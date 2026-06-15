@@ -288,7 +288,7 @@ function apiPath(path: string) {
 }
 
 function readThemePreference(): ThemeMode {
-  if (typeof window === "undefined") return "dark";
+  if (typeof window === "undefined") return "light";
 
   try {
     const storedTheme = window.localStorage.getItem(THEME_STORAGE_KEY);
@@ -296,14 +296,14 @@ function readThemePreference(): ThemeMode {
       return storedTheme;
     }
 
-    return window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "dark" : "dark";
+    return window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "dark" : "light";
   } catch {
-    return "dark";
+    return "light";
   }
 }
 
 function readThemePalettePreference(): ThemePalette {
-  if (typeof window === "undefined") return "tradeGreen";
+  if (typeof window === "undefined") return "orangeRidge";
 
   try {
     const storedPalette = window.localStorage.getItem(THEME_PALETTE_STORAGE_KEY);
@@ -311,10 +311,10 @@ function readThemePalettePreference(): ThemePalette {
       return storedPalette as ThemePalette;
     }
   } catch {
-    return "tradeGreen";
+    return "orangeRidge";
   }
 
-  return "tradeGreen";
+  return "orangeRidge";
 }
 
 const defaultCloseout: CloseoutRecord = {
@@ -4776,7 +4776,7 @@ function HomeView({
           <small>{selectedJob.location} - {selectedApplication?.state ?? selectedJob.status}</small>
         </div>
 
-        <button type="button" className="mobile-work-card" onClick={() => onOpenJob(selectedJob.id)}>
+        <button type="button" className="mobile-work-card mobile-work-card-visual" onClick={() => onOpenJob(selectedJob.id)}>
           <div>
             <span>{selectedJob.trade}</span>
             <strong>{selectedJob.title}</strong>
@@ -4867,7 +4867,7 @@ function HomeView({
             <span>Today's Work</span>
             <button type="button" onClick={() => onNavigate("Marketplace")}>View all</button>
           </div>
-          <div className="dashboard-job">
+          <div className="dashboard-job dashboard-job-visual">
             <div>
               <strong>{selectedJob.title}</strong>
               <small>{selectedJob.trade}</small>
@@ -4892,7 +4892,7 @@ function HomeView({
             <span>Up Next</span>
             <button type="button" onClick={() => onNavigate("Marketplace")}>View all</button>
           </div>
-          <div className="dashboard-job">
+          <div className="dashboard-job dashboard-job-visual alt">
             <div>
               <strong>{nextJob.title}</strong>
               <small>{nextJob.trade}</small>

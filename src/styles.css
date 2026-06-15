@@ -3,28 +3,28 @@
   font-family:
     Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
     sans-serif;
-  --bg: #f5f7f9;
+  --bg: #f4f5f4;
   --surface: #ffffff;
-  --surface-soft: #f8fafb;
-  --text: #070b0f;
-  --muted: #56626d;
+  --surface-soft: #f3f5f5;
+  --text: #0d1114;
+  --muted: #5f686e;
   --faint: #88959b;
-  --border: #dfe4e8;
-  --border-strong: #c8d4da;
-  --nav: #071015;
-  --nav-deep: #03080b;
-  --green: #b8e319;
-  --green-deep: #4d6900;
-  --green-soft: #f2ffd2;
-  --blue: #0b72cf;
-  --blue-soft: #eaf3ff;
-  --amber: #d88a16;
-  --amber-soft: #fff5e3;
+  --border: #dde2e4;
+  --border-strong: #c6ced2;
+  --nav: #080d10;
+  --nav-deep: #030506;
+  --green: #ff6a00;
+  --green-deep: #9a3a00;
+  --green-soft: #fff0e7;
+  --blue: #334f5b;
+  --blue-soft: #edf3f5;
+  --amber: #ff8a1d;
+  --amber-soft: #fff2df;
   --danger-soft: #ffecec;
   --topbar: rgba(255, 255, 255, 0.92);
   --radius: 8px;
-  --shadow: 0 20px 48px rgba(16, 35, 50, 0.09);
-  --shadow-soft: 0 10px 26px rgba(15, 29, 35, 0.05);
+  --shadow: 0 20px 48px rgba(13, 17, 20, 0.09);
+  --shadow-soft: 0 10px 26px rgba(13, 17, 20, 0.05);
 }
 
 * {
@@ -699,9 +699,9 @@ textarea:focus-visible {
   gap: 18px;
   padding: 26px 16px 18px;
   background:
-    radial-gradient(circle at 50% 0%, rgba(184, 227, 25, 0.12), transparent 32%),
-    var(--nav);
+    linear-gradient(180deg, #080d10 0%, #10181d 58%, #080d10 100%);
   color: #e8f0f3;
+  box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.07);
 }
 
 .brand-lockup {
@@ -717,9 +717,9 @@ textarea:focus-visible {
   height: 40px;
   place-items: center;
   border-radius: 8px;
-  background: var(--green);
-  color: #071015;
-  box-shadow: 0 12px 28px rgba(184, 227, 25, 0.18);
+  background: linear-gradient(135deg, #ff7a1a, #ff4f00);
+  color: #080d10;
+  box-shadow: 0 12px 28px rgba(255, 106, 0, 0.24);
 }
 
 .brand-mark .rivt-mark-svg {
@@ -738,7 +738,7 @@ textarea:focus-visible {
 .brand-lockup span {
   display: block;
   margin-top: 4px;
-  color: var(--green);
+  color: #ff8a1d;
   font-size: 11px;
   font-weight: 800;
   text-transform: none;
@@ -920,7 +920,7 @@ textarea:focus-visible {
   min-height: 46px;
   padding: 0 14px;
   border: 1px solid transparent;
-  border-radius: var(--radius);
+  border-radius: 7px;
   background: transparent;
   color: #f4f7f8;
   font-size: 15px;
@@ -934,13 +934,15 @@ textarea:focus-visible {
 
 .nav-item.active,
 .nav-item:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.08);
   color: #fff;
 }
 
 .nav-item.active {
   color: #fff;
-  box-shadow: inset 4px 0 0 var(--green);
+  box-shadow:
+    inset 4px 0 0 var(--green),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.05);
 }
 
 .nav-item.active svg {
@@ -959,7 +961,7 @@ textarea:focus-visible {
   padding: 14px;
   border: 1px solid rgba(255, 255, 255, 0.13);
   border-radius: var(--radius);
-  background: rgba(255, 255, 255, 0.07);
+  background: rgba(255, 255, 255, 0.055);
   color: #eaf7ef;
 }
 
@@ -1054,7 +1056,7 @@ textarea:focus-visible {
 .sidebar-pro-card button {
   border: 0;
   background: var(--green);
-  color: #071015;
+  color: #080d10;
 }
 
 .sidebar-profile {
@@ -1081,11 +1083,12 @@ textarea:focus-visible {
   grid-template-columns: minmax(210px, auto) minmax(240px, 1fr) auto auto auto auto;
   gap: 12px;
   align-items: center;
-  min-height: 70px;
-  padding: 14px 28px;
+  min-height: 66px;
+  padding: 12px 28px;
   border-bottom: 1px solid var(--border);
   background: var(--topbar);
   backdrop-filter: blur(12px);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.72);
 }
 
 .role-switch {
@@ -1113,7 +1116,7 @@ textarea:focus-visible {
 .role-switch button.selected {
   background: var(--green-soft);
   color: var(--green-deep);
-  box-shadow: inset 0 0 0 1px rgba(20, 148, 71, 0.22);
+  box-shadow: inset 0 0 0 1px rgba(255, 106, 0, 0.28);
 }
 
 .searchbox {
@@ -1123,9 +1126,10 @@ textarea:focus-visible {
   height: 42px;
   padding: 0 14px;
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: 9px;
   background: var(--surface);
   color: var(--muted);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.72);
 }
 
 .searchbox input {
@@ -1173,15 +1177,15 @@ textarea:focus-visible {
   border: 2px solid var(--surface);
   border-radius: 999px;
   background: var(--green);
-  color: #fff;
+  color: #080d10;
   font-size: 10px;
   font-weight: 900;
 }
 
 .primary-action {
-  border: 1px solid #070b0f;
+  border: 1px solid #080d10;
   padding: 0 17px;
-  background: #070b0f;
+  background: #080d10;
   color: #fff;
   box-shadow: 0 10px 24px rgba(7, 11, 15, 0.18);
   white-space: nowrap;
@@ -1195,7 +1199,7 @@ textarea:focus-visible {
 }
 
 .save-search.saved {
-  border-color: #cde7d9;
+  border-color: rgba(255, 106, 0, 0.28);
   background: var(--green-soft);
   color: var(--green-deep);
 }
@@ -1265,7 +1269,7 @@ textarea:focus-visible {
   align-items: start;
   width: min(420px, calc(100vw - 28px));
   padding: 14px;
-  border: 1px solid #cde7d9;
+  border: 1px solid rgba(255, 106, 0, 0.22);
   border-radius: 12px;
   background: var(--surface);
   box-shadow: var(--shadow);
@@ -1372,7 +1376,7 @@ textarea:focus-visible {
 }
 
 .quick-actions button:first-child {
-  border-color: #cde7d9;
+  border-color: rgba(255, 106, 0, 0.24);
   background: var(--green-soft);
   color: var(--green-deep);
 }
@@ -3696,6 +3700,7 @@ textarea:focus-visible {
 }
 
 .dashboard-job {
+  position: relative;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 12px;
@@ -3706,6 +3711,40 @@ textarea:focus-visible {
   border-left: 2px solid var(--green);
   border-radius: 6px;
   background: var(--surface);
+}
+
+.dashboard-job-visual {
+  grid-template-columns: minmax(0, 1fr) minmax(136px, 0.34fr) auto;
+  overflow: hidden;
+}
+
+.dashboard-job-visual::after {
+  content: "";
+  display: block;
+  grid-column: 2;
+  grid-row: 1;
+  min-height: 86px;
+  border: 1px solid rgba(8, 13, 16, 0.12);
+  border-radius: 6px;
+  background:
+    linear-gradient(90deg, rgba(8, 13, 16, 0.16) 1px, transparent 1px) 0 0 / 18px 18px,
+    linear-gradient(0deg, rgba(8, 13, 16, 0.1) 1px, transparent 1px) 0 0 / 18px 18px,
+    linear-gradient(135deg, rgba(255, 106, 0, 0.62), rgba(255, 255, 255, 0) 34%),
+    linear-gradient(160deg, #38444a 0%, #9ca8ad 46%, #d8dddf 100%);
+  box-shadow: inset 0 -18px 30px rgba(8, 13, 16, 0.18);
+}
+
+.dashboard-job-visual em {
+  grid-column: 3;
+  grid-row: 1;
+}
+
+.dashboard-job-visual.alt::after {
+  background:
+    linear-gradient(90deg, rgba(8, 13, 16, 0.14) 1px, transparent 1px) 0 0 / 16px 16px,
+    linear-gradient(0deg, rgba(8, 13, 16, 0.1) 1px, transparent 1px) 0 0 / 16px 16px,
+    linear-gradient(135deg, rgba(255, 106, 0, 0.5), rgba(255, 255, 255, 0) 30%),
+    linear-gradient(150deg, #25323a 0%, #7f8a91 52%, #e2e5e6 100%);
 }
 
 .dashboard-job div {
@@ -4460,10 +4499,11 @@ textarea:focus-visible {
   align-items: center;
   margin: 0 20px;
   padding: 18px;
-  border: 1px solid rgba(184, 227, 25, 0.18);
+  border: 1px solid rgba(255, 106, 0, 0.22);
   border-radius: var(--radius);
   background:
-    linear-gradient(135deg, rgba(184, 227, 25, 0.12), transparent 42%),
+    linear-gradient(135deg, rgba(255, 106, 0, 0.12), transparent 42%),
+    linear-gradient(180deg, rgba(8, 13, 16, 0.03), transparent),
     var(--surface);
   box-shadow: var(--shadow-soft);
 }
@@ -4508,7 +4548,7 @@ textarea:focus-visible {
 .jobsite-camera-actions .primary-action {
   border-color: var(--green);
   background: var(--green);
-  color: #071015;
+  color: #080d10;
 }
 
 .tool-card {
@@ -5445,10 +5485,10 @@ textarea:focus-visible {
     flex-direction: row;
     justify-content: space-between;
     min-width: 0;
-    min-height: 50px;
-    padding: 6px 14px 4px;
+    min-height: 46px;
+    padding: 5px 14px 3px;
     border-bottom: 0;
-    background: var(--nav);
+    background: #080d10;
     color: #fff;
     box-shadow: none;
   }
@@ -5487,7 +5527,7 @@ textarea:focus-visible {
     gap: 2px;
     padding: 5px 8px calc(6px + env(safe-area-inset-bottom));
     border-top: 0;
-    background: var(--nav);
+    background: #080d10;
     box-shadow: 0 -12px 30px rgba(0, 0, 0, 0.22);
     backdrop-filter: blur(14px);
   }
@@ -5573,7 +5613,7 @@ textarea:focus-visible {
     grid-column: 1 / -1;
     min-height: 46px;
     background: var(--green);
-    color: #071015;
+    color: #080d10;
   }
 
   .brand-lockup div:last-child {
@@ -5582,7 +5622,7 @@ textarea:focus-visible {
 
   .brand-lockup strong {
     color: #fff;
-    font-size: 24px;
+    font-size: 22px;
   }
 
   .brand-lockup span,
@@ -5598,15 +5638,15 @@ textarea:focus-visible {
 
   .topbar {
     position: sticky;
-    top: 50px;
+    top: 46px;
     z-index: 35;
     grid-template-columns: minmax(0, 1fr) auto auto;
     gap: 7px;
     align-items: center;
-    min-height: 50px;
+    min-height: 46px;
     overflow: visible;
-    padding: 5px 10px;
-    background: var(--nav);
+    padding: 4px 10px;
+    background: #10181d;
     box-shadow: none;
   }
 
@@ -5620,7 +5660,7 @@ textarea:focus-visible {
     order: 1;
     width: 100%;
     min-width: 0;
-    min-height: 30px;
+    min-height: 32px;
     padding: 3px;
     border-color: rgba(255, 255, 255, 0.12);
     background: rgba(255, 255, 255, 0.08);
@@ -5637,7 +5677,7 @@ textarea:focus-visible {
 
   .role-switch button.selected {
     background: var(--green);
-    color: #071015;
+    color: #080d10;
     box-shadow: none;
   }
 
@@ -5847,8 +5887,9 @@ textarea:focus-visible {
   }
 
   .mobile-work-card {
+    position: relative;
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr) 74px auto;
     gap: 8px;
     align-items: center;
     width: 100%;
@@ -5859,6 +5900,22 @@ textarea:focus-visible {
       linear-gradient(180deg, rgba(18, 22, 24, 0.92), rgba(11, 14, 15, 0.98));
     color: #edf4f6;
     text-align: left;
+  }
+
+  .mobile-work-card-visual::after {
+    content: "";
+    display: block;
+    grid-column: 2;
+    grid-row: 1;
+    min-height: 54px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 7px;
+    background:
+      linear-gradient(90deg, rgba(255, 255, 255, 0.16) 1px, transparent 1px) 0 0 / 14px 14px,
+      linear-gradient(0deg, rgba(255, 255, 255, 0.1) 1px, transparent 1px) 0 0 / 14px 14px,
+      linear-gradient(135deg, rgba(255, 106, 0, 0.72), rgba(255, 255, 255, 0) 38%),
+      linear-gradient(160deg, #273238 0%, #6f7d84 54%, #c9ced1 100%);
+    box-shadow: inset 0 -14px 22px rgba(8, 13, 16, 0.28);
   }
 
   .mobile-work-card div {
@@ -5884,13 +5941,15 @@ textarea:focus-visible {
   }
 
   .mobile-work-card em {
+    grid-column: 3;
+    grid-row: 1;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     width: 38px;
     height: 38px;
     border-radius: 999px;
-    background: rgba(184, 227, 25, 0.14);
+    background: rgba(255, 106, 0, 0.14);
     color: var(--green);
     font-size: 13px;
     font-style: normal;
