@@ -43,6 +43,35 @@ body {
   color: var(--text);
 }
 
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.18;
+  background:
+    repeating-linear-gradient(
+      90deg,
+      rgba(8, 13, 16, 0.018) 0,
+      rgba(8, 13, 16, 0.018) 1px,
+      transparent 1px,
+      transparent 12px
+    ),
+    repeating-linear-gradient(
+      0deg,
+      rgba(8, 13, 16, 0.014) 0,
+      rgba(8, 13, 16, 0.014) 1px,
+      transparent 1px,
+      transparent 12px
+    );
+}
+
+#root {
+  position: relative;
+  z-index: 1;
+}
+
 :root[data-theme="dark"] {
   color-scheme: dark;
 }
@@ -2373,6 +2402,7 @@ textarea:focus-visible {
 .records-kpi strong {
   margin-top: 0;
   font-size: 18px;
+  font-variant-numeric: tabular-nums;
 }
 
 .records-kpi small {
@@ -3694,7 +3724,7 @@ textarea:focus-visible {
 
 .home-hero-panel {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(240px, 0.48fr);
+  grid-template-columns: minmax(0, 1.08fr) minmax(240px, 0.52fr);
   gap: 16px;
   align-items: stretch;
   padding: 18px;
@@ -3791,6 +3821,7 @@ textarea:focus-visible {
   font-style: normal;
   font-size: 12px;
   font-weight: 850;
+  font-variant-numeric: tabular-nums;
 }
 
 .desktop-focus-grid {
@@ -3823,6 +3854,7 @@ textarea:focus-visible {
   color: var(--muted);
   font-size: 12px;
   font-weight: 850;
+  font-variant-numeric: tabular-nums;
 }
 
 .dashboard-card-head span {
@@ -3935,6 +3967,7 @@ textarea:focus-visible {
   color: var(--text);
   font-size: 12px;
   font-weight: 760;
+  font-variant-numeric: tabular-nums;
 }
 
 .dashboard-meta-row {
@@ -4532,6 +4565,7 @@ textarea:focus-visible {
   color: var(--green-deep);
   font-size: clamp(30px, 4vw, 42px);
   line-height: 1;
+  font-variant-numeric: tabular-nums;
 }
 
 .invoice-total-card small {
@@ -4876,6 +4910,7 @@ textarea:focus-visible {
 .modern-metric strong {
   font-size: 24px;
   line-height: 1;
+  font-variant-numeric: tabular-nums;
 }
 
 .modern-metric small {
@@ -5174,6 +5209,7 @@ textarea:focus-visible {
 .modern-score-label strong {
   font-size: 28px;
   line-height: 1;
+  font-variant-numeric: tabular-nums;
 }
 
 .modern-score-label span {
@@ -5194,6 +5230,7 @@ textarea:focus-visible {
   font-size: 13px;
   font-style: normal;
   font-weight: 900;
+  font-variant-numeric: tabular-nums;
 }
 
 .job-queue-empty {
