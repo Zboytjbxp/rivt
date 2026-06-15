@@ -288,6 +288,16 @@ textarea:focus-visible {
 
 .auth-card > .rivt-lockup {
   margin-bottom: 2px;
+  align-items: center;
+  text-align: center;
+}
+
+.auth-card > .rivt-lockup .rivt-wordmark {
+  width: min(470px, 100%);
+}
+
+.auth-card > .rivt-lockup .rivt-copy {
+  width: 100%;
 }
 
 .auth-brand {
@@ -737,9 +747,11 @@ textarea:focus-visible {
   box-shadow: 0 12px 28px rgba(0, 0, 0, 0.24);
 }
 
-.brand-mark .rivt-mark-svg {
-  width: 28px;
-  height: 28px;
+.brand-mark img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
 .brand-lockup strong {

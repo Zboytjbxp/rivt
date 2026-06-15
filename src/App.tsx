@@ -2814,18 +2814,7 @@ function LogoLockup() {
 
 function RivtMark() {
   return (
-    <svg viewBox="0 0 48 48" className="rivt-mark-svg" aria-hidden="true">
-      <path
-        d="M9 14h7l8 12.4L32 14h7L25.1 33.5l.9 1.5h-6.8l.9-1.5L9 14Z"
-        fill="currentColor"
-      />
-      <path
-        d="M23.8 19.8 15.5 7.5h6.9l5.9 8.7-4.5 3.6Z"
-        fill="var(--green)"
-      />
-      <circle cx="24" cy="28.7" r="6.1" fill="#0a0f12" />
-      <circle cx="24" cy="28.7" r="3.4" fill="var(--surface)" />
-    </svg>
+    <img src="/brand/rivt-mark-mobile.png" alt="" aria-hidden="true" />
   );
 }
 
