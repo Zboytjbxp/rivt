@@ -3963,6 +3963,7 @@ function ModernJobCard({
           <span>{job.trade} - {job.location}</span>
           <strong>{job.title}</strong>
         </div>
+        <ProjectVisual trade={job.trade} compact />
         <span className="match-pill" aria-hidden="true">{job.match}%</span>
       </div>
       <p>{job.summary}</p>
@@ -3973,6 +3974,24 @@ function ModernJobCard({
         <span>{job.insuranceRequired ? "Insurance required" : "Insurance optional"}</span>
       </div>
     </button>
+  );
+}
+
+function ProjectVisual({ trade, compact = false }: { trade: Trade; compact?: boolean }) {
+  const tone =
+    trade === "Electrical"
+      ? "electrical"
+      : trade === "Plumbing" || trade === "HVAC"
+        ? "mechanical"
+        : trade === "Carpentry" || trade === "Drywall" || trade === "Framing"
+          ? "framing"
+          : "concrete";
+
+  return (
+    <span
+      className={["project-visual", compact ? "compact" : "", tone].filter(Boolean).join(" ")}
+      aria-hidden="true"
+    />
   );
 }
 
@@ -6597,22 +6616,22 @@ function RecordsView({
           </article>
         </section>
         <section className="record-gallery" aria-label="Proof of work">
-          <article className="record-gallery-card">
+          <article className="record-gallery-card before">
             <span>Before</span>
             <strong>Capture the condition before the first cut.</strong>
             <small>{selectedJob.summary}</small>
           </article>
-          <article className="record-gallery-card">
+          <article className="record-gallery-card during">
             <span>During</span>
             <strong>Attach progress notes and active photos as the crew works.</strong>
             <small>{selectedJob.deliverables[0] ?? "Progress photos stay linked to the packet."}</small>
           </article>
-          <article className="record-gallery-card">
+          <article className="record-gallery-card after">
             <span>After</span>
             <strong>Keep closeout photos, invoice notes, and approvals together.</strong>
             <small>{selectedJob.deliverables[selectedJob.deliverables.length - 1] ?? "Final proof stays in the record."}</small>
           </article>
-          <article className="record-gallery-card">
+          <article className="record-gallery-card notes">
             <span>Notes</span>
             <strong>{selectedJob.tools.slice(0, 3).join(" • ")}</strong>
             <small>Tools used on this work order stay visible for the next handoff.</small>

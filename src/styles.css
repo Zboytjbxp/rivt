@@ -384,9 +384,9 @@ textarea:focus-visible {
 }
 
 .auth-status.ready {
-  border-color: rgba(184, 227, 25, 0.4);
+  border-color: rgba(255, 106, 0, 0.34);
   background:
-    linear-gradient(180deg, rgba(184, 227, 25, 0.12), rgba(184, 227, 25, 0.06));
+    linear-gradient(180deg, rgba(255, 106, 0, 0.12), rgba(255, 106, 0, 0.06));
 }
 
 .auth-status.needs {
@@ -537,7 +537,7 @@ textarea:focus-visible {
 .plan-choice-grid button.selected,
 .auth-methods button.selected,
 .specialty-picker button.selected {
-  border-color: #cde7d9;
+  border-color: rgba(255, 106, 0, 0.24);
   background: var(--green-soft);
   color: var(--green-deep);
 }
@@ -1406,7 +1406,7 @@ textarea:focus-visible {
 }
 
 .activity-item.unread {
-  border-color: #cde7d9;
+  border-color: rgba(255, 106, 0, 0.24);
   background: var(--green-soft);
 }
 
@@ -2099,7 +2099,7 @@ textarea:focus-visible {
 .network-row-actions button:first-child,
 .risk-row button,
 .review-row button {
-  border-color: #cde7d9;
+  border-color: rgba(255, 106, 0, 0.24);
   background: var(--green-soft);
   color: var(--green-deep);
 }
@@ -2117,7 +2117,7 @@ textarea:focus-visible {
 }
 
 .record-upload-card.ready {
-  border-color: #cde7d9;
+  border-color: rgba(255, 106, 0, 0.24);
   background: var(--green-soft);
 }
 
@@ -2337,9 +2337,9 @@ textarea:focus-visible {
   width: fit-content;
   min-height: 34px;
   padding: 0 12px;
-  border: 1px solid rgba(184, 227, 25, 0.18);
+  border: 1px solid rgba(255, 106, 0, 0.22);
   border-radius: 999px;
-  background: linear-gradient(180deg, rgba(184, 227, 25, 0.12), rgba(184, 227, 25, 0.05));
+  background: linear-gradient(180deg, rgba(255, 106, 0, 0.12), rgba(255, 106, 0, 0.05));
   color: var(--green-deep);
   font-size: 12px;
   font-weight: 900;
@@ -2625,7 +2625,7 @@ textarea:focus-visible {
   gap: 7px;
   min-height: 34px;
   padding: 0 11px;
-  border: 1px solid #cde7d9;
+  border: 1px solid rgba(255, 106, 0, 0.24);
   border-radius: 6px;
   background: var(--green-soft);
   color: var(--green-deep);
@@ -2726,15 +2726,56 @@ textarea:focus-visible {
 }
 
 .record-gallery-card {
+  position: relative;
+  min-height: 158px;
   display: grid;
   gap: 6px;
-  padding: 12px;
+  align-content: end;
+  overflow: hidden;
+  padding: 74px 12px 12px;
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: var(--surface-soft);
 }
 
+.record-gallery-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 66px;
+  border-bottom: 1px solid rgba(8, 13, 16, 0.1);
+  background:
+    linear-gradient(90deg, rgba(8, 13, 16, 0.12) 1px, transparent 1px) 0 0 / 18px 18px,
+    linear-gradient(0deg, rgba(8, 13, 16, 0.08) 1px, transparent 1px) 0 0 / 18px 18px,
+    linear-gradient(135deg, rgba(255, 106, 0, 0.6), rgba(255, 255, 255, 0) 34%),
+    linear-gradient(160deg, #303b42 0%, #8a969c 54%, #d8dddf 100%);
+}
+
+.record-gallery-card.during::before {
+  background:
+    linear-gradient(90deg, rgba(8, 13, 16, 0.13) 1px, transparent 1px) 0 0 / 15px 15px,
+    linear-gradient(0deg, rgba(8, 13, 16, 0.08) 1px, transparent 1px) 0 0 / 15px 15px,
+    linear-gradient(135deg, rgba(255, 106, 0, 0.48), rgba(255, 255, 255, 0) 30%),
+    linear-gradient(155deg, #27353d 0%, #77858d 50%, #cfd5d8 100%);
+}
+
+.record-gallery-card.after::before {
+  background:
+    linear-gradient(90deg, rgba(8, 13, 16, 0.1) 1px, transparent 1px) 0 0 / 20px 20px,
+    linear-gradient(0deg, rgba(8, 13, 16, 0.08) 1px, transparent 1px) 0 0 / 20px 20px,
+    linear-gradient(135deg, rgba(255, 106, 0, 0.42), rgba(255, 255, 255, 0) 36%),
+    linear-gradient(165deg, #4c5960 0%, #a0a9ad 52%, #eef0f0 100%);
+}
+
+.record-gallery-card.notes::before {
+  background:
+    linear-gradient(90deg, rgba(255, 106, 0, 0.22) 1px, transparent 1px) 0 0 / 18px 18px,
+    linear-gradient(0deg, rgba(255, 106, 0, 0.16) 1px, transparent 1px) 0 0 / 18px 18px,
+    linear-gradient(145deg, #10181d 0%, #28363e 48%, #ff6a00 160%);
+}
+
 .record-gallery-card span {
+  position: relative;
   color: var(--muted);
   font-size: 11px;
   font-weight: 850;
@@ -2742,11 +2783,13 @@ textarea:focus-visible {
 }
 
 .record-gallery-card strong {
+  position: relative;
   font-size: 13px;
   line-height: 1.35;
 }
 
 .record-gallery-card small {
+  position: relative;
   color: var(--muted);
   font-size: 12px;
   line-height: 1.4;
@@ -2871,7 +2914,7 @@ textarea:focus-visible {
 .admin-row button {
   min-height: 32px;
   padding: 0 10px;
-  border: 1px solid #cde7d9;
+  border: 1px solid rgba(255, 106, 0, 0.24);
   border-radius: 6px;
   background: var(--green-soft);
   color: var(--green-deep);
@@ -3111,7 +3154,7 @@ textarea:focus-visible {
 
 .message-bubble.mine {
   justify-self: end;
-  border-color: #cde7d9;
+  border-color: rgba(255, 106, 0, 0.24);
   background: var(--green-soft);
 }
 
@@ -3161,7 +3204,7 @@ textarea:focus-visible {
 }
 
 .credential-tile.ready {
-  border-color: #cde7d9;
+  border-color: rgba(255, 106, 0, 0.24);
   background: var(--green-soft);
 }
 
@@ -3235,7 +3278,7 @@ textarea:focus-visible {
 }
 
 .provider-check-card.ready {
-  border-color: #cde7d9;
+  border-color: rgba(255, 106, 0, 0.24);
   background: var(--green-soft);
 }
 
@@ -3307,7 +3350,7 @@ textarea:focus-visible {
 
 .document-checklist button.complete,
 .training-list button.complete {
-  border-color: #cde7d9;
+  border-color: rgba(255, 106, 0, 0.24);
   background: var(--green-soft);
 }
 
@@ -3400,7 +3443,7 @@ textarea:focus-visible {
   gap: 9px;
   margin: 0 20px 20px;
   padding: 12px 14px;
-  border: 1px solid #cde7d9;
+  border: 1px solid rgba(255, 106, 0, 0.24);
   border-radius: var(--radius);
   background: var(--green-soft);
   color: var(--green-deep);
@@ -3611,7 +3654,7 @@ textarea:focus-visible {
 }
 
 .calculator-actions button:first-child {
-  border-color: #cde7d9;
+  border-color: rgba(255, 106, 0, 0.24);
   background: var(--green-soft);
   color: var(--green-deep);
 }
@@ -4057,7 +4100,7 @@ textarea:focus-visible {
 .home-job-row:hover,
 .shop-post-card:hover,
 .shop-post-card.selected {
-  border-color: #cde7d9;
+  border-color: rgba(255, 106, 0, 0.24);
   background: var(--green-soft);
 }
 
@@ -4077,7 +4120,7 @@ textarea:focus-visible {
 
 .home-row-actions button:last-child,
 .answer-actions button:last-child {
-  border-color: #cde7d9;
+  border-color: rgba(255, 106, 0, 0.24);
   background: var(--green-soft);
   color: var(--green-deep);
 }
@@ -4222,7 +4265,7 @@ textarea:focus-visible {
 }
 
 .answer-card.verified {
-  border-color: #cde7d9;
+  border-color: rgba(255, 106, 0, 0.24);
   background: var(--green-soft);
 }
 
@@ -4443,7 +4486,7 @@ textarea:focus-visible {
 }
 
 .invoice-actions button:first-child {
-  border-color: #cde7d9;
+  border-color: rgba(255, 106, 0, 0.24);
   background: var(--green-soft);
   color: var(--green-deep);
 }
@@ -4453,16 +4496,32 @@ textarea:focus-visible {
 }
 
 .tools-command {
+  position: relative;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) minmax(180px, 0.24fr) auto;
   gap: 16px;
   align-items: center;
+  overflow: hidden;
   margin: 0 20px;
   padding: 16px;
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: var(--surface);
   box-shadow: var(--shadow-soft);
+}
+
+.tools-command::after {
+  content: "";
+  display: block;
+  min-height: 104px;
+  border: 1px solid rgba(8, 13, 16, 0.12);
+  border-radius: 8px;
+  background:
+    linear-gradient(90deg, rgba(8, 13, 16, 0.12) 1px, transparent 1px) 0 0 / 18px 18px,
+    linear-gradient(0deg, rgba(8, 13, 16, 0.08) 1px, transparent 1px) 0 0 / 18px 18px,
+    linear-gradient(135deg, rgba(255, 106, 0, 0.56), rgba(255, 255, 255, 0) 34%),
+    linear-gradient(160deg, #2f3b42 0%, #87949b 52%, #dce0e2 100%);
+  box-shadow: inset 0 -22px 36px rgba(8, 13, 16, 0.17);
 }
 
 .tools-command span {
@@ -4594,7 +4653,7 @@ textarea:focus-visible {
   display: grid;
   gap: 4px;
   padding: 12px;
-  border: 1px solid #cde7d9;
+  border: 1px solid rgba(255, 106, 0, 0.24);
   border-radius: 10px;
   background: var(--green-soft);
 }
@@ -4607,7 +4666,7 @@ textarea:focus-visible {
 
 .tool-card button {
   justify-self: start;
-  border-color: #cde7d9;
+  border-color: rgba(255, 106, 0, 0.24);
   background: var(--green-soft);
   color: var(--green-deep);
 }
@@ -4754,7 +4813,7 @@ textarea:focus-visible {
 }
 
 .modern-command-actions button:first-child {
-  border-color: #cde7d9;
+  border-color: rgba(255, 106, 0, 0.24);
   background: var(--green-soft);
   color: var(--green-deep);
 }
@@ -4839,9 +4898,53 @@ textarea:focus-visible {
   text-align: left;
 }
 
+.project-visual {
+  display: block;
+  width: 150px;
+  min-height: 92px;
+  overflow: hidden;
+  border: 1px solid rgba(8, 13, 16, 0.12);
+  border-radius: 8px;
+  background:
+    linear-gradient(90deg, rgba(8, 13, 16, 0.12) 1px, transparent 1px) 0 0 / 18px 18px,
+    linear-gradient(0deg, rgba(8, 13, 16, 0.08) 1px, transparent 1px) 0 0 / 18px 18px,
+    linear-gradient(135deg, rgba(255, 106, 0, 0.64), rgba(255, 255, 255, 0) 34%),
+    linear-gradient(160deg, #38444a 0%, #9ca8ad 48%, #d8dddf 100%);
+  box-shadow: inset 0 -20px 34px rgba(8, 13, 16, 0.16);
+}
+
+.project-visual.compact {
+  width: 82px;
+  min-height: 58px;
+}
+
+.project-visual.mechanical {
+  background:
+    linear-gradient(90deg, rgba(8, 13, 16, 0.12) 1px, transparent 1px) 0 0 / 16px 16px,
+    linear-gradient(0deg, rgba(8, 13, 16, 0.08) 1px, transparent 1px) 0 0 / 16px 16px,
+    linear-gradient(135deg, rgba(255, 106, 0, 0.5), rgba(255, 255, 255, 0) 30%),
+    linear-gradient(155deg, #25323a 0%, #7f8a91 54%, #e2e5e6 100%);
+}
+
+.project-visual.framing {
+  background:
+    linear-gradient(90deg, rgba(8, 13, 16, 0.14) 1px, transparent 1px) 0 0 / 22px 22px,
+    linear-gradient(0deg, rgba(8, 13, 16, 0.08) 1px, transparent 1px) 0 0 / 22px 22px,
+    linear-gradient(135deg, rgba(255, 106, 0, 0.46), rgba(255, 255, 255, 0) 34%),
+    linear-gradient(165deg, #4a3c2e 0%, #9d8a72 48%, #ded7cc 100%);
+}
+
+.project-visual.concrete {
+  background:
+    linear-gradient(90deg, rgba(8, 13, 16, 0.1) 1px, transparent 1px) 0 0 / 20px 20px,
+    linear-gradient(0deg, rgba(8, 13, 16, 0.08) 1px, transparent 1px) 0 0 / 20px 20px,
+    linear-gradient(135deg, rgba(255, 106, 0, 0.4), rgba(255, 255, 255, 0) 34%),
+    linear-gradient(160deg, #4b555a 0%, #a5adb0 50%, #eef0f0 100%);
+}
+
 .modern-job-card:hover,
 .modern-job-card.selected {
-  border-color: #cfe1e8;
+  border-color: rgba(255, 106, 0, 0.22);
   background: var(--surface-soft);
 }
 
@@ -4853,9 +4956,9 @@ textarea:focus-visible {
 
 .modern-job-card-main {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto auto;
   gap: 12px;
-  align-items: start;
+  align-items: center;
 }
 
 .modern-job-card-main strong {
@@ -4914,12 +5017,26 @@ textarea:focus-visible {
 }
 
 .modern-detail-hero {
+  position: relative;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) minmax(150px, 0.28fr) auto;
   gap: 18px;
   align-items: start;
   padding-bottom: 16px;
   border-bottom: 1px solid var(--border);
+}
+
+.modern-detail-hero::after {
+  content: "";
+  min-height: 130px;
+  border: 1px solid rgba(8, 13, 16, 0.12);
+  border-radius: 10px;
+  background:
+    linear-gradient(90deg, rgba(8, 13, 16, 0.12) 1px, transparent 1px) 0 0 / 20px 20px,
+    linear-gradient(0deg, rgba(8, 13, 16, 0.08) 1px, transparent 1px) 0 0 / 20px 20px,
+    linear-gradient(135deg, rgba(255, 106, 0, 0.62), rgba(255, 255, 255, 0) 34%),
+    linear-gradient(160deg, #303b42 0%, #8d999f 54%, #e0e4e5 100%);
+  box-shadow: inset 0 -24px 42px rgba(8, 13, 16, 0.17);
 }
 
 .modern-detail-hero h2 {
@@ -5047,7 +5164,7 @@ textarea:focus-visible {
   gap: 12px;
   align-items: center;
   padding: 13px;
-  border: 1px solid #cde7d9;
+  border: 1px solid rgba(255, 106, 0, 0.24);
   border-radius: 12px;
   background: var(--green-soft);
 }
@@ -6234,17 +6351,15 @@ textarea:focus-visible {
   }
 
   .modern-filter-bar .filters {
-    display: flex;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
-    overflow-x: auto;
-    padding-bottom: 3px;
-    scrollbar-width: thin;
   }
 
   .modern-filter-bar .select-control,
   .modern-filter-bar .input-control,
   .modern-filter-bar .toggle-control {
-    flex: 0 0 156px;
+    min-width: 0;
   }
 
   .modern-filter-bar .toggle-control {
@@ -6277,6 +6392,12 @@ textarea:focus-visible {
 
   .modern-job-card-main {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .project-visual,
+  .project-visual.compact {
+    width: 100%;
+    min-height: 74px;
   }
 
   .modern-job-card-main em {
