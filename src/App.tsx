@@ -2383,54 +2383,6 @@ function App() {
   const nextTrainingModule = trainingModules.find(
     (moduleName) => !completedTraining.has(moduleName),
   );
-  const introAction = (() => {
-    switch (activeView) {
-      case "Home":
-        return { label: "Open Shop Talk", icon: MessageCircle, onClick: () => setActiveView("Shop Talk") };
-      case "Applications":
-        return { label: "Submit active portfolio", icon: Send, onClick: handleApply };
-      case "Shop Talk":
-        return { label: "Ask from active work order", icon: MessageSquareText, onClick: handleCreateCommunityPrompt };
-      case "Tools":
-        return { label: "Open work order", icon: BriefcaseBusiness, onClick: () => openJob(selectedJob.id) };
-      case "Invites":
-        return { label: "Invite top crew", icon: UserCheck, onClick: handleInvite };
-      case "My Crew":
-      case "Trust & Legal":
-        return { label: trustReady ? "Trust ready" : "Review consent", icon: ShieldCheck, onClick: handleReviewConsent };
-      case "Messages":
-        return { label: "Send update", icon: Send, onClick: handleSendMessage };
-      case "Records":
-        return { label: "Record completion", icon: FolderOpen, onClick: () => handleSubmitCloseoutPacket() };
-      case "Safety & Training":
-        return {
-          label: nextTrainingModule ? "Complete next training" : "Training complete",
-          icon: GraduationCap,
-          onClick: () => {
-            if (nextTrainingModule) {
-              handleToggleTraining(nextTrainingModule);
-            }
-          },
-        };
-      case "Reviews":
-        return {
-          label: reviewRequested ? "Review requested" : "Request customer review",
-          icon: Star,
-          onClick: handleRequestReview,
-        };
-      case "Feedback":
-        return { label: "Send feedback", icon: MessageCircle, onClick: handleSubmitFeedback };
-      case "Settings":
-        return { label: "Open settings", icon: ShieldCheck, onClick: () => setAccountOpen(true) };
-      case "Admin":
-        return { label: "Review beta", icon: ClipboardCheck, onClick: () => setActiveView("Admin") };
-      default:
-        return role === "tradesperson"
-          ? { label: "Apply selected", icon: FileCheck2, onClick: handleApply }
-          : { label: "Post job", icon: Plus, onClick: () => setPostOpen(true) };
-    }
-  })();
-  const IntroActionIcon = introAction.icon;
   const profileSubtitle =
     role === "contractor"
       ? accountProfile.organization
@@ -2569,13 +2521,6 @@ function App() {
                 : page.description}
             </p>
           </div>
-          <button
-            className="primary-action"
-            onClick={introAction.onClick}
-          >
-            <IntroActionIcon size={18} />
-            {introAction.label}
-          </button>
         </section>
 
         {activeView === "Marketplace" ? (
@@ -4312,32 +4257,34 @@ function OperationsWorkspace(props: OperationsWorkspaceProps) {
 
   return (
     <>
-      <section className={view === "Home" ? "ops-summary home-ops-summary" : "ops-summary"} aria-label="Operations summary">
-        <OpsMetric
-          icon={BriefcaseBusiness}
-          label="Open work"
-          value={`${jobs.length} jobs`}
-          detail={`${currency(totalPipelineValue)} active value`}
-        />
-        <OpsMetric
-          icon={FileCheck2}
-          label="Applications"
-          value={String(applications.length)}
-          detail={role === "contractor" ? "Applicant and invite queue" : "Submitted portfolios"}
-        />
-        <OpsMetric
-          icon={FolderOpen}
-          label="Records"
-          value={`${activeRecords}/${recordChecklist.length}`}
-          detail={`${paymentRecords.length} payment log${paymentRecords.length === 1 ? "" : "s"}`}
-        />
-        <OpsMetric
-          icon={GraduationCap}
-          label="Safety"
-          value={`${trainingProgress}%`}
-          detail="Training completion"
-        />
-      </section>
+      {view === "Home" && (
+        <section className="ops-summary home-ops-summary" aria-label="Operations summary">
+          <OpsMetric
+            icon={BriefcaseBusiness}
+            label="Open work"
+            value={`${jobs.length} jobs`}
+            detail={`${currency(totalPipelineValue)} active value`}
+          />
+          <OpsMetric
+            icon={FileCheck2}
+            label="Applications"
+            value={String(applications.length)}
+            detail={role === "contractor" ? "Applicant and invite queue" : "Submitted portfolios"}
+          />
+          <OpsMetric
+            icon={FolderOpen}
+            label="Records"
+            value={`${activeRecords}/${recordChecklist.length}`}
+            detail={`${paymentRecords.length} payment log${paymentRecords.length === 1 ? "" : "s"}`}
+          />
+          <OpsMetric
+            icon={GraduationCap}
+            label="Safety"
+            value={`${trainingProgress}%`}
+            detail="Training completion"
+          />
+        </section>
+      )}
 
       {view === "Home" && (
         <HomeView
