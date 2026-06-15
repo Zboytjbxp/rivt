@@ -3783,6 +3783,7 @@ function MarketplaceView({
   onScheduleHold: () => void;
   onSubmitCloseoutPacket: (jobId?: number) => void;
 }) {
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const averageMatch = jobs.length
     ? Math.round(jobs.reduce((sum, job) => sum + job.match, 0) / jobs.length)
     : 0;
@@ -3841,27 +3842,68 @@ function MarketplaceView({
         </section>
 
         <section className="modern-filter-bar" aria-label="Job filters">
-        <Filters
-          trade={trade}
-          setTrade={setTrade}
-          difficulty={difficulty}
-          setDifficulty={setDifficulty}
-          workType={workType}
-          setWorkType={setWorkType}
-          radius={radius}
-          setRadius={setRadius}
-          locationQuery={locationQuery}
-          setLocationQuery={setLocationQuery}
-          verifiedOnly={verifiedOnly}
-          setVerifiedOnly={setVerifiedOnly}
-        />
-        <button
-          className={savedSearch ? "secondary-action save-search saved" : "secondary-action save-search"}
-          onClick={onToggleSavedSearch}
-        >
-          {savedSearch ? `${radius} saved` : "Save search"}
-        </button>
+          <div className="filter-quickbar">
+            <button
+              type="button"
+              className="filter-pill"
+              aria-expanded={filtersOpen}
+              onClick={() => setFiltersOpen(true)}
+            >
+              <Search size={15} />
+              <span>Filters</span>
+              <ChevronDown size={14} />
+            </button>
+            <button
+              className={savedSearch ? "secondary-action save-search saved" : "secondary-action save-search"}
+              onClick={onToggleSavedSearch}
+            >
+              {savedSearch ? `${radius} saved` : "Save search"}
+            </button>
+          </div>
+          <div className="filter-chip-row" aria-label="Active filters">
+            <span>{trade}</span>
+            <span>{difficulty}</span>
+            <span>{workType}</span>
+            <span>{radius}</span>
+            <span>{verifiedOnly ? "Insurance required" : "Insurance optional"}</span>
+          </div>
         </section>
+
+        {filtersOpen && (
+          <div className="filter-sheet-backdrop" role="presentation" onClick={() => setFiltersOpen(false)}>
+            <div
+              className="filter-sheet"
+              role="dialog"
+              aria-modal="true"
+              aria-label="Job filters"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className="filter-sheet-head">
+                <div>
+                  <span>Work filters</span>
+                  <strong>Refine the feed</strong>
+                </div>
+                <button type="button" onClick={() => setFiltersOpen(false)}>
+                  Close
+                </button>
+              </div>
+              <Filters
+                trade={trade}
+                setTrade={setTrade}
+                difficulty={difficulty}
+                setDifficulty={setDifficulty}
+                workType={workType}
+                setWorkType={setWorkType}
+                radius={radius}
+                setRadius={setRadius}
+                locationQuery={locationQuery}
+                setLocationQuery={setLocationQuery}
+                verifiedOnly={verifiedOnly}
+                setVerifiedOnly={setVerifiedOnly}
+              />
+            </div>
+          </div>
+        )}
 
         <section className="modern-workspace-grid">
           <div className="modern-job-queue">

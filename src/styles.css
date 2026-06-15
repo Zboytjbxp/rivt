@@ -4985,9 +4985,108 @@ textarea:focus-visible {
 
 .modern-filter-bar {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+}
+
+.filter-quickbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.filter-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 42px;
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.filter-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.filter-chip-row span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: var(--surface-soft);
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.filter-sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  display: flex;
+  align-items: flex-end;
+  background: rgba(8, 13, 16, 0.5);
+}
+
+.filter-sheet {
+  width: min(760px, calc(100vw - 20px));
+  margin: 0 auto 10px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 18px 18px 12px 12px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.filter-sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   gap: 12px;
-  align-items: end;
+  margin-bottom: 12px;
+}
+
+.filter-sheet-head span {
+  display: block;
+  color: var(--green-deep);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.filter-sheet-head strong {
+  display: block;
+  font-size: 18px;
+  line-height: 1.2;
+}
+
+.filter-sheet-head button {
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-soft);
+  color: var(--text);
+  font-weight: 800;
+}
+
+.filter-sheet .filters {
+  grid-template-columns: 1fr;
+}
+
+.filter-sheet .select-control select,
+.filter-sheet .input-control input,
+.filter-sheet .toggle-control {
+  min-height: 44px;
+  border-radius: 10px;
 }
 
 .modern-filter-bar .filters {
@@ -5006,6 +5105,15 @@ textarea:focus-visible {
 .modern-filter-bar .toggle-control {
   border-radius: 10px;
   background: var(--surface);
+}
+
+.modern-job-queue,
+.modern-detail-panel {
+  border-color: rgba(8, 13, 16, 0.09);
+}
+
+.modern-section-heading {
+  border-bottom-color: rgba(8, 13, 16, 0.08);
 }
 
 .modern-workspace-grid {
