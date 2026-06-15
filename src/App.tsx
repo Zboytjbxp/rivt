@@ -2855,12 +2855,11 @@ function LogoLockup() {
   return (
     <div className="rivt-lockup" aria-label="RIVT">
       <picture className="rivt-wordmark" aria-hidden="true">
-        <source srcSet="/brand/rivt-mark-mobile.png" media="(max-width: 720px)" />
+        <source srcSet="/brand/rivt-lockup-light-transparent.png" media="(prefers-color-scheme: light)" />
         <img src="/brand/rivt-lockup-dark-transparent.png" alt="" />
       </picture>
       <div className="rivt-copy">
-        <strong>RIVT</strong>
-        <span>Where skilled trades connect</span>
+        <span>{brandConfig.productCategory}</span>
       </div>
     </div>
   );
@@ -2869,9 +2868,16 @@ function LogoLockup() {
 function RivtMark() {
   return (
     <svg viewBox="0 0 48 48" className="rivt-mark-svg" aria-hidden="true">
-      <rect x="1" y="1" width="46" height="46" rx="10" fill="none" />
-      <path d="M9 10h6l9 14 9-14h6L26 31v9h-4v-9L9 10Z" fill="currentColor" />
-      <circle cx="24" cy="29" r="5.6" fill="var(--green)" />
+      <path
+        d="M9 14h7l8 12.4L32 14h7L25.1 33.5l.9 1.5h-6.8l.9-1.5L9 14Z"
+        fill="currentColor"
+      />
+      <path
+        d="M23.8 19.8 15.5 7.5h6.9l5.9 8.7-4.5 3.6Z"
+        fill="var(--green)"
+      />
+      <circle cx="24" cy="28.7" r="6.1" fill="#0a0f12" />
+      <circle cx="24" cy="28.7" r="3.4" fill="var(--surface)" />
     </svg>
   );
 }

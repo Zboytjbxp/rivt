@@ -749,9 +749,12 @@ textarea:focus-visible {
   height: 40px;
   place-items: center;
   border-radius: 8px;
-  background: linear-gradient(135deg, #ff7a1a, #ff4f00);
-  color: #080d10;
-  box-shadow: 0 12px 28px rgba(255, 106, 0, 0.24);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02)),
+    rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #f6f8f9;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.24);
 }
 
 .brand-mark .rivt-mark-svg {
@@ -778,13 +781,14 @@ textarea:focus-visible {
 
 .rivt-lockup {
   display: flex;
-  align-items: center;
-  gap: 12px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
 }
 
 .rivt-wordmark {
   display: block;
-  width: min(420px, 100%);
+  width: min(430px, 100%);
   line-height: 0;
 }
 
@@ -803,9 +807,10 @@ textarea:focus-visible {
 
 .rivt-copy span {
   display: block;
-  color: #94a5ad;
-  font-size: 10px;
+  color: #ff8a1d;
+  font-size: 11px;
   font-weight: 850;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
 }
 
@@ -841,7 +846,7 @@ textarea:focus-visible {
   }
 
   .auth-hero .rivt-copy {
-    display: none;
+    padding-left: 2px;
   }
 
 .auth-hero-copy {
