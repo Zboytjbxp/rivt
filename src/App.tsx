@@ -4929,26 +4929,45 @@ function HomeView({
       </section>
 
       <article className="home-hero-panel">
-          <div className="home-hero-copy">
+        <div className="home-hero-copy">
           <span>{role === "contractor" ? "Contractor home" : "Tradesperson home"}</span>
           <h2>Today's work, trusted people, and field tools in one place.</h2>
           <p>
             See the job that needs attention, find nearby help, send a message, or build an invoice without digging.
           </p>
+          <div className="home-action-grid">
+            <button type="button" className="primary-action" onClick={role === "contractor" ? onPostJob : () => onNavigate("Marketplace")}>
+              {role === "contractor" ? <Plus size={17} /> : <BriefcaseBusiness size={17} />}
+              {role === "contractor" ? "Post work" : "Find work"}
+            </button>
+            <button type="button" onClick={onCreateCommunityPrompt}>
+              <MessageSquareText size={16} />
+              Ask from job
+            </button>
+            <button type="button" onClick={() => onNavigate("Tools")}>
+              <Wrench size={16} />
+              Open tools
+            </button>
+          </div>
         </div>
-        <div className="home-action-grid">
-          <button type="button" className="primary-action" onClick={role === "contractor" ? onPostJob : () => onNavigate("Marketplace")}>
-            {role === "contractor" ? <Plus size={17} /> : <BriefcaseBusiness size={17} />}
-            {role === "contractor" ? "Post work" : "Find work"}
-          </button>
-          <button type="button" onClick={onCreateCommunityPrompt}>
-            <MessageSquareText size={16} />
-            Ask from job
-          </button>
-          <button type="button" onClick={() => onNavigate("Tools")}>
-            <Wrench size={16} />
-            Open tools
-          </button>
+        <div className="home-hero-visual">
+          <div className="hero-visual-head">
+            <span>Selected work order</span>
+            <strong>{selectedJob.title}</strong>
+          </div>
+          <ProjectVisual trade={selectedJob.trade} />
+          <div className="hero-visual-meta">
+            <div>
+              <span>{selectedJob.trade}</span>
+              <strong>{selectedJob.location}</strong>
+              <em>{selectedApplication?.state ?? selectedJob.status}</em>
+            </div>
+            <div>
+              <span>{currency(selectedJob.pay)}</span>
+              <strong>{selectedJob.durationHours}h estimate</strong>
+              <em>{selectedJob.match}% match</em>
+            </div>
+          </div>
         </div>
       </article>
 
