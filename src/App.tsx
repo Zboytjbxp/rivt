@@ -2839,11 +2839,6 @@ function AuthGate({
 
         {error ? <p className="auth-error">{error}</p> : null}
 
-        <div className="auth-next-steps">
-          <strong>Need the social logins live?</strong>
-          <span>Give me the Google, Facebook, and Apple app credentials, and I’ll wire the redirects into RIVT and turn the buttons into real sign-in flows.</span>
-        </div>
-
         <button
           type="button"
           className="primary-action"
@@ -4318,6 +4313,7 @@ function OperationsWorkspace(props: OperationsWorkspaceProps) {
           role={role}
           selectedJob={selectedJob}
           onOpenJob={onOpenJob}
+          onNavigate={onNavigate}
         />
       )}
       {view === "My Jobs" && (
@@ -5268,10 +5264,12 @@ function ToolsView({
   role,
   selectedJob,
   onOpenJob,
+  onNavigate,
 }: {
   role: Role;
   selectedJob: Job;
   onOpenJob: (id: number) => void;
+  onNavigate: (view: NavLabel) => void;
 }) {
   return (
     <section className="tools-layout" aria-label="Trade tools">
@@ -5287,6 +5285,26 @@ function ToolsView({
         </button>
       </section>
       <InvoiceTool key={selectedJob.id} role={role} selectedJob={selectedJob} onOpenJob={onOpenJob} />
+      <section className="jobsite-camera-card" aria-label="Jobsite camera and records">
+        <div>
+          <span>Jobsite camera</span>
+          <h3>Photo records, timelines, and closeout reports</h3>
+          <p>
+            Capture before, during, and after proof for {selectedJob.title}. Build a
+            work record, generate a report, and keep closeout photos tied to the job.
+          </p>
+        </div>
+        <div className="jobsite-camera-actions">
+          <button type="button" className="primary-action" onClick={() => onNavigate("Records")}>
+            <Camera size={17} />
+            Open jobsite records
+          </button>
+          <button type="button" onClick={() => onNavigate("Records")}>
+            <FileDown size={16} />
+            Build report
+          </button>
+        </div>
+      </section>
       <section className="tools-grid">
         <FractionTool />
         <MaterialsWasteTool selectedJob={selectedJob} />
@@ -7603,3 +7621,4 @@ function PostJobModal({
 }
 
 export default App;
+

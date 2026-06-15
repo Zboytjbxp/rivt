@@ -429,27 +429,6 @@ textarea:focus-visible {
   font-weight: 750;
 }
 
-.auth-next-steps {
-  display: grid;
-  gap: 6px;
-  padding: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 10px;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.025));
-}
-
-.auth-next-steps strong {
-  font-size: 13px;
-  color: #fff;
-}
-
-.auth-next-steps span {
-  color: #b4c1c6;
-  font-size: 12px;
-  line-height: 1.45;
-}
-
 .auth-shell .auth-status strong svg,
 .auth-shell .auth-provider-grid button svg {
   color: #fff;
@@ -4474,6 +4453,64 @@ textarea:focus-visible {
   padding: 0 20px 20px;
 }
 
+.jobsite-camera-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 16px;
+  align-items: center;
+  margin: 0 20px;
+  padding: 18px;
+  border: 1px solid rgba(184, 227, 25, 0.18);
+  border-radius: var(--radius);
+  background:
+    linear-gradient(135deg, rgba(184, 227, 25, 0.12), transparent 42%),
+    var(--surface);
+  box-shadow: var(--shadow-soft);
+}
+
+.jobsite-camera-card span {
+  color: var(--green-deep);
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.jobsite-camera-card h3 {
+  margin: 4px 0 0;
+  font-size: 20px;
+  line-height: 1.18;
+}
+
+.jobsite-camera-card p {
+  max-width: 680px;
+  margin: 7px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 720;
+  line-height: 1.5;
+}
+
+.jobsite-camera-actions {
+  display: grid;
+  gap: 8px;
+  min-width: 190px;
+}
+
+.jobsite-camera-actions button {
+  min-height: 42px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-soft);
+  color: var(--text);
+  font-weight: 850;
+}
+
+.jobsite-camera-actions .primary-action {
+  border-color: var(--green);
+  background: var(--green);
+  color: #071015;
+}
+
 .tool-card {
   display: grid;
   gap: 13px;
@@ -6040,6 +6077,20 @@ textarea:focus-visible {
   }
 
   .tools-command .primary-action {
+    width: 100%;
+  }
+
+  .jobsite-camera-card {
+    grid-template-columns: 1fr;
+    margin: 0 10px;
+    padding: 15px;
+  }
+
+  .jobsite-camera-actions {
+    min-width: 0;
+  }
+
+  .jobsite-camera-actions button {
     width: 100%;
   }
 
