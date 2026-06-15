@@ -2806,7 +2806,7 @@ function LogoLockup() {
         <img src="/brand/rivt-lockup-dark-transparent.png" alt="" />
       </picture>
       <div className="rivt-copy">
-        <span>{brandConfig.productCategory}</span>
+        <span>{brandConfig.tagline}</span>
       </div>
     </div>
   );
@@ -2957,7 +2957,7 @@ function OnboardingFlow({
               </div>
               <div>
                 <strong>{brandConfig.appName}</strong>
-                <span>{brandConfig.productCategory}</span>
+                <span>{brandConfig.tagline}</span>
               </div>
             </div>
             <ThemeToggle themeMode={themeMode} onToggleTheme={onToggleTheme} />
@@ -3444,10 +3444,10 @@ function Sidebar({
         <div className="brand-mark">
           <RivtMark />
         </div>
-        <div>
-          <strong>{brandConfig.appName}</strong>
-          <span>{brandConfig.productCategory}</span>
-        </div>
+                <div>
+                  <strong>{brandConfig.appName}</strong>
+                  <span>{brandConfig.tagline}</span>
+                </div>
       </div>
 
       <nav className="nav-list" aria-label="Primary">

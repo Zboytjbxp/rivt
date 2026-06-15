@@ -3,10 +3,10 @@ export const brandConfig = {
   appSlug: "rivt",
   productCategory: "Professional trades network",
   betaLabel: "Founding Jacksonville beta",
-  tagline: "Where Skilled Trades Connect",
+  tagline: "Connect. Build. Grow.",
   heroHeadline: "RIVT",
   heroBody:
-    "Where Skilled Trades Connect. Built for contractors, subcontractors, crews, and skilled tradespeople who need work, people, records, and tools in one place.",
+    "Connect. Build. Grow. Built for contractors, subcontractors, crews, and skilled tradespeople who need work, people, records, and tools in one place.",
   missionLine: "The professional network for skilled trades.",
   pricing: {
     betaPlan: {
