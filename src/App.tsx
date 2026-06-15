@@ -2776,29 +2776,31 @@ function AuthGate({
             const provider = providers[key];
             const ok = provider?.ok ?? (key === "email");
             const Icon = label;
-              return (
-                <button
-                  type="button"
-                  key={key}
-                  className={[ok ? "" : "disabled", key === "google" ? "google-auth-button" : ""].filter(Boolean).join(" ")}
-                  title={ok ? provider?.purpose ?? key : `Setup required: ${provider?.missing.join(", ") ?? "provider keys"}`}
-                  onClick={() => {
-                    if (!ok) return;
-                    if (key === "google") {
+            const providerLabel =
+              key === "google" ? "Google" : key === "facebook" ? "Facebook" : key === "apple" ? "Apple" : "Email";
+
+            return (
+              <button
+                type="button"
+                key={key}
+                className={ok ? "" : "disabled"}
+                title={ok ? provider?.purpose ?? key : `Setup required: ${provider?.missing.join(", ") ?? "provider keys"}`}
+                onClick={() => {
+                  if (!ok) return;
+                  if (key === "google") {
                     window.location.assign(apiPath("/api/auth/google/start"));
                     return;
                   }
                   if (key === "email") {
                     onModeChange(mode);
                   }
-                  }}
-                >
-                  <Icon />
-                  {key === "google" && <span>Google</span>}
-                  <span className="sr-only">{key}</span>
-                </button>
-              );
-            })}
+                }}
+              >
+                <Icon />
+                <span>{providerLabel}</span>
+              </button>
+            );
+          })}
         </div>
 
         <div className="auth-toggle">
@@ -3489,11 +3491,14 @@ function Sidebar({
   profile: AccountProfile;
   onNavigate: (view: NavLabel) => void;
 }) {
-  const primaryLabels: NavLabel[] = ["Home", "Marketplace", "Records", "Tools", "My Crew", "Messages"];
+  const [moreOpen, setMoreOpen] = useState(false);
+  const primaryLabels: NavLabel[] = ["Home", "Marketplace", "Records", "Tools", "Messages"];
   const visibleItems = visibleNavItems(role);
   const primaryItems = primaryLabels
     .map((label) => visibleItems.find((item) => item.label === label))
     .filter((item): item is (typeof visibleItems)[number] => Boolean(item));
+  const secondaryItems = visibleItems.filter((item) => !primaryLabels.includes(item.label));
+  const moreSelected = moreOpen || secondaryItems.some((item) => item.label === activeView);
   const displayLabel: Partial<Record<NavLabel, string>> = {
     Marketplace: "Work",
     "My Crew": "Network",
@@ -3527,11 +3532,43 @@ function Sidebar({
             </button>
           );
         })}
-        <button type="button" className={activeView === "Settings" ? "nav-item active" : "nav-item"} onClick={() => onNavigate("Settings")}>
-          <ShieldCheck size={18} />
-          <span>Settings</span>
+        <button
+          type="button"
+          className={moreSelected ? "nav-item active" : "nav-item"}
+          aria-expanded={moreOpen}
+          onClick={() => setMoreOpen((current) => !current)}
+        >
+          <ChevronDown size={18} />
+          <span>More</span>
         </button>
       </nav>
+
+      {moreOpen && (
+        <div className="sidebar-more-sheet" role="menu" aria-label="More sections">
+          <div className="sidebar-more-heading">
+            <strong>More in RIVT</strong>
+            <span>Job management, compliance, account, and admin</span>
+          </div>
+          {secondaryItems.map((item) => {
+            const Icon = item.icon;
+            return (
+              <button
+                type="button"
+                key={item.label}
+                role="menuitem"
+                className={activeView === item.label ? "selected" : ""}
+                onClick={() => {
+                  setMoreOpen(false);
+                  onNavigate(item.label);
+                }}
+              >
+                <Icon size={16} />
+                <span>{item.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       <div className="sidebar-job-card">
         <span>Active work order</span>

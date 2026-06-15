@@ -3,6 +3,16 @@
   font-family:
     "Segoe UI Variable Display", "Segoe UI Variable", "Segoe UI", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
     sans-serif;
+  --weight-body: 400;
+  --weight-semibold: 600;
+  --weight-label: 800;
+  --text-xs: 11px;
+  --text-sm: 12px;
+  --text-base: 14px;
+  --text-md: 16px;
+  --text-lg: 20px;
+  --text-xl: 26px;
+  --text-2xl: 34px;
   --bg: #f4f5f4;
   --surface: #ffffff;
   --surface-soft: #f3f5f5;
@@ -43,30 +53,6 @@ body {
   color: var(--text);
 }
 
-body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  opacity: 0.18;
-  background:
-    repeating-linear-gradient(
-      90deg,
-      rgba(8, 13, 16, 0.018) 0,
-      rgba(8, 13, 16, 0.018) 1px,
-      transparent 1px,
-      transparent 12px
-    ),
-    repeating-linear-gradient(
-      0deg,
-      rgba(8, 13, 16, 0.014) 0,
-      rgba(8, 13, 16, 0.014) 1px,
-      transparent 1px,
-      transparent 12px
-    );
-}
-
 #root {
   position: relative;
   z-index: 1;
@@ -95,7 +81,7 @@ button:focus-visible,
 input:focus-visible,
 select:focus-visible,
 textarea:focus-visible {
-  outline: 2px solid rgba(11, 114, 207, 0.52);
+  outline: 2px solid rgba(255, 106, 0, 0.72);
   outline-offset: 2px;
 }
 
@@ -171,7 +157,7 @@ textarea:focus-visible {
 .trust-check-grid span,
 .auth-methods button {
   font-size: 12px;
-  font-weight: 850;
+  font-weight: 800;
 }
 
 .onboarding-hero-copy > span {
@@ -268,23 +254,23 @@ textarea:focus-visible {
 }
 
 .auth-card {
-  width: min(760px, 100%);
+  width: min(540px, 100%);
   display: grid;
   gap: 18px;
-  padding: 30px;
-  border: 1px solid rgba(255, 255, 255, 0.09);
+  padding: 32px 28px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-left: 3px solid #ff6a00;
   border-radius: 12px;
-  background:
-    linear-gradient(180deg, rgba(16, 20, 22, 0.96), rgba(8, 11, 12, 0.98));
+  background: #0d1114;
   color: #edf4f6;
   box-shadow:
-    0 24px 70px rgba(0, 0, 0, 0.52),
-    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    0 28px 72px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.03);
 }
 
 .auth-card h1 {
   margin: 0;
-  font-size: 31px;
+  font-size: var(--text-2xl);
   line-height: 1.02;
   letter-spacing: 0;
 }
@@ -297,12 +283,7 @@ textarea:focus-visible {
 }
 
 .auth-card::before {
-  content: "";
-  display: block;
-  width: 100%;
-  height: 1px;
-  margin-bottom: 2px;
-  background: linear-gradient(90deg, transparent, rgba(255, 106, 0, 0.45), transparent);
+  display: none;
 }
 
 .auth-card > .rivt-lockup {
@@ -343,14 +324,18 @@ textarea:focus-visible {
 .auth-provider-grid button,
 .auth-toggle button {
   display: grid;
+  grid-template-columns: auto auto;
   place-items: center;
+  justify-content: center;
+  gap: 8px;
   min-height: 46px;
-  border: 1px solid rgba(255, 255, 255, 0.09);
+  padding: 0 14px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: var(--radius);
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.02));
+    linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.03));
   color: #edf4f6;
-  font-weight: 850;
+  font-weight: var(--weight-label);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
   transition:
     transform 0.15s ease,
@@ -359,22 +344,16 @@ textarea:focus-visible {
     box-shadow 0.15s ease;
 }
 
-.auth-provider-grid button.google-auth-button {
-  grid-template-columns: auto auto;
-  gap: 8px;
-  justify-content: center;
-}
-
-.auth-provider-grid button.google-auth-button span:not(.sr-only) {
-  font-size: 12px;
-  font-weight: 850;
-  letter-spacing: 0;
-}
-
 .auth-provider-grid button svg {
   width: 20px;
   height: 20px;
   color: #fff;
+}
+
+.auth-provider-grid button span {
+  font-size: 12px;
+  font-weight: var(--weight-label);
+  letter-spacing: 0;
 }
 
 .auth-provider-grid button:hover,
@@ -476,6 +455,7 @@ textarea:focus-visible {
   background: linear-gradient(180deg, #ff7a1a, #ff6500);
   color: #fff;
   box-shadow: 0 14px 28px rgba(255, 106, 0, 0.24);
+  font-weight: var(--weight-label);
 }
 
 .auth-shell .primary-action:hover {
@@ -600,7 +580,7 @@ textarea:focus-visible {
   gap: 6px;
   color: var(--muted);
   font-size: 12px;
-  font-weight: 850;
+  font-weight: 800;
 }
 
 .onboarding-form-grid input {
@@ -624,7 +604,7 @@ textarea:focus-visible {
 .specialty-picker button {
   padding: 0 12px;
   font-size: 12px;
-  font-weight: 850;
+  font-weight: 800;
 }
 
 .specialty-expander {
@@ -638,7 +618,7 @@ textarea:focus-visible {
   background: var(--surface-soft);
   color: var(--muted);
   font-size: 12px;
-  font-weight: 850;
+  font-weight: 800;
 }
 
 .specialty-expander.secondary {
@@ -809,7 +789,7 @@ textarea:focus-visible {
   display: block;
   color: #ff8a1d;
   font-size: 11px;
-  font-weight: 850;
+  font-weight: 800;
   letter-spacing: 0.12em;
   text-transform: uppercase;
 }
@@ -857,7 +837,7 @@ textarea:focus-visible {
 .auth-hero-copy span {
   color: #ffae73;
   font-size: 12px;
-  font-weight: 850;
+  font-weight: 800;
   letter-spacing: 0.12em;
   text-transform: uppercase;
 }
@@ -896,7 +876,7 @@ textarea:focus-visible {
 .auth-feature-pill span {
   color: #e8f0f3;
   font-size: 12px;
-  font-weight: 850;
+  font-weight: 800;
   letter-spacing: 0.02em;
   text-transform: uppercase;
 }
@@ -914,7 +894,7 @@ textarea:focus-visible {
   background: rgba(255, 255, 255, 0.07);
   color: #eaf2f5;
   font-size: 12px;
-  font-weight: 850;
+  font-weight: 800;
   letter-spacing: 0;
   white-space: nowrap;
 }
@@ -986,6 +966,55 @@ textarea:focus-visible {
   color: var(--green);
 }
 
+.sidebar-more-sheet {
+  display: grid;
+  gap: 8px;
+  margin-top: -2px;
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.sidebar-more-heading {
+  display: grid;
+  gap: 2px;
+  padding: 2px 2px 6px;
+}
+
+.sidebar-more-heading strong {
+  color: #fff;
+  font-size: 14px;
+  line-height: 1.2;
+}
+
+.sidebar-more-heading span {
+  color: #aebdc4;
+  font-size: 11px;
+  font-weight: 760;
+}
+
+.sidebar-more-sheet button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 42px;
+  padding: 0 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  color: #f4f7f8;
+  font-size: 12px;
+  font-weight: 800;
+  text-align: left;
+}
+
+.sidebar-more-sheet button.selected,
+.sidebar-more-sheet button:hover {
+  border-color: rgba(255, 106, 0, 0.24);
+  background: rgba(255, 106, 0, 0.08);
+}
+
 .license-card {
   display: none;
 }
@@ -1047,7 +1076,7 @@ textarea:focus-visible {
   color: var(--green);
   font-size: 12px;
   font-style: normal;
-  font-weight: 850;
+  font-weight: 800;
 }
 
 .sidebar-progress i {
@@ -1073,7 +1102,7 @@ textarea:focus-visible {
   background: transparent;
   color: #fff;
   font-size: 12px;
-  font-weight: 850;
+  font-weight: 800;
 }
 
 .sidebar-pro-card span {
@@ -1147,7 +1176,7 @@ textarea:focus-visible {
   background: transparent;
   color: var(--muted);
   font-size: 13px;
-  font-weight: 850;
+  font-weight: 800;
 }
 
 .role-switch button.selected {
@@ -1190,7 +1219,7 @@ textarea:focus-visible {
   min-height: 42px;
   border-radius: var(--radius);
   font-size: 13px;
-  font-weight: 850;
+  font-weight: 800;
   letter-spacing: 0;
 }
 
@@ -1382,7 +1411,7 @@ textarea:focus-visible {
 .activity-item span {
   color: var(--muted);
   font-size: 11px;
-  font-weight: 850;
+  font-weight: 800;
   text-transform: uppercase;
 }
 
@@ -1409,7 +1438,7 @@ textarea:focus-visible {
   background: var(--surface);
   color: var(--text);
   font-size: 12px;
-  font-weight: 850;
+  font-weight: 800;
 }
 
 .quick-actions button:first-child {
@@ -1569,7 +1598,7 @@ textarea:focus-visible {
 .theme-mode-row > span {
   color: var(--muted);
   font-size: 12px;
-  font-weight: 850;
+  font-weight: 800;
   text-transform: uppercase;
 }
 
@@ -1754,7 +1783,7 @@ textarea:focus-visible {
   justify-self: start;
   border-radius: 5px;
   font-size: 11px;
-  font-weight: 850;
+  font-weight: 800;
 }
 
 .status-chip {
@@ -1796,7 +1825,7 @@ textarea:focus-visible {
 .info-item span {
   color: var(--muted);
   font-size: 12px;
-  font-weight: 850;
+  font-weight: 800;
 }
 
 .info-item strong {
@@ -1818,7 +1847,7 @@ textarea:focus-visible {
 .rating-row strong {
   color: var(--muted);
   font-size: 12px;
-  font-weight: 850;
+  font-weight: 800;
 }
 
 .rating-row button {
@@ -1902,7 +1931,7 @@ textarea:focus-visible {
   gap: 6px;
   color: var(--muted);
   font-size: 12px;
-  font-weight: 850;
+  font-weight: 800;
 }
 
 .post-modal input,
@@ -1978,7 +2007,7 @@ textarea:focus-visible {
 .review-row small {
   color: var(--muted);
   font-size: 11px;
-  font-weight: 850;
+  font-weight: 800;
 }
 
 .ops-metric span,
@@ -2124,7 +2153,7 @@ textarea:focus-visible {
   background: var(--surface);
   color: var(--text);
   font-size: 12px;
-  font-weight: 850;
+  font-weight: 800;
 }
 
 .ops-actions button:first-child,
@@ -2177,7 +2206,7 @@ textarea:focus-visible {
 .record-upload-card span {
   color: var(--muted);
   font-size: 11px;
-  font-weight: 850;
+  font-weight: 800;
   text-transform: uppercase;
 }
 
@@ -2208,7 +2237,7 @@ textarea:focus-visible {
   color: var(--text);
   cursor: pointer;
   font-size: 12px;
-  font-weight: 850;
+  font-weight: 800;
 }
 
 .upload-button:has(input:disabled) {
@@ -2250,7 +2279,7 @@ textarea:focus-visible {
 .network-opening-row span {
   color: var(--muted);
   font-size: 11px;
-  font-weight: 850;
+  font-weight: 800;
   text-transform: uppercase;
 }
 
@@ -2400,7 +2429,7 @@ textarea:focus-visible {
 .records-kpi span {
   color: var(--muted);
   font-size: 11px;
-  font-weight: 850;
+  font-weight: 800;
   text-transform: uppercase;
 }
 
@@ -2446,7 +2475,7 @@ textarea:focus-visible {
   background: var(--surface);
   color: var(--text);
   font-size: 12px;
-  font-weight: 850;
+  font-weight: 800;
 }
 
 .records-toolbar button:hover {
@@ -2463,7 +2492,7 @@ textarea:focus-visible {
 .record-timeline-panel span {
   color: var(--muted);
   font-size: 11px;
-  font-weight: 850;
+  font-weight: 800;
   text-transform: uppercase;
 }
 
@@ -2500,7 +2529,7 @@ textarea:focus-visible {
   background: var(--surface-soft);
   color: var(--text);
   font-size: 12px;
-  font-weight: 850;
+  font-weight: 800;
   text-transform: none;
 }
 
@@ -2590,7 +2619,7 @@ textarea:focus-visible {
   text-align: right;
   font-style: normal;
   font-size: 12px;
-  font-weight: 850;
+  font-weight: 800;
 }
 
 .record-timeline-item.accent em {
@@ -2668,7 +2697,7 @@ textarea:focus-visible {
   background: var(--green-soft);
   color: var(--green-deep);
   font-size: 12px;
-  font-weight: 850;
+  font-weight: 800;
   text-decoration: none;
 }
 
@@ -2738,7 +2767,7 @@ textarea:focus-visible {
   background: var(--green-soft);
   color: var(--green-deep);
   font-size: 12px;
-  font-weight: 850;
+  font-weight: 800;
 }
 
 .empty-ledger {
@@ -2816,7 +2845,7 @@ textarea:focus-visible {
   position: relative;
   color: var(--muted);
   font-size: 11px;
-  font-weight: 850;
+  font-weight: 800;
   text-transform: uppercase;
 }
 
@@ -2957,7 +2986,7 @@ textarea:focus-visible {
   background: var(--green-soft);
   color: var(--green-deep);
   font-size: 12px;
-  font-weight: 850;
+  font-weight: 800;
 }
 
 .modal-toggle {
@@ -3124,7 +3153,7 @@ textarea:focus-visible {
 .crew-score span {
   color: var(--muted);
   font-size: 12px;
-  font-weight: 850;
+  font-weight: 800;
 }
 
 .message-workspace {
@@ -3276,7 +3305,7 @@ textarea:focus-visible {
 .provider-check-card span {
   color: var(--muted);
   font-size: 11px;
-  font-weight: 850;
+  font-weight: 800;
   text-transform: uppercase;
 }
 
@@ -3363,7 +3392,7 @@ textarea:focus-visible {
   background: var(--surface);
   color: var(--text);
   font-size: 12px;
-  font-weight: 850;
+  font-weight: 800;
 }
 
 .provider-check-card button:disabled {
@@ -3405,7 +3434,7 @@ textarea:focus-visible {
 .document-checklist button span,
 .training-list button span {
   font-size: 13px;
-  font-weight: 850;
+  font-weight: 800;
 }
 
 .document-checklist button strong,
@@ -3529,7 +3558,7 @@ textarea:focus-visible {
 .calculator-breakdown span {
   color: var(--muted);
   font-size: 11px;
-  font-weight: 850;
+  font-weight: 800;
   text-transform: uppercase;
 }
 
@@ -3588,7 +3617,7 @@ textarea:focus-visible {
   background: var(--surface);
   color: var(--text);
   font-size: 12px;
-  font-weight: 850;
+  font-weight: 800;
   white-space: nowrap;
 }
 
@@ -3635,7 +3664,7 @@ textarea:focus-visible {
 .calculator-result-hero small {
   color: var(--green-deep);
   font-size: 13px;
-  font-weight: 850;
+  font-weight: 800;
 }
 
 .calculator-result-grid {
@@ -3825,7 +3854,7 @@ textarea:focus-visible {
   color: #ffb27d;
   font-style: normal;
   font-size: 12px;
-  font-weight: 850;
+  font-weight: 800;
   font-variant-numeric: tabular-nums;
 }
 
@@ -3858,7 +3887,7 @@ textarea:focus-visible {
 .dashboard-job small {
   color: var(--muted);
   font-size: 12px;
-  font-weight: 850;
+  font-weight: 800;
   font-variant-numeric: tabular-nums;
 }
 
@@ -3937,7 +3966,7 @@ textarea:focus-visible {
   color: var(--green-deep);
   font-size: 12px;
   font-style: normal;
-  font-weight: 850;
+  font-weight: 800;
 }
 
 .dashboard-job em.warning {
@@ -3999,7 +4028,7 @@ textarea:focus-visible {
   background: var(--surface);
   color: var(--text);
   font-size: 13px;
-  font-weight: 850;
+  font-weight: 800;
 }
 
 .home-hero-copy {
@@ -4028,7 +4057,7 @@ textarea:focus-visible {
 .tool-result span {
   color: var(--muted);
   font-size: 11px;
-  font-weight: 850;
+  font-weight: 800;
   text-transform: uppercase;
 }
 
@@ -4080,7 +4109,7 @@ textarea:focus-visible {
   background: var(--surface);
   color: var(--text);
   font-size: 12px;
-  font-weight: 850;
+  font-weight: 800;
   white-space: nowrap;
 }
 
@@ -4279,7 +4308,7 @@ textarea:focus-visible {
   padding: 10px 12px;
   color: var(--amber);
   font-size: 12px;
-  font-weight: 850;
+  font-weight: 800;
 }
 
 .shop-talk-layout {
@@ -4476,7 +4505,7 @@ textarea:focus-visible {
   gap: 6px;
   color: var(--muted);
   font-size: 12px;
-  font-weight: 850;
+  font-weight: 800;
 }
 
 .invoice-form-grid input,
@@ -4509,7 +4538,7 @@ textarea:focus-visible {
 .invoice-breakdown span {
   color: var(--muted);
   font-size: 11px;
-  font-weight: 850;
+  font-weight: 800;
   text-transform: uppercase;
 }
 
@@ -4613,7 +4642,7 @@ textarea:focus-visible {
   background: var(--surface);
   color: var(--text);
   font-size: 12px;
-  font-weight: 850;
+  font-weight: 800;
 }
 
 .invoice-actions button:disabled {
@@ -4736,7 +4765,7 @@ textarea:focus-visible {
   border-radius: var(--radius);
   background: var(--surface-soft);
   color: var(--text);
-  font-weight: 850;
+  font-weight: 800;
 }
 
 .jobsite-camera-actions .primary-action {
@@ -4768,7 +4797,7 @@ textarea:focus-visible {
   gap: 6px;
   color: var(--muted);
   font-size: 12px;
-  font-weight: 850;
+  font-weight: 800;
 }
 
 .tool-input-grid input,
@@ -4827,7 +4856,7 @@ textarea:focus-visible {
   color: var(--green-deep);
   font-size: 11px;
   font-style: normal;
-  font-weight: 850;
+  font-weight: 800;
 }
 
 .crew-actions,
@@ -4903,7 +4932,7 @@ textarea:focus-visible {
 .modern-talent-card span {
   color: var(--muted);
   font-size: 11px;
-  font-weight: 850;
+  font-weight: 800;
   text-transform: uppercase;
 }
 
@@ -4945,7 +4974,7 @@ textarea:focus-visible {
   background: var(--surface);
   color: var(--text);
   font-size: 12px;
-  font-weight: 850;
+  font-weight: 800;
 }
 
 .modern-command-actions button:first-child {
@@ -5141,7 +5170,7 @@ textarea:focus-visible {
   background: var(--surface-soft);
   color: #40535c;
   font-size: 11px;
-  font-weight: 850;
+  font-weight: 800;
   overflow-wrap: anywhere;
 }
 
@@ -5802,7 +5831,7 @@ textarea:focus-visible {
     background: transparent;
     color: #fff;
     font-size: 9px;
-    font-weight: 850;
+    font-weight: 800;
     line-height: 1.05;
   }
 
@@ -6124,7 +6153,7 @@ textarea:focus-visible {
   .mobile-shop-prompt small {
     color: #98a8ae;
     font-size: 10px;
-    font-weight: 850;
+    font-weight: 800;
     letter-spacing: 0;
     text-transform: uppercase;
   }
@@ -6261,7 +6290,7 @@ textarea:focus-visible {
       linear-gradient(180deg, rgba(19, 22, 24, 0.92), rgba(11, 14, 15, 0.98));
     color: #edf4f6;
     font-size: 12px;
-    font-weight: 850;
+    font-weight: 800;
   }
 
   .mobile-action-grid .primary-action {
@@ -6304,7 +6333,7 @@ textarea:focus-visible {
     background: rgba(255, 255, 255, 0.04);
     color: #b8c5c9;
     font-size: 11px;
-    font-weight: 850;
+    font-weight: 800;
   }
 
   .mobile-next-row {
@@ -6640,3 +6669,4 @@ textarea:focus-visible {
     grid-template-columns: 1fr;
   }
 }
+
