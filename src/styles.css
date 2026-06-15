@@ -19,8 +19,8 @@
   --text: #0d1114;
   --muted: #5f686e;
   --faint: #88959b;
-  --border: #dde2e4;
-  --border-strong: #c6ced2;
+  --border: #e3e8ea;
+  --border-strong: #cad3d7;
   --nav: #080d10;
   --nav-deep: #030506;
   --green: #ff6a00;
@@ -32,9 +32,9 @@
   --amber-soft: #fff2df;
   --danger-soft: #ffecec;
   --topbar: rgba(255, 255, 255, 0.92);
-  --radius: 8px;
+  --radius: 10px;
   --shadow: 0 20px 48px rgba(13, 17, 20, 0.09);
-  --shadow-soft: 0 10px 26px rgba(13, 17, 20, 0.05);
+  --shadow-soft: 0 10px 22px rgba(13, 17, 20, 0.045);
 }
 
 * {
@@ -5498,6 +5498,143 @@ textarea:focus-visible {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
+}
+
+.dashboard-card,
+.home-panel,
+.news-feature,
+.news-row,
+.home-talk-row,
+.home-job-row,
+.shoutout-row,
+.home-alert,
+.answer-card,
+.shop-post-card,
+.answer-composer,
+.record-summary-panel,
+.record-timeline-panel,
+.record-gallery-card,
+.record-upload-card,
+.admin-card,
+.admin-panel,
+.admin-row,
+.message-bubble,
+.message-composer,
+.tool-card,
+.tools-command,
+.jobsite-camera-card,
+.selected-job-summary .info-item,
+.invoice-editor,
+.invoice-preview,
+.invoice-party-grid div,
+.invoice-total-card,
+.invoice-breakdown div,
+.modern-metric,
+.modern-command-actions,
+.modern-job-queue,
+.modern-detail-panel,
+.modern-detail-section,
+.modern-readiness-grid .info-item,
+.modern-talent-card,
+.modern-note {
+  border-color: rgba(221, 228, 231, 0.7);
+  box-shadow: 0 12px 28px rgba(13, 17, 20, 0.035);
+}
+
+.dashboard-card,
+.home-panel,
+.invoice-editor,
+.invoice-preview,
+.modern-job-queue,
+.modern-detail-panel {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 249, 249, 0.98));
+}
+
+.news-feature,
+.news-row,
+.home-talk-row,
+.home-job-row,
+.shoutout-row,
+.home-alert,
+.answer-card,
+.shop-post-card,
+.answer-composer,
+.record-summary-panel,
+.record-timeline-panel,
+.record-gallery-card,
+.record-upload-card,
+.admin-card,
+.admin-panel,
+.admin-row,
+.message-bubble,
+.message-composer,
+.tool-card,
+.tools-command,
+.jobsite-camera-card,
+.selected-job-summary .info-item,
+.invoice-party-grid div,
+.invoice-total-card,
+.invoice-breakdown div,
+.modern-metric,
+.modern-command-actions,
+.modern-detail-section,
+.modern-readiness-grid .info-item,
+.modern-talent-card,
+.modern-note {
+  background: var(--surface-soft);
+}
+
+.modern-section-heading,
+.invoice-preview-header,
+.shop-question-header,
+.record-summary-panel,
+.record-timeline-panel,
+.home-panel-heading,
+.tool-card-heading,
+.dashboard-card-head,
+.message-thread-head,
+.settings-section-heading {
+  border-bottom-color: rgba(221, 228, 231, 0.72);
+}
+
+.record-action-grid article,
+.record-activity-strip article,
+.record-gallery-card::before,
+.project-visual,
+.dashboard-job-visual::after,
+.tools-command::after,
+.modern-detail-hero::after {
+  border-color: rgba(8, 13, 16, 0.08);
+}
+
+.dashboard-job,
+.modern-job-card,
+.record-timeline-item,
+.message-bubble,
+.admin-row,
+.record-upload-card,
+.invoice-total-card,
+.answer-composer,
+.modern-detail-section {
+  border-radius: 12px;
+}
+
+.modern-job-card.selected,
+.home-job-row:hover,
+.home-talk-row:hover,
+.shop-post-card:hover,
+.shop-post-card.selected {
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 106, 0, 0.12),
+    0 12px 24px rgba(13, 17, 20, 0.05);
+}
+
+.record-upload-card.setup_required,
+.record-upload-card.offline,
+.admin-row.flagged,
+.answer-card.verified,
+.modern-talent-card {
+  background: linear-gradient(180deg, rgba(255, 250, 246, 0.98), rgba(255, 245, 236, 0.98));
 }
 
 @media (max-width: 1300px) {
