@@ -1,5 +1,7 @@
 import { type ChangeEvent, type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import {
+  AlertTriangle,
+  ArrowLeft,
   Award,
   BadgeCheck,
   Bell,
@@ -7,8 +9,10 @@ import {
   BriefcaseBusiness,
   Calculator,
   CalendarClock,
-  ChevronDown,
+  CheckCircle,
   CheckCircle2,
+  ChevronDown,
+  ChevronRight,
   ClipboardCheck,
   ClipboardList,
   CreditCard,
@@ -28,6 +32,7 @@ import {
   Newspaper,
   Plus,
   ReceiptText,
+  RefreshCw,
   Search,
   Send,
   Share2,
@@ -43,10 +48,12 @@ import {
   Sun,
   ThumbsDown,
   ThumbsUp,
+  Trash2,
   UserCheck,
   Users,
   Wrench,
   X,
+  XCircle,
 } from "lucide-react";
 import {
   difficultyOptions,
@@ -148,6 +155,31 @@ interface PaymentRecord {
   date: string;
 }
 
+interface InvoiceLineItem {
+  id: string;
+  type: "labor" | "material" | "service" | "discount" | "deposit";
+  description: string;
+  quantity: number;
+  unit: string;
+  unitPrice: number;
+  taxable: boolean;
+}
+
+interface ConstructionMeasure {
+  feet: number;
+  inches: number;
+  eighths: number; // 0-8 representing 0, 1/8, 2/8, etc.
+}
+
+interface MaterialEstimate {
+  id: string;
+  name: string;
+  quantity: number;
+  unit: string;
+  wastePercent: number;
+  costPerUnit?: number;
+}
+
 interface NewsItem {
   id: number;
   headline: string;
@@ -206,6 +238,7 @@ interface CommunityPost {
   trade: Trade | "General";
   author: string;
   badge?: "Community Prompt" | "Recommendation";
+  flair?: "Question" | "Discussion" | "Code Talk" | "Compliance" | "Tip" | "Humor";
   body: string;
   upvotes: number;
   downvotes: number;
@@ -213,6 +246,8 @@ interface CommunityPost {
   createdAt: string;
   status: "Open" | "Verified Fix" | "Needs a pro answer";
 }
+
+type PostFlair = "Question" | "Discussion" | "Code Talk" | "Compliance" | "Tip" | "Humor";
 
 interface CommunityReport {
   id: number;
@@ -277,6 +312,7 @@ interface PersistedAppState {
   communityPosts: CommunityPost[];
   communityReports: CommunityReport[];
   shoutOuts: ShoutOut[];
+  safetyQuizResults?: Record<string, SafetyQuizResult>;
 }
 
 const LEGACY_STORAGE_KEY = `${brandConfig.appSlug}-beta-state-v2`;
@@ -438,7 +474,7 @@ const pageCopy: Record<NavLabel, { title: string; description: string }> = {
   },
   "Shop Talk": {
     title: "Shop Talk",
-    description: "Ask field questions, share fixes, and recognize tradespeople who help.",
+    description: "Ask field questions and get answers from tradespeople who've solved it.",
   },
   Tools: {
     title: "Tools",
@@ -482,11 +518,11 @@ const pageCopy: Record<NavLabel, { title: string; description: string }> = {
   },
   Feedback: {
     title: "Feedback",
-    description: "Capture beta customer notes and turn them into product decisions.",
+    description: "Tell us what's working, what's confusing, and what you need next.",
   },
   Settings: {
     title: "Settings",
-    description: "Manage themes, account details, trust setup, and provider readiness.",
+    description: "Review account status, trust readiness, and launch checklist.",
   },
   Admin: {
     title: "Admin",
@@ -714,6 +750,455 @@ const trainingModules = [
   "Dust containment",
   "Customer-site conduct",
 ];
+
+const QUIZ_PASS_SCORE = 80;
+
+interface QuizQuestion {
+  id: number;
+  text: string;
+  options: string[];
+  correctIndex: number;
+  explanation: string;
+}
+
+interface SafetyQuiz {
+  id: string;
+  title: string;
+  oshaRef: string;
+  description: string;
+  questions: QuizQuestion[];
+}
+
+interface SafetyQuizResult {
+  quizId: string;
+  score: number;
+  passed: boolean;
+  completedAt: string;
+  attempts: number;
+}
+
+const safetyQuizData: SafetyQuiz[] = [
+  {
+    id: "ladder-safety",
+    title: "Ladder Safety",
+    oshaRef: "29 CFR 1926.1053",
+    description: "Setup angle, 3-point contact, load ratings, and inspection.",
+    questions: [
+      {
+        id: 1,
+        text: "OSHA 1926.1053 requires extension ladders to be set up at a pitch of:",
+        options: [
+          "1 foot out for every 3 feet of height (1:3)",
+          "1 foot out for every 4 feet of height (1:4)",
+          "1 foot out for every 6 feet of height (1:6)",
+          "Flush against the wall (1:10)",
+        ],
+        correctIndex: 1,
+        explanation: "The 4:1 rule — ladder base 1 foot out per 4 feet of height — gives approximately 75° and is required by OSHA 1926.1053(b)(5).",
+      },
+      {
+        id: 2,
+        text: "When using a ladder to access a roof or elevated landing, the ladder must extend above the landing by at least:",
+        options: ["1 foot", "2 feet", "3 feet", "5 feet"],
+        correctIndex: 2,
+        explanation: "OSHA 1926.1053(b)(1) requires ladders to extend at least 3 feet above an upper landing surface.",
+      },
+      {
+        id: 3,
+        text: "\"3-point contact\" on a ladder means:",
+        options: [
+          "Three workers may share a ladder simultaneously",
+          "Two hands and one foot, or two feet and one hand, always in contact with the ladder",
+          "The ladder must have three rungs between each worker",
+          "Three separate anchor points secure the ladder top",
+        ],
+        correctIndex: 1,
+        explanation: "3-point contact (two hands + one foot, or two feet + one hand) is the standard for safe climbing — OSHA 1926.1053(b)(22).",
+      },
+      {
+        id: 4,
+        text: "A Type IA ladder is rated for a maximum load of:",
+        options: ["225 lbs", "250 lbs", "300 lbs", "375 lbs"],
+        correctIndex: 2,
+        explanation: "Type IA (Extra Heavy Duty) is rated for 300 lbs. Type I is 250 lbs; Type II is 225 lbs. Type IAA is 375 lbs.",
+      },
+      {
+        id: 5,
+        text: "On a stepladder, workers are prohibited from:",
+        options: [
+          "Using one hand on the rails while carrying a tool belt",
+          "Standing on the top two rungs or the pail shelf",
+          "Climbing while wearing work boots",
+          "Descending the ladder facing away from it",
+        ],
+        correctIndex: 1,
+        explanation: "OSHA prohibits standing on the top two rungs of a stepladder or the pail shelf — these are not designed as standing surfaces (1926.1053(b)(13)).",
+      },
+      {
+        id: 6,
+        text: "Portable ladders must be inspected:",
+        options: [
+          "Once a month by a competent person",
+          "Annually by a third-party inspector",
+          "Before each use",
+          "Only after a fall or impact event",
+        ],
+        correctIndex: 2,
+        explanation: "OSHA 1926.1053(b)(15) requires ladders to be inspected before each use for defects that could cause injury.",
+      },
+    ],
+  },
+  {
+    id: "fall-protection",
+    title: "Fall Protection",
+    oshaRef: "29 CFR 1926.502",
+    description: "Harnesses, anchor points, guardrails, and fall distances.",
+    questions: [
+      {
+        id: 1,
+        text: "In the construction industry, OSHA requires fall protection when a worker is at or above a height of:",
+        options: ["4 feet", "6 feet", "8 feet", "10 feet"],
+        correctIndex: 1,
+        explanation: "OSHA 1926.501(b)(1) requires fall protection at 6 feet or more in the construction industry.",
+      },
+      {
+        id: 2,
+        text: "An anchor point for a personal fall arrest system (PFAS) must be capable of supporting at least:",
+        options: ["2,500 lbs per worker", "3,000 lbs per worker", "5,000 lbs per worker", "7,500 lbs per worker"],
+        correctIndex: 2,
+        explanation: "OSHA 1926.502(d)(15) requires PFAS anchorages to support at least 5,000 lbs per attached worker.",
+      },
+      {
+        id: 3,
+        text: "The top rail of a guardrail system must be at a height of:",
+        options: ["36 ± 3 inches", "42 ± 3 inches", "48 ± 3 inches", "54 ± 3 inches"],
+        correctIndex: 1,
+        explanation: "OSHA 1926.502(b)(1) requires the top edge of guardrails to be 42 inches (± 3 inches) above the walking/working surface.",
+      },
+      {
+        id: 4,
+        text: "Fall protection equipment (harnesses, lanyards, connectors) must be inspected:",
+        options: [
+          "Quarterly by a certified rigger",
+          "Annually, logged in a maintenance book",
+          "Before each use by the user",
+          "Only when visible damage is present",
+        ],
+        correctIndex: 2,
+        explanation: "OSHA 1926.502(d)(21) requires all fall arrest equipment to be inspected before each use for wear, damage, and deterioration.",
+      },
+      {
+        id: 5,
+        text: "When using a self-retracting lifeline (SRL), the device should be positioned:",
+        options: [
+          "At foot level to maximize free fall distance",
+          "Offset 3 feet to one side of the worker",
+          "Directly overhead, as close to plumb as possible",
+          "At waist level to reduce tension",
+        ],
+        correctIndex: 2,
+        explanation: "SRLs are designed to be used directly overhead. Off-axis use increases swing-fall risk and reduces device effectiveness.",
+      },
+      {
+        id: 6,
+        text: "Safety nets used as fall protection must be installed no more than how far below the work surface?",
+        options: ["10 feet", "15 feet", "25 feet", "30 feet"],
+        correctIndex: 3,
+        explanation: "OSHA 1926.502(c)(1) requires safety nets to be installed as close as practicable under the work surface but never more than 30 feet below.",
+      },
+    ],
+  },
+  {
+    id: "electrical-safety",
+    title: "Electrical Safety",
+    oshaRef: "29 CFR 1926.416",
+    description: "GFCI, lockout/tagout, working clearances, and wet conditions.",
+    questions: [
+      {
+        id: 1,
+        text: "At what current level does a GFCI device trip to protect a worker?",
+        options: ["4–6 milliamps", "15 milliamps", "20 milliamps", "30 milliamps"],
+        correctIndex: 0,
+        explanation: "GFCIs trip at 4–6 milliamps — well below the 10 mA threshold that can cause inability to release and 100+ mA that causes ventricular fibrillation.",
+      },
+      {
+        id: 2,
+        text: "The minimum safe approach distance for an unqualified worker near energized overhead lines rated 50 kV or less is:",
+        options: ["3 feet", "6 feet", "10 feet", "25 feet"],
+        correctIndex: 2,
+        explanation: "OSHA 1926.416(a)(1) and 1926.1408 set the limit at 10 feet for voltages up to 50 kV for unqualified workers.",
+      },
+      {
+        id: 3,
+        text: "Lockout/tagout (LOTO) procedures are used to:",
+        options: [
+          "Record energy readings from live circuits",
+          "Ensure machinery cannot be accidentally energized while being serviced",
+          "Replace the function of GFCI protection on outlets",
+          "Label circuits over 240 V",
+        ],
+        correctIndex: 1,
+        explanation: "LOTO (29 CFR 1910.147) controls hazardous energy during service/maintenance so equipment cannot be accidentally started.",
+      },
+      {
+        id: 4,
+        text: "Extension cords used at construction sites must be:",
+        options: [
+          "Listed for indoor use only",
+          "No longer than 100 feet",
+          "3-wire grounded types designed for hard or extra-hard usage",
+          "Replaced monthly regardless of condition",
+        ],
+        correctIndex: 2,
+        explanation: "OSHA 1926.405(a)(2)(ii)(J) requires extension cords on construction sites to be of the 3-wire grounded type rated for hard or extra-hard service.",
+      },
+      {
+        id: 5,
+        text: "The Assured Equipment Grounding Conductor Program (AEGCP) is used as an alternative to:",
+        options: [
+          "Hard hat requirements",
+          "GFCI protection on construction sites",
+          "Lockout/tagout procedures",
+          "Ladder safety inspections",
+        ],
+        correctIndex: 1,
+        explanation: "OSHA 1926.404(b)(1) permits an AEGCP (regular testing/inspection of grounding conductors) as an alternative to GFCI devices at construction sites.",
+      },
+      {
+        id: 6,
+        text: "Before a worker contacts any electrical conductor or circuit part, it must be:",
+        options: [
+          "Rated below 120 V",
+          "De-energized, locked out, and tested to verify it is de-energized",
+          "Covered with electrical tape rated for that voltage",
+          "Tested only if the panel breaker has been off for more than 30 minutes",
+        ],
+        correctIndex: 1,
+        explanation: "OSHA 1926.417 requires de-energizing, locking out, and verifying de-energization before contacting conductors. Tape is not a substitute.",
+      },
+    ],
+  },
+  {
+    id: "ppe-basics",
+    title: "PPE Basics",
+    oshaRef: "29 CFR 1926.95",
+    description: "Employer obligations, head, eye, hand, and respiratory protection.",
+    questions: [
+      {
+        id: 1,
+        text: "Under OSHA 1926.95, who is primarily responsible for providing and paying for required PPE?",
+        options: ["The worker", "The employer", "OSHA directly", "The general contractor's insurance carrier"],
+        correctIndex: 1,
+        explanation: "Employers must provide required PPE at no cost to employees — established by OSHA 1926.95 and reinforced by the 2008 final rule on employer payment.",
+      },
+      {
+        id: 2,
+        text: "A Class C hard hat provides:",
+        options: [
+          "High-voltage electrical protection up to 20,000 V",
+          "Both impact protection and limited low-voltage protection",
+          "Impact protection only — no electrical protection",
+          "Full face protection plus head impact protection",
+        ],
+        correctIndex: 2,
+        explanation: "Class C hard hats protect against impact only. Class E provides electrical protection up to 20,000 V; Class G up to 2,200 V.",
+      },
+      {
+        id: 3,
+        text: "Safety glasses marked \"Z87+\" indicate they meet:",
+        options: [
+          "NIOSH respirator standards for splash protection",
+          "ANSI/ISEA Z87.1 high-impact certification",
+          "UL listing for electrical arc flash",
+          "CE marking for European markets only",
+        ],
+        correctIndex: 1,
+        explanation: "The \"+\" in Z87+ denotes high-impact certification under ANSI/ISEA Z87.1. Glasses without \"+\" meet basic impact only.",
+      },
+      {
+        id: 4,
+        text: "An N95 respirator filters out at least what percentage of airborne particles ≥ 0.3 microns?",
+        options: ["85%", "90%", "95%", "99%"],
+        correctIndex: 2,
+        explanation: "\"N95\" means it filters out at least 95% of airborne particles when properly fitted. \"N\" = not oil-resistant; \"95\" = efficiency level.",
+      },
+      {
+        id: 5,
+        text: "Which glove type provides the best cut resistance for handling sharp sheet metal?",
+        options: [
+          "Thin latex disposable gloves",
+          "Chemical-resistant nitrile gloves",
+          "ANSI A4 or higher cut-resistant gloves",
+          "Standard leather work gloves",
+        ],
+        correctIndex: 2,
+        explanation: "ANSI cut-level A4 or higher gloves (e.g., HDPE or stainless mesh) are designed for cut hazards like sheet metal edges.",
+      },
+      {
+        id: 6,
+        text: "High-visibility (ANSI Class 2 or 3) safety vests are required when working:",
+        options: [
+          "Any time outdoors after 5 PM",
+          "In any confined space",
+          "Near vehicle or equipment traffic as set by the project or jurisdiction",
+          "Only on federal highway projects",
+        ],
+        correctIndex: 2,
+        explanation: "OSHA 1926.201 and MUTCD require high-vis garments near active traffic. Many state and local jurisdictions extend this to any site with moving equipment.",
+      },
+    ],
+  },
+  {
+    id: "tool-safety",
+    title: "Tool Safety",
+    oshaRef: "29 CFR 1926.300",
+    description: "Guards, powder-actuated tools, abrasive wheels, and hand tool condition.",
+    questions: [
+      {
+        id: 1,
+        text: "Portable circular saws and similar rotary tools must be equipped with:",
+        options: [
+          "A two-hand interlock requiring both hands to operate",
+          "A guard that automatically covers the blade when not cutting",
+          "An electronic speed control preventing overspeed",
+          "A built-in voltage tester",
+        ],
+        correctIndex: 1,
+        explanation: "OSHA 1926.304(d) requires portable circular saws to have guards that automatically and instantly return to the covering position when the cut is complete.",
+      },
+      {
+        id: 2,
+        text: "Powder-actuated tools (stud drivers, nail guns fired by a cartridge) may be operated only by workers who are:",
+        options: [
+          "At least 18 years old and hold a general contractor's license",
+          "Trained and qualified per the manufacturer's requirements (and OSHA 1926.302(e)(1))",
+          "Wearing Class E hard hats and cut-resistant gloves",
+          "Supervised by a licensed electrician",
+        ],
+        correctIndex: 1,
+        explanation: "OSHA 1926.302(e)(1) limits powder-actuated tool use to trained workers who have demonstrated competence per the manufacturer's training program.",
+      },
+      {
+        id: 3,
+        text: "A cracked or chipped abrasive wheel (grinding disc) must be:",
+        options: [
+          "Marked with a caution tag and used only for light-duty work",
+          "Removed from service immediately and replaced",
+          "Tested by spinning it freehand before each use",
+          "Returned to the manufacturer for regrading",
+        ],
+        correctIndex: 1,
+        explanation: "OSHA 1926.303(b)(1) requires damaged abrasive wheels to be taken out of service immediately. A cracked wheel can fragment at high speed.",
+      },
+      {
+        id: 4,
+        text: "Pneumatic tools must be disconnected from the air supply:",
+        options: [
+          "Only at the end of each shift",
+          "When the air pressure exceeds 125 PSI",
+          "Before making adjustments, changing attachments, or clearing a jam",
+          "Only when stored overnight",
+        ],
+        correctIndex: 2,
+        explanation: "OSHA 1926.302(b)(3) requires disconnecting the air supply before any adjustment, attachment change, or repair to prevent accidental actuation.",
+      },
+      {
+        id: 5,
+        text: "Hand tools with cracked, broken, or loose handles must be:",
+        options: [
+          "Wrapped in duct tape and reported within 48 hours",
+          "Used only for tasks where torque is minimal",
+          "Tagged out and removed from service immediately",
+          "Replaced at the end of the job",
+        ],
+        correctIndex: 2,
+        explanation: "OSHA 1926.301(a) requires that hand tools be kept in safe condition. Broken handles cause loss of control and must be taken out of service immediately.",
+      },
+      {
+        id: 6,
+        text: "The \"dead man\" (constant-pressure) switch on a power tool is designed to:",
+        options: [
+          "Lock the tool ON for sustained operation without hand fatigue",
+          "Stop the tool automatically when pressure on the trigger is released",
+          "Trigger an emergency shutoff accessible from 10 feet",
+          "Monitor motor temperature and shut down if overheating occurs",
+        ],
+        correctIndex: 1,
+        explanation: "A dead man or constant-pressure switch requires continuous grip to keep the tool running. Releasing it cuts power — a basic safety feature on power tools.",
+      },
+    ],
+  },
+  {
+    id: "hazcom",
+    title: "Hazard Communication",
+    oshaRef: "29 CFR 1910.1200",
+    description: "GHS labels, Safety Data Sheets (SDS), pictograms, and worker training.",
+    questions: [
+      {
+        id: 1,
+        text: "Under OSHA's HazCom 2012 standard (aligned with GHS), a Safety Data Sheet (SDS) must have:",
+        options: ["4 sections", "8 sections", "16 sections", "24 sections"],
+        correctIndex: 2,
+        explanation: "OSHA's HazCom 2012 requires 16 standardized SDS sections (1910.1200(g)(2)), matching the UN GHS format used globally.",
+      },
+      {
+        id: 2,
+        text: "The GHS pictogram that looks like a gas cylinder represents:",
+        options: [
+          "Compressed or liquefied gases",
+          "Flammable gases or aerosols",
+          "Asphyxiants that displace oxygen",
+          "Products stored under pressure only",
+        ],
+        correctIndex: 0,
+        explanation: "The gas cylinder GHS pictogram (GHS04) is used for gases under pressure: compressed, liquefied, refrigerated liquefied, or dissolved gases.",
+      },
+      {
+        id: 3,
+        text: "On a GHS-compliant label, the signal word \"DANGER\" indicates:",
+        options: [
+          "The product is restricted to licensed applicators",
+          "The hazard can cause death or serious injury under normal exposure conditions",
+          "The product requires special PPE but poses no acute risk",
+          "The container must be stored above 50°F",
+        ],
+        correctIndex: 1,
+        explanation: "\"DANGER\" is used for the more severe hazard categories. \"WARNING\" is used for less severe. \"DANGER\" means the hazard can cause death or serious injury.",
+      },
+      {
+        id: 4,
+        text: "Section 8 of an SDS covers:",
+        options: [
+          "Physical and chemical properties",
+          "Ecological information",
+          "Exposure controls and personal protection (PPE recommendations)",
+          "Disposal considerations",
+        ],
+        correctIndex: 2,
+        explanation: "SDS Section 8 (Exposure Controls/Personal Protection) lists OSHA PELs, ACGIH TLVs, engineering controls, and required PPE for the chemical.",
+      },
+      {
+        id: 5,
+        text: "Employers subject to HazCom must provide workers with training on chemical hazards:",
+        options: [
+          "Annually, regardless of whether new chemicals are introduced",
+          "Only when a worker is assigned to handle chemicals for the first time",
+          "When new chemical hazards are introduced, and at initial assignment",
+          "Within 30 days of a chemical spill incident",
+        ],
+        correctIndex: 2,
+        explanation: "OSHA 1910.1200(h)(1) requires training at initial assignment and whenever a new physical or health hazard is introduced into the work area.",
+      },
+      {
+        id: 6,
+        text: "On the NFPA 704 (fire diamond), the BLUE quadrant represents:",
+        options: ["Flammability", "Reactivity", "Health hazard", "Special hazard (e.g., radioactive, water-reactive)"],
+        correctIndex: 2,
+        explanation: "Blue = health hazard (0–4 scale). Red = fire hazard. Yellow = instability/reactivity. White = special hazards like OX (oxidizer) or W (water-reactive).",
+      },
+    ],
+  },
+];
 const communityBadgeThresholds = {
   firstAssistVerifiedFixes: 1,
   mentorQualityAnswers: 10,
@@ -765,8 +1250,51 @@ const emptyTalent: Talent = {
   availability: "Not set",
   responseTime: "—",
 };
-const seedNews: NewsItem[] = [];
-const seedCommunityPosts: CommunityPost[] = [];
+const seedNews: NewsItem[] = []; // populated dynamically from /api/news
+const seedCommunityPosts: CommunityPost[] = [
+  {
+    id: 1,
+    title: "What's the best way to handle a mid-job scope change without losing margin?",
+    trade: "General",
+    author: "FieldPro",
+    badge: "Community Prompt",
+    flair: "Question",
+    body: "Client keeps adding scope after the contract is signed. Looking for a clean way to document and price change orders on the spot without losing the job or the margin.",
+    upvotes: 14,
+    downvotes: 1,
+    replies: [],
+    createdAt: "Jun 2026",
+    status: "Needs a pro answer",
+  },
+  {
+    id: 2,
+    title: "How are you handling the new OSHA heat rule on outdoor jobs this summer?",
+    trade: "General",
+    author: "CrewLead",
+    badge: "Community Prompt",
+    flair: "Discussion",
+    body: "OSHA heat rule is coming August 2026. Curious what other crews are doing — written plans, scheduling changes, gear, etc. Share what's actually working in the field.",
+    upvotes: 9,
+    downvotes: 0,
+    replies: [],
+    createdAt: "Jun 2026",
+    status: "Open",
+  },
+  {
+    id: 3,
+    title: "NEC 2023: Are you already pulling permits under the new AFCI expansion rules?",
+    trade: "Electrical",
+    author: "SparkCheck",
+    badge: "Community Prompt",
+    flair: "Question",
+    body: "Florida is moving to NEC 2023. AFCI now covers all dwelling areas. Have any of you already had inspections fail under the old wiring assumptions? What did you have to change?",
+    upvotes: 11,
+    downvotes: 2,
+    replies: [],
+    createdAt: "May 2026",
+    status: "Needs a pro answer",
+  },
+];
 const seedShoutOuts: ShoutOut[] = [];
 
 function currency(value: number) {
@@ -1096,6 +1624,149 @@ function communityBadgeLabels(posts: CommunityPost[], personName: string) {
   return badges;
 }
 
+const guestDemoJobs: Job[] = [
+  {
+    id: 9001,
+    title: "Service Panel Upgrade – 200A",
+    contractor: "Coastal Electric LLC",
+    trade: "Electrical",
+    location: "Jacksonville, FL",
+    state: "FL",
+    distance: 4,
+    pay: 1400,
+    durationHours: 8,
+    workType: "Multi-day",
+    difficulty: "Advanced",
+    insuranceRequired: true,
+    tools: ["Multimeter", "Wire strippers", "Conduit bender"],
+    trustRequirement: "ID check required",
+    addressPolicy: "Address shared after acceptance",
+    posted: "2h ago",
+    match: 91,
+    rating: 4.8,
+    reviewCount: 22,
+    applicants: 3,
+    status: "Open",
+    summary: "Upgrade a residential 150A panel to 200A service for a Riverside home. Coordinate with JEA for meter pull.",
+    guidance: ["Confirm JEA schedule before start", "Panel is in garage – 6ft clearance available"],
+    risks: ["Live service during prep", "Older aluminum branch wiring on second floor"],
+    deliverables: ["Passed inspection sign-off", "Updated load calculation sheet left on site"],
+    matchFactors: ["Licensed master electrician", "JEA coordination experience"],
+  },
+  {
+    id: 9002,
+    title: "Emergency Water Heater Replacement",
+    contractor: "Jax Plumbing Solutions",
+    trade: "Plumbing",
+    location: "Orange Park, FL",
+    state: "FL",
+    distance: 11,
+    pay: 680,
+    durationHours: 4,
+    workType: "Emergency",
+    difficulty: "Moderate",
+    insuranceRequired: true,
+    tools: ["Pipe wrench", "Teflon tape", "Soldering kit"],
+    trustRequirement: "ID check required",
+    addressPolicy: "Address provided on confirmation",
+    posted: "45m ago",
+    match: 87,
+    rating: 4.6,
+    reviewCount: 14,
+    applicants: 2,
+    status: "Open",
+    summary: "50-gallon natural gas water heater failed overnight. Customer needs same-day replacement.",
+    guidance: ["Gas shutoff is in rear utility room", "Replacement unit provided by contractor"],
+    risks: ["Gas line proximity to copper supply", "Tight utility closet – 28in wide"],
+    deliverables: ["Working hot water restored", "Old unit hauled away and permit pulled"],
+    matchFactors: ["Licensed plumber", "Emergency availability", "Gas line experience"],
+  },
+  {
+    id: 9003,
+    title: "Residential Addition Framing",
+    contractor: "Northeast FL Builders",
+    trade: "Framing",
+    location: "Atlantic Beach, FL",
+    state: "FL",
+    distance: 18,
+    pay: 3200,
+    durationHours: 32,
+    workType: "Multi-day",
+    difficulty: "Challenging",
+    insuranceRequired: true,
+    tools: ["Framing nailer", "Circular saw", "Speed square"],
+    trustRequirement: "ID check required",
+    addressPolicy: "Address shared after acceptance",
+    posted: "1d ago",
+    match: 84,
+    rating: 4.7,
+    reviewCount: 31,
+    applicants: 5,
+    status: "Shortlisting",
+    summary: "Frame a 400 sq ft bedroom addition with exterior walls, roof tie-in, and window rough openings.",
+    guidance: ["Stamped plans on site", "Crane access from rear alley available Tue/Thu"],
+    risks: ["Roof tie-in near load-bearing wall", "Permit inspection required on day 3"],
+    deliverables: ["Framing inspected and approved", "Sheathing ready for housewrap"],
+    matchFactors: ["Framing crew experience", "Inspection-ready work quality"],
+  },
+  {
+    id: 9004,
+    title: "HVAC Mini-Split Install – 3 Ton",
+    contractor: "Comfort Zone HVAC",
+    trade: "HVAC",
+    location: "Mandarin, FL",
+    state: "FL",
+    distance: 7,
+    pay: 1800,
+    durationHours: 10,
+    workType: "Side work",
+    difficulty: "Advanced",
+    insuranceRequired: true,
+    tools: ["Manifold gauges", "Vacuum pump", "Refrigerant recovery unit"],
+    trustRequirement: "Completion photos required",
+    addressPolicy: "Address on confirmation",
+    posted: "3h ago",
+    match: 89,
+    rating: 4.9,
+    reviewCount: 41,
+    applicants: 4,
+    status: "Open",
+    summary: "Install 3-ton mini-split in converted garage. Line set run approximately 35ft through attic.",
+    guidance: ["Existing 240V circuit available at panel", "Attic access through hallway closet"],
+    risks: ["Attic temp may exceed 110°F in afternoon", "Verify BTU sizing with load calc before ordering"],
+    deliverables: ["System commissioned and tested at rated temp", "Startup sheet signed by homeowner"],
+    matchFactors: ["EPA 608 certified", "Mini-split installation experience"],
+  },
+  {
+    id: 9005,
+    title: "Built-In Bookcase & Mudroom Bench",
+    contractor: "Riverside Custom Carpentry",
+    trade: "Carpentry",
+    location: "Riverside, FL",
+    state: "FL",
+    distance: 3,
+    pay: 960,
+    durationHours: 12,
+    workType: "Side work",
+    difficulty: "Moderate",
+    insuranceRequired: false,
+    tools: ["Table saw", "Brad nailer", "Router"],
+    trustRequirement: "Legal agreement required",
+    addressPolicy: "Address shared day before start",
+    posted: "5h ago",
+    match: 82,
+    rating: 4.5,
+    reviewCount: 9,
+    applicants: 1,
+    status: "Open",
+    summary: "Build and install floor-to-ceiling bookcase in living room and a bench with storage in mudroom.",
+    guidance: ["Materials pre-purchased and staged in garage", "Paint-grade MDF throughout"],
+    risks: ["Plaster walls – anchoring requires toggle bolts or blocking"],
+    deliverables: ["Bookcase and bench installed, caulked, and sanded", "Ready for paint by homeowner"],
+    matchFactors: ["Finish carpentry experience", "Portfolio of built-ins preferred"],
+  },
+];
+
 function App() {
   const initialJobs = useMemo(() => normalizeJobs(seedJobs), []);
   const initialSelectedId = initialJobs[0]?.id ?? 0;
@@ -1103,13 +1774,13 @@ function App() {
   const [role, setRole] = useState<Role>("contractor");
   const [onboardingComplete, setOnboardingComplete] = useState(true);
   const [accountProfile, setAccountProfile] = useState<AccountProfile>({
-    email: "rivttesting@gmail.com",
-    displayName: "Ryan Mitchell",
-    organization: "RIVT Crew",
+    email: "",
+    displayName: "",
+    organization: "",
     location: "Jacksonville, FL",
-    specialties: ["Electrical", "Carpentry"],
+    specialties: [],
     plan: brandConfig.pricing.betaPlan.label,
-    authMethod: "Google",
+    authMethod: "Email",
   });
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
@@ -1138,9 +1809,7 @@ function App() {
   const [dispatchNotes] = useState<Record<number, string>>({});
   const [closeouts, setCloseouts] = useState<Record<number, CloseoutRecord>>({});
   const [autoMatchEnabled, setAutoMatchEnabled] = useState(true);
-  const [messageDraft, setMessageDraft] = useState(
-    "Job details are confirmed. Please confirm arrival window and parking.",
-  );
+  const [messageDraft, setMessageDraft] = useState("");
   const [sentMessages, setSentMessages] = useState<string[]>([]);
   const [uploadedRecords, setUploadedRecords] = useState<Set<string>>(
     () => new Set(["Signed scope", "Legal consent accepted"]),
@@ -1148,6 +1817,7 @@ function App() {
   const [completedTraining, setCompletedTraining] = useState<Set<string>>(
     () => new Set(["Customer-site conduct"]),
   );
+  const [safetyQuizResults, setSafetyQuizResults] = useState<Record<string, SafetyQuizResult>>({});
   const [reviewRequested, setReviewRequested] = useState(false);
   const [activityFeed, setActivityFeed] = useState<ActivityItem[]>([]);
   const [feedbackItems, setFeedbackItems] = useState<FeedbackItem[]>([]);
@@ -1158,7 +1828,7 @@ function App() {
   const [lockedAccounts, setLockedAccounts] = useState<Set<string>>(
     () => new Set(),
   );
-  const [communityPosts, setCommunityPosts] = useState<CommunityPost[]>([]);
+  const [communityPosts, setCommunityPosts] = useState<CommunityPost[]>(seedCommunityPosts);
   const [communityReports, setCommunityReports] = useState<CommunityReport[]>([]);
   const [shoutOuts, setShoutOuts] = useState<ShoutOut[]>([]);
   const [serverStatus, setServerStatus] = useState<ServerStatus>("checking");
@@ -1166,6 +1836,8 @@ function App() {
   const [serverUpdatedAt, setServerUpdatedAt] = useState<string | null>(null);
   const [themeMode, setThemeMode] = useState<ThemeMode>(readThemePreference);
   const [themePalette, setThemePalette] = useState<ThemePalette>(readThemePalettePreference);
+  const [isGuest, setIsGuest] = useState(false);
+  const [guestPromptOpen, setGuestPromptOpen] = useState(false);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -1359,6 +2031,9 @@ function App() {
     if (Array.isArray(nextState.completedTraining)) {
       setCompletedTraining(new Set(nextState.completedTraining));
     }
+    if (nextState.safetyQuizResults && typeof nextState.safetyQuizResults === "object") {
+      setSafetyQuizResults(nextState.safetyQuizResults);
+    }
     if (nextState.reviewRequested !== undefined) setReviewRequested(nextState.reviewRequested);
     if (Array.isArray(nextState.activityFeed)) setActivityFeed(nextState.activityFeed);
     if (Array.isArray(nextState.feedbackItems)) setFeedbackItems(nextState.feedbackItems);
@@ -1424,6 +2099,7 @@ function App() {
     communityPosts,
     communityReports,
     completedTraining: Array.from(completedTraining),
+    safetyQuizResults,
     difficulty,
     feedbackItems,
     jobs,
@@ -1456,6 +2132,7 @@ function App() {
     communityPosts,
     communityReports,
     completedTraining,
+    safetyQuizResults,
     difficulty,
     feedbackItems,
     jobs,
@@ -1666,6 +2343,7 @@ function App() {
     setActiveView(view);
     setActivityOpen(false);
     setAccountOpen(false);
+    setPostOpen(false);
   }
 
   function handleReviewConsent() {
@@ -2140,6 +2818,26 @@ function App() {
     );
   }
 
+  function handleNewShopTalkPost(flair: PostFlair, title: string, trade: Trade | "General", body: string) {
+    setCommunityPosts((current) => [
+      {
+        id: Date.now(),
+        title,
+        trade,
+        flair,
+        author: accountProfile.displayName,
+        body,
+        upvotes: 0,
+        downvotes: 0,
+        replies: [],
+        createdAt: "Just now",
+        status: "Open",
+      },
+      ...current,
+    ]);
+    addActivity("Shop Talk post created", `"${title}" posted to Shop Talk.`);
+  }
+
   function handleResolveCommunityReport(reportId: number, status: CommunityReport["status"]) {
     const report = communityReports.find((candidate) => candidate.id === reportId);
     if (!report) {
@@ -2295,6 +2993,28 @@ function App() {
     );
   }
 
+  function handleSafetyQuizComplete(quizId: string, score: number) {
+    const quiz = safetyQuizData.find((q) => q.id === quizId);
+    if (!quiz) return;
+    const passed = score >= QUIZ_PASS_SCORE;
+    setSafetyQuizResults((prev) => ({
+      ...prev,
+      [quizId]: {
+        quizId,
+        score,
+        passed,
+        completedAt: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+        attempts: (prev[quizId]?.attempts ?? 0) + 1,
+      },
+    }));
+    addActivity(
+      passed ? `Safety cert earned: ${quiz.title}` : `Quiz attempt: ${quiz.title}`,
+      passed
+        ? `Passed with ${score}% — certificate is now on your profile.`
+        : `Scored ${score}%. Need ${QUIZ_PASS_SCORE}% to pass. Retake anytime.`,
+    );
+  }
+
   function handleRequestReview() {
     setReviewRequested(true);
     setUploadedRecords((current) => {
@@ -2351,6 +3071,28 @@ function App() {
     );
   }
 
+  function handleGuestLogin() {
+    setIsGuest(true);
+    setJobs(guestDemoJobs);
+    setSelectedId(guestDemoJobs[0].id);
+    setAccountProfile((current) => ({ ...current, displayName: "Guest" }));
+  }
+
+  function handleExitGuest() {
+    setIsGuest(false);
+    setJobs(initialJobs);
+    setSelectedId(initialJobs[0]?.id ?? 0);
+    setAccountProfile((current) => ({ ...current, displayName: "" }));
+  }
+
+  function handleSignUpFromGuest() {
+    setAuthMode("signup");
+    setIsGuest(false);
+    setJobs(initialJobs);
+    setSelectedId(initialJobs[0]?.id ?? 0);
+    setAccountProfile((current) => ({ ...current, displayName: "" }));
+  }
+
   const page = pageCopy[activeView];
   const nextTrainingModule = trainingModules.find(
     (moduleName) => !completedTraining.has(moduleName),
@@ -2380,7 +3122,7 @@ function App() {
     return <LaunchLoader />;
   }
 
-  if (!authUser) {
+  if (!authUser && !isGuest) {
     return (
       <AuthGate
         mode={authMode}
@@ -2388,6 +3130,7 @@ function App() {
         providers={authProviders}
         onModeChange={setAuthMode}
         onSubmit={handleAuthSubmit}
+        onGuestLogin={handleGuestLogin}
       />
     );
   }
@@ -2415,6 +3158,7 @@ function App() {
         role={role}
         activeView={activeView}
         selectedJob={selectedJob}
+        hasJobs={jobs.length > 0}
         profile={accountProfile}
         onNavigate={handleNavigate}
       />
@@ -2448,7 +3192,7 @@ function App() {
             type="button"
             className={unreadActivities ? "icon-button alert-button" : "icon-button"}
             aria-label="Notifications"
-            onClick={() => setActivityOpen(true)}
+            onClick={() => { setAccountOpen(false); setPostOpen(false); setActivityOpen(true); }}
           >
             <Bell size={18} />
             {unreadActivities > 0 && <span>{unreadActivities}</span>}
@@ -2457,7 +3201,7 @@ function App() {
             type="button"
             className="user-menu"
             aria-label={`Signed in ${role === "contractor" ? "contractor" : "tradesperson"}`}
-            onClick={() => setAccountOpen(true)}
+            onClick={() => { setActivityOpen(false); setPostOpen(false); setAccountOpen(true); }}
           >
             <Avatar name={accountProfile.displayName} size="sm" className="user-avatar" />
             <span className="user-menu-copy">
@@ -2474,22 +3218,38 @@ function App() {
           onNavigate={handleNavigate}
         />
 
+        {isGuest && (
+          <GuestBanner
+            onSignUp={handleSignUpFromGuest}
+            onExit={handleExitGuest}
+          />
+        )}
+
         {activeView === "Home" ? (
           <section className="page-intro home-intro" aria-label="Home summary">
             <div>
-              <h1>{`Good morning, ${accountProfile.displayName.split(" ")[0]}`}</h1>
+              <h1>{accountProfile.displayName ? `Good morning, ${accountProfile.displayName.split(" ")[0]}` : "Good morning"}</h1>
               <p>Here&apos;s what&apos;s happening in {accountProfile.location}.</p>
             </div>
             <div className="page-intro-right">
-              <span className="page-intro-chip">{selectedJob.trade}</span>
-              <strong>{selectedJob.title}</strong>
-              <small>{selectedJob.location} · {selectedJob.status}</small>
+              {selectedJob.id === 0 ? (
+                <>
+                  <span className="page-intro-chip">{role === "contractor" ? "No active job" : "No active work"}</span>
+                  <strong>{role === "contractor" ? "Post your first job" : "Find work nearby"}</strong>
+                  <small>Tap Work to get started</small>
+                </>
+              ) : (
+                <>
+                  <span className="page-intro-chip">{selectedJob.trade}</span>
+                  <strong>{selectedJob.title}</strong>
+                  <small>{selectedJob.location} · {selectedJob.status}</small>
+                </>
+              )}
             </div>
           </section>
         ) : (
           <header className="page-heading" aria-label={`${page.title} heading`}>
             <div>
-              <span>{page.title}</span>
               <h1>{page.title}</h1>
               <p>{page.description}</p>
             </div>
@@ -2531,6 +3291,7 @@ function App() {
             onInvite={handleInvite}
             onScheduleHold={handleScheduleHold}
             onSubmitCloseoutPacket={handleSubmitCloseoutPacket}
+            onPostJob={() => isGuest ? setGuestPromptOpen(true) : setPostOpen(true)}
           />
         ) : (
           <OperationsWorkspace
@@ -2547,6 +3308,7 @@ function App() {
             trustReady={trustReady}
             uploadedRecords={uploadedRecords}
             completedTraining={completedTraining}
+            safetyQuizResults={safetyQuizResults}
             messageDraft={messageDraft}
             sentMessages={sentMessages}
             reviewRequested={reviewRequested}
@@ -2559,13 +3321,13 @@ function App() {
             communityPosts={communityPosts}
             communityReports={communityReports}
             shoutOuts={shoutOuts}
-            onPostJob={() => setPostOpen(true)}
+            onPostJob={() => isGuest ? setGuestPromptOpen(true) : setPostOpen(true)}
             onNavigate={handleNavigate}
             onOpenJob={openJob}
             onApply={handleApply}
-            onApplyToJob={handleApplyForJob}
+            onApplyToJob={(jobId) => isGuest ? setGuestPromptOpen(true) : handleApplyForJob(jobId)}
             onInvite={handleInvite}
-            onInviteToJob={handleInviteForJob}
+            onInviteToJob={(jobId) => isGuest ? setGuestPromptOpen(true) : handleInviteForJob(jobId)}
             onReviewConsent={handleReviewConsent}
             onToggleRecord={handleToggleRecord}
             onSubmitCloseoutPacket={handleSubmitCloseoutPacket}
@@ -2573,7 +3335,7 @@ function App() {
             onRateJob={handleRateJob}
             onToggleTraining={handleToggleTraining}
             onMessageDraft={setMessageDraft}
-            onSendMessage={handleSendMessage}
+            onSendMessage={() => isGuest ? setGuestPromptOpen(true) : handleSendMessage()}
             onRequestReview={handleRequestReview}
             onFeedbackDraft={setFeedbackDraft}
             onFeedbackCategory={setFeedbackCategory}
@@ -2587,8 +3349,10 @@ function App() {
             onVerifyCommunityAnswer={handleVerifyCommunityAnswer}
             onReportCommunityPost={handleReportCommunityPost}
             onResolveCommunityReport={handleResolveCommunityReport}
-            onCreateCommunityPrompt={handleCreateCommunityPrompt}
-            onCreateShoutOut={handleCreateShoutOut}
+            onCreateCommunityPrompt={() => isGuest ? setGuestPromptOpen(true) : handleCreateCommunityPrompt()}
+            onNewShopTalkPost={(flair, title, trade, body) => isGuest ? setGuestPromptOpen(true) : handleNewShopTalkPost(flair, title, trade, body)}
+            onCreateShoutOut={(to, tradeName) => isGuest ? setGuestPromptOpen(true) : handleCreateShoutOut(to, tradeName)}
+            onSafetyQuizComplete={(quizId, score) => isGuest ? setGuestPromptOpen(true) : handleSafetyQuizComplete(quizId, score)}
           />
         )}
       </main>
@@ -2616,6 +3380,7 @@ function App() {
           trustReady={trustReady}
           recordCount={uploadedRecords.size}
           trainingProgress={Math.round((completedTraining.size / trainingModules.length) * 100)}
+          safetyCertCount={Object.values(safetyQuizResults).filter((r) => r.passed).length}
           themeMode={themeMode}
           themePalette={themePalette}
           communityBadges={communityBadgeLabels(communityPosts, accountProfile.displayName)}
@@ -2636,6 +3401,13 @@ function App() {
 
       {isPostOpen && (
         <PostJobModal onClose={() => setPostOpen(false)} onPost={handlePostJob} />
+      )}
+
+      {guestPromptOpen && (
+        <GuestSignUpPrompt
+          onClose={() => setGuestPromptOpen(false)}
+          onSignUp={handleSignUpFromGuest}
+        />
       )}
     </div>
   );
@@ -2658,17 +3430,19 @@ function AuthGate({
   providers,
   onModeChange,
   onSubmit,
+  onGuestLogin,
 }: {
   mode: "login" | "signup";
   error: string | null;
   providers: Record<string, { ok: boolean; mode: string; missing: string[]; purpose: string }>;
   onModeChange: (mode: "login" | "signup") => void;
   onSubmit: (form: { email: string; password: string; displayName?: string; organization?: string; location?: string; role?: Role }) => void;
+  onGuestLogin: () => void;
 }) {
-  const [email, setEmail] = useState("rivttesting@gmail.com");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [displayName, setDisplayName] = useState("Ryan Mitchell");
-  const [organization, setOrganization] = useState("RIVT Crew");
+  const [displayName, setDisplayName] = useState("");
+  const [organization, setOrganization] = useState("");
   const [location, setLocation] = useState("Jacksonville, FL");
   const [role, setRole] = useState<Role>("contractor");
   const providerIcons = {
@@ -2767,8 +3541,68 @@ function AuthGate({
         >
           {mode === "signup" ? "Create account" : "Log in"}
         </button>
+
+        <div className="auth-guest-divider">
+          <span>or</span>
+        </div>
+
+        <button
+          type="button"
+          className="ghost-action"
+          onClick={onGuestLogin}
+        >
+          Browse as guest
+        </button>
       </section>
     </main>
+  );
+}
+
+function GuestBanner({
+  onSignUp,
+  onExit,
+}: {
+  onSignUp: () => void;
+  onExit: () => void;
+}) {
+  return (
+    <div className="guest-banner" role="status">
+      <span>You&apos;re browsing as a guest. Sign up to apply, post jobs, and message crews.</span>
+      <div className="guest-banner-actions">
+        <button type="button" className="primary-action" onClick={onSignUp}>
+          Sign up free
+        </button>
+        <button type="button" className="ghost-action guest-exit" onClick={onExit}>
+          Exit
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function GuestSignUpPrompt({
+  onClose,
+  onSignUp,
+}: {
+  onClose: () => void;
+  onSignUp: () => void;
+}) {
+  return (
+    <div className="modal-backdrop" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="guest-prompt">
+        <button type="button" className="icon-button guest-prompt-close" onClick={onClose} aria-label="Close">
+          <X size={18} />
+        </button>
+        <h2>Sign up to take action</h2>
+        <p>Create a free account to apply for jobs, post work, send messages, and build your RIVT profile.</p>
+        <button type="button" className="primary-action" onClick={onSignUp}>
+          Create free account
+        </button>
+        <button type="button" className="secondary-action" onClick={onClose}>
+          Keep browsing
+        </button>
+      </div>
+    </div>
   );
 }
 
@@ -3195,7 +4029,7 @@ function ActivityPanel({
       <aside className="side-panel" role="dialog" aria-modal="true" aria-label="Notifications">
         <div className="side-panel-header">
           <div>
-            <span>Live test log</span>
+            <span>Activity log</span>
             <h2>Notifications</h2>
           </div>
           <button type="button" className="icon-button" onClick={onClose} aria-label="Close notifications">
@@ -3244,6 +4078,7 @@ function AccountPanel({
   trustReady,
   recordCount,
   trainingProgress,
+  safetyCertCount,
   themeMode,
   themePalette,
   communityBadges,
@@ -3259,6 +4094,7 @@ function AccountPanel({
   trustReady: boolean;
   recordCount: number;
   trainingProgress: number;
+  safetyCertCount: number;
   themeMode: ThemeMode;
   themePalette: ThemePalette;
   communityBadges: string[];
@@ -3297,14 +4133,19 @@ function AccountPanel({
           <InfoItem icon={ShieldCheck} label="Trust" value={trustReady ? "Ready" : "Needs review"} />
           <InfoItem icon={FolderOpen} label="Records" value={`${recordCount}/${recordChecklist.length}`} />
           <InfoItem icon={ThumbsUp} label="Community" value={`${communityBadges.length} badge${communityBadges.length === 1 ? "" : "s"}`} />
+          <InfoItem icon={GraduationCap} label="Safety certs" value={`${safetyCertCount}/${safetyQuizData.length}`} />
         </div>
 
         <section className="account-section">
           <span>Specialties</span>
           <div className="account-chip-row">
-            {profile.specialties.map((specialty) => (
-              <strong key={specialty}>{specialty}</strong>
-            ))}
+            {profile.specialties.length ? (
+              profile.specialties.map((specialty) => (
+                <strong key={specialty}>{specialty}</strong>
+              ))
+            ) : (
+              <small style={{ color: 'var(--text-muted)' }}>None added yet</small>
+            )}
           </div>
         </section>
 
@@ -3381,12 +4222,14 @@ function Sidebar({
   role,
   activeView,
   selectedJob,
+  hasJobs,
   profile,
   onNavigate,
 }: {
   role: Role;
   activeView: NavLabel;
   selectedJob: Job;
+  hasJobs: boolean;
   profile: AccountProfile;
   onNavigate: (view: NavLabel) => void;
 }) {
@@ -3431,16 +4274,26 @@ function Sidebar({
       </nav>
 
       <div className="sidebar-job-card">
-        <span>Active work order</span>
-        <strong>{selectedJob.title}</strong>
-        <small>{selectedJob.trade}</small>
-        <small><MapPin size={12} /> {selectedJob.location}</small>
-        <div className="sidebar-progress">
-          <em>{selectedJob.status}</em>
-          <i><b style={{ width: `${Math.min(selectedJob.match, 100)}%` }} /></i>
-          <small>{selectedJob.match}%</small>
-        </div>
-        <button type="button" onClick={() => onNavigate("Marketplace")}>Open work order</button>
+        {hasJobs ? (
+          <>
+            <span>Active work order</span>
+            <strong>{selectedJob.title}</strong>
+            <small>{selectedJob.trade}</small>
+            <small><MapPin size={12} /> {selectedJob.location}</small>
+            <div className="sidebar-progress">
+              <em>{selectedJob.status}</em>
+              <i><b style={{ width: `${Math.min(selectedJob.match, 100)}%` }} /></i>
+              <small>{selectedJob.match}%</small>
+            </div>
+            <button type="button" onClick={() => onNavigate("Marketplace")}>Open work order</button>
+          </>
+        ) : (
+          <>
+            <span>Active work order</span>
+            <strong>No active order</strong>
+            <button type="button" onClick={() => onNavigate("Marketplace")}>Post a job</button>
+          </>
+        )}
       </div>
 
       <div className="sidebar-pro-card">
@@ -3604,6 +4457,7 @@ function MarketplaceView({
   onInvite,
   onScheduleHold,
   onSubmitCloseoutPacket,
+  onPostJob,
 }: {
   role: Role;
   jobs: Job[];
@@ -3638,6 +4492,7 @@ function MarketplaceView({
   onInvite: () => void;
   onScheduleHold: () => void;
   onSubmitCloseoutPacket: (jobId?: number) => void;
+  onPostJob?: () => void;
 }) {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const averageMatch = jobs.length
@@ -3664,7 +4519,7 @@ function MarketplaceView({
           <ModernMetric
             icon={Sparkles}
             label="Best match"
-            value={averageMatch ? `${averageMatch}%` : "None"}
+            value={averageMatch ? `${averageMatch}%` : "—"}
             detail={autoMatchEnabled ? "Sorting active" : "Sorting paused"}
           />
           <ModernMetric
@@ -3686,14 +4541,27 @@ function MarketplaceView({
             detail={`${applications.length} active application${applications.length === 1 ? "" : "s"}`}
           />
           <div className="modern-command-actions">
+            {role === "contractor" && onPostJob && (
+              <button className="post-work-btn" onClick={onPostJob}>
+                <Plus size={15} />
+                Post work
+              </button>
+            )}
             <button onClick={onToggleAutoMatch}>
               <Sparkles size={15} />
               {autoMatchEnabled ? "Pause sorting" : "Resume sorting"}
             </button>
-            <button onClick={onReviewConsent}>
-              <ShieldCheck size={15} />
-              {trustReady ? "Ready" : "Consent"}
-            </button>
+            {trustReady ? (
+              <span className="command-trust-ready">
+                <BadgeCheck size={15} />
+                Ready
+              </span>
+            ) : (
+              <button onClick={onReviewConsent}>
+                <ShieldCheck size={15} />
+                Consent
+              </button>
+            )}
           </div>
         </section>
 
@@ -3773,8 +4641,17 @@ function MarketplaceView({
             <div className="modern-job-list">
               {jobs.length === 0 ? (
                 <div className="job-queue-empty">
-                  <p>No jobs match your filters.</p>
-                  <p>Try widening your radius or changing trade.</p>
+                  {role === "contractor" ? (
+                    <>
+                      <p>No jobs posted yet.</p>
+                      <p>Post a work order to start filling your team.</p>
+                    </>
+                  ) : (
+                    <>
+                      <p>No jobs match your filters.</p>
+                      <p>Try widening your radius or changing trade.</p>
+                    </>
+                  )}
                 </div>
               ) : jobs.map((job) => (
                 <ModernJobCard
@@ -3813,14 +4690,16 @@ function ModernMetric({
   label,
   value,
   detail,
+  className = "modern-metric",
 }: {
   icon: typeof BriefcaseBusiness;
   label: string;
   value: string;
   detail: string;
+  className?: string;
 }) {
   return (
-    <article className="modern-metric">
+    <article className={className}>
       <Icon size={17} />
       <span>{label}</span>
       <strong>{value}</strong>
@@ -3966,6 +4845,21 @@ function ModernJobDetail({
         <p>{dispatchNote}</p>
       </div>
 
+      {job.requiredQuizIds && job.requiredQuizIds.length > 0 && (
+        <div className="cert-requirement-banner">
+          <GraduationCap size={15} />
+          <div>
+            <strong>Safety certs required</strong>
+            <span>
+              {job.requiredQuizIds
+                .map((id) => safetyQuizData.find((q) => q.id === id)?.title)
+                .filter(Boolean)
+                .join(", ")}
+            </span>
+          </div>
+        </div>
+      )}
+
       <div className="modern-action-stack">
         {role === "tradesperson" ? (
           <button className="primary-action wide" onClick={onApply}>
@@ -4010,7 +4904,7 @@ function ScoreRing({ score }: { score: number }) {
           cy="48"
           r={r}
           fill="none"
-          stroke="var(--green)"
+          stroke="var(--accent)"
           strokeWidth="10"
           strokeDasharray={`${arc} ${circ}`}
           strokeLinecap="round"
@@ -4039,6 +4933,7 @@ interface OperationsWorkspaceProps {
   trustReady: boolean;
   uploadedRecords: Set<string>;
   completedTraining: Set<string>;
+  safetyQuizResults: Record<string, SafetyQuizResult>;
   messageDraft: string;
   sentMessages: string[];
   reviewRequested: boolean;
@@ -4080,7 +4975,9 @@ interface OperationsWorkspaceProps {
   onReportCommunityPost: (postId: number, reason: CommunityReport["reason"]) => void;
   onResolveCommunityReport: (reportId: number, status: CommunityReport["status"]) => void;
   onCreateCommunityPrompt: () => void;
+  onNewShopTalkPost: (flair: PostFlair, title: string, trade: Trade | "General", body: string) => void;
   onCreateShoutOut: (to: string, tradeName: Trade) => void;
+  onSafetyQuizComplete: (quizId: string, score: number) => void;
 }
 
 function OperationsWorkspace(props: OperationsWorkspaceProps) {
@@ -4098,6 +4995,7 @@ function OperationsWorkspace(props: OperationsWorkspaceProps) {
     trustReady,
     uploadedRecords,
     completedTraining,
+    safetyQuizResults,
     messageDraft,
     sentMessages,
     reviewRequested,
@@ -4139,7 +5037,9 @@ function OperationsWorkspace(props: OperationsWorkspaceProps) {
     onReportCommunityPost,
     onResolveCommunityReport,
     onCreateCommunityPrompt,
+    onNewShopTalkPost,
     onCreateShoutOut,
+    onSafetyQuizComplete,
   } = props;
   const approvedCloseouts = Object.values(closeouts).filter(
     (closeout) => closeout.approved && closeout.rating > 0 && !closeout.dispute,
@@ -4157,25 +5057,29 @@ function OperationsWorkspace(props: OperationsWorkspaceProps) {
     <>
       {view === "Home" && (
         <section className="ops-summary home-ops-summary" aria-label="Operations summary">
-          <OpsMetric
+          <ModernMetric
+            className="ops-metric"
             icon={BriefcaseBusiness}
             label="Open work"
             value={`${jobs.length} jobs`}
             detail={`${currency(totalPipelineValue)} active value`}
           />
-          <OpsMetric
+          <ModernMetric
+            className="ops-metric"
             icon={FileCheck2}
             label="Applications"
             value={String(applications.length)}
             detail={role === "contractor" ? "Applicant and invite queue" : "Submitted portfolios"}
           />
-          <OpsMetric
+          <ModernMetric
+            className="ops-metric"
             icon={FolderOpen}
             label="Records"
             value={`${activeRecords}/${recordChecklist.length}`}
             detail={`${paymentRecords.length} payment log${paymentRecords.length === 1 ? "" : "s"}`}
           />
-          <OpsMetric
+          <ModernMetric
+            className="ops-metric"
             icon={GraduationCap}
             label="Safety"
             value={`${trainingProgress}%`}
@@ -4194,7 +5098,6 @@ function OperationsWorkspace(props: OperationsWorkspaceProps) {
             newsItems={seedNews}
             communityPosts={communityPosts}
             shoutOuts={shoutOuts}
-            communityReports={communityReports}
             activityFeed={activityFeed}
             onNavigate={onNavigate}
             onOpenJob={onOpenJob}
@@ -4208,12 +5111,16 @@ function OperationsWorkspace(props: OperationsWorkspaceProps) {
         <ShopTalkView
           profile={accountProfile}
           communityPosts={communityPosts}
+          newsItems={seedNews}
+          selectedJobTrade={selectedJob.trade}
+          userLocation={accountProfile.location}
           onVotePost={onVoteCommunityPost}
           onVoteAnswer={onVoteCommunityAnswer}
           onAddAnswer={onAddCommunityAnswer}
           onVerifyAnswer={onVerifyCommunityAnswer}
           onReportPost={onReportCommunityPost}
           onCreatePrompt={onCreateCommunityPrompt}
+          onNewPost={onNewShopTalkPost}
         />
       )}
       {view === "Tools" && (
@@ -4269,6 +5176,7 @@ function OperationsWorkspace(props: OperationsWorkspaceProps) {
         <MessagesView
           selectedJob={selectedJob}
           matchingTalent={matchingTalent}
+          displayName={accountProfile.displayName}
           messageDraft={messageDraft}
           sentMessages={sentMessages}
           onMessageDraft={onMessageDraft}
@@ -4299,9 +5207,12 @@ function OperationsWorkspace(props: OperationsWorkspaceProps) {
       )}
       {view === "Safety & Training" && (
         <SafetyTrainingView
+          role={role}
           jobs={jobs}
           completedTraining={completedTraining}
+          safetyQuizResults={safetyQuizResults}
           onToggleTraining={onToggleTraining}
+          onSafetyQuizComplete={onSafetyQuizComplete}
           onOpenJob={onOpenJob}
         />
       )}
@@ -4375,26 +5286,6 @@ function OperationsWorkspace(props: OperationsWorkspaceProps) {
   );
 }
 
-function OpsMetric({
-  icon: Icon,
-  label,
-  value,
-  detail,
-}: {
-  icon: typeof BriefcaseBusiness;
-  label: string;
-  value: string;
-  detail: string;
-}) {
-  return (
-    <article className="ops-metric">
-      <Icon size={17} />
-      <span>{label}</span>
-      <strong>{value}</strong>
-      <small>{detail}</small>
-    </article>
-  );
-}
 
 const calculatorDifficultyMultipliers: Record<Difficulty, number> = {
   Easy: 0.95,
@@ -4636,7 +5527,6 @@ function HomeView({
   newsItems,
   communityPosts,
   shoutOuts,
-  communityReports,
   activityFeed,
   onNavigate,
   onOpenJob,
@@ -4653,7 +5543,6 @@ function HomeView({
   newsItems: NewsItem[];
   communityPosts: CommunityPost[];
   shoutOuts: ShoutOut[];
-  communityReports: CommunityReport[];
   activityFeed: ActivityItem[];
   onNavigate: (view: NavLabel) => void;
   onOpenJob: (id: number) => void;
@@ -4663,7 +5552,6 @@ function HomeView({
   onCreateCommunityPrompt: () => void;
 }) {
   const verifiedFixes = communityPosts.filter((post) => post.status === "Verified Fix").length;
-  const pendingReports = communityReports.filter((report) => report.status === "Flagged").length;
   const pendingPayments = paymentRecords.filter((record) => record.status === "Payment pending").length;
   const topPosts = [...communityPosts].sort((a, b) => netScore(b) - netScore(a)).slice(0, 3);
   const featuredJobs = jobs.slice(0, 3);
@@ -4932,7 +5820,7 @@ function HomeView({
         <ModernMetric icon={BriefcaseBusiness} label="Open work" value={`${jobs.length}`} detail={`${currency(jobs.reduce((sum, job) => sum + job.pay, 0))} active value`} />
         <ModernMetric icon={MessageCircle} label="Shop Talk" value={`${verifiedFixes}`} detail="Verified field fixes" />
         <ModernMetric icon={ThumbsUp} label="Shout-outs" value={`${shoutOuts.length}`} detail="Peer recommendations" />
-        <ModernMetric icon={Flag} label="Moderation" value={`${pendingReports}`} detail="Reports waiting" />
+        <ModernMetric icon={CreditCard} label="Payments" value={`${pendingPayments}`} detail={pendingPayments === 0 ? "All settled" : "Pending confirmation"} />
       </section>
 
       <section className="home-grid">
@@ -5101,200 +5989,495 @@ function HomeView({
   );
 }
 
+const FLAIR_CONFIG: Record<PostFlair, { color: string; description: string }> = {
+  "Question": { color: "#e8a857", description: "Looking for a specific answer" },
+  "Discussion": { color: "#6b9fd4", description: "Open conversation, multiple perspectives" },
+  "Code Talk": { color: "#7ac27a", description: "Building codes, inspections, compliance details" },
+  "Compliance": { color: "#d47a7a", description: "Licensing, permits, legal requirements" },
+  "Tip": { color: "#a87ac2", description: "Share a field technique or shortcut" },
+  "Humor": { color: "#888", description: "Keep it trade-relevant" },
+};
+
+function ShopTalkNewPostModal({
+  profile,
+  selectedJobTrade,
+  onClose,
+  onSubmit,
+}: {
+  profile: AccountProfile;
+  selectedJobTrade: Trade | "General";
+  onClose: () => void;
+  onSubmit: (flair: PostFlair, title: string, trade: Trade | "General", body: string) => void;
+}) {
+  const [flair, setFlair] = useState<PostFlair>("Question");
+  const [title, setTitle] = useState("");
+  const [trade, setTrade] = useState<Trade | "General">(selectedJobTrade);
+  const [body, setBody] = useState("");
+  const canSubmit = title.trim().length > 0 && body.trim().length > 0;
+  const tradeOptions: (Trade | "General")[] = ["General", ...specialtyOptions];
+
+  return (
+    <div className="modal-backdrop" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="new-post-modal">
+        <div className="new-post-modal-header">
+          <h2>Create a post</h2>
+          <button type="button" className="icon-button" onClick={onClose} aria-label="Close"><X size={18} /></button>
+        </div>
+
+        <div className="new-post-flair-picker">
+          <span>Choose a flair</span>
+          <div className="flair-options">
+            {(Object.keys(FLAIR_CONFIG) as PostFlair[]).map((f) => (
+              <button
+                key={f}
+                type="button"
+                className={`flair-option${flair === f ? " selected" : ""}`}
+                style={{ "--flair-color": FLAIR_CONFIG[f].color } as React.CSSProperties}
+                onClick={() => setFlair(f)}
+              >
+                {f}
+              </button>
+            ))}
+          </div>
+          <small>{FLAIR_CONFIG[flair].description}</small>
+        </div>
+
+        <label className="input-control">
+          <span>Trade</span>
+          <select value={trade} onChange={(e) => setTrade(e.target.value as Trade | "General")}>
+            {tradeOptions.map((t) => <option key={t}>{t}</option>)}
+          </select>
+        </label>
+
+        <label className="input-control">
+          <span>Title</span>
+          <input
+            type="text"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder={flair === "Question" ? "What would you check first on...?" : "What's on your mind?"}
+            maxLength={120}
+          />
+          <small>{title.length}/120</small>
+        </label>
+
+        <label className="input-control">
+          <span>Body</span>
+          <textarea
+            value={body}
+            onChange={(e) => setBody(e.target.value)}
+            rows={5}
+            placeholder="Add context, photos, site conditions, tools on hand..."
+          />
+        </label>
+
+        <div className="new-post-modal-footer">
+          <small>Posting as {profile.displayName}</small>
+          <button type="button" className="primary-action" onClick={() => { if (canSubmit) { onSubmit(flair, title.trim(), trade, body.trim()); onClose(); } }} disabled={!canSubmit}>
+            <Send size={15} />
+            Post
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ShopTalkView({
   profile,
   communityPosts,
+  newsItems,
+  selectedJobTrade,
+  userLocation,
   onVotePost,
   onVoteAnswer,
   onAddAnswer,
   onVerifyAnswer,
   onReportPost,
   onCreatePrompt,
+  onNewPost,
 }: {
   profile: AccountProfile;
   communityPosts: CommunityPost[];
+  newsItems: NewsItem[];
+  selectedJobTrade: Trade | "General";
+  userLocation: string;
   onVotePost: (postId: number, direction: "up" | "down") => void;
   onVoteAnswer: (postId: number, answerId: number, direction: "up" | "down") => void;
   onAddAnswer: (postId: number, body: string) => void;
   onVerifyAnswer: (postId: number, answerId: number) => void;
   onReportPost: (postId: number, reason: CommunityReport["reason"]) => void;
   onCreatePrompt: () => void;
+  onNewPost: (flair: PostFlair, title: string, trade: Trade | "General", body: string) => void;
 }) {
+  const [activeTab, setActiveTab] = useState<"talk" | "news">("talk");
+  const [sortMode, setSortMode] = useState<"hot" | "new" | "unanswered">("hot");
   const [tradeFilter, setTradeFilter] = useState("All trades");
   const [selectedPostId, setSelectedPostId] = useState(communityPosts[0]?.id ?? 0);
-  const [answerDraft, setAnswerDraft] = useState(
-    "I would start by confirming scope, access, tool needs, and what photos should go in the closeout.",
-  );
+  const [answerDraft, setAnswerDraft] = useState("");
+  const [rulesOpen, setRulesOpen] = useState(false);
+  const [newPostOpen, setNewPostOpen] = useState(false);
+  const [liveNews, setLiveNews] = useState<NewsItem[]>([]);
+  const [newsLoading, setNewsLoading] = useState(false);
+  const [newsFetched, setNewsFetched] = useState(false);
+  const displayNews = liveNews.length ? liveNews : newsItems;
+  const [selectedNewsId, setSelectedNewsId] = useState(displayNews[0]?.id ?? 0);
   const tradeFilters = ["All trades", "General", ...specialtyOptions];
-  const reportReasons: CommunityReport["reason"][] = ["Misinformation", "Safety concern"];
+  const allReportReasons: CommunityReport["reason"][] = ["Misinformation", "Safety concern", "Spam", "Harassment"];
+
+  useEffect(() => {
+    if (activeTab !== "news" || newsFetched) return;
+    setNewsLoading(true);
+    fetch(apiPath(`/api/news?location=${encodeURIComponent(userLocation)}`))
+      .then((r) => r.json())
+      .then((data: { items?: NewsItem[] }) => {
+        if (Array.isArray(data.items) && data.items.length > 0) {
+          setLiveNews(data.items);
+          setSelectedNewsId(data.items[0].id);
+        }
+      })
+      .catch(() => { /* fall back to seed */ })
+      .finally(() => { setNewsLoading(false); setNewsFetched(true); });
+  }, [activeTab, newsFetched, userLocation]);
+
   const filteredPosts = communityPosts.filter(
     (post) => tradeFilter === "All trades" || post.trade === tradeFilter,
   );
-  const selectedPost =
-    filteredPosts.find((post) => post.id === selectedPostId) ??
-    filteredPosts[0] ??
-    communityPosts[0];
   const sortedPosts = [...filteredPosts].sort((a, b) => {
+    if (sortMode === "new") return b.id - a.id;
+    if (sortMode === "unanswered") {
+      if (a.replies.length === 0 && b.replies.length > 0) return -1;
+      if (a.replies.length > 0 && b.replies.length === 0) return 1;
+      return b.id - a.id;
+    }
+    // hot: "Needs a pro answer" first, then by score
     if (a.status === "Needs a pro answer" && b.status !== "Needs a pro answer") return -1;
     if (a.status !== "Needs a pro answer" && b.status === "Needs a pro answer") return 1;
     return netScore(b) - netScore(a);
   });
+  const selectedPost = filteredPosts.find((p) => p.id === selectedPostId) ?? filteredPosts[0] ?? communityPosts[0];
+  const selectedNews = displayNews.find((n) => n.id === selectedNewsId) ?? displayNews[0];
   const profileBadges = communityBadgeLabels(communityPosts, profile.displayName);
 
   function submitAnswer() {
     const body = answerDraft.trim();
-    if (!selectedPost || !body) {
-      return;
-    }
-
+    if (!selectedPost || !body) return;
     onAddAnswer(selectedPost.id, body);
     setAnswerDraft("");
   }
 
-  if (!selectedPost) {
-    return (
-      <section className="shop-talk-layout">
-        <EmptyState
-          icon={MessageCircle}
-          title="No Shop Talk posts yet"
-          description="Create the first field question and let the community answer it."
-          actionLabel="Create prompt"
-          onAction={onCreatePrompt}
-        />
-      </section>
-    );
-  }
+  const SHOP_RULES = [
+    "Keep it field-relevant — no recruiting or solicitation",
+    "Cite the code section when referencing code requirements",
+    "No pricing disputes or bidding wars",
+    "Mark your answer as a Verified Fix only if you've done it",
+    "Be specific — \"I've seen this on X job\" beats generic advice",
+    "No spam, no harassment — violations get removed, not warned",
+  ];
 
   return (
-    <section className="shop-talk-layout" aria-label="Shop Talk community">
-      <aside className="shop-talk-sidebar">
-        <div className="shop-talk-command">
-          <div>
-            <span>Community knowledge</span>
-            <h2>Field answers, not generic Q&A</h2>
-            <p>Seeded prompts are labeled. Verified Fix answers earn visible reputation and stay separate from job reviews.</p>
-          </div>
-          <button type="button" className="primary-action" onClick={onCreatePrompt}>
-            <Plus size={17} />
-            Ask from job
-          </button>
-        </div>
-
-        <label className="input-control">
-          <span>Filter by trade</span>
-          <select value={tradeFilter} onChange={(event) => setTradeFilter(event.target.value)}>
-            {tradeFilters.map((option) => (
-              <option key={option}>{option}</option>
-            ))}
-          </select>
-        </label>
-
-        <div className="shop-post-list">
-          {sortedPosts.length === 0 ? (
-            <EmptyState
-              icon={MessageCircle}
-              title="No questions in this filter"
-              description="Broaden the trade filter or start the first field question in this lane."
-              actionLabel="Ask a question"
-              onAction={onCreatePrompt}
-            />
-          ) : sortedPosts.map((post) => (
+    <>
+      {newPostOpen && (
+        <ShopTalkNewPostModal
+          profile={profile}
+          selectedJobTrade={selectedJobTrade}
+          onClose={() => setNewPostOpen(false)}
+          onSubmit={(flair, title, trade, body) => {
+            onNewPost(flair, title, trade, body);
+            setNewPostOpen(false);
+          }}
+        />
+      )}
+      <section className="shop-talk-layout" aria-label="Shop Talk community">
+        <aside className="shop-talk-sidebar">
+          {/* Tab switcher */}
+          <div className="shop-talk-tabs">
             <button
               type="button"
-              key={post.id}
-              className={post.id === selectedPost.id ? "shop-post-card selected" : "shop-post-card"}
-              onClick={() => setSelectedPostId(post.id)}
+              className={activeTab === "talk" ? "active" : ""}
+              onClick={() => setActiveTab("talk")}
             >
-              <span>{post.trade} - {post.status}</span>
-              <strong>{post.title}</strong>
-              <small>{netScore(post)} score - {post.replies.length} replies - {post.createdAt}</small>
+              <MessageCircle size={14} />
+              Shop Talk
             </button>
-          ))}
-        </div>
-      </aside>
-
-      <article className="shop-talk-detail">
-        <div className="shop-question-header">
-          <div>
-            <span>{selectedPost.badge ? `${selectedPost.badge} - ${selectedPost.author}` : selectedPost.author}</span>
-            <h2>{selectedPost.title}</h2>
-            <p>{selectedPost.body}</p>
-          </div>
-          <span className={selectedPost.status === "Verified Fix" ? "state-pill verified" : "state-pill"}>
-            {selectedPost.status}
-          </span>
-        </div>
-
-        <div className="shop-question-actions">
-          <button type="button" onClick={() => onVotePost(selectedPost.id, "up")}>
-            <ThumbsUp size={15} />
-            {selectedPost.upvotes}
-          </button>
-          <button type="button" onClick={() => onVotePost(selectedPost.id, "down")}>
-            <ThumbsDown size={15} />
-            {selectedPost.downvotes}
-          </button>
-          {reportReasons.map((reason) => (
-            <button type="button" key={reason} onClick={() => onReportPost(selectedPost.id, reason)}>
-              <Flag size={15} />
-              {reason}
+            <button
+              type="button"
+              className={activeTab === "news" ? "active" : ""}
+              onClick={() => setActiveTab("news")}
+            >
+              <Newspaper size={14} />
+              Trade News
             </button>
-          ))}
-        </div>
-
-        <section className="answer-composer">
-          <div>
-            <span>Answer as {profile.displayName}</span>
-            <strong>{profileBadges.length ? profileBadges.join(", ") : "New contributor"}</strong>
           </div>
-          <textarea
-            value={answerDraft}
-            onChange={(event) => setAnswerDraft(event.target.value)}
-            rows={4}
-            placeholder="Share the field habit, safety check, tool setup, or closeout proof that would prevent a callback."
-          />
-          <button type="button" className="primary-action" onClick={submitAnswer} disabled={!answerDraft.trim()}>
-            <Send size={17} />
-            Post answer
-          </button>
-        </section>
 
-        <section className="answer-list" aria-label="Community answers">
-          {selectedPost.replies.length === 0 ? (
-            <article className="empty-ledger">
-              <MessageCircle size={18} />
-              <strong>This needs a real trade answer.</strong>
-              <span>Answer it, then mark the best response as Verified Fix during testing.</span>
-            </article>
-          ) : sortedAnswers(selectedPost.replies).map((answer) => (
-            <article className={answer.verifiedFix ? "answer-card verified" : "answer-card"} key={answer.id}>
-              <div className="answer-card-heading">
+          {activeTab === "talk" ? (
+            <>
+              <div className="shop-talk-command">
                 <div>
-                  <span>{answer.author}</span>
-                  <strong>{answer.verifiedFix ? "Verified Fix" : "Community answer"}</strong>
+                  <span>Community knowledge</span>
+                  <h2>Field answers, not generic Q&amp;A</h2>
                 </div>
-                {answer.verifiedFix && <CheckCircle2 size={18} />}
-              </div>
-              <p>{answer.body}</p>
-              <div className="answer-actions">
-                <button type="button" onClick={() => onVoteAnswer(selectedPost.id, answer.id, "up")}>
-                  <ThumbsUp size={14} />
-                  {answer.upvotes}
-                </button>
-                <button type="button" onClick={() => onVoteAnswer(selectedPost.id, answer.id, "down")}>
-                  <ThumbsDown size={14} />
-                  {answer.downvotes}
-                </button>
-                <button type="button" disabled={answer.verifiedFix} onClick={() => onVerifyAnswer(selectedPost.id, answer.id)}>
-                  <BadgeCheck size={14} />
-                  {answer.verifiedFix ? "Verified" : "Mark fix"}
+                <button type="button" className="primary-action" onClick={() => setNewPostOpen(true)}>
+                  <Plus size={17} />
+                  New post
                 </button>
               </div>
+
+              {/* Community Rules */}
+              <div className="shop-talk-rules">
+                <button
+                  type="button"
+                  className="rules-toggle"
+                  onClick={() => setRulesOpen((v) => !v)}
+                  aria-expanded={rulesOpen}
+                >
+                  <ShieldCheck size={14} />
+                  <span>Community Rules</span>
+                  <ChevronDown size={13} style={{ transform: rulesOpen ? "rotate(180deg)" : undefined, transition: "transform 0.2s" }} />
+                </button>
+                {rulesOpen && (
+                  <ol className="rules-list">
+                    {SHOP_RULES.map((rule, i) => (
+                      <li key={i}>{rule}</li>
+                    ))}
+                  </ol>
+                )}
+              </div>
+
+              {/* Sort tabs */}
+              <div className="shop-sort-tabs">
+                {(["hot", "new", "unanswered"] as const).map((mode) => (
+                  <button
+                    key={mode}
+                    type="button"
+                    className={sortMode === mode ? "active" : ""}
+                    onClick={() => setSortMode(mode)}
+                  >
+                    {mode === "hot" ? "Hot" : mode === "new" ? "New" : "Unanswered"}
+                  </button>
+                ))}
+              </div>
+
+              <label className="input-control">
+                <span>Filter by trade</span>
+                <select value={tradeFilter} onChange={(e) => setTradeFilter(e.target.value)}>
+                  {tradeFilters.map((opt) => <option key={opt}>{opt}</option>)}
+                </select>
+              </label>
+
+              <div className="shop-post-list">
+                {sortedPosts.length === 0 ? (
+                  <EmptyState
+                    icon={MessageCircle}
+                    title="No questions in this filter"
+                    description="Broaden the trade filter or start the first field question in this lane."
+                    actionLabel="Ask a question"
+                    onAction={() => setNewPostOpen(true)}
+                  />
+                ) : sortedPosts.map((post) => (
+                  <button
+                    type="button"
+                    key={post.id}
+                    className={post.id === (selectedPost?.id ?? 0) ? "shop-post-card selected" : "shop-post-card"}
+                    onClick={() => setSelectedPostId(post.id)}
+                  >
+                    <div className="shop-post-card-meta">
+                      {post.flair && (
+                        <span className={`flair-pill flair-${post.flair.toLowerCase().replace(/\s/g, "-")}`}>
+                          {post.flair}
+                        </span>
+                      )}
+                      <span className="post-trade-label">{post.trade}</span>
+                    </div>
+                    <strong>{post.title}</strong>
+                    <div className="shop-post-card-stats">
+                      <span>↑ {netScore(post)}</span>
+                      <span>{post.replies.length} replies</span>
+                      <span>{post.createdAt}</span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="shop-talk-command">
+                <div>
+                  <span>Florida &amp; trades</span>
+                  <h2>Law changes, code updates, market signals</h2>
+                </div>
+              </div>
+              <div className="shop-news-list">
+                {newsLoading ? (
+                  <div className="news-loading">
+                    {[1,2,3,4,5].map((i) => (
+                      <div key={i} className="news-skeleton">
+                        <div className="skeleton-pill" />
+                        <div className="skeleton-line" />
+                        <div className="skeleton-line short" />
+                      </div>
+                    ))}
+                  </div>
+                ) : displayNews.length === 0 ? (
+                  <EmptyState icon={Newspaper} title="No news yet" description="Trade-relevant news will appear here." />
+                ) : displayNews.map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    className={item.id === selectedNewsId ? "shop-news-card selected" : "shop-news-card"}
+                    onClick={() => setSelectedNewsId(item.id)}
+                  >
+                    {item.urgency && <span className="news-urgency-pill">{item.urgency}</span>}
+                    <strong>{item.headline}</strong>
+                    <small>{item.source} · {item.date}</small>
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+        </aside>
+
+        {/* Right panel */}
+        {activeTab === "talk" ? (
+          selectedPost ? (
+            <article className="shop-talk-detail">
+              <div className="shop-question-header">
+                <div>
+                  <div className="shop-question-meta">
+                    {selectedPost.flair && (
+                      <span className={`flair-pill flair-${selectedPost.flair.toLowerCase().replace(/\s/g, "-")}`}>
+                        {selectedPost.flair}
+                      </span>
+                    )}
+                    <span>{selectedPost.badge ? `${selectedPost.badge} · ${selectedPost.author}` : selectedPost.author}</span>
+                    <span>{selectedPost.trade} · {selectedPost.createdAt}</span>
+                  </div>
+                  <h2>{selectedPost.title}</h2>
+                  <p>{selectedPost.body}</p>
+                </div>
+                <span className={selectedPost.status === "Verified Fix" ? "state-pill verified" : "state-pill"}>
+                  {selectedPost.status}
+                </span>
+              </div>
+
+              <div className="shop-question-actions">
+                <button type="button" onClick={() => onVotePost(selectedPost.id, "up")}>
+                  <ThumbsUp size={15} />
+                  {selectedPost.upvotes}
+                </button>
+                <button type="button" onClick={() => onVotePost(selectedPost.id, "down")}>
+                  <ThumbsDown size={15} />
+                  {selectedPost.downvotes}
+                </button>
+                {allReportReasons.map((reason) => (
+                  <button type="button" key={reason} onClick={() => onReportPost(selectedPost.id, reason)}>
+                    <Flag size={15} />
+                    {reason}
+                  </button>
+                ))}
+              </div>
+
+              <section className="answer-composer">
+                <div>
+                  <span>Answer as {profile.displayName}</span>
+                  <strong>{profileBadges.length ? profileBadges.join(", ") : "New contributor"}</strong>
+                </div>
+                <textarea
+                  value={answerDraft}
+                  onChange={(e) => setAnswerDraft(e.target.value)}
+                  rows={4}
+                  placeholder="Share the field habit, safety check, tool setup, or closeout proof that would prevent a callback."
+                />
+                <button type="button" className="primary-action" onClick={submitAnswer} disabled={!answerDraft.trim()}>
+                  <Send size={17} />
+                  Post answer
+                </button>
+              </section>
+
+              <section className="answer-list" aria-label="Community answers">
+                {selectedPost.replies.length === 0 ? (
+                  <article className="empty-ledger">
+                    <MessageCircle size={18} />
+                    <strong>This needs a real trade answer.</strong>
+                    <span>Answer it, then mark the best response as Verified Fix during testing.</span>
+                  </article>
+                ) : sortedAnswers(selectedPost.replies).map((answer) => (
+                  <article className={answer.verifiedFix ? "answer-card verified" : "answer-card"} key={answer.id}>
+                    <div className="answer-card-heading">
+                      <div>
+                        <span>{answer.author}</span>
+                        <strong>{answer.verifiedFix ? "Verified Fix" : "Community answer"}</strong>
+                      </div>
+                      {answer.verifiedFix && <CheckCircle2 size={18} />}
+                    </div>
+                    <p>{answer.body}</p>
+                    <div className="answer-actions">
+                      <button type="button" onClick={() => onVoteAnswer(selectedPost.id, answer.id, "up")}>
+                        <ThumbsUp size={14} />
+                        {answer.upvotes}
+                      </button>
+                      <button type="button" onClick={() => onVoteAnswer(selectedPost.id, answer.id, "down")}>
+                        <ThumbsDown size={14} />
+                        {answer.downvotes}
+                      </button>
+                      <button type="button" disabled={answer.verifiedFix} onClick={() => onVerifyAnswer(selectedPost.id, answer.id)}>
+                        <BadgeCheck size={14} />
+                        {answer.verifiedFix ? "Verified" : "Mark fix"}
+                      </button>
+                    </div>
+                  </article>
+                ))}
+              </section>
             </article>
-          ))}
-        </section>
-      </article>
-    </section>
+          ) : (
+            <article className="shop-talk-detail">
+              <EmptyState
+                icon={MessageCircle}
+                title="No Shop Talk posts yet"
+                description="Create the first field question and let the community answer it."
+                actionLabel="Create post"
+                onAction={() => setNewPostOpen(true)}
+              />
+            </article>
+          )
+        ) : (
+          <article className="shop-talk-detail">
+            {selectedNews ? (
+              <div className="shop-news-detail">
+                <div className="shop-news-detail-header">
+                  {selectedNews.urgency && <span className="news-urgency-pill">{selectedNews.urgency}</span>}
+                  <h2>{selectedNews.headline}</h2>
+                  <small>{selectedNews.source} · {selectedNews.date}</small>
+                </div>
+                <p className="shop-news-detail-body">{selectedNews.summary}</p>
+                {selectedNews.url && selectedNews.url !== "#" && (
+                  <a href={selectedNews.url} target="_blank" rel="noreferrer" className="secondary-action">
+                    Read full article →
+                  </a>
+                )}
+                <div className="shop-news-discuss">
+                  <strong>Discuss this in Shop Talk</strong>
+                  <p>Have a take on how this affects your work? Start a conversation.</p>
+                  <button
+                    type="button"
+                    className="primary-action"
+                    onClick={() => {
+                      setActiveTab("talk");
+                      setNewPostOpen(true);
+                    }}
+                  >
+                    <MessageCircle size={15} />
+                    Start discussion
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <EmptyState icon={Newspaper} title="Select a news item" description="Choose a headline from the left to read the full summary." />
+            )}
+          </article>
+        )}
+      </section>
+    </>
   );
 }
 
@@ -5309,6 +6492,24 @@ function ToolsView({
   onOpenJob: (id: number) => void;
   onNavigate: (view: NavLabel) => void;
 }) {
+  if (selectedJob.id === 0) {
+    return (
+      <section className="tools-layout" aria-label="Trade tools">
+        <section className="tools-command" aria-label="Tool command center">
+          <div>
+            <span>Field tools</span>
+            <h2>Invoices, estimates, and quick math for your active work order.</h2>
+            <p>No active work order loaded. {role === "contractor" ? "Post a job to activate field tools." : "Apply to work to activate field tools."}</p>
+          </div>
+          <button type="button" className="primary-action" onClick={() => onNavigate("Marketplace")}>
+            <BriefcaseBusiness size={17} />
+            {role === "contractor" ? "Post work" : "Find work"}
+          </button>
+        </section>
+      </section>
+    );
+  }
+
   return (
     <section className="tools-layout" aria-label="Trade tools">
       <section className="tools-command" aria-label="Tool command center">
@@ -5344,7 +6545,7 @@ function ToolsView({
         </div>
       </section>
       <section className="tools-grid">
-        <FractionTool />
+        <ConstructionCalculator />
         <MaterialsWasteTool selectedJob={selectedJob} />
         <PaymentNoteTool selectedJob={selectedJob} />
       </section>
@@ -5365,41 +6566,92 @@ function InvoiceTool({
   const [invoiceNumber, setInvoiceNumber] = useState(`INV-${selectedJob.id}`);
   const [billTo, setBillTo] = useState(selectedJob.contractor);
   const [payTo, setPayTo] = useState(role === "contractor" ? "Selected tradesperson" : "My trade profile");
-  const [laborHours, setLaborHours] = useState(selectedJob.durationHours);
-  const [laborRate, setLaborRate] = useState(Math.max(45, Math.round(selectedJob.pay / Math.max(selectedJob.durationHours, 1) * 0.76)));
-  const [materials, setMaterials] = useState(Math.max(75, Math.round(selectedJob.pay * 0.2)));
-  const [other, setOther] = useState(0);
-  const [taxPercent, setTaxPercent] = useState(0);
   const [recipientEmail, setRecipientEmail] = useState("");
   const [recipientPhone, setRecipientPhone] = useState("");
   const [method, setMethod] = useState("Zelle");
   const [terms, setTerms] = useState("Due on completion");
   const [status, setStatus] = useState<"Draft" | "Sent" | "Paid">("Draft");
+  const [taxPercent, setTaxPercent] = useState(0);
   const [copied, setCopied] = useState(false);
   const [downloaded, setDownloaded] = useState(false);
 
-  function numberFromInput(setValue: (value: number) => void, minimum = 0) {
-    return (event: ChangeEvent<HTMLInputElement>) => {
-      const value = Number(event.target.value);
-      setValue(Number.isFinite(value) ? Math.max(minimum, value) : minimum);
-    };
+  const [lineItems, setLineItems] = useState<InvoiceLineItem[]>([
+    {
+      id: "1",
+      type: "labor",
+      description: "Labor",
+      quantity: selectedJob.durationHours,
+      unit: "hrs",
+      unitPrice: Math.max(45, Math.round(selectedJob.pay / Math.max(selectedJob.durationHours, 1) * 0.76)),
+      taxable: false,
+    },
+    {
+      id: "2",
+      type: "material",
+      description: "Materials",
+      quantity: 1,
+      unit: "ea",
+      unitPrice: Math.max(75, Math.round(selectedJob.pay * 0.2)),
+      taxable: true,
+    },
+  ]);
+
+  function addLineItem() {
+    const newId = String(Math.max(...lineItems.map((l) => Number(l.id) || 0), 0) + 1);
+    setLineItems([
+      ...lineItems,
+      {
+        id: newId,
+        type: "service",
+        description: "",
+        quantity: 1,
+        unit: "ea",
+        unitPrice: 0,
+        taxable: true,
+      },
+    ]);
   }
 
-  const labor = Math.round(laborHours * laborRate);
-  const subtotal = labor + materials + other;
-  const tax = Math.round(subtotal * (taxPercent / 100));
-  const total = subtotal + tax;
+  function removeLineItem(id: string) {
+    setLineItems(lineItems.filter((item) => item.id !== id));
+  }
+
+  function updateLineItem(id: string, field: keyof InvoiceLineItem, value: unknown) {
+    setLineItems(
+      lineItems.map((item) =>
+        item.id === id ? { ...item, [field]: value } : item
+      )
+    );
+  }
+
+  const subtotal = lineItems.reduce((sum, item) => {
+    if (item.type === "deposit") return sum - item.quantity * item.unitPrice;
+    if (item.type === "discount") return sum - item.quantity * item.unitPrice;
+    return sum + item.quantity * item.unitPrice;
+  }, 0);
+
+  const taxableSubtotal = lineItems
+    .filter((item) => item.taxable && item.type !== "discount" && item.type !== "deposit")
+    .reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
+
+  const tax = Math.round(taxableSubtotal * (taxPercent / 100));
+  const total = Math.max(0, subtotal + tax);
+
   const invoiceSubject = `${brandConfig.appName} invoice ${invoiceNumber} - ${selectedJob.title}`;
   const invoiceText = [
     `${brandConfig.appName} invoice ${invoiceNumber}`,
     `Status: ${status}`,
+    `Date: ${new Date().toLocaleDateString()}`,
     `Job: ${selectedJob.title}`,
     `Bill to: ${billTo}`,
     `Pay to: ${payTo}`,
-    `Labor: ${laborHours} hrs x ${currency(laborRate)} = ${currency(labor)}`,
-    `Materials: ${currency(materials)}`,
-    `Other: ${currency(other)}`,
-    `Tax: ${currency(tax)}`,
+    ...lineItems.map((item) => {
+      const lineTotal = item.quantity * item.unitPrice;
+      const sign = item.type === "discount" || item.type === "deposit" ? "-" : "+";
+      return `${sign} ${item.description}: ${item.quantity} ${item.unit} × ${currency(item.unitPrice)} = ${currency(lineTotal)}`;
+    }),
+    `Subtotal: ${currency(subtotal)}`,
+    `Tax (${taxPercent}%): ${currency(tax)}`,
     `Total due: ${currency(total)}`,
     `Terms: ${terms}`,
     `Payment method: ${method}`,
@@ -5546,28 +6798,77 @@ function InvoiceTool({
           </label>
         </div>
 
-        <div className="invoice-line-grid">
-          <label>
-            Labor hours
-            <input type="number" min="0" step="0.5" value={laborHours} onChange={numberFromInput(setLaborHours)} />
-          </label>
-          <label>
-            Labor rate
-            <input type="number" min="0" value={laborRate} onChange={numberFromInput(setLaborRate)} />
-          </label>
-          <label>
-            Materials
-            <input type="number" min="0" value={materials} onChange={numberFromInput(setMaterials)} />
-          </label>
-          <label>
-            Other
-            <input type="number" min="0" value={other} onChange={numberFromInput(setOther)} />
-          </label>
-          <label>
-            Tax %
-            <input type="number" min="0" value={taxPercent} onChange={numberFromInput(setTaxPercent)} />
-          </label>
+        <div className="invoice-line-items">
+          <div className="invoice-line-header">
+            <span>Line items</span>
+            <button type="button" className="small-button" onClick={addLineItem}>
+              <Plus size={14} />
+              Add item
+            </button>
+          </div>
+          <div className="invoice-line-table">
+            {lineItems.map((item) => (
+              <div key={item.id} className="invoice-line-row">
+                <input
+                  type="text"
+                  placeholder="Description"
+                  value={item.description}
+                  onChange={(e) => updateLineItem(item.id, "description", e.target.value)}
+                />
+                <select value={item.type} onChange={(e) => updateLineItem(item.id, "type", e.target.value as InvoiceLineItem["type"])}>
+                  <option value="labor">Labor</option>
+                  <option value="material">Material</option>
+                  <option value="service">Service</option>
+                  <option value="discount">Discount</option>
+                  <option value="deposit">Deposit</option>
+                </select>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.5"
+                  placeholder="Qty"
+                  value={item.quantity}
+                  onChange={(e) => updateLineItem(item.id, "quantity", Number(e.target.value) || 0)}
+                />
+                <input
+                  type="text"
+                  placeholder="Unit"
+                  value={item.unit}
+                  onChange={(e) => updateLineItem(item.id, "unit", e.target.value)}
+                />
+                <input
+                  type="number"
+                  min="0"
+                  placeholder="Price"
+                  value={item.unitPrice}
+                  onChange={(e) => updateLineItem(item.id, "unitPrice", Number(e.target.value) || 0)}
+                />
+                <label className="checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={item.taxable}
+                    onChange={(e) => updateLineItem(item.id, "taxable", e.target.checked)}
+                  />
+                  Tax
+                </label>
+                <button type="button" className="icon-button" onClick={() => removeLineItem(item.id)}>
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            ))}
+          </div>
         </div>
+
+        <label className="invoice-tax-label">
+          Tax %
+          <input
+            type="number"
+            min="0"
+            max="100"
+            value={taxPercent}
+            onChange={(e) => setTaxPercent(Number(e.target.value) || 0)}
+          />
+        </label>
       </div>
 
       <aside className="invoice-preview">
@@ -5597,10 +6898,25 @@ function InvoiceTool({
         </div>
 
         <div className="invoice-breakdown">
-          <div><span>Labor</span><strong>{currency(labor)}</strong></div>
-          <div><span>Materials</span><strong>{currency(materials)}</strong></div>
-          <div><span>Other</span><strong>{currency(other)}</strong></div>
-          <div><span>Tax</span><strong>{currency(tax)}</strong></div>
+          {lineItems.map((item) => {
+            const lineTotal = item.quantity * item.unitPrice;
+            const display = item.type === "discount" || item.type === "deposit" ? -lineTotal : lineTotal;
+            return (
+              <div key={item.id}>
+                <span>{item.description}</span>
+                <strong>{currency(display)}</strong>
+              </div>
+            );
+          })}
+          <div className="invoice-breakdown-divider"></div>
+          <div>
+            <span>Subtotal</span>
+            <strong>{currency(subtotal)}</strong>
+          </div>
+          <div>
+            <span>Tax ({taxPercent}%)</span>
+            <strong>{currency(tax)}</strong>
+          </div>
         </div>
 
         <div className="invoice-actions">
@@ -5630,42 +6946,227 @@ function InvoiceTool({
   );
 }
 
-function FractionTool() {
+function ConstructionCalculator() {
+  const [activeTab, setActiveTab] = useState<"measurement" | "shortcuts" | "materials">("measurement");
+
+  // Measurement tab state
   const [feet, setFeet] = useState(12);
-  const [inches, setInches] = useState(7.5);
+  const [inches, setInches] = useState(7);
+  const [eighths, setEighths] = useState(2); // 2/8 = 1/4
   const [pieces, setPieces] = useState(4);
-  const totalInches = (feet * 12 + inches) * pieces;
+
+  // Shortcuts tab state
+  const [wallLength, setWallLength] = useState(12);
+  const [spacing, setSpacing] = useState(16);
+
+  // Materials tab state
+  const [materials, setMaterials] = useState<MaterialEstimate[]>([
+    {
+      id: "1",
+      name: "2x4 Lumber",
+      quantity: 10,
+      unit: "linear feet",
+      wastePercent: 5,
+      costPerUnit: 0.75,
+    },
+  ]);
+
+  // Calculations
+  const totalInches = (feet * 12 + inches) * pieces + (eighths / 8) * pieces;
   const totalFeet = Math.floor(totalInches / 12);
-  const remainder = Number((totalInches - totalFeet * 12).toFixed(2));
+  const remainderInches = Number((totalInches % 12).toFixed(2));
+  const remainderEighths = Math.round((remainderInches % 1) * 8);
+  const remainingInches = Math.floor(remainderInches);
+
+  const studCount = Math.ceil((wallLength * 12) / spacing) + 1;
+  const joistCount = Math.ceil((wallLength * 12) / spacing) + 1;
+
+  function addMaterial() {
+    const newId = String(Math.max(...materials.map((m) => Number(m.id) || 0), 0) + 1);
+    setMaterials([
+      ...materials,
+      { id: newId, name: "", quantity: 1, unit: "ea", wastePercent: 5, costPerUnit: 0 },
+    ]);
+  }
+
+  function removeMaterial(id: string) {
+    setMaterials(materials.filter((m) => m.id !== id));
+  }
+
+  function updateMaterial(id: string, field: keyof MaterialEstimate, value: unknown) {
+    setMaterials(
+      materials.map((m) => (m.id === id ? { ...m, [field]: value } : m))
+    );
+  }
+
+  const totalMaterialCost = materials.reduce((sum, m) => {
+    const withWaste = m.quantity * (1 + m.wastePercent / 100);
+    return sum + (withWaste * (m.costPerUnit || 0));
+  }, 0);
 
   return (
-    <article className="tool-card">
+    <section className="construction-calculator">
       <div className="tool-card-heading">
-        <Calculator size={18} />
+        <Hammer size={20} />
         <div>
-          <span>Field math</span>
-          <h3>Foot-inch multiplier</h3>
+          <span>Construction math</span>
+          <h3>Measurements, layouts, materials</h3>
         </div>
       </div>
-      <div className="tool-input-grid">
-        <label>
-          Feet
-          <input type="number" value={feet} min="0" onChange={(event) => setFeet(Math.max(0, Number(event.target.value) || 0))} />
-        </label>
-        <label>
-          Inches
-          <input type="number" value={inches} min="0" step="0.125" onChange={(event) => setInches(Math.max(0, Number(event.target.value) || 0))} />
-        </label>
-        <label>
-          Pieces
-          <input type="number" value={pieces} min="1" onChange={(event) => setPieces(Math.max(1, Number(event.target.value) || 1))} />
-        </label>
+
+      <div className="calc-tabs">
+        <button
+          className={activeTab === "measurement" ? "calc-tab active" : "calc-tab"}
+          onClick={() => setActiveTab("measurement")}
+        >
+          Measurements
+        </button>
+        <button
+          className={activeTab === "shortcuts" ? "calc-tab active" : "calc-tab"}
+          onClick={() => setActiveTab("shortcuts")}
+        >
+          Shortcuts
+        </button>
+        <button
+          className={activeTab === "materials" ? "calc-tab active" : "calc-tab"}
+          onClick={() => setActiveTab("materials")}
+        >
+          Materials
+        </button>
       </div>
-      <div className="tool-result">
-        <span>Total length</span>
-        <strong>{totalFeet}' {remainder}"</strong>
-      </div>
-    </article>
+
+      {activeTab === "measurement" && (
+        <div className="calc-tab-content">
+          <div className="calc-grid">
+            <label>
+              Feet
+              <input type="number" value={feet} min="0" onChange={(e) => setFeet(Math.max(0, Number(e.target.value) || 0))} />
+            </label>
+            <label>
+              Inches
+              <input type="number" value={inches} min="0" max="11" onChange={(e) => setInches(Math.max(0, Math.min(11, Number(e.target.value) || 0)))} />
+            </label>
+            <label>
+              Eighths
+              <select value={eighths} onChange={(e) => setEighths(Number(e.target.value))}>
+                {[0, 1, 2, 3, 4, 5, 6, 7, 8].map((n) => (
+                  <option key={n} value={n}>
+                    {n === 0 ? "0" : `${n}/8"`}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Pieces/multiplier
+              <input type="number" value={pieces} min="1" onChange={(e) => setPieces(Math.max(1, Number(e.target.value) || 1))} />
+            </label>
+          </div>
+          <div className="calc-result">
+            <span>Total length</span>
+            <strong>
+              {totalFeet}'{remainingInches}
+              {remainderEighths > 0 && `${remainderEighths}/8`}"
+            </strong>
+            <small>{totalInches.toFixed(2)} total inches</small>
+          </div>
+        </div>
+      )}
+
+      {activeTab === "shortcuts" && (
+        <div className="calc-tab-content">
+          <div className="calc-grid">
+            <label>
+              Wall length (feet)
+              <input type="number" value={wallLength} min="1" onChange={(e) => setWallLength(Math.max(1, Number(e.target.value) || 1))} />
+            </label>
+            <label>
+              Stud spacing (inches)
+              <select value={spacing} onChange={(e) => setSpacing(Number(e.target.value))}>
+                <option value={16}>16" OC</option>
+                <option value={24}>24" OC</option>
+                <option value={12}>12" OC</option>
+              </select>
+            </label>
+          </div>
+          <div className="shortcuts-results">
+            <div className="shortcut-result">
+              <span>Studs needed (2×4)</span>
+              <strong>{studCount} studs</strong>
+              <small>~{(studCount * 8).toFixed(0)} linear feet</small>
+            </div>
+            <div className="shortcut-result">
+              <span>Joists/rafters needed</span>
+              <strong>{joistCount} pieces</strong>
+              <small>at {spacing}" O.C.</small>
+            </div>
+            <div className="shortcut-result">
+              <span>Plates needed</span>
+              <strong>{(wallLength * 3).toFixed(0)} LF</strong>
+              <small>Top + bottom + rim</small>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeTab === "materials" && (
+        <div className="calc-tab-content">
+          <button type="button" className="small-button" onClick={addMaterial}>
+            <Plus size={14} />
+            Add material
+          </button>
+          <div className="material-list">
+            {materials.map((mat) => {
+              const withWaste = mat.quantity * (1 + mat.wastePercent / 100);
+              const cost = withWaste * (mat.costPerUnit || 0);
+              return (
+                <div key={mat.id} className="material-row">
+                  <input
+                    type="text"
+                    placeholder="Material name"
+                    value={mat.name}
+                    onChange={(e) => updateMaterial(mat.id, "name", e.target.value)}
+                  />
+                  <input
+                    type="number"
+                    placeholder="Qty"
+                    value={mat.quantity}
+                    onChange={(e) => updateMaterial(mat.id, "quantity", Number(e.target.value) || 0)}
+                  />
+                  <input
+                    type="text"
+                    placeholder="Unit"
+                    value={mat.unit}
+                    onChange={(e) => updateMaterial(mat.id, "unit", e.target.value)}
+                  />
+                  <input
+                    type="number"
+                    placeholder="Waste %"
+                    value={mat.wastePercent}
+                    onChange={(e) => updateMaterial(mat.id, "wastePercent", Number(e.target.value) || 0)}
+                  />
+                  <input
+                    type="number"
+                    placeholder="Cost/unit"
+                    value={mat.costPerUnit || ""}
+                    onChange={(e) => updateMaterial(mat.id, "costPerUnit", Number(e.target.value) || 0)}
+                  />
+                  <span className="material-total">{currency(cost)}</span>
+                  <button type="button" className="icon-button" onClick={() => removeMaterial(mat.id)}>
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+          {totalMaterialCost > 0 && (
+            <div className="material-total-section">
+              <span>Total material cost (with waste)</span>
+              <strong>{currency(totalMaterialCost)}</strong>
+            </div>
+          )}
+        </div>
+      )}
+    </section>
   );
 }
 
@@ -5965,13 +7466,21 @@ function CrewView({
         <Users size={24} />
         <h2>Trusted bench</h2>
         <p>
-          Top match right now is {highlighted.name}, with {highlighted.match}%
-          fit for the active work order and a {highlighted.responseTime} response time.
+          {highlighted
+            ? `Top match right now is ${highlighted.name}, with ${highlighted.match}% fit for the active work order and a ${highlighted.responseTime} response time.`
+            : "Crew profiles will appear here once tradespeople join the network in Jacksonville."}
         </p>
-        <button className="primary-action" onClick={onReviewConsent}>
-          <ShieldCheck size={17} />
-          {trustReady ? "Consent reviewed" : "Review trust consent"}
-        </button>
+        {trustReady ? (
+          <div className="consent-status-badge">
+            <BadgeCheck size={17} />
+            Consent on file
+          </div>
+        ) : (
+          <button className="primary-action" onClick={onReviewConsent}>
+            <ShieldCheck size={17} />
+            Review trust consent
+          </button>
+        )}
       </div>
       <div className="crew-directory">
         {people.length === 0 ? (
@@ -6020,6 +7529,7 @@ function CrewView({
 function MessagesView({
   selectedJob,
   matchingTalent,
+  displayName,
   messageDraft,
   sentMessages,
   onMessageDraft,
@@ -6028,40 +7538,53 @@ function MessagesView({
 }: {
   selectedJob: Job;
   matchingTalent: typeof talent;
+  displayName: string;
   messageDraft: string;
   sentMessages: string[];
   onMessageDraft: (message: string) => void;
   onSendMessage: () => void;
   onOpenJob: (id: number) => void;
 }) {
-  const contact = matchingTalent[0] ?? talent[0] ?? emptyTalent;
-  const messages = [
-    ...sentMessages.map((message) => ({ author: "Ryan Mitchell", text: message })),
-    {
-      author: contact.name,
-      text: "I can take this. Please send the start window and parking notes.",
-    },
-    {
-      author: "Job assistant",
-      text: `${selectedJob.state} guidance: ${selectedJob.guidance[0].toLowerCase()}.`,
-    },
-  ];
+  const contact = matchingTalent[0] ?? emptyTalent;
+  const messages = sentMessages.map((message) => ({ author: displayName, text: message }));
+
+  if (selectedJob.id === 0) {
+    return (
+      <section className="message-workspace">
+        <aside className="thread-list">
+          <div className="thread-list-empty">
+            <MessageSquareText size={20} />
+            <span>No active work order</span>
+          </div>
+        </aside>
+        <section className="thread-panel" aria-label="Selected message thread">
+          <div className="thread-heading">
+            <div>
+              <span>Messages</span>
+              <h2>No work order loaded</h2>
+            </div>
+          </div>
+          <div className="message-list">
+            <p className="thread-empty">Post a job or apply to work to start a message thread.</p>
+          </div>
+        </section>
+      </section>
+    );
+  }
 
   return (
     <section className="message-workspace">
       <aside className="thread-list">
-        {[selectedJob, ...seedJobs.filter((job) => job.id !== selectedJob.id).slice(0, 3)].map((job) => (
-          <button key={job.id} onClick={() => onOpenJob(job.id)}>
-            <span>{job.trade}</span>
-            <strong>{job.title}</strong>
-            <small>{job.location}</small>
-          </button>
-        ))}
+        <button key={selectedJob.id} onClick={() => onOpenJob(selectedJob.id)}>
+          <span>{selectedJob.trade}</span>
+          <strong>{selectedJob.title}</strong>
+          <small>{selectedJob.location}</small>
+        </button>
       </aside>
       <section className="thread-panel" aria-label="Selected message thread">
         <div className="thread-heading">
           <div>
-            <span>{contact.name} - {contact.responseTime}</span>
+            <span>{contact.name !== emptyTalent.name ? `${contact.name} · ${contact.responseTime}` : "No contact yet"}</span>
             <h2>{selectedJob.title}</h2>
           </div>
           <button onClick={onSendMessage}>
@@ -6070,12 +7593,16 @@ function MessagesView({
           </button>
         </div>
         <div className="message-list">
-          {messages.map((message, index) => (
-            <article key={`${message.author}-${index}`} className={message.author === "Ryan Mitchell" ? "message-bubble mine" : "message-bubble"}>
-              <strong>{message.author}</strong>
-              <p>{message.text}</p>
-            </article>
-          ))}
+          {messages.length === 0 ? (
+            <p className="thread-empty">No messages yet. Use the composer below to send the first update.</p>
+          ) : (
+            messages.map((message, index) => (
+              <article key={`${message.author}-${index}`} className={message.author === displayName ? "message-bubble mine" : "message-bubble"}>
+                <strong>{message.author}</strong>
+                <p>{message.text}</p>
+              </article>
+            ))
+          )}
         </div>
         <label className="message-composer">
           <span>Job update</span>
@@ -6112,10 +7639,17 @@ function TrustLegalView({
           permits, insurance, compliance, payment terms, and work order records. ID
           checks are required before real posting or accepting.
         </p>
-        <button className="primary-action" onClick={onReviewConsent}>
-          <BadgeCheck size={17} />
-          {trustReady ? "Consent reviewed" : "Review consent"}
-        </button>
+        {trustReady ? (
+          <div className="consent-status-badge">
+            <BadgeCheck size={17} />
+            Consent on file
+          </div>
+        ) : (
+          <button className="primary-action" onClick={onReviewConsent}>
+            <BadgeCheck size={17} />
+            Review consent
+          </button>
+        )}
       </div>
       <div className="credential-grid">
         <CredentialTile label="Legal consent" value="Accepted at signup before work starts" tone={trustReady ? "positive" : "warning"} />
@@ -6936,46 +8470,333 @@ function AdminView({
   );
 }
 
+function SafetyQuizTaker({
+  quiz,
+  existingResult,
+  onComplete,
+  onBack,
+}: {
+  quiz: SafetyQuiz;
+  existingResult?: SafetyQuizResult;
+  onComplete: (quizId: string, score: number) => void;
+  onBack: () => void;
+}) {
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [selected, setSelected] = useState<number | null>(null);
+  const [answers, setAnswers] = useState<number[]>([]);
+  const [showResult, setShowResult] = useState(false);
+  const [showExplanation, setShowExplanation] = useState(false);
+  const [retaking, setRetaking] = useState(false);
+
+  const totalQ = quiz.questions.length;
+  const question = quiz.questions[currentIndex];
+
+  if (!retaking && existingResult && !showResult) {
+    const passed = existingResult.passed;
+    return (
+      <div className="quiz-result-screen">
+        <div className={`quiz-result-badge ${passed ? "pass" : "fail"}`}>
+          {passed ? <BadgeCheck size={36} /> : <AlertTriangle size={36} />}
+          <strong>{passed ? "Certified" : "Not yet passed"}</strong>
+          <span>{existingResult.score}%</span>
+        </div>
+        <p className="quiz-result-label">
+          {passed
+            ? `You earned this certificate on ${existingResult.completedAt}.`
+            : `Last attempt: ${existingResult.score}%. You need ${QUIZ_PASS_SCORE}% to pass.`}
+        </p>
+        <div className="quiz-action-row">
+          <button className="secondary-action" onClick={onBack}>
+            <ArrowLeft size={15} />
+            Back
+          </button>
+          <button className="primary-action" onClick={() => { setRetaking(true); setAnswers([]); setCurrentIndex(0); setSelected(null); setShowExplanation(false); }}>
+            <RefreshCw size={15} />
+            {passed ? "Retake quiz" : "Try again"}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (showResult) {
+    const correct = answers.filter((a, i) => a === quiz.questions[i].correctIndex).length;
+    const score = Math.round((correct / totalQ) * 100);
+    const passed = score >= QUIZ_PASS_SCORE;
+    return (
+      <div className="quiz-result-screen">
+        <div className={`quiz-result-badge ${passed ? "pass" : "fail"}`}>
+          {passed ? <BadgeCheck size={36} /> : <AlertTriangle size={36} />}
+          <strong>{passed ? "Certified!" : "Not quite"}</strong>
+          <span>{score}%</span>
+        </div>
+        <p className="quiz-result-label">
+          {passed
+            ? `${correct} of ${totalQ} correct — certificate added to your profile.`
+            : `${correct} of ${totalQ} correct. You need ${QUIZ_PASS_SCORE}% to pass. Review questions below and try again.`}
+        </p>
+        <div className="quiz-review-list">
+          {quiz.questions.map((q, i) => {
+            const userAnswer = answers[i] ?? -1;
+            const wasCorrect = userAnswer === q.correctIndex;
+            return (
+              <div key={q.id} className={`quiz-review-row ${wasCorrect ? "correct" : "incorrect"}`}>
+                <div className="quiz-review-indicator">
+                  {wasCorrect ? <CheckCircle size={14} /> : <XCircle size={14} />}
+                </div>
+                <div>
+                  <p>{q.text}</p>
+                  {!wasCorrect && (
+                    <small>
+                      Correct: <strong>{q.options[q.correctIndex]}</strong> — {q.explanation}
+                    </small>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        <div className="quiz-action-row">
+          <button className="secondary-action" onClick={onBack}>
+            <ArrowLeft size={15} />
+            Back
+          </button>
+          {!passed && (
+            <button className="primary-action" onClick={() => { setAnswers([]); setCurrentIndex(0); setSelected(null); setShowResult(false); setShowExplanation(false); }}>
+              <RefreshCw size={15} />
+              Try again
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  function confirmAnswer() {
+    if (selected === null) return;
+    const newAnswers = [...answers, selected];
+    setAnswers(newAnswers);
+    setShowExplanation(true);
+    if (newAnswers.length === totalQ) {
+      const correct = newAnswers.filter((a, i) => a === quiz.questions[i].correctIndex).length;
+      const score = Math.round((correct / totalQ) * 100);
+      onComplete(quiz.id, score);
+    }
+  }
+
+  function next() {
+    if (currentIndex < totalQ - 1) {
+      setCurrentIndex(currentIndex + 1);
+      setSelected(null);
+      setShowExplanation(false);
+    } else {
+      setShowResult(true);
+    }
+  }
+
+  const isCorrect = selected === question.correctIndex;
+
+  return (
+    <div className="quiz-taker">
+      <div className="quiz-taker-header">
+        <button className="icon-button" onClick={onBack} aria-label="Back to quiz list">
+          <ArrowLeft size={16} />
+        </button>
+        <div>
+          <span className="section-label">{quiz.oshaRef}</span>
+          <strong>{quiz.title}</strong>
+        </div>
+        <span className="quiz-counter">{currentIndex + 1}/{totalQ}</span>
+      </div>
+      <div className="quiz-progress">
+        <div className="quiz-progress-fill" style={{ width: `${((currentIndex) / totalQ) * 100}%` }} />
+      </div>
+      <div className="quiz-question-block">
+        <p className="quiz-question-text">{question.text}</p>
+        <div className="quiz-options">
+          {question.options.map((option, i) => {
+            let cls = "quiz-option";
+            if (showExplanation) {
+              if (i === question.correctIndex) cls += " correct";
+              else if (i === selected) cls += " incorrect";
+            } else if (i === selected) {
+              cls += " selected";
+            }
+            return (
+              <button
+                key={i}
+                className={cls}
+                disabled={showExplanation}
+                onClick={() => setSelected(i)}
+              >
+                <span className="quiz-option-letter">{String.fromCharCode(65 + i)}</span>
+                {option}
+              </button>
+            );
+          })}
+        </div>
+        {showExplanation && (
+          <div className={`quiz-explanation ${isCorrect ? "correct" : "incorrect"}`}>
+            {isCorrect ? <CheckCircle size={15} /> : <XCircle size={15} />}
+            <p>{question.explanation}</p>
+          </div>
+        )}
+      </div>
+      <div className="quiz-taker-footer">
+        {!showExplanation ? (
+          <button
+            className="primary-action"
+            disabled={selected === null}
+            onClick={confirmAnswer}
+          >
+            Confirm answer
+          </button>
+        ) : (
+          <button className="primary-action" onClick={next}>
+            {currentIndex < totalQ - 1 ? "Next question" : "See results"}
+            <ChevronRight size={15} />
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function SafetyTrainingView({
+  role,
   jobs,
   completedTraining,
+  safetyQuizResults,
   onToggleTraining,
+  onSafetyQuizComplete,
   onOpenJob,
 }: {
+  role: Role;
   jobs: Job[];
   completedTraining: Set<string>;
+  safetyQuizResults: Record<string, SafetyQuizResult>;
   onToggleTraining: (moduleName: string) => void;
+  onSafetyQuizComplete: (quizId: string, score: number) => void;
   onOpenJob: (id: number) => void;
 }) {
+  const [activeQuiz, setActiveQuiz] = useState<SafetyQuiz | null>(null);
+
+  const passedCount = Object.values(safetyQuizResults).filter((r) => r.passed).length;
+
+  if (activeQuiz) {
+    return (
+      <section className="operations-layout safety-layout">
+        <div className="training-list">
+          {safetyQuizData.map((quiz) => {
+            const result = safetyQuizResults[quiz.id];
+            const isPassed = result?.passed;
+            return (
+              <button
+                key={quiz.id}
+                className={`quiz-card-btn ${activeQuiz.id === quiz.id ? "active" : ""} ${isPassed ? "complete" : ""}`}
+                onClick={() => setActiveQuiz(quiz)}
+              >
+                {isPassed ? <BadgeCheck size={16} /> : <BookOpen size={16} />}
+                <span>{quiz.title}</span>
+                <strong>{isPassed ? "Passed" : result ? "Retry" : "Start"}</strong>
+              </button>
+            );
+          })}
+        </div>
+        <div className="quiz-panel">
+          <SafetyQuizTaker
+            quiz={activeQuiz}
+            existingResult={safetyQuizResults[activeQuiz.id]}
+            onComplete={onSafetyQuizComplete}
+            onBack={() => setActiveQuiz(null)}
+          />
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section className="operations-layout safety-layout">
       <div className="training-list">
-        {trainingModules.map((moduleName) => (
-          <button
-            key={moduleName}
-            className={completedTraining.has(moduleName) ? "complete" : ""}
-            onClick={() => onToggleTraining(moduleName)}
-          >
-            <BookOpen size={16} />
-            <span>{moduleName}</span>
-            <strong>{completedTraining.has(moduleName) ? "Complete" : "Start"}</strong>
-          </button>
-        ))}
-      </div>
-      <div className="risk-board">
-        {jobs.map((job) => (
-          <article className="risk-row" key={job.id}>
-            <div>
-              <span>{job.trade} risk brief</span>
-              <strong>{job.title}</strong>
-              <small>{job.risks.join(", ")}</small>
-            </div>
-            <button onClick={() => onOpenJob(job.id)}>
-              <ClipboardCheck size={14} />
-              Controls
+        {safetyQuizData.map((quiz) => {
+          const result = safetyQuizResults[quiz.id];
+          const isPassed = result?.passed;
+          return (
+            <button
+              key={quiz.id}
+              className={`quiz-card-btn ${isPassed ? "complete" : ""}`}
+              onClick={() => setActiveQuiz(quiz)}
+            >
+              {isPassed ? <BadgeCheck size={16} /> : <BookOpen size={16} />}
+              <span>{quiz.title}</span>
+              <strong>{isPassed ? "Passed" : result ? "Retry" : "Start"}</strong>
             </button>
-          </article>
-        ))}
+          );
+        })}
+      </div>
+      <div className="quiz-panel quiz-panel-overview">
+        <div className="quiz-overview-header">
+          <GraduationCap size={28} />
+          <div>
+            <span className="section-label">OSHA safety certifications</span>
+            <h2>{passedCount} of {safetyQuizData.length} earned</h2>
+          </div>
+        </div>
+        <div className="quiz-progress-overall">
+          <div className="quiz-progress">
+            <div className="quiz-progress-fill" style={{ width: `${(passedCount / safetyQuizData.length) * 100}%` }} />
+          </div>
+          <small>{Math.round((passedCount / safetyQuizData.length) * 100)}% complete</small>
+        </div>
+        <p className="quiz-overview-body">
+          {role === "tradesperson"
+            ? "Earn certificates by passing OSHA-aligned safety quizzes. Passed certs appear on your profile and help contractors trust your work."
+            : "Each tradesperson you hire can show OSHA safety certs on their profile. You can require specific certs when posting a job."}
+        </p>
+        <div className="quiz-overview-grid">
+          {safetyQuizData.map((quiz) => {
+            const result = safetyQuizResults[quiz.id];
+            const isPassed = result?.passed;
+            return (
+              <button
+                key={quiz.id}
+                className={`quiz-overview-card ${isPassed ? "passed" : ""}`}
+                onClick={() => setActiveQuiz(quiz)}
+              >
+                <div className="quiz-overview-card-icon">
+                  {isPassed ? <BadgeCheck size={20} /> : <BookOpen size={20} />}
+                </div>
+                <strong>{quiz.title}</strong>
+                <span>{quiz.oshaRef}</span>
+                {isPassed ? (
+                  <em className="quiz-cert-date">{result.completedAt}</em>
+                ) : (
+                  <em className="quiz-cert-date quiz-cert-pending">
+                    {result ? `${result.score}% — retry` : "Not taken"}
+                  </em>
+                )}
+              </button>
+            );
+          })}
+        </div>
+        {role === "contractor" && jobs.length > 0 && (
+          <div className="quiz-risk-section">
+            <span className="section-label">Job risk briefs</span>
+            {jobs.map((job) => (
+              <article className="risk-row" key={job.id}>
+                <div>
+                  <span>{job.trade} risk brief</span>
+                  <strong>{job.title}</strong>
+                  <small>{job.risks.join(", ")}</small>
+                </div>
+                <button onClick={() => onOpenJob(job.id)}>
+                  <ClipboardCheck size={14} />
+                  Controls
+                </button>
+              </article>
+            ))}
+          </div>
+        )}
       </div>
     </section>
   );
@@ -7209,16 +9030,12 @@ function SettingsView({
         <CredentialTile label="Training" value={`${trainingProgress}% complete`} tone={trainingProgress > 0 ? "positive" : "warning"} />
         <CredentialTile label="Community" value={`${communityBadges.length} badge${communityBadges.length === 1 ? "" : "s"}`} tone={communityBadges.length > 0 || shoutOutCount > 0 ? "positive" : "neutral"} />
       </div>
-      <section className="account-section theme-settings-section settings-page-panel">
+      <section className="account-section settings-page-panel">
         <div className="settings-section-heading">
           <span>Themes</span>
           <strong>Tool-inspired appearance</strong>
-          <small>Theme controls stay in your account panel for now, while this page focuses on launch readiness.</small>
+          <small>Switch palettes and light/dark mode from the account panel in the top bar.</small>
         </div>
-
-        <button type="button" className="secondary-action" onClick={onReviewConsent}>
-          Open trust setup
-        </button>
       </section>
     </section>
   );
@@ -7257,8 +9074,15 @@ function PostJobModal({
   const [location, setLocation] = useState("Jacksonville, FL");
   const [pay, setPay] = useState(410);
   const [insuranceRequired, setInsuranceRequired] = useState(true);
+  const [requiredQuizIds, setRequiredQuizIds] = useState<string[]>([]);
   const formRef = useRef<HTMLFormElement>(null);
   const canPost = Boolean(title.trim()) && Boolean(location.trim()) && pay >= 100;
+
+  function toggleQuizRequirement(quizId: string) {
+    setRequiredQuizIds((prev) =>
+      prev.includes(quizId) ? prev.filter((id) => id !== quizId) : [...prev, quizId]
+    );
+  }
 
   useEffect(() => {
     const el = formRef.current;
@@ -7332,6 +9156,7 @@ function PostJobModal({
         insuranceRequired ? "Insurance requirement shown" : "Insurance optional",
         "Schedule-ready scope",
       ],
+      requiredQuizIds: requiredQuizIds.length > 0 ? requiredQuizIds : undefined,
     });
   }
 
@@ -7415,6 +9240,32 @@ function PostJobModal({
           />
           <span>Insurance required for this job</span>
         </label>
+
+        <div className="modal-quiz-section">
+          <div className="modal-quiz-section-header">
+            <GraduationCap size={15} />
+            <span>Required OSHA safety certifications</span>
+            <em>Optional</em>
+          </div>
+          <p className="modal-quiz-section-note">
+            Applicants will be shown which certs are required. They can earn them in Safety &amp; Training.
+          </p>
+          <div className="modal-quiz-checklist">
+            {safetyQuizData.map((quiz) => (
+              <label key={quiz.id} className="toggle-control modal-quiz-toggle">
+                <input
+                  type="checkbox"
+                  checked={requiredQuizIds.includes(quiz.id)}
+                  onChange={() => toggleQuizRequirement(quiz.id)}
+                />
+                <span>
+                  {quiz.title}
+                  <small>{quiz.oshaRef}</small>
+                </span>
+              </label>
+            ))}
+          </div>
+        </div>
 
         <label>
           Tools needed

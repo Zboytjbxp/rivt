@@ -72,6 +72,7 @@ export interface Job {
   risks: string[];
   deliverables: string[];
   matchFactors: string[];
+  requiredQuizIds?: string[];
 }
 
 export interface Talent {
