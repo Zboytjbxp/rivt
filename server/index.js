@@ -3,6 +3,7 @@ import "dotenv/config";
 import { GetObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import cors from "cors";
+import { XMLParser } from "fast-xml-parser";
 import express from "express";
 import multer from "multer";
 import { createHash, randomBytes, randomUUID, scryptSync, timingSafeEqual } from "node:crypto";
@@ -530,6 +531,120 @@ async function upsertOAuthUser({ email, provider, displayName, role, organizatio
   );
   return inserted.rows[0];
 }
+
+// ── Trade News Aggregator ────────────────────────────────────────────────────
+
+const newsCache = new Map(); // key → { items, fetchedAt }
+const NEWS_TTL_MS = 30 * 60 * 1000;
+const _xmlParser = new XMLParser({ ignoreAttributes: false, ignoreDeclaration: true });
+
+function _stripHtml(str) {
+  return (str ?? "")
+    .replace(/<[^>]*>/g, " ")
+    .replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/\s+/g, " ").trim();
+}
+
+function _fmtDate(raw) {
+  if (!raw) return "";
+  try {
+    const d = new Date(raw);
+    if (isNaN(d.getTime())) return String(raw).slice(0, 16);
+    return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  } catch { return String(raw).slice(0, 16); }
+}
+
+function _urgency(title) {
+  const t = (title ?? "").toLowerCase();
+  if (/osha|heat illness|heat rule/.test(t))              return "OSHA Rule";
+  if (/permit|permitting/.test(t))                        return "Permit Alert";
+  if (/\bnec\b|national electrical code|building code/.test(t)) return "Code Update";
+  if (/lien|mechanic.?s lien/.test(t))                   return "Legal Alert";
+  if (/law|bill|statute|ordinance|regulation/.test(t))    return "Regulation";
+  if (/licens/.test(t))                                   return "Licensing";
+  return undefined;
+}
+
+async function _fetchFeed(url, fallbackSource) {
+  try {
+    const res = await fetch(url, {
+      signal: AbortSignal.timeout(8000),
+      headers: { "User-Agent": "Mozilla/5.0 (compatible; RIVTNews/1.0)" },
+    });
+    if (!res.ok) return [];
+    const xml = await res.text();
+    const parsed = _xmlParser.parse(xml);
+    const channel = parsed?.rss?.channel ?? parsed?.feed ?? {};
+    const raw = channel.item ?? channel.entry ?? [];
+    const items = Array.isArray(raw) ? raw : [raw];
+    return items.slice(0, 12).map((item, i) => {
+      const link = typeof item.link === "string"
+        ? item.link
+        : item.link?.["@_href"] ?? item.guid ?? "#";
+      const headline = _stripHtml(item.title ?? "");
+      return {
+        id: Date.now() + i,
+        headline,
+        source: fallbackSource ?? _stripHtml(channel.title ?? ""),
+        date: _fmtDate(item.pubDate ?? item.published ?? item.updated ?? ""),
+        summary: _stripHtml(item.description ?? item.summary ?? item["content:encoded"] ?? "").slice(0, 350),
+        url: link,
+        urgency: _urgency(headline),
+      };
+    }).filter((item) => item.headline.length > 10);
+  } catch {
+    return [];
+  }
+}
+
+app.get("/api/news", async (request, response) => {
+  const location = String(request.query.location ?? "").trim();
+  const cacheKey = location || "national";
+  const cached = newsCache.get(cacheKey);
+  if (cached && Date.now() - cached.fetchedAt < NEWS_TTL_MS) {
+    return response.json({ items: cached.items, cached: true });
+  }
+
+  const [city, state] = location.split(",").map((s) => s.trim());
+  const natQ  = "construction+contractor+subcontractor+building+permit+code+OSHA";
+  const localQ = city && state
+    ? `construction+contractor+${encodeURIComponent(city)}+${encodeURIComponent(state)}`
+    : null;
+
+  const [enr, dive, osha, gnNat, gnLocal] = await Promise.allSettled([
+    _fetchFeed("https://www.enr.com/rss/news",                                                         "ENR"),
+    _fetchFeed("https://www.constructiondive.com/feeds/news/",                                         "Construction Dive"),
+    _fetchFeed("https://www.osha.gov/news/newsreleases/trade/rss",                                    "OSHA"),
+    _fetchFeed(`https://news.google.com/rss/search?q=${natQ}&hl=en-US&gl=US&ceid=US:en`,             "Google News"),
+    localQ
+      ? _fetchFeed(`https://news.google.com/rss/search?q=${localQ}&hl=en-US&gl=US&ceid=US:en`, city ? `${city} News` : "Local News")
+      : Promise.resolve([]),
+  ]);
+
+  const pick = (r) => r.status === "fulfilled" ? r.value : [];
+  const localItems = pick(gnLocal).map((item) => ({ ...item, isLocal: true }));
+  const all = [...localItems, ...pick(enr), ...pick(dive), ...pick(osha), ...pick(gnNat)];
+
+  const seen = new Set();
+  const deduped = all.filter((item) => {
+    const key = item.headline.toLowerCase().slice(0, 55);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+
+  deduped.sort((a, b) => {
+    if (a.isLocal && !b.isLocal) return -1;
+    if (!a.isLocal && b.isLocal) return 1;
+    if (a.urgency && !b.urgency) return -1;
+    if (!a.urgency && b.urgency) return 1;
+    return 0;
+  });
+
+  const items = deduped.slice(0, 30).map((item, i) => ({ ...item, id: i + 1 }));
+  newsCache.set(cacheKey, { items, fetchedAt: Date.now() });
+  response.json({ items });
+});
 
 app.get("/api/health", (_request, response) => {
   const storage = storageConfiguration();

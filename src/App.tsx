@@ -768,68 +768,7 @@ const emptyTalent: Talent = {
   availability: "Not set",
   responseTime: "—",
 };
-const seedNews: NewsItem[] = [
-  {
-    id: 1,
-    headline: "Florida Drops Permit Requirement for Residential Work Under $7,500",
-    source: "Florida Building Commission",
-    date: "Jun 2026",
-    summary: "HB 267 eliminates permit requirements for residential repair and renovation jobs under $7,500, streamlining low-dollar work for licensed contractors across all 67 counties.",
-    url: "#",
-    urgency: "Law Change",
-  },
-  {
-    id: 2,
-    headline: "NEC 2023 Adoption Timeline: What Florida Electricians Need to Know",
-    source: "Florida Electrical Contractors",
-    date: "May 2026",
-    summary: "Florida is transitioning to the 2023 National Electrical Code. AFCI requirements expand to all dwelling areas and EV charging circuits now require dedicated 50A circuits by default.",
-    url: "#",
-    urgency: "Code Update",
-  },
-  {
-    id: 3,
-    headline: "OSHA Finalizes Indoor/Outdoor Heat Safety Rule — Effective August 2026",
-    source: "OSHA",
-    date: "Jun 2026",
-    summary: "The final rule requires water, rest, and shade every 2 hours when the heat index exceeds 90°F. Employers must have a written Heat Illness Prevention Plan before August.",
-    url: "#",
-    urgency: "OSHA Rule",
-  },
-  {
-    id: 4,
-    headline: "Jacksonville Permitting Backlog Drops to 6 Days After Digital Overhaul",
-    source: "City of Jacksonville",
-    date: "May 2026",
-    summary: "COJ's new e-permitting portal cut average residential permit wait times from 22 days to 6. Contractors can now track inspections in real time and schedule electronically.",
-    url: "#",
-  },
-  {
-    id: 5,
-    headline: "Copper Prices Hit 18-Month Low — Good News for Plumbers and Electricians",
-    source: "Metals Daily",
-    date: "Jun 2026",
-    summary: "Copper spot prices dropped to $3.62/lb this week, the lowest since late 2024. Contractors locking in material quotes now may see meaningful savings on large jobs.",
-    url: "#",
-  },
-  {
-    id: 6,
-    headline: "Florida Now Accepts Contractor Licenses from 12 Additional States",
-    source: "DBPR",
-    date: "Apr 2026",
-    summary: "Florida's reciprocity expansion adds Alabama, Georgia, Tennessee, and 9 more states to the fast-track licensure program, cutting the wait from 90 days to under 30.",
-    url: "#",
-  },
-  {
-    id: 7,
-    headline: "New Lien Law Amendments Tighten Notice Deadlines for Subcontractors",
-    source: "Florida Bar",
-    date: "Mar 2026",
-    summary: "Ch. 713 amendments reduce the Notice to Owner window from 45 to 30 days for jobs over $10,000. Missing the deadline forfeits lien rights — update your project intake checklist.",
-    url: "#",
-    urgency: "Legal Alert",
-  },
-];
+const seedNews: NewsItem[] = []; // populated dynamically from /api/news
 const seedCommunityPosts: CommunityPost[] = [
   {
     id: 1,
@@ -4621,6 +4560,7 @@ function OperationsWorkspace(props: OperationsWorkspaceProps) {
           communityPosts={communityPosts}
           newsItems={seedNews}
           selectedJobTrade={selectedJob.trade}
+          userLocation={accountProfile.location}
           onVotePost={onVoteCommunityPost}
           onVoteAnswer={onVoteCommunityAnswer}
           onAddAnswer={onAddCommunityAnswer}
@@ -5592,6 +5532,7 @@ function ShopTalkView({
   communityPosts,
   newsItems,
   selectedJobTrade,
+  userLocation,
   onVotePost,
   onVoteAnswer,
   onAddAnswer,
@@ -5604,6 +5545,7 @@ function ShopTalkView({
   communityPosts: CommunityPost[];
   newsItems: NewsItem[];
   selectedJobTrade: Trade | "General";
+  userLocation: string;
   onVotePost: (postId: number, direction: "up" | "down") => void;
   onVoteAnswer: (postId: number, answerId: number, direction: "up" | "down") => void;
   onAddAnswer: (postId: number, body: string) => void;
@@ -5619,9 +5561,28 @@ function ShopTalkView({
   const [answerDraft, setAnswerDraft] = useState("");
   const [rulesOpen, setRulesOpen] = useState(false);
   const [newPostOpen, setNewPostOpen] = useState(false);
-  const [selectedNewsId, setSelectedNewsId] = useState(newsItems[0]?.id ?? 0);
+  const [liveNews, setLiveNews] = useState<NewsItem[]>([]);
+  const [newsLoading, setNewsLoading] = useState(false);
+  const [newsFetched, setNewsFetched] = useState(false);
+  const displayNews = liveNews.length ? liveNews : newsItems;
+  const [selectedNewsId, setSelectedNewsId] = useState(displayNews[0]?.id ?? 0);
   const tradeFilters = ["All trades", "General", ...specialtyOptions];
   const allReportReasons: CommunityReport["reason"][] = ["Misinformation", "Safety concern", "Spam", "Harassment"];
+
+  useEffect(() => {
+    if (activeTab !== "news" || newsFetched) return;
+    setNewsLoading(true);
+    fetch(apiPath(`/api/news?location=${encodeURIComponent(userLocation)}`))
+      .then((r) => r.json())
+      .then((data: { items?: NewsItem[] }) => {
+        if (Array.isArray(data.items) && data.items.length > 0) {
+          setLiveNews(data.items);
+          setSelectedNewsId(data.items[0].id);
+        }
+      })
+      .catch(() => { /* fall back to seed */ })
+      .finally(() => { setNewsLoading(false); setNewsFetched(true); });
+  }, [activeTab, newsFetched, userLocation]);
 
   const filteredPosts = communityPosts.filter(
     (post) => tradeFilter === "All trades" || post.trade === tradeFilter,
@@ -5639,7 +5600,7 @@ function ShopTalkView({
     return netScore(b) - netScore(a);
   });
   const selectedPost = filteredPosts.find((p) => p.id === selectedPostId) ?? filteredPosts[0] ?? communityPosts[0];
-  const selectedNews = newsItems.find((n) => n.id === selectedNewsId) ?? newsItems[0];
+  const selectedNews = displayNews.find((n) => n.id === selectedNewsId) ?? displayNews[0];
   const profileBadges = communityBadgeLabels(communityPosts, profile.displayName);
 
   function submitAnswer() {
@@ -5791,9 +5752,19 @@ function ShopTalkView({
                 </div>
               </div>
               <div className="shop-news-list">
-                {newsItems.length === 0 ? (
+                {newsLoading ? (
+                  <div className="news-loading">
+                    {[1,2,3,4,5].map((i) => (
+                      <div key={i} className="news-skeleton">
+                        <div className="skeleton-pill" />
+                        <div className="skeleton-line" />
+                        <div className="skeleton-line short" />
+                      </div>
+                    ))}
+                  </div>
+                ) : displayNews.length === 0 ? (
                   <EmptyState icon={Newspaper} title="No news yet" description="Trade-relevant news will appear here." />
-                ) : newsItems.map((item) => (
+                ) : displayNews.map((item) => (
                   <button
                     key={item.id}
                     type="button"
