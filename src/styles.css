@@ -334,12 +334,13 @@ textarea:focus-visible {
 .auth-provider-grid button,
 .auth-toggle button {
   display: grid;
-  grid-template-columns: auto auto;
+  grid-template-columns: auto;
   place-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 0;
   min-height: 46px;
-  padding: 0 14px;
+  min-width: 52px;
+  padding: 0 12px;
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: var(--radius);
   background:
@@ -360,10 +361,16 @@ textarea:focus-visible {
   color: #fff;
 }
 
-.auth-provider-grid button span {
-  font-size: 12px;
-  font-weight: var(--weight-label);
-  letter-spacing: 0;
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .auth-provider-grid button:hover,

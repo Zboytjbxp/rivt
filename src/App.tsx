@@ -2768,7 +2768,7 @@ function AuthGate({
                 }}
               >
                 <Icon />
-                <span>{providerLabel}</span>
+                <span className="sr-only">{providerLabel}</span>
               </button>
             );
           })}
