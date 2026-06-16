@@ -118,6 +118,15 @@ interface ActivityItem {
   detail: string;
   timestamp: string;
   unread: boolean;
+  kind?: "info" | "success" | "warning" | "error";
+}
+
+interface AppToast {
+  id: number;
+  title: string;
+  detail: string;
+  kind: "info" | "success" | "warning" | "error";
+  timestamp: string;
 }
 
 interface FeedbackItem {
@@ -707,36 +716,6 @@ const trainingModules = [
   "Dust containment",
   "Customer-site conduct",
 ];
-const providerCheckConfigs = [
-  {
-    id: "storage",
-    label: "Managed storage",
-    purpose: "Server persistence and secure file uploads",
-    method: "GET",
-    path: "/api/health",
-  },
-  {
-    id: "identity",
-    label: "Identity verification",
-    purpose: "Government ID checks before real posting or accepting",
-    method: "POST",
-    path: "/api/identity/verify",
-  },
-  {
-    id: "billing",
-    label: "Subscription billing",
-    purpose: "Stripe checkout for paid launch plans",
-    method: "POST",
-    path: "/api/subscriptions/checkout",
-  },
-  {
-    id: "notifications",
-    label: "Notifications",
-    purpose: "Email or SMS job, message, billing, and review alerts",
-    method: "POST",
-    path: "/api/notifications/test",
-  },
-] as const;
 const communityBadgeThresholds = {
   firstAssistVerifiedFixes: 1,
   mentorQualityAnswers: 10,
@@ -1082,6 +1061,33 @@ function getInitials(name: string) {
     .slice(0, 2)
     .map((part) => part[0]?.toUpperCase() ?? "")
     .join("") || "TC";
+}
+
+function avatarTone(name: string) {
+  const palette = ["stone", "slate", "graphite", "smoke", "ember", "steel"];
+  const seed = name
+    .split("")
+    .reduce((sum, char) => sum + char.charCodeAt(0), 0);
+  return palette[seed % palette.length];
+}
+
+function Avatar({
+  name,
+  photoSrc,
+  size = "md",
+  className = "",
+}: {
+  name: string;
+  photoSrc?: string | null;
+  size?: "sm" | "md" | "lg";
+  className?: string;
+}) {
+  const initials = getInitials(name);
+  return (
+    <div className={`avatar avatar-${size} avatar-${avatarTone(name)} ${className}`.trim()}>
+      {photoSrc ? <img src={photoSrc} alt={name} /> : <span>{initials}</span>}
+    </div>
+  );
 }
 
 function currentTimeLabel() {
@@ -1447,8 +1453,6 @@ function App() {
     "Legal consent ready. Confirm tool list and start window.";
   const closeout = closeouts[selectedJob.id] ?? defaultCloseout;
   const unreadActivities = activityFeed.filter((item) => item.unread).length;
-  const toastActivity = activityFeed.find((item) => item.unread);
-
   const currentState = useMemo<PersistedAppState>(() => ({
     accountProfile,
     activeView,
@@ -1572,8 +1576,17 @@ function App() {
     return () => window.clearTimeout(timeout);
   }, [currentState, serverHydrated]);
 
-  function addActivity(title: string, detail: string) {
+  const [uiToast, setUiToast] = useState<AppToast | null>(null);
+
+  function addActivity(title: string, detail: string, kind: AppToast["kind"] = "info") {
     void recordServerEvent("activity", { title, detail, role, activeView });
+    setUiToast({
+      id: Date.now(),
+      title,
+      detail,
+      kind,
+      timestamp: currentTimeLabel(),
+    });
     setActivityFeed((current) => [
       {
         id: Date.now() + current.length,
@@ -1581,10 +1594,23 @@ function App() {
         detail,
         timestamp: currentTimeLabel(),
         unread: true,
+        kind,
       },
       ...current,
     ].slice(0, 16));
   }
+
+  useEffect(() => {
+    if (!uiToast) {
+      return;
+    }
+
+    const timeout = window.setTimeout(() => {
+      setUiToast(null);
+    }, 3200);
+
+    return () => window.clearTimeout(timeout);
+  }, [uiToast]);
 
   function dismissActivity(activityId: number) {
     setActivityFeed((current) =>
@@ -2490,7 +2516,7 @@ function App() {
             aria-label={`Signed in ${role === "contractor" ? "contractor" : "tradesperson"}`}
             onClick={() => setAccountOpen(true)}
           >
-            <span className="user-avatar">{getInitials(accountProfile.displayName)}</span>
+            <Avatar name={accountProfile.displayName} size="sm" className="user-avatar" />
             <span className="user-menu-copy">
               <strong>{accountProfile.displayName}</strong>
               <span>{profileSubtitle || accountProfile.location}</span>
@@ -2620,10 +2646,10 @@ function App() {
         )}
       </main>
 
-      {toastActivity && (
+      {uiToast && (
         <ActivityToast
-          activity={toastActivity}
-          onDismiss={() => dismissActivity(toastActivity.id)}
+          activity={uiToast}
+          onDismiss={() => setUiToast(null)}
         />
       )}
 
@@ -3203,12 +3229,13 @@ function ActivityToast({
   activity,
   onDismiss,
 }: {
-  activity: ActivityItem;
+  activity: AppToast | ActivityItem;
   onDismiss: () => void;
 }) {
+  const kind = activity.kind ?? "info";
   return (
-    <aside className="activity-toast" role="status" aria-live="polite">
-      <BadgeCheck size={18} />
+    <aside className={`activity-toast ${kind}`} role="status" aria-live="polite">
+      {kind === "success" ? <BadgeCheck size={18} /> : kind === "warning" ? <Flag size={18} /> : kind === "error" ? <X size={18} /> : <ShieldCheck size={18} />}
       <div>
         <strong>{activity.title}</strong>
         <span>{activity.detail}</span>
@@ -3322,7 +3349,7 @@ function AccountPanel({
         </div>
 
         <div className="account-profile-card">
-          <div className="user-avatar">{getInitials(profile.displayName)}</div>
+          <Avatar name={profile.displayName} size="lg" className="user-avatar" />
           <div>
             <strong>{profile.organization}</strong>
             <span>{profile.location}</span>
@@ -3526,7 +3553,7 @@ function Sidebar({
       </div>
 
       <button type="button" className="sidebar-profile" onClick={() => onNavigate("My Crew")}>
-        <span className="user-avatar">{getInitials(profile.displayName)}</span>
+        <Avatar name={profile.displayName} size="sm" className="user-avatar" />
         <span>
           <strong>{profile.displayName}</strong>
           <small>View Profile</small>
@@ -4085,7 +4112,7 @@ function ModernJobDetail({
       </section>
 
       <section className="modern-talent-card">
-        <div className="avatar">{topTalent.name.slice(0, 2).toUpperCase()}</div>
+        <Avatar name={topTalent.name} size="lg" />
         <div>
           <span>Recommended crew</span>
           <strong>{topTalent.name}</strong>
@@ -5988,7 +6015,7 @@ function CrewView({
           const recommendationCount = shoutOuts.filter((shoutOut) => shoutOut.to === person.name).length;
           return (
             <article className="crew-card" key={person.id}>
-              <div className="avatar">{person.name.slice(0, 2).toUpperCase()}</div>
+              <Avatar name={person.name} size="lg" />
               <div className="crew-profile-copy">
                 <span>{person.trade} - {person.location}</span>
                 <strong>{person.name}</strong>
@@ -6103,64 +6130,8 @@ function TrustLegalView({
   selectedJob: Job;
   trustReady: boolean;
   onReviewConsent: () => void;
-}) {
+  }) {
   const states = Array.from(new Set(jobs.map((job) => job.state)));
-  const [providerChecks, setProviderChecks] = useState<Record<string, ProviderCheckResult>>({});
-
-  async function runProviderCheck(config: (typeof providerCheckConfigs)[number]) {
-    setProviderChecks((current) => ({
-      ...current,
-      [config.id]: {
-        status: "checking",
-        message: "Checking provider configuration...",
-        missing: [],
-      },
-    }));
-
-    try {
-      const response = await fetch(apiPath(config.path), {
-        method: config.method,
-        credentials: "include",
-        headers: config.method === "POST" ? { "Content-Type": "application/json" } : undefined,
-        body: config.method === "POST"
-          ? JSON.stringify({ userId: "current-user", plan: "base", channel: "email" })
-          : undefined,
-      });
-      const body = await response.json().catch(() => ({})) as Record<string, unknown>;
-      const message = typeof body.message === "string"
-        ? body.message
-        : response.ok
-          ? `${config.label} is configured.`
-          : `${config.label} needs setup before launch.`;
-
-      setProviderChecks((current) => ({
-        ...current,
-        [config.id]: {
-          status: providerStatusFromResponse(response),
-          message,
-          missing: collectMissingKeys(body),
-          checkedAt: currentTimeLabel(),
-        },
-      }));
-    } catch {
-      setProviderChecks((current) => ({
-        ...current,
-        [config.id]: {
-          status: "offline",
-          message: "API is not reachable from this browser session.",
-          missing: [],
-          checkedAt: currentTimeLabel(),
-        },
-      }));
-    }
-  }
-
-  function runAllProviderChecks() {
-    providerCheckConfigs.forEach((config) => {
-      void runProviderCheck(config);
-    });
-  }
-
   return (
     <section className="operations-layout credential-layout">
       <div className="ops-copy-panel">
@@ -6177,64 +6148,19 @@ function TrustLegalView({
         </button>
       </div>
       <div className="credential-grid">
-        <CredentialTile label="Legal consent" value="Accepted at signup before work starts" ready={trustReady} />
-        <CredentialTile label="Identity check" value="Provider setup required before launch" ready={false} />
-        <CredentialTile label="Address privacy" value={selectedJob.addressPolicy} ready />
-        <CredentialTile label="Direct payment" value="Logged for records, never processed by platform" ready />
+        <CredentialTile label="Legal consent" value="Accepted at signup before work starts" tone={trustReady ? "positive" : "warning"} />
+        <CredentialTile label="Identity check" value="Provider setup required before launch" tone="warning" />
+        <CredentialTile label="Address privacy" value={selectedJob.addressPolicy} tone="neutral" />
+        <CredentialTile label="Direct payment" value="Logged for records, never processed by platform" tone="neutral" />
         {states.map((state) => (
           <CredentialTile
             key={state}
             label={`${state} guidance`}
             value={(stateGuidance[state] ?? ["Guidance queued"])[0]}
-            ready={state === selectedJob.state || trustReady}
+            tone={state === selectedJob.state || trustReady ? "positive" : "neutral"}
           />
         ))}
       </div>
-      <section className="provider-readiness-panel" aria-label="Provider readiness">
-        <div className="provider-readiness-heading">
-          <span>Launch providers</span>
-          <h3>Run live setup checks</h3>
-          <p>These call the backend directly. A setup-required result is functional behavior, not a fake pass.</p>
-        </div>
-        <div className="provider-check-list">
-          {providerCheckConfigs.map((config) => {
-            const result = providerChecks[config.id] ?? {
-              status: "idle",
-              message: config.purpose,
-              missing: [],
-            };
-            const buttonLabel =
-              result.status === "checking"
-                ? "Checking"
-                : result.status === "ready"
-                  ? "Recheck"
-                  : "Check";
-
-            return (
-              <article className={`provider-check-card ${result.status}`} key={config.id}>
-                <div>
-                  <span>{config.label}</span>
-                  <strong>{result.status === "idle" ? config.purpose : result.message}</strong>
-                  <small>
-                    {result.missing.length
-                      ? `Missing: ${result.missing.join(", ")}`
-                      : result.checkedAt
-                        ? `Last checked ${result.checkedAt}`
-                        : "Not checked yet"}
-                  </small>
-                </div>
-                <button
-                  type="button"
-                  disabled={result.status === "checking"}
-                  onClick={() => runProviderCheck(config)}
-                >
-                  {buttonLabel}
-                </button>
-              </article>
-            );
-          })}
-        </div>
-      </section>
     </section>
   );
 }
@@ -6242,15 +6168,17 @@ function TrustLegalView({
 function CredentialTile({
   label,
   value,
-  ready,
+  tone,
 }: {
   label: string;
   value: string;
-  ready: boolean;
+  tone: "neutral" | "positive" | "warning";
 }) {
+  const icon =
+    tone === "positive" ? <BadgeCheck size={17} /> : tone === "warning" ? <Flag size={17} /> : <ShieldCheck size={17} />;
   return (
-    <article className={ready ? "credential-tile ready" : "credential-tile"}>
-      <ShieldCheck size={17} />
+    <article className={`credential-tile ${tone}`}>
+      {icon}
       <span>{label}</span>
       <strong>{value}</strong>
     </article>
@@ -7314,70 +7242,13 @@ function SettingsView({
   shoutOutCount: number;
   onReviewConsent: () => void;
 }) {
-  const [providerChecks, setProviderChecks] = useState<Record<string, ProviderCheckResult>>({});
-
-  async function runProviderCheck(config: (typeof providerCheckConfigs)[number]) {
-    setProviderChecks((current) => ({
-      ...current,
-      [config.id]: {
-        status: "checking",
-        message: "Checking provider configuration...",
-        missing: [],
-      },
-    }));
-
-    try {
-      const response = await fetch(apiPath(config.path), {
-        method: config.method,
-        credentials: "include",
-        headers: config.method === "POST" ? { "Content-Type": "application/json" } : undefined,
-        body: config.method === "POST"
-          ? JSON.stringify({ userId: "current-user", plan: "base", channel: "email" })
-          : undefined,
-      });
-      const body = await response.json().catch(() => ({})) as Record<string, unknown>;
-      const message = typeof body.message === "string"
-        ? body.message
-        : response.ok
-          ? `${config.label} is configured.`
-          : `${config.label} needs setup before launch.`;
-
-      setProviderChecks((current) => ({
-        ...current,
-        [config.id]: {
-          status: providerStatusFromResponse(response),
-          message,
-          missing: collectMissingKeys(body),
-          checkedAt: currentTimeLabel(),
-        },
-      }));
-    } catch {
-      setProviderChecks((current) => ({
-        ...current,
-        [config.id]: {
-          status: "offline",
-          message: "API is not reachable from this browser session.",
-          missing: [],
-          checkedAt: currentTimeLabel(),
-        },
-      }));
-    }
-  }
-
-  function runAllProviderChecks() {
-    providerCheckConfigs.forEach((config) => {
-      void runProviderCheck(config);
-    });
-  }
-
   return (
     <section className="operations-layout credential-layout settings-view">
       <div className="ops-copy-panel">
         <ShieldCheck size={24} />
         <h2>Settings</h2>
         <p>
-          Manage the account, theme, trust setup, and provider readiness that
-          support the launch build.
+          Manage the account, theme, and trust setup that support the launch build.
         </p>
         <button className="primary-action" onClick={onReviewConsent}>
           <BadgeCheck size={17} />
@@ -7385,13 +7256,13 @@ function SettingsView({
         </button>
       </div>
       <div className="credential-grid">
-        <CredentialTile label="Email" value={profile.email} ready />
-        <CredentialTile label="Plan" value={profile.plan} ready />
-        <CredentialTile label="Signup" value={profile.authMethod} ready />
-        <CredentialTile label="Trust" value={trustReady ? "Ready" : "Needs review"} ready={trustReady} />
-        <CredentialTile label="Records" value={`${recordCount}/${recordChecklist.length}`} ready={recordCount > 0} />
-        <CredentialTile label="Training" value={`${trainingProgress}% complete`} ready={trainingProgress > 0} />
-        <CredentialTile label="Community" value={`${communityBadges.length} badge${communityBadges.length === 1 ? "" : "s"}`} ready={communityBadges.length > 0 || shoutOutCount > 0} />
+        <CredentialTile label="Email" value={profile.email} tone="neutral" />
+        <CredentialTile label="Plan" value={profile.plan} tone="neutral" />
+        <CredentialTile label="Signup" value={profile.authMethod} tone="neutral" />
+        <CredentialTile label="Trust" value={trustReady ? "Ready" : "Needs review"} tone={trustReady ? "positive" : "warning"} />
+        <CredentialTile label="Records" value={`${recordCount}/${recordChecklist.length}`} tone={recordCount > 0 ? "positive" : "warning"} />
+        <CredentialTile label="Training" value={`${trainingProgress}% complete`} tone={trainingProgress > 0 ? "positive" : "warning"} />
+        <CredentialTile label="Community" value={`${communityBadges.length} badge${communityBadges.length === 1 ? "" : "s"}`} tone={communityBadges.length > 0 || shoutOutCount > 0 ? "positive" : "neutral"} />
       </div>
       <section className="account-section theme-settings-section settings-page-panel">
         <div className="settings-section-heading">
@@ -7403,54 +7274,6 @@ function SettingsView({
         <button type="button" className="secondary-action" onClick={onReviewConsent}>
           Open trust setup
         </button>
-      </section>
-      <section className="provider-readiness-panel" aria-label="Provider readiness">
-        <div className="provider-readiness-heading">
-          <span>Launch providers</span>
-          <h3>Run live setup checks</h3>
-          <p>These hit the real backend routes so you can see what still needs credentials.</p>
-        </div>
-        <button type="button" className="secondary-action provider-run-all" onClick={runAllProviderChecks}>
-          Run all checks
-        </button>
-        <div className="provider-check-list">
-          {providerCheckConfigs.map((config) => {
-            const result = providerChecks[config.id] ?? {
-              status: "idle",
-              message: config.purpose,
-              missing: [],
-            };
-            const buttonLabel =
-              result.status === "checking"
-                ? "Checking"
-                : result.status === "ready"
-                  ? "Recheck"
-                  : "Check";
-
-            return (
-              <article className={`provider-check-card ${result.status}`} key={config.id}>
-                <div>
-                  <span>{config.label}</span>
-                  <strong>{result.status === "idle" ? config.purpose : result.message}</strong>
-                  <small>
-                    {result.missing.length
-                      ? `Missing: ${result.missing.join(", ")}`
-                      : result.checkedAt
-                        ? `Last checked ${result.checkedAt}`
-                        : "Not checked yet"}
-                  </small>
-                </div>
-                <button
-                  type="button"
-                  disabled={result.status === "checking"}
-                  onClick={() => runProviderCheck(config)}
-                >
-                  {buttonLabel}
-                </button>
-              </article>
-            );
-          })}
-        </div>
       </section>
     </section>
   );
