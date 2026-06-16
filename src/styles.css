@@ -7144,3 +7144,140 @@ textarea:focus-visible {
   }
 }
 
+/* ── Guest mode ───────────────────────────────────────────── */
+
+.ghost-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.ghost-action:hover {
+  border-color: var(--border-strong);
+  color: var(--text);
+}
+
+.auth-shell .ghost-action {
+  width: 100%;
+  border-color: rgba(255, 255, 255, 0.12);
+  color: #9aacb3;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.auth-shell .ghost-action:hover {
+  border-color: rgba(255, 255, 255, 0.22);
+  color: #d4dfe3;
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.auth-guest-divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #5a6a71;
+  font-size: 12px;
+}
+
+.auth-guest-divider::before,
+.auth-guest-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.guest-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 20px;
+  background: var(--accent-soft);
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+  color: var(--text);
+  flex-shrink: 0;
+}
+
+.guest-banner > span {
+  flex: 1;
+  min-width: 0;
+  line-height: 1.4;
+}
+
+.guest-banner-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.guest-banner .primary-action {
+  min-height: 36px;
+  padding: 0 14px;
+  font-size: 12px;
+}
+
+.guest-exit {
+  min-height: 36px;
+  padding: 0 10px;
+  font-size: 12px;
+  border-color: transparent;
+  color: var(--muted);
+}
+
+.guest-exit:hover {
+  border-color: var(--border);
+  color: var(--text);
+}
+
+.guest-prompt {
+  position: relative;
+  display: grid;
+  gap: 14px;
+  width: min(380px, 100%);
+  padding: 28px 24px 24px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  text-align: center;
+}
+
+.guest-prompt h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.guest-prompt p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.guest-prompt .primary-action,
+.guest-prompt .secondary-action {
+  width: 100%;
+}
+
+.guest-prompt-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 36px;
+  min-height: 36px;
+}
+

@@ -1096,6 +1096,149 @@ function communityBadgeLabels(posts: CommunityPost[], personName: string) {
   return badges;
 }
 
+const guestDemoJobs: Job[] = [
+  {
+    id: 9001,
+    title: "Service Panel Upgrade – 200A",
+    contractor: "Coastal Electric LLC",
+    trade: "Electrical",
+    location: "Jacksonville, FL",
+    state: "FL",
+    distance: 4,
+    pay: 1400,
+    durationHours: 8,
+    workType: "Multi-day",
+    difficulty: "Advanced",
+    insuranceRequired: true,
+    tools: ["Multimeter", "Wire strippers", "Conduit bender"],
+    trustRequirement: "ID check required",
+    addressPolicy: "Address shared after acceptance",
+    posted: "2h ago",
+    match: 91,
+    rating: 4.8,
+    reviewCount: 22,
+    applicants: 3,
+    status: "Open",
+    summary: "Upgrade a residential 150A panel to 200A service for a Riverside home. Coordinate with JEA for meter pull.",
+    guidance: ["Confirm JEA schedule before start", "Panel is in garage – 6ft clearance available"],
+    risks: ["Live service during prep", "Older aluminum branch wiring on second floor"],
+    deliverables: ["Passed inspection sign-off", "Updated load calculation sheet left on site"],
+    matchFactors: ["Licensed master electrician", "JEA coordination experience"],
+  },
+  {
+    id: 9002,
+    title: "Emergency Water Heater Replacement",
+    contractor: "Jax Plumbing Solutions",
+    trade: "Plumbing",
+    location: "Orange Park, FL",
+    state: "FL",
+    distance: 11,
+    pay: 680,
+    durationHours: 4,
+    workType: "Emergency",
+    difficulty: "Moderate",
+    insuranceRequired: true,
+    tools: ["Pipe wrench", "Teflon tape", "Soldering kit"],
+    trustRequirement: "ID check required",
+    addressPolicy: "Address provided on confirmation",
+    posted: "45m ago",
+    match: 87,
+    rating: 4.6,
+    reviewCount: 14,
+    applicants: 2,
+    status: "Open",
+    summary: "50-gallon natural gas water heater failed overnight. Customer needs same-day replacement.",
+    guidance: ["Gas shutoff is in rear utility room", "Replacement unit provided by contractor"],
+    risks: ["Gas line proximity to copper supply", "Tight utility closet – 28in wide"],
+    deliverables: ["Working hot water restored", "Old unit hauled away and permit pulled"],
+    matchFactors: ["Licensed plumber", "Emergency availability", "Gas line experience"],
+  },
+  {
+    id: 9003,
+    title: "Residential Addition Framing",
+    contractor: "Northeast FL Builders",
+    trade: "Framing",
+    location: "Atlantic Beach, FL",
+    state: "FL",
+    distance: 18,
+    pay: 3200,
+    durationHours: 32,
+    workType: "Multi-day",
+    difficulty: "Challenging",
+    insuranceRequired: true,
+    tools: ["Framing nailer", "Circular saw", "Speed square"],
+    trustRequirement: "ID check required",
+    addressPolicy: "Address shared after acceptance",
+    posted: "1d ago",
+    match: 84,
+    rating: 4.7,
+    reviewCount: 31,
+    applicants: 5,
+    status: "Shortlisting",
+    summary: "Frame a 400 sq ft bedroom addition with exterior walls, roof tie-in, and window rough openings.",
+    guidance: ["Stamped plans on site", "Crane access from rear alley available Tue/Thu"],
+    risks: ["Roof tie-in near load-bearing wall", "Permit inspection required on day 3"],
+    deliverables: ["Framing inspected and approved", "Sheathing ready for housewrap"],
+    matchFactors: ["Framing crew experience", "Inspection-ready work quality"],
+  },
+  {
+    id: 9004,
+    title: "HVAC Mini-Split Install – 3 Ton",
+    contractor: "Comfort Zone HVAC",
+    trade: "HVAC",
+    location: "Mandarin, FL",
+    state: "FL",
+    distance: 7,
+    pay: 1800,
+    durationHours: 10,
+    workType: "Side work",
+    difficulty: "Advanced",
+    insuranceRequired: true,
+    tools: ["Manifold gauges", "Vacuum pump", "Refrigerant recovery unit"],
+    trustRequirement: "Completion photos required",
+    addressPolicy: "Address on confirmation",
+    posted: "3h ago",
+    match: 89,
+    rating: 4.9,
+    reviewCount: 41,
+    applicants: 4,
+    status: "Open",
+    summary: "Install 3-ton mini-split in converted garage. Line set run approximately 35ft through attic.",
+    guidance: ["Existing 240V circuit available at panel", "Attic access through hallway closet"],
+    risks: ["Attic temp may exceed 110°F in afternoon", "Verify BTU sizing with load calc before ordering"],
+    deliverables: ["System commissioned and tested at rated temp", "Startup sheet signed by homeowner"],
+    matchFactors: ["EPA 608 certified", "Mini-split installation experience"],
+  },
+  {
+    id: 9005,
+    title: "Built-In Bookcase & Mudroom Bench",
+    contractor: "Riverside Custom Carpentry",
+    trade: "Carpentry",
+    location: "Riverside, FL",
+    state: "FL",
+    distance: 3,
+    pay: 960,
+    durationHours: 12,
+    workType: "Side work",
+    difficulty: "Moderate",
+    insuranceRequired: false,
+    tools: ["Table saw", "Brad nailer", "Router"],
+    trustRequirement: "Legal agreement required",
+    addressPolicy: "Address shared day before start",
+    posted: "5h ago",
+    match: 82,
+    rating: 4.5,
+    reviewCount: 9,
+    applicants: 1,
+    status: "Open",
+    summary: "Build and install floor-to-ceiling bookcase in living room and a bench with storage in mudroom.",
+    guidance: ["Materials pre-purchased and staged in garage", "Paint-grade MDF throughout"],
+    risks: ["Plaster walls – anchoring requires toggle bolts or blocking"],
+    deliverables: ["Bookcase and bench installed, caulked, and sanded", "Ready for paint by homeowner"],
+    matchFactors: ["Finish carpentry experience", "Portfolio of built-ins preferred"],
+  },
+];
+
 function App() {
   const initialJobs = useMemo(() => normalizeJobs(seedJobs), []);
   const initialSelectedId = initialJobs[0]?.id ?? 0;
@@ -1166,6 +1309,8 @@ function App() {
   const [serverUpdatedAt, setServerUpdatedAt] = useState<string | null>(null);
   const [themeMode, setThemeMode] = useState<ThemeMode>(readThemePreference);
   const [themePalette, setThemePalette] = useState<ThemePalette>(readThemePalettePreference);
+  const [isGuest, setIsGuest] = useState(false);
+  const [guestPromptOpen, setGuestPromptOpen] = useState(false);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -2351,6 +2496,25 @@ function App() {
     );
   }
 
+  function handleGuestLogin() {
+    setIsGuest(true);
+    setJobs(guestDemoJobs);
+    setSelectedId(guestDemoJobs[0].id);
+  }
+
+  function handleExitGuest() {
+    setIsGuest(false);
+    setJobs(initialJobs);
+    setSelectedId(initialJobs[0]?.id ?? 0);
+  }
+
+  function handleSignUpFromGuest() {
+    setAuthMode("signup");
+    setIsGuest(false);
+    setJobs(initialJobs);
+    setSelectedId(initialJobs[0]?.id ?? 0);
+  }
+
   const page = pageCopy[activeView];
   const nextTrainingModule = trainingModules.find(
     (moduleName) => !completedTraining.has(moduleName),
@@ -2380,7 +2544,7 @@ function App() {
     return <LaunchLoader />;
   }
 
-  if (!authUser) {
+  if (!authUser && !isGuest) {
     return (
       <AuthGate
         mode={authMode}
@@ -2388,6 +2552,7 @@ function App() {
         providers={authProviders}
         onModeChange={setAuthMode}
         onSubmit={handleAuthSubmit}
+        onGuestLogin={handleGuestLogin}
       />
     );
   }
@@ -2474,6 +2639,13 @@ function App() {
           onNavigate={handleNavigate}
         />
 
+        {isGuest && (
+          <GuestBanner
+            onSignUp={handleSignUpFromGuest}
+            onExit={handleExitGuest}
+          />
+        )}
+
         {activeView === "Home" ? (
           <section className="page-intro home-intro" aria-label="Home summary">
             <div>
@@ -2558,13 +2730,13 @@ function App() {
             communityPosts={communityPosts}
             communityReports={communityReports}
             shoutOuts={shoutOuts}
-            onPostJob={() => setPostOpen(true)}
+            onPostJob={() => isGuest ? setGuestPromptOpen(true) : setPostOpen(true)}
             onNavigate={handleNavigate}
             onOpenJob={openJob}
             onApply={handleApply}
-            onApplyToJob={handleApplyForJob}
+            onApplyToJob={(jobId) => isGuest ? setGuestPromptOpen(true) : handleApplyForJob(jobId)}
             onInvite={handleInvite}
-            onInviteToJob={handleInviteForJob}
+            onInviteToJob={(jobId) => isGuest ? setGuestPromptOpen(true) : handleInviteForJob(jobId)}
             onReviewConsent={handleReviewConsent}
             onToggleRecord={handleToggleRecord}
             onSubmitCloseoutPacket={handleSubmitCloseoutPacket}
@@ -2572,7 +2744,7 @@ function App() {
             onRateJob={handleRateJob}
             onToggleTraining={handleToggleTraining}
             onMessageDraft={setMessageDraft}
-            onSendMessage={handleSendMessage}
+            onSendMessage={() => isGuest ? setGuestPromptOpen(true) : handleSendMessage()}
             onRequestReview={handleRequestReview}
             onFeedbackDraft={setFeedbackDraft}
             onFeedbackCategory={setFeedbackCategory}
@@ -2586,8 +2758,8 @@ function App() {
             onVerifyCommunityAnswer={handleVerifyCommunityAnswer}
             onReportCommunityPost={handleReportCommunityPost}
             onResolveCommunityReport={handleResolveCommunityReport}
-            onCreateCommunityPrompt={handleCreateCommunityPrompt}
-            onCreateShoutOut={handleCreateShoutOut}
+            onCreateCommunityPrompt={() => isGuest ? setGuestPromptOpen(true) : handleCreateCommunityPrompt()}
+            onCreateShoutOut={(to, tradeName) => isGuest ? setGuestPromptOpen(true) : handleCreateShoutOut(to, tradeName)}
           />
         )}
       </main>
@@ -2636,6 +2808,13 @@ function App() {
       {isPostOpen && (
         <PostJobModal onClose={() => setPostOpen(false)} onPost={handlePostJob} />
       )}
+
+      {guestPromptOpen && (
+        <GuestSignUpPrompt
+          onClose={() => setGuestPromptOpen(false)}
+          onSignUp={handleSignUpFromGuest}
+        />
+      )}
     </div>
   );
 }
@@ -2657,12 +2836,14 @@ function AuthGate({
   providers,
   onModeChange,
   onSubmit,
+  onGuestLogin,
 }: {
   mode: "login" | "signup";
   error: string | null;
   providers: Record<string, { ok: boolean; mode: string; missing: string[]; purpose: string }>;
   onModeChange: (mode: "login" | "signup") => void;
   onSubmit: (form: { email: string; password: string; displayName?: string; organization?: string; location?: string; role?: Role }) => void;
+  onGuestLogin: () => void;
 }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -2766,8 +2947,68 @@ function AuthGate({
         >
           {mode === "signup" ? "Create account" : "Log in"}
         </button>
+
+        <div className="auth-guest-divider">
+          <span>or</span>
+        </div>
+
+        <button
+          type="button"
+          className="ghost-action"
+          onClick={onGuestLogin}
+        >
+          Browse as guest
+        </button>
       </section>
     </main>
+  );
+}
+
+function GuestBanner({
+  onSignUp,
+  onExit,
+}: {
+  onSignUp: () => void;
+  onExit: () => void;
+}) {
+  return (
+    <div className="guest-banner" role="status">
+      <span>You&apos;re browsing as a guest. Sign up to apply, post jobs, and message crews.</span>
+      <div className="guest-banner-actions">
+        <button type="button" className="primary-action" onClick={onSignUp}>
+          Sign up free
+        </button>
+        <button type="button" className="ghost-action guest-exit" onClick={onExit}>
+          Exit
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function GuestSignUpPrompt({
+  onClose,
+  onSignUp,
+}: {
+  onClose: () => void;
+  onSignUp: () => void;
+}) {
+  return (
+    <div className="modal-backdrop" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="guest-prompt">
+        <button type="button" className="icon-button guest-prompt-close" onClick={onClose} aria-label="Close">
+          <X size={18} />
+        </button>
+        <h2>Sign up to take action</h2>
+        <p>Create a free account to apply for jobs, post work, send messages, and build your RIVT profile.</p>
+        <button type="button" className="primary-action" onClick={onSignUp}>
+          Create free account
+        </button>
+        <button type="button" className="secondary-action" onClick={onClose}>
+          Keep browsing
+        </button>
+      </div>
+    </div>
   );
 }
 
