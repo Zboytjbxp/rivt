@@ -39,6 +39,7 @@ import {
   ScanSearch,
   PenTool,
   Clock3,
+  LogOut,
   Sun,
   ThumbsDown,
   ThumbsUp,
@@ -1654,6 +1655,9 @@ function App() {
       // Ignore logout network hiccups; the local session can still be cleared.
     } finally {
       setAuthUser(null);
+      setAccountOpen(false);
+      setActivityOpen(false);
+      setActiveView("Home");
       saveLocalAuthUser(null);
     }
   }
@@ -2624,6 +2628,7 @@ function App() {
           }
           onToggleTheme={handleToggleTheme}
           onSelectThemePalette={handleSelectThemePalette}
+          onLogout={handleLogout}
           onClose={() => setAccountOpen(false)}
           onNavigate={handleNavigate}
         />
@@ -3245,6 +3250,7 @@ function AccountPanel({
   shoutOutCount,
   onToggleTheme,
   onSelectThemePalette,
+  onLogout,
   onClose,
   onNavigate,
 }: {
@@ -3259,6 +3265,7 @@ function AccountPanel({
   shoutOutCount: number;
   onToggleTheme: () => void;
   onSelectThemePalette: (palette: ThemePalette) => void;
+  onLogout: () => void;
   onClose: () => void;
   onNavigate: (view: NavLabel) => void;
 }) {
@@ -3347,6 +3354,10 @@ function AccountPanel({
           <button type="button" onClick={() => onNavigate("Settings")}>
             <ShieldCheck size={15} />
             Settings
+          </button>
+          <button type="button" onClick={onLogout}>
+            <LogOut size={15} />
+            Sign out
           </button>
           <button type="button" onClick={() => onNavigate("Trust & Legal")}>
             <ShieldCheck size={15} />
