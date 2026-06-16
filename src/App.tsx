@@ -1,5 +1,7 @@
 import { type ChangeEvent, type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import {
+  AlertTriangle,
+  ArrowLeft,
   Award,
   BadgeCheck,
   Bell,
@@ -7,8 +9,10 @@ import {
   BriefcaseBusiness,
   Calculator,
   CalendarClock,
-  ChevronDown,
+  CheckCircle,
   CheckCircle2,
+  ChevronDown,
+  ChevronRight,
   ClipboardCheck,
   ClipboardList,
   CreditCard,
@@ -28,6 +32,7 @@ import {
   Newspaper,
   Plus,
   ReceiptText,
+  RefreshCw,
   Search,
   Send,
   Share2,
@@ -47,6 +52,7 @@ import {
   Users,
   Wrench,
   X,
+  XCircle,
 } from "lucide-react";
 import {
   difficultyOptions,
@@ -280,6 +286,7 @@ interface PersistedAppState {
   communityPosts: CommunityPost[];
   communityReports: CommunityReport[];
   shoutOuts: ShoutOut[];
+  safetyQuizResults?: Record<string, SafetyQuizResult>;
 }
 
 const LEGACY_STORAGE_KEY = `${brandConfig.appSlug}-beta-state-v2`;
@@ -716,6 +723,455 @@ const trainingModules = [
   "Electrical lockout basics",
   "Dust containment",
   "Customer-site conduct",
+];
+
+const QUIZ_PASS_SCORE = 80;
+
+interface QuizQuestion {
+  id: number;
+  text: string;
+  options: string[];
+  correctIndex: number;
+  explanation: string;
+}
+
+interface SafetyQuiz {
+  id: string;
+  title: string;
+  oshaRef: string;
+  description: string;
+  questions: QuizQuestion[];
+}
+
+interface SafetyQuizResult {
+  quizId: string;
+  score: number;
+  passed: boolean;
+  completedAt: string;
+  attempts: number;
+}
+
+const safetyQuizData: SafetyQuiz[] = [
+  {
+    id: "ladder-safety",
+    title: "Ladder Safety",
+    oshaRef: "29 CFR 1926.1053",
+    description: "Setup angle, 3-point contact, load ratings, and inspection.",
+    questions: [
+      {
+        id: 1,
+        text: "OSHA 1926.1053 requires extension ladders to be set up at a pitch of:",
+        options: [
+          "1 foot out for every 3 feet of height (1:3)",
+          "1 foot out for every 4 feet of height (1:4)",
+          "1 foot out for every 6 feet of height (1:6)",
+          "Flush against the wall (1:10)",
+        ],
+        correctIndex: 1,
+        explanation: "The 4:1 rule — ladder base 1 foot out per 4 feet of height — gives approximately 75° and is required by OSHA 1926.1053(b)(5).",
+      },
+      {
+        id: 2,
+        text: "When using a ladder to access a roof or elevated landing, the ladder must extend above the landing by at least:",
+        options: ["1 foot", "2 feet", "3 feet", "5 feet"],
+        correctIndex: 2,
+        explanation: "OSHA 1926.1053(b)(1) requires ladders to extend at least 3 feet above an upper landing surface.",
+      },
+      {
+        id: 3,
+        text: "\"3-point contact\" on a ladder means:",
+        options: [
+          "Three workers may share a ladder simultaneously",
+          "Two hands and one foot, or two feet and one hand, always in contact with the ladder",
+          "The ladder must have three rungs between each worker",
+          "Three separate anchor points secure the ladder top",
+        ],
+        correctIndex: 1,
+        explanation: "3-point contact (two hands + one foot, or two feet + one hand) is the standard for safe climbing — OSHA 1926.1053(b)(22).",
+      },
+      {
+        id: 4,
+        text: "A Type IA ladder is rated for a maximum load of:",
+        options: ["225 lbs", "250 lbs", "300 lbs", "375 lbs"],
+        correctIndex: 2,
+        explanation: "Type IA (Extra Heavy Duty) is rated for 300 lbs. Type I is 250 lbs; Type II is 225 lbs. Type IAA is 375 lbs.",
+      },
+      {
+        id: 5,
+        text: "On a stepladder, workers are prohibited from:",
+        options: [
+          "Using one hand on the rails while carrying a tool belt",
+          "Standing on the top two rungs or the pail shelf",
+          "Climbing while wearing work boots",
+          "Descending the ladder facing away from it",
+        ],
+        correctIndex: 1,
+        explanation: "OSHA prohibits standing on the top two rungs of a stepladder or the pail shelf — these are not designed as standing surfaces (1926.1053(b)(13)).",
+      },
+      {
+        id: 6,
+        text: "Portable ladders must be inspected:",
+        options: [
+          "Once a month by a competent person",
+          "Annually by a third-party inspector",
+          "Before each use",
+          "Only after a fall or impact event",
+        ],
+        correctIndex: 2,
+        explanation: "OSHA 1926.1053(b)(15) requires ladders to be inspected before each use for defects that could cause injury.",
+      },
+    ],
+  },
+  {
+    id: "fall-protection",
+    title: "Fall Protection",
+    oshaRef: "29 CFR 1926.502",
+    description: "Harnesses, anchor points, guardrails, and fall distances.",
+    questions: [
+      {
+        id: 1,
+        text: "In the construction industry, OSHA requires fall protection when a worker is at or above a height of:",
+        options: ["4 feet", "6 feet", "8 feet", "10 feet"],
+        correctIndex: 1,
+        explanation: "OSHA 1926.501(b)(1) requires fall protection at 6 feet or more in the construction industry.",
+      },
+      {
+        id: 2,
+        text: "An anchor point for a personal fall arrest system (PFAS) must be capable of supporting at least:",
+        options: ["2,500 lbs per worker", "3,000 lbs per worker", "5,000 lbs per worker", "7,500 lbs per worker"],
+        correctIndex: 2,
+        explanation: "OSHA 1926.502(d)(15) requires PFAS anchorages to support at least 5,000 lbs per attached worker.",
+      },
+      {
+        id: 3,
+        text: "The top rail of a guardrail system must be at a height of:",
+        options: ["36 ± 3 inches", "42 ± 3 inches", "48 ± 3 inches", "54 ± 3 inches"],
+        correctIndex: 1,
+        explanation: "OSHA 1926.502(b)(1) requires the top edge of guardrails to be 42 inches (± 3 inches) above the walking/working surface.",
+      },
+      {
+        id: 4,
+        text: "Fall protection equipment (harnesses, lanyards, connectors) must be inspected:",
+        options: [
+          "Quarterly by a certified rigger",
+          "Annually, logged in a maintenance book",
+          "Before each use by the user",
+          "Only when visible damage is present",
+        ],
+        correctIndex: 2,
+        explanation: "OSHA 1926.502(d)(21) requires all fall arrest equipment to be inspected before each use for wear, damage, and deterioration.",
+      },
+      {
+        id: 5,
+        text: "When using a self-retracting lifeline (SRL), the device should be positioned:",
+        options: [
+          "At foot level to maximize free fall distance",
+          "Offset 3 feet to one side of the worker",
+          "Directly overhead, as close to plumb as possible",
+          "At waist level to reduce tension",
+        ],
+        correctIndex: 2,
+        explanation: "SRLs are designed to be used directly overhead. Off-axis use increases swing-fall risk and reduces device effectiveness.",
+      },
+      {
+        id: 6,
+        text: "Safety nets used as fall protection must be installed no more than how far below the work surface?",
+        options: ["10 feet", "15 feet", "25 feet", "30 feet"],
+        correctIndex: 3,
+        explanation: "OSHA 1926.502(c)(1) requires safety nets to be installed as close as practicable under the work surface but never more than 30 feet below.",
+      },
+    ],
+  },
+  {
+    id: "electrical-safety",
+    title: "Electrical Safety",
+    oshaRef: "29 CFR 1926.416",
+    description: "GFCI, lockout/tagout, working clearances, and wet conditions.",
+    questions: [
+      {
+        id: 1,
+        text: "At what current level does a GFCI device trip to protect a worker?",
+        options: ["4–6 milliamps", "15 milliamps", "20 milliamps", "30 milliamps"],
+        correctIndex: 0,
+        explanation: "GFCIs trip at 4–6 milliamps — well below the 10 mA threshold that can cause inability to release and 100+ mA that causes ventricular fibrillation.",
+      },
+      {
+        id: 2,
+        text: "The minimum safe approach distance for an unqualified worker near energized overhead lines rated 50 kV or less is:",
+        options: ["3 feet", "6 feet", "10 feet", "25 feet"],
+        correctIndex: 2,
+        explanation: "OSHA 1926.416(a)(1) and 1926.1408 set the limit at 10 feet for voltages up to 50 kV for unqualified workers.",
+      },
+      {
+        id: 3,
+        text: "Lockout/tagout (LOTO) procedures are used to:",
+        options: [
+          "Record energy readings from live circuits",
+          "Ensure machinery cannot be accidentally energized while being serviced",
+          "Replace the function of GFCI protection on outlets",
+          "Label circuits over 240 V",
+        ],
+        correctIndex: 1,
+        explanation: "LOTO (29 CFR 1910.147) controls hazardous energy during service/maintenance so equipment cannot be accidentally started.",
+      },
+      {
+        id: 4,
+        text: "Extension cords used at construction sites must be:",
+        options: [
+          "Listed for indoor use only",
+          "No longer than 100 feet",
+          "3-wire grounded types designed for hard or extra-hard usage",
+          "Replaced monthly regardless of condition",
+        ],
+        correctIndex: 2,
+        explanation: "OSHA 1926.405(a)(2)(ii)(J) requires extension cords on construction sites to be of the 3-wire grounded type rated for hard or extra-hard service.",
+      },
+      {
+        id: 5,
+        text: "The Assured Equipment Grounding Conductor Program (AEGCP) is used as an alternative to:",
+        options: [
+          "Hard hat requirements",
+          "GFCI protection on construction sites",
+          "Lockout/tagout procedures",
+          "Ladder safety inspections",
+        ],
+        correctIndex: 1,
+        explanation: "OSHA 1926.404(b)(1) permits an AEGCP (regular testing/inspection of grounding conductors) as an alternative to GFCI devices at construction sites.",
+      },
+      {
+        id: 6,
+        text: "Before a worker contacts any electrical conductor or circuit part, it must be:",
+        options: [
+          "Rated below 120 V",
+          "De-energized, locked out, and tested to verify it is de-energized",
+          "Covered with electrical tape rated for that voltage",
+          "Tested only if the panel breaker has been off for more than 30 minutes",
+        ],
+        correctIndex: 1,
+        explanation: "OSHA 1926.417 requires de-energizing, locking out, and verifying de-energization before contacting conductors. Tape is not a substitute.",
+      },
+    ],
+  },
+  {
+    id: "ppe-basics",
+    title: "PPE Basics",
+    oshaRef: "29 CFR 1926.95",
+    description: "Employer obligations, head, eye, hand, and respiratory protection.",
+    questions: [
+      {
+        id: 1,
+        text: "Under OSHA 1926.95, who is primarily responsible for providing and paying for required PPE?",
+        options: ["The worker", "The employer", "OSHA directly", "The general contractor's insurance carrier"],
+        correctIndex: 1,
+        explanation: "Employers must provide required PPE at no cost to employees — established by OSHA 1926.95 and reinforced by the 2008 final rule on employer payment.",
+      },
+      {
+        id: 2,
+        text: "A Class C hard hat provides:",
+        options: [
+          "High-voltage electrical protection up to 20,000 V",
+          "Both impact protection and limited low-voltage protection",
+          "Impact protection only — no electrical protection",
+          "Full face protection plus head impact protection",
+        ],
+        correctIndex: 2,
+        explanation: "Class C hard hats protect against impact only. Class E provides electrical protection up to 20,000 V; Class G up to 2,200 V.",
+      },
+      {
+        id: 3,
+        text: "Safety glasses marked \"Z87+\" indicate they meet:",
+        options: [
+          "NIOSH respirator standards for splash protection",
+          "ANSI/ISEA Z87.1 high-impact certification",
+          "UL listing for electrical arc flash",
+          "CE marking for European markets only",
+        ],
+        correctIndex: 1,
+        explanation: "The \"+\" in Z87+ denotes high-impact certification under ANSI/ISEA Z87.1. Glasses without \"+\" meet basic impact only.",
+      },
+      {
+        id: 4,
+        text: "An N95 respirator filters out at least what percentage of airborne particles ≥ 0.3 microns?",
+        options: ["85%", "90%", "95%", "99%"],
+        correctIndex: 2,
+        explanation: "\"N95\" means it filters out at least 95% of airborne particles when properly fitted. \"N\" = not oil-resistant; \"95\" = efficiency level.",
+      },
+      {
+        id: 5,
+        text: "Which glove type provides the best cut resistance for handling sharp sheet metal?",
+        options: [
+          "Thin latex disposable gloves",
+          "Chemical-resistant nitrile gloves",
+          "ANSI A4 or higher cut-resistant gloves",
+          "Standard leather work gloves",
+        ],
+        correctIndex: 2,
+        explanation: "ANSI cut-level A4 or higher gloves (e.g., HDPE or stainless mesh) are designed for cut hazards like sheet metal edges.",
+      },
+      {
+        id: 6,
+        text: "High-visibility (ANSI Class 2 or 3) safety vests are required when working:",
+        options: [
+          "Any time outdoors after 5 PM",
+          "In any confined space",
+          "Near vehicle or equipment traffic as set by the project or jurisdiction",
+          "Only on federal highway projects",
+        ],
+        correctIndex: 2,
+        explanation: "OSHA 1926.201 and MUTCD require high-vis garments near active traffic. Many state and local jurisdictions extend this to any site with moving equipment.",
+      },
+    ],
+  },
+  {
+    id: "tool-safety",
+    title: "Tool Safety",
+    oshaRef: "29 CFR 1926.300",
+    description: "Guards, powder-actuated tools, abrasive wheels, and hand tool condition.",
+    questions: [
+      {
+        id: 1,
+        text: "Portable circular saws and similar rotary tools must be equipped with:",
+        options: [
+          "A two-hand interlock requiring both hands to operate",
+          "A guard that automatically covers the blade when not cutting",
+          "An electronic speed control preventing overspeed",
+          "A built-in voltage tester",
+        ],
+        correctIndex: 1,
+        explanation: "OSHA 1926.304(d) requires portable circular saws to have guards that automatically and instantly return to the covering position when the cut is complete.",
+      },
+      {
+        id: 2,
+        text: "Powder-actuated tools (stud drivers, nail guns fired by a cartridge) may be operated only by workers who are:",
+        options: [
+          "At least 18 years old and hold a general contractor's license",
+          "Trained and qualified per the manufacturer's requirements (and OSHA 1926.302(e)(1))",
+          "Wearing Class E hard hats and cut-resistant gloves",
+          "Supervised by a licensed electrician",
+        ],
+        correctIndex: 1,
+        explanation: "OSHA 1926.302(e)(1) limits powder-actuated tool use to trained workers who have demonstrated competence per the manufacturer's training program.",
+      },
+      {
+        id: 3,
+        text: "A cracked or chipped abrasive wheel (grinding disc) must be:",
+        options: [
+          "Marked with a caution tag and used only for light-duty work",
+          "Removed from service immediately and replaced",
+          "Tested by spinning it freehand before each use",
+          "Returned to the manufacturer for regrading",
+        ],
+        correctIndex: 1,
+        explanation: "OSHA 1926.303(b)(1) requires damaged abrasive wheels to be taken out of service immediately. A cracked wheel can fragment at high speed.",
+      },
+      {
+        id: 4,
+        text: "Pneumatic tools must be disconnected from the air supply:",
+        options: [
+          "Only at the end of each shift",
+          "When the air pressure exceeds 125 PSI",
+          "Before making adjustments, changing attachments, or clearing a jam",
+          "Only when stored overnight",
+        ],
+        correctIndex: 2,
+        explanation: "OSHA 1926.302(b)(3) requires disconnecting the air supply before any adjustment, attachment change, or repair to prevent accidental actuation.",
+      },
+      {
+        id: 5,
+        text: "Hand tools with cracked, broken, or loose handles must be:",
+        options: [
+          "Wrapped in duct tape and reported within 48 hours",
+          "Used only for tasks where torque is minimal",
+          "Tagged out and removed from service immediately",
+          "Replaced at the end of the job",
+        ],
+        correctIndex: 2,
+        explanation: "OSHA 1926.301(a) requires that hand tools be kept in safe condition. Broken handles cause loss of control and must be taken out of service immediately.",
+      },
+      {
+        id: 6,
+        text: "The \"dead man\" (constant-pressure) switch on a power tool is designed to:",
+        options: [
+          "Lock the tool ON for sustained operation without hand fatigue",
+          "Stop the tool automatically when pressure on the trigger is released",
+          "Trigger an emergency shutoff accessible from 10 feet",
+          "Monitor motor temperature and shut down if overheating occurs",
+        ],
+        correctIndex: 1,
+        explanation: "A dead man or constant-pressure switch requires continuous grip to keep the tool running. Releasing it cuts power — a basic safety feature on power tools.",
+      },
+    ],
+  },
+  {
+    id: "hazcom",
+    title: "Hazard Communication",
+    oshaRef: "29 CFR 1910.1200",
+    description: "GHS labels, Safety Data Sheets (SDS), pictograms, and worker training.",
+    questions: [
+      {
+        id: 1,
+        text: "Under OSHA's HazCom 2012 standard (aligned with GHS), a Safety Data Sheet (SDS) must have:",
+        options: ["4 sections", "8 sections", "16 sections", "24 sections"],
+        correctIndex: 2,
+        explanation: "OSHA's HazCom 2012 requires 16 standardized SDS sections (1910.1200(g)(2)), matching the UN GHS format used globally.",
+      },
+      {
+        id: 2,
+        text: "The GHS pictogram that looks like a gas cylinder represents:",
+        options: [
+          "Compressed or liquefied gases",
+          "Flammable gases or aerosols",
+          "Asphyxiants that displace oxygen",
+          "Products stored under pressure only",
+        ],
+        correctIndex: 0,
+        explanation: "The gas cylinder GHS pictogram (GHS04) is used for gases under pressure: compressed, liquefied, refrigerated liquefied, or dissolved gases.",
+      },
+      {
+        id: 3,
+        text: "On a GHS-compliant label, the signal word \"DANGER\" indicates:",
+        options: [
+          "The product is restricted to licensed applicators",
+          "The hazard can cause death or serious injury under normal exposure conditions",
+          "The product requires special PPE but poses no acute risk",
+          "The container must be stored above 50°F",
+        ],
+        correctIndex: 1,
+        explanation: "\"DANGER\" is used for the more severe hazard categories. \"WARNING\" is used for less severe. \"DANGER\" means the hazard can cause death or serious injury.",
+      },
+      {
+        id: 4,
+        text: "Section 8 of an SDS covers:",
+        options: [
+          "Physical and chemical properties",
+          "Ecological information",
+          "Exposure controls and personal protection (PPE recommendations)",
+          "Disposal considerations",
+        ],
+        correctIndex: 2,
+        explanation: "SDS Section 8 (Exposure Controls/Personal Protection) lists OSHA PELs, ACGIH TLVs, engineering controls, and required PPE for the chemical.",
+      },
+      {
+        id: 5,
+        text: "Employers subject to HazCom must provide workers with training on chemical hazards:",
+        options: [
+          "Annually, regardless of whether new chemicals are introduced",
+          "Only when a worker is assigned to handle chemicals for the first time",
+          "When new chemical hazards are introduced, and at initial assignment",
+          "Within 30 days of a chemical spill incident",
+        ],
+        correctIndex: 2,
+        explanation: "OSHA 1910.1200(h)(1) requires training at initial assignment and whenever a new physical or health hazard is introduced into the work area.",
+      },
+      {
+        id: 6,
+        text: "On the NFPA 704 (fire diamond), the BLUE quadrant represents:",
+        options: ["Flammability", "Reactivity", "Health hazard", "Special hazard (e.g., radioactive, water-reactive)"],
+        correctIndex: 2,
+        explanation: "Blue = health hazard (0–4 scale). Red = fire hazard. Yellow = instability/reactivity. White = special hazards like OX (oxidizer) or W (water-reactive).",
+      },
+    ],
+  },
 ];
 const communityBadgeThresholds = {
   firstAssistVerifiedFixes: 1,
@@ -1335,6 +1791,7 @@ function App() {
   const [completedTraining, setCompletedTraining] = useState<Set<string>>(
     () => new Set(["Customer-site conduct"]),
   );
+  const [safetyQuizResults, setSafetyQuizResults] = useState<Record<string, SafetyQuizResult>>({});
   const [reviewRequested, setReviewRequested] = useState(false);
   const [activityFeed, setActivityFeed] = useState<ActivityItem[]>([]);
   const [feedbackItems, setFeedbackItems] = useState<FeedbackItem[]>([]);
@@ -1548,6 +2005,9 @@ function App() {
     if (Array.isArray(nextState.completedTraining)) {
       setCompletedTraining(new Set(nextState.completedTraining));
     }
+    if (nextState.safetyQuizResults && typeof nextState.safetyQuizResults === "object") {
+      setSafetyQuizResults(nextState.safetyQuizResults);
+    }
     if (nextState.reviewRequested !== undefined) setReviewRequested(nextState.reviewRequested);
     if (Array.isArray(nextState.activityFeed)) setActivityFeed(nextState.activityFeed);
     if (Array.isArray(nextState.feedbackItems)) setFeedbackItems(nextState.feedbackItems);
@@ -1613,6 +2073,7 @@ function App() {
     communityPosts,
     communityReports,
     completedTraining: Array.from(completedTraining),
+    safetyQuizResults,
     difficulty,
     feedbackItems,
     jobs,
@@ -1645,6 +2106,7 @@ function App() {
     communityPosts,
     communityReports,
     completedTraining,
+    safetyQuizResults,
     difficulty,
     feedbackItems,
     jobs,
@@ -2505,6 +2967,28 @@ function App() {
     );
   }
 
+  function handleSafetyQuizComplete(quizId: string, score: number) {
+    const quiz = safetyQuizData.find((q) => q.id === quizId);
+    if (!quiz) return;
+    const passed = score >= QUIZ_PASS_SCORE;
+    setSafetyQuizResults((prev) => ({
+      ...prev,
+      [quizId]: {
+        quizId,
+        score,
+        passed,
+        completedAt: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+        attempts: (prev[quizId]?.attempts ?? 0) + 1,
+      },
+    }));
+    addActivity(
+      passed ? `Safety cert earned: ${quiz.title}` : `Quiz attempt: ${quiz.title}`,
+      passed
+        ? `Passed with ${score}% — certificate is now on your profile.`
+        : `Scored ${score}%. Need ${QUIZ_PASS_SCORE}% to pass. Retake anytime.`,
+    );
+  }
+
   function handleRequestReview() {
     setReviewRequested(true);
     setUploadedRecords((current) => {
@@ -2798,6 +3282,7 @@ function App() {
             trustReady={trustReady}
             uploadedRecords={uploadedRecords}
             completedTraining={completedTraining}
+            safetyQuizResults={safetyQuizResults}
             messageDraft={messageDraft}
             sentMessages={sentMessages}
             reviewRequested={reviewRequested}
@@ -2841,6 +3326,7 @@ function App() {
             onCreateCommunityPrompt={() => isGuest ? setGuestPromptOpen(true) : handleCreateCommunityPrompt()}
             onNewShopTalkPost={(flair, title, trade, body) => isGuest ? setGuestPromptOpen(true) : handleNewShopTalkPost(flair, title, trade, body)}
             onCreateShoutOut={(to, tradeName) => isGuest ? setGuestPromptOpen(true) : handleCreateShoutOut(to, tradeName)}
+            onSafetyQuizComplete={(quizId, score) => isGuest ? setGuestPromptOpen(true) : handleSafetyQuizComplete(quizId, score)}
           />
         )}
       </main>
@@ -2868,6 +3354,7 @@ function App() {
           trustReady={trustReady}
           recordCount={uploadedRecords.size}
           trainingProgress={Math.round((completedTraining.size / trainingModules.length) * 100)}
+          safetyCertCount={Object.values(safetyQuizResults).filter((r) => r.passed).length}
           themeMode={themeMode}
           themePalette={themePalette}
           communityBadges={communityBadgeLabels(communityPosts, accountProfile.displayName)}
@@ -3565,6 +4052,7 @@ function AccountPanel({
   trustReady,
   recordCount,
   trainingProgress,
+  safetyCertCount,
   themeMode,
   themePalette,
   communityBadges,
@@ -3580,6 +4068,7 @@ function AccountPanel({
   trustReady: boolean;
   recordCount: number;
   trainingProgress: number;
+  safetyCertCount: number;
   themeMode: ThemeMode;
   themePalette: ThemePalette;
   communityBadges: string[];
@@ -3618,6 +4107,7 @@ function AccountPanel({
           <InfoItem icon={ShieldCheck} label="Trust" value={trustReady ? "Ready" : "Needs review"} />
           <InfoItem icon={FolderOpen} label="Records" value={`${recordCount}/${recordChecklist.length}`} />
           <InfoItem icon={ThumbsUp} label="Community" value={`${communityBadges.length} badge${communityBadges.length === 1 ? "" : "s"}`} />
+          <InfoItem icon={GraduationCap} label="Safety certs" value={`${safetyCertCount}/${safetyQuizData.length}`} />
         </div>
 
         <section className="account-section">
@@ -4329,6 +4819,21 @@ function ModernJobDetail({
         <p>{dispatchNote}</p>
       </div>
 
+      {job.requiredQuizIds && job.requiredQuizIds.length > 0 && (
+        <div className="cert-requirement-banner">
+          <GraduationCap size={15} />
+          <div>
+            <strong>Safety certs required</strong>
+            <span>
+              {job.requiredQuizIds
+                .map((id) => safetyQuizData.find((q) => q.id === id)?.title)
+                .filter(Boolean)
+                .join(", ")}
+            </span>
+          </div>
+        </div>
+      )}
+
       <div className="modern-action-stack">
         {role === "tradesperson" ? (
           <button className="primary-action wide" onClick={onApply}>
@@ -4402,6 +4907,7 @@ interface OperationsWorkspaceProps {
   trustReady: boolean;
   uploadedRecords: Set<string>;
   completedTraining: Set<string>;
+  safetyQuizResults: Record<string, SafetyQuizResult>;
   messageDraft: string;
   sentMessages: string[];
   reviewRequested: boolean;
@@ -4445,6 +4951,7 @@ interface OperationsWorkspaceProps {
   onCreateCommunityPrompt: () => void;
   onNewShopTalkPost: (flair: PostFlair, title: string, trade: Trade | "General", body: string) => void;
   onCreateShoutOut: (to: string, tradeName: Trade) => void;
+  onSafetyQuizComplete: (quizId: string, score: number) => void;
 }
 
 function OperationsWorkspace(props: OperationsWorkspaceProps) {
@@ -4462,6 +4969,7 @@ function OperationsWorkspace(props: OperationsWorkspaceProps) {
     trustReady,
     uploadedRecords,
     completedTraining,
+    safetyQuizResults,
     messageDraft,
     sentMessages,
     reviewRequested,
@@ -4505,6 +5013,7 @@ function OperationsWorkspace(props: OperationsWorkspaceProps) {
     onCreateCommunityPrompt,
     onNewShopTalkPost,
     onCreateShoutOut,
+    onSafetyQuizComplete,
   } = props;
   const approvedCloseouts = Object.values(closeouts).filter(
     (closeout) => closeout.approved && closeout.rating > 0 && !closeout.dispute,
@@ -4672,9 +5181,12 @@ function OperationsWorkspace(props: OperationsWorkspaceProps) {
       )}
       {view === "Safety & Training" && (
         <SafetyTrainingView
+          role={role}
           jobs={jobs}
           completedTraining={completedTraining}
+          safetyQuizResults={safetyQuizResults}
           onToggleTraining={onToggleTraining}
+          onSafetyQuizComplete={onSafetyQuizComplete}
           onOpenJob={onOpenJob}
         />
       )}
@@ -7632,46 +8144,333 @@ function AdminView({
   );
 }
 
+function SafetyQuizTaker({
+  quiz,
+  existingResult,
+  onComplete,
+  onBack,
+}: {
+  quiz: SafetyQuiz;
+  existingResult?: SafetyQuizResult;
+  onComplete: (quizId: string, score: number) => void;
+  onBack: () => void;
+}) {
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [selected, setSelected] = useState<number | null>(null);
+  const [answers, setAnswers] = useState<number[]>([]);
+  const [showResult, setShowResult] = useState(false);
+  const [showExplanation, setShowExplanation] = useState(false);
+  const [retaking, setRetaking] = useState(false);
+
+  const totalQ = quiz.questions.length;
+  const question = quiz.questions[currentIndex];
+
+  if (!retaking && existingResult && !showResult) {
+    const passed = existingResult.passed;
+    return (
+      <div className="quiz-result-screen">
+        <div className={`quiz-result-badge ${passed ? "pass" : "fail"}`}>
+          {passed ? <BadgeCheck size={36} /> : <AlertTriangle size={36} />}
+          <strong>{passed ? "Certified" : "Not yet passed"}</strong>
+          <span>{existingResult.score}%</span>
+        </div>
+        <p className="quiz-result-label">
+          {passed
+            ? `You earned this certificate on ${existingResult.completedAt}.`
+            : `Last attempt: ${existingResult.score}%. You need ${QUIZ_PASS_SCORE}% to pass.`}
+        </p>
+        <div className="quiz-action-row">
+          <button className="secondary-action" onClick={onBack}>
+            <ArrowLeft size={15} />
+            Back
+          </button>
+          <button className="primary-action" onClick={() => { setRetaking(true); setAnswers([]); setCurrentIndex(0); setSelected(null); setShowExplanation(false); }}>
+            <RefreshCw size={15} />
+            {passed ? "Retake quiz" : "Try again"}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (showResult) {
+    const correct = answers.filter((a, i) => a === quiz.questions[i].correctIndex).length;
+    const score = Math.round((correct / totalQ) * 100);
+    const passed = score >= QUIZ_PASS_SCORE;
+    return (
+      <div className="quiz-result-screen">
+        <div className={`quiz-result-badge ${passed ? "pass" : "fail"}`}>
+          {passed ? <BadgeCheck size={36} /> : <AlertTriangle size={36} />}
+          <strong>{passed ? "Certified!" : "Not quite"}</strong>
+          <span>{score}%</span>
+        </div>
+        <p className="quiz-result-label">
+          {passed
+            ? `${correct} of ${totalQ} correct — certificate added to your profile.`
+            : `${correct} of ${totalQ} correct. You need ${QUIZ_PASS_SCORE}% to pass. Review questions below and try again.`}
+        </p>
+        <div className="quiz-review-list">
+          {quiz.questions.map((q, i) => {
+            const userAnswer = answers[i] ?? -1;
+            const wasCorrect = userAnswer === q.correctIndex;
+            return (
+              <div key={q.id} className={`quiz-review-row ${wasCorrect ? "correct" : "incorrect"}`}>
+                <div className="quiz-review-indicator">
+                  {wasCorrect ? <CheckCircle size={14} /> : <XCircle size={14} />}
+                </div>
+                <div>
+                  <p>{q.text}</p>
+                  {!wasCorrect && (
+                    <small>
+                      Correct: <strong>{q.options[q.correctIndex]}</strong> — {q.explanation}
+                    </small>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        <div className="quiz-action-row">
+          <button className="secondary-action" onClick={onBack}>
+            <ArrowLeft size={15} />
+            Back
+          </button>
+          {!passed && (
+            <button className="primary-action" onClick={() => { setAnswers([]); setCurrentIndex(0); setSelected(null); setShowResult(false); setShowExplanation(false); }}>
+              <RefreshCw size={15} />
+              Try again
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  function confirmAnswer() {
+    if (selected === null) return;
+    const newAnswers = [...answers, selected];
+    setAnswers(newAnswers);
+    setShowExplanation(true);
+    if (newAnswers.length === totalQ) {
+      const correct = newAnswers.filter((a, i) => a === quiz.questions[i].correctIndex).length;
+      const score = Math.round((correct / totalQ) * 100);
+      onComplete(quiz.id, score);
+    }
+  }
+
+  function next() {
+    if (currentIndex < totalQ - 1) {
+      setCurrentIndex(currentIndex + 1);
+      setSelected(null);
+      setShowExplanation(false);
+    } else {
+      setShowResult(true);
+    }
+  }
+
+  const isCorrect = selected === question.correctIndex;
+
+  return (
+    <div className="quiz-taker">
+      <div className="quiz-taker-header">
+        <button className="icon-button" onClick={onBack} aria-label="Back to quiz list">
+          <ArrowLeft size={16} />
+        </button>
+        <div>
+          <span className="section-label">{quiz.oshaRef}</span>
+          <strong>{quiz.title}</strong>
+        </div>
+        <span className="quiz-counter">{currentIndex + 1}/{totalQ}</span>
+      </div>
+      <div className="quiz-progress">
+        <div className="quiz-progress-fill" style={{ width: `${((currentIndex) / totalQ) * 100}%` }} />
+      </div>
+      <div className="quiz-question-block">
+        <p className="quiz-question-text">{question.text}</p>
+        <div className="quiz-options">
+          {question.options.map((option, i) => {
+            let cls = "quiz-option";
+            if (showExplanation) {
+              if (i === question.correctIndex) cls += " correct";
+              else if (i === selected) cls += " incorrect";
+            } else if (i === selected) {
+              cls += " selected";
+            }
+            return (
+              <button
+                key={i}
+                className={cls}
+                disabled={showExplanation}
+                onClick={() => setSelected(i)}
+              >
+                <span className="quiz-option-letter">{String.fromCharCode(65 + i)}</span>
+                {option}
+              </button>
+            );
+          })}
+        </div>
+        {showExplanation && (
+          <div className={`quiz-explanation ${isCorrect ? "correct" : "incorrect"}`}>
+            {isCorrect ? <CheckCircle size={15} /> : <XCircle size={15} />}
+            <p>{question.explanation}</p>
+          </div>
+        )}
+      </div>
+      <div className="quiz-taker-footer">
+        {!showExplanation ? (
+          <button
+            className="primary-action"
+            disabled={selected === null}
+            onClick={confirmAnswer}
+          >
+            Confirm answer
+          </button>
+        ) : (
+          <button className="primary-action" onClick={next}>
+            {currentIndex < totalQ - 1 ? "Next question" : "See results"}
+            <ChevronRight size={15} />
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function SafetyTrainingView({
+  role,
   jobs,
   completedTraining,
+  safetyQuizResults,
   onToggleTraining,
+  onSafetyQuizComplete,
   onOpenJob,
 }: {
+  role: Role;
   jobs: Job[];
   completedTraining: Set<string>;
+  safetyQuizResults: Record<string, SafetyQuizResult>;
   onToggleTraining: (moduleName: string) => void;
+  onSafetyQuizComplete: (quizId: string, score: number) => void;
   onOpenJob: (id: number) => void;
 }) {
+  const [activeQuiz, setActiveQuiz] = useState<SafetyQuiz | null>(null);
+
+  const passedCount = Object.values(safetyQuizResults).filter((r) => r.passed).length;
+
+  if (activeQuiz) {
+    return (
+      <section className="operations-layout safety-layout">
+        <div className="training-list">
+          {safetyQuizData.map((quiz) => {
+            const result = safetyQuizResults[quiz.id];
+            const isPassed = result?.passed;
+            return (
+              <button
+                key={quiz.id}
+                className={`quiz-card-btn ${activeQuiz.id === quiz.id ? "active" : ""} ${isPassed ? "complete" : ""}`}
+                onClick={() => setActiveQuiz(quiz)}
+              >
+                {isPassed ? <BadgeCheck size={16} /> : <BookOpen size={16} />}
+                <span>{quiz.title}</span>
+                <strong>{isPassed ? "Passed" : result ? "Retry" : "Start"}</strong>
+              </button>
+            );
+          })}
+        </div>
+        <div className="quiz-panel">
+          <SafetyQuizTaker
+            quiz={activeQuiz}
+            existingResult={safetyQuizResults[activeQuiz.id]}
+            onComplete={onSafetyQuizComplete}
+            onBack={() => setActiveQuiz(null)}
+          />
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section className="operations-layout safety-layout">
       <div className="training-list">
-        {trainingModules.map((moduleName) => (
-          <button
-            key={moduleName}
-            className={completedTraining.has(moduleName) ? "complete" : ""}
-            onClick={() => onToggleTraining(moduleName)}
-          >
-            <BookOpen size={16} />
-            <span>{moduleName}</span>
-            <strong>{completedTraining.has(moduleName) ? "Complete" : "Start"}</strong>
-          </button>
-        ))}
-      </div>
-      <div className="risk-board">
-        {jobs.map((job) => (
-          <article className="risk-row" key={job.id}>
-            <div>
-              <span>{job.trade} risk brief</span>
-              <strong>{job.title}</strong>
-              <small>{job.risks.join(", ")}</small>
-            </div>
-            <button onClick={() => onOpenJob(job.id)}>
-              <ClipboardCheck size={14} />
-              Controls
+        {safetyQuizData.map((quiz) => {
+          const result = safetyQuizResults[quiz.id];
+          const isPassed = result?.passed;
+          return (
+            <button
+              key={quiz.id}
+              className={`quiz-card-btn ${isPassed ? "complete" : ""}`}
+              onClick={() => setActiveQuiz(quiz)}
+            >
+              {isPassed ? <BadgeCheck size={16} /> : <BookOpen size={16} />}
+              <span>{quiz.title}</span>
+              <strong>{isPassed ? "Passed" : result ? "Retry" : "Start"}</strong>
             </button>
-          </article>
-        ))}
+          );
+        })}
+      </div>
+      <div className="quiz-panel quiz-panel-overview">
+        <div className="quiz-overview-header">
+          <GraduationCap size={28} />
+          <div>
+            <span className="section-label">OSHA safety certifications</span>
+            <h2>{passedCount} of {safetyQuizData.length} earned</h2>
+          </div>
+        </div>
+        <div className="quiz-progress-overall">
+          <div className="quiz-progress">
+            <div className="quiz-progress-fill" style={{ width: `${(passedCount / safetyQuizData.length) * 100}%` }} />
+          </div>
+          <small>{Math.round((passedCount / safetyQuizData.length) * 100)}% complete</small>
+        </div>
+        <p className="quiz-overview-body">
+          {role === "tradesperson"
+            ? "Earn certificates by passing OSHA-aligned safety quizzes. Passed certs appear on your profile and help contractors trust your work."
+            : "Each tradesperson you hire can show OSHA safety certs on their profile. You can require specific certs when posting a job."}
+        </p>
+        <div className="quiz-overview-grid">
+          {safetyQuizData.map((quiz) => {
+            const result = safetyQuizResults[quiz.id];
+            const isPassed = result?.passed;
+            return (
+              <button
+                key={quiz.id}
+                className={`quiz-overview-card ${isPassed ? "passed" : ""}`}
+                onClick={() => setActiveQuiz(quiz)}
+              >
+                <div className="quiz-overview-card-icon">
+                  {isPassed ? <BadgeCheck size={20} /> : <BookOpen size={20} />}
+                </div>
+                <strong>{quiz.title}</strong>
+                <span>{quiz.oshaRef}</span>
+                {isPassed ? (
+                  <em className="quiz-cert-date">{result.completedAt}</em>
+                ) : (
+                  <em className="quiz-cert-date quiz-cert-pending">
+                    {result ? `${result.score}% — retry` : "Not taken"}
+                  </em>
+                )}
+              </button>
+            );
+          })}
+        </div>
+        {role === "contractor" && jobs.length > 0 && (
+          <div className="quiz-risk-section">
+            <span className="section-label">Job risk briefs</span>
+            {jobs.map((job) => (
+              <article className="risk-row" key={job.id}>
+                <div>
+                  <span>{job.trade} risk brief</span>
+                  <strong>{job.title}</strong>
+                  <small>{job.risks.join(", ")}</small>
+                </div>
+                <button onClick={() => onOpenJob(job.id)}>
+                  <ClipboardCheck size={14} />
+                  Controls
+                </button>
+              </article>
+            ))}
+          </div>
+        )}
       </div>
     </section>
   );
@@ -7949,8 +8748,15 @@ function PostJobModal({
   const [location, setLocation] = useState("Jacksonville, FL");
   const [pay, setPay] = useState(410);
   const [insuranceRequired, setInsuranceRequired] = useState(true);
+  const [requiredQuizIds, setRequiredQuizIds] = useState<string[]>([]);
   const formRef = useRef<HTMLFormElement>(null);
   const canPost = Boolean(title.trim()) && Boolean(location.trim()) && pay >= 100;
+
+  function toggleQuizRequirement(quizId: string) {
+    setRequiredQuizIds((prev) =>
+      prev.includes(quizId) ? prev.filter((id) => id !== quizId) : [...prev, quizId]
+    );
+  }
 
   useEffect(() => {
     const el = formRef.current;
@@ -8024,6 +8830,7 @@ function PostJobModal({
         insuranceRequired ? "Insurance requirement shown" : "Insurance optional",
         "Schedule-ready scope",
       ],
+      requiredQuizIds: requiredQuizIds.length > 0 ? requiredQuizIds : undefined,
     });
   }
 
@@ -8107,6 +8914,32 @@ function PostJobModal({
           />
           <span>Insurance required for this job</span>
         </label>
+
+        <div className="modal-quiz-section">
+          <div className="modal-quiz-section-header">
+            <GraduationCap size={15} />
+            <span>Required OSHA safety certifications</span>
+            <em>Optional</em>
+          </div>
+          <p className="modal-quiz-section-note">
+            Applicants will be shown which certs are required. They can earn them in Safety &amp; Training.
+          </p>
+          <div className="modal-quiz-checklist">
+            {safetyQuizData.map((quiz) => (
+              <label key={quiz.id} className="toggle-control modal-quiz-toggle">
+                <input
+                  type="checkbox"
+                  checked={requiredQuizIds.includes(quiz.id)}
+                  onChange={() => toggleQuizRequirement(quiz.id)}
+                />
+                <span>
+                  {quiz.title}
+                  <small>{quiz.oshaRef}</small>
+                </span>
+              </label>
+            ))}
+          </div>
+        </div>
 
         <label>
           Tools needed
