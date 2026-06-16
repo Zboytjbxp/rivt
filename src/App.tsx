@@ -1281,9 +1281,7 @@ function App() {
   const [dispatchNotes] = useState<Record<number, string>>({});
   const [closeouts, setCloseouts] = useState<Record<number, CloseoutRecord>>({});
   const [autoMatchEnabled, setAutoMatchEnabled] = useState(true);
-  const [messageDraft, setMessageDraft] = useState(
-    "Job details are confirmed. Please confirm arrival window and parking.",
-  );
+  const [messageDraft, setMessageDraft] = useState("");
   const [sentMessages, setSentMessages] = useState<string[]>([]);
   const [uploadedRecords, setUploadedRecords] = useState<Set<string>>(
     () => new Set(["Signed scope", "Legal consent accepted"]),
@@ -2500,12 +2498,14 @@ function App() {
     setIsGuest(true);
     setJobs(guestDemoJobs);
     setSelectedId(guestDemoJobs[0].id);
+    setAccountProfile((current) => ({ ...current, displayName: "Guest" }));
   }
 
   function handleExitGuest() {
     setIsGuest(false);
     setJobs(initialJobs);
     setSelectedId(initialJobs[0]?.id ?? 0);
+    setAccountProfile((current) => ({ ...current, displayName: "" }));
   }
 
   function handleSignUpFromGuest() {
@@ -2513,6 +2513,7 @@ function App() {
     setIsGuest(false);
     setJobs(initialJobs);
     setSelectedId(initialJobs[0]?.id ?? 0);
+    setAccountProfile((current) => ({ ...current, displayName: "" }));
   }
 
   const page = pageCopy[activeView];
@@ -2649,7 +2650,7 @@ function App() {
         {activeView === "Home" ? (
           <section className="page-intro home-intro" aria-label="Home summary">
             <div>
-              <h1>{`Good morning, ${accountProfile.displayName.split(" ")[0]}`}</h1>
+              <h1>{accountProfile.displayName ? `Good morning, ${accountProfile.displayName.split(" ")[0]}` : "Good morning"}</h1>
               <p>Here&apos;s what&apos;s happening in {accountProfile.location}.</p>
             </div>
             <div className="page-intro-right">
@@ -3435,7 +3436,7 @@ function ActivityPanel({
       <aside className="side-panel" role="dialog" aria-modal="true" aria-label="Notifications">
         <div className="side-panel-header">
           <div>
-            <span>Live test log</span>
+            <span>Activity log</span>
             <h2>Notifications</h2>
           </div>
           <button type="button" className="icon-button" onClick={onClose} aria-label="Close notifications">
@@ -6188,8 +6189,9 @@ function CrewView({
         <Users size={24} />
         <h2>Trusted bench</h2>
         <p>
-          Top match right now is {highlighted.name}, with {highlighted.match}%
-          fit for the active work order and a {highlighted.responseTime} response time.
+          {highlighted
+            ? `Top match right now is ${highlighted.name}, with ${highlighted.match}% fit for the active work order and a ${highlighted.responseTime} response time.`
+            : "Crew profiles will appear here once tradespeople join the network in Jacksonville."}
         </p>
         <button className="primary-action" onClick={onReviewConsent}>
           <ShieldCheck size={17} />
