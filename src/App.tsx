@@ -4663,6 +4663,32 @@ function HomeView({
   const nextJob = jobs.find((job) => job.id !== selectedJob.id) ?? selectedJob;
   const pendingPaymentRecord = paymentRecords.find((record) => record.status === "Payment pending");
   const recentUnread = activityFeed.filter((item) => item.unread).slice(0, 3);
+  const activeSignals = [
+    {
+      label: "Current work",
+      title: selectedJob.title,
+      detail: `${selectedJob.trade} · ${selectedJob.location}`,
+      tone: "success" as const,
+      actionLabel: "Open",
+      onAction: () => onOpenJob(selectedJob.id),
+    },
+    {
+      label: "Unread activity",
+      title: recentUnread.length ? `${recentUnread.length} updates` : "All caught up",
+      detail: recentUnread[0]?.detail ?? "Nothing waiting right now",
+      tone: recentUnread.length ? "info" as const : "neutral" as const,
+      actionLabel: "Inbox",
+      onAction: () => onNavigate("Messages"),
+    },
+    {
+      label: "Payment log",
+      title: pendingPayments ? `${pendingPayments} pending` : "No pending payments",
+      detail: pendingPaymentRecord ? pendingPaymentRecord.jobTitle : "Records are current",
+      tone: pendingPayments ? "warning" as const : "neutral" as const,
+      actionLabel: "Records",
+      onAction: () => onNavigate("Records"),
+    },
+  ];
   const mobilePrimaryLabel = role === "contractor" ? "Open work order" : "Apply";
   const mobilePrimaryIcon = role === "contractor" ? <BriefcaseBusiness size={16} /> : <FileCheck2 size={16} />;
   const mobilePrimaryAction = role === "contractor" ? () => onOpenJob(selectedJob.id) : () => onApplyToJob(selectedJob.id);
@@ -4741,6 +4767,22 @@ function HomeView({
             ))
           )}
         </div>
+      </section>
+
+      <section className="home-command-summary" aria-label="Workspace summary">
+        {activeSignals.map((signal) => (
+          <button
+            key={signal.label}
+            type="button"
+            className={`home-command-tile ${signal.tone}`}
+            onClick={signal.onAction}
+          >
+            <span>{signal.label}</span>
+            <strong>{signal.title}</strong>
+            <small>{signal.detail}</small>
+            <em>{signal.actionLabel}</em>
+          </button>
+        ))}
       </section>
 
       <section className="mobile-up-next" aria-label="Up next">
