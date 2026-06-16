@@ -1855,6 +1855,7 @@ function App() {
     setActiveView(view);
     setActivityOpen(false);
     setAccountOpen(false);
+    setPostOpen(false);
   }
 
   function handleReviewConsent() {
@@ -2681,7 +2682,7 @@ function App() {
             type="button"
             className={unreadActivities ? "icon-button alert-button" : "icon-button"}
             aria-label="Notifications"
-            onClick={() => setActivityOpen(true)}
+            onClick={() => { setAccountOpen(false); setPostOpen(false); setActivityOpen(true); }}
           >
             <Bell size={18} />
             {unreadActivities > 0 && <span>{unreadActivities}</span>}
@@ -2690,7 +2691,7 @@ function App() {
             type="button"
             className="user-menu"
             aria-label={`Signed in ${role === "contractor" ? "contractor" : "tradesperson"}`}
-            onClick={() => setAccountOpen(true)}
+            onClick={() => { setActivityOpen(false); setPostOpen(false); setAccountOpen(true); }}
           >
             <Avatar name={accountProfile.displayName} size="sm" className="user-avatar" />
             <span className="user-menu-copy">
@@ -2721,9 +2722,19 @@ function App() {
               <p>Here&apos;s what&apos;s happening in {accountProfile.location}.</p>
             </div>
             <div className="page-intro-right">
-              <span className="page-intro-chip">{selectedJob.trade}</span>
-              <strong>{selectedJob.title}</strong>
-              <small>{selectedJob.location} · {selectedJob.status}</small>
+              {selectedJob.id === 0 ? (
+                <>
+                  <span className="page-intro-chip">{role === "contractor" ? "No active job" : "No active work"}</span>
+                  <strong>{role === "contractor" ? "Post your first job" : "Find work nearby"}</strong>
+                  <small>Tap Work to get started</small>
+                </>
+              ) : (
+                <>
+                  <span className="page-intro-chip">{selectedJob.trade}</span>
+                  <strong>{selectedJob.title}</strong>
+                  <small>{selectedJob.location} · {selectedJob.status}</small>
+                </>
+              )}
             </div>
           </section>
         ) : (
@@ -4015,7 +4026,7 @@ function MarketplaceView({
           />
           <div className="modern-command-actions">
             {role === "contractor" && onPostJob && (
-              <button onClick={onPostJob}>
+              <button className="post-work-btn" onClick={onPostJob}>
                 <Plus size={15} />
                 Post work
               </button>
@@ -4024,10 +4035,17 @@ function MarketplaceView({
               <Sparkles size={15} />
               {autoMatchEnabled ? "Pause sorting" : "Resume sorting"}
             </button>
-            <button onClick={onReviewConsent}>
-              <ShieldCheck size={15} />
-              {trustReady ? "Ready" : "Consent"}
-            </button>
+            {trustReady ? (
+              <span className="command-trust-ready">
+                <BadgeCheck size={15} />
+                Ready
+              </span>
+            ) : (
+              <button onClick={onReviewConsent}>
+                <ShieldCheck size={15} />
+                Consent
+              </button>
+            )}
           </div>
         </section>
 
@@ -5936,6 +5954,24 @@ function ToolsView({
   onOpenJob: (id: number) => void;
   onNavigate: (view: NavLabel) => void;
 }) {
+  if (selectedJob.id === 0) {
+    return (
+      <section className="tools-layout" aria-label="Trade tools">
+        <section className="tools-command" aria-label="Tool command center">
+          <div>
+            <span>Field tools</span>
+            <h2>Invoices, estimates, and quick math for your active work order.</h2>
+            <p>No active work order loaded. {role === "contractor" ? "Post a job to activate field tools." : "Apply to work to activate field tools."}</p>
+          </div>
+          <button type="button" className="primary-action" onClick={() => onNavigate("Marketplace")}>
+            <BriefcaseBusiness size={17} />
+            {role === "contractor" ? "Post work" : "Find work"}
+          </button>
+        </section>
+      </section>
+    );
+  }
+
   return (
     <section className="tools-layout" aria-label="Trade tools">
       <section className="tools-command" aria-label="Tool command center">
@@ -6596,10 +6632,17 @@ function CrewView({
             ? `Top match right now is ${highlighted.name}, with ${highlighted.match}% fit for the active work order and a ${highlighted.responseTime} response time.`
             : "Crew profiles will appear here once tradespeople join the network in Jacksonville."}
         </p>
-        <button className="primary-action" onClick={onReviewConsent}>
-          <ShieldCheck size={17} />
-          {trustReady ? "Consent reviewed" : "Review trust consent"}
-        </button>
+        {trustReady ? (
+          <div className="consent-status-badge">
+            <BadgeCheck size={17} />
+            Consent on file
+          </div>
+        ) : (
+          <button className="primary-action" onClick={onReviewConsent}>
+            <ShieldCheck size={17} />
+            Review trust consent
+          </button>
+        )}
       </div>
       <div className="crew-directory">
         {people.length === 0 ? (
@@ -6667,11 +6710,35 @@ function MessagesView({
   const contact = matchingTalent[0] ?? emptyTalent;
   const messages = sentMessages.map((message) => ({ author: displayName, text: message }));
 
+  if (selectedJob.id === 0) {
+    return (
+      <section className="message-workspace">
+        <aside className="thread-list">
+          <div className="thread-list-empty">
+            <MessageSquareText size={20} />
+            <span>No active work order</span>
+          </div>
+        </aside>
+        <section className="thread-panel" aria-label="Selected message thread">
+          <div className="thread-heading">
+            <div>
+              <span>Messages</span>
+              <h2>No work order loaded</h2>
+            </div>
+          </div>
+          <div className="message-list">
+            <p className="thread-empty">Post a job or apply to work to start a message thread.</p>
+          </div>
+        </section>
+      </section>
+    );
+  }
+
   return (
     <section className="message-workspace">
       <aside className="thread-list">
         <button key={selectedJob.id} onClick={() => onOpenJob(selectedJob.id)}>
-          {selectedJob.id !== 0 && <span>{selectedJob.trade}</span>}
+          <span>{selectedJob.trade}</span>
           <strong>{selectedJob.title}</strong>
           <small>{selectedJob.location}</small>
         </button>
@@ -6734,10 +6801,17 @@ function TrustLegalView({
           permits, insurance, compliance, payment terms, and work order records. ID
           checks are required before real posting or accepting.
         </p>
-        <button className="primary-action" onClick={onReviewConsent}>
-          <BadgeCheck size={17} />
-          {trustReady ? "Consent reviewed" : "Review consent"}
-        </button>
+        {trustReady ? (
+          <div className="consent-status-badge">
+            <BadgeCheck size={17} />
+            Consent on file
+          </div>
+        ) : (
+          <button className="primary-action" onClick={onReviewConsent}>
+            <BadgeCheck size={17} />
+            Review consent
+          </button>
+        )}
       </div>
       <div className="credential-grid">
         <CredentialTile label="Legal consent" value="Accepted at signup before work starts" tone={trustReady ? "positive" : "warning"} />
