@@ -2470,22 +2470,27 @@ function App() {
           onNavigate={handleNavigate}
         />
 
-        <section
-          className={[
-            "page-intro",
-            activeView === "Home" ? "home-intro" : "",
-            activeView === "Tools" ? "tools-intro" : "",
-          ].filter(Boolean).join(" ")}
-        >
-          <div>
-            <h1>{activeView === "Home" ? `Good morning, ${accountProfile.displayName.split(" ")[0]}` : page.title}</h1>
-            <p>
-              {activeView === "Home"
-                ? `Here's what's happening in ${accountProfile.location}.`
-                : page.description}
-            </p>
-          </div>
-        </section>
+        {activeView === "Home" ? (
+          <section className="page-intro home-intro" aria-label="Home summary">
+            <div>
+              <h1>{`Good morning, ${accountProfile.displayName.split(" ")[0]}`}</h1>
+              <p>Here&apos;s what&apos;s happening in {accountProfile.location}.</p>
+            </div>
+            <div className="page-intro-right">
+              <span className="page-intro-chip">{selectedJob.trade}</span>
+              <strong>{selectedJob.title}</strong>
+              <small>{selectedJob.location} · {selectedJob.status}</small>
+            </div>
+          </section>
+        ) : (
+          <header className="page-heading" aria-label={`${page.title} heading`}>
+            <div>
+              <span>{page.title}</span>
+              <h1>{page.title}</h1>
+              <p>{page.description}</p>
+            </div>
+          </header>
+        )}
 
         {activeView === "Marketplace" ? (
           <MarketplaceView
