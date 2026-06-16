@@ -369,7 +369,6 @@ const navItems: Array<{ label: NavLabel; icon: typeof BriefcaseBusiness }> = [
   { label: "Applications", icon: FileCheck2 },
   { label: "Invites", icon: Sparkles },
   { label: "My Crew", icon: UserCheck },
-  { label: "Messages", icon: MessageSquareText },
   { label: "Trust & Legal", icon: ShieldCheck },
   { label: "Records", icon: ClipboardCheck },
   { label: "Safety & Training", icon: GraduationCap },
@@ -389,7 +388,6 @@ const roleNavItems: Record<Role, NavLabel[]> = {
     "Applications",
     "Invites",
     "My Crew",
-    "Messages",
     "Trust & Legal",
     "Records",
     "Reviews",
@@ -403,7 +401,6 @@ const roleNavItems: Record<Role, NavLabel[]> = {
     "Tools",
     "My Jobs",
     "Applications",
-    "Messages",
     "Trust & Legal",
     "Records",
     "Safety & Training",
@@ -1667,24 +1664,6 @@ function App() {
     setAccountOpen(false);
   }
 
-  function handleRoleChange(nextRole: Role) {
-    setRole(nextRole);
-    if (!roleNavItems[nextRole].includes(activeView)) {
-      setActiveView("Marketplace");
-    }
-    setTrade(
-      nextRole === "tradesperson" && accountProfile.specialties[0]
-        ? accountProfile.specialties[0]
-        : "All trades",
-    );
-    addActivity(
-      `${nextRole === "contractor" ? "Contractor" : "Tradesperson"} mode active`,
-      nextRole === "contractor"
-        ? "Job posting and invite actions are now prioritized."
-        : "Job feed, applications, and portfolio actions are now prioritized.",
-    );
-  }
-
   function handleReviewConsent() {
     setTrustReady(true);
     setUploadedRecords((current) => {
@@ -2437,8 +2416,6 @@ function App() {
       />
       <main className="workspace">
         <header className="topbar">
-          <RoleSwitch role={role} setRole={handleRoleChange} />
-
           <div className="searchbox">
             <Search size={18} aria-hidden="true" />
             <input
@@ -2449,21 +2426,20 @@ function App() {
             />
           </div>
 
-          <button
-            type="button"
-            className="primary-action desktop-post-button"
-            onClick={() => setPostOpen(true)}
-          >
-            <Plus size={16} />
-            Post a Job
-          </button>
-
           <ThemeToggle
             themeMode={themeMode}
             onToggleTheme={handleToggleTheme}
             variant="surface"
           />
 
+          <button
+            type="button"
+            className="icon-button"
+            aria-label="Messages"
+            onClick={() => handleNavigate("Messages")}
+          >
+            <MessageSquareText size={18} />
+          </button>
           <button
             type="button"
             className={unreadActivities ? "icon-button alert-button" : "icon-button"}
@@ -2492,7 +2468,6 @@ function App() {
           role={role}
           activeView={activeView}
           onNavigate={handleNavigate}
-          onPostJob={() => setPostOpen(true)}
         />
 
         <section
@@ -2765,9 +2740,9 @@ function AuthGate({
                 <span>Location</span>
                 <input value={location} onChange={(event) => setLocation(event.target.value)} />
               </label>
-              <div className="auth-toggle">
-                <button type="button" className={role === "contractor" ? "selected" : ""} onClick={() => setRole("contractor")}>Contractor</button>
-                <button type="button" className={role === "tradesperson" ? "selected" : ""} onClick={() => setRole("tradesperson")}>Tradesperson</button>
+              <div className="role-locked-note">
+                <strong>{role === "contractor" ? "Contractor role" : "Tradesperson role"}</strong>
+                <span>Chosen at signup and kept consistent across the app.</span>
               </div>
             </>
           )}
@@ -2989,30 +2964,14 @@ function OnboardingFlow({
             </div>
           </div>
 
-          <section className="onboarding-section" aria-label="Choose account role">
+          <section className="onboarding-section" aria-label="Account role">
             <div className="onboarding-section-heading">
               <span>Step 1</span>
-              <h3>Choose how you use {brandConfig.appName}</h3>
+              <h3>{role === "contractor" ? "Contractor signup" : "Tradesperson signup"}</h3>
             </div>
-            <div className="role-choice-grid">
-              <button
-                type="button"
-                className={role === "contractor" ? "role-choice selected" : "role-choice"}
-                onClick={() => setRole("contractor")}
-              >
-                <BriefcaseBusiness size={20} />
-                <strong>Contractor</strong>
-                <span>Post jobs, review applicants, invite skilled help.</span>
-              </button>
-              <button
-                type="button"
-                className={role === "tradesperson" ? "role-choice selected" : "role-choice"}
-                onClick={() => setRole("tradesperson")}
-              >
-                <Wrench size={20} />
-                <strong>Tradesperson</strong>
-                <span>Find side work, apply fast, build a portfolio.</span>
-              </button>
+            <div className="role-locked-note">
+              <strong>{role === "contractor" ? "Contractor" : "Tradesperson"}</strong>
+              <span>This role stays fixed after signup.</span>
             </div>
           </section>
 
@@ -3415,17 +3374,14 @@ function Sidebar({
   profile: AccountProfile;
   onNavigate: (view: NavLabel) => void;
 }) {
-  const [moreOpen, setMoreOpen] = useState(false);
-  const primaryLabels: NavLabel[] = ["Home", "Marketplace", "Records", "Tools", "Messages"];
+  const primaryLabels: NavLabel[] = ["Home", "Marketplace", "Shop Talk", "Tools", "My Crew"];
   const visibleItems = visibleNavItems(role);
   const primaryItems = primaryLabels
     .map((label) => visibleItems.find((item) => item.label === label))
     .filter((item): item is (typeof visibleItems)[number] => Boolean(item));
-  const secondaryItems = visibleItems.filter((item) => !primaryLabels.includes(item.label));
-  const moreSelected = moreOpen || secondaryItems.some((item) => item.label === activeView);
   const displayLabel: Partial<Record<NavLabel, string>> = {
     Marketplace: "Work",
-    "My Crew": "Network",
+    "My Crew": "Crew",
   };
 
   return (
@@ -3456,43 +3412,7 @@ function Sidebar({
             </button>
           );
         })}
-        <button
-          type="button"
-          className={moreSelected ? "nav-item active" : "nav-item"}
-          aria-expanded={moreOpen}
-          onClick={() => setMoreOpen((current) => !current)}
-        >
-          <ChevronDown size={18} />
-          <span>More</span>
-        </button>
       </nav>
-
-      {moreOpen && (
-        <div className="sidebar-more-sheet" role="menu" aria-label="More sections">
-          <div className="sidebar-more-heading">
-            <strong>More in RIVT</strong>
-            <span>Job management, compliance, account, and admin</span>
-          </div>
-          {secondaryItems.map((item) => {
-            const Icon = item.icon;
-            return (
-              <button
-                type="button"
-                key={item.label}
-                role="menuitem"
-                className={activeView === item.label ? "selected" : ""}
-                onClick={() => {
-                  setMoreOpen(false);
-                  onNavigate(item.label);
-                }}
-              >
-                <Icon size={16} />
-                <span>{item.label}</span>
-              </button>
-            );
-          })}
-        </div>
-      )}
 
       <div className="sidebar-job-card">
         <span>Active work order</span>
@@ -3598,34 +3518,21 @@ function MobileNavStrip({
   role,
   activeView,
   onNavigate,
-  onPostJob,
 }: {
   role: Role;
   activeView: NavLabel;
   onNavigate: (view: NavLabel) => void;
-  onPostJob: () => void;
 }) {
-  const [moreOpen, setMoreOpen] = useState(false);
-  const primaryLabels: NavLabel[] = ["Home", "Marketplace", "Records", "Tools", "Messages"];
+  const primaryLabels: NavLabel[] = ["Home", "Marketplace", "Shop Talk", "Tools", "My Crew"];
   const visibleItems = visibleNavItems(role);
   const primaryItems = primaryLabels
     .map((label) => visibleItems.find((item) => item.label === label))
     .filter((item): item is (typeof visibleItems)[number] => Boolean(item));
-  const secondaryItems = visibleItems.filter(
-    (item) => !primaryItems.some((primary) => primary.label === item.label),
-  );
-  const secondarySelected = secondaryItems.some((item) => item.label === activeView);
   const mobileLabel: Partial<Record<NavLabel, string>> = {
     Marketplace: "Work",
     "Shop Talk": "Talk",
-    Records: "Records",
-    Messages: "Chat",
+    "My Crew": "Crew",
   };
-
-  function navigate(view: NavLabel) {
-    setMoreOpen(false);
-    onNavigate(view);
-  }
 
   return (
     <nav className="mobile-nav-strip" aria-label="Mobile primary navigation">
@@ -3636,59 +3543,13 @@ function MobileNavStrip({
             key={item.label}
             className={activeView === item.label ? "selected" : ""}
             aria-label={`Go to ${mobileLabel[item.label] ?? item.label}`}
-            onClick={() => navigate(item.label)}
+            onClick={() => onNavigate(item.label)}
           >
             <Icon size={15} />
             <span>{mobileLabel[item.label] ?? item.label}</span>
           </button>
         );
       })}
-      <button
-        type="button"
-        className={secondarySelected || moreOpen ? "selected" : ""}
-        aria-expanded={moreOpen}
-        onClick={() => setMoreOpen((current) => !current)}
-      >
-        <ChevronDown size={15} />
-        <span>More</span>
-      </button>
-      {moreOpen && (
-        <div className="mobile-more-sheet" role="menu" aria-label="More sections">
-          <div className="mobile-more-heading">
-            <strong>More in RIVT</strong>
-            <span>Network, trust, reviews, and beta tools</span>
-          </div>
-          {role === "contractor" ? (
-            <button
-              type="button"
-              role="menuitem"
-              className="mobile-sheet-primary"
-              onClick={() => {
-                setMoreOpen(false);
-                onPostJob();
-              }}
-            >
-              <Plus size={16} />
-              <span>Post a job</span>
-            </button>
-          ) : null}
-          {secondaryItems.map((item) => {
-            const Icon = item.icon;
-            return (
-              <button
-                type="button"
-                role="menuitem"
-                key={item.label}
-                className={activeView === item.label ? "selected" : ""}
-                onClick={() => navigate(item.label)}
-              >
-                <Icon size={16} />
-                <span>{item.label}</span>
-              </button>
-            );
-          })}
-        </div>
-      )}
     </nav>
   );
 }
@@ -7114,31 +6975,6 @@ function ProgressBar({ value }: { value: number }) {
       aria-label={`${value}% complete`}
     >
       <span style={{ width: `${Math.min(value, 100)}%` }} />
-    </div>
-  );
-}
-
-function RoleSwitch({
-  role,
-  setRole,
-}: {
-  role: Role;
-  setRole: (role: Role) => void;
-}) {
-  return (
-    <div className="role-switch" aria-label="Role view">
-      <button
-        className={role === "contractor" ? "selected" : ""}
-        onClick={() => setRole("contractor")}
-      >
-        Contractor
-      </button>
-      <button
-        className={role === "tradesperson" ? "selected" : ""}
-        onClick={() => setRole("tradesperson")}
-      >
-        Tradesperson
-      </button>
     </div>
   );
 }
