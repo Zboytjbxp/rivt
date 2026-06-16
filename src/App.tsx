@@ -482,11 +482,11 @@ const pageCopy: Record<NavLabel, { title: string; description: string }> = {
   },
   Feedback: {
     title: "Feedback",
-    description: "Capture beta customer notes and turn them into product decisions.",
+    description: "Tell us what's working, what's confusing, and what you need next.",
   },
   Settings: {
     title: "Settings",
-    description: "Manage themes, account details, trust setup, and provider readiness.",
+    description: "Review account status, trust readiness, and launch checklist.",
   },
   Admin: {
     title: "Admin",
@@ -1103,13 +1103,13 @@ function App() {
   const [role, setRole] = useState<Role>("contractor");
   const [onboardingComplete, setOnboardingComplete] = useState(true);
   const [accountProfile, setAccountProfile] = useState<AccountProfile>({
-    email: "rivttesting@gmail.com",
-    displayName: "Ryan Mitchell",
-    organization: "RIVT Crew",
+    email: "",
+    displayName: "",
+    organization: "",
     location: "Jacksonville, FL",
-    specialties: ["Electrical", "Carpentry"],
+    specialties: [],
     plan: brandConfig.pricing.betaPlan.label,
-    authMethod: "Google",
+    authMethod: "Email",
   });
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
@@ -2489,7 +2489,6 @@ function App() {
         ) : (
           <header className="page-heading" aria-label={`${page.title} heading`}>
             <div>
-              <span>{page.title}</span>
               <h1>{page.title}</h1>
               <p>{page.description}</p>
             </div>
@@ -2665,10 +2664,10 @@ function AuthGate({
   onModeChange: (mode: "login" | "signup") => void;
   onSubmit: (form: { email: string; password: string; displayName?: string; organization?: string; location?: string; role?: Role }) => void;
 }) {
-  const [email, setEmail] = useState("rivttesting@gmail.com");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [displayName, setDisplayName] = useState("Ryan Mitchell");
-  const [organization, setOrganization] = useState("RIVT Crew");
+  const [displayName, setDisplayName] = useState("");
+  const [organization, setOrganization] = useState("");
   const [location, setLocation] = useState("Jacksonville, FL");
   const [role, setRole] = useState<Role>("contractor");
   const providerIcons = {
@@ -3813,14 +3812,16 @@ function ModernMetric({
   label,
   value,
   detail,
+  className = "modern-metric",
 }: {
   icon: typeof BriefcaseBusiness;
   label: string;
   value: string;
   detail: string;
+  className?: string;
 }) {
   return (
-    <article className="modern-metric">
+    <article className={className}>
       <Icon size={17} />
       <span>{label}</span>
       <strong>{value}</strong>
@@ -4010,7 +4011,7 @@ function ScoreRing({ score }: { score: number }) {
           cy="48"
           r={r}
           fill="none"
-          stroke="var(--green)"
+          stroke="var(--accent)"
           strokeWidth="10"
           strokeDasharray={`${arc} ${circ}`}
           strokeLinecap="round"
@@ -4157,25 +4158,29 @@ function OperationsWorkspace(props: OperationsWorkspaceProps) {
     <>
       {view === "Home" && (
         <section className="ops-summary home-ops-summary" aria-label="Operations summary">
-          <OpsMetric
+          <ModernMetric
+            className="ops-metric"
             icon={BriefcaseBusiness}
             label="Open work"
             value={`${jobs.length} jobs`}
             detail={`${currency(totalPipelineValue)} active value`}
           />
-          <OpsMetric
+          <ModernMetric
+            className="ops-metric"
             icon={FileCheck2}
             label="Applications"
             value={String(applications.length)}
             detail={role === "contractor" ? "Applicant and invite queue" : "Submitted portfolios"}
           />
-          <OpsMetric
+          <ModernMetric
+            className="ops-metric"
             icon={FolderOpen}
             label="Records"
             value={`${activeRecords}/${recordChecklist.length}`}
             detail={`${paymentRecords.length} payment log${paymentRecords.length === 1 ? "" : "s"}`}
           />
-          <OpsMetric
+          <ModernMetric
+            className="ops-metric"
             icon={GraduationCap}
             label="Safety"
             value={`${trainingProgress}%`}
@@ -4194,7 +4199,6 @@ function OperationsWorkspace(props: OperationsWorkspaceProps) {
             newsItems={seedNews}
             communityPosts={communityPosts}
             shoutOuts={shoutOuts}
-            communityReports={communityReports}
             activityFeed={activityFeed}
             onNavigate={onNavigate}
             onOpenJob={onOpenJob}
@@ -4269,6 +4273,7 @@ function OperationsWorkspace(props: OperationsWorkspaceProps) {
         <MessagesView
           selectedJob={selectedJob}
           matchingTalent={matchingTalent}
+          displayName={accountProfile.displayName}
           messageDraft={messageDraft}
           sentMessages={sentMessages}
           onMessageDraft={onMessageDraft}
@@ -4375,26 +4380,6 @@ function OperationsWorkspace(props: OperationsWorkspaceProps) {
   );
 }
 
-function OpsMetric({
-  icon: Icon,
-  label,
-  value,
-  detail,
-}: {
-  icon: typeof BriefcaseBusiness;
-  label: string;
-  value: string;
-  detail: string;
-}) {
-  return (
-    <article className="ops-metric">
-      <Icon size={17} />
-      <span>{label}</span>
-      <strong>{value}</strong>
-      <small>{detail}</small>
-    </article>
-  );
-}
 
 const calculatorDifficultyMultipliers: Record<Difficulty, number> = {
   Easy: 0.95,
@@ -4636,7 +4621,6 @@ function HomeView({
   newsItems,
   communityPosts,
   shoutOuts,
-  communityReports,
   activityFeed,
   onNavigate,
   onOpenJob,
@@ -4653,7 +4637,6 @@ function HomeView({
   newsItems: NewsItem[];
   communityPosts: CommunityPost[];
   shoutOuts: ShoutOut[];
-  communityReports: CommunityReport[];
   activityFeed: ActivityItem[];
   onNavigate: (view: NavLabel) => void;
   onOpenJob: (id: number) => void;
@@ -4663,7 +4646,6 @@ function HomeView({
   onCreateCommunityPrompt: () => void;
 }) {
   const verifiedFixes = communityPosts.filter((post) => post.status === "Verified Fix").length;
-  const pendingReports = communityReports.filter((report) => report.status === "Flagged").length;
   const pendingPayments = paymentRecords.filter((record) => record.status === "Payment pending").length;
   const topPosts = [...communityPosts].sort((a, b) => netScore(b) - netScore(a)).slice(0, 3);
   const featuredJobs = jobs.slice(0, 3);
@@ -4932,7 +4914,7 @@ function HomeView({
         <ModernMetric icon={BriefcaseBusiness} label="Open work" value={`${jobs.length}`} detail={`${currency(jobs.reduce((sum, job) => sum + job.pay, 0))} active value`} />
         <ModernMetric icon={MessageCircle} label="Shop Talk" value={`${verifiedFixes}`} detail="Verified field fixes" />
         <ModernMetric icon={ThumbsUp} label="Shout-outs" value={`${shoutOuts.length}`} detail="Peer recommendations" />
-        <ModernMetric icon={Flag} label="Moderation" value={`${pendingReports}`} detail="Reports waiting" />
+        <ModernMetric icon={CreditCard} label="Payments" value={`${pendingPayments}`} detail={pendingPayments === 0 ? "All settled" : "Pending confirmation"} />
       </section>
 
       <section className="home-grid">
@@ -6020,6 +6002,7 @@ function CrewView({
 function MessagesView({
   selectedJob,
   matchingTalent,
+  displayName,
   messageDraft,
   sentMessages,
   onMessageDraft,
@@ -6028,40 +6011,29 @@ function MessagesView({
 }: {
   selectedJob: Job;
   matchingTalent: typeof talent;
+  displayName: string;
   messageDraft: string;
   sentMessages: string[];
   onMessageDraft: (message: string) => void;
   onSendMessage: () => void;
   onOpenJob: (id: number) => void;
 }) {
-  const contact = matchingTalent[0] ?? talent[0] ?? emptyTalent;
-  const messages = [
-    ...sentMessages.map((message) => ({ author: "Ryan Mitchell", text: message })),
-    {
-      author: contact.name,
-      text: "I can take this. Please send the start window and parking notes.",
-    },
-    {
-      author: "Job assistant",
-      text: `${selectedJob.state} guidance: ${selectedJob.guidance[0].toLowerCase()}.`,
-    },
-  ];
+  const contact = matchingTalent[0] ?? emptyTalent;
+  const messages = sentMessages.map((message) => ({ author: displayName, text: message }));
 
   return (
     <section className="message-workspace">
       <aside className="thread-list">
-        {[selectedJob, ...seedJobs.filter((job) => job.id !== selectedJob.id).slice(0, 3)].map((job) => (
-          <button key={job.id} onClick={() => onOpenJob(job.id)}>
-            <span>{job.trade}</span>
-            <strong>{job.title}</strong>
-            <small>{job.location}</small>
-          </button>
-        ))}
+        <button key={selectedJob.id} onClick={() => onOpenJob(selectedJob.id)}>
+          <span>{selectedJob.trade}</span>
+          <strong>{selectedJob.title}</strong>
+          <small>{selectedJob.location}</small>
+        </button>
       </aside>
       <section className="thread-panel" aria-label="Selected message thread">
         <div className="thread-heading">
           <div>
-            <span>{contact.name} - {contact.responseTime}</span>
+            <span>{contact.name !== emptyTalent.name ? `${contact.name} · ${contact.responseTime}` : "No contact yet"}</span>
             <h2>{selectedJob.title}</h2>
           </div>
           <button onClick={onSendMessage}>
@@ -6070,12 +6042,16 @@ function MessagesView({
           </button>
         </div>
         <div className="message-list">
-          {messages.map((message, index) => (
-            <article key={`${message.author}-${index}`} className={message.author === "Ryan Mitchell" ? "message-bubble mine" : "message-bubble"}>
-              <strong>{message.author}</strong>
-              <p>{message.text}</p>
-            </article>
-          ))}
+          {messages.length === 0 ? (
+            <p className="thread-empty">No messages yet. Use the composer below to send the first update.</p>
+          ) : (
+            messages.map((message, index) => (
+              <article key={`${message.author}-${index}`} className={message.author === displayName ? "message-bubble mine" : "message-bubble"}>
+                <strong>{message.author}</strong>
+                <p>{message.text}</p>
+              </article>
+            ))
+          )}
         </div>
         <label className="message-composer">
           <span>Job update</span>
@@ -7209,16 +7185,12 @@ function SettingsView({
         <CredentialTile label="Training" value={`${trainingProgress}% complete`} tone={trainingProgress > 0 ? "positive" : "warning"} />
         <CredentialTile label="Community" value={`${communityBadges.length} badge${communityBadges.length === 1 ? "" : "s"}`} tone={communityBadges.length > 0 || shoutOutCount > 0 ? "positive" : "neutral"} />
       </div>
-      <section className="account-section theme-settings-section settings-page-panel">
+      <section className="account-section settings-page-panel">
         <div className="settings-section-heading">
           <span>Themes</span>
           <strong>Tool-inspired appearance</strong>
-          <small>Theme controls stay in your account panel for now, while this page focuses on launch readiness.</small>
+          <small>Switch palettes and light/dark mode from the account panel in the top bar.</small>
         </div>
-
-        <button type="button" className="secondary-action" onClick={onReviewConsent}>
-          Open trust setup
-        </button>
       </section>
     </section>
   );
