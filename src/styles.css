@@ -2113,6 +2113,98 @@ textarea:focus-visible {
   display: none;
 }
 
+.home-notification-strip {
+  display: grid;
+  gap: 12px;
+  padding: 0 32px 6px;
+}
+
+.home-notification-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.home-notification-heading span {
+  display: block;
+  color: var(--green-deep);
+  font-size: 11px;
+  font-weight: 820;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.home-notification-heading strong {
+  display: block;
+  margin-top: 4px;
+  color: var(--text);
+  font-size: 16px;
+  line-height: 1.2;
+}
+
+.home-notification-heading button {
+  min-height: 30px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 780;
+}
+
+.home-notification-list {
+  display: grid;
+  gap: 8px;
+}
+
+.home-notification-list > span {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.home-notification-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 4px 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  text-align: left;
+}
+
+.home-notification-item strong {
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.25;
+}
+
+.home-notification-item small,
+.home-notification-item span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 760;
+}
+
+.home-notification-item.info {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--blue) 18%, transparent);
+}
+
+.home-notification-item.success {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--green) 18%, transparent);
+}
+
+.home-notification-item.warning {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--amber) 18%, transparent);
+}
+
+.home-notification-item.error {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, #ef4444 18%, transparent);
+}
+
 .ops-summary {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -6306,6 +6398,10 @@ textarea:focus-visible {
     gap: 10px;
     padding-top: 10px;
     padding-bottom: 8px;
+  }
+
+  .home-notification-strip {
+    padding: 0 14px 6px;
   }
 
   .page-intro h1 {

@@ -4174,21 +4174,22 @@ function OperationsWorkspace(props: OperationsWorkspaceProps) {
       )}
 
       {view === "Home" && (
-        <HomeView
-          role={role}
-          jobs={jobs}
-          selectedJob={selectedJob}
-          applications={applications}
-          paymentRecords={paymentRecords}
-          newsItems={seedNews}
-          communityPosts={communityPosts}
-          shoutOuts={shoutOuts}
-          communityReports={communityReports}
-          onNavigate={onNavigate}
-          onOpenJob={onOpenJob}
-          onPostJob={onPostJob}
-          onApplyToJob={onApplyToJob}
-          onInviteToJob={onInviteToJob}
+          <HomeView
+            role={role}
+            jobs={jobs}
+            selectedJob={selectedJob}
+            applications={applications}
+            paymentRecords={paymentRecords}
+            newsItems={seedNews}
+            communityPosts={communityPosts}
+            shoutOuts={shoutOuts}
+            communityReports={communityReports}
+            activityFeed={activityFeed}
+            onNavigate={onNavigate}
+            onOpenJob={onOpenJob}
+            onPostJob={onPostJob}
+            onApplyToJob={onApplyToJob}
+            onInviteToJob={onInviteToJob}
           onCreateCommunityPrompt={onCreateCommunityPrompt}
         />
       )}
@@ -4625,6 +4626,7 @@ function HomeView({
   communityPosts,
   shoutOuts,
   communityReports,
+  activityFeed,
   onNavigate,
   onOpenJob,
   onPostJob,
@@ -4641,6 +4643,7 @@ function HomeView({
   communityPosts: CommunityPost[];
   shoutOuts: ShoutOut[];
   communityReports: CommunityReport[];
+  activityFeed: ActivityItem[];
   onNavigate: (view: NavLabel) => void;
   onOpenJob: (id: number) => void;
   onPostJob: () => void;
@@ -4659,6 +4662,7 @@ function HomeView({
   const topPost = topPosts[0];
   const nextJob = jobs.find((job) => job.id !== selectedJob.id) ?? selectedJob;
   const pendingPaymentRecord = paymentRecords.find((record) => record.status === "Payment pending");
+  const recentUnread = activityFeed.filter((item) => item.unread).slice(0, 3);
   const mobilePrimaryLabel = role === "contractor" ? "Open work order" : "Apply";
   const mobilePrimaryIcon = role === "contractor" ? <BriefcaseBusiness size={16} /> : <FileCheck2 size={16} />;
   const mobilePrimaryAction = role === "contractor" ? () => onOpenJob(selectedJob.id) : () => onApplyToJob(selectedJob.id);
@@ -4713,6 +4717,29 @@ function HomeView({
             <MessageCircle size={16} />
             Message
           </button>
+        </div>
+      </section>
+
+      <section className="home-notification-strip" aria-label="Since you last visited">
+        <div className="home-notification-heading">
+          <div>
+            <span>Since you last visited</span>
+            <strong>{recentUnread.length ? `${recentUnread.length} new updates` : "You’re all caught up"}</strong>
+          </div>
+          <button type="button" onClick={() => onNavigate("Messages")}>Open inbox</button>
+        </div>
+        <div className="home-notification-list">
+          {recentUnread.length === 0 ? (
+            <span>No unread activity right now. New jobs, invites, and replies will show up here.</span>
+          ) : (
+            recentUnread.map((item) => (
+              <button key={item.id} type="button" className={`home-notification-item ${item.kind ?? "info"}`}>
+                <strong>{item.title}</strong>
+                <small>{item.detail}</small>
+                <span>{item.timestamp}</span>
+              </button>
+            ))
+          )}
         </div>
       </section>
 
