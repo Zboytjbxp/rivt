@@ -7946,3 +7946,270 @@ textarea:focus-visible {
 .cert-requirement-banner svg { color: var(--accent); flex-shrink: 0; margin-top: 2px; }
 .cert-requirement-banner strong { display: block; font-size: 12px; color: var(--accent-deep); margin-bottom: 2px; }
 .cert-requirement-banner span { font-size: 12px; color: var(--text-muted); line-height: 1.4; }
+
+/* ── Enhanced Invoice Tool ──────────────────────────────────── */
+
+.invoice-line-items {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-soft);
+}
+.invoice-line-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.small-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--surface);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.small-button:hover { border-color: var(--accent); color: var(--accent); }
+
+.invoice-line-table {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.invoice-line-row {
+  display: grid;
+  grid-template-columns: minmax(140px, 2fr) minmax(90px, 1fr) 60px 60px 90px 50px auto;
+  gap: 8px;
+  align-items: center;
+}
+.invoice-line-row input,
+.invoice-line-row select {
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 12px;
+}
+.invoice-line-row input:focus,
+.invoice-line-row select:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(255, 106, 0, 0.1);
+}
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.checkbox-label input { margin: 0; }
+
+.invoice-tax-label {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 10px;
+  align-items: center;
+  font-size: 12px;
+  font-weight: 800;
+  padding: 10px 0;
+  border-top: 1px solid var(--border);
+}
+.invoice-tax-label input {
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--surface);
+  font-size: 12px;
+}
+
+.invoice-breakdown-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 4px 0;
+}
+
+/* ── Construction Calculator (Measurements, Shortcuts, Materials) ── */
+
+.construction-calculator {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.calc-tabs {
+  display: flex;
+  gap: 8px;
+  border-bottom: 1px solid var(--border);
+}
+.calc-tab {
+  padding: 10px 14px;
+  border: none;
+  background: none;
+  border-bottom: 3px solid transparent;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.calc-tab:hover { color: var(--text); }
+.calc-tab.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+.calc-tab-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.calc-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+}
+.calc-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.calc-grid input,
+.calc-grid select {
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--surface-soft);
+  color: var(--text);
+  font-size: 13px;
+}
+.calc-grid input:focus,
+.calc-grid select:focus {
+  outline: none;
+  border-color: var(--accent);
+  background: var(--surface);
+}
+
+.calc-result {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px;
+  border: 2px solid var(--accent-soft);
+  border-radius: var(--radius);
+  background: var(--accent-soft);
+}
+.calc-result span {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+.calc-result strong {
+  font-size: 24px;
+  color: var(--accent);
+  font-weight: 900;
+}
+.calc-result small {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.shortcuts-results {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+}
+.shortcut-result {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 11px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-soft);
+}
+.shortcut-result span {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+.shortcut-result strong {
+  font-size: 18px;
+  color: var(--text);
+}
+.shortcut-result small {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.material-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+.material-row {
+  display: grid;
+  grid-template-columns: minmax(120px, 1.5fr) 60px 80px 70px 90px auto auto;
+  gap: 6px;
+  align-items: center;
+}
+.material-row input {
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface-soft);
+  font-size: 12px;
+}
+.material-row input:focus {
+  outline: none;
+  border-color: var(--accent);
+  background: var(--surface);
+}
+.material-total {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent);
+  text-align: right;
+}
+
+.material-total-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 12px;
+  border-top: 2px solid var(--border);
+  font-weight: 800;
+}
+.material-total-section span {
+  font-size: 12px;
+  color: var(--muted);
+}
+.material-total-section strong {
+  font-size: 18px;
+  color: var(--accent);
+}

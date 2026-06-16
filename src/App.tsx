@@ -48,6 +48,7 @@ import {
   Sun,
   ThumbsDown,
   ThumbsUp,
+  Trash2,
   UserCheck,
   Users,
   Wrench,
@@ -152,6 +153,31 @@ interface PaymentRecord {
   method: string;
   status: "Payment pending" | "Paid / Closed";
   date: string;
+}
+
+interface InvoiceLineItem {
+  id: string;
+  type: "labor" | "material" | "service" | "discount" | "deposit";
+  description: string;
+  quantity: number;
+  unit: string;
+  unitPrice: number;
+  taxable: boolean;
+}
+
+interface ConstructionMeasure {
+  feet: number;
+  inches: number;
+  eighths: number; // 0-8 representing 0, 1/8, 2/8, etc.
+}
+
+interface MaterialEstimate {
+  id: string;
+  name: string;
+  quantity: number;
+  unit: string;
+  wastePercent: number;
+  costPerUnit?: number;
 }
 
 interface NewsItem {
@@ -6519,7 +6545,7 @@ function ToolsView({
         </div>
       </section>
       <section className="tools-grid">
-        <FractionTool />
+        <ConstructionCalculator />
         <MaterialsWasteTool selectedJob={selectedJob} />
         <PaymentNoteTool selectedJob={selectedJob} />
       </section>
@@ -6540,41 +6566,92 @@ function InvoiceTool({
   const [invoiceNumber, setInvoiceNumber] = useState(`INV-${selectedJob.id}`);
   const [billTo, setBillTo] = useState(selectedJob.contractor);
   const [payTo, setPayTo] = useState(role === "contractor" ? "Selected tradesperson" : "My trade profile");
-  const [laborHours, setLaborHours] = useState(selectedJob.durationHours);
-  const [laborRate, setLaborRate] = useState(Math.max(45, Math.round(selectedJob.pay / Math.max(selectedJob.durationHours, 1) * 0.76)));
-  const [materials, setMaterials] = useState(Math.max(75, Math.round(selectedJob.pay * 0.2)));
-  const [other, setOther] = useState(0);
-  const [taxPercent, setTaxPercent] = useState(0);
   const [recipientEmail, setRecipientEmail] = useState("");
   const [recipientPhone, setRecipientPhone] = useState("");
   const [method, setMethod] = useState("Zelle");
   const [terms, setTerms] = useState("Due on completion");
   const [status, setStatus] = useState<"Draft" | "Sent" | "Paid">("Draft");
+  const [taxPercent, setTaxPercent] = useState(0);
   const [copied, setCopied] = useState(false);
   const [downloaded, setDownloaded] = useState(false);
 
-  function numberFromInput(setValue: (value: number) => void, minimum = 0) {
-    return (event: ChangeEvent<HTMLInputElement>) => {
-      const value = Number(event.target.value);
-      setValue(Number.isFinite(value) ? Math.max(minimum, value) : minimum);
-    };
+  const [lineItems, setLineItems] = useState<InvoiceLineItem[]>([
+    {
+      id: "1",
+      type: "labor",
+      description: "Labor",
+      quantity: selectedJob.durationHours,
+      unit: "hrs",
+      unitPrice: Math.max(45, Math.round(selectedJob.pay / Math.max(selectedJob.durationHours, 1) * 0.76)),
+      taxable: false,
+    },
+    {
+      id: "2",
+      type: "material",
+      description: "Materials",
+      quantity: 1,
+      unit: "ea",
+      unitPrice: Math.max(75, Math.round(selectedJob.pay * 0.2)),
+      taxable: true,
+    },
+  ]);
+
+  function addLineItem() {
+    const newId = String(Math.max(...lineItems.map((l) => Number(l.id) || 0), 0) + 1);
+    setLineItems([
+      ...lineItems,
+      {
+        id: newId,
+        type: "service",
+        description: "",
+        quantity: 1,
+        unit: "ea",
+        unitPrice: 0,
+        taxable: true,
+      },
+    ]);
   }
 
-  const labor = Math.round(laborHours * laborRate);
-  const subtotal = labor + materials + other;
-  const tax = Math.round(subtotal * (taxPercent / 100));
-  const total = subtotal + tax;
+  function removeLineItem(id: string) {
+    setLineItems(lineItems.filter((item) => item.id !== id));
+  }
+
+  function updateLineItem(id: string, field: keyof InvoiceLineItem, value: unknown) {
+    setLineItems(
+      lineItems.map((item) =>
+        item.id === id ? { ...item, [field]: value } : item
+      )
+    );
+  }
+
+  const subtotal = lineItems.reduce((sum, item) => {
+    if (item.type === "deposit") return sum - item.quantity * item.unitPrice;
+    if (item.type === "discount") return sum - item.quantity * item.unitPrice;
+    return sum + item.quantity * item.unitPrice;
+  }, 0);
+
+  const taxableSubtotal = lineItems
+    .filter((item) => item.taxable && item.type !== "discount" && item.type !== "deposit")
+    .reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
+
+  const tax = Math.round(taxableSubtotal * (taxPercent / 100));
+  const total = Math.max(0, subtotal + tax);
+
   const invoiceSubject = `${brandConfig.appName} invoice ${invoiceNumber} - ${selectedJob.title}`;
   const invoiceText = [
     `${brandConfig.appName} invoice ${invoiceNumber}`,
     `Status: ${status}`,
+    `Date: ${new Date().toLocaleDateString()}`,
     `Job: ${selectedJob.title}`,
     `Bill to: ${billTo}`,
     `Pay to: ${payTo}`,
-    `Labor: ${laborHours} hrs x ${currency(laborRate)} = ${currency(labor)}`,
-    `Materials: ${currency(materials)}`,
-    `Other: ${currency(other)}`,
-    `Tax: ${currency(tax)}`,
+    ...lineItems.map((item) => {
+      const lineTotal = item.quantity * item.unitPrice;
+      const sign = item.type === "discount" || item.type === "deposit" ? "-" : "+";
+      return `${sign} ${item.description}: ${item.quantity} ${item.unit} × ${currency(item.unitPrice)} = ${currency(lineTotal)}`;
+    }),
+    `Subtotal: ${currency(subtotal)}`,
+    `Tax (${taxPercent}%): ${currency(tax)}`,
     `Total due: ${currency(total)}`,
     `Terms: ${terms}`,
     `Payment method: ${method}`,
@@ -6721,28 +6798,77 @@ function InvoiceTool({
           </label>
         </div>
 
-        <div className="invoice-line-grid">
-          <label>
-            Labor hours
-            <input type="number" min="0" step="0.5" value={laborHours} onChange={numberFromInput(setLaborHours)} />
-          </label>
-          <label>
-            Labor rate
-            <input type="number" min="0" value={laborRate} onChange={numberFromInput(setLaborRate)} />
-          </label>
-          <label>
-            Materials
-            <input type="number" min="0" value={materials} onChange={numberFromInput(setMaterials)} />
-          </label>
-          <label>
-            Other
-            <input type="number" min="0" value={other} onChange={numberFromInput(setOther)} />
-          </label>
-          <label>
-            Tax %
-            <input type="number" min="0" value={taxPercent} onChange={numberFromInput(setTaxPercent)} />
-          </label>
+        <div className="invoice-line-items">
+          <div className="invoice-line-header">
+            <span>Line items</span>
+            <button type="button" className="small-button" onClick={addLineItem}>
+              <Plus size={14} />
+              Add item
+            </button>
+          </div>
+          <div className="invoice-line-table">
+            {lineItems.map((item) => (
+              <div key={item.id} className="invoice-line-row">
+                <input
+                  type="text"
+                  placeholder="Description"
+                  value={item.description}
+                  onChange={(e) => updateLineItem(item.id, "description", e.target.value)}
+                />
+                <select value={item.type} onChange={(e) => updateLineItem(item.id, "type", e.target.value as InvoiceLineItem["type"])}>
+                  <option value="labor">Labor</option>
+                  <option value="material">Material</option>
+                  <option value="service">Service</option>
+                  <option value="discount">Discount</option>
+                  <option value="deposit">Deposit</option>
+                </select>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.5"
+                  placeholder="Qty"
+                  value={item.quantity}
+                  onChange={(e) => updateLineItem(item.id, "quantity", Number(e.target.value) || 0)}
+                />
+                <input
+                  type="text"
+                  placeholder="Unit"
+                  value={item.unit}
+                  onChange={(e) => updateLineItem(item.id, "unit", e.target.value)}
+                />
+                <input
+                  type="number"
+                  min="0"
+                  placeholder="Price"
+                  value={item.unitPrice}
+                  onChange={(e) => updateLineItem(item.id, "unitPrice", Number(e.target.value) || 0)}
+                />
+                <label className="checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={item.taxable}
+                    onChange={(e) => updateLineItem(item.id, "taxable", e.target.checked)}
+                  />
+                  Tax
+                </label>
+                <button type="button" className="icon-button" onClick={() => removeLineItem(item.id)}>
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            ))}
+          </div>
         </div>
+
+        <label className="invoice-tax-label">
+          Tax %
+          <input
+            type="number"
+            min="0"
+            max="100"
+            value={taxPercent}
+            onChange={(e) => setTaxPercent(Number(e.target.value) || 0)}
+          />
+        </label>
       </div>
 
       <aside className="invoice-preview">
@@ -6772,10 +6898,25 @@ function InvoiceTool({
         </div>
 
         <div className="invoice-breakdown">
-          <div><span>Labor</span><strong>{currency(labor)}</strong></div>
-          <div><span>Materials</span><strong>{currency(materials)}</strong></div>
-          <div><span>Other</span><strong>{currency(other)}</strong></div>
-          <div><span>Tax</span><strong>{currency(tax)}</strong></div>
+          {lineItems.map((item) => {
+            const lineTotal = item.quantity * item.unitPrice;
+            const display = item.type === "discount" || item.type === "deposit" ? -lineTotal : lineTotal;
+            return (
+              <div key={item.id}>
+                <span>{item.description}</span>
+                <strong>{currency(display)}</strong>
+              </div>
+            );
+          })}
+          <div className="invoice-breakdown-divider"></div>
+          <div>
+            <span>Subtotal</span>
+            <strong>{currency(subtotal)}</strong>
+          </div>
+          <div>
+            <span>Tax ({taxPercent}%)</span>
+            <strong>{currency(tax)}</strong>
+          </div>
         </div>
 
         <div className="invoice-actions">
@@ -6805,42 +6946,227 @@ function InvoiceTool({
   );
 }
 
-function FractionTool() {
+function ConstructionCalculator() {
+  const [activeTab, setActiveTab] = useState<"measurement" | "shortcuts" | "materials">("measurement");
+
+  // Measurement tab state
   const [feet, setFeet] = useState(12);
-  const [inches, setInches] = useState(7.5);
+  const [inches, setInches] = useState(7);
+  const [eighths, setEighths] = useState(2); // 2/8 = 1/4
   const [pieces, setPieces] = useState(4);
-  const totalInches = (feet * 12 + inches) * pieces;
+
+  // Shortcuts tab state
+  const [wallLength, setWallLength] = useState(12);
+  const [spacing, setSpacing] = useState(16);
+
+  // Materials tab state
+  const [materials, setMaterials] = useState<MaterialEstimate[]>([
+    {
+      id: "1",
+      name: "2x4 Lumber",
+      quantity: 10,
+      unit: "linear feet",
+      wastePercent: 5,
+      costPerUnit: 0.75,
+    },
+  ]);
+
+  // Calculations
+  const totalInches = (feet * 12 + inches) * pieces + (eighths / 8) * pieces;
   const totalFeet = Math.floor(totalInches / 12);
-  const remainder = Number((totalInches - totalFeet * 12).toFixed(2));
+  const remainderInches = Number((totalInches % 12).toFixed(2));
+  const remainderEighths = Math.round((remainderInches % 1) * 8);
+  const remainingInches = Math.floor(remainderInches);
+
+  const studCount = Math.ceil((wallLength * 12) / spacing) + 1;
+  const joistCount = Math.ceil((wallLength * 12) / spacing) + 1;
+
+  function addMaterial() {
+    const newId = String(Math.max(...materials.map((m) => Number(m.id) || 0), 0) + 1);
+    setMaterials([
+      ...materials,
+      { id: newId, name: "", quantity: 1, unit: "ea", wastePercent: 5, costPerUnit: 0 },
+    ]);
+  }
+
+  function removeMaterial(id: string) {
+    setMaterials(materials.filter((m) => m.id !== id));
+  }
+
+  function updateMaterial(id: string, field: keyof MaterialEstimate, value: unknown) {
+    setMaterials(
+      materials.map((m) => (m.id === id ? { ...m, [field]: value } : m))
+    );
+  }
+
+  const totalMaterialCost = materials.reduce((sum, m) => {
+    const withWaste = m.quantity * (1 + m.wastePercent / 100);
+    return sum + (withWaste * (m.costPerUnit || 0));
+  }, 0);
 
   return (
-    <article className="tool-card">
+    <section className="construction-calculator">
       <div className="tool-card-heading">
-        <Calculator size={18} />
+        <Hammer size={20} />
         <div>
-          <span>Field math</span>
-          <h3>Foot-inch multiplier</h3>
+          <span>Construction math</span>
+          <h3>Measurements, layouts, materials</h3>
         </div>
       </div>
-      <div className="tool-input-grid">
-        <label>
-          Feet
-          <input type="number" value={feet} min="0" onChange={(event) => setFeet(Math.max(0, Number(event.target.value) || 0))} />
-        </label>
-        <label>
-          Inches
-          <input type="number" value={inches} min="0" step="0.125" onChange={(event) => setInches(Math.max(0, Number(event.target.value) || 0))} />
-        </label>
-        <label>
-          Pieces
-          <input type="number" value={pieces} min="1" onChange={(event) => setPieces(Math.max(1, Number(event.target.value) || 1))} />
-        </label>
+
+      <div className="calc-tabs">
+        <button
+          className={activeTab === "measurement" ? "calc-tab active" : "calc-tab"}
+          onClick={() => setActiveTab("measurement")}
+        >
+          Measurements
+        </button>
+        <button
+          className={activeTab === "shortcuts" ? "calc-tab active" : "calc-tab"}
+          onClick={() => setActiveTab("shortcuts")}
+        >
+          Shortcuts
+        </button>
+        <button
+          className={activeTab === "materials" ? "calc-tab active" : "calc-tab"}
+          onClick={() => setActiveTab("materials")}
+        >
+          Materials
+        </button>
       </div>
-      <div className="tool-result">
-        <span>Total length</span>
-        <strong>{totalFeet}' {remainder}"</strong>
-      </div>
-    </article>
+
+      {activeTab === "measurement" && (
+        <div className="calc-tab-content">
+          <div className="calc-grid">
+            <label>
+              Feet
+              <input type="number" value={feet} min="0" onChange={(e) => setFeet(Math.max(0, Number(e.target.value) || 0))} />
+            </label>
+            <label>
+              Inches
+              <input type="number" value={inches} min="0" max="11" onChange={(e) => setInches(Math.max(0, Math.min(11, Number(e.target.value) || 0)))} />
+            </label>
+            <label>
+              Eighths
+              <select value={eighths} onChange={(e) => setEighths(Number(e.target.value))}>
+                {[0, 1, 2, 3, 4, 5, 6, 7, 8].map((n) => (
+                  <option key={n} value={n}>
+                    {n === 0 ? "0" : `${n}/8"`}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Pieces/multiplier
+              <input type="number" value={pieces} min="1" onChange={(e) => setPieces(Math.max(1, Number(e.target.value) || 1))} />
+            </label>
+          </div>
+          <div className="calc-result">
+            <span>Total length</span>
+            <strong>
+              {totalFeet}'{remainingInches}
+              {remainderEighths > 0 && `${remainderEighths}/8`}"
+            </strong>
+            <small>{totalInches.toFixed(2)} total inches</small>
+          </div>
+        </div>
+      )}
+
+      {activeTab === "shortcuts" && (
+        <div className="calc-tab-content">
+          <div className="calc-grid">
+            <label>
+              Wall length (feet)
+              <input type="number" value={wallLength} min="1" onChange={(e) => setWallLength(Math.max(1, Number(e.target.value) || 1))} />
+            </label>
+            <label>
+              Stud spacing (inches)
+              <select value={spacing} onChange={(e) => setSpacing(Number(e.target.value))}>
+                <option value={16}>16" OC</option>
+                <option value={24}>24" OC</option>
+                <option value={12}>12" OC</option>
+              </select>
+            </label>
+          </div>
+          <div className="shortcuts-results">
+            <div className="shortcut-result">
+              <span>Studs needed (2×4)</span>
+              <strong>{studCount} studs</strong>
+              <small>~{(studCount * 8).toFixed(0)} linear feet</small>
+            </div>
+            <div className="shortcut-result">
+              <span>Joists/rafters needed</span>
+              <strong>{joistCount} pieces</strong>
+              <small>at {spacing}" O.C.</small>
+            </div>
+            <div className="shortcut-result">
+              <span>Plates needed</span>
+              <strong>{(wallLength * 3).toFixed(0)} LF</strong>
+              <small>Top + bottom + rim</small>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeTab === "materials" && (
+        <div className="calc-tab-content">
+          <button type="button" className="small-button" onClick={addMaterial}>
+            <Plus size={14} />
+            Add material
+          </button>
+          <div className="material-list">
+            {materials.map((mat) => {
+              const withWaste = mat.quantity * (1 + mat.wastePercent / 100);
+              const cost = withWaste * (mat.costPerUnit || 0);
+              return (
+                <div key={mat.id} className="material-row">
+                  <input
+                    type="text"
+                    placeholder="Material name"
+                    value={mat.name}
+                    onChange={(e) => updateMaterial(mat.id, "name", e.target.value)}
+                  />
+                  <input
+                    type="number"
+                    placeholder="Qty"
+                    value={mat.quantity}
+                    onChange={(e) => updateMaterial(mat.id, "quantity", Number(e.target.value) || 0)}
+                  />
+                  <input
+                    type="text"
+                    placeholder="Unit"
+                    value={mat.unit}
+                    onChange={(e) => updateMaterial(mat.id, "unit", e.target.value)}
+                  />
+                  <input
+                    type="number"
+                    placeholder="Waste %"
+                    value={mat.wastePercent}
+                    onChange={(e) => updateMaterial(mat.id, "wastePercent", Number(e.target.value) || 0)}
+                  />
+                  <input
+                    type="number"
+                    placeholder="Cost/unit"
+                    value={mat.costPerUnit || ""}
+                    onChange={(e) => updateMaterial(mat.id, "costPerUnit", Number(e.target.value) || 0)}
+                  />
+                  <span className="material-total">{currency(cost)}</span>
+                  <button type="button" className="icon-button" onClick={() => removeMaterial(mat.id)}>
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+          {totalMaterialCost > 0 && (
+            <div className="material-total-section">
+              <span>Total material cost (with waste)</span>
+              <strong>{currency(totalMaterialCost)}</strong>
+            </div>
+          )}
+        </div>
+      )}
+    </section>
   );
 }
 
