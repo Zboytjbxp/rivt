@@ -56,7 +56,7 @@ import {
   workTypeOptions,
 } from "./data";
 import { brandConfig, type ThemeMode, type ThemePalette, type TrialPlan } from "./brandConfig";
-import type { ApplicationRecord, Difficulty, Job, Role, Trade, WorkType } from "./types";
+import type { ApplicationRecord, Difficulty, Job, Role, Talent, Trade, WorkType } from "./types";
 
 type TradeFilter = (typeof tradeOptions)[number];
 type DifficultyFilter = (typeof difficultyOptions)[number];
@@ -722,120 +722,54 @@ const communityBadgeThresholds = {
   topHandQualityAnswers: 25,
   premiumRewardMonths: 1,
 };
-const seedNews: NewsItem[] = [
-  {
-    id: 1,
-    headline: "Florida permit changes take effect July 1, 2026",
-    source: "Florida Senate",
-    date: "Jun 2026",
-    urgency: "New Florida Law",
-    summary:
-      "CS/CS/HB 803 changes building permit rules, including limited exemptions for some single-family residential work under $7,500. Electrical, plumbing, mechanical, gas, structural, flood-zone, and local compliance issues still need careful review.",
-    url: "https://www.flsenate.gov/Session/Bill/2026/803",
-  },
-  {
-    id: 2,
-    headline: "Jacksonville beta focus: fewer surprises before the first site visit",
-    source: brandConfig.appName,
-    date: "Today",
-    summary:
-      "The cleanest job posts include scope, difficulty, tools, access notes, payment expectations, and closeout photos before anyone commits.",
-    url: "#",
-  },
-];
-const seedCommunityPosts: CommunityPost[] = [
-  {
-    id: 101,
-    title: "Cabinet alignment on uneven walls - what is your shim strategy?",
-    trade: "Carpentry",
-    author: "Founder prompt",
-    badge: "Community Prompt",
-    body:
-      "Real field pain point from finish work: what do you check before fastening cabinets when the wall is out and the floor has a crown?",
-    upvotes: 18,
-    downvotes: 1,
-    createdAt: "Today",
-    status: "Verified Fix",
-    replies: [
-      {
-        id: 1001,
-        author: "Maya Ortiz",
-        body:
-          "Scribe first, find the high point, shim from the rail, then leave yourself reveal room at fillers. I mark the wall before the box goes up so I am not guessing while holding weight.",
-        upvotes: 21,
-        downvotes: 0,
-        verifiedFix: true,
-      },
-      {
-        id: 1002,
-        author: "Trevor Hall",
-        body:
-          "Laser line plus story pole. It slows the first cabinet down but saves the whole run.",
-        upvotes: 9,
-        downvotes: 1,
-        verifiedFix: false,
-      },
-    ],
-  },
-  {
-    id: 102,
-    title: "Best way to document small change orders before they become arguments?",
-    trade: "General",
-    author: "Community Prompt",
-    badge: "Community Prompt",
-    body:
-      "What is the fastest field habit for keeping a small scope change from turning into a payment fight?",
-    upvotes: 11,
-    downvotes: 0,
-    createdAt: "Yesterday",
-    status: "Needs a pro answer",
-    replies: [],
-  },
-  {
-    id: 103,
-    title: "Mini split line set through tight framing - what do you refuse to compromise on?",
-    trade: "HVAC",
-    author: "Founder prompt",
-    badge: "Community Prompt",
-    body:
-      "Looking for experienced HVAC answers that separate clean shortcuts from callbacks.",
-    upvotes: 7,
-    downvotes: 0,
-    createdAt: "Yesterday",
-    status: "Open",
-    replies: [
-      {
-        id: 1003,
-        author: "Andre Bell",
-        body:
-          "Bend radius, insulation continuity, and pressure test photos. If those are rushed, the callback is already on the calendar.",
-        upvotes: 12,
-        downvotes: 0,
-        verifiedFix: false,
-      },
-    ],
-  },
-];
-const seedShoutOuts: ShoutOut[] = [
-  {
-    id: 201,
-    from: "Mitchell Construction",
-    to: "Maya Ortiz",
-    trade: "Carpentry",
-    createdAt: "Today",
-    message:
-      "Wrapped a cabinet repair clean and on time. If you need finish carpentry in Jacksonville, she is worth calling.",
-  },
-  {
-    id: 202,
-    from: "Parker Mechanical",
-    to: "Andre Bell",
-    trade: "HVAC",
-    createdAt: "Yesterday",
-    message:
-      "Good communication, clean recovery setup, and left photos in the work order record.",
-  },
-];
+const emptyJob: Job = {
+  id: 0,
+  title: "No jobs posted yet",
+  contractor: "RIVT",
+  trade: "Electrical",
+  location: "Jacksonville, FL",
+  state: "FL",
+  distance: 0,
+  pay: 0,
+  durationHours: 0,
+  workType: "Side work",
+  difficulty: "Moderate",
+  insuranceRequired: false,
+  tools: [],
+  trustRequirement: "Legal agreement required",
+  addressPolicy: "Exact address stays hidden until you accept a job.",
+  posted: "Today",
+  match: 0,
+  rating: 0,
+  reviewCount: 0,
+  applicants: 0,
+  status: "Open",
+  summary: "Post the first real job to start building the live marketplace.",
+  guidance: ["No active work order yet."],
+  risks: ["No active work order"],
+  deliverables: ["Job posting", "Acceptance", "Closeout"],
+  matchFactors: ["Launch ready"],
+};
+const emptyTalent: Talent = {
+  id: 0,
+  name: "No crew selected yet",
+  trade: "Electrical",
+  location: "Jacksonville, FL",
+  rating: 0,
+  reviews: 0,
+  verified: false,
+  identityVerified: false,
+  insured: false,
+  match: 0,
+  rate: 0,
+  portfolio: ["Post the first real profile to surface crew matches."],
+  tools: [],
+  availability: "Not set",
+  responseTime: "—",
+};
+const seedNews: NewsItem[] = [];
+const seedCommunityPosts: CommunityPost[] = [];
+const seedShoutOuts: ShoutOut[] = [];
 
 function currency(value: number) {
   return new Intl.NumberFormat("en-US", {
@@ -1090,6 +1024,35 @@ function Avatar({
   );
 }
 
+function EmptyState({
+  icon: Icon,
+  title,
+  description,
+  actionLabel,
+  onAction,
+}: {
+  icon: typeof BriefcaseBusiness;
+  title: string;
+  description: string;
+  actionLabel?: string;
+  onAction?: () => void;
+}) {
+  return (
+    <div className="empty-state">
+      <Icon size={22} />
+      <div>
+        <strong>{title}</strong>
+        <p>{description}</p>
+      </div>
+      {actionLabel && onAction ? (
+        <button type="button" className="secondary-action" onClick={onAction}>
+          {actionLabel}
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
 function currentTimeLabel() {
   return new Intl.DateTimeFormat("en-US", {
     hour: "numeric",
@@ -1137,14 +1100,14 @@ function communityBadgeLabels(posts: CommunityPost[], personName: string) {
 
 function App() {
   const initialJobs = useMemo(() => normalizeJobs(seedJobs), []);
-  const initialSelectedId = initialJobs[0].id;
+  const initialSelectedId = initialJobs[0]?.id ?? 0;
   const [activeView, setActiveView] = useState<NavLabel>("Home");
   const [role, setRole] = useState<Role>("contractor");
   const [onboardingComplete, setOnboardingComplete] = useState(true);
   const [accountProfile, setAccountProfile] = useState<AccountProfile>({
     email: "rivttesting@gmail.com",
     displayName: "Ryan Mitchell",
-    organization: "Mitchell Construction",
+    organization: "RIVT Crew",
     location: "Jacksonville, FL",
     specialties: ["Electrical", "Carpentry"],
     plan: brandConfig.pricing.betaPlan.label,
@@ -1197,9 +1160,9 @@ function App() {
   const [lockedAccounts, setLockedAccounts] = useState<Set<string>>(
     () => new Set(),
   );
-  const [communityPosts, setCommunityPosts] = useState<CommunityPost[]>(seedCommunityPosts);
+  const [communityPosts, setCommunityPosts] = useState<CommunityPost[]>([]);
   const [communityReports, setCommunityReports] = useState<CommunityReport[]>([]);
-  const [shoutOuts, setShoutOuts] = useState<ShoutOut[]>(seedShoutOuts);
+  const [shoutOuts, setShoutOuts] = useState<ShoutOut[]>([]);
   const [serverStatus, setServerStatus] = useState<ServerStatus>("checking");
   const [serverHydrated, setServerHydrated] = useState(false);
   const [serverUpdatedAt, setServerUpdatedAt] = useState<string | null>(null);
@@ -1410,7 +1373,7 @@ function App() {
     if (Array.isArray(nextState.shoutOuts)) setShoutOuts(nextState.shoutOuts);
   }
 
-  const selectedJob = jobs.find((job) => job.id === selectedId) ?? jobs[0];
+  const selectedJob = jobs.find((job) => job.id === selectedId) ?? jobs[0] ?? emptyJob;
 
   const filteredJobs = useMemo(() => {
     return jobs
@@ -1446,7 +1409,7 @@ function App() {
     (record) => record.jobId === selectedJob.id,
   )?.state;
 
-  const selectedTalent = matchingTalent[0] ?? talent[0];
+  const selectedTalent = matchingTalent[0] ?? talent[0] ?? emptyTalent;
   const scheduleHeld = scheduleHolds.has(selectedJob.id);
   const dispatchNote =
     dispatchNotes[selectedJob.id] ??
@@ -2720,7 +2683,7 @@ function AuthGate({
   const [email, setEmail] = useState("rivttesting@gmail.com");
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("Ryan Mitchell");
-  const [organization, setOrganization] = useState("Mitchell Construction");
+  const [organization, setOrganization] = useState("RIVT Crew");
   const [location, setLocation] = useState("Jacksonville, FL");
   const [role, setRole] = useState<Role>("contractor");
   const providerIcons = {
@@ -3809,7 +3772,7 @@ function MarketplaceView({
   const recordsReady = Object.values(closeouts).filter(
     (record) => record.approved && record.rating > 0 && !record.dispute,
   ).length;
-  const topTalent = matchingTalent[0] ?? talent[0];
+  const topTalent = matchingTalent[0] ?? talent[0] ?? emptyTalent;
   const readyCount = [
     trustReady,
     selectedJob.trustRequirement.length > 0,
@@ -5061,13 +5024,23 @@ function HomeView({
             </div>
           </div>
           <div className="home-list">
-            {topPosts.map((post) => (
-              <button type="button" className="home-talk-row" key={post.id} onClick={() => onNavigate("Shop Talk")}>
-                <span>{post.trade} - {post.status}</span>
-                <strong>{post.title}</strong>
-                <small>{netScore(post)} score - {post.replies.length} replies</small>
-              </button>
-            ))}
+            {topPosts.length === 0 ? (
+              <EmptyState
+                icon={MessageCircle}
+                title="No questions yet"
+                description="Start the first field question and let nearby trades answer with what actually works."
+                actionLabel="Ask a question"
+                onAction={onCreateCommunityPrompt}
+              />
+            ) : (
+              topPosts.map((post) => (
+                <button type="button" className="home-talk-row" key={post.id} onClick={() => onNavigate("Shop Talk")}>
+                  <span>{post.trade} - {post.status}</span>
+                  <strong>{post.title}</strong>
+                  <small>{netScore(post)} score - {post.replies.length} replies</small>
+                </button>
+              ))
+            )}
           </div>
         </article>
 
@@ -5080,21 +5053,31 @@ function HomeView({
             </div>
           </div>
           <div className="home-list">
-            {featuredJobs.map((job) => (
-              <article className="home-job-row" key={job.id}>
-                <div>
-                  <span>{job.trade} - {job.location}</span>
-                  <strong>{job.title}</strong>
-                  <small>{currency(job.pay)} - {job.match}% match - {job.status}</small>
-                </div>
-                <div className="home-row-actions">
-                  <button type="button" onClick={() => onOpenJob(job.id)}>Open</button>
-                  <button type="button" onClick={() => role === "contractor" ? onInviteToJob(job.id) : onApplyToJob(job.id)}>
-                    {role === "contractor" ? "Invite" : "Apply"}
-                  </button>
-                </div>
-              </article>
-            ))}
+            {featuredJobs.length === 0 ? (
+              <EmptyState
+                icon={BriefcaseBusiness}
+                title="No jobs posted yet"
+                description="Post the first real work order and the marketplace will fill in around it."
+                actionLabel={role === "contractor" ? "Post work" : "Browse tools"}
+                onAction={role === "contractor" ? onPostJob : () => onNavigate("Tools")}
+              />
+            ) : (
+              featuredJobs.map((job) => (
+                <article className="home-job-row" key={job.id}>
+                  <div>
+                    <span>{job.trade} - {job.location}</span>
+                    <strong>{job.title}</strong>
+                    <small>{currency(job.pay)} - {job.match}% match - {job.status}</small>
+                  </div>
+                  <div className="home-row-actions">
+                    <button type="button" onClick={() => onOpenJob(job.id)}>Open</button>
+                    <button type="button" onClick={() => role === "contractor" ? onInviteToJob(job.id) : onApplyToJob(job.id)}>
+                      {role === "contractor" ? "Invite" : "Apply"}
+                    </button>
+                  </div>
+                </article>
+              ))
+            )}
           </div>
         </article>
 
@@ -5107,14 +5090,22 @@ function HomeView({
             </div>
           </div>
           <div className="home-list">
-            {shoutOuts.slice(0, 3).map((shoutOut) => (
-              <article className="shoutout-row" key={shoutOut.id}>
-                <span>{shoutOut.trade} - {shoutOut.createdAt}</span>
-                <strong>{shoutOut.to}</strong>
-                <p>{shoutOut.message}</p>
-                <small>From {shoutOut.from}</small>
-              </article>
-            ))}
+            {shoutOuts.length === 0 ? (
+              <EmptyState
+                icon={ThumbsUp}
+                title="No shout-outs yet"
+                description="Recognition will show up here as the first jobs close and people start recommending each other."
+              />
+            ) : (
+              shoutOuts.slice(0, 3).map((shoutOut) => (
+                <article className="shoutout-row" key={shoutOut.id}>
+                  <span>{shoutOut.trade} - {shoutOut.createdAt}</span>
+                  <strong>{shoutOut.to}</strong>
+                  <p>{shoutOut.message}</p>
+                  <small>From {shoutOut.from}</small>
+                </article>
+              ))
+            )}
           </div>
         </article>
 
@@ -5146,12 +5137,18 @@ function HomeView({
               Estimate
             </button>
           </div>
-          {pendingPayments > 0 && (
+          {jobs.length === 0 ? (
+            <EmptyState
+              icon={CheckCircle2}
+              title="No active work order"
+              description="Once a job is posted, selected work, records, and tools will anchor to it."
+            />
+          ) : pendingPayments > 0 ? (
             <div className="home-alert">
               <ReceiptText size={15} />
               <span>{pendingPayments} direct payment record{pendingPayments === 1 ? "" : "s"} need paid confirmation.</span>
             </div>
-          )}
+          ) : null}
         </article>
       </section>
     </section>
@@ -5211,12 +5208,13 @@ function ShopTalkView({
   if (!selectedPost) {
     return (
       <section className="shop-talk-layout">
-        <article className="empty-ledger">
-          <MessageCircle size={18} />
-          <strong>No Shop Talk posts yet.</strong>
-          <span>Create the first field question from the active work order.</span>
-          <button type="button" onClick={onCreatePrompt}>Create prompt</button>
-        </article>
+        <EmptyState
+          icon={MessageCircle}
+          title="No Shop Talk posts yet"
+          description="Create the first field question and let the community answer it."
+          actionLabel="Create prompt"
+          onAction={onCreatePrompt}
+        />
       </section>
     );
   }
@@ -5246,7 +5244,15 @@ function ShopTalkView({
         </label>
 
         <div className="shop-post-list">
-          {sortedPosts.map((post) => (
+          {sortedPosts.length === 0 ? (
+            <EmptyState
+              icon={MessageCircle}
+              title="No questions in this filter"
+              description="Broaden the trade filter or start the first field question in this lane."
+              actionLabel="Ask a question"
+              onAction={onCreatePrompt}
+            />
+          ) : sortedPosts.map((post) => (
             <button
               type="button"
               key={post.id}
@@ -5869,7 +5875,7 @@ function ApplicationsView({
 }) {
   const rows = applications.length
     ? applications.map((record) => ({
-        job: jobs.find((job) => job.id === record.jobId) ?? jobs[0],
+        job: jobs.find((job) => job.id === record.jobId) ?? jobs[0] ?? emptyJob,
         state: record.state,
       }))
     : jobs.slice(0, 3).map((job) => ({ job, state: "Suggested" }));
@@ -5889,7 +5895,13 @@ function ApplicationsView({
         </button>
       </div>
       <div className="ops-list-panel">
-        {rows.map(({ job, state }) => (
+        {rows.length === 0 ? (
+          <EmptyState
+            icon={FileCheck2}
+            title="No applications yet"
+            description="Applications will appear here after the first real job is posted."
+          />
+        ) : rows.map(({ job, state }) => (
           <article className="data-row" key={`${job.id}-${state}`}>
             <div>
               <span>{job.trade} - {job.location}</span>
@@ -5941,7 +5953,13 @@ function InvitesView({
           Invite selected crew
         </button>
       </article>
-      {jobs.map((job) => {
+      {jobs.length === 0 ? (
+        <EmptyState
+          icon={UserCheck}
+          title="No invites yet"
+          description="Invite recommendations will appear once a real job and matching crew exist."
+        />
+      ) : jobs.map((job) => {
         const matched = talent
           .filter((person) => person.trade === job.trade)
           .sort((a, b) => b.match - a.match)[0];
@@ -6010,8 +6028,14 @@ function CrewView({
         </button>
       </div>
       <div className="crew-directory">
-        {people.map((person) => {
-          const matchingJob = jobs.find((job) => job.trade === person.trade) ?? jobs[0];
+        {people.length === 0 ? (
+          <EmptyState
+            icon={Users}
+            title="No crew profiles yet"
+            description="Crew cards will appear after real tradespeople join the launch."
+          />
+        ) : people.map((person) => {
+          const matchingJob = jobs.find((job) => job.trade === person.trade) ?? jobs[0] ?? emptyJob;
           const recommendationCount = shoutOuts.filter((shoutOut) => shoutOut.to === person.name).length;
           return (
             <article className="crew-card" key={person.id}>
@@ -6064,7 +6088,7 @@ function MessagesView({
   onSendMessage: () => void;
   onOpenJob: (id: number) => void;
 }) {
-  const contact = matchingTalent[0] ?? talent[0];
+  const contact = matchingTalent[0] ?? talent[0] ?? emptyTalent;
   const messages = [
     ...sentMessages.map((message) => ({ author: "Ryan Mitchell", text: message })),
     {
@@ -6831,12 +6855,12 @@ function AdminView({
   const flaggedCommunityReports = communityReports.filter((report) => report.status === "Flagged");
   const pendingReports = [
     {
-      account: "Harborline Builders",
-      issue: "Insurance-required job needs applicant insurance check",
+      account: "Unreviewed contractor",
+      issue: "Insurance-required job needs applicant proof review",
       severity: "Review",
     },
     {
-      account: "Andre Malik",
+      account: "Unverified tradesperson",
       issue: "Self-reported insurance missing on one HVAC match",
       severity: "Watch",
     },
