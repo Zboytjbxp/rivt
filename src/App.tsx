@@ -438,7 +438,7 @@ const pageCopy: Record<NavLabel, { title: string; description: string }> = {
   },
   "Shop Talk": {
     title: "Shop Talk",
-    description: "Ask field questions, share fixes, and recognize tradespeople who help.",
+    description: "Ask field questions and get answers from tradespeople who've solved it.",
   },
   Tools: {
     title: "Tools",
@@ -2581,6 +2581,7 @@ function App() {
         role={role}
         activeView={activeView}
         selectedJob={selectedJob}
+        hasJobs={jobs.length > 0}
         profile={accountProfile}
         onNavigate={handleNavigate}
       />
@@ -2703,6 +2704,7 @@ function App() {
             onInvite={handleInvite}
             onScheduleHold={handleScheduleHold}
             onSubmitCloseoutPacket={handleSubmitCloseoutPacket}
+            onPostJob={() => isGuest ? setGuestPromptOpen(true) : setPostOpen(true)}
           />
         ) : (
           <OperationsWorkspace
@@ -3543,9 +3545,13 @@ function AccountPanel({
         <section className="account-section">
           <span>Specialties</span>
           <div className="account-chip-row">
-            {profile.specialties.map((specialty) => (
-              <strong key={specialty}>{specialty}</strong>
-            ))}
+            {profile.specialties.length ? (
+              profile.specialties.map((specialty) => (
+                <strong key={specialty}>{specialty}</strong>
+              ))
+            ) : (
+              <small style={{ color: 'var(--text-muted)' }}>None added yet</small>
+            )}
           </div>
         </section>
 
@@ -3622,12 +3628,14 @@ function Sidebar({
   role,
   activeView,
   selectedJob,
+  hasJobs,
   profile,
   onNavigate,
 }: {
   role: Role;
   activeView: NavLabel;
   selectedJob: Job;
+  hasJobs: boolean;
   profile: AccountProfile;
   onNavigate: (view: NavLabel) => void;
 }) {
@@ -3672,16 +3680,26 @@ function Sidebar({
       </nav>
 
       <div className="sidebar-job-card">
-        <span>Active work order</span>
-        <strong>{selectedJob.title}</strong>
-        <small>{selectedJob.trade}</small>
-        <small><MapPin size={12} /> {selectedJob.location}</small>
-        <div className="sidebar-progress">
-          <em>{selectedJob.status}</em>
-          <i><b style={{ width: `${Math.min(selectedJob.match, 100)}%` }} /></i>
-          <small>{selectedJob.match}%</small>
-        </div>
-        <button type="button" onClick={() => onNavigate("Marketplace")}>Open work order</button>
+        {hasJobs ? (
+          <>
+            <span>Active work order</span>
+            <strong>{selectedJob.title}</strong>
+            <small>{selectedJob.trade}</small>
+            <small><MapPin size={12} /> {selectedJob.location}</small>
+            <div className="sidebar-progress">
+              <em>{selectedJob.status}</em>
+              <i><b style={{ width: `${Math.min(selectedJob.match, 100)}%` }} /></i>
+              <small>{selectedJob.match}%</small>
+            </div>
+            <button type="button" onClick={() => onNavigate("Marketplace")}>Open work order</button>
+          </>
+        ) : (
+          <>
+            <span>Active work order</span>
+            <strong>No active order</strong>
+            <button type="button" onClick={() => onNavigate("Marketplace")}>Post a job</button>
+          </>
+        )}
       </div>
 
       <div className="sidebar-pro-card">
@@ -3845,6 +3863,7 @@ function MarketplaceView({
   onInvite,
   onScheduleHold,
   onSubmitCloseoutPacket,
+  onPostJob,
 }: {
   role: Role;
   jobs: Job[];
@@ -3879,6 +3898,7 @@ function MarketplaceView({
   onInvite: () => void;
   onScheduleHold: () => void;
   onSubmitCloseoutPacket: (jobId?: number) => void;
+  onPostJob?: () => void;
 }) {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const averageMatch = jobs.length
@@ -3905,7 +3925,7 @@ function MarketplaceView({
           <ModernMetric
             icon={Sparkles}
             label="Best match"
-            value={averageMatch ? `${averageMatch}%` : "None"}
+            value={averageMatch ? `${averageMatch}%` : "—"}
             detail={autoMatchEnabled ? "Sorting active" : "Sorting paused"}
           />
           <ModernMetric
@@ -3927,6 +3947,12 @@ function MarketplaceView({
             detail={`${applications.length} active application${applications.length === 1 ? "" : "s"}`}
           />
           <div className="modern-command-actions">
+            {role === "contractor" && onPostJob && (
+              <button onClick={onPostJob}>
+                <Plus size={15} />
+                Post work
+              </button>
+            )}
             <button onClick={onToggleAutoMatch}>
               <Sparkles size={15} />
               {autoMatchEnabled ? "Pause sorting" : "Resume sorting"}
@@ -4014,8 +4040,17 @@ function MarketplaceView({
             <div className="modern-job-list">
               {jobs.length === 0 ? (
                 <div className="job-queue-empty">
-                  <p>No jobs match your filters.</p>
-                  <p>Try widening your radius or changing trade.</p>
+                  {role === "contractor" ? (
+                    <>
+                      <p>No jobs posted yet.</p>
+                      <p>Post a work order to start filling your team.</p>
+                    </>
+                  ) : (
+                    <>
+                      <p>No jobs match your filters.</p>
+                      <p>Try widening your radius or changing trade.</p>
+                    </>
+                  )}
                 </div>
               ) : jobs.map((job) => (
                 <ModernJobCard
@@ -6268,7 +6303,7 @@ function MessagesView({
     <section className="message-workspace">
       <aside className="thread-list">
         <button key={selectedJob.id} onClick={() => onOpenJob(selectedJob.id)}>
-          <span>{selectedJob.trade}</span>
+          {selectedJob.id !== 0 && <span>{selectedJob.trade}</span>}
           <strong>{selectedJob.title}</strong>
           <small>{selectedJob.location}</small>
         </button>
