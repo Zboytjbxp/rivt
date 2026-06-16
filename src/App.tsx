@@ -206,6 +206,7 @@ interface CommunityPost {
   trade: Trade | "General";
   author: string;
   badge?: "Community Prompt" | "Recommendation";
+  flair?: "Question" | "Discussion" | "Code Talk" | "Compliance" | "Tip" | "Humor";
   body: string;
   upvotes: number;
   downvotes: number;
@@ -213,6 +214,8 @@ interface CommunityPost {
   createdAt: string;
   status: "Open" | "Verified Fix" | "Needs a pro answer";
 }
+
+type PostFlair = "Question" | "Discussion" | "Code Talk" | "Compliance" | "Tip" | "Humor";
 
 interface CommunityReport {
   id: number;
@@ -765,8 +768,112 @@ const emptyTalent: Talent = {
   availability: "Not set",
   responseTime: "—",
 };
-const seedNews: NewsItem[] = [];
-const seedCommunityPosts: CommunityPost[] = [];
+const seedNews: NewsItem[] = [
+  {
+    id: 1,
+    headline: "Florida Drops Permit Requirement for Residential Work Under $7,500",
+    source: "Florida Building Commission",
+    date: "Jun 2026",
+    summary: "HB 267 eliminates permit requirements for residential repair and renovation jobs under $7,500, streamlining low-dollar work for licensed contractors across all 67 counties.",
+    url: "#",
+    urgency: "Law Change",
+  },
+  {
+    id: 2,
+    headline: "NEC 2023 Adoption Timeline: What Florida Electricians Need to Know",
+    source: "Florida Electrical Contractors",
+    date: "May 2026",
+    summary: "Florida is transitioning to the 2023 National Electrical Code. AFCI requirements expand to all dwelling areas and EV charging circuits now require dedicated 50A circuits by default.",
+    url: "#",
+    urgency: "Code Update",
+  },
+  {
+    id: 3,
+    headline: "OSHA Finalizes Indoor/Outdoor Heat Safety Rule — Effective August 2026",
+    source: "OSHA",
+    date: "Jun 2026",
+    summary: "The final rule requires water, rest, and shade every 2 hours when the heat index exceeds 90°F. Employers must have a written Heat Illness Prevention Plan before August.",
+    url: "#",
+    urgency: "OSHA Rule",
+  },
+  {
+    id: 4,
+    headline: "Jacksonville Permitting Backlog Drops to 6 Days After Digital Overhaul",
+    source: "City of Jacksonville",
+    date: "May 2026",
+    summary: "COJ's new e-permitting portal cut average residential permit wait times from 22 days to 6. Contractors can now track inspections in real time and schedule electronically.",
+    url: "#",
+  },
+  {
+    id: 5,
+    headline: "Copper Prices Hit 18-Month Low — Good News for Plumbers and Electricians",
+    source: "Metals Daily",
+    date: "Jun 2026",
+    summary: "Copper spot prices dropped to $3.62/lb this week, the lowest since late 2024. Contractors locking in material quotes now may see meaningful savings on large jobs.",
+    url: "#",
+  },
+  {
+    id: 6,
+    headline: "Florida Now Accepts Contractor Licenses from 12 Additional States",
+    source: "DBPR",
+    date: "Apr 2026",
+    summary: "Florida's reciprocity expansion adds Alabama, Georgia, Tennessee, and 9 more states to the fast-track licensure program, cutting the wait from 90 days to under 30.",
+    url: "#",
+  },
+  {
+    id: 7,
+    headline: "New Lien Law Amendments Tighten Notice Deadlines for Subcontractors",
+    source: "Florida Bar",
+    date: "Mar 2026",
+    summary: "Ch. 713 amendments reduce the Notice to Owner window from 45 to 30 days for jobs over $10,000. Missing the deadline forfeits lien rights — update your project intake checklist.",
+    url: "#",
+    urgency: "Legal Alert",
+  },
+];
+const seedCommunityPosts: CommunityPost[] = [
+  {
+    id: 1,
+    title: "What's the best way to handle a mid-job scope change without losing margin?",
+    trade: "General",
+    author: "FieldPro",
+    badge: "Community Prompt",
+    flair: "Question",
+    body: "Client keeps adding scope after the contract is signed. Looking for a clean way to document and price change orders on the spot without losing the job or the margin.",
+    upvotes: 14,
+    downvotes: 1,
+    replies: [],
+    createdAt: "Jun 2026",
+    status: "Needs a pro answer",
+  },
+  {
+    id: 2,
+    title: "How are you handling the new OSHA heat rule on outdoor jobs this summer?",
+    trade: "General",
+    author: "CrewLead",
+    badge: "Community Prompt",
+    flair: "Discussion",
+    body: "OSHA heat rule is coming August 2026. Curious what other crews are doing — written plans, scheduling changes, gear, etc. Share what's actually working in the field.",
+    upvotes: 9,
+    downvotes: 0,
+    replies: [],
+    createdAt: "Jun 2026",
+    status: "Open",
+  },
+  {
+    id: 3,
+    title: "NEC 2023: Are you already pulling permits under the new AFCI expansion rules?",
+    trade: "Electrical",
+    author: "SparkCheck",
+    badge: "Community Prompt",
+    flair: "Question",
+    body: "Florida is moving to NEC 2023. AFCI now covers all dwelling areas. Have any of you already had inspections fail under the old wiring assumptions? What did you have to change?",
+    upvotes: 11,
+    downvotes: 2,
+    replies: [],
+    createdAt: "May 2026",
+    status: "Needs a pro answer",
+  },
+];
 const seedShoutOuts: ShoutOut[] = [];
 
 function currency(value: number) {
@@ -1299,7 +1406,7 @@ function App() {
   const [lockedAccounts, setLockedAccounts] = useState<Set<string>>(
     () => new Set(),
   );
-  const [communityPosts, setCommunityPosts] = useState<CommunityPost[]>([]);
+  const [communityPosts, setCommunityPosts] = useState<CommunityPost[]>(seedCommunityPosts);
   const [communityReports, setCommunityReports] = useState<CommunityReport[]>([]);
   const [shoutOuts, setShoutOuts] = useState<ShoutOut[]>([]);
   const [serverStatus, setServerStatus] = useState<ServerStatus>("checking");
@@ -2283,6 +2390,26 @@ function App() {
     );
   }
 
+  function handleNewShopTalkPost(flair: PostFlair, title: string, trade: Trade | "General", body: string) {
+    setCommunityPosts((current) => [
+      {
+        id: Date.now(),
+        title,
+        trade,
+        flair,
+        author: accountProfile.displayName,
+        body,
+        upvotes: 0,
+        downvotes: 0,
+        replies: [],
+        createdAt: "Just now",
+        status: "Open",
+      },
+      ...current,
+    ]);
+    addActivity("Shop Talk post created", `"${title}" posted to Shop Talk.`);
+  }
+
   function handleResolveCommunityReport(reportId: number, status: CommunityReport["status"]) {
     const report = communityReports.find((candidate) => candidate.id === reportId);
     if (!report) {
@@ -2762,6 +2889,7 @@ function App() {
             onReportCommunityPost={handleReportCommunityPost}
             onResolveCommunityReport={handleResolveCommunityReport}
             onCreateCommunityPrompt={() => isGuest ? setGuestPromptOpen(true) : handleCreateCommunityPrompt()}
+            onNewShopTalkPost={(flair, title, trade, body) => isGuest ? setGuestPromptOpen(true) : handleNewShopTalkPost(flair, title, trade, body)}
             onCreateShoutOut={(to, tradeName) => isGuest ? setGuestPromptOpen(true) : handleCreateShoutOut(to, tradeName)}
           />
         )}
@@ -4358,6 +4486,7 @@ interface OperationsWorkspaceProps {
   onReportCommunityPost: (postId: number, reason: CommunityReport["reason"]) => void;
   onResolveCommunityReport: (reportId: number, status: CommunityReport["status"]) => void;
   onCreateCommunityPrompt: () => void;
+  onNewShopTalkPost: (flair: PostFlair, title: string, trade: Trade | "General", body: string) => void;
   onCreateShoutOut: (to: string, tradeName: Trade) => void;
 }
 
@@ -4417,6 +4546,7 @@ function OperationsWorkspace(props: OperationsWorkspaceProps) {
     onReportCommunityPost,
     onResolveCommunityReport,
     onCreateCommunityPrompt,
+    onNewShopTalkPost,
     onCreateShoutOut,
   } = props;
   const approvedCloseouts = Object.values(closeouts).filter(
@@ -4489,12 +4619,15 @@ function OperationsWorkspace(props: OperationsWorkspaceProps) {
         <ShopTalkView
           profile={accountProfile}
           communityPosts={communityPosts}
+          newsItems={seedNews}
+          selectedJobTrade={selectedJob.trade}
           onVotePost={onVoteCommunityPost}
           onVoteAnswer={onVoteCommunityAnswer}
           onAddAnswer={onAddCommunityAnswer}
           onVerifyAnswer={onVerifyCommunityAnswer}
           onReportPost={onReportCommunityPost}
           onCreatePrompt={onCreateCommunityPrompt}
+          onNewPost={onNewShopTalkPost}
         />
       )}
       {view === "Tools" && (
@@ -5360,200 +5493,464 @@ function HomeView({
   );
 }
 
+const FLAIR_CONFIG: Record<PostFlair, { color: string; description: string }> = {
+  "Question": { color: "#e8a857", description: "Looking for a specific answer" },
+  "Discussion": { color: "#6b9fd4", description: "Open conversation, multiple perspectives" },
+  "Code Talk": { color: "#7ac27a", description: "Building codes, inspections, compliance details" },
+  "Compliance": { color: "#d47a7a", description: "Licensing, permits, legal requirements" },
+  "Tip": { color: "#a87ac2", description: "Share a field technique or shortcut" },
+  "Humor": { color: "#888", description: "Keep it trade-relevant" },
+};
+
+function ShopTalkNewPostModal({
+  profile,
+  selectedJobTrade,
+  onClose,
+  onSubmit,
+}: {
+  profile: AccountProfile;
+  selectedJobTrade: Trade | "General";
+  onClose: () => void;
+  onSubmit: (flair: PostFlair, title: string, trade: Trade | "General", body: string) => void;
+}) {
+  const [flair, setFlair] = useState<PostFlair>("Question");
+  const [title, setTitle] = useState("");
+  const [trade, setTrade] = useState<Trade | "General">(selectedJobTrade);
+  const [body, setBody] = useState("");
+  const canSubmit = title.trim().length > 0 && body.trim().length > 0;
+  const tradeOptions: (Trade | "General")[] = ["General", ...specialtyOptions];
+
+  return (
+    <div className="modal-backdrop" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="new-post-modal">
+        <div className="new-post-modal-header">
+          <h2>Create a post</h2>
+          <button type="button" className="icon-button" onClick={onClose} aria-label="Close"><X size={18} /></button>
+        </div>
+
+        <div className="new-post-flair-picker">
+          <span>Choose a flair</span>
+          <div className="flair-options">
+            {(Object.keys(FLAIR_CONFIG) as PostFlair[]).map((f) => (
+              <button
+                key={f}
+                type="button"
+                className={`flair-option${flair === f ? " selected" : ""}`}
+                style={{ "--flair-color": FLAIR_CONFIG[f].color } as React.CSSProperties}
+                onClick={() => setFlair(f)}
+              >
+                {f}
+              </button>
+            ))}
+          </div>
+          <small>{FLAIR_CONFIG[flair].description}</small>
+        </div>
+
+        <label className="input-control">
+          <span>Trade</span>
+          <select value={trade} onChange={(e) => setTrade(e.target.value as Trade | "General")}>
+            {tradeOptions.map((t) => <option key={t}>{t}</option>)}
+          </select>
+        </label>
+
+        <label className="input-control">
+          <span>Title</span>
+          <input
+            type="text"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder={flair === "Question" ? "What would you check first on...?" : "What's on your mind?"}
+            maxLength={120}
+          />
+          <small>{title.length}/120</small>
+        </label>
+
+        <label className="input-control">
+          <span>Body</span>
+          <textarea
+            value={body}
+            onChange={(e) => setBody(e.target.value)}
+            rows={5}
+            placeholder="Add context, photos, site conditions, tools on hand..."
+          />
+        </label>
+
+        <div className="new-post-modal-footer">
+          <small>Posting as {profile.displayName}</small>
+          <button type="button" className="primary-action" onClick={() => { if (canSubmit) { onSubmit(flair, title.trim(), trade, body.trim()); onClose(); } }} disabled={!canSubmit}>
+            <Send size={15} />
+            Post
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ShopTalkView({
   profile,
   communityPosts,
+  newsItems,
+  selectedJobTrade,
   onVotePost,
   onVoteAnswer,
   onAddAnswer,
   onVerifyAnswer,
   onReportPost,
   onCreatePrompt,
+  onNewPost,
 }: {
   profile: AccountProfile;
   communityPosts: CommunityPost[];
+  newsItems: NewsItem[];
+  selectedJobTrade: Trade | "General";
   onVotePost: (postId: number, direction: "up" | "down") => void;
   onVoteAnswer: (postId: number, answerId: number, direction: "up" | "down") => void;
   onAddAnswer: (postId: number, body: string) => void;
   onVerifyAnswer: (postId: number, answerId: number) => void;
   onReportPost: (postId: number, reason: CommunityReport["reason"]) => void;
   onCreatePrompt: () => void;
+  onNewPost: (flair: PostFlair, title: string, trade: Trade | "General", body: string) => void;
 }) {
+  const [activeTab, setActiveTab] = useState<"talk" | "news">("talk");
+  const [sortMode, setSortMode] = useState<"hot" | "new" | "unanswered">("hot");
   const [tradeFilter, setTradeFilter] = useState("All trades");
   const [selectedPostId, setSelectedPostId] = useState(communityPosts[0]?.id ?? 0);
-  const [answerDraft, setAnswerDraft] = useState(
-    "I would start by confirming scope, access, tool needs, and what photos should go in the closeout.",
-  );
+  const [answerDraft, setAnswerDraft] = useState("");
+  const [rulesOpen, setRulesOpen] = useState(false);
+  const [newPostOpen, setNewPostOpen] = useState(false);
+  const [selectedNewsId, setSelectedNewsId] = useState(newsItems[0]?.id ?? 0);
   const tradeFilters = ["All trades", "General", ...specialtyOptions];
-  const reportReasons: CommunityReport["reason"][] = ["Misinformation", "Safety concern"];
+  const allReportReasons: CommunityReport["reason"][] = ["Misinformation", "Safety concern", "Spam", "Harassment"];
+
   const filteredPosts = communityPosts.filter(
     (post) => tradeFilter === "All trades" || post.trade === tradeFilter,
   );
-  const selectedPost =
-    filteredPosts.find((post) => post.id === selectedPostId) ??
-    filteredPosts[0] ??
-    communityPosts[0];
   const sortedPosts = [...filteredPosts].sort((a, b) => {
+    if (sortMode === "new") return b.id - a.id;
+    if (sortMode === "unanswered") {
+      if (a.replies.length === 0 && b.replies.length > 0) return -1;
+      if (a.replies.length > 0 && b.replies.length === 0) return 1;
+      return b.id - a.id;
+    }
+    // hot: "Needs a pro answer" first, then by score
     if (a.status === "Needs a pro answer" && b.status !== "Needs a pro answer") return -1;
     if (a.status !== "Needs a pro answer" && b.status === "Needs a pro answer") return 1;
     return netScore(b) - netScore(a);
   });
+  const selectedPost = filteredPosts.find((p) => p.id === selectedPostId) ?? filteredPosts[0] ?? communityPosts[0];
+  const selectedNews = newsItems.find((n) => n.id === selectedNewsId) ?? newsItems[0];
   const profileBadges = communityBadgeLabels(communityPosts, profile.displayName);
 
   function submitAnswer() {
     const body = answerDraft.trim();
-    if (!selectedPost || !body) {
-      return;
-    }
-
+    if (!selectedPost || !body) return;
     onAddAnswer(selectedPost.id, body);
     setAnswerDraft("");
   }
 
-  if (!selectedPost) {
-    return (
-      <section className="shop-talk-layout">
-        <EmptyState
-          icon={MessageCircle}
-          title="No Shop Talk posts yet"
-          description="Create the first field question and let the community answer it."
-          actionLabel="Create prompt"
-          onAction={onCreatePrompt}
-        />
-      </section>
-    );
-  }
+  const SHOP_RULES = [
+    "Keep it field-relevant — no recruiting or solicitation",
+    "Cite the code section when referencing code requirements",
+    "No pricing disputes or bidding wars",
+    "Mark your answer as a Verified Fix only if you've done it",
+    "Be specific — \"I've seen this on X job\" beats generic advice",
+    "No spam, no harassment — violations get removed, not warned",
+  ];
 
   return (
-    <section className="shop-talk-layout" aria-label="Shop Talk community">
-      <aside className="shop-talk-sidebar">
-        <div className="shop-talk-command">
-          <div>
-            <span>Community knowledge</span>
-            <h2>Field answers, not generic Q&A</h2>
-            <p>Seeded prompts are labeled. Verified Fix answers earn visible reputation and stay separate from job reviews.</p>
-          </div>
-          <button type="button" className="primary-action" onClick={onCreatePrompt}>
-            <Plus size={17} />
-            Ask from job
-          </button>
-        </div>
-
-        <label className="input-control">
-          <span>Filter by trade</span>
-          <select value={tradeFilter} onChange={(event) => setTradeFilter(event.target.value)}>
-            {tradeFilters.map((option) => (
-              <option key={option}>{option}</option>
-            ))}
-          </select>
-        </label>
-
-        <div className="shop-post-list">
-          {sortedPosts.length === 0 ? (
-            <EmptyState
-              icon={MessageCircle}
-              title="No questions in this filter"
-              description="Broaden the trade filter or start the first field question in this lane."
-              actionLabel="Ask a question"
-              onAction={onCreatePrompt}
-            />
-          ) : sortedPosts.map((post) => (
+    <>
+      {newPostOpen && (
+        <ShopTalkNewPostModal
+          profile={profile}
+          selectedJobTrade={selectedJobTrade}
+          onClose={() => setNewPostOpen(false)}
+          onSubmit={(flair, title, trade, body) => {
+            onNewPost(flair, title, trade, body);
+            setNewPostOpen(false);
+          }}
+        />
+      )}
+      <section className="shop-talk-layout" aria-label="Shop Talk community">
+        <aside className="shop-talk-sidebar">
+          {/* Tab switcher */}
+          <div className="shop-talk-tabs">
             <button
               type="button"
-              key={post.id}
-              className={post.id === selectedPost.id ? "shop-post-card selected" : "shop-post-card"}
-              onClick={() => setSelectedPostId(post.id)}
+              className={activeTab === "talk" ? "active" : ""}
+              onClick={() => setActiveTab("talk")}
             >
-              <span>{post.trade} - {post.status}</span>
-              <strong>{post.title}</strong>
-              <small>{netScore(post)} score - {post.replies.length} replies - {post.createdAt}</small>
+              <MessageCircle size={14} />
+              Shop Talk
             </button>
-          ))}
-        </div>
-      </aside>
-
-      <article className="shop-talk-detail">
-        <div className="shop-question-header">
-          <div>
-            <span>{selectedPost.badge ? `${selectedPost.badge} - ${selectedPost.author}` : selectedPost.author}</span>
-            <h2>{selectedPost.title}</h2>
-            <p>{selectedPost.body}</p>
-          </div>
-          <span className={selectedPost.status === "Verified Fix" ? "state-pill verified" : "state-pill"}>
-            {selectedPost.status}
-          </span>
-        </div>
-
-        <div className="shop-question-actions">
-          <button type="button" onClick={() => onVotePost(selectedPost.id, "up")}>
-            <ThumbsUp size={15} />
-            {selectedPost.upvotes}
-          </button>
-          <button type="button" onClick={() => onVotePost(selectedPost.id, "down")}>
-            <ThumbsDown size={15} />
-            {selectedPost.downvotes}
-          </button>
-          {reportReasons.map((reason) => (
-            <button type="button" key={reason} onClick={() => onReportPost(selectedPost.id, reason)}>
-              <Flag size={15} />
-              {reason}
+            <button
+              type="button"
+              className={activeTab === "news" ? "active" : ""}
+              onClick={() => setActiveTab("news")}
+            >
+              <Newspaper size={14} />
+              Trade News
             </button>
-          ))}
-        </div>
-
-        <section className="answer-composer">
-          <div>
-            <span>Answer as {profile.displayName}</span>
-            <strong>{profileBadges.length ? profileBadges.join(", ") : "New contributor"}</strong>
           </div>
-          <textarea
-            value={answerDraft}
-            onChange={(event) => setAnswerDraft(event.target.value)}
-            rows={4}
-            placeholder="Share the field habit, safety check, tool setup, or closeout proof that would prevent a callback."
-          />
-          <button type="button" className="primary-action" onClick={submitAnswer} disabled={!answerDraft.trim()}>
-            <Send size={17} />
-            Post answer
-          </button>
-        </section>
 
-        <section className="answer-list" aria-label="Community answers">
-          {selectedPost.replies.length === 0 ? (
-            <article className="empty-ledger">
-              <MessageCircle size={18} />
-              <strong>This needs a real trade answer.</strong>
-              <span>Answer it, then mark the best response as Verified Fix during testing.</span>
-            </article>
-          ) : sortedAnswers(selectedPost.replies).map((answer) => (
-            <article className={answer.verifiedFix ? "answer-card verified" : "answer-card"} key={answer.id}>
-              <div className="answer-card-heading">
+          {activeTab === "talk" ? (
+            <>
+              <div className="shop-talk-command">
                 <div>
-                  <span>{answer.author}</span>
-                  <strong>{answer.verifiedFix ? "Verified Fix" : "Community answer"}</strong>
+                  <span>Community knowledge</span>
+                  <h2>Field answers, not generic Q&amp;A</h2>
                 </div>
-                {answer.verifiedFix && <CheckCircle2 size={18} />}
-              </div>
-              <p>{answer.body}</p>
-              <div className="answer-actions">
-                <button type="button" onClick={() => onVoteAnswer(selectedPost.id, answer.id, "up")}>
-                  <ThumbsUp size={14} />
-                  {answer.upvotes}
-                </button>
-                <button type="button" onClick={() => onVoteAnswer(selectedPost.id, answer.id, "down")}>
-                  <ThumbsDown size={14} />
-                  {answer.downvotes}
-                </button>
-                <button type="button" disabled={answer.verifiedFix} onClick={() => onVerifyAnswer(selectedPost.id, answer.id)}>
-                  <BadgeCheck size={14} />
-                  {answer.verifiedFix ? "Verified" : "Mark fix"}
+                <button type="button" className="primary-action" onClick={() => setNewPostOpen(true)}>
+                  <Plus size={17} />
+                  New post
                 </button>
               </div>
+
+              {/* Community Rules */}
+              <div className="shop-talk-rules">
+                <button
+                  type="button"
+                  className="rules-toggle"
+                  onClick={() => setRulesOpen((v) => !v)}
+                  aria-expanded={rulesOpen}
+                >
+                  <ShieldCheck size={14} />
+                  <span>Community Rules</span>
+                  <ChevronDown size={13} style={{ transform: rulesOpen ? "rotate(180deg)" : undefined, transition: "transform 0.2s" }} />
+                </button>
+                {rulesOpen && (
+                  <ol className="rules-list">
+                    {SHOP_RULES.map((rule, i) => (
+                      <li key={i}>{rule}</li>
+                    ))}
+                  </ol>
+                )}
+              </div>
+
+              {/* Sort tabs */}
+              <div className="shop-sort-tabs">
+                {(["hot", "new", "unanswered"] as const).map((mode) => (
+                  <button
+                    key={mode}
+                    type="button"
+                    className={sortMode === mode ? "active" : ""}
+                    onClick={() => setSortMode(mode)}
+                  >
+                    {mode === "hot" ? "Hot" : mode === "new" ? "New" : "Unanswered"}
+                  </button>
+                ))}
+              </div>
+
+              <label className="input-control">
+                <span>Filter by trade</span>
+                <select value={tradeFilter} onChange={(e) => setTradeFilter(e.target.value)}>
+                  {tradeFilters.map((opt) => <option key={opt}>{opt}</option>)}
+                </select>
+              </label>
+
+              <div className="shop-post-list">
+                {sortedPosts.length === 0 ? (
+                  <EmptyState
+                    icon={MessageCircle}
+                    title="No questions in this filter"
+                    description="Broaden the trade filter or start the first field question in this lane."
+                    actionLabel="Ask a question"
+                    onAction={() => setNewPostOpen(true)}
+                  />
+                ) : sortedPosts.map((post) => (
+                  <button
+                    type="button"
+                    key={post.id}
+                    className={post.id === (selectedPost?.id ?? 0) ? "shop-post-card selected" : "shop-post-card"}
+                    onClick={() => setSelectedPostId(post.id)}
+                  >
+                    <div className="shop-post-card-meta">
+                      {post.flair && (
+                        <span className={`flair-pill flair-${post.flair.toLowerCase().replace(/\s/g, "-")}`}>
+                          {post.flair}
+                        </span>
+                      )}
+                      <span className="post-trade-label">{post.trade}</span>
+                    </div>
+                    <strong>{post.title}</strong>
+                    <div className="shop-post-card-stats">
+                      <span>↑ {netScore(post)}</span>
+                      <span>{post.replies.length} replies</span>
+                      <span>{post.createdAt}</span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="shop-talk-command">
+                <div>
+                  <span>Florida &amp; trades</span>
+                  <h2>Law changes, code updates, market signals</h2>
+                </div>
+              </div>
+              <div className="shop-news-list">
+                {newsItems.length === 0 ? (
+                  <EmptyState icon={Newspaper} title="No news yet" description="Trade-relevant news will appear here." />
+                ) : newsItems.map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    className={item.id === selectedNewsId ? "shop-news-card selected" : "shop-news-card"}
+                    onClick={() => setSelectedNewsId(item.id)}
+                  >
+                    {item.urgency && <span className="news-urgency-pill">{item.urgency}</span>}
+                    <strong>{item.headline}</strong>
+                    <small>{item.source} · {item.date}</small>
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+        </aside>
+
+        {/* Right panel */}
+        {activeTab === "talk" ? (
+          selectedPost ? (
+            <article className="shop-talk-detail">
+              <div className="shop-question-header">
+                <div>
+                  <div className="shop-question-meta">
+                    {selectedPost.flair && (
+                      <span className={`flair-pill flair-${selectedPost.flair.toLowerCase().replace(/\s/g, "-")}`}>
+                        {selectedPost.flair}
+                      </span>
+                    )}
+                    <span>{selectedPost.badge ? `${selectedPost.badge} · ${selectedPost.author}` : selectedPost.author}</span>
+                    <span>{selectedPost.trade} · {selectedPost.createdAt}</span>
+                  </div>
+                  <h2>{selectedPost.title}</h2>
+                  <p>{selectedPost.body}</p>
+                </div>
+                <span className={selectedPost.status === "Verified Fix" ? "state-pill verified" : "state-pill"}>
+                  {selectedPost.status}
+                </span>
+              </div>
+
+              <div className="shop-question-actions">
+                <button type="button" onClick={() => onVotePost(selectedPost.id, "up")}>
+                  <ThumbsUp size={15} />
+                  {selectedPost.upvotes}
+                </button>
+                <button type="button" onClick={() => onVotePost(selectedPost.id, "down")}>
+                  <ThumbsDown size={15} />
+                  {selectedPost.downvotes}
+                </button>
+                {allReportReasons.map((reason) => (
+                  <button type="button" key={reason} onClick={() => onReportPost(selectedPost.id, reason)}>
+                    <Flag size={15} />
+                    {reason}
+                  </button>
+                ))}
+              </div>
+
+              <section className="answer-composer">
+                <div>
+                  <span>Answer as {profile.displayName}</span>
+                  <strong>{profileBadges.length ? profileBadges.join(", ") : "New contributor"}</strong>
+                </div>
+                <textarea
+                  value={answerDraft}
+                  onChange={(e) => setAnswerDraft(e.target.value)}
+                  rows={4}
+                  placeholder="Share the field habit, safety check, tool setup, or closeout proof that would prevent a callback."
+                />
+                <button type="button" className="primary-action" onClick={submitAnswer} disabled={!answerDraft.trim()}>
+                  <Send size={17} />
+                  Post answer
+                </button>
+              </section>
+
+              <section className="answer-list" aria-label="Community answers">
+                {selectedPost.replies.length === 0 ? (
+                  <article className="empty-ledger">
+                    <MessageCircle size={18} />
+                    <strong>This needs a real trade answer.</strong>
+                    <span>Answer it, then mark the best response as Verified Fix during testing.</span>
+                  </article>
+                ) : sortedAnswers(selectedPost.replies).map((answer) => (
+                  <article className={answer.verifiedFix ? "answer-card verified" : "answer-card"} key={answer.id}>
+                    <div className="answer-card-heading">
+                      <div>
+                        <span>{answer.author}</span>
+                        <strong>{answer.verifiedFix ? "Verified Fix" : "Community answer"}</strong>
+                      </div>
+                      {answer.verifiedFix && <CheckCircle2 size={18} />}
+                    </div>
+                    <p>{answer.body}</p>
+                    <div className="answer-actions">
+                      <button type="button" onClick={() => onVoteAnswer(selectedPost.id, answer.id, "up")}>
+                        <ThumbsUp size={14} />
+                        {answer.upvotes}
+                      </button>
+                      <button type="button" onClick={() => onVoteAnswer(selectedPost.id, answer.id, "down")}>
+                        <ThumbsDown size={14} />
+                        {answer.downvotes}
+                      </button>
+                      <button type="button" disabled={answer.verifiedFix} onClick={() => onVerifyAnswer(selectedPost.id, answer.id)}>
+                        <BadgeCheck size={14} />
+                        {answer.verifiedFix ? "Verified" : "Mark fix"}
+                      </button>
+                    </div>
+                  </article>
+                ))}
+              </section>
             </article>
-          ))}
-        </section>
-      </article>
-    </section>
+          ) : (
+            <article className="shop-talk-detail">
+              <EmptyState
+                icon={MessageCircle}
+                title="No Shop Talk posts yet"
+                description="Create the first field question and let the community answer it."
+                actionLabel="Create post"
+                onAction={() => setNewPostOpen(true)}
+              />
+            </article>
+          )
+        ) : (
+          <article className="shop-talk-detail">
+            {selectedNews ? (
+              <div className="shop-news-detail">
+                <div className="shop-news-detail-header">
+                  {selectedNews.urgency && <span className="news-urgency-pill">{selectedNews.urgency}</span>}
+                  <h2>{selectedNews.headline}</h2>
+                  <small>{selectedNews.source} · {selectedNews.date}</small>
+                </div>
+                <p className="shop-news-detail-body">{selectedNews.summary}</p>
+                {selectedNews.url && selectedNews.url !== "#" && (
+                  <a href={selectedNews.url} target="_blank" rel="noreferrer" className="secondary-action">
+                    Read full article →
+                  </a>
+                )}
+                <div className="shop-news-discuss">
+                  <strong>Discuss this in Shop Talk</strong>
+                  <p>Have a take on how this affects your work? Start a conversation.</p>
+                  <button
+                    type="button"
+                    className="primary-action"
+                    onClick={() => {
+                      setActiveTab("talk");
+                      setNewPostOpen(true);
+                    }}
+                  >
+                    <MessageCircle size={15} />
+                    Start discussion
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <EmptyState icon={Newspaper} title="Select a news item" description="Choose a headline from the left to read the full summary." />
+            )}
+          </article>
+        )}
+      </section>
+    </>
   );
 }
 
