@@ -405,6 +405,10 @@ textarea:focus-visible {
   background: rgba(255, 106, 0, 0.06);
 }
 
+.auth-guest-callout--hero {
+  margin-top: 2px;
+}
+
 .auth-guest-callout strong {
   display: block;
   color: #fff;
@@ -425,6 +429,7 @@ textarea:focus-visible {
   background: rgba(255, 106, 0, 0.12);
   color: #ffd7c1;
   font-weight: var(--weight-label);
+  width: 100%;
 }
 
 .auth-status-grid {

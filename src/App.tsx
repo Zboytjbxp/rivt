@@ -3512,6 +3512,16 @@ function AuthGate({
         <h1>{mode === "signup" ? "Create your account" : "Welcome back"}</h1>
         <p>Sign in to your crew, jobs, tools, and records.</p>
 
+        <div className="auth-guest-callout auth-guest-callout--hero">
+          <div>
+            <strong>Prefer to browse first?</strong>
+            <span>See jobs, tools, and the full workspace without creating an account yet.</span>
+          </div>
+          <button type="button" className="ghost-action auth-guest-cta" onClick={onGuestLogin}>
+            Browse as guest
+          </button>
+        </div>
+
         <div className="auth-provider-grid">
           {([
             ["google", GoogleIcon],
@@ -3547,16 +3557,6 @@ function AuthGate({
               </button>
             );
           })}
-        </div>
-
-        <div className="auth-guest-callout">
-          <div>
-            <strong>Prefer to browse first?</strong>
-            <span>See jobs, tools, and the full workspace without creating an account yet.</span>
-          </div>
-          <button type="button" className="ghost-action auth-guest-cta" onClick={onGuestLogin}>
-            Browse as guest
-          </button>
         </div>
 
         <div className="auth-toggle">
