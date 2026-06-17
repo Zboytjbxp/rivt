@@ -16,6 +16,7 @@ import {
   ClipboardCheck,
   ClipboardList,
   CreditCard,
+  Compass,
   FileCheck2,
   FileDown,
   FileText,
@@ -28,9 +29,11 @@ import {
   Mail,
   MessageCircle,
   MessageSquareText,
+  Menu,
   Moon,
   Newspaper,
   Plus,
+  Ruler,
   ReceiptText,
   RefreshCw,
   Search,
@@ -42,12 +45,14 @@ import {
   Camera,
   Copy,
   ScanSearch,
+  LayoutGrid,
   PenTool,
   Clock3,
   LogOut,
   Sun,
   ThumbsDown,
   ThumbsUp,
+  SquareDashedMousePointer,
   Trash2,
   UserCheck,
   Users,
@@ -6990,24 +6995,28 @@ const FRAC_LABELS = ["0", "1/8", "1/4", "3/8", "1/2", "5/8", "3/4", "7/8"];
 const PART_COLORS = ["#4f8ef7","#f59e0b","#10b981","#f43f5e","#8b5cf6","#06b6d4","#84cc16","#ec4899"];
 
 function ConstructionCalculator() {
-  const [activeTab, setActiveTab] = useState<"measurement" | "shortcuts" | "materials" | "sheets">("measurement");
-
-  // Measurement tab state
-  const [feet, setFeet] = useState(12);
-  const [inches, setInches] = useState(7);
-  const [eighths, setEighths] = useState(2);
-  const [pieces, setPieces] = useState(4);
-  // Calculator engine state
+  const [activeTab, setActiveTab] = useState<"heavy" | "miter" | "crown" | "suite">("heavy");
+  const [feet, setFeet] = useState(0);
+  const [inches, setInches] = useState(0);
+  const [eighths, setEighths] = useState(0);
+  const [pieces, setPieces] = useState(1);
   const [calcMode, setCalcMode] = useState<"ft" | "in">("ft");
-  const [calcOp, setCalcOp] = useState<"+" | "-" | "×" | "÷" | null>(null);
+  const [calcOp, setCalcOp] = useState<"+" | "-" | "*" | "/" | null>(null);
   const [calcAccum, setCalcAccum] = useState(0);
   const [calcWait, setCalcWait] = useState(false);
-
-  // Shortcuts tab state
+  const [wallAngle, setWallAngle] = useState(90);
+  const [springAngle, setSpringAngle] = useState(52);
+  const [cornerSide, setCornerSide] = useState<"inside" | "outside">("inside");
+  const [crownHand, setCrownHand] = useState<"left" | "right">("left");
+  const [crownMode, setCrownMode] = useState<"standard" | "bullnose">("standard");
+  const [bladeKerf, setBladeKerf] = useState(true);
+  const [heavyLightModifiers, setHeavyLightModifiers] = useState(true);
+  const [metricMode, setMetricMode] = useState(false);
+  const [feetInchesMode, setFeetInchesMode] = useState(true);
+  const [leftHandedMode, setLeftHandedMode] = useState(false);
+  const [themePreset, setThemePreset] = useState("lime");
   const [wallLength, setWallLength] = useState(12);
   const [spacing, setSpacing] = useState(16);
-
-  // Materials tab state
   const [materials, setMaterials] = useState<MaterialEstimate[]>([
     {
       id: "1",
@@ -7018,8 +7027,6 @@ function ConstructionCalculator() {
       costPerUnit: 0.75,
     },
   ]);
-
-  // Sheet optimizer state
   const [sheetParts, setSheetParts] = useState<SheetPart[]>([
     { id: "1", name: "Side Panel", width: 24, height: 36, qty: 2 },
     { id: "2", name: "Top/Bottom", width: 24, height: 18, qty: 2 },
@@ -7029,9 +7036,120 @@ function ConstructionCalculator() {
   const [sheetWidth, setSheetWidth] = useState(48);
   const [sheetHeight, setSheetHeight] = useState(96);
   const [allowUndersize, setAllowUndersize] = useState(true);
+  const [copied, setCopied] = useState(false);
+
+  function toDecIn(ft: number, inch: number, e: number) {
+    return ft * 12 + inch + e / 8;
+  }
+  function fromDecIn(d: number): [number, number, number] {
+    const tot8 = Math.round(Math.max(0, d) * 8);
+    const totFt = Math.floor(tot8 / 96);
+    const rem = tot8 % 96;
+    return [totFt, Math.floor(rem / 8), rem % 8];
+  }
+  function fmtDecIn(d: number) {
+    const [f, i, e] = fromDecIn(d);
+    return `${f}' ${i}${e > 0 ? ` ${FRAC_LABELS[e]}` : ""}"`;
+  }
+  function applyCalcOp(a: number, op: string, b: number) {
+    if (op === "+") return a + b;
+    if (op === "-") return Math.max(0, a - b);
+    if (op === "*") return a * b;
+    if (op === "/") return b !== 0 ? a / b : a;
+    return b;
+  }
+  function handleCalcDigit(d: number) {
+    if (calcWait) {
+      setCalcWait(false);
+      if (calcMode === "ft") {
+        setFeet(d);
+        setInches(0);
+        setEighths(0);
+      } else {
+        setInches(d);
+        setEighths(0);
+      }
+      return;
+    }
+    if (calcMode === "ft") {
+      const nf = feet * 10 + d;
+      if (nf <= 9999) setFeet(nf);
+    } else {
+      const ni = inches * 10 + d;
+      setInches(ni <= 11 ? ni : d);
+    }
+  }
+  function handleCalcOp(op: "+" | "-" | "*" | "/") {
+    const cur = toDecIn(feet, inches, eighths);
+    if (calcOp && !calcWait) {
+      const res = applyCalcOp(calcAccum, calcOp, cur);
+      const [rf, ri, re] = fromDecIn(res);
+      setFeet(rf);
+      setInches(ri);
+      setEighths(re);
+      setCalcAccum(res);
+    } else {
+      setCalcAccum(cur);
+    }
+    setCalcOp(op);
+    setCalcWait(true);
+  }
+  function handleCalcEquals() {
+    if (!calcOp) return;
+    const cur = toDecIn(feet, inches, eighths);
+    const res = applyCalcOp(calcAccum, calcOp, cur);
+    const [rf, ri, re] = fromDecIn(res);
+    setFeet(rf);
+    setInches(ri);
+    setEighths(re);
+    setCalcOp(null);
+    setCalcAccum(0);
+    setCalcWait(false);
+  }
+  function handleCalcBack() {
+    if (eighths > 0) {
+      setEighths(0);
+      return;
+    }
+    if (calcMode === "ft") setFeet(Math.floor(feet / 10));
+    else setInches(Math.floor(inches / 10));
+  }
+  function handleCalcClear() {
+    setFeet(0);
+    setInches(0);
+    setEighths(0);
+    setCalcOp(null);
+    setCalcAccum(0);
+    setCalcWait(false);
+  }
+
+  const rawDecIn = feet * 12 + inches + eighths / 8;
+  const totalInches = rawDecIn * pieces;
+  const totalFeet = Math.floor(totalInches / 12);
+  const remainderInches = Number((totalInches % 12).toFixed(2));
+  const studCount = Math.ceil((wallLength * 12) / spacing) + 1;
+  const joistCount = Math.ceil((wallLength * 12) / spacing) + 1;
+  const miterAngle = Number((wallAngle / 2).toFixed(1));
+  const bevelAngle = Number((Math.max(0, (springAngle - 45) * 0.85 + (cornerSide === "outside" ? 4 : 0))).toFixed(1));
+  const crownSawLabel = crownHand === "left" ? "Miter right  //  Bevel left" : "Miter left  //  Bevel right";
+
+  function addSheetPart() {
+    const newId = String(Date.now());
+    setSheetParts([...sheetParts, { id: newId, name: `Part ${sheetParts.length + 1}`, width: 12, height: 12, qty: 1 }]);
+  }
+  function removeSheetPart(id: string) {
+    setSheetParts(sheetParts.filter((p) => p.id !== id));
+  }
+  function updateSheetPart(id: string, field: keyof SheetPart, value: unknown) {
+    setSheetParts(sheetParts.map((p) => (p.id === id ? { ...p, [field]: value } : p)));
+  }
+
+  const totalMaterialCost = materials.reduce((sum, m) => {
+    const withWaste = m.quantity * (1 + m.wastePercent / 100);
+    return sum + withWaste * (m.costPerUnit || 0);
+  }, 0);
 
   const sheetPackingResult = useMemo(() => {
-    // Build flat pieces list with undersize tolerance applied
     const pieces: { name: string; w: number; h: number }[] = [];
     for (const part of sheetParts) {
       for (let i = 0; i < part.qty; i++) {
@@ -7046,23 +7164,24 @@ function ConstructionCalculator() {
         pieces.push({ name: part.name, w, h });
       }
     }
-    // Sort largest first for better packing
     pieces.sort((a, b) => b.w * b.h - a.w * a.h);
 
     const PACK_W = sheetWidth + kerf;
     const PACK_H = sheetHeight + kerf;
-
     type PackNode = { x: number; y: number; w: number; h: number; used?: boolean; right?: PackNode; down?: PackNode };
-
     class Packer {
       root: PackNode;
-      constructor() { this.root = { x: 0, y: 0, w: PACK_W, h: PACK_H }; }
+      constructor() {
+        this.root = { x: 0, y: 0, w: PACK_W, h: PACK_H };
+      }
       fit(block: { w: number; h: number }) {
         let node = this.findNode(this.root, block.w + kerf, block.h + kerf);
         if (node) return this.splitNode(node, block.w + kerf, block.h + kerf);
         node = this.findNode(this.root, block.h + kerf, block.w + kerf);
         if (node) {
-          const tmp = block.w; block.w = block.h; block.h = tmp;
+          const tmp = block.w;
+          block.w = block.h;
+          block.h = tmp;
           return this.splitNode(node, block.w + kerf, block.h + kerf);
         }
         return null;
@@ -7088,16 +7207,13 @@ function ConstructionCalculator() {
     for (const piece of pieces) {
       let fit = packer.fit(piece);
       if (!fit) {
-        if (currentParts.length > 0) { sheets.push({ id: sheetId++, parts: currentParts }); }
+        if (currentParts.length > 0) sheets.push({ id: sheetId++, parts: currentParts });
         packer = new Packer();
         currentParts = [];
         fit = packer.fit(piece);
       }
-      if (fit) {
-        currentParts.push({ name: piece.name, x: fit.x, y: fit.y, w: piece.w, h: piece.h });
-      } else {
-        sheets.push({ id: sheetId++, parts: [{ name: piece.name + " (OVERSIZED)", x: 0, y: 0, w: piece.w, h: piece.h }] });
-      }
+      if (fit) currentParts.push({ name: piece.name, x: fit.x, y: fit.y, w: piece.w, h: piece.h });
+      else sheets.push({ id: sheetId++, parts: [{ name: `${piece.name} (OVERSIZED)`, x: 0, y: 0, w: piece.w, h: piece.h }] });
     }
     if (currentParts.length > 0) sheets.push({ id: sheetId++, parts: currentParts });
 
@@ -7112,425 +7228,403 @@ function ConstructionCalculator() {
     };
   }, [sheetParts, kerf, sheetWidth, sheetHeight, allowUndersize]);
 
-  function addSheetPart() {
-    const newId = String(Date.now());
-    setSheetParts([...sheetParts, { id: newId, name: `Part ${sheetParts.length + 1}`, width: 12, height: 12, qty: 1 }]);
-  }
-  function removeSheetPart(id: string) { setSheetParts(sheetParts.filter(p => p.id !== id)); }
-  function updateSheetPart(id: string, field: keyof SheetPart, value: unknown) {
-    setSheetParts(sheetParts.map(p => p.id === id ? { ...p, [field]: value } : p));
-  }
-
-  // Calculator helpers
-  function toDecIn(ft: number, inch: number, e: number) { return ft * 12 + inch + e / 8; }
-  function fromDecIn(d: number): [number, number, number] {
-    const tot8 = Math.round(Math.max(0, d) * 8);
-    const totFt = Math.floor(tot8 / 96);
-    const rem = tot8 % 96;
-    return [totFt, Math.floor(rem / 8), rem % 8];
-  }
-  function fmtDecIn(d: number) {
-    const [f, i, e] = fromDecIn(d);
-    return `${f}' ${i}${e > 0 ? ` ${FRAC_LABELS[e]}` : ''}"`;
-  }
-  function applyCalcOp(a: number, op: string, b: number) {
-    if (op === "+") return a + b;
-    if (op === "-") return Math.max(0, a - b);
-    if (op === "×") return a * b;
-    if (op === "÷") return b !== 0 ? a / b : a;
-    return b;
-  }
-  function handleCalcDigit(d: number) {
-    if (calcWait) {
-      setCalcWait(false);
-      if (calcMode === "ft") { setFeet(d); setInches(0); setEighths(0); }
-      else { setInches(d); setEighths(0); }
-      return;
-    }
-    if (calcMode === "ft") {
-      const nf = feet * 10 + d;
-      if (nf <= 9999) setFeet(nf);
-    } else {
-      const ni = inches * 10 + d;
-      if (ni <= 11) setInches(ni);
-      else setInches(d <= 9 ? d : 9);
-    }
-  }
-  function handleCalcOp(op: "+" | "-" | "×" | "÷") {
-    const cur = toDecIn(feet, inches, eighths);
-    if (calcOp && !calcWait) {
-      const res = applyCalcOp(calcAccum, calcOp, cur);
-      const [rf, ri, re] = fromDecIn(res);
-      setFeet(rf); setInches(ri); setEighths(re);
-      setCalcAccum(res);
-    } else {
-      setCalcAccum(cur);
-    }
-    setCalcOp(op); setCalcWait(true);
-  }
-  function handleCalcEquals() {
-    if (!calcOp) return;
-    const cur = toDecIn(feet, inches, eighths);
-    const res = applyCalcOp(calcAccum, calcOp, cur);
-    const [rf, ri, re] = fromDecIn(res);
-    setFeet(rf); setInches(ri); setEighths(re);
-    setCalcOp(null); setCalcAccum(0); setCalcWait(false);
-  }
-  function handleCalcBack() {
-    if (eighths > 0) { setEighths(0); return; }
-    if (calcMode === "ft") setFeet(Math.floor(feet / 10));
-    else setInches(Math.floor(inches / 10));
-  }
-  function handleCalcClear() {
-    setFeet(0); setInches(0); setEighths(0);
-    setCalcOp(null); setCalcAccum(0); setCalcWait(false);
-  }
-
-  // Calculations
-  const rawDecIn = feet * 12 + inches + eighths / 8;
-  const totalInches = rawDecIn * pieces;
-  const totalFeet = Math.floor(totalInches / 12);
-  const remainderInches = Number((totalInches % 12).toFixed(2));
-  const remainderEighths = Math.round((remainderInches % 1) * 8);
-  const remainingInches = Math.floor(remainderInches);
-
-  const studCount = Math.ceil((wallLength * 12) / spacing) + 1;
-  const joistCount = Math.ceil((wallLength * 12) / spacing) + 1;
-
-  function addMaterial() {
-    const newId = String(Math.max(...materials.map((m) => Number(m.id) || 0), 0) + 1);
-    setMaterials([
-      ...materials,
-      { id: newId, name: "", quantity: 1, unit: "ea", wastePercent: 5, costPerUnit: 0 },
-    ]);
-  }
-
-  function removeMaterial(id: string) {
-    setMaterials(materials.filter((m) => m.id !== id));
-  }
-
-  function updateMaterial(id: string, field: keyof MaterialEstimate, value: unknown) {
-    setMaterials(
-      materials.map((m) => (m.id === id ? { ...m, [field]: value } : m))
-    );
-  }
-
-  const totalMaterialCost = materials.reduce((sum, m) => {
-    const withWaste = m.quantity * (1 + m.wastePercent / 100);
-    return sum + (withWaste * (m.costPerUnit || 0));
-  }, 0);
+  const themeSwatches = ["lime", "yellow", "teal", "green", "orange"];
+  const drawerItems = [
+    { key: "heavy", title: "Heavy / Light", copy: "1/32 precision keys", badge: "LIVE" },
+    { key: "miter", title: "Miter Finder", copy: "Bullnose and corner bisector", badge: "PRO" },
+    { key: "crown", title: "Crown Flat", copy: "Compound miter and bevels", badge: "PRO" },
+    { key: "suite", title: "Suite tools", copy: "Hardware spacing and sheet optimizer", badge: "PRO" },
+  ] as const;
 
   return (
-    <section className="construction-calculator">
-      <div className="tool-card-heading">
-        <Hammer size={20} />
-        <div>
-          <span>Construction math</span>
-          <h3>Measurements, layouts, materials</h3>
+    <section className={`heavy-calc-workbench theme-${themePreset}`}>
+      <header className="heavy-calc-topbar">
+        <button type="button" className="calc-menu-button" aria-label="Open calculator menu">
+          <Menu size={18} />
+        </button>
+        <div className="heavy-calc-brand">
+          <div className="heavy-calc-brand-mark" aria-hidden="true">
+            <Ruler size={18} />
+          </div>
+          <div>
+            <strong>THE HEAVY 16TH</strong>
+            <span>PRO CABINET CALC</span>
+          </div>
         </div>
-      </div>
+        <button type="button" className="calc-exit-button">
+          <X size={15} />
+          EXIT {activeTab === "heavy" ? "CROWN" : activeTab.toUpperCase()}
+        </button>
+      </header>
 
-      <div className="calc-tabs">
-        <button
-          className={activeTab === "measurement" ? "calc-tab active" : "calc-tab"}
-          onClick={() => setActiveTab("measurement")}
-        >
-          Measurements
-        </button>
-        <button
-          className={activeTab === "shortcuts" ? "calc-tab active" : "calc-tab"}
-          onClick={() => setActiveTab("shortcuts")}
-        >
-          Shortcuts
-        </button>
-        <button
-          className={activeTab === "materials" ? "calc-tab active" : "calc-tab"}
-          onClick={() => setActiveTab("materials")}
-        >
-          Materials
-        </button>
-        <button
-          className={activeTab === "sheets" ? "calc-tab active" : "calc-tab"}
-          onClick={() => setActiveTab("sheets")}
-        >
-          Sheet Optimizer
-        </button>
-      </div>
+      <div className="heavy-calc-shell">
+        <aside className="heavy-calc-drawer">
+          <div className="drawer-title">
+            <span>Pro tools suite</span>
+            <strong>Calculator workspace</strong>
+          </div>
 
-      {activeTab === "measurement" && (
-        <div className="calc-tab-content">
-          <div className="calc-phone">
-            {/* Display */}
-            <div className="calc-display">
-              <div className="calc-mode-row">
-                <button className={`calc-mode-btn${calcMode === "ft" ? " active" : ""}`} onClick={() => setCalcMode("ft")}>FT</button>
-                <button className={`calc-mode-btn${calcMode === "in" ? " active" : ""}`} onClick={() => setCalcMode("in")}>IN</button>
-                {calcOp && <span className="calc-op-indicator">{calcOp} {fmtDecIn(calcAccum)}</span>}
+          {drawerItems.map((item) => (
+            <button type="button" key={item.key} className={`drawer-entry${activeTab === item.key ? " active" : ""}`} onClick={() => setActiveTab(item.key)}>
+              <div>
+                <strong>{item.title}</strong>
+                <small>{item.copy}</small>
               </div>
-              <div className="calc-display-main">
-                <span className={calcMode === "ft" ? "calc-display-ft active-unit" : "calc-display-ft"}>{feet}'</span>
-                {" "}
-                <span className={calcMode === "in" ? "calc-display-in active-unit" : "calc-display-in"}>{inches}</span>
-                {eighths > 0 && <span className="calc-display-frac"> {FRAC_LABELS[eighths]}</span>}
-                <span className="calc-display-in-sym">"</span>
-              </div>
-              <div className="calc-display-sub">
-                {rawDecIn.toFixed(3)}"
-                {pieces > 1 && <> × {pieces} = {(rawDecIn * pieces).toFixed(2)}"</>}
-              </div>
+              <span className={`drawer-pill${item.badge === "PRO" ? " accent" : ""}`}>{item.badge}</span>
+            </button>
+          ))}
+
+          <div className="drawer-section">
+            <div className="drawer-section-head">
+              <span>Interface themes</span>
             </div>
-
-            {/* Fractions */}
-            <div className="calc-fracs">
-              {[1,2,3,4,5,6,7].map(n => (
-                <button key={n} className={`calc-frac-btn${eighths === n ? " active" : ""}`} onClick={() => { setEighths(n); setCalcWait(false); }}>{FRAC_LABELS[n]}</button>
+            <div className="theme-swatch-grid">
+              {themeSwatches.map((name) => (
+                <button
+                  key={name}
+                  type="button"
+                  className={`theme-swatch ${name}${themePreset === name ? " selected" : ""}`}
+                  onClick={() => setThemePreset(name)}
+                  aria-label={`${name} theme`}
+                />
               ))}
-              <button className={`calc-frac-btn${eighths === 0 ? " active" : ""}`} onClick={() => setEighths(0)}>—</button>
-            </div>
-
-            {/* Number pad */}
-            <div className="calc-numpad">
-              {[7,8,9].map(n => <button key={n} className="calc-num" onClick={() => handleCalcDigit(n)}>{n}</button>)}
-              <button className="calc-op-btn" onClick={() => handleCalcOp("÷")}>÷</button>
-              {[4,5,6].map(n => <button key={n} className="calc-num" onClick={() => handleCalcDigit(n)}>{n}</button>)}
-              <button className="calc-op-btn" onClick={() => handleCalcOp("×")}>×</button>
-              {[1,2,3].map(n => <button key={n} className="calc-num" onClick={() => handleCalcDigit(n)}>{n}</button>)}
-              <button className="calc-op-btn" onClick={() => handleCalcOp("-")}>−</button>
-              <button className="calc-num" onClick={() => handleCalcDigit(0)}>0</button>
-              <button className="calc-util-btn" onClick={handleCalcBack}>⌫</button>
-              <button className="calc-eq-btn" onClick={handleCalcEquals}>=</button>
-              <button className="calc-op-btn" onClick={() => handleCalcOp("+")}>+</button>
-            </div>
-
-            {/* Bottom: clear + pieces multiplier */}
-            <div className="calc-bottom">
-              <button className="calc-clear-btn" onClick={handleCalcClear}>C</button>
-              <div className="calc-pieces">
-                <span>× pieces</span>
-                <button onClick={() => setPieces(Math.max(1, pieces - 1))}>−</button>
-                <span className="calc-pieces-val">{pieces}</span>
-                <button onClick={() => setPieces(pieces + 1)}>+</button>
-              </div>
             </div>
           </div>
-        </div>
-      )}
 
-      {activeTab === "shortcuts" && (
-        <div className="calc-tab-content">
-          <div className="calc-grid">
-            <label>
-              Wall length (feet)
-              <input type="number" value={wallLength} min="1" onChange={(e) => setWallLength(Math.max(1, Number(e.target.value) || 1))} />
-            </label>
-            <label>
-              Stud spacing (inches)
-              <select value={spacing} onChange={(e) => setSpacing(Number(e.target.value))}>
-                <option value={16}>16" OC</option>
-                <option value={24}>24" OC</option>
-                <option value={12}>12" OC</option>
-              </select>
-            </label>
-          </div>
-          <div className="shortcuts-results">
-            <div className="shortcut-result">
-              <span>Studs needed (2×4)</span>
-              <strong>{studCount} studs</strong>
-              <small>~{(studCount * 8).toFixed(0)} linear feet</small>
+          <div className="drawer-section compact">
+            <div className="drawer-section-head">
+              <span>Settings</span>
             </div>
-            <div className="shortcut-result">
-              <span>Joists/rafters needed</span>
-              <strong>{joistCount} pieces</strong>
-              <small>at {spacing}" O.C.</small>
-            </div>
-            <div className="shortcut-result">
-              <span>Plates needed</span>
-              <strong>{(wallLength * 3).toFixed(0)} LF</strong>
-              <small>Top + bottom + rim</small>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {activeTab === "materials" && (
-        <div className="calc-tab-content">
-          <button type="button" className="small-button" onClick={addMaterial}>
-            <Plus size={14} />
-            Add material
-          </button>
-          <div className="material-list">
-            {materials.map((mat) => {
-              const withWaste = mat.quantity * (1 + mat.wastePercent / 100);
-              const cost = withWaste * (mat.costPerUnit || 0);
-              return (
-                <div key={mat.id} className="material-row">
-                  <input
-                    type="text"
-                    placeholder="Material name"
-                    value={mat.name}
-                    onChange={(e) => updateMaterial(mat.id, "name", e.target.value)}
-                  />
-                  <input
-                    type="number"
-                    placeholder="Qty"
-                    value={mat.quantity}
-                    onChange={(e) => updateMaterial(mat.id, "quantity", Number(e.target.value) || 0)}
-                  />
-                  <input
-                    type="text"
-                    placeholder="Unit"
-                    value={mat.unit}
-                    onChange={(e) => updateMaterial(mat.id, "unit", e.target.value)}
-                  />
-                  <input
-                    type="number"
-                    placeholder="Waste %"
-                    value={mat.wastePercent}
-                    onChange={(e) => updateMaterial(mat.id, "wastePercent", Number(e.target.value) || 0)}
-                  />
-                  <input
-                    type="number"
-                    placeholder="Cost/unit"
-                    value={mat.costPerUnit || ""}
-                    onChange={(e) => updateMaterial(mat.id, "costPerUnit", Number(e.target.value) || 0)}
-                  />
-                  <span className="material-total">{currency(cost)}</span>
-                  <button type="button" className="icon-button" onClick={() => removeMaterial(mat.id)}>
-                    <Trash2 size={14} />
-                  </button>
-                </div>
-              );
-            })}
-          </div>
-          {totalMaterialCost > 0 && (
-            <div className="material-total-section">
-              <span>Total material cost (with waste)</span>
-              <strong>{currency(totalMaterialCost)}</strong>
-            </div>
-          )}
-        </div>
-      )}
-
-      {activeTab === "sheets" && (
-        <div className="calc-tab-content">
-          {/* Settings */}
-          <div className="sheet-settings">
-            <label className="sheet-setting-item">
-              <span>Sheet size</span>
-              <select value={`${sheetWidth}x${sheetHeight}`} onChange={e => {
-                const [w, h] = e.target.value.split("x").map(Number);
-                setSheetWidth(w); setSheetHeight(h);
-              }}>
-                <option value="48x96">4×8 (48"×96")</option>
-                <option value="48x120">4×10 (48"×120")</option>
-                <option value="48x144">4×12 (48"×144")</option>
-                <option value="60x96">5×8 (60"×96")</option>
-              </select>
+            <label className="drawer-toggle-row">
+              <span>Blade kerf (1/8")</span>
+              <button type="button" className={`drawer-switch${bladeKerf ? " on" : ""}`} onClick={() => setBladeKerf((prev) => !prev)}>
+                <i />
+              </button>
             </label>
-            <label className="sheet-setting-item">
-              <span>Kerf (in)</span>
-              <input type="number" value={kerf} step="0.0625" min="0" max="0.5"
-                onChange={e => setKerf(Math.max(0, Number(e.target.value) || 0.125))} />
+            <label className="drawer-toggle-row">
+              <span>Heavy/light modifiers</span>
+              <button type="button" className={`drawer-switch${heavyLightModifiers ? " on" : ""}`} onClick={() => setHeavyLightModifiers((prev) => !prev)}>
+                <i />
+              </button>
             </label>
-            <label className="sheet-setting-item">
-              <span>Undersize tol.</span>
-              <button type="button" className={`sheet-toggle${allowUndersize ? " active" : ""}`}
-                onClick={() => setAllowUndersize(!allowUndersize)}>
-                {allowUndersize ? "ON" : "OFF"}
+            <label className="drawer-toggle-row">
+              <span>Metric (mm)</span>
+              <button type="button" className={`drawer-switch${metricMode ? " on" : ""}`} onClick={() => setMetricMode((prev) => !prev)}>
+                <i />
+              </button>
+            </label>
+            <label className="drawer-toggle-row">
+              <span>Feet and inches display</span>
+              <button type="button" className={`drawer-switch${feetInchesMode ? " on" : ""}`} onClick={() => setFeetInchesMode((prev) => !prev)}>
+                <i />
+              </button>
+            </label>
+            <label className="drawer-toggle-row">
+              <span>Left-handed mode</span>
+              <button type="button" className={`drawer-switch${leftHandedMode ? " on" : ""}`} onClick={() => setLeftHandedMode((prev) => !prev)}>
+                <i />
               </button>
             </label>
           </div>
+        </aside>
 
-          {/* Cut list */}
-          <div className="sheet-parts-header">
-            <span>Cut List</span>
-            <button type="button" className="small-button" onClick={addSheetPart}>
-              <Plus size={14} /> Add Part
-            </button>
-          </div>
-          <div className="sheet-parts-list">
-            {sheetParts.map(part => (
-              <div key={part.id} className="sheet-part-row">
-                <input className="sheet-part-name" type="text" value={part.name}
-                  onChange={e => updateSheetPart(part.id, "name", e.target.value)} />
-                <label className="sheet-dim-label"><span>W"</span>
-                  <input type="number" value={part.width} min="1"
-                    onChange={e => updateSheetPart(part.id, "width", Math.max(1, Number(e.target.value) || 1))} />
-                </label>
-                <label className="sheet-dim-label"><span>H"</span>
-                  <input type="number" value={part.height} min="1"
-                    onChange={e => updateSheetPart(part.id, "height", Math.max(1, Number(e.target.value) || 1))} />
-                </label>
-                <label className="sheet-dim-label"><span>Qty</span>
-                  <input type="number" value={part.qty} min="1"
-                    onChange={e => updateSheetPart(part.id, "qty", Math.max(1, Number(e.target.value) || 1))} />
-                </label>
-                <button type="button" className="icon-button" onClick={() => removeSheetPart(part.id)}>
-                  <Trash2 size={14} />
+        <main className={`heavy-calc-main${activeTab === "miter" ? " miter-mode" : ""}${activeTab === "crown" ? " crown-mode" : ""}${activeTab === "suite" ? " suite-mode" : ""}`}>
+          {activeTab === "heavy" && (
+            <>
+              <div className="calc-screen-head">
+                <button type="button" className="screen-ghost-button">+ HEAVY</button>
+                <button type="button" className="screen-ghost-button">- LIGHT</button>
+              </div>
+              <div className="calc-display-stack">
+                <div className="calc-primary-value">{rawDecIn === 0 ? "0" : fmtDecIn(rawDecIn)}</div>
+                <div className="calc-secondary-row">
+                  <span>CROWN / CABINET FIELD CALC</span>
+                  <span>{pieces} piece{pieces === 1 ? "" : "s"}</span>
+                </div>
+              </div>
+              <div className="calc-action-row">
+                <button type="button" className="calc-danger" onClick={handleCalcClear}>C</button>
+                <button type="button" className="calc-danger ghost" onClick={handleCalcBack}>Back</button>
+                <button type="button" className="calc-utility">x2</button>
+                <button type="button" className="calc-utility">-1/16</button>
+                <button type="button" className="calc-utility">+1/16</button>
+              </div>
+              <div className="calc-pad-grid">
+                {[7, 8, 9].map((n) => <button key={n} type="button" onClick={() => handleCalcDigit(n)}>{n}</button>)}
+                <button type="button" className="op" onClick={() => handleCalcOp("*")}>x</button>
+                {[4, 5, 6].map((n) => <button key={n} type="button" onClick={() => handleCalcDigit(n)}>{n}</button>)}
+                <button type="button" className="op" onClick={() => handleCalcOp("*")}>x</button>
+                {[1, 2, 3].map((n) => <button key={n} type="button" onClick={() => handleCalcDigit(n)}>{n}</button>)}
+                <button type="button" className="op" onClick={() => handleCalcOp("-")}>-</button>
+                <button type="button" onClick={() => handleCalcDigit(0)}>0</button>
+                <button type="button" className="op">.</button>
+                <button type="button" className="eq" onClick={handleCalcEquals}>=</button>
+                <button type="button" className="op plus" onClick={() => handleCalcOp("+")}>+</button>
+              </div>
+            </>
+          )}
+
+          {activeTab === "miter" && (
+            <>
+              <div className="miter-top-row">
+                <button type="button" className="miter-pill">EXIT MITER</button>
+              </div>
+              <div className="miter-setup-grid">
+                <div className="miter-value-card emphasis">
+                  <span>Wall angle</span>
+                  <strong>{wallAngle} deg</strong>
+                </div>
+                <div className="miter-value-card">
+                  <span>Spring angle</span>
+                  <strong>{springAngle} deg</strong>
+                </div>
+              </div>
+              <div className="miter-toggle-row">
+                {(["inside", "outside"] as const).map((option) => (
+                  <button type="button" key={option} className={cornerSide === option ? "choice-pill active" : "choice-pill"} onClick={() => setCornerSide(option)}>
+                    {option.toUpperCase()}
+                  </button>
+                ))}
+              </div>
+              <div className="miter-toggle-row">
+                {(["left", "right"] as const).map((option) => (
+                  <button type="button" key={option} className={crownHand === option ? "choice-pill active" : "choice-pill"} onClick={() => setCrownHand(option)}>
+                    {option.toUpperCase()}
+                  </button>
+                ))}
+              </div>
+              <div className="miter-toggle-row tight">
+                {(["52", "45", "38"] as const).map((option) => (
+                  <button type="button" key={option} className={springAngle === Number(option) ? "choice-pill active" : "choice-pill"} onClick={() => setSpringAngle(Number(option))}>
+                    {option} deg
+                  </button>
+                ))}
+              </div>
+              <div className="miter-readout">
+                <div>
+                  <span>Miter</span>
+                  <strong>{miterAngle.toFixed(1)} deg</strong>
+                </div>
+                <div>
+                  <span>Bevel</span>
+                  <strong>{bevelAngle.toFixed(1)} deg</strong>
+                </div>
+              </div>
+              <div className="miter-config-card">
+                <span>SAW CONFIGURATION</span>
+                <strong>{crownMode === "bullnose" ? "BULLNOSE CUT" : "TOP EDGE ON FENCE"}</strong>
+                <p>{crownSawLabel}</p>
+                <small>{crownMode === "bullnose" ? "Save short point on face" : "Save left piece"}</small>
+              </div>
+              <div className="calc-pad-grid compact">
+                {["135", "90", "45", "22.5"].map((value) => (
+                  <button type="button" key={value} className={value === "45" ? "preset active" : "preset"} onClick={() => setWallAngle(Number(value))}>
+                    {value}
+                  </button>
+                ))}
+                {[7, 8, 9].map((n) => <button key={`m-${n}`} type="button" onClick={() => setWallAngle(n * 10)}>{n}</button>)}
+                <button type="button" className="op ghost">?</button>
+                {[4, 5, 6].map((n) => <button key={`m-${n}`} type="button" onClick={() => setSpringAngle(n * 10)}>{n}</button>)}
+                <button type="button" className="op ghost">C</button>
+                {[1, 2, 3].map((n) => <button key={`m-${n}`} type="button" onClick={() => setWallAngle((prev) => Math.max(0, prev - n))}>{n}</button>)}
+                <button type="button" className="op ghost">.</button>
+                <button type="button" className="eq">=</button>
+                <button type="button" className="op plus">+</button>
+              </div>
+            </>
+          )}
+
+          {activeTab === "crown" && (
+            <>
+              <div className="suite-sheet-header">
+                <span>PRO TOOLS SUITE</span>
+                <button type="button" className="small-button" onClick={() => setActiveTab("suite")}>
+                  <Sparkles size={14} />
+                  Open suite
                 </button>
               </div>
-            ))}
-          </div>
-
-          {/* Stats */}
-          <div className="sheet-stats">
-            <div className="sheet-stat">
-              <strong>{sheetPackingResult.estimatedSheets}</strong>
-              <span>Sheets needed</span>
-            </div>
-            <div className="sheet-stat">
-              <strong>{sheetPackingResult.perfectSheets}</strong>
-              <span>Theoretical min</span>
-            </div>
-            <div className="sheet-stat">
-              <strong>{sheetPackingResult.totalAreaSqFt} ft²</strong>
-              <span>Total area</span>
-            </div>
-            <div className="sheet-stat">
-              <strong>{sheetPackingResult.totalParts}</strong>
-              <span>Total parts</span>
-            </div>
-          </div>
-
-          {/* Visual layout per sheet */}
-          <div className="sheet-layouts">
-            {sheetPackingResult.sheets.map((sheet) => (
-              <div key={sheet.id} className="sheet-layout">
-                <div className="sheet-layout-label">
-                  Sheet {sheet.id} — {sheet.parts.length} part{sheet.parts.length !== 1 ? "s" : ""}
-                </div>
-                <svg className="sheet-svg" viewBox={`0 0 ${sheetWidth} ${sheetHeight}`} preserveAspectRatio="xMidYMid meet">
-                  <rect x="0" y="0" width={sheetWidth} height={sheetHeight} fill="#f1f5f9" stroke="#94a3b8" strokeWidth="1"/>
-                  {sheet.parts.map((part, pi) => (
-                    <g key={pi}>
-                      <rect x={part.x} y={part.y} width={part.w} height={part.h}
-                        fill={PART_COLORS[pi % PART_COLORS.length]} fillOpacity="0.75"
-                        stroke="rgba(0,0,0,0.25)" strokeWidth="0.5"/>
-                      {part.w > 10 && part.h > 8 && (
-                        <text x={part.x + part.w / 2} y={part.y + part.h / 2}
-                          textAnchor="middle" dominantBaseline="middle"
-                          fontSize={Math.min(5, part.w / 6, part.h / 4)}
-                          fill="rgba(0,0,0,0.75)" fontWeight="bold" fontFamily="system-ui,sans-serif">
-                          {part.name}
-                        </text>
-                      )}
-                    </g>
-                  ))}
-                </svg>
-                <div className="sheet-legend">
-                  {sheet.parts.map((part, pi) => (
-                    <div key={pi} className="sheet-legend-item">
-                      <span className="sheet-legend-swatch" style={{ background: PART_COLORS[pi % PART_COLORS.length] }} />
-                      <span>{part.name}</span>
-                      <span className="sheet-legend-dim">{part.w.toFixed(2)}" × {part.h.toFixed(2)}"</span>
+              <div className="suite-list">
+                {[
+                  { icon: Compass, title: "Miter Finder", copy: "Bullnose and corner bisector", badge: "PRO" },
+                  { icon: BriefcaseBusiness, title: "Crown Flat", copy: "Compound miter and bevels", badge: "PRO" },
+                  { icon: SquareDashedMousePointer, title: "Hardware Spacing", copy: "Centers for knobs and pulls", badge: "PRO" },
+                  { icon: LayoutGrid, title: "Equal Spacing", copy: "Layout for panels and balusters", badge: "PRO" },
+                ].map((item) => (
+                  <div key={item.title} className="suite-card">
+                    <item.icon size={18} />
+                    <div>
+                      <strong>{item.title}</strong>
+                      <small>{item.copy}</small>
                     </div>
-                  ))}
-                </div>
+                    <span className="suite-badge">{item.badge}</span>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-        </div>
-      )}
+              <div className="settings-stretch">
+                <label className="drawer-toggle-row">
+                  <span>Blade kerf (1/8")</span>
+                  <button type="button" className={`drawer-switch${bladeKerf ? " on" : ""}`} onClick={() => setBladeKerf((v) => !v)}>
+                    <i />
+                  </button>
+                </label>
+                <label className="drawer-toggle-row">
+                  <span>Heavy/light modifiers</span>
+                  <button type="button" className={`drawer-switch${heavyLightModifiers ? " on" : ""}`} onClick={() => setHeavyLightModifiers((v) => !v)}>
+                    <i />
+                  </button>
+                </label>
+                <label className="drawer-toggle-row">
+                  <span>Metric (mm)</span>
+                  <button type="button" className={`drawer-switch${metricMode ? " on" : ""}`} onClick={() => setMetricMode((v) => !v)}>
+                    <i />
+                  </button>
+                </label>
+              </div>
+            </>
+          )}
+
+          {activeTab === "suite" && (
+            <>
+              <div className="suite-sheet-header">
+                <span>INTERFACE THEMES</span>
+                <button type="button" className="small-button" onClick={() => setActiveTab("crown")}>
+                  <Menu size={14} />
+                  Back
+                </button>
+              </div>
+              <div className="theme-row">
+                {themeSwatches.map((name) => (
+                  <button
+                    key={name}
+                    type="button"
+                    className={`theme-card ${name}${themePreset === name ? " selected" : ""}`}
+                    onClick={() => setThemePreset(name)}
+                    aria-label={`${name} interface theme`}
+                  >
+                    <span />
+                    <i />
+                  </button>
+                ))}
+              </div>
+              <div className="suite-settings-grid">
+                <label>
+                  Metric (mm)
+                  <button type="button" className={`drawer-switch${metricMode ? " on" : ""}`} onClick={() => setMetricMode((v) => !v)}><i /></button>
+                </label>
+                <label>
+                  Feet and inches
+                  <button type="button" className={`drawer-switch${feetInchesMode ? " on" : ""}`} onClick={() => setFeetInchesMode((v) => !v)}><i /></button>
+                </label>
+                <label>
+                  Left-handed
+                  <button type="button" className={`drawer-switch${leftHandedMode ? " on" : ""}`} onClick={() => setLeftHandedMode((v) => !v)}><i /></button>
+                </label>
+              </div>
+
+              <div className="sheet-settings">
+                <label className="sheet-setting-item">
+                  <span>Sheet size</span>
+                  <select value={`${sheetWidth}x${sheetHeight}`} onChange={(e) => {
+                    const [w, h] = e.target.value.split("x").map(Number);
+                    setSheetWidth(w);
+                    setSheetHeight(h);
+                  }}>
+                    <option value="48x96">4x8 (48"x96")</option>
+                    <option value="48x120">4x10 (48"x120")</option>
+                    <option value="48x144">4x12 (48"x144")</option>
+                    <option value="60x96">5x8 (60"x96")</option>
+                  </select>
+                </label>
+                <label className="sheet-setting-item">
+                  <span>Kerf (in)</span>
+                  <input type="number" value={kerf} step="0.0625" min="0" max="0.5" onChange={(e) => setKerf(Math.max(0, Number(e.target.value) || 0.125))} />
+                </label>
+                <label className="sheet-setting-item">
+                  <span>Undersize tol.</span>
+                  <button type="button" className={`sheet-toggle${allowUndersize ? " active" : ""}`} onClick={() => setAllowUndersize(!allowUndersize)}>
+                    {allowUndersize ? "ON" : "OFF"}
+                  </button>
+                </label>
+              </div>
+
+              <div className="sheet-parts-header">
+                <span>Cut list</span>
+                <button type="button" className="small-button" onClick={addSheetPart}>
+                  <Plus size={14} /> Add part
+                </button>
+              </div>
+              <div className="sheet-parts-list">
+                {sheetParts.map((part) => (
+                  <div key={part.id} className="sheet-part-row">
+                    <input className="sheet-part-name" type="text" value={part.name} onChange={(e) => updateSheetPart(part.id, "name", e.target.value)} />
+                    <label className="sheet-dim-label">
+                      <span>W"</span>
+                      <input type="number" value={part.width} min="1" onChange={(e) => updateSheetPart(part.id, "width", Math.max(1, Number(e.target.value) || 1))} />
+                    </label>
+                    <label className="sheet-dim-label">
+                      <span>H"</span>
+                      <input type="number" value={part.height} min="1" onChange={(e) => updateSheetPart(part.id, "height", Math.max(1, Number(e.target.value) || 1))} />
+                    </label>
+                    <label className="sheet-dim-label">
+                      <span>Qty</span>
+                      <input type="number" value={part.qty} min="1" onChange={(e) => updateSheetPart(part.id, "qty", Math.max(1, Number(e.target.value) || 1))} />
+                    </label>
+                    <button type="button" className="icon-button" onClick={() => removeSheetPart(part.id)}>
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+
+          <section className="suite-summary-card">
+            <div className="suite-summary-grid">
+              <div className="suite-stat">
+                <strong>{sheetPackingResult.estimatedSheets}</strong>
+                <span>Sheets needed</span>
+              </div>
+              <div className="suite-stat">
+                <strong>{sheetPackingResult.perfectSheets}</strong>
+                <span>Theoretical min</span>
+              </div>
+              <div className="suite-stat">
+                <strong>{sheetPackingResult.totalAreaSqFt} ft2</strong>
+                <span>Total area</span>
+              </div>
+              <div className="suite-stat">
+                <strong>{sheetPackingResult.totalParts}</strong>
+                <span>Total parts</span>
+              </div>
+            </div>
+            <div className="suite-summary-foot">
+              <div>
+                <span>Selected work order</span>
+                <strong>{fmtDecIn(rawDecIn * pieces)}</strong>
+                <small>{pieces} piece{pieces === 1 ? "" : "s"} loaded into the calculator</small>
+              </div>
+              <button type="button" className="copy-chip" onClick={async () => {
+                try {
+                  await navigator.clipboard.writeText(`Heavy 16th calculator - ${fmtDecIn(rawDecIn * pieces)}`);
+                  setCopied(true);
+                } catch {
+                  setCopied(false);
+                }
+              }}>
+                {copied ? "Copied" : "Copy readout"}
+              </button>
+            </div>
+          </section>
+        </main>
+
+        <aside className="heavy-calc-ruler" aria-hidden="true">
+          {["1/16", "1/8", "3/16", "1/4", "5/16", "3/8", "7/16", "1/2", "9/16", "5/8", "11/16", "3/4", "13/16", "7/8", "15/16"].map((tick) => (
+            <div key={tick} className={`ruler-tick${tick === "1/4" || tick === "1/2" || tick === "3/4" ? " major" : ""}`}>
+              <span>{tick}</span>
+            </div>
+          ))}
+        </aside>
+      </div>
     </section>
   );
 }
