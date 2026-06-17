@@ -180,14 +180,6 @@ interface MaterialEstimate {
   costPerUnit?: number;
 }
 
-interface SheetPart {
-  id: string;
-  name: string;
-  width: number;
-  height: number;
-  qty: number;
-}
-
 interface NewsItem {
   id: number;
   headline: string;
@@ -6993,22 +6985,14 @@ function InvoiceTool({
   );
 }
 
-const FRAC_LABELS = ["0", "1/8", "1/4", "3/8", "1/2", "5/8", "3/4", "7/8"];
-const PART_COLORS = ["#4f8ef7","#f59e0b","#10b981","#f43f5e","#8b5cf6","#06b6d4","#84cc16","#ec4899"];
-
 function ConstructionCalculator() {
-  const [activeTab, setActiveTab] = useState<"measurement" | "shortcuts" | "materials" | "sheets">("measurement");
+  const [activeTab, setActiveTab] = useState<"measurement" | "shortcuts" | "materials">("measurement");
 
   // Measurement tab state
   const [feet, setFeet] = useState(12);
   const [inches, setInches] = useState(7);
-  const [eighths, setEighths] = useState(2);
+  const [eighths, setEighths] = useState(2); // 2/8 = 1/4
   const [pieces, setPieces] = useState(4);
-  // Calculator engine state
-  const [calcMode, setCalcMode] = useState<"ft" | "in">("ft");
-  const [calcOp, setCalcOp] = useState<"+" | "-" | "×" | "÷" | null>(null);
-  const [calcAccum, setCalcAccum] = useState(0);
-  const [calcWait, setCalcWait] = useState(false);
 
   // Shortcuts tab state
   const [wallLength, setWallLength] = useState(12);
@@ -7026,176 +7010,8 @@ function ConstructionCalculator() {
     },
   ]);
 
-  // Sheet optimizer state
-  const [sheetParts, setSheetParts] = useState<SheetPart[]>([
-    { id: "1", name: "Side Panel", width: 24, height: 36, qty: 2 },
-    { id: "2", name: "Top/Bottom", width: 24, height: 18, qty: 2 },
-    { id: "3", name: "Shelf", width: 22, height: 14, qty: 3 },
-  ]);
-  const [kerf, setKerf] = useState(0.125);
-  const [sheetWidth, setSheetWidth] = useState(48);
-  const [sheetHeight, setSheetHeight] = useState(96);
-  const [allowUndersize, setAllowUndersize] = useState(true);
-
-  const sheetPackingResult = useMemo(() => {
-    // Build flat pieces list with undersize tolerance applied
-    const pieces: { name: string; w: number; h: number }[] = [];
-    for (const part of sheetParts) {
-      for (let i = 0; i < part.qty; i++) {
-        let w = part.width;
-        let h = part.height;
-        if (allowUndersize) {
-          if (Math.abs(w - 48) < 0.001) w -= kerf;
-          if (Math.abs(h - 48) < 0.001) h -= kerf;
-          if (Math.abs(w - 96) < 0.001) w -= kerf;
-          if (Math.abs(h - 96) < 0.001) h -= kerf;
-        }
-        pieces.push({ name: part.name, w, h });
-      }
-    }
-    // Sort largest first for better packing
-    pieces.sort((a, b) => b.w * b.h - a.w * a.h);
-
-    const PACK_W = sheetWidth + kerf;
-    const PACK_H = sheetHeight + kerf;
-
-    type PackNode = { x: number; y: number; w: number; h: number; used?: boolean; right?: PackNode; down?: PackNode };
-
-    class Packer {
-      root: PackNode;
-      constructor() { this.root = { x: 0, y: 0, w: PACK_W, h: PACK_H }; }
-      fit(block: { w: number; h: number }) {
-        let node = this.findNode(this.root, block.w + kerf, block.h + kerf);
-        if (node) return this.splitNode(node, block.w + kerf, block.h + kerf);
-        node = this.findNode(this.root, block.h + kerf, block.w + kerf);
-        if (node) {
-          const tmp = block.w; block.w = block.h; block.h = tmp;
-          return this.splitNode(node, block.w + kerf, block.h + kerf);
-        }
-        return null;
-      }
-      findNode(root: PackNode, w: number, h: number): PackNode | null {
-        if (root.used) return this.findNode(root.right!, w, h) || this.findNode(root.down!, w, h);
-        if (w <= root.w + 0.0001 && h <= root.h + 0.0001) return root;
-        return null;
-      }
-      splitNode(node: PackNode, w: number, h: number) {
-        node.used = true;
-        node.down = { x: node.x, y: node.y + h, w: node.w, h: node.h - h };
-        node.right = { x: node.x + w, y: node.y, w: node.w - w, h };
-        return node;
-      }
-    }
-
-    const sheets: { id: number; parts: { name: string; x: number; y: number; w: number; h: number }[] }[] = [];
-    let sheetId = 1;
-    let packer = new Packer();
-    let currentParts: typeof sheets[0]["parts"] = [];
-
-    for (const piece of pieces) {
-      let fit = packer.fit(piece);
-      if (!fit) {
-        if (currentParts.length > 0) { sheets.push({ id: sheetId++, parts: currentParts }); }
-        packer = new Packer();
-        currentParts = [];
-        fit = packer.fit(piece);
-      }
-      if (fit) {
-        currentParts.push({ name: piece.name, x: fit.x, y: fit.y, w: piece.w, h: piece.h });
-      } else {
-        sheets.push({ id: sheetId++, parts: [{ name: piece.name + " (OVERSIZED)", x: 0, y: 0, w: piece.w, h: piece.h }] });
-      }
-    }
-    if (currentParts.length > 0) sheets.push({ id: sheetId++, parts: currentParts });
-
-    const totalAreaSqIn = sheetParts.reduce((sum, p) => sum + p.width * p.height * p.qty, 0);
-    const totalQty = sheetParts.reduce((sum, p) => sum + p.qty, 0);
-    return {
-      sheets,
-      estimatedSheets: sheets.length,
-      perfectSheets: (totalAreaSqIn / (sheetWidth * sheetHeight)).toFixed(1),
-      totalAreaSqFt: (totalAreaSqIn / 144).toFixed(1),
-      totalParts: totalQty,
-    };
-  }, [sheetParts, kerf, sheetWidth, sheetHeight, allowUndersize]);
-
-  function addSheetPart() {
-    const newId = String(Date.now());
-    setSheetParts([...sheetParts, { id: newId, name: `Part ${sheetParts.length + 1}`, width: 12, height: 12, qty: 1 }]);
-  }
-  function removeSheetPart(id: string) { setSheetParts(sheetParts.filter(p => p.id !== id)); }
-  function updateSheetPart(id: string, field: keyof SheetPart, value: unknown) {
-    setSheetParts(sheetParts.map(p => p.id === id ? { ...p, [field]: value } : p));
-  }
-
-  // Calculator helpers
-  function toDecIn(ft: number, inch: number, e: number) { return ft * 12 + inch + e / 8; }
-  function fromDecIn(d: number): [number, number, number] {
-    const tot8 = Math.round(Math.max(0, d) * 8);
-    const totFt = Math.floor(tot8 / 96);
-    const rem = tot8 % 96;
-    return [totFt, Math.floor(rem / 8), rem % 8];
-  }
-  function fmtDecIn(d: number) {
-    const [f, i, e] = fromDecIn(d);
-    return `${f}' ${i}${e > 0 ? ` ${FRAC_LABELS[e]}` : ''}"`;
-  }
-  function applyCalcOp(a: number, op: string, b: number) {
-    if (op === "+") return a + b;
-    if (op === "-") return Math.max(0, a - b);
-    if (op === "×") return a * b;
-    if (op === "÷") return b !== 0 ? a / b : a;
-    return b;
-  }
-  function handleCalcDigit(d: number) {
-    if (calcWait) {
-      setCalcWait(false);
-      if (calcMode === "ft") { setFeet(d); setInches(0); setEighths(0); }
-      else { setInches(d); setEighths(0); }
-      return;
-    }
-    if (calcMode === "ft") {
-      const nf = feet * 10 + d;
-      if (nf <= 9999) setFeet(nf);
-    } else {
-      const ni = inches * 10 + d;
-      if (ni <= 11) setInches(ni);
-      else setInches(d <= 9 ? d : 9);
-    }
-  }
-  function handleCalcOp(op: "+" | "-" | "×" | "÷") {
-    const cur = toDecIn(feet, inches, eighths);
-    if (calcOp && !calcWait) {
-      const res = applyCalcOp(calcAccum, calcOp, cur);
-      const [rf, ri, re] = fromDecIn(res);
-      setFeet(rf); setInches(ri); setEighths(re);
-      setCalcAccum(res);
-    } else {
-      setCalcAccum(cur);
-    }
-    setCalcOp(op); setCalcWait(true);
-  }
-  function handleCalcEquals() {
-    if (!calcOp) return;
-    const cur = toDecIn(feet, inches, eighths);
-    const res = applyCalcOp(calcAccum, calcOp, cur);
-    const [rf, ri, re] = fromDecIn(res);
-    setFeet(rf); setInches(ri); setEighths(re);
-    setCalcOp(null); setCalcAccum(0); setCalcWait(false);
-  }
-  function handleCalcBack() {
-    if (eighths > 0) { setEighths(0); return; }
-    if (calcMode === "ft") setFeet(Math.floor(feet / 10));
-    else setInches(Math.floor(inches / 10));
-  }
-  function handleCalcClear() {
-    setFeet(0); setInches(0); setEighths(0);
-    setCalcOp(null); setCalcAccum(0); setCalcWait(false);
-  }
-
   // Calculations
-  const rawDecIn = feet * 12 + inches + eighths / 8;
-  const totalInches = rawDecIn * pieces;
+  const totalInches = (feet * 12 + inches) * pieces + (eighths / 8) * pieces;
   const totalFeet = Math.floor(totalInches / 12);
   const remainderInches = Number((totalInches % 12).toFixed(2));
   const remainderEighths = Math.round((remainderInches % 1) * 8);
@@ -7256,69 +7072,41 @@ function ConstructionCalculator() {
         >
           Materials
         </button>
-        <button
-          className={activeTab === "sheets" ? "calc-tab active" : "calc-tab"}
-          onClick={() => setActiveTab("sheets")}
-        >
-          Sheet Optimizer
-        </button>
       </div>
 
       {activeTab === "measurement" && (
         <div className="calc-tab-content">
-          <div className="calc-phone">
-            {/* Display */}
-            <div className="calc-display">
-              <div className="calc-mode-row">
-                <button className={`calc-mode-btn${calcMode === "ft" ? " active" : ""}`} onClick={() => setCalcMode("ft")}>FT</button>
-                <button className={`calc-mode-btn${calcMode === "in" ? " active" : ""}`} onClick={() => setCalcMode("in")}>IN</button>
-                {calcOp && <span className="calc-op-indicator">{calcOp} {fmtDecIn(calcAccum)}</span>}
-              </div>
-              <div className="calc-display-main">
-                <span className={calcMode === "ft" ? "calc-display-ft active-unit" : "calc-display-ft"}>{feet}'</span>
-                {" "}
-                <span className={calcMode === "in" ? "calc-display-in active-unit" : "calc-display-in"}>{inches}</span>
-                {eighths > 0 && <span className="calc-display-frac"> {FRAC_LABELS[eighths]}</span>}
-                <span className="calc-display-in-sym">"</span>
-              </div>
-              <div className="calc-display-sub">
-                {rawDecIn.toFixed(3)}"
-                {pieces > 1 && <> × {pieces} = {(rawDecIn * pieces).toFixed(2)}"</>}
-              </div>
-            </div>
-
-            {/* Fractions */}
-            <div className="calc-fracs">
-              {[1,2,3,4,5,6,7].map(n => (
-                <button key={n} className={`calc-frac-btn${eighths === n ? " active" : ""}`} onClick={() => { setEighths(n); setCalcWait(false); }}>{FRAC_LABELS[n]}</button>
-              ))}
-              <button className={`calc-frac-btn${eighths === 0 ? " active" : ""}`} onClick={() => setEighths(0)}>—</button>
-            </div>
-
-            {/* Number pad */}
-            <div className="calc-numpad">
-              {[7,8,9].map(n => <button key={n} className="calc-num" onClick={() => handleCalcDigit(n)}>{n}</button>)}
-              <button className="calc-op-btn" onClick={() => handleCalcOp("÷")}>÷</button>
-              {[4,5,6].map(n => <button key={n} className="calc-num" onClick={() => handleCalcDigit(n)}>{n}</button>)}
-              <button className="calc-op-btn" onClick={() => handleCalcOp("×")}>×</button>
-              {[1,2,3].map(n => <button key={n} className="calc-num" onClick={() => handleCalcDigit(n)}>{n}</button>)}
-              <button className="calc-op-btn" onClick={() => handleCalcOp("-")}>−</button>
-              <button className="calc-num" onClick={() => handleCalcDigit(0)}>0</button>
-              <button className="calc-util-btn" onClick={handleCalcBack}>⌫</button>
-              <button className="calc-eq-btn" onClick={handleCalcEquals}>=</button>
-              <button className="calc-op-btn" onClick={() => handleCalcOp("+")}>+</button>
-            </div>
-
-            {/* Bottom: clear + pieces multiplier */}
-            <div className="calc-bottom">
-              <button className="calc-clear-btn" onClick={handleCalcClear}>C</button>
-              <div className="calc-pieces">
-                <span>× pieces</span>
-                <button onClick={() => setPieces(Math.max(1, pieces - 1))}>−</button>
-                <span className="calc-pieces-val">{pieces}</span>
-                <button onClick={() => setPieces(pieces + 1)}>+</button>
-              </div>
-            </div>
+          <div className="calc-grid">
+            <label>
+              Feet
+              <input type="number" value={feet} min="0" onChange={(e) => setFeet(Math.max(0, Number(e.target.value) || 0))} />
+            </label>
+            <label>
+              Inches
+              <input type="number" value={inches} min="0" max="11" onChange={(e) => setInches(Math.max(0, Math.min(11, Number(e.target.value) || 0)))} />
+            </label>
+            <label>
+              Eighths
+              <select value={eighths} onChange={(e) => setEighths(Number(e.target.value))}>
+                {[0, 1, 2, 3, 4, 5, 6, 7, 8].map((n) => (
+                  <option key={n} value={n}>
+                    {n === 0 ? "0" : `${n}/8"`}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Pieces/multiplier
+              <input type="number" value={pieces} min="1" onChange={(e) => setPieces(Math.max(1, Number(e.target.value) || 1))} />
+            </label>
+          </div>
+          <div className="calc-result">
+            <span>Total length</span>
+            <strong>
+              {totalFeet}'{remainingInches}
+              {remainderEighths > 0 && `${remainderEighths}/8`}"
+            </strong>
+            <small>{totalInches.toFixed(2)} total inches</small>
           </div>
         </div>
       )}
@@ -7415,127 +7203,6 @@ function ConstructionCalculator() {
               <strong>{currency(totalMaterialCost)}</strong>
             </div>
           )}
-        </div>
-      )}
-
-      {activeTab === "sheets" && (
-        <div className="calc-tab-content">
-          {/* Settings */}
-          <div className="sheet-settings">
-            <label className="sheet-setting-item">
-              <span>Sheet size</span>
-              <select value={`${sheetWidth}x${sheetHeight}`} onChange={e => {
-                const [w, h] = e.target.value.split("x").map(Number);
-                setSheetWidth(w); setSheetHeight(h);
-              }}>
-                <option value="48x96">4×8 (48"×96")</option>
-                <option value="48x120">4×10 (48"×120")</option>
-                <option value="48x144">4×12 (48"×144")</option>
-                <option value="60x96">5×8 (60"×96")</option>
-              </select>
-            </label>
-            <label className="sheet-setting-item">
-              <span>Kerf (in)</span>
-              <input type="number" value={kerf} step="0.0625" min="0" max="0.5"
-                onChange={e => setKerf(Math.max(0, Number(e.target.value) || 0.125))} />
-            </label>
-            <label className="sheet-setting-item">
-              <span>Undersize tol.</span>
-              <button type="button" className={`sheet-toggle${allowUndersize ? " active" : ""}`}
-                onClick={() => setAllowUndersize(!allowUndersize)}>
-                {allowUndersize ? "ON" : "OFF"}
-              </button>
-            </label>
-          </div>
-
-          {/* Cut list */}
-          <div className="sheet-parts-header">
-            <span>Cut List</span>
-            <button type="button" className="small-button" onClick={addSheetPart}>
-              <Plus size={14} /> Add Part
-            </button>
-          </div>
-          <div className="sheet-parts-list">
-            {sheetParts.map(part => (
-              <div key={part.id} className="sheet-part-row">
-                <input className="sheet-part-name" type="text" value={part.name}
-                  onChange={e => updateSheetPart(part.id, "name", e.target.value)} />
-                <label className="sheet-dim-label"><span>W"</span>
-                  <input type="number" value={part.width} min="1"
-                    onChange={e => updateSheetPart(part.id, "width", Math.max(1, Number(e.target.value) || 1))} />
-                </label>
-                <label className="sheet-dim-label"><span>H"</span>
-                  <input type="number" value={part.height} min="1"
-                    onChange={e => updateSheetPart(part.id, "height", Math.max(1, Number(e.target.value) || 1))} />
-                </label>
-                <label className="sheet-dim-label"><span>Qty</span>
-                  <input type="number" value={part.qty} min="1"
-                    onChange={e => updateSheetPart(part.id, "qty", Math.max(1, Number(e.target.value) || 1))} />
-                </label>
-                <button type="button" className="icon-button" onClick={() => removeSheetPart(part.id)}>
-                  <Trash2 size={14} />
-                </button>
-              </div>
-            ))}
-          </div>
-
-          {/* Stats */}
-          <div className="sheet-stats">
-            <div className="sheet-stat">
-              <strong>{sheetPackingResult.estimatedSheets}</strong>
-              <span>Sheets needed</span>
-            </div>
-            <div className="sheet-stat">
-              <strong>{sheetPackingResult.perfectSheets}</strong>
-              <span>Theoretical min</span>
-            </div>
-            <div className="sheet-stat">
-              <strong>{sheetPackingResult.totalAreaSqFt} ft²</strong>
-              <span>Total area</span>
-            </div>
-            <div className="sheet-stat">
-              <strong>{sheetPackingResult.totalParts}</strong>
-              <span>Total parts</span>
-            </div>
-          </div>
-
-          {/* Visual layout per sheet */}
-          <div className="sheet-layouts">
-            {sheetPackingResult.sheets.map((sheet) => (
-              <div key={sheet.id} className="sheet-layout">
-                <div className="sheet-layout-label">
-                  Sheet {sheet.id} — {sheet.parts.length} part{sheet.parts.length !== 1 ? "s" : ""}
-                </div>
-                <svg className="sheet-svg" viewBox={`0 0 ${sheetWidth} ${sheetHeight}`} preserveAspectRatio="xMidYMid meet">
-                  <rect x="0" y="0" width={sheetWidth} height={sheetHeight} fill="#f1f5f9" stroke="#94a3b8" strokeWidth="1"/>
-                  {sheet.parts.map((part, pi) => (
-                    <g key={pi}>
-                      <rect x={part.x} y={part.y} width={part.w} height={part.h}
-                        fill={PART_COLORS[pi % PART_COLORS.length]} fillOpacity="0.75"
-                        stroke="rgba(0,0,0,0.25)" strokeWidth="0.5"/>
-                      {part.w > 10 && part.h > 8 && (
-                        <text x={part.x + part.w / 2} y={part.y + part.h / 2}
-                          textAnchor="middle" dominantBaseline="middle"
-                          fontSize={Math.min(5, part.w / 6, part.h / 4)}
-                          fill="rgba(0,0,0,0.75)" fontWeight="bold" fontFamily="system-ui,sans-serif">
-                          {part.name}
-                        </text>
-                      )}
-                    </g>
-                  ))}
-                </svg>
-                <div className="sheet-legend">
-                  {sheet.parts.map((part, pi) => (
-                    <div key={pi} className="sheet-legend-item">
-                      <span className="sheet-legend-swatch" style={{ background: PART_COLORS[pi % PART_COLORS.length] }} />
-                      <span>{part.name}</span>
-                      <span className="sheet-legend-dim">{part.w.toFixed(2)}" × {part.h.toFixed(2)}"</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
         </div>
       )}
     </section>
