@@ -1,4 +1,4 @@
-import { type ChangeEvent, type FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { type ChangeEvent, type FormEvent, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertTriangle,
   ArrowLeft,
@@ -76,6 +76,7 @@ type DifficultyFilter = (typeof difficultyOptions)[number];
 type WorkTypeFilter = (typeof workTypeOptions)[number];
 type RadiusFilter = (typeof radiusOptions)[number];
 type AuthMethod = "Google" | "Facebook" | "Apple" | "Email";
+type ToolSurface = "hub" | "estimate" | "calculator" | "invoice" | "records" | "materials" | "payments";
 type NavLabel =
   | "Home"
   | "Marketplace"
@@ -6543,22 +6544,165 @@ function ToolsView({
   onOpenJob: (id: number) => void;
   onNavigate: (view: NavLabel) => void;
 }) {
+  const [activeTool, setActiveTool] = useState<ToolSurface>("hub");
   const hasJob = selectedJob.id !== 0;
+  const appJobLabel = hasJob ? `${selectedJob.title} · ${selectedJob.location}` : "No work order selected";
+
+  function openTool(tool: Exclude<ToolSurface, "hub">) {
+    setActiveTool(tool);
+  }
+
+  function ToolShell({
+    title,
+    eyebrow,
+    description,
+    children,
+  }: {
+    title: string;
+    eyebrow: string;
+    description: string;
+    children: ReactNode;
+  }) {
+    return (
+      <section className="tool-app-shell" aria-label={title}>
+        <header className="tool-app-header">
+          <button type="button" className="tool-back-button" onClick={() => setActiveTool("hub")}>
+            <ArrowLeft size={16} />
+            Tools hub
+          </button>
+          <div className="tool-app-header-copy">
+            <span>{eyebrow}</span>
+            <h2>{title}</h2>
+            <p>{description}</p>
+          </div>
+          <div className="tool-app-job-chip" title={appJobLabel}>
+            <BriefcaseBusiness size={15} />
+            <span>{hasJob ? selectedJob.title : "No active work order"}</span>
+          </div>
+        </header>
+        {children}
+      </section>
+    );
+  }
+
+  if (activeTool === "invoice") {
+    return (
+      <ToolShell
+        eyebrow="Invoice app"
+        title="Generate, preview, and send invoices"
+        description={hasJob ? "This invoice opens from the active work order and stays tied to it." : "Draft an invoice first, then link it to a job later."}
+      >
+        <div className="tool-app-panel">
+          <InvoiceTool key={selectedJob.id} role={role} selectedJob={selectedJob} onOpenJob={onOpenJob} />
+        </div>
+      </ToolShell>
+    );
+  }
+
+  if (activeTool === "estimate") {
+    return (
+      <ToolShell
+        eyebrow="Estimate app"
+        title="Price checks before you post or bid"
+        description={hasJob ? "Use the active work order as a starting point, then tune the math." : "Build a clean estimate from scratch and keep it separate from the calculator."}
+      >
+        <div className="tool-app-panel">
+          <CalculatorView role={role} selectedJob={selectedJob} onOpenJob={onOpenJob} />
+        </div>
+      </ToolShell>
+    );
+  }
+
+  if (activeTool === "calculator") {
+    return (
+      <ToolShell
+        eyebrow="Calculator app"
+        title="The Heavy 16th"
+        description={hasJob ? "A focused shop calculator tuned to the active job." : "A standalone field calculator for quick measurements and cuts."}
+      >
+        <div className="tool-app-panel tool-app-panel-compact">
+          <ConstructionCalculator />
+        </div>
+      </ToolShell>
+    );
+  }
+
+  if (activeTool === "records") {
+    return (
+      <ToolShell
+        eyebrow="Records app"
+        title="Jobsite camera and closeout proof"
+        description={hasJob ? `Capture before, during, and after proof for ${selectedJob.title}.` : "Capture a work record, build a report, and store closeout photos."}
+      >
+        <div className="tool-app-panel">
+          <section className="jobsite-camera-card jobsite-camera-card-app" aria-label="Jobsite camera and records">
+            <div>
+              <span>Jobsite camera</span>
+              <h3>Photo records, timelines, and closeout reports</h3>
+              <p>
+                {hasJob
+                  ? `Capture before, during, and after proof for ${selectedJob.title}. Build a work record, generate a report, and keep closeout photos tied to the job.`
+                  : "Capture jobsite photos, build work records, and generate closeout reports. Link to a job to keep everything organized."}
+              </p>
+            </div>
+            <div className="jobsite-camera-actions">
+              <button type="button" className="primary-action" onClick={() => onNavigate("Records")}>
+                <Camera size={17} />
+                Open jobsite records
+              </button>
+              <button type="button" onClick={() => onNavigate("Records")}>
+                <FileDown size={16} />
+                Build report
+              </button>
+            </div>
+          </section>
+        </div>
+      </ToolShell>
+    );
+  }
+
+  if (activeTool === "materials") {
+    return (
+      <ToolShell
+        eyebrow="Materials app"
+        title="Waste, sheet count, and cut planning"
+        description="Keep material takeoff and sheet packing separate from the calculator."
+      >
+        <div className="tool-app-panel">
+          <MaterialsWasteTool selectedJob={selectedJob} />
+        </div>
+      </ToolShell>
+    );
+  }
+
+  if (activeTool === "payments") {
+    return (
+      <ToolShell
+        eyebrow="Payments app"
+        title="Payment notes and record keeping"
+        description="Track how the job got paid without mixing it into the other tools."
+      >
+        <div className="tool-app-panel">
+          <PaymentNoteTool selectedJob={selectedJob} />
+        </div>
+      </ToolShell>
+    );
+  }
 
   return (
-    <section className="tools-layout" aria-label="Trade tools">
-      <section className="tools-command" aria-label="Tool command center">
+    <section className="tools-layout tools-hub-layout" aria-label="Trade tools">
+      <section className="tools-command tools-command-hub" aria-label="Tool command center">
         <div>
-          <span>Field tools</span>
+          <span>Tools hub</span>
           {hasJob ? (
             <>
-              <h2>Invoices, estimates, and quick math for the active work order.</h2>
-              <p>{selectedJob.title} in {selectedJob.location} is loaded into the tools below.</p>
+              <h2>Open each tool as its own app, all tied to the active work order.</h2>
+              <p>{selectedJob.title} in {selectedJob.location} is ready to load into any tool.</p>
             </>
           ) : (
             <>
-              <h2>Invoices, estimates, and quick math for the job site.</h2>
-              <p>Use the tools below freely. {role === "contractor" ? "Post a job" : "Apply to a work order"} to link them to a specific job.</p>
+              <h2>Open each tool as its own app, even without a live work order.</h2>
+              <p>Start in the hub, then jump into the calculator, estimate builder, invoice app, records, or payment log.</p>
             </>
           )}
         </div>
@@ -6567,34 +6711,63 @@ function ToolsView({
           {hasJob ? "Open work order" : (role === "contractor" ? "Post work" : "Find work")}
         </button>
       </section>
-      <InvoiceTool key={selectedJob.id} role={role} selectedJob={selectedJob} onOpenJob={onOpenJob} />
-      <section className="jobsite-camera-card" aria-label="Jobsite camera and records">
-        <div>
-          <span>Jobsite camera</span>
-          <h3>Photo records, timelines, and closeout reports</h3>
-          <p>
-            {hasJob
-              ? `Capture before, during, and after proof for ${selectedJob.title}. Build a work record, generate a report, and keep closeout photos tied to the job.`
-              : "Capture jobsite photos, build work records, and generate closeout reports. Link to a job to keep everything organized."}
-          </p>
-        </div>
-        <div className="jobsite-camera-actions">
-          <button type="button" className="primary-action" onClick={() => onNavigate("Records")}>
-            <Camera size={17} />
-            Open jobsite records
-          </button>
-          <button type="button" onClick={() => onNavigate("Records")}>
-            <FileDown size={16} />
-            Build report
-          </button>
-        </div>
+
+      <section className="tool-launchpad" aria-label="Tool apps">
+        <button type="button" className="tool-launch-card tool-launch-card-featured" onClick={() => openTool("calculator")}>
+          <div className="tool-launch-icon"><Calculator size={18} /></div>
+          <div>
+            <span>Calculator app</span>
+            <strong>The Heavy 16th</strong>
+            <p>Quick field math, miter cuts, and layout checks.</p>
+          </div>
+          <ChevronRight size={16} />
+        </button>
+        <button type="button" className="tool-launch-card" onClick={() => openTool("invoice")}>
+          <div className="tool-launch-icon"><ReceiptText size={18} /></div>
+          <div>
+            <span>Invoice app</span>
+            <strong>Build and send invoices</strong>
+            <p>Line items, totals, delivery, and payment method notes.</p>
+          </div>
+          <ChevronRight size={16} />
+        </button>
+        <button type="button" className="tool-launch-card" onClick={() => openTool("estimate")}>
+          <div className="tool-launch-icon"><Ruler size={18} /></div>
+          <div>
+            <span>Estimate app</span>
+            <strong>Price check and job math</strong>
+            <p>Start from the work order and dial in your bid.</p>
+          </div>
+          <ChevronRight size={16} />
+        </button>
+        <button type="button" className="tool-launch-card" onClick={() => openTool("records")}>
+          <div className="tool-launch-icon"><Camera size={18} /></div>
+          <div>
+            <span>Records app</span>
+            <strong>Jobsite camera and closeout proof</strong>
+            <p>Capture photos, build reports, and store proof by job.</p>
+          </div>
+          <ChevronRight size={16} />
+        </button>
+        <button type="button" className="tool-launch-card" onClick={() => openTool("materials")}>
+          <div className="tool-launch-icon"><LayoutGrid size={18} /></div>
+          <div>
+            <span>Materials app</span>
+            <strong>Waste and sheet planning</strong>
+            <p>Estimate takeoff, packing, and yield without distraction.</p>
+          </div>
+          <ChevronRight size={16} />
+        </button>
+        <button type="button" className="tool-launch-card" onClick={() => openTool("payments")}>
+          <div className="tool-launch-icon"><CreditCard size={18} /></div>
+          <div>
+            <span>Payments app</span>
+            <strong>Payment notes and receipts</strong>
+            <p>Keep the record of how the job got paid.</p>
+          </div>
+          <ChevronRight size={16} />
+        </button>
       </section>
-      <section className="tools-grid">
-        <ConstructionCalculator />
-        <MaterialsWasteTool selectedJob={selectedJob} />
-        <PaymentNoteTool selectedJob={selectedJob} />
-      </section>
-      <CalculatorView role={role} selectedJob={selectedJob} onOpenJob={onOpenJob} />
     </section>
   );
 }

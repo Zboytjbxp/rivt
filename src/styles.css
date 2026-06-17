@@ -5046,6 +5046,11 @@ textarea:focus-visible {
   padding-top: 0;
 }
 
+.tools-hub-layout {
+  display: grid;
+  gap: 18px;
+}
+
 .tools-command {
   position: relative;
   display: grid;
@@ -5093,6 +5098,177 @@ textarea:focus-visible {
   color: var(--muted);
   font-size: 13px;
   font-weight: 720;
+}
+
+.tools-command-hub {
+  margin-bottom: 0;
+}
+
+.tool-launchpad {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  padding: 0 20px 20px;
+}
+
+.tool-launch-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: center;
+  width: 100%;
+  min-height: 104px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent 100%),
+    var(--surface);
+  color: var(--text);
+  text-align: left;
+  box-shadow: var(--shadow-soft);
+}
+
+.tool-launch-card:hover {
+  transform: translateY(-1px);
+  border-color: rgba(255, 106, 0, 0.24);
+}
+
+.tool-launch-card strong,
+.tool-launch-card span,
+.tool-launch-card p {
+  display: block;
+}
+
+.tool-launch-card span {
+  color: var(--accent-deep);
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.tool-launch-card strong {
+  margin-top: 4px;
+  font-size: 18px;
+  line-height: 1.15;
+}
+
+.tool-launch-card p {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.tool-launch-card-featured {
+  grid-column: span 2;
+  background:
+    linear-gradient(135deg, rgba(255, 106, 0, 0.12), transparent 34%),
+    var(--surface);
+}
+
+.tool-launch-icon {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: var(--accent-soft);
+  color: var(--accent-deep);
+}
+
+.tool-launch-card svg:last-child {
+  color: var(--muted);
+}
+
+.tool-app-shell {
+  display: grid;
+  gap: 16px;
+  padding: 0 20px 20px;
+}
+
+.tool-app-header {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: center;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: var(--surface);
+  box-shadow: var(--shadow-soft);
+}
+
+.tool-back-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-soft);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.tool-app-header-copy {
+  min-width: 0;
+}
+
+.tool-app-header-copy span {
+  color: var(--accent-deep);
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.tool-app-header-copy h2 {
+  margin: 4px 0 0;
+  font-size: clamp(20px, 2vw, 28px);
+  line-height: 1.08;
+}
+
+.tool-app-header-copy p {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.tool-app-job-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  min-height: 40px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent-deep);
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.tool-app-job-chip span {
+  max-width: 22ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tool-app-panel {
+  border-radius: 18px;
+  overflow: hidden;
+}
+
+.tool-app-panel-compact {
+  padding: 0;
+}
+
+.jobsite-camera-card-app {
+  margin: 0;
 }
 
 .tools-grid {
@@ -9085,6 +9261,34 @@ textarea:focus-visible {
 }
 
 @media (max-width: 900px) {
+  .tools-command {
+    grid-template-columns: 1fr;
+  }
+
+  .tools-command::after {
+    display: none;
+  }
+
+  .tool-launchpad {
+    grid-template-columns: 1fr;
+  }
+
+  .tool-launch-card-featured {
+    grid-column: auto;
+  }
+
+  .tool-app-shell {
+    padding: 0 12px 12px;
+  }
+
+  .tool-app-header {
+    grid-template-columns: 1fr;
+  }
+
+  .tool-app-job-chip {
+    justify-self: start;
+  }
+
   .heavy-calc-shell { grid-template-columns: minmax(0, 1fr); }
   .heavy-calc-drawer { border-right: none; border-bottom: 1px solid var(--calc-line); }
   .theme-swatch-grid,
