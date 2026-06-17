@@ -334,6 +334,18 @@ async function ensureSchema() {
 
     CREATE INDEX IF NOT EXISTS auth_sessions_user_id_idx
       ON auth_sessions (user_id, updated_at DESC);
+
+      CREATE TABLE IF NOT EXISTS guest_sessions (
+        guest_id text PRIMARY KEY,
+          session_token text NOT NULL UNIQUE,
+            expires_at timestamptz NOT NULL
+            );
+
+            CREATE INDEX IF NOT EXISTS guest_sessions_session_token_idx
+            ON guest_sessions (session_token);
+
+            CREATE INDEX IF NOT EXISTS guest_sessions_expires_at_idx
+            ON guest_sessions (expires_at);
   `);
 
   await schemaReadyPromise;
@@ -934,6 +946,49 @@ app.put("/api/app-state", async (request, response, next) => {
 
     response.json({ ok: true, updatedAt: result.rows[0].updated_at });
   });
+});
+
+// POST /api/auth/guest - Create a guest session
+app.post("/api/auth/guest", async (request, response) => {
+    try {
+          // Generate guest session token
+          const guestId = `guest_${randomUUID()}`;
+          const guestToken = randomBytes(32).toString('hex');
+          const expiryTime = new Date(Date.now() + (24 * 60 * 60 * 1000)); // 24 hours
+
+          // Set session cookie
+          response.setHeader('Set-Cookie', [
+                  `${sessionCookieName}=${guestToken}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${24 * 60 * 60}`
+                ]);
+
+          // Store guest session if database is available
+          if (database) {
+                  await database.query(
+                            `INSERT INTO guest_sessions (guest_id, session_token, expires_at) 
+                                     VALUES ($1, $2, $3) 
+                                              ON CONFLICT (guest_id) DO UPDATE SET session_token = $2, expires_at = $3`,
+                            [guestId, guestToken, expiryTime]
+                          );
+          }
+
+          // Return guest user profile
+          response.json({
+                  user: {
+                            id: guestId,
+                            email: null,
+                            provider: 'guest',
+                            display_name: 'Guest User',
+                            role: 'guest',
+                            organization: '',
+                            location: '',
+                            isGuest: true,
+                            sessionExpiry: expiryTime.getTime()
+                  }
+          });
+    } catch (error) {
+          console.error('Guest login error:', error);
+          response.status(500).json({ error: 'Guest login failed' });
+    }
 });
 
 app.post("/api/events", async (request, response, next) => {
