@@ -3540,7 +3540,7 @@ textarea:focus-visible {
 .document-layout,
 .safety-layout,
 .reviews-layout {
-  grid-template-columns: minmax(260px, 0.4fr) minmax(0, 1fr);
+  grid-template-columns: minmax(300px, 0.48fr) minmax(0, 1fr);
 }
 
 .crew-card {
