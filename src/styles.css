@@ -396,6 +396,37 @@ textarea:focus-visible {
   opacity: 0.55;
 }
 
+.auth-guest-callout {
+  display: grid;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid rgba(255, 106, 0, 0.18);
+  border-radius: var(--radius);
+  background: rgba(255, 106, 0, 0.06);
+}
+
+.auth-guest-callout strong {
+  display: block;
+  color: #fff;
+  font-size: 14px;
+  line-height: 1.2;
+}
+
+.auth-guest-callout span {
+  color: #9aacb3;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.auth-guest-cta {
+  min-height: 42px;
+  border: 1px solid rgba(255, 106, 0, 0.22);
+  border-radius: var(--radius);
+  background: rgba(255, 106, 0, 0.12);
+  color: #ffd7c1;
+  font-weight: var(--weight-label);
+}
+
 .auth-status-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;

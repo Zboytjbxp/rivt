@@ -3549,6 +3549,16 @@ function AuthGate({
           })}
         </div>
 
+        <div className="auth-guest-callout">
+          <div>
+            <strong>Prefer to browse first?</strong>
+            <span>See jobs, tools, and the full workspace without creating an account yet.</span>
+          </div>
+          <button type="button" className="ghost-action auth-guest-cta" onClick={onGuestLogin}>
+            Browse as guest
+          </button>
+        </div>
+
         <div className="auth-toggle">
           <button type="button" className={mode === "login" ? "selected" : ""} onClick={() => onModeChange("login")}>Log in</button>
           <button type="button" className={mode === "signup" ? "selected" : ""} onClick={() => onModeChange("signup")}>Sign up</button>
@@ -3595,17 +3605,6 @@ function AuthGate({
           {mode === "signup" ? "Create account" : "Log in"}
         </button>
 
-        <div className="auth-guest-divider">
-          <span>or</span>
-        </div>
-
-        <button
-          type="button"
-          className="ghost-action"
-          onClick={onGuestLogin}
-        >
-          Browse as guest
-        </button>
       </section>
     </main>
   );
