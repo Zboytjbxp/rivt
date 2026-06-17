@@ -1313,9 +1313,10 @@ app.post("/api/invoices/send", async (request, response) => {
 
 if (existsSync(distDir)) {
   app.use(express.static(distDir, {
+    index: false,
     setHeaders(response, filePath) {
       if (filePath.endsWith("index.html")) {
-        response.setHeader("Cache-Control", "no-store");
+        response.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0");
       }
     },
   }));
@@ -1325,7 +1326,7 @@ if (existsSync(distDir)) {
       return;
     }
 
-    response.setHeader("Cache-Control", "no-store");
+    response.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0");
     response.sendFile(path.join(distDir, "index.html"));
   });
 }
