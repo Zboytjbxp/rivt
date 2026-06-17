@@ -8076,6 +8076,7 @@ function RecordsView({
   onExportPayments: () => void;
 }) {
   const selectedPayment = paymentRecords.find((record) => record.jobId === selectedJob.id);
+  const uploadInputRef = useRef<HTMLInputElement | null>(null);
   const [uploadResult, setUploadResult] = useState<UploadCheckResult>({
     status: "idle",
     message: "Upload completion photos, signed scopes, or payment backup to managed storage.",
@@ -8118,6 +8119,7 @@ function RecordsView({
   const readyItems = recordChecklist.filter((recordName) => uploadedRecords.has(recordName));
   const missingItems = recordChecklist.filter((recordName) => !uploadedRecords.has(recordName));
   const lastUpload = selectedJobUploads[0];
+  const previewUploads = selectedJobUploads.slice(0, 3);
   const [reportStatus, setReportStatus] = useState<"idle" | "copied" | "opened">("idle");
 
   async function refreshUploadHistory() {
@@ -8306,6 +8308,51 @@ function RecordsView({
           Capture the job, narrate progress, and turn every site visit into a clean
           report, timeline, and closeout packet.
         </p>
+        <div className="record-capture-actions">
+          <button type="button" className="primary-action" onClick={() => uploadInputRef.current?.click()}>
+            <Camera size={15} />
+            Capture photo
+          </button>
+          <button type="button" className="secondary-action" onClick={handleGenerateReport}>
+            <FileDown size={15} />
+            Build report
+          </button>
+          <button
+            type="button"
+            className="secondary-action"
+            onClick={() => {
+              onSubmitCloseoutPacket(selectedJob.id);
+              setReportStatus("opened");
+            }}
+          >
+            <Send size={15} />
+            Send closeout
+          </button>
+        </div>
+        <div className="record-preview-strip" aria-label="Recent captures">
+          {previewUploads.length === 0 ? (
+            <article className="record-preview-empty">
+              <Camera size={18} />
+              <strong>Capture the first photo or scope file to start the log.</strong>
+              <span>Before, during, and after proof stays tied to this work order.</span>
+            </article>
+          ) : previewUploads.map((upload, index) => (
+            <article key={upload.id} className={`record-preview-card ${index === 0 ? "lead" : ""}`}>
+              {upload.file?.signedUrl && upload.file.mimeType.startsWith("image/") ? (
+                <img src={upload.file.signedUrl} alt={upload.name} />
+              ) : (
+                <div className="record-preview-fallback">
+                  <FileText size={18} />
+                </div>
+              )}
+              <div>
+                <span>{index === 0 ? "Latest capture" : index === 1 ? "Active progress" : "Closeout proof"}</span>
+                <strong>{upload.name}</strong>
+                <small>{upload.timestamp ? new Date(upload.timestamp).toLocaleString() : "Stored in managed records"}</small>
+              </div>
+            </article>
+          ))}
+        </div>
         <div className="records-kpi-grid">
           {recordQuickStats.map((stat) => (
             <article key={stat.label} className={`records-kpi ${stat.tone}`}>
@@ -8507,6 +8554,7 @@ function RecordsView({
           <label className="upload-button">
             {uploadResult.status === "checking" ? "Uploading" : "Choose file"}
             <input
+              ref={uploadInputRef}
               type="file"
               accept="image/*,.pdf,.txt"
               disabled={uploadResult.status === "checking"}
