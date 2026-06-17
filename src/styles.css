@@ -983,6 +983,15 @@ textarea:focus-visible {
   color: var(--text);
 }
 
+.topbar .theme-toggle.surface-toggle {
+  width: 42px;
+  padding: 0;
+}
+
+.topbar .theme-toggle.surface-toggle span {
+  display: none;
+}
+
 .onboarding-brand-row .theme-toggle {
   width: auto;
   flex: 0 0 auto;
@@ -1079,8 +1088,9 @@ textarea:focus-visible {
   background: rgba(255, 106, 0, 0.08);
 }
 
+.sidebar-pro-card,
 .license-card {
-  display: none;
+  display: none !important;
 }
 
 .sidebar-job-card,
