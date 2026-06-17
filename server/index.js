@@ -1312,13 +1312,20 @@ app.post("/api/invoices/send", async (request, response) => {
 });
 
 if (existsSync(distDir)) {
-  app.use(express.static(distDir));
+  app.use(express.static(distDir, {
+    setHeaders(response, filePath) {
+      if (filePath.endsWith("index.html")) {
+        response.setHeader("Cache-Control", "no-store");
+      }
+    },
+  }));
   app.use((request, response, next) => {
     if (request.path.startsWith("/api/")) {
       next();
       return;
     }
 
+    response.setHeader("Cache-Control", "no-store");
     response.sendFile(path.join(distDir, "index.html"));
   });
 }
