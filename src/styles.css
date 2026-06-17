@@ -968,6 +968,15 @@ textarea:focus-visible {
   color: var(--text);
 }
 
+.theme-toggle.surface-toggle.compact {
+  width: 42px;
+  padding: 0;
+}
+
+.theme-toggle.surface-toggle.compact span {
+  display: none;
+}
+
 .theme-toggle.surface-toggle:hover,
 .theme-toggle.surface-toggle[aria-pressed="true"] {
   background: var(--surface-soft);
@@ -1075,7 +1084,6 @@ textarea:focus-visible {
 }
 
 .sidebar-job-card,
-.sidebar-pro-card,
 .sidebar-profile {
   display: grid;
   gap: 8px;
@@ -1091,7 +1099,6 @@ textarea:focus-visible {
 }
 
 .sidebar-job-card > span,
-.sidebar-pro-card span,
 .sidebar-profile small {
   color: #b8c8cf;
   font-size: 12px;
@@ -1103,7 +1110,6 @@ textarea:focus-visible {
 }
 
 .sidebar-job-card strong,
-.sidebar-pro-card strong,
 .sidebar-profile strong {
   color: #fff;
   font-size: 15px;
@@ -1149,8 +1155,7 @@ textarea:focus-visible {
   background: var(--accent);
 }
 
-.sidebar-job-card button,
-.sidebar-pro-card button {
+.sidebar-job-card button {
   min-height: 36px;
   border: 1px solid rgba(255, 255, 255, 0.3);
   border-radius: 7px;
@@ -1158,26 +1163,6 @@ textarea:focus-visible {
   color: #fff;
   font-size: 12px;
   font-weight: 800;
-}
-
-.sidebar-pro-card span {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.sidebar-pro-card strong {
-  color: #fff;
-}
-
-.sidebar-pro-card strong b {
-  color: #ff7a22;
-}
-
-.sidebar-pro-card button {
-  border: 0;
-  background: var(--accent);
-  color: #080d10;
 }
 
 .sidebar-profile {

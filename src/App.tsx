@@ -3231,6 +3231,7 @@ function App() {
             themeMode={themeMode}
             onToggleTheme={handleToggleTheme}
             variant="surface"
+            compact
           />
 
           <button
@@ -4348,14 +4349,6 @@ function Sidebar({
         )}
       </div>
 
-      <div className="sidebar-pro-card">
-        <strong>Get more with RIVT Pro</strong>
-        <span><BadgeCheck size={13} /> Real-time jobs</span>
-        <span><UserCheck size={13} /> Featured profile</span>
-        <span><Search size={13} /> Advanced search</span>
-        <button type="button" onClick={() => onNavigate("Trust & Legal")}>Go Pro</button>
-      </div>
-
       <button type="button" className="sidebar-profile" onClick={() => onNavigate("My Crew")}>
         <Avatar name={profile.displayName} size="sm" className="user-avatar" />
         <span>
@@ -4364,12 +4357,6 @@ function Sidebar({
         </span>
         <ChevronDown size={15} />
       </button>
-
-      <div className="license-card">
-        <BadgeCheck size={18} />
-        <strong>{brandConfig.legal.trustCardTitle}</strong>
-        <span>{brandConfig.legal.idGateLabel}</span>
-      </div>
     </aside>
   );
 }
@@ -4411,10 +4398,12 @@ function ThemeToggle({
   themeMode,
   onToggleTheme,
   variant = "nav",
+  compact = false,
 }: {
   themeMode: ThemeMode;
   onToggleTheme: () => void;
   variant?: "nav" | "surface";
+  compact?: boolean;
 }) {
   const isDark = themeMode === "dark";
   const Icon = isDark ? Sun : Moon;
@@ -4423,14 +4412,19 @@ function ThemeToggle({
   return (
     <button
       type="button"
-      className={variant === "surface" ? "theme-toggle surface-toggle" : "theme-toggle"}
+      className={[
+        variant === "surface" ? "theme-toggle surface-toggle" : "theme-toggle",
+        compact ? "compact" : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
       aria-label={`Switch to ${label.toLowerCase()}`}
       aria-pressed={isDark}
       title={`Switch to ${label}`}
       onClick={onToggleTheme}
     >
       <Icon size={16} />
-      <span>{label}</span>
+      {!compact && <span>{label}</span>}
     </button>
   );
 }
