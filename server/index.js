@@ -334,6 +334,18 @@ async function ensureSchema() {
 
     CREATE INDEX IF NOT EXISTS auth_sessions_user_id_idx
       ON auth_sessions (user_id, updated_at DESC);
+
+      CREATE TABLE IF NOT EXISTS guest_sessions (
+        guest_id text PRIMARY KEY,
+          session_token text NOT NULL UNIQUE,
+            expires_at timestamptz NOT NULL
+            );
+
+            CREATE INDEX IF NOT EXISTS guest_sessions_session_token_idx
+            ON guest_sessions (session_token);
+
+            CREATE INDEX IF NOT EXISTS guest_sessions_expires_at_idx
+            ON guest_sessions (expires_at);
   `);
 
   await schemaReadyPromise;
