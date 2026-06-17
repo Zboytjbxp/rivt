@@ -6492,35 +6492,28 @@ function ToolsView({
   onOpenJob: (id: number) => void;
   onNavigate: (view: NavLabel) => void;
 }) {
-  if (selectedJob.id === 0) {
-    return (
-      <section className="tools-layout" aria-label="Trade tools">
-        <section className="tools-command" aria-label="Tool command center">
-          <div>
-            <span>Field tools</span>
-            <h2>Invoices, estimates, and quick math for your active work order.</h2>
-            <p>No active work order loaded. {role === "contractor" ? "Post a job to activate field tools." : "Apply to work to activate field tools."}</p>
-          </div>
-          <button type="button" className="primary-action" onClick={() => onNavigate("Marketplace")}>
-            <BriefcaseBusiness size={17} />
-            {role === "contractor" ? "Post work" : "Find work"}
-          </button>
-        </section>
-      </section>
-    );
-  }
+  const hasJob = selectedJob.id !== 0;
 
   return (
     <section className="tools-layout" aria-label="Trade tools">
       <section className="tools-command" aria-label="Tool command center">
         <div>
           <span>Field tools</span>
-          <h2>Invoices, estimates, and quick math for the active work order.</h2>
-          <p>{selectedJob.title} in {selectedJob.location} is loaded into the tools below.</p>
+          {hasJob ? (
+            <>
+              <h2>Invoices, estimates, and quick math for the active work order.</h2>
+              <p>{selectedJob.title} in {selectedJob.location} is loaded into the tools below.</p>
+            </>
+          ) : (
+            <>
+              <h2>Invoices, estimates, and quick math for the job site.</h2>
+              <p>Use the tools below freely. {role === "contractor" ? "Post a job" : "Apply to a work order"} to link them to a specific job.</p>
+            </>
+          )}
         </div>
-        <button type="button" className="primary-action" onClick={() => onOpenJob(selectedJob.id)}>
+        <button type="button" className="primary-action" onClick={() => hasJob ? onOpenJob(selectedJob.id) : onNavigate("Marketplace")}>
           <BriefcaseBusiness size={17} />
-          Open work order
+          {hasJob ? "Open work order" : (role === "contractor" ? "Post work" : "Find work")}
         </button>
       </section>
       <InvoiceTool key={selectedJob.id} role={role} selectedJob={selectedJob} onOpenJob={onOpenJob} />
@@ -6529,8 +6522,9 @@ function ToolsView({
           <span>Jobsite camera</span>
           <h3>Photo records, timelines, and closeout reports</h3>
           <p>
-            Capture before, during, and after proof for {selectedJob.title}. Build a
-            work record, generate a report, and keep closeout photos tied to the job.
+            {hasJob
+              ? `Capture before, during, and after proof for ${selectedJob.title}. Build a work record, generate a report, and keep closeout photos tied to the job.`
+              : "Capture jobsite photos, build work records, and generate closeout reports. Link to a job to keep everything organized."}
           </p>
         </div>
         <div className="jobsite-camera-actions">

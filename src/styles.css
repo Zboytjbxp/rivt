@@ -297,7 +297,7 @@ textarea:focus-visible {
 }
 
 .auth-card > .rivt-lockup .rivt-copy {
-  width: 100%;
+  display: none;
 }
 
 .auth-brand {
