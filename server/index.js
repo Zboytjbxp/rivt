@@ -936,6 +936,49 @@ app.put("/api/app-state", async (request, response, next) => {
   });
 });
 
+// POST /api/auth/guest - Create a guest session
+app.post("/api/auth/guest", async (request, response) => {
+    try {
+          // Generate guest session token
+          const guestId = `guest_${randomUUID()}`;
+          const guestToken = randomBytes(32).toString('hex');
+          const expiryTime = new Date(Date.now() + (24 * 60 * 60 * 1000)); // 24 hours
+
+          // Set session cookie
+          response.setHeader('Set-Cookie', [
+                  `${sessionCookieName}=${guestToken}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${24 * 60 * 60}`
+                ]);
+
+          // Store guest session if database is available
+          if (database) {
+                  await database.query(
+                            `INSERT INTO guest_sessions (guest_id, session_token, expires_at) 
+                                     VALUES ($1, $2, $3) 
+                                              ON CONFLICT (guest_id) DO UPDATE SET session_token = $2, expires_at = $3`,
+                            [guestId, guestToken, expiryTime]
+                          );
+          }
+
+          // Return guest user profile
+          response.json({
+                  user: {
+                            id: guestId,
+                            email: null,
+                            provider: 'guest',
+                            display_name: 'Guest User',
+                            role: 'guest',
+                            organization: '',
+                            location: '',
+                            isGuest: true,
+                            sessionExpiry: expiryTime.getTime()
+                  }
+          });
+    } catch (error) {
+          console.error('Guest login error:', error);
+          response.status(500).json({ error: 'Guest login failed' });
+    }
+});
+
 app.post("/api/events", async (request, response, next) => {
   await runWithDatabase(response, next, async () => {
     const sessionId = getSessionId(request, response);
