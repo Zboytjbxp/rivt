@@ -1795,7 +1795,7 @@ textarea:focus-visible {
   align-items: center;
   justify-content: space-between;
   gap: 18px;
-  padding: 24px 32px 10px;
+  padding: 18px 32px 8px;
   border-bottom: 0;
   background: transparent;
 }
@@ -1852,7 +1852,7 @@ textarea:focus-visible {
   align-items: center;
   justify-content: space-between;
   gap: 18px;
-  padding: 14px 32px 0;
+  padding: 10px 32px 0;
   background: transparent;
 }
 
@@ -2154,7 +2154,7 @@ textarea:focus-visible {
 .home-notification-strip {
   display: grid;
   gap: 12px;
-  padding: 0 32px 6px;
+  padding: 0 32px 4px;
 }
 
 .home-notification-heading {
@@ -2247,7 +2247,7 @@ textarea:focus-visible {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
-  padding: 0 32px;
+  padding: 0 32px 2px;
 }
 
 .home-command-tile {
