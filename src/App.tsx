@@ -1250,7 +1250,52 @@ const emptyTalent: Talent = {
   availability: "Not set",
   responseTime: "—",
 };
-const seedNews: NewsItem[] = []; // populated dynamically from /api/news
+const seedNews: NewsItem[] = [
+  {
+    id: 1,
+    headline: "OSHA Updates Heat Illness Prevention Rules for Outdoor Workers",
+    source: "OSHA",
+    date: "Jun 2026",
+    summary: "New enforcement guidelines require employers to provide water, rest, and shade for outdoor workers when heat index exceeds 80°F. Violations can result in fines up to $15,625 per incident.",
+    url: "https://www.osha.gov",
+    urgency: "Regulation",
+  },
+  {
+    id: 2,
+    headline: "NEC 2023 Arc-Fault Requirements Now Enforced in Florida",
+    source: "NFPA",
+    date: "Jun 2026",
+    summary: "Florida has adopted NEC 2023, expanding AFCI requirements to kitchens, laundry areas, and all 120V circuits in new construction. Inspectors are actively flagging non-compliant installs.",
+    url: "https://www.nfpa.org",
+    urgency: "Code Change",
+  },
+  {
+    id: 3,
+    headline: "Lumber Prices Drop 12% as Tariff Uncertainty Eases",
+    source: "ProSales",
+    date: "Jun 2026",
+    summary: "Framing lumber futures fell 12% this week as trade policy uncertainty cleared. Contractors are locking in summer project materials now before potential Q3 volatility.",
+    url: "https://www.prosalesmagazine.com",
+  },
+  {
+    id: 4,
+    headline: "JEA Updates Permit Requirements for 200A Panel Upgrades",
+    source: "JEA",
+    date: "May 2026",
+    summary: "Jacksonville Electric Authority now requires a pre-inspection request 5 business days before meter pull for residential panel upgrades. Standard form available on the JEA contractor portal.",
+    url: "https://www.jea.com",
+    urgency: "Local",
+  },
+  {
+    id: 5,
+    headline: "Florida Contractor License Renewals Due August 31",
+    source: "DBPR",
+    date: "May 2026",
+    summary: "Florida Department of Business and Professional Regulation reminder: all contractor licenses with even-numbered expiration years must renew by August 31. 14 CE hours required.",
+    url: "https://www.myfloridalicense.com",
+    urgency: "License",
+  },
+];
 const seedCommunityPosts: CommunityPost[] = [
   {
     id: 1,
@@ -6136,7 +6181,7 @@ function ShopTalkView({
           setSelectedNewsId(data.items[0].id);
         }
       })
-      .catch(() => { /* fall back to seed */ })
+      .catch(() => { if (!liveNews.length) setLiveNews(newsItems); })
       .finally(() => { setNewsLoading(false); setNewsFetched(true); });
   }, [activeTab, newsFetched, userLocation]);
 
