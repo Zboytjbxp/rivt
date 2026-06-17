@@ -3233,21 +3233,6 @@ function App() {
             />
           </div>
 
-          <ThemeToggle
-            themeMode={themeMode}
-            onToggleTheme={handleToggleTheme}
-            variant="surface"
-            compact
-          />
-
-          <button
-            type="button"
-            className="icon-button"
-            aria-label="Messages"
-            onClick={() => handleNavigate("Messages")}
-          >
-            <MessageSquareText size={18} />
-          </button>
           <button
             type="button"
             className={unreadActivities ? "icon-button alert-button" : "icon-button"}
@@ -6174,6 +6159,7 @@ function ShopTalkView({
   const [newsFetched, setNewsFetched] = useState(false);
   const displayNews = liveNews.length ? liveNews : newsItems;
   const [selectedNewsId, setSelectedNewsId] = useState(displayNews[0]?.id ?? 0);
+  const [mobileDetail, setMobileDetail] = useState(false);
   const tradeFilters = ["All trades", "General", ...specialtyOptions];
   const allReportReasons: CommunityReport["reason"][] = ["Misinformation", "Safety concern", "Spam", "Harassment"];
 
@@ -6240,7 +6226,7 @@ function ShopTalkView({
           }}
         />
       )}
-      <section className="shop-talk-layout" aria-label="Shop Talk community">
+      <section className={mobileDetail ? "shop-talk-layout mobile-detail-open" : "shop-talk-layout"} aria-label="Shop Talk community">
         <aside className="shop-talk-sidebar">
           {/* Tab switcher */}
           <div className="shop-talk-tabs">
@@ -6331,7 +6317,7 @@ function ShopTalkView({
                     type="button"
                     key={post.id}
                     className={post.id === (selectedPost?.id ?? 0) ? "shop-post-card selected" : "shop-post-card"}
-                    onClick={() => setSelectedPostId(post.id)}
+                    onClick={() => { setSelectedPostId(post.id); setMobileDetail(true); }}
                   >
                     <div className="shop-post-card-meta">
                       {post.flair && (
@@ -6377,11 +6363,16 @@ function ShopTalkView({
                     key={item.id}
                     type="button"
                     className={item.id === selectedNewsId ? "shop-news-card selected" : "shop-news-card"}
-                    onClick={() => setSelectedNewsId(item.id)}
+                    onClick={() => { setSelectedNewsId(item.id); setMobileDetail(true); }}
                   >
-                    {item.urgency && <span className="news-urgency-pill">{item.urgency}</span>}
-                    <strong>{item.headline}</strong>
-                    <small>{item.source} · {item.date}</small>
+                    <div className="news-card-thumb" data-urgency={item.urgency ?? "default"}>
+                      <span>{item.source}</span>
+                    </div>
+                    <div className="news-card-body">
+                      {item.urgency && <span className="news-urgency-pill">{item.urgency}</span>}
+                      <strong>{item.headline}</strong>
+                      <small>{item.date}</small>
+                    </div>
                   </button>
                 ))}
               </div>
@@ -6393,6 +6384,9 @@ function ShopTalkView({
         {activeTab === "talk" ? (
           selectedPost ? (
             <article className="shop-talk-detail">
+              <button type="button" className="mobile-back-btn" onClick={() => setMobileDetail(false)}>
+                ← Back
+              </button>
               <div className="shop-question-header">
                 <div>
                   <div className="shop-question-meta">
@@ -6483,6 +6477,9 @@ function ShopTalkView({
             </article>
           ) : (
             <article className="shop-talk-detail">
+              <button type="button" className="mobile-back-btn" onClick={() => setMobileDetail(false)}>
+                ← Back
+              </button>
               <EmptyState
                 icon={MessageCircle}
                 title="No Shop Talk posts yet"
@@ -6494,16 +6491,22 @@ function ShopTalkView({
           )
         ) : (
           <article className="shop-talk-detail">
+            <button type="button" className="mobile-back-btn" onClick={() => setMobileDetail(false)}>
+              ← Back
+            </button>
             {selectedNews ? (
               <div className="shop-news-detail">
-                <div className="shop-news-detail-header">
+                <div className="news-detail-hero" data-urgency={selectedNews.urgency ?? "default"}>
+                  <span className="news-detail-source">{selectedNews.source}</span>
                   {selectedNews.urgency && <span className="news-urgency-pill">{selectedNews.urgency}</span>}
+                </div>
+                <div className="shop-news-detail-header">
                   <h2>{selectedNews.headline}</h2>
                   <small>{selectedNews.source} · {selectedNews.date}</small>
                 </div>
                 <p className="shop-news-detail-body">{selectedNews.summary}</p>
                 {selectedNews.url && selectedNews.url !== "#" && (
-                  <a href={selectedNews.url} target="_blank" rel="noreferrer" className="secondary-action">
+                  <a href={selectedNews.url} target="_blank" rel="noreferrer" className="primary-action news-read-btn">
                     Read full article →
                   </a>
                 )}
