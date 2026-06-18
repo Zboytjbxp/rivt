@@ -709,7 +709,7 @@ function buildJobsiteReportHtml(
       <meta name="viewport" content="width=device-width, initial-scale=1" />
       <title>RIVT Jobsite Report</title>
       <style>
-        body { margin: 0; font-family: Inter, Arial, sans-serif; background: #0b0f12; color: #e9f0f3; }
+        body { margin: 0; font-family: "Segoe UI Variable Display", "Segoe UI Variable", "Segoe UI", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif; background: #0b0f12; color: #e9f0f3; }
         .sheet { max-width: 920px; margin: 0 auto; padding: 32px; }
         .hero { display: grid; gap: 8px; padding: 24px; border: 1px solid rgba(255,255,255,0.08); border-radius: 18px; background: linear-gradient(180deg, #12181d, #090c0f); }
         .hero h1 { margin: 0; font-size: 34px; }

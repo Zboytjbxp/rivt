@@ -37,6 +37,10 @@
   --shadow-soft: 0 10px 22px rgba(13, 17, 20, 0.045);
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -47,9 +51,19 @@ body {
   min-height: 100vh;
   overflow-x: hidden;
   background:
-    radial-gradient(circle at 18% 0%, rgba(255, 106, 0, 0.08), transparent 22%),
-    radial-gradient(circle at 100% 0%, rgba(8, 13, 16, 0.04), transparent 18%),
+    radial-gradient(circle at 18% 0%, rgba(255, 106, 0, 0.075), transparent 22%),
+    radial-gradient(circle at 100% 0%, rgba(8, 13, 16, 0.035), transparent 18%),
     var(--bg);
+  color: var(--text);
+}
+
+body::selection {
+  background: rgba(255, 106, 0, 0.24);
+  color: var(--text);
+}
+
+::selection {
+  background: rgba(255, 106, 0, 0.24);
   color: var(--text);
 }
 
