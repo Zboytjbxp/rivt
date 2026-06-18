@@ -1,0 +1,50 @@
+.rivt-v2 {
+  --v2-bg: #f4f6f7;
+  --v2-surface: #ffffff;
+  --v2-surface-muted: #eef1f2;
+  --v2-surface-strong: #111719;
+  --v2-text: #121719;
+  --v2-text-muted: #647176;
+  --v2-text-subtle: #879197;
+  --v2-border: #dce2e4;
+  --v2-border-strong: #c8d0d3;
+  --v2-accent: #f56718;
+  --v2-accent-hover: #db540d;
+  --v2-accent-soft: #fff0e8;
+  --v2-success: #2f7a4f;
+  --v2-success-soft: #e7f4eb;
+  --v2-warning: #9a5b0a;
+  --v2-warning-soft: #fff2d9;
+  --v2-danger: #b73d3d;
+  --v2-danger-soft: #faeaea;
+  --v2-shadow-sm: 0 1px 2px rgba(16, 23, 25, 0.06);
+  --v2-shadow-md: 0 14px 34px rgba(16, 23, 25, 0.09);
+  --v2-radius-sm: 6px;
+  --v2-radius-md: 8px;
+  --v2-radius-lg: 12px;
+  --v2-sidebar-width: 236px;
+  --v2-topbar-height: 64px;
+  color: var(--v2-text);
+  font-family: "Manrope", "Segoe UI", sans-serif;
+}
+
+[data-theme="dark"] .rivt-v2 {
+  --v2-bg: #0c1113;
+  --v2-surface: #141a1d;
+  --v2-surface-muted: #1b2326;
+  --v2-surface-strong: #f2f5f6;
+  --v2-text: #f2f5f6;
+  --v2-text-muted: #a5b0b5;
+  --v2-text-subtle: #77858b;
+  --v2-border: #283136;
+  --v2-border-strong: #364147;
+  --v2-accent-soft: #392015;
+  --v2-success: #66b986;
+  --v2-success-soft: #173226;
+  --v2-warning: #e0a44f;
+  --v2-warning-soft: #372a17;
+  --v2-danger: #e37878;
+  --v2-danger-soft: #3b2020;
+  --v2-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.22);
+  --v2-shadow-md: 0 18px 40px rgba(0, 0, 0, 0.28);
+}

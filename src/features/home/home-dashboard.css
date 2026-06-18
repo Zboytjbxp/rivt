@@ -1,0 +1,350 @@
+.v2-home-page {
+  display: grid;
+  gap: 24px;
+}
+
+.v2-home-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.v2-home-header h1 {
+  margin: 0;
+  font-size: clamp(28px, 3vw, 38px);
+  line-height: 1.08;
+}
+
+.v2-home-header p {
+  margin: 6px 0 0;
+  color: var(--v2-text-muted);
+  font-size: 13px;
+}
+
+.v2-home-focus-grid,
+.v2-home-secondary-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(320px, 0.6fr);
+  gap: 18px;
+}
+
+.v2-today-panel,
+.v2-attention-panel,
+.v2-next-work,
+.v2-network-pulse {
+  border: 1px solid var(--v2-border);
+  border-radius: var(--v2-radius-lg);
+  background: var(--v2-surface);
+  box-shadow: var(--v2-shadow-sm);
+}
+
+.v2-today-panel {
+  overflow: hidden;
+}
+
+.v2-today-panel > header,
+.v2-attention-panel > header,
+.v2-next-work > header,
+.v2-network-pulse > header {
+  display: flex;
+  min-height: 48px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 18px;
+  border-bottom: 1px solid var(--v2-border);
+}
+
+.v2-today-panel > header span,
+.v2-attention-panel > header span {
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.v2-today-panel > header small {
+  color: var(--v2-success);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.v2-today-job {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 24px 24px 16px;
+}
+
+.v2-today-job > div > span {
+  color: var(--v2-accent);
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.v2-today-job h2 {
+  margin: 5px 0 8px;
+  font-size: clamp(22px, 2.5vw, 32px);
+  line-height: 1.1;
+}
+
+.v2-today-job p {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin: 0;
+  color: var(--v2-text-muted);
+  font-size: 12px;
+}
+
+.v2-today-job > strong {
+  font-size: 22px;
+  font-variant-numeric: tabular-nums;
+}
+
+.v2-today-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  padding: 0 24px 22px;
+  color: var(--v2-text-muted);
+  font-size: 12px;
+}
+
+.v2-today-facts span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.v2-today-actions {
+  display: flex;
+  gap: 8px;
+  padding: 14px 18px;
+  border-top: 1px solid var(--v2-border);
+  background: var(--v2-surface-muted);
+}
+
+.v2-today-actions button {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 0 14px;
+  border: 1px solid var(--v2-border);
+  border-radius: var(--v2-radius-md);
+  background: var(--v2-surface);
+  color: var(--v2-text);
+  font-weight: 700;
+}
+
+.v2-today-actions .v2-primary-button {
+  border-color: var(--v2-accent);
+  background: var(--v2-accent);
+  color: #ffffff;
+}
+
+.v2-attention-panel {
+  overflow: hidden;
+}
+
+.v2-attention-panel > header button,
+.v2-next-work > header button,
+.v2-network-pulse > header button {
+  border: 0;
+  background: transparent;
+  color: var(--v2-text-muted);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.v2-attention-panel > button,
+.v2-network-pulse > div > button {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  width: 100%;
+  gap: 10px;
+  align-items: center;
+  min-height: 76px;
+  padding: 12px 16px;
+  border: 0;
+  border-bottom: 1px solid var(--v2-border);
+  background: transparent;
+  color: var(--v2-text);
+  text-align: left;
+}
+
+.v2-attention-panel > button:hover,
+.v2-network-pulse > div > button:hover,
+.v2-next-work-list > button:hover {
+  background: var(--v2-surface-muted);
+}
+
+.v2-attention-icon {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  border-radius: var(--v2-radius-sm);
+  background: var(--v2-accent-soft);
+  color: var(--v2-accent);
+}
+
+.v2-attention-panel > button > span:nth-child(2),
+.v2-network-pulse > div > button > span,
+.v2-next-work-list > button > span {
+  display: grid;
+  gap: 3px;
+}
+
+.v2-attention-panel small,
+.v2-network-pulse small,
+.v2-next-work-list small {
+  color: var(--v2-text-muted);
+  font-size: 11px;
+}
+
+.v2-home-secondary-grid {
+  grid-template-columns: minmax(0, 1.25fr) minmax(320px, 0.75fr);
+}
+
+.v2-next-work > header,
+.v2-network-pulse > header {
+  min-height: 64px;
+}
+
+.v2-next-work h2,
+.v2-network-pulse h2 {
+  margin: 0;
+  font-size: 15px;
+}
+
+.v2-next-work header p,
+.v2-network-pulse header p {
+  margin: 3px 0 0;
+  color: var(--v2-text-muted);
+  font-size: 11px;
+}
+
+.v2-next-work-list > button {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  width: 100%;
+  gap: 16px;
+  align-items: center;
+  min-height: 70px;
+  padding: 12px 18px;
+  border: 0;
+  border-bottom: 1px solid var(--v2-border);
+  background: transparent;
+  color: var(--v2-text);
+  text-align: left;
+}
+
+.v2-next-work-list > button > span:nth-child(2) {
+  justify-items: end;
+}
+
+.v2-network-pulse > div > button {
+  min-height: 70px;
+}
+
+.v2-network-pulse > div > button > svg:first-child {
+  color: var(--v2-accent);
+}
+
+.v2-home-empty {
+  display: grid;
+  justify-items: start;
+  gap: 9px;
+  padding: 34px 24px;
+  color: var(--v2-text-muted);
+}
+
+.v2-home-empty h2,
+.v2-home-empty p {
+  margin: 0;
+}
+
+@media (max-width: 1040px) {
+  .v2-home-focus-grid,
+  .v2-home-secondary-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 860px) {
+  .v2-home-page {
+    gap: 16px;
+  }
+
+  .v2-home-header h1 {
+    font-size: 26px;
+  }
+
+  .v2-home-header p {
+    margin-top: 4px;
+  }
+
+  .v2-today-job {
+    padding: 18px 16px 12px;
+  }
+
+  .v2-today-job h2 {
+    font-size: 22px;
+  }
+
+  .v2-today-facts {
+    gap: 10px 16px;
+    padding: 0 16px 16px;
+  }
+
+  .v2-today-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    padding: 10px;
+  }
+
+  .v2-today-actions .v2-primary-button {
+    grid-column: 1 / -1;
+  }
+
+  .v2-attention-panel,
+  .v2-network-pulse {
+    display: none;
+  }
+
+  .v2-home-secondary-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .v2-next-work-list > button:nth-child(n + 2) {
+    display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .v2-home-header .v2-primary-button {
+    width: 44px;
+    padding: 0;
+    overflow: hidden;
+    color: transparent;
+    font-size: 0;
+  }
+
+  .v2-home-header .v2-primary-button svg {
+    color: #ffffff;
+  }
+
+  .v2-today-job {
+    display: grid;
+  }
+
+  .v2-today-job > strong {
+    font-size: 18px;
+  }
+}

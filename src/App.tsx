@@ -70,6 +70,10 @@ import {
 } from "./data";
 import { brandConfig, type ThemeMode, type ThemePalette, type TrialPlan } from "./brandConfig";
 import type { ApplicationRecord, Difficulty, Job, Role, Talent, Trade, WorkType } from "./types";
+import { AppShell } from "./app-shell/AppShell";
+import type { PrimaryDestination } from "./app-shell/types";
+import { WorkWorkspace } from "./features/work/WorkWorkspace";
+import { HomeDashboard } from "./features/home/HomeDashboard";
 
 type TradeFilter = (typeof tradeOptions)[number];
 type DifficultyFilter = (typeof difficultyOptions)[number];
@@ -1829,7 +1833,7 @@ const guestDemoJobs: Job[] = [
 function App() {
   const initialJobs = useMemo(() => normalizeJobs(seedJobs), []);
   const initialSelectedId = initialJobs[0]?.id ?? 0;
-  const [activeView, setActiveView] = useState<NavLabel>("Home");
+  const [activeView, setActiveView] = useState<NavLabel>(() => viewFromPath(window.location.pathname));
   const [role, setRole] = useState<Role>("contractor");
   const [onboardingComplete, setOnboardingComplete] = useState(true);
   const [accountProfile, setAccountProfile] = useState<AccountProfile>({
@@ -1942,6 +1946,18 @@ function App() {
       // no-op
     }
   }, [authMode]);
+
+  useEffect(() => {
+    function handleHistoryNavigation() {
+      setActiveView(viewFromPath(window.location.pathname));
+      setActivityOpen(false);
+      setAccountOpen(false);
+      setPostOpen(false);
+    }
+
+    window.addEventListener("popstate", handleHistoryNavigation);
+    return () => window.removeEventListener("popstate", handleHistoryNavigation);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -2394,12 +2410,17 @@ function App() {
       setAccountOpen(false);
       setActivityOpen(false);
       setActiveView("Home");
+      window.history.replaceState({}, "", "/");
       saveLocalAuthUser(null);
     }
   }
 
   function handleNavigate(view: NavLabel) {
     setActiveView(view);
+    const nextPath = viewRoutes[view];
+    if (window.location.pathname !== nextPath) {
+      window.history.pushState({ view }, "", nextPath);
+    }
     setActivityOpen(false);
     setAccountOpen(false);
     setPostOpen(false);
@@ -2993,9 +3014,7 @@ function App() {
 
   function openJob(jobId: number) {
     setSelectedId(jobId);
-    setActiveView("Marketplace");
-    setActivityOpen(false);
-    setAccountOpen(false);
+    handleNavigate("Marketplace");
   }
 
   function handleSendMessage() {
@@ -3212,102 +3231,40 @@ function App() {
   }
 
   return (
-    <div className="app-shell">
-      <Sidebar
+    <>
+      <AppShell
+        activeDestination={primaryDestinationForView(activeView)}
         role={role}
-        activeView={activeView}
-        selectedJob={selectedJob}
-        hasJobs={jobs.length > 0}
-        profile={accountProfile}
-        onNavigate={handleNavigate}
-      />
-      <main className="workspace">
-        <header className="topbar">
-          <div className="searchbox">
-            <Search size={18} aria-hidden="true" />
-            <input
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search jobs, crews, trades, or tools"
-              aria-label="Search jobs, crews, trades, or tools"
-            />
-          </div>
-
-          <ThemeToggle
-            themeMode={themeMode}
-            onToggleTheme={handleToggleTheme}
-            variant="surface"
-            compact
-          />
-
-          <button
-            type="button"
-            className="icon-button"
-            aria-label="Messages"
-            onClick={() => handleNavigate("Messages")}
-          >
-            <MessageSquareText size={18} />
-          </button>
-          <button
-            type="button"
-            className={unreadActivities ? "icon-button alert-button" : "icon-button"}
-            aria-label="Notifications"
-            onClick={() => { setAccountOpen(false); setPostOpen(false); setActivityOpen(true); }}
-          >
-            <Bell size={18} />
-            {unreadActivities > 0 && <span>{unreadActivities}</span>}
-          </button>
-          <button
-            type="button"
-            className="user-menu"
-            aria-label={`Signed in ${role === "contractor" ? "contractor" : "tradesperson"}`}
-            onClick={() => { setActivityOpen(false); setPostOpen(false); setAccountOpen(true); }}
-          >
-            <Avatar name={accountProfile.displayName} size="sm" className="user-avatar" />
-            <span className="user-menu-copy">
-              <strong>{accountProfile.displayName}</strong>
-              <span>{profileSubtitle || accountProfile.location}</span>
-            </span>
-            <ChevronDown size={16} />
-          </button>
-        </header>
-
-        <MobileNavStrip
-          role={role}
-          activeView={activeView}
-          onNavigate={handleNavigate}
-        />
-
-        {isGuest && (
+        profile={{
+          name: accountProfile.displayName || (isGuest ? "Guest" : "RIVT member"),
+          subtitle: profileSubtitle || accountProfile.location,
+          location: accountProfile.location,
+        }}
+        activeJob={selectedJob.id ? {
+          title: selectedJob.title,
+          trade: selectedJob.trade,
+          location: selectedJob.location,
+          status: selectedJob.status,
+        } : null}
+        notificationCount={unreadActivities}
+        isGuest={isGuest}
+        guestBanner={
           <GuestBanner
             onSignUp={handleSignUpFromGuest}
             onExit={handleExitGuest}
           />
-        )}
+        }
+        onNavigate={(destination) => handleNavigate(defaultViewForDestination(destination))}
+        onOpenAccount={() => { setActivityOpen(false); setPostOpen(false); setAccountOpen(true); }}
+        onOpenNotifications={() => { setAccountOpen(false); setPostOpen(false); setActivityOpen(true); }}
+        onOpenActiveJob={() => handleNavigate("Marketplace")}
+        onSearch={(nextQuery) => {
+          setQuery(nextQuery);
+          handleNavigate("Marketplace");
+        }}
+      >
 
-        {activeView === "Home" ? (
-          <section className="page-intro home-intro" aria-label="Home summary">
-            <div>
-              <h1>{accountProfile.displayName ? `Good morning, ${accountProfile.displayName.split(" ")[0]}` : "Good morning"}</h1>
-              <p>Here&apos;s what&apos;s happening in {accountProfile.location}.</p>
-            </div>
-            <div className="page-intro-right">
-              {selectedJob.id === 0 ? (
-                <>
-                  <span className="page-intro-chip">{role === "contractor" ? "No active job" : "No active work"}</span>
-                  <strong>{role === "contractor" ? "Post your first job" : "Find work nearby"}</strong>
-                  <small>Tap Work to get started</small>
-                </>
-              ) : (
-                <>
-                  <span className="page-intro-chip">{selectedJob.trade}</span>
-                  <strong>{selectedJob.title}</strong>
-                  <small>{selectedJob.location} · {selectedJob.status}</small>
-                </>
-              )}
-            </div>
-          </section>
-        ) : (
+        {activeView === "Home" || activeView === "Marketplace" ? null : (
           <header className="page-heading" aria-label={`${page.title} heading`}>
             <div>
               <h1>{page.title}</h1>
@@ -3316,42 +3273,51 @@ function App() {
           </header>
         )}
 
-        {activeView === "Marketplace" ? (
-          <MarketplaceView
+        {activeView === "Home" ? (
+          <HomeDashboard
+            role={role}
+            name={accountProfile.displayName || (isGuest ? "Guest" : "RIVT member")}
+            location={accountProfile.location}
+            activeJob={selectedJob.id ? selectedJob : null}
+            upcomingJobs={jobs.filter((job) => job.id !== selectedJob.id)}
+            applicationCount={Math.max(applications.length, selectedJob.applicants || 0)}
+            unreadCount={unreadActivities}
+            pendingPaymentCount={paymentRecords.filter((record) => record.status === "Payment pending").length}
+            communityCount={communityPosts.length}
+            shoutOutCount={shoutOuts.length}
+            onPostJob={() => isGuest ? setGuestPromptOpen(true) : setPostOpen(true)}
+            onOpenJob={openJob}
+            onNavigate={(destination) => handleNavigate(defaultViewForDestination(destination))}
+          />
+        ) : activeView === "Marketplace" ? (
+          <WorkWorkspace
             role={role}
             jobs={filteredJobs}
             selectedJob={selectedJob}
-            matchingTalent={matchingTalent}
-            applications={applications}
+            recommendedTalent={matchingTalent[0]}
             applicationState={applicationState}
             savedSearch={savedSearch}
+            autoMatchEnabled={autoMatchEnabled}
             radius={radius}
             trade={trade}
-            setTrade={setTrade}
             difficulty={difficulty}
-            setDifficulty={setDifficulty}
             workType={workType}
-            setWorkType={setWorkType}
-            locationQuery={locationQuery}
-            setLocationQuery={setLocationQuery}
             verifiedOnly={verifiedOnly}
-            setVerifiedOnly={setVerifiedOnly}
-            setRadius={setRadius}
-            setSelectedId={setSelectedId}
-            onToggleSavedSearch={handleToggleSavedSearch}
-            scheduleHeld={scheduleHeld}
-            dispatchNote={dispatchNote}
-            closeout={closeout}
-            trustReady={trustReady}
-            closeouts={closeouts}
-            autoMatchEnabled={autoMatchEnabled}
-            onToggleAutoMatch={handleToggleAutoMatch}
-            onReviewConsent={handleReviewConsent}
-            onApply={handleApply}
-            onInvite={handleInvite}
-            onScheduleHold={handleScheduleHold}
-            onSubmitCloseoutPacket={handleSubmitCloseoutPacket}
+            onTradeChange={setTrade}
+            onDifficultyChange={setDifficulty}
+            onWorkTypeChange={setWorkType}
+            onRadiusChange={setRadius}
+            onVerifiedChange={setVerifiedOnly}
+            onSelectJob={setSelectedId}
             onPostJob={() => isGuest ? setGuestPromptOpen(true) : setPostOpen(true)}
+            onApply={() => isGuest ? setGuestPromptOpen(true) : handleApply()}
+            onInvite={() => isGuest ? setGuestPromptOpen(true) : handleInvite()}
+            onOpenApplications={() => handleNavigate("Applications")}
+            onOpenMyJobs={() => handleNavigate("My Jobs")}
+            onOpenMessages={() => handleNavigate("Messages")}
+            onOpenRecords={() => handleNavigate("Records")}
+            onToggleSavedSearch={handleToggleSavedSearch}
+            onToggleAutoMatch={handleToggleAutoMatch}
           />
         ) : (
           <OperationsWorkspace
@@ -3415,7 +3381,7 @@ function App() {
             onSafetyQuizComplete={(quizId, score) => isGuest ? setGuestPromptOpen(true) : handleSafetyQuizComplete(quizId, score)}
           />
         )}
-      </main>
+      </AppShell>
 
       {uiToast && (
         <ActivityToast
@@ -3469,7 +3435,7 @@ function App() {
           onSignUp={handleSignUpFromGuest}
         />
       )}
-    </div>
+    </>
   );
 }
 
@@ -3626,10 +3592,10 @@ function GuestBanner({
 }) {
   return (
     <div className="guest-banner" role="status">
-      <span>You&apos;re browsing as a guest. Sign up to apply, post jobs, and message crews.</span>
+      <span>Guest mode. Sign up to apply, post jobs, and message crews.</span>
       <div className="guest-banner-actions">
         <button type="button" className="primary-action" onClick={onSignUp}>
-          Sign up free
+          Sign up
         </button>
         <button type="button" className="ghost-action guest-exit" onClick={onExit}>
           Exit
@@ -6770,6 +6736,48 @@ function ToolsView({
       </section>
     </section>
   );
+}
+
+function primaryDestinationForView(view: NavLabel): PrimaryDestination | null {
+  if (view === "Home") return "home";
+  if (["Marketplace", "My Jobs", "Applications", "Invites"].includes(view)) return "work";
+  if (["My Crew", "Shop Talk", "Reviews"].includes(view)) return "network";
+  if (view === "Messages") return "inbox";
+  if (["Tools", "Records"].includes(view)) return "tools";
+  return null;
+}
+
+function defaultViewForDestination(destination: PrimaryDestination): NavLabel {
+  if (destination === "home") return "Home";
+  if (destination === "work") return "Marketplace";
+  if (destination === "network") return "My Crew";
+  if (destination === "inbox") return "Messages";
+  return "Tools";
+}
+
+const viewRoutes: Record<NavLabel, string> = {
+  Home: "/app",
+  Marketplace: "/app/work",
+  "Shop Talk": "/app/network/talk",
+  Tools: "/app/tools",
+  "My Jobs": "/app/work/jobs",
+  Applications: "/app/work/applications",
+  Invites: "/app/work/invites",
+  "My Crew": "/app/network",
+  Messages: "/app/inbox",
+  "Trust & Legal": "/app/profile/trust",
+  Records: "/app/tools/records",
+  "Safety & Training": "/app/profile/training",
+  Reviews: "/app/profile/reviews",
+  Feedback: "/app/profile/feedback",
+  Settings: "/app/profile/settings",
+  Admin: "/admin",
+};
+
+function viewFromPath(pathname: string): NavLabel {
+  const normalized = pathname.replace(/\/$/, "") || "/";
+  const match = (Object.entries(viewRoutes) as Array<[NavLabel, string]>).find(([, route]) => route === normalized);
+  return match?.[0] ?? "Home";
 }
 
 function InvoiceTool({
