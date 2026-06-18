@@ -76,6 +76,7 @@ import { WorkWorkspace } from "./features/work/WorkWorkspace";
 import { HomeDashboard } from "./features/home/HomeDashboard";
 import { NetworkHub } from "./features/network/NetworkHub";
 import { InboxCenter } from "./features/inbox/InboxCenter";
+import { LegacyBridge } from "./features/legacy/LegacyBridge";
 import { ToolsStudio } from "./features/tools/ToolsStudio";
 import { ProfileHub } from "./features/profile/ProfileHub";
 
@@ -3383,65 +3384,10 @@ function App() {
             onOpenJob={openJob}
           />
         ) : (
-          <OperationsWorkspace
-            view={activeView}
-            role={role}
-            accountProfile={accountProfile}
-            jobs={jobs}
-            selectedJob={selectedJob}
-            matchingTalent={matchingTalent}
-            applications={applications}
-            closeouts={closeouts}
-            scheduleHolds={scheduleHolds}
-            dispatchNotes={dispatchNotes}
-            trustReady={trustReady}
-            uploadedRecords={uploadedRecords}
-            completedTraining={completedTraining}
-            safetyQuizResults={safetyQuizResults}
-            messageDraft={messageDraft}
-            sentMessages={sentMessages}
-            reviewRequested={reviewRequested}
-            feedbackItems={feedbackItems}
-            feedbackDraft={feedbackDraft}
-            feedbackCategory={feedbackCategory}
-            paymentRecords={paymentRecords}
-            activityFeed={activityFeed}
-            lockedAccounts={lockedAccounts}
-            communityPosts={communityPosts}
-            communityReports={communityReports}
-            shoutOuts={shoutOuts}
-            onPostJob={() => isGuest ? setGuestPromptOpen(true) : setPostOpen(true)}
-            onNavigate={handleNavigate}
-            onOpenJob={openJob}
-            onApply={handleApply}
-            onApplyToJob={(jobId) => isGuest ? setGuestPromptOpen(true) : handleApplyForJob(jobId)}
-            onInvite={handleInvite}
-            onInviteToJob={(jobId) => isGuest ? setGuestPromptOpen(true) : handleInviteForJob(jobId)}
-            onReviewConsent={handleReviewConsent}
-            onToggleRecord={handleToggleRecord}
-            onSubmitCloseoutPacket={handleSubmitCloseoutPacket}
-            onApproveCloseout={handleApproveCloseout}
-            onRateJob={handleRateJob}
-            onToggleTraining={handleToggleTraining}
-            onMessageDraft={setMessageDraft}
-            onSendMessage={() => isGuest ? setGuestPromptOpen(true) : handleSendMessage()}
-            onRequestReview={handleRequestReview}
-            onFeedbackDraft={setFeedbackDraft}
-            onFeedbackCategory={setFeedbackCategory}
-            onSubmitFeedback={handleSubmitFeedback}
-            onMarkPaymentPaid={handleMarkPaymentPaid}
-            onExportPayments={handleExportPayments}
-            onToggleAdminLock={handleToggleAdminLock}
-            onVoteCommunityPost={handleVoteCommunityPost}
-            onVoteCommunityAnswer={handleVoteCommunityAnswer}
-            onAddCommunityAnswer={handleAddCommunityAnswer}
-            onVerifyCommunityAnswer={handleVerifyCommunityAnswer}
-            onReportCommunityPost={handleReportCommunityPost}
-            onResolveCommunityReport={handleResolveCommunityReport}
-            onCreateCommunityPrompt={() => isGuest ? setGuestPromptOpen(true) : handleCreateCommunityPrompt()}
-            onNewShopTalkPost={(flair, title, trade, body) => isGuest ? setGuestPromptOpen(true) : handleNewShopTalkPost(flair, title, trade, body)}
-            onCreateShoutOut={(to, tradeName) => isGuest ? setGuestPromptOpen(true) : handleCreateShoutOut(to, tradeName)}
-            onSafetyQuizComplete={(quizId, score) => isGuest ? setGuestPromptOpen(true) : handleSafetyQuizComplete(quizId, score)}
+          <LegacyBridge
+            view={activeView as "My Jobs" | "Applications" | "Invites" | "My Crew" | "Messages" | "Trust & Legal" | "Records" | "Safety & Training" | "Reviews" | "Feedback" | "Settings" | "Admin" | "Marketplace" | "Home" | "Shop Talk" | "Tools"}
+            onNavigate={(view) => handleNavigate(view)}
+            onOpenAccount={() => handleNavigate("Settings")}
           />
         )}
       </AppShell>
@@ -6823,9 +6769,9 @@ const viewRoutes: Record<NavLabel, string> = {
   Marketplace: "/app/work",
   "Shop Talk": "/app/network/talk",
   Tools: "/app/tools",
-  "My Jobs": "/app/work/jobs",
-  Applications: "/app/work/applications",
-  Invites: "/app/work/invites",
+  "My Jobs": "/app/work",
+  Applications: "/app/work",
+  Invites: "/app/work",
   "My Crew": "/app/network",
   Messages: "/app/inbox",
   "Trust & Legal": "/app/profile/trust",
@@ -6839,6 +6785,20 @@ const viewRoutes: Record<NavLabel, string> = {
 
 function viewFromPath(pathname: string): NavLabel {
   const normalized = pathname.replace(/\/$/, "") || "/";
+  const aliases: Record<string, NavLabel> = {
+    "/app/work/jobs": "Marketplace",
+    "/app/work/applications": "Marketplace",
+    "/app/work/invites": "Marketplace",
+    "/app/network/talk": "Shop Talk",
+    "/app/network/reviews": "Reviews",
+    "/app/profile/trust": "Trust & Legal",
+    "/app/profile/training": "Safety & Training",
+    "/app/profile/reviews": "Reviews",
+    "/app/profile/feedback": "Feedback",
+    "/app/profile/settings": "Settings",
+    "/app/tools/records": "Records",
+  };
+  if (aliases[normalized]) return aliases[normalized];
   const match = (Object.entries(viewRoutes) as Array<[NavLabel, string]>).find(([, route]) => route === normalized);
   return match?.[0] ?? "Home";
 }
