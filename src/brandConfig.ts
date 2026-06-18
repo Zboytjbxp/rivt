@@ -6,7 +6,7 @@ export const brandConfig = {
   tagline: "Where skilled trades connect",
   heroHeadline: "RIVT",
   heroBody:
-    "Connect. Build. Grow. Built for contractors, subcontractors, crews, and skilled tradespeople who need work, people, records, and tools in one place.",
+    "Built for contractors, subcontractors, crews, and skilled tradespeople who need work, people, records, and tools in one place.",
   missionLine: "The professional network for skilled trades.",
   pricing: {
     betaPlan: {
