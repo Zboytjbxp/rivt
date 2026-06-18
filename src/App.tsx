@@ -77,6 +77,7 @@ import { HomeDashboard } from "./features/home/HomeDashboard";
 import { NetworkHub } from "./features/network/NetworkHub";
 import { InboxCenter } from "./features/inbox/InboxCenter";
 import { ToolsStudio } from "./features/tools/ToolsStudio";
+import { ProfileHub } from "./features/profile/ProfileHub";
 
 type TradeFilter = (typeof tradeOptions)[number];
 type DifficultyFilter = (typeof difficultyOptions)[number];
@@ -3267,7 +3268,7 @@ function App() {
         }}
       >
 
-        {["Home", "Marketplace", "My Crew", "Shop Talk", "Reviews", "Messages", "Tools", "Records"].includes(activeView) ? null : (
+        {["Home", "Marketplace", "My Crew", "Shop Talk", "Reviews", "Messages", "Tools", "Records", "Trust & Legal", "Safety & Training", "Feedback", "Settings"].includes(activeView) ? null : (
           <header className="page-heading" aria-label={`${page.title} heading`}>
             <div>
               <h1>{page.title}</h1>
@@ -3340,6 +3341,39 @@ function App() {
             onMessageDraft={setMessageDraft}
             onSendMessage={() => isGuest ? setGuestPromptOpen(true) : handleSendMessage()}
             onNavigate={(destination) => handleNavigate(defaultViewForDestination(destination))}
+          />
+        ) : ["Trust & Legal", "Safety & Training", "Reviews", "Feedback", "Settings"].includes(activeView) ? (
+          <ProfileHub
+            view={activeView as "Trust & Legal" | "Safety & Training" | "Reviews" | "Feedback" | "Settings"}
+            role={role}
+            profile={{
+              email: accountProfile.email,
+              displayName: accountProfile.displayName,
+              organization: accountProfile.organization,
+              location: accountProfile.location,
+              specialties: accountProfile.specialties,
+              plan: accountProfile.plan,
+              authMethod: accountProfile.authMethod,
+            }}
+            trustReady={trustReady}
+            recordCount={uploadedRecords.size}
+            trainingProgress={Math.round((completedTraining.size / trainingModules.length) * 100)}
+            safetyCertCount={Object.values(safetyQuizResults).filter((result) => result.passed).length}
+            communityBadges={communityBadgeLabels(communityPosts, accountProfile.displayName)}
+            shoutOutCount={
+              shoutOuts.filter(
+                (shoutOut) =>
+                  shoutOut.to === accountProfile.displayName ||
+                  shoutOut.to === accountProfile.organization,
+              ).length
+            }
+            feedbackCount={feedbackItems.length}
+            themeMode={themeMode}
+            themePalette={themePalette}
+            onToggleTheme={handleToggleTheme}
+            onSelectThemePalette={handleSelectThemePalette}
+            onReviewConsent={() => {}}
+            onLogout={handleLogout}
           />
         ) : ["Tools", "Records"].includes(activeView) ? (
           <ToolsStudio
