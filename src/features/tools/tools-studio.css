@@ -1,0 +1,223 @@
+.v2-tools-page {
+  display: grid;
+  gap: 18px;
+}
+
+.v2-tools-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.v2-tools-header h1 {
+  margin: 0;
+  font-size: clamp(28px, 3vw, 38px);
+}
+
+.v2-tools-header p {
+  margin: 7px 0 0;
+  color: var(--v2-text-muted);
+  font-size: 14px;
+}
+
+.v2-tools-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.v2-tools-panel {
+  overflow: hidden;
+  border: 1px solid var(--v2-border);
+  border-radius: var(--v2-radius-lg);
+  background: var(--v2-surface);
+  box-shadow: var(--v2-shadow-sm);
+}
+
+.v2-tools-panel-wide {
+  grid-column: 1 / -1;
+}
+
+.v2-tools-panel > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--v2-border);
+}
+
+.v2-tools-panel > header span {
+  color: var(--v2-text-muted);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.v2-tools-panel > header h2 {
+  margin: 3px 0 0;
+  font-size: 15px;
+}
+
+.v2-tools-panel > header button {
+  border: 0;
+  background: transparent;
+  color: var(--v2-accent);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.v2-tools-list,
+.v2-tools-records,
+.v2-tools-shortcuts {
+  display: grid;
+}
+
+.v2-tool-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 15px 18px;
+  border-bottom: 1px solid var(--v2-border);
+}
+
+.v2-tool-card:last-child,
+.v2-tools-shortcut:last-child {
+  border-bottom: 0;
+}
+
+.v2-tool-card-icon {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border-radius: 11px;
+  background: var(--v2-accent-soft);
+  color: var(--v2-accent);
+}
+
+.v2-tool-card strong,
+.v2-tools-active-job strong,
+.v2-tools-records strong,
+.v2-tools-empty strong,
+.v2-tools-shortcut strong {
+  display: block;
+  font-size: 13px;
+}
+
+.v2-tool-card p,
+.v2-tools-active-job p,
+.v2-tools-records span,
+.v2-tools-empty span,
+.v2-tools-shortcut small {
+  margin: 0;
+  color: var(--v2-text-muted);
+  font-size: 12px;
+}
+
+.v2-tool-card button,
+.v2-tools-shortcut {
+  border: 0;
+  background: transparent;
+  color: var(--v2-accent);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.v2-tools-active-job,
+.v2-tools-empty {
+  display: grid;
+  gap: 8px;
+  padding: 18px;
+}
+
+.v2-tools-active-job > span {
+  color: var(--v2-text-muted);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.v2-tools-active-job-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.v2-tools-active-job-actions button {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 0 14px;
+  border: 1px solid var(--v2-border);
+  border-radius: var(--v2-radius-md);
+  background: var(--v2-surface);
+  color: var(--v2-text);
+  font-weight: 700;
+}
+
+.v2-tools-active-job-actions button:first-child {
+  border-color: var(--v2-accent);
+  background: var(--v2-accent);
+  color: #fff;
+}
+
+.v2-tools-records {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.v2-tools-records article {
+  display: grid;
+  gap: 4px;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--v2-border);
+}
+
+.v2-tools-records article strong {
+  font-size: 20px;
+  font-variant-numeric: tabular-nums;
+}
+
+.v2-tools-shortcut {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--v2-border);
+  color: var(--v2-text);
+  text-align: left;
+}
+
+.v2-tools-shortcuts button:hover {
+  background: var(--v2-surface-muted);
+}
+
+@media (max-width: 1040px) {
+  .v2-tools-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .v2-tools-panel-wide {
+    grid-column: auto;
+  }
+}
+
+@media (max-width: 860px) {
+  .v2-tools-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .v2-tools-records {
+    grid-template-columns: 1fr;
+  }
+}

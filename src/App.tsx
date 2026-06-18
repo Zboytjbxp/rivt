@@ -74,6 +74,9 @@ import { AppShell } from "./app-shell/AppShell";
 import type { PrimaryDestination } from "./app-shell/types";
 import { WorkWorkspace } from "./features/work/WorkWorkspace";
 import { HomeDashboard } from "./features/home/HomeDashboard";
+import { NetworkHub } from "./features/network/NetworkHub";
+import { InboxCenter } from "./features/inbox/InboxCenter";
+import { ToolsStudio } from "./features/tools/ToolsStudio";
 
 type TradeFilter = (typeof tradeOptions)[number];
 type DifficultyFilter = (typeof difficultyOptions)[number];
@@ -3264,7 +3267,7 @@ function App() {
         }}
       >
 
-        {activeView === "Home" || activeView === "Marketplace" ? null : (
+        {["Home", "Marketplace", "My Crew", "Shop Talk", "Reviews", "Messages", "Tools", "Records"].includes(activeView) ? null : (
           <header className="page-heading" aria-label={`${page.title} heading`}>
             <div>
               <h1>{page.title}</h1>
@@ -3318,6 +3321,32 @@ function App() {
             onOpenRecords={() => handleNavigate("Records")}
             onToggleSavedSearch={handleToggleSavedSearch}
             onToggleAutoMatch={handleToggleAutoMatch}
+          />
+        ) : ["My Crew", "Shop Talk", "Reviews"].includes(activeView) ? (
+          <NetworkHub
+            jobs={jobs}
+            talent={matchingTalent}
+            communityPosts={communityPosts}
+            shoutOuts={shoutOuts}
+            onNavigate={(destination) => handleNavigate(defaultViewForDestination(destination))}
+          />
+        ) : activeView === "Messages" ? (
+          <InboxCenter
+            jobs={jobs}
+            sentMessages={sentMessages}
+            messageDraft={messageDraft}
+            activityFeed={activityFeed}
+            paymentRecords={paymentRecords}
+            onMessageDraft={setMessageDraft}
+            onSendMessage={() => isGuest ? setGuestPromptOpen(true) : handleSendMessage()}
+            onNavigate={(destination) => handleNavigate(defaultViewForDestination(destination))}
+          />
+        ) : ["Tools", "Records"].includes(activeView) ? (
+          <ToolsStudio
+            jobs={jobs}
+            paymentRecords={paymentRecords}
+            onNavigate={(destination) => handleNavigate(defaultViewForDestination(destination))}
+            onOpenJob={openJob}
           />
         ) : (
           <OperationsWorkspace
