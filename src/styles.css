@@ -6770,6 +6770,15 @@ textarea:focus-visible {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .auth-provider-tile {
+    justify-content: center;
+    padding-inline: 12px;
+  }
+
+  .auth-provider-tile span {
+    display: none;
+  }
+
   .panel-backdrop {
     padding: 0;
   }
