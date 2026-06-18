@@ -3459,6 +3459,61 @@ function LaunchLoader() {
   );
 }
 
+function EntryShowcase() {
+  const pillars = [
+    { icon: BriefcaseBusiness, title: "Find work", copy: "See the jobs, scope, and timing before you commit." },
+    { icon: Users, title: "Build crews", copy: "Keep trusted people and applicants in one place." },
+    { icon: ReceiptText, title: "Run records", copy: "Invoices, completion photos, and payment notes stay together." },
+    { icon: MessageCircle, title: "Stay in touch", copy: "Message crews and ask field questions without the clutter." },
+  ];
+
+  return (
+    <section className="auth-story" aria-label="Product preview">
+      <div className="auth-story-header">
+        <span className="auth-story-eyebrow">Jacksonville launch</span>
+        <h1>The professional network for skilled trades.</h1>
+        <p>
+          RIVT keeps jobs, crews, tools, invoices, and records in one place so contractors and tradespeople can move faster.
+        </p>
+      </div>
+
+      <div className="auth-story-pills" aria-label="Core benefits">
+        <span>Post work</span>
+        <span>Build crews</span>
+        <span>Track records</span>
+        <span>Message on the job</span>
+      </div>
+
+      <div className="auth-story-grid">
+        {pillars.map(({ icon: Icon, title, copy }) => (
+          <article key={title} className="auth-story-card">
+            <span className="auth-story-icon">
+              <Icon size={17} />
+            </span>
+            <div>
+              <strong>{title}</strong>
+              <p>{copy}</p>
+            </div>
+          </article>
+        ))}
+      </div>
+
+      <div className="auth-story-preview">
+        <article>
+          <span>Work feed</span>
+          <strong>Jobs, match score, and active status</strong>
+          <p>Open work stays visible while applicants, invites, and closeouts stay tied to the same record.</p>
+        </article>
+        <article>
+          <span>Tools</span>
+          <strong>Invoice, estimate, and record tools</strong>
+          <p>Utilities stay ready without forcing the user into a separate admin surface.</p>
+        </article>
+      </div>
+    </section>
+  );
+}
+
 function AuthGate({
   mode,
   error,
@@ -3488,16 +3543,21 @@ function AuthGate({
   } as const;
 
   return (
-    <main className="auth-shell">
-      <section className="auth-card">
+    <main className="auth-shell auth-shell--split">
+      <EntryShowcase />
+
+      <section className="auth-card auth-card--entry">
         <LogoLockup />
-        <h1>{mode === "signup" ? "Create your account" : "Welcome back"}</h1>
-        <p>Sign in to your crew, jobs, tools, and records.</p>
+        <div className="auth-card-heading">
+          <span className="auth-card-kicker">{mode === "signup" ? "Start free" : "Welcome back"}</span>
+          <h2>{mode === "signup" ? "Create your account" : "Sign in to continue"}</h2>
+          <p>Use the same workspace to manage jobs, crews, tools, and records.</p>
+        </div>
 
         <div className="auth-guest-callout auth-guest-callout--hero">
           <div>
             <strong>Prefer to browse first?</strong>
-            <span>See jobs, tools, and the full workspace without creating an account yet.</span>
+            <span>See the live app without creating an account yet.</span>
           </div>
           <button type="button" className="ghost-action auth-guest-cta" onClick={onGuestLogin}>
             Browse as guest
@@ -3506,22 +3566,20 @@ function AuthGate({
 
         <div className="auth-provider-grid">
           {([
-            ["google", GoogleIcon],
-            ["facebook", FacebookIcon],
-            ["apple", AppleIcon],
-            ["email", EmailIcon],
-          ] as const).map(([key, label]) => {
+            ["google", GoogleIcon, "Continue with Google"],
+            ["facebook", FacebookIcon, "Continue with Facebook"],
+            ["apple", AppleIcon, "Continue with Apple"],
+            ["email", EmailIcon, "Use email"],
+          ] as const).map(([key, label, providerLabel]) => {
             const provider = providers[key];
             const ok = provider?.ok ?? (key === "email");
             const Icon = label;
-            const providerLabel =
-              key === "google" ? "Google" : key === "facebook" ? "Facebook" : key === "apple" ? "Apple" : "Email";
 
             return (
               <button
                 type="button"
                 key={key}
-                className={ok ? "" : "disabled"}
+                className={ok ? "auth-provider-tile" : "auth-provider-tile disabled"}
                 title={ok ? provider?.purpose ?? key : `Setup required: ${provider?.missing.join(", ") ?? "provider keys"}`}
                 onClick={() => {
                   if (!ok) return;
@@ -3535,13 +3593,13 @@ function AuthGate({
                 }}
               >
                 <Icon />
-                <span className="sr-only">{providerLabel}</span>
+                <span>{providerLabel}</span>
               </button>
             );
           })}
         </div>
 
-        <div className="auth-toggle">
+        <div className="auth-toggle" aria-label="Auth mode">
           <button type="button" className={mode === "login" ? "selected" : ""} onClick={() => onModeChange("login")}>Log in</button>
           <button type="button" className={mode === "signup" ? "selected" : ""} onClick={() => onModeChange("signup")}>Sign up</button>
         </div>
@@ -3586,7 +3644,6 @@ function AuthGate({
         >
           {mode === "signup" ? "Create account" : "Log in"}
         </button>
-
       </section>
     </main>
   );
