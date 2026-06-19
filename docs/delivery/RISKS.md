@@ -8,11 +8,11 @@
 | R-004 | High | Google users receive fabricated role/company/location | Mitigated locally: new OAuth users enter pending onboarding | Verify live OAuth onboarding and existing-account preservation |
 | R-005 | High | Session fixation/overlong sessions | Rotation is CI-proven and deployed; live signup/logout passed | Add device/session controls in Packet 02 |
 | R-006 | High | Core records can conflict or be overwritten as one JSON blob | Debounced whole-state PUT | Normalized domain schema and optimistic/state conflict strategy |
-| R-007 | High | Upload authorization and type safety are insufficient | User ownership, exact MIME allowlist, and limits exist; broken bucket-name config was found and corrected variables are staged | Deploy/verify new bucket, then add content-signature checks and scanning decision |
+| R-007 | High | Upload authorization and type safety are insufficient | New private bucket and authenticated upload/signed-download path are deployed and verified; ownership, MIME allowlist, and limits exist | Add content-signature checks and malware-scanning decision in project/media packet |
 | R-008 | High | Known upload denial-of-service vulnerability | Closed in source and CI: Multer 2.2.0 and zero-vulnerability audit | Verify deployed lockfile/build |
 | R-009 | High | No automated authorization or critical-flow tests | Partial: unit/integration/E2E and disposable-DB authorization cases pass in CI | Expand critical journeys by packet |
 | R-010 | High | Production revision cannot be proven | Closed: health/readiness report commit `4c199d9`; deployment ledger records Railway build ID | Require source SHA for every deployment |
-| R-011 | High | Startup schema mutation can partially fail or drift | Mitigated in source and CI by checksummed transactional migrations and advisory lock | Deploy, verify production ledger, and preserve immutable history |
+| R-011 | High | Startup schema mutation can partially fail or drift | Closed: checksummed transactional migrations, advisory lock, CI rollback, and production ledger/readiness are verified | Preserve immutable migration history and release checks |
 | R-012 | High | CORS/CSRF/rate-limit posture is not launch safe | Mitigated locally with approved origins, SameSite cookies, and baseline limits | Complete threat review and use durable distributed limits before scale |
 | R-013 | Medium | Lint debt hides dead behavior and unsafe cleanup | Closed locally: repository lint passes with zero findings | Keep full lint required in CI; remove four deprecated exports in Packet 01 |
 | R-014 | Medium | Giant component creates regression and AI-context risk | `App.tsx` over 10k lines | Strangler migration by domain; no wholesale rewrite |

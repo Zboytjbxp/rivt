@@ -38,4 +38,11 @@ Do not implement jobs or messages. Hand off reviewed schema decisions and next m
 - CI: GitHub Actions 27803255310 and 27803349568 passed
 - Release backup: encrypted, cloud-only snapshot round-trip verified before deployment
 
-Production deployment and smoke evidence remain required before Packet 01 acceptance.
+## Production Evidence
+
+- Source `166c43a`; Railway deployment `1188000e-374c-44db-9d32-b007bf481959`
+- Readiness reported `0002_domain_foundation`, two applied migrations, zero pending
+- Existing auth users reconciled to exactly two private accounts/profiles/identities
+- Legacy state remained 114 rows; no legacy marketplace records were promoted
+- New bucket upload, object head, signed download, content verification, and cleanup passed
+- Packet 01 accepted; proceed to Packet 02

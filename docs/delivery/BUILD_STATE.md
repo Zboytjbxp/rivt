@@ -1,9 +1,9 @@
 # RIVT Build State
 
 Last updated: 2026-06-18 America/New_York
-Current gate: Gate A domain foundation
-Current phase: Packet 01 implementation and CI complete; production deployment pending
-Repository branch: `codex/packet-01-domain-foundation`
+Current gate: Gate A authentication, onboarding, and profiles
+Current phase: Packet 01 deployed and smoke-verified; Packet 02 ready to begin
+Repository branch: `master`
 Base commit: `99be82a Align public brand copy with RIVT tagline`
 
 ## Source State
@@ -82,11 +82,26 @@ Packet 00 is accepted. The broader Gate A release is not approved: normalized do
 - Created an AES-256-GCM encrypted logical snapshot directly in private object storage at `backups/postgres/2026-06-19T03-29-15.832Z-pre-packet-01-4c199d9.json.aes256gcm`.
 - Downloaded, decrypted, parsed, and reconciled the snapshot in memory: 53 events, 114 app-state rows, 3 sessions, 2 users, 0 guests, and 1 upload.
 - Stored the encryption key as a Railway secret; no local backup file or plaintext cloud object was created.
-- Staged corrected S3 variables with deployment suppressed so application code and config change together.
+- Deployed corrected S3 variables with Packet 01 and verified an authenticated upload, S3 head request, signed download, content match, and cleanup.
+
+## Packet 01 Production Evidence
+
+- Source commit: `166c43a9e24af64737eed22088e0306cc6873b22`
+- Railway deployment: `1188000e-374c-44db-9d32-b007bf481959`
+- Merged-master GitHub Actions run 27803652474: pass
+- Production readiness: `0002_domain_foundation`, two applied migrations, zero pending
+- Canonical bridge: 2 accounts, 2 private draft profiles, 2 identities, 25 trades, 0 inferred organizations
+- Legacy reconciliation: 114 app-state blobs unchanged
+- Anonymous storage/readiness/app-state/v1 account requests: 401
+- Disposable Tradesperson signup, `/api/v1/me`, object upload/download, and logout passed; all smoke records and objects were deleted
+
+## Packet 01 Acceptance
+
+Packet 01 is accepted. The old object-storage bucket remains temporarily as a rollback source and should be deleted only after the isolated restore drill and retention decision.
 
 ## Next Exact Task
 
-Fast-forward the CI-proven Packet 01 branch into `master`, deploy it with the staged storage variables, verify migrations/account bridges/object access, then record the exact build and rollback evidence. Do not implement jobs, messages, or new UI until that release is accepted.
+Begin Packet 02 with email verification/recovery, OAuth identity linking, resumable role-correct onboarding, canonical profile APIs, and session/device controls. Preserve private profile defaults and do not build jobs or messages yet.
 
 ## Blocking Founder Decisions
 

@@ -21,7 +21,7 @@ Add one entry per staging/production deployment.
 - Rollback performed/result:
 - Approval:
 
-## Current Production
+## Packet 00 Production Deployment
 
 - Environment: Production (`https://rivt.pro`)
 - Date/time/timezone: 2026-06-18 22:59 America/New_York
@@ -41,3 +41,23 @@ Add one entry per staging/production deployment.
 - Known risks: runtime schema mutation, app-state blob persistence, seed content, incomplete provider acceptance, and missing restore drill remain open
 - Rollback performed/result: not required
 - Approval: Packet 00 accepted; overall Gate A not approved
+
+## Current Production - Packet 01
+
+- Environment: Production (`https://rivt.pro`)
+- Date/time/timezone: 2026-06-18 23:33 America/New_York
+- Deployer: Codex through authenticated Railway CLI
+- Source repository/branch: `Zboytjbxp/rivt`, `master`
+- Source commit: `166c43a9e24af64737eed22088e0306cc6873b22`
+- Build/artifact ID: Railway deployment `1188000e-374c-44db-9d32-b007bf481959`
+- Migration version before/after: no SQL ledger (`runtime-schema-v1`) / `0002_domain_foundation`
+- Feature-flag/config version: source SHA updated; S3 credentials moved to `rivt-private-66cklzn4qc-f`; backup encryption key added as a Railway secret
+- Provider/config changes: new private Railway bucket; existing legacy object copied and verified; no auth/notification provider changes
+- Backup/rollback target: encrypted object `backups/postgres/2026-06-19T03-29-15.832Z-pre-packet-01-4c199d9.json.aes256gcm`; prior app deployment `0f6a928c-02e6-4d58-b13d-f80894bb4b77`
+- Automated gates: branch runs 27803255310, 27803349568, 27803604764 and merged-master run 27803652474 passed
+- Post-deploy smoke tests: exact source SHA; migrations 0001/0002 with zero pending; canonical account bridge; anonymous 401 boundaries; disposable signup and private `/api/v1/me`; upload/head/signed-download content round trip; logout revocation; cleanup verified
+- Health/readiness result: healthy PostgreSQL and S3-compatible storage; exact build commit; `0002_domain_foundation`
+- Reconciled records: 2 accounts, 2 profiles, 2 identities, 25 trades, 0 organizations, 114 unchanged legacy state blobs
+- Known risks: legacy state remains quarantined; old bucket retained for rollback; no timed isolated restore; identity linking and account recovery remain Packet 02 work
+- Rollback performed/result: migration down/up is CI-proven; production rollback not required
+- Approval: Packet 01 accepted; overall Gate A not approved

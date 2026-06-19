@@ -15,13 +15,13 @@ Evidence must eventually link to implementation, automated tests, manual accepta
 | ID | Requirement | Current | Evidence / gap |
 |---|---|---:|---|
 | GA-FND-001 | Managed PostgreSQL and private object storage are required | Verified | Live `/api/health` and `/api/storage` report PostgreSQL and S3-compatible storage healthy. |
-| GA-FND-002 | Versioned database migrations own schema changes | Partial | SQL migration ledger, checksums, advisory lock, transactional apply, status, and rollback pass in CI; production deployment remains. |
+| GA-FND-002 | Versioned database migrations own schema changes | Verified | Production runs checksummed transactional migrations with advisory locking; apply/rerun/rollback/reapply/tamper tests pass and readiness reports 0002 with zero pending. |
 | GA-FND-003 | Core records use normalized, user-owned domain tables | Partial | Canonical account/profile/organization/trade foundations exist and legacy blobs are quarantined; marketplace domains remain in `app_state` until their packets. |
 | GA-FND-004 | Authenticated tenant/ownership authorization protects every private API | Partial | Legacy private routes require a DB-backed user and scope state/events/uploads/export to user ID; disposable-DB cross-user isolation passes in GitHub Actions. Normalized domain authorization remains. |
 | GA-FND-005 | API uses consistent typed errors and validation | Partial | `/api/v1` has request IDs, Zod validation, stable errors, and pagination primitives; legacy APIs retain transitional shapes. |
 | GA-FND-006 | Retryable writes are idempotent | Partial | Canonical idempotency storage and request primitives exist; domain mutations will adopt them per packet. |
 | GA-FND-007 | Auditable domain events use authenticated actor and subject | Partial | Append-only canonical audit storage and actor context exist; domain routes must emit events per packet. |
-| GA-FND-008 | Internal diagnostics identify deployed source revision and dependency readiness | Partial | Safe health and authenticated readiness responses now include build/dependency/migration metadata; deployment must provide and verify the source commit. |
+| GA-FND-008 | Internal diagnostics identify deployed source revision and dependency readiness | Verified | Health/readiness identify exact source `166c43a`, dependencies, applied migrations, and pending count in production. |
 
 ## Authentication and Account
 

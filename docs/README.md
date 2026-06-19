@@ -12,4 +12,4 @@ Start here for implementation:
 8. `quality/ACCEPTANCE.md` — evidence required for release.
 9. `delivery/RISKS.md`, `delivery/DEFERRED.md`, and `operations/RUNBOOKS.md`.
 
-Current next action: `delivery/packets/01_DOMAIN_FOUNDATION.md`.
+Current next action: `delivery/packets/02_AUTH_ONBOARDING_PROFILES.md`.
