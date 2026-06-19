@@ -1003,7 +1003,7 @@ app.patch("/api/v1/profile", requireV1AuthenticatedUser, requireV1Actor, writeRa
     await saveProfileFields(client, request.actor.account.id, input);
     await client.query(
       `INSERT INTO audit_events (request_id, actor_account_id, action, subject_type, subject_id)
-       VALUES ($1, $2, 'profile.draft_updated', 'profile', $2::text)`,
+       VALUES ($1, $2::uuid, 'profile.draft_updated', 'profile', ($2::uuid)::text)`,
       [request.requestId, request.actor.account.id],
     );
   });
@@ -1075,7 +1075,7 @@ app.post("/api/v1/onboarding/complete", requireV1AuthenticatedUser, requireV1Act
     );
     await client.query(
       `INSERT INTO audit_events (request_id, actor_account_id, action, subject_type, subject_id, metadata)
-       VALUES ($1, $2, 'onboarding.completed', 'account', $2::text, $3::jsonb)`,
+       VALUES ($1, $2::uuid, 'onboarding.completed', 'account', ($2::uuid)::text, $3::jsonb)`,
       [request.requestId, request.actor.account.id, JSON.stringify({ role: input.role, consentVersion: expectedConsentVersion })],
     );
   });
@@ -1276,7 +1276,7 @@ async function handleSignup(request, response) {
     const verificationToken = await createVerificationToken(client, userId);
     await client.query(
       `INSERT INTO audit_events (request_id, actor_account_id, action, subject_type, subject_id, metadata)
-       VALUES ($1, $2, 'account.signup', 'account', $2::text, $3::jsonb)`,
+       VALUES ($1, $2::uuid, 'account.signup', 'account', ($2::uuid)::text, $3::jsonb)`,
       [request.requestId ?? null, userId, JSON.stringify({ provider: "email", inviteId })],
     );
     return { user: result.rows[0], verificationToken };
@@ -1376,7 +1376,7 @@ app.post("/api/v1/auth/email/verify", authRateLimit, asyncRoute(async (request, 
     await client.query("UPDATE auth_users SET email_verified_at = COALESCE(email_verified_at, now()), updated_at = now() WHERE id = $1", [record.account_id]);
     await client.query(
       `INSERT INTO audit_events (request_id, actor_account_id, action, subject_type, subject_id)
-       VALUES ($1, $2, 'account.email_verified', 'account', $2::text)`,
+       VALUES ($1, $2::uuid, 'account.email_verified', 'account', ($2::uuid)::text)`,
       [request.requestId, record.account_id],
     );
     return record.account_id;
@@ -1449,7 +1449,7 @@ app.post("/api/v1/auth/password/reset", authRateLimit, asyncRoute(async (request
     await client.query("UPDATE auth_sessions SET revoked_at = now() WHERE user_id = $1 AND revoked_at IS NULL", [record.account_id]);
     await client.query(
       `INSERT INTO audit_events (request_id, actor_account_id, action, subject_type, subject_id)
-       VALUES ($1, $2, 'account.password_reset', 'account', $2::text)`,
+       VALUES ($1, $2::uuid, 'account.password_reset', 'account', ($2::uuid)::text)`,
       [request.requestId, record.account_id],
     );
   });
