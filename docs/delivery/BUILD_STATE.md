@@ -1,10 +1,10 @@
 # RIVT Build State
 
 Last updated: 2026-06-19 America/New_York
-Current gate: Gate A authentication, onboarding, and profiles
-Current phase: Packet 02 implemented and CI-accepted; production provider configuration and deployment remain pending
-Repository branch: `codex/packet-02-auth-onboarding-profiles`
-Head commit: `762bf2c Update fail-closed auth browser contract`
+Current gate: Gate A jobs and discovery
+Current phase: Packet 02 production-accepted; Packet 03 is the next implementation packet
+Repository branch: `master`
+Production release commit: `696a332 Fix Railway production build dependencies`
 
 ## Source State
 
@@ -113,16 +113,29 @@ Packet 01 is accepted. The old object-storage bucket remains temporarily as a ro
 
 - Local `npm run lint`, `npm run build`, `npm run test`, and `npm run test:e2e`: pass.
 - Local PostgreSQL-backed tests skip when `TEST_DATABASE_URL` is absent by design.
-- GitHub Actions Gate A run `27807558330` for commit `762bf2c`: pass in 1m 12s.
+- GitHub Actions Gate A run `27807673862` for accepted source commit `d417908`: pass.
 - CI evidence includes PostgreSQL 16 migration lifecycle, account lifecycle/onboarding, cross-user authorization, browser fail-closed behavior, production bundle, full lint, and production dependency audit.
+- Railway's first release attempt (`7a072390-c2c9-4a5a-89f1-5ecaeda29602`) failed before traffic moved because the production install omitted React type packages needed by the build. Commit `696a332` corrected their dependency classification; the complete local gate passed again before redeployment.
+
+## Packet 02 Production Evidence
+
+- Release commit: `696a332ee55355f49a43960b9962be2cc37c966c`
+- Railway deployment: `2fe13f14-4852-48cd-bd19-c33f64ccc96a` (success)
+- `https://rivt.pro/api/health`: 200, source commit matched the release, PostgreSQL and S3-compatible storage healthy
+- Migration status: `0003_auth_onboarding_profiles`, three applied migrations, zero pending
+- Resend sender domain: `rivt.pro` verified with DKIM and the `send.rivt.pro` SPF/MX return path; DMARC published at monitoring policy
+- Railway email provider: sending-only production key restricted to `rivt.pro`; direct delivery and application verification/recovery messages delivered
+- `/api/auth/providers`: Google, email, and session security configured; pilot invitations required; Facebook and Apple remain explicitly unavailable
+- Live acceptance: invite-gated signup, email verification, canonical onboarding, profile update/publish, two-session revocation, logout, password recovery/reset, and Google authorization handoff passed
+- Cleanup: two disposable accounts were closed and anonymized, three disposable invites were revoked, profiles were made private, sessions were revoked, and append-only audit history was preserved
 
 ## Packet 02 Acceptance
 
-Packet 02 source and automated gates are accepted. Production deployment is intentionally held until the real email sender and required Railway security variables are configured and verified. No claim of live email delivery or live Google onboarding acceptance has been made.
+Packet 02 is accepted in production. The account journey, canonical profiles, provider configuration, and live release checks are complete for this packet. Facebook and Apple are not presented as available providers and remain deferred until their credentials and acceptance checks exist.
 
 ## Next Exact Task
 
-Configure Packet 02 production variables (`AUTH_METADATA_PEPPER`, `APP_ORIGIN`, `RESEND_API_KEY`, `EMAIL_FROM`, `EMAIL_DELIVERY_MODE`, and the `REQUIRE_PILOT_INVITE` decision), verify the sender domain, deploy the accepted commit through the normal merge/release path, then run disposable email signup, verification, password recovery, Google OAuth, onboarding, profile ownership, session revocation, and cleanup smoke tests.
+Execute Packet 03 (`03_JOBS_DISCOVERY.md`): add canonical contractor-owned job drafts and lifecycle APIs, enforce exact-address privacy and ownership, build paginated tradesperson discovery, remove production seed/blob jobs from the experience, and migrate the Work UI to typed APIs without implementing applications or offers yet.
 
 ## Blocking Founder Decisions
 

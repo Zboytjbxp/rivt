@@ -62,6 +62,8 @@ GOOGLE_REDIRECT_URI=https://rivt.pro/api/auth/google/callback
 
 Verify `rivt.pro` with the email provider before inviting users. Never use capture delivery in production. Generate invitation codes from an authorized operations terminal with `npm run invite:create -- --email=user@example.com --role=contractor`; only the one-time raw code is printed.
 
+Production sender verification was completed on 2026-06-19. The Resend API key is sending-only and restricted to `rivt.pro`; the verified sender remains `RIVT <support@rivt.pro>`. Keep the existing Google Workspace root MX record intact. Resend uses only the `send.rivt.pro` return-path MX/SPF records.
+
 Uploads use private S3-compatible object storage and signed download URLs:
 
 ```bash
@@ -101,9 +103,9 @@ npm start
 
 Do not use Railway volumes for customer records or customer-uploaded files in this app.
 
-## What Railway Still Needs
+## Railway Managed Storage
 
-Before the app can return healthy for real users, the web service environment must include:
+The production service is configured with the following managed dependencies. Keep these variables present during every deploy:
 
 ```bash
 DATABASE_URL=
@@ -120,6 +122,8 @@ Recommended storage behavior:
 - Use private object storage for uploads and signed URLs.
 - Leave `S3_PUBLIC_BASE_URL` blank unless your storage provider requires a public asset URL.
 - Keep `S3_FORCE_PATH_STYLE=false` unless your S3 provider documents path-style access.
+
+Do not copy secret values into this document, source control, build logs, or support tickets.
 
 ## Production Run
 
