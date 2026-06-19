@@ -108,6 +108,7 @@ if (!testDatabaseUrl) {
     assert.equal(canonicalAccount.payload.data.primaryRole, "contractor");
     assert.equal(canonicalAccount.payload.data.profile.visibility, "private");
     assert.equal(canonicalAccount.payload.data.profile.onboardingStatus, "draft");
+    assert.deepEqual(canonicalAccount.payload.data.organizations, []);
     assert.equal(canonicalAccount.payload.meta.requestId, canonicalAccount.response.headers.get("x-request-id"));
 
     const contractorWrite = await requestJson(baseUrl, "/api/app-state", {

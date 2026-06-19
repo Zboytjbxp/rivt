@@ -12,6 +12,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import pg from "pg";
 import { ApiError, asyncRoute, createRequestContext, sendApiError, z } from "./api.js";
+import { loadActorContext } from "./authorization.js";
 import { migrateUp, migrationStatus } from "./migrations.js";
 import {
   createOriginGuard,
@@ -414,6 +415,15 @@ const requireV1AuthenticatedUser = asyncRoute(async (request, _response, next) =
   next();
 });
 
+const requireV1Actor = asyncRoute(async (request, _response, next) => {
+  await ensureDatabaseReady();
+  request.actor = await loadActorContext(database, request.authUser.id);
+  if (["suspended", "closed"].includes(request.actor.account.status)) {
+    throw new ApiError(403, "ACCOUNT_NOT_ACTIVE", "This account cannot access the current API.");
+  }
+  next();
+});
+
 const authRateLimit = createRateLimiter({
   windowMs: 15 * 60 * 1000,
   max: Number(process.env.AUTH_RATE_LIMIT ?? 30),
@@ -713,40 +723,25 @@ const canonicalAccountSchema = z.object({
     visibility: z.enum(["private", "network"]),
     onboardingStatus: z.enum(["draft", "complete"]),
   }),
+  organizations: z.array(z.object({
+    id: z.uuid(),
+    name: z.string(),
+    role: z.enum(["owner", "admin", "member"]),
+  })),
 });
 
-app.get("/api/v1/me", requireV1AuthenticatedUser, asyncRoute(async (request, response) => {
-  await ensureDatabaseReady();
-  const result = await database.query(
-    `
-      SELECT a.id, a.status, a.primary_role,
-             p.display_name, p.headline, p.bio, p.location_text,
-             p.visibility, p.onboarding_status
-      FROM accounts a
-      INNER JOIN profiles p ON p.account_id = a.id
-      WHERE a.id = $1
-      LIMIT 1
-    `,
-    [request.authUser.id],
-  );
-
-  if (!result.rowCount) {
-    throw new ApiError(409, "ACCOUNT_MIGRATION_REQUIRED", "This account is not ready for the current API.");
-  }
-
-  const row = result.rows[0];
+app.get("/api/v1/me", requireV1AuthenticatedUser, requireV1Actor, asyncRoute(async (request, response) => {
+  const { account: actorAccount, profile, memberships } = request.actor;
   const account = canonicalAccountSchema.parse({
-    id: row.id,
-    status: row.status,
-    primaryRole: row.primary_role,
-    profile: {
-      displayName: row.display_name,
-      headline: row.headline,
-      bio: row.bio,
-      locationText: row.location_text,
-      visibility: row.visibility,
-      onboardingStatus: row.onboarding_status,
-    },
+    id: actorAccount.id,
+    status: actorAccount.status,
+    primaryRole: actorAccount.primaryRole,
+    profile,
+    organizations: memberships.map((membership) => ({
+      id: membership.organizationId,
+      name: membership.organizationName,
+      role: membership.role,
+    })),
   });
 
   response.json({ data: account, meta: { requestId: request.requestId } });
