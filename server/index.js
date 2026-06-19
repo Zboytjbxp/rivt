@@ -1894,6 +1894,10 @@ app.use((error, request, response, _next) => {
   if (!error.status || error.status >= 500) {
     console.error(error);
   }
+  if (request.path === "/api/auth/google/callback" && !response.headersSent) {
+    response.redirect(`${productionOrigin}/?auth_error=google`);
+    return;
+  }
   if (request.path.startsWith("/api/v1/")) {
     sendApiError(error, request, response);
     return;

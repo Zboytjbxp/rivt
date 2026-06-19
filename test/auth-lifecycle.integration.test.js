@@ -212,6 +212,26 @@ if (!testDatabaseUrl) {
     assert.equal(tradespersonMe.payload.data.capabilities.canApplyToWork, true);
     assert.equal(tradespersonMe.payload.data.organizations.length, 0);
 
+    const avatarUploadId = randomUUID();
+    await database.query(
+      `INSERT INTO uploads (id, session_id, kind, name, mime_type, size_bytes)
+       VALUES ($1, $2, 'profile-avatar', 'profile.jpg', 'image/jpeg', 128)`,
+      [avatarUploadId, contractor.id],
+    );
+    const ownAvatar = await requestJson(baseUrl, "/api/v1/profile/avatar", {
+      method: "PUT",
+      cookie: contractor.cookie,
+      body: { uploadId: avatarUploadId },
+    });
+    assert.equal(ownAvatar.response.status, 200);
+    const foreignAvatar = await requestJson(baseUrl, "/api/v1/profile/avatar", {
+      method: "PUT",
+      cookie: tradesperson.cookie,
+      body: { uploadId: avatarUploadId },
+    });
+    assert.equal(foreignAvatar.response.status, 404);
+    assert.equal(foreignAvatar.payload.error.code, "PROFILE_MEDIA_NOT_FOUND");
+
     const secondLogin = await requestJson(baseUrl, "/api/v1/auth/login", {
       method: "POST",
       userAgent: "Mozilla/5.0 (Android) Chrome/125.0",

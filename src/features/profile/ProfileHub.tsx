@@ -287,6 +287,7 @@ export function ProfileHub({
               <label><span>Availability</span><select value={draft.availabilityStatus} onChange={(event) => setDraft({ ...draft, availabilityStatus: event.target.value as ProfileUpdateInput["availabilityStatus"] })}><option value="available">Available</option><option value="limited">Limited</option><option value="unavailable">Unavailable</option></select></label>
               <label><span>Phone (optional)</span><input value={draft.phoneE164 ?? ""} onChange={(event) => setDraft({ ...draft, phoneE164: event.target.value || null })} placeholder="+19045551234" /></label>
               <label><span>Contact visibility</span><select value={draft.contactEmailVisibility} onChange={(event) => setDraft({ ...draft, contactEmailVisibility: event.target.value as ProfileUpdateInput["contactEmailVisibility"] })}><option value="private">Private</option><option value="connections">Connections only</option></select></label>
+              <label><span>Phone visibility</span><select value={draft.phoneVisibility} onChange={(event) => setDraft({ ...draft, phoneVisibility: event.target.value as ProfileUpdateInput["phoneVisibility"] })}><option value="private">Private</option><option value="connections">Connections only</option></select></label>
             </div>
             <div className="v2-profile-trade-picker" aria-label="Trade specialties">
               {tradeOptions.filter((trade) => trade !== "All trades").map((trade) => (

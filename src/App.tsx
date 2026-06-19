@@ -1899,7 +1899,11 @@ function App() {
   const [accountSessions, setAccountSessions] = useState<AccountSessionSummary[]>([]);
   const [authLoading, setAuthLoading] = useState(true);
   const [authMode, setAuthMode] = useState<"login" | "signup">(readAuthModePreference);
-  const [authError, setAuthError] = useState<string | null>(null);
+  const [authError, setAuthError] = useState<string | null>(() => (
+    new URLSearchParams(window.location.search).get("auth_error") === "google"
+      ? "Google sign-in could not be completed. Try again or use email."
+      : null
+  ));
   const [authProviders, setAuthProviders] = useState<Record<string, { ok: boolean; mode: string; missing: string[]; purpose: string }>>({});
   const [pilotInviteRequired, setPilotInviteRequired] = useState(false);
   const [authNotice, setAuthNotice] = useState<string | null>(null);
@@ -1983,6 +1987,13 @@ function App() {
       // no-op
     }
   }, [authMode]);
+
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    if (!url.searchParams.has("auth_error")) return;
+    url.searchParams.delete("auth_error");
+    window.history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`);
+  }, []);
 
   useEffect(() => {
     function handleHistoryNavigation() {
