@@ -1,14 +1,14 @@
 # RIVT Build State
 
 Last updated: 2026-06-18 America/New_York
-Current gate: Gate A foundation
-Current phase: Packet 00 implementation and CI complete; review, merge, and deployment evidence pending
-Repository branch: `codex/gate-a-foundation`
+Current gate: Gate A domain foundation
+Current phase: Packet 00 deployed and smoke-verified; Packet 01 ready to begin
+Repository branch: `master`
 Base commit: `99be82a Align public brand copy with RIVT tagline`
 
-## Working Tree
+## Source State
 
-The branch contains committed Packet 00 work plus pre-existing product changes that remain preserved:
+Packet 00 is merged on `master` at `4c199d903683e44d17b7985272c399c6d7a6cbd6`. The checkpoint preserves:
 
 - Pre-existing Shop Talk/Trade News work: `server/index.js`, `src/App.tsx`, `src/features/network/NetworkHub.tsx`, `src/styles.css`
 - Packet 00 safety work: auth/session/API hardening, dependency fixes, tests, and delivery documentation
@@ -16,7 +16,7 @@ The branch contains committed Packet 00 work plus pre-existing product changes t
 
 Do not discard or overwrite the pre-existing Trade News work when committing or splitting this packet.
 
-## Implemented Locally
+## Packet 00 Delivered
 
 - Removed browser-side fabricated authentication and session-storage auth fallback.
 - Failed login/network requests remain signed out; local guest access is disabled.
@@ -46,28 +46,27 @@ Run on 2026-06-18:
 - `npm audit --omit=dev`: pass; zero known vulnerabilities.
 - In-app Browser QA at 1280x720 and 390x844: auth page renders, signup role selection responds, narrow role copy no longer overlaps, and no console warnings/errors were observed.
 - GitHub Actions `Gate A Safety` run 27802147834 for commit `e4d1815`: pass; clean install, PostgreSQL-backed authorization/session tests, full lint, production build, Playwright auth flow, and production dependency audit all completed successfully.
+- GitHub Actions `Gate A Safety` run 27802435052 for merged `master` commit `4c199d9`: pass.
 
 ## Live Environment Evidence
 
-Last checked before Packet 00 implementation:
+Deployed on 2026-06-18 through Railway deployment `0f6a928c-02e6-4d58-b13d-f80894bb4b77`:
 
-- `https://rivt.pro/` returned 200.
-- PostgreSQL and S3-compatible storage reported healthy.
-- Google auth reported configured; Facebook and Apple were not configured/implemented.
-- The running source revision was not exposed.
+- `https://rivt.pro/api/health` returned 200 and identified source commit `4c199d903683e44d17b7985272c399c6d7a6cbd6`.
+- PostgreSQL and S3-compatible storage reported healthy; authenticated readiness reported `runtime-schema-v1`.
+- Anonymous storage, readiness, and app-state requests returned 401.
+- Invalid login returned 401 and did not create an authenticated session.
+- A marked disposable account completed signup, authenticated readiness/storage access, and logout; it was then deleted from production.
+- Trade News returned 22 live items.
+- Playwright live checks at 1280x720 and 390x844 returned 200 with the correct title/heading and no console errors.
 
-Packet 00 has not been deployed. Live behavior must not be assumed to include these local fixes.
+## Packet 00 Acceptance
 
-## Remaining Packet 00 Work
-
-1. Review and merge commit `e4d1815` from `codex/gate-a-foundation` into `master`.
-2. Deploy the merged commit to Railway and record the source commit.
-3. Run authenticated live readiness and smoke tests, including existing Shop Talk/Trade News behavior.
-4. Record deployment and rollback evidence in `DEPLOYMENT_LEDGER.md`.
+Packet 00 is accepted. The broader Gate A release is not approved: normalized domain persistence, migrations, real workflow authorization, backup/restore evidence, and provider acceptance remain open.
 
 ## Next Exact Task
 
-Review and merge the CI-proven Packet 00 checkpoint, deploy that exact commit, and run the live smoke matrix. Do not begin normalized marketplace schema or new product features until Packet 00 is accepted and deployed.
+Begin Packet 01 with a read-only production data inventory, schema/ADR review, and versioned migration runner. Do not implement jobs, messages, or new UI in this packet.
 
 ## Blocking Founder Decisions
 
