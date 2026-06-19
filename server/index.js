@@ -11,7 +11,7 @@ import { existsSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import pg from "pg";
-import { ApiError, asyncRoute, createRequestContext, sendApiError, z } from "./api.js";
+import { ApiError, asyncRoute, createRequestContext, sendApiError, validate, z } from "./api.js";
 import {
   assertStrongPassword,
   buildGoogleAuthorizationUrl,
