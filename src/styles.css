@@ -692,6 +692,27 @@ textarea:focus-visible {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.auth-card--entry > .auth-toggle {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  padding: 4px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.auth-card--entry > .auth-toggle button {
+  justify-content: center;
+  min-height: 44px;
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+}
+
+.auth-card--entry > .auth-toggle button.selected {
+  border-color: rgba(255, 106, 0, 0.38);
+  background: rgba(255, 106, 0, 0.14);
+  color: #fff;
+}
+
 .auth-role-choice .auth-toggle button {
   justify-content: center;
   min-height: 48px;
@@ -728,6 +749,73 @@ textarea:focus-visible {
   background: var(--danger-soft);
   color: #9b1c1c;
   font-weight: 750;
+}
+
+.auth-notice {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  background: var(--blue-soft);
+  color: var(--text);
+  font-weight: 700;
+}
+
+.auth-link-action {
+  justify-self: start;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--accent);
+  font-weight: var(--weight-label);
+}
+
+.auth-link-action:disabled {
+  color: var(--muted);
+  cursor: not-allowed;
+}
+
+.auth-link-card {
+  width: min(520px, calc(100vw - 32px));
+}
+
+.auth-link-status {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 14px;
+  align-items: start;
+  padding: 16px;
+  border-radius: var(--radius);
+  background: var(--surface-soft);
+}
+
+.auth-link-status[data-status="success"] svg {
+  color: #1f9d55;
+}
+
+.auth-link-status[data-status="error"] svg {
+  color: #c43d3d;
+}
+
+.auth-link-status span,
+.auth-link-status p,
+.auth-link-password small,
+.auth-form-grid small {
+  color: var(--muted);
+}
+
+.auth-link-status h2,
+.auth-link-status p {
+  margin: 4px 0 0;
+}
+
+.auth-link-password {
+  display: grid;
+  gap: 8px;
+}
+
+.auth-link-password input {
+  min-height: 48px;
 }
 
 .auth-shell .auth-status strong svg,
@@ -796,6 +884,36 @@ textarea:focus-visible {
   color: var(--muted);
   font-size: 13px;
   line-height: 1.4;
+}
+
+.onboarding-verification {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 14px;
+  border-radius: var(--radius);
+  background: var(--amber-soft);
+}
+
+.onboarding-verification > div {
+  display: grid;
+  gap: 3px;
+}
+
+.onboarding-verification span {
+  color: var(--muted);
+}
+
+@media (max-width: 560px) {
+  .onboarding-verification {
+    grid-template-columns: auto 1fr;
+  }
+
+  .onboarding-verification .secondary-action {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
 }
 
 .role-choice-grid,

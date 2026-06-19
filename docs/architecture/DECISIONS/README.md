@@ -19,3 +19,4 @@ Accepted decisions:
 
 - `2026-06-18-versioned-sql-migrations.md`
 - `2026-06-18-legacy-quarantine-account-bridge.md`
+- `2026-06-19-auth-account-lifecycle.md`

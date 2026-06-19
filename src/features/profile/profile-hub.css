@@ -217,6 +217,128 @@
   grid-column: 1 / -1;
 }
 
+.v2-profile-editor {
+  padding-bottom: 18px;
+}
+
+.v2-profile-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  padding: 18px;
+}
+
+.v2-profile-form-grid label {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+}
+
+.v2-profile-form-grid label > span {
+  color: var(--v2-text-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.v2-profile-form-grid .is-wide {
+  grid-column: 1 / -1;
+}
+
+.v2-profile-form-grid input,
+.v2-profile-form-grid select,
+.v2-profile-form-grid textarea {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid var(--v2-border);
+  border-radius: var(--v2-radius-md);
+  background: var(--v2-surface-muted);
+  color: var(--v2-text);
+}
+
+.v2-profile-form-grid textarea {
+  resize: vertical;
+}
+
+.v2-profile-trade-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 0 18px 18px;
+}
+
+.v2-profile-trade-picker button {
+  min-height: 38px;
+  padding: 0 11px;
+  border: 1px solid var(--v2-border);
+  border-radius: 999px;
+  background: var(--v2-surface);
+  color: var(--v2-text-muted);
+  font-weight: 700;
+}
+
+.v2-profile-trade-picker button.is-selected {
+  border-color: var(--v2-accent);
+  background: var(--v2-accent-soft);
+  color: var(--v2-accent);
+}
+
+.v2-profile-editor-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 0 18px;
+}
+
+.v2-profile-editor-actions > div {
+  display: grid;
+  gap: 3px;
+  margin-right: auto;
+}
+
+.v2-profile-editor-actions span {
+  color: var(--v2-text-muted);
+  font-size: 12px;
+}
+
+.v2-session-list {
+  display: grid;
+}
+
+.v2-session-list article {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--v2-border);
+}
+
+.v2-session-list article > div {
+  display: grid;
+  gap: 3px;
+}
+
+.v2-session-list article span {
+  color: var(--v2-text-muted);
+  font-size: 12px;
+}
+
+.v2-revoke-others {
+  margin: 16px 18px 0;
+}
+
+.v2-profile-action-message {
+  margin: 12px 18px 0;
+  color: var(--v2-text-muted);
+  font-size: 12px;
+}
+
+.v2-profile-action-message.is-error {
+  color: #c43d3d;
+}
+
 @media (max-width: 1040px) {
   .v2-profile-grid {
     grid-template-columns: 1fr;
@@ -236,5 +358,31 @@
   .v2-profile-header-actions {
     width: 100%;
     flex-direction: column;
+  }
+
+  .v2-profile-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .v2-profile-form-grid .is-wide {
+    grid-column: auto;
+  }
+
+  .v2-profile-editor-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .v2-profile-editor-actions > div {
+    margin-right: 0;
+  }
+
+  .v2-session-list article {
+    grid-template-columns: auto 1fr;
+  }
+
+  .v2-session-list article button {
+    grid-column: 1 / -1;
+    width: 100%;
   }
 }

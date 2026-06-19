@@ -1,4 +1,4 @@
-import { type ChangeEvent, type FormEvent, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import { type ChangeEvent, type FormEvent, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertTriangle,
   ArrowLeft,
@@ -80,6 +80,7 @@ import { InboxCenter } from "./features/inbox/InboxCenter";
 import { LegacyBridge } from "./features/legacy/LegacyBridge";
 import { ToolsStudio } from "./features/tools/ToolsStudio";
 import { ProfileHub } from "./features/profile/ProfileHub";
+import type { AccountSessionSummary, ProfileUpdateInput } from "./features/profile/ProfileHub";
 
 type TradeFilter = (typeof tradeOptions)[number];
 type DifficultyFilter = (typeof difficultyOptions)[number];
@@ -124,6 +125,9 @@ interface AccountProfile {
 
 interface OnboardingResult extends AccountProfile {
   role: Role;
+  serviceAreaCity: string;
+  serviceAreaRegion: string;
+  serviceRadiusMiles: number;
 }
 
 interface AuthUser {
@@ -134,6 +138,45 @@ interface AuthUser {
   role: Role | "pending";
   organization: string;
   location: string;
+  email_verified: boolean;
+  account_status: "onboarding" | "active" | "suspended" | "closed";
+  onboarding_status: "draft" | "complete";
+}
+
+interface CanonicalAccount {
+  id: string;
+  status: "onboarding" | "active" | "suspended" | "closed";
+  primaryRole: Role | "pending";
+  email: string;
+  provider: "email" | "google" | "facebook" | "apple";
+  emailVerified: boolean;
+  profile: {
+    displayName: string;
+    headline: string;
+    bio: string;
+    locationText: string;
+    visibility: "private" | "network";
+    onboardingStatus: "draft" | "complete";
+    serviceArea: {
+      city: string;
+      region: string;
+      countryCode: string;
+      radiusMiles: number;
+    };
+    availabilityStatus: "available" | "limited" | "unavailable";
+    contactEmailVisibility: "private" | "connections";
+    phoneE164: string | null;
+    phoneVisibility: "private" | "connections";
+    avatarUploadId: string | null;
+    trades: Array<{ code: string; name: string; primary: boolean }>;
+  };
+  organizations: Array<{ id: string; name: string; role: "owner" | "admin" | "member" }>;
+  capabilities: {
+    canCompleteOnboarding: boolean;
+    canPostWork: boolean;
+    canApplyToWork: boolean;
+    canPublishProfile: boolean;
+  };
 }
 
 interface ActivityItem {
@@ -343,7 +386,6 @@ const LEGACY_STORAGE_KEY = `${brandConfig.appSlug}-beta-state-v2`;
 const THEME_STORAGE_KEY = `${brandConfig.appSlug}-theme-mode`;
 const THEME_PALETTE_STORAGE_KEY = `${brandConfig.appSlug}-theme-palette`;
 const AUTH_MODE_KEY = `${brandConfig.appSlug}-auth-mode`;
-const GUEST_DEMO_ENABLED = import.meta.env.DEV && import.meta.env.VITE_ENABLE_GUEST_DEMO === "true";
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? (import.meta.env.DEV ? "http://127.0.0.1:8787" : "");
 
 type ServerStatus = "checking" | "connected" | "offline" | "setup_required";
@@ -356,6 +398,37 @@ interface ServerStateResponse {
 function apiPath(path: string) {
   return `${API_BASE_URL}${path}`;
 }
+
+const tradeCodeByName: Record<Trade, string> = {
+  Electrical: "electrical",
+  Plumbing: "plumbing",
+  HVAC: "hvac",
+  Carpentry: "carpentry",
+  Cabinetry: "cabinetry",
+  "Painting/Finishing": "painting_finishing",
+  Welding: "welding",
+  Roofing: "roofing",
+  Flooring: "flooring",
+  Drywall: "drywall",
+  "Concrete/Masonry": "concrete_masonry",
+  Landscaping: "landscaping",
+  Tile: "tile",
+  Insulation: "insulation",
+  Framing: "framing",
+  "General Labor": "general_labor",
+  Demolition: "demolition",
+  Excavation: "excavation",
+  Fencing: "fencing",
+  Gutters: "gutters",
+  "Windows/Doors": "windows_doors",
+  Siding: "siding",
+  "Driveways/Pavers": "driveways_pavers",
+  "Pool/Spa": "pool_spa",
+  "Fire Suppression": "fire_protection",
+  "Low Voltage": "low_voltage",
+  Solar: "solar",
+  "Security Systems": "security_systems",
+};
 
 function readThemePreference(): ThemeMode {
   if (typeof window === "undefined") return "light";
@@ -1661,6 +1734,8 @@ function communityBadgeLabels(posts: CommunityPost[], personName: string) {
   return badges;
 }
 
+// Legacy fixture retained only until the marketplace packet removes the old local model.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const guestDemoJobs: Job[] = [
   {
     id: 9001,
@@ -1809,7 +1884,7 @@ function App() {
   const initialSelectedId = initialJobs[0]?.id ?? 0;
   const [activeView, setActiveView] = useState<NavLabel>(() => viewFromPath(window.location.pathname));
   const [role, setRole] = useState<Role>("contractor");
-  const [onboardingComplete, setOnboardingComplete] = useState(true);
+  const [onboardingComplete, setOnboardingComplete] = useState(false);
   const [accountProfile, setAccountProfile] = useState<AccountProfile>({
     email: "",
     displayName: "",
@@ -1820,10 +1895,14 @@ function App() {
     authMethod: "Email",
   });
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
+  const [canonicalAccount, setCanonicalAccount] = useState<CanonicalAccount | null>(null);
+  const [accountSessions, setAccountSessions] = useState<AccountSessionSummary[]>([]);
   const [authLoading, setAuthLoading] = useState(true);
   const [authMode, setAuthMode] = useState<"login" | "signup">(readAuthModePreference);
   const [authError, setAuthError] = useState<string | null>(null);
   const [authProviders, setAuthProviders] = useState<Record<string, { ok: boolean; mode: string; missing: string[]; purpose: string }>>({});
+  const [pilotInviteRequired, setPilotInviteRequired] = useState(false);
+  const [authNotice, setAuthNotice] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [trade, setTrade] = useState<TradeFilter>("All trades");
   const [difficulty, setDifficulty] =
@@ -1917,37 +1996,59 @@ function App() {
     return () => window.removeEventListener("popstate", handleHistoryNavigation);
   }, []);
 
+  const applyCanonicalAccount = useCallback((account: CanonicalAccount) => {
+    const accountRole = account.primaryRole === "tradesperson" ? "tradesperson" : "contractor";
+    const authMethod: AuthMethod = account.provider === "google" ? "Google" : account.provider === "facebook" ? "Facebook" : account.provider === "apple" ? "Apple" : "Email";
+    setCanonicalAccount(account);
+    setAuthUser({
+      id: account.id,
+      email: account.email,
+      provider: account.provider,
+      display_name: account.profile.displayName,
+      role: account.primaryRole,
+      organization: account.organizations[0]?.name ?? "",
+      location: account.profile.locationText,
+      email_verified: account.emailVerified,
+      account_status: account.status,
+      onboarding_status: account.profile.onboardingStatus,
+    });
+    setRole(accountRole);
+    setAccountProfile((current) => ({
+      email: account.email,
+      displayName: account.profile.displayName || "RIVT member",
+      organization: account.organizations[0]?.name ?? "",
+      location: account.profile.locationText,
+      specialties: account.profile.trades.map((trade) => trade.name as Trade),
+      plan: current.plan,
+      authMethod,
+    }));
+    setOnboardingComplete(account.status === "active" && account.profile.onboardingStatus === "complete");
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
     async function hydrateAuth() {
       try {
         const [meResponse, providersResponse] = await Promise.all([
-          fetch(apiPath("/api/auth/me"), { credentials: "include" }),
+          fetch(apiPath("/api/v1/me"), { credentials: "include" }),
           fetch(apiPath("/api/auth/providers"), { credentials: "include" }),
         ]);
-        const meBody = await meResponse.json().catch(() => ({})) as { user?: AuthUser | null };
+        const meBody = await meResponse.json().catch(() => ({})) as { data?: CanonicalAccount };
         const providersBody = await providersResponse.json().catch(() => ({})) as {
           providers?: Record<string, { ok: boolean; mode: string; missing: string[]; purpose: string }>;
+          inviteRequired?: boolean;
         };
         if (cancelled) return;
-        setAuthUser(meBody.user ?? null);
         setAuthProviders(providersBody.providers ?? {});
-        const hydratedUser = meBody.user;
-        if (hydratedUser) {
-          const hydratedRole: Role = hydratedUser.role === "tradesperson" ? "tradesperson" : "contractor";
-          setRole(hydratedRole);
-          if (hydratedUser.role === "pending") {
-            setOnboardingComplete(false);
-          }
-          setAccountProfile({
-            email: hydratedUser.email,
-            displayName: hydratedUser.display_name || "RIVT user",
-            organization: hydratedUser.organization,
-            location: hydratedUser.location,
-            specialties: accountProfile.specialties,
-            plan: accountProfile.plan,
-            authMethod: hydratedUser.provider === "email" ? "Email" : "Google",
-          });
+        setPilotInviteRequired(Boolean(providersBody.inviteRequired));
+        if (meResponse.ok && meBody.data) {
+          applyCanonicalAccount(meBody.data);
+        } else if (meResponse.status === 401) {
+          setAuthUser(null);
+          setCanonicalAccount(null);
+          setOnboardingComplete(false);
+        } else {
+          throw new Error("Session lookup failed.");
         }
       } catch {
         if (!cancelled) {
@@ -1966,9 +2067,34 @@ function App() {
     return () => {
       cancelled = true;
     };
-    // One-time auth bootstrap.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [applyCanonicalAccount]);
+
+  async function refreshCanonicalAccount() {
+    const response = await fetch(apiPath("/api/v1/me"), { credentials: "include" });
+    const body = await response.json().catch(() => ({})) as { data?: CanonicalAccount; error?: { message?: string } };
+    if (!response.ok || !body.data) throw new Error(body.error?.message || "RIVT could not load your account.");
+    applyCanonicalAccount(body.data);
+    return body.data;
+  }
+
+  const fetchAccountSessions = useCallback(async () => {
+    const response = await fetch(apiPath("/api/v1/sessions"), { credentials: "include" });
+    const body = await response.json().catch(() => ({})) as {
+      data?: { sessions?: AccountSessionSummary[] };
+      error?: { message?: string };
+    };
+    if (!response.ok) throw new Error(body.error?.message || "Sessions could not be loaded.");
+    return body.data?.sessions ?? [];
   }, []);
+
+  useEffect(() => {
+    if (!authUser || (activeView !== "Settings" && !isAccountOpen)) return;
+    let cancelled = false;
+    void fetchAccountSessions()
+      .then((sessions) => { if (!cancelled) setAccountSessions(sessions); })
+      .catch(() => { if (!cancelled) setAccountSessions([]); });
+    return () => { cancelled = true; };
+  }, [activeView, authUser, fetchAccountSessions, isAccountOpen]);
 
   useEffect(() => {
     if (onboardingComplete) {
@@ -2004,10 +2130,7 @@ function App() {
           : "Marketplace",
       );
     }
-    if (nextState.onboardingComplete !== undefined) {
-      setOnboardingComplete(nextState.onboardingComplete);
-    }
-    if (nextState.accountProfile !== undefined) setAccountProfile(nextState.accountProfile);
+    // Identity, role, profile, and onboarding state are server-authoritative.
     if (nextState.query !== undefined) setQuery(nextState.query);
     if (nextState.trade !== undefined) setTrade(nextState.trade);
     if (nextState.difficulty !== undefined) setDifficulty(nextState.difficulty);
@@ -2265,44 +2388,134 @@ function App() {
     );
   }
 
-  async function handleAuthSubmit(form: { email: string; password: string; displayName?: string; organization?: string; location?: string; role?: Role }) {
+  async function handleAuthSubmit(form: { email: string; password: string; displayName?: string; role?: Role; inviteCode?: string }) {
     setAuthError(null);
+    setAuthNotice(null);
     try {
-      const path = authMode === "signup" ? "/api/auth/signup" : "/api/auth/login";
+      const path = authMode === "signup" ? "/api/v1/auth/signup" : "/api/v1/auth/login";
       const response = await fetch(apiPath(path), {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
       });
-      const body = await response.json().catch(() => ({})) as { ok?: boolean; error?: string; user?: AuthUser };
-      if (!response.ok || !body.user) {
-        throw new Error(body.error || "Sign-in failed.");
+      const body = await response.json().catch(() => ({})) as {
+        data?: { user?: AuthUser; verificationRequired?: boolean; verificationDelivered?: boolean };
+        error?: { message?: string };
+      };
+      if (!response.ok || !body.data?.user) {
+        throw new Error(body.error?.message || "Sign-in failed.");
       }
-      setAuthUser(body.user);
-      const authenticatedRole: Role = body.user.role === "tradesperson" ? "tradesperson" : "contractor";
-      setRole(authenticatedRole);
-      setAccountProfile({
-        email: body.user.email,
-        displayName: body.user.display_name || form.displayName || "RIVT user",
-        organization: body.user.organization || form.organization || "",
-        location: body.user.location || form.location || "",
-        specialties: accountProfile.specialties,
-        plan: accountProfile.plan,
-        authMethod: authMode === "signup" ? "Email" : (body.user.provider === "email" ? "Email" : "Google"),
-      });
-      setOnboardingComplete(false);
+      const account = await refreshCanonicalAccount();
       setServerHydrated(false);
-      addActivity("Authenticated", `${body.user.email} is now signed in.`);
+      if (body.data.verificationRequired || !account.emailVerified) {
+        setAuthNotice(body.data.verificationDelivered === false
+          ? `Your account was created, but the verification email could not be delivered. Use Resend on the next screen.`
+          : `We sent a verification link to ${account.email}.`);
+      }
     } catch (error) {
       setAuthUser(null);
+      setCanonicalAccount(null);
       setAuthError(error instanceof Error ? error.message : "Sign-in failed. Check your connection and try again.");
     }
   }
 
+  async function handleForgotPassword(email: string) {
+    setAuthError(null);
+    setAuthNotice(null);
+    try {
+      const response = await fetch(apiPath("/api/v1/auth/password/forgot"), {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      const body = await response.json().catch(() => ({})) as { data?: { message?: string }; error?: { message?: string } };
+      if (!response.ok) throw new Error(body.error?.message || "Reset request could not be sent.");
+      setAuthNotice(body.data?.message || "If that account exists, a reset email will arrive shortly.");
+    } catch (error) {
+      setAuthError(error instanceof Error ? error.message : "Reset request could not be sent.");
+    }
+  }
+
+  async function handleResendVerification() {
+    setAuthError(null);
+    setAuthNotice(null);
+    try {
+      const response = await fetch(apiPath("/api/v1/auth/email/resend"), {
+        method: "POST",
+        credentials: "include",
+      });
+      const body = await response.json().catch(() => ({})) as { error?: { message?: string } };
+      if (!response.ok) throw new Error(body.error?.message || "Verification email could not be sent.");
+      setAuthNotice(`A fresh verification link was sent to ${canonicalAccount?.email ?? accountProfile.email}.`);
+    } catch (error) {
+      setAuthError(error instanceof Error ? error.message : "Verification email could not be sent.");
+    }
+  }
+
+  async function handleSaveProfile(input: ProfileUpdateInput) {
+    const response = await fetch(apiPath("/api/v1/profile"), {
+      method: "PATCH",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ...input,
+        tradeCodes: input.specialties.map((specialty) => tradeCodeByName[specialty]),
+      }),
+    });
+    const body = await response.json().catch(() => ({})) as { error?: { message?: string } };
+    if (!response.ok) throw new Error(body.error?.message || "Profile could not be saved.");
+    await refreshCanonicalAccount();
+    addActivity("Profile saved", "Your network profile and service area are up to date.", "success");
+  }
+
+  async function handleSetProfileVisibility(visibility: "private" | "network") {
+    const response = await fetch(apiPath(`/api/v1/profile/${visibility === "network" ? "publish" : "unpublish"}`), {
+      method: "POST",
+      credentials: "include",
+    });
+    const body = await response.json().catch(() => ({})) as { error?: { message?: string } };
+    if (!response.ok) throw new Error(body.error?.message || "Profile visibility could not be changed.");
+    await refreshCanonicalAccount();
+    addActivity(
+      visibility === "network" ? "Profile visible" : "Profile private",
+      visibility === "network" ? "Other RIVT members can now discover your profile." : "Your profile is hidden from network discovery.",
+      "success",
+    );
+  }
+
+  async function handleRevokeSession(sessionId: string) {
+    const response = await fetch(apiPath(`/api/v1/sessions/${sessionId}`), {
+      method: "DELETE",
+      credentials: "include",
+    });
+    const body = await response.json().catch(() => ({})) as { data?: { current?: boolean }; error?: { message?: string } };
+    if (!response.ok) throw new Error(body.error?.message || "Session could not be signed out.");
+    if (body.data?.current) {
+      setAuthUser(null);
+      setCanonicalAccount(null);
+      setOnboardingComplete(false);
+      return;
+    }
+    setAccountSessions(await fetchAccountSessions());
+    addActivity("Device signed out", "That RIVT session can no longer access your account.", "success");
+  }
+
+  async function handleRevokeOtherSessions() {
+    const response = await fetch(apiPath("/api/v1/sessions/revoke-others"), {
+      method: "POST",
+      credentials: "include",
+    });
+    const body = await response.json().catch(() => ({})) as { data?: { revokedCount?: number }; error?: { message?: string } };
+    if (!response.ok) throw new Error(body.error?.message || "Other sessions could not be signed out.");
+    setAccountSessions(await fetchAccountSessions());
+    addActivity("Other devices signed out", `${body.data?.revokedCount ?? 0} other session${body.data?.revokedCount === 1 ? "" : "s"} revoked.`, "success");
+  }
+
   async function handleLogout() {
     try {
-      await fetch(apiPath("/api/auth/logout"), {
+      await fetch(apiPath("/api/v1/auth/logout"), {
         method: "POST",
         credentials: "include",
       });
@@ -2310,6 +2523,9 @@ function App() {
       // Ignore logout network hiccups; the local session can still be cleared.
     } finally {
       setAuthUser(null);
+      setCanonicalAccount(null);
+      setOnboardingComplete(false);
+      setAuthNotice(null);
       setAccountOpen(false);
       setActivityOpen(false);
       setActiveView("Home");
@@ -2596,22 +2812,27 @@ function App() {
   async function handleOnboardingComplete(result: OnboardingResult) {
     setAuthError(null);
     try {
-      const response = await fetch(apiPath("/api/auth/profile"), {
-        method: "PATCH",
+      const response = await fetch(apiPath("/api/v1/onboarding/complete"), {
+        method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           role: result.role,
           displayName: result.displayName,
-          organization: result.organization,
-          location: result.location,
+          serviceAreaCity: result.serviceAreaCity,
+          serviceAreaRegion: result.serviceAreaRegion,
+          serviceRadiusMiles: result.serviceRadiusMiles,
+          tradeCodes: result.specialties.map((specialty) => tradeCodeByName[specialty]),
+          organizationName: result.role === "contractor" ? result.organization : undefined,
+          consentAccepted: true,
+          consentVersion: "2026-06-19",
         }),
       });
-      const body = await response.json().catch(() => ({})) as { error?: string; user?: AuthUser };
-      if (!response.ok || !body.user) {
-        throw new Error(body.error || "Account setup could not be saved.");
+      const body = await response.json().catch(() => ({})) as { error?: { message?: string } };
+      if (!response.ok) {
+        throw new Error(body.error?.message || "Account setup could not be saved.");
       }
-      setAuthUser(body.user);
+      await refreshCanonicalAccount();
     } catch (error) {
       setAuthError(error instanceof Error ? error.message : "Account setup could not be saved.");
       return;
@@ -2667,13 +2888,6 @@ function App() {
     );
   }
 
-  function handleGuestLogin() {
-    setIsGuest(true);
-    setJobs(guestDemoJobs);
-    setSelectedId(guestDemoJobs[0].id);
-    setAccountProfile((current) => ({ ...current, displayName: "Guest" }));
-  }
-
   function handleExitGuest() {
     setIsGuest(false);
     setJobs(initialJobs);
@@ -2698,15 +2912,22 @@ function App() {
     return <LaunchLoader />;
   }
 
-  if (!authUser && !isGuest) {
+  const authLinkPath = window.location.pathname;
+  if (authLinkPath === "/verify-email" || authLinkPath === "/reset-password") {
+    return <AuthLinkFlow mode={authLinkPath === "/verify-email" ? "verify" : "reset"} />;
+  }
+
+  if (!authUser) {
     return (
       <AuthGate
         mode={authMode}
         error={authError}
+        notice={authNotice}
         providers={authProviders}
+        inviteRequired={pilotInviteRequired}
         onModeChange={setAuthMode}
         onSubmit={handleAuthSubmit}
-        onGuestLogin={handleGuestLogin}
+        onForgotPassword={handleForgotPassword}
       />
     );
   }
@@ -2717,8 +2938,11 @@ function App() {
         themeMode={themeMode}
         onToggleTheme={handleToggleTheme}
         onComplete={handleOnboardingComplete}
+        onResendVerification={handleResendVerification}
         error={authError}
-        initialRole={role}
+        notice={authNotice}
+        emailVerified={Boolean(canonicalAccount?.emailVerified)}
+        initialRole={authUser.role}
         initialEmail={accountProfile.email}
         initialDisplayName={accountProfile.displayName}
         initialOrganization={accountProfile.organization}
@@ -2870,6 +3094,20 @@ function App() {
               plan: accountProfile.plan,
               authMethod: accountProfile.authMethod,
             }}
+            canonicalProfile={canonicalAccount ? {
+              headline: canonicalAccount.profile.headline,
+              bio: canonicalAccount.profile.bio,
+              serviceAreaCity: canonicalAccount.profile.serviceArea.city,
+              serviceAreaRegion: canonicalAccount.profile.serviceArea.region,
+              serviceRadiusMiles: canonicalAccount.profile.serviceArea.radiusMiles,
+              availabilityStatus: canonicalAccount.profile.availabilityStatus,
+              contactEmailVisibility: canonicalAccount.profile.contactEmailVisibility,
+              phoneE164: canonicalAccount.profile.phoneE164,
+              phoneVisibility: canonicalAccount.profile.phoneVisibility,
+              visibility: canonicalAccount.profile.visibility,
+              emailVerified: canonicalAccount.emailVerified,
+            } : null}
+            sessions={accountSessions}
             trustReady={trustReady}
             recordCount={uploadedRecords.size}
             trainingProgress={Math.round((completedTraining.size / trainingModules.length) * 100)}
@@ -2889,6 +3127,10 @@ function App() {
             onSelectThemePalette={handleSelectThemePalette}
             onReviewConsent={() => {}}
             onLogout={handleLogout}
+            onSaveProfile={handleSaveProfile}
+            onSetProfileVisibility={handleSetProfileVisibility}
+            onRevokeSession={handleRevokeSession}
+            onRevokeOtherSessions={handleRevokeOtherSessions}
           />
         ) : ["Tools", "Records"].includes(activeView) ? (
           <ToolsStudio
@@ -2973,6 +3215,92 @@ function LaunchLoader() {
   );
 }
 
+function AuthLinkFlow({ mode }: { mode: "verify" | "reset" }) {
+  const token = new URLSearchParams(window.location.search).get("token") ?? "";
+  const started = useRef(false);
+  const [status, setStatus] = useState<"idle" | "working" | "success" | "error">(mode === "verify" ? (token ? "working" : "error") : "idle");
+  const [message, setMessage] = useState(mode === "verify"
+    ? token ? "Verifying your email..." : "This verification link is incomplete. Request a new link from sign in."
+    : "Choose a new password for your RIVT account.");
+  const [password, setPassword] = useState("");
+
+  useEffect(() => {
+    if (mode !== "verify" || started.current) return;
+    started.current = true;
+    if (!token) return;
+    void fetch(apiPath("/api/v1/auth/email/verify"), {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token }),
+    }).then(async (response) => {
+      const body = await response.json().catch(() => ({})) as { error?: { message?: string } };
+      if (!response.ok) throw new Error(body.error?.message || "Email verification failed.");
+      setStatus("success");
+      setMessage("Your email is verified. You can finish setting up your RIVT profile.");
+    }).catch((error) => {
+      setStatus("error");
+      setMessage(error instanceof Error ? error.message : "Email verification failed.");
+    });
+  }, [mode, token]);
+
+  async function resetPassword() {
+    if (!token) {
+      setStatus("error");
+      setMessage("This reset link is incomplete. Request a new one from sign in.");
+      return;
+    }
+    setStatus("working");
+    try {
+      const response = await fetch(apiPath("/api/v1/auth/password/reset"), {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token, password }),
+      });
+      const body = await response.json().catch(() => ({})) as { error?: { message?: string } };
+      if (!response.ok) throw new Error(body.error?.message || "Password reset failed.");
+      setStatus("success");
+      setMessage("Your password has been changed. Sign in again on your devices.");
+    } catch (error) {
+      setStatus("error");
+      setMessage(error instanceof Error ? error.message : "Password reset failed.");
+    }
+  }
+
+  return (
+    <main className="auth-shell">
+      <section className="auth-card auth-link-card">
+        <LogoLockup />
+        <div className="auth-link-status" data-status={status}>
+          {status === "success" ? <CheckCircle2 size={24} /> : status === "error" ? <AlertTriangle size={24} /> : <Mail size={24} />}
+          <div>
+            <span>{mode === "verify" ? "Email verification" : "Account recovery"}</span>
+            <h2>{status === "success" ? "All set" : mode === "verify" ? "Checking your link" : "Reset password"}</h2>
+            <p>{message}</p>
+          </div>
+        </div>
+        {mode === "reset" && status !== "success" ? (
+          <label className="auth-link-password">
+            <span>New password</span>
+            <input value={password} onChange={(event) => setPassword(event.target.value)} type="password" autoComplete="new-password" />
+            <small>12+ characters with uppercase, lowercase, a number, and a symbol.</small>
+          </label>
+        ) : null}
+        {mode === "reset" && status !== "success" ? (
+          <button type="button" className="primary-action" onClick={resetPassword} disabled={status === "working" || !password}>
+            {status === "working" ? "Updating..." : "Update password"}
+          </button>
+        ) : (
+          <button type="button" className="primary-action" onClick={() => window.location.assign("/")} disabled={status === "working"}>
+            Continue to RIVT
+          </button>
+        )}
+      </section>
+    </main>
+  );
+}
+
 function EntryShowcase() {
   const pillars = [
     { icon: BriefcaseBusiness, title: "Find work", copy: "See the jobs, scope, and timing before you commit." },
@@ -3031,24 +3359,27 @@ function EntryShowcase() {
 function AuthGate({
   mode,
   error,
+  notice,
   providers,
+  inviteRequired,
   onModeChange,
   onSubmit,
-  onGuestLogin,
+  onForgotPassword,
 }: {
   mode: "login" | "signup";
   error: string | null;
+  notice: string | null;
   providers: Record<string, { ok: boolean; mode: string; missing: string[]; purpose: string }>;
+  inviteRequired: boolean;
   onModeChange: (mode: "login" | "signup") => void;
-  onSubmit: (form: { email: string; password: string; displayName?: string; organization?: string; location?: string; role?: Role }) => void;
-  onGuestLogin: () => void;
+  onSubmit: (form: { email: string; password: string; displayName?: string; role?: Role; inviteCode?: string }) => void;
+  onForgotPassword: (email: string) => void;
 }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
-  const [organization, setOrganization] = useState("");
-  const [location, setLocation] = useState("Jacksonville, FL");
   const [role, setRole] = useState<Role>("contractor");
+  const [inviteCode, setInviteCode] = useState("");
 
   return (
     <main className="auth-shell auth-shell--split">
@@ -3062,25 +3393,8 @@ function AuthGate({
           <p>Use the same workspace to manage jobs, crews, tools, and records.</p>
         </div>
 
-        {GUEST_DEMO_ENABLED ? (
-          <div className="auth-guest-callout auth-guest-callout--hero">
-            <div>
-              <strong>Prefer to browse first?</strong>
-              <span>Preview the local demo without creating an account.</span>
-            </div>
-            <button type="button" className="ghost-action auth-guest-cta" onClick={onGuestLogin}>
-              Browse local demo
-            </button>
-          </div>
-        ) : null}
-
         <div className="auth-provider-grid">
-          {([
-            ["google", GoogleIcon, "Continue with Google"],
-            ["facebook", FacebookIcon, "Continue with Facebook"],
-            ["apple", AppleIcon, "Continue with Apple"],
-            ["email", EmailIcon, "Use email"],
-          ] as const).map(([key, label, providerLabel]) => {
+          {([ ["google", GoogleIcon, "Continue with Google"], ["email", EmailIcon, "Use email"] ] as const).map(([key, label, providerLabel]) => {
             const provider = providers[key];
             const ok = provider?.ok ?? (key === "email");
             const Icon = label;
@@ -3090,7 +3404,7 @@ function AuthGate({
                 type="button"
                 key={key}
                 className={ok ? "auth-provider-tile" : "auth-provider-tile disabled"}
-                title={ok ? provider?.purpose ?? key : `Setup required: ${provider?.missing.join(", ") ?? "provider keys"}`}
+                title={ok ? provider?.purpose ?? key : "Temporarily unavailable"}
                 onClick={() => {
                   if (!ok) return;
                   if (key === "google") {
@@ -3132,6 +3446,7 @@ function AuthGate({
           <label>
             <span>Password</span>
             <input value={password} onChange={(event) => setPassword(event.target.value)} type="password" />
+            {mode === "signup" ? <small>12+ characters with uppercase, lowercase, a number, and a symbol.</small> : null}
           </label>
           {mode === "signup" && (
             <>
@@ -3139,14 +3454,12 @@ function AuthGate({
                 <span>Name</span>
                 <input value={displayName} onChange={(event) => setDisplayName(event.target.value)} />
               </label>
-              <label>
-                <span>{role === "contractor" ? "Company" : "Portfolio"}</span>
-                <input value={organization} onChange={(event) => setOrganization(event.target.value)} />
-              </label>
-              <label>
-                <span>Location</span>
-                <input value={location} onChange={(event) => setLocation(event.target.value)} />
-              </label>
+              {inviteRequired ? (
+                <label>
+                  <span>Pilot invitation code</span>
+                  <input value={inviteCode} onChange={(event) => setInviteCode(event.target.value)} autoComplete="one-time-code" />
+                </label>
+              ) : null}
               <div className="role-locked-note">
                 <strong>{role === "contractor" ? "Contractor role" : "Tradesperson role"}</strong>
                 <span>Chosen at signup and kept consistent across the app.</span>
@@ -3155,12 +3468,19 @@ function AuthGate({
           )}
         </div>
 
+        {notice ? <p className="auth-notice" role="status">{notice}</p> : null}
         {error ? <p className="auth-error">{error}</p> : null}
+
+        {mode === "login" ? (
+          <button type="button" className="auth-link-action" onClick={() => onForgotPassword(email)} disabled={!email.trim()}>
+            Forgot password?
+          </button>
+        ) : null}
 
         <button
           type="button"
           className="primary-action"
-          onClick={() => onSubmit({ email, password, displayName, organization, location, role })}
+          onClick={() => onSubmit({ email, password, displayName, role, inviteCode: inviteCode || undefined })}
         >
           {mode === "signup" ? "Create account" : "Log in"}
         </button>
@@ -3248,23 +3568,6 @@ function GoogleIcon() {
   );
 }
 
-function FacebookIcon() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path fill="#1877F2" d="M12 2.5a9.5 9.5 0 1 0 0 19h.2v-6.5h-1.8v-2.7h1.8v-2c0-1.8 1.1-2.8 2.7-2.8.8 0 1.6.1 1.6.1v1.8h-.9c-.9 0-1.1.6-1.1 1.1v1.8h2l-.3 2.7h-1.7v6.5A9.5 9.5 0 0 0 12 2.5Z" />
-    </svg>
-  );
-}
-
-function AppleIcon() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path fill="currentColor" d="M16.2 12.5c0-2.5 2-3.7 2.1-3.8-1.2-1.7-3-1.9-3.6-1.9-1.5-.2-2.9.9-3.6.9-.7 0-1.9-.9-3.2-.9-1.7 0-3.3 1-4.2 2.6-1.8 3.1-.4 7.7 1.2 10.2.8 1.2 1.8 2.6 3.1 2.5 1.2-.1 1.7-.8 3.3-.8s2 0.8 3.3.8c1.3 0 2.2-1.2 3-2.4.9-1.3 1.2-2.6 1.2-2.7-.1 0-2.5-.9-2.5-4.1Z" />
-      <path fill="currentColor" d="M15 5.2c.7-.8 1.2-1.9 1.1-3.2-1 .1-2.2.7-2.9 1.5-.6.7-1.2 1.8-1.1 3 1.1.1 2.2-.5 2.9-1.3Z" />
-    </svg>
-  );
-}
-
 function EmailIcon() {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -3278,6 +3581,7 @@ function OnboardingFlow({
   themeMode,
   onToggleTheme,
   onComplete,
+  onResendVerification,
   initialRole,
   initialEmail,
   initialDisplayName,
@@ -3285,49 +3589,55 @@ function OnboardingFlow({
   initialLocation,
   initialSpecialties,
   initialAuthMethod,
+  emailVerified,
+  notice,
   error,
 }: {
   themeMode: ThemeMode;
   onToggleTheme: () => void;
   onComplete: (result: OnboardingResult) => void;
-  initialRole: Role;
+  onResendVerification: () => void;
+  initialRole: Role | "pending";
   initialEmail: string;
   initialDisplayName: string;
   initialOrganization: string;
   initialLocation: string;
   initialSpecialties: Trade[];
   initialAuthMethod: AuthMethod;
+  emailVerified: boolean;
+  notice?: string | null;
   error?: string | null;
 }) {
-  const role = initialRole;
-  const [authMethod, setAuthMethod] = useState<AuthMethod>(initialAuthMethod);
+  const [role, setRole] = useState<Role>(initialRole === "pending" ? "contractor" : initialRole);
+  const roleLocked = initialRole !== "pending";
   const [displayName, setDisplayName] = useState(initialDisplayName);
-  const [email, setEmail] = useState(initialEmail);
   const [organization, setOrganization] = useState(initialOrganization);
-  const [location, setLocation] = useState(initialLocation);
+  const [initialCity = "Jacksonville", initialRegion = "FL"] = initialLocation.split(",").map((part) => part.trim());
+  const [serviceAreaCity, setServiceAreaCity] = useState(initialCity || "Jacksonville");
+  const [serviceAreaRegion, setServiceAreaRegion] = useState(initialRegion || "FL");
+  const [serviceRadiusMiles, setServiceRadiusMiles] = useState(25);
   const [specialties, setSpecialties] = useState<Trade[]>(
     initialSpecialties.length ? initialSpecialties : ["Electrical", "Carpentry"],
   );
   const [showAllSpecialties, setShowAllSpecialties] = useState(false);
   const [legalConsent, setLegalConsent] = useState(false);
-  const [plan, setPlan] = useState<TrialPlan>(brandConfig.pricing.betaPlan.label);
+  const plan: TrialPlan = brandConfig.pricing.betaPlan.label;
 
-  const accountReady = Boolean(displayName.trim()) && Boolean(location.trim()) && Boolean(email.trim());
+  const accountReady = Boolean(displayName.trim()) && Boolean(serviceAreaCity.trim()) && Boolean(serviceAreaRegion.trim());
   const profileReady =
     specialties.length > 0;
   const legalReady = legalConsent;
   const completionChecks = [
     Boolean(role),
-    Boolean(authMethod),
+    emailVerified,
     accountReady,
     profileReady,
     legalReady,
-    Boolean(plan),
   ];
   const completion = Math.round(
     (completionChecks.filter(Boolean).length / completionChecks.length) * 100,
   );
-  const canEnter = accountReady && profileReady && legalReady;
+  const canEnter = emailVerified && accountReady && profileReady && legalReady;
   const roleNoun = role === "contractor" ? "Contractor" : "Tradesperson";
   const specialtyHeading =
     role === "contractor" ? "Trades you hire for" : "Your trade specialties";
@@ -3354,14 +3664,17 @@ function OnboardingFlow({
 
     onComplete({
       role,
-      authMethod,
-      email: email.trim(),
+      authMethod: initialAuthMethod,
+      email: initialEmail,
       displayName: displayName.trim(),
       organization:
         role === "contractor"
           ? organization.trim() || `${displayName.trim()} crew`
           : `${displayName.trim()} portfolio`,
-      location: location.trim(),
+      location: `${serviceAreaCity.trim()}, ${serviceAreaRegion.trim()}`,
+      serviceAreaCity: serviceAreaCity.trim(),
+      serviceAreaRegion: serviceAreaRegion.trim(),
+      serviceRadiusMiles,
       specialties,
       plan,
     });
@@ -3424,30 +3737,25 @@ function OnboardingFlow({
           <section className="onboarding-section" aria-label="Account role">
             <div className="onboarding-section-heading">
               <span>Step 1</span>
-              <h3>{role === "contractor" ? "Contractor signup" : "Tradesperson signup"}</h3>
+              <h3>Choose your account type</h3>
             </div>
-            <div className="role-locked-note">
-              <strong>{role === "contractor" ? "Contractor" : "Tradesperson"}</strong>
-              <span>This role stays fixed after signup.</span>
-            </div>
+            {roleLocked ? (
+              <div className="role-locked-note">
+                <strong>{role === "contractor" ? "Contractor" : "Tradesperson"}</strong>
+                <span>This role was selected at signup and cannot be changed.</span>
+              </div>
+            ) : (
+              <div className="auth-toggle" aria-label="Choose account type">
+                <button type="button" className={role === "contractor" ? "selected" : ""} onClick={() => setRole("contractor")}>Contractor</button>
+                <button type="button" className={role === "tradesperson" ? "selected" : ""} onClick={() => setRole("tradesperson")}>Tradesperson</button>
+              </div>
+            )}
           </section>
 
           <section className="onboarding-section" aria-label="Profile basics">
             <div className="onboarding-section-heading">
               <span>Step 2</span>
               <h3>{roleNoun} profile</h3>
-            </div>
-            <div className="auth-methods" aria-label="Signup method">
-              {(["Google", "Facebook", "Apple", "Email"] as AuthMethod[]).map((method) => (
-                <button
-                  type="button"
-                  key={method}
-                  className={authMethod === method ? "selected" : ""}
-                  onClick={() => setAuthMethod(method)}
-                >
-                  {method}
-                </button>
-              ))}
             </div>
             <div className="onboarding-form-grid">
               <label>
@@ -3461,11 +3769,11 @@ function OnboardingFlow({
               <label>
                 <span>Email</span>
                 <input
-                  value={email}
-                  onChange={(event) => setEmail(event.target.value)}
-                  placeholder="name@company.com"
+                  value={initialEmail}
                   type="email"
+                  readOnly
                 />
+                <small>{emailVerified ? "Verified email" : "Verification required before you can finish."}</small>
               </label>
               <label>
                 <span>{role === "contractor" ? "Business or crew name" : "Portfolio name"}</span>
@@ -3480,14 +3788,31 @@ function OnboardingFlow({
                 />
               </label>
               <label>
-                <span>Launch location</span>
+                <span>Service area city</span>
                 <input
-                  value={location}
-                  onChange={(event) => setLocation(event.target.value)}
-                  placeholder="City, state"
+                  value={serviceAreaCity}
+                  onChange={(event) => setServiceAreaCity(event.target.value)}
+                  placeholder="Jacksonville"
                 />
               </label>
+              <label>
+                <span>State or region</span>
+                <input value={serviceAreaRegion} onChange={(event) => setServiceAreaRegion(event.target.value)} placeholder="FL" />
+              </label>
+              <label>
+                <span>Service radius</span>
+                <select value={serviceRadiusMiles} onChange={(event) => setServiceRadiusMiles(Number(event.target.value))}>
+                  {[10, 25, 50, 75, 100].map((miles) => <option key={miles} value={miles}>{miles} miles</option>)}
+                </select>
+              </label>
             </div>
+            {!emailVerified ? (
+              <div className="onboarding-verification" role="status">
+                <Mail size={18} />
+                <div><strong>Verify your email</strong><span>Open the secure link we sent to {initialEmail}.</span></div>
+                <button type="button" className="secondary-action" onClick={onResendVerification}>Resend</button>
+              </div>
+            ) : null}
           </section>
 
           <section className="onboarding-section" aria-label="Trade specialties">
@@ -3549,33 +3874,8 @@ function OnboardingFlow({
               </div>
               <div className="readiness-note">
                 <Bell size={16} />
-                <span>Email and phone verification will be provider-backed before launch.</span>
+                <span>{emailVerified ? "Email verified" : "Email verification pending"}</span>
               </div>
-            </div>
-          </section>
-
-          <section className="onboarding-section" aria-label="Trial plan">
-            <div className="onboarding-section-heading">
-              <span>Step 5</span>
-              <h3>Start with the beta plan</h3>
-            </div>
-            <div className="plan-choice-grid">
-              <button
-                type="button"
-                className={plan === brandConfig.pricing.betaPlan.label ? "selected" : ""}
-                onClick={() => setPlan(brandConfig.pricing.betaPlan.label)}
-              >
-                <strong>{brandConfig.pricing.betaPlan.label}</strong>
-                <span>{brandConfig.pricing.betaPlan.summary}</span>
-              </button>
-              <button
-                type="button"
-                className={plan === brandConfig.pricing.launchPreviewPlan.label ? "selected" : ""}
-                onClick={() => setPlan(brandConfig.pricing.launchPreviewPlan.label)}
-              >
-                <strong>{brandConfig.pricing.launchPreviewPlan.label}</strong>
-                <span>{brandConfig.pricing.launchPreviewPlan.summary}</span>
-              </button>
             </div>
           </section>
 
@@ -3584,9 +3884,10 @@ function OnboardingFlow({
               <strong>{canEnter ? `Ready to enter ${brandConfig.appName}` : "Finish the basics"}</strong>
               <span>
                 {canEnter
-                  ? "Your role, profile, consent, and beta plan are ready."
-                  : "Add your profile basics, pick at least one trade, and accept the consent agreement."}
+                  ? "Your verified account, role, profile, and consent are ready."
+                  : "Verify your email, finish your service area, select a trade, and accept the agreement."}
               </span>
+              {notice ? <span className="auth-notice" role="status">{notice}</span> : null}
               {error ? <span className="auth-error" role="alert">{error}</span> : null}
             </div>
             <button

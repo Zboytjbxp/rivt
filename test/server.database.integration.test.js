@@ -11,6 +11,10 @@ if (!testDatabaseUrl) {
   process.env.NODE_ENV = "test";
   process.env.DATABASE_URL = testDatabaseUrl;
   process.env.PGSSL = "disable";
+  process.env.APP_ORIGIN = "https://rivt.pro";
+  process.env.EMAIL_FROM = "RIVT Test <noreply@example.test>";
+  process.env.EMAIL_DELIVERY_MODE = "capture";
+  process.env.AUTH_METADATA_PEPPER = "database-integration-test-pepper";
   process.env.S3_BUCKET = "";
   process.env.S3_ACCESS_KEY_ID = "";
   process.env.S3_SECRET_ACCESS_KEY = "";
@@ -65,16 +69,7 @@ if (!testDatabaseUrl) {
     await new Promise((resolve) => server.once("listening", resolve));
     const address = server.address();
     const baseUrl = `http://127.0.0.1:${address.port}`;
-    const createdUserIds = [];
-
     context.after(async () => {
-      if (createdUserIds.length) {
-        await database.query("DELETE FROM app_events WHERE session_id = ANY($1::text[])", [createdUserIds]);
-        await database.query("DELETE FROM uploads WHERE session_id = ANY($1::text[])", [createdUserIds]);
-        await database.query("DELETE FROM app_state WHERE id = ANY($1::text[])", [createdUserIds]);
-        await database.query("DELETE FROM accounts WHERE id = ANY($1::uuid[])", [createdUserIds]);
-        await database.query("DELETE FROM auth_users WHERE id = ANY($1::uuid[])", [createdUserIds]);
-      }
       await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
       await closeDatabase();
       await database.end();
@@ -86,8 +81,6 @@ if (!testDatabaseUrl) {
     const previousSessionId = randomUUID();
     const contractor = await signUp(baseUrl, "contractor", previousSessionId);
     const tradesperson = await signUp(baseUrl, "tradesperson");
-    createdUserIds.push(contractor.user.id, tradesperson.user.id);
-
     assert.notEqual(contractor.cookie, `rivt_session=${previousSessionId}`);
     const issuedSessionId = contractor.cookie.split("=")[1];
     const sessions = await database.query(
@@ -140,7 +133,7 @@ if (!testDatabaseUrl) {
         role: "tradesperson",
       },
     });
-    assert.equal(roleChange.response.status, 409);
-    assert.equal(roleChange.payload.error, "Account type cannot be changed after onboarding.");
+    assert.equal(roleChange.response.status, 410);
+    assert.match(roleChange.payload.error, /retired/i);
   });
 }

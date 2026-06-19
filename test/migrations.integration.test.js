@@ -24,7 +24,7 @@ if (!testDatabaseUrl) {
     try {
       const baseline = await migrateUp(database, { targetVersion: 1 });
       assert.equal(baseline.latestVersion, 1);
-      assert.equal(baseline.pending.length, 1);
+      assert.equal(baseline.pending.length, 2);
 
       const existingUserId = randomUUID();
       await database.query(
@@ -39,9 +39,9 @@ if (!testDatabaseUrl) {
         [randomUUID(), JSON.stringify({ jobs: [{ id: 1 }], sentMessages: ["legacy"] })],
       );
 
-      const applied = await migrateUp(database);
+      const applied = await migrateUp(database, { targetVersion: 2 });
       assert.equal(applied.latestVersion, 2);
-      assert.equal(applied.pending.length, 0);
+      assert.equal(applied.pending.length, 1);
 
       const bridged = await database.query(
         `SELECT a.primary_role, p.visibility, p.onboarding_status,
@@ -74,7 +74,7 @@ if (!testDatabaseUrl) {
       );
       assert.equal(newBridge.rows[0].primary_role, "tradesperson");
 
-      const rerun = await migrateUp(database);
+      const rerun = await migrateUp(database, { targetVersion: 2 });
       assert.equal(rerun.applied.length, 2);
 
       await database.query(
@@ -85,19 +85,40 @@ if (!testDatabaseUrl) {
         /append-only/,
       );
 
+      const authFoundation = await migrateUp(database);
+      assert.equal(authFoundation.latestVersion, 3);
+      assert.equal(authFoundation.pending.length, 0);
+      const authState = await database.query(
+        `SELECT u.provider, u.email_verified_at, a.status,
+                p.service_radius_miles, p.contact_email_visibility
+         FROM auth_users u
+         INNER JOIN accounts a ON a.id = u.id
+         INNER JOIN profiles p ON p.account_id = u.id
+         ORDER BY u.provider`,
+      );
+      assert.equal(authState.rows[0].provider, "email");
+      assert.equal(authState.rows[0].email_verified_at, null);
+      assert.equal(authState.rows[0].status, "onboarding");
+      assert.equal(authState.rows[1].provider, "google");
+      assert.ok(authState.rows[1].email_verified_at instanceof Date);
+      assert.equal(authState.rows[1].status, "onboarding");
+      assert.equal(authState.rows[1].service_radius_miles, 25);
+      assert.equal(authState.rows[1].contact_email_visibility, "private");
+
       const rolledBack = await rollbackLatest(database);
-      assert.equal(rolledBack.latestVersion, 1);
-      assert.equal((await database.query("SELECT to_regclass('accounts') AS table_name")).rows[0].table_name, null);
+      assert.equal(rolledBack.latestVersion, 2);
+      assert.notEqual((await database.query("SELECT to_regclass('accounts') AS table_name")).rows[0].table_name, null);
       assert.equal((await database.query("SELECT count(*)::int AS count FROM app_state")).rows[0].count, 1);
+      assert.equal((await database.query("SELECT to_regclass('email_verification_tokens') AS table_name")).rows[0].table_name, null);
 
       const reapplied = await migrateUp(database);
-      assert.equal(reapplied.latestVersion, 2);
+      assert.equal(reapplied.latestVersion, 3);
       assert.equal((await database.query("SELECT count(*)::int AS count FROM accounts")).rows[0].count, 2);
 
-      const stored = await database.query("SELECT checksum FROM schema_migrations WHERE version = 2");
-      await database.query("UPDATE schema_migrations SET checksum = 'tampered' WHERE version = 2");
+      const stored = await database.query("SELECT checksum FROM schema_migrations WHERE version = 3");
+      await database.query("UPDATE schema_migrations SET checksum = 'tampered' WHERE version = 3");
       await assert.rejects(migrationStatus(database), /checksum does not match source/);
-      await database.query("UPDATE schema_migrations SET checksum = $1 WHERE version = 2", [stored.rows[0].checksum]);
+      await database.query("UPDATE schema_migrations SET checksum = $1 WHERE version = 3", [stored.rows[0].checksum]);
     } finally {
       await database.end();
       await admin.query(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);

@@ -12,7 +12,18 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import pg from "pg";
 import { ApiError, asyncRoute, createRequestContext, sendApiError, z } from "./api.js";
+import {
+  assertStrongPassword,
+  buildGoogleAuthorizationUrl,
+  createOpaqueToken,
+  hashOpaqueToken,
+  pkceChallenge,
+  requestMetadata,
+  safeRedirectPath,
+  verifyGoogleIdToken,
+} from "./auth.js";
 import { loadActorContext } from "./authorization.js";
+import { emailProviderStatus, sendTransactionalEmail } from "./email.js";
 import { migrateUp, migrationStatus } from "./migrations.js";
 import {
   createOriginGuard,
@@ -355,29 +366,51 @@ async function getUserBySessionId(sessionId) {
 
   const result = await database.query(
     `
-      SELECT u.id, u.email, u.provider, u.display_name, u.role, u.organization, u.location
+      SELECT u.id, u.email, u.provider, u.display_name, u.role, u.organization, u.location,
+             u.email_verified_at, a.status AS account_status, p.onboarding_status
       FROM auth_sessions s
       INNER JOIN auth_users u ON u.id = s.user_id
-      WHERE s.session_id = $1 AND s.expires_at > now()
+      INNER JOIN accounts a ON a.id = u.id
+      INNER JOIN profiles p ON p.account_id = u.id
+      WHERE s.session_id = $1
+        AND s.expires_at > now()
+        AND s.revoked_at IS NULL
       LIMIT 1
     `,
     [sessionId],
   );
 
+  if (result.rowCount) {
+    await database.query(
+      "UPDATE auth_sessions SET last_seen_at = now() WHERE session_id = $1 AND last_seen_at < now() - interval '5 minutes'",
+      [sessionId],
+    );
+  }
   return result.rowCount ? result.rows[0] : null;
 }
 
-async function issueAuthSession(response, userId, sessionId) {
+async function issueAuthSession(request, response, userId, sessionId) {
   const now = new Date();
   const expiresAt = new Date(Date.now() + sessionMaxAgeMs);
+  const metadata = requestMetadata(request);
   await database.query(
     `
-      INSERT INTO auth_sessions (id, session_id, user_id, created_at, updated_at, expires_at)
-      VALUES ($1, $2, $3, $4, $4, $5)
+      INSERT INTO auth_sessions (
+        id, session_id, user_id, created_at, updated_at, expires_at, last_seen_at,
+        user_agent_hash, ip_hash, device_label
+      )
+      VALUES ($1, $2, $3, $4, $4, $5, $4, $6, $7, $8)
       ON CONFLICT (session_id)
-      DO UPDATE SET user_id = EXCLUDED.user_id, updated_at = EXCLUDED.updated_at, expires_at = EXCLUDED.expires_at
+      DO UPDATE SET user_id = EXCLUDED.user_id,
+                    updated_at = EXCLUDED.updated_at,
+                    expires_at = EXCLUDED.expires_at,
+                    last_seen_at = EXCLUDED.last_seen_at,
+                    revoked_at = NULL,
+                    user_agent_hash = EXCLUDED.user_agent_hash,
+                    ip_hash = EXCLUDED.ip_hash,
+                    device_label = EXCLUDED.device_label
     `,
-    [randomUUID(), sessionId, userId, now, expiresAt],
+    [randomUUID(), sessionId, userId, now, expiresAt, metadata.userAgentHash, metadata.ipHash, metadata.deviceLabel],
   );
   setSessionId(response, sessionId);
 }
@@ -387,10 +420,10 @@ async function rotateAuthSession(request, response, userId) {
   const nextSessionId = randomUUID();
 
   if (previousSessionId) {
-    await database.query("DELETE FROM auth_sessions WHERE session_id = $1", [previousSessionId]);
+    await database.query("UPDATE auth_sessions SET revoked_at = now() WHERE session_id = $1", [previousSessionId]);
   }
 
-  await issueAuthSession(response, userId, nextSessionId);
+  await issueAuthSession(request, response, userId, nextSessionId);
   return nextSessionId;
 }
 
@@ -453,18 +486,6 @@ function integrationStatus(provider, requiredEnv, purpose) {
   };
 }
 
-function safeRedirectTarget(value, fallback = "/") {
-  try {
-    const parsed = new URL(String(value ?? ""), "https://rivt.pro");
-    if (parsed.origin !== "https://rivt.pro") {
-      return fallback;
-    }
-    return `${parsed.pathname}${parsed.search}${parsed.hash}`;
-  } catch {
-    return fallback;
-  }
-}
-
 function buildUserResponse(user) {
   return {
     id: user.id,
@@ -474,54 +495,160 @@ function buildUserResponse(user) {
     role: user.role,
     organization: user.organization,
     location: user.location,
+    email_verified: Boolean(user.email_verified_at),
+    account_status: user.account_status ?? null,
+    onboarding_status: user.onboarding_status ?? null,
   };
 }
 
-async function upsertOAuthUser({ email, provider, displayName, role, organization, location }) {
-  const emailHash = sha256(email);
-  const existing = await database.query(
-    "SELECT id, email, provider, display_name, role, organization, location FROM auth_users WHERE email_hash = $1 LIMIT 1",
-    [emailHash],
-  );
-
-  if (existing.rowCount) {
-    const user = await database.query(
-      `
-        UPDATE auth_users
-        SET provider = $2,
-            display_name = CASE WHEN trim(display_name) = '' THEN $3 ELSE display_name END,
-            updated_at = now()
-        WHERE id = $1
-        RETURNING id, email, provider, display_name, role, organization, location
-      `,
-      [existing.rows[0].id, provider, displayName],
-    );
-    return user.rows[0];
+async function withTransaction(action) {
+  const client = await database.connect();
+  try {
+    await client.query("BEGIN");
+    const result = await action(client);
+    await client.query("COMMIT");
+    return result;
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
   }
+}
 
-  const credentials = hashPassword(randomUUID());
-  const inserted = await database.query(
-    `
-      INSERT INTO auth_users (
-        id, email, email_hash, password_salt, password_hash, provider, display_name, role, organization, location
-      )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-      RETURNING id, email, provider, display_name, role, organization, location
-    `,
-    [
-      randomUUID(),
-      email,
-      emailHash,
-      credentials.salt,
-      credentials.hash,
-      provider,
-      displayName,
-      role,
-      organization,
-      location,
-    ],
+function verificationUrl(token) {
+  return `${productionOrigin}/verify-email?token=${encodeURIComponent(token)}`;
+}
+
+function passwordResetUrl(token) {
+  return `${productionOrigin}/reset-password?token=${encodeURIComponent(token)}`;
+}
+
+async function createVerificationToken(client, accountId, { enforceResendLimit = false } = {}) {
+  if (enforceResendLimit) {
+    const recent = await client.query(
+      "SELECT count(*)::int AS count FROM email_verification_tokens WHERE account_id = $1 AND created_at > now() - interval '1 hour'",
+      [accountId],
+    );
+    if (recent.rows[0].count >= 3) {
+      throw new ApiError(429, "VERIFICATION_RATE_LIMITED", "Too many verification emails. Try again later.");
+    }
+  }
+  await client.query(
+    "UPDATE email_verification_tokens SET consumed_at = now() WHERE account_id = $1 AND consumed_at IS NULL",
+    [accountId],
   );
-  return inserted.rows[0];
+  const token = createOpaqueToken();
+  await client.query(
+    `INSERT INTO email_verification_tokens (account_id, token_hash, expires_at)
+     VALUES ($1, $2, now() + interval '24 hours')`,
+    [accountId, hashOpaqueToken(token)],
+  );
+  return token;
+}
+
+async function sendVerificationMessage(email, token) {
+  const url = verificationUrl(token);
+  return sendTransactionalEmail({
+    to: email,
+    subject: "Verify your RIVT email",
+    text: `Verify your RIVT email: ${url}\n\nThis link expires in 24 hours.`,
+    html: `<p>Verify your RIVT email to continue setting up your trade profile.</p><p><a href="${url}">Verify email</a></p><p>This link expires in 24 hours.</p>`,
+  });
+}
+
+async function sendPasswordResetMessage(email, token) {
+  const url = passwordResetUrl(token);
+  return sendTransactionalEmail({
+    to: email,
+    subject: "Reset your RIVT password",
+    text: `Reset your RIVT password: ${url}\n\nThis link expires in 30 minutes.`,
+    html: `<p>A password reset was requested for your RIVT account.</p><p><a href="${url}">Reset password</a></p><p>This link expires in 30 minutes. If you did not request it, no action is needed.</p>`,
+  });
+}
+
+async function consumePilotInvite(client, { inviteCode, email, role }) {
+  if (process.env.REQUIRE_PILOT_INVITE !== "true") return null;
+  if (!inviteCode) throw new ApiError(403, "INVITATION_REQUIRED", "A valid pilot invitation is required.");
+  const result = await client.query(
+    `SELECT * FROM signup_invites WHERE code_hash = $1 FOR UPDATE`,
+    [hashOpaqueToken(inviteCode)],
+  );
+  const invite = result.rows[0];
+  const invalid = !invite
+    || invite.revoked_at
+    || new Date(invite.expires_at).getTime() <= Date.now()
+    || invite.use_count >= invite.max_uses
+    || (invite.email_hash && invite.email_hash !== sha256(email))
+    || (invite.allowed_role && invite.allowed_role !== role);
+  if (invalid) throw new ApiError(403, "INVITATION_INVALID", "The pilot invitation is invalid or expired.");
+  await client.query("UPDATE signup_invites SET use_count = use_count + 1 WHERE id = $1", [invite.id]);
+  return invite.id;
+}
+
+async function resolveGoogleAccount(identity) {
+  return withTransaction(async (client) => {
+    const bySubject = await client.query(
+      `SELECT account_id FROM auth_identities
+       WHERE provider = 'google' AND subject_kind = 'provider_subject' AND provider_subject = $1
+       LIMIT 1`,
+      [identity.subject],
+    );
+
+    let accountId = bySubject.rows[0]?.account_id;
+    if (!accountId) {
+      const byEmail = await client.query("SELECT id FROM auth_users WHERE email_hash = $1 LIMIT 1", [sha256(identity.email)]);
+      accountId = byEmail.rows[0]?.id;
+    }
+
+    if (!accountId) {
+      accountId = randomUUID();
+      const credentials = hashPassword(createOpaqueToken());
+      await client.query(
+        `INSERT INTO auth_users (
+           id, email, email_hash, password_salt, password_hash, provider, display_name,
+           role, organization, location, email_verified_at, last_login_at
+         ) VALUES ($1, $2, $3, $4, $5, 'google', $6, 'pending', '', '', now(), now())`,
+        [accountId, identity.email, sha256(identity.email), credentials.salt, credentials.hash, identity.displayName],
+      );
+    }
+
+    const existingIdentity = await client.query(
+      "SELECT id, provider_subject, subject_kind FROM auth_identities WHERE account_id = $1 AND provider = 'google' LIMIT 1 FOR UPDATE",
+      [accountId],
+    );
+    if (existingIdentity.rowCount
+      && existingIdentity.rows[0].subject_kind === "provider_subject"
+      && existingIdentity.rows[0].provider_subject !== identity.subject) {
+      throw new ApiError(409, "OAUTH_IDENTITY_CONFLICT", "This Google identity requires support review.");
+    }
+
+    if (existingIdentity.rowCount) {
+      await client.query(
+        `UPDATE auth_identities
+         SET provider_subject = $2, subject_kind = 'provider_subject', email = $3, email_hash = $4, updated_at = now()
+         WHERE id = $1`,
+        [existingIdentity.rows[0].id, identity.subject, identity.email, sha256(identity.email)],
+      );
+    } else {
+      await client.query(
+        `INSERT INTO auth_identities (account_id, provider, provider_subject, subject_kind, email, email_hash)
+         VALUES ($1, 'google', $2, 'provider_subject', $3, $4)`,
+        [accountId, identity.subject, identity.email, sha256(identity.email)],
+      );
+    }
+
+    const updated = await client.query(
+      `UPDATE auth_users
+       SET provider = 'google', email_verified_at = COALESCE(email_verified_at, now()),
+           display_name = CASE WHEN trim(display_name) = '' THEN $2 ELSE display_name END,
+           last_login_at = now(), updated_at = now()
+       WHERE id = $1
+       RETURNING id, email, provider, display_name, role, organization, location, email_verified_at`,
+      [accountId, identity.displayName],
+    );
+    return updated.rows[0];
+  });
 }
 
 // ── Trade News Aggregator ────────────────────────────────────────────────────
@@ -715,6 +842,9 @@ const canonicalAccountSchema = z.object({
   id: z.uuid(),
   status: z.enum(["onboarding", "active", "suspended", "closed"]),
   primaryRole: z.enum(["pending", "contractor", "tradesperson"]),
+  email: z.email(),
+  provider: z.enum(["email", "google", "facebook", "apple"]),
+  emailVerified: z.boolean(),
   profile: z.object({
     displayName: z.string(),
     headline: z.string(),
@@ -722,12 +852,30 @@ const canonicalAccountSchema = z.object({
     locationText: z.string(),
     visibility: z.enum(["private", "network"]),
     onboardingStatus: z.enum(["draft", "complete"]),
+    serviceArea: z.object({
+      city: z.string(),
+      region: z.string(),
+      countryCode: z.string(),
+      radiusMiles: z.number().int(),
+    }),
+    availabilityStatus: z.enum(["available", "limited", "unavailable"]),
+    contactEmailVisibility: z.enum(["private", "connections"]),
+    phoneE164: z.string().nullable(),
+    phoneVisibility: z.enum(["private", "connections"]),
+    avatarUploadId: z.uuid().nullable(),
+    trades: z.array(z.object({ code: z.string(), name: z.string(), primary: z.boolean() })),
   }),
   organizations: z.array(z.object({
     id: z.uuid(),
     name: z.string(),
     role: z.enum(["owner", "admin", "member"]),
   })),
+  capabilities: z.object({
+    canCompleteOnboarding: z.boolean(),
+    canPostWork: z.boolean(),
+    canApplyToWork: z.boolean(),
+    canPublishProfile: z.boolean(),
+  }),
 });
 
 app.get("/api/v1/me", requireV1AuthenticatedUser, requireV1Actor, asyncRoute(async (request, response) => {
@@ -736,15 +884,213 @@ app.get("/api/v1/me", requireV1AuthenticatedUser, requireV1Actor, asyncRoute(asy
     id: actorAccount.id,
     status: actorAccount.status,
     primaryRole: actorAccount.primaryRole,
+    email: actorAccount.email,
+    provider: actorAccount.provider,
+    emailVerified: actorAccount.emailVerified,
     profile,
     organizations: memberships.map((membership) => ({
       id: membership.organizationId,
       name: membership.organizationName,
       role: membership.role,
     })),
+    capabilities: {
+      canCompleteOnboarding: actorAccount.emailVerified && profile.onboardingStatus === "draft",
+      canPostWork: actorAccount.status === "active" && actorAccount.primaryRole === "contractor",
+      canApplyToWork: actorAccount.status === "active" && actorAccount.primaryRole === "tradesperson",
+      canPublishProfile: actorAccount.status === "active" && profile.onboardingStatus === "complete",
+    },
   });
 
   response.json({ data: account, meta: { requestId: request.requestId } });
+}));
+
+const profileFieldsSchema = z.object({
+  displayName: z.string().trim().min(2).max(100).optional(),
+  headline: z.string().trim().max(140).optional(),
+  bio: z.string().trim().max(1500).optional(),
+  serviceAreaCity: z.string().trim().min(2).max(100).optional(),
+  serviceAreaRegion: z.string().trim().min(2).max(100).optional(),
+  serviceRadiusMiles: z.number().int().min(1).max(250).optional(),
+  availabilityStatus: z.enum(["available", "limited", "unavailable"]).optional(),
+  contactEmailVisibility: z.enum(["private", "connections"]).optional(),
+  phoneE164: z.string().trim().regex(/^\+[1-9]\d{7,14}$/).nullable().optional(),
+  phoneVisibility: z.enum(["private", "connections"]).optional(),
+  tradeCodes: z.array(z.string().trim().min(1).max(80)).min(1).max(12).optional(),
+});
+
+const onboardingSchema = profileFieldsSchema.extend({
+  role: z.enum(["contractor", "tradesperson"]),
+  displayName: z.string().trim().min(2).max(100),
+  serviceAreaCity: z.string().trim().min(2).max(100),
+  serviceAreaRegion: z.string().trim().min(2).max(100),
+  serviceRadiusMiles: z.number().int().min(1).max(250),
+  tradeCodes: z.array(z.string().trim().min(1).max(80)).min(1).max(12),
+  organizationName: z.string().trim().max(160).optional(),
+  consentAccepted: z.literal(true),
+  consentVersion: z.string().trim().min(1).max(80),
+});
+
+async function saveProfileFields(client, accountId, input) {
+  const currentResult = await client.query("SELECT * FROM profiles WHERE account_id = $1 FOR UPDATE", [accountId]);
+  if (!currentResult.rowCount) throw new ApiError(409, "PROFILE_MIGRATION_REQUIRED", "Profile setup is unavailable.");
+  const current = currentResult.rows[0];
+  const next = {
+    displayName: input.displayName ?? current.display_name,
+    headline: input.headline ?? current.headline,
+    bio: input.bio ?? current.bio,
+    city: input.serviceAreaCity ?? current.service_area_city,
+    region: input.serviceAreaRegion ?? current.service_area_region,
+    radius: input.serviceRadiusMiles ?? current.service_radius_miles,
+    availability: input.availabilityStatus ?? current.availability_status,
+    emailVisibility: input.contactEmailVisibility ?? current.contact_email_visibility,
+    phone: input.phoneE164 !== undefined ? input.phoneE164 : current.phone_e164,
+    phoneVisibility: input.phoneVisibility ?? current.phone_visibility,
+  };
+  const locationText = [next.city, next.region].filter(Boolean).join(", ");
+  await client.query(
+    `UPDATE profiles
+     SET display_name = $2, headline = $3, bio = $4,
+         service_area_city = $5, service_area_region = $6,
+         service_radius_miles = $7, availability_status = $8,
+         contact_email_visibility = $9, phone_e164 = $10,
+         phone_visibility = $11, location_text = $12, updated_at = now()
+     WHERE account_id = $1`,
+    [accountId, next.displayName, next.headline, next.bio, next.city, next.region, next.radius,
+      next.availability, next.emailVisibility, next.phone, next.phoneVisibility, locationText],
+  );
+  await client.query(
+    "UPDATE auth_users SET display_name = $2, location = $3, updated_at = now() WHERE id = $1",
+    [accountId, next.displayName, locationText],
+  );
+
+  if (input.tradeCodes) {
+    const uniqueCodes = [...new Set(input.tradeCodes)];
+    const trades = await client.query("SELECT code FROM trades WHERE code = ANY($1::text[]) AND active = true", [uniqueCodes]);
+    if (trades.rowCount !== uniqueCodes.length) {
+      throw new ApiError(422, "TRADE_INVALID", "One or more selected trades are unavailable.");
+    }
+    await client.query("DELETE FROM profile_trades WHERE account_id = $1", [accountId]);
+    for (const [index, code] of uniqueCodes.entries()) {
+      await client.query(
+        "INSERT INTO profile_trades (account_id, trade_code, is_primary) VALUES ($1, $2, $3)",
+        [accountId, code, index === 0],
+      );
+    }
+  }
+}
+
+app.patch("/api/v1/profile", requireV1AuthenticatedUser, requireV1Actor, writeRateLimit, asyncRoute(async (request, response) => {
+  const input = validate(profileFieldsSchema, request.body);
+  await withTransaction(async (client) => {
+    await saveProfileFields(client, request.actor.account.id, input);
+    await client.query(
+      `INSERT INTO audit_events (request_id, actor_account_id, action, subject_type, subject_id)
+       VALUES ($1, $2, 'profile.draft_updated', 'profile', $2::text)`,
+      [request.requestId, request.actor.account.id],
+    );
+  });
+  const actor = await loadActorContext(database, request.actor.account.id);
+  response.json({ data: { account: actor }, meta: { requestId: request.requestId } });
+}));
+
+app.post("/api/v1/onboarding/complete", requireV1AuthenticatedUser, requireV1Actor, writeRateLimit, asyncRoute(async (request, response) => {
+  const input = validate(onboardingSchema, request.body);
+  const expectedConsentVersion = envValue("SIGNUP_CONSENT_VERSION", "2026-06-19");
+  if (input.consentVersion !== expectedConsentVersion) {
+    throw new ApiError(409, "CONSENT_VERSION_CHANGED", "The consent agreement changed. Review the current version.");
+  }
+  if (!request.actor.account.emailVerified) {
+    throw new ApiError(403, "EMAIL_VERIFICATION_REQUIRED", "Verify your email before completing onboarding.");
+  }
+  if (input.role === "contractor" && !input.organizationName) {
+    throw new ApiError(422, "ORGANIZATION_REQUIRED", "Contractor accounts require a business or crew name.");
+  }
+
+  await withTransaction(async (client) => {
+    const accountResult = await client.query("SELECT primary_role FROM accounts WHERE id = $1 FOR UPDATE", [request.actor.account.id]);
+    const currentRole = accountResult.rows[0]?.primary_role;
+    if (!currentRole || (currentRole !== "pending" && currentRole !== input.role)) {
+      throw new ApiError(409, "ROLE_IMMUTABLE", "Account type cannot be changed after selection.");
+    }
+    await saveProfileFields(client, request.actor.account.id, input);
+    await client.query(
+      "UPDATE accounts SET primary_role = $2, status = 'active', updated_at = now() WHERE id = $1",
+      [request.actor.account.id, input.role],
+    );
+    await client.query(
+      `UPDATE auth_users SET role = $2, organization = $3, updated_at = now() WHERE id = $1`,
+      [request.actor.account.id, input.role, input.role === "contractor" ? input.organizationName : ""],
+    );
+    await client.query(
+      "UPDATE profiles SET onboarding_status = 'complete', updated_at = now() WHERE account_id = $1",
+      [request.actor.account.id],
+    );
+
+    if (input.role === "contractor") {
+      const membership = await client.query(
+        `SELECT m.organization_id FROM organization_memberships m
+         WHERE m.account_id = $1 AND m.status = 'active' AND m.membership_role = 'owner'
+         LIMIT 1 FOR UPDATE`,
+        [request.actor.account.id],
+      );
+      if (membership.rowCount) {
+        await client.query("UPDATE organizations SET name = $2, updated_at = now() WHERE id = $1", [membership.rows[0].organization_id, input.organizationName]);
+      } else {
+        const organization = await client.query(
+          "INSERT INTO organizations (name, created_by_account_id) VALUES ($1, $2) RETURNING id",
+          [input.organizationName, request.actor.account.id],
+        );
+        await client.query(
+          `INSERT INTO organization_memberships (organization_id, account_id, membership_role, status)
+           VALUES ($1, $2, 'owner', 'active')`,
+          [organization.rows[0].id, request.actor.account.id],
+        );
+      }
+    }
+
+    await client.query(
+      `INSERT INTO consent_acceptances (
+         account_id, document_key, document_version, context, request_id, metadata
+       ) VALUES ($1, 'platform_terms', $2, 'signup', $3, $4::jsonb)
+       ON CONFLICT (account_id, document_key, document_version, context) DO NOTHING`,
+      [request.actor.account.id, expectedConsentVersion, request.requestId, JSON.stringify({ role: input.role })],
+    );
+    await client.query(
+      `INSERT INTO audit_events (request_id, actor_account_id, action, subject_type, subject_id, metadata)
+       VALUES ($1, $2, 'onboarding.completed', 'account', $2::text, $3::jsonb)`,
+      [request.requestId, request.actor.account.id, JSON.stringify({ role: input.role, consentVersion: expectedConsentVersion })],
+    );
+  });
+
+  const actor = await loadActorContext(database, request.actor.account.id);
+  response.json({ data: { account: actor }, meta: { requestId: request.requestId } });
+}));
+
+app.post("/api/v1/profile/publish", requireV1AuthenticatedUser, requireV1Actor, writeRateLimit, asyncRoute(async (request, response) => {
+  if (request.actor.account.status !== "active" || request.actor.profile.onboardingStatus !== "complete") {
+    throw new ApiError(409, "PROFILE_NOT_READY", "Complete onboarding before publishing your profile.");
+  }
+  await database.query("UPDATE profiles SET visibility = 'network', updated_at = now() WHERE account_id = $1", [request.actor.account.id]);
+  response.json({ data: { visibility: "network" }, meta: { requestId: request.requestId } });
+}));
+
+app.post("/api/v1/profile/unpublish", requireV1AuthenticatedUser, requireV1Actor, writeRateLimit, asyncRoute(async (request, response) => {
+  await database.query("UPDATE profiles SET visibility = 'private', updated_at = now() WHERE account_id = $1", [request.actor.account.id]);
+  response.json({ data: { visibility: "private" }, meta: { requestId: request.requestId } });
+}));
+
+app.put("/api/v1/profile/avatar", requireV1AuthenticatedUser, requireV1Actor, writeRateLimit, asyncRoute(async (request, response) => {
+  const input = validate(z.object({ uploadId: z.uuid().nullable() }), request.body);
+  if (input.uploadId) {
+    const uploadResult = await database.query(
+      `SELECT id FROM uploads
+       WHERE id = $1 AND session_id = $2 AND mime_type LIKE 'image/%' AND kind = 'profile-avatar'`,
+      [input.uploadId, request.actor.account.id],
+    );
+    if (!uploadResult.rowCount) throw new ApiError(404, "PROFILE_MEDIA_NOT_FOUND", "Profile image was not found.");
+  }
+  await database.query("UPDATE profiles SET avatar_upload_id = $2, updated_at = now() WHERE account_id = $1", [request.actor.account.id, input.uploadId]);
+  response.json({ data: { avatarUploadId: input.uploadId }, meta: { requestId: request.requestId } });
 }));
 
 app.get("/api/readiness", requireAuthenticatedUser, async (_request, response, next) => {
@@ -778,23 +1124,29 @@ app.get("/api/auth/providers", (_request, response) => {
     google: integrationStatus("google", ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"], "Google sign-in"),
     facebook: integrationStatus("facebook", ["FACEBOOK_APP_ID", "FACEBOOK_APP_SECRET"], "Facebook sign-in"),
     apple: integrationStatus("apple", ["APPLE_CLIENT_ID", "APPLE_TEAM_ID", "APPLE_KEY_ID", "APPLE_PRIVATE_KEY"], "Apple sign-in"),
-    email: { ok: true, provider: "email", purpose: "Email/password sign-in", mode: "configured", missing: [] },
+    email: emailProviderStatus(),
   };
 
-  response.json({ providers });
+  response.json({ providers, inviteRequired: process.env.REQUIRE_PILOT_INVITE === "true" });
 });
 
-app.get("/api/auth/google/start", authRateLimit, (request, response) => {
+app.get("/api/auth/google/start", authRateLimit, asyncRoute(async (request, response) => {
   const status = integrationStatus("google", ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"], "Google sign-in");
   if (!status.ok) {
-    response.status(424).json({
-      ...status,
-      message: "Add Google OAuth credentials before sign-in can start.",
-    });
-    return;
+    throw new ApiError(503, "OAUTH_PROVIDER_UNAVAILABLE", "Google sign-in is temporarily unavailable.");
   }
 
-  const state = randomBytes(16).toString("hex");
+  await ensureDatabaseReady();
+  const state = createOpaqueToken();
+  const nonce = createOpaqueToken();
+  const verifier = createOpaqueToken(48);
+  const redirectPath = safeRedirectPath(request.query.redirect, "/");
+  await database.query("DELETE FROM oauth_transactions WHERE expires_at <= now()");
+  await database.query(
+    `INSERT INTO oauth_transactions (state_hash, provider, code_verifier, nonce, redirect_path, expires_at)
+     VALUES ($1, 'google', $2, $3, $4, now() + interval '10 minutes')`,
+    [hashOpaqueToken(state), verifier, nonce, redirectPath],
+  );
   response.cookie(`${sessionCookieName}_oauth_state`, state, {
     httpOnly: true,
     path: "/",
@@ -804,220 +1156,353 @@ app.get("/api/auth/google/start", authRateLimit, (request, response) => {
   });
 
   const redirectUri = envValue("GOOGLE_REDIRECT_URI", "https://rivt.pro/api/auth/google/callback");
-  const authUrl = new URL("https://accounts.google.com/o/oauth2/v2/auth");
-  authUrl.searchParams.set("client_id", process.env.GOOGLE_CLIENT_ID);
-  authUrl.searchParams.set("redirect_uri", redirectUri);
-  authUrl.searchParams.set("response_type", "code");
-  authUrl.searchParams.set("scope", "openid email profile");
-  authUrl.searchParams.set("access_type", "offline");
-  authUrl.searchParams.set("prompt", "consent");
-  authUrl.searchParams.set("state", state);
+  response.redirect(buildGoogleAuthorizationUrl({
+    clientId: process.env.GOOGLE_CLIENT_ID,
+    redirectUri,
+    state,
+    nonce,
+    codeChallenge: pkceChallenge(verifier),
+  }));
+}));
 
-  response.redirect(authUrl.toString());
-});
+app.get("/api/auth/google/callback", authRateLimit, asyncRoute(async (request, response) => {
+  await ensureDatabaseReady();
+  const state = String(request.query.state ?? "");
+  const stateCookie = parseCookies(request)[`${sessionCookieName}_oauth_state`];
+  const code = String(request.query.code ?? "");
+  if (!state || !stateCookie || stateCookie !== state || !code) {
+    throw new ApiError(400, "OAUTH_TRANSACTION_INVALID", "Google sign-in could not be completed.");
+  }
 
-app.get("/api/auth/google/callback", authRateLimit, async (request, response, next) => {
-  await runWithDatabase(response, next, async () => {
-    const stateCookie = parseCookies(request)[`${sessionCookieName}_oauth_state`];
-    if (!stateCookie || stateCookie !== request.query.state) {
-      response.status(400).send("Invalid OAuth state.");
-      return;
-    }
-
-    const code = String(request.query.code ?? "");
-    if (!code) {
-      response.status(400).send("Missing OAuth code.");
-      return;
-    }
-
-    const redirectUri = envValue("GOOGLE_REDIRECT_URI", "https://rivt.pro/api/auth/google/callback");
-    const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({
-        code,
-        client_id: process.env.GOOGLE_CLIENT_ID,
-        client_secret: process.env.GOOGLE_CLIENT_SECRET,
-        redirect_uri: redirectUri,
-        grant_type: "authorization_code",
-      }),
-    });
-
-    if (!tokenResponse.ok) {
-      await tokenResponse.text();
-      response.status(502).send("Google token exchange failed.");
-      return;
-    }
-
-    const tokenBody = await tokenResponse.json();
-    const profileResponse = await fetch("https://www.googleapis.com/oauth2/v2/userinfo", {
-      headers: { Authorization: `Bearer ${tokenBody.access_token}` },
-    });
-
-    if (!profileResponse.ok) {
-      await profileResponse.text();
-      response.status(502).send("Google profile lookup failed.");
-      return;
-    }
-
-    const profile = await profileResponse.json();
-    const user = await upsertOAuthUser({
-      email: normalizeEmail(profile.email),
-      provider: "google",
-      displayName: String(profile.name ?? profile.email ?? "RIVT user"),
-      role: "pending",
-      organization: "",
-      location: "",
-    });
-
-    await rotateAuthSession(request, response, user.id);
-    response.clearCookie(`${sessionCookieName}_oauth_state`, { path: "/", sameSite: "lax", secure: process.env.NODE_ENV === "production" });
-    response.redirect(`${safeRedirectTarget(request.query.stateFrom ?? "/")}`);
+  const transactionResult = await database.query(
+    `DELETE FROM oauth_transactions
+     WHERE state_hash = $1 AND provider = 'google' AND expires_at > now()
+     RETURNING code_verifier, nonce, redirect_path`,
+    [hashOpaqueToken(state)],
+  );
+  if (!transactionResult.rowCount) {
+    throw new ApiError(400, "OAUTH_TRANSACTION_EXPIRED", "Google sign-in expired. Start again.");
+  }
+  const transaction = transactionResult.rows[0];
+  const redirectUri = envValue("GOOGLE_REDIRECT_URI", "https://rivt.pro/api/auth/google/callback");
+  const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      code,
+      client_id: process.env.GOOGLE_CLIENT_ID,
+      client_secret: process.env.GOOGLE_CLIENT_SECRET,
+      redirect_uri: redirectUri,
+      grant_type: "authorization_code",
+      code_verifier: transaction.code_verifier,
+    }),
   });
+  if (!tokenResponse.ok) {
+    await tokenResponse.text();
+    throw new ApiError(502, "OAUTH_EXCHANGE_FAILED", "Google sign-in could not be completed.");
+  }
+  const tokenBody = await tokenResponse.json();
+  const identity = await verifyGoogleIdToken(tokenBody.id_token, {
+    clientId: process.env.GOOGLE_CLIENT_ID,
+    nonce: transaction.nonce,
+  });
+  const user = await resolveGoogleAccount(identity);
+  await rotateAuthSession(request, response, user.id);
+  response.clearCookie(`${sessionCookieName}_oauth_state`, {
+    path: "/",
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+  });
+  response.redirect(safeRedirectPath(transaction.redirect_path, "/"));
+}));
+
+const signupSchema = z.object({
+  email: z.email().max(320).transform((value) => normalizeEmail(value)),
+  password: z.string(),
+  role: z.enum(["contractor", "tradesperson"]),
+  displayName: z.string().trim().min(2).max(100),
+  inviteCode: z.string().trim().min(8).max(256).optional(),
 });
 
-app.post("/api/auth/signup", authRateLimit, async (request, response, next) => {
-  const email = normalizeEmail(request.body?.email);
-  const password = String(request.body?.password ?? "");
-  const role = request.body?.role === "tradesperson" ? "tradesperson" : request.body?.role === "contractor" ? "contractor" : null;
-  const displayName = String(request.body?.displayName ?? "").trim();
-  const organization = String(request.body?.organization ?? "").trim();
-  const location = String(request.body?.location ?? "").trim();
+const loginSchema = z.object({
+  email: z.email().max(320).transform((value) => normalizeEmail(value)),
+  password: z.string().min(1).max(1024),
+});
 
-  if (!email || !role || !displayName || !location) {
-    response.status(400).json({ ok: false, error: "Email, account type, name, and location are required." });
-    return;
+async function handleSignup(request, response) {
+  const input = validate(signupSchema, request.body);
+  assertStrongPassword(input.password);
+  if (!emailProviderStatus().ok) {
+    throw new ApiError(503, "EMAIL_PROVIDER_UNAVAILABLE", "Email signup is temporarily unavailable.");
   }
-
-  if (password.length < 12) {
-    response.status(422).json({ ok: false, error: "Password must be at least 12 characters." });
-    return;
-  }
-
-  await runWithDatabase(response, next, async () => {
-    const existing = await database.query("SELECT id FROM auth_users WHERE email_hash = $1", [sha256(email)]);
+  await ensureDatabaseReady();
+  const created = await withTransaction(async (client) => {
+    const existing = await client.query("SELECT id FROM auth_users WHERE email_hash = $1", [sha256(input.email)]);
     if (existing.rowCount) {
-      response.status(409).json({ ok: false, error: "An account with that email already exists." });
-      return;
+      throw new ApiError(409, "SIGNUP_NOT_AVAILABLE", "An account could not be created with those details.");
     }
-
-    const credentials = hashPassword(password);
+    const inviteId = await consumePilotInvite(client, input);
+    const credentials = hashPassword(input.password);
     const userId = randomUUID();
-    const result = await database.query(
-      `
-        INSERT INTO auth_users (
-          id, email, email_hash, password_salt, password_hash, provider, display_name, role, organization, location
-        )
-        VALUES ($1, $2, $3, $4, $5, 'email', $6, $7, $8, $9)
-        RETURNING id, email, provider, display_name, role, organization, location
-      `,
-      [
-        userId,
-        email,
-        sha256(email),
-        credentials.salt,
-        credentials.hash,
-        displayName,
-        role,
-        organization,
-        location,
-      ],
+    const result = await client.query(
+      `INSERT INTO auth_users (
+         id, email, email_hash, password_salt, password_hash, provider,
+         display_name, role, organization, location
+       ) VALUES ($1, $2, $3, $4, $5, 'email', $6, $7, '', '')
+       RETURNING id, email, provider, display_name, role, organization, location, email_verified_at`,
+      [userId, input.email, sha256(input.email), credentials.salt, credentials.hash, input.displayName, input.role],
     );
-
-    await rotateAuthSession(request, response, userId);
-    response.status(201).json({ ok: true, user: result.rows[0] });
+    const verificationToken = await createVerificationToken(client, userId);
+    await client.query(
+      `INSERT INTO audit_events (request_id, actor_account_id, action, subject_type, subject_id, metadata)
+       VALUES ($1, $2, 'account.signup', 'account', $2::text, $3::jsonb)`,
+      [request.requestId ?? null, userId, JSON.stringify({ provider: "email", inviteId })],
+    );
+    return { user: result.rows[0], verificationToken };
   });
-});
 
-app.post("/api/auth/login", authRateLimit, async (request, response, next) => {
-  const email = normalizeEmail(request.body?.email);
-  const password = String(request.body?.password ?? "");
-  if (!email || !password) {
-    response.status(400).json({ ok: false, error: "Email and password are required." });
+  await rotateAuthSession(request, response, created.user.id);
+  let verificationDelivered = true;
+  try {
+    await sendVerificationMessage(created.user.email, created.verificationToken);
+  } catch (error) {
+    verificationDelivered = false;
+    console.error("Signup verification delivery failed", { code: error.code ?? "unknown" });
+  }
+  const user = buildUserResponse({ ...created.user, account_status: "onboarding", onboarding_status: "draft" });
+  if (request.path.startsWith("/api/v1/")) {
+    response.status(201).json({ data: { user, verificationRequired: true, verificationDelivered }, meta: { requestId: request.requestId } });
     return;
   }
+  response.status(201).json({ ok: true, user, verificationRequired: true, verificationDelivered });
+}
 
-  await runWithDatabase(response, next, async () => {
-    const result = await database.query(
-      `
-        SELECT id, email, password_salt, password_hash, provider, display_name, role, organization, location
-        FROM auth_users
-        WHERE email_hash = $1
-        LIMIT 1
-      `,
-      [sha256(email)],
-    );
-
-    if (!result.rowCount) {
-      response.status(401).json({ ok: false, error: "Invalid email or password." });
-      return;
-    }
-
-    const user = result.rows[0];
-    if (!verifyPassword(password, user.password_salt, user.password_hash)) {
-      response.status(401).json({ ok: false, error: "Invalid email or password." });
-      return;
-    }
-
-    await rotateAuthSession(request, response, user.id);
-    response.json({
-      ok: true,
-      user: {
-        id: user.id,
-        email: user.email,
-        provider: user.provider,
-        display_name: user.display_name,
-        role: user.role,
-        organization: user.organization,
-        location: user.location,
-      },
-    });
-  });
-});
-
-app.patch("/api/auth/profile", requireAuthenticatedUser, writeRateLimit, async (request, response, next) => {
-  const role = request.body?.role === "tradesperson" ? "tradesperson" : request.body?.role === "contractor" ? "contractor" : null;
-  const displayName = String(request.body?.displayName ?? "").trim();
-  const organization = String(request.body?.organization ?? "").trim();
-  const location = String(request.body?.location ?? "").trim();
-
-  if (!role || !displayName || !location) {
-    response.status(422).json({ ok: false, error: "Role, name, and location are required." });
+async function handleLogin(request, response) {
+  const input = validate(loginSchema, request.body);
+  await ensureDatabaseReady();
+  const result = await database.query(
+    `SELECT u.id, u.email, u.password_salt, u.password_hash, u.provider,
+            u.display_name, u.role, u.organization, u.location, u.email_verified_at,
+            a.status AS account_status, p.onboarding_status
+     FROM auth_users u
+     INNER JOIN accounts a ON a.id = u.id
+     INNER JOIN profiles p ON p.account_id = u.id
+     WHERE u.email_hash = $1
+     LIMIT 1`,
+    [sha256(input.email)],
+  );
+  const user = result.rows[0];
+  if (!user || !verifyPassword(input.password, user.password_salt, user.password_hash)) {
+    throw new ApiError(401, "INVALID_CREDENTIALS", "Invalid email or password.");
+  }
+  if (["suspended", "closed"].includes(user.account_status)) {
+    throw new ApiError(403, "ACCOUNT_NOT_ACTIVE", "This account cannot sign in. Contact support.");
+  }
+  await database.query("UPDATE auth_users SET last_login_at = now(), updated_at = now() WHERE id = $1", [user.id]);
+  await rotateAuthSession(request, response, user.id);
+  const responseUser = buildUserResponse(user);
+  if (request.path.startsWith("/api/v1/")) {
+    response.json({ data: { user: responseUser }, meta: { requestId: request.requestId } });
     return;
   }
+  response.json({ ok: true, user: responseUser });
+}
 
-  await runWithDatabase(response, next, async () => {
-    if (request.authUser.role !== "pending" && request.authUser.role !== role) {
-      response.status(409).json({
-        ok: false,
-        error: "Account type cannot be changed after onboarding.",
+app.post("/api/v1/auth/signup", authRateLimit, asyncRoute(handleSignup));
+app.post("/api/auth/signup", authRateLimit, asyncRoute(handleSignup));
+app.post("/api/v1/auth/login", authRateLimit, asyncRoute(handleLogin));
+app.post("/api/auth/login", authRateLimit, asyncRoute(handleLogin));
+
+const tokenSchema = z.object({ token: z.string().min(32).max(512) });
+const forgotPasswordSchema = z.object({
+  email: z.email().max(320).transform((value) => normalizeEmail(value)),
+});
+const resetPasswordSchema = tokenSchema.extend({ password: z.string() });
+
+app.post("/api/v1/auth/email/resend", authRateLimit, requireV1AuthenticatedUser, asyncRoute(async (request, response) => {
+  await ensureDatabaseReady();
+  const user = await database.query("SELECT id, email, email_verified_at FROM auth_users WHERE id = $1", [request.authUser.id]);
+  if (!user.rowCount || user.rows[0].email_verified_at) {
+    response.status(202).json({ data: { accepted: true }, meta: { requestId: request.requestId } });
+    return;
+  }
+  if (!emailProviderStatus().ok) {
+    throw new ApiError(503, "EMAIL_PROVIDER_UNAVAILABLE", "Verification email is temporarily unavailable.");
+  }
+  const token = await withTransaction((client) => createVerificationToken(client, request.authUser.id, { enforceResendLimit: true }));
+  await sendVerificationMessage(user.rows[0].email, token);
+  response.status(202).json({ data: { accepted: true }, meta: { requestId: request.requestId } });
+}));
+
+app.post("/api/v1/auth/email/verify", authRateLimit, asyncRoute(async (request, response) => {
+  const input = validate(tokenSchema, request.body);
+  await ensureDatabaseReady();
+  const accountId = await withTransaction(async (client) => {
+    const result = await client.query(
+      `SELECT id, account_id, expires_at, consumed_at
+       FROM email_verification_tokens WHERE token_hash = $1 LIMIT 1 FOR UPDATE`,
+      [hashOpaqueToken(input.token)],
+    );
+    const record = result.rows[0];
+    if (!record || record.consumed_at || new Date(record.expires_at).getTime() <= Date.now()) {
+      throw new ApiError(400, "VERIFICATION_TOKEN_INVALID", "The verification link is invalid or expired.");
+    }
+    await client.query(
+      "UPDATE email_verification_tokens SET consumed_at = now() WHERE account_id = $1 AND consumed_at IS NULL",
+      [record.account_id],
+    );
+    await client.query("UPDATE auth_users SET email_verified_at = COALESCE(email_verified_at, now()), updated_at = now() WHERE id = $1", [record.account_id]);
+    await client.query(
+      `INSERT INTO audit_events (request_id, actor_account_id, action, subject_type, subject_id)
+       VALUES ($1, $2, 'account.email_verified', 'account', $2::text)`,
+      [request.requestId, record.account_id],
+    );
+    return record.account_id;
+  });
+  response.json({ data: { verified: true, accountId }, meta: { requestId: request.requestId } });
+}));
+
+app.post("/api/v1/auth/password/forgot", authRateLimit, asyncRoute(async (request, response) => {
+  const input = validate(forgotPasswordSchema, request.body);
+  await ensureDatabaseReady();
+  const result = await database.query(
+    "SELECT id, email, email_verified_at FROM auth_users WHERE email_hash = $1 LIMIT 1",
+    [sha256(input.email)],
+  );
+  const user = result.rows[0];
+  if (user?.email_verified_at && emailProviderStatus().ok) {
+    try {
+      const token = await withTransaction(async (client) => {
+        const recent = await client.query(
+          "SELECT count(*)::int AS count FROM password_reset_tokens WHERE account_id = $1 AND created_at > now() - interval '1 hour'",
+          [user.id],
+        );
+        if (recent.rows[0].count >= 3) return null;
+        const raw = createOpaqueToken();
+        await client.query(
+          "UPDATE password_reset_tokens SET consumed_at = now() WHERE account_id = $1 AND consumed_at IS NULL",
+          [user.id],
+        );
+        await client.query(
+          `INSERT INTO password_reset_tokens (account_id, token_hash, expires_at)
+           VALUES ($1, $2, now() + interval '30 minutes')`,
+          [user.id, hashOpaqueToken(raw)],
+        );
+        return raw;
       });
-      return;
+      if (token) await sendPasswordResetMessage(user.email, token);
+    } catch (error) {
+      console.error("Password reset delivery failed", { code: error.code ?? "unknown" });
     }
-
-    const result = await database.query(
-      `
-        UPDATE auth_users
-        SET display_name = $2, role = $3, organization = $4, location = $5, updated_at = now()
-        WHERE id = $1
-        RETURNING id, email, provider, display_name, role, organization, location
-      `,
-      [request.authUser.id, displayName, role, organization, location],
-    );
-    response.json({ ok: true, user: result.rows[0] });
+  }
+  response.status(202).json({
+    data: { accepted: true, message: "If that account exists, a reset email will arrive shortly." },
+    meta: { requestId: request.requestId },
   });
+}));
+
+app.post("/api/v1/auth/password/reset", authRateLimit, asyncRoute(async (request, response) => {
+  const input = validate(resetPasswordSchema, request.body);
+  assertStrongPassword(input.password);
+  await ensureDatabaseReady();
+  await withTransaction(async (client) => {
+    const result = await client.query(
+      `SELECT id, account_id, expires_at, consumed_at
+       FROM password_reset_tokens WHERE token_hash = $1 LIMIT 1 FOR UPDATE`,
+      [hashOpaqueToken(input.token)],
+    );
+    const record = result.rows[0];
+    if (!record || record.consumed_at || new Date(record.expires_at).getTime() <= Date.now()) {
+      throw new ApiError(400, "RESET_TOKEN_INVALID", "The reset link is invalid or expired.");
+    }
+    const credentials = hashPassword(input.password);
+    await client.query(
+      `UPDATE auth_users SET password_salt = $2, password_hash = $3, updated_at = now() WHERE id = $1`,
+      [record.account_id, credentials.salt, credentials.hash],
+    );
+    await client.query(
+      "UPDATE password_reset_tokens SET consumed_at = now() WHERE account_id = $1 AND consumed_at IS NULL",
+      [record.account_id],
+    );
+    await client.query("UPDATE auth_sessions SET revoked_at = now() WHERE user_id = $1 AND revoked_at IS NULL", [record.account_id]);
+    await client.query(
+      `INSERT INTO audit_events (request_id, actor_account_id, action, subject_type, subject_id)
+       VALUES ($1, $2, 'account.password_reset', 'account', $2::text)`,
+      [request.requestId, record.account_id],
+    );
+  });
+  response.json({ data: { reset: true }, meta: { requestId: request.requestId } });
+}));
+
+app.patch("/api/auth/profile", requireAuthenticatedUser, (_request, response) => {
+  response.status(410).json({ ok: false, error: "This profile endpoint was retired. Refresh RIVT to continue." });
 });
 
 app.post("/api/auth/logout", authRateLimit, async (request, response, next) => {
   await runWithDatabase(response, next, async () => {
     const sessionId = readSessionId(request, sessionCookieName);
     if (sessionId) {
-      await database.query("DELETE FROM auth_sessions WHERE session_id = $1", [sessionId]);
+      await database.query("UPDATE auth_sessions SET revoked_at = now() WHERE session_id = $1", [sessionId]);
     }
     response.clearCookie(sessionCookieName, { path: "/", sameSite: "lax", secure: process.env.NODE_ENV === "production" });
     response.json({ ok: true });
   });
 });
+
+app.post("/api/v1/auth/logout", authRateLimit, requireV1AuthenticatedUser, asyncRoute(async (request, response) => {
+  await database.query("UPDATE auth_sessions SET revoked_at = now() WHERE session_id = $1", [request.authSessionId]);
+  response.clearCookie(sessionCookieName, { path: "/", sameSite: "lax", secure: process.env.NODE_ENV === "production" });
+  response.json({ data: { loggedOut: true }, meta: { requestId: request.requestId } });
+}));
+
+app.get("/api/v1/sessions", requireV1AuthenticatedUser, asyncRoute(async (request, response) => {
+  const result = await database.query(
+    `SELECT id, session_id, device_label, created_at, last_seen_at, expires_at
+     FROM auth_sessions
+     WHERE user_id = $1 AND revoked_at IS NULL AND expires_at > now()
+     ORDER BY last_seen_at DESC, created_at DESC`,
+    [request.authUser.id],
+  );
+  response.json({
+    data: {
+      sessions: result.rows.map((session) => ({
+        id: session.id,
+        deviceLabel: session.device_label,
+        createdAt: session.created_at,
+        lastSeenAt: session.last_seen_at,
+        expiresAt: session.expires_at,
+        current: session.session_id === request.authSessionId,
+      })),
+    },
+    meta: { requestId: request.requestId },
+  });
+}));
+
+app.delete("/api/v1/sessions/:id", requireV1AuthenticatedUser, writeRateLimit, asyncRoute(async (request, response) => {
+  const sessionId = validate(z.uuid(), request.params.id);
+  const result = await database.query(
+    `UPDATE auth_sessions SET revoked_at = now()
+     WHERE id = $1 AND user_id = $2 AND revoked_at IS NULL
+     RETURNING session_id`,
+    [sessionId, request.authUser.id],
+  );
+  if (!result.rowCount) throw new ApiError(404, "SESSION_NOT_FOUND", "Session was not found.");
+  const revokedCurrent = result.rows[0].session_id === request.authSessionId;
+  if (revokedCurrent) {
+    response.clearCookie(sessionCookieName, { path: "/", sameSite: "lax", secure: process.env.NODE_ENV === "production" });
+  }
+  response.json({ data: { revoked: true, current: revokedCurrent }, meta: { requestId: request.requestId } });
+}));
+
+app.post("/api/v1/sessions/revoke-others", requireV1AuthenticatedUser, writeRateLimit, asyncRoute(async (request, response) => {
+  const result = await database.query(
+    `UPDATE auth_sessions SET revoked_at = now()
+     WHERE user_id = $1 AND session_id <> $2 AND revoked_at IS NULL
+     RETURNING id`,
+    [request.authUser.id, request.authSessionId],
+  );
+  response.json({ data: { revokedCount: result.rowCount }, meta: { requestId: request.requestId } });
+}));
 
 app.get("/api/app-state", requireAuthenticatedUser, async (request, response, next) => {
   await runWithDatabase(response, next, async () => {
