@@ -1,10 +1,10 @@
 # RIVT Build State
 
-Last updated: 2026-06-18 America/New_York
+Last updated: 2026-06-19 America/New_York
 Current gate: Gate A authentication, onboarding, and profiles
-Current phase: Packet 01 deployed and smoke-verified; Packet 02 ready to begin
-Repository branch: `master`
-Base commit: `99be82a Align public brand copy with RIVT tagline`
+Current phase: Packet 02 implemented and CI-accepted; production provider configuration and deployment remain pending
+Repository branch: `codex/packet-02-auth-onboarding-profiles`
+Head commit: `762bf2c Update fail-closed auth browser contract`
 
 ## Source State
 
@@ -99,9 +99,30 @@ Packet 00 is accepted. The broader Gate A release is not approved: normalized do
 
 Packet 01 is accepted. The old object-storage bucket remains temporarily as a rollback source and should be deleted only after the isolated restore drill and retention decision.
 
+## Packet 02 Implemented
+
+- Added migration `0003_auth_onboarding_profiles` for verification/recovery challenges, OAuth transactions, profile ownership, resumable onboarding, and device/session controls.
+- Added single-use, hashed email-verification and password-recovery tokens with expiry, replay protection, resend replacement, and session revocation after password reset.
+- Added Google OIDC state, nonce, PKCE, JWKS signature validation, and safe identity linking.
+- Added canonical `/api/v1/me`, profile, onboarding, and session/device APIs with server-authoritative role and ownership checks.
+- Added role-correct onboarding, profile editing, email verification/recovery, and session management to the frontend without restoring browser-owned account state.
+- Added a Resend email adapter, pilot invitation controls, production security configuration checks, and invitation CLI.
+- Preserved the Packet 02 stop condition: no job or messaging persistence was added.
+
+## Packet 02 Verification
+
+- Local `npm run lint`, `npm run build`, `npm run test`, and `npm run test:e2e`: pass.
+- Local PostgreSQL-backed tests skip when `TEST_DATABASE_URL` is absent by design.
+- GitHub Actions Gate A run `27807558330` for commit `762bf2c`: pass in 1m 12s.
+- CI evidence includes PostgreSQL 16 migration lifecycle, account lifecycle/onboarding, cross-user authorization, browser fail-closed behavior, production bundle, full lint, and production dependency audit.
+
+## Packet 02 Acceptance
+
+Packet 02 source and automated gates are accepted. Production deployment is intentionally held until the real email sender and required Railway security variables are configured and verified. No claim of live email delivery or live Google onboarding acceptance has been made.
+
 ## Next Exact Task
 
-Begin Packet 02 with email verification/recovery, OAuth identity linking, resumable role-correct onboarding, canonical profile APIs, and session/device controls. Preserve private profile defaults and do not build jobs or messages yet.
+Configure Packet 02 production variables (`AUTH_METADATA_PEPPER`, `APP_ORIGIN`, `RESEND_API_KEY`, `EMAIL_FROM`, `EMAIL_DELIVERY_MODE`, and the `REQUIRE_PILOT_INVITE` decision), verify the sender domain, deploy the accepted commit through the normal merge/release path, then run disposable email signup, verification, password recovery, Google OAuth, onboarding, profile ownership, session revocation, and cleanup smoke tests.
 
 ## Blocking Founder Decisions
 

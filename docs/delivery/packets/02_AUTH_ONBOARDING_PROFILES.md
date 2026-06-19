@@ -29,3 +29,12 @@ Requirements: GA-AUTH-001 through GA-AUTH-010; GA-PRO-001 through GA-PRO-006.
 ## Stop Condition
 
 Do not build job persistence in remaining tokens. Update exact account/profile API and migration evidence.
+
+## Implementation Evidence
+
+- Source branch: `codex/packet-02-auth-onboarding-profiles`
+- Accepted commit: `762bf2c`
+- Migration: `0003_auth_onboarding_profiles`
+- GitHub Actions Gate A run: `27807558330` (pass)
+- Local gates: lint, production build, unit/integration suite, and fail-closed browser test pass
+- Production status: not deployed; provider configuration and controlled live acceptance remain required
