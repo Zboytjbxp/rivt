@@ -27,3 +27,15 @@ Requirements: GA-FND-002, GA-FND-003, GA-FND-006, GA-FND-007, GA-PRO-003.
 ## Stop Condition
 
 Do not implement jobs or messages. Hand off reviewed schema decisions and next migration boundary.
+
+## Implementation Evidence
+
+- Production inventory: `01_PRODUCTION_INVENTORY.md`
+- ADRs: `2026-06-18-versioned-sql-migrations.md` and `2026-06-18-legacy-quarantine-account-bridge.md`
+- Migrations: `0001_legacy_baseline.up.sql`, `0002_domain_foundation.up.sql`, and tested down migration
+- Runtime: `server/migrations.js`, `server/api.js`, `server/authorization.js`
+- Tests: API/authorization unit tests plus disposable-Postgres migration and account-boundary integration tests
+- CI: GitHub Actions 27803255310 and 27803349568 passed
+- Release backup: encrypted, cloud-only snapshot round-trip verified before deployment
+
+Production deployment and smoke evidence remain required before Packet 01 acceptance.

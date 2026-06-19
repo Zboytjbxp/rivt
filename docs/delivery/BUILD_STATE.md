@@ -2,8 +2,8 @@
 
 Last updated: 2026-06-18 America/New_York
 Current gate: Gate A domain foundation
-Current phase: Packet 00 deployed and smoke-verified; Packet 01 ready to begin
-Repository branch: `master`
+Current phase: Packet 01 implementation and CI complete; production deployment pending
+Repository branch: `codex/packet-01-domain-foundation`
 Base commit: `99be82a Align public brand copy with RIVT tagline`
 
 ## Source State
@@ -64,9 +64,29 @@ Deployed on 2026-06-18 through Railway deployment `0f6a928c-02e6-4d58-b13d-f8089
 
 Packet 00 is accepted. The broader Gate A release is not approved: normalized domain persistence, migrations, real workflow authorization, backup/restore evidence, and provider acceptance remain open.
 
+## Packet 01 Implemented
+
+- Inventoried production in a read-only transaction without emitting PII: 2 authenticated users, 114 unowned app-state blobs, 53 generic events, and 1 unowned upload.
+- Classified all legacy marketplace state as quarantined prototype data; no legacy job, person, message, review, community post, or upload becomes canonical/public.
+- Added transactional SQL migrations with checksums, advisory locking, migration status, explicit rollback, and fail-closed startup.
+- Added canonical accounts, auth identities, private draft profiles, organizations/memberships, 25-trade taxonomy, consent, append-only audit events, and idempotency records.
+- Bridged existing and newly inserted auth users to canonical private accounts without inferring organizations.
+- Added `/api/v1` request IDs, validation/error conventions, pagination primitives, actor context, and fail-closed organization-role policy.
+- Added clean/snapshot migration apply, idempotent rerun, rollback/reapply, checksum-tamper, account bridge, and authorization tests.
+- GitHub Actions runs 27803255310 and 27803349568 passed against disposable PostgreSQL.
+
+## Packet 01 Release Safety
+
+- Created Railway bucket `rivt-private` with actual bucket `rivt-private-66cklzn4qc-f` after discovering the prior app variable used a display name that did not exist in S3.
+- Copied and size-verified the single quarantined legacy object into the new bucket.
+- Created an AES-256-GCM encrypted logical snapshot directly in private object storage at `backups/postgres/2026-06-19T03-29-15.832Z-pre-packet-01-4c199d9.json.aes256gcm`.
+- Downloaded, decrypted, parsed, and reconciled the snapshot in memory: 53 events, 114 app-state rows, 3 sessions, 2 users, 0 guests, and 1 upload.
+- Stored the encryption key as a Railway secret; no local backup file or plaintext cloud object was created.
+- Staged corrected S3 variables with deployment suppressed so application code and config change together.
+
 ## Next Exact Task
 
-Begin Packet 01 with a read-only production data inventory, schema/ADR review, and versioned migration runner. Do not implement jobs, messages, or new UI in this packet.
+Fast-forward the CI-proven Packet 01 branch into `master`, deploy it with the staged storage variables, verify migrations/account bridges/object access, then record the exact build and rollback evidence. Do not implement jobs, messages, or new UI until that release is accepted.
 
 ## Blocking Founder Decisions
 

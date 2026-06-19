@@ -15,12 +15,12 @@ Evidence must eventually link to implementation, automated tests, manual accepta
 | ID | Requirement | Current | Evidence / gap |
 |---|---|---:|---|
 | GA-FND-001 | Managed PostgreSQL and private object storage are required | Verified | Live `/api/health` and `/api/storage` report PostgreSQL and S3-compatible storage healthy. |
-| GA-FND-002 | Versioned database migrations own schema changes | Blocker | `ensureSchema()` creates/changes production tables at process startup; only guest-session SQL exists under `migrations/`. |
-| GA-FND-003 | Core records use normalized, user-owned domain tables | Blocker | Jobs, applications, messages, reviews, closeouts, payments, community, and settings live inside `app_state.state` JSON per cookie session. |
+| GA-FND-002 | Versioned database migrations own schema changes | Partial | SQL migration ledger, checksums, advisory lock, transactional apply, status, and rollback pass in CI; production deployment remains. |
+| GA-FND-003 | Core records use normalized, user-owned domain tables | Partial | Canonical account/profile/organization/trade foundations exist and legacy blobs are quarantined; marketplace domains remain in `app_state` until their packets. |
 | GA-FND-004 | Authenticated tenant/ownership authorization protects every private API | Partial | Legacy private routes require a DB-backed user and scope state/events/uploads/export to user ID; disposable-DB cross-user isolation passes in GitHub Actions. Normalized domain authorization remains. |
-| GA-FND-005 | API uses consistent typed errors and validation | Partial | Some explicit errors exist; no shared schema validation or stable error contract. |
-| GA-FND-006 | Retryable writes are idempotent | Missing | State blob upsert masks duplication; domain idempotency is absent. |
-| GA-FND-007 | Auditable domain events use authenticated actor and subject | Partial | `app_events` exists but accepts arbitrary unauthenticated payloads and is not a domain audit log. |
+| GA-FND-005 | API uses consistent typed errors and validation | Partial | `/api/v1` has request IDs, Zod validation, stable errors, and pagination primitives; legacy APIs retain transitional shapes. |
+| GA-FND-006 | Retryable writes are idempotent | Partial | Canonical idempotency storage and request primitives exist; domain mutations will adopt them per packet. |
+| GA-FND-007 | Auditable domain events use authenticated actor and subject | Partial | Append-only canonical audit storage and actor context exist; domain routes must emit events per packet. |
 | GA-FND-008 | Internal diagnostics identify deployed source revision and dependency readiness | Partial | Safe health and authenticated readiness responses now include build/dependency/migration metadata; deployment must provide and verify the source commit. |
 
 ## Authentication and Account
@@ -44,7 +44,7 @@ Evidence must eventually link to implementation, automated tests, manual accepta
 |---|---|---:|---|
 | GA-PRO-001 | Resumable contractor/tradesperson onboarding | Prototype | Rich UI exists in `App.tsx`; persistence is app-state, and an effect forces onboarding complete. |
 | GA-PRO-002 | Role-correct professional profile persists independently | Prototype | Account/profile values are split between `auth_users`, React state, session storage, and app-state. |
-| GA-PRO-003 | Trade specialties use canonical taxonomy | Partial | Type union/options exist; no versioned DB taxonomy or profile relationship tables. |
+| GA-PRO-003 | Trade specialties use canonical taxonomy | Partial | Versioned 25-trade taxonomy and profile relationship tables pass migration tests; profile UI/API adoption remains. |
 | GA-PRO-004 | Service area and location privacy | Prototype | Free-form location only; no normalized/geospatial service-area model. |
 | GA-PRO-005 | Availability and controlled contact visibility | Prototype | Display fields exist; no authoritative availability/contact policy. |
 | GA-PRO-006 | Profile photos/portfolio use authorized private media | Prototype | Generic uploads exist; no profile/portfolio ownership model. |
