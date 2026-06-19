@@ -3396,7 +3396,13 @@ function AuthGate({
     <main className="auth-shell auth-shell--split">
       <EntryShowcase />
 
-      <section className="auth-card auth-card--entry">
+      <form
+        className="auth-card auth-card--entry"
+        onSubmit={(event) => {
+          event.preventDefault();
+          onSubmit({ email, password, displayName, role, inviteCode: inviteCode || undefined });
+        }}
+      >
         <LogoLockup />
         <div className="auth-card-heading">
           <span className="auth-card-kicker">{mode === "signup" ? "Start free" : "Welcome back"}</span>
@@ -3452,18 +3458,18 @@ function AuthGate({
           ) : null}
           <label>
             <span>Email</span>
-            <input value={email} onChange={(event) => setEmail(event.target.value)} type="email" />
+            <input value={email} onChange={(event) => setEmail(event.target.value)} type="email" autoComplete="email" required />
           </label>
           <label>
             <span>Password</span>
-            <input value={password} onChange={(event) => setPassword(event.target.value)} type="password" />
+            <input value={password} onChange={(event) => setPassword(event.target.value)} type="password" autoComplete={mode === "signup" ? "new-password" : "current-password"} required />
             {mode === "signup" ? <small>12+ characters with uppercase, lowercase, a number, and a symbol.</small> : null}
           </label>
           {mode === "signup" && (
             <>
               <label>
                 <span>Name</span>
-                <input value={displayName} onChange={(event) => setDisplayName(event.target.value)} />
+                <input value={displayName} onChange={(event) => setDisplayName(event.target.value)} autoComplete="name" required />
               </label>
               {inviteRequired ? (
                 <label>
@@ -3489,13 +3495,12 @@ function AuthGate({
         ) : null}
 
         <button
-          type="button"
+          type="submit"
           className="primary-action"
-          onClick={() => onSubmit({ email, password, displayName, role, inviteCode: inviteCode || undefined })}
         >
           {mode === "signup" ? "Create account" : "Log in"}
         </button>
-      </section>
+      </form>
     </main>
   );
 }

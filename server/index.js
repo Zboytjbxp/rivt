@@ -501,6 +501,24 @@ function buildUserResponse(user) {
   };
 }
 
+function authSecurityStatus() {
+  const configured = process.env.NODE_ENV !== "production"
+    || String(process.env.AUTH_METADATA_PEPPER ?? "").length >= 32;
+  return {
+    ok: configured,
+    provider: "session_security",
+    purpose: "Privacy-safe session metadata",
+    mode: configured ? "configured" : "setup_required",
+    missing: configured ? [] : ["AUTH_METADATA_PEPPER"],
+  };
+}
+
+function requireAuthSecurity() {
+  if (!authSecurityStatus().ok) {
+    throw new ApiError(503, "AUTH_SECURITY_UNAVAILABLE", "Sign-in is temporarily unavailable.");
+  }
+}
+
 async function withTransaction(action) {
   const client = await database.connect();
   try {
@@ -1125,12 +1143,14 @@ app.get("/api/auth/providers", (_request, response) => {
     facebook: integrationStatus("facebook", ["FACEBOOK_APP_ID", "FACEBOOK_APP_SECRET"], "Facebook sign-in"),
     apple: integrationStatus("apple", ["APPLE_CLIENT_ID", "APPLE_TEAM_ID", "APPLE_KEY_ID", "APPLE_PRIVATE_KEY"], "Apple sign-in"),
     email: emailProviderStatus(),
+    sessionSecurity: authSecurityStatus(),
   };
 
   response.json({ providers, inviteRequired: process.env.REQUIRE_PILOT_INVITE === "true" });
 });
 
 app.get("/api/auth/google/start", authRateLimit, asyncRoute(async (request, response) => {
+  requireAuthSecurity();
   const status = integrationStatus("google", ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"], "Google sign-in");
   if (!status.ok) {
     throw new ApiError(503, "OAUTH_PROVIDER_UNAVAILABLE", "Google sign-in is temporarily unavailable.");
@@ -1230,6 +1250,7 @@ const loginSchema = z.object({
 });
 
 async function handleSignup(request, response) {
+  requireAuthSecurity();
   const input = validate(signupSchema, request.body);
   assertStrongPassword(input.password);
   if (!emailProviderStatus().ok) {
@@ -1278,6 +1299,7 @@ async function handleSignup(request, response) {
 }
 
 async function handleLogin(request, response) {
+  requireAuthSecurity();
   const input = validate(loginSchema, request.body);
   await ensureDatabaseReady();
   const result = await database.query(
