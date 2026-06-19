@@ -29,6 +29,7 @@ async function waitForServer() {
 }
 
 let browser;
+let capturedSignupBody;
 try {
   await waitForServer();
   browser = await chromium.launch({ headless: true });
@@ -49,6 +50,14 @@ try {
     contentType: "application/json",
     body: JSON.stringify({ error: "Service unavailable for test." }),
   }));
+  await page.route("**/api/auth/signup", (route) => {
+    capturedSignupBody = route.request().postDataJSON();
+    return route.fulfill({
+      status: 503,
+      contentType: "application/json",
+      body: JSON.stringify({ error: "Signup unavailable for test." }),
+    });
+  });
 
   await page.goto(baseUrl, { waitUntil: "networkidle" });
   await page.locator('input[type="email"]').fill("test@example.com");
@@ -58,6 +67,16 @@ try {
   await page.getByText("Service unavailable for test.").waitFor();
   assert.equal(await page.getByText("Welcome back").isVisible(), true);
   assert.equal(await page.getByText("Browse local demo").count(), 0);
+
+  await page.getByRole("button", { name: "Sign up", exact: true }).click();
+  await page.getByRole("button", { name: "Tradesperson", exact: true }).click();
+  await page.getByLabel("Name", { exact: true }).fill("Taylor Test");
+  await page.getByLabel("Portfolio", { exact: true }).fill("Taylor Finish Work");
+  await page.getByRole("button", { name: "Create account", exact: true }).click();
+  await page.getByText("Signup unavailable for test.").waitFor();
+
+  assert.equal(capturedSignupBody?.role, "tradesperson");
+  assert.equal(capturedSignupBody?.organization, "Taylor Finish Work");
   console.log("Fail-closed authentication E2E passed.");
 } finally {
   await browser?.close();

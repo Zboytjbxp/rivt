@@ -181,21 +181,6 @@ interface InvoiceLineItem {
   taxable: boolean;
 }
 
-interface ConstructionMeasure {
-  feet: number;
-  inches: number;
-  eighths: number; // 0-8 representing 0, 1/8, 2/8, etc.
-}
-
-interface MaterialEstimate {
-  id: string;
-  name: string;
-  quantity: number;
-  unit: string;
-  wastePercent: number;
-  costPerUnit?: number;
-}
-
 interface SheetPart {
   id: string;
   name: string;
@@ -400,6 +385,15 @@ function readThemePalettePreference(): ThemePalette {
   }
 
   return "orangeRidge";
+}
+
+function readAuthModePreference(): "login" | "signup" {
+  if (typeof window === "undefined") return "login";
+  try {
+    return window.sessionStorage.getItem(AUTH_MODE_KEY) === "signup" ? "signup" : "login";
+  } catch {
+    return "login";
+  }
 }
 
 const defaultCloseout: CloseoutRecord = {
@@ -1379,8 +1373,6 @@ const seedCommunityPosts: CommunityPost[] = [
     status: "Needs a pro answer",
   },
 ];
-const seedShoutOuts: ShoutOut[] = [];
-
 function currency(value: number) {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
@@ -1639,14 +1631,6 @@ function currentTimeLabel() {
   }).format(new Date());
 }
 
-function currentDateLabel() {
-  return new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  }).format(new Date());
-}
-
 function netScore(item: { upvotes: number; downvotes: number }) {
   return item.upvotes - item.downvotes;
 }
@@ -1837,7 +1821,7 @@ function App() {
   });
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
-  const [authMode, setAuthMode] = useState<"login" | "signup">("login");
+  const [authMode, setAuthMode] = useState<"login" | "signup">(readAuthModePreference);
   const [authError, setAuthError] = useState<string | null>(null);
   const [authProviders, setAuthProviders] = useState<Record<string, { ok: boolean; mode: string; missing: string[]; purpose: string }>>({});
   const [query, setQuery] = useState("");
@@ -1859,7 +1843,6 @@ function App() {
   const [scheduleHolds, setScheduleHolds] = useState<Set<number>>(
     () => new Set(),
   );
-  const [dispatchNotes] = useState<Record<number, string>>({});
   const [closeouts, setCloseouts] = useState<Record<number, CloseoutRecord>>({});
   const [autoMatchEnabled, setAutoMatchEnabled] = useState(true);
   const [messageDraft, setMessageDraft] = useState("");
@@ -1874,9 +1857,6 @@ function App() {
   const [reviewRequested, setReviewRequested] = useState(false);
   const [activityFeed, setActivityFeed] = useState<ActivityItem[]>([]);
   const [feedbackItems, setFeedbackItems] = useState<FeedbackItem[]>([]);
-  const [feedbackDraft, setFeedbackDraft] = useState("");
-  const [feedbackCategory, setFeedbackCategory] =
-    useState<FeedbackItem["category"]>("Confusing");
   const [paymentRecords, setPaymentRecords] = useState<PaymentRecord[]>([]);
   const [lockedAccounts, setLockedAccounts] = useState<Set<string>>(
     () => new Set(),
@@ -1884,9 +1864,9 @@ function App() {
   const [communityPosts, setCommunityPosts] = useState<CommunityPost[]>(seedCommunityPosts);
   const [communityReports, setCommunityReports] = useState<CommunityReport[]>([]);
   const [shoutOuts, setShoutOuts] = useState<ShoutOut[]>([]);
-  const [serverStatus, setServerStatus] = useState<ServerStatus>("checking");
+  const [, setServerStatus] = useState<ServerStatus>("checking");
   const [serverHydrated, setServerHydrated] = useState(false);
-  const [serverUpdatedAt, setServerUpdatedAt] = useState<string | null>(null);
+  const [, setServerUpdatedAt] = useState<string | null>(null);
   const [themeMode, setThemeMode] = useState<ThemeMode>(readThemePreference);
   const [themePalette, setThemePalette] = useState<ThemePalette>(readThemePalettePreference);
   const [isGuest, setIsGuest] = useState(false);
@@ -1915,18 +1895,6 @@ function App() {
       // If browser storage is unavailable, the visual theme still applies for this session.
     }
   }, [themeMode, themePalette]);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    try {
-      const stored = window.sessionStorage.getItem(AUTH_MODE_KEY);
-      if (stored === "login" || stored === "signup") {
-        setAuthMode(stored);
-      }
-    } catch {
-      // no-op
-    }
-  }, []);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -2125,11 +2093,6 @@ function App() {
   )?.state;
 
   const selectedTalent = matchingTalent[0] ?? talent[0] ?? emptyTalent;
-  const scheduleHeld = scheduleHolds.has(selectedJob.id);
-  const dispatchNote =
-    dispatchNotes[selectedJob.id] ??
-    "Legal consent ready. Confirm tool list and start window.";
-  const closeout = closeouts[selectedJob.id] ?? defaultCloseout;
   const unreadActivities = activityFeed.filter((item) => item.unread).length;
   const currentState = useMemo<PersistedAppState>(() => ({
     accountProfile,
@@ -2296,14 +2259,6 @@ function App() {
     return () => window.clearTimeout(timeout);
   }, [uiToast]);
 
-  function dismissActivity(activityId: number) {
-    setActivityFeed((current) =>
-      current.map((item) =>
-        item.id === activityId ? { ...item, unread: false } : item,
-      ),
-    );
-  }
-
   function markAllActivityRead() {
     setActivityFeed((current) =>
       current.map((item) => ({ ...item, unread: false })),
@@ -2372,19 +2327,6 @@ function App() {
     setActivityOpen(false);
     setAccountOpen(false);
     setPostOpen(false);
-  }
-
-  function handleReviewConsent() {
-    setTrustReady(true);
-    setUploadedRecords((current) => {
-      const next = new Set(current);
-      next.add("Legal consent accepted");
-      return next;
-    });
-    addActivity(
-      "Legal consent reviewed",
-      "Connection-service consent is accepted. ID checks stay required before real posting or accepting.",
-    );
   }
 
   function handleToggleAutoMatch() {
@@ -2487,204 +2429,6 @@ function App() {
 
   function handleInvite() {
     handleInviteForJob(selectedJob.id);
-  }
-
-  function handleScheduleHold() {
-    const isHeld = scheduleHolds.has(selectedJob.id);
-    setScheduleHolds((current) => {
-      const next = new Set(current);
-      if (next.has(selectedJob.id)) {
-        next.delete(selectedJob.id);
-      } else {
-        next.add(selectedJob.id);
-      }
-
-      return next;
-    });
-    setJobs((current) =>
-      current.map((job) =>
-        job.id === selectedJob.id
-          ? { ...job, status: isHeld ? "Shortlisting" : "Scheduled" }
-          : job,
-      ),
-    );
-    addActivity(
-      isHeld ? "Schedule hold released" : "Schedule hold placed",
-      `${selectedJob.title} is ${isHeld ? "back in shortlisting" : "held on the calendar"}.`,
-    );
-  }
-
-  function updateJobCloseout(jobId: number, update: Partial<CloseoutRecord>) {
-    setCloseouts((current) => ({
-      ...current,
-      [jobId]: {
-        ...(current[jobId] ?? defaultCloseout),
-        ...update,
-      },
-    }));
-  }
-
-  function handleSubmitCloseoutPacket(jobId = selectedId) {
-    const job = jobs.find((candidate) => candidate.id === jobId) ?? selectedJob;
-    updateJobCloseout(jobId, { packetSubmitted: true });
-    setJobs((current) =>
-      current.map((job) =>
-        job.id === jobId && job.status !== "Paid / Closed"
-          ? { ...job, status: "Completion Pending" }
-          : job,
-      ),
-    );
-    setUploadedRecords((current) => {
-      const next = new Set(current);
-      next.add("Completion photos");
-      return next;
-    });
-    addActivity(
-      "Completion packet recorded",
-      `${job.title} now has completion photos queued in Records.`,
-    );
-  }
-
-  function handleApproveCloseout(jobId = selectedId) {
-    const job = jobs.find((candidate) => candidate.id === jobId) ?? selectedJob;
-    const paymentTalent =
-      talent
-        .filter((person) => person.trade === job.trade)
-        .sort((a, b) => b.match - a.match)[0] ?? selectedTalent;
-
-    updateJobCloseout(jobId, { approved: true, packetSubmitted: true, dispute: false });
-    setJobs((current) =>
-      current.map((job) =>
-        job.id === jobId && job.status !== "Paid / Closed"
-          ? { ...job, status: "Payment Pending" }
-          : job,
-      ),
-    );
-    setPaymentRecords((current) => {
-      const existing = current.find((record) => record.jobId === jobId);
-      if (existing) {
-        return current.map((record) =>
-          record.jobId === jobId
-            ? {
-                ...record,
-                jobTitle: job.title,
-                worker: paymentTalent.name,
-                amount: job.pay,
-                method: "Direct payment",
-                status: record.status === "Paid / Closed" ? record.status : "Payment pending",
-                date: record.date || currentDateLabel(),
-              }
-            : record,
-        );
-      }
-
-      return [
-        {
-          id: Date.now(),
-          jobId,
-          jobTitle: job.title,
-          worker: paymentTalent.name,
-          amount: job.pay,
-          method: "Direct payment",
-          status: "Payment pending",
-          date: currentDateLabel(),
-        },
-        ...current,
-      ];
-    });
-    setUploadedRecords((current) => {
-      const next = new Set(current);
-      next.add("Payment method note");
-      next.add("Review prompt");
-      return next;
-    });
-    addActivity(
-      "Closeout approved",
-      `${job.title} is ready for direct payment logging and review.`,
-    );
-  }
-
-  function handleMarkPaymentPaid(jobId: number) {
-    const job = jobs.find((candidate) => candidate.id === jobId);
-    const title = job?.title ?? "Selected work order";
-
-    setPaymentRecords((current) =>
-      current.map((record) =>
-        record.jobId === jobId
-          ? { ...record, status: "Paid / Closed", date: currentDateLabel() }
-          : record,
-      ),
-    );
-    setJobs((current) =>
-      current.map((candidate) =>
-        candidate.id === jobId ? { ...candidate, status: "Paid / Closed" } : candidate,
-      ),
-    );
-    setCloseouts((current) => ({
-      ...current,
-      [jobId]: {
-        ...(current[jobId] ?? defaultCloseout),
-        approved: true,
-        packetSubmitted: true,
-        dispute: false,
-      },
-    }));
-    setUploadedRecords((current) => {
-      const next = new Set(current);
-      next.add("Payment method note");
-      next.add("Review prompt");
-      return next;
-    });
-    addActivity(
-      "Payment marked paid",
-      `${title} is closed in the bookkeeping ledger.`,
-    );
-  }
-
-  function handleExportPayments() {
-    if (!paymentRecords.length) {
-      addActivity(
-        "No payments to export",
-        "Approve a closeout first to create a bookkeeping row.",
-      );
-      return;
-    }
-
-    const headers = ["Job", "Worker", "Amount", "Method", "Status", "Date"];
-    const escapeCsv = (value: string | number) =>
-      `"${String(value).replace(/"/g, '""')}"`;
-    const rows = paymentRecords.map((record) => [
-      record.jobTitle,
-      record.worker,
-      record.amount,
-      record.method,
-      record.status,
-      record.date,
-    ]);
-    const csv = [headers, ...rows]
-      .map((row) => row.map(escapeCsv).join(","))
-      .join("\n");
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `${brandConfig.appSlug}-payment-history-${new Date().toISOString().slice(0, 10)}.csv`;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    window.URL.revokeObjectURL(url);
-    addActivity(
-      "Payment CSV exported",
-      `${paymentRecords.length} payment record${paymentRecords.length === 1 ? "" : "s"} downloaded for bookkeeping.`,
-    );
-  }
-
-  function handleRateJob(rating: number) {
-    updateJobCloseout(selectedId, { rating });
-    addActivity(
-      "Review rating saved",
-      `${selectedJob.title} was rated ${rating} star${rating === 1 ? "" : "s"}.`,
-    );
   }
 
   function handleVoteCommunityPost(postId: number, direction: "up" | "down") {
@@ -2812,40 +2556,6 @@ function App() {
     );
   }
 
-  function handleCreateCommunityPrompt() {
-    const title = `${selectedJob.trade}: what would you check first on ${selectedJob.title.toLowerCase()}?`;
-    const existing = communityPosts.find((post) => post.title === title);
-    setActiveView("Shop Talk");
-
-    if (existing) {
-      addActivity(
-        "Shop Talk prompt already exists",
-        `"${existing.title}" is ready for answers.`,
-      );
-      return;
-    }
-
-    setCommunityPosts((current) => [
-      {
-        id: Date.now(),
-        title,
-        trade: selectedJob.trade,
-        author: accountProfile.displayName,
-        body: `Looking at ${selectedJob.location} work: tools are ${selectedJob.tools.slice(0, 3).join(", ")}. What would you verify before committing?`,
-        upvotes: 0,
-        downvotes: 0,
-        replies: [],
-        createdAt: "Just now",
-        status: "Needs a pro answer",
-      },
-      ...current,
-    ]);
-    addActivity(
-      "Shop Talk prompt created",
-      `"${title}" is ready for the community to answer.`,
-    );
-  }
-
   function handleNewShopTalkPost(flair: PostFlair, title: string, trade: Trade | "General", body: string) {
     setCommunityPosts((current) => [
       {
@@ -2864,55 +2574,6 @@ function App() {
       ...current,
     ]);
     addActivity("Shop Talk post created", `"${title}" posted to Shop Talk.`);
-  }
-
-  function handleResolveCommunityReport(reportId: number, status: CommunityReport["status"]) {
-    const report = communityReports.find((candidate) => candidate.id === reportId);
-    if (!report) {
-      return;
-    }
-
-    setCommunityReports((current) =>
-      current.map((candidate) =>
-        candidate.id === reportId ? { ...candidate, status } : candidate,
-      ),
-    );
-    if (status === "Removed") {
-      setCommunityPosts((current) => current.filter((post) => post.id !== report.postId));
-    }
-    addActivity(
-      "Moderation updated",
-      `"${report.postTitle}" was marked ${status.toLowerCase()}.`,
-    );
-  }
-
-  function handleCreateShoutOut(to: string, tradeName: Trade) {
-    const alreadyPosted = shoutOuts.some(
-      (shoutOut) => shoutOut.from === accountProfile.organization && shoutOut.to === to,
-    );
-    if (alreadyPosted) {
-      addActivity(
-        "Shout-out already exists",
-        `${accountProfile.organization} has already recommended ${to}.`,
-      );
-      return;
-    }
-
-    setShoutOuts((current) => [
-      {
-        id: Date.now(),
-        from: accountProfile.organization,
-        to,
-        trade: tradeName,
-        createdAt: "Just now",
-        message: `${to} is recommended for reliable ${tradeName.toLowerCase()} work and clear job communication.`,
-      },
-      ...current,
-    ]);
-    addActivity(
-      "Shout-out posted",
-      `${to} now has a public recommendation from ${accountProfile.organization}.`,
-    );
   }
 
   function handlePostJob(job: Job) {
@@ -3006,120 +2667,6 @@ function App() {
     );
   }
 
-  function handleToggleRecord(recordName: string) {
-    const isReady = uploadedRecords.has(recordName);
-    setUploadedRecords((current) => {
-      const next = new Set(current);
-      if (next.has(recordName)) {
-        next.delete(recordName);
-      } else {
-        next.add(recordName);
-      }
-
-      return next;
-    });
-    addActivity(
-      isReady ? "Record item reopened" : "Record item completed",
-      `${recordName} is now ${isReady ? "needed again" : "ready"} for ${selectedJob.title}.`,
-    );
-  }
-
-  function handleToggleTraining(moduleName: string) {
-    const isComplete = completedTraining.has(moduleName);
-    setCompletedTraining((current) => {
-      const next = new Set(current);
-      if (next.has(moduleName)) {
-        next.delete(moduleName);
-      } else {
-        next.add(moduleName);
-      }
-
-      return next;
-    });
-    addActivity(
-      isComplete ? "Training reopened" : "Training completed",
-      `${moduleName} is ${isComplete ? "available to retake" : "marked complete"}.`,
-    );
-  }
-
-  function handleSafetyQuizComplete(quizId: string, score: number) {
-    const quiz = safetyQuizData.find((q) => q.id === quizId);
-    if (!quiz) return;
-    const passed = score >= QUIZ_PASS_SCORE;
-    setSafetyQuizResults((prev) => ({
-      ...prev,
-      [quizId]: {
-        quizId,
-        score,
-        passed,
-        completedAt: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
-        attempts: (prev[quizId]?.attempts ?? 0) + 1,
-      },
-    }));
-    addActivity(
-      passed ? `Safety cert earned: ${quiz.title}` : `Quiz attempt: ${quiz.title}`,
-      passed
-        ? `Passed with ${score}% — certificate is now on your profile.`
-        : `Scored ${score}%. Need ${QUIZ_PASS_SCORE}% to pass. Retake anytime.`,
-    );
-  }
-
-  function handleRequestReview() {
-    setReviewRequested(true);
-    setUploadedRecords((current) => {
-      const next = new Set(current);
-      next.add("Review prompt");
-      return next;
-    });
-    addActivity(
-      "Review request sent",
-      `${selectedJob.title} now has a pending two-way review prompt.`,
-    );
-  }
-
-  function handleSubmitFeedback() {
-    const message = feedbackDraft.trim();
-    if (!message) {
-      addActivity(
-        "Feedback not sent",
-        "Add a short note before sending feedback.",
-      );
-      return;
-    }
-
-    setFeedbackItems((current) => [
-      {
-        id: Date.now(),
-        category: feedbackCategory,
-        message,
-        timestamp: `${currentDateLabel()} ${currentTimeLabel()}`,
-      },
-      ...current,
-    ]);
-    setFeedbackDraft("");
-    addActivity(
-      "Feedback captured",
-      `${feedbackCategory} note saved for the beta improvement list.`,
-    );
-  }
-
-  function handleToggleAdminLock(accountName: string) {
-    const wasLocked = lockedAccounts.has(accountName);
-    setLockedAccounts((current) => {
-      const next = new Set(current);
-      if (next.has(accountName)) {
-        next.delete(accountName);
-      } else {
-        next.add(accountName);
-      }
-      return next;
-    });
-    addActivity(
-      wasLocked ? "Account unlocked" : "Account locked",
-      `${accountName} is ${wasLocked ? "back in beta access" : "blocked pending review"}.`,
-    );
-  }
-
   function handleGuestLogin() {
     setIsGuest(true);
     setJobs(guestDemoJobs);
@@ -3143,30 +2690,10 @@ function App() {
   }
 
   const page = pageCopy[activeView];
-  const nextTrainingModule = trainingModules.find(
-    (moduleName) => !completedTraining.has(moduleName),
-  );
   const profileSubtitle =
     role === "contractor"
       ? accountProfile.organization
       : accountProfile.specialties.slice(0, 2).join(", ");
-  const serverStatusLabel =
-    serverStatus === "connected"
-      ? "Server saved"
-      : serverStatus === "checking"
-        ? "Checking storage"
-        : serverStatus === "setup_required"
-          ? "Storage setup needed"
-          : "Server unavailable";
-  const serverStatusTitle =
-    serverStatus === "connected" && serverUpdatedAt
-      ? `Last server save ${new Date(serverUpdatedAt).toLocaleString()}`
-      : serverStatus === "setup_required"
-        ? "Managed Postgres and object storage are required before customer data can be saved."
-        : serverStatus === "offline"
-          ? "The API is unavailable. Local browser backup is disabled for customer safety."
-          : "Checking managed backend persistence.";
-
   if (authLoading) {
     return <LaunchLoader />;
   }
@@ -3307,7 +2834,6 @@ function App() {
             onAddAnswer={handleAddCommunityAnswer}
             onVerifyAnswer={handleVerifyCommunityAnswer}
             onReportPost={handleReportCommunityPost}
-            onCreatePrompt={handleCreateCommunityPrompt}
             onNewPost={handleNewShopTalkPost}
           />
         ) : ["My Crew", "Reviews"].includes(activeView) ? (
@@ -3523,12 +3049,6 @@ function AuthGate({
   const [organization, setOrganization] = useState("");
   const [location, setLocation] = useState("Jacksonville, FL");
   const [role, setRole] = useState<Role>("contractor");
-  const providerIcons = {
-    google: GoogleIcon,
-    facebook: FacebookIcon,
-    apple: AppleIcon,
-    email: EmailIcon,
-  } as const;
 
   return (
     <main className="auth-shell auth-shell--split">
@@ -3595,6 +3115,16 @@ function AuthGate({
         </div>
 
         <div className="auth-form-grid">
+          {mode === "signup" ? (
+            <fieldset className="auth-role-choice">
+              <legend>Account type</legend>
+              <div className="auth-toggle" aria-label="Choose account type">
+                <button type="button" className={role === "contractor" ? "selected" : ""} onClick={() => setRole("contractor")}>Contractor</button>
+                <button type="button" className={role === "tradesperson" ? "selected" : ""} onClick={() => setRole("tradesperson")}>Tradesperson</button>
+              </div>
+              <small>This choice is permanent after signup.</small>
+            </fieldset>
+          ) : null}
           <label>
             <span>Email</span>
             <input value={email} onChange={(event) => setEmail(event.target.value)} type="email" />
@@ -3769,7 +3299,7 @@ function OnboardingFlow({
   initialAuthMethod: AuthMethod;
   error?: string | null;
 }) {
-  const [role, setRole] = useState<Role>(initialRole);
+  const role = initialRole;
   const [authMethod, setAuthMethod] = useState<AuthMethod>(initialAuthMethod);
   const [displayName, setDisplayName] = useState(initialDisplayName);
   const [email, setEmail] = useState(initialEmail);
@@ -4302,7 +3832,8 @@ function AccountPanel({
   );
 }
 
-function Sidebar({
+/** @deprecated Remove in Packet 01 after the routed shell parity audit. */
+export function Sidebar({
   role,
   activeView,
   selectedJob,
@@ -4460,7 +3991,8 @@ function ThemeToggle({
   );
 }
 
-function MobileNavStrip({
+/** @deprecated Remove in Packet 01 after the routed shell parity audit. */
+export function MobileNavStrip({
   role,
   activeView,
   onNavigate,
@@ -4482,7 +4014,7 @@ function MobileNavStrip({
 
   return (
     <nav className="mobile-nav-strip" aria-label="Mobile primary navigation">
-      {primaryItems.map((item, index) => {
+      {primaryItems.map((item) => {
         const Icon = item.icon;
         return (
           <button
@@ -4500,7 +4032,8 @@ function MobileNavStrip({
   );
 }
 
-function MarketplaceView({
+/** @deprecated Remove in Packet 01 after WorkWorkspace parity is verified. */
+export function MarketplaceView({
   role,
   jobs,
   selectedJob,
@@ -5035,7 +4568,6 @@ interface OperationsWorkspaceProps {
   onSubmitCloseoutPacket: (jobId?: number) => void;
   onApproveCloseout: (jobId?: number) => void;
   onRateJob: (rating: number) => void;
-  onToggleTraining: (moduleName: string) => void;
   onMessageDraft: (message: string) => void;
   onSendMessage: () => void;
   onRequestReview: () => void;
@@ -5057,7 +4589,8 @@ interface OperationsWorkspaceProps {
   onSafetyQuizComplete: (quizId: string, score: number) => void;
 }
 
-function OperationsWorkspace(props: OperationsWorkspaceProps) {
+/** @deprecated Remove in Packet 01 after all LegacyBridge routes are normalized. */
+export function OperationsWorkspace(props: OperationsWorkspaceProps) {
   const {
     view,
     role,
@@ -5097,7 +4630,6 @@ function OperationsWorkspace(props: OperationsWorkspaceProps) {
     onSubmitCloseoutPacket,
     onApproveCloseout,
     onRateJob,
-    onToggleTraining,
     onMessageDraft,
     onSendMessage,
     onRequestReview,
@@ -5196,7 +4728,6 @@ function OperationsWorkspace(props: OperationsWorkspaceProps) {
           onAddAnswer={onAddCommunityAnswer}
           onVerifyAnswer={onVerifyCommunityAnswer}
           onReportPost={onReportCommunityPost}
-          onCreatePrompt={onCreateCommunityPrompt}
           onNewPost={onNewShopTalkPost}
         />
       )}
@@ -5286,9 +4817,7 @@ function OperationsWorkspace(props: OperationsWorkspaceProps) {
         <SafetyTrainingView
           role={role}
           jobs={jobs}
-          completedTraining={completedTraining}
           safetyQuizResults={safetyQuizResults}
-          onToggleTraining={onToggleTraining}
           onSafetyQuizComplete={onSafetyQuizComplete}
           onOpenJob={onOpenJob}
         />
@@ -5316,7 +4845,6 @@ function OperationsWorkspace(props: OperationsWorkspaceProps) {
       )}
       {view === "Settings" && (
         <SettingsView
-          role={role}
           profile={accountProfile}
           trustReady={trustReady}
           recordCount={uploadedRecords.size}
@@ -6181,7 +5709,6 @@ function ShopTalkView({
   onAddAnswer,
   onVerifyAnswer,
   onReportPost,
-  onCreatePrompt,
   onNewPost,
 }: {
   profile: AccountProfile;
@@ -6194,7 +5721,6 @@ function ShopTalkView({
   onAddAnswer: (postId: number, body: string) => void;
   onVerifyAnswer: (postId: number, answerId: number) => void;
   onReportPost: (postId: number, reason: CommunityReport["reason"]) => void;
-  onCreatePrompt: () => void;
   onNewPost: (flair: PostFlair, title: string, trade: Trade | "General", body: string) => void;
 }) {
   const [activeTab, setActiveTab] = useState<"talk" | "news">("talk");
@@ -6213,20 +5739,24 @@ function ShopTalkView({
   const tradeFilters = ["All trades", "General", ...specialtyOptions];
   const allReportReasons: CommunityReport["reason"][] = ["Misinformation", "Safety concern", "Spam", "Harassment"];
 
-  useEffect(() => {
-    if (activeTab !== "news" || newsFetched) return;
+  async function activateNews() {
+    setActiveTab("news");
+    if (newsFetched) return;
     setNewsLoading(true);
-    fetch(apiPath(`/api/news?location=${encodeURIComponent(userLocation)}`))
-      .then((r) => r.json())
-      .then((data: { items?: NewsItem[] }) => {
-        if (Array.isArray(data.items) && data.items.length > 0) {
-          setLiveNews(data.items);
-          setSelectedNewsId(data.items[0].id);
-        }
-      })
-      .catch(() => { if (!liveNews.length) setLiveNews(newsItems); })
-      .finally(() => { setNewsLoading(false); setNewsFetched(true); });
-  }, [activeTab, newsFetched, userLocation]);
+    try {
+      const response = await fetch(apiPath(`/api/news?location=${encodeURIComponent(userLocation)}`));
+      const data = await response.json() as { items?: NewsItem[] };
+      const items = Array.isArray(data.items) && data.items.length > 0 ? data.items : newsItems;
+      setLiveNews(items);
+      setSelectedNewsId(items[0]?.id ?? 0);
+    } catch {
+      setLiveNews(newsItems);
+      setSelectedNewsId(newsItems[0]?.id ?? 0);
+    } finally {
+      setNewsLoading(false);
+      setNewsFetched(true);
+    }
+  }
 
   const filteredPosts = communityPosts.filter(
     (post) => tradeFilter === "All trades" || post.trade === tradeFilter,
@@ -6291,7 +5821,7 @@ function ShopTalkView({
             <button
               type="button"
               className={activeTab === "news" ? "active" : ""}
-              onClick={() => setActiveTab("news")}
+              onClick={activateNews}
             >
               <Newspaper size={14} />
               Trade News
@@ -6602,6 +6132,46 @@ function ShopTalkView({
   );
 }
 
+function ToolAppShell({
+  title,
+  eyebrow,
+  description,
+  selectedJob,
+  onBack,
+  children,
+}: {
+  title: string;
+  eyebrow: string;
+  description: string;
+  selectedJob: Job;
+  onBack: () => void;
+  children: ReactNode;
+}) {
+  const hasJob = selectedJob.id !== 0;
+  const jobLabel = hasJob ? `${selectedJob.title} · ${selectedJob.location}` : "No work order selected";
+
+  return (
+    <section className="tool-app-shell" aria-label={title}>
+      <header className="tool-app-header">
+        <button type="button" className="tool-back-button" onClick={onBack}>
+          <ArrowLeft size={16} />
+          Tools hub
+        </button>
+        <div className="tool-app-header-copy">
+          <span>{eyebrow}</span>
+          <h2>{title}</h2>
+          <p>{description}</p>
+        </div>
+        <div className="tool-app-job-chip" title={jobLabel}>
+          <BriefcaseBusiness size={15} />
+          <span>{hasJob ? selectedJob.title : "No active work order"}</span>
+        </div>
+      </header>
+      {children}
+    </section>
+  );
+}
+
 function ToolsView({
   role,
   selectedJob,
@@ -6615,93 +6185,67 @@ function ToolsView({
 }) {
   const [activeTool, setActiveTool] = useState<ToolSurface>("hub");
   const hasJob = selectedJob.id !== 0;
-  const appJobLabel = hasJob ? `${selectedJob.title} · ${selectedJob.location}` : "No work order selected";
 
   function openTool(tool: Exclude<ToolSurface, "hub">) {
     setActiveTool(tool);
   }
 
-  function ToolShell({
-    title,
-    eyebrow,
-    description,
-    children,
-  }: {
-    title: string;
-    eyebrow: string;
-    description: string;
-    children: ReactNode;
-  }) {
-    return (
-      <section className="tool-app-shell" aria-label={title}>
-        <header className="tool-app-header">
-          <button type="button" className="tool-back-button" onClick={() => setActiveTool("hub")}>
-            <ArrowLeft size={16} />
-            Tools hub
-          </button>
-          <div className="tool-app-header-copy">
-            <span>{eyebrow}</span>
-            <h2>{title}</h2>
-            <p>{description}</p>
-          </div>
-          <div className="tool-app-job-chip" title={appJobLabel}>
-            <BriefcaseBusiness size={15} />
-            <span>{hasJob ? selectedJob.title : "No active work order"}</span>
-          </div>
-        </header>
-        {children}
-      </section>
-    );
-  }
-
   if (activeTool === "invoice") {
     return (
-      <ToolShell
+      <ToolAppShell
         eyebrow="Invoice app"
         title="Generate, preview, and send invoices"
         description={hasJob ? "This invoice opens from the active work order and stays tied to it." : "Draft an invoice first, then link it to a job later."}
+        selectedJob={selectedJob}
+        onBack={() => setActiveTool("hub")}
       >
         <div className="tool-app-panel">
           <InvoiceTool key={selectedJob.id} role={role} selectedJob={selectedJob} onOpenJob={onOpenJob} />
         </div>
-      </ToolShell>
+      </ToolAppShell>
     );
   }
 
   if (activeTool === "estimate") {
     return (
-      <ToolShell
+      <ToolAppShell
         eyebrow="Estimate app"
         title="Price checks before you post or bid"
         description={hasJob ? "Use the active work order as a starting point, then tune the math." : "Build a clean estimate from scratch and keep it separate from the calculator."}
+        selectedJob={selectedJob}
+        onBack={() => setActiveTool("hub")}
       >
         <div className="tool-app-panel">
           <CalculatorView role={role} selectedJob={selectedJob} onOpenJob={onOpenJob} />
         </div>
-      </ToolShell>
+      </ToolAppShell>
     );
   }
 
   if (activeTool === "calculator") {
     return (
-      <ToolShell
+      <ToolAppShell
         eyebrow="Calculator app"
         title="The Heavy 16th"
         description={hasJob ? "A focused shop calculator tuned to the active job." : "A standalone field calculator for quick measurements and cuts."}
+        selectedJob={selectedJob}
+        onBack={() => setActiveTool("hub")}
       >
         <div className="tool-app-panel tool-app-panel-compact">
           <ConstructionCalculator />
         </div>
-      </ToolShell>
+      </ToolAppShell>
     );
   }
 
   if (activeTool === "records") {
     return (
-      <ToolShell
+      <ToolAppShell
         eyebrow="Records app"
         title="Jobsite camera and closeout proof"
         description={hasJob ? `Capture before, during, and after proof for ${selectedJob.title}.` : "Capture a work record, build a report, and store closeout photos."}
+        selectedJob={selectedJob}
+        onBack={() => setActiveTool("hub")}
       >
         <div className="tool-app-panel">
           <section className="jobsite-camera-card jobsite-camera-card-app" aria-label="Jobsite camera and records">
@@ -6726,35 +6270,39 @@ function ToolsView({
             </div>
           </section>
         </div>
-      </ToolShell>
+      </ToolAppShell>
     );
   }
 
   if (activeTool === "materials") {
     return (
-      <ToolShell
+      <ToolAppShell
         eyebrow="Materials app"
         title="Waste, sheet count, and cut planning"
         description="Keep material takeoff and sheet packing separate from the calculator."
+        selectedJob={selectedJob}
+        onBack={() => setActiveTool("hub")}
       >
         <div className="tool-app-panel">
           <MaterialsWasteTool selectedJob={selectedJob} />
         </div>
-      </ToolShell>
+      </ToolAppShell>
     );
   }
 
   if (activeTool === "payments") {
     return (
-      <ToolShell
+      <ToolAppShell
         eyebrow="Payments app"
         title="Payment notes and record keeping"
         description="Track how the job got paid without mixing it into the other tools."
+        selectedJob={selectedJob}
+        onBack={() => setActiveTool("hub")}
       >
         <div className="tool-app-panel">
           <PaymentNoteTool selectedJob={selectedJob} />
         </div>
-      </ToolShell>
+      </ToolAppShell>
     );
   }
 
@@ -7290,15 +6838,14 @@ function InvoiceTool({
 }
 
 const FRAC_LABELS = ["0", "1/8", "1/4", "3/8", "1/2", "5/8", "3/4", "7/8"];
-const PART_COLORS = ["#4f8ef7","#f59e0b","#10b981","#f43f5e","#8b5cf6","#06b6d4","#84cc16","#ec4899"];
 
 function ConstructionCalculator() {
   const [activeTab, setActiveTab] = useState<"heavy" | "miter" | "crown" | "suite">("heavy");
   const [feet, setFeet] = useState(0);
   const [inches, setInches] = useState(0);
   const [eighths, setEighths] = useState(0);
-  const [pieces, setPieces] = useState(1);
-  const [calcMode, setCalcMode] = useState<"ft" | "in">("ft");
+  const [pieces] = useState(1);
+  const [calcMode] = useState<"ft" | "in">("ft");
   const [calcOp, setCalcOp] = useState<"+" | "-" | "*" | "/" | null>(null);
   const [calcAccum, setCalcAccum] = useState(0);
   const [calcWait, setCalcWait] = useState(false);
@@ -7306,25 +6853,13 @@ function ConstructionCalculator() {
   const [springAngle, setSpringAngle] = useState(52);
   const [cornerSide, setCornerSide] = useState<"inside" | "outside">("inside");
   const [crownHand, setCrownHand] = useState<"left" | "right">("left");
-  const [crownMode, setCrownMode] = useState<"standard" | "bullnose">("standard");
+  const [crownMode] = useState<"standard" | "bullnose">("standard");
   const [bladeKerf, setBladeKerf] = useState(true);
   const [heavyLightModifiers, setHeavyLightModifiers] = useState(true);
   const [metricMode, setMetricMode] = useState(false);
   const [feetInchesMode, setFeetInchesMode] = useState(true);
   const [leftHandedMode, setLeftHandedMode] = useState(false);
   const [themePreset, setThemePreset] = useState("lime");
-  const [wallLength, setWallLength] = useState(12);
-  const [spacing, setSpacing] = useState(16);
-  const [materials, setMaterials] = useState<MaterialEstimate[]>([
-    {
-      id: "1",
-      name: "2x4 Lumber",
-      quantity: 10,
-      unit: "linear feet",
-      wastePercent: 5,
-      costPerUnit: 0.75,
-    },
-  ]);
   const [sheetParts, setSheetParts] = useState<SheetPart[]>([
     { id: "1", name: "Side Panel", width: 24, height: 36, qty: 2 },
     { id: "2", name: "Top/Bottom", width: 24, height: 18, qty: 2 },
@@ -7422,11 +6957,6 @@ function ConstructionCalculator() {
   }
 
   const rawDecIn = feet * 12 + inches + eighths / 8;
-  const totalInches = rawDecIn * pieces;
-  const totalFeet = Math.floor(totalInches / 12);
-  const remainderInches = Number((totalInches % 12).toFixed(2));
-  const studCount = Math.ceil((wallLength * 12) / spacing) + 1;
-  const joistCount = Math.ceil((wallLength * 12) / spacing) + 1;
   const miterAngle = Number((wallAngle / 2).toFixed(1));
   const bevelAngle = Number((Math.max(0, (springAngle - 45) * 0.85 + (cornerSide === "outside" ? 4 : 0))).toFixed(1));
   const crownSawLabel = crownHand === "left" ? "Miter right  //  Bevel left" : "Miter left  //  Bevel right";
@@ -7441,11 +6971,6 @@ function ConstructionCalculator() {
   function updateSheetPart(id: string, field: keyof SheetPart, value: unknown) {
     setSheetParts(sheetParts.map((p) => (p.id === id ? { ...p, [field]: value } : p)));
   }
-
-  const totalMaterialCost = materials.reduce((sum, m) => {
-    const withWaste = m.quantity * (1 + m.wastePercent / 100);
-    return sum + withWaste * (m.costPerUnit || 0);
-  }, 0);
 
   const sheetPackingResult = useMemo(() => {
     const pieces: { name: string; w: number; h: number }[] = [];
@@ -7513,7 +7038,7 @@ function ConstructionCalculator() {
       if (fit) currentParts.push({ name: piece.name, x: fit.x, y: fit.y, w: piece.w, h: piece.h });
       else sheets.push({ id: sheetId++, parts: [{ name: `${piece.name} (OVERSIZED)`, x: 0, y: 0, w: piece.w, h: piece.h }] });
     }
-    if (currentParts.length > 0) sheets.push({ id: sheetId++, parts: currentParts });
+    if (currentParts.length > 0) sheets.push({ id: sheetId, parts: currentParts });
 
     const totalAreaSqIn = sheetParts.reduce((sum, p) => sum + p.width * p.height * p.qty, 0);
     const totalQty = sheetParts.reduce((sum, p) => sum + p.qty, 0);
@@ -9470,17 +8995,13 @@ function SafetyQuizTaker({
 function SafetyTrainingView({
   role,
   jobs,
-  completedTraining,
   safetyQuizResults,
-  onToggleTraining,
   onSafetyQuizComplete,
   onOpenJob,
 }: {
   role: Role;
   jobs: Job[];
-  completedTraining: Set<string>;
   safetyQuizResults: Record<string, SafetyQuizResult>;
-  onToggleTraining: (moduleName: string) => void;
   onSafetyQuizComplete: (quizId: string, score: number) => void;
   onOpenJob: (id: number) => void;
 }) {
@@ -9795,7 +9316,6 @@ function Filters({
 }
 
 function SettingsView({
-  role,
   profile,
   trustReady,
   recordCount,
@@ -9804,7 +9324,6 @@ function SettingsView({
   shoutOutCount,
   onReviewConsent,
 }: {
-  role: Role;
   profile: AccountProfile;
   trustReady: boolean;
   recordCount: number;

@@ -1441,6 +1441,12 @@ export async function startServer(listenPort = port) {
   });
 }
 
+export async function closeDatabase() {
+  if (database) {
+    await database.end();
+  }
+}
+
 export { app, ensureSchema };
 
 if (path.resolve(process.argv[1] ?? "") === __filename) {

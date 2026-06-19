@@ -17,7 +17,7 @@ Evidence must eventually link to implementation, automated tests, manual accepta
 | GA-FND-001 | Managed PostgreSQL and private object storage are required | Verified | Live `/api/health` and `/api/storage` report PostgreSQL and S3-compatible storage healthy. |
 | GA-FND-002 | Versioned database migrations own schema changes | Blocker | `ensureSchema()` creates/changes production tables at process startup; only guest-session SQL exists under `migrations/`. |
 | GA-FND-003 | Core records use normalized, user-owned domain tables | Blocker | Jobs, applications, messages, reviews, closeouts, payments, community, and settings live inside `app_state.state` JSON per cookie session. |
-| GA-FND-004 | Authenticated tenant/ownership authorization protects every private API | Partial | Legacy private routes now require a DB-backed user and scope state/events/uploads/export to the authenticated user ID; normalized resource-level authorization tests remain. |
+| GA-FND-004 | Authenticated tenant/ownership authorization protects every private API | Partial | Legacy private routes require a DB-backed user and scope state/events/uploads/export to user ID; disposable-DB cross-user isolation coverage is added and awaiting CI proof. |
 | GA-FND-005 | API uses consistent typed errors and validation | Partial | Some explicit errors exist; no shared schema validation or stable error contract. |
 | GA-FND-006 | Retryable writes are idempotent | Missing | State blob upsert masks duplication; domain idempotency is absent. |
 | GA-FND-007 | Auditable domain events use authenticated actor and subject | Partial | `app_events` exists but accepts arbitrary unauthenticated payloads and is not a domain audit log. |
@@ -33,7 +33,7 @@ Evidence must eventually link to implementation, automated tests, manual accepta
 | GA-AUTH-004 | Password reset and recovery | Missing | No recovery workflow. |
 | GA-AUTH-005 | Google OAuth validates identity and continues onboarding | Partial | New OAuth users are created with pending role and blank company/location, then complete onboarding; live provider and account-linking tests remain. |
 | GA-AUTH-006 | OAuth uses safe redirect/state/nonce design and account linking rules | Partial | State exists; no nonce/PKCE, identity-linking policy, or robust redirect-intent record. |
-| GA-AUTH-007 | Session rotates after authentication and uses bounded lifetime | Partial | Signup/login/OAuth rotate sessions and default to 30-day expiry; database-backed rotation tests and device/session management remain. |
+| GA-AUTH-007 | Session rotates after authentication and uses bounded lifetime | Partial | Signup/login/OAuth rotate sessions and default to 30-day expiry; a DB-backed rotation test awaits CI proof, while device/session management remains deferred. |
 | GA-AUTH-008 | Logout revokes server session and clears local auth | Partial | Route and UI exist; must be retested after removal of local fallback and ownership migration. |
 | GA-AUTH-009 | Auth endpoints are rate-limited and resist enumeration/CSRF | Partial | Auth/write/upload limits and approved-origin checks exist with SameSite cookies; enumeration review and explicit CSRF threat evidence remain. |
 | GA-AUTH-010 | Account state and role are server-authoritative | Partial | Server role is required, pending during OAuth onboarding, and immutable afterward; legacy app-state authority must still be removed during normalization. |
@@ -130,13 +130,13 @@ Evidence must eventually link to implementation, automated tests, manual accepta
 | GA-ADM-001 | Internal routes require least-privilege admin authorization | Blocker | Admin UI is a normal view over client state; no admin roles/authorization. |
 | GA-ADM-002 | Support can inspect safe account/workflow timeline | Missing | Generic events exist without safe support policy or actor identity. |
 | GA-ADM-003 | Moderation/account actions use reason and immutable audit | Prototype | Lock/report handlers mutate app-state. |
-| GA-OPS-001 | Build and lint gates pass | Blocker | Build and changed-file lint pass; repository lint still fails with 58 errors and 1 warning in legacy `App.tsx`. |
+| GA-OPS-001 | Build and lint gates pass | Verified | Production build and repository-wide ESLint both pass locally with zero errors or warnings. |
 | GA-OPS-002 | Direct production dependencies are declared and vulnerability gate passes | Verified | `fast-xml-parser` is direct, Multer is 2.2.0, and `npm audit --omit=dev` reports zero vulnerabilities. |
 | GA-OPS-003 | Health, readiness, and build version are distinct | Partial | Separate health/readiness metadata exists locally; deployed source commit and platform probe configuration remain unverified. |
 | GA-OPS-004 | Backup and timed restore drill pass | Unknown | Documentation requests it; no evidence found in repo. |
 | GA-OPS-005 | Structured logs, error monitoring, alerts, and incident routing | Missing | Console logging/basic responses only. |
 | GA-OPS-006 | Critical rate limits and upload abuse limits | Partial | Auth/write/upload limits and an explicit upload MIME/size/count policy exist; durable/distributed limits and domain quotas remain. |
-| GA-OPS-007 | Automated tests cover critical journeys and authorization | Partial | Nine unit/integration tests and one fail-closed Playwright journey pass; database-backed cross-user and full critical-flow coverage remain. |
+| GA-OPS-007 | Automated tests cover critical journeys and authorization | Partial | Nine local tests plus the expanded Playwright auth/signup journey pass; disposable-Postgres rotation/isolation/role coverage is added and awaiting CI. |
 | GA-OPS-008 | Deployed commit, migrations, flags, and rollback are recorded | Partial | Build metadata and ledger templates exist; no Packet 00 deployment or rollback evidence has been recorded. |
 
 ## Current Gate A Summary

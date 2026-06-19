@@ -12,10 +12,10 @@
     "dev:api": "node server/index.js",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "lint:security": "eslint server/index.js server/security.js test/security.test.js test/server.integration.test.js test/auth-fail-closed.e2e.mjs",
+    "lint:security": "eslint server/index.js server/security.js test/security.test.js test/server.integration.test.js test/server.database.integration.test.js test/auth-fail-closed.e2e.mjs",
     "test": "npm run test:unit && npm run test:integration",
     "test:unit": "node --test test/security.test.js",
-    "test:integration": "node --test test/server.integration.test.js",
+    "test:integration": "node --test test/server.integration.test.js test/server.database.integration.test.js",
     "test:e2e": "node test/auth-fail-closed.e2e.mjs",
     "preview": "vite preview --host 127.0.0.1",
     "start": "node server/index.js"
