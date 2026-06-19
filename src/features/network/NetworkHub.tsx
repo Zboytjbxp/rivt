@@ -7,7 +7,6 @@ import {
   Users,
 } from "lucide-react";
 import type { Job, Talent } from "../../types";
-import type { PrimaryDestination } from "../../app-shell/types";
 import "./network-hub.css";
 
 interface CommunityPost {
@@ -30,7 +29,9 @@ interface NetworkHubProps {
   talent: Talent[];
   communityPosts: CommunityPost[];
   shoutOuts: ShoutOut[];
-  onNavigate: (destination: PrimaryDestination) => void;
+  onOpenCrew: () => void;
+  onOpenShopTalk: () => void;
+  onOpenReviews: () => void;
 }
 
 function TopTalentCard({ person }: { person: Talent }) {
@@ -68,7 +69,7 @@ function AnswerPrompt({ post }: { post: CommunityPost }) {
   );
 }
 
-export function NetworkHub({ jobs, talent, communityPosts, shoutOuts, onNavigate }: NetworkHubProps) {
+export function NetworkHub({ jobs, talent, communityPosts, shoutOuts, onOpenCrew, onOpenShopTalk, onOpenReviews }: NetworkHubProps) {
   const activeCrew = talent.slice(0, 3);
   const questionPosts = communityPosts.filter((post) => post.flair === "Question" || post.status !== "Open").slice(0, 4);
   const highlightedShoutOuts = shoutOuts.slice(0, 4);
@@ -95,7 +96,7 @@ export function NetworkHub({ jobs, talent, communityPosts, shoutOuts, onNavigate
               <span>Top matches</span>
               <h2>People to reach out to</h2>
             </div>
-            <button type="button" onClick={() => onNavigate("network")}>Open crew</button>
+            <button type="button" onClick={onOpenCrew}>Open crew</button>
           </header>
           <div className="v2-network-person-list">
             {activeCrew.map((person) => <TopTalentCard key={person.id} person={person} />)}
@@ -108,7 +109,7 @@ export function NetworkHub({ jobs, talent, communityPosts, shoutOuts, onNavigate
               <span>Shout-outs</span>
               <h2>Recent reputation signals</h2>
             </div>
-            <button type="button" onClick={() => onNavigate("network")}>Open Shop Talk</button>
+            <button type="button" onClick={onOpenShopTalk}>Open Shop Talk</button>
           </header>
           <div className="v2-network-shoutouts">
             {highlightedShoutOuts.map((item) => (
@@ -129,7 +130,7 @@ export function NetworkHub({ jobs, talent, communityPosts, shoutOuts, onNavigate
               <span>Questions worth answering</span>
               <h2>Shop Talk with field weight</h2>
             </div>
-            <button type="button" onClick={() => onNavigate("network")}>View all</button>
+            <button type="button" onClick={onOpenShopTalk}>View all</button>
           </header>
           <div className="v2-network-prompts">
             {questionPosts.length ? questionPosts.map((post) => <AnswerPrompt key={post.id} post={post} />) : (
@@ -148,7 +149,7 @@ export function NetworkHub({ jobs, talent, communityPosts, shoutOuts, onNavigate
               <span>Trust signals</span>
               <h2>Who looks ready</h2>
             </div>
-            <button type="button" onClick={() => onNavigate("network")}>Open reviews</button>
+            <button type="button" onClick={onOpenReviews}>Open reviews</button>
           </header>
           <div className="v2-network-trust-stack">
             <article>

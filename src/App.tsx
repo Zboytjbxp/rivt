@@ -31,6 +31,7 @@ import {
   MessageSquareText,
   Menu,
   Moon,
+  ExternalLink,
   Newspaper,
   Plus,
   Ruler,
@@ -130,7 +131,7 @@ interface AuthUser {
   email: string;
   provider: string;
   display_name: string;
-  role: Role;
+  role: Role | "pending";
   organization: string;
   location: string;
 }
@@ -211,6 +212,21 @@ interface NewsItem {
   summary: string;
   url: string;
   urgency?: string;
+  thumbnailUrl?: string;
+}
+
+function newsThumbnailUrl(item: Pick<NewsItem, "url" | "thumbnailUrl" | "source">) {
+  if (item.thumbnailUrl) {
+    return item.thumbnailUrl;
+  }
+
+  try {
+    const parsed = new URL(item.url);
+    const host = parsed.hostname.replace(/^www\./i, "");
+    return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(host)}&sz=128`;
+  } catch {
+    return "/rivt-icon-192.png";
+  }
 }
 
 type ProviderCheckStatus = "idle" | "checking" | "ready" | "setup_required" | "offline";
@@ -341,8 +357,8 @@ interface PersistedAppState {
 const LEGACY_STORAGE_KEY = `${brandConfig.appSlug}-beta-state-v2`;
 const THEME_STORAGE_KEY = `${brandConfig.appSlug}-theme-mode`;
 const THEME_PALETTE_STORAGE_KEY = `${brandConfig.appSlug}-theme-palette`;
-const AUTH_STORAGE_KEY = `${brandConfig.appSlug}-auth-user`;
 const AUTH_MODE_KEY = `${brandConfig.appSlug}-auth-mode`;
+const GUEST_DEMO_ENABLED = import.meta.env.DEV && import.meta.env.VITE_ENABLE_GUEST_DEMO === "true";
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? (import.meta.env.DEV ? "http://127.0.0.1:8787" : "");
 
 type ServerStatus = "checking" | "connected" | "offline" | "setup_required";
@@ -1442,37 +1458,6 @@ function discardLegacyLocalState() {
   }
 }
 
-function readLocalAuthUser(): AuthUser | null {
-  if (typeof window === "undefined") {
-    return null;
-  }
-
-  try {
-    const raw = window.sessionStorage.getItem(AUTH_STORAGE_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as AuthUser;
-    return parsed?.email ? parsed : null;
-  } catch {
-    return null;
-  }
-}
-
-function saveLocalAuthUser(user: AuthUser | null) {
-  if (typeof window === "undefined") {
-    return;
-  }
-
-  try {
-    if (user) {
-      window.sessionStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
-    } else {
-      window.sessionStorage.removeItem(AUTH_STORAGE_KEY);
-    }
-  } catch {
-    // sessionStorage is optional in the browser.
-  }
-}
-
 async function parseApiError(response: Response) {
   const body = await response.json().catch(() => null) as { error?: string } | null;
   const error = new Error(body?.error ?? `Request failed with ${response.status}`) as Error & { status?: number };
@@ -1977,17 +1962,20 @@ function App() {
           providers?: Record<string, { ok: boolean; mode: string; missing: string[]; purpose: string }>;
         };
         if (cancelled) return;
-        const localUser = readLocalAuthUser();
-        setAuthUser(meBody.user ?? localUser ?? null);
+        setAuthUser(meBody.user ?? null);
         setAuthProviders(providersBody.providers ?? {});
-        const hydratedUser = meBody.user ?? localUser;
+        const hydratedUser = meBody.user;
         if (hydratedUser) {
-          setRole(hydratedUser.role);
+          const hydratedRole: Role = hydratedUser.role === "tradesperson" ? "tradesperson" : "contractor";
+          setRole(hydratedRole);
+          if (hydratedUser.role === "pending") {
+            setOnboardingComplete(false);
+          }
           setAccountProfile({
             email: hydratedUser.email,
             displayName: hydratedUser.display_name || "RIVT user",
-            organization: hydratedUser.organization || `${hydratedUser.display_name || "Crew"} crew`,
-            location: hydratedUser.location || "Jacksonville, FL",
+            organization: hydratedUser.organization,
+            location: hydratedUser.location,
             specialties: accountProfile.specialties,
             plan: accountProfile.plan,
             authMethod: hydratedUser.provider === "email" ? "Email" : "Google",
@@ -1995,21 +1983,9 @@ function App() {
         }
       } catch {
         if (!cancelled) {
-          const localUser = readLocalAuthUser();
-          if (localUser) {
-            setAuthUser(localUser);
-            setRole(localUser.role);
-            setAccountProfile({
-              email: localUser.email,
-              displayName: localUser.display_name || "RIVT user",
-              organization: localUser.organization || `${localUser.display_name || "Crew"} crew`,
-              location: localUser.location || "Jacksonville, FL",
-              specialties: accountProfile.specialties,
-              plan: accountProfile.plan,
-              authMethod: localUser.provider === "email" ? "Email" : "Google",
-            });
-          }
+          setAuthUser(null);
           setAuthProviders({});
+          setAuthError("RIVT could not verify your session. Check your connection and sign in again.");
         }
       } finally {
         if (!cancelled) {
@@ -2031,20 +2007,6 @@ function App() {
       window.scrollTo({ top: 0, left: 0 });
     }
   }, [activeView, onboardingComplete]);
-
-  useEffect(() => {
-    if (!serverHydrated) {
-      return;
-    }
-
-    if (!onboardingComplete) {
-      setOnboardingComplete(true);
-    }
-
-    if (!trustReady) {
-      setTrustReady(true);
-    }
-  }, [onboardingComplete, serverHydrated, trustReady]);
 
   function handleToggleTheme() {
     setThemeMode((currentMode) => (currentMode === "dark" ? "light" : "dark"));
@@ -2238,6 +2200,10 @@ function App() {
   ]);
 
   useEffect(() => {
+    if (!authUser) {
+      return;
+    }
+
     let cancelled = false;
     discardLegacyLocalState();
 
@@ -2271,12 +2237,12 @@ function App() {
     return () => {
       cancelled = true;
     };
-    // Run once on mount so managed server data is the only durable source of truth.
+    // Rehydrate when the authenticated account changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [authUser?.id]);
 
   useEffect(() => {
-    if (!serverHydrated) {
+    if (!authUser || !serverHydrated) {
       return;
     }
 
@@ -2292,7 +2258,7 @@ function App() {
     }, 350);
 
     return () => window.clearTimeout(timeout);
-  }, [currentState, serverHydrated]);
+  }, [authUser, currentState, serverHydrated]);
 
   const [uiToast, setUiToast] = useState<AppToast | null>(null);
 
@@ -2359,46 +2325,23 @@ function App() {
         throw new Error(body.error || "Sign-in failed.");
       }
       setAuthUser(body.user);
-      saveLocalAuthUser(body.user);
-      setRole(body.user.role);
+      const authenticatedRole: Role = body.user.role === "tradesperson" ? "tradesperson" : "contractor";
+      setRole(authenticatedRole);
       setAccountProfile({
         email: body.user.email,
         displayName: body.user.display_name || form.displayName || "RIVT user",
-        organization: form.organization || `${form.displayName || "Crew"} crew`,
-        location: form.location || "Jacksonville, FL",
+        organization: body.user.organization || form.organization || "",
+        location: body.user.location || form.location || "",
         specialties: accountProfile.specialties,
         plan: accountProfile.plan,
         authMethod: authMode === "signup" ? "Email" : (body.user.provider === "email" ? "Email" : "Google"),
       });
       setOnboardingComplete(false);
+      setServerHydrated(false);
       addActivity("Authenticated", `${body.user.email} is now signed in.`);
     } catch (error) {
-      const localUser: AuthUser = {
-        id: `local-${Date.now()}`,
-        email: form.email,
-        provider: "email",
-        display_name: form.displayName || form.email.split("@")[0] || "RIVT user",
-        role: form.role ?? "contractor",
-        organization: form.organization || `${form.displayName || "Crew"} crew`,
-        location: form.location || "Jacksonville, FL",
-      };
-      setAuthUser(localUser);
-      saveLocalAuthUser(localUser);
-      setRole(localUser.role);
-      setAccountProfile({
-        email: localUser.email,
-        displayName: localUser.display_name,
-        organization: localUser.organization,
-        location: localUser.location,
-        specialties: accountProfile.specialties,
-        plan: accountProfile.plan,
-        authMethod: "Email",
-      });
-      setOnboardingComplete(false);
-      addActivity("Authenticated locally", `${localUser.email} is now signed in with browser session auth.`);
-      if (error instanceof Error) {
-        setAuthError(null);
-      }
+      setAuthUser(null);
+      setAuthError(error instanceof Error ? error.message : "Sign-in failed. Check your connection and try again.");
     }
   }
 
@@ -2415,8 +2358,8 @@ function App() {
       setAccountOpen(false);
       setActivityOpen(false);
       setActiveView("Home");
+      setServerHydrated(false);
       window.history.replaceState({}, "", "/");
-      saveLocalAuthUser(null);
     }
   }
 
@@ -2989,7 +2932,30 @@ function App() {
     );
   }
 
-  function handleOnboardingComplete(result: OnboardingResult) {
+  async function handleOnboardingComplete(result: OnboardingResult) {
+    setAuthError(null);
+    try {
+      const response = await fetch(apiPath("/api/auth/profile"), {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          role: result.role,
+          displayName: result.displayName,
+          organization: result.organization,
+          location: result.location,
+        }),
+      });
+      const body = await response.json().catch(() => ({})) as { error?: string; user?: AuthUser };
+      if (!response.ok || !body.user) {
+        throw new Error(body.error || "Account setup could not be saved.");
+      }
+      setAuthUser(body.user);
+    } catch (error) {
+      setAuthError(error instanceof Error ? error.message : "Account setup could not be saved.");
+      return;
+    }
+
     setRole(result.role);
     setAccountProfile({
       email: result.email,
@@ -3224,6 +3190,7 @@ function App() {
         themeMode={themeMode}
         onToggleTheme={handleToggleTheme}
         onComplete={handleOnboardingComplete}
+        error={authError}
         initialRole={role}
         initialEmail={accountProfile.email}
         initialDisplayName={accountProfile.displayName}
@@ -3328,13 +3295,30 @@ function App() {
             onToggleSavedSearch={handleToggleSavedSearch}
             onToggleAutoMatch={handleToggleAutoMatch}
           />
-        ) : ["My Crew", "Shop Talk", "Reviews"].includes(activeView) ? (
+        ) : activeView === "Shop Talk" ? (
+          <ShopTalkView
+            profile={accountProfile}
+            communityPosts={communityPosts}
+            newsItems={seedNews}
+            selectedJobTrade={selectedJob.trade}
+            userLocation={accountProfile.location}
+            onVotePost={handleVoteCommunityPost}
+            onVoteAnswer={handleVoteCommunityAnswer}
+            onAddAnswer={handleAddCommunityAnswer}
+            onVerifyAnswer={handleVerifyCommunityAnswer}
+            onReportPost={handleReportCommunityPost}
+            onCreatePrompt={handleCreateCommunityPrompt}
+            onNewPost={handleNewShopTalkPost}
+          />
+        ) : ["My Crew", "Reviews"].includes(activeView) ? (
           <NetworkHub
             jobs={jobs}
             talent={matchingTalent}
             communityPosts={communityPosts}
             shoutOuts={shoutOuts}
-            onNavigate={(destination) => handleNavigate(defaultViewForDestination(destination))}
+            onOpenCrew={() => handleNavigate("My Crew")}
+            onOpenShopTalk={() => handleNavigate("Shop Talk")}
+            onOpenReviews={() => handleNavigate("Reviews")}
           />
         ) : activeView === "Messages" ? (
           <InboxCenter
@@ -3558,15 +3542,17 @@ function AuthGate({
           <p>Use the same workspace to manage jobs, crews, tools, and records.</p>
         </div>
 
-        <div className="auth-guest-callout auth-guest-callout--hero">
-          <div>
-            <strong>Prefer to browse first?</strong>
-            <span>See the live app without creating an account yet.</span>
+        {GUEST_DEMO_ENABLED ? (
+          <div className="auth-guest-callout auth-guest-callout--hero">
+            <div>
+              <strong>Prefer to browse first?</strong>
+              <span>Preview the local demo without creating an account.</span>
+            </div>
+            <button type="button" className="ghost-action auth-guest-cta" onClick={onGuestLogin}>
+              Browse local demo
+            </button>
           </div>
-          <button type="button" className="ghost-action auth-guest-cta" onClick={onGuestLogin}>
-            Browse as guest
-          </button>
-        </div>
+        ) : null}
 
         <div className="auth-provider-grid">
           {([
@@ -3769,6 +3755,7 @@ function OnboardingFlow({
   initialLocation,
   initialSpecialties,
   initialAuthMethod,
+  error,
 }: {
   themeMode: ThemeMode;
   onToggleTheme: () => void;
@@ -3780,6 +3767,7 @@ function OnboardingFlow({
   initialLocation: string;
   initialSpecialties: Trade[];
   initialAuthMethod: AuthMethod;
+  error?: string | null;
 }) {
   const [role, setRole] = useState<Role>(initialRole);
   const [authMethod, setAuthMethod] = useState<AuthMethod>(initialAuthMethod);
@@ -3945,7 +3933,7 @@ function OnboardingFlow({
                 <input
                   value={email}
                   onChange={(event) => setEmail(event.target.value)}
-                  placeholder="rivttesting@gmail.com"
+                  placeholder="name@company.com"
                   type="email"
                 />
               </label>
@@ -4069,6 +4057,7 @@ function OnboardingFlow({
                   ? "Your role, profile, consent, and beta plan are ready."
                   : "Add your profile basics, pick at least one trade, and accept the consent agreement."}
               </span>
+              {error ? <span className="auth-error" role="alert">{error}</span> : null}
             </div>
             <button
               type="button"
@@ -5922,18 +5911,28 @@ function HomeView({
           </div>
           {latestNews && (
             <a className="news-feature" href={latestNews.url} target={latestNews.url === "#" ? undefined : "_blank"} rel="noreferrer">
-              <span>{latestNews.urgency ?? latestNews.source}</span>
-              <strong>{latestNews.headline}</strong>
-              <p>{latestNews.summary}</p>
-              <small>{latestNews.source} - {latestNews.date}</small>
+              <div className="news-feature-thumb">
+                <img src={newsThumbnailUrl(latestNews)} alt={`${latestNews.source} article thumbnail`} loading="lazy" />
+              </div>
+              <div className="news-feature-copy">
+                <span>{latestNews.urgency ?? latestNews.source}</span>
+                <strong>{latestNews.headline}</strong>
+                <p>{latestNews.summary}</p>
+                <small>{latestNews.source} - {latestNews.date}</small>
+              </div>
             </a>
           )}
           {secondaryNews.map((item) => (
-            <article className="news-row" key={item.id}>
-              <span>{item.source} - {item.date}</span>
-              <strong>{item.headline}</strong>
-              <p>{item.summary}</p>
-            </article>
+            <a className="news-row" key={item.id} href={item.url} target={item.url === "#" ? undefined : "_blank"} rel="noreferrer">
+              <div className="news-row-thumb">
+                <img src={newsThumbnailUrl(item)} alt={`${item.source} article thumbnail`} loading="lazy" />
+              </div>
+              <div className="news-row-copy">
+                <span>{item.source} - {item.date}</span>
+                <strong>{item.headline}</strong>
+                <p>{item.summary}</p>
+              </div>
+            </a>
           ))}
         </article>
 
@@ -6410,21 +6409,37 @@ function ShopTalkView({
                 ) : displayNews.length === 0 ? (
                   <EmptyState icon={Newspaper} title="No news yet" description="Trade-relevant news will appear here." />
                 ) : displayNews.map((item) => (
-                  <button
+                  <article
                     key={item.id}
-                    type="button"
                     className={item.id === selectedNewsId ? "shop-news-card selected" : "shop-news-card"}
-                    onClick={() => { setSelectedNewsId(item.id); setMobileDetail(true); }}
                   >
-                    <div className="news-card-thumb" data-urgency={item.urgency ?? "default"}>
-                      <span>{item.source}</span>
-                    </div>
-                    <div className="news-card-body">
-                      {item.urgency && <span className="news-urgency-pill">{item.urgency}</span>}
-                      <strong>{item.headline}</strong>
-                      <small>{item.date}</small>
-                    </div>
-                  </button>
+                    <button
+                      type="button"
+                      className="shop-news-card-main"
+                      onClick={() => { setSelectedNewsId(item.id); setMobileDetail(true); }}
+                    >
+                      <div className="news-card-thumb">
+                        <img src={newsThumbnailUrl(item)} alt={`${item.source} thumbnail`} loading="lazy" />
+                        <span>{item.source}</span>
+                      </div>
+                      <div className="news-card-body">
+                        {item.urgency && <span className="news-urgency-pill">{item.urgency}</span>}
+                        <strong>{item.headline}</strong>
+                        <small>{item.date}</small>
+                      </div>
+                    </button>
+                    {item.url && item.url !== "#" && (
+                      <a
+                        className="shop-news-source-link"
+                        href={item.url}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        <ExternalLink size={12} />
+                        Read original
+                      </a>
+                    )}
+                  </article>
                 ))}
               </div>
             </>
@@ -6558,7 +6573,7 @@ function ShopTalkView({
                 <p className="shop-news-detail-body">{selectedNews.summary}</p>
                 {selectedNews.url && selectedNews.url !== "#" && (
                   <a href={selectedNews.url} target="_blank" rel="noreferrer" className="primary-action news-read-btn">
-                    Read full article →
+                    Read original article →
                   </a>
                 )}
                 <div className="shop-news-discuss">

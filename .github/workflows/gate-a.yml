@@ -1,0 +1,51 @@
+name: Gate A Safety
+
+on:
+  pull_request:
+  push:
+    branches:
+      - master
+      - "codex/**"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gate-a-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Install browser
+        run: npx playwright install --with-deps chromium
+
+      - name: Build production bundle
+        run: npm run build
+
+      - name: Lint Packet 00 security surface
+        run: npm run lint:security
+
+      - name: Run unit and integration tests
+        run: npm run test
+
+      - name: Run fail-closed browser test
+        run: npm run test:e2e
+
+      - name: Audit production dependencies
+        run: npm audit --omit=dev --audit-level=high

@@ -11,6 +11,13 @@ import { existsSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import pg from "pg";
+import {
+  createOriginGuard,
+  createRateLimiter,
+  createRequireAuthenticatedUser,
+  parseCookies,
+  readSessionId,
+} from "./security.js";
 
 const { Pool } = pg;
 const __filename = fileURLToPath(import.meta.url);
@@ -24,7 +31,11 @@ const signedUrlSeconds = Number(process.env.S3_SIGNED_URL_SECONDS ?? 900);
 const appName = envValue("APP_NAME", "RIVT");
 const appSlug = envValue("APP_SLUG", "rivt");
 const sessionCookieName = `${appSlug}_session`;
-const sessionMaxAgeMs = 1000 * 60 * 60 * 24 * 365;
+const sessionMaxAgeMs = Number(process.env.SESSION_MAX_AGE_MS ?? 1000 * 60 * 60 * 24 * 30);
+const appVersion = envValue("APP_VERSION", "0.1.0");
+const sourceCommit = envValue("SOURCE_COMMIT", envValue("RAILWAY_GIT_COMMIT_SHA", "unknown"));
+const migrationVersion = envValue("MIGRATION_VERSION", "runtime-schema-v1");
+const productionOrigin = envValue("APP_ORIGIN", "https://rivt.pro");
 
 function envValue(name, fallback = undefined) {
   const value = process.env[name]?.trim();
@@ -140,7 +151,7 @@ const upload = multer({
       "text/plain",
     ]);
 
-    if (allowedTypes.has(file.mimetype) || file.mimetype.startsWith("image/")) {
+    if (allowedTypes.has(file.mimetype)) {
       callback(null, true);
       return;
     }
@@ -153,49 +164,35 @@ const upload = multer({
 
 let schemaReadyPromise;
 
-app.use(cors({ origin: true, credentials: true }));
+const allowedOrigins = [
+  productionOrigin,
+  ...(process.env.NODE_ENV === "production"
+    ? []
+    : ["http://127.0.0.1:5173", "http://localhost:5173", "http://127.0.0.1:4173", "http://localhost:4173"]),
+];
+
+app.use(cors({
+  credentials: true,
+  origin(origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+      return;
+    }
+    const error = new Error("Request origin is not allowed.");
+    error.status = 403;
+    callback(error);
+  },
+}));
 app.set("trust proxy", 1);
 app.use(express.json({ limit: "1mb" }));
 
-function parseCookies(request) {
-  return Object.fromEntries(
-    String(request.headers.cookie ?? "")
-      .split(";")
-      .map((cookie) => cookie.trim())
-      .filter(Boolean)
-      .map((cookie) => {
-        const separator = cookie.indexOf("=");
-        if (separator === -1) {
-          return [cookie, ""];
-        }
-
-        return [
-          decodeURIComponent(cookie.slice(0, separator)),
-          decodeURIComponent(cookie.slice(separator + 1)),
-        ];
-      }),
-  );
-}
-
-function getSessionId(request, response) {
-  const cookies = parseCookies(request);
-  const existing = cookies[sessionCookieName];
-  const sessionId = /^[0-9a-f-]{36}$/i.test(existing ?? "") ? existing : randomUUID();
-
-  response.cookie(sessionCookieName, sessionId, {
-    httpOnly: true,
-    maxAge: sessionMaxAgeMs,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-  });
-
-  return sessionId;
-}
+app.use("/api", createOriginGuard(allowedOrigins));
 
 function setSessionId(response, sessionId) {
   response.cookie(sessionCookieName, sessionId, {
     httpOnly: true,
     maxAge: sessionMaxAgeMs,
+    path: "/",
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
   });
@@ -464,6 +461,42 @@ async function issueAuthSession(response, userId, sessionId) {
   setSessionId(response, sessionId);
 }
 
+async function rotateAuthSession(request, response, userId) {
+  const previousSessionId = readSessionId(request, sessionCookieName);
+  const nextSessionId = randomUUID();
+
+  if (previousSessionId) {
+    await database.query("DELETE FROM auth_sessions WHERE session_id = $1", [previousSessionId]);
+  }
+
+  await issueAuthSession(response, userId, nextSessionId);
+  return nextSessionId;
+}
+
+const requireAuthenticatedUser = createRequireAuthenticatedUser({
+  databaseAvailable: () => Boolean(database),
+  findUserBySessionId: getUserBySessionId,
+  cookieName: sessionCookieName,
+});
+
+const authRateLimit = createRateLimiter({
+  windowMs: 15 * 60 * 1000,
+  max: Number(process.env.AUTH_RATE_LIMIT ?? 30),
+  namespace: "auth",
+});
+
+const writeRateLimit = createRateLimiter({
+  windowMs: 60 * 1000,
+  max: Number(process.env.WRITE_RATE_LIMIT ?? 120),
+  namespace: "write",
+});
+
+const uploadRateLimit = createRateLimiter({
+  windowMs: 60 * 60 * 1000,
+  max: Number(process.env.UPLOAD_RATE_LIMIT ?? 40),
+  namespace: "upload",
+});
+
 function integrationStatus(provider, requiredEnv, purpose) {
   const missing = requiredEnv.filter((key) => !process.env[key]);
   return {
@@ -510,11 +543,13 @@ async function upsertOAuthUser({ email, provider, displayName, role, organizatio
     const user = await database.query(
       `
         UPDATE auth_users
-        SET provider = $2, display_name = $3, role = $4, organization = $5, location = $6, updated_at = now()
+        SET provider = $2,
+            display_name = CASE WHEN trim(display_name) = '' THEN $3 ELSE display_name END,
+            updated_at = now()
         WHERE id = $1
         RETURNING id, email, provider, display_name, role, organization, location
       `,
-      [existing.rows[0].id, provider, displayName, role, organization, location],
+      [existing.rows[0].id, provider, displayName],
     );
     return user.rows[0];
   }
@@ -577,6 +612,28 @@ function _urgency(title) {
   return undefined;
 }
 
+function _firstString(value) {
+  if (!value) return null;
+  if (typeof value === "string") return value;
+  if (Array.isArray(value)) return _firstString(value[0]);
+  if (typeof value === "object") {
+    return value["@_url"] ?? value["@_href"] ?? value.url ?? value.href ?? null;
+  }
+  return null;
+}
+
+function _thumbnailUrl(link, item) {
+  const direct = _firstString(item?.enclosure) ?? _firstString(item?.["media:thumbnail"]) ?? _firstString(item?.["media:content"]);
+  if (direct) return direct;
+
+  try {
+    const host = new URL(String(link ?? "")).hostname.replace(/^www\./i, "");
+    return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(host)}&sz=128`;
+  } catch {
+    return null;
+  }
+}
+
 async function _fetchFeed(url, fallbackSource) {
   try {
     const res = await fetch(url, {
@@ -602,6 +659,7 @@ async function _fetchFeed(url, fallbackSource) {
         summary: _stripHtml(item.description ?? item.summary ?? item["content:encoded"] ?? "").slice(0, 350),
         url: link,
         urgency: _urgency(headline),
+        thumbnailUrl: _thumbnailUrl(link, item),
       };
     }).filter((item) => item.headline.length > 10);
   } catch {
@@ -664,12 +722,19 @@ app.get("/api/health", (_request, response) => {
   response.status(storage.ok ? 200 : 503).json({
     ok: storage.ok,
     service: `${appSlug}-api`,
-    storage,
+    build: {
+      version: appVersion,
+      commit: sourceCommit,
+    },
+    dependencies: {
+      database: storage.database,
+      objectStorage: storage.objectStorage,
+    },
     timestamp: new Date().toISOString(),
   });
 });
 
-app.get("/api/storage", async (_request, response, next) => {
+app.get("/api/storage", requireAuthenticatedUser, async (_request, response, next) => {
   await runWithDatabase(response, next, async () => {
     const storage = storageConfiguration();
     const [stateCount, eventCount, uploadCount] = await Promise.all([
@@ -691,9 +756,31 @@ app.get("/api/storage", async (_request, response, next) => {
 
 app.get("/api/auth/me", async (request, response, next) => {
   await runWithDatabase(response, next, async () => {
-    const sessionId = getSessionId(request, response);
+    const sessionId = readSessionId(request, sessionCookieName);
+    if (!sessionId) {
+      response.json({ user: null });
+      return;
+    }
     const user = await getUserBySessionId(sessionId);
     response.json({ user });
+  });
+});
+
+app.get("/api/readiness", requireAuthenticatedUser, async (_request, response, next) => {
+  await runWithDatabase(response, next, async () => {
+    const storage = storageConfiguration();
+    await database.query("SELECT 1");
+    response.status(storage.ok ? 200 : 503).json({
+      ok: storage.ok,
+      service: `${appSlug}-api`,
+      build: { version: appVersion, commit: sourceCommit },
+      migrationVersion,
+      dependencies: {
+        database: storage.database,
+        objectStorage: storage.objectStorage,
+      },
+      timestamp: new Date().toISOString(),
+    });
   });
 });
 
@@ -708,7 +795,7 @@ app.get("/api/auth/providers", (_request, response) => {
   response.json({ providers });
 });
 
-app.get("/api/auth/google/start", (request, response) => {
+app.get("/api/auth/google/start", authRateLimit, (request, response) => {
   const status = integrationStatus("google", ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"], "Google sign-in");
   if (!status.ok) {
     response.status(424).json({
@@ -721,6 +808,7 @@ app.get("/api/auth/google/start", (request, response) => {
   const state = randomBytes(16).toString("hex");
   response.cookie(`${sessionCookieName}_oauth_state`, state, {
     httpOnly: true,
+    path: "/",
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
     maxAge: 1000 * 60 * 10,
@@ -739,7 +827,7 @@ app.get("/api/auth/google/start", (request, response) => {
   response.redirect(authUrl.toString());
 });
 
-app.get("/api/auth/google/callback", async (request, response, next) => {
+app.get("/api/auth/google/callback", authRateLimit, async (request, response, next) => {
   await runWithDatabase(response, next, async () => {
     const stateCookie = parseCookies(request)[`${sessionCookieName}_oauth_state`];
     if (!stateCookie || stateCookie !== request.query.state) {
@@ -767,8 +855,8 @@ app.get("/api/auth/google/callback", async (request, response, next) => {
     });
 
     if (!tokenResponse.ok) {
-      const body = await tokenResponse.text();
-      response.status(502).send(`Google token exchange failed: ${body}`);
+      await tokenResponse.text();
+      response.status(502).send("Google token exchange failed.");
       return;
     }
 
@@ -778,8 +866,8 @@ app.get("/api/auth/google/callback", async (request, response, next) => {
     });
 
     if (!profileResponse.ok) {
-      const body = await profileResponse.text();
-      response.status(502).send(`Google profile lookup failed: ${body}`);
+      await profileResponse.text();
+      response.status(502).send("Google profile lookup failed.");
       return;
     }
 
@@ -788,33 +876,36 @@ app.get("/api/auth/google/callback", async (request, response, next) => {
       email: normalizeEmail(profile.email),
       provider: "google",
       displayName: String(profile.name ?? profile.email ?? "RIVT user"),
-      role: "contractor",
-      organization: `${String(profile.given_name ?? profile.name ?? "Crew")} crew`,
-      location: "Jacksonville, FL",
+      role: "pending",
+      organization: "",
+      location: "",
     });
 
-    const sessionId = getSessionId(request, response);
-    await issueAuthSession(response, user.id, sessionId);
-    response.clearCookie(`${sessionCookieName}_oauth_state`, { sameSite: "lax", secure: process.env.NODE_ENV === "production" });
+    await rotateAuthSession(request, response, user.id);
+    response.clearCookie(`${sessionCookieName}_oauth_state`, { path: "/", sameSite: "lax", secure: process.env.NODE_ENV === "production" });
     response.redirect(`${safeRedirectTarget(request.query.stateFrom ?? "/")}`);
   });
 });
 
-app.post("/api/auth/signup", async (request, response, next) => {
+app.post("/api/auth/signup", authRateLimit, async (request, response, next) => {
   const email = normalizeEmail(request.body?.email);
   const password = String(request.body?.password ?? "");
-  const role = request.body?.role === "tradesperson" ? "tradesperson" : "contractor";
+  const role = request.body?.role === "tradesperson" ? "tradesperson" : request.body?.role === "contractor" ? "contractor" : null;
   const displayName = String(request.body?.displayName ?? "").trim();
   const organization = String(request.body?.organization ?? "").trim();
   const location = String(request.body?.location ?? "").trim();
 
-  if (!email || !password || !displayName || !location) {
-    response.status(400).json({ ok: false, error: "Email, password, name, and location are required." });
+  if (!email || !role || !displayName || !location) {
+    response.status(400).json({ ok: false, error: "Email, account type, name, and location are required." });
+    return;
+  }
+
+  if (password.length < 12) {
+    response.status(422).json({ ok: false, error: "Password must be at least 12 characters." });
     return;
   }
 
   await runWithDatabase(response, next, async () => {
-    const sessionId = getSessionId(request, response);
     const existing = await database.query("SELECT id FROM auth_users WHERE email_hash = $1", [sha256(email)]);
     if (existing.rowCount) {
       response.status(409).json({ ok: false, error: "An account with that email already exists." });
@@ -844,12 +935,12 @@ app.post("/api/auth/signup", async (request, response, next) => {
       ],
     );
 
-    await issueAuthSession(response, userId, sessionId);
+    await rotateAuthSession(request, response, userId);
     response.status(201).json({ ok: true, user: result.rows[0] });
   });
 });
 
-app.post("/api/auth/login", async (request, response, next) => {
+app.post("/api/auth/login", authRateLimit, async (request, response, next) => {
   const email = normalizeEmail(request.body?.email);
   const password = String(request.body?.password ?? "");
   if (!email || !password) {
@@ -858,7 +949,6 @@ app.post("/api/auth/login", async (request, response, next) => {
   }
 
   await runWithDatabase(response, next, async () => {
-    const sessionId = getSessionId(request, response);
     const result = await database.query(
       `
         SELECT id, email, password_salt, password_hash, provider, display_name, role, organization, location
@@ -880,7 +970,7 @@ app.post("/api/auth/login", async (request, response, next) => {
       return;
     }
 
-    await issueAuthSession(response, user.id, sessionId);
+    await rotateAuthSession(request, response, user.id);
     response.json({
       ok: true,
       user: {
@@ -896,21 +986,56 @@ app.post("/api/auth/login", async (request, response, next) => {
   });
 });
 
-app.post("/api/auth/logout", async (request, response, next) => {
+app.patch("/api/auth/profile", requireAuthenticatedUser, writeRateLimit, async (request, response, next) => {
+  const role = request.body?.role === "tradesperson" ? "tradesperson" : request.body?.role === "contractor" ? "contractor" : null;
+  const displayName = String(request.body?.displayName ?? "").trim();
+  const organization = String(request.body?.organization ?? "").trim();
+  const location = String(request.body?.location ?? "").trim();
+
+  if (!role || !displayName || !location) {
+    response.status(422).json({ ok: false, error: "Role, name, and location are required." });
+    return;
+  }
+
   await runWithDatabase(response, next, async () => {
-    const sessionId = getSessionId(request, response);
-    await database.query("DELETE FROM auth_sessions WHERE session_id = $1", [sessionId]);
-    response.clearCookie(sessionCookieName, { sameSite: "lax", secure: process.env.NODE_ENV === "production" });
+    if (request.authUser.role !== "pending" && request.authUser.role !== role) {
+      response.status(409).json({
+        ok: false,
+        error: "Account type cannot be changed after onboarding.",
+      });
+      return;
+    }
+
+    const result = await database.query(
+      `
+        UPDATE auth_users
+        SET display_name = $2, role = $3, organization = $4, location = $5, updated_at = now()
+        WHERE id = $1
+        RETURNING id, email, provider, display_name, role, organization, location
+      `,
+      [request.authUser.id, displayName, role, organization, location],
+    );
+    response.json({ ok: true, user: result.rows[0] });
+  });
+});
+
+app.post("/api/auth/logout", authRateLimit, async (request, response, next) => {
+  await runWithDatabase(response, next, async () => {
+    const sessionId = readSessionId(request, sessionCookieName);
+    if (sessionId) {
+      await database.query("DELETE FROM auth_sessions WHERE session_id = $1", [sessionId]);
+    }
+    response.clearCookie(sessionCookieName, { path: "/", sameSite: "lax", secure: process.env.NODE_ENV === "production" });
     response.json({ ok: true });
   });
 });
 
-app.get("/api/app-state", async (request, response, next) => {
+app.get("/api/app-state", requireAuthenticatedUser, async (request, response, next) => {
   await runWithDatabase(response, next, async () => {
-    const sessionId = getSessionId(request, response);
+    const scopeId = request.authUser.id;
     const result = await database.query(
       "SELECT state, updated_at FROM app_state WHERE id = $1",
-      [sessionId],
+      [scopeId],
     );
 
     if (!result.rowCount) {
@@ -925,14 +1050,14 @@ app.get("/api/app-state", async (request, response, next) => {
   });
 });
 
-app.put("/api/app-state", async (request, response, next) => {
+app.put("/api/app-state", requireAuthenticatedUser, writeRateLimit, async (request, response, next) => {
   if (!request.body || typeof request.body.state !== "object" || request.body.state === null) {
     response.status(400).json({ ok: false, error: "Expected JSON body with a state object." });
     return;
   }
 
   await runWithDatabase(response, next, async () => {
-    const sessionId = getSessionId(request, response);
+    const scopeId = request.authUser.id;
     const result = await database.query(
       `
         INSERT INTO app_state (id, state, updated_at)
@@ -941,59 +1066,20 @@ app.put("/api/app-state", async (request, response, next) => {
         DO UPDATE SET state = EXCLUDED.state, updated_at = now()
         RETURNING updated_at
       `,
-      [sessionId, JSON.stringify(request.body.state)],
+      [scopeId, JSON.stringify(request.body.state)],
     );
 
     response.json({ ok: true, updatedAt: result.rows[0].updated_at });
   });
 });
 
-// POST /api/auth/guest - Create a guest session
-app.post("/api/auth/guest", async (request, response) => {
-    try {
-          // Generate guest session token
-          const guestId = `guest_${randomUUID()}`;
-          const guestToken = randomBytes(32).toString('hex');
-          const expiryTime = new Date(Date.now() + (24 * 60 * 60 * 1000)); // 24 hours
-
-          // Set session cookie
-          response.setHeader('Set-Cookie', [
-                  `${sessionCookieName}=${guestToken}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${24 * 60 * 60}`
-                ]);
-
-          // Store guest session if database is available
-          if (database) {
-                  await database.query(
-                            `INSERT INTO guest_sessions (guest_id, session_token, expires_at) 
-                                     VALUES ($1, $2, $3) 
-                                              ON CONFLICT (guest_id) DO UPDATE SET session_token = $2, expires_at = $3`,
-                            [guestId, guestToken, expiryTime]
-                          );
-          }
-
-          // Return guest user profile
-          response.json({
-                  user: {
-                            id: guestId,
-                            email: null,
-                            provider: 'guest',
-                            display_name: 'Guest User',
-                            role: 'guest',
-                            organization: '',
-                            location: '',
-                            isGuest: true,
-                            sessionExpiry: expiryTime.getTime()
-                  }
-          });
-    } catch (error) {
-          console.error('Guest login error:', error);
-          response.status(500).json({ error: 'Guest login failed' });
-    }
+app.post("/api/auth/guest", (_request, response) => {
+  response.status(404).json({ ok: false, error: "Guest authentication is not available." });
 });
 
-app.post("/api/events", async (request, response, next) => {
+app.post("/api/events", requireAuthenticatedUser, writeRateLimit, async (request, response, next) => {
   await runWithDatabase(response, next, async () => {
-    const sessionId = getSessionId(request, response);
+    const scopeId = request.authUser.id;
     const event = {
       id: randomUUID(),
       type: request.body?.type ?? "app_event",
@@ -1005,17 +1091,17 @@ app.post("/api/events", async (request, response, next) => {
         VALUES ($1, $2, $3, $4::jsonb)
         RETURNING id, session_id, type, payload, created_at
       `,
-      [event.id, sessionId, event.type, JSON.stringify(event.payload)],
+      [event.id, scopeId, event.type, JSON.stringify(event.payload)],
     );
 
     response.status(201).json({ ok: true, event: result.rows[0] });
   });
 });
 
-app.get("/api/payments/export.csv", async (request, response, next) => {
+app.get("/api/payments/export.csv", requireAuthenticatedUser, async (request, response, next) => {
   await runWithDatabase(response, next, async () => {
-    const sessionId = getSessionId(request, response);
-    const result = await database.query("SELECT state FROM app_state WHERE id = $1", [sessionId]);
+    const scopeId = request.authUser.id;
+    const result = await database.query("SELECT state FROM app_state WHERE id = $1", [scopeId]);
     const paymentRecords = Array.isArray(result.rows[0]?.state?.paymentRecords)
       ? result.rows[0].state.paymentRecords
       : [];
@@ -1039,9 +1125,9 @@ app.get("/api/payments/export.csv", async (request, response, next) => {
   });
 });
 
-app.get("/api/uploads", async (request, response, next) => {
+app.get("/api/uploads", requireAuthenticatedUser, async (request, response, next) => {
   await runWithDatabase(response, next, async () => {
-    const sessionId = getSessionId(request, response);
+    const scopeId = request.authUser.id;
     const result = await database.query(
       `
         SELECT *
@@ -1050,7 +1136,7 @@ app.get("/api/uploads", async (request, response, next) => {
         ORDER BY created_at DESC
         LIMIT 200
       `,
-      [sessionId],
+      [scopeId],
     );
     const uploads = await Promise.all(
       result.rows.map(async (row) => mapUploadRow(row, await signedObjectUrl(row.object_key))),
@@ -1060,12 +1146,12 @@ app.get("/api/uploads", async (request, response, next) => {
   });
 });
 
-app.get("/api/uploads/:id/url", async (request, response, next) => {
+app.get("/api/uploads/:id/url", requireAuthenticatedUser, async (request, response, next) => {
   await runWithDatabase(response, next, async () => {
-    const sessionId = getSessionId(request, response);
+    const scopeId = request.authUser.id;
     const result = await database.query(
       "SELECT object_key FROM uploads WHERE id = $1 AND session_id = $2",
-      [request.params.id, sessionId],
+      [request.params.id, scopeId],
     );
 
     if (!result.rowCount || !result.rows[0].object_key) {
@@ -1081,7 +1167,7 @@ app.get("/api/uploads/:id/url", async (request, response, next) => {
   });
 });
 
-app.post("/api/uploads", upload.single("file"), async (request, response, next) => {
+app.post("/api/uploads", requireAuthenticatedUser, uploadRateLimit, upload.single("file"), async (request, response, next) => {
   if (!requireObjectStorage(response)) {
     return;
   }
@@ -1092,11 +1178,11 @@ app.post("/api/uploads", upload.single("file"), async (request, response, next) 
   }
 
   await runWithDatabase(response, next, async () => {
-    const sessionId = getSessionId(request, response);
+    const scopeId = request.authUser.id;
     const id = randomUUID();
     const kind = request.body?.kind ?? "record";
     const jobId = Number(request.body?.jobId);
-    const objectKey = `${safeObjectName(kind)}/${new Date().toISOString().slice(0, 10)}/${id}-${safeObjectName(
+    const objectKey = `${safeObjectName(scopeId)}/${safeObjectName(kind)}/${new Date().toISOString().slice(0, 10)}/${id}-${safeObjectName(
       request.file.originalname,
     )}`;
 
@@ -1123,7 +1209,7 @@ app.post("/api/uploads", upload.single("file"), async (request, response, next) 
       `,
       [
         id,
-        sessionId,
+        scopeId,
         kind,
         request.body?.name ?? request.file.originalname,
         Number.isFinite(jobId) ? jobId : null,
@@ -1142,7 +1228,7 @@ app.post("/api/uploads", upload.single("file"), async (request, response, next) 
   });
 });
 
-app.post("/api/identity/verify", (request, response) => {
+app.post("/api/identity/verify", requireAuthenticatedUser, writeRateLimit, (_request, response) => {
   const status = integrationStatus("identity", ["IDENTITY_PROVIDER_KEY"], "government ID verification");
 
   if (!status.ok) {
@@ -1153,15 +1239,15 @@ app.post("/api/identity/verify", (request, response) => {
     return;
   }
 
-  response.json({
-    ...status,
-    verificationId: `idv_${Date.now()}`,
-    userId: request.body?.userId ?? "current-user",
-    result: "queued",
+  response.status(501).json({
+    ok: false,
+    provider: "identity",
+    mode: "not_implemented",
+    message: "Identity verification is not available until a provider workflow is implemented and tested.",
   });
 });
 
-app.post("/api/subscriptions/checkout", (request, response) => {
+app.post("/api/subscriptions/checkout", requireAuthenticatedUser, writeRateLimit, (_request, response) => {
   const status = integrationStatus("stripe", ["STRIPE_SECRET_KEY"], "subscription billing");
 
   if (!status.ok) {
@@ -1172,14 +1258,15 @@ app.post("/api/subscriptions/checkout", (request, response) => {
     return;
   }
 
-  response.json({
-    ...status,
-    checkoutUrl: process.env.STRIPE_CHECKOUT_URL ?? "https://dashboard.stripe.com/test/checkouts",
-    plan: request.body?.plan ?? "base",
+  response.status(501).json({
+    ok: false,
+    provider: "stripe",
+    mode: "not_implemented",
+    message: "Subscription checkout is not available until the Stripe workflow is implemented and tested.",
   });
 });
 
-app.post("/api/notifications/test", (request, response) => {
+app.post("/api/notifications/test", requireAuthenticatedUser, writeRateLimit, (request, response) => {
   const email = integrationStatus("email", ["RESEND_API_KEY"], "email notifications");
   const sms = buildTwilioSmsStatus("SMS notifications");
   const ok = email.ok || sms.ok;
@@ -1195,7 +1282,7 @@ app.post("/api/notifications/test", (request, response) => {
   });
 });
 
-app.post("/api/invoices/send", async (request, response) => {
+app.post("/api/invoices/send", requireAuthenticatedUser, writeRateLimit, async (request, response) => {
   const channel = request.body?.channel === "sms" ? "sms" : "email";
   const recipient = String(request.body?.recipient ?? "").trim();
   const subject = String(request.body?.subject ?? `${appName} invoice`).trim();
@@ -1234,13 +1321,12 @@ app.post("/api/invoices/send", async (request, response) => {
       }),
     });
 
-    if (!sendResponse.ok) {
-      const detail = await sendResponse.text();
+  if (!sendResponse.ok) {
+      await sendResponse.text();
       response.status(502).json({
         ok: false,
         ...status,
         message: "Resend rejected the invoice email.",
-        detail,
       });
       return;
     }
@@ -1291,12 +1377,11 @@ app.post("/api/invoices/send", async (request, response) => {
   );
 
   if (!sendResponse.ok) {
-    const detail = await sendResponse.text();
+    await sendResponse.text();
     response.status(502).json({
       ok: false,
       ...status,
       message: "Twilio rejected the invoice SMS.",
-      detail,
     });
     return;
   }
@@ -1332,7 +1417,9 @@ if (existsSync(distDir)) {
 }
 
 app.use((error, _request, response, _next) => {
-  console.error(error);
+  if (!error.status || error.status >= 500) {
+    console.error(error);
+  }
   response.status(error.status ?? 500).json({
     ok: false,
     error: error.status ? error.message : `${appName} API error`,
@@ -1340,16 +1427,25 @@ app.use((error, _request, response, _next) => {
   });
 });
 
-if (database) {
-  ensureSchema().catch((error) => {
-    console.error("Database schema setup failed", error);
+export async function startServer(listenPort = port) {
+  if (database) {
+    await ensureSchema();
+  }
+
+  return app.listen(listenPort, () => {
+    const storage = storageConfiguration();
+    console.log(`${appName} API listening on http://127.0.0.1:${listenPort}`);
+    if (!storage.ok) {
+      console.warn(`Managed storage setup required: ${storage.missing.join(", ")}`);
+    }
   });
 }
 
-app.listen(port, () => {
-  const storage = storageConfiguration();
-  console.log(`${appName} API listening on http://127.0.0.1:${port}`);
-  if (!storage.ok) {
-    console.warn(`Managed storage setup required: ${storage.missing.join(", ")}`);
-  }
-});
+export { app, ensureSchema };
+
+if (path.resolve(process.argv[1] ?? "") === __filename) {
+  startServer().catch((error) => {
+    console.error("Server startup failed", error);
+    process.exitCode = 1;
+  });
+}
