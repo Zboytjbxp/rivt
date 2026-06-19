@@ -2,13 +2,13 @@
 
 Last updated: 2026-06-18 America/New_York
 Current gate: Gate A foundation
-Current phase: Packet 00 implementation complete locally; CI and deployment evidence pending
+Current phase: Packet 00 implementation and CI complete; review, merge, and deployment evidence pending
 Repository branch: `codex/gate-a-foundation`
 Base commit: `99be82a Align public brand copy with RIVT tagline`
 
 ## Working Tree
 
-The branch contains uncommitted Packet 00 work plus pre-existing product changes that remain preserved:
+The branch contains committed Packet 00 work plus pre-existing product changes that remain preserved:
 
 - Pre-existing Shop Talk/Trade News work: `server/index.js`, `src/App.tsx`, `src/features/network/NetworkHub.tsx`, `src/styles.css`
 - Packet 00 safety work: auth/session/API hardening, dependency fixes, tests, and delivery documentation
@@ -45,6 +45,7 @@ Run on 2026-06-18:
 - `npm run lint`: pass repository-wide with zero errors or warnings.
 - `npm audit --omit=dev`: pass; zero known vulnerabilities.
 - In-app Browser QA at 1280x720 and 390x844: auth page renders, signup role selection responds, narrow role copy no longer overlaps, and no console warnings/errors were observed.
+- GitHub Actions `Gate A Safety` run 27802147834 for commit `e4d1815`: pass; clean install, PostgreSQL-backed authorization/session tests, full lint, production build, Playwright auth flow, and production dependency audit all completed successfully.
 
 ## Live Environment Evidence
 
@@ -59,15 +60,14 @@ Packet 00 has not been deployed. Live behavior must not be assumed to include th
 
 ## Remaining Packet 00 Work
 
-1. Commit and push this checkpoint, then verify the GitHub PostgreSQL-backed workflow.
-2. Review and merge the foundation branch only after CI passes.
-3. Deploy the merged commit to Railway and record the source commit.
-4. Run authenticated live readiness and smoke tests, including existing Shop Talk/Trade News behavior.
-5. Record deployment and rollback evidence in `DEPLOYMENT_LEDGER.md`.
+1. Review and merge commit `e4d1815` from `codex/gate-a-foundation` into `master`.
+2. Deploy the merged commit to Railway and record the source commit.
+3. Run authenticated live readiness and smoke tests, including existing Shop Talk/Trade News behavior.
+4. Record deployment and rollback evidence in `DEPLOYMENT_LEDGER.md`.
 
 ## Next Exact Task
 
-Verify the pushed PostgreSQL-backed CI run. Do not begin normalized marketplace schema or new product features until Packet 00 is accepted and deployed.
+Review and merge the CI-proven Packet 00 checkpoint, deploy that exact commit, and run the live smoke matrix. Do not begin normalized marketplace schema or new product features until Packet 00 is accepted and deployed.
 
 ## Blocking Founder Decisions
 
