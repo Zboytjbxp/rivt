@@ -1,0 +1,14 @@
+DROP TRIGGER IF EXISTS auth_users_account_bridge_insert ON auth_users;
+DROP FUNCTION IF EXISTS bridge_auth_user_to_account();
+DROP TABLE IF EXISTS idempotency_keys;
+DROP TRIGGER IF EXISTS audit_events_no_update ON audit_events;
+DROP FUNCTION IF EXISTS prevent_audit_event_mutation();
+DROP TABLE IF EXISTS audit_events;
+DROP TABLE IF EXISTS consent_acceptances;
+DROP TABLE IF EXISTS profile_trades;
+DROP TABLE IF EXISTS trades;
+DROP TABLE IF EXISTS organization_memberships;
+DROP TABLE IF EXISTS organizations;
+DROP TABLE IF EXISTS profiles;
+DROP TABLE IF EXISTS auth_identities;
+DROP TABLE IF EXISTS accounts;

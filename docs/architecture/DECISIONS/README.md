@@ -14,3 +14,8 @@ Each record contains:
 - Owner and review date.
 
 Required early decisions include migration runner, API validation/test stack, session design, organization identity model, email provider, SMS deferral, profile indexing, review policy, and pilot retention.
+
+Accepted decisions:
+
+- `2026-06-18-versioned-sql-migrations.md`
+- `2026-06-18-legacy-quarantine-account-bridge.md`

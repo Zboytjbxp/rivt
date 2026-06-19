@@ -17,7 +17,7 @@ if (!testDatabaseUrl) {
 
   const { Pool } = pg;
   const database = new Pool({ connectionString: testDatabaseUrl, ssl: false });
-  const { app, closeDatabase, ensureSchema } = await import("../server/index.js");
+  const { app, closeDatabase, ensureDatabaseReady } = await import("../server/index.js");
 
   function sessionCookie(response) {
     return String(response.headers.get("set-cookie") ?? "").split(";", 1)[0];
@@ -60,7 +60,7 @@ if (!testDatabaseUrl) {
   }
 
   test("database-backed authorization boundaries", async (context) => {
-    await ensureSchema();
+    await ensureDatabaseReady();
     const server = app.listen(0, "127.0.0.1");
     await new Promise((resolve) => server.once("listening", resolve));
     const address = server.address();
@@ -72,6 +72,7 @@ if (!testDatabaseUrl) {
         await database.query("DELETE FROM app_events WHERE session_id = ANY($1::text[])", [createdUserIds]);
         await database.query("DELETE FROM uploads WHERE session_id = ANY($1::text[])", [createdUserIds]);
         await database.query("DELETE FROM app_state WHERE id = ANY($1::text[])", [createdUserIds]);
+        await database.query("DELETE FROM accounts WHERE id = ANY($1::uuid[])", [createdUserIds]);
         await database.query("DELETE FROM auth_users WHERE id = ANY($1::uuid[])", [createdUserIds]);
       }
       await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
@@ -95,6 +96,19 @@ if (!testDatabaseUrl) {
     );
     assert.equal(sessions.rowCount, 1);
     assert.equal(sessions.rows[0].session_id, issuedSessionId);
+
+    const anonymousV1 = await requestJson(baseUrl, "/api/v1/me");
+    assert.equal(anonymousV1.response.status, 401);
+    assert.equal(anonymousV1.payload.error.code, "AUTHENTICATION_REQUIRED");
+    assert.match(anonymousV1.payload.error.requestId, /^[0-9a-f-]{36}$/);
+
+    const canonicalAccount = await requestJson(baseUrl, "/api/v1/me", { cookie: contractor.cookie });
+    assert.equal(canonicalAccount.response.status, 200);
+    assert.equal(canonicalAccount.payload.data.id, contractor.user.id);
+    assert.equal(canonicalAccount.payload.data.primaryRole, "contractor");
+    assert.equal(canonicalAccount.payload.data.profile.visibility, "private");
+    assert.equal(canonicalAccount.payload.data.profile.onboardingStatus, "draft");
+    assert.equal(canonicalAccount.payload.meta.requestId, canonicalAccount.response.headers.get("x-request-id"));
 
     const contractorWrite = await requestJson(baseUrl, "/api/app-state", {
       method: "PUT",

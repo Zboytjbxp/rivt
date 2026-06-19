@@ -11,6 +11,8 @@ import { existsSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import pg from "pg";
+import { ApiError, asyncRoute, createRequestContext, sendApiError, z } from "./api.js";
+import { migrateUp, migrationStatus } from "./migrations.js";
 import {
   createOriginGuard,
   createRateLimiter,
@@ -34,7 +36,7 @@ const sessionCookieName = `${appSlug}_session`;
 const sessionMaxAgeMs = Number(process.env.SESSION_MAX_AGE_MS ?? 1000 * 60 * 60 * 24 * 30);
 const appVersion = envValue("APP_VERSION", "0.1.0");
 const sourceCommit = envValue("SOURCE_COMMIT", envValue("RAILWAY_GIT_COMMIT_SHA", "unknown"));
-const migrationVersion = envValue("MIGRATION_VERSION", "runtime-schema-v1");
+let migrationVersion = envValue("MIGRATION_VERSION", "uninitialized");
 const productionOrigin = envValue("APP_ORIGIN", "https://rivt.pro");
 
 function envValue(name, fallback = undefined) {
@@ -162,7 +164,7 @@ const upload = multer({
   },
 });
 
-let schemaReadyPromise;
+let databaseReadyPromise;
 
 const allowedOrigins = [
   productionOrigin,
@@ -186,6 +188,7 @@ app.use(cors({
 app.set("trust proxy", 1);
 app.use(express.json({ limit: "1mb" }));
 
+app.use("/api/v1", createRequestContext);
 app.use("/api", createOriginGuard(allowedOrigins));
 
 function setSessionId(response, sessionId) {
@@ -250,102 +253,19 @@ function requireObjectStorage(response) {
   return false;
 }
 
-async function ensureSchema() {
+async function ensureDatabaseReady() {
   if (!database) {
     throw new Error("DATABASE_URL is required.");
   }
 
-  schemaReadyPromise ??= database.query(`
-    CREATE TABLE IF NOT EXISTS app_state (
-      id text PRIMARY KEY,
-      state jsonb NOT NULL,
-      updated_at timestamptz NOT NULL DEFAULT now()
-    );
+  databaseReadyPromise ??= migrateUp(database).then((status) => {
+    migrationVersion = status.latestVersion
+      ? `${String(status.latestVersion).padStart(4, "0")}_${status.latestName}`
+      : "uninitialized";
+    return status;
+  });
 
-    CREATE TABLE IF NOT EXISTS app_events (
-      id uuid PRIMARY KEY,
-      session_id text,
-      type text NOT NULL,
-      payload jsonb NOT NULL,
-      created_at timestamptz NOT NULL DEFAULT now()
-    );
-
-    CREATE INDEX IF NOT EXISTS app_events_created_at_idx
-      ON app_events (created_at DESC);
-
-    CREATE TABLE IF NOT EXISTS uploads (
-      id uuid PRIMARY KEY,
-      session_id text,
-      kind text NOT NULL,
-      name text NOT NULL,
-      job_id bigint,
-      notes text NOT NULL DEFAULT '',
-      object_key text,
-      original_name text,
-      mime_type text,
-      size_bytes bigint,
-      created_at timestamptz NOT NULL DEFAULT now()
-    );
-
-    CREATE INDEX IF NOT EXISTS uploads_created_at_idx
-      ON uploads (created_at DESC);
-
-    CREATE INDEX IF NOT EXISTS uploads_job_id_idx
-      ON uploads (job_id);
-
-    ALTER TABLE app_events
-      ADD COLUMN IF NOT EXISTS session_id text;
-
-    ALTER TABLE uploads
-      ADD COLUMN IF NOT EXISTS session_id text;
-
-    CREATE INDEX IF NOT EXISTS app_events_session_id_idx
-      ON app_events (session_id, created_at DESC);
-
-    CREATE INDEX IF NOT EXISTS uploads_session_id_idx
-      ON uploads (session_id, created_at DESC);
-
-    CREATE TABLE IF NOT EXISTS auth_users (
-      id uuid PRIMARY KEY,
-      email text NOT NULL UNIQUE,
-      email_hash text NOT NULL UNIQUE,
-      password_salt text NOT NULL,
-      password_hash text NOT NULL,
-      provider text NOT NULL DEFAULT 'email',
-      display_name text NOT NULL DEFAULT '',
-      role text NOT NULL DEFAULT 'contractor',
-      organization text NOT NULL DEFAULT '',
-      location text NOT NULL DEFAULT '',
-      created_at timestamptz NOT NULL DEFAULT now(),
-      updated_at timestamptz NOT NULL DEFAULT now()
-    );
-
-    CREATE TABLE IF NOT EXISTS auth_sessions (
-      id uuid PRIMARY KEY,
-      session_id text NOT NULL UNIQUE,
-      user_id uuid NOT NULL REFERENCES auth_users(id) ON DELETE CASCADE,
-      created_at timestamptz NOT NULL DEFAULT now(),
-      updated_at timestamptz NOT NULL DEFAULT now(),
-      expires_at timestamptz NOT NULL
-    );
-
-    CREATE INDEX IF NOT EXISTS auth_sessions_user_id_idx
-      ON auth_sessions (user_id, updated_at DESC);
-
-      CREATE TABLE IF NOT EXISTS guest_sessions (
-        guest_id text PRIMARY KEY,
-          session_token text NOT NULL UNIQUE,
-            expires_at timestamptz NOT NULL
-            );
-
-            CREATE INDEX IF NOT EXISTS guest_sessions_session_token_idx
-            ON guest_sessions (session_token);
-
-            CREATE INDEX IF NOT EXISTS guest_sessions_expires_at_idx
-            ON guest_sessions (expires_at);
-  `);
-
-  await schemaReadyPromise;
+  return databaseReadyPromise;
 }
 
 async function runWithDatabase(response, next, action) {
@@ -354,7 +274,7 @@ async function runWithDatabase(response, next, action) {
   }
 
   try {
-    await ensureSchema();
+    await ensureDatabaseReady();
     await action();
   } catch (error) {
     next(error);
@@ -477,6 +397,21 @@ const requireAuthenticatedUser = createRequireAuthenticatedUser({
   databaseAvailable: () => Boolean(database),
   findUserBySessionId: getUserBySessionId,
   cookieName: sessionCookieName,
+});
+
+const requireV1AuthenticatedUser = asyncRoute(async (request, _response, next) => {
+  if (!database) {
+    throw new ApiError(503, "ACCOUNT_STORAGE_UNAVAILABLE", "Managed account storage is unavailable.");
+  }
+
+  const sessionId = readSessionId(request, sessionCookieName);
+  if (!sessionId) throw new ApiError(401, "AUTHENTICATION_REQUIRED", "Authentication required.");
+  const user = await getUserBySessionId(sessionId);
+  if (!user) throw new ApiError(401, "AUTHENTICATION_REQUIRED", "Authentication required.");
+
+  request.authSessionId = sessionId;
+  request.authUser = user;
+  next();
 });
 
 const authRateLimit = createRateLimiter({
@@ -766,15 +701,74 @@ app.get("/api/auth/me", async (request, response, next) => {
   });
 });
 
+const canonicalAccountSchema = z.object({
+  id: z.uuid(),
+  status: z.enum(["onboarding", "active", "suspended", "closed"]),
+  primaryRole: z.enum(["pending", "contractor", "tradesperson"]),
+  profile: z.object({
+    displayName: z.string(),
+    headline: z.string(),
+    bio: z.string(),
+    locationText: z.string(),
+    visibility: z.enum(["private", "network"]),
+    onboardingStatus: z.enum(["draft", "complete"]),
+  }),
+});
+
+app.get("/api/v1/me", requireV1AuthenticatedUser, asyncRoute(async (request, response) => {
+  await ensureDatabaseReady();
+  const result = await database.query(
+    `
+      SELECT a.id, a.status, a.primary_role,
+             p.display_name, p.headline, p.bio, p.location_text,
+             p.visibility, p.onboarding_status
+      FROM accounts a
+      INNER JOIN profiles p ON p.account_id = a.id
+      WHERE a.id = $1
+      LIMIT 1
+    `,
+    [request.authUser.id],
+  );
+
+  if (!result.rowCount) {
+    throw new ApiError(409, "ACCOUNT_MIGRATION_REQUIRED", "This account is not ready for the current API.");
+  }
+
+  const row = result.rows[0];
+  const account = canonicalAccountSchema.parse({
+    id: row.id,
+    status: row.status,
+    primaryRole: row.primary_role,
+    profile: {
+      displayName: row.display_name,
+      headline: row.headline,
+      bio: row.bio,
+      locationText: row.location_text,
+      visibility: row.visibility,
+      onboardingStatus: row.onboarding_status,
+    },
+  });
+
+  response.json({ data: account, meta: { requestId: request.requestId } });
+}));
+
 app.get("/api/readiness", requireAuthenticatedUser, async (_request, response, next) => {
   await runWithDatabase(response, next, async () => {
     const storage = storageConfiguration();
     await database.query("SELECT 1");
+    const migrations = await migrationStatus(database);
+    migrationVersion = migrations.latestVersion
+      ? `${String(migrations.latestVersion).padStart(4, "0")}_${migrations.latestName}`
+      : "uninitialized";
     response.status(storage.ok ? 200 : 503).json({
       ok: storage.ok,
       service: `${appSlug}-api`,
       build: { version: appVersion, commit: sourceCommit },
       migrationVersion,
+      migrations: {
+        applied: migrations.applied.map(({ version, name }) => ({ version, name })),
+        pending: migrations.pending,
+      },
       dependencies: {
         database: storage.database,
         objectStorage: storage.objectStorage,
@@ -1416,9 +1410,13 @@ if (existsSync(distDir)) {
   });
 }
 
-app.use((error, _request, response, _next) => {
+app.use((error, request, response, _next) => {
   if (!error.status || error.status >= 500) {
     console.error(error);
+  }
+  if (request.path.startsWith("/api/v1/")) {
+    sendApiError(error, request, response);
+    return;
   }
   response.status(error.status ?? 500).json({
     ok: false,
@@ -1429,7 +1427,7 @@ app.use((error, _request, response, _next) => {
 
 export async function startServer(listenPort = port) {
   if (database) {
-    await ensureSchema();
+    await ensureDatabaseReady();
   }
 
   return app.listen(listenPort, () => {
@@ -1447,7 +1445,7 @@ export async function closeDatabase() {
   }
 }
 
-export { app, ensureSchema };
+export { app, ensureDatabaseReady };
 
 if (path.resolve(process.argv[1] ?? "") === __filename) {
   startServer().catch((error) => {

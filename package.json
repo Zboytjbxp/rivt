@@ -12,11 +12,14 @@
     "dev:api": "node server/index.js",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "lint:security": "eslint server/index.js server/security.js test/security.test.js test/server.integration.test.js test/server.database.integration.test.js test/auth-fail-closed.e2e.mjs",
+    "lint:security": "eslint server/index.js server/security.js server/api.js server/migrations.js scripts/migrate.js test/security.test.js test/api.test.js test/server.integration.test.js test/server.database.integration.test.js test/migrations.integration.test.js test/auth-fail-closed.e2e.mjs",
     "test": "npm run test:unit && npm run test:integration",
-    "test:unit": "node --test test/security.test.js",
-    "test:integration": "node --test test/server.integration.test.js test/server.database.integration.test.js",
+    "test:unit": "node --test test/security.test.js test/api.test.js",
+    "test:integration": "node --test test/server.integration.test.js test/server.database.integration.test.js test/migrations.integration.test.js",
     "test:e2e": "node test/auth-fail-closed.e2e.mjs",
+    "migrate": "node scripts/migrate.js up",
+    "migrate:status": "node scripts/migrate.js status",
+    "migrate:down": "node scripts/migrate.js down",
     "preview": "vite preview --host 127.0.0.1",
     "start": "node server/index.js"
   },
@@ -36,7 +39,8 @@
     "react": "latest",
     "react-dom": "latest",
     "typescript": "latest",
-    "vite": "latest"
+    "vite": "latest",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@eslint/js": "latest",
