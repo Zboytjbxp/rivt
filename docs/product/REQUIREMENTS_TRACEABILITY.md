@@ -55,7 +55,7 @@ Evidence must eventually link to implementation, automated tests, manual accepta
 |---|---|---:|---|
 | GA-UX-001 | Compact role-correct shell and routes | Partial | Modern shell exists, but legacy views/routes and bridges remain. |
 | GA-UX-002 | Mobile nav is Home, Work, Crew, Shop Talk, Tools | Partial | Packet 03 shell uses exactly Home, Work, Crew, Shop Talk, Tools in primary navigation; desktop/mobile E2E and live release evidence pass. Legacy bridge code remains until the App strangler finishes. |
-| GA-UX-003 | Messages, notifications, search, and profile use top-bar entry | Partial | Search, messages, notifications, and profile use top-bar entry; Packet 05 source wires Messages/Notifications to server-owned inbox state, pending production smoke evidence. |
+| GA-UX-003 | Messages, notifications, search, and profile use top-bar entry | Partial | Search, messages, notifications, and profile use top-bar entry; Packet 05 is deployed and wires Messages/Notifications to server-owned inbox state, but live workflow smoke remains blocked. |
 | GA-UX-004 | No role toggle or duplicate global Post action | Partial | Signup/onboarding role selection exists appropriately; legacy components still carry older nav/action patterns. |
 | GA-UX-005 | Every screen has loading, empty, error, offline, permission, and retry states | Partial | Work now has server loading, directional empty, error, retry, filter, and detail states with local E2E coverage; remaining screens still need the matrix. |
 | GA-UX-006 | Responsive, keyboard, screen-reader, light/dark acceptance | Partial | Themes and skip link exist; no automated UI suite or complete manual evidence. |
@@ -92,12 +92,12 @@ Evidence must eventually link to implementation, automated tests, manual accepta
 
 | ID | Requirement | Current | Evidence / gap |
 |---|---|---:|---|
-| GA-MSG-001 | Job-linked conversation exists only for authorized participants | Partial | Packet 05 source adds conversations and participants tied to accepted active work with server participant checks; DB-backed CI and production smoke pending. |
-| GA-MSG-002 | Message persists once with sender and server timestamp | Partial | Packet 05 source adds idempotent message API, server sender/timestamps, receipts, and frontend Inbox wiring; DB-backed CI and production smoke pending. |
-| GA-MSG-003 | Unread/read state is persistent per participant | Partial | Packet 05 source persists message receipts, participant read state, and notification read state; DB-backed CI and production smoke pending. |
+| GA-MSG-001 | Job-linked conversation exists only for authorized participants | Partial | Packet 05 source adds conversations and participants tied to accepted active work with server participant checks; deployed health passes, but live workflow smoke remains blocked. |
+| GA-MSG-002 | Message persists once with sender and server timestamp | Partial | Packet 05 source adds idempotent message API, server sender/timestamps, receipts, and frontend Inbox wiring; deployed health passes, but live workflow smoke remains blocked. |
+| GA-MSG-003 | Unread/read state is persistent per participant | Partial | Packet 05 source persists message receipts, participant read state, and notification read state; deployed health passes, but live workflow smoke remains blocked. |
 | GA-MSG-004 | Message attachments use private authorized media | Partial | Packet 05 source adds attachment metadata rows with `pending_authorization`; actual private media authorization is explicitly handed off to Packet 06. |
-| GA-MSG-005 | Block/report/mute rules apply to messaging | Partial | Packet 05 source enforces shared-conversation block/report/mute behavior on server routes; DB-backed CI and production smoke pending. |
-| GA-MSG-006 | Gate A in-app notifications represent real domain events | Partial | Packet 05 source creates in-app notifications for offers, accepted work, work transitions, and messages; client-only activity feed remains fallback UI only. |
+| GA-MSG-005 | Block/report/mute rules apply to messaging | Partial | Packet 05 source enforces shared-conversation block/report/mute behavior on server routes; deployed health passes, but live workflow smoke remains blocked. |
+| GA-MSG-006 | Gate A in-app notifications represent real domain events | Partial | Packet 05 source creates in-app notifications for offers, accepted work, work transitions, and messages; client-only activity feed remains fallback UI only, and live workflow smoke remains blocked. |
 
 ## Project Records and Completion
 

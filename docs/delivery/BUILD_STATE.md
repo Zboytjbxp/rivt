@@ -2,10 +2,10 @@
 
 Last updated: 2026-06-20 America/New_York
 Current gate: Gate A messaging and in-app notifications
-Current phase: Packet 05 implemented locally; production deploy and smoke pending
+Current phase: Packet 05 deployed; production workflow smoke blocked on access
 Active packet: `docs/delivery/packets/05_MESSAGING_NOTIFICATIONS.md`
 Repository branch: `master`
-Production release commit: `0ccf88c3ade7511d6d3ad53fc2911cec90648810`
+Production release commit: `338ce7f7ec921fbcfafe20b4f9b96ecbf3053224`
 
 ## Source State
 
@@ -227,9 +227,19 @@ Run on 2026-06-20 from `master`:
 - `npm run test:e2e`: pass; fail-closed auth and jobs/discovery desktop/mobile checks pass with Packet 05 inbox endpoints mocked.
 - `npm audit --omit=dev`: pass; zero vulnerabilities.
 
+## Packet 05 Production Evidence
+
+- Source commit: `338ce7f7ec921fbcfafe20b4f9b96ecbf3053224`
+- Railway deployment: `16fb271d-9dc0-4d85-9a55-4765acb07f43` (success)
+- `https://rivt.pro/api/health`: 200, source commit matched the release, PostgreSQL and S3-compatible storage healthy.
+- Anonymous `/api/storage` and `/api/readiness`: 401, preserving authenticated diagnostics.
+- Production startup reached a healthy container after migration apply; authenticated readiness was not captured because no valid production test session was available.
+- Full live workflow smoke `npm run smoke:messaging:live` could not complete from the local machine: `railway run` receives the private `postgres.railway.internal` host, Railway SSH command execution hung, `psql` is not installed for `railway connect`, and the stored `rivttesting@gmail.com` credentials returned 401.
+- Packet 05 is deployed but not accepted. The acceptance boundary remains blocked until a working production test account/invite or usable DB tunnel/public Postgres smoke path is available.
+
 ## Next Exact Task
 
-Deploy Packet 05 to production, verify migration `0006_messaging_notifications`, run `npm run smoke:messaging:live`, record production evidence, and then move to `docs/delivery/packets/06_PROJECT_COMPLETION.md`.
+Unblock Packet 05 production acceptance by providing either a working production test account plus an approved pilot invite path, or a usable Postgres access path for the smoke script. Then verify migration `0006_messaging_notifications`, run `npm run smoke:messaging:live`, record production workflow evidence, and only then move to `docs/delivery/packets/06_PROJECT_COMPLETION.md`.
 
 ## Blocking Founder Decisions
 

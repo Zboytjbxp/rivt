@@ -99,3 +99,22 @@ Add one entry per staging/production deployment.
 - Known risks: messaging, notifications, project records, reviews, admin operations, distributed rate limits, and full restore drill remain open
 - Rollback performed/result: not required
 - Approval: Packet 04 accepted; overall Gate A not approved
+
+## Current Production - Packet 05 Messaging and In-App Notifications
+
+- Environment: Production (`https://rivt.pro`)
+- Date/time/timezone: 2026-06-20 07:46 America/New_York
+- Deployer: Codex through authenticated Railway CLI
+- Source repository/branch: `Zboytjbxp/rivt`, `master`
+- Source commit: `338ce7f7ec921fbcfafe20b4f9b96ecbf3053224`
+- Build/artifact ID: Railway deployment `16fb271d-9dc0-4d85-9a55-4765acb07f43`
+- Migration version before/after: `0005_match_acceptance` / expected `0006_messaging_notifications` on startup; authenticated readiness capture is blocked pending a valid production test session or database access path
+- Feature-flag/config version: `SOURCE_COMMIT` updated to `338ce7f7ec921fbcfafe20b4f9b96ecbf3053224`; pilot invite enforcement remains enabled
+- Provider/config changes: no provider credentials changed; no SMS/external channels enabled
+- Backup/rollback target: prior successful Packet 04 deployment `04b7e269-f103-4bbe-88cf-6ef82161b6bc`; checked migration rollback for `0006_messaging_notifications` in source tests
+- Automated gates: local `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test`, `npm run test:e2e`, and `npm audit --omit=dev` passed; local DB-backed integration tests skipped because `TEST_DATABASE_URL` is not configured
+- Post-deploy smoke tests: public `/api/health` passed and reported exact source commit; anonymous `/api/storage` and `/api/readiness` returned 401. Full `npm run smoke:messaging:live` is blocked because local Railway env uses private Postgres DNS, Railway SSH command execution hangs, `psql` is unavailable for `railway connect`, and the stored production testing credentials returned 401.
+- Health/readiness result: health reports PostgreSQL and S3-compatible storage healthy with exact source commit; authenticated readiness not captured
+- Known risks: Packet 05 is deployed but not accepted; live workflow evidence for conversations, unread/read state, notification non-leak, mute/report/block, and cleanup still required
+- Rollback performed/result: not required
+- Approval: Packet 05 deployment complete; Packet 05 acceptance withheld pending live smoke
