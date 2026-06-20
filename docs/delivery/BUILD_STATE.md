@@ -2,10 +2,10 @@
 
 Last updated: 2026-06-20 America/New_York
 Current gate: Gate A launch hardening
-Current phase: Packet 08 legacy app-state bridge retired and deployed; full Gate A approval remains blocked
+Current phase: Packet 08 accessibility-device matrix progress deployed; full Gate A approval remains blocked
 Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
-Production release commit: `00147c8e3f70e246b41ed48b46550ae33cf0eb54`
+Production release commit: `7fc6f65b1dad7af803547293cae199135908c5cd`
 
 ## Source State
 
@@ -389,12 +389,12 @@ The Packet 08 hardening, durable-rate-limit, and legacy-bridge retirement slices
 
 Started on 2026-06-20 against `https://rivt.pro/`.
 
-- Live health reports source commit `00147c8e3f70e246b41ed48b46550ae33cf0eb54`.
+- Live health reports source commit `7fc6f65b1dad7af803547293cae199135908c5cd` after deployment `255d59f0-ecdf-4c0d-ac36-583045b767a8`.
 - Codex in-app Browser smoke covered the public auth/marketing shell at 1280x720, 390x844, and 360x800.
 - The public shell loaded with the expected RIVT title, no console warnings/errors, and no horizontal overflow on tested breakpoints.
 - Invalid email/password remained signed out with the generic `Invalid email or password.` message.
 - The provided test account did not authenticate, so no new production user was created and the authenticated route/device matrix remains blocked.
-- A touch-target issue was fixed locally by raising auth input minimum height from 42px to 46px.
+- A touch-target issue was fixed and deployed by raising auth input minimum height from 42px to 46px; post-deploy mobile verification measured 46px fields at 390x844.
 - Evidence is recorded in `docs/quality/ACCESSIBILITY_DEVICE_MATRIX.md`.
 
 Local verification for this slice:

@@ -7,8 +7,9 @@ Gate A status: partial evidence only. This report does not approve named custome
 ## Live Target
 
 - URL: `https://rivt.pro/`
-- Live health checked: `2026-06-20T22:03:09Z`
-- Live source commit reported by `/api/health`: `00147c8e3f70e246b41ed48b46550ae33cf0eb54`
+- Live health checked after deploy: `2026-06-20T22:07:54Z`
+- Live source commit reported by `/api/health`: `7fc6f65b1dad7af803547293cae199135908c5cd`
+- Railway deployment: `255d59f0-ecdf-4c0d-ac36-583045b767a8`
 - Browser tool: Codex in-app Browser controlled by Playwright runtime
 
 ## Completed Smoke Coverage
@@ -25,6 +26,7 @@ Gate A status: partial evidence only. This report does not approve named custome
 
 - Finding: public auth email/password fields rendered at `42px` height, below the Gate A 44px target-size floor.
 - Fix in this packet: raised `.auth-form-grid input` `min-height` to `46px` in `src/styles.css`.
+- Post-deploy verification: at 390x844, live email and password fields measured `46px` high with visible labels and no console warnings/errors.
 - No horizontal page overflow was found in the tested public shell breakpoints.
 - No live console warnings or errors were observed in the tested public shell breakpoints.
 

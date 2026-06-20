@@ -230,3 +230,22 @@ Add one entry per staging/production deployment.
 - Known risks: full Gate A remains blocked by timed isolated restore drill, external monitoring/alerts and incident routing, manual accessibility/device matrix, and support/legal/founder signoff
 - Rollback performed/result: not required
 - Approval: Packet 08 legacy bridge retirement slice accepted; overall Gate A not approved
+
+## Current Production - Packet 08 Accessibility Matrix Progress
+
+- Environment: Production (`https://rivt.pro`)
+- Date/time/timezone: 2026-06-20 18:07 America/New_York
+- Deployer: Codex through authenticated Railway CLI
+- Source repository/branch: `Zboytjbxp/rivt`, `master`
+- Source commit: `7fc6f65b1dad7af803547293cae199135908c5cd`
+- Build/artifact ID: Railway deployment `255d59f0-ecdf-4c0d-ac36-583045b767a8`
+- Migration version before/after: `0009_durable_rate_limits` / `0009_durable_rate_limits`
+- Feature-flag/config version: `SOURCE_COMMIT` updated to `7fc6f65b1dad7af803547293cae199135908c5cd`; no operational-control flags changed
+- Provider/config changes: no provider credentials changed; external monitoring provider still not configured
+- Backup/rollback target: prior successful Packet 08 legacy-bridge deployment `f2170045-3df8-498e-b29e-fc733cc18b9f`; no migration change
+- Automated gates: local `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test`, `npm run test:e2e`, and `npm audit --omit=dev` passed; DB-backed integration tests skipped locally because `TEST_DATABASE_URL` is not configured
+- Post-deploy smoke tests: public `/api/health` passed and reported exact source commit. Public auth shell at 390x844 measured 46px email/password fields, retained visible labels, showed no console warnings/errors, and had no horizontal overflow.
+- Health/readiness result: health reports PostgreSQL and S3-compatible storage healthy with exact source commit `7fc6f65b1dad7af803547293cae199135908c5cd`
+- Known risks: full Gate A remains blocked by timed isolated restore drill, external monitoring/alerts and incident routing, authenticated/physical accessibility-device matrix, and support/legal/founder signoff
+- Rollback performed/result: not required
+- Approval: accessibility matrix progress accepted as partial evidence; overall Gate A not approved
