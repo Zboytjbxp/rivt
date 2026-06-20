@@ -8,21 +8,22 @@ Gate A is not approved yet.
 
 Packet 08 hardening evidence now exists for:
 
-- Production source proof: `https://rivt.pro/api/health` reports exact source `bf42ee6a51dc91ddeb4c2451ee2434e0548d8615`.
+- Production source proof: `https://rivt.pro/api/health` reports exact source `00147c8e3f70e246b41ed48b46550ae33cf0eb54`.
 - Migration proof: production readiness and live hardening audit report `0009_durable_rate_limits`, nine applied migrations, and zero pending migrations.
 - Anonymous fail-closed proof: live hardening audit checks seven private endpoints and receives `401` for anonymous requests.
 - Seed/demo proof: first hardening audit caught visible test artifacts; guarded cleanup made matching test profiles private and closed smoke organizations without deletion; final audit reports zero user-facing seed/demo findings.
 - Operational controls: signup and platform-mutation kill switches are wired and exposed through readiness/provider status; both are currently disabled.
 - Durable limits: auth, write, and upload throttles use shared PostgreSQL `rate_limit_windows` buckets keyed by privacy-safe subject hashes.
+- Legacy bridge retirement: authenticated `/api/app-state`, `/api/events`, and `/api/payments/export.csv` bridge routes are retired in deployed source `00147c8e3f70e246b41ed48b46550ae33cf0eb54`; live hardening smoke still reports zero seed/demo findings and anonymous fail-closed behavior.
+- Manual public-shell accessibility/device smoke: `docs/quality/ACCESSIBILITY_DEVICE_MATRIX.md` records 1280x720, 390x844, and 360x800 public-shell checks with no console warnings/errors or horizontal overflow; one sub-44px auth input target-size defect was fixed locally.
 - Local automated gates: `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test`, `npm run test:e2e`, and `npm audit --omit=dev` pass on the Packet 08 source.
 
 Blocking evidence still missing before named customer/pilot launch:
 
 - Timed restore into isolated PostgreSQL with measured recovery time and recovery point.
 - External error monitoring, alert rules, paging/incident owner routing, and one incident rehearsal.
-- Manual device/accessibility matrix evidence, including mobile Safari/Chrome, 200% text/zoom, keyboard-only, reduced motion, and screen-reader labels.
+- Authenticated and physical-device accessibility matrix evidence, including mobile Safari/Chrome, 200% text/zoom, keyboard-only, reduced motion, and screen-reader labels.
 - Founder/legal/support approval owners, launch communications, and support hours.
-- Final decision and cleanup plan for the remaining legacy app-state bridge.
 
 ## Required Automated Gates
 

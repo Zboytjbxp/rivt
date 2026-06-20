@@ -58,7 +58,7 @@ Evidence must eventually link to implementation, automated tests, manual accepta
 | GA-UX-003 | Messages, notifications, search, and profile use top-bar entry | Partial | Search, messages, notifications, and profile use top-bar entry; Packet 05 live smoke proves Messages/Notifications are server-owned. Older fallback components remain for later App cleanup, but messages/notifications do not depend on app-state persistence. |
 | GA-UX-004 | No role toggle or duplicate global Post action | Partial | Signup/onboarding role selection exists appropriately; legacy components still carry older nav/action patterns. |
 | GA-UX-005 | Every screen has loading, empty, error, offline, permission, and retry states | Partial | Work now has server loading, directional empty, error, retry, filter, and detail states with local E2E coverage; remaining screens still need the matrix. |
-| GA-UX-006 | Responsive, keyboard, screen-reader, light/dark acceptance | Partial | Themes and skip link exist; no automated UI suite or complete manual evidence. |
+| GA-UX-006 | Responsive, keyboard, screen-reader, light/dark acceptance | Partial | Themes and skip link exist; public-shell browser smoke at 1280x720, 390x844, and 360x800 is recorded in `docs/quality/ACCESSIBILITY_DEVICE_MATRIX.md`, and a sub-44px auth input target-size issue was fixed. Authenticated routes, physical devices, 200% text, keyboard-only, reduced motion, and screen-reader evidence remain open. |
 
 ## Jobs and Discovery
 

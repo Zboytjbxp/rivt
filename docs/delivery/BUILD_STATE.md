@@ -385,9 +385,30 @@ Production evidence:
 
 The Packet 08 hardening, durable-rate-limit, and legacy-bridge retirement slices are deployed and accepted as evidence. Full Gate A approval is rejected until the remaining launch blockers are closed: timed isolated restore drill, external monitoring/alerts and incident routing, support/legal/founder signoff, and manual accessibility/device matrix.
 
+## Packet 08 Manual Device/Accessibility Matrix Progress
+
+Started on 2026-06-20 against `https://rivt.pro/`.
+
+- Live health reports source commit `00147c8e3f70e246b41ed48b46550ae33cf0eb54`.
+- Codex in-app Browser smoke covered the public auth/marketing shell at 1280x720, 390x844, and 360x800.
+- The public shell loaded with the expected RIVT title, no console warnings/errors, and no horizontal overflow on tested breakpoints.
+- Invalid email/password remained signed out with the generic `Invalid email or password.` message.
+- The provided test account did not authenticate, so no new production user was created and the authenticated route/device matrix remains blocked.
+- A touch-target issue was fixed locally by raising auth input minimum height from 42px to 46px.
+- Evidence is recorded in `docs/quality/ACCESSIBILITY_DEVICE_MATRIX.md`.
+
+Local verification for this slice:
+
+- `npm run build`: pass.
+- `npm run lint`: pass.
+- `npm run lint:security`: pass.
+- `npm run test`: pass; DB-backed integration tests skip locally because `TEST_DATABASE_URL` is not configured.
+- `npm run test:e2e`: pass.
+- `npm audit --omit=dev`: pass; zero vulnerabilities.
+
 ## Next Exact Task
 
-Complete the remaining Packet 08 launch blockers: provision an isolated restore target and run a timed restore drill; wire external monitoring/alerts and incident owner routing; finish support/legal/founder approvals; and complete the manual accessibility/device matrix before named-cohort launch.
+Complete the remaining Packet 08 launch blockers: provision an isolated restore target and run a timed restore drill; wire external monitoring/alerts and incident owner routing; finish support/legal/founder approvals; and complete the authenticated/physical accessibility-device matrix before named-cohort launch.
 
 ## Blocking Founder Decisions
 
