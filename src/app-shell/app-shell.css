@@ -13,6 +13,7 @@
   top: 8px;
   left: 8px;
   z-index: 100;
+  min-height: 44px;
   padding: 10px 14px;
   transform: translateY(-150%);
   border-radius: var(--v2-radius-sm);
@@ -230,7 +231,7 @@
 .v2-search {
   display: flex;
   width: min(440px, 45vw);
-  min-height: 40px;
+  min-height: 44px;
   align-items: center;
   gap: 9px;
   padding: 0 10px;
@@ -244,6 +245,7 @@
 .v2-search input,
 .v2-search-panel input {
   min-width: 0;
+  min-height: 44px;
   flex: 1;
   border: 0;
   outline: 0;
@@ -403,8 +405,10 @@
   }
 
   .v2-mobile-brand {
-    display: block;
+    display: grid;
     width: 92px;
+    min-height: 44px;
+    place-items: center start;
     padding: 0;
     border: 0;
     background: transparent;

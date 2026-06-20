@@ -1659,7 +1659,7 @@ textarea:focus-visible {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  min-height: 42px;
+  min-height: 44px;
   border-radius: var(--radius);
   font-size: 13px;
   font-weight: 800;
@@ -4665,6 +4665,11 @@ textarea:focus-visible {
 }
 
 .dashboard-card-head button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 10px;
   border: 0;
   background: transparent;
   color: #102b64;
@@ -4790,7 +4795,7 @@ textarea:focus-visible {
 }
 
 .dashboard-main-button {
-  min-height: 38px;
+  min-height: 44px;
   border: 1px solid var(--border);
   border-radius: 9px;
   background: var(--surface-soft);
@@ -6005,7 +6010,7 @@ textarea:focus-visible {
   align-items: center;
   justify-content: center;
   gap: 7px;
-  min-height: 36px;
+  min-height: 44px;
   border: 1px solid var(--border);
   border-radius: 9px;
   background: var(--surface);
@@ -6031,7 +6036,7 @@ textarea:focus-visible {
   align-items: center;
   gap: 6px;
   padding: 0 12px;
-  min-height: 36px;
+  min-height: 44px;
   border: 1px solid rgba(255, 106, 0, 0.24);
   border-radius: 9px;
   background: var(--accent-soft);
@@ -6056,7 +6061,7 @@ textarea:focus-visible {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  min-height: 42px;
+  min-height: 44px;
   padding: 0 14px;
   border: 1px solid var(--border);
   border-radius: 999px;
@@ -6126,7 +6131,7 @@ textarea:focus-visible {
 }
 
 .filter-sheet-head button {
-  min-height: 40px;
+  min-height: 44px;
   padding: 0 14px;
   border: 1px solid var(--border);
   border-radius: 999px;
