@@ -39,8 +39,10 @@ export type TrustRequirement =
 
 export type WorkType = "Side work" | "Emergency" | "Multi-day" | "Inspection prep";
 
+export type JobId = number;
+
 export interface Job {
-  id: number;
+  id: JobId;
   title: string;
   contractor: string;
   trade: Trade;
@@ -61,7 +63,10 @@ export interface Job {
   reviewCount: number;
   applicants: number;
   status:
+    | "Draft"
     | "Open"
+    | "Paused"
+    | "Closed"
     | "Shortlisting"
     | "Scheduled"
     | "Completion Pending"
@@ -73,6 +78,42 @@ export interface Job {
   deliverables: string[];
   matchFactors: string[];
   requiredQuizIds?: string[];
+  canonical?: {
+    id: string;
+    organizationId: string;
+    tradeCode: string;
+    version: number;
+    scopeDescription: string;
+    materials: string[];
+    publicLocation: {
+      city: string;
+      region: string;
+      countryCode: string;
+      postalPrefix: string | null;
+    };
+    privateLocation?: {
+      addressLine1: string;
+      addressLine2: string;
+      city: string;
+      region: string;
+      postalCode: string;
+      countryCode: string;
+      accessNotes: string;
+    };
+    preferredStartDate: string | null;
+    applicationDeadline: string | null;
+    budgetUnit: "fixed" | "hourly";
+    createdAt: string;
+    updatedAt: string;
+    events: Array<{
+      id: string;
+      type: string;
+      fromStatus: string | null;
+      toStatus: string;
+      reason: string;
+      occurredAt: string;
+    }>;
+  };
 }
 
 export interface Talent {
@@ -94,7 +135,7 @@ export interface Talent {
 }
 
 export interface ApplicationRecord {
-  jobId: number;
+  jobId: JobId;
   talentId: number;
   state: "Submitted" | "Invited";
 }

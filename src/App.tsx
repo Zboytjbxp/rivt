@@ -63,17 +63,18 @@ import {
 } from "lucide-react";
 import {
   difficultyOptions,
-  jobs as seedJobs,
   radiusOptions,
   talent,
   tradeOptions,
   workTypeOptions,
 } from "./data";
 import { brandConfig, type ThemeMode, type ThemePalette, type TrialPlan } from "./brandConfig";
-import type { ApplicationRecord, Difficulty, Job, Role, Talent, Trade, WorkType } from "./types";
+import type { ApplicationRecord, Difficulty, Job, JobId, Role, Talent, Trade, WorkType } from "./types";
 import { AppShell } from "./app-shell/AppShell";
 import type { PrimaryDestination } from "./app-shell/types";
 import { WorkWorkspace } from "./features/work/WorkWorkspace";
+import { JobEditorModal } from "./features/work/JobEditorModal";
+import { getJob, listJobs, toJobViewModel, transitionJob, type CanonicalDifficulty, type CanonicalWorkType } from "./features/work/job-api";
 import { HomeDashboard } from "./features/home/HomeDashboard";
 import { NetworkHub } from "./features/network/NetworkHub";
 import { InboxCenter } from "./features/inbox/InboxCenter";
@@ -360,8 +361,6 @@ interface PersistedAppState {
   locationQuery: string;
   verifiedOnly: boolean;
   savedSearch: boolean;
-  jobs: Job[];
-  selectedId: number;
   applications: ApplicationRecord[];
   trustReady: boolean;
   scheduleHolds: number[];
@@ -428,6 +427,21 @@ const tradeCodeByName: Record<Trade, string> = {
   "Low Voltage": "low_voltage",
   Solar: "solar",
   "Security Systems": "security_systems",
+};
+
+const canonicalDifficultyByLabel: Record<Difficulty, CanonicalDifficulty> = {
+  Easy: "easy",
+  Moderate: "moderate",
+  Challenging: "challenging",
+  Advanced: "advanced",
+  Expert: "expert",
+};
+
+const canonicalWorkTypeByLabel: Record<WorkType, CanonicalWorkType> = {
+  "Side work": "side_work",
+  Emergency: "emergency",
+  "Multi-day": "multi_day",
+  "Inspection prep": "inspection_prep",
 };
 
 function readThemePreference(): ThemeMode {
@@ -1503,14 +1517,6 @@ function normalizeStoredUpload(value: unknown): StoredUpload | null {
   };
 }
 
-function radiusMiles(value: RadiusFilter) {
-  if (value === "Any radius") {
-    return Number.POSITIVE_INFINITY;
-  }
-
-  return Number(value.replace(" mi", ""));
-}
-
 function discardLegacyLocalState() {
   if (typeof window === "undefined") {
     return;
@@ -1619,17 +1625,6 @@ function providerStatusFromResponse(response: Response): ProviderCheckStatus {
 
 function statusClass(status: Job["status"]) {
   return status.toLowerCase().replace(/[^a-z0-9]+/g, "-");
-}
-
-function normalizeJob(job: Job): Job {
-  return {
-    ...job,
-    insuranceRequired: Boolean(job.insuranceRequired),
-  };
-}
-
-function normalizeJobs(jobs: Job[]) {
-  return jobs.map(normalizeJob);
 }
 
 function getInitials(name: string) {
@@ -1880,8 +1875,6 @@ const guestDemoJobs: Job[] = [
 ];
 
 function App() {
-  const initialJobs = useMemo(() => normalizeJobs(seedJobs), []);
-  const initialSelectedId = initialJobs[0]?.id ?? 0;
   const [activeView, setActiveView] = useState<NavLabel>(() => viewFromPath(window.location.pathname));
   const [role, setRole] = useState<Role>("contractor");
   const [onboardingComplete, setOnboardingComplete] = useState(false);
@@ -1916,8 +1909,12 @@ function App() {
   const [locationQuery, setLocationQuery] = useState("");
   const [verifiedOnly, setVerifiedOnly] = useState(false);
   const [savedSearch, setSavedSearch] = useState(false);
-  const [jobs, setJobs] = useState<Job[]>(initialJobs);
-  const [selectedId, setSelectedId] = useState(initialSelectedId);
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const [selectedId, setSelectedId] = useState<JobId>(0);
+  const [jobsLoading, setJobsLoading] = useState(false);
+  const [jobsError, setJobsError] = useState<string | null>(null);
+  const [editingJob, setEditingJob] = useState<Job | null>(null);
+  const jobsRequestRef = useRef(0);
   const [applications, setApplications] = useState<ApplicationRecord[]>([]);
   const [isPostOpen, setPostOpen] = useState(false);
   const [isActivityOpen, setActivityOpen] = useState(false);
@@ -2107,6 +2104,41 @@ function App() {
     return () => { cancelled = true; };
   }, [activeView, authUser, fetchAccountSessions, isAccountOpen]);
 
+  const reloadJobs = useCallback(async () => {
+    if (!authUser || !onboardingComplete) return;
+    const requestId = ++jobsRequestRef.current;
+    setJobsLoading(true);
+    setJobsError(null);
+    const [locationCity = "", locationRegion = ""] = locationQuery.split(",").map((part) => part.trim());
+    try {
+      const canonicalJobs = await listJobs({
+        query: query.trim() || undefined,
+        trade: trade === "All trades" ? undefined : tradeCodeByName[trade],
+        difficulty: difficulty === "Any difficulty" ? undefined : canonicalDifficultyByLabel[difficulty],
+        workType: workType === "All work types" ? undefined : canonicalWorkTypeByLabel[workType],
+        city: locationCity || undefined,
+        region: locationRegion || undefined,
+        insuranceRequired: verifiedOnly ? true : undefined,
+      });
+      if (jobsRequestRef.current !== requestId) return;
+      const nextJobs = canonicalJobs.map(toJobViewModel);
+      setJobs(nextJobs);
+      setSelectedId((current) => nextJobs.some((job) => job.id === current) ? current : nextJobs[0]?.id ?? 0);
+    } catch (cause) {
+      if (jobsRequestRef.current !== requestId) return;
+      setJobs([]);
+      setSelectedId(0);
+      setJobsError(cause instanceof Error ? cause.message : "Jobs could not be loaded.");
+    } finally {
+      if (jobsRequestRef.current === requestId) setJobsLoading(false);
+    }
+  }, [authUser, difficulty, locationQuery, onboardingComplete, query, trade, verifiedOnly, workType]);
+
+  useEffect(() => {
+    const timeout = window.setTimeout(() => { void reloadJobs(); }, 250);
+    return () => window.clearTimeout(timeout);
+  }, [reloadJobs]);
+
   useEffect(() => {
     if (onboardingComplete) {
       window.scrollTo({ top: 0, left: 0 });
@@ -2127,12 +2159,6 @@ function App() {
         ? nextState.role
         : role;
     const navForRole = visibleNavItems(nextRole);
-    const nextJobs =
-      Array.isArray(nextState.jobs) && nextState.jobs.length
-        ? normalizeJobs(nextState.jobs)
-        : null;
-    const availableJobs = nextJobs ?? jobs;
-
     setRole(nextRole);
     if (nextState.activeView !== undefined) {
       setActiveView(
@@ -2150,14 +2176,6 @@ function App() {
     if (nextState.locationQuery !== undefined) setLocationQuery(nextState.locationQuery);
     if (nextState.verifiedOnly !== undefined) setVerifiedOnly(nextState.verifiedOnly);
     if (nextState.savedSearch !== undefined) setSavedSearch(nextState.savedSearch);
-    if (nextJobs) setJobs(nextJobs);
-    if (typeof nextState.selectedId === "number" && availableJobs.length) {
-      setSelectedId(
-        availableJobs.some((job) => job.id === nextState.selectedId)
-          ? nextState.selectedId
-          : availableJobs[0].id,
-      );
-    }
     if (Array.isArray(nextState.applications)) setApplications(nextState.applications);
     if (nextState.trustReady !== undefined) setTrustReady(nextState.trustReady);
     if (Array.isArray(nextState.scheduleHolds)) {
@@ -2192,29 +2210,7 @@ function App() {
 
   const selectedJob = jobs.find((job) => job.id === selectedId) ?? jobs[0] ?? emptyJob;
 
-  const filteredJobs = useMemo(() => {
-    return jobs
-      .filter((job) => {
-        const searchable = `${job.title} ${job.contractor} ${job.trade} ${
-          job.location
-        } ${job.tools.join(" ")}`.toLowerCase();
-        return searchable.includes(query.toLowerCase());
-      })
-      .filter((job) => trade === "All trades" || job.trade === trade)
-      .filter(
-        (job) =>
-          difficulty === "Any difficulty" || job.difficulty === difficulty,
-      )
-      .filter((job) => workType === "All work types" || job.workType === workType)
-      .filter((job) =>
-        locationQuery.trim()
-          ? job.location.toLowerCase().includes(locationQuery.toLowerCase())
-          : true,
-      )
-      .filter((job) => job.distance <= radiusMiles(radius))
-      .filter((job) => !verifiedOnly || job.insuranceRequired)
-      .sort((a, b) => b.match - a.match);
-  }, [difficulty, verifiedOnly, jobs, locationQuery, query, radius, trade, workType]);
+  const filteredJobs = jobs;
 
   const matchingTalent = useMemo(() => {
     return talent
@@ -2222,11 +2218,6 @@ function App() {
       .sort((a, b) => b.match - a.match);
   }, [selectedJob.trade]);
 
-  const applicationState = applications.find(
-    (record) => record.jobId === selectedJob.id,
-  )?.state;
-
-  const selectedTalent = matchingTalent[0] ?? talent[0] ?? emptyTalent;
   const unreadActivities = activityFeed.filter((item) => item.unread).length;
   const currentState = useMemo<PersistedAppState>(() => ({
     accountProfile,
@@ -2241,7 +2232,6 @@ function App() {
     safetyQuizResults,
     difficulty,
     feedbackItems,
-    jobs,
     locationQuery,
     lockedAccounts: Array.from(lockedAccounts),
     messageDraft,
@@ -2253,7 +2243,6 @@ function App() {
     role,
     savedSearch,
     scheduleHolds: Array.from(scheduleHolds),
-    selectedId,
     sentMessages,
     shoutOuts,
     trade,
@@ -2274,7 +2263,6 @@ function App() {
     safetyQuizResults,
     difficulty,
     feedbackItems,
-    jobs,
     locationQuery,
     lockedAccounts,
     messageDraft,
@@ -2286,7 +2274,6 @@ function App() {
     role,
     savedSearch,
     scheduleHolds,
-    selectedId,
     sentMessages,
     shoutOuts,
     trade,
@@ -2556,108 +2543,6 @@ function App() {
     setPostOpen(false);
   }
 
-  function handleToggleAutoMatch() {
-    const next = !autoMatchEnabled;
-    setAutoMatchEnabled(next);
-    addActivity(
-      next ? "Best-match sorting resumed" : "Best-match sorting paused",
-      next
-        ? "The marketplace is sorting jobs by best fit again."
-        : "The current job order stays visible while sorting is paused.",
-    );
-  }
-
-  function handleToggleSavedSearch() {
-    const next = !savedSearch;
-    setSavedSearch(next);
-    addActivity(
-      next ? "Search saved" : "Saved search removed",
-      next
-        ? `${trade}, ${difficulty}, ${radius} will stay ready for testing.`
-        : "The feed is back to an unsaved filter set.",
-    );
-  }
-
-  function handleApplyForJob(jobId: number) {
-    const job = jobs.find((candidate) => candidate.id === jobId) ?? selectedJob;
-    const alreadyApplied = applications.some((record) => record.jobId === jobId);
-    const matchedTalent =
-      talent
-        .filter((person) => person.trade === job.trade)
-        .sort((a, b) => b.match - a.match)[0] ?? selectedTalent;
-
-    setApplications((current) => {
-      const existing = current.find((record) => record.jobId === jobId);
-      if (existing) {
-        return current.map((record) =>
-          record.jobId === jobId
-            ? { ...record, state: "Submitted" }
-            : record,
-        );
-      }
-
-      return [
-        ...current,
-        {
-          jobId,
-          talentId: matchedTalent.id,
-          state: "Submitted",
-        },
-      ];
-    });
-    setJobs((current) =>
-      current.map((candidate) =>
-        candidate.id === jobId
-          ? {
-              ...candidate,
-              applicants: alreadyApplied ? candidate.applicants : candidate.applicants + 1,
-              status: "Shortlisting",
-            }
-          : candidate,
-      ),
-    );
-    addActivity(
-      "Portfolio submitted",
-      `${matchedTalent.name} is attached to ${job.title}. Contractor review is now ready.`,
-    );
-  }
-
-  function handleApply() {
-    handleApplyForJob(selectedJob.id);
-  }
-
-  function handleInviteForJob(jobId: number) {
-    const job = jobs.find((candidate) => candidate.id === jobId) ?? selectedJob;
-    const matchedTalent =
-      talent
-        .filter((person) => person.trade === job.trade)
-        .sort((a, b) => b.match - a.match)[0] ?? selectedTalent;
-
-    setApplications((current) => [
-      ...current.filter((record) => record.jobId !== jobId),
-      {
-        jobId,
-        talentId: matchedTalent.id,
-        state: "Invited",
-      },
-    ]);
-    setJobs((current) =>
-      current.map((candidate) =>
-        candidate.id === jobId
-          ? { ...candidate, status: "Shortlisting" }
-          : candidate,
-      ),
-    );
-    addActivity(
-      "Crew invite sent",
-      `${matchedTalent.name} was invited to ${job.title}.`,
-    );
-  }
-
-  function handleInvite() {
-    handleInviteForJob(selectedJob.id);
-  }
-
   function handleVoteCommunityPost(postId: number, direction: "up" | "down") {
     setCommunityPosts((current) =>
       current.map((post) =>
@@ -2803,21 +2688,44 @@ function App() {
     addActivity("Shop Talk post created", `"${title}" posted to Shop Talk.`);
   }
 
-  function handlePostJob(job: Job) {
-    setJobs((current) => [job, ...current]);
-    setQuery("");
-    setTrade("All trades");
-    setDifficulty("Any difficulty");
-    setWorkType("All work types");
-    setRadius("Any radius");
-    setLocationQuery("");
+  function handleJobSaved(job: Job, published: boolean) {
+    setJobs((current) => {
+      const exists = current.some((candidate) => candidate.id === job.id);
+      return exists ? current.map((candidate) => candidate.id === job.id ? job : candidate) : [job, ...current];
+    });
     setSelectedId(job.id);
-    setActiveView("Marketplace");
-    setPostOpen(false);
-    addActivity(
-      "Job published",
-      `${job.title} is now live in ${job.location} with ${job.tools.length} tool requirement${job.tools.length === 1 ? "" : "s"}.`,
-    );
+    setEditingJob(job);
+    if (published) {
+      addActivity("Job published", `${job.title} is now visible to tradespeople in ${job.location}.`);
+    }
+  }
+
+  async function handleEditJob(job: Job) {
+    setJobsError(null);
+    try {
+      if (!job.canonical) throw new Error("This job is missing its server identity.");
+      const canonical = await getJob(job.canonical.id);
+      setEditingJob(toJobViewModel(canonical));
+      setPostOpen(true);
+    } catch (cause) {
+      setJobsError(cause instanceof Error ? cause.message : "The job could not be opened.");
+    }
+  }
+
+  async function handleJobTransition(job: Job, action: "publish" | "pause" | "resume" | "close") {
+    if (!job.canonical) throw new Error("This job is missing canonical lifecycle data.");
+    setJobsError(null);
+    try {
+      const updated = toJobViewModel(await transitionJob(job.canonical.id, action, job.canonical.version));
+      setJobs((current) => current.map((candidate) => candidate.id === updated.id ? updated : candidate));
+      setSelectedId(updated.id);
+      const activityLabel = { publish: "published", pause: "paused", resume: "reopened", close: "closed" }[action];
+      addActivity(`Job ${activityLabel}`, `${updated.title} is now ${updated.status.toLowerCase()}.`);
+    } catch (cause) {
+      const message = cause instanceof Error ? cause.message : "The job status could not be changed.";
+      setJobsError(message);
+      throw cause;
+    }
   }
 
   async function handleOnboardingComplete(result: OnboardingResult) {
@@ -2876,7 +2784,7 @@ function App() {
     );
   }
 
-  function openJob(jobId: number) {
+  function openJob(jobId: JobId) {
     setSelectedId(jobId);
     handleNavigate("Marketplace");
   }
@@ -2901,20 +2809,29 @@ function App() {
 
   function handleExitGuest() {
     setIsGuest(false);
-    setJobs(initialJobs);
-    setSelectedId(initialJobs[0]?.id ?? 0);
+    setJobs([]);
+    setSelectedId(0);
     setAccountProfile((current) => ({ ...current, displayName: "" }));
   }
 
   function handleSignUpFromGuest() {
     setAuthMode("signup");
     setIsGuest(false);
-    setJobs(initialJobs);
-    setSelectedId(initialJobs[0]?.id ?? 0);
+    setJobs([]);
+    setSelectedId(0);
     setAccountProfile((current) => ({ ...current, displayName: "" }));
   }
 
   const page = pageCopy[activeView];
+  const primaryOrganizationId = canonicalAccount?.organizations[0]?.id ?? "";
+  function openCreateJob() {
+    if (!primaryOrganizationId) {
+      setJobsError("Finish your contractor organization setup before creating a job.");
+      return;
+    }
+    setEditingJob(null);
+    setPostOpen(true);
+  }
   const profileSubtitle =
     role === "contractor"
       ? accountProfile.organization
@@ -2994,6 +2911,7 @@ function App() {
         }
         onNavigate={(destination) => handleNavigate(defaultViewForDestination(destination))}
         onOpenAccount={() => { setActivityOpen(false); setPostOpen(false); setAccountOpen(true); }}
+        onOpenMessages={() => handleNavigate("Messages")}
         onOpenNotifications={() => { setAccountOpen(false); setPostOpen(false); setActivityOpen(true); }}
         onOpenActiveJob={() => handleNavigate("Marketplace")}
         onSearch={(nextQuery) => {
@@ -3023,7 +2941,7 @@ function App() {
             pendingPaymentCount={paymentRecords.filter((record) => record.status === "Payment pending").length}
             communityCount={communityPosts.length}
             shoutOutCount={shoutOuts.length}
-            onPostJob={() => isGuest ? setGuestPromptOpen(true) : setPostOpen(true)}
+            onPostJob={openCreateJob}
             onOpenJob={openJob}
             onNavigate={(destination) => handleNavigate(defaultViewForDestination(destination))}
           />
@@ -3031,31 +2949,26 @@ function App() {
           <WorkWorkspace
             role={role}
             jobs={filteredJobs}
-            selectedJob={selectedJob}
-            recommendedTalent={matchingTalent[0]}
-            applicationState={applicationState}
-            savedSearch={savedSearch}
-            autoMatchEnabled={autoMatchEnabled}
-            radius={radius}
+            selectedJob={selectedJob.id ? selectedJob : null}
+            loading={jobsLoading}
+            error={jobsError}
+            query={query}
             trade={trade}
             difficulty={difficulty}
             workType={workType}
+            locationQuery={locationQuery}
             verifiedOnly={verifiedOnly}
+            onQueryChange={setQuery}
             onTradeChange={setTrade}
             onDifficultyChange={setDifficulty}
             onWorkTypeChange={setWorkType}
-            onRadiusChange={setRadius}
+            onLocationChange={setLocationQuery}
             onVerifiedChange={setVerifiedOnly}
             onSelectJob={setSelectedId}
-            onPostJob={() => isGuest ? setGuestPromptOpen(true) : setPostOpen(true)}
-            onApply={() => isGuest ? setGuestPromptOpen(true) : handleApply()}
-            onInvite={() => isGuest ? setGuestPromptOpen(true) : handleInvite()}
-            onOpenApplications={() => handleNavigate("Applications")}
-            onOpenMyJobs={() => handleNavigate("My Jobs")}
-            onOpenMessages={() => handleNavigate("Messages")}
-            onOpenRecords={() => handleNavigate("Records")}
-            onToggleSavedSearch={handleToggleSavedSearch}
-            onToggleAutoMatch={handleToggleAutoMatch}
+            onPostJob={openCreateJob}
+            onEditJob={(job) => void handleEditJob(job)}
+            onTransition={handleJobTransition}
+            onRetry={() => void reloadJobs()}
           />
         ) : activeView === "Shop Talk" ? (
           <ShopTalkView
@@ -3201,9 +3114,15 @@ function App() {
         />
       )}
 
-      {isPostOpen && (
-        <PostJobModal onClose={() => setPostOpen(false)} onPost={handlePostJob} />
-      )}
+      {isPostOpen && primaryOrganizationId ? (
+        <JobEditorModal
+          organizationId={primaryOrganizationId}
+          job={editingJob}
+          defaultLocation={accountProfile.location}
+          onClose={() => { setPostOpen(false); setEditingJob(null); }}
+          onSaved={handleJobSaved}
+        />
+      ) : null}
 
       {guestPromptOpen && (
         <GuestSignUpPrompt
@@ -6709,8 +6628,8 @@ function ToolsView({
 function primaryDestinationForView(view: NavLabel): PrimaryDestination | null {
   if (view === "Home") return "home";
   if (["Marketplace", "My Jobs", "Applications", "Invites"].includes(view)) return "work";
-  if (["My Crew", "Shop Talk", "Reviews"].includes(view)) return "network";
-  if (view === "Messages") return "inbox";
+  if (["My Crew", "Reviews"].includes(view)) return "crew";
+  if (view === "Shop Talk") return "shop-talk";
   if (["Tools", "Records"].includes(view)) return "tools";
   return null;
 }
@@ -6718,8 +6637,9 @@ function primaryDestinationForView(view: NavLabel): PrimaryDestination | null {
 function defaultViewForDestination(destination: PrimaryDestination): NavLabel {
   if (destination === "home") return "Home";
   if (destination === "work") return "Marketplace";
-  if (destination === "network") return "My Crew";
-  if (destination === "inbox") return "Messages";
+  if (destination === "crew") return "My Crew";
+  if (destination === "shop-talk") return "Shop Talk";
+  if (destination === "messages") return "Messages";
   return "Tools";
 }
 
@@ -9700,6 +9620,8 @@ function InfoItem({
   );
 }
 
+// Superseded by JobEditorModal; retained temporarily with other exported legacy screens.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function PostJobModal({
   onClose,
   onPost,

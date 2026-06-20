@@ -76,11 +76,11 @@ export function NetworkHub({ jobs, talent, communityPosts, shoutOuts, onOpenCrew
   const openJobs = jobs.filter((job) => job.status === "Open").length;
 
   return (
-    <section className="v2-network-page" aria-label="Network">
+    <section className="v2-network-page" aria-label="Crew">
       <header className="v2-network-header">
         <div>
-          <h1>Network</h1>
-          <p>People, answers, and reputation in one place.</p>
+          <h1>Crew</h1>
+          <p>Your trusted trade connections and reputation signals.</p>
         </div>
         <div className="v2-network-header-metrics">
           <article><strong>{activeCrew.length}</strong><span>crew members</span></article>
@@ -99,7 +99,13 @@ export function NetworkHub({ jobs, talent, communityPosts, shoutOuts, onOpenCrew
             <button type="button" onClick={onOpenCrew}>Open crew</button>
           </header>
           <div className="v2-network-person-list">
-            {activeCrew.map((person) => <TopTalentCard key={person.id} person={person} />)}
+            {activeCrew.length ? activeCrew.map((person) => <TopTalentCard key={person.id} person={person} />) : (
+              <article className="v2-network-empty">
+                <Users size={20} />
+                <strong>No crew connections yet</strong>
+                <span>People you connect with through real RIVT work will appear here.</span>
+              </article>
+            )}
           </div>
         </section>
 

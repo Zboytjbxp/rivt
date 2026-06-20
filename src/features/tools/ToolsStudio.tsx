@@ -88,7 +88,7 @@ export function ToolsStudio({ jobs, paymentRecords, onNavigate, onOpenJob }: Too
           <div className="v2-tools-list">
             <ToolCard icon={Calculator} title="Calculator" summary="Fraction math, quick takeoffs, and field ratios." action="Open calculator" onAction={() => onOpenJob(activeJob?.id ?? jobs[0]?.id ?? 0)} />
             <ToolCard icon={Scale} title="Estimate" summary="Work through quantities and labor assumptions." action="Open estimate" onAction={() => onNavigate("work")} />
-            <ToolCard icon={ReceiptText} title="Invoice" summary="Draft a clean invoice from the job you are already on." action="Open invoice" onAction={() => onNavigate("inbox")} />
+            <ToolCard icon={ReceiptText} title="Invoice" summary="Draft a clean invoice from the job you are already on." action="Open invoice" onAction={() => onNavigate("tools")} />
             <ToolCard icon={FolderOpen} title="Records" summary="Completion packets, payment logs, and exportable history." action="Open records" onAction={() => onNavigate("work")} />
           </div>
         </section>
@@ -111,7 +111,7 @@ export function ToolsStudio({ jobs, paymentRecords, onNavigate, onOpenJob }: Too
                   <Plus size={15} />
                   Open details
                 </button>
-                <button type="button" onClick={() => onNavigate("inbox")}>
+                <button type="button" onClick={() => onNavigate("tools")}>
                   <FileText size={15} />
                   Write invoice
                 </button>
@@ -132,7 +132,7 @@ export function ToolsStudio({ jobs, paymentRecords, onNavigate, onOpenJob }: Too
               <span>Payment records</span>
               <h2>What still needs attention</h2>
             </div>
-            <button type="button" onClick={() => onNavigate("inbox")}>Open inbox</button>
+            <button type="button" onClick={() => onNavigate("tools")}>Open records</button>
           </header>
           <div className="v2-tools-records">
             <article>
@@ -156,7 +156,7 @@ export function ToolsStudio({ jobs, paymentRecords, onNavigate, onOpenJob }: Too
               <span>Quick access</span>
               <h2>Jump into a workflow</h2>
             </div>
-            <button type="button" onClick={() => onNavigate("network")}>Open network</button>
+            <button type="button" onClick={() => onNavigate("crew")}>Open crew</button>
           </header>
           <div className="v2-tools-shortcuts">
             {jobs.slice(0, 3).map((job) => (

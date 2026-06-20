@@ -1,60 +1,7 @@
 import type { Job, Talent } from "./types";
 
 export const jobs: Job[] = [];
-
-export const talent: Talent[] = [
-  {
-    id: 1,
-    name: "Marcus Webb",
-    trade: "Electrical",
-    location: "Jacksonville, FL",
-    rating: 4.9,
-    reviews: 31,
-    verified: true,
-    identityVerified: true,
-    insured: true,
-    match: 94,
-    rate: 65,
-    portfolio: ["Panel upgrades", "Service entrance", "Conduit runs"],
-    tools: ["Multimeter", "Conduit bender", "Wire strippers"],
-    availability: "Available now",
-    responseTime: "Under 1 hr",
-  },
-  {
-    id: 2,
-    name: "Delia Rojas",
-    trade: "Plumbing",
-    location: "Orange Park, FL",
-    rating: 4.7,
-    reviews: 18,
-    verified: true,
-    identityVerified: false,
-    insured: true,
-    match: 88,
-    rate: 58,
-    portfolio: ["Water heater install", "Fixture rough-in", "Drain repair"],
-    tools: ["Pipe wrench", "PEX expander", "Drain snake"],
-    availability: "Available tomorrow",
-    responseTime: "2–4 hrs",
-  },
-  {
-    id: 3,
-    name: "Tyler Oaks",
-    trade: "Carpentry",
-    location: "Fleming Island, FL",
-    rating: 4.8,
-    reviews: 24,
-    verified: true,
-    identityVerified: true,
-    insured: true,
-    match: 82,
-    rate: 52,
-    portfolio: ["Framing", "Deck builds", "Door/window install"],
-    tools: ["Framing nailer", "Miter saw", "Level"],
-    availability: "Weekends",
-    responseTime: "Same day",
-  },
-];
+export const talent: Talent[] = [];
 
 export const tradeOptions = [
   "All trades",

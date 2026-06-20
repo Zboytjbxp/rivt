@@ -5,7 +5,7 @@ import {
   ChevronDown,
   HardHat,
   Home,
-  Inbox,
+  MessageCircle,
   Search,
   Users,
   Wrench,
@@ -21,8 +21,8 @@ const primaryNavigation: Array<{
 }> = [
   { destination: "home", label: "Home", icon: Home },
   { destination: "work", label: "Work", icon: BriefcaseBusiness },
-  { destination: "network", label: "Network", icon: Users },
-  { destination: "inbox", label: "Inbox", icon: Inbox },
+  { destination: "crew", label: "Crew", icon: Users },
+  { destination: "shop-talk", label: "Shop Talk", icon: MessageCircle },
   { destination: "tools", label: "Tools", icon: Wrench },
 ];
 
@@ -42,6 +42,7 @@ export function AppShell({
   guestBanner,
   onNavigate,
   onOpenAccount,
+  onOpenMessages,
   onOpenNotifications,
   onOpenActiveJob,
   onSearch,
@@ -141,6 +142,9 @@ export function AppShell({
           <div className="v2-topbar-actions">
             <button type="button" className="v2-icon-button v2-mobile-search" aria-label="Search" onClick={() => setSearchOpen(true)}>
               <Search size={19} />
+            </button>
+            <button type="button" className="v2-icon-button" aria-label="Messages" onClick={onOpenMessages}>
+              <MessageCircle size={19} />
             </button>
             <button type="button" className="v2-icon-button" aria-label="Notifications" onClick={onOpenNotifications}>
               <Bell size={19} />
