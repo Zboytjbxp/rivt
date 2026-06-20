@@ -154,3 +154,22 @@ Add one entry per staging/production deployment.
 - Known risks: disposable-PostgreSQL CI and live smoke are required before Packet 07 acceptance
 - Rollback performed/result: not required
 - Approval: not accepted; deploy and live smoke pending
+
+## Current Production - Packet 07 Reviews, Admin, and Safety
+
+- Environment: Production (`https://rivt.pro`)
+- Date/time/timezone: 2026-06-20 10:33 America/New_York
+- Deployer: Codex through authenticated Railway CLI
+- Source repository/branch: `Zboytjbxp/rivt`, `master`
+- Source commit: `01bf1adfedef03ee7ecd7c408d2bab6cbde654fe`
+- Build/artifact ID: Railway application deployment `698ce001-b5b2-42c6-9967-9c89e30afe68`; metadata redeploy `b3c91226-d60b-407f-a93e-1e289cbdc968` after updating `SOURCE_COMMIT`
+- Migration version before/after: `0007_project_completion` / `0008_reviews_admin_safety`
+- Feature-flag/config version: `SOURCE_COMMIT` updated to `01bf1adfedef03ee7ecd7c408d2bab6cbde654fe`; pilot invite enforcement remains enabled
+- Provider/config changes: no provider credentials changed; no automated verification provider enabled
+- Backup/rollback target: prior successful Packet 06 deployment `67562c06-40d4-4923-bd82-52b169a0d45e`; checked source rollback for `0008_reviews_admin_safety` in migration tests
+- Automated gates: local `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test`, `npm run test:e2e`, and `npm audit --omit=dev` passed; local DB-backed integration tests skipped because `TEST_DATABASE_URL` is not configured
+- Post-deploy smoke tests: first Packet 07 smoke against deployment `0f708552-8598-4a04-8f45-0126262efce8` caught a pending-onboarding mutation-guard regression; commit `01bf1ad` fixed the guard and was redeployed. Final live smoke `packet07-20260620143318-94c6bd` passed signup/onboarding for disposable contractor, tradesperson, outsider, and admin; normal user admin overview 403; migration `0008_reviews_admin_safety`; completed-work review creation; duplicate/ineligible review rejection; dispute/response/admin resolve; reputation count; unsafe stop-work report; safety report; block-hardened job/reputation access; admin suspension, support access while restricted, admin assist, restriction lift, immutable admin action count, and disposable cleanup.
+- Health/readiness result: public health reports PostgreSQL and S3-compatible storage healthy with exact source commit `01bf1adfedef03ee7ecd7c408d2bab6cbde654fe`; authenticated readiness in live smoke reported `0008_reviews_admin_safety`, eight applied migrations, zero pending
+- Known risks: Gate A hardening remains: restore drill, distributed limits, observability/alerts, support runbooks, final launch checklist, and remaining legacy bridge cleanup
+- Rollback performed/result: not required
+- Approval: Packet 07 accepted; overall Gate A not approved

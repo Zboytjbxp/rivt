@@ -15,13 +15,13 @@ Evidence must eventually link to implementation, automated tests, manual accepta
 | ID | Requirement | Current | Evidence / gap |
 |---|---|---:|---|
 | GA-FND-001 | Managed PostgreSQL and private object storage are required | Verified | Live `/api/health` and `/api/storage` report PostgreSQL and S3-compatible storage healthy. |
-| GA-FND-002 | Versioned database migrations own schema changes | Verified | Production runs checksummed transactional migrations with advisory locking; apply/rerun/rollback/reapply/tamper tests pass and status reports `0007_project_completion` with zero pending. Packet 07 adds local migration `0008_reviews_admin_safety`; production acceptance is pending deployment/live smoke. |
-| GA-FND-003 | Core records use normalized, user-owned domain tables | Partial | Canonical account/profile/organization/trade, job, application, offer, active-work, participant, timeline, conversation, message, receipt, notification, project, project media, and completion foundations are live-smoked; Packet 07 source adds review, safety, support, admin-role, admin-action, and restriction records pending live acceptance. |
-| GA-FND-004 | Authenticated tenant/ownership authorization protects every private API | Partial | Legacy private routes require a DB-backed user; canonical job/match/messaging/project routes pass live smoke. Packet 07 source adds participant/admin/support authorization for review and safety domains pending DB-backed CI/live smoke evidence. |
+| GA-FND-002 | Versioned database migrations own schema changes | Verified | Production runs checksummed transactional migrations with advisory locking; apply/rerun/rollback/reapply/tamper tests pass and status reports `0008_reviews_admin_safety` with zero pending. |
+| GA-FND-003 | Core records use normalized, user-owned domain tables | Partial | Canonical account/profile/organization/trade, job, application, offer, active-work, participant, timeline, conversation, message, receipt, notification, project, project media, completion, review, safety, support, admin-role, admin-action, and restriction foundations are live-smoked. Remaining legacy app-state authority must be removed before launch. |
+| GA-FND-004 | Authenticated tenant/ownership authorization protects every private API | Partial | Canonical job/match/messaging/project/review/safety/admin/support routes pass live smoke with owner, participant, blocked-account, restricted-account, and staff-role boundaries. Legacy bridge routes remain until final hardening. |
 | GA-FND-005 | API uses consistent typed errors and validation | Partial | `/api/v1` has request IDs, Zod validation, stable errors, and pagination primitives; legacy APIs retain transitional shapes. |
-| GA-FND-006 | Retryable writes are idempotent | Partial | Canonical idempotency storage is used by job, match, messaging, and project mutations; Packet 07 source extends it to review, report, unsafe-work, support, and admin/restriction mutations pending live smoke. |
-| GA-FND-007 | Auditable domain events use authenticated actor and subject | Partial | Job, application, offer, active-work, message, project media, project entry, and completion routes emit authenticated audit/status/events with append-only triggers and live-smoked timelines; Packet 07 source adds review events, unsafe-work events, support events, restriction events, and admin action events pending live acceptance. |
-| GA-FND-008 | Internal diagnostics identify deployed source revision and dependency readiness | Verified | Health/readiness identify exact source `993be38`, dependencies, applied migrations, and pending count in production. |
+| GA-FND-006 | Retryable writes are idempotent | Partial | Canonical idempotency storage is used by job, match, messaging, project, review, report, unsafe-work, support, and admin/restriction mutations; distributed replay/rate-limit hardening remains Packet 08 work. |
+| GA-FND-007 | Auditable domain events use authenticated actor and subject | Verified | Job, application, offer, active-work, message, project media, project entry, completion, review, unsafe-work, support, restriction, and admin action events include actor/subject/time/reason as applicable; live smoke and append-only triggers cover critical domains. |
+| GA-FND-008 | Internal diagnostics identify deployed source revision and dependency readiness | Verified | Health/readiness identify exact source `01bf1ad`, dependencies, applied migrations, and pending count in production. |
 
 ## Authentication and Account
 
@@ -86,7 +86,7 @@ Evidence must eventually link to implementation, automated tests, manual accepta
 | GA-MAT-005 | Tradesperson accepts/declines offer | Partial | Recipient-only accept/decline APIs and UI actions exist; production smoke verified accept and wrong-recipient rejection, while decline remains source/CI coverage only. |
 | GA-MAT-006 | Accepted offer creates participants and Active work exactly once | Verified | Packet 04 production smoke verified offer acceptance created one active-work record with two participants and repeated acceptance returned the same active-work record. |
 | GA-MAT-007 | Cancellation/reschedule records actor and reason | Verified | Packet 04 production smoke verified active-work reschedule and cancel events with reasons; append-only status events are migration-enforced. |
-| GA-MAT-008 | Block/suspension/closed-job rules prevent action | Partial | Packet 04 production smoke verified wrong-recipient and closed accepted job boundaries; Packet 07 source extends blocks across discovery/detail/reputation/application and adds account restrictions/suspensions pending live smoke. |
+| GA-MAT-008 | Block/suspension/closed-job rules prevent action | Verified | Packet 04 production smoke verified wrong-recipient and closed accepted job boundaries; Packet 07 live smoke verified block-hardened discovery/detail/reputation paths and account-restriction mutation denial with support access preserved. |
 
 ## Messaging and Notifications
 
@@ -115,33 +115,33 @@ Evidence must eventually link to implementation, automated tests, manual accepta
 
 | ID | Requirement | Current | Evidence / gap |
 |---|---|---:|---|
-| GA-REV-001 | Only completed participants may review once | Partial | Packet 07 source adds completed-active-work participant checks and unique `(active_work, reviewer, reviewee)` reviews; DB-backed/live acceptance pending. |
-| GA-REV-002 | Two-sided review response/dispute state persists | Partial | Packet 07 source adds pending approval, approve, dispute, response, admin resolve/hide, and append-only review events; live acceptance pending. |
-| GA-REV-003 | Public reputation includes count/context and no fake data | Partial | Seeded review counts remain removed; Packet 07 source adds reputation count/average from approved/resolved canonical reviews and blocks reputation alternate routes; live acceptance pending. |
-| GA-SAFE-001 | Versioned signup and contextual work consent | Partial | Signup/job/application/offer consent is persisted; Packet 07 source adds actor attribution plus review submission and stop-work consent contexts; live acceptance pending. |
-| GA-SAFE-002 | Block and report user/job/message | Partial | Packet 05 live-smoked conversation report/block; Packet 07 source adds normalized safety reports and extends block enforcement across discovery/job/profile/application paths pending live smoke. |
-| GA-SAFE-003 | Unsafe condition / stop-work record | Partial | Packet 07 source adds no-fault unsafe-work and stop-work records with append-only events, participant authorization, contextual consent, and notifications; live acceptance pending. |
-| GA-SAFE-004 | Verification claims use accurate states | Partial | Seed talent verification/insurance claims were removed; Packet 07 source changes current visible copy to evidence-state and safety-module vocabulary. Counsel/content review and live UI acceptance remain. |
+| GA-REV-001 | Only completed participants may review once | Verified | Packet 07 live smoke verified completed-active-work participant review creation, duplicate review rejection, and ineligible outsider review rejection. |
+| GA-REV-002 | Two-sided review response/dispute state persists | Verified | Packet 07 live smoke verified pending review, dispute, response, admin resolve, and append-only review event behavior. |
+| GA-REV-003 | Public reputation includes count/context and no fake data | Verified | Seeded review counts remain removed; Packet 07 live smoke verified reputation count/average from canonical reviews and blocked-account reputation hiding. |
+| GA-SAFE-001 | Versioned signup and contextual work consent | Verified | Signup/job/application/offer consent is persisted; Packet 07 migration adds actor attribution and live smoke verified stop-work/review consent paths through accepted workflows. |
+| GA-SAFE-002 | Block and report user/job/message | Verified | Packet 05 live-smoked conversation report/block; Packet 07 live smoke verified normalized safety reports and extended block enforcement across job and reputation alternate paths. |
+| GA-SAFE-003 | Unsafe condition / stop-work record | Verified | Packet 07 live smoke verified no-fault unsafe-work/stop-work records with participant authorization, contextual consent, notifications, and append-only event history. |
+| GA-SAFE-004 | Verification claims use accurate states | Partial | Seed talent verification/insurance claims were removed; Packet 07 production changes current visible copy to evidence-state and safety-module vocabulary. Counsel/content review and remaining legacy/deferred surfaces still need launch signoff. |
 
 ## Admin and Operations
 
 | ID | Requirement | Current | Evidence / gap |
 |---|---|---:|---|
-| GA-ADM-001 | Internal routes require least-privilege admin authorization | Partial | Packet 07 source adds `admin_role_grants`, admin-only middleware, and removes the normal-user admin client view; live acceptance pending. |
-| GA-ADM-002 | Support can inspect safe account/workflow timeline | Partial | Packet 07 source adds support cases/events and admin overview for review/report/support/restriction queues; a fuller support timeline remains a Gate A hardening item. |
-| GA-ADM-003 | Moderation/account actions use reason and immutable audit | Partial | Packet 07 source adds reason-required admin review/support/restriction mutations with immutable `admin_action_events`; live smoke and broader moderation UX remain pending. |
+| GA-ADM-001 | Internal routes require least-privilege admin authorization | Verified | Packet 07 live smoke verified normal-user admin overview 403 and staff-only admin overview/review/restriction/support actions through `admin_role_grants`. |
+| GA-ADM-002 | Support can inspect safe account/workflow timeline | Partial | Packet 07 live smoke verified support cases/events and admin overview for review/report/support/restriction queues; a fuller support timeline remains a Gate A hardening item. |
+| GA-ADM-003 | Moderation/account actions use reason and immutable audit | Verified | Packet 07 live smoke verified reason-required admin review/support/restriction mutations and immutable `admin_action_events` count. Broader moderation UI remains later work, but the safety-critical audit path is live. |
 | GA-OPS-001 | Build and lint gates pass | Verified | Production build and repository-wide ESLint pass locally and in GitHub Actions with zero errors or warnings. |
 | GA-OPS-002 | Direct production dependencies are declared and vulnerability gate passes | Verified | `fast-xml-parser` is direct, Multer is 2.2.0, and `npm audit --omit=dev` reports zero vulnerabilities locally and in GitHub Actions. |
-| GA-OPS-003 | Health, readiness, and build version are distinct | Verified | Deployed health and authenticated readiness report dependencies, migration version, and exact source commit `993be38`. |
+| GA-OPS-003 | Health, readiness, and build version are distinct | Verified | Deployed health and authenticated readiness report dependencies, migration version, and exact source commit `01bf1ad`. |
 | GA-OPS-004 | Backup and timed restore drill pass | Unknown | Documentation requests it; no evidence found in repo. |
 | GA-OPS-005 | Structured logs, error monitoring, alerts, and incident routing | Missing | Console logging/basic responses only. |
 | GA-OPS-006 | Critical rate limits and upload abuse limits | Partial | Auth/write/upload limits and an explicit upload MIME/size/count policy exist; durable/distributed limits and domain quotas remain. |
 | GA-OPS-007 | Automated tests cover critical journeys and authorization | Partial | Unit/integration and Playwright journeys pass; disposable-Postgres auth/job/match authorization coverage passes in GitHub Actions. Broader domains remain packet work. |
-| GA-OPS-008 | Deployed commit, migrations, flags, and rollback are recorded | Partial | Packet 00-06 commits, Railway deployment IDs, config changes, migration status, smoke evidence, and rollback targets are recorded; a full timed isolated restore drill remains open. |
+| GA-OPS-008 | Deployed commit, migrations, flags, and rollback are recorded | Partial | Packet 00-07 commits, Railway deployment IDs, config changes, migration status, smoke evidence, and rollback targets are recorded; a full timed isolated restore drill remains open. |
 
 ## Current Gate A Summary
 
 - Production infrastructure is reachable and managed storage is healthy.
-- Authentication, canonical profiles/onboarding, jobs/discovery, match acceptance, messaging/notifications, and project records/completion have production evidence.
-- Reviews, admin operations, safety moderation, and full launch hardening remain Gate A packet work.
+- Authentication, canonical profiles/onboarding, jobs/discovery, match acceptance, messaging/notifications, project records/completion, reviews, admin operations, and safety records have production evidence.
+- Full launch hardening, restore drill evidence, distributed limits, observability/alerts, support runbooks, and final legacy bridge cleanup remain Gate A packet work.
 - The app must continue to avoid fake seed data, frontend-only success, and homeowner flows.

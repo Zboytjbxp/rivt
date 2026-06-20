@@ -1,11 +1,11 @@
 # RIVT Build State
 
 Last updated: 2026-06-20 America/New_York
-Current gate: Gate A reviews, admin, and safety
-Current phase: Packet 07 implemented locally; deployment and live acceptance pending
-Active packet: `docs/delivery/packets/07_REVIEWS_ADMIN_SAFETY.md`
+Current gate: Gate A launch hardening
+Current phase: Packet 07 accepted in production; Packet 08 ready for audit
+Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
-Production release commit: `993be3899f8eb996229be90cf423cf58e5e27c76`
+Production release commit: `01bf1adfedef03ee7ecd7c408d2bab6cbde654fe`
 
 ## Source State
 
@@ -277,7 +277,7 @@ Run on 2026-06-20 from `master`:
 
 Packet 06 is accepted in production for private accepted-work project records, authorized media evidence, content-signature rejection, notes, completion submission, contractor confirmation/dispute, and reproducible closeout reports. Reviews, admin/support, safety moderation, and final launch hardening remain later packets and must not be represented as production-ready.
 
-## Packet 07 Implemented Locally
+## Packet 07 Implemented
 
 - Added migration `0008_reviews_admin_safety` for participant reviews, review events, safety reports, unsafe-work reports, support cases/events, admin role grants, admin action events, and account restrictions/events.
 - Added `actor_account_id` to consent acceptances and expanded consent contexts for review submission and stop-work acknowledgement.
@@ -302,11 +302,23 @@ Run on 2026-06-20 from `master`:
 - `npm audit --omit=dev`: pass; zero vulnerabilities.
 - `npm run lint:security`: pass.
 
-Packet 07 is not accepted yet. Deployment, disposable-PostgreSQL CI evidence, production readiness for migration `0008_reviews_admin_safety`, and `npm run smoke:reviews:live` remain required before production acceptance.
+The first production smoke attempt on deployment `0f708552-8598-4a04-8f45-0126262efce8` caught an onboarding regression: the new mutation-restriction guard blocked pending accounts from completing onboarding. Commit `01bf1adfedef03ee7ecd7c408d2bab6cbde654fe` fixed the guard so `/api/v1/onboarding/complete` remains available to pending accounts while normal mutating routes still fail closed for inactive or restricted accounts. The full local gate passed again before redeploy.
+
+## Packet 07 Production Evidence
+
+- Source commit: `01bf1adfedef03ee7ecd7c408d2bab6cbde654fe`
+- Railway deployment: application deploy `698ce001-b5b2-42c6-9967-9c89e30afe68`, followed by metadata redeploy `b3c91226-d60b-407f-a93e-1e289cbdc968` after updating `SOURCE_COMMIT`.
+- `https://rivt.pro/api/health`: 200, source commit matched the release, PostgreSQL and S3-compatible storage healthy.
+- Production migration status: `0008_reviews_admin_safety`, eight applied migrations, zero pending, verified during live smoke readiness.
+- Live smoke `packet07-20260620143318-94c6bd`: disposable contractor, tradesperson, outsider, and admin signup/onboarding passed; normal user admin overview returned 403; readiness confirmed migration `0008_reviews_admin_safety`; completed active work accepted one review and rejected duplicate/ineligible reviews; review dispute, response, admin resolve, and reputation count passed; unsafe stop-work report and safety report persisted; block enforcement hid job detail/list and reputation paths; admin suspension blocked normal mutations while support remained available; admin support assist and restriction lift passed; immutable admin-action evidence counted 4 actions; disposable accounts and smoke records were closed.
+
+## Packet 07 Acceptance
+
+Packet 07 is accepted in production for participant reviews, review disputes/resolution, reputation counts, safety reports, unsafe stop-work reports, support cases, least-privilege admin access, account restrictions, admin action events, and extended block enforcement. Gate A launch hardening, restore drill evidence, distributed limits, monitoring/alerts, and final ops checklist remain before first-user launch.
 
 ## Next Exact Task
 
-Deploy Packet 07 after source review, confirm migration `0008_reviews_admin_safety` in readiness, then run `npm run smoke:reviews:live` and record production acceptance evidence.
+Start Packet 08 (`docs/delivery/packets/08_GATE_A_HARDENING.md`) with a hardening audit: restore drill, monitoring/alerts, distributed rate limits, support/incident runbooks, final seed-data sweep, and launch checklist closure.
 
 ## Blocking Founder Decisions
 
