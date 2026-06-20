@@ -189,7 +189,7 @@ Add one entry per staging/production deployment.
 - Automated gates: local `node --check` for new scripts, `npm run lint:security`, `npm run build`, `npm run lint`, `npm run test`, `npm run test:e2e`, and `npm audit --omit=dev` passed; local DB-backed integration tests skipped because `TEST_DATABASE_URL` is not configured
 - Post-deploy smoke tests: public `/api/health` passed and reported exact source commit. First live hardening audit caught user-facing test artifacts: two `RIVT * Test` public profiles and twelve Packet 03-07 smoke organizations. Guarded production cleanup made the two profiles private and closed the twelve smoke organizations without deleting records. Final `npm run smoke:gate-a:live` passed with exact source, migration `0008_reviews_admin_safety`, seven anonymous private-route checks returning 401, zero seed/demo findings, 3 active accounts, 0 public network profiles, 0 open jobs, 2 open support cases, 0 active restrictions, and 115 legacy app-state rows.
 - Health/readiness result: health reports PostgreSQL and S3-compatible storage healthy with exact source commit `7e60a9de537fcc555b32f2510c4bed5371ccd264`; authenticated readiness exposes operational-control state and migration status
-- Known risks: full Gate A remains blocked by timed isolated restore drill, external monitoring/alerts and incident routing, durable/distributed rate limits, manual accessibility/device matrix, support/legal/founder signoff, and final legacy app-state bridge disposition
+- Known risks at this release: full Gate A remained blocked by timed isolated restore drill, external monitoring/alerts and incident routing, durable/distributed rate limits, manual accessibility/device matrix, support/legal/founder signoff, and the still-open legacy bridge decision. Later Packet 08 slices closed durable rate limits and the legacy bridge decision.
 - Rollback performed/result: not required
 - Approval: Packet 08 hardening audit slice accepted; overall Gate A not approved
 
@@ -208,6 +208,25 @@ Add one entry per staging/production deployment.
 - Automated gates: `node --check server/security.js`, `node --check server/index.js`, `node --check scripts/live-gate-a-hardening.js`, targeted `node --test test/security.test.js`, local `npm run lint:security`, `npm run build`, `npm run lint`, `npm run test`, `npm run test:e2e`, and `npm audit --omit=dev` passed; local DB-backed integration tests skipped because `TEST_DATABASE_URL` is not configured
 - Post-deploy smoke tests: public `/api/health` passed and reported exact source commit. Final `npm run smoke:gate-a:live` passed from the Railway runtime with migration `0009_durable_rate_limits`, seven anonymous private-route checks returning 401, zero seed/demo findings, 3 active accounts, 0 public network profiles, 0 open jobs, 2 open support cases, 0 active restrictions, 115 legacy app-state rows, and 0 rate-limit windows before traffic.
 - Health/readiness result: health reports PostgreSQL and S3-compatible storage healthy with exact source commit `bf42ee6a51dc91ddeb4c2451ee2434e0548d8615`; live hardening audit reports latest migration `0009_durable_rate_limits`
-- Known risks: full Gate A remains blocked by timed isolated restore drill, external monitoring/alerts and incident routing, manual accessibility/device matrix, support/legal/founder signoff, and final legacy app-state bridge disposition
+- Known risks at this release: full Gate A remained blocked by timed isolated restore drill, external monitoring/alerts and incident routing, manual accessibility/device matrix, support/legal/founder signoff, and the still-open legacy bridge decision. The subsequent Packet 08 legacy bridge retirement slice closed that decision.
 - Rollback performed/result: not required
 - Approval: Packet 08 durable rate-limit slice accepted; overall Gate A not approved
+
+## Current Production - Packet 08 Legacy Bridge Retirement
+
+- Environment: Production (`https://rivt.pro`)
+- Date/time/timezone: 2026-06-20 15:06 America/New_York
+- Deployer: Codex through authenticated Railway CLI
+- Source repository/branch: `Zboytjbxp/rivt`, `master`
+- Source commit: `00147c8e3f70e246b41ed48b46550ae33cf0eb54`
+- Build/artifact ID: Railway application deployment `dd46b5e2-916a-47be-9dde-36cb0c8d9ed6`; metadata redeploy `f2170045-3df8-498e-b29e-fc733cc18b9f` after updating `SOURCE_COMMIT`
+- Migration version before/after: `0009_durable_rate_limits` / `0009_durable_rate_limits`
+- Feature-flag/config version: `SOURCE_COMMIT` updated to `00147c8e3f70e246b41ed48b46550ae33cf0eb54`; no operational-control flags changed
+- Provider/config changes: no provider credentials changed; no external monitoring provider was configured in this deployment
+- Backup/rollback target: prior successful Packet 08 durable-rate-limit deployment `300918e1-5ed5-44f3-8bbb-e2c289c5f97a`; no migration change
+- Automated gates: local `npm run lint`, `npm run build`, `npm run test`, `npm run test:e2e`, `npm run lint:security`, and `npm audit --omit=dev` passed; local DB-backed integration tests skipped because `TEST_DATABASE_URL` is not configured
+- Post-deploy smoke tests: public `/api/health` passed and reported exact source commit. `npm run smoke:gate-a:live` passed inside the Railway service with migration `0009_durable_rate_limits`, seven anonymous private-route checks returning 401, zero seed/demo findings, 3 active accounts, 0 public network profiles, 0 open jobs, 2 open support cases, 0 active restrictions, 115 quarantined legacy app-state rows, and 0 rate-limit windows before traffic.
+- Health/readiness result: health reports PostgreSQL and S3-compatible storage healthy with exact source commit `00147c8e3f70e246b41ed48b46550ae33cf0eb54`; live hardening audit reports latest migration `0009_durable_rate_limits`
+- Known risks: full Gate A remains blocked by timed isolated restore drill, external monitoring/alerts and incident routing, manual accessibility/device matrix, and support/legal/founder signoff
+- Rollback performed/result: not required
+- Approval: Packet 08 legacy bridge retirement slice accepted; overall Gate A not approved

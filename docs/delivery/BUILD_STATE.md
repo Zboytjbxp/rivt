@@ -2,10 +2,10 @@
 
 Last updated: 2026-06-20 America/New_York
 Current gate: Gate A launch hardening
-Current phase: Packet 08 legacy app-state bridge retired in source; production redeploy pending
+Current phase: Packet 08 legacy app-state bridge retired and deployed; full Gate A approval remains blocked
 Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
-Production release commit: `bf42ee6a51dc91ddeb4c2451ee2434e0548d8615`
+Production release commit: `00147c8e3f70e246b41ed48b46550ae33cf0eb54`
 
 ## Source State
 
@@ -356,7 +356,7 @@ Local restore tooling remains unavailable on this workstation (`docker`, `psql`,
 
 ## Packet 08 Legacy Bridge Retirement
 
-Implemented locally on 2026-06-20:
+Implemented and deployed on 2026-06-20:
 
 - Retired authenticated `/api/app-state` read/write calls with `410 LEGACY_APP_STATE_RETIRED`.
 - Retired authenticated `/api/events` generic event writes with `410 LEGACY_EVENTS_RETIRED`.
@@ -372,14 +372,22 @@ Local verification for this slice:
 - `npm run test`: pass; DB-backed suites skipped locally because `TEST_DATABASE_URL` is not configured.
 - `npm run test:e2e`: pass.
 - `npm audit --omit=dev`: pass; zero vulnerabilities.
+- `npm run lint:security`: pass.
+
+Production evidence:
+
+- Source commit: `00147c8e3f70e246b41ed48b46550ae33cf0eb54`
+- Railway deployment: application deploy `dd46b5e2-916a-47be-9dde-36cb0c8d9ed6`, followed by metadata redeploy `f2170045-3df8-498e-b29e-fc733cc18b9f` after updating `SOURCE_COMMIT`.
+- `https://rivt.pro/api/health`: 200, source commit matched the release, PostgreSQL and S3-compatible storage healthy.
+- Live hardening audit executed inside the Railway service with private network access: exact source `00147c8e3f70e246b41ed48b46550ae33cf0eb54`, migration `0009_durable_rate_limits`, seven anonymous private-route checks returning 401, zero seed/demo findings, and counts of 3 active accounts, 0 public network profiles, 0 open jobs, 2 open support cases, 0 active restrictions, 115 quarantined legacy app-state rows, and 0 rate-limit windows before traffic.
 
 ## Packet 08 Gate Status
 
-The Packet 08 hardening and durable-rate-limit slices are deployed and accepted as evidence. The legacy app-state bridge is retired in source and still needs production redeploy/live smoke evidence. Full Gate A approval is rejected until the remaining launch blockers are closed: timed isolated restore drill, external monitoring/alerts and incident routing, support/legal/founder signoff, and manual accessibility/device matrix.
+The Packet 08 hardening, durable-rate-limit, and legacy-bridge retirement slices are deployed and accepted as evidence. Full Gate A approval is rejected until the remaining launch blockers are closed: timed isolated restore drill, external monitoring/alerts and incident routing, support/legal/founder signoff, and manual accessibility/device matrix.
 
 ## Next Exact Task
 
-Redeploy the legacy-bridge retirement, re-run live hardening smoke, then complete the remaining Packet 08 launch blockers: provision an isolated restore target and run a timed restore drill; wire external monitoring/alerts and incident owner routing; finish support/legal/founder approvals; and complete the manual accessibility/device matrix before named-cohort launch.
+Complete the remaining Packet 08 launch blockers: provision an isolated restore target and run a timed restore drill; wire external monitoring/alerts and incident owner routing; finish support/legal/founder approvals; and complete the manual accessibility/device matrix before named-cohort launch.
 
 ## Blocking Founder Decisions
 
