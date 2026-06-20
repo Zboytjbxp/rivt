@@ -51,7 +51,8 @@ if (!testDatabaseUrl) {
   }
 
   async function createAccount(baseUrl, role, label) {
-    const email = `${label}-${randomUUID()}@example.test`;
+    const emailLabel = label.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+    const email = `${emailLabel}-${randomUUID()}@example.test`;
     const signup = await requestJson(baseUrl, "/api/v1/auth/signup", {
       method: "POST",
       body: { email, password: "SafePassword!1234", displayName: label, role },
