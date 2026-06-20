@@ -31,6 +31,17 @@ Use these only during a real incident, launch pause, or controlled maintenance w
 
 Support and admin routes remain available during platform mutation lockout so users can appeal/get help and staff can operate the incident. Record every enable/disable action in the deployment ledger or incident notes.
 
+## Durable Rate Limits
+
+Gate A auth, write, and upload throttles use the PostgreSQL `rate_limit_windows` table introduced in migration `0009_durable_rate_limits`.
+
+- Subjects are hashed before storage; do not add raw IPs, emails, or account names to this table.
+- Auth limits default to `AUTH_RATE_LIMIT` per 15 minutes.
+- Write limits default to `WRITE_RATE_LIMIT` per minute.
+- Upload limits default to `UPLOAD_RATE_LIMIT` per hour.
+- Threshold changes are production config changes and must be recorded in the deployment ledger.
+- A sudden spike in this table is an operational signal; correlate with structured request logs and provider alerts once monitoring is wired.
+
 ## Authentication Incident
 
 1. Disable affected provider or new login through kill switch if exploitation/data exposure is plausible.

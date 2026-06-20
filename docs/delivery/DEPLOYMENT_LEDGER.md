@@ -192,3 +192,22 @@ Add one entry per staging/production deployment.
 - Known risks: full Gate A remains blocked by timed isolated restore drill, external monitoring/alerts and incident routing, durable/distributed rate limits, manual accessibility/device matrix, support/legal/founder signoff, and final legacy app-state bridge disposition
 - Rollback performed/result: not required
 - Approval: Packet 08 hardening audit slice accepted; overall Gate A not approved
+
+## Current Production - Packet 08 Durable Rate Limits
+
+- Environment: Production (`https://rivt.pro`)
+- Date/time/timezone: 2026-06-20 13:36 America/New_York
+- Deployer: Codex through authenticated Railway CLI
+- Source repository/branch: `Zboytjbxp/rivt`, `master`
+- Source commit: `bf42ee6a51dc91ddeb4c2451ee2434e0548d8615`
+- Build/artifact ID: Railway application deployment `14ae3c42-c5c0-4bfb-a873-b496a51c6877`; metadata redeploy `300918e1-5ed5-44f3-8bbb-e2c289c5f97a` after updating `SOURCE_COMMIT`
+- Migration version before/after: `0008_reviews_admin_safety` / `0009_durable_rate_limits`
+- Feature-flag/config version: `SOURCE_COMMIT` updated to `bf42ee6a51dc91ddeb4c2451ee2434e0548d8615`; auth/write/upload limits now use the PostgreSQL `rate_limit_windows` table
+- Provider/config changes: no provider credentials changed; no external monitoring provider was configured in this deployment
+- Backup/rollback target: prior successful Packet 08 hardening deployment `2cf8d8d3-b46f-4400-a049-b3a68f64ad14`; migration `0009_durable_rate_limits` has a down migration that drops only `rate_limit_windows`
+- Automated gates: `node --check server/security.js`, `node --check server/index.js`, `node --check scripts/live-gate-a-hardening.js`, targeted `node --test test/security.test.js`, local `npm run lint:security`, `npm run build`, `npm run lint`, `npm run test`, `npm run test:e2e`, and `npm audit --omit=dev` passed; local DB-backed integration tests skipped because `TEST_DATABASE_URL` is not configured
+- Post-deploy smoke tests: public `/api/health` passed and reported exact source commit. Final `npm run smoke:gate-a:live` passed from the Railway runtime with migration `0009_durable_rate_limits`, seven anonymous private-route checks returning 401, zero seed/demo findings, 3 active accounts, 0 public network profiles, 0 open jobs, 2 open support cases, 0 active restrictions, 115 legacy app-state rows, and 0 rate-limit windows before traffic.
+- Health/readiness result: health reports PostgreSQL and S3-compatible storage healthy with exact source commit `bf42ee6a51dc91ddeb4c2451ee2434e0548d8615`; live hardening audit reports latest migration `0009_durable_rate_limits`
+- Known risks: full Gate A remains blocked by timed isolated restore drill, external monitoring/alerts and incident routing, manual accessibility/device matrix, support/legal/founder signoff, and final legacy app-state bridge disposition
+- Rollback performed/result: not required
+- Approval: Packet 08 durable rate-limit slice accepted; overall Gate A not approved

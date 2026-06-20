@@ -15,13 +15,13 @@ Evidence must eventually link to implementation, automated tests, manual accepta
 | ID | Requirement | Current | Evidence / gap |
 |---|---|---:|---|
 | GA-FND-001 | Managed PostgreSQL and private object storage are required | Verified | Live `/api/health` and `/api/storage` report PostgreSQL and S3-compatible storage healthy. |
-| GA-FND-002 | Versioned database migrations own schema changes | Verified | Production runs checksummed transactional migrations with advisory locking; apply/rerun/rollback/reapply/tamper tests pass and status reports `0008_reviews_admin_safety` with zero pending. |
+| GA-FND-002 | Versioned database migrations own schema changes | Verified | Production runs checksummed transactional migrations with advisory locking; apply/rerun/rollback/reapply/tamper tests pass and status reports `0009_durable_rate_limits` with zero pending. |
 | GA-FND-003 | Core records use normalized, user-owned domain tables | Partial | Canonical account/profile/organization/trade, job, application, offer, active-work, participant, timeline, conversation, message, receipt, notification, project, project media, completion, review, safety, support, admin-role, admin-action, and restriction foundations are live-smoked. Remaining legacy app-state authority must be removed before launch. |
 | GA-FND-004 | Authenticated tenant/ownership authorization protects every private API | Partial | Canonical job/match/messaging/project/review/safety/admin/support routes pass live smoke with owner, participant, blocked-account, restricted-account, and staff-role boundaries. Legacy bridge routes remain until final hardening. |
 | GA-FND-005 | API uses consistent typed errors and validation | Partial | `/api/v1` has request IDs, Zod validation, stable errors, and pagination primitives; legacy APIs retain transitional shapes. |
-| GA-FND-006 | Retryable writes are idempotent | Partial | Canonical idempotency storage is used by job, match, messaging, project, review, report, unsafe-work, support, and admin/restriction mutations; distributed replay/rate-limit hardening remains Packet 08 work. |
+| GA-FND-006 | Retryable writes are idempotent | Partial | Canonical idempotency storage is used by job, match, messaging, project, review, report, unsafe-work, support, and admin/restriction mutations; Packet 08 adds durable shared rate-limit buckets. Some smaller profile/session mutations remain non-idempotent by design. |
 | GA-FND-007 | Auditable domain events use authenticated actor and subject | Verified | Job, application, offer, active-work, message, project media, project entry, completion, review, unsafe-work, support, restriction, and admin action events include actor/subject/time/reason as applicable; live smoke and append-only triggers cover critical domains. |
-| GA-FND-008 | Internal diagnostics identify deployed source revision and dependency readiness | Verified | Health/readiness identify exact source `7e60a9d`, dependencies, applied migrations, pending count, and Packet 08 operational-control state in production. |
+| GA-FND-008 | Internal diagnostics identify deployed source revision and dependency readiness | Verified | Health/readiness identify exact source `bf42ee6`, dependencies, applied migrations, pending count, and Packet 08 operational-control state in production. |
 
 ## Authentication and Account
 
@@ -73,7 +73,7 @@ Evidence must eventually link to implementation, automated tests, manual accepta
 | GA-JOB-007 | Exact address remains server-private until accepted relationship | Verified | Packet 04 live smoke verified exact address was hidden before acceptance, revealed to the accepted tradesperson after offer acceptance, and unavailable to an unrelated tradesperson. |
 | GA-JOB-008 | Published/paused/closed status transitions are server-enforced | Verified | Server enforces valid lifecycle transitions and rejects invalid duplicate/closed transitions; unit, E2E, and live smoke pass. |
 | GA-JOB-009 | Job events are timestamped with actor/reason | Verified | Status events and audit events include authenticated actor/reason/timestamp and are immutable via trigger; lifecycle live smoke passed. |
-| GA-JOB-010 | Rate limits and duplicate-submit protection | Partial | Job create/publish daily limits and idempotency-key replay protection are implemented and live-smoked; distributed rate-limit hardening remains later ops work. |
+| GA-JOB-010 | Rate limits and duplicate-submit protection | Verified | Job create/publish daily limits, idempotency-key replay protection, and Packet 08 PostgreSQL-backed write limits are implemented; job lifecycle and hardening smoke passed in production. |
 
 ## Applications, Offers, and Active Work
 
@@ -132,10 +132,10 @@ Evidence must eventually link to implementation, automated tests, manual accepta
 | GA-ADM-003 | Moderation/account actions use reason and immutable audit | Verified | Packet 07 live smoke verified reason-required admin review/support/restriction mutations and immutable `admin_action_events` count. Broader moderation UI remains later work, but the safety-critical audit path is live. |
 | GA-OPS-001 | Build and lint gates pass | Verified | Production build and repository-wide ESLint pass locally and in GitHub Actions with zero errors or warnings. |
 | GA-OPS-002 | Direct production dependencies are declared and vulnerability gate passes | Verified | `fast-xml-parser` is direct, Multer is 2.2.0, and `npm audit --omit=dev` reports zero vulnerabilities locally and in GitHub Actions. |
-| GA-OPS-003 | Health, readiness, and build version are distinct | Verified | Deployed health and authenticated readiness report dependencies, migration version, operational-control state, and exact source commit `7e60a9d`. |
+| GA-OPS-003 | Health, readiness, and build version are distinct | Verified | Deployed health and authenticated readiness report dependencies, migration version, operational-control state, and exact source commit `bf42ee6`. |
 | GA-OPS-004 | Backup and timed restore drill pass | Blocker | Encrypted cloud snapshot was previously decrypted/count-reconciled, but no timed isolated restore has passed. Packet 08 confirmed local restore tooling is unavailable. |
 | GA-OPS-005 | Structured logs, error monitoring, alerts, and incident routing | Partial | Packet 08 added structured JSON request/domain logs and request IDs; external error monitoring, alert rules, paging destination, and incident owner routing remain missing. |
-| GA-OPS-006 | Critical rate limits and upload abuse limits | Partial | Auth/write/upload limits, upload MIME/size/count policy, domain quotas, and Packet 08 signup/mutation kill switches exist; durable/distributed limits remain required before named cohort launch. |
+| GA-OPS-006 | Critical rate limits and upload abuse limits | Verified | Auth/write/upload limits now use PostgreSQL-backed `rate_limit_windows`, uploads retain MIME/size/count policy, domain quotas remain in workflow routes, and signup/mutation kill switches are live. Threshold tuning remains an operating task, not a launch blocker. |
 | GA-OPS-007 | Automated tests cover critical journeys and authorization | Partial | Unit/integration and Playwright journeys pass; disposable-Postgres auth/job/match authorization coverage passes in GitHub Actions. Broader domains remain packet work. |
 | GA-OPS-008 | Deployed commit, migrations, flags, and rollback are recorded | Partial | Packet 00-08 commits, Railway deployment IDs, config changes, migration status, operational controls, smoke/hardening audit evidence, and rollback targets are recorded; a full timed isolated restore drill remains open. |
 
@@ -143,6 +143,6 @@ Evidence must eventually link to implementation, automated tests, manual accepta
 
 - Production infrastructure is reachable and managed storage is healthy.
 - Authentication, canonical profiles/onboarding, jobs/discovery, match acceptance, messaging/notifications, project records/completion, reviews, admin operations, and safety records have production evidence.
-- Packet 08 hardening audit passed live with exact source, migration status, anonymous fail-closed routes, operational controls, and zero seed/demo findings after cleanup.
-- Full Gate A approval remains blocked by restore drill evidence, distributed limits, external observability/alerts, support/legal/founder signoff, manual accessibility/device evidence, and final legacy bridge cleanup.
+- Packet 08 hardening audit passed live with exact source, migration status, anonymous fail-closed routes, operational controls, durable rate-limit storage, and zero seed/demo findings after cleanup.
+- Full Gate A approval remains blocked by restore drill evidence, external observability/alerts, support/legal/founder signoff, manual accessibility/device evidence, and final legacy bridge cleanup.
 - The app must continue to avoid fake seed data, frontend-only success, and homeowner flows.
