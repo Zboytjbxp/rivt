@@ -335,8 +335,15 @@ function summarizeResults({ run, buildCommit, accountsClosed, results, mode = "f
       viewport: result.viewport,
       auditCount: result.audits.length,
       consoleWarningsOrErrors: result.logs.length,
+      consoleSamples: result.logs.slice(0, 3),
       topBarSignals: result.audits[0]?.topBarSignals ?? null,
       smallTargetCount: result.audits.reduce((count, audit) => count + audit.smallTargets.length, 0),
+      smallTargetSamples: result.audits.flatMap((audit) =>
+        audit.smallTargets.map((target) => ({
+          screen: audit.label,
+          ...target,
+        })),
+      ).slice(0, 10),
     })),
   };
 }

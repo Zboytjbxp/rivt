@@ -105,7 +105,12 @@ export function AppShell({
           </button>
         ) : null}
 
-        <button className="v2-sidebar-profile" type="button" onClick={onOpenAccount}>
+        <button
+          className="v2-sidebar-profile"
+          type="button"
+          onClick={onOpenAccount}
+          aria-label={`Open profile menu for ${profile.name || "RIVT member"}`}
+        >
           <InitialAvatar name={profile.name} />
           <span>
             <strong>{profile.name || "RIVT member"}</strong>
@@ -150,7 +155,12 @@ export function AppShell({
               <Bell size={19} />
               {notificationCount > 0 ? <span>{Math.min(notificationCount, 9)}</span> : null}
             </button>
-            <button type="button" className="v2-account-button" onClick={onOpenAccount}>
+            <button
+              type="button"
+              className="v2-account-button"
+              onClick={onOpenAccount}
+              aria-label={`Open profile menu for ${profile.name || "RIVT member"}`}
+            >
               <InitialAvatar name={profile.name} />
               <span className="v2-account-copy">
                 <strong>{profile.name || "RIVT member"}</strong>
