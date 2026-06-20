@@ -1,0 +1,311 @@
+import "dotenv/config";
+import assert from "node:assert/strict";
+import { createHash, randomBytes } from "node:crypto";
+import pg from "pg";
+import { chromium } from "playwright";
+
+const baseUrl = process.env.RIVT_SMOKE_BASE_URL ?? "https://rivt.pro";
+const databaseUrl = process.env.DATABASE_URL?.trim();
+const expectedCommit = process.env.EXPECTED_SOURCE_COMMIT?.trim() || process.env.SOURCE_COMMIT?.trim();
+const smokeRun = `ui-a11y-${new Date().toISOString().replace(/[^0-9]/g, "").slice(0, 14)}-${randomBytes(3).toString("hex")}`;
+
+if (!databaseUrl) throw new Error("DATABASE_URL is required.");
+
+const pool = new pg.Pool({
+  connectionString: databaseUrl,
+  ssl: process.env.PGSSL === "disable" || databaseUrl.includes("localhost") ? false : { rejectUnauthorized: false },
+});
+
+function sha256(value) {
+  return createHash("sha256").update(value).digest("hex");
+}
+
+function normalizeEmail(email) {
+  return String(email).trim().toLowerCase();
+}
+
+function sessionCookie(response) {
+  return String(response.headers.get("set-cookie") ?? "").split(";", 1)[0];
+}
+
+async function requestJson(path, { body, cookie, idempotencyKey, method = "GET", expected } = {}) {
+  const headers = { Origin: baseUrl };
+  if (body !== undefined) headers["Content-Type"] = "application/json";
+  if (cookie) headers.Cookie = cookie;
+  if (idempotencyKey) headers["Idempotency-Key"] = idempotencyKey;
+  const response = await fetch(`${baseUrl}${path}`, {
+    method,
+    headers,
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+  const text = await response.text();
+  const payload = text ? JSON.parse(text) : null;
+  if (expected !== undefined) {
+    assert.equal(response.status, expected, `${method} ${path} returned ${response.status}: ${text}`);
+  }
+  return { response, payload };
+}
+
+async function createInvite(client, { email, role }) {
+  const code = `rivt_${randomBytes(24).toString("base64url")}`;
+  const result = await client.query(
+    `INSERT INTO signup_invites (code_hash, email_hash, allowed_role, max_uses, expires_at)
+     VALUES ($1, $2, $3, 1, now() + interval '1 day')
+     RETURNING id`,
+    [sha256(code), sha256(normalizeEmail(email)), role],
+  );
+  return { code, id: result.rows[0].id };
+}
+
+async function verifyEmailDirectly(client, email) {
+  await client.query(
+    "UPDATE auth_users SET email_verified_at = COALESCE(email_verified_at, now()), updated_at = now() WHERE email_hash = $1",
+    [sha256(normalizeEmail(email))],
+  );
+}
+
+async function signupAndOnboard(role, label) {
+  const email = `${smokeRun}-${role}-${randomBytes(2).toString("hex")}@example.test`;
+  const password = `UiSmoke!${randomBytes(10).toString("base64url")}1a`;
+  const invite = await createInvite(pool, { email, role });
+  const signup = await requestJson("/api/v1/auth/signup", {
+    method: "POST",
+    expected: 201,
+    body: {
+      email,
+      password,
+      displayName: `${label} ${smokeRun}`,
+      role,
+      inviteCode: invite.code,
+    },
+  });
+  const cookie = sessionCookie(signup.response);
+  await verifyEmailDirectly(pool, email);
+  await requestJson("/api/v1/onboarding/complete", {
+    method: "POST",
+    cookie,
+    expected: 200,
+    body: {
+      role,
+      displayName: `${label} ${smokeRun}`,
+      headline: role === "contractor" ? "RIVT UI smoke contractor" : "RIVT UI smoke electrician",
+      bio: "Temporary Gate A authenticated UI accessibility smoke account.",
+      serviceAreaCity: "Jacksonville",
+      serviceAreaRegion: "FL",
+      serviceRadiusMiles: 35,
+      availabilityStatus: "available",
+      contactEmailVisibility: "private",
+      phoneE164: null,
+      phoneVisibility: "private",
+      tradeCodes: ["electrical"],
+      organizationName: role === "contractor" ? `${label} ${smokeRun} LLC` : undefined,
+      consentAccepted: true,
+      consentVersion: "2026-06-19",
+    },
+  });
+  const me = await requestJson("/api/v1/me", { cookie, expected: 200 });
+  return {
+    role,
+    email,
+    password,
+    cookie,
+    inviteId: invite.id,
+    accountId: me.payload.data.id,
+    organizationId: me.payload.data.organizations[0]?.id,
+  };
+}
+
+async function closeSmokeArtifacts(accounts) {
+  const accountIds = accounts.map((account) => account.accountId).filter(Boolean);
+  if (accountIds.length === 0) return;
+
+  await pool.query("UPDATE profiles SET visibility = 'private', updated_at = now() WHERE account_id = ANY($1::uuid[])", [accountIds]);
+  await pool.query("UPDATE auth_sessions SET revoked_at = now() WHERE user_id = ANY($1::uuid[]) AND revoked_at IS NULL", [accountIds]);
+  await pool.query("UPDATE jobs SET status = 'closed', closed_at = COALESCE(closed_at, now()), updated_at = now() WHERE created_by_account_id = ANY($1::uuid[]) AND status <> 'closed'", [accountIds]);
+  await pool.query("UPDATE organizations SET status = 'closed', updated_at = now() WHERE created_by_account_id = ANY($1::uuid[]) AND status <> 'closed'", [accountIds]);
+  await pool.query("UPDATE accounts SET status = 'closed', updated_at = now() WHERE id = ANY($1::uuid[])", [accountIds]);
+}
+
+async function firstVisibleClick(page, label) {
+  const count = await page.evaluate((text) => {
+    function visible(el) {
+      const rect = el.getBoundingClientRect();
+      const style = window.getComputedStyle(el);
+      return rect.width > 0 && rect.height > 0 && style.visibility !== "hidden" && style.display !== "none";
+    }
+    const matches = [...document.querySelectorAll("button,a")]
+      .filter((el) => visible(el) && (el.textContent || "").replace(/\s+/g, " ").trim() === text);
+    matches.at(-1)?.click();
+    return matches.length;
+  }, label);
+  assert.ok(count > 0, `No visible ${label} navigation control was found.`);
+  await page.waitForTimeout(350);
+}
+
+async function collectUiAudit(page, label) {
+  return page.evaluate((auditLabel) => {
+    function textOf(el) {
+      return (el.getAttribute("aria-label") || el.getAttribute("title") || el.textContent || el.getAttribute("placeholder") || "")
+        .replace(/\s+/g, " ")
+        .trim();
+    }
+    function visible(el) {
+      const rect = el.getBoundingClientRect();
+      const style = window.getComputedStyle(el);
+      return rect.width > 0 && rect.height > 0 && style.visibility !== "hidden" && style.display !== "none";
+    }
+    const interactive = [...document.querySelectorAll("button,a,input,select,textarea,[role='button'],[tabindex]:not([tabindex='-1'])")]
+      .filter(visible);
+    const controls = interactive.map((el) => {
+      const rect = el.getBoundingClientRect();
+      return {
+        name: textOf(el),
+        tag: el.tagName.toLowerCase(),
+        width: Math.round(rect.width),
+        height: Math.round(rect.height),
+      };
+    });
+    const bodyText = document.body.innerText.replace(/\s+/g, " ").trim();
+    const overflow = [...document.body.querySelectorAll("*")]
+      .filter(visible)
+      .map((el) => {
+        const rect = el.getBoundingClientRect();
+        return {
+          name: textOf(el).slice(0, 80),
+          tag: el.tagName.toLowerCase(),
+          left: Math.round(rect.left),
+          right: Math.round(rect.right),
+          width: Math.round(rect.width),
+        };
+      })
+      .filter((entry) => entry.left < -2 || entry.right > window.innerWidth + 2)
+      .slice(0, 20);
+
+    return {
+      label: auditLabel,
+      url: window.location.href,
+      title: document.title,
+      viewport: {
+        width: window.innerWidth,
+        height: window.innerHeight,
+        scrollWidth: document.documentElement.scrollWidth,
+        scrollHeight: document.documentElement.scrollHeight,
+      },
+      requiredNav: ["Home", "Work", "Crew", "Shop Talk", "Tools"].map((name) => ({
+        name,
+        visible: controls.some((control) => control.name === name),
+      })),
+      topBarSignals: {
+        search: controls.some((control) => /search/i.test(control.name)),
+        messages: controls.some((control) => /message|chat/i.test(control.name)),
+        notifications: controls.some((control) => /notification|bell/i.test(control.name)),
+        profile: controls.some((control) => /profile|account|avatar|sign out/i.test(control.name)),
+      },
+      hasMoreNav: controls.some((control) => control.name === "More"),
+      roleToggleVisible: [...document.querySelectorAll(".role-toggle")].some(visible),
+      missingNames: controls.filter((control) => !control.name).slice(0, 15),
+      smallTargets: controls.filter((control) => control.width < 44 || control.height < 44).slice(0, 20),
+      overflow,
+      bodyStart: bodyText.slice(0, 500),
+      frameworkOverlay: /vite|webpack|next\.js|runtime error|failed to compile/i.test(bodyText),
+    };
+  }, label);
+}
+
+async function loginAndAudit(browser, account, viewport) {
+  const context = await browser.newContext({ viewport });
+  const page = await context.newPage();
+  const logs = [];
+  page.on("console", (message) => {
+    if (["warning", "error"].includes(message.type())) {
+      logs.push({ type: message.type(), text: message.text().slice(0, 300) });
+    }
+  });
+
+  try {
+    await page.goto(baseUrl, { waitUntil: "domcontentloaded" });
+    await page.locator("form input[type='email']").fill(account.email);
+    await page.locator("form input[type='password']").fill(account.password);
+    await Promise.all([
+      page.waitForResponse((response) => response.url().includes("/api/v1/auth/login"), { timeout: 20000 }),
+      page.locator("form button[type='submit']").click(),
+    ]);
+    await page.waitForFunction(() => document.body.innerText.includes("Home") && document.body.innerText.includes("Work"), null, { timeout: 20000 });
+
+    const audits = [await collectUiAudit(page, `${account.role}-${viewport.width}x${viewport.height}-home`)];
+    for (const navItem of ["Work", "Crew", "Shop Talk", "Tools", "Home"]) {
+      await firstVisibleClick(page, navItem);
+      audits.push(await collectUiAudit(page, `${account.role}-${viewport.width}x${viewport.height}-${navItem.toLowerCase().replace(/\s+/g, "-")}`));
+    }
+
+    for (const audit of audits) {
+      assert.equal(audit.title, "RIVT | Where skilled trades connect", `${audit.label} has unexpected title.`);
+      assert.equal(audit.frameworkOverlay, false, `${audit.label} shows a framework/runtime overlay.`);
+      assert.equal(audit.viewport.scrollWidth <= audit.viewport.width + 2, true, `${audit.label} has horizontal page overflow.`);
+      assert.deepEqual(audit.overflow, [], `${audit.label} has off-screen visible elements: ${JSON.stringify(audit.overflow)}`);
+      assert.deepEqual(audit.requiredNav.filter((item) => !item.visible), [], `${audit.label} is missing primary nav.`);
+      assert.equal(audit.hasMoreNav, false, `${audit.label} still exposes a More nav control.`);
+      assert.equal(audit.roleToggleVisible, false, `${audit.label} still exposes a role toggle.`);
+      assert.deepEqual(audit.missingNames, [], `${audit.label} has visible interactive controls without names: ${JSON.stringify(audit.missingNames)}`);
+    }
+
+    return {
+      role: account.role,
+      viewport,
+      logs,
+      audits: audits.map((audit) => ({
+        label: audit.label,
+        url: audit.url,
+        requiredNav: audit.requiredNav,
+        topBarSignals: audit.topBarSignals,
+        smallTargets: audit.smallTargets,
+        bodyStart: audit.bodyStart,
+      })),
+    };
+  } finally {
+    await context.close();
+  }
+}
+
+const accounts = [];
+let browser;
+
+try {
+  const health = await requestJson("/api/health", { expected: 200 });
+  assert.equal(health.payload.ok, true);
+  if (expectedCommit) assert.equal(health.payload.build.commit, expectedCommit);
+
+  const contractor = await signupAndOnboard("contractor", "GateA UI Contractor");
+  accounts.push(contractor);
+  const tradesperson = await signupAndOnboard("tradesperson", "GateA UI Trade");
+  accounts.push(tradesperson);
+
+  browser = await chromium.launch({ headless: true });
+  const results = [];
+  for (const account of accounts) {
+    results.push(await loginAndAudit(browser, account, { width: 390, height: 844 }));
+  }
+  results.push(await loginAndAudit(browser, contractor, { width: 1366, height: 768 }));
+
+  await closeSmokeArtifacts(accounts);
+
+  console.log(JSON.stringify({
+    ok: true,
+    run: smokeRun,
+    buildCommit: health.payload.build.commit,
+    baseUrl,
+    accountsClosed: accounts.length,
+    viewports: results.map((result) => ({
+      role: result.role,
+      viewport: result.viewport,
+      auditCount: result.audits.length,
+      consoleWarningsOrErrors: result.logs.length,
+      topBarSignals: result.audits[0]?.topBarSignals ?? null,
+      smallTargetCount: result.audits.reduce((count, audit) => count + audit.smallTargets.length, 0),
+    })),
+  }, null, 2));
+} finally {
+  if (browser) await browser.close();
+  await closeSmokeArtifacts(accounts).catch(() => {});
+  await pool.end();
+}
