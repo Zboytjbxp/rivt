@@ -70,6 +70,7 @@ import {
   notificationReadSchema,
   reportConversationSchema,
 } from "./messaging.js";
+import { createRequestLogger, logError, logInfo, logWarn } from "./logger.js";
 import {
   buildCloseoutReport,
   completionResolutionSchema,
@@ -132,6 +133,18 @@ const productionOrigin = envValue("APP_ORIGIN", "https://rivt.pro");
 function envValue(name, fallback = undefined) {
   const value = process.env[name]?.trim();
   return value || fallback;
+}
+
+function envFlag(name) {
+  return ["1", "true", "yes", "on"].includes(String(process.env[name] ?? "").trim().toLowerCase());
+}
+
+function operationalControls() {
+  return {
+    signupsDisabled: envFlag("RIVT_SIGNUPS_DISABLED") || envFlag("SIGNUPS_DISABLED"),
+    mutationsDisabled: envFlag("RIVT_MUTATIONS_DISABLED") || envFlag("PLATFORM_MUTATIONS_DISABLED"),
+    reason: envValue("RIVT_CONTROL_REASON", null),
+  };
 }
 
 function normalizeEmail(email) {
@@ -282,7 +295,8 @@ app.use(cors({
 app.set("trust proxy", 1);
 app.use(express.json({ limit: "1mb" }));
 
-app.use("/api/v1", createRequestContext);
+app.use("/api", createRequestContext);
+app.use("/api", createRequestLogger());
 app.use("/api", createOriginGuard(allowedOrigins));
 
 function setSessionId(response, sessionId) {
@@ -590,9 +604,21 @@ function allowsPendingOnboardingMutation(request) {
   return request.method === "POST" && path === "/api/v1/onboarding/complete";
 }
 
+function allowsOperationalMutation(request) {
+  const path = String(request.path ?? request.originalUrl ?? "").split("?", 1)[0];
+  return path.startsWith("/api/v1/support/") || path.startsWith("/api/v1/admin/");
+}
+
 async function assertActorCanMutate(request) {
   const actor = request.actor;
   if (!actor) return;
+  const controls = operationalControls();
+  if (controls.mutationsDisabled && !allowsOperationalMutation(request)) {
+    throw new ApiError(503, "PLATFORM_MUTATIONS_DISABLED", "RIVT is temporarily paused. Existing records are preserved and support remains available.", {
+      supportAllowed: true,
+      reason: controls.reason,
+    });
+  }
   if (actor.account.status !== "active" && !allowsPendingOnboardingMutation(request)) {
     throw new ApiError(403, "ACCOUNT_NOT_ACTIVE", "This account cannot make changes.");
   }
@@ -4407,6 +4433,7 @@ app.get("/api/readiness", requireAuthenticatedUser, async (_request, response, n
         database: storage.database,
         objectStorage: storage.objectStorage,
       },
+      controls: operationalControls(),
       timestamp: new Date().toISOString(),
     });
   });
@@ -4421,7 +4448,7 @@ app.get("/api/auth/providers", (_request, response) => {
     sessionSecurity: authSecurityStatus(),
   };
 
-  response.json({ providers, inviteRequired: process.env.REQUIRE_PILOT_INVITE === "true" });
+  response.json({ providers, inviteRequired: process.env.REQUIRE_PILOT_INVITE === "true", controls: operationalControls() });
 });
 
 app.get("/api/auth/google/start", authRateLimit, asyncRoute(async (request, response) => {
@@ -4526,6 +4553,12 @@ const loginSchema = z.object({
 
 async function handleSignup(request, response) {
   requireAuthSecurity();
+  const controls = operationalControls();
+  if (controls.signupsDisabled) {
+    throw new ApiError(503, "SIGNUPS_DISABLED", "RIVT pilot signups are temporarily closed.", {
+      reason: controls.reason,
+    });
+  }
   const input = validate(signupSchema, request.body);
   assertStrongPassword(input.password);
   if (!emailProviderStatus().ok) {
@@ -4563,7 +4596,7 @@ async function handleSignup(request, response) {
     await sendVerificationMessage(created.user.email, created.verificationToken);
   } catch (error) {
     verificationDelivered = false;
-    console.error("Signup verification delivery failed", { code: error.code ?? "unknown" });
+    logWarn("email.verification_delivery_failed", { requestId: request.requestId, code: error.code ?? "unknown" });
   }
   const user = buildUserResponse({ ...created.user, account_status: "onboarding", onboarding_status: "draft" });
   if (request.path.startsWith("/api/v1/")) {
@@ -4689,7 +4722,7 @@ app.post("/api/v1/auth/password/forgot", authRateLimit, asyncRoute(async (reques
       });
       if (token) await sendPasswordResetMessage(user.email, token);
     } catch (error) {
-      console.error("Password reset delivery failed", { code: error.code ?? "unknown" });
+      logWarn("email.password_reset_delivery_failed", { requestId: request.requestId, code: error.code ?? "unknown" });
     }
   }
   response.status(202).json({
@@ -5189,7 +5222,12 @@ if (existsSync(distDir)) {
 
 app.use((error, request, response, _next) => {
   if (!error.status || error.status >= 500) {
-    console.error(error);
+    logError("http.unhandled_error", {
+      requestId: request.requestId ?? null,
+      method: request.method,
+      path: request.path,
+      error,
+    });
   }
   if (request.path === "/api/auth/google/callback" && !response.headersSent) {
     response.redirect(`${productionOrigin}/?auth_error=google`);
@@ -5213,9 +5251,15 @@ export async function startServer(listenPort = port) {
 
   return app.listen(listenPort, () => {
     const storage = storageConfiguration();
-    console.log(`${appName} API listening on http://127.0.0.1:${listenPort}`);
+    logInfo("server.started", {
+      appName,
+      port: listenPort,
+      buildCommit: sourceCommit,
+      migrationVersion,
+      storageOk: storage.ok,
+    });
     if (!storage.ok) {
-      console.warn(`Managed storage setup required: ${storage.missing.join(", ")}`);
+      logWarn("server.storage_setup_required", { missing: storage.missing });
     }
   });
 }
@@ -5230,7 +5274,7 @@ export { app, ensureDatabaseReady };
 
 if (path.resolve(process.argv[1] ?? "") === __filename) {
   startServer().catch((error) => {
-    console.error("Server startup failed", error);
+    logError("server.startup_failed", { error });
     process.exitCode = 1;
   });
 }
