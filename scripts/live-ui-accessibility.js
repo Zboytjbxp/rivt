@@ -1,6 +1,7 @@
 import "dotenv/config";
 import assert from "node:assert/strict";
 import { createHash, randomBytes } from "node:crypto";
+import { readFile } from "node:fs/promises";
 import pg from "pg";
 import { chromium } from "playwright";
 
@@ -8,13 +9,29 @@ const baseUrl = process.env.RIVT_SMOKE_BASE_URL ?? "https://rivt.pro";
 const databaseUrl = process.env.DATABASE_URL?.trim();
 const expectedCommit = process.env.EXPECTED_SOURCE_COMMIT?.trim() || process.env.SOURCE_COMMIT?.trim();
 const smokeRun = `ui-a11y-${new Date().toISOString().replace(/[^0-9]/g, "").slice(0, 14)}-${randomBytes(3).toString("hex")}`;
+const args = process.argv.slice(2);
+const setupOnly = args.includes("--setup-only");
+const cleanupRun = argValue("--cleanup-run");
+const browserOnlyFile = argValue("--browser-only");
 
-if (!databaseUrl) throw new Error("DATABASE_URL is required.");
+let pool;
 
-const pool = new pg.Pool({
-  connectionString: databaseUrl,
-  ssl: process.env.PGSSL === "disable" || databaseUrl.includes("localhost") ? false : { rejectUnauthorized: false },
-});
+if (databaseUrl) {
+  pool = new pg.Pool({
+    connectionString: databaseUrl,
+    ssl: process.env.PGSSL === "disable" || databaseUrl.includes("localhost") ? false : { rejectUnauthorized: false },
+  });
+}
+
+function argValue(name) {
+  const index = args.indexOf(name);
+  return index >= 0 ? args[index + 1] : null;
+}
+
+function requirePool() {
+  if (!pool) throw new Error("DATABASE_URL is required for setup or cleanup modes.");
+  return pool;
+}
 
 function sha256(value) {
   return createHash("sha256").update(value).digest("hex");
@@ -67,7 +84,7 @@ async function verifyEmailDirectly(client, email) {
 async function signupAndOnboard(role, label) {
   const email = `${smokeRun}-${role}-${randomBytes(2).toString("hex")}@example.test`;
   const password = `UiSmoke!${randomBytes(10).toString("base64url")}1a`;
-  const invite = await createInvite(pool, { email, role });
+  const invite = await createInvite(requirePool(), { email, role });
   const signup = await requestJson("/api/v1/auth/signup", {
     method: "POST",
     expected: 201,
@@ -80,7 +97,7 @@ async function signupAndOnboard(role, label) {
     },
   });
   const cookie = sessionCookie(signup.response);
-  await verifyEmailDirectly(pool, email);
+  await verifyEmailDirectly(requirePool(), email);
   await requestJson("/api/v1/onboarding/complete", {
     method: "POST",
     cookie,
@@ -119,11 +136,22 @@ async function closeSmokeArtifacts(accounts) {
   const accountIds = accounts.map((account) => account.accountId).filter(Boolean);
   if (accountIds.length === 0) return;
 
-  await pool.query("UPDATE profiles SET visibility = 'private', updated_at = now() WHERE account_id = ANY($1::uuid[])", [accountIds]);
-  await pool.query("UPDATE auth_sessions SET revoked_at = now() WHERE user_id = ANY($1::uuid[]) AND revoked_at IS NULL", [accountIds]);
-  await pool.query("UPDATE jobs SET status = 'closed', closed_at = COALESCE(closed_at, now()), updated_at = now() WHERE created_by_account_id = ANY($1::uuid[]) AND status <> 'closed'", [accountIds]);
-  await pool.query("UPDATE organizations SET status = 'closed', updated_at = now() WHERE created_by_account_id = ANY($1::uuid[]) AND status <> 'closed'", [accountIds]);
-  await pool.query("UPDATE accounts SET status = 'closed', updated_at = now() WHERE id = ANY($1::uuid[])", [accountIds]);
+  await requirePool().query("UPDATE profiles SET visibility = 'private', updated_at = now() WHERE account_id = ANY($1::uuid[])", [accountIds]);
+  await requirePool().query("UPDATE auth_sessions SET revoked_at = now() WHERE user_id = ANY($1::uuid[]) AND revoked_at IS NULL", [accountIds]);
+  await requirePool().query("UPDATE jobs SET status = 'closed', closed_at = COALESCE(closed_at, now()), updated_at = now() WHERE created_by_account_id = ANY($1::uuid[]) AND status <> 'closed'", [accountIds]);
+  await requirePool().query("UPDATE organizations SET status = 'closed', updated_at = now() WHERE created_by_account_id = ANY($1::uuid[]) AND status <> 'closed'", [accountIds]);
+  await requirePool().query("UPDATE accounts SET status = 'closed', updated_at = now() WHERE id = ANY($1::uuid[])", [accountIds]);
+}
+
+async function closeSmokeRun(run) {
+  assert.match(run, /^ui-a11y-\d{14}-[a-f0-9]{6}$/);
+  const result = await requirePool().query(
+    "SELECT id::text AS id FROM auth_users WHERE email LIKE $1",
+    [`${run}-%@example.test`],
+  );
+  const accounts = result.rows.map((row) => ({ accountId: row.id }));
+  await closeSmokeArtifacts(accounts);
+  return accounts.length;
 }
 
 async function firstVisibleClick(page, label) {
@@ -267,34 +295,39 @@ async function loginAndAudit(browser, account, viewport) {
   }
 }
 
-const accounts = [];
-let browser;
-
-try {
-  const health = await requestJson("/api/health", { expected: 200 });
-  assert.equal(health.payload.ok, true);
-  if (expectedCommit) assert.equal(health.payload.build.commit, expectedCommit);
-
-  const contractor = await signupAndOnboard("contractor", "GateA UI Contractor");
-  accounts.push(contractor);
-  const tradesperson = await signupAndOnboard("tradesperson", "GateA UI Trade");
-  accounts.push(tradesperson);
-
-  browser = await chromium.launch({ headless: true });
-  const results = [];
-  for (const account of accounts) {
-    results.push(await loginAndAudit(browser, account, { width: 390, height: 844 }));
+async function runBrowserOnly(filePath) {
+  const setup = JSON.parse(await readFile(filePath, "utf8"));
+  assert.equal(setup.ok, true);
+  assert.ok(Array.isArray(setup.accounts));
+  const browser = await chromium.launch({ headless: true });
+  try {
+    const contractor = setup.accounts.find((account) => account.role === "contractor");
+    assert.ok(contractor, "Browser-only mode requires a contractor account.");
+    const results = [];
+    for (const account of setup.accounts) {
+      results.push(await loginAndAudit(browser, account, { width: 390, height: 844 }));
+    }
+    results.push(await loginAndAudit(browser, contractor, { width: 1366, height: 768 }));
+    console.log(JSON.stringify(summarizeResults({
+      run: setup.run,
+      buildCommit: setup.buildCommit,
+      accountsClosed: 0,
+      results,
+      mode: "browser-only",
+    }), null, 2));
+  } finally {
+    await browser.close();
   }
-  results.push(await loginAndAudit(browser, contractor, { width: 1366, height: 768 }));
+}
 
-  await closeSmokeArtifacts(accounts);
-
-  console.log(JSON.stringify({
+function summarizeResults({ run, buildCommit, accountsClosed, results, mode = "full" }) {
+  return {
     ok: true,
-    run: smokeRun,
-    buildCommit: health.payload.build.commit,
+    mode,
+    run,
+    buildCommit,
     baseUrl,
-    accountsClosed: accounts.length,
+    accountsClosed,
     viewports: results.map((result) => ({
       role: result.role,
       viewport: result.viewport,
@@ -303,9 +336,68 @@ try {
       topBarSignals: result.audits[0]?.topBarSignals ?? null,
       smallTargetCount: result.audits.reduce((count, audit) => count + audit.smallTargets.length, 0),
     })),
-  }, null, 2));
+  };
+}
+
+async function main() {
+  if (cleanupRun) {
+    const accountsClosed = await closeSmokeRun(cleanupRun);
+    console.log(JSON.stringify({ ok: true, mode: "cleanup", run: cleanupRun, accountsClosed }, null, 2));
+    return;
+  }
+
+  if (browserOnlyFile) {
+    await runBrowserOnly(browserOnlyFile);
+    return;
+  }
+
+  const accounts = [];
+  let browser;
+  try {
+    const health = await requestJson("/api/health", { expected: 200 });
+    assert.equal(health.payload.ok, true);
+    if (expectedCommit) assert.equal(health.payload.build.commit, expectedCommit);
+
+    const contractor = await signupAndOnboard("contractor", "GateA UI Contractor");
+    accounts.push(contractor);
+    const tradesperson = await signupAndOnboard("tradesperson", "GateA UI Trade");
+    accounts.push(tradesperson);
+
+    if (setupOnly) {
+      console.log(`RIVT_UI_SMOKE_SETUP_JSON=${JSON.stringify({
+        ok: true,
+        mode: "setup",
+        run: smokeRun,
+        buildCommit: health.payload.build.commit,
+        baseUrl,
+        accounts,
+      })}`);
+      return;
+    }
+
+    browser = await chromium.launch({ headless: true });
+    const results = [];
+    for (const account of accounts) {
+      results.push(await loginAndAudit(browser, account, { width: 390, height: 844 }));
+    }
+    results.push(await loginAndAudit(browser, contractor, { width: 1366, height: 768 }));
+
+    await closeSmokeArtifacts(accounts);
+
+    console.log(JSON.stringify(summarizeResults({
+      run: smokeRun,
+      buildCommit: health.payload.build.commit,
+      accountsClosed: accounts.length,
+      results,
+    }), null, 2));
+  } finally {
+    if (browser) await browser.close();
+    if (!setupOnly) await closeSmokeArtifacts(accounts).catch(() => {});
+  }
+}
+
+try {
+  await main();
 } finally {
-  if (browser) await browser.close();
-  await closeSmokeArtifacts(accounts).catch(() => {});
-  await pool.end();
+  if (pool) await pool.end();
 }
