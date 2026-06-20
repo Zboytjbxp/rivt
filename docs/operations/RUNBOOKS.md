@@ -13,6 +13,24 @@ These are minimum pilot procedures. Add provider-specific commands and owners be
 7. Verify private cross-user access is denied.
 8. Record evidence and rollback target in the deployment ledger.
 
+Packet 08 adds a reusable live hardening check:
+
+```text
+railway ssh --service RIVT --environment production npm run smoke:gate-a:live
+```
+
+Set `EXPECTED_SOURCE_COMMIT` only when intentionally checking an exact source SHA. A passing hardening check does not replace the timed restore drill, external monitoring, or manual device/accessibility evidence.
+
+## Operational Kill Switches
+
+Use these only during a real incident, launch pause, or controlled maintenance window:
+
+- `RIVT_SIGNUPS_DISABLED=true` or `SIGNUPS_DISABLED=true` blocks new signups.
+- `RIVT_MUTATIONS_DISABLED=true` or `PLATFORM_MUTATIONS_DISABLED=true` blocks regular platform mutations.
+- `RIVT_CONTROL_REASON="short operator-facing reason"` explains the control state in authenticated readiness/provider status.
+
+Support and admin routes remain available during platform mutation lockout so users can appeal/get help and staff can operate the incident. Record every enable/disable action in the deployment ledger or incident notes.
+
 ## Authentication Incident
 
 1. Disable affected provider or new login through kill switch if exploitation/data exposure is plausible.
@@ -50,6 +68,8 @@ These are minimum pilot procedures. Add provider-specific commands and owners be
 3. Measure recovery time and recovery point.
 4. Record missing records, configuration, and repair actions.
 5. A successful backup job without restore proof does not close the requirement.
+
+Current blocker: the local workstation used for Packet 08 does not have `docker`, `psql`, or `pg_dump`, so the timed restore drill is not complete. Do not approve Gate A until a real isolated target is provisioned and the restore is timed.
 
 ## Provider Outage
 

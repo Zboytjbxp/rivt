@@ -2,10 +2,10 @@
 
 Last updated: 2026-06-20 America/New_York
 Current gate: Gate A launch hardening
-Current phase: Packet 07 accepted in production; Packet 08 ready for audit
+Current phase: Packet 08 hardening audit deployed; full Gate A approval remains blocked
 Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
-Production release commit: `01bf1adfedef03ee7ecd7c408d2bab6cbde654fe`
+Production release commit: `7e60a9de537fcc555b32f2510c4bed5371ccd264`
 
 ## Source State
 
@@ -316,9 +316,46 @@ The first production smoke attempt on deployment `0f708552-8598-4a04-8f45-012626
 
 Packet 07 is accepted in production for participant reviews, review disputes/resolution, reputation counts, safety reports, unsafe stop-work reports, support cases, least-privilege admin access, account restrictions, admin action events, and extended block enforcement. Gate A launch hardening, restore drill evidence, distributed limits, monitoring/alerts, and final ops checklist remain before first-user launch.
 
+## Packet 08 Hardening Slice Implemented
+
+- Added structured JSON request/domain logging with request IDs, method/path/status/duration, actor ID when authenticated, and safe error fields.
+- Added operational controls for `RIVT_SIGNUPS_DISABLED` / `SIGNUPS_DISABLED`, `RIVT_MUTATIONS_DISABLED` / `PLATFORM_MUTATIONS_DISABLED`, and optional `RIVT_CONTROL_REASON`.
+- Exposed control state through authenticated readiness and auth-provider status without exposing secrets.
+- Preserved support/admin access during platform mutation lockout so restricted users can still reach support and staff can operate incidents.
+- Added reusable production hardening audit command `npm run smoke:gate-a:live` for exact source commit, migration status, anonymous fail-closed routes, provider status, operational controls, and user-facing seed/demo sweeps.
+- Added guarded cleanup command `npm run cleanup:gate-a:demo` that requires `CONFIRM_GATE_A_DEMO_CLEANUP=true`, preserves records, makes matching test profiles private, closes matching smoke organizations/jobs, and hides matching public reviews instead of deleting data.
+- Executed the cleanup in production after the first hardening audit surfaced user-facing test artifacts.
+
+## Packet 08 Verification
+
+Run on 2026-06-20 from `master`:
+
+- `npm run build`: pass.
+- `npm run lint`: pass.
+- `npm run lint:security`: pass.
+- `npm run test`: pass; unit and non-DB integration coverage pass, while DB-backed local integration tests skip because `TEST_DATABASE_URL` is not configured.
+- `npm run test:e2e`: pass.
+- `npm audit --omit=dev`: pass; zero vulnerabilities.
+
+Local restore tooling remains unavailable on this workstation (`docker`, `psql`, and `pg_dump` are not installed), so the timed isolated restore drill cannot be closed from the current local environment.
+
+## Packet 08 Production Evidence
+
+- Source commit: `7e60a9de537fcc555b32f2510c4bed5371ccd264`
+- Railway deployment: application deploy `cf59e885-5f00-429b-b790-0d390ce66886`, followed by metadata redeploy `2cf8d8d3-b46f-4400-a049-b3a68f64ad14` after updating `SOURCE_COMMIT`.
+- `https://rivt.pro/api/health`: 200, source commit matched the release, PostgreSQL and S3-compatible storage healthy.
+- Production migration status: `0008_reviews_admin_safety`, eight applied migrations, zero pending.
+- First live hardening audit on the Packet 08 code correctly failed because two published test network profiles and twelve active smoke organizations remained visible.
+- Production cleanup made two `RIVT * Test` profiles private and closed twelve Packet 03-07 smoke organizations; no records were deleted.
+- Final live hardening audit passed with exact source `7e60a9de537fcc555b32f2510c4bed5371ccd264`, migration `0008_reviews_admin_safety`, seven anonymous private-route checks returning 401, zero seed/demo findings, and counts of 3 active accounts, 0 public network profiles, 0 open jobs, 2 open support cases, 0 active restrictions, and 115 legacy app-state rows.
+
+## Packet 08 Gate Status
+
+The Packet 08 hardening slice is deployed and accepted as evidence. Full Gate A approval is rejected until the remaining launch blockers are closed: timed isolated restore drill, external monitoring/alerts and incident routing, durable/distributed rate limits, support/legal/founder signoff, manual accessibility/device matrix, and final legacy app-state/bridge removal plan.
+
 ## Next Exact Task
 
-Start Packet 08 (`docs/delivery/packets/08_GATE_A_HARDENING.md`) with a hardening audit: restore drill, monitoring/alerts, distributed rate limits, support/incident runbooks, final seed-data sweep, and launch checklist closure.
+Complete the remaining Packet 08 launch blockers: provision an isolated restore target and run a timed restore drill; wire external monitoring/alerts and incident owner routing; replace in-memory limits with durable/distributed limits for launch-critical flows; finish support/legal/founder approvals; complete the manual accessibility/device matrix; and decide/remove the remaining legacy app-state bridge before named-cohort launch.
 
 ## Blocking Founder Decisions
 

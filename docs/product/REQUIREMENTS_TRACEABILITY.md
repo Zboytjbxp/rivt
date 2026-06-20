@@ -21,19 +21,19 @@ Evidence must eventually link to implementation, automated tests, manual accepta
 | GA-FND-005 | API uses consistent typed errors and validation | Partial | `/api/v1` has request IDs, Zod validation, stable errors, and pagination primitives; legacy APIs retain transitional shapes. |
 | GA-FND-006 | Retryable writes are idempotent | Partial | Canonical idempotency storage is used by job, match, messaging, project, review, report, unsafe-work, support, and admin/restriction mutations; distributed replay/rate-limit hardening remains Packet 08 work. |
 | GA-FND-007 | Auditable domain events use authenticated actor and subject | Verified | Job, application, offer, active-work, message, project media, project entry, completion, review, unsafe-work, support, restriction, and admin action events include actor/subject/time/reason as applicable; live smoke and append-only triggers cover critical domains. |
-| GA-FND-008 | Internal diagnostics identify deployed source revision and dependency readiness | Verified | Health/readiness identify exact source `01bf1ad`, dependencies, applied migrations, and pending count in production. |
+| GA-FND-008 | Internal diagnostics identify deployed source revision and dependency readiness | Verified | Health/readiness identify exact source `7e60a9d`, dependencies, applied migrations, pending count, and Packet 08 operational-control state in production. |
 
 ## Authentication and Account
 
 | ID | Requirement | Current | Evidence / gap |
 |---|---|---:|---|
-| GA-AUTH-001 | Email signup creates a real account with password policy | Partial | Scrypt hashing, explicit role, 8-character minimum, and auth throttling exist; verification, recovery, and breached-password screening remain. |
+| GA-AUTH-001 | Email signup creates a real account with password policy | Partial | Scrypt hashing, explicit role, 8-character minimum, invite gating, email verification, recovery, and auth throttling exist; breached-password screening remains deferred. |
 | GA-AUTH-002 | Invalid login fails closed | Verified | Local fallback was removed; Playwright and deployed production smoke both prove a rejected login remains unauthenticated. |
-| GA-AUTH-003 | Email ownership verification | Missing | No token/table/routes or verified-email state. |
-| GA-AUTH-004 | Password reset and recovery | Missing | No recovery workflow. |
-| GA-AUTH-005 | Google OAuth validates identity and continues onboarding | Partial | New OAuth users are created with pending role and blank company/location, then complete onboarding; live provider and account-linking tests remain. |
-| GA-AUTH-006 | OAuth uses safe redirect/state/nonce design and account linking rules | Partial | State exists; no nonce/PKCE, identity-linking policy, or robust redirect-intent record. |
-| GA-AUTH-007 | Session rotates after authentication and uses bounded lifetime | Partial | Signup/login/OAuth rotate sessions and default to 30-day expiry; DB-backed rotation passes in GitHub Actions, while device/session management remains deferred. |
+| GA-AUTH-003 | Email ownership verification | Verified | Packet 02 added hashed, single-use verification challenges with expiry and live delivery; production smoke verified account verification and cleanup. |
+| GA-AUTH-004 | Password reset and recovery | Verified | Packet 02 added hashed, single-use password recovery/reset with expiry and session revocation; production smoke verified recovery, reset, and cleanup. |
+| GA-AUTH-005 | Google OAuth validates identity and continues onboarding | Verified | Google OIDC validation creates or links canonical accounts without fabricated role/company/location, and first-login users continue through pending onboarding; live provider handoff and account journey passed in Packet 02. |
+| GA-AUTH-006 | OAuth uses safe redirect/state/nonce design and account linking rules | Verified | Packet 02 added state, nonce, PKCE, JWKS signature validation, redirect-intent records, and safe identity linking rules with source and live acceptance evidence. |
+| GA-AUTH-007 | Session rotates after authentication and uses bounded lifetime | Verified | Signup/login/OAuth rotate sessions, sessions default to 30-day expiry, and Packet 02 live acceptance verified multi-session revocation and logout. |
 | GA-AUTH-008 | Logout revokes server session and clears local auth | Verified | Local E2E coverage and a deployed disposable-account smoke prove logout clears the server session and subsequent `/api/auth/me` is anonymous. |
 | GA-AUTH-009 | Auth endpoints are rate-limited and resist enumeration/CSRF | Partial | Auth/write/upload limits and approved-origin checks exist with SameSite cookies; enumeration review and explicit CSRF threat evidence remain. |
 | GA-AUTH-010 | Account state and role are server-authoritative | Partial | Server role is required, pending during OAuth onboarding, and immutable afterward; legacy app-state authority must still be removed during normalization. |
@@ -42,12 +42,12 @@ Evidence must eventually link to implementation, automated tests, manual accepta
 
 | ID | Requirement | Current | Evidence / gap |
 |---|---|---:|---|
-| GA-PRO-001 | Resumable contractor/tradesperson onboarding | Prototype | Rich UI exists in `App.tsx`; persistence is app-state, and an effect forces onboarding complete. |
-| GA-PRO-002 | Role-correct professional profile persists independently | Prototype | Account/profile values are split between `auth_users`, React state, session storage, and app-state. |
-| GA-PRO-003 | Trade specialties use canonical taxonomy | Partial | Versioned 25-trade taxonomy and profile relationship tables pass migration tests; profile UI/API adoption remains. |
-| GA-PRO-004 | Service area and location privacy | Prototype | Free-form location only; no normalized/geospatial service-area model. |
-| GA-PRO-005 | Availability and controlled contact visibility | Prototype | Display fields exist; no authoritative availability/contact policy. |
-| GA-PRO-006 | Profile photos/portfolio use authorized private media | Prototype | Generic uploads exist; no profile/portfolio ownership model. |
+| GA-PRO-001 | Resumable contractor/tradesperson onboarding | Partial | Canonical onboarding APIs persist selected role, organization/profile basics, and resume state; richer checklist/profile-strength guidance remains outside Gate A. |
+| GA-PRO-002 | Role-correct professional profile persists independently | Partial | Canonical account/profile records persist independently of legacy app-state and Packet 02 live smoke verified profile update/publish; portfolio/contact/availability completeness remains launch follow-up. |
+| GA-PRO-003 | Trade specialties use canonical taxonomy | Partial | Versioned 25-trade taxonomy, profile relationship tables, and profile/onboarding APIs exist; broader profile-search and trade-management UX still need polish. |
+| GA-PRO-004 | Service area and location privacy | Partial | Public-area/private-address protection is verified for jobs and accepted work; profile-level service-area normalization/geospatial privacy remains incomplete. |
+| GA-PRO-005 | Availability and controlled contact visibility | Partial | Contact visibility is constrained through accepted-work messaging and server-owned profiles; explicit availability calendar/status remains missing. |
+| GA-PRO-006 | Profile photos/portfolio use authorized private media | Partial | Private project evidence media is participant-authorized and signed; profile photo/portfolio ownership and moderation remain unresolved before broad launch. |
 
 ## Application Shell and UX
 
@@ -132,16 +132,17 @@ Evidence must eventually link to implementation, automated tests, manual accepta
 | GA-ADM-003 | Moderation/account actions use reason and immutable audit | Verified | Packet 07 live smoke verified reason-required admin review/support/restriction mutations and immutable `admin_action_events` count. Broader moderation UI remains later work, but the safety-critical audit path is live. |
 | GA-OPS-001 | Build and lint gates pass | Verified | Production build and repository-wide ESLint pass locally and in GitHub Actions with zero errors or warnings. |
 | GA-OPS-002 | Direct production dependencies are declared and vulnerability gate passes | Verified | `fast-xml-parser` is direct, Multer is 2.2.0, and `npm audit --omit=dev` reports zero vulnerabilities locally and in GitHub Actions. |
-| GA-OPS-003 | Health, readiness, and build version are distinct | Verified | Deployed health and authenticated readiness report dependencies, migration version, and exact source commit `01bf1ad`. |
-| GA-OPS-004 | Backup and timed restore drill pass | Unknown | Documentation requests it; no evidence found in repo. |
-| GA-OPS-005 | Structured logs, error monitoring, alerts, and incident routing | Missing | Console logging/basic responses only. |
-| GA-OPS-006 | Critical rate limits and upload abuse limits | Partial | Auth/write/upload limits and an explicit upload MIME/size/count policy exist; durable/distributed limits and domain quotas remain. |
+| GA-OPS-003 | Health, readiness, and build version are distinct | Verified | Deployed health and authenticated readiness report dependencies, migration version, operational-control state, and exact source commit `7e60a9d`. |
+| GA-OPS-004 | Backup and timed restore drill pass | Blocker | Encrypted cloud snapshot was previously decrypted/count-reconciled, but no timed isolated restore has passed. Packet 08 confirmed local restore tooling is unavailable. |
+| GA-OPS-005 | Structured logs, error monitoring, alerts, and incident routing | Partial | Packet 08 added structured JSON request/domain logs and request IDs; external error monitoring, alert rules, paging destination, and incident owner routing remain missing. |
+| GA-OPS-006 | Critical rate limits and upload abuse limits | Partial | Auth/write/upload limits, upload MIME/size/count policy, domain quotas, and Packet 08 signup/mutation kill switches exist; durable/distributed limits remain required before named cohort launch. |
 | GA-OPS-007 | Automated tests cover critical journeys and authorization | Partial | Unit/integration and Playwright journeys pass; disposable-Postgres auth/job/match authorization coverage passes in GitHub Actions. Broader domains remain packet work. |
-| GA-OPS-008 | Deployed commit, migrations, flags, and rollback are recorded | Partial | Packet 00-07 commits, Railway deployment IDs, config changes, migration status, smoke evidence, and rollback targets are recorded; a full timed isolated restore drill remains open. |
+| GA-OPS-008 | Deployed commit, migrations, flags, and rollback are recorded | Partial | Packet 00-08 commits, Railway deployment IDs, config changes, migration status, operational controls, smoke/hardening audit evidence, and rollback targets are recorded; a full timed isolated restore drill remains open. |
 
 ## Current Gate A Summary
 
 - Production infrastructure is reachable and managed storage is healthy.
 - Authentication, canonical profiles/onboarding, jobs/discovery, match acceptance, messaging/notifications, project records/completion, reviews, admin operations, and safety records have production evidence.
-- Full launch hardening, restore drill evidence, distributed limits, observability/alerts, support runbooks, and final legacy bridge cleanup remain Gate A packet work.
+- Packet 08 hardening audit passed live with exact source, migration status, anonymous fail-closed routes, operational controls, and zero seed/demo findings after cleanup.
+- Full Gate A approval remains blocked by restore drill evidence, distributed limits, external observability/alerts, support/legal/founder signoff, manual accessibility/device evidence, and final legacy bridge cleanup.
 - The app must continue to avoid fake seed data, frontend-only success, and homeowner flows.

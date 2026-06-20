@@ -173,3 +173,22 @@ Add one entry per staging/production deployment.
 - Known risks: Gate A hardening remains: restore drill, distributed limits, observability/alerts, support runbooks, final launch checklist, and remaining legacy bridge cleanup
 - Rollback performed/result: not required
 - Approval: Packet 07 accepted; overall Gate A not approved
+
+## Current Production - Packet 08 Hardening Audit Controls
+
+- Environment: Production (`https://rivt.pro`)
+- Date/time/timezone: 2026-06-20 12:41 America/New_York
+- Deployer: Codex through authenticated Railway CLI
+- Source repository/branch: `Zboytjbxp/rivt`, `master`
+- Source commit: `7e60a9de537fcc555b32f2510c4bed5371ccd264`
+- Build/artifact ID: Railway application deployment `cf59e885-5f00-429b-b790-0d390ce66886`; metadata redeploy `2cf8d8d3-b46f-4400-a049-b3a68f64ad14` after updating `SOURCE_COMMIT`
+- Migration version before/after: `0008_reviews_admin_safety` / `0008_reviews_admin_safety`
+- Feature-flag/config version: `SOURCE_COMMIT` updated to `7e60a9de537fcc555b32f2510c4bed5371ccd264`; operational controls are wired but disabled (`signupsDisabled=false`, `mutationsDisabled=false`)
+- Provider/config changes: no provider credentials changed; no external monitoring provider was configured in this deployment
+- Backup/rollback target: prior successful Packet 07 deployment `b3c91226-d60b-407f-a93e-1e289cbdc968`; migration version unchanged; cleanup command was non-destructive and converted matching test artifacts to private/closed states
+- Automated gates: local `node --check` for new scripts, `npm run lint:security`, `npm run build`, `npm run lint`, `npm run test`, `npm run test:e2e`, and `npm audit --omit=dev` passed; local DB-backed integration tests skipped because `TEST_DATABASE_URL` is not configured
+- Post-deploy smoke tests: public `/api/health` passed and reported exact source commit. First live hardening audit caught user-facing test artifacts: two `RIVT * Test` public profiles and twelve Packet 03-07 smoke organizations. Guarded production cleanup made the two profiles private and closed the twelve smoke organizations without deleting records. Final `npm run smoke:gate-a:live` passed with exact source, migration `0008_reviews_admin_safety`, seven anonymous private-route checks returning 401, zero seed/demo findings, 3 active accounts, 0 public network profiles, 0 open jobs, 2 open support cases, 0 active restrictions, and 115 legacy app-state rows.
+- Health/readiness result: health reports PostgreSQL and S3-compatible storage healthy with exact source commit `7e60a9de537fcc555b32f2510c4bed5371ccd264`; authenticated readiness exposes operational-control state and migration status
+- Known risks: full Gate A remains blocked by timed isolated restore drill, external monitoring/alerts and incident routing, durable/distributed rate limits, manual accessibility/device matrix, support/legal/founder signoff, and final legacy app-state bridge disposition
+- Rollback performed/result: not required
+- Approval: Packet 08 hardening audit slice accepted; overall Gate A not approved
