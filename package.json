@@ -12,7 +12,7 @@
     "dev:api": "node server/index.js",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "lint:security": "eslint server/index.js server/security.js server/api.js server/logger.js server/auth.js server/email.js server/authorization.js server/jobs.js server/matches.js server/messaging.js server/projects.js server/reviews-safety.js server/migrations.js scripts/migrate.js scripts/create-pilot-invite.js scripts/live-smoke-jobs.js scripts/live-smoke-match.js scripts/live-smoke-messaging.js scripts/live-smoke-projects.js scripts/live-smoke-reviews-safety.js scripts/live-gate-a-hardening.js test/security.test.js test/api.test.js test/auth.test.js test/authorization.test.js test/jobs.test.js test/server.integration.test.js test/server.database.integration.test.js test/auth-lifecycle.integration.test.js test/jobs.integration.test.js test/match-acceptance.integration.test.js test/messaging-notifications.integration.test.js test/project-completion.integration.test.js test/reviews-admin-safety.integration.test.js test/migrations.integration.test.js test/auth-fail-closed.e2e.mjs test/jobs-discovery.e2e.mjs",
+    "lint:security": "eslint server/index.js server/security.js server/api.js server/logger.js server/auth.js server/email.js server/authorization.js server/jobs.js server/matches.js server/messaging.js server/projects.js server/reviews-safety.js server/migrations.js scripts/migrate.js scripts/create-pilot-invite.js scripts/live-smoke-jobs.js scripts/live-smoke-match.js scripts/live-smoke-messaging.js scripts/live-smoke-projects.js scripts/live-smoke-reviews-safety.js scripts/live-gate-a-hardening.js scripts/cleanup-gate-a-demo-artifacts.js test/security.test.js test/api.test.js test/auth.test.js test/authorization.test.js test/jobs.test.js test/server.integration.test.js test/server.database.integration.test.js test/auth-lifecycle.integration.test.js test/jobs.integration.test.js test/match-acceptance.integration.test.js test/messaging-notifications.integration.test.js test/project-completion.integration.test.js test/reviews-admin-safety.integration.test.js test/migrations.integration.test.js test/auth-fail-closed.e2e.mjs test/jobs-discovery.e2e.mjs",
     "test": "npm run test:unit && npm run test:integration",
     "test:unit": "node --test test/security.test.js test/api.test.js test/auth.test.js test/authorization.test.js test/jobs.test.js",
     "test:integration": "node --test --test-concurrency=1 test/server.integration.test.js test/server.database.integration.test.js test/auth-lifecycle.integration.test.js test/jobs.integration.test.js test/match-acceptance.integration.test.js test/messaging-notifications.integration.test.js test/project-completion.integration.test.js test/reviews-admin-safety.integration.test.js test/migrations.integration.test.js",
@@ -27,6 +27,7 @@
     "smoke:projects:live": "node scripts/live-smoke-projects.js",
     "smoke:reviews:live": "node scripts/live-smoke-reviews-safety.js",
     "smoke:gate-a:live": "node scripts/live-gate-a-hardening.js",
+    "cleanup:gate-a:demo": "node scripts/cleanup-gate-a-demo-artifacts.js",
     "preview": "vite preview --host 127.0.0.1",
     "start": "node server/index.js"
   },
