@@ -2,7 +2,7 @@
 
 Last updated: 2026-06-20 America/New_York
 Current gate: Gate A launch hardening
-Current phase: Packet 08 durable rate limits deployed; full Gate A approval remains blocked
+Current phase: Packet 08 legacy app-state bridge retired in source; production redeploy pending
 Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
 Production release commit: `bf42ee6a51dc91ddeb4c2451ee2434e0548d8615`
@@ -354,13 +354,32 @@ Local restore tooling remains unavailable on this workstation (`docker`, `psql`,
 - Production cleanup made two `RIVT * Test` profiles private and closed twelve Packet 03-07 smoke organizations; no records were deleted.
 - Final live hardening audit passed with exact source `bf42ee6a51dc91ddeb4c2451ee2434e0548d8615`, migration `0009_durable_rate_limits`, seven anonymous private-route checks returning 401, zero seed/demo findings, and counts of 3 active accounts, 0 public network profiles, 0 open jobs, 2 open support cases, 0 active restrictions, 115 legacy app-state rows, and 0 rate-limit windows before traffic.
 
+## Packet 08 Legacy Bridge Retirement
+
+Implemented locally on 2026-06-20:
+
+- Retired authenticated `/api/app-state` read/write calls with `410 LEGACY_APP_STATE_RETIRED`.
+- Retired authenticated `/api/events` generic event writes with `410 LEGACY_EVENTS_RETIRED`.
+- Retired `/api/payments/export.csv` because it depended on legacy app-state payment rows that are not canonical payment records.
+- Removed the frontend app-state hydration/save loop and removed the obsolete E2E app-state stub.
+- Kept authorized managed upload routes in place because profile/project media storage is a separate managed-storage path, not app-state authority.
+- Updated database-backed authorization coverage to assert the legacy bridge no longer creates app-state rows for authenticated accounts.
+
+Local verification for this slice:
+
+- `npm run lint`: pass.
+- `npm run build`: pass.
+- `npm run test`: pass; DB-backed suites skipped locally because `TEST_DATABASE_URL` is not configured.
+- `npm run test:e2e`: pass.
+- `npm audit --omit=dev`: pass; zero vulnerabilities.
+
 ## Packet 08 Gate Status
 
-The Packet 08 hardening and durable-rate-limit slices are deployed and accepted as evidence. Full Gate A approval is rejected until the remaining launch blockers are closed: timed isolated restore drill, external monitoring/alerts and incident routing, support/legal/founder signoff, manual accessibility/device matrix, and final legacy app-state/bridge removal plan.
+The Packet 08 hardening and durable-rate-limit slices are deployed and accepted as evidence. The legacy app-state bridge is retired in source and still needs production redeploy/live smoke evidence. Full Gate A approval is rejected until the remaining launch blockers are closed: timed isolated restore drill, external monitoring/alerts and incident routing, support/legal/founder signoff, and manual accessibility/device matrix.
 
 ## Next Exact Task
 
-Complete the remaining Packet 08 launch blockers: provision an isolated restore target and run a timed restore drill; wire external monitoring/alerts and incident owner routing; finish support/legal/founder approvals; complete the manual accessibility/device matrix; and decide/remove the remaining legacy app-state bridge before named-cohort launch.
+Redeploy the legacy-bridge retirement, re-run live hardening smoke, then complete the remaining Packet 08 launch blockers: provision an isolated restore target and run a timed restore drill; wire external monitoring/alerts and incident owner routing; finish support/legal/founder approvals; and complete the manual accessibility/device matrix before named-cohort launch.
 
 ## Blocking Founder Decisions
 

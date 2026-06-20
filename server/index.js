@@ -389,10 +389,6 @@ async function runWithDatabase(response, next, action) {
   }
 }
 
-function csvEscape(value) {
-  return `"${String(value ?? "").replace(/"/g, '""')}"`;
-}
-
 function safeObjectName(name) {
   return String(name || "upload")
     .trim()
@@ -4840,99 +4836,53 @@ app.post("/api/v1/sessions/revoke-others", requireV1AuthenticatedUser, writeRate
   response.json({ data: { revokedCount: result.rowCount }, meta: { requestId: request.requestId } });
 }));
 
-app.get("/api/app-state", requireAuthenticatedUser, async (request, response, next) => {
-  await runWithDatabase(response, next, async () => {
-    const scopeId = request.authUser.id;
-    const result = await database.query(
-      "SELECT state, updated_at FROM app_state WHERE id = $1",
-      [scopeId],
-    );
-
-    if (!result.rowCount) {
-      response.json({ state: null, updatedAt: null });
-      return;
-    }
-
-    response.json({
-      state: result.rows[0].state,
-      updatedAt: result.rows[0].updated_at,
-    });
-  });
-});
-
-app.put("/api/app-state", requireAuthenticatedUser, writeRateLimit, async (request, response, next) => {
-  if (!request.body || typeof request.body.state !== "object" || request.body.state === null) {
-    response.status(400).json({ ok: false, error: "Expected JSON body with a state object." });
-    return;
-  }
-
-  await runWithDatabase(response, next, async () => {
-    const scopeId = request.authUser.id;
-    const result = await database.query(
-      `
-        INSERT INTO app_state (id, state, updated_at)
-        VALUES ($1, $2::jsonb, now())
-        ON CONFLICT (id)
-        DO UPDATE SET state = EXCLUDED.state, updated_at = now()
-        RETURNING updated_at
-      `,
-      [scopeId, JSON.stringify(request.body.state)],
-    );
-
-    response.json({ ok: true, updatedAt: result.rows[0].updated_at });
-  });
-});
-
 app.post("/api/auth/guest", (_request, response) => {
   response.status(404).json({ ok: false, error: "Guest authentication is not available." });
 });
 
-app.post("/api/events", requireAuthenticatedUser, writeRateLimit, async (request, response, next) => {
-  await runWithDatabase(response, next, async () => {
-    const scopeId = request.authUser.id;
-    const event = {
-      id: randomUUID(),
-      type: request.body?.type ?? "app_event",
-      payload: request.body?.payload ?? request.body ?? {},
-    };
-    const result = await database.query(
-      `
-        INSERT INTO app_events (id, session_id, type, payload)
-        VALUES ($1, $2, $3, $4::jsonb)
-        RETURNING id, session_id, type, payload, created_at
-      `,
-      [event.id, scopeId, event.type, JSON.stringify(event.payload)],
-    );
-
-    response.status(201).json({ ok: true, event: result.rows[0] });
+function sendLegacyBridgeRetired(request, response, code, message) {
+  response.status(410).json({
+    ok: false,
+    code,
+    error: message,
+    requestId: request.requestId ?? null,
   });
+}
+
+app.get("/api/app-state", requireAuthenticatedUser, (request, response) => {
+  sendLegacyBridgeRetired(
+    request,
+    response,
+    "LEGACY_APP_STATE_RETIRED",
+    "Legacy app-state storage is retired. RIVT now uses server-owned domain records.",
+  );
 });
 
-app.get("/api/payments/export.csv", requireAuthenticatedUser, async (request, response, next) => {
-  await runWithDatabase(response, next, async () => {
-    const scopeId = request.authUser.id;
-    const result = await database.query("SELECT state FROM app_state WHERE id = $1", [scopeId]);
-    const paymentRecords = Array.isArray(result.rows[0]?.state?.paymentRecords)
-      ? result.rows[0].state.paymentRecords
-      : [];
-    const headers = ["Job", "Worker", "Amount", "Method", "Status", "Date"];
-    const rows = paymentRecords.map((record) => [
-      record.jobTitle,
-      record.worker,
-      record.amount,
-      record.method,
-      record.status,
-      record.date,
-    ]);
-    const csv = [headers, ...rows].map((row) => row.map(csvEscape).join(",")).join("\n");
+app.put("/api/app-state", requireAuthenticatedUser, (request, response) => {
+  sendLegacyBridgeRetired(
+    request,
+    response,
+    "LEGACY_APP_STATE_RETIRED",
+    "Legacy app-state writes are retired. Use canonical RIVT workflows instead.",
+  );
+});
 
-    response.setHeader("Content-Type", "text/csv;charset=utf-8");
-    response.setHeader(
-      "Content-Disposition",
-      `attachment; filename="${appSlug}-payment-history-${new Date().toISOString().slice(0, 10)}.csv"`,
-    );
-    response.send(csv);
-  });
+app.post("/api/events", requireAuthenticatedUser, (request, response) => {
+  sendLegacyBridgeRetired(
+    request,
+    response,
+    "LEGACY_EVENTS_RETIRED",
+    "Legacy generic event logging is retired. Canonical workflows now write auditable server events.",
+  );
+});
+
+app.get("/api/payments/export.csv", requireAuthenticatedUser, (request, response) => {
+  sendLegacyBridgeRetired(
+    request,
+    response,
+    "LEGACY_PAYMENT_EXPORT_RETIRED",
+    "Legacy payment export is retired until canonical payment records are available.",
+  );
 });
 
 app.get("/api/uploads", requireAuthenticatedUser, async (request, response, next) => {

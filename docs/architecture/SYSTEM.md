@@ -7,21 +7,22 @@ Status: Gate A architecture delta
 ```text
 Browser / React
   ├─ 10k-line App.tsx state and handlers
-  ├─ modern feature components plus legacy bridge
-  ├─ seed jobs, seed talent, seed community/news
-  └─ debounced PUT /api/app-state
+  ├─ modern feature components plus retired fallback components
+  ├─ seed community/news surfaces pending canonical packet work
+  └─ canonical /api/v1 domain workflows; no app-state hydrate/save loop
 
 Express process on Railway
   ├─ email auth and Google OAuth
   ├─ session cookie
-  ├─ app-state/events/upload/provider endpoints
+  ├─ canonical /api/v1 domain endpoints plus managed upload/provider endpoints
+  ├─ retired legacy app-state/event/payment-export endpoints returning 410
   ├─ runtime CREATE/ALTER schema
   └─ serves Vite dist
 
 PostgreSQL
   ├─ auth_users / auth_sessions / guest_sessions
-  ├─ app_state JSON blob per session
-  ├─ app_events
+  ├─ quarantined app_state JSON blobs retained for rollback/retention only
+  ├─ quarantined app_events retained for rollback/retention only
   └─ uploads
 
 S3-compatible storage

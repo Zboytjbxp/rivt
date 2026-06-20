@@ -361,51 +361,12 @@ interface RecordQuickStat {
   tone: "good" | "accent" | "warn" | "neutral";
 }
 
-interface PersistedAppState {
-  activeView: NavLabel;
-  role: Role;
-  onboardingComplete: boolean;
-  accountProfile: AccountProfile;
-  query: string;
-  trade: TradeFilter;
-  difficulty: DifficultyFilter;
-  workType: WorkTypeFilter;
-  radius: RadiusFilter;
-  locationQuery: string;
-  verifiedOnly: boolean;
-  savedSearch: boolean;
-  applications: ApplicationRecord[];
-  trustReady: boolean;
-  scheduleHolds: number[];
-  closeouts: Record<number, CloseoutRecord>;
-  autoMatchEnabled: boolean;
-  messageDraft: string;
-  sentMessages: string[];
-  uploadedRecords: string[];
-  completedTraining: string[];
-  reviewRequested: boolean;
-  activityFeed: ActivityItem[];
-  feedbackItems: FeedbackItem[];
-  paymentRecords: PaymentRecord[];
-  lockedAccounts: string[];
-  communityPosts: CommunityPost[];
-  communityReports: CommunityReport[];
-  shoutOuts: ShoutOut[];
-  safetyQuizResults?: Record<string, SafetyQuizResult>;
-}
-
-const LEGACY_STORAGE_KEY = `${brandConfig.appSlug}-beta-state-v2`;
 const THEME_STORAGE_KEY = `${brandConfig.appSlug}-theme-mode`;
 const THEME_PALETTE_STORAGE_KEY = `${brandConfig.appSlug}-theme-palette`;
 const AUTH_MODE_KEY = `${brandConfig.appSlug}-auth-mode`;
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? (import.meta.env.DEV ? "http://127.0.0.1:8787" : "");
 
 type ServerStatus = "checking" | "connected" | "offline" | "setup_required";
-
-interface ServerStateResponse {
-  state: Partial<PersistedAppState> | null;
-  updatedAt: string | null;
-}
 
 function apiPath(path: string) {
   return `${API_BASE_URL}${path}`;
@@ -1530,18 +1491,6 @@ function normalizeStoredUpload(value: unknown): StoredUpload | null {
   };
 }
 
-function discardLegacyLocalState() {
-  if (typeof window === "undefined") {
-    return;
-  }
-
-  try {
-    window.localStorage.removeItem(LEGACY_STORAGE_KEY);
-  } catch {
-    // If browser storage is unavailable, there is nothing to clean up.
-  }
-}
-
 async function parseApiError(response: Response) {
   const body = await response.json().catch(() => null) as { error?: string } | null;
   const error = new Error(body?.error ?? `Request failed with ${response.status}`) as Error & { status?: number };
@@ -1555,44 +1504,11 @@ function statusFromError(error: unknown): ServerStatus {
     : "offline";
 }
 
-async function fetchServerState(): Promise<ServerStateResponse> {
-  const response = await fetch(apiPath("/api/app-state"), {
-    credentials: "include",
-  });
-
-  if (!response.ok) {
-    throw await parseApiError(response);
-  }
-
-  return response.json() as Promise<ServerStateResponse>;
-}
-
-async function saveServerState(state: PersistedAppState) {
-  const response = await fetch(apiPath("/api/app-state"), {
-    method: "PUT",
-    credentials: "include",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ state }),
-  });
-
-  if (!response.ok) {
-    throw await parseApiError(response);
-  }
-
-  return response.json() as Promise<{ ok: boolean; updatedAt: string }>;
-}
-
 async function recordServerEvent(type: string, payload: Record<string, unknown>) {
-  try {
-    await fetch(apiPath("/api/events"), {
-      method: "POST",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ type, payload }),
-    });
-  } catch {
-    // State sync is the durable path; event logging is helpful but non-blocking.
-  }
+  void type;
+  void payload;
+  // The legacy generic event bridge is retired. Canonical workflows write
+  // auditable events through their dedicated server APIs.
 }
 
 async function fetchUploadHistory() {
@@ -1918,28 +1834,20 @@ function App() {
   const [difficulty, setDifficulty] =
     useState<DifficultyFilter>("Any difficulty");
   const [workType, setWorkType] = useState<WorkTypeFilter>("All work types");
-  const [radius, setRadius] = useState<RadiusFilter>("Any radius");
   const [locationQuery, setLocationQuery] = useState("");
   const [verifiedOnly, setVerifiedOnly] = useState(false);
-  const [savedSearch, setSavedSearch] = useState(false);
   const [jobs, setJobs] = useState<Job[]>([]);
   const [selectedId, setSelectedId] = useState<JobId>(0);
   const [jobsLoading, setJobsLoading] = useState(false);
   const [jobsError, setJobsError] = useState<string | null>(null);
   const [editingJob, setEditingJob] = useState<Job | null>(null);
   const jobsRequestRef = useRef(0);
-  const [applications, setApplications] = useState<ApplicationRecord[]>([]);
+  const [applications] = useState<ApplicationRecord[]>([]);
   const [isPostOpen, setPostOpen] = useState(false);
   const [isActivityOpen, setActivityOpen] = useState(false);
   const [isAccountOpen, setAccountOpen] = useState(false);
   const [trustReady, setTrustReady] = useState(true);
-  const [scheduleHolds, setScheduleHolds] = useState<Set<number>>(
-    () => new Set(),
-  );
-  const [closeouts, setCloseouts] = useState<Record<number, CloseoutRecord>>({});
-  const [autoMatchEnabled, setAutoMatchEnabled] = useState(true);
   const [messageDraft, setMessageDraft] = useState("");
-  const [sentMessages, setSentMessages] = useState<string[]>([]);
   const [inboxConversations, setInboxConversations] = useState<InboxConversation[]>([]);
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
   const [inboxMessages, setInboxMessages] = useState<InboxMessage[]>([]);
@@ -1950,23 +1858,16 @@ function App() {
   const [uploadedRecords, setUploadedRecords] = useState<Set<string>>(
     () => new Set(["Signed scope", "Legal consent accepted"]),
   );
-  const [completedTraining, setCompletedTraining] = useState<Set<string>>(
+  const [completedTraining] = useState<Set<string>>(
     () => new Set(["Customer-site conduct"]),
   );
-  const [safetyQuizResults, setSafetyQuizResults] = useState<Record<string, SafetyQuizResult>>({});
-  const [reviewRequested, setReviewRequested] = useState(false);
+  const [safetyQuizResults] = useState<Record<string, SafetyQuizResult>>({});
   const [activityFeed, setActivityFeed] = useState<ActivityItem[]>([]);
-  const [feedbackItems, setFeedbackItems] = useState<FeedbackItem[]>([]);
-  const [paymentRecords, setPaymentRecords] = useState<PaymentRecord[]>([]);
-  const [lockedAccounts, setLockedAccounts] = useState<Set<string>>(
-    () => new Set(),
-  );
+  const [feedbackItems] = useState<FeedbackItem[]>([]);
+  const [paymentRecords] = useState<PaymentRecord[]>([]);
   const [communityPosts, setCommunityPosts] = useState<CommunityPost[]>(seedCommunityPosts);
-  const [communityReports, setCommunityReports] = useState<CommunityReport[]>([]);
-  const [shoutOuts, setShoutOuts] = useState<ShoutOut[]>([]);
-  const [, setServerStatus] = useState<ServerStatus>("checking");
-  const [serverHydrated, setServerHydrated] = useState(false);
-  const [, setServerUpdatedAt] = useState<string | null>(null);
+  const [, setCommunityReports] = useState<CommunityReport[]>([]);
+  const [shoutOuts] = useState<ShoutOut[]>([]);
   const [themeMode, setThemeMode] = useState<ThemeMode>(readThemePreference);
   const [themePalette, setThemePalette] = useState<ThemePalette>(readThemePalettePreference);
   const [isGuest, setIsGuest] = useState(false);
@@ -2234,61 +2135,6 @@ function App() {
     setThemePalette(nextPalette);
   }
 
-  function applyServerState(nextState: Partial<PersistedAppState>) {
-    const nextRole: Role =
-      nextState.role === "tradesperson" || nextState.role === "contractor"
-        ? nextState.role
-        : role;
-    const navForRole = visibleNavItems(nextRole);
-    setRole(nextRole);
-    if (nextState.activeView !== undefined) {
-      setActiveView(
-        navForRole.some((item) => item.label === nextState.activeView)
-          ? nextState.activeView
-          : "Marketplace",
-      );
-    }
-    // Identity, role, profile, and onboarding state are server-authoritative.
-    if (nextState.query !== undefined) setQuery(nextState.query);
-    if (nextState.trade !== undefined) setTrade(nextState.trade);
-    if (nextState.difficulty !== undefined) setDifficulty(nextState.difficulty);
-    if (nextState.workType !== undefined) setWorkType(nextState.workType);
-    if (nextState.radius !== undefined) setRadius(nextState.radius);
-    if (nextState.locationQuery !== undefined) setLocationQuery(nextState.locationQuery);
-    if (nextState.verifiedOnly !== undefined) setVerifiedOnly(nextState.verifiedOnly);
-    if (nextState.savedSearch !== undefined) setSavedSearch(nextState.savedSearch);
-    if (Array.isArray(nextState.applications)) setApplications(nextState.applications);
-    if (nextState.trustReady !== undefined) setTrustReady(nextState.trustReady);
-    if (Array.isArray(nextState.scheduleHolds)) {
-      setScheduleHolds(new Set(nextState.scheduleHolds));
-    }
-    if (nextState.closeouts !== undefined) setCloseouts(nextState.closeouts);
-    if (nextState.autoMatchEnabled !== undefined) {
-      setAutoMatchEnabled(nextState.autoMatchEnabled);
-    }
-    if (nextState.messageDraft !== undefined) setMessageDraft(nextState.messageDraft);
-    if (Array.isArray(nextState.sentMessages)) setSentMessages(nextState.sentMessages);
-    if (Array.isArray(nextState.uploadedRecords)) {
-      setUploadedRecords(new Set(nextState.uploadedRecords));
-    }
-    if (Array.isArray(nextState.completedTraining)) {
-      setCompletedTraining(new Set(nextState.completedTraining));
-    }
-    if (nextState.safetyQuizResults && typeof nextState.safetyQuizResults === "object") {
-      setSafetyQuizResults(nextState.safetyQuizResults);
-    }
-    if (nextState.reviewRequested !== undefined) setReviewRequested(nextState.reviewRequested);
-    if (Array.isArray(nextState.activityFeed)) setActivityFeed(nextState.activityFeed);
-    if (Array.isArray(nextState.feedbackItems)) setFeedbackItems(nextState.feedbackItems);
-    if (Array.isArray(nextState.paymentRecords)) setPaymentRecords(nextState.paymentRecords);
-    if (Array.isArray(nextState.lockedAccounts)) {
-      setLockedAccounts(new Set(nextState.lockedAccounts));
-    }
-    if (Array.isArray(nextState.communityPosts)) setCommunityPosts(nextState.communityPosts);
-    if (Array.isArray(nextState.communityReports)) setCommunityReports(nextState.communityReports);
-    if (Array.isArray(nextState.shoutOuts)) setShoutOuts(nextState.shoutOuts);
-  }
-
   const selectedJob = jobs.find((job) => job.id === selectedId) ?? jobs[0] ?? emptyJob;
 
   const filteredJobs = jobs;
@@ -2308,131 +2154,6 @@ function App() {
     kind: item.priority === "high" ? "warning" : item.type === "message" ? "info" : "success",
   })), [inboxNotifications]);
   const unreadActivities = inboxNotifications.filter((item) => !item.readAt).length;
-  const currentState = useMemo<PersistedAppState>(() => ({
-    accountProfile,
-    activeView,
-    activityFeed,
-    applications,
-    autoMatchEnabled,
-    closeouts,
-    communityPosts,
-    communityReports,
-    completedTraining: Array.from(completedTraining),
-    safetyQuizResults,
-    difficulty,
-    feedbackItems,
-    locationQuery,
-    lockedAccounts: Array.from(lockedAccounts),
-    messageDraft,
-    onboardingComplete,
-    paymentRecords,
-    query,
-    radius,
-    reviewRequested,
-    role,
-    savedSearch,
-    scheduleHolds: Array.from(scheduleHolds),
-    sentMessages,
-    shoutOuts,
-    trade,
-    trustReady,
-    uploadedRecords: Array.from(uploadedRecords),
-    verifiedOnly,
-    workType,
-  }), [
-    accountProfile,
-    activeView,
-    activityFeed,
-    applications,
-    autoMatchEnabled,
-    closeouts,
-    communityPosts,
-    communityReports,
-    completedTraining,
-    safetyQuizResults,
-    difficulty,
-    feedbackItems,
-    locationQuery,
-    lockedAccounts,
-    messageDraft,
-    onboardingComplete,
-    paymentRecords,
-    query,
-    radius,
-    reviewRequested,
-    role,
-    savedSearch,
-    scheduleHolds,
-    sentMessages,
-    shoutOuts,
-    trade,
-    trustReady,
-    uploadedRecords,
-    verifiedOnly,
-    workType,
-  ]);
-
-  useEffect(() => {
-    if (!authUser) {
-      return;
-    }
-
-    let cancelled = false;
-    discardLegacyLocalState();
-
-    async function hydrateFromServer() {
-      try {
-        const serverResponse = await fetchServerState();
-
-        if (cancelled) {
-          return;
-        }
-
-        if (serverResponse.state) {
-          applyServerState(serverResponse.state);
-        }
-
-        setServerUpdatedAt(serverResponse.updatedAt);
-        setServerStatus("connected");
-      } catch (error) {
-        if (!cancelled) {
-          setServerStatus(statusFromError(error));
-        }
-      } finally {
-        if (!cancelled) {
-          setServerHydrated(true);
-        }
-      }
-    }
-
-    void hydrateFromServer();
-
-    return () => {
-      cancelled = true;
-    };
-    // Rehydrate when the authenticated account changes.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authUser?.id]);
-
-  useEffect(() => {
-    if (!authUser || !serverHydrated) {
-      return;
-    }
-
-    const timeout = window.setTimeout(() => {
-      void saveServerState(currentState)
-        .then((response) => {
-          setServerUpdatedAt(response.updatedAt);
-          setServerStatus("connected");
-        })
-        .catch((error) => {
-          setServerStatus(statusFromError(error));
-        });
-    }, 350);
-
-    return () => window.clearTimeout(timeout);
-  }, [authUser, currentState, serverHydrated]);
-
   const [uiToast, setUiToast] = useState<AppToast | null>(null);
 
   function addActivity(title: string, detail: string, kind: AppToast["kind"] = "info") {
@@ -2494,7 +2215,6 @@ function App() {
         throw new Error(body.error?.message || "Sign-in failed.");
       }
       const account = await refreshCanonicalAccount();
-      setServerHydrated(false);
       if (body.data.verificationRequired || !account.emailVerified) {
         setAuthNotice(body.data.verificationDelivered === false
           ? `Your account was created, but the verification email could not be delivered. Use Resend on the next screen.`
@@ -2616,7 +2336,6 @@ function App() {
       setAccountOpen(false);
       setActivityOpen(false);
       setActiveView("Home");
-      setServerHydrated(false);
       window.history.replaceState({}, "", "/");
     }
   }

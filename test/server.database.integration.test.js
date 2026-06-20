@@ -104,24 +104,43 @@ if (!testDatabaseUrl) {
     assert.deepEqual(canonicalAccount.payload.data.organizations, []);
     assert.equal(canonicalAccount.payload.meta.requestId, canonicalAccount.response.headers.get("x-request-id"));
 
+    const contractorLegacyRead = await requestJson(baseUrl, "/api/app-state", { cookie: contractor.cookie });
+    assert.equal(contractorLegacyRead.response.status, 410);
+    assert.equal(contractorLegacyRead.payload.code, "LEGACY_APP_STATE_RETIRED");
+
     const contractorWrite = await requestJson(baseUrl, "/api/app-state", {
       method: "PUT",
       cookie: contractor.cookie,
       body: { state: { marker: "contractor-private" } },
     });
-    assert.equal(contractorWrite.response.status, 200);
+    assert.equal(contractorWrite.response.status, 410);
+    assert.equal(contractorWrite.payload.code, "LEGACY_APP_STATE_RETIRED");
 
     const tradespersonWrite = await requestJson(baseUrl, "/api/app-state", {
       method: "PUT",
       cookie: tradesperson.cookie,
       body: { state: { marker: "tradesperson-private" } },
     });
-    assert.equal(tradespersonWrite.response.status, 200);
+    assert.equal(tradespersonWrite.response.status, 410);
+    assert.equal(tradespersonWrite.payload.code, "LEGACY_APP_STATE_RETIRED");
 
-    const contractorRead = await requestJson(baseUrl, "/api/app-state", { cookie: contractor.cookie });
-    const tradespersonRead = await requestJson(baseUrl, "/api/app-state", { cookie: tradesperson.cookie });
-    assert.equal(contractorRead.payload.state.marker, "contractor-private");
-    assert.equal(tradespersonRead.payload.state.marker, "tradesperson-private");
+    const legacyEvent = await requestJson(baseUrl, "/api/events", {
+      method: "POST",
+      cookie: contractor.cookie,
+      body: { type: "activity", payload: { marker: "legacy-event" } },
+    });
+    assert.equal(legacyEvent.response.status, 410);
+    assert.equal(legacyEvent.payload.code, "LEGACY_EVENTS_RETIRED");
+
+    const legacyPaymentExport = await requestJson(baseUrl, "/api/payments/export.csv", { cookie: contractor.cookie });
+    assert.equal(legacyPaymentExport.response.status, 410);
+    assert.equal(legacyPaymentExport.payload.code, "LEGACY_PAYMENT_EXPORT_RETIRED");
+
+    const legacyRows = await database.query(
+      "SELECT count(*)::int AS count FROM app_state WHERE id = ANY($1::uuid[])",
+      [[contractor.user.id, tradesperson.user.id]],
+    );
+    assert.equal(legacyRows.rows[0].count, 0);
 
     const roleChange = await requestJson(baseUrl, "/api/auth/profile", {
       method: "PATCH",
