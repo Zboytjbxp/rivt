@@ -16,11 +16,11 @@ Evidence must eventually link to implementation, automated tests, manual accepta
 |---|---|---:|---|
 | GA-FND-001 | Managed PostgreSQL and private object storage are required | Verified | Live `/api/health` and `/api/storage` report PostgreSQL and S3-compatible storage healthy. |
 | GA-FND-002 | Versioned database migrations own schema changes | Verified | Production runs checksummed transactional migrations with advisory locking; apply/rerun/rollback/reapply/tamper tests pass and readiness reports 0002 with zero pending. |
-| GA-FND-003 | Core records use normalized, user-owned domain tables | Partial | Canonical account/profile/organization/trade foundations exist and legacy blobs are quarantined; marketplace domains remain in `app_state` until their packets. |
-| GA-FND-004 | Authenticated tenant/ownership authorization protects every private API | Partial | Legacy private routes require a DB-backed user and scope state/events/uploads/export to user ID; disposable-DB cross-user isolation passes in GitHub Actions. Normalized domain authorization remains. |
+| GA-FND-003 | Core records use normalized, user-owned domain tables | Partial | Canonical account/profile/organization/trade and job foundations exist; legacy blobs are quarantined and jobs no longer use `app_state`, while applications/messages/records remain packet work. |
+| GA-FND-004 | Authenticated tenant/ownership authorization protects every private API | Partial | Legacy private routes require a DB-backed user; canonical job mutations require active organization owner/admin membership. Packet 03 disposable-DB CI remains pending. |
 | GA-FND-005 | API uses consistent typed errors and validation | Partial | `/api/v1` has request IDs, Zod validation, stable errors, and pagination primitives; legacy APIs retain transitional shapes. |
-| GA-FND-006 | Retryable writes are idempotent | Partial | Canonical idempotency storage and request primitives exist; domain mutations will adopt them per packet. |
-| GA-FND-007 | Auditable domain events use authenticated actor and subject | Partial | Append-only canonical audit storage and actor context exist; domain routes must emit events per packet. |
+| GA-FND-006 | Retryable writes are idempotent | Partial | Canonical idempotency storage is used by job create/update/transition APIs; remaining domains adopt it per packet. |
+| GA-FND-007 | Auditable domain events use authenticated actor and subject | Partial | Job create/update/transition routes emit authenticated audit events and append-only status events; remaining domains adopt it per packet. |
 | GA-FND-008 | Internal diagnostics identify deployed source revision and dependency readiness | Verified | Health/readiness identify exact source `166c43a`, dependencies, applied migrations, and pending count in production. |
 
 ## Authentication and Account
@@ -54,26 +54,26 @@ Evidence must eventually link to implementation, automated tests, manual accepta
 | ID | Requirement | Current | Evidence / gap |
 |---|---|---:|---|
 | GA-UX-001 | Compact role-correct shell and routes | Partial | Modern shell exists, but legacy views/routes and bridges remain. |
-| GA-UX-002 | Mobile nav is Home, Work, Crew, Shop Talk, Tools | Blocker | Current `PrimaryDestination` is Home, Work, Network, Inbox, Tools; Messages occupies primary nav and Shop Talk is nested/bridged. |
-| GA-UX-003 | Messages, notifications, search, and profile use top-bar entry | Partial | Search, notifications, and profile exist; messages remain primary nav and notification data is prototype state. |
+| GA-UX-002 | Mobile nav is Home, Work, Crew, Shop Talk, Tools | Partial | Packet 03 source shell uses exactly Home, Work, Crew, Shop Talk, Tools in primary navigation; local desktop/mobile E2E passes, CI/live release evidence pending. |
+| GA-UX-003 | Messages, notifications, search, and profile use top-bar entry | Partial | Search, messages, notifications, and profile use top-bar entry; notification/message data remains prototype until later packets. |
 | GA-UX-004 | No role toggle or duplicate global Post action | Partial | Signup/onboarding role selection exists appropriately; legacy components still carry older nav/action patterns. |
-| GA-UX-005 | Every screen has loading, empty, error, offline, permission, and retry states | Prototype | Some empty/toast states exist; no systematic acceptance matrix. |
+| GA-UX-005 | Every screen has loading, empty, error, offline, permission, and retry states | Partial | Work now has server loading, directional empty, error, retry, filter, and detail states with local E2E coverage; remaining screens still need the matrix. |
 | GA-UX-006 | Responsive, keyboard, screen-reader, light/dark acceptance | Partial | Themes and skip link exist; no automated UI suite or complete manual evidence. |
 
 ## Jobs and Discovery
 
 | ID | Requirement | Current | Evidence / gap |
 |---|---|---:|---|
-| GA-JOB-001 | Contractor creates a job draft and publishes it | Prototype | Post modal mutates React/app-state and uses seeded IDs; no job API/table. |
-| GA-JOB-002 | Contractor edits, pauses, closes, and views status history | Prototype | Some statuses and handlers exist in blob state; no server state machine. |
-| GA-JOB-003 | Job captures canonical scope, difficulty, tools/materials, schedule, pay expectation, location, and privacy | Partial | Type/modal include a subset; missing authoritative validation, private address model, deadlines, and versioned scope. |
-| GA-JOB-004 | Only authorized contractor/organization members mutate a job | Missing | No domain authorization. |
-| GA-JOB-005 | Tradesperson discovers only real, open, permitted jobs | Blocker | Seed jobs initialize every account; filters operate client-side over seeded/blob state. |
-| GA-JOB-006 | Search/filter works over server-owned records | Prototype | Client-side filter only. |
-| GA-JOB-007 | Exact address remains server-private until accepted relationship | Missing | Text policy exists but no separate private location record. |
-| GA-JOB-008 | Published/paused/closed status transitions are server-enforced | Missing | Client directly rewrites status strings. |
-| GA-JOB-009 | Job events are timestamped with actor/reason | Prototype | UI activity is inferred/hardcoded; generic events are not authoritative. |
-| GA-JOB-010 | Rate limits and duplicate-submit protection | Missing | No server limits/idempotency. |
+| GA-JOB-001 | Contractor creates a job draft and publishes it | Partial | Packet 03 adds `jobs` tables, typed APIs, progressive editor, and publish consent/idempotency; local unit/E2E pass, disposable-DB CI/live evidence pending. |
+| GA-JOB-002 | Contractor edits, pauses, closes, and views status history | Partial | Server state machine supports draft/open/paused/closed with append-only status events; Work UI exposes edit/publish/pause/resume/close. |
+| GA-JOB-003 | Job captures canonical scope, difficulty, tools/materials, schedule, pay expectation, location, and privacy | Partial | Canonical fields, validation, versioning, public location, private address, schedule/deadline, budget, duration, and requirements are implemented; production evidence pending. |
+| GA-JOB-004 | Only authorized contractor/organization members mutate a job | Partial | Job mutations require active owner/admin membership for the owning organization; cross-contractor integration test added and awaits CI PostgreSQL. |
+| GA-JOB-005 | Tradesperson discovers only real, open, permitted jobs | Partial | Tradesperson list API returns only published open jobs; seeded jobs/talent are removed from `src/data.ts`; CI/live evidence pending. |
+| GA-JOB-006 | Search/filter works over server-owned records | Partial | `/api/v1/jobs` supports paginated server filtering by query, trade, difficulty, work type, location, insurance, and status; Work UI calls typed API. |
+| GA-JOB-007 | Exact address remains server-private until accepted relationship | Partial | Exact address is stored in `job_private_locations` and excluded from list/tradesperson payloads; owner detail can view it. Accepted relationship release remains Packet 04. |
+| GA-JOB-008 | Published/paused/closed status transitions are server-enforced | Partial | Server enforces valid lifecycle transitions and rejects invalid duplicate/closed transitions; local unit coverage passes. |
+| GA-JOB-009 | Job events are timestamped with actor/reason | Partial | Status events and audit events include authenticated actor/reason/timestamp and are immutable via trigger. |
+| GA-JOB-010 | Rate limits and duplicate-submit protection | Partial | Job create/publish daily limits and idempotency-key replay protection are implemented; distributed rate-limit hardening remains later ops work. |
 
 ## Applications, Offers, and Active Work
 
@@ -117,11 +117,11 @@ Evidence must eventually link to implementation, automated tests, manual accepta
 |---|---|---:|---|
 | GA-REV-001 | Only completed participants may review once | Prototype | Review UI/flags exist; no participant eligibility or uniqueness. |
 | GA-REV-002 | Two-sided review response/dispute state persists | Prototype | Concepts/views exist; no normalized records. |
-| GA-REV-003 | Public reputation includes count/context and no fake data | Blocker | Seed jobs/talent carry ratings and review counts. |
+| GA-REV-003 | Public reputation includes count/context and no fake data | Partial | Packet 03 removes seeded jobs/talent/review counts from current data and Work/Crew E2E asserts seeded names are absent; canonical review reputation remains future packet work. |
 | GA-SAFE-001 | Versioned signup and contextual work consent | Prototype | Boolean/trust copy in app-state; no consent version/timestamp/actor. |
 | GA-SAFE-002 | Block and report user/job/message | Prototype | Community reports and account locks exist only as blob/admin simulation. |
 | GA-SAFE-003 | Unsafe condition / stop-work record | Missing | No workflow. |
-| GA-SAFE-004 | Verification claims use accurate states | Blocker | Seed talent uses boolean `verified`, `identityVerified`, and `insured`; UI includes “OSHA-aligned safety certs.” |
+| GA-SAFE-004 | Verification claims use accurate states | Partial | Seed talent verification/insurance claims were removed from current data; remaining profile/training copy still needs evidence-state review in the safety packet. |
 
 ## Admin and Operations
 

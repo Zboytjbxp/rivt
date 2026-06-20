@@ -2,8 +2,8 @@
 
 Last updated: 2026-06-19 America/New_York
 Current gate: Gate A jobs and discovery
-Current phase: Packet 02 production-accepted; Packet 03 is the next implementation packet
-Repository branch: `master`
+Current phase: Packet 03 implemented locally; awaiting commit, CI, and production release evidence
+Repository branch: `codex/packet-03-jobs-discovery`
 Production release commit: `696a332 Fix Railway production build dependencies`
 
 ## Source State
@@ -133,9 +133,37 @@ Packet 01 is accepted. The old object-storage bucket remains temporarily as a ro
 
 Packet 02 is accepted in production. The account journey, canonical profiles, provider configuration, and live release checks are complete for this packet. Facebook and Apple are not presented as available providers and remain deferred until their credentials and acceptance checks exist.
 
+## Packet 03 Implemented Locally
+
+- Added migration `0004_jobs_discovery` for canonical contractor-owned jobs, public job areas, private exact addresses, normalized requirements, and append-only job status events.
+- Added typed job domain validation, publish-readiness checks, deterministic match scoring, server-side filtering, private-address-safe mapping, and lifecycle transition rules.
+- Added `/api/v1/jobs` create/list/detail/update/publish/pause/resume/close APIs with authenticated actor context, organization owner/admin authorization, idempotency-key replay, optimistic version checks, daily job/publish limits, status events, and audit events.
+- Migrated the Work UI from local job posting to the typed jobs API with progressive draft save, edit, publish, pause, resume, close, loading, empty, error, retry, filter, detail, and private-address owner states.
+- Removed current seeded jobs, seeded talent, and fake review counts from `src/data.ts`; Work/Crew now use real empty states instead of fabricated people or jobs.
+- Corrected the primary shell to Home, Work, Crew, Shop Talk, Tools, with search, messages, notifications, and profile in the top bar.
+- Added job lifecycle unit tests, PostgreSQL-backed job integration tests, migration lifecycle coverage for migration 0004, and desktop/mobile Work shell E2E coverage.
+- Preserved the Packet 03 stop condition: applications/offers/mutual hiring were not implemented.
+
+## Packet 03 Local Verification
+
+Run on 2026-06-19 from `codex/packet-03-jobs-discovery`:
+
+- `npm.cmd run lint`: pass.
+- `npm.cmd run lint:security`: pass.
+- `npm.cmd run test`: pass; 18 unit tests pass, 3 non-DB integration tests pass, and 4 PostgreSQL integration tests skip locally because `TEST_DATABASE_URL` is not configured.
+- `npm.cmd run test:e2e`: pass; fail-closed auth and jobs/discovery desktop/mobile Work acceptance pass.
+- `npm.cmd run build`: pass; Vite builds 1,762 modules.
+- `npm.cmd audit --omit=dev`: pass; zero vulnerabilities.
+
+## Packet 03 Pending Evidence
+
+- Disposable PostgreSQL CI must run the new migration/job integration tests before acceptance.
+- Packet 03 has not been deployed to Railway yet.
+- Live `/api/health`, migration readiness, draft/publish/pause/resume/close smoke, tradesperson discovery smoke, and private-address non-leak smoke remain required before marking Packet 03 production-accepted.
+
 ## Next Exact Task
 
-Execute Packet 03 (`03_JOBS_DISCOVERY.md`): add canonical contractor-owned job drafts and lifecycle APIs, enforce exact-address privacy and ownership, build paginated tradesperson discovery, remove production seed/blob jobs from the experience, and migrate the Work UI to typed APIs without implementing applications or offers yet.
+Commit and push Packet 03, wait for GitHub Actions disposable-PostgreSQL evidence, then deploy to Railway and run the Packet 03 live smoke. If accepted, begin Packet 04 applications/offers/active work without reintroducing frontend-only job state.
 
 ## Blocking Founder Decisions
 

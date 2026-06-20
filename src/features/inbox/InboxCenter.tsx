@@ -144,7 +144,7 @@ export function InboxCenter({
               <span>Recent activity</span>
               <h2>Activity log</h2>
             </div>
-            <button type="button" onClick={() => onNavigate("network")}>Open network</button>
+            <button type="button" onClick={() => onNavigate("crew")}>Open crew</button>
           </header>
           <div className="v2-inbox-list">
             {activityFeed.slice(0, 4).map((item) => (

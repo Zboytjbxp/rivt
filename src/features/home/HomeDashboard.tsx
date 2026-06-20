@@ -92,7 +92,7 @@ export function HomeDashboard({
               </div>
               <div className="v2-today-actions">
                 <button type="button" className="v2-primary-button" onClick={() => onOpenJob(activeJob.id)}>Open job <ArrowRight size={16} /></button>
-                <button type="button" onClick={() => onNavigate("inbox")}><MessageSquareText size={16} /> Message</button>
+                <button type="button" onClick={() => onNavigate("messages")}><MessageSquareText size={16} /> Message</button>
                 <button type="button" onClick={() => onNavigate("tools")}><FileText size={16} /> Invoice</button>
               </div>
             </>
@@ -106,13 +106,13 @@ export function HomeDashboard({
         </article>
 
         <aside className="v2-attention-panel">
-          <header><span>Needs attention</span><button type="button" onClick={() => onNavigate("inbox")}>Open inbox</button></header>
+          <header><span>Needs attention</span><button type="button" onClick={() => onNavigate("messages")}>Open messages</button></header>
           <button type="button" onClick={() => onNavigate("work")}>
             <span className="v2-attention-icon"><Users size={17} /></span>
             <span><strong>{applicationCount || "No"} {role === "contractor" ? "applicants" : "applications"}</strong><small>{applicationCount ? "Review the latest activity" : "Nothing waiting right now"}</small></span>
             <ArrowRight size={15} />
           </button>
-          <button type="button" onClick={() => onNavigate("inbox")}>
+          <button type="button" onClick={() => onNavigate("messages")}>
             <span className="v2-attention-icon"><MessageSquareText size={17} /></span>
             <span><strong>{unreadCount || "No"} unread updates</strong><small>{unreadCount ? "Messages and job activity" : "You're caught up"}</small></span>
             <ArrowRight size={15} />
@@ -140,10 +140,10 @@ export function HomeDashboard({
         </section>
 
         <section className="v2-network-pulse">
-          <header><div><h2>Your network</h2><p>People and field knowledge.</p></div><button type="button" onClick={() => onNavigate("network")}>Open network</button></header>
+          <header><div><h2>Your crew</h2><p>People and field knowledge.</p></div><button type="button" onClick={() => onNavigate("crew")}>Open crew</button></header>
           <div>
-            <button type="button" onClick={() => onNavigate("network")}><Users size={18} /><span><strong>{shoutOutCount} shout-outs</strong><small>Peer reputation</small></span><ArrowRight size={15} /></button>
-            <button type="button" onClick={() => onNavigate("network")}><MessageSquareText size={18} /><span><strong>{communityCount} discussions</strong><small>Shop Talk</small></span><ArrowRight size={15} /></button>
+            <button type="button" onClick={() => onNavigate("crew")}><Users size={18} /><span><strong>{shoutOutCount} shout-outs</strong><small>Peer reputation</small></span><ArrowRight size={15} /></button>
+            <button type="button" onClick={() => onNavigate("shop-talk")}><MessageSquareText size={18} /><span><strong>{communityCount} discussions</strong><small>Shop Talk</small></span><ArrowRight size={15} /></button>
             <button type="button" onClick={() => onNavigate("tools")}><Wrench size={18} /><span><strong>Field tools</strong><small>Estimate, invoice, and records</small></span><ArrowRight size={15} /></button>
           </div>
         </section>

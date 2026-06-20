@@ -11,7 +11,16 @@ import { existsSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import pg from "pg";
-import { ApiError, asyncRoute, createRequestContext, sendApiError, validate, z } from "./api.js";
+import {
+  ApiError,
+  asyncRoute,
+  createRequestContext,
+  decodeCursor,
+  encodeCursor,
+  sendApiError,
+  validate,
+  z,
+} from "./api.js";
 import {
   assertStrongPassword,
   buildGoogleAuthorizationUrl,
@@ -22,8 +31,19 @@ import {
   safeRedirectPath,
   verifyGoogleIdToken,
 } from "./auth.js";
-import { loadActorContext } from "./authorization.js";
+import { loadActorContext, requireOrganizationRole } from "./authorization.js";
 import { emailProviderStatus, sendTransactionalEmail } from "./email.js";
+import {
+  assertPublishableJob,
+  createJobSchema,
+  jobListQuerySchema,
+  jobSelectSql,
+  mapJobRecord,
+  publishJobSchema,
+  transitionFor,
+  transitionJobSchema,
+  updateJobSchema,
+} from "./jobs.js";
 import { migrateUp, migrationStatus } from "./migrations.js";
 import {
   createOriginGuard,
@@ -1110,6 +1130,447 @@ app.put("/api/v1/profile/avatar", requireV1AuthenticatedUser, requireV1Actor, wr
   await database.query("UPDATE profiles SET avatar_upload_id = $2, updated_at = now() WHERE account_id = $1", [request.actor.account.id, input.uploadId]);
   response.json({ data: { avatarUploadId: input.uploadId }, meta: { requestId: request.requestId } });
 }));
+
+function requireContractorActor(actor) {
+  if (actor.account.status !== "active" || actor.profile.onboardingStatus !== "complete") {
+    throw new ApiError(403, "ACCOUNT_NOT_READY", "Complete account setup before managing jobs.");
+  }
+  if (actor.account.primaryRole !== "contractor") {
+    throw new ApiError(403, "CONTRACTOR_REQUIRED", "Only contractor accounts can manage jobs.");
+  }
+}
+
+function requireIdempotencyKey(request) {
+  const value = String(request.headers["idempotency-key"] ?? "").trim();
+  if (value.length < 8 || value.length > 200) {
+    throw new ApiError(400, "IDEMPOTENCY_KEY_REQUIRED", "Use a valid Idempotency-Key for this request.");
+  }
+  return value;
+}
+
+async function runIdempotentMutation(request, accountId, scope, action) {
+  const rawKey = requireIdempotencyKey(request);
+  const keyHash = sha256(`${scope}:${rawKey}`);
+  const requestHash = sha256(JSON.stringify(request.body ?? {}));
+
+  return withTransaction(async (client) => {
+    const inserted = await client.query(
+      `INSERT INTO idempotency_keys (
+         account_id, scope, key_hash, request_hash, state, locked_until, expires_at
+       ) VALUES ($1, $2, $3, $4, 'started', now() + interval '30 seconds', now() + interval '24 hours')
+       ON CONFLICT (account_id, scope, key_hash) DO NOTHING
+       RETURNING id`,
+      [accountId, scope, keyHash, requestHash],
+    );
+
+    let recordId = inserted.rows[0]?.id;
+    if (!recordId) {
+      const existing = await client.query(
+        `SELECT id, request_hash, state, response_status, response_body, locked_until
+         FROM idempotency_keys
+         WHERE account_id = $1 AND scope = $2 AND key_hash = $3
+         FOR UPDATE`,
+        [accountId, scope, keyHash],
+      );
+      const record = existing.rows[0];
+      if (!record || record.request_hash !== requestHash) {
+        throw new ApiError(409, "IDEMPOTENCY_KEY_CONFLICT", "That request key was already used for different data.");
+      }
+      if (record.state === "completed") {
+        return { status: record.response_status, body: record.response_body, replayed: true };
+      }
+      if (record.locked_until && new Date(record.locked_until).getTime() > Date.now()) {
+        throw new ApiError(409, "REQUEST_IN_PROGRESS", "That request is already in progress.");
+      }
+      recordId = record.id;
+      await client.query(
+        "UPDATE idempotency_keys SET state = 'started', locked_until = now() + interval '30 seconds', updated_at = now() WHERE id = $1",
+        [recordId],
+      );
+    }
+
+    const result = await action(client);
+    await client.query(
+      `UPDATE idempotency_keys
+       SET state = 'completed', response_status = $2, response_body = $3::jsonb,
+           locked_until = NULL, updated_at = now()
+       WHERE id = $1`,
+      [recordId, result.status, JSON.stringify(result.body)],
+    );
+    return { ...result, replayed: false };
+  });
+}
+
+function sendIdempotentResult(response, result) {
+  if (result.replayed) response.setHeader("Idempotent-Replayed", "true");
+  response.status(result.status).json(result.body);
+}
+
+async function replaceJobRequirements(client, jobId, input) {
+  const requirementFields = [
+    ["tools", "tool"],
+    ["materials", "material"],
+    ["deliverables", "deliverable"],
+    ["certificationCodes", "certification"],
+  ];
+  for (const [field, kind] of requirementFields) {
+    if (!Object.prototype.hasOwnProperty.call(input, field)) continue;
+    await client.query("DELETE FROM job_requirements WHERE job_id = $1 AND kind = $2", [jobId, kind]);
+    for (const [index, value] of input[field].entries()) {
+      await client.query(
+        "INSERT INTO job_requirements (job_id, kind, value, sort_order) VALUES ($1, $2, $3, $4)",
+        [jobId, kind, value, index],
+      );
+    }
+  }
+}
+
+async function loadJobRequirements(client, jobIds) {
+  if (!jobIds.length) return new Map();
+  const result = await client.query(
+    `SELECT job_id, kind, value, sort_order
+     FROM job_requirements
+     WHERE job_id = ANY($1::uuid[])
+     ORDER BY job_id, kind, sort_order, id`,
+    [jobIds],
+  );
+  const grouped = new Map();
+  for (const row of result.rows) {
+    const current = grouped.get(row.job_id) ?? [];
+    current.push(row);
+    grouped.set(row.job_id, current);
+  }
+  return grouped;
+}
+
+async function loadJobEvents(client, jobId) {
+  const result = await client.query(
+    `SELECT id, event_type, from_status, to_status, reason, occurred_at
+     FROM job_status_events WHERE job_id = $1
+     ORDER BY occurred_at DESC, id DESC`,
+    [jobId],
+  );
+  return result.rows;
+}
+
+async function loadOwnedJobForUpdate(client, actor, jobId) {
+  const result = await client.query(`${jobSelectSql({ includePrivateLocation: true })} WHERE j.id = $1 FOR UPDATE OF j`, [jobId]);
+  if (!result.rowCount) throw new ApiError(404, "JOB_NOT_FOUND", "Job not found.");
+  const job = result.rows[0];
+  requireOrganizationRole(actor, job.organization_id, ["owner", "admin"]);
+  return job;
+}
+
+function assertExpectedJobVersion(job, expectedVersion) {
+  if (job.version !== expectedVersion) {
+    throw new ApiError(409, "JOB_VERSION_CONFLICT", "This job changed on another device. Refresh and try again.", {
+      currentVersion: job.version,
+    });
+  }
+}
+
+async function mapJobDetail(client, row, actor, includePrivateLocation) {
+  const requirements = await loadJobRequirements(client, [row.id]);
+  const events = includePrivateLocation ? await loadJobEvents(client, row.id) : [];
+  return mapJobRecord(row, {
+    actor,
+    includePrivateLocation,
+    requirements: requirements.get(row.id) ?? [],
+    events,
+  });
+}
+
+app.post("/api/v1/jobs", requireV1AuthenticatedUser, requireV1Actor, writeRateLimit, asyncRoute(async (request, response) => {
+  requireContractorActor(request.actor);
+  const input = validate(createJobSchema, request.body);
+  requireOrganizationRole(request.actor, input.organizationId, ["owner", "admin"]);
+
+  const result = await runIdempotentMutation(request, request.actor.account.id, "jobs.create", async (client) => {
+    const recentDrafts = await client.query(
+      "SELECT count(*)::int AS count FROM jobs WHERE created_by_account_id = $1 AND created_at > now() - interval '24 hours'",
+      [request.actor.account.id],
+    );
+    const draftLimit = Number(process.env.JOB_DRAFT_DAILY_LIMIT ?? 30);
+    if (recentDrafts.rows[0].count >= draftLimit) {
+      throw new ApiError(429, "JOB_DRAFT_LIMIT_REACHED", "Daily job draft limit reached.", {
+        limit: draftLimit,
+        used: recentDrafts.rows[0].count,
+      });
+    }
+
+    const trade = await client.query("SELECT code FROM trades WHERE code = $1 AND active = true", [input.tradeCode]);
+    if (!trade.rowCount) throw new ApiError(422, "TRADE_INVALID", "The selected trade is unavailable.");
+
+    const inserted = await client.query(
+      `INSERT INTO jobs (
+         organization_id, created_by_account_id, title, trade_code, summary,
+         scope_description, difficulty, work_type, budget_cents, budget_unit,
+         duration_hours, preferred_start_date, application_deadline, insurance_required
+       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+       RETURNING id`,
+      [input.organizationId, request.actor.account.id, input.title, input.tradeCode, input.summary,
+        input.scopeDescription, input.difficulty, input.workType, input.budgetCents, input.budgetUnit,
+        input.durationHours, input.preferredStartDate, input.applicationDeadline, input.insuranceRequired],
+    );
+    const jobId = inserted.rows[0].id;
+    await client.query(
+      `INSERT INTO job_public_locations (job_id, city, region, country_code, postal_prefix)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [jobId, input.publicLocation.city, input.publicLocation.region, input.publicLocation.countryCode, input.publicLocation.postalPrefix ?? null],
+    );
+    if (input.privateLocation) {
+      await client.query(
+        `INSERT INTO job_private_locations (
+           job_id, address_line1, address_line2, city, region, postal_code, country_code, access_notes
+         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+        [jobId, input.privateLocation.addressLine1, input.privateLocation.addressLine2,
+          input.privateLocation.city, input.privateLocation.region, input.privateLocation.postalCode,
+          input.privateLocation.countryCode, input.privateLocation.accessNotes],
+      );
+    }
+    await replaceJobRequirements(client, jobId, input);
+    await client.query(
+      `INSERT INTO job_status_events (job_id, actor_account_id, event_type, to_status)
+       VALUES ($1, $2, 'draft_created', 'draft')`,
+      [jobId, request.actor.account.id],
+    );
+    await client.query(
+      `INSERT INTO audit_events (request_id, actor_account_id, organization_id, action, subject_type, subject_id)
+       VALUES ($1, $2::uuid, $3::uuid, 'job.draft_created', 'job', ($4::uuid)::text)`,
+      [request.requestId, request.actor.account.id, input.organizationId, jobId],
+    );
+    const row = (await client.query(`${jobSelectSql({ includePrivateLocation: true })} WHERE j.id = $1`, [jobId])).rows[0];
+    const job = await mapJobDetail(client, row, request.actor, true);
+    return { status: 201, body: { data: { job }, meta: { requestId: request.requestId } } };
+  });
+  sendIdempotentResult(response, result);
+}));
+
+app.get("/api/v1/jobs", requireV1AuthenticatedUser, requireV1Actor, asyncRoute(async (request, response) => {
+  const input = validate(jobListQuerySchema, request.query);
+  const conditions = [];
+  const parameters = [];
+  const addParameter = (value) => {
+    parameters.push(value);
+    return `$${parameters.length}`;
+  };
+
+  const sortColumn = request.actor.account.primaryRole === "contractor" ? "j.updated_at" : "j.published_at";
+  if (request.actor.account.primaryRole === "contractor") {
+    const organizationIds = request.actor.memberships
+      .filter((membership) => ["owner", "admin"].includes(membership.role))
+      .map((membership) => membership.organizationId);
+    if (!organizationIds.length) {
+      response.json({ data: { jobs: [] }, meta: { requestId: request.requestId, nextCursor: null } });
+      return;
+    }
+    conditions.push(`j.organization_id = ANY(${addParameter(organizationIds)}::uuid[])`);
+    if (input.status) conditions.push(`j.status = ${addParameter(input.status)}`);
+  } else {
+    if (request.actor.account.primaryRole !== "tradesperson" || request.actor.account.status !== "active") {
+      throw new ApiError(403, "TRADESPERSON_REQUIRED", "Complete tradesperson setup before discovering work.");
+    }
+    conditions.push("j.status = 'open'");
+    conditions.push("j.published_at IS NOT NULL");
+  }
+
+  if (input.q) {
+    const queryParameter = addParameter(`%${input.q}%`);
+    conditions.push(`(j.title ILIKE ${queryParameter} OR j.summary ILIKE ${queryParameter} OR j.scope_description ILIKE ${queryParameter} OR o.name ILIKE ${queryParameter})`);
+  }
+  if (input.trade) conditions.push(`j.trade_code = ${addParameter(input.trade)}`);
+  if (input.difficulty) conditions.push(`j.difficulty = ${addParameter(input.difficulty)}`);
+  if (input.workType) conditions.push(`j.work_type = ${addParameter(input.workType)}`);
+  if (input.city) conditions.push(`pl.city ILIKE ${addParameter(input.city)}`);
+  if (input.region) conditions.push(`pl.region ILIKE ${addParameter(input.region)}`);
+  if (input.insuranceRequired !== undefined) conditions.push(`j.insurance_required = ${addParameter(input.insuranceRequired)}`);
+  if (input.cursor) {
+    const cursor = decodeCursor(input.cursor);
+    if (!cursor?.sort || !cursor?.id) throw new ApiError(422, "INVALID_CURSOR", "The pagination cursor is invalid.");
+    conditions.push(`(${sortColumn}, j.id) < (${addParameter(cursor.sort)}::timestamptz, ${addParameter(cursor.id)}::uuid)`);
+  }
+
+  const rows = await database.query(
+    `${jobSelectSql()} WHERE ${conditions.join(" AND ")}
+     ORDER BY ${sortColumn} DESC, j.id DESC
+     LIMIT ${addParameter(input.limit + 1)}`,
+    parameters,
+  );
+  const hasMore = rows.rows.length > input.limit;
+  const pageRows = rows.rows.slice(0, input.limit);
+  const requirements = await loadJobRequirements(database, pageRows.map((job) => job.id));
+  const jobs = pageRows.map((job) => mapJobRecord(job, {
+    actor: request.actor,
+    requirements: requirements.get(job.id) ?? [],
+  }));
+  const last = pageRows.at(-1);
+  response.json({
+    data: { jobs },
+    meta: {
+      requestId: request.requestId,
+      nextCursor: hasMore && last ? encodeCursor({ sort: last[sortColumn === "j.updated_at" ? "updated_at" : "published_at"], id: last.id }) : null,
+    },
+  });
+}));
+
+app.get("/api/v1/jobs/:id", requireV1AuthenticatedUser, requireV1Actor, asyncRoute(async (request, response) => {
+  const jobId = validate(z.uuid(), request.params.id);
+  const publicResult = await database.query(`${jobSelectSql()} WHERE j.id = $1`, [jobId]);
+  if (!publicResult.rowCount) throw new ApiError(404, "JOB_NOT_FOUND", "Job not found.");
+  let row = publicResult.rows[0];
+  const ownsJob = request.actor.memberships.some((membership) => (
+    membership.organizationId === row.organization_id && ["owner", "admin"].includes(membership.role)
+  ));
+  if (!ownsJob && (request.actor.account.primaryRole !== "tradesperson" || row.status !== "open")) {
+    throw new ApiError(404, "JOB_NOT_FOUND", "Job not found.");
+  }
+  if (ownsJob) {
+    row = (await database.query(`${jobSelectSql({ includePrivateLocation: true })} WHERE j.id = $1`, [jobId])).rows[0];
+  }
+  const job = await mapJobDetail(database, row, request.actor, ownsJob);
+  response.json({ data: { job }, meta: { requestId: request.requestId } });
+}));
+
+app.patch("/api/v1/jobs/:id", requireV1AuthenticatedUser, requireV1Actor, writeRateLimit, asyncRoute(async (request, response) => {
+  requireContractorActor(request.actor);
+  const jobId = validate(z.uuid(), request.params.id);
+  const input = validate(updateJobSchema, request.body);
+  const result = await runIdempotentMutation(request, request.actor.account.id, `jobs.update:${jobId}`, async (client) => {
+    const current = await loadOwnedJobForUpdate(client, request.actor, jobId);
+    assertExpectedJobVersion(current, input.expectedVersion);
+    if (current.status === "closed") throw new ApiError(409, "JOB_CLOSED", "Closed jobs cannot be edited.");
+    if (input.tradeCode) {
+      const trade = await client.query("SELECT code FROM trades WHERE code = $1 AND active = true", [input.tradeCode]);
+      if (!trade.rowCount) throw new ApiError(422, "TRADE_INVALID", "The selected trade is unavailable.");
+    }
+    const has = (key) => Object.prototype.hasOwnProperty.call(input, key);
+    const updated = await client.query(
+      `UPDATE jobs SET
+         title = $2, trade_code = $3, summary = $4, scope_description = $5,
+         difficulty = $6, work_type = $7, budget_cents = $8, budget_unit = $9,
+         duration_hours = $10, preferred_start_date = $11, application_deadline = $12,
+         insurance_required = $13, version = version + 1, updated_at = now()
+       WHERE id = $1 RETURNING version`,
+      [jobId, input.title ?? current.title, input.tradeCode ?? current.trade_code,
+        input.summary ?? current.summary, input.scopeDescription ?? current.scope_description,
+        input.difficulty ?? current.difficulty, input.workType ?? current.work_type,
+        has("budgetCents") ? input.budgetCents : current.budget_cents,
+        input.budgetUnit ?? current.budget_unit,
+        has("durationHours") ? input.durationHours : current.duration_hours,
+        has("preferredStartDate") ? input.preferredStartDate : current.preferred_start_date,
+        has("applicationDeadline") ? input.applicationDeadline : current.application_deadline,
+        input.insuranceRequired ?? current.insurance_required],
+    );
+    if (input.publicLocation) {
+      await client.query(
+        `UPDATE job_public_locations SET city = $2, region = $3, country_code = $4,
+           postal_prefix = $5, updated_at = now() WHERE job_id = $1`,
+        [jobId, input.publicLocation.city, input.publicLocation.region,
+          input.publicLocation.countryCode, input.publicLocation.postalPrefix ?? null],
+      );
+    }
+    if (has("privateLocation")) {
+      if (input.privateLocation === null) {
+        await client.query("DELETE FROM job_private_locations WHERE job_id = $1", [jobId]);
+      } else {
+        await client.query(
+          `INSERT INTO job_private_locations (
+             job_id, address_line1, address_line2, city, region, postal_code, country_code, access_notes
+           ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+           ON CONFLICT (job_id) DO UPDATE SET
+             address_line1 = EXCLUDED.address_line1, address_line2 = EXCLUDED.address_line2,
+             city = EXCLUDED.city, region = EXCLUDED.region, postal_code = EXCLUDED.postal_code,
+             country_code = EXCLUDED.country_code, access_notes = EXCLUDED.access_notes, updated_at = now()`,
+          [jobId, input.privateLocation.addressLine1, input.privateLocation.addressLine2,
+            input.privateLocation.city, input.privateLocation.region, input.privateLocation.postalCode,
+            input.privateLocation.countryCode, input.privateLocation.accessNotes],
+        );
+      }
+    }
+    await replaceJobRequirements(client, jobId, input);
+    await client.query(
+      `INSERT INTO job_status_events (job_id, actor_account_id, event_type, from_status, to_status)
+       VALUES ($1, $2, 'draft_updated', $3, $3)`,
+      [jobId, request.actor.account.id, current.status],
+    );
+    await client.query(
+      `INSERT INTO audit_events (request_id, actor_account_id, organization_id, action, subject_type, subject_id, metadata)
+       VALUES ($1, $2::uuid, $3::uuid, 'job.updated', 'job', ($4::uuid)::text, $5::jsonb)`,
+      [request.requestId, request.actor.account.id, current.organization_id, jobId,
+        JSON.stringify({ version: updated.rows[0].version })],
+    );
+    const row = (await client.query(`${jobSelectSql({ includePrivateLocation: true })} WHERE j.id = $1`, [jobId])).rows[0];
+    const job = await mapJobDetail(client, row, request.actor, true);
+    return { status: 200, body: { data: { job }, meta: { requestId: request.requestId } } };
+  });
+  sendIdempotentResult(response, result);
+}));
+
+async function transitionJob(request, response, action) {
+  requireContractorActor(request.actor);
+  const jobId = validate(z.uuid(), request.params.id);
+  const input = validate(action === "publish" ? publishJobSchema : transitionJobSchema, request.body);
+  const result = await runIdempotentMutation(request, request.actor.account.id, `jobs.${action}:${jobId}`, async (client) => {
+    const current = await loadOwnedJobForUpdate(client, request.actor, jobId);
+    assertExpectedJobVersion(current, input.expectedVersion);
+    const nextStatus = transitionFor(current.status, action);
+    if (action === "publish") {
+      const expectedConsentVersion = envValue("SIGNUP_CONSENT_VERSION", "2026-06-19");
+      if (input.consentVersion !== expectedConsentVersion) {
+        throw new ApiError(409, "CONSENT_VERSION_CHANGED", "The consent agreement changed. Review the current version.");
+      }
+      assertPublishableJob(current);
+      const publishedToday = await client.query(
+        `SELECT count(*)::int AS count FROM job_status_events
+         WHERE actor_account_id = $1 AND event_type = 'published' AND occurred_at > now() - interval '24 hours'`,
+        [request.actor.account.id],
+      );
+      const publishLimit = Number(process.env.JOB_PUBLISH_DAILY_LIMIT ?? 10);
+      if (publishedToday.rows[0].count >= publishLimit) {
+        throw new ApiError(429, "JOB_PUBLISH_LIMIT_REACHED", "Daily job publishing limit reached.", {
+          limit: publishLimit,
+          used: publishedToday.rows[0].count,
+        });
+      }
+      await client.query(
+        `INSERT INTO consent_acceptances (account_id, document_key, document_version, context, request_id, metadata)
+         VALUES ($1, 'platform_terms', $2, 'job_post', $3, $4::jsonb)
+         ON CONFLICT (account_id, document_key, document_version, context) DO NOTHING`,
+        [request.actor.account.id, expectedConsentVersion, request.requestId, JSON.stringify({ jobId })],
+      );
+    }
+
+    const eventType = action === "publish" ? "published" : action === "resume" ? "resumed" : `${action}d`;
+    await client.query(
+      `UPDATE jobs SET status = $2, version = version + 1, updated_at = now(),
+         published_at = CASE WHEN $2 = 'open' THEN COALESCE(published_at, now()) ELSE published_at END,
+         paused_at = CASE WHEN $2 = 'paused' THEN now() WHEN $2 = 'open' THEN NULL ELSE paused_at END,
+         closed_at = CASE WHEN $2 = 'closed' THEN now() ELSE closed_at END
+       WHERE id = $1`,
+      [jobId, nextStatus],
+    );
+    await client.query(
+      `INSERT INTO job_status_events (job_id, actor_account_id, event_type, from_status, to_status, reason)
+       VALUES ($1, $2, $3, $4, $5, $6)`,
+      [jobId, request.actor.account.id, eventType, current.status, nextStatus, input.reason ?? ""],
+    );
+    await client.query(
+      `INSERT INTO audit_events (request_id, actor_account_id, organization_id, action, subject_type, subject_id, metadata)
+       VALUES ($1, $2::uuid, $3::uuid, $4, 'job', ($5::uuid)::text, $6::jsonb)`,
+      [request.requestId, request.actor.account.id, current.organization_id, `job.${eventType}`, jobId,
+        JSON.stringify({ fromStatus: current.status, toStatus: nextStatus })],
+    );
+    const row = (await client.query(`${jobSelectSql({ includePrivateLocation: true })} WHERE j.id = $1`, [jobId])).rows[0];
+    const job = await mapJobDetail(client, row, request.actor, true);
+    return { status: 200, body: { data: { job }, meta: { requestId: request.requestId } } };
+  });
+  sendIdempotentResult(response, result);
+}
+
+app.post("/api/v1/jobs/:id/publish", requireV1AuthenticatedUser, requireV1Actor, writeRateLimit, asyncRoute((request, response) => transitionJob(request, response, "publish")));
+app.post("/api/v1/jobs/:id/pause", requireV1AuthenticatedUser, requireV1Actor, writeRateLimit, asyncRoute((request, response) => transitionJob(request, response, "pause")));
+app.post("/api/v1/jobs/:id/resume", requireV1AuthenticatedUser, requireV1Actor, writeRateLimit, asyncRoute((request, response) => transitionJob(request, response, "resume")));
+app.post("/api/v1/jobs/:id/close", requireV1AuthenticatedUser, requireV1Actor, writeRateLimit, asyncRoute((request, response) => transitionJob(request, response, "close")));
 
 app.get("/api/readiness", requireAuthenticatedUser, async (_request, response, next) => {
   await runWithDatabase(response, next, async () => {

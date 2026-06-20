@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import type { Role } from "../types";
 
-export type PrimaryDestination = "home" | "work" | "network" | "inbox" | "tools";
+export type PrimaryDestination = "home" | "work" | "crew" | "shop-talk" | "tools" | "messages";
 
 export interface ShellProfile {
   name: string;
@@ -27,6 +27,7 @@ export interface AppShellProps {
   guestBanner?: ReactNode;
   onNavigate: (destination: PrimaryDestination) => void;
   onOpenAccount: () => void;
+  onOpenMessages: () => void;
   onOpenNotifications: () => void;
   onOpenActiveJob: () => void;
   onSearch: (query: string) => void;
