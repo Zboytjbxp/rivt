@@ -585,9 +585,15 @@ const baseUploadRateLimit = createRateLimiter({
   namespace: "upload",
 });
 
-async function assertActorCanMutate(actor) {
+function allowsPendingOnboardingMutation(request) {
+  const path = String(request.path ?? request.originalUrl ?? "").split("?", 1)[0];
+  return request.method === "POST" && path === "/api/v1/onboarding/complete";
+}
+
+async function assertActorCanMutate(request) {
+  const actor = request.actor;
   if (!actor) return;
-  if (actor.account.status !== "active") {
+  if (actor.account.status !== "active" && !allowsPendingOnboardingMutation(request)) {
     throw new ApiError(403, "ACCOUNT_NOT_ACTIVE", "This account cannot make changes.");
   }
   const activeRestrictions = await database.query(
@@ -615,13 +621,13 @@ async function assertActorCanMutate(actor) {
 }
 
 function writeRateLimit(request, response, next) {
-  Promise.resolve(assertActorCanMutate(request.actor))
+  Promise.resolve(assertActorCanMutate(request))
     .then(() => baseWriteRateLimit(request, response, next))
     .catch(next);
 }
 
 function uploadRateLimit(request, response, next) {
-  Promise.resolve(assertActorCanMutate(request.actor))
+  Promise.resolve(assertActorCanMutate(request))
     .then(() => baseUploadRateLimit(request, response, next))
     .catch(next);
 }
