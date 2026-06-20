@@ -3096,7 +3096,7 @@ function App() {
         }}
       >
 
-        {["Home", "Marketplace", "My Crew", "Shop Talk", "Reviews", "Messages", "Tools", "Records", "Trust & Legal", "Safety & Training", "Feedback", "Settings"].includes(activeView) ? null : (
+        {["Home", "Marketplace", "My Crew", "Shop Talk", "Reviews", "Messages", "Tools", "Records", "Trust & Legal", "Safety & Training", "Feedback", "Settings", "Admin"].includes(activeView) ? null : (
           <header className="page-heading" aria-label={`${page.title} heading`}>
             <div>
               <h1>{page.title}</h1>
@@ -3249,6 +3249,23 @@ function App() {
             onRevokeSession={handleRevokeSession}
             onRevokeOtherSessions={handleRevokeOtherSessions}
           />
+        ) : activeView === "Admin" ? (
+          <section className="v2-profile-page" aria-label="Admin access">
+            <header className="v2-profile-hero">
+              <span>Staff access</span>
+              <h1>Admin console</h1>
+              <p>Admin tools are only available to authorized RIVT staff. Normal user sessions cannot access moderation, support, or account restriction controls.</p>
+            </header>
+            <section className="v2-profile-panel v2-profile-panel-wide">
+              <header>
+                <span>Access boundary</span>
+                <strong>Server-side permission required</strong>
+              </header>
+              <p className="v2-profile-note">
+                If you need help with an account, use Support from the profile menu. Admin-only actions require a staff role and an auditable reason.
+              </p>
+            </section>
+          </section>
         ) : ["Tools", "Records"].includes(activeView) ? (
           <ToolsStudio
             jobs={jobs}
@@ -4184,7 +4201,7 @@ function AccountPanel({
           <InfoItem icon={ShieldCheck} label="Trust" value={trustReady ? "Ready" : "Needs review"} />
           <InfoItem icon={FolderOpen} label="Records" value={`${recordCount}/${recordChecklist.length}`} />
           <InfoItem icon={ThumbsUp} label="Community" value={`${communityBadges.length} badge${communityBadges.length === 1 ? "" : "s"}`} />
-          <InfoItem icon={GraduationCap} label="Safety certs" value={`${safetyCertCount}/${safetyQuizData.length}`} />
+          <InfoItem icon={GraduationCap} label="Safety modules" value={`${safetyCertCount}/${safetyQuizData.length}`} />
         </div>
 
         <section className="account-section">

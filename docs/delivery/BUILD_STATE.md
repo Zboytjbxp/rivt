@@ -2,7 +2,7 @@
 
 Last updated: 2026-06-20 America/New_York
 Current gate: Gate A reviews, admin, and safety
-Current phase: Packet 06 accepted; Packet 07 ready
+Current phase: Packet 07 implemented locally; deployment and live acceptance pending
 Active packet: `docs/delivery/packets/07_REVIEWS_ADMIN_SAFETY.md`
 Repository branch: `master`
 Production release commit: `993be3899f8eb996229be90cf423cf58e5e27c76`
@@ -277,9 +277,36 @@ Run on 2026-06-20 from `master`:
 
 Packet 06 is accepted in production for private accepted-work project records, authorized media evidence, content-signature rejection, notes, completion submission, contractor confirmation/dispute, and reproducible closeout reports. Reviews, admin/support, safety moderation, and final launch hardening remain later packets and must not be represented as production-ready.
 
+## Packet 07 Implemented Locally
+
+- Added migration `0008_reviews_admin_safety` for participant reviews, review events, safety reports, unsafe-work reports, support cases/events, admin role grants, admin action events, and account restrictions/events.
+- Added `actor_account_id` to consent acceptances and expanded consent contexts for review submission and stop-work acknowledgement.
+- Added typed review/safety/support/admin schemas and mappers in `server/reviews-safety.js`.
+- Added participant-only review submission for completed active work, one-review-per-reviewee/work uniqueness, pending approval, dispute, response, admin resolve/hide, and reputation count/average APIs.
+- Added report and unsafe/stop-work APIs with participant/relationship authorization, stop-work contextual consent, no-fault unsafe-work records, notifications, and append-only event history.
+- Added support-case APIs that remain available to suspended/restricted accounts while regular mutating APIs fail closed.
+- Added least-privilege admin API authorization through `admin_role_grants`, admin-only overview/review/support/restriction mutations, and immutable `admin_action_events` requiring actor, reason, subject, and timestamp.
+- Hardened block behavior so blocked accounts cannot use job discovery/detail/profile reputation/application routes as alternate contact paths.
+- Replaced the normal-user Admin route with a staff-access boundary notice and removed visible overclaims around verified profiles and safety certifications in current shell copy.
+- Added Packet 07 integration coverage and reusable live smoke command `npm run smoke:reviews:live`.
+- Preserved the Packet 07 stop condition: no public Shop Talk moderation or automated verification-provider claims were added.
+
+## Packet 07 Local Verification
+
+Run on 2026-06-20 from `master`:
+
+- `npm run lint`: pass.
+- `npm run build`: pass.
+- `npm run test`: pass; 18 unit tests pass, non-DB integration tests pass, and DB-backed integration tests including Packet 07 skip locally because `TEST_DATABASE_URL` is not configured.
+- `npm run test:e2e`: pass; fail-closed auth and jobs/discovery desktop/mobile checks pass.
+- `npm audit --omit=dev`: pass; zero vulnerabilities.
+- `npm run lint:security`: pass.
+
+Packet 07 is not accepted yet. Deployment, disposable-PostgreSQL CI evidence, production readiness for migration `0008_reviews_admin_safety`, and `npm run smoke:reviews:live` remain required before production acceptance.
+
 ## Next Exact Task
 
-Start `docs/delivery/packets/07_REVIEWS_ADMIN_SAFETY.md`: implement participant-only reviews, review dispute/approval state, admin/support authorization, moderation/account safety flows, and acceptance smoke without adding broad launch hardening scope.
+Deploy Packet 07 after source review, confirm migration `0008_reviews_admin_safety` in readiness, then run `npm run smoke:reviews:live` and record production acceptance evidence.
 
 ## Blocking Founder Decisions
 

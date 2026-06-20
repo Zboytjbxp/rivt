@@ -251,7 +251,7 @@ export function ProfileHub({
           </header>
           <div className="v2-profile-list">
             <article><GraduationCap size={16} /><span>{trainingProgress}% complete</span></article>
-            <article><BadgeCheck size={16} /><span>{safetyCertCount} safety cert{safetyCertCount === 1 ? "" : "s"}</span></article>
+            <article><BadgeCheck size={16} /><span>{safetyCertCount} safety module{safetyCertCount === 1 ? "" : "s"}</span></article>
             <article><Star size={16} /><span>{shoutOutCount} shout-out{shoutOutCount === 1 ? "" : "s"}</span></article>
           </div>
         </section>

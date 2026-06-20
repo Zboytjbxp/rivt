@@ -137,3 +137,20 @@ Add one entry per staging/production deployment.
 - Known risks: reviews, admin/support, safety moderation, distributed rate limits, full restore drill, and final launch hardening remain open
 - Rollback performed/result: not required
 - Approval: Packet 06 accepted; overall Gate A not approved
+
+## Packet 07 Pre-Deploy Source State
+
+- Environment: Local source, production deployment pending
+- Date/time/timezone: 2026-06-20 America/New_York
+- Source repository/branch: `Zboytjbxp/rivt`, `master`
+- Source commit: pending until commit/push
+- Migration version before/after: production remains `0007_project_completion`; source adds `0008_reviews_admin_safety`
+- Feature-flag/config version: no provider credentials changed; no automated verification provider enabled
+- Provider/config changes: none
+- Backup/rollback target: prior successful Packet 06 production deployment `67562c06-40d4-4923-bd82-52b169a0d45e`; source migration includes down migration for `0008_reviews_admin_safety`
+- Automated gates: local `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test`, `npm run test:e2e`, and `npm audit --omit=dev` passed; DB-backed tests skipped locally because `TEST_DATABASE_URL` is not configured
+- Post-deploy smoke tests: not run yet; requires deployment and `npm run smoke:reviews:live`
+- Health/readiness result: not checked for Packet 07; production currently reports Packet 06
+- Known risks: disposable-PostgreSQL CI and live smoke are required before Packet 07 acceptance
+- Rollback performed/result: not required
+- Approval: not accepted; deploy and live smoke pending

@@ -82,6 +82,26 @@ import {
   mediaKindForMime,
   projectEntryCreateSchema,
 } from "./projects.js";
+import {
+  adminReviewResolveSchema,
+  adminSupportCaseEventSchema,
+  mapReputation,
+  mapRestriction,
+  mapReview,
+  mapSafetyReport,
+  mapSupportCase,
+  mapUnsafeWorkReport,
+  requireAdminRole,
+  restrictionCreateSchema,
+  restrictionLiftSchema,
+  reviewDisputeSchema,
+  reviewResponseSchema,
+  reviewSubmitSchema,
+  safetyReportSchema,
+  supportCaseCreateSchema,
+  supportCaseEventSchema,
+  unsafeWorkReportSchema,
+} from "./reviews-safety.js";
 import { migrateUp, migrationStatus } from "./migrations.js";
 import {
   createOriginGuard,
@@ -519,23 +539,92 @@ const requireV1Actor = asyncRoute(async (request, _response, next) => {
   next();
 });
 
+const requireV1SupportActor = asyncRoute(async (request, _response, next) => {
+  await ensureDatabaseReady();
+  request.actor = await loadActorContext(database, request.authUser.id);
+  if (request.actor.account.status === "closed") {
+    throw new ApiError(403, "ACCOUNT_CLOSED", "Closed accounts cannot access support.");
+  }
+  next();
+});
+
+const requireV1AdminActor = asyncRoute(async (request, _response, next) => {
+  await ensureDatabaseReady();
+  request.actor = await loadActorContext(database, request.authUser.id);
+  if (request.actor.account.status !== "active") {
+    throw new ApiError(403, "ADMIN_ACCESS_DENIED", "Admin access requires an active account.");
+  }
+  const roles = await database.query(
+    `SELECT role FROM admin_role_grants
+     WHERE account_id = $1 AND status = 'active'
+     ORDER BY role`,
+    [request.actor.account.id],
+  );
+  request.admin = { roles: roles.rows.map((row) => row.role) };
+  if (!request.admin.roles.length) {
+    throw new ApiError(403, "ADMIN_ACCESS_DENIED", "This route requires RIVT staff access.");
+  }
+  next();
+});
+
 const authRateLimit = createRateLimiter({
   windowMs: 15 * 60 * 1000,
   max: Number(process.env.AUTH_RATE_LIMIT ?? 30),
   namespace: "auth",
 });
 
-const writeRateLimit = createRateLimiter({
+const baseWriteRateLimit = createRateLimiter({
   windowMs: 60 * 1000,
   max: Number(process.env.WRITE_RATE_LIMIT ?? 120),
   namespace: "write",
 });
 
-const uploadRateLimit = createRateLimiter({
+const baseUploadRateLimit = createRateLimiter({
   windowMs: 60 * 60 * 1000,
   max: Number(process.env.UPLOAD_RATE_LIMIT ?? 40),
   namespace: "upload",
 });
+
+async function assertActorCanMutate(actor) {
+  if (!actor) return;
+  if (actor.account.status !== "active") {
+    throw new ApiError(403, "ACCOUNT_NOT_ACTIVE", "This account cannot make changes.");
+  }
+  const activeRestrictions = await database.query(
+    `SELECT id, restriction_type, reason_code, reason, ends_at
+     FROM account_restrictions
+     WHERE account_id = $1
+       AND status = 'active'
+       AND restriction_type IN ('mutation_restricted', 'timeout_24h', 'suspension', 'ban')
+       AND (ends_at IS NULL OR ends_at > now())
+     ORDER BY created_at DESC, id DESC
+     LIMIT 5`,
+    [actor.account.id],
+  );
+  if (activeRestrictions.rowCount) {
+    throw new ApiError(403, "ACCOUNT_RESTRICTED", "This account is restricted from making changes. Support access remains available.", {
+      supportAllowed: true,
+      restrictions: activeRestrictions.rows.map((row) => ({
+        id: row.id,
+        type: row.restriction_type,
+        reasonCode: row.reason_code,
+        endsAt: row.ends_at ? new Date(row.ends_at).toISOString() : null,
+      })),
+    });
+  }
+}
+
+function writeRateLimit(request, response, next) {
+  Promise.resolve(assertActorCanMutate(request.actor))
+    .then(() => baseWriteRateLimit(request, response, next))
+    .catch(next);
+}
+
+function uploadRateLimit(request, response, next) {
+  Promise.resolve(assertActorCanMutate(request.actor))
+    .then(() => baseUploadRateLimit(request, response, next))
+    .catch(next);
+}
 
 function integrationStatus(provider, requiredEnv, purpose) {
   const missing = requiredEnv.filter((key) => !process.env[key]);
@@ -1130,8 +1219,8 @@ app.post("/api/v1/onboarding/complete", requireV1AuthenticatedUser, requireV1Act
 
     await client.query(
       `INSERT INTO consent_acceptances (
-         account_id, document_key, document_version, context, request_id, metadata
-       ) VALUES ($1, 'platform_terms', $2, 'signup', $3, $4::jsonb)
+         account_id, actor_account_id, document_key, document_version, context, request_id, metadata
+       ) VALUES ($1, $1, 'platform_terms', $2, 'signup', $3, $4::jsonb)
        ON CONFLICT (account_id, document_key, document_version, context) DO NOTHING`,
       [request.actor.account.id, expectedConsentVersion, request.requestId, JSON.stringify({ role: input.role })],
     );
@@ -1391,6 +1480,12 @@ async function loadWorkEvents(client, activeWorkId) {
 }
 
 async function assertNoAccountBlock(client, leftAccountId, rightAccountId) {
+  if (await accountsAreBlocked(client, leftAccountId, rightAccountId)) {
+    throw new ApiError(403, "ACCOUNT_BLOCKED", "These accounts cannot interact.");
+  }
+}
+
+async function accountsAreBlocked(client, leftAccountId, rightAccountId) {
   const result = await client.query(
     `SELECT 1 FROM account_blocks
      WHERE (blocker_account_id = $1 AND blocked_account_id = $2)
@@ -1398,9 +1493,7 @@ async function assertNoAccountBlock(client, leftAccountId, rightAccountId) {
      LIMIT 1`,
     [leftAccountId, rightAccountId],
   );
-  if (result.rowCount) {
-    throw new ApiError(403, "ACCOUNT_BLOCKED", "These accounts cannot interact.");
-  }
+  return result.rowCount > 0;
 }
 
 async function canViewPrivateJobLocation(client, jobId, actor) {
@@ -1829,6 +1922,760 @@ async function assertSharedConversation(client, actorAccountId, targetAccountId)
   if (!result.rowCount) throw new ApiError(403, "ACCOUNT_RELATIONSHIP_REQUIRED", "You can only take this action for a connected work contact.");
 }
 
+async function hasSharedActiveWork(client, actorAccountId, targetAccountId) {
+  const result = await client.query(
+    `SELECT 1
+     FROM work_participants actor_wp
+     INNER JOIN work_participants target_wp
+       ON target_wp.active_work_id = actor_wp.active_work_id
+     WHERE actor_wp.account_id = $1 AND target_wp.account_id = $2
+     LIMIT 1`,
+    [actorAccountId, targetAccountId],
+  );
+  return result.rowCount > 0;
+}
+
+async function assertConnectedAccount(client, actorAccountId, targetAccountId) {
+  const conversation = await client.query(
+    `SELECT 1
+     FROM conversation_participants actor_cp
+     INNER JOIN conversation_participants target_cp
+       ON target_cp.conversation_id = actor_cp.conversation_id
+     WHERE actor_cp.account_id = $1 AND target_cp.account_id = $2
+     LIMIT 1`,
+    [actorAccountId, targetAccountId],
+  );
+  if (conversation.rowCount || await hasSharedActiveWork(client, actorAccountId, targetAccountId)) return;
+  throw new ApiError(403, "ACCOUNT_RELATIONSHIP_REQUIRED", "You can only take this action for a connected work contact.");
+}
+
+const reviewSelectBase = `
+  SELECT wr.*, j.title AS job_title, pl.city AS public_city, pl.region AS public_region,
+         reviewer.display_name AS reviewer_display_name,
+         reviewer.headline AS reviewer_headline,
+         reviewer.service_area_city AS reviewer_service_area_city,
+         reviewer.service_area_region AS reviewer_service_area_region,
+         reviewee.display_name AS reviewee_display_name,
+         reviewee.headline AS reviewee_headline,
+         reviewee.service_area_city AS reviewee_service_area_city,
+         reviewee.service_area_region AS reviewee_service_area_region
+  FROM work_reviews wr
+  INNER JOIN jobs j ON j.id = wr.job_id
+  INNER JOIN job_public_locations pl ON pl.job_id = j.id
+  INNER JOIN profiles reviewer ON reviewer.account_id = wr.reviewer_account_id
+  INNER JOIN profiles reviewee ON reviewee.account_id = wr.reviewee_account_id`;
+
+async function loadReviewEvents(client, reviewIds) {
+  if (!reviewIds.length) return new Map();
+  const result = await client.query(
+    `SELECT * FROM review_events
+     WHERE review_id = ANY($1::uuid[])
+     ORDER BY occurred_at ASC, id ASC`,
+    [reviewIds],
+  );
+  const grouped = new Map();
+  for (const row of result.rows) {
+    const list = grouped.get(row.review_id) ?? [];
+    list.push(row);
+    grouped.set(row.review_id, list);
+  }
+  return grouped;
+}
+
+async function loadReviewById(client, reviewId, { forUpdate = false } = {}) {
+  const result = await client.query(
+    `${reviewSelectBase}
+     WHERE wr.id = $1
+     ${forUpdate ? "FOR UPDATE OF wr" : ""}`,
+    [reviewId],
+  );
+  if (!result.rowCount) throw new ApiError(404, "REVIEW_NOT_FOUND", "Review not found.");
+  return result.rows[0];
+}
+
+async function mapReviewRows(client, rows) {
+  const events = await loadReviewEvents(client, rows.map((row) => row.id));
+  return rows.map((row) => mapReview(row, { events: events.get(row.id) ?? [] }));
+}
+
+async function insertAdminAction(client, actorAccountId, {
+  action,
+  subjectType,
+  subjectId,
+  reasonCode,
+  reason,
+  metadata = {},
+}) {
+  const inserted = await client.query(
+    `INSERT INTO admin_action_events (
+       actor_account_id, action, subject_type, subject_id, reason_code, reason, metadata
+     ) VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb)
+     RETURNING *`,
+    [actorAccountId, action, subjectType, subjectId, reasonCode, reason, JSON.stringify(metadata)],
+  );
+  return inserted.rows[0];
+}
+
+async function loadSupportCaseEvents(client, supportCaseIds, { includeInternal = false } = {}) {
+  if (!supportCaseIds.length) return new Map();
+  const result = await client.query(
+    `SELECT * FROM support_case_events
+     WHERE support_case_id = ANY($1::uuid[])
+       ${includeInternal ? "" : "AND visibility = 'user'"}
+     ORDER BY occurred_at ASC, id ASC`,
+    [supportCaseIds],
+  );
+  const grouped = new Map();
+  for (const row of result.rows) {
+    const list = grouped.get(row.support_case_id) ?? [];
+    list.push(row);
+    grouped.set(row.support_case_id, list);
+  }
+  return grouped;
+}
+
+async function mapSupportCaseRows(client, rows, options = {}) {
+  const events = await loadSupportCaseEvents(client, rows.map((row) => row.id), options);
+  return rows.map((row) => mapSupportCase(row, { events: events.get(row.id) ?? [] }));
+}
+
+async function loadRestrictionEvents(client, restrictionIds) {
+  if (!restrictionIds.length) return new Map();
+  const result = await client.query(
+    `SELECT * FROM account_restriction_events
+     WHERE restriction_id = ANY($1::uuid[])
+     ORDER BY occurred_at ASC, id ASC`,
+    [restrictionIds],
+  );
+  const grouped = new Map();
+  for (const row of result.rows) {
+    const list = grouped.get(row.restriction_id) ?? [];
+    list.push(row);
+    grouped.set(row.restriction_id, list);
+  }
+  return grouped;
+}
+
+async function mapRestrictionRows(client, rows) {
+  const events = await loadRestrictionEvents(client, rows.map((row) => row.id));
+  return rows.map((row) => mapRestriction(row, { events: events.get(row.id) ?? [] }));
+}
+
+async function validateReviewConsent(input) {
+  const expectedConsentVersion = envValue("SIGNUP_CONSENT_VERSION", "2026-06-19");
+  if (input.consentVersion !== expectedConsentVersion) {
+    throw new ApiError(409, "CONSENT_VERSION_OUTDATED", "Review the latest RIVT terms before continuing.", {
+      expectedConsentVersion,
+    });
+  }
+}
+
+async function authorizeSafetyReportSubject(client, actor, input) {
+  if (input.subjectType === "account") {
+    const targetAccountId = validate(z.uuid(), input.subjectId);
+    if (targetAccountId === actor.account.id) throw new ApiError(422, "REPORT_TARGET_INVALID", "Report a different account.");
+    if (input.reportedAccountId && input.reportedAccountId !== targetAccountId) {
+      throw new ApiError(422, "REPORT_TARGET_INVALID", "Reported account must match the account subject.");
+    }
+    await assertConnectedAccount(client, actor.account.id, targetAccountId);
+    return { reportedAccountId: targetAccountId };
+  }
+
+  if (input.subjectType === "job") {
+    const jobId = validate(z.uuid(), input.subjectId);
+    const job = (await client.query(`${jobSelectSql()} WHERE j.id = $1`, [jobId])).rows[0];
+    if (!job) throw new ApiError(404, "JOB_NOT_FOUND", "Job not found.");
+    const ownsJob = actor.memberships.some((membership) => (
+      membership.organizationId === job.organization_id && ["owner", "admin"].includes(membership.role)
+    ));
+    if (!ownsJob && (actor.account.primaryRole !== "tradesperson" || job.status !== "open")) {
+      throw new ApiError(404, "JOB_NOT_FOUND", "Job not found.");
+    }
+    return { reportedAccountId: input.reportedAccountId ?? job.created_by_account_id };
+  }
+
+  if (input.subjectType === "conversation") {
+    const conversationId = validate(z.uuid(), input.subjectId);
+    await loadConversationById(client, conversationId, actor);
+    if (input.reportedAccountId) {
+      const participant = await client.query(
+        "SELECT 1 FROM conversation_participants WHERE conversation_id = $1 AND account_id = $2",
+        [conversationId, input.reportedAccountId],
+      );
+      if (!participant.rowCount || input.reportedAccountId === actor.account.id) {
+        throw new ApiError(422, "REPORT_TARGET_INVALID", "Report a different participant in this conversation.");
+      }
+    }
+    return { reportedAccountId: input.reportedAccountId };
+  }
+
+  if (input.subjectType === "message") {
+    const messageId = validate(z.uuid(), input.subjectId);
+    const message = await client.query(
+      `SELECT cm.sender_account_id, cm.conversation_id
+       FROM conversation_messages cm
+       WHERE cm.id = $1 AND cm.deleted_at IS NULL`,
+      [messageId],
+    );
+    if (!message.rowCount) throw new ApiError(404, "MESSAGE_NOT_FOUND", "Message not found.");
+    await loadConversationById(client, message.rows[0].conversation_id, actor);
+    const reportedAccountId = input.reportedAccountId ?? message.rows[0].sender_account_id;
+    if (reportedAccountId === actor.account.id) throw new ApiError(422, "REPORT_TARGET_INVALID", "Report a different account.");
+    return { reportedAccountId };
+  }
+
+  if (input.subjectType === "active_work") {
+    const activeWorkId = validate(z.uuid(), input.subjectId);
+    const activeWork = await loadActiveWorkById(client, activeWorkId, actor);
+    return {
+      reportedAccountId: input.reportedAccountId
+        ?? (activeWork.contractor_account_id === actor.account.id ? activeWork.tradesperson_account_id : activeWork.contractor_account_id),
+    };
+  }
+
+  if (input.subjectType === "project") {
+    const projectId = validate(z.uuid(), input.subjectId);
+    const project = await loadProjectById(client, projectId, actor);
+    return {
+      reportedAccountId: input.reportedAccountId
+        ?? (project.contractor_account_id === actor.account.id ? project.tradesperson_account_id : project.contractor_account_id),
+    };
+  }
+
+  return { reportedAccountId: input.reportedAccountId };
+}
+
+app.get("/api/v1/reviews", requireV1AuthenticatedUser, requireV1Actor, asyncRoute(async (request, response) => {
+  const rows = await database.query(
+    `${reviewSelectBase}
+     WHERE wr.reviewer_account_id = $1 OR wr.reviewee_account_id = $1
+     ORDER BY wr.submitted_at DESC, wr.id DESC
+     LIMIT 100`,
+    [request.actor.account.id],
+  );
+  response.json({
+    data: { reviews: await mapReviewRows(database, rows.rows) },
+    meta: { requestId: request.requestId },
+  });
+}));
+
+app.get("/api/v1/accounts/:id/reputation", requireV1AuthenticatedUser, requireV1Actor, asyncRoute(async (request, response) => {
+  const accountId = validate(z.uuid(), request.params.id);
+  if (accountId !== request.actor.account.id && await accountsAreBlocked(database, request.actor.account.id, accountId)) {
+    throw new ApiError(404, "ACCOUNT_NOT_FOUND", "Account not found.");
+  }
+  const result = await database.query(
+    `SELECT p.account_id, p.display_name, p.headline, p.service_area_city, p.service_area_region,
+            COALESCE(review_stats.published_count, 0) AS published_count,
+            review_stats.average_rating,
+            COALESCE(review_stats.pending_count, 0) AS pending_count,
+            COALESCE(review_stats.disputed_count, 0) AS disputed_count
+     FROM profiles p
+     LEFT JOIN LATERAL (
+       SELECT
+         count(*) FILTER (WHERE status IN ('approved', 'resolved'))::int AS published_count,
+         avg(rating) FILTER (WHERE status IN ('approved', 'resolved')) AS average_rating,
+         count(*) FILTER (WHERE status = 'pending_approval')::int AS pending_count,
+         count(*) FILTER (WHERE status = 'disputed')::int AS disputed_count
+       FROM work_reviews
+       WHERE reviewee_account_id = p.account_id
+     ) review_stats ON true
+     WHERE p.account_id = $1`,
+    [accountId],
+  );
+  if (!result.rowCount) throw new ApiError(404, "ACCOUNT_NOT_FOUND", "Account not found.");
+  response.json({ data: { reputation: mapReputation(result.rows[0]) }, meta: { requestId: request.requestId } });
+}));
+
+app.post("/api/v1/active-work/:id/reviews", requireV1AuthenticatedUser, requireV1Actor, writeRateLimit, asyncRoute(async (request, response) => {
+  const activeWorkId = validate(z.uuid(), request.params.id);
+  const input = validate(reviewSubmitSchema, request.body);
+  await validateReviewConsent(input);
+  const result = await runIdempotentMutation(request, request.actor.account.id, `reviews.submit:${activeWorkId}`, async (client) => {
+    const activeWork = await loadActiveWorkById(client, activeWorkId, request.actor, { forUpdate: true });
+    if (activeWork.status !== "completed") {
+      throw new ApiError(409, "REVIEW_NOT_ELIGIBLE", "Reviews unlock after the work is completed.");
+    }
+    const reviewerRole = activeWork.contractor_account_id === request.actor.account.id ? "contractor" : "tradesperson";
+    const expectedReviewee = reviewerRole === "contractor" ? activeWork.tradesperson_account_id : activeWork.contractor_account_id;
+    if (input.revieweeAccountId !== expectedReviewee) {
+      throw new ApiError(422, "REVIEWEE_INVALID", "Review the other participant on this completed work.");
+    }
+    await assertNoAccountBlock(client, request.actor.account.id, input.revieweeAccountId);
+    const project = await client.query("SELECT id FROM projects WHERE active_work_id = $1 LIMIT 1", [activeWorkId]);
+    await client.query(
+      `INSERT INTO consent_acceptances (account_id, actor_account_id, document_key, document_version, context, request_id, metadata)
+       VALUES ($1, $1, 'platform_terms', $2, 'review_submission', $3, $4::jsonb)
+       ON CONFLICT DO NOTHING`,
+      [request.actor.account.id, input.consentVersion, request.requestId, JSON.stringify({ activeWorkId, revieweeAccountId: input.revieweeAccountId })],
+    );
+    const inserted = await client.query(
+      `INSERT INTO work_reviews (
+         active_work_id, project_id, job_id, organization_id, reviewer_account_id,
+         reviewee_account_id, reviewer_role, rating, body
+       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+       ON CONFLICT (active_work_id, reviewer_account_id, reviewee_account_id) DO NOTHING
+       RETURNING id`,
+      [
+        activeWorkId,
+        project.rows[0]?.id ?? null,
+        activeWork.job_id,
+        activeWork.organization_id,
+        request.actor.account.id,
+        input.revieweeAccountId,
+        reviewerRole,
+        input.rating,
+        input.body,
+      ],
+    );
+    if (!inserted.rowCount) {
+      throw new ApiError(409, "REVIEW_ALREADY_EXISTS", "You already reviewed this participant for this work.");
+    }
+    const reviewId = inserted.rows[0].id;
+    await client.query(
+      "INSERT INTO review_events (review_id, actor_account_id, event_type, note) VALUES ($1, $2, 'submitted', $3)",
+      [reviewId, request.actor.account.id, input.body],
+    );
+    await client.query(
+      `INSERT INTO audit_events (request_id, actor_account_id, organization_id, action, subject_type, subject_id, metadata)
+       VALUES ($1, $2::uuid, $3::uuid, 'review.submitted', 'review', ($4::uuid)::text, $5::jsonb)`,
+      [request.requestId, request.actor.account.id, activeWork.organization_id, reviewId,
+        JSON.stringify({ activeWorkId, revieweeAccountId: input.revieweeAccountId })],
+    );
+    await createInAppNotification(client, {
+      accountId: input.revieweeAccountId,
+      type: "work",
+      title: "Review pending approval",
+      body: `${activeWork.job_title} - ${activeWork.public_city}, ${activeWork.public_region}`,
+      actionHref: "/app/profile",
+      sourceType: "review",
+      sourceId: reviewId,
+      priority: "normal",
+      metadata: { activeWorkId },
+    });
+    const [review] = await mapReviewRows(client, [await loadReviewById(client, reviewId)]);
+    return { status: 201, body: { data: { review }, meta: { requestId: request.requestId } } };
+  });
+  sendIdempotentResult(response, result);
+}));
+
+app.post("/api/v1/reviews/:id/approve", requireV1AuthenticatedUser, requireV1Actor, writeRateLimit, asyncRoute(async (request, response) => {
+  const reviewId = validate(z.uuid(), request.params.id);
+  const result = await runIdempotentMutation(request, request.actor.account.id, `reviews.approve:${reviewId}`, async (client) => {
+    const review = await loadReviewById(client, reviewId, { forUpdate: true });
+    if (review.reviewee_account_id !== request.actor.account.id) {
+      throw new ApiError(403, "REVIEW_APPROVAL_FORBIDDEN", "Only the reviewed participant can approve this review.");
+    }
+    if (review.status !== "pending_approval") {
+      throw new ApiError(409, "REVIEW_NOT_PENDING", "Only pending reviews can be approved.");
+    }
+    await client.query("UPDATE work_reviews SET status = 'approved', approved_at = now(), updated_at = now() WHERE id = $1", [reviewId]);
+    await client.query("INSERT INTO review_events (review_id, actor_account_id, event_type) VALUES ($1, $2, 'approved')", [reviewId, request.actor.account.id]);
+    await createInAppNotification(client, {
+      accountId: review.reviewer_account_id,
+      type: "work",
+      title: "Review approved",
+      body: `${review.job_title} - ${review.public_city}, ${review.public_region}`,
+      actionHref: "/app/profile",
+      sourceType: "review",
+      sourceId: reviewId,
+      priority: "normal",
+      metadata: { activeWorkId: review.active_work_id },
+    });
+    const [mapped] = await mapReviewRows(client, [await loadReviewById(client, reviewId)]);
+    return { status: 200, body: { data: { review: mapped }, meta: { requestId: request.requestId } } };
+  });
+  sendIdempotentResult(response, result);
+}));
+
+app.post("/api/v1/reviews/:id/dispute", requireV1AuthenticatedUser, requireV1Actor, writeRateLimit, asyncRoute(async (request, response) => {
+  const reviewId = validate(z.uuid(), request.params.id);
+  const input = validate(reviewDisputeSchema, request.body);
+  const result = await runIdempotentMutation(request, request.actor.account.id, `reviews.dispute:${reviewId}`, async (client) => {
+    const review = await loadReviewById(client, reviewId, { forUpdate: true });
+    if (review.reviewee_account_id !== request.actor.account.id) {
+      throw new ApiError(403, "REVIEW_DISPUTE_FORBIDDEN", "Only the reviewed participant can dispute this review.");
+    }
+    if (review.status !== "pending_approval") {
+      throw new ApiError(409, "REVIEW_NOT_PENDING", "Only pending reviews can be disputed.");
+    }
+    await client.query("UPDATE work_reviews SET status = 'disputed', disputed_at = now(), updated_at = now() WHERE id = $1", [reviewId]);
+    await client.query(
+      "INSERT INTO review_events (review_id, actor_account_id, event_type, note) VALUES ($1, $2, 'disputed', $3)",
+      [reviewId, request.actor.account.id, input.reason],
+    );
+    await createInAppNotification(client, {
+      accountId: review.reviewer_account_id,
+      type: "work",
+      title: "Review disputed",
+      body: `${review.job_title} - ${review.public_city}, ${review.public_region}`,
+      actionHref: "/app/profile",
+      sourceType: "review",
+      sourceId: reviewId,
+      priority: "normal",
+      metadata: { activeWorkId: review.active_work_id },
+    });
+    const [mapped] = await mapReviewRows(client, [await loadReviewById(client, reviewId)]);
+    return { status: 200, body: { data: { review: mapped }, meta: { requestId: request.requestId } } };
+  });
+  sendIdempotentResult(response, result);
+}));
+
+app.post("/api/v1/reviews/:id/responses", requireV1AuthenticatedUser, requireV1Actor, writeRateLimit, asyncRoute(async (request, response) => {
+  const reviewId = validate(z.uuid(), request.params.id);
+  const input = validate(reviewResponseSchema, request.body);
+  const result = await runIdempotentMutation(request, request.actor.account.id, `reviews.response:${reviewId}`, async (client) => {
+    const review = await loadReviewById(client, reviewId, { forUpdate: true });
+    if (![review.reviewer_account_id, review.reviewee_account_id].includes(request.actor.account.id)) {
+      throw new ApiError(403, "REVIEW_RESPONSE_FORBIDDEN", "Only review participants can respond.");
+    }
+    if (review.status === "hidden") throw new ApiError(409, "REVIEW_HIDDEN", "Hidden reviews cannot receive responses.");
+    await client.query("UPDATE work_reviews SET updated_at = now() WHERE id = $1", [reviewId]);
+    await client.query(
+      "INSERT INTO review_events (review_id, actor_account_id, event_type, note) VALUES ($1, $2, 'response_added', $3)",
+      [reviewId, request.actor.account.id, input.note],
+    );
+    const [mapped] = await mapReviewRows(client, [await loadReviewById(client, reviewId)]);
+    return { status: 201, body: { data: { review: mapped }, meta: { requestId: request.requestId } } };
+  });
+  sendIdempotentResult(response, result);
+}));
+
+app.post("/api/v1/reports", requireV1AuthenticatedUser, requireV1Actor, writeRateLimit, asyncRoute(async (request, response) => {
+  const input = validate(safetyReportSchema, request.body);
+  const result = await runIdempotentMutation(request, request.actor.account.id, `safety.report:${input.subjectType}:${input.subjectId}`, async (client) => {
+    const { reportedAccountId } = await authorizeSafetyReportSubject(client, request.actor, input);
+    const inserted = await client.query(
+      `INSERT INTO safety_reports (
+         reporter_account_id, reported_account_id, subject_type, subject_id, reason, note
+       ) VALUES ($1, $2, $3, $4, $5, $6)
+       RETURNING *`,
+      [request.actor.account.id, reportedAccountId, input.subjectType, input.subjectId, input.reason, input.note],
+    );
+    await client.query(
+      `INSERT INTO audit_events (request_id, actor_account_id, action, subject_type, subject_id, metadata)
+       VALUES ($1, $2::uuid, 'safety.reported', 'safety_report', ($3::uuid)::text, $4::jsonb)`,
+      [request.requestId, request.actor.account.id, inserted.rows[0].id,
+        JSON.stringify({ subjectType: input.subjectType, subjectId: input.subjectId, reason: input.reason })],
+    );
+    return {
+      status: 201,
+      body: { data: { report: mapSafetyReport(inserted.rows[0]) }, meta: { requestId: request.requestId } },
+    };
+  });
+  sendIdempotentResult(response, result);
+}));
+
+app.post("/api/v1/active-work/:id/unsafe-reports", requireV1AuthenticatedUser, requireV1Actor, writeRateLimit, asyncRoute(async (request, response) => {
+  const activeWorkId = validate(z.uuid(), request.params.id);
+  const input = validate(unsafeWorkReportSchema, request.body);
+  if (input.conditionType === "stop_work") {
+    if (!input.consentAccepted || !input.consentVersion) {
+      throw new ApiError(422, "STOP_WORK_CONSENT_REQUIRED", "Confirm the stop-work acknowledgement before submitting.");
+    }
+    await validateReviewConsent({ consentVersion: input.consentVersion });
+  }
+  const result = await runIdempotentMutation(request, request.actor.account.id, `unsafe-work.report:${activeWorkId}`, async (client) => {
+    const activeWork = await loadActiveWorkById(client, activeWorkId, request.actor, { forUpdate: true });
+    if (activeWork.status === "cancelled") {
+      throw new ApiError(409, "ACTIVE_WORK_CANCELLED", "Cancelled work cannot receive new unsafe-work reports.");
+    }
+    const project = await client.query("SELECT id FROM projects WHERE active_work_id = $1 LIMIT 1", [activeWorkId]);
+    if (input.conditionType === "stop_work") {
+      await client.query(
+        `INSERT INTO consent_acceptances (account_id, actor_account_id, document_key, document_version, context, request_id, metadata)
+         VALUES ($1, $1, 'platform_terms', $2, 'stop_work', $3, $4::jsonb)
+         ON CONFLICT DO NOTHING`,
+        [request.actor.account.id, input.consentVersion, request.requestId, JSON.stringify({ activeWorkId })],
+      );
+    }
+    const inserted = await client.query(
+      `INSERT INTO unsafe_work_reports (
+         active_work_id, project_id, reporter_account_id, condition_type, severity, description
+       ) VALUES ($1, $2, $3, $4, $5, $6)
+       RETURNING *`,
+      [activeWorkId, project.rows[0]?.id ?? null, request.actor.account.id, input.conditionType, input.severity, input.description],
+    );
+    await client.query(
+      "INSERT INTO unsafe_work_report_events (unsafe_report_id, actor_account_id, event_type, note) VALUES ($1, $2, 'opened', $3)",
+      [inserted.rows[0].id, request.actor.account.id, input.description],
+    );
+    const recipientAccountId = activeWork.contractor_account_id === request.actor.account.id
+      ? activeWork.tradesperson_account_id
+      : activeWork.contractor_account_id;
+    await createInAppNotification(client, {
+      accountId: recipientAccountId,
+      type: "work",
+      title: input.conditionType === "stop_work" ? "Stop-work report opened" : "Unsafe-work report opened",
+      body: `${activeWork.job_title} - ${activeWork.public_city}, ${activeWork.public_region}`,
+      actionHref: "/app/messages",
+      sourceType: "unsafe_work_report",
+      sourceId: inserted.rows[0].id,
+      priority: input.severity === "urgent" || input.conditionType === "stop_work" ? "high" : "normal",
+      metadata: { activeWorkId, conditionType: input.conditionType },
+    });
+    await client.query(
+      `INSERT INTO audit_events (request_id, actor_account_id, organization_id, action, subject_type, subject_id, metadata)
+       VALUES ($1, $2::uuid, $3::uuid, 'unsafe_work.reported', 'unsafe_work_report', ($4::uuid)::text, $5::jsonb)`,
+      [request.requestId, request.actor.account.id, activeWork.organization_id, inserted.rows[0].id,
+        JSON.stringify({ activeWorkId, conditionType: input.conditionType, severity: input.severity })],
+    );
+    const events = await client.query("SELECT * FROM unsafe_work_report_events WHERE unsafe_report_id = $1 ORDER BY occurred_at ASC", [inserted.rows[0].id]);
+    return {
+      status: 201,
+      body: { data: { unsafeReport: mapUnsafeWorkReport(inserted.rows[0], { events: events.rows }) }, meta: { requestId: request.requestId } },
+    };
+  });
+  sendIdempotentResult(response, result);
+}));
+
+app.get("/api/v1/support/cases", requireV1AuthenticatedUser, requireV1SupportActor, asyncRoute(async (request, response) => {
+  const rows = await database.query(
+    `SELECT * FROM support_cases
+     WHERE opened_by_account_id = $1
+     ORDER BY created_at DESC, id DESC
+     LIMIT 100`,
+    [request.actor.account.id],
+  );
+  response.json({
+    data: { cases: await mapSupportCaseRows(database, rows.rows) },
+    meta: { requestId: request.requestId },
+  });
+}));
+
+app.post("/api/v1/support/cases", requireV1AuthenticatedUser, requireV1SupportActor, baseWriteRateLimit, asyncRoute(async (request, response) => {
+  const input = validate(supportCaseCreateSchema, request.body);
+  const result = await runIdempotentMutation(request, request.actor.account.id, "support.cases.create", async (client) => {
+    if (input.subjectAccountId && input.subjectAccountId !== request.actor.account.id) {
+      await assertConnectedAccount(client, request.actor.account.id, input.subjectAccountId);
+    }
+    if (input.activeWorkId) await loadActiveWorkById(client, input.activeWorkId, request.actor);
+    if (input.projectId) await loadProjectById(client, input.projectId, request.actor);
+    const inserted = await client.query(
+      `INSERT INTO support_cases (
+         opened_by_account_id, subject_account_id, active_work_id, project_id, category, title, description
+       ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+       RETURNING *`,
+      [
+        request.actor.account.id,
+        input.subjectAccountId,
+        input.activeWorkId,
+        input.projectId,
+        input.category,
+        input.title,
+        input.description,
+      ],
+    );
+    await client.query(
+      "INSERT INTO support_case_events (support_case_id, actor_account_id, event_type, visibility, note) VALUES ($1, $2, 'opened', 'user', $3)",
+      [inserted.rows[0].id, request.actor.account.id, input.description],
+    );
+    await client.query(
+      `INSERT INTO audit_events (request_id, actor_account_id, action, subject_type, subject_id, metadata)
+       VALUES ($1, $2::uuid, 'support_case.opened', 'support_case', ($3::uuid)::text, $4::jsonb)`,
+      [request.requestId, request.actor.account.id, inserted.rows[0].id, JSON.stringify({ category: input.category })],
+    );
+    const [supportCase] = await mapSupportCaseRows(client, [inserted.rows[0]]);
+    return { status: 201, body: { data: { case: supportCase }, meta: { requestId: request.requestId } } };
+  });
+  sendIdempotentResult(response, result);
+}));
+
+app.post("/api/v1/support/cases/:id/events", requireV1AuthenticatedUser, requireV1SupportActor, baseWriteRateLimit, asyncRoute(async (request, response) => {
+  const supportCaseId = validate(z.uuid(), request.params.id);
+  const input = validate(supportCaseEventSchema, request.body);
+  const result = await runIdempotentMutation(request, request.actor.account.id, `support.cases.event:${supportCaseId}`, async (client) => {
+    const supportCase = await client.query("SELECT * FROM support_cases WHERE id = $1 AND opened_by_account_id = $2 FOR UPDATE", [supportCaseId, request.actor.account.id]);
+    if (!supportCase.rowCount) throw new ApiError(404, "SUPPORT_CASE_NOT_FOUND", "Support case not found.");
+    if (["resolved", "closed"].includes(supportCase.rows[0].status)) {
+      throw new ApiError(409, "SUPPORT_CASE_CLOSED", "Closed support cases cannot receive user notes.");
+    }
+    await client.query(
+      "INSERT INTO support_case_events (support_case_id, actor_account_id, event_type, visibility, note) VALUES ($1, $2, 'user_note', 'user', $3)",
+      [supportCaseId, request.actor.account.id, input.note],
+    );
+    await client.query("UPDATE support_cases SET status = 'reviewing', updated_at = now() WHERE id = $1 AND status = 'open'", [supportCaseId]);
+    const updated = (await client.query("SELECT * FROM support_cases WHERE id = $1", [supportCaseId])).rows[0];
+    const [mapped] = await mapSupportCaseRows(client, [updated]);
+    return { status: 201, body: { data: { case: mapped }, meta: { requestId: request.requestId } } };
+  });
+  sendIdempotentResult(response, result);
+}));
+
+app.get("/api/v1/admin/overview", requireV1AuthenticatedUser, requireV1AdminActor, asyncRoute(async (request, response) => {
+  requireAdminRole(request.admin, ["owner", "support", "moderator"]);
+  const [reviews, reports, unsafeReports, supportCases, restrictions] = await Promise.all([
+    database.query(`${reviewSelectBase} WHERE wr.status = 'disputed' ORDER BY wr.disputed_at DESC NULLS LAST, wr.submitted_at DESC LIMIT 25`),
+    database.query("SELECT * FROM safety_reports WHERE status IN ('open', 'reviewing') ORDER BY created_at DESC, id DESC LIMIT 25"),
+    database.query("SELECT * FROM unsafe_work_reports WHERE status IN ('open', 'acknowledged') ORDER BY created_at DESC, id DESC LIMIT 25"),
+    database.query("SELECT * FROM support_cases WHERE status IN ('open', 'reviewing') ORDER BY created_at DESC, id DESC LIMIT 25"),
+    database.query("SELECT * FROM account_restrictions WHERE status = 'active' AND (ends_at IS NULL OR ends_at > now()) ORDER BY created_at DESC, id DESC LIMIT 25"),
+  ]);
+  response.json({
+    data: {
+      reviews: await mapReviewRows(database, reviews.rows),
+      reports: reports.rows.map(mapSafetyReport),
+      unsafeReports: unsafeReports.rows.map((row) => mapUnsafeWorkReport(row)),
+      supportCases: await mapSupportCaseRows(database, supportCases.rows, { includeInternal: true }),
+      restrictions: await mapRestrictionRows(database, restrictions.rows),
+    },
+    meta: { requestId: request.requestId },
+  });
+}));
+
+app.post("/api/v1/admin/reviews/:id/resolve", requireV1AuthenticatedUser, requireV1AdminActor, writeRateLimit, asyncRoute(async (request, response) => {
+  requireAdminRole(request.admin, ["owner", "support", "moderator"]);
+  const reviewId = validate(z.uuid(), request.params.id);
+  const input = validate(adminReviewResolveSchema, request.body);
+  const result = await runIdempotentMutation(request, request.actor.account.id, `admin.reviews.resolve:${reviewId}`, async (client) => {
+    const review = await loadReviewById(client, reviewId, { forUpdate: true });
+    if (review.status === input.status) {
+      const [mapped] = await mapReviewRows(client, [review]);
+      return { status: 200, body: { data: { review: mapped }, meta: { requestId: request.requestId } } };
+    }
+    await client.query(
+      `UPDATE work_reviews
+       SET status = $2,
+           resolved_at = CASE WHEN $2 = 'resolved' THEN now() ELSE resolved_at END,
+           updated_at = now()
+       WHERE id = $1`,
+      [reviewId, input.status],
+    );
+    await client.query(
+      "INSERT INTO review_events (review_id, actor_account_id, event_type, note, metadata) VALUES ($1, $2, $3, $4, $5::jsonb)",
+      [reviewId, request.actor.account.id, input.status, input.reason, JSON.stringify({ reasonCode: input.reasonCode })],
+    );
+    await insertAdminAction(client, request.actor.account.id, {
+      action: `review.${input.status}`,
+      subjectType: "review",
+      subjectId: reviewId,
+      reasonCode: input.reasonCode,
+      reason: input.reason,
+      metadata: { previousStatus: review.status },
+    });
+    const [mapped] = await mapReviewRows(client, [await loadReviewById(client, reviewId)]);
+    return { status: 200, body: { data: { review: mapped }, meta: { requestId: request.requestId } } };
+  });
+  sendIdempotentResult(response, result);
+}));
+
+app.post("/api/v1/admin/support-cases/:id/events", requireV1AuthenticatedUser, requireV1AdminActor, writeRateLimit, asyncRoute(async (request, response) => {
+  requireAdminRole(request.admin, ["owner", "support"]);
+  const supportCaseId = validate(z.uuid(), request.params.id);
+  const input = validate(adminSupportCaseEventSchema, request.body);
+  const result = await runIdempotentMutation(request, request.actor.account.id, `admin.support.event:${supportCaseId}`, async (client) => {
+    const supportCase = await client.query("SELECT * FROM support_cases WHERE id = $1 FOR UPDATE", [supportCaseId]);
+    if (!supportCase.rowCount) throw new ApiError(404, "SUPPORT_CASE_NOT_FOUND", "Support case not found.");
+    if (input.status) {
+      await client.query("UPDATE support_cases SET status = $2, updated_at = now() WHERE id = $1", [supportCaseId, input.status]);
+    }
+    await client.query(
+      `INSERT INTO support_case_events (
+         support_case_id, actor_account_id, event_type, visibility, note, metadata
+       ) VALUES ($1, $2, $3, $4, $5, $6::jsonb)`,
+      [supportCaseId, request.actor.account.id, input.eventType, input.visibility, input.note, JSON.stringify({ reasonCode: input.reasonCode })],
+    );
+    await insertAdminAction(client, request.actor.account.id, {
+      action: "support_case.event_added",
+      subjectType: "support_case",
+      subjectId: supportCaseId,
+      reasonCode: input.reasonCode,
+      reason: input.reason,
+      metadata: { eventType: input.eventType, status: input.status ?? null, visibility: input.visibility },
+    });
+    const updated = (await client.query("SELECT * FROM support_cases WHERE id = $1", [supportCaseId])).rows[0];
+    const [mapped] = await mapSupportCaseRows(client, [updated], { includeInternal: true });
+    return { status: 201, body: { data: { case: mapped }, meta: { requestId: request.requestId } } };
+  });
+  sendIdempotentResult(response, result);
+}));
+
+app.post("/api/v1/admin/accounts/:id/restrictions", requireV1AuthenticatedUser, requireV1AdminActor, writeRateLimit, asyncRoute(async (request, response) => {
+  requireAdminRole(request.admin, ["owner", "support"]);
+  const accountId = validate(z.uuid(), request.params.id);
+  const input = validate(restrictionCreateSchema, request.body);
+  if (accountId === request.actor.account.id) throw new ApiError(422, "RESTRICTION_TARGET_INVALID", "Admins cannot restrict their own account.");
+  const result = await runIdempotentMutation(request, request.actor.account.id, `admin.restrictions.create:${accountId}`, async (client) => {
+    const target = await client.query("SELECT id, status FROM accounts WHERE id = $1 FOR UPDATE", [accountId]);
+    if (!target.rowCount) throw new ApiError(404, "ACCOUNT_NOT_FOUND", "Account not found.");
+    const inserted = await client.query(
+      `INSERT INTO account_restrictions (
+         account_id, imposed_by_account_id, restriction_type, reason_code, reason, ends_at
+       ) VALUES ($1, $2, $3, $4, $5, COALESCE($6::timestamptz, CASE WHEN $3 = 'timeout_24h' THEN now() + interval '24 hours' ELSE NULL END))
+       RETURNING *`,
+      [accountId, request.actor.account.id, input.restrictionType, input.reasonCode, input.reason, input.endsAt],
+    );
+    await client.query(
+      `INSERT INTO account_restriction_events (
+         restriction_id, actor_account_id, event_type, reason_code, reason
+       ) VALUES ($1, $2, 'imposed', $3, $4)`,
+      [inserted.rows[0].id, request.actor.account.id, input.reasonCode, input.reason],
+    );
+    if (["suspension", "ban"].includes(input.restrictionType)) {
+      await client.query("UPDATE accounts SET status = 'suspended', updated_at = now() WHERE id = $1 AND status <> 'closed'", [accountId]);
+    }
+    await insertAdminAction(client, request.actor.account.id, {
+      action: "account.restriction.imposed",
+      subjectType: "account",
+      subjectId: accountId,
+      reasonCode: input.reasonCode,
+      reason: input.reason,
+      metadata: { restrictionId: inserted.rows[0].id, restrictionType: input.restrictionType },
+    });
+    const [restriction] = await mapRestrictionRows(client, [inserted.rows[0]]);
+    return { status: 201, body: { data: { restriction }, meta: { requestId: request.requestId } } };
+  });
+  sendIdempotentResult(response, result);
+}));
+
+app.post("/api/v1/admin/restrictions/:id/lift", requireV1AuthenticatedUser, requireV1AdminActor, writeRateLimit, asyncRoute(async (request, response) => {
+  requireAdminRole(request.admin, ["owner", "support"]);
+  const restrictionId = validate(z.uuid(), request.params.id);
+  const input = validate(restrictionLiftSchema, request.body);
+  const result = await runIdempotentMutation(request, request.actor.account.id, `admin.restrictions.lift:${restrictionId}`, async (client) => {
+    const existing = await client.query("SELECT * FROM account_restrictions WHERE id = $1 FOR UPDATE", [restrictionId]);
+    if (!existing.rowCount) throw new ApiError(404, "RESTRICTION_NOT_FOUND", "Restriction not found.");
+    const restriction = existing.rows[0];
+    if (restriction.status === "active") {
+      await client.query(
+        "UPDATE account_restrictions SET status = 'lifted', lifted_at = now(), updated_at = now() WHERE id = $1",
+        [restrictionId],
+      );
+      await client.query(
+        `INSERT INTO account_restriction_events (
+           restriction_id, actor_account_id, event_type, reason_code, reason
+         ) VALUES ($1, $2, 'lifted', $3, $4)`,
+        [restrictionId, request.actor.account.id, input.reasonCode, input.reason],
+      );
+      const stillSuspended = await client.query(
+        `SELECT 1 FROM account_restrictions
+         WHERE account_id = $1
+           AND id <> $2
+           AND status = 'active'
+           AND restriction_type IN ('suspension', 'ban')
+           AND (ends_at IS NULL OR ends_at > now())
+         LIMIT 1`,
+        [restriction.account_id, restrictionId],
+      );
+      if (!stillSuspended.rowCount) {
+        await client.query("UPDATE accounts SET status = 'active', updated_at = now() WHERE id = $1 AND status = 'suspended'", [restriction.account_id]);
+      }
+    }
+    await insertAdminAction(client, request.actor.account.id, {
+      action: "account.restriction.lifted",
+      subjectType: "account_restriction",
+      subjectId: restrictionId,
+      reasonCode: input.reasonCode,
+      reason: input.reason,
+      metadata: { accountId: restriction.account_id },
+    });
+    const updated = (await client.query("SELECT * FROM account_restrictions WHERE id = $1", [restrictionId])).rows[0];
+    const [mapped] = await mapRestrictionRows(client, [updated]);
+    return { status: 200, body: { data: { restriction: mapped }, meta: { requestId: request.requestId } } };
+  });
+  sendIdempotentResult(response, result);
+}));
+
 app.post("/api/v1/jobs", requireV1AuthenticatedUser, requireV1Actor, writeRateLimit, asyncRoute(async (request, response) => {
   requireContractorActor(request.actor);
   const input = validate(createJobSchema, request.body);
@@ -1921,6 +2768,12 @@ app.get("/api/v1/jobs", requireV1AuthenticatedUser, requireV1Actor, asyncRoute(a
     }
     conditions.push("j.status = 'open'");
     conditions.push("j.published_at IS NOT NULL");
+    const actorAccountParameter = addParameter(request.actor.account.id);
+    conditions.push(`NOT EXISTS (
+      SELECT 1 FROM account_blocks ab
+      WHERE (ab.blocker_account_id = ${actorAccountParameter}::uuid AND ab.blocked_account_id = j.created_by_account_id)
+         OR (ab.blocked_account_id = ${actorAccountParameter}::uuid AND ab.blocker_account_id = j.created_by_account_id)
+    )`);
   }
 
   if (input.q) {
@@ -1970,6 +2823,9 @@ app.get("/api/v1/jobs/:id", requireV1AuthenticatedUser, requireV1Actor, asyncRou
   const ownsJob = request.actor.memberships.some((membership) => (
     membership.organizationId === row.organization_id && ["owner", "admin"].includes(membership.role)
   ));
+  if (!ownsJob && await accountsAreBlocked(database, request.actor.account.id, row.created_by_account_id)) {
+    throw new ApiError(404, "JOB_NOT_FOUND", "Job not found.");
+  }
   const activeParticipant = !ownsJob ? await canViewPrivateJobLocation(database, jobId, request.actor) : false;
   if (!ownsJob && !activeParticipant && (request.actor.account.primaryRole !== "tradesperson" || row.status !== "open")) {
     throw new ApiError(404, "JOB_NOT_FOUND", "Job not found.");
@@ -2083,8 +2939,8 @@ async function transitionJob(request, response, action) {
         });
       }
       await client.query(
-        `INSERT INTO consent_acceptances (account_id, document_key, document_version, context, request_id, metadata)
-         VALUES ($1, 'platform_terms', $2, 'job_post', $3, $4::jsonb)
+        `INSERT INTO consent_acceptances (account_id, actor_account_id, document_key, document_version, context, request_id, metadata)
+         VALUES ($1, $1, 'platform_terms', $2, 'job_post', $3, $4::jsonb)
          ON CONFLICT (account_id, document_key, document_version, context) DO NOTHING`,
         [request.actor.account.id, expectedConsentVersion, request.requestId, JSON.stringify({ jobId })],
       );
@@ -2183,8 +3039,8 @@ app.post("/api/v1/jobs/:id/applications", requireV1AuthenticatedUser, requireV1A
     }
     await assertNoAccountBlock(client, request.actor.account.id, job.created_by_account_id);
     await client.query(
-      `INSERT INTO consent_acceptances (account_id, document_key, document_version, context, request_id, metadata)
-       VALUES ($1, 'platform_terms', $2, 'application', $3, $4::jsonb)
+      `INSERT INTO consent_acceptances (account_id, actor_account_id, document_key, document_version, context, request_id, metadata)
+       VALUES ($1, $1, 'platform_terms', $2, 'application', $3, $4::jsonb)
        ON CONFLICT (account_id, document_key, document_version, context) DO NOTHING`,
       [request.actor.account.id, input.consentVersion, request.requestId, JSON.stringify({ jobId })],
     );
@@ -2460,8 +3316,8 @@ app.post("/api/v1/offers/:id/accept", requireV1AuthenticatedUser, requireV1Actor
     if (!job || job.status !== "open") throw new ApiError(409, "JOB_NOT_OPEN", "This job is no longer available.");
     await assertNoAccountBlock(client, offer.contractor_account_id, request.actor.account.id);
     await client.query(
-      `INSERT INTO consent_acceptances (account_id, document_key, document_version, context, request_id, metadata)
-       VALUES ($1, 'platform_terms', $2, 'offer_acceptance', $3, $4::jsonb)
+      `INSERT INTO consent_acceptances (account_id, actor_account_id, document_key, document_version, context, request_id, metadata)
+       VALUES ($1, $1, 'platform_terms', $2, 'offer_acceptance', $3, $4::jsonb)
        ON CONFLICT (account_id, document_key, document_version, context) DO NOTHING`,
       [request.actor.account.id, expectedConsentVersion, request.requestId, JSON.stringify({ offerId, jobId: offer.job_id })],
     );

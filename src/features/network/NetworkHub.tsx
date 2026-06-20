@@ -160,13 +160,13 @@ export function NetworkHub({ jobs, talent, communityPosts, shoutOuts, onOpenCrew
           <div className="v2-network-trust-stack">
             <article>
               <ShieldCheck size={18} />
-              <strong>Verified profiles</strong>
-              <span>Identity and insurance markers stay visible across the app.</span>
+              <strong>Evidence states</strong>
+              <span>Self-reported, uploaded, reviewed, and verified markers stay distinct.</span>
             </article>
             <article>
               <Star size={18} />
               <strong>High reputation</strong>
-              <span>Shout-outs and verified fixes can lift the profile before the first deal.</span>
+              <span>Shout-outs and accepted field fixes can lift the profile before the first deal.</span>
             </article>
             <article>
               <Users size={18} />

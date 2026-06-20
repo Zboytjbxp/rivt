@@ -15,12 +15,12 @@ Evidence must eventually link to implementation, automated tests, manual accepta
 | ID | Requirement | Current | Evidence / gap |
 |---|---|---:|---|
 | GA-FND-001 | Managed PostgreSQL and private object storage are required | Verified | Live `/api/health` and `/api/storage` report PostgreSQL and S3-compatible storage healthy. |
-| GA-FND-002 | Versioned database migrations own schema changes | Verified | Production runs checksummed transactional migrations with advisory locking; apply/rerun/rollback/reapply/tamper tests pass and status reports `0007_project_completion` with zero pending. |
-| GA-FND-003 | Core records use normalized, user-owned domain tables | Partial | Canonical account/profile/organization/trade, job, application, offer, active-work, participant, timeline, conversation, message, receipt, notification, project, project media, and completion foundations are live-smoked; reviews/admin remain packet work. |
-| GA-FND-004 | Authenticated tenant/ownership authorization protects every private API | Partial | Legacy private routes require a DB-backed user; canonical job mutations require active organization owner/admin membership and pass CI/live cross-user smoke. Remaining domains still need the same authorization model. |
+| GA-FND-002 | Versioned database migrations own schema changes | Verified | Production runs checksummed transactional migrations with advisory locking; apply/rerun/rollback/reapply/tamper tests pass and status reports `0007_project_completion` with zero pending. Packet 07 adds local migration `0008_reviews_admin_safety`; production acceptance is pending deployment/live smoke. |
+| GA-FND-003 | Core records use normalized, user-owned domain tables | Partial | Canonical account/profile/organization/trade, job, application, offer, active-work, participant, timeline, conversation, message, receipt, notification, project, project media, and completion foundations are live-smoked; Packet 07 source adds review, safety, support, admin-role, admin-action, and restriction records pending live acceptance. |
+| GA-FND-004 | Authenticated tenant/ownership authorization protects every private API | Partial | Legacy private routes require a DB-backed user; canonical job/match/messaging/project routes pass live smoke. Packet 07 source adds participant/admin/support authorization for review and safety domains pending DB-backed CI/live smoke evidence. |
 | GA-FND-005 | API uses consistent typed errors and validation | Partial | `/api/v1` has request IDs, Zod validation, stable errors, and pagination primitives; legacy APIs retain transitional shapes. |
-| GA-FND-006 | Retryable writes are idempotent | Partial | Canonical idempotency storage is used by job create/update/transition, application, offer, active-work mutation, message send, project open/note/media/completion APIs; Packet 06 live smoke proved project replay safety; remaining review/admin domains adopt it per packet. |
-| GA-FND-007 | Auditable domain events use authenticated actor and subject | Partial | Job, application, offer, active-work, message, project media, project entry, and completion routes emit authenticated audit/status/events with append-only triggers and live-smoked timelines; remaining review/admin domains adopt it per packet. |
+| GA-FND-006 | Retryable writes are idempotent | Partial | Canonical idempotency storage is used by job, match, messaging, and project mutations; Packet 07 source extends it to review, report, unsafe-work, support, and admin/restriction mutations pending live smoke. |
+| GA-FND-007 | Auditable domain events use authenticated actor and subject | Partial | Job, application, offer, active-work, message, project media, project entry, and completion routes emit authenticated audit/status/events with append-only triggers and live-smoked timelines; Packet 07 source adds review events, unsafe-work events, support events, restriction events, and admin action events pending live acceptance. |
 | GA-FND-008 | Internal diagnostics identify deployed source revision and dependency readiness | Verified | Health/readiness identify exact source `993be38`, dependencies, applied migrations, and pending count in production. |
 
 ## Authentication and Account
@@ -86,7 +86,7 @@ Evidence must eventually link to implementation, automated tests, manual accepta
 | GA-MAT-005 | Tradesperson accepts/declines offer | Partial | Recipient-only accept/decline APIs and UI actions exist; production smoke verified accept and wrong-recipient rejection, while decline remains source/CI coverage only. |
 | GA-MAT-006 | Accepted offer creates participants and Active work exactly once | Verified | Packet 04 production smoke verified offer acceptance created one active-work record with two participants and repeated acceptance returned the same active-work record. |
 | GA-MAT-007 | Cancellation/reschedule records actor and reason | Verified | Packet 04 production smoke verified active-work reschedule and cancel events with reasons; append-only status events are migration-enforced. |
-| GA-MAT-008 | Block/suspension/closed-job rules prevent action | Partial | Packet 04 source and DB-backed CI cover account blocks; production smoke verified wrong-recipient and closed accepted job boundaries. Broader suspension policy remains a later safety/admin packet. |
+| GA-MAT-008 | Block/suspension/closed-job rules prevent action | Partial | Packet 04 production smoke verified wrong-recipient and closed accepted job boundaries; Packet 07 source extends blocks across discovery/detail/reputation/application and adds account restrictions/suspensions pending live smoke. |
 
 ## Messaging and Notifications
 
@@ -115,21 +115,21 @@ Evidence must eventually link to implementation, automated tests, manual accepta
 
 | ID | Requirement | Current | Evidence / gap |
 |---|---|---:|---|
-| GA-REV-001 | Only completed participants may review once | Prototype | Review UI/flags exist; no participant eligibility or uniqueness. |
-| GA-REV-002 | Two-sided review response/dispute state persists | Prototype | Concepts/views exist; no normalized records. |
-| GA-REV-003 | Public reputation includes count/context and no fake data | Partial | Packet 03 removes seeded jobs/talent/review counts from current data and Work/Crew E2E asserts seeded names are absent; canonical review reputation remains future packet work. |
-| GA-SAFE-001 | Versioned signup and contextual work consent | Prototype | Boolean/trust copy in app-state; no consent version/timestamp/actor. |
-| GA-SAFE-002 | Block and report user/job/message | Prototype | Community reports and account locks exist only as blob/admin simulation. |
-| GA-SAFE-003 | Unsafe condition / stop-work record | Missing | No workflow. |
-| GA-SAFE-004 | Verification claims use accurate states | Partial | Seed talent verification/insurance claims were removed from current data; remaining profile/training copy still needs evidence-state review in the safety packet. |
+| GA-REV-001 | Only completed participants may review once | Partial | Packet 07 source adds completed-active-work participant checks and unique `(active_work, reviewer, reviewee)` reviews; DB-backed/live acceptance pending. |
+| GA-REV-002 | Two-sided review response/dispute state persists | Partial | Packet 07 source adds pending approval, approve, dispute, response, admin resolve/hide, and append-only review events; live acceptance pending. |
+| GA-REV-003 | Public reputation includes count/context and no fake data | Partial | Seeded review counts remain removed; Packet 07 source adds reputation count/average from approved/resolved canonical reviews and blocks reputation alternate routes; live acceptance pending. |
+| GA-SAFE-001 | Versioned signup and contextual work consent | Partial | Signup/job/application/offer consent is persisted; Packet 07 source adds actor attribution plus review submission and stop-work consent contexts; live acceptance pending. |
+| GA-SAFE-002 | Block and report user/job/message | Partial | Packet 05 live-smoked conversation report/block; Packet 07 source adds normalized safety reports and extends block enforcement across discovery/job/profile/application paths pending live smoke. |
+| GA-SAFE-003 | Unsafe condition / stop-work record | Partial | Packet 07 source adds no-fault unsafe-work and stop-work records with append-only events, participant authorization, contextual consent, and notifications; live acceptance pending. |
+| GA-SAFE-004 | Verification claims use accurate states | Partial | Seed talent verification/insurance claims were removed; Packet 07 source changes current visible copy to evidence-state and safety-module vocabulary. Counsel/content review and live UI acceptance remain. |
 
 ## Admin and Operations
 
 | ID | Requirement | Current | Evidence / gap |
 |---|---|---:|---|
-| GA-ADM-001 | Internal routes require least-privilege admin authorization | Blocker | Admin UI is a normal view over client state; no admin roles/authorization. |
-| GA-ADM-002 | Support can inspect safe account/workflow timeline | Missing | Generic events exist without safe support policy or actor identity. |
-| GA-ADM-003 | Moderation/account actions use reason and immutable audit | Prototype | Lock/report handlers mutate app-state. |
+| GA-ADM-001 | Internal routes require least-privilege admin authorization | Partial | Packet 07 source adds `admin_role_grants`, admin-only middleware, and removes the normal-user admin client view; live acceptance pending. |
+| GA-ADM-002 | Support can inspect safe account/workflow timeline | Partial | Packet 07 source adds support cases/events and admin overview for review/report/support/restriction queues; a fuller support timeline remains a Gate A hardening item. |
+| GA-ADM-003 | Moderation/account actions use reason and immutable audit | Partial | Packet 07 source adds reason-required admin review/support/restriction mutations with immutable `admin_action_events`; live smoke and broader moderation UX remain pending. |
 | GA-OPS-001 | Build and lint gates pass | Verified | Production build and repository-wide ESLint pass locally and in GitHub Actions with zero errors or warnings. |
 | GA-OPS-002 | Direct production dependencies are declared and vulnerability gate passes | Verified | `fast-xml-parser` is direct, Multer is 2.2.0, and `npm audit --omit=dev` reports zero vulnerabilities locally and in GitHub Actions. |
 | GA-OPS-003 | Health, readiness, and build version are distinct | Verified | Deployed health and authenticated readiness report dependencies, migration version, and exact source commit `993be38`. |
