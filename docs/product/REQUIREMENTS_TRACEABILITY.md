@@ -15,13 +15,13 @@ Evidence must eventually link to implementation, automated tests, manual accepta
 | ID | Requirement | Current | Evidence / gap |
 |---|---|---:|---|
 | GA-FND-001 | Managed PostgreSQL and private object storage are required | Verified | Live `/api/health` and `/api/storage` report PostgreSQL and S3-compatible storage healthy. |
-| GA-FND-002 | Versioned database migrations own schema changes | Verified | Production runs checksummed transactional migrations with advisory locking; apply/rerun/rollback/reapply/tamper tests pass and status reports `0006_messaging_notifications` with zero pending. |
-| GA-FND-003 | Core records use normalized, user-owned domain tables | Partial | Canonical account/profile/organization/trade, job, application, offer, active-work, participant, timeline, conversation, message, receipt, and notification foundations are live-smoked; project records/reviews remain packet work. |
+| GA-FND-002 | Versioned database migrations own schema changes | Verified | Production runs checksummed transactional migrations with advisory locking; apply/rerun/rollback/reapply/tamper tests pass and status reports `0007_project_completion` with zero pending. |
+| GA-FND-003 | Core records use normalized, user-owned domain tables | Partial | Canonical account/profile/organization/trade, job, application, offer, active-work, participant, timeline, conversation, message, receipt, notification, project, project media, and completion foundations are live-smoked; reviews/admin remain packet work. |
 | GA-FND-004 | Authenticated tenant/ownership authorization protects every private API | Partial | Legacy private routes require a DB-backed user; canonical job mutations require active organization owner/admin membership and pass CI/live cross-user smoke. Remaining domains still need the same authorization model. |
 | GA-FND-005 | API uses consistent typed errors and validation | Partial | `/api/v1` has request IDs, Zod validation, stable errors, and pagination primitives; legacy APIs retain transitional shapes. |
-| GA-FND-006 | Retryable writes are idempotent | Partial | Canonical idempotency storage is used by job create/update/transition, application, offer, active-work mutation, and message send APIs; Packet 05 live smoke proved message replay safety; remaining domains adopt it per packet. |
-| GA-FND-007 | Auditable domain events use authenticated actor and subject | Partial | Job, application, offer, active-work, and message routes emit authenticated audit/status events with append-only triggers and live-smoked timelines; remaining domains adopt it per packet. |
-| GA-FND-008 | Internal diagnostics identify deployed source revision and dependency readiness | Verified | Health/readiness identify exact source `338ce7f`, dependencies, applied migrations, and pending count in production. |
+| GA-FND-006 | Retryable writes are idempotent | Partial | Canonical idempotency storage is used by job create/update/transition, application, offer, active-work mutation, message send, project open/note/media/completion APIs; Packet 06 live smoke proved project replay safety; remaining review/admin domains adopt it per packet. |
+| GA-FND-007 | Auditable domain events use authenticated actor and subject | Partial | Job, application, offer, active-work, message, project media, project entry, and completion routes emit authenticated audit/status/events with append-only triggers and live-smoked timelines; remaining review/admin domains adopt it per packet. |
+| GA-FND-008 | Internal diagnostics identify deployed source revision and dependency readiness | Verified | Health/readiness identify exact source `993be38`, dependencies, applied migrations, and pending count in production. |
 
 ## Authentication and Account
 
@@ -95,7 +95,7 @@ Evidence must eventually link to implementation, automated tests, manual accepta
 | GA-MSG-001 | Job-linked conversation exists only for authorized participants | Verified | Packet 05 live smoke `packet05-20260620123233-891897` proved accepted-work conversation creation, participant access, outsider empty list, and outsider direct-message 404. |
 | GA-MSG-002 | Message persists once with sender and server timestamp | Verified | Packet 05 live smoke proved idempotent message send replayed the same persisted message and two messages remained in the conversation. |
 | GA-MSG-003 | Unread/read state is persistent per participant | Verified | Packet 05 live smoke proved contractor unread count survived relogin and conversation read cleared unread state. |
-| GA-MSG-004 | Message attachments use private authorized media | Partial | Packet 05 source adds attachment metadata rows with `pending_authorization`; actual private media authorization is explicitly handed off to Packet 06. |
+| GA-MSG-004 | Message attachments use private authorized media | Partial | Packet 06 adds private participant-authorized project media and signed access; message attachment rows still remain `pending_authorization` until the messaging attachment UI/API is wired to project media. |
 | GA-MSG-005 | Block/report/mute rules apply to messaging | Verified | Packet 05 live smoke proved mute suppressed a second message notification, conversation report persisted, and blocked sender returned `ACCOUNT_BLOCKED`. |
 | GA-MSG-006 | Gate A in-app notifications represent real domain events | Verified | Packet 05 live smoke proved message/offer notifications were real server records, read-all worked, and notification text did not leak private address fields. |
 
@@ -103,13 +103,13 @@ Evidence must eventually link to implementation, automated tests, manual accepta
 
 | ID | Requirement | Current | Evidence / gap |
 |---|---|---:|---|
-| GA-PRJ-001 | Accepted work owns a project record/timeline | Prototype | Records UI exists; no project-record domain table. |
-| GA-PRJ-002 | Photo/file/note upload is user/job authorized | Blocker | S3 upload is real but keyed by unauthenticated session and arbitrary job ID. |
-| GA-PRJ-003 | File type/size/content safety and private signed access | Partial | Size/MIME and signed URLs exist; MIME trusts client, wildcard images are allowed, no scanning/derivatives. |
-| GA-PRJ-004 | Completion submission contains note/evidence/checklist | Prototype | Closeout state/handlers exist in app-state. |
-| GA-PRJ-005 | Contractor confirms or disputes completion | Prototype | Client handler exists; no server authorization/state. |
-| GA-PRJ-006 | Closeout report is reproducible and exportable | Prototype | Clipboard/window report behavior exists; no immutable server report. |
-| GA-PRJ-007 | Original evidence and audit history are preserved | Missing | No media revision/evidence model. |
+| GA-PRJ-001 | Accepted work owns a project record/timeline | Verified | Packet 06 migration/API creates one private project per accepted active work, immutable entries, and live smoke opened a participant-scoped project record. |
+| GA-PRJ-002 | Photo/file/note upload is user/job authorized | Verified | Project notes/media require accepted-work participant access; outsider project/media URL access returned 404 in live smoke. |
+| GA-PRJ-003 | File type/size/content safety and private signed access | Verified | Multer size/MIME limits, content-signature checks, SHA-256, rejected media state, private object key, and participant-scoped signed URL route are implemented; live smoke rejected malformed PNG and authorized stored evidence URL. |
+| GA-PRJ-004 | Completion submission contains note/evidence/checklist | Verified | Tradesperson completion API persists note, checklist, and evidence media IDs; live smoke submitted completion with evidence. |
+| GA-PRJ-005 | Contractor confirms or disputes completion | Verified | Contractor-only confirm/dispute APIs persist actor/time/reason, notify the tradesperson, and update project/active-work state; live smoke confirmed one project and disputed another. |
+| GA-PRJ-006 | Closeout report is reproducible and exportable | Verified | `/api/v1/projects/:id/report` generates deterministic JSON from canonical server records; live smoke proved the report matched after relogin and excluded private address. |
+| GA-PRJ-007 | Original evidence and audit history are preserved | Verified | Upload rows, project media metadata/content hash, immutable project entries, completion submissions, and append-only resolution records preserve evidence/audit history. |
 
 ## Reviews and Safety
 
@@ -132,16 +132,16 @@ Evidence must eventually link to implementation, automated tests, manual accepta
 | GA-ADM-003 | Moderation/account actions use reason and immutable audit | Prototype | Lock/report handlers mutate app-state. |
 | GA-OPS-001 | Build and lint gates pass | Verified | Production build and repository-wide ESLint pass locally and in GitHub Actions with zero errors or warnings. |
 | GA-OPS-002 | Direct production dependencies are declared and vulnerability gate passes | Verified | `fast-xml-parser` is direct, Multer is 2.2.0, and `npm audit --omit=dev` reports zero vulnerabilities locally and in GitHub Actions. |
-| GA-OPS-003 | Health, readiness, and build version are distinct | Verified | Deployed health and authenticated readiness report dependencies, migration version, and exact source commit `338ce7f`. |
+| GA-OPS-003 | Health, readiness, and build version are distinct | Verified | Deployed health and authenticated readiness report dependencies, migration version, and exact source commit `993be38`. |
 | GA-OPS-004 | Backup and timed restore drill pass | Unknown | Documentation requests it; no evidence found in repo. |
 | GA-OPS-005 | Structured logs, error monitoring, alerts, and incident routing | Missing | Console logging/basic responses only. |
 | GA-OPS-006 | Critical rate limits and upload abuse limits | Partial | Auth/write/upload limits and an explicit upload MIME/size/count policy exist; durable/distributed limits and domain quotas remain. |
 | GA-OPS-007 | Automated tests cover critical journeys and authorization | Partial | Unit/integration and Playwright journeys pass; disposable-Postgres auth/job/match authorization coverage passes in GitHub Actions. Broader domains remain packet work. |
-| GA-OPS-008 | Deployed commit, migrations, flags, and rollback are recorded | Partial | Packet 00-05 commits, Railway deployment IDs, config changes, migration status, smoke evidence, and rollback targets are recorded; a full timed isolated restore drill remains open. |
+| GA-OPS-008 | Deployed commit, migrations, flags, and rollback are recorded | Partial | Packet 00-06 commits, Railway deployment IDs, config changes, migration status, smoke evidence, and rollback targets are recorded; a full timed isolated restore drill remains open. |
 
 ## Current Gate A Summary
 
 - Production infrastructure is reachable and managed storage is healthy.
-- Authentication, canonical profiles/onboarding, jobs/discovery, and match acceptance have production evidence.
-- Project records/completion, reviews, admin operations, and full launch hardening remain Gate A packet work.
+- Authentication, canonical profiles/onboarding, jobs/discovery, match acceptance, messaging/notifications, and project records/completion have production evidence.
+- Reviews, admin operations, safety moderation, and full launch hardening remain Gate A packet work.
 - The app must continue to avoid fake seed data, frontend-only success, and homeowner flows.

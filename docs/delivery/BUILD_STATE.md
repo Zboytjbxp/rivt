@@ -1,11 +1,11 @@
 # RIVT Build State
 
 Last updated: 2026-06-20 America/New_York
-Current gate: Gate A project records and completion
-Current phase: Packet 05 accepted; Packet 06 ready
-Active packet: `docs/delivery/packets/06_PROJECT_COMPLETION.md`
+Current gate: Gate A reviews, admin, and safety
+Current phase: Packet 06 accepted; Packet 07 ready
+Active packet: `docs/delivery/packets/07_REVIEWS_ADMIN_SAFETY.md`
 Repository branch: `master`
-Production release commit: `338ce7f7ec921fbcfafe20b4f9b96ecbf3053224`
+Production release commit: `993be3899f8eb996229be90cf423cf58e5e27c76`
 
 ## Source State
 
@@ -241,9 +241,45 @@ Run on 2026-06-20 from `master`:
 
 Packet 05 is accepted in production for accepted-work conversations, durable messages, unread/read state, in-app notifications, mute, report, block enforcement, and private-address-safe notification content. Project records, completion evidence, reviews, support/admin, and full launch hardening remain later packets and must not be represented as production-ready.
 
+## Packet 06 Implemented Locally
+
+- Added migration `0007_project_completion` for projects, immutable project entries, authorized project media, completion submissions, and completion resolutions.
+- Extended uploads with authenticated account ownership, active-work linkage, project upload status, content SHA-256, storage scope, failure reason, and verification timestamp.
+- Added typed project validation/mapping and content-signature checks in `server/projects.js`.
+- Added participant-scoped `/api/v1/active-work/:id/project`, `/api/v1/projects/:id`, note, media, media signed-url, completion submit, confirm, dispute, and report APIs.
+- Bound all project access through accepted `work_participants`; unrelated authenticated accounts receive 404.
+- Added idempotent project opening, notes, media upload/rejection, completion submission, and completion resolution.
+- Added malformed-file rejection with durable rejected status; valid project media requires managed object storage and private signed access.
+- Added Records mode in Tools with server-backed accepted-work records, note upload, evidence upload, completion submit, confirm/dispute, and report preview.
+- Added Packet 06 integration coverage and reusable production smoke command `npm run smoke:projects:live`.
+- Preserved the Packet 06 stop condition: no public share links, advanced annotations, or CompanyCam-scale media features were added.
+
+## Packet 06 Local Verification
+
+Run on 2026-06-20 from `master`:
+
+- `npm run build`: pass.
+- `npm run lint`: pass.
+- `npm run lint:security`: pass.
+- `npm run test`: pass; 18 unit tests pass, non-DB integration tests pass, and DB-backed integration tests including Packet 06 skip locally because `TEST_DATABASE_URL` is not configured.
+- `npm run test:e2e`: pass; fail-closed auth and jobs/discovery desktop/mobile checks pass.
+- `npm audit --omit=dev`: pass; zero vulnerabilities.
+
+## Packet 06 Production Evidence
+
+- Source commit: `993be3899f8eb996229be90cf423cf58e5e27c76`
+- Railway deployment: initial application deploy `4da1b9b0-9afd-4af9-a088-c244a466a761`, followed by metadata deploy `67562c06-40d4-4923-bd82-52b169a0d45e` after updating `SOURCE_COMMIT`.
+- `https://rivt.pro/api/health`: 200, source commit matched the release, PostgreSQL and S3-compatible storage healthy.
+- Production migration status: `0007_project_completion`, seven applied migrations, zero pending, verified during live smoke readiness.
+- Live smoke `packet06-20260620132532-bdf04b`: disposable contractor, tradesperson, and outsider signup/onboarding passed; readiness confirmed migration `0007_project_completion`; accepted work opened a private project record; outsider project and media URL access returned 404; note idempotency replayed; malformed PNG upload was rejected and idempotent; text evidence uploaded to managed storage; contractor received a media signed-url response; tradesperson submitted completion with evidence; contractor confirmed completion; closeout report matched after relogin and excluded private address; a second project completion was disputed with reason; persisted smoke evidence counted 9 entries, 2 media rows, and 2 resolutions; disposable accounts were closed and the smoke object was deleted from object storage.
+
+## Packet 06 Acceptance
+
+Packet 06 is accepted in production for private accepted-work project records, authorized media evidence, content-signature rejection, notes, completion submission, contractor confirmation/dispute, and reproducible closeout reports. Reviews, admin/support, safety moderation, and final launch hardening remain later packets and must not be represented as production-ready.
+
 ## Next Exact Task
 
-Start `docs/delivery/packets/06_PROJECT_COMPLETION.md`: implement server-owned project records, authorized closeout evidence uploads/notes/checklists, contractor confirmation/dispute, reproducible closeout reports, and acceptance smoke without adding reviews/admin scope.
+Start `docs/delivery/packets/07_REVIEWS_ADMIN_SAFETY.md`: implement participant-only reviews, review dispute/approval state, admin/support authorization, moderation/account safety flows, and acceptance smoke without adding broad launch hardening scope.
 
 ## Blocking Founder Decisions
 

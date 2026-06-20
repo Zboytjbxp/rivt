@@ -118,3 +118,22 @@ Add one entry per staging/production deployment.
 - Known risks: project records/completion, reviews, admin/support, distributed rate limits, full restore drill, and launch hardening remain open
 - Rollback performed/result: not required
 - Approval: Packet 05 accepted; overall Gate A not approved
+
+## Current Production - Packet 06 Project Records and Completion
+
+- Environment: Production (`https://rivt.pro`)
+- Date/time/timezone: 2026-06-20 09:25 America/New_York
+- Deployer: Codex through authenticated Railway CLI
+- Source repository/branch: `Zboytjbxp/rivt`, `master`
+- Source commit: `993be3899f8eb996229be90cf423cf58e5e27c76`
+- Build/artifact ID: Railway deployment `67562c06-40d4-4923-bd82-52b169a0d45e`; initial application upload was `4da1b9b0-9afd-4af9-a088-c244a466a761`, followed by metadata redeploy after `SOURCE_COMMIT` was updated
+- Migration version before/after: `0006_messaging_notifications` / `0007_project_completion`
+- Feature-flag/config version: `SOURCE_COMMIT` updated to `993be3899f8eb996229be90cf423cf58e5e27c76`; pilot invite enforcement remains enabled
+- Provider/config changes: no provider credentials changed; project evidence uses existing private S3-compatible bucket
+- Backup/rollback target: prior successful Packet 05 deployment `16fb271d-9dc0-4d85-9a55-4765acb07f43`; checked migration rollback for `0007_project_completion` in source tests
+- Automated gates: local `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test`, `npm run test:e2e`, and `npm audit --omit=dev` passed; local DB-backed integration tests skipped because `TEST_DATABASE_URL` is not configured
+- Post-deploy smoke tests: public `/api/health` passed and reported exact source commit. Live smoke `packet06-20260620132532-bdf04b` passed signup/onboarding for disposable contractor, tradesperson, and outsider; readiness confirmed migration `0007_project_completion`; accepted work opened one private project record; outsider project/media URL access returned 404; note write replayed idempotently; malformed PNG was rejected with durable rejected media state and replayed idempotently; text evidence uploaded to managed storage and authorized signed-url route responded; completion submit, contractor confirmation, report reproducibility after relogin, private-address non-leak, second-project dispute, persisted counts, disposable account closure, and smoke object deletion passed.
+- Health/readiness result: health reports PostgreSQL and S3-compatible storage healthy with exact source commit; authenticated readiness in live smoke reported `0007_project_completion`
+- Known risks: reviews, admin/support, safety moderation, distributed rate limits, full restore drill, and final launch hardening remain open
+- Rollback performed/result: not required
+- Approval: Packet 06 accepted; overall Gate A not approved
