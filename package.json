@@ -12,7 +12,7 @@
     "dev:api": "node server/index.js",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "lint:security": "eslint server/index.js server/security.js server/api.js server/auth.js server/email.js server/authorization.js server/jobs.js server/migrations.js scripts/migrate.js scripts/create-pilot-invite.js test/security.test.js test/api.test.js test/auth.test.js test/authorization.test.js test/jobs.test.js test/server.integration.test.js test/server.database.integration.test.js test/auth-lifecycle.integration.test.js test/jobs.integration.test.js test/migrations.integration.test.js test/auth-fail-closed.e2e.mjs test/jobs-discovery.e2e.mjs",
+    "lint:security": "eslint server/index.js server/security.js server/api.js server/auth.js server/email.js server/authorization.js server/jobs.js server/migrations.js scripts/migrate.js scripts/create-pilot-invite.js scripts/live-smoke-jobs.js test/security.test.js test/api.test.js test/auth.test.js test/authorization.test.js test/jobs.test.js test/server.integration.test.js test/server.database.integration.test.js test/auth-lifecycle.integration.test.js test/jobs.integration.test.js test/migrations.integration.test.js test/auth-fail-closed.e2e.mjs test/jobs-discovery.e2e.mjs",
     "test": "npm run test:unit && npm run test:integration",
     "test:unit": "node --test test/security.test.js test/api.test.js test/auth.test.js test/authorization.test.js test/jobs.test.js",
     "test:integration": "node --test --test-concurrency=1 test/server.integration.test.js test/server.database.integration.test.js test/auth-lifecycle.integration.test.js test/jobs.integration.test.js test/migrations.integration.test.js",
@@ -21,6 +21,7 @@
     "migrate:status": "node scripts/migrate.js status",
     "migrate:down": "node scripts/migrate.js down",
     "invite:create": "node scripts/create-pilot-invite.js",
+    "smoke:jobs:live": "node scripts/live-smoke-jobs.js",
     "preview": "vite preview --host 127.0.0.1",
     "start": "node server/index.js"
   },
