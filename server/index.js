@@ -57,6 +57,19 @@ import {
   requireTradespersonActor,
   workTransitionSchema,
 } from "./matches.js";
+import {
+  blockAccountSchema,
+  conversationMuteSchema,
+  mapConversation,
+  mapConversationParticipant,
+  mapMessage,
+  mapNotification,
+  mapNotificationPreference,
+  messageCreateSchema,
+  notificationPreferenceSchema,
+  notificationReadSchema,
+  reportConversationSchema,
+} from "./messaging.js";
 import { migrateUp, migrationStatus } from "./migrations.js";
 import {
   createOriginGuard,
@@ -1437,6 +1450,217 @@ async function mappedActiveWorkWithEvents(client, row) {
   return mapActiveWork(row, { events: await loadWorkEvents(client, row.id) });
 }
 
+const conversationSelectBase = `
+  SELECT c.*, aw.status AS active_work_status, j.title AS job_title, j.status AS job_status,
+         o.name AS organization_name, pl.city AS public_city, pl.region AS public_region,
+         pl.country_code AS public_country_code
+  FROM conversations c
+  INNER JOIN active_work aw ON aw.id = c.active_work_id
+  INNER JOIN jobs j ON j.id = c.job_id
+  INNER JOIN organizations o ON o.id = c.organization_id
+  INNER JOIN job_public_locations pl ON pl.job_id = j.id`;
+
+const messageSelectBase = `
+  SELECT cm.*, p.display_name AS sender_display_name, p.headline AS sender_headline
+  FROM conversation_messages cm
+  INNER JOIN profiles p ON p.account_id = cm.sender_account_id`;
+
+async function loadConversationParticipants(client, conversationIds) {
+  if (!conversationIds.length) return new Map();
+  const result = await client.query(
+    `SELECT cp.*, p.display_name, p.headline, p.service_area_city, p.service_area_region
+     FROM conversation_participants cp
+     INNER JOIN profiles p ON p.account_id = cp.account_id
+     WHERE cp.conversation_id = ANY($1::uuid[])
+     ORDER BY cp.conversation_id, cp.participant_role, p.display_name`,
+    [conversationIds],
+  );
+  const grouped = new Map();
+  for (const row of result.rows) {
+    const list = grouped.get(row.conversation_id) ?? [];
+    list.push(row);
+    grouped.set(row.conversation_id, list);
+  }
+  return grouped;
+}
+
+async function loadLastMessages(client, conversationIds) {
+  if (!conversationIds.length) return new Map();
+  const result = await client.query(
+    `SELECT DISTINCT ON (cm.conversation_id)
+       cm.*, p.display_name AS sender_display_name, p.headline AS sender_headline
+     FROM conversation_messages cm
+     INNER JOIN profiles p ON p.account_id = cm.sender_account_id
+     WHERE cm.conversation_id = ANY($1::uuid[]) AND cm.deleted_at IS NULL
+     ORDER BY cm.conversation_id, cm.created_at DESC, cm.id DESC`,
+    [conversationIds],
+  );
+  return new Map(result.rows.map((row) => [row.conversation_id, row]));
+}
+
+async function loadUnreadMessageCounts(client, conversationIds, accountId) {
+  if (!conversationIds.length) return new Map();
+  const result = await client.query(
+    `SELECT cm.conversation_id, count(*)::int AS count
+     FROM message_receipts mr
+     INNER JOIN conversation_messages cm ON cm.id = mr.message_id
+     WHERE cm.conversation_id = ANY($1::uuid[])
+       AND mr.account_id = $2
+       AND mr.read_at IS NULL
+       AND cm.sender_account_id <> $2
+       AND cm.deleted_at IS NULL
+     GROUP BY cm.conversation_id`,
+    [conversationIds, accountId],
+  );
+  return new Map(result.rows.map((row) => [row.conversation_id, row.count]));
+}
+
+async function mapConversationsForActor(client, rows, actor) {
+  const conversationIds = rows.map((row) => row.id);
+  const [participants, lastMessages, unreadCounts] = await Promise.all([
+    loadConversationParticipants(client, conversationIds),
+    loadLastMessages(client, conversationIds),
+    loadUnreadMessageCounts(client, conversationIds, actor.account.id),
+  ]);
+  return rows.map((row) => mapConversation(row, {
+    participants: participants.get(row.id) ?? [],
+    lastMessage: lastMessages.get(row.id) ?? null,
+    unreadCount: unreadCounts.get(row.id) ?? 0,
+  }));
+}
+
+async function loadConversationById(client, conversationId, actor, { forUpdate = false } = {}) {
+  const result = await client.query(
+    `${conversationSelectBase}
+     INNER JOIN conversation_participants cp ON cp.conversation_id = c.id
+     WHERE c.id = $1 AND cp.account_id = $2
+     ${forUpdate ? "FOR UPDATE OF c" : ""}`,
+    [conversationId, actor.account.id],
+  );
+  if (!result.rowCount) throw new ApiError(404, "CONVERSATION_NOT_FOUND", "Conversation not found.");
+  return result.rows[0];
+}
+
+async function loadConversationParticipantRows(client, conversationId, { forUpdate = false } = {}) {
+  const result = await client.query(
+    `SELECT cp.*, p.display_name, p.headline, p.service_area_city, p.service_area_region
+     FROM conversation_participants cp
+     INNER JOIN profiles p ON p.account_id = cp.account_id
+     WHERE cp.conversation_id = $1
+     ORDER BY cp.participant_role, p.display_name
+     ${forUpdate ? "FOR UPDATE OF cp" : ""}`,
+    [conversationId],
+  );
+  return result.rows;
+}
+
+async function ensureConversationForActiveWork(client, activeWorkId, actor) {
+  const activeWork = await loadActiveWorkById(client, activeWorkId, actor);
+  const existing = await client.query(
+    `${conversationSelectBase}
+     INNER JOIN conversation_participants cp ON cp.conversation_id = c.id
+     WHERE c.active_work_id = $1 AND cp.account_id = $2`,
+    [activeWorkId, actor.account.id],
+  );
+  if (existing.rowCount) return existing.rows[0];
+
+  const inserted = await client.query(
+    `INSERT INTO conversations (
+       active_work_id, job_id, organization_id, created_by_account_id
+     ) VALUES ($1, $2, $3, $4)
+     ON CONFLICT (active_work_id) DO NOTHING
+     RETURNING id`,
+    [activeWorkId, activeWork.job_id, activeWork.organization_id, actor.account.id],
+  );
+  const conversationId = inserted.rows[0]?.id
+    ?? (await client.query("SELECT id FROM conversations WHERE active_work_id = $1", [activeWorkId])).rows[0]?.id;
+  if (!conversationId) throw new ApiError(500, "CONVERSATION_CREATE_FAILED", "Conversation could not be opened.");
+
+  await client.query(
+    `INSERT INTO conversation_participants (conversation_id, account_id, participant_role)
+     SELECT $1, account_id, participant_role
+     FROM work_participants
+     WHERE active_work_id = $2
+     ON CONFLICT DO NOTHING`,
+    [conversationId, activeWorkId],
+  );
+  return loadConversationById(client, conversationId, actor);
+}
+
+async function createInAppNotification(client, {
+  accountId,
+  type,
+  title,
+  body = "",
+  actionHref = "",
+  sourceType = "",
+  sourceId = null,
+  priority = "normal",
+  metadata = {},
+}) {
+  const preference = await client.query(
+    `SELECT enabled FROM notification_preferences
+     WHERE account_id = $1 AND notification_type = $2 AND channel = 'in_app'`,
+    [accountId, type === "message" ? "messages" : type === "work" ? "work_updates" : "system"],
+  );
+  if (preference.rowCount && preference.rows[0].enabled === false) return null;
+  const inserted = await client.query(
+    `INSERT INTO in_app_notifications (
+       account_id, type, title, body, action_href, source_type, source_id, priority, metadata
+     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb)
+     RETURNING *`,
+    [accountId, type, title, body, actionHref, sourceType, sourceId, priority, JSON.stringify(metadata)],
+  );
+  return inserted.rows[0];
+}
+
+async function notifyConversationParticipants(client, conversation, participants, senderAccountId, messageId, messageBody) {
+  const sender = participants.find((participant) => participant.account_id === senderAccountId);
+  const now = Date.now();
+  const preview = messageBody.length > 140 ? `${messageBody.slice(0, 137)}...` : messageBody;
+  const actionHref = `/app/messages?conversation=${conversation.id}`;
+  for (const participant of participants) {
+    if (participant.account_id === senderAccountId) continue;
+    if (participant.muted_until && new Date(participant.muted_until).getTime() > now) continue;
+    await createInAppNotification(client, {
+      accountId: participant.account_id,
+      type: "message",
+      title: `${sender?.display_name || "RIVT member"} sent a message`,
+      body: `${conversation.job_title} - ${conversation.public_city}, ${conversation.public_region}: ${preview}`,
+      actionHref,
+      sourceType: "message",
+      sourceId: messageId,
+      priority: "normal",
+      metadata: {
+        conversationId: conversation.id,
+        jobId: conversation.job_id,
+        publicLocation: `${conversation.public_city}, ${conversation.public_region}`,
+      },
+    });
+  }
+}
+
+async function assertConversationParticipantsCanInteract(client, participants) {
+  for (let index = 0; index < participants.length; index += 1) {
+    for (let otherIndex = index + 1; otherIndex < participants.length; otherIndex += 1) {
+      await assertNoAccountBlock(client, participants[index].account_id, participants[otherIndex].account_id);
+    }
+  }
+}
+
+async function assertSharedConversation(client, actorAccountId, targetAccountId) {
+  const result = await client.query(
+    `SELECT 1
+     FROM conversation_participants actor_cp
+     INNER JOIN conversation_participants target_cp
+       ON target_cp.conversation_id = actor_cp.conversation_id
+     WHERE actor_cp.account_id = $1 AND target_cp.account_id = $2
+     LIMIT 1`,
+    [actorAccountId, targetAccountId],
+  );
+  if (!result.rowCount) throw new ApiError(403, "ACCOUNT_RELATIONSHIP_REQUIRED", "You can only take this action for a connected work contact.");
+}
+
 app.post("/api/v1/jobs", requireV1AuthenticatedUser, requireV1Actor, writeRateLimit, asyncRoute(async (request, response) => {
   requireContractorActor(request.actor);
   const input = validate(createJobSchema, request.body);
@@ -1992,6 +2216,17 @@ app.post("/api/v1/applications/:id/offer", requireV1AuthenticatedUser, requireV1
       [request.requestId, request.actor.account.id, application.organization_id, offerId,
         JSON.stringify({ applicationId, jobId: application.job_id })],
     );
+    await createInAppNotification(client, {
+      accountId: application.applicant_account_id,
+      type: "work",
+      title: "Offer received",
+      body: `${application.job_title} - ${application.public_city}, ${application.public_region}`,
+      actionHref: `/app/work?job=${application.job_id}`,
+      sourceType: "offer",
+      sourceId: offerId,
+      priority: "high",
+      metadata: { jobId: application.job_id, applicationId },
+    });
     const offer = await loadOfferById(client, offerId);
     const updatedApplication = await loadApplicationById(client, applicationId);
     return {
@@ -2113,12 +2348,24 @@ app.post("/api/v1/offers/:id/accept", requireV1AuthenticatedUser, requireV1Actor
         [activeWorkId, request.actor.account.id, input.reason],
       );
     }
+    await ensureConversationForActiveWork(client, activeWorkId, request.actor);
     await client.query(
       `INSERT INTO audit_events (request_id, actor_account_id, organization_id, action, subject_type, subject_id, metadata)
        VALUES ($1, $2::uuid, $3::uuid, 'offer.accepted', 'offer', ($4::uuid)::text, $5::jsonb)`,
       [request.requestId, request.actor.account.id, job.organization_id, offerId,
         JSON.stringify({ activeWorkId, jobId: offer.job_id })],
     );
+    await createInAppNotification(client, {
+      accountId: offer.contractor_account_id,
+      type: "work",
+      title: "Offer accepted",
+      body: `${offer.job_title} - ${offer.public_city}, ${offer.public_region}`,
+      actionHref: `/app/messages`,
+      sourceType: "active_work",
+      sourceId: activeWorkId,
+      priority: "high",
+      metadata: { jobId: offer.job_id, offerId },
+    });
     const acceptedOffer = await loadOfferById(client, offerId);
     const activeWork = (await client.query(`${activeWorkSelectBase} WHERE aw.id = $1`, [activeWorkId])).rows[0];
     return {
@@ -2208,6 +2455,20 @@ app.post("/api/v1/active-work/:id/cancel", requireV1AuthenticatedUser, requireV1
        ) VALUES ($1, $2, 'cancelled', 'active', 'cancelled', $3)`,
       [activeWorkId, request.actor.account.id, input.reason],
     );
+    const recipientAccountId = activeWork.contractor_account_id === request.actor.account.id
+      ? activeWork.tradesperson_account_id
+      : activeWork.contractor_account_id;
+    await createInAppNotification(client, {
+      accountId: recipientAccountId,
+      type: "work",
+      title: "Work cancelled",
+      body: `${activeWork.job_title} - ${activeWork.public_city}, ${activeWork.public_region}`,
+      actionHref: "/app/messages",
+      sourceType: "active_work",
+      sourceId: activeWorkId,
+      priority: "high",
+      metadata: { jobId: activeWork.job_id, reason: input.reason },
+    });
     const row = await loadActiveWorkById(client, activeWorkId, request.actor);
     return { status: 200, body: { data: { activeWork: await mappedActiveWorkWithEvents(client, row) }, meta: { requestId: request.requestId } } };
   });
@@ -2226,10 +2487,357 @@ app.post("/api/v1/active-work/:id/reschedule", requireV1AuthenticatedUser, requi
        ) VALUES ($1, $2, 'reschedule_requested', 'active', 'active', $3)`,
       [activeWorkId, request.actor.account.id, input.reason],
     );
+    const recipientAccountId = activeWork.contractor_account_id === request.actor.account.id
+      ? activeWork.tradesperson_account_id
+      : activeWork.contractor_account_id;
+    await createInAppNotification(client, {
+      accountId: recipientAccountId,
+      type: "work",
+      title: "Reschedule requested",
+      body: `${activeWork.job_title} - ${activeWork.public_city}, ${activeWork.public_region}`,
+      actionHref: "/app/messages",
+      sourceType: "active_work",
+      sourceId: activeWorkId,
+      priority: "normal",
+      metadata: { jobId: activeWork.job_id, reason: input.reason },
+    });
     const row = await loadActiveWorkById(client, activeWorkId, request.actor);
     return { status: 200, body: { data: { activeWork: await mappedActiveWorkWithEvents(client, row) }, meta: { requestId: request.requestId } } };
   });
   sendIdempotentResult(response, result);
+}));
+
+app.post("/api/v1/active-work/:id/conversation", requireV1AuthenticatedUser, requireV1Actor, writeRateLimit, asyncRoute(async (request, response) => {
+  const activeWorkId = validate(z.uuid(), request.params.id);
+  const result = await runIdempotentMutation(request, request.actor.account.id, `conversations.open:${activeWorkId}`, async (client) => {
+    const conversation = await ensureConversationForActiveWork(client, activeWorkId, request.actor);
+    const [mapped] = await mapConversationsForActor(client, [conversation], request.actor);
+    return {
+      status: 200,
+      body: { data: { conversation: mapped }, meta: { requestId: request.requestId } },
+    };
+  });
+  sendIdempotentResult(response, result);
+}));
+
+app.get("/api/v1/conversations", requireV1AuthenticatedUser, requireV1Actor, asyncRoute(async (request, response) => {
+  const rows = await database.query(
+    `${conversationSelectBase}
+     INNER JOIN conversation_participants cp ON cp.conversation_id = c.id
+     WHERE cp.account_id = $1
+     ORDER BY c.updated_at DESC, c.id DESC
+     LIMIT 100`,
+    [request.actor.account.id],
+  );
+  response.json({
+    data: { conversations: await mapConversationsForActor(database, rows.rows, request.actor) },
+    meta: { requestId: request.requestId },
+  });
+}));
+
+app.get("/api/v1/conversations/:id/messages", requireV1AuthenticatedUser, requireV1Actor, asyncRoute(async (request, response) => {
+  const conversationId = validate(z.uuid(), request.params.id);
+  await loadConversationById(database, conversationId, request.actor);
+  const rows = await database.query(
+    `${messageSelectBase}
+     WHERE cm.conversation_id = $1 AND cm.deleted_at IS NULL
+     ORDER BY cm.created_at ASC, cm.id ASC
+     LIMIT 100`,
+    [conversationId],
+  );
+  const messageIds = rows.rows.map((row) => row.id);
+  const receipts = messageIds.length
+    ? await database.query(
+      `SELECT * FROM message_receipts
+       WHERE message_id = ANY($1::uuid[])
+       ORDER BY delivered_at ASC`,
+      [messageIds],
+    )
+    : { rows: [] };
+  const attachments = messageIds.length
+    ? await database.query(
+      `SELECT * FROM message_attachments
+       WHERE message_id = ANY($1::uuid[])
+       ORDER BY created_at ASC, id ASC`,
+      [messageIds],
+    )
+    : { rows: [] };
+  const receiptMap = new Map();
+  for (const receipt of receipts.rows) {
+    const current = receiptMap.get(receipt.message_id) ?? [];
+    current.push(receipt);
+    receiptMap.set(receipt.message_id, current);
+  }
+  const attachmentMap = new Map();
+  for (const attachment of attachments.rows) {
+    const current = attachmentMap.get(attachment.message_id) ?? [];
+    current.push(attachment);
+    attachmentMap.set(attachment.message_id, current);
+  }
+  response.json({
+    data: {
+      messages: rows.rows.map((row) => mapMessage(row, {
+        receipts: receiptMap.get(row.id) ?? [],
+        attachments: attachmentMap.get(row.id) ?? [],
+      })),
+    },
+    meta: { requestId: request.requestId },
+  });
+}));
+
+app.post("/api/v1/conversations/:id/messages", requireV1AuthenticatedUser, requireV1Actor, writeRateLimit, asyncRoute(async (request, response) => {
+  const conversationId = validate(z.uuid(), request.params.id);
+  const input = validate(messageCreateSchema, request.body);
+  const result = await runIdempotentMutation(request, request.actor.account.id, `messages.send:${conversationId}`, async (client) => {
+    const conversation = await loadConversationById(client, conversationId, request.actor, { forUpdate: true });
+    if (conversation.status !== "open") throw new ApiError(409, "CONVERSATION_CLOSED", "This conversation is closed.");
+    const participants = await loadConversationParticipantRows(client, conversationId, { forUpdate: true });
+    await assertConversationParticipantsCanInteract(client, participants);
+    const messageId = (await client.query(
+      `INSERT INTO conversation_messages (conversation_id, sender_account_id, body)
+       VALUES ($1, $2, $3)
+       RETURNING id`,
+      [conversationId, request.actor.account.id, input.body],
+    )).rows[0].id;
+    for (const participant of participants) {
+      await client.query(
+        `INSERT INTO message_receipts (message_id, account_id, read_at)
+         VALUES ($1, $2, $3)`,
+        [messageId, participant.account_id, participant.account_id === request.actor.account.id ? new Date() : null],
+      );
+    }
+    for (const attachment of input.attachments) {
+      await client.query(
+        `INSERT INTO message_attachments (
+           message_id, upload_id, original_name, mime_type, size_bytes, created_by_account_id
+         ) VALUES ($1, $2, $3, $4, $5, $6)`,
+        [messageId, attachment.uploadId, attachment.originalName, attachment.mimeType, attachment.sizeBytes, request.actor.account.id],
+      );
+    }
+    await client.query("UPDATE conversations SET updated_at = now() WHERE id = $1", [conversationId]);
+    await client.query(
+      `UPDATE conversation_participants
+       SET updated_at = now(),
+           last_read_at = CASE WHEN account_id = $2 THEN now() ELSE last_read_at END,
+           last_read_message_id = CASE WHEN account_id = $2 THEN $3 ELSE last_read_message_id END
+       WHERE conversation_id = $1`,
+      [conversationId, request.actor.account.id, messageId],
+    );
+    await notifyConversationParticipants(client, conversation, participants, request.actor.account.id, messageId, input.body);
+    await client.query(
+      `INSERT INTO audit_events (request_id, actor_account_id, organization_id, action, subject_type, subject_id, metadata)
+       VALUES ($1, $2::uuid, $3::uuid, 'message.sent', 'message', ($4::uuid)::text, $5::jsonb)`,
+      [request.requestId, request.actor.account.id, conversation.organization_id, messageId,
+        JSON.stringify({ conversationId, jobId: conversation.job_id })],
+    );
+    const messageRow = (await client.query(`${messageSelectBase} WHERE cm.id = $1`, [messageId])).rows[0];
+    const receipts = await client.query("SELECT * FROM message_receipts WHERE message_id = $1 ORDER BY delivered_at ASC", [messageId]);
+    const attachments = await client.query("SELECT * FROM message_attachments WHERE message_id = $1 ORDER BY created_at ASC, id ASC", [messageId]);
+    return {
+      status: 201,
+      body: {
+        data: { message: mapMessage(messageRow, { receipts: receipts.rows, attachments: attachments.rows }) },
+        meta: { requestId: request.requestId },
+      },
+    };
+  });
+  sendIdempotentResult(response, result);
+}));
+
+app.post("/api/v1/conversations/:id/read", requireV1AuthenticatedUser, requireV1Actor, writeRateLimit, asyncRoute(async (request, response) => {
+  const conversationId = validate(z.uuid(), request.params.id);
+  const conversation = await loadConversationById(database, conversationId, request.actor);
+  await withTransaction(async (client) => {
+    const latest = await client.query(
+      `SELECT id FROM conversation_messages
+       WHERE conversation_id = $1 AND deleted_at IS NULL
+       ORDER BY created_at DESC, id DESC
+       LIMIT 1`,
+      [conversationId],
+    );
+    await client.query(
+      `UPDATE message_receipts
+       SET read_at = COALESCE(read_at, now())
+       WHERE account_id = $1
+         AND message_id IN (SELECT id FROM conversation_messages WHERE conversation_id = $2)`,
+      [request.actor.account.id, conversationId],
+    );
+    await client.query(
+      `UPDATE conversation_participants
+       SET last_read_at = now(), last_read_message_id = $3, updated_at = now()
+       WHERE conversation_id = $1 AND account_id = $2`,
+      [conversationId, request.actor.account.id, latest.rows[0]?.id ?? null],
+    );
+    await client.query(
+      `UPDATE in_app_notifications
+       SET read_at = COALESCE(read_at, now())
+       WHERE account_id = $1
+         AND read_at IS NULL
+         AND (
+           (source_type = 'message' AND metadata->>'conversationId' = $2)
+           OR (source_type = 'active_work' AND source_id = $3)
+         )`,
+      [request.actor.account.id, conversationId, conversation.active_work_id],
+    );
+  });
+  const [mapped] = await mapConversationsForActor(database, [conversation], request.actor);
+  response.json({ data: { conversation: mapped }, meta: { requestId: request.requestId } });
+}));
+
+app.post("/api/v1/conversations/:id/mute", requireV1AuthenticatedUser, requireV1Actor, writeRateLimit, asyncRoute(async (request, response) => {
+  const conversationId = validate(z.uuid(), request.params.id);
+  const input = validate(conversationMuteSchema, request.body);
+  await loadConversationById(database, conversationId, request.actor);
+  const updated = await database.query(
+    `UPDATE conversation_participants
+     SET muted_until = $3, updated_at = now()
+     WHERE conversation_id = $1 AND account_id = $2
+     RETURNING *`,
+    [conversationId, request.actor.account.id, input.mutedUntil],
+  );
+  response.json({
+    data: { participant: mapConversationParticipant(updated.rows[0]) },
+    meta: { requestId: request.requestId },
+  });
+}));
+
+app.post("/api/v1/conversations/:id/report", requireV1AuthenticatedUser, requireV1Actor, writeRateLimit, asyncRoute(async (request, response) => {
+  const conversationId = validate(z.uuid(), request.params.id);
+  const input = validate(reportConversationSchema, request.body);
+  const result = await runIdempotentMutation(request, request.actor.account.id, `conversations.report:${conversationId}`, async (client) => {
+    await loadConversationById(client, conversationId, request.actor);
+    if (input.reportedAccountId) {
+      const participant = await client.query(
+        "SELECT 1 FROM conversation_participants WHERE conversation_id = $1 AND account_id = $2",
+        [conversationId, input.reportedAccountId],
+      );
+      if (!participant.rowCount || input.reportedAccountId === request.actor.account.id) {
+        throw new ApiError(422, "REPORT_TARGET_INVALID", "Report a different participant in this conversation.");
+      }
+    }
+    if (input.messageId) {
+      const message = await client.query(
+        "SELECT 1 FROM conversation_messages WHERE id = $1 AND conversation_id = $2",
+        [input.messageId, conversationId],
+      );
+      if (!message.rowCount) throw new ApiError(422, "REPORT_MESSAGE_INVALID", "That message is not in this conversation.");
+    }
+    const inserted = await client.query(
+      `INSERT INTO conversation_reports (
+         conversation_id, reporter_account_id, reported_account_id, message_id, reason, note
+       ) VALUES ($1, $2, $3, $4, $5, $6)
+       RETURNING id, status, created_at`,
+      [conversationId, request.actor.account.id, input.reportedAccountId, input.messageId, input.reason, input.note],
+    );
+    await client.query(
+      `INSERT INTO audit_events (request_id, actor_account_id, action, subject_type, subject_id, metadata)
+       VALUES ($1, $2::uuid, 'conversation.reported', 'conversation_report', ($3::uuid)::text, $4::jsonb)`,
+      [request.requestId, request.actor.account.id, inserted.rows[0].id, JSON.stringify({ conversationId, reason: input.reason })],
+    );
+    return {
+      status: 201,
+      body: { data: { report: inserted.rows[0] }, meta: { requestId: request.requestId } },
+    };
+  });
+  sendIdempotentResult(response, result);
+}));
+
+app.post("/api/v1/accounts/:id/block", requireV1AuthenticatedUser, requireV1Actor, writeRateLimit, asyncRoute(async (request, response) => {
+  const targetAccountId = validate(z.uuid(), request.params.id);
+  const input = validate(blockAccountSchema, request.body);
+  if (targetAccountId === request.actor.account.id) throw new ApiError(422, "BLOCK_TARGET_INVALID", "You cannot block yourself.");
+  await assertSharedConversation(database, request.actor.account.id, targetAccountId);
+  await database.query(
+    `INSERT INTO account_blocks (blocker_account_id, blocked_account_id, reason)
+     VALUES ($1, $2, $3)
+     ON CONFLICT (blocker_account_id, blocked_account_id)
+     DO UPDATE SET reason = EXCLUDED.reason, created_at = account_blocks.created_at`,
+    [request.actor.account.id, targetAccountId, input.reason],
+  );
+  response.json({ data: { blockedAccountId: targetAccountId }, meta: { requestId: request.requestId } });
+}));
+
+app.post("/api/v1/accounts/:id/unblock", requireV1AuthenticatedUser, requireV1Actor, writeRateLimit, asyncRoute(async (request, response) => {
+  const targetAccountId = validate(z.uuid(), request.params.id);
+  await database.query(
+    "DELETE FROM account_blocks WHERE blocker_account_id = $1 AND blocked_account_id = $2",
+    [request.actor.account.id, targetAccountId],
+  );
+  response.json({ data: { blockedAccountId: targetAccountId, unblocked: true }, meta: { requestId: request.requestId } });
+}));
+
+app.get("/api/v1/notifications", requireV1AuthenticatedUser, requireV1Actor, asyncRoute(async (request, response) => {
+  const rows = await database.query(
+    `SELECT * FROM in_app_notifications
+     WHERE account_id = $1
+     ORDER BY created_at DESC, id DESC
+     LIMIT 100`,
+    [request.actor.account.id],
+  );
+  const unread = rows.rows.filter((row) => !row.read_at).length;
+  response.json({
+    data: {
+      notifications: rows.rows.map(mapNotification),
+      unreadCount: unread,
+    },
+    meta: { requestId: request.requestId },
+  });
+}));
+
+app.post("/api/v1/notifications/read", requireV1AuthenticatedUser, requireV1Actor, writeRateLimit, asyncRoute(async (request, response) => {
+  const input = validate(notificationReadSchema, request.body);
+  if (!input.all && input.ids.length === 0) {
+    throw new ApiError(422, "NOTIFICATION_SELECTION_REQUIRED", "Select notifications to mark read or use all.");
+  }
+  if (input.all) {
+    await database.query(
+      "UPDATE in_app_notifications SET read_at = COALESCE(read_at, now()) WHERE account_id = $1 AND read_at IS NULL",
+      [request.actor.account.id],
+    );
+  } else {
+    await database.query(
+      "UPDATE in_app_notifications SET read_at = COALESCE(read_at, now()) WHERE account_id = $1 AND id = ANY($2::uuid[])",
+      [request.actor.account.id, input.ids],
+    );
+  }
+  const unread = await database.query(
+    "SELECT count(*)::int AS count FROM in_app_notifications WHERE account_id = $1 AND read_at IS NULL",
+    [request.actor.account.id],
+  );
+  response.json({ data: { unreadCount: unread.rows[0].count }, meta: { requestId: request.requestId } });
+}));
+
+app.get("/api/v1/notification-preferences", requireV1AuthenticatedUser, requireV1Actor, asyncRoute(async (request, response) => {
+  const rows = await database.query(
+    `SELECT * FROM notification_preferences
+     WHERE account_id = $1
+     ORDER BY notification_type, channel`,
+    [request.actor.account.id],
+  );
+  response.json({
+    data: { preferences: rows.rows.map(mapNotificationPreference) },
+    meta: { requestId: request.requestId },
+  });
+}));
+
+app.put("/api/v1/notification-preferences", requireV1AuthenticatedUser, requireV1Actor, writeRateLimit, asyncRoute(async (request, response) => {
+  const input = validate(notificationPreferenceSchema, request.body);
+  const result = await database.query(
+    `INSERT INTO notification_preferences (
+       account_id, notification_type, channel, enabled, quiet_hours_start, quiet_hours_end
+     ) VALUES ($1, $2, $3, $4, $5::time, $6::time)
+     ON CONFLICT (account_id, notification_type, channel)
+     DO UPDATE SET enabled = EXCLUDED.enabled,
+                   quiet_hours_start = EXCLUDED.quiet_hours_start,
+                   quiet_hours_end = EXCLUDED.quiet_hours_end,
+                   updated_at = now()
+     RETURNING *`,
+    [request.actor.account.id, input.notificationType, input.channel, input.enabled, input.quietHoursStart, input.quietHoursEnd],
+  );
+  response.json({
+    data: { preference: mapNotificationPreference(result.rows[0]) },
+    meta: { requestId: request.requestId },
+  });
 }));
 
 app.get("/api/readiness", requireAuthenticatedUser, async (_request, response, next) => {

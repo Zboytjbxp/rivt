@@ -2,7 +2,7 @@
 
 Last updated: 2026-06-20 America/New_York
 Current gate: Gate A messaging and in-app notifications
-Current phase: Packet 04 accepted in production; Packet 05 is next
+Current phase: Packet 05 implemented locally; production deploy and smoke pending
 Active packet: `docs/delivery/packets/05_MESSAGING_NOTIFICATIONS.md`
 Repository branch: `master`
 Production release commit: `0ccf88c3ade7511d6d3ad53fc2911cec90648810`
@@ -204,9 +204,32 @@ Run on 2026-06-20 from `master`:
 
 Packet 04 is accepted in production for applications, offers, mutual acceptance, active-work participants, accepted-address release, and active-work cancel/reschedule events. Persistent messaging, notifications, project records, completion, reviews, and admin operations remain later packets and must not be represented as production-ready.
 
+## Packet 05 Implemented Locally
+
+- Added migration `0006_messaging_notifications` for conversations, conversation participants, durable messages, message receipts, attachment metadata, in-app notifications, notification preferences, and conversation reports.
+- Added typed messaging/notification validation and response mapping in `server/messaging.js`.
+- Added `/api/v1/active-work/:id/conversation`, `/api/v1/conversations`, `/api/v1/conversations/:id/messages`, `/api/v1/conversations/:id/read`, `/api/v1/conversations/:id/mute`, `/api/v1/conversations/:id/report`, `/api/v1/accounts/:id/block`, `/api/v1/accounts/:id/unblock`, `/api/v1/notifications`, `/api/v1/notifications/read`, and notification preference APIs.
+- Created conversations only from accepted active-work relationships and enforced participant-only read/send behavior.
+- Added idempotent message send, per-participant receipts/read state, server notifications for offers/accepted work/work transitions/messages, and mute suppression.
+- Added server-backed Inbox UI and top-bar notification activity mapping; old local sent-message behavior is no longer used by the Messages route.
+- Added message attachment metadata with `pending_authorization` status as the Packet 06 media authorization handoff.
+- Added PostgreSQL-backed Packet 05 integration coverage and reusable production smoke command `npm run smoke:messaging:live`.
+- Preserved the Packet 05 stop condition: no project albums, external SMS channels, or frontend-only notification success were added.
+
+## Packet 05 Local Verification
+
+Run on 2026-06-20 from `master`:
+
+- `npm run build`: pass.
+- `npm run lint`: pass.
+- `npm run lint:security`: pass.
+- `npm run test`: pass; 18 unit tests pass, non-DB integration tests pass, and DB-backed integration tests including Packet 05 skip locally because `TEST_DATABASE_URL` is not configured.
+- `npm run test:e2e`: pass; fail-closed auth and jobs/discovery desktop/mobile checks pass with Packet 05 inbox endpoints mocked.
+- `npm audit --omit=dev`: pass; zero vulnerabilities.
+
 ## Next Exact Task
 
-Start `docs/delivery/packets/05_MESSAGING_NOTIFICATIONS.md`: add server-owned job-linked conversations, participant authorization, durable messages, unread state, truthful notification center entries, and block/mute policy. Do not add project albums, external SMS, or frontend-only notification success.
+Deploy Packet 05 to production, verify migration `0006_messaging_notifications`, run `npm run smoke:messaging:live`, record production evidence, and then move to `docs/delivery/packets/06_PROJECT_COMPLETION.md`.
 
 ## Blocking Founder Decisions
 

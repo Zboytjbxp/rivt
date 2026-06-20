@@ -78,6 +78,19 @@ import { getJob, listJobs, toJobViewModel, transitionJob, type CanonicalDifficul
 import { HomeDashboard } from "./features/home/HomeDashboard";
 import { NetworkHub } from "./features/network/NetworkHub";
 import { InboxCenter } from "./features/inbox/InboxCenter";
+import {
+  listConversationMessages,
+  listConversations,
+  listNotifications,
+  markConversationRead,
+  markNotificationsRead,
+  muteConversation,
+  reportConversation,
+  sendConversationMessage,
+  type InboxConversation,
+  type InboxMessage,
+  type InboxNotification,
+} from "./features/inbox/inbox-api";
 import { LegacyBridge } from "./features/legacy/LegacyBridge";
 import { ToolsStudio } from "./features/tools/ToolsStudio";
 import { ProfileHub } from "./features/profile/ProfileHub";
@@ -181,7 +194,7 @@ interface CanonicalAccount {
 }
 
 interface ActivityItem {
-  id: number;
+  id: number | string;
   title: string;
   detail: string;
   timestamp: string;
@@ -1927,6 +1940,13 @@ function App() {
   const [autoMatchEnabled, setAutoMatchEnabled] = useState(true);
   const [messageDraft, setMessageDraft] = useState("");
   const [sentMessages, setSentMessages] = useState<string[]>([]);
+  const [inboxConversations, setInboxConversations] = useState<InboxConversation[]>([]);
+  const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
+  const [inboxMessages, setInboxMessages] = useState<InboxMessage[]>([]);
+  const [inboxNotifications, setInboxNotifications] = useState<InboxNotification[]>([]);
+  const [inboxLoading, setInboxLoading] = useState(false);
+  const [inboxSending, setInboxSending] = useState(false);
+  const [inboxError, setInboxError] = useState<string | null>(null);
   const [uploadedRecords, setUploadedRecords] = useState<Set<string>>(
     () => new Set(["Signed scope", "Legal consent accepted"]),
   );
@@ -2139,6 +2159,67 @@ function App() {
     return () => window.clearTimeout(timeout);
   }, [reloadJobs]);
 
+  const reloadInbox = useCallback(async () => {
+    if (!authUser || !onboardingComplete) return;
+    setInboxLoading(true);
+    setInboxError(null);
+    try {
+      const [conversationRows, notificationRows] = await Promise.all([
+        listConversations(),
+        listNotifications(),
+      ]);
+      setInboxConversations(conversationRows);
+      setInboxNotifications(notificationRows.notifications);
+      setSelectedConversationId((current) => (
+        current && conversationRows.some((conversation) => conversation.id === current)
+          ? current
+          : conversationRows[0]?.id ?? null
+      ));
+    } catch (error) {
+      setInboxError(error instanceof Error ? error.message : "Inbox could not be loaded.");
+    } finally {
+      setInboxLoading(false);
+    }
+  }, [authUser, onboardingComplete]);
+
+  const loadConversationMessages = useCallback(async (conversationId: string | null) => {
+    if (!conversationId || !authUser || !onboardingComplete) {
+      setInboxMessages([]);
+      return;
+    }
+    setInboxError(null);
+    try {
+      const messages = await listConversationMessages(conversationId);
+      setInboxMessages(messages);
+    } catch (error) {
+      setInboxMessages([]);
+      setInboxError(error instanceof Error ? error.message : "Messages could not be loaded.");
+    }
+  }, [authUser, onboardingComplete]);
+
+  useEffect(() => {
+    if (!authUser || !onboardingComplete) return;
+    const timeout = window.setTimeout(() => {
+      void reloadInbox();
+    }, 0);
+    return () => window.clearTimeout(timeout);
+  }, [authUser, onboardingComplete, reloadInbox]);
+
+  useEffect(() => {
+    if (activeView !== "Messages") return;
+    const timeout = window.setTimeout(() => {
+      void reloadInbox();
+    }, 0);
+    return () => window.clearTimeout(timeout);
+  }, [activeView, reloadInbox]);
+
+  useEffect(() => {
+    const timeout = window.setTimeout(() => {
+      void loadConversationMessages(selectedConversationId);
+    }, 0);
+    return () => window.clearTimeout(timeout);
+  }, [loadConversationMessages, selectedConversationId]);
+
   useEffect(() => {
     if (onboardingComplete) {
       window.scrollTo({ top: 0, left: 0 });
@@ -2218,7 +2299,15 @@ function App() {
       .sort((a, b) => b.match - a.match);
   }, [selectedJob.trade]);
 
-  const unreadActivities = activityFeed.filter((item) => item.unread).length;
+  const notificationActivityItems = useMemo<ActivityItem[]>(() => inboxNotifications.map((item) => ({
+    id: item.id,
+    title: item.title,
+    detail: item.body,
+    timestamp: item.createdAt ? new Date(item.createdAt).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "",
+    unread: !item.readAt,
+    kind: item.priority === "high" ? "warning" : item.type === "message" ? "info" : "success",
+  })), [inboxNotifications]);
+  const unreadActivities = inboxNotifications.filter((item) => !item.readAt).length;
   const currentState = useMemo<PersistedAppState>(() => ({
     accountProfile,
     activeView,
@@ -2797,22 +2886,101 @@ function App() {
     handleNavigate("Marketplace");
   }
 
-  function handleSendMessage() {
+  async function handleSendMessage() {
     const trimmed = messageDraft.trim();
     if (!trimmed) {
       addActivity(
         "Message not sent",
         "Write a message in the composer before sending.",
+        "warning",
+      );
+      return;
+    }
+    if (!selectedConversationId) {
+      addActivity(
+        "No work thread selected",
+        "Open an accepted work thread before sending a message.",
+        "warning",
       );
       return;
     }
 
-    setSentMessages((current) => [trimmed, ...current]);
-    setMessageDraft("");
-    addActivity(
-      "Message sent",
-      `${selectedJob.title} thread now includes your update.`,
-    );
+    setInboxSending(true);
+    setInboxError(null);
+    try {
+      const message = await sendConversationMessage(selectedConversationId, trimmed);
+      setInboxMessages((current) => [...current, message]);
+      setMessageDraft("");
+      await reloadInbox();
+    } catch (error) {
+      setInboxError(error instanceof Error ? error.message : "Message could not be sent.");
+      addActivity(
+        "Message not sent",
+        error instanceof Error ? error.message : "Message could not be sent.",
+        "error",
+      );
+    } finally {
+      setInboxSending(false);
+    }
+  }
+
+  function handleSelectConversation(conversationId: string) {
+    setSelectedConversationId(conversationId);
+    void markConversationRead(conversationId)
+      .then((conversation) => {
+        setInboxConversations((current) => current.map((item) => item.id === conversation.id ? conversation : item));
+        setInboxNotifications((current) => current.map((item) => {
+          const metadataConversationId = typeof item.metadata?.conversationId === "string" ? item.metadata.conversationId : null;
+          return metadataConversationId === conversationId && !item.readAt
+            ? { ...item, readAt: new Date().toISOString() }
+            : item;
+        }));
+      })
+      .catch(() => {
+        // The messages still load; read-state retry is available through the thread actions.
+      });
+  }
+
+  async function handleMarkSelectedConversationRead() {
+    if (!selectedConversationId) return;
+    try {
+      const conversation = await markConversationRead(selectedConversationId);
+      setInboxConversations((current) => current.map((item) => item.id === conversation.id ? conversation : item));
+      await reloadInbox();
+    } catch (error) {
+      setInboxError(error instanceof Error ? error.message : "Conversation could not be marked read.");
+    }
+  }
+
+  async function handleMarkNotificationsRead() {
+    try {
+      await markNotificationsRead([], true);
+      setInboxNotifications((current) => current.map((item) => ({ ...item, readAt: item.readAt ?? new Date().toISOString() })));
+    } catch (error) {
+      setInboxError(error instanceof Error ? error.message : "Notifications could not be marked read.");
+    }
+  }
+
+  async function handleMuteSelectedConversation() {
+    if (!selectedConversationId) return;
+    try {
+      const mutedUntil = new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString();
+      await muteConversation(selectedConversationId, mutedUntil);
+      addActivity("Thread muted", "This conversation is muted for 8 hours.", "success");
+      await reloadInbox();
+    } catch (error) {
+      setInboxError(error instanceof Error ? error.message : "Conversation could not be muted.");
+    }
+  }
+
+  async function handleReportSelectedConversation() {
+    if (!selectedConversationId) return;
+    try {
+      await reportConversation(selectedConversationId, "safety", "Reported from the inbox for review.");
+      addActivity("Conversation reported", "RIVT recorded this conversation for admin review.", "warning");
+    } catch (error) {
+      setInboxError(error instanceof Error ? error.message : "Conversation could not be reported.");
+    }
   }
 
   function handleExitGuest() {
@@ -3005,13 +3173,29 @@ function App() {
           />
         ) : activeView === "Messages" ? (
           <InboxCenter
-            jobs={jobs}
-            sentMessages={sentMessages}
+            accountId={canonicalAccount?.id ?? authUser.id}
+            conversations={inboxConversations}
+            selectedConversationId={selectedConversationId}
+            messages={inboxMessages}
+            notifications={inboxNotifications}
             messageDraft={messageDraft}
-            activityFeed={activityFeed}
-            paymentRecords={paymentRecords}
+            loading={inboxLoading}
+            sending={inboxSending}
+            error={inboxError}
+            onSelectConversation={handleSelectConversation}
             onMessageDraft={setMessageDraft}
-            onSendMessage={() => isGuest ? setGuestPromptOpen(true) : handleSendMessage()}
+            onSendMessage={() => {
+              if (isGuest) {
+                setGuestPromptOpen(true);
+                return;
+              }
+              void handleSendMessage();
+            }}
+            onMarkSelectedRead={() => void handleMarkSelectedConversationRead()}
+            onMarkNotificationsRead={() => void handleMarkNotificationsRead()}
+            onMuteSelected={() => void handleMuteSelectedConversation()}
+            onReportSelected={() => void handleReportSelectedConversation()}
+            onRefresh={() => void reloadInbox()}
             onNavigate={(destination) => handleNavigate(defaultViewForDestination(destination))}
           />
         ) : ["Trust & Legal", "Safety & Training", "Reviews", "Feedback", "Settings"].includes(activeView) ? (
@@ -3090,9 +3274,12 @@ function App() {
 
       {isActivityOpen && (
         <ActivityPanel
-          items={activityFeed}
+          items={notificationActivityItems.length ? notificationActivityItems : activityFeed}
           onClose={() => setActivityOpen(false)}
-          onMarkAllRead={markAllActivityRead}
+          onMarkAllRead={() => {
+            markAllActivityRead();
+            void handleMarkNotificationsRead();
+          }}
           onNavigate={handleNavigate}
         />
       )}
