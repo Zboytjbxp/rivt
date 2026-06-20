@@ -156,6 +156,13 @@ export interface CanonicalActiveWork {
   cancelledAt: string | null;
   createdAt: string;
   updatedAt: string;
+  job?: {
+    id: string;
+    title: string;
+    status: string;
+    organization: { id: string; name: string };
+    publicLocation: { city: string; region: string; countryCode: string };
+  };
   events: CanonicalTimelineEvent[];
 }
 

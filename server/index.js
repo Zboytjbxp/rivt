@@ -70,6 +70,18 @@ import {
   notificationReadSchema,
   reportConversationSchema,
 } from "./messaging.js";
+import {
+  buildCloseoutReport,
+  completionResolutionSchema,
+  completionSubmitSchema,
+  detectUploadContent,
+  mapCompletionSubmission,
+  mapProject,
+  mapProjectEntry,
+  mapProjectMedia,
+  mediaKindForMime,
+  projectEntryCreateSchema,
+} from "./projects.js";
 import { migrateUp, migrationStatus } from "./migrations.js";
 import {
   createOriginGuard,
@@ -158,6 +170,10 @@ function verifyPassword(password, salt, hash) {
 
 function sha256(value) {
   return createHash("sha256").update(String(value ?? "")).digest("hex");
+}
+
+function sha256Buffer(value) {
+  return createHash("sha256").update(value).digest("hex");
 }
 
 const databaseUrl = envValue("DATABASE_URL");
@@ -1587,6 +1603,158 @@ async function ensureConversationForActiveWork(client, activeWorkId, actor) {
   return loadConversationById(client, conversationId, actor);
 }
 
+const projectSelectBase = `
+  SELECT pr.*, aw.status AS active_work_status, j.title AS job_title, j.status AS job_status,
+         pl.city AS public_city, pl.region AS public_region, pl.country_code AS public_country_code
+  FROM projects pr
+  INNER JOIN active_work aw ON aw.id = pr.active_work_id
+  INNER JOIN jobs j ON j.id = pr.job_id
+  INNER JOIN job_public_locations pl ON pl.job_id = j.id`;
+
+async function loadProjectById(client, projectId, actor, { forUpdate = false } = {}) {
+  const result = await client.query(
+    `${projectSelectBase}
+     INNER JOIN work_participants wp ON wp.active_work_id = pr.active_work_id
+     WHERE pr.id = $1 AND wp.account_id = $2
+     ${forUpdate ? "FOR UPDATE OF pr" : ""}`,
+    [projectId, actor.account.id],
+  );
+  if (!result.rowCount) throw new ApiError(404, "PROJECT_NOT_FOUND", "Project record not found.");
+  return result.rows[0];
+}
+
+async function loadProjectByActiveWorkId(client, activeWorkId, actor) {
+  const result = await client.query(
+    `${projectSelectBase}
+     INNER JOIN work_participants wp ON wp.active_work_id = pr.active_work_id
+     WHERE pr.active_work_id = $1 AND wp.account_id = $2`,
+    [activeWorkId, actor.account.id],
+  );
+  if (!result.rowCount) throw new ApiError(404, "PROJECT_NOT_FOUND", "Project record not found.");
+  return result.rows[0];
+}
+
+async function ensureProjectForActiveWork(client, activeWorkId, actor) {
+  const activeWork = await loadActiveWorkById(client, activeWorkId, actor);
+  if (activeWork.status === "cancelled") {
+    throw new ApiError(409, "ACTIVE_WORK_CANCELLED", "Cancelled work cannot start a new project record.");
+  }
+
+  const inserted = await client.query(
+    `INSERT INTO projects (
+       active_work_id, job_id, organization_id, contractor_account_id, tradesperson_account_id, created_by_account_id
+     ) VALUES ($1, $2, $3, $4, $5, $6)
+     ON CONFLICT (active_work_id) DO NOTHING
+     RETURNING id`,
+    [
+      activeWorkId,
+      activeWork.job_id,
+      activeWork.organization_id,
+      activeWork.contractor_account_id,
+      activeWork.tradesperson_account_id,
+      actor.account.id,
+    ],
+  );
+  const projectId = inserted.rows[0]?.id
+    ?? (await client.query("SELECT id FROM projects WHERE active_work_id = $1", [activeWorkId])).rows[0]?.id;
+  if (!projectId) throw new ApiError(500, "PROJECT_CREATE_FAILED", "Project record could not be opened.");
+
+  if (inserted.rowCount) {
+    await client.query(
+      `INSERT INTO project_entries (project_id, active_work_id, actor_account_id, entry_type, body, metadata)
+       VALUES ($1, $2, $3, 'system', 'Project record opened.', $4::jsonb)`,
+      [projectId, activeWorkId, actor.account.id, JSON.stringify({ source: "active_work" })],
+    );
+  }
+
+  return loadProjectById(client, projectId, actor);
+}
+
+async function loadProjectBundle(client, project, actor) {
+  const [entries, media, submissions, resolutions] = await Promise.all([
+    client.query(
+      `SELECT * FROM project_entries
+       WHERE project_id = $1
+       ORDER BY created_at ASC, id ASC`,
+      [project.id],
+    ),
+    client.query(
+      `SELECT * FROM project_media
+       WHERE project_id = $1
+       ORDER BY created_at ASC, id ASC`,
+      [project.id],
+    ),
+    client.query(
+      `SELECT * FROM project_completion_submissions
+       WHERE project_id = $1
+       ORDER BY submitted_at ASC, id ASC`,
+      [project.id],
+    ),
+    client.query(
+      `SELECT * FROM project_completion_resolutions
+       WHERE project_id = $1
+       ORDER BY created_at ASC, id ASC`,
+      [project.id],
+    ),
+  ]);
+  const resolutionMap = new Map();
+  for (const resolution of resolutions.rows) {
+    const list = resolutionMap.get(resolution.submission_id) ?? [];
+    list.push(resolution);
+    resolutionMap.set(resolution.submission_id, list);
+  }
+  const submissionsWithResolutions = submissions.rows.map((submission) => ({
+    ...submission,
+    resolutions: resolutionMap.get(submission.id) ?? [],
+  }));
+  return mapProject(project, {
+    entries: entries.rows,
+    media: media.rows,
+    submissions: submissionsWithResolutions,
+    actor,
+  });
+}
+
+async function loadProjectMediaById(client, projectId, mediaId, actor) {
+  await loadProjectById(client, projectId, actor);
+  const result = await client.query(
+    `SELECT pm.*, u.object_key, u.upload_status
+     FROM project_media pm
+     INNER JOIN uploads u ON u.id = pm.upload_id
+     WHERE pm.project_id = $1 AND pm.id = $2`,
+    [projectId, mediaId],
+  );
+  if (!result.rowCount || result.rows[0].status !== "stored" || !result.rows[0].object_key) {
+    throw new ApiError(404, "PROJECT_MEDIA_NOT_FOUND", "Project media was not found.");
+  }
+  return result.rows[0];
+}
+
+async function loadCompletionSubmission(client, projectId, submissionId, { forUpdate = false } = {}) {
+  const result = await client.query(
+    `SELECT * FROM project_completion_submissions
+     WHERE project_id = $1 AND id = $2
+     ${forUpdate ? "FOR UPDATE" : ""}`,
+    [projectId, submissionId],
+  );
+  if (!result.rowCount) throw new ApiError(404, "COMPLETION_NOT_FOUND", "Completion submission not found.");
+  return result.rows[0];
+}
+
+function requireProjectTradesperson(actor, project) {
+  requireTradespersonActor(actor);
+  if (project.tradesperson_account_id !== actor.account.id) {
+    throw new ApiError(403, "PROJECT_ROLE_MISMATCH", "Only the assigned tradesperson can submit completion.");
+  }
+}
+
+function requireProjectContractor(actor, project) {
+  requireContractorActor(actor);
+  if (project.contractor_account_id !== actor.account.id) {
+    throw new ApiError(403, "PROJECT_ROLE_MISMATCH", "Only the hiring contractor can resolve completion.");
+  }
+}
+
 async function createInAppNotification(client, {
   accountId,
   type,
@@ -2518,6 +2686,522 @@ app.post("/api/v1/active-work/:id/conversation", requireV1AuthenticatedUser, req
     };
   });
   sendIdempotentResult(response, result);
+}));
+
+async function openProjectResponse(client, activeWorkId, actor, requestId) {
+  const project = await ensureProjectForActiveWork(client, activeWorkId, actor);
+  return {
+    status: 200,
+    body: {
+      data: { project: await loadProjectBundle(client, project, actor) },
+      meta: { requestId },
+    },
+  };
+}
+
+app.get("/api/v1/active-work/:id/project", requireV1AuthenticatedUser, requireV1Actor, asyncRoute(async (request, response) => {
+  const activeWorkId = validate(z.uuid(), request.params.id);
+  const project = await loadProjectByActiveWorkId(database, activeWorkId, request.actor);
+  response.json({
+    data: { project: await loadProjectBundle(database, project, request.actor) },
+    meta: { requestId: request.requestId },
+  });
+}));
+
+app.post("/api/v1/active-work/:id/project", requireV1AuthenticatedUser, requireV1Actor, writeRateLimit, asyncRoute(async (request, response) => {
+  const activeWorkId = validate(z.uuid(), request.params.id);
+  request.body = request.body ?? {};
+  const result = await runIdempotentMutation(request, request.actor.account.id, `projects.open:${activeWorkId}`, async (client) => (
+    openProjectResponse(client, activeWorkId, request.actor, request.requestId)
+  ));
+  sendIdempotentResult(response, result);
+}));
+
+app.get("/api/v1/projects/:id", requireV1AuthenticatedUser, requireV1Actor, asyncRoute(async (request, response) => {
+  const projectId = validate(z.uuid(), request.params.id);
+  const project = await loadProjectById(database, projectId, request.actor);
+  response.json({
+    data: { project: await loadProjectBundle(database, project, request.actor) },
+    meta: { requestId: request.requestId },
+  });
+}));
+
+app.post("/api/v1/projects/:id/entries", requireV1AuthenticatedUser, requireV1Actor, writeRateLimit, asyncRoute(async (request, response) => {
+  const projectId = validate(z.uuid(), request.params.id);
+  const input = validate(projectEntryCreateSchema, request.body);
+  const result = await runIdempotentMutation(request, request.actor.account.id, `projects.entry:${projectId}`, async (client) => {
+    const project = await loadProjectById(client, projectId, request.actor);
+    const inserted = await client.query(
+      `INSERT INTO project_entries (project_id, active_work_id, actor_account_id, entry_type, body, checklist, metadata)
+       VALUES ($1, $2, $3, 'note', $4, $5::jsonb, $6::jsonb)
+       RETURNING *`,
+      [
+        projectId,
+        project.active_work_id,
+        request.actor.account.id,
+        input.body,
+        JSON.stringify(input.checklist),
+        JSON.stringify(input.metadata),
+      ],
+    );
+    await client.query("UPDATE projects SET updated_at = now() WHERE id = $1", [projectId]);
+    await client.query(
+      `INSERT INTO audit_events (request_id, actor_account_id, organization_id, action, subject_type, subject_id, metadata)
+       VALUES ($1, $2::uuid, $3::uuid, 'project.entry.created', 'project', ($4::uuid)::text, $5::jsonb)`,
+      [request.requestId, request.actor.account.id, project.organization_id, projectId, JSON.stringify({ entryId: inserted.rows[0].id })],
+    );
+    return {
+      status: 201,
+      body: { data: { entry: mapProjectEntry(inserted.rows[0]) }, meta: { requestId: request.requestId } },
+    };
+  });
+  sendIdempotentResult(response, result);
+}));
+
+app.post(
+  "/api/v1/projects/:id/media",
+  requireV1AuthenticatedUser,
+  requireV1Actor,
+  uploadRateLimit,
+  upload.single("file"),
+  asyncRoute(async (request, response) => {
+    const projectId = validate(z.uuid(), request.params.id);
+    if (!request.file) throw new ApiError(400, "UPLOAD_REQUIRED", "A file field named `file` is required.");
+
+    const contentHash = sha256Buffer(request.file.buffer);
+    const detection = detectUploadContent(request.file);
+    const name = String(request.body?.name ?? request.file.originalname ?? "Project upload").trim().slice(0, 240);
+    const notes = String(request.body?.notes ?? "").trim().slice(0, 1000);
+    request.body = {
+      name,
+      notes,
+      originalName: request.file.originalname,
+      mimeType: request.file.mimetype,
+      sizeBytes: request.file.size,
+      contentSha256: contentHash,
+    };
+
+    const result = await runIdempotentMutation(request, request.actor.account.id, `projects.media:${projectId}`, async (client) => {
+      const project = await loadProjectById(client, projectId, request.actor);
+      const uploadId = randomUUID();
+      const mediaId = randomUUID();
+      const entryId = randomUUID();
+
+      if (!detection.ok) {
+        const uploadRow = await client.query(
+          `INSERT INTO uploads (
+             id, session_id, account_id, active_work_id, kind, name, notes, original_name, mime_type,
+             size_bytes, upload_status, storage_scope, content_sha256, failure_reason
+           ) VALUES ($1, $2::text, $2::uuid, $3, 'project-media', $4, $5, $6, $7, $8, 'rejected', 'project', $9, $10)
+           RETURNING *`,
+          [
+            uploadId,
+            request.actor.account.id,
+            project.active_work_id,
+            name || request.file.originalname,
+            notes,
+            request.file.originalname,
+            request.file.mimetype,
+            request.file.size,
+            contentHash,
+            detection.message,
+          ],
+        );
+        await client.query(
+          `INSERT INTO project_entries (id, project_id, active_work_id, actor_account_id, entry_type, body, metadata)
+           VALUES ($1, $2, $3, $4, 'media', $5, $6::jsonb)`,
+          [
+            entryId,
+            projectId,
+            project.active_work_id,
+            request.actor.account.id,
+            `Rejected upload: ${request.file.originalname}`,
+            JSON.stringify({ uploadId, reason: detection.code }),
+          ],
+        );
+        const mediaRow = await client.query(
+          `INSERT INTO project_media (
+             id, project_id, entry_id, upload_id, uploader_account_id, original_name, mime_type, size_bytes,
+             content_sha256, media_kind, status, review_status, failure_reason
+           ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'rejected', 'rejected', $11)
+           RETURNING *`,
+          [
+            mediaId,
+            projectId,
+            entryId,
+            uploadId,
+            request.actor.account.id,
+            request.file.originalname,
+            request.file.mimetype,
+            request.file.size,
+            contentHash,
+            mediaKindForMime(request.file.mimetype),
+            detection.message,
+          ],
+        );
+        await client.query("UPDATE projects SET updated_at = now() WHERE id = $1", [projectId]);
+        return {
+          status: 422,
+          body: {
+            data: {
+              upload: mapUploadRow(uploadRow.rows[0]),
+              media: mapProjectMedia(mediaRow.rows[0]),
+            },
+            error: { code: detection.code, message: detection.message },
+            meta: { requestId: request.requestId },
+          },
+        };
+      }
+
+      if (!s3Client || !s3Bucket) {
+        throw new ApiError(503, "OBJECT_STORAGE_UNAVAILABLE", "Managed object storage is unavailable.");
+      }
+
+      const objectKey = `projects/${safeObjectName(projectId)}/${safeObjectName(request.actor.account.id)}/${new Date().toISOString().slice(0, 10)}/${uploadId}-${safeObjectName(
+        request.file.originalname,
+      )}`;
+      await s3Client.send(
+        new PutObjectCommand({
+          Bucket: s3Bucket,
+          Key: objectKey,
+          Body: request.file.buffer,
+          ContentType: request.file.mimetype,
+          Metadata: {
+            originalName: request.file.originalname.slice(0, 256),
+            source: appSlug,
+            contentSha256: contentHash,
+          },
+        }),
+      );
+      const uploadRow = await client.query(
+        `INSERT INTO uploads (
+           id, session_id, account_id, active_work_id, kind, name, notes, object_key, original_name,
+           mime_type, size_bytes, upload_status, storage_scope, content_sha256, verified_at
+         ) VALUES ($1, $2::text, $2::uuid, $3, 'project-media', $4, $5, $6, $7, $8, $9, 'stored', 'project', $10, now())
+         RETURNING *`,
+        [
+          uploadId,
+          request.actor.account.id,
+          project.active_work_id,
+          name || request.file.originalname,
+          notes,
+          objectKey,
+          request.file.originalname,
+          request.file.mimetype,
+          request.file.size,
+          contentHash,
+        ],
+      );
+      const entryRow = await client.query(
+        `INSERT INTO project_entries (id, project_id, active_work_id, actor_account_id, entry_type, body, metadata)
+         VALUES ($1, $2, $3, $4, 'media', $5, $6::jsonb)
+         RETURNING *`,
+        [
+          entryId,
+          projectId,
+          project.active_work_id,
+          request.actor.account.id,
+          notes || `Uploaded ${request.file.originalname}`,
+          JSON.stringify({ uploadId, contentSha256: contentHash }),
+        ],
+      );
+      const mediaRow = await client.query(
+        `INSERT INTO project_media (
+           id, project_id, entry_id, upload_id, uploader_account_id, original_name, mime_type, size_bytes,
+           content_sha256, media_kind, status, review_status
+         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'stored', 'not_scanned')
+         RETURNING *`,
+        [
+          mediaId,
+          projectId,
+          entryId,
+          uploadId,
+          request.actor.account.id,
+          request.file.originalname,
+          request.file.mimetype,
+          request.file.size,
+          contentHash,
+          mediaKindForMime(request.file.mimetype),
+        ],
+      );
+      await client.query("UPDATE projects SET updated_at = now() WHERE id = $1", [projectId]);
+      await client.query(
+        `INSERT INTO audit_events (request_id, actor_account_id, organization_id, action, subject_type, subject_id, metadata)
+         VALUES ($1, $2::uuid, $3::uuid, 'project.media.uploaded', 'project_media', ($4::uuid)::text, $5::jsonb)`,
+        [
+          request.requestId,
+          request.actor.account.id,
+          project.organization_id,
+          mediaId,
+          JSON.stringify({ projectId, uploadId, contentSha256: contentHash }),
+        ],
+      );
+      return {
+        status: 201,
+        body: {
+          data: {
+            upload: mapUploadRow(uploadRow.rows[0]),
+            entry: mapProjectEntry(entryRow.rows[0]),
+            media: mapProjectMedia(mediaRow.rows[0]),
+          },
+          meta: { requestId: request.requestId },
+        },
+      };
+    });
+    sendIdempotentResult(response, result);
+  }),
+);
+
+app.get("/api/v1/projects/:id/media/:mediaId/url", requireV1AuthenticatedUser, requireV1Actor, asyncRoute(async (request, response) => {
+  const projectId = validate(z.uuid(), request.params.id);
+  const mediaId = validate(z.uuid(), request.params.mediaId);
+  const media = await loadProjectMediaById(database, projectId, mediaId, request.actor);
+  const signedUrl = await signedObjectUrl(media.object_key);
+  response.json({
+    data: {
+      media: mapProjectMedia(media, { signedUrl }),
+      signedUrl,
+      expiresIn: signedUrlSeconds,
+    },
+    meta: { requestId: request.requestId },
+  });
+}));
+
+app.post("/api/v1/projects/:id/completion", requireV1AuthenticatedUser, requireV1Actor, writeRateLimit, asyncRoute(async (request, response) => {
+  const projectId = validate(z.uuid(), request.params.id);
+  const input = validate(completionSubmitSchema, request.body);
+  const result = await runIdempotentMutation(request, request.actor.account.id, `projects.completion.submit:${projectId}`, async (client) => {
+    const project = await loadProjectById(client, projectId, request.actor, { forUpdate: true });
+    requireProjectTradesperson(request.actor, project);
+    if (project.active_work_status !== "active") {
+      throw new ApiError(409, "ACTIVE_WORK_NOT_ACTIVE", "Only active work can be submitted for completion.");
+    }
+    if (project.status === "confirmed") {
+      throw new ApiError(409, "PROJECT_ALREADY_CONFIRMED", "This project is already confirmed.");
+    }
+
+    if (input.evidenceMediaIds.length) {
+      const mediaResult = await client.query(
+        `SELECT id FROM project_media
+         WHERE project_id = $1 AND id = ANY($2::uuid[]) AND status = 'stored'`,
+        [projectId, input.evidenceMediaIds],
+      );
+      if (mediaResult.rowCount !== input.evidenceMediaIds.length) {
+        throw new ApiError(422, "COMPLETION_EVIDENCE_INVALID", "Completion evidence must belong to this project.");
+      }
+    }
+
+    const submission = await client.query(
+      `INSERT INTO project_completion_submissions (
+         project_id, submitted_by_account_id, note, checklist, evidence_media_ids
+       ) VALUES ($1, $2, $3, $4::jsonb, $5::uuid[])
+       RETURNING *`,
+      [
+        projectId,
+        request.actor.account.id,
+        input.note,
+        JSON.stringify(input.checklist),
+        input.evidenceMediaIds,
+      ],
+    );
+    await client.query(
+      `INSERT INTO project_entries (project_id, active_work_id, actor_account_id, entry_type, body, checklist, metadata)
+       VALUES ($1, $2, $3, 'completion_submitted', $4, $5::jsonb, $6::jsonb)`,
+      [
+        projectId,
+        project.active_work_id,
+        request.actor.account.id,
+        input.note,
+        JSON.stringify(input.checklist),
+        JSON.stringify({ submissionId: submission.rows[0].id, evidenceMediaIds: input.evidenceMediaIds }),
+      ],
+    );
+    await client.query(
+      `UPDATE projects
+       SET status = 'completion_submitted', completion_submitted_at = now(), updated_at = now()
+       WHERE id = $1`,
+      [projectId],
+    );
+    await createInAppNotification(client, {
+      accountId: project.contractor_account_id,
+      type: "work",
+      title: "Completion submitted",
+      body: `${project.job_title} - ${project.public_city}, ${project.public_region}`,
+      actionHref: "/app/tools",
+      sourceType: "project",
+      sourceId: projectId,
+      priority: "high",
+      metadata: { activeWorkId: project.active_work_id, submissionId: submission.rows[0].id },
+    });
+    await client.query(
+      `INSERT INTO audit_events (request_id, actor_account_id, organization_id, action, subject_type, subject_id, metadata)
+       VALUES ($1, $2::uuid, $3::uuid, 'project.completion.submitted', 'project', ($4::uuid)::text, $5::jsonb)`,
+      [
+        request.requestId,
+        request.actor.account.id,
+        project.organization_id,
+        projectId,
+        JSON.stringify({ submissionId: submission.rows[0].id }),
+      ],
+    );
+    return {
+      status: 201,
+      body: {
+        data: { completion: mapCompletionSubmission(submission.rows[0]) },
+        meta: { requestId: request.requestId },
+      },
+    };
+  });
+  sendIdempotentResult(response, result);
+}));
+
+async function resolveCompletion(request, projectId, submissionId, decision) {
+  const input = validate(completionResolutionSchema, request.body);
+  return runIdempotentMutation(request, request.actor.account.id, `projects.completion.${decision}:${submissionId}`, async (client) => {
+    const project = await loadProjectById(client, projectId, request.actor, { forUpdate: true });
+    requireProjectContractor(request.actor, project);
+    const submission = await loadCompletionSubmission(client, projectId, submissionId, { forUpdate: true });
+    if (submission.status === decision) {
+      return {
+        status: 200,
+        body: { data: { completion: mapCompletionSubmission(submission) }, meta: { requestId: request.requestId } },
+      };
+    }
+    if (submission.status !== "submitted") {
+      throw new ApiError(409, "COMPLETION_ALREADY_RESOLVED", "This completion submission has already been resolved.");
+    }
+    if (project.active_work_status !== "active") {
+      throw new ApiError(409, "ACTIVE_WORK_NOT_ACTIVE", "Only active work can be resolved for completion.");
+    }
+
+    const projectStatus = decision === "confirmed" ? "confirmed" : "disputed";
+    await client.query(
+      `UPDATE project_completion_submissions
+       SET status = $3, resolved_at = now()
+       WHERE project_id = $1 AND id = $2`,
+      [projectId, submissionId, decision],
+    );
+    const resolution = await client.query(
+      `INSERT INTO project_completion_resolutions (submission_id, project_id, actor_account_id, decision, reason)
+       VALUES ($1, $2, $3, $4, $5)
+       RETURNING *`,
+      [submissionId, projectId, request.actor.account.id, decision, input.reason],
+    );
+    await client.query(
+      `INSERT INTO project_entries (project_id, active_work_id, actor_account_id, entry_type, body, metadata)
+       VALUES ($1, $2, $3, $4, $5, $6::jsonb)`,
+      [
+        projectId,
+        project.active_work_id,
+        request.actor.account.id,
+        decision === "confirmed" ? "completion_confirmed" : "completion_disputed",
+        input.reason || (decision === "confirmed" ? "Completion confirmed." : "Completion disputed."),
+        JSON.stringify({ submissionId, resolutionId: resolution.rows[0].id }),
+      ],
+    );
+    await client.query(
+      `UPDATE projects
+       SET status = $2,
+           confirmed_at = CASE WHEN $2 = 'confirmed' THEN now() ELSE confirmed_at END,
+           disputed_at = CASE WHEN $2 = 'disputed' THEN now() ELSE disputed_at END,
+           updated_at = now()
+       WHERE id = $1`,
+      [projectId, projectStatus],
+    );
+
+    if (decision === "confirmed") {
+      await client.query(
+        `UPDATE active_work
+         SET status = 'completed', completed_at = now(), updated_at = now()
+         WHERE id = $1`,
+        [project.active_work_id],
+      );
+      await client.query(
+        `INSERT INTO work_status_events (
+           active_work_id, actor_account_id, event_type, from_status, to_status, reason, metadata
+         ) VALUES ($1, $2, 'completed', 'active', 'completed', $3, $4::jsonb)`,
+        [
+          project.active_work_id,
+          request.actor.account.id,
+          input.reason || "Completion confirmed.",
+          JSON.stringify({ projectId, submissionId, resolutionId: resolution.rows[0].id }),
+        ],
+      );
+    }
+
+    await createInAppNotification(client, {
+      accountId: project.tradesperson_account_id,
+      type: "work",
+      title: decision === "confirmed" ? "Completion confirmed" : "Completion disputed",
+      body: `${project.job_title} - ${project.public_city}, ${project.public_region}`,
+      actionHref: "/app/tools",
+      sourceType: "project",
+      sourceId: projectId,
+      priority: "high",
+      metadata: { activeWorkId: project.active_work_id, submissionId, decision },
+    });
+    await client.query(
+      `INSERT INTO audit_events (request_id, actor_account_id, organization_id, action, subject_type, subject_id, metadata)
+       VALUES ($1, $2::uuid, $3::uuid, $4, 'project', ($5::uuid)::text, $6::jsonb)`,
+      [
+        request.requestId,
+        request.actor.account.id,
+        project.organization_id,
+        decision === "confirmed" ? "project.completion.confirmed" : "project.completion.disputed",
+        projectId,
+        JSON.stringify({ submissionId, resolutionId: resolution.rows[0].id }),
+      ],
+    );
+    const updatedSubmission = await loadCompletionSubmission(client, projectId, submissionId);
+    return {
+      status: 200,
+      body: {
+        data: { completion: mapCompletionSubmission(updatedSubmission, { resolutions: [resolution.rows[0]] }) },
+        meta: { requestId: request.requestId },
+      },
+    };
+  });
+}
+
+app.post("/api/v1/projects/:id/completion/:submissionId/confirm", requireV1AuthenticatedUser, requireV1Actor, writeRateLimit, asyncRoute(async (request, response) => {
+  const projectId = validate(z.uuid(), request.params.id);
+  const submissionId = validate(z.uuid(), request.params.submissionId);
+  sendIdempotentResult(response, await resolveCompletion(request, projectId, submissionId, "confirmed"));
+}));
+
+app.post("/api/v1/projects/:id/completion/:submissionId/dispute", requireV1AuthenticatedUser, requireV1Actor, writeRateLimit, asyncRoute(async (request, response) => {
+  const projectId = validate(z.uuid(), request.params.id);
+  const submissionId = validate(z.uuid(), request.params.submissionId);
+  sendIdempotentResult(response, await resolveCompletion(request, projectId, submissionId, "disputed"));
+}));
+
+app.get("/api/v1/projects/:id/report", requireV1AuthenticatedUser, requireV1Actor, asyncRoute(async (request, response) => {
+  const projectId = validate(z.uuid(), request.params.id);
+  const project = await loadProjectById(database, projectId, request.actor);
+  const [entries, media, submissions, resolutions] = await Promise.all([
+    database.query(
+      "SELECT * FROM project_entries WHERE project_id = $1 ORDER BY created_at ASC, id ASC",
+      [projectId],
+    ),
+    database.query(
+      "SELECT * FROM project_media WHERE project_id = $1 ORDER BY created_at ASC, id ASC",
+      [projectId],
+    ),
+    database.query(
+      "SELECT * FROM project_completion_submissions WHERE project_id = $1 ORDER BY submitted_at ASC, id ASC",
+      [projectId],
+    ),
+    database.query(
+      "SELECT * FROM project_completion_resolutions WHERE project_id = $1 ORDER BY created_at ASC, id ASC",
+      [projectId],
+    ),
+  ]);
+  response.json({
+    data: {
+      report: buildCloseoutReport(project, entries.rows, media.rows, submissions.rows, resolutions.rows),
+    },
+    meta: { requestId: request.requestId },
+  });
 }));
 
 app.get("/api/v1/conversations", requireV1AuthenticatedUser, requireV1Actor, asyncRoute(async (request, response) => {

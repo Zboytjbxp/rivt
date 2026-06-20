@@ -3253,8 +3253,10 @@ function App() {
           <ToolsStudio
             jobs={jobs}
             paymentRecords={paymentRecords}
+            mode={activeView === "Records" ? "records" : "tools"}
             onNavigate={(destination) => handleNavigate(defaultViewForDestination(destination))}
             onOpenJob={openJob}
+            onOpenRecords={() => handleNavigate("Records")}
           />
         ) : (
           <LegacyBridge
