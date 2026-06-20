@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  createDurableRateLimiter,
   createOriginGuard,
   createRateLimiter,
   createRequireAuthenticatedUser,
@@ -57,6 +58,39 @@ test("rate limiter blocks after configured request count", () => {
   limiter(request, blocked, () => { calls += 1; });
   assert.equal(calls, 2);
   assert.equal(blocked.statusCode, 429);
+});
+
+test("durable rate limiter uses shared storage and headers", async () => {
+  let count = 0;
+  const database = {
+    async query(_sql, params) {
+      count += 1;
+      assert.equal(params[0], "durable-test");
+      assert.equal(typeof params[1], "string");
+      assert.equal(params[1].length, 64);
+      return { rows: [{ request_count: count, expires_at: new Date(Date.now() + 60_000) }] };
+    },
+  };
+  const limiter = createDurableRateLimiter({
+    database,
+    databaseAvailable: () => true,
+    windowMs: 60_000,
+    max: 2,
+    namespace: "durable-test",
+  });
+  const request = { ip: "127.0.0.1", method: "POST", socket: {}, headers: {} };
+  let calls = 0;
+
+  await limiter(request, responseDouble(), () => { calls += 1; });
+  await limiter(request, responseDouble(), () => { calls += 1; });
+  const blocked = responseDouble();
+  await limiter(request, blocked, () => { calls += 1; });
+
+  assert.equal(calls, 2);
+  assert.equal(blocked.statusCode, 429);
+  assert.equal(blocked.headers["RateLimit-Limit"], "2");
+  assert.equal(blocked.headers["RateLimit-Remaining"], "0");
+  assert.ok(Number(blocked.headers["Retry-After"]) >= 1);
 });
 
 test("authenticated-user middleware rejects missing and unknown sessions", async () => {

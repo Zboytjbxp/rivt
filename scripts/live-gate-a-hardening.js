@@ -139,6 +139,7 @@ try {
   const migrations = await migrationStatus(pool);
   assert.equal(migrations.pending.length, 0);
   assert.ok(migrations.applied.some((migration) => migration.version === 8), "Migration 0008 must be applied.");
+  assert.ok(migrations.applied.some((migration) => migration.version === 9), "Migration 0009 must be applied.");
 
   const client = await pool.connect();
   try {
@@ -147,6 +148,7 @@ try {
     assert.deepEqual(findings, [], `User-facing seed/demo findings: ${JSON.stringify(findings)}`);
 
     const legacyAppStateExists = await tableExists(client, "app_state");
+    assert.equal(await tableExists(client, "rate_limit_windows"), true, "Durable rate-limit table must exist.");
     const summary = {
       ok: true,
       buildCommit: health.payload.build.commit,
@@ -160,6 +162,7 @@ try {
         supportCasesOpen: await count(client, "SELECT count(*) FROM support_cases WHERE status <> 'closed'"),
         activeRestrictions: await count(client, "SELECT count(*) FROM account_restrictions WHERE status = 'active' AND (ends_at IS NULL OR ends_at > now())"),
         legacyAppStateRows: legacyAppStateExists ? await count(client, "SELECT count(*) FROM app_state") : 0,
+        rateLimitWindows: await count(client, "SELECT count(*) FROM rate_limit_windows"),
       },
       controls: providers.payload.controls,
       anonymousPrivateChecks: anonymousPrivateChecks.length,

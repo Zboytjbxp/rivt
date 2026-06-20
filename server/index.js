@@ -106,7 +106,7 @@ import {
 import { migrateUp, migrationStatus } from "./migrations.js";
 import {
   createOriginGuard,
-  createRateLimiter,
+  createDurableRateLimiter,
   createRequireAuthenticatedUser,
   parseCookies,
   readSessionId,
@@ -581,19 +581,25 @@ const requireV1AdminActor = asyncRoute(async (request, _response, next) => {
   next();
 });
 
-const authRateLimit = createRateLimiter({
+const authRateLimit = createDurableRateLimiter({
+  database,
+  databaseAvailable: () => Boolean(database),
   windowMs: 15 * 60 * 1000,
   max: Number(process.env.AUTH_RATE_LIMIT ?? 30),
   namespace: "auth",
 });
 
-const baseWriteRateLimit = createRateLimiter({
+const baseWriteRateLimit = createDurableRateLimiter({
+  database,
+  databaseAvailable: () => Boolean(database),
   windowMs: 60 * 1000,
   max: Number(process.env.WRITE_RATE_LIMIT ?? 120),
   namespace: "write",
 });
 
-const baseUploadRateLimit = createRateLimiter({
+const baseUploadRateLimit = createDurableRateLimiter({
+  database,
+  databaseAvailable: () => Boolean(database),
   windowMs: 60 * 60 * 1000,
   max: Number(process.env.UPLOAD_RATE_LIMIT ?? 40),
   namespace: "upload",
