@@ -43,7 +43,7 @@ try {
   await page.route("**/api/auth/providers", (route) => route.fulfill({
     status: 200,
     contentType: "application/json",
-    body: JSON.stringify({ providers: { email: { ok: true, mode: "configured", missing: [], purpose: "Email/password sign-in" } } }),
+    body: JSON.stringify({ providers: { email: { ok: true, mode: "configured", missing: [], purpose: "Email/password sign-in" } }, inviteRequired: true }),
   }));
   await page.route("**/api/v1/auth/login", (route) => route.fulfill({
     status: 503,
@@ -69,13 +69,23 @@ try {
   assert.equal(await page.getByText("Browse local demo").count(), 0);
 
   await page.getByRole("button", { name: "Sign up", exact: true }).click();
+  const contractorRole = page.locator(".role-toggle").getByRole("button", { name: "Contractor", exact: true });
+  const tradespersonRole = page.locator(".role-toggle").getByRole("button", { name: "Tradesperson", exact: true });
+  assert.equal(await contractorRole.getAttribute("aria-pressed"), "true");
+  assert.equal(await tradespersonRole.getAttribute("aria-pressed"), "false");
   await page.getByRole("button", { name: "Tradesperson", exact: true }).click();
+  assert.equal(await contractorRole.getAttribute("aria-pressed"), "false");
+  assert.equal(await tradespersonRole.getAttribute("aria-pressed"), "true");
   await page.getByLabel("Name", { exact: true }).fill("Taylor Test");
+  const inviteField = page.getByLabel(/Pilot invitation code/i);
+  assert.equal(await inviteField.getAttribute("required"), "");
+  await inviteField.fill("rivt_test_invite");
   await page.getByRole("button", { name: "Create account", exact: true }).click();
   await page.getByText("Signup unavailable for test.").waitFor();
 
   assert.equal(capturedSignupBody?.role, "tradesperson");
   assert.equal(capturedSignupBody?.displayName, "Taylor Test");
+  assert.equal(capturedSignupBody?.inviteCode, "rivt_test_invite");
   console.log("Fail-closed authentication E2E passed.");
 } finally {
   await browser?.close();

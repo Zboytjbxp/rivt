@@ -675,6 +675,27 @@ textarea:focus-visible {
   gap: 6px;
 }
 
+.auth-form-grid label > span {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.required-label {
+  display: inline-flex;
+  align-items: center;
+  min-height: 20px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: rgba(255, 106, 0, 0.14);
+  color: var(--accent);
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 900;
+  letter-spacing: 0;
+}
+
 .auth-role-choice {
   display: grid;
   gap: 8px;

@@ -3310,6 +3310,7 @@ function AuthGate({
   const [displayName, setDisplayName] = useState("");
   const [role, setRole] = useState<Role>("contractor");
   const [inviteCode, setInviteCode] = useState("");
+  const emailInputRef = useRef<HTMLInputElement>(null);
 
   return (
     <main className="auth-shell auth-shell--split">
@@ -3319,7 +3320,7 @@ function AuthGate({
         className="auth-card auth-card--entry"
         onSubmit={(event) => {
           event.preventDefault();
-          onSubmit({ email, password, displayName, role, inviteCode: inviteCode || undefined });
+          onSubmit({ email, password, displayName, role, inviteCode: inviteCode.trim() || undefined });
         }}
       >
         <LogoLockup />
@@ -3349,6 +3350,7 @@ function AuthGate({
                   }
                   if (key === "email") {
                     onModeChange(mode);
+                    window.requestAnimationFrame(() => emailInputRef.current?.focus());
                   }
                 }}
               >
@@ -3377,7 +3379,7 @@ function AuthGate({
           ) : null}
           <label>
             <span>Email</span>
-            <input value={email} onChange={(event) => setEmail(event.target.value)} type="email" autoComplete="email" required />
+            <input ref={emailInputRef} value={email} onChange={(event) => setEmail(event.target.value)} type="email" autoComplete="email" required />
           </label>
           <label>
             <span>Password</span>
@@ -3392,8 +3394,9 @@ function AuthGate({
               </label>
               {inviteRequired ? (
                 <label>
-                  <span>Pilot invitation code</span>
-                  <input value={inviteCode} onChange={(event) => setInviteCode(event.target.value)} autoComplete="one-time-code" />
+                  <span>Pilot invitation code <em className="required-label">Required</em></span>
+                  <input value={inviteCode} onChange={(event) => setInviteCode(event.target.value)} autoComplete="one-time-code" spellCheck={false} required />
+                  <small>RIVT is invite-only during the pilot so early users stay supported.</small>
                 </label>
               ) : null}
               <div className="role-locked-note">
