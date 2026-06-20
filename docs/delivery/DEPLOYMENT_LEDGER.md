@@ -81,22 +81,21 @@ Add one entry per staging/production deployment.
 - Rollback performed/result: not required
 - Approval: Packet 03 accepted; overall Gate A not approved
 
-## Pending Deployment - Packet 04 Applications and Active Work
+## Current Production - Packet 04 Applications and Active Work
 
-- Environment: Not deployed; production remains Packet 03 at `4a3a7215b09a8cfe224405f7b274bc10c8f7ac31`
-- Date/time/timezone: 2026-06-20 America/New_York
-- Deployer: Pending
+- Environment: Production (`https://rivt.pro`)
+- Date/time/timezone: 2026-06-20 02:02 America/New_York
+- Deployer: Codex through authenticated Railway CLI
 - Source repository/branch: `Zboytjbxp/rivt`, `master`
-- Source commit: pending commit
-- Build/artifact ID: none yet
-- Migration version before/after: expected `0004_jobs_discovery` / `0005_match_acceptance`
-- Feature-flag/config version: no config changes planned
-- Provider/config changes: none planned
-- Backup/rollback target: prior successful Packet 03 deployment and migration rollback for `0005_match_acceptance`
-- Automated gates completed locally: `npm run build`, `npm run lint`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`
-- Automated gates still required: disposable PostgreSQL run for `test/match-acceptance.integration.test.js` because local `TEST_DATABASE_URL` is absent
-- Post-deploy smoke tests required: two-account application/offer/acceptance journey, wrong-recipient rejection, duplicate/double-accept protection, private-address reveal before/after acceptance, active-work timeline
-- Health/readiness result: pending deployment
-- Known risks: R-019 remains open until DB-backed/live Packet 04 evidence exists
-- Rollback performed/result: not applicable
-- Approval: not accepted
+- Source commit: `0ccf88c3ade7511d6d3ad53fc2911cec90648810`
+- Build/artifact ID: Railway deployment `04b7e269-f103-4bbe-88cf-6ef82161b6bc`; initial upload deployment `bef21475-e9f7-46f6-af2e-71a040a4b8d5` was replaced after updating `SOURCE_COMMIT`
+- Migration version before/after: `0004_jobs_discovery` / `0005_match_acceptance`
+- Feature-flag/config version: source SHA updated; pilot invite enforcement remains enabled
+- Provider/config changes: no provider credentials changed; Google and email remain available, Facebook/Apple unavailable
+- Backup/rollback target: prior successful Packet 03 deployment `61142204-fa92-4c44-a798-27c99932266b`; checked migration rollback for `0005_match_acceptance`
+- Automated gates: local `npm run build`, `npm run lint`, `npm run test`, `npm run test:e2e`, and `npm audit --omit=dev` passed; GitHub Actions Gate A Safety run `27862175954` passed with disposable PostgreSQL coverage
+- Post-deploy smoke tests: live smoke `packet04-20260620061146-411fdf` passed signup/onboarding, readiness, application submit, duplicate application 409, non-owner applicant list 403, contractor applicant list, offer creation, wrong-recipient offer acceptance 403, recipient acceptance, double-accept idempotency, one active-work record, two participants, private-address hidden-before/revealed-after acceptance, unrelated-user access denial, reschedule event, cancel event, and disposable account closure
+- Health/readiness result: healthy PostgreSQL and S3-compatible storage; health reports exact source commit; migration status reports `0005_match_acceptance`, five applied migrations, zero pending
+- Known risks: messaging, notifications, project records, reviews, admin operations, distributed rate limits, and full restore drill remain open
+- Rollback performed/result: not required
+- Approval: Packet 04 accepted; overall Gate A not approved

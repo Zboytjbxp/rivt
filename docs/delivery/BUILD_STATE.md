@@ -1,10 +1,11 @@
 # RIVT Build State
 
 Last updated: 2026-06-20 America/New_York
-Current gate: Gate A applications/offers/active work
-Current phase: Packet 04 implemented locally; deployment and DB-backed acceptance pending
+Current gate: Gate A messaging and in-app notifications
+Current phase: Packet 04 accepted in production; Packet 05 is next
+Active packet: `docs/delivery/packets/05_MESSAGING_NOTIFICATIONS.md`
 Repository branch: `master`
-Production release commit: `4a3a7215b09a8cfe224405f7b274bc10c8f7ac31`
+Production release commit: `0ccf88c3ade7511d6d3ad53fc2911cec90648810`
 
 ## Source State
 
@@ -189,15 +190,23 @@ Run on 2026-06-20 from `master`:
 - `npm run test:e2e`: pass; fail-closed auth and jobs/discovery desktop/mobile checks pass.
 - `npm audit --omit=dev`: pass; zero vulnerabilities.
 
-## Packet 04 Pending Acceptance
+## Packet 04 Production Evidence
 
-- Run the new Packet 04 integration test against disposable PostgreSQL in CI or a configured local `TEST_DATABASE_URL`.
-- Deploy migration `0005_match_acceptance` and the API/UI changes to Railway only after DB-backed tests pass.
-- Run live smoke for the two-account application/offer/acceptance journey, then update production evidence and mark Packet 04 accepted.
+- Source commit: `0ccf88c3ade7511d6d3ad53fc2911cec90648810`
+- Railway deployment: `04b7e269-f103-4bbe-88cf-6ef82161b6bc` (success); initial source upload was `bef21475-e9f7-46f6-af2e-71a040a4b8d5`, followed by a metadata redeploy after `SOURCE_COMMIT` was updated.
+- GitHub Actions Gate A Safety run `27862175954`: pass for Packet 04 source.
+- `https://rivt.pro/api/health`: 200, source commit matched the release, PostgreSQL and S3-compatible storage healthy.
+- Production migration status: `0005_match_acceptance`, five applied migrations, zero pending.
+- Live smoke `packet04-20260620061146-411fdf`: disposable contractor, tradesperson, and second tradesperson signup/onboarding passed; readiness confirmed migration 0005; tradesperson application passed; duplicate application returned 409; non-owner applicant list returned 403; contractor applicant review passed; contractor sent offer; wrong-recipient acceptance returned 403; recipient acceptance created exactly one active-work record with two participants; double acceptance returned the same active-work record; private address was hidden before acceptance and revealed to the accepted tradesperson after acceptance; unrelated tradesperson could not view the closed accepted job; active-work reschedule/cancel timeline events passed; disposable accounts were closed.
+- Added reusable live-smoke command: `npm run smoke:match:live`.
+
+## Packet 04 Acceptance
+
+Packet 04 is accepted in production for applications, offers, mutual acceptance, active-work participants, accepted-address release, and active-work cancel/reschedule events. Persistent messaging, notifications, project records, completion, reviews, and admin operations remain later packets and must not be represented as production-ready.
 
 ## Next Exact Task
 
-Commit and push Packet 04, confirm disposable PostgreSQL CI passes for `test/match-acceptance.integration.test.js`, then deploy and live-smoke the two-account application/offer/acceptance journey.
+Start `docs/delivery/packets/05_MESSAGING_NOTIFICATIONS.md`: add server-owned job-linked conversations, participant authorization, durable messages, unread state, truthful notification center entries, and block/mute policy. Do not add project albums, external SMS, or frontend-only notification success.
 
 ## Blocking Founder Decisions
 

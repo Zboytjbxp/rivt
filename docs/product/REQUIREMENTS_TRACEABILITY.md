@@ -15,13 +15,13 @@ Evidence must eventually link to implementation, automated tests, manual accepta
 | ID | Requirement | Current | Evidence / gap |
 |---|---|---:|---|
 | GA-FND-001 | Managed PostgreSQL and private object storage are required | Verified | Live `/api/health` and `/api/storage` report PostgreSQL and S3-compatible storage healthy. |
-| GA-FND-002 | Versioned database migrations own schema changes | Verified | Production runs checksummed transactional migrations with advisory locking; apply/rerun/rollback/reapply/tamper tests pass and readiness reports 0004 with zero pending. |
-| GA-FND-003 | Core records use normalized, user-owned domain tables | Partial | Canonical account/profile/organization/trade, job, application, offer, active-work, participant, and timeline foundations exist in source; messages/project records/reviews remain packet work and Packet 04 deployment evidence is pending. |
+| GA-FND-002 | Versioned database migrations own schema changes | Verified | Production runs checksummed transactional migrations with advisory locking; apply/rerun/rollback/reapply/tamper tests pass and status reports `0005_match_acceptance` with zero pending. |
+| GA-FND-003 | Core records use normalized, user-owned domain tables | Partial | Canonical account/profile/organization/trade, job, application, offer, active-work, participant, and timeline foundations are live-smoked; messages/project records/reviews remain packet work. |
 | GA-FND-004 | Authenticated tenant/ownership authorization protects every private API | Partial | Legacy private routes require a DB-backed user; canonical job mutations require active organization owner/admin membership and pass CI/live cross-user smoke. Remaining domains still need the same authorization model. |
 | GA-FND-005 | API uses consistent typed errors and validation | Partial | `/api/v1` has request IDs, Zod validation, stable errors, and pagination primitives; legacy APIs retain transitional shapes. |
-| GA-FND-006 | Retryable writes are idempotent | Partial | Canonical idempotency storage is used by job create/update/transition, application, offer, and active-work mutation APIs; remaining domains adopt it per packet. |
-| GA-FND-007 | Auditable domain events use authenticated actor and subject | Partial | Job, application, offer, and active-work routes emit authenticated audit/status events with append-only triggers; remaining domains adopt it per packet. |
-| GA-FND-008 | Internal diagnostics identify deployed source revision and dependency readiness | Verified | Health/readiness identify exact source `4a3a721`, dependencies, applied migrations, and pending count in production. |
+| GA-FND-006 | Retryable writes are idempotent | Partial | Canonical idempotency storage is used by job create/update/transition, application, offer, and active-work mutation APIs; Packet 04 live smoke proved double-accept safety; remaining domains adopt it per packet. |
+| GA-FND-007 | Auditable domain events use authenticated actor and subject | Partial | Job, application, offer, and active-work routes emit authenticated audit/status events with append-only triggers and live-smoked timelines; remaining domains adopt it per packet. |
+| GA-FND-008 | Internal diagnostics identify deployed source revision and dependency readiness | Verified | Health/readiness identify exact source `0ccf88c`, dependencies, applied migrations, and pending count in production. |
 
 ## Authentication and Account
 
@@ -70,7 +70,7 @@ Evidence must eventually link to implementation, automated tests, manual accepta
 | GA-JOB-004 | Only authorized contractor/organization members mutate a job | Verified | Job mutations require active owner/admin membership for the owning organization; CI and live smoke verify cross-contractor mutation returns 403. |
 | GA-JOB-005 | Tradesperson discovers only real, open, permitted jobs | Verified | Tradesperson list API returns only published open jobs; seeded jobs/talent are removed from `src/data.ts`; live smoke verified open discovery and paused/closed hiding. |
 | GA-JOB-006 | Search/filter works over server-owned records | Verified | `/api/v1/jobs` supports paginated server filtering by query, trade, difficulty, work type, location, insurance, and status; Work UI calls typed API; live smoke verified trade/region discovery. |
-| GA-JOB-007 | Exact address remains server-private until accepted relationship | Partial | Exact address is stored in `job_private_locations`, excluded from browsing payloads, and Packet 04 source releases it only to accepted active-work participants; DB-backed/live acceptance evidence is pending. |
+| GA-JOB-007 | Exact address remains server-private until accepted relationship | Verified | Packet 04 live smoke verified exact address was hidden before acceptance, revealed to the accepted tradesperson after offer acceptance, and unavailable to an unrelated tradesperson. |
 | GA-JOB-008 | Published/paused/closed status transitions are server-enforced | Verified | Server enforces valid lifecycle transitions and rejects invalid duplicate/closed transitions; unit, E2E, and live smoke pass. |
 | GA-JOB-009 | Job events are timestamped with actor/reason | Verified | Status events and audit events include authenticated actor/reason/timestamp and are immutable via trigger; lifecycle live smoke passed. |
 | GA-JOB-010 | Rate limits and duplicate-submit protection | Partial | Job create/publish daily limits and idempotency-key replay protection are implemented and live-smoked; distributed rate-limit hardening remains later ops work. |
@@ -79,14 +79,14 @@ Evidence must eventually link to implementation, automated tests, manual accepta
 
 | ID | Requirement | Current | Evidence / gap |
 |---|---|---:|---|
-| GA-MAT-001 | Tradesperson submits one application per job | Partial | Packet 04 source adds `job_applications` with `(job_id, applicant_account_id)` uniqueness, submit/draft APIs, typed UI actions, and integration coverage; DB-backed/live evidence pending. |
-| GA-MAT-002 | Tradesperson withdraws application | Partial | Packet 04 source adds authenticated withdraw API, timeline event, and Work UI action; DB-backed/live evidence pending. |
-| GA-MAT-003 | Contractor sees authorized applicants and profiles | Partial | Packet 04 source adds contractor-only job applicant API requiring organization owner/admin role and profile preview mapping; DB-backed/live evidence pending. |
-| GA-MAT-004 | Contractor sends an offer/invite to a specific applicant/person | Partial | Packet 04 source adds applicant-specific offer API, one active offer per job, and Work UI send-offer action; DB-backed/live evidence pending. |
-| GA-MAT-005 | Tradesperson accepts/declines offer | Partial | Packet 04 source adds recipient-only accept/decline APIs with consent check and Work UI actions; DB-backed/live evidence pending. |
-| GA-MAT-006 | Accepted offer creates participants and Active work exactly once | Partial | Packet 04 source adds `active_work`, `work_participants`, uniqueness constraints, idempotent/double-accept handling, and integration coverage; DB-backed/live evidence pending. |
-| GA-MAT-007 | Cancellation/reschedule records actor and reason | Partial | Packet 04 source adds active-work cancel/reschedule APIs and append-only `work_status_events`; fuller mutual negotiation remains later. |
-| GA-MAT-008 | Block/suspension/closed-job rules prevent action | Partial | Packet 04 source adds `account_blocks`, blocked interaction checks, closed/stale/wrong-recipient checks, and relies on active-account actor guards; DB-backed/live evidence pending. |
+| GA-MAT-001 | Tradesperson submits one application per job | Verified | Packet 04 production smoke verified application submit and duplicate application rejection; schema enforces one application per job/applicant. |
+| GA-MAT-002 | Tradesperson withdraws application | Partial | Authenticated withdraw API, timeline event, and Work UI action exist; acceptance smoke did not exercise withdrawal before hire. |
+| GA-MAT-003 | Contractor sees authorized applicants and profiles | Verified | Packet 04 production smoke verified non-owner applicant list returned 403 and the owning contractor saw exactly the applicant profile preview. |
+| GA-MAT-004 | Contractor sends an offer/invite to a specific applicant/person | Verified | Packet 04 production smoke verified applicant-specific offer creation and one active-offer boundary. |
+| GA-MAT-005 | Tradesperson accepts/declines offer | Partial | Recipient-only accept/decline APIs and UI actions exist; production smoke verified accept and wrong-recipient rejection, while decline remains source/CI coverage only. |
+| GA-MAT-006 | Accepted offer creates participants and Active work exactly once | Verified | Packet 04 production smoke verified offer acceptance created one active-work record with two participants and repeated acceptance returned the same active-work record. |
+| GA-MAT-007 | Cancellation/reschedule records actor and reason | Verified | Packet 04 production smoke verified active-work reschedule and cancel events with reasons; append-only status events are migration-enforced. |
+| GA-MAT-008 | Block/suspension/closed-job rules prevent action | Partial | Packet 04 source and DB-backed CI cover account blocks; production smoke verified wrong-recipient and closed accepted job boundaries. Broader suspension policy remains a later safety/admin packet. |
 
 ## Messaging and Notifications
 
@@ -132,17 +132,16 @@ Evidence must eventually link to implementation, automated tests, manual accepta
 | GA-ADM-003 | Moderation/account actions use reason and immutable audit | Prototype | Lock/report handlers mutate app-state. |
 | GA-OPS-001 | Build and lint gates pass | Verified | Production build and repository-wide ESLint pass locally and in GitHub Actions with zero errors or warnings. |
 | GA-OPS-002 | Direct production dependencies are declared and vulnerability gate passes | Verified | `fast-xml-parser` is direct, Multer is 2.2.0, and `npm audit --omit=dev` reports zero vulnerabilities locally and in GitHub Actions. |
-| GA-OPS-003 | Health, readiness, and build version are distinct | Verified | Deployed health and authenticated readiness report dependencies, migration version, and exact source commit `4c199d9`. |
+| GA-OPS-003 | Health, readiness, and build version are distinct | Verified | Deployed health and authenticated readiness report dependencies, migration version, and exact source commit `0ccf88c`. |
 | GA-OPS-004 | Backup and timed restore drill pass | Unknown | Documentation requests it; no evidence found in repo. |
 | GA-OPS-005 | Structured logs, error monitoring, alerts, and incident routing | Missing | Console logging/basic responses only. |
 | GA-OPS-006 | Critical rate limits and upload abuse limits | Partial | Auth/write/upload limits and an explicit upload MIME/size/count policy exist; durable/distributed limits and domain quotas remain. |
-| GA-OPS-007 | Automated tests cover critical journeys and authorization | Partial | Unit/integration and Playwright auth/signup journeys pass; disposable-Postgres rotation, cross-user isolation, and immutable-role coverage pass in GitHub Actions. Broader domain journeys remain packet work. |
-| GA-OPS-008 | Deployed commit, migrations, flags, and rollback are recorded | Partial | Packet 00 commit, Railway deployment ID, config change, smoke evidence, and rollback target are recorded; versioned migrations and a performed rollback drill remain. |
+| GA-OPS-007 | Automated tests cover critical journeys and authorization | Partial | Unit/integration and Playwright journeys pass; disposable-Postgres auth/job/match authorization coverage passes in GitHub Actions. Broader domains remain packet work. |
+| GA-OPS-008 | Deployed commit, migrations, flags, and rollback are recorded | Partial | Packet 00-04 commits, Railway deployment IDs, config changes, migration status, smoke evidence, and rollback targets are recorded; a full timed isolated restore drill remains open. |
 
 ## Current Gate A Summary
 
 - Production infrastructure is reachable and managed storage is healthy.
-- The application is a broad interactive prototype with substantial UI coverage.
-- Gate A domain persistence, authorization, and workflow integrity are mostly missing.
-- Authentication now fails closed locally and in automated browser coverage; new OAuth identities enter pending onboarding without fabricated account data.
-- Packet 00 safety foundations are CI-proven but not yet deployed; normalized domain persistence remains the next implementation priority after live verification.
+- Authentication, canonical profiles/onboarding, jobs/discovery, and match acceptance have production evidence.
+- Messaging, notifications, project records/completion, reviews, admin operations, and full launch hardening remain Gate A packet work.
+- The app must continue to avoid fake seed data, frontend-only success, and homeowner flows.
