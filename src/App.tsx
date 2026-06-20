@@ -3214,7 +3214,7 @@ function AuthLinkFlow({ mode }: { mode: "verify" | "reset" }) {
           <label className="auth-link-password">
             <span>New password</span>
             <input value={password} onChange={(event) => setPassword(event.target.value)} type="password" autoComplete="new-password" />
-            <small>12+ characters with uppercase, lowercase, a number, and a symbol.</small>
+            <small>8+ characters with uppercase, lowercase, a number, and a symbol.</small>
           </label>
         ) : null}
         {mode === "reset" && status !== "success" ? (
@@ -3382,7 +3382,7 @@ function AuthGate({
           <label>
             <span>Password</span>
             <input value={password} onChange={(event) => setPassword(event.target.value)} type="password" autoComplete={mode === "signup" ? "new-password" : "current-password"} required />
-            {mode === "signup" ? <small>12+ characters with uppercase, lowercase, a number, and a symbol.</small> : null}
+            {mode === "signup" ? <small>8+ characters with uppercase, lowercase, a number, and a symbol.</small> : null}
           </label>
           {mode === "signup" && (
             <>

@@ -27,7 +27,7 @@ Evidence must eventually link to implementation, automated tests, manual accepta
 
 | ID | Requirement | Current | Evidence / gap |
 |---|---|---:|---|
-| GA-AUTH-001 | Email signup creates a real account with password policy | Partial | Scrypt hashing, explicit role, 12-character minimum, and auth throttling exist; verification, recovery, and breached-password screening remain. |
+| GA-AUTH-001 | Email signup creates a real account with password policy | Partial | Scrypt hashing, explicit role, 8-character minimum, and auth throttling exist; verification, recovery, and breached-password screening remain. |
 | GA-AUTH-002 | Invalid login fails closed | Verified | Local fallback was removed; Playwright and deployed production smoke both prove a rejected login remains unauthenticated. |
 | GA-AUTH-003 | Email ownership verification | Missing | No token/table/routes or verified-email state. |
 | GA-AUTH-004 | Password reset and recovery | Missing | No recovery workflow. |

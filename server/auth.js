@@ -14,7 +14,7 @@ export function hashOpaqueToken(token) {
 
 export function assertStrongPassword(password) {
   const value = String(password ?? "");
-  const valid = value.length >= 12
+  const valid = value.length >= 8
     && /[a-z]/.test(value)
     && /[A-Z]/.test(value)
     && /\d/.test(value)
@@ -23,7 +23,7 @@ export function assertStrongPassword(password) {
     throw new ApiError(
       422,
       "PASSWORD_POLICY_FAILED",
-      "Use at least 12 characters with uppercase, lowercase, a number, and a symbol.",
+      "Use at least 8 characters with uppercase, lowercase, a number, and a symbol.",
     );
   }
   return value;

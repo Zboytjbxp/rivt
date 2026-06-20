@@ -10,8 +10,9 @@ import {
 
 test("password policy accepts strong passwords and rejects incomplete passwords", () => {
   assert.equal(assertStrongPassword("A-strong-pass9"), "A-strong-pass9");
+  assert.equal(assertStrongPassword("Goodpass1!"), "Goodpass1!");
   assert.throws(() => assertStrongPassword("alllowercase9!"), /uppercase/i);
-  assert.throws(() => assertStrongPassword("Short9!"), /12 characters/i);
+  assert.throws(() => assertStrongPassword("Short9!"), /8 characters/i);
 });
 
 test("Google authorization URL includes OIDC, nonce, state, and PKCE controls", () => {
