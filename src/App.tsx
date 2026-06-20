@@ -2700,6 +2700,14 @@ function App() {
     }
   }
 
+  function handleJobLoaded(job: Job) {
+    setJobs((current) => {
+      const exists = current.some((candidate) => candidate.id === job.id);
+      return exists ? current.map((candidate) => candidate.id === job.id ? job : candidate) : [job, ...current];
+    });
+    setSelectedId(job.id);
+  }
+
   async function handleEditJob(job: Job) {
     setJobsError(null);
     try {
@@ -2968,6 +2976,7 @@ function App() {
             onPostJob={openCreateJob}
             onEditJob={(job) => void handleEditJob(job)}
             onTransition={handleJobTransition}
+            onJobLoaded={handleJobLoaded}
             onRetry={() => void reloadJobs()}
           />
         ) : activeView === "Shop Talk" ? (

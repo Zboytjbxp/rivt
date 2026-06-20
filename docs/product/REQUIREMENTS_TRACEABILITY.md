@@ -16,11 +16,11 @@ Evidence must eventually link to implementation, automated tests, manual accepta
 |---|---|---:|---|
 | GA-FND-001 | Managed PostgreSQL and private object storage are required | Verified | Live `/api/health` and `/api/storage` report PostgreSQL and S3-compatible storage healthy. |
 | GA-FND-002 | Versioned database migrations own schema changes | Verified | Production runs checksummed transactional migrations with advisory locking; apply/rerun/rollback/reapply/tamper tests pass and readiness reports 0004 with zero pending. |
-| GA-FND-003 | Core records use normalized, user-owned domain tables | Partial | Canonical account/profile/organization/trade and job foundations exist; legacy blobs are quarantined and jobs no longer use `app_state`, while applications/messages/records remain packet work. |
+| GA-FND-003 | Core records use normalized, user-owned domain tables | Partial | Canonical account/profile/organization/trade, job, application, offer, active-work, participant, and timeline foundations exist in source; messages/project records/reviews remain packet work and Packet 04 deployment evidence is pending. |
 | GA-FND-004 | Authenticated tenant/ownership authorization protects every private API | Partial | Legacy private routes require a DB-backed user; canonical job mutations require active organization owner/admin membership and pass CI/live cross-user smoke. Remaining domains still need the same authorization model. |
 | GA-FND-005 | API uses consistent typed errors and validation | Partial | `/api/v1` has request IDs, Zod validation, stable errors, and pagination primitives; legacy APIs retain transitional shapes. |
-| GA-FND-006 | Retryable writes are idempotent | Partial | Canonical idempotency storage is used by job create/update/transition APIs; remaining domains adopt it per packet. |
-| GA-FND-007 | Auditable domain events use authenticated actor and subject | Partial | Job create/update/transition routes emit authenticated audit events and append-only status events; remaining domains adopt it per packet. |
+| GA-FND-006 | Retryable writes are idempotent | Partial | Canonical idempotency storage is used by job create/update/transition, application, offer, and active-work mutation APIs; remaining domains adopt it per packet. |
+| GA-FND-007 | Auditable domain events use authenticated actor and subject | Partial | Job, application, offer, and active-work routes emit authenticated audit/status events with append-only triggers; remaining domains adopt it per packet. |
 | GA-FND-008 | Internal diagnostics identify deployed source revision and dependency readiness | Verified | Health/readiness identify exact source `4a3a721`, dependencies, applied migrations, and pending count in production. |
 
 ## Authentication and Account
@@ -70,7 +70,7 @@ Evidence must eventually link to implementation, automated tests, manual accepta
 | GA-JOB-004 | Only authorized contractor/organization members mutate a job | Verified | Job mutations require active owner/admin membership for the owning organization; CI and live smoke verify cross-contractor mutation returns 403. |
 | GA-JOB-005 | Tradesperson discovers only real, open, permitted jobs | Verified | Tradesperson list API returns only published open jobs; seeded jobs/talent are removed from `src/data.ts`; live smoke verified open discovery and paused/closed hiding. |
 | GA-JOB-006 | Search/filter works over server-owned records | Verified | `/api/v1/jobs` supports paginated server filtering by query, trade, difficulty, work type, location, insurance, and status; Work UI calls typed API; live smoke verified trade/region discovery. |
-| GA-JOB-007 | Exact address remains server-private until accepted relationship | Partial | Exact address is stored in `job_private_locations` and excluded from list/tradesperson payloads in live smoke; owner detail can view it. Accepted relationship release remains Packet 04. |
+| GA-JOB-007 | Exact address remains server-private until accepted relationship | Partial | Exact address is stored in `job_private_locations`, excluded from browsing payloads, and Packet 04 source releases it only to accepted active-work participants; DB-backed/live acceptance evidence is pending. |
 | GA-JOB-008 | Published/paused/closed status transitions are server-enforced | Verified | Server enforces valid lifecycle transitions and rejects invalid duplicate/closed transitions; unit, E2E, and live smoke pass. |
 | GA-JOB-009 | Job events are timestamped with actor/reason | Verified | Status events and audit events include authenticated actor/reason/timestamp and are immutable via trigger; lifecycle live smoke passed. |
 | GA-JOB-010 | Rate limits and duplicate-submit protection | Partial | Job create/publish daily limits and idempotency-key replay protection are implemented and live-smoked; distributed rate-limit hardening remains later ops work. |
@@ -79,14 +79,14 @@ Evidence must eventually link to implementation, automated tests, manual accepta
 
 | ID | Requirement | Current | Evidence / gap |
 |---|---|---:|---|
-| GA-MAT-001 | Tradesperson submits one application per job | Prototype | `ApplicationRecord` in app-state; no current-user identity or DB uniqueness. |
-| GA-MAT-002 | Tradesperson withdraws application | Missing | No real workflow. |
-| GA-MAT-003 | Contractor sees authorized applicants and profiles | Prototype | Seed talent is selected by trade; not real users/applicants. |
-| GA-MAT-004 | Contractor sends an offer/invite to a specific applicant/person | Prototype | Invite targets highest seeded match rather than an authenticated selected user. |
-| GA-MAT-005 | Tradesperson accepts/declines offer | Missing | No mutual acceptance endpoint/state machine. |
-| GA-MAT-006 | Accepted offer creates participants and Active work exactly once | Missing | Client status changes do not establish an authoritative relationship. |
-| GA-MAT-007 | Cancellation/reschedule records actor and reason | Prototype | Schedule hold and statuses exist; no mutual flow or history. |
-| GA-MAT-008 | Block/suspension/closed-job rules prevent action | Missing | No domain enforcement. |
+| GA-MAT-001 | Tradesperson submits one application per job | Partial | Packet 04 source adds `job_applications` with `(job_id, applicant_account_id)` uniqueness, submit/draft APIs, typed UI actions, and integration coverage; DB-backed/live evidence pending. |
+| GA-MAT-002 | Tradesperson withdraws application | Partial | Packet 04 source adds authenticated withdraw API, timeline event, and Work UI action; DB-backed/live evidence pending. |
+| GA-MAT-003 | Contractor sees authorized applicants and profiles | Partial | Packet 04 source adds contractor-only job applicant API requiring organization owner/admin role and profile preview mapping; DB-backed/live evidence pending. |
+| GA-MAT-004 | Contractor sends an offer/invite to a specific applicant/person | Partial | Packet 04 source adds applicant-specific offer API, one active offer per job, and Work UI send-offer action; DB-backed/live evidence pending. |
+| GA-MAT-005 | Tradesperson accepts/declines offer | Partial | Packet 04 source adds recipient-only accept/decline APIs with consent check and Work UI actions; DB-backed/live evidence pending. |
+| GA-MAT-006 | Accepted offer creates participants and Active work exactly once | Partial | Packet 04 source adds `active_work`, `work_participants`, uniqueness constraints, idempotent/double-accept handling, and integration coverage; DB-backed/live evidence pending. |
+| GA-MAT-007 | Cancellation/reschedule records actor and reason | Partial | Packet 04 source adds active-work cancel/reschedule APIs and append-only `work_status_events`; fuller mutual negotiation remains later. |
+| GA-MAT-008 | Block/suspension/closed-job rules prevent action | Partial | Packet 04 source adds `account_blocks`, blocked interaction checks, closed/stale/wrong-recipient checks, and relies on active-account actor guards; DB-backed/live evidence pending. |
 
 ## Messaging and Notifications
 

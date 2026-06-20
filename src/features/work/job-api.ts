@@ -84,6 +84,81 @@ export interface JobEditorInput {
   } | null;
 }
 
+export type CanonicalApplicationStatus = "draft" | "submitted" | "withdrawn" | "shortlisted" | "declined" | "offered";
+export type CanonicalOfferStatus = "pending" | "accepted" | "declined" | "cancelled" | "expired";
+export type CanonicalActiveWorkStatus = "active" | "cancelled" | "completed";
+
+export interface CanonicalTimelineEvent {
+  id: string;
+  type: string;
+  fromStatus: string | null;
+  toStatus: string;
+  reason: string;
+  occurredAt: string;
+}
+
+export interface CanonicalApplication {
+  id: string;
+  jobId: string;
+  applicantAccountId: string;
+  status: CanonicalApplicationStatus;
+  message: string;
+  proposedStartDate: string | null;
+  submittedAt: string | null;
+  withdrawnAt: string | null;
+  decidedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  applicant?: {
+    accountId: string;
+    displayName: string;
+    headline: string;
+    serviceArea: { city: string; region: string };
+  };
+  events: CanonicalTimelineEvent[];
+}
+
+export interface CanonicalOffer {
+  id: string;
+  jobId: string;
+  applicationId: string;
+  contractorAccountId: string;
+  recipientAccountId: string;
+  status: CanonicalOfferStatus;
+  startDate: string | null;
+  scopeSummary: string;
+  message: string;
+  expiresAt: string | null;
+  acceptedAt: string | null;
+  declinedAt: string | null;
+  cancelledAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  recipient?: {
+    accountId: string;
+    displayName: string;
+    headline: string;
+    serviceArea: { city: string; region: string };
+  };
+  events: CanonicalTimelineEvent[];
+}
+
+export interface CanonicalActiveWork {
+  id: string;
+  jobId: string;
+  offerId: string;
+  organizationId: string;
+  contractorAccountId: string;
+  tradespersonAccountId: string;
+  status: CanonicalActiveWorkStatus;
+  startedAt: string;
+  completedAt: string | null;
+  cancelledAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  events: CanonicalTimelineEvent[];
+}
+
 interface ApiErrorBody {
   error?: { code?: string; message?: string; details?: unknown };
 }
@@ -176,6 +251,121 @@ export async function transitionJob(jobId: string, action: "publish" | "pause" |
     body: JSON.stringify(payload),
   });
   return body.data.job;
+}
+
+export async function saveApplicationDraft(jobId: string, input: { message: string; proposedStartDate?: string | null }) {
+  const body = await request<{ data: { application: CanonicalApplication } }>(`/api/v1/jobs/${jobId}/application-draft`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json", "Idempotency-Key": requestKey() },
+    body: JSON.stringify({ message: input.message, proposedStartDate: input.proposedStartDate ?? null }),
+  });
+  return body.data.application;
+}
+
+export async function submitApplication(jobId: string, input: { message: string; proposedStartDate?: string | null }) {
+  const body = await request<{ data: { application: CanonicalApplication } }>(`/api/v1/jobs/${jobId}/applications`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Idempotency-Key": requestKey() },
+    body: JSON.stringify({
+      message: input.message,
+      proposedStartDate: input.proposedStartDate ?? null,
+      consentAccepted: true,
+      consentVersion: "2026-06-19",
+    }),
+  });
+  return body.data.application;
+}
+
+export async function withdrawApplication(applicationId: string, reason = "Applicant withdrew") {
+  const body = await request<{ data: { application: CanonicalApplication } }>(`/api/v1/applications/${applicationId}/withdraw`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Idempotency-Key": requestKey() },
+    body: JSON.stringify({ reason }),
+  });
+  return body.data.application;
+}
+
+export async function listMyApplications() {
+  const body = await request<{ data: { applications: CanonicalApplication[] } }>("/api/v1/applications");
+  return body.data.applications;
+}
+
+export async function listJobApplications(jobId: string) {
+  const body = await request<{ data: { applications: CanonicalApplication[] } }>(`/api/v1/jobs/${jobId}/applications`);
+  return body.data.applications;
+}
+
+export async function shortlistApplication(applicationId: string) {
+  const body = await request<{ data: { application: CanonicalApplication } }>(`/api/v1/applications/${applicationId}/shortlist`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Idempotency-Key": requestKey() },
+    body: JSON.stringify({ reason: "Shortlisted by contractor" }),
+  });
+  return body.data.application;
+}
+
+export async function declineApplication(applicationId: string) {
+  const body = await request<{ data: { application: CanonicalApplication } }>(`/api/v1/applications/${applicationId}/decline`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Idempotency-Key": requestKey() },
+    body: JSON.stringify({ reason: "Not selected for this work" }),
+  });
+  return body.data.application;
+}
+
+export async function sendOffer(applicationId: string, input: { startDate?: string | null; scopeSummary: string; message: string }) {
+  const body = await request<{ data: { offer: CanonicalOffer; application: CanonicalApplication } }>(`/api/v1/applications/${applicationId}/offer`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Idempotency-Key": requestKey() },
+    body: JSON.stringify({ ...input, startDate: input.startDate ?? null, expiresAt: null }),
+  });
+  return body.data;
+}
+
+export async function listOffers() {
+  const body = await request<{ data: { offers: CanonicalOffer[] } }>("/api/v1/offers");
+  return body.data.offers;
+}
+
+export async function acceptOffer(offerId: string, reason = "Offer accepted") {
+  const body = await request<{ data: { offer: CanonicalOffer; activeWork: CanonicalActiveWork } }>(`/api/v1/offers/${offerId}/accept`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Idempotency-Key": requestKey() },
+    body: JSON.stringify({ reason, consentAccepted: true, consentVersion: "2026-06-19" }),
+  });
+  return body.data;
+}
+
+export async function declineOffer(offerId: string, reason = "Offer declined") {
+  const body = await request<{ data: { offer: CanonicalOffer } }>(`/api/v1/offers/${offerId}/decline`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Idempotency-Key": requestKey() },
+    body: JSON.stringify({ reason }),
+  });
+  return body.data.offer;
+}
+
+export async function listActiveWork() {
+  const body = await request<{ data: { activeWork: CanonicalActiveWork[] } }>("/api/v1/active-work");
+  return body.data.activeWork;
+}
+
+export async function requestWorkReschedule(activeWorkId: string, reason: string) {
+  const body = await request<{ data: { activeWork: CanonicalActiveWork } }>(`/api/v1/active-work/${activeWorkId}/reschedule`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Idempotency-Key": requestKey() },
+    body: JSON.stringify({ reason }),
+  });
+  return body.data.activeWork;
+}
+
+export async function cancelActiveWork(activeWorkId: string, reason: string) {
+  const body = await request<{ data: { activeWork: CanonicalActiveWork } }>(`/api/v1/active-work/${activeWorkId}/cancel`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Idempotency-Key": requestKey() },
+    body: JSON.stringify({ reason }),
+  });
+  return body.data.activeWork;
 }
 
 const difficultyLabels: Record<CanonicalDifficulty, Difficulty> = {

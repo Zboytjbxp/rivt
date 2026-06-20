@@ -1,8 +1,8 @@
 # RIVT Build State
 
 Last updated: 2026-06-20 America/New_York
-Current gate: Gate A jobs and discovery
-Current phase: Packet 03 production-accepted; next packet is applications/offers/active work
+Current gate: Gate A applications/offers/active work
+Current phase: Packet 04 implemented locally; deployment and DB-backed acceptance pending
 Repository branch: `master`
 Production release commit: `4a3a7215b09a8cfe224405f7b274bc10c8f7ac31`
 
@@ -168,9 +168,36 @@ Run on 2026-06-19 from `codex/packet-03-jobs-discovery`:
 
 Packet 03 is accepted in production for jobs and discovery. Applications, offers, mutual acceptance, project records, messaging, reviews, and admin operations remain later packets and must not be represented as production-ready.
 
+## Packet 04 Implemented Locally
+
+- Added migration `0005_match_acceptance` for account blocks, applications, application timelines, offers, offer timelines, active work, participants, and active-work status timelines.
+- Added typed match/acceptance validation and response mapping in `server/matches.js`.
+- Added `/api/v1/jobs/:id/application-draft`, `/api/v1/jobs/:id/applications`, `/api/v1/applications`, `/api/v1/applications/:id/withdraw`, `/api/v1/jobs/:id/applications`, `/api/v1/applications/:id/shortlist`, `/api/v1/applications/:id/decline`, `/api/v1/applications/:id/offer`, `/api/v1/offers`, `/api/v1/offers/:id/accept`, `/api/v1/offers/:id/decline`, `/api/v1/active-work`, `/api/v1/active-work/:id/reschedule`, and `/api/v1/active-work/:id/cancel`.
+- Added server-side protections for active account role, organization owner/admin applicant review, one application per job/applicant, one active offer per job, blocked-account interactions, wrong-recipient offer acceptance, stale/closed jobs, idempotent mutations, and exactly-one active-work creation.
+- Changed job detail authorization so exact private address remains hidden from browsing tradespeople but is visible to the accepted active-work participant.
+- Added a compact Work detail hiring panel: tradespeople can save draft/apply/withdraw and accept/decline offers; contractors can review applicants, shortlist, decline, and send offers; accepted work shows active-work events and cancel/reschedule actions.
+- Added PostgreSQL-backed Packet 04 integration coverage for blocked applications, duplicate applications, applicant privacy, wrong-recipient acceptance, double acceptance, address release before/after acceptance, participant creation, and timelines.
+- Preserved the Packet 04 stop condition: persistent messaging was not added.
+
+## Packet 04 Local Verification
+
+Run on 2026-06-20 from `master`:
+
+- `npm run build`: pass.
+- `npm run lint`: pass.
+- `npm run test`: pass; 18 unit tests pass, non-DB integration tests pass, and DB-backed integration tests including Packet 04 skip locally because `TEST_DATABASE_URL` is not configured.
+- `npm run test:e2e`: pass; fail-closed auth and jobs/discovery desktop/mobile checks pass.
+- `npm audit --omit=dev`: pass; zero vulnerabilities.
+
+## Packet 04 Pending Acceptance
+
+- Run the new Packet 04 integration test against disposable PostgreSQL in CI or a configured local `TEST_DATABASE_URL`.
+- Deploy migration `0005_match_acceptance` and the API/UI changes to Railway only after DB-backed tests pass.
+- Run live smoke for the two-account application/offer/acceptance journey, then update production evidence and mark Packet 04 accepted.
+
 ## Next Exact Task
 
-Begin Packet 04 applications/offers/active work without reintroducing frontend-only job state. The next implementation should add real applications, contractor applicant review, offer/invite creation, tradesperson accept/decline, active-work creation, and participant authorization.
+Commit and push Packet 04, confirm disposable PostgreSQL CI passes for `test/match-acceptance.integration.test.js`, then deploy and live-smoke the two-account application/offer/acceptance journey.
 
 ## Blocking Founder Decisions
 

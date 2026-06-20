@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ArrowLeft,
   BriefcaseBusiness,
@@ -23,6 +23,27 @@ import {
 } from "lucide-react";
 import type { Job, JobId, Role } from "../../types";
 import { difficultyOptions, tradeOptions, workTypeOptions } from "../../data";
+import {
+  acceptOffer,
+  cancelActiveWork,
+  declineApplication,
+  declineOffer,
+  getJob,
+  listActiveWork,
+  listJobApplications,
+  listMyApplications,
+  listOffers,
+  requestWorkReschedule,
+  saveApplicationDraft,
+  sendOffer,
+  shortlistApplication,
+  submitApplication,
+  toJobViewModel,
+  withdrawApplication,
+  type CanonicalActiveWork,
+  type CanonicalApplication,
+  type CanonicalOffer,
+} from "./job-api";
 import "./work-workspace.css";
 
 type TradeFilter = (typeof tradeOptions)[number];
@@ -54,6 +75,7 @@ interface WorkWorkspaceProps {
   onPostJob: () => void;
   onEditJob: (job: Job) => void;
   onTransition: (job: Job, action: JobAction) => Promise<void>;
+  onJobLoaded: (job: Job) => void;
   onRetry: () => void;
 }
 
@@ -151,6 +173,7 @@ export function WorkWorkspace({
   onPostJob,
   onEditJob,
   onTransition,
+  onJobLoaded,
   onRetry,
 }: WorkWorkspaceProps) {
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -158,6 +181,13 @@ export function WorkWorkspace({
   const [detailTab, setDetailTab] = useState<DetailTab>("overview");
   const [contractorSection, setContractorSection] = useState<ContractorSection>("open");
   const [activeAction, setActiveAction] = useState("");
+  const [matchRefreshKey, setMatchRefreshKey] = useState(0);
+  const [matchLoading, setMatchLoading] = useState(false);
+  const [matchError, setMatchError] = useState<string | null>(null);
+  const [matchApplications, setMatchApplications] = useState<CanonicalApplication[]>([]);
+  const [matchOffers, setMatchOffers] = useState<CanonicalOffer[]>([]);
+  const [matchActiveWork, setMatchActiveWork] = useState<CanonicalActiveWork[]>([]);
+  const [applicationMessage, setApplicationMessage] = useState("I am interested in this work and can confirm tools, timing, and site requirements.");
 
   const visibleJobs = useMemo(() => role === "contractor"
     ? jobs.filter((job) => job.status === statusForSection[contractorSection])
@@ -187,8 +217,167 @@ export function WorkWorkspace({
     }
   }
 
+  async function handleSaveDraft(job: Job) {
+    const jobId = job.canonical?.id;
+    if (!jobId) return;
+    await runMatchAction(`draft:${jobId}`, async () => {
+      await saveApplicationDraft(jobId, { message: applicationMessage });
+    });
+  }
+
+  async function handleSubmitApplication(job: Job) {
+    const jobId = job.canonical?.id;
+    if (!jobId) return;
+    await runMatchAction(`apply:${jobId}`, async () => {
+      await submitApplication(jobId, { message: applicationMessage });
+    });
+  }
+
+  async function handleWithdraw(application: CanonicalApplication) {
+    await runMatchAction(`withdraw:${application.id}`, async () => {
+      await withdrawApplication(application.id);
+    });
+  }
+
+  async function handleShortlist(application: CanonicalApplication) {
+    await runMatchAction(`shortlist:${application.id}`, async () => {
+      await shortlistApplication(application.id);
+    });
+  }
+
+  async function handleDeclineApplication(application: CanonicalApplication) {
+    await runMatchAction(`decline:${application.id}`, async () => {
+      await declineApplication(application.id);
+    });
+  }
+
+  async function handleSendOffer(job: Job, application: CanonicalApplication) {
+    await runMatchAction(`offer:${application.id}`, async () => {
+      await sendOffer(application.id, {
+        startDate: job.canonical?.preferredStartDate ?? null,
+        scopeSummary: job.canonical?.scopeDescription || job.summary,
+        message: `Offer for ${job.title}. Accept to unlock the exact jobsite and active work record.`,
+      });
+    });
+  }
+
+  async function handleAcceptOffer(offer: CanonicalOffer) {
+    await runMatchAction(`accept:${offer.id}`, async () => {
+      await acceptOffer(offer.id, "Confirmed in RIVT.");
+      await refreshDetailJob();
+    });
+  }
+
+  async function handleDeclineOffer(offer: CanonicalOffer) {
+    await runMatchAction(`decline-offer:${offer.id}`, async () => {
+      await declineOffer(offer.id);
+    });
+  }
+
+  async function handleReschedule(activeWork: CanonicalActiveWork) {
+    const reason = window.prompt("Reason for reschedule request", "Schedule needs to move.");
+    if (!reason?.trim()) return;
+    await runMatchAction(`reschedule:${activeWork.id}`, async () => {
+      await requestWorkReschedule(activeWork.id, reason.trim());
+    });
+  }
+
+  async function handleCancelActiveWork(activeWork: CanonicalActiveWork) {
+    const reason = window.prompt("Reason for cancellation", "Mutual schedule conflict.");
+    if (!reason?.trim()) return;
+    await runMatchAction(`cancel:${activeWork.id}`, async () => {
+      await cancelActiveWork(activeWork.id, reason.trim());
+    });
+  }
+
   const selectedIsVisible = selectedJob ? visibleJobs.some((job) => job.id === selectedJob.id) : false;
   const detailJob = selectedIsVisible ? selectedJob : visibleJobs[0] ?? null;
+  const canonicalJobId = detailJob?.canonical?.id ?? null;
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadMatchState() {
+      if (!canonicalJobId) {
+        setMatchApplications([]);
+        setMatchOffers([]);
+        setMatchActiveWork([]);
+        return;
+      }
+      setMatchLoading(true);
+      setMatchError(null);
+      try {
+        if (role === "contractor") {
+          const [applicationsForJob, active] = await Promise.all([
+            listJobApplications(canonicalJobId),
+            listActiveWork(),
+          ]);
+          if (cancelled) return;
+          setMatchApplications(applicationsForJob);
+          setMatchOffers([]);
+          setMatchActiveWork(active.filter((item) => item.jobId === canonicalJobId));
+        } else {
+          const [applicationsForUser, offersForUser, active] = await Promise.all([
+            listMyApplications(),
+            listOffers(),
+            listActiveWork(),
+          ]);
+          if (cancelled) return;
+          setMatchApplications(applicationsForUser.filter((item) => item.jobId === canonicalJobId));
+          setMatchOffers(offersForUser.filter((item) => item.jobId === canonicalJobId));
+          setMatchActiveWork(active.filter((item) => item.jobId === canonicalJobId));
+        }
+      } catch (cause) {
+        if (!cancelled) {
+          setMatchApplications([]);
+          setMatchOffers([]);
+          setMatchActiveWork([]);
+          setMatchError(cause instanceof Error ? cause.message : "Hiring state could not be loaded.");
+        }
+      } finally {
+        if (!cancelled) setMatchLoading(false);
+      }
+    }
+    void loadMatchState();
+    return () => {
+      cancelled = true;
+    };
+  }, [canonicalJobId, matchRefreshKey, role]);
+
+  async function refreshDetailJob() {
+    if (!canonicalJobId) return;
+    try {
+      onJobLoaded(toJobViewModel(await getJob(canonicalJobId)));
+    } catch {
+      onRetry();
+    }
+  }
+
+  async function runMatchAction(key: string, action: () => Promise<void>) {
+    setActiveAction(key);
+    setMatchError(null);
+    try {
+      await action();
+      setMatchRefreshKey((current) => current + 1);
+    } catch (cause) {
+      setMatchError(cause instanceof Error ? cause.message : "That hiring action could not be completed.");
+      throw cause;
+    } finally {
+      setActiveAction("");
+    }
+  }
+
+  const currentApplication = canonicalJobId
+    ? matchApplications.find((application) => application.jobId === canonicalJobId)
+    : undefined;
+  const pendingOffer = canonicalJobId
+    ? matchOffers.find((offer) => offer.jobId === canonicalJobId && offer.status === "pending")
+    : undefined;
+  const acceptedOffer = canonicalJobId
+    ? matchOffers.find((offer) => offer.jobId === canonicalJobId && offer.status === "accepted")
+    : undefined;
+  const activeWork = canonicalJobId
+    ? matchActiveWork.find((work) => work.jobId === canonicalJobId)
+    : undefined;
 
   return (
     <section className="v2-work-page" aria-label="Work">
@@ -259,6 +448,103 @@ export function WorkWorkspace({
                 <section className="v2-detail-section"><h3>Scope</h3><p>{detailJob.canonical?.scopeDescription || "Scope details have not been added yet."}</p></section>
                 <section className="v2-privacy-note"><LockKeyhole size={17} /><div><strong>Exact address stays private</strong><span>{role === "contractor" ? "Only your organization can access the saved address in this release." : detailJob.addressPolicy}</span></div></section>
                 {role === "contractor" && detailJob.canonical?.privateLocation ? <section className="v2-detail-section"><h3>Private jobsite</h3><p>{detailJob.canonical.privateLocation.addressLine1}{detailJob.canonical.privateLocation.addressLine2 ? `, ${detailJob.canonical.privateLocation.addressLine2}` : ""}<br />{detailJob.canonical.privateLocation.city}, {detailJob.canonical.privateLocation.region} {detailJob.canonical.privateLocation.postalCode}</p></section> : null}
+                <section className="v2-match-panel" aria-label="Hiring workflow">
+                  <div className="v2-match-panel-heading">
+                    <div>
+                      <span>{role === "contractor" ? "Applicants" : "Your hiring status"}</span>
+                      <h3>{role === "contractor" ? "Move one real applicant to active work" : "Apply, accept, and unlock the jobsite"}</h3>
+                    </div>
+                    {matchLoading ? <small>Loading...</small> : null}
+                  </div>
+                  {matchError ? <p className="v2-match-error" role="alert">{matchError}</p> : null}
+                  {activeWork ? (
+                    <div className="v2-active-work-card">
+                      <div>
+                        <span>Active work</span>
+                        <strong>{activeWork.status === "active" ? "Accepted and active" : activeWork.status}</strong>
+                        <small>Started {new Date(activeWork.startedAt).toLocaleString()}</small>
+                      </div>
+                      <div className="v2-match-actions">
+                        {activeWork.status === "active" ? (
+                          <>
+                            <button type="button" disabled={Boolean(activeAction)} onClick={() => void handleReschedule(activeWork)}>Request reschedule</button>
+                            <button type="button" className="v2-destructive-button" disabled={Boolean(activeAction)} onClick={() => void handleCancelActiveWork(activeWork)}>Cancel</button>
+                          </>
+                        ) : null}
+                      </div>
+                      {activeWork.events.length ? (
+                        <ol className="v2-mini-timeline">
+                          {activeWork.events.slice(0, 4).map((event) => <li key={event.id}><strong>{event.type.replaceAll("_", " ")}</strong><small>{event.reason || new Date(event.occurredAt).toLocaleString()}</small></li>)}
+                        </ol>
+                      ) : null}
+                    </div>
+                  ) : role === "contractor" ? (
+                    matchApplications.length ? (
+                      <div className="v2-applicant-list">
+                        {matchApplications.map((application) => (
+                          <article className="v2-applicant-card" key={application.id}>
+                            <div>
+                              <span>{application.status}</span>
+                              <strong>{application.applicant?.displayName || "Tradesperson"}</strong>
+                              <small>{application.applicant?.headline || `${application.applicant?.serviceArea.city ?? ""}, ${application.applicant?.serviceArea.region ?? ""}`}</small>
+                              {application.message ? <p>{application.message}</p> : null}
+                            </div>
+                            <div className="v2-match-actions">
+                              {application.status === "submitted" ? <button type="button" disabled={Boolean(activeAction)} onClick={() => void handleShortlist(application)}>Shortlist</button> : null}
+                              {["submitted", "shortlisted"].includes(application.status) ? (
+                                <>
+                                  <button type="button" className="v2-primary-button" disabled={Boolean(activeAction)} onClick={() => void handleSendOffer(detailJob, application)}>Send offer</button>
+                                  <button type="button" disabled={Boolean(activeAction)} onClick={() => void handleDeclineApplication(application)}>Decline</button>
+                                </>
+                              ) : <small>{application.status === "offered" ? "Offer sent" : "No action needed"}</small>}
+                            </div>
+                          </article>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="v2-match-empty"><strong>No applicants yet</strong><span>Applicants will appear here after tradespeople apply to this job.</span></div>
+                    )
+                  ) : pendingOffer ? (
+                    <div className="v2-offer-card">
+                      <div>
+                        <span>Offer pending</span>
+                        <strong>{pendingOffer.startDate ? `Start ${pendingOffer.startDate}` : "Contractor is ready to hire"}</strong>
+                        <p>{pendingOffer.message || pendingOffer.scopeSummary}</p>
+                      </div>
+                      <div className="v2-match-actions">
+                        <button type="button" className="v2-primary-button" disabled={Boolean(activeAction)} onClick={() => void handleAcceptOffer(pendingOffer)}>Accept work</button>
+                        <button type="button" disabled={Boolean(activeAction)} onClick={() => void handleDeclineOffer(pendingOffer)}>Decline</button>
+                      </div>
+                    </div>
+                  ) : acceptedOffer ? (
+                    <div className="v2-match-empty"><strong>Offer accepted</strong><span>The active work record is being prepared.</span></div>
+                  ) : currentApplication && currentApplication.status !== "withdrawn" ? (
+                    <div className="v2-offer-card">
+                      <div>
+                        <span>{currentApplication.status}</span>
+                        <strong>{currentApplication.status === "draft" ? "Draft saved" : "Application submitted"}</strong>
+                        <p>{currentApplication.message || "Your application is on file for this job."}</p>
+                      </div>
+                      {["draft", "submitted", "shortlisted"].includes(currentApplication.status) ? (
+                        <div className="v2-match-actions">
+                          {currentApplication.status === "draft" ? <button type="button" className="v2-primary-button" disabled={Boolean(activeAction)} onClick={() => void handleSubmitApplication(detailJob)}>Submit</button> : null}
+                          <button type="button" disabled={Boolean(activeAction)} onClick={() => void handleWithdraw(currentApplication)}>Withdraw</button>
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : (
+                    <div className="v2-apply-box">
+                      <label>
+                        <span>Message to contractor</span>
+                        <textarea value={applicationMessage} onChange={(event) => setApplicationMessage(event.target.value)} rows={4} />
+                      </label>
+                      <div className="v2-match-actions">
+                        <button type="button" disabled={Boolean(activeAction) || !detailJob.canonical || detailJob.status !== "Open"} onClick={() => void handleSaveDraft(detailJob)}>Save draft</button>
+                        <button type="button" className="v2-primary-button" disabled={Boolean(activeAction) || !detailJob.canonical || detailJob.status !== "Open"} onClick={() => void handleSubmitApplication(detailJob)}>Apply</button>
+                      </div>
+                    </div>
+                  )}
+                </section>
               </div>
             ) : null}
 

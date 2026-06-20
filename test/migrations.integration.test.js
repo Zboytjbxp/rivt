@@ -24,7 +24,7 @@ if (!testDatabaseUrl) {
     try {
       const baseline = await migrateUp(database, { targetVersion: 1 });
       assert.equal(baseline.latestVersion, 1);
-      assert.equal(baseline.pending.length, 3);
+      assert.equal(baseline.pending.length, 4);
 
       const existingUserId = randomUUID();
       await database.query(
@@ -41,7 +41,7 @@ if (!testDatabaseUrl) {
 
       const applied = await migrateUp(database, { targetVersion: 2 });
       assert.equal(applied.latestVersion, 2);
-      assert.equal(applied.pending.length, 2);
+      assert.equal(applied.pending.length, 3);
 
       const bridged = await database.query(
         `SELECT a.primary_role, p.visibility, p.onboarding_status,
@@ -87,7 +87,7 @@ if (!testDatabaseUrl) {
 
       const authFoundation = await migrateUp(database, { targetVersion: 3 });
       assert.equal(authFoundation.latestVersion, 3);
-      assert.equal(authFoundation.pending.length, 1);
+      assert.equal(authFoundation.pending.length, 2);
       const authState = await database.query(
         `SELECT u.provider, u.email_verified_at, a.status,
                 p.service_radius_miles, p.contact_email_visibility
@@ -105,11 +105,22 @@ if (!testDatabaseUrl) {
       assert.equal(authState.rows[1].service_radius_miles, 25);
       assert.equal(authState.rows[1].contact_email_visibility, "private");
 
-      const jobsFoundation = await migrateUp(database);
+      const jobsFoundation = await migrateUp(database, { targetVersion: 4 });
       assert.equal(jobsFoundation.latestVersion, 4);
-      assert.equal(jobsFoundation.pending.length, 0);
+      assert.equal(jobsFoundation.pending.length, 1);
       assert.notEqual((await database.query("SELECT to_regclass('jobs') AS table_name")).rows[0].table_name, null);
       assert.notEqual((await database.query("SELECT to_regclass('job_private_locations') AS table_name")).rows[0].table_name, null);
+
+      const matchFoundation = await migrateUp(database);
+      assert.equal(matchFoundation.latestVersion, 5);
+      assert.equal(matchFoundation.pending.length, 0);
+      assert.notEqual((await database.query("SELECT to_regclass('job_applications') AS table_name")).rows[0].table_name, null);
+      assert.notEqual((await database.query("SELECT to_regclass('active_work') AS table_name")).rows[0].table_name, null);
+
+      const rolledBackMatch = await rollbackLatest(database);
+      assert.equal(rolledBackMatch.latestVersion, 4);
+      assert.notEqual((await database.query("SELECT to_regclass('jobs') AS table_name")).rows[0].table_name, null);
+      assert.equal((await database.query("SELECT to_regclass('active_work') AS table_name")).rows[0].table_name, null);
 
       const rolledBack = await rollbackLatest(database);
       assert.equal(rolledBack.latestVersion, 3);
@@ -119,13 +130,13 @@ if (!testDatabaseUrl) {
       assert.equal((await database.query("SELECT to_regclass('jobs') AS table_name")).rows[0].table_name, null);
 
       const reapplied = await migrateUp(database);
-      assert.equal(reapplied.latestVersion, 4);
+      assert.equal(reapplied.latestVersion, 5);
       assert.equal((await database.query("SELECT count(*)::int AS count FROM accounts")).rows[0].count, 2);
 
-      const stored = await database.query("SELECT checksum FROM schema_migrations WHERE version = 4");
-      await database.query("UPDATE schema_migrations SET checksum = 'tampered' WHERE version = 4");
+      const stored = await database.query("SELECT checksum FROM schema_migrations WHERE version = 5");
+      await database.query("UPDATE schema_migrations SET checksum = 'tampered' WHERE version = 5");
       await assert.rejects(migrationStatus(database), /checksum does not match source/);
-      await database.query("UPDATE schema_migrations SET checksum = $1 WHERE version = 4", [stored.rows[0].checksum]);
+      await database.query("UPDATE schema_migrations SET checksum = $1 WHERE version = 5", [stored.rows[0].checksum]);
     } finally {
       await database.end();
       await admin.query(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);

@@ -44,6 +44,19 @@ import {
   transitionJobSchema,
   updateJobSchema,
 } from "./jobs.js";
+import {
+  applicationDecisionSchema,
+  applicationDraftSchema,
+  applicationSubmitSchema,
+  mapActiveWork,
+  mapApplication,
+  mapOffer,
+  offerCreateSchema,
+  offerDecisionSchema,
+  requireOfferAcceptanceConsent,
+  requireTradespersonActor,
+  workTransitionSchema,
+} from "./matches.js";
 import { migrateUp, migrationStatus } from "./migrations.js";
 import {
   createOriginGuard,
@@ -1280,6 +1293,150 @@ async function mapJobDetail(client, row, actor, includePrivateLocation) {
   });
 }
 
+const applicationSelectBase = `
+  SELECT ja.*, j.title AS job_title, j.status AS job_status, j.organization_id,
+         o.name AS organization_name, pl.city AS public_city, pl.region AS public_region,
+         pl.country_code AS public_country_code,
+         p.account_id AS applicant_account_id, p.display_name AS applicant_display_name,
+         p.headline AS applicant_headline, p.service_area_city AS applicant_service_area_city,
+         p.service_area_region AS applicant_service_area_region
+  FROM job_applications ja
+  INNER JOIN jobs j ON j.id = ja.job_id
+  INNER JOIN organizations o ON o.id = j.organization_id
+  INNER JOIN job_public_locations pl ON pl.job_id = j.id
+  INNER JOIN profiles p ON p.account_id = ja.applicant_account_id`;
+
+const offerSelectBase = `
+  SELECT jo.*, j.title AS job_title, j.status AS job_status, j.organization_id,
+         o.name AS organization_name, pl.city AS public_city, pl.region AS public_region,
+         pl.country_code AS public_country_code,
+         p.account_id AS recipient_account_id, p.display_name AS recipient_display_name,
+         p.headline AS recipient_headline, p.service_area_city AS recipient_service_area_city,
+         p.service_area_region AS recipient_service_area_region
+  FROM job_offers jo
+  INNER JOIN jobs j ON j.id = jo.job_id
+  INNER JOIN organizations o ON o.id = j.organization_id
+  INNER JOIN job_public_locations pl ON pl.job_id = j.id
+  INNER JOIN profiles p ON p.account_id = jo.recipient_account_id`;
+
+const activeWorkSelectBase = `
+  SELECT aw.*, j.title AS job_title, j.status AS job_status,
+         o.name AS organization_name, pl.city AS public_city, pl.region AS public_region,
+         pl.country_code AS public_country_code
+  FROM active_work aw
+  INNER JOIN jobs j ON j.id = aw.job_id
+  INNER JOIN organizations o ON o.id = aw.organization_id
+  INNER JOIN job_public_locations pl ON pl.job_id = j.id`;
+
+async function loadApplicationEvents(client, applicationId) {
+  const result = await client.query(
+    `SELECT id, event_type, from_status, to_status, reason, occurred_at
+     FROM job_application_events
+     WHERE application_id = $1
+     ORDER BY occurred_at DESC, id DESC`,
+    [applicationId],
+  );
+  return result.rows;
+}
+
+async function loadOfferEvents(client, offerId) {
+  const result = await client.query(
+    `SELECT id, event_type, from_status, to_status, reason, occurred_at
+     FROM job_offer_events
+     WHERE offer_id = $1
+     ORDER BY occurred_at DESC, id DESC`,
+    [offerId],
+  );
+  return result.rows;
+}
+
+async function loadWorkEvents(client, activeWorkId) {
+  const result = await client.query(
+    `SELECT id, event_type, from_status, to_status, reason, occurred_at
+     FROM work_status_events
+     WHERE active_work_id = $1
+     ORDER BY occurred_at DESC, id DESC`,
+    [activeWorkId],
+  );
+  return result.rows;
+}
+
+async function assertNoAccountBlock(client, leftAccountId, rightAccountId) {
+  const result = await client.query(
+    `SELECT 1 FROM account_blocks
+     WHERE (blocker_account_id = $1 AND blocked_account_id = $2)
+        OR (blocker_account_id = $2 AND blocked_account_id = $1)
+     LIMIT 1`,
+    [leftAccountId, rightAccountId],
+  );
+  if (result.rowCount) {
+    throw new ApiError(403, "ACCOUNT_BLOCKED", "These accounts cannot interact.");
+  }
+}
+
+async function canViewPrivateJobLocation(client, jobId, actor) {
+  const result = await client.query(
+    `SELECT 1
+     FROM active_work aw
+     INNER JOIN work_participants wp ON wp.active_work_id = aw.id
+     WHERE aw.job_id = $1 AND wp.account_id = $2 AND aw.status IN ('active', 'completed')
+     LIMIT 1`,
+    [jobId, actor.account.id],
+  );
+  return result.rowCount > 0;
+}
+
+function applicationLifecycleEvent(status) {
+  return status === "shortlisted" ? "shortlisted" : status === "declined" ? "declined" : status;
+}
+
+async function loadApplicationById(client, applicationId, { forUpdate = false } = {}) {
+  const result = await client.query(
+    `${applicationSelectBase} WHERE ja.id = $1 ${forUpdate ? "FOR UPDATE OF ja" : ""}`,
+    [applicationId],
+  );
+  if (!result.rowCount) throw new ApiError(404, "APPLICATION_NOT_FOUND", "Application not found.");
+  return result.rows[0];
+}
+
+async function loadOfferById(client, offerId, { forUpdate = false } = {}) {
+  const result = await client.query(
+    `${offerSelectBase} WHERE jo.id = $1 ${forUpdate ? "FOR UPDATE OF jo" : ""}`,
+    [offerId],
+  );
+  if (!result.rowCount) throw new ApiError(404, "OFFER_NOT_FOUND", "Offer not found.");
+  return result.rows[0];
+}
+
+async function loadActiveWorkById(client, activeWorkId, actor, { forUpdate = false } = {}) {
+  const result = await client.query(
+    `${activeWorkSelectBase}
+     INNER JOIN work_participants wp ON wp.active_work_id = aw.id
+     WHERE aw.id = $1 AND wp.account_id = $2
+     ${forUpdate ? "FOR UPDATE OF aw" : ""}`,
+    [activeWorkId, actor.account.id],
+  );
+  if (!result.rowCount) throw new ApiError(404, "ACTIVE_WORK_NOT_FOUND", "Active work not found.");
+  return result.rows[0];
+}
+
+function requireApplicationContractorAccess(actor, application) {
+  requireContractorActor(actor);
+  requireOrganizationRole(actor, application.organization_id, ["owner", "admin"]);
+}
+
+async function mappedApplicationWithEvents(client, row) {
+  return mapApplication(row, { events: await loadApplicationEvents(client, row.id) });
+}
+
+async function mappedOfferWithEvents(client, row) {
+  return mapOffer(row, { events: await loadOfferEvents(client, row.id) });
+}
+
+async function mappedActiveWorkWithEvents(client, row) {
+  return mapActiveWork(row, { events: await loadWorkEvents(client, row.id) });
+}
+
 app.post("/api/v1/jobs", requireV1AuthenticatedUser, requireV1Actor, writeRateLimit, asyncRoute(async (request, response) => {
   requireContractorActor(request.actor);
   const input = validate(createJobSchema, request.body);
@@ -1421,13 +1578,14 @@ app.get("/api/v1/jobs/:id", requireV1AuthenticatedUser, requireV1Actor, asyncRou
   const ownsJob = request.actor.memberships.some((membership) => (
     membership.organizationId === row.organization_id && ["owner", "admin"].includes(membership.role)
   ));
-  if (!ownsJob && (request.actor.account.primaryRole !== "tradesperson" || row.status !== "open")) {
+  const activeParticipant = !ownsJob ? await canViewPrivateJobLocation(database, jobId, request.actor) : false;
+  if (!ownsJob && !activeParticipant && (request.actor.account.primaryRole !== "tradesperson" || row.status !== "open")) {
     throw new ApiError(404, "JOB_NOT_FOUND", "Job not found.");
   }
-  if (ownsJob) {
+  if (ownsJob || activeParticipant) {
     row = (await database.query(`${jobSelectSql({ includePrivateLocation: true })} WHERE j.id = $1`, [jobId])).rows[0];
   }
-  const job = await mapJobDetail(database, row, request.actor, ownsJob);
+  const job = await mapJobDetail(database, row, request.actor, ownsJob || activeParticipant);
   response.json({ data: { job }, meta: { requestId: request.requestId } });
 }));
 
@@ -1571,6 +1729,508 @@ app.post("/api/v1/jobs/:id/publish", requireV1AuthenticatedUser, requireV1Actor,
 app.post("/api/v1/jobs/:id/pause", requireV1AuthenticatedUser, requireV1Actor, writeRateLimit, asyncRoute((request, response) => transitionJob(request, response, "pause")));
 app.post("/api/v1/jobs/:id/resume", requireV1AuthenticatedUser, requireV1Actor, writeRateLimit, asyncRoute((request, response) => transitionJob(request, response, "resume")));
 app.post("/api/v1/jobs/:id/close", requireV1AuthenticatedUser, requireV1Actor, writeRateLimit, asyncRoute((request, response) => transitionJob(request, response, "close")));
+
+app.put("/api/v1/jobs/:id/application-draft", requireV1AuthenticatedUser, requireV1Actor, writeRateLimit, asyncRoute(async (request, response) => {
+  requireTradespersonActor(request.actor);
+  const jobId = validate(z.uuid(), request.params.id);
+  const input = validate(applicationDraftSchema, request.body);
+  const result = await runIdempotentMutation(request, request.actor.account.id, `applications.draft:${jobId}`, async (client) => {
+    const job = (await client.query("SELECT id, status, created_by_account_id FROM jobs WHERE id = $1", [jobId])).rows[0];
+    if (!job || job.status !== "open") throw new ApiError(404, "JOB_NOT_FOUND", "Job not found.");
+    await assertNoAccountBlock(client, request.actor.account.id, job.created_by_account_id);
+    const existing = await client.query(
+      "SELECT id, status FROM job_applications WHERE job_id = $1 AND applicant_account_id = $2 FOR UPDATE",
+      [jobId, request.actor.account.id],
+    );
+    if (existing.rowCount && existing.rows[0].status !== "draft") {
+      throw new ApiError(409, "APPLICATION_ALREADY_SUBMITTED", "This application is already in the hiring flow.");
+    }
+    let applicationId = existing.rows[0]?.id;
+    if (applicationId) {
+      await client.query(
+        `UPDATE job_applications
+         SET message = $3, proposed_start_date = $4, updated_at = now()
+         WHERE id = $1 AND applicant_account_id = $2`,
+        [applicationId, request.actor.account.id, input.message, input.proposedStartDate],
+      );
+    } else {
+      applicationId = (await client.query(
+        `INSERT INTO job_applications (job_id, applicant_account_id, status, message, proposed_start_date)
+         VALUES ($1, $2, 'draft', $3, $4)
+         RETURNING id`,
+        [jobId, request.actor.account.id, input.message, input.proposedStartDate],
+      )).rows[0].id;
+    }
+    await client.query(
+      `INSERT INTO job_application_events (application_id, actor_account_id, event_type, to_status)
+       VALUES ($1, $2, 'draft_saved', 'draft')`,
+      [applicationId, request.actor.account.id],
+    );
+    const row = await loadApplicationById(client, applicationId);
+    return {
+      status: existing.rowCount ? 200 : 201,
+      body: { data: { application: await mappedApplicationWithEvents(client, row) }, meta: { requestId: request.requestId } },
+    };
+  });
+  sendIdempotentResult(response, result);
+}));
+
+app.post("/api/v1/jobs/:id/applications", requireV1AuthenticatedUser, requireV1Actor, writeRateLimit, asyncRoute(async (request, response) => {
+  requireTradespersonActor(request.actor);
+  const jobId = validate(z.uuid(), request.params.id);
+  const input = validate(applicationSubmitSchema, request.body);
+  const result = await runIdempotentMutation(request, request.actor.account.id, `applications.submit:${jobId}`, async (client) => {
+    const job = (await client.query(
+      `SELECT id, status, created_by_account_id, application_deadline
+       FROM jobs WHERE id = $1 FOR UPDATE`,
+      [jobId],
+    )).rows[0];
+    if (!job || job.status !== "open") throw new ApiError(404, "JOB_NOT_FOUND", "Job not found.");
+    if (job.application_deadline && new Date(job.application_deadline).getTime() <= Date.now()) {
+      throw new ApiError(409, "APPLICATION_DEADLINE_PASSED", "This job is no longer accepting applications.");
+    }
+    await assertNoAccountBlock(client, request.actor.account.id, job.created_by_account_id);
+    await client.query(
+      `INSERT INTO consent_acceptances (account_id, document_key, document_version, context, request_id, metadata)
+       VALUES ($1, 'platform_terms', $2, 'application', $3, $4::jsonb)
+       ON CONFLICT (account_id, document_key, document_version, context) DO NOTHING`,
+      [request.actor.account.id, input.consentVersion, request.requestId, JSON.stringify({ jobId })],
+    );
+    const existing = await client.query(
+      "SELECT id, status FROM job_applications WHERE job_id = $1 AND applicant_account_id = $2 FOR UPDATE",
+      [jobId, request.actor.account.id],
+    );
+    if (existing.rowCount && !["draft", "withdrawn"].includes(existing.rows[0].status)) {
+      throw new ApiError(409, "APPLICATION_ALREADY_EXISTS", "You already have an active application for this job.");
+    }
+    const fromStatus = existing.rows[0]?.status ?? null;
+    let applicationId = existing.rows[0]?.id;
+    if (applicationId) {
+      await client.query(
+        `UPDATE job_applications
+         SET status = 'submitted', message = $3, proposed_start_date = $4,
+             submitted_at = now(), withdrawn_at = NULL, decided_at = NULL, updated_at = now()
+         WHERE id = $1 AND applicant_account_id = $2`,
+        [applicationId, request.actor.account.id, input.message, input.proposedStartDate],
+      );
+    } else {
+      applicationId = (await client.query(
+        `INSERT INTO job_applications (
+           job_id, applicant_account_id, status, message, proposed_start_date, submitted_at
+         ) VALUES ($1, $2, 'submitted', $3, $4, now())
+         RETURNING id`,
+        [jobId, request.actor.account.id, input.message, input.proposedStartDate],
+      )).rows[0].id;
+    }
+    await client.query(
+      `INSERT INTO job_application_events (
+         application_id, actor_account_id, event_type, from_status, to_status
+       ) VALUES ($1, $2, 'submitted', $3, 'submitted')`,
+      [applicationId, request.actor.account.id, fromStatus],
+    );
+    await client.query(
+      `INSERT INTO audit_events (request_id, actor_account_id, action, subject_type, subject_id, metadata)
+       VALUES ($1, $2::uuid, 'application.submitted', 'application', ($3::uuid)::text, $4::jsonb)`,
+      [request.requestId, request.actor.account.id, applicationId, JSON.stringify({ jobId })],
+    );
+    const row = await loadApplicationById(client, applicationId);
+    return {
+      status: existing.rowCount ? 200 : 201,
+      body: { data: { application: await mappedApplicationWithEvents(client, row) }, meta: { requestId: request.requestId } },
+    };
+  });
+  sendIdempotentResult(response, result);
+}));
+
+app.get("/api/v1/applications", requireV1AuthenticatedUser, requireV1Actor, asyncRoute(async (request, response) => {
+  requireTradespersonActor(request.actor);
+  const rows = await database.query(
+    `${applicationSelectBase}
+     WHERE ja.applicant_account_id = $1
+     ORDER BY ja.updated_at DESC, ja.id DESC
+     LIMIT 100`,
+    [request.actor.account.id],
+  );
+  response.json({
+    data: { applications: rows.rows.map((row) => mapApplication(row)) },
+    meta: { requestId: request.requestId },
+  });
+}));
+
+app.post("/api/v1/applications/:id/withdraw", requireV1AuthenticatedUser, requireV1Actor, writeRateLimit, asyncRoute(async (request, response) => {
+  requireTradespersonActor(request.actor);
+  const applicationId = validate(z.uuid(), request.params.id);
+  const input = validate(applicationDecisionSchema, request.body);
+  const result = await runIdempotentMutation(request, request.actor.account.id, `applications.withdraw:${applicationId}`, async (client) => {
+    const application = await loadApplicationById(client, applicationId, { forUpdate: true });
+    if (application.applicant_account_id !== request.actor.account.id) {
+      throw new ApiError(404, "APPLICATION_NOT_FOUND", "Application not found.");
+    }
+    if (application.status === "withdrawn") {
+      return {
+        status: 200,
+        body: { data: { application: await mappedApplicationWithEvents(client, application) }, meta: { requestId: request.requestId } },
+      };
+    }
+    if (!["draft", "submitted", "shortlisted"].includes(application.status)) {
+      throw new ApiError(409, "APPLICATION_CANNOT_WITHDRAW", "This application can no longer be withdrawn here.");
+    }
+    await client.query(
+      `UPDATE job_applications
+       SET status = 'withdrawn', withdrawn_at = now(), updated_at = now()
+       WHERE id = $1`,
+      [applicationId],
+    );
+    await client.query(
+      `INSERT INTO job_application_events (
+         application_id, actor_account_id, event_type, from_status, to_status, reason
+       ) VALUES ($1, $2, 'withdrawn', $3, 'withdrawn', $4)`,
+      [applicationId, request.actor.account.id, application.status, input.reason],
+    );
+    const row = await loadApplicationById(client, applicationId);
+    return { status: 200, body: { data: { application: await mappedApplicationWithEvents(client, row) }, meta: { requestId: request.requestId } } };
+  });
+  sendIdempotentResult(response, result);
+}));
+
+app.get("/api/v1/jobs/:id/applications", requireV1AuthenticatedUser, requireV1Actor, asyncRoute(async (request, response) => {
+  requireContractorActor(request.actor);
+  const jobId = validate(z.uuid(), request.params.id);
+  const job = (await database.query("SELECT id, organization_id FROM jobs WHERE id = $1", [jobId])).rows[0];
+  if (!job) throw new ApiError(404, "JOB_NOT_FOUND", "Job not found.");
+  requireOrganizationRole(request.actor, job.organization_id, ["owner", "admin"]);
+  const rows = await database.query(
+    `${applicationSelectBase}
+     WHERE ja.job_id = $1 AND ja.status <> 'draft'
+     ORDER BY ja.submitted_at DESC NULLS LAST, ja.updated_at DESC, ja.id DESC`,
+    [jobId],
+  );
+  response.json({
+    data: { applications: rows.rows.map((row) => mapApplication(row)) },
+    meta: { requestId: request.requestId },
+  });
+}));
+
+async function decideApplication(request, response, nextStatus) {
+  requireContractorActor(request.actor);
+  const applicationId = validate(z.uuid(), request.params.id);
+  const input = validate(applicationDecisionSchema, request.body);
+  const result = await runIdempotentMutation(request, request.actor.account.id, `applications.${nextStatus}:${applicationId}`, async (client) => {
+    const application = await loadApplicationById(client, applicationId, { forUpdate: true });
+    requireApplicationContractorAccess(request.actor, application);
+    if (!["submitted", "shortlisted"].includes(application.status)) {
+      throw new ApiError(409, "APPLICATION_STATE_INVALID", "That application is not ready for this decision.");
+    }
+    await client.query(
+      `UPDATE job_applications
+       SET status = $2, decided_at = now(), updated_at = now()
+       WHERE id = $1`,
+      [applicationId, nextStatus],
+    );
+    await client.query(
+      `INSERT INTO job_application_events (
+         application_id, actor_account_id, event_type, from_status, to_status, reason
+       ) VALUES ($1, $2, $3, $4, $5, $6)`,
+      [applicationId, request.actor.account.id, applicationLifecycleEvent(nextStatus), application.status, nextStatus, input.reason],
+    );
+    const row = await loadApplicationById(client, applicationId);
+    return { status: 200, body: { data: { application: await mappedApplicationWithEvents(client, row) }, meta: { requestId: request.requestId } } };
+  });
+  sendIdempotentResult(response, result);
+}
+
+app.post("/api/v1/applications/:id/shortlist", requireV1AuthenticatedUser, requireV1Actor, writeRateLimit, asyncRoute((request, response) => decideApplication(request, response, "shortlisted")));
+app.post("/api/v1/applications/:id/decline", requireV1AuthenticatedUser, requireV1Actor, writeRateLimit, asyncRoute((request, response) => decideApplication(request, response, "declined")));
+
+app.post("/api/v1/applications/:id/offer", requireV1AuthenticatedUser, requireV1Actor, writeRateLimit, asyncRoute(async (request, response) => {
+  requireContractorActor(request.actor);
+  const applicationId = validate(z.uuid(), request.params.id);
+  const input = validate(offerCreateSchema, request.body);
+  const result = await runIdempotentMutation(request, request.actor.account.id, `offers.create:${applicationId}`, async (client) => {
+    const application = await loadApplicationById(client, applicationId, { forUpdate: true });
+    requireApplicationContractorAccess(request.actor, application);
+    if (!["submitted", "shortlisted"].includes(application.status)) {
+      throw new ApiError(409, "APPLICATION_NOT_OFFERABLE", "This application cannot receive an offer.");
+    }
+    const job = (await client.query("SELECT id, status, created_by_account_id FROM jobs WHERE id = $1 FOR UPDATE", [application.job_id])).rows[0];
+    if (!job || job.status !== "open") throw new ApiError(409, "JOB_NOT_OPEN", "This job is not accepting offers.");
+    await assertNoAccountBlock(client, request.actor.account.id, application.applicant_account_id);
+    const existingOffer = await client.query(
+      "SELECT id, status FROM job_offers WHERE job_id = $1 AND status IN ('pending', 'accepted') FOR UPDATE",
+      [application.job_id],
+    );
+    if (existingOffer.rowCount) {
+      throw new ApiError(409, "JOB_OFFER_ALREADY_ACTIVE", "This job already has an active offer.");
+    }
+    const offerId = (await client.query(
+      `INSERT INTO job_offers (
+         job_id, application_id, contractor_account_id, recipient_account_id,
+         start_date, scope_summary, message, expires_at
+       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+       RETURNING id`,
+      [application.job_id, applicationId, request.actor.account.id, application.applicant_account_id,
+        input.startDate, input.scopeSummary, input.message, input.expiresAt],
+    )).rows[0].id;
+    await client.query(
+      "UPDATE job_applications SET status = 'offered', decided_at = now(), updated_at = now() WHERE id = $1",
+      [applicationId],
+    );
+    await client.query(
+      `INSERT INTO job_application_events (
+         application_id, actor_account_id, event_type, from_status, to_status
+       ) VALUES ($1, $2, 'offered', $3, 'offered')`,
+      [applicationId, request.actor.account.id, application.status],
+    );
+    await client.query(
+      `INSERT INTO job_offer_events (offer_id, actor_account_id, event_type, to_status)
+       VALUES ($1, $2, 'sent', 'pending')`,
+      [offerId, request.actor.account.id],
+    );
+    await client.query(
+      `INSERT INTO audit_events (request_id, actor_account_id, organization_id, action, subject_type, subject_id, metadata)
+       VALUES ($1, $2::uuid, $3::uuid, 'offer.sent', 'offer', ($4::uuid)::text, $5::jsonb)`,
+      [request.requestId, request.actor.account.id, application.organization_id, offerId,
+        JSON.stringify({ applicationId, jobId: application.job_id })],
+    );
+    const offer = await loadOfferById(client, offerId);
+    const updatedApplication = await loadApplicationById(client, applicationId);
+    return {
+      status: 201,
+      body: {
+        data: {
+          offer: await mappedOfferWithEvents(client, offer),
+          application: await mappedApplicationWithEvents(client, updatedApplication),
+        },
+        meta: { requestId: request.requestId },
+      },
+    };
+  });
+  sendIdempotentResult(response, result);
+}));
+
+app.get("/api/v1/offers", requireV1AuthenticatedUser, requireV1Actor, asyncRoute(async (request, response) => {
+  const rows = await database.query(
+    `${offerSelectBase}
+     WHERE jo.recipient_account_id = $1 OR jo.contractor_account_id = $1
+     ORDER BY jo.updated_at DESC, jo.id DESC
+     LIMIT 100`,
+    [request.actor.account.id],
+  );
+  response.json({ data: { offers: rows.rows.map((row) => mapOffer(row)) }, meta: { requestId: request.requestId } });
+}));
+
+app.post("/api/v1/offers/:id/accept", requireV1AuthenticatedUser, requireV1Actor, writeRateLimit, asyncRoute(async (request, response) => {
+  requireTradespersonActor(request.actor);
+  const offerId = validate(z.uuid(), request.params.id);
+  const input = validate(offerDecisionSchema, request.body);
+  const expectedConsentVersion = envValue("SIGNUP_CONSENT_VERSION", "2026-06-19");
+  requireOfferAcceptanceConsent(input, expectedConsentVersion);
+  const result = await runIdempotentMutation(request, request.actor.account.id, `offers.accept:${offerId}`, async (client) => {
+    const offer = await loadOfferById(client, offerId, { forUpdate: true });
+    if (offer.recipient_account_id !== request.actor.account.id) {
+      throw new ApiError(403, "OFFER_RECIPIENT_MISMATCH", "Only the offer recipient can accept this work.");
+    }
+    if (offer.status === "accepted") {
+      const active = (await client.query(`${activeWorkSelectBase} WHERE aw.offer_id = $1`, [offerId])).rows[0];
+      return {
+        status: 200,
+        body: {
+          data: {
+            offer: await mappedOfferWithEvents(client, offer),
+            activeWork: active ? await mappedActiveWorkWithEvents(client, active) : null,
+          },
+          meta: { requestId: request.requestId },
+        },
+      };
+    }
+    if (offer.status !== "pending") throw new ApiError(409, "OFFER_NOT_PENDING", "This offer is no longer pending.");
+    if (offer.expires_at && new Date(offer.expires_at).getTime() <= Date.now()) {
+      await client.query("UPDATE job_offers SET status = 'expired', updated_at = now() WHERE id = $1", [offerId]);
+      await client.query(
+        `INSERT INTO job_offer_events (offer_id, actor_account_id, event_type, from_status, to_status, reason)
+         VALUES ($1, $2, 'expired', 'pending', 'expired', 'Offer expired before acceptance')`,
+        [offerId, request.actor.account.id],
+      );
+      throw new ApiError(409, "OFFER_EXPIRED", "This offer has expired.");
+    }
+    const job = (await client.query("SELECT id, status, organization_id FROM jobs WHERE id = $1 FOR UPDATE", [offer.job_id])).rows[0];
+    if (!job || job.status !== "open") throw new ApiError(409, "JOB_NOT_OPEN", "This job is no longer available.");
+    await assertNoAccountBlock(client, offer.contractor_account_id, request.actor.account.id);
+    await client.query(
+      `INSERT INTO consent_acceptances (account_id, document_key, document_version, context, request_id, metadata)
+       VALUES ($1, 'platform_terms', $2, 'offer_acceptance', $3, $4::jsonb)
+       ON CONFLICT (account_id, document_key, document_version, context) DO NOTHING`,
+      [request.actor.account.id, expectedConsentVersion, request.requestId, JSON.stringify({ offerId, jobId: offer.job_id })],
+    );
+    await client.query(
+      `UPDATE job_offers
+       SET status = 'accepted', accepted_at = now(), updated_at = now()
+       WHERE id = $1`,
+      [offerId],
+    );
+    await client.query(
+      `INSERT INTO job_offer_events (
+         offer_id, actor_account_id, event_type, from_status, to_status, reason
+       ) VALUES ($1, $2, 'accepted', 'pending', 'accepted', $3)`,
+      [offerId, request.actor.account.id, input.reason],
+    );
+    await client.query(
+      `UPDATE jobs
+       SET status = 'closed', closed_at = now(), version = version + 1, updated_at = now()
+       WHERE id = $1`,
+      [offer.job_id],
+    );
+    await client.query(
+      `INSERT INTO job_status_events (job_id, actor_account_id, event_type, from_status, to_status, reason)
+       VALUES ($1, $2, 'closed', 'open', 'closed', 'Offer accepted')`,
+      [offer.job_id, request.actor.account.id],
+    );
+    const activeWorkInsert = await client.query(
+      `INSERT INTO active_work (
+         job_id, offer_id, organization_id, contractor_account_id, tradesperson_account_id
+       ) VALUES ($1, $2, $3, $4, $5)
+       ON CONFLICT (job_id) DO NOTHING
+       RETURNING id`,
+      [offer.job_id, offerId, job.organization_id, offer.contractor_account_id, request.actor.account.id],
+    );
+    let activeWorkId = activeWorkInsert.rows[0]?.id;
+    if (!activeWorkId) {
+      const existing = (await client.query("SELECT id, offer_id FROM active_work WHERE job_id = $1", [offer.job_id])).rows[0];
+      if (!existing || existing.offer_id !== offerId) throw new ApiError(409, "JOB_ALREADY_FILLED", "This job already has active work.");
+      activeWorkId = existing.id;
+    }
+    await client.query(
+      `INSERT INTO work_participants (active_work_id, account_id, participant_role)
+       VALUES ($1, $2, 'contractor'), ($1, $3, 'tradesperson')
+       ON CONFLICT DO NOTHING`,
+      [activeWorkId, offer.contractor_account_id, request.actor.account.id],
+    );
+    if (activeWorkInsert.rowCount) {
+      await client.query(
+        `INSERT INTO work_status_events (
+           active_work_id, actor_account_id, event_type, to_status, reason
+         ) VALUES ($1, $2, 'active_created', 'active', $3)`,
+        [activeWorkId, request.actor.account.id, input.reason],
+      );
+    }
+    await client.query(
+      `INSERT INTO audit_events (request_id, actor_account_id, organization_id, action, subject_type, subject_id, metadata)
+       VALUES ($1, $2::uuid, $3::uuid, 'offer.accepted', 'offer', ($4::uuid)::text, $5::jsonb)`,
+      [request.requestId, request.actor.account.id, job.organization_id, offerId,
+        JSON.stringify({ activeWorkId, jobId: offer.job_id })],
+    );
+    const acceptedOffer = await loadOfferById(client, offerId);
+    const activeWork = (await client.query(`${activeWorkSelectBase} WHERE aw.id = $1`, [activeWorkId])).rows[0];
+    return {
+      status: 200,
+      body: {
+        data: {
+          offer: await mappedOfferWithEvents(client, acceptedOffer),
+          activeWork: await mappedActiveWorkWithEvents(client, activeWork),
+        },
+        meta: { requestId: request.requestId },
+      },
+    };
+  });
+  sendIdempotentResult(response, result);
+}));
+
+app.post("/api/v1/offers/:id/decline", requireV1AuthenticatedUser, requireV1Actor, writeRateLimit, asyncRoute(async (request, response) => {
+  requireTradespersonActor(request.actor);
+  const offerId = validate(z.uuid(), request.params.id);
+  const input = validate(offerDecisionSchema, request.body);
+  const result = await runIdempotentMutation(request, request.actor.account.id, `offers.decline:${offerId}`, async (client) => {
+    const offer = await loadOfferById(client, offerId, { forUpdate: true });
+    if (offer.recipient_account_id !== request.actor.account.id) {
+      throw new ApiError(403, "OFFER_RECIPIENT_MISMATCH", "Only the offer recipient can decline this offer.");
+    }
+    if (offer.status === "declined") {
+      return { status: 200, body: { data: { offer: await mappedOfferWithEvents(client, offer) }, meta: { requestId: request.requestId } } };
+    }
+    if (offer.status !== "pending") throw new ApiError(409, "OFFER_NOT_PENDING", "This offer is no longer pending.");
+    await client.query(
+      `UPDATE job_offers
+       SET status = 'declined', declined_at = now(), updated_at = now()
+       WHERE id = $1`,
+      [offerId],
+    );
+    await client.query(
+      `UPDATE job_applications SET status = 'declined', decided_at = now(), updated_at = now()
+       WHERE id = $1`,
+      [offer.application_id],
+    );
+    await client.query(
+      `INSERT INTO job_offer_events (
+         offer_id, actor_account_id, event_type, from_status, to_status, reason
+       ) VALUES ($1, $2, 'declined', 'pending', 'declined', $3)`,
+      [offerId, request.actor.account.id, input.reason],
+    );
+    await client.query(
+      `INSERT INTO job_application_events (
+         application_id, actor_account_id, event_type, from_status, to_status, reason
+       ) VALUES ($1, $2, 'declined', 'offered', 'declined', $3)`,
+      [offer.application_id, request.actor.account.id, input.reason],
+    );
+    const declined = await loadOfferById(client, offerId);
+    return { status: 200, body: { data: { offer: await mappedOfferWithEvents(client, declined) }, meta: { requestId: request.requestId } } };
+  });
+  sendIdempotentResult(response, result);
+}));
+
+app.get("/api/v1/active-work", requireV1AuthenticatedUser, requireV1Actor, asyncRoute(async (request, response) => {
+  const rows = await database.query(
+    `${activeWorkSelectBase}
+     INNER JOIN work_participants wp ON wp.active_work_id = aw.id
+     WHERE wp.account_id = $1
+     ORDER BY aw.updated_at DESC, aw.id DESC
+     LIMIT 100`,
+    [request.actor.account.id],
+  );
+  response.json({ data: { activeWork: rows.rows.map((row) => mapActiveWork(row)) }, meta: { requestId: request.requestId } });
+}));
+
+app.post("/api/v1/active-work/:id/cancel", requireV1AuthenticatedUser, requireV1Actor, writeRateLimit, asyncRoute(async (request, response) => {
+  const activeWorkId = validate(z.uuid(), request.params.id);
+  const input = validate(workTransitionSchema, request.body);
+  const result = await runIdempotentMutation(request, request.actor.account.id, `active-work.cancel:${activeWorkId}`, async (client) => {
+    const activeWork = await loadActiveWorkById(client, activeWorkId, request.actor, { forUpdate: true });
+    if (activeWork.status === "cancelled") {
+      return { status: 200, body: { data: { activeWork: await mappedActiveWorkWithEvents(client, activeWork) }, meta: { requestId: request.requestId } } };
+    }
+    if (activeWork.status !== "active") throw new ApiError(409, "ACTIVE_WORK_NOT_CANCELLABLE", "This work cannot be cancelled.");
+    await client.query(
+      "UPDATE active_work SET status = 'cancelled', cancelled_at = now(), updated_at = now() WHERE id = $1",
+      [activeWorkId],
+    );
+    await client.query(
+      `INSERT INTO work_status_events (
+         active_work_id, actor_account_id, event_type, from_status, to_status, reason
+       ) VALUES ($1, $2, 'cancelled', 'active', 'cancelled', $3)`,
+      [activeWorkId, request.actor.account.id, input.reason],
+    );
+    const row = await loadActiveWorkById(client, activeWorkId, request.actor);
+    return { status: 200, body: { data: { activeWork: await mappedActiveWorkWithEvents(client, row) }, meta: { requestId: request.requestId } } };
+  });
+  sendIdempotentResult(response, result);
+}));
+
+app.post("/api/v1/active-work/:id/reschedule", requireV1AuthenticatedUser, requireV1Actor, writeRateLimit, asyncRoute(async (request, response) => {
+  const activeWorkId = validate(z.uuid(), request.params.id);
+  const input = validate(workTransitionSchema, request.body);
+  const result = await runIdempotentMutation(request, request.actor.account.id, `active-work.reschedule:${activeWorkId}`, async (client) => {
+    const activeWork = await loadActiveWorkById(client, activeWorkId, request.actor, { forUpdate: true });
+    if (activeWork.status !== "active") throw new ApiError(409, "ACTIVE_WORK_NOT_ACTIVE", "Only active work can be rescheduled.");
+    await client.query(
+      `INSERT INTO work_status_events (
+         active_work_id, actor_account_id, event_type, from_status, to_status, reason
+       ) VALUES ($1, $2, 'reschedule_requested', 'active', 'active', $3)`,
+      [activeWorkId, request.actor.account.id, input.reason],
+    );
+    const row = await loadActiveWorkById(client, activeWorkId, request.actor);
+    return { status: 200, body: { data: { activeWork: await mappedActiveWorkWithEvents(client, row) }, meta: { requestId: request.requestId } } };
+  });
+  sendIdempotentResult(response, result);
+}));
 
 app.get("/api/readiness", requireAuthenticatedUser, async (_request, response, next) => {
   await runWithDatabase(response, next, async () => {
