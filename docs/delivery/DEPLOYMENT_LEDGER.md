@@ -61,3 +61,22 @@ Add one entry per staging/production deployment.
 - Known risks: legacy state remains quarantined; old bucket retained for rollback; no timed isolated restore; identity linking and account recovery remain Packet 02 work
 - Rollback performed/result: migration down/up is CI-proven; production rollback not required
 - Approval: Packet 01 accepted; overall Gate A not approved
+
+## Current Production - Packet 03 Jobs and Discovery
+
+- Environment: Production (`https://rivt.pro`)
+- Date/time/timezone: 2026-06-20 01:06 America/New_York
+- Deployer: Codex through authenticated Railway CLI
+- Source repository/branch: `Zboytjbxp/rivt`, `master`
+- Source commit: `4a3a7215b09a8cfe224405f7b274bc10c8f7ac31`
+- Build/artifact ID: Railway deployment `61142204-fa92-4c44-a798-27c99932266b`
+- Migration version before/after: `0003_auth_onboarding_profiles` / `0004_jobs_discovery`
+- Feature-flag/config version: source SHA updated; pilot invite enforcement remains enabled
+- Provider/config changes: no provider credentials changed; Google and email remain available, Facebook/Apple unavailable
+- Backup/rollback target: prior successful deployment `873af682-3c7c-4755-9a29-5054a394fb08`; checked migrations and closed smoke records
+- Automated gates: local `npm run build`, `npm run lint`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `npm run lint:security` passed; local DB-backed integration tests skipped because `TEST_DATABASE_URL` is absent
+- Post-deploy smoke tests: live smoke `packet03-20260620052132-4ef6a7` passed signup/onboarding, readiness, draft/update/publish/pause/resume/close, cross-contractor 403, idempotent publish replay, tradesperson discovery, private-address non-leak, paused/closed hiding, and disposable account closure
+- Health/readiness result: healthy PostgreSQL and S3-compatible storage; readiness reports `0004_jobs_discovery`, four applied migrations, zero pending; health reports exact source commit
+- Known risks: Packet 04 applications/offers/active work, messaging, records, reviews, admin operations, and full restore drill remain open
+- Rollback performed/result: not required
+- Approval: Packet 03 accepted; overall Gate A not approved

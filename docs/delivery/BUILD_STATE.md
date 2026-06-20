@@ -1,10 +1,10 @@
 # RIVT Build State
 
-Last updated: 2026-06-19 America/New_York
+Last updated: 2026-06-20 America/New_York
 Current gate: Gate A jobs and discovery
-Current phase: Packet 03 implemented locally; awaiting commit, CI, and production release evidence
-Repository branch: `codex/packet-03-jobs-discovery`
-Production release commit: `696a332 Fix Railway production build dependencies`
+Current phase: Packet 03 production-accepted; next packet is applications/offers/active work
+Repository branch: `master`
+Production release commit: `4a3a7215b09a8cfe224405f7b274bc10c8f7ac31`
 
 ## Source State
 
@@ -155,15 +155,22 @@ Run on 2026-06-19 from `codex/packet-03-jobs-discovery`:
 - `npm.cmd run build`: pass; Vite builds 1,762 modules.
 - `npm.cmd audit --omit=dev`: pass; zero vulnerabilities.
 
-## Packet 03 Pending Evidence
+## Packet 03 Production Evidence
 
-- Disposable PostgreSQL CI must run the new migration/job integration tests before acceptance.
-- Packet 03 has not been deployed to Railway yet.
-- Live `/api/health`, migration readiness, draft/publish/pause/resume/close smoke, tradesperson discovery smoke, and private-address non-leak smoke remain required before marking Packet 03 production-accepted.
+- Source commit: `4a3a7215b09a8cfe224405f7b274bc10c8f7ac31`
+- Railway deployment: `61142204-fa92-4c44-a798-27c99932266b` (success)
+- GitHub Actions disposable PostgreSQL run `27859431951`: pass for Packet 03 source before merge; merged source was deployed after the signup-policy/UI patches.
+- `https://rivt.pro/api/health`: 200, source commit matched the release, PostgreSQL and S3-compatible storage healthy.
+- Production readiness: `0004_jobs_discovery`, four applied migrations, zero pending.
+- Live smoke `packet03-20260620052132-4ef6a7`: disposable contractor, second contractor, and tradesperson signup/onboarding passed; incomplete publish failed safely; authorized draft/update/publish/pause/resume/close passed; unauthorized mutation returned 403; idempotent publish replay was detected; tradesperson discovery returned the open job without private address; paused/closed jobs were hidden from tradesperson; owner detail included private address; disposable accounts were closed.
+
+## Packet 03 Acceptance
+
+Packet 03 is accepted in production for jobs and discovery. Applications, offers, mutual acceptance, project records, messaging, reviews, and admin operations remain later packets and must not be represented as production-ready.
 
 ## Next Exact Task
 
-Commit and push Packet 03, wait for GitHub Actions disposable-PostgreSQL evidence, then deploy to Railway and run the Packet 03 live smoke. If accepted, begin Packet 04 applications/offers/active work without reintroducing frontend-only job state.
+Begin Packet 04 applications/offers/active work without reintroducing frontend-only job state. The next implementation should add real applications, contractor applicant review, offer/invite creation, tradesperson accept/decline, active-work creation, and participant authorization.
 
 ## Blocking Founder Decisions
 

@@ -80,7 +80,7 @@ async function signupAndOnboard(role, label) {
   });
   const cookie = sessionCookie(signup.response);
   await verifyEmailDirectly(pool, email);
-  const onboard = await requestJson("/api/v1/onboarding/complete", {
+  await requestJson("/api/v1/onboarding/complete", {
     method: "POST",
     cookie,
     expected: 200,
@@ -102,12 +102,13 @@ async function signupAndOnboard(role, label) {
       consentVersion: "2026-06-19",
     },
   });
+  const me = await requestJson("/api/v1/me", { cookie, expected: 200 });
   return {
     email,
     cookie,
     inviteId: invite.id,
-    accountId: onboard.payload.data.account.account.id,
-    organizationId: onboard.payload.data.account.organizations[0]?.id,
+    accountId: me.payload.data.id,
+    organizationId: me.payload.data.organizations[0]?.id,
   };
 }
 
@@ -125,9 +126,9 @@ try {
   const accounts = [contractor, otherContractor, tradesperson];
 
   const readiness = await requestJson("/api/readiness", { cookie: contractor.cookie, expected: 200 });
-  assert.equal(readiness.payload.data.migrations.pending.length, 0);
-  assert.ok(readiness.payload.data.migrations.applied.some((migration) => migration.version === 4));
-  if (sourceCommit) assert.equal(readiness.payload.data.build.commit, sourceCommit);
+  assert.equal(readiness.payload.migrations.pending.length, 0);
+  assert.ok(readiness.payload.migrations.applied.some((migration) => migration.version === 4));
+  if (sourceCommit) assert.equal(readiness.payload.build.commit, sourceCommit);
 
   const title = `Packet 03 smoke electrical rough-in ${smokeRun}`;
   const created = await requestJson("/api/v1/jobs", {
@@ -274,8 +275,8 @@ try {
   console.log(JSON.stringify({
     ok: true,
     run: smokeRun,
-    buildCommit: readiness.payload.data.build.commit,
-    latestMigration: readiness.payload.data.migrationVersion,
+    buildCommit: readiness.payload.build.commit,
+    latestMigration: readiness.payload.migrationVersion,
     deployment: process.env.RAILWAY_DEPLOYMENT_ID ?? null,
     jobId,
     closedStatus: closed.payload.data.job.status,
