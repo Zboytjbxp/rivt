@@ -692,6 +692,45 @@ textarea:focus-visible {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.role-toggle {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  padding: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.11);
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.025));
+}
+
+.role-toggle button {
+  position: relative;
+  justify-content: center;
+  min-height: 52px;
+  border-color: transparent;
+  background: transparent;
+  color: #aebbc1;
+  box-shadow: none;
+}
+
+.role-toggle button.selected {
+  border-color: rgba(255, 106, 0, 0.78);
+  background:
+    linear-gradient(180deg, rgba(255, 106, 0, 0.26), rgba(255, 106, 0, 0.14));
+  color: #ffffff;
+  box-shadow:
+    0 12px 26px rgba(255, 106, 0, 0.14),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+.role-toggle button.selected::after {
+  content: "";
+  width: 14px;
+  height: 8px;
+  border-left: 3px solid var(--accent);
+  border-bottom: 3px solid var(--accent);
+  border-radius: 1px;
+  transform: translateY(-1px) rotate(-45deg);
+}
+
 .auth-card--entry > .auth-toggle {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   padding: 4px;

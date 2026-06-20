@@ -3368,9 +3368,9 @@ function AuthGate({
           {mode === "signup" ? (
             <fieldset className="auth-role-choice">
               <legend>Account type</legend>
-              <div className="auth-toggle" aria-label="Choose account type">
-                <button type="button" className={role === "contractor" ? "selected" : ""} onClick={() => setRole("contractor")}>Contractor</button>
-                <button type="button" className={role === "tradesperson" ? "selected" : ""} onClick={() => setRole("tradesperson")}>Tradesperson</button>
+              <div className="auth-toggle role-toggle" aria-label="Choose account type">
+                <button type="button" className={role === "contractor" ? "selected" : ""} aria-pressed={role === "contractor"} onClick={() => setRole("contractor")}>Contractor</button>
+                <button type="button" className={role === "tradesperson" ? "selected" : ""} aria-pressed={role === "tradesperson"} onClick={() => setRole("tradesperson")}>Tradesperson</button>
               </div>
               <small>This choice is permanent after signup.</small>
             </fieldset>
@@ -3680,9 +3680,9 @@ function OnboardingFlow({
                 <span>This role was selected at signup and cannot be changed.</span>
               </div>
             ) : (
-              <div className="auth-toggle" aria-label="Choose account type">
-                <button type="button" className={role === "contractor" ? "selected" : ""} onClick={() => setRole("contractor")}>Contractor</button>
-                <button type="button" className={role === "tradesperson" ? "selected" : ""} onClick={() => setRole("tradesperson")}>Tradesperson</button>
+              <div className="auth-toggle role-toggle" aria-label="Choose account type">
+                <button type="button" className={role === "contractor" ? "selected" : ""} aria-pressed={role === "contractor"} onClick={() => setRole("contractor")}>Contractor</button>
+                <button type="button" className={role === "tradesperson" ? "selected" : ""} aria-pressed={role === "tradesperson"} onClick={() => setRole("tradesperson")}>Tradesperson</button>
               </div>
             )}
           </section>
