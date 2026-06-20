@@ -1,9 +1,9 @@
 # RIVT Build State
 
 Last updated: 2026-06-20 America/New_York
-Current gate: Gate A messaging and in-app notifications
-Current phase: Packet 05 deployed; production workflow smoke blocked on access
-Active packet: `docs/delivery/packets/05_MESSAGING_NOTIFICATIONS.md`
+Current gate: Gate A project records and completion
+Current phase: Packet 05 accepted; Packet 06 ready
+Active packet: `docs/delivery/packets/06_PROJECT_COMPLETION.md`
 Repository branch: `master`
 Production release commit: `338ce7f7ec921fbcfafe20b4f9b96ecbf3053224`
 
@@ -233,13 +233,17 @@ Run on 2026-06-20 from `master`:
 - Railway deployment: `16fb271d-9dc0-4d85-9a55-4765acb07f43` (success)
 - `https://rivt.pro/api/health`: 200, source commit matched the release, PostgreSQL and S3-compatible storage healthy.
 - Anonymous `/api/storage` and `/api/readiness`: 401, preserving authenticated diagnostics.
-- Production startup reached a healthy container after migration apply; authenticated readiness was not captured because no valid production test session was available.
-- Full live workflow smoke `npm run smoke:messaging:live` could not complete from the local machine: `railway run` receives the private `postgres.railway.internal` host, Railway SSH command execution hung, `psql` is not installed for `railway connect`, and the stored `rivttesting@gmail.com` credentials returned 401.
-- Packet 05 is deployed but not accepted. The acceptance boundary remains blocked until a working production test account/invite or usable DB tunnel/public Postgres smoke path is available.
+- Live smoke `packet05-20260620123233-891897`: disposable contractor, tradesperson, and outsider signup/onboarding passed; readiness confirmed migration `0006_messaging_notifications`; accepted active work opened one conversation; outsider conversation list was empty and direct message access returned 404; message send was idempotent; unread count survived contractor relogin; notifications excluded private address details; conversation read cleared unread state; notification read-all passed; mute suppressed a second message notification; report creation passed; block enforcement returned `ACCOUNT_BLOCKED`; two messages and one report persisted; disposable smoke accounts were closed.
+- Dedicated reusable production test accounts were created for future manual/smoke checks: one contractor account and one tradesperson account, both email-verified, active, onboarded, and profile-published.
+- Added reusable live-smoke command: `npm run smoke:messaging:live`.
+
+## Packet 05 Acceptance
+
+Packet 05 is accepted in production for accepted-work conversations, durable messages, unread/read state, in-app notifications, mute, report, block enforcement, and private-address-safe notification content. Project records, completion evidence, reviews, support/admin, and full launch hardening remain later packets and must not be represented as production-ready.
 
 ## Next Exact Task
 
-Unblock Packet 05 production acceptance by providing either a working production test account plus an approved pilot invite path, or a usable Postgres access path for the smoke script. Then verify migration `0006_messaging_notifications`, run `npm run smoke:messaging:live`, record production workflow evidence, and only then move to `docs/delivery/packets/06_PROJECT_COMPLETION.md`.
+Start `docs/delivery/packets/06_PROJECT_COMPLETION.md`: implement server-owned project records, authorized closeout evidence uploads/notes/checklists, contractor confirmation/dispute, reproducible closeout reports, and acceptance smoke without adding reviews/admin scope.
 
 ## Blocking Founder Decisions
 
