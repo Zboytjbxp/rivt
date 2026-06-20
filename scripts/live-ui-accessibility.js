@@ -235,7 +235,9 @@ async function collectUiAudit(page, label) {
       smallTargets: controls.filter((control) => control.width < 44 || control.height < 44).slice(0, 20),
       overflow,
       bodyStart: bodyText.slice(0, 500),
-      frameworkOverlay: /vite|webpack|next\.js|runtime error|failed to compile/i.test(bodyText),
+      frameworkOverlay: Boolean(document.querySelector("vite-error-overlay, nextjs-portal, [data-nextjs-dialog-overlay]"))
+        || /\b(Vite|Webpack|Next\.js)\b.*\b(error|overlay)\b/i.test(bodyText)
+        || /\b(Runtime Error|Failed to compile|Internal server error)\b/i.test(bodyText),
     };
   }, label);
 }
