@@ -2,10 +2,10 @@
 
 Last updated: 2026-06-21 America/New_York
 Current gate: Gate A launch hardening
-Current phase: Packet 08 controllable UX hardening, Trade News polish, and production UI smoke regression fixes verified; full Gate A approval remains blocked
+Current phase: Packet 08 controllable UX hardening, Trade News polish, production UI smoke regression fixes, and Tools studio release verified; full Gate A approval remains blocked
 Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
-Production release commit: `4fe22bc6a3cbbd146ac286869562f4c3e968ece1`
+Production release commit: `24c37ac7dfc086903c688ec64df684f42e35db6b`
 
 ## Source State
 
@@ -539,6 +539,21 @@ Completed on 2026-06-21 as controllable Gate A hardening:
 - Every scenario reported top-bar search/messages/notifications/profile present, reduced-motion enabled, keyboard focus reaching named top-bar and primary navigation targets, `consoleWarningsOrErrors: 0`, and `smallTargetCount: 0`.
 - Post-fix production checks passed: `npm run monitor:production` reported exact source `4fe22bc6a3cbbd146ac286869562f4c3e968ece1`, PostgreSQL/S3-compatible dependencies healthy, operational controls disabled, and seven anonymous private-route checks; `npm run smoke:gate-a:live` passed inside Railway with migration `0009_durable_rate_limits`, seven anonymous private-route checks returning 401, zero seed/demo findings, 3 active accounts, 0 public network profiles, 0 open jobs, 2 open support cases, 0 active restrictions, 115 quarantined legacy app-state rows, and 78 rate-limit windows.
 - Required local gates passed after each runtime fix: `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test`, `npm run test:e2e`, and `npm audit --omit=dev`. DB-backed local integration tests still skip on this workstation because `TEST_DATABASE_URL` is intentionally absent.
+
+## Packet 08 Tools Studio Release
+
+Completed on 2026-06-21 as controllable UX hardening after the founder asked to flesh out Tools while continuing Gate A:
+
+- Rebuilt the visible Tools tab into a working utility studio instead of a launchpad with dead-end actions.
+- Added standalone local/browser tools for Heavy 16th field calculations, estimate building, invoice drafting, and material takeoff.
+- Kept Records server-backed and tied to accepted active work/project records; Records still opens from Tools but does not fabricate project or payment rows.
+- Kept invoice drafting honest for Gate A: users can copy or download a draft, but the UI explicitly states that email/text delivery is not production-ready. No fake SMS, fake email delivery, fake payment processing, escrow, payroll, or 1099 behavior was added.
+- Updated desktop/mobile E2E coverage so `/app/tools` opens every new tool surface and verifies the no-fake-delivery invoice note.
+- Rendered local Tools QA with Playwright at 390x844 mobile and 1440x900 desktop, including hub, calculator, and invoice surfaces. The pass found no horizontal overflow and zero console errors. Screenshot evidence was saved outside the repo at `C:\Users\zboyt\AppData\Local\Temp\rivt-tools-visual-qa`.
+- Required local gates passed after this slice: `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test`, `npm run test:e2e`, and `npm audit --omit=dev`. DB-backed local integration tests still skip on this workstation because `TEST_DATABASE_URL` is intentionally absent.
+- Deployed the runtime slice to Railway production as deployment `ac8d1f8d-ac13-424d-b1ba-a4dc0a0ebdde` from commit `24c37ac7dfc086903c688ec64df684f42e35db6b`.
+- Live `https://rivt.pro/api/health` returned 200 with exact build commit `24c37ac7dfc086903c688ec64df684f42e35db6b`; `npm run monitor:production` passed with PostgreSQL/S3-compatible dependencies healthy, operational controls disabled, seven anonymous private-route checks, and 561 ms duration.
+- `npm run smoke:gate-a:live` cannot run directly from this workstation because local execution lacks `DATABASE_URL`, and `railway run` from the workstation still cannot resolve Railway private DNS (`postgres.railway.internal`). This is the same known split-run limitation from the production UI smoke work, not a Tools-specific regression.
 
 ## Next Exact Task
 
