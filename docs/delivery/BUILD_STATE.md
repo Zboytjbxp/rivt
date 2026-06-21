@@ -569,6 +569,20 @@ Completed on 2026-06-21 as a continuation of the Tools buildout:
 - Deployed the runtime slice to Railway production as deployment `83c95b13-a681-4e31-9768-e87aea6f8312` from commit `1679aec006c8cb393b6986aa24ec507c15bc8181`.
 - Live `https://rivt.pro/api/health` returned 200 with exact build commit `1679aec006c8cb393b6986aa24ec507c15bc8181`; `npm run monitor:production` passed with PostgreSQL/S3-compatible dependencies healthy, operational controls disabled, seven anonymous private-route checks, and 464 ms duration.
 
+## Packet 08 UI System Pass
+
+Completed on 2026-06-21 as controllable UI hardening after the founder called out that the app still felt like an AI-generated interface:
+
+- Refined the global V2 visual system with a more disciplined industrial palette, reduced radii, softer surfaces, cleaner shadows, `Instrument Sans`, stronger type hierarchy, and less default card/border noise.
+- Updated the authenticated shell so the sidebar, top bar, global search, mobile header, and main canvas feel like one product system while preserving the approved five primary concepts: Home, Work, Crew, Shop Talk, Tools.
+- Reworked the visible Home, Work, Crew, Inbox, Tools, Records, and Profile surfaces at the CSS/system layer to improve hierarchy, spacing, tap targets, status tabs, rows, cards, tool panels, message bubbles, profile facts, and mobile containment without changing Gate A business logic or adding fake feature success.
+- Preserved the RIVT logo assets and did not regenerate, trace, recolor, or approximate approved marks.
+- Rendered local authenticated UI QA with Playwright fallback because the Browser plugin was not exposed in this session. Desktop and mobile screenshots for Home, Work, Crew, Inbox, Tools, Records, and Profile were saved outside the repo at `C:\Users\zboyt\AppData\Local\Temp\rivt-ui-system-pass`; the pass reported zero page/console errors and no horizontal overflow.
+- Required local gates passed after the UI system pass: `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check`. DB-backed local integration tests still skip on this workstation because `TEST_DATABASE_URL` is intentionally absent.
+- Deployed the runtime slice to Railway production as deployment `747f71f5-f790-4277-8d26-cc50bcdff77a` from commit `8d90ef22be8fee2471435ccf9cab134d04154560`.
+- Live `https://rivt.pro/api/health` returned 200 with exact build commit `8d90ef22be8fee2471435ccf9cab134d04154560`; `npm run monitor:production` passed with PostgreSQL/S3-compatible dependencies healthy, operational controls disabled, seven anonymous private-route checks, and 465 ms duration.
+- This is accepted as controllable UI hardening evidence only. It does not close the remaining Gate A external/manual blockers.
+
 ## Next Exact Task
 
 Continue Gate A launch hardening with the remaining external and manual blockers: configure real dedicated error monitoring and paging/escalation, fill backup owner/support-hours/approval fields in `docs/operations/incident-routing.json`, approve RPO/RTO/retention/cadence fields in `docs/operations/recovery-policy.json`, run an incident rehearsal, then pass `npm run incident:readiness -- --require-ready` and `npm run launch:readiness -- --require-ready`. Complete the physical/deeper manual accessibility-device matrix before named-cohort launch.
