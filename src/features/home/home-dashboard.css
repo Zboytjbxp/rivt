@@ -128,7 +128,7 @@
 
 .v2-today-actions button {
   display: inline-flex;
-  min-height: 40px;
+  min-height: 44px;
   align-items: center;
   justify-content: center;
   gap: 7px;
@@ -153,6 +153,11 @@
 .v2-attention-panel > header button,
 .v2-next-work > header button,
 .v2-network-pulse > header button {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 10px;
   border: 0;
   background: transparent;
   color: var(--v2-text-muted);

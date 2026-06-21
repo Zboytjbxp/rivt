@@ -189,6 +189,7 @@ async function collectUiAudit(page, label) {
       return {
         name: textOf(el),
         tag: el.tagName.toLowerCase(),
+        className: typeof el.className === "string" ? el.className : "",
         width: Math.round(rect.width),
         height: Math.round(rect.height),
       };
