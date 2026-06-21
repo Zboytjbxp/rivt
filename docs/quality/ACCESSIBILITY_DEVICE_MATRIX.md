@@ -7,9 +7,9 @@ Gate A status: partial evidence only. This report does not approve named custome
 ## Live Target
 
 - URL: `https://rivt.pro/`
-- Live health checked after deploy: `2026-06-21T00:50:27Z`
-- Live source commit reported by `/api/health`: `f846f700ee23c911a250b16afe1623723c9e760a`
-- Railway deployment: `a229d32c-ebeb-48b5-a239-9983c28ace53`
+- Live health checked after deploy: `2026-06-21T00:58:17Z`
+- Live source commit reported by `/api/health`: `f5a68d9c16364c94dd727bb91e03a25f33e283df`
+- Railway deployment: `b241d02b-04bf-42d8-a462-243d06f4ab4a`
 - Browser tool: Codex in-app Browser controlled by Playwright runtime
 
 ## Completed Smoke Coverage
@@ -34,7 +34,7 @@ Gate A status: partial evidence only. This report does not approve named custome
 - No horizontal page overflow was found in the tested public shell breakpoints.
 - No live console warnings or errors were observed in the tested public shell breakpoints.
 - Follow-up finding: authenticated shell smoke initially found sub-44px Work status tabs and Shop Talk action buttons. Fixes raised `.v2-section-tabs button`, `.v2-detail-tabs button`, and shared Shop Talk action buttons to a `44px` minimum width.
-- Post-deploy authenticated verification: live smoke `ui-a11y-20260621005027-1e207f` passed at 390x844 contractor, 390x844 tradesperson, and 1366x768 contractor with `consoleWarningsOrErrors: 0` and `smallTargetCount: 0` on all three viewports. This smoke now fails on missing top-bar controls, post-login console warnings/errors, sub-44px controls, unnamed keyboard focus targets, and keyboard focus failing to reach search or primary navigation within 32 Tab presses. Disposable accounts were closed after the run.
+- Post-deploy authenticated verification: live smoke `ui-a11y-20260621005817-8a87eb` passed at 390x844 contractor, 390x844 tradesperson, and 1366x768 contractor with `consoleWarningsOrErrors: 0` and `smallTargetCount: 0` on all three viewports. This smoke now fails on missing top-bar controls, post-login console warnings/errors, sub-44px controls, unnamed keyboard focus targets, and keyboard focus failing to reach search or primary navigation within 32 Tab presses. Disposable accounts were closed after the run.
 
 ## Blocked Coverage
 

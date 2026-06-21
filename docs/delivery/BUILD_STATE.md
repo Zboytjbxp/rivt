@@ -5,7 +5,7 @@ Current gate: Gate A launch hardening
 Current phase: Packet 08 authenticated accessibility smoke deployed; full Gate A approval remains blocked
 Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
-Production release commit: `f846f700ee23c911a250b16afe1623723c9e760a`
+Production release commit: `f5a68d9c16364c94dd727bb91e03a25f33e283df`
 
 ## Source State
 
@@ -410,12 +410,12 @@ Local verification for this slice:
 
 Deployed on 2026-06-20:
 
-- Source commit: `f846f700ee23c911a250b16afe1623723c9e760a`
-- Railway deployment: `a229d32c-ebeb-48b5-a239-9983c28ace53`
+- Source commit: `f5a68d9c16364c94dd727bb91e03a25f33e283df`
+- Railway deployment: `b241d02b-04bf-42d8-a462-243d06f4ab4a`
 - `https://rivt.pro/api/health`: 200, source commit matched the release, PostgreSQL and S3-compatible storage healthy.
-- Authenticated UI smoke `ui-a11y-20260621005027-1e207f` created disposable contractor and tradesperson accounts, tested contractor mobile, tradesperson mobile, and contractor desktop shells, then closed both accounts.
+- Authenticated UI smoke `ui-a11y-20260621005817-8a87eb` created disposable contractor and tradesperson accounts, tested contractor mobile, tradesperson mobile, and contractor desktop shells, then closed both accounts.
 - Tested shells had top-bar search, messages, notifications, and profile controls; no role toggle; no More tab; no horizontal overflow; `consoleWarningsOrErrors: 0`; and `smallTargetCount: 0` on all tested viewports. The smoke uses reduced-motion browser preference and now fails on missing top-bar controls, post-login console warnings/errors, sub-44px controls, unnamed keyboard focus targets, or keyboard focus not reaching search/primary navigation.
-- Live hardening audit passed after deployment with exact source `f846f700ee23c911a250b16afe1623723c9e760a`, migration `0009_durable_rate_limits`, seven anonymous private-route checks returning 401, zero seed/demo findings, and counts of 3 active accounts, 0 public network profiles, 0 open jobs, 2 open support cases, 0 active restrictions, 115 quarantined legacy app-state rows, and 49 rate-limit windows.
+- Live hardening audit passed after deployment with exact source `f5a68d9c16364c94dd727bb91e03a25f33e283df`, migration `0009_durable_rate_limits`, seven anonymous private-route checks returning 401, zero seed/demo findings, and counts of 3 active accounts, 0 public network profiles, 0 open jobs, 2 open support cases, 0 active restrictions, 115 quarantined legacy app-state rows, and 49 rate-limit windows.
 
 ## Packet 08 Synthetic Monitoring Progress
 
@@ -424,7 +424,7 @@ Implemented on 2026-06-20:
 - Added `scripts/production-synthetic-monitor.js` and `npm run monitor:production`.
 - Added `.github/workflows/production-synthetic.yml` to run the public production synthetic check every 30 minutes and on manual dispatch.
 - The monitor verifies public health, deployed source presence, managed PostgreSQL/S3-compatible dependency status, invite-gated email/password provider configuration, operational-control state, and seven anonymous private-route 401 boundaries.
-- Local run against `https://rivt.pro` passed with source `5f3334b231114efb377899ea79bad6a48b353a21`, operational controls disabled, seven anonymous private checks, and a 531 ms duration.
+- Latest local run against `https://rivt.pro` passed with source `f5a68d9c16364c94dd727bb91e03a25f33e283df`, operational controls disabled, seven anonymous private checks, and a 554 ms duration.
 - This is partial monitoring progress only. Dedicated error monitoring, alert routing, paging destination, incident owner, and rehearsal remain launch blockers.
 
 ## Packet 08 Restore Drill Tooling Progress
@@ -435,6 +435,7 @@ Implemented on 2026-06-20:
 - The verifier requires `CONFIRM_RESTORE_TARGET_ISOLATED=true` and `RESTORE_DATABASE_URL`; it refuses to run without an isolated target.
 - The verifier checks migration status, requires migration `0009_durable_rate_limits`, verifies critical Gate A table presence, counts rows, can compare source/target counts with `RESTORE_SOURCE_DATABASE_URL`, and reports duration.
 - Local syntax, lint, security lint, build, tests, e2e, and audit pass. A no-target run correctly fails with `RESTORE_DATABASE_URL is required`.
+- Deployed Railway runtime also correctly refuses `npm run restore:drill` without isolated `RESTORE_DATABASE_URL`.
 - This is tooling progress only. Gate A remains blocked until a real isolated PostgreSQL target is provisioned, restored, verified, timed, and recorded.
 
 ## Next Exact Task
