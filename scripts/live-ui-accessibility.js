@@ -243,8 +243,65 @@ async function collectUiAudit(page, label) {
   }, label);
 }
 
+async function collectKeyboardAudit(page, label) {
+  await page.evaluate(() => {
+    window.scrollTo(0, 0);
+    if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
+  });
+
+  const focusSteps = [];
+  for (let index = 0; index < 32; index += 1) {
+    await page.keyboard.press("Tab");
+    const step = await page.evaluate(() => {
+      function textOf(el) {
+        return (el.getAttribute("aria-label") || el.getAttribute("title") || el.textContent || el.getAttribute("placeholder") || "")
+          .replace(/\s+/g, " ")
+          .trim();
+      }
+      function visible(el) {
+        const rect = el.getBoundingClientRect();
+        const style = window.getComputedStyle(el);
+        return rect.width > 0 && rect.height > 0 && style.visibility !== "hidden" && style.display !== "none";
+      }
+      const element = document.activeElement;
+      if (!(element instanceof HTMLElement) || element === document.body || element === document.documentElement) return null;
+      const rect = element.getBoundingClientRect();
+      return {
+        name: textOf(element),
+        tag: element.tagName.toLowerCase(),
+        className: typeof element.className === "string" ? element.className : "",
+        visible: visible(element),
+        width: Math.round(rect.width),
+        height: Math.round(rect.height),
+        left: Math.round(rect.left),
+        top: Math.round(rect.top),
+      };
+    });
+    if (step) focusSteps.push(step);
+  }
+
+  const visibleFocusSteps = focusSteps.filter((step) => step.visible);
+  assert.ok(visibleFocusSteps.length > 0, `${label} did not expose any visible keyboard focus targets.`);
+  const unnamedVisibleFocus = visibleFocusSteps.filter((step) => !step.name);
+  assert.deepEqual(unnamedVisibleFocus, [], `${label} has visible keyboard focus targets without names: ${JSON.stringify(unnamedVisibleFocus)}`);
+  assert.ok(
+    visibleFocusSteps.some((step) => /search/i.test(step.name)),
+    `${label} keyboard focus did not reach the top-bar search control within 32 Tab presses.`,
+  );
+  assert.ok(
+    visibleFocusSteps.some((step) => /home|work|crew|shop talk|tools/i.test(step.name)),
+    `${label} keyboard focus did not reach primary navigation within 32 Tab presses.`,
+  );
+
+  return {
+    label,
+    focusStepCount: visibleFocusSteps.length,
+    firstFocusNames: visibleFocusSteps.map((step) => step.name).slice(0, 12),
+  };
+}
+
 async function loginAndAudit(browser, account, viewport) {
-  const context = await browser.newContext({ viewport });
+  const context = await browser.newContext({ viewport, reducedMotion: "reduce" });
   const page = await context.newPage();
   const logs = [];
   page.on("console", (message) => {
@@ -285,11 +342,14 @@ async function loginAndAudit(browser, account, viewport) {
       }
     }
     assert.deepEqual(logs, [], `${account.role}-${viewport.width}x${viewport.height} produced post-login console warnings/errors: ${JSON.stringify(logs)}`);
+    const keyboard = await collectKeyboardAudit(page, `${account.role}-${viewport.width}x${viewport.height}-keyboard`);
 
     return {
       role: account.role,
       viewport,
       logs,
+      reducedMotion: true,
+      keyboard,
       audits: audits.map((audit) => ({
         label: audit.label,
         url: audit.url,
@@ -341,6 +401,8 @@ function summarizeResults({ run, buildCommit, accountsClosed, results, mode = "f
       role: result.role,
       viewport: result.viewport,
       auditCount: result.audits.length,
+      reducedMotion: result.reducedMotion,
+      keyboard: result.keyboard,
       consoleWarningsOrErrors: result.logs.length,
       consoleSamples: result.logs.slice(0, 3),
       topBarSignals: result.audits[0]?.topBarSignals ?? null,
