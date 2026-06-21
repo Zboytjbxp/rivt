@@ -10,10 +10,13 @@ import {
   Users,
   Wrench,
 } from "lucide-react";
+import { useState } from "react";
 import type { Job, Role } from "../../types";
 import type { PrimaryDestination } from "../../app-shell/types";
 import { EmptyState, PageHeader } from "../../components/ui";
 import "./home-dashboard.css";
+
+type AvailabilityStatus = "available" | "limited" | "unavailable";
 
 interface HomeDashboardProps {
   role: Role;
@@ -26,9 +29,13 @@ interface HomeDashboardProps {
   pendingPaymentCount: number;
   communityCount: number;
   shoutOutCount: number;
+  availabilityStatus: AvailabilityStatus;
+  primaryTrade: string;
+  newsCount: number;
   onPostJob: () => void;
   onOpenJob: (jobId: number) => void;
   onNavigate: (destination: PrimaryDestination) => void;
+  onSetAvailability: (status: AvailabilityStatus) => Promise<void>;
 }
 
 function currency(value: number) {
@@ -50,11 +57,75 @@ export function HomeDashboard({
   pendingPaymentCount,
   communityCount,
   shoutOutCount,
+  availabilityStatus,
+  primaryTrade,
+  newsCount,
   onPostJob,
   onOpenJob,
   onNavigate,
+  onSetAvailability,
 }: HomeDashboardProps) {
   const firstName = name.trim().split(/\s+/)[0] || "there";
+  const [savingAvailability, setSavingAvailability] = useState<AvailabilityStatus | null>(null);
+  const [availabilityMessage, setAvailabilityMessage] = useState("");
+  const moneySignal = activeJob ? currency(activeJob.pay) : role === "contractor" ? "Post work" : `${upcomingJobs.length} matches`;
+  const workSignal = role === "contractor"
+    ? `${applicationCount || "No"} applicants`
+    : `${upcomingJobs.length} jobs nearby`;
+  const availabilityCopy = {
+    available: role === "contractor" ? "Open to crew conversations" : "Shown as ready for work",
+    limited: role === "contractor" ? "Some capacity today" : "Available with limits",
+    unavailable: role === "contractor" ? "Booked for now" : "Hidden from quick-availability signals",
+  } satisfies Record<AvailabilityStatus, string>;
+  const availabilityOptions: Array<{ status: AvailabilityStatus; label: string; detail: string }> = [
+    { status: "available", label: "Available", detail: role === "contractor" ? "Taking conversations" : "Ready for work" },
+    { status: "limited", label: "Limited", detail: "Some openings" },
+    { status: "unavailable", label: "Booked", detail: "Not looking today" },
+  ];
+  const dailySignals = [
+    {
+      label: role === "contractor" ? "Crew signal" : "Work signal",
+      value: workSignal,
+      detail: role === "contractor" ? "Review applicants or invite saved people" : "Check jobs that fit your trade and area",
+      action: "Open Work",
+      destination: "work" as PrimaryDestination,
+    },
+    {
+      label: "Money signal",
+      value: moneySignal,
+      detail: pendingPaymentCount ? `${pendingPaymentCount} payment record${pendingPaymentCount === 1 ? "" : "s"} need review` : "Invoices and records are current",
+      action: "Open Tools",
+      destination: "tools" as PrimaryDestination,
+    },
+    {
+      label: "Network signal",
+      value: `${shoutOutCount} shout-outs`,
+      detail: role === "contractor" ? "Keep reliable subs close" : "Build proof other contractors can trust",
+      action: "Open Crew",
+      destination: "crew" as PrimaryDestination,
+    },
+    {
+      label: "Field signal",
+      value: `${communityCount} posts`,
+      detail: `${newsCount} trade updates plus questions in Shop Talk`,
+      action: "Read",
+      destination: "shop-talk" as PrimaryDestination,
+    },
+  ];
+
+  async function handleAvailability(status: AvailabilityStatus) {
+    if (status === availabilityStatus || savingAvailability) return;
+    setSavingAvailability(status);
+    setAvailabilityMessage("");
+    try {
+      await onSetAvailability(status);
+      setAvailabilityMessage("Availability saved to your profile.");
+    } catch (error) {
+      setAvailabilityMessage(error instanceof Error ? error.message : "Availability could not be saved.");
+    } finally {
+      setSavingAvailability(null);
+    }
+  }
 
   return (
     <section className="v2-home-page" aria-label="Home">
@@ -68,6 +139,26 @@ export function HomeDashboard({
           <button type="button" className="v2-primary-button" onClick={() => onNavigate("work")}><BriefcaseBusiness size={17} /> Find work</button>
         )}
       />
+
+      <section className="v2-daily-brief" aria-label="RIVT Daily">
+        <div className="v2-daily-brief-copy">
+          <span>RIVT Daily</span>
+          <h2>Make money, protect the record, and stay visible.</h2>
+          <p>
+            A morning check-in for work, crew, trade news, messages, and the tools that keep the job moving.
+          </p>
+        </div>
+        <div className="v2-daily-signal-grid">
+          {dailySignals.map((signal) => (
+            <button type="button" key={signal.label} onClick={() => onNavigate(signal.destination)}>
+              <span>{signal.label}</span>
+              <strong>{signal.value}</strong>
+              <small>{signal.detail}</small>
+              <em>{signal.action} <ArrowRight size={13} /></em>
+            </button>
+          ))}
+        </div>
+      </section>
 
       <div className="v2-home-focus-grid">
         <article className="v2-today-panel">
@@ -106,24 +197,57 @@ export function HomeDashboard({
           )}
         </article>
 
-        <aside className="v2-attention-panel">
-          <header><span>Needs attention</span><button type="button" onClick={() => onNavigate("messages")}>Open messages</button></header>
-          <button type="button" onClick={() => onNavigate("work")}>
-            <span className="v2-attention-icon"><Users size={17} /></span>
-            <span><strong>{applicationCount || "No"} {role === "contractor" ? "applicants" : "applications"}</strong><small>{applicationCount ? "Review the latest activity" : "Nothing waiting right now"}</small></span>
-            <ArrowRight size={15} />
-          </button>
-          <button type="button" onClick={() => onNavigate("messages")}>
-            <span className="v2-attention-icon"><MessageSquareText size={17} /></span>
-            <span><strong>{unreadCount || "No"} unread updates</strong><small>{unreadCount ? "Messages and job activity" : "You're caught up"}</small></span>
-            <ArrowRight size={15} />
-          </button>
-          <button type="button" onClick={() => onNavigate("tools")}>
-            <span className="v2-attention-icon"><CircleDollarSign size={17} /></span>
-            <span><strong>{pendingPaymentCount || "No"} pending payments</strong><small>{pendingPaymentCount ? "Review payment records" : "Payment log is current"}</small></span>
-            <ArrowRight size={15} />
-          </button>
-        </aside>
+        <div className="v2-home-side-stack">
+          <aside className="v2-availability-radar">
+            <header>
+              <div>
+                <span>Availability radar</span>
+                <strong>{availabilityCopy[availabilityStatus]}</strong>
+              </div>
+              <small>{primaryTrade}</small>
+            </header>
+            <p>
+              {role === "contractor"
+                ? "Let nearby tradespeople know whether you are open to crew conversations and upcoming help."
+                : "Set the signal contractors see before they message, invite, or save your profile."}
+            </p>
+            <div className="v2-availability-options" role="group" aria-label="Daily availability">
+              {availabilityOptions.map((option) => (
+                <button
+                  key={option.status}
+                  type="button"
+                  className={availabilityStatus === option.status ? "active" : ""}
+                  aria-pressed={availabilityStatus === option.status}
+                  disabled={Boolean(savingAvailability)}
+                  onClick={() => void handleAvailability(option.status)}
+                >
+                  <strong>{savingAvailability === option.status ? "Saving" : option.label}</strong>
+                  <small>{option.detail}</small>
+                </button>
+              ))}
+            </div>
+            {availabilityMessage && <small className="v2-availability-message">{availabilityMessage}</small>}
+          </aside>
+
+          <aside className="v2-attention-panel">
+            <header><span>Needs attention</span><button type="button" onClick={() => onNavigate("messages")}>Open messages</button></header>
+            <button type="button" onClick={() => onNavigate("work")}>
+              <span className="v2-attention-icon"><Users size={17} /></span>
+              <span><strong>{applicationCount || "No"} {role === "contractor" ? "applicants" : "applications"}</strong><small>{applicationCount ? "Review the latest activity" : "Nothing waiting right now"}</small></span>
+              <ArrowRight size={15} />
+            </button>
+            <button type="button" onClick={() => onNavigate("messages")}>
+              <span className="v2-attention-icon"><MessageSquareText size={17} /></span>
+              <span><strong>{unreadCount || "No"} unread updates</strong><small>{unreadCount ? "Messages and job activity" : "You're caught up"}</small></span>
+              <ArrowRight size={15} />
+            </button>
+            <button type="button" onClick={() => onNavigate("tools")}>
+              <span className="v2-attention-icon"><CircleDollarSign size={17} /></span>
+              <span><strong>{pendingPaymentCount || "No"} pending payments</strong><small>{pendingPaymentCount ? "Review payment records" : "Payment log is current"}</small></span>
+              <ArrowRight size={15} />
+            </button>
+          </aside>
+        </div>
       </div>
 
       <div className="v2-home-secondary-grid">
@@ -132,7 +256,7 @@ export function HomeDashboard({
           <div className="v2-next-work-list">
             {upcomingJobs.slice(0, 3).map((job) => (
               <button type="button" key={job.id} onClick={() => onOpenJob(job.id)}>
-                <span><small>{job.trade} · {job.location}</small><strong>{job.title}</strong></span>
+                <span><small>{job.trade} - {job.location}</small><strong>{job.title}</strong></span>
                 <span><strong>{currency(job.pay)}</strong><small>{job.status}</small></span>
                 <ArrowRight size={15} />
               </button>

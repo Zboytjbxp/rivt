@@ -32,7 +32,9 @@
   gap: 18px;
 }
 
+.v2-daily-brief,
 .v2-today-panel,
+.v2-availability-radar,
 .v2-attention-panel,
 .v2-next-work,
 .v2-network-pulse {
@@ -40,6 +42,105 @@
   border-radius: var(--v2-radius-lg);
   background: color-mix(in srgb, var(--v2-surface) 92%, transparent);
   box-shadow: var(--v2-shadow-card);
+}
+
+.v2-daily-brief {
+  display: grid;
+  grid-template-columns: minmax(0, 0.75fr) minmax(0, 1.25fr);
+  gap: 18px;
+  align-items: stretch;
+  padding: 18px;
+  border-color: color-mix(in srgb, var(--v2-accent) 18%, var(--v2-border));
+  background:
+    radial-gradient(circle at top left, color-mix(in srgb, var(--v2-accent) 15%, transparent), transparent 34%),
+    color-mix(in srgb, var(--v2-surface) 96%, transparent);
+}
+
+.v2-daily-brief-copy {
+  display: grid;
+  align-content: center;
+  min-height: 160px;
+}
+
+.v2-daily-brief-copy > span,
+.v2-availability-radar header span {
+  color: var(--v2-accent);
+  font-size: 10px;
+  font-weight: 850;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.v2-daily-brief-copy h2 {
+  max-width: 540px;
+  margin: 8px 0 10px;
+  font-size: clamp(28px, 4vw, 48px);
+  font-weight: 820;
+  line-height: 0.96;
+  text-wrap: balance;
+}
+
+.v2-daily-brief-copy p {
+  max-width: 560px;
+  margin: 0;
+  color: var(--v2-text-muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.v2-daily-signal-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.v2-daily-signal-grid button {
+  display: grid;
+  min-height: 156px;
+  gap: 7px;
+  align-content: start;
+  padding: 14px;
+  border: 1px solid color-mix(in srgb, var(--v2-border) 62%, transparent);
+  border-radius: var(--v2-radius-md);
+  background: color-mix(in srgb, var(--v2-surface-muted) 74%, transparent);
+  color: var(--v2-text);
+  text-align: left;
+}
+
+.v2-daily-signal-grid button:hover {
+  border-color: color-mix(in srgb, var(--v2-accent) 36%, var(--v2-border));
+  background: color-mix(in srgb, var(--v2-accent-soft) 52%, var(--v2-surface-muted));
+}
+
+.v2-daily-signal-grid span {
+  color: var(--v2-text-muted);
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.v2-daily-signal-grid strong {
+  font-size: clamp(18px, 2.2vw, 26px);
+  font-weight: 820;
+  line-height: 1;
+}
+
+.v2-daily-signal-grid small {
+  color: var(--v2-text-muted);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.v2-daily-signal-grid em {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  align-self: end;
+  margin-top: auto;
+  color: var(--v2-accent);
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 800;
 }
 
 .v2-today-panel {
@@ -159,6 +260,101 @@
   overflow: hidden;
 }
 
+.v2-home-side-stack {
+  display: grid;
+  gap: 18px;
+  align-content: start;
+}
+
+.v2-availability-radar {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--v2-surface-muted) 65%, transparent), transparent),
+    color-mix(in srgb, var(--v2-surface) 94%, transparent);
+}
+
+.v2-availability-radar header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.v2-availability-radar header strong {
+  display: block;
+  margin-top: 5px;
+  font-size: 15px;
+  line-height: 1.25;
+}
+
+.v2-availability-radar header small {
+  display: inline-flex;
+  min-height: 28px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 9px;
+  border-radius: 999px;
+  background: var(--v2-accent-soft);
+  color: var(--v2-accent);
+  font-size: 10px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.v2-availability-radar p {
+  margin: 0;
+  color: var(--v2-text-muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.v2-availability-options {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.v2-availability-options button {
+  display: grid;
+  min-height: 62px;
+  gap: 3px;
+  padding: 10px;
+  border: 1px solid color-mix(in srgb, var(--v2-border) 68%, transparent);
+  border-radius: var(--v2-radius-sm);
+  background: color-mix(in srgb, var(--v2-surface-muted) 70%, transparent);
+  color: var(--v2-text);
+  text-align: left;
+}
+
+.v2-availability-options button.active {
+  border-color: var(--v2-accent);
+  background: var(--v2-accent-soft);
+  color: var(--v2-accent);
+}
+
+.v2-availability-options button:disabled {
+  cursor: progress;
+  opacity: 0.72;
+}
+
+.v2-availability-options strong {
+  font-size: 12px;
+  font-weight: 820;
+}
+
+.v2-availability-options small {
+  color: var(--v2-text-muted);
+  font-size: 10px;
+}
+
+.v2-availability-message {
+  color: var(--v2-success);
+  font-size: 11px;
+  font-weight: 750;
+}
+
 .v2-attention-panel > header button,
 .v2-next-work > header button,
 .v2-network-pulse > header button {
@@ -271,6 +467,14 @@
 }
 
 @media (max-width: 1040px) {
+  .v2-daily-brief {
+    grid-template-columns: 1fr;
+  }
+
+  .v2-daily-signal-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .v2-home-focus-grid,
   .v2-home-secondary-grid {
     grid-template-columns: 1fr;
@@ -288,6 +492,31 @@
 
   .v2-home-header p {
     margin-top: 4px;
+  }
+
+  .v2-daily-brief {
+    gap: 12px;
+    padding: 14px;
+  }
+
+  .v2-daily-brief-copy {
+    min-height: 0;
+  }
+
+  .v2-daily-brief-copy h2 {
+    font-size: 30px;
+  }
+
+  .v2-daily-signal-grid button {
+    min-height: 132px;
+  }
+
+  .v2-home-side-stack {
+    gap: 14px;
+  }
+
+  .v2-availability-options {
+    grid-template-columns: 1fr;
   }
 
   .v2-today-job {
@@ -341,11 +570,30 @@
     color: #ffffff;
   }
 
+  .v2-daily-signal-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .v2-daily-signal-grid button {
+    min-height: 118px;
+    padding: 12px;
+  }
+
   .v2-today-job {
     display: grid;
   }
 
   .v2-today-job > strong {
     font-size: 18px;
+  }
+}
+
+@media (max-width: 360px) {
+  .v2-daily-signal-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .v2-daily-signal-grid button {
+    min-height: auto;
   }
 }

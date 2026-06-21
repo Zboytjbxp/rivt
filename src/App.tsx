@@ -2386,6 +2386,27 @@ function App() {
     addActivity("Profile saved", "Your network profile and service area are up to date.", "success");
   }
 
+  async function handleSetAvailability(availabilityStatus: CanonicalAccount["profile"]["availabilityStatus"]) {
+    const response = await fetch(apiPath("/api/v1/profile"), {
+      method: "PATCH",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ availabilityStatus }),
+    });
+    const body = await response.json().catch(() => ({})) as { error?: { message?: string } };
+    if (!response.ok) throw new Error(body.error?.message || "Availability could not be saved.");
+    await refreshCanonicalAccount();
+    addActivity(
+      "Availability updated",
+      availabilityStatus === "available"
+        ? "Your profile is marked available for new conversations."
+        : availabilityStatus === "limited"
+          ? "Your profile is marked limited for new conversations."
+          : "Your profile is marked booked for now.",
+      "success",
+    );
+  }
+
   async function handleSetProfileVisibility(visibility: "private" | "network") {
     const response = await fetch(apiPath(`/api/v1/profile/${visibility === "network" ? "publish" : "unpublish"}`), {
       method: "POST",
@@ -2967,9 +2988,13 @@ function App() {
             pendingPaymentCount={paymentRecords.filter((record) => record.status === "Payment pending").length}
             communityCount={communityPosts.length}
             shoutOutCount={shoutOuts.length}
+            availabilityStatus={canonicalAccount?.profile.availabilityStatus ?? "available"}
+            primaryTrade={canonicalAccount?.profile.trades.find((tradeItem) => tradeItem.primary)?.name ?? accountProfile.specialties[0] ?? "General trades"}
+            newsCount={seedNews.length}
             onPostJob={openCreateJob}
             onOpenJob={openJob}
             onNavigate={(destination) => handleNavigate(defaultViewForDestination(destination))}
+            onSetAvailability={handleSetAvailability}
           />
         ) : activeView === "Marketplace" ? (
           <WorkWorkspace

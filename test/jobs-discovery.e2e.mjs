@@ -154,7 +154,24 @@ async function waitForServer() {
 }
 
 async function configurePage(page, jobs, { activeWork = [], project = null } = {}) {
-  await page.route("**/api/v1/me", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: account }) }));
+  let currentAccount = structuredClone(account);
+  await page.route("**/api/v1/me", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: currentAccount }) }));
+  await page.route("**/api/v1/profile", async (route) => {
+    const rawBody = route.request().postData() || "{}";
+    const input = JSON.parse(rawBody);
+    currentAccount = {
+      ...currentAccount,
+      profile: {
+        ...currentAccount.profile,
+        availabilityStatus: input.availabilityStatus ?? currentAccount.profile.availabilityStatus,
+      },
+    };
+    return route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ data: { account: currentAccount }, meta: { requestId: "e2e-profile" } }),
+    });
+  });
   await page.route("**/api/auth/providers", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ providers: {} }) }));
   await page.route("**/api/v1/sessions", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { sessions: [] }, meta: { requestId: "e2e-sessions" } }) }));
   await page.route("**/api/v1/conversations", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { conversations: [] }, meta: { requestId: "e2e-conversations" } }) }));
@@ -249,6 +266,12 @@ try {
     const consoleErrors = [];
     page.on("console", (message) => { if (message.type() === "error") consoleErrors.push(message.text()); });
     await configurePage(page, []);
+    await page.goto(`${baseUrl}/app`, { waitUntil: "networkidle" });
+    await page.getByRole("heading", { name: /Good morning/i }).waitFor();
+    await page.getByText("RIVT Daily", { exact: true }).waitFor();
+    await page.getByText("Availability radar", { exact: true }).waitFor();
+    await page.getByRole("button", { name: /Limited/i }).click();
+    await page.getByText("Availability saved to your profile.", { exact: true }).waitFor();
     await page.goto(`${baseUrl}/app/work`, { waitUntil: "networkidle" });
     await page.getByRole("heading", { name: "Work", exact: true }).waitFor();
     await page.getByText("No open jobs", { exact: true }).waitFor();
