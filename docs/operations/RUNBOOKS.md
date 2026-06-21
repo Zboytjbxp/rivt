@@ -68,6 +68,31 @@ The gate requires:
 
 Current state: primary owner is recorded as Michael at `support@rivt.pro`, and GitHub synthetic issue routing is configured. Backup owner, support hours, dedicated error monitoring, paging, rehearsal, and approvals remain missing; therefore Gate A remains blocked.
 
+## Launch Readiness Gate
+
+Launch readiness combines incident routing with the approved recovery policy. Run:
+
+```text
+npm run launch:readiness -- --json
+```
+
+Before named-cohort launch, the strict gate must pass:
+
+```text
+npm run launch:readiness -- --require-ready
+```
+
+The gate requires everything from incident readiness plus:
+
+- Approved RPO target in minutes and basis.
+- Approved RTO target in minutes and basis.
+- Backup retention window and owner.
+- Restore-drill cadence, owner, and next due date.
+- A passed named backup-artifact restore from the last 30 days.
+- Founder and operations approvals for the recovery policy.
+
+Current state: the latest named backup-artifact restore is recorded in `docs/operations/recovery-policy.json`, but RPO/RTO targets, retention, cadence, and recovery-policy approvals remain missing; therefore Gate A remains blocked.
+
 ## Operational Kill Switches
 
 Use these only during a real incident, launch pause, or controlled maintenance window:
@@ -167,7 +192,7 @@ CONFIRM_RESTORE_TARGET_ISOLATED=true RESTORE_DATABASE_URL="postgresql://restore-
 
 The artifact restore command refuses to run without the isolated-target confirmation, applies migrations when requested, checks table and column parity against the backup artifact, disables user-defined triggers during replay, restores sequences, and fails by default if target counts differ from the backup manifest. Do not persist `RESTORE_DATABASE_URL`, `RESTORE_BACKUP_S3_KEY`, or `CONFIRM_RESTORE_TARGET_ISOLATED` as normal app service variables; pass them only for the one restore command.
 
-Latest Packet 08 evidence: temporary Railway PostgreSQL target `Postgres-3Ei3` was migrated, populated with 59 public tables and 1,524 rows in 1,421 ms, strictly verified with migration `0009_durable_rate_limits`, zero pending migrations, zero source/target count diffs across critical Gate A tables, and a 220 ms verifier duration, then deleted. Artifact restore tooling now exists and is unit/lint covered, but the live restore-from-artifact rehearsal is not complete until Railway is re-authenticated, a new isolated target is created, a current named backup object is produced, and that object is restored and verified.
+Latest Packet 08 evidence: temporary Railway PostgreSQL target `Postgres-3Ei3` was migrated, populated with 59 public tables and 1,524 rows in 1,421 ms, strictly verified with migration `0009_durable_rate_limits`, zero pending migrations, zero source/target count diffs across critical Gate A tables, and a 220 ms verifier duration, then deleted. A named backup-artifact restore also passed on 2026-06-21: encrypted object `backups/postgres/2026-06-21T04-14-48.795Z-332dbc0.json.gz.aes256gcm` restored into isolated Railway target `Postgres-_FQz`, applied nine migrations through `0009_durable_rate_limits`, restored 59 public tables and 1,524 rows, verified strict manifest parity with zero diffs in 13,411 ms, passed `npm run restore:drill` in 1,862 ms, and then the temporary target was deleted.
 
 ## Provider Outage
 

@@ -20,12 +20,13 @@ Packet 08 hardening evidence now exists for:
 - Incident readiness gate: `docs/operations/incident-routing.json` and `npm run incident:readiness` now make incident owner, support-hours, alert destination, rehearsal, and approval gaps machine-checkable. The synthetic incident issue body includes routing context. Current readiness is blocked with primary owner `Michael <support@rivt.pro>` and synthetic monitoring configured, but backup owner, support hours, dedicated error monitoring, paging route, incident rehearsal, and founder/support/legal-safety approvals still missing.
 - Timed isolated logical restore: temporary Railway PostgreSQL target `Postgres-3Ei3` was provisioned, migrated, populated from production through `npm run restore:logical-copy -- --apply-migrations`, and then strictly verified through `npm run restore:drill`. The copy covered 59 public tables and 1,524 rows in 1,421 ms; the verifier confirmed migration `0009_durable_rate_limits`, nine applied migrations, zero pending migrations, source/target parity across critical Gate A tables, zero count diffs, and a 220 ms verifier duration. The temporary target was deleted and no temporary restore variables remain.
 - Named backup artifact restore: `npm run backup:logical-artifact` created AES-256-GCM encrypted object `backups/postgres/2026-06-21T04-14-48.795Z-332dbc0.json.gz.aes256gcm` in private S3-compatible storage from 59 tables / 1,524 rows in 630 ms. `npm run restore:logical-artifact -- --apply-migrations` restored that named object into isolated Railway target `Postgres-_FQz`, applied nine migrations through `0009_durable_rate_limits`, restored 59 tables / 1,524 rows, verified table/column/sequence and strict manifest-count parity with zero diffs in 13,411 ms, and `npm run restore:drill` verified the target in 1,862 ms. The temporary target was deleted, detached restore volumes were marked for deletion, and temporary restore variables were removed.
+- Launch readiness gate: `docs/operations/recovery-policy.json`, `docs/operations/LAUNCH_OPS_CHECKLIST.md`, `docs/operations/INCIDENT_REHEARSAL_RUNBOOK.md`, and `npm run launch:readiness` now combine incident readiness with recovery-policy evidence. The current gate recognizes the recent named backup-artifact restore but remains blocked by missing RPO/RTO targets, backup retention, restore cadence, next restore-drill date, and recovery-policy approvals.
 - Local automated gates: `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test`, `npm run test:e2e`, and `npm audit --omit=dev` pass on the Packet 08 source.
 
 Blocking evidence still missing before named customer/pilot launch:
 
 - Dedicated error monitoring, alert rules, paging/incident owner routing, and one incident rehearsal. `npm run incident:readiness -- --require-ready` must pass before launch.
-- Founder-approved RPO/RTO policy, backup retention window, and recurring restore-drill cadence.
+- Founder-approved RPO/RTO policy, backup retention window, recurring restore-drill cadence, next restore due date, and recovery-policy approvals. `npm run launch:readiness -- --require-ready` must pass before launch.
 - Physical-device and deeper manual accessibility matrix evidence, including mobile Safari/Chrome, route-level keyboard-only workflows, screen-reader labels, and end-to-end route flows after login.
 - Founder/legal/support approval owners, launch communications, and support hours.
 
@@ -39,6 +40,8 @@ npm run test:unit
 npm run test:integration
 npm run test:e2e
 npm audit --omit=dev
+npm run incident:readiness -- --require-ready
+npm run launch:readiness -- --require-ready
 ```
 
 Test scripts not currently present must be created in Packet 00. The production dependency audit must have no unaccepted high/critical vulnerabilities.

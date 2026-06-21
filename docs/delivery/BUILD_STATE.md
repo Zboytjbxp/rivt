@@ -485,9 +485,21 @@ Completed on 2026-06-21 after Railway re-authentication:
 - Required local gates passed after the production fix: `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test`, `npm run test:e2e`, and `npm audit --omit=dev`. DB-backed local integration tests still skip on this workstation because `TEST_DATABASE_URL` is intentionally absent.
 - `npm run incident:readiness -- --json` remains blocked by missing backup owner, support hours, dedicated error monitoring, paging route, incident rehearsal, and founder/support/legal-safety approvals.
 
+## Packet 08 Launch Operations Readiness Progress
+
+Implemented on 2026-06-21:
+
+- Added `docs/operations/recovery-policy.json` as the machine-readable RPO/RTO, backup-retention, restore-cadence, latest named artifact restore, and recovery-approval source.
+- Added `scripts/launch-readiness-check.js`, `npm run launch:readiness`, and unit coverage in `test/launch-readiness.test.js`.
+- Added `docs/operations/LAUNCH_OPS_CHECKLIST.md` so the final go/no-go checklist is explicit across incident ownership, restore policy, support, providers, accessibility, and pilot cohort controls.
+- Added `docs/operations/INCIDENT_REHEARSAL_RUNBOOK.md` with public-health, storage, and abuse/safety rehearsal scenarios plus an evidence template.
+- Updated `docs/operations/RUNBOOKS.md` so it no longer describes the named backup-artifact restore as incomplete and now documents the launch readiness gate.
+- `npm run launch:readiness -- --json` currently blocks with the expected non-code findings: incident routing not approved, backup owner missing, support hours missing, dedicated error monitoring missing, paging missing, incident rehearsal missing, incident approvals missing, recovery policy not approved, RPO/RTO missing, backup retention missing, restore cadence missing, next restore drill missing, and recovery approvals missing. It does recognize the recent named backup-artifact restore as current evidence.
+- Required local gates passed after this slice: `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test`, `npm run test:e2e`, and `npm audit --omit=dev`. DB-backed local integration tests still skip on this workstation because `TEST_DATABASE_URL` is intentionally absent.
+
 ## Next Exact Task
 
-Configure a real dedicated error-monitoring provider and paging/escalation route, fill the backup owner/support-hours/approval fields in `docs/operations/incident-routing.json`, run `npm run incident:readiness -- --require-ready`, and complete the physical/deeper manual accessibility-device matrix before named-cohort launch. Then record the final RPO/RTO policy and approval owners in the launch checklist.
+Configure a real dedicated error-monitoring provider and paging/escalation route, fill the backup owner/support-hours/approval fields in `docs/operations/incident-routing.json`, approve the RPO/RTO/retention/cadence fields in `docs/operations/recovery-policy.json`, run an incident rehearsal, then pass `npm run incident:readiness -- --require-ready` and `npm run launch:readiness -- --require-ready`. Complete the physical/deeper manual accessibility-device matrix before named-cohort launch.
 
 ## Blocking Founder Decisions
 

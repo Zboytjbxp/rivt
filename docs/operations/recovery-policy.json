@@ -1,0 +1,44 @@
+{
+  "version": 1,
+  "status": "blocked",
+  "targets": {
+    "rpoMinutes": null,
+    "rpoBasis": "TBD",
+    "rtoMinutes": null,
+    "rtoBasis": "TBD"
+  },
+  "backupRetention": {
+    "days": null,
+    "storage": "private S3-compatible managed object storage",
+    "encryption": "AES-256-GCM logical backup artifacts",
+    "owner": "TBD"
+  },
+  "restoreDrillCadence": {
+    "days": null,
+    "owner": "TBD",
+    "nextDueAt": null
+  },
+  "latestNamedArtifactRestore": {
+    "status": "passed",
+    "completedAt": "2026-06-21T04:18:59.000Z",
+    "artifactKey": "backups/postgres/2026-06-21T04-14-48.795Z-332dbc0.json.gz.aes256gcm",
+    "tableCount": 59,
+    "rowCount": 1524,
+    "restoreDurationMs": 13411,
+    "verificationDurationMs": 1862,
+    "target": "isolated Railway PostgreSQL service Postgres-_FQz, deleted after verification",
+    "evidence": "docs/delivery/DEPLOYMENT_LEDGER.md#current-production---packet-08-backup-artifact-restore-and-expanded-ui-matrix"
+  },
+  "approvals": {
+    "founder": {
+      "status": "missing",
+      "approvedBy": "TBD",
+      "approvedAt": null
+    },
+    "operations": {
+      "status": "missing",
+      "approvedBy": "TBD",
+      "approvedAt": null
+    }
+  }
+}
