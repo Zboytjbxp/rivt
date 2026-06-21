@@ -20,13 +20,18 @@
   z-index: 100;
   min-height: 44px;
   padding: 10px 14px;
+  visibility: hidden;
+  opacity: 0;
   transform: translateY(-150%);
   border-radius: var(--v2-radius-sm);
   background: var(--v2-surface-strong);
   color: var(--v2-bg);
+  transition: opacity 120ms ease, transform 120ms ease, visibility 120ms ease;
 }
 
-.v2-skip-link:focus {
+.v2-skip-link:focus-visible {
+  visibility: visible;
+  opacity: 1;
   transform: translateY(0);
 }
 

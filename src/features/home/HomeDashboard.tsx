@@ -32,6 +32,7 @@ interface HomeDashboardProps {
   availabilityStatus: AvailabilityStatus;
   primaryTrade: string;
   newsCount: number;
+  answerQueueCount: number;
   onPostJob: () => void;
   onOpenJob: (jobId: number) => void;
   onNavigate: (destination: PrimaryDestination) => void;
@@ -60,6 +61,7 @@ export function HomeDashboard({
   availabilityStatus,
   primaryTrade,
   newsCount,
+  answerQueueCount,
   onPostJob,
   onOpenJob,
   onNavigate,
@@ -106,9 +108,11 @@ export function HomeDashboard({
     },
     {
       label: "Field signal",
-      value: `${communityCount} posts`,
-      detail: `${newsCount} trade updates plus questions in Shop Talk`,
-      action: "Read",
+      value: answerQueueCount ? `${answerQueueCount} need answers` : `${communityCount} posts`,
+      detail: answerQueueCount
+        ? `${primaryTrade} and General questions you can help close`
+        : `${newsCount} trade updates plus questions in Shop Talk`,
+      action: answerQueueCount ? "Answer" : "Read",
       destination: "shop-talk" as PrimaryDestination,
     },
   ];

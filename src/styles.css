@@ -10492,6 +10492,67 @@ textarea:focus-visible {
     var(--surface-soft);
 }
 
+.shop-talk-answer-queue {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: center;
+  padding: 14px;
+  border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--border));
+  border-radius: 14px;
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--accent) 12%, transparent), transparent 58%),
+    color-mix(in srgb, var(--surface-soft) 94%, var(--surface));
+}
+
+.shop-talk-answer-queue > div:first-child {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.shop-talk-answer-queue span,
+.shop-talk-active-filter span {
+  color: var(--accent);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  line-height: 1.1;
+  text-transform: uppercase;
+}
+
+.shop-talk-answer-queue strong {
+  color: var(--text);
+  font-size: 15px;
+  line-height: 1.25;
+}
+
+.shop-talk-answer-queue p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.shop-talk-answer-actions {
+  display: grid;
+  gap: 7px;
+}
+
+.shop-talk-answer-actions button {
+  min-height: 44px;
+  white-space: nowrap;
+}
+
+.shop-talk-answer-actions button:not(.primary-action) {
+  border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 800;
+}
+
 .shop-talk-pulse-head {
   display: flex;
   align-items: end;
@@ -10624,6 +10685,29 @@ textarea:focus-visible {
   color: #fff;
 }
 
+.shop-talk-active-filter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 44px;
+  padding: 8px 10px;
+  border: 1px solid color-mix(in srgb, var(--accent) 25%, var(--border));
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface));
+}
+
+.shop-talk-active-filter button {
+  min-height: 34px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 850;
+}
+
 .shop-post-list,
 .shop-news-list,
 .answer-list {
@@ -10712,6 +10796,26 @@ textarea:focus-visible {
 .answer-composer,
 .answer-card {
   border-radius: 14px;
+}
+
+.answer-guidance-card {
+  display: grid;
+  gap: 4px;
+  padding: 11px 12px;
+  border: 1px solid color-mix(in srgb, var(--teal) 28%, var(--border));
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--teal) 8%, var(--surface));
+}
+
+.answer-guidance-card strong {
+  color: var(--text);
+  font-size: 13px;
+}
+
+.answer-guidance-card span {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.4;
 }
 
 .shop-news-card-main {
@@ -10813,6 +10917,19 @@ textarea:focus-visible {
   .shop-talk-command {
     grid-template-columns: 1fr;
     padding: 14px;
+  }
+
+  .shop-talk-answer-queue {
+    grid-template-columns: 1fr;
+  }
+
+  .shop-talk-answer-actions {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .shop-talk-answer-actions .primary-action {
+    width: 100%;
+    justify-content: center;
   }
 
   .shop-talk-command .primary-action {

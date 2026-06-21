@@ -2226,6 +2226,14 @@ function App() {
   }
 
   const selectedJob = jobs.find((job) => job.id === selectedId) ?? jobs[0] ?? emptyJob;
+  const primaryProfileTrade = canonicalAccount?.profile.trades.find((tradeItem) => tradeItem.primary)?.name
+    ?? accountProfile.specialties[0]
+    ?? selectedJob.trade
+    ?? "General trades";
+  const answerQueueCount = communityPosts.filter((post) => (
+    (post.trade === primaryProfileTrade || post.trade === "General") &&
+    post.status !== "Verified Fix"
+  )).length;
 
   const filteredJobs = jobs;
 
@@ -2989,8 +2997,9 @@ function App() {
             communityCount={communityPosts.length}
             shoutOutCount={shoutOuts.length}
             availabilityStatus={canonicalAccount?.profile.availabilityStatus ?? "available"}
-            primaryTrade={canonicalAccount?.profile.trades.find((tradeItem) => tradeItem.primary)?.name ?? accountProfile.specialties[0] ?? "General trades"}
+            primaryTrade={primaryProfileTrade}
             newsCount={seedNews.length}
+            answerQueueCount={answerQueueCount}
             onPostJob={openCreateJob}
             onOpenJob={openJob}
             onNavigate={(destination) => handleNavigate(defaultViewForDestination(destination))}
@@ -6067,6 +6076,7 @@ function ShopTalkView({
   const [activeTab, setActiveTab] = useState<"talk" | "news">("talk");
   const [sortMode, setSortMode] = useState<"hot" | "new" | "unanswered">("hot");
   const [tradeFilter, setTradeFilter] = useState("All trades");
+  const [answerQueueOnly, setAnswerQueueOnly] = useState(false);
   const [selectedPostId, setSelectedPostId] = useState(communityPosts[0]?.id ?? 0);
   const [answerDraft, setAnswerDraft] = useState("");
   const [rulesOpen, setRulesOpen] = useState(false);
@@ -6080,6 +6090,19 @@ function ShopTalkView({
   const [selectedNewsId, setSelectedNewsId] = useState(displayNews[0]?.id ?? 0);
   const [mobileDetail, setMobileDetail] = useState(false);
   const tradeFilters = ["All trades", "General", ...specialtyOptions];
+  const primaryTrade = profile.specialties[0] ?? selectedJobTrade;
+  const answerQueuePosts = communityPosts
+    .filter((post) => (
+      (post.trade === primaryTrade || post.trade === "General") &&
+      post.status !== "Verified Fix"
+    ))
+    .sort((a, b) => {
+      if (a.trade === primaryTrade && b.trade !== primaryTrade) return -1;
+      if (a.trade !== primaryTrade && b.trade === primaryTrade) return 1;
+      if (a.status === "Needs a pro answer" && b.status !== "Needs a pro answer") return -1;
+      if (a.status !== "Needs a pro answer" && b.status === "Needs a pro answer") return 1;
+      return b.id - a.id;
+    });
   const allReportReasons: CommunityReport["reason"][] = ["Misinformation", "Safety concern", "Spam", "Harassment"];
 
   async function activateNews() {
@@ -6104,6 +6127,8 @@ function ShopTalkView({
   const normalizedTalkQuery = talkQuery.trim().toLowerCase();
   const normalizedNewsQuery = newsQuery.trim().toLowerCase();
   const filteredPosts = communityPosts.filter((post) => {
+    const needsAnswer = post.status !== "Verified Fix";
+    if (answerQueueOnly && !((post.trade === primaryTrade || post.trade === "General") && needsAnswer)) return false;
     const tradeMatches = tradeFilter === "All trades" || post.trade === tradeFilter;
     if (!tradeMatches) return false;
     if (!normalizedTalkQuery) return true;
@@ -6173,6 +6198,18 @@ function ShopTalkView({
     setAnswerDraft("");
   }
 
+  function openAnswerQueue() {
+    setActiveTab("talk");
+    setAnswerQueueOnly(true);
+    setSortMode("unanswered");
+    setTradeFilter("All trades");
+    const nextPost = answerQueuePosts[0];
+    if (nextPost) {
+      setSelectedPostId(nextPost.id);
+      setMobileDetail(true);
+    }
+  }
+
   const SHOP_RULES = [
     "Keep it field-relevant - no recruiting or solicitation",
     "Cite the code section when referencing code requirements",
@@ -6233,6 +6270,31 @@ function ShopTalkView({
                   <span><strong>{filteredPosts.length}</strong><small>threads</small></span>
                   <span><strong>{unansweredCount}</strong><small>need answers</small></span>
                   <span><strong>{verifiedFixCount}</strong><small>verified fixes</small></span>
+                </div>
+              </div>
+
+              <div className="shop-talk-answer-queue" aria-label="Unanswered in your trade">
+                <div>
+                  <span>Answer queue</span>
+                  <strong>
+                    {answerQueuePosts.length
+                      ? `${answerQueuePosts.length} ${primaryTrade} question${answerQueuePosts.length === 1 ? "" : "s"} need a hand`
+                      : `${primaryTrade} is caught up`}
+                  </strong>
+                  <p>
+                    Jump straight into questions where a field-tested answer can build trust before the next hiring conversation.
+                  </p>
+                </div>
+                <div className="shop-talk-answer-actions">
+                  <button type="button" className="primary-action" onClick={openAnswerQueue} disabled={answerQueuePosts.length === 0}>
+                    <MessageCircle size={15} />
+                    Answer now
+                  </button>
+                  {answerQueueOnly && (
+                    <button type="button" onClick={() => setAnswerQueueOnly(false)}>
+                      Show all
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -6311,6 +6373,12 @@ function ShopTalkView({
                     </button>
                   ))}
                 </div>
+                {answerQueueOnly && (
+                  <div className="shop-talk-active-filter">
+                    <span>{primaryTrade} answer queue</span>
+                    <button type="button" onClick={() => setAnswerQueueOnly(false)}>Clear</button>
+                  </div>
+                )}
               </div>
 
               <div className="shop-post-list">
@@ -6493,6 +6561,10 @@ function ShopTalkView({
                 <div>
                   <span>Answer as {profile.displayName}</span>
                   <strong>{profileBadges.length ? profileBadges.join(", ") : "New contributor"}</strong>
+                </div>
+                <div className="answer-guidance-card">
+                  <strong>Good answers get specific.</strong>
+                  <span>Name the condition, the tool or code check, the order of operations, and what proof prevents a callback.</span>
                 </div>
                 <textarea
                   value={answerDraft}

@@ -183,6 +183,14 @@ async function assertNoHorizontalOverflow(page) {
   assert.equal(hasOverflow, false, "page has horizontal overflow");
 }
 
+async function prepareScreenshot(page) {
+  await page.evaluate(() => {
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+  });
+}
+
 let browser;
 
 try {
@@ -206,6 +214,16 @@ try {
     await page.goto(`${baseUrl}/app/network/talk`, { waitUntil: "networkidle" });
     await page.getByRole("heading", { name: /Field answers/i }).waitFor({ timeout: 15_000 });
     await page.getByText("Social hub", { exact: true }).waitFor({ timeout: 15_000 });
+    await page.getByText("Answer queue", { exact: true }).waitFor({ timeout: 15_000 });
+    await page.getByText(/Electrical question/i).waitFor({ timeout: 15_000 });
+    await page.getByRole("button", { name: /Answer now/i }).click();
+    await page.getByText("Good answers get specific.", { exact: true }).waitFor({ timeout: 15_000 });
+    await page.getByRole("heading", { name: /NEC 2023/i }).waitFor({ timeout: 15_000 });
+    if (viewport.name === "desktop") {
+      await page.getByText("Electrical answer queue", { exact: true }).waitFor({ timeout: 15_000 });
+    } else {
+      await page.getByRole("button", { name: /Back/i }).first().click();
+    }
     await page.locator(".shop-post-card").first().click();
     const upvoteThread = page.getByRole("button", { name: "Upvote thread" }).first();
     const threadInitial = (await upvoteThread.textContent())?.trim() ?? "";
@@ -242,6 +260,7 @@ try {
     }
     await talkSearch.fill("scope");
     await assertNoHorizontalOverflow(page);
+    await prepareScreenshot(page);
     await page.screenshot({ path: path.join(screenshotDir, `${viewport.name}-talk.png`), fullPage: true });
 
     await page.getByRole("button", { name: "Trade News" }).click();
@@ -255,6 +274,7 @@ try {
     await page.locator(".shop-news-list .news-card-thumb.is-real img").first().waitFor({ timeout: 15_000 });
     await page.getByRole("link", { name: /Read original/i }).first().waitFor({ timeout: 15_000 });
     await assertNoHorizontalOverflow(page);
+    await prepareScreenshot(page);
     await page.screenshot({ path: path.join(screenshotDir, `${viewport.name}-news.png`), fullPage: true });
 
     assert.equal(errors.length, 0, `${viewport.name} console errors: ${errors.join("\n")}`);
