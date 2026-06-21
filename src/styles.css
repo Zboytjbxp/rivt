@@ -1357,7 +1357,7 @@ textarea:focus-visible {
   justify-content: center;
   gap: 8px;
   width: 100%;
-  min-height: 38px;
+  min-height: 44px;
   padding: 0 11px;
   border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 8px;
@@ -1377,14 +1377,14 @@ textarea:focus-visible {
 
 .theme-toggle.surface-toggle {
   width: auto;
-  min-height: 42px;
+  min-height: 44px;
   border-color: var(--border);
   background: var(--surface);
   color: var(--text);
 }
 
 .theme-toggle.surface-toggle.compact {
-  width: 42px;
+  width: 44px;
   padding: 0;
 }
 
@@ -1399,7 +1399,7 @@ textarea:focus-visible {
 }
 
 .topbar .theme-toggle.surface-toggle {
-  width: 42px;
+  width: 44px;
   padding: 0;
 }
 
