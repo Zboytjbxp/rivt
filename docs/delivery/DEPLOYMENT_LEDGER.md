@@ -268,3 +268,22 @@ Add one entry per staging/production deployment.
 - Known risks: full Gate A remains blocked by timed isolated restore drill, external monitoring/alerts and incident routing, physical/deeper manual accessibility-device matrix, and support/legal/founder signoff
 - Rollback performed/result: not required
 - Approval: authenticated accessibility smoke accepted as partial evidence; overall Gate A not approved
+
+## Current Production - Packet 08 Timed Isolated Logical Restore
+
+- Environment: Production (`https://rivt.pro`) plus temporary isolated Railway PostgreSQL target
+- Date/time/timezone: 2026-06-20 22:42 America/New_York
+- Deployer: Codex through authenticated Railway CLI
+- Source repository/branch: `Zboytjbxp/rivt`, `master`
+- Source commit: `e0ac24d143c29f1f17c6570debbd576f49538597`
+- Build/artifact ID: Railway application deployment `ab7ee788-da6d-473d-9834-8382af0af057`; metadata redeploy `0d3f94b0-f586-446f-808b-9078c9a40f65` after updating `SOURCE_COMMIT`
+- Migration version before/after: `0009_durable_rate_limits` / `0009_durable_rate_limits`
+- Feature-flag/config version: `SOURCE_COMMIT` updated to `e0ac24d143c29f1f17c6570debbd576f49538597`; no operational-control flags changed
+- Provider/config changes: temporary Railway PostgreSQL service `Postgres-3Ei3` (`fe501310-25bb-4389-a2fb-1a11dc89772c`, deployment `f034530e-2aa3-46d3-a83b-ea3b11df9f30`) was created as an isolated restore target and deleted after verification; no temporary restore variables remain on RIVT or Postgres
+- Backup/rollback target: prior successful deployment `b241d02b-04bf-42d8-a462-243d06f4ab4a`; logical restore source was the live production PostgreSQL database at the time of the drill, not a named backup artifact
+- Automated gates: local `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test`, `npm run test:e2e`, and `npm audit --omit=dev` passed on final source; local DB-backed integration tests skipped because `TEST_DATABASE_URL` is not configured
+- Post-deploy smoke tests: public `/api/health` passed and reported exact source commit. `npm run restore:logical-copy -- --apply-migrations` ran inside the Railway RIVT service against the isolated target, applied migrations, copied 59 public tables and 1,524 rows, restored sequence positions, and completed in 1,421 ms. `npm run restore:drill` then verified migration `0009_durable_rate_limits`, nine applied migrations, zero pending migrations, exact source/target row-count parity across critical Gate A tables, zero count diffs, and a 220 ms verifier duration. `npm run monitor:production` passed externally with seven anonymous private-route checks and a 549 ms duration. `npm run smoke:gate-a:live` passed with zero seed/demo findings.
+- Health/readiness result: health reports PostgreSQL and S3-compatible storage healthy with exact source commit `e0ac24d143c29f1f17c6570debbd576f49538597`; live hardening audit reports latest migration `0009_durable_rate_limits`
+- Known risks: full Gate A remains blocked by backup-artifact restore/RPO acceptance if required, dedicated error monitoring/alerts and named incident owner routing, physical/deeper manual accessibility-device matrix, and support/legal/founder signoff
+- Rollback performed/result: not required
+- Approval: timed isolated logical restore accepted as partial restore evidence; overall Gate A not approved

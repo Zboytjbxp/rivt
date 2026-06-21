@@ -2,10 +2,10 @@
 
 Last updated: 2026-06-20 America/New_York
 Current gate: Gate A launch hardening
-Current phase: Packet 08 authenticated accessibility smoke deployed; full Gate A approval remains blocked
+Current phase: Packet 08 timed isolated logical restore deployed; full Gate A approval remains blocked
 Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
-Production release commit: `f5a68d9c16364c94dd727bb91e03a25f33e283df`
+Production release commit: `e0ac24d143c29f1f17c6570debbd576f49538597`
 
 ## Source State
 
@@ -433,15 +433,23 @@ Implemented on 2026-06-20:
 Implemented on 2026-06-20:
 
 - Added `scripts/restore-drill.js` and `npm run restore:drill`.
+- Added `scripts/restore-logical-copy.js` and `npm run restore:logical-copy` to create a verified restored target through the application runtime when local `pg_dump`/`psql` tooling is unavailable.
 - The verifier requires `CONFIRM_RESTORE_TARGET_ISOLATED=true` and `RESTORE_DATABASE_URL`; it refuses to run without an isolated target.
 - The verifier checks migration status, requires migration `0009_durable_rate_limits`, verifies critical Gate A table presence, counts rows, can compare source/target counts with `RESTORE_SOURCE_DATABASE_URL`, and reports duration.
-- Local syntax, lint, security lint, build, tests, e2e, and audit pass. A no-target run correctly fails with `RESTORE_DATABASE_URL is required`.
-- Deployed Railway runtime also correctly refuses `npm run restore:drill` without isolated `RESTORE_DATABASE_URL`.
-- This is tooling progress only. Gate A remains blocked until a real isolated PostgreSQL target is provisioned, restored, verified, timed, and recorded.
+- A no-target run correctly fails with `RESTORE_DATABASE_URL is required`.
+
+Timed isolated logical restore executed on 2026-06-20:
+
+- Temporary Railway PostgreSQL target: `Postgres-3Ei3` (`fe501310-25bb-4389-a2fb-1a11dc89772c`, deployment `f034530e-2aa3-46d3-a83b-ea3b11df9f30`), deleted after verification.
+- Production runtime source: `e0ac24d143c29f1f17c6570debbd576f49538597`, current Railway deployment `0d3f94b0-f586-446f-808b-9078c9a40f65`.
+- `npm run restore:logical-copy -- --apply-migrations` ran inside the Railway RIVT service with explicit one-command restore env vars, applied migrations to the isolated target, copied 59 public tables and 1,524 rows, restored sequence positions, and completed in 1,421 ms.
+- `npm run restore:drill` then verified the isolated target with strict source/target row-count parity, migration `0009_durable_rate_limits`, nine applied migrations, zero pending migrations, zero count diffs across critical Gate A tables, and a 220 ms verifier duration.
+- Cleanup: the temporary target database was deleted, no temporary restore variables remain on RIVT or Postgres, and production health remained healthy on commit `e0ac24d143c29f1f17c6570debbd576f49538597`.
+- This closes the timed isolated logical restore evidence gap. It does not by itself prove restoration from a specific backup artifact or define the final RPO/RTO policy.
 
 ## Next Exact Task
 
-Complete the remaining Packet 08 launch blockers: provision an isolated restore target and run a timed restore drill; wire dedicated error monitoring/alerts, paging, and named incident-owner routing; finish support/legal/founder approvals; and complete the physical/deeper manual accessibility-device matrix before named-cohort launch.
+Complete the remaining Packet 08 launch blockers: decide whether Gate A requires a backup-artifact restore in addition to the timed isolated logical restore; wire dedicated error monitoring/alerts, paging, and named incident-owner routing; finish support/legal/founder approvals; and complete the physical/deeper manual accessibility-device matrix before named-cohort launch.
 
 ## Blocking Founder Decisions
 

@@ -114,7 +114,16 @@ CONFIRM_RESTORE_TARGET_ISOLATED=true RESTORE_DATABASE_URL="postgresql://restore-
 
 The verifier refuses to run without `CONFIRM_RESTORE_TARGET_ISOLATED=true`, checks the migration ledger, requires migration `0009_durable_rate_limits`, verifies critical Gate A tables, counts rows, and measures duration. With `RESTORE_SOURCE_DATABASE_URL` set, row counts must match unless `RESTORE_STRICT_COMPARE=false` is explicitly set for a documented scrubbed/sampled restore.
 
-Current blocker: the local workstation used for Packet 08 does not have `docker`, `psql`, or `pg_dump`, and no isolated target URL has been provided, so the timed restore drill is not complete. Do not approve Gate A until a real isolated target is provisioned, restored, verified, and timed.
+When native `pg_dump`/`psql` are unavailable to the operator, use the application-level logical copy helper from inside Railway private networking:
+
+```text
+CONFIRM_RESTORE_TARGET_ISOLATED=true RESTORE_DATABASE_URL="postgresql://restore-target" RESTORE_SOURCE_DATABASE_URL="postgresql://source" npm run restore:logical-copy -- --apply-migrations
+CONFIRM_RESTORE_TARGET_ISOLATED=true RESTORE_DATABASE_URL="postgresql://restore-target" RESTORE_SOURCE_DATABASE_URL="postgresql://source" npm run restore:drill
+```
+
+The logical copy helper applies migrations when requested, truncates the isolated target, disables user-defined triggers during the copy to avoid restore side effects, copies all public base tables in foreign-key order with batched inserts, restores sequence positions, and reports table/row counts and duration. It is acceptable evidence for isolated logical restore mechanics. It is not by itself proof that a specific backup artifact can be restored.
+
+Latest Packet 08 evidence: temporary Railway PostgreSQL target `Postgres-3Ei3` was migrated, populated with 59 public tables and 1,524 rows in 1,421 ms, strictly verified with migration `0009_durable_rate_limits`, zero pending migrations, zero source/target count diffs across critical Gate A tables, and a 220 ms verifier duration, then deleted. Remaining decision: whether Gate A requires backup-artifact restore proof and final RPO/RTO acceptance in addition to this logical restore drill.
 
 ## Provider Outage
 
