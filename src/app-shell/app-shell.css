@@ -348,7 +348,8 @@
 
 .v2-search-panel {
   display: flex;
-  width: min(620px, 100%);
+  box-sizing: border-box;
+  width: min(620px, calc(100vw - 32px));
   min-height: 58px;
   align-items: center;
   gap: 12px;
@@ -362,6 +363,7 @@
 
 .v2-search-panel button {
   display: inline-flex;
+  flex: 0 0 auto;
   min-width: 44px;
   min-height: 44px;
   align-items: center;
@@ -486,6 +488,10 @@
     min-height: 54px;
     gap: 8px;
     padding-inline: 12px 8px;
+  }
+
+  .v2-search-panel input {
+    width: 0;
   }
 
   .rivt-v2 .guest-banner {
