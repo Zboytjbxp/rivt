@@ -279,7 +279,12 @@ async function loginAndAudit(browser, account, viewport) {
       assert.equal(audit.hasMoreNav, false, `${audit.label} still exposes a More nav control.`);
       assert.equal(audit.roleToggleVisible, false, `${audit.label} still exposes a role toggle.`);
       assert.deepEqual(audit.missingNames, [], `${audit.label} has visible interactive controls without names: ${JSON.stringify(audit.missingNames)}`);
+      assert.deepEqual(audit.smallTargets, [], `${audit.label} has visible interactive controls below 44px: ${JSON.stringify(audit.smallTargets)}`);
+      for (const [signal, present] of Object.entries(audit.topBarSignals)) {
+        assert.equal(present, true, `${audit.label} is missing top-bar ${signal}.`);
+      }
     }
+    assert.deepEqual(logs, [], `${account.role}-${viewport.width}x${viewport.height} produced post-login console warnings/errors: ${JSON.stringify(logs)}`);
 
     return {
       role: account.role,
