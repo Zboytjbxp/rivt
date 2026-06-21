@@ -297,16 +297,18 @@
 }
 
 .v2-tool-app-strip,
-.v2-tool-preset-row {
+.v2-tool-preset-row,
+.v2-tool-toggle-row {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
 }
 
-.v2-tool-app-strip span,
-.v2-tool-preset-row button {
+.v2-tool-app-strip button,
+.v2-tool-preset-row button,
+.v2-tool-toggle-row button {
   display: inline-flex;
-  min-height: 36px;
+  min-height: 44px;
   align-items: center;
   justify-content: center;
   gap: 7px;
@@ -320,11 +322,38 @@
   font-weight: 850;
 }
 
-.v2-tool-app-strip span:first-child,
-.v2-tool-preset-row button.active {
+.v2-tool-app-strip button.active,
+.v2-tool-preset-row button.active,
+.v2-tool-toggle-row button.active {
   border-color: color-mix(in srgb, var(--v2-accent) 44%, var(--v2-border));
   background: color-mix(in srgb, var(--v2-accent-soft) 76%, transparent);
   color: var(--v2-accent);
+}
+
+.v2-tool-mode-panel {
+  display: grid;
+  gap: 16px;
+}
+
+.v2-tool-input-grid.three {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.v2-tool-field-card {
+  position: sticky;
+  top: 16px;
+}
+
+.v2-tool-field-card > .v2-primary-button {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border-color: var(--v2-accent);
+  background: var(--v2-accent);
+  color: #fff;
+  font-weight: 900;
 }
 
 .v2-tool-input-grid input {
@@ -1141,8 +1170,13 @@
   .v2-tool-input-grid,
   .v2-tool-input-grid.two,
   .v2-tool-input-grid.four,
+  .v2-tool-input-grid.three,
   .v2-tool-result-grid {
     grid-template-columns: 1fr;
+  }
+
+  .v2-tool-field-card {
+    position: static;
   }
 
   .v2-tool-launch-card {

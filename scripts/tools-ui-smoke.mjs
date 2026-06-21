@@ -102,10 +102,24 @@ async function runToolsFlow(page, viewportName) {
 
   await page.getByRole("button", { name: /Heavy 16th/i }).click();
   await page.getByRole("heading", { name: "Heavy 16th field calculator" }).waitFor({ timeout: 15_000 });
-  await page.getByText("Total length", { exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByLabel("Length calculator").getByText("Total length", { exact: true }).waitFor({ timeout: 15_000 });
   await page.getByText("Copy result", { exact: true }).waitFor({ timeout: 15_000 });
   await assertNoHorizontalOverflow(page);
   await page.screenshot({ path: path.join(screenshotDir, `${viewportName}-calculator.png`), fullPage: true });
+  await page.getByRole("button", { name: "Spacing" }).click();
+  await page.getByRole("heading", { name: "Heavy 16th calculator" }).waitFor({ timeout: 15_000 });
+  await page.getByLabel("Equal spacing calculator").getByText("Center-to-center").waitFor({ timeout: 15_000 });
+  await page.getByText("First center", { exact: true }).waitFor({ timeout: 15_000 });
+  await assertNoHorizontalOverflow(page);
+  await page.getByRole("button", { name: "Cuts" }).click();
+  await page.getByLabel("Cut angle calculator").getByText("Flat miter", { exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByRole("button", { name: "Inside" }).waitFor({ timeout: 15_000 });
+  await assertNoHorizontalOverflow(page);
+  await page.getByRole("button", { name: "Hardware" }).click();
+  await page.getByLabel("Hardware layout calculator").getByText("Centerline", { exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByRole("button", { name: "Knob" }).click();
+  await page.getByText("Height mark", { exact: true }).waitFor({ timeout: 15_000 });
+  await assertNoHorizontalOverflow(page);
   await page.getByLabel("Heavy 16th field calculator").getByRole("button", { name: "Tools" }).click();
 
   await page.getByRole("button", { name: /Estimate builder/i }).click();

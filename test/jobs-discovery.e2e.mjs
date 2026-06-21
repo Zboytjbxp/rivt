@@ -177,7 +177,9 @@ async function assertToolsFlow(page) {
   await page.getByRole("heading", { name: "Tools", exact: true }).waitFor();
   await page.getByRole("button", { name: /Heavy 16th/i }).click();
   await page.getByRole("heading", { name: "Heavy 16th field calculator" }).waitFor();
-  await page.getByText("Total length", { exact: true }).waitFor();
+  await page.getByLabel("Length calculator").getByText("Total length", { exact: true }).waitFor();
+  await page.getByRole("button", { name: "Spacing" }).click();
+  await page.getByLabel("Equal spacing calculator").getByText("Center-to-center").waitFor();
   await page.getByLabel("Heavy 16th field calculator").getByRole("button", { name: "Tools" }).click();
 
   await page.getByRole("button", { name: /Estimate builder/i }).click();
