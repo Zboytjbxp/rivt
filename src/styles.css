@@ -2334,7 +2334,8 @@ textarea:focus-visible {
 
 .select-control select {
   width: 100%;
-  height: 40px;
+  min-height: 44px;
+  height: 44px;
   appearance: none;
   border: 1px solid var(--border);
   border-radius: 6px;
@@ -2347,7 +2348,8 @@ textarea:focus-visible {
 
 .input-control input {
   width: 100%;
-  height: 40px;
+  min-height: 44px;
+  height: 44px;
   border: 1px solid var(--border);
   border-radius: 6px;
   background: var(--surface);
@@ -2370,7 +2372,7 @@ textarea:focus-visible {
   align-items: center;
   align-self: end;
   gap: 8px;
-  min-height: 40px;
+  min-height: 44px;
   padding: 0 12px;
   border: 1px solid var(--border);
   border-radius: 6px;
@@ -2597,7 +2599,7 @@ textarea:focus-visible {
 }
 
 .home-notification-heading button {
-  min-height: 30px;
+  min-height: 44px;
   padding: 0 12px;
   border: 1px solid var(--border);
   border-radius: 999px;
@@ -2668,7 +2670,8 @@ textarea:focus-visible {
 .home-command-tile {
   display: grid;
   gap: 6px;
-  min-height: 120px;
+  min-height: 128px;
+  min-width: 0;
   padding: 16px;
   border: 1px solid var(--border);
   border-radius: 16px;
@@ -4949,6 +4952,20 @@ textarea:focus-visible {
   margin: 2px 0 0;
   font-size: 17px;
   line-height: 1.2;
+}
+
+.home-panel-heading button,
+.mobile-section-title button {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 10px;
+  border: 0;
+  background: transparent;
+  color: var(--accent-deep);
+  font-size: 12px;
+  font-weight: 800;
 }
 
 .news-feature,
@@ -7661,7 +7678,7 @@ textarea:focus-visible {
   }
 
   .mobile-section-title button {
-    min-height: 30px;
+    min-height: 44px;
     padding: 0 10px;
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 999px;
@@ -8151,6 +8168,7 @@ textarea:focus-visible {
   align-items: center;
   gap: 6px;
   flex: 1;
+  min-height: 44px;
   padding: 10px 12px;
   font-size: 13px;
   font-weight: 500;
@@ -8177,6 +8195,7 @@ textarea:focus-visible {
   align-items: center;
   gap: 6px;
   width: 100%;
+  min-height: 44px;
   padding: 10px 12px;
   font-size: 12px;
   font-weight: 600;
@@ -8203,6 +8222,7 @@ textarea:focus-visible {
   margin-bottom: 10px;
 }
 .shop-sort-tabs button {
+  min-height: 44px;
   padding: 5px 12px;
   font-size: 12px;
   font-weight: 500;
