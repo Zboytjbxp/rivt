@@ -47,7 +47,7 @@
 
 .v2-tools-command span,
 .v2-tool-app-header span,
-.v2-tool-panel > header span {
+.v2-tool-panel .rivt-panel-header span {
   color: var(--v2-accent);
   font-size: 10px;
   font-weight: 850;
@@ -72,25 +72,15 @@
   line-height: 1.5;
 }
 
-.v2-tools-command article {
-  display: grid;
-  gap: 4px;
-  justify-items: end;
-  padding: 14px;
-  border: 1px solid color-mix(in srgb, var(--v2-border) 54%, transparent);
-  border-radius: var(--v2-radius-md);
+.v2-tools-context-metric {
+  justify-self: end;
+  min-width: min(220px, 100%);
   background: color-mix(in srgb, var(--v2-surface) 78%, transparent);
   text-align: right;
 }
 
-.v2-tools-command article strong {
-  font-size: 18px;
-}
-
-.v2-tools-command article span {
-  color: var(--v2-text-muted);
-  text-transform: none;
-  letter-spacing: 0;
+.v2-tools-context-metric div {
+  justify-items: end;
 }
 
 .v2-tool-launch-grid {
@@ -238,12 +228,12 @@
   box-shadow: var(--v2-shadow-card);
 }
 
-.v2-tool-panel > header {
+.v2-tool-panel .rivt-panel-header {
   padding: 0;
   border: 0;
 }
 
-.v2-tool-panel > header h2 {
+.v2-tool-panel .rivt-panel-header h2 {
   margin: 4px 0 0;
   font-size: 19px;
   line-height: 1.2;
@@ -424,17 +414,14 @@
 
 .v2-tools-panel {
   overflow: hidden;
-  border: 1px solid color-mix(in srgb, var(--v2-border) 58%, transparent);
-  border-radius: var(--v2-radius-lg);
   background: var(--v2-surface-raised);
-  box-shadow: var(--v2-shadow-card);
 }
 
 .v2-tools-panel-wide {
   grid-column: 1 / -1;
 }
 
-.v2-tools-panel > header {
+.v2-tools-panel .rivt-panel-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -444,7 +431,7 @@
   background: color-mix(in srgb, var(--v2-surface-muted) 26%, transparent);
 }
 
-.v2-tools-panel > header span {
+.v2-tools-panel .rivt-panel-header span {
   color: var(--v2-text-muted);
   font-size: 10px;
   font-weight: 800;
@@ -452,12 +439,12 @@
   text-transform: uppercase;
 }
 
-.v2-tools-panel > header h2 {
+.v2-tools-panel .rivt-panel-header h2 {
   margin: 3px 0 0;
   font-size: 15px;
 }
 
-.v2-tools-panel > header button {
+.v2-tools-panel .rivt-panel-action button {
   display: inline-flex;
   min-height: 44px;
   align-items: center;
@@ -503,8 +490,6 @@
 
 .v2-tool-card strong,
 .v2-tools-active-job strong,
-.v2-tools-records strong,
-.v2-tools-empty strong,
 .v2-tools-shortcut strong {
   display: block;
   font-size: 13px;
@@ -512,8 +497,6 @@
 
 .v2-tool-card p,
 .v2-tools-active-job p,
-.v2-tools-records span,
-.v2-tools-empty span,
 .v2-tools-shortcut small {
   margin: 0;
   color: var(--v2-text-muted);
@@ -535,11 +518,16 @@
   font-weight: 700;
 }
 
-.v2-tools-active-job,
-.v2-tools-empty {
+.v2-tools-active-job {
   display: grid;
   gap: 8px;
   padding: 18px;
+}
+
+.v2-tools-empty.rivt-empty-state {
+  margin: 18px;
+  border-color: color-mix(in srgb, var(--v2-border) 58%, transparent);
+  background: color-mix(in srgb, var(--v2-surface-muted) 76%, transparent);
 }
 
 .v2-tools-active-job > span {
@@ -578,23 +566,17 @@
 
 .v2-tools-records {
   grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  padding: 18px;
 }
 
-.v2-tools-records article {
-  display: grid;
-  gap: 4px;
-  padding: 17px 20px;
-  border-bottom: 1px solid color-mix(in srgb, var(--v2-border) 56%, transparent);
-}
-
-.v2-tools-records article strong {
+.v2-tools-records .rivt-metric-tile strong {
   font-size: 20px;
-  font-variant-numeric: tabular-nums;
 }
 
 .v2-tools-shortcut {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto auto;
   gap: 12px;
   align-items: center;
   padding: 15px 20px;
@@ -627,11 +609,11 @@
   min-height: 420px;
 }
 
-.v2-record-detail-panel > header {
+.v2-record-detail-panel .rivt-panel-header {
   align-items: start;
 }
 
-.v2-record-detail-panel > header p {
+.v2-record-detail-panel .rivt-panel-header p {
   margin: 5px 0 0;
   color: var(--v2-text-muted);
   font-size: 12px;
@@ -718,22 +700,13 @@
   padding: 16px 18px 0;
 }
 
-.v2-record-metrics article {
+.v2-record-metrics .rivt-metric-tile {
   padding: 13px;
-  border: 1px solid color-mix(in srgb, var(--v2-border) 48%, transparent);
-  border-radius: var(--v2-radius-md);
   background: color-mix(in srgb, var(--v2-surface-muted) 76%, transparent);
 }
 
-.v2-record-metrics strong {
-  display: block;
+.v2-record-metrics .rivt-metric-tile strong {
   font-size: 22px;
-  font-variant-numeric: tabular-nums;
-}
-
-.v2-record-metrics span {
-  color: var(--v2-text-muted);
-  font-size: 12px;
 }
 
 .v2-record-actions {
@@ -989,7 +962,7 @@
     grid-template-columns: 1fr;
   }
 
-  .v2-record-detail-panel > header,
+  .v2-record-detail-panel .rivt-panel-header,
   .v2-record-card header {
     align-items: stretch;
     flex-direction: column;
@@ -1020,7 +993,9 @@
     grid-template-columns: 1fr;
   }
 
-  .v2-tools-command article {
+  .v2-tools-context-metric,
+  .v2-tools-context-metric div {
+    justify-self: stretch;
     justify-items: start;
     text-align: left;
   }

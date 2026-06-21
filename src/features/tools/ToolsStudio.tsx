@@ -22,6 +22,7 @@ import {
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { Job } from "../../types";
 import type { PrimaryDestination } from "../../app-shell/types";
+import { EmptyState, MetricTile, PageHeader, Panel, StatusPill } from "../../components/ui";
 import { listActiveWork, type CanonicalActiveWork } from "../work/job-api";
 import {
   addProjectNote,
@@ -163,11 +164,7 @@ function FieldCalculatorTool({ activeJob }: { activeJob: Job | null }) {
 
   return (
     <div className="v2-tool-workbench v2-calculator-workbench">
-      <section className="v2-tool-panel">
-        <header>
-          <span>Field math</span>
-          <h2>Heavy 16th calculator</h2>
-        </header>
+      <Panel className="v2-tool-panel" eyebrow="Field math" title="Heavy 16th calculator">
         <div className="v2-tool-input-grid four">
           <label>Feet<input type="number" value={feet} min="0" onChange={(event) => setFeet(Math.max(0, Number(event.target.value) || 0))} /></label>
           <label>Inches<input type="number" value={inches} min="0" max="11" onChange={(event) => setInches(Math.max(0, Math.min(11, Number(event.target.value) || 0)))} /></label>
@@ -187,13 +184,9 @@ function FieldCalculatorTool({ activeJob }: { activeJob: Job | null }) {
           <span>Equal spacing</span>
           <strong>{formatNumber(equalSpacing, 3)} in on center</strong>
         </div>
-      </section>
+      </Panel>
 
-      <section className="v2-tool-panel">
-        <header>
-          <span>Cuts</span>
-          <h2>Miter and crown quick check</h2>
-        </header>
+      <Panel className="v2-tool-panel" eyebrow="Cuts" title="Miter and crown quick check">
         <div className="v2-tool-input-grid two">
           <label>Wall angle<input type="number" value={wallAngle} min="1" max="179" onChange={(event) => setWallAngle(Math.max(1, Math.min(179, Number(event.target.value) || 90)))} /></label>
           <label>Spring angle<input type="number" value={springAngle} min="1" max="89" onChange={(event) => setSpringAngle(Math.max(1, Math.min(89, Number(event.target.value) || 52)))} /></label>
@@ -205,7 +198,7 @@ function FieldCalculatorTool({ activeJob }: { activeJob: Job | null }) {
         </div>
         <p className="v2-tool-note">Use this as a field check. Always verify against the saw, material profile, and site condition before cutting.</p>
         {activeJob ? <p className="v2-tool-note">Loaded from: {activeJob.title}</p> : null}
-      </section>
+      </Panel>
     </div>
   );
 }
@@ -251,11 +244,7 @@ function EstimateTool({ activeJob }: { activeJob: Job | null }) {
 
   return (
     <div className="v2-tool-workbench">
-      <section className="v2-tool-panel">
-        <header>
-          <span>Estimate</span>
-          <h2>Price the work before you post or bid</h2>
-        </header>
+      <Panel className="v2-tool-panel" eyebrow="Estimate" title="Price the work before you post or bid">
         <div className="v2-tool-input-grid">
           <label>Labor hours<input type="number" min="0" step="0.5" value={laborHours} onChange={(event) => setLaborHours(Math.max(0, Number(event.target.value) || 0))} /></label>
           <label>Hourly rate<input type="number" min="0" value={hourlyRate} onChange={(event) => setHourlyRate(Math.max(0, Number(event.target.value) || 0))} /></label>
@@ -266,13 +255,9 @@ function EstimateTool({ activeJob }: { activeJob: Job | null }) {
           <label>Margin %<input type="number" min="0" value={marginPct} onChange={(event) => setMarginPct(Math.max(0, Number(event.target.value) || 0))} /></label>
           <label>Contingency %<input type="number" min="0" value={contingencyPct} onChange={(event) => setContingencyPct(Math.max(0, Number(event.target.value) || 0))} /></label>
         </div>
-      </section>
+      </Panel>
 
-      <aside className="v2-tool-panel v2-tool-summary-panel">
-        <header>
-          <span>Target</span>
-          <h2>{currency(low)} - {currency(high)}</h2>
-        </header>
+      <Panel as="aside" className="v2-tool-panel v2-tool-summary-panel" eyebrow="Target" title={`${currency(low)} - ${currency(high)}`}>
         <div className="v2-tool-result-hero">
           <span>Recommended target</span>
           <strong>{currency(target)}</strong>
@@ -289,7 +274,7 @@ function EstimateTool({ activeJob }: { activeJob: Job | null }) {
           <Copy size={15} />
           {copied ? "Copied" : "Copy estimate"}
         </button>
-      </aside>
+      </Panel>
     </div>
   );
 }
@@ -371,11 +356,7 @@ function InvoiceDraftTool({ activeJob }: { activeJob: Job | null }) {
 
   return (
     <div className="v2-tool-workbench">
-      <section className="v2-tool-panel">
-        <header>
-          <span>Invoice draft</span>
-          <h2>Build a clean direct-payment invoice</h2>
-        </header>
+      <Panel className="v2-tool-panel" eyebrow="Invoice draft" title="Build a clean direct-payment invoice">
         <div className="v2-tool-input-grid two">
           <label>Invoice #<input value={invoiceNumber} onChange={(event) => setInvoiceNumber(event.target.value)} /></label>
           <label>Terms<input value={terms} onChange={(event) => setTerms(event.target.value)} /></label>
@@ -399,13 +380,9 @@ function InvoiceDraftTool({ activeJob }: { activeJob: Job | null }) {
             </div>
           ))}
         </div>
-      </section>
+      </Panel>
 
-      <aside className="v2-tool-panel v2-tool-summary-panel">
-        <header>
-          <span>Total due</span>
-          <h2>{currency(total)}</h2>
-        </header>
+      <Panel as="aside" className="v2-tool-panel v2-tool-summary-panel" eyebrow="Total due" title={currency(total)}>
         <div className="v2-tool-breakdown">
           <div><span>Subtotal</span><strong>{currency(subtotal)}</strong></div>
           <div><span>Tax</span><strong>{currency(tax)}</strong></div>
@@ -417,7 +394,7 @@ function InvoiceDraftTool({ activeJob }: { activeJob: Job | null }) {
           <button type="button" className="v2-primary-button" onClick={copyInvoice}><Copy size={15} />{copied ? "Copied" : "Copy invoice"}</button>
           <button type="button" onClick={downloadInvoice}><Download size={15} />{downloaded ? "Downloaded" : "Download TXT"}</button>
         </div>
-      </aside>
+      </Panel>
     </div>
   );
 }
@@ -442,11 +419,7 @@ function MaterialsTool({ activeJob }: { activeJob: Job | null }) {
 
   return (
     <div className="v2-tool-workbench">
-      <section className="v2-tool-panel">
-        <header>
-          <span>Takeoff</span>
-          <h2>Area, waste, and material cost</h2>
-        </header>
+      <Panel className="v2-tool-panel" eyebrow="Takeoff" title="Area, waste, and material cost">
         <div className="v2-tool-input-grid">
           <label>Length (ft)<input type="number" min="0" value={areaLength} onChange={(event) => setAreaLength(Math.max(0, Number(event.target.value) || 0))} /></label>
           <label>Width (ft)<input type="number" min="0" value={areaWidth} onChange={(event) => setAreaWidth(Math.max(0, Number(event.target.value) || 0))} /></label>
@@ -458,13 +431,9 @@ function MaterialsTool({ activeJob }: { activeJob: Job | null }) {
           <article><span>With waste</span><strong>{formatNumber(withWaste)} sq ft</strong></article>
           <article><span>Material cost</span><strong>{currency(materialCost)}</strong></article>
         </div>
-      </section>
+      </Panel>
 
-      <section className="v2-tool-panel">
-        <header>
-          <span>Sheet planning</span>
-          <h2>Quick sheet count</h2>
-        </header>
+      <Panel className="v2-tool-panel" eyebrow="Sheet planning" title="Quick sheet count">
         <div className="v2-tool-input-grid">
           <label>Sheet W (in)<input type="number" min="1" value={sheetWidth} onChange={(event) => setSheetWidth(Math.max(1, Number(event.target.value) || 1))} /></label>
           <label>Sheet H (in)<input type="number" min="1" value={sheetHeight} onChange={(event) => setSheetHeight(Math.max(1, Number(event.target.value) || 1))} /></label>
@@ -478,7 +447,7 @@ function MaterialsTool({ activeJob }: { activeJob: Job | null }) {
           <small>{formatNumber(partArea)} sq ft of parts on {formatNumber(sheetArea)} sq ft sheets</small>
         </div>
         {activeJob ? <p className="v2-tool-note">Use this takeoff beside {activeJob.title}; save official closeout files in Records.</p> : null}
-      </section>
+      </Panel>
     </div>
   );
 }
@@ -680,28 +649,25 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", onNavigate, 
   if (mode === "records") {
     return (
       <section className="v2-tools-page" aria-label="Project records">
-        <header className="v2-tools-header">
-          <div>
-            <h1>Records</h1>
-            <p>Private closeout packets for accepted work. Photos, notes, completion, and reports are server-backed.</p>
-          </div>
-          <button type="button" className="v2-primary-button" onClick={() => onNavigate("work")}>
+        <PageHeader
+          className="v2-tools-header"
+          title="Records"
+          description="Private closeout packets for accepted work. Photos, notes, completion, and reports are server-backed."
+          actions={<button type="button" className="v2-primary-button" onClick={() => onNavigate("work")}>
             <FolderOpen size={16} />
             Open work
-          </button>
-        </header>
+          </button>}
+        />
 
         {recordsError ? <p className="v2-record-error" role="alert">{recordsError}</p> : null}
 
         <div className="v2-records-layout">
-          <section className="v2-tools-panel">
-            <header>
-              <div>
-                <span>Accepted work</span>
-                <h2>{recordsLoading ? "Loading records..." : `${activeWork.length} private record${activeWork.length === 1 ? "" : "s"}`}</h2>
-              </div>
-              <button type="button" onClick={() => onNavigate("work")}>Find work</button>
-            </header>
+          <Panel
+            className="v2-tools-panel"
+            eyebrow="Accepted work"
+            title={recordsLoading ? "Loading records..." : `${activeWork.length} private record${activeWork.length === 1 ? "" : "s"}`}
+            action={<button type="button" onClick={() => onNavigate("work")}>Find work</button>}
+          >
             {activeWork.length ? (
               <div className="v2-record-work-list">
                 {activeWork.map((work) => (
@@ -715,39 +681,35 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", onNavigate, 
                 ))}
               </div>
             ) : (
-              <article className="v2-tools-empty">
-                <FolderOpen size={20} />
-                <strong>No accepted work yet</strong>
-                <span>Records unlock after a contractor and tradesperson both accept the work.</span>
-              </article>
+              <EmptyState className="v2-tools-empty" icon={<FolderOpen size={20} />} title="No accepted work yet" description="Records unlock after a contractor and tradesperson both accept the work." compact />
             )}
-          </section>
+          </Panel>
 
-          <section className="v2-tools-panel v2-record-detail-panel">
+          <Panel
+            className="v2-tools-panel v2-record-detail-panel"
+            eyebrow={selectedProject ? recordStatusLabel(selectedProject.status) : "Record detail"}
+            title={selectedProject ? selectedProject.job.title : "Select an accepted job"}
+            description={selectedProject ? `${selectedProject.job.publicLocation.city}, ${selectedProject.job.publicLocation.region} - Updated ${new Date(selectedProject.updatedAt).toLocaleString()}` : "Open a record to add closeout evidence, submit completion, or generate the closeout report."}
+            action={selectedProject ? (
+              <div className="v2-record-header-actions">
+                <button type="button" onClick={() => void refreshSelectedProject()} disabled={actionBusy}>
+                  <RefreshCw size={14} />
+                  Refresh
+                </button>
+                <button type="button" onClick={() => void handleLoadReport()} disabled={actionBusy}>
+                  <Clipboard size={14} />
+                  Report
+                </button>
+              </div>
+            ) : undefined}
+          >
             {selectedProject ? (
               <>
-                <header>
-                  <div>
-                    <span>{recordStatusLabel(selectedProject.status)}</span>
-                    <h2>{selectedProject.job.title}</h2>
-                    <p>{selectedProject.job.publicLocation.city}, {selectedProject.job.publicLocation.region} - Updated {new Date(selectedProject.updatedAt).toLocaleString()}</p>
-                  </div>
-                  <div className="v2-record-header-actions">
-                    <button type="button" onClick={() => void refreshSelectedProject()} disabled={actionBusy}>
-                      <RefreshCw size={14} />
-                      Refresh
-                    </button>
-                    <button type="button" onClick={() => void handleLoadReport()} disabled={actionBusy}>
-                      <Clipboard size={14} />
-                      Report
-                    </button>
-                  </div>
-                </header>
                 {recordNotice ? <p className="v2-record-notice" role="status">{recordNotice}</p> : null}
                 <div className="v2-record-metrics">
-                  <article><strong>{selectedProject.entries.length}</strong><span>timeline entries</span></article>
-                  <article><strong>{storedMedia.length}</strong><span>stored files</span></article>
-                  <article><strong>{selectedCompletion?.status ?? "open"}</strong><span>completion status</span></article>
+                  <MetricTile value={selectedProject.entries.length} label="timeline entries" />
+                  <MetricTile value={storedMedia.length} label="stored files" />
+                  <MetricTile value={selectedCompletion?.status ?? "open"} label="completion status" />
                 </div>
 
                 <div className="v2-record-workspace">
@@ -892,13 +854,9 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", onNavigate, 
                 {reportPreview ? <pre className="v2-record-report">{reportPreview}</pre> : null}
               </>
             ) : (
-              <article className="v2-tools-empty">
-                <FileText size={20} />
-                <strong>Select an accepted job</strong>
-                <span>Open a record to add closeout evidence, submit completion, or generate the closeout report.</span>
-              </article>
+              <EmptyState className="v2-tools-empty" icon={<FileText size={20} />} title="Select an accepted job" description="Open a record to add closeout evidence, submit completion, or generate the closeout report." />
             )}
-          </section>
+          </Panel>
         </div>
       </section>
     );
@@ -947,16 +905,15 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", onNavigate, 
 
   return (
     <section className="v2-tools-page" aria-label="Tools">
-      <header className="v2-tools-header">
-        <div>
-          <h1>Tools</h1>
-          <p>Standalone field utilities for estimates, invoice drafts, materials, and closeout records.</p>
-        </div>
-        <button type="button" className="v2-primary-button" onClick={() => activeJob ? onOpenJob(activeJob.id) : onNavigate("work")}>
+      <PageHeader
+        className="v2-tools-header"
+        title="Tools"
+        description="Standalone field utilities for estimates, invoice drafts, materials, and closeout records."
+        actions={<button type="button" className="v2-primary-button" onClick={() => activeJob ? onOpenJob(activeJob.id) : onNavigate("work")}>
           <Wrench size={16} />
           {activeJob ? "Use active job" : "Open work"}
-        </button>
-      </header>
+        </button>}
+      />
 
       <section className="v2-tools-command">
         <div>
@@ -964,10 +921,7 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", onNavigate, 
           <h2>{activeJob ? `Loaded from ${activeJob.title}` : "Open tools without needing a job first"}</h2>
           <p>These utilities calculate locally in the browser. Server-backed records still live in Records after accepted work.</p>
         </div>
-        <article>
-          <strong>{activeJob ? activeJob.trade : "Standalone"}</strong>
-          <span>{activeJob ? activeJob.location : "No active job selected"}</span>
-        </article>
+        <MetricTile className="v2-tools-context-metric" value={activeJob ? activeJob.trade : "Standalone"} label={activeJob ? activeJob.location : "No active job selected"} />
       </section>
 
       <div className="v2-tool-launch-grid">
@@ -979,38 +933,25 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", onNavigate, 
       </div>
 
       <div className="v2-tools-grid">
-        <section className="v2-tools-panel">
-          <header>
-            <div>
-              <span>Payment records</span>
-              <h2>Direct-payment bookkeeping</h2>
-            </div>
-            <button type="button" onClick={onOpenRecords}>Records</button>
-          </header>
+        <Panel
+          className="v2-tools-panel"
+          eyebrow="Payment records"
+          title="Direct-payment bookkeeping"
+          action={<button type="button" onClick={onOpenRecords}>Records</button>}
+        >
           <div className="v2-tools-records">
-            <article>
-              <strong>{paymentRecords.length}</strong>
-              <span>logged payments</span>
-            </article>
-            <article>
-              <strong>{pendingPayments.length}</strong>
-              <span>waiting to close</span>
-            </article>
-            <article>
-              <strong>{activeWork.filter((work) => work.status === "active").length}</strong>
-              <span>active closeouts</span>
-            </article>
+            <MetricTile value={paymentRecords.length} label="logged payments" />
+            <MetricTile value={pendingPayments.length} label="waiting to close" />
+            <MetricTile value={activeWork.filter((work) => work.status === "active").length} label="active closeouts" />
           </div>
-        </section>
+        </Panel>
 
-        <section className="v2-tools-panel">
-          <header>
-            <div>
-              <span>Job shortcuts</span>
-              <h2>{jobs.length ? "Open a current work order" : "No jobs yet"}</h2>
-            </div>
-            <button type="button" onClick={() => onNavigate("work")}>Work</button>
-          </header>
+        <Panel
+          className="v2-tools-panel"
+          eyebrow="Job shortcuts"
+          title={jobs.length ? "Open a current work order" : "No jobs yet"}
+          action={<button type="button" onClick={() => onNavigate("work")}>Work</button>}
+        >
           <div className="v2-tools-shortcuts">
             {jobs.slice(0, 3).map((job) => (
               <button key={job.id} type="button" className="v2-tools-shortcut" onClick={() => onOpenJob(job.id)}>
@@ -1018,18 +959,15 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", onNavigate, 
                   <strong>{job.title}</strong>
                   <small>{job.trade} - {job.status}</small>
                 </span>
+                <StatusPill tone={job.status === "Open" ? "success" : job.status === "Draft" ? "warning" : "neutral"}>{job.status}</StatusPill>
                 <ArrowRight size={15} />
               </button>
             ))}
             {jobs.length === 0 ? (
-              <article className="v2-tools-empty">
-                <Clipboard size={20} />
-                <strong>No work orders yet</strong>
-                <span>Create or accept work before Records can build a closeout packet.</span>
-              </article>
+              <EmptyState className="v2-tools-empty" icon={<Clipboard size={20} />} title="No work orders yet" description="Create or accept work before Records can build a closeout packet." compact />
             ) : null}
           </div>
-        </section>
+        </Panel>
       </div>
     </section>
   );
