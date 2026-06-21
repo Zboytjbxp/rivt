@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: read
+  issues: write
 
 concurrency:
   group: production-synthetic
@@ -28,5 +29,116 @@ jobs:
         with:
           node-version: 22
 
+      - name: Install dependencies
+        run: npm ci
+
       - name: Run production synthetic monitor
-        run: npm run monitor:production
+        shell: bash
+        run: |
+          set -o pipefail
+          npm run monitor:production 2>&1 | tee production-monitor.log
+
+      - name: Upload monitor evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-monitor-${{ github.run_id }}
+          path: production-monitor.log
+          if-no-files-found: warn
+
+      - name: Open or update incident issue on failure
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require("fs");
+            const { owner, repo } = context.repo;
+            const marker = "<!-- rivt-production-synthetic-incident -->";
+            const title = "Production synthetic check failing";
+            const runUrl = `https://github.com/${owner}/${repo}/actions/runs/${context.runId}`;
+            const log = fs.existsSync("production-monitor.log")
+              ? fs.readFileSync("production-monitor.log", "utf8").slice(-6000)
+              : "No monitor log was captured.";
+            const body = [
+              marker,
+              "",
+              "The scheduled production synthetic check is failing.",
+              "",
+              `Run: ${runUrl}`,
+              `Workflow: ${context.workflow}`,
+              `Ref: ${context.ref}`,
+              `Commit: ${context.sha}`,
+              "",
+              "Immediate triage:",
+              "1. Check https://rivt.pro/api/health and confirm the deployed commit, PostgreSQL, and object storage status.",
+              "2. Check https://rivt.pro/api/auth/providers and confirm invite-gated email auth and operational-control state.",
+              "3. Confirm anonymous private routes still return 401.",
+              "4. If user impact is plausible, set the appropriate RIVT kill switch and record the reason in the deployment ledger.",
+              "5. Restore normal state only after the synthetic check passes again.",
+              "",
+              "Latest monitor output:",
+              "",
+              "```text",
+              log,
+              "```",
+              "",
+            ].join("\n");
+            const issues = await github.paginate(github.rest.issues.listForRepo, {
+              owner,
+              repo,
+              state: "open",
+              per_page: 100,
+            });
+            const existing = issues.find((issue) => !issue.pull_request && (issue.title === title || issue.body?.includes(marker)));
+            if (existing) {
+              await github.rest.issues.update({
+                owner,
+                repo,
+                issue_number: existing.number,
+                body,
+              });
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number: existing.number,
+                body: `Synthetic check failed again: ${runUrl}`,
+              });
+            } else {
+              await github.rest.issues.create({
+                owner,
+                repo,
+                title,
+                body,
+              });
+            }
+
+      - name: Close incident issue after recovery
+        if: success()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const marker = "<!-- rivt-production-synthetic-incident -->";
+            const runUrl = `https://github.com/${owner}/${repo}/actions/runs/${context.runId}`;
+            const issues = await github.paginate(github.rest.issues.listForRepo, {
+              owner,
+              repo,
+              state: "open",
+              per_page: 100,
+            });
+            const existing = issues.find((issue) => !issue.pull_request && (issue.title === "Production synthetic check failing" || issue.body?.includes(marker)));
+            if (existing) {
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number: existing.number,
+                body: `Synthetic check recovered and passed: ${runUrl}`,
+              });
+              await github.rest.issues.update({
+                owner,
+                repo,
+                issue_number: existing.number,
+                state: "closed",
+                state_reason: "completed",
+              });
+            }

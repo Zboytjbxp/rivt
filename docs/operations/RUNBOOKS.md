@@ -37,7 +37,9 @@ The check runs outside Railway and verifies:
 
 If `EXPECTED_SOURCE_COMMIT` is set, the monitor also requires production to match that exact source. If the platform is intentionally locked during an incident or maintenance window, set `ALLOW_OPERATIONAL_LOCKOUT=true` for that monitor run and record the reason in incident notes.
 
-This scheduled synthetic check is a first external tripwire. It does not replace a dedicated error-monitoring provider, paging policy, or named incident owner.
+Every workflow run uploads `production-monitor.log` as evidence. If the monitor fails, GitHub Actions opens or updates one incident issue titled `Production synthetic check failing` with the workflow run, commit, triage checklist, and latest monitor output. When the synthetic check recovers, the workflow comments on that issue and closes it.
+
+This scheduled synthetic check and GitHub issue loop are first external tripwires. They do not replace a dedicated error-monitoring provider, paging policy, or named incident owner.
 
 ## Operational Kill Switches
 

@@ -424,8 +424,9 @@ Implemented on 2026-06-20:
 - Added `scripts/production-synthetic-monitor.js` and `npm run monitor:production`.
 - Added `.github/workflows/production-synthetic.yml` to run the public production synthetic check every 30 minutes and on manual dispatch.
 - The monitor verifies public health, deployed source presence, managed PostgreSQL/S3-compatible dependency status, invite-gated email/password provider configuration, operational-control state, and seven anonymous private-route 401 boundaries.
-- Latest local run against `https://rivt.pro` passed with source `f5a68d9c16364c94dd727bb91e03a25f33e283df`, operational controls disabled, seven anonymous private checks, and a 554 ms duration.
-- This is partial monitoring progress only. Dedicated error monitoring, alert routing, paging destination, incident owner, and rehearsal remain launch blockers.
+- Hardened the scheduled workflow so it installs dependencies from `package-lock.json`, uploads `production-monitor.log` evidence on every run, opens or updates one GitHub issue titled `Production synthetic check failing` when checks fail, and comments/closes that issue when production recovers.
+- Latest local run against `https://rivt.pro` passed with source `f5a68d9c16364c94dd727bb91e03a25f33e283df`, operational controls disabled, seven anonymous private checks, and a 606 ms duration.
+- This is partial monitoring progress only. Dedicated error monitoring, alert routing, paging destination, named incident owner, and rehearsal remain launch blockers.
 
 ## Packet 08 Restore Drill Tooling Progress
 
@@ -440,7 +441,7 @@ Implemented on 2026-06-20:
 
 ## Next Exact Task
 
-Complete the remaining Packet 08 launch blockers: provision an isolated restore target and run a timed restore drill; wire dedicated error monitoring/alerts and incident owner routing; finish support/legal/founder approvals; and complete the physical/deeper manual accessibility-device matrix before named-cohort launch.
+Complete the remaining Packet 08 launch blockers: provision an isolated restore target and run a timed restore drill; wire dedicated error monitoring/alerts, paging, and named incident-owner routing; finish support/legal/founder approvals; and complete the physical/deeper manual accessibility-device matrix before named-cohort launch.
 
 ## Blocking Founder Decisions
 
