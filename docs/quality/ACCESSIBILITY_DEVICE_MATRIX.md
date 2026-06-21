@@ -7,9 +7,9 @@ Gate A status: partial evidence only. This report does not approve named custome
 ## Live Target
 
 - URL: `https://rivt.pro/`
-- Live health checked after deploy: `2026-06-20T22:07:54Z`
-- Live source commit reported by `/api/health`: `7fc6f65b1dad7af803547293cae199135908c5cd`
-- Railway deployment: `255d59f0-ecdf-4c0d-ac36-583045b767a8`
+- Live health checked after deploy: `2026-06-21T00:14:45Z`
+- Live source commit reported by `/api/health`: `0959e8ff408249236922141289083929e53d1f7b`
+- Railway deployment: `29dc4282-6dd0-4d67-aed9-1951d715d911`
 - Browser tool: Codex in-app Browser controlled by Playwright runtime
 
 ## Completed Smoke Coverage
@@ -21,6 +21,9 @@ Gate A status: partial evidence only. This report does not approve named custome
 | Public auth/marketing shell | 360x800 | Loaded; no console warnings/errors; no horizontal overflow. |
 | Auth form labels | 1280x720 / 390x844 / 360x800 | Email and password controls have visible labels. |
 | Invalid email/password | 390x844 | Remains signed out with generic `Invalid email or password.` message; no local fallback observed. |
+| Authenticated contractor shell | 390x844 | Disposable production contractor account signed in; top-bar search, messages, notifications, and profile controls present; no role toggle or More tab; no horizontal overflow; `smallTargetCount: 0`. |
+| Authenticated tradesperson shell | 390x844 | Disposable production tradesperson account signed in; top-bar search, messages, notifications, and profile controls present; no role toggle or More tab; no horizontal overflow; `smallTargetCount: 0`. |
+| Authenticated contractor shell | 1366x768 | Disposable production contractor account signed in; top-bar search, messages, notifications, and profile controls present; no role toggle or More tab; no horizontal overflow; `smallTargetCount: 0`. |
 
 ## Findings and Fixes
 
@@ -29,10 +32,13 @@ Gate A status: partial evidence only. This report does not approve named custome
 - Post-deploy verification: at 390x844, live email and password fields measured `46px` high with visible labels and no console warnings/errors.
 - No horizontal page overflow was found in the tested public shell breakpoints.
 - No live console warnings or errors were observed in the tested public shell breakpoints.
+- Follow-up finding: authenticated shell smoke initially found sub-44px Work status tabs and Shop Talk action buttons. Fixes raised `.v2-section-tabs button`, `.v2-detail-tabs button`, and shared Shop Talk action buttons to a `44px` minimum width.
+- Post-deploy authenticated verification: live smoke `ui-a11y-20260621001445-df080b` passed at 390x844 contractor, 390x844 tradesperson, and 1366x768 contractor with `smallTargetCount: 0` on all three viewports. Disposable accounts were closed after the run.
+- Remaining classification item: the authenticated smoke still records one expected-looking `401` resource load in each viewport. No UI auth fallback or user-facing failure was observed, but the request should be classified or filtered in a later diagnostics pass.
 
 ## Blocked Coverage
 
-The authenticated manual route matrix is still blocked because the provided testing account does not authenticate on production and no new production user was created during this audit.
+Scripted authenticated shell coverage now exists through disposable production accounts. Full manual route and physical-device coverage remains incomplete.
 
 Remaining manual Gate A coverage:
 
