@@ -417,9 +417,19 @@ Deployed on 2026-06-20:
 - Tested shells had top-bar search, messages, notifications, and profile controls; no role toggle; no More tab; no horizontal overflow; `consoleWarningsOrErrors: 0`; and `smallTargetCount: 0` on all tested viewports. The smoke now fails on missing top-bar controls, post-login console warnings/errors, or sub-44px controls.
 - Live hardening audit passed after deployment with exact source `5f3334b231114efb377899ea79bad6a48b353a21`, migration `0009_durable_rate_limits`, seven anonymous private-route checks returning 401, zero seed/demo findings, and counts of 3 active accounts, 0 public network profiles, 0 open jobs, 2 open support cases, 0 active restrictions, 115 quarantined legacy app-state rows, and 41 rate-limit windows.
 
+## Packet 08 Synthetic Monitoring Progress
+
+Implemented on 2026-06-20:
+
+- Added `scripts/production-synthetic-monitor.js` and `npm run monitor:production`.
+- Added `.github/workflows/production-synthetic.yml` to run the public production synthetic check every 30 minutes and on manual dispatch.
+- The monitor verifies public health, deployed source presence, managed PostgreSQL/S3-compatible dependency status, invite-gated email/password provider configuration, operational-control state, and seven anonymous private-route 401 boundaries.
+- Local run against `https://rivt.pro` passed with source `5f3334b231114efb377899ea79bad6a48b353a21`, operational controls disabled, seven anonymous private checks, and a 531 ms duration.
+- This is partial monitoring progress only. Dedicated error monitoring, alert routing, paging destination, incident owner, and rehearsal remain launch blockers.
+
 ## Next Exact Task
 
-Complete the remaining Packet 08 launch blockers: provision an isolated restore target and run a timed restore drill; wire external monitoring/alerts and incident owner routing; finish support/legal/founder approvals; and complete the physical/deeper manual accessibility-device matrix before named-cohort launch.
+Complete the remaining Packet 08 launch blockers: provision an isolated restore target and run a timed restore drill; wire dedicated error monitoring/alerts and incident owner routing; finish support/legal/founder approvals; and complete the physical/deeper manual accessibility-device matrix before named-cohort launch.
 
 ## Blocking Founder Decisions
 

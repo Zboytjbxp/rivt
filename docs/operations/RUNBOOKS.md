@@ -21,6 +21,24 @@ railway ssh --service RIVT --environment production npm run smoke:gate-a:live
 
 Set `EXPECTED_SOURCE_COMMIT` only when intentionally checking an exact source SHA. A passing hardening check does not replace the timed restore drill, external monitoring, or manual device/accessibility evidence.
 
+## Production Synthetic Monitoring
+
+GitHub Actions runs `Production Synthetic Check` every 30 minutes and can also be triggered manually. It executes:
+
+```text
+npm run monitor:production
+```
+
+The check runs outside Railway and verifies:
+
+- `https://rivt.pro/api/health` returns `ok=true`, managed PostgreSQL, S3-compatible storage, and a deployed source commit.
+- `/api/auth/providers` reports invite-gated email/password auth and operational-control state.
+- Anonymous requests to private routes still return `401`.
+
+If `EXPECTED_SOURCE_COMMIT` is set, the monitor also requires production to match that exact source. If the platform is intentionally locked during an incident or maintenance window, set `ALLOW_OPERATIONAL_LOCKOUT=true` for that monitor run and record the reason in incident notes.
+
+This scheduled synthetic check is a first external tripwire. It does not replace a dedicated error-monitoring provider, paging policy, or named incident owner.
+
 ## Operational Kill Switches
 
 Use these only during a real incident, launch pause, or controlled maintenance window:

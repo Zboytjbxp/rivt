@@ -16,12 +16,13 @@ Packet 08 hardening evidence now exists for:
 - Durable limits: auth, write, and upload throttles use shared PostgreSQL `rate_limit_windows` buckets keyed by privacy-safe subject hashes.
 - Legacy bridge retirement: authenticated `/api/app-state`, `/api/events`, and `/api/payments/export.csv` bridge routes were retired in source `00147c8e3f70e246b41ed48b46550ae33cf0eb54` and remain absent from the current deployed source; live hardening smoke still reports zero seed/demo findings and anonymous fail-closed behavior.
 - Manual and scripted accessibility/device smoke: `docs/quality/ACCESSIBILITY_DEVICE_MATRIX.md` records 1280x720, 390x844, and 360x800 public-shell checks with no console warnings/errors or horizontal overflow; one sub-44px auth input target-size defect was fixed and post-deploy verification measured 46px fields at 390x844. Authenticated production smoke `ui-a11y-20260621002702-cbe0e5` also covered contractor mobile, tradesperson mobile, and contractor desktop shells with top-bar search/messages/notifications/profile present, no role toggle, no More tab, no horizontal overflow, zero post-login console warnings/errors, and zero small tap-target findings. The smoke now fails on those authenticated-shell regressions instead of only reporting them.
+- Production synthetic monitoring: `npm run monitor:production` passes against `https://rivt.pro` and `.github/workflows/production-synthetic.yml` schedules the same public health/provider/fail-closed check every 30 minutes.
 - Local automated gates: `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test`, `npm run test:e2e`, and `npm audit --omit=dev` pass on the Packet 08 source.
 
 Blocking evidence still missing before named customer/pilot launch:
 
 - Timed restore into isolated PostgreSQL with measured recovery time and recovery point.
-- External error monitoring, alert rules, paging/incident owner routing, and one incident rehearsal.
+- Dedicated error monitoring, alert rules, paging/incident owner routing, and one incident rehearsal. The scheduled GitHub synthetic check is only a first external tripwire.
 - Physical-device and deeper manual accessibility matrix evidence, including mobile Safari/Chrome, 200% text/zoom, keyboard-only, reduced motion, screen-reader labels, and end-to-end route flows after login.
 - Founder/legal/support approval owners, launch communications, and support hours.
 
