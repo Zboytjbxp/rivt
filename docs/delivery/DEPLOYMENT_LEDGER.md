@@ -401,3 +401,41 @@ Add one entry per staging/production deployment.
 - Known risks: the expanded top-bar action audit has not yet been rerun against production with disposable accounts; physical/manual accessibility and external incident/launch operations blockers remain open
 - Rollback performed/result: not required
 - Approval: controllable UI smoke coverage accepted as local evidence only; overall Gate A not approved
+
+## Current Production - Packet 08 Trade News and Shop Talk Polish
+
+- Environment: Production (`https://rivt.pro`)
+- Date/time/timezone: 2026-06-21 01:55 America/New_York
+- Deployer: Codex through authenticated Railway CLI
+- Source repository/branch: `Zboytjbxp/rivt`, `master`
+- Runtime source commit: `850337ff3c54f98405c58f74ac5feb39213f1bbd`, followed by documentation/metadata source `97cc5dd6d807a0a44a7eac2cb71c2a602e1ee8f9`
+- Build/artifact ID: Railway deployment `9c1a3184-1b5e-44dc-bcae-6b8cffc5fc7b`; a later metadata redeploy set `SOURCE_COMMIT` to `97cc5dd6d807a0a44a7eac2cb71c2a602e1ee8f9`
+- Migration version before/after: unchanged (`0009_durable_rate_limits`)
+- Feature-flag/config version: `SOURCE_COMMIT` updated after the initial successful app deployment; no operational-control flags changed
+- Provider/config changes: no provider credentials changed
+- Backup/rollback target: prior successful launch-ops deployment; no migration change
+- Automated gates: local `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test`, `npm run test:e2e`, and `npm audit --omit=dev` passed; DB-backed integration tests skipped locally because `TEST_DATABASE_URL` is not configured
+- Post-deploy smoke tests: production `/api/news` returned curated contractor-relevant news plus live tail items with original source URLs, RIVT-owned fallback thumbnails, zero Google favicon thumbnails, zero missing thumbnails, zero missing source URLs, and zero homeowner drift findings. A later verification on source `4fe22bc6a3cbbd146ac286869562f4c3e968ece1` returned 23 items with the same thumbnail/source-url guarantees.
+- Health/readiness result: health remained healthy with PostgreSQL and S3-compatible storage; the final current runtime health now reports exact source commit `4fe22bc6a3cbbd146ac286869562f4c3e968ece1`
+- Known risks: full Gate A remains blocked by dedicated error monitoring/paging, incident rehearsal, RPO/RTO policy approval, support/legal/founder approvals, and physical/deeper manual accessibility-device matrix
+- Rollback performed/result: not required
+- Approval: Trade News and Shop Talk polish accepted as controllable UX hardening evidence; overall Gate A not approved
+
+## Current Production - Packet 08 UI Smoke Regression Fixes
+
+- Environment: Production (`https://rivt.pro`)
+- Date/time/timezone: 2026-06-21 02:54 America/New_York
+- Deployer: Codex through authenticated Railway CLI
+- Source repository/branch: `Zboytjbxp/rivt`, `master`
+- Source commit: `4fe22bc6a3cbbd146ac286869562f4c3e968ece1`
+- Build/artifact ID: Railway deployment `7fe1c3ea-d5f4-48c4-b757-a46ff8ebc369`; earlier same-session deployments fixed mobile search target (`3577f1f`), notification quick actions (`b1768d8`), base theme toggle target (`a76377f`), responsive theme toggle overrides (`8f13d9c`), and Inbox targets (`30293e9`)
+- Migration version before/after: unchanged (`0009_durable_rate_limits`)
+- Feature-flag/config version: `SOURCE_COMMIT` updated to `4fe22bc6a3cbbd146ac286869562f4c3e968ece1`; no operational-control flags changed
+- Provider/config changes: no provider credentials changed
+- Backup/rollback target: prior successful Trade News deployment `9c1a3184-1b5e-44dc-bcae-6b8cffc5fc7b`; no migration change
+- Automated gates: after each runtime fix, local `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test`, `npm run test:e2e`, and `npm audit --omit=dev` passed; DB-backed integration tests skipped locally because `TEST_DATABASE_URL` is not configured
+- Post-deploy smoke tests: live authenticated UI smoke used Railway-side setup/cleanup plus local Playwright browser execution because local `railway run` cannot resolve Railway private DNS and the Railway container does not include Playwright browser binaries. Final run `ui-a11y-20260621062332-02b380` passed contractor/tradesperson 360x800 and 390x844 phones, contractor 768x1024 tablet, contractor 1366x768 laptop, contractor 1440x900 desktop, and contractor 390x844 at 200% root text scale. It opened and audited search, notifications, profile/account, and messages/inbox surfaces; every scenario reported top-bar search/messages/notifications/profile present, reduced-motion enabled, keyboard focus reaching named top-bar and primary navigation targets, `consoleWarningsOrErrors: 0`, and `smallTargetCount: 0`. The two disposable accounts were closed after the run.
+- Health/readiness result: `https://rivt.pro/api/health` returned exact source `4fe22bc6a3cbbd146ac286869562f4c3e968ece1` with PostgreSQL and S3-compatible storage healthy. `npm run monitor:production` passed externally with seven anonymous private-route checks. `npm run smoke:gate-a:live` passed inside Railway with migration `0009_durable_rate_limits`, zero seed/demo findings, and production counts of 3 active accounts, 0 public network profiles, 0 open jobs, 2 open support cases, 0 active restrictions, 115 quarantined legacy app-state rows, and 78 rate-limit windows.
+- Known risks: full Gate A remains blocked by dedicated error monitoring/paging, completed incident-routing fields and rehearsal, founder/support/legal-safety approvals, RPO/RTO policy approval, and physical/deeper manual accessibility-device matrix
+- Rollback performed/result: not required
+- Approval: production UI smoke regression fixes accepted as controllable Gate A evidence; overall Gate A not approved

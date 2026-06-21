@@ -2,10 +2,10 @@
 
 Last updated: 2026-06-21 America/New_York
 Current gate: Gate A launch hardening
-Current phase: Packet 08 backup-artifact restore and expanded authenticated UI matrix verified; full Gate A approval remains blocked
+Current phase: Packet 08 controllable UX hardening, Trade News polish, and production UI smoke regression fixes verified; full Gate A approval remains blocked
 Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
-Production release commit: `67094c9853a8f4be2be01ffe30376b669afe6cde`
+Production release commit: `4fe22bc6a3cbbd146ac286869562f4c3e968ece1`
 
 ## Source State
 
@@ -518,11 +518,31 @@ Implemented on 2026-06-21 as controllable UX hardening:
 - Rendered QA with a mocked authenticated account while letting `/api/news` hit the real local API at `127.0.0.1:8787`: desktop `1280x800` and mobile `390x844` both showed curated cards, no Google favicon thumbnails, working original-source URLs, detail hero images, and zero console errors. Screenshot evidence was saved outside the repo at `C:\Users\zboyt\AppData\Local\Temp\rivt-trade-news-desktop.png` and `C:\Users\zboyt\AppData\Local\Temp\rivt-trade-news-mobile.png`.
 - Deployed the slice to Railway production as deployment `9c1a3184-1b5e-44dc-bcae-6b8cffc5fc7b` from commit `850337ff3c54f98405c58f74ac5feb39213f1bbd`.
 - Live `https://rivt.pro/api/news` verification after deployment returned 21 items with `GoogleFavicons: 0`, `MissingThumbnails: 0`, `MissingUrls: 0`, and `HomeownerMentions: 0`; the first card used `/news/permit-watch.svg` and linked to the Jacksonville permitting source.
+- A follow-up metadata redeploy set production `SOURCE_COMMIT` to the Trade News documentation commit `97cc5dd6d807a0a44a7eac2cb71c2a602e1ee8f9`; subsequent UI-smoke fix deployments preserved the same `/api/news` behavior.
+- Final live `/api/news` verification on production source `4fe22bc6a3cbbd146ac286869562f4c3e968ece1` returned 23 items with `GoogleFavicons: 0`, `MissingThumbnails: 0`, and `MissingUrls: 0`; the first curated item uses `/news/permit-watch.svg` and links to the Jacksonville permitting source.
 - Required local gates passed after this slice: `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test`, `npm run test:e2e`, and `npm audit --omit=dev`. DB-backed local integration tests still skip on this workstation because `TEST_DATABASE_URL` is intentionally absent.
+
+## Packet 08 Production UI Smoke Regression Fixes
+
+Completed on 2026-06-21 as controllable Gate A hardening:
+
+- Because `railway run` from the local workstation cannot resolve Railway private DNS (`postgres.railway.internal`) and the Railway container does not include Playwright browser binaries, live authenticated UI smoke used a split run: production setup/cleanup inside Railway and browser-only verification from the local Playwright runtime against `https://rivt.pro`.
+- Setup run `ui-a11y-20260621062332-02b380` created disposable contractor and tradesperson accounts through the production service. After final verification, cleanup closed both disposable accounts.
+- The production smoke caught and fixed five real UI regressions:
+  - Search dialog `Cancel` action measured 18px tall on a 360px phone; commit `3577f1f` raised the mobile search action target to the 44px floor.
+  - Notification quick actions measured 38px tall; commit `b1768d8` raised those panel actions to the 44px floor.
+  - Theme toggles measured 36-42px across account, sidebar, onboarding, and top-bar surfaces; commits `a76377f` and `8f13d9c` corrected the base and responsive overrides.
+  - Inbox refresh/open/mark-read controls measured 18-38px; commit `30293e9` raised Inbox header, alert, composer, empty-state, and job-row actions to the 44px floor.
+  - The search dialog overflowed horizontally at 200% root text scale on a 390px phone; commit `4fe22bc` constrained the search panel and input flex behavior.
+- Final browser-only production smoke passed against `https://rivt.pro` after deployment `7fe1c3ea-d5f4-48c4-b757-a46ff8ebc369` and source `4fe22bc6a3cbbd146ac286869562f4c3e968ece1`.
+- Passed viewports: contractor and tradesperson 360x800 phones, contractor and tradesperson 390x844 phones, contractor 768x1024 tablet, contractor 1366x768 laptop, contractor 1440x900 desktop, and contractor 390x844 phone at 200% root text scale.
+- Every scenario reported top-bar search/messages/notifications/profile present, reduced-motion enabled, keyboard focus reaching named top-bar and primary navigation targets, `consoleWarningsOrErrors: 0`, and `smallTargetCount: 0`.
+- Post-fix production checks passed: `npm run monitor:production` reported exact source `4fe22bc6a3cbbd146ac286869562f4c3e968ece1`, PostgreSQL/S3-compatible dependencies healthy, operational controls disabled, and seven anonymous private-route checks; `npm run smoke:gate-a:live` passed inside Railway with migration `0009_durable_rate_limits`, seven anonymous private-route checks returning 401, zero seed/demo findings, 3 active accounts, 0 public network profiles, 0 open jobs, 2 open support cases, 0 active restrictions, 115 quarantined legacy app-state rows, and 78 rate-limit windows.
+- Required local gates passed after each runtime fix: `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test`, `npm run test:e2e`, and `npm audit --omit=dev`. DB-backed local integration tests still skip on this workstation because `TEST_DATABASE_URL` is intentionally absent.
 
 ## Next Exact Task
 
-Continue controllable Gate A hardening by rerunning the expanded authenticated UI smoke against production with disposable accounts when live credentials are available, then address any resulting UI blockers. Keep the remaining external launch requirements noted: configure real dedicated error monitoring and paging/escalation, fill backup owner/support-hours/approval fields in `docs/operations/incident-routing.json`, approve RPO/RTO/retention/cadence fields in `docs/operations/recovery-policy.json`, run an incident rehearsal, then pass `npm run incident:readiness -- --require-ready` and `npm run launch:readiness -- --require-ready`. Complete the physical/deeper manual accessibility-device matrix before named-cohort launch.
+Continue Gate A launch hardening with the remaining external and manual blockers: configure real dedicated error monitoring and paging/escalation, fill backup owner/support-hours/approval fields in `docs/operations/incident-routing.json`, approve RPO/RTO/retention/cadence fields in `docs/operations/recovery-policy.json`, run an incident rehearsal, then pass `npm run incident:readiness -- --require-ready` and `npm run launch:readiness -- --require-ready`. Complete the physical/deeper manual accessibility-device matrix before named-cohort launch.
 
 ## Blocking Founder Decisions
 

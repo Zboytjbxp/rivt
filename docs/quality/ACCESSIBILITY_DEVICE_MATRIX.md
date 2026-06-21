@@ -7,9 +7,9 @@ Gate A status: partial evidence only. This report does not approve named custome
 ## Live Target
 
 - URL: `https://rivt.pro/`
-- Live health checked after deploy: `2026-06-21T04:35:29Z`
-- Live source commit reported by `/api/health`: `67094c9853a8f4be2be01ffe30376b669afe6cde`
-- Railway deployment: `007b3270-4c08-4c61-8238-3164db747666`
+- Live health checked after deploy: `2026-06-21T06:54:02Z`
+- Live source commit reported by `/api/health`: `4fe22bc6a3cbbd146ac286869562f4c3e968ece1`
+- Railway deployment: `7fe1c3ea-d5f4-48c4-b757-a46ff8ebc369`
 - Browser tool: Codex in-app Browser controlled by Playwright runtime
 
 ## Completed Smoke Coverage
@@ -42,16 +42,16 @@ Gate A status: partial evidence only. This report does not approve named custome
 - 1440x900 wide desktop for contractor.
 - 390x844 contractor pass with 200% root text scale.
 
-Live run `ui-a11y-20260621043529-3efa9b` created disposable contractor and tradesperson accounts, exercised every scenario above, and closed both accounts after the run.
+Live run `ui-a11y-20260621062332-02b380` created disposable contractor and tradesperson accounts through the production service, exercised every scenario above against `https://rivt.pro`, and closed both accounts after the final run.
 
-The script was hardened after that live run to open and audit the top-bar action surfaces rather than only checking that the controls exist:
+The script now opens and audits the top-bar action surfaces rather than only checking that the controls exist:
 
 - `Ctrl+K` global search dialog.
 - Notifications panel, including its quick actions.
 - Profile/account panel, including the sign-out control.
 - Messages top-bar button routing to the server-owned Inbox page.
 
-This expanded top-bar action coverage still needs to be rerun against production with disposable accounts before it becomes live evidence.
+This expanded top-bar action coverage passed in production during run `ui-a11y-20260621062332-02b380` after the tap-target and text-scale fixes below.
 
 Local mocked E2E coverage now also opens top-bar search, notifications, profile/account, and messages/inbox at desktop and mobile viewports through `npm run test:e2e`.
 
@@ -67,11 +67,16 @@ Local mocked E2E coverage now also opens top-bar search, notifications, profile/
 - Follow-up finding: expanded authenticated smoke found 360x800 Crew overflow in the V2 network shell. The first issue was intrinsic grid/flex sizing that let `.v2-network-header`, `.v2-network-grid`, and `.v2-network-panel` exceed their parent; the second was a mobile metric row with three `min-width: 110px` cards.
 - Fixes in this packet: added explicit `min-width: 0` shrink rules for network page children and converted the mobile metrics row to a real three-column grid with no fixed metric-card minimum.
 - Post-deploy expanded verification: live smoke `ui-a11y-20260621043529-3efa9b` passed at 360x800, 390x844, 768x1024, 1366x768, 1440x900, and 390x844 with 200% text-scale.
-- Controllable follow-up: top-bar controls were upgraded from presence-only smoke to interaction smoke in `scripts/live-ui-accessibility.js`, and `test/jobs-discovery.e2e.mjs` now verifies search, notifications, account/profile, and messages/inbox open correctly with mocked server responses.
+- Follow-up finding: production top-bar interaction smoke found sub-44px controls in opened surfaces: search dialog `Cancel` measured 18px, notification quick actions measured 38px, theme toggles measured 36-42px across responsive contexts, and Inbox actions measured 18-38px.
+- Fixes in this packet: raised mobile search actions, notification quick actions, theme toggles and responsive overrides, and Inbox header/alert/composer/empty/job-row actions to the 44px target floor.
+- Follow-up finding: the search dialog overflowed horizontally on a 390x844 phone at 200% root text scale.
+- Fix in this packet: constrained the search panel to `calc(100vw - 32px)` and adjusted search input flex behavior for narrow mobile panels.
+- Post-deploy regression verification: live smoke `ui-a11y-20260621062332-02b380` passed at 360x800, 390x844, 768x1024, 1366x768, 1440x900, and 390x844 with 200% text-scale on production source `4fe22bc6a3cbbd146ac286869562f4c3e968ece1`. Every scenario reported `consoleWarningsOrErrors: 0`, `smallTargetCount: 0`, reduced-motion preference, top-bar search/messages/notifications/profile present, and keyboard focus reaching named top-bar and primary navigation targets.
+- Controllable follow-up: local mocked E2E coverage also opens top-bar search, notifications, account/profile, and messages/inbox at desktop and mobile viewports through `npm run test:e2e`.
 
 ## Blocked Coverage
 
-Expanded scripted authenticated shell coverage now exists through disposable production accounts. Full manual route and physical-device coverage remains incomplete.
+Expanded scripted authenticated shell coverage now exists through disposable production accounts and includes opened top-bar interaction surfaces. Full manual route and physical-device coverage remains incomplete.
 
 Remaining manual Gate A coverage:
 
@@ -83,4 +88,4 @@ Remaining manual Gate A coverage:
 
 ## Decision
 
-This pass records live public-shell evidence and expanded scripted authenticated shell, reduced-motion, 200% text-scale, and keyboard-focus evidence, but `GA-UX-006` remains `Partial`. Gate A remains blocked until the deeper manual route matrix and physical-device coverage are completed, including route-level keyboard-only workflows, physical mobile browsers, and screen-reader passes.
+This pass records live public-shell evidence plus expanded scripted authenticated shell, opened top-bar interaction, reduced-motion, 200% text-scale, tap-target, and keyboard-focus evidence, but `GA-UX-006` remains `Partial`. Gate A remains blocked until the deeper manual route matrix and physical-device coverage are completed, including route-level keyboard-only workflows, physical mobile browsers, and screen-reader passes.
