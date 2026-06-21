@@ -5926,6 +5926,8 @@ function ShopTalkView({
   const [answerDraft, setAnswerDraft] = useState("");
   const [rulesOpen, setRulesOpen] = useState(false);
   const [newPostOpen, setNewPostOpen] = useState(false);
+  const [talkQuery, setTalkQuery] = useState("");
+  const [newsQuery, setNewsQuery] = useState("");
   const [liveNews, setLiveNews] = useState<NewsItem[]>([]);
   const [newsLoading, setNewsLoading] = useState(false);
   const [newsFetched, setNewsFetched] = useState(false);
@@ -5954,9 +5956,29 @@ function ShopTalkView({
     }
   }
 
-  const filteredPosts = communityPosts.filter(
-    (post) => tradeFilter === "All trades" || post.trade === tradeFilter,
-  );
+  const normalizedTalkQuery = talkQuery.trim().toLowerCase();
+  const normalizedNewsQuery = newsQuery.trim().toLowerCase();
+  const filteredPosts = communityPosts.filter((post) => {
+    const tradeMatches = tradeFilter === "All trades" || post.trade === tradeFilter;
+    if (!tradeMatches) return false;
+    if (!normalizedTalkQuery) return true;
+
+    const searchable = [
+      post.title,
+      post.body,
+      post.trade,
+      post.flair ?? "",
+      post.author,
+      post.status,
+      ...post.replies.map((reply) => `${reply.author} ${reply.body}`),
+    ].join(" ").toLowerCase();
+
+    return searchable.includes(normalizedTalkQuery);
+  });
+  const filteredNews = displayNews.filter((item) => {
+    if (!normalizedNewsQuery) return true;
+    return [item.headline, item.summary, item.source, item.urgency ?? "", item.date].join(" ").toLowerCase().includes(normalizedNewsQuery);
+  });
   const sortedPosts = [...filteredPosts].sort((a, b) => {
     if (sortMode === "new") return b.id - a.id;
     if (sortMode === "unanswered") {
@@ -5969,9 +5991,12 @@ function ShopTalkView({
     if (a.status !== "Needs a pro answer" && b.status === "Needs a pro answer") return 1;
     return netScore(b) - netScore(a);
   });
-  const selectedPost = filteredPosts.find((p) => p.id === selectedPostId) ?? filteredPosts[0] ?? communityPosts[0];
-  const selectedNews = displayNews.find((n) => n.id === selectedNewsId) ?? displayNews[0];
+  const selectedPost = filteredPosts.find((p) => p.id === selectedPostId) ?? filteredPosts[0];
+  const selectedNews = filteredNews.find((n) => n.id === selectedNewsId) ?? filteredNews[0];
   const profileBadges = communityBadgeLabels(communityPosts, profile.displayName);
+  const unansweredCount = filteredPosts.filter((post) => post.replies.length === 0 || post.status === "Needs a pro answer").length;
+  const verifiedFixCount = filteredPosts.filter((post) => post.status === "Verified Fix").length;
+  const newsSourceCount = new Set(filteredNews.map((item) => item.source)).size;
 
   function submitAnswer() {
     const body = answerDraft.trim();
@@ -5981,12 +6006,12 @@ function ShopTalkView({
   }
 
   const SHOP_RULES = [
-    "Keep it field-relevant — no recruiting or solicitation",
+    "Keep it field-relevant - no recruiting or solicitation",
     "Cite the code section when referencing code requirements",
     "No pricing disputes or bidding wars",
     "Mark your answer as a Verified Fix only if you've done it",
-    "Be specific — \"I've seen this on X job\" beats generic advice",
-    "No spam, no harassment — violations get removed, not warned",
+    "Be specific - \"I've seen this on X job\" beats generic advice",
+    "No spam, no harassment - violations get removed, not warned",
   ];
 
   return (
@@ -6027,14 +6052,20 @@ function ShopTalkView({
           {activeTab === "talk" ? (
             <>
               <div className="shop-talk-command">
-                <div>
+                <div className="shop-talk-command-head">
                   <span>Community knowledge</span>
                   <h2>Field answers, not generic Q&amp;A</h2>
+                  <p>Search first, then ask. Keep code, safety, and site-condition answers tied to real trade experience.</p>
                 </div>
                 <button type="button" className="primary-action" onClick={() => setNewPostOpen(true)}>
                   <Plus size={17} />
                   New post
                 </button>
+                <div className="shop-talk-kpi-strip" aria-label="Shop Talk summary">
+                  <span><strong>{filteredPosts.length}</strong><small>threads</small></span>
+                  <span><strong>{unansweredCount}</strong><small>need answers</small></span>
+                  <span><strong>{verifiedFixCount}</strong><small>verified fixes</small></span>
+                </div>
               </div>
 
               {/* Community Rules */}
@@ -6058,35 +6089,45 @@ function ShopTalkView({
                 )}
               </div>
 
-              {/* Sort tabs */}
-              <div className="shop-sort-tabs">
-                {(["hot", "new", "unanswered"] as const).map((mode) => (
-                  <button
-                    key={mode}
-                    type="button"
-                    className={sortMode === mode ? "active" : ""}
-                    onClick={() => setSortMode(mode)}
-                  >
-                    {mode === "hot" ? "Hot" : mode === "new" ? "New" : "Unanswered"}
-                  </button>
-                ))}
+              <div className="shop-talk-fieldbar" aria-label="Shop Talk filters">
+                <label className="shop-talk-search">
+                  <Search size={15} />
+                  <span className="sr-only">Search Shop Talk</span>
+                  <input
+                    type="search"
+                    value={talkQuery}
+                    onChange={(event) => setTalkQuery(event.target.value)}
+                    placeholder="Search questions, trades, fixes"
+                  />
+                </label>
+                <label className="input-control">
+                  <span>Trade</span>
+                  <select value={tradeFilter} onChange={(e) => setTradeFilter(e.target.value)}>
+                    {tradeFilters.map((opt) => <option key={opt}>{opt}</option>)}
+                  </select>
+                </label>
+                <div className="shop-sort-tabs">
+                  {(["hot", "new", "unanswered"] as const).map((mode) => (
+                    <button
+                      key={mode}
+                      type="button"
+                      className={sortMode === mode ? "active" : ""}
+                      onClick={() => setSortMode(mode)}
+                    >
+                      {mode === "hot" ? "Hot" : mode === "new" ? "New" : "Unanswered"}
+                    </button>
+                  ))}
+                </div>
               </div>
-
-              <label className="input-control">
-                <span>Filter by trade</span>
-                <select value={tradeFilter} onChange={(e) => setTradeFilter(e.target.value)}>
-                  {tradeFilters.map((opt) => <option key={opt}>{opt}</option>)}
-                </select>
-              </label>
 
               <div className="shop-post-list">
                 {sortedPosts.length === 0 ? (
                   <EmptyState
                     icon={MessageCircle}
-                    title="No questions in this filter"
-                    description="Broaden the trade filter or start the first field question in this lane."
-                    actionLabel="Ask a question"
-                    onAction={() => setNewPostOpen(true)}
+                    title="No matching questions"
+                    description="Clear the search, broaden the trade filter, or start the first field question in this lane."
+                    actionLabel={talkQuery ? "Clear search" : "Ask a question"}
+                    onAction={() => talkQuery ? setTalkQuery("") : setNewPostOpen(true)}
                   />
                 ) : sortedPosts.map((post) => (
                   <button
@@ -6105,7 +6146,7 @@ function ShopTalkView({
                     </div>
                     <strong>{post.title}</strong>
                     <div className="shop-post-card-stats">
-                      <span>↑ {netScore(post)}</span>
+                      <span>Score {netScore(post)}</span>
                       <span>{post.replies.length} replies</span>
                       <span>{post.createdAt}</span>
                     </div>
@@ -6116,11 +6157,28 @@ function ShopTalkView({
           ) : (
             <>
               <div className="shop-talk-command">
-                <div>
+                <div className="shop-talk-command-head">
                   <span>Trade news</span>
                   <h2>Original sources, contractor context</h2>
                   <p>Curated code, safety, licensing, labor, and local permitting updates with links back to the source.</p>
                 </div>
+                <div className="shop-talk-kpi-strip" aria-label="Trade news summary">
+                  <span><strong>{filteredNews.length}</strong><small>articles</small></span>
+                  <span><strong>{newsSourceCount}</strong><small>sources</small></span>
+                  <span><strong>{newsFetched ? "Live" : "Curated"}</strong><small>feed</small></span>
+                </div>
+              </div>
+              <div className="shop-talk-fieldbar news-fieldbar" aria-label="Trade News filters">
+                <label className="shop-talk-search">
+                  <Search size={15} />
+                  <span className="sr-only">Search Trade News</span>
+                  <input
+                    type="search"
+                    value={newsQuery}
+                    onChange={(event) => setNewsQuery(event.target.value)}
+                    placeholder="Search sources, codes, safety, local"
+                  />
+                </label>
               </div>
               <div className="shop-news-list">
                 {newsLoading ? (
@@ -6133,9 +6191,15 @@ function ShopTalkView({
                       </div>
                     ))}
                   </div>
-                ) : displayNews.length === 0 ? (
-                  <EmptyState icon={Newspaper} title="No news yet" description="Trade-relevant news will appear here." />
-                ) : displayNews.map((item) => (
+                ) : filteredNews.length === 0 ? (
+                  <EmptyState
+                    icon={Newspaper}
+                    title="No matching trade news"
+                    description="Clear the search to see the current trade feed."
+                    actionLabel="Clear search"
+                    onAction={() => setNewsQuery("")}
+                  />
+                ) : filteredNews.map((item) => (
                   <article
                     key={item.id}
                     className={item.id === selectedNewsId ? "shop-news-card selected" : "shop-news-card"}
@@ -6181,7 +6245,8 @@ function ShopTalkView({
           selectedPost ? (
             <article className="shop-talk-detail">
               <button type="button" className="mobile-back-btn" onClick={() => setMobileDetail(false)}>
-                ← Back
+                <ArrowLeft size={15} />
+                Back
               </button>
               <div className="shop-question-header">
                 <div>
@@ -6191,8 +6256,8 @@ function ShopTalkView({
                         {selectedPost.flair}
                       </span>
                     )}
-                    <span>{selectedPost.badge ? `${selectedPost.badge} · ${selectedPost.author}` : selectedPost.author}</span>
-                    <span>{selectedPost.trade} · {selectedPost.createdAt}</span>
+                    <span>{selectedPost.badge ? `${selectedPost.badge} - ${selectedPost.author}` : selectedPost.author}</span>
+                    <span>{selectedPost.trade} - {selectedPost.createdAt}</span>
                   </div>
                   <h2>{selectedPost.title}</h2>
                   <p>{selectedPost.body}</p>
@@ -6274,7 +6339,8 @@ function ShopTalkView({
           ) : (
             <article className="shop-talk-detail">
               <button type="button" className="mobile-back-btn" onClick={() => setMobileDetail(false)}>
-                ← Back
+                <ArrowLeft size={15} />
+                Back
               </button>
               <EmptyState
                 icon={MessageCircle}
@@ -6288,7 +6354,8 @@ function ShopTalkView({
         ) : (
           <article className="shop-talk-detail">
             <button type="button" className="mobile-back-btn" onClick={() => setMobileDetail(false)}>
-              ← Back
+              <ArrowLeft size={15} />
+              Back
             </button>
             {selectedNews ? (
               <div className="shop-news-detail">

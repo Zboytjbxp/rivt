@@ -10349,3 +10349,342 @@ textarea:focus-visible {
     width: 100%;
   }
 }
+
+/* Shop Talk command center pass */
+.shop-talk-layout {
+  gap: 20px;
+  grid-template-columns: minmax(320px, 0.44fr) minmax(0, 1fr);
+}
+
+.shop-talk-sidebar,
+.shop-talk-detail {
+  overflow: hidden;
+  border-color: color-mix(in srgb, var(--border) 70%, transparent);
+  border-radius: 14px;
+  background: var(--surface);
+  box-shadow: 0 14px 32px rgba(13, 17, 20, 0.045);
+}
+
+.shop-talk-sidebar {
+  padding: 14px;
+}
+
+.shop-talk-detail {
+  padding: 18px;
+}
+
+.shop-talk-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  margin: 0;
+  padding: 4px;
+  border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+  border-radius: 12px;
+  background: var(--surface-soft);
+}
+
+.shop-talk-tabs button {
+  justify-content: center;
+  border: 0;
+  border-radius: 9px;
+  color: var(--muted);
+}
+
+.shop-talk-tabs button.active {
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 8px 18px rgba(13, 17, 20, 0.055);
+}
+
+.shop-talk-command {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 14px;
+  padding: 16px;
+  border-radius: 14px;
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--accent) 8%, transparent), transparent 54%),
+    var(--surface-soft);
+}
+
+.shop-talk-command-head {
+  min-width: 0;
+}
+
+.shop-talk-command .primary-action {
+  align-self: start;
+}
+
+.shop-talk-command h2 {
+  max-width: 16ch;
+  margin: 4px 0 0;
+  font-size: clamp(22px, 2.2vw, 30px);
+  line-height: 1.04;
+  letter-spacing: -0.025em;
+  text-wrap: balance;
+}
+
+.shop-talk-command p {
+  max-width: 52ch;
+  margin-top: 8px;
+}
+
+.shop-talk-kpi-strip {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.shop-talk-kpi-strip span {
+  display: grid;
+  gap: 3px;
+  padding: 10px;
+  border: 1px solid color-mix(in srgb, var(--border) 68%, transparent);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--surface) 86%, transparent);
+  text-transform: none;
+}
+
+.shop-talk-kpi-strip strong {
+  color: var(--text);
+  font-size: 17px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.shop-talk-kpi-strip small {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 850;
+  letter-spacing: 0.06em;
+  line-height: 1.1;
+  text-transform: uppercase;
+}
+
+.shop-talk-fieldbar {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid color-mix(in srgb, var(--border) 68%, transparent);
+  border-radius: 14px;
+  background: var(--surface-soft);
+}
+
+.shop-talk-search {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--muted);
+}
+
+.shop-talk-search input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+}
+
+.news-fieldbar {
+  padding: 10px;
+}
+
+.shop-sort-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  margin: 0;
+}
+
+.shop-sort-tabs button {
+  border-radius: 9px;
+  background: var(--surface);
+}
+
+.shop-sort-tabs button.active {
+  background: var(--accent);
+  color: #fff;
+}
+
+.shop-post-list,
+.shop-news-list,
+.answer-list {
+  gap: 10px;
+}
+
+.shop-post-card {
+  border-radius: 13px;
+  padding: 14px;
+  background: var(--surface-soft);
+  transition: background 0.16s ease, border-color 0.16s ease, transform 0.16s ease;
+}
+
+.shop-post-card:hover,
+.shop-post-card.selected {
+  transform: translateY(-1px);
+}
+
+.shop-post-card.selected {
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+.shop-post-card-meta,
+.shop-question-meta {
+  gap: 7px;
+}
+
+.shop-post-card-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.shop-post-card-stats span {
+  min-height: 24px;
+  padding: 4px 7px;
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--surface) 82%, transparent);
+}
+
+.shop-question-header {
+  align-items: start;
+  gap: 16px;
+  padding: 0 0 16px;
+}
+
+.shop-question-header h2 {
+  max-width: 20ch;
+  font-size: clamp(25px, 3vw, 38px);
+  line-height: 1.02;
+  letter-spacing: -0.035em;
+  text-wrap: balance;
+}
+
+.shop-question-actions {
+  padding-bottom: 2px;
+}
+
+.answer-composer,
+.answer-card {
+  border-radius: 14px;
+}
+
+.shop-news-card-main {
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.news-card-thumb {
+  min-height: 128px;
+  aspect-ratio: 16 / 9;
+  background: var(--surface-soft);
+}
+
+.news-card-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: 4px;
+}
+
+.shop-news-source-link {
+  margin-left: 0;
+  min-height: 36px;
+  justify-content: center;
+}
+
+.news-detail-hero {
+  border-radius: 14px;
+}
+
+.news-detail-hero img {
+  object-fit: contain;
+  background: #101922;
+}
+
+.shop-news-detail-header h2 {
+  max-width: 24ch;
+}
+
+.shop-news-discuss {
+  display: grid;
+  gap: 10px;
+}
+
+.mobile-back-btn {
+  justify-content: flex-start;
+  min-height: 44px;
+  padding: 0;
+}
+
+.mobile-back-btn svg {
+  flex: 0 0 auto;
+}
+
+@media (max-width: 1100px) {
+  .shop-talk-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .shop-talk-detail {
+    min-height: min(720px, calc(100dvh - 170px));
+  }
+}
+
+@media (max-width: 640px) {
+  .shop-talk-sidebar,
+  .shop-talk-detail {
+    padding: 12px;
+    border-radius: 12px;
+  }
+
+  .shop-talk-command {
+    grid-template-columns: 1fr;
+    padding: 14px;
+  }
+
+  .shop-talk-command .primary-action {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .shop-talk-kpi-strip {
+    grid-template-columns: 1fr;
+  }
+
+  .shop-talk-fieldbar {
+    padding: 10px;
+  }
+
+  .news-card-thumb {
+    min-height: 132px;
+  }
+
+  .shop-news-list .news-card-body {
+    order: -1;
+  }
+
+  .shop-news-list .news-card-body p {
+    -webkit-line-clamp: 3;
+  }
+
+  .shop-news-source-link {
+    margin-left: 0;
+  }
+
+  .shop-question-actions button,
+  .answer-actions button {
+    width: 100%;
+  }
+}
