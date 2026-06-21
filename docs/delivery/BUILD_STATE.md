@@ -2,10 +2,10 @@
 
 Last updated: 2026-06-21 America/New_York
 Current gate: Gate A launch hardening
-Current phase: Packet 08 controllable UX hardening, Trade News polish, production UI smoke regression fixes, Tools studio release, Records workspace upgrade, UI system pass, shared UI primitives, Tools primitive alignment, Shop Talk command center, Tools app surface pass, and Heavy 16th multi-mode calculator verified; full Gate A approval remains blocked
+Current phase: Packet 08 controllable UX hardening, Trade News polish, production UI smoke regression fixes, Tools studio release, Records workspace upgrade, UI system pass, shared UI primitives, Tools primitive alignment, Shop Talk command center, Tools app surface pass, Heavy 16th multi-mode calculator, and Invoice Draft app upgrade verified; full Gate A approval remains blocked
 Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
-Production release commit: `444fc96b49f9b7cb60e7ca547a300d3df3000891`
+Production release commit: `97d9da7adb90a79b00af695fa36460f4888cb5e7`
 
 ## Source State
 
@@ -17,7 +17,18 @@ Packet 00 is merged on `master` at `4c199d903683e44d17b7985272c399c6d7a6cbd6`. T
 
 Do not discard or overwrite the pre-existing Trade News work when committing or splitting this packet.
 
-## Latest Packet 08 Pass - Heavy 16th Multi-Mode Calculator
+## Latest Packet 08 Pass - Invoice Draft App Upgrade
+
+- Deployed source `97d9da7adb90a79b00af695fa36460f4888cb5e7` through Railway deployment `58d6dca4-d5cb-40e7-b18d-5a037c36ec6b`.
+- Reworked Invoice Draft into a fuller invoice app with a cleaner builder column, totals/delivery actions, and a polished printable preview document.
+- Added local browser-only invoice templates with save, load, and delete controls. Templates are explicitly labeled as device-local and not production records.
+- Added a print action and print CSS so the printable preview can be sent to the browser print dialog without the app shell.
+- Preserved the Gate A honesty boundary: email/text actions still open device drafts only; RIVT does not claim server delivery, payment processing, escrow, payroll, tax filing, or delivery logs.
+- Expanded `npm run test:ui:tools` so the invoice flow verifies local template save/load visibility, recipient email/phone fields, draft email/SMS affordances, the printable preview, no horizontal overflow, and zero console/page errors at 1440x900 and 390x844.
+- Local gates passed: `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test`, `npm run test:e2e`, `npm run test:ui:tools`, `npm audit --omit=dev`, and `git diff --check`; DB-backed integration tests still skip locally because `TEST_DATABASE_URL` is not configured.
+- Live checks passed: `/api/health` reported exact source `97d9da7adb90a79b00af695fa36460f4888cb5e7`, PostgreSQL and S3-compatible dependencies healthy, and `npm run monitor:production` passed.
+
+## Packet 08 Pass - Heavy 16th Multi-Mode Calculator
 
 - Deployed source `444fc96b49f9b7cb60e7ca547a300d3df3000891` through Railway deployment `6bd7f24d-6948-4a2c-a9c2-bf77b1a95abe`.
 - Turned Heavy 16th from a static all-in-one panel into a real mini-app with separate Length, Spacing, Cuts, and Hardware modes.
