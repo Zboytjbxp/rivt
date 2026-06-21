@@ -6190,6 +6190,34 @@ function ShopTalkView({
   )
     .sort(([, a], [, b]) => b.score - a.score)
     .slice(0, 3);
+  const profileAnswerCount = communityPosts.reduce((count, post) => (
+    count + post.replies.filter((reply) => reply.author === profile.displayName).length
+  ), 0);
+  const profileFixCount = communityPosts.reduce((count, post) => (
+    count + post.replies.filter((reply) => reply.author === profile.displayName && reply.verifiedFix).length
+  ), 0);
+  const reputationGoal = profileFixCount > 0
+    ? "Keep your Top Hand signal fresh"
+    : profileAnswerCount > 0
+      ? "Earn a Verified Fix"
+      : "Give your first field answer";
+  const reputationSteps = [
+    {
+      label: "Answer one question",
+      value: profileAnswerCount ? `${profileAnswerCount} posted` : "Start here",
+      complete: profileAnswerCount > 0,
+    },
+    {
+      label: "Get marked as a fix",
+      value: profileFixCount ? `${profileFixCount} fix${profileFixCount === 1 ? "" : "es"}` : "Next proof",
+      complete: profileFixCount > 0,
+    },
+    {
+      label: "Show it on your profile",
+      value: profileBadges.length ? profileBadges.join(", ") : "Badge path",
+      complete: profileBadges.length > 0,
+    },
+  ];
 
   function submitAnswer() {
     const body = answerDraft.trim();
@@ -6296,6 +6324,25 @@ function ShopTalkView({
                     </button>
                   )}
                 </div>
+              </div>
+
+              <div className="shop-talk-reputation-path" aria-label="Shop Talk reputation path">
+                <header>
+                  <span><Award size={14} /> Reputation path</span>
+                  <strong>{reputationGoal}</strong>
+                </header>
+                <div className="shop-talk-reputation-steps">
+                  {reputationSteps.map((step) => (
+                    <span key={step.label} data-complete={step.complete ? "true" : "false"}>
+                      {step.complete ? <CheckCircle2 size={14} /> : <Sparkles size={14} />}
+                      <b>{step.label}</b>
+                      <em>{step.value}</em>
+                    </span>
+                  ))}
+                </div>
+                <p>
+                  Field-tested answers become hiring proof when reputation is server-owned. For this pilot surface, use Shop Talk to practice the loop and find the questions worth closing.
+                </p>
               </div>
 
               {/* Community Rules */}

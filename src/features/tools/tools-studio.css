@@ -368,6 +368,94 @@
   font-size: 14px;
 }
 
+.v2-daily-log-workbench {
+  align-items: start;
+}
+
+.v2-daily-log-notes {
+  display: grid;
+  gap: 12px;
+}
+
+.v2-daily-log-notes label {
+  display: grid;
+  gap: 7px;
+  color: var(--v2-text-muted);
+  font-size: 12px;
+  font-weight: 760;
+}
+
+.v2-daily-log-notes textarea {
+  width: 100%;
+  min-height: 96px;
+  resize: vertical;
+  border: 1px solid color-mix(in srgb, var(--v2-border) 58%, transparent);
+  border-radius: var(--v2-radius-sm);
+  background: color-mix(in srgb, var(--v2-surface-muted) 76%, transparent);
+  color: var(--v2-text);
+  padding: 12px;
+  font: inherit;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.v2-daily-log-side {
+  display: grid;
+  gap: 18px;
+  min-width: 0;
+}
+
+.v2-daily-log-checklist {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.v2-daily-log-checklist button {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  gap: 8px;
+  padding: 0 11px;
+  border: 1px solid color-mix(in srgb, var(--v2-border) 62%, transparent);
+  border-radius: var(--v2-radius-md);
+  background: color-mix(in srgb, var(--v2-surface-muted) 76%, transparent);
+  color: var(--v2-text-muted);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 850;
+  text-align: left;
+}
+
+.v2-daily-log-checklist button.active {
+  border-color: color-mix(in srgb, var(--v2-success) 42%, var(--v2-border));
+  background: color-mix(in srgb, var(--v2-success) 10%, var(--v2-surface-muted));
+  color: var(--v2-text);
+}
+
+.v2-daily-log-checklist button svg {
+  flex: 0 0 auto;
+  color: var(--v2-accent);
+}
+
+.v2-daily-log-checklist button.active svg {
+  color: var(--v2-success);
+}
+
+.v2-daily-log-preview {
+  max-height: 360px;
+  overflow: auto;
+  margin: 0;
+  padding: 14px;
+  border: 1px solid color-mix(in srgb, var(--v2-border) 56%, transparent);
+  border-radius: var(--v2-radius-md);
+  background: #050505;
+  color: #f4f4f4;
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
 .v2-invoice-lines {
   display: grid;
   gap: 10px;
@@ -1466,6 +1554,10 @@
   }
 
   .v2-invoice-delivery {
+    grid-template-columns: 1fr;
+  }
+
+  .v2-daily-log-checklist {
     grid-template-columns: 1fr;
   }
 

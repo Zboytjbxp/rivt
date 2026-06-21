@@ -10553,6 +10553,101 @@ textarea:focus-visible {
   font-weight: 800;
 }
 
+.shop-talk-reputation-path {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid color-mix(in srgb, var(--teal) 24%, var(--border));
+  border-radius: 14px;
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--teal) 10%, transparent), transparent 62%),
+    var(--surface-soft);
+}
+
+.shop-talk-reputation-path header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.shop-talk-reputation-path header span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--teal);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  line-height: 1.1;
+  text-transform: uppercase;
+}
+
+.shop-talk-reputation-path header strong {
+  color: var(--text);
+  font-size: 14px;
+  text-align: right;
+}
+
+.shop-talk-reputation-steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.shop-talk-reputation-steps span {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 4px 7px;
+  align-items: center;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid color-mix(in srgb, var(--border) 58%, transparent);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--surface) 84%, transparent);
+}
+
+.shop-talk-reputation-steps span[data-complete="true"] {
+  border-color: color-mix(in srgb, var(--success) 34%, var(--border));
+  background: color-mix(in srgb, var(--success) 9%, var(--surface));
+}
+
+.shop-talk-reputation-steps svg {
+  color: var(--teal);
+}
+
+.shop-talk-reputation-steps span[data-complete="true"] svg {
+  color: var(--success);
+}
+
+.shop-talk-reputation-steps b,
+.shop-talk-reputation-steps em {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.shop-talk-reputation-steps b {
+  color: var(--text);
+  font-size: 12px;
+}
+
+.shop-talk-reputation-steps em {
+  grid-column: 2;
+  color: var(--muted);
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 750;
+}
+
+.shop-talk-reputation-path p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
 .shop-talk-pulse-head {
   display: flex;
   align-items: end;
@@ -10930,6 +11025,19 @@ textarea:focus-visible {
   .shop-talk-answer-actions .primary-action {
     width: 100%;
     justify-content: center;
+  }
+
+  .shop-talk-reputation-path header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .shop-talk-reputation-path header strong {
+    text-align: left;
+  }
+
+  .shop-talk-reputation-steps {
+    grid-template-columns: 1fr;
   }
 
   .shop-talk-command .primary-action {

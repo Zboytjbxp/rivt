@@ -94,6 +94,12 @@
   gap: 10px;
 }
 
+.v2-daily-action-stack {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
 .v2-daily-signal-grid button {
   display: grid;
   min-height: 156px;
@@ -141,6 +147,86 @@
   font-size: 11px;
   font-style: normal;
   font-weight: 800;
+}
+
+.v2-daily-habit-loop {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid color-mix(in srgb, var(--v2-border) 54%, transparent);
+  border-radius: var(--v2-radius-md);
+  background: color-mix(in srgb, var(--v2-surface-muted) 62%, transparent);
+}
+
+.v2-daily-habit-loop header {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.v2-daily-habit-loop header span,
+.v2-reputation-momentum header span {
+  color: var(--v2-accent);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.v2-daily-habit-loop header strong {
+  color: var(--v2-text);
+  font-size: 13px;
+}
+
+.v2-daily-habit-loop > div {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.v2-daily-habit-loop button {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 9px;
+  align-items: start;
+  min-height: 86px;
+  padding: 11px;
+  border: 1px solid color-mix(in srgb, var(--v2-border) 58%, transparent);
+  border-radius: var(--v2-radius-sm);
+  background: color-mix(in srgb, var(--v2-surface) 86%, transparent);
+  color: var(--v2-text);
+  text-align: left;
+}
+
+.v2-daily-habit-loop button svg {
+  margin-top: 2px;
+  color: var(--v2-accent);
+}
+
+.v2-daily-habit-loop button span {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.v2-daily-habit-loop button strong {
+  font-size: 12px;
+  line-height: 1.2;
+}
+
+.v2-daily-habit-loop button small {
+  color: var(--v2-text-muted);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.v2-daily-habit-loop button em {
+  grid-column: 1 / -1;
+  color: var(--v2-accent);
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 850;
 }
 
 .v2-today-panel {
@@ -273,6 +359,103 @@
   background:
     linear-gradient(180deg, color-mix(in srgb, var(--v2-surface-muted) 65%, transparent), transparent),
     color-mix(in srgb, var(--v2-surface) 94%, transparent);
+}
+
+.v2-reputation-momentum {
+  display: grid;
+  gap: 13px;
+  padding: 16px;
+  border: 1px solid color-mix(in srgb, var(--v2-border) 66%, transparent);
+  border-radius: var(--v2-radius-lg);
+  background:
+    radial-gradient(circle at top right, color-mix(in srgb, var(--v2-accent) 10%, transparent), transparent 42%),
+    color-mix(in srgb, var(--v2-surface) 94%, transparent);
+  box-shadow: var(--v2-shadow-card);
+}
+
+.v2-reputation-momentum header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.v2-reputation-momentum header span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.v2-reputation-momentum header small {
+  color: var(--v2-text-muted);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.v2-reputation-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.v2-reputation-metrics span {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  padding: 10px;
+  border-radius: var(--v2-radius-sm);
+  background: color-mix(in srgb, var(--v2-surface-muted) 72%, transparent);
+}
+
+.v2-reputation-metrics span[data-tone="action"] {
+  background: color-mix(in srgb, var(--v2-accent-soft) 82%, transparent);
+}
+
+.v2-reputation-metrics span[data-tone="info"] {
+  background: color-mix(in srgb, var(--v2-info) 10%, var(--v2-surface-muted));
+}
+
+.v2-reputation-metrics strong {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--v2-text);
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.v2-reputation-metrics small,
+.v2-reputation-momentum p {
+  color: var(--v2-text-muted);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.v2-reputation-momentum p {
+  margin: 0;
+}
+
+.v2-reputation-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.v2-reputation-actions button {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 0 10px;
+  border: 1px solid color-mix(in srgb, var(--v2-border) 64%, transparent);
+  border-radius: var(--v2-radius-sm);
+  background: color-mix(in srgb, var(--v2-surface-muted) 76%, transparent);
+  color: var(--v2-text);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 850;
 }
 
 .v2-availability-radar header {
@@ -475,6 +658,10 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .v2-daily-habit-loop > div {
+    grid-template-columns: 1fr;
+  }
+
   .v2-home-focus-grid,
   .v2-home-secondary-grid {
     grid-template-columns: 1fr;
@@ -516,6 +703,10 @@
   }
 
   .v2-availability-options {
+    grid-template-columns: 1fr;
+  }
+
+  .v2-reputation-metrics {
     grid-template-columns: 1fr;
   }
 

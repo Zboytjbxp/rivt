@@ -146,6 +146,22 @@ async function runToolsFlow(page, viewportName) {
   await page.screenshot({ path: path.join(screenshotDir, `${viewportName}-invoice.png`), fullPage: true });
   await page.getByLabel("Invoice draft").getByRole("button", { name: "Tools" }).click();
 
+  await page.getByRole("button", { name: /Daily log/i }).click();
+  await page.getByRole("heading", { name: "Daily log", exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByLabel("Work completed").fill("Installed devices, labeled panel schedule, and cleaned up the work area.");
+  await page.getByLabel("Blockers / changes").fill("Waiting on final fixture selections before trim-out can close.");
+  await page.getByLabel("Safety note").fill("Verified ladder setup and kept panel covered while working.");
+  await page.getByRole("button", { name: "Photos captured" }).click();
+  await page.getByRole("button", { name: "Safety condition checked" }).click();
+  await page.getByRole("heading", { name: "Daily log preview" }).waitFor({ timeout: 15_000 });
+  await page.locator(".v2-daily-log-preview").getByText("Installed devices", { exact: false }).waitFor({ timeout: 15_000 });
+  await page.getByRole("button", { name: "Save local draft" }).click();
+  await page.getByText("Daily log draft saved on this device.", { exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByRole("button", { name: "Copy daily log" }).waitFor({ timeout: 15_000 });
+  await assertNoHorizontalOverflow(page);
+  await page.screenshot({ path: path.join(screenshotDir, `${viewportName}-daily-log.png`), fullPage: true });
+  await page.getByLabel("Daily log").getByRole("button", { name: "Tools" }).click();
+
   await page.getByRole("button", { name: /Material takeoff/i }).click();
   await page.getByRole("heading", { name: "Material takeoff" }).waitFor({ timeout: 15_000 });
   await page.getByRole("button", { name: "Drywall" }).click();

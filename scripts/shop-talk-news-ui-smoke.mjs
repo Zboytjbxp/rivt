@@ -215,6 +215,7 @@ try {
     await page.getByRole("heading", { name: /Field answers/i }).waitFor({ timeout: 15_000 });
     await page.getByText("Social hub", { exact: true }).waitFor({ timeout: 15_000 });
     await page.getByText("Answer queue", { exact: true }).waitFor({ timeout: 15_000 });
+    await page.getByText("Reputation path", { exact: true }).waitFor({ timeout: 15_000 });
     await page.getByText(/Electrical question/i).waitFor({ timeout: 15_000 });
     await page.getByRole("button", { name: /Answer now/i }).click();
     await page.getByText("Good answers get specific.", { exact: true }).waitFor({ timeout: 15_000 });
