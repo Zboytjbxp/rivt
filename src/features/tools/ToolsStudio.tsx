@@ -2,12 +2,17 @@ import {
   ArrowLeft,
   ArrowRight,
   Calculator,
+  CheckCircle2,
   Clipboard,
   Copy,
   Download,
   FileText,
+  FileUp,
   FolderOpen,
+  Image,
   LayoutGrid,
+  ListChecks,
+  RefreshCw,
   Plus,
   ReceiptText,
   Scale,
@@ -41,6 +46,12 @@ interface PaymentRecord {
   method: string;
   status: "Payment pending" | "Paid / Closed";
   date: string;
+}
+
+interface CompletionChecklistState {
+  completedOnTime: boolean;
+  clientApproved: boolean;
+  photosProvided: boolean;
 }
 
 interface ToolsStudioProps {
@@ -477,6 +488,22 @@ function projectErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : "RIVT could not update the project record.";
 }
 
+function fileSize(sizeBytes: number) {
+  if (sizeBytes < 1024) return `${sizeBytes} B`;
+  if (sizeBytes < 1024 * 1024) return `${formatNumber(sizeBytes / 1024, 1)} KB`;
+  return `${formatNumber(sizeBytes / 1024 / 1024, 1)} MB`;
+}
+
+function recordStatusLabel(status: ProjectRecord["status"]) {
+  return status.replaceAll("_", " ");
+}
+
+const defaultCompletionChecklist: CompletionChecklistState = {
+  completedOnTime: true,
+  clientApproved: false,
+  photosProvided: false,
+};
+
 export function ToolsStudio({ jobs, paymentRecords, mode = "tools", onNavigate, onOpenJob, onOpenRecords }: ToolsStudioProps) {
   const activeJob = jobs.find((job) => job.status !== "Paid / Closed") ?? jobs[0] ?? null;
   const pendingPayments = paymentRecords.filter((record) => record.status === "Payment pending");
@@ -487,10 +514,19 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", onNavigate, 
   const [selectedProject, setSelectedProject] = useState<ProjectRecord | null>(null);
   const [projectAction, setProjectAction] = useState<string | null>(null);
   const [reportPreview, setReportPreview] = useState<string | null>(null);
+  const [recordNotice, setRecordNotice] = useState<string | null>(null);
+  const [noteDraft, setNoteDraft] = useState("");
+  const [uploadNotes, setUploadNotes] = useState("");
+  const [completionNote, setCompletionNote] = useState("");
+  const [resolutionNote, setResolutionNote] = useState("");
+  const [completionChecklist, setCompletionChecklist] = useState<CompletionChecklistState>(defaultCompletionChecklist);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const selectedCompletion = selectedProject?.completionSubmissions.find((completion) => completion.status === "submitted")
     ?? selectedProject?.completionSubmissions.at(-1)
     ?? null;
+  const storedMedia = selectedProject?.media.filter((item) => item.status === "stored") ?? [];
+  const latestEntry = selectedProject?.entries.at(-1) ?? null;
+  const actionBusy = Boolean(projectAction);
 
   useEffect(() => {
     let cancelled = false;
@@ -510,12 +546,25 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", onNavigate, 
     };
   }, []);
 
+  function resetRecordForms(project: ProjectRecord | null = selectedProject) {
+    const hasStoredMedia = Boolean(project?.media.some((item) => item.status === "stored"));
+    setNoteDraft("");
+    setUploadNotes("");
+    setCompletionNote("");
+    setResolutionNote("");
+    setReportPreview(null);
+    setCompletionChecklist({ ...defaultCompletionChecklist, photosProvided: hasStoredMedia });
+  }
+
   async function handleOpenRecord(work: CanonicalActiveWork) {
     setProjectAction(`open:${work.id}`);
     setRecordsError(null);
+    setRecordNotice(null);
     setReportPreview(null);
     try {
-      setSelectedProject(await openProjectForActiveWork(work.id));
+      const project = await openProjectForActiveWork(work.id);
+      setSelectedProject(project);
+      resetRecordForms(project);
     } catch (error) {
       setRecordsError(projectErrorMessage(error));
     } finally {
@@ -530,13 +579,16 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", onNavigate, 
 
   async function handleAddNote() {
     if (!selectedProject) return;
-    const body = window.prompt("Add a private project note");
-    if (!body?.trim()) return;
+    const body = noteDraft.trim();
+    if (!body) return;
     setProjectAction("note");
     setRecordsError(null);
+    setRecordNotice(null);
     try {
-      await addProjectNote(selectedProject.id, body.trim());
+      await addProjectNote(selectedProject.id, body);
       await refreshSelectedProject();
+      setNoteDraft("");
+      setRecordNotice("Private note added to the project timeline.");
     } catch (error) {
       setRecordsError(projectErrorMessage(error));
     } finally {
@@ -548,9 +600,13 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", onNavigate, 
     if (!selectedProject || !file) return;
     setProjectAction("upload");
     setRecordsError(null);
+    setRecordNotice(null);
     try {
-      await uploadProjectMedia(selectedProject.id, file, "Uploaded from RIVT Records.");
+      await uploadProjectMedia(selectedProject.id, file, uploadNotes.trim() || "Uploaded from RIVT Records.");
       await refreshSelectedProject();
+      setUploadNotes("");
+      setCompletionChecklist((current) => ({ ...current, photosProvided: true }));
+      setRecordNotice(`${file.name} was added to the project record.`);
     } catch (error) {
       setRecordsError(projectErrorMessage(error));
     } finally {
@@ -561,17 +617,24 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", onNavigate, 
 
   async function handleSubmitCompletion() {
     if (!selectedProject) return;
-    const note = window.prompt("Completion note for the contractor");
-    if (!note?.trim()) return;
+    const note = completionNote.trim();
+    if (!note) return;
     setProjectAction("submit");
     setRecordsError(null);
+    setRecordNotice(null);
     try {
       await submitProjectCompletion(
         selectedProject.id,
-        note.trim(),
-        selectedProject.media.filter((item) => item.status === "stored").map((item) => item.id),
+        note,
+        storedMedia.map((item) => item.id),
+        {
+          ...completionChecklist,
+          photosProvided: completionChecklist.photosProvided || storedMedia.length > 0,
+        },
       );
       await refreshSelectedProject();
+      setCompletionNote("");
+      setRecordNotice("Completion submitted. The other party can now confirm or dispute it.");
     } catch (error) {
       setRecordsError(projectErrorMessage(error));
     } finally {
@@ -581,13 +644,16 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", onNavigate, 
 
   async function handleResolveCompletion(decision: "confirm" | "dispute") {
     if (!selectedProject || !selectedCompletion) return;
-    const reason = window.prompt(decision === "confirm" ? "Confirmation note" : "Why are you disputing completion?") ?? "";
+    const reason = resolutionNote.trim();
     if (decision === "dispute" && !reason.trim()) return;
     setProjectAction(decision);
     setRecordsError(null);
+    setRecordNotice(null);
     try {
-      await resolveProjectCompletion(selectedProject.id, selectedCompletion.id, decision, reason.trim());
+      await resolveProjectCompletion(selectedProject.id, selectedCompletion.id, decision, reason);
       await refreshSelectedProject();
+      setResolutionNote("");
+      setRecordNotice(decision === "confirm" ? "Completion confirmed and recorded." : "Completion dispute recorded.");
     } catch (error) {
       setRecordsError(projectErrorMessage(error));
     } finally {
@@ -599,9 +665,11 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", onNavigate, 
     if (!selectedProject) return;
     setProjectAction("report");
     setRecordsError(null);
+    setRecordNotice(null);
     try {
       const report = await getProjectReport(selectedProject.id);
       setReportPreview(JSON.stringify(report, null, 2));
+      setRecordNotice("Closeout report loaded from server records.");
     } catch (error) {
       setRecordsError(projectErrorMessage(error));
     } finally {
@@ -660,28 +728,158 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", onNavigate, 
               <>
                 <header>
                   <div>
-                    <span>{selectedProject.status.replaceAll("_", " ")}</span>
+                    <span>{recordStatusLabel(selectedProject.status)}</span>
                     <h2>{selectedProject.job.title}</h2>
+                    <p>{selectedProject.job.publicLocation.city}, {selectedProject.job.publicLocation.region} - Updated {new Date(selectedProject.updatedAt).toLocaleString()}</p>
                   </div>
-                  <button type="button" onClick={() => void handleLoadReport()} disabled={Boolean(projectAction)}>Report</button>
+                  <div className="v2-record-header-actions">
+                    <button type="button" onClick={() => void refreshSelectedProject()} disabled={actionBusy}>
+                      <RefreshCw size={14} />
+                      Refresh
+                    </button>
+                    <button type="button" onClick={() => void handleLoadReport()} disabled={actionBusy}>
+                      <Clipboard size={14} />
+                      Report
+                    </button>
+                  </div>
                 </header>
+                {recordNotice ? <p className="v2-record-notice" role="status">{recordNotice}</p> : null}
                 <div className="v2-record-metrics">
                   <article><strong>{selectedProject.entries.length}</strong><span>timeline entries</span></article>
-                  <article><strong>{selectedProject.media.filter((item) => item.status === "stored").length}</strong><span>stored files</span></article>
-                  <article><strong>{selectedProject.completionSubmissions.length}</strong><span>completion submits</span></article>
+                  <article><strong>{storedMedia.length}</strong><span>stored files</span></article>
+                  <article><strong>{selectedCompletion?.status ?? "open"}</strong><span>completion status</span></article>
                 </div>
-                <div className="v2-record-actions">
-                  <button type="button" onClick={() => void handleAddNote()} disabled={Boolean(projectAction)}>Add note</button>
-                  <button type="button" onClick={() => fileInputRef.current?.click()} disabled={Boolean(projectAction)}>Upload evidence</button>
-                  <button type="button" onClick={() => void handleSubmitCompletion()} disabled={Boolean(projectAction)}>Submit completion</button>
-                  {selectedCompletion?.status === "submitted" ? (
-                    <>
-                      <button type="button" className="v2-primary-button" onClick={() => void handleResolveCompletion("confirm")} disabled={Boolean(projectAction)}>Confirm</button>
-                      <button type="button" className="v2-destructive-button" onClick={() => void handleResolveCompletion("dispute")} disabled={Boolean(projectAction)}>Dispute</button>
-                    </>
-                  ) : null}
-                  <input ref={fileInputRef} type="file" accept="image/*,.pdf,text/plain" hidden onChange={(event) => void handleFileSelected(event.target.files?.[0] ?? null)} />
+
+                <div className="v2-record-workspace">
+                  <section className="v2-record-card">
+                    <header>
+                      <span><FileText size={16} /> Field notebook</span>
+                      <small>Private timeline note</small>
+                    </header>
+                    <textarea
+                      value={noteDraft}
+                      onChange={(event) => setNoteDraft(event.target.value)}
+                      placeholder="What changed on site? Access issue, material condition, measurement, weather, or owner approval..."
+                      rows={5}
+                    />
+                    <button type="button" className="v2-primary-button" onClick={() => void handleAddNote()} disabled={actionBusy || !noteDraft.trim()}>
+                      Add note
+                    </button>
+                  </section>
+
+                  <section className="v2-record-card">
+                    <header>
+                      <span><FileUp size={16} /> Evidence</span>
+                      <small>Photos, PDFs, or closeout files</small>
+                    </header>
+                    <textarea
+                      value={uploadNotes}
+                      onChange={(event) => setUploadNotes(event.target.value)}
+                      placeholder="Optional upload note, for example: before photo, signed scope, completion photo..."
+                      rows={3}
+                    />
+                    <button type="button" onClick={() => fileInputRef.current?.click()} disabled={actionBusy}>
+                      Upload file
+                    </button>
+                    <input ref={fileInputRef} type="file" accept="image/*,.pdf,text/plain" hidden onChange={(event) => void handleFileSelected(event.target.files?.[0] ?? null)} />
+                    {storedMedia.length ? (
+                      <div className="v2-record-media-list" aria-label="Stored evidence">
+                        {storedMedia.slice(0, 6).map((item) => (
+                          <article key={item.id}>
+                            <Image size={16} />
+                            <span>
+                              <strong>{item.originalName}</strong>
+                              <small>{item.mediaKind} - {fileSize(item.sizeBytes)}</small>
+                            </span>
+                          </article>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="v2-tool-note">No stored evidence yet. Upload photos or files before submitting completion when possible.</p>
+                    )}
+                  </section>
+
+                  <section className="v2-record-card">
+                    <header>
+                      <span><ListChecks size={16} /> Submit completion</span>
+                      <small>Creates the reviewable closeout step</small>
+                    </header>
+                    <textarea
+                      value={completionNote}
+                      onChange={(event) => setCompletionNote(event.target.value)}
+                      placeholder="Summarize what was completed and anything the other party should review..."
+                      rows={4}
+                    />
+                    <div className="v2-record-checklist">
+                      <label>
+                        <input
+                          type="checkbox"
+                          checked={completionChecklist.completedOnTime}
+                          onChange={(event) => setCompletionChecklist((current) => ({ ...current, completedOnTime: event.target.checked }))}
+                        />
+                        Completed on time
+                      </label>
+                      <label>
+                        <input
+                          type="checkbox"
+                          checked={completionChecklist.clientApproved}
+                          onChange={(event) => setCompletionChecklist((current) => ({ ...current, clientApproved: event.target.checked }))}
+                        />
+                        Client/contractor approved
+                      </label>
+                      <label>
+                        <input
+                          type="checkbox"
+                          checked={completionChecklist.photosProvided}
+                          onChange={(event) => setCompletionChecklist((current) => ({ ...current, photosProvided: event.target.checked }))}
+                        />
+                        Photos or proof provided
+                      </label>
+                    </div>
+                    <button type="button" className="v2-primary-button" onClick={() => void handleSubmitCompletion()} disabled={actionBusy || !completionNote.trim()}>
+                      Submit completion
+                    </button>
+                  </section>
+
+                  <section className="v2-record-card">
+                    <header>
+                      <span><CheckCircle2 size={16} /> Review completion</span>
+                      <small>{selectedCompletion ? `Latest: ${selectedCompletion.status}` : "Waiting on a submission"}</small>
+                    </header>
+                    {selectedCompletion ? (
+                      <>
+                        <p className="v2-tool-note">{selectedCompletion.note}</p>
+                        {selectedCompletion.status === "submitted" ? (
+                          <>
+                            <textarea
+                              value={resolutionNote}
+                              onChange={(event) => setResolutionNote(event.target.value)}
+                              placeholder="Optional confirmation note, or required dispute reason..."
+                              rows={3}
+                            />
+                            <div className="v2-record-resolution-actions">
+                              <button type="button" className="v2-primary-button" onClick={() => void handleResolveCompletion("confirm")} disabled={actionBusy}>Confirm</button>
+                              <button type="button" className="v2-destructive-button" onClick={() => void handleResolveCompletion("dispute")} disabled={actionBusy || !resolutionNote.trim()}>Dispute</button>
+                            </div>
+                          </>
+                        ) : (
+                          <p className="v2-tool-note">Resolved {selectedCompletion.resolvedAt ? new Date(selectedCompletion.resolvedAt).toLocaleString() : "in timeline"}.</p>
+                        )}
+                      </>
+                    ) : (
+                      <p className="v2-tool-note">No completion has been submitted for this record yet.</p>
+                    )}
+                  </section>
                 </div>
+
+                {latestEntry ? (
+                  <div className="v2-record-latest">
+                    <strong>Latest update</strong>
+                    <span>{latestEntry.body || latestEntry.entryType.replaceAll("_", " ")}</span>
+                    <small>{new Date(latestEntry.createdAt).toLocaleString()}</small>
+                  </div>
+                ) : null}
+
                 <ol className="v2-record-timeline">
                   {selectedProject.entries.slice().reverse().map((entry) => (
                     <li key={entry.id}>

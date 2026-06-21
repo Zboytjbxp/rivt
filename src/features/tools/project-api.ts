@@ -133,7 +133,12 @@ export async function uploadProjectMedia(projectId: string, file: File, notes = 
   return body.data;
 }
 
-export async function submitProjectCompletion(projectId: string, note: string, evidenceMediaIds: string[]) {
+export async function submitProjectCompletion(
+  projectId: string,
+  note: string,
+  evidenceMediaIds: string[],
+  checklist: { completedOnTime?: boolean; clientApproved?: boolean; photosProvided?: boolean } = {},
+) {
   const body = await request<{ data: { completion: ProjectCompletion } }>(`/api/v1/projects/${projectId}/completion`, {
     method: "POST",
     headers: { "Content-Type": "application/json", "Idempotency-Key": requestKey() },
@@ -141,9 +146,9 @@ export async function submitProjectCompletion(projectId: string, note: string, e
       note,
       evidenceMediaIds,
       checklist: {
-        completedOnTime: true,
-        clientApproved: false,
-        photosProvided: evidenceMediaIds.length > 0,
+        completedOnTime: checklist.completedOnTime ?? true,
+        clientApproved: checklist.clientApproved ?? false,
+        photosProvided: checklist.photosProvided ?? evidenceMediaIds.length > 0,
       },
     }),
   });

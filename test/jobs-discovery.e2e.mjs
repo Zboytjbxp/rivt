@@ -70,6 +70,75 @@ const job = {
   events: [],
 };
 
+const activeWorkItem = {
+  id: "9c72aa97-7a41-47bb-8d67-9b4e12cb83f1",
+  jobId: job.id,
+  offerId: "6d1ff85f-d6f4-4f85-9bbd-bf2a70cf9cf7",
+  organizationId: account.organizations[0].id,
+  contractorAccountId: account.id,
+  tradespersonAccountId: "9913cfd7-e467-4c4e-91f6-ac40e46f099b",
+  status: "in_progress",
+  startedAt: "2026-06-24T12:00:00.000Z",
+  completedAt: null,
+  cancelledAt: null,
+  createdAt: "2026-06-24T12:00:00.000Z",
+  updatedAt: "2026-06-24T12:00:00.000Z",
+  job: {
+    id: job.id,
+    title: job.title,
+    status: "accepted",
+    organization: job.organization,
+    publicLocation: job.publicLocation,
+  },
+  events: [],
+};
+
+const projectRecord = {
+  id: "8ca50a33-f676-450a-b415-df20b3a31d43",
+  activeWorkId: activeWorkItem.id,
+  jobId: job.id,
+  organizationId: account.organizations[0].id,
+  status: "open",
+  contractorAccountId: account.id,
+  tradespersonAccountId: activeWorkItem.tradespersonAccountId,
+  job: {
+    title: job.title,
+    status: "accepted",
+    publicLocation: job.publicLocation,
+  },
+  entries: [
+    {
+      id: "entry-1",
+      projectId: "8ca50a33-f676-450a-b415-df20b3a31d43",
+      actorAccountId: account.id,
+      entryType: "system",
+      body: "Project record opened.",
+      checklist: {},
+      metadata: {},
+      createdAt: "2026-06-24T12:05:00.000Z",
+    },
+  ],
+  media: [
+    {
+      id: "media-1",
+      projectId: "8ca50a33-f676-450a-b415-df20b3a31d43",
+      uploadId: "upload-1",
+      originalName: "panel-before.jpg",
+      mimeType: "image/jpeg",
+      sizeBytes: 182400,
+      contentSha256: "abc123",
+      mediaKind: "photo",
+      status: "stored",
+      reviewStatus: "accepted",
+      failureReason: "",
+      createdAt: "2026-06-24T12:10:00.000Z",
+      signedUrl: null,
+    },
+  ],
+  completionSubmissions: [],
+  updatedAt: "2026-06-24T12:10:00.000Z",
+};
+
 async function waitForServer() {
   const deadline = Date.now() + 30_000;
   while (Date.now() < deadline) {
@@ -84,13 +153,18 @@ async function waitForServer() {
   throw new Error("Timed out waiting for Vite.");
 }
 
-async function configurePage(page, jobs) {
+async function configurePage(page, jobs, { activeWork = [], project = null } = {}) {
   await page.route("**/api/v1/me", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: account }) }));
   await page.route("**/api/auth/providers", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ providers: {} }) }));
   await page.route("**/api/v1/sessions", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { sessions: [] }, meta: { requestId: "e2e-sessions" } }) }));
   await page.route("**/api/v1/conversations", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { conversations: [] }, meta: { requestId: "e2e-conversations" } }) }));
   await page.route("**/api/v1/notifications", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { notifications: [], unreadCount: 0 }, meta: { requestId: "e2e-notifications" } }) }));
-  await page.route("**/api/v1/active-work", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { activeWork: [] }, meta: { requestId: "e2e-active-work" } }) }));
+  await page.route("**/api/v1/active-work", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { activeWork }, meta: { requestId: "e2e-active-work" } }) }));
+  if (project && activeWork[0]) {
+    await page.route(`**/api/v1/active-work/${activeWork[0].id}/project`, (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { project }, meta: { requestId: "e2e-project" } }) }));
+    await page.route(`**/api/v1/projects/${project.id}/entries`, (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { entry: project.entries[0] }, meta: { requestId: "e2e-project-note" } }) }));
+    await page.route(`**/api/v1/projects/${project.id}/report`, (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { report: { projectId: project.id, entries: project.entries.length, media: project.media.length } }, meta: { requestId: "e2e-project-report" } }) }));
+  }
   await page.route("**/api/v1/jobs?**", async (route) => {
     await new Promise((resolve) => setTimeout(resolve, 120));
     return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { jobs }, meta: { nextCursor: null } }) });
@@ -119,6 +193,23 @@ async function assertToolsFlow(page) {
   await page.getByRole("button", { name: /Material takeoff/i }).click();
   await page.getByRole("heading", { name: "Material takeoff" }).waitFor();
   await page.getByText("Sheets needed", { exact: true }).waitFor();
+}
+
+async function assertRecordsFlow(page) {
+  await page.goto(`${baseUrl}/app/tools/records`, { waitUntil: "networkidle" });
+  await page.getByRole("heading", { name: "Records", exact: true }).waitFor();
+  await page.getByRole("button", { name: new RegExp(projectRecord.job.title) }).click();
+  await page.getByText("Field notebook", { exact: true }).waitFor();
+  await page.getByText("Evidence", { exact: true }).waitFor();
+  await page.getByText("Creates the reviewable closeout step", { exact: true }).waitFor();
+  await page.getByText("Review completion", { exact: true }).waitFor();
+  await page.getByText("panel-before.jpg", { exact: true }).waitFor();
+  await page.getByPlaceholder("What changed on site?").fill("Panel rough-in inspected and photo attached.");
+  await page.getByRole("button", { name: "Add note" }).click();
+  await page.getByText("Private note added to the project timeline.").waitFor();
+  await page.getByRole("button", { name: "Report" }).click();
+  await page.getByText("Closeout report loaded from server records.").waitFor();
+  await page.getByText(`"projectId": "${projectRecord.id}"`).waitFor();
 }
 
 async function assertTopBarActions(page) {
@@ -181,6 +272,12 @@ try {
   assert.equal(await page.getByLabel("Job title").inputValue(), job.title);
   assert.equal(await page.getByText("Exact address is private", { exact: true }).count(), 0);
   await page.getByRole("dialog", { name: "Edit job" }).getByRole("button", { name: "Close" }).click();
+  await page.close();
+
+  const recordsPage = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  await configurePage(recordsPage, [job], { activeWork: [activeWorkItem], project: projectRecord });
+  await assertRecordsFlow(recordsPage);
+  await recordsPage.close();
   console.log("Jobs and discovery E2E passed at desktop and mobile viewports.");
 } finally {
   await browser?.close();
