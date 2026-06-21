@@ -336,6 +336,8 @@ interface CommunityPost {
 }
 
 type PostFlair = "Question" | "Discussion" | "Code Talk" | "Compliance" | "Tip" | "Humor";
+type CommunityReaction = "up" | "down";
+type CommunityReactionMap = Record<string, CommunityReaction>;
 
 interface CommunityReport {
   id: number;
@@ -1651,8 +1653,63 @@ function currentTimeLabel() {
   }).format(new Date());
 }
 
+const COMMUNITY_REACTIONS_STORAGE_KEY = "rivt-shop-talk-reactions-v1";
+
 function netScore(item: { upvotes: number; downvotes: number }) {
   return item.upvotes - item.downvotes;
+}
+
+function readCommunityReactions(): CommunityReactionMap {
+  if (typeof window === "undefined") return {};
+
+  try {
+    const stored = window.localStorage.getItem(COMMUNITY_REACTIONS_STORAGE_KEY);
+    if (!stored) return {};
+    const parsed = JSON.parse(stored) as Record<string, unknown>;
+    return Object.entries(parsed).reduce<CommunityReactionMap>((reactions, [key, value]) => {
+      if (value === "up" || value === "down") {
+        reactions[key] = value;
+      }
+      return reactions;
+    }, {});
+  } catch {
+    return {};
+  }
+}
+
+function persistCommunityReactions(reactions: CommunityReactionMap) {
+  try {
+    window.localStorage.setItem(COMMUNITY_REACTIONS_STORAGE_KEY, JSON.stringify(reactions));
+  } catch {
+    // A failed local write should not break the current reaction state.
+  }
+}
+
+function communityReactionKey(actorKey: string, targetKey: string) {
+  return `${actorKey}:${targetKey}`;
+}
+
+function communityPostReactionKey(postId: number) {
+  return `post:${postId}`;
+}
+
+function communityAnswerReactionKey(postId: number, answerId: number) {
+  return `answer:${postId}:${answerId}`;
+}
+
+function applyReactionCount<T extends { upvotes: number; downvotes: number }>(
+  item: T,
+  previousReaction: CommunityReaction | null,
+  nextReaction: CommunityReaction | null,
+): T {
+  const upvoteDelta = (nextReaction === "up" ? 1 : 0) - (previousReaction === "up" ? 1 : 0);
+  const downvoteDelta = (nextReaction === "down" ? 1 : 0) - (previousReaction === "down" ? 1 : 0);
+
+  return {
+    ...item,
+    upvotes: Math.max(0, item.upvotes + upvoteDelta),
+    downvotes: Math.max(0, item.downvotes + downvoteDelta),
+  };
 }
 
 function sortedAnswers(answers: CommunityAnswer[]) {
@@ -1889,6 +1946,7 @@ function App() {
   const [feedbackItems] = useState<FeedbackItem[]>([]);
   const [paymentRecords] = useState<PaymentRecord[]>([]);
   const [communityPosts, setCommunityPosts] = useState<CommunityPost[]>(seedCommunityPosts);
+  const [communityReactions, setCommunityReactions] = useState<CommunityReactionMap>(readCommunityReactions);
   const [, setCommunityReports] = useState<CommunityReport[]>([]);
   const [shoutOuts] = useState<ShoutOut[]>([]);
   const [themeMode, setThemeMode] = useState<ThemeMode>(readThemePreference);
@@ -2178,6 +2236,25 @@ function App() {
   })), [inboxNotifications]);
   const unreadActivities = inboxNotifications.filter((item) => !item.readAt).length;
   const [uiToast, setUiToast] = useState<AppToast | null>(null);
+  const communityReactionActorKey = useMemo(() => (
+    canonicalAccount?.id ||
+    authUser?.id ||
+    accountProfile.email ||
+    accountProfile.displayName ||
+    "local-profile"
+  ), [accountProfile.displayName, accountProfile.email, authUser?.id, canonicalAccount?.id]);
+
+  const getCommunityPostReaction = useCallback((postId: number): CommunityReaction | null => {
+    return communityReactions[
+      communityReactionKey(communityReactionActorKey, communityPostReactionKey(postId))
+    ] ?? null;
+  }, [communityReactionActorKey, communityReactions]);
+
+  const getCommunityAnswerReaction = useCallback((postId: number, answerId: number): CommunityReaction | null => {
+    return communityReactions[
+      communityReactionKey(communityReactionActorKey, communityAnswerReactionKey(postId, answerId))
+    ] ?? null;
+  }, [communityReactionActorKey, communityReactions]);
 
   function addActivity(title: string, detail: string, kind: AppToast["kind"] = "info") {
     void recordServerEvent("activity", { title, detail, role, activeView });
@@ -2375,20 +2452,36 @@ function App() {
   }
 
   function handleVoteCommunityPost(postId: number, direction: "up" | "down") {
+    const targetKey = communityPostReactionKey(postId);
+    const reactionKey = communityReactionKey(communityReactionActorKey, targetKey);
+    const previousReaction = communityReactions[reactionKey] ?? null;
+    const nextReaction = previousReaction === direction ? null : direction;
+
     setCommunityPosts((current) =>
       current.map((post) =>
         post.id === postId
-          ? {
-              ...post,
-              upvotes: post.upvotes + (direction === "up" ? 1 : 0),
-              downvotes: post.downvotes + (direction === "down" ? 1 : 0),
-            }
+          ? applyReactionCount(post, previousReaction, nextReaction)
           : post,
       ),
     );
+    setCommunityReactions((current) => {
+      const next = { ...current };
+      if (nextReaction) {
+        next[reactionKey] = nextReaction;
+      } else {
+        delete next[reactionKey];
+      }
+      persistCommunityReactions(next);
+      return next;
+    });
   }
 
   function handleVoteCommunityAnswer(postId: number, answerId: number, direction: "up" | "down") {
+    const targetKey = communityAnswerReactionKey(postId, answerId);
+    const reactionKey = communityReactionKey(communityReactionActorKey, targetKey);
+    const previousReaction = communityReactions[reactionKey] ?? null;
+    const nextReaction = previousReaction === direction ? null : direction;
+
     setCommunityPosts((current) =>
       current.map((post) =>
         post.id === postId
@@ -2396,17 +2489,23 @@ function App() {
               ...post,
               replies: post.replies.map((answer) =>
                 answer.id === answerId
-                  ? {
-                      ...answer,
-                      upvotes: answer.upvotes + (direction === "up" ? 1 : 0),
-                      downvotes: answer.downvotes + (direction === "down" ? 1 : 0),
-                    }
+                  ? applyReactionCount(answer, previousReaction, nextReaction)
                   : answer,
               ),
             }
           : post,
       ),
     );
+    setCommunityReactions((current) => {
+      const next = { ...current };
+      if (nextReaction) {
+        next[reactionKey] = nextReaction;
+      } else {
+        delete next[reactionKey];
+      }
+      persistCommunityReactions(next);
+      return next;
+    });
   }
 
   function handleAddCommunityAnswer(postId: number, body: string) {
@@ -2896,6 +2995,8 @@ function App() {
             newsItems={seedNews}
             selectedJobTrade={selectedJob.trade}
             userLocation={accountProfile.location}
+            getPostReaction={getCommunityPostReaction}
+            getAnswerReaction={getCommunityAnswerReaction}
             onVotePost={handleVoteCommunityPost}
             onVoteAnswer={handleVoteCommunityAnswer}
             onAddAnswer={handleAddCommunityAnswer}
@@ -4752,6 +4853,8 @@ interface OperationsWorkspaceProps {
   communityPosts: CommunityPost[];
   communityReports: CommunityReport[];
   shoutOuts: ShoutOut[];
+  getCommunityPostReaction: (postId: number) => CommunityReaction | null;
+  getCommunityAnswerReaction: (postId: number, answerId: number) => CommunityReaction | null;
   onPostJob: () => void;
   onNavigate: (view: NavLabel) => void;
   onOpenJob: (id: number) => void;
@@ -4814,6 +4917,8 @@ export function OperationsWorkspace(props: OperationsWorkspaceProps) {
     communityPosts,
     communityReports,
     shoutOuts,
+    getCommunityPostReaction,
+    getCommunityAnswerReaction,
     onPostJob,
     onNavigate,
     onOpenJob,
@@ -4919,6 +5024,8 @@ export function OperationsWorkspace(props: OperationsWorkspaceProps) {
           newsItems={seedNews}
           selectedJobTrade={selectedJob.trade}
           userLocation={accountProfile.location}
+          getPostReaction={getCommunityPostReaction}
+          getAnswerReaction={getCommunityAnswerReaction}
           onVotePost={onVoteCommunityPost}
           onVoteAnswer={onVoteCommunityAnswer}
           onAddAnswer={onAddCommunityAnswer}
@@ -5900,6 +6007,8 @@ function ShopTalkView({
   newsItems,
   selectedJobTrade,
   userLocation,
+  getPostReaction,
+  getAnswerReaction,
   onVotePost,
   onVoteAnswer,
   onAddAnswer,
@@ -5912,6 +6021,8 @@ function ShopTalkView({
   newsItems: NewsItem[];
   selectedJobTrade: Trade | "General";
   userLocation: string;
+  getPostReaction: (postId: number) => CommunityReaction | null;
+  getAnswerReaction: (postId: number, answerId: number) => CommunityReaction | null;
   onVotePost: (postId: number, direction: "up" | "down") => void;
   onVoteAnswer: (postId: number, answerId: number, direction: "up" | "down") => void;
   onAddAnswer: (postId: number, body: string) => void;
@@ -5997,6 +6108,29 @@ function ShopTalkView({
   const unansweredCount = filteredPosts.filter((post) => post.replies.length === 0 || post.status === "Needs a pro answer").length;
   const verifiedFixCount = filteredPosts.filter((post) => post.status === "Verified Fix").length;
   const newsSourceCount = new Set(filteredNews.map((item) => item.source)).size;
+  const selectedPostReaction = selectedPost ? getPostReaction(selectedPost.id) : null;
+  const selectedTradeThreads = filteredPosts.filter((post) => post.trade === selectedJobTrade || post.trade === "General");
+  const profileScore = communityPosts.reduce((score, post) => {
+    const authorScore = post.author === profile.displayName ? Math.max(0, netScore(post)) : 0;
+    const answerScore = post.replies
+      .filter((reply) => reply.author === profile.displayName)
+      .reduce((sum, reply) => sum + Math.max(0, netScore(reply)) + (reply.verifiedFix ? 5 : 0), 0);
+    return score + authorScore + answerScore;
+  }, 0);
+  const topContributors = Object.entries(
+    communityPosts.reduce<Record<string, { answers: number; fixes: number; score: number }>>((contributors, post) => {
+      post.replies.forEach((reply) => {
+        const contributor = contributors[reply.author] ?? { answers: 0, fixes: 0, score: 0 };
+        contributor.answers += 1;
+        contributor.fixes += reply.verifiedFix ? 1 : 0;
+        contributor.score += Math.max(0, netScore(reply)) + (reply.verifiedFix ? 5 : 0);
+        contributors[reply.author] = contributor;
+      });
+      return contributors;
+    }, {}),
+  )
+    .sort(([, a], [, b]) => b.score - a.score)
+    .slice(0, 3);
 
   function submitAnswer() {
     const body = answerDraft.trim();
@@ -6086,6 +6220,31 @@ function ShopTalkView({
                       <li key={i}>{rule}</li>
                     ))}
                   </ol>
+                )}
+              </div>
+
+              <div className="shop-talk-pulse" aria-label="Shop Talk social pulse">
+                <div className="shop-talk-pulse-head">
+                  <span>Social hub</span>
+                  <strong>Your trade signal</strong>
+                </div>
+                <div className="shop-talk-pulse-grid">
+                  <span><strong>{profileScore}</strong><small>impact score</small></span>
+                  <span><strong>{selectedTradeThreads.length}</strong><small>{selectedJobTrade} threads</small></span>
+                  <span><strong>{profileBadges.length || 0}</strong><small>badges</small></span>
+                </div>
+                {topContributors.length > 0 ? (
+                  <div className="shop-talk-contributors">
+                    <small>Top hands this week</small>
+                    {topContributors.map(([name, stats]) => (
+                      <span key={name}>
+                        <b>{name}</b>
+                        <em>{stats.answers} answers - {stats.fixes} fixes</em>
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <p>Answer a field question to start building visible reputation.</p>
                 )}
               </div>
 
@@ -6268,11 +6427,23 @@ function ShopTalkView({
               </div>
 
               <div className="shop-question-actions">
-                <button type="button" onClick={() => onVotePost(selectedPost.id, "up")}>
+                <button
+                  type="button"
+                  className={selectedPostReaction === "up" ? "reaction-button active" : "reaction-button"}
+                  aria-pressed={selectedPostReaction === "up"}
+                  aria-label={selectedPostReaction === "up" ? "Remove upvote from thread" : "Upvote thread"}
+                  onClick={() => onVotePost(selectedPost.id, "up")}
+                >
                   <ThumbsUp size={15} />
                   {selectedPost.upvotes}
                 </button>
-                <button type="button" onClick={() => onVotePost(selectedPost.id, "down")}>
+                <button
+                  type="button"
+                  className={selectedPostReaction === "down" ? "reaction-button active negative" : "reaction-button"}
+                  aria-pressed={selectedPostReaction === "down"}
+                  aria-label={selectedPostReaction === "down" ? "Remove downvote from thread" : "Downvote thread"}
+                  onClick={() => onVotePost(selectedPost.id, "down")}
+                >
                   <ThumbsDown size={15} />
                   {selectedPost.downvotes}
                 </button>
@@ -6308,32 +6479,48 @@ function ShopTalkView({
                     <strong>This needs a real trade answer.</strong>
                     <span>Answer it, then mark the best response as Verified Fix during testing.</span>
                   </article>
-                ) : sortedAnswers(selectedPost.replies).map((answer) => (
-                  <article className={answer.verifiedFix ? "answer-card verified" : "answer-card"} key={answer.id}>
-                    <div className="answer-card-heading">
-                      <div>
-                        <span>{answer.author}</span>
-                        <strong>{answer.verifiedFix ? "Verified Fix" : "Community answer"}</strong>
+                ) : sortedAnswers(selectedPost.replies).map((answer) => {
+                  const answerReaction = getAnswerReaction(selectedPost.id, answer.id);
+
+                  return (
+                    <article className={answer.verifiedFix ? "answer-card verified" : "answer-card"} key={answer.id}>
+                      <div className="answer-card-heading">
+                        <div>
+                          <span>{answer.author}</span>
+                          <strong>{answer.verifiedFix ? "Verified Fix" : "Community answer"}</strong>
+                        </div>
+                        {answer.verifiedFix && <CheckCircle2 size={18} />}
                       </div>
-                      {answer.verifiedFix && <CheckCircle2 size={18} />}
-                    </div>
-                    <p>{answer.body}</p>
-                    <div className="answer-actions">
-                      <button type="button" onClick={() => onVoteAnswer(selectedPost.id, answer.id, "up")}>
-                        <ThumbsUp size={14} />
-                        {answer.upvotes}
-                      </button>
-                      <button type="button" onClick={() => onVoteAnswer(selectedPost.id, answer.id, "down")}>
-                        <ThumbsDown size={14} />
-                        {answer.downvotes}
-                      </button>
-                      <button type="button" disabled={answer.verifiedFix} onClick={() => onVerifyAnswer(selectedPost.id, answer.id)}>
-                        <BadgeCheck size={14} />
-                        {answer.verifiedFix ? "Verified" : "Mark fix"}
-                      </button>
-                    </div>
-                  </article>
-                ))}
+                      <p>{answer.body}</p>
+                      <div className="answer-actions">
+                        <button
+                          type="button"
+                          className={answerReaction === "up" ? "reaction-button active" : "reaction-button"}
+                          aria-pressed={answerReaction === "up"}
+                          aria-label={answerReaction === "up" ? "Remove upvote from answer" : "Upvote answer"}
+                          onClick={() => onVoteAnswer(selectedPost.id, answer.id, "up")}
+                        >
+                          <ThumbsUp size={14} />
+                          {answer.upvotes}
+                        </button>
+                        <button
+                          type="button"
+                          className={answerReaction === "down" ? "reaction-button active negative" : "reaction-button"}
+                          aria-pressed={answerReaction === "down"}
+                          aria-label={answerReaction === "down" ? "Remove downvote from answer" : "Downvote answer"}
+                          onClick={() => onVoteAnswer(selectedPost.id, answer.id, "down")}
+                        >
+                          <ThumbsDown size={14} />
+                          {answer.downvotes}
+                        </button>
+                        <button type="button" disabled={answer.verifiedFix} onClick={() => onVerifyAnswer(selectedPost.id, answer.id)}>
+                          <BadgeCheck size={14} />
+                          {answer.verifiedFix ? "Verified" : "Mark fix"}
+                        </button>
+                      </div>
+                    </article>
+                  );
+                })}
               </section>
             </article>
           ) : (

@@ -10,6 +10,7 @@ const baseUrl = `http://127.0.0.1:${port}`;
 const projectRoot = process.cwd();
 const viteBin = path.join(projectRoot, "node_modules", "vite", "bin", "vite.js");
 const screenshotDir = path.join(os.tmpdir(), "rivt-shop-talk-news-pass");
+const reactionStorageKey = "rivt-shop-talk-reactions-v1";
 
 const vite = spawn(process.execPath, [viteBin, "--host", "127.0.0.1", "--port", String(port)], {
   cwd: projectRoot,
@@ -101,6 +102,9 @@ async function waitForServer() {
 }
 
 async function configurePage(page) {
+  await page.addInitScript((storageKey) => {
+    window.localStorage.removeItem(storageKey);
+  }, reactionStorageKey);
   await page.route("**/api/v1/me", (route) =>
     route.fulfill({
       status: 200,
@@ -180,7 +184,42 @@ try {
 
     await page.goto(`${baseUrl}/app/network/talk`, { waitUntil: "networkidle" });
     await page.getByRole("heading", { name: /Field answers/i }).waitFor({ timeout: 15_000 });
-    await page.locator('input[placeholder="Search questions, trades, fixes"]').fill("safety");
+    await page.getByText("Social hub", { exact: true }).waitFor({ timeout: 15_000 });
+    await page.locator(".shop-post-card").first().click();
+    const upvoteThread = page.getByRole("button", { name: "Upvote thread" }).first();
+    const threadInitial = (await upvoteThread.textContent())?.trim() ?? "";
+    await upvoteThread.click();
+    const removeThreadUpvote = page.getByRole("button", { name: "Remove upvote from thread" }).first();
+    await removeThreadUpvote.waitFor({ timeout: 15_000 });
+    const threadUpvoted = (await removeThreadUpvote.textContent())?.trim() ?? "";
+    assert.notEqual(threadUpvoted, threadInitial, "thread upvote should move the count once");
+    await removeThreadUpvote.click();
+    await page.getByRole("button", { name: "Upvote thread" }).first().waitFor({ timeout: 15_000 });
+    const threadCleared = (await page.getByRole("button", { name: "Upvote thread" }).first().textContent())?.trim() ?? "";
+    assert.equal(threadCleared, threadInitial, "clicking the same thread reaction again should clear it");
+
+    await page
+      .locator('textarea[placeholder^="Share the field habit"]')
+      .fill("Document the condition, price the change order, and get written approval before the crew keeps going.");
+    await page.getByRole("button", { name: /Post answer/i }).click();
+    await page.getByText("Document the condition", { exact: false }).waitFor({ timeout: 15_000 });
+    const upvoteAnswer = page.getByRole("button", { name: "Upvote answer" }).first();
+    const answerInitial = (await upvoteAnswer.textContent())?.trim() ?? "";
+    await upvoteAnswer.click();
+    const removeAnswerUpvote = page.getByRole("button", { name: "Remove upvote from answer" }).first();
+    await removeAnswerUpvote.waitFor({ timeout: 15_000 });
+    const answerUpvoted = (await removeAnswerUpvote.textContent())?.trim() ?? "";
+    assert.notEqual(answerUpvoted, answerInitial, "answer upvote should move the count once");
+    await removeAnswerUpvote.click();
+    await page.getByRole("button", { name: "Upvote answer" }).first().waitFor({ timeout: 15_000 });
+    const answerCleared = (await page.getByRole("button", { name: "Upvote answer" }).first().textContent())?.trim() ?? "";
+    assert.equal(answerCleared, answerInitial, "clicking the same answer reaction again should clear it");
+
+    const talkSearch = page.locator('input[placeholder="Search questions, trades, fixes"]');
+    if (!(await talkSearch.isVisible())) {
+      await page.getByRole("button", { name: /Back/i }).first().click();
+    }
+    await talkSearch.fill("scope");
     await assertNoHorizontalOverflow(page);
     await page.screenshot({ path: path.join(screenshotDir, `${viewport.name}-talk.png`), fullPage: true });
 
