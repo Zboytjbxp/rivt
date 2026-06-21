@@ -427,6 +427,16 @@ Implemented on 2026-06-20:
 - Local run against `https://rivt.pro` passed with source `5f3334b231114efb377899ea79bad6a48b353a21`, operational controls disabled, seven anonymous private checks, and a 531 ms duration.
 - This is partial monitoring progress only. Dedicated error monitoring, alert routing, paging destination, incident owner, and rehearsal remain launch blockers.
 
+## Packet 08 Restore Drill Tooling Progress
+
+Implemented on 2026-06-20:
+
+- Added `scripts/restore-drill.js` and `npm run restore:drill`.
+- The verifier requires `CONFIRM_RESTORE_TARGET_ISOLATED=true` and `RESTORE_DATABASE_URL`; it refuses to run without an isolated target.
+- The verifier checks migration status, requires migration `0009_durable_rate_limits`, verifies critical Gate A table presence, counts rows, can compare source/target counts with `RESTORE_SOURCE_DATABASE_URL`, and reports duration.
+- Local syntax, lint, security lint, build, tests, e2e, and audit pass. A no-target run correctly fails with `RESTORE_DATABASE_URL is required`.
+- This is tooling progress only. Gate A remains blocked until a real isolated PostgreSQL target is provisioned, restored, verified, timed, and recorded.
+
 ## Next Exact Task
 
 Complete the remaining Packet 08 launch blockers: provision an isolated restore target and run a timed restore drill; wire dedicated error monitoring/alerts and incident owner routing; finish support/legal/founder approvals; and complete the physical/deeper manual accessibility-device matrix before named-cohort launch.
