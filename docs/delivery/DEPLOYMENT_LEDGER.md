@@ -325,3 +325,22 @@ Add one entry per staging/production deployment.
 - Known risks: full Gate A remains blocked until `docs/operations/incident-routing.json` is completed with real owner/escalation/provider/approval evidence and `npm run incident:readiness -- --require-ready` passes
 - Rollback performed/result: not required
 - Approval: incident-readiness tooling accepted as partial evidence only; overall Gate A not approved
+
+## Local Packet 08 - Accessibility Matrix Script Expansion
+
+- Environment: Local repository tooling; no production deploy performed in this slice
+- Date/time/timezone: 2026-06-20 23:55 America/New_York
+- Deployer: Codex
+- Source repository/branch: `Zboytjbxp/rivt`, `master`
+- Source commit: pending local changes
+- Build/artifact ID: not deployed
+- Migration version before/after: unchanged (`0009_durable_rate_limits`)
+- Feature-flag/config version: no app runtime flags changed
+- Provider/config changes: none
+- Backup/rollback target: prior pushed source `a5d7d45 Add incident readiness gate`; no deploy
+- Automated gates: `scripts/live-ui-accessibility.js` was expanded to cover 360x800 phone, 390x844 phone, 768x1024 tablet, 1366x768 laptop, 1440x900 desktop, and 390x844 200% text-scale scenarios. The script has not yet been rerun against production in this slice.
+- Post-deploy smoke tests: none; no deployment occurred
+- Health/readiness result: not rechecked because Railway CLI remains unauthorized
+- Known risks: full Gate A still requires live-recorded expanded matrix evidence plus physical-device/manual screen-reader coverage
+- Rollback performed/result: not required
+- Approval: accessibility tooling progress accepted as partial evidence only; overall Gate A not approved

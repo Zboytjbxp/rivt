@@ -416,6 +416,7 @@ Deployed on 2026-06-20:
 - Authenticated UI smoke `ui-a11y-20260621005817-8a87eb` created disposable contractor and tradesperson accounts, tested contractor mobile, tradesperson mobile, and contractor desktop shells, then closed both accounts.
 - Tested shells had top-bar search, messages, notifications, and profile controls; no role toggle; no More tab; no horizontal overflow; `consoleWarningsOrErrors: 0`; and `smallTargetCount: 0` on all tested viewports. The smoke uses reduced-motion browser preference and now fails on missing top-bar controls, post-login console warnings/errors, sub-44px controls, unnamed keyboard focus targets, or keyboard focus not reaching search/primary navigation.
 - Live hardening audit passed after deployment with exact source `f5a68d9c16364c94dd727bb91e03a25f33e283df`, migration `0009_durable_rate_limits`, seven anonymous private-route checks returning 401, zero seed/demo findings, and counts of 3 active accounts, 0 public network profiles, 0 open jobs, 2 open support cases, 0 active restrictions, 115 quarantined legacy app-state rows, and 49 rate-limit windows.
+- The next authenticated UI smoke matrix is now expanded in `scripts/live-ui-accessibility.js` to cover 360x800 phone, 390x844 phone, 768x1024 tablet, 1366x768 laptop, 1440x900 desktop, and a 390x844 200% text-scale scenario. This is tooling progress only until rerun against production and recorded in `docs/quality/ACCESSIBILITY_DEVICE_MATRIX.md`.
 
 ## Packet 08 Synthetic Monitoring Progress
 

@@ -14,6 +14,15 @@ const setupOnly = args.includes("--setup-only");
 const cleanupRun = argValue("--cleanup-run");
 const browserOnlyFile = argValue("--browser-only");
 
+const auditScenarios = [
+  { name: "phone-compact", viewport: { width: 360, height: 800 }, roles: ["contractor", "tradesperson"] },
+  { name: "phone-standard", viewport: { width: 390, height: 844 }, roles: ["contractor", "tradesperson"] },
+  { name: "tablet", viewport: { width: 768, height: 1024 }, roles: ["contractor"] },
+  { name: "laptop", viewport: { width: 1366, height: 768 }, roles: ["contractor"] },
+  { name: "desktop-wide", viewport: { width: 1440, height: 900 }, roles: ["contractor"] },
+  { name: "phone-200-percent-text", viewport: { width: 390, height: 844 }, roles: ["contractor"], textScale: 2 },
+];
+
 let pool;
 
 if (databaseUrl) {
@@ -300,8 +309,8 @@ async function collectKeyboardAudit(page, label) {
   };
 }
 
-async function loginAndAudit(browser, account, viewport) {
-  const context = await browser.newContext({ viewport, reducedMotion: "reduce" });
+async function loginAndAudit(browser, account, scenario) {
+  const context = await browser.newContext({ viewport: scenario.viewport, reducedMotion: "reduce" });
   const page = await context.newPage();
   const logs = [];
   page.on("console", (message) => {
@@ -319,12 +328,17 @@ async function loginAndAudit(browser, account, viewport) {
       page.locator("form button[type='submit']").click(),
     ]);
     await page.waitForFunction(() => document.body.innerText.includes("Home") && document.body.innerText.includes("Work"), null, { timeout: 20000 });
+    if (scenario.textScale && scenario.textScale !== 1) {
+      await page.addStyleTag({ content: `html { font-size: ${16 * scenario.textScale}px !important; }` });
+      await page.waitForTimeout(150);
+    }
     logs.length = 0;
 
-    const audits = [await collectUiAudit(page, `${account.role}-${viewport.width}x${viewport.height}-home`)];
+    const scenarioLabel = `${account.role}-${scenario.name}-${scenario.viewport.width}x${scenario.viewport.height}`;
+    const audits = [await collectUiAudit(page, `${scenarioLabel}-home`)];
     for (const navItem of ["Work", "Crew", "Shop Talk", "Tools", "Home"]) {
       await firstVisibleClick(page, navItem);
-      audits.push(await collectUiAudit(page, `${account.role}-${viewport.width}x${viewport.height}-${navItem.toLowerCase().replace(/\s+/g, "-")}`));
+      audits.push(await collectUiAudit(page, `${scenarioLabel}-${navItem.toLowerCase().replace(/\s+/g, "-")}`));
     }
 
     for (const audit of audits) {
@@ -341,12 +355,14 @@ async function loginAndAudit(browser, account, viewport) {
         assert.equal(present, true, `${audit.label} is missing top-bar ${signal}.`);
       }
     }
-    assert.deepEqual(logs, [], `${account.role}-${viewport.width}x${viewport.height} produced post-login console warnings/errors: ${JSON.stringify(logs)}`);
-    const keyboard = await collectKeyboardAudit(page, `${account.role}-${viewport.width}x${viewport.height}-keyboard`);
+    assert.deepEqual(logs, [], `${scenarioLabel} produced post-login console warnings/errors: ${JSON.stringify(logs)}`);
+    const keyboard = await collectKeyboardAudit(page, `${scenarioLabel}-keyboard`);
 
     return {
       role: account.role,
-      viewport,
+      scenario: scenario.name,
+      viewport: scenario.viewport,
+      textScale: scenario.textScale ?? 1,
       logs,
       reducedMotion: true,
       keyboard,
@@ -370,13 +386,14 @@ async function runBrowserOnly(filePath) {
   assert.ok(Array.isArray(setup.accounts));
   const browser = await chromium.launch({ headless: true });
   try {
-    const contractor = setup.accounts.find((account) => account.role === "contractor");
-    assert.ok(contractor, "Browser-only mode requires a contractor account.");
     const results = [];
-    for (const account of setup.accounts) {
-      results.push(await loginAndAudit(browser, account, { width: 390, height: 844 }));
+    for (const scenario of auditScenarios) {
+      for (const role of scenario.roles) {
+        const account = setup.accounts.find((candidate) => candidate.role === role);
+        assert.ok(account, `Browser-only mode requires a ${role} account for ${scenario.name}.`);
+        results.push(await loginAndAudit(browser, account, scenario));
+      }
     }
-    results.push(await loginAndAudit(browser, contractor, { width: 1366, height: 768 }));
     console.log(JSON.stringify(summarizeResults({
       run: setup.run,
       buildCommit: setup.buildCommit,
@@ -399,7 +416,9 @@ function summarizeResults({ run, buildCommit, accountsClosed, results, mode = "f
     accountsClosed,
     viewports: results.map((result) => ({
       role: result.role,
+      scenario: result.scenario,
       viewport: result.viewport,
+      textScale: result.textScale,
       auditCount: result.audits.length,
       reducedMotion: result.reducedMotion,
       keyboard: result.keyboard,
@@ -436,10 +455,8 @@ async function main() {
     assert.equal(health.payload.ok, true);
     if (expectedCommit) assert.equal(health.payload.build.commit, expectedCommit);
 
-    const contractor = await signupAndOnboard("contractor", "GateA UI Contractor");
-    accounts.push(contractor);
-    const tradesperson = await signupAndOnboard("tradesperson", "GateA UI Trade");
-    accounts.push(tradesperson);
+    accounts.push(await signupAndOnboard("contractor", "GateA UI Contractor"));
+    accounts.push(await signupAndOnboard("tradesperson", "GateA UI Trade"));
 
     if (setupOnly) {
       console.log(`RIVT_UI_SMOKE_SETUP_JSON=${JSON.stringify({
@@ -455,10 +472,13 @@ async function main() {
 
     browser = await chromium.launch({ headless: true });
     const results = [];
-    for (const account of accounts) {
-      results.push(await loginAndAudit(browser, account, { width: 390, height: 844 }));
+    for (const scenario of auditScenarios) {
+      for (const role of scenario.roles) {
+        const account = accounts.find((candidate) => candidate.role === role);
+        assert.ok(account, `Missing ${role} account for ${scenario.name}.`);
+        results.push(await loginAndAudit(browser, account, scenario));
+      }
     }
-    results.push(await loginAndAudit(browser, contractor, { width: 1366, height: 768 }));
 
     await closeSmokeArtifacts(accounts);
 

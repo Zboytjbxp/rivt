@@ -26,6 +26,19 @@ Gate A status: partial evidence only. This report does not approve named custome
 | Authenticated contractor shell | 1366x768 | Disposable production contractor account signed in; top-bar search, messages, notifications, and profile controls present; no role toggle or More tab; no horizontal overflow; `consoleWarningsOrErrors: 0`; `smallTargetCount: 0`. |
 | Authenticated keyboard/reduced-motion smoke | 390x844 / 1366x768 | Browser context uses reduced-motion preference; keyboard focus reaches skip link, RIVT home, top-bar controls, profile menu, and primary navigation with named visible focus targets. |
 
+## Scripted Matrix Expansion
+
+`scripts/live-ui-accessibility.js` now defines the next authenticated smoke matrix as explicit scenarios:
+
+- 360x800 compact phone for contractor and tradesperson.
+- 390x844 standard phone for contractor and tradesperson.
+- 768x1024 tablet for contractor.
+- 1366x768 laptop for contractor.
+- 1440x900 wide desktop for contractor.
+- 390x844 contractor pass with 200% root text scale.
+
+This is tooling progress only until the script is rerun against production with disposable accounts and the output is recorded here.
+
 ## Findings and Fixes
 
 - Finding: public auth email/password fields rendered at `42px` height, below the Gate A 44px target-size floor.
@@ -44,8 +57,8 @@ Remaining manual Gate A coverage:
 
 - Authenticated contractor and tradesperson routes on production.
 - Physical or emulated iOS Safari and Android Chrome.
-- 768px tablet, 1366x768 laptop, and 1440px desktop routes after login.
-- 200% text/zoom pass.
+- Live-recorded 768px tablet and 1440px desktop routes after login.
+- Live-recorded 200% text/zoom pass.
 - Keyboard-only pass across auth, posting, application, offer, messaging, upload, completion, review, report, and error flows.
 - Reduced-motion pass.
 - Screen-reader label and announcement pass across the same flows.
