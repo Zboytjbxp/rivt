@@ -858,6 +858,7 @@ async function resolveGoogleAccount(identity) {
 
 const newsCache = new Map(); // key → { items, fetchedAt }
 const NEWS_TTL_MS = 30 * 60 * 1000;
+const NEWS_ARTICLE_IMAGE_LIMIT = 18;
 const _xmlParser = new XMLParser({ ignoreAttributes: false, ignoreDeclaration: true });
 
 function _stripHtml(str) {
@@ -898,6 +899,10 @@ function _topicThumbnail({ title = "", source = "", urgency = "" } = {}) {
   if (/license|renewal|dbpr|certification/.test(haystack)) return "/news/license-renewal.svg";
   if (/labor|workforce|shortage|hiring|wage/.test(haystack)) return "/news/workforce-market.svg";
   return "/news/rivt-trade-brief.svg";
+}
+
+function _fallbackNewsThumbnail(item) {
+  return _topicThumbnail({ title: item.headline ?? item.title, source: item.source, urgency: item.urgency });
 }
 
 function _isTradeNewsCandidate(item) {
@@ -970,22 +975,149 @@ const curatedTradeNews = [
   },
 ];
 
-function _firstString(value) {
-  if (!value) return null;
-  if (typeof value === "string") return value;
-  if (Array.isArray(value)) return _firstString(value[0]);
-  if (typeof value === "object") {
-    return value["@_url"] ?? value["@_href"] ?? value.url ?? value.href ?? null;
+function _resolvePublicImageUrl(value, baseUrl) {
+  const raw = String(value ?? "").trim();
+  if (!raw) return null;
+
+  try {
+    const parsed = new URL(raw, baseUrl || undefined);
+    if (parsed.protocol !== "https:" && parsed.protocol !== "http:") return null;
+    if (parsed.username || parsed.password) return null;
+
+    const hostname = parsed.hostname.toLowerCase();
+    if (
+      hostname === "localhost" ||
+      hostname.endsWith(".localhost") ||
+      hostname === "127.0.0.1" ||
+      hostname === "::1" ||
+      /^10\./.test(hostname) ||
+      /^192\.168\./.test(hostname) ||
+      /^172\.(1[6-9]|2\d|3[0-1])\./.test(hostname)
+    ) {
+      return null;
+    }
+
+    const href = parsed.href;
+    if (/favicon|apple-touch-icon|site-logo|\/logo[.\-/]|sprite|avatar|profile-image/i.test(href)) return null;
+    if (/google\.com\/s2\/favicons/i.test(href)) return null;
+    if (/\.(ico|svg)(\?|#|$)/i.test(parsed.pathname)) return null;
+
+    return href;
+  } catch {
+    return null;
+  }
+}
+
+function _imageCandidateFrom(value, baseUrl, depth = 0) {
+  if (!value || depth > 4) return null;
+  if (typeof value === "string") return _resolvePublicImageUrl(value, baseUrl);
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const candidate = _imageCandidateFrom(item, baseUrl, depth + 1);
+      if (candidate) return candidate;
+    }
+    return null;
+  }
+  if (typeof value !== "object") return null;
+
+  for (const key of ["@_url", "@_href", "url", "href", "content", "$t"]) {
+    const candidate = _resolvePublicImageUrl(value[key], baseUrl);
+    if (candidate) return candidate;
+  }
+  for (const key of ["media:content", "media:thumbnail", "thumbnail", "image", "enclosure", "itunes:image"]) {
+    const candidate = _imageCandidateFrom(value[key], baseUrl, depth + 1);
+    if (candidate) return candidate;
   }
   return null;
 }
 
-function _thumbnailUrl(item, source, title) {
-  const direct = _firstString(item?.enclosure) ?? _firstString(item?.["media:thumbnail"]) ?? _firstString(item?.["media:content"]);
-  if (direct) return direct;
+function _htmlImageCandidate(html, baseUrl) {
+  const source = String(html ?? "");
+  if (!source) return null;
 
-  const urgency = _urgency(title);
-  return _topicThumbnail({ title, source, urgency });
+  const imgMatch = source.match(/<img[^>]+(?:src|data-src)=["']([^"']+)["']/i);
+  return _resolvePublicImageUrl(imgMatch?.[1], baseUrl);
+}
+
+function _rssThumbnailUrl(item, baseUrl) {
+  return (
+    _imageCandidateFrom(item?.enclosure, baseUrl) ??
+    _imageCandidateFrom(item?.["media:thumbnail"], baseUrl) ??
+    _imageCandidateFrom(item?.["media:content"], baseUrl) ??
+    _imageCandidateFrom(item?.["media:group"], baseUrl) ??
+    _imageCandidateFrom(item?.image, baseUrl) ??
+    _imageCandidateFrom(item?.["itunes:image"], baseUrl) ??
+    _htmlImageCandidate(item?.description ?? item?.summary ?? item?.["content:encoded"], baseUrl)
+  );
+}
+
+function _metaContent(html, regexes) {
+  for (const regex of regexes) {
+    const match = html.match(regex);
+    if (match?.[1]) return match[1].replace(/&amp;/g, "&").trim();
+  }
+  return null;
+}
+
+async function _fetchArticleImage(url) {
+  const safeUrl = _resolvePublicImageUrl(url);
+  if (!safeUrl) return null;
+
+  try {
+    const res = await fetch(safeUrl, {
+      signal: AbortSignal.timeout(3500),
+      headers: {
+        Accept: "text/html,application/xhtml+xml",
+        "User-Agent": "Mozilla/5.0 (compatible; RIVTNewsImageBot/1.0; +https://rivt.pro)",
+      },
+      redirect: "follow",
+    });
+    if (!res.ok) return null;
+    const contentType = res.headers.get("content-type") ?? "";
+    if (!/text\/html|application\/xhtml\+xml/i.test(contentType)) return null;
+    const html = (await res.text()).slice(0, 600_000);
+    const candidate = _metaContent(html, [
+      /<meta[^>]+property=["']og:image:secure_url["'][^>]+content=["']([^"']+)["'][^>]*>/i,
+      /<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image:secure_url["'][^>]*>/i,
+      /<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["'][^>]*>/i,
+      /<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["'][^>]*>/i,
+      /<meta[^>]+name=["']twitter:image(?::src)?["'][^>]+content=["']([^"']+)["'][^>]*>/i,
+      /<meta[^>]+content=["']([^"']+)["'][^>]+name=["']twitter:image(?::src)?["'][^>]*>/i,
+      /<link[^>]+rel=["']image_src["'][^>]+href=["']([^"']+)["'][^>]*>/i,
+      /<link[^>]+href=["']([^"']+)["'][^>]+rel=["']image_src["'][^>]*>/i,
+    ]);
+    return _resolvePublicImageUrl(candidate, res.url);
+  } catch {
+    return null;
+  }
+}
+
+async function _enrichNewsImages(items) {
+  const candidates = items.slice(0, NEWS_ARTICLE_IMAGE_LIMIT);
+  const enriched = await Promise.all(candidates.map(async (item) => {
+    const currentIsFallback = !item.thumbnailUrl || item.thumbnailKind === "fallback" || String(item.thumbnailUrl).startsWith("/news/");
+    if (!currentIsFallback) return item;
+
+    const articleImage = await _fetchArticleImage(item.url);
+    if (articleImage) {
+      return { ...item, thumbnailUrl: articleImage, thumbnailKind: "article" };
+    }
+
+    return {
+      ...item,
+      thumbnailUrl: item.thumbnailUrl || _fallbackNewsThumbnail(item),
+      thumbnailKind: "fallback",
+    };
+  }));
+
+  return [
+    ...enriched,
+    ...items.slice(NEWS_ARTICLE_IMAGE_LIMIT).map((item) => ({
+      ...item,
+      thumbnailUrl: item.thumbnailUrl || _fallbackNewsThumbnail(item),
+      thumbnailKind: item.thumbnailKind ?? "fallback",
+    })),
+  ];
 }
 
 async function _fetchFeed(url, fallbackSource) {
@@ -1005,15 +1137,18 @@ async function _fetchFeed(url, fallbackSource) {
         ? item.link
         : item.link?.["@_href"] ?? item.guid ?? "#";
       const headline = _stripHtml(item.title ?? "");
+      const source = fallbackSource ?? _stripHtml(channel.title ?? "");
+      const thumbnailUrl = _rssThumbnailUrl(item, link);
       return {
         id: Date.now() + i,
         headline,
-        source: fallbackSource ?? _stripHtml(channel.title ?? ""),
+        source,
         date: _fmtDate(item.pubDate ?? item.published ?? item.updated ?? ""),
         summary: _stripHtml(item.description ?? item.summary ?? item["content:encoded"] ?? "").slice(0, 350),
         url: link,
         urgency: _urgency(headline),
-        thumbnailUrl: _thumbnailUrl(item, fallbackSource ?? _stripHtml(channel.title ?? ""), headline),
+        thumbnailUrl: thumbnailUrl ?? _topicThumbnail({ title: headline, source, urgency: _urgency(headline) }),
+        thumbnailKind: thumbnailUrl ? "feed" : "fallback",
       };
     }).filter((item) => item.headline.length > 10 && _isTradeNewsCandidate(item));
   } catch {
@@ -1067,7 +1202,12 @@ app.get("/api/news", async (request, response) => {
     return 0;
   });
 
-  const items = deduped.slice(0, 30).map((item, i) => ({ ...item, id: i + 1 }));
+  const items = (await _enrichNewsImages(deduped.slice(0, 30))).map((item, i) => ({
+    ...item,
+    id: i + 1,
+    thumbnailUrl: item.thumbnailUrl || _fallbackNewsThumbnail(item),
+    thumbnailKind: item.thumbnailKind ?? "fallback",
+  }));
   newsCache.set(cacheKey, { items, fetchedAt: Date.now() });
   response.json({ items });
 });

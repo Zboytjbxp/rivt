@@ -255,6 +255,7 @@ interface NewsItem {
   url: string;
   urgency?: string;
   thumbnailUrl?: string;
+  thumbnailKind?: "article" | "feed" | "fallback";
 }
 
 function newsTopicThumbnail(item: Pick<NewsItem, "headline" | "source" | "urgency">) {
@@ -276,6 +277,14 @@ function newsThumbnailUrl(item: Pick<NewsItem, "url" | "thumbnailUrl" | "source"
   }
 
   return newsTopicThumbnail(item);
+}
+
+function isFallbackNewsThumbnail(item: Pick<NewsItem, "thumbnailUrl" | "thumbnailKind">) {
+  return item.thumbnailKind === "fallback" || !item.thumbnailUrl || item.thumbnailUrl.startsWith("/news/");
+}
+
+function newsThumbClassName(baseClass: string, item: Pick<NewsItem, "thumbnailUrl" | "thumbnailKind">) {
+  return `${baseClass} ${isFallbackNewsThumbnail(item) ? "is-fallback" : "is-real"}`;
 }
 
 type ProviderCheckStatus = "idle" | "checking" | "ready" | "setup_required" | "offline";
@@ -5742,7 +5751,7 @@ function HomeView({
           </div>
           {latestNews && (
             <a className="news-feature" href={latestNews.url} target={latestNews.url === "#" ? undefined : "_blank"} rel="noreferrer">
-              <div className="news-feature-thumb">
+              <div className={newsThumbClassName("news-feature-thumb", latestNews)}>
                 <img src={newsThumbnailUrl(latestNews)} alt={`${latestNews.source} article thumbnail`} loading="lazy" />
               </div>
               <div className="news-feature-copy">
@@ -5755,7 +5764,7 @@ function HomeView({
           )}
           {secondaryNews.map((item) => (
             <a className="news-row" key={item.id} href={item.url} target={item.url === "#" ? undefined : "_blank"} rel="noreferrer">
-              <div className="news-row-thumb">
+              <div className={newsThumbClassName("news-row-thumb", item)}>
                 <img src={newsThumbnailUrl(item)} alt={`${item.source} article thumbnail`} loading="lazy" />
               </div>
               <div className="news-row-copy">
@@ -6368,7 +6377,7 @@ function ShopTalkView({
                       className="shop-news-card-main"
                       onClick={() => { setSelectedNewsId(item.id); setMobileDetail(true); }}
                     >
-                      <div className="news-card-thumb">
+                      <div className={newsThumbClassName("news-card-thumb", item)}>
                         <img src={newsThumbnailUrl(item)} alt={`${item.source} article thumbnail`} loading="lazy" />
                       </div>
                       <div className="news-card-body">
@@ -6546,7 +6555,7 @@ function ShopTalkView({
             </button>
             {selectedNews ? (
               <div className="shop-news-detail">
-                <div className="news-detail-hero" data-urgency={selectedNews.urgency ?? "default"}>
+                <div className={newsThumbClassName("news-detail-hero", selectedNews)} data-urgency={selectedNews.urgency ?? "default"}>
                   <img src={newsThumbnailUrl(selectedNews)} alt={`${selectedNews.source} article thumbnail`} loading="lazy" />
                   <div className="news-detail-hero-copy">
                     <span className="news-detail-source">{selectedNews.source}</span>

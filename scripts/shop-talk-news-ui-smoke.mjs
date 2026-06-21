@@ -49,6 +49,24 @@ const account = {
   },
 };
 
+const newsPhotoDataUri = (label, accent = "#ff6a00") =>
+  `data:image/svg+xml,${encodeURIComponent(`
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 560">
+      <defs>
+        <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1">
+          <stop offset="0" stop-color="#17242c"/>
+          <stop offset="0.52" stop-color="#2d3940"/>
+          <stop offset="1" stop-color="#0a0f12"/>
+        </linearGradient>
+      </defs>
+      <rect width="900" height="560" fill="url(#bg)"/>
+      <rect x="0" y="390" width="900" height="170" fill="#111" opacity="0.42"/>
+      <path d="M90 360h720v26H90zM140 306h620v22H140zM190 254h520v20H190z" fill="${accent}" opacity="0.72"/>
+      <circle cx="710" cy="138" r="58" fill="${accent}" opacity="0.86"/>
+      <text x="64" y="98" fill="#fff" font-family="Arial, sans-serif" font-size="44" font-weight="800">${label}</text>
+    </svg>
+  `)}`;
+
 const newsPayload = {
   items: [
     {
@@ -58,7 +76,8 @@ const newsPayload = {
         "City update: contractors can request select same-day inspection windows for electrical, plumbing, HVAC, and closeout work in active neighborhoods.",
       source: "Jacksonville Building Inspection Division",
       url: "https://www.jacksonville.gov/departments/planning-and-development/building-inspection-division",
-      thumbnailUrl: "/news/permit-watch.svg",
+      thumbnailUrl: newsPhotoDataUri("JAX PERMIT WATCH"),
+      thumbnailKind: "article",
       date: "Jun 21, 2026",
       urgency: "Local update",
     },
@@ -69,7 +88,8 @@ const newsPayload = {
         "Heat plans, water/rest/shade routines, and documented communication matter more during summer jobsite scheduling.",
       source: "OSHA",
       url: "https://www.osha.gov/heat-exposure",
-      thumbnailUrl: "/news/heat-safety.svg",
+      thumbnailUrl: newsPhotoDataUri("HEAT SAFETY", "#f97316"),
+      thumbnailKind: "article",
       date: "Jun 20, 2026",
       urgency: "Safety",
     },
@@ -81,6 +101,7 @@ const newsPayload = {
       source: "EPA SNAP",
       url: "https://www.epa.gov/snap",
       thumbnailUrl: "/news/hvac-refrigerant.svg",
+      thumbnailKind: "fallback",
       date: "Jun 19, 2026",
       urgency: "Code watch",
     },
@@ -231,6 +252,7 @@ try {
       .getByText("Jacksonville permit desk", { exact: false })
       .first()
       .waitFor({ timeout: 15_000 });
+    await page.locator(".shop-news-list .news-card-thumb.is-real img").first().waitFor({ timeout: 15_000 });
     await page.getByRole("link", { name: /Read original/i }).first().waitFor({ timeout: 15_000 });
     await assertNoHorizontalOverflow(page);
     await page.screenshot({ path: path.join(screenshotDir, `${viewport.name}-news.png`), fullPage: true });

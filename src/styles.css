@@ -5021,6 +5021,24 @@ textarea:focus-visible {
   object-fit: cover;
 }
 
+.news-feature-thumb.is-fallback,
+.news-row-thumb.is-fallback {
+  background:
+    radial-gradient(circle at top left, color-mix(in srgb, var(--accent) 10%, transparent), transparent 52%),
+    var(--surface);
+}
+
+.news-feature-thumb.is-fallback img,
+.news-row-thumb.is-fallback img {
+  object-fit: contain;
+  padding: 8px;
+}
+
+.news-feature-thumb.is-real,
+.news-row-thumb.is-real {
+  background: #0b1115;
+}
+
 .news-feature-thumb span,
 .news-row-thumb span {
   position: absolute;
@@ -10697,21 +10715,40 @@ textarea:focus-visible {
 }
 
 .shop-news-card-main {
-  grid-template-columns: 1fr;
-  gap: 10px;
+  grid-template-columns: minmax(126px, 0.42fr) minmax(0, 1fr);
+  gap: 14px;
+  align-items: stretch;
 }
 
 .news-card-thumb {
-  min-height: 128px;
-  aspect-ratio: 16 / 9;
-  background: var(--surface-soft);
+  min-height: 132px;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--border) 64%, transparent);
+  border-radius: 13px;
+  background: #0b1115;
 }
 
 .news-card-thumb img {
+  display: block;
   width: 100%;
   height: 100%;
+}
+
+.news-card-thumb.is-real img {
+  object-fit: cover;
+  padding: 0;
+}
+
+.news-card-thumb.is-fallback {
+  background:
+    radial-gradient(circle at 22% 18%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 38%),
+    color-mix(in srgb, var(--surface-soft) 92%, #0b1115);
+}
+
+.news-card-thumb.is-fallback img {
   object-fit: contain;
-  padding: 4px;
+  padding: 13px;
 }
 
 .shop-news-source-link {
@@ -10724,9 +10761,17 @@ textarea:focus-visible {
   border-radius: 14px;
 }
 
-.news-detail-hero img {
-  object-fit: contain;
+.news-detail-hero.is-real img {
+  object-fit: cover;
   background: #101922;
+}
+
+.news-detail-hero.is-fallback img {
+  object-fit: contain;
+  padding: clamp(14px, 3vw, 26px);
+  background:
+    radial-gradient(circle at 20% 10%, color-mix(in srgb, var(--accent) 14%, transparent), transparent 40%),
+    #101922;
 }
 
 .shop-news-detail-header h2 {
@@ -10793,12 +10838,18 @@ textarea:focus-visible {
     padding: 10px;
   }
 
+  .shop-news-card-main {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
   .news-card-thumb {
     min-height: 132px;
+    aspect-ratio: 16 / 9;
   }
 
   .shop-news-list .news-card-body {
-    order: -1;
+    order: initial;
   }
 
   .shop-news-list .news-card-body p {
@@ -10812,5 +10863,112 @@ textarea:focus-visible {
   .shop-question-actions button,
   .answer-actions button {
     width: 100%;
+  }
+}
+
+/* Final Trade News composition: keep old pass rules from fighting the cards. */
+.shop-news-list .shop-news-card {
+  display: block;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--border) 68%, transparent);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--surface) 94%, var(--surface-soft));
+}
+
+.shop-news-list .shop-news-card-main {
+  display: grid;
+  grid-template-columns: 132px minmax(0, 1fr);
+  gap: 14px;
+  align-items: stretch;
+  width: 100%;
+  padding: 12px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+}
+
+.shop-news-list .news-card-thumb {
+  width: 132px;
+  min-height: 126px;
+  aspect-ratio: 1 / 1;
+}
+
+.shop-news-list .news-card-body {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  min-width: 0;
+  padding: 2px 0;
+  order: initial;
+}
+
+.shop-news-list .news-card-body strong {
+  font-size: 15.5px;
+  font-weight: 850;
+  line-height: 1.22;
+  letter-spacing: 0;
+}
+
+.shop-news-list .news-card-body p {
+  display: -webkit-box;
+  margin: 0;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 12.75px;
+  line-height: 1.48;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+}
+
+.shop-news-list .shop-news-source-link {
+  justify-content: flex-start;
+  margin: -2px 12px 12px 158px;
+  padding-top: 9px;
+  border-top: 1px solid color-mix(in srgb, var(--border) 64%, transparent);
+}
+
+@media (max-width: 640px) {
+  .shop-talk-command {
+    gap: 12px;
+  }
+
+  .shop-talk-command h2 {
+    max-width: 18ch;
+    font-size: 22px;
+  }
+
+  .shop-talk-command p {
+    margin-top: 6px;
+    font-size: 12.5px;
+    line-height: 1.45;
+  }
+
+  .shop-talk-kpi-strip {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .shop-talk-kpi-strip span {
+    min-height: 58px;
+    padding: 8px;
+  }
+
+  .shop-talk-kpi-strip strong {
+    font-size: 15px;
+  }
+
+  .shop-news-list .shop-news-card-main {
+    grid-template-columns: 1fr;
+  }
+
+  .shop-news-list .news-card-thumb {
+    width: 100%;
+    min-height: 108px;
+    aspect-ratio: 16 / 9;
+  }
+
+  .shop-news-list .shop-news-source-link {
+    margin: -2px 12px 12px;
   }
 }
