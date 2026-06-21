@@ -270,19 +270,6 @@
   color: var(--v2-accent);
 }
 
-.v2-home-empty {
-  display: grid;
-  justify-items: start;
-  gap: 9px;
-  padding: 34px 24px;
-  color: var(--v2-text-muted);
-}
-
-.v2-home-empty h2,
-.v2-home-empty p {
-  margin: 0;
-}
-
 @media (max-width: 1040px) {
   .v2-home-focus-grid,
   .v2-home-secondary-grid {

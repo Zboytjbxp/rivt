@@ -29,32 +29,11 @@
   gap: 12px;
 }
 
-.v2-inbox-badge,
 .v2-inbox-panel {
   border: 1px solid color-mix(in srgb, var(--v2-border) 58%, transparent);
   border-radius: var(--v2-radius-lg);
   background: var(--v2-surface-raised);
   box-shadow: var(--v2-shadow-card);
-}
-
-.v2-inbox-badge {
-  display: grid;
-  min-width: 112px;
-  gap: 3px;
-  padding: 13px 15px;
-  background: color-mix(in srgb, var(--v2-surface-raised) 86%, var(--v2-surface-muted));
-}
-
-.v2-inbox-badge strong {
-  font-size: 20px;
-  font-variant-numeric: tabular-nums;
-}
-
-.v2-inbox-badge span {
-  color: var(--v2-text-muted);
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
 }
 
 .v2-inbox-grid {
@@ -352,8 +331,7 @@
 
 .v2-inbox-item span,
 .v2-inbox-job-row small,
-.v2-inbox-sent article small,
-.v2-inbox-empty span {
+.v2-inbox-sent article small {
   color: var(--v2-text-muted);
   font-size: 12px;
 }
@@ -414,18 +392,6 @@
   border-bottom: 0;
 }
 
-.v2-inbox-empty {
-  display: grid;
-  justify-items: start;
-  gap: 8px;
-  padding: 20px;
-  color: var(--v2-text-muted);
-}
-
-.v2-inbox-empty strong {
-  color: var(--v2-text);
-}
-
 .v2-inbox-empty button {
   min-height: 44px;
   margin-top: 4px;
@@ -439,8 +405,7 @@
 
 .v2-inbox-empty-large {
   min-height: 360px;
-  align-content: center;
-  justify-items: center;
+  justify-content: center;
   text-align: center;
 }
 

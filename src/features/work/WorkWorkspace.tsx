@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import type { Job, JobId, Role } from "../../types";
 import { difficultyOptions, tradeOptions, workTypeOptions } from "../../data";
+import { EmptyState, StatusPill } from "../../components/ui";
 import {
   acceptOffer,
   cancelActiveWork,
@@ -94,6 +95,13 @@ function money(value: number) {
   }).format(value);
 }
 
+function statusTone(status: Job["status"]) {
+  if (status === "Open") return "success";
+  if (status === "Paused" || status === "Draft") return "warning";
+  if (status === "Closed") return "neutral";
+  return "info";
+}
+
 function JobRow({ job, selected, role, onSelect }: { job: Job; selected: boolean; role: Role; onSelect: () => void }) {
   return (
     <button
@@ -113,7 +121,7 @@ function JobRow({ job, selected, role, onSelect }: { job: Job; selected: boolean
         </span>
       </span>
       <span className="v2-job-row-aside">
-        <span className={`v2-work-status status-${job.status.toLowerCase()}`}>{job.status}</span>
+        <StatusPill tone={statusTone(job.status)} className={`v2-work-status status-${job.status.toLowerCase()}`}>{job.status}</StatusPill>
         {role === "tradesperson" && job.match > 0 ? <><strong>{job.match}%</strong><small>match</small></> : null}
         <ChevronRight size={16} />
       </span>
@@ -142,12 +150,13 @@ function WorkEmptyState({ role, section, onPostJob }: { role: Role; section: Con
   };
   const copy = role === "contractor" ? contractorCopy[section] : { title: "No matching work nearby", body: "Try changing the trade, location, or job requirements." };
   return (
-    <div className="v2-work-empty">
-      <BriefcaseBusiness size={24} />
-      <h2>{copy.title}</h2>
-      <p>{copy.body}</p>
-      {role === "contractor" ? <button type="button" className="v2-primary-button" onClick={onPostJob}><Plus size={17} /> Create job</button> : null}
-    </div>
+    <EmptyState
+      className="v2-work-empty"
+      icon={<BriefcaseBusiness size={24} />}
+      title={copy.title}
+      description={copy.body}
+      action={role === "contractor" ? <button type="button" className="v2-primary-button" onClick={onPostJob}><Plus size={17} /> Create job</button> : null}
+    />
   );
 }
 
@@ -429,7 +438,7 @@ export function WorkWorkspace({
             <button type="button" className="v2-detail-back" onClick={() => setMobileDetailOpen(false)}><ArrowLeft size={16} /> All work</button>
             <header className="v2-work-detail-header">
               <div><span className="v2-detail-trade">{detailJob.trade}</span><h2>{detailJob.title}</h2><p><MapPin size={14} /> {detailJob.location} · {detailJob.status === "Draft" ? "Last saved" : "Posted"} {detailJob.posted}</p></div>
-              {role === "tradesperson" && detailJob.match > 0 ? <div className="v2-match-score"><strong>{detailJob.match}%</strong><span>match</span></div> : <span className={`v2-work-status status-${detailJob.status.toLowerCase()}`}>{detailJob.status}</span>}
+              {role === "tradesperson" && detailJob.match > 0 ? <div className="v2-match-score"><strong>{detailJob.match}%</strong><span>match</span></div> : <StatusPill tone={statusTone(detailJob.status)} className={`v2-work-status status-${detailJob.status.toLowerCase()}`}>{detailJob.status}</StatusPill>}
             </header>
 
             <nav className="v2-detail-tabs" aria-label="Job details">

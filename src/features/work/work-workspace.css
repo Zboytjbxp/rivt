@@ -436,9 +436,10 @@
 
 .v2-work-status {
   margin-bottom: 8px;
-  color: var(--v2-success);
-  font-size: 10px;
-  font-weight: 800;
+}
+
+.v2-job-row-aside .v2-work-status {
+  margin-bottom: 0;
 }
 
 .status-shortlisting,
@@ -898,19 +899,6 @@
   justify-items: center;
   gap: 10px;
   color: var(--v2-text-muted);
-}
-
-.v2-work-empty {
-  display: grid;
-  justify-items: start;
-  gap: 10px;
-  padding: 36px 20px;
-  color: var(--v2-text-muted);
-}
-
-.v2-work-empty h2,
-.v2-work-empty p {
-  margin: 0;
 }
 
 @media (max-width: 1080px) {

@@ -7,6 +7,7 @@ import {
   Users,
 } from "lucide-react";
 import type { Job, Talent } from "../../types";
+import { Avatar, EmptyState, MetricTile, PageHeader, Panel } from "../../components/ui";
 import "./network-hub.css";
 
 interface CommunityPost {
@@ -38,7 +39,7 @@ function TopTalentCard({ person }: { person: Talent }) {
   return (
     <article className="v2-network-person-card">
       <div className="v2-network-person-header">
-        <span className="v2-network-avatar" aria-hidden="true">{person.name.charAt(0)}</span>
+        <Avatar name={person.name} size="md" className="v2-network-avatar" />
         <div>
           <strong>{person.name}</strong>
           <span>{person.trade} · {person.location}</span>
@@ -77,46 +78,39 @@ export function NetworkHub({ jobs, talent, communityPosts, shoutOuts, onOpenCrew
 
   return (
     <section className="v2-network-page" aria-label="Crew">
-      <header className="v2-network-header">
-        <div>
-          <h1>Crew</h1>
-          <p>Your trusted trade connections and reputation signals.</p>
-        </div>
+      <PageHeader
+        className="v2-network-header"
+        title="Crew"
+        description="Your trusted trade connections and reputation signals."
+        actions={
         <div className="v2-network-header-metrics">
-          <article><strong>{activeCrew.length}</strong><span>crew members</span></article>
-          <article><strong>{openJobs}</strong><span>open jobs</span></article>
-          <article><strong>{shoutOuts.length}</strong><span>shout-outs</span></article>
+          <MetricTile value={activeCrew.length} label="crew members" />
+          <MetricTile value={openJobs} label="open jobs" />
+          <MetricTile value={shoutOuts.length} label="shout-outs" />
         </div>
-      </header>
+        }
+      />
 
       <div className="v2-network-grid">
-        <section className="v2-network-panel">
-          <header>
-            <div>
-              <span>Top matches</span>
-              <h2>People to reach out to</h2>
-            </div>
-            <button type="button" onClick={onOpenCrew}>Open crew</button>
-          </header>
+        <Panel
+          className="v2-network-panel"
+          eyebrow="Top matches"
+          title="People to reach out to"
+          action={<button type="button" onClick={onOpenCrew}>Open crew</button>}
+        >
           <div className="v2-network-person-list">
             {activeCrew.length ? activeCrew.map((person) => <TopTalentCard key={person.id} person={person} />) : (
-              <article className="v2-network-empty">
-                <Users size={20} />
-                <strong>No crew connections yet</strong>
-                <span>People you connect with through real RIVT work will appear here.</span>
-              </article>
+              <EmptyState className="v2-network-empty" icon={<Users size={20} />} title="No crew connections yet" description="People you connect with through real RIVT work will appear here." compact />
             )}
           </div>
-        </section>
+        </Panel>
 
-        <section className="v2-network-panel">
-          <header>
-            <div>
-              <span>Shout-outs</span>
-              <h2>Recent reputation signals</h2>
-            </div>
-            <button type="button" onClick={onOpenShopTalk}>Open Shop Talk</button>
-          </header>
+        <Panel
+          className="v2-network-panel"
+          eyebrow="Shout-outs"
+          title="Recent reputation signals"
+          action={<button type="button" onClick={onOpenShopTalk}>Open Shop Talk</button>}
+        >
           <div className="v2-network-shoutouts">
             {highlightedShoutOuts.map((item) => (
               <article key={item.id}>
@@ -128,35 +122,27 @@ export function NetworkHub({ jobs, talent, communityPosts, shoutOuts, onOpenCrew
               </article>
             ))}
           </div>
-        </section>
+        </Panel>
 
-        <section className="v2-network-panel v2-network-panel-wide">
-          <header>
-            <div>
-              <span>Questions worth answering</span>
-              <h2>Shop Talk with field weight</h2>
-            </div>
-            <button type="button" onClick={onOpenShopTalk}>View all</button>
-          </header>
+        <Panel
+          className="v2-network-panel v2-network-panel-wide"
+          eyebrow="Questions worth answering"
+          title="Shop Talk with field weight"
+          action={<button type="button" onClick={onOpenShopTalk}>View all</button>}
+        >
           <div className="v2-network-prompts">
             {questionPosts.length ? questionPosts.map((post) => <AnswerPrompt key={post.id} post={post} />) : (
-              <article className="v2-network-empty">
-                <Sparkles size={20} />
-                <strong>No unresolved questions</strong>
-                <span>Post a question and the network will start filling in the gaps.</span>
-              </article>
+              <EmptyState className="v2-network-empty" icon={<Sparkles size={20} />} title="No unresolved questions" description="Post a question and the network will start filling in the gaps." compact />
             )}
           </div>
-        </section>
+        </Panel>
 
-        <section className="v2-network-panel">
-          <header>
-            <div>
-              <span>Trust signals</span>
-              <h2>Who looks ready</h2>
-            </div>
-            <button type="button" onClick={onOpenReviews}>Open reviews</button>
-          </header>
+        <Panel
+          className="v2-network-panel"
+          eyebrow="Trust signals"
+          title="Who looks ready"
+          action={<button type="button" onClick={onOpenReviews}>Open reviews</button>}
+        >
           <div className="v2-network-trust-stack">
             <article>
               <ShieldCheck size={18} />
@@ -174,7 +160,7 @@ export function NetworkHub({ jobs, talent, communityPosts, shoutOuts, onOpenCrew
               <span>Open jobs, crew invites, and referrals flow through one network view.</span>
             </article>
           </div>
-        </section>
+        </Panel>
       </div>
     </section>
   );

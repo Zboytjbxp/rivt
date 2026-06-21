@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import type { Job, Role } from "../../types";
 import type { PrimaryDestination } from "../../app-shell/types";
+import { EmptyState, PageHeader } from "../../components/ui";
 import "./home-dashboard.css";
 
 interface HomeDashboardProps {
@@ -57,17 +58,16 @@ export function HomeDashboard({
 
   return (
     <section className="v2-home-page" aria-label="Home">
-      <header className="v2-home-header">
-        <div>
-          <h1>Good morning, {firstName}</h1>
-          <p>{location}</p>
-        </div>
-        {role === "contractor" ? (
+      <PageHeader
+        className="v2-home-header"
+        title={`Good morning, ${firstName}`}
+        description={location}
+        actions={role === "contractor" ? (
           <button type="button" className="v2-primary-button" onClick={onPostJob}><Plus size={17} /> Post work</button>
         ) : (
           <button type="button" className="v2-primary-button" onClick={() => onNavigate("work")}><BriefcaseBusiness size={17} /> Find work</button>
         )}
-      </header>
+      />
 
       <div className="v2-home-focus-grid">
         <article className="v2-today-panel">
@@ -97,11 +97,12 @@ export function HomeDashboard({
               </div>
             </>
           ) : (
-            <div className="v2-home-empty">
-              <BriefcaseBusiness size={24} />
-              <h2>{role === "contractor" ? "Post your first job" : "Find your next job"}</h2>
-              <p>{role === "contractor" ? "Describe the work and invite people from your network." : "Browse work that matches your trade and availability."}</p>
-            </div>
+            <EmptyState
+              className="v2-home-empty"
+              icon={<BriefcaseBusiness size={24} />}
+              title={role === "contractor" ? "Post your first job" : "Find your next job"}
+              description={role === "contractor" ? "Describe the work and invite people from your network." : "Browse work that matches your trade and availability."}
+            />
           )}
         </article>
 

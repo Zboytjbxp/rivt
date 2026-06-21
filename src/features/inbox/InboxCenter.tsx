@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import type { PrimaryDestination } from "../../app-shell/types";
 import type { InboxConversation, InboxMessage, InboxNotification } from "./inbox-api";
+import { EmptyState, MetricTile, PageHeader, Panel } from "../../components/ui";
 import "./inbox-center.css";
 
 interface InboxCenterProps {
@@ -32,15 +33,6 @@ interface InboxCenterProps {
   onReportSelected: () => void;
   onRefresh: () => void;
   onNavigate: (destination: PrimaryDestination) => void;
-}
-
-function InboxBadge({ value, label }: { value: number | string; label: string }) {
-  return (
-    <article className="v2-inbox-badge">
-      <strong>{value}</strong>
-      <span>{label}</span>
-    </article>
-  );
 }
 
 function timeLabel(value: string) {
@@ -89,17 +81,18 @@ export function InboxCenter({
 
   return (
     <section className="v2-inbox-page" aria-label="Inbox">
-      <header className="v2-inbox-header">
-        <div>
-          <h1>Inbox</h1>
-          <p>Server-owned job messages and notifications for accepted work.</p>
-        </div>
+      <PageHeader
+        className="v2-inbox-header"
+        title="Inbox"
+        description="Server-owned job messages and notifications for accepted work."
+        actions={
         <div className="v2-inbox-summary">
-          <InboxBadge value={unreadThreads} label="unread messages" />
-          <InboxBadge value={unreadNotifications.length} label="new updates" />
-          <InboxBadge value={conversations.length} label="work threads" />
+          <MetricTile value={unreadThreads} label="unread messages" />
+          <MetricTile value={unreadNotifications.length} label="new updates" />
+          <MetricTile value={conversations.length} label="work threads" />
         </div>
-      </header>
+        }
+      />
 
       {error ? (
         <article className="v2-inbox-alert">
@@ -110,21 +103,15 @@ export function InboxCenter({
       ) : null}
 
       <div className="v2-inbox-grid">
-        <section className="v2-inbox-panel">
-          <header>
-            <div>
-              <span>Threads</span>
-              <h2>Accepted work only</h2>
-            </div>
-            <button type="button" onClick={onRefresh}><RefreshCw size={14} /> Refresh</button>
-          </header>
+        <Panel
+          className="v2-inbox-panel"
+          eyebrow="Threads"
+          title="Accepted work only"
+          action={<button type="button" onClick={onRefresh}><RefreshCw size={14} /> Refresh</button>}
+        >
           <div className="v2-inbox-thread-list">
             {loading ? (
-              <article className="v2-inbox-empty">
-                <Clock3 size={20} />
-                <strong>Loading threads</strong>
-                <span>Checking active work conversations.</span>
-              </article>
+              <EmptyState className="v2-inbox-empty" icon={<Clock3 size={20} />} title="Loading threads" description="Checking active work conversations." compact />
             ) : conversations.length ? conversations.map((conversation) => (
               <button
                 key={conversation.id}
@@ -140,30 +127,30 @@ export function InboxCenter({
                 <em>{conversation.lastMessage ? timeLabel(conversation.lastMessage.createdAt) : "new"}</em>
               </button>
             )) : (
-              <article className="v2-inbox-empty">
-                <MessageCircle size={20} />
-                <strong>No work threads yet</strong>
-                <span>A thread opens after a contractor offer is accepted.</span>
-                <button type="button" onClick={() => onNavigate("work")}>Open Work</button>
-              </article>
+              <EmptyState
+                className="v2-inbox-empty"
+                icon={<MessageCircle size={20} />}
+                title="No work threads yet"
+                description="A thread opens after a contractor offer is accepted."
+                action={<button type="button" onClick={() => onNavigate("work")}>Open Work</button>}
+                compact
+              />
             )}
           </div>
-        </section>
+        </Panel>
 
-        <section className="v2-inbox-panel v2-inbox-panel-thread">
-          <header>
-            <div>
-              <span>Conversation</span>
-              <h2>{selectedConversation ? selectedConversation.job.title : "Select a thread"}</h2>
-            </div>
-            {selectedConversation ? (
+        <Panel
+          className="v2-inbox-panel v2-inbox-panel-thread"
+          eyebrow="Conversation"
+          title={selectedConversation ? selectedConversation.job.title : "Select a thread"}
+          action={selectedConversation ? (
               <div className="v2-inbox-header-actions">
                 <button type="button" onClick={onMarkSelectedRead}><CheckCheck size={14} /> Read</button>
                 <button type="button" onClick={onMuteSelected}><VolumeX size={14} /> Mute</button>
                 <button type="button" onClick={onReportSelected}><ShieldAlert size={14} /> Report</button>
               </div>
-            ) : null}
-          </header>
+          ) : null}
+        >
 
           {selectedConversation ? (
             <>
@@ -184,11 +171,7 @@ export function InboxCenter({
                     </article>
                   );
                 }) : (
-                  <article className="v2-inbox-empty">
-                    <Clock3 size={20} />
-                    <strong>No messages yet</strong>
-                    <span>Send the first update when you have a real work question.</span>
-                  </article>
+                  <EmptyState className="v2-inbox-empty" icon={<Clock3 size={20} />} title="No messages yet" description="Send the first update when you have a real work question." compact />
                 )}
               </div>
               <label className="v2-inbox-composer">
@@ -208,25 +191,19 @@ export function InboxCenter({
               </div>
             </>
           ) : (
-            <article className="v2-inbox-empty v2-inbox-empty-large">
-              <MessageCircle size={24} />
-              <strong>Select a work thread</strong>
-              <span>Messages are only available between accepted work participants.</span>
-            </article>
+            <EmptyState className="v2-inbox-empty v2-inbox-empty-large" icon={<MessageCircle size={24} />} title="Select a work thread" description="Messages are only available between accepted work participants." />
           )}
-        </section>
+        </Panel>
 
-        <section className="v2-inbox-panel v2-inbox-panel-wide">
-          <header>
-            <div>
-              <span>Notifications</span>
-              <h2>What changed since you last checked</h2>
-            </div>
-            <button type="button" onClick={onMarkNotificationsRead} disabled={!unreadNotifications.length}>
+        <Panel
+          className="v2-inbox-panel v2-inbox-panel-wide"
+          eyebrow="Notifications"
+          title="What changed since you last checked"
+          action={<button type="button" onClick={onMarkNotificationsRead} disabled={!unreadNotifications.length}>
               <Bell size={14} />
               Mark all read
-            </button>
-          </header>
+            </button>}
+        >
           <div className="v2-inbox-list">
             {notifications.length ? notifications.map((item) => (
               <article key={item.id} className={item.readAt ? "v2-inbox-item" : "v2-inbox-item unread"}>
@@ -237,14 +214,10 @@ export function InboxCenter({
                 <small>{timeLabel(item.createdAt)}</small>
               </article>
             )) : (
-              <article className="v2-inbox-empty">
-                <Bell size={20} />
-                <strong>No notifications yet</strong>
-                <span>Offers, accepted work, and new messages will show here.</span>
-              </article>
+              <EmptyState className="v2-inbox-empty" icon={<Bell size={20} />} title="No notifications yet" description="Offers, accepted work, and new messages will show here." compact />
             )}
           </div>
-        </section>
+        </Panel>
       </div>
     </section>
   );

@@ -15,6 +15,7 @@ import { useState } from "react";
 import { brandConfig, type ThemeMode, type ThemePalette } from "../../brandConfig";
 import { tradeOptions } from "../../data";
 import type { Role, Trade } from "../../types";
+import { Avatar, MetricTile, PageHeader } from "../../components/ui";
 import "./profile-hub.css";
 
 interface AccountProfile {
@@ -159,11 +160,11 @@ export function ProfileHub({
 
   return (
     <section className="v2-profile-page" aria-label={view}>
-      <header className="v2-profile-header">
-        <div>
-          <h1>{view === "Settings" ? "Profile" : view}</h1>
-          <p>{brandConfig.tagline}</p>
-        </div>
+      <PageHeader
+        className="v2-profile-header"
+        title={view === "Settings" ? "Profile" : view}
+        description={brandConfig.tagline}
+        actions={
         <div className="v2-profile-header-actions">
           <button type="button" className="v2-primary-button" onClick={onReviewConsent}>
             <ShieldCheck size={16} />
@@ -174,13 +175,12 @@ export function ProfileHub({
             Sign out
           </button>
         </div>
-      </header>
+        }
+      />
 
       <div className="v2-profile-grid">
         <section className="v2-profile-panel v2-profile-summary">
-          <div className="v2-profile-avatar" aria-hidden="true">
-            {profile.displayName.trim().charAt(0).toUpperCase() || "R"}
-          </div>
+          <Avatar name={profile.displayName || profile.organization || "RIVT member"} size="lg" className="v2-profile-avatar" />
           <div>
             <span>{role === "contractor" ? "Contractor profile" : "Tradesperson profile"}</span>
             <h2>{profile.organization || profile.displayName}</h2>
@@ -199,10 +199,10 @@ export function ProfileHub({
             <strong>Basics and access</strong>
           </header>
           <div className="v2-profile-facts">
-            <article><Mail size={16} /><strong>{profile.email}</strong><span>Email</span></article>
-            <article><CreditCard size={16} /><strong>{profile.plan}</strong><span>Plan</span></article>
-            <article><UserCheck size={16} /><strong>{profile.authMethod}</strong><span>Signup method</span></article>
-            <article><BadgeCheck size={16} /><strong>{trustReady ? "Ready" : "Needs review"}</strong><span>Trust</span></article>
+            <MetricTile icon={<Mail size={16} />} value={profile.email} label="Email" />
+            <MetricTile icon={<CreditCard size={16} />} value={profile.plan} label="Plan" />
+            <MetricTile icon={<UserCheck size={16} />} value={profile.authMethod} label="Signup method" />
+            <MetricTile icon={<BadgeCheck size={16} />} value={trustReady ? "Ready" : "Needs review"} label="Trust" />
           </div>
         </section>
 

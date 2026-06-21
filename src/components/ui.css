@@ -1,0 +1,309 @@
+.rivt-page-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.rivt-page-header-copy {
+  min-width: 0;
+}
+
+.rivt-page-header-copy > span,
+.rivt-panel-header span {
+  display: inline-flex;
+  align-items: center;
+  color: var(--v2-muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+.rivt-page-header h1 {
+  margin: 0;
+  color: var(--v2-text);
+  font-size: clamp(2rem, 5vw, 4.2rem);
+  font-weight: 900;
+  letter-spacing: -0.035em;
+  line-height: 0.92;
+  text-wrap: balance;
+}
+
+.rivt-page-header p {
+  max-width: 56ch;
+  margin: 10px 0 0;
+  color: var(--v2-muted);
+  font-size: 0.98rem;
+  line-height: 1.6;
+  text-wrap: pretty;
+}
+
+.rivt-page-header-actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.rivt-panel {
+  min-width: 0;
+  border: 1px solid var(--v2-border);
+  border-radius: var(--v2-radius-lg);
+  background: var(--v2-surface);
+  box-shadow: var(--v2-shadow-card);
+}
+
+.rivt-panel-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 16px;
+}
+
+.rivt-panel-header h2 {
+  margin: 5px 0 0;
+  color: var(--v2-text);
+  font-size: 1.02rem;
+  font-weight: 850;
+  letter-spacing: -0.02em;
+  line-height: 1.14;
+  text-wrap: balance;
+}
+
+.rivt-panel-header p {
+  margin: 7px 0 0;
+  color: var(--v2-muted);
+  font-size: 0.86rem;
+  line-height: 1.5;
+}
+
+.rivt-panel-action {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+}
+
+.rivt-empty-state {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+  padding: 18px;
+  border: 1px solid var(--v2-border);
+  border-radius: var(--v2-radius-md);
+  background: var(--v2-surface-raised);
+  color: var(--v2-text);
+}
+
+.rivt-empty-state.is-compact {
+  align-items: flex-start;
+  padding: 14px;
+}
+
+.rivt-empty-icon,
+.rivt-metric-icon {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border: 1px solid color-mix(in srgb, var(--v2-accent) 28%, transparent);
+  border-radius: var(--v2-radius-md);
+  background: color-mix(in srgb, var(--v2-accent) 11%, transparent);
+  color: var(--v2-accent);
+}
+
+.rivt-empty-state div,
+.rivt-metric-tile div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.rivt-empty-state strong {
+  color: var(--v2-text);
+  font-size: 0.98rem;
+  line-height: 1.2;
+}
+
+.rivt-empty-state span:not(.rivt-empty-icon) {
+  color: var(--v2-muted);
+  font-size: 0.86rem;
+  line-height: 1.45;
+}
+
+.rivt-empty-action {
+  margin-left: auto;
+}
+
+.rivt-metric-tile {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid var(--v2-border);
+  border-radius: var(--v2-radius-md);
+  background: var(--v2-surface-raised);
+}
+
+.rivt-metric-tile strong {
+  color: var(--v2-text);
+  font-variant-numeric: tabular-nums;
+  font-size: 1.35rem;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.rivt-metric-tile.has-icon strong {
+  font-size: 1rem;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+
+.rivt-metric-tile span {
+  color: var(--v2-muted);
+  font-size: 0.78rem;
+  font-weight: 750;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.rivt-metric-tile.has-icon span {
+  font-size: 0.72rem;
+}
+
+.rivt-metric-tile small {
+  color: var(--v2-muted);
+  font-size: 0.78rem;
+}
+
+.rivt-status-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 24px;
+  width: fit-content;
+  padding: 4px 8px;
+  border: 1px solid var(--v2-border);
+  border-radius: var(--v2-radius-sm);
+  background: var(--v2-surface-raised);
+  color: var(--v2-muted);
+  font-size: 0.72rem;
+  font-weight: 850;
+  letter-spacing: 0.06em;
+  line-height: 1;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.rivt-status-pill.tone-success {
+  border-color: color-mix(in srgb, var(--v2-success) 34%, transparent);
+  background: color-mix(in srgb, var(--v2-success) 12%, var(--v2-surface-raised));
+  color: var(--v2-success);
+}
+
+.rivt-status-pill.tone-warning {
+  border-color: color-mix(in srgb, var(--v2-warning) 34%, transparent);
+  background: color-mix(in srgb, var(--v2-warning) 12%, var(--v2-surface-raised));
+  color: var(--v2-warning);
+}
+
+.rivt-status-pill.tone-danger {
+  border-color: color-mix(in srgb, var(--v2-danger) 34%, transparent);
+  background: color-mix(in srgb, var(--v2-danger) 12%, var(--v2-surface-raised));
+  color: var(--v2-danger);
+}
+
+.rivt-status-pill.tone-info {
+  border-color: color-mix(in srgb, var(--v2-info) 34%, transparent);
+  background: color-mix(in srgb, var(--v2-info) 12%, var(--v2-surface-raised));
+  color: var(--v2-info);
+}
+
+.rivt-avatar {
+  --avatar-accent: var(--v2-accent);
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--avatar-accent) 28%, transparent);
+  border-radius: var(--v2-radius-md);
+  background:
+    linear-gradient(145deg, color-mix(in srgb, var(--avatar-accent) 24%, transparent), transparent 62%),
+    var(--v2-surface-raised);
+  color: var(--v2-text);
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.rivt-avatar.size-sm {
+  width: 34px;
+  height: 34px;
+  font-size: 0.85rem;
+}
+
+.rivt-avatar.size-md {
+  width: 42px;
+  height: 42px;
+  font-size: 1rem;
+}
+
+.rivt-avatar.size-lg {
+  width: 64px;
+  height: 64px;
+  font-size: 1.6rem;
+}
+
+.rivt-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+@media (max-width: 720px) {
+  .rivt-page-header {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .rivt-page-header h1 {
+    font-size: clamp(2rem, 12vw, 3.2rem);
+  }
+
+  .rivt-page-header-actions,
+  .rivt-page-header-actions > button,
+  .rivt-page-header-actions > a {
+    width: 100%;
+  }
+
+  .rivt-page-header-actions > button,
+  .rivt-page-header-actions > a {
+    justify-content: center;
+  }
+
+  .rivt-panel-header,
+  .rivt-empty-state {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .rivt-empty-action {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .rivt-empty-action > button,
+  .rivt-empty-action > a {
+    width: 100%;
+    justify-content: center;
+  }
+}

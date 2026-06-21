@@ -198,19 +198,6 @@
   font-size: 11px;
 }
 
-.v2-avatar {
-  display: grid;
-  width: 34px;
-  height: 34px;
-  place-items: center;
-  flex: 0 0 auto;
-  border-radius: var(--v2-radius-md);
-  background: #e7ecee;
-  color: #162023;
-  font-size: 12px;
-  font-weight: 800;
-}
-
 .v2-workspace {
   min-height: 100dvh;
   margin-left: var(--v2-sidebar-width);
@@ -468,11 +455,6 @@
     min-height: 44px;
     padding: 4px;
     color: #f6f8f8;
-  }
-
-  .v2-account-button .v2-avatar {
-    background: #f6f8f8;
-    color: #0b1011;
   }
 
   .v2-account-copy,

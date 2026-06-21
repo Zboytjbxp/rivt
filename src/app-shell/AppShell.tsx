@@ -11,6 +11,7 @@ import {
   Wrench,
 } from "lucide-react";
 import type { AppShellProps, PrimaryDestination } from "./types";
+import { Avatar } from "../components/ui";
 import "./tokens.css";
 import "./app-shell.css";
 
@@ -25,11 +26,6 @@ const primaryNavigation: Array<{
   { destination: "shop-talk", label: "Shop Talk", icon: MessageCircle },
   { destination: "tools", label: "Tools", icon: Wrench },
 ];
-
-function InitialAvatar({ name }: { name: string }) {
-  const initial = name.trim().charAt(0).toUpperCase() || "R";
-  return <span className="v2-avatar" aria-hidden="true">{initial}</span>;
-}
 
 export function AppShell({
   activeDestination,
@@ -111,7 +107,7 @@ export function AppShell({
           onClick={onOpenAccount}
           aria-label={`Open profile menu for ${profile.name || "RIVT member"}`}
         >
-          <InitialAvatar name={profile.name} />
+          <Avatar name={profile.name} size="sm" className="v2-avatar" />
           <span>
             <strong>{profile.name || "RIVT member"}</strong>
             <small>{role === "contractor" ? "Contractor" : "Tradesperson"}</small>
@@ -123,7 +119,7 @@ export function AppShell({
       <div className="v2-workspace">
         <header className="v2-topbar">
           <button className="v2-mobile-brand" type="button" onClick={() => onNavigate("home")} aria-label="RIVT home">
-            <img src="/brand/rivt-lockup-light-transparent.png" alt="RIVT" />
+            <img src="/brand/rivt-lockup-dark-transparent.png" alt="RIVT" />
           </button>
 
           <form
@@ -161,7 +157,7 @@ export function AppShell({
               onClick={onOpenAccount}
               aria-label={`Open profile menu for ${profile.name || "RIVT member"}`}
             >
-              <InitialAvatar name={profile.name} />
+              <Avatar name={profile.name} size="sm" className="v2-avatar" />
               <span className="v2-account-copy">
                 <strong>{profile.name || "RIVT member"}</strong>
                 <small>{profile.location}</small>
