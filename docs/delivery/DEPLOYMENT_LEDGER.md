@@ -21,7 +21,27 @@ Add one entry per staging/production deployment.
 - Rollback performed/result:
 - Approval:
 
-## Current Production - Packet 08 RIVT Daily Home Check-In
+## Current Production - Packet 08 Shop Talk Answer Queue
+
+- Environment: Production (`https://rivt.pro`)
+- Date/time/timezone: 2026-06-21 19:27 America/New_York
+- Deployer: Codex through authenticated Railway CLI
+- Source repository/branch: `Zboytjbxp/rivt`, `master`
+- Source commit: `73f79ac63e22ceb07492fccd893b805a792d1ede`
+- Build/artifact ID: Railway deployment `d717edd7-bd08-43f9-8f6e-eb213e45f8af`
+- Migration version before/after: `0009_durable_rate_limits` / `0009_durable_rate_limits` (no schema migration)
+- Feature-flag/config version: `SOURCE_COMMIT` updated to `73f79ac63e22ceb07492fccd893b805a792d1ede`; operational controls unchanged
+- Provider/config changes: no provider credentials changed; Shop Talk answer queue remains a UI/community-loop hardening pass, not a provider-backed social/reputation system
+- Backup/rollback target: prior successful deployment `f17fbcec-f7a2-4c5f-bceb-b5dc1af1a436`; migration version unchanged
+- Automated gates: local `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test`, `npm run test:e2e`, `npm run test:ui:shop-talk-news`, `npm audit --omit=dev`, and `git diff --check` passed; DB-backed integration tests skipped locally because `TEST_DATABASE_URL` is not configured
+- Post-deploy smoke tests: public `/api/health` passed and reported exact source commit `73f79ac63e22ceb07492fccd893b805a792d1ede`; anonymous `/api/storage` returned `Authentication required` as expected for the private storage endpoint; `npm run monitor:production` passed with PostgreSQL/S3-compatible dependencies healthy, operational controls disabled, and seven anonymous private-route checks. In-app Browser route proof was blocked by lack of authenticated route mocking, so rendered authenticated UI evidence is the dedicated Playwright smoke.
+- Rendered UI evidence: `npm run test:ui:shop-talk-news` covered the Shop Talk answer queue, Answer now path, active answer-queue filter, answer guidance, reaction toggle regression, Trade News original-source links, no horizontal overflow, and zero console/page errors at 1440x900 and 390x844. Screenshots are outside the repo at `C:\Users\zboyt\AppData\Local\Temp\rivt-shop-talk-news-pass`.
+- Health/readiness result: health reports PostgreSQL and S3-compatible storage healthy with exact source commit `73f79ac63e22ceb07492fccd893b805a792d1ede`; production synthetic monitor reports signups and mutations enabled
+- Known risks: answer queue uses the current local Shop Talk surface and must not be treated as durable server reputation. Full Gate A remains blocked by real external error monitoring/paging, incident rehearsal, RPO/RTO policy approval, backup retention/cadence approval, support/legal/founder signoff, physical/deeper manual accessibility-device evidence, and production-grade server Shop Talk posts/reactions/reputation if promoted into launch scope.
+- Rollback performed/result: not required
+- Approval: Packet 08 Shop Talk answer queue slice accepted as controllable UX hardening evidence; overall Gate A not approved
+
+## Previous Production - Packet 08 RIVT Daily Home Check-In
 
 - Environment: Production (`https://rivt.pro`)
 - Date/time/timezone: 2026-06-21 19:03 America/New_York

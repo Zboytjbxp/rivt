@@ -2,10 +2,10 @@
 
 Last updated: 2026-06-21 America/New_York
 Current gate: Gate A launch hardening
-Current phase: Packet 08 controllable UX hardening, RIVT Daily home check-in, Trade News real-media and mobile layout pass, production UI smoke regression fixes, Tools studio release, Records workspace upgrade, UI system pass, shared UI primitives, Tools primitive alignment, Shop Talk command center, Tools app surface pass, Heavy 16th multi-mode calculator, Invoice Draft app upgrade, and Shop Talk reaction/social pulse pass verified; full Gate A approval remains blocked
+Current phase: Packet 08 controllable UX hardening, Shop Talk answer queue, RIVT Daily home check-in, Trade News real-media and mobile layout pass, production UI smoke regression fixes, Tools studio release, Records workspace upgrade, UI system pass, shared UI primitives, Tools primitive alignment, Shop Talk command center, Tools app surface pass, Heavy 16th multi-mode calculator, Invoice Draft app upgrade, and Shop Talk reaction/social pulse pass verified; full Gate A approval remains blocked
 Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
-Production release commit: `436b83fb94f70d2dc0b831d2a7ee09c59d915882`
+Production release commit: `73f79ac63e22ceb07492fccd893b805a792d1ede`
 
 ## Source State
 
@@ -17,7 +17,20 @@ Packet 00 is merged on `master` at `4c199d903683e44d17b7985272c399c6d7a6cbd6`. T
 
 Do not discard or overwrite the pre-existing Trade News work when committing or splitting this packet.
 
-## Latest Packet 08 Pass - RIVT Daily Home Check-In
+## Latest Packet 08 Pass - Shop Talk Answer Queue
+
+- Deployed source `73f79ac63e22ceb07492fccd893b805a792d1ede` through Railway deployment `d717edd7-bd08-43f9-8f6e-eb213e45f8af`.
+- Added a Shop Talk `Answer queue` card that surfaces unanswered questions in the user's primary trade plus General, with an `Answer now` path that jumps straight into the next thread and turns on the unanswered filter.
+- Added an active `Electrical answer queue` filter chip and answer guidance card so contributors know what a useful field-tested answer should include.
+- Updated Home's `Field signal` tile to call out open answer opportunities instead of only showing raw post counts, giving tradespeople and contractors a daily community reason to return.
+- Tightened the skip-link visibility model so it remains accessible on keyboard focus but does not appear as an off-canvas artifact in full-page UI proof screenshots.
+- Expanded `npm run test:ui:shop-talk-news` to verify the answer queue, `Answer now` interaction, selected detail thread, answer guidance, active queue filter, reaction toggling, Trade News original-source links, no horizontal overflow, and zero console/page errors at 1440x900 and 390x844. Screenshot evidence remains outside the repo at `C:\Users\zboyt\AppData\Local\Temp\rivt-shop-talk-news-pass`.
+- Local gates passed: `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test`, `npm run test:e2e`, `npm run test:ui:shop-talk-news`, `npm audit --omit=dev`, and `git diff --check`; DB-backed integration tests still skip locally because `TEST_DATABASE_URL` is not configured.
+- In-app Browser path was attempted, but authenticated route mocking is not exposed by the Browser runtime; the dedicated Playwright UI smoke remains the rendered authenticated-surface evidence for this pass.
+- Live checks passed: `/api/health` reported exact source `73f79ac63e22ceb07492fccd893b805a792d1ede`, PostgreSQL and S3-compatible dependencies healthy, anonymous `/api/storage` returned `Authentication required` as expected for the private storage endpoint, and `npm run monitor:production` passed with seven anonymous private-route checks.
+- Remaining honesty boundary: the answer queue improves the current local Shop Talk surface and contributor loop. Durable server-owned Shop Talk posts, answers, reactions, follows, ranking, moderation, and reputation remain future work before Shop Talk can be treated as production-grade social proof.
+
+## Packet 08 Pass - RIVT Daily Home Check-In
 
 - Deployed source `436b83fb94f70d2dc0b831d2a7ee09c59d915882` through Railway deployment `f17fbcec-f7a2-4c5f-bceb-b5dc1af1a436`.
 - Added a Home-level `RIVT Daily` command surface with work, money, crew, and field-knowledge signals so contractors and tradespeople have a daily reason to check in without inventing fake marketplace density.
