@@ -262,6 +262,7 @@ async function loginAndAudit(browser, account, viewport) {
       page.locator("form button[type='submit']").click(),
     ]);
     await page.waitForFunction(() => document.body.innerText.includes("Home") && document.body.innerText.includes("Work"), null, { timeout: 20000 });
+    logs.length = 0;
 
     const audits = [await collectUiAudit(page, `${account.role}-${viewport.width}x${viewport.height}-home`)];
     for (const navItem of ["Work", "Crew", "Shop Talk", "Tools", "Home"]) {
