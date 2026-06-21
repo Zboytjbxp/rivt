@@ -1,11 +1,11 @@
 # RIVT Build State
 
-Last updated: 2026-06-20 America/New_York
+Last updated: 2026-06-21 America/New_York
 Current gate: Gate A launch hardening
-Current phase: Packet 08 backup-artifact and incident-readiness tooling added; full Gate A approval remains blocked
+Current phase: Packet 08 backup-artifact restore and expanded authenticated UI matrix verified; full Gate A approval remains blocked
 Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
-Production release commit: `e0ac24d143c29f1f17c6570debbd576f49538597`
+Production release commit: `67094c9853a8f4be2be01ffe30376b669afe6cde`
 
 ## Source State
 
@@ -416,7 +416,7 @@ Deployed on 2026-06-20:
 - Authenticated UI smoke `ui-a11y-20260621005817-8a87eb` created disposable contractor and tradesperson accounts, tested contractor mobile, tradesperson mobile, and contractor desktop shells, then closed both accounts.
 - Tested shells had top-bar search, messages, notifications, and profile controls; no role toggle; no More tab; no horizontal overflow; `consoleWarningsOrErrors: 0`; and `smallTargetCount: 0` on all tested viewports. The smoke uses reduced-motion browser preference and now fails on missing top-bar controls, post-login console warnings/errors, sub-44px controls, unnamed keyboard focus targets, or keyboard focus not reaching search/primary navigation.
 - Live hardening audit passed after deployment with exact source `f5a68d9c16364c94dd727bb91e03a25f33e283df`, migration `0009_durable_rate_limits`, seven anonymous private-route checks returning 401, zero seed/demo findings, and counts of 3 active accounts, 0 public network profiles, 0 open jobs, 2 open support cases, 0 active restrictions, 115 quarantined legacy app-state rows, and 49 rate-limit windows.
-- The next authenticated UI smoke matrix is now expanded in `scripts/live-ui-accessibility.js` to cover 360x800 phone, 390x844 phone, 768x1024 tablet, 1366x768 laptop, 1440x900 desktop, and a 390x844 200% text-scale scenario. This is tooling progress only until rerun against production and recorded in `docs/quality/ACCESSIBILITY_DEVICE_MATRIX.md`.
+- The authenticated UI smoke matrix was expanded in `scripts/live-ui-accessibility.js` to cover 360x800 phone, 390x844 phone, 768x1024 tablet, 1366x768 laptop, 1440x900 desktop, and a 390x844 200% text-scale scenario. It was rerun against production on 2026-06-21 as `ui-a11y-20260621043529-3efa9b`; evidence is recorded in `docs/quality/ACCESSIBILITY_DEVICE_MATRIX.md`.
 
 ## Packet 08 Synthetic Monitoring Progress
 
@@ -469,9 +469,25 @@ Backup-artifact restore tooling progress on 2026-06-20:
 - Temporary restore-control variables (`RESTORE_DATABASE_URL`, `RESTORE_SOURCE_DATABASE_URL`, and `CONFIRM_RESTORE_TARGET_ISOLATED`) were found on the RIVT service and removed. Remaining key-name check showed only persistent backup/storage names: `BACKUP_ENCRYPTION_KEY`, `DATABASE_URL`, `S3_*`, and `SOURCE_COMMIT`.
 - Attempting to provision a fresh temporary Railway PostgreSQL target for the named-artifact restore rehearsal failed because the Railway CLI session is expired (`Unauthorized. Please run railway login again.`). No backup artifact was created and no restore target remains from this attempt.
 
+## Packet 08 Backup Artifact Restore and Expanded UI Matrix Evidence
+
+Completed on 2026-06-21 after Railway re-authentication:
+
+- Deployed current source to production and verified `https://rivt.pro/api/health` reported exact source `67094c9853a8f4be2be01ffe30376b669afe6cde` with PostgreSQL and S3-compatible storage healthy.
+- Created a current named encrypted backup artifact from production with `npm run backup:logical-artifact`: object `backups/postgres/2026-06-21T04-14-48.795Z-332dbc0.json.gz.aes256gcm`, source commit `332dbc05e1978976d31395a6e482911e34931251`, 59 tables, 1,524 rows, 630 ms creation duration.
+- Restored that named object into isolated Railway PostgreSQL service `Postgres-_FQz`, applied nine migrations through `0009_durable_rate_limits`, restored 59 tables and 1,524 rows, verified table/column/sequence and strict manifest-count parity with zero diffs, and completed restore verification in 13,411 ms.
+- Ran `npm run restore:drill` against the isolated restored target: migration `0009_durable_rate_limits`, nine applied migrations, zero pending migrations, zero count diffs, and 1,862 ms verifier duration.
+- Deleted temporary restore service `Postgres-_FQz` and marked detached restore volumes `postgres-volume-FH_H` and `postgres-volume-M1Ll` for deletion. No temporary `RESTORE_*` or `CONFIRM_*` variables remain on the RIVT service, and a leftover `RESTORE_DATABASE_URL` variable was removed from the production Postgres service.
+- `npm run monitor:production` passed on deployed commit `67094c9853a8f4be2be01ffe30376b669afe6cde` with seven anonymous private-route checks and managed PostgreSQL/S3-compatible dependencies healthy.
+- `npm run smoke:gate-a:live` passed on deployed commit `67094c9853a8f4be2be01ffe30376b669afe6cde` with migration `0009_durable_rate_limits`, seven anonymous private-route checks returning 401, zero seed/demo findings, 3 active accounts, 0 public network profiles, 0 open jobs, 2 open support cases, 0 active restrictions, 115 quarantined legacy app-state rows, and 64 rate-limit windows.
+- Expanded authenticated UI smoke `ui-a11y-20260621043529-3efa9b` created disposable contractor and tradesperson accounts, tested 360x800 phone, 390x844 phone, 768x1024 tablet, 1366x768 laptop, 1440x900 desktop, and a 390x844 200% text-scale scenario, then closed both accounts. All scenarios reported top-bar search/messages/notifications/profile present, reduced-motion enabled, keyboard focus reaching named top-bar and primary navigation targets, `consoleWarningsOrErrors: 0`, and `smallTargetCount: 0`.
+- The expanded UI smoke caught a real 360px Crew overflow in the V2 network shell. Two CSS fixes were deployed (`d7129b4` and `67094c9`) to force mobile network children and metric cards to shrink without off-screen bleed; the final smoke passed after those fixes.
+- Required local gates passed after the production fix: `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test`, `npm run test:e2e`, and `npm audit --omit=dev`. DB-backed local integration tests still skip on this workstation because `TEST_DATABASE_URL` is intentionally absent.
+- `npm run incident:readiness -- --json` remains blocked by missing backup owner, support hours, dedicated error monitoring, paging route, incident rehearsal, and founder/support/legal-safety approvals.
+
 ## Next Exact Task
 
-Re-authenticate Railway, provision a fresh temporary isolated PostgreSQL target, run `npm run backup:logical-artifact` to create a current named encrypted backup object, run `npm run restore:logical-artifact -- --apply-migrations` against the isolated target, run `npm run restore:drill`, delete the temporary target, and record RPO/RTO evidence. Then configure a real dedicated error-monitoring provider and paging/escalation route, fill the backup owner/support-hours/approval fields in `docs/operations/incident-routing.json`, run `npm run incident:readiness -- --require-ready`, and complete the physical/deeper manual accessibility-device matrix before named-cohort launch.
+Configure a real dedicated error-monitoring provider and paging/escalation route, fill the backup owner/support-hours/approval fields in `docs/operations/incident-routing.json`, run `npm run incident:readiness -- --require-ready`, and complete the physical/deeper manual accessibility-device matrix before named-cohort launch. Then record the final RPO/RTO policy and approval owners in the launch checklist.
 
 ## Blocking Founder Decisions
 

@@ -344,3 +344,22 @@ Add one entry per staging/production deployment.
 - Known risks: full Gate A still requires live-recorded expanded matrix evidence plus physical-device/manual screen-reader coverage
 - Rollback performed/result: not required
 - Approval: accessibility tooling progress accepted as partial evidence only; overall Gate A not approved
+
+## Current Production - Packet 08 Backup Artifact Restore and Expanded UI Matrix
+
+- Environment: Production (`https://rivt.pro`) plus temporary isolated Railway PostgreSQL target
+- Date/time/timezone: 2026-06-21 00:35 America/New_York
+- Deployer: Codex through authenticated Railway CLI
+- Source repository/branch: `Zboytjbxp/rivt`, `master`
+- Source commit: `67094c9853a8f4be2be01ffe30376b669afe6cde`
+- Build/artifact ID: Railway application deployment `007b3270-4c08-4c61-8238-3164db747666`; earlier same-session deployment `81c8c39c-0266-435d-b203-485266d2a23b` deployed backup-artifact tooling, and deployments `f53b5fdd-e176-49a3-8e78-ffccf7f47c8d` / `007b3270-4c08-4c61-8238-3164db747666` deployed the Crew/network overflow fixes.
+- Migration version before/after: `0009_durable_rate_limits` / `0009_durable_rate_limits`
+- Feature-flag/config version: `SOURCE_COMMIT` updated to `67094c9853a8f4be2be01ffe30376b669afe6cde`; no operational-control flags changed
+- Provider/config changes: no provider credentials changed; temporary Railway PostgreSQL restore service `Postgres-_FQz` was used only as an isolated restore target and deleted after verification; detached restore volumes `postgres-volume-FH_H` and `postgres-volume-M1Ll` were marked for deletion; leftover temporary restore variables were removed from RIVT/Postgres
+- Backup/rollback target: named encrypted backup object `backups/postgres/2026-06-21T04-14-48.795Z-332dbc0.json.gz.aes256gcm`; prior successful deployment `0d3f94b0-f586-446f-808b-9078c9a40f65`
+- Automated gates: local `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test`, `npm run test:e2e`, and `npm audit --omit=dev` passed; local DB-backed integration tests skipped because `TEST_DATABASE_URL` is not configured
+- Post-deploy smoke tests: public `/api/health` passed and reported exact source commit. `npm run backup:logical-artifact` created the named encrypted backup object from 59 tables and 1,524 rows in 630 ms. `npm run restore:logical-artifact -- --apply-migrations` restored the named object into the isolated target, applied nine migrations, restored 59 tables and 1,524 rows, verified table/column/sequence and strict manifest-count parity with zero diffs, and completed in 13,411 ms. `npm run restore:drill` verified migration `0009_durable_rate_limits`, nine applied migrations, zero pending migrations, zero count diffs, and completed in 1,862 ms. `npm run monitor:production` passed with seven anonymous private-route checks. `npm run smoke:gate-a:live` passed with zero seed/demo findings. Expanded authenticated UI smoke `ui-a11y-20260621043529-3efa9b` passed 360x800, 390x844, 768x1024, 1366x768, 1440x900, and 390x844 at 200% root text scale after Crew/network overflow fixes.
+- Health/readiness result: health reports PostgreSQL and S3-compatible storage healthy with exact source commit `67094c9853a8f4be2be01ffe30376b669afe6cde`; live hardening audit reports latest migration `0009_durable_rate_limits`
+- Known risks: full Gate A remains blocked by dedicated error monitoring/paging, completed incident-routing fields and rehearsal, founder/support/legal-safety approvals, RPO/RTO policy approval, and physical/deeper manual accessibility-device matrix
+- Rollback performed/result: not required
+- Approval: backup artifact restore and expanded authenticated UI matrix accepted as production evidence; overall Gate A not approved
