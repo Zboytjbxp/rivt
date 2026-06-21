@@ -2,10 +2,10 @@
 
 Last updated: 2026-06-21 America/New_York
 Current gate: Gate A launch hardening
-Current phase: Packet 08 controllable UX hardening, Trade News polish, production UI smoke regression fixes, and Tools studio release verified; full Gate A approval remains blocked
+Current phase: Packet 08 controllable UX hardening, Trade News polish, production UI smoke regression fixes, Tools studio release, and Records workspace upgrade verified; full Gate A approval remains blocked
 Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
-Production release commit: `24c37ac7dfc086903c688ec64df684f42e35db6b`
+Production release commit: `1679aec006c8cb393b6986aa24ec507c15bc8181`
 
 ## Source State
 
@@ -554,6 +554,20 @@ Completed on 2026-06-21 as controllable UX hardening after the founder asked to 
 - Deployed the runtime slice to Railway production as deployment `ac8d1f8d-ac13-424d-b1ba-a4dc0a0ebdde` from commit `24c37ac7dfc086903c688ec64df684f42e35db6b`.
 - Live `https://rivt.pro/api/health` returned 200 with exact build commit `24c37ac7dfc086903c688ec64df684f42e35db6b`; `npm run monitor:production` passed with PostgreSQL/S3-compatible dependencies healthy, operational controls disabled, seven anonymous private-route checks, and 561 ms duration.
 - `npm run smoke:gate-a:live` cannot run directly from this workstation because local execution lacks `DATABASE_URL`, and `railway run` from the workstation still cannot resolve Railway private DNS (`postgres.railway.internal`). This is the same known split-run limitation from the production UI smoke work, not a Tools-specific regression.
+
+## Packet 08 Records Workspace Upgrade
+
+Completed on 2026-06-21 as a continuation of the Tools buildout:
+
+- Reworked the Records surface from prompt-driven actions into a structured field-documentation workspace with accepted-work list, project status header, refresh/report controls, metrics, field notebook, evidence upload notes, stored evidence list, completion checklist, confirm/dispute panel, latest update, timeline, and closeout report preview.
+- Removed browser `window.prompt` usage from Records actions. Notes, upload notes, completion notes, and confirm/dispute reasons now use visible in-app forms with disabled states and inline success/error feedback.
+- Preserved the production honesty boundary: Records still only unlocks for accepted active work from the server, does not fabricate project rows, and does not create fake payment, invoice, SMS, or email delivery records.
+- Updated the project API wrapper so completion checklist values can be submitted from the UI while retaining safe defaults for existing callers.
+- Expanded desktop/mobile E2E to cover `/app/tools/records` with mocked accepted work, server-owned project record data, field note submission, and report loading.
+- Rendered local Records QA with Playwright at 390x844 mobile and 1440x900 desktop. The pass found no horizontal overflow and zero console errors. Screenshot evidence was saved outside the repo at `C:\Users\zboyt\AppData\Local\Temp\rivt-records-visual-qa`.
+- Required local gates passed after this slice: `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test`, `npm run test:e2e`, and `npm audit --omit=dev`. DB-backed local integration tests still skip on this workstation because `TEST_DATABASE_URL` is intentionally absent.
+- Deployed the runtime slice to Railway production as deployment `83c95b13-a681-4e31-9768-e87aea6f8312` from commit `1679aec006c8cb393b6986aa24ec507c15bc8181`.
+- Live `https://rivt.pro/api/health` returned 200 with exact build commit `1679aec006c8cb393b6986aa24ec507c15bc8181`; `npm run monitor:production` passed with PostgreSQL/S3-compatible dependencies healthy, operational controls disabled, seven anonymous private-route checks, and 464 ms duration.
 
 ## Next Exact Task
 

@@ -458,3 +458,22 @@ Add one entry per staging/production deployment.
 - Known risks: full Gate A remains blocked by dedicated error monitoring/paging, completed incident-routing fields and rehearsal, founder/support/legal-safety approvals, RPO/RTO policy approval, physical/deeper manual accessibility-device matrix, and production-grade server invoice/SMS delivery if that is promoted from Gate B
 - Rollback performed/result: not required
 - Approval: Tools studio accepted as controllable UX hardening and a founder-approved local-utility exception; overall Gate A not approved
+
+## Current Production - Packet 08 Records Workspace Upgrade
+
+- Environment: Production (`https://rivt.pro`)
+- Date/time/timezone: 2026-06-21 10:41 America/New_York
+- Deployer: Codex through authenticated Railway CLI
+- Source repository/branch: `Zboytjbxp/rivt`, `master`
+- Source commit: `1679aec006c8cb393b6986aa24ec507c15bc8181`
+- Build/artifact ID: Railway deployment `83c95b13-a681-4e31-9768-e87aea6f8312`
+- Migration version before/after: unchanged (`0009_durable_rate_limits`)
+- Feature-flag/config version: `SOURCE_COMMIT` updated to `1679aec006c8cb393b6986aa24ec507c15bc8181`; no operational-control flags changed
+- Provider/config changes: no provider credentials changed
+- Backup/rollback target: prior successful Tools studio deployment `ac8d1f8d-ac13-424d-b1ba-a4dc0a0ebdde`; no migration change
+- Automated gates: local `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test`, `npm run test:e2e`, and `npm audit --omit=dev` passed; DB-backed integration tests skipped locally because `TEST_DATABASE_URL` is not configured
+- Post-deploy smoke tests: `https://rivt.pro/api/health` returned exact source commit `1679aec006c8cb393b6986aa24ec507c15bc8181`; `npm run monitor:production` passed externally with PostgreSQL/S3-compatible dependencies healthy, operational controls disabled, seven anonymous private-route checks, and 464 ms duration. Local rendered Playwright QA covered Records workspace at 390x844 and 1440x900 with no horizontal overflow and no console errors.
+- Health/readiness result: health reported PostgreSQL and S3-compatible storage healthy with exact source commit `1679aec006c8cb393b6986aa24ec507c15bc8181`
+- Known risks: full Gate A remains blocked by dedicated error monitoring/paging, completed incident-routing fields and rehearsal, founder/support/legal-safety approvals, RPO/RTO policy approval, physical/deeper manual accessibility-device matrix, and production-grade server invoice/SMS delivery if that is promoted from Gate B
+- Rollback performed/result: not required
+- Approval: Records workspace accepted as controllable UX hardening for server-backed accepted-work records; overall Gate A not approved
