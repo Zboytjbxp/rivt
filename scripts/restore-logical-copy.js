@@ -158,6 +158,12 @@ async function truncateTarget(client, tables) {
   await client.query(`TRUNCATE ${tables.map(qualified).join(", ")} RESTART IDENTITY CASCADE`);
 }
 
+async function setUserTriggers(client, tables, enabled) {
+  for (const tableName of tables) {
+    await client.query(`ALTER TABLE ${qualified(tableName)} ${enabled ? "ENABLE" : "DISABLE"} TRIGGER USER`);
+  }
+}
+
 async function rowsForTable(client, tableName, columns) {
   if (!columns.length) return [];
   const selectedColumns = columns.map((column) => quoteIdentifier(column.name)).join(", ");
@@ -251,8 +257,13 @@ try {
     await truncateTarget(targetClient, copyOrder);
 
     const copiedRows = {};
-    for (const tableName of copyOrder) {
-      copiedRows[tableName] = await copyTable(sourceClient, targetClient, tableName);
+    await setUserTriggers(targetClient, copyOrder, false);
+    try {
+      for (const tableName of copyOrder) {
+        copiedRows[tableName] = await copyTable(sourceClient, targetClient, tableName);
+      }
+    } finally {
+      await setUserTriggers(targetClient, copyOrder, true);
     }
     await restoreSequences(targetClient, await sequenceStates(sourceClient));
 
