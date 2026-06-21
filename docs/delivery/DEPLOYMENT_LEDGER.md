@@ -253,18 +253,18 @@ Add one entry per staging/production deployment.
 ## Current Production - Packet 08 Authenticated Accessibility Smoke
 
 - Environment: Production (`https://rivt.pro`)
-- Date/time/timezone: 2026-06-20 20:20 America/New_York
+- Date/time/timezone: 2026-06-20 20:27 America/New_York
 - Deployer: Codex through authenticated Railway CLI
 - Source repository/branch: `Zboytjbxp/rivt`, `master`
-- Source commit: `c7cd61468fa975b8c06c5c96f3bacf825380e3f8`
-- Build/artifact ID: Railway deployment `da33d239-6505-43e6-9016-2bdbde68ab51`
+- Source commit: `5f3334b231114efb377899ea79bad6a48b353a21`
+- Build/artifact ID: Railway deployment `508c2a9c-5748-4341-9ec8-cdf427dac1fc`
 - Migration version before/after: `0009_durable_rate_limits` / `0009_durable_rate_limits`
-- Feature-flag/config version: `SOURCE_COMMIT` updated to `c7cd61468fa975b8c06c5c96f3bacf825380e3f8`; no operational-control flags changed
+- Feature-flag/config version: `SOURCE_COMMIT` updated to `5f3334b231114efb377899ea79bad6a48b353a21`; no operational-control flags changed
 - Provider/config changes: no provider credentials changed; external monitoring provider still not configured
 - Backup/rollback target: prior successful Packet 08 accessibility deployment `255d59f0-ecdf-4c0d-ac36-583045b767a8`; no migration change
 - Automated gates: local `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test`, `npm run test:e2e`, and `npm audit --omit=dev` passed; DB-backed integration tests skipped locally because `TEST_DATABASE_URL` is not configured
-- Post-deploy smoke tests: public `/api/health` passed and reported exact source commit. Authenticated UI smoke `ui-a11y-20260621002056-10d4b9` created disposable contractor and tradesperson accounts, verified contractor mobile, tradesperson mobile, and contractor desktop shells, and closed both accounts. Top-bar search/messages/notifications/profile controls were present, role toggle and More tab were absent, horizontal overflow was absent, `consoleWarningsOrErrors` was zero, and `smallTargetCount` was zero on all tested viewports. Live hardening audit also passed with zero seed/demo findings.
-- Health/readiness result: health reports PostgreSQL and S3-compatible storage healthy with exact source commit `c7cd61468fa975b8c06c5c96f3bacf825380e3f8`; live hardening audit reports latest migration `0009_durable_rate_limits`
+- Post-deploy smoke tests: public `/api/health` passed and reported exact source commit. Authenticated UI smoke `ui-a11y-20260621002702-cbe0e5` created disposable contractor and tradesperson accounts, verified contractor mobile, tradesperson mobile, and contractor desktop shells, and closed both accounts. Top-bar search/messages/notifications/profile controls were present, role toggle and More tab were absent, horizontal overflow was absent, `consoleWarningsOrErrors` was zero, and `smallTargetCount` was zero on all tested viewports. The smoke now fails on missing top-bar controls, post-login console warnings/errors, or sub-44px controls. Live hardening audit also passed with zero seed/demo findings.
+- Health/readiness result: health reports PostgreSQL and S3-compatible storage healthy with exact source commit `5f3334b231114efb377899ea79bad6a48b353a21`; live hardening audit reports latest migration `0009_durable_rate_limits`
 - Known risks: full Gate A remains blocked by timed isolated restore drill, external monitoring/alerts and incident routing, physical/deeper manual accessibility-device matrix, and support/legal/founder signoff
 - Rollback performed/result: not required
 - Approval: authenticated accessibility smoke accepted as partial evidence; overall Gate A not approved
