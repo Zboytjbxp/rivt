@@ -249,8 +249,16 @@
   }
 
   .v2-network-header-metrics {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     width: 100%;
-    overflow-x: auto;
+    gap: 8px;
+    overflow-x: visible;
     padding-bottom: 4px;
+  }
+
+  .v2-network-header-metrics article {
+    min-width: 0;
+    padding: 10px 8px;
   }
 }
