@@ -1,7 +1,7 @@
 :root {
   color-scheme: light;
   font-family:
-    "Segoe UI Variable Display", "Segoe UI Variable", "Segoe UI", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+    "Instrument Sans", "Segoe UI Variable", "Segoe UI", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
     sans-serif;
   --weight-body: 400;
   --weight-semibold: 600;
@@ -23,7 +23,7 @@
   --border-strong: #cad3d7;
   --nav: #080d10;
   --nav-deep: #030506;
-  --accent: #ff6a00;
+  --accent: #ef5f1a;
   --accent-deep: #9a3a00;
   --accent-soft: #fff0e7;
   --blue: #334f5b;
@@ -32,9 +32,9 @@
   --amber-soft: #fff2df;
   --danger-soft: #ffecec;
   --topbar: rgba(255, 255, 255, 0.92);
-  --radius: 10px;
-  --shadow: 0 20px 48px rgba(13, 17, 20, 0.09);
-  --shadow-soft: 0 10px 22px rgba(13, 17, 20, 0.045);
+  --radius: 8px;
+  --shadow: 0 24px 58px rgba(13, 17, 20, 0.105);
+  --shadow-soft: 0 14px 34px rgba(13, 17, 20, 0.06);
 }
 
 html {
@@ -51,9 +51,10 @@ body {
   min-height: 100vh;
   overflow-x: hidden;
   background:
-    radial-gradient(circle at 18% 0%, rgba(255, 106, 0, 0.075), transparent 22%),
-    radial-gradient(circle at 100% 0%, rgba(8, 13, 16, 0.035), transparent 18%),
+    linear-gradient(rgba(13, 17, 20, 0.018) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(13, 17, 20, 0.014) 1px, transparent 1px),
     var(--bg);
+  background-size: 28px 28px, 28px 28px, auto;
   color: var(--text);
 }
 
@@ -107,8 +108,10 @@ textarea:focus-visible {
   min-height: 100vh;
   padding: 18px;
   background:
-    linear-gradient(180deg, #ffffff 0%, var(--bg) 58%),
+    linear-gradient(rgba(13, 17, 20, 0.018) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(13, 17, 20, 0.014) 1px, transparent 1px),
     var(--bg);
+  background-size: 28px 28px, 28px 28px, auto;
 }
 
 .onboarding-layout {

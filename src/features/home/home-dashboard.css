@@ -1,6 +1,6 @@
 .v2-home-page {
   display: grid;
-  gap: 24px;
+  gap: 28px;
 }
 
 .v2-home-header {
@@ -12,14 +12,17 @@
 
 .v2-home-header h1 {
   margin: 0;
-  font-size: clamp(28px, 3vw, 38px);
-  line-height: 1.08;
+  max-width: 760px;
+  font-size: clamp(31px, 4vw, 48px);
+  font-weight: 780;
+  line-height: 0.98;
+  text-wrap: balance;
 }
 
 .v2-home-header p {
   margin: 6px 0 0;
   color: var(--v2-text-muted);
-  font-size: 13px;
+  font-size: 14px;
 }
 
 .v2-home-focus-grid,
@@ -33,14 +36,18 @@
 .v2-attention-panel,
 .v2-next-work,
 .v2-network-pulse {
-  border: 1px solid var(--v2-border);
+  border: 1px solid color-mix(in srgb, var(--v2-border) 66%, transparent);
   border-radius: var(--v2-radius-lg);
-  background: var(--v2-surface);
-  box-shadow: var(--v2-shadow-sm);
+  background: color-mix(in srgb, var(--v2-surface) 92%, transparent);
+  box-shadow: var(--v2-shadow-card);
 }
 
 .v2-today-panel {
   overflow: hidden;
+  border-color: color-mix(in srgb, var(--v2-accent) 22%, var(--v2-border));
+  background:
+    linear-gradient(135deg, rgba(239, 95, 26, 0.12), transparent 36%),
+    var(--v2-surface);
 }
 
 .v2-today-panel > header,
@@ -52,8 +59,8 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 0 18px;
-  border-bottom: 1px solid var(--v2-border);
+  padding: 0 20px;
+  border-bottom: 1px solid color-mix(in srgb, var(--v2-border) 62%, transparent);
 }
 
 .v2-today-panel > header span,
@@ -73,7 +80,7 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 20px;
-  padding: 24px 24px 16px;
+  padding: 28px 28px 18px;
 }
 
 .v2-today-job > div > span {
@@ -85,8 +92,10 @@
 
 .v2-today-job h2 {
   margin: 5px 0 8px;
-  font-size: clamp(22px, 2.5vw, 32px);
-  line-height: 1.1;
+  font-size: clamp(25px, 3vw, 38px);
+  font-weight: 760;
+  line-height: 1;
+  text-wrap: balance;
 }
 
 .v2-today-job p {
@@ -107,7 +116,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 18px;
-  padding: 0 24px 22px;
+  padding: 0 28px 24px;
   color: var(--v2-text-muted);
   font-size: 12px;
 }
@@ -121,9 +130,9 @@
 .v2-today-actions {
   display: flex;
   gap: 8px;
-  padding: 14px 18px;
-  border-top: 1px solid var(--v2-border);
-  background: var(--v2-surface-muted);
+  padding: 14px 18px 18px;
+  border-top: 1px solid color-mix(in srgb, var(--v2-border) 60%, transparent);
+  background: color-mix(in srgb, var(--v2-surface-muted) 70%, transparent);
 }
 
 .v2-today-actions button {
@@ -133,7 +142,7 @@
   justify-content: center;
   gap: 7px;
   padding: 0 14px;
-  border: 1px solid var(--v2-border);
+  border: 1px solid color-mix(in srgb, var(--v2-border) 72%, transparent);
   border-radius: var(--v2-radius-md);
   background: var(--v2-surface);
   color: var(--v2-text);
@@ -160,7 +169,7 @@
   padding: 0 10px;
   border: 0;
   background: transparent;
-  color: var(--v2-text-muted);
+  color: var(--v2-accent);
   font: inherit;
   font-size: 11px;
   font-weight: 700;
@@ -176,7 +185,7 @@
   min-height: 76px;
   padding: 12px 16px;
   border: 0;
-  border-bottom: 1px solid var(--v2-border);
+  border-bottom: 1px solid color-mix(in srgb, var(--v2-border) 62%, transparent);
   background: transparent;
   color: var(--v2-text);
   text-align: left;
@@ -185,7 +194,7 @@
 .v2-attention-panel > button:hover,
 .v2-network-pulse > div > button:hover,
 .v2-next-work-list > button:hover {
-  background: var(--v2-surface-muted);
+  background: color-mix(in srgb, var(--v2-surface-muted) 70%, transparent);
 }
 
 .v2-attention-icon {
@@ -243,7 +252,7 @@
   min-height: 70px;
   padding: 12px 18px;
   border: 0;
-  border-bottom: 1px solid var(--v2-border);
+  border-bottom: 1px solid color-mix(in srgb, var(--v2-border) 62%, transparent);
   background: transparent;
   color: var(--v2-text);
   text-align: left;
@@ -283,11 +292,11 @@
 
 @media (max-width: 860px) {
   .v2-home-page {
-    gap: 16px;
+    gap: 18px;
   }
 
   .v2-home-header h1 {
-    font-size: 26px;
+    font-size: 30px;
   }
 
   .v2-home-header p {
@@ -299,7 +308,7 @@
   }
 
   .v2-today-job h2 {
-    font-size: 22px;
+    font-size: 26px;
   }
 
   .v2-today-facts {

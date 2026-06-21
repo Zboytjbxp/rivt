@@ -1,18 +1,21 @@
 .v2-inbox-page {
   display: grid;
-  gap: 18px;
+  gap: 24px;
 }
 
 .v2-inbox-header {
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
-  gap: 20px;
+  gap: 24px;
 }
 
 .v2-inbox-header h1 {
   margin: 0;
-  font-size: clamp(28px, 3vw, 38px);
+  font-size: clamp(31px, 4vw, 48px);
+  font-weight: 780;
+  line-height: 0.98;
+  text-wrap: balance;
 }
 
 .v2-inbox-header p {
@@ -23,22 +26,23 @@
 
 .v2-inbox-summary {
   display: flex;
-  gap: 10px;
+  gap: 12px;
 }
 
 .v2-inbox-badge,
 .v2-inbox-panel {
-  border: 1px solid var(--v2-border);
+  border: 1px solid color-mix(in srgb, var(--v2-border) 58%, transparent);
   border-radius: var(--v2-radius-lg);
-  background: var(--v2-surface);
-  box-shadow: var(--v2-shadow-sm);
+  background: var(--v2-surface-raised);
+  box-shadow: var(--v2-shadow-card);
 }
 
 .v2-inbox-badge {
   display: grid;
   min-width: 112px;
   gap: 3px;
-  padding: 12px 14px;
+  padding: 13px 15px;
+  background: color-mix(in srgb, var(--v2-surface-raised) 86%, var(--v2-surface-muted));
 }
 
 .v2-inbox-badge strong {
@@ -56,7 +60,7 @@
 .v2-inbox-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 18px;
+  gap: 20px;
 }
 
 .v2-inbox-panel {
@@ -72,8 +76,9 @@
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  padding: 16px 18px;
-  border-bottom: 1px solid var(--v2-border);
+  padding: 18px 20px;
+  border-bottom: 1px solid color-mix(in srgb, var(--v2-border) 62%, transparent);
+  background: color-mix(in srgb, var(--v2-surface-muted) 26%, transparent);
 }
 
 .v2-inbox-panel > header span {
@@ -86,7 +91,7 @@
 
 .v2-inbox-panel > header h2 {
   margin: 3px 0 0;
-  font-size: 15px;
+  font-size: 16px;
 }
 
 .v2-inbox-panel > header button,
@@ -132,9 +137,9 @@
 .v2-inbox-alert button {
   min-height: 44px;
   padding: 0 12px;
-  border: 1px solid var(--v2-border);
+  border: 1px solid color-mix(in srgb, var(--v2-border) 62%, transparent);
   border-radius: var(--v2-radius-sm);
-  background: var(--v2-surface);
+  background: var(--v2-surface-raised);
   color: var(--v2-text);
   font-weight: 800;
 }
@@ -150,9 +155,9 @@
   gap: 10px;
   align-items: center;
   width: 100%;
-  padding: 14px 18px;
+  padding: 15px 20px;
   border: 0;
-  border-bottom: 1px solid var(--v2-border);
+  border-bottom: 1px solid color-mix(in srgb, var(--v2-border) 56%, transparent);
   background: transparent;
   color: var(--v2-text);
   text-align: left;
@@ -206,9 +211,9 @@
 .v2-inbox-context {
   display: grid;
   gap: 4px;
-  padding: 14px 18px;
-  border-bottom: 1px solid var(--v2-border);
-  background: var(--v2-bg);
+  padding: 15px 20px;
+  border-bottom: 1px solid color-mix(in srgb, var(--v2-border) 56%, transparent);
+  background: color-mix(in srgb, var(--v2-surface-muted) 52%, transparent);
 }
 
 .v2-inbox-context strong {
@@ -222,7 +227,7 @@
   align-content: start;
   overflow: auto;
   padding: 18px;
-  background: color-mix(in srgb, var(--v2-bg) 80%, var(--v2-surface));
+  background: color-mix(in srgb, var(--v2-surface-muted) 58%, transparent);
 }
 
 .v2-inbox-message {
@@ -231,14 +236,14 @@
   justify-self: start;
   gap: 5px;
   padding: 12px 13px;
-  border: 1px solid var(--v2-border);
-  border-radius: 16px 16px 16px 6px;
-  background: var(--v2-surface);
+  border: 1px solid color-mix(in srgb, var(--v2-border) 58%, transparent);
+  border-radius: 8px 8px 8px 4px;
+  background: var(--v2-surface-raised);
 }
 
 .v2-inbox-message.is-mine {
   justify-self: end;
-  border-radius: 16px 16px 6px 16px;
+  border-radius: 8px 8px 4px 8px;
   border-color: color-mix(in srgb, var(--v2-accent) 35%, var(--v2-border));
   background: color-mix(in srgb, var(--v2-accent-soft) 58%, var(--v2-surface));
 }
@@ -293,9 +298,9 @@
 .v2-inbox-composer textarea {
   min-height: 110px;
   padding: 12px 13px;
-  border: 1px solid var(--v2-border);
+  border: 1px solid color-mix(in srgb, var(--v2-border) 58%, transparent);
   border-radius: var(--v2-radius-md);
-  background: var(--v2-bg);
+  background: var(--v2-surface-raised);
   color: var(--v2-text);
   resize: vertical;
 }
@@ -312,9 +317,9 @@
   justify-content: center;
   gap: 7px;
   padding: 0 14px;
-  border: 1px solid var(--v2-border);
+  border: 1px solid color-mix(in srgb, var(--v2-border) 62%, transparent);
   border-radius: var(--v2-radius-md);
-  background: var(--v2-surface);
+  background: var(--v2-surface-raised);
   color: var(--v2-text);
   font-weight: 700;
 }
@@ -330,8 +335,8 @@
   align-items: start;
   justify-content: space-between;
   gap: 12px;
-  padding: 14px 18px;
-  border-bottom: 1px solid var(--v2-border);
+  padding: 15px 20px;
+  border-bottom: 1px solid color-mix(in srgb, var(--v2-border) 56%, transparent);
 }
 
 .v2-inbox-item:last-child {
@@ -380,8 +385,8 @@
   grid-template-columns: auto minmax(0, 1fr) auto;
   gap: 12px;
   align-items: center;
-  padding: 14px 18px;
-  border-bottom: 1px solid var(--v2-border);
+  padding: 15px 20px;
+  border-bottom: 1px solid color-mix(in srgb, var(--v2-border) 56%, transparent);
   color: var(--v2-text);
   text-align: left;
 }
@@ -391,7 +396,7 @@
   width: 34px;
   height: 34px;
   place-items: center;
-  border-radius: 11px;
+  border-radius: var(--v2-radius-md);
   background: var(--v2-accent-soft);
   color: var(--v2-accent);
 }
@@ -401,8 +406,8 @@
   grid-template-columns: auto minmax(0, 1fr) auto;
   gap: 10px;
   align-items: center;
-  padding: 14px 18px;
-  border-bottom: 1px solid var(--v2-border);
+  padding: 15px 20px;
+  border-bottom: 1px solid color-mix(in srgb, var(--v2-border) 56%, transparent);
 }
 
 .v2-inbox-sent article:last-child {
@@ -413,7 +418,7 @@
   display: grid;
   justify-items: start;
   gap: 8px;
-  padding: 18px;
+  padding: 20px;
   color: var(--v2-text-muted);
 }
 
@@ -425,9 +430,9 @@
   min-height: 44px;
   margin-top: 4px;
   padding: 0 13px;
-  border: 1px solid var(--v2-border);
+  border: 1px solid color-mix(in srgb, var(--v2-border) 62%, transparent);
   border-radius: var(--v2-radius-md);
-  background: var(--v2-surface);
+  background: var(--v2-surface-raised);
   color: var(--v2-text);
   font-weight: 800;
 }
