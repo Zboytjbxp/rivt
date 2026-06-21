@@ -2,10 +2,10 @@
 
 Last updated: 2026-06-21 America/New_York
 Current gate: Gate A launch hardening
-Current phase: Packet 08 controllable UX hardening, Shop Talk answer queue, RIVT Daily home check-in, Trade News real-media and mobile layout pass, production UI smoke regression fixes, Tools studio release, Records workspace upgrade, UI system pass, shared UI primitives, Tools primitive alignment, Shop Talk command center, Tools app surface pass, Heavy 16th multi-mode calculator, Invoice Draft app upgrade, and Shop Talk reaction/social pulse pass verified; full Gate A approval remains blocked
+Current phase: Packet 08 controllable UX hardening, daily engagement loop, Shop Talk answer queue, RIVT Daily home check-in, Trade News real-media and mobile layout pass, production UI smoke regression fixes, Tools studio release, Records workspace upgrade, UI system pass, shared UI primitives, Tools primitive alignment, Shop Talk command center, Tools app surface pass, Heavy 16th multi-mode calculator, Invoice Draft app upgrade, and Shop Talk reaction/social pulse pass verified; full Gate A approval remains blocked
 Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
-Production release commit: `73f79ac63e22ceb07492fccd893b805a792d1ede`
+Production release commit: `aeb23caf2d09d9598adfcf3c7ad330e8bcaa9681`
 
 ## Source State
 
@@ -17,7 +17,20 @@ Packet 00 is merged on `master` at `4c199d903683e44d17b7985272c399c6d7a6cbd6`. T
 
 Do not discard or overwrite the pre-existing Trade News work when committing or splitting this packet.
 
-## Latest Packet 08 Pass - Shop Talk Answer Queue
+## Latest Packet 08 Pass - Daily Engagement Loop
+
+- Deployed source `aeb23caf2d09d9598adfcf3c7ad330e8bcaa9681` through Railway deployment `63a4f5aa-7b67-4e3e-9331-5ecd6dd8c0a6`.
+- Expanded Home's `RIVT Daily` into a clearer habit loop: check work/crew, write a field record, and build Shop Talk reputation.
+- Added a `Reputation momentum` Home panel with answer-queue, peer-proof, and news-watch signals plus direct actions to Shop Talk and the new Daily Log tool.
+- Added a standalone Tools `Daily log` mini-app for crew hours, site notes, blockers, materials, safety notes, next steps, a field checklist, copy/download output, and an explicitly device-local draft.
+- Added a Shop Talk `Reputation path` card so contributors can see the steps from first answer to verified fix to profile badge without claiming durable server-owned reputation yet.
+- Expanded `npm run test:ui:tools` to verify the Daily Log tool on desktop/mobile, including entered notes, checklist toggles, preview output, local draft save, no horizontal overflow, and zero console/page errors.
+- Expanded `npm run test:ui:shop-talk-news` to verify the Shop Talk reputation path alongside the answer queue and existing news/reaction coverage.
+- Local gates passed: `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test`, `npm run test:e2e`, `npm run test:ui:tools`, `npm run test:ui:shop-talk-news`, `npm audit --omit=dev`, and `git diff --check`; DB-backed integration tests still skip locally because `TEST_DATABASE_URL` is not configured.
+- Live checks passed: `/api/health` reported exact source `aeb23caf2d09d9598adfcf3c7ad330e8bcaa9681`, PostgreSQL and S3-compatible dependencies healthy, anonymous `/api/storage` returned 401 as expected for the private storage endpoint, and `npm run monitor:production` passed with seven anonymous private-route checks.
+- Remaining honesty boundary: Daily Log drafts are browser-local and Shop Talk reputation remains current-surface UI. Server-owned daily logs, streaks, analytics, posts, answers, reactions, moderation, and durable reputation still require canonical tables, authorization, provider/error handling, and live smoke evidence before being treated as production social proof.
+
+## Packet 08 Pass - Shop Talk Answer Queue
 
 - Deployed source `73f79ac63e22ceb07492fccd893b805a792d1ede` through Railway deployment `d717edd7-bd08-43f9-8f6e-eb213e45f8af`.
 - Added a Shop Talk `Answer queue` card that surfaces unanswered questions in the user's primary trade plus General, with an `Answer now` path that jumps straight into the next thread and turns on the unanswered filter.

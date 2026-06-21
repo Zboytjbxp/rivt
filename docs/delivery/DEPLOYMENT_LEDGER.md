@@ -21,7 +21,27 @@ Add one entry per staging/production deployment.
 - Rollback performed/result:
 - Approval:
 
-## Current Production - Packet 08 Shop Talk Answer Queue
+## Current Production - Packet 08 Daily Engagement Loop
+
+- Environment: Production (`https://rivt.pro`)
+- Date/time/timezone: 2026-06-21 19:55 America/New_York
+- Deployer: Codex through authenticated Railway CLI
+- Source repository/branch: `Zboytjbxp/rivt`, `master`
+- Source commit: `aeb23caf2d09d9598adfcf3c7ad330e8bcaa9681`
+- Build/artifact ID: Railway deployment `63a4f5aa-7b67-4e3e-9331-5ecd6dd8c0a6`
+- Migration version before/after: `0009_durable_rate_limits` / `0009_durable_rate_limits` (no schema migration)
+- Feature-flag/config version: `SOURCE_COMMIT` updated to `aeb23caf2d09d9598adfcf3c7ad330e8bcaa9681`; operational controls unchanged
+- Provider/config changes: no provider credentials changed; Daily Log drafts are browser-local and do not add server storage, SMS, email, payment, or tax-provider behavior
+- Backup/rollback target: prior successful deployment `d717edd7-bd08-43f9-8f6e-eb213e45f8af`; migration version unchanged
+- Automated gates: local `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test`, `npm run test:e2e`, `npm run test:ui:tools`, `npm run test:ui:shop-talk-news`, `npm audit --omit=dev`, and `git diff --check` passed; DB-backed integration tests skipped locally because `TEST_DATABASE_URL` is not configured
+- Post-deploy smoke tests: public `/api/health` passed and reported exact source commit `aeb23caf2d09d9598adfcf3c7ad330e8bcaa9681`; anonymous `/api/storage` returned 401 as expected for the private storage endpoint; `npm run monitor:production` passed with PostgreSQL/S3-compatible dependencies healthy, operational controls disabled, and seven anonymous private-route checks
+- Rendered UI evidence: `npm run test:ui:tools` covered Tools hub, Heavy 16th, Estimate Builder, Invoice Draft, Daily Log, and Material Takeoff at 1440x900 and 390x844 with no horizontal overflow and zero console/page errors. `npm run test:ui:shop-talk-news` covered the answer queue, reputation path, Answer now path, answer guidance, reaction toggle regression, Trade News original-source links, no horizontal overflow, and zero console/page errors at 1440x900 and 390x844. Screenshots are outside the repo at `C:\Users\zboyt\AppData\Local\Temp\rivt-tools-pass` and `C:\Users\zboyt\AppData\Local\Temp\rivt-shop-talk-news-pass`.
+- Health/readiness result: health reports PostgreSQL and S3-compatible storage healthy with exact source commit `aeb23caf2d09d9598adfcf3c7ad330e8bcaa9681`; production synthetic monitor reports signups and mutations enabled
+- Known risks: Daily Log is a device-local draft surface, not a server-backed legal/project record. Shop Talk reputation path is current-surface UX, not durable multi-device reputation. Full Gate A remains blocked by real external error monitoring/paging, incident rehearsal, RPO/RTO policy approval, backup retention/cadence approval, support/legal/founder signoff, physical/deeper manual accessibility-device evidence, and production-grade server Shop Talk posts/reactions/reputation if promoted into launch scope.
+- Rollback performed/result: not required
+- Approval: Packet 08 daily engagement loop slice accepted as controllable UX hardening evidence; overall Gate A not approved
+
+## Previous Production - Packet 08 Shop Talk Answer Queue
 
 - Environment: Production (`https://rivt.pro`)
 - Date/time/timezone: 2026-06-21 19:27 America/New_York
