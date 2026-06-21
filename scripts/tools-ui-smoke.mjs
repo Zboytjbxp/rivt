@@ -131,10 +131,16 @@ async function runToolsFlow(page, viewportName) {
 
   await page.getByRole("button", { name: /Invoice draft/i }).click();
   await page.getByRole("heading", { name: "Invoice draft" }).waitFor({ timeout: 15_000 });
+  await page.getByLabel("Template name").fill(`${viewportName} invoice template`);
+  await page.getByRole("button", { name: "Save template" }).click();
+  await page.getByText("Template saved on this device.", { exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByRole("button", { name: "Load" }).first().waitFor({ timeout: 15_000 });
   await page.getByLabel("Recipient email").fill("billing@example.com");
   await page.getByLabel("Recipient phone").fill("+19045550123");
   await page.getByRole("link", { name: "Email draft" }).waitFor({ timeout: 15_000 });
   await page.getByRole("link", { name: "Text draft" }).waitFor({ timeout: 15_000 });
+  await page.getByRole("heading", { name: "Printable invoice" }).waitFor({ timeout: 15_000 });
+  await page.getByLabel("Printable invoice preview").getByText("Total due", { exact: true }).waitFor({ timeout: 15_000 });
   await page.getByText("Email/text delivery is not represented as production-ready", { exact: false }).waitFor({ timeout: 15_000 });
   await assertNoHorizontalOverflow(page);
   await page.screenshot({ path: path.join(screenshotDir, `${viewportName}-invoice.png`), fullPage: true });

@@ -482,6 +482,34 @@ interface InvoiceLine {
   rate: number;
 }
 
+interface InvoiceTemplate {
+  id: string;
+  name: string;
+  savedAt: string;
+  invoiceNumber: string;
+  billTo: string;
+  payTo: string;
+  terms: string;
+  paymentMethod: string;
+  recipientEmail: string;
+  recipientPhone: string;
+  taxPct: number;
+  lines: InvoiceLine[];
+}
+
+const invoiceTemplateStorageKey = "rivt.invoiceTemplates.v1";
+
+function readInvoiceTemplates() {
+  try {
+    const stored = localStorage.getItem(invoiceTemplateStorageKey);
+    if (!stored) return [];
+    const parsed = JSON.parse(stored) as InvoiceTemplate[];
+    return Array.isArray(parsed) ? parsed.slice(0, 8) : [];
+  } catch {
+    return [];
+  }
+}
+
 function InvoiceDraftTool({ activeJob }: { activeJob: Job | null }) {
   const [invoiceNumber, setInvoiceNumber] = useState(activeJob ? `RIVT-${activeJob.id}` : "RIVT-DRAFT");
   const [billTo, setBillTo] = useState(activeJob?.contractor ?? "");
@@ -493,6 +521,9 @@ function InvoiceDraftTool({ activeJob }: { activeJob: Job | null }) {
   const [taxPct, setTaxPct] = useState(0);
   const [copied, setCopied] = useState(false);
   const [downloaded, setDownloaded] = useState(false);
+  const [templates, setTemplates] = useState<InvoiceTemplate[]>(readInvoiceTemplates);
+  const [templateName, setTemplateName] = useState(activeJob ? `${activeJob.title} invoice` : "Standard invoice");
+  const [templateNotice, setTemplateNotice] = useState("");
   const [lines, setLines] = useState<InvoiceLine[]>([
     { id: "labor", description: "Labor", qty: activeJob?.durationHours ?? 8, rate: activeJob ? Math.max(45, Math.round(activeJob.pay / Math.max(1, activeJob.durationHours) * 0.78)) : 65 },
     { id: "materials", description: "Materials", qty: 1, rate: activeJob ? Math.max(50, Math.round(activeJob.pay * 0.2)) : 250 },
@@ -532,6 +563,54 @@ function InvoiceDraftTool({ activeJob }: { activeJob: Job | null }) {
     setLines((current) => current.length > 1 ? current.filter((line) => line.id !== id) : current);
   }
 
+  function persistTemplates(nextTemplates: InvoiceTemplate[], notice: string) {
+    const limited = nextTemplates.slice(0, 8);
+    setTemplates(limited);
+    setTemplateNotice(notice);
+    try {
+      localStorage.setItem(invoiceTemplateStorageKey, JSON.stringify(limited));
+    } catch {
+      setTemplateNotice("Template could not be saved on this device.");
+    }
+  }
+
+  function saveTemplate() {
+    const cleanName = templateName.trim() || "Invoice template";
+    const template: InvoiceTemplate = {
+      id: crypto.randomUUID(),
+      name: cleanName,
+      savedAt: new Date().toISOString(),
+      invoiceNumber,
+      billTo,
+      payTo,
+      terms,
+      paymentMethod,
+      recipientEmail,
+      recipientPhone,
+      taxPct,
+      lines: lines.map((line) => ({ ...line, id: crypto.randomUUID() })),
+    };
+    persistTemplates([template, ...templates.filter((item) => item.name.toLowerCase() !== cleanName.toLowerCase())], "Template saved on this device.");
+  }
+
+  function loadTemplate(template: InvoiceTemplate) {
+    setTemplateName(template.name);
+    setInvoiceNumber(template.invoiceNumber);
+    setBillTo(template.billTo);
+    setPayTo(template.payTo);
+    setTerms(template.terms);
+    setPaymentMethod(template.paymentMethod);
+    setRecipientEmail(template.recipientEmail);
+    setRecipientPhone(template.recipientPhone);
+    setTaxPct(template.taxPct);
+    setLines(template.lines.length ? template.lines.map((line) => ({ ...line, id: crypto.randomUUID() })) : [{ id: crypto.randomUUID(), description: "", qty: 1, rate: 0 }]);
+    setTemplateNotice(`Loaded ${template.name}.`);
+  }
+
+  function deleteTemplate(templateId: string) {
+    persistTemplates(templates.filter((template) => template.id !== templateId), "Template removed from this device.");
+  }
+
   async function copyInvoice() {
     try {
       await navigator.clipboard.writeText(invoiceText);
@@ -554,27 +633,54 @@ function InvoiceDraftTool({ activeJob }: { activeJob: Job | null }) {
     setDownloaded(true);
   }
 
+  function printInvoice() {
+    window.print();
+  }
+
   return (
-    <div className="v2-tool-workbench">
-      <Panel className="v2-tool-panel" eyebrow="Invoice draft" title="Build a clean direct-payment invoice">
-        <div className="v2-tool-input-grid two">
-          <label>Invoice #<input value={invoiceNumber} onChange={(event) => setInvoiceNumber(event.target.value)} /></label>
-          <label>Terms<input value={terms} onChange={(event) => setTerms(event.target.value)} /></label>
-          <label>Bill to<input value={billTo} onChange={(event) => setBillTo(event.target.value)} placeholder="Contractor or company" /></label>
-          <label>Pay to<input value={payTo} onChange={(event) => setPayTo(event.target.value)} placeholder="Your company or name" /></label>
-          <label>Payment method<input value={paymentMethod} onChange={(event) => setPaymentMethod(event.target.value)} /></label>
-          <label>Tax %<input type="number" min="0" value={taxPct} onChange={(event) => setTaxPct(Math.max(0, Number(event.target.value) || 0))} /></label>
-          <label>Recipient email<input type="email" value={recipientEmail} onChange={(event) => setRecipientEmail(event.target.value)} placeholder="name@company.com" /></label>
-          <label>Recipient phone<input type="tel" value={recipientPhone} onChange={(event) => setRecipientPhone(event.target.value)} placeholder="+1 904 555 0123" /></label>
-        </div>
-        <div className="v2-invoice-lines">
+    <div className="v2-tool-workbench v2-invoice-workbench">
+      <Panel className="v2-tool-panel v2-invoice-builder-panel" eyebrow="Invoice draft" title="Build a clean direct-payment invoice">
+        <section className="v2-invoice-template-bar" aria-label="Invoice templates">
+          <label>Template name<input value={templateName} onChange={(event) => setTemplateName(event.target.value)} placeholder="Standard labor invoice" /></label>
+          <button type="button" className="v2-primary-button" onClick={saveTemplate}><FileText size={14} />Save template</button>
+          <small>Templates stay in this browser only. They are not production records.</small>
+        </section>
+        {templateNotice ? <p className="v2-record-notice" role="status">{templateNotice}</p> : null}
+        {templates.length ? (
+          <div className="v2-invoice-template-list" aria-label="Saved invoice templates">
+            {templates.map((template) => (
+              <article key={template.id}>
+                <span>
+                  <strong>{template.name}</strong>
+                  <small>Saved {new Date(template.savedAt).toLocaleDateString()}</small>
+                </span>
+                <button type="button" onClick={() => loadTemplate(template)}>Load</button>
+                <button type="button" aria-label={`Delete ${template.name}`} onClick={() => deleteTemplate(template.id)}><Trash2 size={14} /></button>
+              </article>
+            ))}
+          </div>
+        ) : null}
+        <section className="v2-invoice-builder-section" aria-label="Invoice details">
+          <h3>Invoice details</h3>
+          <div className="v2-tool-input-grid two">
+            <label>Invoice #<input value={invoiceNumber} onChange={(event) => setInvoiceNumber(event.target.value)} /></label>
+            <label>Terms<input value={terms} onChange={(event) => setTerms(event.target.value)} /></label>
+            <label>Bill to<input value={billTo} onChange={(event) => setBillTo(event.target.value)} placeholder="Contractor or company" /></label>
+            <label>Pay to<input value={payTo} onChange={(event) => setPayTo(event.target.value)} placeholder="Your company or name" /></label>
+            <label>Payment method<input value={paymentMethod} onChange={(event) => setPaymentMethod(event.target.value)} /></label>
+            <label>Tax %<input type="number" min="0" value={taxPct} onChange={(event) => setTaxPct(Math.max(0, Number(event.target.value) || 0))} /></label>
+            <label>Recipient email<input type="email" value={recipientEmail} onChange={(event) => setRecipientEmail(event.target.value)} placeholder="name@company.com" /></label>
+            <label>Recipient phone<input type="tel" value={recipientPhone} onChange={(event) => setRecipientPhone(event.target.value)} placeholder="+1 904 555 0123" /></label>
+          </div>
+        </section>
+        <div className="v2-invoice-lines" aria-label="Invoice line items">
           <div className="v2-invoice-lines-header">
             <span>Line items</span>
             <button type="button" onClick={addLine}><Plus size={14} />Add item</button>
           </div>
           {lines.map((line) => (
             <div className="v2-invoice-line" key={line.id}>
-              <input value={line.description} placeholder="Description" onChange={(event) => updateLine(line.id, "description", event.target.value)} />
+              <input aria-label="Line description" value={line.description} placeholder="Description" onChange={(event) => updateLine(line.id, "description", event.target.value)} />
               <input type="number" min="0" step="0.5" value={line.qty} aria-label={`${line.description || "Line"} quantity`} onChange={(event) => updateLine(line.id, "qty", Number(event.target.value) || 0)} />
               <input type="number" min="0" value={line.rate} aria-label={`${line.description || "Line"} rate`} onChange={(event) => updateLine(line.id, "rate", Number(event.target.value) || 0)} />
               <strong>{currency(line.qty * line.rate)}</strong>
@@ -584,29 +690,77 @@ function InvoiceDraftTool({ activeJob }: { activeJob: Job | null }) {
         </div>
       </Panel>
 
-      <Panel as="aside" className="v2-tool-panel v2-tool-summary-panel" eyebrow="Total due" title={currency(total)}>
-        <div className="v2-tool-breakdown">
-          <div><span>Subtotal</span><strong>{currency(subtotal)}</strong></div>
-          <div><span>Tax</span><strong>{currency(tax)}</strong></div>
-          <div><span>Terms</span><strong>{terms}</strong></div>
-          <div><span>Method</span><strong>{paymentMethod}</strong></div>
-        </div>
-        <p className="v2-tool-note">Email/text delivery is not represented as production-ready in Gate A. These actions open your device's email or SMS draft; RIVT does not send or log delivery yet.</p>
-        <div className="v2-invoice-delivery" aria-label="Invoice draft delivery">
-          <a href={recipientEmail ? emailHref : undefined} aria-disabled={!recipientEmail} onClick={(event) => { if (!recipientEmail) event.preventDefault(); }}>
-            <Mail size={15} />
-            Email draft
-          </a>
-          <a href={recipientPhone ? smsHref : undefined} aria-disabled={!recipientPhone} onClick={(event) => { if (!recipientPhone) event.preventDefault(); }}>
-            <MessageSquare size={15} />
-            Text draft
-          </a>
-        </div>
-        <div className="v2-tool-action-row">
-          <button type="button" className="v2-primary-button" onClick={copyInvoice}><Copy size={15} />{copied ? "Copied" : "Copy invoice"}</button>
-          <button type="button" onClick={downloadInvoice}><Download size={15} />{downloaded ? "Downloaded" : "Download TXT"}</button>
-        </div>
-      </Panel>
+      <aside className="v2-invoice-side-stack">
+        <Panel className="v2-tool-panel v2-tool-summary-panel v2-invoice-summary-panel" eyebrow="Total due" title={currency(total)}>
+          <div className="v2-tool-breakdown">
+            <div><span>Subtotal</span><strong>{currency(subtotal)}</strong></div>
+            <div><span>Tax</span><strong>{currency(tax)}</strong></div>
+            <div><span>Terms</span><strong>{terms}</strong></div>
+            <div><span>Method</span><strong>{paymentMethod}</strong></div>
+          </div>
+          <p className="v2-tool-note">Email/text delivery is not represented as production-ready in Gate A. These actions open your device's email or SMS draft; RIVT does not send or log delivery yet.</p>
+          <div className="v2-invoice-delivery" aria-label="Invoice draft delivery">
+            <a href={recipientEmail ? emailHref : undefined} aria-disabled={!recipientEmail} onClick={(event) => { if (!recipientEmail) event.preventDefault(); }}>
+              <Mail size={15} />
+              Email draft
+            </a>
+            <a href={recipientPhone ? smsHref : undefined} aria-disabled={!recipientPhone} onClick={(event) => { if (!recipientPhone) event.preventDefault(); }}>
+              <MessageSquare size={15} />
+              Text draft
+            </a>
+          </div>
+          <div className="v2-tool-action-row">
+            <button type="button" className="v2-primary-button" onClick={copyInvoice}><Copy size={15} />{copied ? "Copied" : "Copy invoice"}</button>
+            <button type="button" onClick={downloadInvoice}><Download size={15} />{downloaded ? "Downloaded" : "Download TXT"}</button>
+            <button type="button" onClick={printInvoice}><FileText size={15} />Print</button>
+          </div>
+        </Panel>
+
+        <Panel className="v2-tool-panel v2-invoice-preview-panel" eyebrow="Preview" title="Printable invoice">
+          <article className="v2-invoice-print-preview" aria-label="Printable invoice preview">
+            <header>
+              <div>
+                <strong>RIVT</strong>
+                <span>Direct-payment invoice draft</span>
+              </div>
+              <aside>
+                <span>Invoice</span>
+                <strong>{invoiceNumber || "RIVT-DRAFT"}</strong>
+              </aside>
+            </header>
+            <section className="v2-invoice-preview-meta">
+              <div><span>Bill to</span><strong>{billTo || "Contractor / company"}</strong></div>
+              <div><span>Pay to</span><strong>{payTo || "Your company / name"}</strong></div>
+              <div><span>Job</span><strong>{activeJob?.title ?? "Unlinked work"}</strong></div>
+              <div><span>Terms</span><strong>{terms}</strong></div>
+            </section>
+            <table>
+              <thead>
+                <tr><th>Description</th><th>Qty</th><th>Rate</th><th>Total</th></tr>
+              </thead>
+              <tbody>
+                {lines.map((line) => (
+                  <tr key={line.id}>
+                    <td>{line.description || "Line item"}</td>
+                    <td>{formatNumber(line.qty)}</td>
+                    <td>{currency(line.rate)}</td>
+                    <td>{currency(line.qty * line.rate)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <section className="v2-invoice-preview-totals">
+              <div><span>Subtotal</span><strong>{currency(subtotal)}</strong></div>
+              <div><span>Tax</span><strong>{currency(tax)}</strong></div>
+              <div><span>Total due</span><strong>{currency(total)}</strong></div>
+            </section>
+            <footer>
+              <span>{paymentMethod}</span>
+              <p>RIVT records direct-payment details only. RIVT does not process, escrow, or hold job payments.</p>
+            </footer>
+          </article>
+        </Panel>
+      </aside>
     </div>
   );
 }
