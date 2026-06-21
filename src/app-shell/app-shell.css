@@ -361,12 +361,19 @@
 }
 
 .v2-search-panel button {
+  display: inline-flex;
+  min-width: 44px;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 8px;
   border: 0;
   background: transparent;
   color: var(--v2-text-muted);
   font: inherit;
   font-size: 12px;
   font-weight: 700;
+  line-height: 1;
 }
 
 .v2-mobile-nav {
@@ -477,6 +484,8 @@
 
   .v2-search-panel {
     min-height: 54px;
+    gap: 8px;
+    padding-inline: 12px 8px;
   }
 
   .rivt-v2 .guest-banner {
