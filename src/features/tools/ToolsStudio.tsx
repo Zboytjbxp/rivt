@@ -12,9 +12,12 @@ import {
   Image,
   LayoutGrid,
   ListChecks,
+  Mail,
+  MessageSquare,
   RefreshCw,
   Plus,
   ReceiptText,
+  Ruler,
   Scale,
   Trash2,
   Wrench,
@@ -72,6 +75,32 @@ function formatNumber(value: number, digits = 1) {
   return Number.isInteger(value) ? String(value) : value.toFixed(digits);
 }
 
+function gcd(a: number, b: number): number {
+  return b ? gcd(b, a % b) : Math.abs(a);
+}
+
+function formatInchesAsFeet(totalInches: number) {
+  const safeInches = Math.max(0, totalInches);
+  const feet = Math.floor(safeInches / 12);
+  const remainder = safeInches - feet * 12;
+  const wholeInches = Math.floor(remainder);
+  const sixteenths = Math.round((remainder - wholeInches) * 16);
+  const normalizedWhole = sixteenths === 16 ? wholeInches + 1 : wholeInches;
+  const normalizedSixteenths = sixteenths === 16 ? 0 : sixteenths;
+  const normalizedFeet = normalizedWhole >= 12 ? feet + 1 : feet;
+  const normalizedInches = normalizedWhole >= 12 ? normalizedWhole - 12 : normalizedWhole;
+
+  const parts = [];
+  if (normalizedFeet) parts.push(`${normalizedFeet} ft`);
+  if (normalizedInches || normalizedSixteenths || !parts.length) {
+    const divisor = normalizedSixteenths ? gcd(normalizedSixteenths, 16) : 1;
+    const fraction = normalizedSixteenths ? ` ${normalizedSixteenths / divisor}/${16 / divisor}` : "";
+    parts.push(`${normalizedInches}${fraction} in`);
+  }
+
+  return parts.join(" ");
+}
+
 function jobName(job: Job | null) {
   return job ? `${job.title} - ${job.location}` : "Standalone tool";
 }
@@ -85,6 +114,9 @@ function ToolCard({
   title,
   summary,
   action,
+  badge,
+  output,
+  detail,
   featured = false,
   onAction,
 }: {
@@ -92,15 +124,23 @@ function ToolCard({
   title: string;
   summary: string;
   action: string;
+  badge: string;
+  output: string;
+  detail: string;
   featured?: boolean;
   onAction: () => void;
 }) {
   return (
     <button type="button" className={featured ? "v2-tool-launch-card is-featured" : "v2-tool-launch-card"} onClick={onAction}>
       <span className="v2-tool-card-icon"><Icon size={19} /></span>
-      <span>
+      <span className="v2-tool-card-copy">
+        <small>{badge}</small>
         <strong>{title}</strong>
         <small>{summary}</small>
+      </span>
+      <span className="v2-tool-card-output">
+        <strong>{output}</strong>
+        <small>{detail}</small>
       </span>
       <em>{action}<ArrowRight size={14} /></em>
     </button>
@@ -153,28 +193,63 @@ function FieldCalculatorTool({ activeJob }: { activeJob: Job | null }) {
   const [spacingCount, setSpacingCount] = useState(5);
   const [wallAngle, setWallAngle] = useState(90);
   const [springAngle, setSpringAngle] = useState(52);
+  const [copied, setCopied] = useState(false);
 
   const decimalInches = Math.max(0, feet * 12 + inches + sixteenths / 16);
   const totalInches = decimalInches * Math.max(1, quantity);
   const totalFeet = totalInches / 12;
+  const singleLengthLabel = formatInchesAsFeet(decimalInches);
+  const totalLengthLabel = formatInchesAsFeet(totalInches);
   const equalSpacing = spacingRun / Math.max(1, spacingCount + 1);
   const miter = wallAngle / 2;
   const crownMiter = Math.atan(Math.sin((miter * Math.PI) / 180) / Math.tan((springAngle * Math.PI) / 180)) * (180 / Math.PI);
   const crownBevel = Math.asin(Math.cos((springAngle * Math.PI) / 180) * Math.cos((miter * Math.PI) / 180)) * (180 / Math.PI);
 
+  async function copyCalculatorResult() {
+    const result = [
+      "RIVT Heavy 16th",
+      `Each piece: ${singleLengthLabel} (${formatNumber(decimalInches, 3)} in)`,
+      `Quantity: ${quantity}`,
+      `Total: ${totalLengthLabel} (${formatNumber(totalInches, 3)} in)`,
+      `Equal spacing: ${formatNumber(equalSpacing, 3)} in on center`,
+      `Flat miter: ${formatNumber(miter, 1)} deg`,
+      `Crown: ${formatNumber(Math.abs(crownMiter), 1)} deg miter / ${formatNumber(Math.abs(crownBevel), 1)} deg bevel`,
+    ].join("\n");
+    try {
+      await navigator.clipboard.writeText(result);
+      setCopied(true);
+    } catch {
+      setCopied(false);
+    }
+  }
+
   return (
     <div className="v2-tool-workbench v2-calculator-workbench">
       <Panel className="v2-tool-panel" eyebrow="Field math" title="Heavy 16th calculator">
+        <div className="v2-tool-app-strip" aria-label="Calculator modes">
+          <span><Ruler size={15} /> Length</span>
+          <span>Spacing</span>
+          <span>Cuts</span>
+        </div>
         <div className="v2-tool-input-grid four">
           <label>Feet<input type="number" value={feet} min="0" onChange={(event) => setFeet(Math.max(0, Number(event.target.value) || 0))} /></label>
           <label>Inches<input type="number" value={inches} min="0" max="11" onChange={(event) => setInches(Math.max(0, Math.min(11, Number(event.target.value) || 0)))} /></label>
           <label>16ths<input type="number" value={sixteenths} min="0" max="15" onChange={(event) => setSixteenths(Math.max(0, Math.min(15, Number(event.target.value) || 0)))} /></label>
           <label>Qty<input type="number" value={quantity} min="1" onChange={(event) => setQuantity(Math.max(1, Number(event.target.value) || 1))} /></label>
         </div>
-        <div className="v2-tool-result-hero">
+        <div className="v2-tool-result-hero v2-calculator-hero">
           <span>Total length</span>
-          <strong>{formatNumber(totalFeet, 2)} ft</strong>
-          <small>{formatNumber(totalInches, 2)} in across {quantity} piece{quantity === 1 ? "" : "s"}</small>
+          <strong>{totalLengthLabel}</strong>
+          <small>{formatNumber(totalFeet, 2)} ft / {formatNumber(totalInches, 2)} in across {quantity} piece{quantity === 1 ? "" : "s"}</small>
+          <button type="button" onClick={copyCalculatorResult}>
+            <Copy size={15} />
+            {copied ? "Copied" : "Copy result"}
+          </button>
+        </div>
+        <div className="v2-tool-result-grid compact">
+          <article><span>Each piece</span><strong>{singleLengthLabel}</strong></article>
+          <article><span>Decimal</span><strong>{formatNumber(decimalInches, 3)} in</strong></article>
+          <article><span>Quantity</span><strong>{quantity}</strong></article>
         </div>
         <div className="v2-tool-input-grid two">
           <label>Run length (in)<input type="number" value={spacingRun} min="1" onChange={(event) => setSpacingRun(Math.max(1, Number(event.target.value) || 1))} /></label>
@@ -223,6 +298,8 @@ function EstimateTool({ activeJob }: { activeJob: Job | null }) {
   const low = Math.floor((target * 0.92) / 25) * 25;
   const high = Math.ceil((target * 1.12) / 25) * 25;
   const days = Math.max(0.5, laborHours / Math.max(1, crewSize) / 7);
+  const marginShare = target > 0 ? Math.min(100, Math.round(((margin + contingency) / target) * 100)) : 0;
+  const laborShare = target > 0 ? Math.min(100, Math.round((labor / target) * 100)) : 0;
 
   async function copySummary() {
     const summary = [
@@ -263,6 +340,10 @@ function EstimateTool({ activeJob }: { activeJob: Job | null }) {
           <strong>{currency(target)}</strong>
           <small>{formatNumber(days, 1)} working days estimated</small>
         </div>
+        <div className="v2-estimate-meter" aria-label="Estimate composition">
+          <div><span style={{ width: `${laborShare}%` }} /></div>
+          <small>{laborShare}% labor load - {marginShare}% margin/contingency cushion</small>
+        </div>
         <div className="v2-tool-breakdown">
           <div><span>Labor</span><strong>{currency(labor)}</strong></div>
           <div><span>Materials</span><strong>{currency(materials)}</strong></div>
@@ -292,6 +373,8 @@ function InvoiceDraftTool({ activeJob }: { activeJob: Job | null }) {
   const [payTo, setPayTo] = useState("");
   const [terms, setTerms] = useState("Due on completion");
   const [paymentMethod, setPaymentMethod] = useState("Direct payment");
+  const [recipientEmail, setRecipientEmail] = useState("");
+  const [recipientPhone, setRecipientPhone] = useState("");
   const [taxPct, setTaxPct] = useState(0);
   const [copied, setCopied] = useState(false);
   const [downloaded, setDownloaded] = useState(false);
@@ -319,6 +402,8 @@ function InvoiceDraftTool({ activeJob }: { activeJob: Job | null }) {
     `Payment method: ${paymentMethod}`,
     "RIVT records direct-payment details only. RIVT does not process, escrow, or hold job payments.",
   ].join("\n"), [activeJob, billTo, invoiceNumber, lines, paymentMethod, payTo, subtotal, tax, terms, total]);
+  const emailHref = `mailto:${encodeURIComponent(recipientEmail)}?subject=${encodeURIComponent(`Invoice ${invoiceNumber}`)}&body=${encodeURIComponent(invoiceText)}`;
+  const smsHref = `sms:${encodeURIComponent(recipientPhone)}?body=${encodeURIComponent(`RIVT invoice ${invoiceNumber}: ${currency(total)} due. ${terms}. ${paymentMethod}.`)}`;
 
   function updateLine(id: string, field: keyof InvoiceLine, value: string | number) {
     setLines((current) => current.map((line) => line.id === id ? { ...line, [field]: value } : line));
@@ -364,6 +449,8 @@ function InvoiceDraftTool({ activeJob }: { activeJob: Job | null }) {
           <label>Pay to<input value={payTo} onChange={(event) => setPayTo(event.target.value)} placeholder="Your company or name" /></label>
           <label>Payment method<input value={paymentMethod} onChange={(event) => setPaymentMethod(event.target.value)} /></label>
           <label>Tax %<input type="number" min="0" value={taxPct} onChange={(event) => setTaxPct(Math.max(0, Number(event.target.value) || 0))} /></label>
+          <label>Recipient email<input type="email" value={recipientEmail} onChange={(event) => setRecipientEmail(event.target.value)} placeholder="name@company.com" /></label>
+          <label>Recipient phone<input type="tel" value={recipientPhone} onChange={(event) => setRecipientPhone(event.target.value)} placeholder="+1 904 555 0123" /></label>
         </div>
         <div className="v2-invoice-lines">
           <div className="v2-invoice-lines-header">
@@ -389,7 +476,17 @@ function InvoiceDraftTool({ activeJob }: { activeJob: Job | null }) {
           <div><span>Terms</span><strong>{terms}</strong></div>
           <div><span>Method</span><strong>{paymentMethod}</strong></div>
         </div>
-        <p className="v2-tool-note">Email/text delivery is not represented as production-ready in Gate A. Use copy or download for pilot testing.</p>
+        <p className="v2-tool-note">Email/text delivery is not represented as production-ready in Gate A. These actions open your device's email or SMS draft; RIVT does not send or log delivery yet.</p>
+        <div className="v2-invoice-delivery" aria-label="Invoice draft delivery">
+          <a href={recipientEmail ? emailHref : undefined} aria-disabled={!recipientEmail} onClick={(event) => { if (!recipientEmail) event.preventDefault(); }}>
+            <Mail size={15} />
+            Email draft
+          </a>
+          <a href={recipientPhone ? smsHref : undefined} aria-disabled={!recipientPhone} onClick={(event) => { if (!recipientPhone) event.preventDefault(); }}>
+            <MessageSquare size={15} />
+            Text draft
+          </a>
+        </div>
         <div className="v2-tool-action-row">
           <button type="button" className="v2-primary-button" onClick={copyInvoice}><Copy size={15} />{copied ? "Copied" : "Copy invoice"}</button>
           <button type="button" onClick={downloadInvoice}><Download size={15} />{downloaded ? "Downloaded" : "Download TXT"}</button>
@@ -400,6 +497,12 @@ function InvoiceDraftTool({ activeJob }: { activeJob: Job | null }) {
 }
 
 function MaterialsTool({ activeJob }: { activeJob: Job | null }) {
+  const materialPresets = [
+    { label: "Sheet goods", waste: 10, cost: 3.25, sheetWidth: 48, sheetHeight: 96 },
+    { label: "Drywall", waste: 12, cost: 1.85, sheetWidth: 48, sheetHeight: 96 },
+    { label: "Flooring", waste: 8, cost: 4.75, sheetWidth: 48, sheetHeight: 48 },
+    { label: "Tile", waste: 15, cost: 7.5, sheetWidth: 12, sheetHeight: 24 },
+  ];
   const [areaLength, setAreaLength] = useState(12);
   const [areaWidth, setAreaWidth] = useState(10);
   const [wastePct, setWastePct] = useState(10);
@@ -409,6 +512,7 @@ function MaterialsTool({ activeJob }: { activeJob: Job | null }) {
   const [partWidth, setPartWidth] = useState(24);
   const [partHeight, setPartHeight] = useState(18);
   const [partQty, setPartQty] = useState(8);
+  const [presetName, setPresetName] = useState(materialPresets[0].label);
 
   const squareFeet = areaLength * areaWidth;
   const withWaste = squareFeet * (1 + wastePct / 100);
@@ -416,10 +520,31 @@ function MaterialsTool({ activeJob }: { activeJob: Job | null }) {
   const sheetArea = (sheetWidth * sheetHeight) / 144;
   const partArea = (partWidth * partHeight * partQty) / 144;
   const sheetsNeeded = Math.max(1, Math.ceil(partArea / Math.max(1, sheetArea)));
+  const wasteAdded = withWaste - squareFeet;
+
+  function applyPreset(preset: (typeof materialPresets)[number]) {
+    setPresetName(preset.label);
+    setWastePct(preset.waste);
+    setUnitCost(preset.cost);
+    setSheetWidth(preset.sheetWidth);
+    setSheetHeight(preset.sheetHeight);
+  }
 
   return (
     <div className="v2-tool-workbench">
       <Panel className="v2-tool-panel" eyebrow="Takeoff" title="Area, waste, and material cost">
+        <div className="v2-tool-preset-row" aria-label="Material presets">
+          {materialPresets.map((preset) => (
+            <button
+              key={preset.label}
+              type="button"
+              className={presetName === preset.label ? "active" : ""}
+              onClick={() => applyPreset(preset)}
+            >
+              {preset.label}
+            </button>
+          ))}
+        </div>
         <div className="v2-tool-input-grid">
           <label>Length (ft)<input type="number" min="0" value={areaLength} onChange={(event) => setAreaLength(Math.max(0, Number(event.target.value) || 0))} /></label>
           <label>Width (ft)<input type="number" min="0" value={areaWidth} onChange={(event) => setAreaWidth(Math.max(0, Number(event.target.value) || 0))} /></label>
@@ -429,6 +554,7 @@ function MaterialsTool({ activeJob }: { activeJob: Job | null }) {
         <div className="v2-tool-result-grid">
           <article><span>Base area</span><strong>{formatNumber(squareFeet)} sq ft</strong></article>
           <article><span>With waste</span><strong>{formatNumber(withWaste)} sq ft</strong></article>
+          <article><span>Waste added</span><strong>{formatNumber(wasteAdded)} sq ft</strong></article>
           <article><span>Material cost</span><strong>{currency(materialCost)}</strong></article>
         </div>
       </Panel>
@@ -925,11 +1051,57 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", onNavigate, 
       </section>
 
       <div className="v2-tool-launch-grid">
-        <ToolCard icon={Calculator} title="Heavy 16th" summary="Field length math, equal spacing, miter, and crown checks." action="Open" featured onAction={() => setActiveTool("calculator")} />
-        <ToolCard icon={Scale} title="Estimate builder" summary="Labor, material, overhead, margin, and target price range." action="Open" onAction={() => setActiveTool("estimate")} />
-        <ToolCard icon={ReceiptText} title="Invoice draft" summary="Line items, totals, terms, and direct-payment note." action="Open" onAction={() => setActiveTool("invoice")} />
-        <ToolCard icon={LayoutGrid} title="Material takeoff" summary="Area, waste, material cost, and rough sheet count." action="Open" onAction={() => setActiveTool("materials")} />
-        <ToolCard icon={FolderOpen} title="Records" summary="Server-backed closeout packets for accepted work." action="Open" onAction={onOpenRecords} />
+        <ToolCard
+          icon={Calculator}
+          title="Heavy 16th"
+          badge="Field calculator"
+          summary="Length math, equal spacing, miter, and crown checks."
+          output="Ft-in-16ths"
+          detail="Copy-ready result"
+          action="Open"
+          featured
+          onAction={() => setActiveTool("calculator")}
+        />
+        <ToolCard
+          icon={Scale}
+          title="Estimate builder"
+          badge="Pricing"
+          summary="Labor, material, overhead, margin, and target price range."
+          output="Target range"
+          detail="Copy estimate"
+          action="Open"
+          onAction={() => setActiveTool("estimate")}
+        />
+        <ToolCard
+          icon={ReceiptText}
+          title="Invoice draft"
+          badge="Direct pay"
+          summary="Line items, totals, terms, email draft, and text draft."
+          output="TXT / draft"
+          detail="No fake sending"
+          action="Open"
+          onAction={() => setActiveTool("invoice")}
+        />
+        <ToolCard
+          icon={LayoutGrid}
+          title="Material takeoff"
+          badge="Takeoff"
+          summary="Area, waste, material cost, presets, and rough sheet count."
+          output="Sq ft / sheets"
+          detail="Trade presets"
+          action="Open"
+          onAction={() => setActiveTool("materials")}
+        />
+        <ToolCard
+          icon={FolderOpen}
+          title="Records"
+          badge="Closeout"
+          summary="Server-backed closeout packets for accepted work."
+          output={`${activeWork.length}`}
+          detail="accepted records"
+          action="Open"
+          onAction={onOpenRecords}
+        />
       </div>
 
       <div className="v2-tools-grid">
