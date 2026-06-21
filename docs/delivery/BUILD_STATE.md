@@ -5,7 +5,7 @@ Current gate: Gate A launch hardening
 Current phase: Packet 08 authenticated accessibility smoke deployed; full Gate A approval remains blocked
 Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
-Production release commit: `5f3334b231114efb377899ea79bad6a48b353a21`
+Production release commit: `f846f700ee23c911a250b16afe1623723c9e760a`
 
 ## Source State
 
@@ -410,12 +410,12 @@ Local verification for this slice:
 
 Deployed on 2026-06-20:
 
-- Source commit: `5f3334b231114efb377899ea79bad6a48b353a21`
-- Railway deployment: `508c2a9c-5748-4341-9ec8-cdf427dac1fc`
+- Source commit: `f846f700ee23c911a250b16afe1623723c9e760a`
+- Railway deployment: `a229d32c-ebeb-48b5-a239-9983c28ace53`
 - `https://rivt.pro/api/health`: 200, source commit matched the release, PostgreSQL and S3-compatible storage healthy.
-- Authenticated UI smoke `ui-a11y-20260621002702-cbe0e5` created disposable contractor and tradesperson accounts, tested contractor mobile, tradesperson mobile, and contractor desktop shells, then closed both accounts.
-- Tested shells had top-bar search, messages, notifications, and profile controls; no role toggle; no More tab; no horizontal overflow; `consoleWarningsOrErrors: 0`; and `smallTargetCount: 0` on all tested viewports. The smoke now fails on missing top-bar controls, post-login console warnings/errors, or sub-44px controls.
-- Live hardening audit passed after deployment with exact source `5f3334b231114efb377899ea79bad6a48b353a21`, migration `0009_durable_rate_limits`, seven anonymous private-route checks returning 401, zero seed/demo findings, and counts of 3 active accounts, 0 public network profiles, 0 open jobs, 2 open support cases, 0 active restrictions, 115 quarantined legacy app-state rows, and 41 rate-limit windows.
+- Authenticated UI smoke `ui-a11y-20260621005027-1e207f` created disposable contractor and tradesperson accounts, tested contractor mobile, tradesperson mobile, and contractor desktop shells, then closed both accounts.
+- Tested shells had top-bar search, messages, notifications, and profile controls; no role toggle; no More tab; no horizontal overflow; `consoleWarningsOrErrors: 0`; and `smallTargetCount: 0` on all tested viewports. The smoke uses reduced-motion browser preference and now fails on missing top-bar controls, post-login console warnings/errors, sub-44px controls, unnamed keyboard focus targets, or keyboard focus not reaching search/primary navigation.
+- Live hardening audit passed after deployment with exact source `f846f700ee23c911a250b16afe1623723c9e760a`, migration `0009_durable_rate_limits`, seven anonymous private-route checks returning 401, zero seed/demo findings, and counts of 3 active accounts, 0 public network profiles, 0 open jobs, 2 open support cases, 0 active restrictions, 115 quarantined legacy app-state rows, and 49 rate-limit windows.
 
 ## Packet 08 Synthetic Monitoring Progress
 
