@@ -98,7 +98,21 @@ Gate A auth, write, and upload throttles use the PostgreSQL `rate_limit_windows`
 4. Record missing records, configuration, and repair actions.
 5. A successful backup job without restore proof does not close the requirement.
 
-Current blocker: the local workstation used for Packet 08 does not have `docker`, `psql`, or `pg_dump`, so the timed restore drill is not complete. Do not approve Gate A until a real isolated target is provisioned and the restore is timed.
+Use the restore drill verifier after the isolated target has been provisioned and restored:
+
+```text
+CONFIRM_RESTORE_TARGET_ISOLATED=true RESTORE_DATABASE_URL="postgresql://..." npm run restore:drill
+```
+
+When comparing a restored target against a live or snapshot source, set a read-only source URL:
+
+```text
+CONFIRM_RESTORE_TARGET_ISOLATED=true RESTORE_DATABASE_URL="postgresql://restore-target" RESTORE_SOURCE_DATABASE_URL="postgresql://source" npm run restore:drill
+```
+
+The verifier refuses to run without `CONFIRM_RESTORE_TARGET_ISOLATED=true`, checks the migration ledger, requires migration `0009_durable_rate_limits`, verifies critical Gate A tables, counts rows, and measures duration. With `RESTORE_SOURCE_DATABASE_URL` set, row counts must match unless `RESTORE_STRICT_COMPARE=false` is explicitly set for a documented scrubbed/sampled restore.
+
+Current blocker: the local workstation used for Packet 08 does not have `docker`, `psql`, or `pg_dump`, and no isolated target URL has been provided, so the timed restore drill is not complete. Do not approve Gate A until a real isolated target is provisioned, restored, verified, and timed.
 
 ## Provider Outage
 
