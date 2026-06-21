@@ -2,10 +2,10 @@
 
 Last updated: 2026-06-21 America/New_York
 Current gate: Gate A launch hardening
-Current phase: Packet 08 controllable UX hardening, Trade News polish, production UI smoke regression fixes, Tools studio release, Records workspace upgrade, UI system pass, shared UI primitives, Tools primitive alignment, Shop Talk command center, Tools app surface pass, Heavy 16th multi-mode calculator, Invoice Draft app upgrade, and Shop Talk reaction/social pulse pass verified; full Gate A approval remains blocked
+Current phase: Packet 08 controllable UX hardening, Trade News real-media and mobile layout pass, production UI smoke regression fixes, Tools studio release, Records workspace upgrade, UI system pass, shared UI primitives, Tools primitive alignment, Shop Talk command center, Tools app surface pass, Heavy 16th multi-mode calculator, Invoice Draft app upgrade, and Shop Talk reaction/social pulse pass verified; full Gate A approval remains blocked
 Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
-Production release commit: `1227e1cdba071889384006fca44403538977b8df`
+Production release commit: `a59eb47b9b3efc4eb8e60da835fc50d0cc912b5f`
 
 ## Source State
 
@@ -17,7 +17,21 @@ Packet 00 is merged on `master` at `4c199d903683e44d17b7985272c399c6d7a6cbd6`. T
 
 Do not discard or overwrite the pre-existing Trade News work when committing or splitting this packet.
 
-## Latest Packet 08 Pass - Shop Talk Reaction and Social Pulse
+## Latest Packet 08 Pass - Trade News Real Media and Mobile Layout
+
+- Deployed source `a59eb47b9b3efc4eb8e60da835fc50d0cc912b5f` through Railway deployment `4fb062bd-1c3e-474e-90df-fe42f4f2e1fa`.
+- Reworked the Trade News image pipeline so RSS media, article Open Graph/Twitter images, and source page `image_src` candidates are used before RIVT fallback topic thumbnails.
+- Added public-image safety filtering for local/private hosts, favicons, site logos, SVG/ICO placeholders, and credentialed URLs before exposing article images to the client.
+- Added `thumbnailKind` (`article`, `feed`, `fallback`) to `/api/news` responses so the frontend can treat real photos differently from fallback graphics.
+- Tightened Home and Shop Talk news thumbnails so real article images crop like media, fallback topic art is padded/contained, and the Shop Talk news rail no longer lets thumbnail aspect ratio overlap card text.
+- Compacted the mobile Trade News command/KPI area so the first article headline appears sooner on phone screens.
+- Expanded `npm run test:ui:shop-talk-news` to verify real-media classes, original-source links, reaction regression coverage, no horizontal overflow, and zero console/page errors at 1440x900 and 390x844.
+- Local gates passed: `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test`, `npm run test:e2e`, `npm run test:ui:shop-talk-news`, `npm audit --omit=dev`, and `git diff --check`; DB-backed integration tests still skip locally because `TEST_DATABASE_URL` is not configured.
+- Local `/api/news?location=Jacksonville, FL` probe returned 30 items with 24 `article`/`feed` thumbnails, 6 fallbacks, zero missing thumbnails, and zero missing source URLs.
+- Live checks passed: `/api/health` reported exact source `a59eb47b9b3efc4eb8e60da835fc50d0cc912b5f`, PostgreSQL and S3-compatible dependencies healthy, live `/api/news` returned 30 items with 24 `article`/`feed` thumbnails, 6 fallbacks, zero missing thumbnails, zero missing source URLs, and zero Google favicon thumbnails, and `npm run monitor:production` passed.
+- Remaining honesty boundary: some publishers do not expose usable article art, so RIVT fallback topic thumbnails remain intentional and should not be treated as a failure.
+
+## Packet 08 Pass - Shop Talk Reaction and Social Pulse
 
 - Deployed source `1227e1cdba071889384006fca44403538977b8df` through Railway deployment `740dfd5a-23ab-4509-bde3-0a0615a1f6fe`.
 - Fixed the founder-reported infinite Shop Talk like/dislike behavior in the current UI: thread and answer reactions now support one active reaction per signed-in user/device, switching between up/down moves the count, and clicking the same reaction clears it.

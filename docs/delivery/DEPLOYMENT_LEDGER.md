@@ -21,6 +21,25 @@ Add one entry per staging/production deployment.
 - Rollback performed/result:
 - Approval:
 
+## Current Production - Packet 08 Trade News Real Media and Mobile Layout
+
+- Environment: Production (`https://rivt.pro`)
+- Date/time/timezone: 2026-06-21 17:51 America/New_York
+- Deployer: Codex through authenticated Railway CLI
+- Source repository/branch: `Zboytjbxp/rivt`, `master`
+- Source commit: `a59eb47b9b3efc4eb8e60da835fc50d0cc912b5f`
+- Build/artifact ID: Railway deployment `4fb062bd-1c3e-474e-90df-fe42f4f2e1fa`
+- Migration version before/after: `0009_durable_rate_limits` / `0009_durable_rate_limits` (no schema migration)
+- Feature-flag/config version: `SOURCE_COMMIT` updated to `a59eb47b9b3efc4eb8e60da835fc50d0cc912b5f`; operational controls unchanged
+- Provider/config changes: no provider credentials changed; Trade News now enriches RSS/feed items with public article images when source pages expose usable media
+- Backup/rollback target: prior successful deployment `740dfd5a-23ab-4509-bde3-0a0615a1f6fe`; migration version unchanged
+- Automated gates: local `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test`, `npm run test:e2e`, `npm run test:ui:shop-talk-news`, `npm audit --omit=dev`, and `git diff --check` passed; DB-backed integration tests skipped locally because `TEST_DATABASE_URL` is not configured
+- Post-deploy smoke tests: public `/api/health` passed and reported exact source commit; live `/api/news?location=Jacksonville%2C%20FL` returned 30 items with 24 `article`/`feed` thumbnails, 6 fallbacks, 0 missing thumbnails, 0 missing source URLs, and 0 Google favicon thumbnails; `npm run monitor:production` passed
+- Health/readiness result: health reports PostgreSQL and S3-compatible storage healthy with exact source commit `a59eb47b9b3efc4eb8e60da835fc50d0cc912b5f`; production synthetic monitor reports signups and mutations enabled
+- Known risks: publishers may omit or block article images, so RIVT fallback topic thumbnails remain expected; full Gate A remains blocked by real external error monitoring/paging, incident rehearsal, RPO/RTO policy approval, backup retention/cadence approval, support/legal/founder signoff, and physical/deeper manual accessibility/device evidence
+- Rollback performed/result: not required
+- Approval: Packet 08 Trade News real-media/mobile-layout slice accepted; overall Gate A not approved
+
 ## Packet 00 Production Deployment
 
 - Environment: Production (`https://rivt.pro`)
