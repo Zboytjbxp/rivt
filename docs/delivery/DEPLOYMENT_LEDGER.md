@@ -574,3 +574,23 @@ Add one entry per staging/production deployment.
 - Known risks: full Gate A remains blocked by dedicated error monitoring/paging, completed incident-routing fields and rehearsal, founder/support/legal-safety approvals, RPO/RTO policy approval, physical/deeper manual accessibility-device matrix, remaining `src/App.tsx` strangler/component cleanup, and production-grade server invoice/SMS delivery if promoted from Gate B
 - Rollback performed/result: not required
 - Approval: Tools app surface pass accepted as controllable UX hardening evidence; overall Gate A not approved
+
+## Current Production - Packet 08 Heavy 16th Multi-Mode Calculator Pass
+
+- Environment: Production (`https://rivt.pro`)
+- Date/time/timezone: 2026-06-21 16:35 America/New_York
+- Deployer: Codex through authenticated Railway CLI
+- Source repository/branch: `Zboytjbxp/rivt`, `master`
+- Source commit: `444fc96b49f9b7cb60e7ca547a300d3df3000891`
+- Build/artifact ID: Railway deployment `6bd7f24d-6948-4a2c-a9c2-bf77b1a95abe`
+- Migration version before/after: unchanged (`0009_durable_rate_limits`)
+- Feature-flag/config version: `SOURCE_COMMIT` updated to `444fc96b49f9b7cb60e7ca547a300d3df3000891`; no operational-control flags changed
+- Provider/config changes: no provider credentials changed
+- Backup/rollback target: prior successful Tools app surface deployment `14bb03aa-9e7d-41f1-a0d0-24335fb216b8`; no migration change
+- Automated gates: local `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test`, `npm run test:e2e`, `npm run test:ui:tools`, `npm audit --omit=dev`, and `git diff --check` passed; DB-backed integration tests skipped locally because `TEST_DATABASE_URL` is not configured
+- Post-deploy smoke tests: `https://rivt.pro/api/health` returned exact source commit `444fc96b49f9b7cb60e7ca547a300d3df3000891`; `npm run monitor:production` passed externally with PostgreSQL/S3-compatible dependencies healthy, operational controls disabled, seven anonymous private-route checks, and 513 ms duration
+- Rendered UI evidence: `npm run test:ui:tools` now covers the Heavy 16th Length, Spacing, Cuts, and Hardware modes plus Estimate Builder, Invoice Draft, and Material Takeoff at 1440x900 and 390x844. Screenshots are outside the repo at `C:\Users\zboyt\AppData\Local\Temp\rivt-tools-pass`.
+- Health/readiness result: health reported PostgreSQL and S3-compatible storage healthy with exact source commit `444fc96b49f9b7cb60e7ca547a300d3df3000891`
+- Known risks: full Gate A remains blocked by dedicated error monitoring/paging, completed incident-routing fields and rehearsal, founder/support/legal-safety approvals, RPO/RTO policy approval, physical/deeper manual accessibility-device matrix, remaining `src/App.tsx` strangler/component cleanup, and production-grade server invoice/SMS delivery if promoted from Gate B
+- Rollback performed/result: not required
+- Approval: Heavy 16th multi-mode calculator accepted as controllable Tools UX hardening evidence; overall Gate A not approved

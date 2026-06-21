@@ -2,10 +2,10 @@
 
 Last updated: 2026-06-21 America/New_York
 Current gate: Gate A launch hardening
-Current phase: Packet 08 controllable UX hardening, Trade News polish, production UI smoke regression fixes, Tools studio release, Records workspace upgrade, UI system pass, shared UI primitives, Tools primitive alignment, Shop Talk command center, and Tools app surface pass verified; full Gate A approval remains blocked
+Current phase: Packet 08 controllable UX hardening, Trade News polish, production UI smoke regression fixes, Tools studio release, Records workspace upgrade, UI system pass, shared UI primitives, Tools primitive alignment, Shop Talk command center, Tools app surface pass, and Heavy 16th multi-mode calculator verified; full Gate A approval remains blocked
 Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
-Production release commit: `ad5ff7d2ed174634c4bde82bb0b7b23d8a058e8f`
+Production release commit: `444fc96b49f9b7cb60e7ca547a300d3df3000891`
 
 ## Source State
 
@@ -17,7 +17,20 @@ Packet 00 is merged on `master` at `4c199d903683e44d17b7985272c399c6d7a6cbd6`. T
 
 Do not discard or overwrite the pre-existing Trade News work when committing or splitting this packet.
 
-## Latest Packet 08 Pass - Tools App Surface
+## Latest Packet 08 Pass - Heavy 16th Multi-Mode Calculator
+
+- Deployed source `444fc96b49f9b7cb60e7ca547a300d3df3000891` through Railway deployment `6bd7f24d-6948-4a2c-a9c2-bf77b1a95abe`.
+- Turned Heavy 16th from a static all-in-one panel into a real mini-app with separate Length, Spacing, Cuts, and Hardware modes.
+- Added equal-spacing inputs for run length, item count, item width, and end reveal with first-center, last-center, open-gap, and center-to-center outputs.
+- Added cut presets, inside/outside and left/right orientation controls, wall-angle and spring-angle inputs, plus flat miter, crown miter, and crown bevel outputs.
+- Added a hardware layout mode for pulls and knobs with centerline, bore marks, and reference-edge height output.
+- Added a persistent field-card summary with total length, spacing, cuts, hardware, and copy-ready output while preserving the Gate A honesty boundary.
+- Raised calculator mode and preset controls to the 44px tap-target floor.
+- Expanded `npm run test:ui:tools` and `npm run test:e2e` coverage so the new calculator modes are exercised at desktop and mobile widths.
+- Local gates passed: `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test`, `npm run test:e2e`, `npm run test:ui:tools`, `npm audit --omit=dev`, and `git diff --check`; DB-backed integration tests still skip locally because `TEST_DATABASE_URL` is not configured.
+- Live checks passed: `/api/health` reported exact source `444fc96b49f9b7cb60e7ca547a300d3df3000891`, PostgreSQL and S3-compatible dependencies healthy, and `npm run monitor:production` passed.
+
+## Packet 08 Pass - Tools App Surface
 
 - Deployed source `ad5ff7d2ed174634c4bde82bb0b7b23d8a058e8f` through Railway deployment `14bb03aa-9e7d-41f1-a0d0-24335fb216b8`.
 - Reworked the active Tools tab app surfaces so the hub reads like a utility suite instead of a generic card grid: each tool now has a clear app category, output signal, detail line, and stable action.
