@@ -92,9 +92,11 @@
 .v2-inbox-panel > header button,
 .v2-inbox-job-row {
   display: inline-flex;
+  min-height: 44px;
   align-items: center;
   justify-content: center;
   gap: 6px;
+  padding: 0 10px;
   border: 0;
   background: transparent;
   color: var(--v2-accent);
@@ -128,7 +130,7 @@
 }
 
 .v2-inbox-alert button {
-  min-height: 34px;
+  min-height: 44px;
   padding: 0 12px;
   border: 1px solid var(--v2-border);
   border-radius: var(--v2-radius-sm);
@@ -305,7 +307,7 @@
 
 .v2-inbox-composer-actions button {
   display: inline-flex;
-  min-height: 40px;
+  min-height: 44px;
   align-items: center;
   justify-content: center;
   gap: 7px;
@@ -420,7 +422,7 @@
 }
 
 .v2-inbox-empty button {
-  min-height: 38px;
+  min-height: 44px;
   margin-top: 4px;
   padding: 0 13px;
   border: 1px solid var(--v2-border);
