@@ -2,7 +2,7 @@
 
 Last updated: 2026-06-20 America/New_York
 Current gate: Gate A launch hardening
-Current phase: Packet 08 backup-artifact restore tooling added; full Gate A approval remains blocked
+Current phase: Packet 08 backup-artifact and incident-readiness tooling added; full Gate A approval remains blocked
 Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
 Production release commit: `e0ac24d143c29f1f17c6570debbd576f49538597`
@@ -428,6 +428,16 @@ Implemented on 2026-06-20:
 - Latest local run against `https://rivt.pro` passed with source `f5a68d9c16364c94dd727bb91e03a25f33e283df`, operational controls disabled, seven anonymous private checks, and a 606 ms duration.
 - This is partial monitoring progress only. Dedicated error monitoring, alert routing, paging destination, named incident owner, and rehearsal remain launch blockers.
 
+## Packet 08 Incident Readiness Tooling Progress
+
+Implemented on 2026-06-20:
+
+- Added `docs/operations/incident-routing.json` as the machine-readable incident owner, support-hours, alert-destination, rehearsal, and approval source.
+- Added `scripts/incident-readiness-check.js` and `npm run incident:readiness`.
+- Added unit coverage proving incident readiness passes only with owners, support hours, synthetic monitoring, error monitoring, paging, recent rehearsal, and founder/support/legal-safety approvals.
+- Updated the production synthetic GitHub issue workflow so a failing monitor issue includes incident-routing context: primary owner, backup owner, dedicated error-monitoring status, and paging status.
+- Current readiness output is blocked, with primary owner recorded as Michael at `support@rivt.pro`, synthetic monitoring configured, and these missing blockers: backup owner, founder-approved support hours, dedicated error monitoring, paging route, incident rehearsal, founder approval, support approval, and legal/safety approval.
+
 ## Packet 08 Restore Drill Tooling Progress
 
 Implemented on 2026-06-20:
@@ -460,7 +470,7 @@ Backup-artifact restore tooling progress on 2026-06-20:
 
 ## Next Exact Task
 
-Re-authenticate Railway, provision a fresh temporary isolated PostgreSQL target, run `npm run backup:logical-artifact` to create a current named encrypted backup object, run `npm run restore:logical-artifact -- --apply-migrations` against the isolated target, run `npm run restore:drill`, delete the temporary target, and record RPO/RTO evidence. Then wire dedicated error monitoring/alerts, paging, and named incident-owner routing; finish support/legal/founder approvals; and complete the physical/deeper manual accessibility-device matrix before named-cohort launch.
+Re-authenticate Railway, provision a fresh temporary isolated PostgreSQL target, run `npm run backup:logical-artifact` to create a current named encrypted backup object, run `npm run restore:logical-artifact -- --apply-migrations` against the isolated target, run `npm run restore:drill`, delete the temporary target, and record RPO/RTO evidence. Then configure a real dedicated error-monitoring provider and paging/escalation route, fill the backup owner/support-hours/approval fields in `docs/operations/incident-routing.json`, run `npm run incident:readiness -- --require-ready`, and complete the physical/deeper manual accessibility-device matrix before named-cohort launch.
 
 ## Blocking Founder Decisions
 

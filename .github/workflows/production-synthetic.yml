@@ -56,6 +56,15 @@ jobs:
             const marker = "<!-- rivt-production-synthetic-incident -->";
             const title = "Production synthetic check failing";
             const runUrl = `https://github.com/${owner}/${repo}/actions/runs/${context.runId}`;
+            const routing = JSON.parse(fs.readFileSync("docs/operations/incident-routing.json", "utf8"));
+            const primaryOwner = routing.primaryOwner
+              ? `${routing.primaryOwner.name} <${routing.primaryOwner.email}>`
+              : "not configured";
+            const backupOwner = routing.backupOwner && routing.backupOwner.email !== "TBD"
+              ? `${routing.backupOwner.name} <${routing.backupOwner.email}>`
+              : "missing";
+            const errorMonitoring = routing.alertDestinations?.find((destination) => destination.category === "error_monitoring")?.status ?? "missing";
+            const paging = routing.alertDestinations?.find((destination) => destination.category === "paging")?.status ?? "missing";
             const log = fs.existsSync("production-monitor.log")
               ? fs.readFileSync("production-monitor.log", "utf8").slice(-6000)
               : "No monitor log was captured.";
@@ -68,6 +77,12 @@ jobs:
               `Workflow: ${context.workflow}`,
               `Ref: ${context.ref}`,
               `Commit: ${context.sha}`,
+              "",
+              "Incident routing:",
+              `- Primary owner: ${primaryOwner}`,
+              `- Backup owner: ${backupOwner}`,
+              `- Dedicated error monitoring: ${errorMonitoring}`,
+              `- Paging route: ${paging}`,
               "",
               "Immediate triage:",
               "1. Check https://rivt.pro/api/health and confirm the deployed commit, PostgreSQL, and object storage status.",

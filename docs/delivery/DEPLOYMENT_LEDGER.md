@@ -306,3 +306,22 @@ Add one entry per staging/production deployment.
 - Known risks: live backup-artifact restore/RPO evidence remains blocked until Railway is re-authenticated, a fresh temporary isolated PostgreSQL target is provisioned, a current named backup object is created/restored, and the target is deleted after verification
 - Rollback performed/result: not required
 - Approval: tooling progress accepted as partial evidence only; overall Gate A not approved
+
+## Local Packet 08 - Incident Readiness Gate
+
+- Environment: Local repository tooling plus GitHub workflow source; no production deploy performed in this slice
+- Date/time/timezone: 2026-06-20 23:25 America/New_York
+- Deployer: Codex
+- Source repository/branch: `Zboytjbxp/rivt`, `master`
+- Source commit: pending local changes
+- Build/artifact ID: not deployed
+- Migration version before/after: unchanged (`0009_durable_rate_limits`)
+- Feature-flag/config version: no app runtime flags changed
+- Provider/config changes: no provider credentials changed; no dedicated error-monitoring or paging provider was configured
+- Backup/rollback target: prior pushed source `43117cc Add backup artifact restore tooling`; no deploy
+- Automated gates: `npm run incident:readiness -- --json` returned blocked with primary owner `Michael <support@rivt.pro>` and synthetic monitoring configured; missing findings were backup owner, support hours, dedicated error monitoring, paging route, incident rehearsal, founder approval, support approval, and legal/safety approval. `npm run test:unit` passed with 25 tests including incident-readiness coverage. `npm run lint:security` passed with the new script included. `node --check scripts/incident-readiness-check.js` passed.
+- Post-deploy smoke tests: none; no deployment occurred
+- Health/readiness result: not rechecked because Railway CLI remains unauthorized
+- Known risks: full Gate A remains blocked until `docs/operations/incident-routing.json` is completed with real owner/escalation/provider/approval evidence and `npm run incident:readiness -- --require-ready` passes
+- Rollback performed/result: not required
+- Approval: incident-readiness tooling accepted as partial evidence only; overall Gate A not approved

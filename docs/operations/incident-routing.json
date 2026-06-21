@@ -1,0 +1,62 @@
+{
+  "version": 1,
+  "status": "blocked",
+  "primaryOwner": {
+    "name": "Michael",
+    "role": "Founder / incident commander",
+    "email": "support@rivt.pro",
+    "phoneStatus": "not_recorded"
+  },
+  "backupOwner": {
+    "name": "TBD",
+    "role": "Backup incident owner",
+    "email": "TBD",
+    "phoneStatus": "missing"
+  },
+  "supportHours": {
+    "timezone": "America/New_York",
+    "coverage": "TBD",
+    "launchExpectation": "Founder-approved support hours are required before named-cohort launch."
+  },
+  "alertDestinations": [
+    {
+      "id": "github-production-synthetic",
+      "category": "synthetic_monitor",
+      "status": "configured",
+      "route": "GitHub issue: Production synthetic check failing",
+      "frequency": "30 minutes"
+    },
+    {
+      "id": "dedicated-error-monitoring",
+      "category": "error_monitoring",
+      "status": "missing",
+      "provider": "TBD",
+      "route": "TBD"
+    },
+    {
+      "id": "paging",
+      "category": "paging",
+      "status": "missing",
+      "provider": "TBD",
+      "route": "TBD"
+    }
+  ],
+  "rehearsals": [],
+  "approvals": {
+    "founder": {
+      "status": "missing",
+      "approvedBy": "TBD",
+      "approvedAt": null
+    },
+    "support": {
+      "status": "missing",
+      "approvedBy": "TBD",
+      "approvedAt": null
+    },
+    "legalSafety": {
+      "status": "missing",
+      "approvedBy": "TBD",
+      "approvedAt": null
+    }
+  }
+}

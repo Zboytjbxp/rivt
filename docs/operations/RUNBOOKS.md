@@ -41,6 +41,33 @@ Every workflow run uploads `production-monitor.log` as evidence. If the monitor 
 
 This scheduled synthetic check and GitHub issue loop are first external tripwires. They do not replace a dedicated error-monitoring provider, paging policy, or named incident owner.
 
+## Incident Readiness Gate
+
+Incident ownership and alert routing are tracked in `docs/operations/incident-routing.json`. Run:
+
+```text
+npm run incident:readiness -- --json
+```
+
+Before named-cohort launch, the strict gate must pass:
+
+```text
+npm run incident:readiness -- --require-ready
+```
+
+The gate requires:
+
+- Approved incident-routing status.
+- Primary and backup incident owners with real names and emails.
+- Founder-approved support coverage hours.
+- External synthetic monitoring.
+- Dedicated error monitoring.
+- Paging/escalation route.
+- A passed incident rehearsal within the last 30 days.
+- Founder, support, and legal/safety approvals.
+
+Current state: primary owner is recorded as Michael at `support@rivt.pro`, and GitHub synthetic issue routing is configured. Backup owner, support hours, dedicated error monitoring, paging, rehearsal, and approvals remain missing; therefore Gate A remains blocked.
+
 ## Operational Kill Switches
 
 Use these only during a real incident, launch pause, or controlled maintenance window:
