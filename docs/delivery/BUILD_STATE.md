@@ -2,10 +2,10 @@
 
 Last updated: 2026-06-21 America/New_York
 Current gate: Gate A launch hardening
-Current phase: Packet 08 controllable UX hardening, Trade News polish, production UI smoke regression fixes, Tools studio release, Records workspace upgrade, UI system pass, and shared UI primitives verified; full Gate A approval remains blocked
+Current phase: Packet 08 controllable UX hardening, Trade News polish, production UI smoke regression fixes, Tools studio release, Records workspace upgrade, UI system pass, shared UI primitives, and Tools primitive alignment verified; full Gate A approval remains blocked
 Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
-Production release commit: `b2229170be23405138bb66ce479755585730163b`
+Production release commit: `0680b8f013c167ac4706ad6faf648a0e5cc6df3a`
 
 ## Source State
 
@@ -597,6 +597,20 @@ Completed on 2026-06-21 as the next serious UI push after the founder asked to k
 - Required local gates passed after the shared UI primitives pass: `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check`. DB-backed local integration tests still skip on this workstation because `TEST_DATABASE_URL` is intentionally absent.
 - Deployed the runtime slice to Railway production as deployment `e3ad8e53-e001-418d-b688-48519cd6a8dd` from commit `b2229170be23405138bb66ce479755585730163b`.
 - Live `https://rivt.pro/api/health` returned 200 with exact build commit `b2229170be23405138bb66ce479755585730163b`; `npm run monitor:production` passed with PostgreSQL/S3-compatible dependencies healthy, operational controls disabled, seven anonymous private-route checks, and 534 ms duration.
+- This is accepted as controllable UI hardening evidence only. It does not close the remaining Gate A external/manual blockers or the remaining large-component strangler work in `src/App.tsx`.
+
+## Packet 08 Tools Primitive Alignment Pass
+
+Completed on 2026-06-21 as a focused follow-up to the shared UI primitive system:
+
+- Migrated the Tools and Records surfaces onto shared `PageHeader`, `Panel`, `EmptyState`, `MetricTile`, and `StatusPill` primitives instead of one-off local section/header/card markup.
+- Reduced bespoke Tools/Records CSS selectors that were styling old local card structures, aligned panel headers/actions with the shared UI layer, and fixed shortcut rows so status pills and open arrows have stable columns.
+- Preserved the Gate A honesty boundary: no fake invoice sending, SMS delivery, payment processing, escrow, payroll, tax filing, or frontend-only Records success was added. Tools still calculate locally; Records remains server-backed and available only for accepted active work.
+- Required local gates passed after this slice: `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check`. DB-backed local integration tests still skip on this workstation because `TEST_DATABASE_URL` is intentionally absent.
+- Deployed the runtime slice to Railway production as deployment `b7740f77-4af0-4ba2-838f-ff85386cb86b` from commit `0680b8f013c167ac4706ad6faf648a0e5cc6df3a`.
+- Live `https://rivt.pro/api/health` returned 200 with exact build commit `0680b8f013c167ac4706ad6faf648a0e5cc6df3a`, PostgreSQL dependency `postgres`, and object storage dependency `s3-compatible`.
+- Anonymous `https://rivt.pro/api/storage` returned `Authentication required`, which is expected for the private storage endpoint. Public storage health is represented through `/api/health` and `npm run monitor:production`.
+- `npm run monitor:production` passed with PostgreSQL/S3-compatible dependencies healthy, operational controls disabled, seven anonymous private-route checks, and 494 ms duration.
 - This is accepted as controllable UI hardening evidence only. It does not close the remaining Gate A external/manual blockers or the remaining large-component strangler work in `src/App.tsx`.
 
 ## Next Exact Task

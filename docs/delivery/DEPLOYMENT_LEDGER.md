@@ -515,3 +515,22 @@ Add one entry per staging/production deployment.
 - Known risks: full Gate A remains blocked by dedicated error monitoring/paging, completed incident-routing fields and rehearsal, founder/support/legal-safety approvals, RPO/RTO policy approval, physical/deeper manual accessibility-device matrix, remaining `src/App.tsx` strangler/component cleanup, and production-grade server invoice/SMS delivery if promoted from Gate B
 - Rollback performed/result: not required
 - Approval: shared UI primitives pass accepted as controllable UX hardening evidence; overall Gate A not approved
+
+## Current Production - Packet 08 Tools Primitive Alignment Pass
+
+- Environment: Production (`https://rivt.pro`)
+- Date/time/timezone: 2026-06-21 14:03 America/New_York
+- Deployer: Codex through authenticated Railway CLI
+- Source repository/branch: `Zboytjbxp/rivt`, `master`
+- Source commit: `0680b8f013c167ac4706ad6faf648a0e5cc6df3a`
+- Build/artifact ID: Railway deployment `b7740f77-4af0-4ba2-838f-ff85386cb86b`
+- Migration version before/after: unchanged (`0009_durable_rate_limits`)
+- Feature-flag/config version: `SOURCE_COMMIT` updated to `0680b8f013c167ac4706ad6faf648a0e5cc6df3a`; no operational-control flags changed
+- Provider/config changes: no provider credentials changed
+- Backup/rollback target: prior successful shared-primitives deployment `e3ad8e53-e001-418d-b688-48519cd6a8dd`; no migration change
+- Automated gates: local `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check` passed; DB-backed integration tests skipped locally because `TEST_DATABASE_URL` is not configured
+- Post-deploy smoke tests: `https://rivt.pro/api/health` returned exact source commit `0680b8f013c167ac4706ad6faf648a0e5cc6df3a`; anonymous `/api/storage` returned `Authentication required` as expected for the private storage endpoint; `npm run monitor:production` passed externally with PostgreSQL/S3-compatible dependencies healthy, operational controls disabled, seven anonymous private-route checks, and 494 ms duration
+- Health/readiness result: health reported PostgreSQL and S3-compatible storage healthy with exact source commit `0680b8f013c167ac4706ad6faf648a0e5cc6df3a`
+- Known risks: full Gate A remains blocked by dedicated error monitoring/paging, completed incident-routing fields and rehearsal, founder/support/legal-safety approvals, RPO/RTO policy approval, physical/deeper manual accessibility-device matrix, remaining `src/App.tsx` strangler/component cleanup, and production-grade server invoice/SMS delivery if promoted from Gate B
+- Rollback performed/result: not required
+- Approval: Tools primitive alignment accepted as controllable UX hardening evidence; overall Gate A not approved
