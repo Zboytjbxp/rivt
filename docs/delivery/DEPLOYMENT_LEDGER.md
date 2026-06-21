@@ -287,3 +287,22 @@ Add one entry per staging/production deployment.
 - Known risks: full Gate A remains blocked by backup-artifact restore/RPO acceptance if required, dedicated error monitoring/alerts and named incident owner routing, physical/deeper manual accessibility-device matrix, and support/legal/founder signoff
 - Rollback performed/result: not required
 - Approval: timed isolated logical restore accepted as partial restore evidence; overall Gate A not approved
+
+## Local Packet 08 - Backup Artifact Restore Tooling
+
+- Environment: Local repository tooling; no production deploy performed in this slice
+- Date/time/timezone: 2026-06-20 23:11 America/New_York
+- Deployer: Codex
+- Source repository/branch: `Zboytjbxp/rivt`, `master`
+- Source commit: pending local changes
+- Build/artifact ID: not deployed
+- Migration version before/after: unchanged (`0009_durable_rate_limits`)
+- Feature-flag/config version: no app runtime flags changed
+- Provider/config changes: temporary RIVT service restore-control variables (`RESTORE_DATABASE_URL`, `RESTORE_SOURCE_DATABASE_URL`, `CONFIRM_RESTORE_TARGET_ISOLATED`) were found and removed; key-name verification showed only persistent backup/storage variables remain (`BACKUP_ENCRYPTION_KEY`, `DATABASE_URL`, `S3_*`, `SOURCE_COMMIT`)
+- Backup/rollback target: new tooling creates a current encrypted S3-compatible logical backup object with `npm run backup:logical-artifact`; live object creation was not executed because Railway CLI auth expired before isolated-target provisioning
+- Automated gates: `node --check` passed for `scripts/logical-backup-utils.js`, `scripts/create-logical-backup-artifact.js`, and `scripts/restore-logical-backup-artifact.js`; `npm run test:unit` passed with 23 tests including logical backup encryption/decryption, dependency ordering, count-diff reporting, and matching-target refusal; `npm run lint:security` passed with the new scripts included; `npm run restore:logical-artifact` without env failed cleanly with `RESTORE_DATABASE_URL is required`
+- Post-deploy smoke tests: none; no deployment occurred
+- Health/readiness result: not rechecked in this slice because Railway CLI returned `Unauthorized. Please run railway login again.`
+- Known risks: live backup-artifact restore/RPO evidence remains blocked until Railway is re-authenticated, a fresh temporary isolated PostgreSQL target is provisioned, a current named backup object is created/restored, and the target is deleted after verification
+- Rollback performed/result: not required
+- Approval: tooling progress accepted as partial evidence only; overall Gate A not approved

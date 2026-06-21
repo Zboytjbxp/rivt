@@ -2,7 +2,7 @@
 
 Last updated: 2026-06-20 America/New_York
 Current gate: Gate A launch hardening
-Current phase: Packet 08 timed isolated logical restore deployed; full Gate A approval remains blocked
+Current phase: Packet 08 backup-artifact restore tooling added; full Gate A approval remains blocked
 Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
 Production release commit: `e0ac24d143c29f1f17c6570debbd576f49538597`
@@ -434,9 +434,13 @@ Implemented on 2026-06-20:
 
 - Added `scripts/restore-drill.js` and `npm run restore:drill`.
 - Added `scripts/restore-logical-copy.js` and `npm run restore:logical-copy` to create a verified restored target through the application runtime when local `pg_dump`/`psql` tooling is unavailable.
+- Added `scripts/logical-backup-utils.js`, `scripts/create-logical-backup-artifact.js`, and `scripts/restore-logical-backup-artifact.js`.
+- Added `npm run backup:logical-artifact` to create an AES-256-GCM encrypted gzip logical backup object in private S3-compatible storage, with a manifest containing source commit, table counts, row counts, and object key evidence.
+- Added `npm run restore:logical-artifact` to restore a named backup object into an isolated target, apply migrations when requested, verify table/column parity, restore sequences, and fail on count drift from the backup manifest by default.
 - The verifier requires `CONFIRM_RESTORE_TARGET_ISOLATED=true` and `RESTORE_DATABASE_URL`; it refuses to run without an isolated target.
 - The verifier checks migration status, requires migration `0009_durable_rate_limits`, verifies critical Gate A table presence, counts rows, can compare source/target counts with `RESTORE_SOURCE_DATABASE_URL`, and reports duration.
-- A no-target run correctly fails with `RESTORE_DATABASE_URL is required`.
+- A no-target artifact restore run correctly fails cleanly with `RESTORE_DATABASE_URL is required`.
+- Unit coverage now verifies backup encryption/decryption, dependency ordering, count-diff reporting, and restore source/target identity refusal.
 
 Timed isolated logical restore executed on 2026-06-20:
 
@@ -447,9 +451,16 @@ Timed isolated logical restore executed on 2026-06-20:
 - Cleanup: the temporary target database was deleted, no temporary restore variables remain on RIVT or Postgres, and production health remained healthy on commit `e0ac24d143c29f1f17c6570debbd576f49538597`.
 - This closes the timed isolated logical restore evidence gap. It does not by itself prove restoration from a specific backup artifact or define the final RPO/RTO policy.
 
+Backup-artifact restore tooling progress on 2026-06-20:
+
+- Local `npm run test:unit` passed with 23 tests, including the new logical backup utility tests.
+- Local `npm run lint:security` passed with the new backup artifact scripts included.
+- Temporary restore-control variables (`RESTORE_DATABASE_URL`, `RESTORE_SOURCE_DATABASE_URL`, and `CONFIRM_RESTORE_TARGET_ISOLATED`) were found on the RIVT service and removed. Remaining key-name check showed only persistent backup/storage names: `BACKUP_ENCRYPTION_KEY`, `DATABASE_URL`, `S3_*`, and `SOURCE_COMMIT`.
+- Attempting to provision a fresh temporary Railway PostgreSQL target for the named-artifact restore rehearsal failed because the Railway CLI session is expired (`Unauthorized. Please run railway login again.`). No backup artifact was created and no restore target remains from this attempt.
+
 ## Next Exact Task
 
-Complete the remaining Packet 08 launch blockers: decide whether Gate A requires a backup-artifact restore in addition to the timed isolated logical restore; wire dedicated error monitoring/alerts, paging, and named incident-owner routing; finish support/legal/founder approvals; and complete the physical/deeper manual accessibility-device matrix before named-cohort launch.
+Re-authenticate Railway, provision a fresh temporary isolated PostgreSQL target, run `npm run backup:logical-artifact` to create a current named encrypted backup object, run `npm run restore:logical-artifact -- --apply-migrations` against the isolated target, run `npm run restore:drill`, delete the temporary target, and record RPO/RTO evidence. Then wire dedicated error monitoring/alerts, paging, and named incident-owner routing; finish support/legal/founder approvals; and complete the physical/deeper manual accessibility-device matrix before named-cohort launch.
 
 ## Blocking Founder Decisions
 

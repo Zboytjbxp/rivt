@@ -123,7 +123,24 @@ CONFIRM_RESTORE_TARGET_ISOLATED=true RESTORE_DATABASE_URL="postgresql://restore-
 
 The logical copy helper applies migrations when requested, truncates the isolated target, disables user-defined triggers during the copy to avoid restore side effects, copies all public base tables in foreign-key order with batched inserts, restores sequence positions, and reports table/row counts and duration. It is acceptable evidence for isolated logical restore mechanics. It is not by itself proof that a specific backup artifact can be restored.
 
-Latest Packet 08 evidence: temporary Railway PostgreSQL target `Postgres-3Ei3` was migrated, populated with 59 public tables and 1,524 rows in 1,421 ms, strictly verified with migration `0009_durable_rate_limits`, zero pending migrations, zero source/target count diffs across critical Gate A tables, and a 220 ms verifier duration, then deleted. Remaining decision: whether Gate A requires backup-artifact restore proof and final RPO/RTO acceptance in addition to this logical restore drill.
+Gate A requires proof that a named backup object can be restored. Create the encrypted logical backup artifact directly in managed storage:
+
+```text
+npm run backup:logical-artifact
+```
+
+The command reads from `BACKUP_DATABASE_URL` or `DATABASE_URL`, requires `BACKUP_ENCRYPTION_KEY` or `RIVT_BACKUP_ENCRYPTION_KEY`, uses the configured private S3-compatible bucket, writes an AES-256-GCM encrypted gzip JSON object under `backups/postgres/`, and prints only non-secret evidence: bucket, object key, source commit, table count, row count, and duration.
+
+Restore that named artifact into a freshly provisioned isolated target:
+
+```text
+CONFIRM_RESTORE_TARGET_ISOLATED=true RESTORE_DATABASE_URL="postgresql://restore-target" RESTORE_BACKUP_S3_KEY="backups/postgres/<object>.json.gz.aes256gcm" npm run restore:logical-artifact -- --apply-migrations
+CONFIRM_RESTORE_TARGET_ISOLATED=true RESTORE_DATABASE_URL="postgresql://restore-target" npm run restore:drill
+```
+
+The artifact restore command refuses to run without the isolated-target confirmation, applies migrations when requested, checks table and column parity against the backup artifact, disables user-defined triggers during replay, restores sequences, and fails by default if target counts differ from the backup manifest. Do not persist `RESTORE_DATABASE_URL`, `RESTORE_BACKUP_S3_KEY`, or `CONFIRM_RESTORE_TARGET_ISOLATED` as normal app service variables; pass them only for the one restore command.
+
+Latest Packet 08 evidence: temporary Railway PostgreSQL target `Postgres-3Ei3` was migrated, populated with 59 public tables and 1,524 rows in 1,421 ms, strictly verified with migration `0009_durable_rate_limits`, zero pending migrations, zero source/target count diffs across critical Gate A tables, and a 220 ms verifier duration, then deleted. Artifact restore tooling now exists and is unit/lint covered, but the live restore-from-artifact rehearsal is not complete until Railway is re-authenticated, a new isolated target is created, a current named backup object is produced, and that object is restored and verified.
 
 ## Provider Outage
 
