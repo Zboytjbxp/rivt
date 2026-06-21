@@ -2,10 +2,10 @@
 
 Last updated: 2026-06-21 America/New_York
 Current gate: Gate A launch hardening
-Current phase: Packet 08 controllable UX hardening, Trade News polish, production UI smoke regression fixes, Tools studio release, and Records workspace upgrade verified; full Gate A approval remains blocked
+Current phase: Packet 08 controllable UX hardening, Trade News polish, production UI smoke regression fixes, Tools studio release, Records workspace upgrade, UI system pass, and shared UI primitives verified; full Gate A approval remains blocked
 Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
-Production release commit: `1679aec006c8cb393b6986aa24ec507c15bc8181`
+Production release commit: `b2229170be23405138bb66ce479755585730163b`
 
 ## Source State
 
@@ -582,6 +582,22 @@ Completed on 2026-06-21 as controllable UI hardening after the founder called ou
 - Deployed the runtime slice to Railway production as deployment `747f71f5-f790-4277-8d26-cc50bcdff77a` from commit `8d90ef22be8fee2471435ccf9cab134d04154560`.
 - Live `https://rivt.pro/api/health` returned 200 with exact build commit `8d90ef22be8fee2471435ccf9cab134d04154560`; `npm run monitor:production` passed with PostgreSQL/S3-compatible dependencies healthy, operational controls disabled, seven anonymous private-route checks, and 465 ms duration.
 - This is accepted as controllable UI hardening evidence only. It does not close the remaining Gate A external/manual blockers.
+
+## Packet 08 Shared UI Primitives Pass
+
+Completed on 2026-06-21 as the next serious UI push after the founder asked to keep improving the product toward a professional, popular-app feel:
+
+- Added a shared UI primitive layer in `src/components/ui.tsx` and `src/components/ui.css` for page headers, panels, empty states, metric tiles, status pills, and deterministic avatars.
+- Applied those primitives to high-visibility authenticated surfaces: shell/profile avatars, Home empty state/header, Crew metrics/panels/empty states, Inbox metrics/panels/empty states, Profile header/avatar/account facts, and Work status/empty states.
+- Reduced one-off per-screen CSS and removed duplicated local avatar, badge, and empty-state treatments so future screens can converge on one RIVT component system instead of bespoke card stacks.
+- Fixed a rendered mobile profile issue where long account facts such as email addresses inherited oversized numeric KPI styling and overflowed the card.
+- Corrected the mobile top-bar logo to use the approved high-contrast RIVT lockup on the dark header surface. No logo was regenerated, recolored, traced, or approximated.
+- Preserved Gate A business logic and production honesty boundaries: no fake feature success, no homeowner flows, no provider claims, and no frontend-only production state were added.
+- Rendered authenticated UI QA with Playwright route mocks because the in-app Browser runtime does not expose the same route-mocking controls needed for authenticated surface tests. Full desktop/mobile screenshot evidence for Home, Work, Crew, Inbox, Tools, Records, and Profile was saved outside the repo at `C:\Users\zboyt\AppData\Local\Temp\rivt-ui-primitives-pass`; final mobile spot-checks for Crew and Profile after polish fixes were saved at `C:\Users\zboyt\AppData\Local\Temp\rivt-ui-primitives-pass-final`. The rendered pass reported zero page/console errors and no horizontal overflow.
+- Required local gates passed after the shared UI primitives pass: `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check`. DB-backed local integration tests still skip on this workstation because `TEST_DATABASE_URL` is intentionally absent.
+- Deployed the runtime slice to Railway production as deployment `e3ad8e53-e001-418d-b688-48519cd6a8dd` from commit `b2229170be23405138bb66ce479755585730163b`.
+- Live `https://rivt.pro/api/health` returned 200 with exact build commit `b2229170be23405138bb66ce479755585730163b`; `npm run monitor:production` passed with PostgreSQL/S3-compatible dependencies healthy, operational controls disabled, seven anonymous private-route checks, and 534 ms duration.
+- This is accepted as controllable UI hardening evidence only. It does not close the remaining Gate A external/manual blockers or the remaining large-component strangler work in `src/App.tsx`.
 
 ## Next Exact Task
 

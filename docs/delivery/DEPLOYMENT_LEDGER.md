@@ -496,3 +496,22 @@ Add one entry per staging/production deployment.
 - Known risks: full Gate A remains blocked by dedicated error monitoring/paging, completed incident-routing fields and rehearsal, founder/support/legal-safety approvals, RPO/RTO policy approval, physical/deeper manual accessibility-device matrix, and production-grade server invoice/SMS delivery if promoted from Gate B
 - Rollback performed/result: not required
 - Approval: UI system pass accepted as controllable UX hardening evidence; overall Gate A not approved
+
+## Current Production - Packet 08 Shared UI Primitives Pass
+
+- Environment: Production (`https://rivt.pro`)
+- Date/time/timezone: 2026-06-21 11:52 America/New_York
+- Deployer: Codex through authenticated Railway CLI
+- Source repository/branch: `Zboytjbxp/rivt`, `master`
+- Source commit: `b2229170be23405138bb66ce479755585730163b`
+- Build/artifact ID: Railway deployment `e3ad8e53-e001-418d-b688-48519cd6a8dd`
+- Migration version before/after: unchanged (`0009_durable_rate_limits`)
+- Feature-flag/config version: `SOURCE_COMMIT` updated to `b2229170be23405138bb66ce479755585730163b`; no operational-control flags changed
+- Provider/config changes: no provider credentials changed
+- Backup/rollback target: prior successful UI system deployment `747f71f5-f790-4277-8d26-cc50bcdff77a`; no migration change
+- Automated gates: local `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check` passed; DB-backed integration tests skipped locally because `TEST_DATABASE_URL` is not configured
+- Post-deploy smoke tests: `https://rivt.pro/api/health` returned exact source commit `b2229170be23405138bb66ce479755585730163b`; `npm run monitor:production` passed externally with PostgreSQL/S3-compatible dependencies healthy, operational controls disabled, seven anonymous private-route checks, and 534 ms duration. Rendered local Playwright QA covered Home, Work, Crew, Inbox, Tools, Records, and Profile at desktop/mobile breakpoints with no horizontal overflow and no console/page errors; final mobile spot-checks verified the corrected profile fact-card sizing and dark-header logo contrast. Screenshot evidence is outside the repo at `C:\Users\zboyt\AppData\Local\Temp\rivt-ui-primitives-pass` and `C:\Users\zboyt\AppData\Local\Temp\rivt-ui-primitives-pass-final`.
+- Health/readiness result: health reported PostgreSQL and S3-compatible storage healthy with exact source commit `b2229170be23405138bb66ce479755585730163b`
+- Known risks: full Gate A remains blocked by dedicated error monitoring/paging, completed incident-routing fields and rehearsal, founder/support/legal-safety approvals, RPO/RTO policy approval, physical/deeper manual accessibility-device matrix, remaining `src/App.tsx` strangler/component cleanup, and production-grade server invoice/SMS delivery if promoted from Gate B
+- Rollback performed/result: not required
+- Approval: shared UI primitives pass accepted as controllable UX hardening evidence; overall Gate A not approved
