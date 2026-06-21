@@ -8,14 +8,14 @@ Gate A is not approved yet.
 
 Packet 08 hardening evidence now exists for:
 
-- Production source proof: `https://rivt.pro/api/health` reports exact source `0959e8ff408249236922141289083929e53d1f7b`.
+- Production source proof: `https://rivt.pro/api/health` reports exact source `c7cd61468fa975b8c06c5c96f3bacf825380e3f8`.
 - Migration proof: production readiness and live hardening audit report `0009_durable_rate_limits`, nine applied migrations, and zero pending migrations.
 - Anonymous fail-closed proof: live hardening audit checks seven private endpoints and receives `401` for anonymous requests.
 - Seed/demo proof: first hardening audit caught visible test artifacts; guarded cleanup made matching test profiles private and closed smoke organizations without deletion; final audit reports zero user-facing seed/demo findings.
 - Operational controls: signup and platform-mutation kill switches are wired and exposed through readiness/provider status; both are currently disabled.
 - Durable limits: auth, write, and upload throttles use shared PostgreSQL `rate_limit_windows` buckets keyed by privacy-safe subject hashes.
 - Legacy bridge retirement: authenticated `/api/app-state`, `/api/events`, and `/api/payments/export.csv` bridge routes were retired in source `00147c8e3f70e246b41ed48b46550ae33cf0eb54` and remain absent from the current deployed source; live hardening smoke still reports zero seed/demo findings and anonymous fail-closed behavior.
-- Manual and scripted accessibility/device smoke: `docs/quality/ACCESSIBILITY_DEVICE_MATRIX.md` records 1280x720, 390x844, and 360x800 public-shell checks with no console warnings/errors or horizontal overflow; one sub-44px auth input target-size defect was fixed and post-deploy verification measured 46px fields at 390x844. Authenticated production smoke `ui-a11y-20260621001445-df080b` also covered contractor mobile, tradesperson mobile, and contractor desktop shells with top-bar search/messages/notifications/profile present, no role toggle, no More tab, no horizontal overflow, and zero small tap-target findings.
+- Manual and scripted accessibility/device smoke: `docs/quality/ACCESSIBILITY_DEVICE_MATRIX.md` records 1280x720, 390x844, and 360x800 public-shell checks with no console warnings/errors or horizontal overflow; one sub-44px auth input target-size defect was fixed and post-deploy verification measured 46px fields at 390x844. Authenticated production smoke `ui-a11y-20260621002056-10d4b9` also covered contractor mobile, tradesperson mobile, and contractor desktop shells with top-bar search/messages/notifications/profile present, no role toggle, no More tab, no horizontal overflow, zero post-login console warnings/errors, and zero small tap-target findings.
 - Local automated gates: `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test`, `npm run test:e2e`, and `npm audit --omit=dev` pass on the Packet 08 source.
 
 Blocking evidence still missing before named customer/pilot launch:

@@ -5,7 +5,7 @@ Current gate: Gate A launch hardening
 Current phase: Packet 08 authenticated accessibility smoke deployed; full Gate A approval remains blocked
 Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
-Production release commit: `0959e8ff408249236922141289083929e53d1f7b`
+Production release commit: `c7cd61468fa975b8c06c5c96f3bacf825380e3f8`
 
 ## Source State
 
@@ -410,17 +410,16 @@ Local verification for this slice:
 
 Deployed on 2026-06-20:
 
-- Source commit: `0959e8ff408249236922141289083929e53d1f7b`
-- Railway deployment: `29dc4282-6dd0-4d67-aed9-1951d715d911`
+- Source commit: `c7cd61468fa975b8c06c5c96f3bacf825380e3f8`
+- Railway deployment: `da33d239-6505-43e6-9016-2bdbde68ab51`
 - `https://rivt.pro/api/health`: 200, source commit matched the release, PostgreSQL and S3-compatible storage healthy.
-- Authenticated UI smoke `ui-a11y-20260621001445-df080b` created disposable contractor and tradesperson accounts, tested contractor mobile, tradesperson mobile, and contractor desktop shells, then closed both accounts.
-- Tested shells had top-bar search, messages, notifications, and profile controls; no role toggle; no More tab; no horizontal overflow; and `smallTargetCount: 0` on all tested viewports.
-- Live hardening audit passed after deployment with exact source `0959e8ff408249236922141289083929e53d1f7b`, migration `0009_durable_rate_limits`, seven anonymous private-route checks returning 401, zero seed/demo findings, and counts of 3 active accounts, 0 public network profiles, 0 open jobs, 2 open support cases, 0 active restrictions, 115 quarantined legacy app-state rows, and 33 rate-limit windows.
-- Remaining diagnostics item: the authenticated UI smoke records one `401` resource load sample per tested viewport. No local auth fallback or user-facing failure was observed, but the request should be classified or filtered before final Gate A approval.
+- Authenticated UI smoke `ui-a11y-20260621002056-10d4b9` created disposable contractor and tradesperson accounts, tested contractor mobile, tradesperson mobile, and contractor desktop shells, then closed both accounts.
+- Tested shells had top-bar search, messages, notifications, and profile controls; no role toggle; no More tab; no horizontal overflow; `consoleWarningsOrErrors: 0`; and `smallTargetCount: 0` on all tested viewports.
+- Live hardening audit passed after deployment with exact source `c7cd61468fa975b8c06c5c96f3bacf825380e3f8`, migration `0009_durable_rate_limits`, seven anonymous private-route checks returning 401, zero seed/demo findings, and counts of 3 active accounts, 0 public network profiles, 0 open jobs, 2 open support cases, 0 active restrictions, 115 quarantined legacy app-state rows, and 38 rate-limit windows.
 
 ## Next Exact Task
 
-Complete the remaining Packet 08 launch blockers: provision an isolated restore target and run a timed restore drill; wire external monitoring/alerts and incident owner routing; finish support/legal/founder approvals; classify the authenticated smoke `401` console sample; and complete the physical/deeper manual accessibility-device matrix before named-cohort launch.
+Complete the remaining Packet 08 launch blockers: provision an isolated restore target and run a timed restore drill; wire external monitoring/alerts and incident owner routing; finish support/legal/founder approvals; and complete the physical/deeper manual accessibility-device matrix before named-cohort launch.
 
 ## Blocking Founder Decisions
 

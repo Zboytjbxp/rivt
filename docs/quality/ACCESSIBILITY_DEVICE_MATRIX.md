@@ -7,9 +7,9 @@ Gate A status: partial evidence only. This report does not approve named custome
 ## Live Target
 
 - URL: `https://rivt.pro/`
-- Live health checked after deploy: `2026-06-21T00:14:45Z`
-- Live source commit reported by `/api/health`: `0959e8ff408249236922141289083929e53d1f7b`
-- Railway deployment: `29dc4282-6dd0-4d67-aed9-1951d715d911`
+- Live health checked after deploy: `2026-06-21T00:20:56Z`
+- Live source commit reported by `/api/health`: `c7cd61468fa975b8c06c5c96f3bacf825380e3f8`
+- Railway deployment: `da33d239-6505-43e6-9016-2bdbde68ab51`
 - Browser tool: Codex in-app Browser controlled by Playwright runtime
 
 ## Completed Smoke Coverage
@@ -33,8 +33,7 @@ Gate A status: partial evidence only. This report does not approve named custome
 - No horizontal page overflow was found in the tested public shell breakpoints.
 - No live console warnings or errors were observed in the tested public shell breakpoints.
 - Follow-up finding: authenticated shell smoke initially found sub-44px Work status tabs and Shop Talk action buttons. Fixes raised `.v2-section-tabs button`, `.v2-detail-tabs button`, and shared Shop Talk action buttons to a `44px` minimum width.
-- Post-deploy authenticated verification: live smoke `ui-a11y-20260621001445-df080b` passed at 390x844 contractor, 390x844 tradesperson, and 1366x768 contractor with `smallTargetCount: 0` on all three viewports. Disposable accounts were closed after the run.
-- Remaining classification item: the authenticated smoke still records one expected-looking `401` resource load in each viewport. No UI auth fallback or user-facing failure was observed, but the request should be classified or filtered in a later diagnostics pass.
+- Post-deploy authenticated verification: live smoke `ui-a11y-20260621002056-10d4b9` passed at 390x844 contractor, 390x844 tradesperson, and 1366x768 contractor with `consoleWarningsOrErrors: 0` and `smallTargetCount: 0` on all three viewports. Disposable accounts were closed after the run.
 
 ## Blocked Coverage
 
