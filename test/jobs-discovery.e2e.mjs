@@ -90,11 +90,35 @@ async function configurePage(page, jobs) {
   await page.route("**/api/v1/sessions", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { sessions: [] }, meta: { requestId: "e2e-sessions" } }) }));
   await page.route("**/api/v1/conversations", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { conversations: [] }, meta: { requestId: "e2e-conversations" } }) }));
   await page.route("**/api/v1/notifications", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { notifications: [], unreadCount: 0 }, meta: { requestId: "e2e-notifications" } }) }));
+  await page.route("**/api/v1/active-work", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { activeWork: [] }, meta: { requestId: "e2e-active-work" } }) }));
   await page.route("**/api/v1/jobs?**", async (route) => {
     await new Promise((resolve) => setTimeout(resolve, 120));
     return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { jobs }, meta: { nextCursor: null } }) });
   });
   await page.route(`**/api/v1/jobs/${job.id}`, (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { job } }) }));
+}
+
+async function assertToolsFlow(page) {
+  await page.goto(`${baseUrl}/app/tools`, { waitUntil: "networkidle" });
+  await page.getByRole("heading", { name: "Tools", exact: true }).waitFor();
+  await page.getByRole("button", { name: /Heavy 16th/i }).click();
+  await page.getByRole("heading", { name: "Heavy 16th field calculator" }).waitFor();
+  await page.getByText("Total length", { exact: true }).waitFor();
+  await page.getByLabel("Heavy 16th field calculator").getByRole("button", { name: "Tools" }).click();
+
+  await page.getByRole("button", { name: /Estimate builder/i }).click();
+  await page.getByRole("heading", { name: "Estimate builder" }).waitFor();
+  await page.getByText("Recommended target", { exact: true }).waitFor();
+  await page.getByLabel("Estimate builder").getByRole("button", { name: "Tools" }).click();
+
+  await page.getByRole("button", { name: /Invoice draft/i }).click();
+  await page.getByRole("heading", { name: "Invoice draft" }).waitFor();
+  await page.getByText("Email/text delivery is not represented as production-ready", { exact: false }).waitFor();
+  await page.getByLabel("Invoice draft").getByRole("button", { name: "Tools" }).click();
+
+  await page.getByRole("button", { name: /Material takeoff/i }).click();
+  await page.getByRole("heading", { name: "Material takeoff" }).waitFor();
+  await page.getByText("Sheets needed", { exact: true }).waitFor();
 }
 
 async function assertTopBarActions(page) {
@@ -141,6 +165,7 @@ try {
     assert.equal(await page.getByRole("button", { name: "Messages" }).count(), 1);
     assert.equal(await page.getByRole("button", { name: "Notifications" }).count(), 1);
     await assertTopBarActions(page);
+    await assertToolsFlow(page);
     assert.equal(await page.getByText("Marcus Webb").count(), 0);
     assert.deepEqual(consoleErrors, []);
     await page.close();
