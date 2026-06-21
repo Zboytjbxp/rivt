@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360" role="img" aria-labelledby="title desc">
+  <title id="title">Permit watch trade news thumbnail</title>
+  <desc id="desc">A construction permit document and city grid motif in RIVT colors.</desc>
+  <rect width="640" height="360" fill="#0e151b"/>
+  <path d="M0 262h640v98H0z" fill="#17242c"/>
+  <g opacity=".15" stroke="#ffffff" stroke-width="2">
+    <path d="M58 72h524M58 124h524M58 176h524M58 228h524"/>
+    <path d="M118 44v224M214 44v224M310 44v224M406 44v224M502 44v224"/>
+  </g>
+  <rect x="94" y="58" width="242" height="226" rx="18" fill="#f7faf8"/>
+  <rect x="124" y="96" width="152" height="16" rx="8" fill="#0e151b"/>
+  <rect x="124" y="138" width="168" height="12" rx="6" fill="#a8b3b9"/>
+  <rect x="124" y="166" width="132" height="12" rx="6" fill="#a8b3b9"/>
+  <rect x="124" y="194" width="180" height="12" rx="6" fill="#a8b3b9"/>
+  <path d="M260 234l26 26 58-70" fill="none" stroke="#ff6a00" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
+  <g transform="translate(388 92)">
+    <path d="M0 120h154v82H0z" fill="#233540"/>
+    <path d="M20 120V62l56-40 58 40v58" fill="none" stroke="#37d6c6" stroke-width="12" stroke-linejoin="round"/>
+    <path d="M48 202v-54h56v54" fill="#ff6a00"/>
+  </g>
+  <text x="72" y="324" fill="#f7faf8" font-family="Arial, Helvetica, sans-serif" font-size="38" font-weight="900" letter-spacing="2">PERMIT WATCH</text>
+</svg>

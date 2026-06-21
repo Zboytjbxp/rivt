@@ -878,14 +878,97 @@ function _fmtDate(raw) {
 
 function _urgency(title) {
   const t = (title ?? "").toLowerCase();
-  if (/osha|heat illness|heat rule/.test(t))              return "OSHA Rule";
+  if (/osha|heat illness|heat rule|heat exposure/.test(t)) return "Safety";
   if (/permit|permitting/.test(t))                        return "Permit Alert";
   if (/\bnec\b|national electrical code|building code/.test(t)) return "Code Update";
+  if (/hvac|refrigerant|r-410a|epa/.test(t))              return "HVAC";
+  if (/labor|workforce|shortage|hiring|wage/.test(t))     return "Labor";
   if (/lien|mechanic.?s lien/.test(t))                   return "Legal Alert";
   if (/law|bill|statute|ordinance|regulation/.test(t))    return "Regulation";
   if (/licens/.test(t))                                   return "Licensing";
   return undefined;
 }
+
+function _topicThumbnail({ title = "", source = "", urgency = "" } = {}) {
+  const haystack = `${urgency} ${source} ${title}`.toLowerCase();
+  if (/osha|heat|safety/.test(haystack)) return "/news/heat-safety.svg";
+  if (/\bnec\b|code|electrical/.test(haystack)) return "/news/code-update.svg";
+  if (/hvac|refrigerant|r-410a|epa/.test(haystack)) return "/news/hvac-refrigerant.svg";
+  if (/permit|jacksonville|inspection|ordinance/.test(haystack)) return "/news/permit-watch.svg";
+  if (/license|renewal|dbpr|certification/.test(haystack)) return "/news/license-renewal.svg";
+  if (/labor|workforce|shortage|hiring|wage/.test(haystack)) return "/news/workforce-market.svg";
+  return "/news/rivt-trade-brief.svg";
+}
+
+function _isTradeNewsCandidate(item) {
+  const text = `${item.headline ?? ""} ${item.summary ?? ""} ${item.source ?? ""}`.toLowerCase();
+  if (/\bhomeowners?\b|\bhome owner\b/.test(text)) return false;
+  return /contractor|construction|subcontractor|trade|jobsite|osha|safety|permit|inspection|code|nec|nfpa|hvac|refrigerant|roof|electrical|plumbing|carpentry|concrete|masonry|framing|drywall|demolition|development|infrastructure|renovation|mechanical|lien|licens|labor|workforce|apprentice|skilled/.test(text);
+}
+
+const curatedTradeNews = [
+  {
+    headline: "OSHA expands heat inspections for high-risk outdoor work",
+    source: "OSHA",
+    date: "Apr 10, 2026",
+    summary: "OSHA updated its National Emphasis Program on heat exposure. For contractors, the practical takeaway is simple: document water, rest, shade, acclimatization, and heat-response plans before the first hot-weather site visit.",
+    url: "https://www.osha.gov/news/newsreleases/osha-national-news-release/20260410",
+    urgency: "Safety",
+    thumbnailUrl: "/news/heat-safety.svg",
+    curated: true,
+  },
+  {
+    headline: "NFPA previews the biggest changes in the 2026 NEC",
+    source: "NFPA",
+    date: "Jan 29, 2026",
+    summary: "The 2026 National Electrical Code cycle is moving, with changes that can affect planning, estimates, and inspection conversations. Electrical contractors should review updates early instead of waiting until a failed rough-in.",
+    url: "https://www.nfpa.org/news-blogs-and-articles/blogs/2026/01/29/2026-nec-key-changes",
+    urgency: "Code Update",
+    thumbnailUrl: "/news/code-update.svg",
+    curated: true,
+  },
+  {
+    headline: "EPA removes the R-410A installation deadline",
+    source: "ACHR News",
+    date: "May 21, 2026",
+    summary: "ACHR News reports that EPA removed the R-410A installation deadline. HVAC contractors still need to watch refrigerant rules closely, but this update changes how some pending equipment installs get scheduled.",
+    url: "https://www.achrnews.com/articles/166226-epa-removes-r-410a-installation-deadline",
+    urgency: "HVAC",
+    thumbnailUrl: "/news/hvac-refrigerant.svg",
+    curated: true,
+  },
+  {
+    headline: "ABC says construction must attract 349,000 workers in 2026",
+    source: "Associated Builders and Contractors",
+    date: "Jan 15, 2026",
+    summary: "ABC estimates the industry needs hundreds of thousands of additional workers in 2026. For RIVT users, that is the market signal behind faster crew-building, better profiles, and keeping reliable subs close.",
+    url: "https://www.abc.org/News-Media/News-Releases/abc-construction-industry-must-attract-349000-workers-in-2026-despite-macroeconomic-headwinds",
+    urgency: "Labor",
+    thumbnailUrl: "/news/workforce-market.svg",
+    curated: true,
+  },
+  {
+    headline: "Florida electrical contractor renewals and CE reminders",
+    source: "DBPR",
+    date: "2026",
+    summary: "Florida DBPR keeps contractor renewal, continuing education, and board information in one place. Keep this bookmarked before hiring, accepting specialty work, or updating compliance records.",
+    url: "https://www2.myfloridalicense.com/electrical-contractors/",
+    urgency: "License",
+    thumbnailUrl: "/news/license-renewal.svg",
+    curated: true,
+  },
+  {
+    headline: "Jacksonville permitting guide for contractors",
+    source: "PermitFlow",
+    date: "Mar 13, 2026",
+    summary: "A contractor-focused look at Jacksonville permitting, review steps, and local process expectations. Useful context before posting work that depends on inspection timing or access to permit records.",
+    url: "https://www.permitflow.com/blog/jacksonville-building-permit",
+    urgency: "Local",
+    thumbnailUrl: "/news/permit-watch.svg",
+    curated: true,
+    isLocal: true,
+  },
+];
 
 function _firstString(value) {
   if (!value) return null;
@@ -897,16 +980,12 @@ function _firstString(value) {
   return null;
 }
 
-function _thumbnailUrl(link, item) {
+function _thumbnailUrl(item, source, title) {
   const direct = _firstString(item?.enclosure) ?? _firstString(item?.["media:thumbnail"]) ?? _firstString(item?.["media:content"]);
   if (direct) return direct;
 
-  try {
-    const host = new URL(String(link ?? "")).hostname.replace(/^www\./i, "");
-    return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(host)}&sz=128`;
-  } catch {
-    return null;
-  }
+  const urgency = _urgency(title);
+  return _topicThumbnail({ title, source, urgency });
 }
 
 async function _fetchFeed(url, fallbackSource) {
@@ -934,9 +1013,9 @@ async function _fetchFeed(url, fallbackSource) {
         summary: _stripHtml(item.description ?? item.summary ?? item["content:encoded"] ?? "").slice(0, 350),
         url: link,
         urgency: _urgency(headline),
-        thumbnailUrl: _thumbnailUrl(link, item),
+        thumbnailUrl: _thumbnailUrl(item, fallbackSource ?? _stripHtml(channel.title ?? ""), headline),
       };
-    }).filter((item) => item.headline.length > 10);
+    }).filter((item) => item.headline.length > 10 && _isTradeNewsCandidate(item));
   } catch {
     return [];
   }
@@ -968,7 +1047,7 @@ app.get("/api/news", async (request, response) => {
 
   const pick = (r) => r.status === "fulfilled" ? r.value : [];
   const localItems = pick(gnLocal).map((item) => ({ ...item, isLocal: true }));
-  const all = [...localItems, ...pick(enr), ...pick(dive), ...pick(osha), ...pick(gnNat)];
+  const all = [...curatedTradeNews, ...localItems, ...pick(enr), ...pick(dive), ...pick(osha), ...pick(gnNat)];
 
   const seen = new Set();
   const deduped = all.filter((item) => {
@@ -979,6 +1058,8 @@ app.get("/api/news", async (request, response) => {
   });
 
   deduped.sort((a, b) => {
+    if (a.curated && !b.curated) return -1;
+    if (!a.curated && b.curated) return 1;
     if (a.isLocal && !b.isLocal) return -1;
     if (!a.isLocal && b.isLocal) return 1;
     if (a.urgency && !b.urgency) return -1;

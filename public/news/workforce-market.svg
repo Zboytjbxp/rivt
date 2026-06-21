@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360" role="img" aria-labelledby="title desc">
+  <title id="title">Workforce market trade news thumbnail</title>
+  <desc id="desc">A crew and growth chart graphic for skilled labor market news.</desc>
+  <rect width="640" height="360" fill="#0d1117"/>
+  <path d="M0 280h640v80H0z" fill="#17242c"/>
+  <g fill="#f7faf8">
+    <circle cx="142" cy="132" r="34"/>
+    <circle cx="228" cy="116" r="38"/>
+    <circle cx="314" cy="132" r="34"/>
+    <path d="M84 236c8-48 36-78 58-78s50 30 58 78"/>
+    <path d="M152 236c10-58 42-92 76-92s66 34 76 92"/>
+    <path d="M256 236c8-48 36-78 58-78s50 30 58 78"/>
+  </g>
+  <g fill="none" stroke="#ff6a00" stroke-width="14" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M390 230V112"/>
+    <path d="M390 112l52 52"/>
+    <path d="M390 112l-52 52"/>
+  </g>
+  <path d="M430 236h132V96" fill="none" stroke="#37d6c6" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M430 236l38-46 40 22 54-74" fill="none" stroke="#37d6c6" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="62" y="320" fill="#f7faf8" font-family="Arial, Helvetica, sans-serif" font-size="38" font-weight="900" letter-spacing="2">LABOR SIGNAL</text>
+</svg>

@@ -506,6 +506,18 @@ Implemented on 2026-06-21 after deciding to keep external Gate A finish blockers
 - `npm run test:e2e` passed after the new top-bar interaction checks.
 - Required local gates passed after this slice: `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test`, `npm run test:e2e`, and `npm audit --omit=dev`. DB-backed local integration tests still skip on this workstation because `TEST_DATABASE_URL` is intentionally absent.
 
+## Packet 08 Trade News and Shop Talk Polish Progress
+
+Implemented on 2026-06-21 as controllable UX hardening:
+
+- Replaced the Trade News Google favicon fallback with topic-aware RIVT-owned thumbnail assets in `public/news/` so cards render reliable editorial imagery for safety, code, HVAC, workforce, licensing, permitting, and general trade briefs.
+- Added a curated contractor-relevant news layer ahead of live RSS aggregation in `/api/news`, with original-source links for OSHA heat inspection emphasis, NFPA 2026 NEC changes, EPA/R-410A HVAC timing, ABC workforce shortage signals, Florida DBPR renewal context, and Jacksonville permitting context.
+- Kept live feed aggregation behind the curated items, filtered obvious consumer/homeowner drift out of the live tail, and changed its no-media fallback to RIVT topic thumbnails instead of `google.com/s2/favicons`.
+- Reworked the Trade News card layout with larger readable headlines, summary previews, date/source separation, original-source links, non-cropped thumbnails, and cleaner selected/detail states.
+- Reworked the Trade News detail hero on mobile so metadata no longer collides with the thumbnail artwork.
+- Rendered QA with a mocked authenticated account while letting `/api/news` hit the real local API at `127.0.0.1:8787`: desktop `1280x800` and mobile `390x844` both showed curated cards, no Google favicon thumbnails, working original-source URLs, detail hero images, and zero console errors. Screenshot evidence was saved outside the repo at `C:\Users\zboyt\AppData\Local\Temp\rivt-trade-news-desktop.png` and `C:\Users\zboyt\AppData\Local\Temp\rivt-trade-news-mobile.png`.
+- Required local gates passed after this slice: `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test`, `npm run test:e2e`, and `npm audit --omit=dev`. DB-backed local integration tests still skip on this workstation because `TEST_DATABASE_URL` is intentionally absent.
+
 ## Next Exact Task
 
 Continue controllable Gate A hardening by rerunning the expanded authenticated UI smoke against production with disposable accounts when live credentials are available, then address any resulting UI blockers. Keep the remaining external launch requirements noted: configure real dedicated error monitoring and paging/escalation, fill backup owner/support-hours/approval fields in `docs/operations/incident-routing.json`, approve RPO/RTO/retention/cadence fields in `docs/operations/recovery-policy.json`, run an incident rehearsal, then pass `npm run incident:readiness -- --require-ready` and `npm run launch:readiness -- --require-ready`. Complete the physical/deeper manual accessibility-device matrix before named-cohort launch.

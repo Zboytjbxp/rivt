@@ -257,18 +257,25 @@ interface NewsItem {
   thumbnailUrl?: string;
 }
 
-function newsThumbnailUrl(item: Pick<NewsItem, "url" | "thumbnailUrl" | "source">) {
+function newsTopicThumbnail(item: Pick<NewsItem, "headline" | "source" | "urgency">) {
+  const haystack = `${item.urgency ?? ""} ${item.source ?? ""} ${item.headline ?? ""}`.toLowerCase();
+
+  if (/osha|heat|safety/.test(haystack)) return "/news/heat-safety.svg";
+  if (/\bnec\b|code|electrical/.test(haystack)) return "/news/code-update.svg";
+  if (/hvac|refrigerant|r-410a|epa/.test(haystack)) return "/news/hvac-refrigerant.svg";
+  if (/permit|jacksonville|inspection|ordinance/.test(haystack)) return "/news/permit-watch.svg";
+  if (/license|renewal|dbpr|certification/.test(haystack)) return "/news/license-renewal.svg";
+  if (/labor|workforce|shortage|hiring|wage/.test(haystack)) return "/news/workforce-market.svg";
+
+  return "/news/rivt-trade-brief.svg";
+}
+
+function newsThumbnailUrl(item: Pick<NewsItem, "url" | "thumbnailUrl" | "source" | "headline" | "urgency">) {
   if (item.thumbnailUrl) {
     return item.thumbnailUrl;
   }
 
-  try {
-    const parsed = new URL(item.url);
-    const host = parsed.hostname.replace(/^www\./i, "");
-    return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(host)}&sz=128`;
-  } catch {
-    return "/rivt-icon-192.png";
-  }
+  return newsTopicThumbnail(item);
 }
 
 type ProviderCheckStatus = "idle" | "checking" | "ready" | "setup_required" | "offline";
@@ -1347,47 +1354,63 @@ const emptyTalent: Talent = {
 const seedNews: NewsItem[] = [
   {
     id: 1,
-    headline: "OSHA Updates Heat Illness Prevention Rules for Outdoor Workers",
+    headline: "OSHA expands heat inspections for high-risk outdoor work",
     source: "OSHA",
-    date: "Jun 2026",
-    summary: "New enforcement guidelines require employers to provide water, rest, and shade for outdoor workers when heat index exceeds 80°F. Violations can result in fines up to $15,625 per incident.",
-    url: "https://www.osha.gov",
-    urgency: "Regulation",
+    date: "Apr 10, 2026",
+    summary: "OSHA updated its National Emphasis Program on heat exposure. For contractors, the practical takeaway is simple: document water, rest, shade, acclimatization, and heat-response plans before the first hot-weather site visit.",
+    url: "https://www.osha.gov/news/newsreleases/osha-national-news-release/20260410",
+    urgency: "Safety",
+    thumbnailUrl: "/news/heat-safety.svg",
   },
   {
     id: 2,
-    headline: "NEC 2023 Arc-Fault Requirements Now Enforced in Florida",
+    headline: "NFPA previews the biggest changes in the 2026 NEC",
     source: "NFPA",
-    date: "Jun 2026",
-    summary: "Florida has adopted NEC 2023, expanding AFCI requirements to kitchens, laundry areas, and all 120V circuits in new construction. Inspectors are actively flagging non-compliant installs.",
-    url: "https://www.nfpa.org",
-    urgency: "Code Change",
+    date: "Jan 29, 2026",
+    summary: "The 2026 National Electrical Code cycle is moving, with changes that can affect planning, estimates, and inspection conversations. Electrical contractors should review updates early instead of waiting until a failed rough-in.",
+    url: "https://www.nfpa.org/news-blogs-and-articles/blogs/2026/01/29/2026-nec-key-changes",
+    urgency: "Code Update",
+    thumbnailUrl: "/news/code-update.svg",
   },
   {
     id: 3,
-    headline: "Lumber Prices Drop 12% as Tariff Uncertainty Eases",
-    source: "ProSales",
-    date: "Jun 2026",
-    summary: "Framing lumber futures fell 12% this week as trade policy uncertainty cleared. Contractors are locking in summer project materials now before potential Q3 volatility.",
-    url: "https://www.prosalesmagazine.com",
+    headline: "EPA removes the R-410A installation deadline",
+    source: "ACHR News",
+    date: "May 21, 2026",
+    summary: "ACHR News reports that EPA removed the R-410A installation deadline. HVAC contractors still need to watch refrigerant rules closely, but this update changes how some pending equipment installs get scheduled.",
+    url: "https://www.achrnews.com/articles/166226-epa-removes-r-410a-installation-deadline",
+    urgency: "HVAC",
+    thumbnailUrl: "/news/hvac-refrigerant.svg",
   },
   {
     id: 4,
-    headline: "JEA Updates Permit Requirements for 200A Panel Upgrades",
-    source: "JEA",
-    date: "May 2026",
-    summary: "Jacksonville Electric Authority now requires a pre-inspection request 5 business days before meter pull for residential panel upgrades. Standard form available on the JEA contractor portal.",
-    url: "https://www.jea.com",
-    urgency: "Local",
+    headline: "ABC says construction must attract 349,000 workers in 2026",
+    source: "Associated Builders and Contractors",
+    date: "Jan 15, 2026",
+    summary: "ABC estimates the industry needs hundreds of thousands of additional workers in 2026. For RIVT users, that is the market signal behind faster crew-building, better profiles, and keeping reliable subs close.",
+    url: "https://www.abc.org/News-Media/News-Releases/abc-construction-industry-must-attract-349000-workers-in-2026-despite-macroeconomic-headwinds",
+    urgency: "Labor",
+    thumbnailUrl: "/news/workforce-market.svg",
   },
   {
     id: 5,
-    headline: "Florida Contractor License Renewals Due August 31",
+    headline: "Florida electrical contractor renewals and CE reminders",
     source: "DBPR",
-    date: "May 2026",
-    summary: "Florida Department of Business and Professional Regulation reminder: all contractor licenses with even-numbered expiration years must renew by August 31. 14 CE hours required.",
-    url: "https://www.myfloridalicense.com",
+    date: "2026",
+    summary: "Florida DBPR keeps contractor renewal, continuing education, and board information in one place. Keep this bookmarked before hiring, accepting specialty work, or updating compliance records.",
+    url: "https://www2.myfloridalicense.com/electrical-contractors/",
     urgency: "License",
+    thumbnailUrl: "/news/license-renewal.svg",
+  },
+  {
+    id: 6,
+    headline: "Jacksonville permitting guide for contractors",
+    source: "PermitFlow",
+    date: "Mar 13, 2026",
+    summary: "A contractor-focused look at Jacksonville permitting, review steps, and local process expectations. Useful context before posting work that depends on inspection timing or access to permit records.",
+    url: "https://www.permitflow.com/blog/jacksonville-building-permit",
+    urgency: "Local",
+    thumbnailUrl: "/news/permit-watch.svg",
   },
 ];
 const seedCommunityPosts: CommunityPost[] = [
@@ -1770,7 +1793,7 @@ const guestDemoJobs: Job[] = [
     summary: "Install 3-ton mini-split in converted garage. Line set run approximately 35ft through attic.",
     guidance: ["Existing 240V circuit available at panel", "Attic access through hallway closet"],
     risks: ["Attic temp may exceed 110°F in afternoon", "Verify BTU sizing with load calc before ordering"],
-    deliverables: ["System commissioned and tested at rated temp", "Startup sheet signed by homeowner"],
+    deliverables: ["System commissioned and tested at rated temp", "Startup sheet signed by client"],
     matchFactors: ["EPA 608 certified", "Mini-split installation experience"],
   },
   {
@@ -1798,7 +1821,7 @@ const guestDemoJobs: Job[] = [
     summary: "Build and install floor-to-ceiling bookcase in living room and a bench with storage in mudroom.",
     guidance: ["Materials pre-purchased and staged in garage", "Paint-grade MDF throughout"],
     risks: ["Plaster walls – anchoring requires toggle bolts or blocking"],
-    deliverables: ["Bookcase and bench installed, caulked, and sanded", "Ready for paint by homeowner"],
+    deliverables: ["Bookcase and bench installed, caulked, and sanded", "Ready for paint by property owner"],
     matchFactors: ["Finish carpentry experience", "Portfolio of built-ins preferred"],
   },
 ];
@@ -6094,8 +6117,9 @@ function ShopTalkView({
             <>
               <div className="shop-talk-command">
                 <div>
-                  <span>Florida &amp; trades</span>
-                  <h2>Law changes, code updates, market signals</h2>
+                  <span>Trade news</span>
+                  <h2>Original sources, contractor context</h2>
+                  <p>Curated code, safety, licensing, labor, and local permitting updates with links back to the source.</p>
                 </div>
               </div>
               <div className="shop-news-list">
@@ -6122,13 +6146,16 @@ function ShopTalkView({
                       onClick={() => { setSelectedNewsId(item.id); setMobileDetail(true); }}
                     >
                       <div className="news-card-thumb">
-                        <img src={newsThumbnailUrl(item)} alt={`${item.source} thumbnail`} loading="lazy" />
-                        <span>{item.source}</span>
+                        <img src={newsThumbnailUrl(item)} alt={`${item.source} article thumbnail`} loading="lazy" />
                       </div>
                       <div className="news-card-body">
-                        {item.urgency && <span className="news-urgency-pill">{item.urgency}</span>}
+                        <div className="news-card-kicker">
+                          {item.urgency && <span className="news-urgency-pill">{item.urgency}</span>}
+                          <small>{item.date}</small>
+                        </div>
                         <strong>{item.headline}</strong>
-                        <small>{item.date}</small>
+                        <p>{item.summary}</p>
+                        <small>{item.source}</small>
                       </div>
                     </button>
                     {item.url && item.url !== "#" && (
@@ -6266,17 +6293,21 @@ function ShopTalkView({
             {selectedNews ? (
               <div className="shop-news-detail">
                 <div className="news-detail-hero" data-urgency={selectedNews.urgency ?? "default"}>
-                  <span className="news-detail-source">{selectedNews.source}</span>
-                  {selectedNews.urgency && <span className="news-urgency-pill">{selectedNews.urgency}</span>}
+                  <img src={newsThumbnailUrl(selectedNews)} alt={`${selectedNews.source} article thumbnail`} loading="lazy" />
+                  <div className="news-detail-hero-copy">
+                    <span className="news-detail-source">{selectedNews.source}</span>
+                    {selectedNews.urgency && <span className="news-urgency-pill">{selectedNews.urgency}</span>}
+                  </div>
                 </div>
                 <div className="shop-news-detail-header">
                   <h2>{selectedNews.headline}</h2>
-                  <small>{selectedNews.source} · {selectedNews.date}</small>
+                  <small>{selectedNews.source} - {selectedNews.date}</small>
                 </div>
                 <p className="shop-news-detail-body">{selectedNews.summary}</p>
                 {selectedNews.url && selectedNews.url !== "#" && (
                   <a href={selectedNews.url} target="_blank" rel="noreferrer" className="primary-action news-read-btn">
-                    Read original article →
+                    Read original article
+                    <ExternalLink size={15} />
                   </a>
                 )}
                 <div className="shop-news-discuss">

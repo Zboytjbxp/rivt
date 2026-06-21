@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360" role="img" aria-labelledby="title desc">
+  <title id="title">Heat safety trade news thumbnail</title>
+  <desc id="desc">A dark jobsite-inspired card with an orange sun, water drops, and heat plan label.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#111820"/>
+      <stop offset="1" stop-color="#233540"/>
+    </linearGradient>
+    <radialGradient id="sun" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#ffb36b"/>
+      <stop offset="1" stop-color="#ff6a00"/>
+    </radialGradient>
+  </defs>
+  <rect width="640" height="360" fill="url(#bg)"/>
+  <path d="M0 284h640v76H0z" fill="#0a0f13" opacity=".72"/>
+  <g opacity=".18" stroke="#ffffff" stroke-width="1">
+    <path d="M54 40h532M54 92h532M54 144h532M54 196h532M54 248h532"/>
+    <path d="M92 18v278M172 18v278M252 18v278M332 18v278M412 18v278M492 18v278"/>
+  </g>
+  <circle cx="472" cy="116" r="62" fill="url(#sun)"/>
+  <g fill="none" stroke="#ff6a00" stroke-width="10" stroke-linecap="round" opacity=".72">
+    <path d="M472 30v-18M472 220v-18M386 116h-18M576 116h-18M411 55l-13-13M546 190l-13-13M533 55l13-13M398 190l13-13"/>
+  </g>
+  <g transform="translate(80 86)">
+    <rect x="0" y="0" width="252" height="154" rx="20" fill="#ffffff" opacity=".08"/>
+    <path d="M54 45c16 22 31 42 31 61a31 31 0 0 1-62 0c0-19 15-39 31-61z" fill="#37d6c6"/>
+    <path d="M132 48h76M132 84h104M132 120h64" stroke="#f7faf8" stroke-width="14" stroke-linecap="round"/>
+  </g>
+  <text x="80" y="303" fill="#f7faf8" font-family="Arial, Helvetica, sans-serif" font-size="40" font-weight="900" letter-spacing="2">HEAT PLAN</text>
+  <text x="82" y="333" fill="#ff8a2a" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="800" letter-spacing="4">OSHA + FIELD SAFETY</text>
+</svg>

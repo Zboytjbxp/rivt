@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360" role="img" aria-labelledby="title desc">
+  <title id="title">Code update trade news thumbnail</title>
+  <desc id="desc">A dark electrical plan card with circuit lines and a code update label.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0d1117"/>
+      <stop offset="1" stop-color="#172934"/>
+    </linearGradient>
+  </defs>
+  <rect width="640" height="360" fill="url(#bg)"/>
+  <rect x="48" y="42" width="544" height="236" rx="20" fill="#f7faf8" opacity=".08"/>
+  <g fill="none" stroke="#37d6c6" stroke-width="8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M118 108h96v58h96v-34h84"/>
+    <path d="M394 132h88v72h60"/>
+    <path d="M214 166v62h168"/>
+  </g>
+  <g fill="#ff6a00">
+    <circle cx="118" cy="108" r="16"/>
+    <circle cx="214" cy="166" r="16"/>
+    <circle cx="394" cy="132" r="16"/>
+    <circle cx="542" cy="204" r="16"/>
+  </g>
+  <g transform="translate(88 250)">
+    <rect width="190" height="54" rx="12" fill="#ff6a00"/>
+    <text x="95" y="37" fill="#0d1117" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="900">NEC</text>
+  </g>
+  <text x="304" y="287" fill="#f7faf8" font-family="Arial, Helvetica, sans-serif" font-size="34" font-weight="900" letter-spacing="2">CODE UPDATE</text>
+  <text x="306" y="318" fill="#a8b3b9" font-family="Arial, Helvetica, sans-serif" font-size="17" font-weight="800" letter-spacing="4">ELECTRICAL + BUILDING</text>
+</svg>

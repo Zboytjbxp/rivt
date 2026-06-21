@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360" role="img" aria-labelledby="title desc">
+  <title id="title">HVAC refrigerant trade news thumbnail</title>
+  <desc id="desc">A dark HVAC unit illustration with blue airflow and an orange refrigerant badge.</desc>
+  <rect width="640" height="360" fill="#101922"/>
+  <g opacity=".2" stroke="#ffffff" stroke-width="1">
+    <path d="M0 64h640M0 128h640M0 192h640M0 256h640"/>
+  </g>
+  <rect x="78" y="90" width="270" height="176" rx="22" fill="#202b34" stroke="#334b58" stroke-width="4"/>
+  <circle cx="213" cy="178" r="62" fill="#0d1117" stroke="#37d6c6" stroke-width="8"/>
+  <path d="M213 122v112M157 178h112M174 139l78 78M252 139l-78 78" stroke="#37d6c6" stroke-width="10" stroke-linecap="round"/>
+  <g fill="none" stroke="#37d6c6" stroke-width="10" stroke-linecap="round" opacity=".82">
+    <path d="M398 116c46 0 66 38 112 38"/>
+    <path d="M398 178c58 0 74 38 128 38"/>
+    <path d="M398 240c42 0 74 28 118 28"/>
+  </g>
+  <rect x="404" y="64" width="146" height="54" rx="12" fill="#ff6a00"/>
+  <text x="477" y="99" fill="#0d1117" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="26" font-weight="900">EPA</text>
+  <text x="80" y="312" fill="#f7faf8" font-family="Arial, Helvetica, sans-serif" font-size="38" font-weight="900" letter-spacing="2">HVAC WATCH</text>
+  <text x="82" y="338" fill="#ff8a2a" font-family="Arial, Helvetica, sans-serif" font-size="17" font-weight="800" letter-spacing="4">REFRIGERANT + INSTALL RULES</text>
+</svg>

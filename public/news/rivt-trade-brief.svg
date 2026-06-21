@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360" role="img" aria-labelledby="title desc">
+  <title id="title">RIVT trade brief thumbnail</title>
+  <desc id="desc">A generic RIVT trade news card for construction business updates.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0d1117"/>
+      <stop offset=".56" stop-color="#15242d"/>
+      <stop offset="1" stop-color="#0e151b"/>
+    </linearGradient>
+  </defs>
+  <rect width="640" height="360" fill="url(#bg)"/>
+  <g opacity=".2" stroke="#f7faf8" stroke-width="1">
+    <path d="M42 72h556M42 132h556M42 192h556M42 252h556"/>
+  </g>
+  <rect x="78" y="82" width="484" height="154" rx="24" fill="#f7faf8" opacity=".08"/>
+  <path d="M156 196l72-86 78 86 94-118 84 118" fill="none" stroke="#37d6c6" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="228" cy="110" r="18" fill="#ff6a00"/>
+  <circle cx="400" cy="78" r="18" fill="#ff6a00"/>
+  <text x="80" y="302" fill="#f7faf8" font-family="Arial, Helvetica, sans-serif" font-size="40" font-weight="900" letter-spacing="2">TRADE BRIEF</text>
+  <text x="82" y="332" fill="#ff8a2a" font-family="Arial, Helvetica, sans-serif" font-size="17" font-weight="800" letter-spacing="4">NEWS FOR CONTRACTORS</text>
+</svg>
