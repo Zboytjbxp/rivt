@@ -2,10 +2,10 @@
 
 Last updated: 2026-06-21 America/New_York
 Current gate: Gate A launch hardening
-Current phase: Packet 08 controllable UX hardening, Trade News polish, production UI smoke regression fixes, Tools studio release, Records workspace upgrade, UI system pass, shared UI primitives, Tools primitive alignment, and Shop Talk command center verified; full Gate A approval remains blocked
+Current phase: Packet 08 controllable UX hardening, Trade News polish, production UI smoke regression fixes, Tools studio release, Records workspace upgrade, UI system pass, shared UI primitives, Tools primitive alignment, Shop Talk command center, and Tools app surface pass verified; full Gate A approval remains blocked
 Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
-Production release commit: `4cef7973b247c3377efad3040ddb600110b2678b`
+Production release commit: `ad5ff7d2ed174634c4bde82bb0b7b23d8a058e8f`
 
 ## Source State
 
@@ -17,7 +17,19 @@ Packet 00 is merged on `master` at `4c199d903683e44d17b7985272c399c6d7a6cbd6`. T
 
 Do not discard or overwrite the pre-existing Trade News work when committing or splitting this packet.
 
-## Latest Packet 08 Pass - Shop Talk Command Center
+## Latest Packet 08 Pass - Tools App Surface
+
+- Deployed source `ad5ff7d2ed174634c4bde82bb0b7b23d8a058e8f` through Railway deployment `14bb03aa-9e7d-41f1-a0d0-24335fb216b8`.
+- Reworked the active Tools tab app surfaces so the hub reads like a utility suite instead of a generic card grid: each tool now has a clear app category, output signal, detail line, and stable action.
+- Improved Heavy 16th with copy-ready ft/in/16ths output, total length/spacing/cut result cards, decimal inches, quantity summary, and clipboard feedback.
+- Improved Estimate Builder with a cost composition meter for labor load and margin, while preserving copy-ready estimate behavior.
+- Improved Invoice Draft with recipient email/phone fields and honest `mailto:`/`sms:` draft actions; RIVT still does not claim server email/SMS delivery, payment processing, escrow, payroll, or tax automation.
+- Improved Material Takeoff with trade presets, waste-added output, and clearer sheet/cost breakdowns.
+- Added repeatable rendered QA command `npm run test:ui:tools`, covering Tools hub, Heavy 16th, Estimate Builder, Invoice Draft, and Material Takeoff at 1440x900 and 390x844 with no horizontal overflow and zero console/page errors. Screenshot evidence is outside the repo at `C:\Users\zboyt\AppData\Local\Temp\rivt-tools-pass`.
+- Local gates passed: `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test`, `npm run test:e2e`, `npm run test:ui:tools`, `npm audit --omit=dev`, and `git diff --check`; DB-backed integration tests still skip locally because `TEST_DATABASE_URL` is not configured.
+- Live checks passed: `/api/health` reported exact source `ad5ff7d2ed174634c4bde82bb0b7b23d8a058e8f`, PostgreSQL and S3-compatible dependencies healthy, and `npm run monitor:production` passed.
+
+## Packet 08 Pass - Shop Talk Command Center
 
 - Deployed source `4cef7973b247c3377efad3040ddb600110b2678b` through Railway deployment `f001843b-ab15-4f79-9406-bc36bfd27f31`.
 - Tightened Shop Talk into a search-first command center with thread/answer/fix metrics, a compact filter bar, honest empty states, and cleaner mobile/detail navigation.
