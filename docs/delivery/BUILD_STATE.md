@@ -2,10 +2,10 @@
 
 Last updated: 2026-06-21 America/New_York
 Current gate: Gate A launch hardening
-Current phase: Packet 08 controllable UX hardening, Trade News polish, production UI smoke regression fixes, Tools studio release, Records workspace upgrade, UI system pass, shared UI primitives, Tools primitive alignment, Shop Talk command center, Tools app surface pass, Heavy 16th multi-mode calculator, and Invoice Draft app upgrade verified; full Gate A approval remains blocked
+Current phase: Packet 08 controllable UX hardening, Trade News polish, production UI smoke regression fixes, Tools studio release, Records workspace upgrade, UI system pass, shared UI primitives, Tools primitive alignment, Shop Talk command center, Tools app surface pass, Heavy 16th multi-mode calculator, Invoice Draft app upgrade, and Shop Talk reaction/social pulse pass verified; full Gate A approval remains blocked
 Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
-Production release commit: `97d9da7adb90a79b00af695fa36460f4888cb5e7`
+Production release commit: `1227e1cdba071889384006fca44403538977b8df`
 
 ## Source State
 
@@ -17,7 +17,18 @@ Packet 00 is merged on `master` at `4c199d903683e44d17b7985272c399c6d7a6cbd6`. T
 
 Do not discard or overwrite the pre-existing Trade News work when committing or splitting this packet.
 
-## Latest Packet 08 Pass - Invoice Draft App Upgrade
+## Latest Packet 08 Pass - Shop Talk Reaction and Social Pulse
+
+- Deployed source `1227e1cdba071889384006fca44403538977b8df` through Railway deployment `740dfd5a-23ab-4509-bde3-0a0615a1f6fe`.
+- Fixed the founder-reported infinite Shop Talk like/dislike behavior in the current UI: thread and answer reactions now support one active reaction per signed-in user/device, switching between up/down moves the count, and clicking the same reaction clears it.
+- Added active visual and accessible reaction states (`aria-pressed`, upvote/downvote labels) so users can tell what they already reacted to.
+- Added a compact Shop Talk social pulse with profile impact score, trade-thread count, badge count, and top contributor rows to push Shop Talk toward the trades-only social hub direction.
+- Preserved the Gate A honesty boundary: this is local browser reaction state for the current Shop Talk surface, not production-grade server reputation. Durable multi-device reactions still require a canonical server reaction table and authorization/live smoke before being treated as permanent social proof.
+- Expanded `npm run test:ui:shop-talk-news` so the rendered QA verifies thread and answer reactions move once, clear on second click, expose active labels, keep no horizontal overflow, and preserve Trade News original-source coverage at 1440x900 and 390x844.
+- Local gates passed: `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test`, `npm run test:e2e`, `npm run test:ui:shop-talk-news`, `npm audit --omit=dev`, and `git diff --check`; DB-backed integration tests still skip locally because `TEST_DATABASE_URL` is not configured.
+- Live checks passed: `/api/health` reported exact source `1227e1cdba071889384006fca44403538977b8df`, PostgreSQL and S3-compatible dependencies healthy, and `npm run monitor:production` passed.
+
+## Packet 08 Pass - Invoice Draft App Upgrade
 
 - Deployed source `97d9da7adb90a79b00af695fa36460f4888cb5e7` through Railway deployment `58d6dca4-d5cb-40e7-b18d-5a037c36ec6b`.
 - Reworked Invoice Draft into a fuller invoice app with a cleaner builder column, totals/delivery actions, and a polished printable preview document.

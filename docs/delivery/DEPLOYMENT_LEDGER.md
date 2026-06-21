@@ -614,3 +614,23 @@ Add one entry per staging/production deployment.
 - Known risks: full Gate A remains blocked by dedicated error monitoring/paging, completed incident-routing fields and rehearsal, founder/support/legal-safety approvals, RPO/RTO policy approval, physical/deeper manual accessibility-device matrix, remaining `src/App.tsx` strangler/component cleanup, and production-grade server invoice/SMS delivery if promoted from Gate B
 - Rollback performed/result: not required
 - Approval: Invoice Draft app upgrade accepted as controllable Tools UX hardening evidence; overall Gate A not approved
+
+## Current Production - Packet 08 Shop Talk Reaction and Social Pulse Pass
+
+- Environment: Production (`https://rivt.pro`)
+- Date/time/timezone: 2026-06-21 17:23 America/New_York
+- Deployer: Codex through authenticated Railway CLI
+- Source repository/branch: `Zboytjbxp/rivt`, `master`
+- Source commit: `1227e1cdba071889384006fca44403538977b8df`
+- Build/artifact ID: Railway deployment `740dfd5a-23ab-4509-bde3-0a0615a1f6fe`
+- Migration version before/after: unchanged (`0009_durable_rate_limits`)
+- Feature-flag/config version: `SOURCE_COMMIT` updated to `1227e1cdba071889384006fca44403538977b8df`; no operational-control flags changed
+- Provider/config changes: no provider credentials changed; Shop Talk reactions remain local browser state in this pass and are not durable server reputation
+- Backup/rollback target: prior successful Invoice Draft deployment `58d6dca4-d5cb-40e7-b18d-5a037c36ec6b`; no migration change
+- Automated gates: local `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test`, `npm run test:e2e`, `npm run test:ui:shop-talk-news`, `npm audit --omit=dev`, and `git diff --check` passed; DB-backed integration tests skipped locally because `TEST_DATABASE_URL` is not configured
+- Post-deploy smoke tests: `https://rivt.pro/api/health` returned exact source commit `1227e1cdba071889384006fca44403538977b8df`; `npm run monitor:production` passed externally with PostgreSQL/S3-compatible dependencies healthy, operational controls disabled, seven anonymous private-route checks, and 547 ms duration
+- Rendered UI evidence: `npm run test:ui:shop-talk-news` covered Shop Talk and Trade News at 1440x900 and 390x844 using authenticated route mocks, verified the Social hub pulse, thread upvote toggling, answer upvote toggling, no horizontal overflow, original-source links, and zero console/page errors. Screenshots are outside the repo at `C:\Users\zboyt\AppData\Local\Temp\rivt-shop-talk-news-pass`.
+- Health/readiness result: health reported PostgreSQL and S3-compatible storage healthy with exact source commit `1227e1cdba071889384006fca44403538977b8df`
+- Known risks: full Gate A remains blocked by dedicated error monitoring/paging, completed incident-routing fields and rehearsal, founder/support/legal-safety approvals, RPO/RTO policy approval, physical/deeper manual accessibility-device matrix, remaining `src/App.tsx` strangler/component cleanup, and production-grade server Shop Talk posts/reactions/reputation if promoted from Gate B to launch scope
+- Rollback performed/result: not required
+- Approval: Shop Talk reaction and social pulse pass accepted as controllable social-hub UX hardening evidence; overall Gate A not approved
