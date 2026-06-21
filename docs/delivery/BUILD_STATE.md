@@ -2,10 +2,10 @@
 
 Last updated: 2026-06-21 America/New_York
 Current gate: Gate A launch hardening
-Current phase: Packet 08 controllable UX hardening, Trade News polish, production UI smoke regression fixes, Tools studio release, Records workspace upgrade, UI system pass, shared UI primitives, and Tools primitive alignment verified; full Gate A approval remains blocked
+Current phase: Packet 08 controllable UX hardening, Trade News polish, production UI smoke regression fixes, Tools studio release, Records workspace upgrade, UI system pass, shared UI primitives, Tools primitive alignment, and Shop Talk command center verified; full Gate A approval remains blocked
 Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
-Production release commit: `0680b8f013c167ac4706ad6faf648a0e5cc6df3a`
+Production release commit: `4cef7973b247c3377efad3040ddb600110b2678b`
 
 ## Source State
 
@@ -16,6 +16,15 @@ Packet 00 is merged on `master` at `4c199d903683e44d17b7985272c399c6d7a6cbd6`. T
 - Product source of truth: `RIVT_MASTER_BUILD_PROMPT.md`
 
 Do not discard or overwrite the pre-existing Trade News work when committing or splitting this packet.
+
+## Latest Packet 08 Pass - Shop Talk Command Center
+
+- Deployed source `4cef7973b247c3377efad3040ddb600110b2678b` through Railway deployment `f001843b-ab15-4f79-9406-bc36bfd27f31`.
+- Tightened Shop Talk into a search-first command center with thread/answer/fix metrics, a compact filter bar, honest empty states, and cleaner mobile/detail navigation.
+- Tightened Trade News into a source-first feed with search, source/article metrics, readable mobile cards, RIVT-owned thumbnails, and original-source links.
+- Added repeatable rendered QA command `npm run test:ui:shop-talk-news`, covering Shop Talk and Trade News at 1440x900 and 390x844 with no horizontal overflow and zero console/page errors. Screenshot evidence is outside the repo at `C:\Users\zboyt\AppData\Local\Temp\rivt-shop-talk-news-pass`.
+- Local gates passed: `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test`, `npm run test:e2e`, `npm run test:ui:shop-talk-news`, `npm audit --omit=dev`, and `git diff --check`; DB-backed integration tests still skip locally because `TEST_DATABASE_URL` is not configured.
+- Live checks passed: `/api/health` reported exact source `4cef7973b247c3377efad3040ddb600110b2678b`, live `/api/news` returned 21 items with zero missing URLs or thumbnails, anonymous `/api/storage` returned 401 as expected, and `npm run monitor:production` passed.
 
 ## Packet 00 Delivered
 

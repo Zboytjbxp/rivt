@@ -534,3 +534,23 @@ Add one entry per staging/production deployment.
 - Known risks: full Gate A remains blocked by dedicated error monitoring/paging, completed incident-routing fields and rehearsal, founder/support/legal-safety approvals, RPO/RTO policy approval, physical/deeper manual accessibility-device matrix, remaining `src/App.tsx` strangler/component cleanup, and production-grade server invoice/SMS delivery if promoted from Gate B
 - Rollback performed/result: not required
 - Approval: Tools primitive alignment accepted as controllable UX hardening evidence; overall Gate A not approved
+
+## Current Production - Packet 08 Shop Talk Command Center Pass
+
+- Environment: Production (`https://rivt.pro`)
+- Date/time/timezone: 2026-06-21 14:30 America/New_York
+- Deployer: Codex through authenticated Railway CLI
+- Source repository/branch: `Zboytjbxp/rivt`, `master`
+- Source commit: `4cef7973b247c3377efad3040ddb600110b2678b`
+- Build/artifact ID: Railway deployment `f001843b-ab15-4f79-9406-bc36bfd27f31`
+- Migration version before/after: unchanged (`0009_durable_rate_limits`)
+- Feature-flag/config version: `SOURCE_COMMIT` updated to `4cef7973b247c3377efad3040ddb600110b2678b`; no operational-control flags changed
+- Provider/config changes: no provider credentials changed
+- Backup/rollback target: prior successful Tools primitive alignment deployment `b7740f77-4af0-4ba2-838f-ff85386cb86b`; no migration change
+- Automated gates: local `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check` passed; DB-backed integration tests skipped locally because `TEST_DATABASE_URL` is not configured. Added and passed repeatable rendered QA command `npm run test:ui:shop-talk-news`.
+- Post-deploy smoke tests: `https://rivt.pro/api/health` returned exact source commit `4cef7973b247c3377efad3040ddb600110b2678b`; anonymous `/api/storage` returned `Authentication required` as expected for the private storage endpoint; live `/api/news` returned 21 items with zero missing original URLs and zero missing thumbnails; `npm run monitor:production` passed externally with PostgreSQL/S3-compatible dependencies healthy, operational controls disabled, seven anonymous private-route checks, and 491 ms duration.
+- Rendered UI evidence: `npm run test:ui:shop-talk-news` covered Shop Talk and Trade News at 1440x900 and 390x844 using authenticated route mocks, verified search inputs, original-source links, no horizontal overflow, and zero console/page errors. Screenshots are outside the repo at `C:\Users\zboyt\AppData\Local\Temp\rivt-shop-talk-news-pass`.
+- Health/readiness result: health reported PostgreSQL and S3-compatible storage healthy with exact source commit `4cef7973b247c3377efad3040ddb600110b2678b`
+- Known risks: full Gate A remains blocked by dedicated error monitoring/paging, completed incident-routing fields and rehearsal, founder/support/legal-safety approvals, RPO/RTO policy approval, physical/deeper manual accessibility-device matrix, remaining `src/App.tsx` strangler/component cleanup, and production-grade server invoice/SMS delivery if promoted from Gate B
+- Rollback performed/result: not required
+- Approval: Shop Talk command center and Trade News feed polish accepted as controllable UX hardening evidence; overall Gate A not approved
