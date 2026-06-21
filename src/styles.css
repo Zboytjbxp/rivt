@@ -4879,6 +4879,7 @@ textarea:focus-visible {
   align-items: center;
   justify-content: center;
   gap: 7px;
+  min-width: 44px;
   min-height: 44px;
   border: 1px solid var(--border);
   border-radius: 9px;

@@ -58,6 +58,7 @@
 .v2-section-tabs button,
 .v2-detail-tabs button {
   position: relative;
+  min-width: 44px;
   min-height: 44px;
   padding: 0;
   border: 0;
