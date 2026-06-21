@@ -87,6 +87,7 @@ async function waitForServer() {
 async function configurePage(page, jobs) {
   await page.route("**/api/v1/me", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: account }) }));
   await page.route("**/api/auth/providers", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ providers: {} }) }));
+  await page.route("**/api/v1/sessions", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { sessions: [] }, meta: { requestId: "e2e-sessions" } }) }));
   await page.route("**/api/v1/conversations", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { conversations: [] }, meta: { requestId: "e2e-conversations" } }) }));
   await page.route("**/api/v1/notifications", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { notifications: [], unreadCount: 0 }, meta: { requestId: "e2e-notifications" } }) }));
   await page.route("**/api/v1/jobs?**", async (route) => {
@@ -94,6 +95,31 @@ async function configurePage(page, jobs) {
     return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { jobs }, meta: { nextCursor: null } }) });
   });
   await page.route(`**/api/v1/jobs/${job.id}`, (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { job } }) }));
+}
+
+async function assertTopBarActions(page) {
+  await page.keyboard.press("Control+K");
+  await page.getByRole("dialog", { name: "Search RIVT" }).waitFor();
+  await page.getByPlaceholder("Search jobs, people, messages, and tools").fill("electrical");
+  await page.keyboard.press("Escape");
+  await page.getByRole("dialog", { name: "Search RIVT" }).waitFor({ state: "detached" }).catch(async () => {
+    await page.getByRole("dialog", { name: "Search RIVT" }).waitFor({ state: "hidden" });
+  });
+
+  await page.getByRole("button", { name: "Notifications" }).click();
+  await page.getByRole("dialog", { name: "Notifications" }).waitFor();
+  await page.getByRole("button", { name: /Mark read/i }).waitFor();
+  await page.getByRole("button", { name: "Messages" }).last().waitFor();
+  await page.getByRole("button", { name: "Close notifications" }).click();
+
+  await page.getByRole("button", { name: /Open profile menu for/i }).last().click();
+  await page.getByRole("dialog", { name: "Settings" }).waitFor();
+  await page.getByRole("button", { name: "Sign out" }).waitFor();
+  await page.getByRole("button", { name: "Close account" }).click();
+
+  await page.getByRole("button", { name: "Messages" }).click();
+  await page.getByRole("heading", { name: "Inbox", exact: true }).waitFor();
+  await page.getByText("Server-owned job messages and notifications", { exact: false }).waitFor();
 }
 
 let browser;
@@ -114,6 +140,7 @@ try {
     }
     assert.equal(await page.getByRole("button", { name: "Messages" }).count(), 1);
     assert.equal(await page.getByRole("button", { name: "Notifications" }).count(), 1);
+    await assertTopBarActions(page);
     assert.equal(await page.getByText("Marcus Webb").count(), 0);
     assert.deepEqual(consoleErrors, []);
     await page.close();

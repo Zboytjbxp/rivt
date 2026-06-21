@@ -44,6 +44,17 @@ Gate A status: partial evidence only. This report does not approve named custome
 
 Live run `ui-a11y-20260621043529-3efa9b` created disposable contractor and tradesperson accounts, exercised every scenario above, and closed both accounts after the run.
 
+The script was hardened after that live run to open and audit the top-bar action surfaces rather than only checking that the controls exist:
+
+- `Ctrl+K` global search dialog.
+- Notifications panel, including its quick actions.
+- Profile/account panel, including the sign-out control.
+- Messages top-bar button routing to the server-owned Inbox page.
+
+This expanded top-bar action coverage still needs to be rerun against production with disposable accounts before it becomes live evidence.
+
+Local mocked E2E coverage now also opens top-bar search, notifications, profile/account, and messages/inbox at desktop and mobile viewports through `npm run test:e2e`.
+
 ## Findings and Fixes
 
 - Finding: public auth email/password fields rendered at `42px` height, below the Gate A 44px target-size floor.
@@ -56,6 +67,7 @@ Live run `ui-a11y-20260621043529-3efa9b` created disposable contractor and trade
 - Follow-up finding: expanded authenticated smoke found 360x800 Crew overflow in the V2 network shell. The first issue was intrinsic grid/flex sizing that let `.v2-network-header`, `.v2-network-grid`, and `.v2-network-panel` exceed their parent; the second was a mobile metric row with three `min-width: 110px` cards.
 - Fixes in this packet: added explicit `min-width: 0` shrink rules for network page children and converted the mobile metrics row to a real three-column grid with no fixed metric-card minimum.
 - Post-deploy expanded verification: live smoke `ui-a11y-20260621043529-3efa9b` passed at 360x800, 390x844, 768x1024, 1366x768, 1440x900, and 390x844 with 200% text-scale.
+- Controllable follow-up: top-bar controls were upgraded from presence-only smoke to interaction smoke in `scripts/live-ui-accessibility.js`, and `test/jobs-discovery.e2e.mjs` now verifies search, notifications, account/profile, and messages/inbox open correctly with mocked server responses.
 
 ## Blocked Coverage
 

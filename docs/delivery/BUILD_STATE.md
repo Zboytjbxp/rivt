@@ -497,9 +497,18 @@ Implemented on 2026-06-21:
 - `npm run launch:readiness -- --json` currently blocks with the expected non-code findings: incident routing not approved, backup owner missing, support hours missing, dedicated error monitoring missing, paging missing, incident rehearsal missing, incident approvals missing, recovery policy not approved, RPO/RTO missing, backup retention missing, restore cadence missing, next restore drill missing, and recovery approvals missing. It does recognize the recent named backup-artifact restore as current evidence.
 - Required local gates passed after this slice: `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test`, `npm run test:e2e`, and `npm audit --omit=dev`. DB-backed local integration tests still skip on this workstation because `TEST_DATABASE_URL` is intentionally absent.
 
+## Packet 08 Controllable UI Smoke Coverage Progress
+
+Implemented on 2026-06-21 after deciding to keep external Gate A finish blockers noted and move to controllable work:
+
+- Hardened `scripts/live-ui-accessibility.js` so authenticated smoke now opens the top-bar search dialog, notifications panel, profile/account panel, and messages/inbox route, then applies the same title, overflow, unnamed-control, tap-target, top-bar-signal, and console-warning/error checks to those opened surfaces.
+- Hardened `test/jobs-discovery.e2e.mjs` with mocked API coverage that opens top-bar search, notifications, account/profile, and messages/inbox across desktop and mobile viewports. The test also mocks `/api/v1/sessions` so the account panel can open without leaking to an unmocked local API.
+- `npm run test:e2e` passed after the new top-bar interaction checks.
+- Required local gates passed after this slice: `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test`, `npm run test:e2e`, and `npm audit --omit=dev`. DB-backed local integration tests still skip on this workstation because `TEST_DATABASE_URL` is intentionally absent.
+
 ## Next Exact Task
 
-Configure a real dedicated error-monitoring provider and paging/escalation route, fill the backup owner/support-hours/approval fields in `docs/operations/incident-routing.json`, approve the RPO/RTO/retention/cadence fields in `docs/operations/recovery-policy.json`, run an incident rehearsal, then pass `npm run incident:readiness -- --require-ready` and `npm run launch:readiness -- --require-ready`. Complete the physical/deeper manual accessibility-device matrix before named-cohort launch.
+Continue controllable Gate A hardening by rerunning the expanded authenticated UI smoke against production with disposable accounts when live credentials are available, then address any resulting UI blockers. Keep the remaining external launch requirements noted: configure real dedicated error monitoring and paging/escalation, fill backup owner/support-hours/approval fields in `docs/operations/incident-routing.json`, approve RPO/RTO/retention/cadence fields in `docs/operations/recovery-policy.json`, run an incident rehearsal, then pass `npm run incident:readiness -- --require-ready` and `npm run launch:readiness -- --require-ready`. Complete the physical/deeper manual accessibility-device matrix before named-cohort launch.
 
 ## Blocking Founder Decisions
 

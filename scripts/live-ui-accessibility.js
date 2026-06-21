@@ -179,6 +179,28 @@ async function firstVisibleClick(page, label) {
   await page.waitForTimeout(350);
 }
 
+async function clickVisibleControl(page, { pattern, flags = "i", description }) {
+  const count = await page.evaluate(({ pattern: patternText, flags: patternFlags }) => {
+    const matcher = new RegExp(patternText, patternFlags);
+    function textOf(el) {
+      return (el.getAttribute("aria-label") || el.getAttribute("title") || el.textContent || el.getAttribute("placeholder") || "")
+        .replace(/\s+/g, " ")
+        .trim();
+    }
+    function visible(el) {
+      const rect = el.getBoundingClientRect();
+      const style = window.getComputedStyle(el);
+      return rect.width > 0 && rect.height > 0 && style.visibility !== "hidden" && style.display !== "none";
+    }
+    const matches = [...document.querySelectorAll("button,a,input,[role='button']")]
+      .filter((el) => visible(el) && matcher.test(textOf(el)));
+    matches.at(-1)?.click();
+    return matches.length;
+  }, { pattern, flags });
+  assert.ok(count > 0, `No visible ${description} control was found.`);
+  await page.waitForTimeout(350);
+}
+
 async function collectUiAudit(page, label) {
   return page.evaluate((auditLabel) => {
     function textOf(el) {
@@ -309,6 +331,44 @@ async function collectKeyboardAudit(page, label) {
   };
 }
 
+async function assertNoDialog(page, name) {
+  await page.getByRole("dialog", { name }).waitFor({ state: "detached", timeout: 5000 }).catch(async () => {
+    await page.getByRole("dialog", { name }).waitFor({ state: "hidden", timeout: 5000 });
+  });
+}
+
+async function collectTopBarActionAudits(page, scenarioLabel) {
+  const audits = [];
+
+  await page.keyboard.press("Control+K");
+  await page.getByRole("dialog", { name: "Search RIVT" }).waitFor({ timeout: 5000 });
+  audits.push(await collectUiAudit(page, `${scenarioLabel}-search-dialog`));
+  await page.keyboard.press("Escape");
+  await assertNoDialog(page, "Search RIVT");
+
+  await clickVisibleControl(page, { pattern: "^Notifications$", description: "notifications" });
+  await page.getByRole("dialog", { name: "Notifications" }).waitFor({ timeout: 5000 });
+  await page.getByRole("button", { name: /Mark read/i }).waitFor({ timeout: 5000 });
+  audits.push(await collectUiAudit(page, `${scenarioLabel}-notifications-panel`));
+  await page.getByRole("button", { name: "Close notifications" }).click();
+  await assertNoDialog(page, "Notifications");
+
+  await clickVisibleControl(page, { pattern: "Open profile menu", description: "profile menu" });
+  await page.getByRole("dialog", { name: "Settings" }).waitFor({ timeout: 5000 });
+  await page.getByRole("button", { name: "Sign out" }).waitFor({ timeout: 5000 });
+  audits.push(await collectUiAudit(page, `${scenarioLabel}-account-panel`));
+  await page.getByRole("button", { name: "Close account" }).click();
+  await assertNoDialog(page, "Settings");
+
+  await clickVisibleControl(page, { pattern: "^Messages$", description: "messages" });
+  await page.getByRole("heading", { name: "Inbox", exact: true }).waitFor({ timeout: 10000 });
+  await page.getByText("Server-owned job messages and notifications", { exact: false }).waitFor({ timeout: 5000 });
+  audits.push(await collectUiAudit(page, `${scenarioLabel}-messages-page`));
+  await firstVisibleClick(page, "Home");
+
+  return audits;
+}
+
 async function loginAndAudit(browser, account, scenario) {
   const context = await browser.newContext({ viewport: scenario.viewport, reducedMotion: "reduce" });
   const page = await context.newPage();
@@ -340,8 +400,9 @@ async function loginAndAudit(browser, account, scenario) {
       await firstVisibleClick(page, navItem);
       audits.push(await collectUiAudit(page, `${scenarioLabel}-${navItem.toLowerCase().replace(/\s+/g, "-")}`));
     }
+    const topBarActionAudits = await collectTopBarActionAudits(page, scenarioLabel);
 
-    for (const audit of audits) {
+    for (const audit of [...audits, ...topBarActionAudits]) {
       assert.equal(audit.title, "RIVT | Where skilled trades connect", `${audit.label} has unexpected title.`);
       assert.equal(audit.frameworkOverlay, false, `${audit.label} shows a framework/runtime overlay.`);
       assert.equal(audit.viewport.scrollWidth <= audit.viewport.width + 2, true, `${audit.label} has horizontal page overflow.`);
@@ -366,6 +427,13 @@ async function loginAndAudit(browser, account, scenario) {
       logs,
       reducedMotion: true,
       keyboard,
+      topBarActionAudits: topBarActionAudits.map((audit) => ({
+        label: audit.label,
+        url: audit.url,
+        topBarSignals: audit.topBarSignals,
+        smallTargets: audit.smallTargets,
+        bodyStart: audit.bodyStart,
+      })),
       audits: audits.map((audit) => ({
         label: audit.label,
         url: audit.url,
@@ -422,11 +490,12 @@ function summarizeResults({ run, buildCommit, accountsClosed, results, mode = "f
       auditCount: result.audits.length,
       reducedMotion: result.reducedMotion,
       keyboard: result.keyboard,
+      topBarActionAuditCount: result.topBarActionAudits.length,
       consoleWarningsOrErrors: result.logs.length,
       consoleSamples: result.logs.slice(0, 3),
       topBarSignals: result.audits[0]?.topBarSignals ?? null,
-      smallTargetCount: result.audits.reduce((count, audit) => count + audit.smallTargets.length, 0),
-      smallTargetSamples: result.audits.flatMap((audit) =>
+      smallTargetCount: [...result.audits, ...result.topBarActionAudits].reduce((count, audit) => count + audit.smallTargets.length, 0),
+      smallTargetSamples: [...result.audits, ...result.topBarActionAudits].flatMap((audit) =>
         audit.smallTargets.map((target) => ({
           screen: audit.label,
           ...target,

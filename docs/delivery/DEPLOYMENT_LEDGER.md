@@ -382,3 +382,22 @@ Add one entry per staging/production deployment.
 - Known risks: full Gate A remains blocked by dedicated error monitoring/paging, completed incident-routing fields and rehearsal, founder/support/legal-safety approvals, RPO/RTO/retention/cadence policy approval, and physical/deeper manual accessibility-device matrix
 - Rollback performed/result: not required
 - Approval: launch-readiness tooling accepted as partial evidence only; overall Gate A not approved
+
+## Local Packet 08 - Controllable Top-Bar Interaction Coverage
+
+- Environment: Local repository tooling; no production deploy performed in this slice
+- Date/time/timezone: 2026-06-21 01:10 America/New_York
+- Deployer: Codex
+- Source repository/branch: `Zboytjbxp/rivt`, `master`
+- Source commit: pending local changes
+- Build/artifact ID: not deployed
+- Migration version before/after: unchanged (`0009_durable_rate_limits`)
+- Feature-flag/config version: no app runtime flags changed
+- Provider/config changes: none
+- Backup/rollback target: prior pushed source `252081a Add launch operations readiness gate`; no deploy
+- Automated gates: `node --check scripts/live-ui-accessibility.js` passed; `npm run lint:security` passed after adding top-bar action audits; `npm run test:e2e` passed after mocked desktop/mobile coverage opened search, notifications, account/profile, and messages/inbox; full local gates passed with `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test`, `npm run test:e2e`, and `npm audit --omit=dev`
+- Post-deploy smoke tests: none; no deployment occurred
+- Health/readiness result: not rechecked because this slice only changed test/smoke coverage
+- Known risks: the expanded top-bar action audit has not yet been rerun against production with disposable accounts; physical/manual accessibility and external incident/launch operations blockers remain open
+- Rollback performed/result: not required
+- Approval: controllable UI smoke coverage accepted as local evidence only; overall Gate A not approved
