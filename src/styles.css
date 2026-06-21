@@ -2136,7 +2136,7 @@ textarea:focus-visible {
 }
 
 .theme-mode-row .theme-toggle {
-  min-height: 36px;
+  min-height: 44px;
 }
 
 .theme-palette-grid {
@@ -7144,7 +7144,7 @@ textarea:focus-visible {
 
   .sidebar .theme-toggle {
     width: auto;
-    min-height: 36px;
+    min-height: 44px;
     padding: 0 10px;
     border-color: var(--border);
     background: var(--surface-soft);
@@ -7156,8 +7156,8 @@ textarea:focus-visible {
   }
 
   .onboarding-brand-row .theme-toggle {
-    width: 42px;
-    flex-basis: 42px;
+    width: 44px;
+    flex-basis: 44px;
   }
 
   .mobile-nav-strip {
@@ -7333,9 +7333,9 @@ textarea:focus-visible {
 
   .topbar .theme-toggle {
     order: 1;
-    width: 32px;
-    min-height: 32px;
-    flex-basis: 32px;
+    width: 44px;
+    min-height: 44px;
+    flex-basis: 44px;
     justify-self: end;
     border-color: rgba(255, 255, 255, 0.16);
     border-radius: 9px;
