@@ -516,6 +516,8 @@ Implemented on 2026-06-21 as controllable UX hardening:
 - Reworked the Trade News card layout with larger readable headlines, summary previews, date/source separation, original-source links, non-cropped thumbnails, and cleaner selected/detail states.
 - Reworked the Trade News detail hero on mobile so metadata no longer collides with the thumbnail artwork.
 - Rendered QA with a mocked authenticated account while letting `/api/news` hit the real local API at `127.0.0.1:8787`: desktop `1280x800` and mobile `390x844` both showed curated cards, no Google favicon thumbnails, working original-source URLs, detail hero images, and zero console errors. Screenshot evidence was saved outside the repo at `C:\Users\zboyt\AppData\Local\Temp\rivt-trade-news-desktop.png` and `C:\Users\zboyt\AppData\Local\Temp\rivt-trade-news-mobile.png`.
+- Deployed the slice to Railway production as deployment `9c1a3184-1b5e-44dc-bcae-6b8cffc5fc7b` from commit `850337ff3c54f98405c58f74ac5feb39213f1bbd`.
+- Live `https://rivt.pro/api/news` verification after deployment returned 21 items with `GoogleFavicons: 0`, `MissingThumbnails: 0`, `MissingUrls: 0`, and `HomeownerMentions: 0`; the first card used `/news/permit-watch.svg` and linked to the Jacksonville permitting source.
 - Required local gates passed after this slice: `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test`, `npm run test:e2e`, and `npm audit --omit=dev`. DB-backed local integration tests still skip on this workstation because `TEST_DATABASE_URL` is intentionally absent.
 
 ## Next Exact Task
