@@ -2,10 +2,10 @@
 
 Last updated: 2026-06-21 America/New_York
 Current gate: Gate A launch hardening
-Current phase: Packet 08 controllable UX hardening, Trade News real-media and mobile layout pass, production UI smoke regression fixes, Tools studio release, Records workspace upgrade, UI system pass, shared UI primitives, Tools primitive alignment, Shop Talk command center, Tools app surface pass, Heavy 16th multi-mode calculator, Invoice Draft app upgrade, and Shop Talk reaction/social pulse pass verified; full Gate A approval remains blocked
+Current phase: Packet 08 controllable UX hardening, RIVT Daily home check-in, Trade News real-media and mobile layout pass, production UI smoke regression fixes, Tools studio release, Records workspace upgrade, UI system pass, shared UI primitives, Tools primitive alignment, Shop Talk command center, Tools app surface pass, Heavy 16th multi-mode calculator, Invoice Draft app upgrade, and Shop Talk reaction/social pulse pass verified; full Gate A approval remains blocked
 Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
-Production release commit: `a59eb47b9b3efc4eb8e60da835fc50d0cc912b5f`
+Production release commit: `436b83fb94f70d2dc0b831d2a7ee09c59d915882`
 
 ## Source State
 
@@ -17,7 +17,20 @@ Packet 00 is merged on `master` at `4c199d903683e44d17b7985272c399c6d7a6cbd6`. T
 
 Do not discard or overwrite the pre-existing Trade News work when committing or splitting this packet.
 
-## Latest Packet 08 Pass - Trade News Real Media and Mobile Layout
+## Latest Packet 08 Pass - RIVT Daily Home Check-In
+
+- Deployed source `436b83fb94f70d2dc0b831d2a7ee09c59d915882` through Railway deployment `f17fbcec-f7a2-4c5f-bceb-b5dc1af1a436`.
+- Added a Home-level `RIVT Daily` command surface with work, money, crew, and field-knowledge signals so contractors and tradespeople have a daily reason to check in without inventing fake marketplace density.
+- Added a compact `Availability radar` to Home that lets users set `available`, `limited`, or `unavailable/booked` from the dashboard.
+- Wired the availability change to the existing authenticated `PATCH /api/v1/profile` route and refreshes the canonical account after save; it is not frontend-only state.
+- Tuned the mobile Home layout so Daily signals render as a compact two-column grid on phone widths, with an extra-narrow one-column fallback only below 360px.
+- Expanded `npm run test:e2e` to open Home on desktop and mobile, verify `RIVT Daily` and `Availability radar`, save a mocked server-backed availability update, and continue through Work, top-bar actions, Tools, and Records.
+- Local gates passed: `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check`; DB-backed integration tests still skip locally because `TEST_DATABASE_URL` is not configured.
+- Live checks passed: `/api/health` reported exact source `436b83fb94f70d2dc0b831d2a7ee09c59d915882`, PostgreSQL and S3-compatible dependencies healthy, and `npm run monitor:production` passed with seven anonymous private-route checks.
+- DB-bound live UI and hardening smokes were not completed from this local machine: plain local runs lack `DATABASE_URL`, and `railway run` injects the private `postgres.railway.internal` host that is not resolvable outside Railway's network. These checks need GitHub Actions/Railway runtime execution or a reviewed public DB proxy.
+- Remaining honesty boundary: `RIVT Daily` summarizes current available app signals; durable daily streaks, personalized ranking, and server-owned social reputation remain future work.
+
+## Packet 08 Pass - Trade News Real Media and Mobile Layout
 
 - Deployed source `a59eb47b9b3efc4eb8e60da835fc50d0cc912b5f` through Railway deployment `4fb062bd-1c3e-474e-90df-fe42f4f2e1fa`.
 - Reworked the Trade News image pipeline so RSS media, article Open Graph/Twitter images, and source page `image_src` candidates are used before RIVT fallback topic thumbnails.

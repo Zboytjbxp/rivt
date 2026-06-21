@@ -21,7 +21,26 @@ Add one entry per staging/production deployment.
 - Rollback performed/result:
 - Approval:
 
-## Current Production - Packet 08 Trade News Real Media and Mobile Layout
+## Current Production - Packet 08 RIVT Daily Home Check-In
+
+- Environment: Production (`https://rivt.pro`)
+- Date/time/timezone: 2026-06-21 19:03 America/New_York
+- Deployer: Codex through authenticated Railway CLI
+- Source repository/branch: `Zboytjbxp/rivt`, `master`
+- Source commit: `436b83fb94f70d2dc0b831d2a7ee09c59d915882`
+- Build/artifact ID: Railway deployment `f17fbcec-f7a2-4c5f-bceb-b5dc1af1a436`
+- Migration version before/after: `0009_durable_rate_limits` / `0009_durable_rate_limits` (no schema migration)
+- Feature-flag/config version: `SOURCE_COMMIT` updated to `436b83fb94f70d2dc0b831d2a7ee09c59d915882`; operational controls unchanged
+- Provider/config changes: no provider credentials changed; Home now writes daily availability through the existing authenticated profile endpoint
+- Backup/rollback target: prior successful deployment `4fb062bd-1c3e-474e-90df-fe42f4f2e1fa`; migration version unchanged
+- Automated gates: local `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check` passed; DB-backed integration tests skipped locally because `TEST_DATABASE_URL` is not configured
+- Post-deploy smoke tests: public `/api/health` passed and reported exact source commit `436b83fb94f70d2dc0b831d2a7ee09c59d915882`; `npm run monitor:production` passed with PostgreSQL/S3-compatible dependencies healthy, operational controls disabled, and seven anonymous private-route checks. DB-bound `smoke:ui:live` and `smoke:gate-a:live` could not run from this local machine because local env lacks `DATABASE_URL`, and Railway-injected private Postgres DNS (`postgres.railway.internal`) is not resolvable outside Railway.
+- Health/readiness result: health reports PostgreSQL and S3-compatible storage healthy with exact source commit `436b83fb94f70d2dc0b831d2a7ee09c59d915882`; production synthetic monitor reports signups and mutations enabled
+- Known risks: `RIVT Daily` uses current app signals only; personalized ranking, streaks, durable server-owned Shop Talk reputation, and full daily-engagement analytics remain future work. Full Gate A remains blocked by real external error monitoring/paging, incident rehearsal, RPO/RTO policy approval, backup retention/cadence approval, support/legal/founder signoff, and physical/deeper manual accessibility/device evidence.
+- Rollback performed/result: not required
+- Approval: Packet 08 RIVT Daily home check-in slice accepted; overall Gate A not approved
+
+## Previous Production - Packet 08 Trade News Real Media and Mobile Layout
 
 - Environment: Production (`https://rivt.pro`)
 - Date/time/timezone: 2026-06-21 17:51 America/New_York
