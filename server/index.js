@@ -71,6 +71,7 @@ import {
   reportConversationSchema,
 } from "./messaging.js";
 import { createRequestLogger, logError, logInfo, logWarn } from "./logger.js";
+import { captureException, errorMonitoringStatus } from "./monitoring.js";
 import {
   buildCloseoutReport,
   completionResolutionSchema,
@@ -145,6 +146,20 @@ function operationalControls() {
     mutationsDisabled: envFlag("RIVT_MUTATIONS_DISABLED") || envFlag("PLATFORM_MUTATIONS_DISABLED"),
     reason: envValue("RIVT_CONTROL_REASON", null),
   };
+}
+
+function captureOperationalError(error, context = {}) {
+  return captureException(error, {
+    ...context,
+    sourceCommit,
+    migrationVersion,
+    appVersion,
+  }).catch((captureError) => {
+    logWarn("monitoring.capture_failed", {
+      requestId: context.requestId ?? null,
+      error: captureError,
+    });
+  });
 }
 
 function normalizeEmail(email) {
@@ -1214,6 +1229,7 @@ app.get("/api/news", async (request, response) => {
 
 app.get("/api/health", (_request, response) => {
   const storage = storageConfiguration();
+  const monitoring = errorMonitoringStatus();
 
   response.status(storage.ok ? 200 : 503).json({
     ok: storage.ok,
@@ -1225,6 +1241,13 @@ app.get("/api/health", (_request, response) => {
     dependencies: {
       database: storage.database,
       objectStorage: storage.objectStorage,
+    },
+    observability: {
+      errorMonitoring: {
+        ok: monitoring.ok,
+        provider: monitoring.provider,
+        mode: monitoring.mode,
+      },
     },
     timestamp: new Date().toISOString(),
   });
@@ -4856,6 +4879,7 @@ app.get("/api/readiness", requireAuthenticatedUser, async (_request, response, n
       dependencies: {
         database: storage.database,
         objectStorage: storage.objectStorage,
+        errorMonitoring: errorMonitoringStatus(),
       },
       controls: operationalControls(),
       timestamp: new Date().toISOString(),
@@ -5600,6 +5624,13 @@ if (existsSync(distDir)) {
 
 app.use((error, request, response, _next) => {
   if (!error.status || error.status >= 500) {
+    void captureOperationalError(error, {
+      requestId: request.requestId ?? null,
+      method: request.method,
+      path: request.path,
+      statusCode: error.status ?? 500,
+      actorId: request.authUser?.id ?? null,
+    });
     logError("http.unhandled_error", {
       requestId: request.requestId ?? null,
       method: request.method,
@@ -5635,6 +5666,7 @@ export async function startServer(listenPort = port) {
       buildCommit: sourceCommit,
       migrationVersion,
       storageOk: storage.ok,
+      errorMonitoring: errorMonitoringStatus().mode,
     });
     if (!storage.ok) {
       logWarn("server.storage_setup_required", { missing: storage.missing });
@@ -5651,7 +5683,23 @@ export async function closeDatabase() {
 export { app, ensureDatabaseReady };
 
 if (path.resolve(process.argv[1] ?? "") === __filename) {
+  process.on("unhandledRejection", (reason) => {
+    const error = reason instanceof Error ? reason : new Error(String(reason ?? "Unhandled promise rejection"));
+    logError("process.unhandled_rejection", { error });
+    void captureOperationalError(error, { source: "process.unhandled_rejection" });
+  });
+
+  process.on("uncaughtException", (error) => {
+    logError("process.uncaught_exception", { error });
+    void captureOperationalError(error, { source: "process.uncaught_exception" })
+      .finally(() => {
+        process.exit(1);
+      });
+    setTimeout(() => process.exit(1), 1000).unref();
+  });
+
   startServer().catch((error) => {
+    void captureOperationalError(error, { source: "server.startup_failed" });
     logError("server.startup_failed", { error });
     process.exitCode = 1;
   });

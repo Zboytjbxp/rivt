@@ -39,6 +39,7 @@ const startedAt = Date.now();
 const health = await request("/api/health");
 assert.equal(health.payload?.ok, true, "Health endpoint must report ok=true.");
 const dependencies = health.payload?.dependencies ?? health.payload?.storage;
+const observability = health.payload?.observability ?? {};
 assert.ok(dependencies, "Health must expose dependency status.");
 if (dependencies.ok !== undefined) assert.equal(dependencies.ok, true, "Managed storage must report healthy.");
 assert.equal(dependencies.database, "postgres", "Database mode must be postgres.");
@@ -69,6 +70,7 @@ console.log(JSON.stringify({
     database: dependencies.database,
     objectStorage: dependencies.objectStorage,
   },
+  observability,
   controls: providers.payload.controls,
   anonymousPrivateChecks: privateRoutes.length,
   durationMs: Date.now() - startedAt,

@@ -27,6 +27,8 @@ test("public health is safe and reports unavailable dependencies", async () => {
     assert.equal(response.status, 503);
     assert.equal(body.ok, false);
     assert.equal(body.dependencies.database, "missing");
+    assert.equal(body.observability.errorMonitoring.mode, "setup_required");
+    assert.equal("dsn" in body.observability.errorMonitoring, false);
     assert.equal("bucket" in body, false);
     assert.equal("endpoint" in body, false);
   });
