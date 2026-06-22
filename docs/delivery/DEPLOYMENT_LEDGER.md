@@ -21,6 +21,30 @@ Add one entry per staging/production deployment.
 - Rollback performed/result:
 - Approval:
 
+## Incident Rehearsal Attempt - 2026-06-22
+
+- Scenario: Public health or provider failure rehearsal, attempted per `docs/operations/INCIDENT_REHEARSAL_RUNBOOK.md`.
+- Environment: Production (`https://rivt.pro`)
+- Started at: `2026-06-22T03:14:00Z`
+- Ended at: `2026-06-22T03:20:29.5545352Z`
+- Incident commander: Michael
+- Backup owner: Anya Tingle
+- Support communicator: Michael / `support@rivt.pro`
+- Production source commit: `6d8e276e036553c5f861f1f8ab97cc3333a3494b` from `npm run monitor:production`
+- Alert destination tested: production synthetic monitor path was exercised locally; Sentry high-priority issue alert was previously verified on smoke issue `RIVT Sentry smoke test` at 2026-06-22 02:38 UTC
+- Paging destination tested: not newly triggered in this attempt
+- User impact: none; no kill switch was changed and no customer data was modified
+- Kill switch used: no
+- Commands run: `npm run monitor:production` passed; `npm run smoke:gate-a:live` failed before touching production because `DATABASE_URL` was missing from the process; a retry loading `.env` also failed because `.env` contains a blank `DATABASE_URL`; Railway CLI variable lookup failed because the CLI session is unauthorized and requires `railway login`
+- Detection time: immediate from command output
+- Triage time: under 10 minutes; root blocker isolated to missing live smoke database credential / expired Railway CLI auth
+- Recovery time: not applicable; this was a rehearsal setup blocker, not a production incident
+- Root cause: local workstation lacks a nonblank production `DATABASE_URL`, and Railway CLI cannot refresh its token
+- Decision log: do not mark rehearsal as passed; do not invent credentials; record the blocker and require Railway login or a temporary redacted production smoke credential before rerun
+- Follow-up actions: re-authenticate Railway CLI or provide a nonblank `DATABASE_URL` in the shell, rerun `npm run smoke:gate-a:live`, verify alert/page receipt, then update `docs/operations/incident-routing.json` with a `status: "passed"` rehearsal
+- Pass/fail: failed / blocked
+- Approval: no Gate A approval from this attempt
+
 ## Current Production - Packet 08 Sentry Error Monitoring Configured
 
 - Environment: Production (`https://rivt.pro`)

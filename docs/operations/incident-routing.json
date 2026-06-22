@@ -51,7 +51,16 @@
       "evidence": "Sentry alert rule 'Send a notification for high priority issues' is connected to project node-express and triggered on smoke issue 'RIVT Sentry smoke test' at 2026-06-22 02:38 UTC. This is the first pilot escalation route; dedicated phone/SMS paging should be added before broader scale."
     }
   ],
-  "rehearsals": [],
+  "rehearsals": [
+    {
+      "status": "blocked",
+      "completedAt": "2026-06-22T03:20:29.5545352Z",
+      "scenario": "public-health-provider-failure",
+      "commander": "Michael",
+      "evidence": "docs/delivery/DEPLOYMENT_LEDGER.md#incident-rehearsal-attempt---2026-06-22",
+      "summary": "Production synthetic monitor passed, but the required live Gate A smoke could not run because local DATABASE_URL is blank and Railway CLI token refresh is unauthorized. This does not satisfy the Gate A passed-rehearsal requirement."
+    }
+  ],
   "approvals": {
     "founder": {
       "status": "missing",
