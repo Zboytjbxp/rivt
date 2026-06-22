@@ -138,12 +138,12 @@ try {
 
   const readiness = await requestJson("/api/readiness", { cookie: actor.cookie, expected: 200 });
   assert.equal(readiness.payload.migrations.pending.length, 0);
-  assert.ok(readiness.payload.migrations.applied.some((migration) => migration.version === 10));
+  assert.ok(readiness.payload.migrations.applied.some((migration) => migration.version === 11));
   if (expectedCommit) assert.equal(readiness.payload.build.commit, expectedCommit);
 
   const migrations = await migrationStatus(pool);
   assert.equal(migrations.pending.length, 0);
-  assert.ok(migrations.applied.some((migration) => migration.version === 10));
+  assert.ok(migrations.applied.some((migration) => migration.version === 11));
 
   const anonymous = await requestJson("/api/v1/shop-talk/reactions/batch", {
     method: "POST",

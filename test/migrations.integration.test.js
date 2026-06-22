@@ -24,7 +24,7 @@ if (!testDatabaseUrl) {
     try {
       const baseline = await migrateUp(database, { targetVersion: 1 });
       assert.equal(baseline.latestVersion, 1);
-      assert.equal(baseline.pending.length, 9);
+      assert.equal(baseline.pending.length, 10);
 
       const existingUserId = randomUUID();
       await database.query(
@@ -41,7 +41,7 @@ if (!testDatabaseUrl) {
 
       const applied = await migrateUp(database, { targetVersion: 2 });
       assert.equal(applied.latestVersion, 2);
-      assert.equal(applied.pending.length, 8);
+      assert.equal(applied.pending.length, 9);
 
       const bridged = await database.query(
         `SELECT a.primary_role, p.visibility, p.onboarding_status,
@@ -87,7 +87,7 @@ if (!testDatabaseUrl) {
 
       const authFoundation = await migrateUp(database, { targetVersion: 3 });
       assert.equal(authFoundation.latestVersion, 3);
-      assert.equal(authFoundation.pending.length, 7);
+      assert.equal(authFoundation.pending.length, 8);
       const authState = await database.query(
         `SELECT u.provider, u.email_verified_at, a.status,
                 p.service_radius_miles, p.contact_email_visibility
@@ -107,44 +107,76 @@ if (!testDatabaseUrl) {
 
       const jobsFoundation = await migrateUp(database, { targetVersion: 4 });
       assert.equal(jobsFoundation.latestVersion, 4);
-      assert.equal(jobsFoundation.pending.length, 6);
+      assert.equal(jobsFoundation.pending.length, 7);
       assert.notEqual((await database.query("SELECT to_regclass('jobs') AS table_name")).rows[0].table_name, null);
       assert.notEqual((await database.query("SELECT to_regclass('job_private_locations') AS table_name")).rows[0].table_name, null);
 
       const matchFoundation = await migrateUp(database, { targetVersion: 5 });
       assert.equal(matchFoundation.latestVersion, 5);
-      assert.equal(matchFoundation.pending.length, 5);
+      assert.equal(matchFoundation.pending.length, 6);
       assert.notEqual((await database.query("SELECT to_regclass('job_applications') AS table_name")).rows[0].table_name, null);
       assert.notEqual((await database.query("SELECT to_regclass('active_work') AS table_name")).rows[0].table_name, null);
 
       const messagingFoundation = await migrateUp(database, { targetVersion: 6 });
       assert.equal(messagingFoundation.latestVersion, 6);
-      assert.equal(messagingFoundation.pending.length, 4);
+      assert.equal(messagingFoundation.pending.length, 5);
       assert.notEqual((await database.query("SELECT to_regclass('conversations') AS table_name")).rows[0].table_name, null);
       assert.notEqual((await database.query("SELECT to_regclass('in_app_notifications') AS table_name")).rows[0].table_name, null);
 
       const projectFoundation = await migrateUp(database, { targetVersion: 7 });
       assert.equal(projectFoundation.latestVersion, 7);
-      assert.equal(projectFoundation.pending.length, 3);
+      assert.equal(projectFoundation.pending.length, 4);
       assert.notEqual((await database.query("SELECT to_regclass('projects') AS table_name")).rows[0].table_name, null);
       assert.notEqual((await database.query("SELECT to_regclass('project_media') AS table_name")).rows[0].table_name, null);
 
       const safetyFoundation = await migrateUp(database, { targetVersion: 8 });
       assert.equal(safetyFoundation.latestVersion, 8);
-      assert.equal(safetyFoundation.pending.length, 2);
+      assert.equal(safetyFoundation.pending.length, 3);
       assert.notEqual((await database.query("SELECT to_regclass('work_reviews') AS table_name")).rows[0].table_name, null);
       assert.notEqual((await database.query("SELECT to_regclass('admin_role_grants') AS table_name")).rows[0].table_name, null);
 
       const hardeningFoundation = await migrateUp(database, { targetVersion: 9 });
       assert.equal(hardeningFoundation.latestVersion, 9);
-      assert.equal(hardeningFoundation.pending.length, 1);
+      assert.equal(hardeningFoundation.pending.length, 2);
       assert.notEqual((await database.query("SELECT to_regclass('rate_limit_windows') AS table_name")).rows[0].table_name, null);
 
-      const shopTalkFoundation = await migrateUp(database);
+      const shopTalkFoundation = await migrateUp(database, { targetVersion: 10 });
       assert.equal(shopTalkFoundation.latestVersion, 10);
-      assert.equal(shopTalkFoundation.pending.length, 0);
+      assert.equal(shopTalkFoundation.pending.length, 1);
       assert.notEqual((await database.query("SELECT to_regclass('shop_talk_reactions') AS table_name")).rows[0].table_name, null);
       assert.notEqual((await database.query("SELECT to_regclass('shop_talk_reaction_events') AS table_name")).rows[0].table_name, null);
+
+      const shopTalkImmutabilityFix = await migrateUp(database);
+      assert.equal(shopTalkImmutabilityFix.latestVersion, 11);
+      assert.equal(shopTalkImmutabilityFix.pending.length, 0);
+      assert.notEqual((await database.query("SELECT to_regclass('shop_talk_reactions') AS table_name")).rows[0].table_name, null);
+      assert.notEqual((await database.query("SELECT to_regclass('shop_talk_reaction_events') AS table_name")).rows[0].table_name, null);
+
+      const smokeReaction = await database.query(
+        `INSERT INTO shop_talk_reactions (actor_account_id, target_type, target_key, reaction)
+         VALUES ($1, 'thread', 'post:migration_smoke', 'up')
+         RETURNING id`,
+        [newUserId],
+      );
+      await database.query(
+        `INSERT INTO shop_talk_reaction_events (
+           reaction_id, actor_account_id, target_type, target_key, event_type, next_reaction
+         ) VALUES ($1, $2, 'thread', 'post:migration_smoke', 'set_up', 'up')`,
+        [smokeReaction.rows[0].id, newUserId],
+      );
+      await database.query("DELETE FROM shop_talk_reactions WHERE id = $1", [smokeReaction.rows[0].id]);
+      const reactionEvent = await database.query(
+        "SELECT reaction_id FROM shop_talk_reaction_events WHERE target_key = 'post:migration_smoke'",
+      );
+      assert.equal(reactionEvent.rows[0].reaction_id, smokeReaction.rows[0].id);
+      await assert.rejects(
+        database.query("UPDATE shop_talk_reaction_events SET next_reaction = 'down' WHERE target_key = 'post:migration_smoke'"),
+        /append-only/,
+      );
+
+      const rolledBackShopTalkImmutabilityFix = await rollbackLatest(database);
+      assert.equal(rolledBackShopTalkImmutabilityFix.latestVersion, 10);
+      assert.notEqual((await database.query("SELECT to_regclass('shop_talk_reactions') AS table_name")).rows[0].table_name, null);
 
       const rolledBackShopTalk = await rollbackLatest(database);
       assert.equal(rolledBackShopTalk.latestVersion, 9);
@@ -184,13 +216,13 @@ if (!testDatabaseUrl) {
       assert.equal((await database.query("SELECT to_regclass('jobs') AS table_name")).rows[0].table_name, null);
 
       const reapplied = await migrateUp(database);
-      assert.equal(reapplied.latestVersion, 10);
+      assert.equal(reapplied.latestVersion, 11);
       assert.equal((await database.query("SELECT count(*)::int AS count FROM accounts")).rows[0].count, 2);
 
-      const stored = await database.query("SELECT checksum FROM schema_migrations WHERE version = 10");
-      await database.query("UPDATE schema_migrations SET checksum = 'tampered' WHERE version = 10");
+      const stored = await database.query("SELECT checksum FROM schema_migrations WHERE version = 11");
+      await database.query("UPDATE schema_migrations SET checksum = 'tampered' WHERE version = 11");
       await assert.rejects(migrationStatus(database), /checksum does not match source/);
-      await database.query("UPDATE schema_migrations SET checksum = $1 WHERE version = 10", [stored.rows[0].checksum]);
+      await database.query("UPDATE schema_migrations SET checksum = $1 WHERE version = 11", [stored.rows[0].checksum]);
     } finally {
       await database.end();
       await admin.query(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);

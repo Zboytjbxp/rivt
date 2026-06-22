@@ -1,0 +1,2 @@
+ALTER TABLE shop_talk_reaction_events
+  DROP CONSTRAINT IF EXISTS shop_talk_reaction_events_reaction_id_fkey;
