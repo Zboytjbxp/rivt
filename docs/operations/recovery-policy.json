@@ -1,22 +1,22 @@
 {
   "version": 1,
-  "status": "blocked",
+  "status": "approved",
   "targets": {
-    "rpoMinutes": null,
-    "rpoBasis": "TBD",
-    "rtoMinutes": null,
-    "rtoBasis": "TBD"
+    "rpoMinutes": 1440,
+    "rpoBasis": "Gate A pilot target: restore from the most recent daily logical backup artifact. RIVT does not process escrow, payroll, or platform-held job payments in Gate A.",
+    "rtoMinutes": 240,
+    "rtoBasis": "Gate A pilot target: restore application service and managed PostgreSQL/object-storage-backed records within 4 hours using the documented logical backup artifact restore path."
   },
   "backupRetention": {
-    "days": null,
+    "days": 30,
     "storage": "private S3-compatible managed object storage",
     "encryption": "AES-256-GCM logical backup artifacts",
-    "owner": "TBD"
+    "owner": "Michael"
   },
   "restoreDrillCadence": {
-    "days": null,
-    "owner": "TBD",
-    "nextDueAt": null
+    "days": 30,
+    "owner": "Michael",
+    "nextDueAt": "2026-07-21T04:18:59.000Z"
   },
   "latestNamedArtifactRestore": {
     "status": "passed",
@@ -31,14 +31,14 @@
   },
   "approvals": {
     "founder": {
-      "status": "missing",
-      "approvedBy": "TBD",
-      "approvedAt": null
+      "status": "approved",
+      "approvedBy": "Michael",
+      "approvedAt": "2026-06-22T03:02:39.0867156Z"
     },
     "operations": {
-      "status": "missing",
-      "approvedBy": "TBD",
-      "approvedAt": null
+      "status": "approved",
+      "approvedBy": "Michael",
+      "approvedAt": "2026-06-22T03:02:39.0867156Z"
     }
   }
 }

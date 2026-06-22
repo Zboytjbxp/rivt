@@ -38,8 +38,9 @@ Add one entry per staging/production deployment.
 - Escalation evidence: Sentry alert rule `Send a notification for high priority issues` is connected to project `node-express`, notifies suggested assignees or recently active members on every trigger, and triggered once for the smoke issue at 2026-06-22 02:38 UTC.
 - Incident-owner evidence: backup incident owner Anya Tingle is recorded in `docs/operations/incident-routing.json` with email and phone status recorded; the actual phone number is intentionally not stored in the repository.
 - Support-hours evidence: founder-provided Gate A support coverage is recorded as Monday-Saturday, 9:00 AM-5:00 PM, America/New_York.
+- Recovery-policy evidence: Gate A recovery policy is approved with RPO 1440 minutes, RTO 240 minutes, 30-day backup retention, 30-day restore-drill cadence, next restore drill due `2026-07-21T04:18:59.000Z`, and founder/operations approvals by Michael.
 - Health/readiness result: health reports PostgreSQL and S3-compatible storage healthy with exact source commit `6d8e276e036553c5f861f1f8ab97cc3333a3494b`; dedicated error monitoring is configured
-- Known risks: full Gate A remains blocked by incident rehearsal, RPO/RTO policy approval, backup retention/cadence approval, support/legal/founder signoff, and physical/deeper manual accessibility-device evidence. Sentry alerting is accepted as the first pilot escalation route; dedicated phone/SMS paging should be added before broader scale.
+- Known risks: full Gate A remains blocked by incident rehearsal, incident-routing approval, support/legal/founder signoff, and physical/deeper manual accessibility-device evidence. Sentry alerting is accepted as the first pilot escalation route; dedicated phone/SMS paging should be added before broader scale. RPO/RTO is approved for Gate A pilot and should be tightened before broader scale or platform-held financial workflows.
 - Rollback performed/result: not required
 - Approval: Packet 08 Sentry error monitoring setup accepted as controllable Gate A evidence; overall Gate A not approved
 

@@ -2,7 +2,7 @@
 
 Last updated: 2026-06-22 America/New_York
 Current gate: Gate A launch hardening
-Current phase: Packet 08 controllable UX hardening, support hours and backup incident owner recorded, Sentry error monitoring and first escalation route configured, server-owned Shop Talk reactions/reputation ledger, Daily Log live UI proof, Daily Log Records bridge, daily engagement loop, Shop Talk answer queue, RIVT Daily home check-in, Trade News real-media and mobile layout pass, production UI smoke regression fixes, Tools studio release, Records workspace upgrade, UI system pass, shared UI primitives, Tools primitive alignment, Shop Talk command center, Tools app surface pass, Heavy 16th multi-mode calculator, Invoice Draft app upgrade, and Shop Talk reaction/social pulse pass verified; full Gate A approval remains blocked
+Current phase: Packet 08 controllable UX hardening, recovery policy approved, support hours and backup incident owner recorded, Sentry error monitoring and first escalation route configured, server-owned Shop Talk reactions/reputation ledger, Daily Log live UI proof, Daily Log Records bridge, daily engagement loop, Shop Talk answer queue, RIVT Daily home check-in, Trade News real-media and mobile layout pass, production UI smoke regression fixes, Tools studio release, Records workspace upgrade, UI system pass, shared UI primitives, Tools primitive alignment, Shop Talk command center, Tools app surface pass, Heavy 16th multi-mode calculator, Invoice Draft app upgrade, and Shop Talk reaction/social pulse pass verified; full Gate A approval remains blocked
 Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
 Production release commit: `6d8e276e036553c5f861f1f8ab97cc3333a3494b`
@@ -16,6 +16,15 @@ Packet 00 is merged on `master` at `4c199d903683e44d17b7985272c399c6d7a6cbd6`. T
 - Product source of truth: `RIVT_MASTER_BUILD_PROMPT.md`
 
 Do not discard or overwrite the pre-existing Trade News work when committing or splitting this packet.
+
+## Latest Packet 08 Pass - Recovery Policy Approved
+
+- Approved Gate A recovery policy in `docs/operations/recovery-policy.json`: RPO 1440 minutes / 24 hours, RTO 240 minutes / 4 hours, 30-day backup retention, and 30-day restore-drill cadence.
+- Set backup-retention and restore-drill owner to Michael for the Gate A pilot.
+- Set next restore drill due date to `2026-07-21T04:18:59.000Z`, 30 days after the last passed named backup-artifact restore.
+- Recorded founder and operations recovery-policy approvals by Michael at `2026-06-22T03:02:39.0867156Z`.
+- `node scripts/launch-readiness-check.js --json` stopped reporting recovery-policy blockers. Remaining launch blockers are now incident-routing approval, incident rehearsal, founder/support/legal-safety approvals, and deeper manual accessibility/device evidence.
+- Remaining honesty boundary: the policy is approved for Gate A pilot only. RPO/RTO should be tightened before broader scale or any platform-held financial workflow.
 
 ## Latest Packet 08 Pass - Support Hours Recorded
 
@@ -796,7 +805,7 @@ Completed on 2026-06-21 as a focused follow-up to the shared UI primitive system
 
 ## Next Exact Task
 
-Continue Gate A launch hardening with the remaining external and manual blockers: fill approval fields in `docs/operations/incident-routing.json`, approve RPO/RTO/retention/cadence fields in `docs/operations/recovery-policy.json`, orient the backup owner on the runbook, run an incident rehearsal, then pass `npm run incident:readiness -- --require-ready` and `npm run launch:readiness -- --require-ready`. Complete the physical/deeper manual accessibility-device matrix before named-cohort launch.
+Continue Gate A launch hardening with the remaining external and manual blockers: fill approval fields in `docs/operations/incident-routing.json`, orient the backup owner on the runbook, run an incident rehearsal, then pass `npm run incident:readiness -- --require-ready` and `npm run launch:readiness -- --require-ready`. Complete the physical/deeper manual accessibility-device matrix before named-cohort launch.
 
 ## Blocking Founder Decisions
 
