@@ -10,6 +10,14 @@ Status values:
 
 Evidence must eventually link to implementation, automated tests, manual acceptance proof, and deployed build.
 
+## Traceability Addendum - 2026-06-22 Shop Talk Fallback Data Extraction
+
+- `GA-UX-001` gains maintainability evidence: static Shop Talk fallback news and founder/community prompt records were moved from `src/App.tsx` into `src/features/shop-talk/fallback-data.ts`.
+- `GA-UX-005` retains behavior boundaries: Shop Talk and Trade News still receive the same fallback items and community prompt records through the active route.
+- `GA-OPS-007` gains local automated evidence for this refactor slice: `npm run build`, `npm run lint`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check` passed.
+- The full `npm run test` command was run with explicit network access because the integration suite uses the isolated test Postgres.
+- `GA-OPS-008` is unchanged for production deployment: this slice has not been deployed.
+
 ## Traceability Addendum - 2026-06-22 Shop Talk Community Helper Extraction
 
 - `GA-UX-001` gains maintainability evidence: shared Shop Talk score sorting, community badge labeling, and server-owned reaction key helpers were extracted from `src/App.tsx` and `src/features/shop-talk/ShopTalkView.tsx` into `src/features/shop-talk/community-utils.ts`.

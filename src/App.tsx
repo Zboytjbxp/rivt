@@ -61,6 +61,7 @@ import {
   communityReactionLedgerKey,
   type CommunityReactionTargetType,
 } from "./features/shop-talk/community-utils";
+import { communityPromptPosts, fallbackNewsItems } from "./features/shop-talk/fallback-data";
 import type { ProfileUpdateInput } from "./features/profile/ProfileHub";
 import { apiPath } from "./lib/api";
 import {
@@ -170,18 +171,6 @@ interface PaymentRecord {
   method: string;
   status: "Payment pending" | "Paid / Closed";
   date: string;
-}
-
-interface NewsItem {
-  id: number;
-  headline: string;
-  source: string;
-  date: string;
-  summary: string;
-  url: string;
-  urgency?: string;
-  thumbnailUrl?: string;
-  thumbnailKind?: "article" | "feed" | "fallback";
 }
 
 interface CommunityAnswer {
@@ -766,113 +755,6 @@ function idempotencyKey(scope: string) {
   return `${scope}-${randomPart}`;
 }
 
-const seedNews: NewsItem[] = [
-  {
-    id: 1,
-    headline: "OSHA expands heat inspections for high-risk outdoor work",
-    source: "OSHA",
-    date: "Apr 10, 2026",
-    summary: "OSHA updated its National Emphasis Program on heat exposure. For contractors, the practical takeaway is simple: document water, rest, shade, acclimatization, and heat-response plans before the first hot-weather site visit.",
-    url: "https://www.osha.gov/news/newsreleases/osha-national-news-release/20260410",
-    urgency: "Safety",
-    thumbnailUrl: "/news/heat-safety.svg",
-  },
-  {
-    id: 2,
-    headline: "NFPA previews the biggest changes in the 2026 NEC",
-    source: "NFPA",
-    date: "Jan 29, 2026",
-    summary: "The 2026 National Electrical Code cycle is moving, with changes that can affect planning, estimates, and inspection conversations. Electrical contractors should review updates early instead of waiting until a failed rough-in.",
-    url: "https://www.nfpa.org/news-blogs-and-articles/blogs/2026/01/29/2026-nec-key-changes",
-    urgency: "Code Update",
-    thumbnailUrl: "/news/code-update.svg",
-  },
-  {
-    id: 3,
-    headline: "EPA removes the R-410A installation deadline",
-    source: "ACHR News",
-    date: "May 21, 2026",
-    summary: "ACHR News reports that EPA removed the R-410A installation deadline. HVAC contractors still need to watch refrigerant rules closely, but this update changes how some pending equipment installs get scheduled.",
-    url: "https://www.achrnews.com/articles/166226-epa-removes-r-410a-installation-deadline",
-    urgency: "HVAC",
-    thumbnailUrl: "/news/hvac-refrigerant.svg",
-  },
-  {
-    id: 4,
-    headline: "ABC says construction must attract 349,000 workers in 2026",
-    source: "Associated Builders and Contractors",
-    date: "Jan 15, 2026",
-    summary: "ABC estimates the industry needs hundreds of thousands of additional workers in 2026. For RIVT users, that is the market signal behind faster crew-building, better profiles, and keeping reliable subs close.",
-    url: "https://www.abc.org/News-Media/News-Releases/abc-construction-industry-must-attract-349000-workers-in-2026-despite-macroeconomic-headwinds",
-    urgency: "Labor",
-    thumbnailUrl: "/news/workforce-market.svg",
-  },
-  {
-    id: 5,
-    headline: "Florida electrical contractor renewals and CE reminders",
-    source: "DBPR",
-    date: "2026",
-    summary: "Florida DBPR keeps contractor renewal, continuing education, and board information in one place. Keep this bookmarked before hiring, accepting specialty work, or updating compliance records.",
-    url: "https://www2.myfloridalicense.com/electrical-contractors/",
-    urgency: "License",
-    thumbnailUrl: "/news/license-renewal.svg",
-  },
-  {
-    id: 6,
-    headline: "Jacksonville permitting guide for contractors",
-    source: "PermitFlow",
-    date: "Mar 13, 2026",
-    summary: "A contractor-focused look at Jacksonville permitting, review steps, and local process expectations. Useful context before posting work that depends on inspection timing or access to permit records.",
-    url: "https://www.permitflow.com/blog/jacksonville-building-permit",
-    urgency: "Local",
-    thumbnailUrl: "/news/permit-watch.svg",
-  },
-];
-const seedCommunityPosts: CommunityPost[] = [
-  {
-    id: 1,
-    title: "What's the best way to handle a mid-job scope change without losing margin?",
-    trade: "General",
-    author: "FieldPro",
-    badge: "Community Prompt",
-    flair: "Question",
-    body: "Client keeps adding scope after the contract is signed. Looking for a clean way to document and price change orders on the spot without losing the job or the margin.",
-    upvotes: 14,
-    downvotes: 1,
-    replies: [],
-    createdAt: "Jun 2026",
-    status: "Needs a pro answer",
-  },
-  {
-    id: 2,
-    title: "How are you handling the new OSHA heat rule on outdoor jobs this summer?",
-    trade: "General",
-    author: "CrewLead",
-    badge: "Community Prompt",
-    flair: "Discussion",
-    body: "OSHA heat rule is coming August 2026. Curious what other crews are doing — written plans, scheduling changes, gear, etc. Share what's actually working in the field.",
-    upvotes: 9,
-    downvotes: 0,
-    replies: [],
-    createdAt: "Jun 2026",
-    status: "Open",
-  },
-  {
-    id: 3,
-    title: "NEC 2023: Are you already pulling permits under the new AFCI expansion rules?",
-    trade: "Electrical",
-    author: "SparkCheck",
-    badge: "Community Prompt",
-    flair: "Question",
-    body: "Florida is moving to NEC 2023. AFCI now covers all dwelling areas. Have any of you already had inspections fail under the old wiring assumptions? What did you have to change?",
-    upvotes: 11,
-    downvotes: 2,
-    replies: [],
-    createdAt: "May 2026",
-    status: "Needs a pro answer",
-  },
-];
-
 function App() {
   const [activeView, setActiveView] = useState<NavLabel>(() => viewFromPath(window.location.pathname));
   const [role, setRole] = useState<Role>("contractor");
@@ -935,7 +817,7 @@ function App() {
   const [activityFeed, setActivityFeed] = useState<ActivityItem[]>([]);
   const [feedbackItems] = useState<FeedbackItem[]>([]);
   const [paymentRecords] = useState<PaymentRecord[]>([]);
-  const [communityPosts, setCommunityPosts] = useState<CommunityPost[]>(seedCommunityPosts);
+  const [communityPosts, setCommunityPosts] = useState<CommunityPost[]>(communityPromptPosts);
   const [communityReactionLedger, setCommunityReactionLedger] = useState<CommunityReactionLedger>({});
   const [communityReactionSummary, setCommunityReactionSummary] = useState<CommunityReactionSummary | null>(null);
   const [communityReactionStatus, setCommunityReactionStatus] = useState<CommunityReactionSyncStatus>("idle");
@@ -2043,7 +1925,7 @@ function App() {
             shoutOutCount={shoutOuts.length}
             availabilityStatus={canonicalAccount?.profile.availabilityStatus ?? "available"}
             primaryTrade={primaryProfileTrade}
-            newsCount={seedNews.length}
+            newsCount={fallbackNewsItems.length}
             answerQueueCount={answerQueueCount}
             onPostJob={openCreateJob}
             onOpenJob={openJob}
@@ -2081,7 +1963,7 @@ function App() {
             key={`shop-talk-${shopTalkGlobalQuery}`}
             profile={accountProfile}
             communityPosts={communityPosts}
-            newsItems={seedNews}
+            newsItems={fallbackNewsItems}
             initialQuery={shopTalkGlobalQuery}
             selectedJobTrade={selectedJob.trade}
             userLocation={accountProfile.location}
