@@ -21,6 +21,30 @@ Add one entry per staging/production deployment.
 - Rollback performed/result:
 - Approval:
 
+## Incident Rehearsal - 2026-06-22
+
+- Scenario: Public health or provider failure rehearsal per `docs/operations/INCIDENT_REHEARSAL_RUNBOOK.md`.
+- Environment: Production (`https://rivt.pro`)
+- Started at: `2026-06-22T03:14:00Z`
+- Ended at: `2026-06-22T03:31:05.8720277Z`
+- Incident commander: Michael
+- Backup owner: Anya Tingle
+- Support communicator: Michael / `support@rivt.pro`
+- Production source commit: `6d8e276e036553c5f861f1f8ab97cc3333a3494b`
+- Alert destination tested: Sentry Cloud project `4511606746185728` accepted rehearsal event `43fc7567f458490582db1f6642e2e0ea` with HTTP 200; the high-priority Sentry issue alert rule was previously verified on `RIVT Sentry smoke test` at 2026-06-22 02:38 UTC.
+- Paging destination tested: Sentry high-priority issue alert route remains the first pilot escalation route; dedicated phone/SMS paging is still recommended before broader scale.
+- User impact: none; no kill switch was changed and no customer data was modified.
+- Kill switch used: no.
+- Commands run: `npm run monitor:production` passed locally against production; `railway ssh --service RIVT --environment production -- npm run smoke:gate-a:live` passed inside the Railway service; a temporary Sentry rehearsal script was streamed to `/tmp`, executed inside the Railway service, and removed.
+- Detection time: immediate from command output.
+- Triage time: initial credential/network blocker isolated in under 10 minutes; Railway re-auth and service-local smoke resolved it.
+- Recovery time: not applicable; this was a controlled rehearsal, not a production outage.
+- Root cause: no production incident. The rehearsal proved that local smoke needing the database must run inside Railway or use a public database URL; the service-local run passed.
+- Decision log: keep signups and mutations enabled because production health, storage, operational controls, anonymous fail-closed checks, migrations, seed/demo scan, and Sentry capture all passed.
+- Follow-up actions: add dedicated phone/SMS paging before broader scale; complete founder/support/legal-safety approvals and physical/deeper manual accessibility-device evidence before named-cohort launch.
+- Pass/fail: passed.
+- Approval: incident rehearsal evidence accepted as Gate A incident-readiness progress; overall Gate A not approved until final approvals and manual accessibility/device evidence are complete.
+
 ## Incident Rehearsal Attempt - 2026-06-22
 
 - Scenario: Public health or provider failure rehearsal, attempted per `docs/operations/INCIDENT_REHEARSAL_RUNBOOK.md`.

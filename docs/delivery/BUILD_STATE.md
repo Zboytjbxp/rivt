@@ -2,7 +2,7 @@
 
 Last updated: 2026-06-22 America/New_York
 Current gate: Gate A launch hardening
-Current phase: Packet 08 controllable UX hardening, incident rehearsal attempt recorded as blocked, incident routing approved, recovery policy approved, support hours and backup incident owner recorded, Sentry error monitoring and first escalation route configured, server-owned Shop Talk reactions/reputation ledger, Daily Log live UI proof, Daily Log Records bridge, daily engagement loop, Shop Talk answer queue, RIVT Daily home check-in, Trade News real-media and mobile layout pass, production UI smoke regression fixes, Tools studio release, Records workspace upgrade, UI system pass, shared UI primitives, Tools primitive alignment, Shop Talk command center, Tools app surface pass, Heavy 16th multi-mode calculator, Invoice Draft app upgrade, and Shop Talk reaction/social pulse pass verified; full Gate A approval remains blocked
+Current phase: Packet 08 controllable UX hardening, incident rehearsal passed, incident routing approved, recovery policy approved, support hours and backup incident owner recorded, Sentry error monitoring and first escalation route configured, server-owned Shop Talk reactions/reputation ledger, Daily Log live UI proof, Daily Log Records bridge, daily engagement loop, Shop Talk answer queue, RIVT Daily home check-in, Trade News real-media and mobile layout pass, production UI smoke regression fixes, Tools studio release, Records workspace upgrade, UI system pass, shared UI primitives, Tools primitive alignment, Shop Talk command center, Tools app surface pass, Heavy 16th multi-mode calculator, Invoice Draft app upgrade, and Shop Talk reaction/social pulse pass verified; full Gate A approval remains blocked
 Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
 Production release commit: `6d8e276e036553c5f861f1f8ab97cc3333a3494b`
@@ -17,13 +17,23 @@ Packet 00 is merged on `master` at `4c199d903683e44d17b7985272c399c6d7a6cbd6`. T
 
 Do not discard or overwrite the pre-existing Trade News work when committing or splitting this packet.
 
+## Latest Packet 08 Pass - Incident Rehearsal Passed
+
+- Re-authenticated Railway CLI as `zboytjbxp@gmail.com` and verified the linked project/service: project `RIVT`, production environment, service `RIVT`, public URL `https://rivt.pro`.
+- `npm run monitor:production` passed against production, confirming exact source `6d8e276e036553c5f861f1f8ab97cc3333a3494b`, PostgreSQL and S3-compatible storage healthy, Sentry configured, operational controls off, and seven anonymous private-route checks failing closed.
+- Local live smoke failed against the Railway internal DB hostname, then passed inside the service with `railway ssh --service RIVT --environment production -- npm run smoke:gate-a:live`.
+- The service-local live smoke verified migration `0011_shop_talk_reaction_events_immutable`, zero seed/demo findings, seven anonymous private-route checks, operational controls off, five active accounts, zero network profiles, zero open jobs, two open support cases, zero active restrictions, 115 legacy app-state rows, and 111 rate-limit windows.
+- Sent a harmless Sentry incident-rehearsal smoke event from inside Railway; Sentry accepted event `43fc7567f458490582db1f6642e2e0ea` with HTTP 200.
+- Recorded the passed rehearsal in `docs/operations/incident-routing.json` and `docs/delivery/DEPLOYMENT_LEDGER.md`.
+- Remaining honesty boundary: Gate A still requires founder/support/legal-safety approvals and physical/deeper manual accessibility-device evidence before named-cohort launch.
+
 ## Latest Packet 08 Pass - Incident Rehearsal Attempt Blocked
 
 - Attempted Scenario A from `docs/operations/INCIDENT_REHEARSAL_RUNBOOK.md` against production on 2026-06-22.
 - `npm run monitor:production` passed against `https://rivt.pro`, confirming exact source `6d8e276e036553c5f861f1f8ab97cc3333a3494b`, PostgreSQL and S3-compatible storage healthy, Sentry error monitoring configured, operational controls off, and seven anonymous private-route checks returning closed access.
 - `npm run smoke:gate-a:live` could not run because `DATABASE_URL` is missing from the process; `.env` contains a blank `DATABASE_URL`, and Railway CLI variable lookup is blocked by expired auth (`railway login` required).
 - Recorded the attempt as `status: "blocked"` in `docs/operations/incident-routing.json` and as `Incident Rehearsal Attempt - 2026-06-22` in `docs/delivery/DEPLOYMENT_LEDGER.md`.
-- Remaining honesty boundary: the incident rehearsal blocker is still open. To close it, re-authenticate Railway CLI or load a nonblank production `DATABASE_URL`, rerun the live smoke, verify alert/page receipt, then record a passed rehearsal.
+- Remaining honesty boundary: this blocked attempt remains in the audit trail, but the follow-up pass above closed the incident rehearsal blocker.
 
 ## Latest Packet 08 Pass - Incident Routing Approved
 
@@ -820,7 +830,7 @@ Completed on 2026-06-21 as a focused follow-up to the shared UI primitive system
 
 ## Next Exact Task
 
-Continue Gate A launch hardening with the remaining external and manual blockers: re-authenticate Railway CLI or load a nonblank production `DATABASE_URL`, rerun `npm run smoke:gate-a:live`, verify alert/page receipt, record a passed incident rehearsal, fill the founder/support/legal-safety approval fields in `docs/operations/incident-routing.json`, then pass `npm run incident:readiness -- --require-ready` and `npm run launch:readiness -- --require-ready`. Complete the physical/deeper manual accessibility-device matrix before named-cohort launch.
+Continue Gate A launch hardening with the remaining external and manual blockers: fill the founder/support/legal-safety approval fields in `docs/operations/incident-routing.json`, then pass `npm run incident:readiness -- --require-ready` and `npm run launch:readiness -- --require-ready`. Complete the physical/deeper manual accessibility-device matrix before named-cohort launch.
 
 ## Blocking Founder Decisions
 

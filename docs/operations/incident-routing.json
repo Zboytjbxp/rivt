@@ -53,6 +53,14 @@
   ],
   "rehearsals": [
     {
+      "status": "passed",
+      "completedAt": "2026-06-22T03:31:05.8720277Z",
+      "scenario": "public-health-provider-failure",
+      "commander": "Michael",
+      "evidence": "docs/delivery/DEPLOYMENT_LEDGER.md#incident-rehearsal---2026-06-22",
+      "summary": "Production monitor passed, live Gate A smoke passed inside the Railway RIVT service, and Sentry accepted rehearsal event 43fc7567f458490582db1f6642e2e0ea with HTTP 200."
+    },
+    {
       "status": "blocked",
       "completedAt": "2026-06-22T03:20:29.5545352Z",
       "scenario": "public-health-provider-failure",
