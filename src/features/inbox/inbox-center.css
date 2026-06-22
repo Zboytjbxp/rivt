@@ -462,6 +462,12 @@
   }
 }
 
+@media (max-width: 480px) {
+  .v2-inbox-summary {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (max-width: 860px) {
   .v2-inbox-header {
     align-items: flex-start;

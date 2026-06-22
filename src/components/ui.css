@@ -171,6 +171,8 @@
   font-size: 0.78rem;
   font-weight: 750;
   letter-spacing: 0.04em;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
   text-transform: uppercase;
 }
 
