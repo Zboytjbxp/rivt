@@ -2,10 +2,10 @@
 
 Last updated: 2026-06-21 America/New_York
 Current gate: Gate A launch hardening
-Current phase: Packet 08 controllable UX hardening, Daily Log live UI proof, Daily Log Records bridge, daily engagement loop, Shop Talk answer queue, RIVT Daily home check-in, Trade News real-media and mobile layout pass, production UI smoke regression fixes, Tools studio release, Records workspace upgrade, UI system pass, shared UI primitives, Tools primitive alignment, Shop Talk command center, Tools app surface pass, Heavy 16th multi-mode calculator, Invoice Draft app upgrade, and Shop Talk reaction/social pulse pass verified; full Gate A approval remains blocked
+Current phase: Packet 08 controllable UX hardening, server-owned Shop Talk reactions/reputation ledger, Daily Log live UI proof, Daily Log Records bridge, daily engagement loop, Shop Talk answer queue, RIVT Daily home check-in, Trade News real-media and mobile layout pass, production UI smoke regression fixes, Tools studio release, Records workspace upgrade, UI system pass, shared UI primitives, Tools primitive alignment, Shop Talk command center, Tools app surface pass, Heavy 16th multi-mode calculator, Invoice Draft app upgrade, and Shop Talk reaction/social pulse pass verified; full Gate A approval remains blocked
 Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
-Production release commit: `9c614ac2f8691186150e16583e7b204cbada590a`
+Production release commit: `13f7e2e92ecc608e5326b0d1d335906700758584`
 
 ## Source State
 
@@ -17,7 +17,20 @@ Packet 00 is merged on `master` at `4c199d903683e44d17b7985272c399c6d7a6cbd6`. T
 
 Do not discard or overwrite the pre-existing Trade News work when committing or splitting this packet.
 
-## Latest Packet 08 Pass - Daily Log Live UI Proof
+## Latest Packet 08 Pass - Server-Owned Shop Talk Reactions and Reputation Ledger
+
+- Deployed source `13f7e2e92ecc608e5326b0d1d335906700758584` through Railway deployment `718003b2-9b27-49fb-a36a-f01ea0528bf0`.
+- Added canonical PostgreSQL tables for Shop Talk reactions and append-only reaction events in `0010_shop_talk_reactions`.
+- Added migration `0011_shop_talk_reaction_events_immutable` after live proof exposed a real clear/delete bug: immutable reaction events cannot use `ON DELETE SET NULL` from the active reaction row. The fix removes that FK so reaction history remains append-only and active reactions can still be cleared.
+- Added authenticated server routes for reaction aggregate batch loading, current-user reaction summary, and idempotent up/down/clear mutation: `POST /api/v1/shop-talk/reactions/batch`, `GET /api/v1/shop-talk/reputation/me`, and `POST /api/v1/shop-talk/reactions`.
+- Replaced the prior browser-local Shop Talk reaction state with server-owned reaction state in the frontend. Reaction buttons now load viewer state from the API, disable while pending, show a failure toast if the server write fails, and no longer claim local-only reactions as production behavior.
+- Added `npm run smoke:shop-talk-reactions:live`, a Railway-SSH live smoke that creates disposable invited accounts, verifies migration 0011, proves anonymous access fails closed, proves up/down/switch/clear/idempotency behavior through the real production API, verifies zero active reactions after clear, verifies five append-only reaction events and five audit events, then closes both smoke accounts.
+- Live proof run `shop-talk-react-20260622020534-423b8b` passed on build `13f7e2e92ecc608e5326b0d1d335906700758584` with target `post:shop_talk_react_20260622020534_423b8b`, `activeReactionsAfterClear: 0`, `reactionEventsPersisted: 5`, `auditEventsPersisted: 5`, and `smokeAccountsClosed: 2`.
+- Local gates passed for this slice: `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test`, `npm run test:e2e`, `npm run test:ui:tools`, `npm run test:ui:shop-talk-news`, `npm audit --omit=dev`, and `git diff --check`; DB-backed integration tests still skip locally because `TEST_DATABASE_URL` is not configured.
+- Live checks passed: `/api/health` reported exact source `13f7e2e92ecc608e5326b0d1d335906700758584`, PostgreSQL and S3-compatible dependencies healthy, `npm run monitor:production` passed with seven anonymous private-route checks, and the authenticated Railway-SSH smoke verified migration `0011_shop_talk_reaction_events_immutable`.
+- Remaining honesty boundary: reaction ownership is now production server-owned. Full Shop Talk production-grade social proof still requires canonical server-owned Shop Talk posts/answers, author-earned reputation totals, ranking, moderation queues, and profile reputation surfacing before treating Shop Talk as a complete durable social network.
+
+## Packet 08 Pass - Daily Log Live UI Proof
 
 - Deployed source `9c614ac2f8691186150e16583e7b204cbada590a` through Railway deployment `1c138a66-7015-4cfb-a2ad-48135b932c5d`.
 - Added first-class live smoke command `npm run smoke:daily-log-ui:live` with full, setup-only, browser-only, and cleanup modes.
