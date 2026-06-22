@@ -21,7 +21,26 @@ Add one entry per staging/production deployment.
 - Rollback performed/result:
 - Approval:
 
-## Current Production - Packet 08 Daily Log Live UI Proof
+## Current Production - Packet 08 Error Monitoring Readiness Hooks
+
+- Environment: Production (`https://rivt.pro`)
+- Date/time/timezone: 2026-06-21 22:21 America/New_York
+- Deployer: Codex through authenticated Railway CLI
+- Source repository/branch: `Zboytjbxp/rivt`, `master`
+- Source commit: `6d8e276e036553c5f861f1f8ab97cc3333a3494b`
+- Build/artifact ID: Railway deployment `3260e837-ff72-4343-b0bd-4243ac02424f`
+- Migration version before/after: `0011_shop_talk_reaction_events_immutable` / `0011_shop_talk_reaction_events_immutable` (no schema migration)
+- Feature-flag/config version: `SOURCE_COMMIT` updated to `6d8e276e036553c5f861f1f8ab97cc3333a3494b`; operational controls unchanged
+- Provider/config changes: no provider credentials changed; code now supports `SENTRY_DSN` or `ERROR_MONITORING_DSN`, but production health correctly reports `observability.errorMonitoring.mode=setup_required` until a real DSN is set
+- Backup/rollback target: prior successful deployment `718003b2-9b27-49fb-a36a-f01ea0528bf0`; migration version unchanged
+- Automated gates: local `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check` passed; DB-backed integration tests skipped locally because `TEST_DATABASE_URL` is not configured
+- Post-deploy smoke tests: public `/api/health` passed and reported exact source commit `6d8e276e036553c5f861f1f8ab97cc3333a3494b`, PostgreSQL/S3-compatible dependencies healthy, and non-secret error-monitoring setup status; `npm run monitor:production` passed with seven anonymous private-route checks and observability evidence
+- Health/readiness result: health reports PostgreSQL and S3-compatible storage healthy with exact source commit `6d8e276e036553c5f861f1f8ab97cc3333a3494b`; error monitoring reports `setup_required` because the real provider DSN has not been configured
+- Known risks: full Gate A remains blocked by real external error monitoring DSN, paging/escalation route, incident rehearsal, RPO/RTO policy approval, backup retention/cadence approval, support/legal/founder signoff, and physical/deeper manual accessibility-device evidence.
+- Rollback performed/result: not required
+- Approval: Packet 08 error monitoring readiness hooks accepted as controllable Gate A evidence; overall Gate A not approved
+
+## Previous Production - Packet 08 Daily Log Live UI Proof
 
 - Environment: Production (`https://rivt.pro`)
 - Date/time/timezone: 2026-06-21 20:49 America/New_York

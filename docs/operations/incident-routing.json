@@ -30,15 +30,17 @@
       "id": "dedicated-error-monitoring",
       "category": "error_monitoring",
       "status": "missing",
-      "provider": "TBD",
-      "route": "TBD"
+      "provider": "Sentry-compatible",
+      "route": "Set SENTRY_DSN or ERROR_MONITORING_DSN on the Railway RIVT service; /api/health and authenticated /api/readiness will report configured once live.",
+      "implementationStatus": "code_ready",
+      "evidence": "server/monitoring.js captures HTTP 500/startup/unhandled process errors without exposing DSNs; deployed source 6d8e276e036553c5f861f1f8ab97cc3333a3494b reports observability.errorMonitoring.mode=setup_required."
     },
     {
       "id": "paging",
       "category": "paging",
       "status": "missing",
       "provider": "TBD",
-      "route": "TBD"
+      "route": "TBD - choose PagerDuty/Opsgenie/SMS/phone escalation before named-cohort launch."
     }
   ],
   "rehearsals": [],
