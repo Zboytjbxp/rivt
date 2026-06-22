@@ -6,10 +6,11 @@ import cors from "cors";
 import { XMLParser } from "fast-xml-parser";
 import express from "express";
 import multer from "multer";
-import { createHash, randomBytes, randomUUID, scryptSync, timingSafeEqual } from "node:crypto";
+import { createHash, randomBytes, randomUUID, scrypt as scryptCb, timingSafeEqual } from "node:crypto";
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { promisify } from "node:util";
 import pg from "pg";
 import {
   ApiError,
@@ -130,6 +131,7 @@ const appVersion = envValue("APP_VERSION", "0.1.0");
 const sourceCommit = envValue("SOURCE_COMMIT", envValue("RAILWAY_GIT_COMMIT_SHA", "unknown"));
 let migrationVersion = envValue("MIGRATION_VERSION", "uninitialized");
 const productionOrigin = envValue("APP_ORIGIN", "https://rivt.pro");
+const scrypt = promisify(scryptCb);
 
 function envValue(name, fallback = undefined) {
   const value = process.env[name]?.trim();
@@ -205,13 +207,13 @@ function buildTwilioSmsStatus(purpose) {
   };
 }
 
-function hashPassword(password, salt = randomBytes(16).toString("hex")) {
-  const derived = scryptSync(String(password ?? ""), salt, 64).toString("hex");
+async function hashPassword(password, salt = randomBytes(16).toString("hex")) {
+  const derived = (await scrypt(String(password ?? ""), salt, 64)).toString("hex");
   return { salt, hash: derived };
 }
 
-function verifyPassword(password, salt, hash) {
-  const candidate = scryptSync(String(password ?? ""), salt, 64);
+async function verifyPassword(password, salt, hash) {
+  const candidate = await scrypt(String(password ?? ""), salt, 64);
   const target = Buffer.from(String(hash ?? ""), "hex");
   return candidate.length === target.length && timingSafeEqual(candidate, target);
 }
@@ -821,7 +823,7 @@ async function resolveGoogleAccount(identity) {
 
     if (!accountId) {
       accountId = randomUUID();
-      const credentials = hashPassword(createOpaqueToken());
+      const credentials = await hashPassword(createOpaqueToken());
       await client.query(
         `INSERT INTO auth_users (
            id, email, email_hash, password_salt, password_hash, provider, display_name,
@@ -5101,7 +5103,7 @@ async function handleSignup(request, response) {
       throw new ApiError(409, "SIGNUP_NOT_AVAILABLE", "An account could not be created with those details.");
     }
     const inviteId = await consumePilotInvite(client, input);
-    const credentials = hashPassword(input.password);
+    const credentials = await hashPassword(input.password);
     const userId = randomUUID();
     const result = await client.query(
       `INSERT INTO auth_users (
@@ -5152,7 +5154,8 @@ async function handleLogin(request, response) {
     [sha256(input.email)],
   );
   const user = result.rows[0];
-  if (!user || !verifyPassword(input.password, user.password_salt, user.password_hash)) {
+  const passwordValid = user ? await verifyPassword(input.password, user.password_salt, user.password_hash) : false;
+  if (!user || !passwordValid) {
     throw new ApiError(401, "INVALID_CREDENTIALS", "Invalid email or password.");
   }
   if (["suspended", "closed"].includes(user.account_status)) {
@@ -5275,7 +5278,7 @@ app.post("/api/v1/auth/password/reset", authRateLimit, asyncRoute(async (request
     if (!record || record.consumed_at || new Date(record.expires_at).getTime() <= Date.now()) {
       throw new ApiError(400, "RESET_TOKEN_INVALID", "The reset link is invalid or expired.");
     }
-    const credentials = hashPassword(input.password);
+    const credentials = await hashPassword(input.password);
     await client.query(
       `UPDATE auth_users SET password_salt = $2, password_hash = $3, updated_at = now() WHERE id = $1`,
       [record.account_id, credentials.salt, credentials.hash],
