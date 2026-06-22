@@ -246,8 +246,8 @@ try {
     [target.targetKey],
   );
   assert.equal(counts.rows[0].active_reactions, 0);
-  assert.equal(counts.rows[0].reaction_events, 4);
-  assert.equal(counts.rows[0].audit_events, 4);
+  assert.equal(counts.rows[0].reaction_events, 5);
+  assert.equal(counts.rows[0].audit_events, 5);
 
   console.log(JSON.stringify({
     ok: true,
