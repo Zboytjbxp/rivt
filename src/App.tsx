@@ -54,6 +54,13 @@ import { LegacyBridge } from "./features/legacy/LegacyBridge";
 import { ToolsStudio } from "./features/tools/ToolsStudio";
 import { ProfileRoute, type ProfileRouteView } from "./features/profile/ProfileRoute";
 import { ShopTalkView } from "./features/shop-talk/ShopTalkView";
+import {
+  communityAnswerReactionKey,
+  communityBadgeLabels,
+  communityPostReactionKey,
+  communityReactionLedgerKey,
+  type CommunityReactionTargetType,
+} from "./features/shop-talk/community-utils";
 import type { ProfileUpdateInput } from "./features/profile/ProfileHub";
 import { apiPath } from "./lib/api";
 import {
@@ -203,7 +210,6 @@ interface CommunityPost {
 
 type PostFlair = "Question" | "Discussion" | "Code Talk" | "Compliance" | "Tip" | "Humor";
 type CommunityReaction = "up" | "down";
-type CommunityReactionTargetType = "thread" | "answer";
 
 interface CommunityReactionAggregate {
   targetType: CommunityReactionTargetType;
@@ -713,12 +719,6 @@ const safetyQuizData: SafetyQuiz[] = [
     ],
   },
 ];
-const communityBadgeThresholds = {
-  firstAssistVerifiedFixes: 1,
-  mentorQualityAnswers: 10,
-  topHandQualityAnswers: 25,
-  premiumRewardMonths: 1,
-};
 const emptyJob: Job = {
   id: 0,
   title: "No jobs posted yet",
@@ -764,41 +764,6 @@ function currentTimeLabel() {
 function idempotencyKey(scope: string) {
   const randomPart = globalThis.crypto?.randomUUID?.() ?? Math.random().toString(36).slice(2);
   return `${scope}-${randomPart}`;
-}
-
-function netScore(item: { upvotes: number; downvotes: number }) {
-  return item.upvotes - item.downvotes;
-}
-
-function communityReactionLedgerKey(targetType: CommunityReactionTargetType, targetKey: string) {
-  return `${targetType}:${targetKey}`;
-}
-
-function communityPostReactionKey(postId: number) {
-  return `post:${postId}`;
-}
-
-function communityAnswerReactionKey(postId: number, answerId: number) {
-  return `answer:${postId}:${answerId}`;
-}
-
-function communityBadgeLabels(posts: CommunityPost[], personName: string) {
-  const answers = posts.flatMap((post) => post.replies).filter((answer) => answer.author === personName);
-  const verifiedFixes = answers.filter((answer) => answer.verifiedFix).length;
-  const qualityAnswers = answers.filter((answer) => netScore(answer) >= 3).length;
-  const badges: string[] = [];
-
-  if (verifiedFixes >= communityBadgeThresholds.firstAssistVerifiedFixes) {
-    badges.push("First Assist");
-  }
-  if (qualityAnswers >= communityBadgeThresholds.mentorQualityAnswers) {
-    badges.push("Trade Mentor");
-  }
-  if (qualityAnswers >= communityBadgeThresholds.topHandQualityAnswers && verifiedFixes > 1) {
-    badges.push("Top Hand");
-  }
-
-  return badges;
 }
 
 const seedNews: NewsItem[] = [

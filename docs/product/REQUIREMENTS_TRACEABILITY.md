@@ -10,6 +10,14 @@ Status values:
 
 Evidence must eventually link to implementation, automated tests, manual acceptance proof, and deployed build.
 
+## Traceability Addendum - 2026-06-22 Shop Talk Community Helper Extraction
+
+- `GA-UX-001` gains maintainability evidence: shared Shop Talk score sorting, community badge labeling, and server-owned reaction key helpers were extracted from `src/App.tsx` and `src/features/shop-talk/ShopTalkView.tsx` into `src/features/shop-talk/community-utils.ts`.
+- `GA-UX-005` retains behavior boundaries: App-level community badges keep the existing 10/25 answer thresholds, while the Shop Talk screen keeps its existing 3/8 thresholds.
+- `GA-OPS-007` gains local automated evidence for this refactor slice: `npm run build`, `npm run lint`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check` passed.
+- The full `npm run test` command was run with explicit network access because the integration suite uses the isolated test Postgres.
+- `GA-OPS-008` is unchanged for production deployment: this slice has not been deployed.
+
 ## Traceability Addendum - 2026-06-22 Dead Guest Job Fixture Removal
 
 - `GA-UX-001` gains cleanup evidence: the unreferenced `guestDemoJobs` fixture was removed from `src/App.tsx`.

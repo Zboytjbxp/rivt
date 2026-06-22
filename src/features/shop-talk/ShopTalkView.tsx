@@ -21,6 +21,12 @@ import {
 } from "lucide-react";
 import { tradeOptions } from "../../data";
 import type { Trade } from "../../types";
+import {
+  communityBadgeLabels,
+  netScore,
+  sortedAnswers,
+  type CommunityBadgeThresholds,
+} from "./community-utils";
 
 interface AccountProfile {
   displayName: string;
@@ -95,7 +101,7 @@ export interface CommunityReport {
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? (import.meta.env.DEV ? "http://127.0.0.1:8787" : "");
 const specialtyOptions = tradeOptions.filter((trade): trade is Trade => trade !== "All trades");
 
-const communityBadgeThresholds = {
+const communityBadgeThresholds: CommunityBadgeThresholds = {
   firstAssistVerifiedFixes: 1,
   mentorQualityAnswers: 3,
   topHandQualityAnswers: 8,
@@ -129,30 +135,6 @@ function isFallbackNewsThumbnail(item: Pick<NewsItem, "thumbnailUrl" | "thumbnai
 
 function newsThumbClassName(baseClass: string, item: Pick<NewsItem, "thumbnailUrl" | "thumbnailKind">) {
   return `${baseClass} ${isFallbackNewsThumbnail(item) ? "is-fallback" : "is-real"}`;
-}
-
-function netScore(item: { upvotes: number; downvotes: number }) {
-  return item.upvotes - item.downvotes;
-}
-
-function sortedAnswers(answers: CommunityAnswer[]) {
-  return [...answers].sort((a, b) => {
-    if (a.verifiedFix !== b.verifiedFix) return a.verifiedFix ? -1 : 1;
-    return netScore(b) - netScore(a);
-  });
-}
-
-function communityBadgeLabels(posts: CommunityPost[], personName: string) {
-  const answers = posts.flatMap((post) => post.replies).filter((answer) => answer.author === personName);
-  const verifiedFixes = answers.filter((answer) => answer.verifiedFix).length;
-  const qualityAnswers = answers.filter((answer) => netScore(answer) >= 3).length;
-  const badges: string[] = [];
-
-  if (verifiedFixes >= communityBadgeThresholds.firstAssistVerifiedFixes) badges.push("First Assist");
-  if (qualityAnswers >= communityBadgeThresholds.mentorQualityAnswers) badges.push("Trade Mentor");
-  if (qualityAnswers >= communityBadgeThresholds.topHandQualityAnswers && verifiedFixes > 1) badges.push("Top Hand");
-
-  return badges;
 }
 
 function EmptyState({
@@ -403,7 +385,7 @@ export function ShopTalkView({
   });
   const selectedPost = filteredPosts.find((p) => p.id === selectedPostId) ?? filteredPosts[0];
   const selectedNews = filteredNews.find((n) => n.id === selectedNewsId) ?? filteredNews[0];
-  const profileBadges = communityBadgeLabels(communityPosts, profile.displayName);
+  const profileBadges = communityBadgeLabels(communityPosts, profile.displayName, communityBadgeThresholds);
   const unansweredCount = filteredPosts.filter((post) => post.replies.length === 0 || post.status === "Needs a pro answer").length;
   const verifiedFixCount = filteredPosts.filter((post) => post.status === "Verified Fix").length;
   const newsSourceCount = new Set(filteredNews.map((item) => item.source)).size;
