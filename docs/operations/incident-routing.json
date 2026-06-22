@@ -8,10 +8,10 @@
     "phoneStatus": "not_recorded"
   },
   "backupOwner": {
-    "name": "TBD",
-    "role": "Backup incident owner",
-    "email": "TBD",
-    "phoneStatus": "missing"
+    "name": "Anya Tingle",
+    "role": "Partner / wife",
+    "email": "abota1994@gmail.com",
+    "phoneStatus": "recorded"
   },
   "supportHours": {
     "timezone": "America/New_York",
