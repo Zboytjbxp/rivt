@@ -19,24 +19,7 @@ import {
 import { brandConfig, type ThemeMode, type ThemePalette, type TrialPlan } from "../brandConfig";
 import { ProgressBar, ThemeToggle, type AuthMethod } from "../features/auth/AuthScreens";
 import type { Role, Trade } from "../types";
-
-type NavLabel =
-  | "Home"
-  | "Marketplace"
-  | "Shop Talk"
-  | "Tools"
-  | "My Jobs"
-  | "Applications"
-  | "Invites"
-  | "My Crew"
-  | "Messages"
-  | "Trust & Legal"
-  | "Records"
-  | "Safety & Training"
-  | "Reviews"
-  | "Feedback"
-  | "Settings"
-  | "Admin";
+import type { NavLabel } from "./routes";
 
 export interface ActivityItemForPanel {
   id: number | string;
