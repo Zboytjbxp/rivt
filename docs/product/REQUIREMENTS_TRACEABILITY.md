@@ -218,6 +218,14 @@ Evidence must eventually link to implementation, automated tests, manual accepta
 - `GA-OPS-007` gains local automated evidence for this refactor slice: `npm run build`, `npm run test:unit`, `npm run lint`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check` passed.
 - `GA-OPS-008` is unchanged for production deployment: this slice has not been deployed.
 
+## Traceability Addendum - 2026-06-22 Shop Talk Route Split
+
+- `GA-UX-001` gains maintainability evidence: the active Shop Talk and Trade News surface now lives in `src/features/shop-talk/ShopTalkView.tsx` instead of inside the main application shell.
+- `GA-COM-001`, `GA-COM-002`, and `GA-COM-003` retain behavior: the extraction preserves Shop Talk filtering, answer queue, post creation, reporting, verified-fix display, and server-owned reaction props.
+- `GA-UX-004` retains Trade News behavior: the extracted view still uses the live `/api/news` fetch path with curated fallback data and source links.
+- `GA-OPS-007` gains local automated evidence for this refactor slice: `npm run build`, `npm run lint`, `npm run test:unit`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check` passed.
+- `GA-OPS-008` is unchanged for production deployment: this slice has not been deployed.
+
 ## Current Gate A Summary
 
 - Production infrastructure is reachable and managed storage is healthy.
