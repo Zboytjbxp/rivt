@@ -16,6 +16,7 @@ if (!testDatabaseUrl) {
   process.env.EMAIL_DELIVERY_MODE = "capture";
   process.env.AUTH_METADATA_PEPPER = "project-completion-test-pepper";
   process.env.REQUIRE_PILOT_INVITE = "false";
+  process.env.AUTH_RATE_LIMIT = "10000";
   process.env.S3_BUCKET = "";
   process.env.S3_ACCESS_KEY_ID = "";
   process.env.S3_SECRET_ACCESS_KEY = "";
@@ -280,9 +281,9 @@ if (!testDatabaseUrl) {
       `INSERT INTO uploads (
          id, session_id, account_id, active_work_id, kind, name, notes, object_key, original_name, mime_type,
          size_bytes, upload_status, storage_scope, content_sha256, verified_at
-       ) VALUES ($1, $2, $2::uuid, $3, 'project-media', 'Stored evidence', '', 'projects/test/evidence.png',
-         'evidence.png', 'image/png', 15, 'stored', 'project', $4, now())`,
-      [uploadId, tradesperson.id, activeWork.id, contentHash],
+       ) VALUES ($1, $2, $3, $4, 'project-media', 'Stored evidence', '', 'projects/test/evidence.png',
+         'evidence.png', 'image/png', 15, 'stored', 'project', $5, now())`,
+      [uploadId, randomUUID(), tradesperson.id, activeWork.id, contentHash],
     );
     await database.query(
       `INSERT INTO project_entries (id, project_id, active_work_id, actor_account_id, entry_type, body, metadata)

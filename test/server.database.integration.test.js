@@ -15,6 +15,7 @@ if (!testDatabaseUrl) {
   process.env.EMAIL_FROM = "RIVT Test <noreply@example.test>";
   process.env.EMAIL_DELIVERY_MODE = "capture";
   process.env.AUTH_METADATA_PEPPER = "database-integration-test-pepper";
+  process.env.AUTH_RATE_LIMIT = "10000";
   process.env.S3_BUCKET = "";
   process.env.S3_ACCESS_KEY_ID = "";
   process.env.S3_SECRET_ACCESS_KEY = "";
@@ -137,7 +138,7 @@ if (!testDatabaseUrl) {
     assert.equal(legacyPaymentExport.payload.code, "LEGACY_PAYMENT_EXPORT_RETIRED");
 
     const legacyRows = await database.query(
-      "SELECT count(*)::int AS count FROM app_state WHERE id = ANY($1::uuid[])",
+      "SELECT count(*)::int AS count FROM app_state WHERE id = ANY($1::text[])",
       [[contractor.user.id, tradesperson.user.id]],
     );
     assert.equal(legacyRows.rows[0].count, 0);

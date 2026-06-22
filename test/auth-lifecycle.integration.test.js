@@ -16,6 +16,7 @@ if (!testDatabaseUrl) {
   process.env.EMAIL_DELIVERY_MODE = "capture";
   process.env.AUTH_METADATA_PEPPER = "auth-lifecycle-test-pepper";
   process.env.REQUIRE_PILOT_INVITE = "false";
+  process.env.AUTH_RATE_LIMIT = "10000";
   process.env.S3_BUCKET = "";
   process.env.S3_ACCESS_KEY_ID = "";
   process.env.S3_SECRET_ACCESS_KEY = "";

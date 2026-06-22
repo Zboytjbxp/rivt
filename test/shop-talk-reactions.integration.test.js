@@ -16,6 +16,7 @@ if (!testDatabaseUrl) {
   process.env.EMAIL_DELIVERY_MODE = "capture";
   process.env.AUTH_METADATA_PEPPER = "shop-talk-reactions-test-pepper";
   process.env.REQUIRE_PILOT_INVITE = "false";
+  process.env.AUTH_RATE_LIMIT = "10000";
   process.env.S3_BUCKET = "";
   process.env.S3_ACCESS_KEY_ID = "";
   process.env.S3_SECRET_ACCESS_KEY = "";
@@ -75,7 +76,7 @@ if (!testDatabaseUrl) {
         tradeCodes: ["electrical"],
         organizationName: role === "contractor" ? `${label} LLC` : undefined,
         consentAccepted: true,
-        consentVersion: "2026-06-21",
+        consentVersion: "2026-06-19",
       },
     });
     assert.equal(onboarded.response.status, 200);
@@ -98,7 +99,7 @@ if (!testDatabaseUrl) {
 
     const contractor = await createAccount(baseUrl, "contractor", "Shop Talk Contractor");
     const tradesperson = await createAccount(baseUrl, "tradesperson", "Shop Talk Electrician");
-    const target = { targetType: "thread", targetKey: "post:integration-thread" };
+    const target = { targetType: "thread", targetKey: `post:integration-thread-${randomUUID()}` };
 
     const anonymous = await requestJson(baseUrl, "/api/v1/shop-talk/reactions/batch", {
       method: "POST",

@@ -2,7 +2,7 @@
 
 Last updated: 2026-06-22 America/New_York
 Current gate: Gate A launch hardening
-Current phase: Packet 08 controllable UX hardening, founder/support/legal-safety approvals recorded, incident and launch readiness gates passing, Gate A approval packet prepared, incident rehearsal passed, incident routing approved, recovery policy approved, support hours and backup incident owner recorded, Sentry error monitoring and first escalation route configured, server-owned Shop Talk reactions/reputation ledger, Daily Log live UI proof, Daily Log Records bridge, daily engagement loop, Shop Talk answer queue, RIVT Daily home check-in, Trade News real-media and mobile layout pass, production UI smoke regression fixes, Tools studio release, Records workspace upgrade, UI system pass, shared UI primitives, Tools primitive alignment, Shop Talk command center, Tools app surface pass, Heavy 16th multi-mode calculator, Invoice Draft app upgrade, Shop Talk reaction/social pulse pass, expanded production accessibility smoke verified, Claude-audit UI consolidation deployed, global search command surface deployed, and server-owned profile search deployed; physical/deeper manual accessibility-device evidence remains the next launch-quality boundary
+Current phase: Packet 08 controllable UX hardening, founder/support/legal-safety approvals recorded, incident and launch readiness gates passing, Gate A approval packet prepared, incident rehearsal passed, incident routing approved, recovery policy approved, support hours and backup incident owner recorded, Sentry error monitoring and first escalation route configured, server-owned Shop Talk reactions/reputation ledger, Daily Log live UI proof, Daily Log Records bridge, daily engagement loop, Shop Talk answer queue, RIVT Daily home check-in, Trade News real-media and mobile layout pass, production UI smoke regression fixes, Tools studio release, Records workspace upgrade, UI system pass, shared UI primitives, Tools primitive alignment, Shop Talk command center, Tools app surface pass, Heavy 16th multi-mode calculator, Invoice Draft app upgrade, Shop Talk reaction/social pulse pass, expanded production accessibility smoke verified, Claude-audit UI consolidation deployed, global search command surface deployed, server-owned profile search deployed, and local `TEST_DATABASE_URL` configured against isolated test Postgres; physical/deeper manual accessibility-device evidence remains the next launch-quality boundary
 Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
 Production release commit: `cda9733acdaa7ed858b819fc9b5904ee2c237600`
@@ -16,6 +16,16 @@ Packet 00 is merged on `master` at `4c199d903683e44d17b7985272c399c6d7a6cbd6`. T
 - Product source of truth: `RIVT_MASTER_BUILD_PROMPT.md`
 
 Do not discard or overwrite the pre-existing Trade News work when committing or splitting this packet.
+
+## Latest Packet 08 Pass - Local TEST_DATABASE_URL Configuration
+
+- Created an isolated `rivt_test` database on the existing Railway Postgres service for local DB-backed integration testing. This is separate from the production app database and is used only through ignored local `.env` configuration.
+- Wrote `TEST_DATABASE_URL` to local `.env` without committing the secret value and added a blank `TEST_DATABASE_URL=` placeholder to `.env.example`.
+- Updated `npm run test:integration` to load `.env` through `node --env-file-if-exists=.env`, so local runs use the configured test database while CI or other machines can still inject `TEST_DATABASE_URL` through environment variables.
+- Fixed integration-test repeatability issues exposed by the newly active database suite: separated text session id and UUID account id parameters in project upload setup, compared legacy `app_state.id` as text, updated the Shop Talk consent version, made the Shop Talk reaction target unique per run, and raised auth rate limits inside DB-backed integration tests only.
+- `npm run test:integration` now executes the DB-backed suite locally with 12 passed, 0 failed, and 0 skipped.
+- Required local gates passed after this slice: `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check`.
+- No production deployment was performed for this setup/configuration slice; runtime product behavior is unchanged.
 
 ## Latest Packet 08 Pass - Server-Owned Profile Search
 
