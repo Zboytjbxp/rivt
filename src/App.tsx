@@ -22,6 +22,14 @@ import {
   viewFromPath,
   viewRoutes,
 } from "./app-shell/routes";
+import {
+  AUTH_MODE_KEY,
+  readAuthModePreference,
+  readThemePalettePreference,
+  readThemePreference,
+  THEME_PALETTE_STORAGE_KEY,
+  THEME_STORAGE_KEY,
+} from "./app-shell/preferences";
 import { WorkWorkspace } from "./features/work/WorkWorkspace";
 import { JobEditorModal } from "./features/work/JobEditorModal";
 import { getJob, listJobs, toJobViewModel, transitionJob, type CanonicalDifficulty, type CanonicalWorkType } from "./features/work/job-api";
@@ -241,10 +249,6 @@ interface ShoutOut {
   createdAt: string;
 }
 
-const THEME_STORAGE_KEY = `${brandConfig.appSlug}-theme-mode`;
-const THEME_PALETTE_STORAGE_KEY = `${brandConfig.appSlug}-theme-palette`;
-const AUTH_MODE_KEY = `${brandConfig.appSlug}-auth-mode`;
-
 const tradeCodeByName: Record<Trade, string> = {
   Electrical: "electrical",
   Plumbing: "plumbing",
@@ -290,45 +294,6 @@ const canonicalWorkTypeByLabel: Record<WorkType, CanonicalWorkType> = {
   "Multi-day": "multi_day",
   "Inspection prep": "inspection_prep",
 };
-
-function readThemePreference(): ThemeMode {
-  if (typeof window === "undefined") return "light";
-
-  try {
-    const storedTheme = window.localStorage.getItem(THEME_STORAGE_KEY);
-    if (storedTheme === "light" || storedTheme === "dark") {
-      return storedTheme;
-    }
-
-    return window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-  } catch {
-    return "light";
-  }
-}
-
-function readThemePalettePreference(): ThemePalette {
-  if (typeof window === "undefined") return "orangeRidge";
-
-  try {
-    const storedPalette = window.localStorage.getItem(THEME_PALETTE_STORAGE_KEY);
-    if (storedPalette && storedPalette in brandConfig.theme.palettes) {
-      return storedPalette as ThemePalette;
-    }
-  } catch {
-    return "orangeRidge";
-  }
-
-  return "orangeRidge";
-}
-
-function readAuthModePreference(): "login" | "signup" {
-  if (typeof window === "undefined") return "login";
-  try {
-    return window.sessionStorage.getItem(AUTH_MODE_KEY) === "signup" ? "signup" : "login";
-  } catch {
-    return "login";
-  }
-}
 
 const recordChecklist = [
   "Signed scope",

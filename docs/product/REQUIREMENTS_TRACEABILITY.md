@@ -10,6 +10,14 @@ Status values:
 
 Evidence must eventually link to implementation, automated tests, manual acceptance proof, and deployed build.
 
+## Traceability Addendum - 2026-06-22 App Preference Helper Extraction
+
+- `GA-UX-001` gains maintainability evidence: theme, palette, and auth-mode storage keys plus browser preference readers were extracted from `src/App.tsx` into `src/app-shell/preferences.ts`.
+- `GA-UX-003` retains behavior boundaries: theme persistence, palette persistence, auth-mode session persistence, and fallback defaults are unchanged.
+- `GA-OPS-007` gains local automated evidence for this refactor slice: `npm run build`, `npm run lint`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check` passed.
+- The full `npm run test` command was run with explicit network access because the integration suite uses the isolated test Postgres.
+- `GA-OPS-008` is unchanged for production deployment: this slice has not been deployed.
+
 ## Traceability Addendum - 2026-06-22 App Route Metadata Extraction
 
 - `GA-UX-001` gains maintainability evidence: route labels, destination mapping, path aliases, and page-title metadata were extracted from `src/App.tsx` into `src/app-shell/routes.ts`.
