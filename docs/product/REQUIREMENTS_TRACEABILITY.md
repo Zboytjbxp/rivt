@@ -10,6 +10,14 @@ Status values:
 
 Evidence must eventually link to implementation, automated tests, manual acceptance proof, and deployed build.
 
+## Traceability Addendum - 2026-06-22 Account Activity Panel Extraction
+
+- `GA-UX-001` gains maintainability evidence: notification toast, notification panel, account panel, avatar fallback, account stat item, and theme-palette picker presentation were extracted from `src/App.tsx` into `src/app-shell/AppPanels.tsx`.
+- `GA-UX-003` retains behavior boundaries: notification read clearing, account open/close, logout, and profile navigation remain owned by the existing App state and server flows.
+- `GA-OPS-007` gains local automated evidence for this refactor slice: `npm run build`, `npm run lint`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check` passed.
+- The full `npm run test` command was run with explicit network access because the integration suite uses the isolated test Postgres.
+- `GA-OPS-008` is unchanged for production deployment: this slice has not been deployed.
+
 ## Traceability Addendum - 2026-06-22 Auth Screen Extraction
 
 - `GA-UX-001` gains maintainability evidence: auth, verification/reset, guest prompt, onboarding, theme toggle, and progress-bar presentation were extracted from `src/App.tsx` into `src/features/auth/AuthScreens.tsx`.
