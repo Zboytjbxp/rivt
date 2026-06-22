@@ -15,8 +15,8 @@
   },
   "supportHours": {
     "timezone": "America/New_York",
-    "coverage": "TBD",
-    "launchExpectation": "Founder-approved support hours are required before named-cohort launch."
+    "coverage": "Monday-Saturday, 9:00 AM-5:00 PM",
+    "launchExpectation": "Founder-provided Gate A support coverage window for named-cohort pilot."
   },
   "alertDestinations": [
     {

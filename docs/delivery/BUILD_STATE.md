@@ -2,7 +2,7 @@
 
 Last updated: 2026-06-22 America/New_York
 Current gate: Gate A launch hardening
-Current phase: Packet 08 controllable UX hardening, backup incident owner recorded, Sentry error monitoring and first escalation route configured, server-owned Shop Talk reactions/reputation ledger, Daily Log live UI proof, Daily Log Records bridge, daily engagement loop, Shop Talk answer queue, RIVT Daily home check-in, Trade News real-media and mobile layout pass, production UI smoke regression fixes, Tools studio release, Records workspace upgrade, UI system pass, shared UI primitives, Tools primitive alignment, Shop Talk command center, Tools app surface pass, Heavy 16th multi-mode calculator, Invoice Draft app upgrade, and Shop Talk reaction/social pulse pass verified; full Gate A approval remains blocked
+Current phase: Packet 08 controllable UX hardening, support hours and backup incident owner recorded, Sentry error monitoring and first escalation route configured, server-owned Shop Talk reactions/reputation ledger, Daily Log live UI proof, Daily Log Records bridge, daily engagement loop, Shop Talk answer queue, RIVT Daily home check-in, Trade News real-media and mobile layout pass, production UI smoke regression fixes, Tools studio release, Records workspace upgrade, UI system pass, shared UI primitives, Tools primitive alignment, Shop Talk command center, Tools app surface pass, Heavy 16th multi-mode calculator, Invoice Draft app upgrade, and Shop Talk reaction/social pulse pass verified; full Gate A approval remains blocked
 Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
 Production release commit: `6d8e276e036553c5f861f1f8ab97cc3333a3494b`
@@ -17,11 +17,17 @@ Packet 00 is merged on `master` at `4c199d903683e44d17b7985272c399c6d7a6cbd6`. T
 
 Do not discard or overwrite the pre-existing Trade News work when committing or splitting this packet.
 
+## Latest Packet 08 Pass - Support Hours Recorded
+
+- Recorded founder-provided Gate A support hours in `docs/operations/incident-routing.json`: Monday-Saturday, 9:00 AM-5:00 PM, America/New_York.
+- `node scripts/incident-readiness-check.js --json` is expected to stop reporting `SUPPORT_HOURS_MISSING`; incident rehearsal, founder/support/legal-safety approvals, and incident-routing approval remain blocked.
+- Remaining honesty boundary: this records the support coverage window, not final support/legal/founder approval.
+
 ## Latest Packet 08 Pass - Backup Incident Owner Recorded
 
 - Recorded backup incident owner in `docs/operations/incident-routing.json`: Anya Tingle, partner / wife, `abota1994@gmail.com`.
 - Phone status is `recorded`; the actual phone number is intentionally not stored in the repository.
-- `node scripts/incident-readiness-check.js --json` is expected to stop reporting `BACKUP_OWNER_MISSING`; support hours, incident rehearsal, founder/support/legal-safety approvals, and incident-routing approval remain blocked.
+- `node scripts/incident-readiness-check.js --json` stopped reporting `BACKUP_OWNER_MISSING`; support hours were recorded in the follow-up pass above.
 - Remaining honesty boundary: backup ownership is recorded, but Anya still needs access/runbook orientation before we should treat incident response as operationally rehearsed.
 
 ## Latest Packet 08 Pass - Sentry Error Monitoring Configured
@@ -790,7 +796,7 @@ Completed on 2026-06-21 as a focused follow-up to the shared UI primitive system
 
 ## Next Exact Task
 
-Continue Gate A launch hardening with the remaining external and manual blockers: fill support-hours/approval fields in `docs/operations/incident-routing.json`, approve RPO/RTO/retention/cadence fields in `docs/operations/recovery-policy.json`, orient the backup owner on the runbook, run an incident rehearsal, then pass `npm run incident:readiness -- --require-ready` and `npm run launch:readiness -- --require-ready`. Complete the physical/deeper manual accessibility-device matrix before named-cohort launch.
+Continue Gate A launch hardening with the remaining external and manual blockers: fill approval fields in `docs/operations/incident-routing.json`, approve RPO/RTO/retention/cadence fields in `docs/operations/recovery-policy.json`, orient the backup owner on the runbook, run an incident rehearsal, then pass `npm run incident:readiness -- --require-ready` and `npm run launch:readiness -- --require-ready`. Complete the physical/deeper manual accessibility-device matrix before named-cohort launch.
 
 ## Blocking Founder Decisions
 
