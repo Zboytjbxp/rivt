@@ -197,6 +197,13 @@ Evidence must eventually link to implementation, automated tests, manual accepta
 - The first sandboxed `npm run test` attempt timed out without useful output; the same command passed after explicit network access was granted for the isolated test Postgres.
 - `GA-OPS-008` is unchanged for production deployment: this slice has not been deployed.
 
+## Traceability Addendum - 2026-06-22 Frontend Smoke Test Tripwire
+
+- `GA-OPS-007` gains frontend render-tripwire evidence: `test/frontend-smoke.test.mjs` now mounts Home, Work, Profile, and AppShell through Vite SSR and `react-dom/server` without adding dependencies.
+- `npm run test:unit` now includes this frontend smoke suite, and `npm run test` proved 35 unit tests plus 12 integration tests passed with the new coverage.
+- Required local gates passed for this slice: `npm run build`, `npm run lint`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check`.
+- `GA-OPS-008` is unchanged for production deployment: this slice has not been deployed.
+
 ## Current Gate A Summary
 
 - Production infrastructure is reachable and managed storage is healthy.
