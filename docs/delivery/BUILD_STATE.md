@@ -2,10 +2,10 @@
 
 Last updated: 2026-06-21 America/New_York
 Current gate: Gate A launch hardening
-Current phase: Packet 08 controllable UX hardening, Daily Log Records bridge, daily engagement loop, Shop Talk answer queue, RIVT Daily home check-in, Trade News real-media and mobile layout pass, production UI smoke regression fixes, Tools studio release, Records workspace upgrade, UI system pass, shared UI primitives, Tools primitive alignment, Shop Talk command center, Tools app surface pass, Heavy 16th multi-mode calculator, Invoice Draft app upgrade, and Shop Talk reaction/social pulse pass verified; full Gate A approval remains blocked
+Current phase: Packet 08 controllable UX hardening, Daily Log live UI proof, Daily Log Records bridge, daily engagement loop, Shop Talk answer queue, RIVT Daily home check-in, Trade News real-media and mobile layout pass, production UI smoke regression fixes, Tools studio release, Records workspace upgrade, UI system pass, shared UI primitives, Tools primitive alignment, Shop Talk command center, Tools app surface pass, Heavy 16th multi-mode calculator, Invoice Draft app upgrade, and Shop Talk reaction/social pulse pass verified; full Gate A approval remains blocked
 Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
-Production release commit: `d03f2a50e0df9297dc6c0e33c7eb83a6732cdd8b`
+Production release commit: `9c614ac2f8691186150e16583e7b204cbada590a`
 
 ## Source State
 
@@ -17,7 +17,19 @@ Packet 00 is merged on `master` at `4c199d903683e44d17b7985272c399c6d7a6cbd6`. T
 
 Do not discard or overwrite the pre-existing Trade News work when committing or splitting this packet.
 
-## Latest Packet 08 Pass - Daily Log Records Bridge
+## Latest Packet 08 Pass - Daily Log Live UI Proof
+
+- Deployed source `9c614ac2f8691186150e16583e7b204cbada590a` through Railway deployment `1c138a66-7015-4cfb-a2ad-48135b932c5d`.
+- Added first-class live smoke command `npm run smoke:daily-log-ui:live` with full, setup-only, browser-only, and cleanup modes.
+- Used Railway SSH setup mode to create disposable invited contractor/tradesperson accounts, publish a real job, accept real work, and leave an accepted-work fixture on production without bypassing app auth.
+- Ran local browser-only mode against `https://rivt.pro`: logged in through the real auth form, opened Tools, selected Daily Log, verified `Records-ready`, saved the Daily Log through the authenticated Records API, verified the project bundle contained the marker, and captured screenshot evidence at `C:\Users\zboyt\AppData\Local\Temp\rivt-daily-log-live-smoke`.
+- Live proof run `daily-log-ui-20260622004926-05a797` passed on build `9c614ac2f8691186150e16583e7b204cbada590a` with `dailyLogEntries: 1`, project `2d110b1a-258e-4516-b046-9ecfb735083e`, and active work `52a7ed95-365e-4d33-83e6-dde5bbc10a47`.
+- Railway cleanup mode closed both disposable accounts and closed the smoke job for run `daily-log-ui-20260622004926-05a797`.
+- Local gates passed for this slice: `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test`, `npm run test:e2e`, `npm run test:ui:tools`, `npm run test:ui:shop-talk-news`, `npm audit --omit=dev`, and `git diff --check`; DB-backed integration tests still skip locally because `TEST_DATABASE_URL` is not configured.
+- Live checks passed: `/api/health` reported exact source `9c614ac2f8691186150e16583e7b204cbada590a`, PostgreSQL and S3-compatible dependencies healthy, and `npm run monitor:production` passed with seven anonymous private-route checks.
+- Remaining honesty boundary: this closes the exact Daily Log UI-to-Records live proof gap. Full Gate A still requires real external error monitoring/paging, incident rehearsal, RPO/RTO policy approval, backup retention/cadence approval, final support/legal/founder signoff, physical/deeper manual accessibility-device evidence, and production-grade server Shop Talk posts/reactions/reputation if promoted into launch scope.
+
+## Packet 08 Pass - Daily Log Records Bridge
 
 - Deployed source `d03f2a50e0df9297dc6c0e33c7eb83a6732cdd8b` through Railway deployment `95973719-d8de-42a7-854c-69833221c439`.
 - Connected the Daily Log mini-app to the existing authenticated Records API when an accepted active-work record exists.

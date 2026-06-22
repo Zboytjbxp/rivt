@@ -21,7 +21,27 @@ Add one entry per staging/production deployment.
 - Rollback performed/result:
 - Approval:
 
-## Current Production - Packet 08 Daily Log Records Bridge
+## Current Production - Packet 08 Daily Log Live UI Proof
+
+- Environment: Production (`https://rivt.pro`)
+- Date/time/timezone: 2026-06-21 20:49 America/New_York
+- Deployer: Codex through authenticated Railway CLI
+- Source repository/branch: `Zboytjbxp/rivt`, `master`
+- Source commit: `9c614ac2f8691186150e16583e7b204cbada590a`
+- Build/artifact ID: Railway deployment `1c138a66-7015-4cfb-a2ad-48135b932c5d`
+- Migration version before/after: `0009_durable_rate_limits` / `0009_durable_rate_limits` (no schema migration)
+- Feature-flag/config version: `SOURCE_COMMIT` updated to `9c614ac2f8691186150e16583e7b204cbada590a`; operational controls unchanged
+- Provider/config changes: no provider credentials changed; added live Daily Log UI smoke tooling and did not add runtime product behavior
+- Backup/rollback target: prior successful deployment `95973719-d8de-42a7-854c-69833221c439`; migration version unchanged
+- Automated gates: local `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test`, `npm run test:e2e`, `npm run test:ui:tools`, `npm run test:ui:shop-talk-news`, `npm audit --omit=dev`, and `git diff --check` passed; DB-backed integration tests skipped locally because `TEST_DATABASE_URL` is not configured
+- Post-deploy smoke tests: public `/api/health` passed and reported exact source commit `9c614ac2f8691186150e16583e7b204cbada590a`; `npm run monitor:production` passed with PostgreSQL/S3-compatible dependencies healthy, operational controls disabled, and seven anonymous private-route checks
+- Rendered live UI evidence: split smoke `daily-log-ui-20260622004926-05a797` used Railway SSH setup to create disposable invited accounts and real accepted work, local browser-only mode to log in at `https://rivt.pro`, open Tools -> Daily Log, verify `Records-ready`, save to Records, and verify one project timeline note through the live API. Screenshot evidence is outside the repo at `C:\Users\zboyt\AppData\Local\Temp\rivt-daily-log-live-smoke`.
+- Health/readiness result: health reports PostgreSQL and S3-compatible storage healthy with exact source commit `9c614ac2f8691186150e16583e7b204cbada590a`; production synthetic monitor reports signups and mutations enabled
+- Known risks: full Gate A remains blocked by real external error monitoring/paging, incident rehearsal, RPO/RTO policy approval, backup retention/cadence approval, support/legal/founder signoff, physical/deeper manual accessibility-device evidence, and production-grade server Shop Talk posts/reactions/reputation if promoted into launch scope.
+- Rollback performed/result: not required
+- Approval: Packet 08 Daily Log live UI proof accepted as controllable Gate A evidence; overall Gate A not approved
+
+## Previous Production - Packet 08 Daily Log Records Bridge
 
 - Environment: Production (`https://rivt.pro`)
 - Date/time/timezone: 2026-06-21 20:25 America/New_York
