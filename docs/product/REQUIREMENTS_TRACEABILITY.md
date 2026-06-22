@@ -204,6 +204,13 @@ Evidence must eventually link to implementation, automated tests, manual accepta
 - Required local gates passed for this slice: `npm run build`, `npm run lint`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check`.
 - `GA-OPS-008` is unchanged for production deployment: this slice has not been deployed.
 
+## Traceability Addendum - 2026-06-22 App Profile Route Split
+
+- `GA-UX-001` gains maintainability evidence: the active Profile route adapter was extracted from `src/App.tsx` into `src/features/profile/ProfileRoute.tsx`, reducing direct route-render coupling while preserving existing account/profile behavior.
+- This is the first safe slice of the larger `App.tsx` decomposition. Auth/session ownership remains in `App.tsx` because it is still shared by Settings and the top-bar account panel.
+- `GA-OPS-007` gains local automated evidence for this refactor slice: `npm run build`, `npm run test:unit`, `npm run lint`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check` passed.
+- `GA-OPS-008` is unchanged for production deployment: this slice has not been deployed.
+
 ## Current Gate A Summary
 
 - Production infrastructure is reachable and managed storage is healthy.

@@ -93,7 +93,7 @@ import {
 } from "./features/inbox/inbox-api";
 import { LegacyBridge } from "./features/legacy/LegacyBridge";
 import { ToolsStudio } from "./features/tools/ToolsStudio";
-import { ProfileHub } from "./features/profile/ProfileHub";
+import { ProfileRoute, type ProfileRouteView } from "./features/profile/ProfileRoute";
 import type { AccountSessionSummary, ProfileUpdateInput } from "./features/profile/ProfileHub";
 
 type TradeFilter = (typeof tradeOptions)[number];
@@ -3185,31 +3185,11 @@ function App() {
             onNavigate={(destination) => handleNavigate(defaultViewForDestination(destination))}
           />
         ) : ["Trust & Legal", "Safety & Training", "Reviews", "Feedback", "Settings"].includes(activeView) ? (
-          <ProfileHub
-            view={activeView as "Trust & Legal" | "Safety & Training" | "Reviews" | "Feedback" | "Settings"}
+          <ProfileRoute
+            view={activeView as ProfileRouteView}
             role={role}
-            profile={{
-              email: accountProfile.email,
-              displayName: accountProfile.displayName,
-              organization: accountProfile.organization,
-              location: accountProfile.location,
-              specialties: accountProfile.specialties,
-              plan: accountProfile.plan,
-              authMethod: accountProfile.authMethod,
-            }}
-            canonicalProfile={canonicalAccount ? {
-              headline: canonicalAccount.profile.headline,
-              bio: canonicalAccount.profile.bio,
-              serviceAreaCity: canonicalAccount.profile.serviceArea.city,
-              serviceAreaRegion: canonicalAccount.profile.serviceArea.region,
-              serviceRadiusMiles: canonicalAccount.profile.serviceArea.radiusMiles,
-              availabilityStatus: canonicalAccount.profile.availabilityStatus,
-              contactEmailVisibility: canonicalAccount.profile.contactEmailVisibility,
-              phoneE164: canonicalAccount.profile.phoneE164,
-              phoneVisibility: canonicalAccount.profile.phoneVisibility,
-              visibility: canonicalAccount.profile.visibility,
-              emailVerified: canonicalAccount.emailVerified,
-            } : null}
+            accountProfile={accountProfile}
+            canonicalAccount={canonicalAccount}
             sessions={accountSessions}
             trustReady={trustReady}
             recordCount={uploadedRecords.size}
@@ -3228,7 +3208,6 @@ function App() {
             themePalette={themePalette}
             onToggleTheme={handleToggleTheme}
             onSelectThemePalette={handleSelectThemePalette}
-            onReviewConsent={() => {}}
             onLogout={handleLogout}
             onSaveProfile={handleSaveProfile}
             onSetProfileVisibility={handleSetProfileVisibility}
