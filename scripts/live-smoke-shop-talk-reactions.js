@@ -242,8 +242,8 @@ try {
     `SELECT
        (SELECT count(*)::int FROM shop_talk_reactions WHERE target_key = $1) AS active_reactions,
        (SELECT count(*)::int FROM shop_talk_reaction_events WHERE target_key = $1) AS reaction_events,
-       (SELECT count(*)::int FROM audit_events WHERE subject_type = 'shop_talk_reaction' AND subject_id = $1) AS audit_events`,
-    [target.targetKey],
+       (SELECT count(*)::int FROM audit_events WHERE subject_type = 'shop_talk_reaction' AND subject_id = $2) AS audit_events`,
+    [target.targetKey, `${target.targetType}:${target.targetKey}`],
   );
   assert.equal(counts.rows[0].active_reactions, 0);
   assert.equal(counts.rows[0].reaction_events, 5);
