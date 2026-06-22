@@ -21,7 +21,27 @@ Add one entry per staging/production deployment.
 - Rollback performed/result:
 - Approval:
 
-## Current Production - Packet 08 Daily Engagement Loop
+## Current Production - Packet 08 Daily Log Records Bridge
+
+- Environment: Production (`https://rivt.pro`)
+- Date/time/timezone: 2026-06-21 20:25 America/New_York
+- Deployer: Codex through authenticated Railway CLI
+- Source repository/branch: `Zboytjbxp/rivt`, `master`
+- Source commit: `d03f2a50e0df9297dc6c0e33c7eb83a6732cdd8b`
+- Build/artifact ID: Railway deployment `95973719-d8de-42a7-854c-69833221c439`
+- Migration version before/after: `0009_durable_rate_limits` / `0009_durable_rate_limits` (no schema migration)
+- Feature-flag/config version: `SOURCE_COMMIT` updated to `d03f2a50e0df9297dc6c0e33c7eb83a6732cdd8b`; operational controls unchanged
+- Provider/config changes: no provider credentials changed; Daily Log now uses existing authenticated project-record APIs only when accepted work exists
+- Backup/rollback target: prior successful deployment `63a4f5aa-7b67-4e3e-9331-5ecd6dd8c0a6`; migration version unchanged
+- Automated gates: local `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test`, `npm run test:e2e`, `npm run test:ui:tools`, `npm run test:ui:shop-talk-news`, `npm audit --omit=dev`, and `git diff --check` passed; DB-backed integration tests skipped locally because `TEST_DATABASE_URL` is not configured
+- Post-deploy smoke tests: public `/api/health` passed and reported exact source commit `d03f2a50e0df9297dc6c0e33c7eb83a6732cdd8b`; anonymous `/api/storage` returned 401 as expected for the private storage endpoint; `npm run monitor:production` passed with PostgreSQL/S3-compatible dependencies healthy, operational controls disabled, and seven anonymous private-route checks
+- Rendered UI evidence: `npm run test:ui:tools` covered Tools hub, Heavy 16th, Estimate Builder, Invoice Draft, Daily Log, server-backed `Save to Records` affordance against a mocked accepted-work/project-record API, local draft save, and Material Takeoff at 1440x900 and 390x844 with no horizontal overflow and zero console/page errors. Screenshots are outside the repo at `C:\Users\zboyt\AppData\Local\Temp\rivt-tools-pass`.
+- Health/readiness result: health reports PostgreSQL and S3-compatible storage healthy with exact source commit `d03f2a50e0df9297dc6c0e33c7eb83a6732cdd8b`; production synthetic monitor reports signups and mutations enabled
+- Known risks: rendered Daily Log -> Records proof is local mocked UI evidence. Production project-record APIs were live-smoked in prior Packet 06, but this exact UI path still needs a DB-backed live UI smoke with an accepted-work fixture. Full Gate A remains blocked by real external error monitoring/paging, incident rehearsal, RPO/RTO policy approval, backup retention/cadence approval, support/legal/founder signoff, physical/deeper manual accessibility-device evidence, and production-grade server Shop Talk posts/reactions/reputation if promoted into launch scope.
+- Rollback performed/result: not required
+- Approval: Packet 08 Daily Log Records bridge slice accepted as controllable UX hardening evidence; overall Gate A not approved
+
+## Previous Production - Packet 08 Daily Engagement Loop
 
 - Environment: Production (`https://rivt.pro`)
 - Date/time/timezone: 2026-06-21 19:55 America/New_York

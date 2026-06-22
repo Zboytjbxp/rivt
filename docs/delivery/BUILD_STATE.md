@@ -2,10 +2,10 @@
 
 Last updated: 2026-06-21 America/New_York
 Current gate: Gate A launch hardening
-Current phase: Packet 08 controllable UX hardening, daily engagement loop, Shop Talk answer queue, RIVT Daily home check-in, Trade News real-media and mobile layout pass, production UI smoke regression fixes, Tools studio release, Records workspace upgrade, UI system pass, shared UI primitives, Tools primitive alignment, Shop Talk command center, Tools app surface pass, Heavy 16th multi-mode calculator, Invoice Draft app upgrade, and Shop Talk reaction/social pulse pass verified; full Gate A approval remains blocked
+Current phase: Packet 08 controllable UX hardening, Daily Log Records bridge, daily engagement loop, Shop Talk answer queue, RIVT Daily home check-in, Trade News real-media and mobile layout pass, production UI smoke regression fixes, Tools studio release, Records workspace upgrade, UI system pass, shared UI primitives, Tools primitive alignment, Shop Talk command center, Tools app surface pass, Heavy 16th multi-mode calculator, Invoice Draft app upgrade, and Shop Talk reaction/social pulse pass verified; full Gate A approval remains blocked
 Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
-Production release commit: `aeb23caf2d09d9598adfcf3c7ad330e8bcaa9681`
+Production release commit: `d03f2a50e0df9297dc6c0e33c7eb83a6732cdd8b`
 
 ## Source State
 
@@ -17,7 +17,18 @@ Packet 00 is merged on `master` at `4c199d903683e44d17b7985272c399c6d7a6cbd6`. T
 
 Do not discard or overwrite the pre-existing Trade News work when committing or splitting this packet.
 
-## Latest Packet 08 Pass - Daily Engagement Loop
+## Latest Packet 08 Pass - Daily Log Records Bridge
+
+- Deployed source `d03f2a50e0df9297dc6c0e33c7eb83a6732cdd8b` through Railway deployment `95973719-d8de-42a7-854c-69833221c439`.
+- Connected the Daily Log mini-app to the existing authenticated Records API when an accepted active-work record exists.
+- Added a `Records-ready` state, accepted-work target card, and `Save to Records` action that opens/creates the private project record and writes the daily log as a project timeline note.
+- Preserved the standalone field-tool fallback: without accepted work, Daily Log remains a clearly labeled device-local draft with copy/download/local-save options.
+- Expanded `npm run test:ui:tools` to mock accepted work and project records, verify `Records-ready`, click `Save to Records`, and observe the server-backed success notice alongside the existing local draft, no-overflow, and zero console/page-error checks.
+- Local gates passed: `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test`, `npm run test:e2e`, `npm run test:ui:tools`, `npm run test:ui:shop-talk-news`, `npm audit --omit=dev`, and `git diff --check`; DB-backed integration tests still skip locally because `TEST_DATABASE_URL` is not configured.
+- Live checks passed: `/api/health` reported exact source `d03f2a50e0df9297dc6c0e33c7eb83a6732cdd8b`, PostgreSQL and S3-compatible dependencies healthy, anonymous `/api/storage` returned 401 as expected for the private storage endpoint, and `npm run monitor:production` passed with seven anonymous private-route checks.
+- Remaining honesty boundary: the rendered authenticated save flow is locally mocked. Production server routes already exist and are covered by project-record live smoke from prior Packet 06, but this exact Daily Log UI save path still needs an authenticated live UI smoke with accepted-work fixture before claiming end-to-end live UI evidence.
+
+## Packet 08 Pass - Daily Engagement Loop
 
 - Deployed source `aeb23caf2d09d9598adfcf3c7ad330e8bcaa9681` through Railway deployment `63a4f5aa-7b67-4e3e-9331-5ecd6dd8c0a6`.
 - Expanded Home's `RIVT Daily` into a clearer habit loop: check work/crew, write a field record, and build Shop Talk reputation.
