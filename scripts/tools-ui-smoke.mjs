@@ -143,6 +143,33 @@ async function configurePage(page) {
   await page.route("**/api/v1/notifications", (route) =>
     route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { notifications: [], unreadCount: 0 } }) }),
   );
+  await page.route("**/api/v1/shop-talk/reactions/batch", async (route) => {
+    const body = route.request().postDataJSON();
+    const targets = Array.isArray(body?.targets) ? body.targets : [];
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        data: {
+          reactions: targets.map((target) => ({
+            targetType: target.targetType,
+            targetKey: target.targetKey,
+            upvotes: 0,
+            downvotes: 0,
+            score: 0,
+            viewerReaction: null,
+          })),
+          reputation: {
+            reactionsGiven: 0,
+            upvotesGiven: 0,
+            downvotesGiven: 0,
+            targetsReacted: 0,
+            lastReactedAt: null,
+          },
+        },
+      }),
+    });
+  });
   await page.route("**/api/v1/active-work", (route) =>
     route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { activeWork: [activeWorkItem] } }) }),
   );

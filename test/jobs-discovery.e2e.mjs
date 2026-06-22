@@ -177,6 +177,61 @@ async function configurePage(page, jobs, { activeWork = [], project = null } = {
   await page.route("**/api/v1/conversations", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { conversations: [] }, meta: { requestId: "e2e-conversations" } }) }));
   await page.route("**/api/v1/notifications", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { notifications: [], unreadCount: 0 }, meta: { requestId: "e2e-notifications" } }) }));
   await page.route("**/api/v1/active-work", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { activeWork }, meta: { requestId: "e2e-active-work" } }) }));
+  await page.route("**/api/v1/shop-talk/reactions/batch", async (route) => {
+    const body = route.request().postDataJSON();
+    const targets = Array.isArray(body?.targets) ? body.targets : [];
+    return route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        data: {
+          reactions: targets.map((target) => ({
+            targetType: target.targetType,
+            targetKey: target.targetKey,
+            upvotes: 0,
+            downvotes: 0,
+            score: 0,
+            viewerReaction: null,
+          })),
+          reputation: {
+            reactionsGiven: 0,
+            upvotesGiven: 0,
+            downvotesGiven: 0,
+            targetsReacted: 0,
+            lastReactedAt: null,
+          },
+        },
+        meta: { requestId: "e2e-shop-talk-reactions" },
+      }),
+    });
+  });
+  await page.route("**/api/v1/shop-talk/reactions", async (route) => {
+    const body = route.request().postDataJSON();
+    return route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        data: {
+          reaction: {
+            targetType: body.targetType,
+            targetKey: body.targetKey,
+            upvotes: body.reaction === "up" ? 1 : 0,
+            downvotes: body.reaction === "down" ? 1 : 0,
+            score: body.reaction === "up" ? 1 : body.reaction === "down" ? -1 : 0,
+            viewerReaction: body.reaction,
+          },
+          reputation: {
+            reactionsGiven: body.reaction ? 1 : 0,
+            upvotesGiven: body.reaction === "up" ? 1 : 0,
+            downvotesGiven: body.reaction === "down" ? 1 : 0,
+            targetsReacted: body.reaction ? 1 : 0,
+            lastReactedAt: body.reaction ? new Date().toISOString() : null,
+          },
+        },
+        meta: { requestId: "e2e-shop-talk-reaction" },
+      }),
+    });
+  });
   if (project && activeWork[0]) {
     await page.route(`**/api/v1/active-work/${activeWork[0].id}/project`, (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { project }, meta: { requestId: "e2e-project" } }) }));
     await page.route(`**/api/v1/projects/${project.id}/entries`, (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { entry: project.entries[0] }, meta: { requestId: "e2e-project-note" } }) }));

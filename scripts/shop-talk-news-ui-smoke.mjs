@@ -11,6 +11,7 @@ const projectRoot = process.cwd();
 const viteBin = path.join(projectRoot, "node_modules", "vite", "bin", "vite.js");
 const screenshotDir = path.join(os.tmpdir(), "rivt-shop-talk-news-pass");
 const reactionStorageKey = "rivt-shop-talk-reactions-v1";
+const reactionLedger = new Map();
 
 const vite = spawn(process.execPath, [viteBin, "--host", "127.0.0.1", "--port", String(port)], {
   cwd: projectRoot,
@@ -108,6 +109,35 @@ const newsPayload = {
   ],
 };
 
+function reactionLedgerKey(targetType, targetKey) {
+  return `${targetType}:${targetKey}`;
+}
+
+function reactionSummary() {
+  const active = [...reactionLedger.values()];
+  return {
+    reactionsGiven: active.length,
+    upvotesGiven: active.filter((reaction) => reaction.reaction === "up").length,
+    downvotesGiven: active.filter((reaction) => reaction.reaction === "down").length,
+    targetsReacted: new Set(active.map((reaction) => reactionLedgerKey(reaction.targetType, reaction.targetKey))).size,
+    lastReactedAt: active.length ? new Date().toISOString() : null,
+  };
+}
+
+function reactionAggregate(target) {
+  const active = [...reactionLedger.values()].filter((reaction) => (
+    reaction.targetType === target.targetType && reaction.targetKey === target.targetKey
+  ));
+  return {
+    targetType: target.targetType,
+    targetKey: target.targetKey,
+    upvotes: active.filter((reaction) => reaction.reaction === "up").length,
+    downvotes: active.filter((reaction) => reaction.reaction === "down").length,
+    score: active.filter((reaction) => reaction.reaction === "up").length - active.filter((reaction) => reaction.reaction === "down").length,
+    viewerReaction: reactionLedger.get(reactionLedgerKey(target.targetType, target.targetKey))?.reaction ?? null,
+  };
+}
+
 async function waitForServer() {
   const deadline = Date.now() + 30_000;
   while (Date.now() < deadline) {
@@ -126,6 +156,7 @@ async function configurePage(page) {
   await page.addInitScript((storageKey) => {
     window.localStorage.removeItem(storageKey);
   }, reactionStorageKey);
+  reactionLedger.clear();
   await page.route("**/api/v1/me", (route) =>
     route.fulfill({
       status: 200,
@@ -164,6 +195,40 @@ async function configurePage(page) {
       body: JSON.stringify({ data: { activeWork: [] } }),
     }),
   );
+  await page.route("**/api/v1/shop-talk/reactions/batch", async (route) => {
+    const body = route.request().postDataJSON();
+    const targets = Array.isArray(body?.targets) ? body.targets : [];
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        data: {
+          reactions: targets.map(reactionAggregate),
+          reputation: reactionSummary(),
+        },
+      }),
+    });
+  });
+  await page.route("**/api/v1/shop-talk/reactions", async (route) => {
+    const body = route.request().postDataJSON();
+    const target = { targetType: body.targetType, targetKey: body.targetKey };
+    const key = reactionLedgerKey(target.targetType, target.targetKey);
+    if (body.reaction === "up" || body.reaction === "down") {
+      reactionLedger.set(key, { ...target, reaction: body.reaction });
+    } else {
+      reactionLedger.delete(key);
+    }
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        data: {
+          reaction: reactionAggregate(target),
+          reputation: reactionSummary(),
+        },
+      }),
+    });
+  });
   await page.route("**/api/v1/jobs?**", (route) =>
     route.fulfill({
       status: 200,

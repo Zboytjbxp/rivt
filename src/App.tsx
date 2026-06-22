@@ -346,7 +346,35 @@ interface CommunityPost {
 
 type PostFlair = "Question" | "Discussion" | "Code Talk" | "Compliance" | "Tip" | "Humor";
 type CommunityReaction = "up" | "down";
-type CommunityReactionMap = Record<string, CommunityReaction>;
+type CommunityReactionTargetType = "thread" | "answer";
+
+interface CommunityReactionAggregate {
+  targetType: CommunityReactionTargetType;
+  targetKey: string;
+  upvotes: number;
+  downvotes: number;
+  score: number;
+  viewerReaction: CommunityReaction | null;
+}
+
+interface CommunityReactionSummary {
+  reactionsGiven: number;
+  upvotesGiven: number;
+  downvotesGiven: number;
+  targetsReacted: number;
+  lastReactedAt: string | null;
+}
+
+interface CommunityReactionState {
+  upvotes: number;
+  downvotes: number;
+  reaction: CommunityReaction | null;
+  serverOwned: boolean;
+  pending: boolean;
+}
+
+type CommunityReactionLedger = Record<string, CommunityReactionAggregate>;
+type CommunityReactionSyncStatus = "idle" | "loading" | "ready" | "error";
 
 interface CommunityReport {
   id: number;
@@ -1662,40 +1690,17 @@ function currentTimeLabel() {
   }).format(new Date());
 }
 
-const COMMUNITY_REACTIONS_STORAGE_KEY = "rivt-shop-talk-reactions-v1";
+function idempotencyKey(scope: string) {
+  const randomPart = globalThis.crypto?.randomUUID?.() ?? Math.random().toString(36).slice(2);
+  return `${scope}-${randomPart}`;
+}
 
 function netScore(item: { upvotes: number; downvotes: number }) {
   return item.upvotes - item.downvotes;
 }
 
-function readCommunityReactions(): CommunityReactionMap {
-  if (typeof window === "undefined") return {};
-
-  try {
-    const stored = window.localStorage.getItem(COMMUNITY_REACTIONS_STORAGE_KEY);
-    if (!stored) return {};
-    const parsed = JSON.parse(stored) as Record<string, unknown>;
-    return Object.entries(parsed).reduce<CommunityReactionMap>((reactions, [key, value]) => {
-      if (value === "up" || value === "down") {
-        reactions[key] = value;
-      }
-      return reactions;
-    }, {});
-  } catch {
-    return {};
-  }
-}
-
-function persistCommunityReactions(reactions: CommunityReactionMap) {
-  try {
-    window.localStorage.setItem(COMMUNITY_REACTIONS_STORAGE_KEY, JSON.stringify(reactions));
-  } catch {
-    // A failed local write should not break the current reaction state.
-  }
-}
-
-function communityReactionKey(actorKey: string, targetKey: string) {
-  return `${actorKey}:${targetKey}`;
+function communityReactionLedgerKey(targetType: CommunityReactionTargetType, targetKey: string) {
+  return `${targetType}:${targetKey}`;
 }
 
 function communityPostReactionKey(postId: number) {
@@ -1704,21 +1709,6 @@ function communityPostReactionKey(postId: number) {
 
 function communityAnswerReactionKey(postId: number, answerId: number) {
   return `answer:${postId}:${answerId}`;
-}
-
-function applyReactionCount<T extends { upvotes: number; downvotes: number }>(
-  item: T,
-  previousReaction: CommunityReaction | null,
-  nextReaction: CommunityReaction | null,
-): T {
-  const upvoteDelta = (nextReaction === "up" ? 1 : 0) - (previousReaction === "up" ? 1 : 0);
-  const downvoteDelta = (nextReaction === "down" ? 1 : 0) - (previousReaction === "down" ? 1 : 0);
-
-  return {
-    ...item,
-    upvotes: Math.max(0, item.upvotes + upvoteDelta),
-    downvotes: Math.max(0, item.downvotes + downvoteDelta),
-  };
 }
 
 function sortedAnswers(answers: CommunityAnswer[]) {
@@ -1955,7 +1945,10 @@ function App() {
   const [feedbackItems] = useState<FeedbackItem[]>([]);
   const [paymentRecords] = useState<PaymentRecord[]>([]);
   const [communityPosts, setCommunityPosts] = useState<CommunityPost[]>(seedCommunityPosts);
-  const [communityReactions, setCommunityReactions] = useState<CommunityReactionMap>(readCommunityReactions);
+  const [communityReactionLedger, setCommunityReactionLedger] = useState<CommunityReactionLedger>({});
+  const [communityReactionSummary, setCommunityReactionSummary] = useState<CommunityReactionSummary | null>(null);
+  const [communityReactionStatus, setCommunityReactionStatus] = useState<CommunityReactionSyncStatus>("idle");
+  const [pendingCommunityReactions, setPendingCommunityReactions] = useState<Set<string>>(() => new Set());
   const [, setCommunityReports] = useState<CommunityReport[]>([]);
   const [shoutOuts] = useState<ShoutOut[]>([]);
   const [themeMode, setThemeMode] = useState<ThemeMode>(readThemePreference);
@@ -2066,12 +2059,20 @@ function App() {
           setAuthUser(null);
           setCanonicalAccount(null);
           setOnboardingComplete(false);
+          setCommunityReactionLedger({});
+          setCommunityReactionSummary(null);
+          setCommunityReactionStatus("idle");
         } else {
           throw new Error("Session lookup failed.");
         }
       } catch {
         if (!cancelled) {
           setAuthUser(null);
+          setCanonicalAccount(null);
+          setOnboardingComplete(false);
+          setCommunityReactionLedger({});
+          setCommunityReactionSummary(null);
+          setCommunityReactionStatus("idle");
           setAuthProviders({});
           setAuthError("RIVT could not verify your session. Check your connection and sign in again.");
         }
@@ -2253,25 +2254,45 @@ function App() {
   })), [inboxNotifications]);
   const unreadActivities = inboxNotifications.filter((item) => !item.readAt).length;
   const [uiToast, setUiToast] = useState<AppToast | null>(null);
-  const communityReactionActorKey = useMemo(() => (
-    canonicalAccount?.id ||
-    authUser?.id ||
-    accountProfile.email ||
-    accountProfile.displayName ||
-    "local-profile"
-  ), [accountProfile.displayName, accountProfile.email, authUser?.id, canonicalAccount?.id]);
+  const communityReactionTargets = useMemo(() => {
+    const targets: { targetType: CommunityReactionTargetType; targetKey: string }[] = [];
+    communityPosts.forEach((post) => {
+      targets.push({ targetType: "thread", targetKey: communityPostReactionKey(post.id) });
+      post.replies.forEach((answer) => {
+        targets.push({ targetType: "answer", targetKey: communityAnswerReactionKey(post.id, answer.id) });
+      });
+    });
+    return targets;
+  }, [communityPosts]);
+  const communityReactionTargetsKey = useMemo(() => (
+    communityReactionTargets.map((target) => communityReactionLedgerKey(target.targetType, target.targetKey)).join("|")
+  ), [communityReactionTargets]);
 
-  const getCommunityPostReaction = useCallback((postId: number): CommunityReaction | null => {
-    return communityReactions[
-      communityReactionKey(communityReactionActorKey, communityPostReactionKey(postId))
-    ] ?? null;
-  }, [communityReactionActorKey, communityReactions]);
+  const getCommunityPostReactionState = useCallback((post: CommunityPost): CommunityReactionState => {
+    const targetKey = communityPostReactionKey(post.id);
+    const ledgerKey = communityReactionLedgerKey("thread", targetKey);
+    const aggregate = communityReactionLedger[ledgerKey];
+    return {
+      upvotes: post.upvotes + (aggregate?.upvotes ?? 0),
+      downvotes: post.downvotes + (aggregate?.downvotes ?? 0),
+      reaction: aggregate?.viewerReaction ?? null,
+      serverOwned: communityReactionStatus === "ready",
+      pending: pendingCommunityReactions.has(ledgerKey),
+    };
+  }, [communityReactionLedger, communityReactionStatus, pendingCommunityReactions]);
 
-  const getCommunityAnswerReaction = useCallback((postId: number, answerId: number): CommunityReaction | null => {
-    return communityReactions[
-      communityReactionKey(communityReactionActorKey, communityAnswerReactionKey(postId, answerId))
-    ] ?? null;
-  }, [communityReactionActorKey, communityReactions]);
+  const getCommunityAnswerReactionState = useCallback((postId: number, answer: CommunityAnswer): CommunityReactionState => {
+    const targetKey = communityAnswerReactionKey(postId, answer.id);
+    const ledgerKey = communityReactionLedgerKey("answer", targetKey);
+    const aggregate = communityReactionLedger[ledgerKey];
+    return {
+      upvotes: answer.upvotes + (aggregate?.upvotes ?? 0),
+      downvotes: answer.downvotes + (aggregate?.downvotes ?? 0),
+      reaction: aggregate?.viewerReaction ?? null,
+      serverOwned: communityReactionStatus === "ready",
+      pending: pendingCommunityReactions.has(ledgerKey),
+    };
+  }, [communityReactionLedger, communityReactionStatus, pendingCommunityReactions]);
 
   function addActivity(title: string, detail: string, kind: AppToast["kind"] = "info") {
     void recordServerEvent("activity", { title, detail, role, activeView });
@@ -2294,6 +2315,56 @@ function App() {
       ...current,
     ].slice(0, 16));
   }
+
+  function mergeCommunityReactionAggregate(reaction: CommunityReactionAggregate) {
+    setCommunityReactionLedger((current) => ({
+      ...current,
+      [communityReactionLedgerKey(reaction.targetType, reaction.targetKey)]: reaction,
+    }));
+  }
+
+  useEffect(() => {
+    if (!authUser || !canonicalAccount || !onboardingComplete) {
+      return;
+    }
+
+    let cancelled = false;
+    async function loadCommunityReactionLedger() {
+      setCommunityReactionStatus("loading");
+      try {
+        const response = await fetch(apiPath("/api/v1/shop-talk/reactions/batch"), {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ targets: communityReactionTargets }),
+        });
+        const body = await response.json().catch(() => ({})) as {
+          data?: { reactions?: CommunityReactionAggregate[]; reputation?: CommunityReactionSummary };
+          error?: { message?: string };
+        };
+        if (!response.ok) throw new Error(body.error?.message || "Shop Talk reactions could not be loaded.");
+        if (cancelled) return;
+        setCommunityReactionLedger(
+          (body.data?.reactions ?? []).reduce<CommunityReactionLedger>((ledger, reaction) => {
+            ledger[communityReactionLedgerKey(reaction.targetType, reaction.targetKey)] = reaction;
+            return ledger;
+          }, {}),
+        );
+        setCommunityReactionSummary(body.data?.reputation ?? null);
+        setCommunityReactionStatus("ready");
+      } catch {
+        if (cancelled) return;
+        setCommunityReactionLedger({});
+        setCommunityReactionSummary(null);
+        setCommunityReactionStatus("error");
+      }
+    }
+
+    void loadCommunityReactionLedger();
+    return () => {
+      cancelled = true;
+    };
+  }, [authUser, canonicalAccount, onboardingComplete, communityReactionTargets, communityReactionTargetsKey]);
 
   useEffect(() => {
     if (!uiToast) {
@@ -2340,6 +2411,10 @@ function App() {
     } catch (error) {
       setAuthUser(null);
       setCanonicalAccount(null);
+      setOnboardingComplete(false);
+      setCommunityReactionLedger({});
+      setCommunityReactionSummary(null);
+      setCommunityReactionStatus("idle");
       setAuthError(error instanceof Error ? error.message : "Sign-in failed. Check your connection and try again.");
     }
   }
@@ -2441,6 +2516,9 @@ function App() {
       setAuthUser(null);
       setCanonicalAccount(null);
       setOnboardingComplete(false);
+      setCommunityReactionLedger({});
+      setCommunityReactionSummary(null);
+      setCommunityReactionStatus("idle");
       return;
     }
     setAccountSessions(await fetchAccountSessions());
@@ -2470,6 +2548,9 @@ function App() {
       setAuthUser(null);
       setCanonicalAccount(null);
       setOnboardingComplete(false);
+      setCommunityReactionLedger({});
+      setCommunityReactionSummary(null);
+      setCommunityReactionStatus("idle");
       setAuthNotice(null);
       setAccountOpen(false);
       setActivityOpen(false);
@@ -2489,61 +2570,61 @@ function App() {
     setPostOpen(false);
   }
 
-  function handleVoteCommunityPost(postId: number, direction: "up" | "down") {
-    const targetKey = communityPostReactionKey(postId);
-    const reactionKey = communityReactionKey(communityReactionActorKey, targetKey);
-    const previousReaction = communityReactions[reactionKey] ?? null;
-    const nextReaction = previousReaction === direction ? null : direction;
-
-    setCommunityPosts((current) =>
-      current.map((post) =>
-        post.id === postId
-          ? applyReactionCount(post, previousReaction, nextReaction)
-          : post,
-      ),
-    );
-    setCommunityReactions((current) => {
-      const next = { ...current };
-      if (nextReaction) {
-        next[reactionKey] = nextReaction;
+  function setCommunityReactionPending(ledgerKey: string, pending: boolean) {
+    setPendingCommunityReactions((current) => {
+      const next = new Set(current);
+      if (pending) {
+        next.add(ledgerKey);
       } else {
-        delete next[reactionKey];
+        next.delete(ledgerKey);
       }
-      persistCommunityReactions(next);
       return next;
     });
   }
 
-  function handleVoteCommunityAnswer(postId: number, answerId: number, direction: "up" | "down") {
-    const targetKey = communityAnswerReactionKey(postId, answerId);
-    const reactionKey = communityReactionKey(communityReactionActorKey, targetKey);
-    const previousReaction = communityReactions[reactionKey] ?? null;
+  async function commitCommunityReaction(targetType: CommunityReactionTargetType, targetKey: string, direction: "up" | "down") {
+    const ledgerKey = communityReactionLedgerKey(targetType, targetKey);
+    if (pendingCommunityReactions.has(ledgerKey)) return;
+    const previousReaction = communityReactionLedger[ledgerKey]?.viewerReaction ?? null;
     const nextReaction = previousReaction === direction ? null : direction;
-
-    setCommunityPosts((current) =>
-      current.map((post) =>
-        post.id === postId
-          ? {
-              ...post,
-              replies: post.replies.map((answer) =>
-                answer.id === answerId
-                  ? applyReactionCount(answer, previousReaction, nextReaction)
-                  : answer,
-              ),
-            }
-          : post,
-      ),
-    );
-    setCommunityReactions((current) => {
-      const next = { ...current };
-      if (nextReaction) {
-        next[reactionKey] = nextReaction;
-      } else {
-        delete next[reactionKey];
+    setCommunityReactionPending(ledgerKey, true);
+    try {
+      const response = await fetch(apiPath("/api/v1/shop-talk/reactions"), {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+          "Idempotency-Key": idempotencyKey("shop-talk-reaction"),
+        },
+        body: JSON.stringify({ targetType, targetKey, reaction: nextReaction }),
+      });
+      const body = await response.json().catch(() => ({})) as {
+        data?: { reaction?: CommunityReactionAggregate; reputation?: CommunityReactionSummary };
+        error?: { message?: string };
+      };
+      if (!response.ok || !body.data?.reaction) {
+        throw new Error(body.error?.message || "Shop Talk reaction could not be saved.");
       }
-      persistCommunityReactions(next);
-      return next;
-    });
+      mergeCommunityReactionAggregate(body.data.reaction);
+      setCommunityReactionSummary(body.data.reputation ?? null);
+      setCommunityReactionStatus("ready");
+    } catch (error) {
+      addActivity(
+        "Reaction not saved",
+        error instanceof Error ? error.message : "Shop Talk reaction could not be saved.",
+        "error",
+      );
+    } finally {
+      setCommunityReactionPending(ledgerKey, false);
+    }
+  }
+
+  function handleVoteCommunityPost(postId: number, direction: "up" | "down") {
+    void commitCommunityReaction("thread", communityPostReactionKey(postId), direction);
+  }
+
+  function handleVoteCommunityAnswer(postId: number, answerId: number, direction: "up" | "down") {
+    void commitCommunityReaction("answer", communityAnswerReactionKey(postId, answerId), direction);
   }
 
   function handleAddCommunityAnswer(postId: number, body: string) {
@@ -3038,8 +3119,10 @@ function App() {
             newsItems={seedNews}
             selectedJobTrade={selectedJob.trade}
             userLocation={accountProfile.location}
-            getPostReaction={getCommunityPostReaction}
-            getAnswerReaction={getCommunityAnswerReaction}
+            getPostReactionState={getCommunityPostReactionState}
+            getAnswerReactionState={getCommunityAnswerReactionState}
+            reactionSummary={communityReactionSummary}
+            reactionStatus={communityReactionStatus}
             onVotePost={handleVoteCommunityPost}
             onVoteAnswer={handleVoteCommunityAnswer}
             onAddAnswer={handleAddCommunityAnswer}
@@ -4896,8 +4979,10 @@ interface OperationsWorkspaceProps {
   communityPosts: CommunityPost[];
   communityReports: CommunityReport[];
   shoutOuts: ShoutOut[];
-  getCommunityPostReaction: (postId: number) => CommunityReaction | null;
-  getCommunityAnswerReaction: (postId: number, answerId: number) => CommunityReaction | null;
+  getCommunityPostReactionState: (post: CommunityPost) => CommunityReactionState;
+  getCommunityAnswerReactionState: (postId: number, answer: CommunityAnswer) => CommunityReactionState;
+  communityReactionSummary: CommunityReactionSummary | null;
+  communityReactionStatus: CommunityReactionSyncStatus;
   onPostJob: () => void;
   onNavigate: (view: NavLabel) => void;
   onOpenJob: (id: number) => void;
@@ -4960,8 +5045,10 @@ export function OperationsWorkspace(props: OperationsWorkspaceProps) {
     communityPosts,
     communityReports,
     shoutOuts,
-    getCommunityPostReaction,
-    getCommunityAnswerReaction,
+    getCommunityPostReactionState,
+    getCommunityAnswerReactionState,
+    communityReactionSummary,
+    communityReactionStatus,
     onPostJob,
     onNavigate,
     onOpenJob,
@@ -5067,8 +5154,10 @@ export function OperationsWorkspace(props: OperationsWorkspaceProps) {
           newsItems={seedNews}
           selectedJobTrade={selectedJob.trade}
           userLocation={accountProfile.location}
-          getPostReaction={getCommunityPostReaction}
-          getAnswerReaction={getCommunityAnswerReaction}
+          getPostReactionState={getCommunityPostReactionState}
+          getAnswerReactionState={getCommunityAnswerReactionState}
+          reactionSummary={communityReactionSummary}
+          reactionStatus={communityReactionStatus}
           onVotePost={onVoteCommunityPost}
           onVoteAnswer={onVoteCommunityAnswer}
           onAddAnswer={onAddCommunityAnswer}
@@ -6050,8 +6139,10 @@ function ShopTalkView({
   newsItems,
   selectedJobTrade,
   userLocation,
-  getPostReaction,
-  getAnswerReaction,
+  getPostReactionState,
+  getAnswerReactionState,
+  reactionSummary,
+  reactionStatus,
   onVotePost,
   onVoteAnswer,
   onAddAnswer,
@@ -6064,8 +6155,10 @@ function ShopTalkView({
   newsItems: NewsItem[];
   selectedJobTrade: Trade | "General";
   userLocation: string;
-  getPostReaction: (postId: number) => CommunityReaction | null;
-  getAnswerReaction: (postId: number, answerId: number) => CommunityReaction | null;
+  getPostReactionState: (post: CommunityPost) => CommunityReactionState;
+  getAnswerReactionState: (postId: number, answer: CommunityAnswer) => CommunityReactionState;
+  reactionSummary: CommunityReactionSummary | null;
+  reactionStatus: CommunityReactionSyncStatus;
   onVotePost: (postId: number, direction: "up" | "down") => void;
   onVoteAnswer: (postId: number, answerId: number, direction: "up" | "down") => void;
   onAddAnswer: (postId: number, body: string) => void;
@@ -6167,15 +6260,10 @@ function ShopTalkView({
   const unansweredCount = filteredPosts.filter((post) => post.replies.length === 0 || post.status === "Needs a pro answer").length;
   const verifiedFixCount = filteredPosts.filter((post) => post.status === "Verified Fix").length;
   const newsSourceCount = new Set(filteredNews.map((item) => item.source)).size;
-  const selectedPostReaction = selectedPost ? getPostReaction(selectedPost.id) : null;
+  const selectedPostReactionState = selectedPost
+    ? getPostReactionState(selectedPost)
+    : { upvotes: 0, downvotes: 0, reaction: null, serverOwned: reactionStatus === "ready", pending: false };
   const selectedTradeThreads = filteredPosts.filter((post) => post.trade === selectedJobTrade || post.trade === "General");
-  const profileScore = communityPosts.reduce((score, post) => {
-    const authorScore = post.author === profile.displayName ? Math.max(0, netScore(post)) : 0;
-    const answerScore = post.replies
-      .filter((reply) => reply.author === profile.displayName)
-      .reduce((sum, reply) => sum + Math.max(0, netScore(reply)) + (reply.verifiedFix ? 5 : 0), 0);
-    return score + authorScore + answerScore;
-  }, 0);
   const topContributors = Object.entries(
     communityPosts.reduce<Record<string, { answers: number; fixes: number; score: number }>>((contributors, post) => {
       post.replies.forEach((reply) => {
@@ -6218,6 +6306,13 @@ function ShopTalkView({
       complete: profileBadges.length > 0,
     },
   ];
+  const reactionLedgerLabel = reactionStatus === "ready"
+    ? "Server-backed"
+    : reactionStatus === "loading"
+      ? "Syncing"
+      : reactionStatus === "error"
+        ? "Offline"
+        : "Not loaded";
 
   function submitAnswer() {
     const body = answerDraft.trim();
@@ -6369,12 +6464,12 @@ function ShopTalkView({
               <div className="shop-talk-pulse" aria-label="Shop Talk social pulse">
                 <div className="shop-talk-pulse-head">
                   <span>Social hub</span>
-                  <strong>Your trade signal</strong>
+                  <strong>Reaction integrity</strong>
                 </div>
                 <div className="shop-talk-pulse-grid">
-                  <span><strong>{profileScore}</strong><small>impact score</small></span>
+                  <span><strong>{reactionSummary?.reactionsGiven ?? 0}</strong><small>server reactions</small></span>
                   <span><strong>{selectedTradeThreads.length}</strong><small>{selectedJobTrade} threads</small></span>
-                  <span><strong>{profileBadges.length || 0}</strong><small>badges</small></span>
+                  <span><strong>{reactionLedgerLabel}</strong><small>ledger status</small></span>
                 </div>
                 {topContributors.length > 0 ? (
                   <div className="shop-talk-contributors">
@@ -6387,7 +6482,7 @@ function ShopTalkView({
                     ))}
                   </div>
                 ) : (
-                  <p>Answer a field question to start building visible reputation.</p>
+                  <p>Reactions are account-owned now; earned author reputation comes next when posts and answers move fully server-side.</p>
                 )}
               </div>
 
@@ -6578,23 +6673,25 @@ function ShopTalkView({
               <div className="shop-question-actions">
                 <button
                   type="button"
-                  className={selectedPostReaction === "up" ? "reaction-button active" : "reaction-button"}
-                  aria-pressed={selectedPostReaction === "up"}
-                  aria-label={selectedPostReaction === "up" ? "Remove upvote from thread" : "Upvote thread"}
+                  className={selectedPostReactionState.reaction === "up" ? "reaction-button active" : "reaction-button"}
+                  aria-pressed={selectedPostReactionState.reaction === "up"}
+                  aria-label={selectedPostReactionState.reaction === "up" ? "Remove upvote from thread" : "Upvote thread"}
+                  disabled={selectedPostReactionState.pending}
                   onClick={() => onVotePost(selectedPost.id, "up")}
                 >
                   <ThumbsUp size={15} />
-                  {selectedPost.upvotes}
+                  {selectedPostReactionState.upvotes}
                 </button>
                 <button
                   type="button"
-                  className={selectedPostReaction === "down" ? "reaction-button active negative" : "reaction-button"}
-                  aria-pressed={selectedPostReaction === "down"}
-                  aria-label={selectedPostReaction === "down" ? "Remove downvote from thread" : "Downvote thread"}
+                  className={selectedPostReactionState.reaction === "down" ? "reaction-button active negative" : "reaction-button"}
+                  aria-pressed={selectedPostReactionState.reaction === "down"}
+                  aria-label={selectedPostReactionState.reaction === "down" ? "Remove downvote from thread" : "Downvote thread"}
+                  disabled={selectedPostReactionState.pending}
                   onClick={() => onVotePost(selectedPost.id, "down")}
                 >
                   <ThumbsDown size={15} />
-                  {selectedPost.downvotes}
+                  {selectedPostReactionState.downvotes}
                 </button>
                 {allReportReasons.map((reason) => (
                   <button type="button" key={reason} onClick={() => onReportPost(selectedPost.id, reason)}>
@@ -6633,7 +6730,7 @@ function ShopTalkView({
                     <span>Answer it, then mark the best response as Verified Fix during testing.</span>
                   </article>
                 ) : sortedAnswers(selectedPost.replies).map((answer) => {
-                  const answerReaction = getAnswerReaction(selectedPost.id, answer.id);
+                  const answerReactionState = getAnswerReactionState(selectedPost.id, answer);
 
                   return (
                     <article className={answer.verifiedFix ? "answer-card verified" : "answer-card"} key={answer.id}>
@@ -6648,23 +6745,25 @@ function ShopTalkView({
                       <div className="answer-actions">
                         <button
                           type="button"
-                          className={answerReaction === "up" ? "reaction-button active" : "reaction-button"}
-                          aria-pressed={answerReaction === "up"}
-                          aria-label={answerReaction === "up" ? "Remove upvote from answer" : "Upvote answer"}
+                          className={answerReactionState.reaction === "up" ? "reaction-button active" : "reaction-button"}
+                          aria-pressed={answerReactionState.reaction === "up"}
+                          aria-label={answerReactionState.reaction === "up" ? "Remove upvote from answer" : "Upvote answer"}
+                          disabled={answerReactionState.pending}
                           onClick={() => onVoteAnswer(selectedPost.id, answer.id, "up")}
                         >
                           <ThumbsUp size={14} />
-                          {answer.upvotes}
+                          {answerReactionState.upvotes}
                         </button>
                         <button
                           type="button"
-                          className={answerReaction === "down" ? "reaction-button active negative" : "reaction-button"}
-                          aria-pressed={answerReaction === "down"}
-                          aria-label={answerReaction === "down" ? "Remove downvote from answer" : "Downvote answer"}
+                          className={answerReactionState.reaction === "down" ? "reaction-button active negative" : "reaction-button"}
+                          aria-pressed={answerReactionState.reaction === "down"}
+                          aria-label={answerReactionState.reaction === "down" ? "Remove downvote from answer" : "Downvote answer"}
+                          disabled={answerReactionState.pending}
                           onClick={() => onVoteAnswer(selectedPost.id, answer.id, "down")}
                         >
                           <ThumbsDown size={14} />
-                          {answer.downvotes}
+                          {answerReactionState.downvotes}
                         </button>
                         <button type="button" disabled={answer.verifiedFix} onClick={() => onVerifyAnswer(selectedPost.id, answer.id)}>
                           <BadgeCheck size={14} />
