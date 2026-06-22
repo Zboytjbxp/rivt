@@ -21,6 +21,26 @@ Add one entry per staging/production deployment.
 - Rollback performed/result:
 - Approval:
 
+## Current Production - Packet 08 Global Search Command Surface
+
+- Environment: Production (`https://rivt.pro`)
+- Date/time/timezone: 2026-06-22 13:32 America/New_York
+- Deployer: Codex through authenticated Railway CLI
+- Source repository/branch: `Zboytjbxp/rivt`, `master`
+- Source commit: `98f4b6716674de57e6c38c497ea837105ad069b1`
+- Build/artifact ID: Railway runtime upload deployment `a4918783-b28c-4ab0-a606-851c631a62c3`; metadata redeploy `5c6c5a06-12b3-4ad8-a365-854a85ebcfdc`
+- Migration version before/after: `0011_shop_talk_reaction_events_immutable` / `0011_shop_talk_reaction_events_immutable` (no schema migration)
+- Feature-flag/config version: `SOURCE_COMMIT` updated to `98f4b6716674de57e6c38c497ea837105ad069b1`; operational controls unchanged
+- Provider/config changes (no secrets): no provider credentials changed; Sentry remains configured
+- Backup/rollback target: prior successful production deployment `68e6eca4-8574-4c0c-b2a6-d533fc5cab47`; no migration rollback required
+- Automated gates: `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check` passed. DB-backed local integration tests continue to skip locally because `TEST_DATABASE_URL` is not configured.
+- Rendered evidence: Browser plugin target `iab` was unavailable, so local Playwright fallback captured desktop/mobile search-modal and Work-result screenshots at `C:\Users\zboyt\AppData\Local\Temp\rivt-global-search-1782149323491` with zero console warnings/errors.
+- Post-deploy smoke tests: live `/api/health` reported exact source `98f4b6716674de57e6c38c497ea837105ad069b1`; `EXPECTED_SOURCE_COMMIT=98f4b6716674de57e6c38c497ea837105ad069b1 npm run monitor:production` passed with PostgreSQL, S3-compatible object storage, Sentry configured, operational controls off, and seven anonymous private-route checks.
+- Health/readiness result: healthy production health and synthetic monitor; no schema migration applied.
+- Known risks: people/profile search still needs a server-owned discovery endpoint; canonical Shop Talk posts/answers remain a separate server-owned social-network workstream.
+- Rollback performed/result: not required.
+- Approval: accepted as controllable Gate A UX hardening evidence only.
+
 ## Current Production - Packet 08 Claude-Audit UI Consolidation
 
 - Environment: Production (`https://rivt.pro`)

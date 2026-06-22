@@ -161,6 +161,15 @@ Evidence must eventually link to implementation, automated tests, manual accepta
 - `GA-OPS-008` gains deployment evidence: Railway runtime upload deployment `eb75395a-45c9-4d8d-b9cc-c9e63230fba9` and metadata redeploy `68e6eca4-8574-4c0c-b2a6-d533fc5cab47` now serve source `92fd0a71d6a39cd21c9b3e233c5caa2c1a37da54`; live `/api/health` and `EXPECTED_SOURCE_COMMIT=92fd0a71d6a39cd21c9b3e233c5caa2c1a37da54 npm run monitor:production` passed.
 - Unified cross-surface search remains a real backend/product gap, not a frontend-only claim: no unified `/api/v1/search` endpoint currently exists, so this pass did not fabricate People/Jobs/Shop Talk result lists.
 
+## Traceability Addendum - 2026-06-22 Global Search Command Surface
+
+- `GA-UX-003` gains functional global search command evidence: the top-bar search modal now exposes explicit Work, Shop Talk, and Tools commands instead of accepting text with no visible destination-specific result.
+- `GA-JOB-006` gains local e2e coverage that `Ctrl+K`, entering `electrical`, and selecting `Search work` routes to Work and preserves the server-backed Work query input.
+- `GA-UX-005` gains a clearer no-fake-results state: people search is explicitly deferred until profile discovery is server-owned; the UI does not fabricate profile matches.
+- `GA-UX-006` gains rendered desktop/mobile evidence for the search command modal and Work result state at `C:\Users\zboyt\AppData\Local\Temp\rivt-global-search-1782149323491`; Browser plugin access was unavailable for target `iab`, so local Playwright was used with route mocks.
+- `GA-OPS-007` gains local automated evidence for this slice: `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check` passed. DB-backed local integration tests still skip because `TEST_DATABASE_URL` is not configured.
+- `GA-OPS-008` gains deployment evidence: Railway runtime upload deployment `a4918783-b28c-4ab0-a606-851c631a62c3` and metadata redeploy `5c6c5a06-12b3-4ad8-a365-854a85ebcfdc` now serve source `98f4b6716674de57e6c38c497ea837105ad069b1`; live `/api/health` and `EXPECTED_SOURCE_COMMIT=98f4b6716674de57e6c38c497ea837105ad069b1 npm run monitor:production` passed.
+
 ## Current Gate A Summary
 
 - Production infrastructure is reachable and managed storage is healthy.

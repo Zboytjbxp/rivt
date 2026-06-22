@@ -2,10 +2,10 @@
 
 Last updated: 2026-06-22 America/New_York
 Current gate: Gate A launch hardening
-Current phase: Packet 08 controllable UX hardening, founder/support/legal-safety approvals recorded, incident and launch readiness gates passing, Gate A approval packet prepared, incident rehearsal passed, incident routing approved, recovery policy approved, support hours and backup incident owner recorded, Sentry error monitoring and first escalation route configured, server-owned Shop Talk reactions/reputation ledger, Daily Log live UI proof, Daily Log Records bridge, daily engagement loop, Shop Talk answer queue, RIVT Daily home check-in, Trade News real-media and mobile layout pass, production UI smoke regression fixes, Tools studio release, Records workspace upgrade, UI system pass, shared UI primitives, Tools primitive alignment, Shop Talk command center, Tools app surface pass, Heavy 16th multi-mode calculator, Invoice Draft app upgrade, Shop Talk reaction/social pulse pass, expanded production accessibility smoke verified, and Claude-audit UI consolidation implemented locally; physical/deeper manual accessibility-device evidence remains the next launch-quality boundary
+Current phase: Packet 08 controllable UX hardening, founder/support/legal-safety approvals recorded, incident and launch readiness gates passing, Gate A approval packet prepared, incident rehearsal passed, incident routing approved, recovery policy approved, support hours and backup incident owner recorded, Sentry error monitoring and first escalation route configured, server-owned Shop Talk reactions/reputation ledger, Daily Log live UI proof, Daily Log Records bridge, daily engagement loop, Shop Talk answer queue, RIVT Daily home check-in, Trade News real-media and mobile layout pass, production UI smoke regression fixes, Tools studio release, Records workspace upgrade, UI system pass, shared UI primitives, Tools primitive alignment, Shop Talk command center, Tools app surface pass, Heavy 16th multi-mode calculator, Invoice Draft app upgrade, Shop Talk reaction/social pulse pass, expanded production accessibility smoke verified, Claude-audit UI consolidation deployed, and global search command surface deployed; physical/deeper manual accessibility-device evidence remains the next launch-quality boundary
 Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
-Production release commit: `92fd0a71d6a39cd21c9b3e233c5caa2c1a37da54`
+Production release commit: `98f4b6716674de57e6c38c497ea837105ad069b1`
 
 ## Source State
 
@@ -16,6 +16,20 @@ Packet 00 is merged on `master` at `4c199d903683e44d17b7985272c399c6d7a6cbd6`. T
 - Product source of truth: `RIVT_MASTER_BUILD_PROMPT.md`
 
 Do not discard or overwrite the pre-existing Trade News work when committing or splitting this packet.
+
+## Latest Packet 08 Pass - Global Search Command Surface
+
+- Replaced the global search modal's non-visible submit behavior with an explicit command surface for Work, Shop Talk, and Tools.
+- Work search now receives the query and routes to the Work screen with the search input populated.
+- Shop Talk search receives the query through the active authenticated shell and initializes the visible Shop Talk query field without claiming server-owned community search.
+- Tools can be opened directly from the command surface.
+- Added an honest note that people search remains blocked until profile discovery is server-owned; no fake profile matches are shown.
+- Expanded `test/jobs-discovery.e2e.mjs` to prove `Ctrl+K -> Search work -> Work` routes correctly and preserves the query.
+- Rendered validation used Playwright fallback because the Browser plugin reported the in-app browser target unavailable (`iab`). Desktop and mobile screenshots were captured outside the repo at `C:\Users\zboyt\AppData\Local\Temp\rivt-global-search-1782149323491`; both runs had zero console warnings/errors and verified the Work search query value.
+- Local gates passed for this slice: `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check`. DB-backed local integration tests still skip because `TEST_DATABASE_URL` is not configured.
+- Deployed to Railway production through runtime upload deployment `a4918783-b28c-4ab0-a606-851c631a62c3` and metadata redeploy `5c6c5a06-12b3-4ad8-a365-854a85ebcfdc`.
+- Live `/api/health` reports exact source `98f4b6716674de57e6c38c497ea837105ad069b1`, PostgreSQL, S3-compatible object storage, and Sentry configured.
+- `EXPECTED_SOURCE_COMMIT=98f4b6716674de57e6c38c497ea837105ad069b1 npm run monitor:production` passed with seven anonymous private-route checks and operational controls off.
 
 ## Latest Packet 08 Pass - Claude-Audit UI Consolidation
 
