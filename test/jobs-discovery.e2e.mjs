@@ -289,11 +289,10 @@ async function assertRecordsFlow(page) {
 async function assertTopBarActions(page) {
   await page.keyboard.press("Control+K");
   await page.getByRole("dialog", { name: "Search RIVT" }).waitFor();
-  await page.getByPlaceholder("Search jobs, people, messages, and tools").fill("electrical");
-  await page.keyboard.press("Escape");
-  await page.getByRole("dialog", { name: "Search RIVT" }).waitFor({ state: "detached" }).catch(async () => {
-    await page.getByRole("dialog", { name: "Search RIVT" }).waitFor({ state: "hidden" });
-  });
+  await page.getByPlaceholder("Search jobs, questions, trades, or tools").fill("electrical");
+  await page.getByRole("button", { name: /Search work/i }).click();
+  await page.getByRole("heading", { name: "Work", exact: true }).waitFor();
+  await page.getByPlaceholder("Search work").waitFor();
 
   await page.getByRole("button", { name: "Notifications" }).click();
   await page.getByRole("dialog", { name: "Notifications" }).waitFor();

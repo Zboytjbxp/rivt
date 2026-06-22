@@ -1909,6 +1909,7 @@ function App() {
   const [pilotInviteRequired, setPilotInviteRequired] = useState(false);
   const [authNotice, setAuthNotice] = useState<string | null>(null);
   const [query, setQuery] = useState("");
+  const [shopTalkGlobalQuery, setShopTalkGlobalQuery] = useState("");
   const [trade, setTrade] = useState<TradeFilter>("All trades");
   const [difficulty, setDifficulty] =
     useState<DifficultyFilter>("Any difficulty");
@@ -3055,7 +3056,16 @@ function App() {
           void handleMarkNotificationsRead();
         }}
         onOpenActiveJob={() => handleNavigate("Marketplace")}
-        onSearch={(nextQuery) => {
+        onSearch={(nextQuery, target = "work") => {
+          if (target === "shop-talk") {
+            setShopTalkGlobalQuery(nextQuery);
+            handleNavigate("Shop Talk");
+            return;
+          }
+          if (target === "tools") {
+            handleNavigate("Tools");
+            return;
+          }
           setQuery(nextQuery);
           handleNavigate("Marketplace");
         }}
@@ -3119,9 +3129,11 @@ function App() {
           />
         ) : activeView === "Shop Talk" ? (
           <ShopTalkView
+            key={`shop-talk-${shopTalkGlobalQuery}`}
             profile={accountProfile}
             communityPosts={communityPosts}
             newsItems={seedNews}
+            initialQuery={shopTalkGlobalQuery}
             selectedJobTrade={selectedJob.trade}
             userLocation={accountProfile.location}
             getPostReactionState={getCommunityPostReactionState}
@@ -5157,6 +5169,7 @@ export function OperationsWorkspace(props: OperationsWorkspaceProps) {
           profile={accountProfile}
           communityPosts={communityPosts}
           newsItems={seedNews}
+          initialQuery=""
           selectedJobTrade={selectedJob.trade}
           userLocation={accountProfile.location}
           getPostReactionState={getCommunityPostReactionState}
@@ -6142,6 +6155,7 @@ function ShopTalkView({
   profile,
   communityPosts,
   newsItems,
+  initialQuery,
   selectedJobTrade,
   userLocation,
   getPostReactionState,
@@ -6158,6 +6172,7 @@ function ShopTalkView({
   profile: AccountProfile;
   communityPosts: CommunityPost[];
   newsItems: NewsItem[];
+  initialQuery: string;
   selectedJobTrade: Trade | "General";
   userLocation: string;
   getPostReactionState: (post: CommunityPost) => CommunityReactionState;
@@ -6179,7 +6194,7 @@ function ShopTalkView({
   const [answerDraft, setAnswerDraft] = useState("");
   const [rulesOpen, setRulesOpen] = useState(false);
   const [newPostOpen, setNewPostOpen] = useState(false);
-  const [talkQuery, setTalkQuery] = useState("");
+  const [talkQuery, setTalkQuery] = useState(() => initialQuery.trim());
   const [newsQuery, setNewsQuery] = useState("");
   const [liveNews, setLiveNews] = useState<NewsItem[]>([]);
   const [newsLoading, setNewsLoading] = useState(false);

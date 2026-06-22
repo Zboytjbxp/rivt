@@ -341,35 +341,97 @@
 
 .v2-search-panel {
   position: relative;
-  display: flex;
+  display: block;
   box-sizing: border-box;
   width: min(620px, calc(100vw - 32px));
-  min-height: 58px;
-  align-items: center;
-  gap: 12px;
-  padding: 0 58px 0 14px;
+  padding: 16px;
   border: 1px solid var(--v2-border-strong);
   border-radius: var(--v2-radius-lg);
   background: var(--v2-surface-raised);
-  color: var(--v2-text-muted);
+  color: var(--v2-text);
   box-shadow: var(--v2-shadow-md);
 }
 
-.v2-search-panel > button:not(.v2-modal-close) {
-  display: inline-flex;
-  flex: 0 0 auto;
-  min-width: 44px;
+.v2-search-panel-inner {
+  display: grid;
+  gap: 12px;
+}
+
+.v2-search-panel-input {
+  display: flex;
   min-height: 44px;
   align-items: center;
-  justify-content: center;
-  padding: 0 8px;
+  gap: 10px;
+  padding: 0 46px 0 12px;
+  border: 1px solid var(--v2-border);
+  border-radius: var(--v2-radius-md);
+  background: var(--v2-surface);
+  color: var(--v2-text-muted);
+}
+
+.v2-search-panel-input input {
+  min-width: 0;
+  width: 100%;
+  min-height: 44px;
   border: 0;
   background: transparent;
-  color: var(--v2-text-muted);
+  color: var(--v2-text);
   font: inherit;
-  font-size: 12px;
+  outline: none;
+}
+
+.v2-search-command-list {
+  display: grid;
+  gap: 8px;
+}
+
+.v2-search-command-list button {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  min-height: 58px;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid transparent;
+  border-radius: var(--v2-radius-md);
+  background: var(--v2-surface);
+  color: var(--v2-text);
+  text-align: left;
+}
+
+.v2-search-command-list button:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--v2-accent) 36%, var(--v2-border));
+  background: var(--v2-accent-soft);
+}
+
+.v2-search-command-list button:disabled {
+  opacity: 0.5;
+}
+
+.v2-search-command-list button > svg {
+  color: var(--v2-accent);
+}
+
+.v2-search-command-list strong,
+.v2-search-command-list small {
+  display: block;
+}
+
+.v2-search-command-list strong {
+  font-size: var(--v2-text-sm);
   font-weight: var(--v2-weight-strong);
-  line-height: 1;
+}
+
+.v2-search-command-list small,
+.v2-search-note {
+  color: var(--v2-text-muted);
+  font-size: var(--v2-text-xs);
+  line-height: 1.45;
+}
+
+.v2-search-note {
+  max-width: 52ch;
+  margin: 0;
 }
 
 @media (min-width: 861px) {
@@ -512,13 +574,11 @@
   }
 
   .v2-search-panel {
-    min-height: 54px;
-    gap: 8px;
-    padding-inline: 12px 8px;
+    padding: 14px;
   }
 
-  .v2-search-panel input {
-    width: 0;
+  .v2-search-panel-input {
+    padding-right: 44px;
   }
 
   .rivt-v2 .guest-banner {

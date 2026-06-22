@@ -11,7 +11,7 @@ import {
   Wrench,
   X,
 } from "lucide-react";
-import type { AppShellProps, PrimaryDestination } from "./types";
+import type { AppShellProps, PrimaryDestination, SearchTarget } from "./types";
 import { Avatar } from "../components/ui";
 import "./tokens.css";
 import "./app-shell.css";
@@ -59,10 +59,10 @@ export function AppShell({
     return () => window.removeEventListener("keydown", handleCommandSearch);
   }, []);
 
-  function submitSearch() {
+  function submitSearch(target: SearchTarget = "work") {
     const normalized = searchValue.trim();
     if (!normalized) return;
-    onSearch(normalized);
+    onSearch(normalized, target);
     setSearchOpen(false);
   }
 
@@ -127,7 +127,7 @@ export function AppShell({
             className={searchOpen ? "v2-search is-open" : "v2-search"}
             onSubmit={(event) => {
               event.preventDefault();
-              submitSearch();
+              submitSearch("work");
             }}
           >
             <Search size={17} />
@@ -174,18 +174,51 @@ export function AppShell({
               <button type="button" className="v2-modal-close v2-icon-button" onClick={() => setSearchOpen(false)} aria-label="Close search">
                 <X size={18} />
               </button>
-              <Search size={19} />
-              <input
-                autoFocus
-                value={searchValue}
-                onChange={(event) => setSearchValue(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter") submitSearch();
-                  if (event.key === "Escape") setSearchOpen(false);
-                }}
-                placeholder="Search jobs, people, messages, and tools"
-              />
-              <button type="button" onClick={() => setSearchOpen(false)}>Cancel</button>
+              <div className="v2-search-panel-inner">
+                <label className="v2-search-panel-input">
+                  <Search size={19} />
+                  <input
+                    autoFocus
+                    value={searchValue}
+                    onChange={(event) => setSearchValue(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") submitSearch("work");
+                      if (event.key === "Escape") setSearchOpen(false);
+                    }}
+                    placeholder="Search jobs, questions, trades, or tools"
+                    aria-label="Search jobs, questions, trades, or tools"
+                  />
+                </label>
+
+                <div className="v2-search-command-list" aria-label="Search destinations">
+                  <button type="button" onClick={() => submitSearch("work")} disabled={!searchValue.trim()}>
+                    <BriefcaseBusiness size={18} />
+                    <span>
+                      <strong>Search work</strong>
+                      <small>Jobs, trades, locations, scopes</small>
+                    </span>
+                  </button>
+                  <button type="button" onClick={() => submitSearch("shop-talk")} disabled={!searchValue.trim()}>
+                    <MessageCircle size={18} />
+                    <span>
+                      <strong>Search Shop Talk</strong>
+                      <small>Questions, fixes, trade news</small>
+                    </span>
+                  </button>
+                  <button type="button" onClick={() => {
+                    onSearch(searchValue.trim() || "tools", "tools");
+                    setSearchOpen(false);
+                  }}>
+                    <Wrench size={18} />
+                    <span>
+                      <strong>Open Tools</strong>
+                      <small>Calculator, estimate, invoice, records</small>
+                    </span>
+                  </button>
+                </div>
+
+                <p className="v2-search-note">People search will unlock when profile discovery is server-owned. RIVT will not show fake matches.</p>
+              </div>
             </div>
           </div>
         ) : null}

@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import type { Role } from "../types";
 
 export type PrimaryDestination = "home" | "work" | "crew" | "shop-talk" | "tools" | "messages";
+export type SearchTarget = "work" | "shop-talk" | "tools";
 
 export interface ShellProfile {
   name: string;
@@ -30,5 +31,5 @@ export interface AppShellProps {
   onOpenMessages: () => void;
   onOpenNotifications: () => void;
   onOpenActiveJob: () => void;
-  onSearch: (query: string) => void;
+  onSearch: (query: string, target?: SearchTarget) => void;
 }
