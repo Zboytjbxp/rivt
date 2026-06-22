@@ -29,11 +29,11 @@
     {
       "id": "dedicated-error-monitoring",
       "category": "error_monitoring",
-      "status": "missing",
-      "provider": "Sentry-compatible",
-      "route": "Set SENTRY_DSN or ERROR_MONITORING_DSN on the Railway RIVT service; /api/health and authenticated /api/readiness will report configured once live.",
+      "status": "configured",
+      "provider": "Sentry Cloud",
+      "route": "Sentry project for RIVT production API errors; Railway RIVT service has SENTRY_DSN configured.",
       "implementationStatus": "code_ready",
-      "evidence": "server/monitoring.js captures HTTP 500/startup/unhandled process errors without exposing DSNs; deployed source 6d8e276e036553c5f861f1f8ab97cc3333a3494b reports observability.errorMonitoring.mode=setup_required."
+      "evidence": "server/monitoring.js captures HTTP 500/startup/unhandled process errors without exposing DSNs; Railway deployment eaa7409d-0e75-4ae4-8ac7-1aaa8c8e1a68 reports observability.errorMonitoring.mode=configured; Sentry accepted smoke event 'RIVT Sentry smoke test' with HTTP 200."
     },
     {
       "id": "paging",

@@ -2,7 +2,7 @@
 
 Last updated: 2026-06-22 America/New_York
 Current gate: Gate A launch hardening
-Current phase: Packet 08 controllable UX hardening, error monitoring readiness hooks, server-owned Shop Talk reactions/reputation ledger, Daily Log live UI proof, Daily Log Records bridge, daily engagement loop, Shop Talk answer queue, RIVT Daily home check-in, Trade News real-media and mobile layout pass, production UI smoke regression fixes, Tools studio release, Records workspace upgrade, UI system pass, shared UI primitives, Tools primitive alignment, Shop Talk command center, Tools app surface pass, Heavy 16th multi-mode calculator, Invoice Draft app upgrade, and Shop Talk reaction/social pulse pass verified; full Gate A approval remains blocked
+Current phase: Packet 08 controllable UX hardening, Sentry error monitoring configured, server-owned Shop Talk reactions/reputation ledger, Daily Log live UI proof, Daily Log Records bridge, daily engagement loop, Shop Talk answer queue, RIVT Daily home check-in, Trade News real-media and mobile layout pass, production UI smoke regression fixes, Tools studio release, Records workspace upgrade, UI system pass, shared UI primitives, Tools primitive alignment, Shop Talk command center, Tools app surface pass, Heavy 16th multi-mode calculator, Invoice Draft app upgrade, and Shop Talk reaction/social pulse pass verified; full Gate A approval remains blocked
 Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
 Production release commit: `6d8e276e036553c5f861f1f8ab97cc3333a3494b`
@@ -17,7 +17,15 @@ Packet 00 is merged on `master` at `4c199d903683e44d17b7985272c399c6d7a6cbd6`. T
 
 Do not discard or overwrite the pre-existing Trade News work when committing or splitting this packet.
 
-## Latest Packet 08 Pass - Error Monitoring Readiness Hooks
+## Latest Packet 08 Pass - Sentry Error Monitoring Configured
+
+- Configured `SENTRY_DSN` and `ERROR_MONITORING_PROVIDER=sentry` on the Railway production `RIVT` service and redeployed through Railway deployment `eaa7409d-0e75-4ae4-8ac7-1aaa8c8e1a68`.
+- Live `/api/health` reports exact source `6d8e276e036553c5f861f1f8ab97cc3333a3494b`, PostgreSQL and S3-compatible dependencies healthy, and `observability.errorMonitoring.mode=configured`.
+- Sent a harmless smoke event named `RIVT Sentry smoke test`; Sentry returned HTTP 200 and the onboarding screen changed to `Error Received`.
+- Updated `docs/operations/incident-routing.json` so dedicated error monitoring is now `configured` while paging/escalation, backup owner, support hours, incident rehearsal, and approvals remain blocked.
+- Remaining honesty boundary: Sentry ingestion is configured. Gate A still requires paging/escalation, backup owner, support hours, incident rehearsal, RPO/RTO/retention/cadence approvals, founder/support/legal-safety approvals, and deeper manual device/accessibility evidence.
+
+## Packet 08 Pass - Error Monitoring Readiness Hooks
 
 - Deployed source `6d8e276e036553c5f861f1f8ab97cc3333a3494b` through Railway deployment `3260e837-ff72-4343-b0bd-4243ac02424f`.
 - Added a dependency-light Sentry-compatible monitoring adapter in `server/monitoring.js` that reports honest setup state, redacts DSN material from status payloads, sanitizes captured context, and no-ops safely when no provider DSN is configured.
@@ -28,7 +36,7 @@ Do not discard or overwrite the pre-existing Trade News work when committing or 
 - Local gates passed for this slice: `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check`; DB-backed integration tests still skip locally because `TEST_DATABASE_URL` is not configured.
 - Readiness checks still correctly block launch: `node scripts/incident-readiness-check.js --json` reports backup owner, support hours, dedicated error monitoring provider, paging route, incident rehearsal, and approvals missing; `node scripts/launch-readiness-check.js --json` also reports recovery-policy RPO/RTO, retention, cadence, next-drill, and approval blockers.
 - Live checks passed: `/api/health` reported exact source `6d8e276e036553c5f861f1f8ab97cc3333a3494b`, PostgreSQL and S3-compatible dependencies healthy, and `observability.errorMonitoring.mode=setup_required`; `npm run monitor:production` passed with the same source, healthy storage, operational controls enabled state unchanged, seven anonymous private-route checks, and observability evidence.
-- Remaining honesty boundary: error monitoring is code-ready, not operationally configured. Gate A still requires setting `SENTRY_DSN` or `ERROR_MONITORING_DSN` on Railway, choosing a paging/escalation route, recording backup owner/support hours/approvals, and running a successful incident rehearsal.
+- Remaining honesty boundary: error monitoring was code-ready in this pass; it was configured in the follow-up Sentry pass above. Gate A still requires choosing a paging/escalation route, recording backup owner/support hours/approvals, and running a successful incident rehearsal.
 
 ## Latest Packet 08 Pass - Server-Owned Shop Talk Reactions and Reputation Ledger
 
@@ -773,7 +781,7 @@ Completed on 2026-06-21 as a focused follow-up to the shared UI primitive system
 
 ## Next Exact Task
 
-Continue Gate A launch hardening with the remaining external and manual blockers: set a real `SENTRY_DSN` or `ERROR_MONITORING_DSN` on Railway, configure paging/escalation, fill backup owner/support-hours/approval fields in `docs/operations/incident-routing.json`, approve RPO/RTO/retention/cadence fields in `docs/operations/recovery-policy.json`, run an incident rehearsal, then pass `npm run incident:readiness -- --require-ready` and `npm run launch:readiness -- --require-ready`. Complete the physical/deeper manual accessibility-device matrix before named-cohort launch.
+Continue Gate A launch hardening with the remaining external and manual blockers: configure paging/escalation, fill backup owner/support-hours/approval fields in `docs/operations/incident-routing.json`, approve RPO/RTO/retention/cadence fields in `docs/operations/recovery-policy.json`, run an incident rehearsal, then pass `npm run incident:readiness -- --require-ready` and `npm run launch:readiness -- --require-ready`. Complete the physical/deeper manual accessibility-device matrix before named-cohort launch.
 
 ## Blocking Founder Decisions
 

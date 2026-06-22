@@ -21,7 +21,26 @@ Add one entry per staging/production deployment.
 - Rollback performed/result:
 - Approval:
 
-## Current Production - Packet 08 Error Monitoring Readiness Hooks
+## Current Production - Packet 08 Sentry Error Monitoring Configured
+
+- Environment: Production (`https://rivt.pro`)
+- Date/time/timezone: 2026-06-21 22:37 America/New_York
+- Deployer: Codex through authenticated Railway CLI and Sentry Cloud project setup
+- Source repository/branch: `Zboytjbxp/rivt`, `master`
+- Source commit: `6d8e276e036553c5f861f1f8ab97cc3333a3494b`
+- Build/artifact ID: Railway deployment `eaa7409d-0e75-4ae4-8ac7-1aaa8c8e1a68`
+- Migration version before/after: `0011_shop_talk_reaction_events_immutable` / `0011_shop_talk_reaction_events_immutable` (no schema migration)
+- Feature-flag/config version: `SENTRY_DSN` and `ERROR_MONITORING_PROVIDER=sentry` configured on the Railway `RIVT` service; `SOURCE_COMMIT` remains `6d8e276e036553c5f861f1f8ab97cc3333a3494b`; operational controls unchanged
+- Provider/config changes: Sentry Cloud project created for RIVT production API errors; no DSN value is recorded in repository documentation
+- Backup/rollback target: prior successful deployment `3260e837-ff72-4343-b0bd-4243ac02424f`; migration version unchanged
+- Automated gates: `npm run monitor:production` passed after provider configuration; prior source gates for `6d8e276` remain `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check`
+- Post-deploy smoke tests: public `/api/health` passed and reported exact source commit `6d8e276e036553c5f861f1f8ab97cc3333a3494b`, PostgreSQL/S3-compatible dependencies healthy, and `observability.errorMonitoring.mode=configured`; Sentry accepted smoke event `RIVT Sentry smoke test` with HTTP 200 and showed `Error Received`
+- Health/readiness result: health reports PostgreSQL and S3-compatible storage healthy with exact source commit `6d8e276e036553c5f861f1f8ab97cc3333a3494b`; dedicated error monitoring is configured
+- Known risks: full Gate A remains blocked by paging/escalation route, incident rehearsal, RPO/RTO policy approval, backup retention/cadence approval, support/legal/founder signoff, and physical/deeper manual accessibility-device evidence.
+- Rollback performed/result: not required
+- Approval: Packet 08 Sentry error monitoring setup accepted as controllable Gate A evidence; overall Gate A not approved
+
+## Previous Production - Packet 08 Error Monitoring Readiness Hooks
 
 - Environment: Production (`https://rivt.pro`)
 - Date/time/timezone: 2026-06-21 22:21 America/New_York
