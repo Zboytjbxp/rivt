@@ -2,7 +2,7 @@
 
 Last updated: 2026-06-22 America/New_York
 Current gate: Gate A launch hardening
-Current phase: Packet 08 controllable UX hardening, Sentry error monitoring configured, server-owned Shop Talk reactions/reputation ledger, Daily Log live UI proof, Daily Log Records bridge, daily engagement loop, Shop Talk answer queue, RIVT Daily home check-in, Trade News real-media and mobile layout pass, production UI smoke regression fixes, Tools studio release, Records workspace upgrade, UI system pass, shared UI primitives, Tools primitive alignment, Shop Talk command center, Tools app surface pass, Heavy 16th multi-mode calculator, Invoice Draft app upgrade, and Shop Talk reaction/social pulse pass verified; full Gate A approval remains blocked
+Current phase: Packet 08 controllable UX hardening, Sentry error monitoring and first escalation route configured, server-owned Shop Talk reactions/reputation ledger, Daily Log live UI proof, Daily Log Records bridge, daily engagement loop, Shop Talk answer queue, RIVT Daily home check-in, Trade News real-media and mobile layout pass, production UI smoke regression fixes, Tools studio release, Records workspace upgrade, UI system pass, shared UI primitives, Tools primitive alignment, Shop Talk command center, Tools app surface pass, Heavy 16th multi-mode calculator, Invoice Draft app upgrade, and Shop Talk reaction/social pulse pass verified; full Gate A approval remains blocked
 Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
 Production release commit: `6d8e276e036553c5f861f1f8ab97cc3333a3494b`
@@ -22,8 +22,10 @@ Do not discard or overwrite the pre-existing Trade News work when committing or 
 - Configured `SENTRY_DSN` and `ERROR_MONITORING_PROVIDER=sentry` on the Railway production `RIVT` service and redeployed through Railway deployment `eaa7409d-0e75-4ae4-8ac7-1aaa8c8e1a68`.
 - Live `/api/health` reports exact source `6d8e276e036553c5f861f1f8ab97cc3333a3494b`, PostgreSQL and S3-compatible dependencies healthy, and `observability.errorMonitoring.mode=configured`.
 - Sent a harmless smoke event named `RIVT Sentry smoke test`; Sentry returned HTTP 200 and the onboarding screen changed to `Error Received`.
+- Verified Sentry's built-in alert rule `Send a notification for high priority issues` is connected to project `node-express`, set to notify suggested assignees or recently active members on every trigger, and triggered once for the smoke issue at 2026-06-22 02:38 UTC.
 - Updated `docs/operations/incident-routing.json` so dedicated error monitoring is now `configured` while paging/escalation, backup owner, support hours, incident rehearsal, and approvals remain blocked.
-- Remaining honesty boundary: Sentry ingestion is configured. Gate A still requires paging/escalation, backup owner, support hours, incident rehearsal, RPO/RTO/retention/cadence approvals, founder/support/legal-safety approvals, and deeper manual device/accessibility evidence.
+- Updated `docs/operations/incident-routing.json` again so the Sentry high-priority issue alert is the first pilot escalation route. Dedicated phone/SMS paging remains recommended before broader scale, but the readiness `PAGING_ROUTE_MISSING` blocker is no longer expected.
+- Remaining honesty boundary: Sentry ingestion and first escalation are configured. Gate A still requires backup owner, support hours, incident rehearsal, RPO/RTO/retention/cadence approvals, founder/support/legal-safety approvals, and deeper manual device/accessibility evidence.
 
 ## Packet 08 Pass - Error Monitoring Readiness Hooks
 
@@ -781,7 +783,7 @@ Completed on 2026-06-21 as a focused follow-up to the shared UI primitive system
 
 ## Next Exact Task
 
-Continue Gate A launch hardening with the remaining external and manual blockers: configure paging/escalation, fill backup owner/support-hours/approval fields in `docs/operations/incident-routing.json`, approve RPO/RTO/retention/cadence fields in `docs/operations/recovery-policy.json`, run an incident rehearsal, then pass `npm run incident:readiness -- --require-ready` and `npm run launch:readiness -- --require-ready`. Complete the physical/deeper manual accessibility-device matrix before named-cohort launch.
+Continue Gate A launch hardening with the remaining external and manual blockers: fill backup owner/support-hours/approval fields in `docs/operations/incident-routing.json`, approve RPO/RTO/retention/cadence fields in `docs/operations/recovery-policy.json`, run an incident rehearsal, then pass `npm run incident:readiness -- --require-ready` and `npm run launch:readiness -- --require-ready`. Complete the physical/deeper manual accessibility-device matrix before named-cohort launch.
 
 ## Blocking Founder Decisions
 

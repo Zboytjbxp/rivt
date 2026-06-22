@@ -38,9 +38,11 @@
     {
       "id": "paging",
       "category": "paging",
-      "status": "missing",
-      "provider": "TBD",
-      "route": "TBD - choose PagerDuty/Opsgenie/SMS/phone escalation before named-cohort launch."
+      "status": "configured",
+      "provider": "Sentry Cloud issue alert",
+      "route": "Sentry high-priority issue alert: notify suggested assignees and, if none found, recently active members for project node-express.",
+      "frequency": "Notify on every trigger",
+      "evidence": "Sentry alert rule 'Send a notification for high priority issues' is connected to project node-express and triggered on smoke issue 'RIVT Sentry smoke test' at 2026-06-22 02:38 UTC. This is the first pilot escalation route; dedicated phone/SMS paging should be added before broader scale."
     }
   ],
   "rehearsals": [],
