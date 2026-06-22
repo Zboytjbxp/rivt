@@ -100,7 +100,14 @@ export function NetworkHub({ jobs, talent, communityPosts, shoutOuts, onOpenCrew
         >
           <div className="v2-network-person-list">
             {activeCrew.length ? activeCrew.map((person) => <TopTalentCard key={person.id} person={person} />) : (
-              <EmptyState className="v2-network-empty" icon={<Users size={20} />} title="No crew connections yet" description="People you connect with through real RIVT work will appear here." compact />
+              <EmptyState
+                className="v2-network-empty"
+                icon={<Users size={20} />}
+                title="Your crew starts here"
+                description="Add contractors and tradespeople you have worked with. Your crew is your reputation network."
+                action={<button type="button" onClick={onOpenCrew}>Find people</button>}
+                compact
+              />
             )}
           </div>
         </Panel>
@@ -132,7 +139,14 @@ export function NetworkHub({ jobs, talent, communityPosts, shoutOuts, onOpenCrew
         >
           <div className="v2-network-prompts">
             {questionPosts.length ? questionPosts.map((post) => <AnswerPrompt key={post.id} post={post} />) : (
-              <EmptyState className="v2-network-empty" icon={<Sparkles size={20} />} title="No unresolved questions" description="Post a question and the network will start filling in the gaps." compact />
+              <EmptyState
+                className="v2-network-empty"
+                icon={<Sparkles size={20} />}
+                title="Nothing posted in your trade yet"
+                description="Be the first to ask a question or share a field-tested fix."
+                action={<button type="button" onClick={onOpenShopTalk}>Post in Shop Talk</button>}
+                compact
+              />
             )}
           </div>
         </Panel>

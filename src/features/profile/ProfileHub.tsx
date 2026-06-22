@@ -271,6 +271,30 @@ export function ProfileHub({
           </p>
         </section>
 
+        <section className="v2-profile-panel v2-profile-panel-wide v2-profile-reputation">
+          <header>
+            <span>Reputation momentum</span>
+            <strong>Proof that follows the work</strong>
+          </header>
+          <div className="v2-profile-reputation-grid">
+            <article>
+              <Star size={18} />
+              <strong>{shoutOutCount} shout-out{shoutOutCount === 1 ? "" : "s"}</strong>
+              <span>Peer proof from people who know your work.</span>
+            </article>
+            <article>
+              <Sparkles size={18} />
+              <strong>{communityBadges.length || "No"} badge{communityBadges.length === 1 ? "" : "s"}</strong>
+              <span>Community credibility earned through useful participation.</span>
+            </article>
+            <article>
+              <CreditCard size={18} />
+              <strong>{recordCount} saved record{recordCount === 1 ? "" : "s"}</strong>
+              <span>Work history and documentation signal reliability.</span>
+            </article>
+          </div>
+        </section>
+
         {view === "Settings" && canonicalProfile ? (
           <section className="v2-profile-panel v2-profile-panel-wide v2-profile-editor">
             <header>

@@ -13,7 +13,7 @@
 .v2-profile-header h1 {
   margin: 0;
   font-size: clamp(31px, 4vw, 48px);
-  font-weight: 780;
+  font-weight: var(--v2-weight-strong);
   line-height: 0.98;
   text-wrap: balance;
 }
@@ -29,8 +29,6 @@
   gap: 8px;
 }
 
-.v2-secondary-button,
-.v2-primary-button,
 .v2-theme-toggle {
   display: inline-flex;
   min-height: 44px;
@@ -42,13 +40,7 @@
   border: 1px solid color-mix(in srgb, var(--v2-border) 62%, transparent);
   background: var(--v2-surface-raised);
   color: var(--v2-text);
-  font-weight: 700;
-}
-
-.v2-primary-button {
-  border-color: var(--v2-accent);
-  background: var(--v2-accent);
-  color: #fff;
+  font-weight: var(--v2-weight-strong);
 }
 
 .v2-profile-grid {
@@ -74,7 +66,7 @@
 .v2-profile-panel > header span {
   color: var(--v2-text-muted);
   font-size: 10px;
-  font-weight: 800;
+  font-weight: var(--v2-weight-bold);
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -121,7 +113,7 @@
   background: color-mix(in srgb, var(--v2-accent-soft) 78%, transparent);
   color: var(--v2-accent);
   font-size: 11px;
-  font-weight: 700;
+  font-weight: var(--v2-weight-strong);
 }
 
 .v2-profile-facts,
@@ -177,7 +169,7 @@
   width: 24px;
   height: 24px;
   margin: 6px auto 0;
-  border-radius: 8px;
+  border-radius: var(--v2-radius-md);
 }
 
 .v2-theme-palettes button.is-selected {
@@ -198,12 +190,43 @@
   background: color-mix(in srgb, var(--v2-accent-soft) 78%, transparent);
   color: var(--v2-accent);
   font-size: 12px;
-  font-weight: 700;
+  font-weight: var(--v2-weight-strong);
 }
 
 .v2-profile-note {
   padding: 0 18px 18px;
   line-height: 1.5;
+}
+
+.v2-profile-reputation-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  padding: 18px;
+}
+
+.v2-profile-reputation-grid article {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+  padding: 14px;
+  border-radius: var(--v2-radius-md);
+  background: color-mix(in srgb, var(--v2-surface-muted) 74%, transparent);
+}
+
+.v2-profile-reputation-grid svg {
+  color: var(--v2-accent);
+}
+
+.v2-profile-reputation-grid strong {
+  color: var(--v2-text);
+  font-size: 15px;
+}
+
+.v2-profile-reputation-grid span {
+  color: var(--v2-text-muted);
+  font-size: 12px;
+  line-height: 1.4;
 }
 
 .v2-profile-panel-wide {
@@ -230,7 +253,7 @@
 .v2-profile-form-grid label > span {
   color: var(--v2-text-muted);
   font-size: 12px;
-  font-weight: 700;
+  font-weight: var(--v2-weight-strong);
 }
 
 .v2-profile-form-grid .is-wide {
@@ -267,7 +290,7 @@
   border-radius: 999px;
   background: var(--v2-surface-raised);
   color: var(--v2-text-muted);
-  font-weight: 700;
+  font-weight: var(--v2-weight-strong);
 }
 
 .v2-profile-trade-picker button.is-selected {
@@ -354,6 +377,10 @@
   }
 
   .v2-profile-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .v2-profile-reputation-grid {
     grid-template-columns: 1fr;
   }
 

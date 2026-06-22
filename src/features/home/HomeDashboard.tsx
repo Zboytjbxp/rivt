@@ -9,8 +9,6 @@ import {
   MessageSquareText,
   Newspaper,
   Plus,
-  ShieldCheck,
-  Trophy,
   Users,
   Wrench,
 } from "lucide-react";
@@ -145,12 +143,6 @@ export function HomeDashboard({
       destination: "shop-talk" as PrimaryDestination,
     },
   ];
-  const reputationSignals = [
-    { label: "Answer queue", value: answerQueueCount ? `${answerQueueCount} open` : "Caught up", tone: answerQueueCount ? "action" : "steady" },
-    { label: "Peer proof", value: `${shoutOutCount} shout-outs`, tone: shoutOutCount ? "steady" : "neutral" },
-    { label: "News watch", value: `${newsCount} updates`, tone: newsCount ? "info" : "neutral" },
-  ];
-
   async function handleAvailability(status: AvailabilityStatus) {
     if (status === availabilityStatus || savingAvailability) return;
     setSavingAvailability(status);
@@ -179,14 +171,10 @@ export function HomeDashboard({
       />
 
       <section className="v2-daily-brief" aria-label="RIVT Daily">
-        <div className="v2-daily-brief-copy">
-          <span>RIVT Daily</span>
-          <h2>Make money, protect the record, and stay visible.</h2>
-          <p>
-            A morning check-in for work, crew, trade news, messages, and the tools that keep the job moving.
-          </p>
-        </div>
         <div className="v2-daily-action-stack">
+          <header className="v2-daily-brief-header">
+            <span>RIVT Daily</span>
+          </header>
           <div className="v2-daily-signal-grid">
             {dailySignals.map((signal) => (
               <button type="button" key={signal.label} onClick={() => onNavigate(signal.destination)}>
@@ -288,28 +276,6 @@ export function HomeDashboard({
               ))}
             </div>
             {availabilityMessage && <small className="v2-availability-message">{availabilityMessage}</small>}
-          </aside>
-
-          <aside className="v2-reputation-momentum">
-            <header>
-              <span><Trophy size={15} /> Reputation momentum</span>
-              <small>Daily proof</small>
-            </header>
-            <div className="v2-reputation-metrics">
-              {reputationSignals.map((signal) => (
-                <span key={signal.label} data-tone={signal.tone}>
-                  <strong>{signal.value}</strong>
-                  <small>{signal.label}</small>
-                </span>
-              ))}
-            </div>
-            <p>
-              Useful answers, clean records, and reliable availability make RIVT worth opening even when nobody is actively hiring.
-            </p>
-            <div className="v2-reputation-actions">
-              <button type="button" onClick={() => onNavigate("shop-talk")}><ShieldCheck size={15} /> Build trust</button>
-              <button type="button" onClick={() => onNavigate("tools")}><ClipboardCheck size={15} /> Daily log</button>
-            </div>
           </aside>
 
           <aside className="v2-attention-panel">

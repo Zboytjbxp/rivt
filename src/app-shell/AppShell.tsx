@@ -9,6 +9,7 @@ import {
   Search,
   Users,
   Wrench,
+  X,
 } from "lucide-react";
 import type { AppShellProps, PrimaryDestination } from "./types";
 import { Avatar } from "../components/ui";
@@ -89,7 +90,7 @@ export function AppShell({
           ))}
         </nav>
 
-        {activeJob && activeDestination !== "work" && activeDestination !== "home" ? (
+        {activeJob ? (
           <button className="v2-job-context" type="button" onClick={onOpenActiveJob}>
             <span className="v2-job-context-icon"><HardHat size={17} /></span>
             <span className="v2-job-context-copy">
@@ -170,6 +171,9 @@ export function AppShell({
         {searchOpen ? (
           <div className="v2-search-scrim" role="presentation" onClick={() => setSearchOpen(false)}>
             <div className="v2-search-panel" role="dialog" aria-label="Search RIVT" onClick={(event) => event.stopPropagation()}>
+              <button type="button" className="v2-modal-close v2-icon-button" onClick={() => setSearchOpen(false)} aria-label="Close search">
+                <X size={18} />
+              </button>
               <Search size={19} />
               <input
                 autoFocus

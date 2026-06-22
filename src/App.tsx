@@ -3048,7 +3048,12 @@ function App() {
         onNavigate={(destination) => handleNavigate(defaultViewForDestination(destination))}
         onOpenAccount={() => { setActivityOpen(false); setPostOpen(false); setAccountOpen(true); }}
         onOpenMessages={() => handleNavigate("Messages")}
-        onOpenNotifications={() => { setAccountOpen(false); setPostOpen(false); setActivityOpen(true); }}
+        onOpenNotifications={() => {
+          setAccountOpen(false);
+          setPostOpen(false);
+          setActivityOpen(true);
+          void handleMarkNotificationsRead();
+        }}
         onOpenActiveJob={() => handleNavigate("Marketplace")}
         onSearch={(nextQuery) => {
           setQuery(nextQuery);

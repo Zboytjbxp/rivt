@@ -2,7 +2,7 @@
 
 Last updated: 2026-06-22 America/New_York
 Current gate: Gate A launch hardening
-Current phase: Packet 08 controllable UX hardening, founder/support/legal-safety approvals recorded, incident and launch readiness gates passing, Gate A approval packet prepared, incident rehearsal passed, incident routing approved, recovery policy approved, support hours and backup incident owner recorded, Sentry error monitoring and first escalation route configured, server-owned Shop Talk reactions/reputation ledger, Daily Log live UI proof, Daily Log Records bridge, daily engagement loop, Shop Talk answer queue, RIVT Daily home check-in, Trade News real-media and mobile layout pass, production UI smoke regression fixes, Tools studio release, Records workspace upgrade, UI system pass, shared UI primitives, Tools primitive alignment, Shop Talk command center, Tools app surface pass, Heavy 16th multi-mode calculator, Invoice Draft app upgrade, Shop Talk reaction/social pulse pass, and expanded production accessibility smoke verified; physical/deeper manual accessibility-device evidence remains the next launch-quality boundary
+Current phase: Packet 08 controllable UX hardening, founder/support/legal-safety approvals recorded, incident and launch readiness gates passing, Gate A approval packet prepared, incident rehearsal passed, incident routing approved, recovery policy approved, support hours and backup incident owner recorded, Sentry error monitoring and first escalation route configured, server-owned Shop Talk reactions/reputation ledger, Daily Log live UI proof, Daily Log Records bridge, daily engagement loop, Shop Talk answer queue, RIVT Daily home check-in, Trade News real-media and mobile layout pass, production UI smoke regression fixes, Tools studio release, Records workspace upgrade, UI system pass, shared UI primitives, Tools primitive alignment, Shop Talk command center, Tools app surface pass, Heavy 16th multi-mode calculator, Invoice Draft app upgrade, Shop Talk reaction/social pulse pass, expanded production accessibility smoke verified, and Claude-audit UI consolidation implemented locally; physical/deeper manual accessibility-device evidence remains the next launch-quality boundary
 Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
 Production release commit: `d4e6f06a70e3dad8f59d54b6698b79ab08d6fd2d`
@@ -16,6 +16,18 @@ Packet 00 is merged on `master` at `4c199d903683e44d17b7985272c399c6d7a6cbd6`. T
 - Product source of truth: `RIVT_MASTER_BUILD_PROMPT.md`
 
 Do not discard or overwrite the pre-existing Trade News work when committing or splitting this packet.
+
+## Latest Packet 08 Pass - Claude-Audit UI Consolidation
+
+- Consolidated v2 design tokens for typography weights, info state colors, card shadow, sidebar/topbar sizing, and radius fallbacks so legacy and v2 CSS resolve consistently.
+- Reduced CSS font weights to the five-token scale and normalized simple single-value border radii to the shared small/medium/large token scale while leaving custom compound and pill/circle shapes intact.
+- Centralized shared primary, secondary, icon-button, modal-close, and skeleton primitives in `src/components/ui.css`, then removed duplicate local button definitions where they conflicted with the shared layer.
+- Cleaned the Home surface by removing the editorial mission-copy block from `RIVT Daily`, keeping a compact section label, letting the signal grid own the section, moving reputation momentum to Profile, and tightening the mobile availability controls into a horizontal 52px row.
+- Cleaned the shell by keeping active-job context visible consistently, reducing duplicate desktop account identity in the topbar, adding mobile safe-area spacing, and adding visible close controls to the search/job-editor modals.
+- Improved missing/loading states with real Inbox skeleton cards, clearer Crew first-run empty states, and server-backed notification badge clearing through the existing `POST /api/v1/notifications/read` path when the notification center opens.
+- Deliberately did not fake unified cross-surface search results because no unified `/api/v1/search` endpoint exists yet; the shell search still routes into the real Work search/filter behavior.
+- Local gates passed for this slice: `npm run build`, `npm run lint`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check`. DB-backed local integration tests still skip because `TEST_DATABASE_URL` is not configured.
+- Deployment status: pending commit and Railway redeploy.
 
 ## Latest Packet 08 Pass - Accessibility Boundary Progress
 

@@ -15,7 +15,7 @@
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--v2-accent);
-  font-weight: 700;
+  font-weight: var(--v2-weight-strong);
 }
 
 .v2-legacy-hero h1 {
@@ -47,7 +47,7 @@
   min-height: 86px;
   padding: 18px 18px 18px 16px;
   border: 1px solid color-mix(in srgb, var(--v2-border) 68%, transparent);
-  border-radius: 20px;
+  border-radius: var(--v2-radius-lg);
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.01));
   color: inherit;
   text-align: left;
@@ -67,7 +67,7 @@
   height: 38px;
   align-items: center;
   justify-content: center;
-  border-radius: 13px;
+  border-radius: var(--v2-radius-lg);
   background: color-mix(in srgb, var(--v2-surface-elevated) 88%, var(--v2-accent) 12%);
   color: var(--v2-accent);
   flex: 0 0 auto;
@@ -93,7 +93,7 @@
 
 .v2-legacy-note {
   padding: 18px 20px;
-  border-radius: 20px;
+  border-radius: var(--v2-radius-lg);
   background: rgba(255, 255, 255, 0.025);
   border: 1px solid color-mix(in srgb, var(--v2-border) 60%, transparent);
 }

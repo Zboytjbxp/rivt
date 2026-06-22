@@ -189,7 +189,7 @@ export function JobEditorModal({ organizationId, job, defaultLocation, onClose, 
             <span className="section-label">{savedJob ? "Saved job" : "New job"}</span>
             <h2 id="job-editor-title">{savedJob ? "Edit job" : "Create a job"}</h2>
           </div>
-          <button type="button" className="icon-button" onClick={onClose} disabled={saving} aria-label="Close"><X size={19} /></button>
+          <button type="button" className="icon-button v2-modal-close v2-icon-button" onClick={onClose} disabled={saving} aria-label="Close"><X size={19} /></button>
         </header>
 
         <ol className="job-editor-steps" aria-label="Job form progress">

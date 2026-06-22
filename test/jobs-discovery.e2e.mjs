@@ -345,7 +345,7 @@ try {
   const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
   await configurePage(page, [job]);
   await page.goto(`${baseUrl}/app/work`, { waitUntil: "networkidle" });
-  await page.getByRole("button", { name: "Draft" }).click();
+  await page.getByRole("button", { name: "Draft", exact: true }).click();
   await page.getByText(job.title, { exact: true }).first().waitFor();
   await page.getByRole("button", { name: "Edit" }).click();
   await page.getByRole("dialog", { name: "Edit job" }).waitFor();

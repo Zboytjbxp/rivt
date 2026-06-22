@@ -20,7 +20,7 @@
 .v2-network-header h1 {
   margin: 0;
   font-size: clamp(31px, 4vw, 48px);
-  font-weight: 780;
+  font-weight: var(--v2-weight-strong);
   line-height: 0.98;
   text-wrap: balance;
 }
@@ -61,7 +61,7 @@
 .v2-network-header-metrics span {
   color: var(--v2-text-muted);
   font-size: 11px;
-  font-weight: 700;
+  font-weight: var(--v2-weight-strong);
   text-transform: uppercase;
 }
 
@@ -93,7 +93,7 @@
 .v2-network-panel > header span {
   color: var(--v2-text-muted);
   font-size: 10px;
-  font-weight: 800;
+  font-weight: var(--v2-weight-bold);
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -115,7 +115,7 @@
   color: var(--v2-accent);
   font: inherit;
   font-size: 12px;
-  font-weight: 700;
+  font-weight: var(--v2-weight-strong);
 }
 
 .v2-network-person-list,
@@ -175,7 +175,7 @@
 .v2-network-person-card footer {
   display: flex;
   gap: 14px;
-  font-weight: 700;
+  font-weight: var(--v2-weight-strong);
 }
 
 .v2-network-shoutouts article,

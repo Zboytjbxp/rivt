@@ -6,6 +6,14 @@
   --weight-body: 400;
   --weight-semibold: 600;
   --weight-label: 800;
+  --v2-weight-body: 400;
+  --v2-weight-semibold: 600;
+  --v2-weight-strong: 700;
+  --v2-weight-bold: 800;
+  --v2-weight-display: 900;
+  --v2-radius-sm: 4px;
+  --v2-radius-md: 6px;
+  --v2-radius-lg: 8px;
   --text-xs: 11px;
   --text-sm: 12px;
   --text-base: 14px;
@@ -174,7 +182,7 @@ textarea:focus-visible {
 .trust-check-grid span,
 .auth-methods button {
   font-size: 12px;
-  font-weight: 800;
+  font-weight: var(--v2-weight-bold);
 }
 
 .onboarding-hero-copy > span {
@@ -208,7 +216,7 @@ textarea:focus-visible {
   gap: 5px 9px;
   padding: 13px;
   border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 10px;
+  border-radius: var(--v2-radius-lg);
   background: rgba(255, 255, 255, 0.07);
 }
 
@@ -296,7 +304,7 @@ textarea:focus-visible {
   letter-spacing: 0.18em;
   text-transform: uppercase;
   color: #ff9d60;
-  font-weight: 700;
+  font-weight: var(--v2-weight-strong);
 }
 
 .auth-story-header h1 {
@@ -331,7 +339,7 @@ textarea:focus-visible {
   background: rgba(255, 255, 255, 0.03);
   color: #edf4f6;
   font-size: 13px;
-  font-weight: 600;
+  font-weight: var(--v2-weight-semibold);
 }
 
 .auth-story-grid {
@@ -346,7 +354,7 @@ textarea:focus-visible {
   gap: 14px;
   min-height: 96px;
   padding: 18px;
-  border-radius: 20px;
+  border-radius: var(--v2-radius-lg);
   border: 1px solid rgba(255, 255, 255, 0.08);
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.02));
   box-shadow: 0 18px 36px rgba(0, 0, 0, 0.22);
@@ -359,7 +367,7 @@ textarea:focus-visible {
   width: 40px;
   height: 40px;
   flex: 0 0 auto;
-  border-radius: 14px;
+  border-radius: var(--v2-radius-lg);
   background: rgba(255, 106, 0, 0.12);
   color: #ff9d60;
 }
@@ -389,7 +397,7 @@ textarea:focus-visible {
   display: grid;
   gap: 10px;
   padding: 18px 20px;
-  border-radius: 20px;
+  border-radius: var(--v2-radius-lg);
   background: rgba(8, 13, 15, 0.82);
   border: 1px solid rgba(255, 255, 255, 0.07);
 }
@@ -399,7 +407,7 @@ textarea:focus-visible {
   font-size: 0.74rem;
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  font-weight: 700;
+  font-weight: var(--v2-weight-strong);
 }
 
 .auth-story-preview strong {
@@ -420,7 +428,7 @@ textarea:focus-visible {
   gap: 18px;
   padding: 30px 28px;
   border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 22px;
+  border-radius: var(--v2-radius-lg);
   background:
     linear-gradient(180deg, rgba(12, 17, 20, 0.96), rgba(8, 12, 14, 0.98));
   color: #edf4f6;
@@ -438,7 +446,7 @@ textarea:focus-visible {
   content: "";
   position: absolute;
   inset: 0;
-  border-radius: 22px;
+  border-radius: var(--v2-radius-lg);
   pointer-events: none;
   background: linear-gradient(180deg, rgba(255, 106, 0, 0.07), transparent 32%);
   opacity: 0.9;
@@ -473,7 +481,7 @@ textarea:focus-visible {
   font-size: 0.74rem;
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  font-weight: 700;
+  font-weight: var(--v2-weight-strong);
 }
 
 .auth-card-heading h2 {
@@ -520,7 +528,7 @@ textarea:focus-visible {
 .auth-brand span {
   color: #8ea0a9;
   font-size: 12px;
-  font-weight: 800;
+  font-weight: var(--v2-weight-bold);
   text-transform: uppercase;
 }
 
@@ -546,7 +554,7 @@ textarea:focus-visible {
   min-width: 0;
   padding: 0 16px;
   border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 16px;
+  border-radius: var(--v2-radius-lg);
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.025));
   color: #edf4f6;
@@ -605,7 +613,7 @@ textarea:focus-visible {
   gap: 10px;
   padding: 14px 16px;
   border: 1px solid rgba(255, 106, 0, 0.18);
-  border-radius: 18px;
+  border-radius: var(--v2-radius-lg);
   background: rgba(255, 106, 0, 0.07);
 }
 
@@ -629,7 +637,7 @@ textarea:focus-visible {
 .auth-guest-cta {
   min-height: 42px;
   border: 1px solid rgba(255, 106, 0, 0.22);
-  border-radius: 14px;
+  border-radius: var(--v2-radius-lg);
   background: rgba(255, 106, 0, 0.12);
   color: #ffd7c1;
   font-weight: var(--weight-label);
@@ -646,7 +654,7 @@ textarea:focus-visible {
   gap: 6px;
   padding: 14px;
   border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 10px;
+  border-radius: var(--v2-radius-lg);
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.03));
 }
@@ -695,7 +703,7 @@ textarea:focus-visible {
   color: var(--accent);
   font-size: 11px;
   font-style: normal;
-  font-weight: 900;
+  font-weight: var(--v2-weight-display);
   letter-spacing: 0;
 }
 
@@ -720,7 +728,7 @@ textarea:focus-visible {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   padding: 4px;
   border: 1px solid rgba(255, 255, 255, 0.11);
-  border-radius: 18px;
+  border-radius: var(--v2-radius-lg);
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.025));
 }
@@ -758,7 +766,7 @@ textarea:focus-visible {
 .auth-card--entry > .auth-toggle {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   padding: 4px;
-  border-radius: 14px;
+  border-radius: var(--v2-radius-lg);
   background: rgba(255, 255, 255, 0.035);
 }
 
@@ -799,7 +807,7 @@ textarea:focus-visible {
   min-height: 46px;
   padding: 0 12px;
   border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 14px;
+  border-radius: var(--v2-radius-lg);
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0.02));
   color: #edf4f6;
@@ -811,7 +819,7 @@ textarea:focus-visible {
   border-radius: var(--radius);
   background: var(--danger-soft);
   color: #9b1c1c;
-  font-weight: 750;
+  font-weight: var(--v2-weight-strong);
 }
 
 .auth-notice {
@@ -820,7 +828,7 @@ textarea:focus-visible {
   border-radius: var(--radius);
   background: var(--blue-soft);
   color: var(--text);
-  font-weight: 700;
+  font-weight: var(--v2-weight-strong);
 }
 
 .auth-link-action {
@@ -1051,19 +1059,19 @@ textarea:focus-visible {
   gap: 6px;
   color: var(--muted);
   font-size: 12px;
-  font-weight: 800;
+  font-weight: var(--v2-weight-bold);
 }
 
 .onboarding-form-grid input {
   width: 100%;
   height: 42px;
   border: 1px solid var(--border);
-  border-radius: 9px;
+  border-radius: var(--v2-radius-md);
   background: var(--surface);
   color: var(--text);
   padding: 0 12px;
   font-size: 14px;
-  font-weight: 720;
+  font-weight: var(--v2-weight-strong);
 }
 
 .specialty-picker {
@@ -1075,7 +1083,7 @@ textarea:focus-visible {
 .specialty-picker button {
   padding: 0 12px;
   font-size: 12px;
-  font-weight: 800;
+  font-weight: var(--v2-weight-bold);
 }
 
 .specialty-expander {
@@ -1089,7 +1097,7 @@ textarea:focus-visible {
   background: var(--surface-soft);
   color: var(--muted);
   font-size: 12px;
-  font-weight: 800;
+  font-weight: var(--v2-weight-bold);
 }
 
 .specialty-expander.secondary {
@@ -1115,7 +1123,7 @@ textarea:focus-visible {
   min-height: 52px;
   padding: 11px;
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--v2-radius-lg);
   background: var(--surface);
 }
 
@@ -1141,7 +1149,7 @@ textarea:focus-visible {
   min-height: 46px;
   padding: 11px;
   border: 1px solid var(--border);
-  border-radius: 9px;
+  border-radius: var(--v2-radius-md);
   background: var(--surface-soft);
 }
 
@@ -1152,7 +1160,7 @@ textarea:focus-visible {
 .readiness-note span {
   color: var(--muted);
   font-size: 12px;
-  font-weight: 760;
+  font-weight: var(--v2-weight-strong);
 }
 
 .onboarding-actions {
@@ -1199,7 +1207,7 @@ textarea:focus-visible {
   width: 40px;
   height: 40px;
   place-items: center;
-  border-radius: 8px;
+  border-radius: var(--v2-radius-md);
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02)),
     rgba(255, 255, 255, 0.03);
@@ -1228,7 +1236,7 @@ textarea:focus-visible {
   margin-top: 4px;
   color: #ff8a1d;
   font-size: 11px;
-  font-weight: 800;
+  font-weight: var(--v2-weight-bold);
   text-transform: none;
 }
 
@@ -1262,7 +1270,7 @@ textarea:focus-visible {
   display: block;
   color: #ff8a1d;
   font-size: 11px;
-  font-weight: 800;
+  font-weight: var(--v2-weight-bold);
   letter-spacing: 0.12em;
   text-transform: uppercase;
 }
@@ -1281,7 +1289,7 @@ textarea:focus-visible {
     gap: 18px;
     padding: 28px;
   border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 12px;
+  border-radius: var(--v2-radius-lg);
   background:
     linear-gradient(180deg, rgba(14, 18, 20, 0.94), rgba(7, 10, 11, 0.98));
   box-shadow:
@@ -1310,7 +1318,7 @@ textarea:focus-visible {
 .auth-hero-copy span {
   color: #ffae73;
   font-size: 12px;
-  font-weight: 800;
+  font-weight: var(--v2-weight-bold);
   letter-spacing: 0.12em;
   text-transform: uppercase;
 }
@@ -1342,14 +1350,14 @@ textarea:focus-visible {
   min-height: 44px;
   padding: 0 14px;
   border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 9px;
+  border-radius: var(--v2-radius-md);
   background: rgba(255, 255, 255, 0.03);
 }
 
 .auth-feature-pill span {
   color: #e8f0f3;
   font-size: 12px;
-  font-weight: 800;
+  font-weight: var(--v2-weight-bold);
   letter-spacing: 0.02em;
   text-transform: uppercase;
 }
@@ -1363,11 +1371,11 @@ textarea:focus-visible {
   min-height: 44px;
   padding: 0 11px;
   border: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: 8px;
+  border-radius: var(--v2-radius-md);
   background: rgba(255, 255, 255, 0.07);
   color: #eaf2f5;
   font-size: 12px;
-  font-weight: 800;
+  font-weight: var(--v2-weight-bold);
   letter-spacing: 0;
   white-space: nowrap;
 }
@@ -1428,11 +1436,11 @@ textarea:focus-visible {
   min-height: 46px;
   padding: 0 14px;
   border: 1px solid transparent;
-  border-radius: 7px;
+  border-radius: var(--v2-radius-md);
   background: transparent;
   color: #f4f7f8;
   font-size: 15px;
-  font-weight: 750;
+  font-weight: var(--v2-weight-strong);
   text-align: left;
 }
 
@@ -1463,7 +1471,7 @@ textarea:focus-visible {
   margin-top: -2px;
   padding: 12px;
   border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 12px;
+  border-radius: var(--v2-radius-lg);
   background: rgba(255, 255, 255, 0.03);
 }
 
@@ -1482,7 +1490,7 @@ textarea:focus-visible {
 .sidebar-more-heading span {
   color: #aebdc4;
   font-size: 11px;
-  font-weight: 760;
+  font-weight: var(--v2-weight-strong);
 }
 
 .sidebar-more-sheet button {
@@ -1492,11 +1500,11 @@ textarea:focus-visible {
   min-height: 42px;
   padding: 0 12px;
   border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 8px;
+  border-radius: var(--v2-radius-md);
   background: rgba(255, 255, 255, 0.03);
   color: #f4f7f8;
   font-size: 12px;
-  font-weight: 800;
+  font-weight: var(--v2-weight-bold);
   text-align: left;
 }
 
@@ -1530,7 +1538,7 @@ textarea:focus-visible {
 .sidebar-profile small {
   color: #b8c8cf;
   font-size: 12px;
-  font-weight: 760;
+  font-weight: var(--v2-weight-strong);
 }
 
 .sidebar-job-card > span {
@@ -1550,7 +1558,7 @@ textarea:focus-visible {
   gap: 4px;
   color: #d7e3e8;
   font-size: 12px;
-  font-weight: 720;
+  font-weight: var(--v2-weight-strong);
 }
 
 .sidebar-progress {
@@ -1565,7 +1573,7 @@ textarea:focus-visible {
   color: var(--accent);
   font-size: 12px;
   font-style: normal;
-  font-weight: 800;
+  font-weight: var(--v2-weight-bold);
 }
 
 .sidebar-progress i {
@@ -1586,11 +1594,11 @@ textarea:focus-visible {
 .sidebar-job-card button {
   min-height: 36px;
   border: 1px solid rgba(255, 255, 255, 0.3);
-  border-radius: 7px;
+  border-radius: var(--v2-radius-md);
   background: transparent;
   color: #fff;
   font-size: 12px;
-  font-weight: 800;
+  font-weight: var(--v2-weight-bold);
 }
 
 .sidebar-profile {
@@ -1638,7 +1646,7 @@ textarea:focus-visible {
   height: 42px;
   padding: 0 14px;
   border: 1px solid var(--border);
-  border-radius: 9px;
+  border-radius: var(--v2-radius-md);
   background: var(--surface);
   color: var(--muted);
   box-shadow: 0 1px 0 rgba(255, 255, 255, 0.72);
@@ -1665,7 +1673,7 @@ textarea:focus-visible {
   min-height: 44px;
   border-radius: var(--radius);
   font-size: 13px;
-  font-weight: 800;
+  font-weight: var(--v2-weight-bold);
   letter-spacing: 0;
 }
 
@@ -1692,7 +1700,7 @@ textarea:focus-visible {
   background: var(--accent);
   color: #080d10;
   font-size: 10px;
-  font-weight: 900;
+  font-weight: var(--v2-weight-display);
 }
 
 .primary-action {
@@ -1735,9 +1743,9 @@ textarea:focus-visible {
 .avatar {
   display: grid;
   place-items: center;
-  border-radius: 8px;
+  border-radius: var(--v2-radius-md);
   font-size: 12px;
-  font-weight: 900;
+  font-weight: var(--v2-weight-display);
 }
 
 .user-avatar {
@@ -1814,7 +1822,7 @@ textarea:focus-visible {
   width: min(420px, calc(100vw - 28px));
   padding: 14px;
   border: 1px solid rgba(255, 106, 0, 0.22);
-  border-radius: 12px;
+  border-radius: var(--v2-radius-lg);
   background: var(--surface);
   box-shadow: var(--shadow);
 }
@@ -1866,7 +1874,7 @@ textarea:focus-visible {
   margin-top: 3px;
   color: var(--muted);
   font-size: 12px;
-  font-weight: 760;
+  font-weight: var(--v2-weight-strong);
   line-height: 1.4;
 }
 
@@ -1876,7 +1884,7 @@ textarea:focus-visible {
   height: 28px;
   place-items: center;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--v2-radius-md);
   background: var(--surface);
   color: var(--muted);
 }
@@ -1926,7 +1934,7 @@ textarea:focus-visible {
   overflow-y: auto;
   padding: 16px;
   border: 1px solid var(--border);
-  border-radius: 14px;
+  border-radius: var(--v2-radius-lg);
   background: var(--surface);
   box-shadow: var(--shadow);
 }
@@ -1945,7 +1953,7 @@ textarea:focus-visible {
 .activity-item span {
   color: var(--muted);
   font-size: 11px;
-  font-weight: 800;
+  font-weight: var(--v2-weight-bold);
   text-transform: uppercase;
 }
 
@@ -1969,11 +1977,11 @@ textarea:focus-visible {
   min-height: 44px;
   padding: 0 8px;
   border: 1px solid var(--border);
-  border-radius: 9px;
+  border-radius: var(--v2-radius-md);
   background: var(--surface);
   color: var(--text);
   font-size: 11px;
-  font-weight: 800;
+  font-weight: var(--v2-weight-bold);
   line-height: 1.1;
 }
 
@@ -1994,7 +2002,7 @@ textarea:focus-visible {
 .account-section,
 .closeout-status-card {
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--v2-radius-lg);
   background: var(--surface-soft);
 }
 
@@ -2024,7 +2032,7 @@ textarea:focus-visible {
   margin: 0;
   color: var(--muted);
   font-size: 12px;
-  font-weight: 740;
+  font-weight: var(--v2-weight-strong);
   line-height: 1.42;
 }
 
@@ -2058,7 +2066,7 @@ textarea:focus-visible {
   margin-top: 2px;
   color: var(--muted);
   font-size: 12px;
-  font-weight: 760;
+  font-weight: var(--v2-weight-strong);
 }
 
 .account-stat-grid {
@@ -2070,7 +2078,7 @@ textarea:focus-visible {
 .account-stat-grid .info-item {
   min-height: 74px;
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--v2-radius-lg);
   background: var(--surface);
 }
 
@@ -2094,7 +2102,7 @@ textarea:focus-visible {
 .account-note {
   color: var(--muted);
   font-size: 12px;
-  font-weight: 720;
+  font-weight: var(--v2-weight-strong);
   line-height: 1.4;
 }
 
@@ -2116,7 +2124,7 @@ textarea:focus-visible {
 .settings-section-heading small {
   color: var(--muted);
   font-size: 12px;
-  font-weight: 720;
+  font-weight: var(--v2-weight-strong);
   line-height: 1.4;
 }
 
@@ -2127,14 +2135,14 @@ textarea:focus-visible {
   align-items: center;
   padding: 10px;
   border: 1px solid var(--border);
-  border-radius: 9px;
+  border-radius: var(--v2-radius-md);
   background: var(--surface);
 }
 
 .theme-mode-row > span {
   color: var(--muted);
   font-size: 12px;
-  font-weight: 800;
+  font-weight: var(--v2-weight-bold);
   text-transform: uppercase;
 }
 
@@ -2155,7 +2163,7 @@ textarea:focus-visible {
   min-height: 92px;
   padding: 10px;
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--v2-radius-lg);
   background: var(--surface);
   color: var(--text);
   text-align: left;
@@ -2201,7 +2209,7 @@ textarea:focus-visible {
 .palette-copy small {
   color: var(--muted);
   font-size: 11px;
-  font-weight: 720;
+  font-weight: var(--v2-weight-strong);
   line-height: 1.3;
 }
 
@@ -2250,7 +2258,7 @@ textarea:focus-visible {
 .page-intro-right small {
   color: var(--muted);
   font-size: 12px;
-  font-weight: 760;
+  font-weight: var(--v2-weight-strong);
 }
 
 .page-intro-chip {
@@ -2262,7 +2270,7 @@ textarea:focus-visible {
   background: var(--accent-soft);
   color: var(--accent-deep);
   font-size: 11px;
-  font-weight: 820;
+  font-weight: var(--v2-weight-bold);
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
@@ -2284,7 +2292,7 @@ textarea:focus-visible {
 .page-heading > div > span {
   color: var(--accent-deep);
   font-size: 11px;
-  font-weight: 820;
+  font-weight: var(--v2-weight-bold);
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
@@ -2334,7 +2342,7 @@ textarea:focus-visible {
 .side-card small {
   color: var(--muted);
   font-size: 12px;
-  font-weight: 800;
+  font-weight: var(--v2-weight-bold);
 }
 
 .select-control select {
@@ -2343,12 +2351,12 @@ textarea:focus-visible {
   height: 44px;
   appearance: none;
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--v2-radius-md);
   background: var(--surface);
   color: var(--text);
   padding: 0 34px 0 12px;
   font-size: 13px;
-  font-weight: 780;
+  font-weight: var(--v2-weight-strong);
 }
 
 .input-control input {
@@ -2356,12 +2364,12 @@ textarea:focus-visible {
   min-height: 44px;
   height: 44px;
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--v2-radius-md);
   background: var(--surface);
   color: var(--text);
   padding: 0 12px;
   font-size: 13px;
-  font-weight: 780;
+  font-weight: var(--v2-weight-strong);
 }
 
 .select-control svg {
@@ -2380,7 +2388,7 @@ textarea:focus-visible {
   min-height: 44px;
   padding: 0 12px;
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--v2-radius-md);
   background: var(--surface-soft);
 }
 
@@ -2391,9 +2399,9 @@ textarea:focus-visible {
 
 .status-chip {
   justify-self: start;
-  border-radius: 5px;
+  border-radius: var(--v2-radius-sm);
   font-size: 11px;
-  font-weight: 800;
+  font-weight: var(--v2-weight-bold);
 }
 
 .status-chip {
@@ -2435,7 +2443,7 @@ textarea:focus-visible {
 .info-item span {
   color: var(--muted);
   font-size: 12px;
-  font-weight: 800;
+  font-weight: var(--v2-weight-bold);
 }
 
 .info-item strong {
@@ -2457,7 +2465,7 @@ textarea:focus-visible {
 .rating-row strong {
   color: var(--muted);
   font-size: 12px;
-  font-weight: 800;
+  font-weight: var(--v2-weight-bold);
 }
 
 .rating-row button {
@@ -2466,7 +2474,7 @@ textarea:focus-visible {
   height: 28px;
   place-items: center;
   border: 1px solid var(--border);
-  border-radius: 5px;
+  border-radius: var(--v2-radius-sm);
   background: var(--surface);
   color: #b9c3c8;
 }
@@ -2495,7 +2503,7 @@ textarea:focus-visible {
 .section-header span {
   color: var(--muted);
   font-size: 12px;
-  font-weight: 800;
+  font-weight: var(--v2-weight-bold);
 }
 
 
@@ -2541,7 +2549,7 @@ textarea:focus-visible {
   gap: 6px;
   color: var(--muted);
   font-size: 12px;
-  font-weight: 800;
+  font-weight: var(--v2-weight-bold);
 }
 
 .post-modal input,
@@ -2553,7 +2561,7 @@ textarea:focus-visible {
   color: var(--text);
   padding: 0 12px;
   font-size: 14px;
-  font-weight: 700;
+  font-weight: var(--v2-weight-strong);
 }
 
 .form-grid,
@@ -2590,7 +2598,7 @@ textarea:focus-visible {
   display: block;
   color: var(--accent-deep);
   font-size: 11px;
-  font-weight: 820;
+  font-weight: var(--v2-weight-bold);
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
@@ -2611,7 +2619,7 @@ textarea:focus-visible {
   background: var(--surface);
   color: var(--text);
   font-size: 12px;
-  font-weight: 780;
+  font-weight: var(--v2-weight-strong);
 }
 
 .home-notification-list {
@@ -2631,7 +2639,7 @@ textarea:focus-visible {
   gap: 4px 12px;
   padding: 12px 14px;
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: var(--v2-radius-lg);
   background: var(--surface);
   text-align: left;
 }
@@ -2646,7 +2654,7 @@ textarea:focus-visible {
 .home-notification-item span {
   color: var(--muted);
   font-size: 11px;
-  font-weight: 760;
+  font-weight: var(--v2-weight-strong);
 }
 
 .home-notification-item.info {
@@ -2679,7 +2687,7 @@ textarea:focus-visible {
   min-width: 0;
   padding: 16px;
   border: 1px solid var(--border);
-  border-radius: 16px;
+  border-radius: var(--v2-radius-lg);
   background: var(--surface);
   text-align: left;
   box-shadow: var(--shadow-soft);
@@ -2688,7 +2696,7 @@ textarea:focus-visible {
 .home-command-tile span {
   color: var(--muted);
   font-size: 11px;
-  font-weight: 820;
+  font-weight: var(--v2-weight-bold);
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
@@ -2710,7 +2718,7 @@ textarea:focus-visible {
   color: var(--accent-deep);
   font-size: 12px;
   font-style: normal;
-  font-weight: 820;
+  font-weight: var(--v2-weight-bold);
 }
 
 .home-command-tile.success {
@@ -2770,7 +2778,7 @@ textarea:focus-visible {
 .review-row small {
   color: var(--muted);
   font-size: 11px;
-  font-weight: 800;
+  font-weight: var(--v2-weight-bold);
 }
 
 .ops-metric span,
@@ -2867,7 +2875,7 @@ textarea:focus-visible {
 .compact-meta-grid .info-item {
   min-height: 68px;
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--v2-radius-md);
   background: var(--surface-soft);
 }
 
@@ -2878,11 +2886,11 @@ textarea:focus-visible {
   align-items: start;
   padding: 10px;
   border: 1px solid #cfe0ea;
-  border-radius: 5px;
+  border-radius: var(--v2-radius-sm);
   background: var(--blue-soft);
   color: #254d68;
   font-size: 12px;
-  font-weight: 740;
+  font-weight: var(--v2-weight-strong);
   line-height: 1.38;
 }
 
@@ -2912,11 +2920,11 @@ textarea:focus-visible {
   gap: 6px;
   min-height: 44px;
   border: 1px solid var(--border);
-  border-radius: 5px;
+  border-radius: var(--v2-radius-sm);
   background: var(--surface);
   color: var(--text);
   font-size: 12px;
-  font-weight: 800;
+  font-weight: var(--v2-weight-bold);
 }
 
 .ops-actions button:first-child,
@@ -2969,7 +2977,7 @@ textarea:focus-visible {
   gap: 10px;
   padding: 12px;
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: var(--v2-radius-lg);
   background: var(--surface);
   box-shadow: var(--shadow-soft);
 }
@@ -2984,7 +2992,7 @@ textarea:focus-visible {
   width: 100%;
   aspect-ratio: 4 / 3;
   object-fit: cover;
-  border-radius: 10px;
+  border-radius: var(--v2-radius-lg);
   background: var(--surface-soft);
 }
 
@@ -2992,7 +3000,7 @@ textarea:focus-visible {
   display: grid;
   place-items: center;
   aspect-ratio: 4 / 3;
-  border-radius: 10px;
+  border-radius: var(--v2-radius-lg);
   background:
     radial-gradient(circle at 30% 20%, rgba(255, 106, 0, 0.14), transparent 34%),
     linear-gradient(180deg, #edf1f2, #f7f8f8);
@@ -3003,7 +3011,7 @@ textarea:focus-visible {
 .record-preview-empty span {
   color: var(--accent-deep);
   font-size: 11px;
-  font-weight: 820;
+  font-weight: var(--v2-weight-bold);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
@@ -3046,7 +3054,7 @@ textarea:focus-visible {
 .record-upload-card span {
   color: var(--muted);
   font-size: 11px;
-  font-weight: 800;
+  font-weight: var(--v2-weight-bold);
   text-transform: uppercase;
 }
 
@@ -3061,7 +3069,7 @@ textarea:focus-visible {
 .record-upload-card small {
   color: var(--muted);
   font-size: 11px;
-  font-weight: 750;
+  font-weight: var(--v2-weight-strong);
   line-height: 1.35;
 }
 
@@ -3072,12 +3080,12 @@ textarea:focus-visible {
   min-height: 36px;
   padding: 0 12px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--v2-radius-md);
   background: var(--surface);
   color: var(--text);
   cursor: pointer;
   font-size: 12px;
-  font-weight: 800;
+  font-weight: var(--v2-weight-bold);
 }
 
 .upload-button:has(input:disabled) {
@@ -3119,7 +3127,7 @@ textarea:focus-visible {
 .network-opening-row span {
   color: var(--muted);
   font-size: 11px;
-  font-weight: 800;
+  font-weight: var(--v2-weight-bold);
   text-transform: uppercase;
 }
 
@@ -3248,7 +3256,7 @@ textarea:focus-visible {
   background: linear-gradient(180deg, rgba(255, 106, 0, 0.12), rgba(255, 106, 0, 0.05));
   color: var(--accent-deep);
   font-size: 12px;
-  font-weight: 900;
+  font-weight: var(--v2-weight-display);
 }
 
 .records-kpi-grid {
@@ -3269,7 +3277,7 @@ textarea:focus-visible {
 .records-kpi span {
   color: var(--muted);
   font-size: 11px;
-  font-weight: 800;
+  font-weight: var(--v2-weight-bold);
   text-transform: uppercase;
 }
 
@@ -3315,7 +3323,7 @@ textarea:focus-visible {
   background: var(--surface);
   color: var(--text);
   font-size: 12px;
-  font-weight: 800;
+  font-weight: var(--v2-weight-bold);
 }
 
 .records-toolbar button:hover {
@@ -3332,7 +3340,7 @@ textarea:focus-visible {
 .record-timeline-panel span {
   color: var(--muted);
   font-size: 11px;
-  font-weight: 800;
+  font-weight: var(--v2-weight-bold);
   text-transform: uppercase;
 }
 
@@ -3369,7 +3377,7 @@ textarea:focus-visible {
   background: var(--surface-soft);
   color: var(--text);
   font-size: 12px;
-  font-weight: 800;
+  font-weight: var(--v2-weight-bold);
   text-transform: none;
 }
 
@@ -3405,7 +3413,7 @@ textarea:focus-visible {
   align-items: start;
   padding: 12px;
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--v2-radius-lg);
   background: var(--surface-soft);
 }
 
@@ -3437,7 +3445,7 @@ textarea:focus-visible {
   align-items: start;
   padding: 12px;
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--v2-radius-lg);
   background: var(--surface-soft);
 }
 
@@ -3459,7 +3467,7 @@ textarea:focus-visible {
   text-align: right;
   font-style: normal;
   font-size: 12px;
-  font-weight: 800;
+  font-weight: var(--v2-weight-bold);
 }
 
 .record-timeline-item.accent em {
@@ -3508,7 +3516,7 @@ textarea:focus-visible {
 .empty-ledger span {
   color: var(--muted);
   font-size: 12px;
-  font-weight: 820;
+  font-weight: var(--v2-weight-bold);
 }
 
 .ledger-header strong,
@@ -3533,11 +3541,11 @@ textarea:focus-visible {
   min-height: 34px;
   padding: 0 11px;
   border: 1px solid rgba(255, 106, 0, 0.24);
-  border-radius: 6px;
+  border-radius: var(--v2-radius-md);
   background: var(--accent-soft);
   color: var(--accent-deep);
   font-size: 12px;
-  font-weight: 800;
+  font-weight: var(--v2-weight-bold);
   text-decoration: none;
 }
 
@@ -3553,7 +3561,7 @@ textarea:focus-visible {
   color: var(--accent-deep);
   font-size: 15px;
   font-style: normal;
-  font-weight: 900;
+  font-weight: var(--v2-weight-display);
 }
 
 .upload-history-panel {
@@ -3603,11 +3611,11 @@ textarea:focus-visible {
   align-items: center;
   min-height: 30px;
   padding: 0 10px;
-  border-radius: 5px;
+  border-radius: var(--v2-radius-sm);
   background: var(--accent-soft);
   color: var(--accent-deep);
   font-size: 12px;
-  font-weight: 800;
+  font-weight: var(--v2-weight-bold);
 }
 
 .empty-ledger {
@@ -3685,7 +3693,7 @@ textarea:focus-visible {
   position: relative;
   color: var(--muted);
   font-size: 11px;
-  font-weight: 800;
+  font-weight: var(--v2-weight-bold);
   text-transform: uppercase;
 }
 
@@ -3719,7 +3727,7 @@ textarea:focus-visible {
   border-radius: var(--radius);
   background: var(--surface);
   color: var(--text);
-  font-weight: 760;
+  font-weight: var(--v2-weight-strong);
 }
 
 .feedback-form select {
@@ -3772,7 +3780,7 @@ textarea:focus-visible {
 .field-help {
   color: var(--muted);
   font-size: 12px;
-  font-weight: 820;
+  font-weight: var(--v2-weight-bold);
 }
 
 .admin-card strong,
@@ -3788,7 +3796,7 @@ textarea:focus-visible {
   margin: 0;
   color: var(--muted);
   font-size: 13px;
-  font-weight: 720;
+  font-weight: var(--v2-weight-strong);
   line-height: 1.42;
 }
 
@@ -3822,11 +3830,11 @@ textarea:focus-visible {
   min-height: 32px;
   padding: 0 10px;
   border: 1px solid rgba(255, 106, 0, 0.24);
-  border-radius: 6px;
+  border-radius: var(--v2-radius-md);
   background: var(--accent-soft);
   color: var(--accent-deep);
   font-size: 12px;
-  font-weight: 800;
+  font-weight: var(--v2-weight-bold);
 }
 
 .modal-toggle {
@@ -3897,7 +3905,7 @@ textarea:focus-visible {
   background: var(--accent-soft);
   color: var(--accent-deep);
   font-size: 13px;
-  font-weight: 800;
+  font-weight: var(--v2-weight-bold);
 }
 
 .ops-list-panel,
@@ -3940,11 +3948,11 @@ textarea:focus-visible {
   justify-content: center;
   min-height: 28px;
   padding: 0 9px;
-  border-radius: 5px;
+  border-radius: var(--v2-radius-sm);
   background: var(--blue-soft);
   color: var(--blue);
   font-size: 11px;
-  font-weight: 900;
+  font-weight: var(--v2-weight-display);
   text-transform: uppercase;
 }
 
@@ -3988,7 +3996,7 @@ textarea:focus-visible {
 .crew-card small {
   color: var(--muted);
   font-size: 12px;
-  font-weight: 700;
+  font-weight: var(--v2-weight-strong);
 }
 
 .crew-score {
@@ -4005,7 +4013,7 @@ textarea:focus-visible {
 .crew-score span {
   color: var(--muted);
   font-size: 12px;
-  font-weight: 800;
+  font-weight: var(--v2-weight-bold);
 }
 
 .message-workspace {
@@ -4051,7 +4059,7 @@ textarea:focus-visible {
   padding: 32px 16px;
   color: var(--muted);
   font-size: 12px;
-  font-weight: 800;
+  font-weight: var(--v2-weight-bold);
   text-align: center;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -4093,7 +4101,7 @@ textarea:focus-visible {
   max-width: 78%;
   padding: 11px 12px;
   border: 1px solid var(--border);
-  border-radius: 7px;
+  border-radius: var(--v2-radius-md);
   background: var(--surface-soft);
 }
 
@@ -4210,7 +4218,7 @@ textarea:focus-visible {
 .document-checklist button span,
 .training-list button span {
   font-size: 13px;
-  font-weight: 800;
+  font-weight: var(--v2-weight-bold);
 }
 
 .document-checklist button strong,
@@ -4277,7 +4285,7 @@ textarea:focus-visible {
   color: var(--accent-deep);
   font-size: 18px;
   font-style: normal;
-  font-weight: 900;
+  font-weight: var(--v2-weight-display);
 }
 
 .ops-footer-band {
@@ -4295,7 +4303,7 @@ textarea:focus-visible {
 .ops-footer-band span {
   color: #426b54;
   font-size: 13px;
-  font-weight: 750;
+  font-weight: var(--v2-weight-strong);
 }
 
 .calculator-layout {
@@ -4309,7 +4317,7 @@ textarea:focus-visible {
 .calculator-panel {
   min-width: 0;
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: var(--v2-radius-lg);
   background: var(--surface);
   box-shadow: var(--shadow-soft);
 }
@@ -4334,7 +4342,7 @@ textarea:focus-visible {
 .calculator-breakdown span {
   color: var(--muted);
   font-size: 11px;
-  font-weight: 800;
+  font-weight: var(--v2-weight-bold);
   text-transform: uppercase;
 }
 
@@ -4359,7 +4367,7 @@ textarea:focus-visible {
   align-items: center;
   padding: 12px;
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--v2-radius-lg);
   background: var(--surface-soft);
 }
 
@@ -4378,7 +4386,7 @@ textarea:focus-visible {
   margin-top: 3px;
   color: var(--muted);
   font-size: 12px;
-  font-weight: 760;
+  font-weight: var(--v2-weight-strong);
 }
 
 .calculator-context-card button,
@@ -4389,11 +4397,11 @@ textarea:focus-visible {
   gap: 7px;
   min-height: 38px;
   border: 1px solid var(--border);
-  border-radius: 9px;
+  border-radius: var(--v2-radius-md);
   background: var(--surface);
   color: var(--text);
   font-size: 12px;
-  font-weight: 800;
+  font-weight: var(--v2-weight-bold);
   white-space: nowrap;
 }
 
@@ -4414,12 +4422,12 @@ textarea:focus-visible {
   width: 100%;
   height: 42px;
   border: 1px solid var(--border);
-  border-radius: 9px;
+  border-radius: var(--v2-radius-md);
   background: var(--surface-soft);
   color: var(--text);
   padding: 0 11px;
   font-size: 13px;
-  font-weight: 780;
+  font-weight: var(--v2-weight-strong);
 }
 
 .calculator-result-hero {
@@ -4427,7 +4435,7 @@ textarea:focus-visible {
   gap: 6px;
   padding: 16px;
   border: 1px solid var(--accent);
-  border-radius: 12px;
+  border-radius: var(--v2-radius-lg);
   background: var(--accent-soft);
 }
 
@@ -4440,7 +4448,7 @@ textarea:focus-visible {
 .calculator-result-hero small {
   color: var(--accent-deep);
   font-size: 13px;
-  font-weight: 800;
+  font-weight: var(--v2-weight-bold);
 }
 
 .calculator-result-grid {
@@ -4451,7 +4459,7 @@ textarea:focus-visible {
 
 .calculator-result-grid .info-item {
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--v2-radius-lg);
   background: var(--surface-soft);
 }
 
@@ -4468,7 +4476,7 @@ textarea:focus-visible {
   min-height: 42px;
   padding: 0 12px;
   border: 1px solid var(--border);
-  border-radius: 9px;
+  border-radius: var(--v2-radius-md);
   background: var(--surface-soft);
 }
 
@@ -4481,7 +4489,7 @@ textarea:focus-visible {
   gap: 6px;
   padding: 12px;
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--v2-radius-lg);
   background: var(--blue-soft);
 }
 
@@ -4571,7 +4579,7 @@ textarea:focus-visible {
   gap: 12px;
   min-height: 196px;
   padding: 14px;
-  border-radius: 14px;
+  border-radius: var(--v2-radius-lg);
   border: 1px solid rgba(8, 13, 16, 0.1);
   background:
     linear-gradient(90deg, rgba(8, 13, 16, 0.12) 1px, transparent 1px) 0 0 / 20px 20px,
@@ -4590,7 +4598,7 @@ textarea:focus-visible {
 .hero-visual-head span {
   color: var(--accent-deep);
   font-size: 11px;
-  font-weight: 900;
+  font-weight: var(--v2-weight-display);
   text-transform: uppercase;
 }
 
@@ -4612,7 +4620,7 @@ textarea:focus-visible {
   gap: 8px;
   align-items: center;
   padding: 9px 10px;
-  border-radius: 10px;
+  border-radius: var(--v2-radius-lg);
   background: rgba(8, 13, 16, 0.58);
   color: #fff;
 }
@@ -4630,7 +4638,7 @@ textarea:focus-visible {
   color: #ffb27d;
   font-style: normal;
   font-size: 12px;
-  font-weight: 800;
+  font-weight: var(--v2-weight-bold);
   font-variant-numeric: tabular-nums;
 }
 
@@ -4663,7 +4671,7 @@ textarea:focus-visible {
 .dashboard-job small {
   color: var(--muted);
   font-size: 12px;
-  font-weight: 800;
+  font-weight: var(--v2-weight-bold);
   font-variant-numeric: tabular-nums;
 }
 
@@ -4682,7 +4690,7 @@ textarea:focus-visible {
   background: transparent;
   color: #102b64;
   font-size: 12px;
-  font-weight: 780;
+  font-weight: var(--v2-weight-strong);
 }
 
 .dashboard-job {
@@ -4695,7 +4703,7 @@ textarea:focus-visible {
   padding: 13px 14px;
   border: 1px solid var(--border);
   border-left: 2px solid var(--accent);
-  border-radius: 10px;
+  border-radius: var(--v2-radius-lg);
   background: var(--surface);
 }
 
@@ -4711,7 +4719,7 @@ textarea:focus-visible {
   grid-row: 1;
   min-height: 86px;
   border: 1px solid rgba(8, 13, 16, 0.12);
-  border-radius: 6px;
+  border-radius: var(--v2-radius-md);
   background:
     linear-gradient(90deg, rgba(8, 13, 16, 0.16) 1px, transparent 1px) 0 0 / 18px 18px,
     linear-gradient(0deg, rgba(8, 13, 16, 0.1) 1px, transparent 1px) 0 0 / 18px 18px,
@@ -4747,7 +4755,7 @@ textarea:focus-visible {
   color: var(--accent-deep);
   font-size: 12px;
   font-style: normal;
-  font-weight: 800;
+  font-weight: var(--v2-weight-bold);
 }
 
 .dashboard-job em.warning {
@@ -4781,7 +4789,7 @@ textarea:focus-visible {
   justify-self: end;
   color: var(--text);
   font-size: 12px;
-  font-weight: 760;
+  font-weight: var(--v2-weight-strong);
   font-variant-numeric: tabular-nums;
 }
 
@@ -4805,11 +4813,11 @@ textarea:focus-visible {
 .dashboard-main-button {
   min-height: 44px;
   border: 1px solid var(--border);
-  border-radius: 9px;
+  border-radius: var(--v2-radius-md);
   background: var(--surface-soft);
   color: var(--text);
   font-size: 13px;
-  font-weight: 800;
+  font-weight: var(--v2-weight-bold);
 }
 
 .home-hero-copy {
@@ -4838,7 +4846,7 @@ textarea:focus-visible {
 .tool-result span {
   color: var(--muted);
   font-size: 11px;
-  font-weight: 800;
+  font-weight: var(--v2-weight-bold);
   text-transform: uppercase;
 }
 
@@ -4887,11 +4895,11 @@ textarea:focus-visible {
   min-width: 44px;
   min-height: 44px;
   border: 1px solid var(--border);
-  border-radius: 9px;
+  border-radius: var(--v2-radius-md);
   background: var(--surface);
   color: var(--text);
   font-size: 12px;
-  font-weight: 800;
+  font-weight: var(--v2-weight-bold);
   white-space: nowrap;
 }
 
@@ -4971,7 +4979,7 @@ textarea:focus-visible {
   background: transparent;
   color: var(--accent-deep);
   font-size: 12px;
-  font-weight: 800;
+  font-weight: var(--v2-weight-bold);
 }
 
 .news-feature,
@@ -5000,7 +5008,7 @@ textarea:focus-visible {
 .news-row-thumb {
   position: relative;
   overflow: hidden;
-  border-radius: 12px;
+  border-radius: var(--v2-radius-lg);
   background: var(--surface);
   border: 1px solid var(--border);
 }
@@ -5050,7 +5058,7 @@ textarea:focus-visible {
   background: rgba(9, 13, 16, 0.72);
   color: #fff;
   font-size: 9px;
-  font-weight: 900;
+  font-weight: var(--v2-weight-display);
   letter-spacing: 0.06em;
   text-transform: uppercase;
   backdrop-filter: blur(8px);
@@ -5203,7 +5211,7 @@ textarea:focus-visible {
 
 .selected-job-summary .info-item {
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--v2-radius-lg);
   background: var(--surface-soft);
 }
 
@@ -5215,7 +5223,7 @@ textarea:focus-visible {
   padding: 10px 12px;
   color: var(--amber);
   font-size: 12px;
-  font-weight: 800;
+  font-weight: var(--v2-weight-bold);
 }
 
 .shop-talk-layout {
@@ -5249,12 +5257,12 @@ textarea:focus-visible {
   min-height: 44px;
   height: 44px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--v2-radius-md);
   background: var(--surface);
   color: var(--text);
   padding: 0 11px;
   font-size: 13px;
-  font-weight: 780;
+  font-weight: var(--v2-weight-strong);
 }
 
 .shop-post-list,
@@ -5269,7 +5277,7 @@ textarea:focus-visible {
   width: 100%;
   padding: 12px;
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--v2-radius-lg);
   background: var(--surface);
   color: var(--text);
   text-align: left;
@@ -5306,7 +5314,7 @@ textarea:focus-visible {
   gap: 10px;
   padding: 12px;
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--v2-radius-lg);
   background: var(--surface-soft);
 }
 
@@ -5321,7 +5329,7 @@ textarea:focus-visible {
   width: 100%;
   resize: vertical;
   border: 1px solid var(--border);
-  border-radius: 9px;
+  border-radius: var(--v2-radius-md);
   background: var(--surface);
   color: var(--text);
   padding: 11px 12px;
@@ -5380,7 +5388,7 @@ textarea:focus-visible {
 .invoice-preview {
   min-width: 0;
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: var(--v2-radius-lg);
   background: var(--surface);
   box-shadow: var(--shadow-soft);
 }
@@ -5413,7 +5421,7 @@ textarea:focus-visible {
   gap: 6px;
   color: var(--muted);
   font-size: 12px;
-  font-weight: 800;
+  font-weight: var(--v2-weight-bold);
 }
 
 .invoice-form-grid input,
@@ -5422,12 +5430,12 @@ textarea:focus-visible {
   width: 100%;
   height: 42px;
   border: 1px solid var(--border);
-  border-radius: 9px;
+  border-radius: var(--v2-radius-md);
   background: var(--surface-soft);
   color: var(--text);
   padding: 0 11px;
   font-size: 13px;
-  font-weight: 780;
+  font-weight: var(--v2-weight-strong);
 }
 
 .invoice-preview-header {
@@ -5446,7 +5454,7 @@ textarea:focus-visible {
 .invoice-breakdown span {
   color: var(--muted);
   font-size: 11px;
-  font-weight: 800;
+  font-weight: var(--v2-weight-bold);
   text-transform: uppercase;
 }
 
@@ -5467,7 +5475,7 @@ textarea:focus-visible {
   color: var(--accent-deep);
   font-size: 12px;
   font-style: normal;
-  font-weight: 900;
+  font-weight: var(--v2-weight-display);
 }
 
 .invoice-party-grid {
@@ -5480,7 +5488,7 @@ textarea:focus-visible {
 .invoice-total-card,
 .invoice-breakdown div {
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--v2-radius-lg);
   background: var(--surface-soft);
 }
 
@@ -5546,11 +5554,11 @@ textarea:focus-visible {
   gap: 7px;
   min-height: 38px;
   border: 1px solid var(--border);
-  border-radius: 9px;
+  border-radius: var(--v2-radius-md);
   background: var(--surface);
   color: var(--text);
   font-size: 12px;
-  font-weight: 800;
+  font-weight: var(--v2-weight-bold);
 }
 
 .invoice-actions button:disabled {
@@ -5592,7 +5600,7 @@ textarea:focus-visible {
   display: block;
   min-height: 104px;
   border: 1px solid rgba(8, 13, 16, 0.12);
-  border-radius: 8px;
+  border-radius: var(--v2-radius-md);
   background:
     linear-gradient(90deg, rgba(8, 13, 16, 0.12) 1px, transparent 1px) 0 0 / 18px 18px,
     linear-gradient(0deg, rgba(8, 13, 16, 0.08) 1px, transparent 1px) 0 0 / 18px 18px,
@@ -5604,7 +5612,7 @@ textarea:focus-visible {
 .tools-command span {
   color: var(--accent-deep);
   font-size: 11px;
-  font-weight: 900;
+  font-weight: var(--v2-weight-display);
   text-transform: uppercase;
 }
 
@@ -5618,7 +5626,7 @@ textarea:focus-visible {
   margin: 6px 0 0;
   color: var(--muted);
   font-size: 13px;
-  font-weight: 720;
+  font-weight: var(--v2-weight-strong);
 }
 
 .tools-command-hub {
@@ -5641,7 +5649,7 @@ textarea:focus-visible {
   min-height: 104px;
   padding: 16px;
   border: 1px solid var(--border);
-  border-radius: 18px;
+  border-radius: var(--v2-radius-lg);
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent 100%),
     var(--surface);
@@ -5664,7 +5672,7 @@ textarea:focus-visible {
 .tool-launch-card span {
   color: var(--accent-deep);
   font-size: 11px;
-  font-weight: 900;
+  font-weight: var(--v2-weight-display);
   text-transform: uppercase;
 }
 
@@ -5693,7 +5701,7 @@ textarea:focus-visible {
   place-items: center;
   width: 42px;
   height: 42px;
-  border-radius: 12px;
+  border-radius: var(--v2-radius-lg);
   background: var(--accent-soft);
   color: var(--accent-deep);
 }
@@ -5715,7 +5723,7 @@ textarea:focus-visible {
   align-items: center;
   padding: 14px 16px;
   border: 1px solid var(--border);
-  border-radius: 18px;
+  border-radius: var(--v2-radius-lg);
   background: var(--surface);
   box-shadow: var(--shadow-soft);
 }
@@ -5731,7 +5739,7 @@ textarea:focus-visible {
   background: var(--surface-soft);
   color: var(--text);
   font-size: 12px;
-  font-weight: 850;
+  font-weight: var(--v2-weight-bold);
 }
 
 .tool-app-header-copy {
@@ -5741,7 +5749,7 @@ textarea:focus-visible {
 .tool-app-header-copy span {
   color: var(--accent-deep);
   font-size: 11px;
-  font-weight: 900;
+  font-weight: var(--v2-weight-display);
   text-transform: uppercase;
 }
 
@@ -5769,7 +5777,7 @@ textarea:focus-visible {
   background: var(--accent-soft);
   color: var(--accent-deep);
   font-size: 12px;
-  font-weight: 850;
+  font-weight: var(--v2-weight-bold);
 }
 
 .tool-app-job-chip span {
@@ -5780,7 +5788,7 @@ textarea:focus-visible {
 }
 
 .tool-app-panel {
-  border-radius: 18px;
+  border-radius: var(--v2-radius-lg);
   overflow: hidden;
 }
 
@@ -5818,7 +5826,7 @@ textarea:focus-visible {
 .jobsite-camera-card span {
   color: var(--accent-deep);
   font-size: 11px;
-  font-weight: 900;
+  font-weight: var(--v2-weight-display);
   text-transform: uppercase;
 }
 
@@ -5833,7 +5841,7 @@ textarea:focus-visible {
   margin: 7px 0 0;
   color: var(--muted);
   font-size: 13px;
-  font-weight: 720;
+  font-weight: var(--v2-weight-strong);
   line-height: 1.5;
 }
 
@@ -5849,7 +5857,7 @@ textarea:focus-visible {
   border-radius: var(--radius);
   background: var(--surface-soft);
   color: var(--text);
-  font-weight: 800;
+  font-weight: var(--v2-weight-bold);
 }
 
 .jobsite-camera-actions .primary-action {
@@ -5881,7 +5889,7 @@ textarea:focus-visible {
   gap: 6px;
   color: var(--muted);
   font-size: 12px;
-  font-weight: 800;
+  font-weight: var(--v2-weight-bold);
 }
 
 .tool-input-grid input,
@@ -5889,12 +5897,12 @@ textarea:focus-visible {
   width: 100%;
   height: 40px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--v2-radius-md);
   background: var(--surface-soft);
   color: var(--text);
   padding: 0 10px;
   font-size: 13px;
-  font-weight: 780;
+  font-weight: var(--v2-weight-strong);
 }
 
 .tool-result {
@@ -5902,7 +5910,7 @@ textarea:focus-visible {
   gap: 4px;
   padding: 12px;
   border: 1px solid rgba(255, 106, 0, 0.24);
-  border-radius: 10px;
+  border-radius: var(--v2-radius-lg);
   background: var(--accent-soft);
 }
 
@@ -5940,7 +5948,7 @@ textarea:focus-visible {
   color: var(--accent-deep);
   font-size: 11px;
   font-style: normal;
-  font-weight: 800;
+  font-weight: var(--v2-weight-bold);
 }
 
 .crew-actions,
@@ -5990,7 +5998,7 @@ textarea:focus-visible {
 .modern-job-queue,
 .modern-detail-panel {
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: var(--v2-radius-lg);
   background: var(--surface);
   box-shadow: var(--shadow-soft);
 }
@@ -6016,7 +6024,7 @@ textarea:focus-visible {
 .modern-talent-card span {
   color: var(--muted);
   font-size: 11px;
-  font-weight: 800;
+  font-weight: var(--v2-weight-bold);
   text-transform: uppercase;
 }
 
@@ -6054,11 +6062,11 @@ textarea:focus-visible {
   gap: 7px;
   min-height: 44px;
   border: 1px solid var(--border);
-  border-radius: 9px;
+  border-radius: var(--v2-radius-md);
   background: var(--surface);
   color: var(--text);
   font-size: 12px;
-  font-weight: 800;
+  font-weight: var(--v2-weight-bold);
 }
 
 .modern-command-actions button:first-child {
@@ -6080,11 +6088,11 @@ textarea:focus-visible {
   padding: 0 12px;
   min-height: 44px;
   border: 1px solid rgba(255, 106, 0, 0.24);
-  border-radius: 9px;
+  border-radius: var(--v2-radius-md);
   background: var(--accent-soft);
   color: var(--accent-deep);
   font-size: 12px;
-  font-weight: 800;
+  font-weight: var(--v2-weight-bold);
 }
 
 .modern-filter-bar {
@@ -6110,7 +6118,7 @@ textarea:focus-visible {
   background: var(--surface);
   color: var(--text);
   font-size: 13px;
-  font-weight: 800;
+  font-weight: var(--v2-weight-bold);
 }
 
 .filter-chip-row {
@@ -6128,7 +6136,7 @@ textarea:focus-visible {
   background: var(--surface-soft);
   color: var(--muted);
   font-size: 11px;
-  font-weight: 800;
+  font-weight: var(--v2-weight-bold);
 }
 
 .filter-sheet-backdrop {
@@ -6162,7 +6170,7 @@ textarea:focus-visible {
   display: block;
   color: var(--accent-deep);
   font-size: 11px;
-  font-weight: 800;
+  font-weight: var(--v2-weight-bold);
   text-transform: uppercase;
 }
 
@@ -6179,7 +6187,7 @@ textarea:focus-visible {
   border-radius: 999px;
   background: var(--surface-soft);
   color: var(--text);
-  font-weight: 800;
+  font-weight: var(--v2-weight-bold);
 }
 
 .filter-sheet .filters {
@@ -6190,7 +6198,7 @@ textarea:focus-visible {
 .filter-sheet .input-control input,
 .filter-sheet .toggle-control {
   min-height: 44px;
-  border-radius: 10px;
+  border-radius: var(--v2-radius-lg);
 }
 
 .modern-filter-bar .filters {
@@ -6207,7 +6215,7 @@ textarea:focus-visible {
 .modern-filter-bar .select-control select,
 .modern-filter-bar .input-control input,
 .modern-filter-bar .toggle-control {
-  border-radius: 10px;
+  border-radius: var(--v2-radius-lg);
   background: var(--surface);
 }
 
@@ -6281,7 +6289,7 @@ textarea:focus-visible {
   min-height: 92px;
   overflow: hidden;
   border: 1px solid rgba(8, 13, 16, 0.12);
-  border-radius: 8px;
+  border-radius: var(--v2-radius-md);
   background:
     linear-gradient(90deg, rgba(8, 13, 16, 0.12) 1px, transparent 1px) 0 0 / 18px 18px,
     linear-gradient(0deg, rgba(8, 13, 16, 0.08) 1px, transparent 1px) 0 0 / 18px 18px,
@@ -6351,12 +6359,12 @@ textarea:focus-visible {
   width: 54px;
   height: 38px;
   place-items: center;
-  border-radius: 10px;
+  border-radius: var(--v2-radius-lg);
   background: var(--accent-soft);
   color: var(--accent-deep);
   font-size: 13px;
   font-style: normal;
-  font-weight: 900;
+  font-weight: var(--v2-weight-display);
 }
 
 .modern-job-card p {
@@ -6382,7 +6390,7 @@ textarea:focus-visible {
   background: var(--surface-soft);
   color: #40535c;
   font-size: 11px;
-  font-weight: 800;
+  font-weight: var(--v2-weight-bold);
   overflow-wrap: anywhere;
 }
 
@@ -6407,7 +6415,7 @@ textarea:focus-visible {
   content: "";
   min-height: 130px;
   border: 1px solid rgba(8, 13, 16, 0.12);
-  border-radius: 10px;
+  border-radius: var(--v2-radius-lg);
   background:
     linear-gradient(90deg, rgba(8, 13, 16, 0.12) 1px, transparent 1px) 0 0 / 20px 20px,
     linear-gradient(0deg, rgba(8, 13, 16, 0.08) 1px, transparent 1px) 0 0 / 20px 20px,
@@ -6461,7 +6469,7 @@ textarea:focus-visible {
 .modern-score-label span {
   color: var(--muted);
   font-size: 10px;
-  font-weight: 900;
+  font-weight: var(--v2-weight-display);
   text-transform: uppercase;
 }
 
@@ -6470,12 +6478,12 @@ textarea:focus-visible {
   width: 54px;
   height: 38px;
   place-items: center;
-  border-radius: 10px;
+  border-radius: var(--v2-radius-lg);
   background: var(--accent-soft);
   color: var(--accent-deep);
   font-size: 13px;
   font-style: normal;
-  font-weight: 900;
+  font-weight: var(--v2-weight-display);
   font-variant-numeric: tabular-nums;
 }
 
@@ -6509,7 +6517,7 @@ textarea:focus-visible {
   gap: 12px;
   padding: 14px;
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: var(--v2-radius-lg);
   background: var(--surface-soft);
 }
 
@@ -6528,7 +6536,7 @@ textarea:focus-visible {
   align-items: start;
   color: #263940;
   font-size: 13px;
-  font-weight: 760;
+  font-weight: var(--v2-weight-strong);
   line-height: 1.4;
 }
 
@@ -6544,7 +6552,7 @@ textarea:focus-visible {
   align-items: center;
   padding: 13px;
   border: 1px solid rgba(255, 106, 0, 0.24);
-  border-radius: 12px;
+  border-radius: var(--v2-radius-lg);
   background: var(--accent-soft);
 }
 
@@ -6561,14 +6569,14 @@ textarea:focus-visible {
 .modern-talent-card small {
   color: #4f6d5c;
   font-size: 12px;
-  font-weight: 750;
+  font-weight: var(--v2-weight-strong);
 }
 
 .modern-talent-card em {
   color: var(--accent-deep);
   font-size: 16px;
   font-style: normal;
-  font-weight: 900;
+  font-weight: var(--v2-weight-display);
 }
 
 .modern-note {
@@ -6577,7 +6585,7 @@ textarea:focus-visible {
   gap: 9px;
   padding: 12px;
   border: 1px solid #d8e6ee;
-  border-radius: 12px;
+  border-radius: var(--v2-radius-lg);
   background: var(--blue-soft);
 }
 
@@ -6589,7 +6597,7 @@ textarea:focus-visible {
   margin: 0;
   color: #2f5269;
   font-size: 13px;
-  font-weight: 740;
+  font-weight: var(--v2-weight-strong);
   line-height: 1.45;
 }
 
@@ -6720,7 +6728,7 @@ textarea:focus-visible {
 .invoice-total-card,
 .answer-composer,
 .modern-detail-section {
-  border-radius: 12px;
+  border-radius: var(--v2-radius-lg);
 }
 
 .modern-job-card.selected,
@@ -7209,11 +7217,11 @@ textarea:focus-visible {
     min-height: 46px;
     padding: 4px 2px;
     border: 0;
-    border-radius: 10px;
+    border-radius: var(--v2-radius-lg);
     background: transparent;
     color: #fff;
     font-size: 9px;
-    font-weight: 800;
+    font-weight: var(--v2-weight-bold);
     line-height: 1.05;
   }
 
@@ -7241,7 +7249,7 @@ textarea:focus-visible {
     gap: 8px;
     padding: 10px;
     border: 1px solid var(--border);
-    border-radius: 14px;
+    border-radius: var(--v2-radius-lg);
     background: var(--nav);
     box-shadow: var(--shadow);
   }
@@ -7262,7 +7270,7 @@ textarea:focus-visible {
   .mobile-more-heading span {
     color: #aebdc4;
     font-size: 11px;
-    font-weight: 760;
+    font-weight: var(--v2-weight-strong);
   }
 
   .mobile-more-sheet button {
@@ -7347,7 +7355,7 @@ textarea:focus-visible {
     width: 32px;
     min-height: 32px;
     border-color: rgba(255, 255, 255, 0.16);
-    border-radius: 9px;
+    border-radius: var(--v2-radius-md);
     background: rgba(255, 255, 255, 0.08);
     color: #fff;
   }
@@ -7359,7 +7367,7 @@ textarea:focus-visible {
     flex-basis: 44px;
     justify-self: end;
     border-color: rgba(255, 255, 255, 0.16);
-    border-radius: 9px;
+    border-radius: var(--v2-radius-md);
     background: rgba(255, 255, 255, 0.08);
     color: #fff;
   }
@@ -7376,7 +7384,7 @@ textarea:focus-visible {
     width: 32px;
     min-height: 32px;
     border: 1px solid rgba(255, 255, 255, 0.16);
-    border-radius: 9px;
+    border-radius: var(--v2-radius-md);
     background: rgba(255, 255, 255, 0.08);
   }
 
@@ -7530,7 +7538,7 @@ textarea:focus-visible {
   .mobile-shop-prompt small {
     color: #98a8ae;
     font-size: 10px;
-    font-weight: 800;
+    font-weight: var(--v2-weight-bold);
     letter-spacing: 0;
     text-transform: uppercase;
   }
@@ -7544,7 +7552,7 @@ textarea:focus-visible {
   .mobile-today-heading small {
     color: #b8c5c9;
     font-size: 12px;
-    font-weight: 750;
+    font-weight: var(--v2-weight-strong);
   }
 
   .mobile-work-card {
@@ -7570,7 +7578,7 @@ textarea:focus-visible {
     grid-row: 1;
     min-height: 54px;
     border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 7px;
+    border-radius: var(--v2-radius-md);
     background:
       linear-gradient(90deg, rgba(255, 255, 255, 0.16) 1px, transparent 1px) 0 0 / 14px 14px,
       linear-gradient(0deg, rgba(255, 255, 255, 0.1) 1px, transparent 1px) 0 0 / 14px 14px,
@@ -7614,7 +7622,7 @@ textarea:focus-visible {
     color: var(--accent);
     font-size: 13px;
     font-style: normal;
-    font-weight: 900;
+    font-weight: var(--v2-weight-display);
   }
 
   .mobile-signal-grid,
@@ -7667,7 +7675,7 @@ textarea:focus-visible {
       linear-gradient(180deg, rgba(19, 22, 24, 0.92), rgba(11, 14, 15, 0.98));
     color: #edf4f6;
     font-size: 12px;
-    font-weight: 800;
+    font-weight: var(--v2-weight-bold);
   }
 
   .mobile-action-grid .primary-action {
@@ -7699,7 +7707,7 @@ textarea:focus-visible {
   .mobile-section-title span {
     color: #fff;
     font-size: 14px;
-    font-weight: 900;
+    font-weight: var(--v2-weight-display);
   }
 
   .mobile-section-title button {
@@ -7710,7 +7718,7 @@ textarea:focus-visible {
     background: rgba(255, 255, 255, 0.04);
     color: #b8c5c9;
     font-size: 11px;
-    font-weight: 800;
+    font-weight: var(--v2-weight-bold);
   }
 
   .mobile-next-row {
@@ -7767,7 +7775,7 @@ textarea:focus-visible {
   .mobile-next-row small {
     color: #b8c5c9;
     font-size: 11px;
-    font-weight: 750;
+    font-weight: var(--v2-weight-strong);
   }
 
   .mobile-shop-prompt {
@@ -8021,7 +8029,7 @@ textarea:focus-visible {
 
   .info-item {
     border: 1px solid var(--border);
-    border-radius: 6px;
+    border-radius: var(--v2-radius-md);
   }
 }
 
@@ -8057,7 +8065,7 @@ textarea:focus-visible {
   background: transparent;
   color: var(--muted);
   font-size: 13px;
-  font-weight: 700;
+  font-weight: var(--v2-weight-strong);
   cursor: pointer;
   white-space: nowrap;
 }
@@ -8157,7 +8165,7 @@ textarea:focus-visible {
 .guest-prompt h2 {
   margin: 0;
   font-size: 18px;
-  font-weight: 800;
+  font-weight: var(--v2-weight-bold);
   line-height: 1.2;
 }
 
@@ -8196,7 +8204,7 @@ textarea:focus-visible {
   min-height: 44px;
   padding: 10px 12px;
   font-size: 13px;
-  font-weight: 500;
+  font-weight: var(--v2-weight-semibold);
   color: var(--text-muted);
   background: none;
   border: none;
@@ -8212,7 +8220,7 @@ textarea:focus-visible {
 .shop-talk-rules {
   margin-bottom: 10px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--v2-radius-md);
   overflow: hidden;
 }
 .rules-toggle {
@@ -8223,7 +8231,7 @@ textarea:focus-visible {
   min-height: 44px;
   padding: 10px 12px;
   font-size: 12px;
-  font-weight: 600;
+  font-weight: var(--v2-weight-semibold);
   color: var(--text-muted);
   background: none;
   border: none;
@@ -8250,8 +8258,8 @@ textarea:focus-visible {
   min-height: 44px;
   padding: 5px 12px;
   font-size: 12px;
-  font-weight: 500;
-  border-radius: 20px;
+  font-weight: var(--v2-weight-semibold);
+  border-radius: var(--v2-radius-lg);
   border: 1px solid var(--border);
   background: none;
   color: var(--text-muted);
@@ -8268,9 +8276,9 @@ textarea:focus-visible {
 .flair-pill {
   display: inline-block;
   padding: 2px 8px;
-  border-radius: 12px;
+  border-radius: var(--v2-radius-lg);
   font-size: 10px;
-  font-weight: 700;
+  font-weight: var(--v2-weight-strong);
   letter-spacing: 0.03em;
   text-transform: uppercase;
 }
@@ -8322,7 +8330,7 @@ textarea:focus-visible {
   display: grid;
   gap: 0;
   width: 100%;
-  border-radius: 8px;
+  border-radius: var(--v2-radius-md);
   border: 1px solid var(--border);
   background: var(--surface-soft);
   overflow: hidden;
@@ -8356,7 +8364,7 @@ textarea:focus-visible {
   padding: 0 12px 10px 84px;
   color: var(--accent);
   font-size: 10px;
-  font-weight: 800;
+  font-weight: var(--v2-weight-bold);
   letter-spacing: 0.06em;
   text-transform: uppercase;
   text-decoration: none;
@@ -8368,9 +8376,9 @@ textarea:focus-visible {
 .news-urgency-pill {
   display: inline-block;
   padding: 2px 7px;
-  border-radius: 10px;
+  border-radius: var(--v2-radius-lg);
   font-size: 10px;
-  font-weight: 700;
+  font-weight: var(--v2-weight-strong);
   letter-spacing: 0.04em;
   text-transform: uppercase;
   background: rgba(212,122,122,0.18);
@@ -8398,7 +8406,7 @@ textarea:focus-visible {
 }
 .shop-news-discuss {
   padding: 20px;
-  border-radius: 10px;
+  border-radius: var(--v2-radius-lg);
   background: var(--surface-raised);
   border: 1px solid var(--border);
   display: flex;
@@ -8411,7 +8419,7 @@ textarea:focus-visible {
 /* New Post Modal */
 .new-post-modal {
   background: var(--surface);
-  border-radius: 14px;
+  border-radius: var(--v2-radius-lg);
   border: 1px solid var(--border);
   width: 100%;
   max-width: 560px;
@@ -8433,7 +8441,7 @@ textarea:focus-visible {
   flex-direction: column;
   gap: 8px;
 }
-.new-post-flair-picker > span { font-size: 12px; font-weight: 600; color: var(--text-muted); }
+.new-post-flair-picker > span { font-size: 12px; font-weight: var(--v2-weight-semibold); color: var(--text-muted); }
 .new-post-flair-picker > small { font-size: 11.5px; color: var(--text-muted); }
 
 .flair-options {
@@ -8443,11 +8451,11 @@ textarea:focus-visible {
 }
 .flair-option {
   padding: 5px 12px;
-  border-radius: 16px;
+  border-radius: var(--v2-radius-lg);
   border: 1.5px solid var(--border);
   background: none;
   font-size: 12px;
-  font-weight: 600;
+  font-weight: var(--v2-weight-semibold);
   cursor: pointer;
   transition: all 0.15s;
   color: var(--text-muted);
@@ -8475,7 +8483,7 @@ textarea:focus-visible {
   gap: 6px;
   padding: 10px 12px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--v2-radius-md);
   animation: skeleton-pulse 1.4s ease-in-out infinite;
 }
 @keyframes skeleton-pulse {
@@ -8485,12 +8493,12 @@ textarea:focus-visible {
 .skeleton-pill {
   width: 72px;
   height: 14px;
-  border-radius: 8px;
+  border-radius: var(--v2-radius-md);
   background: var(--border);
 }
 .skeleton-line {
   height: 13px;
-  border-radius: 4px;
+  border-radius: var(--v2-radius-sm);
   background: var(--border);
 }
 .skeleton-line.short { width: 55%; }
@@ -8525,7 +8533,7 @@ textarea:focus-visible {
 .quiz-card-btn svg { color: var(--blue); }
 .quiz-card-btn.complete svg,
 .quiz-card-btn.active svg { color: var(--accent); }
-.quiz-card-btn span { font-size: 13px; font-weight: 800; }
+.quiz-card-btn span { font-size: 13px; font-weight: var(--v2-weight-bold); }
 .quiz-card-btn strong { color: var(--muted); font-size: 12px; }
 .quiz-card-btn.complete strong { color: var(--accent); }
 
@@ -8550,7 +8558,7 @@ textarea:focus-visible {
 .quiz-progress-overall small { font-size: 11px; color: var(--muted); white-space: nowrap; }
 .quiz-overview-body { font-size: 13px; color: var(--text-muted); line-height: 1.55; margin: 0; }
 .quiz-risk-section { display: flex; flex-direction: column; gap: 8px; }
-.quiz-risk-section > .section-label { font-size: 11px; font-weight: 900; text-transform: uppercase; color: var(--muted); letter-spacing: 0.05em; }
+.quiz-risk-section > .section-label { font-size: 11px; font-weight: var(--v2-weight-display); text-transform: uppercase; color: var(--muted); letter-spacing: 0.05em; }
 
 /* Overview card grid */
 .quiz-overview-grid {
@@ -8580,8 +8588,8 @@ textarea:focus-visible {
 .quiz-overview-card:not(.passed) .quiz-overview-card-icon svg { color: var(--blue); }
 .quiz-overview-card.passed .quiz-overview-card-icon svg { color: var(--accent); }
 .quiz-overview-card strong { font-size: 13px; line-height: 1.3; }
-.quiz-overview-card span { font-size: 10px; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
-.quiz-cert-date { font-size: 11px; color: var(--accent); font-style: normal; font-weight: 800; margin-top: 2px; }
+.quiz-overview-card span { font-size: 10px; color: var(--muted); font-weight: var(--v2-weight-strong); text-transform: uppercase; letter-spacing: 0.04em; }
+.quiz-cert-date { font-size: 11px; color: var(--accent); font-style: normal; font-weight: var(--v2-weight-bold); margin-top: 2px; }
 .quiz-cert-pending { color: var(--muted) !important; }
 
 /* Quiz taker component */
@@ -8605,7 +8613,7 @@ textarea:focus-visible {
 .quiz-taker-header strong { display: block; font-size: 14px; }
 .quiz-counter {
   font-size: 12px;
-  font-weight: 900;
+  font-weight: var(--v2-weight-display);
   color: var(--muted);
   white-space: nowrap;
 }
@@ -8629,7 +8637,7 @@ textarea:focus-visible {
 }
 .quiz-question-text {
   font-size: 15px;
-  font-weight: 700;
+  font-weight: var(--v2-weight-strong);
   line-height: 1.5;
   margin: 0;
 }
@@ -8662,7 +8670,7 @@ textarea:focus-visible {
   border-radius: 50%;
   border: 1.5px solid currentColor;
   font-size: 11px;
-  font-weight: 900;
+  font-weight: var(--v2-weight-display);
   flex-shrink: 0;
   opacity: 0.6;
 }
@@ -8719,7 +8727,7 @@ textarea:focus-visible {
   gap: 8px;
 }
 .quiz-result-badge strong { font-size: 22px; }
-.quiz-result-badge span { font-size: 36px; font-weight: 900; letter-spacing: -0.02em; }
+.quiz-result-badge span { font-size: 36px; font-weight: var(--v2-weight-display); letter-spacing: -0.02em; }
 .quiz-result-badge.pass svg { color: var(--accent); }
 .quiz-result-badge.pass strong { color: var(--accent); }
 .quiz-result-badge.pass span { color: var(--accent); }
@@ -8756,7 +8764,7 @@ textarea:focus-visible {
 .quiz-review-indicator { flex-shrink: 0; margin-top: 1px; }
 .quiz-review-row.correct .quiz-review-indicator svg { color: #1a9e4a; }
 .quiz-review-row.incorrect .quiz-review-indicator svg { color: #c0392b; }
-.quiz-review-row p { margin: 0 0 4px; font-weight: 700; }
+.quiz-review-row p { margin: 0 0 4px; font-weight: var(--v2-weight-strong); }
 .quiz-review-row small { display: block; color: var(--text-muted); }
 .quiz-review-row small strong { color: var(--text); }
 .quiz-action-row { display: flex; gap: 10px; margin-top: 4px; }
@@ -8776,7 +8784,7 @@ textarea:focus-visible {
   align-items: center;
   gap: 8px;
   font-size: 12px;
-  font-weight: 900;
+  font-weight: var(--v2-weight-display);
   color: var(--text);
 }
 .modal-quiz-section-header svg { color: var(--accent); flex-shrink: 0; }
@@ -8784,7 +8792,7 @@ textarea:focus-visible {
 .modal-quiz-section-header em {
   font-style: normal;
   font-size: 10px;
-  font-weight: 700;
+  font-weight: var(--v2-weight-strong);
   color: var(--muted);
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -8804,8 +8812,8 @@ textarea:focus-visible {
   border-bottom: 1px solid var(--border);
 }
 .modal-quiz-toggle:last-child { border-bottom: none; padding-bottom: 0; }
-.modal-quiz-toggle span { font-size: 13px; font-weight: 700; line-height: 1.4; }
-.modal-quiz-toggle small { display: block; font-size: 11px; color: var(--muted); font-weight: 600; margin-top: 1px; }
+.modal-quiz-toggle span { font-size: 13px; font-weight: var(--v2-weight-strong); line-height: 1.4; }
+.modal-quiz-toggle small { display: block; font-size: 11px; color: var(--muted); font-weight: var(--v2-weight-semibold); margin-top: 1px; }
 
 /* Job detail cert requirement banner */
 .cert-requirement-banner {
@@ -8838,7 +8846,7 @@ textarea:focus-visible {
   align-items: center;
   justify-content: space-between;
   font-size: 12px;
-  font-weight: 900;
+  font-weight: var(--v2-weight-display);
   text-transform: uppercase;
   color: var(--muted);
 }
@@ -8848,10 +8856,10 @@ textarea:focus-visible {
   gap: 5px;
   padding: 6px 10px;
   border: 1px solid var(--border);
-  border-radius: 5px;
+  border-radius: var(--v2-radius-sm);
   background: var(--surface);
   font-size: 12px;
-  font-weight: 700;
+  font-weight: var(--v2-weight-strong);
   cursor: pointer;
 }
 .small-button:hover { border-color: var(--accent); color: var(--accent); }
@@ -8871,7 +8879,7 @@ textarea:focus-visible {
 .invoice-line-row select {
   padding: 8px 10px;
   border: 1px solid var(--border);
-  border-radius: 5px;
+  border-radius: var(--v2-radius-sm);
   background: var(--surface);
   color: var(--text);
   font-size: 12px;
@@ -8897,14 +8905,14 @@ textarea:focus-visible {
   gap: 10px;
   align-items: center;
   font-size: 12px;
-  font-weight: 800;
+  font-weight: var(--v2-weight-bold);
   padding: 10px 0;
   border-top: 1px solid var(--border);
 }
 .invoice-tax-label input {
   padding: 8px 10px;
   border: 1px solid var(--border);
-  border-radius: 5px;
+  border-radius: var(--v2-radius-sm);
   background: var(--surface);
   font-size: 12px;
 }
@@ -8939,7 +8947,7 @@ textarea:focus-visible {
   border-bottom: 3px solid transparent;
   color: var(--muted);
   font-size: 12px;
-  font-weight: 800;
+  font-weight: var(--v2-weight-bold);
   text-transform: uppercase;
   cursor: pointer;
   transition: all 0.15s;
@@ -8966,7 +8974,7 @@ textarea:focus-visible {
   flex-direction: column;
   gap: 6px;
   font-size: 11px;
-  font-weight: 800;
+  font-weight: var(--v2-weight-bold);
   text-transform: uppercase;
   color: var(--muted);
 }
@@ -8974,7 +8982,7 @@ textarea:focus-visible {
 .calc-grid select {
   padding: 8px 10px;
   border: 1px solid var(--border);
-  border-radius: 5px;
+  border-radius: var(--v2-radius-sm);
   background: var(--surface-soft);
   color: var(--text);
   font-size: 13px;
@@ -8997,14 +9005,14 @@ textarea:focus-visible {
 }
 .calc-result span {
   font-size: 11px;
-  font-weight: 800;
+  font-weight: var(--v2-weight-bold);
   color: var(--muted);
   text-transform: uppercase;
 }
 .calc-result strong {
   font-size: 24px;
   color: var(--accent);
-  font-weight: 900;
+  font-weight: var(--v2-weight-display);
 }
 .calc-result small {
   font-size: 11px;
@@ -9027,7 +9035,7 @@ textarea:focus-visible {
 }
 .shortcut-result span {
   font-size: 11px;
-  font-weight: 800;
+  font-weight: var(--v2-weight-bold);
   color: var(--muted);
   text-transform: uppercase;
 }
@@ -9056,7 +9064,7 @@ textarea:focus-visible {
 .material-row input {
   padding: 6px 8px;
   border: 1px solid var(--border);
-  border-radius: 4px;
+  border-radius: var(--v2-radius-sm);
   background: var(--surface-soft);
   font-size: 12px;
 }
@@ -9067,7 +9075,7 @@ textarea:focus-visible {
 }
 .material-total {
   font-size: 12px;
-  font-weight: 700;
+  font-weight: var(--v2-weight-strong);
   color: var(--accent);
   text-align: right;
 }
@@ -9078,7 +9086,7 @@ textarea:focus-visible {
   align-items: center;
   padding: 10px 12px;
   border-top: 2px solid var(--border);
-  font-weight: 800;
+  font-weight: var(--v2-weight-bold);
 }
 .material-total-section span {
   font-size: 12px;
@@ -9093,7 +9101,7 @@ textarea:focus-visible {
 
 .calc-phone {
   border: 1px solid var(--border);
-  border-radius: 14px;
+  border-radius: var(--v2-radius-lg);
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -9117,11 +9125,11 @@ textarea:focus-visible {
 .calc-mode-btn {
   padding: 4px 12px;
   border: 1px solid rgba(255,255,255,0.2);
-  border-radius: 20px;
+  border-radius: var(--v2-radius-lg);
   background: transparent;
   color: rgba(255,255,255,0.45);
   font-size: 11px;
-  font-weight: 900;
+  font-weight: var(--v2-weight-display);
   letter-spacing: 0.08em;
   cursor: pointer;
   transition: all 0.12s;
@@ -9136,12 +9144,12 @@ textarea:focus-visible {
   margin-left: auto;
   font-size: 12px;
   color: rgba(255,255,255,0.55);
-  font-weight: 600;
+  font-weight: var(--v2-weight-semibold);
 }
 
 .calc-display-main {
   font-size: 40px;
-  font-weight: 200;
+  font-weight: var(--v2-weight-body);
   color: #fff;
   text-align: right;
   line-height: 1;
@@ -9173,7 +9181,7 @@ textarea:focus-visible {
   background: var(--surface-soft);
   color: var(--text);
   font-size: 12px;
-  font-weight: 700;
+  font-weight: var(--v2-weight-strong);
   cursor: pointer;
   transition: background 0.1s;
 }
@@ -9194,7 +9202,7 @@ textarea:focus-visible {
   background: var(--surface);
   color: var(--text);
   font-size: 20px;
-  font-weight: 400;
+  font-weight: var(--v2-weight-body);
   cursor: pointer;
   transition: background 0.08s;
   line-height: 1;
@@ -9203,8 +9211,8 @@ textarea:focus-visible {
 .calc-op-btn:nth-child(4n),
 .calc-eq-btn:nth-child(4n),
 .calc-util-btn:nth-child(4n) { border-right: none; }
-.calc-op-btn { background: var(--surface-soft); color: var(--accent); font-size: 22px; font-weight: 300; }
-.calc-eq-btn { background: var(--accent); color: #fff; font-size: 22px; font-weight: 700; }
+.calc-op-btn { background: var(--surface-soft); color: var(--accent); font-size: 22px; font-weight: var(--v2-weight-body); }
+.calc-eq-btn { background: var(--accent); color: #fff; font-size: 22px; font-weight: var(--v2-weight-strong); }
 .calc-util-btn { background: var(--surface-soft); color: var(--muted); font-size: 18px; }
 .calc-num:active, .calc-op-btn:active, .calc-util-btn:active { filter: brightness(0.82); }
 .calc-eq-btn:active { filter: brightness(0.88); }
@@ -9221,7 +9229,7 @@ textarea:focus-visible {
   color: #fff;
   border: none;
   font-size: 13px;
-  font-weight: 900;
+  font-weight: var(--v2-weight-display);
   letter-spacing: 0.05em;
   cursor: pointer;
   transition: filter 0.1s;
@@ -9234,7 +9242,7 @@ textarea:focus-visible {
   gap: 12px;
   padding: 8px 14px;
 }
-.calc-pieces > span { font-size: 10px; font-weight: 800; text-transform: uppercase; color: var(--muted); }
+.calc-pieces > span { font-size: 10px; font-weight: var(--v2-weight-bold); text-transform: uppercase; color: var(--muted); }
 .calc-pieces > button {
   width: 28px; height: 28px; border-radius: 50%;
   border: 1px solid var(--border);
@@ -9245,7 +9253,7 @@ textarea:focus-visible {
   cursor: pointer;
   display: flex; align-items: center; justify-content: center;
 }
-.calc-pieces-val { font-size: 20px; font-weight: 900; color: var(--text); min-width: 28px; text-align: center; }
+.calc-pieces-val { font-size: 20px; font-weight: var(--v2-weight-display); color: var(--text); min-width: 28px; text-align: center; }
 
 /* ── Sheet Optimizer ──────────────────────────────────────────────── */
 
@@ -9259,7 +9267,7 @@ textarea:focus-visible {
   align-items: center;
   gap: 8px;
   font-size: 11px;
-  font-weight: 800;
+  font-weight: var(--v2-weight-bold);
   text-transform: uppercase;
   color: var(--muted);
 }
@@ -9267,7 +9275,7 @@ textarea:focus-visible {
 .sheet-setting-item input[type="number"] {
   padding: 6px 8px;
   border: 1px solid var(--border);
-  border-radius: 5px;
+  border-radius: var(--v2-radius-sm);
   background: var(--surface-soft);
   color: var(--text);
   font-size: 13px;
@@ -9277,11 +9285,11 @@ textarea:focus-visible {
 .sheet-toggle {
   padding: 5px 14px;
   border: 1px solid var(--border);
-  border-radius: 20px;
+  border-radius: var(--v2-radius-lg);
   background: var(--surface-soft);
   color: var(--muted);
   font-size: 11px;
-  font-weight: 900;
+  font-weight: var(--v2-weight-display);
   cursor: pointer;
   transition: all 0.15s;
 }
@@ -9292,7 +9300,7 @@ textarea:focus-visible {
   align-items: center;
   justify-content: space-between;
   font-size: 11px;
-  font-weight: 800;
+  font-weight: var(--v2-weight-bold);
   text-transform: uppercase;
   color: var(--muted);
 }
@@ -9311,7 +9319,7 @@ textarea:focus-visible {
 .sheet-part-name {
   padding: 7px 9px;
   border: 1px solid var(--border);
-  border-radius: 5px;
+  border-radius: var(--v2-radius-sm);
   background: var(--surface-soft);
   color: var(--text);
   font-size: 13px;
@@ -9322,11 +9330,11 @@ textarea:focus-visible {
   flex-direction: column;
   gap: 2px;
 }
-.sheet-dim-label span { font-size: 9px; font-weight: 800; text-transform: uppercase; color: var(--muted); padding-left: 2px; }
+.sheet-dim-label span { font-size: 9px; font-weight: var(--v2-weight-bold); text-transform: uppercase; color: var(--muted); padding-left: 2px; }
 .sheet-dim-label input {
   padding: 7px 6px;
   border: 1px solid var(--border);
-  border-radius: 5px;
+  border-radius: var(--v2-radius-sm);
   background: var(--surface-soft);
   color: var(--text);
   font-size: 13px;
@@ -9350,8 +9358,8 @@ textarea:focus-visible {
   background: var(--surface-soft);
   text-align: center;
 }
-.sheet-stat strong { font-size: 20px; color: var(--accent); font-weight: 900; }
-.sheet-stat span { font-size: 10px; font-weight: 700; color: var(--muted); text-transform: uppercase; }
+.sheet-stat strong { font-size: 20px; color: var(--accent); font-weight: var(--v2-weight-display); }
+.sheet-stat span { font-size: 10px; font-weight: var(--v2-weight-strong); color: var(--muted); text-transform: uppercase; }
 
 .sheet-layouts {
   display: flex;
@@ -9365,7 +9373,7 @@ textarea:focus-visible {
 }
 .sheet-layout-label {
   font-size: 11px;
-  font-weight: 800;
+  font-weight: var(--v2-weight-bold);
   text-transform: uppercase;
   color: var(--muted);
 }
@@ -9373,7 +9381,7 @@ textarea:focus-visible {
   width: 100%;
   max-width: 340px;
   border: 1px solid var(--border);
-  border-radius: 5px;
+  border-radius: var(--v2-radius-sm);
   display: block;
 }
 .sheet-legend {
@@ -9419,7 +9427,7 @@ textarea:focus-visible {
   overflow: hidden;
   padding: 0;
   border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 18px;
+  border-radius: var(--v2-radius-lg);
   background:
     radial-gradient(circle at top left, rgba(147, 214, 35, 0.08), transparent 28%),
     linear-gradient(180deg, #0d1524 0%, #101826 100%);
@@ -9442,14 +9450,14 @@ textarea:focus-visible {
 .calc-exit-button {
   height: 42px;
   border: none;
-  border-radius: 12px;
+  border-radius: var(--v2-radius-lg);
   background: rgba(255, 255, 255, 0.02);
   color: var(--calc-lime);
   display: inline-flex;
   align-items: center;
   gap: 10px;
   font-size: 13px;
-  font-weight: 800;
+  font-weight: var(--v2-weight-bold);
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
@@ -9470,7 +9478,7 @@ textarea:focus-visible {
 .heavy-calc-brand-mark {
   width: 42px;
   height: 42px;
-  border-radius: 14px;
+  border-radius: var(--v2-radius-lg);
   background: linear-gradient(180deg, rgba(147, 214, 35, 0.14), rgba(147, 214, 35, 0.04));
   border: 1px solid rgba(147, 214, 35, 0.25);
   display: grid;
@@ -9481,7 +9489,7 @@ textarea:focus-visible {
 .heavy-calc-brand strong {
   display: block;
   font-size: 13px;
-  font-weight: 900;
+  font-weight: var(--v2-weight-display);
   letter-spacing: 0.14em;
   text-transform: uppercase;
 }
@@ -9490,7 +9498,7 @@ textarea:focus-visible {
   display: block;
   margin-top: 3px;
   font-size: 11px;
-  font-weight: 800;
+  font-weight: var(--v2-weight-bold);
   color: rgba(147, 214, 35, 0.84);
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -9517,7 +9525,7 @@ textarea:focus-visible {
 .suite-sheet-header span {
   display: block;
   font-size: 11px;
-  font-weight: 900;
+  font-weight: var(--v2-weight-display);
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: rgba(147, 214, 35, 0.72);
@@ -9528,7 +9536,7 @@ textarea:focus-visible {
   width: 100%;
   padding: 14px 15px;
   border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 16px;
+  border-radius: var(--v2-radius-lg);
   background: rgba(255, 255, 255, 0.015);
   color: var(--calc-text);
   display: flex;
@@ -9537,7 +9545,7 @@ textarea:focus-visible {
   gap: 12px;
   text-align: left;
 }
-.drawer-entry strong { display: block; font-size: 15px; font-weight: 800; line-height: 1.15; }
+.drawer-entry strong { display: block; font-size: 15px; font-weight: var(--v2-weight-bold); line-height: 1.15; }
 .drawer-entry small { display: block; margin-top: 4px; font-size: 12px; color: var(--calc-muted); }
 .drawer-entry.active {
   border-color: rgba(147, 214, 35, 0.42);
@@ -9555,7 +9563,7 @@ textarea:focus-visible {
   background: rgba(255, 255, 255, 0.06);
   color: var(--calc-text);
   font-size: 11px;
-  font-weight: 900;
+  font-weight: var(--v2-weight-display);
   letter-spacing: 0.08em;
 }
 .drawer-pill.accent { background: rgba(248, 197, 55, 0.16); color: #ffd44d; }
@@ -9567,7 +9575,7 @@ textarea:focus-visible {
 .theme-swatch {
   aspect-ratio: 1;
   border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 12px;
+  border-radius: var(--v2-radius-lg);
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0 50%, rgba(0, 0, 0, 0.85) 50% 100%);
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.03);
 }
@@ -9585,7 +9593,7 @@ textarea:focus-visible {
   justify-content: space-between;
   gap: 12px;
   font-size: 12px;
-  font-weight: 800;
+  font-weight: var(--v2-weight-bold);
   color: var(--calc-text);
 }
 .drawer-toggle-row span,
@@ -9636,12 +9644,12 @@ textarea:focus-visible {
 .small-button,
 .copy-chip {
   border: none;
-  border-radius: 12px;
+  border-radius: var(--v2-radius-lg);
   background: rgba(255, 255, 255, 0.03);
   color: var(--calc-text);
   padding: 11px 14px;
   font-size: 12px;
-  font-weight: 900;
+  font-weight: var(--v2-weight-display);
   letter-spacing: 0.12em;
   text-transform: uppercase;
 }
@@ -9658,7 +9666,7 @@ textarea:focus-visible {
 .calc-primary-value {
   font-size: clamp(56px, 9vw, 98px);
   line-height: 0.95;
-  font-weight: 800;
+  font-weight: var(--v2-weight-bold);
   text-align: right;
   color: #fff;
   letter-spacing: -0.04em;
@@ -9670,7 +9678,7 @@ textarea:focus-visible {
   justify-content: space-between;
   gap: 12px;
   font-size: 12px;
-  font-weight: 800;
+  font-weight: var(--v2-weight-bold);
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: rgba(242, 246, 251, 0.58);
@@ -9682,10 +9690,10 @@ textarea:focus-visible {
 .preset,
 .choice-pill {
   border: none;
-  border-radius: 14px;
+  border-radius: var(--v2-radius-lg);
   min-height: 54px;
   font-size: 18px;
-  font-weight: 800;
+  font-weight: var(--v2-weight-bold);
   background: #20242a;
   color: #f5f7fa;
 }
@@ -9693,7 +9701,7 @@ textarea:focus-visible {
 .calc-danger.ghost { background: #3d2222; }
 .calc-utility { background: #26321b; color: var(--calc-lime); font-size: 15px; }
 .calc-pad-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
-.calc-pad-grid button { min-height: 60px; background: #23262b; border-radius: 14px; }
+.calc-pad-grid button { min-height: 60px; background: #23262b; border-radius: var(--v2-radius-lg); }
 .calc-pad-grid button.op { color: var(--calc-lime); background: #1a2412; }
 .calc-pad-grid button.op.ghost { color: #ff6464; background: #301a1a; }
 .calc-pad-grid button.eq { background: var(--calc-lime); color: #0d1524; }
@@ -9703,7 +9711,7 @@ textarea:focus-visible {
 .miter-setup-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .miter-value-card {
   padding: 18px;
-  border-radius: 18px;
+  border-radius: var(--v2-radius-lg);
   background: #23262b;
   border: 1px solid rgba(255, 255, 255, 0.05);
 }
@@ -9716,7 +9724,7 @@ textarea:focus-visible {
 .suite-card small {
   display: block;
   font-size: 11px;
-  font-weight: 900;
+  font-weight: var(--v2-weight-display);
   letter-spacing: 0.14em;
   text-transform: uppercase;
   opacity: 0.75;
@@ -9730,13 +9738,13 @@ textarea:focus-visible {
 .miter-toggle-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .miter-toggle-row.tight { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .choice-pill,
-.preset { min-height: 48px; border-radius: 12px; background: #23262b; color: #dfe7ef; font-size: 14px; }
+.preset { min-height: 48px; border-radius: var(--v2-radius-lg); background: #23262b; color: #dfe7ef; font-size: 14px; }
 .choice-pill.active,
 .preset.active { background: var(--calc-lime); color: #0d1524; }
 .miter-readout { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; padding-top: 4px; }
 .miter-readout > div {
   min-height: 170px;
-  border-radius: 20px;
+  border-radius: var(--v2-radius-lg);
   background: linear-gradient(180deg, #101722, #121d2d);
   border: 1px solid rgba(255, 255, 255, 0.05);
   display: flex;
@@ -9754,18 +9762,18 @@ textarea:focus-visible {
 .miter-config-card,
 .suite-summary-card {
   padding: 18px;
-  border-radius: 20px;
+  border-radius: var(--v2-radius-lg);
   background: #191d24;
   border: 1px solid rgba(255, 255, 255, 0.05);
 }
 .miter-config-card strong { display: block; margin-top: 8px; font-size: 18px; color: var(--calc-lime); letter-spacing: 0.08em; }
-.miter-config-card p { margin: 10px 0 0; font-size: 16px; font-weight: 900; }
+.miter-config-card p { margin: 10px 0 0; font-size: 16px; font-weight: var(--v2-weight-display); }
 .miter-config-card small { display: block; margin-top: 6px; font-size: 12px; color: rgba(242, 246, 251, 0.45); }
 
 .suite-list { display: grid; gap: 12px; }
 .suite-card {
   padding: 16px;
-  border-radius: 18px;
+  border-radius: var(--v2-radius-lg);
   background: #1d2230;
   display: grid;
   grid-template-columns: 24px minmax(0, 1fr) auto;
@@ -9785,7 +9793,7 @@ textarea:focus-visible {
   background: rgba(248, 197, 55, 0.14);
   color: #ffd24d;
   font-size: 11px;
-  font-weight: 900;
+  font-weight: var(--v2-weight-display);
   letter-spacing: 0.12em;
 }
 .settings-stretch,
@@ -9794,7 +9802,7 @@ textarea:focus-visible {
 .theme-card {
   aspect-ratio: 1;
   border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 14px;
+  border-radius: var(--v2-radius-lg);
   background: #161a22;
   display: grid;
   place-items: center;
@@ -9812,7 +9820,7 @@ textarea:focus-visible {
 .theme-card.selected { outline: 2px solid var(--calc-lime); outline-offset: 2px; }
 
 .suite-summary-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
-.suite-stat { padding: 14px; border-radius: 16px; background: #222633; text-align: center; }
+.suite-stat { padding: 14px; border-radius: var(--v2-radius-lg); background: #222633; text-align: center; }
 .suite-stat strong { display: block; font-size: 28px; color: #fff; }
 .suite-summary-foot {
   margin-top: 14px;
@@ -9840,7 +9848,7 @@ textarea:focus-visible {
   gap: 8px;
   color: rgba(242, 246, 251, 0.4);
   font-size: 13px;
-  font-weight: 900;
+  font-weight: var(--v2-weight-display);
 }
 .ruler-tick::before { content: ""; flex: 1; height: 2px; background: rgba(147, 214, 35, 0.18); }
 .ruler-tick.major { color: rgba(242, 246, 251, 0.78); }
@@ -9919,7 +9927,7 @@ textarea:focus-visible {
   padding: 0;
   overflow: hidden;
   align-items: stretch;
-  border-radius: 10px;
+  border-radius: var(--v2-radius-lg);
   text-align: left;
 }
 
@@ -9945,7 +9953,7 @@ textarea:focus-visible {
   background: rgba(9, 13, 16, 0.68);
   color: #fff;
   font-size: 9px;
-  font-weight: 900;
+  font-weight: var(--v2-weight-display);
   letter-spacing: 0.06em;
   text-transform: uppercase;
   text-align: center;
@@ -9961,7 +9969,7 @@ textarea:focus-visible {
 .news-card-body strong {
   font-size: 13px;
   line-height: 1.35;
-  font-weight: 700;
+  font-weight: var(--v2-weight-strong);
 }
 .news-card-body small {
   font-size: 11px;
@@ -9974,7 +9982,7 @@ textarea:focus-visible {
   align-items: center;
   justify-content: space-between;
   padding: 20px 20px 16px;
-  border-radius: 10px;
+  border-radius: var(--v2-radius-lg);
   color: #fff;
   background: #334f5b;
   margin-bottom: 4px;
@@ -9986,7 +9994,7 @@ textarea:focus-visible {
 .news-detail-hero[data-urgency="default"] { background: linear-gradient(135deg, #334f5b, #1e3540); }
 .news-detail-source {
   font-size: 18px;
-  font-weight: 900;
+  font-weight: var(--v2-weight-display);
   letter-spacing: -0.01em;
 }
 .news-detail-hero .news-urgency-pill {
@@ -10010,7 +10018,7 @@ textarea:focus-visible {
   background: none;
   color: var(--accent);
   font-size: 14px;
-  font-weight: 700;
+  font-weight: var(--v2-weight-strong);
   cursor: pointer;
 }
 
@@ -10018,19 +10026,19 @@ textarea:focus-visible {
 .shop-talk-command h2,
 .shop-question-header h2 {
   font-size: 24px;
-  font-weight: 800;
+  font-weight: var(--v2-weight-bold);
   letter-spacing: -0.02em;
   line-height: 1.15;
 }
 
 .shop-post-card {
   padding: 14px 16px;
-  border-radius: 12px;
+  border-radius: var(--v2-radius-lg);
 }
 
 .shop-post-card strong {
   font-size: 14px;
-  font-weight: 700;
+  font-weight: var(--v2-weight-strong);
   line-height: 1.4;
 }
 
@@ -10083,7 +10091,7 @@ textarea:focus-visible {
 
 .shop-news-card {
   display: block;
-  border-radius: 14px;
+  border-radius: var(--v2-radius-lg);
   border-color: color-mix(in srgb, var(--border) 72%, transparent);
   background: color-mix(in srgb, var(--surface) 92%, var(--surface-soft));
   box-shadow: none;
@@ -10111,7 +10119,7 @@ textarea:focus-visible {
 .news-card-thumb {
   min-height: 118px;
   aspect-ratio: 1 / 1;
-  border-radius: 12px;
+  border-radius: var(--v2-radius-lg);
   background: #101922;
 }
 
@@ -10143,7 +10151,7 @@ textarea:focus-visible {
   display: block;
   color: var(--text);
   font-size: 15px;
-  font-weight: 840;
+  font-weight: var(--v2-weight-bold);
   line-height: 1.25;
   letter-spacing: -0.01em;
   text-wrap: pretty;
@@ -10165,7 +10173,7 @@ textarea:focus-visible {
 .news-card-body small {
   color: var(--muted);
   font-size: 11px;
-  font-weight: 760;
+  font-weight: var(--v2-weight-strong);
   line-height: 1.25;
 }
 
@@ -10181,7 +10189,7 @@ textarea:focus-visible {
   background: color-mix(in srgb, var(--accent) 13%, transparent);
   color: var(--accent-deep);
   font-size: 9.5px;
-  font-weight: 900;
+  font-weight: var(--v2-weight-display);
   line-height: 1;
 }
 
@@ -10209,7 +10217,7 @@ textarea:focus-visible {
   margin: 0;
   padding: 0;
   overflow: hidden;
-  border-radius: 16px;
+  border-radius: var(--v2-radius-lg);
   background: #101922;
 }
 
@@ -10249,7 +10257,7 @@ textarea:focus-visible {
   background: rgba(9, 13, 16, 0.62);
   color: #fff;
   font-size: 11px;
-  font-weight: 920;
+  font-weight: var(--v2-weight-display);
   letter-spacing: 0.06em;
   line-height: 1;
   text-transform: uppercase;
@@ -10268,7 +10276,7 @@ textarea:focus-visible {
 .shop-news-detail-header small {
   color: var(--muted);
   font-size: 12px;
-  font-weight: 780;
+  font-weight: var(--v2-weight-strong);
 }
 
 .shop-news-detail-body {
@@ -10287,7 +10295,7 @@ textarea:focus-visible {
 }
 
 .shop-news-discuss {
-  border-radius: 14px;
+  border-radius: var(--v2-radius-lg);
   border-color: color-mix(in srgb, var(--border) 70%, transparent);
 }
 
@@ -10297,14 +10305,14 @@ textarea:focus-visible {
   gap: 12px;
   min-height: 116px;
   padding: 12px;
-  border-radius: 14px;
+  border-radius: var(--v2-radius-lg);
   background: var(--surface);
 }
 
 .news-skeleton::before {
   content: "";
   grid-row: 1 / 4;
-  border-radius: 12px;
+  border-radius: var(--v2-radius-lg);
   background: linear-gradient(90deg, var(--surface-soft), color-mix(in srgb, var(--surface-soft) 62%, #fff), var(--surface-soft));
   background-size: 180% 100%;
   animation: skeletonPulse 1.4s ease-in-out infinite;
@@ -10378,7 +10386,7 @@ textarea:focus-visible {
 .shop-talk-detail {
   overflow: hidden;
   border-color: color-mix(in srgb, var(--border) 70%, transparent);
-  border-radius: 14px;
+  border-radius: var(--v2-radius-lg);
   background: var(--surface);
   box-shadow: 0 14px 32px rgba(13, 17, 20, 0.045);
 }
@@ -10398,14 +10406,14 @@ textarea:focus-visible {
   margin: 0;
   padding: 4px;
   border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
-  border-radius: 12px;
+  border-radius: var(--v2-radius-lg);
   background: var(--surface-soft);
 }
 
 .shop-talk-tabs button {
   justify-content: center;
   border: 0;
-  border-radius: 9px;
+  border-radius: var(--v2-radius-md);
   color: var(--muted);
 }
 
@@ -10420,7 +10428,7 @@ textarea:focus-visible {
   align-items: start;
   gap: 14px;
   padding: 16px;
-  border-radius: 14px;
+  border-radius: var(--v2-radius-lg);
   background:
     linear-gradient(135deg, color-mix(in srgb, var(--accent) 8%, transparent), transparent 54%),
     var(--surface-soft);
@@ -10460,7 +10468,7 @@ textarea:focus-visible {
   gap: 3px;
   padding: 10px;
   border: 1px solid color-mix(in srgb, var(--border) 68%, transparent);
-  border-radius: 10px;
+  border-radius: var(--v2-radius-lg);
   background: color-mix(in srgb, var(--surface) 86%, transparent);
   text-transform: none;
 }
@@ -10475,7 +10483,7 @@ textarea:focus-visible {
 .shop-talk-kpi-strip small {
   color: var(--muted);
   font-size: 10px;
-  font-weight: 850;
+  font-weight: var(--v2-weight-bold);
   letter-spacing: 0.06em;
   line-height: 1.1;
   text-transform: uppercase;
@@ -10486,7 +10494,7 @@ textarea:focus-visible {
   gap: 12px;
   padding: 14px;
   border: 1px solid color-mix(in srgb, var(--border) 66%, transparent);
-  border-radius: 14px;
+  border-radius: var(--v2-radius-lg);
   background:
     radial-gradient(circle at top right, color-mix(in srgb, var(--teal) 12%, transparent), transparent 44%),
     var(--surface-soft);
@@ -10499,7 +10507,7 @@ textarea:focus-visible {
   align-items: center;
   padding: 14px;
   border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--border));
-  border-radius: 14px;
+  border-radius: var(--v2-radius-lg);
   background:
     linear-gradient(135deg, color-mix(in srgb, var(--accent) 12%, transparent), transparent 58%),
     color-mix(in srgb, var(--surface-soft) 94%, var(--surface));
@@ -10515,7 +10523,7 @@ textarea:focus-visible {
 .shop-talk-active-filter span {
   color: var(--accent);
   font-size: 10px;
-  font-weight: 900;
+  font-weight: var(--v2-weight-display);
   letter-spacing: 0.08em;
   line-height: 1.1;
   text-transform: uppercase;
@@ -10546,11 +10554,11 @@ textarea:focus-visible {
 
 .shop-talk-answer-actions button:not(.primary-action) {
   border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
-  border-radius: 10px;
+  border-radius: var(--v2-radius-lg);
   background: var(--surface);
   color: var(--text);
   font-size: 12px;
-  font-weight: 800;
+  font-weight: var(--v2-weight-bold);
 }
 
 .shop-talk-reputation-path {
@@ -10558,7 +10566,7 @@ textarea:focus-visible {
   gap: 12px;
   padding: 14px;
   border: 1px solid color-mix(in srgb, var(--teal) 24%, var(--border));
-  border-radius: 14px;
+  border-radius: var(--v2-radius-lg);
   background:
     linear-gradient(135deg, color-mix(in srgb, var(--teal) 10%, transparent), transparent 62%),
     var(--surface-soft);
@@ -10577,7 +10585,7 @@ textarea:focus-visible {
   gap: 7px;
   color: var(--teal);
   font-size: 10px;
-  font-weight: 900;
+  font-weight: var(--v2-weight-display);
   letter-spacing: 0.08em;
   line-height: 1.1;
   text-transform: uppercase;
@@ -10603,7 +10611,7 @@ textarea:focus-visible {
   min-width: 0;
   padding: 10px;
   border: 1px solid color-mix(in srgb, var(--border) 58%, transparent);
-  border-radius: 10px;
+  border-radius: var(--v2-radius-lg);
   background: color-mix(in srgb, var(--surface) 84%, transparent);
 }
 
@@ -10638,7 +10646,7 @@ textarea:focus-visible {
   color: var(--muted);
   font-size: 11px;
   font-style: normal;
-  font-weight: 750;
+  font-weight: var(--v2-weight-strong);
 }
 
 .shop-talk-reputation-path p {
@@ -10659,7 +10667,7 @@ textarea:focus-visible {
 .shop-talk-contributors small {
   color: var(--accent);
   font-size: 10px;
-  font-weight: 900;
+  font-weight: var(--v2-weight-display);
   letter-spacing: 0.1em;
   text-transform: uppercase;
 }
@@ -10680,7 +10688,7 @@ textarea:focus-visible {
   gap: 3px;
   min-width: 0;
   padding: 10px;
-  border-radius: 10px;
+  border-radius: var(--v2-radius-lg);
   background: color-mix(in srgb, var(--surface) 86%, transparent);
 }
 
@@ -10697,7 +10705,7 @@ textarea:focus-visible {
   color: var(--muted);
   font-size: 11px;
   font-style: normal;
-  font-weight: 750;
+  font-weight: var(--v2-weight-strong);
   line-height: 1.25;
 }
 
@@ -10713,7 +10721,7 @@ textarea:focus-visible {
   gap: 10px;
   min-width: 0;
   padding: 9px 10px;
-  border-radius: 10px;
+  border-radius: var(--v2-radius-lg);
   background: color-mix(in srgb, var(--surface) 82%, transparent);
 }
 
@@ -10731,7 +10739,7 @@ textarea:focus-visible {
   gap: 10px;
   padding: 12px;
   border: 1px solid color-mix(in srgb, var(--border) 68%, transparent);
-  border-radius: 14px;
+  border-radius: var(--v2-radius-lg);
   background: var(--surface-soft);
 }
 
@@ -10743,7 +10751,7 @@ textarea:focus-visible {
   min-height: 44px;
   padding: 0 12px;
   border: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
-  border-radius: 10px;
+  border-radius: var(--v2-radius-lg);
   background: var(--surface);
   color: var(--muted);
 }
@@ -10772,7 +10780,7 @@ textarea:focus-visible {
 }
 
 .shop-sort-tabs button {
-  border-radius: 9px;
+  border-radius: var(--v2-radius-md);
   background: var(--surface);
 }
 
@@ -10789,7 +10797,7 @@ textarea:focus-visible {
   min-height: 44px;
   padding: 8px 10px;
   border: 1px solid color-mix(in srgb, var(--accent) 25%, var(--border));
-  border-radius: 10px;
+  border-radius: var(--v2-radius-lg);
   background: color-mix(in srgb, var(--accent) 8%, var(--surface));
 }
 
@@ -10797,11 +10805,11 @@ textarea:focus-visible {
   min-height: 34px;
   padding: 0 10px;
   border: 0;
-  border-radius: 8px;
+  border-radius: var(--v2-radius-md);
   background: var(--surface);
   color: var(--text);
   font-size: 11px;
-  font-weight: 850;
+  font-weight: var(--v2-weight-bold);
 }
 
 .shop-post-list,
@@ -10811,7 +10819,7 @@ textarea:focus-visible {
 }
 
 .shop-post-card {
-  border-radius: 13px;
+  border-radius: var(--v2-radius-lg);
   padding: 14px;
   background: var(--surface-soft);
   transition: background 0.16s ease, border-color 0.16s ease, transform 0.16s ease;
@@ -10840,7 +10848,7 @@ textarea:focus-visible {
 .shop-post-card-stats span {
   min-height: 24px;
   padding: 4px 7px;
-  border-radius: 7px;
+  border-radius: var(--v2-radius-md);
   background: color-mix(in srgb, var(--surface) 82%, transparent);
 }
 
@@ -10891,7 +10899,7 @@ textarea:focus-visible {
 
 .answer-composer,
 .answer-card {
-  border-radius: 14px;
+  border-radius: var(--v2-radius-lg);
 }
 
 .answer-guidance-card {
@@ -10899,7 +10907,7 @@ textarea:focus-visible {
   gap: 4px;
   padding: 11px 12px;
   border: 1px solid color-mix(in srgb, var(--teal) 28%, var(--border));
-  border-radius: 12px;
+  border-radius: var(--v2-radius-lg);
   background: color-mix(in srgb, var(--teal) 8%, var(--surface));
 }
 
@@ -10925,7 +10933,7 @@ textarea:focus-visible {
   aspect-ratio: 4 / 3;
   overflow: hidden;
   border: 1px solid color-mix(in srgb, var(--border) 64%, transparent);
-  border-radius: 13px;
+  border-radius: var(--v2-radius-lg);
   background: #0b1115;
 }
 
@@ -10958,7 +10966,7 @@ textarea:focus-visible {
 }
 
 .news-detail-hero {
-  border-radius: 14px;
+  border-radius: var(--v2-radius-lg);
 }
 
 .news-detail-hero.is-real img {
@@ -11007,7 +11015,7 @@ textarea:focus-visible {
   .shop-talk-sidebar,
   .shop-talk-detail {
     padding: 12px;
-    border-radius: 12px;
+    border-radius: var(--v2-radius-lg);
   }
 
   .shop-talk-command {
@@ -11097,7 +11105,7 @@ textarea:focus-visible {
   display: block;
   overflow: hidden;
   border: 1px solid color-mix(in srgb, var(--border) 68%, transparent);
-  border-radius: 14px;
+  border-radius: var(--v2-radius-lg);
   background: color-mix(in srgb, var(--surface) 94%, var(--surface-soft));
 }
 
@@ -11131,7 +11139,7 @@ textarea:focus-visible {
 
 .shop-news-list .news-card-body strong {
   font-size: 15.5px;
-  font-weight: 850;
+  font-weight: var(--v2-weight-bold);
   line-height: 1.22;
   letter-spacing: 0;
 }

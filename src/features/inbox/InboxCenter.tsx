@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import type { PrimaryDestination } from "../../app-shell/types";
 import type { InboxConversation, InboxMessage, InboxNotification } from "./inbox-api";
-import { EmptyState, MetricTile, PageHeader, Panel } from "../../components/ui";
+import { EmptyState, MetricTile, PageHeader, Panel, SkeletonCard } from "../../components/ui";
 import "./inbox-center.css";
 
 interface InboxCenterProps {
@@ -111,7 +111,11 @@ export function InboxCenter({
         >
           <div className="v2-inbox-thread-list">
             {loading ? (
-              <EmptyState className="v2-inbox-empty" icon={<Clock3 size={20} />} title="Loading threads" description="Checking active work conversations." compact />
+              <>
+                <SkeletonCard />
+                <SkeletonCard />
+                <SkeletonCard />
+              </>
             ) : conversations.length ? conversations.map((conversation) => (
               <button
                 key={conversation.id}

@@ -14,7 +14,7 @@
   margin: 0;
   max-width: 760px;
   font-size: clamp(31px, 4vw, 48px);
-  font-weight: 780;
+  font-weight: var(--v2-weight-strong);
   line-height: 0.98;
   text-wrap: balance;
 }
@@ -46,7 +46,7 @@
 
 .v2-daily-brief {
   display: grid;
-  grid-template-columns: minmax(0, 0.75fr) minmax(0, 1.25fr);
+  grid-template-columns: 1fr;
   gap: 18px;
   align-items: stretch;
   padding: 18px;
@@ -56,36 +56,12 @@
     color-mix(in srgb, var(--v2-surface) 96%, transparent);
 }
 
-.v2-daily-brief-copy {
-  display: grid;
-  align-content: center;
-  min-height: 160px;
-}
-
-.v2-daily-brief-copy > span,
 .v2-availability-radar header span {
   color: var(--v2-accent);
   font-size: 10px;
-  font-weight: 850;
+  font-weight: var(--v2-weight-bold);
   letter-spacing: 0;
   text-transform: uppercase;
-}
-
-.v2-daily-brief-copy h2 {
-  max-width: 540px;
-  margin: 8px 0 10px;
-  font-size: clamp(28px, 4vw, 48px);
-  font-weight: 820;
-  line-height: 0.96;
-  text-wrap: balance;
-}
-
-.v2-daily-brief-copy p {
-  max-width: 560px;
-  margin: 0;
-  color: var(--v2-text-muted);
-  font-size: 14px;
-  line-height: 1.5;
 }
 
 .v2-daily-signal-grid {
@@ -98,6 +74,14 @@
   display: grid;
   gap: 10px;
   min-width: 0;
+}
+
+.v2-daily-brief-header span {
+  color: var(--v2-accent);
+  font-size: var(--v2-text-xs);
+  font-weight: var(--v2-weight-bold);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .v2-daily-signal-grid button {
@@ -121,13 +105,13 @@
 .v2-daily-signal-grid span {
   color: var(--v2-text-muted);
   font-size: 10px;
-  font-weight: 800;
+  font-weight: var(--v2-weight-bold);
   text-transform: uppercase;
 }
 
 .v2-daily-signal-grid strong {
   font-size: clamp(18px, 2.2vw, 26px);
-  font-weight: 820;
+  font-weight: var(--v2-weight-bold);
   line-height: 1;
 }
 
@@ -146,7 +130,7 @@
   color: var(--v2-accent);
   font-size: 11px;
   font-style: normal;
-  font-weight: 800;
+  font-weight: var(--v2-weight-bold);
 }
 
 .v2-daily-habit-loop {
@@ -169,7 +153,7 @@
 .v2-reputation-momentum header span {
   color: var(--v2-accent);
   font-size: 10px;
-  font-weight: 900;
+  font-weight: var(--v2-weight-display);
   letter-spacing: 0;
   text-transform: uppercase;
 }
@@ -226,7 +210,7 @@
   color: var(--v2-accent);
   font-size: 11px;
   font-style: normal;
-  font-weight: 850;
+  font-weight: var(--v2-weight-bold);
 }
 
 .v2-today-panel {
@@ -253,13 +237,13 @@
 .v2-today-panel > header span,
 .v2-attention-panel > header span {
   font-size: 12px;
-  font-weight: 800;
+  font-weight: var(--v2-weight-bold);
 }
 
 .v2-today-panel > header small {
   color: var(--v2-success);
   font-size: 11px;
-  font-weight: 700;
+  font-weight: var(--v2-weight-strong);
 }
 
 .v2-today-job {
@@ -273,14 +257,14 @@
 .v2-today-job > div > span {
   color: var(--v2-accent);
   font-size: 10px;
-  font-weight: 800;
+  font-weight: var(--v2-weight-bold);
   text-transform: uppercase;
 }
 
 .v2-today-job h2 {
   margin: 5px 0 8px;
   font-size: clamp(25px, 3vw, 38px);
-  font-weight: 760;
+  font-weight: var(--v2-weight-strong);
   line-height: 1;
   text-wrap: balance;
 }
@@ -333,13 +317,7 @@
   border-radius: var(--v2-radius-md);
   background: var(--v2-surface);
   color: var(--v2-text);
-  font-weight: 700;
-}
-
-.v2-today-actions .v2-primary-button {
-  border-color: var(--v2-accent);
-  background: var(--v2-accent);
-  color: #ffffff;
+  font-weight: var(--v2-weight-strong);
 }
 
 .v2-attention-panel {
@@ -389,7 +367,7 @@
 .v2-reputation-momentum header small {
   color: var(--v2-text-muted);
   font-size: 11px;
-  font-weight: 800;
+  font-weight: var(--v2-weight-bold);
 }
 
 .v2-reputation-metrics {
@@ -455,7 +433,7 @@
   color: var(--v2-text);
   font: inherit;
   font-size: 12px;
-  font-weight: 850;
+  font-weight: var(--v2-weight-bold);
 }
 
 .v2-availability-radar header {
@@ -482,7 +460,7 @@
   background: var(--v2-accent-soft);
   color: var(--v2-accent);
   font-size: 10px;
-  font-weight: 800;
+  font-weight: var(--v2-weight-bold);
   white-space: nowrap;
 }
 
@@ -524,7 +502,7 @@
 
 .v2-availability-options strong {
   font-size: 12px;
-  font-weight: 820;
+  font-weight: var(--v2-weight-bold);
 }
 
 .v2-availability-options small {
@@ -535,7 +513,7 @@
 .v2-availability-message {
   color: var(--v2-success);
   font-size: 11px;
-  font-weight: 750;
+  font-weight: var(--v2-weight-strong);
 }
 
 .v2-attention-panel > header button,
@@ -551,7 +529,7 @@
   color: var(--v2-accent);
   font: inherit;
   font-size: 11px;
-  font-weight: 700;
+  font-weight: var(--v2-weight-strong);
 }
 
 .v2-attention-panel > button,
@@ -686,14 +664,6 @@
     padding: 14px;
   }
 
-  .v2-daily-brief-copy {
-    min-height: 0;
-  }
-
-  .v2-daily-brief-copy h2 {
-    font-size: 30px;
-  }
-
   .v2-daily-signal-grid button {
     min-height: 132px;
   }
@@ -703,7 +673,9 @@
   }
 
   .v2-availability-options {
-    grid-template-columns: 1fr;
+    display: flex;
+    flex-direction: row;
+    gap: 8px;
   }
 
   .v2-reputation-metrics {
@@ -768,6 +740,16 @@
   .v2-daily-signal-grid button {
     min-height: 118px;
     padding: 12px;
+  }
+
+  .v2-availability-options button {
+    min-height: 52px;
+    flex: 1;
+    padding: 8px;
+  }
+
+  .v2-availability-options small {
+    display: none;
   }
 
   .v2-today-job {

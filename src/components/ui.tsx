@@ -133,7 +133,40 @@ export function StatusPill({
   return <span className={cx("rivt-status-pill", `tone-${tone}`, className)}>{children}</span>;
 }
 
-const avatarColors = ["#ef5f1a", "#1f8a70", "#b68a2c", "#456075", "#8b5c43", "#7a6f46"];
+export function SkeletonLine({ width = "100%", height = 16 }: { width?: string; height?: number }) {
+  return (
+    <div
+      className="v2-skeleton"
+      style={{ width, height, borderRadius: "var(--v2-radius-sm)" }}
+      aria-hidden="true"
+    />
+  );
+}
+
+export function SkeletonCard() {
+  return (
+    <div className="v2-skeleton-card" aria-hidden="true">
+      <SkeletonLine height={20} width="60%" />
+      <SkeletonLine height={14} width="80%" />
+      <SkeletonLine height={14} width="40%" />
+    </div>
+  );
+}
+
+const avatarColors = [
+  "#ef5f1a",
+  "#1f6f5e",
+  "#4a7fa5",
+  "#8b5c43",
+  "#6b5fa0",
+  "#b68a2c",
+  "#456075",
+  "#7a4f3a",
+  "#2d6b4f",
+  "#a04a4a",
+  "#4f6b3a",
+  "#5f5f8a",
+];
 
 function colorForName(name: string) {
   const value = [...name].reduce((sum, char) => sum + char.charCodeAt(0), 0);

@@ -151,6 +151,15 @@ Evidence must eventually link to implementation, automated tests, manual accepta
 - `GA-OPS-007` gains this production accessibility smoke evidence plus the existing local gates; `GA-OPS-008` gains deployment `17cc18db-0ac5-4f23-bf5f-955b98af38cb`, source `d4e6f06a70e3dad8f59d54b6698b79ab08d6fd2d`, screenshot evidence, and cleanup evidence.
 - `docs/quality/PHYSICAL_ACCESSIBILITY_CHECKLIST.md` now defines the remaining manual/physical boundary. Physical iOS Safari, Android Chrome, desktop keyboard-only, and screen-reader route evidence remain required before `GA-UX-006` can move to Verified.
 
+## Traceability Addendum - 2026-06-22 Claude-Audit UI Consolidation
+
+- `GA-UX-001` gains a local shell/design-system consolidation slice: v2 tokens now cover the referenced typography weights, info state colors, card shadow, topbar/sidebar sizing, and fallback radius values; shared button and skeleton primitives live in `src/components/ui.css`.
+- `GA-UX-003` gains server-backed notification badge clearing evidence: opening the notification center now calls the existing `POST /api/v1/notifications/read` flow instead of leaving the badge stale.
+- `GA-UX-005` gains improved loading/empty states: Inbox loading now renders skeleton cards, Crew empty states provide directional copy/actions, and Home no longer uses landing-page mission copy as repeated product UI.
+- `GA-UX-006` gains local responsive cleanup evidence for mobile safe areas, horizontal Home availability controls, reduced duplicate desktop profile display, and modal close affordances.
+- `GA-OPS-007` gains local automated evidence for this slice: `npm run build`, `npm run lint`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check` passed. DB-backed local integration tests still skip because `TEST_DATABASE_URL` is not configured.
+- Unified cross-surface search remains a real backend/product gap, not a frontend-only claim: no unified `/api/v1/search` endpoint currently exists, so this pass did not fabricate People/Jobs/Shop Talk result lists.
+
 ## Current Gate A Summary
 
 - Production infrastructure is reachable and managed storage is healthy.
