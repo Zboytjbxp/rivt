@@ -211,6 +211,13 @@ Evidence must eventually link to implementation, automated tests, manual accepta
 - `GA-OPS-007` gains local automated evidence for this refactor slice: `npm run build`, `npm run test:unit`, `npm run lint`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check` passed.
 - `GA-OPS-008` is unchanged for production deployment: this slice has not been deployed.
 
+## Traceability Addendum - 2026-06-22 Profile Session Ownership Split
+
+- `GA-UX-001` gains maintainability evidence: `ProfileRoute` now owns session-list loading and non-current session revocation, further reducing active account/profile state in `src/App.tsx`.
+- `GA-AUTH-007` retains behavior: current-session revocation still clears the whole app auth/session state through an App-owned callback.
+- `GA-OPS-007` gains local automated evidence for this refactor slice: `npm run build`, `npm run test:unit`, `npm run lint`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check` passed.
+- `GA-OPS-008` is unchanged for production deployment: this slice has not been deployed.
+
 ## Current Gate A Summary
 
 - Production infrastructure is reachable and managed storage is healthy.

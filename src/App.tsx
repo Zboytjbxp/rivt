@@ -94,7 +94,7 @@ import {
 import { LegacyBridge } from "./features/legacy/LegacyBridge";
 import { ToolsStudio } from "./features/tools/ToolsStudio";
 import { ProfileRoute, type ProfileRouteView } from "./features/profile/ProfileRoute";
-import type { AccountSessionSummary, ProfileUpdateInput } from "./features/profile/ProfileHub";
+import type { ProfileUpdateInput } from "./features/profile/ProfileHub";
 
 type TradeFilter = (typeof tradeOptions)[number];
 type DifficultyFilter = (typeof difficultyOptions)[number];
@@ -1897,7 +1897,6 @@ function App() {
   });
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
   const [canonicalAccount, setCanonicalAccount] = useState<CanonicalAccount | null>(null);
-  const [accountSessions, setAccountSessions] = useState<AccountSessionSummary[]>([]);
   const [authLoading, setAuthLoading] = useState(true);
   const [authMode, setAuthMode] = useState<"login" | "signup">(readAuthModePreference);
   const [authError, setAuthError] = useState<string | null>(() => (
@@ -2097,25 +2096,6 @@ function App() {
     applyCanonicalAccount(body.data);
     return body.data;
   }
-
-  const fetchAccountSessions = useCallback(async () => {
-    const response = await fetch(apiPath("/api/v1/sessions"), { credentials: "include" });
-    const body = await response.json().catch(() => ({})) as {
-      data?: { sessions?: AccountSessionSummary[] };
-      error?: { message?: string };
-    };
-    if (!response.ok) throw new Error(body.error?.message || "Sessions could not be loaded.");
-    return body.data?.sessions ?? [];
-  }, []);
-
-  useEffect(() => {
-    if (!authUser || (activeView !== "Settings" && !isAccountOpen)) return;
-    let cancelled = false;
-    void fetchAccountSessions()
-      .then((sessions) => { if (!cancelled) setAccountSessions(sessions); })
-      .catch(() => { if (!cancelled) setAccountSessions([]); });
-    return () => { cancelled = true; };
-  }, [activeView, authUser, fetchAccountSessions, isAccountOpen]);
 
   const reloadJobs = useCallback(async () => {
     if (!authUser || !onboardingComplete) return;
@@ -2506,35 +2486,13 @@ function App() {
     );
   }
 
-  async function handleRevokeSession(sessionId: string) {
-    const response = await fetch(apiPath(`/api/v1/sessions/${sessionId}`), {
-      method: "DELETE",
-      credentials: "include",
-    });
-    const body = await response.json().catch(() => ({})) as { data?: { current?: boolean }; error?: { message?: string } };
-    if (!response.ok) throw new Error(body.error?.message || "Session could not be signed out.");
-    if (body.data?.current) {
-      setAuthUser(null);
-      setCanonicalAccount(null);
-      setOnboardingComplete(false);
-      setCommunityReactionLedger({});
-      setCommunityReactionSummary(null);
-      setCommunityReactionStatus("idle");
-      return;
-    }
-    setAccountSessions(await fetchAccountSessions());
-    addActivity("Device signed out", "That RIVT session can no longer access your account.", "success");
-  }
-
-  async function handleRevokeOtherSessions() {
-    const response = await fetch(apiPath("/api/v1/sessions/revoke-others"), {
-      method: "POST",
-      credentials: "include",
-    });
-    const body = await response.json().catch(() => ({})) as { data?: { revokedCount?: number }; error?: { message?: string } };
-    if (!response.ok) throw new Error(body.error?.message || "Other sessions could not be signed out.");
-    setAccountSessions(await fetchAccountSessions());
-    addActivity("Other devices signed out", `${body.data?.revokedCount ?? 0} other session${body.data?.revokedCount === 1 ? "" : "s"} revoked.`, "success");
+  function handleCurrentSessionRevoked() {
+    setAuthUser(null);
+    setCanonicalAccount(null);
+    setOnboardingComplete(false);
+    setCommunityReactionLedger({});
+    setCommunityReactionSummary(null);
+    setCommunityReactionStatus("idle");
   }
 
   async function handleLogout() {
@@ -3190,7 +3148,6 @@ function App() {
             role={role}
             accountProfile={accountProfile}
             canonicalAccount={canonicalAccount}
-            sessions={accountSessions}
             trustReady={trustReady}
             recordCount={uploadedRecords.size}
             trainingProgress={Math.round((completedTraining.size / trainingModules.length) * 100)}
@@ -3211,8 +3168,8 @@ function App() {
             onLogout={handleLogout}
             onSaveProfile={handleSaveProfile}
             onSetProfileVisibility={handleSetProfileVisibility}
-            onRevokeSession={handleRevokeSession}
-            onRevokeOtherSessions={handleRevokeOtherSessions}
+            onCurrentSessionRevoked={handleCurrentSessionRevoked}
+            onActivity={addActivity}
           />
         ) : activeView === "Admin" ? (
           <section className="v2-profile-page" aria-label="Admin access">

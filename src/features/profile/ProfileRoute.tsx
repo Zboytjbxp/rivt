@@ -1,6 +1,13 @@
 import type { ThemeMode, ThemePalette, TrialPlan } from "../../brandConfig";
 import type { Role, Trade } from "../../types";
+import { useCallback, useEffect, useState } from "react";
 import { ProfileHub, type AccountSessionSummary, type ProfileUpdateInput } from "./ProfileHub";
+
+const API_BASE_URL = import.meta.env.VITE_API_URL ?? (import.meta.env.DEV ? "http://127.0.0.1:8787" : "");
+
+function apiPath(path: string) {
+  return `${API_BASE_URL}${path}`;
+}
 
 export type ProfileRouteView = "Trust & Legal" | "Safety & Training" | "Reviews" | "Feedback" | "Settings";
 
@@ -39,7 +46,6 @@ interface ProfileRouteProps {
   role: Role;
   accountProfile: AccountProfileForProfileRoute;
   canonicalAccount: CanonicalAccountForProfileRoute | null;
-  sessions: AccountSessionSummary[];
   trustReady: boolean;
   recordCount: number;
   trainingProgress: number;
@@ -54,8 +60,8 @@ interface ProfileRouteProps {
   onLogout: () => void;
   onSaveProfile: (input: ProfileUpdateInput) => Promise<void>;
   onSetProfileVisibility: (visibility: "private" | "network") => Promise<void>;
-  onRevokeSession: (sessionId: string) => Promise<void>;
-  onRevokeOtherSessions: () => Promise<void>;
+  onCurrentSessionRevoked: () => void;
+  onActivity: (title: string, detail: string, kind: "info" | "success" | "warning" | "error") => void;
 }
 
 export function ProfileRoute({
@@ -63,7 +69,6 @@ export function ProfileRoute({
   role,
   accountProfile,
   canonicalAccount,
-  sessions,
   trustReady,
   recordCount,
   trainingProgress,
@@ -78,9 +83,55 @@ export function ProfileRoute({
   onLogout,
   onSaveProfile,
   onSetProfileVisibility,
-  onRevokeSession,
-  onRevokeOtherSessions,
+  onCurrentSessionRevoked,
+  onActivity,
 }: ProfileRouteProps) {
+  const [sessions, setSessions] = useState<AccountSessionSummary[]>([]);
+
+  const fetchAccountSessions = useCallback(async () => {
+    const response = await fetch(apiPath("/api/v1/sessions"), { credentials: "include" });
+    const body = await response.json().catch(() => ({})) as {
+      data?: { sessions?: AccountSessionSummary[] };
+      error?: { message?: string };
+    };
+    if (!response.ok) throw new Error(body.error?.message || "Sessions could not be loaded.");
+    return body.data?.sessions ?? [];
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    void fetchAccountSessions()
+      .then((nextSessions) => { if (!cancelled) setSessions(nextSessions); })
+      .catch(() => { if (!cancelled) setSessions([]); });
+    return () => { cancelled = true; };
+  }, [fetchAccountSessions]);
+
+  async function revokeSession(sessionId: string) {
+    const response = await fetch(apiPath(`/api/v1/sessions/${sessionId}`), {
+      method: "DELETE",
+      credentials: "include",
+    });
+    const body = await response.json().catch(() => ({})) as { data?: { current?: boolean }; error?: { message?: string } };
+    if (!response.ok) throw new Error(body.error?.message || "Session could not be signed out.");
+    if (body.data?.current) {
+      onCurrentSessionRevoked();
+      return;
+    }
+    setSessions(await fetchAccountSessions());
+    onActivity("Device signed out", "That RIVT session can no longer access your account.", "success");
+  }
+
+  async function revokeOtherSessions() {
+    const response = await fetch(apiPath("/api/v1/sessions/revoke-others"), {
+      method: "POST",
+      credentials: "include",
+    });
+    const body = await response.json().catch(() => ({})) as { data?: { revokedCount?: number }; error?: { message?: string } };
+    if (!response.ok) throw new Error(body.error?.message || "Other sessions could not be signed out.");
+    setSessions(await fetchAccountSessions());
+    onActivity("Other devices signed out", `${body.data?.revokedCount ?? 0} other session${body.data?.revokedCount === 1 ? "" : "s"} revoked.`, "success");
+  }
+
   return (
     <ProfileHub
       view={view}
@@ -123,8 +174,8 @@ export function ProfileRoute({
       onLogout={onLogout}
       onSaveProfile={onSaveProfile}
       onSetProfileVisibility={onSetProfileVisibility}
-      onRevokeSession={onRevokeSession}
-      onRevokeOtherSessions={onRevokeOtherSessions}
+      onRevokeSession={revokeSession}
+      onRevokeOtherSessions={revokeOtherSessions}
     />
   );
 }
