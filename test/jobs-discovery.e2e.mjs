@@ -40,6 +40,16 @@ const account = {
   capabilities: { canCompleteOnboarding: false, canPostWork: true, canApplyToWork: false, canPublishProfile: true },
 };
 
+const profileResult = {
+  accountId: "b2292315-f244-42d1-90fb-7a884dc9f307",
+  displayName: "Riley Harper",
+  headline: "Commercial electrician",
+  locationText: "Jacksonville, FL",
+  primaryRole: "tradesperson",
+  availabilityStatus: "available",
+  trades: [{ code: "electrical", name: "Electrical", primary: true }],
+};
+
 const job = {
   id: "6a6b46c8-0870-44fd-97f9-07b061734d58",
   organization: { id: account.organizations[0].id, name: account.organizations[0].name },
@@ -155,6 +165,7 @@ async function waitForServer() {
 
 async function configurePage(page, jobs, { activeWork = [], project = null } = {}) {
   let currentAccount = structuredClone(account);
+  await page.route("https://fonts.googleapis.com/**", (route) => route.fulfill({ status: 200, contentType: "text/css", body: "" }));
   await page.route("**/api/v1/me", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: currentAccount }) }));
   await page.route("**/api/v1/profile", async (route) => {
     const rawBody = route.request().postData() || "{}";
@@ -174,8 +185,10 @@ async function configurePage(page, jobs, { activeWork = [], project = null } = {
   });
   await page.route("**/api/auth/providers", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ providers: {} }) }));
   await page.route("**/api/v1/sessions", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { sessions: [] }, meta: { requestId: "e2e-sessions" } }) }));
+  await page.route("**/api/v1/profiles**", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { profiles: [profileResult] }, meta: { requestId: "e2e-profiles", count: 1 } }) }));
   await page.route("**/api/v1/conversations", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { conversations: [] }, meta: { requestId: "e2e-conversations" } }) }));
   await page.route("**/api/v1/notifications", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { notifications: [], unreadCount: 0 }, meta: { requestId: "e2e-notifications" } }) }));
+  await page.route("**/api/v1/notifications/read", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { unreadCount: 0 }, meta: { requestId: "e2e-notifications-read" } }) }));
   await page.route("**/api/v1/active-work", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { activeWork }, meta: { requestId: "e2e-active-work" } }) }));
   await page.route("**/api/v1/shop-talk/reactions/batch", async (route) => {
     const body = route.request().postDataJSON();
@@ -287,6 +300,13 @@ async function assertRecordsFlow(page) {
 }
 
 async function assertTopBarActions(page) {
+  await page.keyboard.press("Control+K");
+  await page.getByRole("dialog", { name: "Search RIVT" }).waitFor();
+  await page.getByPlaceholder("Search jobs, questions, trades, or tools").fill("electrical");
+  await page.getByText("Riley Harper", { exact: true }).waitFor();
+  await page.getByRole("button", { name: /Riley Harper/i }).click();
+  await page.getByRole("heading", { name: "Crew", exact: true }).waitFor();
+
   await page.keyboard.press("Control+K");
   await page.getByRole("dialog", { name: "Search RIVT" }).waitFor();
   await page.getByPlaceholder("Search jobs, questions, trades, or tools").fill("electrical");

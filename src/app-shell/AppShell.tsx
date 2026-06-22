@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Bell,
   BriefcaseBusiness,
@@ -15,6 +15,22 @@ import type { AppShellProps, PrimaryDestination, SearchTarget } from "./types";
 import { Avatar } from "../components/ui";
 import "./tokens.css";
 import "./app-shell.css";
+
+const API_BASE_URL = import.meta.env.VITE_API_URL ?? (import.meta.env.DEV ? "http://127.0.0.1:8787" : "");
+
+function apiPath(path: string) {
+  return `${API_BASE_URL}${path}`;
+}
+
+interface ProfileSearchResult {
+  accountId: string;
+  displayName: string;
+  headline: string;
+  locationText: string;
+  primaryRole: "contractor" | "tradesperson";
+  availabilityStatus: "available" | "limited" | "unavailable";
+  trades: Array<{ code: string; name: string; primary: boolean }>;
+}
 
 const primaryNavigation: Array<{
   destination: PrimaryDestination;
@@ -46,6 +62,10 @@ export function AppShell({
 }: AppShellProps) {
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchValue, setSearchValue] = useState("");
+  const [peopleResults, setPeopleResults] = useState<ProfileSearchResult[]>([]);
+  const [peopleStatus, setPeopleStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
+  const [peopleError, setPeopleError] = useState("");
+  const peopleSearchRequestRef = useRef(0);
 
   useEffect(() => {
     function handleCommandSearch(event: KeyboardEvent) {
@@ -59,12 +79,65 @@ export function AppShell({
     return () => window.removeEventListener("keydown", handleCommandSearch);
   }, []);
 
+  async function fetchPeopleResults(nextValue: string) {
+    const normalized = nextValue.trim();
+    const requestId = peopleSearchRequestRef.current + 1;
+    peopleSearchRequestRef.current = requestId;
+
+    if (isGuest || normalized.length < 2) {
+      setPeopleResults([]);
+      setPeopleStatus("idle");
+      setPeopleError("");
+      return;
+    }
+
+    setPeopleStatus("loading");
+    setPeopleError("");
+
+    try {
+      const response = await fetch(apiPath(`/api/v1/profiles?q=${encodeURIComponent(normalized)}&limit=4`), {
+        credentials: "include",
+      });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(body.error?.message || "Profile search is unavailable.");
+      }
+      if (peopleSearchRequestRef.current !== requestId) return;
+      setPeopleResults(Array.isArray(body.data?.profiles) ? body.data.profiles : []);
+      setPeopleStatus("ready");
+    } catch (error) {
+      if (peopleSearchRequestRef.current !== requestId) return;
+      setPeopleResults([]);
+      setPeopleStatus("error");
+      setPeopleError(error instanceof Error ? error.message : "Profile search is unavailable.");
+    }
+  }
+
+  function openSearch() {
+    setSearchOpen(true);
+    void fetchPeopleResults(searchValue);
+  }
+
+  function handleSearchValueChange(nextValue: string) {
+    setSearchValue(nextValue);
+    void fetchPeopleResults(nextValue);
+  }
+
   function submitSearch(target: SearchTarget = "work") {
     const normalized = searchValue.trim();
     if (!normalized) return;
     onSearch(normalized, target);
     setSearchOpen(false);
   }
+
+  function openProfileResult() {
+    onNavigate("crew");
+    setSearchOpen(false);
+  }
+
+  const normalizedSearch = searchValue.trim();
+  const canSubmitSearch = normalizedSearch.length > 0;
+  const canSearchPeople = normalizedSearch.length >= 2 && !isGuest;
 
   return (
     <div className="rivt-v2">
@@ -133,8 +206,8 @@ export function AppShell({
             <Search size={17} />
             <input
               value={searchValue}
-              onChange={(event) => setSearchValue(event.target.value)}
-              onFocus={() => setSearchOpen(true)}
+              onChange={(event) => handleSearchValueChange(event.target.value)}
+              onFocus={openSearch}
               placeholder="Search jobs, people, or tools"
               aria-label="Search jobs, people, or tools"
             />
@@ -142,7 +215,7 @@ export function AppShell({
           </form>
 
           <div className="v2-topbar-actions">
-            <button type="button" className="v2-icon-button v2-mobile-search" aria-label="Search" onClick={() => setSearchOpen(true)}>
+            <button type="button" className="v2-icon-button v2-mobile-search" aria-label="Search" onClick={openSearch}>
               <Search size={19} />
             </button>
             <button type="button" className="v2-icon-button" aria-label="Messages" onClick={onOpenMessages}>
@@ -180,7 +253,7 @@ export function AppShell({
                   <input
                     autoFocus
                     value={searchValue}
-                    onChange={(event) => setSearchValue(event.target.value)}
+                    onChange={(event) => handleSearchValueChange(event.target.value)}
                     onKeyDown={(event) => {
                       if (event.key === "Enter") submitSearch("work");
                       if (event.key === "Escape") setSearchOpen(false);
@@ -190,15 +263,43 @@ export function AppShell({
                   />
                 </label>
 
+                {canSearchPeople ? (
+                  <section className="v2-search-people-results" aria-label="People results">
+                    <header>
+                      <span>People</span>
+                      <small>Network-visible profiles only</small>
+                    </header>
+                    {peopleStatus === "loading" ? (
+                      <div className="v2-search-result-state">Searching profiles...</div>
+                    ) : peopleStatus === "error" ? (
+                      <div className="v2-search-result-state is-error">{peopleError}</div>
+                    ) : peopleResults.length ? (
+                      peopleResults.map((person) => (
+                        <button key={person.accountId} type="button" className="v2-search-person-result" onClick={openProfileResult}>
+                          <Avatar name={person.displayName} size="sm" className="v2-avatar" />
+                          <span>
+                            <strong>{person.displayName}</strong>
+                            <small>{person.headline || (person.primaryRole === "contractor" ? "Contractor" : "Tradesperson")}</small>
+                            <small>{[person.trades.map((trade) => trade.name).join(", "), person.locationText].filter(Boolean).join(" · ")}</small>
+                          </span>
+                          <em>{person.availabilityStatus}</em>
+                        </button>
+                      ))
+                    ) : peopleStatus === "ready" ? (
+                      <div className="v2-search-result-state">No network profiles found for "{normalizedSearch}".</div>
+                    ) : null}
+                  </section>
+                ) : null}
+
                 <div className="v2-search-command-list" aria-label="Search destinations">
-                  <button type="button" onClick={() => submitSearch("work")} disabled={!searchValue.trim()}>
+                  <button type="button" onClick={() => submitSearch("work")} disabled={!canSubmitSearch}>
                     <BriefcaseBusiness size={18} />
                     <span>
                       <strong>Search work</strong>
                       <small>Jobs, trades, locations, scopes</small>
                     </span>
                   </button>
-                  <button type="button" onClick={() => submitSearch("shop-talk")} disabled={!searchValue.trim()}>
+                  <button type="button" onClick={() => submitSearch("shop-talk")} disabled={!canSubmitSearch}>
                     <MessageCircle size={18} />
                     <span>
                       <strong>Search Shop Talk</strong>
@@ -206,7 +307,7 @@ export function AppShell({
                     </span>
                   </button>
                   <button type="button" onClick={() => {
-                    onSearch(searchValue.trim() || "tools", "tools");
+                    onSearch(normalizedSearch || "tools", "tools");
                     setSearchOpen(false);
                   }}>
                     <Wrench size={18} />
@@ -217,7 +318,9 @@ export function AppShell({
                   </button>
                 </div>
 
-                <p className="v2-search-note">People search will unlock when profile discovery is server-owned. RIVT will not show fake matches.</p>
+                <p className="v2-search-note">
+                  RIVT only shows published network profiles. Contact details stay private until a real connection or active job requires them.
+                </p>
               </div>
             </div>
           </div>

@@ -1365,6 +1365,11 @@ const profileFieldsSchema = z.object({
   tradeCodes: z.array(z.string().trim().min(1).max(80)).min(1).max(12).optional(),
 });
 
+const profileSearchQuerySchema = z.object({
+  q: z.string().trim().min(2).max(80),
+  limit: z.coerce.number().int().min(1).max(8).default(4),
+});
+
 const onboardingSchema = profileFieldsSchema.extend({
   role: z.enum(["contractor", "tradesperson"]),
   displayName: z.string().trim().min(2).max(100),
@@ -1424,6 +1429,10 @@ async function saveProfileFields(client, accountId, input) {
       );
     }
   }
+}
+
+function escapeLikePattern(value) {
+  return value.replace(/[\\%_]/g, (match) => `\\${match}`);
 }
 
 app.patch("/api/v1/profile", requireV1AuthenticatedUser, requireV1Actor, writeRateLimit, asyncRoute(async (request, response) => {
@@ -1524,6 +1533,79 @@ app.post("/api/v1/profile/publish", requireV1AuthenticatedUser, requireV1Actor, 
 app.post("/api/v1/profile/unpublish", requireV1AuthenticatedUser, requireV1Actor, writeRateLimit, asyncRoute(async (request, response) => {
   await database.query("UPDATE profiles SET visibility = 'private', updated_at = now() WHERE account_id = $1", [request.actor.account.id]);
   response.json({ data: { visibility: "private" }, meta: { requestId: request.requestId } });
+}));
+
+app.get("/api/v1/profiles", requireV1AuthenticatedUser, requireV1Actor, asyncRoute(async (request, response) => {
+  const input = validate(profileSearchQuerySchema, request.query);
+  if (request.actor.account.status !== "active" || request.actor.profile.onboardingStatus !== "complete") {
+    throw new ApiError(403, "ACCOUNT_NOT_READY", "Complete account setup before searching profiles.");
+  }
+
+  const escapedQuery = escapeLikePattern(input.q);
+  const containsQuery = `%${escapedQuery}%`;
+  const prefixQuery = `${escapedQuery}%`;
+  const result = await database.query(
+    `SELECT
+       p.account_id,
+       a.primary_role,
+       p.display_name,
+       p.headline,
+       p.location_text,
+       p.availability_status,
+       p.updated_at,
+       COALESCE(
+         jsonb_agg(
+           jsonb_build_object('code', t.code, 'name', t.name, 'primary', pt.is_primary)
+           ORDER BY pt.is_primary DESC, t.sort_order, t.code
+         ) FILTER (WHERE t.code IS NOT NULL),
+         '[]'::jsonb
+       ) AS trades
+     FROM profiles p
+     INNER JOIN accounts a ON a.id = p.account_id
+     LEFT JOIN profile_trades pt ON pt.account_id = p.account_id
+     LEFT JOIN trades t ON t.code = pt.trade_code AND t.active = true
+     WHERE p.visibility = 'network'
+       AND p.onboarding_status = 'complete'
+       AND a.status = 'active'
+       AND a.primary_role IN ('contractor', 'tradesperson')
+       AND p.account_id <> $1::uuid
+       AND NOT EXISTS (
+         SELECT 1 FROM account_blocks ab
+         WHERE (ab.blocker_account_id = $1::uuid AND ab.blocked_account_id = p.account_id)
+            OR (ab.blocked_account_id = $1::uuid AND ab.blocker_account_id = p.account_id)
+       )
+       AND (
+         p.display_name ILIKE $2 ESCAPE '\\'
+         OR p.headline ILIKE $2 ESCAPE '\\'
+         OR p.location_text ILIKE $2 ESCAPE '\\'
+         OR EXISTS (
+           SELECT 1
+           FROM profile_trades search_pt
+           INNER JOIN trades search_t ON search_t.code = search_pt.trade_code AND search_t.active = true
+           WHERE search_pt.account_id = p.account_id
+             AND (search_t.name ILIKE $2 ESCAPE '\\' OR search_t.code ILIKE $2 ESCAPE '\\')
+         )
+       )
+     GROUP BY p.account_id, a.primary_role, p.display_name, p.headline, p.location_text, p.availability_status, p.updated_at
+     ORDER BY
+       CASE WHEN p.display_name ILIKE $3 ESCAPE '\\' THEN 0 ELSE 1 END,
+       p.updated_at DESC,
+       p.account_id
+     LIMIT $4`,
+    [request.actor.account.id, containsQuery, prefixQuery, input.limit],
+  );
+
+  const profiles = result.rows.map((row) => ({
+    accountId: row.account_id,
+    displayName: row.display_name,
+    headline: row.headline,
+    locationText: row.location_text,
+    primaryRole: row.primary_role,
+    availabilityStatus: row.availability_status,
+    trades: Array.isArray(row.trades) ? row.trades : [],
+  }));
+
+  response.json({ data: { profiles }, meta: { requestId: request.requestId, count: profiles.length } });
 }));
 
 app.put("/api/v1/profile/avatar", requireV1AuthenticatedUser, requireV1Actor, writeRateLimit, asyncRoute(async (request, response) => {
