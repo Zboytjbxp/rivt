@@ -282,7 +282,7 @@ async function loginAndSaveDailyLog(account, jobTitle, marker) {
     errors.length = 0;
     await page.goto(`${baseUrl}/app/tools`, { waitUntil: "networkidle" });
     await page.getByRole("heading", { name: "Tools", exact: true }).waitFor({ timeout: 20_000 });
-    await page.getByRole("button", { name: /Daily log/i }).click();
+    await page.locator("button.v2-tool-launch-card").filter({ hasText: "Daily log" }).first().click();
     await page.getByRole("heading", { name: "Daily log", exact: true }).waitFor({ timeout: 20_000 });
     await page.getByText("Records-ready", { exact: true }).waitFor({ timeout: 20_000 });
     await page.getByText(jobTitle, { exact: true }).waitFor({ timeout: 20_000 });
