@@ -21,6 +21,21 @@ Add one entry per staging/production deployment.
 - Rollback performed/result:
 - Approval:
 
+## Gate A Final Incident Approvals - 2026-06-22
+
+- Environment: Production (`https://rivt.pro`)
+- Date/time/timezone: 2026-06-22 03:48:04 UTC / 2026-06-21 23:48:04 America/New_York
+- Approver: Michael
+- Approval scope: founder, support, and legal/safety Gate A signoffs for the controlled named-cohort pilot readiness package.
+- Evidence: `docs/operations/GATE_A_APPROVAL_PACKET.md`; `docs/operations/incident-routing.json`
+- Source repository/branch: `Zboytjbxp/rivt`, `master`
+- Production source commit: `6d8e276e036553c5f861f1f8ab97cc3333a3494b`
+- Provider/config changes: no provider credentials changed; this entry records approval state only.
+- Automated gates: `node scripts/incident-readiness-check.js --json` passed with `ready` and zero findings; `node scripts/launch-readiness-check.js --json` passed with `ready` and zero findings; `npm run incident:readiness -- --require-ready` passed; `npm run launch:readiness -- --require-ready` passed.
+- Known risks: physical/deeper manual accessibility-device evidence remains incomplete; dedicated phone/SMS paging remains recommended before broader scale.
+- Rollback performed/result: not required.
+- Approval: founder/support/legal-safety approvals recorded; machine-readable incident and launch readiness gates pass. Broader rollout still requires accepted physical/deeper manual accessibility-device evidence.
+
 ## Incident Rehearsal - 2026-06-22
 
 - Scenario: Public health or provider failure rehearsal per `docs/operations/INCIDENT_REHEARSAL_RUNBOOK.md`.

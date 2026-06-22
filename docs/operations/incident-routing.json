@@ -71,19 +71,19 @@
   ],
   "approvals": {
     "founder": {
-      "status": "missing",
-      "approvedBy": "TBD",
-      "approvedAt": null
+      "status": "approved",
+      "approvedBy": "Michael",
+      "approvedAt": "2026-06-22T03:48:04.1166525Z"
     },
     "support": {
-      "status": "missing",
-      "approvedBy": "TBD",
-      "approvedAt": null
+      "status": "approved",
+      "approvedBy": "Michael",
+      "approvedAt": "2026-06-22T03:48:04.1166525Z"
     },
     "legalSafety": {
-      "status": "missing",
-      "approvedBy": "TBD",
-      "approvedAt": null
+      "status": "approved",
+      "approvedBy": "Michael",
+      "approvedAt": "2026-06-22T03:48:04.1166525Z"
     }
   }
 }
