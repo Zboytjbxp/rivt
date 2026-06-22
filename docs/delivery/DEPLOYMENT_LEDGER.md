@@ -21,6 +21,25 @@ Add one entry per staging/production deployment.
 - Rollback performed/result:
 - Approval:
 
+## Current Production - Packet 08 Claude-Audit UI Consolidation
+
+- Environment: Production (`https://rivt.pro`)
+- Date/time/timezone: 2026-06-22 10:19 America/New_York
+- Deployer: Codex through authenticated Railway CLI
+- Source repository/branch: `Zboytjbxp/rivt`, `master`
+- Source commit: `92fd0a71d6a39cd21c9b3e233c5caa2c1a37da54`
+- Build/artifact ID: Railway runtime upload deployment `eb75395a-45c9-4d8d-b9cc-c9e63230fba9`; metadata redeploy `68e6eca4-8574-4c0c-b2a6-d533fc5cab47`
+- Migration version before/after: `0011_shop_talk_reaction_events_immutable` / `0011_shop_talk_reaction_events_immutable` (no schema migration)
+- Feature-flag/config version: `SOURCE_COMMIT` updated to `92fd0a71d6a39cd21c9b3e233c5caa2c1a37da54`; operational controls unchanged
+- Provider/config changes (no secrets): no provider credentials changed; Sentry remains configured
+- Backup/rollback target: prior successful production deployment `17cc18db-0ac5-4f23-bf5f-955b98af38cb`; no migration rollback required
+- Automated gates: `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check` passed. DB-backed local integration tests continue to skip locally because `TEST_DATABASE_URL` is not configured.
+- Post-deploy smoke tests: live `/api/health` reported exact source `92fd0a71d6a39cd21c9b3e233c5caa2c1a37da54`; `EXPECTED_SOURCE_COMMIT=92fd0a71d6a39cd21c9b3e233c5caa2c1a37da54 npm run monitor:production` passed with PostgreSQL, S3-compatible object storage, Sentry configured, operational controls off, and seven anonymous private-route checks.
+- Health/readiness result: healthy production health and synthetic monitor; no schema migration applied.
+- Known risks: unified People/Jobs/Shop Talk search still needs a real backend endpoint; physical iOS Safari, Android Chrome, desktop keyboard-only, and screen-reader/manual route evidence remain incomplete.
+- Rollback performed/result: not required.
+- Approval: accepted as controllable Gate A UI hardening evidence only.
+
 ## Current Production - Packet 08 Accessibility Boundary Progress
 
 - Environment: Production (`https://rivt.pro`)

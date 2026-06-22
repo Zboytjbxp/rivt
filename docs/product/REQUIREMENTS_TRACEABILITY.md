@@ -158,6 +158,7 @@ Evidence must eventually link to implementation, automated tests, manual accepta
 - `GA-UX-005` gains improved loading/empty states: Inbox loading now renders skeleton cards, Crew empty states provide directional copy/actions, and Home no longer uses landing-page mission copy as repeated product UI.
 - `GA-UX-006` gains local responsive cleanup evidence for mobile safe areas, horizontal Home availability controls, reduced duplicate desktop profile display, and modal close affordances.
 - `GA-OPS-007` gains local automated evidence for this slice: `npm run build`, `npm run lint`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check` passed. DB-backed local integration tests still skip because `TEST_DATABASE_URL` is not configured.
+- `GA-OPS-008` gains deployment evidence: Railway runtime upload deployment `eb75395a-45c9-4d8d-b9cc-c9e63230fba9` and metadata redeploy `68e6eca4-8574-4c0c-b2a6-d533fc5cab47` now serve source `92fd0a71d6a39cd21c9b3e233c5caa2c1a37da54`; live `/api/health` and `EXPECTED_SOURCE_COMMIT=92fd0a71d6a39cd21c9b3e233c5caa2c1a37da54 npm run monitor:production` passed.
 - Unified cross-surface search remains a real backend/product gap, not a frontend-only claim: no unified `/api/v1/search` endpoint currently exists, so this pass did not fabricate People/Jobs/Shop Talk result lists.
 
 ## Current Gate A Summary
