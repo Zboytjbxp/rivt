@@ -11,7 +11,7 @@ import {
   workTypeOptions,
 } from "./data";
 import { brandConfig, type ThemeMode, type ThemePalette, type TrialPlan } from "./brandConfig";
-import type { ApplicationRecord, Difficulty, Job, JobId, Role, Trade, WorkType } from "./types";
+import type { ApplicationRecord, Job, JobId, Role, Trade } from "./types";
 import { AppShell } from "./app-shell/AppShell";
 import { AccountPanel, ActivityPanel, ActivityToast } from "./app-shell/AppPanels";
 import {
@@ -32,7 +32,8 @@ import {
 } from "./app-shell/preferences";
 import { WorkWorkspace } from "./features/work/WorkWorkspace";
 import { JobEditorModal } from "./features/work/JobEditorModal";
-import { getJob, listJobs, toJobViewModel, transitionJob, type CanonicalDifficulty, type CanonicalWorkType } from "./features/work/job-api";
+import { getJob, listJobs, toJobViewModel, transitionJob } from "./features/work/job-api";
+import { canonicalDifficultyByLabel, canonicalWorkTypeByLabel, tradeCodeByName } from "./features/work/work-mappings";
 import { HomeDashboard } from "./features/home/HomeDashboard";
 import { NetworkHub } from "./features/network/NetworkHub";
 import { InboxCenter } from "./features/inbox/InboxCenter";
@@ -248,52 +249,6 @@ interface ShoutOut {
   message: string;
   createdAt: string;
 }
-
-const tradeCodeByName: Record<Trade, string> = {
-  Electrical: "electrical",
-  Plumbing: "plumbing",
-  HVAC: "hvac",
-  Carpentry: "carpentry",
-  Cabinetry: "cabinetry",
-  "Painting/Finishing": "painting_finishing",
-  Welding: "welding",
-  Roofing: "roofing",
-  Flooring: "flooring",
-  Drywall: "drywall",
-  "Concrete/Masonry": "concrete_masonry",
-  Landscaping: "landscaping",
-  Tile: "tile",
-  Insulation: "insulation",
-  Framing: "framing",
-  "General Labor": "general_labor",
-  Demolition: "demolition",
-  Excavation: "excavation",
-  Fencing: "fencing",
-  Gutters: "gutters",
-  "Windows/Doors": "windows_doors",
-  Siding: "siding",
-  "Driveways/Pavers": "driveways_pavers",
-  "Pool/Spa": "pool_spa",
-  "Fire Suppression": "fire_protection",
-  "Low Voltage": "low_voltage",
-  Solar: "solar",
-  "Security Systems": "security_systems",
-};
-
-const canonicalDifficultyByLabel: Record<Difficulty, CanonicalDifficulty> = {
-  Easy: "easy",
-  Moderate: "moderate",
-  Challenging: "challenging",
-  Advanced: "advanced",
-  Expert: "expert",
-};
-
-const canonicalWorkTypeByLabel: Record<WorkType, CanonicalWorkType> = {
-  "Side work": "side_work",
-  Emergency: "emergency",
-  "Multi-day": "multi_day",
-  "Inspection prep": "inspection_prep",
-};
 
 const recordChecklist = [
   "Signed scope",
