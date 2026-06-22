@@ -21,6 +21,27 @@ Add one entry per staging/production deployment.
 - Rollback performed/result:
 - Approval:
 
+## Current Production - Packet 08 Accessibility Boundary Progress
+
+- Environment: Production (`https://rivt.pro`)
+- Date/time/timezone: 2026-06-22 00:17 America/New_York
+- Deployer: Codex through authenticated Railway CLI
+- Source repository/branch: `Zboytjbxp/rivt`, `master`
+- Source commit: `d4e6f06a70e3dad8f59d54b6698b79ab08d6fd2d`
+- Build/artifact ID: Railway deployment `17cc18db-0ac5-4f23-bf5f-955b98af38cb`
+- Migration version before/after: `0011_shop_talk_reaction_events_immutable` / `0011_shop_talk_reaction_events_immutable` (no schema migration)
+- Feature-flag/config version: `SOURCE_COMMIT` updated to `d4e6f06a70e3dad8f59d54b6698b79ab08d6fd2d`; operational controls unchanged
+- Provider/config changes (no secrets): no provider credentials changed; production smoke tooling gained screenshot, landmark, visible-image-alt, and visible-field-label assertions
+- Backup/rollback target: prior successful accessibility deployment `60cc0602-a6d2-4f19-9864-7c78bae96bf7`, or last broader Sentry-configured stable deployment `eaa7409d-0e75-4ae4-8ac7-1aaa8c8e1a68`; no migration rollback required
+- Automated gates: `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check` passed after this documentation update. `npm run test:ui:shop-talk-news` passed before the runtime source commits. DB-backed local integration tests continue to skip locally because `TEST_DATABASE_URL` is not configured.
+- Post-deploy smoke tests: `/api/health` reported exact source `d4e6f06a70e3dad8f59d54b6698b79ab08d6fd2d`; `npm run monitor:production` passed with PostgreSQL, S3-compatible object storage, Sentry configured, operational controls off, and seven anonymous private-route checks; split production accessibility smoke `ui-a11y-20260622041456-3d6a3d` passed after Railway setup/local browser/Railway cleanup.
+- Rendered evidence: the passing smoke captured 72 PNG screenshots outside the repo at `C:\Users\zboyt\AppData\Local\Temp\rivt-ui-a11y-20260622041456-3d6a3d`.
+- Cleanup evidence: disposable accounts for run `ui-a11y-20260622041456-3d6a3d` were closed with `accountsClosed: 2`.
+- Health/readiness result: health reported healthy PostgreSQL and S3-compatible storage with exact source `d4e6f06a70e3dad8f59d54b6698b79ab08d6fd2d`; production synthetic monitor passed.
+- Known risks: physical iOS Safari, Android Chrome, desktop keyboard-only, and screen-reader/manual route evidence remain incomplete. Browser screenshot capture from the in-app Browser timed out, but Playwright smoke screenshots were captured successfully.
+- Rollback performed/result: not required.
+- Approval: accepted as stronger automated accessibility evidence only; overall Gate A still requires accepted physical/deeper manual accessibility-device evidence.
+
 ## Gate A Final Incident Approvals - 2026-06-22
 
 - Environment: Production (`https://rivt.pro`)

@@ -2,10 +2,10 @@
 
 Last updated: 2026-06-22 America/New_York
 Current gate: Gate A launch hardening
-Current phase: Packet 08 controllable UX hardening, founder/support/legal-safety approvals recorded, incident and launch readiness gates passing, Gate A approval packet prepared, incident rehearsal passed, incident routing approved, recovery policy approved, support hours and backup incident owner recorded, Sentry error monitoring and first escalation route configured, server-owned Shop Talk reactions/reputation ledger, Daily Log live UI proof, Daily Log Records bridge, daily engagement loop, Shop Talk answer queue, RIVT Daily home check-in, Trade News real-media and mobile layout pass, production UI smoke regression fixes, Tools studio release, Records workspace upgrade, UI system pass, shared UI primitives, Tools primitive alignment, Shop Talk command center, Tools app surface pass, Heavy 16th multi-mode calculator, Invoice Draft app upgrade, and Shop Talk reaction/social pulse pass verified; physical/deeper manual accessibility-device evidence remains the next launch-quality boundary
+Current phase: Packet 08 controllable UX hardening, founder/support/legal-safety approvals recorded, incident and launch readiness gates passing, Gate A approval packet prepared, incident rehearsal passed, incident routing approved, recovery policy approved, support hours and backup incident owner recorded, Sentry error monitoring and first escalation route configured, server-owned Shop Talk reactions/reputation ledger, Daily Log live UI proof, Daily Log Records bridge, daily engagement loop, Shop Talk answer queue, RIVT Daily home check-in, Trade News real-media and mobile layout pass, production UI smoke regression fixes, Tools studio release, Records workspace upgrade, UI system pass, shared UI primitives, Tools primitive alignment, Shop Talk command center, Tools app surface pass, Heavy 16th multi-mode calculator, Invoice Draft app upgrade, Shop Talk reaction/social pulse pass, and expanded production accessibility smoke verified; physical/deeper manual accessibility-device evidence remains the next launch-quality boundary
 Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
-Production release commit: `6d8e276e036553c5f861f1f8ab97cc3333a3494b`
+Production release commit: `d4e6f06a70e3dad8f59d54b6698b79ab08d6fd2d`
 
 ## Source State
 
@@ -16,6 +16,24 @@ Packet 00 is merged on `master` at `4c199d903683e44d17b7985272c399c6d7a6cbd6`. T
 - Product source of truth: `RIVT_MASTER_BUILD_PROMPT.md`
 
 Do not discard or overwrite the pre-existing Trade News work when committing or splitting this packet.
+
+## Latest Packet 08 Pass - Accessibility Boundary Progress
+
+- Deployed source `d4e6f06a70e3dad8f59d54b6698b79ab08d6fd2d` through Railway deployment `17cc18db-0ac5-4f23-bf5f-955b98af38cb`.
+- Hardened `scripts/live-ui-accessibility.js` with optional screenshot capture, visible main/navigation landmark checks, visible-image `alt` checks, visible-form label/name/placeholder/title checks, and BOM tolerance for setup JSON created outside Node.
+- The expanded production smoke caught two real issues and they were fixed before acceptance:
+  - Shop Talk search input measured below the 44px touch target floor on a 360px phone; `src/styles.css` now raises `.shop-talk-search input` to a 44px minimum height.
+  - Inbox metric labels clipped at 200% text on a 390px phone; `src/components/ui.css` allows metric labels to wrap and `src/features/inbox/inbox-center.css` stacks the Inbox summary on narrow phones.
+- Production accessibility smoke `ui-a11y-20260622041456-3d6a3d` passed against `https://rivt.pro` and source `d4e6f06a70e3dad8f59d54b6698b79ab08d6fd2d`.
+- The smoke covered contractor/tradesperson 360x800 and 390x844 phones, contractor 768x1024 tablet, 1366x768 laptop, 1440x900 desktop, and contractor 390x844 with 200% root text scale.
+- Each scenario audited Home, Work, Crew, Shop Talk, Tools, and Home again, plus opened top-bar search, notifications, account/profile, and messages/inbox surfaces.
+- Every scenario reported `consoleWarningsOrErrors: 0`, `smallTargetCount: 0`, `missingImageAltCount: 0`, `unlabeledFieldCount: 0`, top-bar search/messages/notifications/profile present, no role toggle, no More tab, reduced-motion preference, named keyboard focus targets, and no horizontal overflow.
+- Screenshot evidence was saved outside the repo at `C:\Users\zboyt\AppData\Local\Temp\rivt-ui-a11y-20260622041456-3d6a3d` with 72 PNGs.
+- Disposable production smoke accounts were cleaned up with `accountsClosed: 2`.
+- Post-documentation gates passed: `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, `git diff --check`, `npm run incident:readiness -- --require-ready`, and `npm run launch:readiness -- --require-ready`.
+- `npm run monitor:production` passed after deployment and after this evidence update, reporting exact source `d4e6f06a70e3dad8f59d54b6698b79ab08d6fd2d`, PostgreSQL, S3-compatible object storage, Sentry configured, operational controls off, and seven anonymous private-route checks.
+- Added `docs/quality/PHYSICAL_ACCESSIBILITY_CHECKLIST.md` as the remaining physical iOS Safari, Android Chrome, desktop keyboard-only, and screen-reader route matrix.
+- Remaining honesty boundary: scripted production accessibility evidence is materially stronger, but `GA-UX-006` remains `Partial` until physical-device and screen-reader/manual route evidence is completed.
 
 ## Latest Packet 08 Pass - Final Incident Approvals Recorded
 
@@ -844,7 +862,7 @@ Completed on 2026-06-21 as a focused follow-up to the shared UI primitive system
 
 ## Next Exact Task
 
-Continue Gate A launch hardening by completing and recording the physical/deeper manual accessibility-device matrix before named-cohort launch. Keep `npm run incident:readiness -- --require-ready` and `npm run launch:readiness -- --require-ready` passing as the machine-readiness gates while that manual evidence is gathered.
+Continue Gate A launch hardening by running `docs/quality/PHYSICAL_ACCESSIBILITY_CHECKLIST.md` on physical iOS Safari, Android Chrome, desktop keyboard-only, and at least one screen reader, then record the pass/fail evidence before named-cohort launch. Keep `npm run incident:readiness -- --require-ready` and `npm run launch:readiness -- --require-ready` passing as the machine-readiness gates while that manual evidence is gathered.
 
 ## Blocking Founder Decisions
 

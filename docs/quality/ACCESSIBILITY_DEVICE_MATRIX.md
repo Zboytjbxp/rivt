@@ -1,15 +1,15 @@
 # Gate A Accessibility and Device Matrix
 
-Date: 2026-06-21
+Date: 2026-06-22
 
 Gate A status: partial evidence only. This report does not approve named customer or pilot launch.
 
 ## Live Target
 
 - URL: `https://rivt.pro/`
-- Live health checked after deploy: `2026-06-21T06:54:02Z`
-- Live source commit reported by `/api/health`: `4fe22bc6a3cbbd146ac286869562f4c3e968ece1`
-- Railway deployment: `7fe1c3ea-d5f4-48c4-b757-a46ff8ebc369`
+- Live health checked after deploy: `2026-06-22T04:17Z`
+- Live source commit reported by `/api/health`: `d4e6f06a70e3dad8f59d54b6698b79ab08d6fd2d`
+- Railway deployment: `17cc18db-0ac5-4f23-bf5f-955b98af38cb`
 - Browser tool: Codex in-app Browser controlled by Playwright runtime
 
 ## Completed Smoke Coverage
@@ -55,6 +55,50 @@ This expanded top-bar action coverage passed in production during run `ui-a11y-2
 
 Local mocked E2E coverage now also opens top-bar search, notifications, profile/account, and messages/inbox at desktop and mobile viewports through `npm run test:e2e`.
 
+## 2026-06-22 Expanded Production Accessibility Smoke
+
+Run `ui-a11y-20260622041456-3d6a3d` passed against `https://rivt.pro` after Railway deployment `17cc18db-0ac5-4f23-bf5f-955b98af38cb` and source `d4e6f06a70e3dad8f59d54b6698b79ab08d6fd2d`.
+
+The script now captures screenshot evidence when `RIVT_UI_SMOKE_SCREENSHOT_DIR` is set and fails on these additional accessibility regressions:
+
+- Missing visible `main` or navigation landmarks.
+- Visible images without `alt`.
+- Visible form controls without a label, `aria-label`, `aria-labelledby`, `name`, `placeholder`, or `title`.
+- Sub-44px visible controls.
+- Horizontal overflow, including 200% root text scale.
+- Missing top-bar search, messages, notifications, or profile controls.
+- Reintroduced More navigation or authenticated role toggle.
+- Post-login console warnings/errors.
+- Keyboard focus targets without useful names.
+
+The passing run covered eight role/viewport scenarios:
+
+- Contractor and tradesperson at 360x800.
+- Contractor and tradesperson at 390x844.
+- Contractor at 768x1024.
+- Contractor at 1366x768.
+- Contractor at 1440x900.
+- Contractor at 390x844 with 200% root text scale.
+
+Each scenario audited Home, Work, Crew, Shop Talk, Tools, and Home again, then opened and audited the top-bar search dialog, notifications panel, account/profile panel, and messages/inbox route.
+
+Every scenario reported:
+
+- `consoleWarningsOrErrors: 0`
+- `smallTargetCount: 0`
+- `missingImageAltCount: 0`
+- `unlabeledFieldCount: 0`
+- Top-bar search/messages/notifications/profile present.
+- No role toggle.
+- No More tab.
+- Reduced-motion preference.
+- Keyboard focus reaching named top-bar and primary-navigation targets.
+- No horizontal overflow.
+
+Screenshot evidence: `C:\Users\zboyt\AppData\Local\Temp\rivt-ui-a11y-20260622041456-3d6a3d` with 72 PNG files.
+
+Disposable production smoke accounts from this run were closed after verification with `accountsClosed: 2`.
+
 ## Findings and Fixes
 
 - Finding: public auth email/password fields rendered at `42px` height, below the Gate A 44px target-size floor.
@@ -73,6 +117,11 @@ Local mocked E2E coverage now also opens top-bar search, notifications, profile/
 - Fix in this packet: constrained the search panel to `calc(100vw - 32px)` and adjusted search input flex behavior for narrow mobile panels.
 - Post-deploy regression verification: live smoke `ui-a11y-20260621062332-02b380` passed at 360x800, 390x844, 768x1024, 1366x768, 1440x900, and 390x844 with 200% text-scale on production source `4fe22bc6a3cbbd146ac286869562f4c3e968ece1`. Every scenario reported `consoleWarningsOrErrors: 0`, `smallTargetCount: 0`, reduced-motion preference, top-bar search/messages/notifications/profile present, and keyboard focus reaching named top-bar and primary navigation targets.
 - Controllable follow-up: local mocked E2E coverage also opens top-bar search, notifications, account/profile, and messages/inbox at desktop and mobile viewports through `npm run test:e2e`.
+- 2026-06-22 finding: hardened production smoke found the Shop Talk search input below the 44px touch-target floor on a 360px phone.
+- Fix in this packet: added a 44px minimum height for `.shop-talk-search input` in `src/styles.css`.
+- 2026-06-22 finding: the Inbox metric summary clipped labels at 200% text on a 390x844 phone.
+- Fix in this packet: allowed metric labels to wrap in `src/components/ui.css` and stacked `.v2-inbox-summary` to a single column below 480px in `src/features/inbox/inbox-center.css`.
+- Post-deploy regression verification: live smoke `ui-a11y-20260622041456-3d6a3d` passed all expanded checks on production source `d4e6f06a70e3dad8f59d54b6698b79ab08d6fd2d` with screenshot evidence captured.
 
 ## Blocked Coverage
 
@@ -85,7 +134,8 @@ Remaining manual Gate A coverage:
 - Reduced-motion pass.
 - Screen-reader label and announcement pass across the same flows.
 - Loading, empty, permission, retry, and offline states on authenticated screens.
+- The manual checklist for this remaining boundary is `docs/quality/PHYSICAL_ACCESSIBILITY_CHECKLIST.md`.
 
 ## Decision
 
-This pass records live public-shell evidence plus expanded scripted authenticated shell, opened top-bar interaction, reduced-motion, 200% text-scale, tap-target, and keyboard-focus evidence, but `GA-UX-006` remains `Partial`. Gate A remains blocked until the deeper manual route matrix and physical-device coverage are completed, including route-level keyboard-only workflows, physical mobile browsers, and screen-reader passes.
+This pass records live public-shell evidence plus expanded scripted authenticated shell, opened top-bar interaction, reduced-motion, 200% text-scale, tap-target, missing-image-alt, unlabeled-field, landmark, screenshot, and keyboard-focus evidence, but `GA-UX-006` remains `Partial`. Gate A remains blocked until the deeper manual route matrix and physical-device coverage are completed, including route-level keyboard-only workflows, physical mobile browsers, and screen-reader passes.
