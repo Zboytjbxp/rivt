@@ -2,7 +2,7 @@
 
 Last updated: 2026-06-22 America/New_York
 Current gate: Gate A launch hardening
-Current phase: Packet 08 controllable UX hardening, recovery policy approved, support hours and backup incident owner recorded, Sentry error monitoring and first escalation route configured, server-owned Shop Talk reactions/reputation ledger, Daily Log live UI proof, Daily Log Records bridge, daily engagement loop, Shop Talk answer queue, RIVT Daily home check-in, Trade News real-media and mobile layout pass, production UI smoke regression fixes, Tools studio release, Records workspace upgrade, UI system pass, shared UI primitives, Tools primitive alignment, Shop Talk command center, Tools app surface pass, Heavy 16th multi-mode calculator, Invoice Draft app upgrade, and Shop Talk reaction/social pulse pass verified; full Gate A approval remains blocked
+Current phase: Packet 08 controllable UX hardening, incident routing approved, recovery policy approved, support hours and backup incident owner recorded, Sentry error monitoring and first escalation route configured, server-owned Shop Talk reactions/reputation ledger, Daily Log live UI proof, Daily Log Records bridge, daily engagement loop, Shop Talk answer queue, RIVT Daily home check-in, Trade News real-media and mobile layout pass, production UI smoke regression fixes, Tools studio release, Records workspace upgrade, UI system pass, shared UI primitives, Tools primitive alignment, Shop Talk command center, Tools app surface pass, Heavy 16th multi-mode calculator, Invoice Draft app upgrade, and Shop Talk reaction/social pulse pass verified; full Gate A approval remains blocked
 Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
 Production release commit: `6d8e276e036553c5f861f1f8ab97cc3333a3494b`
@@ -17,19 +17,26 @@ Packet 00 is merged on `master` at `4c199d903683e44d17b7985272c399c6d7a6cbd6`. T
 
 Do not discard or overwrite the pre-existing Trade News work when committing or splitting this packet.
 
+## Latest Packet 08 Pass - Incident Routing Approved
+
+- Approved the Gate A incident-routing plan in `docs/operations/incident-routing.json`.
+- Recorded route approval by Michael at `2026-06-22T03:09:36.0366141Z` for the Gate A pilot scope: primary owner, backup owner, support hours, synthetic monitor, Sentry error monitoring, and first pilot escalation route.
+- `node scripts/incident-readiness-check.js --json` is expected to stop reporting `INCIDENT_ROUTING_NOT_APPROVED`.
+- Remaining honesty boundary: this approves the route design only. Gate A still needs a passed incident rehearsal and explicit founder/support/legal-safety approvals.
+
 ## Latest Packet 08 Pass - Recovery Policy Approved
 
 - Approved Gate A recovery policy in `docs/operations/recovery-policy.json`: RPO 1440 minutes / 24 hours, RTO 240 minutes / 4 hours, 30-day backup retention, and 30-day restore-drill cadence.
 - Set backup-retention and restore-drill owner to Michael for the Gate A pilot.
 - Set next restore drill due date to `2026-07-21T04:18:59.000Z`, 30 days after the last passed named backup-artifact restore.
 - Recorded founder and operations recovery-policy approvals by Michael at `2026-06-22T03:02:39.0867156Z`.
-- `node scripts/launch-readiness-check.js --json` stopped reporting recovery-policy blockers. Remaining launch blockers are now incident-routing approval, incident rehearsal, founder/support/legal-safety approvals, and deeper manual accessibility/device evidence.
+- `node scripts/launch-readiness-check.js --json` stopped reporting recovery-policy blockers. Remaining launch blockers are now incident rehearsal, founder/support/legal-safety approvals, and deeper manual accessibility/device evidence after the follow-up incident-routing approval pass.
 - Remaining honesty boundary: the policy is approved for Gate A pilot only. RPO/RTO should be tightened before broader scale or any platform-held financial workflow.
 
 ## Latest Packet 08 Pass - Support Hours Recorded
 
 - Recorded founder-provided Gate A support hours in `docs/operations/incident-routing.json`: Monday-Saturday, 9:00 AM-5:00 PM, America/New_York.
-- `node scripts/incident-readiness-check.js --json` is expected to stop reporting `SUPPORT_HOURS_MISSING`; incident rehearsal, founder/support/legal-safety approvals, and incident-routing approval remain blocked.
+- `node scripts/incident-readiness-check.js --json` is expected to stop reporting `SUPPORT_HOURS_MISSING`; incident rehearsal and founder/support/legal-safety approvals remain blocked after the follow-up incident-routing approval pass.
 - Remaining honesty boundary: this records the support coverage window, not final support/legal/founder approval.
 
 ## Latest Packet 08 Pass - Backup Incident Owner Recorded
@@ -85,7 +92,7 @@ Do not discard or overwrite the pre-existing Trade News work when committing or 
 - Railway cleanup mode closed both disposable accounts and closed the smoke job for run `daily-log-ui-20260622004926-05a797`.
 - Local gates passed for this slice: `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test`, `npm run test:e2e`, `npm run test:ui:tools`, `npm run test:ui:shop-talk-news`, `npm audit --omit=dev`, and `git diff --check`; DB-backed integration tests still skip locally because `TEST_DATABASE_URL` is not configured.
 - Live checks passed: `/api/health` reported exact source `9c614ac2f8691186150e16583e7b204cbada590a`, PostgreSQL and S3-compatible dependencies healthy, and `npm run monitor:production` passed with seven anonymous private-route checks.
-- Remaining honesty boundary: this closes the exact Daily Log UI-to-Records live proof gap. Full Gate A still requires real external error monitoring/paging, incident rehearsal, RPO/RTO policy approval, backup retention/cadence approval, final support/legal/founder signoff, physical/deeper manual accessibility-device evidence, and production-grade server Shop Talk posts/reactions/reputation if promoted into launch scope.
+- Remaining honesty boundary: this closes the exact Daily Log UI-to-Records live proof gap. Later Packet 08 passes closed external error monitoring/paging, incident-routing approval, RPO/RTO policy approval, and backup retention/cadence approval. Full Gate A still requires incident rehearsal, final support/legal/founder signoff, physical/deeper manual accessibility-device evidence, and production-grade server Shop Talk posts/reactions/reputation if promoted into launch scope.
 
 ## Packet 08 Pass - Daily Log Records Bridge
 
@@ -573,7 +580,7 @@ Production evidence:
 
 ## Packet 08 Gate Status
 
-The Packet 08 hardening, durable-rate-limit, and legacy-bridge retirement slices are deployed and accepted as evidence. Full Gate A approval is rejected until the remaining launch blockers are closed: timed isolated restore drill, external monitoring/alerts and incident routing, support/legal/founder signoff, and manual accessibility/device matrix.
+The Packet 08 hardening, durable-rate-limit, and legacy-bridge retirement slices are deployed and accepted as evidence. Later Packet 08 passes closed timed restore evidence, external monitoring/alerts, incident routing, and recovery-policy approval. Full Gate A approval remains rejected until the remaining launch blockers are closed: incident rehearsal, support/legal/founder signoff, and manual accessibility/device matrix.
 
 ## Packet 08 Manual Device/Accessibility Matrix Progress
 
@@ -684,7 +691,7 @@ Implemented on 2026-06-21:
 - Added `docs/operations/LAUNCH_OPS_CHECKLIST.md` so the final go/no-go checklist is explicit across incident ownership, restore policy, support, providers, accessibility, and pilot cohort controls.
 - Added `docs/operations/INCIDENT_REHEARSAL_RUNBOOK.md` with public-health, storage, and abuse/safety rehearsal scenarios plus an evidence template.
 - Updated `docs/operations/RUNBOOKS.md` so it no longer describes the named backup-artifact restore as incomplete and now documents the launch readiness gate.
-- `npm run launch:readiness -- --json` currently blocks with the expected non-code findings: incident routing not approved, backup owner missing, support hours missing, dedicated error monitoring missing, paging missing, incident rehearsal missing, incident approvals missing, recovery policy not approved, RPO/RTO missing, backup retention missing, restore cadence missing, next restore drill missing, and recovery approvals missing. It does recognize the recent named backup-artifact restore as current evidence.
+- `npm run launch:readiness -- --json` blocked at the time with expected non-code findings including incident routing, backup owner, support hours, dedicated error monitoring, paging, incident rehearsal, incident approvals, recovery policy, RPO/RTO, backup retention, restore cadence, next restore drill, and recovery approvals. Later Packet 08 passes closed all of those except incident rehearsal and final incident approvals.
 - Required local gates passed after this slice: `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test`, `npm run test:e2e`, and `npm audit --omit=dev`. DB-backed local integration tests still skip on this workstation because `TEST_DATABASE_URL` is intentionally absent.
 
 ## Packet 08 Controllable UI Smoke Coverage Progress
@@ -805,7 +812,7 @@ Completed on 2026-06-21 as a focused follow-up to the shared UI primitive system
 
 ## Next Exact Task
 
-Continue Gate A launch hardening with the remaining external and manual blockers: fill approval fields in `docs/operations/incident-routing.json`, orient the backup owner on the runbook, run an incident rehearsal, then pass `npm run incident:readiness -- --require-ready` and `npm run launch:readiness -- --require-ready`. Complete the physical/deeper manual accessibility-device matrix before named-cohort launch.
+Continue Gate A launch hardening with the remaining external and manual blockers: fill the founder/support/legal-safety approval fields in `docs/operations/incident-routing.json`, orient the backup owner on the runbook, run an incident rehearsal, then pass `npm run incident:readiness -- --require-ready` and `npm run launch:readiness -- --require-ready`. Complete the physical/deeper manual accessibility-device matrix before named-cohort launch.
 
 ## Blocking Founder Decisions
 

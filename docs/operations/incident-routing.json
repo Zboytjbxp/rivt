@@ -1,6 +1,12 @@
 {
   "version": 1,
-  "status": "blocked",
+  "status": "approved",
+  "routeApproval": {
+    "status": "approved",
+    "approvedBy": "Michael",
+    "approvedAt": "2026-06-22T03:09:36.0366141Z",
+    "scope": "Gate A pilot incident-routing plan: primary owner, backup owner, support hours, synthetic monitor, Sentry error monitoring, and first pilot escalation route."
+  },
   "primaryOwner": {
     "name": "Michael",
     "role": "Founder / incident commander",
