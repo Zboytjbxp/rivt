@@ -1,7 +1,8 @@
 import "dotenv/config";
 import assert from "node:assert/strict";
 import { createHash, randomBytes } from "node:crypto";
-import { readFile } from "node:fs/promises";
+import { mkdir, readFile } from "node:fs/promises";
+import { join } from "node:path";
 import pg from "pg";
 import { chromium } from "playwright";
 
@@ -13,6 +14,7 @@ const args = process.argv.slice(2);
 const setupOnly = args.includes("--setup-only");
 const cleanupRun = argValue("--cleanup-run");
 const browserOnlyFile = argValue("--browser-only");
+const screenshotDir = process.env.RIVT_UI_SMOKE_SCREENSHOT_DIR?.trim();
 
 const auditScenarios = [
   { name: "phone-compact", viewport: { width: 360, height: 800 }, roles: ["contractor", "tradesperson"] },
@@ -215,6 +217,8 @@ async function collectUiAudit(page, label) {
     }
     const interactive = [...document.querySelectorAll("button,a,input,select,textarea,[role='button'],[tabindex]:not([tabindex='-1'])")]
       .filter(visible);
+    const fields = [...document.querySelectorAll("input,select,textarea")]
+      .filter((el) => visible(el) && !["button", "checkbox", "hidden", "image", "radio", "reset", "submit"].includes(String(el.type || "").toLowerCase()));
     const controls = interactive.map((el) => {
       const rect = el.getBoundingClientRect();
       return {
@@ -263,7 +267,28 @@ async function collectUiAudit(page, label) {
       },
       hasMoreNav: controls.some((control) => control.name === "More"),
       roleToggleVisible: [...document.querySelectorAll(".role-toggle")].some(visible),
+      landmarks: {
+        main: [...document.querySelectorAll("main,[role='main']")].some(visible),
+        navigation: [...document.querySelectorAll("nav,[role='navigation']")].some(visible),
+      },
       missingNames: controls.filter((control) => !control.name).slice(0, 15),
+      missingImageAlt: [...document.querySelectorAll("img")]
+        .filter(visible)
+        .filter((el) => !el.hasAttribute("alt"))
+        .map((el) => ({
+          src: String(el.getAttribute("src") || "").slice(0, 100),
+          className: typeof el.className === "string" ? el.className : "",
+        }))
+        .slice(0, 15),
+      unlabeledFields: fields
+        .filter((el) => !textOf(el))
+        .map((el) => ({
+          tag: el.tagName.toLowerCase(),
+          type: String(el.type || ""),
+          name: String(el.getAttribute("name") || ""),
+          className: typeof el.className === "string" ? el.className : "",
+        }))
+        .slice(0, 15),
       smallTargets: controls.filter((control) => control.width < 44 || control.height < 44).slice(0, 20),
       overflow,
       bodyStart: bodyText.slice(0, 500),
@@ -272,6 +297,20 @@ async function collectUiAudit(page, label) {
         || /\b(Runtime Error|Failed to compile|Internal server error)\b/i.test(bodyText),
     };
   }, label);
+}
+
+function screenshotName(label) {
+  return `${label.replace(/[^a-z0-9-]+/gi, "-").replace(/^-+|-+$/g, "").toLowerCase() || "screen"}.png`;
+}
+
+async function collectAndCaptureUiAudit(page, label) {
+  const audit = await collectUiAudit(page, label);
+  if (screenshotDir) {
+    await mkdir(screenshotDir, { recursive: true });
+    audit.screenshot = join(screenshotDir, screenshotName(label));
+    await page.screenshot({ path: audit.screenshot, fullPage: false });
+  }
+  return audit;
 }
 
 async function collectKeyboardAudit(page, label) {
@@ -342,28 +381,28 @@ async function collectTopBarActionAudits(page, scenarioLabel) {
 
   await page.keyboard.press("Control+K");
   await page.getByRole("dialog", { name: "Search RIVT" }).waitFor({ timeout: 5000 });
-  audits.push(await collectUiAudit(page, `${scenarioLabel}-search-dialog`));
+  audits.push(await collectAndCaptureUiAudit(page, `${scenarioLabel}-search-dialog`));
   await page.keyboard.press("Escape");
   await assertNoDialog(page, "Search RIVT");
 
   await clickVisibleControl(page, { pattern: "^Notifications$", description: "notifications" });
   await page.getByRole("dialog", { name: "Notifications" }).waitFor({ timeout: 5000 });
   await page.getByRole("button", { name: /Mark read/i }).waitFor({ timeout: 5000 });
-  audits.push(await collectUiAudit(page, `${scenarioLabel}-notifications-panel`));
+  audits.push(await collectAndCaptureUiAudit(page, `${scenarioLabel}-notifications-panel`));
   await page.getByRole("button", { name: "Close notifications" }).click();
   await assertNoDialog(page, "Notifications");
 
   await clickVisibleControl(page, { pattern: "Open profile menu", description: "profile menu" });
   await page.getByRole("dialog", { name: "Settings" }).waitFor({ timeout: 5000 });
   await page.getByRole("button", { name: "Sign out" }).waitFor({ timeout: 5000 });
-  audits.push(await collectUiAudit(page, `${scenarioLabel}-account-panel`));
+  audits.push(await collectAndCaptureUiAudit(page, `${scenarioLabel}-account-panel`));
   await page.getByRole("button", { name: "Close account" }).click();
   await assertNoDialog(page, "Settings");
 
   await clickVisibleControl(page, { pattern: "^Messages$", description: "messages" });
   await page.getByRole("heading", { name: "Inbox", exact: true }).waitFor({ timeout: 10000 });
   await page.getByText("Server-owned job messages and notifications", { exact: false }).waitFor({ timeout: 5000 });
-  audits.push(await collectUiAudit(page, `${scenarioLabel}-messages-page`));
+  audits.push(await collectAndCaptureUiAudit(page, `${scenarioLabel}-messages-page`));
   await firstVisibleClick(page, "Home");
 
   return audits;
@@ -395,10 +434,10 @@ async function loginAndAudit(browser, account, scenario) {
     logs.length = 0;
 
     const scenarioLabel = `${account.role}-${scenario.name}-${scenario.viewport.width}x${scenario.viewport.height}`;
-    const audits = [await collectUiAudit(page, `${scenarioLabel}-home`)];
+    const audits = [await collectAndCaptureUiAudit(page, `${scenarioLabel}-home`)];
     for (const navItem of ["Work", "Crew", "Shop Talk", "Tools", "Home"]) {
       await firstVisibleClick(page, navItem);
-      audits.push(await collectUiAudit(page, `${scenarioLabel}-${navItem.toLowerCase().replace(/\s+/g, "-")}`));
+      audits.push(await collectAndCaptureUiAudit(page, `${scenarioLabel}-${navItem.toLowerCase().replace(/\s+/g, "-")}`));
     }
     const topBarActionAudits = await collectTopBarActionAudits(page, scenarioLabel);
 
@@ -408,9 +447,13 @@ async function loginAndAudit(browser, account, scenario) {
       assert.equal(audit.viewport.scrollWidth <= audit.viewport.width + 2, true, `${audit.label} has horizontal page overflow.`);
       assert.deepEqual(audit.overflow, [], `${audit.label} has off-screen visible elements: ${JSON.stringify(audit.overflow)}`);
       assert.deepEqual(audit.requiredNav.filter((item) => !item.visible), [], `${audit.label} is missing primary nav.`);
+      assert.equal(audit.landmarks.main, true, `${audit.label} is missing a visible main landmark.`);
+      assert.equal(audit.landmarks.navigation, true, `${audit.label} is missing a visible navigation landmark.`);
       assert.equal(audit.hasMoreNav, false, `${audit.label} still exposes a More nav control.`);
       assert.equal(audit.roleToggleVisible, false, `${audit.label} still exposes a role toggle.`);
       assert.deepEqual(audit.missingNames, [], `${audit.label} has visible interactive controls without names: ${JSON.stringify(audit.missingNames)}`);
+      assert.deepEqual(audit.missingImageAlt, [], `${audit.label} has visible images without alt attributes: ${JSON.stringify(audit.missingImageAlt)}`);
+      assert.deepEqual(audit.unlabeledFields, [], `${audit.label} has visible form fields without labels/names: ${JSON.stringify(audit.unlabeledFields)}`);
       assert.deepEqual(audit.smallTargets, [], `${audit.label} has visible interactive controls below 44px: ${JSON.stringify(audit.smallTargets)}`);
       for (const [signal, present] of Object.entries(audit.topBarSignals)) {
         assert.equal(present, true, `${audit.label} is missing top-bar ${signal}.`);
@@ -432,6 +475,9 @@ async function loginAndAudit(browser, account, scenario) {
         url: audit.url,
         topBarSignals: audit.topBarSignals,
         smallTargets: audit.smallTargets,
+        missingImageAlt: audit.missingImageAlt,
+        unlabeledFields: audit.unlabeledFields,
+        screenshot: audit.screenshot ?? null,
         bodyStart: audit.bodyStart,
       })),
       audits: audits.map((audit) => ({
@@ -440,6 +486,9 @@ async function loginAndAudit(browser, account, scenario) {
         requiredNav: audit.requiredNav,
         topBarSignals: audit.topBarSignals,
         smallTargets: audit.smallTargets,
+        missingImageAlt: audit.missingImageAlt,
+        unlabeledFields: audit.unlabeledFields,
+        screenshot: audit.screenshot ?? null,
         bodyStart: audit.bodyStart,
       })),
     };
@@ -449,7 +498,7 @@ async function loginAndAudit(browser, account, scenario) {
 }
 
 async function runBrowserOnly(filePath) {
-  const setup = JSON.parse(await readFile(filePath, "utf8"));
+  const setup = JSON.parse((await readFile(filePath, "utf8")).replace(/^\uFEFF/, ""));
   assert.equal(setup.ok, true);
   assert.ok(Array.isArray(setup.accounts));
   const browser = await chromium.launch({ headless: true });
@@ -495,6 +544,9 @@ function summarizeResults({ run, buildCommit, accountsClosed, results, mode = "f
       consoleSamples: result.logs.slice(0, 3),
       topBarSignals: result.audits[0]?.topBarSignals ?? null,
       smallTargetCount: [...result.audits, ...result.topBarActionAudits].reduce((count, audit) => count + audit.smallTargets.length, 0),
+      missingImageAltCount: [...result.audits, ...result.topBarActionAudits].reduce((count, audit) => count + audit.missingImageAlt.length, 0),
+      unlabeledFieldCount: [...result.audits, ...result.topBarActionAudits].reduce((count, audit) => count + audit.unlabeledFields.length, 0),
+      screenshotSamples: [...result.audits, ...result.topBarActionAudits].map((audit) => audit.screenshot).filter(Boolean).slice(0, 5),
       smallTargetSamples: [...result.audits, ...result.topBarActionAudits].flatMap((audit) =>
         audit.smallTargets.map((target) => ({
           screen: audit.label,
