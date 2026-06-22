@@ -285,7 +285,7 @@ async function loginAndSaveDailyLog(account, jobTitle, marker) {
     await page.locator("button.v2-tool-launch-card").filter({ hasText: "Daily log" }).first().click();
     await page.getByRole("heading", { name: "Daily log", exact: true }).waitFor({ timeout: 20_000 });
     await page.getByText("Records-ready", { exact: true }).waitFor({ timeout: 20_000 });
-    await page.getByText(jobTitle, { exact: true }).waitFor({ timeout: 20_000 });
+    await page.locator(".v2-daily-log-record-target").getByText(jobTitle, { exact: true }).waitFor({ timeout: 20_000 });
 
     await page.getByLabel("Work completed").fill(`Installed labels and captured Daily Log UI marker ${marker}.`);
     await page.getByLabel("Blockers / changes").fill(`No blockers for ${marker}.`);
