@@ -10,22 +10,16 @@ import {
   Bell,
   BriefcaseBusiness,
   CheckCircle2,
-  ChevronDown,
-  ClipboardCheck,
-  ClipboardList,
   CreditCard,
-  FileCheck2,
   Flag,
   FolderOpen,
   GraduationCap,
-  Home,
   MapPin,
   Mail,
   MessageCircle,
   MessageSquareText,
   Moon,
   ReceiptText,
-  Sparkles,
   ShieldCheck,
   Star,
   LogOut,
@@ -33,7 +27,6 @@ import {
   ThumbsUp,
   UserCheck,
   Users,
-  Wrench,
   X,
 } from "lucide-react";
 import {
@@ -436,64 +429,9 @@ const specialtyOptions = tradeOptions.filter(
   (option): option is Trade => option !== "All trades",
 );
 
-const navItems: Array<{ label: NavLabel; icon: typeof BriefcaseBusiness }> = [
-  { label: "Home", icon: Home },
-  { label: "Marketplace", icon: BriefcaseBusiness },
-  { label: "Shop Talk", icon: MessageCircle },
-  { label: "Tools", icon: Wrench },
-  { label: "My Jobs", icon: ClipboardList },
-  { label: "Applications", icon: FileCheck2 },
-  { label: "Invites", icon: Sparkles },
-  { label: "My Crew", icon: UserCheck },
-  { label: "Trust & Legal", icon: ShieldCheck },
-  { label: "Records", icon: ClipboardCheck },
-  { label: "Safety & Training", icon: GraduationCap },
-  { label: "Reviews", icon: Star },
-  { label: "Feedback", icon: MessageCircle },
-  { label: "Settings", icon: ShieldCheck },
-  { label: "Admin", icon: ClipboardCheck },
-];
-
-const roleNavItems: Record<Role, NavLabel[]> = {
-  contractor: [
-    "Home",
-    "Marketplace",
-    "Shop Talk",
-    "Tools",
-    "My Jobs",
-    "Applications",
-    "Invites",
-    "My Crew",
-    "Trust & Legal",
-    "Records",
-    "Reviews",
-    "Feedback",
-    "Settings",
-  ],
-  tradesperson: [
-    "Home",
-    "Marketplace",
-    "Shop Talk",
-    "Tools",
-    "My Jobs",
-    "Applications",
-    "Trust & Legal",
-    "Records",
-    "Safety & Training",
-    "Reviews",
-    "Feedback",
-    "Settings",
-  ],
-};
-
 const themePaletteOptions = Object.entries(brandConfig.theme.palettes) as Array<
   [ThemePalette, (typeof brandConfig.theme.palettes)[ThemePalette]]
 >;
-
-function visibleNavItems(role: Role) {
-  const visibleLabels = new Set(roleNavItems[role]);
-  return navItems.filter((item) => visibleLabels.has(item.label));
-}
 
 const pageCopy: Record<NavLabel, { title: string; description: string }> = {
   Home: {
@@ -3727,97 +3665,6 @@ function AccountPanel({
   );
 }
 
-/** @deprecated Remove in Packet 01 after the routed shell parity audit. */
-export function Sidebar({
-  role,
-  activeView,
-  selectedJob,
-  hasJobs,
-  profile,
-  onNavigate,
-}: {
-  role: Role;
-  activeView: NavLabel;
-  selectedJob: Job;
-  hasJobs: boolean;
-  profile: AccountProfile;
-  onNavigate: (view: NavLabel) => void;
-}) {
-  const primaryLabels: NavLabel[] = ["Home", "Marketplace", "Shop Talk", "Tools", "My Crew"];
-  const visibleItems = visibleNavItems(role);
-  const primaryItems = primaryLabels
-    .map((label) => visibleItems.find((item) => item.label === label))
-    .filter((item): item is (typeof visibleItems)[number] => Boolean(item));
-  const displayLabel: Partial<Record<NavLabel, string>> = {
-    Marketplace: "Work",
-    "My Crew": "Crew",
-  };
-
-  return (
-    <aside className="sidebar">
-      <div className="brand-lockup">
-        <div className="brand-mark">
-          <RivtMark />
-        </div>
-                <div>
-                  <strong>{brandConfig.appName}</strong>
-                  <span>{brandConfig.tagline}</span>
-                </div>
-      </div>
-
-      <nav className="nav-list" aria-label="Primary">
-        {primaryItems.map((item) => {
-          const Icon = item.icon;
-          return (
-            <button
-              key={item.label}
-              className={activeView === item.label ? "nav-item active" : "nav-item"}
-              aria-label={`Go to ${displayLabel[item.label] ?? item.label}`}
-              aria-current={activeView === item.label ? "page" : undefined}
-              onClick={() => onNavigate(item.label)}
-            >
-              <Icon size={18} />
-              <span>{displayLabel[item.label] ?? item.label}</span>
-            </button>
-          );
-        })}
-      </nav>
-
-      <div className="sidebar-job-card">
-        {hasJobs ? (
-          <>
-            <span>Active work order</span>
-            <strong>{selectedJob.title}</strong>
-            <small>{selectedJob.trade}</small>
-            <small><MapPin size={12} /> {selectedJob.location}</small>
-            <div className="sidebar-progress">
-              <em>{selectedJob.status}</em>
-              <i><b style={{ width: `${Math.min(selectedJob.match, 100)}%` }} /></i>
-              <small>{selectedJob.match}%</small>
-            </div>
-            <button type="button" onClick={() => onNavigate("Marketplace")}>Open work order</button>
-          </>
-        ) : (
-          <>
-            <span>Active work order</span>
-            <strong>No active order</strong>
-            <button type="button" onClick={() => onNavigate("Marketplace")}>Post a job</button>
-          </>
-        )}
-      </div>
-
-      <button type="button" className="sidebar-profile" onClick={() => onNavigate("My Crew")}>
-        <Avatar name={profile.displayName} size="sm" className="user-avatar" />
-        <span>
-          <strong>{profile.displayName}</strong>
-          <small>View Profile</small>
-        </span>
-        <ChevronDown size={15} />
-      </button>
-    </aside>
-  );
-}
-
 function ThemePalettePicker({
   selectedPalette,
   onSelectPalette,
@@ -3883,47 +3730,6 @@ function ThemeToggle({
       <Icon size={16} />
       {!compact && <span>{label}</span>}
     </button>
-  );
-}
-
-/** @deprecated Remove in Packet 01 after the routed shell parity audit. */
-export function MobileNavStrip({
-  role,
-  activeView,
-  onNavigate,
-}: {
-  role: Role;
-  activeView: NavLabel;
-  onNavigate: (view: NavLabel) => void;
-}) {
-  const primaryLabels: NavLabel[] = ["Home", "Marketplace", "Shop Talk", "Tools", "My Crew"];
-  const visibleItems = visibleNavItems(role);
-  const primaryItems = primaryLabels
-    .map((label) => visibleItems.find((item) => item.label === label))
-    .filter((item): item is (typeof visibleItems)[number] => Boolean(item));
-  const mobileLabel: Partial<Record<NavLabel, string>> = {
-    Marketplace: "Work",
-    "Shop Talk": "Talk",
-    "My Crew": "Crew",
-  };
-
-  return (
-    <nav className="mobile-nav-strip" aria-label="Mobile primary navigation">
-      {primaryItems.map((item) => {
-        const Icon = item.icon;
-        return (
-          <button
-            key={item.label}
-            className={activeView === item.label ? "selected" : ""}
-            aria-label={`Go to ${mobileLabel[item.label] ?? item.label}`}
-            onClick={() => onNavigate(item.label)}
-          >
-            <Icon size={15} />
-            <span>{mobileLabel[item.label] ?? item.label}</span>
-          </button>
-        );
-      })}
-    </nav>
   );
 }
 

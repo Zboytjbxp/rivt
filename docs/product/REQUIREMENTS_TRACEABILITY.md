@@ -10,6 +10,14 @@ Status values:
 
 Evidence must eventually link to implementation, automated tests, manual acceptance proof, and deployed build.
 
+## Traceability Addendum - 2026-06-22 Legacy Sidebar Export Cleanup
+
+- `GA-UX-001` gains maintainability evidence: unused deprecated `Sidebar` and `MobileNavStrip` exports were removed from `src/App.tsx` after confirming no references in `src` or `test`.
+- `GA-UX-002` and `GA-UX-004` gain cleanup evidence that the old role-filtered nav helper table is no longer present in `App.tsx`; active primary navigation remains owned by AppShell.
+- `GA-OPS-007` gains local automated evidence for this refactor slice: `npm run build`, `npm run lint`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check` passed.
+- The full DB-backed `npm run test` command was run with explicit network access because the integration suite uses the isolated test Postgres.
+- `GA-OPS-008` is unchanged for production deployment: this slice has not been deployed.
+
 ## Traceability Addendum - 2026-06-22 Legacy App View Cleanup
 
 - `GA-UX-001` gains maintainability evidence: unreachable deprecated `OperationsWorkspace`, old `MarketplaceView`, and old `PostJobModal` code paths were removed from `src/App.tsx` after call-site verification.
