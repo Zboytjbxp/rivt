@@ -2,7 +2,7 @@
 
 Last updated: 2026-06-22 America/New_York
 Current gate: Gate A launch hardening
-Current phase: Packet 08 controllable UX hardening, Work mapping extraction, app preference helper extraction, app route metadata extraction, account/activity panel extraction, auth screen extraction, legacy sidebar export cleanup, legacy App view cleanup, Shop Talk route split, Profile session ownership split, App profile-route split, frontend smoke-test tripwire, async password hashing, exact direct dependency pinning, founder/support/legal-safety approvals recorded, incident and launch readiness gates passing, Gate A approval packet prepared, incident rehearsal passed, incident routing approved, recovery policy approved, support hours and backup incident owner recorded, Sentry error monitoring and first escalation route configured, server-owned Shop Talk reactions/reputation ledger, Daily Log live UI proof, Daily Log Records bridge, daily engagement loop, Shop Talk answer queue, RIVT Daily home check-in, Trade News real-media and mobile layout pass, production UI smoke regression fixes, Tools studio release, Records workspace upgrade, UI system pass, shared UI primitives, Tools primitive alignment, Shop Talk command center, Tools app surface pass, Heavy 16th multi-mode calculator, Invoice Draft app upgrade, Shop Talk reaction/social pulse pass, expanded production accessibility smoke verified, Claude-audit UI consolidation deployed, global search command surface deployed, server-owned profile search deployed, and local `TEST_DATABASE_URL` configured against isolated test Postgres; physical/deeper manual accessibility-device evidence remains the next launch-quality boundary
+Current phase: Packet 08 controllable UX hardening, dead guest job fixture removal, Work mapping extraction, app preference helper extraction, app route metadata extraction, account/activity panel extraction, auth screen extraction, legacy sidebar export cleanup, legacy App view cleanup, Shop Talk route split, Profile session ownership split, App profile-route split, frontend smoke-test tripwire, async password hashing, exact direct dependency pinning, founder/support/legal-safety approvals recorded, incident and launch readiness gates passing, Gate A approval packet prepared, incident rehearsal passed, incident routing approved, recovery policy approved, support hours and backup incident owner recorded, Sentry error monitoring and first escalation route configured, server-owned Shop Talk reactions/reputation ledger, Daily Log live UI proof, Daily Log Records bridge, daily engagement loop, Shop Talk answer queue, RIVT Daily home check-in, Trade News real-media and mobile layout pass, production UI smoke regression fixes, Tools studio release, Records workspace upgrade, UI system pass, shared UI primitives, Tools primitive alignment, Shop Talk command center, Tools app surface pass, Heavy 16th multi-mode calculator, Invoice Draft app upgrade, Shop Talk reaction/social pulse pass, expanded production accessibility smoke verified, Claude-audit UI consolidation deployed, global search command surface deployed, server-owned profile search deployed, and local `TEST_DATABASE_URL` configured against isolated test Postgres; physical/deeper manual accessibility-device evidence remains the next launch-quality boundary
 Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
 Production release commit: `cda9733acdaa7ed858b819fc9b5904ee2c237600`
@@ -16,6 +16,15 @@ Packet 00 is merged on `master` at `4c199d903683e44d17b7985272c399c6d7a6cbd6`. T
 - Product source of truth: `RIVT_MASTER_BUILD_PROMPT.md`
 
 Do not discard or overwrite the pre-existing Trade News work when committing or splitting this packet.
+
+## Latest Packet 08 Pass - Dead Guest Job Fixture Removal
+
+- Removed the unreferenced `guestDemoJobs` fixture from `src/App.tsx`; the fixture contained local demo job content and was not used by any active screen.
+- Verified no remaining references to the deleted guest-demo job titles or `guestDemoJobs` symbol.
+- `src/App.tsx` is now reduced to 2,180 lines.
+- Required gates passed after this slice: `npm run build`, `npm run lint`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check`.
+- The full `npm run test` command was run with explicit network access because the integration suite uses the isolated test Postgres.
+- No production deployment was performed for this refactor slice.
 
 ## Latest Packet 08 Pass - Work Mapping Extraction
 

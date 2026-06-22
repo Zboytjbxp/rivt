@@ -10,6 +10,14 @@ Status values:
 
 Evidence must eventually link to implementation, automated tests, manual acceptance proof, and deployed build.
 
+## Traceability Addendum - 2026-06-22 Dead Guest Job Fixture Removal
+
+- `GA-UX-001` gains cleanup evidence: the unreferenced `guestDemoJobs` fixture was removed from `src/App.tsx`.
+- `GA-DATA-001` improves launch hygiene: unused local demo job titles and example job details are no longer retained in the frontend bundle.
+- `GA-OPS-007` gains local automated evidence for this cleanup slice: `npm run build`, `npm run lint`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check` passed.
+- The full `npm run test` command was run with explicit network access because the integration suite uses the isolated test Postgres.
+- `GA-OPS-008` is unchanged for production deployment: this slice has not been deployed.
+
 ## Traceability Addendum - 2026-06-22 Work Mapping Extraction
 
 - `GA-UX-001` gains maintainability evidence: trade-code, difficulty-label, and work-type-label mappings were extracted from `src/App.tsx` into `src/features/work/work-mappings.ts`.
