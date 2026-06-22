@@ -161,6 +161,7 @@ try {
     ...target,
     upvotes: 0,
     downvotes: 0,
+    score: 0,
     viewerReaction: null,
   });
 
