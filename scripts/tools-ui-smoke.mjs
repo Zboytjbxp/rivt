@@ -48,6 +48,48 @@ const account = {
   },
 };
 
+const activeWorkItem = {
+  id: "tools-active-work-1",
+  jobId: "tools-job-1",
+  offerId: "tools-offer-1",
+  organizationId: "org-tools-ui",
+  contractorAccountId: account.id,
+  tradespersonAccountId: "tools-tradesperson-1",
+  status: "active",
+  startedAt: "2026-06-21T12:00:00.000Z",
+  completedAt: null,
+  cancelledAt: null,
+  createdAt: "2026-06-21T12:00:00.000Z",
+  updatedAt: "2026-06-21T12:00:00.000Z",
+  job: {
+    id: "tools-job-1",
+    title: "Tenant Build-Out",
+    status: "accepted",
+    organization: { id: "org-tools-ui", name: "RIVT Test Crew" },
+    publicLocation: { city: "Jacksonville", region: "FL", countryCode: "US" },
+  },
+  events: [],
+};
+
+const projectRecord = {
+  id: "tools-project-1",
+  activeWorkId: activeWorkItem.id,
+  jobId: activeWorkItem.jobId,
+  organizationId: activeWorkItem.organizationId,
+  status: "open",
+  contractorAccountId: account.id,
+  tradespersonAccountId: activeWorkItem.tradespersonAccountId,
+  job: {
+    title: activeWorkItem.job.title,
+    status: "accepted",
+    publicLocation: activeWorkItem.job.publicLocation,
+  },
+  entries: [],
+  media: [],
+  completionSubmissions: [],
+  updatedAt: "2026-06-21T12:05:00.000Z",
+};
+
 async function waitForServer() {
   const deadline = Date.now() + 30_000;
   while (Date.now() < deadline) {
@@ -63,6 +105,29 @@ async function waitForServer() {
 }
 
 async function configurePage(page) {
+  await page.route(`**/api/v1/active-work/${activeWorkItem.id}/project`, (route) =>
+    route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { project: projectRecord } }) }),
+  );
+  await page.route(`**/api/v1/projects/${projectRecord.id}/entries`, (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        data: {
+          entry: {
+            id: "tools-daily-log-entry",
+            projectId: projectRecord.id,
+            actorAccountId: account.id,
+            entryType: "note",
+            body: JSON.parse(route.request().postData() || "{}").body ?? "Daily log",
+            checklist: {},
+            metadata: {},
+            createdAt: "2026-06-21T13:00:00.000Z",
+          },
+        },
+      }),
+    }),
+  );
   await page.route("**/api/v1/me", (route) =>
     route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: account }) }),
   );
@@ -79,7 +144,7 @@ async function configurePage(page) {
     route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { notifications: [], unreadCount: 0 } }) }),
   );
   await page.route("**/api/v1/active-work", (route) =>
-    route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { activeWork: [] } }) }),
+    route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { activeWork: [activeWorkItem] } }) }),
   );
   await page.route("**/api/v1/jobs?**", (route) =>
     route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { jobs: [] }, meta: { nextCursor: null } }) }),
@@ -148,6 +213,8 @@ async function runToolsFlow(page, viewportName) {
 
   await page.getByRole("button", { name: /Daily log/i }).click();
   await page.getByRole("heading", { name: "Daily log", exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByText("Records-ready", { exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByText("Tenant Build-Out", { exact: true }).waitFor({ timeout: 15_000 });
   await page.getByLabel("Work completed").fill("Installed devices, labeled panel schedule, and cleaned up the work area.");
   await page.getByLabel("Blockers / changes").fill("Waiting on final fixture selections before trim-out can close.");
   await page.getByLabel("Safety note").fill("Verified ladder setup and kept panel covered while working.");
@@ -155,6 +222,8 @@ async function runToolsFlow(page, viewportName) {
   await page.getByRole("button", { name: "Safety condition checked" }).click();
   await page.getByRole("heading", { name: "Daily log preview" }).waitFor({ timeout: 15_000 });
   await page.locator(".v2-daily-log-preview").getByText("Installed devices", { exact: false }).waitFor({ timeout: 15_000 });
+  await page.getByRole("button", { name: "Save to Records" }).click();
+  await page.getByText("Daily log saved to the server-backed Records timeline.", { exact: true }).waitFor({ timeout: 15_000 });
   await page.getByRole("button", { name: "Save local draft" }).click();
   await page.getByText("Daily log draft saved on this device.", { exact: true }).waitFor({ timeout: 15_000 });
   await page.getByRole("button", { name: "Copy daily log" }).waitFor({ timeout: 15_000 });

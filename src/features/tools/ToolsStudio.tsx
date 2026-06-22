@@ -890,13 +890,16 @@ function defaultDailyLogDraft(activeJob: Job | null): DailyLogDraft {
   };
 }
 
-function DailyLogTool({ activeJob }: { activeJob: Job | null }) {
+function DailyLogTool({ activeJob, activeWork }: { activeJob: Job | null; activeWork: CanonicalActiveWork[] }) {
   const [draft, setDraft] = useState<DailyLogDraft>(() => defaultDailyLogDraft(activeJob));
   const [copied, setCopied] = useState(false);
   const [downloaded, setDownloaded] = useState(false);
   const [notice, setNotice] = useState("");
+  const [savingRecord, setSavingRecord] = useState(false);
 
   const completedChecks = dailyLogChecklist.filter((item) => draft.checklist[item]).length;
+  const recordWork = activeWork.find((work) => work.status === "active") ?? activeWork[0] ?? null;
+  const recordWorkLabel = recordWork?.job?.title ?? activeJob?.title ?? "Accepted work";
   const dailyLogText = useMemo(() => [
     `RIVT daily log - ${draft.date || "undated"}`,
     `Site/job: ${draft.site || "Not entered"}`,
@@ -988,6 +991,24 @@ function DailyLogTool({ activeJob }: { activeJob: Job | null }) {
     setDownloaded(true);
   }
 
+  async function saveToRecords() {
+    if (!recordWork) {
+      setNotice("Accepted work is required before RIVT can save this daily log to server-backed Records.");
+      return;
+    }
+    setSavingRecord(true);
+    setNotice("");
+    try {
+      const project = await openProjectForActiveWork(recordWork.id);
+      await addProjectNote(project.id, dailyLogText);
+      setNotice("Daily log saved to the server-backed Records timeline.");
+    } catch (error) {
+      setNotice(projectErrorMessage(error));
+    } finally {
+      setSavingRecord(false);
+    }
+  }
+
   return (
     <div className="v2-tool-workbench v2-daily-log-workbench">
       <Panel className="v2-tool-panel" eyebrow="Daily log" title="Capture the jobsite while it is fresh">
@@ -1013,7 +1034,12 @@ function DailyLogTool({ activeJob }: { activeJob: Job | null }) {
           <div className="v2-tool-result-grid compact">
             <article><span>Crew hours</span><strong>{formatNumber(draft.crewCount * draft.hours)}h</strong></article>
             <article><span>Checklist</span><strong>{completedChecks}/{dailyLogChecklist.length}</strong></article>
-            <article><span>Mode</span><strong>Local draft</strong></article>
+            <article><span>Mode</span><strong>{recordWork ? "Records-ready" : "Local draft"}</strong></article>
+          </div>
+          <div className={recordWork ? "v2-daily-log-record-target is-ready" : "v2-daily-log-record-target"}>
+            <span>{recordWork ? "Accepted work target" : "No accepted work loaded"}</span>
+            <strong>{recordWork ? recordWorkLabel : "Use local draft or open Records after a hire"}</strong>
+            <small>{recordWork ? "This log can be added to the private project timeline." : "Server-backed Records are available after a job is accepted by both sides."}</small>
           </div>
           <div className="v2-daily-log-checklist" aria-label="Daily log checklist">
             {dailyLogChecklist.map((item) => (
@@ -1026,12 +1052,20 @@ function DailyLogTool({ activeJob }: { activeJob: Job | null }) {
           <pre className="v2-daily-log-preview">{dailyLogText}</pre>
           {notice ? <p className="v2-record-notice" role="status">{notice}</p> : null}
           <div className="v2-tool-action-row">
+            <button type="button" className="v2-primary-button" onClick={() => void saveToRecords()} disabled={savingRecord || !recordWork}>
+              <FolderOpen size={15} />
+              {savingRecord ? "Saving" : "Save to Records"}
+            </button>
             <button type="button" className="v2-primary-button" onClick={copyDailyLog}><Copy size={15} />{copied ? "Copied" : "Copy daily log"}</button>
             <button type="button" onClick={downloadDailyLog}><Download size={15} />{downloaded ? "Downloaded" : "Download TXT"}</button>
             <button type="button" onClick={saveLocalDraft}><FileText size={15} />Save local draft</button>
             <button type="button" onClick={loadLocalDraft}><RefreshCw size={15} />Load last draft</button>
           </div>
-          <p className="v2-tool-note">This is a device-local field note. Accepted-work closeouts, uploads, and official records stay in server-backed Records.</p>
+          <p className="v2-tool-note">
+            {recordWork
+              ? "Save to Records writes a private project timeline note through RIVT's authenticated Records API. Copy/download/local draft remain available for field backup."
+              : "Without accepted work this stays a device-local field note. Accepted-work closeouts, uploads, and official records stay in server-backed Records."}
+          </p>
         </Panel>
       </aside>
     </div>
@@ -1472,7 +1506,7 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", onNavigate, 
         eyebrow: "Field record app",
         title: "Daily log",
         description: "Capture crew hours, site notes, blockers, safety, and next steps before the details disappear.",
-        node: <DailyLogTool activeJob={activeJob} />,
+        node: <DailyLogTool activeJob={activeJob} activeWork={activeWork} />,
       },
       materials: {
         eyebrow: "Materials app",
