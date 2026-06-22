@@ -2,10 +2,10 @@
 
 Last updated: 2026-06-22 America/New_York
 Current gate: Gate A launch hardening
-Current phase: Packet 08 controllable UX hardening, founder/support/legal-safety approvals recorded, incident and launch readiness gates passing, Gate A approval packet prepared, incident rehearsal passed, incident routing approved, recovery policy approved, support hours and backup incident owner recorded, Sentry error monitoring and first escalation route configured, server-owned Shop Talk reactions/reputation ledger, Daily Log live UI proof, Daily Log Records bridge, daily engagement loop, Shop Talk answer queue, RIVT Daily home check-in, Trade News real-media and mobile layout pass, production UI smoke regression fixes, Tools studio release, Records workspace upgrade, UI system pass, shared UI primitives, Tools primitive alignment, Shop Talk command center, Tools app surface pass, Heavy 16th multi-mode calculator, Invoice Draft app upgrade, Shop Talk reaction/social pulse pass, expanded production accessibility smoke verified, Claude-audit UI consolidation deployed, and global search command surface deployed; physical/deeper manual accessibility-device evidence remains the next launch-quality boundary
+Current phase: Packet 08 controllable UX hardening, founder/support/legal-safety approvals recorded, incident and launch readiness gates passing, Gate A approval packet prepared, incident rehearsal passed, incident routing approved, recovery policy approved, support hours and backup incident owner recorded, Sentry error monitoring and first escalation route configured, server-owned Shop Talk reactions/reputation ledger, Daily Log live UI proof, Daily Log Records bridge, daily engagement loop, Shop Talk answer queue, RIVT Daily home check-in, Trade News real-media and mobile layout pass, production UI smoke regression fixes, Tools studio release, Records workspace upgrade, UI system pass, shared UI primitives, Tools primitive alignment, Shop Talk command center, Tools app surface pass, Heavy 16th multi-mode calculator, Invoice Draft app upgrade, Shop Talk reaction/social pulse pass, expanded production accessibility smoke verified, Claude-audit UI consolidation deployed, global search command surface deployed, and server-owned profile search deployed; physical/deeper manual accessibility-device evidence remains the next launch-quality boundary
 Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
-Production release commit: `98f4b6716674de57e6c38c497ea837105ad069b1`
+Production release commit: `cda9733acdaa7ed858b819fc9b5904ee2c237600`
 
 ## Source State
 
@@ -16,6 +16,20 @@ Packet 00 is merged on `master` at `4c199d903683e44d17b7985272c399c6d7a6cbd6`. T
 - Product source of truth: `RIVT_MASTER_BUILD_PROMPT.md`
 
 Do not discard or overwrite the pre-existing Trade News work when committing or splitting this packet.
+
+## Latest Packet 08 Pass - Server-Owned Profile Search
+
+- Added authenticated `GET /api/v1/profiles` profile discovery for published network profiles only.
+- The route requires an active, completed account, excludes the viewer, excludes blocked account pairs, searches profile name/headline/location/trades, clamps result count to eight, and returns only public profile fields.
+- Replaced the search modal's profile placeholder with live People results, loading/error/empty states, and privacy copy that contact details remain private until a real connection or active job requires them.
+- Selecting a person result routes to Crew without claiming profile detail pages or direct contact access that do not exist yet.
+- Expanded `test/jobs-discovery.e2e.mjs` to prove `Ctrl+K -> People result -> Crew`, then the existing `Search work` flow; the e2e harness now also mocks external font CSS and notification-read requests so CI remains hermetic.
+- Rendered validation used Playwright fallback because the Browser plugin reported the in-app browser target unavailable (`iab`). Desktop and mobile screenshots for profile search and Crew result navigation were captured outside the repo at `C:\Users\zboyt\AppData\Local\Temp\rivt-profile-search-1782153354986`; both runs had zero console warnings/errors.
+- Local gates passed for this slice: `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check`. DB-backed local integration tests still skip because `TEST_DATABASE_URL` is not configured.
+- Deployed to Railway production through runtime upload deployment `1f29a48c-89aa-45a0-8554-dfce1d386924` and metadata redeploy `58a361b4-0f0a-41b5-8309-d3a4104fc1eb`.
+- Live `/api/health` reports exact source `cda9733acdaa7ed858b819fc9b5904ee2c237600`, PostgreSQL, S3-compatible object storage, and Sentry configured.
+- `EXPECTED_SOURCE_COMMIT=cda9733acdaa7ed858b819fc9b5904ee2c237600 RIVT_MONITOR_TIMEOUT_MS=30000 npm run monitor:production` passed with seven anonymous private-route checks and operational controls off.
+- Remaining honesty boundary: this is search-result discovery only. Full Crew directory, profile detail pages, connection requests, and contact exchange still need server-owned workflows before being represented as complete networking features.
 
 ## Latest Packet 08 Pass - Global Search Command Surface
 

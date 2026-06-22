@@ -170,6 +170,18 @@ Evidence must eventually link to implementation, automated tests, manual accepta
 - `GA-OPS-007` gains local automated evidence for this slice: `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check` passed. DB-backed local integration tests still skip because `TEST_DATABASE_URL` is not configured.
 - `GA-OPS-008` gains deployment evidence: Railway runtime upload deployment `a4918783-b28c-4ab0-a606-851c631a62c3` and metadata redeploy `5c6c5a06-12b3-4ad8-a365-854a85ebcfdc` now serve source `98f4b6716674de57e6c38c497ea837105ad069b1`; live `/api/health` and `EXPECTED_SOURCE_COMMIT=98f4b6716674de57e6c38c497ea837105ad069b1 npm run monitor:production` passed.
 
+## Traceability Addendum - 2026-06-22 Server-Owned Profile Search
+
+- `GA-PRO-002` gains server-owned public profile discovery: `GET /api/v1/profiles` now searches only active completed accounts with published network profiles and returns limited public profile fields.
+- `GA-PRO-003` gains trade-aware profile discovery evidence: profile search matches canonical trade names/codes through `profile_trades` and `trades` without introducing a parallel taxonomy.
+- `GA-PRO-004` and `GA-PRO-005` retain privacy boundaries: the search response excludes email, phone, private address, private contact visibility, and unpublished profiles, and it filters blocked account pairs.
+- `GA-UX-003` gains functional People results in the global search modal while preserving Work, Shop Talk, and Tools commands.
+- `GA-UX-005` gains loading, empty, and error states for People search instead of a static "not built yet" placeholder.
+- `GA-UX-006` gains rendered desktop/mobile profile-search and Crew-navigation evidence at `C:\Users\zboyt\AppData\Local\Temp\rivt-profile-search-1782153354986`; Browser plugin access was unavailable for target `iab`, so local Playwright was used with route mocks.
+- `GA-OPS-007` gains local automated evidence for this slice: `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check` passed. DB-backed local integration tests still skip because `TEST_DATABASE_URL` is not configured.
+- `GA-OPS-008` gains deployment evidence: Railway runtime upload deployment `1f29a48c-89aa-45a0-8554-dfce1d386924` and metadata redeploy `58a361b4-0f0a-41b5-8309-d3a4104fc1eb` now serve source `cda9733acdaa7ed858b819fc9b5904ee2c237600`; live `/api/health` and `EXPECTED_SOURCE_COMMIT=cda9733acdaa7ed858b819fc9b5904ee2c237600 RIVT_MONITOR_TIMEOUT_MS=30000 npm run monitor:production` passed.
+- Remaining boundary: this is discovery, not a full social graph. Profile detail pages, connection requests, messaging permissions outside active work, and safe contact exchange remain future server-owned work.
+
 ## Current Gate A Summary
 
 - Production infrastructure is reachable and managed storage is healthy.

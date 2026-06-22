@@ -21,6 +21,26 @@ Add one entry per staging/production deployment.
 - Rollback performed/result:
 - Approval:
 
+## Current Production - Packet 08 Server-Owned Profile Search
+
+- Environment: Production (`https://rivt.pro`)
+- Date/time/timezone: 2026-06-22 14:56 America/New_York
+- Deployer: Codex through authenticated Railway CLI
+- Source repository/branch: `Zboytjbxp/rivt`, `master`
+- Source commit: `cda9733acdaa7ed858b819fc9b5904ee2c237600`
+- Build/artifact ID: Railway runtime upload deployment `1f29a48c-89aa-45a0-8554-dfce1d386924`; metadata redeploy `58a361b4-0f0a-41b5-8309-d3a4104fc1eb`
+- Migration version before/after: `0011_shop_talk_reaction_events_immutable` / `0011_shop_talk_reaction_events_immutable` (no schema migration)
+- Feature-flag/config version: `SOURCE_COMMIT` updated to `cda9733acdaa7ed858b819fc9b5904ee2c237600`; operational controls unchanged
+- Provider/config changes (no secrets): no provider credentials changed; Sentry remains configured
+- Backup/rollback target: prior successful production deployment `5c6c5a06-12b3-4ad8-a365-854a85ebcfdc`; no migration rollback required
+- Automated gates: `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check` passed. DB-backed local integration tests continue to skip locally because `TEST_DATABASE_URL` is not configured.
+- Rendered evidence: Browser plugin target `iab` was unavailable, so local Playwright fallback captured desktop/mobile profile-search and Crew-navigation screenshots at `C:\Users\zboyt\AppData\Local\Temp\rivt-profile-search-1782153354986` with zero console warnings/errors.
+- Post-deploy smoke tests: live `/api/health` reported exact source `cda9733acdaa7ed858b819fc9b5904ee2c237600`; `EXPECTED_SOURCE_COMMIT=cda9733acdaa7ed858b819fc9b5904ee2c237600 RIVT_MONITOR_TIMEOUT_MS=30000 npm run monitor:production` passed with PostgreSQL, S3-compatible object storage, Sentry configured, operational controls off, and seven anonymous private-route checks.
+- Health/readiness result: healthy production health and synthetic monitor; no schema migration applied.
+- Known risks: profile search is limited to published network-profile discovery. Full Crew directory, profile detail, connection request, and safe contact-exchange workflows remain separate Gate A/B product work.
+- Rollback performed/result: not required.
+- Approval: accepted as controllable Gate A UX hardening evidence only.
+
 ## Current Production - Packet 08 Global Search Command Surface
 
 - Environment: Production (`https://rivt.pro`)
