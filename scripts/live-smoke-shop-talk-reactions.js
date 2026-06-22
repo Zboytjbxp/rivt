@@ -128,7 +128,7 @@ async function closeSmokeArtifacts(accounts, targetKey) {
 }
 
 const accounts = [];
-const target = { targetType: "thread", targetKey: smokeRun.replace(/-/g, "_") };
+const target = { targetType: "thread", targetKey: `post:${smokeRun.replace(/-/g, "_")}` };
 
 try {
   const actor = await signupAndOnboard("tradesperson", "Shop Talk Reactor");
