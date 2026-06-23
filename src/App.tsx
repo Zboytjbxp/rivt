@@ -11,8 +11,6 @@ import { AppShell } from "./app-shell/AppShell";
 import { AccountPanel, ActivityPanel, ActivityToast } from "./app-shell/AppPanels";
 import type {
   AccountProfile,
-  ActivityItem,
-  AppToast,
   AuthUser,
   CanonicalAccount,
   DifficultyFilter,
@@ -35,6 +33,7 @@ import {
   readAuthModePreference,
 } from "./app-shell/preferences";
 import { useAppTheme } from "./app-shell/useAppTheme";
+import { useActivityFeed } from "./app-shell/useActivityFeed";
 import { WorkWorkspace } from "./features/work/WorkWorkspace";
 import { JobEditorModal } from "./features/work/JobEditorModal";
 import { getJob, listJobs, toJobViewModel, transitionJob } from "./features/work/job-api";
@@ -71,7 +70,6 @@ import { useCommunityReactions } from "./features/shop-talk/useCommunityReaction
 import type { ProfileUpdateInput } from "./features/profile/ProfileHub";
 import { recordChecklist, safetyQuizData, trainingModules, type SafetyQuizResult } from "./features/profile/training-data";
 import { apiPath } from "./lib/api";
-import { currentTimeLabel, recordServerEvent } from "./lib/app-helpers";
 import {
   AuthGate,
   AuthLinkFlow,
@@ -142,8 +140,6 @@ function App() {
     () => new Set(["Customer-site conduct"]),
   );
   const [safetyQuizResults] = useState<Record<string, SafetyQuizResult>>({});
-  const [activityFeed, setActivityFeed] = useState<ActivityItem[]>([]);
-  const [uiToast, setUiToast] = useState<AppToast | null>(null);
   const [feedbackItems] = useState<FeedbackItem[]>([]);
   const [paymentRecords] = useState<PaymentRecord[]>([]);
   const [communityPosts, setCommunityPosts] = useState<CommunityPost[]>(communityPromptPosts);
@@ -155,6 +151,18 @@ function App() {
     themeMode,
     themePalette,
   } = useAppTheme();
+  const {
+    activityItems,
+    addActivity,
+    dismissToast,
+    markAllActivityRead,
+    uiToast,
+    unreadActivities,
+  } = useActivityFeed({
+    activeView,
+    notifications: inboxNotifications,
+    role,
+  });
   const [isGuest, setIsGuest] = useState(false);
   const [guestPromptOpen, setGuestPromptOpen] = useState(false);
   const {
@@ -403,56 +411,6 @@ function App() {
       .filter((person) => person.trade === selectedJob.trade)
       .sort((a, b) => b.match - a.match);
   }, [selectedJob.trade]);
-
-  const notificationActivityItems = useMemo<ActivityItem[]>(() => inboxNotifications.map((item) => ({
-    id: item.id,
-    title: item.title,
-    detail: item.body,
-    timestamp: item.createdAt ? new Date(item.createdAt).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "",
-    unread: !item.readAt,
-    kind: item.priority === "high" ? "warning" : item.type === "message" ? "info" : "success",
-  })), [inboxNotifications]);
-  const unreadActivities = inboxNotifications.filter((item) => !item.readAt).length;
-
-  function addActivity(title: string, detail: string, kind: AppToast["kind"] = "info") {
-    void recordServerEvent("activity", { title, detail, role, activeView });
-    setUiToast({
-      id: Date.now(),
-      title,
-      detail,
-      kind,
-      timestamp: currentTimeLabel(),
-    });
-    setActivityFeed((current) => [
-      {
-        id: Date.now() + current.length,
-        title,
-        detail,
-        timestamp: currentTimeLabel(),
-        unread: true,
-        kind,
-      },
-      ...current,
-    ].slice(0, 16));
-  }
-
-  useEffect(() => {
-    if (!uiToast) {
-      return;
-    }
-
-    const timeout = window.setTimeout(() => {
-      setUiToast(null);
-    }, 3200);
-
-    return () => window.clearTimeout(timeout);
-  }, [uiToast]);
-
-  function markAllActivityRead() {
-    setActivityFeed((current) =>
-      current.map((item) => ({ ...item, unread: false })),
-    );
-  }
 
   async function handleAuthSubmit(form: { email: string; password: string; displayName?: string; role?: Role; inviteCode?: string }) {
     setAuthError(null);
@@ -1235,13 +1193,13 @@ function App() {
       {uiToast && (
         <ActivityToast
           activity={uiToast}
-          onDismiss={() => setUiToast(null)}
+          onDismiss={dismissToast}
         />
       )}
 
       {isActivityOpen && (
         <ActivityPanel
-          items={notificationActivityItems.length ? notificationActivityItems : activityFeed}
+          items={activityItems}
           onClose={() => setActivityOpen(false)}
           onMarkAllRead={() => {
             markAllActivityRead();

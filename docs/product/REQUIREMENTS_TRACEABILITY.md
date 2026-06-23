@@ -10,6 +10,14 @@ Status values:
 
 Evidence must eventually link to implementation, automated tests, manual acceptance proof, and deployed build.
 
+## Traceability Addendum - 2026-06-22 App Activity Feed Hook Extraction
+
+- `GA-UX-001` gains maintainability evidence: local activity feed state, toast state, toast auto-dismiss timing, notification-to-activity mapping, unread activity counts, and activity event recording moved from `src/App.tsx` into `src/app-shell/useActivityFeed.ts`.
+- `GA-UX-003` retains behavior boundaries: activity toasts, activity panel fallback items, notification activity prioritization, mark-all-read behavior, and server event recording payloads remain unchanged.
+- `GA-OPS-007` gains local automated evidence for this refactor slice: `npm run build`, `npm run lint`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check` passed.
+- The full `npm run test` command used the isolated test Postgres through local `TEST_DATABASE_URL`.
+- `GA-OPS-008` is unchanged for production deployment: this slice has not been deployed.
+
 ## Traceability Addendum - 2026-06-22 App Theme Hook Extraction
 
 - `GA-UX-001` gains maintainability evidence: theme mode, theme palette, CSS variable application, color-scheme application, and localStorage persistence moved from `src/App.tsx` into `src/app-shell/useAppTheme.ts`.
