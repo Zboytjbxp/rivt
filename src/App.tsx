@@ -5,7 +5,7 @@ import {
   useRef,
   useState } from "react";
 import { talent } from "./data";
-import { brandConfig, type ThemeMode, type ThemePalette } from "./brandConfig";
+import { brandConfig } from "./brandConfig";
 import type { ApplicationRecord, Job, JobId, Role, Trade } from "./types";
 import { AppShell } from "./app-shell/AppShell";
 import { AccountPanel, ActivityPanel, ActivityToast } from "./app-shell/AppPanels";
@@ -33,11 +33,8 @@ import {
 import {
   AUTH_MODE_KEY,
   readAuthModePreference,
-  readThemePalettePreference,
-  readThemePreference,
-  THEME_PALETTE_STORAGE_KEY,
-  THEME_STORAGE_KEY,
 } from "./app-shell/preferences";
+import { useAppTheme } from "./app-shell/useAppTheme";
 import { WorkWorkspace } from "./features/work/WorkWorkspace";
 import { JobEditorModal } from "./features/work/JobEditorModal";
 import { getJob, listJobs, toJobViewModel, transitionJob } from "./features/work/job-api";
@@ -152,8 +149,12 @@ function App() {
   const [communityPosts, setCommunityPosts] = useState<CommunityPost[]>(communityPromptPosts);
   const [, setCommunityReports] = useState<CommunityReport[]>([]);
   const [shoutOuts] = useState<ShoutOut[]>([]);
-  const [themeMode, setThemeMode] = useState<ThemeMode>(readThemePreference);
-  const [themePalette, setThemePalette] = useState<ThemePalette>(readThemePalettePreference);
+  const {
+    handleSelectThemePalette,
+    handleToggleTheme,
+    themeMode,
+    themePalette,
+  } = useAppTheme();
   const [isGuest, setIsGuest] = useState(false);
   const [guestPromptOpen, setGuestPromptOpen] = useState(false);
   const {
@@ -169,30 +170,6 @@ function App() {
     communityPosts,
     onReactionError: (message) => addActivity("Reaction not saved", message, "error"),
   });
-
-  useEffect(() => {
-    const root = document.documentElement;
-    const theme = brandConfig.theme.modes[themeMode];
-    const palette = brandConfig.theme.palettes[themePalette];
-    const paletteVariables = palette.modes[themeMode];
-
-    root.dataset.theme = themeMode;
-    root.dataset.palette = themePalette;
-    root.style.colorScheme = theme.colorScheme;
-    Object.entries(theme.cssVariables).forEach(([name, value]) => {
-      root.style.setProperty(name, value);
-    });
-    Object.entries(paletteVariables).forEach(([name, value]) => {
-      root.style.setProperty(name, value);
-    });
-
-    try {
-      window.localStorage.setItem(THEME_STORAGE_KEY, themeMode);
-      window.localStorage.setItem(THEME_PALETTE_STORAGE_KEY, themePalette);
-    } catch {
-      // If browser storage is unavailable, the visual theme still applies for this session.
-    }
-  }, [themeMode, themePalette]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -408,14 +385,6 @@ function App() {
       window.scrollTo({ top: 0, left: 0 });
     }
   }, [activeView, onboardingComplete]);
-
-  function handleToggleTheme() {
-    setThemeMode((currentMode) => (currentMode === "dark" ? "light" : "dark"));
-  }
-
-  function handleSelectThemePalette(nextPalette: ThemePalette) {
-    setThemePalette(nextPalette);
-  }
 
   const selectedJob = jobs.find((job) => job.id === selectedId) ?? jobs[0] ?? emptyJob;
   const primaryProfileTrade = canonicalAccount?.profile.trades.find((tradeItem) => tradeItem.primary)?.name
