@@ -74,6 +74,7 @@
 .job-editor-section .toggle-control span { display: inline-flex; align-items: center; gap: 7px; }
 .three-columns { grid-template-columns: 1.2fr 1fr 1fr; }
 .optional-label { color: var(--muted); font-weight: var(--v2-weight-semibold); }
+.required-mark { color: #c53030; margin-left: 2px; }
 
 .privacy-callout {
   display: flex;
@@ -91,6 +92,7 @@
   .job-editor { width: 100%; max-height: 100dvh; height: 100dvh; border: 0; border-radius: 0; }
   .job-editor-header,
   .job-editor-footer { padding: 14px 16px; }
+  .job-editor-footer { padding-bottom: max(env(safe-area-inset-bottom), 14px); }
   .job-editor-steps { padding: 0 16px; }
   .job-editor-body { padding: 20px 16px 24px; }
   .job-editor-error { margin-inline: 16px; }

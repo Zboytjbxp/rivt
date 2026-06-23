@@ -204,14 +204,14 @@ export function JobEditorModal({ organizationId, job, defaultLocation, onClose, 
           {step === 0 ? (
             <section className="job-editor-section">
               <div className="job-editor-intro"><h3>What needs to get done?</h3><p>Use a specific title and the public service area tradespeople should see.</p></div>
-              <label>Job title<input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Commercial panel rough-in" autoFocus /></label>
+              <label>Job title<span className="required-mark" aria-hidden="true">*</span><input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Commercial panel rough-in" autoFocus /></label>
               <div className="form-grid">
                 <label>Trade<select value={tradeName} onChange={(event) => setTradeName(event.target.value as typeof tradeName)}>{tradeOptions.slice(1).map((option) => <option key={option}>{option}</option>)}</select></label>
                 <label>Difficulty<select value={difficulty} onChange={(event) => setDifficulty(event.target.value as typeof difficulty)}>{difficultyValues.map((value) => <option key={value} value={value}>{value.charAt(0).toUpperCase() + value.slice(1)}</option>)}</select></label>
               </div>
               <div className="form-grid">
-                <label>City<input value={city} onChange={(event) => setCity(event.target.value)} placeholder="Jacksonville" /></label>
-                <label>State / region<input value={region} onChange={(event) => setRegion(event.target.value.toUpperCase())} placeholder="FL" maxLength={100} /></label>
+                <label>City<span className="required-mark" aria-hidden="true">*</span><input value={city} onChange={(event) => setCity(event.target.value)} placeholder="Jacksonville" /></label>
+                <label>State / region<span className="required-mark" aria-hidden="true">*</span><input value={region} onChange={(event) => setRegion(event.target.value.toUpperCase())} placeholder="FL" maxLength={100} /></label>
               </div>
             </section>
           ) : null}
@@ -219,12 +219,12 @@ export function JobEditorModal({ organizationId, job, defaultLocation, onClose, 
           {step === 1 ? (
             <section className="job-editor-section">
               <div className="job-editor-intro"><h3>Define the scope</h3><p>Clear expectations produce better-fit responses and fewer jobsite surprises.</p></div>
-              <label>Short summary<textarea value={summary} onChange={(event) => setSummary(event.target.value)} placeholder="One or two sentences tradespeople can scan quickly." rows={2} /></label>
-              <label>Detailed scope<textarea value={scopeDescription} onChange={(event) => setScopeDescription(event.target.value)} placeholder="Describe the work, existing conditions, and what completion looks like." rows={5} /></label>
+              <label>Short summary<span className="required-mark" aria-hidden="true">*</span><textarea value={summary} onChange={(event) => setSummary(event.target.value)} placeholder="One or two sentences tradespeople can scan quickly." rows={2} /></label>
+              <label>Detailed scope<span className="required-mark" aria-hidden="true">*</span><textarea value={scopeDescription} onChange={(event) => setScopeDescription(event.target.value)} placeholder="Describe the work, existing conditions, and what completion looks like." rows={5} /></label>
               <div className="form-grid three-columns">
                 <label>Work type<select value={workType} onChange={(event) => setWorkType(event.target.value as typeof workType)}>{workTypeValues.map((value) => <option key={value} value={value}>{value.replaceAll("_", " ")}</option>)}</select></label>
-                <label>Budget ($)<input type="number" min="50" step="1" value={budget} onChange={(event) => setBudget(event.target.value)} /></label>
-                <label>Hours<input type="number" min="0.5" step="0.5" value={duration} onChange={(event) => setDuration(event.target.value)} /></label>
+                <label>Budget ($)<span className="required-mark" aria-hidden="true">*</span><input type="number" min="50" step="1" value={budget} onChange={(event) => setBudget(event.target.value)} /></label>
+                <label>Hours<span className="required-mark" aria-hidden="true">*</span><input type="number" min="0.5" step="0.5" value={duration} onChange={(event) => setDuration(event.target.value)} /></label>
               </div>
               <label>Tools needed<input value={tools} onChange={(event) => setTools(event.target.value)} placeholder="Multimeter, conduit bender" /></label>
               <label>Materials / site provisions<input value={materials} onChange={(event) => setMaterials(event.target.value)} placeholder="Materials provided, lift onsite" /></label>
@@ -237,10 +237,10 @@ export function JobEditorModal({ organizationId, job, defaultLocation, onClose, 
             <section className="job-editor-section">
               <div className="job-editor-intro"><h3>Schedule and private location</h3><p>The public listing shows only city and state. The exact address remains restricted.</p></div>
               <div className="privacy-callout"><MapPin size={18} /><div><strong>Exact address is private</strong><span>Only the job owner can access it during this packet.</span></div></div>
-              <label>Address line 1<input value={addressLine1} onChange={(event) => setAddressLine1(event.target.value)} autoComplete="street-address" /></label>
+              <label>Address line 1<span className="required-mark" aria-hidden="true">*</span><input value={addressLine1} onChange={(event) => setAddressLine1(event.target.value)} autoComplete="street-address" /></label>
               <label>Address line 2 <span className="optional-label">Optional</span><input value={addressLine2} onChange={(event) => setAddressLine2(event.target.value)} /></label>
               <div className="form-grid">
-                <label>Postal code<input value={postalCode} onChange={(event) => setPostalCode(event.target.value)} autoComplete="postal-code" /></label>
+                <label>Postal code<span className="required-mark" aria-hidden="true">*</span><input value={postalCode} onChange={(event) => setPostalCode(event.target.value)} autoComplete="postal-code" /></label>
                 <label>Public postal prefix <span className="optional-label">Optional</span><input value={postalPrefix} onChange={(event) => setPostalPrefix(event.target.value)} maxLength={12} /></label>
               </div>
               <label>Access notes <span className="optional-label">Private</span><textarea value={accessNotes} onChange={(event) => setAccessNotes(event.target.value)} rows={3} placeholder="Gate, parking, lockbox, or arrival instructions" /></label>
