@@ -164,6 +164,11 @@ export async function resolveProjectCompletion(projectId: string, completionId: 
   return body.data.completion;
 }
 
+export async function getProject(projectId: string) {
+  const body = await request<{ data: { project: ProjectRecord } }>(`/api/v1/projects/${projectId}`);
+  return body.data.project;
+}
+
 export async function getProjectReport(projectId: string) {
   const body = await request<{ data: { report: unknown } }>(`/api/v1/projects/${projectId}/report`);
   return body.data.report;

@@ -2,6 +2,7 @@ import {
   ArrowLeft,
   ArrowRight,
   Calculator,
+  Camera,
   CheckCircle2,
   Clipboard,
   Copy,
@@ -29,17 +30,19 @@ import { EmptyState, MetricTile, PageHeader, Panel, StatusPill } from "../../com
 import { listActiveWork, type CanonicalActiveWork } from "../work/job-api";
 import {
   addProjectNote,
+  getProject,
   getProjectReport,
   openProjectForActiveWork,
   ProjectApiError,
   resolveProjectCompletion,
   submitProjectCompletion,
   uploadProjectMedia,
+  type ProjectMedia,
   type ProjectRecord,
 } from "./project-api";
 import "./tools-studio.css";
 
-type ToolMode = "hub" | "calculator" | "estimate" | "invoice" | "materials" | "daily-log";
+type ToolMode = "hub" | "calculator" | "estimate" | "invoice" | "materials" | "daily-log" | "job-photos";
 type CalculatorMode = "length" | "spacing" | "cuts" | "hardware";
 
 interface PaymentRecord {
@@ -1072,6 +1075,289 @@ function DailyLogTool({ activeJob, activeWork }: { activeJob: Job | null; active
   );
 }
 
+type PhotoView = "gallery" | "detail" | "compare-a" | "compare-b" | "compare-view";
+
+function JobPhotosTool({ activeWork }: { activeWork: CanonicalActiveWork[] }) {
+  const recordWork = activeWork.find((w) => w.status === "active") ?? activeWork[0] ?? null;
+  const [project, setProject] = useState<ProjectRecord | null>(null);
+  const [loadingProject, setLoadingProject] = useState(false);
+  const [projectError, setProjectError] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState("");
+  const [photoView, setPhotoView] = useState<PhotoView>("gallery");
+  const [selectedPhoto, setSelectedPhoto] = useState<ProjectMedia | null>(null);
+  const [compareA, setCompareA] = useState<ProjectMedia | null>(null);
+  const [compareB, setCompareB] = useState<ProjectMedia | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const cameraRef = useRef<HTMLInputElement>(null);
+
+  const photos = (project?.media ?? []).filter(
+    (m) => m.mediaKind === "photo" && m.status !== "removed" && m.signedUrl,
+  );
+
+  async function openProject() {
+    if (!recordWork) return;
+    setLoadingProject(true);
+    setProjectError("");
+    try {
+      setProject(await openProjectForActiveWork(recordWork.id));
+    } catch (error) {
+      setProjectError(projectErrorMessage(error));
+    } finally {
+      setLoadingProject(false);
+    }
+  }
+
+  async function refreshProject() {
+    if (!project) return;
+    try {
+      setProject(await getProject(project.id));
+    } catch {
+      // best-effort
+    }
+  }
+
+  async function handleFiles(files: FileList | null) {
+    if (!files?.length || !project) return;
+    setUploading(true);
+    setUploadError("");
+    for (const file of Array.from(files)) {
+      try {
+        await uploadProjectMedia(project.id, file, "");
+      } catch (error) {
+        setUploadError(projectErrorMessage(error));
+        break;
+      }
+    }
+    await refreshProject();
+    setUploading(false);
+    if (fileRef.current) fileRef.current.value = "";
+    if (cameraRef.current) cameraRef.current.value = "";
+  }
+
+  function startCompare() {
+    setCompareA(null);
+    setCompareB(null);
+    setPhotoView("compare-a");
+  }
+
+  function pickForCompare(photo: ProjectMedia) {
+    if (photoView === "compare-a") {
+      setCompareA(photo);
+      setPhotoView("compare-b");
+    } else {
+      setCompareB(photo);
+      setPhotoView("compare-view");
+    }
+  }
+
+  if (!recordWork) {
+    return (
+      <div className="v2-job-photos-connect">
+        <Camera size={32} />
+        <h2>Job Photos</h2>
+        <p>Job Photos links to your active project record. Accept a job in Work to start documenting the site.</p>
+      </div>
+    );
+  }
+
+  if (!project) {
+    return (
+      <div className="v2-job-photos-connect">
+        <Camera size={36} />
+        <h2>Job Photos</h2>
+        <p>
+          Photos are stored privately in the project record for{" "}
+          <strong>{recordWork.job?.title ?? "your active job"}</strong>.
+        </p>
+        {projectError ? <p className="v2-record-notice" role="alert">{projectError}</p> : null}
+        <button
+          type="button"
+          className="v2-primary-button"
+          onClick={() => void openProject()}
+          disabled={loadingProject}
+        >
+          <Camera size={15} />
+          {loadingProject ? "Opening…" : "Open Job Photos"}
+        </button>
+      </div>
+    );
+  }
+
+  if (photoView === "detail" && selectedPhoto) {
+    return (
+      <div className="v2-job-photos-workbench">
+        <div className="v2-job-photos-toolbar">
+          <button type="button" onClick={() => { setPhotoView("gallery"); setSelectedPhoto(null); }}>
+            <ArrowLeft size={15} />
+            All photos
+          </button>
+          <div className="v2-job-photos-toolbar-meta">
+            <strong>{selectedPhoto.originalName}</strong>
+            <small>{new Date(selectedPhoto.createdAt).toLocaleString()} · {fileSize(selectedPhoto.sizeBytes)}</small>
+          </div>
+          <a
+            href={selectedPhoto.signedUrl!}
+            download={selectedPhoto.originalName}
+            className="v2-btn-secondary"
+            rel="noreferrer"
+          >
+            <Download size={15} />
+            Download
+          </a>
+        </div>
+        <figure className="v2-job-photo-full">
+          <img src={selectedPhoto.signedUrl!} alt={selectedPhoto.originalName} />
+        </figure>
+      </div>
+    );
+  }
+
+  if (photoView === "compare-a" || photoView === "compare-b") {
+    const pickingLabel = photoView === "compare-a" ? "Pick the Before photo" : "Now pick the After photo";
+    const excludeId = photoView === "compare-b" ? compareA?.id : undefined;
+    return (
+      <div className="v2-job-photos-workbench">
+        <div className="v2-job-photos-toolbar">
+          <button type="button" onClick={() => setPhotoView("gallery")}>
+            <ArrowLeft size={15} />
+            Back
+          </button>
+          <span className="v2-job-photos-pick-label">{pickingLabel}</span>
+        </div>
+        <div className="v2-job-photos-grid">
+          {photos.filter((p) => p.id !== excludeId).map((photo) => (
+            <button key={photo.id} type="button" className="v2-job-photo-thumb" onClick={() => pickForCompare(photo)}>
+              <img src={photo.signedUrl!} alt={photo.originalName} loading="lazy" />
+              <span className="v2-job-photo-meta">
+                <small>{new Date(photo.createdAt).toLocaleDateString()}</small>
+              </span>
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (photoView === "compare-view" && compareA && compareB) {
+    return (
+      <div className="v2-job-photos-workbench">
+        <div className="v2-job-photos-toolbar">
+          <button type="button" onClick={() => setPhotoView("gallery")}>
+            <ArrowLeft size={15} />
+            All photos
+          </button>
+          <span>Before / after</span>
+          <button type="button" onClick={startCompare}>
+            <RefreshCw size={14} />
+            New compare
+          </button>
+        </div>
+        <div className="v2-job-photos-compare-grid">
+          <figure className="v2-job-photo-compare-frame">
+            <span className="v2-job-photo-compare-label">Before</span>
+            <img src={compareA.signedUrl!} alt={compareA.originalName} />
+            <figcaption>{new Date(compareA.createdAt).toLocaleDateString()}</figcaption>
+          </figure>
+          <figure className="v2-job-photo-compare-frame">
+            <span className="v2-job-photo-compare-label">After</span>
+            <img src={compareB.signedUrl!} alt={compareB.originalName} />
+            <figcaption>{new Date(compareB.createdAt).toLocaleDateString()}</figcaption>
+          </figure>
+        </div>
+      </div>
+    );
+  }
+
+  // Gallery view
+  return (
+    <div className="v2-job-photos-workbench">
+      <input
+        ref={fileRef}
+        type="file"
+        accept="image/*"
+        multiple
+        style={{ display: "none" }}
+        aria-hidden="true"
+        onChange={(e) => void handleFiles(e.target.files)}
+      />
+      <input
+        ref={cameraRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        style={{ display: "none" }}
+        aria-hidden="true"
+        onChange={(e) => void handleFiles(e.target.files)}
+      />
+
+      <div className="v2-job-photos-actions-bar">
+        <div className="v2-job-photos-stats">
+          <strong>{photos.length}</strong>
+          <span>{photos.length === 1 ? "photo" : "photos"}</span>
+          <span className="v2-job-photos-separator">·</span>
+          <span className="v2-job-photos-job-name">{recordWork.job?.title ?? "Active job"}</span>
+        </div>
+        <div className="v2-tool-action-row">
+          <button type="button" className="v2-primary-button" onClick={() => cameraRef.current?.click()} disabled={uploading}>
+            <Camera size={15} />
+            Camera
+          </button>
+          <button type="button" className="v2-primary-button" onClick={() => fileRef.current?.click()} disabled={uploading}>
+            <FileUp size={15} />
+            {uploading ? "Uploading…" : "Upload"}
+          </button>
+          {photos.length >= 2 ? (
+            <button type="button" onClick={startCompare}>
+              <Image size={15} />
+              Before / after
+            </button>
+          ) : null}
+          <button type="button" aria-label="Refresh photos" onClick={() => void refreshProject()}>
+            <RefreshCw size={15} />
+          </button>
+        </div>
+      </div>
+
+      {uploadError ? <p className="v2-record-notice v2-job-photos-upload-error" role="alert">{uploadError}</p> : null}
+
+      {photos.length === 0 ? (
+        <div className="v2-job-photos-empty">
+          <Camera size={28} />
+          <strong>No photos yet</strong>
+          <p>Take a photo on site or upload from your device. Photos are stored privately in your RIVT project record.</p>
+          <div className="v2-tool-action-row">
+            <button type="button" className="v2-primary-button" onClick={() => cameraRef.current?.click()} disabled={uploading}>
+              <Camera size={15} />
+              Take first photo
+            </button>
+            <button type="button" onClick={() => fileRef.current?.click()} disabled={uploading}>
+              <FileUp size={15} />
+              Upload from device
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="v2-job-photos-grid">
+          {photos.map((photo) => (
+            <button
+              key={photo.id}
+              type="button"
+              className="v2-job-photo-thumb"
+              onClick={() => { setSelectedPhoto(photo); setPhotoView("detail"); }}
+            >
+              <img src={photo.signedUrl!} alt={photo.originalName} loading="lazy" />
+              <span className="v2-job-photo-meta">
+                <small>{new Date(photo.createdAt).toLocaleDateString()}</small>
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function projectErrorMessage(error: unknown) {
   if (error instanceof ProjectApiError) return error.message;
   return error instanceof Error ? error.message : "RIVT could not update the project record.";
@@ -1514,6 +1800,12 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", onNavigate, 
         description: "Estimate area, waste, material cost, and rough sheet count.",
         node: <MaterialsTool activeJob={activeJob} />,
       },
+      "job-photos": {
+        eyebrow: "Site documentation",
+        title: "Job Photos",
+        description: "Capture, organize, and compare job-site photos tied to your active project record.",
+        node: <JobPhotosTool activeWork={activeWork} />,
+      },
     }[activeTool];
 
     return (
@@ -1601,6 +1893,16 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", onNavigate, 
           detail="Trade presets"
           action="Open"
           onAction={() => setActiveTool("materials")}
+        />
+        <ToolCard
+          icon={Camera}
+          title="Job Photos"
+          badge="Site docs"
+          summary="Capture, organize, and compare job-site photos by project."
+          output="S3-backed"
+          detail="Per project"
+          action="Open"
+          onAction={() => setActiveTool("job-photos")}
         />
         <ToolCard
           icon={FolderOpen}
