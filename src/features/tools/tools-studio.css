@@ -2006,6 +2006,196 @@
   text-align: center;
 }
 
+.v2-job-photos-subtitle {
+  margin: 0;
+  color: var(--v2-text-muted);
+  font-size: 12px;
+}
+
+.v2-job-photos-back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--v2-text-muted);
+  font-size: 12px;
+  font-weight: var(--v2-weight-strong);
+  cursor: pointer;
+  transition: color 140ms ease;
+}
+
+.v2-job-photos-back-link:hover {
+  color: var(--v2-text);
+}
+
+.v2-job-photo-placeholder {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  background: var(--v2-surface-muted);
+  color: var(--v2-text-muted);
+}
+
+/* Albums home screen */
+
+.v2-job-photos-albums-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.v2-job-photos-albums-title {
+  margin: 0 0 4px;
+  font-size: 18px;
+  font-weight: var(--v2-weight-bold);
+}
+
+.v2-job-photos-albums-sub {
+  margin: 0;
+  color: var(--v2-text-muted);
+  font-size: 13px;
+}
+
+.v2-job-photos-new-album {
+  display: grid;
+  gap: 12px;
+  padding: 16px 18px;
+  border: 1px solid color-mix(in srgb, var(--v2-accent) 40%, var(--v2-border));
+  border-radius: var(--v2-radius-lg);
+  background: var(--v2-accent-soft);
+}
+
+.v2-job-photos-new-album input {
+  width: 100%;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid color-mix(in srgb, var(--v2-border) 70%, transparent);
+  border-radius: var(--v2-radius-md);
+  background: var(--v2-surface-raised);
+  color: var(--v2-text);
+  font: inherit;
+  font-size: 14px;
+}
+
+.v2-job-photos-new-album input:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--v2-accent) 38%, transparent);
+  outline-offset: 2px;
+}
+
+.v2-job-photos-active-job-card {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 18px;
+  border: 1px solid color-mix(in srgb, var(--v2-border) 58%, transparent);
+  border-radius: var(--v2-radius-lg);
+  background: var(--v2-surface-raised);
+  box-shadow: var(--v2-shadow-card);
+}
+
+.v2-job-photos-active-job-info {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.v2-job-photos-active-badge {
+  color: var(--v2-accent);
+  font-size: 11px;
+  font-weight: var(--v2-weight-bold);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.v2-job-photos-active-job-info strong {
+  overflow: hidden;
+  font-size: 14px;
+  font-weight: var(--v2-weight-bold);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.v2-job-photos-active-job-info small {
+  color: var(--v2-text-muted);
+  font-size: 11px;
+}
+
+.v2-job-photos-loading {
+  padding: 24px;
+  color: var(--v2-text-muted);
+  font-size: 13px;
+  text-align: center;
+}
+
+.v2-job-photos-album-list {
+  display: grid;
+  border: 1px solid color-mix(in srgb, var(--v2-border) 55%, transparent);
+  border-radius: var(--v2-radius-lg);
+  overflow: hidden;
+}
+
+.v2-job-photos-album-row {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  min-height: 64px;
+  padding: 12px 16px;
+  border: 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--v2-border) 45%, transparent);
+  background: var(--v2-surface-raised);
+  color: var(--v2-text);
+  text-align: left;
+  transition: background 140ms ease;
+}
+
+.v2-job-photos-album-row:last-child {
+  border-bottom: 0;
+}
+
+.v2-job-photos-album-row:hover:not(:disabled) {
+  background: var(--v2-surface);
+}
+
+.v2-job-photos-album-row:disabled {
+  opacity: 0.6;
+}
+
+.v2-job-photos-album-icon {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--v2-radius-md);
+  background: var(--v2-accent-soft);
+  color: var(--v2-accent);
+}
+
+.v2-job-photos-album-copy {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.v2-job-photos-album-copy strong {
+  overflow: hidden;
+  font-size: 14px;
+  font-weight: var(--v2-weight-strong);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.v2-job-photos-album-copy small {
+  color: var(--v2-text-muted);
+  font-size: 11px;
+}
+
 @media (max-width: 860px) {
   .v2-job-photos-compare-grid {
     grid-template-columns: 1fr;
@@ -2018,5 +2208,9 @@
 
   .v2-job-photos-actions-bar {
     padding: 12px 14px;
+  }
+
+  .v2-job-photos-active-job-card {
+    grid-template-columns: 1fr;
   }
 }
