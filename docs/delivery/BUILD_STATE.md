@@ -2,7 +2,7 @@
 
 Last updated: 2026-06-22 America/New_York
 Current gate: Gate A launch hardening
-Current phase: Packet 08 controllable UX hardening, founder/support/legal-safety approvals recorded, incident and launch readiness gates passing, Gate A approval packet prepared, incident rehearsal passed, incident routing approved, recovery policy approved, support hours and backup incident owner recorded, Sentry error monitoring and first escalation route configured, server-owned Shop Talk reactions/reputation ledger, Daily Log live UI proof, Daily Log Records bridge, daily engagement loop, Shop Talk answer queue, RIVT Daily home check-in, Trade News real-media and mobile layout pass, production UI smoke regression fixes, Tools studio release, Records workspace upgrade, UI system pass, shared UI primitives, Tools primitive alignment, Shop Talk command center, Tools app surface pass, Heavy 16th multi-mode calculator, Invoice Draft app upgrade, Shop Talk reaction/social pulse pass, expanded production accessibility smoke verified, Claude-audit UI consolidation deployed, global search command surface deployed, server-owned profile search deployed, and local `TEST_DATABASE_URL` configured against isolated test Postgres; physical/deeper manual accessibility-device evidence remains the next launch-quality boundary
+Current phase: Packet 08 controllable UX hardening, Tools calculator/estimate extraction and provider-doc hardening, App activity feed hook extraction, App theme hook extraction, Shop Talk reaction hook extraction, App state type extraction, Work empty-state and runtime helper extraction, profile training data extraction, Shop Talk fallback data extraction, Shop Talk community helper extraction, dead guest job fixture removal, Work mapping extraction, app preference helper extraction, app route metadata extraction, account/activity panel extraction, auth screen extraction, legacy sidebar export cleanup, legacy App view cleanup, Shop Talk route split, Profile session ownership split, App profile-route split, frontend smoke-test tripwire, async password hashing, exact direct dependency pinning, founder/support/legal-safety approvals recorded, incident and launch readiness gates passing, Gate A approval packet prepared, incident rehearsal passed, incident routing approved, recovery policy approved, support hours and backup incident owner recorded, Sentry error monitoring and first escalation route configured, server-owned Shop Talk reactions/reputation ledger, Daily Log live UI proof, Daily Log Records bridge, daily engagement loop, Shop Talk answer queue, RIVT Daily home check-in, Trade News real-media and mobile layout pass, production UI smoke regression fixes, Tools studio release, Records workspace upgrade, UI system pass, shared UI primitives, Tools primitive alignment, Shop Talk command center, Tools app surface pass, Heavy 16th multi-mode calculator, Invoice Draft app upgrade, Shop Talk reaction/social pulse pass, expanded production accessibility smoke verified, Claude-audit UI consolidation deployed, global search command surface deployed, server-owned profile search deployed, and local `TEST_DATABASE_URL` configured against isolated test Postgres; physical/deeper manual accessibility-device evidence remains the next launch-quality boundary
 Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
 Production release commit: `cda9733acdaa7ed858b819fc9b5904ee2c237600`
@@ -16,6 +16,220 @@ Packet 00 is merged on `master` at `4c199d903683e44d17b7985272c399c6d7a6cbd6`. T
 - Product source of truth: `RIVT_MASTER_BUILD_PROMPT.md`
 
 Do not discard or overwrite the pre-existing Trade News work when committing or splitting this packet.
+
+## Latest Packet 08 Pass - Tools Extraction and Provider Documentation Hardening
+
+- Reviewed the Claude master-branch audit against the current local `master`: `src/App.tsx` is already reduced to 1,194 lines locally, lint is green, Shop Talk has a feature folder, and sensitive auth endpoints use the durable `authRateLimit` created by `createDurableRateLimiter`.
+- Continued the Tools strangler migration by moving Heavy 16th calculator behavior into `src/features/tools/FieldCalculatorTool.tsx` and estimate-builder behavior into `src/features/tools/EstimateTool.tsx`.
+- Preserved existing calculator modes, copy output, estimate inputs, target range calculation, and tool hub launch behavior while reducing `src/features/tools/ToolsStudio.tsx` to 1,259 lines.
+- Hardened `PRODUCTION.md` with explicit Railway Object Storage setup guidance, private signed-URL expectations, object-storage fail-closed behavior, and Resend fail-closed signup/password-recovery behavior.
+- Required gates passed after this slice: `npm run build`, `npm run lint`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check`.
+- The full `npm run test` command used the isolated test Postgres through local `TEST_DATABASE_URL`.
+- No production deployment was performed for this refactor/documentation slice.
+
+## Latest Packet 08 Pass - App Activity Feed Hook Extraction
+
+- Continued the incremental `App.tsx` split by moving local activity feed state, toast state, toast auto-dismiss timing, notification-to-activity mapping, unread activity counts, and activity event recording into `src/app-shell/useActivityFeed.ts`.
+- Preserved activity toast behavior, activity panel fallback behavior, notification activity prioritization, mark-all-read behavior, and server event recording payloads.
+- `src/App.tsx` is now reduced to 1,194 lines.
+- Required gates passed after this slice: `npm run build`, `npm run lint`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check`.
+- The full `npm run test` command used the isolated test Postgres through local `TEST_DATABASE_URL`.
+- No production deployment was performed for this refactor slice.
+
+## Latest Packet 08 Pass - App Theme Hook Extraction
+
+- Continued the incremental `App.tsx` split by moving theme mode, theme palette, CSS variable application, color-scheme application, and localStorage persistence into `src/app-shell/useAppTheme.ts`.
+- Preserved dark/light theme toggle behavior, tool-manufacturer palette selection behavior, and profile/account panel theme controls.
+- `src/App.tsx` is now reduced to 1,230 lines.
+- Required gates passed after this slice: `npm run build`, `npm run lint`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check`.
+- The full `npm run test` command used the isolated test Postgres through local `TEST_DATABASE_URL`.
+- No production deployment was performed for this refactor slice.
+
+## Latest Packet 08 Pass - Shop Talk Reaction Hook Extraction
+
+- Continued the incremental `App.tsx` split by moving server-owned Shop Talk reaction target batching, ledger loading, pending state, reaction commits, and reaction reset behavior into `src/features/shop-talk/useCommunityReactions.ts`.
+- Preserved Shop Talk reaction error toasts, server-owned reaction status, answer/thread vote behavior, and logout/session reset behavior.
+- Removed reaction aggregate and ledger types from `src/app-shell/app-state-types.ts` because the hook now owns them.
+- `src/App.tsx` is now reduced to 1,256 lines.
+- Required gates passed after this slice: `npm run build`, `npm run lint`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check`.
+- The full `npm run test` command used the isolated test Postgres through local `TEST_DATABASE_URL`.
+- No production deployment was performed for this refactor slice.
+
+## Latest Packet 08 Pass - App State Type Extraction
+
+- Continued the incremental `App.tsx` split by moving App-owned account, auth, activity, feedback, payment, reaction-aggregate, crew shout-out, and Work filter type contracts into `src/app-shell/app-state-types.ts`.
+- Removed duplicate Shop Talk post/reaction type declarations from `src/App.tsx` by importing the existing exported contracts from `src/features/shop-talk/ShopTalkView.tsx`.
+- Preserved account/session state, activity feed, payment record, Shop Talk reaction, and Work filter behavior.
+- `src/App.tsx` is now reduced to 1,404 lines.
+- Required gates passed after this slice: `npm run build`, `npm run lint`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check`.
+- The full `npm run test` command used the isolated test Postgres through local `TEST_DATABASE_URL`.
+- No production deployment was performed for this refactor slice.
+
+## Latest Packet 08 Pass - Work Empty State and Runtime Helper Extraction
+
+- Continued the incremental `App.tsx` split by moving the Work empty-job fallback into `src/features/work/empty-job.ts`.
+- Moved the retired generic event bridge helper, time label formatter, and idempotency-key generator into `src/lib/app-helpers.ts`.
+- Preserved selected-job fallback, activity timestamp, activity event no-op, and Shop Talk reaction idempotency-key behavior.
+- `src/App.tsx` is now reduced to 1,538 lines.
+- Required gates passed after this slice: `npm run build`, `npm run lint`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check`.
+- The full `npm run test` command used the isolated test Postgres through local `TEST_DATABASE_URL`.
+- No production deployment was performed for this refactor slice.
+
+## Latest Packet 08 Pass - Profile Training Data Extraction
+
+- Continued the incremental `App.tsx` split by moving profile safety training metadata, quiz types, quiz data, record checklist, and training module labels into `src/features/profile/training-data.ts`.
+- Preserved existing training-progress, record-goal, safety-module count, and safety quiz result typing behavior.
+- `src/App.tsx` is now reduced to 1,580 lines.
+- Required gates passed after this slice: `npm run build`, `npm run lint`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check`.
+- The full `npm run test` command used the isolated test Postgres through local `TEST_DATABASE_URL`.
+- No production deployment was performed for this refactor slice.
+
+## Latest Packet 08 Pass - Shop Talk Fallback Data Extraction
+
+- Continued the incremental `App.tsx` split by moving static Shop Talk fallback news and founder/community prompt records into `src/features/shop-talk/fallback-data.ts`.
+- Preserved route behavior and visible fallback content while removing route-owned static data from the main app shell.
+- `src/App.tsx` is now reduced to 2,036 lines.
+- Required gates passed after this slice: `npm run build`, `npm run lint`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check`.
+- The full `npm run test` command was run with explicit network access because the integration suite uses the isolated test Postgres.
+- No production deployment was performed for this refactor slice.
+
+## Latest Packet 08 Pass - Shop Talk Community Helper Extraction
+
+- Continued the incremental `App.tsx` split by moving shared Shop Talk score sorting, community badge labeling, and server-owned reaction key helpers into `src/features/shop-talk/community-utils.ts`.
+- Preserved behavior boundaries: App-level community badges keep the existing 10/25 answer thresholds, while the Shop Talk screen keeps its existing 3/8 screen-level thresholds.
+- `src/App.tsx` is now reduced to 2,152 lines.
+- Required gates passed after this slice: `npm run build`, `npm run lint`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check`.
+- The full `npm run test` command was run with explicit network access because the integration suite uses the isolated test Postgres.
+- No production deployment was performed for this refactor slice.
+
+## Latest Packet 08 Pass - Dead Guest Job Fixture Removal
+
+- Removed the unreferenced `guestDemoJobs` fixture from `src/App.tsx`; the fixture contained local demo job content and was not used by any active screen.
+- Verified no remaining references to the deleted guest-demo job titles or `guestDemoJobs` symbol.
+- `src/App.tsx` is now reduced to 2,180 lines.
+- Required gates passed after this slice: `npm run build`, `npm run lint`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check`.
+- The full `npm run test` command was run with explicit network access because the integration suite uses the isolated test Postgres.
+- No production deployment was performed for this refactor slice.
+
+## Latest Packet 08 Pass - Work Mapping Extraction
+
+- Continued the incremental `App.tsx` split by moving trade-code, difficulty-label, and work-type-label mappings into `src/features/work/work-mappings.ts`.
+- Preserved Work filter, profile publish, and onboarding specialty mapping behavior exactly.
+- `src/App.tsx` is now reduced to 2,324 lines.
+- Required gates passed after this slice: `npm run build`, `npm run lint`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check`.
+- The full `npm run test` command was run with explicit network access because the integration suite uses the isolated test Postgres.
+- No production deployment was performed for this refactor slice.
+
+## Latest Packet 08 Pass - App Preference Helper Extraction
+
+- Continued the incremental `App.tsx` split by moving theme, palette, and auth-mode storage keys plus their browser preference readers into `src/app-shell/preferences.ts`.
+- Preserved theme persistence, palette persistence, auth-mode session persistence, and fallback behavior exactly.
+- `src/App.tsx` is now reduced to 2,366 lines.
+- Required gates passed after this slice: `npm run build`, `npm run lint`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check`.
+- The full `npm run test` command was run with explicit network access because the integration suite uses the isolated test Postgres.
+- No production deployment was performed for this refactor slice.
+
+## Latest Packet 08 Pass - App Route Metadata Extraction
+
+- Continued the incremental `App.tsx` split by moving app route labels, destination mapping, path aliases, and page-title metadata into `src/app-shell/routes.ts`.
+- Removed the duplicate `NavLabel` definition from `src/app-shell/AppPanels.tsx`; shell panels now import the shared route type.
+- Preserved navigation behavior and URL paths exactly; this slice moves pure route metadata only.
+- `src/App.tsx` is now reduced to 2,393 lines.
+- Required gates passed after this slice: `npm run build`, `npm run lint`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check`.
+- The full `npm run test` command was run with explicit network access because the integration suite uses the isolated test Postgres.
+- No production deployment was performed for this refactor slice.
+
+## Latest Packet 08 Pass - Account Activity Panel Extraction
+
+- Continued the incremental `App.tsx` split by moving notification toast, notification panel, account panel, avatar fallback, account stat item, and theme-palette picker presentation into `src/app-shell/AppPanels.tsx`.
+- Preserved activity, account, theme, logout, notification-read, and navigation state ownership in `src/App.tsx`; this slice moves shell panel UI only.
+- `AccountPanel` now receives record and safety target counts as props instead of reading App-local constants directly.
+- `src/App.tsx` is now reduced to 2,522 lines.
+- Required gates passed after this slice: `npm run build`, `npm run lint`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check`.
+- The full `npm run test` command was run with explicit network access because the integration suite uses the isolated test Postgres.
+- No production deployment was performed for this refactor slice.
+
+## Latest Packet 08 Pass - Auth Screen Extraction
+
+- Continued the incremental `App.tsx` split by moving auth, verification/reset, guest prompt, onboarding, theme toggle, and progress-bar presentation into `src/features/auth/AuthScreens.tsx`.
+- Added `src/lib/api.ts` as the shared API URL helper so the moved auth-link and Google-start flows use the same API base behavior as the authenticated app.
+- Preserved auth/session/onboarding state ownership in `src/App.tsx`; this slice moves UI and helper presentation only.
+- `src/App.tsx` is now reduced to 2,836 lines.
+- Required gates passed after this slice: `npm run build`, `npm run lint`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check`.
+- The full `npm run test` command was run with explicit network access because the integration suite uses the isolated test Postgres.
+- No production deployment was performed for this refactor slice.
+
+## Latest Packet 08 Pass - Legacy Sidebar Export Cleanup
+
+- Removed the unused deprecated `Sidebar` and `MobileNavStrip` exports from `src/App.tsx` after verifying no references in `src` or `test`.
+- Removed the private legacy nav item and role-filter helper data that only existed to support those deprecated exports.
+- This further reduces the chance of reintroducing stale authenticated shell patterns outside the active AppShell route.
+- `src/App.tsx` is now reduced to 3,561 lines.
+- Required gates passed after this slice: `npm run build`, `npm run lint`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check`.
+- The full `npm run test` command was run with explicit network access because the integration suite uses the isolated test Postgres.
+- No production deployment was performed for this refactor slice.
+
+## Latest Packet 08 Pass - Legacy App View Cleanup
+
+- Continued the incremental `App.tsx` split by removing unreachable deprecated legacy view blocks after call-site verification.
+- Removed the inactive `OperationsWorkspace`, old `MarketplaceView`, and old `PostJobModal` paths from `src/App.tsx`; the active authenticated app remains routed through HomeDashboard, WorkWorkspace, ShopTalkView, NetworkHub, InboxCenter, ProfileRoute, ToolsStudio, and the lightweight LegacyBridge.
+- Preserved only shared helpers still used by active onboarding/account/profile surfaces, including route mapping and `ProgressBar`.
+- `src/App.tsx` is now reduced to 3,745 lines, down from the 10,339-line starting point recorded in the master hardening plan.
+- Required gates passed after this slice: `npm run build`, `npm run lint`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check`.
+- The full `npm run test` command was run with explicit network access because the integration suite uses the isolated test Postgres.
+- No production deployment was performed for this refactor slice.
+
+## Latest Packet 08 Pass - Shop Talk Route Split
+
+- Continued the incremental `App.tsx` split by moving the active Shop Talk and Trade News view into `src/features/shop-talk/ShopTalkView.tsx`.
+- Preserved the existing Shop Talk props, server-owned reaction state handoff, Trade News live fetch behavior, filters, answer queue, reporting, and post composer behavior.
+- `App.tsx` now imports the Shop Talk surface instead of owning the full active screen implementation, reducing the main application file by another large route slice.
+- Focused gates passed after this extraction before the full packet run: `npm run build`, `npm run lint`, and `npm run test:unit`.
+- No production deployment was performed for this refactor slice.
+
+## Latest Packet 08 Pass - Profile Session Ownership Split
+
+- Moved Profile session-list loading and non-current session revocation from `src/App.tsx` into `src/features/profile/ProfileRoute.tsx`.
+- `App.tsx` now keeps only the whole-app auth teardown callback for the current-session revocation case, because clearing auth still affects the shell, inbox, jobs, and Shop Talk reaction state.
+- Preserved existing server endpoints and response handling for `GET /api/v1/sessions`, `DELETE /api/v1/sessions/:id`, and `POST /api/v1/sessions/revoke-others`; no auth/security route behavior changed.
+- Required gates passed after this slice: `npm run build`, `npm run test:unit`, `npm run lint`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check`.
+- The full `npm run test` command was run with explicit network access because the integration suite uses the isolated test Postgres.
+- No production deployment was performed for this refactor slice.
+
+## Latest Packet 08 Pass - App Profile Route Split
+
+- Started the incremental `App.tsx` split with the Profile surface, adding `src/features/profile/ProfileRoute.tsx` as the active profile route adapter.
+- Moved ProfileHub prop-shaping and canonical-profile mapping out of `src/App.tsx` while preserving the existing server-owned account, session, theme, logout, and profile mutation handlers in place.
+- This intentionally does not move auth/session ownership yet because the profile session list is still coupled to both Settings and the account-panel menu. The next safe extraction is to separate that account/session owner after the active render path is slimmer.
+- Required gates passed after this slice: `npm run build`, `npm run test:unit`, `npm run lint`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check`.
+- The full `npm run test` command was run with explicit network access because the integration suite uses the isolated test Postgres.
+- No production deployment was performed for this refactor slice.
+
+## Latest Packet 08 Pass - Frontend Smoke Test Tripwire
+
+- Added `test/frontend-smoke.test.mjs`, a Vite SSR + React server-render smoke suite that mounts Home, Work, Profile, and AppShell with explicit mock props and fails on render crashes.
+- Wired the smoke suite into `npm run test:unit`, so `npm run test` now catches basic frontend white-screen regressions before the larger App refactor work.
+- No new npm dependencies were added; the suite uses existing Node test, Vite, React, and `react-dom/server`.
+- Required gates passed after this slice: `npm run build`, `npm run lint`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check`.
+- The full `npm run test` command was run with explicit network access because the integration suite uses the isolated test Postgres.
+- No production deployment was performed for this test-coverage slice.
+
+## Latest Packet 08 Pass - Async Password Hashing
+
+- Replaced blocking `scryptSync` password derivation in `server/index.js` with promisified async `scrypt`, preserving salt generation, 64-byte key length, and timing-safe hash comparison.
+- Updated signup, login, Google first-account creation, and password reset call sites to await password hashing/verification instead of blocking the Node event loop during credential work.
+- Required gates passed after this slice: `npm run build`, `npm run lint`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check`.
+- The first sandboxed `npm run test` attempt timed out without useful output; the same command passed after rerun with explicit network access to the configured isolated test Postgres.
+- No production deployment was performed for this server hardening slice.
+
+## Latest Packet 08 Pass - Exact Direct Dependency Pinning
+
+- Replaced all direct `package.json` dependency and devDependency ranges/`latest` values with exact versions already resolved in `package-lock.json`.
+- Added `.nvmrc` with Node major `20` to align local/runtime expectations with the Railway Node 20 target while keeping `engines.node` at `>=20`.
+- Ran `npm install`; npm reported the tree up to date and updated only the root lockfile metadata from ranges to exact direct versions.
+- Required gates passed after this slice: `npm run build`, `npm run lint`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check`.
+- The first sandboxed `npm run test` attempt failed because network access to the isolated Railway test Postgres was blocked (`EACCES`); the same command passed after rerun with explicit network access.
+- No production deployment was performed for this dependency pinning slice; runtime product behavior is unchanged.
 
 ## Latest Packet 08 Pass - Local TEST_DATABASE_URL Configuration
 

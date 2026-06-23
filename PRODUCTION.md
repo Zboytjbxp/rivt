@@ -64,7 +64,9 @@ Verify `rivt.pro` with the email provider before inviting users. Never use captu
 
 Production sender verification was completed on 2026-06-19. The Resend API key is sending-only and restricted to `rivt.pro`; the verified sender remains `RIVT <support@rivt.pro>`. Keep the existing Google Workspace root MX record intact. Resend uses only the `send.rivt.pro` return-path MX/SPF records.
 
-Uploads use private S3-compatible object storage and signed download URLs:
+If `EMAIL_DELIVERY_MODE=resend` and either `RESEND_API_KEY` or `EMAIL_FROM` is missing, signup and password recovery must fail closed with `EMAIL_PROVIDER_UNAVAILABLE` / provider setup-required status. Do not bypass verification, return raw verification tokens, or switch to capture delivery for production users.
+
+Uploads use private S3-compatible object storage and signed download URLs. RIVT production currently targets Railway Object Storage, which exposes an S3-compatible endpoint (`https://t3.storageapi.dev` in Railway's current storage service). Cloudflare R2, AWS S3, Backblaze B2, Supabase Storage S3 compatibility, or another managed S3-compatible provider can be used only if the same private-bucket and signed-URL behavior is preserved.
 
 ```bash
 S3_BUCKET=
@@ -78,7 +80,7 @@ S3_SIGNED_URL_SECONDS=900
 MAX_UPLOAD_MB=10
 ```
 
-Use AWS S3, Cloudflare R2, Supabase Storage S3 compatibility, or another S3-compatible provider. For private files, leave `S3_PUBLIC_BASE_URL` blank and use the signed URLs returned by the API.
+For Railway Object Storage, copy the bucket name, endpoint, access key, and secret key from the Railway storage service into the web service variables. Keep `S3_REGION=auto` when Railway reports `auto`, keep `S3_FORCE_PATH_STYLE=false` unless the provider explicitly requires path-style requests, and leave `S3_PUBLIC_BASE_URL` blank for private customer files. The API intentionally fails closed with `503 OBJECT_STORAGE_UNAVAILABLE` / setup-required health output when object storage is missing; there is no local upload fallback.
 
 ## Railway Setup
 
@@ -93,7 +95,7 @@ The process healthcheck only proves the site is online. Customer readiness is st
 1. Create a Railway project for the web app.
 2. Add a Railway PostgreSQL service.
 3. Set `DATABASE_URL` on the web service from the PostgreSQL service variables.
-4. Add S3-compatible storage credentials from AWS S3, Cloudflare R2, Supabase Storage, or another managed provider.
+4. Add private S3-compatible object storage. For the current RIVT setup, use Railway Object Storage and add its S3 variables to the web service: `S3_BUCKET`, `S3_REGION`, `S3_ENDPOINT`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, and `S3_FORCE_PATH_STYLE`.
 5. Deploy with:
 
 ```bash
@@ -119,9 +121,10 @@ S3_SECRET_ACCESS_KEY=
 Recommended storage behavior:
 
 - Use a managed PostgreSQL instance in Railway for `DATABASE_URL`.
-- Use private object storage for uploads and signed URLs.
+- Use Railway Object Storage, or an equivalent private S3-compatible bucket, for uploads and signed URLs.
 - Leave `S3_PUBLIC_BASE_URL` blank unless your storage provider requires a public asset URL.
 - Keep `S3_FORCE_PATH_STYLE=false` unless your S3 provider documents path-style access.
+- Treat `/api/health` or `/api/storage` reporting missing S3 values as a launch blocker. Profile avatar and project media endpoints must return setup-required/503 responses rather than writing locally.
 
 Do not copy secret values into this document, source control, build logs, or support tickets.
 

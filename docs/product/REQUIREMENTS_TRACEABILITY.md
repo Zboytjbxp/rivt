@@ -10,6 +10,145 @@ Status values:
 
 Evidence must eventually link to implementation, automated tests, manual acceptance proof, and deployed build.
 
+## Traceability Addendum - 2026-06-22 Tools Extraction and Provider Documentation Hardening
+
+- `GA-UX-001` gains maintainability evidence: Heavy 16th calculator behavior moved into `src/features/tools/FieldCalculatorTool.tsx`, and estimate-builder behavior moved into `src/features/tools/EstimateTool.tsx`; `src/features/tools/ToolsStudio.tsx` is reduced to 1,259 lines.
+- `GA-UX-005` retains behavior boundaries: calculator modes, copy output, estimate inputs, target range calculation, and tool hub launch behavior remain unchanged.
+- `GA-FND-001` gains deployment-readiness evidence: `PRODUCTION.md` now names Railway Object Storage as the current intended S3-compatible provider, documents required S3 variables and private signed-URL behavior, and states that missing object storage must fail closed with setup-required/503 behavior.
+- `GA-AUTH-004` and `GA-OPS-004` retain safety boundaries: current auth signup/login/email verification/password reset endpoints use durable `authRateLimit`, and production email signup/password recovery must fail closed when Resend is not configured.
+- `GA-OPS-007` gains local automated evidence for this refactor slice: `npm run build`, `npm run lint`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check` passed.
+- The full `npm run test` command used the isolated test Postgres through local `TEST_DATABASE_URL`.
+- `GA-OPS-008` is unchanged for production deployment: this slice has not been deployed.
+
+## Traceability Addendum - 2026-06-22 App Activity Feed Hook Extraction
+
+- `GA-UX-001` gains maintainability evidence: local activity feed state, toast state, toast auto-dismiss timing, notification-to-activity mapping, unread activity counts, and activity event recording moved from `src/App.tsx` into `src/app-shell/useActivityFeed.ts`.
+- `GA-UX-003` retains behavior boundaries: activity toasts, activity panel fallback items, notification activity prioritization, mark-all-read behavior, and server event recording payloads remain unchanged.
+- `GA-OPS-007` gains local automated evidence for this refactor slice: `npm run build`, `npm run lint`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check` passed.
+- The full `npm run test` command used the isolated test Postgres through local `TEST_DATABASE_URL`.
+- `GA-OPS-008` is unchanged for production deployment: this slice has not been deployed.
+
+## Traceability Addendum - 2026-06-22 App Theme Hook Extraction
+
+- `GA-UX-001` gains maintainability evidence: theme mode, theme palette, CSS variable application, color-scheme application, and localStorage persistence moved from `src/App.tsx` into `src/app-shell/useAppTheme.ts`.
+- `GA-UX-003` retains behavior boundaries: dark/light theme toggle behavior, tool-manufacturer palette selection, and profile/account panel theme controls remain unchanged.
+- `GA-OPS-007` gains local automated evidence for this refactor slice: `npm run build`, `npm run lint`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check` passed.
+- The full `npm run test` command used the isolated test Postgres through local `TEST_DATABASE_URL`.
+- `GA-OPS-008` is unchanged for production deployment: this slice has not been deployed.
+
+## Traceability Addendum - 2026-06-22 Shop Talk Reaction Hook Extraction
+
+- `GA-UX-001` gains maintainability evidence: server-owned Shop Talk reaction target batching, ledger loading, pending state, reaction commits, and reset behavior moved from `src/App.tsx` into `src/features/shop-talk/useCommunityReactions.ts`.
+- `GA-UX-005` retains behavior boundaries: Shop Talk answer/thread vote controls still use server-owned reaction data, error toasts still surface failed saves, and logout/session reset still clears reaction state.
+- `GA-OPS-007` gains local automated evidence for this refactor slice: `npm run build`, `npm run lint`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check` passed.
+- The full `npm run test` command used the isolated test Postgres through local `TEST_DATABASE_URL`.
+- `GA-OPS-008` is unchanged for production deployment: this slice has not been deployed.
+
+## Traceability Addendum - 2026-06-22 App State Type Extraction
+
+- `GA-UX-001` gains maintainability evidence: App-owned account, auth, activity, feedback, payment, reaction-aggregate, crew shout-out, and Work filter type contracts were moved from `src/App.tsx` into `src/app-shell/app-state-types.ts`.
+- `GA-UX-005` gains cleanup evidence: duplicate Shop Talk post/reaction type declarations were removed from `src/App.tsx` in favor of the existing `src/features/shop-talk/ShopTalkView.tsx` exported contracts.
+- `GA-OPS-007` gains local automated evidence for this refactor slice: `npm run build`, `npm run lint`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check` passed.
+- The full `npm run test` command used the isolated test Postgres through local `TEST_DATABASE_URL`.
+- `GA-OPS-008` is unchanged for production deployment: this slice has not been deployed.
+
+## Traceability Addendum - 2026-06-22 Work Empty State and Runtime Helper Extraction
+
+- `GA-UX-001` gains maintainability evidence: the Work empty-job fallback moved from `src/App.tsx` into `src/features/work/empty-job.ts`, and generic runtime helpers moved into `src/lib/app-helpers.ts`.
+- `GA-UX-003` retains behavior boundaries: selected-job fallback, activity timestamp labels, retired event-bridge no-op behavior, and Shop Talk reaction idempotency-key generation remain unchanged.
+- `GA-OPS-007` gains local automated evidence for this refactor slice: `npm run build`, `npm run lint`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check` passed.
+- The full `npm run test` command used the isolated test Postgres through local `TEST_DATABASE_URL`.
+- `GA-OPS-008` is unchanged for production deployment: this slice has not been deployed.
+
+## Traceability Addendum - 2026-06-22 Profile Training Data Extraction
+
+- `GA-UX-001` gains maintainability evidence: profile safety training metadata, quiz types, quiz data, record checklist, and training module labels were moved from `src/App.tsx` into `src/features/profile/training-data.ts`.
+- `GA-SAFE-004` and `GA-UX-005` retain behavior boundaries: training-progress, record-goal, safety-module count, and safety quiz result typing continue to use the same data.
+- `GA-OPS-007` gains local automated evidence for this refactor slice: `npm run build`, `npm run lint`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check` passed.
+- The full `npm run test` command used the isolated test Postgres through local `TEST_DATABASE_URL`.
+- `GA-OPS-008` is unchanged for production deployment: this slice has not been deployed.
+
+## Traceability Addendum - 2026-06-22 Shop Talk Fallback Data Extraction
+
+- `GA-UX-001` gains maintainability evidence: static Shop Talk fallback news and founder/community prompt records were moved from `src/App.tsx` into `src/features/shop-talk/fallback-data.ts`.
+- `GA-UX-005` retains behavior boundaries: Shop Talk and Trade News still receive the same fallback items and community prompt records through the active route.
+- `GA-OPS-007` gains local automated evidence for this refactor slice: `npm run build`, `npm run lint`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check` passed.
+- The full `npm run test` command was run with explicit network access because the integration suite uses the isolated test Postgres.
+- `GA-OPS-008` is unchanged for production deployment: this slice has not been deployed.
+
+## Traceability Addendum - 2026-06-22 Shop Talk Community Helper Extraction
+
+- `GA-UX-001` gains maintainability evidence: shared Shop Talk score sorting, community badge labeling, and server-owned reaction key helpers were extracted from `src/App.tsx` and `src/features/shop-talk/ShopTalkView.tsx` into `src/features/shop-talk/community-utils.ts`.
+- `GA-UX-005` retains behavior boundaries: App-level community badges keep the existing 10/25 answer thresholds, while the Shop Talk screen keeps its existing 3/8 thresholds.
+- `GA-OPS-007` gains local automated evidence for this refactor slice: `npm run build`, `npm run lint`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check` passed.
+- The full `npm run test` command was run with explicit network access because the integration suite uses the isolated test Postgres.
+- `GA-OPS-008` is unchanged for production deployment: this slice has not been deployed.
+
+## Traceability Addendum - 2026-06-22 Dead Guest Job Fixture Removal
+
+- `GA-UX-001` gains cleanup evidence: the unreferenced `guestDemoJobs` fixture was removed from `src/App.tsx`.
+- `GA-DATA-001` improves launch hygiene: unused local demo job titles and example job details are no longer retained in the frontend bundle.
+- `GA-OPS-007` gains local automated evidence for this cleanup slice: `npm run build`, `npm run lint`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check` passed.
+- The full `npm run test` command was run with explicit network access because the integration suite uses the isolated test Postgres.
+- `GA-OPS-008` is unchanged for production deployment: this slice has not been deployed.
+
+## Traceability Addendum - 2026-06-22 Work Mapping Extraction
+
+- `GA-UX-001` gains maintainability evidence: trade-code, difficulty-label, and work-type-label mappings were extracted from `src/App.tsx` into `src/features/work/work-mappings.ts`.
+- `GA-UX-003` retains behavior boundaries: Work filters, profile publish specialties, and onboarding specialties still use the same mapping values.
+- `GA-OPS-007` gains local automated evidence for this refactor slice: `npm run build`, `npm run lint`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check` passed.
+- The full `npm run test` command was run with explicit network access because the integration suite uses the isolated test Postgres.
+- `GA-OPS-008` is unchanged for production deployment: this slice has not been deployed.
+
+## Traceability Addendum - 2026-06-22 App Preference Helper Extraction
+
+- `GA-UX-001` gains maintainability evidence: theme, palette, and auth-mode storage keys plus browser preference readers were extracted from `src/App.tsx` into `src/app-shell/preferences.ts`.
+- `GA-UX-003` retains behavior boundaries: theme persistence, palette persistence, auth-mode session persistence, and fallback defaults are unchanged.
+- `GA-OPS-007` gains local automated evidence for this refactor slice: `npm run build`, `npm run lint`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check` passed.
+- The full `npm run test` command was run with explicit network access because the integration suite uses the isolated test Postgres.
+- `GA-OPS-008` is unchanged for production deployment: this slice has not been deployed.
+
+## Traceability Addendum - 2026-06-22 App Route Metadata Extraction
+
+- `GA-UX-001` gains maintainability evidence: route labels, destination mapping, path aliases, and page-title metadata were extracted from `src/App.tsx` into `src/app-shell/routes.ts`.
+- `GA-UX-003` retains behavior boundaries: existing top-level navigation state, profile-menu routing, active destination mapping, and browser path handling still call the same route helpers.
+- `GA-OPS-007` gains local automated evidence for this refactor slice: `npm run build`, `npm run lint`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check` passed.
+- The full `npm run test` command was run with explicit network access because the integration suite uses the isolated test Postgres.
+- `GA-OPS-008` is unchanged for production deployment: this slice has not been deployed.
+
+## Traceability Addendum - 2026-06-22 Account Activity Panel Extraction
+
+- `GA-UX-001` gains maintainability evidence: notification toast, notification panel, account panel, avatar fallback, account stat item, and theme-palette picker presentation were extracted from `src/App.tsx` into `src/app-shell/AppPanels.tsx`.
+- `GA-UX-003` retains behavior boundaries: notification read clearing, account open/close, logout, and profile navigation remain owned by the existing App state and server flows.
+- `GA-OPS-007` gains local automated evidence for this refactor slice: `npm run build`, `npm run lint`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check` passed.
+- The full `npm run test` command was run with explicit network access because the integration suite uses the isolated test Postgres.
+- `GA-OPS-008` is unchanged for production deployment: this slice has not been deployed.
+
+## Traceability Addendum - 2026-06-22 Auth Screen Extraction
+
+- `GA-UX-001` gains maintainability evidence: auth, verification/reset, guest prompt, onboarding, theme toggle, and progress-bar presentation were extracted from `src/App.tsx` into `src/features/auth/AuthScreens.tsx`.
+- `GA-AUTH-001`, `GA-AUTH-003`, `GA-AUTH-004`, and `GA-AUTH-005` retain behavior boundaries: auth/session/onboarding state and server calls remain owned by the existing app flow, with the moved UI calling the same endpoints through shared `src/lib/api.ts`.
+- `GA-OPS-007` gains local automated evidence for this refactor slice: `npm run build`, `npm run lint`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check` passed.
+- The full DB-backed `npm run test` command was run with explicit network access because the integration suite uses the isolated test Postgres.
+- `GA-OPS-008` is unchanged for production deployment: this slice has not been deployed.
+
+## Traceability Addendum - 2026-06-22 Legacy Sidebar Export Cleanup
+
+- `GA-UX-001` gains maintainability evidence: unused deprecated `Sidebar` and `MobileNavStrip` exports were removed from `src/App.tsx` after confirming no references in `src` or `test`.
+- `GA-UX-002` and `GA-UX-004` gain cleanup evidence that the old role-filtered nav helper table is no longer present in `App.tsx`; active primary navigation remains owned by AppShell.
+- `GA-OPS-007` gains local automated evidence for this refactor slice: `npm run build`, `npm run lint`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check` passed.
+- The full DB-backed `npm run test` command was run with explicit network access because the integration suite uses the isolated test Postgres.
+- `GA-OPS-008` is unchanged for production deployment: this slice has not been deployed.
+
+## Traceability Addendum - 2026-06-22 Legacy App View Cleanup
+
+- `GA-UX-001` gains maintainability evidence: unreachable deprecated `OperationsWorkspace`, old `MarketplaceView`, and old `PostJobModal` code paths were removed from `src/App.tsx` after call-site verification.
+- Active Gate A surfaces remain routed through HomeDashboard, WorkWorkspace, ShopTalkView, NetworkHub, InboxCenter, ProfileRoute, ToolsStudio, and the lightweight LegacyBridge.
+- `GA-UX-004` gains cleanup evidence that the removed legacy authenticated workspace path can no longer reintroduce the old role-toggle/global-post patterns through `OperationsWorkspace`.
+- `GA-OPS-007` gains local automated evidence for this refactor slice: `npm run build`, `npm run lint`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check` passed.
+- The full DB-backed `npm run test` command was run with explicit network access because the integration suite uses the isolated test Postgres.
+- `GA-OPS-008` is unchanged for production deployment: this slice has not been deployed.
+
 ## Foundation
 
 | ID | Requirement | Current | Evidence / gap |
@@ -27,7 +166,7 @@ Evidence must eventually link to implementation, automated tests, manual accepta
 
 | ID | Requirement | Current | Evidence / gap |
 |---|---|---:|---|
-| GA-AUTH-001 | Email signup creates a real account with password policy | Partial | Scrypt hashing, explicit role, 8-character minimum, invite gating, email verification, recovery, and auth throttling exist; breached-password screening remains deferred. |
+| GA-AUTH-001 | Email signup creates a real account with password policy | Partial | Async scrypt hashing, explicit role, 8-character minimum, invite gating, email verification, recovery, and auth throttling exist; breached-password screening remains deferred. |
 | GA-AUTH-002 | Invalid login fails closed | Verified | Local fallback was removed; Playwright and deployed production smoke both prove a rejected login remains unauthenticated. |
 | GA-AUTH-003 | Email ownership verification | Verified | Packet 02 added hashed, single-use verification challenges with expiry and live delivery; production smoke verified account verification and cleanup. |
 | GA-AUTH-004 | Password reset and recovery | Verified | Packet 02 added hashed, single-use password recovery/reset with expiry and session revocation; production smoke verified recovery, reset, and cleanup. |
@@ -131,7 +270,7 @@ Evidence must eventually link to implementation, automated tests, manual accepta
 | GA-ADM-002 | Support can inspect safe account/workflow timeline | Partial | Packet 07 live smoke verified support cases/events and admin overview for review/report/support/restriction queues; a fuller support timeline remains a Gate A hardening item. |
 | GA-ADM-003 | Moderation/account actions use reason and immutable audit | Verified | Packet 07 live smoke verified reason-required admin review/support/restriction mutations and immutable `admin_action_events` count. Broader moderation UI remains later work, but the safety-critical audit path is live. |
 | GA-OPS-001 | Build and lint gates pass | Verified | Production build and repository-wide ESLint pass locally and in GitHub Actions with zero errors or warnings. |
-| GA-OPS-002 | Direct production dependencies are declared and vulnerability gate passes | Verified | `fast-xml-parser` is direct, Multer is 2.2.0, and `npm audit --omit=dev` reports zero vulnerabilities locally and in GitHub Actions. |
+| GA-OPS-002 | Direct production dependencies are declared and vulnerability gate passes | Verified | `fast-xml-parser` is direct, Multer is 2.2.0, all direct dependencies/devDependencies are exact-pinned in local source with `.nvmrc` set to Node 20, and `npm audit --omit=dev` reports zero vulnerabilities locally and in GitHub Actions. |
 | GA-OPS-003 | Health, readiness, and build version are distinct | Verified | Deployed health and authenticated readiness report dependencies, migration version, operational-control state, observability setup state, and exact source commit `6d8e276`. Public health exposes only non-secret monitoring status. |
 | GA-OPS-004 | Backup and timed restore drill pass | Verified | Timed isolated logical restore passed against temporary Railway target `Postgres-3Ei3` on 2026-06-20. A named backup-artifact restore also passed on 2026-06-21: `npm run backup:logical-artifact` created encrypted object `backups/postgres/2026-06-21T04-14-48.795Z-332dbc0.json.gz.aes256gcm` from 59 tables / 1,524 rows in 630 ms; `npm run restore:logical-artifact -- --apply-migrations` restored that object to isolated target `Postgres-_FQz`, applied nine migrations through `0009_durable_rate_limits`, restored 59 tables / 1,524 rows, verified table/column/sequence and strict manifest-count parity with zero diffs in 13,411 ms; `npm run restore:drill` then verified the isolated target in 1,862 ms. The temporary target was deleted, detached restore volumes were marked for deletion, and temporary restore variables were removed. `docs/operations/recovery-policy.json` now records this evidence and approves Gate A RPO 1440 minutes, RTO 240 minutes, 30-day backup retention, 30-day restore-drill cadence, next restore drill due `2026-07-21T04:18:59.000Z`, with founder and operations approval by Michael. |
 | GA-OPS-005 | Structured logs, error monitoring, alerts, and incident routing | Partial | Packet 08 added structured JSON request/domain logs and request IDs. `npm run monitor:production` and the scheduled `Production Synthetic Check` workflow now verify public health, provider controls, and anonymous fail-closed routes from outside Railway; the workflow installs from lockfile, uploads monitor evidence, opens/updates a single GitHub incident issue on failure, and closes it after recovery. Source `6d8e276` adds Sentry-compatible error monitoring hooks for HTTP 500, startup failure, unhandled rejection, and uncaught exception capture; `/api/health` and authenticated `/api/readiness` expose redacted monitoring setup status. Railway deployment `eaa7409d` configures Sentry Cloud for the RIVT production service, live health reports `observability.errorMonitoring.mode=configured`, and Sentry accepted smoke event `RIVT Sentry smoke test` with HTTP 200. Sentry alert rule `Send a notification for high priority issues` is connected to project `node-express`, notifies suggested assignees or recently active members on every trigger, and triggered once for the smoke issue at 2026-06-22 02:38 UTC; this is accepted as the first pilot escalation route, with dedicated phone/SMS paging recommended before broader scale. Backup owner Anya Tingle is recorded with email and phone status recorded, without storing the phone number in the repo. Founder-provided support coverage is recorded as Monday-Saturday, 9:00 AM-5:00 PM, America/New_York. `docs/operations/incident-routing.json` is approved for the Gate A pilot route scope by Michael at `2026-06-22T03:09:36.0366141Z`. Scenario A rehearsal passed on 2026-06-22: `npm run monitor:production` passed locally, `railway ssh --service RIVT --environment production -- npm run smoke:gate-a:live` passed inside the Railway service with zero seed/demo findings and seven anonymous private-route checks, and Sentry accepted incident-rehearsal event `43fc7567f458490582db1f6642e2e0ea` with HTTP 200. Michael approved founder/support/legal-safety signoffs at `2026-06-22T03:48:04.1166525Z`, and `node scripts/incident-readiness-check.js --json` now reports `ready` with zero findings. Dedicated phone/SMS paging remains recommended before broader scale. |
@@ -181,6 +320,50 @@ Evidence must eventually link to implementation, automated tests, manual accepta
 - `GA-OPS-007` gains local automated evidence for this slice: `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check` passed. DB-backed local integration tests still skip because `TEST_DATABASE_URL` is not configured.
 - `GA-OPS-008` gains deployment evidence: Railway runtime upload deployment `1f29a48c-89aa-45a0-8554-dfce1d386924` and metadata redeploy `58a361b4-0f0a-41b5-8309-d3a4104fc1eb` now serve source `cda9733acdaa7ed858b819fc9b5904ee2c237600`; live `/api/health` and `EXPECTED_SOURCE_COMMIT=cda9733acdaa7ed858b819fc9b5904ee2c237600 RIVT_MONITOR_TIMEOUT_MS=30000 npm run monitor:production` passed.
 - Remaining boundary: this is discovery, not a full social graph. Profile detail pages, connection requests, messaging permissions outside active work, and safe contact exchange remain future server-owned work.
+
+## Traceability Addendum - 2026-06-22 Exact Direct Dependency Pinning
+
+- `GA-OPS-002` gains reproducibility evidence: every direct runtime and dev dependency in `package.json` is exact-pinned to the version already resolved by `package-lock.json`; `latest` and caret ranges were removed from direct dependencies.
+- `.nvmrc` now records Node major `20` for local/runtime alignment with the Railway target.
+- `GA-OPS-007` gains local automated evidence for this slice: `npm run build`, `npm run lint`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check` passed.
+- The first sandboxed `npm run test` attempt failed only because the sandbox blocked the isolated Railway test Postgres network connection; the same command passed after explicit network access was granted.
+- `GA-OPS-008` is unchanged for production deployment: this slice has not been deployed, and no runtime product behavior changed.
+
+## Traceability Addendum - 2026-06-22 Async Password Hashing
+
+- `GA-AUTH-001` gains server hardening evidence: email signup, Google first-account creation, login verification, and password reset now use promisified async `scrypt` instead of blocking `scryptSync`, while preserving salt generation, 64-byte derived keys, and timing-safe comparison.
+- `GA-OPS-007` gains local automated evidence for this slice: `npm run build`, `npm run lint`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check` passed.
+- The first sandboxed `npm run test` attempt timed out without useful output; the same command passed after explicit network access was granted for the isolated test Postgres.
+- `GA-OPS-008` is unchanged for production deployment: this slice has not been deployed.
+
+## Traceability Addendum - 2026-06-22 Frontend Smoke Test Tripwire
+
+- `GA-OPS-007` gains frontend render-tripwire evidence: `test/frontend-smoke.test.mjs` now mounts Home, Work, Profile, and AppShell through Vite SSR and `react-dom/server` without adding dependencies.
+- `npm run test:unit` now includes this frontend smoke suite, and `npm run test` proved 35 unit tests plus 12 integration tests passed with the new coverage.
+- Required local gates passed for this slice: `npm run build`, `npm run lint`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check`.
+- `GA-OPS-008` is unchanged for production deployment: this slice has not been deployed.
+
+## Traceability Addendum - 2026-06-22 App Profile Route Split
+
+- `GA-UX-001` gains maintainability evidence: the active Profile route adapter was extracted from `src/App.tsx` into `src/features/profile/ProfileRoute.tsx`, reducing direct route-render coupling while preserving existing account/profile behavior.
+- This is the first safe slice of the larger `App.tsx` decomposition. Auth/session ownership remains in `App.tsx` because it is still shared by Settings and the top-bar account panel.
+- `GA-OPS-007` gains local automated evidence for this refactor slice: `npm run build`, `npm run test:unit`, `npm run lint`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check` passed.
+- `GA-OPS-008` is unchanged for production deployment: this slice has not been deployed.
+
+## Traceability Addendum - 2026-06-22 Profile Session Ownership Split
+
+- `GA-UX-001` gains maintainability evidence: `ProfileRoute` now owns session-list loading and non-current session revocation, further reducing active account/profile state in `src/App.tsx`.
+- `GA-AUTH-007` retains behavior: current-session revocation still clears the whole app auth/session state through an App-owned callback.
+- `GA-OPS-007` gains local automated evidence for this refactor slice: `npm run build`, `npm run test:unit`, `npm run lint`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check` passed.
+- `GA-OPS-008` is unchanged for production deployment: this slice has not been deployed.
+
+## Traceability Addendum - 2026-06-22 Shop Talk Route Split
+
+- `GA-UX-001` gains maintainability evidence: the active Shop Talk and Trade News surface now lives in `src/features/shop-talk/ShopTalkView.tsx` instead of inside the main application shell.
+- `GA-COM-001`, `GA-COM-002`, and `GA-COM-003` retain behavior: the extraction preserves Shop Talk filtering, answer queue, post creation, reporting, verified-fix display, and server-owned reaction props.
+- `GA-UX-004` retains Trade News behavior: the extracted view still uses the live `/api/news` fetch path with curated fallback data and source links.
+- `GA-OPS-007` gains local automated evidence for this refactor slice: `npm run build`, `npm run lint`, `npm run test:unit`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check` passed.
+- `GA-OPS-008` is unchanged for production deployment: this slice has not been deployed.
 
 ## Current Gate A Summary
 
