@@ -4472,7 +4472,7 @@ app.get("/api/v1/albums", requireV1AuthenticatedUser, requireV1Actor, asyncRoute
     [request.actor.account.id],
   );
   response.json({
-    data: { albums: rows.rows.map((row) => mapAlbumRow(database, row)) },
+    data: { albums: await Promise.all(rows.rows.map((row) => mapAlbumRow(database, row))) },
     meta: { requestId: request.requestId },
   });
 }));
