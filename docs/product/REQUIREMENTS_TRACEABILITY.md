@@ -10,6 +10,14 @@ Status values:
 
 Evidence must eventually link to implementation, automated tests, manual acceptance proof, and deployed build.
 
+## Traceability Addendum - 2026-06-22 Shop Talk Reaction Hook Extraction
+
+- `GA-UX-001` gains maintainability evidence: server-owned Shop Talk reaction target batching, ledger loading, pending state, reaction commits, and reset behavior moved from `src/App.tsx` into `src/features/shop-talk/useCommunityReactions.ts`.
+- `GA-UX-005` retains behavior boundaries: Shop Talk answer/thread vote controls still use server-owned reaction data, error toasts still surface failed saves, and logout/session reset still clears reaction state.
+- `GA-OPS-007` gains local automated evidence for this refactor slice: `npm run build`, `npm run lint`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check` passed.
+- The full `npm run test` command used the isolated test Postgres through local `TEST_DATABASE_URL`.
+- `GA-OPS-008` is unchanged for production deployment: this slice has not been deployed.
+
 ## Traceability Addendum - 2026-06-22 App State Type Extraction
 
 - `GA-UX-001` gains maintainability evidence: App-owned account, auth, activity, feedback, payment, reaction-aggregate, crew shout-out, and Work filter type contracts were moved from `src/App.tsx` into `src/app-shell/app-state-types.ts`.

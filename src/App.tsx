@@ -15,8 +15,6 @@ import type {
   AppToast,
   AuthUser,
   CanonicalAccount,
-  CommunityReactionAggregate,
-  CommunityReactionLedger,
   DifficultyFilter,
   FeedbackItem,
   PaymentRecord,
@@ -66,26 +64,17 @@ import { ToolsStudio } from "./features/tools/ToolsStudio";
 import { ProfileRoute, type ProfileRouteView } from "./features/profile/ProfileRoute";
 import {
   ShopTalkView,
-  type CommunityAnswer,
   type CommunityPost,
-  type CommunityReactionState,
-  type CommunityReactionSummary,
-  type CommunityReactionSyncStatus,
   type CommunityReport,
   type PostFlair,
 } from "./features/shop-talk/ShopTalkView";
-import {
-  communityAnswerReactionKey,
-  communityBadgeLabels,
-  communityPostReactionKey,
-  communityReactionLedgerKey,
-  type CommunityReactionTargetType,
-} from "./features/shop-talk/community-utils";
+import { communityBadgeLabels } from "./features/shop-talk/community-utils";
 import { communityPromptPosts, fallbackNewsItems } from "./features/shop-talk/fallback-data";
+import { useCommunityReactions } from "./features/shop-talk/useCommunityReactions";
 import type { ProfileUpdateInput } from "./features/profile/ProfileHub";
 import { recordChecklist, safetyQuizData, trainingModules, type SafetyQuizResult } from "./features/profile/training-data";
 import { apiPath } from "./lib/api";
-import { currentTimeLabel, idempotencyKey, recordServerEvent } from "./lib/app-helpers";
+import { currentTimeLabel, recordServerEvent } from "./lib/app-helpers";
 import {
   AuthGate,
   AuthLinkFlow,
@@ -157,19 +146,29 @@ function App() {
   );
   const [safetyQuizResults] = useState<Record<string, SafetyQuizResult>>({});
   const [activityFeed, setActivityFeed] = useState<ActivityItem[]>([]);
+  const [uiToast, setUiToast] = useState<AppToast | null>(null);
   const [feedbackItems] = useState<FeedbackItem[]>([]);
   const [paymentRecords] = useState<PaymentRecord[]>([]);
   const [communityPosts, setCommunityPosts] = useState<CommunityPost[]>(communityPromptPosts);
-  const [communityReactionLedger, setCommunityReactionLedger] = useState<CommunityReactionLedger>({});
-  const [communityReactionSummary, setCommunityReactionSummary] = useState<CommunityReactionSummary | null>(null);
-  const [communityReactionStatus, setCommunityReactionStatus] = useState<CommunityReactionSyncStatus>("idle");
-  const [pendingCommunityReactions, setPendingCommunityReactions] = useState<Set<string>>(() => new Set());
   const [, setCommunityReports] = useState<CommunityReport[]>([]);
   const [shoutOuts] = useState<ShoutOut[]>([]);
   const [themeMode, setThemeMode] = useState<ThemeMode>(readThemePreference);
   const [themePalette, setThemePalette] = useState<ThemePalette>(readThemePalettePreference);
   const [isGuest, setIsGuest] = useState(false);
   const [guestPromptOpen, setGuestPromptOpen] = useState(false);
+  const {
+    communityReactionStatus,
+    communityReactionSummary,
+    getCommunityAnswerReactionState,
+    getCommunityPostReactionState,
+    handleVoteCommunityAnswer,
+    handleVoteCommunityPost,
+    resetCommunityReactions,
+  } = useCommunityReactions({
+    authReady: Boolean(authUser && canonicalAccount && onboardingComplete),
+    communityPosts,
+    onReactionError: (message) => addActivity("Reaction not saved", message, "error"),
+  });
 
   useEffect(() => {
     const root = document.documentElement;
@@ -274,9 +273,7 @@ function App() {
           setAuthUser(null);
           setCanonicalAccount(null);
           setOnboardingComplete(false);
-          setCommunityReactionLedger({});
-          setCommunityReactionSummary(null);
-          setCommunityReactionStatus("idle");
+          resetCommunityReactions();
         } else {
           throw new Error("Session lookup failed.");
         }
@@ -285,9 +282,7 @@ function App() {
           setAuthUser(null);
           setCanonicalAccount(null);
           setOnboardingComplete(false);
-          setCommunityReactionLedger({});
-          setCommunityReactionSummary(null);
-          setCommunityReactionStatus("idle");
+          resetCommunityReactions();
           setAuthProviders({});
           setAuthError("RIVT could not verify your session. Check your connection and sign in again.");
         }
@@ -302,7 +297,7 @@ function App() {
     return () => {
       cancelled = true;
     };
-  }, [applyCanonicalAccount]);
+  }, [applyCanonicalAccount, resetCommunityReactions]);
 
   async function refreshCanonicalAccount() {
     const response = await fetch(apiPath("/api/v1/me"), { credentials: "include" });
@@ -449,46 +444,6 @@ function App() {
     kind: item.priority === "high" ? "warning" : item.type === "message" ? "info" : "success",
   })), [inboxNotifications]);
   const unreadActivities = inboxNotifications.filter((item) => !item.readAt).length;
-  const [uiToast, setUiToast] = useState<AppToast | null>(null);
-  const communityReactionTargets = useMemo(() => {
-    const targets: { targetType: CommunityReactionTargetType; targetKey: string }[] = [];
-    communityPosts.forEach((post) => {
-      targets.push({ targetType: "thread", targetKey: communityPostReactionKey(post.id) });
-      post.replies.forEach((answer) => {
-        targets.push({ targetType: "answer", targetKey: communityAnswerReactionKey(post.id, answer.id) });
-      });
-    });
-    return targets;
-  }, [communityPosts]);
-  const communityReactionTargetsKey = useMemo(() => (
-    communityReactionTargets.map((target) => communityReactionLedgerKey(target.targetType, target.targetKey)).join("|")
-  ), [communityReactionTargets]);
-
-  const getCommunityPostReactionState = useCallback((post: CommunityPost): CommunityReactionState => {
-    const targetKey = communityPostReactionKey(post.id);
-    const ledgerKey = communityReactionLedgerKey("thread", targetKey);
-    const aggregate = communityReactionLedger[ledgerKey];
-    return {
-      upvotes: post.upvotes + (aggregate?.upvotes ?? 0),
-      downvotes: post.downvotes + (aggregate?.downvotes ?? 0),
-      reaction: aggregate?.viewerReaction ?? null,
-      serverOwned: communityReactionStatus === "ready",
-      pending: pendingCommunityReactions.has(ledgerKey),
-    };
-  }, [communityReactionLedger, communityReactionStatus, pendingCommunityReactions]);
-
-  const getCommunityAnswerReactionState = useCallback((postId: number, answer: CommunityAnswer): CommunityReactionState => {
-    const targetKey = communityAnswerReactionKey(postId, answer.id);
-    const ledgerKey = communityReactionLedgerKey("answer", targetKey);
-    const aggregate = communityReactionLedger[ledgerKey];
-    return {
-      upvotes: answer.upvotes + (aggregate?.upvotes ?? 0),
-      downvotes: answer.downvotes + (aggregate?.downvotes ?? 0),
-      reaction: aggregate?.viewerReaction ?? null,
-      serverOwned: communityReactionStatus === "ready",
-      pending: pendingCommunityReactions.has(ledgerKey),
-    };
-  }, [communityReactionLedger, communityReactionStatus, pendingCommunityReactions]);
 
   function addActivity(title: string, detail: string, kind: AppToast["kind"] = "info") {
     void recordServerEvent("activity", { title, detail, role, activeView });
@@ -511,56 +466,6 @@ function App() {
       ...current,
     ].slice(0, 16));
   }
-
-  function mergeCommunityReactionAggregate(reaction: CommunityReactionAggregate) {
-    setCommunityReactionLedger((current) => ({
-      ...current,
-      [communityReactionLedgerKey(reaction.targetType, reaction.targetKey)]: reaction,
-    }));
-  }
-
-  useEffect(() => {
-    if (!authUser || !canonicalAccount || !onboardingComplete) {
-      return;
-    }
-
-    let cancelled = false;
-    async function loadCommunityReactionLedger() {
-      setCommunityReactionStatus("loading");
-      try {
-        const response = await fetch(apiPath("/api/v1/shop-talk/reactions/batch"), {
-          method: "POST",
-          credentials: "include",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ targets: communityReactionTargets }),
-        });
-        const body = await response.json().catch(() => ({})) as {
-          data?: { reactions?: CommunityReactionAggregate[]; reputation?: CommunityReactionSummary };
-          error?: { message?: string };
-        };
-        if (!response.ok) throw new Error(body.error?.message || "Shop Talk reactions could not be loaded.");
-        if (cancelled) return;
-        setCommunityReactionLedger(
-          (body.data?.reactions ?? []).reduce<CommunityReactionLedger>((ledger, reaction) => {
-            ledger[communityReactionLedgerKey(reaction.targetType, reaction.targetKey)] = reaction;
-            return ledger;
-          }, {}),
-        );
-        setCommunityReactionSummary(body.data?.reputation ?? null);
-        setCommunityReactionStatus("ready");
-      } catch {
-        if (cancelled) return;
-        setCommunityReactionLedger({});
-        setCommunityReactionSummary(null);
-        setCommunityReactionStatus("error");
-      }
-    }
-
-    void loadCommunityReactionLedger();
-    return () => {
-      cancelled = true;
-    };
-  }, [authUser, canonicalAccount, onboardingComplete, communityReactionTargets, communityReactionTargetsKey]);
 
   useEffect(() => {
     if (!uiToast) {
@@ -608,9 +513,7 @@ function App() {
       setAuthUser(null);
       setCanonicalAccount(null);
       setOnboardingComplete(false);
-      setCommunityReactionLedger({});
-      setCommunityReactionSummary(null);
-      setCommunityReactionStatus("idle");
+      resetCommunityReactions();
       setAuthError(error instanceof Error ? error.message : "Sign-in failed. Check your connection and try again.");
     }
   }
@@ -705,9 +608,7 @@ function App() {
     setAuthUser(null);
     setCanonicalAccount(null);
     setOnboardingComplete(false);
-    setCommunityReactionLedger({});
-    setCommunityReactionSummary(null);
-    setCommunityReactionStatus("idle");
+    resetCommunityReactions();
   }
 
   async function handleLogout() {
@@ -722,9 +623,7 @@ function App() {
       setAuthUser(null);
       setCanonicalAccount(null);
       setOnboardingComplete(false);
-      setCommunityReactionLedger({});
-      setCommunityReactionSummary(null);
-      setCommunityReactionStatus("idle");
+      resetCommunityReactions();
       setAuthNotice(null);
       setAccountOpen(false);
       setActivityOpen(false);
@@ -742,63 +641,6 @@ function App() {
     setActivityOpen(false);
     setAccountOpen(false);
     setPostOpen(false);
-  }
-
-  function setCommunityReactionPending(ledgerKey: string, pending: boolean) {
-    setPendingCommunityReactions((current) => {
-      const next = new Set(current);
-      if (pending) {
-        next.add(ledgerKey);
-      } else {
-        next.delete(ledgerKey);
-      }
-      return next;
-    });
-  }
-
-  async function commitCommunityReaction(targetType: CommunityReactionTargetType, targetKey: string, direction: "up" | "down") {
-    const ledgerKey = communityReactionLedgerKey(targetType, targetKey);
-    if (pendingCommunityReactions.has(ledgerKey)) return;
-    const previousReaction = communityReactionLedger[ledgerKey]?.viewerReaction ?? null;
-    const nextReaction = previousReaction === direction ? null : direction;
-    setCommunityReactionPending(ledgerKey, true);
-    try {
-      const response = await fetch(apiPath("/api/v1/shop-talk/reactions"), {
-        method: "POST",
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-          "Idempotency-Key": idempotencyKey("shop-talk-reaction"),
-        },
-        body: JSON.stringify({ targetType, targetKey, reaction: nextReaction }),
-      });
-      const body = await response.json().catch(() => ({})) as {
-        data?: { reaction?: CommunityReactionAggregate; reputation?: CommunityReactionSummary };
-        error?: { message?: string };
-      };
-      if (!response.ok || !body.data?.reaction) {
-        throw new Error(body.error?.message || "Shop Talk reaction could not be saved.");
-      }
-      mergeCommunityReactionAggregate(body.data.reaction);
-      setCommunityReactionSummary(body.data.reputation ?? null);
-      setCommunityReactionStatus("ready");
-    } catch (error) {
-      addActivity(
-        "Reaction not saved",
-        error instanceof Error ? error.message : "Shop Talk reaction could not be saved.",
-        "error",
-      );
-    } finally {
-      setCommunityReactionPending(ledgerKey, false);
-    }
-  }
-
-  function handleVoteCommunityPost(postId: number, direction: "up" | "down") {
-    void commitCommunityReaction("thread", communityPostReactionKey(postId), direction);
-  }
-
-  function handleVoteCommunityAnswer(postId: number, answerId: number, direction: "up" | "down") {
-    void commitCommunityReaction("answer", communityAnswerReactionKey(postId, answerId), direction);
   }
 
   function handleAddCommunityAnswer(postId: number, body: string) {

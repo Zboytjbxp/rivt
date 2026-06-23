@@ -1,8 +1,6 @@
 import type { TrialPlan } from "../brandConfig";
 import type { difficultyOptions, tradeOptions, workTypeOptions } from "../data";
 import type { AuthMethod } from "../features/auth/AuthScreens";
-import type { CommunityReaction } from "../features/shop-talk/ShopTalkView";
-import type { CommunityReactionTargetType } from "../features/shop-talk/community-utils";
 import type { Role, Trade } from "../types";
 
 export type TradeFilter = (typeof tradeOptions)[number];
@@ -102,17 +100,6 @@ export interface PaymentRecord {
   status: "Payment pending" | "Paid / Closed";
   date: string;
 }
-
-export interface CommunityReactionAggregate {
-  targetType: CommunityReactionTargetType;
-  targetKey: string;
-  upvotes: number;
-  downvotes: number;
-  score: number;
-  viewerReaction: CommunityReaction | null;
-}
-
-export type CommunityReactionLedger = Record<string, CommunityReactionAggregate>;
 
 export interface ShoutOut {
   id: number;
