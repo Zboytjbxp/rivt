@@ -10,6 +10,14 @@ Status values:
 
 Evidence must eventually link to implementation, automated tests, manual acceptance proof, and deployed build.
 
+## Traceability Addendum - 2026-06-22 Work Empty State and Runtime Helper Extraction
+
+- `GA-UX-001` gains maintainability evidence: the Work empty-job fallback moved from `src/App.tsx` into `src/features/work/empty-job.ts`, and generic runtime helpers moved into `src/lib/app-helpers.ts`.
+- `GA-UX-003` retains behavior boundaries: selected-job fallback, activity timestamp labels, retired event-bridge no-op behavior, and Shop Talk reaction idempotency-key generation remain unchanged.
+- `GA-OPS-007` gains local automated evidence for this refactor slice: `npm run build`, `npm run lint`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check` passed.
+- The full `npm run test` command used the isolated test Postgres through local `TEST_DATABASE_URL`.
+- `GA-OPS-008` is unchanged for production deployment: this slice has not been deployed.
+
 ## Traceability Addendum - 2026-06-22 Profile Training Data Extraction
 
 - `GA-UX-001` gains maintainability evidence: profile safety training metadata, quiz types, quiz data, record checklist, and training module labels were moved from `src/App.tsx` into `src/features/profile/training-data.ts`.

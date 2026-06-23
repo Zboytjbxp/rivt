@@ -34,6 +34,7 @@ import { WorkWorkspace } from "./features/work/WorkWorkspace";
 import { JobEditorModal } from "./features/work/JobEditorModal";
 import { getJob, listJobs, toJobViewModel, transitionJob } from "./features/work/job-api";
 import { canonicalDifficultyByLabel, canonicalWorkTypeByLabel, tradeCodeByName } from "./features/work/work-mappings";
+import { emptyJob } from "./features/work/empty-job";
 import { HomeDashboard } from "./features/home/HomeDashboard";
 import { NetworkHub } from "./features/network/NetworkHub";
 import { InboxCenter } from "./features/inbox/InboxCenter";
@@ -65,6 +66,7 @@ import { communityPromptPosts, fallbackNewsItems } from "./features/shop-talk/fa
 import type { ProfileUpdateInput } from "./features/profile/ProfileHub";
 import { recordChecklist, safetyQuizData, trainingModules, type SafetyQuizResult } from "./features/profile/training-data";
 import { apiPath } from "./lib/api";
+import { currentTimeLabel, idempotencyKey, recordServerEvent } from "./lib/app-helpers";
 import {
   AuthGate,
   AuthLinkFlow,
@@ -244,53 +246,6 @@ interface ShoutOut {
   trade: Trade;
   message: string;
   createdAt: string;
-}
-
-const emptyJob: Job = {
-  id: 0,
-  title: "No jobs posted yet",
-  contractor: "RIVT",
-  trade: "Electrical",
-  location: "Jacksonville, FL",
-  state: "FL",
-  distance: 0,
-  pay: 0,
-  durationHours: 0,
-  workType: "Side work",
-  difficulty: "Moderate",
-  insuranceRequired: false,
-  tools: [],
-  trustRequirement: "Legal agreement required",
-  addressPolicy: "Exact address stays hidden until you accept a job.",
-  posted: "Today",
-  match: 0,
-  rating: 0,
-  reviewCount: 0,
-  applicants: 0,
-  status: "Open",
-  summary: "Post the first real job to start building the live marketplace.",
-  guidance: ["No active work order yet."],
-  risks: ["No active work order"],
-  deliverables: ["Job posting", "Acceptance", "Closeout"],
-  matchFactors: ["Launch ready"],
-};
-function recordServerEvent(type: string, payload: Record<string, unknown>) {
-  void type;
-  void payload;
-  // The legacy generic event bridge is retired. Canonical workflows write
-  // auditable events through their dedicated server APIs.
-}
-
-function currentTimeLabel() {
-  return new Intl.DateTimeFormat("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-  }).format(new Date());
-}
-
-function idempotencyKey(scope: string) {
-  const randomPart = globalThis.crypto?.randomUUID?.() ?? Math.random().toString(36).slice(2);
-  return `${scope}-${randomPart}`;
 }
 
 function App() {
