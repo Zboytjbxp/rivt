@@ -10,6 +10,16 @@ Status values:
 
 Evidence must eventually link to implementation, automated tests, manual acceptance proof, and deployed build.
 
+## Traceability Addendum - 2026-06-22 Tools Extraction and Provider Documentation Hardening
+
+- `GA-UX-001` gains maintainability evidence: Heavy 16th calculator behavior moved into `src/features/tools/FieldCalculatorTool.tsx`, and estimate-builder behavior moved into `src/features/tools/EstimateTool.tsx`; `src/features/tools/ToolsStudio.tsx` is reduced to 1,259 lines.
+- `GA-UX-005` retains behavior boundaries: calculator modes, copy output, estimate inputs, target range calculation, and tool hub launch behavior remain unchanged.
+- `GA-FND-001` gains deployment-readiness evidence: `PRODUCTION.md` now names Railway Object Storage as the current intended S3-compatible provider, documents required S3 variables and private signed-URL behavior, and states that missing object storage must fail closed with setup-required/503 behavior.
+- `GA-AUTH-004` and `GA-OPS-004` retain safety boundaries: current auth signup/login/email verification/password reset endpoints use durable `authRateLimit`, and production email signup/password recovery must fail closed when Resend is not configured.
+- `GA-OPS-007` gains local automated evidence for this refactor slice: `npm run build`, `npm run lint`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check` passed.
+- The full `npm run test` command used the isolated test Postgres through local `TEST_DATABASE_URL`.
+- `GA-OPS-008` is unchanged for production deployment: this slice has not been deployed.
+
 ## Traceability Addendum - 2026-06-22 App Activity Feed Hook Extraction
 
 - `GA-UX-001` gains maintainability evidence: local activity feed state, toast state, toast auto-dismiss timing, notification-to-activity mapping, unread activity counts, and activity event recording moved from `src/App.tsx` into `src/app-shell/useActivityFeed.ts`.
