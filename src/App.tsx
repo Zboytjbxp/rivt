@@ -4,16 +4,26 @@ import {
   useMemo,
   useRef,
   useState } from "react";
-import {
-  difficultyOptions,
-  talent,
-  tradeOptions,
-  workTypeOptions,
-} from "./data";
-import { brandConfig, type ThemeMode, type ThemePalette, type TrialPlan } from "./brandConfig";
+import { talent } from "./data";
+import { brandConfig, type ThemeMode, type ThemePalette } from "./brandConfig";
 import type { ApplicationRecord, Job, JobId, Role, Trade } from "./types";
 import { AppShell } from "./app-shell/AppShell";
 import { AccountPanel, ActivityPanel, ActivityToast } from "./app-shell/AppPanels";
+import type {
+  AccountProfile,
+  ActivityItem,
+  AppToast,
+  AuthUser,
+  CanonicalAccount,
+  CommunityReactionAggregate,
+  CommunityReactionLedger,
+  DifficultyFilter,
+  FeedbackItem,
+  PaymentRecord,
+  ShoutOut,
+  TradeFilter,
+  WorkTypeFilter,
+} from "./app-shell/app-state-types";
 import {
   defaultViewForDestination,
   pageCopy,
@@ -54,7 +64,16 @@ import {
 import { LegacyBridge } from "./features/legacy/LegacyBridge";
 import { ToolsStudio } from "./features/tools/ToolsStudio";
 import { ProfileRoute, type ProfileRouteView } from "./features/profile/ProfileRoute";
-import { ShopTalkView } from "./features/shop-talk/ShopTalkView";
+import {
+  ShopTalkView,
+  type CommunityAnswer,
+  type CommunityPost,
+  type CommunityReactionState,
+  type CommunityReactionSummary,
+  type CommunityReactionSyncStatus,
+  type CommunityReport,
+  type PostFlair,
+} from "./features/shop-talk/ShopTalkView";
 import {
   communityAnswerReactionKey,
   communityBadgeLabels,
@@ -77,176 +96,6 @@ import {
   type AuthMethod,
   type OnboardingResult,
 } from "./features/auth/AuthScreens";
-
-type TradeFilter = (typeof tradeOptions)[number];
-type DifficultyFilter = (typeof difficultyOptions)[number];
-type WorkTypeFilter = (typeof workTypeOptions)[number];
-
-interface AccountProfile {
-  email: string;
-  displayName: string;
-  organization: string;
-  location: string;
-  specialties: Trade[];
-  plan: TrialPlan;
-  authMethod: AuthMethod;
-}
-
-interface AuthUser {
-  id: string;
-  email: string;
-  provider: string;
-  display_name: string;
-  role: Role | "pending";
-  organization: string;
-  location: string;
-  email_verified: boolean;
-  account_status: "onboarding" | "active" | "suspended" | "closed";
-  onboarding_status: "draft" | "complete";
-}
-
-interface CanonicalAccount {
-  id: string;
-  status: "onboarding" | "active" | "suspended" | "closed";
-  primaryRole: Role | "pending";
-  email: string;
-  provider: "email" | "google" | "facebook" | "apple";
-  emailVerified: boolean;
-  profile: {
-    displayName: string;
-    headline: string;
-    bio: string;
-    locationText: string;
-    visibility: "private" | "network";
-    onboardingStatus: "draft" | "complete";
-    serviceArea: {
-      city: string;
-      region: string;
-      countryCode: string;
-      radiusMiles: number;
-    };
-    availabilityStatus: "available" | "limited" | "unavailable";
-    contactEmailVisibility: "private" | "connections";
-    phoneE164: string | null;
-    phoneVisibility: "private" | "connections";
-    avatarUploadId: string | null;
-    trades: Array<{ code: string; name: string; primary: boolean }>;
-  };
-  organizations: Array<{ id: string; name: string; role: "owner" | "admin" | "member" }>;
-  capabilities: {
-    canCompleteOnboarding: boolean;
-    canPostWork: boolean;
-    canApplyToWork: boolean;
-    canPublishProfile: boolean;
-  };
-}
-
-interface ActivityItem {
-  id: number | string;
-  title: string;
-  detail: string;
-  timestamp: string;
-  unread: boolean;
-  kind?: "info" | "success" | "warning" | "error";
-}
-
-interface AppToast {
-  id: number;
-  title: string;
-  detail: string;
-  kind: "info" | "success" | "warning" | "error";
-  timestamp: string;
-}
-
-interface FeedbackItem {
-  id: number;
-  category: "Bug" | "Confusing" | "Feature" | "Pricing" | "Other";
-  message: string;
-  timestamp: string;
-}
-
-interface PaymentRecord {
-  id: number;
-  jobId: number;
-  jobTitle: string;
-  worker: string;
-  amount: number;
-  method: string;
-  status: "Payment pending" | "Paid / Closed";
-  date: string;
-}
-
-interface CommunityAnswer {
-  id: number;
-  author: string;
-  body: string;
-  upvotes: number;
-  downvotes: number;
-  verifiedFix: boolean;
-}
-
-interface CommunityPost {
-  id: number;
-  title: string;
-  trade: Trade | "General";
-  author: string;
-  badge?: "Community Prompt" | "Recommendation";
-  flair?: "Question" | "Discussion" | "Code Talk" | "Compliance" | "Tip" | "Humor";
-  body: string;
-  upvotes: number;
-  downvotes: number;
-  replies: CommunityAnswer[];
-  createdAt: string;
-  status: "Open" | "Verified Fix" | "Needs a pro answer";
-}
-
-type PostFlair = "Question" | "Discussion" | "Code Talk" | "Compliance" | "Tip" | "Humor";
-type CommunityReaction = "up" | "down";
-
-interface CommunityReactionAggregate {
-  targetType: CommunityReactionTargetType;
-  targetKey: string;
-  upvotes: number;
-  downvotes: number;
-  score: number;
-  viewerReaction: CommunityReaction | null;
-}
-
-interface CommunityReactionSummary {
-  reactionsGiven: number;
-  upvotesGiven: number;
-  downvotesGiven: number;
-  targetsReacted: number;
-  lastReactedAt: string | null;
-}
-
-interface CommunityReactionState {
-  upvotes: number;
-  downvotes: number;
-  reaction: CommunityReaction | null;
-  serverOwned: boolean;
-  pending: boolean;
-}
-
-type CommunityReactionLedger = Record<string, CommunityReactionAggregate>;
-type CommunityReactionSyncStatus = "idle" | "loading" | "ready" | "error";
-
-interface CommunityReport {
-  id: number;
-  postId: number;
-  postTitle: string;
-  reason: "Misinformation" | "Safety concern" | "Spam" | "Harassment";
-  status: "Flagged" | "Cleared" | "Hidden" | "Removed" | "Warned";
-}
-
-interface ShoutOut {
-  id: number;
-  from: string;
-  to: string;
-  trade: Trade;
-  message: string;
-  createdAt: string;
-}
 
 function App() {
   const [activeView, setActiveView] = useState<NavLabel>(() => viewFromPath(window.location.pathname));
