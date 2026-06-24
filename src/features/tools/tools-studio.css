@@ -1548,8 +1548,38 @@
     justify-content: center;
   }
 
-  .v2-tool-launch-grid,
-  .v2-tool-launch-card.is-featured,
+  .v2-tools-command {
+    padding: 14px;
+  }
+
+  .v2-tools-command h2 {
+    font-size: 18px;
+  }
+
+  .v2-tool-launch-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .v2-tool-launch-card.is-featured {
+    grid-column: 1 / -1;
+    flex-direction: row;
+    justify-content: flex-start;
+    min-height: 72px;
+    padding: 14px;
+    gap: 12px;
+    text-align: left;
+  }
+
+  .v2-tool-launch-card.is-featured .v2-tool-card-copy {
+    align-items: flex-start;
+  }
+
+  .v2-tool-launch-card.is-featured .v2-tool-card-output,
+  .v2-tool-launch-card.is-featured em {
+    display: none;
+  }
+
   .v2-tool-input-grid,
   .v2-tool-input-grid.two,
   .v2-tool-input-grid.four,
@@ -1563,18 +1593,37 @@
   }
 
   .v2-tool-launch-card {
-    grid-template-columns: auto minmax(0, 1fr);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 84px;
+    padding: 12px 6px 10px;
+    gap: 5px;
+    text-align: center;
   }
 
+  .v2-tool-card-copy {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+  }
+
+  .v2-tool-launch-card strong {
+    font-size: 12px;
+    line-height: 1.2;
+  }
+
+  .v2-tool-card-copy small:last-child,
   .v2-tool-card-output,
   .v2-tool-launch-card em {
-    grid-column: 1 / -1;
+    display: none;
   }
 
-  .v2-tool-launch-card em {
-    justify-content: center;
-    border-top: 1px solid color-mix(in srgb, var(--v2-border) 56%, transparent);
-    padding-top: 10px;
+  .v2-tool-card-icon {
+    width: 36px;
+    height: 36px;
   }
 
   .v2-calculator-hero {
@@ -2037,6 +2086,24 @@
   height: 100%;
   background: var(--v2-surface-muted);
   color: var(--v2-text-muted);
+}
+
+.v2-job-photo-pending {
+  cursor: default;
+  border-color: var(--v2-border);
+}
+
+.v2-job-photo-pending:hover {
+  transform: none;
+  border-color: var(--v2-border);
+}
+
+@keyframes v2-spin {
+  to { transform: rotate(360deg); }
+}
+
+.v2-photo-spinner {
+  animation: v2-spin 1s linear infinite;
 }
 
 /* Albums home screen */
