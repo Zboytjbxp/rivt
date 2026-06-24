@@ -8493,6 +8493,25 @@ textarea:focus-visible {
 .route-loading {
   min-height: 240px;
 }
+.route-error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 240px;
+  padding: 24px;
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+.route-error button {
+  margin-left: 8px;
+  text-decoration: underline;
+  color: var(--accent);
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: inherit;
+}
 .skeleton-pill {
   width: 72px;
   height: 14px;

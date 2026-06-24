@@ -1,4 +1,5 @@
 import {
+  Component,
   lazy,
   Suspense,
   useCallback,
@@ -87,6 +88,21 @@ const LegacyBridge = lazy(() => import("./features/legacy/LegacyBridge").then((m
 
 function RouteFallback() {
   return <div className="route-loading" role="status" aria-live="polite" aria-label="Loading" />;
+}
+
+class RouteErrorBoundary extends Component<{ children: React.ReactNode }, { failed: boolean }> {
+  state = { failed: false };
+  static getDerivedStateFromError() { return { failed: true }; }
+  render() {
+    if (this.state.failed) {
+      return (
+        <div className="route-error" role="alert">
+          <p>This page couldn't load. <button type="button" onClick={() => window.location.reload()}>Reload</button></p>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
 }
 
 function App() {
@@ -1030,6 +1046,7 @@ function App() {
           </header>
         )}
 
+        <RouteErrorBoundary>
         <Suspense fallback={<RouteFallback />}>
         {activeView === "Home" ? (
           <HomeDashboard
@@ -1198,6 +1215,7 @@ function App() {
           />
         )}
         </Suspense>
+        </RouteErrorBoundary>
       </AppShell>
 
       {uiToast && (
@@ -1248,15 +1266,17 @@ function App() {
       )}
 
       {isPostOpen && primaryOrganizationId ? (
-        <Suspense fallback={null}>
-          <JobEditorModal
-            organizationId={primaryOrganizationId}
-            job={editingJob}
-            defaultLocation={accountProfile.location}
-            onClose={() => { setPostOpen(false); setEditingJob(null); }}
-            onSaved={handleJobSaved}
-          />
-        </Suspense>
+        <RouteErrorBoundary>
+          <Suspense fallback={null}>
+            <JobEditorModal
+              organizationId={primaryOrganizationId}
+              job={editingJob}
+              defaultLocation={accountProfile.location}
+              onClose={() => { setPostOpen(false); setEditingJob(null); }}
+              onSaved={handleJobSaved}
+            />
+          </Suspense>
+        </RouteErrorBoundary>
       ) : null}
 
       {guestPromptOpen && (
