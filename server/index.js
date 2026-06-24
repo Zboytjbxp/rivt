@@ -131,6 +131,8 @@ const sessionMaxAgeMs = Number(process.env.SESSION_MAX_AGE_MS ?? 1000 * 60 * 60 
 const appVersion = envValue("APP_VERSION", "0.1.0");
 const sourceCommit = envValue("SOURCE_COMMIT", envValue("RAILWAY_GIT_COMMIT_SHA", "unknown"));
 let migrationVersion = envValue("MIGRATION_VERSION", "uninitialized");
+let migrationState = "pending"; // "pending" | "running" | "ready" | "failed"
+let migrationErrorDetail = null;
 const productionOrigin = envValue("APP_ORIGIN", "https://rivt.pro");
 const scrypt = promisify(scryptCb);
 
@@ -385,12 +387,21 @@ async function ensureDatabaseReady() {
     throw new Error("DATABASE_URL is required.");
   }
 
-  databaseReadyPromise ??= migrateUp(database).then((status) => {
-    migrationVersion = status.latestVersion
-      ? `${String(status.latestVersion).padStart(4, "0")}_${status.latestName}`
-      : "uninitialized";
-    return status;
-  });
+  databaseReadyPromise ??= (async () => {
+    migrationState = "running";
+    try {
+      const status = await migrateUp(database);
+      migrationVersion = status.latestVersion
+        ? `${String(status.latestVersion).padStart(4, "0")}_${status.latestName}`
+        : "uninitialized";
+      migrationState = "ready";
+      return status;
+    } catch (error) {
+      migrationState = "failed";
+      migrationErrorDetail = error.message;
+      throw error;
+    }
+  })();
 
   return databaseReadyPromise;
 }
@@ -1242,13 +1253,19 @@ app.get("/api/news", async (request, response) => {
 app.get("/api/health", (_request, response) => {
   const storage = storageConfiguration();
   const monitoring = errorMonitoringStatus();
+  const ok = storage.ok && migrationState !== "failed";
 
-  response.status(storage.ok ? 200 : 503).json({
-    ok: storage.ok,
+  response.status(ok ? 200 : 503).json({
+    ok,
     service: `${appSlug}-api`,
     build: {
       version: appVersion,
       commit: sourceCommit,
+    },
+    migration: {
+      state: migrationState,
+      version: migrationVersion,
+      error: migrationErrorDetail,
     },
     dependencies: {
       database: storage.database,
@@ -5943,8 +5960,14 @@ export async function startServer(listenPort = port) {
   }
 
   if (database) {
-    await ensureDatabaseReady();
-    logInfo("server.migrations_ready", { migrationVersion });
+    ensureDatabaseReady().then(() => {
+      logInfo("server.migrations_ready", { migrationVersion });
+    }).catch((error) => {
+      logError("server.migration_failed", {
+        message: error.message,
+        cause: error.cause?.message ?? null,
+      });
+    });
   }
 }
 
