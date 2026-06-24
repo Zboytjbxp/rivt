@@ -4578,7 +4578,7 @@ app.post(
     await database.query(
       `INSERT INTO uploads (id, session_id, account_id, kind, name, original_name, mime_type,
         size_bytes, object_key, upload_status, storage_scope, content_sha256)
-       VALUES ($1, $2::text, $2::uuid, 'album-photo', $3, $4, $5, $6, $7, 'stored', 'private', $8)`,
+       VALUES ($1, $2::text, $2::uuid, 'album-photo', $3, $4, $5, $6, $7, 'stored', 'album', $8)`,
       [
         uploadId,
         request.actor.account.id,
