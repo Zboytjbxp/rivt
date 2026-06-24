@@ -174,18 +174,24 @@ const FLAIR_CONFIG: Record<PostFlair, { color: string; description: string }> = 
 function ShopTalkNewPostModal({
   profile,
   selectedJobTrade,
+  initialFlair = "Question",
+  initialTitle = "",
+  initialBody = "",
   onClose,
   onSubmit,
 }: {
   profile: AccountProfile;
   selectedJobTrade: Trade | "General";
+  initialFlair?: PostFlair;
+  initialTitle?: string;
+  initialBody?: string;
   onClose: () => void;
   onSubmit: (flair: PostFlair, title: string, trade: Trade | "General", body: string) => void;
 }) {
-  const [flair, setFlair] = useState<PostFlair>("Question");
-  const [title, setTitle] = useState("");
+  const [flair, setFlair] = useState<PostFlair>(initialFlair);
+  const [title, setTitle] = useState(initialTitle);
   const [trade, setTrade] = useState<Trade | "General">(selectedJobTrade);
-  const [body, setBody] = useState("");
+  const [body, setBody] = useState(initialBody);
   const canSubmit = title.trim().length > 0 && body.trim().length > 0;
   const tradeOptions: (Trade | "General")[] = ["General", ...specialtyOptions];
 
@@ -307,6 +313,7 @@ export function ShopTalkView({
   const displayNews = liveNews.length ? liveNews : newsItems;
   const [selectedNewsId, setSelectedNewsId] = useState(displayNews[0]?.id ?? 0);
   const [mobileDetail, setMobileDetail] = useState(false);
+  const [newsDiscussContext, setNewsDiscussContext] = useState<NewsItem | null>(null);
   const tradeFilters = ["All trades", "General", ...specialtyOptions];
   const primaryTrade = profile.specialties[0] ?? selectedJobTrade;
   const answerQueuePosts = communityPosts
@@ -473,10 +480,14 @@ export function ShopTalkView({
         <ShopTalkNewPostModal
           profile={profile}
           selectedJobTrade={selectedJobTrade}
-          onClose={() => setNewPostOpen(false)}
+          initialFlair={newsDiscussContext ? "Discussion" : "Question"}
+          initialTitle={newsDiscussContext ? newsDiscussContext.headline.slice(0, 120) : ""}
+          initialBody={newsDiscussContext ? `Via ${newsDiscussContext.source} · ${newsDiscussContext.date}\n\n` : ""}
+          onClose={() => { setNewPostOpen(false); setNewsDiscussContext(null); }}
           onSubmit={(flair, title, trade, body) => {
             onNewPost(flair, title, trade, body);
             setNewPostOpen(false);
+            setNewsDiscussContext(null);
           }}
         />
       )}
@@ -943,12 +954,13 @@ export function ShopTalkView({
                     type="button"
                     className="primary-action"
                     onClick={() => {
+                      setNewsDiscussContext(selectedNews);
                       setActiveTab("talk");
                       setNewPostOpen(true);
                     }}
                   >
                     <MessageCircle size={15} />
-                    Start discussion
+                    Discuss
                   </button>
                 </div>
               </div>
