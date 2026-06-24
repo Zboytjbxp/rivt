@@ -1,4 +1,6 @@
 import {
+  lazy,
+  Suspense,
   useCallback,
   useEffect,
   useMemo,
@@ -34,14 +36,9 @@ import {
 } from "./app-shell/preferences";
 import { useAppTheme } from "./app-shell/useAppTheme";
 import { useActivityFeed } from "./app-shell/useActivityFeed";
-import { WorkWorkspace } from "./features/work/WorkWorkspace";
-import { JobEditorModal } from "./features/work/JobEditorModal";
 import { getJob, listJobs, toJobViewModel, transitionJob } from "./features/work/job-api";
 import { canonicalDifficultyByLabel, canonicalWorkTypeByLabel, tradeCodeByName } from "./features/work/work-mappings";
 import { emptyJob } from "./features/work/empty-job";
-import { HomeDashboard } from "./features/home/HomeDashboard";
-import { NetworkHub } from "./features/network/NetworkHub";
-import { InboxCenter } from "./features/inbox/InboxCenter";
 import {
   listConversationMessages,
   listConversations,
@@ -55,14 +52,11 @@ import {
   type InboxMessage,
   type InboxNotification,
 } from "./features/inbox/inbox-api";
-import { LegacyBridge } from "./features/legacy/LegacyBridge";
-import { ToolsStudio } from "./features/tools/ToolsStudio";
-import { ProfileRoute, type ProfileRouteView } from "./features/profile/ProfileRoute";
-import {
-  ShopTalkView,
-  type CommunityPost,
-  type CommunityReport,
-  type PostFlair,
+import type { ProfileRouteView } from "./features/profile/ProfileRoute";
+import type {
+  CommunityPost,
+  CommunityReport,
+  PostFlair,
 } from "./features/shop-talk/ShopTalkView";
 import { communityBadgeLabels } from "./features/shop-talk/community-utils";
 import { communityPromptPosts, fallbackNewsItems } from "./features/shop-talk/fallback-data";
@@ -80,6 +74,20 @@ import {
   type AuthMethod,
   type OnboardingResult,
 } from "./features/auth/AuthScreens";
+
+const HomeDashboard = lazy(() => import("./features/home/HomeDashboard").then((m) => ({ default: m.HomeDashboard })));
+const WorkWorkspace = lazy(() => import("./features/work/WorkWorkspace").then((m) => ({ default: m.WorkWorkspace })));
+const JobEditorModal = lazy(() => import("./features/work/JobEditorModal").then((m) => ({ default: m.JobEditorModal })));
+const NetworkHub = lazy(() => import("./features/network/NetworkHub").then((m) => ({ default: m.NetworkHub })));
+const InboxCenter = lazy(() => import("./features/inbox/InboxCenter").then((m) => ({ default: m.InboxCenter })));
+const ShopTalkView = lazy(() => import("./features/shop-talk/ShopTalkView").then((m) => ({ default: m.ShopTalkView })));
+const ProfileRoute = lazy(() => import("./features/profile/ProfileRoute").then((m) => ({ default: m.ProfileRoute })));
+const ToolsStudio = lazy(() => import("./features/tools/ToolsStudio").then((m) => ({ default: m.ToolsStudio })));
+const LegacyBridge = lazy(() => import("./features/legacy/LegacyBridge").then((m) => ({ default: m.LegacyBridge })));
+
+function RouteFallback() {
+  return <div className="route-loading" role="status" aria-live="polite" aria-label="Loading" />;
+}
 
 function App() {
   const [activeView, setActiveView] = useState<NavLabel>(() => viewFromPath(window.location.pathname));
@@ -1022,6 +1030,7 @@ function App() {
           </header>
         )}
 
+        <Suspense fallback={<RouteFallback />}>
         {activeView === "Home" ? (
           <HomeDashboard
             role={role}
@@ -1188,6 +1197,7 @@ function App() {
             onOpenAccount={() => handleNavigate("Settings")}
           />
         )}
+        </Suspense>
       </AppShell>
 
       {uiToast && (
@@ -1238,13 +1248,15 @@ function App() {
       )}
 
       {isPostOpen && primaryOrganizationId ? (
-        <JobEditorModal
-          organizationId={primaryOrganizationId}
-          job={editingJob}
-          defaultLocation={accountProfile.location}
-          onClose={() => { setPostOpen(false); setEditingJob(null); }}
-          onSaved={handleJobSaved}
-        />
+        <Suspense fallback={null}>
+          <JobEditorModal
+            organizationId={primaryOrganizationId}
+            job={editingJob}
+            defaultLocation={accountProfile.location}
+            onClose={() => { setPostOpen(false); setEditingJob(null); }}
+            onSaved={handleJobSaved}
+          />
+        </Suspense>
       ) : null}
 
       {guestPromptOpen && (

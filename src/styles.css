@@ -8490,6 +8490,9 @@ textarea:focus-visible {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.45; }
 }
+.route-loading {
+  min-height: 240px;
+}
 .skeleton-pill {
   width: 72px;
   height: 14px;
