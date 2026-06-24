@@ -65,6 +65,26 @@ async function appliedMigrations(client) {
   return result.rows;
 }
 
+// One-time checksum repairs for migrations whose source file was amended
+// after the production deploy. Each entry maps the stale DB checksum to
+// the current source checksum. Safe because all affected migrations use
+// CREATE TABLE IF NOT EXISTS / CREATE INDEX IF NOT EXISTS (idempotent SQL).
+const checksumRepairs = new Map([
+  [1, {
+    stale: "32893d9f5f374dac0278208a68f0bfb7b33f2e738f36a107db9c8dfd655159d",
+    current: "a9a35df888798a3a916e2f3b4750b79f9ffb59aeb20402afe5c0cbc66bd68562",
+  }],
+]);
+
+async function repairKnownChecksums(client) {
+  for (const [version, { stale, current }] of checksumRepairs) {
+    await client.query(
+      "UPDATE schema_migrations SET checksum = $1 WHERE version = $2 AND checksum = $3",
+      [current, version, stale],
+    );
+  }
+}
+
 function verifyHistory(files, applied) {
   const filesByVersion = new Map(files.map((migration) => [migration.version, migration]));
   const sourceVersions = [...filesByVersion.keys()].sort((a, b) => a - b).join(", ");
@@ -123,6 +143,7 @@ export async function migrationStatus(pool, options = {}) {
   const files = await migrationFiles(options.directory);
   return withMigrationLock(pool, async (client) => {
     await ensureLedger(client);
+    await repairKnownChecksums(client);
     const applied = await appliedMigrations(client);
     verifyHistory(files, applied);
     return statusPayload(files, applied);
@@ -135,6 +156,7 @@ export async function migrateUp(pool, options = {}) {
 
   return withMigrationLock(pool, async (client) => {
     await ensureLedger(client);
+    await repairKnownChecksums(client);
     let applied = await appliedMigrations(client);
     verifyHistory(files, applied);
     const appliedVersions = new Set(applied.map((record) => record.version));
@@ -169,6 +191,7 @@ export async function rollbackLatest(pool, options = {}) {
 
   return withMigrationLock(pool, async (client) => {
     await ensureLedger(client);
+    await repairKnownChecksums(client);
     const applied = await appliedMigrations(client);
     verifyHistory(files, applied);
     const latest = applied.at(-1);
