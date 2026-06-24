@@ -1116,3 +1116,63 @@
     grid-template-columns: 1fr 1fr;
   }
 }
+
+/* Reason dialog (reschedule / cancel) */
+.v2-reason-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.v2-reason-dialog {
+  background: var(--v2-surface);
+  border-radius: 16px;
+  padding: 28px 24px 24px;
+  width: 100%;
+  max-width: 440px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.18);
+}
+
+.v2-reason-dialog h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: var(--v2-weight-strong);
+}
+
+.v2-reason-dialog textarea {
+  width: 100%;
+  min-height: 96px;
+  border: 1.5px solid var(--v2-border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  font-size: 15px;
+  font-family: inherit;
+  resize: vertical;
+  background: var(--v2-bg);
+  color: var(--v2-text);
+  box-sizing: border-box;
+}
+
+.v2-reason-dialog textarea:focus {
+  outline: none;
+  border-color: var(--v2-accent);
+}
+
+.v2-reason-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.v2-reason-actions button {
+  flex: 1;
+  min-width: 120px;
+}

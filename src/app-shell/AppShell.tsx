@@ -218,7 +218,7 @@ export function AppShell({
             </button>
             <button type="button" className="v2-icon-button" aria-label="Notifications" onClick={onOpenNotifications}>
               <Bell size={19} />
-              {notificationCount > 0 ? <span>{Math.min(notificationCount, 9)}</span> : null}
+              {notificationCount > 0 ? <span>{notificationCount > 9 ? "9+" : notificationCount}</span> : null}
             </button>
             <button
               type="button"
@@ -258,11 +258,14 @@ export function AppShell({
                   />
                 </label>
 
+                {normalizedSearch.length === 1 ? (
+                  <p className="v2-search-note">Keep typing to search…</p>
+                ) : null}
                 {canSearchPeople ? (
                   <section className="v2-search-people-results" aria-label="People results">
                     <header>
                       <span>People</span>
-                      <small>Network-visible profiles only</small>
+                      <small>Public profiles only</small>
                     </header>
                     {peopleStatus === "loading" ? (
                       <div className="v2-search-result-state">Searching profiles...</div>
@@ -277,7 +280,7 @@ export function AppShell({
                             <small>{person.headline || (person.primaryRole === "contractor" ? "Contractor" : "Tradesperson")}</small>
                             <small>{[person.trades.map((trade) => trade.name).join(", "), person.locationText].filter(Boolean).join(" · ")}</small>
                           </span>
-                          <em>{person.availabilityStatus}</em>
+                          <em>{person.availabilityStatus === "available" ? "Available" : person.availabilityStatus === "limited" ? "Limited" : "Unavailable"}</em>
                         </button>
                       ))
                     ) : peopleStatus === "ready" ? (
@@ -314,7 +317,7 @@ export function AppShell({
                 </div>
 
                 <p className="v2-search-note">
-                  RIVT only shows published network profiles. Contact details stay private until a real connection or active job requires them.
+                  Only public profiles are shown. Contact details are shared only when both parties are on an active job.
                 </p>
               </div>
             </div>

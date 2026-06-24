@@ -337,11 +337,11 @@ function InvoiceDraftTool({ activeJob }: { activeJob: Job | null }) {
 
   return (
     <div className="v2-tool-workbench v2-invoice-workbench">
-      <Panel className="v2-tool-panel v2-invoice-builder-panel" eyebrow="Invoice draft" title="Build a clean direct-payment invoice">
+      <Panel className="v2-tool-panel v2-invoice-builder-panel" eyebrow="Invoice draft" title="Build an invoice">
         <section className="v2-invoice-template-bar" aria-label="Invoice templates">
           <label>Template name<input value={templateName} onChange={(event) => setTemplateName(event.target.value)} placeholder="Standard labor invoice" /></label>
           <button type="button" className="v2-primary-button" onClick={saveTemplate}><FileText size={14} />Save template</button>
-          <small>Templates stay in this browser only. They are not production records.</small>
+          <small>Templates are saved to this browser only — they won't appear on other devices.</small>
         </section>
         {templateNotice ? <p className="v2-record-notice" role="status">{templateNotice}</p> : null}
         {templates.length ? (
@@ -396,7 +396,7 @@ function InvoiceDraftTool({ activeJob }: { activeJob: Job | null }) {
             <div><span>Terms</span><strong>{terms}</strong></div>
             <div><span>Method</span><strong>{paymentMethod}</strong></div>
           </div>
-          <p className="v2-tool-note">Email/text delivery is not represented as production-ready in Gate A. These actions open your device's email or SMS draft; RIVT does not send or log delivery yet.</p>
+          <p className="v2-tool-note">Tapping Email or Text opens a draft in your own email or messaging app. RIVT does not send on your behalf.</p>
           <div className="v2-invoice-delivery" aria-label="Invoice draft delivery">
             <a href={recipientEmail ? emailHref : undefined} aria-disabled={!recipientEmail} onClick={(event) => { if (!recipientEmail) event.preventDefault(); }}>
               <Mail size={15} />
@@ -419,7 +419,7 @@ function InvoiceDraftTool({ activeJob }: { activeJob: Job | null }) {
             <header>
               <div>
                 <strong>RIVT</strong>
-                <span>Direct-payment invoice draft</span>
+                <span>Invoice draft</span>
               </div>
               <aside>
                 <span>Invoice</span>
@@ -454,7 +454,7 @@ function InvoiceDraftTool({ activeJob }: { activeJob: Job | null }) {
             </section>
             <footer>
               <span>{paymentMethod}</span>
-              <p>RIVT records direct-payment details only. RIVT does not process, escrow, or hold job payments.</p>
+              <p>RIVT generates this invoice for your records. Payments are collected directly between you and the client — not through RIVT.</p>
             </footer>
           </article>
         </Panel>
@@ -728,7 +728,7 @@ function DailyLogTool({ activeJob, activeWork }: { activeJob: Job | null; active
       </Panel>
 
       <aside className="v2-daily-log-side">
-        <Panel className="v2-tool-panel v2-tool-summary-panel" eyebrow="Field record" title="Daily log preview">
+        <Panel className="v2-tool-panel v2-tool-summary-panel" eyebrow="Daily log" title="Preview">
           <div className="v2-tool-result-grid compact">
             <article><span>Crew hours</span><strong>{formatNumber(draft.crewCount * draft.hours)}h</strong></article>
             <article><span>Checklist</span><strong>{completedChecks}/{dailyLogChecklist.length}</strong></article>
@@ -1618,10 +1618,13 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", onNavigate, 
                             <Image size={16} />
                             <span>
                               <strong>{item.originalName}</strong>
-                              <small>{item.mediaKind} - {fileSize(item.sizeBytes)}</small>
+                              <small>{item.mediaKind} · {fileSize(item.sizeBytes)}</small>
                             </span>
                           </article>
                         ))}
+                        {storedMedia.length > 6 && (
+                          <p className="v2-tool-note">and {storedMedia.length - 6} more file{storedMedia.length - 6 === 1 ? "" : "s"}</p>
+                        )}
                       </div>
                     ) : (
                       <p className="v2-tool-note">No stored evidence yet. Upload photos or files before submitting completion when possible.</p>
@@ -1746,11 +1749,11 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", onNavigate, 
       invoice: {
         eyebrow: "Invoice app",
         title: "Invoice draft",
-        description: "Create a clean direct-payment invoice draft. Copy or download it for pilot testing.",
+        description: "Build an invoice draft. Copy, download, or send it from your own email or text.",
         node: <InvoiceDraftTool activeJob={activeJob} />,
       },
       "daily-log": {
-        eyebrow: "Field record app",
+        eyebrow: "Daily log",
         title: "Daily log",
         description: "Capture crew hours, site notes, blockers, safety, and next steps before the details disappear.",
         node: <DailyLogTool activeJob={activeJob} activeWork={activeWork} />,
@@ -1837,7 +1840,7 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", onNavigate, 
         <ToolCard
           icon={Clipboard}
           title="Daily log"
-          badge="Field record"
+          badge="Daily log"
           summary="Crew hours, site notes, blockers, safety, and next steps."
           output="Today"
           detail="Device draft"
@@ -1859,7 +1862,7 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", onNavigate, 
           title="Job Photos"
           badge="Site docs"
           summary="Capture, organize, and compare job-site photos by project."
-          output="S3-backed"
+          output="Cloud storage"
           detail="Per project"
           action="Open"
           onAction={() => setActiveTool("job-photos")}

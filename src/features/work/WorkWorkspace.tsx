@@ -193,6 +193,8 @@ export function WorkWorkspace({
   const [matchRefreshKey, setMatchRefreshKey] = useState(0);
   const [matchLoading, setMatchLoading] = useState(false);
   const [matchError, setMatchError] = useState<string | null>(null);
+  const [reasonPrompt, setReasonPrompt] = useState<{ kind: "reschedule" | "cancel"; target: CanonicalActiveWork } | null>(null);
+  const [reasonText, setReasonText] = useState("");
   const [matchApplications, setMatchApplications] = useState<CanonicalApplication[]>([]);
   const [matchOffers, setMatchOffers] = useState<CanonicalOffer[]>([]);
   const [matchActiveWork, setMatchActiveWork] = useState<CanonicalActiveWork[]>([]);
@@ -283,20 +285,25 @@ export function WorkWorkspace({
     });
   }
 
-  async function handleReschedule(activeWork: CanonicalActiveWork) {
-    const reason = window.prompt("Reason for reschedule request", "Schedule needs to move.");
-    if (!reason?.trim()) return;
-    await runMatchAction(`reschedule:${activeWork.id}`, async () => {
-      await requestWorkReschedule(activeWork.id, reason.trim());
-    });
+  function openReasonPrompt(kind: "reschedule" | "cancel", target: CanonicalActiveWork) {
+    setReasonText("");
+    setReasonPrompt({ kind, target });
   }
 
-  async function handleCancelActiveWork(activeWork: CanonicalActiveWork) {
-    const reason = window.prompt("Reason for cancellation", "Mutual schedule conflict.");
-    if (!reason?.trim()) return;
-    await runMatchAction(`cancel:${activeWork.id}`, async () => {
-      await cancelActiveWork(activeWork.id, reason.trim());
-    });
+  async function submitReason() {
+    if (!reasonPrompt || !reasonText.trim()) return;
+    const { kind, target } = reasonPrompt;
+    const reason = reasonText.trim();
+    setReasonPrompt(null);
+    if (kind === "reschedule") {
+      await runMatchAction(`reschedule:${target.id}`, async () => {
+        await requestWorkReschedule(target.id, reason);
+      });
+    } else {
+      await runMatchAction(`cancel:${target.id}`, async () => {
+        await cancelActiveWork(target.id, reason);
+      });
+    }
   }
 
   const selectedIsVisible = selectedJob ? visibleJobs.some((job) => job.id === selectedJob.id) : false;
@@ -390,6 +397,32 @@ export function WorkWorkspace({
 
   return (
     <section className="v2-work-page" aria-label="Work">
+      {reasonPrompt && (
+        <div className="v2-reason-backdrop" onClick={() => setReasonPrompt(null)}>
+          <div className="v2-reason-dialog" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+            <h3>{reasonPrompt.kind === "reschedule" ? "Request a reschedule" : "Cancel active work"}</h3>
+            <p>{reasonPrompt.kind === "reschedule" ? "Let the other party know why the schedule needs to change." : "Explain the reason for cancellation. Both parties will see this."}</p>
+            <textarea
+              value={reasonText}
+              onChange={(e) => setReasonText(e.target.value)}
+              rows={3}
+              placeholder={reasonPrompt.kind === "reschedule" ? "e.g. Site not ready until next week" : "e.g. Scope changed — work no longer needed"}
+              autoFocus
+            />
+            <div className="v2-reason-actions">
+              <button type="button" onClick={() => setReasonPrompt(null)}>Go back</button>
+              <button
+                type="button"
+                className={reasonPrompt.kind === "cancel" ? "v2-destructive-button" : "v2-primary-button"}
+                disabled={!reasonText.trim()}
+                onClick={() => void submitReason()}
+              >
+                {reasonPrompt.kind === "reschedule" ? "Send request" : "Cancel work"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <header className="v2-work-header">
         <div><h1>Work</h1><p>{role === "contractor" ? "Post and manage jobs." : "Find open work nearby."}</p></div>
         {role === "contractor" ? <button type="button" className="v2-primary-button" onClick={onPostJob}><Plus size={17} /> Create job</button> : null}
@@ -442,7 +475,7 @@ export function WorkWorkspace({
             </header>
 
             <nav className="v2-detail-tabs" aria-label="Job details">
-              {(["overview", "requirements", "activity"] as const).map((tab) => <button key={tab} type="button" className={detailTab === tab ? "is-active" : ""} onClick={() => setDetailTab(tab)}>{tab}</button>)}
+              {(["overview", "requirements", "activity"] as const).map((tab) => <button key={tab} type="button" className={detailTab === tab ? "is-active" : ""} onClick={() => setDetailTab(tab)}>{tab.charAt(0).toUpperCase() + tab.slice(1)}</button>)}
             </nav>
 
             {detailTab === "overview" ? (
@@ -476,14 +509,14 @@ export function WorkWorkspace({
                       <div className="v2-match-actions">
                         {activeWork.status === "active" ? (
                           <>
-                            <button type="button" disabled={Boolean(activeAction)} onClick={() => void handleReschedule(activeWork)}>Request reschedule</button>
-                            <button type="button" className="v2-destructive-button" disabled={Boolean(activeAction)} onClick={() => void handleCancelActiveWork(activeWork)}>Cancel</button>
+                            <button type="button" disabled={Boolean(activeAction)} onClick={() => openReasonPrompt("reschedule", activeWork)}>Request reschedule</button>
+                            <button type="button" className="v2-destructive-button" disabled={Boolean(activeAction)} onClick={() => openReasonPrompt("cancel", activeWork)}>Cancel work</button>
                           </>
                         ) : null}
                       </div>
                       {activeWork.events.length ? (
                         <ol className="v2-mini-timeline">
-                          {activeWork.events.slice(0, 4).map((event) => <li key={event.id}><strong>{event.type.replaceAll("_", " ")}</strong><small>{event.reason || new Date(event.occurredAt).toLocaleString()}</small></li>)}
+                          {activeWork.events.slice(0, 4).map((event) => { const label = event.type.replaceAll("_", " "); return <li key={event.id}><strong>{label.charAt(0).toUpperCase() + label.slice(1)}</strong><small>{event.reason || new Date(event.occurredAt).toLocaleString()}</small></li>; })}
                         </ol>
                       ) : null}
                     </div>
@@ -511,13 +544,13 @@ export function WorkWorkspace({
                         ))}
                       </div>
                     ) : (
-                      <div className="v2-match-empty"><strong>No applicants yet</strong><span>Applicants will appear here after tradespeople apply to this job.</span></div>
+                      <div className="v2-match-empty"><strong>No applicants yet</strong><span>{detailJob.status === "Open" ? "Tradespeople who apply will appear here." : `This job is ${detailJob.status.toLowerCase()} — publish it to start receiving applicants.`}</span></div>
                     )
                   ) : pendingOffer ? (
                     <div className="v2-offer-card">
                       <div>
-                        <span>Offer pending</span>
-                        <strong>{pendingOffer.startDate ? `Start ${pendingOffer.startDate}` : "Contractor is ready to hire"}</strong>
+                        <span>You have an offer</span>
+                        <strong>{pendingOffer.startDate ? `Proposed start: ${pendingOffer.startDate}` : "No start date set yet"}</strong>
                         <p>{pendingOffer.message || pendingOffer.scopeSummary}</p>
                       </div>
                       <div className="v2-match-actions">
@@ -543,9 +576,12 @@ export function WorkWorkspace({
                     </div>
                   ) : (
                     <div className="v2-apply-box">
+                      {detailJob.status !== "Open" && (
+                        <p className="v2-match-note">This job is {detailJob.status.toLowerCase()} and not accepting applications right now.</p>
+                      )}
                       <label>
                         <span>Message to contractor</span>
-                        <textarea value={applicationMessage} onChange={(event) => setApplicationMessage(event.target.value)} rows={4} />
+                        <textarea value={applicationMessage} onChange={(event) => setApplicationMessage(event.target.value)} rows={4} disabled={detailJob.status !== "Open"} />
                       </label>
                       <div className="v2-match-actions">
                         <button type="button" disabled={Boolean(activeAction) || !detailJob.canonical || detailJob.status !== "Open"} onClick={() => void handleSaveDraft(detailJob)}>Save draft</button>
@@ -567,7 +603,7 @@ export function WorkWorkspace({
 
             {detailTab === "activity" ? (
               <div className="v2-detail-content">
-                {detailJob.canonical?.events.length ? <ol className="v2-activity-list">{detailJob.canonical.events.map((event) => <li key={event.id}><span /><div><strong>{event.type.replaceAll("_", " ")}</strong><small>{new Date(event.occurredAt).toLocaleString()}</small></div></li>)}</ol> : <p className="v2-muted-copy">No status changes yet.</p>}
+                {detailJob.canonical?.events.length ? <ol className="v2-activity-list">{detailJob.canonical.events.map((event) => { const label = event.type.replaceAll("_", " "); return <li key={event.id}><span /><div><strong>{label.charAt(0).toUpperCase() + label.slice(1)}</strong><small>{new Date(event.occurredAt).toLocaleString()}</small></div></li>; })}</ol> : <p className="v2-muted-copy">No activity yet for this job.</p>}
               </div>
             ) : null}
 

@@ -568,7 +568,7 @@ export function ShopTalkView({
                   ))}
                 </div>
                 <p>
-                  Field-tested answers become hiring proof when reputation is server-owned. For this pilot surface, use Shop Talk to practice the loop and find the questions worth closing.
+                  Field-tested answers become part of your trade reputation once they are tied to your profile.
                 </p>
               </div>
 

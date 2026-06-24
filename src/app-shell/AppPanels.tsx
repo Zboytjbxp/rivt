@@ -126,7 +126,7 @@ export function ActivityPanel({
       <aside className="side-panel" role="dialog" aria-modal="true" aria-label="Notifications">
         <div className="side-panel-header">
           <div>
-            <span>Activity log</span>
+            <span>Recent activity</span>
             <h2>Notifications</h2>
           </div>
           <button type="button" className="icon-button" onClick={onClose} aria-label="Close notifications">
@@ -154,7 +154,7 @@ export function ActivityPanel({
             <article className="empty-panel-state">
               <Bell size={20} />
               <strong>No activity yet</strong>
-              <span>Use any action in the app and it will appear here.</span>
+              <span>Post a job, send a message, or submit work and activity will appear here.</span>
             </article>
           ) : items.map((item) => (
             <article key={item.id} className={item.unread ? "activity-item unread" : "activity-item"}>
@@ -266,7 +266,7 @@ export function AccountPanel({
             {shoutOutCount > 0 && <strong>{shoutOutCount} shout-out{shoutOutCount === 1 ? "" : "s"}</strong>}
           </div>
           <small className="account-note">
-            Verified Fix answers and recommendations build reputation without blocking new users from work.
+            Answering questions and earning Verified Fixes builds your trade reputation over time.
           </small>
         </section>
 

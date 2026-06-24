@@ -88,33 +88,33 @@ export function HomeDashboard({
   ];
   const dailySignals = [
     {
-      label: role === "contractor" ? "Crew signal" : "Work signal",
+      label: role === "contractor" ? "Applicants" : "Work",
       value: workSignal,
       detail: role === "contractor" ? "Review applicants or invite saved people" : "Check jobs that fit your trade and area",
-      action: "Open Work",
+      action: "View",
       destination: "work" as PrimaryDestination,
     },
     {
-      label: "Money signal",
+      label: "Payments",
       value: moneySignal,
       detail: pendingPaymentCount ? `${pendingPaymentCount} payment record${pendingPaymentCount === 1 ? "" : "s"} need review` : "Invoices and records are current",
       action: "Open Tools",
       destination: "tools" as PrimaryDestination,
     },
     {
-      label: "Network signal",
+      label: "Crew",
       value: `${shoutOutCount} shout-outs`,
       detail: role === "contractor" ? "Keep reliable subs close" : "Build proof other contractors can trust",
-      action: "Open Crew",
+      action: "View",
       destination: "crew" as PrimaryDestination,
     },
     {
-      label: "Field signal",
+      label: "Shop Talk",
       value: answerQueueCount ? `${answerQueueCount} need answers` : `${communityCount} posts`,
       detail: answerQueueCount
         ? `${primaryTrade} and General questions you can help close`
         : `${newsCount} trade updates plus questions in Shop Talk`,
-      action: answerQueueCount ? "Answer" : "Read",
+      action: answerQueueCount ? "Answer" : "Browse",
       destination: "shop-talk" as PrimaryDestination,
     },
   ];

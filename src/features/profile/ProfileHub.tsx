@@ -162,13 +162,13 @@ export function ProfileHub({
     <section className="v2-profile-page" aria-label={view}>
       <PageHeader
         className="v2-profile-header"
-        title={view === "Settings" ? "Profile" : view}
+        title={view}
         description={brandConfig.tagline}
         actions={
         <div className="v2-profile-header-actions">
           <button type="button" className="v2-primary-button" onClick={onReviewConsent}>
             <ShieldCheck size={16} />
-            {trustReady ? "Consent on file" : "Review consent"}
+            {trustReady ? "Review consent" : "Review consent"}
           </button>
           <button type="button" className="v2-secondary-button" onClick={onLogout}>
             <LogOut size={16} />
