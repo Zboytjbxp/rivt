@@ -264,11 +264,9 @@ export function ProfileHub({
           <div className="v2-profile-badge-row">
             {communityBadges.length ? communityBadges.map((badge) => <span key={badge}>{badge}</span>) : <span>New contributor</span>}
           </div>
-          <p className="v2-profile-note">
-            {feedbackCount > 0
-              ? `${feedbackCount} feedback note${feedbackCount === 1 ? "" : "s"} captured during beta testing.`
-              : "Feedback stays in the profile hub so the app does not feel like a separate admin tool."}
-          </p>
+          {feedbackCount > 0 ? (
+            <p className="v2-profile-note">{feedbackCount} beta feedback note{feedbackCount === 1 ? "" : "s"}.</p>
+          ) : null}
         </section>
 
         <section className="v2-profile-panel v2-profile-panel-wide v2-profile-reputation">
@@ -280,17 +278,17 @@ export function ProfileHub({
             <article>
               <Star size={18} />
               <strong>{shoutOutCount} shout-out{shoutOutCount === 1 ? "" : "s"}</strong>
-              <span>Peer proof from people who know your work.</span>
+              <span>Peer proof</span>
             </article>
             <article>
               <Sparkles size={18} />
               <strong>{communityBadges.length || "No"} badge{communityBadges.length === 1 ? "" : "s"}</strong>
-              <span>Community credibility earned through useful participation.</span>
+              <span>Community</span>
             </article>
             <article>
               <CreditCard size={18} />
               <strong>{recordCount} saved record{recordCount === 1 ? "" : "s"}</strong>
-              <span>Work history and documentation signal reliability.</span>
+              <span>Work history</span>
             </article>
           </div>
         </section>

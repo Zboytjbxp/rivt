@@ -507,8 +507,7 @@ export function ShopTalkView({
               <div className="shop-talk-command">
                 <div className="shop-talk-command-head">
                   <span>Community knowledge</span>
-                  <h2>Field answers, not generic Q&amp;A</h2>
-                  <p>Search first, then ask. Keep code, safety, and site-condition answers tied to real trade experience.</p>
+                  <h2>Field answers from real trades</h2>
                 </div>
                 <button type="button" className="primary-action" onClick={() => setNewPostOpen(true)}>
                   <Plus size={17} />
@@ -529,9 +528,6 @@ export function ShopTalkView({
                       ? `${answerQueuePosts.length} ${primaryTrade} question${answerQueuePosts.length === 1 ? "" : "s"} need a hand`
                       : `${primaryTrade} is caught up`}
                   </strong>
-                  <p>
-                    Jump straight into questions where a field-tested answer can build trust before the next hiring conversation.
-                  </p>
                 </div>
                 <div className="shop-talk-answer-actions">
                   <button type="button" className="primary-action" onClick={openAnswerQueue} disabled={answerQueuePosts.length === 0}>
@@ -607,7 +603,7 @@ export function ShopTalkView({
                     ))}
                   </div>
                 ) : (
-                  <p>Reactions are account-owned now; earned author reputation comes next when posts and answers move fully server-side.</p>
+                  <p>Post a question or answer to start earning reputation.</p>
                 )}
               </div>
 
@@ -687,8 +683,7 @@ export function ShopTalkView({
               <div className="shop-talk-command">
                 <div className="shop-talk-command-head">
                   <span>Trade news</span>
-                  <h2>Original sources, contractor context</h2>
-                  <p>Curated code, safety, licensing, labor, and local permitting updates with links back to the source.</p>
+                  <h2>Code, safety, and permitting updates</h2>
                 </div>
                 <div className="shop-talk-kpi-strip" aria-label="Trade news summary">
                   <span><strong>{filteredNews.length}</strong><small>articles</small></span>

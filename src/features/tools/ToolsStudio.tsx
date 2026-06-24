@@ -1683,7 +1683,7 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", onNavigate, 
       <PageHeader
         className="v2-tools-header"
         title="Tools"
-        description="Standalone field utilities for estimates, invoice drafts, materials, and closeout records."
+        description="Estimate, invoice, daily log, and material takeoff tools."
         actions={<button type="button" className="v2-primary-button" onClick={() => activeJob ? onOpenJob(activeJob.id) : onNavigate("work")}>
           <Wrench size={16} />
           {activeJob ? "Use active job" : "Open work"}
@@ -1694,7 +1694,6 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", onNavigate, 
         <div>
           <span>Tool apps</span>
           <h2>{activeJob ? `Loaded from ${activeJob.title}` : "Open tools without needing a job first"}</h2>
-          <p>These utilities calculate locally in the browser. Server-backed records still live in Records after accepted work.</p>
         </div>
         <MetricTile className="v2-tools-context-metric" value={activeJob ? activeJob.trade : "Standalone"} label={activeJob ? activeJob.location : "No active job selected"} />
       </section>

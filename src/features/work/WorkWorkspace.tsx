@@ -391,7 +391,7 @@ export function WorkWorkspace({
   return (
     <section className="v2-work-page" aria-label="Work">
       <header className="v2-work-header">
-        <div><h1>Work</h1><p>{role === "contractor" ? "Create and manage your company’s job postings." : "Discover open work from trade businesses in your area."}</p></div>
+        <div><h1>Work</h1><p>{role === "contractor" ? "Post and manage jobs." : "Find open work nearby."}</p></div>
         {role === "contractor" ? <button type="button" className="v2-primary-button" onClick={onPostJob}><Plus size={17} /> Create job</button> : null}
       </header>
 
