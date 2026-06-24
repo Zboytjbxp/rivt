@@ -255,11 +255,6 @@ export function HomeDashboard({
               </div>
               <small>{primaryTrade}</small>
             </header>
-            <p>
-              {role === "contractor"
-                ? "Let nearby tradespeople know whether you are open to crew conversations and upcoming help."
-                : "Set the signal contractors see before they message, invite, or save your profile."}
-            </p>
             <div className="v2-availability-options" role="group" aria-label="Daily availability">
               {availabilityOptions.map((option) => (
                 <button

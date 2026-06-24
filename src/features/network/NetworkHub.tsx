@@ -81,7 +81,7 @@ export function NetworkHub({ jobs, talent, communityPosts, shoutOuts, onOpenCrew
       <PageHeader
         className="v2-network-header"
         title="Crew"
-        description="Your trusted trade connections and reputation signals."
+        description="Trusted connections and reputation."
         actions={
         <div className="v2-network-header-metrics">
           <MetricTile value={activeCrew.length} label="crew members" />
@@ -161,17 +161,17 @@ export function NetworkHub({ jobs, talent, communityPosts, shoutOuts, onOpenCrew
             <article>
               <ShieldCheck size={18} />
               <strong>Evidence states</strong>
-              <span>Self-reported, uploaded, reviewed, and verified markers stay distinct.</span>
+              <span>Self-reported, uploaded, and verified markers stay distinct.</span>
             </article>
             <article>
               <Star size={18} />
               <strong>High reputation</strong>
-              <span>Shout-outs and accepted field fixes can lift the profile before the first deal.</span>
+              <span>Shout-outs and field answers build trust before the first deal.</span>
             </article>
             <article>
               <Users size={18} />
               <strong>Active crew</strong>
-              <span>Open jobs, crew invites, and referrals flow through one network view.</span>
+              <span>Jobs, invites, and referrals in one network view.</span>
             </article>
           </div>
         </Panel>

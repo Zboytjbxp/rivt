@@ -13,6 +13,7 @@ import {
   Image,
   LayoutGrid,
   ListChecks,
+  Loader2,
   Mail,
   MessageSquare,
   RefreshCw,
@@ -818,11 +819,23 @@ function PhotoGallery({
   const [selectedPhoto, setSelectedPhoto] = useState<UnifiedPhoto | null>(null);
   const [compareA, setCompareA] = useState<UnifiedPhoto | null>(null);
   const [compareB, setCompareB] = useState<UnifiedPhoto | null>(null);
+  const [pendingCount, setPendingCount] = useState(0);
   const fileRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => { onFileRef(fileRef.current); }, [onFileRef]);
   useEffect(() => { onCameraRef(cameraRef.current); }, [onCameraRef]);
+
+  async function handleUpload(files: FileList | null) {
+    if (!files?.length) return;
+    const count = files.length;
+    setPendingCount((prev) => prev + count);
+    try {
+      await onUploadFiles(files);
+    } finally {
+      setPendingCount((prev) => Math.max(0, prev - count));
+    }
+  }
 
   function startCompare() { setCompareA(null); setCompareB(null); setPhotoView("compare-a"); }
 
@@ -902,9 +915,9 @@ function PhotoGallery({
   return (
     <div className="v2-job-photos-workbench">
       <input ref={fileRef} type="file" accept="image/*" multiple style={{ display: "none" }} aria-hidden="true"
-        onChange={(e) => void onUploadFiles(e.target.files)} />
+        onChange={(e) => { const files = e.target.files; if (e.target) e.target.value = ""; void handleUpload(files); }} />
       <input ref={cameraRef} type="file" accept="image/*" capture="environment" style={{ display: "none" }} aria-hidden="true"
-        onChange={(e) => void onUploadFiles(e.target.files)} />
+        onChange={(e) => { const files = e.target.files; if (e.target) e.target.value = ""; void handleUpload(files); }} />
 
       <div className="v2-job-photos-actions-bar">
         <div className="v2-job-photos-stats">
@@ -916,8 +929,8 @@ function PhotoGallery({
           <span className="v2-job-photos-job-name">{title}</span>
         </div>
         <div className="v2-tool-action-row">
-          <button type="button" className="v2-primary-button" onClick={() => cameraRef.current?.click()} disabled={uploading}>
-            <Camera size={15} />{uploading ? "Uploading…" : "Camera"}
+          <button type="button" className="v2-primary-button" onClick={() => cameraRef.current?.click()}>
+            <Camera size={15} />Camera
           </button>
           <button type="button" className="v2-primary-button" onClick={() => fileRef.current?.click()} disabled={uploading}>
             <FileUp size={15} />Upload
@@ -931,13 +944,13 @@ function PhotoGallery({
       {subtitle ? <p className="v2-job-photos-subtitle">{subtitle}</p> : null}
       {uploadError ? <p className="v2-record-notice v2-job-photos-upload-error" role="alert">{uploadError}</p> : null}
 
-      {photos.length === 0 ? (
+      {photos.length === 0 && pendingCount === 0 ? (
         <div className="v2-job-photos-empty">
           <Camera size={28} />
           <strong>No photos yet</strong>
           <p>Take a photo on site or upload from your device.</p>
           <div className="v2-tool-action-row">
-            <button type="button" className="v2-primary-button" onClick={() => cameraRef.current?.click()} disabled={uploading}>
+            <button type="button" className="v2-primary-button" onClick={() => cameraRef.current?.click()}>
               <Camera size={15} />Take first photo
             </button>
             <button type="button" onClick={() => fileRef.current?.click()} disabled={uploading}>
@@ -957,6 +970,12 @@ function PhotoGallery({
                 <small>{new Date(photo.createdAt).toLocaleDateString()}</small>
               </span>
             </button>
+          ))}
+          {Array.from({ length: pendingCount }).map((_, i) => (
+            <div key={`pending-${i}`} className="v2-job-photo-thumb v2-job-photo-pending">
+              <span className="v2-job-photo-placeholder"><Loader2 size={18} className="v2-photo-spinner" /></span>
+              <span className="v2-job-photo-meta"><small>Uploading…</small></span>
+            </div>
           ))}
         </div>
       )}
@@ -1683,7 +1702,7 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", onNavigate, 
       <PageHeader
         className="v2-tools-header"
         title="Tools"
-        description="Standalone field utilities for estimates, invoice drafts, materials, and closeout records."
+        description="Estimate, invoice, daily log, and material takeoff tools."
         actions={<button type="button" className="v2-primary-button" onClick={() => activeJob ? onOpenJob(activeJob.id) : onNavigate("work")}>
           <Wrench size={16} />
           {activeJob ? "Use active job" : "Open work"}
@@ -1694,7 +1713,6 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", onNavigate, 
         <div>
           <span>Tool apps</span>
           <h2>{activeJob ? `Loaded from ${activeJob.title}` : "Open tools without needing a job first"}</h2>
-          <p>These utilities calculate locally in the browser. Server-backed records still live in Records after accepted work.</p>
         </div>
         <MetricTile className="v2-tools-context-metric" value={activeJob ? activeJob.trade : "Standalone"} label={activeJob ? activeJob.location : "No active job selected"} />
       </section>
