@@ -5925,24 +5925,27 @@ app.use((error, request, response, _next) => {
 });
 
 export async function startServer(listenPort = port) {
-  if (database) {
-    await ensureDatabaseReady();
+  await new Promise((resolve, reject) => {
+    const srv = app.listen(listenPort, resolve);
+    srv.once("error", reject);
+  });
+
+  const storage = storageConfiguration();
+  logInfo("server.started", {
+    appName,
+    port: listenPort,
+    buildCommit: sourceCommit,
+    storageOk: storage.ok,
+    errorMonitoring: errorMonitoringStatus().mode,
+  });
+  if (!storage.ok) {
+    logWarn("server.storage_setup_required", { missing: storage.missing });
   }
 
-  return app.listen(listenPort, () => {
-    const storage = storageConfiguration();
-    logInfo("server.started", {
-      appName,
-      port: listenPort,
-      buildCommit: sourceCommit,
-      migrationVersion,
-      storageOk: storage.ok,
-      errorMonitoring: errorMonitoringStatus().mode,
-    });
-    if (!storage.ok) {
-      logWarn("server.storage_setup_required", { missing: storage.missing });
-    }
-  });
+  if (database) {
+    await ensureDatabaseReady();
+    logInfo("server.migrations_ready", { migrationVersion });
+  }
 }
 
 export async function closeDatabase() {
@@ -5970,8 +5973,10 @@ if (path.resolve(process.argv[1] ?? "") === __filename) {
   });
 
   startServer().catch((error) => {
-    void captureOperationalError(error, { source: "server.startup_failed" });
     logError("server.startup_failed", { error });
-    process.exitCode = 1;
+    void captureOperationalError(error, { source: "server.startup_failed" }).finally(() => {
+      process.exit(1);
+    });
+    setTimeout(() => process.exit(1), 2000).unref();
   });
 }
