@@ -2,6 +2,7 @@ import "dotenv/config";
 
 import { GetObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import compression from "compression";
 import cors from "cors";
 import { XMLParser } from "fast-xml-parser";
 import express from "express";
@@ -297,6 +298,7 @@ const allowedOrigins = [
     : ["http://127.0.0.1:5173", "http://localhost:5173", "http://127.0.0.1:4173", "http://localhost:4173"]),
 ];
 
+app.use(compression());
 app.use(cors({
   credentials: true,
   origin(origin, callback) {
@@ -1005,11 +1007,19 @@ function _resolvePublicImageUrl(value, baseUrl) {
     if (
       hostname === "localhost" ||
       hostname.endsWith(".localhost") ||
+      hostname === "0.0.0.0" ||
       hostname === "127.0.0.1" ||
       hostname === "::1" ||
+      hostname === "::ffff:127.0.0.1" ||
       /^10\./.test(hostname) ||
       /^192\.168\./.test(hostname) ||
-      /^172\.(1[6-9]|2\d|3[0-1])\./.test(hostname)
+      /^172\.(1[6-9]|2\d|3[0-1])\./.test(hostname) ||
+      /^169\.254\./.test(hostname) ||
+      /^100\.(6[4-9]|[7-9]\d|1([01]\d|2[0-7]))\./.test(hostname) ||
+      /^fc[0-9a-f]{2}:/i.test(hostname) ||
+      /^fd[0-9a-f]{2}:/i.test(hostname) ||
+      /^fe[89ab][0-9a-f]:/i.test(hostname) ||
+      /^::ffff:/i.test(hostname)
     ) {
       return null;
     }
@@ -5632,7 +5642,7 @@ app.get("/api/uploads/:id/url", requireAuthenticatedUser, async (request, respon
   });
 });
 
-app.post("/api/uploads", requireAuthenticatedUser, uploadRateLimit, upload.single("file"), async (request, response, next) => {
+app.post("/api/uploads", requireAuthenticatedUser, requireV1Actor, uploadRateLimit, upload.single("file"), async (request, response, next) => {
   if (!requireObjectStorage(response)) {
     return;
   }
@@ -5867,6 +5877,8 @@ if (existsSync(distDir)) {
     setHeaders(response, filePath) {
       if (filePath.endsWith("index.html")) {
         response.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0");
+      } else if (filePath.includes("/assets/")) {
+        response.setHeader("Cache-Control", "public, max-age=31536000, immutable");
       }
     },
   }));
