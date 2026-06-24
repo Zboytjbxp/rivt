@@ -27,6 +27,7 @@ import {
   sortedAnswers,
   type CommunityBadgeThresholds,
 } from "./community-utils";
+import { apiPath } from "../../lib/api";
 
 interface AccountProfile {
   displayName: string;
@@ -98,7 +99,6 @@ export interface CommunityReport {
   status: "Flagged" | "Cleared" | "Hidden" | "Removed" | "Warned";
 }
 
-const API_BASE_URL = import.meta.env.VITE_API_URL ?? (import.meta.env.DEV ? "http://127.0.0.1:8787" : "");
 const specialtyOptions = tradeOptions.filter((trade): trade is Trade => trade !== "All trades");
 
 const communityBadgeThresholds: CommunityBadgeThresholds = {
@@ -106,10 +106,6 @@ const communityBadgeThresholds: CommunityBadgeThresholds = {
   mentorQualityAnswers: 3,
   topHandQualityAnswers: 8,
 };
-
-function apiPath(path: string) {
-  return `${API_BASE_URL}${path}`;
-}
 
 function newsTopicThumbnail(item: Pick<NewsItem, "headline" | "source" | "urgency">) {
   const haystack = `${item.urgency ?? ""} ${item.source ?? ""} ${item.headline ?? ""}`.toLowerCase();

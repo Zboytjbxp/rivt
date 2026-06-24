@@ -1,3 +1,5 @@
+import { type ApiErrorBody, RivtApiError, requestKey, makeRequest } from "../../lib/api";
+
 export interface InboxParticipant {
   accountId: string;
   role: "contractor" | "tradesperson";
@@ -78,39 +80,14 @@ export interface InboxNotification {
   createdAt: string;
 }
 
-interface ApiErrorBody {
-  error?: { code?: string; message?: string; details?: unknown };
-}
-
-export class InboxApiError extends Error {
-  status: number;
-  code: string;
-  details: unknown;
-
+export class InboxApiError extends RivtApiError {
   constructor(status: number, body: ApiErrorBody) {
-    super(body.error?.message || "RIVT could not complete the inbox request.");
+    super(status, body, "RIVT could not complete the inbox request.");
     this.name = "InboxApiError";
-    this.status = status;
-    this.code = body.error?.code || "REQUEST_FAILED";
-    this.details = body.error?.details;
   }
 }
 
-function apiPath(path: string) {
-  const base = import.meta.env.VITE_API_URL ?? (import.meta.env.DEV ? "http://127.0.0.1:8787" : "");
-  return `${base}${path}`;
-}
-
-function requestKey() {
-  return globalThis.crypto?.randomUUID?.() ?? `rivt-${Date.now()}-${Math.random().toString(16).slice(2)}`;
-}
-
-async function request<T>(path: string, options: RequestInit = {}) {
-  const response = await fetch(apiPath(path), { credentials: "include", ...options });
-  const body = await response.json().catch(() => ({})) as ApiErrorBody & T;
-  if (!response.ok) throw new InboxApiError(response.status, body);
-  return body;
-}
+const request = makeRequest((s, b) => new InboxApiError(s, b));
 
 export async function listConversations() {
   const body = await request<{ data: { conversations: InboxConversation[] } }>("/api/v1/conversations");

@@ -13,14 +13,9 @@ import {
 } from "lucide-react";
 import type { AppShellProps, PrimaryDestination, SearchTarget } from "./types";
 import { Avatar } from "../components/ui";
+import { apiPath } from "../lib/api";
 import "./tokens.css";
 import "./app-shell.css";
-
-const API_BASE_URL = import.meta.env.VITE_API_URL ?? (import.meta.env.DEV ? "http://127.0.0.1:8787" : "");
-
-function apiPath(path: string) {
-  return `${API_BASE_URL}${path}`;
-}
 
 interface ProfileSearchResult {
   accountId: string;

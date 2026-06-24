@@ -1,15 +1,9 @@
-interface ApiErrorBody {
-  error?: { code?: string; message?: string };
-}
+import { type ApiErrorBody, RivtApiError, apiPath, requestKey, makeRequest } from "../../lib/api";
 
-export class AlbumApiError extends Error {
-  status: number;
-  code: string;
+export class AlbumApiError extends RivtApiError {
   constructor(status: number, body: ApiErrorBody) {
-    super(body.error?.message || "RIVT could not complete the album request.");
+    super(status, body, "RIVT could not complete the album request.");
     this.name = "AlbumApiError";
-    this.status = status;
-    this.code = body.error?.code || "REQUEST_FAILED";
   }
 }
 
@@ -37,21 +31,7 @@ export interface AlbumDetail extends PhotoAlbum {
   photos: AlbumPhoto[];
 }
 
-function apiPath(path: string) {
-  const base = import.meta.env.VITE_API_URL ?? (import.meta.env.DEV ? "http://127.0.0.1:8787" : "");
-  return `${base}${path}`;
-}
-
-function requestKey() {
-  return globalThis.crypto?.randomUUID?.() ?? `rivt-${Date.now()}-${Math.random().toString(16).slice(2)}`;
-}
-
-async function request<T>(path: string, options: RequestInit = {}) {
-  const response = await fetch(apiPath(path), { credentials: "include", ...options });
-  const body = await response.json().catch(() => ({})) as ApiErrorBody & T;
-  if (!response.ok) throw new AlbumApiError(response.status, body);
-  return body;
-}
+const request = makeRequest((s, b) => new AlbumApiError(s, b));
 
 export async function listAlbums() {
   const body = await request<{ data: { albums: PhotoAlbum[] } }>("/api/v1/albums");

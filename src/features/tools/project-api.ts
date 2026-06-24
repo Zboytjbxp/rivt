@@ -1,18 +1,9 @@
-interface ApiErrorBody {
-  error?: { code?: string; message?: string; details?: unknown };
-}
+import { type ApiErrorBody, RivtApiError, apiPath, requestKey, makeRequest } from "../../lib/api";
 
-export class ProjectApiError extends Error {
-  status: number;
-  code: string;
-  details: unknown;
-
+export class ProjectApiError extends RivtApiError {
   constructor(status: number, body: ApiErrorBody) {
-    super(body.error?.message || "RIVT could not complete the project-record request.");
+    super(status, body, "RIVT could not complete the project-record request.");
     this.name = "ProjectApiError";
-    this.status = status;
-    this.code = body.error?.code || "REQUEST_FAILED";
-    this.details = body.error?.details;
   }
 }
 
@@ -81,21 +72,7 @@ export interface ProjectRecord {
   updatedAt: string;
 }
 
-function apiPath(path: string) {
-  const base = import.meta.env.VITE_API_URL ?? (import.meta.env.DEV ? "http://127.0.0.1:8787" : "");
-  return `${base}${path}`;
-}
-
-function requestKey() {
-  return globalThis.crypto?.randomUUID?.() ?? `rivt-${Date.now()}-${Math.random().toString(16).slice(2)}`;
-}
-
-async function request<T>(path: string, options: RequestInit = {}) {
-  const response = await fetch(apiPath(path), { credentials: "include", ...options });
-  const body = await response.json().catch(() => ({})) as ApiErrorBody & T;
-  if (!response.ok) throw new ProjectApiError(response.status, body);
-  return body;
-}
+const request = makeRequest((s, b) => new ProjectApiError(s, b));
 
 export async function openProjectForActiveWork(activeWorkId: string) {
   const body = await request<{ data: { project: ProjectRecord } }>(`/api/v1/active-work/${activeWorkId}/project`, {

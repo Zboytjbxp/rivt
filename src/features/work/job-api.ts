@@ -1,4 +1,5 @@
 import type { Difficulty, Job, Trade, WorkType } from "../../types";
+import { type ApiErrorBody, RivtApiError, requestKey, makeRequest } from "../../lib/api";
 
 export type CanonicalJobStatus = "draft" | "open" | "paused" | "closed";
 export type CanonicalDifficulty = "easy" | "moderate" | "challenging" | "advanced" | "expert";
@@ -166,39 +167,14 @@ export interface CanonicalActiveWork {
   events: CanonicalTimelineEvent[];
 }
 
-interface ApiErrorBody {
-  error?: { code?: string; message?: string; details?: unknown };
-}
-
-export class JobApiError extends Error {
-  status: number;
-  code: string;
-  details: unknown;
-
+export class JobApiError extends RivtApiError {
   constructor(status: number, body: ApiErrorBody) {
-    super(body.error?.message || "RIVT could not complete the job request.");
+    super(status, body, "RIVT could not complete the job request.");
     this.name = "JobApiError";
-    this.status = status;
-    this.code = body.error?.code || "REQUEST_FAILED";
-    this.details = body.error?.details;
   }
 }
 
-function apiPath(path: string) {
-  const base = import.meta.env.VITE_API_URL ?? (import.meta.env.DEV ? "http://127.0.0.1:8787" : "");
-  return `${base}${path}`;
-}
-
-function requestKey() {
-  return globalThis.crypto?.randomUUID?.() ?? `rivt-${Date.now()}-${Math.random().toString(16).slice(2)}`;
-}
-
-async function request<T>(path: string, options: RequestInit = {}) {
-  const response = await fetch(apiPath(path), { credentials: "include", ...options });
-  const body = await response.json().catch(() => ({})) as ApiErrorBody & T;
-  if (!response.ok) throw new JobApiError(response.status, body);
-  return body;
-}
+const request = makeRequest((s, b) => new JobApiError(s, b));
 
 export interface JobListFilters {
   query?: string;
