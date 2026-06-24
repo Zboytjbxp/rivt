@@ -71,7 +71,7 @@ async function appliedMigrations(client) {
 // CREATE TABLE IF NOT EXISTS / CREATE INDEX IF NOT EXISTS (idempotent SQL).
 const checksumRepairs = new Map([
   [1, {
-    stale: "32893d9f5f374dac0278208a68f0bfb7b33f2e738f36a107db9c8dfd655159d",
+    stale: "328934d9f5f374dac0278208a68f0bfb7b33f2e738f36a107db9c8dfd655159d",
     current: "a9a35df888798a3a916e2f3b4750b79f9ffb59aeb20402afe5c0cbc66bd68562",
   }],
 ]);
