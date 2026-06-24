@@ -2088,6 +2088,127 @@
   color: var(--v2-text-muted);
 }
 
+/* In-app camera overlay */
+
+.v2-camera-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: #000;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.v2-camera-feed {
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.v2-camera-close {
+  position: absolute;
+  top: max(20px, env(safe-area-inset-top, 20px));
+  right: 20px;
+  z-index: 10;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.45);
+  border-radius: 9999px;
+  padding: 9px 20px;
+  font-size: 15px;
+  font-weight: 600;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.v2-camera-controls {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 32px max(48px, env(safe-area-inset-bottom, 48px));
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.65) 0%, transparent 100%);
+  z-index: 10;
+}
+
+.v2-camera-shutter {
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+  background: #fff;
+  border: 5px solid rgba(255, 255, 255, 0.35);
+  cursor: pointer;
+  padding: 0;
+  transition: transform 80ms ease, opacity 80ms ease;
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.3);
+}
+
+.v2-camera-shutter:active {
+  transform: scale(0.88);
+  opacity: 0.8;
+}
+
+.v2-camera-shutter:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.v2-camera-badge {
+  position: absolute;
+  bottom: max(56px, env(safe-area-inset-bottom, 56px));
+  right: 32px;
+  z-index: 10;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 9999px;
+  padding: 5px 13px;
+  font-size: 13px;
+  font-weight: 600;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+.v2-camera-flash {
+  position: absolute;
+  inset: 0;
+  z-index: 9;
+  background: #fff;
+  pointer-events: none;
+  animation: v2-camera-flash-anim 220ms ease-out forwards;
+}
+
+@keyframes v2-camera-flash-anim {
+  from { opacity: 0.65; }
+  to { opacity: 0; }
+}
+
+.v2-camera-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  color: #fff;
+  gap: 12px;
+  padding: 32px;
+  text-align: center;
+}
+
+.v2-camera-error strong {
+  font-size: 18px;
+}
+
+.v2-camera-error p {
+  margin: 0;
+  font-size: 15px;
+  opacity: 0.75;
+}
+
 .v2-job-photo-pending {
   cursor: default;
   border-color: var(--v2-border);

@@ -794,6 +794,89 @@ function albumErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : "RIVT could not complete the request.";
 }
 
+function CameraCapture({ onCapture, onClose }: {
+  onCapture: (blob: Blob) => void;
+  onClose: () => void;
+}) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [ready, setReady] = useState(false);
+  const [error, setError] = useState("");
+  const [captureCount, setCaptureCount] = useState(0);
+  const [flash, setFlash] = useState(false);
+
+  useEffect(() => {
+    let stream: MediaStream | null = null;
+    navigator.mediaDevices.getUserMedia({
+      video: { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1080 } },
+      audio: false,
+    }).then((s) => {
+      stream = s;
+      if (videoRef.current) videoRef.current.srcObject = s;
+    }).catch((err: unknown) => {
+      setError(
+        err instanceof DOMException && err.name === "NotAllowedError"
+          ? "Camera access was denied. Check your browser or app settings."
+          : "Camera could not be started."
+      );
+    });
+    return () => { stream?.getTracks().forEach((t) => t.stop()); };
+  }, []);
+
+  function shoot() {
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    if (!video || !canvas || !ready) return;
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    ctx.drawImage(video, 0, 0);
+    canvas.toBlob((blob) => {
+      if (!blob) return;
+      onCapture(blob);
+      setCaptureCount((n) => n + 1);
+      setFlash(true);
+      setTimeout(() => setFlash(false), 200);
+    }, "image/jpeg", 0.92);
+  }
+
+  return (
+    <div className="v2-camera-overlay">
+      {flash && <div className="v2-camera-flash" aria-hidden="true" />}
+      <button type="button" className="v2-camera-close" onClick={onClose}>Done</button>
+      {error ? (
+        <div className="v2-camera-error">
+          <strong>Camera unavailable</strong>
+          <p>{error}</p>
+        </div>
+      ) : (
+        <video
+          ref={videoRef}
+          className="v2-camera-feed"
+          playsInline
+          muted
+          autoPlay
+          onLoadedMetadata={() => setReady(true)}
+        />
+      )}
+      <canvas ref={canvasRef} style={{ display: "none" }} aria-hidden="true" />
+      <div className="v2-camera-controls">
+        <button
+          type="button"
+          className="v2-camera-shutter"
+          onClick={shoot}
+          disabled={!ready || !!error}
+          aria-label="Take photo"
+        />
+      </div>
+      {captureCount > 0 && (
+        <span className="v2-camera-badge">{captureCount} {captureCount === 1 ? "photo" : "photos"}</span>
+      )}
+    </div>
+  );
+}
+
 function PhotoGallery({
   title,
   subtitle,
@@ -802,7 +885,6 @@ function PhotoGallery({
   uploadError,
   onBack,
   onUploadFiles,
-  onCameraRef,
   onFileRef,
 }: {
   title: string;
@@ -812,7 +894,6 @@ function PhotoGallery({
   uploadError: string;
   onBack: () => void;
   onUploadFiles: (files: FileList | null) => Promise<void>;
-  onCameraRef: (ref: HTMLInputElement | null) => void;
   onFileRef: (ref: HTMLInputElement | null) => void;
 }) {
   const [photoView, setPhotoView] = useState<PhotoView>("gallery");
@@ -820,11 +901,10 @@ function PhotoGallery({
   const [compareA, setCompareA] = useState<UnifiedPhoto | null>(null);
   const [compareB, setCompareB] = useState<UnifiedPhoto | null>(null);
   const [pendingCount, setPendingCount] = useState(0);
+  const [showCamera, setShowCamera] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
-  const cameraRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => { onFileRef(fileRef.current); }, [onFileRef]);
-  useEffect(() => { onCameraRef(cameraRef.current); }, [onCameraRef]);
 
   async function handleUpload(files: FileList | null) {
     if (!files?.length) return;
@@ -835,6 +915,13 @@ function PhotoGallery({
     } finally {
       setPendingCount((prev) => Math.max(0, prev - count));
     }
+  }
+
+  function handleCapturePhoto(blob: Blob) {
+    const file = new File([blob], `photo-${Date.now()}.jpg`, { type: "image/jpeg" });
+    const dt = new DataTransfer();
+    dt.items.add(file);
+    void handleUpload(dt.files);
   }
 
   function startCompare() { setCompareA(null); setCompareB(null); setPhotoView("compare-a"); }
@@ -914,9 +1001,13 @@ function PhotoGallery({
 
   return (
     <div className="v2-job-photos-workbench">
+      {showCamera && (
+        <CameraCapture
+          onCapture={handleCapturePhoto}
+          onClose={() => setShowCamera(false)}
+        />
+      )}
       <input ref={fileRef} type="file" accept="image/*" multiple style={{ display: "none" }} aria-hidden="true"
-        onChange={(e) => { const files = e.target.files; if (e.target) e.target.value = ""; void handleUpload(files); }} />
-      <input ref={cameraRef} type="file" accept="image/*" capture="environment" style={{ display: "none" }} aria-hidden="true"
         onChange={(e) => { const files = e.target.files; if (e.target) e.target.value = ""; void handleUpload(files); }} />
 
       <div className="v2-job-photos-actions-bar">
@@ -929,7 +1020,7 @@ function PhotoGallery({
           <span className="v2-job-photos-job-name">{title}</span>
         </div>
         <div className="v2-tool-action-row">
-          <button type="button" className="v2-primary-button" onClick={() => cameraRef.current?.click()}>
+          <button type="button" className="v2-primary-button" onClick={() => setShowCamera(true)}>
             <Camera size={15} />Camera
           </button>
           <button type="button" className="v2-primary-button" onClick={() => fileRef.current?.click()} disabled={uploading}>
@@ -950,7 +1041,7 @@ function PhotoGallery({
           <strong>No photos yet</strong>
           <p>Take a photo on site or upload from your device.</p>
           <div className="v2-tool-action-row">
-            <button type="button" className="v2-primary-button" onClick={() => cameraRef.current?.click()}>
+            <button type="button" className="v2-primary-button" onClick={() => setShowCamera(true)}>
               <Camera size={15} />Take first photo
             </button>
             <button type="button" onClick={() => fileRef.current?.click()} disabled={uploading}>
@@ -999,7 +1090,6 @@ function JobPhotosTool({ activeWork }: { activeWork: CanonicalActiveWork[] }) {
   const [albumUploading, setAlbumUploading] = useState(false);
   const [albumUploadError, setAlbumUploadError] = useState("");
   const albumFileRef = useRef<HTMLInputElement | null>(null);
-  const albumCameraRef = useRef<HTMLInputElement | null>(null);
 
   // Active-job mode state
   const [project, setProject] = useState<ProjectRecord | null>(null);
@@ -1008,7 +1098,6 @@ function JobPhotosTool({ activeWork }: { activeWork: CanonicalActiveWork[] }) {
   const [jobUploading, setJobUploading] = useState(false);
   const [jobUploadError, setJobUploadError] = useState("");
   const jobFileRef = useRef<HTMLInputElement | null>(null);
-  const jobCameraRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -1071,7 +1160,6 @@ function JobPhotosTool({ activeWork }: { activeWork: CanonicalActiveWork[] }) {
     }
     setAlbumUploading(false);
     if (albumFileRef.current) albumFileRef.current.value = "";
-    if (albumCameraRef.current) albumCameraRef.current.value = "";
   }
 
   async function openActiveJob() {
@@ -1103,7 +1191,6 @@ function JobPhotosTool({ activeWork }: { activeWork: CanonicalActiveWork[] }) {
     try { setProject(await getProject(project.id)); } catch { /* best-effort */ }
     setJobUploading(false);
     if (jobFileRef.current) jobFileRef.current.value = "";
-    if (jobCameraRef.current) jobCameraRef.current.value = "";
   }
 
   // ── Active-job gallery ───────────────────────────────────────────────────
@@ -1121,7 +1208,6 @@ function JobPhotosTool({ activeWork }: { activeWork: CanonicalActiveWork[] }) {
         onBack={() => setMode("albums")}
         onUploadFiles={handleJobFiles}
         onFileRef={(r) => { jobFileRef.current = r; }}
-        onCameraRef={(r) => { jobCameraRef.current = r; }}
       />
     );
   }
@@ -1139,7 +1225,6 @@ function JobPhotosTool({ activeWork }: { activeWork: CanonicalActiveWork[] }) {
         onBack={() => { setMode("albums"); setOpenAlbum(null); }}
         onUploadFiles={handleAlbumFiles}
         onFileRef={(r) => { albumFileRef.current = r; }}
-        onCameraRef={(r) => { albumCameraRef.current = r; }}
       />
     );
   }
