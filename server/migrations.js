@@ -67,13 +67,25 @@ async function appliedMigrations(client) {
 
 function verifyHistory(files, applied) {
   const filesByVersion = new Map(files.map((migration) => [migration.version, migration]));
+  const sourceVersions = [...filesByVersion.keys()].sort((a, b) => a - b).join(", ");
   for (const record of applied) {
     const migration = filesByVersion.get(record.version);
     if (!migration) {
-      throw new Error(`Applied migration ${record.version}_${record.name} is missing from source.`);
+      throw new Error(
+        `Applied migration ${record.version}_${record.name} is missing from source. ` +
+        `Source has versions: [${sourceVersions}]`,
+      );
     }
-    if (migration.name !== record.name || migration.up.checksum !== record.checksum) {
-      throw new Error(`Applied migration ${record.version}_${record.name} checksum does not match source.`);
+    if (migration.name !== record.name) {
+      throw new Error(
+        `Applied migration v${record.version} name mismatch: DB="${record.name}" source="${migration.name}"`,
+      );
+    }
+    if (migration.up.checksum !== record.checksum) {
+      throw new Error(
+        `Applied migration ${record.version}_${record.name} checksum does not match source. ` +
+        `DB="${record.checksum}" source="${migration.up.checksum}"`,
+      );
     }
   }
 }
