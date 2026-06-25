@@ -743,19 +743,21 @@ export function ShopTalkView({
                       className="shop-news-card-main"
                       onClick={() => { setSelectedNewsId(item.id); setMobileDetail(true); }}
                     >
-                      <div className={newsThumbClassName("news-card-thumb", item)} data-urgency={item.urgency ?? "default"}>
+                      <div className="shop-news-card-body-wrap">
                         {!isFallbackNewsThumbnail(item) && (
-                          <img src={item.thumbnailUrl} alt={`${item.source} article thumbnail`} loading="lazy" />
+                          <div className="news-card-thumb">
+                            <img src={item.thumbnailUrl} alt={`${item.source} article thumbnail`} loading="lazy" />
+                          </div>
                         )}
-                      </div>
-                      <div className="news-card-body">
-                        <div className="news-card-kicker">
-                          {item.urgency && <span className="news-urgency-pill">{item.urgency}</span>}
-                          <small>{item.date}</small>
+                        <div className="news-card-body">
+                          <div className="news-card-kicker">
+                            {item.urgency && <span className="news-urgency-pill">{item.urgency}</span>}
+                            <small>{item.date}</small>
+                          </div>
+                          <strong>{item.headline}</strong>
+                          <p>{item.summary}</p>
+                          <small>{item.source}</small>
                         </div>
-                        <strong>{item.headline}</strong>
-                        <p>{item.summary}</p>
-                        <small>{item.source}</small>
                       </div>
                     </button>
                     {item.url && item.url !== "#" && (
@@ -931,15 +933,15 @@ export function ShopTalkView({
             </button>
             {selectedNews ? (
               <div className="shop-news-detail">
-                <div className={newsThumbClassName("news-detail-hero", selectedNews)} data-urgency={selectedNews.urgency ?? "default"}>
-                  {!isFallbackNewsThumbnail(selectedNews) && (
+                {!isFallbackNewsThumbnail(selectedNews) && (
+                  <div className="news-detail-hero" data-urgency={selectedNews.urgency ?? "default"}>
                     <img src={selectedNews.thumbnailUrl} alt={`${selectedNews.source} article thumbnail`} loading="lazy" />
-                  )}
-                  <div className="news-detail-hero-copy">
-                    <span className="news-detail-source">{selectedNews.source}</span>
-                    {selectedNews.urgency && <span className="news-urgency-pill">{selectedNews.urgency}</span>}
+                    <div className="news-detail-hero-copy">
+                      <span className="news-detail-source">{selectedNews.source}</span>
+                      {selectedNews.urgency && <span className="news-urgency-pill">{selectedNews.urgency}</span>}
+                    </div>
                   </div>
-                </div>
+                )}
                 <div className="shop-news-detail-header">
                   <h2>{selectedNews.headline}</h2>
                   <small>{selectedNews.source} - {selectedNews.date}</small>

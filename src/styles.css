@@ -9941,23 +9941,30 @@ textarea:focus-visible {
   min-height: 60px;
 }
 
-/* News card thumbnails */
+/* News cards */
 .shop-news-card {
-  display: grid;
-  grid-template-columns: 72px 1fr;
-  gap: 0;
-  padding: 0;
   overflow: hidden;
-  align-items: stretch;
   border-radius: var(--v2-radius-lg);
   text-align: left;
 }
 
+.shop-news-card-main {
+  display: flex;
+  width: 100%;
+  text-align: left;
+  align-items: stretch;
+}
+
+.shop-news-card-body-wrap {
+  display: flex;
+  width: 100%;
+  align-items: stretch;
+}
+
 .news-card-thumb {
-  position: relative;
-  min-height: 100%;
+  flex-shrink: 0;
+  width: 72px;
   overflow: hidden;
-  background: linear-gradient(160deg, #334f5b, #1e3540);
 }
 .news-card-thumb img {
   width: 100%;
@@ -9965,15 +9972,6 @@ textarea:focus-visible {
   display: block;
   object-fit: cover;
 }
-/* Urgency-colored fallback strips — no fake image, just intent */
-.news-card-thumb.is-fallback[data-urgency="Safety"] { background: linear-gradient(160deg, #b45309, #92400e); }
-.news-card-thumb.is-fallback[data-urgency="Regulation"] { background: linear-gradient(160deg, #dc2626, #991b1b); }
-.news-card-thumb.is-fallback[data-urgency="Code Update"],
-.news-card-thumb.is-fallback[data-urgency="Code Change"] { background: linear-gradient(160deg, #1d4ed8, #1e3a8a); }
-.news-card-thumb.is-fallback[data-urgency="HVAC"] { background: linear-gradient(160deg, #0369a1, #075985); }
-.news-card-thumb.is-fallback[data-urgency="License"] { background: linear-gradient(160deg, #7c3aed, #5b21b6); }
-.news-card-thumb.is-fallback[data-urgency="Local"] { background: linear-gradient(160deg, #059669, #065f46); }
-.news-card-thumb.is-fallback[data-urgency="Labor"] { background: linear-gradient(160deg, #0f766e, #134e4a); }
 .news-card-thumb span {
   position: absolute;
   left: 8px;
@@ -10027,8 +10025,6 @@ textarea:focus-visible {
 .news-detail-hero[data-urgency="HVAC"] { background: linear-gradient(135deg, #0284c7, #0369a1); }
 .news-detail-hero[data-urgency="Labor"] { background: linear-gradient(135deg, #0f766e, #0d5d55); }
 .news-detail-hero[data-urgency="default"] { background: linear-gradient(135deg, #334f5b, #1e3540); }
-/* Fallback hero: full-bleed gradient, no image overlay */
-.news-detail-hero.is-fallback { min-height: 80px; align-items: flex-end; }
 .news-detail-source {
   font-size: 18px;
   font-weight: var(--v2-weight-display);
