@@ -2,6 +2,8 @@ import {
   BadgeCheck,
   CheckCircle,
   CreditCard,
+  Download,
+  FileText,
   GraduationCap,
   LogOut,
   Mail,
@@ -417,24 +419,122 @@ export function ProfileHub({
     );
   }
 
+  if (view === "Trust & Legal") {
+    return (
+      <section className="v2-profile-page" aria-label="Trust & Legal">
+        <PageHeader
+          className="v2-profile-header"
+          title="Trust & Legal"
+          description="Consent status, your agreements, and data rights."
+        />
+        <div className="v2-trust-grid">
+          <section className="v2-profile-panel v2-trust-status-card">
+            <header>
+              <span>Consent status</span>
+              <strong className={trustReady ? "is-ready" : "is-pending"}>{trustReady ? "Current" : "Action needed"}</strong>
+            </header>
+            <div className="v2-profile-list">
+              <article>
+                <ShieldCheck size={16} className={trustReady ? "icon-success" : "icon-warn"} />
+                <span>Platform consent {trustReady ? "signed and current" : "not yet reviewed"}</span>
+              </article>
+              <article>
+                <BadgeCheck size={16} />
+                <span>Identity readiness: {trustReady ? "ready" : "incomplete"}</span>
+              </article>
+              <article>
+                <CreditCard size={16} />
+                <span>Payment method: {trustReady ? "on file" : "not added"}</span>
+              </article>
+            </div>
+            {!trustReady && (
+              <div className="v2-trust-action">
+                <button type="button" className="v2-primary-button" onClick={onReviewConsent}>
+                  <ShieldCheck size={15} />
+                  Review consent
+                </button>
+              </div>
+            )}
+          </section>
+
+          <section className="v2-profile-panel">
+            <header>
+              <span>Legal documents</span>
+              <strong>Your agreements</strong>
+            </header>
+            <div className="v2-profile-list">
+              <article className="v2-trust-doc-link">
+                <FileText size={16} />
+                <span>Terms of Service</span>
+              </article>
+              <article className="v2-trust-doc-link">
+                <FileText size={16} />
+                <span>Privacy Policy</span>
+              </article>
+              <article className="v2-trust-doc-link">
+                <FileText size={16} />
+                <span>Subcontractor Agreement</span>
+              </article>
+            </div>
+          </section>
+
+          <section className="v2-profile-panel v2-profile-panel-wide">
+            <header>
+              <span>Your data</span>
+              <strong>What we store and what you control</strong>
+            </header>
+            <div className="v2-trust-data-grid">
+              <div className="v2-trust-data-item">
+                <Mail size={15} />
+                <div>
+                  <strong>Contact info</strong>
+                  <span>Email, phone (if provided), location</span>
+                </div>
+              </div>
+              <div className="v2-trust-data-item">
+                <CreditCard size={15} />
+                <div>
+                  <strong>Work history</strong>
+                  <span>Accepted jobs, records, and closeout data</span>
+                </div>
+              </div>
+              <div className="v2-trust-data-item">
+                <BadgeCheck size={15} />
+                <div>
+                  <strong>Safety certifications</strong>
+                  <span>Quiz results and earned certificates</span>
+                </div>
+              </div>
+              <div className="v2-trust-data-item">
+                <Star size={15} />
+                <div>
+                  <strong>Reputation signals</strong>
+                  <span>Shout-outs, badges, and reviews</span>
+                </div>
+              </div>
+            </div>
+            <div className="v2-trust-data-actions">
+              <button type="button" className="v2-secondary-button">
+                <Download size={15} />
+                Request data export
+              </button>
+              <button type="button" className="v2-secondary-button v2-trust-signout-btn" onClick={onLogout}>
+                <LogOut size={15} />
+                Sign out
+              </button>
+            </div>
+          </section>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section className="v2-profile-page" aria-label={view}>
       <PageHeader
         className="v2-profile-header"
         title={view}
         description={profileViewDescriptions[view] ?? brandConfig.tagline}
-        actions={view === "Trust & Legal" ? (
-          <div className="v2-profile-header-actions">
-            <button type="button" className="v2-primary-button" onClick={onReviewConsent}>
-              <ShieldCheck size={16} />
-              Review consent
-            </button>
-            <button type="button" className="v2-secondary-button" onClick={onLogout}>
-              <LogOut size={16} />
-              Sign out
-            </button>
-          </div>
-        ) : undefined}
       />
 
       <div className="v2-profile-grid">

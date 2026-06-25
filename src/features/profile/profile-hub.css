@@ -818,3 +818,106 @@
   gap: 10px;
   margin-top: 8px;
 }
+
+/* Quiz overlay — stronger scrim */
+.v2-quiz-overlay {
+  background: rgba(0, 0, 0, 0.88);
+  z-index: 9999;
+}
+
+/* Quiz option marker — reflects selection state */
+.v2-quiz-option.is-selected .v2-quiz-option-marker {
+  background: var(--v2-accent);
+  color: #fff;
+}
+
+.v2-quiz-option.is-correct .v2-quiz-option-marker {
+  background: #22c55e;
+  color: #fff;
+}
+
+.v2-quiz-option.is-wrong .v2-quiz-option-marker {
+  background: #ef4444;
+  color: #fff;
+}
+
+/* Trust & Legal page */
+.v2-trust-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+
+@media (max-width: 1040px) {
+  .v2-trust-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .v2-trust-data-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.v2-trust-status-card header strong.is-ready {
+  color: #22c55e;
+}
+
+.v2-trust-status-card header strong.is-pending {
+  color: #f59e0b;
+}
+
+.icon-success { color: #22c55e; }
+.icon-warn { color: #f59e0b; }
+
+.v2-trust-action {
+  padding-top: 4px;
+}
+
+.v2-trust-doc-link {
+  cursor: pointer;
+}
+
+.v2-trust-doc-link:hover span {
+  text-decoration: underline;
+}
+
+.v2-trust-data-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.v2-trust-data-item {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.v2-trust-data-item svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: var(--v2-text-muted);
+}
+
+.v2-trust-data-item strong {
+  display: block;
+  font-size: 13px;
+  font-weight: var(--v2-weight-strong);
+}
+
+.v2-trust-data-item span {
+  font-size: 12px;
+  color: var(--v2-text-muted);
+  line-height: 1.4;
+}
+
+.v2-trust-data-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.v2-trust-signout-btn {
+  color: var(--v2-text-muted);
+}
