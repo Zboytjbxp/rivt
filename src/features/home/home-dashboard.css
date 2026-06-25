@@ -619,6 +619,25 @@
   justify-items: end;
 }
 
+.v2-next-work-empty {
+  margin: 0;
+  padding: 20px 18px;
+  color: var(--v2-text-muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.v2-next-work-empty button {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--v2-accent);
+  font: inherit;
+  font-size: 13px;
+  font-weight: var(--v2-weight-strong);
+  cursor: pointer;
+}
+
 .v2-network-pulse > div > button {
   min-height: 70px;
 }

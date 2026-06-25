@@ -823,7 +823,7 @@ export function ProfileHub({
                   <div><strong>{session.deviceLabel}{session.current ? " · This device" : ""}</strong><span>Last active {new Date(session.lastSeenAt).toLocaleString()}</span></div>
                   {!session.current ? <button type="button" className="v2-secondary-button" onClick={() => void runAccountAction(() => onRevokeSession(session.id))}>Sign out</button> : null}
                 </article>
-              )) : <p className="v2-profile-note">No active device sessions were returned.</p>}
+              )) : <p className="v2-profile-note">Only this device is signed in.</p>}
             </div>
             {sessions.some((session) => !session.current) ? (
               <button type="button" className="v2-secondary-button v2-revoke-others" onClick={() => void runAccountAction(onRevokeOtherSessions)}>Sign out other devices</button>

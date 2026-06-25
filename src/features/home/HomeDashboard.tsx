@@ -298,7 +298,9 @@ export function HomeDashboard({
         <section className="v2-next-work">
           <header><div><h2>Next work</h2><p>Jobs ready for a decision.</p></div><button type="button" onClick={() => onNavigate("work")}>View all</button></header>
           <div className="v2-next-work-list">
-            {upcomingJobs.slice(0, 3).map((job) => (
+            {upcomingJobs.length === 0 ? (
+              <p className="v2-next-work-empty">No jobs waiting on a decision. <button type="button" onClick={() => onNavigate("work")}>Browse work</button></p>
+            ) : upcomingJobs.slice(0, 3).map((job) => (
               <button type="button" key={job.id} onClick={() => onOpenJob(job.id)}>
                 <span><small>{job.trade} - {job.location}</small><strong>{job.title}</strong></span>
                 <span><strong>{currency(job.pay)}</strong><small>{job.status}</small></span>
