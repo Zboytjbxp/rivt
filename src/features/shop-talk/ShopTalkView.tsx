@@ -743,8 +743,10 @@ export function ShopTalkView({
                       className="shop-news-card-main"
                       onClick={() => { setSelectedNewsId(item.id); setMobileDetail(true); }}
                     >
-                      <div className={newsThumbClassName("news-card-thumb", item)}>
-                        <img src={newsThumbnailUrl(item)} alt={`${item.source} article thumbnail`} loading="lazy" />
+                      <div className={newsThumbClassName("news-card-thumb", item)} data-urgency={item.urgency ?? "default"}>
+                        {!isFallbackNewsThumbnail(item) && (
+                          <img src={item.thumbnailUrl} alt={`${item.source} article thumbnail`} loading="lazy" />
+                        )}
                       </div>
                       <div className="news-card-body">
                         <div className="news-card-kicker">
@@ -930,7 +932,9 @@ export function ShopTalkView({
             {selectedNews ? (
               <div className="shop-news-detail">
                 <div className={newsThumbClassName("news-detail-hero", selectedNews)} data-urgency={selectedNews.urgency ?? "default"}>
-                  <img src={newsThumbnailUrl(selectedNews)} alt={`${selectedNews.source} article thumbnail`} loading="lazy" />
+                  {!isFallbackNewsThumbnail(selectedNews) && (
+                    <img src={selectedNews.thumbnailUrl} alt={`${selectedNews.source} article thumbnail`} loading="lazy" />
+                  )}
                   <div className="news-detail-hero-copy">
                     <span className="news-detail-source">{selectedNews.source}</span>
                     {selectedNews.urgency && <span className="news-urgency-pill">{selectedNews.urgency}</span>}
