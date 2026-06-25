@@ -87,9 +87,9 @@ export function InboxCenter({
         description="Server-owned job messages and notifications for accepted work."
         actions={
         <div className="v2-inbox-summary">
-          <MetricTile value={unreadThreads} label="unread messages" />
-          <MetricTile value={unreadNotifications.length} label="new updates" />
-          <MetricTile value={conversations.length} label="work threads" />
+          <MetricTile icon={<MessageCircle size={18} />} value={unreadThreads} label="unread messages" />
+          <MetricTile icon={<Bell size={18} />} value={unreadNotifications.length} label="new updates" />
+          <MetricTile icon={<Clock3 size={18} />} value={conversations.length} label="work threads" />
         </div>
         }
       />

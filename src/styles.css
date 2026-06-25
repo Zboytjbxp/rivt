@@ -83,6 +83,22 @@ body::selection {
 
 :root[data-theme="dark"] {
   color-scheme: dark;
+  /* Legacy variable dark-mode overrides — keeps old components themed correctly */
+  --bg: #0c1110;
+  --surface: #141918;
+  --surface-soft: #1a211f;
+  --text: #f2f5f6;
+  --muted: #a4b0ac;
+  --faint: #788681;
+  --border: rgba(242, 245, 246, 0.09);
+  --border-strong: rgba(242, 245, 246, 0.16);
+  --accent-soft: #392015;
+  --accent-deep: #ef8e5a;
+  --blue: #4d9fff;
+  --blue-soft: #0d2340;
+  --amber-soft: #372a17;
+  --danger-soft: #3b2020;
+  --topbar: rgba(20, 25, 24, 0.94);
 }
 
 button,

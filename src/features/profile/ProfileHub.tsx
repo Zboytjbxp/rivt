@@ -334,6 +334,13 @@ export function ProfileHub({
   onRevokeOtherSessions,
   onQuizComplete,
 }: ProfileHubProps) {
+  const [notificationPrefs, setNotificationPrefs] = useState({
+    jobMatches: true,
+    messages: true,
+    shoutOuts: true,
+    safetyUpdates: false,
+  });
+
   const [draft, setDraft] = useState<ProfileUpdateInput>({
     displayName: profile.displayName,
     headline: canonicalProfile?.headline ?? "",
@@ -588,6 +595,40 @@ export function ProfileHub({
               </div>
             </section>
           </>
+        ) : null}
+
+        {/* Notification preferences — Settings only */}
+        {view === "Settings" ? (
+          <section className="v2-profile-panel v2-profile-panel-wide v2-notification-prefs">
+            <header>
+              <span>Notifications</span>
+              <strong>What alerts you</strong>
+            </header>
+            <div className="v2-notif-pref-list">
+              {([
+                { key: "jobMatches" as const, label: "Job matches", detail: "New jobs that match your trades and service area" },
+                { key: "messages" as const, label: "Messages", detail: "New messages on active job threads" },
+                { key: "shoutOuts" as const, label: "Shout-outs", detail: "When someone leaves you a review" },
+                { key: "safetyUpdates" as const, label: "Safety updates", detail: "OSHA code changes relevant to your trades" },
+              ]).map(({ key, label, detail }) => (
+                <label key={key} className="v2-notif-pref-row">
+                  <div>
+                    <strong>{label}</strong>
+                    <span>{detail}</span>
+                  </div>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={notificationPrefs[key]}
+                    className={notificationPrefs[key] ? "v2-notif-toggle is-on" : "v2-notif-toggle"}
+                    onClick={() => setNotificationPrefs((prev) => ({ ...prev, [key]: !prev[key] }))}
+                  >
+                    <span aria-hidden="true" />
+                  </button>
+                </label>
+              ))}
+            </div>
+          </section>
         ) : null}
 
         {/* Sessions — Settings only */}

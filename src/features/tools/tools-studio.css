@@ -75,7 +75,7 @@
 .v2-tools-context-metric {
   justify-self: end;
   min-width: min(220px, 100%);
-  background: color-mix(in srgb, var(--v2-surface) 78%, transparent);
+  background: var(--v2-surface);
   text-align: right;
 }
 
