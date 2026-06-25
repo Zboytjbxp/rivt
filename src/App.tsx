@@ -360,12 +360,14 @@ function App() {
         listConversations(),
         listNotifications(),
       ]);
-      setInboxConversations(conversationRows);
-      setInboxNotifications(notificationRows.notifications);
+      const safeConversations = Array.isArray(conversationRows) ? conversationRows : [];
+      const safeNotifications = Array.isArray(notificationRows?.notifications) ? notificationRows.notifications : [];
+      setInboxConversations(safeConversations);
+      setInboxNotifications(safeNotifications);
       setSelectedConversationId((current) => (
-        current && conversationRows.some((conversation) => conversation.id === current)
+        current && safeConversations.some((conversation) => conversation.id === current)
           ? current
-          : conversationRows[0]?.id ?? null
+          : safeConversations[0]?.id ?? null
       ));
     } catch (error) {
       setInboxError(error instanceof Error ? error.message : "Inbox could not be loaded.");
@@ -382,7 +384,7 @@ function App() {
     setInboxError(null);
     try {
       const messages = await listConversationMessages(conversationId);
-      setInboxMessages(messages);
+      setInboxMessages(Array.isArray(messages) ? messages : []);
     } catch (error) {
       setInboxMessages([]);
       setInboxError(error instanceof Error ? error.message : "Messages could not be loaded.");

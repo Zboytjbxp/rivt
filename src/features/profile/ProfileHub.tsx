@@ -1,18 +1,20 @@
 import {
   BadgeCheck,
-  Bell,
   CheckCircle,
   CreditCard,
   GraduationCap,
   LogOut,
   Mail,
   MonitorSmartphone,
+  Moon,
   ShieldCheck,
   Sparkles,
   Star,
+  Sun,
   UserCheck,
   XCircle,
 } from "lucide-react";
+import { createPortal } from "react-dom";
 import { useState } from "react";
 import { brandConfig, type ThemeMode, type ThemePalette } from "../../brandConfig";
 import { tradeOptions } from "../../data";
@@ -148,7 +150,7 @@ function QuizModal({
     ? answers.filter((sel, i) => sel === quiz.questions[i].correctIndex).length
     : 0;
 
-  return (
+  return createPortal(
     <div className="v2-quiz-overlay" role="dialog" aria-modal="true">
       <div className="v2-quiz-modal">
         {result ? (
@@ -236,7 +238,8 @@ function QuizModal({
           </>
         )}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
@@ -382,21 +385,21 @@ export function ProfileHub({
     }));
   }
 
+  const profileViewDescriptions: Record<string, string> = {
+    "Safety & Training": "OSHA-aligned modules. Pass each quiz to earn a certificate.",
+    "Trust & Legal": "Consent, legal agreements, and your trust status.",
+    "Reviews": "Shout-outs and reputation from people you've worked with.",
+    "Settings": "Manage your account, profile, and preferences.",
+    "Feedback": "Share feedback to help improve RIVT.",
+  };
+
   if (view === "Safety & Training") {
     return (
       <section className="v2-profile-page" aria-label="Safety & Training">
         <PageHeader
           className="v2-profile-header"
           title="Safety & Training"
-          description="OSHA-aligned modules. Pass each quiz to earn a certificate."
-          actions={
-            <div className="v2-profile-header-actions">
-              <button type="button" className="v2-secondary-button" onClick={onLogout}>
-                <LogOut size={16} />
-                Sign out
-              </button>
-            </div>
-          }
+          description={profileViewDescriptions["Safety & Training"]}
         />
         <SafetyTrainingSection
           safetyQuizResults={safetyQuizResults}
@@ -412,19 +415,26 @@ export function ProfileHub({
       <PageHeader
         className="v2-profile-header"
         title={view}
-        description={brandConfig.tagline}
-        actions={
-        <div className="v2-profile-header-actions">
-          <button type="button" className="v2-primary-button" onClick={onReviewConsent}>
-            <ShieldCheck size={16} />
-            {trustReady ? "Review consent" : "Review consent"}
-          </button>
-          <button type="button" className="v2-secondary-button" onClick={onLogout}>
-            <LogOut size={16} />
-            Sign out
-          </button>
-        </div>
-        }
+        description={profileViewDescriptions[view] ?? brandConfig.tagline}
+        actions={view === "Trust & Legal" ? (
+          <div className="v2-profile-header-actions">
+            <button type="button" className="v2-primary-button" onClick={onReviewConsent}>
+              <ShieldCheck size={16} />
+              Review consent
+            </button>
+            <button type="button" className="v2-secondary-button" onClick={onLogout}>
+              <LogOut size={16} />
+              Sign out
+            </button>
+          </div>
+        ) : view === "Settings" ? (
+          <div className="v2-profile-header-actions">
+            <button type="button" className="v2-secondary-button" onClick={onLogout}>
+              <LogOut size={16} />
+              Sign out
+            </button>
+          </div>
+        ) : undefined}
       />
 
       <div className="v2-profile-grid">
@@ -448,7 +458,7 @@ export function ProfileHub({
             <strong>Basics and access</strong>
           </header>
           <div className="v2-profile-facts">
-            <MetricTile icon={<Mail size={16} />} value={profile.email} label="Email" />
+            <MetricTile icon={<Mail size={16} />} value={profile.email || "—"} label="Email" />
             <MetricTile icon={<CreditCard size={16} />} value={profile.plan} label="Plan" />
             <MetricTile icon={<UserCheck size={16} />} value={profile.authMethod} label="Signup method" />
             <MetricTile icon={<BadgeCheck size={16} />} value={trustReady ? "Ready" : "Needs review"} label="Trust" />
@@ -462,7 +472,7 @@ export function ProfileHub({
           </header>
           <div className="v2-profile-theme-row">
             <button type="button" className="v2-theme-toggle" onClick={onToggleTheme}>
-              <Bell size={16} />
+              {themeMode === "dark" ? <Moon size={16} /> : <Sun size={16} />}
               {themeMode === "dark" ? "Dark mode" : "Light mode"}
             </button>
             <div className="v2-theme-palettes">

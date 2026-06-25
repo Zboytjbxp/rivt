@@ -1369,7 +1369,7 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", onNavigate, 
     listActiveWork()
       .then((items) => {
         if (cancelled) return;
-        setActiveWork(items);
+        setActiveWork(Array.isArray(items) ? items : []);
       })
       .catch((error: unknown) => {
         if (!cancelled) setRecordsError(error instanceof Error ? error.message : "Could not load active work.");

@@ -617,7 +617,7 @@ export function WorkWorkspace({
               </footer>
             ) : null}
           </article>
-        ) : <div className="v2-work-detail-placeholder"><BriefcaseBusiness size={28} /><span>Select a job to review its scope.</span></div>}
+        ) : null}
       </div>
     </section>
   );

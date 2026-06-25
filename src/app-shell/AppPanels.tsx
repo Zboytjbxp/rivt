@@ -154,7 +154,7 @@ export function ActivityPanel({
             <article className="empty-panel-state">
               <Bell size={20} />
               <strong>No activity yet</strong>
-              <span>Post a job, send a message, or submit work and activity will appear here.</span>
+              <span>Use any feature in the app and activity will appear here.</span>
             </article>
           ) : items.map((item) => (
             <article key={item.id} className={item.unread ? "activity-item unread" : "activity-item"}>
@@ -222,7 +222,7 @@ export function AccountPanel({
         <div className="account-profile-card">
           <Avatar name={profile.displayName} size="lg" className="user-avatar" />
           <div>
-            <strong>{profile.organization}</strong>
+            <strong>{profile.organization || profile.displayName}</strong>
             <span>{profile.location}</span>
           </div>
         </div>
