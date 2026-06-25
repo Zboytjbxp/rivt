@@ -1981,7 +1981,7 @@ textarea:focus-visible {
 
 .quick-actions {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: 1fr auto;
   gap: 8px;
 }
 
@@ -1991,12 +1991,12 @@ textarea:focus-visible {
   justify-content: center;
   gap: 6px;
   min-height: 44px;
-  padding: 0 8px;
+  padding: 0 16px;
   border: 1px solid var(--border);
   border-radius: var(--v2-radius-md);
   background: var(--surface);
   color: var(--text);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: var(--v2-weight-bold);
   line-height: 1.1;
 }
@@ -2005,6 +2005,11 @@ textarea:focus-visible {
   border-color: rgba(255, 106, 0, 0.24);
   background: var(--accent-soft);
   color: var(--accent-deep);
+}
+
+.account-signout-btn {
+  color: var(--muted) !important;
+  font-size: 11px !important;
 }
 
 .activity-list {
@@ -2085,6 +2090,12 @@ textarea:focus-visible {
   font-weight: var(--v2-weight-strong);
 }
 
+.account-org-name {
+  font-size: 11px !important;
+  margin-top: 1px !important;
+  margin-bottom: -1px;
+}
+
 .account-stat-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2092,10 +2103,42 @@ textarea:focus-visible {
 }
 
 .account-stat-grid .info-item {
-  min-height: 74px;
+  min-height: 60px;
   border: 1px solid var(--border);
   border-radius: var(--v2-radius-lg);
   background: var(--surface);
+}
+
+.account-specialty-chips {
+  margin-top: 8px;
+}
+
+.account-standing {
+  border: 1px solid var(--border);
+  border-radius: var(--v2-radius-lg);
+  background: var(--surface-soft);
+  overflow: hidden;
+}
+
+.account-standing-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+}
+
+.account-standing-row + .account-standing-row {
+  border-top: 1px solid var(--border);
+}
+
+.account-standing-row > span {
+  flex-shrink: 0;
+  width: 68px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: var(--v2-weight-bold);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 .account-chip-row {
@@ -7133,8 +7176,6 @@ textarea:focus-visible {
     border-radius: 0;
   }
 
-  .quick-actions,
-  .account-stat-grid,
   .theme-palette-grid {
     grid-template-columns: 1fr;
   }
