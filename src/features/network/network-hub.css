@@ -264,7 +264,28 @@
   gap: 20px;
 }
 
-.v2-reviews-panel {}
+.v2-reviews-panel > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 18px 20px;
+  border-bottom: 1px solid color-mix(in srgb, var(--v2-border) 62%, transparent);
+  background: color-mix(in srgb, var(--v2-surface-muted) 26%, transparent);
+}
+
+.v2-reviews-panel > header span {
+  font-size: 10px;
+  font-weight: var(--v2-weight-bold);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--v2-text-muted);
+}
+
+.v2-reviews-panel > header h2 {
+  margin: 3px 0 0;
+  font-size: 15px;
+}
 
 .v2-reviews-panel-wide {
   grid-column: 1 / -1;
@@ -274,6 +295,11 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 14px;
+  padding: 20px;
+}
+
+.v2-reviews-list {
+  padding: 16px 20px;
 }
 
 .v2-review-form label {

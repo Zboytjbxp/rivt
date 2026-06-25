@@ -343,6 +343,10 @@ export function ProfileHub({
     safetyUpdates: false,
   });
 
+  const [feedbackCategory, setFeedbackCategory] = useState<string | null>(null);
+  const [feedbackMessage, setFeedbackMessage] = useState("");
+  const [feedbackSent, setFeedbackSent] = useState(false);
+
   const [draft, setDraft] = useState<ProfileUpdateInput>({
     displayName: profile.displayName,
     headline: canonicalProfile?.headline ?? "",
@@ -415,6 +419,80 @@ export function ProfileHub({
           safetyCertCount={safetyCertCount}
           onQuizComplete={onQuizComplete}
         />
+      </section>
+    );
+  }
+
+  function submitFeedback() {
+    if (!feedbackMessage.trim() || !feedbackCategory) return;
+    setFeedbackSent(true);
+    setFeedbackMessage("");
+    setFeedbackCategory(null);
+    setTimeout(() => setFeedbackSent(false), 4000);
+  }
+
+  if (view === "Feedback") {
+    return (
+      <section className="v2-profile-page" aria-label="Feedback">
+        <PageHeader
+          className="v2-profile-header"
+          title="Feedback"
+          description="Share what's working, what's confusing, and what you need next."
+        />
+        <div className="v2-feedback-layout">
+          <section className="v2-profile-panel v2-feedback-form-panel">
+            <header>
+              <span>Submit feedback</span>
+              <strong>What's on your mind?</strong>
+            </header>
+            <div className="v2-feedback-body">
+              <div className="v2-feedback-categories" role="group" aria-label="Feedback type">
+                {(["Bug", "Confusing", "Feature", "Pricing", "Other"] as const).map((cat) => (
+                  <button
+                    key={cat}
+                    type="button"
+                    className={feedbackCategory === cat ? "v2-feedback-cat is-selected" : "v2-feedback-cat"}
+                    onClick={() => setFeedbackCategory(cat)}
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
+              <textarea
+                className="v2-feedback-textarea"
+                value={feedbackMessage}
+                onChange={(e) => setFeedbackMessage(e.target.value.slice(0, 2000))}
+                rows={5}
+                placeholder="Describe the issue, feature request, or confusion in as much detail as you can. Real specifics help most."
+              />
+              <div className="v2-feedback-footer">
+                <span className={feedbackMessage.length > 1800 ? "v2-feedback-count is-near" : "v2-feedback-count"}>
+                  {2000 - feedbackMessage.length}
+                </span>
+                <button
+                  type="button"
+                  className="v2-primary-button"
+                  disabled={!feedbackMessage.trim() || !feedbackCategory}
+                  onClick={submitFeedback}
+                >
+                  {feedbackSent ? <><Sparkles size={15} /> Sent!</> : "Send feedback"}
+                </button>
+              </div>
+            </div>
+          </section>
+
+          <section className="v2-profile-panel v2-feedback-history-panel">
+            <header>
+              <span>Submission history</span>
+              <strong>{feedbackCount > 0 ? `${feedbackCount} note${feedbackCount === 1 ? "" : "s"} on file` : "Nothing submitted yet"}</strong>
+            </header>
+            <div className="v2-profile-list">
+              <article><Sparkles size={16} /><span>Beta feedback shapes future releases</span></article>
+              <article><ShieldCheck size={16} /><span>Notes are reviewed by the RIVT team</span></article>
+              <article><Mail size={16} /><span>Replies go to {profile.email || "your account email"}</span></article>
+            </div>
+          </section>
+        </div>
       </section>
     );
   }

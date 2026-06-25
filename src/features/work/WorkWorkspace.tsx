@@ -624,7 +624,13 @@ export function WorkWorkspace({
               </footer>
             ) : null}
           </article>
-        ) : null}
+        ) : (
+          <article className="v2-work-detail-placeholder">
+            <BriefcaseBusiness size={32} />
+            <strong>{role === "tradesperson" ? "Select a job to see details" : "Select a posting to review it"}</strong>
+            <span>{role === "tradesperson" ? "Tap any job to see scope, budget, and apply" : "Manage scope, applicants, and job status here"}</span>
+          </article>
+        )}
       </div>
     </section>
   );

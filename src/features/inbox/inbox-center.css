@@ -460,6 +460,11 @@
   .v2-inbox-message {
     max-width: 94%;
   }
+
+  /* Hide the "Select a thread" placeholder panel on mobile — only show it when a thread is actually selected */
+  .v2-inbox-panel-thread:has(.v2-inbox-empty-large) {
+    display: none;
+  }
 }
 
 @media (max-width: 480px) {

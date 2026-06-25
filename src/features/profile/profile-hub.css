@@ -921,3 +921,116 @@
 .v2-trust-signout-btn {
   color: var(--v2-text-muted);
 }
+
+/* Feedback page */
+.v2-feedback-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 0.6fr);
+  gap: 20px;
+}
+
+.v2-feedback-form-panel header,
+.v2-feedback-history-panel header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 18px 20px;
+  border-bottom: 1px solid color-mix(in srgb, var(--v2-border) 62%, transparent);
+  background: color-mix(in srgb, var(--v2-surface-muted) 26%, transparent);
+}
+
+.v2-feedback-form-panel header span,
+.v2-feedback-history-panel header span {
+  font-size: 10px;
+  font-weight: var(--v2-weight-bold);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--v2-text-muted);
+}
+
+.v2-feedback-form-panel header strong,
+.v2-feedback-history-panel header strong {
+  font-size: 15px;
+}
+
+.v2-feedback-body {
+  display: grid;
+  gap: 14px;
+  padding: 20px;
+}
+
+.v2-feedback-categories {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.v2-feedback-cat {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 0 14px;
+  border: 1.5px solid var(--v2-border);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--v2-text-muted);
+  font: inherit;
+  font-size: 13px;
+  font-weight: var(--v2-weight-strong);
+  transition: border-color 0.12s, background 0.12s, color 0.12s;
+}
+
+.v2-feedback-cat:hover {
+  border-color: var(--v2-accent);
+  color: var(--v2-text);
+}
+
+.v2-feedback-cat.is-selected {
+  border-color: var(--v2-accent);
+  background: var(--v2-accent-soft);
+  color: var(--v2-accent-deep, var(--v2-accent));
+}
+
+.v2-feedback-textarea {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1.5px solid var(--v2-border);
+  border-radius: var(--v2-radius-md);
+  background: var(--v2-surface-raised);
+  color: var(--v2-text);
+  font: inherit;
+  font-size: 14px;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.v2-feedback-textarea:focus {
+  outline: none;
+  border-color: var(--v2-accent);
+}
+
+.v2-feedback-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.v2-feedback-count {
+  font-size: 11px;
+  color: var(--v2-text-muted);
+  font-weight: var(--v2-weight-strong);
+  font-variant-numeric: tabular-nums;
+  transition: color 150ms;
+}
+
+.v2-feedback-count.is-near {
+  color: var(--v2-accent);
+}
+
+@media (max-width: 860px) {
+  .v2-feedback-layout {
+    grid-template-columns: 1fr;
+  }
+}
