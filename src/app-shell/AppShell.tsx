@@ -8,12 +8,14 @@ import {
   MessageCircle,
   Search,
   Users,
+  WifiOff,
   Wrench,
   X,
 } from "lucide-react";
 import type { AppShellProps, PrimaryDestination, SearchTarget } from "./types";
 import { Avatar } from "../components/ui";
 import { apiPath } from "../lib/api";
+import { useNetworkStatus } from "./useNetworkStatus";
 import "./tokens.css";
 import "./app-shell.css";
 
@@ -55,6 +57,7 @@ export function AppShell({
   onOpenActiveJob,
   onSearch,
 }: AppShellProps) {
+  const isOnline = useNetworkStatus();
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchValue, setSearchValue] = useState("");
   const [peopleResults, setPeopleResults] = useState<ProfileSearchResult[]>([]);
@@ -325,6 +328,13 @@ export function AppShell({
         ) : null}
 
         {isGuest ? guestBanner : null}
+
+        {!isOnline && (
+          <div className="v2-offline-banner" role="alert" aria-live="polite">
+            <WifiOff size={15} />
+            <span>No internet connection — some features may be unavailable</span>
+          </div>
+        )}
 
         <main id="main-content" className="v2-main">
           {children}

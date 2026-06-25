@@ -251,3 +251,137 @@
     padding: 10px 8px;
   }
 }
+
+/* Reviews view */
+.v2-reviews-page {
+  display: grid;
+  gap: 20px;
+}
+
+.v2-reviews-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.v2-reviews-panel {}
+
+.v2-reviews-panel-wide {
+  grid-column: 1 / -1;
+}
+
+.v2-review-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.v2-review-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--v2-text-muted);
+  font-weight: var(--v2-weight-strong);
+}
+
+.v2-review-form label.is-wide {
+  grid-column: 1 / -1;
+}
+
+.v2-review-form input,
+.v2-review-form textarea {
+  border: 1.5px solid var(--v2-border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 14px;
+  font-family: inherit;
+  background: var(--v2-bg);
+  color: var(--v2-text);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.v2-review-form input:focus,
+.v2-review-form textarea:focus {
+  outline: none;
+  border-color: var(--v2-accent);
+}
+
+.v2-review-form textarea { resize: vertical; }
+
+.v2-review-form-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.v2-review-sent {
+  font-size: 13px;
+  color: #16a34a;
+  font-weight: var(--v2-weight-strong);
+}
+
+.v2-reviews-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.v2-review-item {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--v2-border);
+  border-radius: 12px;
+  background: var(--v2-surface-raised);
+}
+
+.v2-review-item-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.v2-review-item-header > div {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.v2-review-item-header strong {
+  font-size: 14px;
+}
+
+.v2-review-item-header span {
+  font-size: 12px;
+  color: var(--v2-text-muted);
+}
+
+.v2-review-item p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--v2-text);
+}
+
+@media (max-width: 600px) {
+  .v2-reviews-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .v2-reviews-panel-wide {
+    grid-column: 1;
+  }
+
+  .v2-review-form {
+    grid-template-columns: 1fr;
+  }
+
+  .v2-review-form label.is-wide {
+    grid-column: 1;
+  }
+}

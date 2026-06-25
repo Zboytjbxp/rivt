@@ -1,11 +1,13 @@
 import {
   ArrowRight,
   MessageSquareText,
+  Send,
   ShieldCheck,
   Sparkles,
   Star,
   Users,
 } from "lucide-react";
+import { useState } from "react";
 import type { Job, Talent } from "../../types";
 import { Avatar, EmptyState, MetricTile, PageHeader, Panel } from "../../components/ui";
 import "./network-hub.css";
@@ -20,19 +22,24 @@ interface CommunityPost {
 
 interface ShoutOut {
   id: number;
+  from: string;
   to: string;
   trade: string;
   message: string;
+  createdAt: string;
 }
 
 interface NetworkHubProps {
+  view: "My Crew" | "Reviews";
   jobs: Job[];
   talent: Talent[];
   communityPosts: CommunityPost[];
   shoutOuts: ShoutOut[];
+  displayName: string;
   onOpenCrew: () => void;
   onOpenShopTalk: () => void;
   onOpenReviews: () => void;
+  onAddShoutOut: (to: string, trade: string, message: string) => void;
 }
 
 function TopTalentCard({ person }: { person: Talent }) {
@@ -70,11 +77,180 @@ function AnswerPrompt({ post }: { post: CommunityPost }) {
   );
 }
 
-export function NetworkHub({ jobs, talent, communityPosts, shoutOuts, onOpenCrew, onOpenShopTalk, onOpenReviews }: NetworkHubProps) {
+function ReviewsView({
+  shoutOuts,
+  displayName,
+  onAddShoutOut,
+  onOpenCrew,
+}: {
+  shoutOuts: ShoutOut[];
+  displayName: string;
+  onAddShoutOut: (to: string, trade: string, message: string) => void;
+  onOpenCrew: () => void;
+}) {
+  const [to, setTo] = useState("");
+  const [trade, setTrade] = useState("");
+  const [message, setMessage] = useState("");
+  const [submitted, setSubmitted] = useState(false);
+
+  const received = shoutOuts.filter((s) => s.to === displayName);
+  const given = shoutOuts.filter((s) => s.from === displayName);
+
+  function submit() {
+    if (!to.trim() || !message.trim()) return;
+    onAddShoutOut(to.trim(), trade.trim(), message.trim());
+    setTo("");
+    setTrade("");
+    setMessage("");
+    setSubmitted(true);
+    setTimeout(() => setSubmitted(false), 3000);
+  }
+
+  return (
+    <div className="v2-reviews-page">
+      <div className="v2-reviews-grid">
+        <Panel
+          className="v2-reviews-panel v2-reviews-panel-wide"
+          eyebrow="Write a review"
+          title="Shout out someone you worked with"
+        >
+          <div className="v2-review-form">
+            <label>
+              <span>Who are you reviewing?</span>
+              <input
+                value={to}
+                onChange={(e) => setTo(e.target.value)}
+                placeholder="Name or company"
+              />
+            </label>
+            <label>
+              <span>Trade / context</span>
+              <input
+                value={trade}
+                onChange={(e) => setTrade(e.target.value)}
+                placeholder="Electrical, roofing, general…"
+              />
+            </label>
+            <label className="is-wide">
+              <span>Your review</span>
+              <textarea
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                rows={3}
+                placeholder="What made them worth working with?"
+              />
+            </label>
+            <div className="v2-review-form-actions">
+              {submitted && <span className="v2-review-sent">Review posted!</span>}
+              <button
+                type="button"
+                className="v2-primary-button"
+                disabled={!to.trim() || !message.trim()}
+                onClick={submit}
+              >
+                <Send size={15} />
+                Post review
+              </button>
+            </div>
+          </div>
+        </Panel>
+
+        <Panel
+          className="v2-reviews-panel"
+          eyebrow={`${received.length} received`}
+          title="Reviews you've received"
+        >
+          {received.length ? (
+            <div className="v2-reviews-list">
+              {received.map((item) => (
+                <article key={item.id} className="v2-review-item">
+                  <div className="v2-review-item-header">
+                    <Avatar name={item.from} size="sm" />
+                    <div>
+                      <strong>{item.from}</strong>
+                      {item.trade && <span>{item.trade}</span>}
+                    </div>
+                  </div>
+                  <p>{item.message}</p>
+                </article>
+              ))}
+            </div>
+          ) : (
+            <EmptyState
+              className="v2-network-empty"
+              icon={<Star size={20} />}
+              title="No reviews yet"
+              description="Complete jobs and build connections. Reviews from contractors you've worked with will appear here."
+              action={<button type="button" onClick={onOpenCrew}>Find crew</button>}
+              compact
+            />
+          )}
+        </Panel>
+
+        <Panel
+          className="v2-reviews-panel"
+          eyebrow={`${given.length} given`}
+          title="Reviews you've written"
+        >
+          {given.length ? (
+            <div className="v2-reviews-list">
+              {given.map((item) => (
+                <article key={item.id} className="v2-review-item">
+                  <div className="v2-review-item-header">
+                    <Avatar name={item.to} size="sm" />
+                    <div>
+                      <strong>{item.to}</strong>
+                      {item.trade && <span>{item.trade}</span>}
+                    </div>
+                  </div>
+                  <p>{item.message}</p>
+                </article>
+              ))}
+            </div>
+          ) : (
+            <EmptyState
+              className="v2-network-empty"
+              icon={<Star size={20} />}
+              title="No reviews written yet"
+              description="Use the form above to write your first shout-out."
+              compact
+            />
+          )}
+        </Panel>
+      </div>
+    </div>
+  );
+}
+
+export function NetworkHub({ view, jobs, talent, communityPosts, shoutOuts, displayName, onOpenCrew, onOpenShopTalk, onOpenReviews, onAddShoutOut }: NetworkHubProps) {
   const activeCrew = talent.slice(0, 3);
   const questionPosts = communityPosts.filter((post) => post.flair === "Question" || post.status !== "Open").slice(0, 4);
   const highlightedShoutOuts = shoutOuts.slice(0, 4);
   const openJobs = jobs.filter((job) => job.status === "Open").length;
+
+  if (view === "Reviews") {
+    return (
+      <section className="v2-network-page" aria-label="Reviews">
+        <PageHeader
+          className="v2-network-header"
+          title="Reviews"
+          description="Shout-outs and reputation from people you've worked with."
+          actions={
+            <div className="v2-network-header-metrics">
+              <MetricTile value={shoutOuts.filter((s) => s.to === displayName).length} label="received" />
+              <MetricTile value={shoutOuts.filter((s) => s.from === displayName).length} label="given" />
+            </div>
+          }
+        />
+        <ReviewsView
+          shoutOuts={shoutOuts}
+          displayName={displayName}
+          onAddShoutOut={onAddShoutOut}
+          onOpenCrew={onOpenCrew}
+        />
+      </section>
+    );
+  }
 
   return (
     <section className="v2-network-page" aria-label="Crew">
@@ -116,10 +292,10 @@ export function NetworkHub({ jobs, talent, communityPosts, shoutOuts, onOpenCrew
           className="v2-network-panel"
           eyebrow="Shout-outs"
           title="Recent reputation signals"
-          action={<button type="button" onClick={onOpenShopTalk}>Open Shop Talk</button>}
+          action={<button type="button" onClick={onOpenReviews}>See all reviews</button>}
         >
           <div className="v2-network-shoutouts">
-            {highlightedShoutOuts.map((item) => (
+            {highlightedShoutOuts.length ? highlightedShoutOuts.map((item) => (
               <article key={item.id}>
                 <div>
                   <strong>{item.to}</strong>
@@ -127,7 +303,15 @@ export function NetworkHub({ jobs, talent, communityPosts, shoutOuts, onOpenCrew
                 </div>
                 <p>{item.message}</p>
               </article>
-            ))}
+            )) : (
+              <EmptyState
+                className="v2-network-empty"
+                icon={<Star size={20} />}
+                title="No shout-outs yet"
+                description="Shout-outs from jobs and Shop Talk will appear here."
+                compact
+              />
+            )}
           </div>
         </Panel>
 

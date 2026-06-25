@@ -12,6 +12,22 @@ export function useAppTheme() {
   const [themePalette, setThemePalette] = useState<ThemePalette>(readThemePalettePreference);
 
   useEffect(() => {
+    const mq = window.matchMedia?.("(prefers-color-scheme: dark)");
+    if (!mq) return;
+    function handleChange(event: MediaQueryListEvent) {
+      try {
+        if (!window.localStorage.getItem(THEME_STORAGE_KEY)) {
+          setThemeMode(event.matches ? "dark" : "light");
+        }
+      } catch {
+        setThemeMode(event.matches ? "dark" : "light");
+      }
+    }
+    mq.addEventListener("change", handleChange);
+    return () => mq.removeEventListener("change", handleChange);
+  }, []);
+
+  useEffect(() => {
     const root = document.documentElement;
     const theme = brandConfig.theme.modes[themeMode];
     const palette = brandConfig.theme.palettes[themePalette];

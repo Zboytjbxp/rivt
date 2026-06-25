@@ -2,6 +2,7 @@ import type { ThemeMode, ThemePalette, TrialPlan } from "../../brandConfig";
 import type { Role, Trade } from "../../types";
 import { useCallback, useEffect, useState } from "react";
 import { ProfileHub, type AccountSessionSummary, type ProfileUpdateInput } from "./ProfileHub";
+import type { SafetyQuizResult } from "./training-data";
 import { apiPath } from "../../lib/api";
 
 export type ProfileRouteView = "Trust & Legal" | "Safety & Training" | "Reviews" | "Feedback" | "Settings";
@@ -45,6 +46,7 @@ interface ProfileRouteProps {
   recordCount: number;
   trainingProgress: number;
   safetyCertCount: number;
+  safetyQuizResults: Record<string, SafetyQuizResult>;
   communityBadges: string[];
   shoutOutCount: number;
   feedbackCount: number;
@@ -57,6 +59,7 @@ interface ProfileRouteProps {
   onSetProfileVisibility: (visibility: "private" | "network") => Promise<void>;
   onCurrentSessionRevoked: () => void;
   onActivity: (title: string, detail: string, kind: "info" | "success" | "warning" | "error") => void;
+  onQuizComplete: (result: SafetyQuizResult) => void;
 }
 
 export function ProfileRoute({
@@ -68,6 +71,7 @@ export function ProfileRoute({
   recordCount,
   trainingProgress,
   safetyCertCount,
+  safetyQuizResults,
   communityBadges,
   shoutOutCount,
   feedbackCount,
@@ -80,6 +84,7 @@ export function ProfileRoute({
   onSetProfileVisibility,
   onCurrentSessionRevoked,
   onActivity,
+  onQuizComplete,
 }: ProfileRouteProps) {
   const [sessions, setSessions] = useState<AccountSessionSummary[]>([]);
 
@@ -158,6 +163,7 @@ export function ProfileRoute({
       recordCount={recordCount}
       trainingProgress={trainingProgress}
       safetyCertCount={safetyCertCount}
+      safetyQuizResults={safetyQuizResults}
       communityBadges={communityBadges}
       shoutOutCount={shoutOutCount}
       feedbackCount={feedbackCount}
@@ -171,6 +177,7 @@ export function ProfileRoute({
       onSetProfileVisibility={onSetProfileVisibility}
       onRevokeSession={revokeSession}
       onRevokeOtherSessions={revokeOtherSessions}
+      onQuizComplete={onQuizComplete}
     />
   );
 }

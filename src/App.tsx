@@ -163,12 +163,12 @@ function App() {
   const [completedTraining] = useState<Set<string>>(
     () => new Set(["Customer-site conduct"]),
   );
-  const [safetyQuizResults] = useState<Record<string, SafetyQuizResult>>({});
+  const [safetyQuizResults, setSafetyQuizResults] = useState<Record<string, SafetyQuizResult>>({});
   const [feedbackItems] = useState<FeedbackItem[]>([]);
   const [paymentRecords] = useState<PaymentRecord[]>([]);
   const [communityPosts, setCommunityPosts] = useState<CommunityPost[]>(communityPromptPosts);
   const [, setCommunityReports] = useState<CommunityReport[]>([]);
-  const [shoutOuts] = useState<ShoutOut[]>([]);
+  const [shoutOuts, setShoutOuts] = useState<ShoutOut[]>([]);
   const {
     handleSelectThemePalette,
     handleToggleTheme,
@@ -404,6 +404,39 @@ function App() {
     }, 0);
     return () => window.clearTimeout(timeout);
   }, [activeView, reloadInbox]);
+
+  // Poll inbox every 30 seconds while authenticated
+  useEffect(() => {
+    if (!authUser || !onboardingComplete) return;
+    const interval = window.setInterval(() => { void reloadInbox(); }, 30000);
+    return () => window.clearInterval(interval);
+  }, [authUser, onboardingComplete, reloadInbox]);
+
+  // Request browser notification permission when user visits Messages
+  useEffect(() => {
+    if (activeView !== "Messages") return;
+    if ("Notification" in window && Notification.permission === "default") {
+      void Notification.requestPermission();
+    }
+  }, [activeView]);
+
+  // Show browser notification on new unread inbox messages
+  const prevUnreadRef = useRef(0);
+  useEffect(() => {
+    const unread = inboxConversations.reduce((sum, c) => sum + c.unreadCount, 0);
+    if (
+      unread > prevUnreadRef.current &&
+      "Notification" in window &&
+      Notification.permission === "granted" &&
+      activeView !== "Messages"
+    ) {
+      new Notification("RIVT — new message", {
+        body: `You have ${unread} unread message${unread === 1 ? "" : "s"}`,
+        icon: "/favicon.ico",
+      });
+    }
+    prevUnreadRef.current = unread;
+  }, [inboxConversations, activeView]);
 
   useEffect(() => {
     const timeout = window.setTimeout(() => {
@@ -910,6 +943,33 @@ function App() {
     }
   }
 
+  function handleQuizComplete(result: SafetyQuizResult) {
+    setSafetyQuizResults((prev) => ({ ...prev, [result.quizId]: result }));
+    const quiz = safetyQuizData.find((q) => q.id === result.quizId);
+    addActivity(
+      result.passed ? "Safety cert earned" : "Quiz complete",
+      result.passed
+        ? `You passed ${quiz?.title ?? result.quizId}. Certificate added to your safety record.`
+        : `Score: ${result.score}%. You need 80% to earn the certificate. Try again.`,
+      result.passed ? "success" : "info",
+    );
+  }
+
+  function handleAddShoutOut(to: string, trade: string, message: string) {
+    setShoutOuts((prev) => [
+      ...prev,
+      {
+        id: Date.now(),
+        from: accountProfile.displayName || "RIVT member",
+        to,
+        trade: (trade || "General trades") as ShoutOut["trade"],
+        message,
+        createdAt: new Date().toISOString(),
+      },
+    ]);
+    addActivity("Review posted", `Your shout-out for ${to} is now part of their crew record.`, "success");
+  }
+
   function handleExitGuest() {
     setIsGuest(false);
     setJobs([]);
@@ -1117,13 +1177,16 @@ function App() {
           />
         ) : ["My Crew", "Reviews"].includes(activeView) ? (
           <NetworkHub
+            view={activeView as "My Crew" | "Reviews"}
             jobs={jobs}
             talent={matchingTalent}
             communityPosts={communityPosts}
             shoutOuts={shoutOuts}
+            displayName={accountProfile.displayName}
             onOpenCrew={() => handleNavigate("My Crew")}
             onOpenShopTalk={() => handleNavigate("Shop Talk")}
             onOpenReviews={() => handleNavigate("Reviews")}
+            onAddShoutOut={handleAddShoutOut}
           />
         ) : activeView === "Messages" ? (
           <InboxCenter
@@ -1162,6 +1225,7 @@ function App() {
             recordCount={uploadedRecords.size}
             trainingProgress={Math.round((completedTraining.size / trainingModules.length) * 100)}
             safetyCertCount={Object.values(safetyQuizResults).filter((result) => result.passed).length}
+            safetyQuizResults={safetyQuizResults}
             communityBadges={communityBadgeLabels(communityPosts, accountProfile.displayName)}
             shoutOutCount={
               shoutOuts.filter(
@@ -1180,6 +1244,7 @@ function App() {
             onSetProfileVisibility={handleSetProfileVisibility}
             onCurrentSessionRevoked={handleCurrentSessionRevoked}
             onActivity={addActivity}
+            onQuizComplete={handleQuizComplete}
           />
         ) : activeView === "Admin" ? (
           <section className="v2-profile-page" aria-label="Admin access">
