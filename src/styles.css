@@ -1980,23 +1980,23 @@ textarea:focus-visible {
 }
 
 .quick-actions {
-  display: grid;
-  grid-template-columns: 1fr auto;
+  display: flex;
   gap: 8px;
 }
 
 .quick-actions button {
   display: inline-flex;
+  flex: 1;
   align-items: center;
   justify-content: center;
   gap: 6px;
   min-height: 44px;
-  padding: 0 16px;
+  padding: 0 12px;
   border: 1px solid var(--border);
   border-radius: var(--v2-radius-md);
   background: var(--surface);
   color: var(--text);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: var(--v2-weight-bold);
   line-height: 1.1;
 }
@@ -2008,6 +2008,7 @@ textarea:focus-visible {
 }
 
 .account-signout-btn {
+  flex: 0 0 auto !important;
   color: var(--muted) !important;
   font-size: 11px !important;
 }
@@ -5394,6 +5395,45 @@ textarea:focus-visible {
   padding: 11px 12px;
   font-size: 13px;
   line-height: 1.45;
+}
+
+.answer-composer-byline {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.answer-trade-tag {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent-deep);
+  font-size: 11px;
+  font-weight: var(--v2-weight-bold);
+}
+
+.answer-composer-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.answer-char-count {
+  font-size: 11px;
+  color: var(--muted);
+  font-weight: var(--v2-weight-strong);
+  font-variant-numeric: tabular-nums;
+  transition: color 150ms;
+}
+
+.answer-char-count.is-near-limit {
+  color: var(--accent-deep);
 }
 
 .answer-card {

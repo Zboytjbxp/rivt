@@ -722,15 +722,8 @@
 
 @media (max-width: 480px) {
   .v2-home-header .v2-primary-button {
-    width: 44px;
-    padding: 0;
-    overflow: hidden;
-    color: transparent;
-    font-size: 0;
-  }
-
-  .v2-home-header .v2-primary-button svg {
-    color: #ffffff;
+    padding: 0 14px;
+    font-size: 12px;
   }
 
   .v2-daily-signal-grid {

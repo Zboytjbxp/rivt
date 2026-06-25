@@ -1,10 +1,12 @@
 import {
   ArrowRight,
+  Briefcase,
   MessageSquareText,
   Send,
   ShieldCheck,
   Sparkles,
   Star,
+  ThumbsUp,
   Users,
 } from "lucide-react";
 import { useState } from "react";
@@ -237,8 +239,8 @@ export function NetworkHub({ view, jobs, talent, communityPosts, shoutOuts, disp
           description="Shout-outs and reputation from people you've worked with."
           actions={
             <div className="v2-network-header-metrics">
-              <MetricTile value={shoutOuts.filter((s) => s.to === displayName).length} label="received" />
-              <MetricTile value={shoutOuts.filter((s) => s.from === displayName).length} label="given" />
+              <MetricTile icon={<Star size={18} />} value={shoutOuts.filter((s) => s.to === displayName).length} label="received" />
+              <MetricTile icon={<ThumbsUp size={18} />} value={shoutOuts.filter((s) => s.from === displayName).length} label="given" />
             </div>
           }
         />
@@ -260,9 +262,9 @@ export function NetworkHub({ view, jobs, talent, communityPosts, shoutOuts, disp
         description="Trusted connections and reputation."
         actions={
         <div className="v2-network-header-metrics">
-          <MetricTile value={activeCrew.length} label="crew members" />
-          <MetricTile value={openJobs} label="open jobs" />
-          <MetricTile value={shoutOuts.length} label="shout-outs" />
+          <MetricTile icon={<Users size={18} />} value={activeCrew.length} label="crew members" />
+          <MetricTile icon={<Briefcase size={18} />} value={openJobs} label="open jobs" />
+          <MetricTile icon={<ThumbsUp size={18} />} value={shoutOuts.length} label="shout-outs" />
         </div>
         }
       />

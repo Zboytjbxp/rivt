@@ -249,6 +249,16 @@
   text-transform: uppercase;
 }
 
+.v2-work-end-of-feed {
+  padding: 18px 16px;
+  text-align: center;
+  color: var(--v2-text-subtle);
+  font-size: 11px;
+  font-weight: var(--v2-weight-strong);
+  letter-spacing: 0.03em;
+  border-top: 1px solid color-mix(in srgb, var(--v2-border) 60%, transparent);
+}
+
 .v2-job-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;

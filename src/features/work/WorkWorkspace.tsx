@@ -461,9 +461,16 @@ export function WorkWorkspace({
       <div className={mobileDetailOpen ? "v2-work-layout show-detail" : "v2-work-layout"}>
         <section className="v2-work-list" aria-label={`${visibleJobs.length} jobs`}>
           <div className="v2-work-list-heading"><span>{visibleJobs.length} {visibleJobs.length === 1 ? "job" : "jobs"}</span><small>{role === "contractor" ? `${contractorSection} postings` : "Open work"}</small></div>
-          {loading ? <JobListSkeleton /> : visibleJobs.length ? visibleJobs.map((job) => (
-            <JobRow key={job.id} job={job} role={role} selected={detailJob?.id === job.id} onSelect={() => selectJob(job.id)} />
-          )) : <WorkEmptyState role={role} section={contractorSection} onPostJob={onPostJob} />}
+          {loading ? <JobListSkeleton /> : visibleJobs.length ? (
+            <>
+              {visibleJobs.map((job) => (
+                <JobRow key={job.id} job={job} role={role} selected={detailJob?.id === job.id} onSelect={() => selectJob(job.id)} />
+              ))}
+              <div className="v2-work-end-of-feed">
+                {role === "tradesperson" ? "That's all open work in your area" : `All ${contractorSection.toLowerCase()} postings shown`}
+              </div>
+            </>
+          ) : <WorkEmptyState role={role} section={contractorSection} onPostJob={onPostJob} />}
         </section>
 
         {detailJob ? (

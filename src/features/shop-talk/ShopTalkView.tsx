@@ -837,9 +837,12 @@ export function ShopTalkView({
               </div>
 
               <section className="answer-composer">
-                <div>
-                  <span>Answer as {profile.displayName}</span>
-                  <strong>{profileBadges.length ? profileBadges.join(", ") : "New contributor"}</strong>
+                <div className="answer-composer-byline">
+                  <div>
+                    <span>Answer as {profile.displayName}</span>
+                    <strong>{profileBadges.length ? profileBadges.join(", ") : "New contributor"}</strong>
+                  </div>
+                  <span className="answer-trade-tag">{selectedPost.trade}</span>
                 </div>
                 <div className="answer-guidance-card">
                   <strong>Good answers get specific.</strong>
@@ -847,14 +850,19 @@ export function ShopTalkView({
                 </div>
                 <textarea
                   value={answerDraft}
-                  onChange={(e) => setAnswerDraft(e.target.value)}
+                  onChange={(e) => setAnswerDraft(e.target.value.slice(0, 1000))}
                   rows={4}
                   placeholder="Share the field habit, safety check, tool setup, or closeout proof that would prevent a callback."
                 />
-                <button type="button" className="primary-action" onClick={submitAnswer} disabled={!answerDraft.trim()}>
-                  <Send size={17} />
-                  Post answer
-                </button>
+                <div className="answer-composer-footer">
+                  <span className={answerDraft.length > 900 ? "answer-char-count is-near-limit" : "answer-char-count"}>
+                    {1000 - answerDraft.length}
+                  </span>
+                  <button type="button" className="primary-action" onClick={submitAnswer} disabled={!answerDraft.trim()}>
+                    <Send size={17} />
+                    Post answer
+                  </button>
+                </div>
               </section>
 
               <section className="answer-list" aria-label="Community answers">
