@@ -427,13 +427,6 @@ export function ProfileHub({
               Sign out
             </button>
           </div>
-        ) : view === "Settings" ? (
-          <div className="v2-profile-header-actions">
-            <button type="button" className="v2-secondary-button" onClick={onLogout}>
-              <LogOut size={16} />
-              Sign out
-            </button>
-          </div>
         ) : undefined}
       />
 
@@ -465,93 +458,7 @@ export function ProfileHub({
           </div>
         </section>
 
-        <section className="v2-profile-panel">
-          <header>
-            <span>Themes</span>
-            <strong>Tool-inspired appearance</strong>
-          </header>
-          <div className="v2-profile-theme-row">
-            <button type="button" className="v2-theme-toggle" onClick={onToggleTheme}>
-              {themeMode === "dark" ? <Moon size={16} /> : <Sun size={16} />}
-              {themeMode === "dark" ? "Dark mode" : "Light mode"}
-            </button>
-            <div className="v2-theme-palettes">
-              {themePaletteOrder.map((palette) => (
-                <button
-                  key={palette}
-                  type="button"
-                  className={palette === themePalette ? "is-selected" : ""}
-                  onClick={() => onSelectThemePalette(palette)}
-                  aria-label={`Use ${brandConfig.theme.palettes[palette].label} theme`}
-                >
-                  <span aria-hidden="true" style={{ background: `linear-gradient(135deg, ${brandConfig.theme.palettes[palette].swatches[0]}, ${brandConfig.theme.palettes[palette].swatches[1]})` }} />
-                </button>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <section className="v2-profile-panel">
-          <header>
-            <span>Trust</span>
-            <strong>Readiness and records</strong>
-          </header>
-          <div className="v2-profile-list">
-            <article><ShieldCheck size={16} /><span>Consent {trustReady ? "ready" : "pending"}</span></article>
-            <article><CreditCard size={16} /><span>{recordCount} records saved</span></article>
-            <article><Sparkles size={16} /><span>{communityBadges.length} community badge{communityBadges.length === 1 ? "" : "s"}</span></article>
-          </div>
-        </section>
-
-        <section className="v2-profile-panel">
-          <header>
-            <span>Training</span>
-            <strong>Safety and proof</strong>
-          </header>
-          <div className="v2-profile-list">
-            <article><GraduationCap size={16} /><span>{trainingProgress}% complete</span></article>
-            <article><BadgeCheck size={16} /><span>{safetyCertCount} safety module{safetyCertCount === 1 ? "" : "s"}</span></article>
-            <article><Star size={16} /><span>{shoutOutCount} shout-out{shoutOutCount === 1 ? "" : "s"}</span></article>
-          </div>
-        </section>
-
-        <section className="v2-profile-panel v2-profile-panel-wide">
-          <header>
-            <span>Community</span>
-            <strong>Profile signals</strong>
-          </header>
-          <div className="v2-profile-badge-row">
-            {communityBadges.length ? communityBadges.map((badge) => <span key={badge}>{badge}</span>) : <span>New contributor</span>}
-          </div>
-          {feedbackCount > 0 ? (
-            <p className="v2-profile-note">{feedbackCount} beta feedback note{feedbackCount === 1 ? "" : "s"}.</p>
-          ) : null}
-        </section>
-
-        <section className="v2-profile-panel v2-profile-panel-wide v2-profile-reputation">
-          <header>
-            <span>Reputation momentum</span>
-            <strong>Proof that follows the work</strong>
-          </header>
-          <div className="v2-profile-reputation-grid">
-            <article>
-              <Star size={18} />
-              <strong>{shoutOutCount} shout-out{shoutOutCount === 1 ? "" : "s"}</strong>
-              <span>Peer proof</span>
-            </article>
-            <article>
-              <Sparkles size={18} />
-              <strong>{communityBadges.length || "No"} badge{communityBadges.length === 1 ? "" : "s"}</strong>
-              <span>Community</span>
-            </article>
-            <article>
-              <CreditCard size={18} />
-              <strong>{recordCount} saved record{recordCount === 1 ? "" : "s"}</strong>
-              <span>Work history</span>
-            </article>
-          </div>
-        </section>
-
+        {/* Profile editor — near top in Settings so it's immediately reachable */}
         {view === "Settings" && canonicalProfile ? (
           <section className="v2-profile-panel v2-profile-panel-wide v2-profile-editor">
             <header>
@@ -587,9 +494,103 @@ export function ProfileHub({
                 {actionState === "saving" ? "Saving..." : "Save profile"}
               </button>
             </div>
+            {actionMessage ? <p className={`v2-profile-action-message is-${actionState}`} role="status">{actionMessage}</p> : null}
           </section>
         ) : null}
 
+        <section className="v2-profile-panel">
+          <header>
+            <span>Themes</span>
+            <strong>Tool-inspired appearance</strong>
+          </header>
+          <div className="v2-profile-theme-row">
+            <button type="button" className="v2-theme-toggle" onClick={onToggleTheme}>
+              {themeMode === "dark" ? <Moon size={16} /> : <Sun size={16} />}
+              {themeMode === "dark" ? "Dark mode" : "Light mode"}
+            </button>
+            <div className="v2-theme-palettes">
+              {themePaletteOrder.map((palette) => (
+                <button
+                  key={palette}
+                  type="button"
+                  className={palette === themePalette ? "is-selected" : ""}
+                  onClick={() => onSelectThemePalette(palette)}
+                  aria-label={`Use ${brandConfig.theme.palettes[palette].label} theme`}
+                >
+                  <span aria-hidden="true" style={{ background: `linear-gradient(135deg, ${brandConfig.theme.palettes[palette].swatches[0]}, ${brandConfig.theme.palettes[palette].swatches[1]})` }} />
+                </button>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Trust / Training / Community / Reputation — shown on their own views, not cluttering Settings */}
+        {view !== "Settings" ? (
+          <>
+            <section className="v2-profile-panel">
+              <header>
+                <span>Trust</span>
+                <strong>Readiness and records</strong>
+              </header>
+              <div className="v2-profile-list">
+                <article><ShieldCheck size={16} /><span>Consent {trustReady ? "ready" : "pending"}</span></article>
+                <article><CreditCard size={16} /><span>{recordCount} records saved</span></article>
+                <article><Sparkles size={16} /><span>{communityBadges.length} community badge{communityBadges.length === 1 ? "" : "s"}</span></article>
+              </div>
+            </section>
+
+            <section className="v2-profile-panel">
+              <header>
+                <span>Training</span>
+                <strong>Safety and proof</strong>
+              </header>
+              <div className="v2-profile-list">
+                <article><GraduationCap size={16} /><span>{trainingProgress}% complete</span></article>
+                <article><BadgeCheck size={16} /><span>{safetyCertCount} safety module{safetyCertCount === 1 ? "" : "s"}</span></article>
+                <article><Star size={16} /><span>{shoutOutCount} shout-out{shoutOutCount === 1 ? "" : "s"}</span></article>
+              </div>
+            </section>
+
+            <section className="v2-profile-panel v2-profile-panel-wide">
+              <header>
+                <span>Community</span>
+                <strong>Profile signals</strong>
+              </header>
+              <div className="v2-profile-badge-row">
+                {communityBadges.length ? communityBadges.map((badge) => <span key={badge}>{badge}</span>) : <span>New contributor</span>}
+              </div>
+              {feedbackCount > 0 ? (
+                <p className="v2-profile-note">{feedbackCount} beta feedback note{feedbackCount === 1 ? "" : "s"}.</p>
+              ) : null}
+            </section>
+
+            <section className="v2-profile-panel v2-profile-panel-wide v2-profile-reputation">
+              <header>
+                <span>Reputation momentum</span>
+                <strong>Proof that follows the work</strong>
+              </header>
+              <div className="v2-profile-reputation-grid">
+                <article>
+                  <Star size={18} />
+                  <strong>{shoutOutCount} shout-out{shoutOutCount === 1 ? "" : "s"}</strong>
+                  <span>Peer proof</span>
+                </article>
+                <article>
+                  <Sparkles size={18} />
+                  <strong>{communityBadges.length || "No"} badge{communityBadges.length === 1 ? "" : "s"}</strong>
+                  <span>Community</span>
+                </article>
+                <article>
+                  <CreditCard size={18} />
+                  <strong>{recordCount} saved record{recordCount === 1 ? "" : "s"}</strong>
+                  <span>Work history</span>
+                </article>
+              </div>
+            </section>
+          </>
+        ) : null}
+
+        {/* Sessions — Settings only */}
         {view === "Settings" ? (
           <section className="v2-profile-panel v2-profile-panel-wide v2-profile-sessions">
             <header>
@@ -608,7 +609,21 @@ export function ProfileHub({
             {sessions.some((session) => !session.current) ? (
               <button type="button" className="v2-secondary-button v2-revoke-others" onClick={() => void runAccountAction(onRevokeOtherSessions)}>Sign out other devices</button>
             ) : null}
-            {actionMessage ? <p className={`v2-profile-action-message is-${actionState}`} role="status">{actionMessage}</p> : null}
+            {actionMessage && !canonicalProfile ? <p className={`v2-profile-action-message is-${actionState}`} role="status">{actionMessage}</p> : null}
+          </section>
+        ) : null}
+
+        {/* Sign out — at the bottom of Settings so it's available but not the first thing you see */}
+        {view === "Settings" ? (
+          <section className="v2-profile-panel v2-profile-panel-wide v2-settings-signout-section">
+            <div>
+              <strong>Sign out</strong>
+              <span>You'll be signed out of this session on this device.</span>
+            </div>
+            <button type="button" className="v2-secondary-button" onClick={onLogout}>
+              <LogOut size={16} />
+              Sign out
+            </button>
           </section>
         ) : null}
       </div>

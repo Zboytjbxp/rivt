@@ -355,6 +355,28 @@
   color: #c43d3d;
 }
 
+.v2-settings-signout-section {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 20px;
+}
+
+.v2-settings-signout-section > div {
+  display: grid;
+  gap: 3px;
+}
+
+.v2-settings-signout-section > div > strong {
+  font-size: 14px;
+}
+
+.v2-settings-signout-section > div > span {
+  color: var(--v2-text-muted);
+  font-size: 12px;
+}
+
 @media (max-width: 1040px) {
   .v2-profile-grid {
     grid-template-columns: 1fr;
