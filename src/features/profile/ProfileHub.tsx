@@ -3,10 +3,12 @@ import {
   CheckCircle,
   CreditCard,
   Download,
+  Eye,
   FileText,
   GraduationCap,
   LogOut,
   Mail,
+  Monitor,
   MonitorSmartphone,
   Moon,
   ShieldCheck,
@@ -19,6 +21,7 @@ import {
 import { createPortal } from "react-dom";
 import { useState } from "react";
 import { brandConfig, type ThemeMode, type ThemePalette } from "../../brandConfig";
+import type { ThemeSource } from "../../app-shell/useAppTheme";
 import { tradeOptions } from "../../data";
 import type { Role, Trade } from "../../types";
 import { Avatar, MetricTile, PageHeader } from "../../components/ui";
@@ -78,8 +81,10 @@ interface ProfileHubProps {
   shoutOutCount: number;
   feedbackCount: number;
   themeMode: ThemeMode;
+  themeSource: ThemeSource;
   themePalette: ThemePalette;
   onToggleTheme: () => void;
+  onSetThemeSource: (source: ThemeSource) => void;
   onSelectThemePalette: (palette: ThemePalette) => void;
   onReviewConsent: () => void;
   onLogout: () => void;
@@ -325,8 +330,10 @@ export function ProfileHub({
   shoutOutCount,
   feedbackCount,
   themeMode,
+  themeSource,
   themePalette,
   onToggleTheme,
+  onSetThemeSource,
   onSelectThemePalette,
   onReviewConsent,
   onLogout,
@@ -342,6 +349,7 @@ export function ProfileHub({
     shoutOuts: true,
     safetyUpdates: false,
   });
+  const [showPreview, setShowPreview] = useState(false);
 
   const [feedbackCategory, setFeedbackCategory] = useState<string | null>(null);
   const [feedbackMessage, setFeedbackMessage] = useState("");
@@ -672,6 +680,9 @@ export function ProfileHub({
                 <strong>{canonicalProfile.emailVerified ? "Email verified" : "Email verification pending"}</strong>
                 <span>{canonicalProfile.visibility === "network" ? "Visible to the RIVT network" : "Private until you publish"}</span>
               </div>
+              <button type="button" className="v2-secondary-button" onClick={() => setShowPreview(true)}>
+                <Eye size={15} /> Preview
+              </button>
               <button type="button" className="v2-secondary-button" onClick={() => void runAccountAction(() => onSetProfileVisibility(canonicalProfile.visibility === "network" ? "private" : "network"))}>
                 {canonicalProfile.visibility === "network" ? "Make private" : "Publish profile"}
               </button>
@@ -689,10 +700,23 @@ export function ProfileHub({
             <strong>Tool-inspired appearance</strong>
           </header>
           <div className="v2-profile-theme-row">
-            <button type="button" className="v2-theme-toggle" onClick={onToggleTheme}>
-              {themeMode === "dark" ? <Moon size={16} /> : <Sun size={16} />}
-              {themeMode === "dark" ? "Dark mode" : "Light mode"}
-            </button>
+            <div className="v2-theme-source-group" role="group" aria-label="Theme mode">
+              {(["system", "light", "dark"] as ThemeSource[]).map((src) => {
+                const Icon = src === "system" ? Monitor : src === "light" ? Sun : Moon;
+                return (
+                  <button
+                    key={src}
+                    type="button"
+                    className={themeSource === src ? "v2-theme-source-btn is-active" : "v2-theme-source-btn"}
+                    aria-pressed={themeSource === src}
+                    onClick={() => onSetThemeSource(src)}
+                  >
+                    <Icon size={14} />
+                    {src.charAt(0).toUpperCase() + src.slice(1)}
+                  </button>
+                );
+              })}
+            </div>
             <div className="v2-theme-palettes">
               {themePaletteOrder.map((palette) => (
                 <button
@@ -846,6 +870,43 @@ export function ProfileHub({
           </section>
         ) : null}
       </div>
+
+      {showPreview && createPortal(
+        <div className="v2-profile-preview-backdrop" onClick={() => setShowPreview(false)} role="dialog" aria-modal="true" aria-label="Public profile preview">
+          <div className="v2-profile-preview-card" onClick={(e) => e.stopPropagation()}>
+            <header className="v2-profile-preview-header">
+              <span>Public profile preview</span>
+              <button type="button" className="v2-profile-preview-close" onClick={() => setShowPreview(false)} aria-label="Close preview">✕</button>
+            </header>
+            <div className="v2-profile-preview-hero">
+              <Avatar name={profile.displayName || profile.organization || "RIVT member"} size="lg" className="v2-profile-preview-avatar" />
+              <div>
+                <h2>{profile.displayName || profile.organization}</h2>
+                {canonicalProfile?.headline && <p className="v2-profile-preview-headline">{canonicalProfile.headline}</p>}
+                <span className="v2-profile-preview-location">{profile.location || canonicalProfile?.serviceAreaCity}</span>
+              </div>
+            </div>
+            {canonicalProfile?.bio && <p className="v2-profile-preview-bio">{canonicalProfile.bio}</p>}
+            <div className="v2-profile-preview-stats">
+              <div><strong>{shoutOutCount}</strong><span>Shout-outs</span></div>
+              <div><strong>{safetyCertCount}</strong><span>Certs</span></div>
+              <div><strong>{recordCount}</strong><span>Records</span></div>
+            </div>
+            {profile.specialties.length ? (
+              <div className="v2-profile-preview-trades">
+                {profile.specialties.map((t) => <span key={t}>{t}</span>)}
+              </div>
+            ) : null}
+            {communityBadges.length ? (
+              <div className="v2-profile-preview-badges">
+                {communityBadges.map((b) => <span key={b}>{b}</span>)}
+              </div>
+            ) : null}
+            <p className="v2-profile-preview-note">This is how contractors see your profile when it's published to the RIVT network.</p>
+          </div>
+        </div>,
+        document.body,
+      )}
     </section>
   );
 }

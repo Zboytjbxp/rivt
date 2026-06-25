@@ -199,6 +199,7 @@ export function WorkWorkspace({
   const [matchOffers, setMatchOffers] = useState<CanonicalOffer[]>([]);
   const [matchActiveWork, setMatchActiveWork] = useState<CanonicalActiveWork[]>([]);
   const [applicationMessage, setApplicationMessage] = useState("I am interested in this work and can confirm tools, timing, and site requirements.");
+  const [demoAppliedJobs, setDemoAppliedJobs] = useState<Set<JobId>>(new Set());
 
   const visibleJobs = useMemo(() => role === "contractor"
     ? jobs.filter((job) => job.status === statusForSection[contractorSection])
@@ -581,6 +582,17 @@ export function WorkWorkspace({
                         </div>
                       ) : null}
                     </div>
+                  ) : demoAppliedJobs.has(detailJob.id) ? (
+                    <div className="v2-offer-card">
+                      <div>
+                        <span>submitted</span>
+                        <strong>Application submitted</strong>
+                        <p>{applicationMessage || "Your application is on file for this job."}</p>
+                      </div>
+                      <div className="v2-match-actions">
+                        <button type="button" onClick={() => setDemoAppliedJobs((prev) => { const next = new Set(prev); next.delete(detailJob.id); return next; })}>Withdraw</button>
+                      </div>
+                    </div>
                   ) : (
                     <div className="v2-apply-box">
                       {detailJob.status !== "Open" && (
@@ -591,8 +603,20 @@ export function WorkWorkspace({
                         <textarea value={applicationMessage} onChange={(event) => setApplicationMessage(event.target.value)} rows={4} disabled={detailJob.status !== "Open"} />
                       </label>
                       <div className="v2-match-actions">
-                        <button type="button" disabled={Boolean(activeAction) || !detailJob.canonical || detailJob.status !== "Open"} onClick={() => void handleSaveDraft(detailJob)}>Save draft</button>
-                        <button type="button" className="v2-primary-button" disabled={Boolean(activeAction) || !detailJob.canonical || detailJob.status !== "Open"} onClick={() => void handleSubmitApplication(detailJob)}>Apply</button>
+                        {detailJob.canonical ? (
+                          <button type="button" disabled={Boolean(activeAction) || detailJob.status !== "Open"} onClick={() => void handleSaveDraft(detailJob)}>Save draft</button>
+                        ) : null}
+                        <button
+                          type="button"
+                          className="v2-primary-button"
+                          disabled={Boolean(activeAction) || detailJob.status !== "Open"}
+                          onClick={detailJob.canonical
+                            ? () => void handleSubmitApplication(detailJob)
+                            : () => setDemoAppliedJobs((prev) => new Set([...prev, detailJob.id]))
+                          }
+                        >
+                          Apply
+                        </button>
                       </div>
                     </div>
                   )}

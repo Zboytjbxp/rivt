@@ -171,9 +171,11 @@ function App() {
   const [shoutOuts, setShoutOuts] = useState<ShoutOut[]>([]);
   const {
     handleSelectThemePalette,
+    handleSetThemeSource,
     handleToggleTheme,
     themeMode,
     themePalette,
+    themeSource,
   } = useAppTheme();
   const {
     activityItems,
@@ -1238,8 +1240,10 @@ function App() {
             }
             feedbackCount={feedbackItems.length}
             themeMode={themeMode}
+            themeSource={themeSource}
             themePalette={themePalette}
             onToggleTheme={handleToggleTheme}
+            onSetThemeSource={handleSetThemeSource}
             onSelectThemePalette={handleSelectThemePalette}
             onLogout={handleLogout}
             onSaveProfile={handleSaveProfile}
@@ -1315,6 +1319,7 @@ function App() {
           safetyCertCount={Object.values(safetyQuizResults).filter((r) => r.passed).length}
           safetyModuleCount={safetyQuizData.length}
           themeMode={themeMode}
+          themeSource={themeSource}
           themePalette={themePalette}
           communityBadges={communityBadgeLabels(communityPosts, accountProfile.displayName)}
           shoutOutCount={
@@ -1325,6 +1330,7 @@ function App() {
             ).length
           }
           onToggleTheme={handleToggleTheme}
+          onSetThemeSource={handleSetThemeSource}
           onSelectThemePalette={handleSelectThemePalette}
           onLogout={handleLogout}
           onClose={() => setAccountOpen(false)}

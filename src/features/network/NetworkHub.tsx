@@ -294,7 +294,7 @@ export function NetworkHub({ view, jobs, talent, communityPosts, shoutOuts, disp
           className="v2-network-panel"
           eyebrow="Shout-outs"
           title="Recent reputation signals"
-          action={<button type="button" onClick={onOpenReviews}>See all reviews</button>}
+          action={<div className="v2-network-panel-actions"><button type="button" className="v2-primary-button" onClick={onOpenReviews}>Write shout-out</button><button type="button" onClick={onOpenReviews}>See all</button></div>}
         >
           <div className="v2-network-shoutouts">
             {highlightedShoutOuts.length ? highlightedShoutOuts.map((item) => (

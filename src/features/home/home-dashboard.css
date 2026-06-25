@@ -782,3 +782,120 @@
     min-height: auto;
   }
 }
+
+/* Weekly availability calendar */
+.v2-weekly-calendar {
+  margin-top: 28px;
+  background: var(--v2-surface-raised);
+  border: 1px solid color-mix(in srgb, var(--v2-border) 70%, transparent);
+  border-radius: var(--v2-radius-xl);
+  overflow: hidden;
+}
+
+.v2-weekly-cal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px 12px;
+  border-bottom: 1px solid color-mix(in srgb, var(--v2-border) 55%, transparent);
+}
+
+.v2-weekly-cal-header h2 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: var(--v2-weight-strong);
+  color: var(--v2-text);
+}
+
+.v2-weekly-cal-header p {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: var(--v2-text-muted);
+}
+
+.v2-weekly-cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0;
+}
+
+.v2-weekly-cal-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 14px 4px;
+  background: transparent;
+  border: none;
+  border-right: 1px solid color-mix(in srgb, var(--v2-border) 40%, transparent);
+  cursor: pointer;
+  transition: background 120ms ease;
+}
+
+.v2-weekly-cal-day:last-child {
+  border-right: none;
+}
+
+.v2-weekly-cal-day:hover {
+  background: color-mix(in srgb, var(--v2-accent) 6%, transparent);
+}
+
+.v2-weekly-cal-day.is-today .v2-weekly-cal-dayname {
+  color: var(--v2-accent);
+  font-weight: var(--v2-weight-strong);
+}
+
+.v2-weekly-cal-dayname {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--v2-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.v2-weekly-cal-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  transition: background 120ms;
+}
+
+.v2-weekly-cal-day.avail-available .v2-weekly-cal-dot {
+  background: var(--v2-success, #22c55e);
+}
+
+.v2-weekly-cal-day.avail-limited .v2-weekly-cal-dot {
+  background: var(--v2-warning, #f59e0b);
+}
+
+.v2-weekly-cal-day.avail-unavailable .v2-weekly-cal-dot {
+  background: var(--v2-text-muted);
+  opacity: 0.45;
+}
+
+.v2-weekly-cal-label {
+  font-size: 10px;
+  color: var(--v2-text-muted);
+  letter-spacing: 0.02em;
+}
+
+.v2-weekly-cal-day.avail-available .v2-weekly-cal-label {
+  color: var(--v2-success, #22c55e);
+}
+
+.v2-weekly-cal-day.avail-limited .v2-weekly-cal-label {
+  color: var(--v2-warning, #f59e0b);
+}
+
+@media (max-width: 360px) {
+  .v2-weekly-cal-day {
+    padding: 10px 2px;
+  }
+  .v2-weekly-cal-dayname {
+    font-size: 10px;
+  }
+  .v2-weekly-cal-label {
+    font-size: 9px;
+  }
+}

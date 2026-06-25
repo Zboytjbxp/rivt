@@ -9,6 +9,7 @@ import {
   Mail,
   MapPin,
   MessageCircle,
+  Monitor,
   Moon,
   ReceiptText,
   ShieldCheck,
@@ -17,6 +18,7 @@ import {
   X,
 } from "lucide-react";
 import { brandConfig, type ThemeMode, type TrialPlan } from "../../brandConfig";
+import type { ThemeSource } from "../../app-shell/useAppTheme";
 import { tradeOptions } from "../../data";
 import { apiPath } from "../../lib/api";
 import type { Role, Trade } from "../../types";
@@ -752,17 +754,49 @@ export function OnboardingFlow({
   );
 }
 
+const THEME_SOURCE_ICONS: Record<ThemeSource, typeof Monitor> = {
+  system: Monitor,
+  light: Sun,
+  dark: Moon,
+};
+
 export function ThemeToggle({
   themeMode,
+  themeSource,
   onToggleTheme,
+  onSetThemeSource,
   variant = "nav",
   compact = false,
 }: {
   themeMode: ThemeMode;
+  themeSource?: ThemeSource;
   onToggleTheme: () => void;
+  onSetThemeSource?: (source: ThemeSource) => void;
   variant?: "nav" | "surface";
   compact?: boolean;
 }) {
+  if (onSetThemeSource && variant === "surface") {
+    return (
+      <div className="theme-source-group" role="group" aria-label="Theme mode">
+        {(["system", "light", "dark"] as ThemeSource[]).map((src) => {
+          const Icon = THEME_SOURCE_ICONS[src];
+          return (
+            <button
+              key={src}
+              type="button"
+              className={themeSource === src ? "theme-source-btn is-active" : "theme-source-btn"}
+              aria-pressed={themeSource === src}
+              onClick={() => onSetThemeSource(src)}
+            >
+              <Icon size={14} />
+              {!compact && <span>{src.charAt(0).toUpperCase() + src.slice(1)}</span>}
+            </button>
+          );
+        })}
+      </div>
+    );
+  }
+
   const isDark = themeMode === "dark";
   const Icon = isDark ? Sun : Moon;
   const label = isDark ? "Light mode" : "Dark mode";

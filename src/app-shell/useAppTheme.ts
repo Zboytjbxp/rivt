@@ -2,26 +2,29 @@ import { useCallback, useEffect, useState } from "react";
 import { brandConfig, type ThemeMode, type ThemePalette } from "../brandConfig";
 import {
   readThemePalettePreference,
-  readThemePreference,
+  readThemeSourcePreference,
   THEME_PALETTE_STORAGE_KEY,
+  THEME_SOURCE_KEY,
   THEME_STORAGE_KEY,
 } from "./preferences";
 
+export type ThemeSource = "system" | ThemeMode;
+
 export function useAppTheme() {
-  const [themeMode, setThemeMode] = useState<ThemeMode>(readThemePreference);
+  const [themeSource, setThemeSource] = useState<ThemeSource>(readThemeSourcePreference);
+  const [systemDark, setSystemDark] = useState<boolean>(
+    () => typeof window !== "undefined" && Boolean(window.matchMedia?.("(prefers-color-scheme: dark)").matches),
+  );
   const [themePalette, setThemePalette] = useState<ThemePalette>(readThemePalettePreference);
+
+  const themeMode: ThemeMode = themeSource === "system" ? (systemDark ? "dark" : "light") : themeSource;
 
   useEffect(() => {
     const mq = window.matchMedia?.("(prefers-color-scheme: dark)");
     if (!mq) return;
+    setSystemDark(mq.matches);
     function handleChange(event: MediaQueryListEvent) {
-      try {
-        if (!window.localStorage.getItem(THEME_STORAGE_KEY)) {
-          setThemeMode(event.matches ? "dark" : "light");
-        }
-      } catch {
-        setThemeMode(event.matches ? "dark" : "light");
-      }
+      setSystemDark(event.matches);
     }
     mq.addEventListener("change", handleChange);
     return () => mq.removeEventListener("change", handleChange);
@@ -44,15 +47,24 @@ export function useAppTheme() {
     });
 
     try {
-      window.localStorage.setItem(THEME_STORAGE_KEY, themeMode);
+      if (themeSource === "system") {
+        window.localStorage.removeItem(THEME_STORAGE_KEY);
+      } else {
+        window.localStorage.setItem(THEME_STORAGE_KEY, themeMode);
+      }
+      window.localStorage.setItem(THEME_SOURCE_KEY, themeSource);
       window.localStorage.setItem(THEME_PALETTE_STORAGE_KEY, themePalette);
     } catch {
-      // If browser storage is unavailable, the visual theme still applies for this session.
+      // Storage unavailable — visual theme still applies for this session.
     }
-  }, [themeMode, themePalette]);
+  }, [themeMode, themeSource, themePalette]);
+
+  const handleSetThemeSource = useCallback((source: ThemeSource) => {
+    setThemeSource(source);
+  }, []);
 
   const handleToggleTheme = useCallback(() => {
-    setThemeMode((currentMode) => (currentMode === "dark" ? "light" : "dark"));
+    setThemeSource((current) => (current === "dark" ? "light" : "dark"));
   }, []);
 
   const handleSelectThemePalette = useCallback((nextPalette: ThemePalette) => {
@@ -61,8 +73,10 @@ export function useAppTheme() {
 
   return {
     handleSelectThemePalette,
+    handleSetThemeSource,
     handleToggleTheme,
     themeMode,
     themePalette,
+    themeSource,
   };
 }

@@ -12,11 +12,29 @@ import {
   Users,
   Wrench,
 } from "lucide-react";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import type { Job, Role } from "../../types";
 import type { PrimaryDestination } from "../../app-shell/types";
 import { EmptyState, PageHeader } from "../../components/ui";
 import "./home-dashboard.css";
+
+type AvailDay = "available" | "limited" | "unavailable";
+const WEEK_DAY_SHORT = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
+const WEEK_DAY_FULL = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const AVAIL_CYCLE: AvailDay[] = ["available", "limited", "unavailable"];
+const AVAIL_DAY_LABEL: Record<AvailDay, string> = { available: "Open", limited: "Ltd", unavailable: "Off" };
+const WEEKLY_AVAIL_KEY = "rivt.weeklyAvail.v1";
+
+function readWeeklyAvailability(): Record<number, AvailDay> {
+  try {
+    const raw = localStorage.getItem(WEEKLY_AVAIL_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw) as Record<string, AvailDay>;
+      return Object.fromEntries(Array.from({ length: 7 }, (_, i) => [i, parsed[i] ?? "available"]));
+    }
+  } catch {}
+  return Object.fromEntries(Array.from({ length: 7 }, (_, i) => [i, "available" as AvailDay]));
+}
 
 type AvailabilityStatus = "available" | "limited" | "unavailable";
 
@@ -72,6 +90,17 @@ export function HomeDashboard({
   const firstName = name.trim().split(/\s+/)[0] || "there";
   const [savingAvailability, setSavingAvailability] = useState<AvailabilityStatus | null>(null);
   const [availabilityMessage, setAvailabilityMessage] = useState("");
+  const [weeklyAvail, setWeeklyAvail] = useState<Record<number, AvailDay>>(readWeeklyAvailability);
+
+  const cycleWeeklyDay = useCallback((dayIndex: number) => {
+    setWeeklyAvail((prev) => {
+      const current = prev[dayIndex] ?? "available";
+      const next = AVAIL_CYCLE[(AVAIL_CYCLE.indexOf(current) + 1) % AVAIL_CYCLE.length];
+      const next_ = { ...prev, [dayIndex]: next };
+      try { localStorage.setItem(WEEKLY_AVAIL_KEY, JSON.stringify(next_)); } catch {}
+      return next_;
+    });
+  }, []);
   const moneySignal = activeJob ? currency(activeJob.pay) : role === "contractor" ? "Post work" : `${upcomingJobs.length} matches`;
   const workSignal = role === "contractor"
     ? `${applicationCount || "No"} applicants`
@@ -319,6 +348,34 @@ export function HomeDashboard({
           </div>
         </section>
       </div>
+
+      <section className="v2-weekly-calendar" aria-label="Weekly availability">
+        <header className="v2-weekly-cal-header">
+          <div>
+            <h2>Week ahead</h2>
+            <p>Tap a day to cycle availability. Saved to this device.</p>
+          </div>
+        </header>
+        <div className="v2-weekly-cal-grid">
+          {WEEK_DAY_SHORT.map((short, i) => {
+            const today = new Date().getDay();
+            const status = weeklyAvail[i] ?? "available";
+            return (
+              <button
+                key={short}
+                type="button"
+                className={`v2-weekly-cal-day avail-${status}${i === today ? " is-today" : ""}`}
+                aria-label={`${WEEK_DAY_FULL[i]}: ${status}. Tap to change.`}
+                onClick={() => cycleWeeklyDay(i)}
+              >
+                <span className="v2-weekly-cal-dayname">{short}</span>
+                <span className="v2-weekly-cal-dot" aria-hidden="true" />
+                <small className="v2-weekly-cal-label">{AVAIL_DAY_LABEL[status]}</small>
+              </button>
+            );
+          })}
+        </div>
+      </section>
     </section>
   );
 }

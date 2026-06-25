@@ -1,4 +1,5 @@
 import type { ThemeMode, ThemePalette, TrialPlan } from "../../brandConfig";
+import type { ThemeSource } from "../../app-shell/useAppTheme";
 import type { Role, Trade } from "../../types";
 import { useCallback, useEffect, useState } from "react";
 import { ProfileHub, type AccountSessionSummary, type ProfileUpdateInput } from "./ProfileHub";
@@ -51,8 +52,10 @@ interface ProfileRouteProps {
   shoutOutCount: number;
   feedbackCount: number;
   themeMode: ThemeMode;
+  themeSource: ThemeSource;
   themePalette: ThemePalette;
   onToggleTheme: () => void;
+  onSetThemeSource: (source: ThemeSource) => void;
   onSelectThemePalette: (palette: ThemePalette) => void;
   onLogout: () => void;
   onSaveProfile: (input: ProfileUpdateInput) => Promise<void>;
@@ -76,8 +79,10 @@ export function ProfileRoute({
   shoutOutCount,
   feedbackCount,
   themeMode,
+  themeSource,
   themePalette,
   onToggleTheme,
+  onSetThemeSource,
   onSelectThemePalette,
   onLogout,
   onSaveProfile,
@@ -168,8 +173,10 @@ export function ProfileRoute({
       shoutOutCount={shoutOutCount}
       feedbackCount={feedbackCount}
       themeMode={themeMode}
+      themeSource={themeSource}
       themePalette={themePalette}
       onToggleTheme={onToggleTheme}
+      onSetThemeSource={onSetThemeSource}
       onSelectThemePalette={onSelectThemePalette}
       onReviewConsent={() => {}}
       onLogout={onLogout}

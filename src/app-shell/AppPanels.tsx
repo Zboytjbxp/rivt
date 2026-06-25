@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { brandConfig, type ThemeMode, type ThemePalette, type TrialPlan } from "../brandConfig";
 import { ProgressBar, ThemeToggle, type AuthMethod } from "../features/auth/AuthScreens";
+import type { ThemeSource } from "./useAppTheme";
 import type { Role, Trade } from "../types";
 import type { NavLabel } from "./routes";
 
@@ -177,10 +178,12 @@ export function AccountPanel({
   safetyCertCount,
   safetyModuleCount,
   themeMode,
+  themeSource,
   themePalette,
   communityBadges,
   shoutOutCount,
   onToggleTheme,
+  onSetThemeSource,
   onSelectThemePalette,
   onLogout,
   onClose,
@@ -195,10 +198,12 @@ export function AccountPanel({
   safetyCertCount: number;
   safetyModuleCount: number;
   themeMode: ThemeMode;
+  themeSource: ThemeSource;
   themePalette: ThemePalette;
   communityBadges: string[];
   shoutOutCount: number;
   onToggleTheme: () => void;
+  onSetThemeSource: (source: ThemeSource) => void;
   onSelectThemePalette: (palette: ThemePalette) => void;
   onLogout: () => void;
   onClose: () => void;
@@ -270,7 +275,9 @@ export function AccountPanel({
             <span>Mode</span>
             <ThemeToggle
               themeMode={themeMode}
+              themeSource={themeSource}
               onToggleTheme={onToggleTheme}
+              onSetThemeSource={onSetThemeSource}
               variant="surface"
             />
           </div>

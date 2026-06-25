@@ -411,3 +411,31 @@
     grid-column: 1;
   }
 }
+
+/* Shout-out panel action row */
+.v2-network-panel-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.v2-network-panel-actions .v2-primary-button {
+  font-size: 12px;
+  padding: 6px 12px;
+  min-height: unset;
+  height: auto;
+}
+
+.v2-network-panel-actions > button:not(.v2-primary-button) {
+  background: transparent;
+  border: 0;
+  color: var(--v2-accent);
+  font: inherit;
+  font-size: 12px;
+  font-weight: var(--v2-weight-strong);
+  cursor: pointer;
+  padding: 4px 8px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+}
