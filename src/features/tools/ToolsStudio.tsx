@@ -3654,8 +3654,6 @@ function projectErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : "RIVT could not update the project record.";
 }
 
-// ── Local Job Photos Tool ─────────────────────────────────────────────────────
-
 export function ToolsStudio({ jobs, paymentRecords, mode = "tools", onNavigate, onOpenJob, onOpenRecords }: ToolsStudioProps) {
   const activeJob = jobs.find((job) => job.status !== "Paid / Closed") ?? jobs[0] ?? null;
   const pendingPayments = paymentRecords.filter((record) => record.status === "Payment pending");
