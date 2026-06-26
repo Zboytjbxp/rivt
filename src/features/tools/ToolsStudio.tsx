@@ -2877,6 +2877,712 @@ function projectErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : "RIVT could not update the project record.";
 }
 
+// ── Local Job Photos Tool ─────────────────────────────────────────────────────
+
+interface LocalPhoto {
+  id: string;
+  jobId: string;
+  url: string;
+  caption: string;
+  takenAt: string;
+}
+
+function readLocalPhotos(): LocalPhoto[] {
+  try {
+    const stored = localStorage.getItem("rivt.photos.v1");
+    if (!stored) return [];
+    const parsed = JSON.parse(stored) as LocalPhoto[];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch { return []; }
+}
+
+function persistLocalPhotos(photos: LocalPhoto[]) {
+  try { localStorage.setItem("rivt.photos.v1", JSON.stringify(photos)); } catch {}
+}
+
+function readLocalJobsList(): Array<{ id: string; title: string }> {
+  try {
+    const stored = localStorage.getItem("rivt.jobs.v1");
+    if (!stored) return [];
+    const parsed = JSON.parse(stored) as Array<{ id: string; title: string }>;
+    return Array.isArray(parsed) ? parsed : [];
+  } catch { return []; }
+}
+
+function LocalJobPhotosTool() {
+  const [photos, setPhotos] = useState<LocalPhoto[]>(readLocalPhotos);
+  const [selectedJobId, setSelectedJobId] = useState("");
+  const [caption, setCaption] = useState("");
+  const [viewPhoto, setViewPhoto] = useState<LocalPhoto | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const localJobs = readLocalJobsList();
+
+  function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const dataUrl = e.target?.result as string;
+      const newPhoto: LocalPhoto = {
+        id: crypto.randomUUID(),
+        jobId: selectedJobId,
+        url: dataUrl,
+        caption,
+        takenAt: new Date().toISOString(),
+      };
+      const next = [...photos, newPhoto];
+      setPhotos(next);
+      persistLocalPhotos(next);
+      setCaption("");
+    };
+    reader.readAsDataURL(file);
+    if (event.target) event.target.value = "";
+  }
+
+  function deletePhoto(id: string) {
+    const next = photos.filter((p) => p.id !== id);
+    setPhotos(next);
+    persistLocalPhotos(next);
+    if (viewPhoto?.id === id) setViewPhoto(null);
+  }
+
+  const filteredPhotos = selectedJobId ? photos.filter((p) => p.jobId === selectedJobId) : photos;
+
+  return (
+    <div className="v2-photos-container">
+      <div className="v2-photos-controls">
+        <select value={selectedJobId} onChange={(e) => setSelectedJobId(e.target.value)} className="v2-photos-select">
+          <option value="">All jobs</option>
+          {localJobs.map((j) => <option key={j.id} value={j.id}>{j.title}</option>)}
+          <option value="standalone">Standalone / no job</option>
+        </select>
+        <input
+          value={caption}
+          onChange={(e) => setCaption(e.target.value)}
+          placeholder="Caption (optional)"
+          className="v2-photos-caption-input"
+        />
+        <div className="v2-tool-action-row">
+          <button type="button" className="v2-primary-button" onClick={() => fileInputRef.current?.click()}>
+            <Camera size={15} />Take / choose photo
+          </button>
+        </div>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          style={{ display: "none" }}
+          aria-hidden="true"
+          onChange={handleFileChange}
+        />
+      </div>
+      {photos.length > 20 && (
+        <p className="v2-photos-warning">Storage warning: you have {photos.length} photos saved locally. Base64 images use significant browser storage.</p>
+      )}
+      <div className="v2-photos-summary">
+        <span>{filteredPhotos.length} photo{filteredPhotos.length !== 1 ? "s" : ""}{selectedJobId ? " for this job" : " total"}</span>
+      </div>
+      {filteredPhotos.length > 0 ? (
+        <div className="v2-photos-grid">
+          {filteredPhotos.map((photo) => (
+            <button key={photo.id} type="button" className="v2-photos-thumb-btn" onClick={() => setViewPhoto(photo)} title={photo.caption || "View photo"}>
+              <img src={photo.url} alt={photo.caption || "Job photo"} className="v2-photos-thumb" loading="lazy" />
+            </button>
+          ))}
+        </div>
+      ) : (
+        <div className="v2-photos-empty">
+          <Camera size={28} />
+          <strong>No photos yet</strong>
+          <p>Take a photo on site or choose from your library to document the job.</p>
+        </div>
+      )}
+      {viewPhoto && (
+        <div className="v2-photos-overlay" role="dialog" aria-label="Photo viewer" onClick={() => setViewPhoto(null)}>
+          <div className="v2-photos-overlay-inner" onClick={(e) => e.stopPropagation()}>
+            <img src={viewPhoto.url} alt={viewPhoto.caption || "Job photo"} className="v2-photos-overlay-img" />
+            <div className="v2-photos-overlay-meta">
+              {viewPhoto.caption && <p className="v2-photos-overlay-caption">{viewPhoto.caption}</p>}
+              <small>{new Date(viewPhoto.takenAt).toLocaleString()}</small>
+            </div>
+            <div className="v2-photos-overlay-actions">
+              <button type="button" className="v2-destructive-button" onClick={() => deletePhoto(viewPhoto.id)}><Trash2 size={14} />Delete</button>
+              <button type="button" onClick={() => setViewPhoto(null)}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Invoice Generator Tool (Pro-gated) ────────────────────────────────────────
+
+function InvoiceGeneratorTool() {
+  const { isPro } = usePro();
+  const [showUpgrade, setShowUpgrade] = useState(false);
+  const [selectedJobId, setSelectedJobId] = useState("");
+  const [clientName, setClientName] = useState("");
+  const [clientEmail, setClientEmail] = useState("");
+  const [clientPhone, setClientPhone] = useState("");
+  const [dueDate, setDueDate] = useState(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 30);
+    return d.toISOString().slice(0, 10);
+  });
+  const [invoiceNotes, setInvoiceNotes] = useState("Thank you for your business. Payment is due within 30 days.");
+  const localJobs = readLocalJobsList();
+
+  if (!isPro) {
+    return (
+      <div className="v2-invoice-gen-upgrade">
+        <div className="v2-invoice-gen-upgrade-inner">
+          <Lock size={28} />
+          <h3>Invoice Generator is a Pro feature</h3>
+          <p>Generate a clean, printable invoice with labor hours, expenses, and client details pre-filled from your job data.</p>
+          <button type="button" className="v2-primary-button" onClick={() => setShowUpgrade(true)}>
+            Upgrade to Pro
+          </button>
+        </div>
+        {showUpgrade && <UpgradeModal reason="Invoice Generator" onClose={() => setShowUpgrade(false)} />}
+      </div>
+    );
+  }
+
+  const timeSessions: Array<{ jobId: string | number | null; startedAt: string; endedAt: string | null }> = (() => {
+    try { return JSON.parse(localStorage.getItem("rivt.timeSessions.v1") ?? "[]") as Array<{ jobId: string | number | null; startedAt: string; endedAt: string | null }>; } catch { return []; }
+  })();
+
+  const expenses: Array<{ jobId: string | number | null; amount: number; description: string }> = (() => {
+    try { return JSON.parse(localStorage.getItem("rivt.expenses.v1") ?? "[]") as Array<{ jobId: string | number | null; amount: number; description: string }>; } catch { return []; }
+  })();
+
+  const rateCard: { hourlyRate: number } = (() => {
+    try { return JSON.parse(localStorage.getItem("rivt.rateCard.v1") ?? "null") as { hourlyRate: number } ?? { hourlyRate: 65 }; } catch { return { hourlyRate: 65 }; }
+  })();
+
+  const profile: { name?: string; companyName?: string } = (() => {
+    try { return JSON.parse(localStorage.getItem("rivt.profile.v1") ?? "null") as { name?: string; companyName?: string } ?? {}; } catch { return {}; }
+  })();
+
+  const filteredSessions = selectedJobId
+    ? timeSessions.filter((s) => String(s.jobId) === selectedJobId && s.endedAt)
+    : timeSessions.filter((s) => s.endedAt);
+
+  const filteredExpenses = selectedJobId
+    ? expenses.filter((e) => String(e.jobId) === selectedJobId)
+    : expenses;
+
+  const totalHours = filteredSessions.reduce((sum, s) => {
+    if (!s.endedAt) return sum;
+    return sum + (new Date(s.endedAt).getTime() - new Date(s.startedAt).getTime()) / 3600000;
+  }, 0);
+
+  const laborCost = totalHours * rateCard.hourlyRate;
+  const materialsCost = filteredExpenses.reduce((sum, e) => sum + e.amount, 0);
+  const grandTotal = laborCost + materialsCost;
+
+  function generateInvoice() {
+    const invoiceNum = `INV-${Date.now().toString().slice(-6)}`;
+    const contractorName = profile.companyName ?? profile.name ?? "Your Company";
+    const jobLabel = localJobs.find((j) => j.id === selectedJobId)?.title ?? "Services Rendered";
+
+    const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Invoice ${invoiceNum}</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, sans-serif; font-size: 14px; color: #111; background: #fff; padding: 48px; max-width: 800px; margin: 0 auto; }
+  .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 40px; padding-bottom: 24px; border-bottom: 3px solid #111; }
+  .logo { font-size: 32px; font-weight: 900; letter-spacing: -0.02em; }
+  .invoice-meta { text-align: right; }
+  .invoice-meta h2 { font-size: 24px; font-weight: 700; color: #f97316; }
+  .invoice-meta p { color: #6b7280; font-size: 12px; margin-top: 4px; }
+  .parties { display: flex; justify-content: space-between; margin-bottom: 40px; }
+  .party h3 { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #6b7280; margin-bottom: 8px; }
+  .party p { font-size: 14px; line-height: 1.6; }
+  table { width: 100%; border-collapse: collapse; margin-bottom: 32px; }
+  th { background: #f9fafb; padding: 10px 12px; text-align: left; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #6b7280; border-bottom: 2px solid #e5e7eb; }
+  th:not(:first-child), td:not(:first-child) { text-align: right; }
+  td { padding: 14px 12px; border-bottom: 1px solid #f3f4f6; font-size: 13px; }
+  .totals { margin-left: auto; width: 300px; }
+  .totals div { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f3f4f6; font-size: 14px; }
+  .totals .grand { font-size: 22px; font-weight: 900; color: #f97316; border-bottom: 0; padding-top: 14px; }
+  .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #e5e7eb; color: #6b7280; font-size: 12px; }
+  .notes { margin-top: 24px; padding: 16px; background: #f9fafb; border-radius: 6px; font-size: 13px; line-height: 1.5; }
+  .thank-you { margin-top: 32px; text-align: center; font-size: 16px; font-weight: 600; color: #f97316; }
+</style>
+</head>
+<body>
+<div class="header">
+  <div>
+    <div class="logo">RIVT</div>
+    <p style="color:#6b7280;font-size:12px;margin-top:4px">${contractorName}</p>
+  </div>
+  <div class="invoice-meta">
+    <h2>INVOICE</h2>
+    <p>#${invoiceNum}</p>
+    <p>Due: ${dueDate}</p>
+    <p>Date: ${new Date().toLocaleDateString()}</p>
+  </div>
+</div>
+<div class="parties">
+  <div class="party">
+    <h3>Bill To</h3>
+    <p><strong>${clientName || "Client Name"}</strong><br>${clientEmail || ""}<br>${clientPhone || ""}</p>
+  </div>
+  <div class="party">
+    <h3>From</h3>
+    <p><strong>${contractorName}</strong></p>
+  </div>
+</div>
+<table>
+  <thead>
+    <tr><th>Description</th><th>Hours / Qty</th><th>Rate</th><th>Amount</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Labor — ${jobLabel}</td><td>${totalHours.toFixed(2)} hrs</td><td>$${rateCard.hourlyRate}/hr</td><td>$${laborCost.toFixed(2)}</td></tr>
+    ${filteredExpenses.map((e) => `<tr><td>${e.description}</td><td>1</td><td>$${e.amount.toFixed(2)}</td><td>$${e.amount.toFixed(2)}</td></tr>`).join("")}
+  </tbody>
+</table>
+<div class="totals">
+  <div><span>Labor subtotal</span><span>$${laborCost.toFixed(2)}</span></div>
+  <div><span>Materials / expenses</span><span>$${materialsCost.toFixed(2)}</span></div>
+  <div class="grand"><span>Total Due</span><span>$${grandTotal.toFixed(2)}</span></div>
+</div>
+${invoiceNotes ? `<div class="notes">${invoiceNotes}</div>` : ""}
+<div class="thank-you">Thank you for your business!</div>
+<div class="footer">
+  <p>Payment terms: Net 30. Generated by RIVT on ${new Date().toLocaleDateString()}.</p>
+</div>
+</body>
+</html>`;
+
+    const printWindow = window.open("", "_blank");
+    if (printWindow) {
+      printWindow.document.write(html);
+      printWindow.document.close();
+      printWindow.print();
+    }
+  }
+
+  return (
+    <div className="v2-invoice-gen-container">
+      <div className="v2-invoice-gen-form v2-tool-panel">
+        <div className="rivt-panel-header"><span>Invoice generator</span><h2>Client &amp; job details</h2></div>
+        <div className="v2-tool-input-grid two">
+          <label>Job<select value={selectedJobId} onChange={(e) => setSelectedJobId(e.target.value)}>
+            <option value="">All / standalone</option>
+            {localJobs.map((j) => <option key={j.id} value={j.id}>{j.title}</option>)}
+          </select></label>
+          <label>Due date<input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} /></label>
+          <label>Client name<input value={clientName} onChange={(e) => setClientName(e.target.value)} placeholder="John Smith" /></label>
+          <label>Client email<input type="email" value={clientEmail} onChange={(e) => setClientEmail(e.target.value)} placeholder="client@example.com" /></label>
+          <label className="is-wide">Client phone<input type="tel" value={clientPhone} onChange={(e) => setClientPhone(e.target.value)} placeholder="+1 555 000 0000" /></label>
+          <label className="is-wide">Invoice notes / payment terms<textarea value={invoiceNotes} onChange={(e) => setInvoiceNotes(e.target.value)} rows={3} /></label>
+        </div>
+      </div>
+      <aside className="v2-invoice-gen-summary v2-tool-panel">
+        <div className="rivt-panel-header"><span>Preview totals</span><h2>${grandTotal.toFixed(2)}</h2></div>
+        <div className="v2-invoice-gen-totals">
+          <div className="v2-invoice-gen-row"><span>Labor ({totalHours.toFixed(1)} hrs @ ${rateCard.hourlyRate}/hr)</span><strong>${laborCost.toFixed(2)}</strong></div>
+          <div className="v2-invoice-gen-row"><span>Materials &amp; expenses ({filteredExpenses.length} items)</span><strong>${materialsCost.toFixed(2)}</strong></div>
+          <div className="v2-invoice-gen-row v2-invoice-gen-total"><span>Grand total</span><strong>${grandTotal.toFixed(2)}</strong></div>
+        </div>
+        <button type="button" className="v2-primary-button v2-invoice-gen-btn" onClick={generateInvoice}>
+          <FileText size={15} />Generate &amp; Print Invoice
+        </button>
+        <p className="v2-tool-note">Opens a print dialog in a new window. No data is sent to any server.</p>
+      </aside>
+    </div>
+  );
+}
+
+// ── Mileage Tracker Tool ──────────────────────────────────────────────────────
+
+const IRS_RATE_TRACKER = 0.67;
+
+interface MileageTrip {
+  id: string;
+  jobId: string;
+  date: string;
+  miles: number;
+  startTime: string;
+  endTime: string;
+  note: string;
+}
+
+interface ActiveTripState {
+  startTime: string;
+  jobId: string;
+}
+
+function readMileageTrips(): MileageTrip[] {
+  try {
+    const stored = localStorage.getItem("rivt.mileage.v1");
+    if (!stored) return [];
+    const parsed = JSON.parse(stored) as MileageTrip[];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch { return []; }
+}
+
+function persistMileageTrips(trips: MileageTrip[]) {
+  try { localStorage.setItem("rivt.mileage.v1", JSON.stringify(trips)); } catch {}
+}
+
+function readActiveTripState(): ActiveTripState | null {
+  try {
+    const stored = localStorage.getItem("rivt.mileage.activeTrip.v1");
+    if (!stored) return null;
+    return JSON.parse(stored) as ActiveTripState;
+  } catch { return null; }
+}
+
+function persistActiveTripState(trip: ActiveTripState | null) {
+  try {
+    if (trip) { localStorage.setItem("rivt.mileage.activeTrip.v1", JSON.stringify(trip)); }
+    else { localStorage.removeItem("rivt.mileage.activeTrip.v1"); }
+  } catch {}
+}
+
+function getMileageWeekMiles(trips: MileageTrip[]): number {
+  const weekAgo = new Date();
+  weekAgo.setDate(weekAgo.getDate() - 7);
+  const weekAgoStr = weekAgo.toISOString().slice(0, 10);
+  return trips.filter((t) => t.date >= weekAgoStr).reduce((sum, t) => sum + t.miles, 0);
+}
+
+function MileageTrackerTool() {
+  const [trips, setTrips] = useState<MileageTrip[]>(readMileageTrips);
+  const [activeTrip, setActiveTrip] = useState<ActiveTripState | null>(readActiveTripState);
+  const [selectedJobId, setSelectedJobId] = useState("");
+  const [manualMiles, setManualMiles] = useState("");
+  const [tripNote, setTripNote] = useState("");
+  const [manualDate, setManualDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [endMiles, setEndMiles] = useState("");
+  const [showEndForm, setShowEndForm] = useState(false);
+  const [elapsed, setElapsed] = useState(0);
+  const localJobs = readLocalJobsList();
+
+  useEffect(() => {
+    if (!activeTrip) { setElapsed(0); return; }
+    const start = new Date(activeTrip.startTime).getTime();
+    const tick = () => setElapsed(Math.floor((Date.now() - start) / 1000));
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [activeTrip]);
+
+  function startTrip() {
+    const trip: ActiveTripState = { startTime: new Date().toISOString(), jobId: selectedJobId };
+    setActiveTrip(trip);
+    persistActiveTripState(trip);
+    setShowEndForm(false);
+  }
+
+  function endTrip() {
+    if (!activeTrip) return;
+    const miles = parseFloat(endMiles);
+    if (!miles || miles <= 0) return;
+    const newTrip: MileageTrip = {
+      id: crypto.randomUUID(),
+      jobId: activeTrip.jobId,
+      date: new Date().toISOString().slice(0, 10),
+      miles,
+      startTime: activeTrip.startTime,
+      endTime: new Date().toISOString(),
+      note: tripNote.trim(),
+    };
+    const next = [newTrip, ...trips];
+    setTrips(next);
+    persistMileageTrips(next);
+    setActiveTrip(null);
+    persistActiveTripState(null);
+    setEndMiles("");
+    setTripNote("");
+    setShowEndForm(false);
+  }
+
+  function logManual() {
+    const miles = parseFloat(manualMiles);
+    if (!miles || miles <= 0) return;
+    const newTrip: MileageTrip = {
+      id: crypto.randomUUID(),
+      jobId: selectedJobId,
+      date: manualDate,
+      miles,
+      startTime: "",
+      endTime: "",
+      note: tripNote.trim(),
+    };
+    const next = [newTrip, ...trips];
+    setTrips(next);
+    persistMileageTrips(next);
+    setManualMiles("");
+    setTripNote("");
+  }
+
+  function deleteTrip(id: string) {
+    const next = trips.filter((t) => t.id !== id);
+    setTrips(next);
+    persistMileageTrips(next);
+  }
+
+  const weekMiles = getMileageWeekMiles(trips);
+  const weekDeduction = weekMiles * IRS_RATE_TRACKER;
+  const elapsedHms = `${String(Math.floor(elapsed / 3600)).padStart(2, "0")}:${String(Math.floor((elapsed % 3600) / 60)).padStart(2, "0")}:${String(elapsed % 60).padStart(2, "0")}`;
+
+  return (
+    <div className="v2-mileage-tracker-container">
+      <div className="v2-mileage-tracker-summary-strip">
+        <span>This week:</span>
+        <strong>{weekMiles.toFixed(1)} mi</strong>
+        <span>·</span>
+        <span>Est. deduction:</span>
+        <strong>${weekDeduction.toFixed(2)}</strong>
+        <small>(IRS rate $0.67/mi)</small>
+      </div>
+
+      <div className="v2-mileage-tracker-body">
+        <div className="v2-mileage-tracker-left v2-tool-panel">
+          <div className="rivt-panel-header"><span>Trip tracking</span><h2>Start a trip</h2></div>
+          <label className="v2-mileage-tracker-label">Job<select value={selectedJobId} onChange={(e) => setSelectedJobId(e.target.value)} className="v2-mileage-tracker-select">
+            <option value="">Standalone / no job</option>
+            {localJobs.map((j) => <option key={j.id} value={j.id}>{j.title}</option>)}
+          </select></label>
+
+          {activeTrip ? (
+            <div className="v2-mileage-active-trip">
+              <div className="v2-mileage-active-badge">Trip in progress</div>
+              <div className="v2-mileage-active-timer">{elapsedHms}</div>
+              <small>Started {new Date(activeTrip.startTime).toLocaleTimeString()}</small>
+              {!showEndForm ? (
+                <button type="button" className="v2-primary-button" onClick={() => setShowEndForm(true)}>
+                  <Navigation size={15} />End Trip
+                </button>
+              ) : (
+                <div className="v2-mileage-end-form">
+                  <label className="v2-mileage-tracker-label">Miles driven<input type="number" min="0.1" step="0.1" value={endMiles} onChange={(e) => setEndMiles(e.target.value)} placeholder="0.0" /></label>
+                  <label className="v2-mileage-tracker-label">Note<input value={tripNote} onChange={(e) => setTripNote(e.target.value)} placeholder="Job site, supply run..." /></label>
+                  <div className="v2-tool-action-row">
+                    <button type="button" className="v2-primary-button" onClick={endTrip} disabled={!endMiles || parseFloat(endMiles) <= 0}>Save trip</button>
+                    <button type="button" onClick={() => setShowEndForm(false)}>Cancel</button>
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <button type="button" className="v2-primary-button" onClick={startTrip}>
+              <Navigation size={15} />Start Trip
+            </button>
+          )}
+
+          <hr className="v2-mileage-divider" />
+          <div className="rivt-panel-header"><span>Manual entry</span><h2>Log miles</h2></div>
+          <div className="v2-tool-input-grid two">
+            <label>Date<input type="date" value={manualDate} onChange={(e) => setManualDate(e.target.value)} /></label>
+            <label>Miles<input type="number" min="0.1" step="0.1" value={manualMiles} onChange={(e) => setManualMiles(e.target.value)} placeholder="0.0" /></label>
+            <label className="is-wide">Note<input value={tripNote} onChange={(e) => setTripNote(e.target.value)} placeholder="Job site, supply run, pickup..." /></label>
+          </div>
+          <button type="button" className="v2-primary-button" onClick={logManual} disabled={!manualMiles || parseFloat(manualMiles) <= 0}>
+            <Navigation size={15} />Log Miles
+          </button>
+        </div>
+
+        <div className="v2-mileage-tracker-right v2-tool-panel">
+          <div className="rivt-panel-header"><span>Recent trips</span><h2>{trips.length} logged</h2></div>
+          {trips.length > 0 ? (
+            <div className="v2-mileage-tracker-list">
+              {trips.slice(0, 10).map((trip) => {
+                const jobLabel = localJobs.find((j) => j.id === trip.jobId)?.title ?? (trip.jobId ? trip.jobId : "Standalone");
+                return (
+                  <article key={trip.id} className="v2-mileage-tracker-entry">
+                    <div className="v2-mileage-tracker-entry-head">
+                      <strong>{trip.miles.toFixed(1)} mi</strong>
+                      <span>{trip.date}</span>
+                      <span className="v2-mileage-est-deduction">${(trip.miles * IRS_RATE_TRACKER).toFixed(2)} deduction</span>
+                      <button type="button" aria-label="Delete trip" onClick={() => deleteTrip(trip.id)}><Trash2 size={13} /></button>
+                    </div>
+                    <div className="v2-mileage-tracker-entry-meta">
+                      <small>{jobLabel}</small>
+                      {trip.note && <small>{trip.note}</small>}
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="v2-muted-copy">No trips logged yet. Start a trip or log miles manually.</p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Materials Estimator Tool ──────────────────────────────────────────────────
+
+interface MaterialsEstItem {
+  id: string;
+  name: string;
+  qty: number;
+  unit: string;
+  unitCost: number;
+  markup: number;
+}
+
+const UNIT_OPTIONS = ["ea", "lf", "sf", "cy", "ton", "hr"];
+
+const COMMON_MATERIALS: Array<{ name: string; unit: string }> = [
+  { name: "Lumber 2x4", unit: "ea" },
+  { name: "Drywall", unit: "sf" },
+  { name: "Concrete", unit: "cy" },
+  { name: "PVC Pipe", unit: "lf" },
+  { name: "Wire 12AWG", unit: "lf" },
+  { name: "Paint", unit: "ea" },
+  { name: "Insulation", unit: "sf" },
+  { name: "Rebar", unit: "lf" },
+];
+
+type StoredMaterialsMap = Record<string, MaterialsEstItem[]>;
+
+function readMaterialsEst(jobId: string): MaterialsEstItem[] {
+  try {
+    const stored = localStorage.getItem("rivt.materials.v1");
+    if (!stored) return [];
+    const map = JSON.parse(stored) as StoredMaterialsMap;
+    return Array.isArray(map[jobId || "default"]) ? map[jobId || "default"] : [];
+  } catch { return []; }
+}
+
+function persistMaterialsEst(jobId: string, items: MaterialsEstItem[]) {
+  try {
+    const stored = localStorage.getItem("rivt.materials.v1");
+    const map: StoredMaterialsMap = stored ? (JSON.parse(stored) as StoredMaterialsMap) : {};
+    map[jobId || "default"] = items;
+    localStorage.setItem("rivt.materials.v1", JSON.stringify(map));
+  } catch {}
+}
+
+function MaterialsEstimatorTool() {
+  const localJobs = readLocalJobsList();
+  const [selectedJobId, setSelectedJobId] = useState("");
+  const [items, setItems] = useState<MaterialsEstItem[]>([]);
+  const [defaultMarkup, setDefaultMarkup] = useState(20);
+
+  useEffect(() => {
+    setItems(readMaterialsEst(selectedJobId));
+  }, [selectedJobId]);
+
+  function addBlankItem() {
+    setItems((prev) => [...prev, {
+      id: crypto.randomUUID(),
+      name: "",
+      qty: 1,
+      unit: "ea",
+      unitCost: 0,
+      markup: defaultMarkup,
+    }]);
+  }
+
+  function addPreset(preset: { name: string; unit: string }) {
+    setItems((prev) => [...prev, {
+      id: crypto.randomUUID(),
+      name: preset.name,
+      qty: 1,
+      unit: preset.unit,
+      unitCost: 0,
+      markup: defaultMarkup,
+    }]);
+  }
+
+  function updateItem(id: string, field: keyof MaterialsEstItem, value: string | number) {
+    setItems((prev) => prev.map((item) => item.id === id ? { ...item, [field]: value } : item));
+  }
+
+  function removeItem(id: string) {
+    setItems((prev) => prev.filter((item) => item.id !== id));
+  }
+
+  function saveList() {
+    persistMaterialsEst(selectedJobId, items);
+  }
+
+  function clearItems() {
+    setItems([]);
+  }
+
+  const subtotal = items.reduce((sum, item) => sum + item.qty * item.unitCost, 0);
+  const markupTotal = items.reduce((sum, item) => sum + (item.qty * item.unitCost) * (item.markup / 100), 0);
+  const total = subtotal + markupTotal;
+
+  return (
+    <div className="v2-materials-est-container">
+      <div className="v2-materials-est-header">
+        <label className="v2-materials-est-job-label">Job<select value={selectedJobId} onChange={(e) => setSelectedJobId(e.target.value)} className="v2-materials-est-select">
+          <option value="">Default / no job</option>
+          {localJobs.map((j) => <option key={j.id} value={j.id}>{j.title}</option>)}
+        </select></label>
+        <label className="v2-materials-est-markup-label">Default markup %<input type="number" min="0" max="200" value={defaultMarkup} onChange={(e) => setDefaultMarkup(Math.max(0, Number(e.target.value) || 0))} className="v2-materials-est-markup-input" /></label>
+      </div>
+
+      <div className="v2-materials-est-quickpick">
+        <span className="v2-materials-est-quickpick-label">Quick add:</span>
+        {COMMON_MATERIALS.map((m) => (
+          <button key={m.name} type="button" className="v2-materials-est-chip" onClick={() => addPreset(m)}>
+            {m.name}
+          </button>
+        ))}
+      </div>
+
+      <div className="v2-materials-est-table">
+        <div className="v2-materials-est-table-header">
+          <span>Item</span>
+          <span>Qty</span>
+          <span>Unit</span>
+          <span>Unit cost</span>
+          <span>Markup %</span>
+          <span>Subtotal</span>
+          <span>With markup</span>
+          <span />
+        </div>
+        {items.map((item) => {
+          const sub = item.qty * item.unitCost;
+          const withMkp = sub * (1 + item.markup / 100);
+          return (
+            <div key={item.id} className="v2-materials-est-row">
+              <input value={item.name} onChange={(e) => updateItem(item.id, "name", e.target.value)} placeholder="Item name" aria-label="Item name" />
+              <input type="number" min="0" step="0.1" value={item.qty} onChange={(e) => updateItem(item.id, "qty", Number(e.target.value) || 0)} aria-label="Quantity" />
+              <select value={item.unit} onChange={(e) => updateItem(item.id, "unit", e.target.value)} aria-label="Unit">
+                {UNIT_OPTIONS.map((u) => <option key={u}>{u}</option>)}
+              </select>
+              <input type="number" min="0" step="0.01" value={item.unitCost} onChange={(e) => updateItem(item.id, "unitCost", Number(e.target.value) || 0)} aria-label="Unit cost" />
+              <input type="number" min="0" step="1" value={item.markup} onChange={(e) => updateItem(item.id, "markup", Number(e.target.value) || 0)} aria-label="Markup %" />
+              <span className="v2-materials-est-num">${sub.toFixed(2)}</span>
+              <span className="v2-materials-est-num v2-materials-est-with-markup">${withMkp.toFixed(2)}</span>
+              <button type="button" aria-label="Remove item" onClick={() => removeItem(item.id)}><Trash2 size={14} /></button>
+            </div>
+          );
+        })}
+        <div className="v2-materials-est-footer">
+          <span>Subtotal: <strong>${subtotal.toFixed(2)}</strong></span>
+          <span>Markup: <strong>${markupTotal.toFixed(2)}</strong></span>
+          <span className="v2-materials-est-footer-total">Total: <strong>${total.toFixed(2)}</strong></span>
+        </div>
+      </div>
+
+      <div className="v2-tool-action-row">
+        <button type="button" className="v2-primary-button" onClick={addBlankItem}><Plus size={14} />Add Item</button>
+        <button type="button" onClick={saveList}><Package size={14} />Save List</button>
+        <button type="button" onClick={clearItems}>Clear</button>
+      </div>
+    </div>
+  );
+}
+
 function fileSize(sizeBytes: number) {
   if (sizeBytes < 1024) return `${sizeBytes} B`;
   if (sizeBytes < 1024 * 1024) return `${formatNumber(sizeBytes / 1024, 1)} KB`;
