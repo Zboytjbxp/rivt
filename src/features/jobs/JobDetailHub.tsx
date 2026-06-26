@@ -10,6 +10,11 @@ interface StoredJob {
   startDate?: string;
   trade?: string;
   description?: string;
+  createdAt?: string;
+  quotedAt?: string;
+  activeAt?: string;
+  invoicedAt?: string;
+  paidAt?: string;
 }
 
 interface TimeSession {
@@ -110,6 +115,96 @@ function Section({ title, count, children }: SectionProps) {
   );
 }
 
+// ── Status Timeline ───────────────────────────────────────────────────────────
+
+const PIPELINE_STAGES = ["Lead", "Quoted", "Active", "Invoiced", "Paid"] as const;
+type PipelineStage = (typeof PIPELINE_STAGES)[number];
+
+const STAGE_TIMESTAMP_KEYS: Record<PipelineStage, keyof StoredJob> = {
+  Lead: "createdAt",
+  Quoted: "quotedAt",
+  Active: "activeAt",
+  Invoiced: "invoicedAt",
+  Paid: "paidAt",
+};
+
+const STAGE_STATUS_VALUES: Record<PipelineStage, string[]> = {
+  Lead: ["Lead"],
+  Quoted: ["Quoted"],
+  Active: ["Active"],
+  Invoiced: ["Invoiced"],
+  Paid: ["Paid", "Paid / Closed"],
+};
+
+function getStageIndex(status?: string): number {
+  if (!status) return -1;
+  for (let i = 0; i < PIPELINE_STAGES.length; i++) {
+    if (STAGE_STATUS_VALUES[PIPELINE_STAGES[i]].includes(status)) return i;
+  }
+  return -1;
+}
+
+function StatusTimeline({ job, onJobUpdate }: { job: StoredJob; onJobUpdate: (updated: StoredJob) => void }) {
+  const currentIdx = getStageIndex(job.status);
+
+  function advanceTo(stage: PipelineStage, idx: number) {
+    if (idx <= currentIdx) return;
+    const tsKey = STAGE_TIMESTAMP_KEYS[stage];
+    const updated: StoredJob = {
+      ...job,
+      status: stage === "Paid" ? "Paid / Closed" : stage,
+      [tsKey]: new Date().toISOString(),
+    };
+    try {
+      const stored = localStorage.getItem("rivt.jobs.v1");
+      const jobs: StoredJob[] = stored ? (JSON.parse(stored) as StoredJob[]) : [];
+      const next = Array.isArray(jobs) ? jobs.map((j) => j.id === job.id ? updated : j) : [updated];
+      localStorage.setItem("rivt.jobs.v1", JSON.stringify(next));
+    } catch { /* noop */ }
+    onJobUpdate(updated);
+  }
+
+  function formatTs(ts?: string) {
+    if (!ts) return null;
+    try {
+      return new Date(ts).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+    } catch { return null; }
+  }
+
+  return (
+    <div className="v2-status-timeline">
+      <div className="v2-status-timeline-track">
+        {PIPELINE_STAGES.map((stage, idx) => {
+          const isDone = idx < currentIdx;
+          const isCurrent = idx === currentIdx;
+          const isFuture = idx > currentIdx;
+          const tsKey = STAGE_TIMESTAMP_KEYS[stage];
+          const ts = job[tsKey] as string | undefined;
+          return (
+            <div
+              key={stage}
+              className={["v2-status-step", isDone ? "is-done" : "", isCurrent ? "is-current" : "", isFuture ? "is-future" : ""].filter(Boolean).join(" ")}
+            >
+              <div
+                className="v2-status-step-circle"
+                role={isFuture ? "button" : undefined}
+                tabIndex={isFuture ? 0 : undefined}
+                title={isFuture ? `Advance to ${stage}` : undefined}
+                onClick={() => { if (isFuture) advanceTo(stage, idx); }}
+                onKeyDown={(e) => { if (isFuture && (e.key === "Enter" || e.key === " ")) advanceTo(stage, idx); }}
+              >
+                {idx + 1}
+              </div>
+              <span className="v2-status-step-label">{stage}</span>
+              {formatTs(ts) ? <span className="v2-status-step-time">{formatTs(ts)}</span> : null}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export function JobDetailHub({ jobId, onClose }: JobDetailHubProps) {
   const [job, setJob] = useState<StoredJob | null>(null);
   const [sessions, setSessions] = useState<TimeSession[]>([]);
@@ -202,6 +297,11 @@ export function JobDetailHub({ jobId, onClose }: JobDetailHubProps) {
           {job.trade ? <><span>·</span><span>{job.trade}</span></> : null}
           {job.startDate ? <><span>·</span><span>{job.startDate}</span></> : null}
         </div>
+      ) : null}
+
+      {/* Status Timeline */}
+      {job ? (
+        <StatusTimeline job={job} onJobUpdate={(updated) => setJob(updated)} />
       ) : null}
 
       {/* Stats row */}

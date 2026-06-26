@@ -924,3 +924,454 @@
 .v2-client-delete-btn { padding: 8px 14px; background: none; border: 1px solid #ef4444; border-radius: var(--v2-radius-sm); font-size: 13px; font-family: inherit; cursor: pointer; color: #ef4444; }
 .v2-client-empty { text-align: center; padding: 40px 20px; color: var(--v2-text-muted); font-size: 14px; }
 .v2-client-jobs-badge { font-size: 11px; background: var(--v2-accent-soft); color: var(--v2-accent); padding: 2px 6px; border-radius: 20px; }
+
+/* ── Crew Manager ────────────────────────────────────────────────────────── */
+
+.v2-crew-manager {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border: 1px solid color-mix(in srgb, var(--v2-border) 58%, transparent);
+  border-radius: var(--v2-radius-lg);
+  background: var(--v2-surface-raised);
+  box-shadow: var(--v2-shadow-card);
+  overflow: hidden;
+}
+
+.v2-crew-manager-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border-bottom: 1px solid color-mix(in srgb, var(--v2-border) 56%, transparent);
+  background: color-mix(in srgb, var(--v2-surface-muted) 26%, transparent);
+}
+
+.v2-crew-manager-title {
+  font-size: 15px;
+  font-weight: var(--v2-weight-bold);
+  color: var(--v2-text);
+}
+
+/* Trade filter pills */
+.v2-crew-trade-filters {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding: 10px 18px;
+  border-bottom: 1px solid color-mix(in srgb, var(--v2-border) 40%, transparent);
+}
+
+.v2-crew-trade-pill {
+  padding: 4px 12px;
+  border: 1px solid color-mix(in srgb, var(--v2-border) 70%, transparent);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--v2-text-muted);
+  font: inherit;
+  font-size: 12px;
+  font-weight: var(--v2-weight-bold);
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+
+.v2-crew-trade-pill:hover {
+  background: color-mix(in srgb, var(--v2-border) 30%, transparent);
+  color: var(--v2-text);
+}
+
+.v2-crew-trade-pill.active {
+  background: var(--v2-accent);
+  color: #fff;
+  border-color: var(--v2-accent);
+}
+
+/* Crew card grid */
+.v2-crew-card-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+  padding: 16px;
+}
+
+.v2-crew-card-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.v2-crew-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid color-mix(in srgb, var(--v2-border) 60%, transparent);
+  border-radius: var(--v2-radius-md);
+  background: var(--v2-surface);
+  box-shadow: var(--v2-shadow-card);
+}
+
+.v2-crew-card-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.v2-crew-card-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.v2-crew-card-name-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.v2-crew-card-name-row strong {
+  font-size: 14px;
+  font-weight: var(--v2-weight-bold);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.v2-crew-avail-status-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.v2-crew-trade-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--v2-accent-soft);
+  color: var(--v2-accent);
+  font-size: 11px;
+  font-weight: var(--v2-weight-bold);
+  align-self: flex-start;
+}
+
+.v2-crew-rate {
+  font-size: 12px;
+  color: var(--v2-text-muted);
+  font-weight: var(--v2-weight-strong);
+}
+
+.v2-crew-card-contacts {
+  display: flex;
+  gap: 8px;
+}
+
+.v2-crew-contact-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--v2-radius-sm);
+  background: var(--v2-surface-muted);
+  color: var(--v2-accent);
+  text-decoration: none;
+  transition: background 0.12s;
+}
+
+.v2-crew-contact-link:hover {
+  background: var(--v2-accent-soft);
+}
+
+.v2-crew-license {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  color: var(--v2-text-muted);
+  padding: 4px 8px;
+  border-radius: var(--v2-radius-sm);
+  background: var(--v2-surface-muted);
+}
+
+.v2-crew-license.is-warning {
+  background: color-mix(in srgb, #f59e0b 12%, transparent);
+  color: #b45309;
+}
+
+.v2-crew-license.is-expired {
+  background: color-mix(in srgb, #ef4444 12%, transparent);
+  color: #b91c1c;
+}
+
+.v2-crew-license-warn {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  font-weight: var(--v2-weight-bold);
+}
+
+.v2-crew-assigned-job {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  color: var(--v2-text-muted);
+  padding: 4px 8px;
+  border-radius: var(--v2-radius-sm);
+  background: color-mix(in srgb, var(--v2-accent-soft) 60%, transparent);
+  color: var(--v2-accent);
+}
+
+.v2-crew-card-notes {
+  margin: 0;
+  font-size: 12px;
+  color: var(--v2-text-muted);
+  line-height: 1.4;
+}
+
+.v2-crew-card-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.v2-crew-assign-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+  padding: 7px 10px;
+  background: var(--v2-accent);
+  color: #fff;
+  border: none;
+  border-radius: var(--v2-radius-sm);
+  font: inherit;
+  font-size: 12px;
+  font-weight: var(--v2-weight-bold);
+  cursor: pointer;
+  transition: opacity 0.12s;
+}
+
+.v2-crew-assign-btn:hover { opacity: 0.88; }
+
+.v2-crew-invite-copy-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 6px 12px;
+  border: 1px dashed color-mix(in srgb, var(--v2-accent) 60%, transparent);
+  border-radius: var(--v2-radius-sm);
+  background: transparent;
+  color: var(--v2-accent);
+  font: inherit;
+  font-size: 12px;
+  font-weight: var(--v2-weight-bold);
+  cursor: pointer;
+  transition: background 0.12s;
+}
+
+.v2-crew-invite-copy-btn:hover {
+  background: var(--v2-accent-soft);
+}
+
+/* ── Crew Member Form ────────────────────────────────────────────────────── */
+
+.v2-crew-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px;
+  border-bottom: 1px solid color-mix(in srgb, var(--v2-border) 50%, transparent);
+  background: color-mix(in srgb, var(--v2-surface-muted) 28%, transparent);
+}
+
+.v2-crew-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.v2-crew-form-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--v2-text-muted);
+  font-weight: var(--v2-weight-strong);
+}
+
+.v2-crew-form-grid label.v2-crew-form-wide {
+  grid-column: 1 / -1;
+}
+
+.v2-crew-form-grid input,
+.v2-crew-form-grid select,
+.v2-crew-form-grid textarea {
+  padding: 8px 10px;
+  border: 1px solid var(--v2-border);
+  border-radius: var(--v2-radius-sm);
+  background: var(--v2-surface);
+  color: var(--v2-text);
+  font: inherit;
+  font-size: 13px;
+}
+
+.v2-crew-form-grid input:focus,
+.v2-crew-form-grid select:focus,
+.v2-crew-form-grid textarea:focus {
+  outline: none;
+  border-color: var(--v2-accent);
+}
+
+.v2-crew-form-grid textarea {
+  resize: vertical;
+}
+
+.v2-crew-form-btns {
+  display: flex;
+  gap: 8px;
+}
+
+/* ── Job Assign Modal ────────────────────────────────────────────────────── */
+
+.v2-crew-assign-modal {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: min(420px, calc(100vw - 32px));
+  max-height: min(520px, calc(100vh - 48px));
+  padding: 20px;
+  border-radius: var(--v2-radius-xl);
+  background: var(--v2-surface-raised);
+  border: 1px solid color-mix(in srgb, var(--v2-border) 70%, transparent);
+  box-shadow: 0 20px 60px color-mix(in srgb, #000 30%, transparent);
+  overflow: hidden;
+}
+
+.v2-crew-assign-modal header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.v2-crew-assign-modal header strong {
+  font-size: 15px;
+  font-weight: var(--v2-weight-bold);
+}
+
+.v2-crew-assign-modal header button {
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: var(--v2-radius-sm);
+  background: transparent;
+  color: var(--v2-text-muted);
+  cursor: pointer;
+}
+
+.v2-crew-assign-modal header button:hover {
+  background: color-mix(in srgb, var(--v2-border) 40%, transparent);
+}
+
+.v2-crew-assign-current {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: var(--v2-radius-sm);
+  background: color-mix(in srgb, var(--v2-accent-soft) 60%, transparent);
+  font-size: 13px;
+  color: var(--v2-text-muted);
+}
+
+.v2-crew-unassign-btn {
+  padding: 4px 10px;
+  border: 1px solid #ef4444;
+  border-radius: var(--v2-radius-sm);
+  background: none;
+  color: #ef4444;
+  font: inherit;
+  font-size: 12px;
+  font-weight: var(--v2-weight-bold);
+  cursor: pointer;
+}
+
+.v2-crew-assign-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  overflow-y: auto;
+  max-height: 300px;
+}
+
+.v2-crew-assign-job-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--v2-border) 60%, transparent);
+  border-radius: var(--v2-radius-md);
+  background: var(--v2-surface-muted);
+  color: var(--v2-text);
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s;
+}
+
+.v2-crew-assign-job-btn:hover {
+  background: color-mix(in srgb, var(--v2-accent-soft) 60%, transparent);
+  border-color: var(--v2-accent);
+}
+
+.v2-crew-assign-job-btn.is-current {
+  border-color: var(--v2-accent);
+  background: color-mix(in srgb, var(--v2-accent-soft) 80%, transparent);
+}
+
+.v2-crew-assign-job-btn > span:first-of-type {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.v2-crew-assign-status {
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--v2-accent-soft) 50%, transparent);
+  color: var(--v2-accent);
+  font-weight: var(--v2-weight-bold);
+  white-space: nowrap;
+}
+
+.v2-crew-assign-empty {
+  font-size: 13px;
+  color: var(--v2-text-muted);
+  text-align: center;
+  padding: 20px;
+  margin: 0;
+}
+
+@media (max-width: 640px) {
+  .v2-crew-form-grid {
+    grid-template-columns: 1fr;
+  }
+  .v2-crew-card-list {
+    grid-template-columns: 1fr;
+  }
+}

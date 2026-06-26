@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   AlertTriangle,
   Archive,
   Bell,
+  Camera,
   CheckCheck,
   Clock3,
   MessageCircle,
@@ -11,12 +12,13 @@ import {
   RefreshCw,
   Send,
   ShieldAlert,
+  Users,
   VolumeX,
   X,
 } from "lucide-react";
 import type { PrimaryDestination } from "../../app-shell/types";
 import type { InboxConversation, InboxMessage, InboxNotification } from "./inbox-api";
-import { EmptyState, MetricTile, PageHeader, Panel, SkeletonCard } from "../../components/ui";
+import { Avatar, EmptyState, MetricTile, PageHeader, Panel, SkeletonCard } from "../../components/ui";
 import "./inbox-center.css";
 
 // ─── localStorage keys ────────────────────────────────────────────────────────
@@ -24,6 +26,7 @@ const TEMPLATES_KEY = "rivt.msgTemplates.v1";
 const PINNED_KEY = "rivt.pinnedConvs.v1";
 const ARCHIVED_KEY = "rivt.archivedConvs.v1";
 const REACTIONS_KEY = "rivt.msgReactions.v1";
+const CLIENT_THREADS_KEY = "rivt.clientThreads.v1";
 
 const DEFAULT_TEMPLATES = [
   "Available and interested — can you share more details?",
@@ -34,6 +37,329 @@ const DEFAULT_TEMPLATES = [
 ];
 
 const EMOJI_OPTIONS = ["👍", "👎", "🔥", "✅", "❓", "😂"];
+
+const SIMULATE_REPLIES = [
+  "Thanks, I'll be there.",
+  "Can we push to next week?",
+  "Sounds good, see you then.",
+  "What time works for you?",
+  "Got it, I'll check my schedule.",
+  "Perfect, send me the address.",
+];
+
+// ─── Client thread types ──────────────────────────────────────────────────────
+
+interface ClientContact {
+  id: string;
+  name: string;
+  createdAt: string;
+}
+
+interface ClientMessage {
+  id: string;
+  text: string;
+  sentAt: string;
+  from: "me" | "client";
+  attachmentUrl?: string;
+}
+
+type ClientThreads = Record<string, ClientMessage[]>;
+
+function loadClientContacts(): ClientContact[] {
+  // Try rivt.clients.v1 first (shared with NetworkHub)
+  try {
+    const raw = localStorage.getItem("rivt.clients.v1");
+    if (raw) {
+      const parsed = JSON.parse(raw) as ClientContact[];
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+  } catch { /* noop */ }
+  return [];
+}
+
+function loadClientThreads(): ClientThreads {
+  try {
+    const raw = localStorage.getItem(CLIENT_THREADS_KEY);
+    if (raw) return JSON.parse(raw) as ClientThreads;
+  } catch { /* noop */ }
+  return {};
+}
+
+function saveClientThreads(threads: ClientThreads) {
+  try { localStorage.setItem(CLIENT_THREADS_KEY, JSON.stringify(threads)); } catch { /* noop */ }
+}
+
+// ─── Client Conversation UI ───────────────────────────────────────────────────
+
+function ClientThread({
+  contact,
+  onBack,
+}: {
+  contact: ClientContact;
+  onBack: () => void;
+}) {
+  const [threads, setThreads] = useState<ClientThreads>(loadClientThreads);
+  const [text, setText] = useState("");
+  const fileRef = useRef<HTMLInputElement>(null);
+  const messagesRef = useRef<HTMLDivElement>(null);
+
+  const messages: ClientMessage[] = threads[contact.id] ?? [];
+
+  function addMessage(msg: ClientMessage) {
+    setThreads((prev) => {
+      const next: ClientThreads = { ...prev, [contact.id]: [...(prev[contact.id] ?? []), msg] };
+      saveClientThreads(next);
+      return next;
+    });
+    // Scroll to bottom
+    setTimeout(() => {
+      if (messagesRef.current) {
+        messagesRef.current.scrollTop = messagesRef.current.scrollHeight;
+      }
+    }, 30);
+  }
+
+  function handleSend() {
+    const trimmed = text.trim();
+    if (!trimmed) return;
+    addMessage({
+      id: crypto.randomUUID(),
+      text: trimmed,
+      sentAt: new Date().toISOString(),
+      from: "me",
+    });
+    setText("");
+  }
+
+  function handleSimulateReply() {
+    const reply = SIMULATE_REPLIES[Math.floor(Math.random() * SIMULATE_REPLIES.length)];
+    addMessage({
+      id: crypto.randomUUID(),
+      text: reply,
+      sentAt: new Date().toISOString(),
+      from: "client",
+    });
+  }
+
+  function handlePhotoAttach(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      addMessage({
+        id: crypto.randomUUID(),
+        text: file.name,
+        sentAt: new Date().toISOString(),
+        from: "me",
+        attachmentUrl: reader.result as string,
+      });
+    };
+    reader.readAsDataURL(file);
+    // reset input
+    e.target.value = "";
+  }
+
+  function timeLabel(iso: string) {
+    // eslint-disable-next-line react-hooks/purity
+    const elapsed = Math.max(0, Date.now() - new Date(iso).getTime());
+    const minutes = Math.floor(elapsed / 60000);
+    if (minutes < 1) return "just now";
+    if (minutes < 60) return `${minutes}m ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours}h ago`;
+    return `${Math.floor(hours / 24)}d ago`;
+  }
+
+  return (
+    <div className="v2-client-thread">
+      <div className="v2-client-thread-header">
+        <button type="button" className="v2-client-thread-back" onClick={onBack} aria-label="Back">
+          ← Back
+        </button>
+        <Avatar name={contact.name} size="sm" />
+        <strong>{contact.name}</strong>
+      </div>
+
+      <div className="v2-client-thread-messages" ref={messagesRef}>
+        {messages.length === 0 ? (
+          <div className="v2-client-thread-empty">No messages yet — say hello!</div>
+        ) : (
+          messages.map((msg) => (
+            <div key={msg.id} className={`v2-ct-bubble ${msg.from === "me" ? "is-mine" : "is-theirs"}`}>
+              {msg.attachmentUrl ? (
+                <img
+                  src={msg.attachmentUrl}
+                  alt={msg.text}
+                  className="v2-ct-attachment"
+                />
+              ) : (
+                <span className="v2-ct-text">{msg.text}</span>
+              )}
+              <time className="v2-ct-time">{timeLabel(msg.sentAt)}</time>
+            </div>
+          ))
+        )}
+      </div>
+
+      <div className="v2-client-thread-input-bar">
+        <input
+          type="file"
+          accept="image/*"
+          ref={fileRef}
+          className="v2-ct-file-input"
+          onChange={handlePhotoAttach}
+          aria-label="Attach photo"
+        />
+        <button
+          type="button"
+          className="v2-ct-photo-btn"
+          onClick={() => fileRef.current?.click()}
+          title="Attach photo"
+          aria-label="Attach photo"
+        >
+          <Camera size={18} />
+        </button>
+        <input
+          className="v2-ct-text-input"
+          placeholder="Type a message…"
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
+        />
+        <button
+          type="button"
+          className="v2-ct-send-btn"
+          disabled={!text.trim()}
+          onClick={handleSend}
+          aria-label="Send"
+        >
+          <Send size={16} />
+        </button>
+      </div>
+
+      <div className="v2-client-thread-toolbar">
+        <button type="button" className="v2-ct-sim-btn" onClick={handleSimulateReply}>
+          Simulate reply
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function ClientsTab() {
+  const [contacts, setContacts] = useState<ClientContact[]>(loadClientContacts);
+  const [selectedContact, setSelectedContact] = useState<ClientContact | null>(null);
+  const [addingName, setAddingName] = useState(false);
+  const [newName, setNewName] = useState("");
+
+  function addContact() {
+    const trimmed = newName.trim();
+    if (!trimmed) return;
+    const c: ClientContact = { id: crypto.randomUUID(), name: trimmed, createdAt: new Date().toISOString() };
+    const next = [c, ...contacts];
+    setContacts(next);
+    // Also persist to rivt.clients.v1 for cross-tab consistency (minimal shape)
+    try {
+      const existing = JSON.parse(localStorage.getItem("rivt.clients.v1") || "[]") as ClientContact[];
+      localStorage.setItem("rivt.clients.v1", JSON.stringify([c, ...existing]));
+    } catch { /* noop */ }
+    setNewName("");
+    setAddingName(false);
+    setSelectedContact(c);
+  }
+
+  function getLastMessage(contactId: string): ClientMessage | null {
+    try {
+      const threads = loadClientThreads();
+      const msgs = threads[contactId];
+      if (msgs && msgs.length > 0) return msgs[msgs.length - 1];
+    } catch { /* noop */ }
+    return null;
+  }
+
+  if (selectedContact) {
+    return (
+      <ClientThread
+        contact={selectedContact}
+        onBack={() => setSelectedContact(null)}
+      />
+    );
+  }
+
+  return (
+    <div className="v2-clients-tab">
+      <div className="v2-clients-tab-header">
+        <span className="v2-client-title">Client Messages ({contacts.length})</span>
+        {addingName ? (
+          <div className="v2-ct-add-form">
+            <input
+              autoFocus
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") addContact(); if (e.key === "Escape") { setAddingName(false); setNewName(""); } }}
+              placeholder="Client name"
+            />
+            <button type="button" className="v2-client-save-btn" disabled={!newName.trim()} onClick={addContact}>Add</button>
+            <button type="button" className="v2-client-cancel-btn" onClick={() => { setAddingName(false); setNewName(""); }}><X size={14} /></button>
+          </div>
+        ) : (
+          <button type="button" className="v2-client-add-btn" onClick={() => setAddingName(true)}>
+            <Plus size={14} /> New
+          </button>
+        )}
+      </div>
+
+      {contacts.length === 0 ? (
+        <EmptyState
+          className="v2-inbox-empty"
+          icon={<Users size={20} />}
+          title="No client conversations yet"
+          description="Tap + New to start a conversation with a client."
+          compact
+        />
+      ) : (
+        <div className="v2-clients-list">
+          {contacts.map((c) => {
+            const last = getLastMessage(c.id);
+            return (
+              <button
+                key={c.id}
+                type="button"
+                className="v2-client-conv-row"
+                onClick={() => setSelectedContact(c)}
+              >
+                <Avatar name={c.name} size="sm" />
+                <div className="v2-client-conv-info">
+                  <strong>{c.name}</strong>
+                  {last ? (
+                    <span className="v2-client-conv-preview">
+                      {last.from === "me" ? "You: " : ""}{last.text.length > 40 ? last.text.slice(0, 40) + "…" : last.text}
+                    </span>
+                  ) : (
+                    <span className="v2-client-conv-preview">No messages yet</span>
+                  )}
+                </div>
+                {last && (
+                  <time className="v2-client-conv-time">
+                    {(() => {
+                      const elapsed = Math.max(0, Date.now() - new Date(last.sentAt).getTime());
+                      const minutes = Math.floor(elapsed / 60000);
+                      if (minutes < 1) return "now";
+                      if (minutes < 60) return `${minutes}m`;
+                      const hours = Math.floor(minutes / 60);
+                      if (hours < 24) return `${hours}h`;
+                      return `${Math.floor(hours / 24)}d`;
+                    })()}
+                  </time>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 interface InboxCenterProps {
@@ -76,6 +402,9 @@ function messageState(message: InboxMessage, accountId: string) {
   return "sent";
 }
 
+// ─── Inbox tab types ──────────────────────────────────────────────────────────
+type InboxTab = "Messages" | "Clients";
+
 // ─── Component ────────────────────────────────────────────────────────────────
 export function InboxCenter({
   accountId,
@@ -97,6 +426,9 @@ export function InboxCenter({
   onRefresh,
   onNavigate,
 }: InboxCenterProps) {
+  // ── Tab state ─────────────────────────────────────────────────────────────
+  const [activeTab, setActiveTab] = useState<InboxTab>("Messages");
+
   // ── Feature 1: Message Templates ──────────────────────────────────────────
   const [templates, setTemplates] = useState<string[]>(() => {
     try {
@@ -203,6 +535,23 @@ export function InboxCenter({
 
   const archivedCount = archivedIds.size;
 
+  // ─── Tab bar ──────────────────────────────────────────────────────────────
+  const tabBar = (
+    <div className="v2-inbox-tabs">
+      {(["Messages", "Clients"] as InboxTab[]).map((tab) => (
+        <button
+          key={tab}
+          type="button"
+          className={`v2-inbox-tab${activeTab === tab ? " is-active" : ""}`}
+          onClick={() => setActiveTab(tab)}
+        >
+          {tab === "Messages" ? <MessageCircle size={15} /> : <Users size={15} />}
+          {tab}
+        </button>
+      ))}
+    </div>
+  );
+
   // ─── Render ───────────────────────────────────────────────────────────────
   return (
     <section className="v2-inbox-page" aria-label="Inbox">
@@ -227,325 +576,335 @@ export function InboxCenter({
         </article>
       ) : null}
 
-      <div className="v2-inbox-grid">
-        {/* ── Thread List Panel ── */}
-        <Panel
-          className="v2-inbox-panel"
-          eyebrow="Threads"
-          title="Accepted work only"
-          action={<button type="button" onClick={onRefresh}><RefreshCw size={14} /> Refresh</button>}
-        >
-          {/* Archive toggle */}
-          <div className="v2-inbox-list-toolbar">
-            <button
-              type="button"
-              className={showArchived ? "v2-archived-toggle active" : "v2-archived-toggle"}
-              onClick={() => setShowArchived((v) => !v)}
-            >
-              <Archive size={12} />
-              Archived ({archivedCount})
-            </button>
-          </div>
+      {/* Tab bar */}
+      {tabBar}
 
-          <div className="v2-inbox-thread-list">
-            {loading ? (
+      {/* Clients tab */}
+      {activeTab === "Clients" ? (
+        <div className="v2-inbox-clients-wrapper">
+          <ClientsTab />
+        </div>
+      ) : (
+        <div className="v2-inbox-grid">
+          {/* ── Thread List Panel ── */}
+          <Panel
+            className="v2-inbox-panel"
+            eyebrow="Threads"
+            title="Accepted work only"
+            action={<button type="button" onClick={onRefresh}><RefreshCw size={14} /> Refresh</button>}
+          >
+            {/* Archive toggle */}
+            <div className="v2-inbox-list-toolbar">
+              <button
+                type="button"
+                className={showArchived ? "v2-archived-toggle active" : "v2-archived-toggle"}
+                onClick={() => setShowArchived((v) => !v)}
+              >
+                <Archive size={12} />
+                Archived ({archivedCount})
+              </button>
+            </div>
+
+            <div className="v2-inbox-thread-list">
+              {loading ? (
+                <>
+                  <SkeletonCard />
+                  <SkeletonCard />
+                  <SkeletonCard />
+                </>
+              ) : visibleConversations.length ? (
+                <>
+                  {/* Pinned section */}
+                  {!showArchived && pinnedConversations.length > 0 && (
+                    <>
+                      <div className="v2-conv-section-label">Pinned</div>
+                      {pinnedConversations.map((conversation) => (
+                        <ConversationRow
+                          key={conversation.id}
+                          conversation={conversation}
+                          isActive={conversation.id === selectedConversationId}
+                          isPinned={pinnedIds.has(conversation.id)}
+                          isArchived={archivedIds.has(conversation.id)}
+                          onSelect={onSelectConversation}
+                          onTogglePin={togglePin}
+                          onToggleArchive={toggleArchive}
+                        />
+                      ))}
+                      {unpinnedConversations.length > 0 && (
+                        <div className="v2-conv-section-label">All messages</div>
+                      )}
+                    </>
+                  )}
+
+                  {/* Unpinned / all conversations */}
+                  {unpinnedConversations.map((conversation) => (
+                    <ConversationRow
+                      key={conversation.id}
+                      conversation={conversation}
+                      isActive={conversation.id === selectedConversationId}
+                      isPinned={pinnedIds.has(conversation.id)}
+                      isArchived={archivedIds.has(conversation.id)}
+                      onSelect={onSelectConversation}
+                      onTogglePin={togglePin}
+                      onToggleArchive={toggleArchive}
+                    />
+                  ))}
+
+                  {/* Show archived-only empty state */}
+                  {showArchived && visibleConversations.length === 0 && (
+                    <EmptyState
+                      className="v2-inbox-empty"
+                      icon={<Archive size={20} />}
+                      title="No archived threads"
+                      description="Archived conversations will appear here."
+                      compact
+                    />
+                  )}
+                </>
+              ) : (
+                <EmptyState
+                  className="v2-inbox-empty"
+                  icon={<MessageCircle size={20} />}
+                  title={showArchived ? "No archived threads" : "No work threads yet"}
+                  description={
+                    showArchived
+                      ? "Archived conversations will appear here."
+                      : "A thread opens after a contractor offer is accepted."
+                  }
+                  action={
+                    !showArchived ? (
+                      <button type="button" onClick={() => onNavigate("work")}>Open Work</button>
+                    ) : undefined
+                  }
+                  compact
+                />
+              )}
+            </div>
+          </Panel>
+
+          {/* ── Conversation Panel ── */}
+          <Panel
+            className="v2-inbox-panel v2-inbox-panel-thread"
+            eyebrow="Conversation"
+            title={selectedConversation ? selectedConversation.job.title : "Select a thread"}
+            action={
+              selectedConversation ? (
+                <div className="v2-inbox-header-actions">
+                  <button type="button" onClick={onMarkSelectedRead}><CheckCheck size={14} /> Read</button>
+                  <button type="button" onClick={onMuteSelected}><VolumeX size={14} /> Mute</button>
+                  <button type="button" onClick={onReportSelected}><ShieldAlert size={14} /> Report</button>
+                </div>
+              ) : null
+            }
+          >
+            {selectedConversation ? (
               <>
-                <SkeletonCard />
-                <SkeletonCard />
-                <SkeletonCard />
-              </>
-            ) : visibleConversations.length ? (
-              <>
-                {/* Pinned section */}
-                {!showArchived && pinnedConversations.length > 0 && (
-                  <>
-                    <div className="v2-conv-section-label">Pinned</div>
-                    {pinnedConversations.map((conversation) => (
-                      <ConversationRow
-                        key={conversation.id}
-                        conversation={conversation}
-                        isActive={conversation.id === selectedConversationId}
-                        isPinned={pinnedIds.has(conversation.id)}
-                        isArchived={archivedIds.has(conversation.id)}
-                        onSelect={onSelectConversation}
-                        onTogglePin={togglePin}
-                        onToggleArchive={toggleArchive}
-                      />
-                    ))}
-                    {unpinnedConversations.length > 0 && (
-                      <div className="v2-conv-section-label">All messages</div>
-                    )}
-                  </>
-                )}
+                <div className="v2-inbox-context">
+                  <strong>{selectedConversation.job.organization.name}</strong>
+                  <span>{selectedConversation.job.publicLocation.city}, {selectedConversation.job.publicLocation.region}</span>
+                  <small>{otherParticipants.map((p) => p.displayName).join(", ") || "Work participant"}</small>
+                </div>
 
-                {/* Unpinned / all conversations */}
-                {unpinnedConversations.map((conversation) => (
-                  <ConversationRow
-                    key={conversation.id}
-                    conversation={conversation}
-                    isActive={conversation.id === selectedConversationId}
-                    isPinned={pinnedIds.has(conversation.id)}
-                    isArchived={archivedIds.has(conversation.id)}
-                    onSelect={onSelectConversation}
-                    onTogglePin={togglePin}
-                    onToggleArchive={toggleArchive}
-                  />
-                ))}
+                {/* ── Message List ── */}
+                <div
+                  className="v2-inbox-message-list"
+                  onClick={() => setReactionPickerFor(null)}
+                >
+                  {messages.length ? messages.map((message) => {
+                    const mine = message.senderAccountId === accountId;
+                    const state = messageState(message, accountId);
+                    const existingReaction = reactions[message.id];
+                    const pickerOpen = reactionPickerFor === message.id;
 
-                {/* Show archived-only empty state */}
-                {showArchived && visibleConversations.length === 0 && (
-                  <EmptyState
-                    className="v2-inbox-empty"
-                    icon={<Archive size={20} />}
-                    title="No archived threads"
-                    description="Archived conversations will appear here."
-                    compact
+                    return (
+                      <article
+                        key={message.id}
+                        className={mine ? "v2-inbox-message is-mine" : "v2-inbox-message"}
+                      >
+                        <small>{message.sender?.displayName || "RIVT member"} - {timeLabel(message.createdAt)}</small>
+                        <p>{message.body}</p>
+                        {state ? <span><CheckCheck size={12} /> {state}</span> : null}
+
+                        {/* Emoji picker + reaction pill */}
+                        <div className="v2-msg-reaction-row">
+                          {existingReaction && (
+                            <button
+                              type="button"
+                              className="v2-msg-reaction-pill"
+                              onClick={(e) => { e.stopPropagation(); setReaction(message.id, existingReaction); }}
+                              title="Remove reaction"
+                            >
+                              {existingReaction}
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            className="v2-msg-reaction-trigger"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setReactionPickerFor(pickerOpen ? null : message.id);
+                            }}
+                            title="React"
+                          >
+                            {existingReaction ? "…" : "☺"}
+                          </button>
+                          {pickerOpen && (
+                            <div
+                              className="v2-msg-reaction-picker"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              {EMOJI_OPTIONS.map((emoji) => (
+                                <button
+                                  key={emoji}
+                                  type="button"
+                                  className={`v2-msg-reaction-btn${existingReaction === emoji ? " is-active" : ""}`}
+                                  onClick={() => setReaction(message.id, emoji)}
+                                >
+                                  {emoji}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </article>
+                    );
+                  }) : (
+                    <EmptyState
+                      className="v2-inbox-empty"
+                      icon={<Clock3 size={20} />}
+                      title="No messages yet"
+                      description="Send the first update when you have a real work question."
+                      compact
+                    />
+                  )}
+                </div>
+
+                {/* ── Templates bar ── */}
+                <div className="v2-msg-templates-section">
+                  <button
+                    type="button"
+                    className="v2-templates-toggle"
+                    onClick={() => setTemplatesOpen((v) => !v)}
+                  >
+                    Templates {templatesOpen ? "▲" : "▼"}
+                  </button>
+
+                  {templatesOpen && (
+                    <div className="v2-msg-templates-bar">
+                      {templates.map((tpl, i) => (
+                        <span key={i} className="v2-msg-template-chip">
+                          <button
+                            type="button"
+                            onClick={() => onMessageDraft(tpl)}
+                            title={tpl}
+                          >
+                            {tpl.length > 35 ? tpl.slice(0, 35) + "…" : tpl}
+                          </button>
+                          <button
+                            type="button"
+                            className="v2-msg-template-chip-delete"
+                            onClick={() => deleteTemplate(i)}
+                            title="Remove template"
+                            aria-label="Remove template"
+                          >
+                            <X size={10} />
+                          </button>
+                        </span>
+                      ))}
+
+                      {addingTemplate ? (
+                        <span className="v2-msg-template-add-form">
+                          <input
+                            autoFocus
+                            type="text"
+                            value={newTemplateDraft}
+                            onChange={(e) => setNewTemplateDraft(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") addTemplate();
+                              if (e.key === "Escape") { setAddingTemplate(false); setNewTemplateDraft(""); }
+                            }}
+                            placeholder="New template text…"
+                          />
+                          <button type="button" onClick={addTemplate}>Save</button>
+                          <button type="button" onClick={() => { setAddingTemplate(false); setNewTemplateDraft(""); }}>
+                            <X size={12} />
+                          </button>
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          className="v2-msg-template-chip-add"
+                          onClick={() => setAddingTemplate(true)}
+                          title="Add template"
+                        >
+                          <Plus size={12} />
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* ── Composer ── */}
+                <label className="v2-inbox-composer">
+                  <span>Message</span>
+                  <textarea
+                    value={messageDraft}
+                    onChange={(event) => onMessageDraft(event.target.value)}
+                    placeholder="Write a job update, schedule question, or site note."
                   />
-                )}
+                </label>
+                <div className="v2-inbox-composer-actions">
+                  <button type="button" className="v2-primary-button" onClick={onSendMessage} disabled={!canSend}>
+                    <Send size={16} />
+                    {sending ? "Sending" : "Send"}
+                  </button>
+                  <button type="button" onClick={() => onNavigate("work")}>Open job</button>
+                </div>
               </>
             ) : (
               <EmptyState
-                className="v2-inbox-empty"
-                icon={<MessageCircle size={20} />}
-                title={showArchived ? "No archived threads" : "No work threads yet"}
-                description={
-                  showArchived
-                    ? "Archived conversations will appear here."
-                    : "A thread opens after a contractor offer is accepted."
-                }
-                action={
-                  !showArchived ? (
-                    <button type="button" onClick={() => onNavigate("work")}>Open Work</button>
-                  ) : undefined
-                }
-                compact
+                className="v2-inbox-empty v2-inbox-empty-large"
+                icon={<MessageCircle size={24} />}
+                title="Select a work thread"
+                description="Messages are only available between accepted work participants."
               />
             )}
-          </div>
-        </Panel>
+          </Panel>
 
-        {/* ── Conversation Panel ── */}
-        <Panel
-          className="v2-inbox-panel v2-inbox-panel-thread"
-          eyebrow="Conversation"
-          title={selectedConversation ? selectedConversation.job.title : "Select a thread"}
-          action={
-            selectedConversation ? (
-              <div className="v2-inbox-header-actions">
-                <button type="button" onClick={onMarkSelectedRead}><CheckCheck size={14} /> Read</button>
-                <button type="button" onClick={onMuteSelected}><VolumeX size={14} /> Mute</button>
-                <button type="button" onClick={onReportSelected}><ShieldAlert size={14} /> Report</button>
-              </div>
-            ) : null
-          }
-        >
-          {selectedConversation ? (
-            <>
-              <div className="v2-inbox-context">
-                <strong>{selectedConversation.job.organization.name}</strong>
-                <span>{selectedConversation.job.publicLocation.city}, {selectedConversation.job.publicLocation.region}</span>
-                <small>{otherParticipants.map((p) => p.displayName).join(", ") || "Work participant"}</small>
-              </div>
-
-              {/* ── Message List ── */}
-              <div
-                className="v2-inbox-message-list"
-                onClick={() => setReactionPickerFor(null)}
-              >
-                {messages.length ? messages.map((message) => {
-                  const mine = message.senderAccountId === accountId;
-                  const state = messageState(message, accountId);
-                  const existingReaction = reactions[message.id];
-                  const pickerOpen = reactionPickerFor === message.id;
-
-                  return (
-                    <article
-                      key={message.id}
-                      className={mine ? "v2-inbox-message is-mine" : "v2-inbox-message"}
-                    >
-                      <small>{message.sender?.displayName || "RIVT member"} - {timeLabel(message.createdAt)}</small>
-                      <p>{message.body}</p>
-                      {state ? <span><CheckCheck size={12} /> {state}</span> : null}
-
-                      {/* Emoji picker + reaction pill */}
-                      <div className="v2-msg-reaction-row">
-                        {existingReaction && (
-                          <button
-                            type="button"
-                            className="v2-msg-reaction-pill"
-                            onClick={(e) => { e.stopPropagation(); setReaction(message.id, existingReaction); }}
-                            title="Remove reaction"
-                          >
-                            {existingReaction}
-                          </button>
-                        )}
-                        <button
-                          type="button"
-                          className="v2-msg-reaction-trigger"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setReactionPickerFor(pickerOpen ? null : message.id);
-                          }}
-                          title="React"
-                        >
-                          {existingReaction ? "…" : "☺"}
-                        </button>
-                        {pickerOpen && (
-                          <div
-                            className="v2-msg-reaction-picker"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            {EMOJI_OPTIONS.map((emoji) => (
-                              <button
-                                key={emoji}
-                                type="button"
-                                className={`v2-msg-reaction-btn${existingReaction === emoji ? " is-active" : ""}`}
-                                onClick={() => setReaction(message.id, emoji)}
-                              >
-                                {emoji}
-                              </button>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    </article>
-                  );
-                }) : (
-                  <EmptyState
-                    className="v2-inbox-empty"
-                    icon={<Clock3 size={20} />}
-                    title="No messages yet"
-                    description="Send the first update when you have a real work question."
-                    compact
-                  />
-                )}
-              </div>
-
-              {/* ── Templates bar ── */}
-              <div className="v2-msg-templates-section">
-                <button
-                  type="button"
-                  className="v2-templates-toggle"
-                  onClick={() => setTemplatesOpen((v) => !v)}
-                >
-                  Templates {templatesOpen ? "▲" : "▼"}
-                </button>
-
-                {templatesOpen && (
-                  <div className="v2-msg-templates-bar">
-                    {templates.map((tpl, i) => (
-                      <span key={i} className="v2-msg-template-chip">
-                        <button
-                          type="button"
-                          onClick={() => onMessageDraft(tpl)}
-                          title={tpl}
-                        >
-                          {tpl.length > 35 ? tpl.slice(0, 35) + "…" : tpl}
-                        </button>
-                        <button
-                          type="button"
-                          className="v2-msg-template-chip-delete"
-                          onClick={() => deleteTemplate(i)}
-                          title="Remove template"
-                          aria-label="Remove template"
-                        >
-                          <X size={10} />
-                        </button>
-                      </span>
-                    ))}
-
-                    {addingTemplate ? (
-                      <span className="v2-msg-template-add-form">
-                        <input
-                          autoFocus
-                          type="text"
-                          value={newTemplateDraft}
-                          onChange={(e) => setNewTemplateDraft(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") addTemplate();
-                            if (e.key === "Escape") { setAddingTemplate(false); setNewTemplateDraft(""); }
-                          }}
-                          placeholder="New template text…"
-                        />
-                        <button type="button" onClick={addTemplate}>Save</button>
-                        <button type="button" onClick={() => { setAddingTemplate(false); setNewTemplateDraft(""); }}>
-                          <X size={12} />
-                        </button>
-                      </span>
-                    ) : (
-                      <button
-                        type="button"
-                        className="v2-msg-template-chip-add"
-                        onClick={() => setAddingTemplate(true)}
-                        title="Add template"
-                      >
-                        <Plus size={12} />
-                      </button>
-                    )}
+          {/* ── Notifications Panel ── */}
+          <Panel
+            className="v2-inbox-panel v2-inbox-panel-wide"
+            eyebrow="Notifications"
+            title="What changed since you last checked"
+            action={
+              <button type="button" onClick={onMarkNotificationsRead} disabled={!unreadNotifications.length}>
+                <Bell size={14} />
+                Mark all read
+              </button>
+            }
+          >
+            <div className="v2-inbox-list">
+              {notifications.length ? notifications.map((item) => (
+                <article key={item.id} className={item.readAt ? "v2-inbox-item" : "v2-inbox-item unread"}>
+                  <div>
+                    <strong>{item.title}</strong>
+                    <span>{item.body}</span>
                   </div>
-                )}
-              </div>
-
-              {/* ── Composer ── */}
-              <label className="v2-inbox-composer">
-                <span>Message</span>
-                <textarea
-                  value={messageDraft}
-                  onChange={(event) => onMessageDraft(event.target.value)}
-                  placeholder="Write a job update, schedule question, or site note."
+                  <small>{timeLabel(item.createdAt)}</small>
+                </article>
+              )) : (
+                <EmptyState
+                  className="v2-inbox-empty"
+                  icon={<Bell size={20} />}
+                  title="No notifications yet"
+                  description="Offers, accepted work, and new messages will show here."
+                  compact
                 />
-              </label>
-              <div className="v2-inbox-composer-actions">
-                <button type="button" className="v2-primary-button" onClick={onSendMessage} disabled={!canSend}>
-                  <Send size={16} />
-                  {sending ? "Sending" : "Send"}
-                </button>
-                <button type="button" onClick={() => onNavigate("work")}>Open job</button>
-              </div>
-            </>
-          ) : (
-            <EmptyState
-              className="v2-inbox-empty v2-inbox-empty-large"
-              icon={<MessageCircle size={24} />}
-              title="Select a work thread"
-              description="Messages are only available between accepted work participants."
-            />
-          )}
-        </Panel>
-
-        {/* ── Notifications Panel ── */}
-        <Panel
-          className="v2-inbox-panel v2-inbox-panel-wide"
-          eyebrow="Notifications"
-          title="What changed since you last checked"
-          action={
-            <button type="button" onClick={onMarkNotificationsRead} disabled={!unreadNotifications.length}>
-              <Bell size={14} />
-              Mark all read
-            </button>
-          }
-        >
-          <div className="v2-inbox-list">
-            {notifications.length ? notifications.map((item) => (
-              <article key={item.id} className={item.readAt ? "v2-inbox-item" : "v2-inbox-item unread"}>
-                <div>
-                  <strong>{item.title}</strong>
-                  <span>{item.body}</span>
-                </div>
-                <small>{timeLabel(item.createdAt)}</small>
-              </article>
-            )) : (
-              <EmptyState
-                className="v2-inbox-empty"
-                icon={<Bell size={20} />}
-                title="No notifications yet"
-                description="Offers, accepted work, and new messages will show here."
-                compact
-              />
-            )}
-          </div>
-        </Panel>
-      </div>
+              )}
+            </div>
+          </Panel>
+        </div>
+      )}
     </section>
   );
 }
