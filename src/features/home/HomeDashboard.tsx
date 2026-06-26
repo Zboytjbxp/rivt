@@ -10,14 +10,18 @@ import {
   CircleDollarSign,
   ClipboardCheck,
   Clock,
+  Cloud,
+  CloudRain,
   CloudSun,
   FileText,
   Flame,
   MapPin,
   MessageSquareText,
+  Navigation,
   Navigation2,
   Newspaper,
   Plus,
+  Sun,
   Target,
   Timer,
   Users,
@@ -40,6 +44,9 @@ const TIME_SESSIONS_KEY = "rivt.timeSessions.v1";
 const WEEKLY_GOAL_KEY = "rivt.weeklyGoal.v1";
 const CHECKIN_LOG_KEY = "rivt.checkinLog.v1";
 const MILEAGE_KEY = "rivt.mileage.v1";
+const JOBS_UPCOMING_KEY = "rivt.jobs.v1";
+const GOALS_KEY = "rivt.goals.v1";
+const EXPENSES_KEY = "rivt.expenses.v1";
 
 interface TimeSession {
   id: string;
@@ -76,6 +83,66 @@ interface MileageEntry {
 interface WeatherSnapshot {
   temp: number;
   condition: string;
+}
+
+interface UpcomingJob {
+  id: string | number;
+  title: string;
+  scheduledDate?: string;
+  status: string;
+  client?: string;
+  address?: string;
+}
+
+interface RevenueGoals {
+  weeklyGoal: number;
+  monthlyGoal: number;
+}
+
+interface RivtTimeSession {
+  id: string;
+  startedAt: string;
+  endedAt: string | null;
+  ratePerHour?: number;
+}
+
+interface RivtExpense {
+  id: string;
+  date: string;
+  amount: number;
+}
+
+function readUpcomingJobs(): UpcomingJob[] {
+  try {
+    const raw = localStorage.getItem(JOBS_UPCOMING_KEY);
+    return raw ? (JSON.parse(raw) as UpcomingJob[]) : [];
+  } catch { return []; }
+}
+
+function readRevenueGoals(): RevenueGoals {
+  try {
+    const raw = localStorage.getItem(GOALS_KEY);
+    if (raw) return JSON.parse(raw) as RevenueGoals;
+  } catch { /* noop */ }
+  return { weeklyGoal: 2000, monthlyGoal: 8000 };
+}
+
+function writeRevenueGoals(goals: RevenueGoals) {
+  try { localStorage.setItem(GOALS_KEY, JSON.stringify(goals)); } catch { /* noop */ }
+}
+
+function readRivtTimeSessions(): RivtTimeSession[] {
+  try {
+    const raw = localStorage.getItem(TIME_SESSIONS_KEY);
+    return raw ? (JSON.parse(raw) as RivtTimeSession[]) : [];
+  } catch { return []; }
+}
+
+function readRivtExpenses(): RivtExpense[] {
+  try {
+    const raw = localStorage.getItem(EXPENSES_KEY);
+    return raw ? (JSON.parse(raw) as RivtExpense[]) : [];
+  } catch { return []; }
 }
 
 function formatTimeAgo(timestamp: string, now: Date): string {
@@ -652,6 +719,252 @@ function WeeklyGoalCard() {
   );
 }
 
+// ── Feature: Weather + Drive-Time ───────────────────────────────────────────
+
+const WEATHER_DAYS: Array<{ label: string; Icon: React.ElementType; temp: string }> = [
+  { label: "Today", Icon: Sun, temp: "74°" },
+  { label: "Tue", Icon: CloudSun, temp: "69°" },
+  { label: "Wed", Icon: Cloud, temp: "63°" },
+  { label: "Thu", Icon: CloudRain, temp: "58°" },
+  { label: "Fri", Icon: Sun, temp: "72°" },
+];
+
+function WeatherDriveWidget() {
+  const todayStr = new Date().toLocaleDateString("en-CA");
+  const jobs = readUpcomingJobs();
+  const todayJob = jobs.find((j) => j.scheduledDate?.slice(0, 10) === todayStr && j.address);
+  const address = todayJob?.address ?? null;
+
+  return (
+    <div className="v2-weather-drive-widget">
+      <div className="v2-weather-row">
+        {WEATHER_DAYS.map(({ label, Icon, temp }) => (
+          <div key={label} className="v2-weather-day-pill">
+            <span className="v2-weather-day-label">{label}</span>
+            <Icon size={18} className="v2-weather-icon" />
+            <span className="v2-weather-temp">{temp}</span>
+          </div>
+        ))}
+      </div>
+      <div className="v2-drive-row">
+        <Navigation size={14} className="v2-drive-icon" />
+        {address ? (
+          <>
+            <span className="v2-drive-address">{address}</span>
+            <a
+              href={`https://maps.google.com/?q=${encodeURIComponent(address)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="v2-drive-btn"
+            >
+              Get directions
+            </a>
+          </>
+        ) : (
+          <span className="v2-drive-empty">No job site set for today</span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Feature: Upcoming Jobs Widget ────────────────────────────────────────────
+
+function getStatusPillClass(status: string): string {
+  const s = status.toLowerCase();
+  if (s === "active" || s === "in progress") return "v2-status-pill--active";
+  if (s === "completed" || s === "done") return "v2-status-pill--done";
+  if (s === "cancelled" || s === "canceled") return "v2-status-pill--cancelled";
+  return "v2-status-pill--default";
+}
+
+function UpcomingJobsWidget() {
+  // eslint-disable-next-line react-hooks/purity
+  const now = Date.now();
+  const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+
+  const upcomingJobs = readUpcomingJobs()
+    .filter((j) => {
+      if (!j.scheduledDate) return false;
+      const t = new Date(j.scheduledDate).getTime();
+      return t >= now && t <= now + sevenDaysMs;
+    })
+    .sort((a, b) => new Date(a.scheduledDate!).getTime() - new Date(b.scheduledDate!).getTime())
+    .slice(0, 3);
+
+  return (
+    <div className="v2-upcoming-jobs-widget">
+      <header className="v2-upcoming-jobs-header">
+        <CalendarDays size={13} />
+        <span>Upcoming jobs this week</span>
+      </header>
+      {upcomingJobs.length === 0 ? (
+        <div className="v2-upcoming-jobs-empty">
+          <CalendarDays size={20} />
+          <span>No jobs scheduled this week</span>
+        </div>
+      ) : (
+        <div className="v2-upcoming-jobs-list">
+          {upcomingJobs.map((job) => {
+            const dateLabel = new Date(job.scheduledDate!).toLocaleDateString("en-US", {
+              weekday: "short",
+              month: "short",
+              day: "numeric",
+            });
+            return (
+              <div key={String(job.id)} className="v2-upcoming-job-card">
+                <div className="v2-upcoming-job-date">{dateLabel}</div>
+                <div className="v2-upcoming-job-body">
+                  <strong className="v2-upcoming-job-title">{job.title}</strong>
+                  {job.client && (
+                    <span className="v2-upcoming-job-client">{job.client}</span>
+                  )}
+                </div>
+                <span className={`v2-status-pill ${getStatusPillClass(job.status)}`}>
+                  {job.status}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Feature: Revenue Goal Tracker ────────────────────────────────────────────
+
+function RevenueGoalWidget() {
+  const [goals, setGoals] = useState<RevenueGoals>(readRevenueGoals);
+  const [activeTab, setActiveTab] = useState<"week" | "month">("week");
+  const [editing, setEditing] = useState(false);
+  const [goalDraft, setGoalDraft] = useState("");
+
+  const now = new Date();
+
+  const weekStart = (() => {
+    const d = new Date(now);
+    const day = d.getDay();
+    d.setDate(d.getDate() - (day === 0 ? 6 : day - 1));
+    d.setHours(0, 0, 0, 0);
+    return d;
+  })();
+
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+
+  const sessions = readRivtTimeSessions();
+  const expenses = readRivtExpenses();
+
+  const DEFAULT_RATE = 75;
+
+  function calcEarnings(from: Date): number {
+    return sessions
+      .filter((s) => s.endedAt && new Date(s.startedAt) >= from)
+      .reduce((sum, s) => {
+        const hrs = (new Date(s.endedAt!).getTime() - new Date(s.startedAt).getTime()) / 3_600_000;
+        return sum + hrs * (s.ratePerHour ?? DEFAULT_RATE);
+      }, 0);
+  }
+
+  function calcExpenses(from: Date): number {
+    return expenses
+      .filter((e) => new Date(e.date) >= from)
+      .reduce((sum, e) => sum + e.amount, 0);
+  }
+
+  const isWeek = activeTab === "week";
+  const periodStart = isWeek ? weekStart : monthStart;
+  const earned = Math.round(calcEarnings(periodStart));
+  const expensesTotal = Math.round(calcExpenses(periodStart));
+  const net = earned - expensesTotal;
+  const goalValue = isWeek ? goals.weeklyGoal : goals.monthlyGoal;
+  const progress = goalValue > 0 ? Math.min(1, net / goalValue) : 0;
+  const pct = Math.round(progress * 100);
+
+  function startEdit() {
+    setGoalDraft(String(goalValue));
+    setEditing(true);
+  }
+
+  function saveGoal() {
+    const val = Number(goalDraft) || 0;
+    const updated: RevenueGoals = isWeek
+      ? { ...goals, weeklyGoal: val }
+      : { ...goals, monthlyGoal: val };
+    setGoals(updated);
+    writeRevenueGoals(updated);
+    setEditing(false);
+  }
+
+  return (
+    <div className="v2-revenue-goal-widget">
+      <div className="v2-revenue-goal-tabs">
+        <button
+          type="button"
+          className={`v2-revenue-tab${activeTab === "week" ? " is-active" : ""}`}
+          onClick={() => { setActiveTab("week"); setEditing(false); }}
+        >
+          This Week
+        </button>
+        <button
+          type="button"
+          className={`v2-revenue-tab${activeTab === "month" ? " is-active" : ""}`}
+          onClick={() => { setActiveTab("month"); setEditing(false); }}
+        >
+          This Month
+        </button>
+      </div>
+
+      <div className="v2-revenue-goal-body">
+        {editing ? (
+          <div className="v2-revenue-goal-edit">
+            <label className="v2-revenue-goal-edit-label">
+              <small>{isWeek ? "Weekly" : "Monthly"} goal ($)</small>
+              <input
+                type="number"
+                min={0}
+                value={goalDraft}
+                onChange={(e) => setGoalDraft(e.target.value)}
+                className="v2-revenue-goal-input"
+                autoFocus
+              />
+            </label>
+            <div className="v2-revenue-goal-edit-actions">
+              <button type="button" className="v2-primary-button" onClick={saveGoal}>Save</button>
+              <button type="button" className="v2-revenue-cancel-btn" onClick={() => setEditing(false)}>Cancel</button>
+            </div>
+          </div>
+        ) : (
+          <>
+            <button
+              type="button"
+              className="v2-revenue-goal-numbers"
+              onClick={startEdit}
+              aria-label="Edit goal"
+            >
+              <strong className="v2-revenue-earned">{currency(net)}</strong>
+              <span className="v2-revenue-separator">/</span>
+              <span className="v2-revenue-goal-value">{currency(goalValue)}</span>
+            </button>
+            {expensesTotal > 0 && (
+              <div className="v2-revenue-expense-note">
+                −{currency(expensesTotal)} expenses · net shown
+              </div>
+            )}
+            <div className="v2-revenue-bar">
+              <div
+                className="v2-revenue-bar-fill"
+                style={{ width: `${Math.max(2, pct)}%` }}
+              />
+            </div>
+            <div className="v2-revenue-pct">{pct}% of goal</div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 const JOBS_V1_KEY = "rivt.jobs.v1";
 
 interface StoredJob {
@@ -946,9 +1259,12 @@ export function HomeDashboard({
         )}
       />
 
+      <WeatherDriveWidget />
       <CockpitHero onNavigate={onNavigate} />
       <QuickActionsBar onNavigate={onNavigate} />
       <WeekSchedule />
+      <UpcomingJobsWidget />
+      <RevenueGoalWidget />
 
       <section className="v2-daily-brief" aria-label="RIVT Daily">
         <div className="v2-daily-action-stack">
