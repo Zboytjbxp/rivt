@@ -856,3 +856,71 @@
 .v2-star-btn.filled { color: var(--v2-accent); }
 .v2-star-btn:hover { color: var(--v2-accent); }
 .v2-review-stars-display { color: var(--v2-accent); font-size: 14px; letter-spacing: 2px; margin-bottom: 4px; }
+
+/* ── Network Tab Bar ─────────────────────────────────────────────────────── */
+
+.v2-network-tab-bar {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--v2-border) 60%, transparent);
+  padding: 0 4px;
+}
+
+.v2-network-tab-btn {
+  padding: 10px 18px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--v2-text-muted);
+  font: inherit;
+  font-size: 14px;
+  font-weight: var(--v2-weight-strong);
+  cursor: pointer;
+  transition: color 120ms ease, border-color 120ms ease;
+  margin-bottom: -1px;
+}
+
+.v2-network-tab-btn:hover {
+  color: var(--v2-text);
+}
+
+.v2-network-tab-btn.active {
+  color: var(--v2-accent);
+  border-bottom-color: var(--v2-accent);
+}
+
+/* ── Client Book ─────────────────────────────────────────────────────────── */
+
+.v2-client-book {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.v2-client-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; }
+.v2-client-title { font-size: 15px; font-weight: var(--v2-weight-bold); color: var(--v2-text); }
+.v2-client-add-btn { display: flex; align-items: center; gap: 4px; font-size: 13px; color: var(--v2-accent); font-weight: var(--v2-weight-bold); background: none; border: none; cursor: pointer; padding: 4px 8px; border-radius: var(--v2-radius-sm); }
+.v2-client-form { padding: 0 16px 16px; display: flex; flex-direction: column; gap: 10px; }
+.v2-client-form input, .v2-client-form textarea { width: 100%; padding: 10px 12px; border: 1px solid var(--v2-border); border-radius: var(--v2-radius-sm); background: var(--v2-surface); color: var(--v2-text); font-size: 14px; font-family: inherit; box-sizing: border-box; }
+.v2-client-form input:focus, .v2-client-form textarea:focus { outline: none; border-color: var(--v2-accent); }
+.v2-client-form textarea { resize: vertical; min-height: 72px; }
+.v2-client-form-btns { display: flex; gap: 8px; }
+.v2-client-save-btn { flex: 1; padding: 10px; background: var(--v2-accent); color: white; border: none; border-radius: var(--v2-radius-sm); font-weight: var(--v2-weight-bold); font-family: inherit; font-size: 14px; cursor: pointer; }
+.v2-client-save-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.v2-client-cancel-btn { padding: 10px 16px; background: var(--v2-surface-muted); border: 1px solid var(--v2-border); border-radius: var(--v2-radius-sm); color: var(--v2-text-muted); font-family: inherit; font-size: 14px; cursor: pointer; }
+.v2-client-list { display: flex; flex-direction: column; gap: 8px; padding: 0 16px 16px; }
+.v2-client-card { background: var(--v2-surface); border: 1px solid var(--v2-border); border-radius: var(--v2-radius-md); overflow: hidden; box-shadow: var(--v2-shadow-card); }
+.v2-client-card-top { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; cursor: pointer; user-select: none; }
+.v2-client-card-top:hover { background: color-mix(in srgb, var(--v2-accent-soft) 40%, transparent); }
+.v2-client-name { font-weight: var(--v2-weight-bold); color: var(--v2-text); font-size: 15px; }
+.v2-client-company { font-size: 12px; color: var(--v2-text-muted); margin-top: 2px; }
+.v2-client-phone-link { color: var(--v2-accent); display: flex; align-items: center; padding: 4px; }
+.v2-client-detail { padding: 0 14px 14px; border-top: 1px solid var(--v2-border); }
+.v2-client-detail-row { display: flex; gap: 8px; align-items: center; padding: 6px 0; font-size: 13px; color: var(--v2-text-muted); border-bottom: 1px solid var(--v2-border); }
+.v2-client-detail-row:last-of-type { border-bottom: none; }
+.v2-client-detail-row a { color: var(--v2-accent); text-decoration: none; }
+.v2-client-actions { display: flex; gap: 8px; margin-top: 10px; }
+.v2-client-edit-btn { flex: 1; padding: 8px; background: var(--v2-surface-muted); border: 1px solid var(--v2-border); border-radius: var(--v2-radius-sm); font-size: 13px; font-family: inherit; cursor: pointer; color: var(--v2-text); }
+.v2-client-delete-btn { padding: 8px 14px; background: none; border: 1px solid #ef4444; border-radius: var(--v2-radius-sm); font-size: 13px; font-family: inherit; cursor: pointer; color: #ef4444; }
+.v2-client-empty { text-align: center; padding: 40px 20px; color: var(--v2-text-muted); font-size: 14px; }
+.v2-client-jobs-badge { font-size: 11px; background: var(--v2-accent-soft); color: var(--v2-accent); padding: 2px 6px; border-radius: 20px; }
