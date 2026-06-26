@@ -783,6 +783,339 @@
   }
 }
 
+/* Daily Cockpit hero */
+.v2-cockpit-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 20px 24px;
+  border: 1px solid color-mix(in srgb, var(--v2-accent) 20%, var(--v2-border));
+  border-radius: var(--v2-radius-xl);
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--v2-accent) 8%, var(--v2-surface)) 0%, var(--v2-surface) 56%),
+    var(--v2-surface);
+  box-shadow: var(--v2-shadow-card);
+}
+
+.v2-cockpit-clock {
+  display: grid;
+  gap: 3px;
+}
+
+.v2-cockpit-time {
+  font-size: clamp(32px, 5vw, 52px);
+  font-weight: var(--v2-weight-display);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+
+.v2-cockpit-date {
+  color: var(--v2-text-muted);
+  font-size: 13px;
+  margin-top: 2px;
+}
+
+.v2-cockpit-weather {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 5px;
+  color: var(--v2-text-muted);
+  font-size: 12px;
+}
+
+.v2-cockpit-weather svg {
+  color: var(--v2-accent);
+}
+
+.v2-cockpit-session {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.v2-cockpit-active-badge,
+.v2-cockpit-idle-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: var(--v2-weight-strong);
+  font-variant-numeric: tabular-nums;
+}
+
+.v2-cockpit-active-badge {
+  background: color-mix(in srgb, var(--v2-success) 14%, transparent);
+  color: var(--v2-success);
+}
+
+.v2-cockpit-idle-badge {
+  background: color-mix(in srgb, var(--v2-text-muted) 12%, transparent);
+  color: var(--v2-text-muted);
+}
+
+.v2-cockpit-clockin-btn,
+.v2-cockpit-clockout-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 44px;
+  padding: 0 18px;
+  border-radius: var(--v2-radius-md);
+  font: inherit;
+  font-size: 14px;
+  font-weight: var(--v2-weight-bold);
+  cursor: pointer;
+  transition: background 120ms;
+}
+
+.v2-cockpit-clockin-btn {
+  border: 2px solid var(--v2-accent);
+  background: var(--v2-accent);
+  color: #fff;
+}
+
+.v2-cockpit-clockin-btn:hover {
+  background: color-mix(in srgb, var(--v2-accent) 85%, #000);
+  border-color: color-mix(in srgb, var(--v2-accent) 85%, #000);
+}
+
+.v2-cockpit-clockout-btn {
+  border: 2px solid color-mix(in srgb, #ef4444 60%, transparent);
+  background: color-mix(in srgb, #ef4444 10%, transparent);
+  color: #ef4444;
+}
+
+.v2-cockpit-clockout-btn:hover {
+  background: color-mix(in srgb, #ef4444 16%, transparent);
+}
+
+.v2-cockpit-checkin-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border: 1px solid color-mix(in srgb, var(--v2-border) 70%, transparent);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--v2-text-muted);
+  font: inherit;
+  font-size: 11px;
+  font-weight: var(--v2-weight-strong);
+  cursor: pointer;
+  transition: border-color 150ms, color 150ms;
+}
+
+.v2-cockpit-checkin-btn.is-checked {
+  border-color: color-mix(in srgb, var(--v2-success) 40%, transparent);
+  color: var(--v2-success);
+}
+
+/* Quick Actions bar */
+.v2-quick-actions {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.v2-quick-actions button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 82px;
+  padding: 14px 8px;
+  border: 1px solid color-mix(in srgb, var(--v2-border) 62%, transparent);
+  border-radius: var(--v2-radius-lg);
+  background: color-mix(in srgb, var(--v2-surface-muted) 72%, transparent);
+  color: var(--v2-text);
+  font: inherit;
+  font-size: 11px;
+  font-weight: var(--v2-weight-bold);
+  cursor: pointer;
+  text-align: center;
+  transition: border-color 120ms, background 120ms;
+}
+
+.v2-quick-actions button svg {
+  color: var(--v2-accent);
+}
+
+.v2-quick-actions button:hover {
+  border-color: color-mix(in srgb, var(--v2-accent) 40%, var(--v2-border));
+  background: color-mix(in srgb, var(--v2-accent-soft) 52%, var(--v2-surface-muted));
+}
+
+/* Weekly goal card */
+.v2-weekly-goal {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid color-mix(in srgb, var(--v2-border) 66%, transparent);
+  border-radius: var(--v2-radius-lg);
+  background: color-mix(in srgb, var(--v2-surface) 94%, transparent);
+  box-shadow: var(--v2-shadow-card);
+}
+
+.v2-weekly-goal header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.v2-weekly-goal header > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--v2-accent);
+  font-size: 10px;
+  font-weight: var(--v2-weight-bold);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.v2-weekly-goal header > button {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--v2-accent);
+  font: inherit;
+  font-size: 11px;
+  font-weight: var(--v2-weight-bold);
+  cursor: pointer;
+}
+
+.v2-weekly-goal-numbers {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.v2-weekly-goal-numbers > div {
+  display: grid;
+  gap: 3px;
+  padding: 10px;
+  border-radius: var(--v2-radius-sm);
+  background: color-mix(in srgb, var(--v2-surface-muted) 72%, transparent);
+}
+
+.v2-weekly-goal-numbers > div:first-child {
+  background: color-mix(in srgb, var(--v2-accent-soft) 80%, transparent);
+}
+
+.v2-weekly-goal-numbers strong {
+  font-size: 16px;
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--v2-weight-bold);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.v2-weekly-goal-numbers small {
+  color: var(--v2-text-muted);
+  font-size: 10px;
+}
+
+.v2-weekly-goal-bar {
+  height: 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--v2-border) 60%, transparent);
+  overflow: hidden;
+}
+
+.v2-weekly-goal-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--v2-accent);
+  transition: width 600ms ease;
+  min-width: 2px;
+}
+
+.v2-weekly-goal-pct {
+  color: var(--v2-text-muted);
+  font-size: 11px;
+}
+
+.v2-weekly-goal-editor {
+  display: grid;
+  gap: 10px;
+}
+
+.v2-weekly-goal-editor label {
+  display: grid;
+  gap: 4px;
+}
+
+.v2-weekly-goal-editor small {
+  color: var(--v2-text-muted);
+  font-size: 11px;
+}
+
+.v2-weekly-goal-editor input {
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid color-mix(in srgb, var(--v2-border) 70%, transparent);
+  border-radius: var(--v2-radius-sm);
+  background: var(--v2-surface);
+  color: var(--v2-text);
+  font: inherit;
+  font-size: 14px;
+}
+
+.v2-weekly-goal-editor input:focus {
+  outline: 2px solid var(--v2-accent);
+  outline-offset: 1px;
+  border-color: transparent;
+}
+
+@media (max-width: 860px) {
+  .v2-cockpit-hero {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+    padding: 16px 18px;
+  }
+
+  .v2-cockpit-session {
+    align-items: flex-start;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .v2-quick-actions {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .v2-quick-actions button {
+    min-height: 72px;
+    font-size: 10px;
+  }
+}
+
+@media (max-width: 480px) {
+  .v2-cockpit-time {
+    font-size: 36px;
+  }
+
+  .v2-cockpit-clockin-btn,
+  .v2-cockpit-clockout-btn {
+    font-size: 13px;
+    padding: 0 14px;
+    min-height: 40px;
+  }
+}
+
 /* Weekly availability calendar */
 .v2-weekly-calendar {
   margin-top: 28px;

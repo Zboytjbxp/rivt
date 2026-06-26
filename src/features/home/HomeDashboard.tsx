@@ -2,17 +2,23 @@ import {
   ArrowRight,
   BriefcaseBusiness,
   CalendarClock,
+  Camera,
   CircleDollarSign,
   ClipboardCheck,
+  Clock,
+  CloudSun,
   FileText,
   MapPin,
   MessageSquareText,
+  Navigation2,
   Newspaper,
   Plus,
+  Target,
+  Timer,
   Users,
   Wrench,
 } from "lucide-react";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { Job, Role } from "../../types";
 import type { PrimaryDestination } from "../../app-shell/types";
 import { EmptyState, PageHeader } from "../../components/ui";
@@ -24,6 +30,36 @@ const WEEK_DAY_FULL = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "
 const AVAIL_CYCLE: AvailDay[] = ["available", "limited", "unavailable"];
 const AVAIL_DAY_LABEL: Record<AvailDay, string> = { available: "Open", limited: "Ltd", unavailable: "Off" };
 const WEEKLY_AVAIL_KEY = "rivt.weeklyAvail.v1";
+const TIME_SESSIONS_KEY = "rivt.timeSessions.v1";
+const WEEKLY_GOAL_KEY = "rivt.weeklyGoal.v1";
+const CHECKIN_LOG_KEY = "rivt.checkinLog.v1";
+
+interface TimeSession {
+  id: string;
+  jobId: number | null;
+  jobTitle: string;
+  startedAt: string;
+  endedAt: string | null;
+  notes: string;
+}
+
+interface WeeklyGoal {
+  target: number;
+  hourlyRate: number;
+}
+
+interface CheckinEntry {
+  id: string;
+  timestamp: string;
+  lat: number | null;
+  lon: number | null;
+  label: string;
+}
+
+interface WeatherSnapshot {
+  temp: number;
+  condition: string;
+}
 
 function readWeeklyAvailability(): Record<number, AvailDay> {
   try {
@@ -37,6 +73,304 @@ function readWeeklyAvailability(): Record<number, AvailDay> {
 }
 
 type AvailabilityStatus = "available" | "limited" | "unavailable";
+
+function currency(value: number) {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0,
+  }).format(value);
+}
+
+function readTimeSessions(): TimeSession[] {
+  try {
+    const raw = localStorage.getItem(TIME_SESSIONS_KEY);
+    return raw ? (JSON.parse(raw) as TimeSession[]) : [];
+  } catch { return []; }
+}
+
+function writeTimeSessions(sessions: TimeSession[]) {
+  try { localStorage.setItem(TIME_SESSIONS_KEY, JSON.stringify(sessions)); } catch {}
+}
+
+function readWeeklyGoal(): WeeklyGoal {
+  try {
+    const raw = localStorage.getItem(WEEKLY_GOAL_KEY);
+    if (raw) return JSON.parse(raw) as WeeklyGoal;
+  } catch {}
+  return { target: 2000, hourlyRate: 75 };
+}
+
+function writeWeeklyGoal(goal: WeeklyGoal) {
+  try { localStorage.setItem(WEEKLY_GOAL_KEY, JSON.stringify(goal)); } catch {}
+}
+
+function getWmoCondition(code: number): string {
+  if (code === 0) return "Clear";
+  if (code <= 3) return "Partly cloudy";
+  if (code <= 48) return "Foggy";
+  if (code <= 67) return "Rainy";
+  if (code <= 77) return "Snowy";
+  if (code <= 82) return "Showers";
+  if (code <= 86) return "Snow showers";
+  return "Stormy";
+}
+
+function formatElapsed(startedAt: string, now: Date): string {
+  const elapsed = Math.max(0, Math.floor((now.getTime() - new Date(startedAt).getTime()) / 1000));
+  const h = Math.floor(elapsed / 3600);
+  const m = Math.floor((elapsed % 3600) / 60);
+  const s = elapsed % 60;
+  if (h > 0) return `${h}h ${m.toString().padStart(2, "0")}m ${s.toString().padStart(2, "0")}s`;
+  return `${m.toString().padStart(2, "0")}m ${s.toString().padStart(2, "0")}s`;
+}
+
+function getWeekStart(): Date {
+  const now = new Date();
+  const day = now.getDay();
+  const daysToMonday = day === 0 ? 6 : day - 1;
+  const monday = new Date(now);
+  monday.setDate(now.getDate() - daysToMonday);
+  monday.setHours(0, 0, 0, 0);
+  return monday;
+}
+
+function CockpitHero({ onNavigate }: { onNavigate: (d: PrimaryDestination) => void }) {
+  const [sessions, setSessions] = useState<TimeSession[]>(readTimeSessions);
+  const [now, setNow] = useState(() => new Date());
+  const [weather, setWeather] = useState<WeatherSnapshot | null>(null);
+  const [checkedIn, setCheckedIn] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const activeSession = sessions.find((s) => !s.endedAt) ?? null;
+
+  useEffect(() => {
+    timerRef.current = setInterval(() => setNow(new Date()), 1000);
+    return () => { if (timerRef.current) clearInterval(timerRef.current); };
+  }, []);
+
+  useEffect(() => {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const { latitude: lat, longitude: lon } = pos.coords;
+        fetch(
+          `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&temperature_unit=fahrenheit`
+        )
+          .then((r) => r.json())
+          .then((data) => {
+            const cw = (data as { current_weather?: { temperature: number; weathercode: number } }).current_weather;
+            if (!cw) return;
+            setWeather({ temp: Math.round(cw.temperature), condition: getWmoCondition(cw.weathercode) });
+          })
+          .catch(() => {});
+      },
+      () => {}
+    );
+  }, []);
+
+  function clockIn() {
+    const newSession: TimeSession = {
+      id: `ts_${Date.now()}`,
+      jobId: null,
+      jobTitle: "Field work",
+      startedAt: new Date().toISOString(),
+      endedAt: null,
+      notes: "",
+    };
+    const updated = [...sessions, newSession];
+    setSessions(updated);
+    writeTimeSessions(updated);
+  }
+
+  function clockOut() {
+    if (!activeSession) return;
+    const updated = sessions.map((s) =>
+      s.id === activeSession.id ? { ...s, endedAt: new Date().toISOString() } : s
+    );
+    setSessions(updated);
+    writeTimeSessions(updated);
+  }
+
+  function handleCheckin() {
+    const saveEntry = (lat: number | null, lon: number | null) => {
+      const entry: CheckinEntry = {
+        id: `ci_${Date.now()}`,
+        timestamp: new Date().toISOString(),
+        lat,
+        lon,
+        label: "On-site check-in",
+      };
+      try {
+        const existing = JSON.parse(localStorage.getItem(CHECKIN_LOG_KEY) ?? "[]") as CheckinEntry[];
+        localStorage.setItem(CHECKIN_LOG_KEY, JSON.stringify([...existing, entry]));
+      } catch {}
+      setCheckedIn(true);
+    };
+
+    if (!navigator.geolocation) { saveEntry(null, null); return; }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => saveEntry(pos.coords.latitude, pos.coords.longitude),
+      () => saveEntry(null, null)
+    );
+  }
+
+  const timeStr = now.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
+  const dateStr = now.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" });
+
+  return (
+    <div className="v2-cockpit-hero">
+      <div className="v2-cockpit-clock">
+        <div className="v2-cockpit-time">{timeStr}</div>
+        <div className="v2-cockpit-date">{dateStr}</div>
+        {weather && (
+          <div className="v2-cockpit-weather">
+            <CloudSun size={14} />
+            <span>{weather.temp}°F · {weather.condition}</span>
+          </div>
+        )}
+      </div>
+
+      <div className="v2-cockpit-session">
+        {activeSession ? (
+          <>
+            <div className="v2-cockpit-active-badge">
+              <Timer size={13} />
+              <span>Clocked in · {formatElapsed(activeSession.startedAt, now)}</span>
+            </div>
+            <button type="button" className="v2-cockpit-clockout-btn" onClick={clockOut}>
+              Clock out
+            </button>
+          </>
+        ) : (
+          <>
+            <div className="v2-cockpit-idle-badge">
+              <Clock size={13} />
+              <span>Not clocked in</span>
+            </div>
+            <button type="button" className="v2-cockpit-clockin-btn" onClick={clockIn}>
+              <Clock size={15} /> Clock in
+            </button>
+          </>
+        )}
+        <button
+          type="button"
+          className={`v2-cockpit-checkin-btn${checkedIn ? " is-checked" : ""}`}
+          onClick={handleCheckin}
+        >
+          <Navigation2 size={14} />
+          <span>{checkedIn ? "Checked in ✓" : "On-site check-in"}</span>
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function QuickActionsBar({ onNavigate }: { onNavigate: (d: PrimaryDestination) => void }) {
+  const actions: Array<{ label: string; Icon: React.ElementType; destination: PrimaryDestination }> = [
+    { label: "Clock In/Out", Icon: Clock, destination: "tools" },
+    { label: "Log Expense", Icon: CircleDollarSign, destination: "tools" },
+    { label: "Take Photo", Icon: Camera, destination: "tools" },
+    { label: "Daily Log", Icon: ClipboardCheck, destination: "tools" },
+  ];
+  return (
+    <div className="v2-quick-actions">
+      {actions.map(({ label, Icon, destination }) => (
+        <button key={label} type="button" onClick={() => onNavigate(destination)}>
+          <Icon size={20} />
+          <span>{label}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function WeeklyGoalCard() {
+  const [goal, setGoal] = useState<WeeklyGoal>(readWeeklyGoal);
+  const [editing, setEditing] = useState(false);
+  const [targetDraft, setTargetDraft] = useState(String(goal.target));
+  const [rateDraft, setRateDraft] = useState(String(goal.hourlyRate));
+
+  const sessions = readTimeSessions();
+  const weekStart = getWeekStart();
+  const weekSessions = sessions.filter((s) => s.endedAt && new Date(s.startedAt) >= weekStart);
+  const weekHours = weekSessions.reduce((sum, s) => {
+    if (!s.endedAt) return sum;
+    return sum + (new Date(s.endedAt).getTime() - new Date(s.startedAt).getTime()) / 3_600_000;
+  }, 0);
+  const estimated = Math.round(weekHours * goal.hourlyRate);
+  const progress = goal.target > 0 ? Math.min(1, estimated / goal.target) : 0;
+
+  function saveGoal() {
+    const t = Number(targetDraft) || 0;
+    const r = Number(rateDraft) || 0;
+    const g: WeeklyGoal = { target: t, hourlyRate: r };
+    setGoal(g);
+    writeWeeklyGoal(g);
+    setEditing(false);
+  }
+
+  function startEdit() {
+    setTargetDraft(String(goal.target));
+    setRateDraft(String(goal.hourlyRate));
+    setEditing((e) => !e);
+  }
+
+  return (
+    <aside className="v2-weekly-goal">
+      <header>
+        <span><Target size={13} /> Weekly goal</span>
+        <button type="button" onClick={startEdit}>{editing ? "Cancel" : "Edit"}</button>
+      </header>
+      {editing ? (
+        <div className="v2-weekly-goal-editor">
+          <label>
+            <small>Weekly target ($)</small>
+            <input
+              type="number"
+              value={targetDraft}
+              min={0}
+              onChange={(e) => setTargetDraft(e.target.value)}
+            />
+          </label>
+          <label>
+            <small>Your hourly rate ($)</small>
+            <input
+              type="number"
+              value={rateDraft}
+              min={0}
+              onChange={(e) => setRateDraft(e.target.value)}
+            />
+          </label>
+          <button type="button" className="v2-primary-button" onClick={saveGoal}>Save</button>
+        </div>
+      ) : (
+        <>
+          <div className="v2-weekly-goal-numbers">
+            <div>
+              <strong>{currency(estimated)}</strong>
+              <small>earned this week</small>
+            </div>
+            <div>
+              <strong>{currency(goal.target)}</strong>
+              <small>goal</small>
+            </div>
+            <div>
+              <strong>{weekHours.toFixed(1)}h</strong>
+              <small>logged</small>
+            </div>
+          </div>
+          <div className="v2-weekly-goal-bar">
+            <div className="v2-weekly-goal-fill" style={{ width: `${Math.round(progress * 100)}%` }} />
+          </div>
+          <small className="v2-weekly-goal-pct">
+            {Math.round(progress * 100)}% of goal · ${goal.hourlyRate}/hr rate
+          </small>
+        </>
+      )}
+    </aside>
+  );
+}
 
 interface HomeDashboardProps {
   role: Role;
@@ -57,14 +391,6 @@ interface HomeDashboardProps {
   onOpenJob: (jobId: number) => void;
   onNavigate: (destination: PrimaryDestination) => void;
   onSetAvailability: (status: AvailabilityStatus) => Promise<void>;
-}
-
-function currency(value: number) {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    maximumFractionDigits: 0,
-  }).format(value);
 }
 
 export function HomeDashboard({
@@ -199,6 +525,9 @@ export function HomeDashboard({
         )}
       />
 
+      <CockpitHero onNavigate={onNavigate} />
+      <QuickActionsBar onNavigate={onNavigate} />
+
       <section className="v2-daily-brief" aria-label="RIVT Daily">
         <div className="v2-daily-action-stack">
           <header className="v2-daily-brief-header">
@@ -276,6 +605,8 @@ export function HomeDashboard({
         </article>
 
         <div className="v2-home-side-stack">
+          <WeeklyGoalCard />
+
           <aside className="v2-availability-radar">
             <header>
               <div>
