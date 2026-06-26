@@ -2553,6 +2553,99 @@
 }
 .v2-expense-item-right button:hover { color: var(--v2-destructive, #e55); }
 
+/* ── Expense Quick Mode ─────────────────────────────────────────────────────── */
+
+.v2-expense-mode-toggle {
+  display: flex;
+  background: var(--v2-surface-muted);
+  border-radius: var(--v2-radius-sm);
+  padding: 3px;
+  gap: 3px;
+  margin-bottom: 16px;
+}
+.v2-expense-mode-toggle button {
+  flex: 1;
+  background: none;
+  border: none;
+  padding: 7px;
+  border-radius: calc(var(--v2-radius-sm) - 2px);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--v2-text-muted);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.v2-expense-mode-toggle button.active {
+  background: var(--v2-surface);
+  color: var(--v2-text);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.v2-expense-quick {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.v2-expense-cat-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.v2-expense-cat-chip {
+  padding: 8px 14px;
+  background: var(--v2-surface-muted);
+  border: 1px solid var(--v2-border);
+  border-radius: 99px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  color: var(--v2-text);
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.v2-expense-cat-chip.active {
+  background: var(--v2-accent);
+  border-color: var(--v2-accent);
+  color: white;
+  font-weight: 700;
+}
+
+.v2-expense-quick-amount {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--v2-surface-muted);
+  border: 2px solid var(--v2-border);
+  border-radius: var(--v2-radius-md);
+  padding: 4px 16px;
+  transition: border-color 0.15s;
+}
+.v2-expense-quick-amount:focus-within {
+  border-color: var(--v2-accent);
+}
+.v2-expense-dollar {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--v2-text-muted);
+  font-family: 'IBM Plex Mono', monospace;
+}
+.v2-expense-amount-input {
+  flex: 1;
+  background: none;
+  border: none;
+  outline: none;
+  font-size: 32px;
+  font-weight: 700;
+  font-family: 'IBM Plex Mono', monospace;
+  color: var(--v2-text);
+  padding: 8px 0;
+  width: 100%;
+}
+.v2-expense-amount-input::placeholder {
+  color: var(--v2-border);
+}
+
 /* ── Earnings Dashboard ────────────────────────────────────────────────────── */
 
 .v2-earnings-workbench {

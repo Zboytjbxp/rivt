@@ -2629,6 +2629,7 @@ function ExpenseLoggerTool({ activeJob, jobs }: { activeJob: Job | null; jobs: J
   const [description, setDescription] = useState("");
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [notice, setNotice] = useState("");
+  const [quickMode, setQuickMode] = useState(true);
 
   function addExpense() {
     const amt = parseFloat(amount);
@@ -2667,29 +2668,106 @@ function ExpenseLoggerTool({ activeJob, jobs }: { activeJob: Job | null; jobs: J
   return (
     <div className="v2-tool-workbench v2-expense-workbench">
       <Panel className="v2-tool-panel" eyebrow="Log expense" title="Track job costs">
-        <div className="v2-tool-input-grid two">
-          <label>Job
-            <select value={jobId ?? ""} onChange={(e) => setJobId(Number(e.target.value) || null)}>
-              <option value="">Standalone / no job</option>
-              {jobs.map((j) => <option key={j.id} value={j.id}>{j.title}</option>)}
-            </select>
-          </label>
-          <label>Date<input type="date" value={date} onChange={(e) => setDate(e.target.value)} /></label>
-          <label>Category
-            <select value={category} onChange={(e) => setCategory(e.target.value as ExpenseCategory)}>
-              {EXPENSE_CATEGORIES.map((c) => <option key={c}>{c}</option>)}
-            </select>
-          </label>
-          <label>Amount ($)<input type="number" min="0" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0.00" /></label>
-          <label className="is-wide">Description<input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Material, rental, mileage description..." /></label>
+        {/* Mode toggle */}
+        <div className="v2-expense-mode-toggle">
+          <button
+            type="button"
+            className={quickMode ? "active" : ""}
+            onClick={() => setQuickMode(true)}
+          >Quick</button>
+          <button
+            type="button"
+            className={!quickMode ? "active" : ""}
+            onClick={() => setQuickMode(false)}
+          >Detailed</button>
         </div>
-        {notice ? <p className="v2-record-notice" role="status">{notice}</p> : null}
-        <div className="v2-tool-action-row">
-          <button type="button" className="v2-primary-button" disabled={!(parseFloat(amount) > 0) || !description.trim()} onClick={addExpense}><Plus size={15} />Log expense</button>
-          <button type="button" disabled={expenses.length === 0} onClick={() => isPro ? exportExpensesCSV(expenses) : setUpgradeOpen(true)}>
-            <Download size={15} />Export CSV{!isPro && <Lock size={11} style={{marginLeft: 4}} />}
-          </button>
-        </div>
+
+        {quickMode ? (
+          /* QUICK MODE */
+          <div className="v2-expense-quick">
+            <div className="v2-expense-cat-chips">
+              {EXPENSE_CATEGORIES.map(cat => (
+                <button
+                  key={cat}
+                  type="button"
+                  className={`v2-expense-cat-chip${category === cat ? " active" : ""}`}
+                  onClick={() => setCategory(cat as ExpenseCategory)}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
+            <div className="v2-expense-quick-amount">
+              <span className="v2-expense-dollar">$</span>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={amount}
+                onChange={e => setAmount(e.target.value)}
+                placeholder="0.00"
+                className="v2-expense-amount-input"
+                inputMode="decimal"
+              />
+            </div>
+            {notice ? <p className="v2-record-notice" role="status">{notice}</p> : null}
+            <button
+              type="button"
+              className="v2-primary-button"
+              style={{ width: "100%", justifyContent: "center", padding: "14px" }}
+              disabled={!(parseFloat(amount) > 0)}
+              onClick={() => {
+                const amt = parseFloat(amount);
+                if (!Number.isFinite(amt) || amt <= 0) return;
+                const job = jobs.find(j => j.id === jobId) ?? null;
+                const entry: ExpenseEntry = {
+                  id: crypto.randomUUID(),
+                  jobId,
+                  jobTitle: job?.title ?? "Standalone",
+                  category,
+                  amount: amt,
+                  description: category,
+                  date: new Date().toISOString().slice(0, 10),
+                };
+                const next = [entry, ...expenses];
+                setExpenses(next);
+                persistExpenses(next);
+                setAmount("");
+                setNotice(`${category} — $${amt.toFixed(2)} logged.`);
+                setTimeout(() => setNotice(""), 3000);
+              }}
+            >
+              Log {category} — {amount ? `$${parseFloat(amount).toFixed(2)}` : "$0.00"}
+            </button>
+          </div>
+        ) : (
+          /* DETAILED MODE */
+          <>
+            <div className="v2-tool-input-grid two">
+              <label>Job
+                <select value={jobId ?? ""} onChange={(e) => setJobId(Number(e.target.value) || null)}>
+                  <option value="">Standalone / no job</option>
+                  {jobs.map((j) => <option key={j.id} value={j.id}>{j.title}</option>)}
+                </select>
+              </label>
+              <label>Date<input type="date" value={date} onChange={(e) => setDate(e.target.value)} /></label>
+              <label>Category
+                <select value={category} onChange={(e) => setCategory(e.target.value as ExpenseCategory)}>
+                  {EXPENSE_CATEGORIES.map((c) => <option key={c}>{c}</option>)}
+                </select>
+              </label>
+              <label>Amount ($)<input type="number" min="0" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0.00" /></label>
+              <label className="is-wide">Description<input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Material, rental, mileage description..." /></label>
+            </div>
+            {notice ? <p className="v2-record-notice" role="status">{notice}</p> : null}
+            <div className="v2-tool-action-row">
+              <button type="button" className="v2-primary-button" disabled={!(parseFloat(amount) > 0) || !description.trim()} onClick={addExpense}><Plus size={15} />Log expense</button>
+              <button type="button" disabled={expenses.length === 0} onClick={() => isPro ? exportExpensesCSV(expenses) : setUpgradeOpen(true)}>
+                <Download size={15} />Export CSV{!isPro && <Lock size={11} style={{marginLeft: 4}} />}
+              </button>
+            </div>
+          </>
+        )}
       </Panel>
       <aside className="v2-invoice-side-stack">
         {upgradeOpen && <UpgradeModal reason="Export CSV" onClose={() => setUpgradeOpen(false)} />}
