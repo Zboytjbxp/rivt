@@ -3,6 +3,13 @@
   gap: 28px;
 }
 
+.v2-cockpit-trade-label {
+  font-size: 12px;
+  color: var(--v2-text-muted);
+  margin: 0;
+  letter-spacing: 0.02em;
+}
+
 .v2-home-header {
   display: flex;
   align-items: center;

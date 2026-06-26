@@ -29,6 +29,7 @@ import { createPortal } from "react-dom";
 import { useState } from "react";
 import { usePro } from "../pro/usePro";
 import { UpgradeModal } from "../pro/UpgradeModal";
+import { usePersona, useTradeModeToggle } from "../persona/usePersona";
 import "../pro/pro.css";
 import { brandConfig, type ThemeMode, type ThemePalette } from "../../brandConfig";
 import type { ThemeSource } from "../../app-shell/useAppTheme";
@@ -728,6 +729,8 @@ export function ProfileHub({
   onRevokeOtherSessions,
   onQuizComplete,
 }: ProfileHubProps) {
+  const persona = usePersona();
+  const [tradeModeOn, toggleTradeMode] = useTradeModeToggle();
   const [notificationPrefs, setNotificationPrefs] = useState({
     jobMatches: true,
     messages: true,
@@ -1023,6 +1026,9 @@ export function ProfileHub({
             <span>{role === "contractor" ? "Contractor profile" : "Tradesperson profile"}</span>
             <h2>{profile.organization || profile.displayName}</h2>
             <p>{profile.location}</p>
+            {persona && (
+              <span className="v2-trade-badge">{persona.emoji} {persona.trade}</span>
+            )}
             <div className="v2-profile-specialties">
               {profile.specialties.length
                 ? profile.specialties.map((specialty) => <span key={specialty}>{specialty}</span>)
@@ -1211,6 +1217,19 @@ export function ProfileHub({
               <span>Notifications</span>
               <strong>What alerts you</strong>
             </header>
+            <div className="v2-trade-mode-toggle">
+              <div>
+                <strong>Trade personalization</strong>
+                <p>Tailor the app — job feed, Shop Talk, and tools — to your trade.</p>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={tradeModeOn}
+                className={`v2-toggle-switch${tradeModeOn ? " is-on" : ""}`}
+                onClick={toggleTradeMode}
+              />
+            </div>
             <div className="v2-notif-pref-list">
               {([
                 { key: "jobMatches" as const, label: "Job matches", detail: "New jobs that match your trades and service area" },

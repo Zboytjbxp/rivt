@@ -24,6 +24,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { Job, Role } from "../../types";
 import type { PrimaryDestination } from "../../app-shell/types";
 import { EmptyState, PageHeader } from "../../components/ui";
+import { usePersona } from "../persona/usePersona";
 import "./home-dashboard.css";
 
 type AvailDay = "available" | "limited" | "unavailable";
@@ -328,10 +329,11 @@ function CockpitHero({ onNavigate }: { onNavigate: (d: PrimaryDestination) => vo
 }
 
 function QuickActionsBar({ onNavigate }: { onNavigate: (d: PrimaryDestination) => void }) {
+  const persona = usePersona();
   const actions: Array<{ label: string; Icon: React.ElementType; destination: PrimaryDestination }> = [
     { label: "Clock In/Out", Icon: Clock, destination: "tools" },
     { label: "Log Expense", Icon: CircleDollarSign, destination: "tools" },
-    { label: "Take Photo", Icon: Camera, destination: "tools" },
+    { label: persona?.quickActionPhotoLabel ?? "Job photo", Icon: Camera, destination: "tools" },
     { label: "Daily Log", Icon: ClipboardCheck, destination: "tools" },
   ];
 
@@ -586,6 +588,11 @@ export function HomeDashboard({
   onSetAvailability,
 }: HomeDashboardProps) {
   const firstName = name.trim().split(/\s+/)[0] || "there";
+  const persona = usePersona();
+  const profileData = (() => { try { return JSON.parse(localStorage.getItem("rivt.profile.v1") ?? "null"); } catch { return null; } })();
+  const tradeLabel = persona ? `${persona.emoji} ${persona.trade}` : null;
+  const locationLabel = profileData?.location ?? (location || null);
+  const subLabel = [tradeLabel, locationLabel].filter(Boolean).join(" · ");
   const [savingAvailability, setSavingAvailability] = useState<AvailabilityStatus | null>(null);
   const [availabilityMessage, setAvailabilityMessage] = useState("");
   const [weeklyAvail, setWeeklyAvail] = useState<Record<number, AvailDay>>(readWeeklyAvailability);
@@ -689,7 +696,7 @@ export function HomeDashboard({
       <PageHeader
         className="v2-home-header"
         title={`${getSmartGreeting()}, ${firstName}`}
-        description={location}
+        description={subLabel || location}
         actions={role === "contractor" ? (
           <button type="button" className="v2-primary-button" onClick={onPostJob}><Plus size={17} /> Post work</button>
         ) : (

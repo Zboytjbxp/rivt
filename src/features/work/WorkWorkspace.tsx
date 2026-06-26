@@ -34,6 +34,7 @@ import {
 import type { Job, JobId, Role } from "../../types";
 import { difficultyOptions, tradeOptions, workTypeOptions } from "../../data";
 import { EmptyState, StatusPill } from "../../components/ui";
+import { usePersona } from "../persona/usePersona";
 import {
   acceptOffer,
   cancelActiveWork,
@@ -1146,6 +1147,7 @@ export function WorkWorkspace({
   onJobLoaded,
   onRetry,
 }: WorkWorkspaceProps) {
+  const persona = usePersona();
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [mobileDetailOpen, setMobileDetailOpen] = useState(false);
   const [detailTab, setDetailTab] = useState<DetailTab>("overview");
@@ -1490,7 +1492,7 @@ export function WorkWorkspace({
 
       <div className={mobileDetailOpen ? "v2-work-layout show-detail" : "v2-work-layout"} style={role === "contractor" && (contractorSection === "pipeline" || contractorSection === "calendar" || contractorSection === "templates") ? { display: "none" } : undefined}>
         <section className="v2-work-list" aria-label={`${visibleJobs.length} jobs`}>
-          <div className="v2-work-list-heading"><span>{visibleJobs.length} {visibleJobs.length === 1 ? "job" : "jobs"}</span><small>{role === "contractor" ? `${contractorSection} postings` : "Open work"}</small></div>
+          <div className="v2-work-list-heading"><span>{visibleJobs.length} {visibleJobs.length === 1 ? "job" : "jobs"}</span><small>{role === "contractor" ? `${contractorSection} postings` : (persona?.jobSectionLabel ?? "Open work")}</small></div>
           {loading ? <JobListSkeleton /> : visibleJobs.length ? (
             <>
               {visibleJobs.map((job) => (

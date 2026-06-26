@@ -11600,3 +11600,12 @@ textarea:focus-visible {
 .shop-talk-mark-answered-btn:hover {
   background: color-mix(in srgb, var(--v2-success, #3a9e5f) 20%, transparent);
 }
+
+.shop-talk-persona-header {
+  padding: 8px 16px 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--v2-text-muted);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}

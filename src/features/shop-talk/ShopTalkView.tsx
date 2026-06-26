@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { tradeOptions } from "../../data";
 import type { Trade } from "../../types";
+import { usePersona } from "../persona/usePersona";
 import {
   communityBadgeLabels,
   netScore,
@@ -299,6 +300,7 @@ export function ShopTalkView({
   onReportPost: (postId: number, reason: CommunityReport["reason"]) => void;
   onNewPost: (flair: PostFlair, title: string, trade: Trade | "General", body: string) => void;
 }) {
+  const persona = usePersona();
   const [activeTab, setActiveTab] = useState<"talk" | "news">("talk");
   const [sortMode, setSortMode] = useState<"hot" | "new" | "unanswered">("hot");
   const [tradeFilter, setTradeFilter] = useState("All trades");
@@ -405,6 +407,11 @@ export function ShopTalkView({
     if (a.status === "Needs a pro answer" && b.status !== "Needs a pro answer") return -1;
     if (a.status !== "Needs a pro answer" && b.status === "Needs a pro answer") return 1;
     return netScore(b) - netScore(a);
+  }).sort((a, b) => {
+    if (!persona) return 0;
+    const aMatch = (a.trade === persona.trade || a.trade === "General") ? 0 : 1;
+    const bMatch = (b.trade === persona.trade || b.trade === "General") ? 0 : 1;
+    return aMatch - bMatch;
   });
   const selectedPost = filteredPosts.find((p) => p.id === selectedPostId) ?? filteredPosts[0];
   const selectedNews = filteredNews.find((n) => n.id === selectedNewsId) ?? filteredNews[0];
@@ -703,6 +710,11 @@ export function ShopTalkView({
                 </div>
               </div>
 
+              {persona && (
+                <div className="shop-talk-persona-header">
+                  <span>{persona.emoji} {persona.shopTalkLabel}</span>
+                </div>
+              )}
               <div className="shop-post-list">
                 {sortedPosts.length === 0 ? (
                   <EmptyState
