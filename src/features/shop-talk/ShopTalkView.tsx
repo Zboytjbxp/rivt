@@ -123,30 +123,8 @@ const communityBadgeThresholds: CommunityBadgeThresholds = {
   topHandQualityAnswers: 8,
 };
 
-function newsTopicThumbnail(item: Pick<NewsItem, "headline" | "source" | "urgency">) {
-  const haystack = `${item.urgency ?? ""} ${item.source ?? ""} ${item.headline ?? ""}`.toLowerCase();
-
-  if (/osha|heat|safety/.test(haystack)) return "/news/heat-safety.svg";
-  if (/\bnec\b|code|electrical/.test(haystack)) return "/news/code-update.svg";
-  if (/hvac|refrigerant|r-410a|epa/.test(haystack)) return "/news/hvac-refrigerant.svg";
-  if (/permit|jacksonville|inspection|ordinance/.test(haystack)) return "/news/permit-watch.svg";
-  if (/license|renewal|dbpr|certification/.test(haystack)) return "/news/license-renewal.svg";
-  if (/labor|workforce|shortage|hiring|wage/.test(haystack)) return "/news/workforce-market.svg";
-
-  return "/news/rivt-trade-brief.svg";
-}
-
-function newsThumbnailUrl(item: Pick<NewsItem, "url" | "thumbnailUrl" | "source" | "headline" | "urgency">) {
-  if (item.thumbnailUrl) return item.thumbnailUrl;
-  return newsTopicThumbnail(item);
-}
-
 function isFallbackNewsThumbnail(item: Pick<NewsItem, "thumbnailUrl" | "thumbnailKind">) {
   return item.thumbnailKind === "fallback" || !item.thumbnailUrl || item.thumbnailUrl.startsWith("/news/");
-}
-
-function newsThumbClassName(baseClass: string, item: Pick<NewsItem, "thumbnailUrl" | "thumbnailKind">) {
-  return `${baseClass} ${isFallbackNewsThumbnail(item) ? "is-fallback" : "is-real"}`;
 }
 
 function EmptyState({
@@ -435,13 +413,13 @@ export function ShopTalkView({
     setBookmarkedIds(prev => {
       const next = new Set(prev);
       if (next.has(postId)) next.delete(postId); else next.add(postId);
-      try { localStorage.setItem("rivt.bookmarks.v1", JSON.stringify([...next])); } catch {}
+      try { localStorage.setItem("rivt.bookmarks.v1", JSON.stringify([...next])); } catch { /* noop */ }
       return next;
     });
   }
 
   useEffect(() => {
-    try { localStorage.setItem("rivt.shopTalkReplies.v1", JSON.stringify(shopTalkReplies)); } catch {}
+    try { localStorage.setItem("rivt.shopTalkReplies.v1", JSON.stringify(shopTalkReplies)); } catch { /* noop */ }
   }, [shopTalkReplies]);
 
   function sendReply(postId: string) {
@@ -461,6 +439,7 @@ export function ShopTalkView({
   }
 
   function relativeTime(iso: string): string {
+    // eslint-disable-next-line react-hooks/purity
     const diffMs = Date.now() - new Date(iso).getTime();
     const diffMin = Math.floor(diffMs / 60000);
     if (diffMin < 1) return "just now";

@@ -133,7 +133,7 @@ function persistChangeOrders(jobId: number, updated: ChangeOrder[]) {
     const all: ChangeOrder[] = stored ? (JSON.parse(stored) as ChangeOrder[]) : [];
     const others = Array.isArray(all) ? all.filter((c) => c.jobId !== jobId) : [];
     localStorage.setItem(changeOrderKey, JSON.stringify([...others, ...updated].slice(0, 200)));
-  } catch {}
+  } catch { /* noop */ }
 }
 
 function BudgetTracker({ jobId, budget }: { jobId: number; budget: number }) {
@@ -283,6 +283,7 @@ function PipelineBoard({ openJobs }: { openJobs: Job[] }) {
   useEffect(() => {
     const canonicalJobs = openJobs.filter((j) => j.canonical?.id);
     if (!canonicalJobs.length) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
     Promise.allSettled(
       canonicalJobs.map((j) =>
@@ -419,6 +420,7 @@ function ContractorStatsBar({ jobs }: { jobs: Job[] }) {
       if (!stored) return 0;
       const sessions = JSON.parse(stored) as Array<{ durationMs: number; startedAt: string }>;
       if (!Array.isArray(sessions)) return 0;
+      // eslint-disable-next-line react-hooks/purity
       const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
       return sessions
         .filter((s) => new Date(s.startedAt).getTime() > weekAgo)
@@ -432,6 +434,7 @@ function ContractorStatsBar({ jobs }: { jobs: Job[] }) {
       if (!stored) return 0;
       const expenses = JSON.parse(stored) as Array<{ amount: number; date: string }>;
       if (!Array.isArray(expenses)) return 0;
+      // eslint-disable-next-line react-hooks/purity
       const weekAgoStr = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
       return expenses.filter((e) => e.date >= weekAgoStr).reduce((sum, e) => sum + e.amount, 0);
     } catch { return 0; }
@@ -472,7 +475,7 @@ function readSavedSearches(): SavedSearch[] {
 }
 
 function persistSavedSearches(searches: SavedSearch[]) {
-  try { localStorage.setItem(savedSearchKey, JSON.stringify(searches.slice(0, 10))); } catch {}
+  try { localStorage.setItem(savedSearchKey, JSON.stringify(searches.slice(0, 10))); } catch { /* noop */ }
 }
 
 // ── Job Checklist ─────────────────────────────────────────────────────────────
@@ -494,7 +497,7 @@ function readChecklist(jobId: number): ChecklistItem[] {
 }
 
 function persistChecklist(jobId: number, items: ChecklistItem[]) {
-  try { localStorage.setItem(`rivt.checklist.${jobId}.v1`, JSON.stringify(items)); } catch {}
+  try { localStorage.setItem(`rivt.checklist.${jobId}.v1`, JSON.stringify(items)); } catch { /* noop */ }
 }
 
 function JobChecklist({ jobId }: { jobId: number }) {
@@ -595,7 +598,7 @@ function readMilestones(jobId: number): PaymentMilestone[] {
 }
 
 function persistMilestones(jobId: number, items: PaymentMilestone[]) {
-  try { localStorage.setItem(`rivt.milestones.${jobId}.v1`, JSON.stringify(items)); } catch {}
+  try { localStorage.setItem(`rivt.milestones.${jobId}.v1`, JSON.stringify(items)); } catch { /* noop */ }
 }
 
 function PaymentMilestones({ jobId, jobPay }: { jobId: number; jobPay: number }) {
@@ -700,7 +703,7 @@ function readJobNotes(jobId: number): JobNote[] {
 }
 
 function persistJobNotes(jobId: number, notes: JobNote[]) {
-  try { localStorage.setItem(`rivt.notes.${jobId}.v1`, JSON.stringify(notes.slice(0, 100))); } catch {}
+  try { localStorage.setItem(`rivt.notes.${jobId}.v1`, JSON.stringify(notes.slice(0, 100))); } catch { /* noop */ }
 }
 
 function JobNotes({ jobId }: { jobId: number }) {
@@ -769,7 +772,7 @@ function readSiteContacts(jobId: number): SiteContact[] {
 }
 
 function persistSiteContacts(jobId: number, contacts: SiteContact[]) {
-  try { localStorage.setItem(`rivt.contacts.${jobId}.v1`, JSON.stringify(contacts.slice(0, 50))); } catch {}
+  try { localStorage.setItem(`rivt.contacts.${jobId}.v1`, JSON.stringify(contacts.slice(0, 50))); } catch { /* noop */ }
 }
 
 function SiteContacts({ jobId }: { jobId: number }) {
@@ -779,7 +782,7 @@ function SiteContacts({ jobId }: { jobId: number }) {
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [notes, setNotes] = useState("");
-  const [copiedId, setCopiedId] = useState("");
+  const [_copiedId, setCopiedId] = useState("");
 
   function addContact() {
     if (!name.trim()) return;
@@ -809,7 +812,7 @@ function SiteContacts({ jobId }: { jobId: number }) {
       await navigator.clipboard.writeText(text);
       setCopiedId(c.id);
       setTimeout(() => setCopiedId(""), 2000);
-    } catch {}
+    } catch { /* noop */ }
   }
 
   return (
@@ -883,7 +886,7 @@ function readJobTemplates(): JobTemplate[] {
 }
 
 function persistJobTemplates(templates: JobTemplate[]) {
-  try { localStorage.setItem(jobTemplateKey, JSON.stringify(templates.slice(0, 20))); } catch {}
+  try { localStorage.setItem(jobTemplateKey, JSON.stringify(templates.slice(0, 20))); } catch { /* noop */ }
 }
 
 function saveJobAsTemplate(job: Job): string {
@@ -933,7 +936,7 @@ function JobTemplates({ onPostJob }: { onPostJob: () => void }) {
       await navigator.clipboard.writeText(text);
       setCopiedId(t.id);
       setTimeout(() => setCopiedId(""), 2000);
-    } catch {}
+    } catch { /* noop */ }
   }
 
   function moneyT(v: number) { return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(v); }

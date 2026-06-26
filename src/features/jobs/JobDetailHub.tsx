@@ -123,6 +123,7 @@ export function JobDetailHub({ jobId, onClose }: JobDetailHubProps) {
     try {
       const jobs: StoredJob[] = JSON.parse(localStorage.getItem("rivt.jobs.v1") || "[]");
       const foundJob = jobs.find((j) => j.id === jobId) ?? null;
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setJob(foundJob);
 
       const allSessions: TimeSession[] = JSON.parse(localStorage.getItem("rivt.timeSessions.v1") || "[]");

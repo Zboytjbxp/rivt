@@ -12,7 +12,7 @@ import "./styles.css";
         "rivt.pro.v1",
         JSON.stringify({ active: true, activatedAt: new Date().toISOString() })
       );
-    } catch {}
+    } catch { /* noop */ }
     // Clean the URL so refreshing doesn't re-trigger
     const clean = window.location.pathname + window.location.hash;
     window.history.replaceState({}, "", clean);

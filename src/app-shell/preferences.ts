@@ -43,7 +43,7 @@ export function readThemeSourcePreference(): "system" | ThemeMode {
     // Infer from existing mode key: if a mode was explicitly saved, treat as manual
     const mode = window.localStorage.getItem(THEME_STORAGE_KEY);
     if (mode === "light" || mode === "dark") return mode;
-  } catch {}
+  } catch { /* noop */ }
   return "system";
 }
 

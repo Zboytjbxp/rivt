@@ -112,7 +112,7 @@ export function InboxCenter({
 
   function saveTemplates(next: string[]) {
     setTemplates(next);
-    try { localStorage.setItem(TEMPLATES_KEY, JSON.stringify(next)); } catch {}
+    try { localStorage.setItem(TEMPLATES_KEY, JSON.stringify(next)); } catch { /* noop */ }
   }
 
   function addTemplate() {
@@ -140,7 +140,7 @@ export function InboxCenter({
     setPinnedIds((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id); else next.add(id);
-      try { localStorage.setItem(PINNED_KEY, JSON.stringify([...next])); } catch {}
+      try { localStorage.setItem(PINNED_KEY, JSON.stringify([...next])); } catch { /* noop */ }
       return next;
     });
   }
@@ -159,7 +159,7 @@ export function InboxCenter({
     setArchivedIds((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id); else next.add(id);
-      try { localStorage.setItem(ARCHIVED_KEY, JSON.stringify([...next])); } catch {}
+      try { localStorage.setItem(ARCHIVED_KEY, JSON.stringify([...next])); } catch { /* noop */ }
       return next;
     });
   }
@@ -179,7 +179,7 @@ export function InboxCenter({
       const next = { ...prev };
       if (next[messageId] === emoji) delete next[messageId];
       else next[messageId] = emoji;
-      try { localStorage.setItem(REACTIONS_KEY, JSON.stringify(next)); } catch {}
+      try { localStorage.setItem(REACTIONS_KEY, JSON.stringify(next)); } catch { /* noop */ }
       return next;
     });
     setReactionPickerFor(null);

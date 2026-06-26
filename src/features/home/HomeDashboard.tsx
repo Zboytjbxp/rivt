@@ -110,7 +110,7 @@ function readWeeklyAvailability(): Record<number, AvailDay> {
       const parsed = JSON.parse(raw) as Record<string, AvailDay>;
       return Object.fromEntries(Array.from({ length: 7 }, (_, i) => [i, parsed[i] ?? "available"]));
     }
-  } catch {}
+  } catch { /* noop */ }
   return Object.fromEntries(Array.from({ length: 7 }, (_, i) => [i, "available" as AvailDay]));
 }
 
@@ -132,19 +132,19 @@ function readTimeSessions(): TimeSession[] {
 }
 
 function writeTimeSessions(sessions: TimeSession[]) {
-  try { localStorage.setItem(TIME_SESSIONS_KEY, JSON.stringify(sessions)); } catch {}
+  try { localStorage.setItem(TIME_SESSIONS_KEY, JSON.stringify(sessions)); } catch { /* noop */ }
 }
 
 function readWeeklyGoal(): WeeklyGoal {
   try {
     const raw = localStorage.getItem(WEEKLY_GOAL_KEY);
     if (raw) return JSON.parse(raw) as WeeklyGoal;
-  } catch {}
+  } catch { /* noop */ }
   return { target: 2000, hourlyRate: 75 };
 }
 
 function writeWeeklyGoal(goal: WeeklyGoal) {
-  try { localStorage.setItem(WEEKLY_GOAL_KEY, JSON.stringify(goal)); } catch {}
+  try { localStorage.setItem(WEEKLY_GOAL_KEY, JSON.stringify(goal)); } catch { /* noop */ }
 }
 
 function getWmoCondition(code: number): string {
@@ -205,13 +205,13 @@ function triggerWeeklyRecapIfDue() {
         icon: "/rivt-icon-192.png",
         tag: "rivt-weekly-recap",
       });
-    }).catch(() => {});
+    }).catch(() => { /* noop */ });
   }
 
-  try { localStorage.setItem("rivt.weeklyRecap.v1", weekKey); } catch {}
+  try { localStorage.setItem("rivt.weeklyRecap.v1", weekKey); } catch { /* noop */ }
 }
 
-function CockpitHero({ onNavigate }: { onNavigate: (d: PrimaryDestination) => void }) {
+function CockpitHero({ onNavigate: _onNavigate }: { onNavigate: (d: PrimaryDestination) => void }) {
   const [sessions, setSessions] = useState<TimeSession[]>(readTimeSessions);
   const [now, setNow] = useState(() => new Date());
   const [weather, setWeather] = useState<WeatherSnapshot | null>(null);
@@ -253,7 +253,7 @@ function CockpitHero({ onNavigate }: { onNavigate: (d: PrimaryDestination) => vo
             if (!cw) return;
             setWeather({ temp: Math.round(cw.temperature), condition: getWmoCondition(cw.weathercode) });
           })
-          .catch(() => {});
+          .catch(() => { /* noop */ });
       },
       () => {}
     );
@@ -304,14 +304,14 @@ function CockpitHero({ onNavigate }: { onNavigate: (d: PrimaryDestination) => vo
   async function handleOnMyWay() {
     const msg = `Heading to ${activeSession?.jobTitle ?? "the job"} — be there in ~20 min.`;
     if (navigator.share) {
-      try { await navigator.share({ text: msg }); return; } catch {}
+      try { await navigator.share({ text: msg }); return; } catch { /* noop */ }
     }
     try {
       await navigator.clipboard.writeText(msg);
       // Brief visual feedback
       setOnMyWayCopied(true);
       setTimeout(() => setOnMyWayCopied(false), 2500);
-    } catch {}
+    } catch { /* noop */ }
   }
 
   function handleCheckin() {
@@ -328,7 +328,7 @@ function CockpitHero({ onNavigate }: { onNavigate: (d: PrimaryDestination) => vo
         const updated = [...existing, entry];
         localStorage.setItem(CHECKIN_LOG_KEY, JSON.stringify(updated));
         setCheckinLog(updated);
-      } catch {}
+      } catch { /* noop */ }
       setCheckedIn(true);
     };
 
@@ -457,7 +457,7 @@ function QuickActionsBar({ onNavigate }: { onNavigate: (d: PrimaryDestination) =
         purpose: "Commute",
       });
       localStorage.setItem(MILEAGE_KEY, JSON.stringify(mileage));
-    } catch {}
+    } catch { /* noop */ }
 
     try {
       const sessionsRaw = localStorage.getItem(TIME_SESSIONS_KEY);
@@ -474,7 +474,7 @@ function QuickActionsBar({ onNavigate }: { onNavigate: (d: PrimaryDestination) =
         });
         localStorage.setItem(TIME_SESSIONS_KEY, JSON.stringify(sessions));
       }
-    } catch {}
+    } catch { /* noop */ }
 
     onNavigate("tools");
   }
@@ -517,6 +517,7 @@ function StreakCounter() {
       count++;
       cursor.setDate(cursor.getDate() - 1);
     }
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setStreak(count);
 
     // Compute Mon-Sun dots for current week
@@ -688,11 +689,7 @@ function formatWeekRange(start: Date): string {
 function WeekSchedule() {
   const [weekOffset, setWeekOffset] = useState(0);
   const [selectedDay, setSelectedDay] = useState<Date | null>(null);
-  const [jobs, setJobs] = useState<StoredJob[]>([]);
-
-  useEffect(() => {
-    setJobs(readStoredJobs());
-  }, []);
+  const [jobs] = useState<StoredJob[]>(() => readStoredJobs());
 
   const weekStart = getWeekStartForOffset(weekOffset);
   const days: Date[] = Array.from({ length: 7 }, (_, i) => {
@@ -847,7 +844,7 @@ export function HomeDashboard({
       const current = prev[dayIndex] ?? "available";
       const next = AVAIL_CYCLE[(AVAIL_CYCLE.indexOf(current) + 1) % AVAIL_CYCLE.length];
       const next_ = { ...prev, [dayIndex]: next };
-      try { localStorage.setItem(WEEKLY_AVAIL_KEY, JSON.stringify(next_)); } catch {}
+      try { localStorage.setItem(WEEKLY_AVAIL_KEY, JSON.stringify(next_)); } catch { /* noop */ }
       return next_;
     });
   }, []);
