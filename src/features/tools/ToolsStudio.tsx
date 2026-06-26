@@ -7,12 +7,14 @@ import {
   ClipboardList,
   Camera,
   CheckCircle2,
+  CheckSquare,
   Clipboard,
   Circle,
   Clock,
   CloudSun,
   Copy,
   Download,
+  DollarSign,
   FileText,
   FileUp,
   FolderOpen,
@@ -73,7 +75,7 @@ import {
 } from "./album-api";
 import "./tools-studio.css";
 
-type ToolMode = "hub" | "calculator" | "estimate" | "invoice" | "materials" | "daily-log" | "job-photos" | "time-tracker" | "expense-logger" | "earnings" | "bid-builder" | "mileage" | "price-book" | "safety-checklist" | "tax-estimator" | "punch-list";
+type ToolMode = "hub" | "calculator" | "estimate" | "invoice" | "materials" | "daily-log" | "job-photos" | "time-tracker" | "expense-logger" | "earnings" | "bid-builder" | "mileage" | "price-book" | "safety-checklist" | "tax-estimator" | "punch-list" | "contracts" | "job-checklist" | "payments";
 
 interface PaymentRecord {
   id: number;
@@ -3044,6 +3046,589 @@ function EarningsDashboardTool({ jobs, paymentRecords }: { jobs: Job[]; paymentR
   );
 }
 
+interface PaymentTrackerRecord {
+  id: string;
+  jobId: string;
+  jobTitle: string;
+  invoiceDate: string;
+  invoiceAmount: number;
+  paidDate?: string;
+  paidAmount?: number;
+  status: "invoiced" | "partial" | "paid" | "overdue";
+  notes?: string;
+}
+
+// ── Contract Templates Tool ───────────────────────────────────────────────────
+
+const CONTRACT_TEMPLATES = [
+  {
+    id: "scope",
+    name: "Scope of Work",
+    fields: ["contractorName", "clientName", "projectAddress", "startDate", "completionDate", "scopeDescription", "totalAmount"],
+    labels: ["Your Name/Company", "Client Name", "Project Address", "Start Date", "Completion Date", "Scope of Work Description", "Total Contract Amount ($)"],
+    body: (v: Record<string,string>) => `SCOPE OF WORK AGREEMENT
+
+Contractor: ${v.contractorName}
+Client: ${v.clientName}
+Project Address: ${v.projectAddress}
+
+This agreement confirms that ${v.contractorName} ("Contractor") will perform the following work at the above address:
+
+SCOPE:
+${v.scopeDescription}
+
+TIMELINE: Work to begin ${v.startDate} and be substantially complete by ${v.completionDate}.
+
+PAYMENT: Total contract amount is $${v.totalAmount}. Payment due upon completion unless otherwise agreed in writing.
+
+Both parties agree to the terms above.
+
+Contractor Signature: _______________________  Date: _______
+Client Signature: ___________________________  Date: _______`,
+  },
+  {
+    id: "change-order",
+    name: "Change Order",
+    fields: ["contractorName", "clientName", "projectAddress", "changeDescription", "additionalCost", "newCompletionDate"],
+    labels: ["Your Name/Company", "Client Name", "Project Address", "Description of Change", "Additional Cost ($)", "Revised Completion Date"],
+    body: (v: Record<string,string>) => `CHANGE ORDER
+
+Contractor: ${v.contractorName}
+Client: ${v.clientName}
+Project Address: ${v.projectAddress}
+
+This change order modifies the original contract as follows:
+
+CHANGE DESCRIPTION:
+${v.changeDescription}
+
+ADDITIONAL COST: $${v.additionalCost}
+REVISED COMPLETION DATE: ${v.newCompletionDate}
+
+This change order must be signed by both parties before work begins.
+
+Contractor Signature: _______________________  Date: _______
+Client Signature: ___________________________  Date: _______`,
+  },
+  {
+    id: "payment-terms",
+    name: "Payment Terms",
+    fields: ["contractorName", "clientName", "projectAddress", "totalAmount", "depositAmount", "depositDueDate", "finalPaymentTrigger"],
+    labels: ["Your Name/Company", "Client Name", "Project Address", "Total Amount ($)", "Deposit Amount ($)", "Deposit Due Date", "Final Payment Trigger (e.g., 'upon final inspection')"],
+    body: (v: Record<string,string>) => `PAYMENT TERMS AGREEMENT
+
+Contractor: ${v.contractorName}
+Client: ${v.clientName}
+Project: ${v.projectAddress}
+
+TOTAL CONTRACT VALUE: $${v.totalAmount}
+
+PAYMENT SCHEDULE:
+1. Deposit: $${v.depositAmount} due by ${v.depositDueDate}
+2. Final Payment: Remaining balance due ${v.finalPaymentTrigger}
+
+Late payments are subject to 1.5% monthly interest. Contractor reserves the right to stop work if payments are not received as scheduled.
+
+Contractor Signature: _______________________  Date: _______
+Client Signature: ___________________________  Date: _______`,
+  },
+  {
+    id: "lien-waiver",
+    name: "Lien Waiver",
+    fields: ["contractorName", "clientName", "projectAddress", "paymentAmount", "paymentDate", "workDescription"],
+    labels: ["Your Name/Company", "Client/Owner Name", "Property Address", "Payment Amount ($)", "Payment Date", "Work Performed"],
+    body: (v: Record<string,string>) => `CONDITIONAL LIEN WAIVER AND RELEASE
+
+For valuable consideration of $${v.paymentAmount} received on ${v.paymentDate}, ${v.contractorName} ("Claimant") hereby waives and releases any lien, claim, or right against:
+
+Property: ${v.projectAddress}
+Owner: ${v.clientName}
+
+For work and materials furnished through the above date:
+${v.workDescription}
+
+This waiver is conditioned upon actual receipt and clearance of the payment described above.
+
+Claimant Signature: _______________________  Date: _______
+Printed Name: _____________________________`,
+  },
+  {
+    id: "sub-agreement",
+    name: "Subcontractor Agreement",
+    fields: ["gcName", "subName", "projectAddress", "tradeScope", "startDate", "completionDate", "subAmount", "paymentTerms"],
+    labels: ["General Contractor Name", "Subcontractor Name", "Project Address", "Trade/Scope of Work", "Start Date", "Completion Date", "Subcontract Amount ($)", "Payment Terms"],
+    body: (v: Record<string,string>) => `SUBCONTRACTOR AGREEMENT
+
+General Contractor: ${v.gcName}
+Subcontractor: ${v.subName}
+Project: ${v.projectAddress}
+
+SCOPE: ${v.subName} agrees to perform the following work:
+${v.tradeScope}
+
+TIMELINE: ${v.startDate} through ${v.completionDate}
+SUBCONTRACT AMOUNT: $${v.subAmount}
+PAYMENT TERMS: ${v.paymentTerms}
+
+Subcontractor agrees to: maintain appropriate insurance, comply with all safety requirements, obtain required permits, and complete work per applicable codes.
+
+GC Signature: __________________________  Date: _______
+Sub Signature: _________________________  Date: _______`,
+  },
+];
+
+function ContractTemplateTool() {
+  const [selectedTemplateId, setSelectedTemplateId] = useState("scope");
+  const [formValues, setFormValues] = useState<Record<string, string>>({});
+  const [generated, setGenerated] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  const template = CONTRACT_TEMPLATES.find((t) => t.id === selectedTemplateId) ?? CONTRACT_TEMPLATES[0];
+
+  function handleFieldChange(field: string, value: string) {
+    setFormValues((prev) => ({ ...prev, [field]: value }));
+  }
+
+  function generateContract() {
+    const values: Record<string, string> = {};
+    for (const field of template.fields) {
+      values[field] = formValues[field] ?? "";
+    }
+    setGenerated(template.body(values));
+  }
+
+  async function handleCopy() {
+    if (!generated) return;
+    try {
+      await navigator.clipboard.writeText(generated);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {}
+  }
+
+  return (
+    <div className="v2-tool-panel" style={{ maxWidth: 720 }}>
+      <div className="v2-contract-templates">
+        {CONTRACT_TEMPLATES.map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            className={`v2-contract-template-pill${selectedTemplateId === t.id ? " is-active" : ""}`}
+            onClick={() => { setSelectedTemplateId(t.id); setGenerated(null); setFormValues({}); }}
+          >
+            {t.name}
+          </button>
+        ))}
+      </div>
+
+      {generated ? (
+        <>
+          <textarea className="v2-contract-output" readOnly value={generated} />
+          <div className="v2-contract-actions">
+            <button type="button" className="v2-contract-copy-btn" onClick={() => void handleCopy()}>
+              {copied ? "Copied!" : "Copy"}
+            </button>
+            <button type="button" className="v2-contract-print-btn" onClick={() => window.print()}>Print</button>
+            <button type="button" className="v2-contract-edit-btn" onClick={() => setGenerated(null)}>Edit</button>
+          </div>
+        </>
+      ) : (
+        <>
+          <div className="v2-contract-form">
+            {template.fields.map((field, i) => (
+              <div key={field} className="v2-contract-field">
+                <label>{template.labels[i]}
+                  {field === "scopeDescription" || field === "changeDescription" || field === "workDescription" || field === "tradeScope" ? (
+                    <textarea
+                      value={formValues[field] ?? ""}
+                      onChange={(e) => handleFieldChange(field, e.target.value)}
+                      rows={3}
+                    />
+                  ) : (
+                    <input
+                      type="text"
+                      value={formValues[field] ?? ""}
+                      onChange={(e) => handleFieldChange(field, e.target.value)}
+                    />
+                  )}
+                </label>
+              </div>
+            ))}
+          </div>
+          <button type="button" className="v2-contract-generate-btn" onClick={generateContract}>
+            Generate Contract
+          </button>
+        </>
+      )}
+    </div>
+  );
+}
+
+// ── Job Checklists Tool ───────────────────────────────────────────────────────
+
+const JOB_CHECKLISTS: Record<string, Record<string, string[]>> = {
+  "Electrician": {
+    "Rough-In Inspection": [
+      "Permit posted and visible","Panel/sub-panel location confirmed","Wire gauge correct for circuit load","All boxes secured and at correct height","Wire stapled per code (every 4.5ft, within 12in of box)","Proper wire protection through studs (nail plates)","AFCI/GFCI locations marked","Smoke detector wiring roughed in","No wire splices outside of boxes","Inspector access confirmed"
+    ],
+    "Panel Upgrade": [
+      "Old panel de-energized and tagged out","New panel properly grounded","All circuits labeled","Main breaker sized correctly","Ground rods driven and bonded","Neutral and ground buses separated","Arc fault breakers installed where required","Panel cover fits flush","Final torque on lugs verified","City inspection scheduled"
+    ],
+    "Service Call": [
+      "Customer complaint documented","Circuit tested with multimeter","GFCI outlets checked and reset","Breaker tested (not tripped internally)","Connections inspected for heat damage","Neutral connections tightened","Issue root cause identified","Fix verified before leaving","Customer signed off","Invoice/receipt provided"
+    ],
+  },
+  "Plumber": {
+    "Rough-In": [
+      "Permit pulled and posted","DWV slope verified (1/4in per foot)","Vent stack locations confirmed","P-traps roughed in at correct height","Water supply lines roughed in","Pressure test passed (air or water)","Pipe supports installed per code","Cleanout locations accessible","No ABS/PVC mixed without adapter","Inspector walkthrough complete"
+    ],
+    "Fixture Install": [
+      "Water shut-offs functional","Supply lines correct length and material","Toilet flange at finished floor level","Toilet wax ring new and seated","Sink drain aligned with rough-in","P-trap fully assembled (no over-tightening)","Faucet connections hand-tight + 1/4 turn","All fixtures caulked at wall","Test flush (toilet) 3 times","Check under sink for drips 10 min"
+    ],
+    "Water Heater": [
+      "Old unit drained and disconnected","New unit properly strapped (seismic if required)","T&P relief valve installed and piped to floor","Expansion tank installed (closed systems)","Correct gas line size / electrical amperage","Flue/venting correct gauge and slope","Anode rod checked","Thermostat set to 120°F","First-hour rating confirmed with customer","Permit finaled"
+    ],
+  },
+  "HVAC": {
+    "Equipment Startup": [
+      "Electrical disconnect installed and labeled","Refrigerant line set leak-checked","Correct refrigerant type and charge","Static pressure measured and within spec","Airflow balanced (each register measured)","Thermostat wired and programmed","Drain line flushed and clear","Filter installed (correct size and direction)","Outdoor unit level and clear of debris","Customer walkthrough complete"
+    ],
+    "Annual Maintenance": [
+      "Filter replaced","Coil cleaned (indoor and outdoor)","Drain pan and line clear","Refrigerant level checked","Capacitors tested","Contactors inspected for pitting","Blower wheel clean","Belt (if applicable) tension and condition","All electrical connections tight","System cycled on heat and cool"
+    ],
+  },
+  "Carpenter": {
+    "Framing Inspection": [
+      "Stud spacing correct (16in or 24in OC)","Headers sized for spans","King studs and trimmers doubled","Top plate doubled","Fire blocking installed","Engineered lumber stamped and approved","Beam bearing correct","Floor joist hangers properly nailed","Shear panel nailing pattern correct","Inspector approved"
+    ],
+    "Cabinet Install": [
+      "Wall studs located and marked","Level line snapped at 34.5in (base) and 54in (upper)","Upper cabinets installed first","Screws into studs (min 2 per cabinet)","All cabinets level and plumb","Doors adjusted (hinges aligned)","Drawer slides fully engaged","Filler strips cut and installed","Hardware installed and aligned","Customer walkthrough signed off"
+    ],
+  },
+  "General Contractor": {
+    "Pre-Construction": [
+      "Permit approved and posted","Utility locates called (811)","Temporary power/water arranged","Site access and staging area confirmed","Subcontractor schedule finalized","Material delivery dates confirmed","Existing conditions documented (photos)","Neighbor notification completed if needed","Porta-potty ordered if needed","Safety plan communicated to all subs"
+    ],
+    "Rough Framing Closeout": [
+      "Framing inspection passed","MEP rough-ins complete and inspected","Insulation inspection passed","Window and door flashing complete","Roof sheathing and underlayment complete","All penetrations fire-blocked","Temporary bracing removed","Site clean for drywall delivery","Schedule confirmed with drywall crew","Owner updated on timeline"
+    ],
+    "Project Closeout": [
+      "Punch list complete","Final inspections passed (all trades)","Certificate of occupancy received","Final cleaning complete","All subcontractors paid","Lien waivers collected from all subs","As-built drawings updated","Owner manual and warranties provided","Keys and codes transferred","Final photos taken"
+    ],
+  },
+};
+
+const checklistStorageKey = "rivt.checklists.v1";
+
+function readChecklistsFromStorage(): Record<string, Record<string, boolean>> {
+  try {
+    const stored = localStorage.getItem(checklistStorageKey);
+    if (!stored) return {};
+    return JSON.parse(stored) as Record<string, Record<string, boolean>>;
+  } catch { return {}; }
+}
+
+function saveChecklistsToStorage(data: Record<string, Record<string, boolean>>) {
+  try { localStorage.setItem(checklistStorageKey, JSON.stringify(data)); } catch {}
+}
+
+function getActiveJobId(): string {
+  try {
+    const stored = localStorage.getItem("rivt.jobs.v1");
+    if (!stored) return "default";
+    const jobs = JSON.parse(stored) as Array<{ id: string; status?: string }>;
+    const active = jobs.find((j) => j.status === "active" || j.status === "Open");
+    return active?.id ?? "default";
+  } catch { return "default"; }
+}
+
+function JobChecklistTool() {
+  const trades = Object.keys(JOB_CHECKLISTS);
+  const [selectedTrade, setSelectedTrade] = useState(trades[0]);
+  const jobTypes = Object.keys(JOB_CHECKLISTS[selectedTrade] ?? {});
+  const [selectedJobType, setSelectedJobType] = useState(jobTypes[0]);
+  const activeJobId = getActiveJobId();
+  const storageKey = `${selectedTrade}:${selectedJobType}:${activeJobId}`;
+
+  const [checks, setChecks] = useState<Record<string, boolean>>(() => {
+    const all = readChecklistsFromStorage();
+    return all[storageKey] ?? {};
+  });
+
+  useEffect(() => {
+    const all = readChecklistsFromStorage();
+    setChecks(all[storageKey] ?? {});
+  }, [storageKey]);
+
+  const items = JOB_CHECKLISTS[selectedTrade]?.[selectedJobType] ?? [];
+  const completedCount = items.filter((item) => checks[item]).length;
+
+  function toggleItem(item: string) {
+    const next = { ...checks, [item]: !checks[item] };
+    setChecks(next);
+    const all = readChecklistsFromStorage();
+    all[storageKey] = next;
+    saveChecklistsToStorage(all);
+  }
+
+  function resetChecklist() {
+    if (!window.confirm("Reset all items on this checklist?")) return;
+    const next: Record<string, boolean> = {};
+    setChecks(next);
+    const all = readChecklistsFromStorage();
+    all[storageKey] = next;
+    saveChecklistsToStorage(all);
+  }
+
+  function handleTradeChange(trade: string) {
+    setSelectedTrade(trade);
+    const firstJobType = Object.keys(JOB_CHECKLISTS[trade] ?? {})[0] ?? "";
+    setSelectedJobType(firstJobType);
+  }
+
+  const pct = items.length > 0 ? (completedCount / items.length) * 100 : 0;
+
+  return (
+    <div className="v2-tool-panel" style={{ maxWidth: 720 }}>
+      <div className="v2-contract-templates">
+        {trades.map((trade) => (
+          <button
+            key={trade}
+            type="button"
+            className={`v2-contract-template-pill${selectedTrade === trade ? " is-active" : ""}`}
+            onClick={() => handleTradeChange(trade)}
+          >
+            {trade}
+          </button>
+        ))}
+      </div>
+      <div className="v2-contract-templates">
+        {Object.keys(JOB_CHECKLISTS[selectedTrade] ?? {}).map((jt) => (
+          <button
+            key={jt}
+            type="button"
+            className={`v2-contract-template-pill${selectedJobType === jt ? " is-active" : ""}`}
+            onClick={() => setSelectedJobType(jt)}
+          >
+            {jt}
+          </button>
+        ))}
+      </div>
+      <div className="v2-checklist-progress">
+        <span className="v2-checklist-progress-label">{completedCount} of {items.length} complete</span>
+        <div className="v2-checklist-progress-bar-wrap">
+          <div className="v2-checklist-progress-bar" style={{ width: `${pct}%` }} />
+        </div>
+      </div>
+      <div className="v2-checklist-items">
+        {items.map((item) => (
+          <div
+            key={item}
+            className={`v2-checklist-item${checks[item] ? " is-checked" : ""}`}
+            onClick={() => toggleItem(item)}
+            role="checkbox"
+            aria-checked={checks[item] ?? false}
+            tabIndex={0}
+            onKeyDown={(e) => { if (e.key === " " || e.key === "Enter") toggleItem(item); }}
+          >
+            <div className="v2-checklist-item-check">
+              {checks[item] && <CheckSquare size={14} color="#fff" />}
+            </div>
+            <span className="v2-checklist-item-text">{item}</span>
+          </div>
+        ))}
+      </div>
+      <button type="button" className="v2-checklist-reset-btn" onClick={resetChecklist}>Reset Checklist</button>
+    </div>
+  );
+}
+
+// ── Payment Tracker Tool ──────────────────────────────────────────────────────
+
+const paymentsTrackerKey = "rivt.payments.v1";
+
+function readPaymentTrackerRecords(): PaymentTrackerRecord[] {
+  try {
+    const stored = localStorage.getItem(paymentsTrackerKey);
+    if (!stored) return [];
+    const parsed = JSON.parse(stored) as PaymentTrackerRecord[];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch { return []; }
+}
+
+function savePaymentTrackerRecords(records: PaymentTrackerRecord[]) {
+  try { localStorage.setItem(paymentsTrackerKey, JSON.stringify(records)); } catch {}
+}
+
+function readLocalJobsForPayments(): Array<{ id: string; title: string }> {
+  try {
+    const stored = localStorage.getItem("rivt.jobs.v1");
+    if (!stored) return [];
+    const parsed = JSON.parse(stored) as Array<{ id: string; title: string }>;
+    return Array.isArray(parsed) ? parsed : [];
+  } catch { return []; }
+}
+
+function getDisplayStatus(record: PaymentTrackerRecord): PaymentTrackerRecord["status"] {
+  if (record.status === "invoiced") {
+    const invoiceDate = new Date(record.invoiceDate);
+    const daysDiff = (Date.now() - invoiceDate.getTime()) / (1000 * 60 * 60 * 24);
+    if (daysDiff > 30) return "overdue";
+  }
+  return record.status;
+}
+
+function PaymentTrackerTool() {
+  const [records, setRecords] = useState<PaymentTrackerRecord[]>(readPaymentTrackerRecords);
+  const localJobs = readLocalJobsForPayments();
+  const [showForm, setShowForm] = useState(false);
+  const [form, setForm] = useState({
+    jobId: localJobs[0]?.id ?? "",
+    invoiceAmount: "",
+    invoiceDate: new Date().toISOString().slice(0, 10),
+    notes: "",
+  });
+
+  const totalInvoiced = records.reduce((sum, r) => sum + r.invoiceAmount, 0);
+  const received = records.filter((r) => r.status === "paid").reduce((sum, r) => sum + (r.paidAmount ?? 0), 0);
+  const outstanding = totalInvoiced - received;
+
+  function saveInvoice() {
+    const job = localJobs.find((j) => j.id === form.jobId);
+    const record: PaymentTrackerRecord = {
+      id: crypto.randomUUID(),
+      jobId: form.jobId,
+      jobTitle: job?.title ?? "Standalone",
+      invoiceDate: form.invoiceDate,
+      invoiceAmount: parseFloat(form.invoiceAmount) || 0,
+      status: "invoiced",
+      notes: form.notes || undefined,
+    };
+    const next = [record, ...records];
+    setRecords(next);
+    savePaymentTrackerRecords(next);
+    setShowForm(false);
+    setForm({ jobId: localJobs[0]?.id ?? "", invoiceAmount: "", invoiceDate: new Date().toISOString().slice(0, 10), notes: "" });
+  }
+
+  function markPaid(id: string) {
+    const next = records.map((r) => r.id === id ? {
+      ...r,
+      paidDate: new Date().toISOString().slice(0, 10),
+      paidAmount: r.invoiceAmount,
+      status: "paid" as const,
+    } : r);
+    setRecords(next);
+    savePaymentTrackerRecords(next);
+  }
+
+  function deleteRecord(id: string) {
+    const next = records.filter((r) => r.id !== id);
+    setRecords(next);
+    savePaymentTrackerRecords(next);
+  }
+
+  const sorted = [...records].sort((a, b) => b.invoiceDate.localeCompare(a.invoiceDate));
+
+  function statusBadgeClass(status: PaymentTrackerRecord["status"]) {
+    return `v2-payment-badge ${status}`;
+  }
+
+  function daysSince(dateStr: string) {
+    const days = Math.floor((Date.now() - new Date(dateStr).getTime()) / (1000 * 60 * 60 * 24));
+    return days === 0 ? "Today" : `${days}d ago`;
+  }
+
+  return (
+    <div className="v2-tool-panel" style={{ maxWidth: 720 }}>
+      <div className="v2-payment-summary">
+        <div className="v2-payment-stat">
+          <div className="v2-payment-stat-value">${totalInvoiced.toLocaleString()}</div>
+          <div className="v2-payment-stat-label">Total Invoiced</div>
+        </div>
+        <div className="v2-payment-stat">
+          <div className="v2-payment-stat-value">${received.toLocaleString()}</div>
+          <div className="v2-payment-stat-label">Received</div>
+        </div>
+        <div className="v2-payment-stat">
+          <div className="v2-payment-stat-value">${outstanding.toLocaleString()}</div>
+          <div className="v2-payment-stat-label">Outstanding</div>
+        </div>
+      </div>
+
+      <button type="button" className="v2-payment-add-btn" onClick={() => setShowForm(!showForm)}>
+        {showForm ? "Cancel" : "+ Add Invoice"}
+      </button>
+
+      {showForm && (
+        <div className="v2-payment-form">
+          <select
+            value={form.jobId}
+            onChange={(e) => setForm((f) => ({ ...f, jobId: e.target.value }))}
+          >
+            <option value="">Standalone / no job</option>
+            {localJobs.map((j) => <option key={j.id} value={j.id}>{j.title}</option>)}
+          </select>
+          <input
+            type="number"
+            min="0"
+            step="0.01"
+            placeholder="Invoice amount ($)"
+            value={form.invoiceAmount}
+            onChange={(e) => setForm((f) => ({ ...f, invoiceAmount: e.target.value }))}
+          />
+          <input
+            type="date"
+            value={form.invoiceDate}
+            onChange={(e) => setForm((f) => ({ ...f, invoiceDate: e.target.value }))}
+          />
+          <input
+            type="text"
+            placeholder="Notes (optional)"
+            value={form.notes}
+            onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
+          />
+          <div className="v2-payment-form-btns">
+            <button type="button" className="v2-payment-save-btn" onClick={saveInvoice} disabled={!form.invoiceAmount}>Save Invoice</button>
+            <button type="button" className="v2-payment-cancel-btn" onClick={() => setShowForm(false)}>Cancel</button>
+          </div>
+        </div>
+      )}
+
+      <div className="v2-payment-list">
+        {sorted.map((record) => {
+          const displayStatus = getDisplayStatus(record);
+          return (
+            <div key={record.id} className="v2-payment-row">
+              <div className="v2-payment-row-top">
+                <span className="v2-payment-job-name">{record.jobTitle}</span>
+                <span className="v2-payment-amount">${record.invoiceAmount.toLocaleString()}</span>
+              </div>
+              <div className="v2-payment-row-meta">
+                <span className={statusBadgeClass(displayStatus)}>{displayStatus}</span>
+                <span>{daysSince(record.invoiceDate)}</span>
+                {record.notes && <span>{record.notes}</span>}
+              </div>
+              {record.status !== "paid" && (
+                <div className="v2-payment-row-actions">
+                  <button type="button" className="v2-payment-paid-btn" onClick={() => markPaid(record.id)}>Mark Paid</button>
+                  <button type="button" className="v2-payment-delete-btn" onClick={() => deleteRecord(record.id)}>Delete</button>
+                </div>
+              )}
+              {record.status === "paid" && (
+                <div className="v2-payment-row-actions">
+                  <button type="button" className="v2-payment-delete-btn" onClick={() => deleteRecord(record.id)}>Delete</button>
+                </div>
+              )}
+            </div>
+          );
+        })}
+        {records.length === 0 && <p className="v2-muted-copy">No invoices tracked yet. Add your first invoice above.</p>}
+      </div>
+    </div>
+  );
+}
+
 function projectErrorMessage(error: unknown) {
   if (error instanceof ProjectApiError) return error.message;
   return error instanceof Error ? error.message : "RIVT could not update the project record.";
@@ -4255,6 +4840,24 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", onNavigate, 
         description: "Track deficiencies and outstanding items for final walkthrough and sign-off.",
         node: <PunchListTool />,
       },
+      contracts: {
+        eyebrow: "Contracts",
+        title: "Contract templates",
+        description: "Generate scope of work, change orders, payment terms, lien waivers, and subcontractor agreements.",
+        node: <ContractTemplateTool />,
+      },
+      "job-checklist": {
+        eyebrow: "Checklists",
+        title: "Job checklists",
+        description: "Trade-specific inspection and job type checklists with progress tracking.",
+        node: <JobChecklistTool />,
+      },
+      payments: {
+        eyebrow: "Payments",
+        title: "Payment tracker",
+        description: "Track invoices, outstanding balances, and payment status across all jobs.",
+        node: <PaymentTrackerTool />,
+      },
     }[activeTool];
 
     if (!toolMeta) return null;
@@ -4443,6 +5046,36 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", onNavigate, 
           detail="Status tracking"
           action="Open"
           onAction={() => setActiveTool("punch-list")}
+        />
+        <ToolCard
+          icon={FileText}
+          title="Contracts"
+          badge="Legal"
+          summary="Generate scope of work, change orders, lien waivers, and subcontractor agreements."
+          output="5 templates"
+          detail="Print ready"
+          action="Open"
+          onAction={() => setActiveTool("contracts")}
+        />
+        <ToolCard
+          icon={CheckSquare}
+          title="Checklists"
+          badge="Quality"
+          summary="Trade-specific inspection and job type checklists with progress tracking."
+          output="Per job"
+          detail="Saved locally"
+          action="Open"
+          onAction={() => setActiveTool("job-checklist")}
+        />
+        <ToolCard
+          icon={DollarSign}
+          title="Payments"
+          badge="Finance"
+          summary="Track invoices, outstanding balances, and payment status across jobs."
+          output="Invoice log"
+          detail="By status"
+          action="Open"
+          onAction={() => setActiveTool("payments")}
         />
         <ToolCard
           icon={FolderOpen}

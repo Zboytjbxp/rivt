@@ -8,6 +8,7 @@ import {
   CircleDollarSign,
   FileText,
   Filter,
+  LayoutGrid,
   LayoutList,
   LockKeyhole,
   MapPin,
@@ -59,6 +60,7 @@ import {
 } from "./job-api";
 import "./work-workspace.css";
 import { JobDetailHub } from "../jobs/JobDetailHub";
+import { JobPipeline } from "../pipeline/JobPipeline";
 
 type TradeFilter = (typeof tradeOptions)[number];
 type DifficultyFilter = (typeof difficultyOptions)[number];
@@ -1150,6 +1152,7 @@ export function WorkWorkspace({
   onRetry,
 }: WorkWorkspaceProps) {
   const persona = usePersona();
+  const [showPipeline, setShowPipeline] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [mobileDetailOpen, setMobileDetailOpen] = useState(false);
   const [detailTab, setDetailTab] = useState<DetailTab>("overview");
@@ -1430,7 +1433,12 @@ export function WorkWorkspace({
       )}
       <header className="v2-work-header">
         <div><h1>Work</h1><p>{role === "contractor" ? "Post and manage jobs." : "Find open work nearby."}</p></div>
-        {role === "contractor" ? <button type="button" className="v2-primary-button" onClick={onPostJob}><Plus size={17} /> Create job</button> : null}
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <button type="button" className="v2-filter-button" onClick={() => setShowPipeline(true)} title="Open job pipeline">
+            <LayoutGrid size={16} /> Pipeline
+          </button>
+          {role === "contractor" ? <button type="button" className="v2-primary-button" onClick={onPostJob}><Plus size={17} /> Create job</button> : null}
+        </div>
       </header>
 
       {role === "contractor" ? (
@@ -1790,6 +1798,8 @@ export function WorkWorkspace({
       {detailJobId && (
         <JobDetailHub jobId={detailJobId} onClose={() => setDetailJobId(null)} />
       )}
+
+      {showPipeline && <JobPipeline onClose={() => setShowPipeline(false)} />}
     </section>
   );
 }

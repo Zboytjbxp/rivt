@@ -65,6 +65,7 @@ import type {
   CommunityPost,
   CommunityReport,
   PostFlair,
+  PostType,
 } from "./features/shop-talk/ShopTalkView";
 import { communityBadgeLabels } from "./features/shop-talk/community-utils";
 import { communityPromptPosts, fallbackNewsItems } from "./features/shop-talk/fallback-data";
@@ -742,7 +743,7 @@ function App() {
     );
   }
 
-  function handleNewShopTalkPost(flair: PostFlair, title: string, trade: Trade | "General", body: string) {
+  function handleNewShopTalkPost(flair: PostFlair, title: string, trade: Trade | "General", body: string, postType: PostType, subTrade?: string, subLocation?: string, subRate?: string) {
     setCommunityPosts((current) => [
       {
         id: Date.now(),
@@ -756,6 +757,10 @@ function App() {
         replies: [],
         createdAt: "Just now",
         status: "Open",
+        type: postType,
+        ...(subTrade ? { subTrade } : {}),
+        ...(subLocation ? { subLocation } : {}),
+        ...(subRate ? { subRate } : {}),
       },
       ...current,
     ]);
