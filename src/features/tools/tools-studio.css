@@ -4086,3 +4086,58 @@
   .rivt-v2 .v2-materials-est-footer { flex-direction: column; gap: 6px; align-items: flex-end; }
   .rivt-v2 .v2-photos-grid { grid-template-columns: repeat(2, 1fr); }
 }
+
+/* Contracts */
+.v2-contract-templates { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
+.v2-contract-template-pill { padding: 6px 12px; border: 1px solid var(--v2-border); border-radius: 20px; font-size: 12px; cursor: pointer; background: var(--v2-surface-muted); color: var(--v2-text-muted); }
+.v2-contract-template-pill.is-active { background: var(--v2-accent-soft); color: var(--v2-accent); border-color: var(--v2-accent); }
+.v2-contract-form { display: flex; flex-direction: column; gap: 10px; }
+.v2-contract-field label { display: block; font-size: 11px; color: var(--v2-text-muted); margin-bottom: 4px; }
+.v2-contract-field input, .v2-contract-field textarea { width: 100%; padding: 8px 10px; border: 1px solid var(--v2-border); border-radius: var(--v2-radius-sm); background: var(--v2-surface); color: var(--v2-text); font-size: 13px; box-sizing: border-box; }
+.v2-contract-field textarea { min-height: 60px; resize: vertical; }
+.v2-contract-generate-btn { width: 100%; padding: 12px; background: var(--v2-accent); color: white; border: none; border-radius: var(--v2-radius-md); font-weight: var(--v2-weight-bold); font-size: 14px; cursor: pointer; margin-top: 8px; }
+.v2-contract-output { width: 100%; min-height: 320px; padding: 12px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; line-height: 1.6; border: 1px solid var(--v2-border); border-radius: var(--v2-radius-sm); background: var(--v2-surface-muted); color: var(--v2-text); resize: vertical; box-sizing: border-box; }
+.v2-contract-actions { display: flex; gap: 8px; margin-top: 8px; }
+.v2-contract-copy-btn { flex: 1; padding: 10px; background: var(--v2-surface-muted); border: 1px solid var(--v2-border); border-radius: var(--v2-radius-sm); cursor: pointer; font-size: 13px; font-weight: var(--v2-weight-bold); color: var(--v2-text); }
+.v2-contract-print-btn { padding: 10px 16px; background: var(--v2-accent); color: white; border: none; border-radius: var(--v2-radius-sm); cursor: pointer; font-size: 13px; font-weight: var(--v2-weight-bold); }
+.v2-contract-edit-btn { padding: 10px 14px; background: none; border: 1px solid var(--v2-border); border-radius: var(--v2-radius-sm); cursor: pointer; font-size: 13px; color: var(--v2-text-muted); }
+
+/* Checklists */
+.v2-checklist-progress { margin: 10px 0; }
+.v2-checklist-progress-bar-wrap { height: 6px; background: var(--v2-surface-muted); border-radius: 3px; overflow: hidden; margin-top: 4px; }
+.v2-checklist-progress-bar { height: 100%; background: var(--v2-accent); border-radius: 3px; transition: width 0.3s; }
+.v2-checklist-progress-label { font-size: 12px; color: var(--v2-text-muted); }
+.v2-checklist-items { display: flex; flex-direction: column; gap: 2px; margin: 10px 0; }
+.v2-checklist-item { display: flex; align-items: flex-start; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--v2-border); cursor: pointer; }
+.v2-checklist-item:last-child { border-bottom: none; }
+.v2-checklist-item-check { width: 18px; height: 18px; border: 2px solid var(--v2-border); border-radius: 3px; flex-shrink: 0; margin-top: 1px; display: flex; align-items: center; justify-content: center; }
+.v2-checklist-item.is-checked .v2-checklist-item-check { background: var(--v2-success); border-color: var(--v2-success); }
+.v2-checklist-item-text { font-size: 13px; color: var(--v2-text); line-height: 1.4; }
+.v2-checklist-item.is-checked .v2-checklist-item-text { text-decoration: line-through; color: var(--v2-text-muted); }
+.v2-checklist-reset-btn { padding: 8px 14px; background: none; border: 1px solid var(--v2-border); border-radius: var(--v2-radius-sm); font-size: 12px; color: var(--v2-text-muted); cursor: pointer; }
+
+/* Payments */
+.v2-payment-summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 14px; }
+.v2-payment-stat { background: var(--v2-surface-muted); border: 1px solid var(--v2-border); border-radius: var(--v2-radius-md); padding: 10px; text-align: center; }
+.v2-payment-stat-value { font-size: 16px; font-weight: var(--v2-weight-display); color: var(--v2-text); font-family: 'IBM Plex Mono', monospace; }
+.v2-payment-stat-label { font-size: 10px; color: var(--v2-text-muted); margin-top: 2px; }
+.v2-payment-add-btn { width: 100%; padding: 10px; background: var(--v2-accent); color: white; border: none; border-radius: var(--v2-radius-sm); font-weight: var(--v2-weight-bold); cursor: pointer; margin-bottom: 12px; }
+.v2-payment-form { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; padding: 12px; background: var(--v2-surface-muted); border-radius: var(--v2-radius-md); border: 1px solid var(--v2-border); }
+.v2-payment-form select, .v2-payment-form input { width: 100%; padding: 8px 10px; border: 1px solid var(--v2-border); border-radius: var(--v2-radius-sm); background: var(--v2-surface); color: var(--v2-text); font-size: 13px; box-sizing: border-box; }
+.v2-payment-form-btns { display: flex; gap: 8px; }
+.v2-payment-save-btn { flex: 1; padding: 9px; background: var(--v2-accent); color: white; border: none; border-radius: var(--v2-radius-sm); font-weight: var(--v2-weight-bold); cursor: pointer; }
+.v2-payment-cancel-btn { padding: 9px 14px; background: none; border: 1px solid var(--v2-border); border-radius: var(--v2-radius-sm); color: var(--v2-text-muted); cursor: pointer; }
+.v2-payment-list { display: flex; flex-direction: column; gap: 8px; }
+.v2-payment-row { background: var(--v2-surface); border: 1px solid var(--v2-border); border-radius: var(--v2-radius-md); padding: 12px 14px; }
+.v2-payment-row-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+.v2-payment-job-name { font-size: 14px; font-weight: var(--v2-weight-bold); color: var(--v2-text); }
+.v2-payment-amount { font-size: 15px; font-weight: var(--v2-weight-display); color: var(--v2-text); font-family: 'IBM Plex Mono', monospace; }
+.v2-payment-row-meta { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--v2-text-muted); }
+.v2-payment-badge { padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: var(--v2-weight-bold); }
+.v2-payment-badge.paid { background: #dcfce7; color: #16a34a; }
+.v2-payment-badge.invoiced { background: #fef9c3; color: #a16207; }
+.v2-payment-badge.overdue { background: #fee2e2; color: #dc2626; }
+.v2-payment-badge.partial { background: #dbeafe; color: #1d4ed8; }
+.v2-payment-row-actions { display: flex; gap: 6px; margin-top: 8px; }
+.v2-payment-paid-btn { flex: 1; padding: 7px; background: var(--v2-success); color: white; border: none; border-radius: var(--v2-radius-sm); font-size: 12px; font-weight: var(--v2-weight-bold); cursor: pointer; }
+.v2-payment-delete-btn { padding: 7px 10px; background: none; border: 1px solid #ef4444; border-radius: var(--v2-radius-sm); font-size: 12px; color: #ef4444; cursor: pointer; }
