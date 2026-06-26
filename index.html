@@ -29,6 +29,12 @@
     <link rel="icon" type="image/png" sizes="32x32" href="/rivt-favicon.png" />
     <link rel="icon" type="image/png" sizes="192x192" href="/rivt-icon-192.png" />
     <link rel="apple-touch-icon" href="/rivt-icon-192.png" />
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#f97316">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="RIVT">
     <title>RIVT | Where skilled trades connect</title>
     <script type="application/ld+json">
       {
@@ -44,5 +50,12 @@
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    <script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js').catch(() => {});
+    });
+  }
+</script>
   </body>
 </html>

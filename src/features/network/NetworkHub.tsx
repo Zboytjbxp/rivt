@@ -47,6 +47,31 @@ interface NetworkHubProps {
   onAddShoutOut: (to: string, trade: string, message: string) => void;
 }
 
+// ── Reviews localStorage ──────────────────────────────────────────────────────
+
+const reviewsKey = "rivt.reviews.v1";
+
+interface StoredReview {
+  id: string;
+  reviewer: string;
+  reviewText: string;
+  rating: number;
+  date: string;
+}
+
+function readStoredReviews(): StoredReview[] {
+  try {
+    const stored = localStorage.getItem(reviewsKey);
+    if (!stored) return [];
+    const parsed = JSON.parse(stored) as StoredReview[];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch { return []; }
+}
+
+function persistStoredReviews(reviews: StoredReview[]) {
+  try { localStorage.setItem(reviewsKey, JSON.stringify(reviews)); } catch {}
+}
+
 // ── Sub Roster ────────────────────────────────────────────────────────────────
 
 const subRosterKey = "rivt.subRoster.v1";
@@ -395,7 +420,9 @@ function ReviewsView({
   const [to, setTo] = useState("");
   const [trade, setTrade] = useState("");
   const [message, setMessage] = useState("");
+  const [rating, setRating] = useState(5);
   const [submitted, setSubmitted] = useState(false);
+  const [storedReviews, setStoredReviews] = useState<StoredReview[]>(readStoredReviews);
 
   const received = shoutOuts.filter((s) => s.to === displayName);
   const given = shoutOuts.filter((s) => s.from === displayName);
@@ -403,9 +430,20 @@ function ReviewsView({
   function submit() {
     if (!to.trim() || !message.trim()) return;
     onAddShoutOut(to.trim(), trade.trim(), message.trim());
+    const newReview: StoredReview = {
+      id: crypto.randomUUID(),
+      reviewer: to.trim(),
+      reviewText: message.trim(),
+      rating,
+      date: new Date().toISOString(),
+    };
+    const next = [newReview, ...storedReviews];
+    setStoredReviews(next);
+    persistStoredReviews(next);
     setTo("");
     setTrade("");
     setMessage("");
+    setRating(5);
     setSubmitted(true);
     setTimeout(() => setSubmitted(false), 3000);
   }
@@ -437,6 +475,15 @@ function ReviewsView({
             </label>
             <label className="is-wide">
               <span>Your review</span>
+              <div className="v2-star-selector">
+                {[1,2,3,4,5].map(n => (
+                  <button key={n} type="button"
+                    className={`v2-star-btn${n <= rating ? " filled" : ""}`}
+                    onClick={() => setRating(n)}
+                    aria-label={`${n} star${n > 1 ? "s" : ""}`}
+                  >★</button>
+                ))}
+              </div>
               <textarea
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
@@ -461,11 +508,25 @@ function ReviewsView({
 
         <Panel
           className="v2-reviews-panel"
-          eyebrow={`${received.length} received`}
+          eyebrow={`${storedReviews.length + received.length} received`}
           title="Reviews you've received"
         >
-          {received.length ? (
+          {(storedReviews.length > 0 || received.length > 0) ? (
             <div className="v2-reviews-list">
+              {storedReviews.map((review) => (
+                <article key={review.id} className="v2-review-item">
+                  <div className="v2-review-item-header">
+                    <Avatar name={review.reviewer} size="sm" />
+                    <div>
+                      <strong>{review.reviewer}</strong>
+                    </div>
+                  </div>
+                  <div className="v2-review-stars-display">
+                    {"★".repeat(review.rating)}{"☆".repeat(5 - review.rating)}
+                  </div>
+                  <p>{review.reviewText}</p>
+                </article>
+              ))}
               {received.map((item) => (
                 <article key={item.id} className="v2-review-item">
                   <div className="v2-review-item-header">

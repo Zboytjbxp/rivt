@@ -848,3 +848,11 @@
   align-items: center;
   gap: 6px;
 }
+
+/* ── Star Rating ─────────────────────────────────────────────────────────── */
+
+.v2-star-selector { display: flex; gap: 4px; margin-bottom: 12px; }
+.v2-star-btn { background: none; border: none; font-size: 24px; cursor: pointer; color: var(--v2-border); padding: 2px; line-height: 1; transition: color 0.1s; }
+.v2-star-btn.filled { color: var(--v2-accent); }
+.v2-star-btn:hover { color: var(--v2-accent); }
+.v2-review-stars-display { color: var(--v2-accent); font-size: 14px; letter-spacing: 2px; margin-bottom: 4px; }
