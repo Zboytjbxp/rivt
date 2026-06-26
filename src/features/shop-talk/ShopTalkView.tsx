@@ -120,6 +120,8 @@ export interface CommunityReport {
 
 const specialtyOptions = tradeOptions.filter((trade): trade is Trade => trade !== "All trades");
 
+const PREDEFINED_TAGS = ["#electrical", "#plumbing", "#hvac", "#permits", "#safety", "#tools", "#osha", "#framing", "#roofing"];
+
 const communityBadgeThresholds: CommunityBadgeThresholds = {
   firstAssistVerifiedFixes: 1,
   mentorQualityAnswers: 3,
@@ -605,7 +607,6 @@ export function ShopTalkView({
         : "Not loaded";
 
   // ── Trending tags ─────────────────────────────────────────────────────────
-  const PREDEFINED_TAGS = ["#electrical", "#plumbing", "#hvac", "#permits", "#safety", "#tools", "#osha", "#framing", "#roofing"];
   const trendingTags = useMemo(() => {
     const counts: Record<string, number> = {};
     // Count predefined tags from post content
