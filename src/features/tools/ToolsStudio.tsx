@@ -1514,6 +1514,89 @@ function MileageLoggerTool({ activeJob }: { activeJob: Job | null }) {
 
 // ── Material Price Book ───────────────────────────────────────────────────────
 
+function getDefaultPriceBook(trade: string | null): Array<{ name: string; unit: string; price: number; supplier: string }> {
+  const catalog: Record<string, Array<{ name: string; unit: string; price: number; supplier: string }>> = {
+    Electrician: [
+      { name: "12/2 Romex wire", unit: "ft", price: 0.65, supplier: "" },
+      { name: "14/2 Romex wire", unit: "ft", price: 0.48, supplier: "" },
+      { name: "Single-pole breaker 15A", unit: "ea", price: 12, supplier: "" },
+      { name: "GFCI outlet", unit: "ea", price: 18, supplier: "" },
+      { name: "Junction box", unit: "ea", price: 4, supplier: "" },
+      { name: "Wire nuts (bag)", unit: "bag", price: 8, supplier: "" },
+      { name: "EMT conduit 1/2\"", unit: "ft", price: 0.90, supplier: "" },
+      { name: "Outlet / switch plate", unit: "ea", price: 2, supplier: "" },
+    ],
+    Plumber: [
+      { name: "Copper pipe 3/4\"", unit: "ft", price: 3.50, supplier: "" },
+      { name: "PVC pipe 3\"", unit: "ft", price: 1.20, supplier: "" },
+      { name: "Ball valve 1/2\"", unit: "ea", price: 12, supplier: "" },
+      { name: "P-trap", unit: "ea", price: 8, supplier: "" },
+      { name: "Wax ring", unit: "ea", price: 6, supplier: "" },
+      { name: "Sharkbite coupling 3/4\"", unit: "ea", price: 14, supplier: "" },
+      { name: "Supply line 12\"", unit: "ea", price: 5, supplier: "" },
+      { name: "Teflon tape", unit: "roll", price: 2, supplier: "" },
+    ],
+    Carpenter: [
+      { name: "2x4x8 stud", unit: "ea", price: 6.50, supplier: "" },
+      { name: "2x6x8", unit: "ea", price: 9.00, supplier: "" },
+      { name: "OSB 4x8 sheet", unit: "ea", price: 28, supplier: "" },
+      { name: "3/4\" plywood 4x8", unit: "ea", price: 55, supplier: "" },
+      { name: "16d sinker nails 5lb", unit: "box", price: 18, supplier: "" },
+      { name: "Construction adhesive", unit: "tube", price: 8, supplier: "" },
+      { name: "Door hinge (pair)", unit: "pair", price: 7, supplier: "" },
+      { name: "2.5\" deck screws 5lb", unit: "box", price: 16, supplier: "" },
+    ],
+    HVAC: [
+      { name: "R-410A refrigerant", unit: "lb", price: 45, supplier: "" },
+      { name: "Capacitor 45/5 MFD", unit: "ea", price: 25, supplier: "" },
+      { name: "Contactor 40A", unit: "ea", price: 18, supplier: "" },
+      { name: "16x25x1 air filter", unit: "ea", price: 8, supplier: "" },
+      { name: "HVAC duct tape", unit: "roll", price: 22, supplier: "" },
+      { name: "Condensate line 3/4\"", unit: "ft", price: 0.40, supplier: "" },
+      { name: "Blower motor", unit: "ea", price: 85, supplier: "" },
+    ],
+    Roofer: [
+      { name: "Architectural shingles", unit: "sq", price: 150, supplier: "" },
+      { name: "15# felt underlayment", unit: "roll", price: 45, supplier: "" },
+      { name: "Ice & water shield", unit: "sq", price: 85, supplier: "" },
+      { name: "Ridge cap bundle", unit: "bundle", price: 65, supplier: "" },
+      { name: "Roofing nails 1-3/4\" 5lb", unit: "box", price: 18, supplier: "" },
+      { name: "Step flashing", unit: "ea", price: 3, supplier: "" },
+    ],
+    Painter: [
+      { name: "Interior latex paint", unit: "gal", price: 45, supplier: "" },
+      { name: "Exterior paint", unit: "gal", price: 52, supplier: "" },
+      { name: "Primer", unit: "gal", price: 35, supplier: "" },
+      { name: "9\" roller cover", unit: "ea", price: 4, supplier: "" },
+      { name: "Painter's tape 1.5\"", unit: "roll", price: 7, supplier: "" },
+      { name: "Drop cloth 9x12", unit: "ea", price: 12, supplier: "" },
+    ],
+    Mason: [
+      { name: "CMU block 8x8x16", unit: "ea", price: 2.50, supplier: "" },
+      { name: "Mortar mix 60lb", unit: "bag", price: 12, supplier: "" },
+      { name: "Mason sand", unit: "ton", price: 80, supplier: "" },
+      { name: "Rebar #4", unit: "ft", price: 1.50, supplier: "" },
+      { name: "Brick (standard)", unit: "ea", price: 0.85, supplier: "" },
+    ],
+    Welder: [
+      { name: "ER70S-6 MIG wire 10lb", unit: "spool", price: 28, supplier: "" },
+      { name: "Argon/CO2 75/25 mix", unit: "tank", price: 60, supplier: "" },
+      { name: "4.5\" grinding disc", unit: "ea", price: 5, supplier: "" },
+      { name: "Anti-spatter spray", unit: "can", price: 12, supplier: "" },
+      { name: "Welding rod 7018 10lb", unit: "box", price: 22, supplier: "" },
+    ],
+    Landscaper: [
+      { name: "Triple-mix topsoil", unit: "cu yd", price: 65, supplier: "" },
+      { name: "Hardwood mulch", unit: "cu yd", price: 55, supplier: "" },
+      { name: "Grass seed premium", unit: "50lb", price: 45, supplier: "" },
+      { name: "Lawn fertilizer", unit: "bag", price: 38, supplier: "" },
+      { name: "Landscape fabric", unit: "sq ft", price: 0.18, supplier: "" },
+      { name: "River rock", unit: "ton", price: 120, supplier: "" },
+    ],
+  };
+  return catalog[trade ?? ""] ?? [];
+}
+
 const priceBookKey = "rivt.priceBook.v1";
 
 interface PriceEntry {
@@ -1541,6 +1624,29 @@ function persistPriceBook(entries: PriceEntry[]) {
 
 function PriceBookTool() {
   const [entries, setEntries] = useState<PriceEntry[]>(readPriceBook);
+
+  useEffect(() => {
+    const trade = (() => { try { return JSON.parse(localStorage.getItem("rivt.profile.v1") ?? "null")?.primaryTrade ?? null; } catch { return null; } })();
+    const seeded = localStorage.getItem("rivt.priceBookSeeded.v1");
+    if (!seeded && entries.length === 0 && trade) {
+      const defaults = getDefaultPriceBook(trade);
+      if (defaults.length) {
+        const seededEntries: PriceEntry[] = defaults.map(d => ({
+          id: crypto.randomUUID(),
+          name: d.name,
+          unit: d.unit,
+          price: d.price,
+          supplier: d.supplier,
+          notes: "Pre-loaded for your trade",
+          updatedAt: new Date().toISOString(),
+        }));
+        setEntries(seededEntries);
+        persistPriceBook(seededEntries);
+        localStorage.setItem("rivt.priceBookSeeded.v1", "1");
+      }
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   const [search, setSearch] = useState("");
   const [name, setName] = useState("");
   const [unit, setUnit] = useState("");
@@ -2021,6 +2127,93 @@ function persistTimeSessions(sessions: TimeSession[]) {
 
 // ── Bid Builder ───────────────────────────────────────────────────────────────
 
+interface DefaultBidLine { description: string; qty: number; unit: string; unitPrice: number; }
+
+function getDefaultBidLines(trade: string | null, overrideDurationHours?: number, overridePay?: number): DefaultBidLine[] {
+  const hrs = overrideDurationHours ?? 8;
+  const payBase = overridePay ? Math.round(overridePay * 0.2) || 250 : 250;
+
+  const defaults: Record<string, DefaultBidLine[]> = {
+    Electrician: [
+      { description: "Labor – rough-in", qty: hrs, unit: "hr", unitPrice: 90 },
+      { description: "Labor – trim-out", qty: Math.ceil(hrs / 2), unit: "hr", unitPrice: 90 },
+      { description: "12/2 Romex wire", qty: 100, unit: "ft", unitPrice: 0.65 },
+      { description: "Panel / breakers", qty: 1, unit: "lot", unitPrice: 200 },
+      { description: "Permit", qty: 1, unit: "ea", unitPrice: 175 },
+    ],
+    Plumber: [
+      { description: "Labor – rough-in", qty: hrs, unit: "hr", unitPrice: 85 },
+      { description: "Labor – trim-out", qty: Math.ceil(hrs / 2), unit: "hr", unitPrice: 85 },
+      { description: "Copper pipe", qty: 50, unit: "ft", unitPrice: 3.50 },
+      { description: "PVC fittings", qty: 1, unit: "lot", unitPrice: 120 },
+      { description: "Permit", qty: 1, unit: "ea", unitPrice: 150 },
+    ],
+    Carpenter: [
+      { description: "Labor – framing", qty: hrs, unit: "hr", unitPrice: 75 },
+      { description: "Labor – finish work", qty: Math.ceil(hrs / 2), unit: "hr", unitPrice: 80 },
+      { description: "Lumber", qty: 100, unit: "bd ft", unitPrice: 1.20 },
+      { description: "Hardware & fasteners", qty: 1, unit: "lot", unitPrice: 80 },
+      { description: "Permit", qty: 1, unit: "ea", unitPrice: 100 },
+    ],
+    HVAC: [
+      { description: "Labor – install", qty: hrs, unit: "hr", unitPrice: 95 },
+      { description: "Labor – startup & test", qty: 2, unit: "hr", unitPrice: 95 },
+      { description: "Equipment", qty: 1, unit: "ea", unitPrice: 2500 },
+      { description: "Refrigerant R-410A", qty: 5, unit: "lb", unitPrice: 45 },
+      { description: "Permit", qty: 1, unit: "ea", unitPrice: 200 },
+    ],
+    "General Contractor": [
+      { description: "Labor – general", qty: hrs, unit: "hr", unitPrice: 70 },
+      { description: "Subcontractor allowance", qty: 1, unit: "lot", unitPrice: 1000 },
+      { description: "Materials allowance", qty: 1, unit: "lot", unitPrice: payBase },
+      { description: "Permit", qty: 1, unit: "ea", unitPrice: 200 },
+    ],
+    Painter: [
+      { description: "Labor – prep & masking", qty: Math.ceil(hrs / 2), unit: "hr", unitPrice: 55 },
+      { description: "Labor – paint", qty: hrs, unit: "hr", unitPrice: 55 },
+      { description: "Paint", qty: 5, unit: "gal", unitPrice: 45 },
+      { description: "Primer", qty: 1, unit: "gal", unitPrice: 35 },
+      { description: "Supplies", qty: 1, unit: "lot", unitPrice: 50 },
+    ],
+    Mason: [
+      { description: "Labor", qty: hrs, unit: "hr", unitPrice: 80 },
+      { description: "Block / brick", qty: 100, unit: "ea", unitPrice: 2.50 },
+      { description: "Mortar mix", qty: 5, unit: "bag", unitPrice: 12 },
+      { description: "Sand", qty: 0.5, unit: "ton", unitPrice: 80 },
+    ],
+    Welder: [
+      { description: "Labor", qty: hrs, unit: "hr", unitPrice: 90 },
+      { description: "Filler wire / rod", qty: 10, unit: "lb", unitPrice: 8 },
+      { description: "Shielding gas", qty: 1, unit: "tank", unitPrice: 60 },
+      { description: "Steel material", qty: 1, unit: "lot", unitPrice: payBase },
+    ],
+    Roofer: [
+      { description: "Labor – tear-off", qty: Math.ceil(hrs / 2), unit: "hr", unitPrice: 65 },
+      { description: "Labor – install", qty: hrs, unit: "hr", unitPrice: 65 },
+      { description: "Architectural shingles", qty: 20, unit: "sq", unitPrice: 150 },
+      { description: "Felt underlayment", qty: 10, unit: "sq", unitPrice: 25 },
+      { description: "Flashing & accessories", qty: 1, unit: "lot", unitPrice: 120 },
+      { description: "Permit", qty: 1, unit: "ea", unitPrice: 125 },
+    ],
+    Landscaper: [
+      { description: "Labor", qty: hrs, unit: "hr", unitPrice: 45 },
+      { description: "Plants & materials", qty: 1, unit: "lot", unitPrice: 300 },
+      { description: "Mulch", qty: 5, unit: "cu yd", unitPrice: 55 },
+      { description: "Equipment rental", qty: 1, unit: "day", unitPrice: 150 },
+    ],
+  };
+
+  return (defaults[trade ?? ""] ?? [
+    { description: "Labor", qty: hrs, unit: "hr", unitPrice: 65 },
+    { description: "Materials", qty: 1, unit: "lot", unitPrice: payBase },
+  ]);
+}
+
+function readTradForBid(): string | null {
+  try { return JSON.parse(localStorage.getItem("rivt.profile.v1") ?? "null")?.primaryTrade ?? null; }
+  catch { return null; }
+}
+
 interface BidLineItem {
   id: string;
   description: string;
@@ -2051,10 +2244,9 @@ function readSavedBids(): SavedBid[] {
 }
 
 function BidBuilderTool({ activeJob }: { activeJob: Job | null }) {
-  const [lines, setLines] = useState<BidLineItem[]>(() => [
-    { id: crypto.randomUUID(), description: "Labor", qty: activeJob?.durationHours ?? 8, unit: "hr", unitPrice: 65 },
-    { id: crypto.randomUUID(), description: "Materials", qty: 1, unit: "lot", unitPrice: activeJob ? Math.round(activeJob.pay * 0.2) || 250 : 250 },
-  ]);
+  const [lines, setLines] = useState<BidLineItem[]>(() =>
+    getDefaultBidLines(readTradForBid(), activeJob?.durationHours, activeJob?.pay).map(l => ({ ...l, id: crypto.randomUUID() }))
+  );
   const [markupPct, setMarkupPct] = useState(15);
   const [bidName, setBidName] = useState(activeJob ? `${activeJob.title} bid` : "New bid");
   const [jobRef, setJobRef] = useState(activeJob?.title ?? "");
