@@ -2187,6 +2187,25 @@
   to { opacity: 0; }
 }
 
+.v2-camera-last-snap {
+  position: absolute;
+  bottom: max(108px, calc(env(safe-area-inset-bottom, 0px) + 108px));
+  left: 24px;
+  width: 72px;
+  height: 72px;
+  border-radius: 10px;
+  object-fit: cover;
+  border: 2.5px solid rgba(255, 255, 255, 0.85);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
+  z-index: 10;
+  animation: v2-snap-pop-in 180ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+@keyframes v2-snap-pop-in {
+  from { transform: scale(0.72); opacity: 0; }
+  to   { transform: scale(1);    opacity: 1; }
+}
+
 .v2-camera-error {
   display: flex;
   flex-direction: column;

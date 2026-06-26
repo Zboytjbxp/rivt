@@ -811,6 +811,8 @@ function CameraCapture({ onCapture, onClose }: {
   const [error, setError] = useState("");
   const [captureCount, setCaptureCount] = useState(0);
   const [flash, setFlash] = useState(false);
+  const [lastSnapUrl, setLastSnapUrl] = useState<string | null>(null);
+  const lastSnapRef = useRef<string | null>(null);
 
   useEffect(() => {
     let stream: MediaStream | null = null;
@@ -827,7 +829,10 @@ function CameraCapture({ onCapture, onClose }: {
           : "Camera could not be started."
       );
     });
-    return () => { stream?.getTracks().forEach((t) => t.stop()); };
+    return () => {
+      stream?.getTracks().forEach((t) => t.stop());
+      if (lastSnapRef.current) URL.revokeObjectURL(lastSnapRef.current);
+    };
   }, []);
 
   function shoot() {
@@ -841,6 +846,10 @@ function CameraCapture({ onCapture, onClose }: {
     ctx.drawImage(video, 0, 0);
     canvas.toBlob((blob) => {
       if (!blob) return;
+      if (lastSnapRef.current) URL.revokeObjectURL(lastSnapRef.current);
+      const url = URL.createObjectURL(blob);
+      lastSnapRef.current = url;
+      setLastSnapUrl(url);
       onCapture(blob);
       setCaptureCount((n) => n + 1);
       setFlash(true);
@@ -877,6 +886,14 @@ function CameraCapture({ onCapture, onClose }: {
           aria-label="Take photo"
         />
       </div>
+      {lastSnapUrl && (
+        <img
+          key={lastSnapUrl}
+          src={lastSnapUrl}
+          alt="Last photo taken"
+          className="v2-camera-last-snap"
+        />
+      )}
       {captureCount > 0 && (
         <span className="v2-camera-badge">{captureCount} {captureCount === 1 ? "photo" : "photos"}</span>
       )}
