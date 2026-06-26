@@ -23,9 +23,13 @@ import {
   Trash2,
   UserCheck,
   XCircle,
+  Zap,
 } from "lucide-react";
 import { createPortal } from "react-dom";
 import { useState } from "react";
+import { usePro } from "../pro/usePro";
+import { UpgradeModal } from "../pro/UpgradeModal";
+import "../pro/pro.css";
 import { brandConfig, type ThemeMode, type ThemePalette } from "../../brandConfig";
 import type { ThemeSource } from "../../app-shell/useAppTheme";
 import { tradeOptions } from "../../data";
@@ -659,6 +663,43 @@ function DataExportButton() {
 
 const themePaletteOrder = Object.keys(brandConfig.theme.palettes) as ThemePalette[];
 
+function PlanCard() {
+  const { isPro, activatedAt } = usePro();
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
+
+  return (
+    <div className="v2-plan-card">
+      <div className="v2-plan-header">
+        <span className="v2-plan-name">{isPro ? "RIVT Pro" : "Free plan"}</span>
+        {isPro ? (
+          <span className="v2-pro-badge"><Zap size={10} />Pro</span>
+        ) : (
+          <span style={{fontSize:12,color:'var(--v2-text-muted)'}}>Free</span>
+        )}
+      </div>
+      {!isPro && (
+        <>
+          <div className="v2-plan-limits">
+            <div className="v2-plan-limit-row"><span>Photo albums</span><span>Up to 50 photos</span></div>
+            <div className="v2-plan-limit-row"><span>History</span><span>90 days</span></div>
+            <div className="v2-plan-limit-row"><span>Punch lists</span><span>1 active list</span></div>
+            <div className="v2-plan-limit-row"><span>CSV export</span><span>Pro only</span></div>
+          </div>
+          <button type="button" className="v2-plan-upgrade-btn" onClick={() => setUpgradeOpen(true)}>
+            Upgrade to Pro — $99/year
+          </button>
+        </>
+      )}
+      {isPro && activatedAt && (
+        <p style={{fontSize:13,color:'var(--v2-text-muted)',margin:0}}>
+          Pro since {new Date(activatedAt).toLocaleDateString("en-US", { month: "long", year: "numeric" })}
+        </p>
+      )}
+      {upgradeOpen && <UpgradeModal onClose={() => setUpgradeOpen(false)} />}
+    </div>
+  );
+}
+
 export function ProfileHub({
   view,
   role,
@@ -1150,6 +1191,17 @@ export function ProfileHub({
               </div>
             </section>
           </>
+        ) : null}
+
+        {/* Subscription plan — Settings only */}
+        {view === "Settings" ? (
+          <section className="v2-profile-panel v2-profile-panel-wide">
+            <header>
+              <span>Subscription</span>
+              <strong>Your current plan</strong>
+            </header>
+            <PlanCard />
+          </section>
         ) : null}
 
         {/* Notification preferences — Settings only */}

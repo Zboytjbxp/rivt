@@ -19,6 +19,7 @@ import {
   LayoutGrid,
   ListChecks,
   Loader2,
+  Lock,
   Mail,
   MapPin,
   MessageSquare,
@@ -34,6 +35,8 @@ import {
   TrendingUp,
   Wrench,
 } from "lucide-react";
+import { usePro } from "../pro/usePro";
+import { UpgradeModal } from "../pro/UpgradeModal";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { Job } from "../../types";
 import type { PrimaryDestination } from "../../app-shell/types";
@@ -1755,6 +1758,8 @@ function writePunchLists(lists: PunchList[]) {
 }
 
 function PunchListTool() {
+  const { isPro } = usePro();
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
   const [lists, setLists] = useState<PunchList[]>(readPunchLists);
   const [activeListId, setActiveListId] = useState<string | null>(() => readPunchLists()[0]?.id ?? null);
   const [newJobName, setNewJobName] = useState("");
@@ -1768,6 +1773,7 @@ function PunchListTool() {
 
   function createList() {
     if (!newJobName.trim()) return;
+    if (!isPro && lists.length >= 1) { setUpgradeOpen(true); setNewJobName(""); return; }
     const list: PunchList = { id: `pl_${Date.now()}`, jobName: newJobName.trim(), createdAt: new Date().toISOString(), items: [] };
     const next = [...lists, list];
     setLists(next); writePunchLists(next);
@@ -1879,6 +1885,7 @@ function PunchListTool() {
           </div>
         )}
       </main>
+      {upgradeOpen && <UpgradeModal reason="Multiple punch lists" onClose={() => setUpgradeOpen(false)} />}
     </div>
   );
 }
@@ -2189,6 +2196,8 @@ function getLast7Days(): string[] {
 }
 
 function TimeTrackerTool({ activeJob, jobs }: { activeJob: Job | null; jobs: Job[] }) {
+  const { isPro } = usePro();
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
   const [sessions, setSessions] = useState<TimeSession[]>(readTimeSessions);
   const [running, setRunning] = useState<TimeSession | null>(
     () => readTimeSessions().find((s) => !s.endedAt) ?? null,
@@ -2245,7 +2254,9 @@ function TimeTrackerTool({ activeJob, jobs }: { activeJob: Job | null; jobs: Job
     return (end - new Date(s.startedAt).getTime()) / 3600000;
   }
 
-  const completed = sessions.filter((s) => s.endedAt);
+  const cutoffDate = isPro ? null : new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const visibleSessions = cutoffDate ? sessions.filter(s => s.startedAt >= cutoffDate) : sessions;
+  const completed = visibleSessions.filter((s) => s.endedAt);
   const totalHours = completed.reduce((sum, s) => sum + hoursFor(s), 0);
 
   const last7Days = getLast7Days();
@@ -2309,6 +2320,11 @@ function TimeTrackerTool({ activeJob, jobs }: { activeJob: Job | null; jobs: Job
             })}
           </svg>
         </div>
+        {!isPro && sessions.length > visibleSessions.length && (
+          <p className="v2-tool-note" style={{fontSize: 12}}>
+            Showing 90-day history. <button type="button" style={{background:'none',border:'none',color:'var(--v2-accent)',cursor:'pointer',padding:0,fontSize:12,textDecoration:'underline'}} onClick={() => setUpgradeOpen(true)}>Upgrade for full history</button>
+          </p>
+        )}
         {completed.length ? (
           <div className="v2-time-session-list">
             {completed.slice(0, 15).map((s) => (
@@ -2326,6 +2342,7 @@ function TimeTrackerTool({ activeJob, jobs }: { activeJob: Job | null; jobs: Job
           <EmptyState className="v2-tools-empty" icon={<Clock size={20} />} title="No sessions yet" description="Clock in to start tracking time against a job." compact />
         )}
       </Panel>
+      {upgradeOpen && <UpgradeModal reason="Full time history" onClose={() => setUpgradeOpen(false)} />}
     </div>
   );
 }
@@ -2378,6 +2395,8 @@ function exportExpensesCSV(expenses: ExpenseEntry[]) {
 }
 
 function ExpenseLoggerTool({ activeJob, jobs }: { activeJob: Job | null; jobs: Job[] }) {
+  const { isPro } = usePro();
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
   const [expenses, setExpenses] = useState<ExpenseEntry[]>(readExpenses);
   const [jobId, setJobId] = useState<number | null>(activeJob?.id ?? null);
   const [category, setCategory] = useState<ExpenseCategory>("Materials");
@@ -2442,10 +2461,13 @@ function ExpenseLoggerTool({ activeJob, jobs }: { activeJob: Job | null; jobs: J
         {notice ? <p className="v2-record-notice" role="status">{notice}</p> : null}
         <div className="v2-tool-action-row">
           <button type="button" className="v2-primary-button" disabled={!(parseFloat(amount) > 0) || !description.trim()} onClick={addExpense}><Plus size={15} />Log expense</button>
-          <button type="button" disabled={expenses.length === 0} onClick={() => exportExpensesCSV(expenses)}><Download size={15} />Export CSV</button>
+          <button type="button" disabled={expenses.length === 0} onClick={() => isPro ? exportExpensesCSV(expenses) : setUpgradeOpen(true)}>
+            <Download size={15} />Export CSV{!isPro && <Lock size={11} style={{marginLeft: 4}} />}
+          </button>
         </div>
       </Panel>
       <aside className="v2-invoice-side-stack">
+        {upgradeOpen && <UpgradeModal reason="Export CSV" onClose={() => setUpgradeOpen(false)} />}
         <Panel className="v2-tool-panel v2-tool-summary-panel" eyebrow="Total spent" title={currency(total)}>
           {byCategory.length ? (
             <div className="v2-tool-breakdown">
