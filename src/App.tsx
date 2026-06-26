@@ -7,6 +7,12 @@ import {
   useMemo,
   useRef,
   useState } from "react";
+import { OfflineBanner } from "./components/OfflineBanner";
+import { GlobalSearch } from "./components/GlobalSearch";
+import { LocalSetupPrompt } from "./components/LocalSetupPrompt";
+import "./components/OfflineBanner.css";
+import "./components/GlobalSearch.css";
+import "./components/LocalSetupPrompt.css";
 import { talent } from "./data";
 import { brandConfig } from "./brandConfig";
 import type { ApplicationRecord, Job, JobId, Role, Trade } from "./types";
@@ -191,6 +197,8 @@ function App() {
   });
   const [isGuest, setIsGuest] = useState(false);
   const [guestPromptOpen, setGuestPromptOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [localSetupOpen, setLocalSetupOpen] = useState(() => localStorage.getItem("rivt.localSetupDone.v1") !== "true");
   const {
     communityReactionStatus,
     communityReactionSummary,
@@ -423,6 +431,18 @@ function App() {
       void Notification.requestPermission();
     }
   }, [activeView]);
+
+  // Cmd+K / Ctrl+K global search shortcut
+  useEffect(() => {
+    const h = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        setSearchOpen(true);
+      }
+    };
+    window.addEventListener("keydown", h);
+    return () => window.removeEventListener("keydown", h);
+  }, []);
 
   // Show browser notification on new unread inbox messages
   const prevUnreadRef = useRef(0);
@@ -1357,6 +1377,19 @@ function App() {
           onClose={() => setGuestPromptOpen(false)}
           onSignUp={handleSignUpFromGuest}
         />
+      )}
+
+      <OfflineBanner />
+      {searchOpen && (
+        <GlobalSearch
+          jobs={jobs.map((j) => ({ id: j.id, title: j.title, trade: j.trade, location: j.location, status: j.status }))}
+          open={searchOpen}
+          onClose={() => setSearchOpen(false)}
+          onNavigate={(view) => { handleNavigate(view as Parameters<typeof handleNavigate>[0]); setSearchOpen(false); }}
+        />
+      )}
+      {localSetupOpen && (
+        <LocalSetupPrompt onDone={() => setLocalSetupOpen(false)} />
       )}
     </>
   );
