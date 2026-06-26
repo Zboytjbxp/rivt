@@ -1,0 +1,892 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RIVT — Built for the Trade. Not the Desk.</title>
+  <meta name="description" content="Time tracking, estimates, job photos, expense logging, and crew tools for field contractors and tradespeople. Free to use, with Pro at $99/year." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=Instrument+Sans:ital,wght@0,400..800;1,400..800&display=swap" rel="stylesheet" />
+  <style>
+    /* ── Custom Properties ─────────────────────────────────────── */
+    :root {
+      --accent:  #f97316;
+      --accent-hover: #ea6c0d;
+      --dark:    #0b0f12;
+      --dark-2:  #111827;
+      --surface: #f8fafc;
+      --text:    #111827;
+      --muted:   #6b7280;
+      --border:  #e5e7eb;
+      --card-bg: #ffffff;
+      --radius:  12px;
+      --max-w:   1100px;
+    }
+
+    /* ── Reset & Base ──────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Instrument Sans', system-ui, sans-serif;
+      font-size: 16px;
+      line-height: 1.6;
+      color: var(--text);
+      background: var(--dark);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    img { max-width: 100%; display: block; }
+    a { text-decoration: none; }
+
+    /* ── Layout helpers ────────────────────────────────────────── */
+    .container {
+      width: 100%;
+      max-width: var(--max-w);
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    /* ── Buttons ───────────────────────────────────────────────── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-family: 'Instrument Sans', sans-serif;
+      font-weight: 700;
+      font-size: 15px;
+      border-radius: 8px;
+      padding: 12px 22px;
+      cursor: pointer;
+      border: 2px solid transparent;
+      transition: opacity 0.18s ease, transform 0.18s ease, background 0.18s ease, color 0.18s ease;
+      white-space: nowrap;
+    }
+    .btn:hover { opacity: 0.88; transform: translateY(-1px); }
+    .btn:active { opacity: 1; transform: translateY(0); }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+    }
+    .btn-primary:hover { background: var(--accent-hover); opacity: 1; }
+
+    .btn-ghost {
+      background: transparent;
+      color: #e2e8f0;
+      border-color: rgba(255,255,255,0.25);
+    }
+    .btn-ghost:hover {
+      border-color: rgba(255,255,255,0.5);
+      color: #fff;
+      opacity: 1;
+    }
+
+    .btn-lg {
+      font-size: 17px;
+      padding: 15px 30px;
+    }
+
+    /* ── Nav ───────────────────────────────────────────────────── */
+    .nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(11, 15, 18, 0.95);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+
+    .nav__inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 62px;
+    }
+
+    .nav__logo {
+      font-family: 'Instrument Sans', sans-serif;
+      font-weight: 800;
+      font-size: 22px;
+      color: #fff;
+      letter-spacing: -0.5px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .nav__logo span { color: var(--accent); }
+
+    .nav__actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .nav__signin {
+      font-family: 'Instrument Sans', sans-serif;
+      font-weight: 600;
+      font-size: 14px;
+      color: #a1aab4;
+      transition: color 0.15s;
+    }
+    .nav__signin:hover { color: #fff; }
+
+    .nav__cta { padding: 9px 18px; font-size: 14px; }
+
+    /* ── Hero ──────────────────────────────────────────────────── */
+    .hero {
+      background: var(--dark);
+      padding: 96px 0 80px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* subtle grid texture */
+    .hero::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(249,115,22,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(249,115,22,0.04) 1px, transparent 1px);
+      background-size: 60px 60px;
+      pointer-events: none;
+    }
+
+    /* radial glow */
+    .hero::after {
+      content: '';
+      position: absolute;
+      top: -120px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 700px;
+      height: 700px;
+      background: radial-gradient(ellipse at center, rgba(249,115,22,0.10) 0%, transparent 65%);
+      pointer-events: none;
+    }
+
+    .hero__inner {
+      position: relative;
+      z-index: 1;
+      text-align: center;
+      max-width: 760px;
+      margin: 0 auto;
+    }
+
+    .hero__eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--accent);
+      background: rgba(249,115,22,0.10);
+      border: 1px solid rgba(249,115,22,0.25);
+      border-radius: 100px;
+      padding: 5px 14px;
+      margin-bottom: 28px;
+    }
+    .hero__eyebrow::before {
+      content: '';
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+      flex-shrink: 0;
+    }
+
+    .hero__headline {
+      font-size: clamp(42px, 7vw, 72px);
+      font-weight: 800;
+      line-height: 1.05;
+      letter-spacing: -0.03em;
+      color: #fff;
+      margin-bottom: 22px;
+    }
+    .hero__headline em {
+      font-style: normal;
+      color: var(--accent);
+    }
+
+    .hero__sub {
+      font-size: 18px;
+      font-weight: 400;
+      color: #94a3b8;
+      max-width: 580px;
+      margin: 0 auto 38px;
+      line-height: 1.7;
+    }
+
+    .hero__ctas {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 52px;
+    }
+
+    /* ── Trade badges ──────────────────────────────────────────── */
+    .trade-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: center;
+      max-width: 680px;
+      margin: 0 auto;
+    }
+
+    .trade-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 12px;
+      font-weight: 600;
+      color: #94a3b8;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.09);
+      border-radius: 100px;
+      padding: 5px 12px;
+      transition: color 0.15s, background 0.15s, border-color 0.15s;
+    }
+    .trade-badge:hover {
+      color: #e2e8f0;
+      background: rgba(255,255,255,0.09);
+      border-color: rgba(255,255,255,0.18);
+    }
+
+    /* ── Section shared ────────────────────────────────────────── */
+    .section {
+      padding: 88px 0;
+    }
+
+    .section-label {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 12px;
+      display: block;
+    }
+
+    .section-heading {
+      font-size: clamp(28px, 4vw, 42px);
+      font-weight: 800;
+      letter-spacing: -0.025em;
+      line-height: 1.1;
+      margin-bottom: 14px;
+    }
+
+    .section-sub {
+      font-size: 17px;
+      color: var(--muted);
+      line-height: 1.65;
+      max-width: 560px;
+    }
+
+    /* ── Features section ──────────────────────────────────────── */
+    .features {
+      background: var(--surface);
+    }
+
+    .features__header {
+      text-align: center;
+      margin-bottom: 56px;
+    }
+
+    .features__header .section-sub {
+      margin: 0 auto;
+    }
+
+    .features__grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 24px;
+    }
+
+    .feature-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 32px 28px;
+      transition: transform 0.22s ease, box-shadow 0.22s ease;
+    }
+    .feature-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 12px 32px rgba(0,0,0,0.10);
+    }
+
+    .feature-card__icon {
+      font-size: 32px;
+      margin-bottom: 18px;
+      line-height: 1;
+    }
+
+    .feature-card__title {
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: var(--text);
+      margin-bottom: 10px;
+    }
+
+    .feature-card__body {
+      font-size: 15px;
+      color: var(--muted);
+      line-height: 1.65;
+    }
+
+    /* ── Trade personalization ─────────────────────────────────── */
+    .personalization {
+      background: var(--dark-2);
+      padding: 88px 0;
+    }
+
+    .personalization__inner {
+      text-align: center;
+    }
+
+    .personalization__inner .section-heading {
+      color: #fff;
+      margin-bottom: 12px;
+    }
+
+    .personalization__inner .section-sub {
+      color: #94a3b8;
+      margin: 0 auto 52px;
+    }
+
+    .terminal-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+      text-align: left;
+    }
+
+    .terminal-card {
+      background: #1a1f2e;
+      border: 1px solid rgba(249,115,22,0.20);
+      border-radius: 10px;
+      padding: 20px 18px;
+      font-family: 'IBM Plex Mono', monospace;
+    }
+
+    .terminal-card__header {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid rgba(255,255,255,0.07);
+    }
+
+    .terminal-card__dots {
+      display: flex;
+      gap: 5px;
+    }
+    .terminal-card__dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+    .terminal-card__dot:nth-child(1) { background: #ff5f57; }
+    .terminal-card__dot:nth-child(2) { background: #febc2e; }
+    .terminal-card__dot:nth-child(3) { background: #28c840; }
+
+    .terminal-card__trade {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-left: auto;
+    }
+
+    .terminal-card__line {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--accent);
+      margin-bottom: 8px;
+      padding: 6px 10px;
+      background: rgba(249,115,22,0.08);
+      border-radius: 5px;
+      border-left: 2px solid var(--accent);
+    }
+    .terminal-card__line:last-child { margin-bottom: 0; }
+
+    .terminal-card__line .prompt {
+      color: #4a5568;
+      margin-right: 6px;
+      user-select: none;
+    }
+
+    /* ── Pricing ───────────────────────────────────────────────── */
+    .pricing {
+      background: var(--surface);
+    }
+
+    .pricing__header {
+      text-align: center;
+      margin-bottom: 52px;
+    }
+    .pricing__header .section-sub { margin: 0 auto; }
+
+    .pricing__grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 24px;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    .pricing-card {
+      background: var(--card-bg);
+      border: 2px solid var(--border);
+      border-radius: 16px;
+      padding: 36px 30px;
+      position: relative;
+    }
+
+    .pricing-card--pro {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px rgba(249,115,22,0.15), 0 16px 48px rgba(249,115,22,0.12);
+    }
+
+    .pricing-card__badge {
+      display: inline-block;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: #fff;
+      background: var(--accent);
+      border-radius: 6px;
+      padding: 3px 9px;
+      margin-bottom: 18px;
+    }
+
+    .pricing-card__name {
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 6px;
+      font-family: 'IBM Plex Mono', monospace;
+    }
+
+    .pricing-card__price {
+      display: flex;
+      align-items: baseline;
+      gap: 4px;
+      margin-bottom: 4px;
+    }
+
+    .pricing-card__amount {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 52px;
+      font-weight: 600;
+      color: var(--text);
+      letter-spacing: -0.03em;
+      line-height: 1;
+    }
+
+    .pricing-card__period {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--muted);
+    }
+
+    .pricing-card__sub {
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 28px;
+    }
+
+    .pricing-card__divider {
+      height: 1px;
+      background: var(--border);
+      margin-bottom: 24px;
+    }
+
+    .pricing-card__features {
+      list-style: none;
+      margin-bottom: 32px;
+    }
+
+    .pricing-card__features li {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      font-size: 14px;
+      color: var(--text);
+      padding: 5px 0;
+      line-height: 1.4;
+    }
+
+    .pricing-card__features li .check {
+      color: var(--accent);
+      font-size: 14px;
+      flex-shrink: 0;
+      margin-top: 1px;
+      font-weight: 700;
+    }
+
+    .pricing-card .btn {
+      width: 100%;
+      justify-content: center;
+    }
+
+    /* ── Final CTA ─────────────────────────────────────────────── */
+    .final-cta {
+      background: var(--dark);
+      padding: 100px 0;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .final-cta::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse at center bottom, rgba(249,115,22,0.12) 0%, transparent 65%);
+      pointer-events: none;
+    }
+
+    .final-cta__inner {
+      position: relative;
+      z-index: 1;
+    }
+
+    .final-cta__heading {
+      font-size: clamp(36px, 5.5vw, 58px);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      color: #fff;
+      margin-bottom: 14px;
+      line-height: 1.08;
+    }
+
+    .final-cta__sub {
+      font-size: 18px;
+      color: #94a3b8;
+      margin-bottom: 38px;
+    }
+
+    /* ── Footer ────────────────────────────────────────────────── */
+    .footer {
+      background: #070a0d;
+      border-top: 1px solid rgba(255,255,255,0.06);
+      padding: 28px 0;
+    }
+
+    .footer__inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .footer__left {
+      font-size: 14px;
+      color: #475569;
+      font-family: 'IBM Plex Mono', monospace;
+      font-weight: 500;
+    }
+    .footer__left span { color: var(--accent); }
+
+    .footer__links {
+      display: flex;
+      gap: 20px;
+    }
+
+    .footer__links a {
+      font-size: 13px;
+      color: #475569;
+      transition: color 0.15s;
+    }
+    .footer__links a:hover { color: #94a3b8; }
+
+    /* ── Responsive ────────────────────────────────────────────── */
+    @media (max-width: 768px) {
+      .section { padding: 64px 0; }
+      .personalization { padding: 64px 0; }
+
+      /* Nav */
+      .nav__signin { display: none; }
+
+      /* Hero */
+      .hero { padding: 72px 0 64px; }
+      .hero__sub { font-size: 16px; }
+      .hero__ctas { flex-direction: column; align-items: center; }
+
+      /* Features */
+      .features__grid { grid-template-columns: 1fr; }
+
+      /* Terminal row */
+      .terminal-row { grid-template-columns: 1fr; }
+
+      /* Pricing */
+      .pricing__grid { grid-template-columns: 1fr; }
+
+      /* Footer */
+      .footer__inner { flex-direction: column; align-items: flex-start; gap: 12px; }
+    }
+
+    @media (max-width: 480px) {
+      .container { padding: 0 16px; }
+      .hero__headline { letter-spacing: -0.025em; }
+      .btn-lg { font-size: 16px; padding: 14px 24px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ════════════════════════════════════════════════════════════
+       NAV
+  ═════════════════════════════════════════════════════════════ -->
+  <header class="nav">
+    <div class="container">
+      <nav class="nav__inner">
+        <a href="/" class="nav__logo">RIVT<span>.</span></a>
+        <div class="nav__actions">
+          <a href="/" class="nav__signin">Sign in</a>
+          <a href="/" class="btn btn-primary nav__cta">Get started free →</a>
+        </div>
+      </nav>
+    </div>
+  </header>
+
+  <!-- ════════════════════════════════════════════════════════════
+       HERO
+  ═════════════════════════════════════════════════════════════ -->
+  <section class="hero">
+    <div class="container">
+      <div class="hero__inner">
+        <div class="hero__eyebrow">Free for contractors &amp; tradespeople</div>
+        <h1 class="hero__headline">
+          Built for the trade.<br>
+          <em>Not the desk.</em>
+        </h1>
+        <p class="hero__sub">
+          Time tracking, estimates, job photos, expense logging, and crew tools&nbsp;— in your pocket. Built for the field.
+        </p>
+        <div class="hero__ctas">
+          <a href="/" class="btn btn-primary btn-lg">Get started free →</a>
+          <a href="/" class="btn btn-ghost btn-lg">Sign in</a>
+        </div>
+        <div class="trade-badges">
+          <span class="trade-badge">⚡ Electrician</span>
+          <span class="trade-badge">🔧 Plumber</span>
+          <span class="trade-badge">🪚 Carpenter</span>
+          <span class="trade-badge">❄️ HVAC</span>
+          <span class="trade-badge">🏗️ General Contractor</span>
+          <span class="trade-badge">🎨 Painter</span>
+          <span class="trade-badge">🧱 Mason</span>
+          <span class="trade-badge">🔥 Welder</span>
+          <span class="trade-badge">🏠 Roofer</span>
+          <span class="trade-badge">🌿 Landscaper</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════════════════════════════════
+       FEATURES
+  ═════════════════════════════════════════════════════════════ -->
+  <section class="section features">
+    <div class="container">
+      <div class="features__header">
+        <span class="section-label">Everything you need on the job</span>
+        <h2 class="section-heading">Stop juggling apps.<br>One tool does it all.</h2>
+        <p class="section-sub">Everything you actually need — already there when you open the app.</p>
+      </div>
+      <div class="features__grid">
+
+        <div class="feature-card">
+          <div class="feature-card__icon">⏱</div>
+          <h3 class="feature-card__title">Clock in, clock out.</h3>
+          <p class="feature-card__body">Track every hour on every job. See your weekly chart, compute earnings, and never lose a billable minute again.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-card__icon">📋</div>
+          <h3 class="feature-card__title">Bids before you leave the site.</h3>
+          <p class="feature-card__body">Trade-specific line items load ready. Build a professional estimate, apply markup, and save it — in under a minute.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-card__icon">👥</div>
+          <h3 class="feature-card__title">Your crew, when you need them.</h3>
+          <p class="feature-card__body">Find verified tradespeople, browse by skill, message directly, and build your go-to list for when work picks up fast.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-card__icon">📸</div>
+          <h3 class="feature-card__title">Every job, documented.</h3>
+          <p class="feature-card__body">Snap photos, organize by album, attach to job records. Your protection when a client claims otherwise.</p>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════════════════════════════════
+       TRADE PERSONALIZATION
+  ═════════════════════════════════════════════════════════════ -->
+  <section class="personalization">
+    <div class="container">
+      <div class="personalization__inner">
+        <span class="section-label">Made for your trade</span>
+        <h2 class="section-heading">Feels like it was made<br>just for you.</h2>
+        <p class="section-sub">Set your trade once. The job feed, bid builder, price book, and Shop Talk all adapt to what you actually do.</p>
+        <div class="terminal-row">
+
+          <div class="terminal-card">
+            <div class="terminal-card__header">
+              <div class="terminal-card__dots">
+                <div class="terminal-card__dot"></div>
+                <div class="terminal-card__dot"></div>
+                <div class="terminal-card__dot"></div>
+              </div>
+              <span class="terminal-card__trade">⚡ Electrician</span>
+            </div>
+            <div class="terminal-card__line"><span class="prompt">›</span>Electrical jobs near you</div>
+            <div class="terminal-card__line"><span class="prompt">›</span>Panel photo · job #E-0041</div>
+            <div class="terminal-card__line"><span class="prompt">›</span>12/2 Romex wire · $0.65/ft</div>
+          </div>
+
+          <div class="terminal-card">
+            <div class="terminal-card__header">
+              <div class="terminal-card__dots">
+                <div class="terminal-card__dot"></div>
+                <div class="terminal-card__dot"></div>
+                <div class="terminal-card__dot"></div>
+              </div>
+              <span class="terminal-card__trade">🔧 Plumber</span>
+            </div>
+            <div class="terminal-card__line"><span class="prompt">›</span>Plumbing jobs near you</div>
+            <div class="terminal-card__line"><span class="prompt">›</span>Leak photo · job #P-0017</div>
+            <div class="terminal-card__line"><span class="prompt">›</span>Copper pipe 3/4" · $3.50/ft</div>
+          </div>
+
+          <div class="terminal-card">
+            <div class="terminal-card__header">
+              <div class="terminal-card__dots">
+                <div class="terminal-card__dot"></div>
+                <div class="terminal-card__dot"></div>
+                <div class="terminal-card__dot"></div>
+              </div>
+              <span class="terminal-card__trade">🪚 Carpenter</span>
+            </div>
+            <div class="terminal-card__line"><span class="prompt">›</span>Carpentry jobs near you</div>
+            <div class="terminal-card__line"><span class="prompt">›</span>Frame photo · job #C-0088</div>
+            <div class="terminal-card__line"><span class="prompt">›</span>2x4x8 stud · $6.50/ea</div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════════════════════════════════
+       PRICING
+  ═════════════════════════════════════════════════════════════ -->
+  <section class="section pricing">
+    <div class="container">
+      <div class="pricing__header">
+        <span class="section-label">Pricing</span>
+        <h2 class="section-heading">Free for life. Pro when you're ready.</h2>
+        <p class="section-sub">No lock-in. Use every tool for free. Upgrade when the job demands it.</p>
+      </div>
+      <div class="pricing__grid">
+
+        <!-- Free -->
+        <div class="pricing-card">
+          <div class="pricing-card__name">Free</div>
+          <div class="pricing-card__price">
+            <span class="pricing-card__amount">$0</span>
+          </div>
+          <p class="pricing-card__sub">Always free, no credit card</p>
+          <div class="pricing-card__divider"></div>
+          <ul class="pricing-card__features">
+            <li><span class="check">✓</span> All tools — time tracker, expenses, estimates</li>
+            <li><span class="check">✓</span> Job photos &amp; albums</li>
+            <li><span class="check">✓</span> Crew connections &amp; messaging</li>
+            <li><span class="check">✓</span> Shop Talk community</li>
+            <li><span class="check">✓</span> Safety training &amp; certs</li>
+            <li><span class="check">✓</span> 90-day history</li>
+            <li><span class="check">✓</span> 1 punch list</li>
+          </ul>
+          <a href="/" class="btn btn-ghost" style="color: var(--text); border-color: var(--border);">Get started free</a>
+        </div>
+
+        <!-- Pro -->
+        <div class="pricing-card pricing-card--pro">
+          <div class="pricing-card__badge">Best Value</div>
+          <div class="pricing-card__name">RIVT Pro</div>
+          <div class="pricing-card__price">
+            <span class="pricing-card__amount">$99</span>
+            <span class="pricing-card__period">/year</span>
+          </div>
+          <p class="pricing-card__sub">About $8/month</p>
+          <div class="pricing-card__divider"></div>
+          <ul class="pricing-card__features">
+            <li><span class="check">✓</span> Everything in Free</li>
+            <li><span class="check">✓</span> Unlimited history</li>
+            <li><span class="check">✓</span> Unlimited punch lists</li>
+            <li><span class="check">✓</span> Export expenses as CSV</li>
+            <li><span class="check">✓</span> PDF invoices &amp; estimates</li>
+            <li><span class="check">✓</span> Client report share link</li>
+            <li><span class="check">✓</span> Cloud backup — any device</li>
+          </ul>
+          <a href="/" class="btn btn-primary">Upgrade to Pro</a>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════════════════════════════════
+       FINAL CTA
+  ═════════════════════════════════════════════════════════════ -->
+  <section class="final-cta">
+    <div class="container">
+      <div class="final-cta__inner">
+        <h2 class="final-cta__heading">Start free today.</h2>
+        <p class="final-cta__sub">No credit card. No catch. Just the tools.</p>
+        <a href="/" class="btn btn-primary btn-lg">Get started →</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════════════════════════════════
+       FOOTER
+  ═════════════════════════════════════════════════════════════ -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer__inner">
+        <span class="footer__left"><span>RIVT</span> © 2025</span>
+        <nav class="footer__links">
+          <a href="/">Privacy</a>
+          <a href="/">Terms</a>
+        </nav>
+      </div>
+    </div>
+  </footer>
+
+</body>
+</html>
