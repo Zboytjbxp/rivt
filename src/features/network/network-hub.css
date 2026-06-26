@@ -439,3 +439,84 @@
   display: inline-flex;
   align-items: center;
 }
+
+/* ── Sub Roster ────────────────────────────────────────────────────────────── */
+
+.v2-sub-roster {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.v2-sub-roster-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.v2-sub-roster-inputs {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+}
+
+.v2-sub-roster-inputs input {
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: var(--v2-radius-md);
+  border: 1px solid var(--v2-border);
+  background: var(--v2-surface);
+  color: var(--v2-text);
+  font-size: 13px;
+  font-family: inherit;
+}
+
+.v2-sub-roster-notice {
+  font-size: 12px;
+  color: var(--v2-accent);
+  margin: 0;
+}
+
+.v2-sub-roster-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.v2-sub-roster-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--v2-border);
+  border-radius: var(--v2-radius-md);
+  background: var(--v2-surface-muted);
+}
+
+.v2-sub-roster-item-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+.v2-sub-roster-item-copy strong { font-size: 13px; }
+.v2-sub-roster-item-copy span { font-size: 12px; color: var(--v2-text-secondary); }
+.v2-sub-roster-item-copy small { font-size: 11px; color: var(--v2-text-muted); }
+
+.v2-sub-roster-remove {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--v2-radius-sm);
+  background: transparent;
+  color: var(--v2-text-muted);
+  flex-shrink: 0;
+}
+.v2-sub-roster-remove:hover { color: var(--v2-destructive, #e55); background: color-mix(in srgb, var(--v2-destructive, #e55) 8%, transparent); }
+
+@media (max-width: 640px) {
+  .v2-sub-roster-inputs { grid-template-columns: 1fr; }
+}

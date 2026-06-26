@@ -5,6 +5,7 @@ import {
   Camera,
   CheckCircle2,
   Clipboard,
+  Clock,
   Copy,
   Download,
   FileText,
@@ -21,6 +22,7 @@ import {
   ReceiptText,
   Scale,
   Trash2,
+  TrendingUp,
   Wrench,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
@@ -54,7 +56,7 @@ import {
 } from "./album-api";
 import "./tools-studio.css";
 
-type ToolMode = "hub" | "calculator" | "estimate" | "invoice" | "materials" | "daily-log" | "job-photos";
+type ToolMode = "hub" | "calculator" | "estimate" | "invoice" | "materials" | "daily-log" | "job-photos" | "time-tracker" | "expense-logger" | "earnings";
 
 interface PaymentRecord {
   id: number;
@@ -1319,6 +1321,346 @@ function JobPhotosTool({ activeWork }: { activeWork: CanonicalActiveWork[] }) {
   );
 }
 
+// ── Time Tracker ─────────────────────────────────────────────────────────────
+
+const timeTrackerKey = "rivt.timeSessions.v1";
+
+interface TimeSession {
+  id: string;
+  jobId: number | null;
+  jobTitle: string;
+  startedAt: string;
+  endedAt: string | null;
+  notes: string;
+}
+
+function readTimeSessions(): TimeSession[] {
+  try {
+    const stored = localStorage.getItem(timeTrackerKey);
+    if (!stored) return [];
+    const parsed = JSON.parse(stored) as TimeSession[];
+    return Array.isArray(parsed) ? parsed.slice(0, 100) : [];
+  } catch { return []; }
+}
+
+function persistTimeSessions(sessions: TimeSession[]) {
+  try { localStorage.setItem(timeTrackerKey, JSON.stringify(sessions.slice(0, 100))); } catch {}
+}
+
+function formatHms(totalSeconds: number): string {
+  const h = Math.floor(totalSeconds / 3600);
+  const m = Math.floor((totalSeconds % 3600) / 60);
+  const s = totalSeconds % 60;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+}
+
+function TimeTrackerTool({ activeJob, jobs }: { activeJob: Job | null; jobs: Job[] }) {
+  const [sessions, setSessions] = useState<TimeSession[]>(readTimeSessions);
+  const [running, setRunning] = useState<TimeSession | null>(
+    () => readTimeSessions().find((s) => !s.endedAt) ?? null,
+  );
+  const [elapsed, setElapsed] = useState(0);
+  const [jobId, setJobId] = useState<number | null>(activeJob?.id ?? null);
+  const [clockNotes, setClockNotes] = useState("");
+
+  useEffect(() => {
+    if (!running) { setElapsed(0); return; }
+    const start = new Date(running.startedAt).getTime();
+    const tick = () => setElapsed(Math.floor((Date.now() - start) / 1000));
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [running]);
+
+  function clockIn() {
+    if (running) return;
+    const job = jobs.find((j) => j.id === jobId) ?? null;
+    const session: TimeSession = {
+      id: crypto.randomUUID(),
+      jobId: job?.id ?? null,
+      jobTitle: job?.title ?? "Standalone",
+      startedAt: new Date().toISOString(),
+      endedAt: null,
+      notes: "",
+    };
+    const next = [session, ...sessions];
+    setSessions(next);
+    setRunning(session);
+    persistTimeSessions(next);
+  }
+
+  function clockOut() {
+    if (!running) return;
+    const ended: TimeSession = { ...running, endedAt: new Date().toISOString(), notes: clockNotes.trim() };
+    const next = sessions.map((s) => s.id === running.id ? ended : s);
+    setSessions(next);
+    setRunning(null);
+    setClockNotes("");
+    persistTimeSessions(next);
+  }
+
+  function deleteSession(sessionId: string) {
+    const next = sessions.filter((s) => s.id !== sessionId);
+    setSessions(next);
+    if (running?.id === sessionId) setRunning(null);
+    persistTimeSessions(next);
+  }
+
+  function hoursFor(s: TimeSession): number {
+    const end = s.endedAt ? new Date(s.endedAt).getTime() : Date.now();
+    return (end - new Date(s.startedAt).getTime()) / 3600000;
+  }
+
+  const completed = sessions.filter((s) => s.endedAt);
+  const totalHours = completed.reduce((sum, s) => sum + hoursFor(s), 0);
+
+  return (
+    <div className="v2-tool-workbench">
+      <Panel className="v2-tool-panel" eyebrow="Time tracker" title="Clock in / clock out">
+        <div className="v2-tool-input-grid">
+          <label className="is-wide">Job
+            <select value={jobId ?? ""} onChange={(e) => setJobId(Number(e.target.value) || null)} disabled={!!running}>
+              <option value="">Standalone / no job</option>
+              {jobs.map((j) => <option key={j.id} value={j.id}>{j.title}</option>)}
+            </select>
+          </label>
+        </div>
+        <div className="v2-time-clock">
+          {running ? (
+            <>
+              <span className="v2-time-clock-label">Clocked in · {running.jobTitle}</span>
+              <strong className="v2-time-clock-display">{formatHms(elapsed)}</strong>
+              <label>Notes<textarea value={clockNotes} onChange={(e) => setClockNotes(e.target.value)} rows={2} placeholder="What are you working on?" /></label>
+              <button type="button" className="v2-destructive-button" onClick={clockOut}>Clock out</button>
+            </>
+          ) : (
+            <>
+              <span className="v2-time-clock-label">Ready to clock in</span>
+              <strong className="v2-time-clock-display">00:00:00</strong>
+              <button type="button" className="v2-primary-button" onClick={clockIn}>Clock in</button>
+            </>
+          )}
+        </div>
+      </Panel>
+      <Panel className="v2-tool-panel" eyebrow={`${completed.length} sessions`} title={`${formatNumber(totalHours, 1)} total hours`}>
+        {completed.length ? (
+          <div className="v2-time-session-list">
+            {completed.slice(0, 15).map((s) => (
+              <article key={s.id} className="v2-time-session">
+                <div>
+                  <strong>{s.jobTitle}</strong>
+                  <small>{new Date(s.startedAt).toLocaleDateString()} · {formatNumber(hoursFor(s), 1)}h</small>
+                  {s.notes ? <span>{s.notes}</span> : null}
+                </div>
+                <button type="button" aria-label="Delete session" onClick={() => deleteSession(s.id)}><Trash2 size={13} /></button>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <EmptyState className="v2-tools-empty" icon={<Clock size={20} />} title="No sessions yet" description="Clock in to start tracking time against a job." compact />
+        )}
+      </Panel>
+    </div>
+  );
+}
+
+// ── Expense Logger ────────────────────────────────────────────────────────────
+
+const expenseLogKey = "rivt.expenses.v1";
+
+type ExpenseCategory = "Materials" | "Tools" | "Mileage" | "Subcontractor" | "Permit" | "Other";
+const EXPENSE_CATEGORIES: ExpenseCategory[] = ["Materials", "Tools", "Mileage", "Subcontractor", "Permit", "Other"];
+
+interface ExpenseEntry {
+  id: string;
+  jobId: number | null;
+  jobTitle: string;
+  category: ExpenseCategory;
+  amount: number;
+  description: string;
+  date: string;
+}
+
+function readExpenses(): ExpenseEntry[] {
+  try {
+    const stored = localStorage.getItem(expenseLogKey);
+    if (!stored) return [];
+    const parsed = JSON.parse(stored) as ExpenseEntry[];
+    return Array.isArray(parsed) ? parsed.slice(0, 200) : [];
+  } catch { return []; }
+}
+
+function persistExpenses(entries: ExpenseEntry[]) {
+  try { localStorage.setItem(expenseLogKey, JSON.stringify(entries.slice(0, 200))); } catch {}
+}
+
+function ExpenseLoggerTool({ activeJob, jobs }: { activeJob: Job | null; jobs: Job[] }) {
+  const [expenses, setExpenses] = useState<ExpenseEntry[]>(readExpenses);
+  const [jobId, setJobId] = useState<number | null>(activeJob?.id ?? null);
+  const [category, setCategory] = useState<ExpenseCategory>("Materials");
+  const [amount, setAmount] = useState("");
+  const [description, setDescription] = useState("");
+  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const [notice, setNotice] = useState("");
+
+  function addExpense() {
+    const amt = parseFloat(amount);
+    if (!Number.isFinite(amt) || amt <= 0 || !description.trim()) return;
+    const job = jobs.find((j) => j.id === jobId) ?? null;
+    const entry: ExpenseEntry = {
+      id: crypto.randomUUID(),
+      jobId,
+      jobTitle: job?.title ?? "Standalone",
+      category,
+      amount: amt,
+      description: description.trim(),
+      date,
+    };
+    const next = [entry, ...expenses];
+    setExpenses(next);
+    persistExpenses(next);
+    setAmount("");
+    setDescription("");
+    setNotice("Expense logged.");
+    setTimeout(() => setNotice(""), 3000);
+  }
+
+  function deleteExpense(expenseId: string) {
+    const next = expenses.filter((e) => e.id !== expenseId);
+    setExpenses(next);
+    persistExpenses(next);
+  }
+
+  const total = expenses.reduce((sum, e) => sum + e.amount, 0);
+  const byCategory = EXPENSE_CATEGORIES.map((cat) => ({
+    cat,
+    total: expenses.filter((e) => e.category === cat).reduce((sum, e) => sum + e.amount, 0),
+  })).filter((c) => c.total > 0);
+
+  return (
+    <div className="v2-tool-workbench v2-expense-workbench">
+      <Panel className="v2-tool-panel" eyebrow="Log expense" title="Track job costs">
+        <div className="v2-tool-input-grid two">
+          <label>Job
+            <select value={jobId ?? ""} onChange={(e) => setJobId(Number(e.target.value) || null)}>
+              <option value="">Standalone / no job</option>
+              {jobs.map((j) => <option key={j.id} value={j.id}>{j.title}</option>)}
+            </select>
+          </label>
+          <label>Date<input type="date" value={date} onChange={(e) => setDate(e.target.value)} /></label>
+          <label>Category
+            <select value={category} onChange={(e) => setCategory(e.target.value as ExpenseCategory)}>
+              {EXPENSE_CATEGORIES.map((c) => <option key={c}>{c}</option>)}
+            </select>
+          </label>
+          <label>Amount ($)<input type="number" min="0" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0.00" /></label>
+          <label className="is-wide">Description<input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Material, rental, mileage description..." /></label>
+        </div>
+        {notice ? <p className="v2-record-notice" role="status">{notice}</p> : null}
+        <div className="v2-tool-action-row">
+          <button type="button" className="v2-primary-button" disabled={!(parseFloat(amount) > 0) || !description.trim()} onClick={addExpense}><Plus size={15} />Log expense</button>
+        </div>
+      </Panel>
+      <aside className="v2-invoice-side-stack">
+        <Panel className="v2-tool-panel v2-tool-summary-panel" eyebrow="Total spent" title={currency(total)}>
+          {byCategory.length ? (
+            <div className="v2-tool-breakdown">
+              {byCategory.map(({ cat, total: catTotal }) => <div key={cat}><span>{cat}</span><strong>{currency(catTotal)}</strong></div>)}
+            </div>
+          ) : <p className="v2-tool-note">No expenses logged yet.</p>}
+        </Panel>
+        <Panel className="v2-tool-panel" eyebrow={`${expenses.length} logged`} title="Expenses">
+          {expenses.length ? (
+            <div className="v2-expense-list">
+              {expenses.slice(0, 12).map((e) => (
+                <article key={e.id} className="v2-expense-item">
+                  <div>
+                    <strong>{e.description}</strong>
+                    <small>{e.category} · {e.jobTitle} · {e.date}</small>
+                  </div>
+                  <div className="v2-expense-item-right">
+                    <strong>{currency(e.amount)}</strong>
+                    <button type="button" aria-label="Delete" onClick={() => deleteExpense(e.id)}><Trash2 size={13} /></button>
+                  </div>
+                </article>
+              ))}
+            </div>
+          ) : <EmptyState className="v2-tools-empty" icon={<ReceiptText size={20} />} title="No expenses yet" description="Log materials, tool rentals, mileage, and other job costs." compact />}
+        </Panel>
+      </aside>
+    </div>
+  );
+}
+
+// ── Earnings Dashboard ────────────────────────────────────────────────────────
+
+function EarningsDashboardTool({ jobs, paymentRecords }: { jobs: Job[]; paymentRecords: PaymentRecord[] }) {
+  const [period, setPeriod] = useState<"week" | "month" | "all">("month");
+
+  const now = new Date();
+  const cutoff = period === "week"
+    ? new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7)
+    : period === "month"
+    ? new Date(now.getFullYear(), now.getMonth() - 1, now.getDate())
+    : null;
+
+  const allPaid = paymentRecords.filter((r) => r.status === "Paid / Closed");
+  const periodPaid = cutoff ? allPaid.filter((r) => new Date(r.date) >= cutoff) : allPaid;
+  const totalEarned = periodPaid.reduce((sum, r) => sum + r.amount, 0);
+  const avgJobSize = periodPaid.length ? totalEarned / periodPaid.length : 0;
+  const pending = paymentRecords.filter((r) => r.status === "Payment pending");
+
+  const tradeTotals: Record<string, number> = {};
+  for (const r of periodPaid) {
+    const job = jobs.find((j) => j.id === r.jobId);
+    if (job) tradeTotals[job.trade] = (tradeTotals[job.trade] ?? 0) + r.amount;
+  }
+  const topTrade = Object.entries(tradeTotals).sort(([, a], [, b]) => b - a)[0]?.[0] ?? "—";
+
+  return (
+    <div className="v2-tool-workbench v2-earnings-workbench">
+      <Panel className="v2-tool-panel" eyebrow="Earnings" title="Income summary">
+        <div className="v2-earnings-period-tabs" role="group" aria-label="Period">
+          {(["week", "month", "all"] as const).map((p) => (
+            <button key={p} type="button" className={period === p ? "is-active" : ""} onClick={() => setPeriod(p)}>
+              {p === "week" ? "Last 7 days" : p === "month" ? "Last 30 days" : "All time"}
+            </button>
+          ))}
+        </div>
+        <div className="v2-tool-result-grid">
+          <article><span>Total earned</span><strong>{currency(totalEarned)}</strong></article>
+          <article><span>Jobs completed</span><strong>{periodPaid.length}</strong></article>
+          <article><span>Avg job size</span><strong>{currency(avgJobSize)}</strong></article>
+          <article><span>Top trade</span><strong>{topTrade}</strong></article>
+        </div>
+        {pending.length ? (
+          <div className="v2-earnings-pending-bar">
+            <strong>{pending.length} pending</strong>
+            <span>{currency(pending.reduce((sum, r) => sum + r.amount, 0))} awaiting close-out</span>
+          </div>
+        ) : null}
+      </Panel>
+      <Panel className="v2-tool-panel" eyebrow={`${periodPaid.length} completed`} title="Payment history">
+        {periodPaid.length ? (
+          <div className="v2-earnings-list">
+            {periodPaid.slice(0, 15).map((r) => (
+              <article key={r.id} className="v2-earnings-item">
+                <div>
+                  <strong>{r.jobTitle}</strong>
+                  <small>{r.date} · {r.worker} · {r.method}</small>
+                </div>
+                <strong>{currency(r.amount)}</strong>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <EmptyState className="v2-tools-empty" icon={<TrendingUp size={20} />} title="No completed payments in this period" description="Closed-out payment records will appear here." compact />
+        )}
+      </Panel>
+    </div>
+  );
+}
+
 function projectErrorMessage(error: unknown) {
   if (error instanceof ProjectApiError) return error.message;
   return error instanceof Error ? error.message : "RIVT could not update the project record.";
@@ -1770,6 +2112,24 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", onNavigate, 
         description: "Capture, organize, and compare job-site photos tied to your active project record.",
         node: <JobPhotosTool activeWork={activeWork} />,
       },
+      "time-tracker": {
+        eyebrow: "Time tracker",
+        title: "Time tracker",
+        description: "Clock in and out per job. Track hours across all active and recent work.",
+        node: <TimeTrackerTool activeJob={activeJob} jobs={jobs} />,
+      },
+      "expense-logger": {
+        eyebrow: "Expense logger",
+        title: "Expense logger",
+        description: "Log materials, tool rentals, mileage, and subcontractor costs by job.",
+        node: <ExpenseLoggerTool activeJob={activeJob} jobs={jobs} />,
+      },
+      earnings: {
+        eyebrow: "Earnings",
+        title: "Earnings dashboard",
+        description: "Weekly and monthly income summary: total earned, jobs completed, top trade, average job size.",
+        node: <EarningsDashboardTool jobs={jobs} paymentRecords={paymentRecords} />,
+      },
     }[activeTool];
 
     return (
@@ -1866,6 +2226,36 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", onNavigate, 
           detail="Per project"
           action="Open"
           onAction={() => setActiveTool("job-photos")}
+        />
+        <ToolCard
+          icon={Clock}
+          title="Time tracker"
+          badge="Time"
+          summary="Clock in and out per job. Tracks hours and auto-fills invoice labor line."
+          output="Hours"
+          detail="Per job"
+          action="Open"
+          onAction={() => setActiveTool("time-tracker")}
+        />
+        <ToolCard
+          icon={ReceiptText}
+          title="Expense logger"
+          badge="Costs"
+          summary="Log materials, tool rentals, mileage, and subcontractor costs."
+          output="Totals"
+          detail="By category"
+          action="Open"
+          onAction={() => setActiveTool("expense-logger")}
+        />
+        <ToolCard
+          icon={TrendingUp}
+          title="Earnings"
+          badge="Income"
+          summary="Weekly and monthly income summary, top trade, and avg job size."
+          output="By period"
+          detail="Payment history"
+          action="Open"
+          onAction={() => setActiveTool("earnings")}
         />
         <ToolCard
           icon={FolderOpen}

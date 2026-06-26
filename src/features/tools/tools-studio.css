@@ -2402,3 +2402,210 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* ── Time Tracker ──────────────────────────────────────────────────────────── */
+
+.v2-time-clock {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 24px 16px;
+  text-align: center;
+}
+
+.v2-time-clock-label {
+  font-size: 12px;
+  font-weight: var(--v2-weight-bold);
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--v2-text-muted);
+}
+
+.v2-time-clock-display {
+  font-size: clamp(36px, 8vw, 56px);
+  font-weight: var(--v2-weight-strong);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  color: var(--v2-text);
+}
+
+.v2-time-clock label {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--v2-text-muted);
+  text-align: left;
+}
+
+.v2-time-clock textarea {
+  resize: vertical;
+  min-height: 60px;
+}
+
+.v2-time-session-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.v2-time-session {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--v2-border);
+  border-radius: var(--v2-radius-md);
+  background: var(--v2-surface-muted);
+}
+
+.v2-time-session > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.v2-time-session strong { font-size: 13px; }
+.v2-time-session small { font-size: 11px; color: var(--v2-text-muted); }
+.v2-time-session span { font-size: 12px; color: var(--v2-text-secondary); margin-top: 2px; }
+
+.v2-time-session button {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--v2-radius-sm);
+  color: var(--v2-text-muted);
+  background: transparent;
+}
+.v2-time-session button:hover { color: var(--v2-destructive, #e55); background: color-mix(in srgb, var(--v2-destructive, #e55) 10%, transparent); }
+
+/* ── Expense Logger ────────────────────────────────────────────────────────── */
+
+.v2-expense-workbench {
+  grid-template-columns: minmax(0, 1.4fr) minmax(260px, 0.8fr);
+}
+
+.v2-expense-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.v2-expense-item {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--v2-border);
+  border-radius: var(--v2-radius-md);
+  background: var(--v2-surface-muted);
+}
+
+.v2-expense-item > div:first-child {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.v2-expense-item strong { font-size: 13px; }
+.v2-expense-item small { font-size: 11px; color: var(--v2-text-muted); }
+
+.v2-expense-item-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.v2-expense-item-right strong { font-size: 13px; white-space: nowrap; }
+.v2-expense-item-right button {
+  width: 26px; height: 26px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: var(--v2-radius-sm);
+  color: var(--v2-text-muted);
+  background: transparent;
+}
+.v2-expense-item-right button:hover { color: var(--v2-destructive, #e55); }
+
+/* ── Earnings Dashboard ────────────────────────────────────────────────────── */
+
+.v2-earnings-workbench {
+  grid-template-columns: 1fr 1fr;
+}
+
+.v2-earnings-period-tabs {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--v2-border);
+  border-radius: var(--v2-radius-md);
+  background: var(--v2-surface-muted);
+  margin-bottom: 16px;
+}
+
+.v2-earnings-period-tabs button {
+  padding: 6px 14px;
+  border-radius: calc(var(--v2-radius-md) - 2px);
+  font-size: 12px;
+  font-weight: var(--v2-weight-strong);
+  color: var(--v2-text-muted);
+  background: transparent;
+  transition: background 0.15s, color 0.15s;
+}
+.v2-earnings-period-tabs button.is-active {
+  background: var(--v2-surface-raised);
+  color: var(--v2-text);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.v2-earnings-pending-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 14px;
+  padding: 10px 14px;
+  border-radius: var(--v2-radius-md);
+  background: color-mix(in srgb, var(--v2-accent) 8%, var(--v2-surface-muted));
+  border: 1px solid color-mix(in srgb, var(--v2-accent) 20%, transparent);
+  font-size: 13px;
+}
+.v2-earnings-pending-bar strong { font-weight: var(--v2-weight-strong); color: var(--v2-accent); }
+.v2-earnings-pending-bar span { color: var(--v2-text-muted); }
+
+.v2-earnings-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.v2-earnings-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: var(--v2-radius-md);
+  border: 1px solid var(--v2-border);
+  background: var(--v2-surface-muted);
+}
+.v2-earnings-item > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.v2-earnings-item strong { font-size: 13px; }
+.v2-earnings-item small { font-size: 11px; color: var(--v2-text-muted); }
+.v2-earnings-item > strong { font-size: 14px; flex-shrink: 0; }
+
+@media (max-width: 640px) {
+  .v2-expense-workbench,
+  .v2-earnings-workbench {
+    grid-template-columns: 1fr;
+  }
+  .v2-expense-workbench aside {
+    display: contents;
+  }
+}

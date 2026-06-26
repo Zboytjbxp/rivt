@@ -11,10 +11,13 @@ import {
   Monitor,
   MonitorSmartphone,
   Moon,
+  Plus,
   ShieldCheck,
   Sparkles,
   Star,
   Sun,
+  Tag,
+  Trash2,
   UserCheck,
   XCircle,
 } from "lucide-react";
@@ -310,6 +313,115 @@ function SafetyTrainingSection({
         />
       )}
     </div>
+  );
+}
+
+// ── Rate Card ─────────────────────────────────────────────────────────────────
+
+const rateCardKey = "rivt.rateCard.v1";
+
+interface RateCardEntry {
+  id: string;
+  trade: string;
+  hourlyRate: number;
+  dayRate: number;
+  minimumCharge: number;
+  notes: string;
+}
+
+function readRateCard(): RateCardEntry[] {
+  try {
+    const stored = localStorage.getItem(rateCardKey);
+    if (!stored) return [];
+    const parsed = JSON.parse(stored) as RateCardEntry[];
+    return Array.isArray(parsed) ? parsed.slice(0, 12) : [];
+  } catch { return []; }
+}
+
+function persistRateCard(entries: RateCardEntry[]) {
+  try { localStorage.setItem(rateCardKey, JSON.stringify(entries.slice(0, 12))); } catch {}
+}
+
+function RateCardSection() {
+  const [rates, setRates] = useState<RateCardEntry[]>(readRateCard);
+  const [trade, setTrade] = useState("");
+  const [hourly, setHourly] = useState("");
+  const [day, setDay] = useState("");
+  const [minimum, setMinimum] = useState("");
+  const [notes, setNotes] = useState("");
+  const [notice, setNotice] = useState("");
+
+  function addRate() {
+    if (!trade.trim()) return;
+    const entry: RateCardEntry = {
+      id: crypto.randomUUID(),
+      trade: trade.trim(),
+      hourlyRate: parseFloat(hourly) || 0,
+      dayRate: parseFloat(day) || 0,
+      minimumCharge: parseFloat(minimum) || 0,
+      notes: notes.trim(),
+    };
+    const next = [entry, ...rates.filter((r) => r.trade.toLowerCase() !== trade.trim().toLowerCase())];
+    setRates(next);
+    persistRateCard(next);
+    setTrade("");
+    setHourly("");
+    setDay("");
+    setMinimum("");
+    setNotes("");
+    setNotice("Rate saved.");
+    setTimeout(() => setNotice(""), 3000);
+  }
+
+  function deleteRate(id: string) {
+    const next = rates.filter((r) => r.id !== id);
+    setRates(next);
+    persistRateCard(next);
+  }
+
+  function fmt(n: number) {
+    return n > 0 ? `$${n.toLocaleString()}` : "—";
+  }
+
+  return (
+    <section className="v2-profile-panel v2-profile-panel-wide v2-rate-card-section">
+      <header>
+        <span>Rate card</span>
+        <strong>Your standard rates by trade</strong>
+      </header>
+      <div className="v2-rate-card-form">
+        <div className="v2-rate-card-inputs">
+          <label>Trade<input value={trade} onChange={(e) => setTrade(e.target.value)} placeholder="Electrical, framing…" /></label>
+          <label>Hourly ($)<input type="number" min="0" value={hourly} onChange={(e) => setHourly(e.target.value)} placeholder="75" /></label>
+          <label>Day rate ($)<input type="number" min="0" value={day} onChange={(e) => setDay(e.target.value)} placeholder="600" /></label>
+          <label>Minimum ($)<input type="number" min="0" value={minimum} onChange={(e) => setMinimum(e.target.value)} placeholder="250" /></label>
+          <label className="is-wide">Notes<input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Includes basic materials, travel within 30 mi…" /></label>
+        </div>
+        {notice ? <p className="v2-rate-card-notice" role="status">{notice}</p> : null}
+        <button type="button" className="v2-primary-button" disabled={!trade.trim()} onClick={addRate}><Plus size={14} />Save rate</button>
+      </div>
+      {rates.length ? (
+        <div className="v2-rate-card-list">
+          {rates.map((r) => (
+            <article key={r.id} className="v2-rate-card-item">
+              <div className="v2-rate-card-item-head">
+                <Tag size={15} />
+                <strong>{r.trade}</strong>
+                <button type="button" aria-label={`Delete ${r.trade} rate`} onClick={() => deleteRate(r.id)}><Trash2 size={13} /></button>
+              </div>
+              <div className="v2-rate-card-item-rates">
+                <div><span>Hourly</span><strong>{fmt(r.hourlyRate)}</strong></div>
+                <div><span>Day rate</span><strong>{fmt(r.dayRate)}</strong></div>
+                <div><span>Minimum</span><strong>{fmt(r.minimumCharge)}</strong></div>
+              </div>
+              {r.notes ? <p className="v2-rate-card-item-notes">{r.notes}</p> : null}
+            </article>
+          ))}
+        </div>
+      ) : (
+        <p className="v2-profile-note">No rates saved yet. Add your standard rates so contractors know what to expect when they view your profile.</p>
+      )}
+    </section>
   );
 }
 
@@ -832,6 +944,9 @@ export function ProfileHub({
             </div>
           </section>
         ) : null}
+
+        {/* Rate card — Settings only, tradesperson-facing */}
+        {view === "Settings" ? <RateCardSection /> : null}
 
         {/* Sessions — Settings only */}
         {view === "Settings" ? (

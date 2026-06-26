@@ -2,12 +2,14 @@ import {
   ArrowRight,
   Briefcase,
   MessageSquareText,
+  Plus,
   Send,
   ShieldCheck,
   Sparkles,
   Star,
   ThumbsUp,
   Users,
+  X,
 } from "lucide-react";
 import { useState } from "react";
 import type { Job, Talent } from "../../types";
@@ -42,6 +44,107 @@ interface NetworkHubProps {
   onOpenShopTalk: () => void;
   onOpenReviews: () => void;
   onAddShoutOut: (to: string, trade: string, message: string) => void;
+}
+
+// ── Sub Roster ────────────────────────────────────────────────────────────────
+
+const subRosterKey = "rivt.subRoster.v1";
+
+interface SubRosterEntry {
+  id: string;
+  name: string;
+  trade: string;
+  rateNote: string;
+  addedAt: string;
+}
+
+function readSubRoster(): SubRosterEntry[] {
+  try {
+    const stored = localStorage.getItem(subRosterKey);
+    if (!stored) return [];
+    const parsed = JSON.parse(stored) as SubRosterEntry[];
+    return Array.isArray(parsed) ? parsed.slice(0, 50) : [];
+  } catch { return []; }
+}
+
+function persistSubRoster(entries: SubRosterEntry[]) {
+  try { localStorage.setItem(subRosterKey, JSON.stringify(entries.slice(0, 50))); } catch {}
+}
+
+function SubRosterPanel() {
+  const [roster, setRoster] = useState<SubRosterEntry[]>(readSubRoster);
+  const [name, setName] = useState("");
+  const [trade, setTrade] = useState("");
+  const [rateNote, setRateNote] = useState("");
+  const [notice, setNotice] = useState("");
+
+  function addToRoster() {
+    if (!name.trim()) return;
+    const entry: SubRosterEntry = {
+      id: crypto.randomUUID(),
+      name: name.trim(),
+      trade: trade.trim(),
+      rateNote: rateNote.trim(),
+      addedAt: new Date().toISOString(),
+    };
+    const next = [entry, ...roster];
+    setRoster(next);
+    persistSubRoster(next);
+    setName("");
+    setTrade("");
+    setRateNote("");
+    setNotice("Added to roster.");
+    setTimeout(() => setNotice(""), 3000);
+  }
+
+  function removeFromRoster(id: string) {
+    const next = roster.filter((e) => e.id !== id);
+    setRoster(next);
+    persistSubRoster(next);
+  }
+
+  return (
+    <Panel
+      className="v2-network-panel v2-network-panel-wide"
+      eyebrow={`${roster.length} saved`}
+      title="Sub roster"
+    >
+      <div className="v2-sub-roster">
+        <div className="v2-sub-roster-form">
+          <div className="v2-sub-roster-inputs">
+            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Name or company" />
+            <input value={trade} onChange={(e) => setTrade(e.target.value)} placeholder="Trade (electrical, framing…)" />
+            <input value={rateNote} onChange={(e) => setRateNote(e.target.value)} placeholder="Rate note ($65/hr, $800/day…)" />
+          </div>
+          {notice ? <p className="v2-sub-roster-notice" role="status">{notice}</p> : null}
+          <button type="button" className="v2-primary-button" disabled={!name.trim()} onClick={addToRoster}><Plus size={14} />Add to roster</button>
+        </div>
+        {roster.length ? (
+          <div className="v2-sub-roster-list">
+            {roster.map((entry) => (
+              <article key={entry.id} className="v2-sub-roster-item">
+                <Avatar name={entry.name} size="sm" className="v2-network-avatar" />
+                <div className="v2-sub-roster-item-copy">
+                  <strong>{entry.name}</strong>
+                  {entry.trade ? <span>{entry.trade}</span> : null}
+                  {entry.rateNote ? <small>{entry.rateNote}</small> : null}
+                </div>
+                <button type="button" className="v2-sub-roster-remove" aria-label={`Remove ${entry.name}`} onClick={() => removeFromRoster(entry.id)}><X size={14} /></button>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <EmptyState
+            className="v2-network-empty"
+            icon={<Users size={20} />}
+            title="No roster entries yet"
+            description="Save contractors and tradespeople you rely on for quick access when new work comes in."
+            compact
+          />
+        )}
+      </div>
+    </Panel>
+  );
 }
 
 function TopTalentCard({ person }: { person: Talent }) {
@@ -289,6 +392,8 @@ export function NetworkHub({ view, jobs, talent, communityPosts, shoutOuts, disp
             )}
           </div>
         </Panel>
+
+        <SubRosterPanel />
 
         <Panel
           className="v2-network-panel"

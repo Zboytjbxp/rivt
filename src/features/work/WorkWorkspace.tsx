@@ -17,6 +17,8 @@ import {
   RefreshCw,
   Search,
   ShieldCheck,
+  Trash2,
+  Users,
   Wrench,
   X,
   XCircle,
@@ -50,8 +52,8 @@ import "./work-workspace.css";
 type TradeFilter = (typeof tradeOptions)[number];
 type DifficultyFilter = (typeof difficultyOptions)[number];
 type WorkTypeFilter = (typeof workTypeOptions)[number];
-type DetailTab = "overview" | "requirements" | "activity";
-type ContractorSection = "open" | "draft" | "paused" | "closed";
+type DetailTab = "overview" | "requirements" | "activity" | "changes";
+type ContractorSection = "open" | "draft" | "paused" | "closed" | "pipeline" | "calendar";
 type JobAction = "publish" | "pause" | "resume" | "close";
 
 interface WorkWorkspaceProps {
@@ -80,12 +82,317 @@ interface WorkWorkspaceProps {
   onRetry: () => void;
 }
 
-const statusForSection: Record<ContractorSection, Job["status"]> = {
+const statusForSection: Partial<Record<ContractorSection, Job["status"]>> = {
   open: "Open",
   draft: "Draft",
   paused: "Paused",
   closed: "Closed",
 };
+
+// ── Change Order Tracker ──────────────────────────────────────────────────────
+
+const changeOrderKey = "rivt.changeOrders.v1";
+
+type ChangeOrderStatus = "pending" | "approved" | "rejected";
+
+interface ChangeOrder {
+  id: string;
+  jobId: number;
+  description: string;
+  requestedBy: string;
+  costDelta: number;
+  status: ChangeOrderStatus;
+  createdAt: string;
+}
+
+function readChangeOrders(jobId: number): ChangeOrder[] {
+  try {
+    const stored = localStorage.getItem(changeOrderKey);
+    if (!stored) return [];
+    const parsed = JSON.parse(stored) as ChangeOrder[];
+    return Array.isArray(parsed) ? parsed.filter((c) => c.jobId === jobId) : [];
+  } catch { return []; }
+}
+
+function persistChangeOrders(jobId: number, updated: ChangeOrder[]) {
+  try {
+    const stored = localStorage.getItem(changeOrderKey);
+    const all: ChangeOrder[] = stored ? (JSON.parse(stored) as ChangeOrder[]) : [];
+    const others = Array.isArray(all) ? all.filter((c) => c.jobId !== jobId) : [];
+    localStorage.setItem(changeOrderKey, JSON.stringify([...others, ...updated].slice(0, 200)));
+  } catch {}
+}
+
+function BudgetTracker({ jobId, budget }: { jobId: number; budget: number }) {
+  const expenses = useMemo(() => {
+    try {
+      const stored = localStorage.getItem("rivt.expenses.v1");
+      if (!stored) return [] as Array<{ jobId: number | null; amount: number; category: string; description: string; date: string }>;
+      const parsed = JSON.parse(stored) as Array<{ jobId: number | null; amount: number; category: string; description: string; date: string }>;
+      return Array.isArray(parsed) ? parsed.filter((e) => e.jobId === jobId) : [];
+    } catch { return []; }
+  }, [jobId]);
+
+  const spent = expenses.reduce((sum, e) => sum + e.amount, 0);
+  const remaining = budget - spent;
+  const pct = Math.min(100, budget > 0 ? Math.round((spent / budget) * 100) : 0);
+  const over = spent > budget;
+
+  return (
+    <div className="v2-budget-tracker">
+      <div className="v2-budget-bar-wrap">
+        <div className="v2-budget-bar">
+          <div className={over ? "v2-budget-bar-fill is-over" : "v2-budget-bar-fill"} style={{ width: `${pct}%` }} />
+        </div>
+        <span>{pct}%</span>
+      </div>
+      <div className="v2-budget-facts">
+        <div><span>Budget</span><strong>{money(budget)}</strong></div>
+        <div><span>Logged costs</span><strong>{money(spent)}</strong></div>
+        <div className={over ? "is-over" : ""}><span>Remaining</span><strong>{over ? `${money(Math.abs(remaining))} over` : money(remaining)}</strong></div>
+      </div>
+      {expenses.length ? (
+        <div className="v2-budget-expenses">
+          {expenses.slice(0, 4).map((e, i) => (
+            <div key={i} className="v2-budget-expense-row">
+              <span>{e.description}</span>
+              <small>{e.category} · {e.date}</small>
+              <strong>{money(e.amount)}</strong>
+            </div>
+          ))}
+          {expenses.length > 4 ? <small className="v2-muted-copy">and {expenses.length - 4} more · open Expense Logger in Tools</small> : null}
+        </div>
+      ) : <p className="v2-muted-copy">No costs logged yet. Use the Expense Logger in Tools to track spending.</p>}
+    </div>
+  );
+}
+
+function ChangeOrderTracker({ jobId, jobTitle }: { jobId: number; jobTitle: string }) {
+  const [changeOrders, setChangeOrders] = useState<ChangeOrder[]>(() => readChangeOrders(jobId));
+  const [description, setDescription] = useState("");
+  const [requestedBy, setRequestedBy] = useState("");
+  const [costDelta, setCostDelta] = useState("");
+  const [notice, setNotice] = useState("");
+
+  function addChangeOrder() {
+    if (!description.trim()) return;
+    const co: ChangeOrder = {
+      id: crypto.randomUUID(),
+      jobId,
+      description: description.trim(),
+      requestedBy: requestedBy.trim() || "Not specified",
+      costDelta: parseFloat(costDelta) || 0,
+      status: "pending",
+      createdAt: new Date().toISOString(),
+    };
+    const next = [co, ...changeOrders];
+    setChangeOrders(next);
+    persistChangeOrders(jobId, next);
+    setDescription("");
+    setRequestedBy("");
+    setCostDelta("");
+    setNotice("Change order logged.");
+    setTimeout(() => setNotice(""), 3000);
+  }
+
+  function updateStatus(id: string, status: ChangeOrderStatus) {
+    const next = changeOrders.map((co) => co.id === id ? { ...co, status } : co);
+    setChangeOrders(next);
+    persistChangeOrders(jobId, next);
+  }
+
+  function deleteChangeOrder(id: string) {
+    const next = changeOrders.filter((co) => co.id !== id);
+    setChangeOrders(next);
+    persistChangeOrders(jobId, next);
+  }
+
+  const approvedDelta = changeOrders.filter((co) => co.status === "approved").reduce((sum, co) => sum + co.costDelta, 0);
+
+  return (
+    <div className="v2-change-orders">
+      <div className="v2-change-order-form">
+        <h3>Log a change order for {jobTitle}</h3>
+        <div className="v2-change-order-inputs">
+          <label className="is-wide">What changed
+            <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} placeholder="Describe the scope change or addition..." />
+          </label>
+          <label>Requested by<input value={requestedBy} onChange={(e) => setRequestedBy(e.target.value)} placeholder="Owner, GC, inspector..." /></label>
+          <label>Cost delta ($)<input type="number" value={costDelta} onChange={(e) => setCostDelta(e.target.value)} placeholder="0 (negative = reduction)" /></label>
+        </div>
+        {notice ? <p className="v2-match-error" style={{ color: "var(--v2-accent)" }} role="status">{notice}</p> : null}
+        <button type="button" className="v2-primary-button" disabled={!description.trim()} onClick={addChangeOrder}><Plus size={14} />Log change order</button>
+      </div>
+      {approvedDelta !== 0 ? (
+        <div className="v2-co-approved-delta">
+          <span>Approved scope delta</span>
+          <strong className={approvedDelta < 0 ? "is-negative" : ""}>{approvedDelta > 0 ? "+" : ""}{money(approvedDelta)}</strong>
+        </div>
+      ) : null}
+      {changeOrders.length ? (
+        <div className="v2-change-order-list">
+          {changeOrders.map((co) => (
+            <article key={co.id} className={`v2-co-card co-status-${co.status}`}>
+              <div className="v2-co-card-header">
+                <span className={`v2-co-pill co-status-${co.status}`}>{co.status}</span>
+                <small>{new Date(co.createdAt).toLocaleDateString()}</small>
+                <button type="button" aria-label="Delete" onClick={() => deleteChangeOrder(co.id)}><Trash2 size={13} /></button>
+              </div>
+              <p>{co.description}</p>
+              <div className="v2-co-meta">
+                <span>By: {co.requestedBy}</span>
+                {co.costDelta !== 0 ? <strong className={co.costDelta < 0 ? "is-negative" : ""}>{co.costDelta > 0 ? "+" : ""}{money(co.costDelta)}</strong> : null}
+              </div>
+              {co.status === "pending" ? (
+                <div className="v2-co-actions">
+                  <button type="button" className="v2-primary-button" onClick={() => updateStatus(co.id, "approved")}>Approve</button>
+                  <button type="button" onClick={() => updateStatus(co.id, "rejected")}>Reject</button>
+                </div>
+              ) : null}
+            </article>
+          ))}
+        </div>
+      ) : <p className="v2-muted-copy">No change orders logged for this job yet.</p>}
+    </div>
+  );
+}
+
+interface PipelineEntry {
+  jobId: number;
+  jobTitle: string;
+  app: CanonicalApplication;
+}
+
+function PipelineBoard({ openJobs }: { openJobs: Job[] }) {
+  const [entries, setEntries] = useState<PipelineEntry[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const canonicalJobs = openJobs.filter((j) => j.canonical?.id);
+    if (!canonicalJobs.length) return;
+    setLoading(true);
+    Promise.allSettled(
+      canonicalJobs.map((j) =>
+        listJobApplications(j.canonical!.id).then((apps) =>
+          apps.map((app): PipelineEntry => ({ jobId: j.id, jobTitle: j.title, app }))
+        )
+      )
+    ).then((results) => {
+      setEntries(results.flatMap((r) => r.status === "fulfilled" ? r.value : []));
+    }).finally(() => setLoading(false));
+  }, [openJobs]);
+
+  const STAGES = ["submitted", "shortlisted", "offered"] as const;
+  const STAGE_LABELS: Record<string, string> = { submitted: "Applied", shortlisted: "Shortlisted", offered: "Offered" };
+
+  return (
+    <div className="v2-pipeline-board">
+      <div className="v2-pipeline-board-header">
+        <div>
+          <h2>Applicant pipeline</h2>
+          <p>All applicants across your open jobs, grouped by stage.</p>
+        </div>
+        {loading ? <small>Loading applicants…</small> : <small>{entries.length} total applicant{entries.length !== 1 ? "s" : ""}</small>}
+      </div>
+      {!loading && entries.length === 0 ? (
+        <div className="v2-work-empty" style={{ textAlign: "center", padding: "48px 24px" }}>
+          <Users size={32} style={{ opacity: 0.3, marginBottom: 12 }} />
+          <strong>No applicants across open jobs yet</strong>
+          <span style={{ display: "block", marginTop: 8, color: "var(--v2-text-muted)", fontSize: 13 }}>Tradespeople who apply to your published jobs will appear here by stage.</span>
+        </div>
+      ) : (
+        <div className="v2-pipeline-columns">
+          {STAGES.map((stage) => {
+            const stageEntries = entries.filter((e) => e.app.status === stage);
+            return (
+              <div key={stage} className="v2-pipeline-column">
+                <div className="v2-pipeline-col-header">
+                  <strong>{STAGE_LABELS[stage]}</strong>
+                  <span className="v2-pipeline-count">{stageEntries.length}</span>
+                </div>
+                <div className="v2-pipeline-col-body">
+                  {stageEntries.map(({ app, jobTitle }) => (
+                    <article key={app.id} className="v2-pipeline-card">
+                      <div className="v2-pipeline-card-avatar">{(app.applicant?.displayName || "?")[0].toUpperCase()}</div>
+                      <div>
+                        <strong>{app.applicant?.displayName || "Tradesperson"}</strong>
+                        <small>{jobTitle}</small>
+                        {app.applicant?.headline ? <span>{app.applicant.headline}</span> : null}
+                      </div>
+                    </article>
+                  ))}
+                  {stageEntries.length === 0 ? <p className="v2-pipeline-empty">None yet</p> : null}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+const CAL_MONTHS = ["January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December"];
+const CAL_DAYS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
+
+function WorkCalendar({ jobs }: { jobs: Job[] }) {
+  const [offset, setOffset] = useState(0);
+  const now = new Date();
+  const display = new Date(now.getFullYear(), now.getMonth() + offset, 1);
+  const firstDay = display.getDay();
+  const daysInMonth = new Date(display.getFullYear(), display.getMonth() + 1, 0).getDate();
+  const cells: Array<number | null> = [
+    ...Array.from({ length: firstDay }, () => null),
+    ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
+  ];
+
+  const openJobs = jobs.filter((j) => j.status === "Open");
+  const draftJobs = jobs.filter((j) => j.status === "Draft");
+  const pausedJobs = jobs.filter((j) => j.status === "Paused");
+  const closedJobs = jobs.filter((j) => j.status === "Closed");
+
+  return (
+    <div className="v2-work-calendar">
+      <div className="v2-work-cal-header">
+        <button type="button" onClick={() => setOffset((o) => o - 1)}>‹</button>
+        <strong>{CAL_MONTHS[display.getMonth()]} {display.getFullYear()}</strong>
+        <button type="button" onClick={() => setOffset((o) => o + 1)}>›</button>
+      </div>
+      <div className="v2-work-cal-weekdays">
+        {CAL_DAYS.map((d) => <span key={d}>{d}</span>)}
+      </div>
+      <div className="v2-work-cal-grid">
+        {cells.map((day, i) => {
+          const isToday = day !== null && offset === 0 && day === now.getDate();
+          return (
+            <div key={i} className={`v2-work-cal-cell${day ? "" : " is-empty"}${isToday ? " is-today" : ""}`}>
+              {day ? <span>{day}</span> : null}
+            </div>
+          );
+        })}
+      </div>
+      <div className="v2-work-cal-jobs">
+        <h3>Active jobs</h3>
+        {[
+          ...openJobs.map((j) => ({ job: j, cls: "open" })),
+          ...draftJobs.map((j) => ({ job: j, cls: "draft" })),
+          ...pausedJobs.map((j) => ({ job: j, cls: "paused" })),
+          ...closedJobs.map((j) => ({ job: j, cls: "closed" })),
+        ].map(({ job, cls }) => (
+          <div key={job.id} className={`v2-work-cal-job-row cal-status-${cls}`}>
+            <span className="v2-work-cal-dot" />
+            <div>
+              <strong>{job.title}</strong>
+              <small>{job.location} · {job.status} · {job.trade}</small>
+            </div>
+          </div>
+        ))}
+        {!jobs.length ? <p className="v2-muted-copy">No jobs yet.</p> : null}
+      </div>
+    </div>
+  );
+}
 
 function money(value: number) {
   return new Intl.NumberFormat("en-US", {
@@ -147,6 +454,8 @@ function WorkEmptyState({ role, section, onPostJob }: { role: Role; section: Con
     draft: { title: "No drafts", body: "Start a job now and return to finish the scope whenever you are ready." },
     paused: { title: "No paused jobs", body: "Jobs you pause will stay here until you reopen or close them." },
     closed: { title: "No closed jobs", body: "Completed or cancelled postings will stay here for your records." },
+    pipeline: { title: "No applicants yet", body: "Tradespeople who apply to your open jobs will appear here by stage." },
+    calendar: { title: "No jobs yet", body: "Create and publish jobs to see them on the calendar." },
   };
   const copy = role === "contractor" ? contractorCopy[section] : { title: "No matching work nearby", body: "Try changing the trade, location, or job requirements." };
   return (
@@ -201,10 +510,11 @@ export function WorkWorkspace({
   const [applicationMessage, setApplicationMessage] = useState("I am interested in this work and can confirm tools, timing, and site requirements.");
   const [demoAppliedJobs, setDemoAppliedJobs] = useState<Set<JobId>>(new Set());
 
-  const visibleJobs = useMemo(() => role === "contractor"
-    ? jobs.filter((job) => job.status === statusForSection[contractorSection])
-    : jobs,
-  [contractorSection, jobs, role]);
+  const visibleJobs = useMemo(() => {
+    if (role !== "contractor") return jobs;
+    const status = statusForSection[contractorSection];
+    return status ? jobs.filter((job) => job.status === status) : jobs;
+  }, [contractorSection, jobs, role]);
 
   const activeFilterCount = [
     trade !== "All trades",
@@ -431,9 +741,9 @@ export function WorkWorkspace({
 
       {role === "contractor" ? (
         <nav className="v2-section-tabs" aria-label="Job status">
-          {(["open", "draft", "paused", "closed"] as const).map((section) => (
+          {(["open", "draft", "paused", "closed", "pipeline", "calendar"] as ContractorSection[]).map((section) => (
             <button key={section} type="button" className={contractorSection === section ? "is-active" : ""} onClick={() => { setContractorSection(section); setMobileDetailOpen(false); }}>
-              {section.charAt(0).toUpperCase() + section.slice(1)}
+              {section === "pipeline" ? "Pipeline" : section === "calendar" ? "Calendar" : section.charAt(0).toUpperCase() + section.slice(1)}
             </button>
           ))}
         </nav>
@@ -459,7 +769,13 @@ export function WorkWorkspace({
 
       {error ? <div className="v2-work-error" role="alert"><div><strong>Jobs could not be loaded</strong><span>{error}</span></div><button type="button" onClick={onRetry}><RefreshCw size={16} /> Retry</button></div> : null}
 
-      <div className={mobileDetailOpen ? "v2-work-layout show-detail" : "v2-work-layout"}>
+      {role === "contractor" && contractorSection === "pipeline" ? (
+        <PipelineBoard openJobs={jobs.filter((j) => j.status === "Open")} />
+      ) : role === "contractor" && contractorSection === "calendar" ? (
+        <WorkCalendar jobs={jobs} />
+      ) : null}
+
+      <div className={mobileDetailOpen ? "v2-work-layout show-detail" : "v2-work-layout"} style={role === "contractor" && (contractorSection === "pipeline" || contractorSection === "calendar") ? { display: "none" } : undefined}>
         <section className="v2-work-list" aria-label={`${visibleJobs.length} jobs`}>
           <div className="v2-work-list-heading"><span>{visibleJobs.length} {visibleJobs.length === 1 ? "job" : "jobs"}</span><small>{role === "contractor" ? `${contractorSection} postings` : "Open work"}</small></div>
           {loading ? <JobListSkeleton /> : visibleJobs.length ? (
@@ -483,7 +799,7 @@ export function WorkWorkspace({
             </header>
 
             <nav className="v2-detail-tabs" aria-label="Job details">
-              {(["overview", "requirements", "activity"] as const).map((tab) => <button key={tab} type="button" className={detailTab === tab ? "is-active" : ""} onClick={() => setDetailTab(tab)}>{tab.charAt(0).toUpperCase() + tab.slice(1)}</button>)}
+              {(["overview", "requirements", "activity", "changes"] as const).map((tab) => <button key={tab} type="button" className={detailTab === tab ? "is-active" : ""} onClick={() => setDetailTab(tab)}>{tab === "changes" ? "Changes" : tab.charAt(0).toUpperCase() + tab.slice(1)}</button>)}
             </nav>
 
             {detailTab === "overview" ? (
@@ -496,6 +812,12 @@ export function WorkWorkspace({
                   <DetailFact icon={BriefcaseBusiness} label="Work type" value={detailJob.workType} />
                 </div>
                 <section className="v2-detail-section"><h3>Scope</h3><p>{detailJob.canonical?.scopeDescription || "Scope details have not been added yet."}</p></section>
+                {detailJob.pay > 0 ? (
+                  <section className="v2-detail-section">
+                    <h3>Budget tracker</h3>
+                    <BudgetTracker jobId={detailJob.id} budget={detailJob.pay} />
+                  </section>
+                ) : null}
                 <section className="v2-privacy-note"><LockKeyhole size={17} /><div><strong>Exact address stays private</strong><span>{role === "contractor" ? "Only your organization can access the saved address in this release." : detailJob.addressPolicy}</span></div></section>
                 {role === "contractor" && detailJob.canonical?.privateLocation ? <section className="v2-detail-section"><h3>Private jobsite</h3><p>{detailJob.canonical.privateLocation.addressLine1}{detailJob.canonical.privateLocation.addressLine2 ? `, ${detailJob.canonical.privateLocation.addressLine2}` : ""}<br />{detailJob.canonical.privateLocation.city}, {detailJob.canonical.privateLocation.region} {detailJob.canonical.privateLocation.postalCode}</p></section> : null}
                 <section className="v2-match-panel" aria-label="Hiring workflow">
@@ -635,6 +957,12 @@ export function WorkWorkspace({
             {detailTab === "activity" ? (
               <div className="v2-detail-content">
                 {detailJob.canonical?.events.length ? <ol className="v2-activity-list">{detailJob.canonical.events.map((event) => { const label = event.type.replaceAll("_", " "); return <li key={event.id}><span /><div><strong>{label.charAt(0).toUpperCase() + label.slice(1)}</strong><small>{new Date(event.occurredAt).toLocaleString()}</small></div></li>; })}</ol> : <p className="v2-muted-copy">No activity yet for this job.</p>}
+              </div>
+            ) : null}
+
+            {detailTab === "changes" ? (
+              <div className="v2-detail-content">
+                <ChangeOrderTracker jobId={detailJob.id} jobTitle={detailJob.title} />
               </div>
             ) : null}
 

@@ -1241,3 +1241,116 @@
   line-height: 1.5;
   font-style: italic;
 }
+
+/* ── Rate Card ─────────────────────────────────────────────────────────────── */
+
+.v2-rate-card-section header {
+  margin-bottom: 18px;
+}
+
+.v2-rate-card-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--v2-border);
+  border-radius: var(--v2-radius-lg);
+  background: var(--v2-surface-muted);
+  margin-bottom: 8px;
+}
+
+.v2-rate-card-inputs {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr 1fr 1fr;
+  gap: 10px;
+}
+
+.v2-rate-card-inputs label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--v2-text-muted);
+  font-weight: var(--v2-weight-strong);
+}
+
+.v2-rate-card-inputs label.is-wide { grid-column: 1 / -1; }
+
+.v2-rate-card-inputs input {
+  padding: 8px 10px;
+  border-radius: var(--v2-radius-md);
+  border: 1px solid var(--v2-border);
+  background: var(--v2-surface);
+  color: var(--v2-text);
+  font-size: 13px;
+  font-family: inherit;
+}
+
+.v2-rate-card-notice {
+  font-size: 12px;
+  color: var(--v2-accent);
+  margin: 0;
+}
+
+.v2-rate-card-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.v2-rate-card-item {
+  padding: 14px 16px;
+  border: 1px solid var(--v2-border);
+  border-radius: var(--v2-radius-lg);
+  background: var(--v2-surface-raised);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.v2-rate-card-item-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.v2-rate-card-item-head svg { color: var(--v2-accent); }
+.v2-rate-card-item-head strong { font-size: 14px; flex: 1; }
+.v2-rate-card-item-head button {
+  width: 28px; height: 28px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: var(--v2-radius-sm);
+  background: transparent;
+  color: var(--v2-text-muted);
+}
+.v2-rate-card-item-head button:hover { color: var(--v2-destructive, #e55); }
+
+.v2-rate-card-item-rates {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.v2-rate-card-item-rates > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+  border-radius: var(--v2-radius-md);
+  background: var(--v2-surface-muted);
+  border: 1px solid var(--v2-border);
+}
+.v2-rate-card-item-rates > div span { font-size: 10px; color: var(--v2-text-muted); text-transform: uppercase; letter-spacing: 0.05em; font-weight: var(--v2-weight-bold); }
+.v2-rate-card-item-rates > div strong { font-size: 15px; font-weight: var(--v2-weight-strong); }
+
+.v2-rate-card-item-notes {
+  margin: 0;
+  font-size: 12px;
+  color: var(--v2-text-muted);
+  line-height: 1.5;
+}
+
+@media (max-width: 640px) {
+  .v2-rate-card-inputs { grid-template-columns: 1fr 1fr; }
+  .v2-rate-card-inputs label.is-wide { grid-column: 1 / -1; }
+  .v2-rate-card-item-rates { grid-template-columns: repeat(3, 1fr); }
+}
