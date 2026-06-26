@@ -2843,6 +2843,20 @@ function ExpenseLoggerTool({ activeJob, jobs }: { activeJob: Job | null; jobs: J
 
 // ── Earnings Dashboard ────────────────────────────────────────────────────────
 
+function getISOWeek(date: Date): number {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const dayNum = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  return Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+}
+
+function getWeekStartDate(year: number, week: number): Date {
+  const jan4 = new Date(Date.UTC(year, 0, 4));
+  const dayOfWeek = jan4.getUTCDay() || 7;
+  return new Date(jan4.getTime() - (dayOfWeek - 1) * 86400000 + (week - 1) * 7 * 86400000);
+}
+
 function EarningsDashboardTool({ jobs, paymentRecords }: { jobs: Job[]; paymentRecords: PaymentRecord[] }) {
   const [period, setPeriod] = useState<"week" | "month" | "all">("month");
 
@@ -2866,6 +2880,79 @@ function EarningsDashboardTool({ jobs, paymentRecords }: { jobs: Job[]; paymentR
   }
   const topTrade = Object.entries(tradeTotals).sort(([, a], [, b]) => b - a)[0]?.[0] ?? "—";
 
+  // ── Weekly earnings chart data (last 8 weeks from time sessions × hourly rate) ──
+  const weeklyData = useMemo(() => {
+    const timeSessions: Array<{ startedAt: string; endedAt: string | null; jobTitle?: string }> = (() => {
+      try { return JSON.parse(localStorage.getItem("rivt.timeSessions.v1") ?? "[]") as Array<{ startedAt: string; endedAt: string | null; jobTitle?: string }>; } catch { return []; }
+    })();
+    const rateCard: { hourlyRate?: number } = (() => {
+      try { return JSON.parse(localStorage.getItem("rivt.rateCard.v1") ?? "null") as { hourlyRate?: number } ?? {}; } catch { return {}; }
+    })();
+    const hourlyRate = rateCard.hourlyRate ?? 65;
+    const weekTotals: Record<string, number> = {};
+    for (const s of timeSessions) {
+      if (!s.endedAt) continue;
+      const start = new Date(s.startedAt);
+      const hrs = (new Date(s.endedAt).getTime() - start.getTime()) / 3600000;
+      const year = start.getFullYear();
+      const week = getISOWeek(start);
+      const key = `${year}-W${String(week).padStart(2, "0")}`;
+      weekTotals[key] = (weekTotals[key] ?? 0) + hrs * hourlyRate;
+    }
+    const currentYear = now.getFullYear();
+    const currentWeek = getISOWeek(now);
+    const weeks: Array<{ label: string; amount: number }> = [];
+    for (let i = 7; i >= 0; i--) {
+      let targetWeek = currentWeek - i;
+      let targetYear = currentYear;
+      if (targetWeek <= 0) { targetYear -= 1; targetWeek += 52; }
+      const key = `${targetYear}-W${String(targetWeek).padStart(2, "0")}`;
+      const weekStart = getWeekStartDate(targetYear, targetWeek);
+      const label = weekStart.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+      weeks.push({ label, amount: weekTotals[key] ?? 0 });
+    }
+    return weeks;
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const maxWeekAmount = Math.max(...weeklyData.map((w) => w.amount), 1);
+
+  // ── Expense category breakdown ──
+  const categoryData = useMemo(() => {
+    const expenses: Array<{ category: string; amount: number }> = (() => {
+      try { return JSON.parse(localStorage.getItem("rivt.expenses.v1") ?? "[]") as Array<{ category: string; amount: number }>; } catch { return []; }
+    })();
+    const totals: Record<string, number> = {};
+    for (const e of expenses) {
+      totals[e.category] = (totals[e.category] ?? 0) + e.amount;
+    }
+    const grandExpTotal = Object.values(totals).reduce((s, v) => s + v, 0);
+    return Object.entries(totals)
+      .sort(([, a], [, b]) => b - a)
+      .map(([name, catTotal]) => ({ name, total: catTotal, pct: grandExpTotal > 0 ? (catTotal / grandExpTotal) * 100 : 0 }));
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Top jobs by earnings (time sessions × rate) ──
+  const topJobs = useMemo(() => {
+    const timeSessions: Array<{ startedAt: string; endedAt: string | null; jobTitle?: string }> = (() => {
+      try { return JSON.parse(localStorage.getItem("rivt.timeSessions.v1") ?? "[]") as Array<{ startedAt: string; endedAt: string | null; jobTitle?: string }>; } catch { return []; }
+    })();
+    const rateCard: { hourlyRate?: number } = (() => {
+      try { return JSON.parse(localStorage.getItem("rivt.rateCard.v1") ?? "null") as { hourlyRate?: number } ?? {}; } catch { return {}; }
+    })();
+    const hourlyRate = rateCard.hourlyRate ?? 65;
+    const byJob: Record<string, number> = {};
+    for (const s of timeSessions) {
+      if (!s.endedAt) continue;
+      const hrs = (new Date(s.endedAt).getTime() - new Date(s.startedAt).getTime()) / 3600000;
+      const title = s.jobTitle ?? "Standalone";
+      byJob[title] = (byJob[title] ?? 0) + hrs * hourlyRate;
+    }
+    return Object.entries(byJob)
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 5)
+      .map(([title, earned]) => ({ title, earned }));
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   return (
     <div className="v2-tool-workbench v2-earnings-workbench">
       <Panel className="v2-tool-panel" eyebrow="Earnings" title="Income summary">
@@ -2887,6 +2974,53 @@ function EarningsDashboardTool({ jobs, paymentRecords }: { jobs: Job[]; paymentR
             <strong>{pending.length} pending</strong>
             <span>{currency(pending.reduce((sum, r) => sum + r.amount, 0))} awaiting close-out</span>
           </div>
+        ) : null}
+
+        {/* Weekly earnings bar chart */}
+        <div className="v2-earn-chart">
+          <div className="v2-earn-chart-title">Weekly earnings (last 8 weeks)</div>
+          {weeklyData.map((week, i) => (
+            <div key={i} className="v2-earn-chart-row">
+              <span className="v2-earn-chart-label">{week.label}</span>
+              <div className="v2-earn-chart-bar-wrap">
+                <div
+                  className="v2-earn-chart-bar"
+                  style={{ width: `${(week.amount / maxWeekAmount) * 100}%` }}
+                />
+              </div>
+              <span className="v2-earn-chart-value">${week.amount.toFixed(0)}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Expense category breakdown */}
+        {categoryData.length > 0 ? (
+          <>
+            <div className="v2-earn-section-title">Expenses by category</div>
+            {categoryData.map((cat) => (
+              <div key={cat.name} className="v2-earn-cat-row">
+                <span className="v2-earn-cat-name">{cat.name}</span>
+                <div className="v2-earn-cat-bar-wrap">
+                  <div className="v2-earn-cat-bar" style={{ width: `${cat.pct}%` }} />
+                </div>
+                <span className="v2-earn-cat-amount">${cat.total.toFixed(0)}</span>
+              </div>
+            ))}
+          </>
+        ) : null}
+
+        {/* Top jobs by earnings */}
+        {topJobs.length > 0 ? (
+          <>
+            <div className="v2-earn-section-title">Top jobs by earnings</div>
+            {topJobs.map((job, i) => (
+              <div key={i} className="v2-earn-top-job-row">
+                <span className="v2-earn-top-job-rank">#{i + 1}</span>
+                <span className="v2-earn-top-job-name">{job.title}</span>
+                <span className="v2-earn-top-job-amount">${job.earned.toFixed(0)}</span>
+              </div>
+            ))}
+          </>
         ) : null}
       </Panel>
       <Panel className="v2-tool-panel" eyebrow={`${periodPaid.length} completed`} title="Payment history">
