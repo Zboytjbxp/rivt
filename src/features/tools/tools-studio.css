@@ -3314,3 +3314,33 @@
   .v2-safety-summary { display: none; }
   .v2-safety-meta-inputs { grid-template-columns: 1fr; }
 }
+
+/* Share report button */
+.v2-share-report-row {
+  display: flex;
+  justify-content: flex-start;
+  padding: 4px 0 8px;
+}
+
+.v2-share-report-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: var(--v2-accent);
+  color: white;
+  border: none;
+  border-radius: var(--v2-radius-md);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.v2-share-report-btn:hover:not(.is-locked) {
+  background: #ea6a10;
+}
+.v2-share-report-btn.is-locked {
+  background: var(--v2-surface-muted);
+  color: var(--v2-text-muted);
+  cursor: default;
+}

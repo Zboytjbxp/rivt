@@ -29,14 +29,16 @@ import {
   ReceiptText,
   Scale,
   Search,
+  Share2,
   Shield,
   Trash2,
   TrendingDown,
   TrendingUp,
   Wrench,
 } from "lucide-react";
-import { usePro } from "../pro/usePro";
+import { usePro, getIsPro } from "../pro/usePro";
 import { UpgradeModal } from "../pro/UpgradeModal";
+import { getReportUrl, buildReportFromStorage } from "../report/reportUtils";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { Job } from "../../types";
 import type { PrimaryDestination } from "../../app-shell/types";
@@ -146,6 +148,37 @@ function ToolCard({
         <small>{detail}</small>
       </span>
       <em>{action}<ArrowRight size={14} /></em>
+    </button>
+  );
+}
+
+function ShareReportButton({ jobTitle }: { jobTitle: string }) {
+  const [copied, setCopied] = useState(false);
+  const isPro = getIsPro();
+
+  async function handleShare() {
+    if (!isPro) return;
+    const data = buildReportFromStorage(jobTitle);
+    const url = getReportUrl(data);
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 3000);
+    } catch {
+      // fallback
+      window.prompt("Copy this link to share with your client:", url);
+    }
+  }
+
+  return (
+    <button
+      type="button"
+      className={`v2-share-report-btn${!isPro ? " is-locked" : ""}`}
+      onClick={() => void handleShare()}
+      title={isPro ? "Copy client report link" : "Pro feature"}
+    >
+      {isPro ? <Share2 size={14} /> : <Lock size={14} />}
+      {copied ? "Link copied!" : "Share report"}
     </button>
   );
 }
@@ -3463,6 +3496,10 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", onNavigate, 
           action="Open"
           onAction={onOpenRecords}
         />
+      </div>
+
+      <div className="v2-share-report-row">
+        <ShareReportButton jobTitle={activeJob?.title ?? "Current job"} />
       </div>
 
       <div className="v2-tools-grid">

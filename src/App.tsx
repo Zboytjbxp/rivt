@@ -10,6 +10,7 @@ import {
 import { OfflineBanner } from "./components/OfflineBanner";
 import { GlobalSearch } from "./components/GlobalSearch";
 import { LocalSetupPrompt } from "./components/LocalSetupPrompt";
+import { ReportViewer } from "./features/report/ReportViewer";
 import "./components/OfflineBanner.css";
 import "./components/GlobalSearch.css";
 import "./components/LocalSetupPrompt.css";
@@ -1025,6 +1026,12 @@ function App() {
       : accountProfile.specialties.slice(0, 2).join(", ");
   if (authLoading) {
     return <LaunchLoader />;
+  }
+
+  // Check for report share URL — publicly accessible, no auth needed
+  const reportParam = new URLSearchParams(window.location.search).get("report");
+  if (reportParam) {
+    return <ReportViewer encoded={reportParam} />;
   }
 
   const authLinkPath = window.location.pathname;
