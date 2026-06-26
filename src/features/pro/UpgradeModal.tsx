@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Lock, Check, Zap, X } from "lucide-react";
 import { usePro } from "./usePro";
+import { hasStripeConfigured, redirectToStripeCheckout } from "../../lib/billing";
 import "./pro.css";
 
 interface UpgradeModalProps {
@@ -23,13 +24,19 @@ export function UpgradeModal({ reason, onClose }: UpgradeModalProps) {
   const [state, setState] = useState<"idle" | "paying" | "done">("idle");
 
   function handleUpgrade() {
-    setState("paying");
-    // Simulate payment processing — in production, redirect to Stripe checkout
-    setTimeout(() => {
-      activatePro();
-      setState("done");
-      setTimeout(onClose, 2000);
-    }, 1500);
+    if (hasStripeConfigured()) {
+      setState("paying");
+      redirectToStripeCheckout();
+      // Page will redirect — no further state needed
+    } else {
+      // Dev/demo fallback: simulate payment
+      setState("paying");
+      setTimeout(() => {
+        activatePro();
+        setState("done");
+        setTimeout(onClose, 2000);
+      }, 1500);
+    }
   }
 
   return (
@@ -62,7 +69,9 @@ export function UpgradeModal({ reason, onClose }: UpgradeModalProps) {
               onClick={handleUpgrade}
               disabled={state === "paying"}
             >
-              {state === "paying" ? "Processing…" : "Upgrade to Pro — $99/year"}
+              {state === "paying"
+                ? (hasStripeConfigured() ? "Redirecting to checkout…" : "Processing…")
+                : "Upgrade to Pro — $99/year"}
             </button>
             <button type="button" className="v2-upgrade-skip" onClick={onClose}>Maybe later</button>
           </>
