@@ -1,6 +1,7 @@
 import { brandConfig, type ThemeMode, type ThemePalette } from "../brandConfig";
 
 export const THEME_STORAGE_KEY = `${brandConfig.appSlug}-theme-mode`;
+export const THEME_SOURCE_KEY = `${brandConfig.appSlug}-theme-source`;
 export const THEME_PALETTE_STORAGE_KEY = `${brandConfig.appSlug}-theme-palette`;
 export const AUTH_MODE_KEY = `${brandConfig.appSlug}-auth-mode`;
 
@@ -32,6 +33,18 @@ export function readThemePalettePreference(): ThemePalette {
   }
 
   return "orangeRidge";
+}
+
+export function readThemeSourcePreference(): "system" | ThemeMode {
+  if (typeof window === "undefined") return "system";
+  try {
+    const src = window.localStorage.getItem(THEME_SOURCE_KEY);
+    if (src === "light" || src === "dark" || src === "system") return src;
+    // Infer from existing mode key: if a mode was explicitly saved, treat as manual
+    const mode = window.localStorage.getItem(THEME_STORAGE_KEY);
+    if (mode === "light" || mode === "dark") return mode;
+  } catch {}
+  return "system";
 }
 
 export function readAuthModePreference(): "login" | "signup" {

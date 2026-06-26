@@ -1,8 +1,10 @@
-import { type CSSProperties, useState } from "react";
+import { type CSSProperties, useEffect, useState } from "react";
 import {
   ArrowLeft,
   Award,
   BadgeCheck,
+  Bookmark,
+  BookmarkCheck,
   CheckCircle2,
   ChevronDown,
   ExternalLink,
@@ -21,6 +23,7 @@ import {
 } from "lucide-react";
 import { tradeOptions } from "../../data";
 import type { Trade } from "../../types";
+import { usePersona } from "../persona/usePersona";
 import {
   communityBadgeLabels,
   netScore,
@@ -55,6 +58,15 @@ export interface CommunityAnswer {
   verifiedFix: boolean;
 }
 
+export type PostType = "question" | "sub-request" | "safety" | "general";
+
+export interface ShopTalkReply {
+  id: string;
+  author: string;
+  text: string;
+  createdAt: string;
+}
+
 export interface CommunityPost {
   id: number;
   title: string;
@@ -68,6 +80,10 @@ export interface CommunityPost {
   replies: CommunityAnswer[];
   createdAt: string;
   status: "Open" | "Verified Fix" | "Needs a pro answer";
+  type?: PostType;
+  subTrade?: string;
+  subLocation?: string;
+  subRate?: string;
 }
 
 export type PostFlair = "Question" | "Discussion" | "Code Talk" | "Compliance" | "Tip" | "Humor";
@@ -171,6 +187,13 @@ const FLAIR_CONFIG: Record<PostFlair, { color: string; description: string }> = 
   "Humor": { color: "#888", description: "Keep it trade-relevant" },
 };
 
+const POST_TYPE_CHIPS: { type: PostType; emoji: string; label: string }[] = [
+  { type: "question", emoji: "❓", label: "Question" },
+  { type: "sub-request", emoji: "🔧", label: "Looking for Sub" },
+  { type: "safety", emoji: "⚠️", label: "Safety Alert" },
+  { type: "general", emoji: "💬", label: "General" },
+];
+
 function ShopTalkNewPostModal({
   profile,
   selectedJobTrade,
@@ -186,12 +209,16 @@ function ShopTalkNewPostModal({
   initialTitle?: string;
   initialBody?: string;
   onClose: () => void;
-  onSubmit: (flair: PostFlair, title: string, trade: Trade | "General", body: string) => void;
+  onSubmit: (flair: PostFlair, title: string, trade: Trade | "General", body: string, postType: PostType, subTrade?: string, subLocation?: string, subRate?: string) => void;
 }) {
   const [flair, setFlair] = useState<PostFlair>(initialFlair);
   const [title, setTitle] = useState(initialTitle);
   const [trade, setTrade] = useState<Trade | "General">(selectedJobTrade);
   const [body, setBody] = useState(initialBody);
+  const [postType, setPostType] = useState<PostType>("general");
+  const [subTrade, setSubTrade] = useState("");
+  const [subLocation, setSubLocation] = useState("");
+  const [subRate, setSubRate] = useState("");
   const canSubmit = title.trim().length > 0 && body.trim().length > 0;
   const tradeOptions: (Trade | "General")[] = ["General", ...specialtyOptions];
 
@@ -201,6 +228,19 @@ function ShopTalkNewPostModal({
         <div className="new-post-modal-header">
           <h2>Create a post</h2>
           <button type="button" className="icon-button" onClick={onClose} aria-label="Close"><X size={18} /></button>
+        </div>
+
+        <div className="v2-st-type-selector">
+          {POST_TYPE_CHIPS.map((chip) => (
+            <button
+              key={chip.type}
+              type="button"
+              className={`v2-st-type-chip${postType === chip.type ? " is-active" : ""}`}
+              onClick={() => setPostType(chip.type)}
+            >
+              {chip.emoji} {chip.label}
+            </button>
+          ))}
         </div>
 
         <div className="new-post-flair-picker">
@@ -250,9 +290,54 @@ function ShopTalkNewPostModal({
           />
         </label>
 
+        {postType === "sub-request" && (
+          <div className="v2-st-sub-fields">
+            <input
+              type="text"
+              className="v2-st-sub-input"
+              placeholder="Trade needed (e.g. Plumber, Electrician)"
+              value={subTrade}
+              onChange={(e) => setSubTrade(e.target.value)}
+            />
+            <input
+              type="text"
+              className="v2-st-sub-input"
+              placeholder="Location (City or zip code)"
+              value={subLocation}
+              onChange={(e) => setSubLocation(e.target.value)}
+            />
+            <input
+              type="text"
+              className="v2-st-sub-input"
+              placeholder="Rate (e.g. $400/day or $55/hr)"
+              value={subRate}
+              onChange={(e) => setSubRate(e.target.value)}
+            />
+          </div>
+        )}
+
         <div className="new-post-modal-footer">
           <small>Posting as {profile.displayName}</small>
-          <button type="button" className="primary-action" onClick={() => { if (canSubmit) { onSubmit(flair, title.trim(), trade, body.trim()); onClose(); } }} disabled={!canSubmit}>
+          <button
+            type="button"
+            className="primary-action"
+            onClick={() => {
+              if (canSubmit) {
+                onSubmit(
+                  flair,
+                  title.trim(),
+                  trade,
+                  body.trim(),
+                  postType,
+                  postType === "sub-request" ? subTrade : undefined,
+                  postType === "sub-request" ? subLocation : undefined,
+                  postType === "sub-request" ? subRate : undefined,
+                );
+                onClose();
+              }
+            }}
+            disabled={!canSubmit}
+          >
             <Send size={15} />
             Post
           </button>
@@ -295,8 +380,9 @@ export function ShopTalkView({
   onAddAnswer: (postId: number, body: string) => void;
   onVerifyAnswer: (postId: number, answerId: number) => void;
   onReportPost: (postId: number, reason: CommunityReport["reason"]) => void;
-  onNewPost: (flair: PostFlair, title: string, trade: Trade | "General", body: string) => void;
+  onNewPost: (flair: PostFlair, title: string, trade: Trade | "General", body: string, postType: PostType, subTrade?: string, subLocation?: string, subRate?: string) => void;
 }) {
+  const persona = usePersona();
   const [activeTab, setActiveTab] = useState<"talk" | "news">("talk");
   const [sortMode, setSortMode] = useState<"hot" | "new" | "unanswered">("hot");
   const [tradeFilter, setTradeFilter] = useState("All trades");
@@ -310,6 +396,21 @@ export function ShopTalkView({
   const [liveNews, setLiveNews] = useState<NewsItem[]>([]);
   const [newsLoading, setNewsLoading] = useState(false);
   const [newsFetched, setNewsFetched] = useState(false);
+  const [flairFilter, setFlairFilter] = useState<PostFlair | "All">("All");
+  const [bookmarkedIds, setBookmarkedIds] = useState<Set<number>>(() => {
+    try { return new Set(JSON.parse(localStorage.getItem("rivt.bookmarks.v1") ?? "[]") as number[]); }
+    catch { return new Set(); }
+  });
+  const [showBookmarked, setShowBookmarked] = useState(false);
+  const [locallyAnswered, setLocallyAnswered] = useState<Set<number>>(new Set());
+  const [filterType, setFilterType] = useState<PostType | "all">("all");
+  const [expandedReplyPostId, setExpandedReplyPostId] = useState<string | null>(null);
+  const [replyDrafts, setReplyDrafts] = useState<Record<string, string>>({});
+  const [shopTalkReplies, setShopTalkReplies] = useState<Record<string, ShopTalkReply[]>>(() => {
+    try { return JSON.parse(localStorage.getItem("rivt.shopTalkReplies.v1") ?? "{}") as Record<string, ShopTalkReply[]>; }
+    catch { return {}; }
+  });
+  const replyAuthorName = profile.displayName || "Anonymous";
   const displayNews = liveNews.length ? liveNews : newsItems;
   const [selectedNewsId, setSelectedNewsId] = useState(displayNews[0]?.id ?? 0);
   const [mobileDetail, setMobileDetail] = useState(false);
@@ -329,6 +430,46 @@ export function ShopTalkView({
       return b.id - a.id;
     });
   const allReportReasons: CommunityReport["reason"][] = ["Misinformation", "Safety concern", "Spam", "Harassment"];
+
+  function toggleBookmark(postId: number) {
+    setBookmarkedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(postId)) next.delete(postId); else next.add(postId);
+      try { localStorage.setItem("rivt.bookmarks.v1", JSON.stringify([...next])); } catch {}
+      return next;
+    });
+  }
+
+  useEffect(() => {
+    try { localStorage.setItem("rivt.shopTalkReplies.v1", JSON.stringify(shopTalkReplies)); } catch {}
+  }, [shopTalkReplies]);
+
+  function sendReply(postId: string) {
+    const text = (replyDrafts[postId] ?? "").trim();
+    if (!text) return;
+    const newReply: ShopTalkReply = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      author: replyAuthorName,
+      text,
+      createdAt: new Date().toISOString(),
+    };
+    setShopTalkReplies(prev => {
+      const existing = prev[postId] ?? [];
+      return { ...prev, [postId]: [...existing, newReply] };
+    });
+    setReplyDrafts(prev => ({ ...prev, [postId]: "" }));
+  }
+
+  function relativeTime(iso: string): string {
+    const diffMs = Date.now() - new Date(iso).getTime();
+    const diffMin = Math.floor(diffMs / 60000);
+    if (diffMin < 1) return "just now";
+    if (diffMin < 60) return `${diffMin}m ago`;
+    const diffH = Math.floor(diffMin / 60);
+    if (diffH < 24) return `${diffH}h ago`;
+    const diffD = Math.floor(diffH / 24);
+    return `${diffD}d ago`;
+  }
 
   async function activateNews() {
     setActiveTab("news");
@@ -356,6 +497,12 @@ export function ShopTalkView({
     if (answerQueueOnly && !((post.trade === primaryTrade || post.trade === "General") && needsAnswer)) return false;
     const tradeMatches = tradeFilter === "All trades" || post.trade === tradeFilter;
     if (!tradeMatches) return false;
+    if (flairFilter !== "All" && post.flair !== flairFilter) return false;
+    if (showBookmarked && !bookmarkedIds.has(post.id)) return false;
+    if (filterType !== "all") {
+      const postEffectiveType: PostType = post.type ?? "general";
+      if (postEffectiveType !== filterType) return false;
+    }
     if (!normalizedTalkQuery) return true;
 
     const searchable = [
@@ -385,6 +532,11 @@ export function ShopTalkView({
     if (a.status === "Needs a pro answer" && b.status !== "Needs a pro answer") return -1;
     if (a.status !== "Needs a pro answer" && b.status === "Needs a pro answer") return 1;
     return netScore(b) - netScore(a);
+  }).sort((a, b) => {
+    if (!persona) return 0;
+    const aMatch = (a.trade === persona.trade || a.trade === "General") ? 0 : 1;
+    const bMatch = (b.trade === persona.trade || b.trade === "General") ? 0 : 1;
+    return aMatch - bMatch;
   });
   const selectedPost = filteredPosts.find((p) => p.id === selectedPostId) ?? filteredPosts[0];
   const selectedNews = filteredNews.find((n) => n.id === selectedNewsId) ?? filteredNews[0];
@@ -484,8 +636,8 @@ export function ShopTalkView({
           initialTitle={newsDiscussContext ? newsDiscussContext.headline.slice(0, 120) : ""}
           initialBody={newsDiscussContext ? `Via ${newsDiscussContext.source} · ${newsDiscussContext.date}\n\n` : ""}
           onClose={() => { setNewPostOpen(false); setNewsDiscussContext(null); }}
-          onSubmit={(flair, title, trade, body) => {
-            onNewPost(flair, title, trade, body);
+          onSubmit={(flair, title, trade, body, postType, subTrade, subLocation, subRate) => {
+            onNewPost(flair, title, trade, body, postType, subTrade, subLocation, subRate);
             setNewPostOpen(false);
             setNewsDiscussContext(null);
           }}
@@ -653,8 +805,60 @@ export function ShopTalkView({
                     <button type="button" onClick={() => setAnswerQueueOnly(false)}>Clear</button>
                   </div>
                 )}
+                <div className="shop-talk-flair-row">
+                  {(["All", "Question", "Discussion", "Tip", "Code Talk", "Compliance", "Humor"] as const).map(flair => (
+                    <button
+                      key={flair}
+                      type="button"
+                      className={flairFilter === flair ? "flair-chip active" : "flair-chip"}
+                      onClick={() => setFlairFilter(flair)}
+                    >
+                      {flair}
+                    </button>
+                  ))}
+                </div>
+                <div className="shop-talk-bookmark-filter">
+                  <button
+                    type="button"
+                    className={showBookmarked ? "shop-talk-saved-btn active" : "shop-talk-saved-btn"}
+                    onClick={() => setShowBookmarked(v => !v)}
+                  >
+                    {showBookmarked ? <BookmarkCheck size={13} /> : <Bookmark size={13} />}
+                    Saved ({bookmarkedIds.size})
+                  </button>
+                  {showBookmarked && (
+                    <button type="button" className="shop-talk-clear-filter-btn" onClick={() => setShowBookmarked(false)}>
+                      <X size={11} />
+                      Clear
+                    </button>
+                  )}
+                </div>
               </div>
 
+              <div className="v2-st-filter-row" aria-label="Filter by post type">
+                {([
+                  { type: "all" as const, emoji: "", label: "All" },
+                  { type: "question" as const, emoji: "❓", label: "Questions" },
+                  { type: "sub-request" as const, emoji: "🔧", label: "Sub Requests" },
+                  { type: "safety" as const, emoji: "⚠️", label: "Safety" },
+                  { type: "general" as const, emoji: "💬", label: "General" },
+                ] satisfies { type: PostType | "all"; emoji: string; label: string }[]).map((f) => (
+                  <button
+                    key={f.type}
+                    type="button"
+                    className={`v2-st-filter-pill${filterType === f.type ? " is-active" : ""}`}
+                    onClick={() => setFilterType(f.type)}
+                  >
+                    {f.emoji ? `${f.emoji} ` : ""}{f.label}
+                  </button>
+                ))}
+              </div>
+
+              {persona && (
+                <div className="shop-talk-persona-header">
+                  <span>{persona.emoji} {persona.shopTalkLabel}</span>
+                </div>
+              )}
               <div className="shop-post-list">
                 {sortedPosts.length === 0 ? (
                   <EmptyState
@@ -664,29 +868,101 @@ export function ShopTalkView({
                     actionLabel={talkQuery ? "Clear search" : "Ask a question"}
                     onAction={() => talkQuery ? setTalkQuery("") : setNewPostOpen(true)}
                   />
-                ) : sortedPosts.map((post) => (
-                  <button
-                    type="button"
-                    key={post.id}
-                    className={post.id === (selectedPost?.id ?? 0) ? "shop-post-card selected" : "shop-post-card"}
-                    onClick={() => { setSelectedPostId(post.id); setMobileDetail(true); }}
-                  >
-                    <div className="shop-post-card-meta">
-                      {post.flair && (
-                        <span className={`flair-pill flair-${post.flair.toLowerCase().replace(/\s/g, "-")}`}>
-                          {post.flair}
-                        </span>
+                ) : sortedPosts.map((post) => {
+                  const postKey = String(post.id);
+                  const postEffectiveType: PostType = post.type ?? "general";
+                  const postReplies = shopTalkReplies[postKey] ?? [];
+                  const isExpanded = expandedReplyPostId === postKey;
+
+                  const typeChip = POST_TYPE_CHIPS.find(c => c.type === postEffectiveType);
+                  const typeBadgeClass = `v2-st-type-badge ${postEffectiveType}`;
+
+                  return (
+                    <div key={post.id} className={post.id === (selectedPost?.id ?? 0) ? "shop-post-card selected" : "shop-post-card"}>
+                      <button
+                        type="button"
+                        className="shop-post-card-clickable"
+                        onClick={() => { setSelectedPostId(post.id); setMobileDetail(true); }}
+                      >
+                        {typeChip && (
+                          <span className={typeBadgeClass}>
+                            {typeChip.emoji} {typeChip.label}
+                          </span>
+                        )}
+                        <div className="shop-post-card-meta">
+                          {post.flair && (
+                            <span className={`flair-pill flair-${post.flair.toLowerCase().replace(/\s/g, "-")}`}>
+                              {post.flair}
+                            </span>
+                          )}
+                          <span className="post-trade-label">{post.trade}</span>
+                          {locallyAnswered.has(post.id) && (
+                            <span className="shop-talk-answered-badge">Answered ✓</span>
+                          )}
+                        </div>
+                        <strong>{post.title}</strong>
+                        {(post.subTrade || post.subLocation || post.subRate) && (
+                          <div className="v2-st-sub-details">
+                            {post.subTrade && <span className="v2-st-sub-pill">🔧 {post.subTrade}</span>}
+                            {post.subLocation && <span className="v2-st-sub-pill">📍 {post.subLocation}</span>}
+                            {post.subRate && <span className="v2-st-sub-pill">💰 {post.subRate}</span>}
+                          </div>
+                        )}
+                        <div className="shop-post-card-stats">
+                          <span>Score {netScore(post)}</span>
+                          <span>{post.replies.length} replies</span>
+                          <span>{post.createdAt}</span>
+                        </div>
+                      </button>
+                      <button
+                        type="button"
+                        className={bookmarkedIds.has(post.id) ? "shop-post-bookmark active" : "shop-post-bookmark"}
+                        aria-label={bookmarkedIds.has(post.id) ? "Remove bookmark" : "Bookmark this post"}
+                        onClick={(e) => { e.stopPropagation(); toggleBookmark(post.id); }}
+                      >
+                        {bookmarkedIds.has(post.id) ? <BookmarkCheck size={14} /> : <Bookmark size={14} />}
+                      </button>
+                      <button
+                        type="button"
+                        className="v2-st-reply-btn"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setExpandedReplyPostId(isExpanded ? null : postKey);
+                        }}
+                      >
+                        💬 Reply ({postReplies.length})
+                      </button>
+                      {isExpanded && (
+                        <div className="v2-st-replies">
+                          {postReplies.map((reply) => (
+                            <div key={reply.id} className="v2-st-reply-item">
+                              <span className="v2-st-reply-author">{reply.author}</span>
+                              <span className="v2-st-reply-text">{reply.text}</span>
+                              <div className="v2-st-reply-time">{relativeTime(reply.createdAt)}</div>
+                            </div>
+                          ))}
+                          <div className="v2-st-reply-input-row">
+                            <input
+                              type="text"
+                              className="v2-st-reply-input"
+                              placeholder="Write a reply..."
+                              value={replyDrafts[postKey] ?? ""}
+                              onChange={(e) => setReplyDrafts(prev => ({ ...prev, [postKey]: e.target.value }))}
+                              onKeyDown={(e) => { if (e.key === "Enter") sendReply(postKey); }}
+                            />
+                            <button
+                              type="button"
+                              className="v2-st-reply-send-btn"
+                              onClick={() => sendReply(postKey)}
+                            >
+                              Send
+                            </button>
+                          </div>
+                        </div>
                       )}
-                      <span className="post-trade-label">{post.trade}</span>
                     </div>
-                    <strong>{post.title}</strong>
-                    <div className="shop-post-card-stats">
-                      <span>Score {netScore(post)}</span>
-                      <span>{post.replies.length} replies</span>
-                      <span>{post.createdAt}</span>
-                    </div>
-                  </button>
-                ))}
+                  );
+                })}
               </div>
             </>
           ) : (
@@ -800,10 +1076,26 @@ export function ShopTalkView({
                   <h2>{selectedPost.title}</h2>
                   <p>{selectedPost.body}</p>
                 </div>
-                <span className={selectedPost.status === "Verified Fix" ? "state-pill verified" : "state-pill"}>
-                  {selectedPost.status}
-                </span>
+                <div className="shop-question-header-actions">
+                  <span className={selectedPost.status === "Verified Fix" ? "state-pill verified" : "state-pill"}>
+                    {selectedPost.status}
+                  </span>
+                  <button
+                    type="button"
+                    className={bookmarkedIds.has(selectedPost.id) ? "shop-detail-bookmark active" : "shop-detail-bookmark"}
+                    aria-label={bookmarkedIds.has(selectedPost.id) ? "Remove bookmark" : "Bookmark this post"}
+                    onClick={() => toggleBookmark(selectedPost.id)}
+                  >
+                    {bookmarkedIds.has(selectedPost.id) ? <BookmarkCheck size={16} /> : <Bookmark size={16} />}
+                  </button>
+                </div>
               </div>
+              {locallyAnswered.has(selectedPost.id) && (
+                <div className="shop-talk-answered-banner">
+                  <CheckCircle2 size={15} />
+                  You marked this as answered
+                </div>
+              )}
 
               <div className="shop-question-actions">
                 <button
@@ -834,12 +1126,27 @@ export function ShopTalkView({
                     {reason}
                   </button>
                 ))}
+                {selectedPost.author === profile.displayName &&
+                  selectedPost.status !== "Verified Fix" &&
+                  !locallyAnswered.has(selectedPost.id) && (
+                  <button
+                    type="button"
+                    className="shop-talk-mark-answered-btn"
+                    onClick={() => setLocallyAnswered(prev => new Set([...prev, selectedPost.id]))}
+                  >
+                    <CheckCircle2 size={15} />
+                    Mark as answered
+                  </button>
+                )}
               </div>
 
               <section className="answer-composer">
-                <div>
-                  <span>Answer as {profile.displayName}</span>
-                  <strong>{profileBadges.length ? profileBadges.join(", ") : "New contributor"}</strong>
+                <div className="answer-composer-byline">
+                  <div>
+                    <span>Answer as {profile.displayName}</span>
+                    <strong>{profileBadges.length ? profileBadges.join(", ") : "New contributor"}</strong>
+                  </div>
+                  <span className="answer-trade-tag">{selectedPost.trade}</span>
                 </div>
                 <div className="answer-guidance-card">
                   <strong>Good answers get specific.</strong>
@@ -847,14 +1154,19 @@ export function ShopTalkView({
                 </div>
                 <textarea
                   value={answerDraft}
-                  onChange={(e) => setAnswerDraft(e.target.value)}
+                  onChange={(e) => setAnswerDraft(e.target.value.slice(0, 1000))}
                   rows={4}
                   placeholder="Share the field habit, safety check, tool setup, or closeout proof that would prevent a callback."
                 />
-                <button type="button" className="primary-action" onClick={submitAnswer} disabled={!answerDraft.trim()}>
-                  <Send size={17} />
-                  Post answer
-                </button>
+                <div className="answer-composer-footer">
+                  <span className={answerDraft.length > 900 ? "answer-char-count is-near-limit" : "answer-char-count"}>
+                    {1000 - answerDraft.length}
+                  </span>
+                  <button type="button" className="primary-action" onClick={submitAnswer} disabled={!answerDraft.trim()}>
+                    <Send size={17} />
+                    Post answer
+                  </button>
+                </div>
               </section>
 
               <section className="answer-list" aria-label="Community answers">

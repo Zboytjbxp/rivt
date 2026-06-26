@@ -1,20 +1,41 @@
 import {
+  AlertTriangle,
   BadgeCheck,
   Bell,
+  BellOff,
+  Calendar,
+  Camera,
   CheckCircle,
   CreditCard,
+  Download,
+  Eye,
+  FileText,
   GraduationCap,
   LogOut,
   Mail,
+  Monitor,
   MonitorSmartphone,
+  Moon,
+  Plus,
   ShieldCheck,
   Sparkles,
   Star,
+  Sun,
+  Tag,
+  Trash2,
   UserCheck,
   XCircle,
+  Zap,
 } from "lucide-react";
+import { createPortal } from "react-dom";
 import { useState } from "react";
+import { usePro } from "../pro/usePro";
+import { usePushNotifications } from "../notifications/usePushNotifications";
+import { UpgradeModal } from "../pro/UpgradeModal";
+import { usePersona, useTradeModeToggle } from "../persona/usePersona";
+import "../pro/pro.css";
 import { brandConfig, type ThemeMode, type ThemePalette } from "../../brandConfig";
+import type { ThemeSource } from "../../app-shell/useAppTheme";
 import { tradeOptions } from "../../data";
 import type { Role, Trade } from "../../types";
 import { Avatar, MetricTile, PageHeader } from "../../components/ui";
@@ -74,8 +95,10 @@ interface ProfileHubProps {
   shoutOutCount: number;
   feedbackCount: number;
   themeMode: ThemeMode;
+  themeSource: ThemeSource;
   themePalette: ThemePalette;
   onToggleTheme: () => void;
+  onSetThemeSource: (source: ThemeSource) => void;
   onSelectThemePalette: (palette: ThemePalette) => void;
   onReviewConsent: () => void;
   onLogout: () => void;
@@ -148,7 +171,7 @@ function QuizModal({
     ? answers.filter((sel, i) => sel === quiz.questions[i].correctIndex).length
     : 0;
 
-  return (
+  return createPortal(
     <div className="v2-quiz-overlay" role="dialog" aria-modal="true">
       <div className="v2-quiz-modal">
         {result ? (
@@ -236,7 +259,8 @@ function QuizModal({
           </>
         )}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
@@ -303,7 +327,434 @@ function SafetyTrainingSection({
   );
 }
 
+// ── Rate Card ─────────────────────────────────────────────────────────────────
+
+const rateCardKey = "rivt.rateCard.v1";
+
+interface RateCardEntry {
+  id: string;
+  trade: string;
+  hourlyRate: number;
+  dayRate: number;
+  minimumCharge: number;
+  notes: string;
+}
+
+function readRateCard(): RateCardEntry[] {
+  try {
+    const stored = localStorage.getItem(rateCardKey);
+    if (!stored) return [];
+    const parsed = JSON.parse(stored) as RateCardEntry[];
+    return Array.isArray(parsed) ? parsed.slice(0, 12) : [];
+  } catch { return []; }
+}
+
+function persistRateCard(entries: RateCardEntry[]) {
+  try { localStorage.setItem(rateCardKey, JSON.stringify(entries.slice(0, 12))); } catch {}
+}
+
+// ── Cert & License Tracker ────────────────────────────────────────────────────
+
+const certKey = "rivt.certs.v1";
+
+interface CertEntry {
+  id: string;
+  name: string;
+  number: string;
+  issuer: string;
+  issueDate: string;
+  expiryDate: string;
+  notes: string;
+}
+
+function readCerts(): CertEntry[] {
+  try {
+    const stored = localStorage.getItem(certKey);
+    if (!stored) return [];
+    const parsed = JSON.parse(stored) as CertEntry[];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch { return []; }
+}
+
+function persistCerts(certs: CertEntry[]) {
+  try { localStorage.setItem(certKey, JSON.stringify(certs.slice(0, 50))); } catch {}
+}
+
+function certStatus(expiryDate: string): "ok" | "soon" | "expired" {
+  if (!expiryDate) return "ok";
+  const expiry = new Date(expiryDate).getTime();
+  const now = Date.now();
+  if (expiry < now) return "expired";
+  if (expiry - now < 60 * 24 * 60 * 60 * 1000) return "soon";
+  return "ok";
+}
+
+function CertTrackerSection() {
+  const [certs, setCerts] = useState<CertEntry[]>(readCerts);
+  const [name, setName] = useState("");
+  const [number, setNumber] = useState("");
+  const [issuer, setIssuer] = useState("");
+  const [issueDate, setIssueDate] = useState("");
+  const [expiryDate, setExpiryDate] = useState("");
+  const [notes, setNotes] = useState("");
+  const [notice, setNotice] = useState("");
+
+  function addCert() {
+    if (!name.trim()) return;
+    const cert: CertEntry = {
+      id: crypto.randomUUID(),
+      name: name.trim(),
+      number: number.trim(),
+      issuer: issuer.trim(),
+      issueDate,
+      expiryDate,
+      notes: notes.trim(),
+    };
+    const next = [cert, ...certs];
+    setCerts(next);
+    persistCerts(next);
+    setName(""); setNumber(""); setIssuer(""); setIssueDate(""); setExpiryDate(""); setNotes("");
+    setNotice("Certificate saved.");
+    setTimeout(() => setNotice(""), 3000);
+  }
+
+  function removeCert(id: string) {
+    const next = certs.filter((c) => c.id !== id);
+    setCerts(next);
+    persistCerts(next);
+  }
+
+  const expiredCount = certs.filter((c) => certStatus(c.expiryDate) === "expired").length;
+  const soonCount = certs.filter((c) => certStatus(c.expiryDate) === "soon").length;
+
+  return (
+    <section className="v2-profile-panel v2-profile-panel-wide v2-cert-tracker-section">
+      <header>
+        <span>Licenses &amp; certs {expiredCount > 0 ? <span className="v2-cert-alert-badge is-expired">{expiredCount} expired</span> : soonCount > 0 ? <span className="v2-cert-alert-badge is-soon">{soonCount} expiring soon</span> : null}</span>
+        <strong>License &amp; Certificate Tracker</strong>
+      </header>
+      <div className="v2-cert-form">
+        <div className="v2-cert-inputs">
+          <label>Cert / license name<input value={name} onChange={(e) => setName(e.target.value)} placeholder="Electrician license, OSHA 10, CPR…" /></label>
+          <label>License #<input value={number} onChange={(e) => setNumber(e.target.value)} placeholder="Optional" /></label>
+          <label>Issuer<input value={issuer} onChange={(e) => setIssuer(e.target.value)} placeholder="State board, OSHA, Red Cross…" /></label>
+          <label>Issue date<input type="date" value={issueDate} onChange={(e) => setIssueDate(e.target.value)} /></label>
+          <label>Expiry date<input type="date" value={expiryDate} onChange={(e) => setExpiryDate(e.target.value)} /></label>
+          <label>Notes<input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Coverage area, endorsements…" /></label>
+        </div>
+        {notice ? <p className="v2-profile-action-message is-success" role="status">{notice}</p> : null}
+        <button type="button" className="v2-primary-button" disabled={!name.trim()} onClick={addCert}><Plus size={14} />Add certificate</button>
+      </div>
+      {certs.length ? (
+        <div className="v2-cert-list">
+          {certs.map((cert) => {
+            const status = certStatus(cert.expiryDate);
+            return (
+              <article key={cert.id} className={`v2-cert-item cert-status-${status}`}>
+                <div className="v2-cert-item-head">
+                  {status === "expired" ? <AlertTriangle size={16} className="v2-cert-status-icon" /> : status === "soon" ? <AlertTriangle size={16} className="v2-cert-status-icon is-soon" /> : <BadgeCheck size={16} className="v2-cert-status-icon is-ok" />}
+                  <strong>{cert.name}</strong>
+                  {cert.number ? <span className="v2-cert-number">#{cert.number}</span> : null}
+                  <button type="button" aria-label={`Remove ${cert.name}`} onClick={() => removeCert(cert.id)}><Trash2 size={13} /></button>
+                </div>
+                <div className="v2-cert-item-meta">
+                  {cert.issuer ? <small>{cert.issuer}</small> : null}
+                  {cert.issueDate ? <small><Calendar size={11} /> Issued {cert.issueDate}</small> : null}
+                  {cert.expiryDate ? <small className={status !== "ok" ? `is-${status}` : ""}><Calendar size={11} /> {status === "expired" ? "Expired" : "Expires"} {cert.expiryDate}</small> : null}
+                  {cert.notes ? <small>{cert.notes}</small> : null}
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      ) : (
+        <p className="v2-profile-note">No certs saved yet. Track your licenses, trade certs, OSHA cards, and insurance here.</p>
+      )}
+    </section>
+  );
+}
+
+function RateCardSection() {
+  const [rates, setRates] = useState<RateCardEntry[]>(readRateCard);
+  const [trade, setTrade] = useState("");
+  const [hourly, setHourly] = useState("");
+  const [day, setDay] = useState("");
+  const [minimum, setMinimum] = useState("");
+  const [notes, setNotes] = useState("");
+  const [notice, setNotice] = useState("");
+
+  function addRate() {
+    if (!trade.trim()) return;
+    const entry: RateCardEntry = {
+      id: crypto.randomUUID(),
+      trade: trade.trim(),
+      hourlyRate: parseFloat(hourly) || 0,
+      dayRate: parseFloat(day) || 0,
+      minimumCharge: parseFloat(minimum) || 0,
+      notes: notes.trim(),
+    };
+    const next = [entry, ...rates.filter((r) => r.trade.toLowerCase() !== trade.trim().toLowerCase())];
+    setRates(next);
+    persistRateCard(next);
+    setTrade("");
+    setHourly("");
+    setDay("");
+    setMinimum("");
+    setNotes("");
+    setNotice("Rate saved.");
+    setTimeout(() => setNotice(""), 3000);
+  }
+
+  function deleteRate(id: string) {
+    const next = rates.filter((r) => r.id !== id);
+    setRates(next);
+    persistRateCard(next);
+  }
+
+  function fmt(n: number) {
+    return n > 0 ? `$${n.toLocaleString()}` : "—";
+  }
+
+  return (
+    <section className="v2-profile-panel v2-profile-panel-wide v2-rate-card-section">
+      <header>
+        <span>Rate card</span>
+        <strong>Your standard rates by trade</strong>
+      </header>
+      <div className="v2-rate-card-form">
+        <div className="v2-rate-card-inputs">
+          <label>Trade<input value={trade} onChange={(e) => setTrade(e.target.value)} placeholder="Electrical, framing…" /></label>
+          <label>Hourly ($)<input type="number" min="0" value={hourly} onChange={(e) => setHourly(e.target.value)} placeholder="75" /></label>
+          <label>Day rate ($)<input type="number" min="0" value={day} onChange={(e) => setDay(e.target.value)} placeholder="600" /></label>
+          <label>Minimum ($)<input type="number" min="0" value={minimum} onChange={(e) => setMinimum(e.target.value)} placeholder="250" /></label>
+          <label className="is-wide">Notes<input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Includes basic materials, travel within 30 mi…" /></label>
+        </div>
+        {notice ? <p className="v2-rate-card-notice" role="status">{notice}</p> : null}
+        <button type="button" className="v2-primary-button" disabled={!trade.trim()} onClick={addRate}><Plus size={14} />Save rate</button>
+      </div>
+      {rates.length ? (
+        <div className="v2-rate-card-list">
+          {rates.map((r) => (
+            <article key={r.id} className="v2-rate-card-item">
+              <div className="v2-rate-card-item-head">
+                <Tag size={15} />
+                <strong>{r.trade}</strong>
+                <button type="button" aria-label={`Delete ${r.trade} rate`} onClick={() => deleteRate(r.id)}><Trash2 size={13} /></button>
+              </div>
+              <div className="v2-rate-card-item-rates">
+                <div><span>Hourly</span><strong>{fmt(r.hourlyRate)}</strong></div>
+                <div><span>Day rate</span><strong>{fmt(r.dayRate)}</strong></div>
+                <div><span>Minimum</span><strong>{fmt(r.minimumCharge)}</strong></div>
+              </div>
+              {r.notes ? <p className="v2-rate-card-item-notes">{r.notes}</p> : null}
+            </article>
+          ))}
+        </div>
+      ) : (
+        <p className="v2-profile-note">No rates saved yet. Add your standard rates so contractors know what to expect when they view your profile.</p>
+      )}
+    </section>
+  );
+}
+
+// ── Profile Completion Card ───────────────────────────────────────────────────
+
+function ProfileCompletionCard({ profile }: { profile: AccountProfile }) {
+  const checks = [
+    { label: "Display name", done: Boolean(profile.displayName?.trim()) },
+    { label: "Location", done: Boolean(profile.location?.trim()) },
+    { label: "Bio", done: (() => { try { const c = JSON.parse(localStorage.getItem("rivt.canonicalProfile.v1") ?? "null"); return Boolean(c?.bio?.trim()); } catch { return false; } })() },
+    { label: "Trade specialty", done: Boolean(profile.specialties?.length > 0) },
+    { label: "Rate card", done: (() => { try { const r = JSON.parse(localStorage.getItem("rivt.rateCard.v1") ?? "null"); return Array.isArray(r) && r.length > 0; } catch { return false; } })() },
+    { label: "Safety cert", done: (() => { try { const c = JSON.parse(localStorage.getItem("rivt.certs.v1") ?? "[]"); return Array.isArray(c) && c.length > 0; } catch { return false; } })() },
+  ];
+  const score = Math.round((checks.filter((c) => c.done).length / checks.length) * 100);
+  const missing = checks.filter((c) => !c.done).slice(0, 3);
+  return (
+    <div className="v2-profile-completion">
+      <header>
+        <span>Profile {score}% complete</span>
+        {score === 100 && <span className="v2-profile-complete-badge">Complete ✓</span>}
+      </header>
+      <div className="v2-profile-completion-bar">
+        <div className="v2-profile-completion-fill" style={{ width: `${score}%` }} />
+      </div>
+      {missing.length > 0 && (
+        <ul className="v2-profile-missing">
+          {missing.map((m) => <li key={m.label}>Add {m.label}</li>)}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+// ── Portfolio Section ─────────────────────────────────────────────────────────
+
+function PortfolioSection({ onNavigate }: { onNavigate?: (dest: string) => void }) {
+  return (
+    <div className="v2-portfolio-section">
+      <header>
+        <Camera size={16} />
+        <span>Portfolio &amp; Work Samples</span>
+      </header>
+      <p>Your job photos from RIVT albums are your portfolio. They're private by default — only you see them.</p>
+      <button type="button" className="v2-primary-button" onClick={() => onNavigate?.("tools")}>
+        View job photos
+      </button>
+    </div>
+  );
+}
+
+// ── Service Area Selector ─────────────────────────────────────────────────────
+
+function ServiceAreaSelector() {
+  const options = ["10", "25", "50", "100", "Any"];
+  const [radius, setRadius] = useState(() => {
+    try { return localStorage.getItem("rivt.serviceRadius.v1") ?? "25"; } catch { return "25"; }
+  });
+  function pick(r: string) {
+    setRadius(r);
+    try { localStorage.setItem("rivt.serviceRadius.v1", r); } catch {}
+  }
+  return (
+    <div className="v2-service-area">
+      <span className="v2-service-area-label">Service radius</span>
+      <div className="v2-service-area-chips">
+        {options.map((opt) => (
+          <button
+            key={opt}
+            type="button"
+            className={`v2-service-chip${radius === opt ? " active" : ""}`}
+            onClick={() => pick(opt)}
+          >
+            {opt === "Any" ? "Any distance" : `${opt} mi`}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Data Export Button ────────────────────────────────────────────────────────
+
+function DataExportButton() {
+  function handleExport() {
+    const data: Record<string, unknown> = {};
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key?.startsWith("rivt.")) {
+        try { data[key] = JSON.parse(localStorage.getItem(key) ?? "null"); } catch { data[key] = localStorage.getItem(key); }
+      }
+    }
+    const json = JSON.stringify(data, null, 2);
+    const blob = new Blob([json], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `rivt-data-${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+  return (
+    <div className="v2-data-export">
+      <button type="button" className="v2-btn-secondary" onClick={handleExport}>
+        <Download size={15} /> Export my data
+      </button>
+      <small>Downloads all your locally-stored RIVT data as JSON.</small>
+    </div>
+  );
+}
+
 const themePaletteOrder = Object.keys(brandConfig.theme.palettes) as ThemePalette[];
+
+function PushNotificationsCard() {
+  const { permission, subscribed, busy, error, requestAndSubscribe, sendTestNotification, unsubscribe } = usePushNotifications();
+
+  return (
+    <div className="v2-push-card">
+      <div className="v2-push-header">
+        <div>
+          <strong>Push notifications</strong>
+          <p>Get alerted for new job matches, messages, and Shop Talk replies.</p>
+        </div>
+        {subscribed
+          ? <span className="v2-push-status is-on">On</span>
+          : <span className="v2-push-status">Off</span>}
+      </div>
+
+      {permission === "denied" && (
+        <p className="v2-push-denied">Blocked in browser settings. Open site settings to allow notifications.</p>
+      )}
+
+      {error && <p className="v2-push-error">{error}</p>}
+
+      <div className="v2-push-actions">
+        {!subscribed && permission !== "denied" && (
+          <button
+            type="button"
+            className="v2-primary-button"
+            onClick={requestAndSubscribe}
+            disabled={busy}
+          >
+            <Bell size={14} />
+            {busy ? "Enabling…" : "Enable notifications"}
+          </button>
+        )}
+        {subscribed && (
+          <>
+            <button type="button" className="v2-primary-button" onClick={sendTestNotification}>
+              <Bell size={14} />Test notification
+            </button>
+            <button type="button" onClick={unsubscribe}>
+              <BellOff size={14} />Turn off
+            </button>
+          </>
+        )}
+      </div>
+
+      {!import.meta.env.VITE_VAPID_PUBLIC_KEY && subscribed && (
+        <p className="v2-push-note">Local notifications active. Set VITE_VAPID_PUBLIC_KEY to enable background push alerts.</p>
+      )}
+    </div>
+  );
+}
+
+function PlanCard() {
+  const { isPro, activatedAt } = usePro();
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
+
+  return (
+    <div className="v2-plan-card">
+      <div className="v2-plan-header">
+        <span className="v2-plan-name">{isPro ? "RIVT Pro" : "Free plan"}</span>
+        {isPro ? (
+          <span className="v2-pro-badge"><Zap size={10} />Pro</span>
+        ) : (
+          <span style={{fontSize:12,color:'var(--v2-text-muted)'}}>Free</span>
+        )}
+      </div>
+      {!isPro && (
+        <>
+          <div className="v2-plan-limits">
+            <div className="v2-plan-limit-row"><span>Photo albums</span><span>Up to 50 photos</span></div>
+            <div className="v2-plan-limit-row"><span>History</span><span>90 days</span></div>
+            <div className="v2-plan-limit-row"><span>Punch lists</span><span>1 active list</span></div>
+            <div className="v2-plan-limit-row"><span>CSV export</span><span>Pro only</span></div>
+          </div>
+          <button type="button" className="v2-plan-upgrade-btn" onClick={() => setUpgradeOpen(true)}>
+            Upgrade to Pro — $99/year
+          </button>
+        </>
+      )}
+      {isPro && activatedAt && (
+        <p style={{fontSize:13,color:'var(--v2-text-muted)',margin:0}}>
+          Pro since {new Date(activatedAt).toLocaleDateString("en-US", { month: "long", year: "numeric" })}
+        </p>
+      )}
+      {upgradeOpen && <UpgradeModal onClose={() => setUpgradeOpen(false)} />}
+    </div>
+  );
+}
 
 export function ProfileHub({
   view,
@@ -320,8 +771,10 @@ export function ProfileHub({
   shoutOutCount,
   feedbackCount,
   themeMode,
+  themeSource,
   themePalette,
   onToggleTheme,
+  onSetThemeSource,
   onSelectThemePalette,
   onReviewConsent,
   onLogout,
@@ -331,6 +784,20 @@ export function ProfileHub({
   onRevokeOtherSessions,
   onQuizComplete,
 }: ProfileHubProps) {
+  const persona = usePersona();
+  const [tradeModeOn, toggleTradeMode] = useTradeModeToggle();
+  const [notificationPrefs, setNotificationPrefs] = useState({
+    jobMatches: true,
+    messages: true,
+    shoutOuts: true,
+    safetyUpdates: false,
+  });
+  const [showPreview, setShowPreview] = useState(false);
+
+  const [feedbackCategory, setFeedbackCategory] = useState<string | null>(null);
+  const [feedbackMessage, setFeedbackMessage] = useState("");
+  const [feedbackSent, setFeedbackSent] = useState(false);
+
   const [draft, setDraft] = useState<ProfileUpdateInput>({
     displayName: profile.displayName,
     headline: canonicalProfile?.headline ?? "",
@@ -382,21 +849,21 @@ export function ProfileHub({
     }));
   }
 
+  const profileViewDescriptions: Record<string, string> = {
+    "Safety & Training": "OSHA-aligned modules. Pass each quiz to earn a certificate.",
+    "Trust & Legal": "Consent, legal agreements, and your trust status.",
+    "Reviews": "Shout-outs and reputation from people you've worked with.",
+    "Settings": "Manage your account, profile, and preferences.",
+    "Feedback": "Share feedback to help improve RIVT.",
+  };
+
   if (view === "Safety & Training") {
     return (
       <section className="v2-profile-page" aria-label="Safety & Training">
         <PageHeader
           className="v2-profile-header"
           title="Safety & Training"
-          description="OSHA-aligned modules. Pass each quiz to earn a certificate."
-          actions={
-            <div className="v2-profile-header-actions">
-              <button type="button" className="v2-secondary-button" onClick={onLogout}>
-                <LogOut size={16} />
-                Sign out
-              </button>
-            </div>
-          }
+          description={profileViewDescriptions["Safety & Training"]}
         />
         <SafetyTrainingSection
           safetyQuizResults={safetyQuizResults}
@@ -407,33 +874,216 @@ export function ProfileHub({
     );
   }
 
+  function submitFeedback() {
+    if (!feedbackMessage.trim() || !feedbackCategory) return;
+    setFeedbackSent(true);
+    setFeedbackMessage("");
+    setFeedbackCategory(null);
+    setTimeout(() => setFeedbackSent(false), 4000);
+  }
+
+  if (view === "Feedback") {
+    return (
+      <section className="v2-profile-page" aria-label="Feedback">
+        <PageHeader
+          className="v2-profile-header"
+          title="Feedback"
+          description="Share what's working, what's confusing, and what you need next."
+        />
+        <div className="v2-feedback-layout">
+          <section className="v2-profile-panel v2-feedback-form-panel">
+            <header>
+              <span>Submit feedback</span>
+              <strong>What's on your mind?</strong>
+            </header>
+            <div className="v2-feedback-body">
+              <div className="v2-feedback-categories" role="group" aria-label="Feedback type">
+                {(["Bug", "Confusing", "Feature", "Pricing", "Other"] as const).map((cat) => (
+                  <button
+                    key={cat}
+                    type="button"
+                    className={feedbackCategory === cat ? "v2-feedback-cat is-selected" : "v2-feedback-cat"}
+                    onClick={() => setFeedbackCategory(cat)}
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
+              <textarea
+                className="v2-feedback-textarea"
+                value={feedbackMessage}
+                onChange={(e) => setFeedbackMessage(e.target.value.slice(0, 2000))}
+                rows={5}
+                placeholder="Describe the issue, feature request, or confusion in as much detail as you can. Real specifics help most."
+              />
+              <div className="v2-feedback-footer">
+                <span className={feedbackMessage.length > 1800 ? "v2-feedback-count is-near" : "v2-feedback-count"}>
+                  {2000 - feedbackMessage.length}
+                </span>
+                <button
+                  type="button"
+                  className="v2-primary-button"
+                  disabled={!feedbackMessage.trim() || !feedbackCategory}
+                  onClick={submitFeedback}
+                >
+                  {feedbackSent ? <><Sparkles size={15} /> Sent!</> : "Send feedback"}
+                </button>
+              </div>
+            </div>
+          </section>
+
+          <section className="v2-profile-panel v2-feedback-history-panel">
+            <header>
+              <span>Submission history</span>
+              <strong>{feedbackCount > 0 ? `${feedbackCount} note${feedbackCount === 1 ? "" : "s"} on file` : "Nothing submitted yet"}</strong>
+            </header>
+            <div className="v2-profile-list">
+              <article><Sparkles size={16} /><span>Beta feedback shapes future releases</span></article>
+              <article><ShieldCheck size={16} /><span>Notes are reviewed by the RIVT team</span></article>
+              <article><Mail size={16} /><span>Replies go to {profile.email || "your account email"}</span></article>
+            </div>
+          </section>
+        </div>
+      </section>
+    );
+  }
+
+  if (view === "Trust & Legal") {
+    return (
+      <section className="v2-profile-page" aria-label="Trust & Legal">
+        <PageHeader
+          className="v2-profile-header"
+          title="Trust & Legal"
+          description="Consent status, your agreements, and data rights."
+        />
+        <div className="v2-trust-grid">
+          <section className="v2-profile-panel v2-trust-status-card">
+            <header>
+              <span>Consent status</span>
+              <strong className={trustReady ? "is-ready" : "is-pending"}>{trustReady ? "Current" : "Action needed"}</strong>
+            </header>
+            <div className="v2-profile-list">
+              <article>
+                <ShieldCheck size={16} className={trustReady ? "icon-success" : "icon-warn"} />
+                <span>Platform consent {trustReady ? "signed and current" : "not yet reviewed"}</span>
+              </article>
+              <article>
+                <BadgeCheck size={16} />
+                <span>Identity readiness: {trustReady ? "ready" : "incomplete"}</span>
+              </article>
+              <article>
+                <CreditCard size={16} />
+                <span>Payment method: {trustReady ? "on file" : "not added"}</span>
+              </article>
+            </div>
+            {!trustReady && (
+              <div className="v2-trust-action">
+                <button type="button" className="v2-primary-button" onClick={onReviewConsent}>
+                  <ShieldCheck size={15} />
+                  Review consent
+                </button>
+              </div>
+            )}
+          </section>
+
+          <section className="v2-profile-panel">
+            <header>
+              <span>Legal documents</span>
+              <strong>Your agreements</strong>
+            </header>
+            <div className="v2-profile-list">
+              <article className="v2-trust-doc-link">
+                <FileText size={16} />
+                <span>Terms of Service</span>
+              </article>
+              <article className="v2-trust-doc-link">
+                <FileText size={16} />
+                <span>Privacy Policy</span>
+              </article>
+              <article className="v2-trust-doc-link">
+                <FileText size={16} />
+                <span>Subcontractor Agreement</span>
+              </article>
+            </div>
+          </section>
+
+          <section className="v2-profile-panel v2-profile-panel-wide">
+            <header>
+              <span>Your data</span>
+              <strong>What we store and what you control</strong>
+            </header>
+            <div className="v2-trust-data-grid">
+              <div className="v2-trust-data-item">
+                <Mail size={15} />
+                <div>
+                  <strong>Contact info</strong>
+                  <span>Email, phone (if provided), location</span>
+                </div>
+              </div>
+              <div className="v2-trust-data-item">
+                <CreditCard size={15} />
+                <div>
+                  <strong>Work history</strong>
+                  <span>Accepted jobs, records, and closeout data</span>
+                </div>
+              </div>
+              <div className="v2-trust-data-item">
+                <BadgeCheck size={15} />
+                <div>
+                  <strong>Safety certifications</strong>
+                  <span>Quiz results and earned certificates</span>
+                </div>
+              </div>
+              <div className="v2-trust-data-item">
+                <Star size={15} />
+                <div>
+                  <strong>Reputation signals</strong>
+                  <span>Shout-outs, badges, and reviews</span>
+                </div>
+              </div>
+            </div>
+            <div className="v2-trust-data-actions">
+              <button type="button" className="v2-secondary-button">
+                <Download size={15} />
+                Request data export
+              </button>
+              <button type="button" className="v2-secondary-button v2-trust-signout-btn" onClick={onLogout}>
+                <LogOut size={15} />
+                Sign out
+              </button>
+            </div>
+          </section>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section className="v2-profile-page" aria-label={view}>
       <PageHeader
         className="v2-profile-header"
         title={view}
-        description={brandConfig.tagline}
-        actions={
-        <div className="v2-profile-header-actions">
-          <button type="button" className="v2-primary-button" onClick={onReviewConsent}>
-            <ShieldCheck size={16} />
-            {trustReady ? "Review consent" : "Review consent"}
-          </button>
-          <button type="button" className="v2-secondary-button" onClick={onLogout}>
-            <LogOut size={16} />
-            Sign out
-          </button>
-        </div>
-        }
+        description={profileViewDescriptions[view] ?? brandConfig.tagline}
       />
 
       <div className="v2-profile-grid">
+        {/* Profile completion + portfolio — Settings only, at the very top */}
+        {view === "Settings" ? (
+          <div className="v2-profile-panel v2-profile-panel-wide v2-profile-top-cards">
+            <ProfileCompletionCard profile={profile} />
+            <PortfolioSection />
+          </div>
+        ) : null}
+
         <section className="v2-profile-panel v2-profile-summary">
           <Avatar name={profile.displayName || profile.organization || "RIVT member"} size="lg" className="v2-profile-avatar" />
           <div>
             <span>{role === "contractor" ? "Contractor profile" : "Tradesperson profile"}</span>
             <h2>{profile.organization || profile.displayName}</h2>
             <p>{profile.location}</p>
+            {persona && (
+              <span className="v2-trade-badge">{persona.emoji} {persona.trade}</span>
+            )}
             <div className="v2-profile-specialties">
               {profile.specialties.length
                 ? profile.specialties.map((specialty) => <span key={specialty}>{specialty}</span>)
@@ -448,100 +1098,14 @@ export function ProfileHub({
             <strong>Basics and access</strong>
           </header>
           <div className="v2-profile-facts">
-            <MetricTile icon={<Mail size={16} />} value={profile.email} label="Email" />
+            <MetricTile icon={<Mail size={16} />} value={profile.email || "—"} label="Email" />
             <MetricTile icon={<CreditCard size={16} />} value={profile.plan} label="Plan" />
             <MetricTile icon={<UserCheck size={16} />} value={profile.authMethod} label="Signup method" />
             <MetricTile icon={<BadgeCheck size={16} />} value={trustReady ? "Ready" : "Needs review"} label="Trust" />
           </div>
         </section>
 
-        <section className="v2-profile-panel">
-          <header>
-            <span>Themes</span>
-            <strong>Tool-inspired appearance</strong>
-          </header>
-          <div className="v2-profile-theme-row">
-            <button type="button" className="v2-theme-toggle" onClick={onToggleTheme}>
-              <Bell size={16} />
-              {themeMode === "dark" ? "Dark mode" : "Light mode"}
-            </button>
-            <div className="v2-theme-palettes">
-              {themePaletteOrder.map((palette) => (
-                <button
-                  key={palette}
-                  type="button"
-                  className={palette === themePalette ? "is-selected" : ""}
-                  onClick={() => onSelectThemePalette(palette)}
-                  aria-label={`Use ${brandConfig.theme.palettes[palette].label} theme`}
-                >
-                  <span aria-hidden="true" style={{ background: `linear-gradient(135deg, ${brandConfig.theme.palettes[palette].swatches[0]}, ${brandConfig.theme.palettes[palette].swatches[1]})` }} />
-                </button>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <section className="v2-profile-panel">
-          <header>
-            <span>Trust</span>
-            <strong>Readiness and records</strong>
-          </header>
-          <div className="v2-profile-list">
-            <article><ShieldCheck size={16} /><span>Consent {trustReady ? "ready" : "pending"}</span></article>
-            <article><CreditCard size={16} /><span>{recordCount} records saved</span></article>
-            <article><Sparkles size={16} /><span>{communityBadges.length} community badge{communityBadges.length === 1 ? "" : "s"}</span></article>
-          </div>
-        </section>
-
-        <section className="v2-profile-panel">
-          <header>
-            <span>Training</span>
-            <strong>Safety and proof</strong>
-          </header>
-          <div className="v2-profile-list">
-            <article><GraduationCap size={16} /><span>{trainingProgress}% complete</span></article>
-            <article><BadgeCheck size={16} /><span>{safetyCertCount} safety module{safetyCertCount === 1 ? "" : "s"}</span></article>
-            <article><Star size={16} /><span>{shoutOutCount} shout-out{shoutOutCount === 1 ? "" : "s"}</span></article>
-          </div>
-        </section>
-
-        <section className="v2-profile-panel v2-profile-panel-wide">
-          <header>
-            <span>Community</span>
-            <strong>Profile signals</strong>
-          </header>
-          <div className="v2-profile-badge-row">
-            {communityBadges.length ? communityBadges.map((badge) => <span key={badge}>{badge}</span>) : <span>New contributor</span>}
-          </div>
-          {feedbackCount > 0 ? (
-            <p className="v2-profile-note">{feedbackCount} beta feedback note{feedbackCount === 1 ? "" : "s"}.</p>
-          ) : null}
-        </section>
-
-        <section className="v2-profile-panel v2-profile-panel-wide v2-profile-reputation">
-          <header>
-            <span>Reputation momentum</span>
-            <strong>Proof that follows the work</strong>
-          </header>
-          <div className="v2-profile-reputation-grid">
-            <article>
-              <Star size={18} />
-              <strong>{shoutOutCount} shout-out{shoutOutCount === 1 ? "" : "s"}</strong>
-              <span>Peer proof</span>
-            </article>
-            <article>
-              <Sparkles size={18} />
-              <strong>{communityBadges.length || "No"} badge{communityBadges.length === 1 ? "" : "s"}</strong>
-              <span>Community</span>
-            </article>
-            <article>
-              <CreditCard size={18} />
-              <strong>{recordCount} saved record{recordCount === 1 ? "" : "s"}</strong>
-              <span>Work history</span>
-            </article>
-          </div>
-        </section>
-
+        {/* Profile editor — near top in Settings so it's immediately reachable */}
         {view === "Settings" && canonicalProfile ? (
           <section className="v2-profile-panel v2-profile-panel-wide v2-profile-editor">
             <header>
@@ -560,6 +1124,7 @@ export function ProfileHub({
               <label><span>Contact visibility</span><select value={draft.contactEmailVisibility} onChange={(event) => setDraft({ ...draft, contactEmailVisibility: event.target.value as ProfileUpdateInput["contactEmailVisibility"] })}><option value="private">Private</option><option value="connections">Connections only</option></select></label>
               <label><span>Phone visibility</span><select value={draft.phoneVisibility} onChange={(event) => setDraft({ ...draft, phoneVisibility: event.target.value as ProfileUpdateInput["phoneVisibility"] })}><option value="private">Private</option><option value="connections">Connections only</option></select></label>
             </div>
+            <ServiceAreaSelector />
             <div className="v2-profile-trade-picker" aria-label="Trade specialties">
               {tradeOptions.filter((trade) => trade !== "All trades").map((trade) => (
                 <button key={trade} type="button" className={draft.specialties.includes(trade as Trade) ? "is-selected" : ""} onClick={() => toggleSpecialty(trade as Trade)}>{trade}</button>
@@ -570,6 +1135,9 @@ export function ProfileHub({
                 <strong>{canonicalProfile.emailVerified ? "Email verified" : "Email verification pending"}</strong>
                 <span>{canonicalProfile.visibility === "network" ? "Visible to the RIVT network" : "Private until you publish"}</span>
               </div>
+              <button type="button" className="v2-secondary-button" onClick={() => setShowPreview(true)}>
+                <Eye size={15} /> Preview
+              </button>
               <button type="button" className="v2-secondary-button" onClick={() => void runAccountAction(() => onSetProfileVisibility(canonicalProfile.visibility === "network" ? "private" : "network"))}>
                 {canonicalProfile.visibility === "network" ? "Make private" : "Publish profile"}
               </button>
@@ -577,9 +1145,181 @@ export function ProfileHub({
                 {actionState === "saving" ? "Saving..." : "Save profile"}
               </button>
             </div>
+            {actionMessage ? <p className={`v2-profile-action-message is-${actionState}`} role="status">{actionMessage}</p> : null}
           </section>
         ) : null}
 
+        <section className="v2-profile-panel">
+          <header>
+            <span>Themes</span>
+            <strong>Tool-inspired appearance</strong>
+          </header>
+          <div className="v2-profile-theme-row">
+            <div className="v2-theme-source-group" role="group" aria-label="Theme mode">
+              {(["system", "light", "dark"] as ThemeSource[]).map((src) => {
+                const Icon = src === "system" ? Monitor : src === "light" ? Sun : Moon;
+                return (
+                  <button
+                    key={src}
+                    type="button"
+                    className={themeSource === src ? "v2-theme-source-btn is-active" : "v2-theme-source-btn"}
+                    aria-pressed={themeSource === src}
+                    onClick={() => onSetThemeSource(src)}
+                  >
+                    <Icon size={14} />
+                    {src.charAt(0).toUpperCase() + src.slice(1)}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="v2-theme-palettes">
+              {themePaletteOrder.map((palette) => (
+                <button
+                  key={palette}
+                  type="button"
+                  className={palette === themePalette ? "is-selected" : ""}
+                  onClick={() => onSelectThemePalette(palette)}
+                  aria-label={`Use ${brandConfig.theme.palettes[palette].label} theme`}
+                >
+                  <span aria-hidden="true" style={{ background: `linear-gradient(135deg, ${brandConfig.theme.palettes[palette].swatches[0]}, ${brandConfig.theme.palettes[palette].swatches[1]})` }} />
+                </button>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Trust / Training / Community / Reputation — shown on their own views, not cluttering Settings */}
+        {view !== "Settings" ? (
+          <>
+            <section className="v2-profile-panel">
+              <header>
+                <span>Trust</span>
+                <strong>Readiness and records</strong>
+              </header>
+              <div className="v2-profile-list">
+                <article><ShieldCheck size={16} /><span>Consent {trustReady ? "ready" : "pending"}</span></article>
+                <article><CreditCard size={16} /><span>{recordCount} records saved</span></article>
+                <article><Sparkles size={16} /><span>{communityBadges.length} community badge{communityBadges.length === 1 ? "" : "s"}</span></article>
+              </div>
+            </section>
+
+            <section className="v2-profile-panel">
+              <header>
+                <span>Training</span>
+                <strong>Safety and proof</strong>
+              </header>
+              <div className="v2-profile-list">
+                <article><GraduationCap size={16} /><span>{trainingProgress}% complete</span></article>
+                <article><BadgeCheck size={16} /><span>{safetyCertCount} safety module{safetyCertCount === 1 ? "" : "s"}</span></article>
+                <article><Star size={16} /><span>{shoutOutCount} shout-out{shoutOutCount === 1 ? "" : "s"}</span></article>
+              </div>
+            </section>
+
+            <section className="v2-profile-panel v2-profile-panel-wide">
+              <header>
+                <span>Community</span>
+                <strong>Profile signals</strong>
+              </header>
+              <div className="v2-profile-badge-row">
+                {communityBadges.length ? communityBadges.map((badge) => <span key={badge}>{badge}</span>) : <span>New contributor</span>}
+              </div>
+              {feedbackCount > 0 ? (
+                <p className="v2-profile-note">{feedbackCount} beta feedback note{feedbackCount === 1 ? "" : "s"}.</p>
+              ) : null}
+            </section>
+
+            <section className="v2-profile-panel v2-profile-panel-wide v2-profile-reputation">
+              <header>
+                <span>Reputation momentum</span>
+                <strong>Proof that follows the work</strong>
+              </header>
+              <div className="v2-profile-reputation-grid">
+                <article>
+                  <Star size={18} />
+                  <strong>{shoutOutCount} shout-out{shoutOutCount === 1 ? "" : "s"}</strong>
+                  <span>Peer proof</span>
+                </article>
+                <article>
+                  <Sparkles size={18} />
+                  <strong>{communityBadges.length || "No"} badge{communityBadges.length === 1 ? "" : "s"}</strong>
+                  <span>Community</span>
+                </article>
+                <article>
+                  <CreditCard size={18} />
+                  <strong>{recordCount} saved record{recordCount === 1 ? "" : "s"}</strong>
+                  <span>Work history</span>
+                </article>
+              </div>
+            </section>
+          </>
+        ) : null}
+
+        {/* Subscription plan — Settings only */}
+        {view === "Settings" ? (
+          <section className="v2-profile-panel v2-profile-panel-wide">
+            <header>
+              <span>Subscription</span>
+              <strong>Your current plan</strong>
+            </header>
+            <PlanCard />
+          </section>
+        ) : null}
+
+        {/* Notification preferences — Settings only */}
+        {view === "Settings" ? (
+          <section className="v2-profile-panel v2-profile-panel-wide v2-notification-prefs">
+            <header>
+              <span>Notifications</span>
+              <strong>What alerts you</strong>
+            </header>
+            <PushNotificationsCard />
+            <div className="v2-trade-mode-toggle">
+              <div>
+                <strong>Trade personalization</strong>
+                <p>Tailor the app — job feed, Shop Talk, and tools — to your trade.</p>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={tradeModeOn}
+                className={`v2-toggle-switch${tradeModeOn ? " is-on" : ""}`}
+                onClick={toggleTradeMode}
+              />
+            </div>
+            <div className="v2-notif-pref-list">
+              {([
+                { key: "jobMatches" as const, label: "Job matches", detail: "New jobs that match your trades and service area" },
+                { key: "messages" as const, label: "Messages", detail: "New messages on active job threads" },
+                { key: "shoutOuts" as const, label: "Shout-outs", detail: "When someone leaves you a review" },
+                { key: "safetyUpdates" as const, label: "Safety updates", detail: "OSHA code changes relevant to your trades" },
+              ]).map(({ key, label, detail }) => (
+                <label key={key} className="v2-notif-pref-row">
+                  <div>
+                    <strong>{label}</strong>
+                    <span>{detail}</span>
+                  </div>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={notificationPrefs[key]}
+                    className={notificationPrefs[key] ? "v2-notif-toggle is-on" : "v2-notif-toggle"}
+                    onClick={() => setNotificationPrefs((prev) => ({ ...prev, [key]: !prev[key] }))}
+                  >
+                    <span aria-hidden="true" />
+                  </button>
+                </label>
+              ))}
+            </div>
+          </section>
+        ) : null}
+
+        {/* Cert tracker — Settings only */}
+        {view === "Settings" ? <CertTrackerSection /> : null}
+
+        {/* Rate card — Settings only, tradesperson-facing */}
+        {view === "Settings" ? <RateCardSection /> : null}
+
+        {/* Sessions — Settings only */}
         {view === "Settings" ? (
           <section className="v2-profile-panel v2-profile-panel-wide v2-profile-sessions">
             <header>
@@ -593,15 +1333,73 @@ export function ProfileHub({
                   <div><strong>{session.deviceLabel}{session.current ? " · This device" : ""}</strong><span>Last active {new Date(session.lastSeenAt).toLocaleString()}</span></div>
                   {!session.current ? <button type="button" className="v2-secondary-button" onClick={() => void runAccountAction(() => onRevokeSession(session.id))}>Sign out</button> : null}
                 </article>
-              )) : <p className="v2-profile-note">No active device sessions were returned.</p>}
+              )) : <p className="v2-profile-note">Only this device is signed in.</p>}
             </div>
             {sessions.some((session) => !session.current) ? (
               <button type="button" className="v2-secondary-button v2-revoke-others" onClick={() => void runAccountAction(onRevokeOtherSessions)}>Sign out other devices</button>
             ) : null}
-            {actionMessage ? <p className={`v2-profile-action-message is-${actionState}`} role="status">{actionMessage}</p> : null}
+            {actionMessage && !canonicalProfile ? <p className={`v2-profile-action-message is-${actionState}`} role="status">{actionMessage}</p> : null}
+          </section>
+        ) : null}
+
+        {/* Sign out — at the bottom of Settings so it's available but not the first thing you see */}
+        {view === "Settings" ? (
+          <section className="v2-profile-panel v2-profile-panel-wide v2-settings-signout-section">
+            <div>
+              <strong>Sign out</strong>
+              <span>You'll be signed out of this session on this device.</span>
+            </div>
+            <button type="button" className="v2-secondary-button" onClick={onLogout}>
+              <LogOut size={16} />
+              Sign out
+            </button>
+          </section>
+        ) : null}
+
+        {/* Data export — very last item in Settings */}
+        {view === "Settings" ? (
+          <section className="v2-profile-panel v2-profile-panel-wide">
+            <DataExportButton />
           </section>
         ) : null}
       </div>
+
+      {showPreview && createPortal(
+        <div className="v2-profile-preview-backdrop" onClick={() => setShowPreview(false)} role="dialog" aria-modal="true" aria-label="Public profile preview">
+          <div className="v2-profile-preview-card" onClick={(e) => e.stopPropagation()}>
+            <header className="v2-profile-preview-header">
+              <span>Public profile preview</span>
+              <button type="button" className="v2-profile-preview-close" onClick={() => setShowPreview(false)} aria-label="Close preview">✕</button>
+            </header>
+            <div className="v2-profile-preview-hero">
+              <Avatar name={profile.displayName || profile.organization || "RIVT member"} size="lg" className="v2-profile-preview-avatar" />
+              <div>
+                <h2>{profile.displayName || profile.organization}</h2>
+                {canonicalProfile?.headline && <p className="v2-profile-preview-headline">{canonicalProfile.headline}</p>}
+                <span className="v2-profile-preview-location">{profile.location || canonicalProfile?.serviceAreaCity}</span>
+              </div>
+            </div>
+            {canonicalProfile?.bio && <p className="v2-profile-preview-bio">{canonicalProfile.bio}</p>}
+            <div className="v2-profile-preview-stats">
+              <div><strong>{shoutOutCount}</strong><span>Shout-outs</span></div>
+              <div><strong>{safetyCertCount}</strong><span>Certs</span></div>
+              <div><strong>{recordCount}</strong><span>Records</span></div>
+            </div>
+            {profile.specialties.length ? (
+              <div className="v2-profile-preview-trades">
+                {profile.specialties.map((t) => <span key={t}>{t}</span>)}
+              </div>
+            ) : null}
+            {communityBadges.length ? (
+              <div className="v2-profile-preview-badges">
+                {communityBadges.map((b) => <span key={b}>{b}</span>)}
+              </div>
+            ) : null}
+            <p className="v2-profile-preview-note">This is how contractors see your profile when it's published to the RIVT network.</p>
+          </div>
+        </div>,
+        document.body,
+      )}
     </section>
   );
 }

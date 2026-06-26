@@ -7,6 +7,13 @@ import {
   useMemo,
   useRef,
   useState } from "react";
+import { OfflineBanner } from "./components/OfflineBanner";
+import { GlobalSearch } from "./components/GlobalSearch";
+import { LocalSetupPrompt } from "./components/LocalSetupPrompt";
+import { ReportViewer } from "./features/report/ReportViewer";
+import "./components/OfflineBanner.css";
+import "./components/GlobalSearch.css";
+import "./components/LocalSetupPrompt.css";
 import { talent } from "./data";
 import { brandConfig } from "./brandConfig";
 import type { ApplicationRecord, Job, JobId, Role, Trade } from "./types";
@@ -58,6 +65,7 @@ import type {
   CommunityPost,
   CommunityReport,
   PostFlair,
+  PostType,
 } from "./features/shop-talk/ShopTalkView";
 import { communityBadgeLabels } from "./features/shop-talk/community-utils";
 import { communityPromptPosts, fallbackNewsItems } from "./features/shop-talk/fallback-data";
@@ -171,9 +179,11 @@ function App() {
   const [shoutOuts, setShoutOuts] = useState<ShoutOut[]>([]);
   const {
     handleSelectThemePalette,
+    handleSetThemeSource,
     handleToggleTheme,
     themeMode,
     themePalette,
+    themeSource,
   } = useAppTheme();
   const {
     activityItems,
@@ -189,6 +199,8 @@ function App() {
   });
   const [isGuest, setIsGuest] = useState(false);
   const [guestPromptOpen, setGuestPromptOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [localSetupOpen, setLocalSetupOpen] = useState(() => localStorage.getItem("rivt.localSetupDone.v1") !== "true");
   const {
     communityReactionStatus,
     communityReactionSummary,
@@ -360,12 +372,14 @@ function App() {
         listConversations(),
         listNotifications(),
       ]);
-      setInboxConversations(conversationRows);
-      setInboxNotifications(notificationRows.notifications);
+      const safeConversations = Array.isArray(conversationRows) ? conversationRows : [];
+      const safeNotifications = Array.isArray(notificationRows?.notifications) ? notificationRows.notifications : [];
+      setInboxConversations(safeConversations);
+      setInboxNotifications(safeNotifications);
       setSelectedConversationId((current) => (
-        current && conversationRows.some((conversation) => conversation.id === current)
+        current && safeConversations.some((conversation) => conversation.id === current)
           ? current
-          : conversationRows[0]?.id ?? null
+          : safeConversations[0]?.id ?? null
       ));
     } catch (error) {
       setInboxError(error instanceof Error ? error.message : "Inbox could not be loaded.");
@@ -382,7 +396,7 @@ function App() {
     setInboxError(null);
     try {
       const messages = await listConversationMessages(conversationId);
-      setInboxMessages(messages);
+      setInboxMessages(Array.isArray(messages) ? messages : []);
     } catch (error) {
       setInboxMessages([]);
       setInboxError(error instanceof Error ? error.message : "Messages could not be loaded.");
@@ -419,6 +433,18 @@ function App() {
       void Notification.requestPermission();
     }
   }, [activeView]);
+
+  // Cmd+K / Ctrl+K global search shortcut
+  useEffect(() => {
+    const h = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        setSearchOpen(true);
+      }
+    };
+    window.addEventListener("keydown", h);
+    return () => window.removeEventListener("keydown", h);
+  }, []);
 
   // Show browser notification on new unread inbox messages
   const prevUnreadRef = useRef(0);
@@ -717,7 +743,7 @@ function App() {
     );
   }
 
-  function handleNewShopTalkPost(flair: PostFlair, title: string, trade: Trade | "General", body: string) {
+  function handleNewShopTalkPost(flair: PostFlair, title: string, trade: Trade | "General", body: string, postType: PostType, subTrade?: string, subLocation?: string, subRate?: string) {
     setCommunityPosts((current) => [
       {
         id: Date.now(),
@@ -731,6 +757,10 @@ function App() {
         replies: [],
         createdAt: "Just now",
         status: "Open",
+        type: postType,
+        ...(subTrade ? { subTrade } : {}),
+        ...(subLocation ? { subLocation } : {}),
+        ...(subRate ? { subRate } : {}),
       },
       ...current,
     ]);
@@ -1003,6 +1033,12 @@ function App() {
     return <LaunchLoader />;
   }
 
+  // Check for report share URL — publicly accessible, no auth needed
+  const reportParam = new URLSearchParams(window.location.search).get("report");
+  if (reportParam) {
+    return <ReportViewer encoded={reportParam} />;
+  }
+
   const authLinkPath = window.location.pathname;
   if (authLinkPath === "/verify-email" || authLinkPath === "/reset-password") {
     return <AuthLinkFlow mode={authLinkPath === "/verify-email" ? "verify" : "reset"} />;
@@ -1236,8 +1272,10 @@ function App() {
             }
             feedbackCount={feedbackItems.length}
             themeMode={themeMode}
+            themeSource={themeSource}
             themePalette={themePalette}
             onToggleTheme={handleToggleTheme}
+            onSetThemeSource={handleSetThemeSource}
             onSelectThemePalette={handleSelectThemePalette}
             onLogout={handleLogout}
             onSaveProfile={handleSaveProfile}
@@ -1313,6 +1351,7 @@ function App() {
           safetyCertCount={Object.values(safetyQuizResults).filter((r) => r.passed).length}
           safetyModuleCount={safetyQuizData.length}
           themeMode={themeMode}
+          themeSource={themeSource}
           themePalette={themePalette}
           communityBadges={communityBadgeLabels(communityPosts, accountProfile.displayName)}
           shoutOutCount={
@@ -1323,6 +1362,7 @@ function App() {
             ).length
           }
           onToggleTheme={handleToggleTheme}
+          onSetThemeSource={handleSetThemeSource}
           onSelectThemePalette={handleSelectThemePalette}
           onLogout={handleLogout}
           onClose={() => setAccountOpen(false)}
@@ -1349,6 +1389,19 @@ function App() {
           onClose={() => setGuestPromptOpen(false)}
           onSignUp={handleSignUpFromGuest}
         />
+      )}
+
+      <OfflineBanner />
+      {searchOpen && (
+        <GlobalSearch
+          jobs={jobs.map((j) => ({ id: j.id, title: j.title, trade: j.trade, location: j.location, status: j.status }))}
+          open={searchOpen}
+          onClose={() => setSearchOpen(false)}
+          onNavigate={(view) => { handleNavigate(view as Parameters<typeof handleNavigate>[0]); setSearchOpen(false); }}
+        />
+      )}
+      {localSetupOpen && (
+        <LocalSetupPrompt onDone={() => setLocalSetupOpen(false)} />
       )}
     </>
   );

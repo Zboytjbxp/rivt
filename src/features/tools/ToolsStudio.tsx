@@ -1,12 +1,20 @@
 import {
   ArrowLeft,
   ArrowRight,
+  Briefcase,
   Calculator,
+  Car,
+  ClipboardList,
   Camera,
   CheckCircle2,
+  CheckSquare,
   Clipboard,
+  Circle,
+  Clock,
+  CloudSun,
   Copy,
   Download,
+  DollarSign,
   FileText,
   FileUp,
   FolderOpen,
@@ -14,15 +22,28 @@ import {
   LayoutGrid,
   ListChecks,
   Loader2,
+  Lock,
   Mail,
+  MapPin,
   MessageSquare,
+  Navigation,
+  Package,
+  Package2,
   RefreshCw,
   Plus,
   ReceiptText,
   Scale,
+  Search,
+  Share2,
+  Shield,
   Trash2,
+  TrendingDown,
+  TrendingUp,
   Wrench,
 } from "lucide-react";
+import { usePro, getIsPro } from "../pro/usePro";
+import { UpgradeModal } from "../pro/UpgradeModal";
+import { getReportUrl, buildReportFromStorage } from "../report/reportUtils";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { Job } from "../../types";
 import type { PrimaryDestination } from "../../app-shell/types";
@@ -54,7 +75,7 @@ import {
 } from "./album-api";
 import "./tools-studio.css";
 
-type ToolMode = "hub" | "calculator" | "estimate" | "invoice" | "materials" | "daily-log" | "job-photos";
+type ToolMode = "hub" | "calculator" | "estimate" | "invoice" | "materials" | "daily-log" | "job-photos" | "time-tracker" | "expense-logger" | "earnings" | "bid-builder" | "mileage" | "price-book" | "safety-checklist" | "tax-estimator" | "punch-list" | "contracts" | "job-checklist" | "payments";
 
 interface PaymentRecord {
   id: number;
@@ -132,6 +153,37 @@ function ToolCard({
         <small>{detail}</small>
       </span>
       <em>{action}<ArrowRight size={14} /></em>
+    </button>
+  );
+}
+
+function ShareReportButton({ jobTitle }: { jobTitle: string }) {
+  const [copied, setCopied] = useState(false);
+  const isPro = getIsPro();
+
+  async function handleShare() {
+    if (!isPro) return;
+    const data = buildReportFromStorage(jobTitle);
+    const url = getReportUrl(data);
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 3000);
+    } catch {
+      // fallback
+      window.prompt("Copy this link to share with your client:", url);
+    }
+  }
+
+  return (
+    <button
+      type="button"
+      className={`v2-share-report-btn${!isPro ? " is-locked" : ""}`}
+      onClick={() => void handleShare()}
+      title={isPro ? "Copy client report link" : "Pro feature"}
+    >
+      {isPro ? <Share2 size={14} /> : <Lock size={14} />}
+      {copied ? "Link copied!" : "Share report"}
     </button>
   );
 }
@@ -594,6 +646,27 @@ function DailyLogTool({ activeJob, activeWork }: { activeJob: Job | null; active
   const [downloaded, setDownloaded] = useState(false);
   const [notice, setNotice] = useState("");
   const [savingRecord, setSavingRecord] = useState(false);
+  const [wxData, setWxData] = useState<{ temp: number; condition: string } | null>(() => {
+    try { return JSON.parse(localStorage.getItem("rivt.lastWeather.v1") ?? "null") as { temp: number; condition: string } | null; } catch { return null; }
+  });
+
+  useEffect(() => {
+    if (wxData) return;
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition((pos) => {
+      fetch(`https://api.open-meteo.com/v1/forecast?latitude=${pos.coords.latitude}&longitude=${pos.coords.longitude}&current_weather=true&temperature_unit=fahrenheit`)
+        .then((r) => r.json())
+        .then((data: { current_weather?: { temperature: number; weathercode: number } }) => {
+          const cw = data.current_weather;
+          if (!cw) return;
+          const codes: Record<number, string> = { 0: "Clear", 1: "Mostly clear", 2: "Partly cloudy", 3: "Overcast", 45: "Foggy", 51: "Drizzle", 61: "Rain", 71: "Snow", 80: "Showers", 95: "Thunderstorm" };
+          const condition = codes[cw.weathercode] ?? "Partly cloudy";
+          const wx = { temp: Math.round(cw.temperature), condition };
+          setWxData(wx);
+          try { localStorage.setItem("rivt.lastWeather.v1", JSON.stringify(wx)); } catch {}
+        }).catch(() => {});
+    }, () => {});
+  }, [wxData]);
 
   const completedChecks = dailyLogChecklist.filter((item) => draft.checklist[item]).length;
   const recordWork = activeWork.find((work) => work.status === "active") ?? activeWork[0] ?? null;
@@ -713,7 +786,24 @@ function DailyLogTool({ activeJob, activeWork }: { activeJob: Job | null; active
         <div className="v2-tool-input-grid three">
           <label>Date<input type="date" value={draft.date} onChange={(event) => updateDraft("date", event.target.value)} /></label>
           <label>Trade<input value={draft.trade} onChange={(event) => updateDraft("trade", event.target.value)} placeholder="Electrical, HVAC, Carpentry..." /></label>
-          <label>Weather<input value={draft.weather} onChange={(event) => updateDraft("weather", event.target.value)} placeholder="Hot, rain delay, dry..." /></label>
+          <label>Weather
+            <span className="v2-daily-log-weather-row">
+              <input value={draft.weather} onChange={(event) => updateDraft("weather", event.target.value)} placeholder="Hot, rain delay, dry..." />
+              <button
+                type="button"
+                className="v2-daily-log-wx-btn"
+                title={wxData ? `Fill: ${wxData.temp}°F, ${wxData.condition}` : "Fetching weather…"}
+                disabled={!wxData}
+                onClick={() => {
+                  if (!wxData) return;
+                  updateDraft("weather", `${wxData.temp}°F, ${wxData.condition}`);
+                }}
+              >
+                <CloudSun size={14} />
+                Fill weather
+              </button>
+            </span>
+          </label>
           <label>Site / job<input value={draft.site} onChange={(event) => updateDraft("site", event.target.value)} placeholder="Job name or address nickname" /></label>
           <label>Crew count<input type="number" min="0" value={draft.crewCount} onChange={(event) => updateDraft("crewCount", Math.max(0, Number(event.target.value) || 0))} /></label>
           <label>Hours<input type="number" min="0" step="0.5" value={draft.hours} onChange={(event) => updateDraft("hours", Math.max(0, Number(event.target.value) || 0))} /></label>
@@ -804,6 +894,8 @@ function CameraCapture({ onCapture, onClose }: {
   const [error, setError] = useState("");
   const [captureCount, setCaptureCount] = useState(0);
   const [flash, setFlash] = useState(false);
+  const [lastSnapUrl, setLastSnapUrl] = useState<string | null>(null);
+  const lastSnapRef = useRef<string | null>(null);
 
   useEffect(() => {
     let stream: MediaStream | null = null;
@@ -820,7 +912,10 @@ function CameraCapture({ onCapture, onClose }: {
           : "Camera could not be started."
       );
     });
-    return () => { stream?.getTracks().forEach((t) => t.stop()); };
+    return () => {
+      stream?.getTracks().forEach((t) => t.stop());
+      if (lastSnapRef.current) URL.revokeObjectURL(lastSnapRef.current);
+    };
   }, []);
 
   function shoot() {
@@ -834,6 +929,10 @@ function CameraCapture({ onCapture, onClose }: {
     ctx.drawImage(video, 0, 0);
     canvas.toBlob((blob) => {
       if (!blob) return;
+      if (lastSnapRef.current) URL.revokeObjectURL(lastSnapRef.current);
+      const url = URL.createObjectURL(blob);
+      lastSnapRef.current = url;
+      setLastSnapUrl(url);
       onCapture(blob);
       setCaptureCount((n) => n + 1);
       setFlash(true);
@@ -870,6 +969,14 @@ function CameraCapture({ onCapture, onClose }: {
           aria-label="Take photo"
         />
       </div>
+      {lastSnapUrl && (
+        <img
+          key={lastSnapUrl}
+          src={lastSnapUrl}
+          alt="Last photo taken"
+          className="v2-camera-last-snap"
+        />
+      )}
       {captureCount > 0 && (
         <span className="v2-camera-badge">{captureCount} {captureCount === 1 ? "photo" : "photos"}</span>
       )}
@@ -1319,9 +1426,2918 @@ function JobPhotosTool({ activeWork }: { activeWork: CanonicalActiveWork[] }) {
   );
 }
 
+// ── Mileage Logger ───────────────────────────────────────────────────────────
+
+const IRS_RATE_2025 = 0.70;
+const mileageKey = "rivt.mileage.v1";
+
+interface MileageEntry {
+  id: string;
+  date: string;
+  from: string;
+  to: string;
+  jobRef: string;
+  miles: number;
+  purpose: string;
+}
+
+function readMileage(): MileageEntry[] {
+  try {
+    const stored = localStorage.getItem(mileageKey);
+    if (!stored) return [];
+    const parsed = JSON.parse(stored) as MileageEntry[];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch { return []; }
+}
+
+function persistMileage(entries: MileageEntry[]) {
+  try { localStorage.setItem(mileageKey, JSON.stringify(entries.slice(0, 500))); } catch {}
+}
+
+function MileageLoggerTool({ activeJob }: { activeJob: Job | null }) {
+  const [entries, setEntries] = useState<MileageEntry[]>(readMileage);
+  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState(activeJob?.location ?? "");
+  const [jobRef, setJobRef] = useState(activeJob?.title ?? "");
+  const [miles, setMiles] = useState("");
+  const [purpose, setPurpose] = useState("Job travel");
+  const [notice, setNotice] = useState("");
+
+  function addEntry() {
+    if (!miles || parseFloat(miles) <= 0) return;
+    const entry: MileageEntry = {
+      id: crypto.randomUUID(),
+      date,
+      from: from.trim(),
+      to: to.trim(),
+      jobRef: jobRef.trim(),
+      miles: parseFloat(miles),
+      purpose: purpose.trim() || "Job travel",
+    };
+    const next = [entry, ...entries];
+    setEntries(next);
+    persistMileage(next);
+    setFrom("");
+    setMiles("");
+    setNotice("Trip logged.");
+    setTimeout(() => setNotice(""), 2500);
+  }
+
+  function removeEntry(id: string) {
+    const next = entries.filter((e) => e.id !== id);
+    setEntries(next);
+    persistMileage(next);
+  }
+
+  const thisYear = new Date().getFullYear().toString();
+  const yearEntries = entries.filter((e) => e.date.startsWith(thisYear));
+  const yearMiles = yearEntries.reduce((sum, e) => sum + e.miles, 0);
+  const yearDeduction = yearMiles * IRS_RATE_2025;
+  const totalMiles = entries.reduce((sum, e) => sum + e.miles, 0);
+
+  return (
+    <div className="v2-tool-workbench v2-mileage-workbench">
+      <Panel className="v2-tool-panel" eyebrow="Trip log" title="Log mileage">
+        <div className="v2-tool-input-grid three">
+          <label>Date<input type="date" value={date} onChange={(e) => setDate(e.target.value)} /></label>
+          <label>From<input value={from} onChange={(e) => setFrom(e.target.value)} placeholder="Shop, home, supplier…" /></label>
+          <label>To<input value={to} onChange={(e) => setTo(e.target.value)} placeholder="Job site address…" /></label>
+          <label>Job / client<input value={jobRef} onChange={(e) => setJobRef(e.target.value)} placeholder="Job name or client" /></label>
+          <label>Miles<input type="number" min="0.1" step="0.1" value={miles} onChange={(e) => setMiles(e.target.value)} placeholder="0.0" /></label>
+          <label>Purpose<input value={purpose} onChange={(e) => setPurpose(e.target.value)} placeholder="Job travel, supply run…" /></label>
+        </div>
+        {notice ? <p className="v2-record-notice" role="status">{notice}</p> : null}
+        <button type="button" className="v2-primary-button" disabled={!miles || parseFloat(miles) <= 0} onClick={addEntry}><Car size={14} />Log trip</button>
+        {entries.length ? (
+          <div className="v2-mileage-list">
+            {entries.map((e) => (
+              <article key={e.id} className="v2-mileage-entry">
+                <div className="v2-mileage-entry-head">
+                  <strong>{e.miles.toFixed(1)} mi</strong>
+                  <span>{e.date}</span>
+                  <span className="v2-mileage-deduction">{currency(e.miles * IRS_RATE_2025)} deduction</span>
+                  <button type="button" aria-label="Delete trip" onClick={() => removeEntry(e.id)}><Trash2 size={13} /></button>
+                </div>
+                <div className="v2-mileage-entry-meta">
+                  {e.from ? <small>From: {e.from}</small> : null}
+                  {e.to ? <small>To: {e.to}</small> : null}
+                  {e.jobRef ? <small>{e.jobRef}</small> : null}
+                  {e.purpose !== "Job travel" ? <small>{e.purpose}</small> : null}
+                </div>
+              </article>
+            ))}
+          </div>
+        ) : <p className="v2-muted-copy">No trips logged yet. Each trip builds your tax deduction record.</p>}
+      </Panel>
+
+      <aside className="v2-mileage-summary">
+        <Panel className="v2-tool-panel v2-tool-summary-panel" eyebrow={`${new Date().getFullYear()} deduction`} title={currency(yearDeduction)}>
+          <div className="v2-tool-breakdown">
+            <div><span>Miles this year</span><strong>{yearMiles.toFixed(1)} mi</strong></div>
+            <div><span>IRS rate (2025)</span><strong>$0.70/mi</strong></div>
+            <div><span>Deductible</span><strong>{currency(yearDeduction)}</strong></div>
+          </div>
+        </Panel>
+        <Panel className="v2-tool-panel" eyebrow="All time" title={`${totalMiles.toFixed(1)} mi`}>
+          <div className="v2-tool-breakdown">
+            <div><span>Total trips</span><strong>{entries.length}</strong></div>
+            <div><span>Total deductible</span><strong>{currency(totalMiles * IRS_RATE_2025)}</strong></div>
+          </div>
+        </Panel>
+      </aside>
+    </div>
+  );
+}
+
+// ── Material Price Book ───────────────────────────────────────────────────────
+
+function getDefaultPriceBook(trade: string | null): Array<{ name: string; unit: string; price: number; supplier: string }> {
+  const catalog: Record<string, Array<{ name: string; unit: string; price: number; supplier: string }>> = {
+    Electrician: [
+      { name: "12/2 Romex wire", unit: "ft", price: 0.65, supplier: "" },
+      { name: "14/2 Romex wire", unit: "ft", price: 0.48, supplier: "" },
+      { name: "Single-pole breaker 15A", unit: "ea", price: 12, supplier: "" },
+      { name: "GFCI outlet", unit: "ea", price: 18, supplier: "" },
+      { name: "Junction box", unit: "ea", price: 4, supplier: "" },
+      { name: "Wire nuts (bag)", unit: "bag", price: 8, supplier: "" },
+      { name: "EMT conduit 1/2\"", unit: "ft", price: 0.90, supplier: "" },
+      { name: "Outlet / switch plate", unit: "ea", price: 2, supplier: "" },
+    ],
+    Plumber: [
+      { name: "Copper pipe 3/4\"", unit: "ft", price: 3.50, supplier: "" },
+      { name: "PVC pipe 3\"", unit: "ft", price: 1.20, supplier: "" },
+      { name: "Ball valve 1/2\"", unit: "ea", price: 12, supplier: "" },
+      { name: "P-trap", unit: "ea", price: 8, supplier: "" },
+      { name: "Wax ring", unit: "ea", price: 6, supplier: "" },
+      { name: "Sharkbite coupling 3/4\"", unit: "ea", price: 14, supplier: "" },
+      { name: "Supply line 12\"", unit: "ea", price: 5, supplier: "" },
+      { name: "Teflon tape", unit: "roll", price: 2, supplier: "" },
+    ],
+    Carpenter: [
+      { name: "2x4x8 stud", unit: "ea", price: 6.50, supplier: "" },
+      { name: "2x6x8", unit: "ea", price: 9.00, supplier: "" },
+      { name: "OSB 4x8 sheet", unit: "ea", price: 28, supplier: "" },
+      { name: "3/4\" plywood 4x8", unit: "ea", price: 55, supplier: "" },
+      { name: "16d sinker nails 5lb", unit: "box", price: 18, supplier: "" },
+      { name: "Construction adhesive", unit: "tube", price: 8, supplier: "" },
+      { name: "Door hinge (pair)", unit: "pair", price: 7, supplier: "" },
+      { name: "2.5\" deck screws 5lb", unit: "box", price: 16, supplier: "" },
+    ],
+    HVAC: [
+      { name: "R-410A refrigerant", unit: "lb", price: 45, supplier: "" },
+      { name: "Capacitor 45/5 MFD", unit: "ea", price: 25, supplier: "" },
+      { name: "Contactor 40A", unit: "ea", price: 18, supplier: "" },
+      { name: "16x25x1 air filter", unit: "ea", price: 8, supplier: "" },
+      { name: "HVAC duct tape", unit: "roll", price: 22, supplier: "" },
+      { name: "Condensate line 3/4\"", unit: "ft", price: 0.40, supplier: "" },
+      { name: "Blower motor", unit: "ea", price: 85, supplier: "" },
+    ],
+    Roofer: [
+      { name: "Architectural shingles", unit: "sq", price: 150, supplier: "" },
+      { name: "15# felt underlayment", unit: "roll", price: 45, supplier: "" },
+      { name: "Ice & water shield", unit: "sq", price: 85, supplier: "" },
+      { name: "Ridge cap bundle", unit: "bundle", price: 65, supplier: "" },
+      { name: "Roofing nails 1-3/4\" 5lb", unit: "box", price: 18, supplier: "" },
+      { name: "Step flashing", unit: "ea", price: 3, supplier: "" },
+    ],
+    Painter: [
+      { name: "Interior latex paint", unit: "gal", price: 45, supplier: "" },
+      { name: "Exterior paint", unit: "gal", price: 52, supplier: "" },
+      { name: "Primer", unit: "gal", price: 35, supplier: "" },
+      { name: "9\" roller cover", unit: "ea", price: 4, supplier: "" },
+      { name: "Painter's tape 1.5\"", unit: "roll", price: 7, supplier: "" },
+      { name: "Drop cloth 9x12", unit: "ea", price: 12, supplier: "" },
+    ],
+    Mason: [
+      { name: "CMU block 8x8x16", unit: "ea", price: 2.50, supplier: "" },
+      { name: "Mortar mix 60lb", unit: "bag", price: 12, supplier: "" },
+      { name: "Mason sand", unit: "ton", price: 80, supplier: "" },
+      { name: "Rebar #4", unit: "ft", price: 1.50, supplier: "" },
+      { name: "Brick (standard)", unit: "ea", price: 0.85, supplier: "" },
+    ],
+    Welder: [
+      { name: "ER70S-6 MIG wire 10lb", unit: "spool", price: 28, supplier: "" },
+      { name: "Argon/CO2 75/25 mix", unit: "tank", price: 60, supplier: "" },
+      { name: "4.5\" grinding disc", unit: "ea", price: 5, supplier: "" },
+      { name: "Anti-spatter spray", unit: "can", price: 12, supplier: "" },
+      { name: "Welding rod 7018 10lb", unit: "box", price: 22, supplier: "" },
+    ],
+    Landscaper: [
+      { name: "Triple-mix topsoil", unit: "cu yd", price: 65, supplier: "" },
+      { name: "Hardwood mulch", unit: "cu yd", price: 55, supplier: "" },
+      { name: "Grass seed premium", unit: "50lb", price: 45, supplier: "" },
+      { name: "Lawn fertilizer", unit: "bag", price: 38, supplier: "" },
+      { name: "Landscape fabric", unit: "sq ft", price: 0.18, supplier: "" },
+      { name: "River rock", unit: "ton", price: 120, supplier: "" },
+    ],
+  };
+  return catalog[trade ?? ""] ?? [];
+}
+
+const priceBookKey = "rivt.priceBook.v1";
+
+interface PriceEntry {
+  id: string;
+  name: string;
+  unit: string;
+  price: number;
+  supplier: string;
+  notes: string;
+  updatedAt: string;
+}
+
+function readPriceBook(): PriceEntry[] {
+  try {
+    const stored = localStorage.getItem(priceBookKey);
+    if (!stored) return [];
+    const parsed = JSON.parse(stored) as PriceEntry[];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch { return []; }
+}
+
+function persistPriceBook(entries: PriceEntry[]) {
+  try { localStorage.setItem(priceBookKey, JSON.stringify(entries.slice(0, 200))); } catch {}
+}
+
+function PriceBookTool() {
+  const [entries, setEntries] = useState<PriceEntry[]>(readPriceBook);
+
+  useEffect(() => {
+    const trade = (() => { try { return JSON.parse(localStorage.getItem("rivt.profile.v1") ?? "null")?.primaryTrade ?? null; } catch { return null; } })();
+    const seeded = localStorage.getItem("rivt.priceBookSeeded.v1");
+    if (!seeded && entries.length === 0 && trade) {
+      const defaults = getDefaultPriceBook(trade);
+      if (defaults.length) {
+        const seededEntries: PriceEntry[] = defaults.map(d => ({
+          id: crypto.randomUUID(),
+          name: d.name,
+          unit: d.unit,
+          price: d.price,
+          supplier: d.supplier,
+          notes: "Pre-loaded for your trade",
+          updatedAt: new Date().toISOString(),
+        }));
+        setEntries(seededEntries);
+        persistPriceBook(seededEntries);
+        localStorage.setItem("rivt.priceBookSeeded.v1", "1");
+      }
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const [search, setSearch] = useState("");
+  const [name, setName] = useState("");
+  const [unit, setUnit] = useState("");
+  const [price, setPrice] = useState("");
+  const [supplier, setSupplier] = useState("");
+  const [notes, setNotes] = useState("");
+  const [notice, setNotice] = useState("");
+  const [copiedId, setCopiedId] = useState("");
+
+  const filtered = entries.filter((e) => !search.trim() || e.name.toLowerCase().includes(search.toLowerCase()) || e.supplier.toLowerCase().includes(search.toLowerCase()));
+
+  function addEntry() {
+    if (!name.trim() || !price) return;
+    const existingIndex = entries.findIndex((e) => e.name.toLowerCase() === name.trim().toLowerCase());
+    const entry: PriceEntry = {
+      id: existingIndex >= 0 ? entries[existingIndex].id : crypto.randomUUID(),
+      name: name.trim(),
+      unit: unit.trim() || "ea",
+      price: parseFloat(price) || 0,
+      supplier: supplier.trim(),
+      notes: notes.trim(),
+      updatedAt: new Date().toISOString(),
+    };
+    const next = existingIndex >= 0
+      ? entries.map((e, i) => i === existingIndex ? entry : e)
+      : [entry, ...entries];
+    setEntries(next);
+    persistPriceBook(next);
+    setName(""); setUnit(""); setPrice(""); setSupplier(""); setNotes("");
+    setNotice(existingIndex >= 0 ? "Price updated." : "Price saved.");
+    setTimeout(() => setNotice(""), 2500);
+  }
+
+  function removeEntry(id: string) {
+    const next = entries.filter((e) => e.id !== id);
+    setEntries(next);
+    persistPriceBook(next);
+  }
+
+  async function copyPrice(entry: PriceEntry) {
+    const text = `${entry.name}: ${currency(entry.price)}/${entry.unit}${entry.supplier ? ` (${entry.supplier})` : ""}`;
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedId(entry.id);
+      setTimeout(() => setCopiedId(""), 2000);
+    } catch {}
+  }
+
+  return (
+    <div className="v2-tool-workbench v2-price-book-workbench">
+      <Panel className="v2-tool-panel" eyebrow="Add price" title="Material price book">
+        <div className="v2-tool-input-grid two">
+          <label>Material / item<input value={name} onChange={(e) => setName(e.target.value)} placeholder="2x6x8 lumber, 12/2 Romex, conduit…" /></label>
+          <label>Unit<input value={unit} onChange={(e) => setUnit(e.target.value)} placeholder="ea, ft, sq ft, sheet, lb…" /></label>
+          <label>Price ($)<input type="number" min="0" step="0.01" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="0.00" /></label>
+          <label>Supplier<input value={supplier} onChange={(e) => setSupplier(e.target.value)} placeholder="Home Depot, local yard…" /></label>
+          <label className="is-wide">Notes<input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="SKU, grade, size spec, date checked…" /></label>
+        </div>
+        {notice ? <p className="v2-record-notice" role="status">{notice}</p> : null}
+        <button type="button" className="v2-primary-button" disabled={!name.trim() || !price} onClick={addEntry}><Package2 size={14} />Save price</button>
+      </Panel>
+
+      <Panel className="v2-tool-panel v2-price-book-list-panel" eyebrow={`${entries.length} items`} title="Saved prices">
+        <label className="v2-list-search"><Search size={15} /><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search materials…" /></label>
+        {filtered.length ? (
+          <div className="v2-price-book-list">
+            {filtered.map((entry) => (
+              <article key={entry.id} className="v2-price-entry">
+                <div className="v2-price-entry-head">
+                  <strong>{entry.name}</strong>
+                  <span className="v2-price-tag">{currency(entry.price)}/{entry.unit}</span>
+                  <button type="button" title="Copy price" onClick={() => void copyPrice(entry)}>
+                    {copiedId === entry.id ? <CheckCircle2 size={14} /> : <Copy size={14} />}
+                  </button>
+                  <button type="button" aria-label={`Delete ${entry.name}`} onClick={() => removeEntry(entry.id)}><Trash2 size={14} /></button>
+                </div>
+                {(entry.supplier || entry.notes) ? (
+                  <div className="v2-price-entry-meta">
+                    {entry.supplier ? <small>{entry.supplier}</small> : null}
+                    {entry.notes ? <small>{entry.notes}</small> : null}
+                  </div>
+                ) : null}
+              </article>
+            ))}
+          </div>
+        ) : entries.length ? (
+          <p className="v2-muted-copy">No matches for "{search}".</p>
+        ) : (
+          <p className="v2-muted-copy">No prices saved yet. Add common materials to speed up estimates and bids.</p>
+        )}
+      </Panel>
+    </div>
+  );
+}
+
+// ── Field Safety Checklist ────────────────────────────────────────────────────
+
+const SAFETY_CATEGORIES: Record<string, string[]> = {
+  "PPE": ["Hard hat worn", "Safety glasses on", "High-vis vest on", "Gloves available", "Steel-toed boots"],
+  "Fall Protection": ["Harness inspected", "Anchor points secured", "Ladder secured top and bottom", "Guardrails in place"],
+  "Electrical": ["GFCI protection confirmed", "Lockout/tagout verified", "Cords inspected", "No water near electrical"],
+  "Tools & Equipment": ["Tools inspected before use", "Guards in place", "No damaged cords/hoses", "SDS accessible"],
+  "Site Access": ["Work area barricaded", "Signage posted", "Overhead hazards marked", "Emergency exit clear"],
+  "Emergency": ["First aid kit located", "Emergency contacts posted", "Nearest hospital identified", "Fire extinguisher accessible"],
+};
+
+const ALL_SAFETY_ITEMS = Object.values(SAFETY_CATEGORIES).flat();
+
+interface SafetyLog {
+  id: string;
+  date: string;
+  jobRef: string;
+  completedBy: string;
+  checks: Record<string, boolean>;
+  notes: string;
+  signedAt: string;
+}
+
+const safetyLogKey = "rivt.safetyLogs.v1";
+
+function readSafetyLogs(): SafetyLog[] {
+  try {
+    const stored = localStorage.getItem(safetyLogKey);
+    if (!stored) return [];
+    const parsed = JSON.parse(stored) as SafetyLog[];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch { return []; }
+}
+
+function persistSafetyLogs(logs: SafetyLog[]) {
+  try { localStorage.setItem(safetyLogKey, JSON.stringify(logs.slice(0, 200))); } catch {}
+}
+
+// ── Tax Estimator ───────────────────────────────────────────────────────────
+
+const TAX_EST_KEY = "rivt.taxEstimator.v1";
+interface TaxEstimatorInput { income: number; filingStatus: "single" | "mfj" | "hoh" }
+
+function calcTax(income: number) {
+  const seTax = income * 0.9235 * 0.153;
+  const taxable = Math.max(0, income - 14600);
+  let fedTax = 0;
+  if (taxable > 0) fedTax += Math.min(taxable, 11600) * 0.10;
+  if (taxable > 11600) fedTax += Math.min(taxable - 11600, 35550) * 0.12;
+  if (taxable > 47150) fedTax += Math.min(taxable - 47150, 53375) * 0.22;
+  if (taxable > 100525) fedTax += (taxable - 100525) * 0.24;
+  return { seTax, fedTax, totalAnnual: seTax + fedTax, quarterly: (seTax + fedTax) / 4 };
+}
+
+function TaxEstimatorTool() {
+  const [input, setInput] = useState<TaxEstimatorInput>(() => {
+    try { return JSON.parse(localStorage.getItem(TAX_EST_KEY) ?? "null") as TaxEstimatorInput ?? { income: 60000, filingStatus: "single" }; }
+    catch { return { income: 60000, filingStatus: "single" }; }
+  });
+  const [incomeDraft, setIncomeDraft] = useState(String(input.income));
+
+  function compute() {
+    const income = Math.max(0, Number(incomeDraft) || 0);
+    const next = { ...input, income };
+    setInput(next);
+    try { localStorage.setItem(TAX_EST_KEY, JSON.stringify(next)); } catch {}
+  }
+
+  const result = calcTax(input.income);
+  const fmt = (n: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(n);
+
+  return (
+    <Panel className="v2-tool-panel v2-tax-estimator-panel" eyebrow="Tax planning" title="Tax estimator">
+      <div className="v2-tax-hero">
+        <small>Estimated quarterly payment</small>
+        <strong>{fmt(result.quarterly)}</strong>
+      </div>
+      <div className="v2-tax-inputs">
+        <label>
+          Annual income ($)
+          <input type="number" value={incomeDraft} min={0} onChange={e => setIncomeDraft(e.target.value)} onBlur={compute} />
+        </label>
+        <label>
+          Filing status
+          <select value={input.filingStatus} onChange={e => { const next = { ...input, filingStatus: e.target.value as TaxEstimatorInput["filingStatus"] }; setInput(next); try { localStorage.setItem(TAX_EST_KEY, JSON.stringify(next)); } catch {} }}>
+            <option value="single">Single</option>
+            <option value="mfj">Married filing jointly</option>
+            <option value="hoh">Head of household</option>
+          </select>
+        </label>
+      </div>
+      <table className="v2-tax-breakdown">
+        <tbody>
+          <tr><td>Self-employment tax</td><td>{fmt(result.seTax)}</td></tr>
+          <tr><td>Federal income tax</td><td>{fmt(result.fedTax)}</td></tr>
+          <tr className="v2-tax-total"><td>Total annual</td><td>{fmt(result.totalAnnual)}</td></tr>
+          <tr className="v2-tax-quarterly"><td>Quarterly payment</td><td>{fmt(result.quarterly)}</td></tr>
+        </tbody>
+      </table>
+      <p className="v2-tax-disclaimer">Estimate only. Consult a tax professional for your specific situation. Based on 2025 rates.</p>
+    </Panel>
+  );
+}
+
+// ── Punch List ───────────────────────────────────────────────────────────────
+
+const PUNCH_KEY = "rivt.punchLists.v1";
+
+interface PunchItem {
+  id: string; description: string; location: string;
+  status: "open" | "in-progress" | "done"; assignee: string; createdAt: string;
+}
+interface PunchList { id: string; jobName: string; createdAt: string; items: PunchItem[] }
+
+function readPunchLists(): PunchList[] {
+  try { return JSON.parse(localStorage.getItem(PUNCH_KEY) ?? "[]") as PunchList[]; } catch { return []; }
+}
+function writePunchLists(lists: PunchList[]) {
+  try { localStorage.setItem(PUNCH_KEY, JSON.stringify(lists)); } catch {}
+}
+
+function PunchListTool() {
+  const { isPro } = usePro();
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
+  const [lists, setLists] = useState<PunchList[]>(readPunchLists);
+  const [activeListId, setActiveListId] = useState<string | null>(() => readPunchLists()[0]?.id ?? null);
+  const [newJobName, setNewJobName] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | "open" | "done">("all");
+  const [addingItem, setAddingItem] = useState(false);
+  const [itemDraft, setItemDraft] = useState({ description: "", location: "", assignee: "" });
+
+  const activeList = lists.find(l => l.id === activeListId) ?? null;
+  const visibleItems = activeList?.items.filter(i => statusFilter === "all" ? true : statusFilter === "open" ? i.status !== "done" : i.status === "done") ?? [];
+  const doneCount = activeList?.items.filter(i => i.status === "done").length ?? 0;
+
+  function createList() {
+    if (!newJobName.trim()) return;
+    if (!isPro && lists.length >= 1) { setUpgradeOpen(true); setNewJobName(""); return; }
+    const list: PunchList = { id: `pl_${Date.now()}`, jobName: newJobName.trim(), createdAt: new Date().toISOString(), items: [] };
+    const next = [...lists, list];
+    setLists(next); writePunchLists(next);
+    setActiveListId(list.id); setNewJobName("");
+  }
+
+  function cycleStatus(itemId: string) {
+    if (!activeList) return;
+    const cycle: PunchItem["status"][] = ["open", "in-progress", "done"];
+    const next = lists.map(l => l.id !== activeList.id ? l : {
+      ...l, items: l.items.map(i => i.id !== itemId ? i : { ...i, status: cycle[(cycle.indexOf(i.status) + 1) % 3] })
+    });
+    setLists(next); writePunchLists(next);
+  }
+
+  function addItem() {
+    if (!activeList || !itemDraft.description.trim()) return;
+    const item: PunchItem = { id: `pi_${Date.now()}`, ...itemDraft, status: "open", createdAt: new Date().toISOString() };
+    const next = lists.map(l => l.id !== activeList.id ? l : { ...l, items: [...l.items, item] });
+    setLists(next); writePunchLists(next);
+    setItemDraft({ description: "", location: "", assignee: "" }); setAddingItem(false);
+  }
+
+  const statusIcon = (s: PunchItem["status"]) =>
+    s === "done" ? <CheckCircle2 size={16} color="var(--v2-success)" /> :
+    s === "in-progress" ? <Clock size={16} color="var(--v2-warning, #f59e0b)" /> :
+    <Circle size={16} color="var(--v2-text-muted)" />;
+
+  return (
+    <div className="v2-punch-workbench">
+      <aside className="v2-punch-sidebar">
+        <header>
+          <span>Job lists</span>
+          <button type="button" className="v2-primary-button" onClick={() => setNewJobName(" ")}>+ New</button>
+        </header>
+        {newJobName !== "" && (
+          <div className="v2-punch-new-list">
+            <input autoFocus placeholder="Job name" value={newJobName.trim()} onChange={e => setNewJobName(e.target.value)} onKeyDown={e => e.key === "Enter" && createList()} />
+            <button type="button" className="v2-primary-button" onClick={createList}>Create</button>
+          </div>
+        )}
+        {lists.map(l => {
+          const done = l.items.filter(i => i.status === "done").length;
+          return (
+            <button key={l.id} type="button" className={`v2-punch-list-row${l.id === activeListId ? " active" : ""}`} onClick={() => setActiveListId(l.id)}>
+              <strong>{l.jobName}</strong>
+              <small>{done} / {l.items.length} done</small>
+            </button>
+          );
+        })}
+        {lists.length === 0 && <p className="v2-punch-empty-hint">Create a list for each job.</p>}
+      </aside>
+
+      <main className="v2-punch-items">
+        {activeList ? (
+          <>
+            <header>
+              <div>
+                <strong>{activeList.jobName}</strong>
+                <small>{doneCount} of {activeList.items.length} items done</small>
+              </div>
+              <div className="v2-punch-filter-tabs">
+                {(["all", "open", "done"] as const).map(f => (
+                  <button key={f} type="button" className={statusFilter === f ? "active" : ""} onClick={() => setStatusFilter(f)}>
+                    {f.charAt(0).toUpperCase() + f.slice(1)}
+                  </button>
+                ))}
+              </div>
+            </header>
+            {activeList.items.length > 0 && (
+              <div className="v2-punch-progress">
+                <div className="v2-punch-progress-fill" style={{ width: `${activeList.items.length ? (doneCount / activeList.items.length) * 100 : 0}%` }} />
+              </div>
+            )}
+            <div className="v2-punch-item-list">
+              {visibleItems.map(item => (
+                <div key={item.id} className={`v2-punch-item${item.status === "done" ? " is-done" : ""}`}>
+                  <button type="button" className="v2-punch-status-btn" onClick={() => cycleStatus(item.id)} title="Click to change status">
+                    {statusIcon(item.status)}
+                  </button>
+                  <div>
+                    <strong>{item.description}</strong>
+                    {item.location && <small><MapPin size={11} /> {item.location}</small>}
+                    {item.assignee && <small>→ {item.assignee}</small>}
+                  </div>
+                </div>
+              ))}
+              {visibleItems.length === 0 && <p className="v2-punch-empty-hint">No {statusFilter !== "all" ? statusFilter : ""} items.</p>}
+            </div>
+            {addingItem ? (
+              <div className="v2-punch-add-form">
+                <input autoFocus placeholder="Description*" value={itemDraft.description} onChange={e => setItemDraft(p => ({ ...p, description: e.target.value }))} />
+                <input placeholder="Location (optional)" value={itemDraft.location} onChange={e => setItemDraft(p => ({ ...p, location: e.target.value }))} />
+                <input placeholder="Assignee (optional)" value={itemDraft.assignee} onChange={e => setItemDraft(p => ({ ...p, assignee: e.target.value }))} />
+                <div className="v2-punch-add-actions">
+                  <button type="button" className="v2-primary-button" onClick={addItem}>Add item</button>
+                  <button type="button" onClick={() => setAddingItem(false)}>Cancel</button>
+                </div>
+              </div>
+            ) : (
+              <button type="button" className="v2-punch-add-btn" onClick={() => setAddingItem(true)}>+ Add item</button>
+            )}
+          </>
+        ) : (
+          <div className="v2-punch-no-list">
+            <ClipboardList size={28} />
+            <strong>No list selected</strong>
+            <p>Create a punch list for each job to track deficiencies and final walkthrough items.</p>
+          </div>
+        )}
+      </main>
+      {upgradeOpen && <UpgradeModal reason="Multiple punch lists" onClose={() => setUpgradeOpen(false)} />}
+    </div>
+  );
+}
+
+function SafetyChecklistTool({ activeJob }: { activeJob: Job | null }) {
+  const [checks, setChecks] = useState<Record<string, boolean>>(() =>
+    Object.fromEntries(ALL_SAFETY_ITEMS.map((item) => [item, false]))
+  );
+  const [jobRef, setJobRef] = useState(activeJob?.title ?? "");
+  const [completedBy, setCompletedBy] = useState("");
+  const [notes, setNotes] = useState("");
+  const [logs, setLogs] = useState<SafetyLog[]>(readSafetyLogs);
+  const [notice, setNotice] = useState("");
+
+  function toggleCheck(item: string) {
+    setChecks((prev) => ({ ...prev, [item]: !prev[item] }));
+  }
+
+  function checkAll() { setChecks(Object.fromEntries(ALL_SAFETY_ITEMS.map((i) => [i, true]))); }
+  function clearAll() { setChecks(Object.fromEntries(ALL_SAFETY_ITEMS.map((i) => [i, false]))); }
+
+  function signOff() {
+    const log: SafetyLog = {
+      id: crypto.randomUUID(),
+      date: new Date().toISOString().slice(0, 10),
+      jobRef: jobRef.trim(),
+      completedBy: completedBy.trim() || "On-site crew",
+      checks: { ...checks },
+      notes: notes.trim(),
+      signedAt: new Date().toISOString(),
+    };
+    const next = [log, ...logs];
+    setLogs(next);
+    persistSafetyLogs(next);
+    clearAll();
+    setNotes("");
+    setNotice("Site check signed off and saved.");
+    setTimeout(() => setNotice(""), 3000);
+  }
+
+  const checkedCount = Object.values(checks).filter(Boolean).length;
+  const totalItems = ALL_SAFETY_ITEMS.length;
+  const pct = Math.round((checkedCount / totalItems) * 100);
+
+  return (
+    <div className="v2-tool-workbench v2-safety-workbench">
+      <Panel className="v2-tool-panel v2-safety-checklist-panel" eyebrow="Daily site check" title="Field safety checklist">
+        <div className="v2-safety-meta-inputs">
+          <label>Job / site<input value={jobRef} onChange={(e) => setJobRef(e.target.value)} placeholder="Job name or site address" /></label>
+          <label>Completed by<input value={completedBy} onChange={(e) => setCompletedBy(e.target.value)} placeholder="Your name" /></label>
+        </div>
+        <div className="v2-safety-check-controls">
+          <span>{checkedCount}/{totalItems} checked</span>
+          <button type="button" onClick={checkAll}>Check all</button>
+          <button type="button" onClick={clearAll}>Clear all</button>
+        </div>
+        {Object.entries(SAFETY_CATEGORIES).map(([category, items]) => (
+          <div key={category} className="v2-safety-category">
+            <h3>{category}</h3>
+            <div className="v2-safety-items">
+              {items.map((item) => (
+                <label key={item} className={`v2-safety-item${checks[item] ? " is-checked" : ""}`}>
+                  <input type="checkbox" checked={checks[item]} onChange={() => toggleCheck(item)} />
+                  {item}
+                </label>
+              ))}
+            </div>
+          </div>
+        ))}
+        <label>Notes / hazards<textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} placeholder="Site-specific hazards, exceptions, or additional notes…" /></label>
+        {notice ? <p className="v2-record-notice" role="status">{notice}</p> : null}
+        <button type="button" className="v2-primary-button" onClick={signOff}><Shield size={14} />Sign off site check</button>
+      </Panel>
+
+      <aside className="v2-safety-summary">
+        <Panel className="v2-tool-panel v2-tool-summary-panel" eyebrow="Today's check" title={`${checkedCount}/${totalItems}`}>
+          <div className="v2-safety-progress-bar">
+            <div className="v2-safety-bar-fill" style={{ width: `${pct}%` }} />
+          </div>
+          <div className="v2-tool-breakdown">
+            {Object.entries(SAFETY_CATEGORIES).map(([cat, items]) => {
+              const catChecked = items.filter((i) => checks[i]).length;
+              return <div key={cat}><span>{cat}</span><strong>{catChecked}/{items.length}</strong></div>;
+            })}
+          </div>
+        </Panel>
+        {logs.length ? (
+          <Panel className="v2-tool-panel" eyebrow={`${logs.length} sign-offs`} title="Sign-off history">
+            <div className="v2-safety-log-list">
+              {logs.slice(0, 6).map((log) => {
+                const done = Object.values(log.checks).filter(Boolean).length;
+                const total = Object.values(log.checks).length;
+                return (
+                  <article key={log.id} className="v2-safety-log-item">
+                    <strong>{log.date} · {log.jobRef || "No job ref"}</strong>
+                    <small>{done}/{total} · {log.completedBy}</small>
+                  </article>
+                );
+              })}
+            </div>
+          </Panel>
+        ) : null}
+      </aside>
+    </div>
+  );
+}
+
+// ── Time Tracker ─────────────────────────────────────────────────────────────
+
+const timeTrackerKey = "rivt.timeSessions.v1";
+
+interface TimeSession {
+  id: string;
+  jobId: number | null;
+  jobTitle: string;
+  startedAt: string;
+  endedAt: string | null;
+  notes: string;
+}
+
+function readTimeSessions(): TimeSession[] {
+  try {
+    const stored = localStorage.getItem(timeTrackerKey);
+    if (!stored) return [];
+    const parsed = JSON.parse(stored) as TimeSession[];
+    return Array.isArray(parsed) ? parsed.slice(0, 100) : [];
+  } catch { return []; }
+}
+
+function persistTimeSessions(sessions: TimeSession[]) {
+  try { localStorage.setItem(timeTrackerKey, JSON.stringify(sessions.slice(0, 100))); } catch {}
+}
+
+// ── Bid Builder ───────────────────────────────────────────────────────────────
+
+interface DefaultBidLine { description: string; qty: number; unit: string; unitPrice: number; }
+
+function getDefaultBidLines(trade: string | null, overrideDurationHours?: number, overridePay?: number): DefaultBidLine[] {
+  const hrs = overrideDurationHours ?? 8;
+  const payBase = overridePay ? Math.round(overridePay * 0.2) || 250 : 250;
+
+  const defaults: Record<string, DefaultBidLine[]> = {
+    Electrician: [
+      { description: "Labor – rough-in", qty: hrs, unit: "hr", unitPrice: 90 },
+      { description: "Labor – trim-out", qty: Math.ceil(hrs / 2), unit: "hr", unitPrice: 90 },
+      { description: "12/2 Romex wire", qty: 100, unit: "ft", unitPrice: 0.65 },
+      { description: "Panel / breakers", qty: 1, unit: "lot", unitPrice: 200 },
+      { description: "Permit", qty: 1, unit: "ea", unitPrice: 175 },
+    ],
+    Plumber: [
+      { description: "Labor – rough-in", qty: hrs, unit: "hr", unitPrice: 85 },
+      { description: "Labor – trim-out", qty: Math.ceil(hrs / 2), unit: "hr", unitPrice: 85 },
+      { description: "Copper pipe", qty: 50, unit: "ft", unitPrice: 3.50 },
+      { description: "PVC fittings", qty: 1, unit: "lot", unitPrice: 120 },
+      { description: "Permit", qty: 1, unit: "ea", unitPrice: 150 },
+    ],
+    Carpenter: [
+      { description: "Labor – framing", qty: hrs, unit: "hr", unitPrice: 75 },
+      { description: "Labor – finish work", qty: Math.ceil(hrs / 2), unit: "hr", unitPrice: 80 },
+      { description: "Lumber", qty: 100, unit: "bd ft", unitPrice: 1.20 },
+      { description: "Hardware & fasteners", qty: 1, unit: "lot", unitPrice: 80 },
+      { description: "Permit", qty: 1, unit: "ea", unitPrice: 100 },
+    ],
+    HVAC: [
+      { description: "Labor – install", qty: hrs, unit: "hr", unitPrice: 95 },
+      { description: "Labor – startup & test", qty: 2, unit: "hr", unitPrice: 95 },
+      { description: "Equipment", qty: 1, unit: "ea", unitPrice: 2500 },
+      { description: "Refrigerant R-410A", qty: 5, unit: "lb", unitPrice: 45 },
+      { description: "Permit", qty: 1, unit: "ea", unitPrice: 200 },
+    ],
+    "General Contractor": [
+      { description: "Labor – general", qty: hrs, unit: "hr", unitPrice: 70 },
+      { description: "Subcontractor allowance", qty: 1, unit: "lot", unitPrice: 1000 },
+      { description: "Materials allowance", qty: 1, unit: "lot", unitPrice: payBase },
+      { description: "Permit", qty: 1, unit: "ea", unitPrice: 200 },
+    ],
+    Painter: [
+      { description: "Labor – prep & masking", qty: Math.ceil(hrs / 2), unit: "hr", unitPrice: 55 },
+      { description: "Labor – paint", qty: hrs, unit: "hr", unitPrice: 55 },
+      { description: "Paint", qty: 5, unit: "gal", unitPrice: 45 },
+      { description: "Primer", qty: 1, unit: "gal", unitPrice: 35 },
+      { description: "Supplies", qty: 1, unit: "lot", unitPrice: 50 },
+    ],
+    Mason: [
+      { description: "Labor", qty: hrs, unit: "hr", unitPrice: 80 },
+      { description: "Block / brick", qty: 100, unit: "ea", unitPrice: 2.50 },
+      { description: "Mortar mix", qty: 5, unit: "bag", unitPrice: 12 },
+      { description: "Sand", qty: 0.5, unit: "ton", unitPrice: 80 },
+    ],
+    Welder: [
+      { description: "Labor", qty: hrs, unit: "hr", unitPrice: 90 },
+      { description: "Filler wire / rod", qty: 10, unit: "lb", unitPrice: 8 },
+      { description: "Shielding gas", qty: 1, unit: "tank", unitPrice: 60 },
+      { description: "Steel material", qty: 1, unit: "lot", unitPrice: payBase },
+    ],
+    Roofer: [
+      { description: "Labor – tear-off", qty: Math.ceil(hrs / 2), unit: "hr", unitPrice: 65 },
+      { description: "Labor – install", qty: hrs, unit: "hr", unitPrice: 65 },
+      { description: "Architectural shingles", qty: 20, unit: "sq", unitPrice: 150 },
+      { description: "Felt underlayment", qty: 10, unit: "sq", unitPrice: 25 },
+      { description: "Flashing & accessories", qty: 1, unit: "lot", unitPrice: 120 },
+      { description: "Permit", qty: 1, unit: "ea", unitPrice: 125 },
+    ],
+    Landscaper: [
+      { description: "Labor", qty: hrs, unit: "hr", unitPrice: 45 },
+      { description: "Plants & materials", qty: 1, unit: "lot", unitPrice: 300 },
+      { description: "Mulch", qty: 5, unit: "cu yd", unitPrice: 55 },
+      { description: "Equipment rental", qty: 1, unit: "day", unitPrice: 150 },
+    ],
+  };
+
+  return (defaults[trade ?? ""] ?? [
+    { description: "Labor", qty: hrs, unit: "hr", unitPrice: 65 },
+    { description: "Materials", qty: 1, unit: "lot", unitPrice: payBase },
+  ]);
+}
+
+function readTradForBid(): string | null {
+  try { return JSON.parse(localStorage.getItem("rivt.profile.v1") ?? "null")?.primaryTrade ?? null; }
+  catch { return null; }
+}
+
+interface BidLineItem {
+  id: string;
+  description: string;
+  qty: number;
+  unit: string;
+  unitPrice: number;
+}
+
+interface SavedBid {
+  id: string;
+  name: string;
+  jobRef: string;
+  markupPct: number;
+  notes: string;
+  lines: BidLineItem[];
+  savedAt: string;
+}
+
+const bidStorageKey = "rivt.bids.v1";
+
+function readSavedBids(): SavedBid[] {
+  try {
+    const stored = localStorage.getItem(bidStorageKey);
+    if (!stored) return [];
+    const parsed = JSON.parse(stored) as SavedBid[];
+    return Array.isArray(parsed) ? parsed.slice(0, 10) : [];
+  } catch { return []; }
+}
+
+function BidBuilderTool({ activeJob }: { activeJob: Job | null }) {
+  const [lines, setLines] = useState<BidLineItem[]>(() =>
+    getDefaultBidLines(readTradForBid(), activeJob?.durationHours, activeJob?.pay).map(l => ({ ...l, id: crypto.randomUUID() }))
+  );
+  const [markupPct, setMarkupPct] = useState(15);
+  const [bidName, setBidName] = useState(activeJob ? `${activeJob.title} bid` : "New bid");
+  const [jobRef, setJobRef] = useState(activeJob?.title ?? "");
+  const [notes, setNotes] = useState("");
+  const [savedBids, setSavedBids] = useState<SavedBid[]>(readSavedBids);
+  const [notice, setNotice] = useState("");
+  const [bidAccepted, setBidAccepted] = useState(false);
+
+  const subtotal = lines.reduce((sum, l) => sum + l.qty * l.unitPrice, 0);
+  const markup = subtotal * (markupPct / 100);
+  const total = subtotal + markup;
+
+  function addLine() {
+    setLines((prev) => [...prev, { id: crypto.randomUUID(), description: "", qty: 1, unit: "ea", unitPrice: 0 }]);
+  }
+
+  function updateLine(id: string, field: keyof BidLineItem, value: string | number) {
+    setLines((prev) => prev.map((l) => l.id === id ? { ...l, [field]: value } : l));
+  }
+
+  function removeLine(id: string) {
+    setLines((prev) => prev.length > 1 ? prev.filter((l) => l.id !== id) : prev);
+  }
+
+  function saveBid() {
+    const bid: SavedBid = {
+      id: crypto.randomUUID(),
+      name: bidName.trim() || "Bid",
+      jobRef: jobRef.trim(),
+      markupPct,
+      notes: notes.trim(),
+      lines: lines.map((l) => ({ ...l, id: crypto.randomUUID() })),
+      savedAt: new Date().toISOString(),
+    };
+    const next = [bid, ...savedBids.filter((b) => b.name.toLowerCase() !== bid.name.toLowerCase())].slice(0, 10);
+    setSavedBids(next);
+    try { localStorage.setItem(bidStorageKey, JSON.stringify(next)); } catch {}
+    setNotice("Bid saved to this device.");
+    setTimeout(() => setNotice(""), 3000);
+  }
+
+  function loadBid(bid: SavedBid) {
+    setBidName(bid.name);
+    setJobRef(bid.jobRef);
+    setMarkupPct(bid.markupPct);
+    setNotes(bid.notes);
+    setLines(bid.lines.length ? bid.lines.map((l) => ({ ...l, id: crypto.randomUUID() })) : [{ id: crypto.randomUUID(), description: "", qty: 1, unit: "ea", unitPrice: 0 }]);
+    setNotice(`Loaded "${bid.name}".`);
+    setTimeout(() => setNotice(""), 3000);
+  }
+
+  function deleteBid(id: string) {
+    const next = savedBids.filter((b) => b.id !== id);
+    setSavedBids(next);
+    try { localStorage.setItem(bidStorageKey, JSON.stringify(next)); } catch {}
+  }
+
+  function acceptBid() {
+    try {
+      const stored = localStorage.getItem("rivt.jobs.v1");
+      const jobs: unknown[] = Array.isArray(JSON.parse(stored ?? "null")) ? (JSON.parse(stored!) as unknown[]) : [];
+      const grandTotal = total;
+      const newJob = {
+        id: crypto.randomUUID(),
+        title: bidName || "Untitled Job",
+        status: "active",
+        startDate: new Date().toISOString(),
+        trade: "",
+        location: "",
+        description: `Accepted bid — total: $${grandTotal.toFixed(2)}`,
+        bidTotal: grandTotal,
+        source: "bid",
+        createdAt: new Date().toISOString(),
+      };
+      jobs.push(newJob);
+      localStorage.setItem("rivt.jobs.v1", JSON.stringify(jobs));
+      setBidAccepted(true);
+      setTimeout(() => setBidAccepted(false), 3000);
+    } catch {
+      // silently fail if localStorage is unavailable
+    }
+  }
+
+  return (
+    <div className="v2-tool-workbench v2-bid-workbench">
+      <Panel className="v2-tool-panel v2-bid-builder-panel" eyebrow="Bid / quote" title="Build a bid">
+        {savedBids.length ? (
+          <div className="v2-bid-saved-list">
+            {savedBids.map((bid) => (
+              <article key={bid.id} className="v2-bid-saved-item">
+                <span>
+                  <strong>{bid.name}</strong>
+                  <small>{bid.jobRef || "No job ref"} · {new Date(bid.savedAt).toLocaleDateString()}</small>
+                </span>
+                <button type="button" onClick={() => loadBid(bid)}>Load</button>
+                <button type="button" aria-label={`Delete ${bid.name}`} onClick={() => deleteBid(bid.id)}><Trash2 size={14} /></button>
+              </article>
+            ))}
+          </div>
+        ) : null}
+        {notice ? <p className="v2-record-notice" role="status">{notice}</p> : null}
+        <div className="v2-tool-input-grid two">
+          <label>Bid name<input value={bidName} onChange={(e) => setBidName(e.target.value)} placeholder="Roof replacement bid" /></label>
+          <label>Job / client ref<input value={jobRef} onChange={(e) => setJobRef(e.target.value)} placeholder="Smith Residence, Job #42…" /></label>
+        </div>
+        <div className="v2-bid-line-table">
+          <div className="v2-bid-line-header">
+            <span>Description</span><span>Qty</span><span>Unit</span><span>Unit price</span><span>Total</span><span />
+          </div>
+          {lines.map((line) => (
+            <div key={line.id} className="v2-bid-line">
+              <input value={line.description} onChange={(e) => updateLine(line.id, "description", e.target.value)} placeholder="Item" aria-label="Description" />
+              <input type="number" min="0" step="0.5" value={line.qty} onChange={(e) => updateLine(line.id, "qty", Number(e.target.value) || 0)} aria-label="Quantity" />
+              <input value={line.unit} onChange={(e) => updateLine(line.id, "unit", e.target.value)} placeholder="hr" aria-label="Unit" />
+              <input type="number" min="0" value={line.unitPrice} onChange={(e) => updateLine(line.id, "unitPrice", Number(e.target.value) || 0)} aria-label="Unit price" />
+              <strong>{currency(line.qty * line.unitPrice)}</strong>
+              <button type="button" aria-label="Remove line" onClick={() => removeLine(line.id)}><Trash2 size={14} /></button>
+            </div>
+          ))}
+          <button type="button" className="v2-bid-add-line" onClick={addLine}><Plus size={14} />Add line</button>
+        </div>
+        <div className="v2-bid-markup">
+          <label>
+            <span>Markup / overhead: {markupPct}%</span>
+            <input type="range" min="0" max="50" step="1" value={markupPct} onChange={(e) => setMarkupPct(Number(e.target.value))} />
+          </label>
+        </div>
+        <label>Notes for client<textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} placeholder="Payment terms, exclusions, validity period…" /></label>
+        <button type="button" className="v2-primary-button" onClick={saveBid}><FileText size={14} />Save bid to device</button>
+      </Panel>
+
+      <aside className="v2-bid-summary-stack">
+        <Panel className="v2-tool-panel v2-tool-summary-panel" eyebrow="Bid total" title={currency(total)}>
+          <div className="v2-tool-breakdown">
+            <div><span>Subtotal</span><strong>{currency(subtotal)}</strong></div>
+            <div><span>Markup ({markupPct}%)</span><strong>{currency(markup)}</strong></div>
+            <div><span>Total</span><strong>{currency(total)}</strong></div>
+          </div>
+          <div className="v2-bid-line-summary-list">
+            {lines.map((l) => l.qty * l.unitPrice > 0 ? (
+              <div key={l.id} className="v2-bid-line-summary">
+                <span>{l.description || "Line"} ({l.qty} {l.unit})</span>
+                <strong>{currency(l.qty * l.unitPrice)}</strong>
+              </div>
+            ) : null)}
+          </div>
+          {lines.some((l) => l.qty * l.unitPrice > 0) && total > 0 ? (
+            bidAccepted ? (
+              <div className="v2-bid-accepted-banner">✓ Job created! Open the Work tab to find it.</div>
+            ) : (
+              <button type="button" className="v2-bid-accept-btn" onClick={acceptBid}>
+                <Briefcase size={16} />
+                Accept Bid → Create Job
+              </button>
+            )
+          ) : null}
+        </Panel>
+      </aside>
+    </div>
+  );
+}
+
+function formatHms(totalSeconds: number): string {
+  const h = Math.floor(totalSeconds / 3600);
+  const m = Math.floor((totalSeconds % 3600) / 60);
+  const s = totalSeconds % 60;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+}
+
+function getLast7Days(): string[] {
+  return Array.from({ length: 7 }, (_, i) => {
+    const d = new Date();
+    d.setDate(d.getDate() - (6 - i));
+    return d.toISOString().slice(0, 10);
+  });
+}
+
+function TimeTrackerTool({ activeJob, jobs }: { activeJob: Job | null; jobs: Job[] }) {
+  const { isPro } = usePro();
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
+  const [sessions, setSessions] = useState<TimeSession[]>(readTimeSessions);
+  const [running, setRunning] = useState<TimeSession | null>(
+    () => readTimeSessions().find((s) => !s.endedAt) ?? null,
+  );
+  const [elapsed, setElapsed] = useState(0);
+  const [jobId, setJobId] = useState<number | null>(activeJob?.id ?? null);
+  const [clockNotes, setClockNotes] = useState("");
+
+  useEffect(() => {
+    if (!running) { setElapsed(0); return; }
+    const start = new Date(running.startedAt).getTime();
+    const tick = () => setElapsed(Math.floor((Date.now() - start) / 1000));
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [running]);
+
+  function clockIn() {
+    if (running) return;
+    const job = jobs.find((j) => j.id === jobId) ?? null;
+    const session: TimeSession = {
+      id: crypto.randomUUID(),
+      jobId: job?.id ?? null,
+      jobTitle: job?.title ?? "Standalone",
+      startedAt: new Date().toISOString(),
+      endedAt: null,
+      notes: "",
+    };
+    const next = [session, ...sessions];
+    setSessions(next);
+    setRunning(session);
+    persistTimeSessions(next);
+  }
+
+  function clockOut() {
+    if (!running) return;
+    const ended: TimeSession = { ...running, endedAt: new Date().toISOString(), notes: clockNotes.trim() };
+    const next = sessions.map((s) => s.id === running.id ? ended : s);
+    setSessions(next);
+    setRunning(null);
+    setClockNotes("");
+    persistTimeSessions(next);
+  }
+
+  function deleteSession(sessionId: string) {
+    const next = sessions.filter((s) => s.id !== sessionId);
+    setSessions(next);
+    if (running?.id === sessionId) setRunning(null);
+    persistTimeSessions(next);
+  }
+
+  function hoursFor(s: TimeSession): number {
+    const end = s.endedAt ? new Date(s.endedAt).getTime() : Date.now();
+    return (end - new Date(s.startedAt).getTime()) / 3600000;
+  }
+
+  const cutoffDate = isPro ? null : new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const visibleSessions = cutoffDate ? sessions.filter(s => s.startedAt >= cutoffDate) : sessions;
+  const completed = visibleSessions.filter((s) => s.endedAt);
+  const totalHours = completed.reduce((sum, s) => sum + hoursFor(s), 0);
+
+  const last7Days = getLast7Days();
+  const today = new Date().toISOString().slice(0, 10);
+  const hoursPerDay: Record<string, number> = {};
+  for (const day of last7Days) {
+    hoursPerDay[day] = completed
+      .filter((s) => s.startedAt.slice(0, 10) === day)
+      .reduce((sum, s) => sum + hoursFor(s), 0);
+  }
+  const maxH = Math.max(...Object.values(hoursPerDay), 1);
+
+  return (
+    <div className="v2-tool-workbench">
+      <Panel className="v2-tool-panel" eyebrow="Time tracker" title="Clock in / clock out">
+        <div className="v2-tool-input-grid">
+          <label className="is-wide">Job
+            <select value={jobId ?? ""} onChange={(e) => setJobId(Number(e.target.value) || null)} disabled={!!running}>
+              <option value="">Standalone / no job</option>
+              {jobs.map((j) => <option key={j.id} value={j.id}>{j.title}</option>)}
+            </select>
+          </label>
+        </div>
+        <div className="v2-time-clock">
+          {running ? (
+            <>
+              <span className="v2-time-clock-label">Clocked in · {running.jobTitle}</span>
+              <strong className="v2-time-clock-display">{formatHms(elapsed)}</strong>
+              <label>Notes<textarea value={clockNotes} onChange={(e) => setClockNotes(e.target.value)} rows={2} placeholder="What are you working on?" /></label>
+              <button type="button" className="v2-destructive-button" onClick={clockOut}>Clock out</button>
+            </>
+          ) : (
+            <>
+              <span className="v2-time-clock-label">Ready to clock in</span>
+              <strong className="v2-time-clock-display">00:00:00</strong>
+              <button type="button" className="v2-primary-button" onClick={clockIn}>Clock in</button>
+            </>
+          )}
+        </div>
+      </Panel>
+      <Panel className="v2-tool-panel" eyebrow={`${completed.length} sessions`} title={`${formatNumber(totalHours, 1)} total hours`}>
+        <div className="v2-tt-weekly-chart">
+          <header><span>This week</span></header>
+          <svg viewBox="0 0 280 90" aria-hidden="true">
+            {last7Days.map((day, i) => {
+              const h = hoursPerDay[day] ?? 0;
+              const barH = Math.max(2, (h / maxH) * 60);
+              const x = 20 + i * 38;
+              const isToday = day === today;
+              return (
+                <g key={day}>
+                  <rect x={x} y={88 - barH} width={26} height={barH}
+                    fill={isToday ? "var(--v2-accent)" : "var(--v2-surface-muted)"}
+                    stroke="var(--v2-border)" strokeWidth="1" rx="3" />
+                  <text x={x + 13} y={85} textAnchor="middle" fontSize="9" fill="var(--v2-text-muted)">
+                    {["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"][i]}
+                  </text>
+                  {h > 0 && <text x={x + 13} y={83 - barH} textAnchor="middle" fontSize="8" fill="var(--v2-text-muted)">{h.toFixed(1)}</text>}
+                </g>
+              );
+            })}
+          </svg>
+        </div>
+        {!isPro && sessions.length > visibleSessions.length && (
+          <p className="v2-tool-note" style={{fontSize: 12}}>
+            Showing 90-day history. <button type="button" style={{background:'none',border:'none',color:'var(--v2-accent)',cursor:'pointer',padding:0,fontSize:12,textDecoration:'underline'}} onClick={() => setUpgradeOpen(true)}>Upgrade for full history</button>
+          </p>
+        )}
+        {completed.length ? (
+          <div className="v2-time-session-list">
+            {completed.slice(0, 15).map((s) => (
+              <article key={s.id} className="v2-time-session">
+                <div>
+                  <strong>{s.jobTitle}</strong>
+                  <small>{new Date(s.startedAt).toLocaleDateString()} · {formatNumber(hoursFor(s), 1)}h</small>
+                  {s.notes ? <span>{s.notes}</span> : null}
+                </div>
+                <button type="button" aria-label="Delete session" onClick={() => deleteSession(s.id)}><Trash2 size={13} /></button>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <EmptyState className="v2-tools-empty" icon={<Clock size={20} />} title="No sessions yet" description="Clock in to start tracking time against a job." compact />
+        )}
+      </Panel>
+      {upgradeOpen && <UpgradeModal reason="Full time history" onClose={() => setUpgradeOpen(false)} />}
+    </div>
+  );
+}
+
+// ── Expense Logger ────────────────────────────────────────────────────────────
+
+const expenseLogKey = "rivt.expenses.v1";
+
+type ExpenseCategory = "Materials" | "Tools" | "Mileage" | "Subcontractor" | "Permit" | "Other";
+const EXPENSE_CATEGORIES: ExpenseCategory[] = ["Materials", "Tools", "Mileage", "Subcontractor", "Permit", "Other"];
+
+interface ExpenseEntry {
+  id: string;
+  jobId: number | null;
+  jobTitle: string;
+  category: ExpenseCategory;
+  amount: number;
+  description: string;
+  date: string;
+}
+
+function readExpenses(): ExpenseEntry[] {
+  try {
+    const stored = localStorage.getItem(expenseLogKey);
+    if (!stored) return [];
+    const parsed = JSON.parse(stored) as ExpenseEntry[];
+    return Array.isArray(parsed) ? parsed.slice(0, 200) : [];
+  } catch { return []; }
+}
+
+function persistExpenses(entries: ExpenseEntry[]) {
+  try { localStorage.setItem(expenseLogKey, JSON.stringify(entries.slice(0, 200))); } catch {}
+}
+
+function exportExpensesCSV(expenses: ExpenseEntry[]) {
+  const header = "Date,Category,Amount,Description";
+  const rows = expenses.map((e) =>
+    [e.date, e.category, e.amount, (e.description ?? "").replace(/,/g, ";")].join(",")
+  );
+  const csv = [header, ...rows].join("\n");
+  const blob = new Blob([csv], { type: "text/csv" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `rivt-expenses-${new Date().toISOString().slice(0, 10)}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function ExpenseLoggerTool({ activeJob, jobs }: { activeJob: Job | null; jobs: Job[] }) {
+  const { isPro } = usePro();
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
+  const [expenses, setExpenses] = useState<ExpenseEntry[]>(readExpenses);
+  const [jobId, setJobId] = useState<number | null>(activeJob?.id ?? null);
+  const [category, setCategory] = useState<ExpenseCategory>("Materials");
+  const [amount, setAmount] = useState("");
+  const [description, setDescription] = useState("");
+  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const [notice, setNotice] = useState("");
+  const [quickMode, setQuickMode] = useState(true);
+
+  function addExpense() {
+    const amt = parseFloat(amount);
+    if (!Number.isFinite(amt) || amt <= 0 || !description.trim()) return;
+    const job = jobs.find((j) => j.id === jobId) ?? null;
+    const entry: ExpenseEntry = {
+      id: crypto.randomUUID(),
+      jobId,
+      jobTitle: job?.title ?? "Standalone",
+      category,
+      amount: amt,
+      description: description.trim(),
+      date,
+    };
+    const next = [entry, ...expenses];
+    setExpenses(next);
+    persistExpenses(next);
+    setAmount("");
+    setDescription("");
+    setNotice("Expense logged.");
+    setTimeout(() => setNotice(""), 3000);
+  }
+
+  function deleteExpense(expenseId: string) {
+    const next = expenses.filter((e) => e.id !== expenseId);
+    setExpenses(next);
+    persistExpenses(next);
+  }
+
+  const total = expenses.reduce((sum, e) => sum + e.amount, 0);
+  const byCategory = EXPENSE_CATEGORIES.map((cat) => ({
+    cat,
+    total: expenses.filter((e) => e.category === cat).reduce((sum, e) => sum + e.amount, 0),
+  })).filter((c) => c.total > 0);
+
+  return (
+    <div className="v2-tool-workbench v2-expense-workbench">
+      <Panel className="v2-tool-panel" eyebrow="Log expense" title="Track job costs">
+        {/* Mode toggle */}
+        <div className="v2-expense-mode-toggle">
+          <button
+            type="button"
+            className={quickMode ? "active" : ""}
+            onClick={() => setQuickMode(true)}
+          >Quick</button>
+          <button
+            type="button"
+            className={!quickMode ? "active" : ""}
+            onClick={() => setQuickMode(false)}
+          >Detailed</button>
+        </div>
+
+        {quickMode ? (
+          /* QUICK MODE */
+          <div className="v2-expense-quick">
+            <div className="v2-expense-cat-chips">
+              {EXPENSE_CATEGORIES.map(cat => (
+                <button
+                  key={cat}
+                  type="button"
+                  className={`v2-expense-cat-chip${category === cat ? " active" : ""}`}
+                  onClick={() => setCategory(cat as ExpenseCategory)}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
+            <div className="v2-expense-quick-amount">
+              <span className="v2-expense-dollar">$</span>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={amount}
+                onChange={e => setAmount(e.target.value)}
+                placeholder="0.00"
+                className="v2-expense-amount-input"
+                inputMode="decimal"
+              />
+            </div>
+            {notice ? <p className="v2-record-notice" role="status">{notice}</p> : null}
+            <button
+              type="button"
+              className="v2-primary-button"
+              style={{ width: "100%", justifyContent: "center", padding: "14px" }}
+              disabled={!(parseFloat(amount) > 0)}
+              onClick={() => {
+                const amt = parseFloat(amount);
+                if (!Number.isFinite(amt) || amt <= 0) return;
+                const job = jobs.find(j => j.id === jobId) ?? null;
+                const entry: ExpenseEntry = {
+                  id: crypto.randomUUID(),
+                  jobId,
+                  jobTitle: job?.title ?? "Standalone",
+                  category,
+                  amount: amt,
+                  description: category,
+                  date: new Date().toISOString().slice(0, 10),
+                };
+                const next = [entry, ...expenses];
+                setExpenses(next);
+                persistExpenses(next);
+                setAmount("");
+                setNotice(`${category} — $${amt.toFixed(2)} logged.`);
+                setTimeout(() => setNotice(""), 3000);
+              }}
+            >
+              Log {category} — {amount ? `$${parseFloat(amount).toFixed(2)}` : "$0.00"}
+            </button>
+          </div>
+        ) : (
+          /* DETAILED MODE */
+          <>
+            <div className="v2-tool-input-grid two">
+              <label>Job
+                <select value={jobId ?? ""} onChange={(e) => setJobId(Number(e.target.value) || null)}>
+                  <option value="">Standalone / no job</option>
+                  {jobs.map((j) => <option key={j.id} value={j.id}>{j.title}</option>)}
+                </select>
+              </label>
+              <label>Date<input type="date" value={date} onChange={(e) => setDate(e.target.value)} /></label>
+              <label>Category
+                <select value={category} onChange={(e) => setCategory(e.target.value as ExpenseCategory)}>
+                  {EXPENSE_CATEGORIES.map((c) => <option key={c}>{c}</option>)}
+                </select>
+              </label>
+              <label>Amount ($)<input type="number" min="0" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0.00" /></label>
+              <label className="is-wide">Description<input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Material, rental, mileage description..." /></label>
+            </div>
+            {notice ? <p className="v2-record-notice" role="status">{notice}</p> : null}
+            <div className="v2-tool-action-row">
+              <button type="button" className="v2-primary-button" disabled={!(parseFloat(amount) > 0) || !description.trim()} onClick={addExpense}><Plus size={15} />Log expense</button>
+              <button type="button" disabled={expenses.length === 0} onClick={() => isPro ? exportExpensesCSV(expenses) : setUpgradeOpen(true)}>
+                <Download size={15} />Export CSV{!isPro && <Lock size={11} style={{marginLeft: 4}} />}
+              </button>
+            </div>
+          </>
+        )}
+      </Panel>
+      <aside className="v2-invoice-side-stack">
+        {upgradeOpen && <UpgradeModal reason="Export CSV" onClose={() => setUpgradeOpen(false)} />}
+        <Panel className="v2-tool-panel v2-tool-summary-panel" eyebrow="Total spent" title={currency(total)}>
+          {byCategory.length ? (
+            <div className="v2-tool-breakdown">
+              {byCategory.map(({ cat, total: catTotal }) => <div key={cat}><span>{cat}</span><strong>{currency(catTotal)}</strong></div>)}
+            </div>
+          ) : <p className="v2-tool-note">No expenses logged yet.</p>}
+        </Panel>
+        <Panel className="v2-tool-panel" eyebrow={`${expenses.length} logged`} title="Expenses">
+          {expenses.length ? (
+            <div className="v2-expense-list">
+              {expenses.slice(0, 12).map((e) => (
+                <article key={e.id} className="v2-expense-item">
+                  <div>
+                    <strong>{e.description}</strong>
+                    <small>{e.category} · {e.jobTitle} · {e.date}</small>
+                  </div>
+                  <div className="v2-expense-item-right">
+                    <strong>{currency(e.amount)}</strong>
+                    <button type="button" aria-label="Delete" onClick={() => deleteExpense(e.id)}><Trash2 size={13} /></button>
+                  </div>
+                </article>
+              ))}
+            </div>
+          ) : <EmptyState className="v2-tools-empty" icon={<ReceiptText size={20} />} title="No expenses yet" description="Log materials, tool rentals, mileage, and other job costs." compact />}
+        </Panel>
+      </aside>
+    </div>
+  );
+}
+
+// ── Earnings Dashboard ────────────────────────────────────────────────────────
+
+function getISOWeek(date: Date): number {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const dayNum = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  return Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+}
+
+function getWeekStartDate(year: number, week: number): Date {
+  const jan4 = new Date(Date.UTC(year, 0, 4));
+  const dayOfWeek = jan4.getUTCDay() || 7;
+  return new Date(jan4.getTime() - (dayOfWeek - 1) * 86400000 + (week - 1) * 7 * 86400000);
+}
+
+function EarningsDashboardTool({ jobs, paymentRecords }: { jobs: Job[]; paymentRecords: PaymentRecord[] }) {
+  const [period, setPeriod] = useState<"week" | "month" | "all">("month");
+
+  const now = new Date();
+  const cutoff = period === "week"
+    ? new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7)
+    : period === "month"
+    ? new Date(now.getFullYear(), now.getMonth() - 1, now.getDate())
+    : null;
+
+  const allPaid = paymentRecords.filter((r) => r.status === "Paid / Closed");
+  const periodPaid = cutoff ? allPaid.filter((r) => new Date(r.date) >= cutoff) : allPaid;
+  const totalEarned = periodPaid.reduce((sum, r) => sum + r.amount, 0);
+  const avgJobSize = periodPaid.length ? totalEarned / periodPaid.length : 0;
+  const pending = paymentRecords.filter((r) => r.status === "Payment pending");
+
+  const tradeTotals: Record<string, number> = {};
+  for (const r of periodPaid) {
+    const job = jobs.find((j) => j.id === r.jobId);
+    if (job) tradeTotals[job.trade] = (tradeTotals[job.trade] ?? 0) + r.amount;
+  }
+  const topTrade = Object.entries(tradeTotals).sort(([, a], [, b]) => b - a)[0]?.[0] ?? "—";
+
+  // ── Weekly earnings chart data (last 8 weeks from time sessions × hourly rate) ──
+  const weeklyData = useMemo(() => {
+    const timeSessions: Array<{ startedAt: string; endedAt: string | null; jobTitle?: string }> = (() => {
+      try { return JSON.parse(localStorage.getItem("rivt.timeSessions.v1") ?? "[]") as Array<{ startedAt: string; endedAt: string | null; jobTitle?: string }>; } catch { return []; }
+    })();
+    const rateCard: { hourlyRate?: number } = (() => {
+      try { return JSON.parse(localStorage.getItem("rivt.rateCard.v1") ?? "null") as { hourlyRate?: number } ?? {}; } catch { return {}; }
+    })();
+    const hourlyRate = rateCard.hourlyRate ?? 65;
+    const weekTotals: Record<string, number> = {};
+    for (const s of timeSessions) {
+      if (!s.endedAt) continue;
+      const start = new Date(s.startedAt);
+      const hrs = (new Date(s.endedAt).getTime() - start.getTime()) / 3600000;
+      const year = start.getFullYear();
+      const week = getISOWeek(start);
+      const key = `${year}-W${String(week).padStart(2, "0")}`;
+      weekTotals[key] = (weekTotals[key] ?? 0) + hrs * hourlyRate;
+    }
+    const currentYear = now.getFullYear();
+    const currentWeek = getISOWeek(now);
+    const weeks: Array<{ label: string; amount: number }> = [];
+    for (let i = 7; i >= 0; i--) {
+      let targetWeek = currentWeek - i;
+      let targetYear = currentYear;
+      if (targetWeek <= 0) { targetYear -= 1; targetWeek += 52; }
+      const key = `${targetYear}-W${String(targetWeek).padStart(2, "0")}`;
+      const weekStart = getWeekStartDate(targetYear, targetWeek);
+      const label = weekStart.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+      weeks.push({ label, amount: weekTotals[key] ?? 0 });
+    }
+    return weeks;
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const maxWeekAmount = Math.max(...weeklyData.map((w) => w.amount), 1);
+
+  // ── Expense category breakdown ──
+  const categoryData = useMemo(() => {
+    const expenses: Array<{ category: string; amount: number }> = (() => {
+      try { return JSON.parse(localStorage.getItem("rivt.expenses.v1") ?? "[]") as Array<{ category: string; amount: number }>; } catch { return []; }
+    })();
+    const totals: Record<string, number> = {};
+    for (const e of expenses) {
+      totals[e.category] = (totals[e.category] ?? 0) + e.amount;
+    }
+    const grandExpTotal = Object.values(totals).reduce((s, v) => s + v, 0);
+    return Object.entries(totals)
+      .sort(([, a], [, b]) => b - a)
+      .map(([name, catTotal]) => ({ name, total: catTotal, pct: grandExpTotal > 0 ? (catTotal / grandExpTotal) * 100 : 0 }));
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Top jobs by earnings (time sessions × rate) ──
+  const topJobs = useMemo(() => {
+    const timeSessions: Array<{ startedAt: string; endedAt: string | null; jobTitle?: string }> = (() => {
+      try { return JSON.parse(localStorage.getItem("rivt.timeSessions.v1") ?? "[]") as Array<{ startedAt: string; endedAt: string | null; jobTitle?: string }>; } catch { return []; }
+    })();
+    const rateCard: { hourlyRate?: number } = (() => {
+      try { return JSON.parse(localStorage.getItem("rivt.rateCard.v1") ?? "null") as { hourlyRate?: number } ?? {}; } catch { return {}; }
+    })();
+    const hourlyRate = rateCard.hourlyRate ?? 65;
+    const byJob: Record<string, number> = {};
+    for (const s of timeSessions) {
+      if (!s.endedAt) continue;
+      const hrs = (new Date(s.endedAt).getTime() - new Date(s.startedAt).getTime()) / 3600000;
+      const title = s.jobTitle ?? "Standalone";
+      byJob[title] = (byJob[title] ?? 0) + hrs * hourlyRate;
+    }
+    return Object.entries(byJob)
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 5)
+      .map(([title, earned]) => ({ title, earned }));
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  return (
+    <div className="v2-tool-workbench v2-earnings-workbench">
+      <Panel className="v2-tool-panel" eyebrow="Earnings" title="Income summary">
+        <div className="v2-earnings-period-tabs" role="group" aria-label="Period">
+          {(["week", "month", "all"] as const).map((p) => (
+            <button key={p} type="button" className={period === p ? "is-active" : ""} onClick={() => setPeriod(p)}>
+              {p === "week" ? "Last 7 days" : p === "month" ? "Last 30 days" : "All time"}
+            </button>
+          ))}
+        </div>
+        <div className="v2-tool-result-grid">
+          <article><span>Total earned</span><strong>{currency(totalEarned)}</strong></article>
+          <article><span>Jobs completed</span><strong>{periodPaid.length}</strong></article>
+          <article><span>Avg job size</span><strong>{currency(avgJobSize)}</strong></article>
+          <article><span>Top trade</span><strong>{topTrade}</strong></article>
+        </div>
+        {pending.length ? (
+          <div className="v2-earnings-pending-bar">
+            <strong>{pending.length} pending</strong>
+            <span>{currency(pending.reduce((sum, r) => sum + r.amount, 0))} awaiting close-out</span>
+          </div>
+        ) : null}
+
+        {/* Weekly earnings bar chart */}
+        <div className="v2-earn-chart">
+          <div className="v2-earn-chart-title">Weekly earnings (last 8 weeks)</div>
+          {weeklyData.map((week, i) => (
+            <div key={i} className="v2-earn-chart-row">
+              <span className="v2-earn-chart-label">{week.label}</span>
+              <div className="v2-earn-chart-bar-wrap">
+                <div
+                  className="v2-earn-chart-bar"
+                  style={{ width: `${(week.amount / maxWeekAmount) * 100}%` }}
+                />
+              </div>
+              <span className="v2-earn-chart-value">${week.amount.toFixed(0)}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Expense category breakdown */}
+        {categoryData.length > 0 ? (
+          <>
+            <div className="v2-earn-section-title">Expenses by category</div>
+            {categoryData.map((cat) => (
+              <div key={cat.name} className="v2-earn-cat-row">
+                <span className="v2-earn-cat-name">{cat.name}</span>
+                <div className="v2-earn-cat-bar-wrap">
+                  <div className="v2-earn-cat-bar" style={{ width: `${cat.pct}%` }} />
+                </div>
+                <span className="v2-earn-cat-amount">${cat.total.toFixed(0)}</span>
+              </div>
+            ))}
+          </>
+        ) : null}
+
+        {/* Top jobs by earnings */}
+        {topJobs.length > 0 ? (
+          <>
+            <div className="v2-earn-section-title">Top jobs by earnings</div>
+            {topJobs.map((job, i) => (
+              <div key={i} className="v2-earn-top-job-row">
+                <span className="v2-earn-top-job-rank">#{i + 1}</span>
+                <span className="v2-earn-top-job-name">{job.title}</span>
+                <span className="v2-earn-top-job-amount">${job.earned.toFixed(0)}</span>
+              </div>
+            ))}
+          </>
+        ) : null}
+      </Panel>
+      <Panel className="v2-tool-panel" eyebrow={`${periodPaid.length} completed`} title="Payment history">
+        {periodPaid.length ? (
+          <div className="v2-earnings-list">
+            {periodPaid.slice(0, 15).map((r) => (
+              <article key={r.id} className="v2-earnings-item">
+                <div>
+                  <strong>{r.jobTitle}</strong>
+                  <small>{r.date} · {r.worker} · {r.method}</small>
+                </div>
+                <strong>{currency(r.amount)}</strong>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <EmptyState className="v2-tools-empty" icon={<TrendingUp size={20} />} title="No completed payments in this period" description="Closed-out payment records will appear here." compact />
+        )}
+      </Panel>
+    </div>
+  );
+}
+
+interface PaymentTrackerRecord {
+  id: string;
+  jobId: string;
+  jobTitle: string;
+  invoiceDate: string;
+  invoiceAmount: number;
+  paidDate?: string;
+  paidAmount?: number;
+  status: "invoiced" | "partial" | "paid" | "overdue";
+  notes?: string;
+}
+
+// ── Contract Templates Tool ───────────────────────────────────────────────────
+
+const CONTRACT_TEMPLATES = [
+  {
+    id: "scope",
+    name: "Scope of Work",
+    fields: ["contractorName", "clientName", "projectAddress", "startDate", "completionDate", "scopeDescription", "totalAmount"],
+    labels: ["Your Name/Company", "Client Name", "Project Address", "Start Date", "Completion Date", "Scope of Work Description", "Total Contract Amount ($)"],
+    body: (v: Record<string,string>) => `SCOPE OF WORK AGREEMENT
+
+Contractor: ${v.contractorName}
+Client: ${v.clientName}
+Project Address: ${v.projectAddress}
+
+This agreement confirms that ${v.contractorName} ("Contractor") will perform the following work at the above address:
+
+SCOPE:
+${v.scopeDescription}
+
+TIMELINE: Work to begin ${v.startDate} and be substantially complete by ${v.completionDate}.
+
+PAYMENT: Total contract amount is $${v.totalAmount}. Payment due upon completion unless otherwise agreed in writing.
+
+Both parties agree to the terms above.
+
+Contractor Signature: _______________________  Date: _______
+Client Signature: ___________________________  Date: _______`,
+  },
+  {
+    id: "change-order",
+    name: "Change Order",
+    fields: ["contractorName", "clientName", "projectAddress", "changeDescription", "additionalCost", "newCompletionDate"],
+    labels: ["Your Name/Company", "Client Name", "Project Address", "Description of Change", "Additional Cost ($)", "Revised Completion Date"],
+    body: (v: Record<string,string>) => `CHANGE ORDER
+
+Contractor: ${v.contractorName}
+Client: ${v.clientName}
+Project Address: ${v.projectAddress}
+
+This change order modifies the original contract as follows:
+
+CHANGE DESCRIPTION:
+${v.changeDescription}
+
+ADDITIONAL COST: $${v.additionalCost}
+REVISED COMPLETION DATE: ${v.newCompletionDate}
+
+This change order must be signed by both parties before work begins.
+
+Contractor Signature: _______________________  Date: _______
+Client Signature: ___________________________  Date: _______`,
+  },
+  {
+    id: "payment-terms",
+    name: "Payment Terms",
+    fields: ["contractorName", "clientName", "projectAddress", "totalAmount", "depositAmount", "depositDueDate", "finalPaymentTrigger"],
+    labels: ["Your Name/Company", "Client Name", "Project Address", "Total Amount ($)", "Deposit Amount ($)", "Deposit Due Date", "Final Payment Trigger (e.g., 'upon final inspection')"],
+    body: (v: Record<string,string>) => `PAYMENT TERMS AGREEMENT
+
+Contractor: ${v.contractorName}
+Client: ${v.clientName}
+Project: ${v.projectAddress}
+
+TOTAL CONTRACT VALUE: $${v.totalAmount}
+
+PAYMENT SCHEDULE:
+1. Deposit: $${v.depositAmount} due by ${v.depositDueDate}
+2. Final Payment: Remaining balance due ${v.finalPaymentTrigger}
+
+Late payments are subject to 1.5% monthly interest. Contractor reserves the right to stop work if payments are not received as scheduled.
+
+Contractor Signature: _______________________  Date: _______
+Client Signature: ___________________________  Date: _______`,
+  },
+  {
+    id: "lien-waiver",
+    name: "Lien Waiver",
+    fields: ["contractorName", "clientName", "projectAddress", "paymentAmount", "paymentDate", "workDescription"],
+    labels: ["Your Name/Company", "Client/Owner Name", "Property Address", "Payment Amount ($)", "Payment Date", "Work Performed"],
+    body: (v: Record<string,string>) => `CONDITIONAL LIEN WAIVER AND RELEASE
+
+For valuable consideration of $${v.paymentAmount} received on ${v.paymentDate}, ${v.contractorName} ("Claimant") hereby waives and releases any lien, claim, or right against:
+
+Property: ${v.projectAddress}
+Owner: ${v.clientName}
+
+For work and materials furnished through the above date:
+${v.workDescription}
+
+This waiver is conditioned upon actual receipt and clearance of the payment described above.
+
+Claimant Signature: _______________________  Date: _______
+Printed Name: _____________________________`,
+  },
+  {
+    id: "sub-agreement",
+    name: "Subcontractor Agreement",
+    fields: ["gcName", "subName", "projectAddress", "tradeScope", "startDate", "completionDate", "subAmount", "paymentTerms"],
+    labels: ["General Contractor Name", "Subcontractor Name", "Project Address", "Trade/Scope of Work", "Start Date", "Completion Date", "Subcontract Amount ($)", "Payment Terms"],
+    body: (v: Record<string,string>) => `SUBCONTRACTOR AGREEMENT
+
+General Contractor: ${v.gcName}
+Subcontractor: ${v.subName}
+Project: ${v.projectAddress}
+
+SCOPE: ${v.subName} agrees to perform the following work:
+${v.tradeScope}
+
+TIMELINE: ${v.startDate} through ${v.completionDate}
+SUBCONTRACT AMOUNT: $${v.subAmount}
+PAYMENT TERMS: ${v.paymentTerms}
+
+Subcontractor agrees to: maintain appropriate insurance, comply with all safety requirements, obtain required permits, and complete work per applicable codes.
+
+GC Signature: __________________________  Date: _______
+Sub Signature: _________________________  Date: _______`,
+  },
+];
+
+function ContractTemplateTool() {
+  const [selectedTemplateId, setSelectedTemplateId] = useState("scope");
+  const [formValues, setFormValues] = useState<Record<string, string>>({});
+  const [generated, setGenerated] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  const template = CONTRACT_TEMPLATES.find((t) => t.id === selectedTemplateId) ?? CONTRACT_TEMPLATES[0];
+
+  function handleFieldChange(field: string, value: string) {
+    setFormValues((prev) => ({ ...prev, [field]: value }));
+  }
+
+  function generateContract() {
+    const values: Record<string, string> = {};
+    for (const field of template.fields) {
+      values[field] = formValues[field] ?? "";
+    }
+    setGenerated(template.body(values));
+  }
+
+  async function handleCopy() {
+    if (!generated) return;
+    try {
+      await navigator.clipboard.writeText(generated);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {}
+  }
+
+  return (
+    <div className="v2-tool-panel" style={{ maxWidth: 720 }}>
+      <div className="v2-contract-templates">
+        {CONTRACT_TEMPLATES.map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            className={`v2-contract-template-pill${selectedTemplateId === t.id ? " is-active" : ""}`}
+            onClick={() => { setSelectedTemplateId(t.id); setGenerated(null); setFormValues({}); }}
+          >
+            {t.name}
+          </button>
+        ))}
+      </div>
+
+      {generated ? (
+        <>
+          <textarea className="v2-contract-output" readOnly value={generated} />
+          <div className="v2-contract-actions">
+            <button type="button" className="v2-contract-copy-btn" onClick={() => void handleCopy()}>
+              {copied ? "Copied!" : "Copy"}
+            </button>
+            <button type="button" className="v2-contract-print-btn" onClick={() => window.print()}>Print</button>
+            <button type="button" className="v2-contract-edit-btn" onClick={() => setGenerated(null)}>Edit</button>
+          </div>
+        </>
+      ) : (
+        <>
+          <div className="v2-contract-form">
+            {template.fields.map((field, i) => (
+              <div key={field} className="v2-contract-field">
+                <label>{template.labels[i]}
+                  {field === "scopeDescription" || field === "changeDescription" || field === "workDescription" || field === "tradeScope" ? (
+                    <textarea
+                      value={formValues[field] ?? ""}
+                      onChange={(e) => handleFieldChange(field, e.target.value)}
+                      rows={3}
+                    />
+                  ) : (
+                    <input
+                      type="text"
+                      value={formValues[field] ?? ""}
+                      onChange={(e) => handleFieldChange(field, e.target.value)}
+                    />
+                  )}
+                </label>
+              </div>
+            ))}
+          </div>
+          <button type="button" className="v2-contract-generate-btn" onClick={generateContract}>
+            Generate Contract
+          </button>
+        </>
+      )}
+    </div>
+  );
+}
+
+// ── Job Checklists Tool ───────────────────────────────────────────────────────
+
+const JOB_CHECKLISTS: Record<string, Record<string, string[]>> = {
+  "Electrician": {
+    "Rough-In Inspection": [
+      "Permit posted and visible","Panel/sub-panel location confirmed","Wire gauge correct for circuit load","All boxes secured and at correct height","Wire stapled per code (every 4.5ft, within 12in of box)","Proper wire protection through studs (nail plates)","AFCI/GFCI locations marked","Smoke detector wiring roughed in","No wire splices outside of boxes","Inspector access confirmed"
+    ],
+    "Panel Upgrade": [
+      "Old panel de-energized and tagged out","New panel properly grounded","All circuits labeled","Main breaker sized correctly","Ground rods driven and bonded","Neutral and ground buses separated","Arc fault breakers installed where required","Panel cover fits flush","Final torque on lugs verified","City inspection scheduled"
+    ],
+    "Service Call": [
+      "Customer complaint documented","Circuit tested with multimeter","GFCI outlets checked and reset","Breaker tested (not tripped internally)","Connections inspected for heat damage","Neutral connections tightened","Issue root cause identified","Fix verified before leaving","Customer signed off","Invoice/receipt provided"
+    ],
+  },
+  "Plumber": {
+    "Rough-In": [
+      "Permit pulled and posted","DWV slope verified (1/4in per foot)","Vent stack locations confirmed","P-traps roughed in at correct height","Water supply lines roughed in","Pressure test passed (air or water)","Pipe supports installed per code","Cleanout locations accessible","No ABS/PVC mixed without adapter","Inspector walkthrough complete"
+    ],
+    "Fixture Install": [
+      "Water shut-offs functional","Supply lines correct length and material","Toilet flange at finished floor level","Toilet wax ring new and seated","Sink drain aligned with rough-in","P-trap fully assembled (no over-tightening)","Faucet connections hand-tight + 1/4 turn","All fixtures caulked at wall","Test flush (toilet) 3 times","Check under sink for drips 10 min"
+    ],
+    "Water Heater": [
+      "Old unit drained and disconnected","New unit properly strapped (seismic if required)","T&P relief valve installed and piped to floor","Expansion tank installed (closed systems)","Correct gas line size / electrical amperage","Flue/venting correct gauge and slope","Anode rod checked","Thermostat set to 120°F","First-hour rating confirmed with customer","Permit finaled"
+    ],
+  },
+  "HVAC": {
+    "Equipment Startup": [
+      "Electrical disconnect installed and labeled","Refrigerant line set leak-checked","Correct refrigerant type and charge","Static pressure measured and within spec","Airflow balanced (each register measured)","Thermostat wired and programmed","Drain line flushed and clear","Filter installed (correct size and direction)","Outdoor unit level and clear of debris","Customer walkthrough complete"
+    ],
+    "Annual Maintenance": [
+      "Filter replaced","Coil cleaned (indoor and outdoor)","Drain pan and line clear","Refrigerant level checked","Capacitors tested","Contactors inspected for pitting","Blower wheel clean","Belt (if applicable) tension and condition","All electrical connections tight","System cycled on heat and cool"
+    ],
+  },
+  "Carpenter": {
+    "Framing Inspection": [
+      "Stud spacing correct (16in or 24in OC)","Headers sized for spans","King studs and trimmers doubled","Top plate doubled","Fire blocking installed","Engineered lumber stamped and approved","Beam bearing correct","Floor joist hangers properly nailed","Shear panel nailing pattern correct","Inspector approved"
+    ],
+    "Cabinet Install": [
+      "Wall studs located and marked","Level line snapped at 34.5in (base) and 54in (upper)","Upper cabinets installed first","Screws into studs (min 2 per cabinet)","All cabinets level and plumb","Doors adjusted (hinges aligned)","Drawer slides fully engaged","Filler strips cut and installed","Hardware installed and aligned","Customer walkthrough signed off"
+    ],
+  },
+  "General Contractor": {
+    "Pre-Construction": [
+      "Permit approved and posted","Utility locates called (811)","Temporary power/water arranged","Site access and staging area confirmed","Subcontractor schedule finalized","Material delivery dates confirmed","Existing conditions documented (photos)","Neighbor notification completed if needed","Porta-potty ordered if needed","Safety plan communicated to all subs"
+    ],
+    "Rough Framing Closeout": [
+      "Framing inspection passed","MEP rough-ins complete and inspected","Insulation inspection passed","Window and door flashing complete","Roof sheathing and underlayment complete","All penetrations fire-blocked","Temporary bracing removed","Site clean for drywall delivery","Schedule confirmed with drywall crew","Owner updated on timeline"
+    ],
+    "Project Closeout": [
+      "Punch list complete","Final inspections passed (all trades)","Certificate of occupancy received","Final cleaning complete","All subcontractors paid","Lien waivers collected from all subs","As-built drawings updated","Owner manual and warranties provided","Keys and codes transferred","Final photos taken"
+    ],
+  },
+};
+
+const checklistStorageKey = "rivt.checklists.v1";
+
+function readChecklistsFromStorage(): Record<string, Record<string, boolean>> {
+  try {
+    const stored = localStorage.getItem(checklistStorageKey);
+    if (!stored) return {};
+    return JSON.parse(stored) as Record<string, Record<string, boolean>>;
+  } catch { return {}; }
+}
+
+function saveChecklistsToStorage(data: Record<string, Record<string, boolean>>) {
+  try { localStorage.setItem(checklistStorageKey, JSON.stringify(data)); } catch {}
+}
+
+function getActiveJobId(): string {
+  try {
+    const stored = localStorage.getItem("rivt.jobs.v1");
+    if (!stored) return "default";
+    const jobs = JSON.parse(stored) as Array<{ id: string; status?: string }>;
+    const active = jobs.find((j) => j.status === "active" || j.status === "Open");
+    return active?.id ?? "default";
+  } catch { return "default"; }
+}
+
+function JobChecklistTool() {
+  const trades = Object.keys(JOB_CHECKLISTS);
+  const [selectedTrade, setSelectedTrade] = useState(trades[0]);
+  const jobTypes = Object.keys(JOB_CHECKLISTS[selectedTrade] ?? {});
+  const [selectedJobType, setSelectedJobType] = useState(jobTypes[0]);
+  const activeJobId = getActiveJobId();
+  const storageKey = `${selectedTrade}:${selectedJobType}:${activeJobId}`;
+
+  const [checks, setChecks] = useState<Record<string, boolean>>(() => {
+    const all = readChecklistsFromStorage();
+    return all[storageKey] ?? {};
+  });
+
+  useEffect(() => {
+    const all = readChecklistsFromStorage();
+    setChecks(all[storageKey] ?? {});
+  }, [storageKey]);
+
+  const items = JOB_CHECKLISTS[selectedTrade]?.[selectedJobType] ?? [];
+  const completedCount = items.filter((item) => checks[item]).length;
+
+  function toggleItem(item: string) {
+    const next = { ...checks, [item]: !checks[item] };
+    setChecks(next);
+    const all = readChecklistsFromStorage();
+    all[storageKey] = next;
+    saveChecklistsToStorage(all);
+  }
+
+  function resetChecklist() {
+    if (!window.confirm("Reset all items on this checklist?")) return;
+    const next: Record<string, boolean> = {};
+    setChecks(next);
+    const all = readChecklistsFromStorage();
+    all[storageKey] = next;
+    saveChecklistsToStorage(all);
+  }
+
+  function handleTradeChange(trade: string) {
+    setSelectedTrade(trade);
+    const firstJobType = Object.keys(JOB_CHECKLISTS[trade] ?? {})[0] ?? "";
+    setSelectedJobType(firstJobType);
+  }
+
+  const pct = items.length > 0 ? (completedCount / items.length) * 100 : 0;
+
+  return (
+    <div className="v2-tool-panel" style={{ maxWidth: 720 }}>
+      <div className="v2-contract-templates">
+        {trades.map((trade) => (
+          <button
+            key={trade}
+            type="button"
+            className={`v2-contract-template-pill${selectedTrade === trade ? " is-active" : ""}`}
+            onClick={() => handleTradeChange(trade)}
+          >
+            {trade}
+          </button>
+        ))}
+      </div>
+      <div className="v2-contract-templates">
+        {Object.keys(JOB_CHECKLISTS[selectedTrade] ?? {}).map((jt) => (
+          <button
+            key={jt}
+            type="button"
+            className={`v2-contract-template-pill${selectedJobType === jt ? " is-active" : ""}`}
+            onClick={() => setSelectedJobType(jt)}
+          >
+            {jt}
+          </button>
+        ))}
+      </div>
+      <div className="v2-checklist-progress">
+        <span className="v2-checklist-progress-label">{completedCount} of {items.length} complete</span>
+        <div className="v2-checklist-progress-bar-wrap">
+          <div className="v2-checklist-progress-bar" style={{ width: `${pct}%` }} />
+        </div>
+      </div>
+      <div className="v2-checklist-items">
+        {items.map((item) => (
+          <div
+            key={item}
+            className={`v2-checklist-item${checks[item] ? " is-checked" : ""}`}
+            onClick={() => toggleItem(item)}
+            role="checkbox"
+            aria-checked={checks[item] ?? false}
+            tabIndex={0}
+            onKeyDown={(e) => { if (e.key === " " || e.key === "Enter") toggleItem(item); }}
+          >
+            <div className="v2-checklist-item-check">
+              {checks[item] && <CheckSquare size={14} color="#fff" />}
+            </div>
+            <span className="v2-checklist-item-text">{item}</span>
+          </div>
+        ))}
+      </div>
+      <button type="button" className="v2-checklist-reset-btn" onClick={resetChecklist}>Reset Checklist</button>
+    </div>
+  );
+}
+
+// ── Payment Tracker Tool ──────────────────────────────────────────────────────
+
+const paymentsTrackerKey = "rivt.payments.v1";
+
+function readPaymentTrackerRecords(): PaymentTrackerRecord[] {
+  try {
+    const stored = localStorage.getItem(paymentsTrackerKey);
+    if (!stored) return [];
+    const parsed = JSON.parse(stored) as PaymentTrackerRecord[];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch { return []; }
+}
+
+function savePaymentTrackerRecords(records: PaymentTrackerRecord[]) {
+  try { localStorage.setItem(paymentsTrackerKey, JSON.stringify(records)); } catch {}
+}
+
+function readLocalJobsForPayments(): Array<{ id: string; title: string }> {
+  try {
+    const stored = localStorage.getItem("rivt.jobs.v1");
+    if (!stored) return [];
+    const parsed = JSON.parse(stored) as Array<{ id: string; title: string }>;
+    return Array.isArray(parsed) ? parsed : [];
+  } catch { return []; }
+}
+
+function getDisplayStatus(record: PaymentTrackerRecord): PaymentTrackerRecord["status"] {
+  if (record.status === "invoiced") {
+    const invoiceDate = new Date(record.invoiceDate);
+    const daysDiff = (Date.now() - invoiceDate.getTime()) / (1000 * 60 * 60 * 24);
+    if (daysDiff > 30) return "overdue";
+  }
+  return record.status;
+}
+
+function PaymentTrackerTool() {
+  const [records, setRecords] = useState<PaymentTrackerRecord[]>(readPaymentTrackerRecords);
+  const localJobs = readLocalJobsForPayments();
+  const [showForm, setShowForm] = useState(false);
+  const [form, setForm] = useState({
+    jobId: localJobs[0]?.id ?? "",
+    invoiceAmount: "",
+    invoiceDate: new Date().toISOString().slice(0, 10),
+    notes: "",
+  });
+
+  const totalInvoiced = records.reduce((sum, r) => sum + r.invoiceAmount, 0);
+  const received = records.filter((r) => r.status === "paid").reduce((sum, r) => sum + (r.paidAmount ?? 0), 0);
+  const outstanding = totalInvoiced - received;
+
+  function saveInvoice() {
+    const job = localJobs.find((j) => j.id === form.jobId);
+    const record: PaymentTrackerRecord = {
+      id: crypto.randomUUID(),
+      jobId: form.jobId,
+      jobTitle: job?.title ?? "Standalone",
+      invoiceDate: form.invoiceDate,
+      invoiceAmount: parseFloat(form.invoiceAmount) || 0,
+      status: "invoiced",
+      notes: form.notes || undefined,
+    };
+    const next = [record, ...records];
+    setRecords(next);
+    savePaymentTrackerRecords(next);
+    setShowForm(false);
+    setForm({ jobId: localJobs[0]?.id ?? "", invoiceAmount: "", invoiceDate: new Date().toISOString().slice(0, 10), notes: "" });
+  }
+
+  function markPaid(id: string) {
+    const next = records.map((r) => r.id === id ? {
+      ...r,
+      paidDate: new Date().toISOString().slice(0, 10),
+      paidAmount: r.invoiceAmount,
+      status: "paid" as const,
+    } : r);
+    setRecords(next);
+    savePaymentTrackerRecords(next);
+  }
+
+  function deleteRecord(id: string) {
+    const next = records.filter((r) => r.id !== id);
+    setRecords(next);
+    savePaymentTrackerRecords(next);
+  }
+
+  const sorted = [...records].sort((a, b) => b.invoiceDate.localeCompare(a.invoiceDate));
+
+  function statusBadgeClass(status: PaymentTrackerRecord["status"]) {
+    return `v2-payment-badge ${status}`;
+  }
+
+  function daysSince(dateStr: string) {
+    const days = Math.floor((Date.now() - new Date(dateStr).getTime()) / (1000 * 60 * 60 * 24));
+    return days === 0 ? "Today" : `${days}d ago`;
+  }
+
+  return (
+    <div className="v2-tool-panel" style={{ maxWidth: 720 }}>
+      <div className="v2-payment-summary">
+        <div className="v2-payment-stat">
+          <div className="v2-payment-stat-value">${totalInvoiced.toLocaleString()}</div>
+          <div className="v2-payment-stat-label">Total Invoiced</div>
+        </div>
+        <div className="v2-payment-stat">
+          <div className="v2-payment-stat-value">${received.toLocaleString()}</div>
+          <div className="v2-payment-stat-label">Received</div>
+        </div>
+        <div className="v2-payment-stat">
+          <div className="v2-payment-stat-value">${outstanding.toLocaleString()}</div>
+          <div className="v2-payment-stat-label">Outstanding</div>
+        </div>
+      </div>
+
+      <button type="button" className="v2-payment-add-btn" onClick={() => setShowForm(!showForm)}>
+        {showForm ? "Cancel" : "+ Add Invoice"}
+      </button>
+
+      {showForm && (
+        <div className="v2-payment-form">
+          <select
+            value={form.jobId}
+            onChange={(e) => setForm((f) => ({ ...f, jobId: e.target.value }))}
+          >
+            <option value="">Standalone / no job</option>
+            {localJobs.map((j) => <option key={j.id} value={j.id}>{j.title}</option>)}
+          </select>
+          <input
+            type="number"
+            min="0"
+            step="0.01"
+            placeholder="Invoice amount ($)"
+            value={form.invoiceAmount}
+            onChange={(e) => setForm((f) => ({ ...f, invoiceAmount: e.target.value }))}
+          />
+          <input
+            type="date"
+            value={form.invoiceDate}
+            onChange={(e) => setForm((f) => ({ ...f, invoiceDate: e.target.value }))}
+          />
+          <input
+            type="text"
+            placeholder="Notes (optional)"
+            value={form.notes}
+            onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
+          />
+          <div className="v2-payment-form-btns">
+            <button type="button" className="v2-payment-save-btn" onClick={saveInvoice} disabled={!form.invoiceAmount}>Save Invoice</button>
+            <button type="button" className="v2-payment-cancel-btn" onClick={() => setShowForm(false)}>Cancel</button>
+          </div>
+        </div>
+      )}
+
+      <div className="v2-payment-list">
+        {sorted.map((record) => {
+          const displayStatus = getDisplayStatus(record);
+          return (
+            <div key={record.id} className="v2-payment-row">
+              <div className="v2-payment-row-top">
+                <span className="v2-payment-job-name">{record.jobTitle}</span>
+                <span className="v2-payment-amount">${record.invoiceAmount.toLocaleString()}</span>
+              </div>
+              <div className="v2-payment-row-meta">
+                <span className={statusBadgeClass(displayStatus)}>{displayStatus}</span>
+                <span>{daysSince(record.invoiceDate)}</span>
+                {record.notes && <span>{record.notes}</span>}
+              </div>
+              {record.status !== "paid" && (
+                <div className="v2-payment-row-actions">
+                  <button type="button" className="v2-payment-paid-btn" onClick={() => markPaid(record.id)}>Mark Paid</button>
+                  <button type="button" className="v2-payment-delete-btn" onClick={() => deleteRecord(record.id)}>Delete</button>
+                </div>
+              )}
+              {record.status === "paid" && (
+                <div className="v2-payment-row-actions">
+                  <button type="button" className="v2-payment-delete-btn" onClick={() => deleteRecord(record.id)}>Delete</button>
+                </div>
+              )}
+            </div>
+          );
+        })}
+        {records.length === 0 && <p className="v2-muted-copy">No invoices tracked yet. Add your first invoice above.</p>}
+      </div>
+    </div>
+  );
+}
+
 function projectErrorMessage(error: unknown) {
   if (error instanceof ProjectApiError) return error.message;
   return error instanceof Error ? error.message : "RIVT could not update the project record.";
+}
+
+// ── Local Job Photos Tool ─────────────────────────────────────────────────────
+
+interface LocalPhoto {
+  id: string;
+  jobId: string;
+  url: string;
+  caption: string;
+  takenAt: string;
+}
+
+function readLocalPhotos(): LocalPhoto[] {
+  try {
+    const stored = localStorage.getItem("rivt.photos.v1");
+    if (!stored) return [];
+    const parsed = JSON.parse(stored) as LocalPhoto[];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch { return []; }
+}
+
+function persistLocalPhotos(photos: LocalPhoto[]) {
+  try { localStorage.setItem("rivt.photos.v1", JSON.stringify(photos)); } catch {}
+}
+
+function readLocalJobsList(): Array<{ id: string; title: string }> {
+  try {
+    const stored = localStorage.getItem("rivt.jobs.v1");
+    if (!stored) return [];
+    const parsed = JSON.parse(stored) as Array<{ id: string; title: string }>;
+    return Array.isArray(parsed) ? parsed : [];
+  } catch { return []; }
+}
+
+function LocalJobPhotosTool() {
+  const [photos, setPhotos] = useState<LocalPhoto[]>(readLocalPhotos);
+  const [selectedJobId, setSelectedJobId] = useState("");
+  const [caption, setCaption] = useState("");
+  const [viewPhoto, setViewPhoto] = useState<LocalPhoto | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const localJobs = readLocalJobsList();
+
+  function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const dataUrl = e.target?.result as string;
+      const newPhoto: LocalPhoto = {
+        id: crypto.randomUUID(),
+        jobId: selectedJobId,
+        url: dataUrl,
+        caption,
+        takenAt: new Date().toISOString(),
+      };
+      const next = [...photos, newPhoto];
+      setPhotos(next);
+      persistLocalPhotos(next);
+      setCaption("");
+    };
+    reader.readAsDataURL(file);
+    if (event.target) event.target.value = "";
+  }
+
+  function deletePhoto(id: string) {
+    const next = photos.filter((p) => p.id !== id);
+    setPhotos(next);
+    persistLocalPhotos(next);
+    if (viewPhoto?.id === id) setViewPhoto(null);
+  }
+
+  const filteredPhotos = selectedJobId ? photos.filter((p) => p.jobId === selectedJobId) : photos;
+
+  return (
+    <div className="v2-photos-container">
+      <div className="v2-photos-controls">
+        <select value={selectedJobId} onChange={(e) => setSelectedJobId(e.target.value)} className="v2-photos-select">
+          <option value="">All jobs</option>
+          {localJobs.map((j) => <option key={j.id} value={j.id}>{j.title}</option>)}
+          <option value="standalone">Standalone / no job</option>
+        </select>
+        <input
+          value={caption}
+          onChange={(e) => setCaption(e.target.value)}
+          placeholder="Caption (optional)"
+          className="v2-photos-caption-input"
+        />
+        <div className="v2-tool-action-row">
+          <button type="button" className="v2-primary-button" onClick={() => fileInputRef.current?.click()}>
+            <Camera size={15} />Take / choose photo
+          </button>
+        </div>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          style={{ display: "none" }}
+          aria-hidden="true"
+          onChange={handleFileChange}
+        />
+      </div>
+      {photos.length > 20 && (
+        <p className="v2-photos-warning">Storage warning: you have {photos.length} photos saved locally. Base64 images use significant browser storage.</p>
+      )}
+      <div className="v2-photos-summary">
+        <span>{filteredPhotos.length} photo{filteredPhotos.length !== 1 ? "s" : ""}{selectedJobId ? " for this job" : " total"}</span>
+      </div>
+      {filteredPhotos.length > 0 ? (
+        <div className="v2-photos-grid">
+          {filteredPhotos.map((photo) => (
+            <button key={photo.id} type="button" className="v2-photos-thumb-btn" onClick={() => setViewPhoto(photo)} title={photo.caption || "View photo"}>
+              <img src={photo.url} alt={photo.caption || "Job photo"} className="v2-photos-thumb" loading="lazy" />
+            </button>
+          ))}
+        </div>
+      ) : (
+        <div className="v2-photos-empty">
+          <Camera size={28} />
+          <strong>No photos yet</strong>
+          <p>Take a photo on site or choose from your library to document the job.</p>
+        </div>
+      )}
+      {viewPhoto && (
+        <div className="v2-photos-overlay" role="dialog" aria-label="Photo viewer" onClick={() => setViewPhoto(null)}>
+          <div className="v2-photos-overlay-inner" onClick={(e) => e.stopPropagation()}>
+            <img src={viewPhoto.url} alt={viewPhoto.caption || "Job photo"} className="v2-photos-overlay-img" />
+            <div className="v2-photos-overlay-meta">
+              {viewPhoto.caption && <p className="v2-photos-overlay-caption">{viewPhoto.caption}</p>}
+              <small>{new Date(viewPhoto.takenAt).toLocaleString()}</small>
+            </div>
+            <div className="v2-photos-overlay-actions">
+              <button type="button" className="v2-destructive-button" onClick={() => deletePhoto(viewPhoto.id)}><Trash2 size={14} />Delete</button>
+              <button type="button" onClick={() => setViewPhoto(null)}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Invoice Generator Tool (Pro-gated) ────────────────────────────────────────
+
+function InvoiceGeneratorTool() {
+  const { isPro } = usePro();
+  const [showUpgrade, setShowUpgrade] = useState(false);
+  const [selectedJobId, setSelectedJobId] = useState("");
+  const [clientName, setClientName] = useState("");
+  const [clientEmail, setClientEmail] = useState("");
+  const [clientPhone, setClientPhone] = useState("");
+  const [dueDate, setDueDate] = useState(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 30);
+    return d.toISOString().slice(0, 10);
+  });
+  const [invoiceNotes, setInvoiceNotes] = useState("Thank you for your business. Payment is due within 30 days.");
+  const localJobs = readLocalJobsList();
+
+  if (!isPro) {
+    return (
+      <div className="v2-invoice-gen-upgrade">
+        <div className="v2-invoice-gen-upgrade-inner">
+          <Lock size={28} />
+          <h3>Invoice Generator is a Pro feature</h3>
+          <p>Generate a clean, printable invoice with labor hours, expenses, and client details pre-filled from your job data.</p>
+          <button type="button" className="v2-primary-button" onClick={() => setShowUpgrade(true)}>
+            Upgrade to Pro
+          </button>
+        </div>
+        {showUpgrade && <UpgradeModal reason="Invoice Generator" onClose={() => setShowUpgrade(false)} />}
+      </div>
+    );
+  }
+
+  const timeSessions: Array<{ jobId: string | number | null; startedAt: string; endedAt: string | null }> = (() => {
+    try { return JSON.parse(localStorage.getItem("rivt.timeSessions.v1") ?? "[]") as Array<{ jobId: string | number | null; startedAt: string; endedAt: string | null }>; } catch { return []; }
+  })();
+
+  const expenses: Array<{ jobId: string | number | null; amount: number; description: string }> = (() => {
+    try { return JSON.parse(localStorage.getItem("rivt.expenses.v1") ?? "[]") as Array<{ jobId: string | number | null; amount: number; description: string }>; } catch { return []; }
+  })();
+
+  const rateCard: { hourlyRate: number } = (() => {
+    try { return JSON.parse(localStorage.getItem("rivt.rateCard.v1") ?? "null") as { hourlyRate: number } ?? { hourlyRate: 65 }; } catch { return { hourlyRate: 65 }; }
+  })();
+
+  const profile: { name?: string; companyName?: string } = (() => {
+    try { return JSON.parse(localStorage.getItem("rivt.profile.v1") ?? "null") as { name?: string; companyName?: string } ?? {}; } catch { return {}; }
+  })();
+
+  const filteredSessions = selectedJobId
+    ? timeSessions.filter((s) => String(s.jobId) === selectedJobId && s.endedAt)
+    : timeSessions.filter((s) => s.endedAt);
+
+  const filteredExpenses = selectedJobId
+    ? expenses.filter((e) => String(e.jobId) === selectedJobId)
+    : expenses;
+
+  const totalHours = filteredSessions.reduce((sum, s) => {
+    if (!s.endedAt) return sum;
+    return sum + (new Date(s.endedAt).getTime() - new Date(s.startedAt).getTime()) / 3600000;
+  }, 0);
+
+  const laborCost = totalHours * rateCard.hourlyRate;
+  const materialsCost = filteredExpenses.reduce((sum, e) => sum + e.amount, 0);
+  const grandTotal = laborCost + materialsCost;
+
+  function generateInvoice() {
+    const invoiceNum = `INV-${Date.now().toString().slice(-6)}`;
+    const contractorName = profile.companyName ?? profile.name ?? "Your Company";
+    const jobLabel = localJobs.find((j) => j.id === selectedJobId)?.title ?? "Services Rendered";
+
+    const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Invoice ${invoiceNum}</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, sans-serif; font-size: 14px; color: #111; background: #fff; padding: 48px; max-width: 800px; margin: 0 auto; }
+  .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 40px; padding-bottom: 24px; border-bottom: 3px solid #111; }
+  .logo { font-size: 32px; font-weight: 900; letter-spacing: -0.02em; }
+  .invoice-meta { text-align: right; }
+  .invoice-meta h2 { font-size: 24px; font-weight: 700; color: #f97316; }
+  .invoice-meta p { color: #6b7280; font-size: 12px; margin-top: 4px; }
+  .parties { display: flex; justify-content: space-between; margin-bottom: 40px; }
+  .party h3 { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #6b7280; margin-bottom: 8px; }
+  .party p { font-size: 14px; line-height: 1.6; }
+  table { width: 100%; border-collapse: collapse; margin-bottom: 32px; }
+  th { background: #f9fafb; padding: 10px 12px; text-align: left; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #6b7280; border-bottom: 2px solid #e5e7eb; }
+  th:not(:first-child), td:not(:first-child) { text-align: right; }
+  td { padding: 14px 12px; border-bottom: 1px solid #f3f4f6; font-size: 13px; }
+  .totals { margin-left: auto; width: 300px; }
+  .totals div { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f3f4f6; font-size: 14px; }
+  .totals .grand { font-size: 22px; font-weight: 900; color: #f97316; border-bottom: 0; padding-top: 14px; }
+  .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #e5e7eb; color: #6b7280; font-size: 12px; }
+  .notes { margin-top: 24px; padding: 16px; background: #f9fafb; border-radius: 6px; font-size: 13px; line-height: 1.5; }
+  .thank-you { margin-top: 32px; text-align: center; font-size: 16px; font-weight: 600; color: #f97316; }
+</style>
+</head>
+<body>
+<div class="header">
+  <div>
+    <div class="logo">RIVT</div>
+    <p style="color:#6b7280;font-size:12px;margin-top:4px">${contractorName}</p>
+  </div>
+  <div class="invoice-meta">
+    <h2>INVOICE</h2>
+    <p>#${invoiceNum}</p>
+    <p>Due: ${dueDate}</p>
+    <p>Date: ${new Date().toLocaleDateString()}</p>
+  </div>
+</div>
+<div class="parties">
+  <div class="party">
+    <h3>Bill To</h3>
+    <p><strong>${clientName || "Client Name"}</strong><br>${clientEmail || ""}<br>${clientPhone || ""}</p>
+  </div>
+  <div class="party">
+    <h3>From</h3>
+    <p><strong>${contractorName}</strong></p>
+  </div>
+</div>
+<table>
+  <thead>
+    <tr><th>Description</th><th>Hours / Qty</th><th>Rate</th><th>Amount</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Labor — ${jobLabel}</td><td>${totalHours.toFixed(2)} hrs</td><td>$${rateCard.hourlyRate}/hr</td><td>$${laborCost.toFixed(2)}</td></tr>
+    ${filteredExpenses.map((e) => `<tr><td>${e.description}</td><td>1</td><td>$${e.amount.toFixed(2)}</td><td>$${e.amount.toFixed(2)}</td></tr>`).join("")}
+  </tbody>
+</table>
+<div class="totals">
+  <div><span>Labor subtotal</span><span>$${laborCost.toFixed(2)}</span></div>
+  <div><span>Materials / expenses</span><span>$${materialsCost.toFixed(2)}</span></div>
+  <div class="grand"><span>Total Due</span><span>$${grandTotal.toFixed(2)}</span></div>
+</div>
+${invoiceNotes ? `<div class="notes">${invoiceNotes}</div>` : ""}
+<div class="thank-you">Thank you for your business!</div>
+<div class="footer">
+  <p>Payment terms: Net 30. Generated by RIVT on ${new Date().toLocaleDateString()}.</p>
+</div>
+</body>
+</html>`;
+
+    const printWindow = window.open("", "_blank");
+    if (printWindow) {
+      printWindow.document.write(html);
+      printWindow.document.close();
+      printWindow.print();
+    }
+  }
+
+  return (
+    <div className="v2-invoice-gen-container">
+      <div className="v2-invoice-gen-form v2-tool-panel">
+        <div className="rivt-panel-header"><span>Invoice generator</span><h2>Client &amp; job details</h2></div>
+        <div className="v2-tool-input-grid two">
+          <label>Job<select value={selectedJobId} onChange={(e) => setSelectedJobId(e.target.value)}>
+            <option value="">All / standalone</option>
+            {localJobs.map((j) => <option key={j.id} value={j.id}>{j.title}</option>)}
+          </select></label>
+          <label>Due date<input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} /></label>
+          <label>Client name<input value={clientName} onChange={(e) => setClientName(e.target.value)} placeholder="John Smith" /></label>
+          <label>Client email<input type="email" value={clientEmail} onChange={(e) => setClientEmail(e.target.value)} placeholder="client@example.com" /></label>
+          <label className="is-wide">Client phone<input type="tel" value={clientPhone} onChange={(e) => setClientPhone(e.target.value)} placeholder="+1 555 000 0000" /></label>
+          <label className="is-wide">Invoice notes / payment terms<textarea value={invoiceNotes} onChange={(e) => setInvoiceNotes(e.target.value)} rows={3} /></label>
+        </div>
+      </div>
+      <aside className="v2-invoice-gen-summary v2-tool-panel">
+        <div className="rivt-panel-header"><span>Preview totals</span><h2>${grandTotal.toFixed(2)}</h2></div>
+        <div className="v2-invoice-gen-totals">
+          <div className="v2-invoice-gen-row"><span>Labor ({totalHours.toFixed(1)} hrs @ ${rateCard.hourlyRate}/hr)</span><strong>${laborCost.toFixed(2)}</strong></div>
+          <div className="v2-invoice-gen-row"><span>Materials &amp; expenses ({filteredExpenses.length} items)</span><strong>${materialsCost.toFixed(2)}</strong></div>
+          <div className="v2-invoice-gen-row v2-invoice-gen-total"><span>Grand total</span><strong>${grandTotal.toFixed(2)}</strong></div>
+        </div>
+        <button type="button" className="v2-primary-button v2-invoice-gen-btn" onClick={generateInvoice}>
+          <FileText size={15} />Generate &amp; Print Invoice
+        </button>
+        <p className="v2-tool-note">Opens a print dialog in a new window. No data is sent to any server.</p>
+      </aside>
+    </div>
+  );
+}
+
+// ── Mileage Tracker Tool ──────────────────────────────────────────────────────
+
+const IRS_RATE_TRACKER = 0.67;
+
+interface MileageTrip {
+  id: string;
+  jobId: string;
+  date: string;
+  miles: number;
+  startTime: string;
+  endTime: string;
+  note: string;
+}
+
+interface ActiveTripState {
+  startTime: string;
+  jobId: string;
+}
+
+function readMileageTrips(): MileageTrip[] {
+  try {
+    const stored = localStorage.getItem("rivt.mileage.v1");
+    if (!stored) return [];
+    const parsed = JSON.parse(stored) as MileageTrip[];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch { return []; }
+}
+
+function persistMileageTrips(trips: MileageTrip[]) {
+  try { localStorage.setItem("rivt.mileage.v1", JSON.stringify(trips)); } catch {}
+}
+
+function readActiveTripState(): ActiveTripState | null {
+  try {
+    const stored = localStorage.getItem("rivt.mileage.activeTrip.v1");
+    if (!stored) return null;
+    return JSON.parse(stored) as ActiveTripState;
+  } catch { return null; }
+}
+
+function persistActiveTripState(trip: ActiveTripState | null) {
+  try {
+    if (trip) { localStorage.setItem("rivt.mileage.activeTrip.v1", JSON.stringify(trip)); }
+    else { localStorage.removeItem("rivt.mileage.activeTrip.v1"); }
+  } catch {}
+}
+
+function getMileageWeekMiles(trips: MileageTrip[]): number {
+  const weekAgo = new Date();
+  weekAgo.setDate(weekAgo.getDate() - 7);
+  const weekAgoStr = weekAgo.toISOString().slice(0, 10);
+  return trips.filter((t) => t.date >= weekAgoStr).reduce((sum, t) => sum + t.miles, 0);
+}
+
+function MileageTrackerTool() {
+  const [trips, setTrips] = useState<MileageTrip[]>(readMileageTrips);
+  const [activeTrip, setActiveTrip] = useState<ActiveTripState | null>(readActiveTripState);
+  const [selectedJobId, setSelectedJobId] = useState("");
+  const [manualMiles, setManualMiles] = useState("");
+  const [tripNote, setTripNote] = useState("");
+  const [manualDate, setManualDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [endMiles, setEndMiles] = useState("");
+  const [showEndForm, setShowEndForm] = useState(false);
+  const [elapsed, setElapsed] = useState(0);
+  const localJobs = readLocalJobsList();
+
+  useEffect(() => {
+    if (!activeTrip) { setElapsed(0); return; }
+    const start = new Date(activeTrip.startTime).getTime();
+    const tick = () => setElapsed(Math.floor((Date.now() - start) / 1000));
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [activeTrip]);
+
+  function startTrip() {
+    const trip: ActiveTripState = { startTime: new Date().toISOString(), jobId: selectedJobId };
+    setActiveTrip(trip);
+    persistActiveTripState(trip);
+    setShowEndForm(false);
+  }
+
+  function endTrip() {
+    if (!activeTrip) return;
+    const miles = parseFloat(endMiles);
+    if (!miles || miles <= 0) return;
+    const newTrip: MileageTrip = {
+      id: crypto.randomUUID(),
+      jobId: activeTrip.jobId,
+      date: new Date().toISOString().slice(0, 10),
+      miles,
+      startTime: activeTrip.startTime,
+      endTime: new Date().toISOString(),
+      note: tripNote.trim(),
+    };
+    const next = [newTrip, ...trips];
+    setTrips(next);
+    persistMileageTrips(next);
+    setActiveTrip(null);
+    persistActiveTripState(null);
+    setEndMiles("");
+    setTripNote("");
+    setShowEndForm(false);
+  }
+
+  function logManual() {
+    const miles = parseFloat(manualMiles);
+    if (!miles || miles <= 0) return;
+    const newTrip: MileageTrip = {
+      id: crypto.randomUUID(),
+      jobId: selectedJobId,
+      date: manualDate,
+      miles,
+      startTime: "",
+      endTime: "",
+      note: tripNote.trim(),
+    };
+    const next = [newTrip, ...trips];
+    setTrips(next);
+    persistMileageTrips(next);
+    setManualMiles("");
+    setTripNote("");
+  }
+
+  function deleteTrip(id: string) {
+    const next = trips.filter((t) => t.id !== id);
+    setTrips(next);
+    persistMileageTrips(next);
+  }
+
+  const weekMiles = getMileageWeekMiles(trips);
+  const weekDeduction = weekMiles * IRS_RATE_TRACKER;
+  const elapsedHms = `${String(Math.floor(elapsed / 3600)).padStart(2, "0")}:${String(Math.floor((elapsed % 3600) / 60)).padStart(2, "0")}:${String(elapsed % 60).padStart(2, "0")}`;
+
+  return (
+    <div className="v2-mileage-tracker-container">
+      <div className="v2-mileage-tracker-summary-strip">
+        <span>This week:</span>
+        <strong>{weekMiles.toFixed(1)} mi</strong>
+        <span>·</span>
+        <span>Est. deduction:</span>
+        <strong>${weekDeduction.toFixed(2)}</strong>
+        <small>(IRS rate $0.67/mi)</small>
+      </div>
+
+      <div className="v2-mileage-tracker-body">
+        <div className="v2-mileage-tracker-left v2-tool-panel">
+          <div className="rivt-panel-header"><span>Trip tracking</span><h2>Start a trip</h2></div>
+          <label className="v2-mileage-tracker-label">Job<select value={selectedJobId} onChange={(e) => setSelectedJobId(e.target.value)} className="v2-mileage-tracker-select">
+            <option value="">Standalone / no job</option>
+            {localJobs.map((j) => <option key={j.id} value={j.id}>{j.title}</option>)}
+          </select></label>
+
+          {activeTrip ? (
+            <div className="v2-mileage-active-trip">
+              <div className="v2-mileage-active-badge">Trip in progress</div>
+              <div className="v2-mileage-active-timer">{elapsedHms}</div>
+              <small>Started {new Date(activeTrip.startTime).toLocaleTimeString()}</small>
+              {!showEndForm ? (
+                <button type="button" className="v2-primary-button" onClick={() => setShowEndForm(true)}>
+                  <Navigation size={15} />End Trip
+                </button>
+              ) : (
+                <div className="v2-mileage-end-form">
+                  <label className="v2-mileage-tracker-label">Miles driven<input type="number" min="0.1" step="0.1" value={endMiles} onChange={(e) => setEndMiles(e.target.value)} placeholder="0.0" /></label>
+                  <label className="v2-mileage-tracker-label">Note<input value={tripNote} onChange={(e) => setTripNote(e.target.value)} placeholder="Job site, supply run..." /></label>
+                  <div className="v2-tool-action-row">
+                    <button type="button" className="v2-primary-button" onClick={endTrip} disabled={!endMiles || parseFloat(endMiles) <= 0}>Save trip</button>
+                    <button type="button" onClick={() => setShowEndForm(false)}>Cancel</button>
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <button type="button" className="v2-primary-button" onClick={startTrip}>
+              <Navigation size={15} />Start Trip
+            </button>
+          )}
+
+          <hr className="v2-mileage-divider" />
+          <div className="rivt-panel-header"><span>Manual entry</span><h2>Log miles</h2></div>
+          <div className="v2-tool-input-grid two">
+            <label>Date<input type="date" value={manualDate} onChange={(e) => setManualDate(e.target.value)} /></label>
+            <label>Miles<input type="number" min="0.1" step="0.1" value={manualMiles} onChange={(e) => setManualMiles(e.target.value)} placeholder="0.0" /></label>
+            <label className="is-wide">Note<input value={tripNote} onChange={(e) => setTripNote(e.target.value)} placeholder="Job site, supply run, pickup..." /></label>
+          </div>
+          <button type="button" className="v2-primary-button" onClick={logManual} disabled={!manualMiles || parseFloat(manualMiles) <= 0}>
+            <Navigation size={15} />Log Miles
+          </button>
+        </div>
+
+        <div className="v2-mileage-tracker-right v2-tool-panel">
+          <div className="rivt-panel-header"><span>Recent trips</span><h2>{trips.length} logged</h2></div>
+          {trips.length > 0 ? (
+            <div className="v2-mileage-tracker-list">
+              {trips.slice(0, 10).map((trip) => {
+                const jobLabel = localJobs.find((j) => j.id === trip.jobId)?.title ?? (trip.jobId ? trip.jobId : "Standalone");
+                return (
+                  <article key={trip.id} className="v2-mileage-tracker-entry">
+                    <div className="v2-mileage-tracker-entry-head">
+                      <strong>{trip.miles.toFixed(1)} mi</strong>
+                      <span>{trip.date}</span>
+                      <span className="v2-mileage-est-deduction">${(trip.miles * IRS_RATE_TRACKER).toFixed(2)} deduction</span>
+                      <button type="button" aria-label="Delete trip" onClick={() => deleteTrip(trip.id)}><Trash2 size={13} /></button>
+                    </div>
+                    <div className="v2-mileage-tracker-entry-meta">
+                      <small>{jobLabel}</small>
+                      {trip.note && <small>{trip.note}</small>}
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="v2-muted-copy">No trips logged yet. Start a trip or log miles manually.</p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Materials Estimator Tool ──────────────────────────────────────────────────
+
+interface MaterialsEstItem {
+  id: string;
+  name: string;
+  qty: number;
+  unit: string;
+  unitCost: number;
+  markup: number;
+}
+
+const UNIT_OPTIONS = ["ea", "lf", "sf", "cy", "ton", "hr"];
+
+const COMMON_MATERIALS: Array<{ name: string; unit: string }> = [
+  { name: "Lumber 2x4", unit: "ea" },
+  { name: "Drywall", unit: "sf" },
+  { name: "Concrete", unit: "cy" },
+  { name: "PVC Pipe", unit: "lf" },
+  { name: "Wire 12AWG", unit: "lf" },
+  { name: "Paint", unit: "ea" },
+  { name: "Insulation", unit: "sf" },
+  { name: "Rebar", unit: "lf" },
+];
+
+type StoredMaterialsMap = Record<string, MaterialsEstItem[]>;
+
+function readMaterialsEst(jobId: string): MaterialsEstItem[] {
+  try {
+    const stored = localStorage.getItem("rivt.materials.v1");
+    if (!stored) return [];
+    const map = JSON.parse(stored) as StoredMaterialsMap;
+    return Array.isArray(map[jobId || "default"]) ? map[jobId || "default"] : [];
+  } catch { return []; }
+}
+
+function persistMaterialsEst(jobId: string, items: MaterialsEstItem[]) {
+  try {
+    const stored = localStorage.getItem("rivt.materials.v1");
+    const map: StoredMaterialsMap = stored ? (JSON.parse(stored) as StoredMaterialsMap) : {};
+    map[jobId || "default"] = items;
+    localStorage.setItem("rivt.materials.v1", JSON.stringify(map));
+  } catch {}
+}
+
+function MaterialsEstimatorTool() {
+  const localJobs = readLocalJobsList();
+  const [selectedJobId, setSelectedJobId] = useState("");
+  const [items, setItems] = useState<MaterialsEstItem[]>([]);
+  const [defaultMarkup, setDefaultMarkup] = useState(20);
+
+  useEffect(() => {
+    setItems(readMaterialsEst(selectedJobId));
+  }, [selectedJobId]);
+
+  function addBlankItem() {
+    setItems((prev) => [...prev, {
+      id: crypto.randomUUID(),
+      name: "",
+      qty: 1,
+      unit: "ea",
+      unitCost: 0,
+      markup: defaultMarkup,
+    }]);
+  }
+
+  function addPreset(preset: { name: string; unit: string }) {
+    setItems((prev) => [...prev, {
+      id: crypto.randomUUID(),
+      name: preset.name,
+      qty: 1,
+      unit: preset.unit,
+      unitCost: 0,
+      markup: defaultMarkup,
+    }]);
+  }
+
+  function updateItem(id: string, field: keyof MaterialsEstItem, value: string | number) {
+    setItems((prev) => prev.map((item) => item.id === id ? { ...item, [field]: value } : item));
+  }
+
+  function removeItem(id: string) {
+    setItems((prev) => prev.filter((item) => item.id !== id));
+  }
+
+  function saveList() {
+    persistMaterialsEst(selectedJobId, items);
+  }
+
+  function clearItems() {
+    setItems([]);
+  }
+
+  const subtotal = items.reduce((sum, item) => sum + item.qty * item.unitCost, 0);
+  const markupTotal = items.reduce((sum, item) => sum + (item.qty * item.unitCost) * (item.markup / 100), 0);
+  const total = subtotal + markupTotal;
+
+  return (
+    <div className="v2-materials-est-container">
+      <div className="v2-materials-est-header">
+        <label className="v2-materials-est-job-label">Job<select value={selectedJobId} onChange={(e) => setSelectedJobId(e.target.value)} className="v2-materials-est-select">
+          <option value="">Default / no job</option>
+          {localJobs.map((j) => <option key={j.id} value={j.id}>{j.title}</option>)}
+        </select></label>
+        <label className="v2-materials-est-markup-label">Default markup %<input type="number" min="0" max="200" value={defaultMarkup} onChange={(e) => setDefaultMarkup(Math.max(0, Number(e.target.value) || 0))} className="v2-materials-est-markup-input" /></label>
+      </div>
+
+      <div className="v2-materials-est-quickpick">
+        <span className="v2-materials-est-quickpick-label">Quick add:</span>
+        {COMMON_MATERIALS.map((m) => (
+          <button key={m.name} type="button" className="v2-materials-est-chip" onClick={() => addPreset(m)}>
+            {m.name}
+          </button>
+        ))}
+      </div>
+
+      <div className="v2-materials-est-table">
+        <div className="v2-materials-est-table-header">
+          <span>Item</span>
+          <span>Qty</span>
+          <span>Unit</span>
+          <span>Unit cost</span>
+          <span>Markup %</span>
+          <span>Subtotal</span>
+          <span>With markup</span>
+          <span />
+        </div>
+        {items.map((item) => {
+          const sub = item.qty * item.unitCost;
+          const withMkp = sub * (1 + item.markup / 100);
+          return (
+            <div key={item.id} className="v2-materials-est-row">
+              <input value={item.name} onChange={(e) => updateItem(item.id, "name", e.target.value)} placeholder="Item name" aria-label="Item name" />
+              <input type="number" min="0" step="0.1" value={item.qty} onChange={(e) => updateItem(item.id, "qty", Number(e.target.value) || 0)} aria-label="Quantity" />
+              <select value={item.unit} onChange={(e) => updateItem(item.id, "unit", e.target.value)} aria-label="Unit">
+                {UNIT_OPTIONS.map((u) => <option key={u}>{u}</option>)}
+              </select>
+              <input type="number" min="0" step="0.01" value={item.unitCost} onChange={(e) => updateItem(item.id, "unitCost", Number(e.target.value) || 0)} aria-label="Unit cost" />
+              <input type="number" min="0" step="1" value={item.markup} onChange={(e) => updateItem(item.id, "markup", Number(e.target.value) || 0)} aria-label="Markup %" />
+              <span className="v2-materials-est-num">${sub.toFixed(2)}</span>
+              <span className="v2-materials-est-num v2-materials-est-with-markup">${withMkp.toFixed(2)}</span>
+              <button type="button" aria-label="Remove item" onClick={() => removeItem(item.id)}><Trash2 size={14} /></button>
+            </div>
+          );
+        })}
+        <div className="v2-materials-est-footer">
+          <span>Subtotal: <strong>${subtotal.toFixed(2)}</strong></span>
+          <span>Markup: <strong>${markupTotal.toFixed(2)}</strong></span>
+          <span className="v2-materials-est-footer-total">Total: <strong>${total.toFixed(2)}</strong></span>
+        </div>
+      </div>
+
+      <div className="v2-tool-action-row">
+        <button type="button" className="v2-primary-button" onClick={addBlankItem}><Plus size={14} />Add Item</button>
+        <button type="button" onClick={saveList}><Package size={14} />Save List</button>
+        <button type="button" onClick={clearItems}>Clear</button>
+      </div>
+    </div>
+  );
 }
 
 function fileSize(sizeBytes: number) {
@@ -1369,7 +4385,7 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", onNavigate, 
     listActiveWork()
       .then((items) => {
         if (cancelled) return;
-        setActiveWork(items);
+        setActiveWork(Array.isArray(items) ? items : []);
       })
       .catch((error: unknown) => {
         if (!cancelled) setRecordsError(error instanceof Error ? error.message : "Could not load active work.");
@@ -1770,7 +4786,81 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", onNavigate, 
         description: "Capture, organize, and compare job-site photos tied to your active project record.",
         node: <JobPhotosTool activeWork={activeWork} />,
       },
+      "time-tracker": {
+        eyebrow: "Time tracker",
+        title: "Time tracker",
+        description: "Clock in and out per job. Track hours across all active and recent work.",
+        node: <TimeTrackerTool activeJob={activeJob} jobs={jobs} />,
+      },
+      "expense-logger": {
+        eyebrow: "Expense logger",
+        title: "Expense logger",
+        description: "Log materials, tool rentals, mileage, and subcontractor costs by job.",
+        node: <ExpenseLoggerTool activeJob={activeJob} jobs={jobs} />,
+      },
+      earnings: {
+        eyebrow: "Earnings",
+        title: "Earnings dashboard",
+        description: "Weekly and monthly income summary: total earned, jobs completed, top trade, average job size.",
+        node: <EarningsDashboardTool jobs={jobs} paymentRecords={paymentRecords} />,
+      },
+      "bid-builder": {
+        eyebrow: "Bid / quote",
+        title: "Bid builder",
+        description: "Line-item bids with labor, materials, overhead markup, client notes, and save-to-device.",
+        node: <BidBuilderTool activeJob={activeJob} />,
+      },
+      mileage: {
+        eyebrow: "Mileage log",
+        title: "Mileage logger",
+        description: "Log job site trips and calculate your IRS 2025 standard mileage deduction ($0.70/mile).",
+        node: <MileageLoggerTool activeJob={activeJob} />,
+      },
+      "price-book": {
+        eyebrow: "Price book",
+        title: "Material price book",
+        description: "Save common material prices for quick lookup when building estimates and bids.",
+        node: <PriceBookTool />,
+      },
+      "safety-checklist": {
+        eyebrow: "Safety",
+        title: "Field safety checklist",
+        description: "Pre-built daily site check across PPE, fall protection, electrical, tools, and emergency readiness.",
+        node: <SafetyChecklistTool activeJob={activeJob} />,
+      },
+      "tax-estimator": {
+        eyebrow: "Tax planning",
+        title: "Tax estimator",
+        description: "Estimate quarterly self-employment tax payments based on your projected annual income.",
+        node: <TaxEstimatorTool />,
+      },
+      "punch-list": {
+        eyebrow: "Closeout",
+        title: "Punch list",
+        description: "Track deficiencies and outstanding items for final walkthrough and sign-off.",
+        node: <PunchListTool />,
+      },
+      contracts: {
+        eyebrow: "Contracts",
+        title: "Contract templates",
+        description: "Generate scope of work, change orders, payment terms, lien waivers, and subcontractor agreements.",
+        node: <ContractTemplateTool />,
+      },
+      "job-checklist": {
+        eyebrow: "Checklists",
+        title: "Job checklists",
+        description: "Trade-specific inspection and job type checklists with progress tracking.",
+        node: <JobChecklistTool />,
+      },
+      payments: {
+        eyebrow: "Payments",
+        title: "Payment tracker",
+        description: "Track invoices, outstanding balances, and payment status across all jobs.",
+        node: <PaymentTrackerTool />,
+      },
     }[activeTool];
+
+    if (!toolMeta) return null;
 
     return (
       <ToolAppShell
@@ -1868,6 +4958,126 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", onNavigate, 
           onAction={() => setActiveTool("job-photos")}
         />
         <ToolCard
+          icon={Clock}
+          title="Time tracker"
+          badge="Time"
+          summary="Clock in and out per job. Tracks hours and auto-fills invoice labor line."
+          output="Hours"
+          detail="Per job"
+          action="Open"
+          onAction={() => setActiveTool("time-tracker")}
+        />
+        <ToolCard
+          icon={ReceiptText}
+          title="Expense logger"
+          badge="Costs"
+          summary="Log materials, tool rentals, mileage, and subcontractor costs."
+          output="Totals"
+          detail="By category"
+          action="Open"
+          onAction={() => setActiveTool("expense-logger")}
+        />
+        <ToolCard
+          icon={TrendingUp}
+          title="Earnings"
+          badge="Income"
+          summary="Weekly and monthly income summary, top trade, and avg job size."
+          output="By period"
+          detail="Payment history"
+          action="Open"
+          onAction={() => setActiveTool("earnings")}
+        />
+        <ToolCard
+          icon={ClipboardList}
+          title="Bid builder"
+          badge="Bid / quote"
+          summary="Line-item bids with labor, materials, markup, and client notes."
+          output="Total w/ markup"
+          detail="Save to device"
+          action="Open"
+          onAction={() => setActiveTool("bid-builder")}
+        />
+        <ToolCard
+          icon={Car}
+          title="Mileage logger"
+          badge="Mileage"
+          summary="Log job site trips and calculate your IRS 2025 deduction at $0.70/mile."
+          output="$/mi deduction"
+          detail="Year-to-date"
+          action="Open"
+          onAction={() => setActiveTool("mileage")}
+        />
+        <ToolCard
+          icon={Package2}
+          title="Price book"
+          badge="Materials"
+          summary="Save and search common material prices for estimates and bids."
+          output="Prices"
+          detail="Copy to clipboard"
+          action="Open"
+          onAction={() => setActiveTool("price-book")}
+        />
+        <ToolCard
+          icon={Shield}
+          title="Safety checklist"
+          badge="Safety"
+          summary="Daily site check across PPE, fall, electrical, tools, and emergency readiness."
+          output="Sign-off log"
+          detail="Trade checklists"
+          action="Open"
+          onAction={() => setActiveTool("safety-checklist")}
+        />
+        <ToolCard
+          icon={TrendingDown}
+          title="Tax estimator"
+          badge="Finance"
+          summary="Estimate quarterly self-employment taxes based on projected annual income."
+          output="Quarterly"
+          detail="SE + federal"
+          action="Open"
+          onAction={() => setActiveTool("tax-estimator")}
+        />
+        <ToolCard
+          icon={ClipboardList}
+          title="Punch list"
+          badge="Closeout"
+          summary="Track deficiencies and outstanding items for final walkthrough and sign-off."
+          output="By job"
+          detail="Status tracking"
+          action="Open"
+          onAction={() => setActiveTool("punch-list")}
+        />
+        <ToolCard
+          icon={FileText}
+          title="Contracts"
+          badge="Legal"
+          summary="Generate scope of work, change orders, lien waivers, and subcontractor agreements."
+          output="5 templates"
+          detail="Print ready"
+          action="Open"
+          onAction={() => setActiveTool("contracts")}
+        />
+        <ToolCard
+          icon={CheckSquare}
+          title="Checklists"
+          badge="Quality"
+          summary="Trade-specific inspection and job type checklists with progress tracking."
+          output="Per job"
+          detail="Saved locally"
+          action="Open"
+          onAction={() => setActiveTool("job-checklist")}
+        />
+        <ToolCard
+          icon={DollarSign}
+          title="Payments"
+          badge="Finance"
+          summary="Track invoices, outstanding balances, and payment status across jobs."
+          output="Invoice log"
+          detail="By status"
+          action="Open"
+          onAction={() => setActiveTool("payments")}
+        />
+        <ToolCard
           icon={FolderOpen}
           title="Records"
           badge="Closeout"
@@ -1877,6 +5087,10 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", onNavigate, 
           action="Open"
           onAction={onOpenRecords}
         />
+      </div>
+
+      <div className="v2-share-report-row">
+        <ShareReportButton jobTitle={activeJob?.title ?? "Current job"} />
       </div>
 
       <div className="v2-tools-grid">

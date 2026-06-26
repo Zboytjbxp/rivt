@@ -409,6 +409,355 @@
   text-align: center;
 }
 
+/* ─── List toolbar (archive toggle) ─────────────────────────────────────── */
+.v2-inbox-list-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-bottom: 1px solid color-mix(in srgb, var(--v2-border) 56%, transparent);
+  background: color-mix(in srgb, var(--v2-surface-muted) 30%, transparent);
+}
+
+/* ─── Feature 3: Archive toggle button ──────────────────────────────────── */
+.v2-archived-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border: 1px solid color-mix(in srgb, var(--v2-border) 62%, transparent);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--v2-text-muted);
+  font: inherit;
+  font-size: 11px;
+  font-weight: var(--v2-weight-bold);
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+
+.v2-archived-toggle:hover {
+  background: color-mix(in srgb, var(--v2-border) 40%, transparent);
+  color: var(--v2-text);
+}
+
+.v2-archived-toggle.active {
+  border-color: var(--v2-accent);
+  background: color-mix(in srgb, var(--v2-accent-soft) 70%, transparent);
+  color: var(--v2-accent);
+}
+
+/* ─── Feature 2: Section dividers (Pinned / All messages) ───────────────── */
+.v2-conv-section-label {
+  padding: 6px 20px 4px;
+  color: var(--v2-text-muted);
+  font-size: 10px;
+  font-weight: var(--v2-weight-bold);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  background: color-mix(in srgb, var(--v2-surface-muted) 26%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--v2-border) 40%, transparent);
+}
+
+/* ─── Conversation row wrapper (holds thread button + action buttons) ────── */
+.v2-inbox-thread-wrapper {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: stretch;
+  border-bottom: 1px solid color-mix(in srgb, var(--v2-border) 56%, transparent);
+}
+
+.v2-inbox-thread-wrapper:last-child {
+  border-bottom: 0;
+}
+
+/* Override the per-item border since the wrapper handles it */
+.v2-inbox-thread-wrapper .v2-inbox-thread {
+  border-bottom: 0;
+}
+
+.v2-inbox-thread-row-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 0 6px;
+  border-left: 1px solid color-mix(in srgb, var(--v2-border) 40%, transparent);
+  background: color-mix(in srgb, var(--v2-surface-muted) 18%, transparent);
+}
+
+/* ─── Feature 2: Pin button ─────────────────────────────────────────────── */
+.v2-conv-pin-btn,
+.v2-conv-archive-btn {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: var(--v2-radius-sm);
+  background: transparent;
+  color: var(--v2-text-muted);
+  cursor: pointer;
+  transition: color 0.12s, background 0.12s;
+}
+
+.v2-conv-pin-btn:hover,
+.v2-conv-archive-btn:hover {
+  background: color-mix(in srgb, var(--v2-border) 40%, transparent);
+  color: var(--v2-text);
+}
+
+.v2-conv-pin-btn.is-pinned {
+  color: var(--v2-accent);
+}
+
+.v2-conv-archive-btn.is-archived {
+  color: var(--v2-accent);
+}
+
+/* ─── Feature 2: Pinned conversation highlight ──────────────────────────── */
+.v2-conv-pinned {
+  border-left: 3px solid var(--v2-accent) !important;
+}
+
+/* ─── Feature 1: Templates section ─────────────────────────────────────── */
+.v2-msg-templates-section {
+  padding: 0 18px 4px;
+  border-top: 1px solid color-mix(in srgb, var(--v2-border) 50%, transparent);
+  background: color-mix(in srgb, var(--v2-surface-muted) 30%, transparent);
+}
+
+.v2-templates-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin: 8px 0 6px;
+  padding: 4px 10px;
+  border: 1px solid color-mix(in srgb, var(--v2-border) 62%, transparent);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--v2-text-muted);
+  font: inherit;
+  font-size: 11px;
+  font-weight: var(--v2-weight-bold);
+  cursor: pointer;
+  transition: color 0.12s, background 0.12s;
+}
+
+.v2-templates-toggle:hover {
+  background: color-mix(in srgb, var(--v2-border) 40%, transparent);
+  color: var(--v2-text);
+}
+
+.v2-msg-templates-bar {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+  scrollbar-width: thin;
+  align-items: center;
+  flex-wrap: nowrap;
+}
+
+.v2-msg-template-chip {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  border: 1px solid color-mix(in srgb, var(--v2-border) 62%, transparent);
+  border-radius: 999px;
+  background: var(--v2-surface-raised);
+  overflow: hidden;
+}
+
+.v2-msg-template-chip > button:first-child {
+  padding: 5px 10px 5px 12px;
+  border: 0;
+  background: transparent;
+  color: var(--v2-text);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.1s;
+}
+
+.v2-msg-template-chip > button:first-child:hover {
+  background: color-mix(in srgb, var(--v2-accent-soft) 50%, transparent);
+  color: var(--v2-accent);
+}
+
+.v2-msg-template-chip-delete {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  border-left: 1px solid color-mix(in srgb, var(--v2-border) 50%, transparent);
+  background: transparent;
+  color: var(--v2-text-muted);
+  cursor: pointer;
+  min-height: 28px;
+  transition: background 0.1s, color 0.1s;
+}
+
+.v2-msg-template-chip-delete:hover {
+  background: color-mix(in srgb, var(--v2-danger-soft, #fee) 60%, transparent);
+  color: var(--v2-danger, #c00);
+}
+
+.v2-msg-template-chip-add {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 1px dashed color-mix(in srgb, var(--v2-border) 70%, transparent);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--v2-text-muted);
+  cursor: pointer;
+  transition: color 0.12s, border-color 0.12s;
+}
+
+.v2-msg-template-chip-add:hover {
+  border-color: var(--v2-accent);
+  color: var(--v2-accent);
+}
+
+.v2-msg-template-add-form {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 4px;
+  padding: 3px 3px 3px 8px;
+  border: 1px solid var(--v2-accent);
+  border-radius: 999px;
+  background: var(--v2-surface-raised);
+}
+
+.v2-msg-template-add-form input {
+  width: 180px;
+  border: 0;
+  background: transparent;
+  color: var(--v2-text);
+  font: inherit;
+  font-size: 12px;
+  outline: none;
+}
+
+.v2-msg-template-add-form button {
+  padding: 3px 8px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--v2-text-muted);
+  font: inherit;
+  font-size: 11px;
+  font-weight: var(--v2-weight-bold);
+  cursor: pointer;
+}
+
+.v2-msg-template-add-form button:first-of-type {
+  background: var(--v2-accent);
+  color: #fff;
+}
+
+/* ─── Feature 4: Emoji Reactions ─────────────────────────────────────────── */
+.v2-msg-reaction-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  position: relative;
+  min-height: 24px;
+}
+
+.v2-msg-reaction-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 7px;
+  border: 1px solid color-mix(in srgb, var(--v2-border) 62%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--v2-accent-soft) 40%, var(--v2-surface-raised));
+  color: var(--v2-text);
+  font-size: 14px;
+  cursor: pointer;
+  transition: transform 0.1s;
+}
+
+.v2-msg-reaction-pill:hover {
+  transform: scale(1.1);
+}
+
+.v2-msg-reaction-trigger {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--v2-text-muted);
+  font-size: 13px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.12s, background 0.12s;
+}
+
+.v2-inbox-message:hover .v2-msg-reaction-trigger,
+.v2-inbox-message:focus-within .v2-msg-reaction-trigger {
+  opacity: 1;
+}
+
+.v2-msg-reaction-trigger:hover {
+  background: color-mix(in srgb, var(--v2-border) 50%, transparent);
+  border-color: color-mix(in srgb, var(--v2-border) 62%, transparent);
+}
+
+.v2-msg-reaction-picker {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 0;
+  display: flex;
+  gap: 4px;
+  padding: 4px 8px;
+  border: 1px solid var(--v2-border);
+  border-radius: 999px;
+  background: var(--v2-surface-raised);
+  box-shadow: var(--v2-shadow-card);
+  z-index: 10;
+  white-space: nowrap;
+}
+
+.v2-inbox-message.is-mine .v2-msg-reaction-picker {
+  left: auto;
+  right: 0;
+}
+
+.v2-msg-reaction-btn {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: transparent;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background 0.1s, transform 0.1s;
+}
+
+.v2-msg-reaction-btn:hover {
+  background: color-mix(in srgb, var(--v2-accent-soft) 50%, transparent);
+  transform: scale(1.15);
+}
+
+.v2-msg-reaction-btn.is-active {
+  background: color-mix(in srgb, var(--v2-accent-soft) 70%, transparent);
+  border-color: color-mix(in srgb, var(--v2-accent) 40%, transparent);
+}
+
 @media (max-width: 1040px) {
   .v2-inbox-grid {
     grid-template-columns: 1fr;
@@ -460,6 +809,11 @@
   .v2-inbox-message {
     max-width: 94%;
   }
+
+  /* Hide the "Select a thread" placeholder panel on mobile — only show it when a thread is actually selected */
+  .v2-inbox-panel-thread:has(.v2-inbox-empty-large) {
+    display: none;
+  }
 }
 
 @media (max-width: 480px) {
@@ -480,3 +834,66 @@
     padding-bottom: 4px;
   }
 }
+
+/* ─── Inbox tab bar ──────────────────────────────────────────────────────── */
+.v2-inbox-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 0 0 0 2px;
+  border-bottom: 2px solid var(--v2-border);
+}
+
+.v2-inbox-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 16px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  background: transparent;
+  color: var(--v2-text-muted);
+  font: inherit;
+  font-size: 14px;
+  font-weight: var(--v2-weight-bold);
+  cursor: pointer;
+  transition: color 0.12s, border-color 0.12s;
+}
+
+.v2-inbox-tab:hover {
+  color: var(--v2-text);
+}
+
+.v2-inbox-tab.is-active {
+  color: var(--v2-accent);
+  border-bottom-color: var(--v2-accent);
+}
+
+/* ─── Job Notes wrapper ───────────────────────────────────────────────────── */
+.v2-inbox-notes-wrapper {
+  min-height: 480px;
+  border: 1px solid color-mix(in srgb, var(--v2-border) 58%, transparent);
+  border-radius: var(--v2-radius-lg);
+  background: var(--v2-surface-raised);
+  box-shadow: var(--v2-shadow-card);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ─── Job Notes component styles ─────────────────────────────────────────── */
+.v2-jobnotes-container { display: flex; flex-direction: column; height: 100%; min-height: 480px; }
+.v2-jobnotes-job-select { padding: 10px 16px; border-bottom: 1px solid var(--v2-border); }
+.v2-jobnotes-job-select select { width: 100%; padding: 8px 12px; border: 1px solid var(--v2-border); border-radius: var(--v2-radius-sm); background: var(--v2-surface); color: var(--v2-text); font-size: 14px; }
+.v2-jobnotes-feed { flex: 1; overflow-y: auto; padding: 12px 16px; display: flex; flex-direction: column; gap: 10px; }
+.v2-jobnotes-bubble { background: var(--v2-surface-muted); border: 1px solid var(--v2-border); border-radius: var(--v2-radius-md); border-bottom-left-radius: 4px; padding: 10px 12px; max-width: 90%; align-self: flex-start; }
+.v2-jobnotes-bubble-text { font-size: 14px; color: var(--v2-text); line-height: 1.4; }
+.v2-jobnotes-bubble-time { font-size: 11px; color: var(--v2-text-muted); margin-top: 4px; }
+.v2-jobnotes-empty { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; color: var(--v2-text-muted); font-size: 14px; padding: 40px; text-align: center; }
+.v2-jobnotes-chips { padding: 8px 16px; display: flex; gap: 6px; overflow-x: auto; border-top: 1px solid var(--v2-border); }
+.v2-jobnotes-chip { padding: 6px 12px; background: var(--v2-surface-muted); border: 1px solid var(--v2-border); border-radius: 20px; font-size: 12px; color: var(--v2-text-muted); cursor: pointer; white-space: nowrap; flex-shrink: 0; }
+.v2-jobnotes-chip:active { background: var(--v2-accent-soft); color: var(--v2-accent); border-color: var(--v2-accent); }
+.v2-jobnotes-input-row { display: flex; gap: 8px; padding: 10px 16px; border-top: 1px solid var(--v2-border); background: var(--v2-surface); }
+.v2-jobnotes-input { flex: 1; padding: 10px 12px; border: 1px solid var(--v2-border); border-radius: var(--v2-radius-sm); background: var(--v2-surface-muted); color: var(--v2-text); font-size: 14px; }
+.v2-jobnotes-send-btn { padding: 10px 16px; background: var(--v2-accent); color: white; border: none; border-radius: var(--v2-radius-sm); font-weight: var(--v2-weight-bold); cursor: pointer; display: flex; align-items: center; gap: 4px; white-space: nowrap; }
+.v2-jobnotes-no-jobs { padding: 40px 20px; text-align: center; color: var(--v2-text-muted); font-size: 14px; }

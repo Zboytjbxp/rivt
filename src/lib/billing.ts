@@ -1,0 +1,27 @@
+/**
+ * Stripe Payment Link integration.
+ *
+ * Setup:
+ *   1. Create a subscription product in your Stripe dashboard ($99/year)
+ *   2. Create a Payment Link for it
+ *   3. Add to your .env:  VITE_STRIPE_CHECKOUT_URL=https://buy.stripe.com/xxxx
+ *   4. In the Stripe Payment Link settings, set the success URL to:
+ *      https://rivt.pro/?upgraded=1
+ *      (or your local dev URL: http://localhost:8787/?upgraded=1)
+ *
+ * When VITE_STRIPE_CHECKOUT_URL is not set, the app falls back to a
+ * simulated upgrade (sets localStorage directly) — useful for local dev.
+ */
+
+const CHECKOUT_URL = import.meta.env.VITE_STRIPE_CHECKOUT_URL as string | undefined;
+
+export function hasStripeConfigured(): boolean {
+  return Boolean(CHECKOUT_URL);
+}
+
+export function redirectToStripeCheckout(): void {
+  if (!CHECKOUT_URL) {
+    throw new Error("VITE_STRIPE_CHECKOUT_URL is not configured");
+  }
+  window.location.href = CHECKOUT_URL;
+}

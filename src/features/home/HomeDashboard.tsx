@@ -2,23 +2,792 @@ import {
   ArrowRight,
   BriefcaseBusiness,
   CalendarClock,
+  CalendarDays,
+  Camera,
+  Car,
+  ChevronLeft,
+  ChevronRight,
   CircleDollarSign,
   ClipboardCheck,
+  Clock,
+  CloudSun,
   FileText,
+  Flame,
   MapPin,
   MessageSquareText,
+  Navigation2,
   Newspaper,
   Plus,
+  Target,
+  Timer,
   Users,
   Wrench,
 } from "lucide-react";
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { Job, Role } from "../../types";
 import type { PrimaryDestination } from "../../app-shell/types";
 import { EmptyState, PageHeader } from "../../components/ui";
+import { usePersona } from "../persona/usePersona";
 import "./home-dashboard.css";
 
+type AvailDay = "available" | "limited" | "unavailable";
+const WEEK_DAY_SHORT = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
+const WEEK_DAY_FULL = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const AVAIL_CYCLE: AvailDay[] = ["available", "limited", "unavailable"];
+const AVAIL_DAY_LABEL: Record<AvailDay, string> = { available: "Open", limited: "Ltd", unavailable: "Off" };
+const WEEKLY_AVAIL_KEY = "rivt.weeklyAvail.v1";
+const TIME_SESSIONS_KEY = "rivt.timeSessions.v1";
+const WEEKLY_GOAL_KEY = "rivt.weeklyGoal.v1";
+const CHECKIN_LOG_KEY = "rivt.checkinLog.v1";
+const MILEAGE_KEY = "rivt.mileage.v1";
+
+interface TimeSession {
+  id: string;
+  jobId: number | null;
+  jobTitle: string;
+  startedAt: string;
+  endedAt: string | null;
+  notes: string;
+}
+
+interface WeeklyGoal {
+  target: number;
+  hourlyRate: number;
+}
+
+interface CheckinEntry {
+  id: string;
+  timestamp: string;
+  lat: number | null;
+  lon: number | null;
+  label: string;
+}
+
+interface MileageEntry {
+  id: string;
+  date: string;
+  startOdometer: number | null;
+  endOdometer: number | null;
+  notes: string;
+  miles: number | null;
+  purpose: string;
+}
+
+interface WeatherSnapshot {
+  temp: number;
+  condition: string;
+}
+
+function formatTimeAgo(timestamp: string, now: Date): string {
+  const diffMs = now.getTime() - new Date(timestamp).getTime();
+  const diffSec = Math.floor(diffMs / 1000);
+  if (diffSec < 60) return "just now";
+  const diffMin = Math.floor(diffSec / 60);
+  if (diffMin < 60) return `${diffMin}m ago`;
+  const diffHr = Math.floor(diffMin / 60);
+  if (diffHr < 24) return `${diffHr}h ago`;
+  return new Date(timestamp).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+function readCheckinLog(): CheckinEntry[] {
+  try {
+    const raw = localStorage.getItem(CHECKIN_LOG_KEY);
+    return raw ? (JSON.parse(raw) as CheckinEntry[]) : [];
+  } catch { return []; }
+}
+
+function getSmartGreeting(): string {
+  const hour = new Date().getHours();
+  if (hour < 12) return "Good morning";
+  if (hour < 17) return "Good afternoon";
+  return "Good evening";
+}
+
+function readWeeklyAvailability(): Record<number, AvailDay> {
+  try {
+    const raw = localStorage.getItem(WEEKLY_AVAIL_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw) as Record<string, AvailDay>;
+      return Object.fromEntries(Array.from({ length: 7 }, (_, i) => [i, parsed[i] ?? "available"]));
+    }
+  } catch {}
+  return Object.fromEntries(Array.from({ length: 7 }, (_, i) => [i, "available" as AvailDay]));
+}
+
 type AvailabilityStatus = "available" | "limited" | "unavailable";
+
+function currency(value: number) {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0,
+  }).format(value);
+}
+
+function readTimeSessions(): TimeSession[] {
+  try {
+    const raw = localStorage.getItem(TIME_SESSIONS_KEY);
+    return raw ? (JSON.parse(raw) as TimeSession[]) : [];
+  } catch { return []; }
+}
+
+function writeTimeSessions(sessions: TimeSession[]) {
+  try { localStorage.setItem(TIME_SESSIONS_KEY, JSON.stringify(sessions)); } catch {}
+}
+
+function readWeeklyGoal(): WeeklyGoal {
+  try {
+    const raw = localStorage.getItem(WEEKLY_GOAL_KEY);
+    if (raw) return JSON.parse(raw) as WeeklyGoal;
+  } catch {}
+  return { target: 2000, hourlyRate: 75 };
+}
+
+function writeWeeklyGoal(goal: WeeklyGoal) {
+  try { localStorage.setItem(WEEKLY_GOAL_KEY, JSON.stringify(goal)); } catch {}
+}
+
+function getWmoCondition(code: number): string {
+  if (code === 0) return "Clear";
+  if (code <= 3) return "Partly cloudy";
+  if (code <= 48) return "Foggy";
+  if (code <= 67) return "Rainy";
+  if (code <= 77) return "Snowy";
+  if (code <= 82) return "Showers";
+  if (code <= 86) return "Snow showers";
+  return "Stormy";
+}
+
+function formatElapsed(startedAt: string, now: Date): string {
+  const elapsed = Math.max(0, Math.floor((now.getTime() - new Date(startedAt).getTime()) / 1000));
+  const h = Math.floor(elapsed / 3600);
+  const m = Math.floor((elapsed % 3600) / 60);
+  const s = elapsed % 60;
+  if (h > 0) return `${h}h ${m.toString().padStart(2, "0")}m ${s.toString().padStart(2, "0")}s`;
+  return `${m.toString().padStart(2, "0")}m ${s.toString().padStart(2, "0")}s`;
+}
+
+function getWeekStart(): Date {
+  const now = new Date();
+  const day = now.getDay();
+  const daysToMonday = day === 0 ? 6 : day - 1;
+  const monday = new Date(now);
+  monday.setDate(now.getDate() - daysToMonday);
+  monday.setHours(0, 0, 0, 0);
+  return monday;
+}
+
+function triggerWeeklyRecapIfDue() {
+  const now = new Date();
+  if (now.getDay() !== 5 || now.getHours() < 17) return; // Friday after 5pm only
+  const weekKey = `${now.getFullYear()}-W${Math.ceil(now.getDate() / 7)}`;
+  if (localStorage.getItem("rivt.weeklyRecap.v1") === weekKey) return;
+
+  const sessions: TimeSession[] = (() => {
+    try { return JSON.parse(localStorage.getItem(TIME_SESSIONS_KEY) ?? "[]"); } catch { return []; }
+  })();
+  const weekStart = new Date(now);
+  weekStart.setDate(now.getDate() - now.getDay() + 1); // Monday
+  weekStart.setHours(0, 0, 0, 0);
+
+  const weekSessions = sessions.filter(s => s.endedAt && new Date(s.startedAt) >= weekStart);
+  const totalHours = weekSessions.reduce((sum, s) => {
+    return sum + (new Date(s.endedAt!).getTime() - new Date(s.startedAt).getTime()) / 3_600_000;
+  }, 0);
+  const rateCard = (() => { try { return JSON.parse(localStorage.getItem("rivt.rateCard.v1") ?? "null"); } catch { return null; } })();
+  const rate = (rateCard as { hourlyRate?: number } | null)?.hourlyRate ?? 75;
+  const earned = Math.round(totalHours * rate);
+
+  if (typeof Notification !== "undefined" && Notification.permission === "granted") {
+    navigator.serviceWorker?.ready.then(reg => {
+      reg.showNotification("Your week in numbers 🔨", {
+        body: `${Math.round(totalHours * 10) / 10}h worked · ~$${earned.toLocaleString()} earned — great week.`,
+        icon: "/rivt-icon-192.png",
+        tag: "rivt-weekly-recap",
+      });
+    }).catch(() => {});
+  }
+
+  try { localStorage.setItem("rivt.weeklyRecap.v1", weekKey); } catch {}
+}
+
+function CockpitHero({ onNavigate }: { onNavigate: (d: PrimaryDestination) => void }) {
+  const [sessions, setSessions] = useState<TimeSession[]>(readTimeSessions);
+  const [now, setNow] = useState(() => new Date());
+  const [weather, setWeather] = useState<WeatherSnapshot | null>(null);
+  const [checkedIn, setCheckedIn] = useState(false);
+  const [checkinLog, setCheckinLog] = useState<CheckinEntry[]>(readCheckinLog);
+  const [daySummary, setDaySummary] = useState<{
+    hours: number; earned: number; expenseCount: number; expenseTotal: number;
+  } | null>(null);
+  const [onMyWayCopied, setOnMyWayCopied] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const activeSession = sessions.find((s) => !s.endedAt) ?? null;
+  const lastCheckin = checkinLog.length > 0 ? checkinLog[checkinLog.length - 1] : null;
+
+  const hourlyRate = readWeeklyGoal().hourlyRate;
+  const earningsStr = activeSession
+    ? (() => {
+        const elapsedHrs = Math.max(0, (now.getTime() - new Date(activeSession.startedAt).getTime()) / 3_600_000);
+        return `Earning $${(elapsedHrs * hourlyRate).toFixed(2)}`;
+      })()
+    : null;
+
+  useEffect(() => {
+    timerRef.current = setInterval(() => setNow(new Date()), 1000);
+    return () => { if (timerRef.current) clearInterval(timerRef.current); };
+  }, []);
+
+  useEffect(() => {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const { latitude: lat, longitude: lon } = pos.coords;
+        fetch(
+          `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&temperature_unit=fahrenheit`
+        )
+          .then((r) => r.json())
+          .then((data) => {
+            const cw = (data as { current_weather?: { temperature: number; weathercode: number } }).current_weather;
+            if (!cw) return;
+            setWeather({ temp: Math.round(cw.temperature), condition: getWmoCondition(cw.weathercode) });
+          })
+          .catch(() => {});
+      },
+      () => {}
+    );
+  }, []);
+
+  function clockIn() {
+    const newSession: TimeSession = {
+      id: `ts_${Date.now()}`,
+      jobId: null,
+      jobTitle: "Field work",
+      startedAt: new Date().toISOString(),
+      endedAt: null,
+      notes: "",
+    };
+    const updated = [...sessions, newSession];
+    setSessions(updated);
+    writeTimeSessions(updated);
+  }
+
+  function clockOut() {
+    if (!activeSession) return;
+    const endedAt = new Date().toISOString();
+    const updated = sessions.map((s) =>
+      s.id === activeSession.id ? { ...s, endedAt } : s
+    );
+    setSessions(updated);
+    writeTimeSessions(updated);
+
+    // Compute today's stats
+    const hours = Math.round(
+      (new Date(endedAt).getTime() - new Date(activeSession.startedAt).getTime()) / 360000
+    ) / 10;
+    const rateCard = (() => { try { return JSON.parse(localStorage.getItem("rivt.rateCard.v1") ?? "null"); } catch { return null; } })();
+    const rate = (rateCard as { hourlyRate?: number } | null)?.hourlyRate ?? 75;
+    const today = new Date().toISOString().slice(0, 10);
+    const expenses: Array<{ date: string; amount: number }> = (() => {
+      try { return JSON.parse(localStorage.getItem("rivt.expenses.v1") ?? "[]"); } catch { return []; }
+    })();
+    const todayExpenses = expenses.filter(e => e.date === today);
+    setDaySummary({
+      hours,
+      earned: Math.round(hours * rate),
+      expenseCount: todayExpenses.length,
+      expenseTotal: Math.round(todayExpenses.reduce((sum, e) => sum + e.amount, 0)),
+    });
+  }
+
+  async function handleOnMyWay() {
+    const msg = `Heading to ${activeSession?.jobTitle ?? "the job"} — be there in ~20 min.`;
+    if (navigator.share) {
+      try { await navigator.share({ text: msg }); return; } catch {}
+    }
+    try {
+      await navigator.clipboard.writeText(msg);
+      // Brief visual feedback
+      setOnMyWayCopied(true);
+      setTimeout(() => setOnMyWayCopied(false), 2500);
+    } catch {}
+  }
+
+  function handleCheckin() {
+    const saveEntry = (lat: number | null, lon: number | null) => {
+      const entry: CheckinEntry = {
+        id: `ci_${Date.now()}`,
+        timestamp: new Date().toISOString(),
+        lat,
+        lon,
+        label: "On-site check-in",
+      };
+      try {
+        const existing = JSON.parse(localStorage.getItem(CHECKIN_LOG_KEY) ?? "[]") as CheckinEntry[];
+        const updated = [...existing, entry];
+        localStorage.setItem(CHECKIN_LOG_KEY, JSON.stringify(updated));
+        setCheckinLog(updated);
+      } catch {}
+      setCheckedIn(true);
+    };
+
+    if (!navigator.geolocation) { saveEntry(null, null); return; }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => saveEntry(pos.coords.latitude, pos.coords.longitude),
+      () => saveEntry(null, null)
+    );
+  }
+
+  const timeStr = now.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
+  const dateStr = now.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" });
+
+  return (
+    <div className={`v2-cockpit-hero${activeSession ? " is-active" : ""}`}>
+      <div className="v2-cockpit-clock">
+        <div className="v2-cockpit-time">{timeStr}</div>
+        <div className="v2-cockpit-date">{dateStr}</div>
+        {weather && (
+          <div className="v2-cockpit-weather">
+            <CloudSun size={14} />
+            <span>{weather.temp}°F · {weather.condition}</span>
+          </div>
+        )}
+        {lastCheckin && (
+          <div className="v2-cockpit-checkin-time">
+            <Navigation2 size={12} />
+            <span>Last check-in: {formatTimeAgo(lastCheckin.timestamp, now)}</span>
+          </div>
+        )}
+      </div>
+
+      <div className="v2-cockpit-session">
+        {earningsStr && (
+          <div className="v2-cockpit-earnings-ticker">
+            {earningsStr}
+          </div>
+        )}
+        {activeSession ? (
+          <>
+            <div className="v2-cockpit-active-badge">
+              <Timer size={13} />
+              <span>Clocked in · {formatElapsed(activeSession.startedAt, now)}</span>
+            </div>
+            <button type="button" className="v2-cockpit-clockout-btn" onClick={clockOut}>
+              Clock out
+            </button>
+          </>
+        ) : (
+          <>
+            <div className="v2-cockpit-idle-badge">
+              <Clock size={13} />
+              <span>Not clocked in</span>
+            </div>
+            <button type="button" className="v2-cockpit-clockin-btn" onClick={clockIn}>
+              <Clock size={15} /> Clock in
+            </button>
+          </>
+        )}
+        {activeSession && (
+          <button type="button" className="v2-on-my-way-btn" onClick={handleOnMyWay}>
+            <Navigation2 size={14} />
+            {onMyWayCopied ? "Copied!" : "On my way"}
+          </button>
+        )}
+        <button
+          type="button"
+          className={`v2-cockpit-checkin-btn${checkedIn ? " is-checked" : ""}`}
+          onClick={handleCheckin}
+        >
+          <Navigation2 size={14} />
+          <span>{checkedIn ? "Checked in ✓" : "On-site check-in"}</span>
+        </button>
+      </div>
+      {daySummary && (
+        <div className="v2-day-summary-backdrop" onClick={() => setDaySummary(null)}>
+          <div className="v2-day-summary" onClick={e => e.stopPropagation()}>
+            <strong className="v2-day-summary-title">Day complete 🎉</strong>
+            <div className="v2-day-summary-grid">
+              <div className="v2-day-summary-stat">
+                <span>Hours</span>
+                <strong>{daySummary.hours}h</strong>
+              </div>
+              <div className="v2-day-summary-stat">
+                <span>Earned</span>
+                <strong>${daySummary.earned.toLocaleString()}</strong>
+              </div>
+              {daySummary.expenseCount > 0 && (
+                <div className="v2-day-summary-stat">
+                  <span>Expenses</span>
+                  <strong>{daySummary.expenseCount} · ${daySummary.expenseTotal}</strong>
+                </div>
+              )}
+            </div>
+            <button type="button" className="v2-day-summary-close" onClick={() => setDaySummary(null)}>
+              Done
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function QuickActionsBar({ onNavigate }: { onNavigate: (d: PrimaryDestination) => void }) {
+  const persona = usePersona();
+  const actions: Array<{ label: string; Icon: React.ElementType; destination: PrimaryDestination }> = [
+    { label: "Clock In/Out", Icon: Clock, destination: "tools" },
+    { label: "Log Expense", Icon: CircleDollarSign, destination: "tools" },
+    { label: persona?.quickActionPhotoLabel ?? "Job photo", Icon: Camera, destination: "tools" },
+    { label: "Daily Log", Icon: ClipboardCheck, destination: "tools" },
+  ];
+
+  function handleCommuteStart() {
+    const todayStr = new Date().toISOString().slice(0, 10);
+    try {
+      const mileageRaw = localStorage.getItem(MILEAGE_KEY);
+      const mileage: MileageEntry[] = mileageRaw ? (JSON.parse(mileageRaw) as MileageEntry[]) : [];
+      mileage.push({
+        id: `mi_${Date.now()}`,
+        date: todayStr,
+        startOdometer: null,
+        endOdometer: null,
+        notes: "Commute",
+        miles: null,
+        purpose: "Commute",
+      });
+      localStorage.setItem(MILEAGE_KEY, JSON.stringify(mileage));
+    } catch {}
+
+    try {
+      const sessionsRaw = localStorage.getItem(TIME_SESSIONS_KEY);
+      const sessions: TimeSession[] = sessionsRaw ? (JSON.parse(sessionsRaw) as TimeSession[]) : [];
+      const hasActive = sessions.some((s) => s.endedAt === null);
+      if (!hasActive) {
+        sessions.push({
+          id: `ts_${Date.now()}`,
+          jobId: null,
+          jobTitle: "Commute",
+          startedAt: new Date().toISOString(),
+          endedAt: null,
+          notes: "",
+        });
+        localStorage.setItem(TIME_SESSIONS_KEY, JSON.stringify(sessions));
+      }
+    } catch {}
+
+    onNavigate("tools");
+  }
+
+  return (
+    <div className="v2-quick-actions v2-quick-actions--five">
+      {actions.map(({ label, Icon, destination }) => (
+        <button key={label} type="button" onClick={() => onNavigate(destination)}>
+          <Icon size={18} />
+          <span>{label}</span>
+        </button>
+      ))}
+      <button type="button" onClick={handleCommuteStart}>
+        <Car size={18} />
+        <span>Commute</span>
+      </button>
+    </div>
+  );
+}
+
+function StreakCounter() {
+  const [streak, setStreak] = useState(0);
+  const [weekDots, setWeekDots] = useState<boolean[]>([]);
+
+  useEffect(() => {
+    const sessions = readTimeSessions();
+    const completedDates = new Set<string>(
+      sessions
+        .filter((s) => s.endedAt !== null)
+        .map((s) => new Date(s.startedAt).toLocaleDateString("en-CA")) // YYYY-MM-DD in local time
+    );
+
+    // Compute streak going backward from today
+    let count = 0;
+    const cursor = new Date();
+    cursor.setHours(0, 0, 0, 0);
+    while (true) {
+      const dateStr = cursor.toLocaleDateString("en-CA");
+      if (!completedDates.has(dateStr)) break;
+      count++;
+      cursor.setDate(cursor.getDate() - 1);
+    }
+    setStreak(count);
+
+    // Compute Mon-Sun dots for current week
+    const today = new Date();
+    const dayOfWeek = today.getDay(); // 0=Sun
+    const monday = new Date(today);
+    monday.setDate(today.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1));
+    monday.setHours(0, 0, 0, 0);
+    const dots: boolean[] = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(monday);
+      d.setDate(monday.getDate() + i);
+      dots.push(completedDates.has(d.toLocaleDateString("en-CA")));
+    }
+    setWeekDots(dots);
+  }, []);
+
+  const DAY_LABELS = ["M", "T", "W", "T", "F", "S", "S"];
+
+  return (
+    <aside className="v2-streak-card">
+      <header>
+        <span><Flame size={13} /> Streak</span>
+      </header>
+      {streak === 0 ? (
+        <p className="v2-streak-empty">Clock in to start your streak</p>
+      ) : (
+        <div className="v2-streak-count">
+          <Flame size={28} />
+          <span>
+            <strong>{streak}</strong>
+            <small>{streak === 1 ? "day streak" : "days"}</small>
+          </span>
+        </div>
+      )}
+      <div className="v2-streak-dots">
+        {weekDots.map((active, i) => (
+          <span key={i} className={`v2-streak-dot${active ? " is-active" : ""}`} aria-label={DAY_LABELS[i]}>
+            <span className="v2-streak-dot-pip" />
+            <small>{DAY_LABELS[i]}</small>
+          </span>
+        ))}
+      </div>
+    </aside>
+  );
+}
+
+function WeeklyGoalCard() {
+  const [goal, setGoal] = useState<WeeklyGoal>(readWeeklyGoal);
+  const [editing, setEditing] = useState(false);
+  const [targetDraft, setTargetDraft] = useState(String(goal.target));
+  const [rateDraft, setRateDraft] = useState(String(goal.hourlyRate));
+
+  const sessions = readTimeSessions();
+  const weekStart = getWeekStart();
+  const weekSessions = sessions.filter((s) => s.endedAt && new Date(s.startedAt) >= weekStart);
+  const weekHours = weekSessions.reduce((sum, s) => {
+    if (!s.endedAt) return sum;
+    return sum + (new Date(s.endedAt).getTime() - new Date(s.startedAt).getTime()) / 3_600_000;
+  }, 0);
+  const estimated = Math.round(weekHours * goal.hourlyRate);
+  const progress = goal.target > 0 ? Math.min(1, estimated / goal.target) : 0;
+
+  function saveGoal() {
+    const t = Number(targetDraft) || 0;
+    const r = Number(rateDraft) || 0;
+    const g: WeeklyGoal = { target: t, hourlyRate: r };
+    setGoal(g);
+    writeWeeklyGoal(g);
+    setEditing(false);
+  }
+
+  function startEdit() {
+    setTargetDraft(String(goal.target));
+    setRateDraft(String(goal.hourlyRate));
+    setEditing((e) => !e);
+  }
+
+  return (
+    <aside className="v2-weekly-goal">
+      <header>
+        <span><Target size={13} /> Weekly goal</span>
+        <button type="button" onClick={startEdit}>{editing ? "Cancel" : "Edit"}</button>
+      </header>
+      {editing ? (
+        <div className="v2-weekly-goal-editor">
+          <label>
+            <small>Weekly target ($)</small>
+            <input
+              type="number"
+              value={targetDraft}
+              min={0}
+              onChange={(e) => setTargetDraft(e.target.value)}
+            />
+          </label>
+          <label>
+            <small>Your hourly rate ($)</small>
+            <input
+              type="number"
+              value={rateDraft}
+              min={0}
+              onChange={(e) => setRateDraft(e.target.value)}
+            />
+          </label>
+          <button type="button" className="v2-primary-button" onClick={saveGoal}>Save</button>
+        </div>
+      ) : (
+        <>
+          <div className="v2-weekly-goal-numbers">
+            <div>
+              <strong>{currency(estimated)}</strong>
+              <small>earned this week</small>
+            </div>
+            <div>
+              <strong>{currency(goal.target)}</strong>
+              <small>goal</small>
+            </div>
+            <div>
+              <strong>{weekHours.toFixed(1)}h</strong>
+              <small>logged</small>
+            </div>
+          </div>
+          <div className="v2-weekly-goal-bar">
+            <div className="v2-weekly-goal-fill" style={{ width: `${Math.round(progress * 100)}%` }} />
+          </div>
+          <small className="v2-weekly-goal-pct">
+            {Math.round(progress * 100)}% of goal · ${goal.hourlyRate}/hr rate
+          </small>
+        </>
+      )}
+    </aside>
+  );
+}
+
+const JOBS_V1_KEY = "rivt.jobs.v1";
+
+interface StoredJob {
+  id: string | number;
+  title: string;
+  location?: string;
+  startDate?: string | Date;
+  status?: string;
+}
+
+function readStoredJobs(): StoredJob[] {
+  try {
+    const raw = localStorage.getItem(JOBS_V1_KEY);
+    return raw ? (JSON.parse(raw) as StoredJob[]) : [];
+  } catch { return []; }
+}
+
+function getWeekStartForOffset(offset: number): Date {
+  const now = new Date();
+  const day = now.getDay();
+  const daysToMonday = day === 0 ? 6 : day - 1;
+  const monday = new Date(now);
+  monday.setDate(now.getDate() - daysToMonday + offset * 7);
+  monday.setHours(0, 0, 0, 0);
+  return monday;
+}
+
+function formatWeekRange(start: Date): string {
+  const end = new Date(start);
+  end.setDate(start.getDate() + 6);
+  const opts: Intl.DateTimeFormatOptions = { month: "short", day: "numeric" };
+  return `${start.toLocaleDateString("en-US", opts)} – ${end.toLocaleDateString("en-US", opts)}`;
+}
+
+function WeekSchedule() {
+  const [weekOffset, setWeekOffset] = useState(0);
+  const [selectedDay, setSelectedDay] = useState<Date | null>(null);
+  const [jobs, setJobs] = useState<StoredJob[]>([]);
+
+  useEffect(() => {
+    setJobs(readStoredJobs());
+  }, []);
+
+  const weekStart = getWeekStartForOffset(weekOffset);
+  const days: Date[] = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(weekStart);
+    d.setDate(weekStart.getDate() + i);
+    return d;
+  });
+
+  const jobsByDay = new Map<string, StoredJob[]>();
+  for (const job of jobs) {
+    if (!job.startDate) continue;
+    const key = new Date(job.startDate).toDateString();
+    const existing = jobsByDay.get(key) ?? [];
+    existing.push(job);
+    jobsByDay.set(key, existing);
+  }
+
+  const today = new Date();
+  const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+  function handleDayClick(day: Date) {
+    if (selectedDay && selectedDay.toDateString() === day.toDateString()) {
+      setSelectedDay(null);
+    } else {
+      setSelectedDay(day);
+    }
+  }
+
+  const selectedJobs = selectedDay ? (jobsByDay.get(selectedDay.toDateString()) ?? []) : [];
+
+  return (
+    <div className="v2-week-schedule">
+      <div className="v2-schedule-heading">
+        <CalendarDays size={13} />
+        <span>Schedule</span>
+      </div>
+      <div className="v2-week-schedule-header">
+        <button
+          type="button"
+          className="v2-week-nav-btn"
+          aria-label="Previous week"
+          onClick={() => { setWeekOffset((o) => o - 1); setSelectedDay(null); }}
+        >
+          <ChevronLeft size={16} />
+        </button>
+        <span className="v2-week-label">This Week · {formatWeekRange(weekStart)}</span>
+        <button
+          type="button"
+          className="v2-week-nav-btn"
+          aria-label="Next week"
+          onClick={() => { setWeekOffset((o) => o + 1); setSelectedDay(null); }}
+        >
+          <ChevronRight size={16} />
+        </button>
+      </div>
+      <div className="v2-days-row">
+        {days.map((day, i) => {
+          const isToday = day.toDateString() === today.toDateString();
+          const isSelected = selectedDay?.toDateString() === day.toDateString();
+          const hasJobs = jobsByDay.has(day.toDateString());
+          return (
+            <button
+              key={i}
+              type="button"
+              className={`v2-day-pill${isToday ? " is-today" : ""}${isSelected ? " is-selected" : ""}`}
+              aria-label={`${DAY_NAMES[i]} ${day.getDate()}${hasJobs ? ", has jobs" : ""}`}
+              onClick={() => handleDayClick(day)}
+            >
+              <span className="v2-day-name">{DAY_NAMES[i]}</span>
+              <span className="v2-day-num">{day.getDate()}</span>
+              {hasJobs && <span className="v2-day-dot" aria-hidden="true" />}
+            </button>
+          );
+        })}
+      </div>
+      {selectedDay && (
+        <div className="v2-day-jobs">
+          {selectedJobs.length === 0 ? (
+            <p className="v2-day-no-jobs">No jobs scheduled</p>
+          ) : (
+            selectedJobs.map((job) => (
+              <div key={String(job.id)} className="v2-day-job-row">
+                <span className="v2-day-job-title">{job.title}</span>
+                {job.location && <span className="v2-day-job-loc"><MapPin size={11} /> {job.location}</span>}
+                {job.status && (
+                  <span className="v2-day-job-status-badge">{job.status}</span>
+                )}
+              </div>
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
 interface HomeDashboardProps {
   role: Role;
@@ -39,14 +808,6 @@ interface HomeDashboardProps {
   onOpenJob: (jobId: number) => void;
   onNavigate: (destination: PrimaryDestination) => void;
   onSetAvailability: (status: AvailabilityStatus) => Promise<void>;
-}
-
-function currency(value: number) {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    maximumFractionDigits: 0,
-  }).format(value);
 }
 
 export function HomeDashboard({
@@ -70,8 +831,26 @@ export function HomeDashboard({
   onSetAvailability,
 }: HomeDashboardProps) {
   const firstName = name.trim().split(/\s+/)[0] || "there";
+  const persona = usePersona();
+
+  useEffect(() => { triggerWeeklyRecapIfDue(); }, []);
+  const profileData = (() => { try { return JSON.parse(localStorage.getItem("rivt.profile.v1") ?? "null"); } catch { return null; } })();
+  const tradeLabel = persona ? `${persona.emoji} ${persona.trade}` : null;
+  const locationLabel = profileData?.location ?? (location || null);
+  const subLabel = [tradeLabel, locationLabel].filter(Boolean).join(" · ");
   const [savingAvailability, setSavingAvailability] = useState<AvailabilityStatus | null>(null);
   const [availabilityMessage, setAvailabilityMessage] = useState("");
+  const [weeklyAvail, setWeeklyAvail] = useState<Record<number, AvailDay>>(readWeeklyAvailability);
+
+  const cycleWeeklyDay = useCallback((dayIndex: number) => {
+    setWeeklyAvail((prev) => {
+      const current = prev[dayIndex] ?? "available";
+      const next = AVAIL_CYCLE[(AVAIL_CYCLE.indexOf(current) + 1) % AVAIL_CYCLE.length];
+      const next_ = { ...prev, [dayIndex]: next };
+      try { localStorage.setItem(WEEKLY_AVAIL_KEY, JSON.stringify(next_)); } catch {}
+      return next_;
+    });
+  }, []);
   const moneySignal = activeJob ? currency(activeJob.pay) : role === "contractor" ? "Post work" : `${upcomingJobs.length} matches`;
   const workSignal = role === "contractor"
     ? `${applicationCount || "No"} applicants`
@@ -161,14 +940,18 @@ export function HomeDashboard({
     <section className="v2-home-page" aria-label="Home">
       <PageHeader
         className="v2-home-header"
-        title={`Good morning, ${firstName}`}
-        description={location}
+        title={`${getSmartGreeting()}, ${firstName}`}
+        description={subLabel || location}
         actions={role === "contractor" ? (
           <button type="button" className="v2-primary-button" onClick={onPostJob}><Plus size={17} /> Post work</button>
         ) : (
           <button type="button" className="v2-primary-button" onClick={() => onNavigate("work")}><BriefcaseBusiness size={17} /> Find work</button>
         )}
       />
+
+      <CockpitHero onNavigate={onNavigate} />
+      <QuickActionsBar onNavigate={onNavigate} />
+      <WeekSchedule />
 
       <section className="v2-daily-brief" aria-label="RIVT Daily">
         <div className="v2-daily-action-stack">
@@ -247,6 +1030,9 @@ export function HomeDashboard({
         </article>
 
         <div className="v2-home-side-stack">
+          <WeeklyGoalCard />
+          <StreakCounter />
+
           <aside className="v2-availability-radar">
             <header>
               <div>
@@ -298,7 +1084,9 @@ export function HomeDashboard({
         <section className="v2-next-work">
           <header><div><h2>Next work</h2><p>Jobs ready for a decision.</p></div><button type="button" onClick={() => onNavigate("work")}>View all</button></header>
           <div className="v2-next-work-list">
-            {upcomingJobs.slice(0, 3).map((job) => (
+            {upcomingJobs.length === 0 ? (
+              <p className="v2-next-work-empty">No jobs waiting on a decision. <button type="button" onClick={() => onNavigate("work")}>Browse work</button></p>
+            ) : upcomingJobs.slice(0, 3).map((job) => (
               <button type="button" key={job.id} onClick={() => onOpenJob(job.id)}>
                 <span><small>{job.trade} - {job.location}</small><strong>{job.title}</strong></span>
                 <span><strong>{currency(job.pay)}</strong><small>{job.status}</small></span>
@@ -317,6 +1105,34 @@ export function HomeDashboard({
           </div>
         </section>
       </div>
+
+      <section className="v2-weekly-calendar" aria-label="Weekly availability">
+        <header className="v2-weekly-cal-header">
+          <div>
+            <h2>Week ahead</h2>
+            <p>Tap a day to cycle availability. Saved to this device.</p>
+          </div>
+        </header>
+        <div className="v2-weekly-cal-grid">
+          {WEEK_DAY_SHORT.map((short, i) => {
+            const today = new Date().getDay();
+            const status = weeklyAvail[i] ?? "available";
+            return (
+              <button
+                key={short}
+                type="button"
+                className={`v2-weekly-cal-day avail-${status}${i === today ? " is-today" : ""}`}
+                aria-label={`${WEEK_DAY_FULL[i]}: ${status}. Tap to change.`}
+                onClick={() => cycleWeeklyDay(i)}
+              >
+                <span className="v2-weekly-cal-dayname">{short}</span>
+                <span className="v2-weekly-cal-dot" aria-hidden="true" />
+                <small className="v2-weekly-cal-label">{AVAIL_DAY_LABEL[status]}</small>
+              </button>
+            );
+          })}
+        </div>
+      </section>
     </section>
   );
 }

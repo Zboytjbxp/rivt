@@ -3,6 +3,13 @@
   gap: 28px;
 }
 
+.v2-cockpit-trade-label {
+  font-size: 12px;
+  color: var(--v2-text-muted);
+  margin: 0;
+  letter-spacing: 0.02em;
+}
+
 .v2-home-header {
   display: flex;
   align-items: center;
@@ -619,6 +626,25 @@
   justify-items: end;
 }
 
+.v2-next-work-empty {
+  margin: 0;
+  padding: 20px 18px;
+  color: var(--v2-text-muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.v2-next-work-empty button {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--v2-accent);
+  font: inherit;
+  font-size: 13px;
+  font-weight: var(--v2-weight-strong);
+  cursor: pointer;
+}
+
 .v2-network-pulse > div > button {
   min-height: 70px;
 }
@@ -722,15 +748,8 @@
 
 @media (max-width: 480px) {
   .v2-home-header .v2-primary-button {
-    width: 44px;
-    padding: 0;
-    overflow: hidden;
-    color: transparent;
-    font-size: 0;
-  }
-
-  .v2-home-header .v2-primary-button svg {
-    color: #ffffff;
+    padding: 0 14px;
+    font-size: 12px;
   }
 
   .v2-daily-signal-grid {
@@ -770,3 +789,683 @@
     min-height: auto;
   }
 }
+
+/* Daily Cockpit hero */
+.v2-cockpit-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 20px 24px;
+  border: 1px solid color-mix(in srgb, var(--v2-accent) 20%, var(--v2-border));
+  border-radius: var(--v2-radius-xl);
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--v2-accent) 8%, var(--v2-surface)) 0%, var(--v2-surface) 56%),
+    var(--v2-surface);
+  box-shadow: var(--v2-shadow-card);
+}
+
+.v2-cockpit-clock {
+  display: grid;
+  gap: 3px;
+}
+
+.v2-cockpit-time {
+  font-size: clamp(32px, 5vw, 52px);
+  font-weight: var(--v2-weight-display);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+
+.v2-cockpit-date {
+  color: var(--v2-text-muted);
+  font-size: 13px;
+  margin-top: 2px;
+}
+
+.v2-cockpit-weather {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 5px;
+  color: var(--v2-text-muted);
+  font-size: 12px;
+}
+
+.v2-cockpit-weather svg {
+  color: var(--v2-accent);
+}
+
+.v2-cockpit-session {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.v2-cockpit-active-badge,
+.v2-cockpit-idle-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: var(--v2-weight-strong);
+  font-variant-numeric: tabular-nums;
+}
+
+.v2-cockpit-active-badge {
+  background: color-mix(in srgb, var(--v2-success) 14%, transparent);
+  color: var(--v2-success);
+}
+
+.v2-cockpit-idle-badge {
+  background: color-mix(in srgb, var(--v2-text-muted) 12%, transparent);
+  color: var(--v2-text-muted);
+}
+
+.v2-cockpit-clockin-btn,
+.v2-cockpit-clockout-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 44px;
+  padding: 0 18px;
+  border-radius: var(--v2-radius-md);
+  font: inherit;
+  font-size: 14px;
+  font-weight: var(--v2-weight-bold);
+  cursor: pointer;
+  transition: background 120ms;
+}
+
+.v2-cockpit-clockin-btn {
+  border: 2px solid var(--v2-accent);
+  background: var(--v2-accent);
+  color: #fff;
+}
+
+.v2-cockpit-clockin-btn:hover {
+  background: color-mix(in srgb, var(--v2-accent) 85%, #000);
+  border-color: color-mix(in srgb, var(--v2-accent) 85%, #000);
+}
+
+.v2-cockpit-clockout-btn {
+  border: 2px solid color-mix(in srgb, #ef4444 60%, transparent);
+  background: color-mix(in srgb, #ef4444 10%, transparent);
+  color: #ef4444;
+}
+
+.v2-cockpit-clockout-btn:hover {
+  background: color-mix(in srgb, #ef4444 16%, transparent);
+}
+
+.v2-cockpit-checkin-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border: 1px solid color-mix(in srgb, var(--v2-border) 70%, transparent);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--v2-text-muted);
+  font: inherit;
+  font-size: 11px;
+  font-weight: var(--v2-weight-strong);
+  cursor: pointer;
+  transition: border-color 150ms, color 150ms;
+}
+
+.v2-cockpit-checkin-btn.is-checked {
+  border-color: color-mix(in srgb, var(--v2-success) 40%, transparent);
+  color: var(--v2-success);
+}
+
+/* Last check-in time */
+.v2-cockpit-checkin-time {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 4px;
+  color: var(--v2-text-muted);
+  font-size: 11px;
+}
+
+.v2-cockpit-checkin-time svg {
+  color: var(--v2-accent);
+  flex-shrink: 0;
+}
+
+/* Live earnings ticker */
+.v2-cockpit-earnings-ticker {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--v2-success) 14%, transparent);
+  color: var(--v2-success);
+  font-size: 12px;
+  font-weight: var(--v2-weight-bold);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Quick Actions bar */
+.v2-quick-actions {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.v2-quick-actions--five {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.v2-quick-actions button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 82px;
+  padding: 14px 8px;
+  border: 1px solid color-mix(in srgb, var(--v2-border) 62%, transparent);
+  border-radius: var(--v2-radius-lg);
+  background: color-mix(in srgb, var(--v2-surface-muted) 72%, transparent);
+  color: var(--v2-text);
+  font: inherit;
+  font-size: 11px;
+  font-weight: var(--v2-weight-bold);
+  cursor: pointer;
+  text-align: center;
+  transition: border-color 120ms, background 120ms;
+}
+
+.v2-quick-actions--five button {
+  min-height: 68px;
+  font-size: 10px;
+}
+
+.v2-quick-actions button svg {
+  color: var(--v2-accent);
+}
+
+.v2-quick-actions button:hover {
+  border-color: color-mix(in srgb, var(--v2-accent) 40%, var(--v2-border));
+  background: color-mix(in srgb, var(--v2-accent-soft) 52%, var(--v2-surface-muted));
+}
+
+/* Weekly goal card */
+.v2-weekly-goal {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid color-mix(in srgb, var(--v2-border) 66%, transparent);
+  border-radius: var(--v2-radius-lg);
+  background: color-mix(in srgb, var(--v2-surface) 94%, transparent);
+  box-shadow: var(--v2-shadow-card);
+}
+
+.v2-weekly-goal header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.v2-weekly-goal header > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--v2-accent);
+  font-size: 10px;
+  font-weight: var(--v2-weight-bold);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.v2-weekly-goal header > button {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--v2-accent);
+  font: inherit;
+  font-size: 11px;
+  font-weight: var(--v2-weight-bold);
+  cursor: pointer;
+}
+
+.v2-weekly-goal-numbers {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.v2-weekly-goal-numbers > div {
+  display: grid;
+  gap: 3px;
+  padding: 10px;
+  border-radius: var(--v2-radius-sm);
+  background: color-mix(in srgb, var(--v2-surface-muted) 72%, transparent);
+}
+
+.v2-weekly-goal-numbers > div:first-child {
+  background: color-mix(in srgb, var(--v2-accent-soft) 80%, transparent);
+}
+
+.v2-weekly-goal-numbers strong {
+  font-size: 16px;
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--v2-weight-bold);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.v2-weekly-goal-numbers small {
+  color: var(--v2-text-muted);
+  font-size: 10px;
+}
+
+.v2-weekly-goal-bar {
+  height: 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--v2-border) 60%, transparent);
+  overflow: hidden;
+}
+
+.v2-weekly-goal-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--v2-accent);
+  transition: width 600ms ease;
+  min-width: 2px;
+}
+
+.v2-weekly-goal-pct {
+  color: var(--v2-text-muted);
+  font-size: 11px;
+}
+
+.v2-weekly-goal-editor {
+  display: grid;
+  gap: 10px;
+}
+
+.v2-weekly-goal-editor label {
+  display: grid;
+  gap: 4px;
+}
+
+.v2-weekly-goal-editor small {
+  color: var(--v2-text-muted);
+  font-size: 11px;
+}
+
+.v2-weekly-goal-editor input {
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid color-mix(in srgb, var(--v2-border) 70%, transparent);
+  border-radius: var(--v2-radius-sm);
+  background: var(--v2-surface);
+  color: var(--v2-text);
+  font: inherit;
+  font-size: 14px;
+}
+
+.v2-weekly-goal-editor input:focus {
+  outline: 2px solid var(--v2-accent);
+  outline-offset: 1px;
+  border-color: transparent;
+}
+
+/* Streak counter card */
+.v2-streak-card {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid color-mix(in srgb, var(--v2-border) 66%, transparent);
+  border-radius: var(--v2-radius-lg);
+  background: color-mix(in srgb, var(--v2-surface) 94%, transparent);
+  box-shadow: var(--v2-shadow-card);
+}
+
+.v2-streak-card header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.v2-streak-card header > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--v2-accent);
+  font-size: 10px;
+  font-weight: var(--v2-weight-bold);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.v2-streak-empty {
+  margin: 0;
+  color: var(--v2-text-muted);
+  font-size: 12px;
+}
+
+.v2-streak-count {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.v2-streak-count svg {
+  color: var(--v2-accent);
+  flex-shrink: 0;
+}
+
+.v2-streak-count > span {
+  display: grid;
+  gap: 1px;
+}
+
+.v2-streak-count strong {
+  font-size: 32px;
+  font-weight: var(--v2-weight-display);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.v2-streak-count small {
+  color: var(--v2-text-muted);
+  font-size: 11px;
+}
+
+.v2-streak-dots {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.v2-streak-dot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.v2-streak-dot-pip {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--v2-border) 80%, transparent);
+  flex-shrink: 0;
+  transition: background 150ms;
+}
+
+.v2-streak-dot.is-active .v2-streak-dot-pip {
+  background: var(--v2-accent);
+}
+
+.v2-streak-dot small {
+  color: var(--v2-text-muted);
+  font-size: 9px;
+  font-weight: var(--v2-weight-bold);
+  text-transform: uppercase;
+}
+
+@media (max-width: 860px) {
+  .v2-cockpit-hero {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+    padding: 16px 18px;
+  }
+
+  .v2-cockpit-session {
+    align-items: flex-start;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .v2-quick-actions {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .v2-quick-actions--five {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .v2-quick-actions button {
+    min-height: 72px;
+    font-size: 10px;
+  }
+
+  .v2-quick-actions--five button {
+    min-height: 68px;
+    font-size: 10px;
+  }
+}
+
+@media (max-width: 480px) {
+  .v2-cockpit-time {
+    font-size: 36px;
+  }
+
+  .v2-cockpit-clockin-btn,
+  .v2-cockpit-clockout-btn {
+    font-size: 13px;
+    padding: 0 14px;
+    min-height: 40px;
+  }
+}
+
+/* Weekly availability calendar */
+.v2-weekly-calendar {
+  margin-top: 28px;
+  background: var(--v2-surface-raised);
+  border: 1px solid color-mix(in srgb, var(--v2-border) 70%, transparent);
+  border-radius: var(--v2-radius-xl);
+  overflow: hidden;
+}
+
+.v2-weekly-cal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px 12px;
+  border-bottom: 1px solid color-mix(in srgb, var(--v2-border) 55%, transparent);
+}
+
+.v2-weekly-cal-header h2 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: var(--v2-weight-strong);
+  color: var(--v2-text);
+}
+
+.v2-weekly-cal-header p {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: var(--v2-text-muted);
+}
+
+.v2-weekly-cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0;
+}
+
+.v2-weekly-cal-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 14px 4px;
+  background: transparent;
+  border: none;
+  border-right: 1px solid color-mix(in srgb, var(--v2-border) 40%, transparent);
+  cursor: pointer;
+  transition: background 120ms ease;
+}
+
+.v2-weekly-cal-day:last-child {
+  border-right: none;
+}
+
+.v2-weekly-cal-day:hover {
+  background: color-mix(in srgb, var(--v2-accent) 6%, transparent);
+}
+
+.v2-weekly-cal-day.is-today .v2-weekly-cal-dayname {
+  color: var(--v2-accent);
+  font-weight: var(--v2-weight-strong);
+}
+
+.v2-weekly-cal-dayname {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--v2-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.v2-weekly-cal-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  transition: background 120ms;
+}
+
+.v2-weekly-cal-day.avail-available .v2-weekly-cal-dot {
+  background: var(--v2-success, #22c55e);
+}
+
+.v2-weekly-cal-day.avail-limited .v2-weekly-cal-dot {
+  background: var(--v2-warning, #f59e0b);
+}
+
+.v2-weekly-cal-day.avail-unavailable .v2-weekly-cal-dot {
+  background: var(--v2-text-muted);
+  opacity: 0.45;
+}
+
+.v2-weekly-cal-label {
+  font-size: 10px;
+  color: var(--v2-text-muted);
+  letter-spacing: 0.02em;
+}
+
+.v2-weekly-cal-day.avail-available .v2-weekly-cal-label {
+  color: var(--v2-success, #22c55e);
+}
+
+.v2-weekly-cal-day.avail-limited .v2-weekly-cal-label {
+  color: var(--v2-warning, #f59e0b);
+}
+
+@media (max-width: 360px) {
+  .v2-weekly-cal-day {
+    padding: 10px 2px;
+  }
+  .v2-weekly-cal-dayname {
+    font-size: 10px;
+  }
+  .v2-weekly-cal-label {
+    font-size: 9px;
+  }
+}
+
+/* Feature 1 — End-of-day summary modal */
+.v2-day-summary-backdrop {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+  display: flex; align-items: flex-end; justify-content: center;
+  z-index: 8000; padding: 0;
+}
+.v2-day-summary {
+  background: var(--v2-surface); border-radius: 20px 20px 0 0;
+  width: 100%; max-width: 430px; padding: 28px 24px 40px;
+  display: flex; flex-direction: column; gap: 20px;
+  box-shadow: 0 -4px 32px rgba(0,0,0,0.15);
+}
+.v2-day-summary-title {
+  font-size: 18px; font-weight: var(--v2-weight-display);
+  text-align: center;
+}
+.v2-day-summary-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  gap: 12px;
+}
+.v2-day-summary-stat {
+  background: var(--v2-surface-muted); border-radius: var(--v2-radius-md);
+  padding: 14px; display: flex; flex-direction: column; gap: 4px; align-items: center;
+}
+.v2-day-summary-stat span { font-size: 11px; color: var(--v2-text-muted); text-transform: uppercase; letter-spacing: 0.06em; }
+.v2-day-summary-stat strong { font-size: 20px; font-weight: var(--v2-weight-bold); font-family: 'IBM Plex Mono', monospace; color: var(--v2-accent); }
+.v2-day-summary-close {
+  background: var(--v2-accent); color: white; border: none;
+  border-radius: var(--v2-radius-md); padding: 14px; font-size: 15px;
+  font-weight: var(--v2-weight-bold); cursor: pointer; width: 100%;
+}
+
+/* Feature 3 — Context-aware cockpit */
+.v2-cockpit-hero.is-active {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--v2-accent) 8%, var(--v2-surface)), var(--v2-surface));
+  border-color: color-mix(in srgb, var(--v2-accent) 25%, var(--v2-border));
+}
+.v2-cockpit-hero.is-active .v2-cockpit-clockout-btn {
+  background: var(--v2-accent);
+  color: white;
+  font-weight: var(--v2-weight-bold);
+  font-size: 15px;
+  padding: 12px 24px;
+  animation: v2-pulse-ring 2s infinite;
+}
+@keyframes v2-pulse-ring {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--v2-accent) 40%, transparent); }
+  50% { box-shadow: 0 0 0 6px color-mix(in srgb, var(--v2-accent) 0%, transparent); }
+}
+.v2-cockpit-clockin-btn {
+  padding: 12px 28px;
+  font-size: 15px;
+  font-weight: var(--v2-weight-bold);
+}
+
+/* Feature 5 — On my way button */
+.v2-on-my-way-btn {
+  display: flex; align-items: center; gap: 6px;
+  background: var(--v2-surface-muted); border: 1px solid var(--v2-border);
+  color: var(--v2-text); border-radius: var(--v2-radius-md);
+  padding: 8px 16px; font-size: 13px; font-weight: 600; cursor: pointer;
+  transition: background 0.15s;
+}
+.v2-on-my-way-btn:active { background: var(--v2-border); }
+
+/* Week Schedule */
+.v2-week-schedule { padding: 0 16px 16px; }
+.v2-week-schedule-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.v2-week-nav-btn { background: none; border: none; padding: 4px 8px; color: var(--v2-text-muted); cursor: pointer; }
+.v2-week-label { font-size: 13px; color: var(--v2-text-muted); font-weight: var(--v2-weight-bold); }
+.v2-days-row { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.v2-day-pill { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 2px; border-radius: var(--v2-radius-sm); border: 1px solid transparent; background: var(--v2-surface-muted); cursor: pointer; transition: background 0.15s; }
+.v2-day-pill.is-today { background: var(--v2-accent-soft); border-color: var(--v2-accent); }
+.v2-day-pill.is-selected { border-color: var(--v2-accent); }
+.v2-day-name { font-size: 10px; color: var(--v2-text-muted); text-transform: uppercase; letter-spacing: 0.03em; }
+.v2-day-num { font-size: 14px; font-weight: var(--v2-weight-bold); color: var(--v2-text); }
+.v2-day-pill.is-today .v2-day-num { color: var(--v2-accent); }
+.v2-day-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--v2-accent); }
+.v2-day-jobs { margin-top: 10px; background: var(--v2-surface); border: 1px solid var(--v2-border); border-radius: var(--v2-radius-md); overflow: hidden; }
+.v2-day-job-row { display: flex; flex-direction: column; padding: 10px 12px; border-bottom: 1px solid var(--v2-border); }
+.v2-day-job-row:last-child { border-bottom: none; }
+.v2-day-job-title { font-size: 14px; font-weight: var(--v2-weight-bold); color: var(--v2-text); }
+.v2-day-job-loc { font-size: 12px; color: var(--v2-text-muted); margin-top: 2px; display: inline-flex; align-items: center; gap: 4px; }
+.v2-day-job-status-badge { display: inline-block; margin-top: 6px; padding: 2px 8px; border-radius: 999px; background: var(--v2-accent-soft); color: var(--v2-accent); font-size: 10px; font-weight: var(--v2-weight-bold); text-transform: uppercase; letter-spacing: 0.04em; align-self: flex-start; }
+.v2-day-no-jobs { padding: 16px 12px; text-align: center; color: var(--v2-text-muted); font-size: 13px; margin: 0; }
+.v2-schedule-heading { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: var(--v2-weight-bold); color: var(--v2-text-muted); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 10px; }

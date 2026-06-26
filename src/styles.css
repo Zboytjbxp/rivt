@@ -83,6 +83,22 @@ body::selection {
 
 :root[data-theme="dark"] {
   color-scheme: dark;
+  /* Legacy variable dark-mode overrides — keeps old components themed correctly */
+  --bg: #0c1110;
+  --surface: #141918;
+  --surface-soft: #1a211f;
+  --text: #f2f5f6;
+  --muted: #a4b0ac;
+  --faint: #788681;
+  --border: rgba(242, 245, 246, 0.09);
+  --border-strong: rgba(242, 245, 246, 0.16);
+  --accent-soft: #392015;
+  --accent-deep: #ef8e5a;
+  --blue: #4d9fff;
+  --blue-soft: #0d2340;
+  --amber-soft: #372a17;
+  --danger-soft: #3b2020;
+  --topbar: rgba(20, 25, 24, 0.94);
 }
 
 button,
@@ -1065,13 +1081,26 @@ textarea:focus-visible {
 .onboarding-form-grid input {
   width: 100%;
   height: 42px;
-  border: 1px solid var(--border);
-  border-radius: var(--v2-radius-md);
+  border: 1.5px solid var(--border);
+  border-radius: var(--v2-radius-lg);
   background: var(--surface);
   color: var(--text);
   padding: 0 12px;
   font-size: 14px;
   font-weight: var(--v2-weight-strong);
+  transition: border-color 150ms ease;
+}
+
+.onboarding-form-grid input:focus,
+.onboarding-form-grid select:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.onboarding-form-grid label span {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
 }
 
 .specialty-picker {
@@ -1392,6 +1421,42 @@ textarea:focus-visible {
   border-color: var(--border);
   background: var(--surface);
   color: var(--text);
+}
+
+/* 3-way theme source group (AppPanels account panel) */
+.theme-source-group {
+  display: flex;
+  gap: 3px;
+  background: color-mix(in srgb, var(--border) 40%, transparent);
+  border-radius: 10px;
+  padding: 3px;
+}
+
+.theme-source-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 11px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 120ms, color 120ms;
+  white-space: nowrap;
+}
+
+.theme-source-btn:hover {
+  background: color-mix(in srgb, var(--surface-soft) 70%, transparent);
+  color: var(--text);
+}
+
+.theme-source-btn.is-active {
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
 }
 
 .theme-toggle.surface-toggle.compact {
@@ -1964,18 +2029,18 @@ textarea:focus-visible {
 }
 
 .quick-actions {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  display: flex;
   gap: 8px;
 }
 
 .quick-actions button {
   display: inline-flex;
+  flex: 1;
   align-items: center;
   justify-content: center;
   gap: 6px;
   min-height: 44px;
-  padding: 0 8px;
+  padding: 0 12px;
   border: 1px solid var(--border);
   border-radius: var(--v2-radius-md);
   background: var(--surface);
@@ -1989,6 +2054,12 @@ textarea:focus-visible {
   border-color: rgba(255, 106, 0, 0.24);
   background: var(--accent-soft);
   color: var(--accent-deep);
+}
+
+.account-signout-btn {
+  flex: 0 0 auto !important;
+  color: var(--muted) !important;
+  font-size: 11px !important;
 }
 
 .activity-list {
@@ -2069,6 +2140,12 @@ textarea:focus-visible {
   font-weight: var(--v2-weight-strong);
 }
 
+.account-org-name {
+  font-size: 11px !important;
+  margin-top: 1px !important;
+  margin-bottom: -1px;
+}
+
 .account-stat-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2076,10 +2153,42 @@ textarea:focus-visible {
 }
 
 .account-stat-grid .info-item {
-  min-height: 74px;
+  min-height: 60px;
   border: 1px solid var(--border);
   border-radius: var(--v2-radius-lg);
   background: var(--surface);
+}
+
+.account-specialty-chips {
+  margin-top: 8px;
+}
+
+.account-standing {
+  border: 1px solid var(--border);
+  border-radius: var(--v2-radius-lg);
+  background: var(--surface-soft);
+  overflow: hidden;
+}
+
+.account-standing-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+}
+
+.account-standing-row + .account-standing-row {
+  border-top: 1px solid var(--border);
+}
+
+.account-standing-row > span {
+  flex-shrink: 0;
+  width: 68px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: var(--v2-weight-bold);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 .account-chip-row {
@@ -5337,6 +5446,45 @@ textarea:focus-visible {
   line-height: 1.45;
 }
 
+.answer-composer-byline {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.answer-trade-tag {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent-deep);
+  font-size: 11px;
+  font-weight: var(--v2-weight-bold);
+}
+
+.answer-composer-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.answer-char-count {
+  font-size: 11px;
+  color: var(--muted);
+  font-weight: var(--v2-weight-strong);
+  font-variant-numeric: tabular-nums;
+  transition: color 150ms;
+}
+
+.answer-char-count.is-near-limit {
+  color: var(--accent-deep);
+}
+
 .answer-card {
   display: grid;
   gap: 9px;
@@ -7117,8 +7265,6 @@ textarea:focus-visible {
     border-radius: 0;
   }
 
-  .quick-actions,
-  .account-stat-grid,
   .theme-palette-grid {
     grid-template-columns: 1fr;
   }
@@ -8030,6 +8176,21 @@ textarea:focus-visible {
   .info-item {
     border: 1px solid var(--border);
     border-radius: var(--v2-radius-md);
+  }
+}
+
+@media (max-width: 480px) {
+  .onboarding-hero-copy p {
+    display: none;
+  }
+
+  .onboarding-rail {
+    gap: 10px;
+    padding: 10px 12px;
+  }
+
+  .onboarding-brand-row {
+    gap: 10px;
   }
 }
 
@@ -11239,3 +11400,248 @@ textarea:focus-visible {
     margin: -2px 12px 12px;
   }
 }
+
+/* ─── Shop Talk: Flair Filter Chips ─────────────────────────────────────────── */
+.shop-talk-flair-row {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 8px 0;
+  scrollbar-width: none;
+}
+
+.shop-talk-flair-row::-webkit-scrollbar {
+  display: none;
+}
+
+.flair-chip {
+  flex-shrink: 0;
+  padding: 5px 12px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, currentColor 30%, transparent);
+  background: transparent;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--v2-text-muted, var(--muted));
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.flair-chip:hover {
+  background: color-mix(in srgb, var(--v2-accent, var(--accent)) 10%, transparent);
+  color: var(--v2-accent, var(--accent));
+  border-color: color-mix(in srgb, var(--v2-accent, var(--accent)) 40%, transparent);
+}
+
+.flair-chip.active {
+  background: var(--v2-accent, var(--accent));
+  color: #fff;
+  border-color: var(--v2-accent, var(--accent));
+}
+
+/* ─── Shop Talk: Bookmark Filter Row ────────────────────────────────────────── */
+.shop-talk-bookmark-filter {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.shop-talk-saved-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: transparent;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--v2-text-muted, var(--muted));
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.shop-talk-saved-btn:hover {
+  background: color-mix(in srgb, var(--v2-accent, var(--accent)) 10%, transparent);
+  color: var(--v2-accent, var(--accent));
+  border-color: color-mix(in srgb, var(--v2-accent, var(--accent)) 40%, transparent);
+}
+
+.shop-talk-saved-btn.active {
+  background: var(--v2-accent, var(--accent));
+  color: #fff;
+  border-color: var(--v2-accent, var(--accent));
+}
+
+.shop-talk-clear-filter-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: transparent;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--v2-text-muted, var(--muted));
+}
+
+/* ─── Shop Talk: Post Card Bookmark Button ───────────────────────────────────── */
+.shop-post-card {
+  position: relative;
+}
+
+.shop-post-card-clickable {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+}
+
+.shop-post-bookmark {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--v2-radius-sm, 4px);
+  background: transparent;
+  color: var(--v2-text-muted, var(--muted));
+  cursor: pointer;
+  transition: color 0.15s;
+}
+
+.shop-post-bookmark:hover,
+.shop-post-bookmark.active {
+  color: var(--v2-accent, var(--accent));
+}
+
+/* ─── Shop Talk: Detail Bookmark + Header Actions ────────────────────────────── */
+.shop-question-header-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.shop-detail-bookmark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--v2-radius-md, 6px);
+  background: transparent;
+  color: var(--v2-text-muted, var(--muted));
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.shop-detail-bookmark:hover,
+.shop-detail-bookmark.active {
+  color: var(--v2-accent, var(--accent));
+  border-color: var(--v2-accent, var(--accent));
+}
+
+/* ─── Shop Talk: Answered Banner + Badge ─────────────────────────────────────── */
+.shop-talk-answered-banner {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 14px;
+  border-radius: var(--v2-radius-md, 6px);
+  background: color-mix(in srgb, var(--v2-success, #3a9e5f) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--v2-success, #3a9e5f) 35%, transparent);
+  color: var(--v2-success, #3a9e5f);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.shop-talk-answered-badge {
+  color: var(--v2-success, #3a9e5f);
+  font-size: 10px;
+  font-weight: bold;
+}
+
+/* ─── Shop Talk: Mark as Answered Button ─────────────────────────────────────── */
+.shop-talk-mark-answered-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1px solid color-mix(in srgb, var(--v2-success, #3a9e5f) 50%, transparent);
+  border-radius: var(--v2-radius-md, 6px);
+  background: color-mix(in srgb, var(--v2-success, #3a9e5f) 10%, transparent);
+  color: var(--v2-success, #3a9e5f);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.shop-talk-mark-answered-btn:hover {
+  background: color-mix(in srgb, var(--v2-success, #3a9e5f) 20%, transparent);
+}
+
+.shop-talk-persona-header {
+  padding: 8px 16px 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--v2-text-muted);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* Post type chips */
+.v2-st-type-selector { display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }
+.v2-st-type-chip { padding: 6px 12px; border: 1px solid var(--v2-border); border-radius: 20px; font-size: 12px; cursor: pointer; background: var(--v2-surface-muted); color: var(--v2-text-muted); white-space: nowrap; }
+.v2-st-type-chip.is-active { border-color: var(--v2-accent); background: var(--v2-accent-soft); color: var(--v2-accent); }
+.v2-st-sub-fields { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+.v2-st-sub-input { padding: 8px 10px; border: 1px solid var(--v2-border); border-radius: var(--v2-radius-sm); background: var(--v2-surface); color: var(--v2-text); font-size: 13px; width: 100%; box-sizing: border-box; }
+
+/* Filter pills */
+.v2-st-filter-row { display: flex; gap: 6px; overflow-x: auto; padding: 10px 16px; border-bottom: 1px solid var(--v2-border); }
+.v2-st-filter-pill { padding: 5px 12px; border: 1px solid var(--v2-border); border-radius: 20px; font-size: 12px; cursor: pointer; background: var(--v2-surface-muted); color: var(--v2-text-muted); white-space: nowrap; flex-shrink: 0; }
+.v2-st-filter-pill.is-active { background: var(--v2-accent-soft); color: var(--v2-accent); border-color: var(--v2-accent); }
+
+/* Post type badge */
+.v2-st-type-badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: var(--v2-weight-bold); margin-bottom: 4px; }
+.v2-st-type-badge.question { background: #dbeafe; color: #1d4ed8; }
+.v2-st-type-badge.sub-request { background: var(--v2-accent-soft); color: var(--v2-accent); }
+.v2-st-type-badge.safety { background: #fee2e2; color: #dc2626; }
+.v2-st-type-badge.general { background: var(--v2-surface-muted); color: var(--v2-text-muted); }
+
+/* Sub request details */
+.v2-st-sub-details { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+.v2-st-sub-pill { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; background: var(--v2-surface-muted); border: 1px solid var(--v2-border); border-radius: 20px; font-size: 12px; color: var(--v2-text-muted); }
+
+/* Replies */
+.v2-st-reply-btn { background: none; border: none; color: var(--v2-text-muted); font-size: 12px; cursor: pointer; padding: 4px 0; display: flex; align-items: center; gap: 4px; }
+.v2-st-reply-btn:hover { color: var(--v2-accent); }
+.v2-st-replies { border-top: 1px solid var(--v2-border); margin-top: 10px; padding-top: 10px; }
+.v2-st-reply-item { padding: 6px 0; border-bottom: 1px solid var(--v2-border); font-size: 13px; }
+.v2-st-reply-item:last-of-type { border-bottom: none; }
+.v2-st-reply-author { font-weight: var(--v2-weight-bold); color: var(--v2-text); margin-right: 6px; }
+.v2-st-reply-text { color: var(--v2-text); }
+.v2-st-reply-time { font-size: 11px; color: var(--v2-text-muted); margin-top: 2px; }
+.v2-st-reply-input-row { display: flex; gap: 6px; margin-top: 10px; }
+.v2-st-reply-input { flex: 1; padding: 8px 10px; border: 1px solid var(--v2-border); border-radius: var(--v2-radius-sm); background: var(--v2-surface-muted); color: var(--v2-text); font-size: 13px; }
+.v2-st-reply-send-btn { padding: 8px 14px; background: var(--v2-accent); color: white; border: none; border-radius: var(--v2-radius-sm); font-size: 13px; font-weight: var(--v2-weight-bold); cursor: pointer; }

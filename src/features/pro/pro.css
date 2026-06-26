@@ -1,0 +1,92 @@
+.v2-upgrade-backdrop {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+  display: flex; align-items: flex-end; justify-content: center;
+  z-index: 9000; padding: 0;
+}
+@media (min-width: 560px) {
+  .v2-upgrade-backdrop { align-items: center; padding: 24px; }
+}
+
+.v2-upgrade-modal {
+  background: var(--v2-surface); border-radius: 20px 20px 0 0;
+  width: 100%; max-width: 480px; padding: 32px 24px 40px;
+  position: relative; display: flex; flex-direction: column; gap: 16px;
+}
+@media (min-width: 560px) {
+  .v2-upgrade-modal { border-radius: 20px; }
+}
+
+.v2-upgrade-close {
+  position: absolute; top: 16px; right: 16px;
+  background: var(--v2-surface-muted); border: none; cursor: pointer;
+  border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;
+  color: var(--v2-text-muted);
+}
+
+.v2-upgrade-hero {
+  text-align: center; display: flex; flex-direction: column; align-items: center; gap: 8px;
+  color: var(--v2-accent);
+}
+.v2-upgrade-hero strong { font-size: 22px; font-weight: var(--v2-weight-display); color: var(--v2-text); }
+.v2-upgrade-reason { font-size: 13px; color: var(--v2-text-muted); margin: 0; }
+
+.v2-upgrade-benefits {
+  list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px;
+}
+.v2-upgrade-benefits li {
+  display: flex; align-items: center; gap: 10px; font-size: 14px;
+  color: var(--v2-text);
+}
+.v2-upgrade-benefits li svg { color: var(--v2-success); flex-shrink: 0; }
+
+.v2-upgrade-price {
+  text-align: center; padding: 16px; background: var(--v2-accent-soft);
+  border-radius: var(--v2-radius-md);
+}
+.v2-upgrade-price strong { font-size: 32px; font-weight: var(--v2-weight-display); color: var(--v2-accent); }
+.v2-upgrade-price strong span { font-size: 16px; font-weight: normal; color: var(--v2-text-muted); }
+.v2-upgrade-price small { display: block; font-size: 12px; color: var(--v2-text-muted); margin-top: 4px; }
+
+.v2-upgrade-cta {
+  width: 100%; justify-content: center; padding: 16px; font-size: 15px;
+  font-weight: var(--v2-weight-bold);
+}
+
+.v2-upgrade-skip {
+  background: none; border: none; cursor: pointer; color: var(--v2-text-muted);
+  font-size: 13px; text-align: center; width: 100%; padding: 4px;
+  text-decoration: underline;
+}
+
+.v2-upgrade-success {
+  text-align: center; padding: 32px 0; display: flex; flex-direction: column;
+  align-items: center; gap: 12px; color: var(--v2-accent);
+}
+.v2-upgrade-success strong { font-size: 20px; color: var(--v2-text); }
+.v2-upgrade-success p { font-size: 14px; color: var(--v2-text-muted); margin: 0; }
+
+/* Pro badge used in settings */
+.v2-pro-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  background: var(--v2-accent); color: white; font-size: 11px;
+  font-weight: var(--v2-weight-bold); padding: 2px 8px; border-radius: 99px;
+  letter-spacing: 0.05em; text-transform: uppercase;
+}
+
+/* Plan card in settings */
+.v2-plan-card {
+  background: var(--v2-surface); border: 1px solid var(--v2-border);
+  border-radius: var(--v2-radius-lg); padding: 20px; display: flex;
+  flex-direction: column; gap: 16px;
+}
+.v2-plan-header { display: flex; align-items: center; justify-content: space-between; }
+.v2-plan-name { font-size: 16px; font-weight: var(--v2-weight-bold); }
+.v2-plan-limits { display: flex; flex-direction: column; gap: 6px; }
+.v2-plan-limit-row { display: flex; justify-content: space-between; font-size: 13px; }
+.v2-plan-limit-row span { color: var(--v2-text-muted); }
+.v2-plan-upgrade-btn {
+  width: 100%; padding: 12px; background: var(--v2-accent); color: white;
+  border: none; border-radius: var(--v2-radius-md); font-size: 14px;
+  font-weight: var(--v2-weight-bold); cursor: pointer;
+}
+.v2-plan-upgrade-btn:hover { opacity: 0.9; }

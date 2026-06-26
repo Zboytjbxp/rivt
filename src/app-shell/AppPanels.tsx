@@ -10,14 +10,13 @@ import {
   Mail,
   MessageSquareText,
   ShieldCheck,
-  Star,
   ThumbsUp,
-  UserCheck,
   X,
   type LucideIcon,
 } from "lucide-react";
 import { brandConfig, type ThemeMode, type ThemePalette, type TrialPlan } from "../brandConfig";
 import { ProgressBar, ThemeToggle, type AuthMethod } from "../features/auth/AuthScreens";
+import type { ThemeSource } from "./useAppTheme";
 import type { Role, Trade } from "../types";
 import type { NavLabel } from "./routes";
 
@@ -154,7 +153,7 @@ export function ActivityPanel({
             <article className="empty-panel-state">
               <Bell size={20} />
               <strong>No activity yet</strong>
-              <span>Post a job, send a message, or submit work and activity will appear here.</span>
+              <span>Use any feature in the app and activity will appear here.</span>
             </article>
           ) : items.map((item) => (
             <article key={item.id} className={item.unread ? "activity-item unread" : "activity-item"}>
@@ -179,10 +178,12 @@ export function AccountPanel({
   safetyCertCount,
   safetyModuleCount,
   themeMode,
+  themeSource,
   themePalette,
   communityBadges,
   shoutOutCount,
   onToggleTheme,
+  onSetThemeSource,
   onSelectThemePalette,
   onLogout,
   onClose,
@@ -197,10 +198,12 @@ export function AccountPanel({
   safetyCertCount: number;
   safetyModuleCount: number;
   themeMode: ThemeMode;
+  themeSource: ThemeSource;
   themePalette: ThemePalette;
   communityBadges: string[];
   shoutOutCount: number;
   onToggleTheme: () => void;
+  onSetThemeSource: (source: ThemeSource) => void;
   onSelectThemePalette: (palette: ThemePalette) => void;
   onLogout: () => void;
   onClose: () => void;
@@ -222,52 +225,43 @@ export function AccountPanel({
         <div className="account-profile-card">
           <Avatar name={profile.displayName} size="lg" className="user-avatar" />
           <div>
-            <strong>{profile.organization}</strong>
+            <strong>{profile.displayName || profile.organization || "RIVT member"}</strong>
+            {profile.organization && profile.organization !== profile.displayName && (
+              <span className="account-org-name">{profile.organization}</span>
+            )}
             <span>{profile.location}</span>
+            {profile.specialties.length > 0 && (
+              <div className="account-chip-row account-specialty-chips">
+                {profile.specialties.map((specialty) => (
+                  <strong key={specialty}>{specialty}</strong>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
         <div className="account-stat-grid">
           <InfoItem icon={Mail} label="Email" value={profile.email} />
           <InfoItem icon={CreditCard} label="Plan" value={profile.plan} />
-          <InfoItem icon={UserCheck} label="Signup" value={profile.authMethod} />
-          <InfoItem icon={ShieldCheck} label="Trust" value={trustReady ? "Ready" : "Needs review"} />
+          <InfoItem icon={ShieldCheck} label="Trust" value={trustReady ? "Ready" : "Pending"} />
           <InfoItem icon={FolderOpen} label="Records" value={`${recordCount}/${recordGoal}`} />
-          <InfoItem icon={ThumbsUp} label="Community" value={`${communityBadges.length} badge${communityBadges.length === 1 ? "" : "s"}`} />
-          <InfoItem icon={GraduationCap} label="Safety modules" value={`${safetyCertCount}/${safetyModuleCount}`} />
+          <InfoItem icon={GraduationCap} label="Safety" value={`${safetyCertCount}/${safetyModuleCount}`} />
+          <InfoItem icon={ThumbsUp} label="Shout-outs" value={`${shoutOutCount}`} />
         </div>
 
-        <section className="account-section">
-          <span>Specialties</span>
-          <div className="account-chip-row">
-            {profile.specialties.length ? (
-              profile.specialties.map((specialty) => (
-                <strong key={specialty}>{specialty}</strong>
-              ))
-            ) : (
-              <small style={{ color: "var(--text-muted)" }}>None added yet</small>
-            )}
+        <section className="account-standing">
+          <div className="account-standing-row">
+            <span>Training</span>
+            <ProgressBar value={trainingProgress} />
           </div>
-        </section>
-
-        <section className="account-section">
-          <span>Safety training</span>
-          <ProgressBar value={trainingProgress} />
-        </section>
-
-        <section className="account-section">
-          <span>Community reputation</span>
-          <div className="account-chip-row">
-            {communityBadges.length ? (
-              communityBadges.map((badge) => <strong key={badge}>{badge}</strong>)
-            ) : (
-              <strong>New contributor</strong>
-            )}
-            {shoutOutCount > 0 && <strong>{shoutOutCount} shout-out{shoutOutCount === 1 ? "" : "s"}</strong>}
+          <div className="account-standing-row">
+            <span>Community</span>
+            <div className="account-chip-row">
+              {communityBadges.length
+                ? communityBadges.map((badge) => <strong key={badge}>{badge}</strong>)
+                : <strong>New contributor</strong>}
+            </div>
           </div>
-          <small className="account-note">
-            Answering questions and earning Verified Fixes builds your trade reputation over time.
-          </small>
         </section>
 
         <section className="account-section theme-settings-section">
@@ -281,7 +275,9 @@ export function AccountPanel({
             <span>Mode</span>
             <ThemeToggle
               themeMode={themeMode}
+              themeSource={themeSource}
               onToggleTheme={onToggleTheme}
+              onSetThemeSource={onSetThemeSource}
               variant="surface"
             />
           </div>
@@ -297,21 +293,9 @@ export function AccountPanel({
             <ShieldCheck size={15} />
             Settings
           </button>
-          <button type="button" onClick={onLogout}>
+          <button type="button" className="account-signout-btn" onClick={onLogout}>
             <LogOut size={15} />
             Sign out
-          </button>
-          <button type="button" onClick={() => onNavigate("Trust & Legal")}>
-            <ShieldCheck size={15} />
-            Trust
-          </button>
-          <button type="button" onClick={() => onNavigate("Safety & Training")}>
-            <GraduationCap size={15} />
-            Training
-          </button>
-          <button type="button" onClick={() => onNavigate("Reviews")}>
-            <Star size={15} />
-            Reviews
           </button>
         </div>
       </aside>

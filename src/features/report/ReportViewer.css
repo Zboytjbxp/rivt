@@ -1,0 +1,122 @@
+.rv-page {
+  min-height: 100vh;
+  background: #f8fafc;
+  font-family: 'Instrument Sans', system-ui, sans-serif;
+  color: #111827;
+}
+
+.rv-header {
+  background: #0b0f12;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 24px;
+}
+.rv-logo {
+  font-size: 20px;
+  font-weight: 800;
+  color: #f97316;
+  letter-spacing: -0.02em;
+}
+.rv-label {
+  font-size: 12px;
+  color: rgba(255,255,255,0.5);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.rv-main {
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 32px 20px 64px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.rv-hero { border-bottom: 1px solid #e5e7eb; padding-bottom: 24px; }
+.rv-job-title { font-size: 28px; font-weight: 800; margin: 0 0 8px; line-height: 1.2; }
+.rv-contractor { font-size: 15px; color: #6b7280; margin: 0 0 4px; }
+.rv-location { font-size: 14px; color: #9ca3af; margin: 0; }
+
+.rv-stats {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+.rv-stat {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.rv-stat span { font-size: 12px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.06em; }
+.rv-stat strong { font-size: 22px; font-weight: 700; font-family: 'IBM Plex Mono', monospace; }
+
+.rv-section h2 { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #6b7280; margin: 0 0 12px; }
+.rv-materials { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; }
+.rv-materials li { font-size: 14px; padding: 10px 14px; background: white; border: 1px solid #e5e7eb; border-radius: 8px; }
+.rv-notes { font-size: 14px; color: #374151; line-height: 1.6; }
+
+.rv-signoff {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  padding: 24px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+.rv-signoff p { font-size: 14px; color: #6b7280; margin: 0; }
+.rv-sign-btn {
+  background: #f97316;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  padding: 14px 32px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  width: 100%;
+  max-width: 280px;
+}
+.rv-sign-btn:hover {
+  background: #ea6a10;
+}
+.rv-signed { display: flex; flex-direction: column; align-items: center; gap: 6px; color: #16a34a; }
+.rv-signed span { font-size: 32px; }
+.rv-signed strong { font-size: 16px; }
+.rv-signed p { font-size: 13px; color: #6b7280; margin: 0; }
+
+.rv-footer {
+  text-align: center;
+  padding: 32px 24px;
+  font-size: 13px;
+  color: #9ca3af;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.rv-footer a { color: #f97316; text-decoration: none; font-weight: 600; }
+
+.rv-error {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: #6b7280;
+}
+
+@media print {
+  .rv-sign-btn { display: none; }
+  .rv-header { background: #111827 !important; -webkit-print-color-adjust: exact; }
+}
