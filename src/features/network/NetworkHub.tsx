@@ -84,7 +84,7 @@ function ClientBookView() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   function save(list: Client[]) {
-    try { localStorage.setItem("rivt.clients.v1", JSON.stringify(list)); } catch {}
+    try { localStorage.setItem("rivt.clients.v1", JSON.stringify(list)); } catch { /* noop */ }
     setClients(list);
   }
 
@@ -279,7 +279,7 @@ function readStoredReviews(): StoredReview[] {
 }
 
 function persistStoredReviews(reviews: StoredReview[]) {
-  try { localStorage.setItem(reviewsKey, JSON.stringify(reviews)); } catch {}
+  try { localStorage.setItem(reviewsKey, JSON.stringify(reviews)); } catch { /* noop */ }
 }
 
 // ── Sub Roster ────────────────────────────────────────────────────────────────
@@ -304,7 +304,7 @@ function readSubRoster(): SubRosterEntry[] {
 }
 
 function persistSubRoster(entries: SubRosterEntry[]) {
-  try { localStorage.setItem(subRosterKey, JSON.stringify(entries.slice(0, 50))); } catch {}
+  try { localStorage.setItem(subRosterKey, JSON.stringify(entries.slice(0, 50))); } catch { /* noop */ }
 }
 
 function SubRosterPanel() {
@@ -409,7 +409,7 @@ function readCrewInvites(): CrewInvite[] {
 }
 
 function persistCrewInvites(invites: CrewInvite[]) {
-  try { localStorage.setItem(crewInviteKey, JSON.stringify(invites.slice(0, 50))); } catch {}
+  try { localStorage.setItem(crewInviteKey, JSON.stringify(invites.slice(0, 50))); } catch { /* noop */ }
 }
 
 function CrewInvitePlanner() {

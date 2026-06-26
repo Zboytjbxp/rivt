@@ -86,7 +86,7 @@ export function usePushNotifications() {
       const reg = await navigator.serviceWorker.ready;
       const sub = await reg.pushManager.getSubscription();
       if (sub) await sub.unsubscribe();
-    } catch {}
+    } catch { /* noop */ }
   }
 
   return { permission, subscribed, busy, error, requestAndSubscribe, sendTestNotification, unsubscribe };

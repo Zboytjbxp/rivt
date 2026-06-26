@@ -51,6 +51,7 @@ export function GlobalSearch({ jobs, open, onClose, onNavigate }: GlobalSearchPr
 
   useEffect(() => {
     if (open) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setQuery("");
       setTimeout(() => inputRef.current?.focus(), 0);
     }
@@ -90,7 +91,7 @@ export function GlobalSearch({ jobs, open, onClose, onNavigate }: GlobalSearchPr
   const hasResults =
     matchedJobs.length > 0 || matchedTools.length > 0 || matchedNav.length > 0;
 
-  function handleJobClick(job: SearchableJob) {
+  function handleJobClick(_job: SearchableJob) {
     onNavigate("Marketplace");
     onClose();
   }

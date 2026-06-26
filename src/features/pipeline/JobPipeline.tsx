@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { ArrowLeft } from "lucide-react";
 import "./job-pipeline.css";
 
@@ -37,18 +37,17 @@ interface JobPipelineProps {
 }
 
 export function JobPipeline({ onClose }: JobPipelineProps) {
-  const [jobs, setJobs] = useState<StoredJob[]>([]);
-  const [actionJobId, setActionJobId] = useState<string | null>(null);
-
-  useEffect(() => {
+  const [jobs, setJobs] = useState<StoredJob[]>(() => {
     try {
       const raw = localStorage.getItem("rivt.jobs.v1");
       if (raw) {
         const parsed = JSON.parse(raw) as StoredJob[];
-        if (Array.isArray(parsed)) setJobs(parsed);
+        if (Array.isArray(parsed)) return parsed;
       }
-    } catch {}
-  }, []);
+    } catch { /* noop */ }
+    return [];
+  });
+  const [actionJobId, setActionJobId] = useState<string | null>(null);
 
   const jobsByStage: Record<Stage, StoredJob[]> = {
     Lead: [],

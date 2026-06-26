@@ -350,7 +350,7 @@ function readRateCard(): RateCardEntry[] {
 }
 
 function persistRateCard(entries: RateCardEntry[]) {
-  try { localStorage.setItem(rateCardKey, JSON.stringify(entries.slice(0, 12))); } catch {}
+  try { localStorage.setItem(rateCardKey, JSON.stringify(entries.slice(0, 12))); } catch { /* noop */ }
 }
 
 // ── Cert & License Tracker ────────────────────────────────────────────────────
@@ -377,7 +377,7 @@ function readCerts(): CertEntry[] {
 }
 
 function persistCerts(certs: CertEntry[]) {
-  try { localStorage.setItem(certKey, JSON.stringify(certs.slice(0, 50))); } catch {}
+  try { localStorage.setItem(certKey, JSON.stringify(certs.slice(0, 50))); } catch { /* noop */ }
 }
 
 function certStatus(expiryDate: string): "ok" | "soon" | "expired" {
@@ -614,7 +614,7 @@ function ServiceAreaSelector() {
   });
   function pick(r: string) {
     setRadius(r);
-    try { localStorage.setItem("rivt.serviceRadius.v1", r); } catch {}
+    try { localStorage.setItem("rivt.serviceRadius.v1", r); } catch { /* noop */ }
   }
   return (
     <div className="v2-service-area">
@@ -770,10 +770,10 @@ export function ProfileHub({
   communityBadges,
   shoutOutCount,
   feedbackCount,
-  themeMode,
+  themeMode: _themeMode,
   themeSource,
   themePalette,
-  onToggleTheme,
+  onToggleTheme: _onToggleTheme,
   onSetThemeSource,
   onSelectThemePalette,
   onReviewConsent,

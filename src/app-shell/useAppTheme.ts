@@ -22,6 +22,7 @@ export function useAppTheme() {
   useEffect(() => {
     const mq = window.matchMedia?.("(prefers-color-scheme: dark)");
     if (!mq) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setSystemDark(mq.matches);
     function handleChange(event: MediaQueryListEvent) {
       setSystemDark(event.matches);

@@ -15,7 +15,7 @@ export function usePro() {
   function activatePro() {
     const next: ProStatus = { active: true, activatedAt: new Date().toISOString() };
     setPro(next);
-    try { localStorage.setItem(PRO_KEY, JSON.stringify(next)); } catch {}
+    try { localStorage.setItem(PRO_KEY, JSON.stringify(next)); } catch { /* noop */ }
   }
 
   return { isPro: pro.active, activatedAt: pro.activatedAt, activatePro };
