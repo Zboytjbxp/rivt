@@ -2,7 +2,11 @@ import {
   ArrowRight,
   Briefcase,
   CheckCircle2,
+  ChevronDown,
+  ChevronRight,
+  Mail,
   MessageSquareText,
+  Phone,
   Plus,
   Send,
   ShieldCheck,
@@ -45,6 +49,212 @@ interface NetworkHubProps {
   onOpenShopTalk: () => void;
   onOpenReviews: () => void;
   onAddShoutOut: (to: string, trade: string, message: string) => void;
+}
+
+// ── Clients ───────────────────────────────────────────────────────────────────
+
+interface Client {
+  id: string;
+  name: string;
+  company: string;
+  phone: string;
+  email: string;
+  notes: string;
+  createdAt: string;
+}
+
+interface StoredJobEntry {
+  id: string | number;
+  title?: string;
+  notes?: string;
+  [key: string]: unknown;
+}
+
+const emptyForm = { name: "", company: "", phone: "", email: "", notes: "" };
+
+function ClientBookView() {
+  const load = (): Client[] => {
+    try { return JSON.parse(localStorage.getItem("rivt.clients.v1") || "[]") as Client[]; } catch { return []; }
+  };
+
+  const [clients, setClients] = useState<Client[]>(load);
+  const [showForm, setShowForm] = useState(false);
+  const [editingClient, setEditingClient] = useState<Client | null>(null);
+  const [form, setForm] = useState(emptyForm);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  function save(list: Client[]) {
+    try { localStorage.setItem("rivt.clients.v1", JSON.stringify(list)); } catch {}
+    setClients(list);
+  }
+
+  function openAdd() {
+    setEditingClient(null);
+    setForm(emptyForm);
+    setShowForm(true);
+  }
+
+  function openEdit(client: Client) {
+    setEditingClient(client);
+    setForm({ name: client.name, company: client.company, phone: client.phone, email: client.email, notes: client.notes });
+    setShowForm(true);
+  }
+
+  function cancel() {
+    setShowForm(false);
+    setEditingClient(null);
+    setForm(emptyForm);
+  }
+
+  function handleSave() {
+    if (!form.name.trim()) return;
+    if (editingClient) {
+      save(clients.map((c) => c.id === editingClient.id ? { ...c, ...form } : c));
+    } else {
+      const next: Client = { id: crypto.randomUUID(), ...form, createdAt: new Date().toISOString() };
+      save([next, ...clients]);
+    }
+    cancel();
+  }
+
+  function handleDelete(id: string) {
+    if (!window.confirm("Delete this client?")) return;
+    save(clients.filter((c) => c.id !== id));
+    if (expandedId === id) setExpandedId(null);
+  }
+
+  function jobsForClient(clientName: string): number {
+    try {
+      const jobs: StoredJobEntry[] = JSON.parse(localStorage.getItem("rivt.jobs.v1") || "[]");
+      const lower = clientName.toLowerCase();
+      return jobs.filter((j) =>
+        (typeof j.title === "string" && j.title.toLowerCase().includes(lower)) ||
+        (typeof j.notes === "string" && j.notes.toLowerCase().includes(lower))
+      ).length;
+    } catch { return 0; }
+  }
+
+  return (
+    <div className="v2-client-book">
+      <div className="v2-client-header">
+        <span className="v2-client-title">Clients ({clients.length})</span>
+        <button type="button" className="v2-client-add-btn" onClick={openAdd}>
+          <Plus size={14} /> Add
+        </button>
+      </div>
+
+      {showForm && (
+        <div className="v2-client-form">
+          <input
+            placeholder="Name *"
+            value={form.name}
+            onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+          />
+          <input
+            placeholder="Company"
+            value={form.company}
+            onChange={(e) => setForm((f) => ({ ...f, company: e.target.value }))}
+          />
+          <input
+            placeholder="Phone"
+            value={form.phone}
+            onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
+          />
+          <input
+            placeholder="Email"
+            value={form.email}
+            onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+          />
+          <textarea
+            placeholder="Notes"
+            value={form.notes}
+            onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
+          />
+          <div className="v2-client-form-btns">
+            <button type="button" className="v2-client-save-btn" disabled={!form.name.trim()} onClick={handleSave}>
+              Save
+            </button>
+            <button type="button" className="v2-client-cancel-btn" onClick={cancel}>
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {!showForm && (
+        <div className="v2-client-list">
+          {clients.length === 0 ? (
+            <div className="v2-client-empty">No clients yet — tap + to add your first</div>
+          ) : (
+            clients.map((client) => {
+              const isExpanded = expandedId === client.id;
+              const jobCount = jobsForClient(client.name);
+              return (
+                <div key={client.id} className="v2-client-card">
+                  <div
+                    className="v2-client-card-top"
+                    onClick={() => setExpandedId(isExpanded ? null : client.id)}
+                  >
+                    <div>
+                      <div className="v2-client-name">{client.name}</div>
+                      {client.company && <div className="v2-client-company">{client.company}</div>}
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                      {client.phone && (
+                        <a
+                          href={`tel:${client.phone}`}
+                          className="v2-client-phone-link"
+                          onClick={(e) => e.stopPropagation()}
+                          aria-label={`Call ${client.name}`}
+                        >
+                          <Phone size={14} />
+                        </a>
+                      )}
+                      {jobCount > 0 && (
+                        <span className="v2-client-jobs-badge">{jobCount} job{jobCount !== 1 ? "s" : ""}</span>
+                      )}
+                      {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                    </div>
+                  </div>
+
+                  {isExpanded && (
+                    <div className="v2-client-detail">
+                      {client.phone && (
+                        <div className="v2-client-detail-row">
+                          <Phone size={13} />
+                          <a href={`tel:${client.phone}`}>{client.phone}</a>
+                        </div>
+                      )}
+                      {client.email && (
+                        <div className="v2-client-detail-row">
+                          <Mail size={13} />
+                          <a href={`mailto:${client.email}`}>{client.email}</a>
+                        </div>
+                      )}
+                      {client.notes && (
+                        <div className="v2-client-detail-row" style={{ alignItems: "flex-start" }}>
+                          <MessageSquareText size={13} style={{ flexShrink: 0, marginTop: 2 }} />
+                          <span style={{ color: "var(--v2-text)", whiteSpace: "pre-wrap" }}>{client.notes}</span>
+                        </div>
+                      )}
+                      <div className="v2-client-actions">
+                        <button type="button" className="v2-client-edit-btn" onClick={() => openEdit(client)}>
+                          Edit
+                        </button>
+                        <button type="button" className="v2-client-delete-btn" onClick={() => handleDelete(client.id)}>
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })
+          )}
+        </div>
+      )}
+    </div>
+  );
 }
 
 // ── Reviews localStorage ──────────────────────────────────────────────────────
@@ -587,11 +797,18 @@ function ReviewsView({
   );
 }
 
+type NetworkTab = "Crew" | "Reviews" | "Clients";
+
 export function NetworkHub({ view, jobs, talent, communityPosts, shoutOuts, displayName, onOpenCrew, onOpenShopTalk, onOpenReviews, onAddShoutOut }: NetworkHubProps) {
   const activeCrew = talent.slice(0, 3);
   const questionPosts = communityPosts.filter((post) => post.flair === "Question" || post.status !== "Open").slice(0, 4);
   const highlightedShoutOuts = shoutOuts.slice(0, 4);
   const openJobs = jobs.filter((job) => job.status === "Open").length;
+
+  // Internal tab state — derive initial tab from the incoming view prop
+  const [activeTab, setActiveTab] = useState<NetworkTab>(() =>
+    view === "Reviews" ? "Reviews" : "Crew"
+  );
 
   // Feature 1: Skill matrix view toggle
   const [crewView, setCrewView] = useState<"list" | "skills">("list");
@@ -627,13 +844,53 @@ export function NetworkHub({ view, jobs, talent, communityPosts, shoutOuts, disp
   // Modal member list (all talent, id as string)
   const modalMembers = talent.map((t) => ({ id: String(t.id), name: t.name }));
 
-  if (view === "Reviews") {
+  // Tab bar shared across all views
+  const tabBar = (
+    <div className="v2-network-tab-bar">
+      {(["Crew", "Reviews", "Clients"] as NetworkTab[]).map((tab) => (
+        <button
+          key={tab}
+          type="button"
+          className={`v2-network-tab-btn${activeTab === tab ? " active" : ""}`}
+          onClick={() => {
+            setActiveTab(tab);
+            if (tab === "Reviews") onOpenReviews();
+            else if (tab === "Crew") onOpenCrew();
+          }}
+        >
+          {tab}
+        </button>
+      ))}
+    </div>
+  );
+
+  if (activeTab === "Clients") {
+    return (
+      <section className="v2-network-page" aria-label="Clients">
+        <PageHeader
+          className="v2-network-header"
+          title="Network"
+          description="Crew, reviews, and your client book."
+          actions={
+            <div className="v2-network-header-metrics">
+              <MetricTile icon={<Users size={18} />} value={activeCrew.length} label="crew members" />
+              <MetricTile icon={<ThumbsUp size={18} />} value={shoutOuts.length} label="shout-outs" />
+            </div>
+          }
+        />
+        {tabBar}
+        <ClientBookView />
+      </section>
+    );
+  }
+
+  if (activeTab === "Reviews") {
     return (
       <section className="v2-network-page" aria-label="Reviews">
         <PageHeader
           className="v2-network-header"
-          title="Reviews"
-          description="Shout-outs and reputation from people you've worked with."
+          title="Network"
+          description="Crew, reviews, and your client book."
           actions={
             <div className="v2-network-header-metrics">
               <MetricTile icon={<Star size={18} />} value={shoutOuts.filter((s) => s.to === displayName).length} label="received" />
@@ -641,6 +898,7 @@ export function NetworkHub({ view, jobs, talent, communityPosts, shoutOuts, disp
             </div>
           }
         />
+        {tabBar}
         <ReviewsView
           shoutOuts={shoutOuts}
           displayName={displayName}
@@ -655,8 +913,8 @@ export function NetworkHub({ view, jobs, talent, communityPosts, shoutOuts, disp
     <section className="v2-network-page" aria-label="Crew">
       <PageHeader
         className="v2-network-header"
-        title="Crew"
-        description="Trusted connections and reputation."
+        title="Network"
+        description="Crew, reviews, and your client book."
         actions={
         <div className="v2-network-header-metrics">
           <MetricTile icon={<Users size={18} />} value={activeCrew.length} label="crew members" />
@@ -665,6 +923,7 @@ export function NetworkHub({ view, jobs, talent, communityPosts, shoutOuts, disp
         </div>
         }
       />
+      {tabBar}
 
       {showGroupMsg && (
         <CrewGroupMessageModal
