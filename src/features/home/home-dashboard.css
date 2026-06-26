@@ -1382,3 +1382,68 @@
     font-size: 9px;
   }
 }
+
+/* Feature 1 — End-of-day summary modal */
+.v2-day-summary-backdrop {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+  display: flex; align-items: flex-end; justify-content: center;
+  z-index: 8000; padding: 0;
+}
+.v2-day-summary {
+  background: var(--v2-surface); border-radius: 20px 20px 0 0;
+  width: 100%; max-width: 430px; padding: 28px 24px 40px;
+  display: flex; flex-direction: column; gap: 20px;
+  box-shadow: 0 -4px 32px rgba(0,0,0,0.15);
+}
+.v2-day-summary-title {
+  font-size: 18px; font-weight: var(--v2-weight-display);
+  text-align: center;
+}
+.v2-day-summary-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  gap: 12px;
+}
+.v2-day-summary-stat {
+  background: var(--v2-surface-muted); border-radius: var(--v2-radius-md);
+  padding: 14px; display: flex; flex-direction: column; gap: 4px; align-items: center;
+}
+.v2-day-summary-stat span { font-size: 11px; color: var(--v2-text-muted); text-transform: uppercase; letter-spacing: 0.06em; }
+.v2-day-summary-stat strong { font-size: 20px; font-weight: var(--v2-weight-bold); font-family: 'IBM Plex Mono', monospace; color: var(--v2-accent); }
+.v2-day-summary-close {
+  background: var(--v2-accent); color: white; border: none;
+  border-radius: var(--v2-radius-md); padding: 14px; font-size: 15px;
+  font-weight: var(--v2-weight-bold); cursor: pointer; width: 100%;
+}
+
+/* Feature 3 — Context-aware cockpit */
+.v2-cockpit-hero.is-active {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--v2-accent) 8%, var(--v2-surface)), var(--v2-surface));
+  border-color: color-mix(in srgb, var(--v2-accent) 25%, var(--v2-border));
+}
+.v2-cockpit-hero.is-active .v2-cockpit-clockout-btn {
+  background: var(--v2-accent);
+  color: white;
+  font-weight: var(--v2-weight-bold);
+  font-size: 15px;
+  padding: 12px 24px;
+  animation: v2-pulse-ring 2s infinite;
+}
+@keyframes v2-pulse-ring {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--v2-accent) 40%, transparent); }
+  50% { box-shadow: 0 0 0 6px color-mix(in srgb, var(--v2-accent) 0%, transparent); }
+}
+.v2-cockpit-clockin-btn {
+  padding: 12px 28px;
+  font-size: 15px;
+  font-weight: var(--v2-weight-bold);
+}
+
+/* Feature 5 — On my way button */
+.v2-on-my-way-btn {
+  display: flex; align-items: center; gap: 6px;
+  background: var(--v2-surface-muted); border: 1px solid var(--v2-border);
+  color: var(--v2-text); border-radius: var(--v2-radius-md);
+  padding: 8px 16px; font-size: 13px; font-weight: 600; cursor: pointer;
+  transition: background 0.15s;
+}
+.v2-on-my-way-btn:active { background: var(--v2-border); }

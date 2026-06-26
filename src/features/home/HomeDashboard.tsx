@@ -174,12 +174,50 @@ function getWeekStart(): Date {
   return monday;
 }
 
+function triggerWeeklyRecapIfDue() {
+  const now = new Date();
+  if (now.getDay() !== 5 || now.getHours() < 17) return; // Friday after 5pm only
+  const weekKey = `${now.getFullYear()}-W${Math.ceil(now.getDate() / 7)}`;
+  if (localStorage.getItem("rivt.weeklyRecap.v1") === weekKey) return;
+
+  const sessions: TimeSession[] = (() => {
+    try { return JSON.parse(localStorage.getItem(TIME_SESSIONS_KEY) ?? "[]"); } catch { return []; }
+  })();
+  const weekStart = new Date(now);
+  weekStart.setDate(now.getDate() - now.getDay() + 1); // Monday
+  weekStart.setHours(0, 0, 0, 0);
+
+  const weekSessions = sessions.filter(s => s.endedAt && new Date(s.startedAt) >= weekStart);
+  const totalHours = weekSessions.reduce((sum, s) => {
+    return sum + (new Date(s.endedAt!).getTime() - new Date(s.startedAt).getTime()) / 3_600_000;
+  }, 0);
+  const rateCard = (() => { try { return JSON.parse(localStorage.getItem("rivt.rateCard.v1") ?? "null"); } catch { return null; } })();
+  const rate = (rateCard as { hourlyRate?: number } | null)?.hourlyRate ?? 75;
+  const earned = Math.round(totalHours * rate);
+
+  if (typeof Notification !== "undefined" && Notification.permission === "granted") {
+    navigator.serviceWorker?.ready.then(reg => {
+      reg.showNotification("Your week in numbers 🔨", {
+        body: `${Math.round(totalHours * 10) / 10}h worked · ~$${earned.toLocaleString()} earned — great week.`,
+        icon: "/rivt-icon-192.png",
+        tag: "rivt-weekly-recap",
+      });
+    }).catch(() => {});
+  }
+
+  try { localStorage.setItem("rivt.weeklyRecap.v1", weekKey); } catch {}
+}
+
 function CockpitHero({ onNavigate }: { onNavigate: (d: PrimaryDestination) => void }) {
   const [sessions, setSessions] = useState<TimeSession[]>(readTimeSessions);
   const [now, setNow] = useState(() => new Date());
   const [weather, setWeather] = useState<WeatherSnapshot | null>(null);
   const [checkedIn, setCheckedIn] = useState(false);
   const [checkinLog, setCheckinLog] = useState<CheckinEntry[]>(readCheckinLog);
+  const [daySummary, setDaySummary] = useState<{
+    hours: number; earned: number; expenseCount: number; expenseTotal: number;
+  } | null>(null);
+  const [onMyWayCopied, setOnMyWayCopied] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const activeSession = sessions.find((s) => !s.endedAt) ?? null;
@@ -234,11 +272,43 @@ function CockpitHero({ onNavigate }: { onNavigate: (d: PrimaryDestination) => vo
 
   function clockOut() {
     if (!activeSession) return;
+    const endedAt = new Date().toISOString();
     const updated = sessions.map((s) =>
-      s.id === activeSession.id ? { ...s, endedAt: new Date().toISOString() } : s
+      s.id === activeSession.id ? { ...s, endedAt } : s
     );
     setSessions(updated);
     writeTimeSessions(updated);
+
+    // Compute today's stats
+    const hours = Math.round(
+      (new Date(endedAt).getTime() - new Date(activeSession.startedAt).getTime()) / 360000
+    ) / 10;
+    const rateCard = (() => { try { return JSON.parse(localStorage.getItem("rivt.rateCard.v1") ?? "null"); } catch { return null; } })();
+    const rate = (rateCard as { hourlyRate?: number } | null)?.hourlyRate ?? 75;
+    const today = new Date().toISOString().slice(0, 10);
+    const expenses: Array<{ date: string; amount: number }> = (() => {
+      try { return JSON.parse(localStorage.getItem("rivt.expenses.v1") ?? "[]"); } catch { return []; }
+    })();
+    const todayExpenses = expenses.filter(e => e.date === today);
+    setDaySummary({
+      hours,
+      earned: Math.round(hours * rate),
+      expenseCount: todayExpenses.length,
+      expenseTotal: Math.round(todayExpenses.reduce((sum, e) => sum + e.amount, 0)),
+    });
+  }
+
+  async function handleOnMyWay() {
+    const msg = `Heading to ${activeSession?.jobTitle ?? "the job"} — be there in ~20 min.`;
+    if (navigator.share) {
+      try { await navigator.share({ text: msg }); return; } catch {}
+    }
+    try {
+      await navigator.clipboard.writeText(msg);
+      // Brief visual feedback
+      setOnMyWayCopied(true);
+      setTimeout(() => setOnMyWayCopied(false), 2500);
+    } catch {}
   }
 
   function handleCheckin() {
@@ -270,7 +340,7 @@ function CockpitHero({ onNavigate }: { onNavigate: (d: PrimaryDestination) => vo
   const dateStr = now.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" });
 
   return (
-    <div className="v2-cockpit-hero">
+    <div className={`v2-cockpit-hero${activeSession ? " is-active" : ""}`}>
       <div className="v2-cockpit-clock">
         <div className="v2-cockpit-time">{timeStr}</div>
         <div className="v2-cockpit-date">{dateStr}</div>
@@ -315,6 +385,12 @@ function CockpitHero({ onNavigate }: { onNavigate: (d: PrimaryDestination) => vo
             </button>
           </>
         )}
+        {activeSession && (
+          <button type="button" className="v2-on-my-way-btn" onClick={handleOnMyWay}>
+            <Navigation2 size={14} />
+            {onMyWayCopied ? "Copied!" : "On my way"}
+          </button>
+        )}
         <button
           type="button"
           className={`v2-cockpit-checkin-btn${checkedIn ? " is-checked" : ""}`}
@@ -324,6 +400,32 @@ function CockpitHero({ onNavigate }: { onNavigate: (d: PrimaryDestination) => vo
           <span>{checkedIn ? "Checked in ✓" : "On-site check-in"}</span>
         </button>
       </div>
+      {daySummary && (
+        <div className="v2-day-summary-backdrop" onClick={() => setDaySummary(null)}>
+          <div className="v2-day-summary" onClick={e => e.stopPropagation()}>
+            <strong className="v2-day-summary-title">Day complete 🎉</strong>
+            <div className="v2-day-summary-grid">
+              <div className="v2-day-summary-stat">
+                <span>Hours</span>
+                <strong>{daySummary.hours}h</strong>
+              </div>
+              <div className="v2-day-summary-stat">
+                <span>Earned</span>
+                <strong>${daySummary.earned.toLocaleString()}</strong>
+              </div>
+              {daySummary.expenseCount > 0 && (
+                <div className="v2-day-summary-stat">
+                  <span>Expenses</span>
+                  <strong>{daySummary.expenseCount} · ${daySummary.expenseTotal}</strong>
+                </div>
+              )}
+            </div>
+            <button type="button" className="v2-day-summary-close" onClick={() => setDaySummary(null)}>
+              Done
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -589,6 +691,8 @@ export function HomeDashboard({
 }: HomeDashboardProps) {
   const firstName = name.trim().split(/\s+/)[0] || "there";
   const persona = usePersona();
+
+  useEffect(() => { triggerWeeklyRecapIfDue(); }, []);
   const profileData = (() => { try { return JSON.parse(localStorage.getItem("rivt.profile.v1") ?? "null"); } catch { return null; } })();
   const tradeLabel = persona ? `${persona.emoji} ${persona.trade}` : null;
   const locationLabel = profileData?.location ?? (location || null);
