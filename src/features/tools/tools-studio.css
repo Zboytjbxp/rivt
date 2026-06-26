@@ -2697,6 +2697,36 @@
   gap: 8px;
 }
 
+/* ── Bid Accept Button & Banner ──────────────────────────────────────────────── */
+
+.v2-bid-accept-btn {
+  width: 100%; padding: 14px; background: var(--v2-accent); color: white;
+  border: none; border-radius: var(--v2-radius-md); font-size: 15px;
+  font-weight: var(--v2-weight-bold); cursor: pointer; display: flex;
+  align-items: center; justify-content: center; gap: 8px; margin-top: 12px;
+}
+.v2-bid-accepted-banner {
+  background: var(--v2-success); color: white; border-radius: var(--v2-radius-md);
+  padding: 12px 16px; font-size: 14px; font-weight: var(--v2-weight-bold);
+  text-align: center; margin-top: 12px;
+}
+
+/* ── Earnings Dashboard Enhancements ─────────────────────────────────────────── */
+
+.v2-earn-chart { padding: 12px 0; }
+.v2-earn-chart-title, .v2-earn-section-title { font-size: 12px; font-weight: var(--v2-weight-bold); color: var(--v2-text-muted); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 10px; margin-top: 20px; }
+.v2-earn-chart-row, .v2-earn-cat-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.v2-earn-chart-label, .v2-earn-cat-name { font-size: 11px; color: var(--v2-text-muted); width: 44px; flex-shrink: 0; }
+.v2-earn-chart-bar-wrap, .v2-earn-cat-bar-wrap { flex: 1; height: 8px; background: var(--v2-surface-muted); border-radius: 4px; overflow: hidden; }
+.v2-earn-chart-bar { height: 100%; background: var(--v2-accent); border-radius: 4px; transition: width 0.4s ease; min-width: 2px; }
+.v2-earn-cat-bar { height: 100%; background: var(--v2-warning); border-radius: 4px; transition: width 0.4s ease; min-width: 2px; }
+.v2-earn-chart-value, .v2-earn-cat-amount { font-size: 11px; color: var(--v2-text); font-family: 'IBM Plex Mono', monospace; width: 44px; text-align: right; }
+.v2-earn-top-job-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--v2-border); }
+.v2-earn-top-job-row:last-child { border-bottom: none; }
+.v2-earn-top-job-rank { font-size: 12px; color: var(--v2-text-muted); width: 20px; }
+.v2-earn-top-job-name { flex: 1; font-size: 13px; color: var(--v2-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.v2-earn-top-job-amount { font-size: 14px; font-weight: var(--v2-weight-bold); color: var(--v2-success); font-family: 'IBM Plex Mono', monospace; }
+
 .v2-earnings-item {
   display: flex;
   align-items: center;

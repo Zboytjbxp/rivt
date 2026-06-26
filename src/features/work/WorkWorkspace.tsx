@@ -8,6 +8,7 @@ import {
   CircleDollarSign,
   FileText,
   Filter,
+  LayoutList,
   LockKeyhole,
   MapPin,
   Pause,
@@ -57,6 +58,7 @@ import {
   type CanonicalOffer,
 } from "./job-api";
 import "./work-workspace.css";
+import { JobDetailHub } from "../jobs/JobDetailHub";
 
 type TradeFilter = (typeof tradeOptions)[number];
 type DifficultyFilter = (typeof difficultyOptions)[number];
@@ -1166,6 +1168,7 @@ export function WorkWorkspace({
   const [savedSearches, setSavedSearches] = useState<SavedSearch[]>(readSavedSearches);
   const [savedSearchNotice, setSavedSearchNotice] = useState("");
   const [saveTemplateNotice, setSaveTemplateNotice] = useState("");
+  const [detailJobId, setDetailJobId] = useState<string | null>(null);
 
   const visibleJobs = useMemo(() => {
     if (role !== "contractor") return jobs;
@@ -1762,12 +1765,17 @@ export function WorkWorkspace({
                   setSaveTemplateNotice(`Saved as "${templateName}"`);
                   setTimeout(() => setSaveTemplateNotice(""), 3000);
                 }}><FileText size={17} /> Template</button>
+                <button type="button" style={{ color: "var(--v2-accent)" }} onClick={() => setDetailJobId(String(detailJob.id))}><LayoutList size={17} /> Full Detail</button>
                 {detailJob.status === "Draft" ? <button type="button" className="v2-primary-button" disabled={Boolean(activeAction)} onClick={() => void runAction(detailJob, "publish")}><Play size={17} /> Publish</button> : null}
                 {detailJob.status === "Open" ? <button type="button" disabled={Boolean(activeAction)} onClick={() => void runAction(detailJob, "pause")}><Pause size={17} /> Pause</button> : null}
                 {detailJob.status === "Paused" ? <button type="button" className="v2-primary-button" disabled={Boolean(activeAction)} onClick={() => void runAction(detailJob, "resume")}><Play size={17} /> Reopen</button> : null}
                 <button type="button" className="v2-destructive-button" disabled={Boolean(activeAction)} onClick={() => void runAction(detailJob, "close")}><XCircle size={17} /> Close</button>
               </footer>
-            ) : null}
+            ) : (
+              <footer className="v2-work-detail-actions">
+                <button type="button" style={{ color: "var(--v2-accent)" }} onClick={() => setDetailJobId(String(detailJob.id))}><LayoutList size={17} /> Full Detail</button>
+              </footer>
+            )}
             {saveTemplateNotice ? <p className="v2-saved-search-notice" role="status" style={{ padding: "8px 16px" }}>{saveTemplateNotice}</p> : null}
           </article>
         ) : (
@@ -1778,6 +1786,10 @@ export function WorkWorkspace({
           </article>
         )}
       </div>
+
+      {detailJobId && (
+        <JobDetailHub jobId={detailJobId} onClose={() => setDetailJobId(null)} />
+      )}
     </section>
   );
 }

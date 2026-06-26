@@ -834,3 +834,66 @@
     padding-bottom: 4px;
   }
 }
+
+/* ─── Inbox tab bar ──────────────────────────────────────────────────────── */
+.v2-inbox-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 0 0 0 2px;
+  border-bottom: 2px solid var(--v2-border);
+}
+
+.v2-inbox-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 16px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  background: transparent;
+  color: var(--v2-text-muted);
+  font: inherit;
+  font-size: 14px;
+  font-weight: var(--v2-weight-bold);
+  cursor: pointer;
+  transition: color 0.12s, border-color 0.12s;
+}
+
+.v2-inbox-tab:hover {
+  color: var(--v2-text);
+}
+
+.v2-inbox-tab.is-active {
+  color: var(--v2-accent);
+  border-bottom-color: var(--v2-accent);
+}
+
+/* ─── Job Notes wrapper ───────────────────────────────────────────────────── */
+.v2-inbox-notes-wrapper {
+  min-height: 480px;
+  border: 1px solid color-mix(in srgb, var(--v2-border) 58%, transparent);
+  border-radius: var(--v2-radius-lg);
+  background: var(--v2-surface-raised);
+  box-shadow: var(--v2-shadow-card);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ─── Job Notes component styles ─────────────────────────────────────────── */
+.v2-jobnotes-container { display: flex; flex-direction: column; height: 100%; min-height: 480px; }
+.v2-jobnotes-job-select { padding: 10px 16px; border-bottom: 1px solid var(--v2-border); }
+.v2-jobnotes-job-select select { width: 100%; padding: 8px 12px; border: 1px solid var(--v2-border); border-radius: var(--v2-radius-sm); background: var(--v2-surface); color: var(--v2-text); font-size: 14px; }
+.v2-jobnotes-feed { flex: 1; overflow-y: auto; padding: 12px 16px; display: flex; flex-direction: column; gap: 10px; }
+.v2-jobnotes-bubble { background: var(--v2-surface-muted); border: 1px solid var(--v2-border); border-radius: var(--v2-radius-md); border-bottom-left-radius: 4px; padding: 10px 12px; max-width: 90%; align-self: flex-start; }
+.v2-jobnotes-bubble-text { font-size: 14px; color: var(--v2-text); line-height: 1.4; }
+.v2-jobnotes-bubble-time { font-size: 11px; color: var(--v2-text-muted); margin-top: 4px; }
+.v2-jobnotes-empty { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; color: var(--v2-text-muted); font-size: 14px; padding: 40px; text-align: center; }
+.v2-jobnotes-chips { padding: 8px 16px; display: flex; gap: 6px; overflow-x: auto; border-top: 1px solid var(--v2-border); }
+.v2-jobnotes-chip { padding: 6px 12px; background: var(--v2-surface-muted); border: 1px solid var(--v2-border); border-radius: 20px; font-size: 12px; color: var(--v2-text-muted); cursor: pointer; white-space: nowrap; flex-shrink: 0; }
+.v2-jobnotes-chip:active { background: var(--v2-accent-soft); color: var(--v2-accent); border-color: var(--v2-accent); }
+.v2-jobnotes-input-row { display: flex; gap: 8px; padding: 10px 16px; border-top: 1px solid var(--v2-border); background: var(--v2-surface); }
+.v2-jobnotes-input { flex: 1; padding: 10px 12px; border: 1px solid var(--v2-border); border-radius: var(--v2-radius-sm); background: var(--v2-surface-muted); color: var(--v2-text); font-size: 14px; }
+.v2-jobnotes-send-btn { padding: 10px 16px; background: var(--v2-accent); color: white; border: none; border-radius: var(--v2-radius-sm); font-weight: var(--v2-weight-bold); cursor: pointer; display: flex; align-items: center; gap: 4px; white-space: nowrap; }
+.v2-jobnotes-no-jobs { padding: 40px 20px; text-align: center; color: var(--v2-text-muted); font-size: 14px; }
