@@ -25,3 +25,33 @@ self.addEventListener('fetch', e => {
       .catch(() => caches.match(e.request))
   );
 });
+
+// Push notification handler
+self.addEventListener('push', e => {
+  let data = { title: 'RIVT', body: 'You have a new notification.' };
+  try {
+    if (e.data) data = { title: 'RIVT', ...e.data.json() };
+  } catch {}
+  e.waitUntil(
+    self.registration.showNotification(data.title, {
+      body: data.body,
+      icon: '/rivt-icon-192.png',
+      badge: '/rivt-favicon.png',
+      tag: data.tag || 'rivt-push',
+      data: data.url ? { url: data.url } : undefined,
+    })
+  );
+});
+
+// Notification click handler
+self.addEventListener('notificationclick', e => {
+  e.notification.close();
+  const url = e.notification.data?.url || '/';
+  e.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
+      const existing = list.find(c => c.url.includes(self.location.origin));
+      if (existing) return existing.focus();
+      return clients.openWindow(url);
+    })
+  );
+});

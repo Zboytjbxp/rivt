@@ -1,6 +1,8 @@
 import {
   AlertTriangle,
   BadgeCheck,
+  Bell,
+  BellOff,
   Calendar,
   Camera,
   CheckCircle,
@@ -28,6 +30,7 @@ import {
 import { createPortal } from "react-dom";
 import { useState } from "react";
 import { usePro } from "../pro/usePro";
+import { usePushNotifications } from "../notifications/usePushNotifications";
 import { UpgradeModal } from "../pro/UpgradeModal";
 import { usePersona, useTradeModeToggle } from "../persona/usePersona";
 import "../pro/pro.css";
@@ -664,6 +667,58 @@ function DataExportButton() {
 
 const themePaletteOrder = Object.keys(brandConfig.theme.palettes) as ThemePalette[];
 
+function PushNotificationsCard() {
+  const { permission, subscribed, busy, error, requestAndSubscribe, sendTestNotification, unsubscribe } = usePushNotifications();
+
+  return (
+    <div className="v2-push-card">
+      <div className="v2-push-header">
+        <div>
+          <strong>Push notifications</strong>
+          <p>Get alerted for new job matches, messages, and Shop Talk replies.</p>
+        </div>
+        {subscribed
+          ? <span className="v2-push-status is-on">On</span>
+          : <span className="v2-push-status">Off</span>}
+      </div>
+
+      {permission === "denied" && (
+        <p className="v2-push-denied">Blocked in browser settings. Open site settings to allow notifications.</p>
+      )}
+
+      {error && <p className="v2-push-error">{error}</p>}
+
+      <div className="v2-push-actions">
+        {!subscribed && permission !== "denied" && (
+          <button
+            type="button"
+            className="v2-primary-button"
+            onClick={requestAndSubscribe}
+            disabled={busy}
+          >
+            <Bell size={14} />
+            {busy ? "Enabling…" : "Enable notifications"}
+          </button>
+        )}
+        {subscribed && (
+          <>
+            <button type="button" className="v2-primary-button" onClick={sendTestNotification}>
+              <Bell size={14} />Test notification
+            </button>
+            <button type="button" onClick={unsubscribe}>
+              <BellOff size={14} />Turn off
+            </button>
+          </>
+        )}
+      </div>
+
+      {!import.meta.env.VITE_VAPID_PUBLIC_KEY && subscribed && (
+        <p className="v2-push-note">Local notifications active. Set VITE_VAPID_PUBLIC_KEY to enable background push alerts.</p>
+      )}
+    </div>
+  );
+}
+
 function PlanCard() {
   const { isPro, activatedAt } = usePro();
   const [upgradeOpen, setUpgradeOpen] = useState(false);
@@ -1217,6 +1272,7 @@ export function ProfileHub({
               <span>Notifications</span>
               <strong>What alerts you</strong>
             </header>
+            <PushNotificationsCard />
             <div className="v2-trade-mode-toggle">
               <div>
                 <strong>Trade personalization</strong>

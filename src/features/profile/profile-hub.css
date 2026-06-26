@@ -1753,4 +1753,41 @@
   box-shadow: 0 1px 3px rgba(0,0,0,0.2);
 }
 .v2-toggle-switch.is-on { background: var(--v2-accent); }
+
+/* ── Push Notifications Card ────────────────────────────────────────────────── */
+.v2-push-card {
+  background: var(--v2-surface);
+  border: 1px solid var(--v2-border);
+  border-radius: var(--v2-radius-lg);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+.v2-push-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.v2-push-header strong { font-size: 14px; display: block; margin-bottom: 2px; }
+.v2-push-header p { font-size: 12px; color: var(--v2-text-muted); margin: 0; }
+.v2-push-status {
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 99px;
+  background: var(--v2-surface-muted);
+  color: var(--v2-text-muted);
+  letter-spacing: 0.05em;
+}
+.v2-push-status.is-on {
+  background: color-mix(in srgb, var(--v2-success) 15%, transparent);
+  color: var(--v2-success);
+}
+.v2-push-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.v2-push-denied, .v2-push-error { font-size: 12px; color: var(--v2-warning, #f59e0b); margin: 0; }
+.v2-push-note { font-size: 11px; color: var(--v2-text-muted); margin: 0; }
 .v2-toggle-switch.is-on::after { transform: translateX(18px); }
