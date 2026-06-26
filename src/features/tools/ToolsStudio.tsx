@@ -1,6 +1,7 @@
 import {
   ArrowLeft,
   ArrowRight,
+  Briefcase,
   Calculator,
   Car,
   ClipboardList,
@@ -2288,6 +2289,7 @@ function BidBuilderTool({ activeJob }: { activeJob: Job | null }) {
   const [notes, setNotes] = useState("");
   const [savedBids, setSavedBids] = useState<SavedBid[]>(readSavedBids);
   const [notice, setNotice] = useState("");
+  const [bidAccepted, setBidAccepted] = useState(false);
 
   const subtotal = lines.reduce((sum, l) => sum + l.qty * l.unitPrice, 0);
   const markup = subtotal * (markupPct / 100);
@@ -2336,6 +2338,32 @@ function BidBuilderTool({ activeJob }: { activeJob: Job | null }) {
     const next = savedBids.filter((b) => b.id !== id);
     setSavedBids(next);
     try { localStorage.setItem(bidStorageKey, JSON.stringify(next)); } catch {}
+  }
+
+  function acceptBid() {
+    try {
+      const stored = localStorage.getItem("rivt.jobs.v1");
+      const jobs: unknown[] = Array.isArray(JSON.parse(stored ?? "null")) ? (JSON.parse(stored!) as unknown[]) : [];
+      const grandTotal = total;
+      const newJob = {
+        id: crypto.randomUUID(),
+        title: bidName || "Untitled Job",
+        status: "active",
+        startDate: new Date().toISOString(),
+        trade: "",
+        location: "",
+        description: `Accepted bid — total: $${grandTotal.toFixed(2)}`,
+        bidTotal: grandTotal,
+        source: "bid",
+        createdAt: new Date().toISOString(),
+      };
+      jobs.push(newJob);
+      localStorage.setItem("rivt.jobs.v1", JSON.stringify(jobs));
+      setBidAccepted(true);
+      setTimeout(() => setBidAccepted(false), 3000);
+    } catch {
+      // silently fail if localStorage is unavailable
+    }
   }
 
   return (
@@ -2401,6 +2429,16 @@ function BidBuilderTool({ activeJob }: { activeJob: Job | null }) {
               </div>
             ) : null)}
           </div>
+          {lines.some((l) => l.qty * l.unitPrice > 0) && total > 0 ? (
+            bidAccepted ? (
+              <div className="v2-bid-accepted-banner">✓ Job created! Open the Work tab to find it.</div>
+            ) : (
+              <button type="button" className="v2-bid-accept-btn" onClick={acceptBid}>
+                <Briefcase size={16} />
+                Accept Bid → Create Job
+              </button>
+            )
+          ) : null}
         </Panel>
       </aside>
     </div>
