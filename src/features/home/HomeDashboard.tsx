@@ -2,8 +2,11 @@ import {
   ArrowRight,
   BriefcaseBusiness,
   CalendarClock,
+  CalendarDays,
   Camera,
   Car,
+  ChevronLeft,
+  ChevronRight,
   CircleDollarSign,
   ClipboardCheck,
   Clock,
@@ -648,6 +651,144 @@ function WeeklyGoalCard() {
   );
 }
 
+const JOBS_V1_KEY = "rivt.jobs.v1";
+
+interface StoredJob {
+  id: string | number;
+  title: string;
+  location?: string;
+  startDate?: string | Date;
+  status?: string;
+}
+
+function readStoredJobs(): StoredJob[] {
+  try {
+    const raw = localStorage.getItem(JOBS_V1_KEY);
+    return raw ? (JSON.parse(raw) as StoredJob[]) : [];
+  } catch { return []; }
+}
+
+function getWeekStartForOffset(offset: number): Date {
+  const now = new Date();
+  const day = now.getDay();
+  const daysToMonday = day === 0 ? 6 : day - 1;
+  const monday = new Date(now);
+  monday.setDate(now.getDate() - daysToMonday + offset * 7);
+  monday.setHours(0, 0, 0, 0);
+  return monday;
+}
+
+function formatWeekRange(start: Date): string {
+  const end = new Date(start);
+  end.setDate(start.getDate() + 6);
+  const opts: Intl.DateTimeFormatOptions = { month: "short", day: "numeric" };
+  return `${start.toLocaleDateString("en-US", opts)} – ${end.toLocaleDateString("en-US", opts)}`;
+}
+
+function WeekSchedule() {
+  const [weekOffset, setWeekOffset] = useState(0);
+  const [selectedDay, setSelectedDay] = useState<Date | null>(null);
+  const [jobs, setJobs] = useState<StoredJob[]>([]);
+
+  useEffect(() => {
+    setJobs(readStoredJobs());
+  }, []);
+
+  const weekStart = getWeekStartForOffset(weekOffset);
+  const days: Date[] = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(weekStart);
+    d.setDate(weekStart.getDate() + i);
+    return d;
+  });
+
+  const jobsByDay = new Map<string, StoredJob[]>();
+  for (const job of jobs) {
+    if (!job.startDate) continue;
+    const key = new Date(job.startDate).toDateString();
+    const existing = jobsByDay.get(key) ?? [];
+    existing.push(job);
+    jobsByDay.set(key, existing);
+  }
+
+  const today = new Date();
+  const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+  function handleDayClick(day: Date) {
+    if (selectedDay && selectedDay.toDateString() === day.toDateString()) {
+      setSelectedDay(null);
+    } else {
+      setSelectedDay(day);
+    }
+  }
+
+  const selectedJobs = selectedDay ? (jobsByDay.get(selectedDay.toDateString()) ?? []) : [];
+
+  return (
+    <div className="v2-week-schedule">
+      <div className="v2-schedule-heading">
+        <CalendarDays size={13} />
+        <span>Schedule</span>
+      </div>
+      <div className="v2-week-schedule-header">
+        <button
+          type="button"
+          className="v2-week-nav-btn"
+          aria-label="Previous week"
+          onClick={() => { setWeekOffset((o) => o - 1); setSelectedDay(null); }}
+        >
+          <ChevronLeft size={16} />
+        </button>
+        <span className="v2-week-label">This Week · {formatWeekRange(weekStart)}</span>
+        <button
+          type="button"
+          className="v2-week-nav-btn"
+          aria-label="Next week"
+          onClick={() => { setWeekOffset((o) => o + 1); setSelectedDay(null); }}
+        >
+          <ChevronRight size={16} />
+        </button>
+      </div>
+      <div className="v2-days-row">
+        {days.map((day, i) => {
+          const isToday = day.toDateString() === today.toDateString();
+          const isSelected = selectedDay?.toDateString() === day.toDateString();
+          const hasJobs = jobsByDay.has(day.toDateString());
+          return (
+            <button
+              key={i}
+              type="button"
+              className={`v2-day-pill${isToday ? " is-today" : ""}${isSelected ? " is-selected" : ""}`}
+              aria-label={`${DAY_NAMES[i]} ${day.getDate()}${hasJobs ? ", has jobs" : ""}`}
+              onClick={() => handleDayClick(day)}
+            >
+              <span className="v2-day-name">{DAY_NAMES[i]}</span>
+              <span className="v2-day-num">{day.getDate()}</span>
+              {hasJobs && <span className="v2-day-dot" aria-hidden="true" />}
+            </button>
+          );
+        })}
+      </div>
+      {selectedDay && (
+        <div className="v2-day-jobs">
+          {selectedJobs.length === 0 ? (
+            <p className="v2-day-no-jobs">No jobs scheduled</p>
+          ) : (
+            selectedJobs.map((job) => (
+              <div key={String(job.id)} className="v2-day-job-row">
+                <span className="v2-day-job-title">{job.title}</span>
+                {job.location && <span className="v2-day-job-loc"><MapPin size={11} /> {job.location}</span>}
+                {job.status && (
+                  <span className="v2-day-job-status-badge">{job.status}</span>
+                )}
+              </div>
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 interface HomeDashboardProps {
   role: Role;
   name: string;
@@ -810,6 +951,7 @@ export function HomeDashboard({
 
       <CockpitHero onNavigate={onNavigate} />
       <QuickActionsBar onNavigate={onNavigate} />
+      <WeekSchedule />
 
       <section className="v2-daily-brief" aria-label="RIVT Daily">
         <div className="v2-daily-action-stack">

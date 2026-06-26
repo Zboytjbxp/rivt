@@ -1447,3 +1447,25 @@
   transition: background 0.15s;
 }
 .v2-on-my-way-btn:active { background: var(--v2-border); }
+
+/* Week Schedule */
+.v2-week-schedule { padding: 0 16px 16px; }
+.v2-week-schedule-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.v2-week-nav-btn { background: none; border: none; padding: 4px 8px; color: var(--v2-text-muted); cursor: pointer; }
+.v2-week-label { font-size: 13px; color: var(--v2-text-muted); font-weight: var(--v2-weight-bold); }
+.v2-days-row { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.v2-day-pill { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 2px; border-radius: var(--v2-radius-sm); border: 1px solid transparent; background: var(--v2-surface-muted); cursor: pointer; transition: background 0.15s; }
+.v2-day-pill.is-today { background: var(--v2-accent-soft); border-color: var(--v2-accent); }
+.v2-day-pill.is-selected { border-color: var(--v2-accent); }
+.v2-day-name { font-size: 10px; color: var(--v2-text-muted); text-transform: uppercase; letter-spacing: 0.03em; }
+.v2-day-num { font-size: 14px; font-weight: var(--v2-weight-bold); color: var(--v2-text); }
+.v2-day-pill.is-today .v2-day-num { color: var(--v2-accent); }
+.v2-day-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--v2-accent); }
+.v2-day-jobs { margin-top: 10px; background: var(--v2-surface); border: 1px solid var(--v2-border); border-radius: var(--v2-radius-md); overflow: hidden; }
+.v2-day-job-row { display: flex; flex-direction: column; padding: 10px 12px; border-bottom: 1px solid var(--v2-border); }
+.v2-day-job-row:last-child { border-bottom: none; }
+.v2-day-job-title { font-size: 14px; font-weight: var(--v2-weight-bold); color: var(--v2-text); }
+.v2-day-job-loc { font-size: 12px; color: var(--v2-text-muted); margin-top: 2px; display: inline-flex; align-items: center; gap: 4px; }
+.v2-day-job-status-badge { display: inline-block; margin-top: 6px; padding: 2px 8px; border-radius: 999px; background: var(--v2-accent-soft); color: var(--v2-accent); font-size: 10px; font-weight: var(--v2-weight-bold); text-transform: uppercase; letter-spacing: 0.04em; align-self: flex-start; }
+.v2-day-no-jobs { padding: 16px 12px; text-align: center; color: var(--v2-text-muted); font-size: 13px; margin: 0; }
+.v2-schedule-heading { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: var(--v2-weight-bold); color: var(--v2-text-muted); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 10px; }

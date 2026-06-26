@@ -23,6 +23,8 @@ import {
   Mail,
   MapPin,
   MessageSquare,
+  Navigation,
+  Package,
   Package2,
   RefreshCw,
   Plus,
