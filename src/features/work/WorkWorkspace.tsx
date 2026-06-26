@@ -22,6 +22,11 @@ import {
   Wrench,
   X,
   XCircle,
+  Bookmark,
+  BookmarkPlus,
+  DollarSign,
+  ListTodo,
+  StickyNote,
 } from "lucide-react";
 import type { Job, JobId, Role } from "../../types";
 import { difficultyOptions, tradeOptions, workTypeOptions } from "../../data";
@@ -52,7 +57,7 @@ import "./work-workspace.css";
 type TradeFilter = (typeof tradeOptions)[number];
 type DifficultyFilter = (typeof difficultyOptions)[number];
 type WorkTypeFilter = (typeof workTypeOptions)[number];
-type DetailTab = "overview" | "requirements" | "activity" | "changes";
+type DetailTab = "overview" | "requirements" | "activity" | "changes" | "checklist" | "payments" | "notes";
 type ContractorSection = "open" | "draft" | "paused" | "closed" | "pipeline" | "calendar";
 type JobAction = "publish" | "pause" | "resume" | "close";
 
@@ -394,6 +399,344 @@ function WorkCalendar({ jobs }: { jobs: Job[] }) {
   );
 }
 
+// ── Contractor Stats Bar ──────────────────────────────────────────────────────
+
+function ContractorStatsBar({ jobs }: { jobs: Job[] }) {
+  const openJobs = jobs.filter((j) => j.status === "Open").length;
+  const draftJobs = jobs.filter((j) => j.status === "Draft").length;
+
+  const weekHours = useMemo(() => {
+    try {
+      const stored = localStorage.getItem("rivt.sessions.v1");
+      if (!stored) return 0;
+      const sessions = JSON.parse(stored) as Array<{ durationMs: number; startedAt: string }>;
+      if (!Array.isArray(sessions)) return 0;
+      const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+      return sessions
+        .filter((s) => new Date(s.startedAt).getTime() > weekAgo)
+        .reduce((sum, s) => sum + s.durationMs / 3_600_000, 0);
+    } catch { return 0; }
+  }, []);
+
+  const weekCosts = useMemo(() => {
+    try {
+      const stored = localStorage.getItem("rivt.expenses.v1");
+      if (!stored) return 0;
+      const expenses = JSON.parse(stored) as Array<{ amount: number; date: string }>;
+      if (!Array.isArray(expenses)) return 0;
+      const weekAgoStr = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+      return expenses.filter((e) => e.date >= weekAgoStr).reduce((sum, e) => sum + e.amount, 0);
+    } catch { return 0; }
+  }, []);
+
+  return (
+    <div className="v2-contractor-stats-bar">
+      <div className="v2-stat-chip"><strong>{openJobs}</strong><span>open</span></div>
+      <div className="v2-stat-chip"><strong>{draftJobs}</strong><span>drafts</span></div>
+      <div className="v2-stat-chip"><strong>{weekHours.toFixed(1)}h</strong><span>this week</span></div>
+      <div className="v2-stat-chip v2-stat-chip-costs"><strong>${Math.round(weekCosts).toLocaleString()}</strong><span>costs logged</span></div>
+    </div>
+  );
+}
+
+// ── Saved Searches ────────────────────────────────────────────────────────────
+
+const savedSearchKey = "rivt.savedSearches.v1";
+
+interface SavedSearch {
+  id: string;
+  label: string;
+  query: string;
+  trade: string;
+  difficulty: string;
+  workType: string;
+  location: string;
+  createdAt: string;
+}
+
+function readSavedSearches(): SavedSearch[] {
+  try {
+    const stored = localStorage.getItem(savedSearchKey);
+    if (!stored) return [];
+    const parsed = JSON.parse(stored) as SavedSearch[];
+    return Array.isArray(parsed) ? parsed.slice(0, 10) : [];
+  } catch { return []; }
+}
+
+function persistSavedSearches(searches: SavedSearch[]) {
+  try { localStorage.setItem(savedSearchKey, JSON.stringify(searches.slice(0, 10))); } catch {}
+}
+
+// ── Job Checklist ─────────────────────────────────────────────────────────────
+
+interface ChecklistItem {
+  id: string;
+  text: string;
+  done: boolean;
+  createdAt: string;
+}
+
+function readChecklist(jobId: number): ChecklistItem[] {
+  try {
+    const stored = localStorage.getItem(`rivt.checklist.${jobId}.v1`);
+    if (!stored) return [];
+    const parsed = JSON.parse(stored) as ChecklistItem[];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch { return []; }
+}
+
+function persistChecklist(jobId: number, items: ChecklistItem[]) {
+  try { localStorage.setItem(`rivt.checklist.${jobId}.v1`, JSON.stringify(items)); } catch {}
+}
+
+function JobChecklist({ jobId }: { jobId: number }) {
+  const [items, setItems] = useState<ChecklistItem[]>(() => readChecklist(jobId));
+  const [newText, setNewText] = useState("");
+
+  function addItem() {
+    if (!newText.trim()) return;
+    const item: ChecklistItem = {
+      id: crypto.randomUUID(),
+      text: newText.trim(),
+      done: false,
+      createdAt: new Date().toISOString(),
+    };
+    const next = [...items, item];
+    setItems(next);
+    persistChecklist(jobId, next);
+    setNewText("");
+  }
+
+  function toggleItem(id: string) {
+    const next = items.map((i) => i.id === id ? { ...i, done: !i.done } : i);
+    setItems(next);
+    persistChecklist(jobId, next);
+  }
+
+  function deleteItem(id: string) {
+    const next = items.filter((i) => i.id !== id);
+    setItems(next);
+    persistChecklist(jobId, next);
+  }
+
+  const doneCount = items.filter((i) => i.done).length;
+  const pct = items.length ? Math.round((doneCount / items.length) * 100) : 0;
+
+  return (
+    <div className="v2-job-checklist">
+      {items.length > 0 ? (
+        <div className="v2-checklist-progress">
+          <div className="v2-checklist-bar">
+            <div className="v2-checklist-bar-fill" style={{ width: `${pct}%` }} />
+          </div>
+          <span>{doneCount}/{items.length} done</span>
+        </div>
+      ) : null}
+      <div className="v2-checklist-add">
+        <input
+          value={newText}
+          onChange={(e) => setNewText(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") addItem(); }}
+          placeholder="Add a punch list item…"
+        />
+        <button type="button" className="v2-primary-button" disabled={!newText.trim()} onClick={addItem}>
+          <Plus size={14} />Add
+        </button>
+      </div>
+      {items.length ? (
+        <div className="v2-checklist-list">
+          {items.map((item) => (
+            <div key={item.id} className={`v2-checklist-item${item.done ? " is-done" : ""}`}>
+              <button type="button" className="v2-checklist-check" onClick={() => toggleItem(item.id)} aria-pressed={item.done}>
+                <Check size={13} />
+              </button>
+              <span>{item.text}</span>
+              <button type="button" className="v2-checklist-delete" aria-label="Delete item" onClick={() => deleteItem(item.id)}>
+                <Trash2 size={13} />
+              </button>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="v2-muted-copy">No checklist items yet. Add punch list items above.</p>
+      )}
+    </div>
+  );
+}
+
+// ── Payment Milestones ────────────────────────────────────────────────────────
+
+type MilestoneStatus = "pending" | "paid" | "overdue";
+
+interface PaymentMilestone {
+  id: string;
+  label: string;
+  amount: number;
+  dueNote: string;
+  status: MilestoneStatus;
+  createdAt: string;
+}
+
+function readMilestones(jobId: number): PaymentMilestone[] {
+  try {
+    const stored = localStorage.getItem(`rivt.milestones.${jobId}.v1`);
+    if (!stored) return [];
+    const parsed = JSON.parse(stored) as PaymentMilestone[];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch { return []; }
+}
+
+function persistMilestones(jobId: number, items: PaymentMilestone[]) {
+  try { localStorage.setItem(`rivt.milestones.${jobId}.v1`, JSON.stringify(items)); } catch {}
+}
+
+function PaymentMilestones({ jobId, jobPay }: { jobId: number; jobPay: number }) {
+  const [milestones, setMilestones] = useState<PaymentMilestone[]>(() => readMilestones(jobId));
+  const [label, setLabel] = useState("");
+  const [amount, setAmount] = useState("");
+  const [dueNote, setDueNote] = useState("");
+
+  function addMilestone() {
+    if (!label.trim()) return;
+    const m: PaymentMilestone = {
+      id: crypto.randomUUID(),
+      label: label.trim(),
+      amount: parseFloat(amount) || 0,
+      dueNote: dueNote.trim(),
+      status: "pending",
+      createdAt: new Date().toISOString(),
+    };
+    const next = [...milestones, m];
+    setMilestones(next);
+    persistMilestones(jobId, next);
+    setLabel("");
+    setAmount("");
+    setDueNote("");
+  }
+
+  function markStatus(id: string, status: MilestoneStatus) {
+    const next = milestones.map((m) => m.id === id ? { ...m, status } : m);
+    setMilestones(next);
+    persistMilestones(jobId, next);
+  }
+
+  function deleteMilestone(id: string) {
+    const next = milestones.filter((m) => m.id !== id);
+    setMilestones(next);
+    persistMilestones(jobId, next);
+  }
+
+  const totalScheduled = milestones.reduce((sum, m) => sum + m.amount, 0);
+  const totalPaid = milestones.filter((m) => m.status === "paid").reduce((sum, m) => sum + m.amount, 0);
+
+  function moneyMs(v: number) { return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(v); }
+
+  return (
+    <div className="v2-payment-milestones">
+      {milestones.length > 0 ? (
+        <div className="v2-milestone-summary">
+          {jobPay > 0 ? <div><span>Job budget</span><strong>{moneyMs(jobPay)}</strong></div> : null}
+          <div><span>Scheduled</span><strong>{moneyMs(totalScheduled)}</strong></div>
+          <div><span>Collected</span><strong className="is-paid">{moneyMs(totalPaid)}</strong></div>
+        </div>
+      ) : null}
+      <div className="v2-milestone-form">
+        <h3>Add milestone</h3>
+        <div className="v2-milestone-inputs">
+          <label>Label<input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Deposit, Midpoint, Final…" /></label>
+          <label>Amount ($)<input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0" /></label>
+          <label>Due when<input value={dueNote} onChange={(e) => setDueNote(e.target.value)} placeholder="On signing, 50% complete…" /></label>
+        </div>
+        <button type="button" className="v2-primary-button" disabled={!label.trim()} onClick={addMilestone}><DollarSign size={14} />Add milestone</button>
+      </div>
+      {milestones.length ? (
+        <div className="v2-milestone-list">
+          {milestones.map((m) => (
+            <article key={m.id} className={`v2-milestone-card ms-status-${m.status}`}>
+              <div className="v2-milestone-card-head">
+                <span className={`v2-ms-pill ms-status-${m.status}`}>{m.status}</span>
+                <strong>{m.label}</strong>
+                <strong>{moneyMs(m.amount)}</strong>
+                <button type="button" aria-label="Delete milestone" onClick={() => deleteMilestone(m.id)}><Trash2 size={13} /></button>
+              </div>
+              {m.dueNote ? <small>{m.dueNote}</small> : null}
+              {m.status === "pending" ? (
+                <div className="v2-milestone-actions">
+                  <button type="button" className="v2-primary-button" onClick={() => markStatus(m.id, "paid")}><Check size={13} />Mark paid</button>
+                  <button type="button" onClick={() => markStatus(m.id, "overdue")}>Mark overdue</button>
+                </div>
+              ) : null}
+            </article>
+          ))}
+        </div>
+      ) : <p className="v2-muted-copy">No payment milestones set. Add deposit, midpoint, and final amounts above.</p>}
+    </div>
+  );
+}
+
+// ── Job Notes ─────────────────────────────────────────────────────────────────
+
+interface JobNote {
+  id: string;
+  text: string;
+  createdAt: string;
+}
+
+function readJobNotes(jobId: number): JobNote[] {
+  try {
+    const stored = localStorage.getItem(`rivt.notes.${jobId}.v1`);
+    if (!stored) return [];
+    const parsed = JSON.parse(stored) as JobNote[];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch { return []; }
+}
+
+function persistJobNotes(jobId: number, notes: JobNote[]) {
+  try { localStorage.setItem(`rivt.notes.${jobId}.v1`, JSON.stringify(notes.slice(0, 100))); } catch {}
+}
+
+function JobNotes({ jobId }: { jobId: number }) {
+  const [notes, setNotes] = useState<JobNote[]>(() => readJobNotes(jobId));
+  const [text, setText] = useState("");
+
+  function addNote() {
+    if (!text.trim()) return;
+    const note: JobNote = { id: crypto.randomUUID(), text: text.trim(), createdAt: new Date().toISOString() };
+    const next = [note, ...notes];
+    setNotes(next);
+    persistJobNotes(jobId, next);
+    setText("");
+  }
+
+  function deleteNote(id: string) {
+    const next = notes.filter((n) => n.id !== id);
+    setNotes(next);
+    persistJobNotes(jobId, next);
+  }
+
+  return (
+    <div className="v2-job-notes">
+      <div className="v2-job-note-form">
+        <textarea value={text} onChange={(e) => setText(e.target.value)} rows={3} placeholder="Add a note, decision, or field observation…" />
+        <button type="button" className="v2-primary-button" disabled={!text.trim()} onClick={addNote}><StickyNote size={14} />Add note</button>
+      </div>
+      {notes.length ? (
+        <div className="v2-job-note-list">
+          {notes.map((note) => (
+            <article key={note.id} className="v2-job-note-card">
+              <div className="v2-job-note-card-head">
+                <small>{new Date(note.createdAt).toLocaleString()}</small>
+                <button type="button" aria-label="Delete note" onClick={() => deleteNote(note.id)}><Trash2 size={13} /></button>
+              </div>
+              <p>{note.text}</p>
+            </article>
+          ))}
+        </div>
+      ) : <p className="v2-muted-copy">No notes yet. Add field notes, decisions, and observations above.</p>}
+    </div>
+  );
+}
+
 function money(value: number) {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
@@ -509,6 +852,8 @@ export function WorkWorkspace({
   const [matchActiveWork, setMatchActiveWork] = useState<CanonicalActiveWork[]>([]);
   const [applicationMessage, setApplicationMessage] = useState("I am interested in this work and can confirm tools, timing, and site requirements.");
   const [demoAppliedJobs, setDemoAppliedJobs] = useState<Set<JobId>>(new Set());
+  const [savedSearches, setSavedSearches] = useState<SavedSearch[]>(readSavedSearches);
+  const [savedSearchNotice, setSavedSearchNotice] = useState("");
 
   const visibleJobs = useMemo(() => {
     if (role !== "contractor") return jobs;
@@ -615,6 +960,40 @@ export function WorkWorkspace({
         await cancelActiveWork(target.id, reason);
       });
     }
+  }
+
+  function saveCurrentSearch() {
+    if (!query.trim() && trade === "All trades" && difficulty === "Any difficulty" && workType === "All work types" && !locationQuery.trim()) return;
+    const label = [query.trim(), trade !== "All trades" ? trade : "", locationQuery.trim()].filter(Boolean).join(" · ") || "Saved search";
+    const search: SavedSearch = {
+      id: crypto.randomUUID(),
+      label,
+      query,
+      trade,
+      difficulty,
+      workType,
+      location: locationQuery,
+      createdAt: new Date().toISOString(),
+    };
+    const next = [search, ...savedSearches.filter((s) => s.label !== label)].slice(0, 10);
+    setSavedSearches(next);
+    persistSavedSearches(next);
+    setSavedSearchNotice("Search saved.");
+    setTimeout(() => setSavedSearchNotice(""), 2500);
+  }
+
+  function loadSavedSearch(s: SavedSearch) {
+    onQueryChange(s.query);
+    onTradeChange(s.trade as TradeFilter);
+    onDifficultyChange(s.difficulty as DifficultyFilter);
+    onWorkTypeChange(s.workType as WorkTypeFilter);
+    onLocationChange(s.location);
+  }
+
+  function deleteSavedSearch(id: string) {
+    const next = savedSearches.filter((s) => s.id !== id);
+    setSavedSearches(next);
+    persistSavedSearches(next);
   }
 
   const selectedIsVisible = selectedJob ? visibleJobs.some((job) => job.id === selectedJob.id) : false;
@@ -749,12 +1128,35 @@ export function WorkWorkspace({
         </nav>
       ) : null}
 
+      {role === "contractor" ? <ContractorStatsBar jobs={jobs} /> : null}
+
       <div className="v2-work-toolbar">
         <label className="v2-list-search"><Search size={16} /><input value={query} onChange={(event) => onQueryChange(event.target.value)} placeholder="Search work" /></label>
         <button type="button" className={filtersOpen ? "v2-filter-button is-active" : "v2-filter-button"} onClick={() => setFiltersOpen((open) => !open)}>
           <Filter size={16} /> Filters {activeFilterCount ? <span>{activeFilterCount}</span> : null}
         </button>
+        {role === "tradesperson" ? (
+          <button type="button" className="v2-filter-button" title="Save current search" onClick={saveCurrentSearch}>
+            <BookmarkPlus size={16} />
+          </button>
+        ) : null}
       </div>
+
+      {savedSearchNotice ? <p className="v2-saved-search-notice" role="status">{savedSearchNotice}</p> : null}
+
+      {role === "tradesperson" && savedSearches.length > 0 ? (
+        <div className="v2-saved-searches">
+          <span className="v2-saved-searches-label"><Bookmark size={13} />Saved searches</span>
+          <div className="v2-saved-search-chips">
+            {savedSearches.map((s) => (
+              <span key={s.id} className="v2-saved-search-chip">
+                <button type="button" onClick={() => loadSavedSearch(s)}>{s.label}</button>
+                <button type="button" aria-label={`Remove ${s.label}`} onClick={() => deleteSavedSearch(s.id)}><X size={11} /></button>
+              </span>
+            ))}
+          </div>
+        </div>
+      ) : null}
 
       {filtersOpen ? (
         <section className="v2-filter-panel" aria-label="Work filters">
@@ -799,7 +1201,10 @@ export function WorkWorkspace({
             </header>
 
             <nav className="v2-detail-tabs" aria-label="Job details">
-              {(["overview", "requirements", "activity", "changes"] as const).map((tab) => <button key={tab} type="button" className={detailTab === tab ? "is-active" : ""} onClick={() => setDetailTab(tab)}>{tab === "changes" ? "Changes" : tab.charAt(0).toUpperCase() + tab.slice(1)}</button>)}
+              {(["overview", "requirements", "activity", "changes", "checklist", "payments", "notes"] as const).map((tab) => {
+                const labels: Record<string, string> = { overview: "Overview", requirements: "Requirements", activity: "Activity", changes: "Changes", checklist: "Checklist", payments: "Payments", notes: "Notes" };
+                return <button key={tab} type="button" className={detailTab === tab ? "is-active" : ""} onClick={() => setDetailTab(tab)}>{labels[tab]}</button>;
+              })}
             </nav>
 
             {detailTab === "overview" ? (
@@ -963,6 +1368,36 @@ export function WorkWorkspace({
             {detailTab === "changes" ? (
               <div className="v2-detail-content">
                 <ChangeOrderTracker jobId={detailJob.id} jobTitle={detailJob.title} />
+              </div>
+            ) : null}
+
+            {detailTab === "checklist" ? (
+              <div className="v2-detail-content">
+                <section className="v2-detail-section">
+                  <h3><ListTodo size={16} />Punch list</h3>
+                  <p className="v2-muted-copy" style={{ marginBottom: 16 }}>Track completion tasks per job. Items are saved to this device.</p>
+                  <JobChecklist jobId={detailJob.id} />
+                </section>
+              </div>
+            ) : null}
+
+            {detailTab === "payments" ? (
+              <div className="v2-detail-content">
+                <section className="v2-detail-section">
+                  <h3><DollarSign size={16} />Payment milestones</h3>
+                  <p className="v2-muted-copy" style={{ marginBottom: 16 }}>Track deposit, progress, and final payments. Saved to this device.</p>
+                  <PaymentMilestones jobId={detailJob.id} jobPay={detailJob.pay} />
+                </section>
+              </div>
+            ) : null}
+
+            {detailTab === "notes" ? (
+              <div className="v2-detail-content">
+                <section className="v2-detail-section">
+                  <h3><StickyNote size={16} />Job notes</h3>
+                  <p className="v2-muted-copy" style={{ marginBottom: 16 }}>Private field notes, decisions, and observations. Saved to this device.</p>
+                  <JobNotes jobId={detailJob.id} />
+                </section>
               </div>
             ) : null}
 

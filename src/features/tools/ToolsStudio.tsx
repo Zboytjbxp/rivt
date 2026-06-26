@@ -2,6 +2,7 @@ import {
   ArrowLeft,
   ArrowRight,
   Calculator,
+  ClipboardList,
   Camera,
   CheckCircle2,
   Clipboard,
@@ -56,7 +57,7 @@ import {
 } from "./album-api";
 import "./tools-studio.css";
 
-type ToolMode = "hub" | "calculator" | "estimate" | "invoice" | "materials" | "daily-log" | "job-photos" | "time-tracker" | "expense-logger" | "earnings";
+type ToolMode = "hub" | "calculator" | "estimate" | "invoice" | "materials" | "daily-log" | "job-photos" | "time-tracker" | "expense-logger" | "earnings" | "bid-builder";
 
 interface PaymentRecord {
   id: number;
@@ -1347,6 +1348,167 @@ function persistTimeSessions(sessions: TimeSession[]) {
   try { localStorage.setItem(timeTrackerKey, JSON.stringify(sessions.slice(0, 100))); } catch {}
 }
 
+// ── Bid Builder ───────────────────────────────────────────────────────────────
+
+interface BidLineItem {
+  id: string;
+  description: string;
+  qty: number;
+  unit: string;
+  unitPrice: number;
+}
+
+interface SavedBid {
+  id: string;
+  name: string;
+  jobRef: string;
+  markupPct: number;
+  notes: string;
+  lines: BidLineItem[];
+  savedAt: string;
+}
+
+const bidStorageKey = "rivt.bids.v1";
+
+function readSavedBids(): SavedBid[] {
+  try {
+    const stored = localStorage.getItem(bidStorageKey);
+    if (!stored) return [];
+    const parsed = JSON.parse(stored) as SavedBid[];
+    return Array.isArray(parsed) ? parsed.slice(0, 10) : [];
+  } catch { return []; }
+}
+
+function BidBuilderTool({ activeJob }: { activeJob: Job | null }) {
+  const [lines, setLines] = useState<BidLineItem[]>(() => [
+    { id: crypto.randomUUID(), description: "Labor", qty: activeJob?.durationHours ?? 8, unit: "hr", unitPrice: 65 },
+    { id: crypto.randomUUID(), description: "Materials", qty: 1, unit: "lot", unitPrice: activeJob ? Math.round(activeJob.pay * 0.2) || 250 : 250 },
+  ]);
+  const [markupPct, setMarkupPct] = useState(15);
+  const [bidName, setBidName] = useState(activeJob ? `${activeJob.title} bid` : "New bid");
+  const [jobRef, setJobRef] = useState(activeJob?.title ?? "");
+  const [notes, setNotes] = useState("");
+  const [savedBids, setSavedBids] = useState<SavedBid[]>(readSavedBids);
+  const [notice, setNotice] = useState("");
+
+  const subtotal = lines.reduce((sum, l) => sum + l.qty * l.unitPrice, 0);
+  const markup = subtotal * (markupPct / 100);
+  const total = subtotal + markup;
+
+  function addLine() {
+    setLines((prev) => [...prev, { id: crypto.randomUUID(), description: "", qty: 1, unit: "ea", unitPrice: 0 }]);
+  }
+
+  function updateLine(id: string, field: keyof BidLineItem, value: string | number) {
+    setLines((prev) => prev.map((l) => l.id === id ? { ...l, [field]: value } : l));
+  }
+
+  function removeLine(id: string) {
+    setLines((prev) => prev.length > 1 ? prev.filter((l) => l.id !== id) : prev);
+  }
+
+  function saveBid() {
+    const bid: SavedBid = {
+      id: crypto.randomUUID(),
+      name: bidName.trim() || "Bid",
+      jobRef: jobRef.trim(),
+      markupPct,
+      notes: notes.trim(),
+      lines: lines.map((l) => ({ ...l, id: crypto.randomUUID() })),
+      savedAt: new Date().toISOString(),
+    };
+    const next = [bid, ...savedBids.filter((b) => b.name.toLowerCase() !== bid.name.toLowerCase())].slice(0, 10);
+    setSavedBids(next);
+    try { localStorage.setItem(bidStorageKey, JSON.stringify(next)); } catch {}
+    setNotice("Bid saved to this device.");
+    setTimeout(() => setNotice(""), 3000);
+  }
+
+  function loadBid(bid: SavedBid) {
+    setBidName(bid.name);
+    setJobRef(bid.jobRef);
+    setMarkupPct(bid.markupPct);
+    setNotes(bid.notes);
+    setLines(bid.lines.length ? bid.lines.map((l) => ({ ...l, id: crypto.randomUUID() })) : [{ id: crypto.randomUUID(), description: "", qty: 1, unit: "ea", unitPrice: 0 }]);
+    setNotice(`Loaded "${bid.name}".`);
+    setTimeout(() => setNotice(""), 3000);
+  }
+
+  function deleteBid(id: string) {
+    const next = savedBids.filter((b) => b.id !== id);
+    setSavedBids(next);
+    try { localStorage.setItem(bidStorageKey, JSON.stringify(next)); } catch {}
+  }
+
+  return (
+    <div className="v2-tool-workbench v2-bid-workbench">
+      <Panel className="v2-tool-panel v2-bid-builder-panel" eyebrow="Bid / quote" title="Build a bid">
+        {savedBids.length ? (
+          <div className="v2-bid-saved-list">
+            {savedBids.map((bid) => (
+              <article key={bid.id} className="v2-bid-saved-item">
+                <span>
+                  <strong>{bid.name}</strong>
+                  <small>{bid.jobRef || "No job ref"} · {new Date(bid.savedAt).toLocaleDateString()}</small>
+                </span>
+                <button type="button" onClick={() => loadBid(bid)}>Load</button>
+                <button type="button" aria-label={`Delete ${bid.name}`} onClick={() => deleteBid(bid.id)}><Trash2 size={14} /></button>
+              </article>
+            ))}
+          </div>
+        ) : null}
+        {notice ? <p className="v2-record-notice" role="status">{notice}</p> : null}
+        <div className="v2-tool-input-grid two">
+          <label>Bid name<input value={bidName} onChange={(e) => setBidName(e.target.value)} placeholder="Roof replacement bid" /></label>
+          <label>Job / client ref<input value={jobRef} onChange={(e) => setJobRef(e.target.value)} placeholder="Smith Residence, Job #42…" /></label>
+        </div>
+        <div className="v2-bid-line-table">
+          <div className="v2-bid-line-header">
+            <span>Description</span><span>Qty</span><span>Unit</span><span>Unit price</span><span>Total</span><span />
+          </div>
+          {lines.map((line) => (
+            <div key={line.id} className="v2-bid-line">
+              <input value={line.description} onChange={(e) => updateLine(line.id, "description", e.target.value)} placeholder="Item" aria-label="Description" />
+              <input type="number" min="0" step="0.5" value={line.qty} onChange={(e) => updateLine(line.id, "qty", Number(e.target.value) || 0)} aria-label="Quantity" />
+              <input value={line.unit} onChange={(e) => updateLine(line.id, "unit", e.target.value)} placeholder="hr" aria-label="Unit" />
+              <input type="number" min="0" value={line.unitPrice} onChange={(e) => updateLine(line.id, "unitPrice", Number(e.target.value) || 0)} aria-label="Unit price" />
+              <strong>{currency(line.qty * line.unitPrice)}</strong>
+              <button type="button" aria-label="Remove line" onClick={() => removeLine(line.id)}><Trash2 size={14} /></button>
+            </div>
+          ))}
+          <button type="button" className="v2-bid-add-line" onClick={addLine}><Plus size={14} />Add line</button>
+        </div>
+        <div className="v2-bid-markup">
+          <label>
+            <span>Markup / overhead: {markupPct}%</span>
+            <input type="range" min="0" max="50" step="1" value={markupPct} onChange={(e) => setMarkupPct(Number(e.target.value))} />
+          </label>
+        </div>
+        <label>Notes for client<textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} placeholder="Payment terms, exclusions, validity period…" /></label>
+        <button type="button" className="v2-primary-button" onClick={saveBid}><FileText size={14} />Save bid to device</button>
+      </Panel>
+
+      <aside className="v2-bid-summary-stack">
+        <Panel className="v2-tool-panel v2-tool-summary-panel" eyebrow="Bid total" title={currency(total)}>
+          <div className="v2-tool-breakdown">
+            <div><span>Subtotal</span><strong>{currency(subtotal)}</strong></div>
+            <div><span>Markup ({markupPct}%)</span><strong>{currency(markup)}</strong></div>
+            <div><span>Total</span><strong>{currency(total)}</strong></div>
+          </div>
+          <div className="v2-bid-line-summary-list">
+            {lines.map((l) => l.qty * l.unitPrice > 0 ? (
+              <div key={l.id} className="v2-bid-line-summary">
+                <span>{l.description || "Line"} ({l.qty} {l.unit})</span>
+                <strong>{currency(l.qty * l.unitPrice)}</strong>
+              </div>
+            ) : null)}
+          </div>
+        </Panel>
+      </aside>
+    </div>
+  );
+}
+
 function formatHms(totalSeconds: number): string {
   const h = Math.floor(totalSeconds / 3600);
   const m = Math.floor((totalSeconds % 3600) / 60);
@@ -2130,6 +2292,12 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", onNavigate, 
         description: "Weekly and monthly income summary: total earned, jobs completed, top trade, average job size.",
         node: <EarningsDashboardTool jobs={jobs} paymentRecords={paymentRecords} />,
       },
+      "bid-builder": {
+        eyebrow: "Bid / quote",
+        title: "Bid builder",
+        description: "Line-item bids with labor, materials, overhead markup, client notes, and save-to-device.",
+        node: <BidBuilderTool activeJob={activeJob} />,
+      },
     }[activeTool];
 
     return (
@@ -2256,6 +2424,16 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", onNavigate, 
           detail="Payment history"
           action="Open"
           onAction={() => setActiveTool("earnings")}
+        />
+        <ToolCard
+          icon={ClipboardList}
+          title="Bid builder"
+          badge="Bid / quote"
+          summary="Line-item bids with labor, materials, markup, and client notes."
+          output="Total w/ markup"
+          detail="Save to device"
+          action="Open"
+          onAction={() => setActiveTool("bid-builder")}
         />
         <ToolCard
           icon={FolderOpen}

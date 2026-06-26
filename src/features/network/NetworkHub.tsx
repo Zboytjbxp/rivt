@@ -1,6 +1,7 @@
 import {
   ArrowRight,
   Briefcase,
+  CheckCircle2,
   MessageSquareText,
   Plus,
   Send,
@@ -139,6 +140,135 @@ function SubRosterPanel() {
             icon={<Users size={20} />}
             title="No roster entries yet"
             description="Save contractors and tradespeople you rely on for quick access when new work comes in."
+            compact
+          />
+        )}
+      </div>
+    </Panel>
+  );
+}
+
+// ── Crew Invite Planner ───────────────────────────────────────────────────────
+
+const crewInviteKey = "rivt.crewInvites.v1";
+
+type InviteStatus = "pending" | "accepted" | "declined";
+
+interface CrewInvite {
+  id: string;
+  jobRef: string;
+  name: string;
+  trade: string;
+  note: string;
+  status: InviteStatus;
+  createdAt: string;
+}
+
+function readCrewInvites(): CrewInvite[] {
+  try {
+    const stored = localStorage.getItem(crewInviteKey);
+    if (!stored) return [];
+    const parsed = JSON.parse(stored) as CrewInvite[];
+    return Array.isArray(parsed) ? parsed.slice(0, 50) : [];
+  } catch { return []; }
+}
+
+function persistCrewInvites(invites: CrewInvite[]) {
+  try { localStorage.setItem(crewInviteKey, JSON.stringify(invites.slice(0, 50))); } catch {}
+}
+
+function CrewInvitePlanner() {
+  const [invites, setInvites] = useState<CrewInvite[]>(readCrewInvites);
+  const [jobRef, setJobRef] = useState("");
+  const [name, setName] = useState("");
+  const [trade, setTrade] = useState("");
+  const [note, setNote] = useState("");
+  const [notice, setNotice] = useState("");
+
+  function addInvite() {
+    if (!name.trim()) return;
+    const invite: CrewInvite = {
+      id: crypto.randomUUID(),
+      jobRef: jobRef.trim(),
+      name: name.trim(),
+      trade: trade.trim(),
+      note: note.trim(),
+      status: "pending",
+      createdAt: new Date().toISOString(),
+    };
+    const next = [invite, ...invites];
+    setInvites(next);
+    persistCrewInvites(next);
+    setJobRef("");
+    setName("");
+    setTrade("");
+    setNote("");
+    setNotice("Invite planned.");
+    setTimeout(() => setNotice(""), 2500);
+  }
+
+  function updateStatus(id: string, status: InviteStatus) {
+    const next = invites.map((i) => i.id === id ? { ...i, status } : i);
+    setInvites(next);
+    persistCrewInvites(next);
+  }
+
+  function removeInvite(id: string) {
+    const next = invites.filter((i) => i.id !== id);
+    setInvites(next);
+    persistCrewInvites(next);
+  }
+
+  const pending = invites.filter((i) => i.status === "pending").length;
+  const accepted = invites.filter((i) => i.status === "accepted").length;
+
+  return (
+    <Panel
+      className="v2-network-panel v2-network-panel-wide"
+      eyebrow={`${pending} pending · ${accepted} accepted`}
+      title="Crew invite planner"
+    >
+      <div className="v2-crew-invite-planner">
+        <div className="v2-crew-invite-form">
+          <div className="v2-crew-invite-inputs">
+            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Name or company" />
+            <input value={trade} onChange={(e) => setTrade(e.target.value)} placeholder="Trade (electrical, framing…)" />
+            <input value={jobRef} onChange={(e) => setJobRef(e.target.value)} placeholder="Job or project name" />
+            <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Note (rate, scope, start date…)" />
+          </div>
+          {notice ? <p className="v2-sub-roster-notice" role="status">{notice}</p> : null}
+          <button type="button" className="v2-primary-button" disabled={!name.trim()} onClick={addInvite}><Plus size={14} />Plan invite</button>
+        </div>
+        {invites.length ? (
+          <div className="v2-crew-invite-list">
+            {invites.map((inv) => (
+              <article key={inv.id} className={`v2-crew-invite-item ci-status-${inv.status}`}>
+                <div className="v2-crew-invite-item-head">
+                  <Avatar name={inv.name} size="sm" className="v2-network-avatar" />
+                  <div className="v2-crew-invite-copy">
+                    <strong>{inv.name}</strong>
+                    {inv.trade ? <span>{inv.trade}</span> : null}
+                    {inv.jobRef ? <small>Job: {inv.jobRef}</small> : null}
+                    {inv.note ? <small>{inv.note}</small> : null}
+                  </div>
+                  <span className={`v2-ci-pill ci-status-${inv.status}`}>{inv.status}</span>
+                  <button type="button" className="v2-sub-roster-remove" aria-label={`Remove ${inv.name}`} onClick={() => removeInvite(inv.id)}><X size={14} /></button>
+                </div>
+                {inv.status === "pending" ? (
+                  <div className="v2-crew-invite-actions">
+                    <button type="button" className="v2-primary-button" onClick={() => updateStatus(inv.id, "accepted")}><CheckCircle2 size={13} />Accepted</button>
+                    <button type="button" onClick={() => updateStatus(inv.id, "declined")}>Declined</button>
+                  </div>
+                ) : null}
+              </article>
+            ))}
+          </div>
+        ) : (
+          <EmptyState
+            className="v2-network-empty"
+            icon={<Users size={20} />}
+            title="No planned invites yet"
+            description="Track who you plan to bring on to upcoming jobs. Mark accepted or declined as responses come in."
             compact
           />
         )}
@@ -394,6 +524,8 @@ export function NetworkHub({ view, jobs, talent, communityPosts, shoutOuts, disp
         </Panel>
 
         <SubRosterPanel />
+
+        <CrewInvitePlanner />
 
         <Panel
           className="v2-network-panel"

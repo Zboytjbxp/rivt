@@ -520,3 +520,88 @@
 @media (max-width: 640px) {
   .v2-sub-roster-inputs { grid-template-columns: 1fr; }
 }
+
+/* ── Crew Invite Planner ─────────────────────────────────────────────────── */
+
+.v2-crew-invite-planner {
+  display: grid;
+  gap: 18px;
+}
+
+.v2-crew-invite-form {
+  display: grid;
+  gap: 10px;
+}
+
+.v2-crew-invite-inputs {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 1fr;
+  gap: 8px;
+}
+
+.v2-crew-invite-inputs input {
+  padding: 8px 10px;
+  border-radius: var(--v2-radius-md);
+  border: 1px solid var(--v2-border);
+  background: var(--v2-surface);
+  font-size: 13px;
+  color: var(--v2-text);
+}
+
+.v2-crew-invite-list {
+  display: grid;
+  gap: 8px;
+}
+
+.v2-crew-invite-item {
+  display: grid;
+  gap: 8px;
+  padding: 12px 14px;
+  border-radius: var(--v2-radius-md);
+  background: var(--v2-surface-muted);
+  border: 1px solid var(--v2-border);
+}
+
+.v2-crew-invite-item.ci-status-accepted { border-color: color-mix(in srgb, #22c55e 40%, var(--v2-border)); }
+.v2-crew-invite-item.ci-status-declined { opacity: 0.6; }
+
+.v2-crew-invite-item-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.v2-crew-invite-copy {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.v2-crew-invite-copy strong { font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.v2-crew-invite-copy span { font-size: 12px; color: var(--v2-text-muted); }
+.v2-crew-invite-copy small { font-size: 11px; color: var(--v2-text-muted); }
+
+.v2-ci-pill {
+  font-size: 11px;
+  font-weight: var(--v2-weight-strong);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+.v2-ci-pill.ci-status-pending { background: color-mix(in srgb, #f59e0b 15%, transparent); color: #b45309; }
+.v2-ci-pill.ci-status-accepted { background: color-mix(in srgb, #22c55e 15%, transparent); color: #15803d; }
+.v2-ci-pill.ci-status-declined { background: color-mix(in srgb, #94a3b8 15%, transparent); color: #475569; }
+
+.v2-crew-invite-actions {
+  display: flex;
+  gap: 8px;
+}
+
+@media (max-width: 640px) {
+  .v2-crew-invite-inputs { grid-template-columns: 1fr 1fr; }
+}

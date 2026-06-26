@@ -1608,3 +1608,357 @@
 .v2-work-cal-job-row > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .v2-work-cal-job-row strong { font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .v2-work-cal-job-row small { font-size: 11px; color: var(--v2-text-muted); }
+
+/* ── Contractor Stats Bar ─────────────────────────────────────────────────── */
+
+.v2-contractor-stats-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.v2-stat-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: var(--v2-radius-md);
+  background: var(--v2-surface-muted);
+  border: 1px solid var(--v2-border);
+}
+
+.v2-stat-chip strong {
+  font-size: 15px;
+  font-weight: var(--v2-weight-strong);
+  font-variant-numeric: tabular-nums;
+}
+
+.v2-stat-chip span {
+  font-size: 11px;
+  color: var(--v2-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.v2-stat-chip-costs strong { color: var(--v2-accent); }
+
+/* ── Saved Searches ──────────────────────────────────────────────────────── */
+
+.v2-saved-search-notice {
+  font-size: 12px;
+  color: var(--v2-text-muted);
+  margin: 0;
+}
+
+.v2-saved-searches {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.v2-saved-searches-label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: var(--v2-weight-strong);
+  color: var(--v2-text-muted);
+  white-space: nowrap;
+}
+
+.v2-saved-search-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.v2-saved-search-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+  border-radius: 999px;
+  border: 1px solid var(--v2-border);
+  background: var(--v2-surface-muted);
+  overflow: hidden;
+}
+
+.v2-saved-search-chip > button:first-child {
+  padding: 5px 10px;
+  font-size: 12px;
+  font-weight: var(--v2-weight-medium);
+  color: var(--v2-text);
+  border-radius: 0;
+  min-height: unset;
+  height: auto;
+  background: transparent;
+}
+
+.v2-saved-search-chip > button:first-child:hover { background: color-mix(in srgb, var(--v2-accent) 10%, transparent); }
+
+.v2-saved-search-chip > button:last-child {
+  padding: 5px 8px;
+  min-height: unset;
+  height: auto;
+  border-left: 1px solid var(--v2-border);
+  border-radius: 0;
+  color: var(--v2-text-muted);
+  background: transparent;
+}
+
+.v2-saved-search-chip > button:last-child:hover { color: var(--v2-text); background: color-mix(in srgb, var(--v2-text) 6%, transparent); }
+
+/* ── Job Checklist ───────────────────────────────────────────────────────── */
+
+.v2-job-checklist {
+  display: grid;
+  gap: 14px;
+}
+
+.v2-checklist-progress {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.v2-checklist-bar {
+  flex: 1;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--v2-border);
+  overflow: hidden;
+}
+
+.v2-checklist-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  background: var(--v2-accent);
+  transition: width 0.25s ease;
+}
+
+.v2-checklist-progress span {
+  font-size: 12px;
+  color: var(--v2-text-muted);
+  white-space: nowrap;
+}
+
+.v2-checklist-add {
+  display: flex;
+  gap: 8px;
+}
+
+.v2-checklist-add input {
+  flex: 1;
+  padding: 8px 12px;
+  border-radius: var(--v2-radius-md);
+  border: 1px solid var(--v2-border);
+  background: var(--v2-surface);
+  font-size: 14px;
+  color: var(--v2-text);
+}
+
+.v2-checklist-list {
+  display: grid;
+  gap: 6px;
+}
+
+.v2-checklist-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: var(--v2-radius-md);
+  background: var(--v2-surface-muted);
+  border: 1px solid var(--v2-border);
+}
+
+.v2-checklist-item.is-done { opacity: 0.55; }
+.v2-checklist-item.is-done span { text-decoration: line-through; }
+
+.v2-checklist-check {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 2px solid var(--v2-border);
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: transparent;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+  min-height: unset;
+  padding: 0;
+}
+
+.v2-checklist-check[aria-pressed="true"] {
+  border-color: var(--v2-accent);
+  background: var(--v2-accent);
+  color: #fff;
+}
+
+.v2-checklist-item span { flex: 1; font-size: 14px; }
+
+.v2-checklist-delete {
+  color: var(--v2-text-muted);
+  background: transparent;
+  border: none;
+  min-height: unset;
+  height: auto;
+  padding: 4px;
+  border-radius: 4px;
+}
+
+.v2-checklist-delete:hover { color: var(--v2-text); background: color-mix(in srgb, var(--v2-text) 8%, transparent); }
+
+/* ── Payment Milestones ──────────────────────────────────────────────────── */
+
+.v2-payment-milestones {
+  display: grid;
+  gap: 18px;
+}
+
+.v2-milestone-summary {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 12px 16px;
+  border-radius: var(--v2-radius-md);
+  background: var(--v2-surface-muted);
+  border: 1px solid var(--v2-border);
+}
+
+.v2-milestone-summary > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.v2-milestone-summary span { font-size: 11px; color: var(--v2-text-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+.v2-milestone-summary strong { font-size: 15px; font-weight: var(--v2-weight-strong); }
+.v2-milestone-summary strong.is-paid { color: #22c55e; }
+
+.v2-milestone-form h3 { font-size: 13px; font-weight: var(--v2-weight-strong); margin: 0 0 10px; }
+
+.v2-milestone-inputs {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.v2-milestone-inputs label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: var(--v2-weight-medium);
+  color: var(--v2-text-muted);
+}
+
+.v2-milestone-inputs input {
+  padding: 8px 10px;
+  border-radius: var(--v2-radius-md);
+  border: 1px solid var(--v2-border);
+  background: var(--v2-surface);
+  font-size: 14px;
+  color: var(--v2-text);
+}
+
+.v2-milestone-list {
+  display: grid;
+  gap: 10px;
+}
+
+.v2-milestone-card {
+  padding: 14px 16px;
+  border-radius: var(--v2-radius-md);
+  border: 1px solid var(--v2-border);
+  background: var(--v2-surface-muted);
+  display: grid;
+  gap: 8px;
+}
+
+.v2-milestone-card-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.v2-milestone-card-head > button { margin-left: auto; color: var(--v2-text-muted); background: transparent; border: none; min-height: unset; height: auto; padding: 4px; }
+
+.v2-milestone-card small { font-size: 12px; color: var(--v2-text-muted); }
+
+.v2-ms-pill {
+  font-size: 11px;
+  font-weight: var(--v2-weight-strong);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+.v2-ms-pill.ms-status-pending { background: color-mix(in srgb, #f59e0b 15%, transparent); color: #b45309; }
+.v2-ms-pill.ms-status-paid { background: color-mix(in srgb, #22c55e 15%, transparent); color: #15803d; }
+.v2-ms-pill.ms-status-overdue { background: color-mix(in srgb, #ef4444 15%, transparent); color: #b91c1c; }
+
+.v2-milestone-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+@media (max-width: 640px) {
+  .v2-milestone-inputs { grid-template-columns: 1fr; }
+}
+
+/* ── Job Notes ───────────────────────────────────────────────────────────── */
+
+.v2-job-notes {
+  display: grid;
+  gap: 14px;
+}
+
+.v2-job-note-form {
+  display: grid;
+  gap: 8px;
+}
+
+.v2-job-note-form textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: var(--v2-radius-md);
+  border: 1px solid var(--v2-border);
+  background: var(--v2-surface);
+  font-size: 14px;
+  color: var(--v2-text);
+  resize: vertical;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.v2-job-note-list {
+  display: grid;
+  gap: 10px;
+}
+
+.v2-job-note-card {
+  padding: 12px 14px;
+  border-radius: var(--v2-radius-md);
+  background: var(--v2-surface-muted);
+  border: 1px solid var(--v2-border);
+  display: grid;
+  gap: 8px;
+}
+
+.v2-job-note-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.v2-job-note-card-head small { font-size: 11px; color: var(--v2-text-muted); }
+.v2-job-note-card-head button { color: var(--v2-text-muted); background: transparent; border: none; min-height: unset; height: auto; padding: 4px; border-radius: 4px; }
+.v2-job-note-card-head button:hover { color: var(--v2-text); background: color-mix(in srgb, var(--v2-text) 8%, transparent); }
+.v2-job-note-card p { margin: 0; font-size: 14px; white-space: pre-wrap; }
