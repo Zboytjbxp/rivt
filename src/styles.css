@@ -11400,3 +11400,203 @@ textarea:focus-visible {
     margin: -2px 12px 12px;
   }
 }
+
+/* ─── Shop Talk: Flair Filter Chips ─────────────────────────────────────────── */
+.shop-talk-flair-row {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 8px 0;
+  scrollbar-width: none;
+}
+
+.shop-talk-flair-row::-webkit-scrollbar {
+  display: none;
+}
+
+.flair-chip {
+  flex-shrink: 0;
+  padding: 5px 12px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, currentColor 30%, transparent);
+  background: transparent;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--v2-text-muted, var(--muted));
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.flair-chip:hover {
+  background: color-mix(in srgb, var(--v2-accent, var(--accent)) 10%, transparent);
+  color: var(--v2-accent, var(--accent));
+  border-color: color-mix(in srgb, var(--v2-accent, var(--accent)) 40%, transparent);
+}
+
+.flair-chip.active {
+  background: var(--v2-accent, var(--accent));
+  color: #fff;
+  border-color: var(--v2-accent, var(--accent));
+}
+
+/* ─── Shop Talk: Bookmark Filter Row ────────────────────────────────────────── */
+.shop-talk-bookmark-filter {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.shop-talk-saved-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: transparent;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--v2-text-muted, var(--muted));
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.shop-talk-saved-btn:hover {
+  background: color-mix(in srgb, var(--v2-accent, var(--accent)) 10%, transparent);
+  color: var(--v2-accent, var(--accent));
+  border-color: color-mix(in srgb, var(--v2-accent, var(--accent)) 40%, transparent);
+}
+
+.shop-talk-saved-btn.active {
+  background: var(--v2-accent, var(--accent));
+  color: #fff;
+  border-color: var(--v2-accent, var(--accent));
+}
+
+.shop-talk-clear-filter-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: transparent;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--v2-text-muted, var(--muted));
+}
+
+/* ─── Shop Talk: Post Card Bookmark Button ───────────────────────────────────── */
+.shop-post-card {
+  position: relative;
+}
+
+.shop-post-card-clickable {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+}
+
+.shop-post-bookmark {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--v2-radius-sm, 4px);
+  background: transparent;
+  color: var(--v2-text-muted, var(--muted));
+  cursor: pointer;
+  transition: color 0.15s;
+}
+
+.shop-post-bookmark:hover,
+.shop-post-bookmark.active {
+  color: var(--v2-accent, var(--accent));
+}
+
+/* ─── Shop Talk: Detail Bookmark + Header Actions ────────────────────────────── */
+.shop-question-header-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.shop-detail-bookmark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--v2-radius-md, 6px);
+  background: transparent;
+  color: var(--v2-text-muted, var(--muted));
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.shop-detail-bookmark:hover,
+.shop-detail-bookmark.active {
+  color: var(--v2-accent, var(--accent));
+  border-color: var(--v2-accent, var(--accent));
+}
+
+/* ─── Shop Talk: Answered Banner + Badge ─────────────────────────────────────── */
+.shop-talk-answered-banner {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 14px;
+  border-radius: var(--v2-radius-md, 6px);
+  background: color-mix(in srgb, var(--v2-success, #3a9e5f) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--v2-success, #3a9e5f) 35%, transparent);
+  color: var(--v2-success, #3a9e5f);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.shop-talk-answered-badge {
+  color: var(--v2-success, #3a9e5f);
+  font-size: 10px;
+  font-weight: bold;
+}
+
+/* ─── Shop Talk: Mark as Answered Button ─────────────────────────────────────── */
+.shop-talk-mark-answered-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1px solid color-mix(in srgb, var(--v2-success, #3a9e5f) 50%, transparent);
+  border-radius: var(--v2-radius-md, 6px);
+  background: color-mix(in srgb, var(--v2-success, #3a9e5f) 10%, transparent);
+  color: var(--v2-success, #3a9e5f);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.shop-talk-mark-answered-btn:hover {
+  background: color-mix(in srgb, var(--v2-success, #3a9e5f) 20%, transparent);
+}

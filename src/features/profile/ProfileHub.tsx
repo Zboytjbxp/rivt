@@ -2,6 +2,7 @@ import {
   AlertTriangle,
   BadgeCheck,
   Calendar,
+  Camera,
   CheckCircle,
   CreditCard,
   Download,
@@ -548,6 +549,114 @@ function RateCardSection() {
   );
 }
 
+// ── Profile Completion Card ───────────────────────────────────────────────────
+
+function ProfileCompletionCard({ profile }: { profile: AccountProfile }) {
+  const checks = [
+    { label: "Display name", done: Boolean(profile.displayName?.trim()) },
+    { label: "Location", done: Boolean(profile.location?.trim()) },
+    { label: "Bio", done: (() => { try { const c = JSON.parse(localStorage.getItem("rivt.canonicalProfile.v1") ?? "null"); return Boolean(c?.bio?.trim()); } catch { return false; } })() },
+    { label: "Trade specialty", done: Boolean(profile.specialties?.length > 0) },
+    { label: "Rate card", done: (() => { try { const r = JSON.parse(localStorage.getItem("rivt.rateCard.v1") ?? "null"); return Array.isArray(r) && r.length > 0; } catch { return false; } })() },
+    { label: "Safety cert", done: (() => { try { const c = JSON.parse(localStorage.getItem("rivt.certs.v1") ?? "[]"); return Array.isArray(c) && c.length > 0; } catch { return false; } })() },
+  ];
+  const score = Math.round((checks.filter((c) => c.done).length / checks.length) * 100);
+  const missing = checks.filter((c) => !c.done).slice(0, 3);
+  return (
+    <div className="v2-profile-completion">
+      <header>
+        <span>Profile {score}% complete</span>
+        {score === 100 && <span className="v2-profile-complete-badge">Complete ✓</span>}
+      </header>
+      <div className="v2-profile-completion-bar">
+        <div className="v2-profile-completion-fill" style={{ width: `${score}%` }} />
+      </div>
+      {missing.length > 0 && (
+        <ul className="v2-profile-missing">
+          {missing.map((m) => <li key={m.label}>Add {m.label}</li>)}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+// ── Portfolio Section ─────────────────────────────────────────────────────────
+
+function PortfolioSection({ onNavigate }: { onNavigate?: (dest: string) => void }) {
+  return (
+    <div className="v2-portfolio-section">
+      <header>
+        <Camera size={16} />
+        <span>Portfolio &amp; Work Samples</span>
+      </header>
+      <p>Your job photos from RIVT albums are your portfolio. They're private by default — only you see them.</p>
+      <button type="button" className="v2-primary-button" onClick={() => onNavigate?.("tools")}>
+        View job photos
+      </button>
+    </div>
+  );
+}
+
+// ── Service Area Selector ─────────────────────────────────────────────────────
+
+function ServiceAreaSelector() {
+  const options = ["10", "25", "50", "100", "Any"];
+  const [radius, setRadius] = useState(() => {
+    try { return localStorage.getItem("rivt.serviceRadius.v1") ?? "25"; } catch { return "25"; }
+  });
+  function pick(r: string) {
+    setRadius(r);
+    try { localStorage.setItem("rivt.serviceRadius.v1", r); } catch {}
+  }
+  return (
+    <div className="v2-service-area">
+      <span className="v2-service-area-label">Service radius</span>
+      <div className="v2-service-area-chips">
+        {options.map((opt) => (
+          <button
+            key={opt}
+            type="button"
+            className={`v2-service-chip${radius === opt ? " active" : ""}`}
+            onClick={() => pick(opt)}
+          >
+            {opt === "Any" ? "Any distance" : `${opt} mi`}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Data Export Button ────────────────────────────────────────────────────────
+
+function DataExportButton() {
+  function handleExport() {
+    const data: Record<string, unknown> = {};
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key?.startsWith("rivt.")) {
+        try { data[key] = JSON.parse(localStorage.getItem(key) ?? "null"); } catch { data[key] = localStorage.getItem(key); }
+      }
+    }
+    const json = JSON.stringify(data, null, 2);
+    const blob = new Blob([json], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `rivt-data-${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+  return (
+    <div className="v2-data-export">
+      <button type="button" className="v2-btn-secondary" onClick={handleExport}>
+        <Download size={15} /> Export my data
+      </button>
+      <small>Downloads all your locally-stored RIVT data as JSON.</small>
+    </div>
+  );
+}
+
 const themePaletteOrder = Object.keys(brandConfig.theme.palettes) as ThemePalette[];
 
 export function ProfileHub({
@@ -859,6 +968,14 @@ export function ProfileHub({
       />
 
       <div className="v2-profile-grid">
+        {/* Profile completion + portfolio — Settings only, at the very top */}
+        {view === "Settings" ? (
+          <div className="v2-profile-panel v2-profile-panel-wide v2-profile-top-cards">
+            <ProfileCompletionCard profile={profile} />
+            <PortfolioSection />
+          </div>
+        ) : null}
+
         <section className="v2-profile-panel v2-profile-summary">
           <Avatar name={profile.displayName || profile.organization || "RIVT member"} size="lg" className="v2-profile-avatar" />
           <div>
@@ -905,6 +1022,7 @@ export function ProfileHub({
               <label><span>Contact visibility</span><select value={draft.contactEmailVisibility} onChange={(event) => setDraft({ ...draft, contactEmailVisibility: event.target.value as ProfileUpdateInput["contactEmailVisibility"] })}><option value="private">Private</option><option value="connections">Connections only</option></select></label>
               <label><span>Phone visibility</span><select value={draft.phoneVisibility} onChange={(event) => setDraft({ ...draft, phoneVisibility: event.target.value as ProfileUpdateInput["phoneVisibility"] })}><option value="private">Private</option><option value="connections">Connections only</option></select></label>
             </div>
+            <ServiceAreaSelector />
             <div className="v2-profile-trade-picker" aria-label="Trade specialties">
               {tradeOptions.filter((trade) => trade !== "All trades").map((trade) => (
                 <button key={trade} type="button" className={draft.specialties.includes(trade as Trade) ? "is-selected" : ""} onClick={() => toggleSpecialty(trade as Trade)}>{trade}</button>
@@ -1108,6 +1226,13 @@ export function ProfileHub({
               <LogOut size={16} />
               Sign out
             </button>
+          </section>
+        ) : null}
+
+        {/* Data export — very last item in Settings */}
+        {view === "Settings" ? (
+          <section className="v2-profile-panel v2-profile-panel-wide">
+            <DataExportButton />
           </section>
         ) : null}
       </div>

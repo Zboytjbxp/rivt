@@ -1481,3 +1481,231 @@
 @media (max-width: 640px) {
   .v2-cert-inputs { grid-template-columns: 1fr 1fr; }
 }
+
+/* ── Profile Top Cards container ─────────────────────────────────────────── */
+
+.v2-profile-top-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+}
+
+.v2-profile-top-cards > * + * {
+  border-left: 1px solid color-mix(in srgb, var(--v2-border) 58%, transparent);
+}
+
+@media (max-width: 700px) {
+  .v2-profile-top-cards {
+    grid-template-columns: 1fr;
+  }
+
+  .v2-profile-top-cards > * + * {
+    border-left: none;
+    border-top: 1px solid color-mix(in srgb, var(--v2-border) 58%, transparent);
+  }
+}
+
+/* ── Profile Completion Card ─────────────────────────────────────────────── */
+
+.v2-profile-completion {
+  display: grid;
+  gap: 12px;
+  padding: 20px;
+}
+
+.v2-profile-completion > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border-bottom: none;
+  background: none;
+  padding: 0;
+}
+
+.v2-profile-completion > header > span {
+  font-size: 14px;
+  font-weight: var(--v2-weight-strong);
+  color: var(--v2-text);
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.v2-profile-complete-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: color-mix(in srgb, #22c55e 15%, transparent);
+  color: #16a34a;
+  font-size: 12px;
+  font-weight: var(--v2-weight-strong);
+}
+
+.v2-profile-completion-bar {
+  height: 8px;
+  border-radius: 99px;
+  background: color-mix(in srgb, var(--v2-accent) 16%, var(--v2-surface-muted));
+  overflow: hidden;
+}
+
+.v2-profile-completion-fill {
+  height: 100%;
+  border-radius: 99px;
+  background: var(--v2-accent);
+  transition: width 0.4s ease;
+  min-width: 4px;
+}
+
+.v2-profile-missing {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.v2-profile-missing li {
+  font-size: 12px;
+  color: var(--v2-text-muted);
+  padding-left: 14px;
+  position: relative;
+}
+
+.v2-profile-missing li::before {
+  content: "·";
+  position: absolute;
+  left: 4px;
+  color: var(--v2-accent);
+  font-weight: bold;
+}
+
+/* ── Portfolio Section ───────────────────────────────────────────────────── */
+
+.v2-portfolio-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px;
+}
+
+.v2-portfolio-section > header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: none;
+  background: none;
+  padding: 0;
+}
+
+.v2-portfolio-section > header svg {
+  color: var(--v2-accent);
+  flex-shrink: 0;
+}
+
+.v2-portfolio-section > header > span {
+  font-size: 14px;
+  font-weight: var(--v2-weight-strong);
+  color: var(--v2-text);
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.v2-portfolio-section > p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--v2-text-muted);
+  line-height: 1.5;
+  flex: 1;
+}
+
+.v2-portfolio-section > button {
+  align-self: flex-start;
+}
+
+/* ── Service Area Selector ───────────────────────────────────────────────── */
+
+.v2-service-area {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding: 0 18px 16px;
+}
+
+.v2-service-area-label {
+  font-size: 12px;
+  font-weight: var(--v2-weight-strong);
+  color: var(--v2-text-muted);
+  white-space: nowrap;
+}
+
+.v2-service-area-chips {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.v2-service-chip {
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid color-mix(in srgb, var(--v2-border) 70%, transparent);
+  border-radius: 999px;
+  background: var(--v2-surface-raised);
+  color: var(--v2-text-muted);
+  font-size: 13px;
+  font-weight: var(--v2-weight-strong);
+  cursor: pointer;
+  transition: border-color 0.12s, background 0.12s, color 0.12s;
+}
+
+.v2-service-chip:hover {
+  border-color: var(--v2-accent);
+  color: var(--v2-text);
+}
+
+.v2-service-chip.active {
+  border-color: var(--v2-accent);
+  background: var(--v2-accent-soft);
+  color: var(--v2-accent);
+}
+
+/* ── Data Export Button ──────────────────────────────────────────────────── */
+
+.v2-data-export {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px 20px;
+  flex-wrap: wrap;
+}
+
+.v2-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 38px;
+  padding: 0 14px;
+  border: 1px solid color-mix(in srgb, var(--v2-border) 80%, transparent);
+  border-radius: var(--v2-radius-md);
+  background: var(--v2-surface-raised);
+  color: var(--v2-text);
+  font-size: 13px;
+  font-weight: var(--v2-weight-strong);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: border-color 0.12s, background 0.12s;
+}
+
+.v2-btn-secondary:hover {
+  border-color: var(--v2-accent);
+  background: var(--v2-accent-soft);
+  color: var(--v2-accent);
+}
+
+.v2-data-export small {
+  font-size: 12px;
+  color: var(--v2-text-muted);
+  line-height: 1.4;
+}

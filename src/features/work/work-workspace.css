@@ -2170,3 +2170,162 @@
   .v2-templates-layout { grid-template-columns: 1fr; min-height: auto; }
   .v2-templates-list { border-right: none; border-bottom: 1px solid var(--v2-border); max-height: 200px; }
 }
+
+/* ── Job Row: restructured wrapper ──────────────────────────────────────────── */
+
+.v2-job-row {
+  display: grid;
+  width: 100%;
+  border: 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--v2-border) 58%, transparent);
+  background: transparent;
+  text-align: left;
+  transition: background 150ms ease, box-shadow 150ms ease;
+}
+
+.v2-job-row:hover,
+.v2-job-row.is-selected {
+  background: color-mix(in srgb, var(--v2-accent-soft) 72%, transparent);
+}
+
+.v2-job-row.is-selected {
+  box-shadow: inset 3px 0 0 var(--v2-accent);
+}
+
+.v2-job-row-inner {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  width: 100%;
+  gap: 14px;
+  padding: 16px 16px 8px;
+  border: 0;
+  background: transparent;
+  color: var(--v2-text);
+  text-align: left;
+}
+
+.v2-job-row-footer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 16px 12px;
+}
+
+/* ── Match Score Badge ───────────────────────────────────────────────────────── */
+
+.v2-match-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: var(--v2-weight-bold);
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+/* ── Quick Apply Button ──────────────────────────────────────────────────────── */
+
+.v2-quick-apply-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--v2-accent);
+  border-radius: var(--v2-radius-sm);
+  background: transparent;
+  color: var(--v2-accent);
+  font-size: 11px;
+  font-weight: var(--v2-weight-bold);
+  cursor: pointer;
+  transition: background 150ms ease, color 150ms ease;
+  margin-left: auto;
+}
+
+.v2-quick-apply-btn:hover {
+  background: var(--v2-accent-soft);
+}
+
+/* ── Similar Jobs Section ────────────────────────────────────────────────────── */
+
+.v2-similar-jobs {
+  padding: 20px 30px 10px;
+  border-top: 1px solid var(--v2-border);
+}
+
+.v2-similar-jobs h3 {
+  margin: 0 0 12px;
+  font-size: 13px;
+  font-weight: var(--v2-weight-strong);
+  color: var(--v2-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.v2-similar-jobs-list {
+  display: grid;
+  gap: 8px;
+}
+
+.v2-similar-job-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border: 1px solid color-mix(in srgb, var(--v2-border) 60%, transparent);
+  border-radius: var(--v2-radius-md);
+  background: color-mix(in srgb, var(--v2-surface-muted) 70%, transparent);
+}
+
+.v2-similar-job-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.v2-similar-job-info strong {
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.v2-similar-job-info span {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--v2-text-muted);
+  font-size: 11px;
+}
+
+.v2-similar-job-open-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 32px;
+  padding: 0 14px;
+  border: 1px solid color-mix(in srgb, var(--v2-border) 70%, transparent);
+  border-radius: var(--v2-radius-sm);
+  background: var(--v2-surface-raised);
+  color: var(--v2-text);
+  font-size: 12px;
+  font-weight: var(--v2-weight-bold);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: border-color 150ms ease, color 150ms ease;
+  flex-shrink: 0;
+}
+
+.v2-similar-job-open-btn:hover {
+  border-color: var(--v2-accent);
+  color: var(--v2-accent);
+}
+
+@media (max-width: 860px) {
+  .v2-similar-jobs {
+    padding: 20px 16px 10px;
+  }
+}

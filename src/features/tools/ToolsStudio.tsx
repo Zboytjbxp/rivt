@@ -7,7 +7,9 @@ import {
   Camera,
   CheckCircle2,
   Clipboard,
+  Circle,
   Clock,
+  CloudSun,
   Copy,
   Download,
   FileText,
@@ -18,6 +20,7 @@ import {
   ListChecks,
   Loader2,
   Mail,
+  MapPin,
   MessageSquare,
   Package2,
   RefreshCw,
@@ -27,6 +30,7 @@ import {
   Search,
   Shield,
   Trash2,
+  TrendingDown,
   TrendingUp,
   Wrench,
 } from "lucide-react";
@@ -61,7 +65,7 @@ import {
 } from "./album-api";
 import "./tools-studio.css";
 
-type ToolMode = "hub" | "calculator" | "estimate" | "invoice" | "materials" | "daily-log" | "job-photos" | "time-tracker" | "expense-logger" | "earnings" | "bid-builder" | "mileage" | "price-book" | "safety-checklist";
+type ToolMode = "hub" | "calculator" | "estimate" | "invoice" | "materials" | "daily-log" | "job-photos" | "time-tracker" | "expense-logger" | "earnings" | "bid-builder" | "mileage" | "price-book" | "safety-checklist" | "tax-estimator" | "punch-list";
 
 interface PaymentRecord {
   id: number;
@@ -601,6 +605,27 @@ function DailyLogTool({ activeJob, activeWork }: { activeJob: Job | null; active
   const [downloaded, setDownloaded] = useState(false);
   const [notice, setNotice] = useState("");
   const [savingRecord, setSavingRecord] = useState(false);
+  const [wxData, setWxData] = useState<{ temp: number; condition: string } | null>(() => {
+    try { return JSON.parse(localStorage.getItem("rivt.lastWeather.v1") ?? "null") as { temp: number; condition: string } | null; } catch { return null; }
+  });
+
+  useEffect(() => {
+    if (wxData) return;
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition((pos) => {
+      fetch(`https://api.open-meteo.com/v1/forecast?latitude=${pos.coords.latitude}&longitude=${pos.coords.longitude}&current_weather=true&temperature_unit=fahrenheit`)
+        .then((r) => r.json())
+        .then((data: { current_weather?: { temperature: number; weathercode: number } }) => {
+          const cw = data.current_weather;
+          if (!cw) return;
+          const codes: Record<number, string> = { 0: "Clear", 1: "Mostly clear", 2: "Partly cloudy", 3: "Overcast", 45: "Foggy", 51: "Drizzle", 61: "Rain", 71: "Snow", 80: "Showers", 95: "Thunderstorm" };
+          const condition = codes[cw.weathercode] ?? "Partly cloudy";
+          const wx = { temp: Math.round(cw.temperature), condition };
+          setWxData(wx);
+          try { localStorage.setItem("rivt.lastWeather.v1", JSON.stringify(wx)); } catch {}
+        }).catch(() => {});
+    }, () => {});
+  }, [wxData]);
 
   const completedChecks = dailyLogChecklist.filter((item) => draft.checklist[item]).length;
   const recordWork = activeWork.find((work) => work.status === "active") ?? activeWork[0] ?? null;
@@ -720,7 +745,24 @@ function DailyLogTool({ activeJob, activeWork }: { activeJob: Job | null; active
         <div className="v2-tool-input-grid three">
           <label>Date<input type="date" value={draft.date} onChange={(event) => updateDraft("date", event.target.value)} /></label>
           <label>Trade<input value={draft.trade} onChange={(event) => updateDraft("trade", event.target.value)} placeholder="Electrical, HVAC, Carpentry..." /></label>
-          <label>Weather<input value={draft.weather} onChange={(event) => updateDraft("weather", event.target.value)} placeholder="Hot, rain delay, dry..." /></label>
+          <label>Weather
+            <span className="v2-daily-log-weather-row">
+              <input value={draft.weather} onChange={(event) => updateDraft("weather", event.target.value)} placeholder="Hot, rain delay, dry..." />
+              <button
+                type="button"
+                className="v2-daily-log-wx-btn"
+                title={wxData ? `Fill: ${wxData.temp}°F, ${wxData.condition}` : "Fetching weather…"}
+                disabled={!wxData}
+                onClick={() => {
+                  if (!wxData) return;
+                  updateDraft("weather", `${wxData.temp}°F, ${wxData.condition}`);
+                }}
+              >
+                <CloudSun size={14} />
+                Fill weather
+              </button>
+            </span>
+          </label>
           <label>Site / job<input value={draft.site} onChange={(event) => updateDraft("site", event.target.value)} placeholder="Job name or address nickname" /></label>
           <label>Crew count<input type="number" min="0" value={draft.crewCount} onChange={(event) => updateDraft("crewCount", Math.max(0, Number(event.target.value) || 0))} /></label>
           <label>Hours<input type="number" min="0" step="0.5" value={draft.hours} onChange={(event) => updateDraft("hours", Math.max(0, Number(event.target.value) || 0))} /></label>
@@ -1629,6 +1671,218 @@ function persistSafetyLogs(logs: SafetyLog[]) {
   try { localStorage.setItem(safetyLogKey, JSON.stringify(logs.slice(0, 200))); } catch {}
 }
 
+// ── Tax Estimator ───────────────────────────────────────────────────────────
+
+const TAX_EST_KEY = "rivt.taxEstimator.v1";
+interface TaxEstimatorInput { income: number; filingStatus: "single" | "mfj" | "hoh" }
+
+function calcTax(income: number) {
+  const seTax = income * 0.9235 * 0.153;
+  const taxable = Math.max(0, income - 14600);
+  let fedTax = 0;
+  if (taxable > 0) fedTax += Math.min(taxable, 11600) * 0.10;
+  if (taxable > 11600) fedTax += Math.min(taxable - 11600, 35550) * 0.12;
+  if (taxable > 47150) fedTax += Math.min(taxable - 47150, 53375) * 0.22;
+  if (taxable > 100525) fedTax += (taxable - 100525) * 0.24;
+  return { seTax, fedTax, totalAnnual: seTax + fedTax, quarterly: (seTax + fedTax) / 4 };
+}
+
+function TaxEstimatorTool() {
+  const [input, setInput] = useState<TaxEstimatorInput>(() => {
+    try { return JSON.parse(localStorage.getItem(TAX_EST_KEY) ?? "null") as TaxEstimatorInput ?? { income: 60000, filingStatus: "single" }; }
+    catch { return { income: 60000, filingStatus: "single" }; }
+  });
+  const [incomeDraft, setIncomeDraft] = useState(String(input.income));
+
+  function compute() {
+    const income = Math.max(0, Number(incomeDraft) || 0);
+    const next = { ...input, income };
+    setInput(next);
+    try { localStorage.setItem(TAX_EST_KEY, JSON.stringify(next)); } catch {}
+  }
+
+  const result = calcTax(input.income);
+  const fmt = (n: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(n);
+
+  return (
+    <Panel className="v2-tool-panel v2-tax-estimator-panel" eyebrow="Tax planning" title="Tax estimator">
+      <div className="v2-tax-hero">
+        <small>Estimated quarterly payment</small>
+        <strong>{fmt(result.quarterly)}</strong>
+      </div>
+      <div className="v2-tax-inputs">
+        <label>
+          Annual income ($)
+          <input type="number" value={incomeDraft} min={0} onChange={e => setIncomeDraft(e.target.value)} onBlur={compute} />
+        </label>
+        <label>
+          Filing status
+          <select value={input.filingStatus} onChange={e => { const next = { ...input, filingStatus: e.target.value as TaxEstimatorInput["filingStatus"] }; setInput(next); try { localStorage.setItem(TAX_EST_KEY, JSON.stringify(next)); } catch {} }}>
+            <option value="single">Single</option>
+            <option value="mfj">Married filing jointly</option>
+            <option value="hoh">Head of household</option>
+          </select>
+        </label>
+      </div>
+      <table className="v2-tax-breakdown">
+        <tbody>
+          <tr><td>Self-employment tax</td><td>{fmt(result.seTax)}</td></tr>
+          <tr><td>Federal income tax</td><td>{fmt(result.fedTax)}</td></tr>
+          <tr className="v2-tax-total"><td>Total annual</td><td>{fmt(result.totalAnnual)}</td></tr>
+          <tr className="v2-tax-quarterly"><td>Quarterly payment</td><td>{fmt(result.quarterly)}</td></tr>
+        </tbody>
+      </table>
+      <p className="v2-tax-disclaimer">Estimate only. Consult a tax professional for your specific situation. Based on 2025 rates.</p>
+    </Panel>
+  );
+}
+
+// ── Punch List ───────────────────────────────────────────────────────────────
+
+const PUNCH_KEY = "rivt.punchLists.v1";
+
+interface PunchItem {
+  id: string; description: string; location: string;
+  status: "open" | "in-progress" | "done"; assignee: string; createdAt: string;
+}
+interface PunchList { id: string; jobName: string; createdAt: string; items: PunchItem[] }
+
+function readPunchLists(): PunchList[] {
+  try { return JSON.parse(localStorage.getItem(PUNCH_KEY) ?? "[]") as PunchList[]; } catch { return []; }
+}
+function writePunchLists(lists: PunchList[]) {
+  try { localStorage.setItem(PUNCH_KEY, JSON.stringify(lists)); } catch {}
+}
+
+function PunchListTool() {
+  const [lists, setLists] = useState<PunchList[]>(readPunchLists);
+  const [activeListId, setActiveListId] = useState<string | null>(() => readPunchLists()[0]?.id ?? null);
+  const [newJobName, setNewJobName] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | "open" | "done">("all");
+  const [addingItem, setAddingItem] = useState(false);
+  const [itemDraft, setItemDraft] = useState({ description: "", location: "", assignee: "" });
+
+  const activeList = lists.find(l => l.id === activeListId) ?? null;
+  const visibleItems = activeList?.items.filter(i => statusFilter === "all" ? true : statusFilter === "open" ? i.status !== "done" : i.status === "done") ?? [];
+  const doneCount = activeList?.items.filter(i => i.status === "done").length ?? 0;
+
+  function createList() {
+    if (!newJobName.trim()) return;
+    const list: PunchList = { id: `pl_${Date.now()}`, jobName: newJobName.trim(), createdAt: new Date().toISOString(), items: [] };
+    const next = [...lists, list];
+    setLists(next); writePunchLists(next);
+    setActiveListId(list.id); setNewJobName("");
+  }
+
+  function cycleStatus(itemId: string) {
+    if (!activeList) return;
+    const cycle: PunchItem["status"][] = ["open", "in-progress", "done"];
+    const next = lists.map(l => l.id !== activeList.id ? l : {
+      ...l, items: l.items.map(i => i.id !== itemId ? i : { ...i, status: cycle[(cycle.indexOf(i.status) + 1) % 3] })
+    });
+    setLists(next); writePunchLists(next);
+  }
+
+  function addItem() {
+    if (!activeList || !itemDraft.description.trim()) return;
+    const item: PunchItem = { id: `pi_${Date.now()}`, ...itemDraft, status: "open", createdAt: new Date().toISOString() };
+    const next = lists.map(l => l.id !== activeList.id ? l : { ...l, items: [...l.items, item] });
+    setLists(next); writePunchLists(next);
+    setItemDraft({ description: "", location: "", assignee: "" }); setAddingItem(false);
+  }
+
+  const statusIcon = (s: PunchItem["status"]) =>
+    s === "done" ? <CheckCircle2 size={16} color="var(--v2-success)" /> :
+    s === "in-progress" ? <Clock size={16} color="var(--v2-warning, #f59e0b)" /> :
+    <Circle size={16} color="var(--v2-text-muted)" />;
+
+  return (
+    <div className="v2-punch-workbench">
+      <aside className="v2-punch-sidebar">
+        <header>
+          <span>Job lists</span>
+          <button type="button" className="v2-primary-button" onClick={() => setNewJobName(" ")}>+ New</button>
+        </header>
+        {newJobName !== "" && (
+          <div className="v2-punch-new-list">
+            <input autoFocus placeholder="Job name" value={newJobName.trim()} onChange={e => setNewJobName(e.target.value)} onKeyDown={e => e.key === "Enter" && createList()} />
+            <button type="button" className="v2-primary-button" onClick={createList}>Create</button>
+          </div>
+        )}
+        {lists.map(l => {
+          const done = l.items.filter(i => i.status === "done").length;
+          return (
+            <button key={l.id} type="button" className={`v2-punch-list-row${l.id === activeListId ? " active" : ""}`} onClick={() => setActiveListId(l.id)}>
+              <strong>{l.jobName}</strong>
+              <small>{done} / {l.items.length} done</small>
+            </button>
+          );
+        })}
+        {lists.length === 0 && <p className="v2-punch-empty-hint">Create a list for each job.</p>}
+      </aside>
+
+      <main className="v2-punch-items">
+        {activeList ? (
+          <>
+            <header>
+              <div>
+                <strong>{activeList.jobName}</strong>
+                <small>{doneCount} of {activeList.items.length} items done</small>
+              </div>
+              <div className="v2-punch-filter-tabs">
+                {(["all", "open", "done"] as const).map(f => (
+                  <button key={f} type="button" className={statusFilter === f ? "active" : ""} onClick={() => setStatusFilter(f)}>
+                    {f.charAt(0).toUpperCase() + f.slice(1)}
+                  </button>
+                ))}
+              </div>
+            </header>
+            {activeList.items.length > 0 && (
+              <div className="v2-punch-progress">
+                <div className="v2-punch-progress-fill" style={{ width: `${activeList.items.length ? (doneCount / activeList.items.length) * 100 : 0}%` }} />
+              </div>
+            )}
+            <div className="v2-punch-item-list">
+              {visibleItems.map(item => (
+                <div key={item.id} className={`v2-punch-item${item.status === "done" ? " is-done" : ""}`}>
+                  <button type="button" className="v2-punch-status-btn" onClick={() => cycleStatus(item.id)} title="Click to change status">
+                    {statusIcon(item.status)}
+                  </button>
+                  <div>
+                    <strong>{item.description}</strong>
+                    {item.location && <small><MapPin size={11} /> {item.location}</small>}
+                    {item.assignee && <small>→ {item.assignee}</small>}
+                  </div>
+                </div>
+              ))}
+              {visibleItems.length === 0 && <p className="v2-punch-empty-hint">No {statusFilter !== "all" ? statusFilter : ""} items.</p>}
+            </div>
+            {addingItem ? (
+              <div className="v2-punch-add-form">
+                <input autoFocus placeholder="Description*" value={itemDraft.description} onChange={e => setItemDraft(p => ({ ...p, description: e.target.value }))} />
+                <input placeholder="Location (optional)" value={itemDraft.location} onChange={e => setItemDraft(p => ({ ...p, location: e.target.value }))} />
+                <input placeholder="Assignee (optional)" value={itemDraft.assignee} onChange={e => setItemDraft(p => ({ ...p, assignee: e.target.value }))} />
+                <div className="v2-punch-add-actions">
+                  <button type="button" className="v2-primary-button" onClick={addItem}>Add item</button>
+                  <button type="button" onClick={() => setAddingItem(false)}>Cancel</button>
+                </div>
+              </div>
+            ) : (
+              <button type="button" className="v2-punch-add-btn" onClick={() => setAddingItem(true)}>+ Add item</button>
+            )}
+          </>
+        ) : (
+          <div className="v2-punch-no-list">
+            <ClipboardList size={28} />
+            <strong>No list selected</strong>
+            <p>Create a punch list for each job to track deficiencies and final walkthrough items.</p>
+          </div>
+        )}
+      </main>
+    </div>
+  );
+}
+
 function SafetyChecklistTool({ activeJob }: { activeJob: Job | null }) {
   const [checks, setChecks] = useState<Record<string, boolean>>(() =>
     Object.fromEntries(ALL_SAFETY_ITEMS.map((item) => [item, false]))
@@ -1926,6 +2180,14 @@ function formatHms(totalSeconds: number): string {
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 }
 
+function getLast7Days(): string[] {
+  return Array.from({ length: 7 }, (_, i) => {
+    const d = new Date();
+    d.setDate(d.getDate() - (6 - i));
+    return d.toISOString().slice(0, 10);
+  });
+}
+
 function TimeTrackerTool({ activeJob, jobs }: { activeJob: Job | null; jobs: Job[] }) {
   const [sessions, setSessions] = useState<TimeSession[]>(readTimeSessions);
   const [running, setRunning] = useState<TimeSession | null>(
@@ -1986,6 +2248,16 @@ function TimeTrackerTool({ activeJob, jobs }: { activeJob: Job | null; jobs: Job
   const completed = sessions.filter((s) => s.endedAt);
   const totalHours = completed.reduce((sum, s) => sum + hoursFor(s), 0);
 
+  const last7Days = getLast7Days();
+  const today = new Date().toISOString().slice(0, 10);
+  const hoursPerDay: Record<string, number> = {};
+  for (const day of last7Days) {
+    hoursPerDay[day] = completed
+      .filter((s) => s.startedAt.slice(0, 10) === day)
+      .reduce((sum, s) => sum + hoursFor(s), 0);
+  }
+  const maxH = Math.max(...Object.values(hoursPerDay), 1);
+
   return (
     <div className="v2-tool-workbench">
       <Panel className="v2-tool-panel" eyebrow="Time tracker" title="Clock in / clock out">
@@ -2015,6 +2287,28 @@ function TimeTrackerTool({ activeJob, jobs }: { activeJob: Job | null; jobs: Job
         </div>
       </Panel>
       <Panel className="v2-tool-panel" eyebrow={`${completed.length} sessions`} title={`${formatNumber(totalHours, 1)} total hours`}>
+        <div className="v2-tt-weekly-chart">
+          <header><span>This week</span></header>
+          <svg viewBox="0 0 280 90" aria-hidden="true">
+            {last7Days.map((day, i) => {
+              const h = hoursPerDay[day] ?? 0;
+              const barH = Math.max(2, (h / maxH) * 60);
+              const x = 20 + i * 38;
+              const isToday = day === today;
+              return (
+                <g key={day}>
+                  <rect x={x} y={88 - barH} width={26} height={barH}
+                    fill={isToday ? "var(--v2-accent)" : "var(--v2-surface-muted)"}
+                    stroke="var(--v2-border)" strokeWidth="1" rx="3" />
+                  <text x={x + 13} y={85} textAnchor="middle" fontSize="9" fill="var(--v2-text-muted)">
+                    {["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"][i]}
+                  </text>
+                  {h > 0 && <text x={x + 13} y={83 - barH} textAnchor="middle" fontSize="8" fill="var(--v2-text-muted)">{h.toFixed(1)}</text>}
+                </g>
+              );
+            })}
+          </svg>
+        </div>
         {completed.length ? (
           <div className="v2-time-session-list">
             {completed.slice(0, 15).map((s) => (
@@ -2064,6 +2358,23 @@ function readExpenses(): ExpenseEntry[] {
 
 function persistExpenses(entries: ExpenseEntry[]) {
   try { localStorage.setItem(expenseLogKey, JSON.stringify(entries.slice(0, 200))); } catch {}
+}
+
+function exportExpensesCSV(expenses: ExpenseEntry[]) {
+  const header = "Date,Category,Amount,Description";
+  const rows = expenses.map((e) =>
+    [e.date, e.category, e.amount, (e.description ?? "").replace(/,/g, ";")].join(",")
+  );
+  const csv = [header, ...rows].join("\n");
+  const blob = new Blob([csv], { type: "text/csv" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `rivt-expenses-${new Date().toISOString().slice(0, 10)}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
 
 function ExpenseLoggerTool({ activeJob, jobs }: { activeJob: Job | null; jobs: Job[] }) {
@@ -2131,6 +2442,7 @@ function ExpenseLoggerTool({ activeJob, jobs }: { activeJob: Job | null; jobs: J
         {notice ? <p className="v2-record-notice" role="status">{notice}</p> : null}
         <div className="v2-tool-action-row">
           <button type="button" className="v2-primary-button" disabled={!(parseFloat(amount) > 0) || !description.trim()} onClick={addExpense}><Plus size={15} />Log expense</button>
+          <button type="button" disabled={expenses.length === 0} onClick={() => exportExpensesCSV(expenses)}><Download size={15} />Export CSV</button>
         </div>
       </Panel>
       <aside className="v2-invoice-side-stack">
@@ -2726,7 +3038,21 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", onNavigate, 
         description: "Pre-built daily site check across PPE, fall protection, electrical, tools, and emergency readiness.",
         node: <SafetyChecklistTool activeJob={activeJob} />,
       },
+      "tax-estimator": {
+        eyebrow: "Tax planning",
+        title: "Tax estimator",
+        description: "Estimate quarterly self-employment tax payments based on your projected annual income.",
+        node: <TaxEstimatorTool />,
+      },
+      "punch-list": {
+        eyebrow: "Closeout",
+        title: "Punch list",
+        description: "Track deficiencies and outstanding items for final walkthrough and sign-off.",
+        node: <PunchListTool />,
+      },
     }[activeTool];
+
+    if (!toolMeta) return null;
 
     return (
       <ToolAppShell
@@ -2892,6 +3218,26 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", onNavigate, 
           detail="Trade checklists"
           action="Open"
           onAction={() => setActiveTool("safety-checklist")}
+        />
+        <ToolCard
+          icon={TrendingDown}
+          title="Tax estimator"
+          badge="Finance"
+          summary="Estimate quarterly self-employment taxes based on projected annual income."
+          output="Quarterly"
+          detail="SE + federal"
+          action="Open"
+          onAction={() => setActiveTool("tax-estimator")}
+        />
+        <ToolCard
+          icon={ClipboardList}
+          title="Punch list"
+          badge="Closeout"
+          summary="Track deficiencies and outstanding items for final walkthrough and sign-off."
+          output="By job"
+          detail="Status tracking"
+          action="Open"
+          onAction={() => setActiveTool("punch-list")}
         />
         <ToolCard
           icon={FolderOpen}

@@ -29,6 +29,7 @@ import {
   ListTodo,
   Phone,
   StickyNote,
+  Zap,
 } from "lucide-react";
 import type { Job, JobId, Role } from "../../types";
 import { difficultyOptions, tradeOptions, workTypeOptions } from "../../data";
@@ -989,6 +990,33 @@ function JobTemplates({ onPostJob }: { onPostJob: () => void }) {
   );
 }
 
+function getProfileFromStorage(): { primaryTrade: string; userLocation: string } {
+  try {
+    const stored = localStorage.getItem("rivt.rateCard.v1");
+    if (!stored) return { primaryTrade: "", userLocation: "" };
+    const parsed = JSON.parse(stored) as { primaryTrade?: string; location?: string };
+    return {
+      primaryTrade: typeof parsed.primaryTrade === "string" ? parsed.primaryTrade : "",
+      userLocation: typeof parsed.location === "string" ? parsed.location : "",
+    };
+  } catch {
+    return { primaryTrade: "", userLocation: "" };
+  }
+}
+
+function matchScore(job: Job, primaryTrade: string, userLocation: string): number {
+  let score = 0;
+  if (primaryTrade && job.trade === primaryTrade) score += 40;
+  if (userLocation && job.location) {
+    const jobWord = job.location.trim().split(/[\s,]+/)[0].toLowerCase();
+    const userWord = userLocation.trim().split(/[\s,]+/)[0].toLowerCase();
+    if (jobWord && userWord && jobWord === userWord) score += 30;
+  }
+  if (job.pay >= 1000) score += 30;
+  else if (job.pay >= 500) score += 15;
+  return Math.min(100, Math.max(10, score));
+}
+
 function money(value: number) {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
@@ -1005,29 +1033,57 @@ function statusTone(status: Job["status"]) {
 }
 
 function JobRow({ job, selected, role, onSelect }: { job: Job; selected: boolean; role: Role; onSelect: () => void }) {
+  const profile = useMemo(() => getProfileFromStorage(), []);
+  const score = useMemo(() => matchScore(job, profile.primaryTrade, profile.userLocation), [job, profile]);
+
+  const badgeColor = score >= 80
+    ? "var(--v2-success)"
+    : score >= 50
+    ? "var(--v2-accent)"
+    : "var(--v2-text-muted)";
+
   return (
-    <button
-      type="button"
-      className={selected ? "v2-job-row is-selected" : "v2-job-row"}
-      onClick={onSelect}
-      aria-pressed={selected}
-    >
-      <span className="v2-job-row-main">
-        <span className="v2-job-row-meta">{job.trade} · {job.location}</span>
-        <strong>{job.title}</strong>
-        <span className="v2-job-row-summary">{job.summary}</span>
-        <span className="v2-job-row-facts">
-          <span>{job.pay > 0 ? money(job.pay) : "Budget not set"}</span>
-          <span>{job.durationHours > 0 ? `${job.durationHours}h` : "Duration not set"}</span>
-          <span>{job.difficulty}</span>
+    <div className={selected ? "v2-job-row is-selected" : "v2-job-row"}>
+      <button
+        type="button"
+        className="v2-job-row-inner"
+        onClick={onSelect}
+        aria-pressed={selected}
+      >
+        <span className="v2-job-row-main">
+          <span className="v2-job-row-meta">{job.trade} · {job.location}</span>
+          <strong>{job.title}</strong>
+          <span className="v2-job-row-summary">{job.summary}</span>
+          <span className="v2-job-row-facts">
+            <span>{job.pay > 0 ? money(job.pay) : "Budget not set"}</span>
+            <span>{job.durationHours > 0 ? `${job.durationHours}h` : "Duration not set"}</span>
+            <span>{job.difficulty}</span>
+          </span>
         </span>
-      </span>
-      <span className="v2-job-row-aside">
-        <StatusPill tone={statusTone(job.status)} className={`v2-work-status status-${job.status.toLowerCase()}`}>{job.status}</StatusPill>
-        {role === "tradesperson" && job.match > 0 ? <><strong>{job.match}%</strong><small>match</small></> : null}
-        <ChevronRight size={16} />
-      </span>
-    </button>
+        <span className="v2-job-row-aside">
+          <StatusPill tone={statusTone(job.status)} className={`v2-work-status status-${job.status.toLowerCase()}`}>{job.status}</StatusPill>
+          {role === "tradesperson" && job.match > 0 ? <><strong>{job.match}%</strong><small>match</small></> : null}
+          <ChevronRight size={16} />
+        </span>
+      </button>
+      <div className="v2-job-row-footer">
+        <span
+          className="v2-match-badge"
+          style={{ color: badgeColor, background: `color-mix(in srgb, ${badgeColor} 12%, transparent)` }}
+        >
+          {score}% match
+        </span>
+        {role !== "contractor" && job.status === "Open" ? (
+          <button
+            type="button"
+            className="v2-quick-apply-btn"
+            onClick={(e) => { e.stopPropagation(); onSelect(); }}
+          >
+            <Zap size={12} />Quick apply
+          </button>
+        ) : null}
+      </div>
+    </div>
   );
 }
 
@@ -1665,6 +1721,36 @@ export function WorkWorkspace({
                 </section>
               </div>
             ) : null}
+
+            {(() => {
+              const similarJobs = jobs
+                .filter((j) => j.id !== detailJob.id && j.trade === detailJob.trade && j.status === "Open")
+                .slice(0, 3);
+              if (similarJobs.length === 0) return null;
+              return (
+                <div className="v2-similar-jobs">
+                  <h3>Similar {detailJob.trade} jobs</h3>
+                  <div className="v2-similar-jobs-list">
+                    {similarJobs.map((j) => (
+                      <div key={j.id} className="v2-similar-job-card">
+                        <div className="v2-similar-job-info">
+                          <strong>{j.title}</strong>
+                          <span><MapPin size={12} />{j.location}</span>
+                          <span>{j.pay > 0 ? money(j.pay) : "Budget not set"}</span>
+                        </div>
+                        <button
+                          type="button"
+                          className="v2-similar-job-open-btn"
+                          onClick={() => selectJob(j.id)}
+                        >
+                          Open
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
 
             {role === "contractor" && detailJob.status !== "Closed" ? (
               <footer className="v2-work-detail-actions">

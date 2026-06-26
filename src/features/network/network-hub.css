@@ -605,3 +605,246 @@
 @media (max-width: 640px) {
   .v2-crew-invite-inputs { grid-template-columns: 1fr 1fr; }
 }
+
+/* ── Crew View Toggle ────────────────────────────────────────────────────── */
+
+.v2-crew-view-toggle {
+  display: flex;
+  gap: 0;
+  padding: 10px 20px 0;
+}
+
+.v2-crew-view-toggle button {
+  flex: 1;
+  padding: 6px 14px;
+  border: 1px solid var(--v2-border);
+  background: var(--v2-surface-muted);
+  color: var(--v2-text-muted);
+  font: inherit;
+  font-size: 12px;
+  font-weight: var(--v2-weight-strong);
+  cursor: pointer;
+  transition: background 120ms ease, color 120ms ease;
+}
+
+.v2-crew-view-toggle button:first-child {
+  border-radius: var(--v2-radius-sm) 0 0 var(--v2-radius-sm);
+  border-right: none;
+}
+
+.v2-crew-view-toggle button:last-child {
+  border-radius: 0 var(--v2-radius-sm) var(--v2-radius-sm) 0;
+}
+
+.v2-crew-view-toggle button.active {
+  background: var(--v2-accent);
+  color: #fff;
+  border-color: var(--v2-accent);
+}
+
+/* ── Availability Dots ───────────────────────────────────────────────────── */
+
+.v2-crew-avail-dots {
+  display: flex;
+  gap: 3px;
+  align-items: center;
+}
+
+.v2-avail-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.v2-avail-dot.avail-available { background: var(--v2-success); }
+.v2-avail-dot.avail-limited   { background: var(--v2-warning, #f59e0b); }
+.v2-avail-dot.avail-unavailable { background: var(--v2-border); }
+
+/* ── Skill Matrix ────────────────────────────────────────────────────────── */
+
+.v2-skill-matrix {
+  display: grid;
+  gap: 0;
+}
+
+.v2-skill-group {
+  display: grid;
+  gap: 10px;
+  padding: 16px 20px;
+  border-bottom: 1px solid color-mix(in srgb, var(--v2-border) 56%, transparent);
+}
+
+.v2-skill-group:last-child {
+  border-bottom: none;
+}
+
+.v2-skill-group > strong {
+  font-size: 11px;
+  font-weight: var(--v2-weight-bold);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--v2-text-muted);
+}
+
+.v2-skill-group-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.v2-skill-member-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--v2-accent-soft);
+  color: var(--v2-text);
+  font-size: 13px;
+  font-weight: var(--v2-weight-strong);
+}
+
+.v2-skill-chip-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--v2-accent);
+  color: #fff;
+  font-size: 10px;
+  font-weight: var(--v2-weight-bold);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Group Message Button ────────────────────────────────────────────────── */
+
+.v2-group-msg-btn {
+  font-size: 12px;
+  padding: 6px 12px;
+  min-height: unset;
+  height: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* ── Group Message Modal ─────────────────────────────────────────────────── */
+
+.v2-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, #000 42%, transparent);
+  backdrop-filter: blur(2px);
+}
+
+.v2-group-msg-modal {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: min(480px, calc(100vw - 32px));
+  max-height: min(600px, calc(100vh - 48px));
+  padding: 20px;
+  border-radius: var(--v2-radius-xl);
+  background: var(--v2-surface-raised);
+  border: 1px solid color-mix(in srgb, var(--v2-border) 70%, transparent);
+  box-shadow: 0 20px 60px color-mix(in srgb, #000 30%, transparent);
+  overflow: hidden;
+}
+
+.v2-group-msg-modal header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.v2-group-msg-modal header strong {
+  font-size: 16px;
+}
+
+.v2-group-msg-modal header button {
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: var(--v2-radius-sm);
+  background: transparent;
+  color: var(--v2-text-muted);
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 120ms ease;
+}
+
+.v2-group-msg-modal header button:hover {
+  background: color-mix(in srgb, var(--v2-border) 40%, transparent);
+  color: var(--v2-text);
+}
+
+.v2-group-msg-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow-y: auto;
+  max-height: 200px;
+  border: 1px solid var(--v2-border);
+  border-radius: var(--v2-radius-md);
+  padding: 6px 0;
+}
+
+.v2-group-msg-member {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 100ms ease;
+}
+
+.v2-group-msg-member:hover {
+  background: color-mix(in srgb, var(--v2-accent-soft) 50%, transparent);
+}
+
+.v2-group-msg-member input[type="checkbox"] {
+  accent-color: var(--v2-accent);
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.v2-group-msg-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border: 1.5px solid var(--v2-border);
+  border-radius: var(--v2-radius-md);
+  background: var(--v2-surface);
+  color: var(--v2-text);
+  font: inherit;
+  font-size: 14px;
+  resize: vertical;
+  min-height: 80px;
+}
+
+.v2-group-msg-textarea:focus {
+  outline: none;
+  border-color: var(--v2-accent);
+}
+
+.v2-group-msg-modal .v2-primary-button {
+  align-self: flex-end;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}

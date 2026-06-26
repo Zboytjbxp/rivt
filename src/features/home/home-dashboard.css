@@ -916,11 +916,44 @@
   color: var(--v2-success);
 }
 
+/* Last check-in time */
+.v2-cockpit-checkin-time {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 4px;
+  color: var(--v2-text-muted);
+  font-size: 11px;
+}
+
+.v2-cockpit-checkin-time svg {
+  color: var(--v2-accent);
+  flex-shrink: 0;
+}
+
+/* Live earnings ticker */
+.v2-cockpit-earnings-ticker {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--v2-success) 14%, transparent);
+  color: var(--v2-success);
+  font-size: 12px;
+  font-weight: var(--v2-weight-bold);
+  font-variant-numeric: tabular-nums;
+}
+
 /* Quick Actions bar */
 .v2-quick-actions {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
+}
+
+.v2-quick-actions--five {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
 }
 
 .v2-quick-actions button {
@@ -941,6 +974,11 @@
   cursor: pointer;
   text-align: center;
   transition: border-color 120ms, background 120ms;
+}
+
+.v2-quick-actions--five button {
+  min-height: 68px;
+  font-size: 10px;
 }
 
 .v2-quick-actions button svg {
@@ -1077,6 +1115,101 @@
   border-color: transparent;
 }
 
+/* Streak counter card */
+.v2-streak-card {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid color-mix(in srgb, var(--v2-border) 66%, transparent);
+  border-radius: var(--v2-radius-lg);
+  background: color-mix(in srgb, var(--v2-surface) 94%, transparent);
+  box-shadow: var(--v2-shadow-card);
+}
+
+.v2-streak-card header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.v2-streak-card header > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--v2-accent);
+  font-size: 10px;
+  font-weight: var(--v2-weight-bold);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.v2-streak-empty {
+  margin: 0;
+  color: var(--v2-text-muted);
+  font-size: 12px;
+}
+
+.v2-streak-count {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.v2-streak-count svg {
+  color: var(--v2-accent);
+  flex-shrink: 0;
+}
+
+.v2-streak-count > span {
+  display: grid;
+  gap: 1px;
+}
+
+.v2-streak-count strong {
+  font-size: 32px;
+  font-weight: var(--v2-weight-display);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.v2-streak-count small {
+  color: var(--v2-text-muted);
+  font-size: 11px;
+}
+
+.v2-streak-dots {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.v2-streak-dot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.v2-streak-dot-pip {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--v2-border) 80%, transparent);
+  flex-shrink: 0;
+  transition: background 150ms;
+}
+
+.v2-streak-dot.is-active .v2-streak-dot-pip {
+  background: var(--v2-accent);
+}
+
+.v2-streak-dot small {
+  color: var(--v2-text-muted);
+  font-size: 9px;
+  font-weight: var(--v2-weight-bold);
+  text-transform: uppercase;
+}
+
 @media (max-width: 860px) {
   .v2-cockpit-hero {
     flex-direction: column;
@@ -1097,8 +1230,18 @@
     gap: 8px;
   }
 
+  .v2-quick-actions--five {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 6px;
+  }
+
   .v2-quick-actions button {
     min-height: 72px;
+    font-size: 10px;
+  }
+
+  .v2-quick-actions--five button {
+    min-height: 68px;
     font-size: 10px;
   }
 }

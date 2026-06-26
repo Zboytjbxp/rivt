@@ -3,6 +3,8 @@ import {
   ArrowLeft,
   Award,
   BadgeCheck,
+  Bookmark,
+  BookmarkCheck,
   CheckCircle2,
   ChevronDown,
   ExternalLink,
@@ -310,6 +312,13 @@ export function ShopTalkView({
   const [liveNews, setLiveNews] = useState<NewsItem[]>([]);
   const [newsLoading, setNewsLoading] = useState(false);
   const [newsFetched, setNewsFetched] = useState(false);
+  const [flairFilter, setFlairFilter] = useState<PostFlair | "All">("All");
+  const [bookmarkedIds, setBookmarkedIds] = useState<Set<number>>(() => {
+    try { return new Set(JSON.parse(localStorage.getItem("rivt.bookmarks.v1") ?? "[]") as number[]); }
+    catch { return new Set(); }
+  });
+  const [showBookmarked, setShowBookmarked] = useState(false);
+  const [locallyAnswered, setLocallyAnswered] = useState<Set<number>>(new Set());
   const displayNews = liveNews.length ? liveNews : newsItems;
   const [selectedNewsId, setSelectedNewsId] = useState(displayNews[0]?.id ?? 0);
   const [mobileDetail, setMobileDetail] = useState(false);
@@ -329,6 +338,15 @@ export function ShopTalkView({
       return b.id - a.id;
     });
   const allReportReasons: CommunityReport["reason"][] = ["Misinformation", "Safety concern", "Spam", "Harassment"];
+
+  function toggleBookmark(postId: number) {
+    setBookmarkedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(postId)) next.delete(postId); else next.add(postId);
+      try { localStorage.setItem("rivt.bookmarks.v1", JSON.stringify([...next])); } catch {}
+      return next;
+    });
+  }
 
   async function activateNews() {
     setActiveTab("news");
@@ -356,6 +374,8 @@ export function ShopTalkView({
     if (answerQueueOnly && !((post.trade === primaryTrade || post.trade === "General") && needsAnswer)) return false;
     const tradeMatches = tradeFilter === "All trades" || post.trade === tradeFilter;
     if (!tradeMatches) return false;
+    if (flairFilter !== "All" && post.flair !== flairFilter) return false;
+    if (showBookmarked && !bookmarkedIds.has(post.id)) return false;
     if (!normalizedTalkQuery) return true;
 
     const searchable = [
@@ -653,6 +673,34 @@ export function ShopTalkView({
                     <button type="button" onClick={() => setAnswerQueueOnly(false)}>Clear</button>
                   </div>
                 )}
+                <div className="shop-talk-flair-row">
+                  {(["All", "Question", "Discussion", "Tip", "Code Talk", "Compliance", "Humor"] as const).map(flair => (
+                    <button
+                      key={flair}
+                      type="button"
+                      className={flairFilter === flair ? "flair-chip active" : "flair-chip"}
+                      onClick={() => setFlairFilter(flair)}
+                    >
+                      {flair}
+                    </button>
+                  ))}
+                </div>
+                <div className="shop-talk-bookmark-filter">
+                  <button
+                    type="button"
+                    className={showBookmarked ? "shop-talk-saved-btn active" : "shop-talk-saved-btn"}
+                    onClick={() => setShowBookmarked(v => !v)}
+                  >
+                    {showBookmarked ? <BookmarkCheck size={13} /> : <Bookmark size={13} />}
+                    Saved ({bookmarkedIds.size})
+                  </button>
+                  {showBookmarked && (
+                    <button type="button" className="shop-talk-clear-filter-btn" onClick={() => setShowBookmarked(false)}>
+                      <X size={11} />
+                      Clear
+                    </button>
+                  )}
+                </div>
               </div>
 
               <div className="shop-post-list">
@@ -665,27 +713,39 @@ export function ShopTalkView({
                     onAction={() => talkQuery ? setTalkQuery("") : setNewPostOpen(true)}
                   />
                 ) : sortedPosts.map((post) => (
-                  <button
-                    type="button"
-                    key={post.id}
-                    className={post.id === (selectedPost?.id ?? 0) ? "shop-post-card selected" : "shop-post-card"}
-                    onClick={() => { setSelectedPostId(post.id); setMobileDetail(true); }}
-                  >
-                    <div className="shop-post-card-meta">
-                      {post.flair && (
-                        <span className={`flair-pill flair-${post.flair.toLowerCase().replace(/\s/g, "-")}`}>
-                          {post.flair}
-                        </span>
-                      )}
-                      <span className="post-trade-label">{post.trade}</span>
-                    </div>
-                    <strong>{post.title}</strong>
-                    <div className="shop-post-card-stats">
-                      <span>Score {netScore(post)}</span>
-                      <span>{post.replies.length} replies</span>
-                      <span>{post.createdAt}</span>
-                    </div>
-                  </button>
+                  <div key={post.id} className={post.id === (selectedPost?.id ?? 0) ? "shop-post-card selected" : "shop-post-card"}>
+                    <button
+                      type="button"
+                      className="shop-post-card-clickable"
+                      onClick={() => { setSelectedPostId(post.id); setMobileDetail(true); }}
+                    >
+                      <div className="shop-post-card-meta">
+                        {post.flair && (
+                          <span className={`flair-pill flair-${post.flair.toLowerCase().replace(/\s/g, "-")}`}>
+                            {post.flair}
+                          </span>
+                        )}
+                        <span className="post-trade-label">{post.trade}</span>
+                        {locallyAnswered.has(post.id) && (
+                          <span className="shop-talk-answered-badge">Answered ✓</span>
+                        )}
+                      </div>
+                      <strong>{post.title}</strong>
+                      <div className="shop-post-card-stats">
+                        <span>Score {netScore(post)}</span>
+                        <span>{post.replies.length} replies</span>
+                        <span>{post.createdAt}</span>
+                      </div>
+                    </button>
+                    <button
+                      type="button"
+                      className={bookmarkedIds.has(post.id) ? "shop-post-bookmark active" : "shop-post-bookmark"}
+                      aria-label={bookmarkedIds.has(post.id) ? "Remove bookmark" : "Bookmark this post"}
+                      onClick={(e) => { e.stopPropagation(); toggleBookmark(post.id); }}
+                    >
+                      {bookmarkedIds.has(post.id) ? <BookmarkCheck size={14} /> : <Bookmark size={14} />}
+                    </button>
+                  </div>
                 ))}
               </div>
             </>
@@ -800,10 +860,26 @@ export function ShopTalkView({
                   <h2>{selectedPost.title}</h2>
                   <p>{selectedPost.body}</p>
                 </div>
-                <span className={selectedPost.status === "Verified Fix" ? "state-pill verified" : "state-pill"}>
-                  {selectedPost.status}
-                </span>
+                <div className="shop-question-header-actions">
+                  <span className={selectedPost.status === "Verified Fix" ? "state-pill verified" : "state-pill"}>
+                    {selectedPost.status}
+                  </span>
+                  <button
+                    type="button"
+                    className={bookmarkedIds.has(selectedPost.id) ? "shop-detail-bookmark active" : "shop-detail-bookmark"}
+                    aria-label={bookmarkedIds.has(selectedPost.id) ? "Remove bookmark" : "Bookmark this post"}
+                    onClick={() => toggleBookmark(selectedPost.id)}
+                  >
+                    {bookmarkedIds.has(selectedPost.id) ? <BookmarkCheck size={16} /> : <Bookmark size={16} />}
+                  </button>
+                </div>
               </div>
+              {locallyAnswered.has(selectedPost.id) && (
+                <div className="shop-talk-answered-banner">
+                  <CheckCircle2 size={15} />
+                  You marked this as answered
+                </div>
+              )}
 
               <div className="shop-question-actions">
                 <button
@@ -834,6 +910,18 @@ export function ShopTalkView({
                     {reason}
                   </button>
                 ))}
+                {selectedPost.author === profile.displayName &&
+                  selectedPost.status !== "Verified Fix" &&
+                  !locallyAnswered.has(selectedPost.id) && (
+                  <button
+                    type="button"
+                    className="shop-talk-mark-answered-btn"
+                    onClick={() => setLocallyAnswered(prev => new Set([...prev, selectedPost.id]))}
+                  >
+                    <CheckCircle2 size={15} />
+                    Mark as answered
+                  </button>
+                )}
               </div>
 
               <section className="answer-composer">

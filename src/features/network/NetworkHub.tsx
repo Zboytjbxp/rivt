@@ -277,6 +277,69 @@ function CrewInvitePlanner() {
   );
 }
 
+// ── Availability dots helper ──────────────────────────────────────────────────
+
+function crewAvailDots(memberId: string | number): Array<"available" | "limited" | "unavailable"> {
+  const seed = String(memberId).split("").reduce((acc, c) => acc + c.charCodeAt(0), 0);
+  const statuses = ["available", "limited", "unavailable"] as const;
+  return Array.from({ length: 7 }, (_, i) => statuses[(seed + i * 3) % 3]);
+}
+
+// ── Group Message Modal ───────────────────────────────────────────────────────
+
+function CrewGroupMessageModal({
+  members,
+  selected,
+  draft,
+  onToggle,
+  onDraftChange,
+  onSend,
+  onClose,
+}: {
+  members: Array<{ id: string; name: string }>;
+  selected: Set<string>;
+  draft: string;
+  onToggle: (id: string) => void;
+  onDraftChange: (v: string) => void;
+  onSend: () => void;
+  onClose: () => void;
+}) {
+  return (
+    <div className="v2-modal-backdrop" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="v2-group-msg-modal">
+        <header>
+          <strong>Group message</strong>
+          <button type="button" onClick={onClose}>✕</button>
+        </header>
+        <div className="v2-group-msg-list">
+          {members.map((m) => (
+            <label key={m.id} className="v2-group-msg-member">
+              <input type="checkbox" checked={selected.has(m.id)} onChange={() => onToggle(m.id)} />
+              {m.name}
+            </label>
+          ))}
+        </div>
+        <textarea
+          value={draft}
+          onChange={(e) => onDraftChange(e.target.value)}
+          placeholder="Type your message..."
+          rows={3}
+          className="v2-group-msg-textarea"
+        />
+        <button
+          type="button"
+          className="v2-primary-button"
+          disabled={selected.size === 0 || !draft.trim()}
+          onClick={onSend}
+        >
+          <Send size={14} />
+          Send to {selected.size} member{selected.size !== 1 ? "s" : ""}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function TopTalentCard({ person }: { person: Talent }) {
   return (
     <article className="v2-network-person-card">
@@ -290,6 +353,12 @@ function TopTalentCard({ person }: { person: Talent }) {
       </div>
 
       <p>{person.availability} · {person.responseTime}</p>
+
+      <div className="v2-crew-avail-dots" aria-label="Estimated availability this week">
+        {crewAvailDots(person.id).map((status, i) => (
+          <span key={i} className={`v2-avail-dot avail-${status}`} title={["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"][i]} />
+        ))}
+      </div>
 
       <footer>
         <span>{person.rating.toFixed(1)} rating</span>
@@ -463,6 +532,40 @@ export function NetworkHub({ view, jobs, talent, communityPosts, shoutOuts, disp
   const highlightedShoutOuts = shoutOuts.slice(0, 4);
   const openJobs = jobs.filter((job) => job.status === "Open").length;
 
+  // Feature 1: Skill matrix view toggle
+  const [crewView, setCrewView] = useState<"list" | "skills">("list");
+
+  // Feature 3: Group message modal
+  const [showGroupMsg, setShowGroupMsg] = useState(false);
+  const [selectedMembers, setSelectedMembers] = useState<Set<string>>(new Set());
+  const [groupMsgDraft, setGroupMsgDraft] = useState("");
+
+  function toggleMember(id: string) {
+    setSelectedMembers((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function handleGroupSend() {
+    setGroupMsgDraft("");
+    setSelectedMembers(new Set());
+    setShowGroupMsg(false);
+  }
+
+  // Skills matrix: group crew by trade
+  const crewByTrade = activeCrew.reduce<Record<string, Talent[]>>((acc, member) => {
+    const key = member.trade || "Other";
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(member);
+    return acc;
+  }, {});
+
+  // Modal member list (all talent, id as string)
+  const modalMembers = talent.map((t) => ({ id: String(t.id), name: t.name }));
+
   if (view === "Reviews") {
     return (
       <section className="v2-network-page" aria-label="Reviews">
@@ -502,25 +605,76 @@ export function NetworkHub({ view, jobs, talent, communityPosts, shoutOuts, disp
         }
       />
 
+      {showGroupMsg && (
+        <CrewGroupMessageModal
+          members={modalMembers}
+          selected={selectedMembers}
+          draft={groupMsgDraft}
+          onToggle={toggleMember}
+          onDraftChange={setGroupMsgDraft}
+          onSend={handleGroupSend}
+          onClose={() => setShowGroupMsg(false)}
+        />
+      )}
+
       <div className="v2-network-grid">
         <Panel
           className="v2-network-panel"
           eyebrow="Top matches"
           title="People to reach out to"
-          action={<button type="button" onClick={onOpenCrew}>Open crew</button>}
+          action={
+            <div className="v2-network-panel-actions">
+              <button type="button" className="v2-primary-button v2-group-msg-btn" onClick={() => setShowGroupMsg(true)}>
+                <Users size={13} />
+                Group message
+              </button>
+              <button type="button" onClick={onOpenCrew}>Open crew</button>
+            </div>
+          }
         >
-          <div className="v2-network-person-list">
-            {activeCrew.length ? activeCrew.map((person) => <TopTalentCard key={person.id} person={person} />) : (
-              <EmptyState
-                className="v2-network-empty"
-                icon={<Users size={20} />}
-                title="Your crew starts here"
-                description="Add contractors and tradespeople you have worked with. Your crew is your reputation network."
-                action={<button type="button" onClick={onOpenCrew}>Find people</button>}
-                compact
-              />
-            )}
+          <div className="v2-crew-view-toggle">
+            <button type="button" className={crewView === "list" ? "active" : ""} onClick={() => setCrewView("list")}>List</button>
+            <button type="button" className={crewView === "skills" ? "active" : ""} onClick={() => setCrewView("skills")}>Skills</button>
           </div>
+
+          {crewView === "list" ? (
+            <div className="v2-network-person-list">
+              {activeCrew.length ? activeCrew.map((person) => <TopTalentCard key={person.id} person={person} />) : (
+                <EmptyState
+                  className="v2-network-empty"
+                  icon={<Users size={20} />}
+                  title="Your crew starts here"
+                  description="Add contractors and tradespeople you have worked with. Your crew is your reputation network."
+                  action={<button type="button" onClick={onOpenCrew}>Find people</button>}
+                  compact
+                />
+              )}
+            </div>
+          ) : (
+            <div className="v2-skill-matrix">
+              {Object.keys(crewByTrade).length ? Object.entries(crewByTrade).map(([trade, members]) => (
+                <div key={trade} className="v2-skill-group">
+                  <strong>{trade}</strong>
+                  <div className="v2-skill-group-chips">
+                    {members.map((m) => (
+                      <span key={m.id} className="v2-skill-member-chip">
+                        {m.name}
+                        {m.reviews > 0 && <span className="v2-skill-chip-badge">{m.reviews}</span>}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )) : (
+                <EmptyState
+                  className="v2-network-empty"
+                  icon={<Users size={20} />}
+                  title="No crew members yet"
+                  description="Add people to see them grouped by trade."
+                  compact
+                />
+              )}
+            </div>
+          )}
         </Panel>
 
         <SubRosterPanel />
