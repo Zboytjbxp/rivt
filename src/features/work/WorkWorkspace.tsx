@@ -24,8 +24,10 @@ import {
   XCircle,
   Bookmark,
   BookmarkPlus,
+  Copy,
   DollarSign,
   ListTodo,
+  Phone,
   StickyNote,
 } from "lucide-react";
 import type { Job, JobId, Role } from "../../types";
@@ -57,8 +59,8 @@ import "./work-workspace.css";
 type TradeFilter = (typeof tradeOptions)[number];
 type DifficultyFilter = (typeof difficultyOptions)[number];
 type WorkTypeFilter = (typeof workTypeOptions)[number];
-type DetailTab = "overview" | "requirements" | "activity" | "changes" | "checklist" | "payments" | "notes";
-type ContractorSection = "open" | "draft" | "paused" | "closed" | "pipeline" | "calendar";
+type DetailTab = "overview" | "requirements" | "activity" | "changes" | "checklist" | "payments" | "notes" | "contacts";
+type ContractorSection = "open" | "draft" | "paused" | "closed" | "pipeline" | "calendar" | "templates";
 type JobAction = "publish" | "pause" | "resume" | "close";
 
 interface WorkWorkspaceProps {
@@ -737,6 +739,256 @@ function JobNotes({ jobId }: { jobId: number }) {
   );
 }
 
+// ── Site Contacts ─────────────────────────────────────────────────────────────
+
+const CONTACT_ROLES = ["GC", "Owner", "Inspector", "Supplier", "Sub", "Other"] as const;
+type ContactRole = (typeof CONTACT_ROLES)[number];
+
+interface SiteContact {
+  id: string;
+  role: ContactRole;
+  name: string;
+  phone: string;
+  email: string;
+  notes: string;
+}
+
+function readSiteContacts(jobId: number): SiteContact[] {
+  try {
+    const stored = localStorage.getItem(`rivt.contacts.${jobId}.v1`);
+    if (!stored) return [];
+    const parsed = JSON.parse(stored) as SiteContact[];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch { return []; }
+}
+
+function persistSiteContacts(jobId: number, contacts: SiteContact[]) {
+  try { localStorage.setItem(`rivt.contacts.${jobId}.v1`, JSON.stringify(contacts.slice(0, 50))); } catch {}
+}
+
+function SiteContacts({ jobId }: { jobId: number }) {
+  const [contacts, setContacts] = useState<SiteContact[]>(() => readSiteContacts(jobId));
+  const [role, setRole] = useState<ContactRole>("GC");
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
+  const [notes, setNotes] = useState("");
+  const [copiedId, setCopiedId] = useState("");
+
+  function addContact() {
+    if (!name.trim()) return;
+    const contact: SiteContact = {
+      id: crypto.randomUUID(),
+      role,
+      name: name.trim(),
+      phone: phone.trim(),
+      email: email.trim(),
+      notes: notes.trim(),
+    };
+    const next = [...contacts, contact];
+    setContacts(next);
+    persistSiteContacts(jobId, next);
+    setName(""); setPhone(""); setEmail(""); setNotes("");
+  }
+
+  function removeContact(id: string) {
+    const next = contacts.filter((c) => c.id !== id);
+    setContacts(next);
+    persistSiteContacts(jobId, next);
+  }
+
+  async function copyContact(c: SiteContact) {
+    const text = [c.name, c.role, c.phone, c.email, c.notes].filter(Boolean).join(" · ");
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedId(c.id);
+      setTimeout(() => setCopiedId(""), 2000);
+    } catch {}
+  }
+
+  return (
+    <div className="v2-site-contacts">
+      <div className="v2-site-contact-form">
+        <div className="v2-site-contact-inputs">
+          <label>Role
+            <select value={role} onChange={(e) => setRole(e.target.value as ContactRole)}>
+              {CONTACT_ROLES.map((r) => <option key={r}>{r}</option>)}
+            </select>
+          </label>
+          <label>Name<input value={name} onChange={(e) => setName(e.target.value)} placeholder="Full name or company" /></label>
+          <label>Phone<input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+1 904 555 0123" /></label>
+          <label>Email<input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@company.com" /></label>
+        </div>
+        <input className="v2-site-contact-notes" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Notes (hours, gate code, preferred contact method…)" />
+        <button type="button" className="v2-primary-button" disabled={!name.trim()} onClick={addContact}><Plus size={14} />Add contact</button>
+      </div>
+      {contacts.length ? (
+        <div className="v2-site-contact-list">
+          {contacts.map((c) => (
+            <article key={c.id} className="v2-site-contact-card">
+              <div className="v2-site-contact-card-head">
+                <span className="v2-contact-role-pill">{c.role}</span>
+                <strong>{c.name}</strong>
+                <button type="button" title="Copy contact" onClick={() => void copyContact(c)}>
+                  <Copy size={13} />
+                </button>
+                <button type="button" aria-label="Delete contact" onClick={() => removeContact(c.id)}><Trash2 size={13} /></button>
+              </div>
+              <div className="v2-site-contact-links">
+                {c.phone ? <a href={`tel:${c.phone}`} className="v2-contact-link"><Phone size={13} />{c.phone}</a> : null}
+                {c.email ? <a href={`mailto:${c.email}`} className="v2-contact-link">{c.email}</a> : null}
+              </div>
+              {c.notes ? <small>{c.notes}</small> : null}
+            </article>
+          ))}
+        </div>
+      ) : (
+        <p className="v2-muted-copy">No site contacts yet. Add GC, owner, inspector, and supplier contacts here for quick access on the job.</p>
+      )}
+    </div>
+  );
+}
+
+// ── Job Templates ─────────────────────────────────────────────────────────────
+
+const jobTemplateKey = "rivt.jobTemplates.v1";
+
+interface JobTemplate {
+  id: string;
+  name: string;
+  title: string;
+  trade: string;
+  summary: string;
+  workType: string;
+  durationHours: number;
+  pay: number;
+  tools: string[];
+  deliverables: string[];
+  savedAt: string;
+}
+
+function readJobTemplates(): JobTemplate[] {
+  try {
+    const stored = localStorage.getItem(jobTemplateKey);
+    if (!stored) return [];
+    const parsed = JSON.parse(stored) as JobTemplate[];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch { return []; }
+}
+
+function persistJobTemplates(templates: JobTemplate[]) {
+  try { localStorage.setItem(jobTemplateKey, JSON.stringify(templates.slice(0, 20))); } catch {}
+}
+
+function saveJobAsTemplate(job: Job): string {
+  const template: JobTemplate = {
+    id: crypto.randomUUID(),
+    name: `${job.title} template`,
+    title: job.title,
+    trade: job.trade,
+    summary: job.summary,
+    workType: job.workType,
+    durationHours: job.durationHours,
+    pay: job.pay,
+    tools: job.tools,
+    deliverables: job.deliverables,
+    savedAt: new Date().toISOString(),
+  };
+  const existing = readJobTemplates();
+  const next = [template, ...existing.filter((t) => t.title !== job.title)].slice(0, 20);
+  persistJobTemplates(next);
+  return template.name;
+}
+
+function JobTemplates({ onPostJob }: { onPostJob: () => void }) {
+  const [templates, setTemplates] = useState<JobTemplate[]>(readJobTemplates);
+  const [selected, setSelected] = useState<JobTemplate | null>(null);
+  const [copiedId, setCopiedId] = useState("");
+
+  function deleteTemplate(id: string) {
+    const next = templates.filter((t) => t.id !== id);
+    setTemplates(next);
+    persistJobTemplates(next);
+    if (selected?.id === id) setSelected(null);
+  }
+
+  async function copyTemplate(t: JobTemplate) {
+    const text = [
+      `Job: ${t.title}`,
+      `Trade: ${t.trade}`,
+      `Work type: ${t.workType}`,
+      `Duration: ${t.durationHours}h`,
+      t.pay > 0 ? `Budget: $${t.pay}` : "",
+      `Summary: ${t.summary}`,
+      t.tools.length ? `Tools: ${t.tools.join(", ")}` : "",
+      t.deliverables.length ? `Deliverables: ${t.deliverables.join(", ")}` : "",
+    ].filter(Boolean).join("\n");
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedId(t.id);
+      setTimeout(() => setCopiedId(""), 2000);
+    } catch {}
+  }
+
+  function moneyT(v: number) { return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(v); }
+
+  if (!templates.length) {
+    return (
+      <div className="v2-templates-empty">
+        <FileText size={32} />
+        <strong>No templates yet</strong>
+        <span>Save any job posting as a template using the "Save as template" button in the job detail footer. Templates let you quickly re-post similar work.</span>
+        <button type="button" className="v2-primary-button" onClick={onPostJob}><Plus size={16} />Create a job first</button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="v2-templates-layout">
+      <div className="v2-templates-list">
+        {templates.map((t) => (
+          <button key={t.id} type="button" className={`v2-template-row${selected?.id === t.id ? " is-selected" : ""}`} onClick={() => setSelected(t)}>
+            <div>
+              <strong>{t.name}</strong>
+              <small>{t.trade} · {t.workType} · {t.durationHours}h{t.pay > 0 ? ` · ${moneyT(t.pay)}` : ""}</small>
+            </div>
+            <ChevronRight size={15} />
+          </button>
+        ))}
+      </div>
+      {selected ? (
+        <article className="v2-template-detail">
+          <div className="v2-template-detail-head">
+            <div>
+              <span className="v2-detail-trade">{selected.trade}</span>
+              <h3>{selected.title}</h3>
+            </div>
+            <div className="v2-template-detail-actions">
+              <button type="button" onClick={() => void copyTemplate(selected)}>{copiedId === selected.id ? <Check size={14} /> : <Copy size={14} />} Copy details</button>
+              <button type="button" className="v2-primary-button" onClick={onPostJob}><Plus size={14} />Post new job</button>
+              <button type="button" className="v2-destructive-button" onClick={() => deleteTemplate(selected.id)}><Trash2 size={14} />Delete</button>
+            </div>
+          </div>
+          <p>{selected.summary}</p>
+          <div className="v2-detail-facts">
+            <DetailFact icon={CircleDollarSign} label="Budget" value={selected.pay > 0 ? moneyT(selected.pay) : "Not set"} />
+            <DetailFact icon={CalendarClock} label="Duration" value={selected.durationHours > 0 ? `${selected.durationHours} hours` : "Not set"} />
+            <DetailFact icon={BriefcaseBusiness} label="Work type" value={selected.workType} />
+          </div>
+          {selected.tools.length ? <section className="v2-detail-section"><h3>Tools</h3><ul>{selected.tools.map((t) => <li key={t}><Wrench size={14} /> {t}</li>)}</ul></section> : null}
+          {selected.deliverables.length ? <section className="v2-detail-section"><h3>Deliverables</h3><ul>{selected.deliverables.map((d) => <li key={d}><Check size={14} /> {d}</li>)}</ul></section> : null}
+          <p className="v2-muted-copy" style={{ marginTop: 16 }}>Saved {new Date(selected.savedAt).toLocaleDateString()}. Click "Post new job" to create a fresh posting, then copy the details from here.</p>
+        </article>
+      ) : (
+        <div className="v2-template-detail-placeholder">
+          <FileText size={28} />
+          <span>Select a template to preview it</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function money(value: number) {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
@@ -799,6 +1051,7 @@ function WorkEmptyState({ role, section, onPostJob }: { role: Role; section: Con
     closed: { title: "No closed jobs", body: "Completed or cancelled postings will stay here for your records." },
     pipeline: { title: "No applicants yet", body: "Tradespeople who apply to your open jobs will appear here by stage." },
     calendar: { title: "No jobs yet", body: "Create and publish jobs to see them on the calendar." },
+    templates: { title: "No templates yet", body: "Save a job as a template to quickly re-post similar work." },
   };
   const copy = role === "contractor" ? contractorCopy[section] : { title: "No matching work nearby", body: "Try changing the trade, location, or job requirements." };
   return (
@@ -854,6 +1107,7 @@ export function WorkWorkspace({
   const [demoAppliedJobs, setDemoAppliedJobs] = useState<Set<JobId>>(new Set());
   const [savedSearches, setSavedSearches] = useState<SavedSearch[]>(readSavedSearches);
   const [savedSearchNotice, setSavedSearchNotice] = useState("");
+  const [saveTemplateNotice, setSaveTemplateNotice] = useState("");
 
   const visibleJobs = useMemo(() => {
     if (role !== "contractor") return jobs;
@@ -1120,11 +1374,10 @@ export function WorkWorkspace({
 
       {role === "contractor" ? (
         <nav className="v2-section-tabs" aria-label="Job status">
-          {(["open", "draft", "paused", "closed", "pipeline", "calendar"] as ContractorSection[]).map((section) => (
-            <button key={section} type="button" className={contractorSection === section ? "is-active" : ""} onClick={() => { setContractorSection(section); setMobileDetailOpen(false); }}>
-              {section === "pipeline" ? "Pipeline" : section === "calendar" ? "Calendar" : section.charAt(0).toUpperCase() + section.slice(1)}
-            </button>
-          ))}
+          {(["open", "draft", "paused", "closed", "pipeline", "calendar", "templates"] as ContractorSection[]).map((section) => {
+            const sectionLabel: Record<ContractorSection, string> = { open: "Open", draft: "Drafts", paused: "Paused", closed: "Closed", pipeline: "Pipeline", calendar: "Calendar", templates: "Templates" };
+            return <button key={section} type="button" className={contractorSection === section ? "is-active" : ""} onClick={() => { setContractorSection(section); setMobileDetailOpen(false); }}>{sectionLabel[section]}</button>;
+          })}
         </nav>
       ) : null}
 
@@ -1175,9 +1428,11 @@ export function WorkWorkspace({
         <PipelineBoard openJobs={jobs.filter((j) => j.status === "Open")} />
       ) : role === "contractor" && contractorSection === "calendar" ? (
         <WorkCalendar jobs={jobs} />
+      ) : role === "contractor" && contractorSection === "templates" ? (
+        <JobTemplates onPostJob={onPostJob} />
       ) : null}
 
-      <div className={mobileDetailOpen ? "v2-work-layout show-detail" : "v2-work-layout"} style={role === "contractor" && (contractorSection === "pipeline" || contractorSection === "calendar") ? { display: "none" } : undefined}>
+      <div className={mobileDetailOpen ? "v2-work-layout show-detail" : "v2-work-layout"} style={role === "contractor" && (contractorSection === "pipeline" || contractorSection === "calendar" || contractorSection === "templates") ? { display: "none" } : undefined}>
         <section className="v2-work-list" aria-label={`${visibleJobs.length} jobs`}>
           <div className="v2-work-list-heading"><span>{visibleJobs.length} {visibleJobs.length === 1 ? "job" : "jobs"}</span><small>{role === "contractor" ? `${contractorSection} postings` : "Open work"}</small></div>
           {loading ? <JobListSkeleton /> : visibleJobs.length ? (
@@ -1201,8 +1456,8 @@ export function WorkWorkspace({
             </header>
 
             <nav className="v2-detail-tabs" aria-label="Job details">
-              {(["overview", "requirements", "activity", "changes", "checklist", "payments", "notes"] as const).map((tab) => {
-                const labels: Record<string, string> = { overview: "Overview", requirements: "Requirements", activity: "Activity", changes: "Changes", checklist: "Checklist", payments: "Payments", notes: "Notes" };
+              {(["overview", "requirements", "activity", "changes", "checklist", "payments", "notes", "contacts"] as const).map((tab) => {
+                const labels: Record<string, string> = { overview: "Overview", requirements: "Req's", activity: "Activity", changes: "Changes", checklist: "Checklist", payments: "Payments", notes: "Notes", contacts: "Contacts" };
                 return <button key={tab} type="button" className={detailTab === tab ? "is-active" : ""} onClick={() => setDetailTab(tab)}>{labels[tab]}</button>;
               })}
             </nav>
@@ -1401,15 +1656,31 @@ export function WorkWorkspace({
               </div>
             ) : null}
 
+            {detailTab === "contacts" ? (
+              <div className="v2-detail-content">
+                <section className="v2-detail-section">
+                  <h3><Phone size={16} />Site contacts</h3>
+                  <p className="v2-muted-copy" style={{ marginBottom: 16 }}>GC, owner, inspector, supplier contacts for this job. Tap a phone number to call.</p>
+                  <SiteContacts jobId={detailJob.id} />
+                </section>
+              </div>
+            ) : null}
+
             {role === "contractor" && detailJob.status !== "Closed" ? (
               <footer className="v2-work-detail-actions">
                 <button type="button" onClick={() => onEditJob(detailJob)}><Pencil size={17} /> Edit</button>
+                <button type="button" title="Save as template" onClick={() => {
+                  const templateName = saveJobAsTemplate(detailJob);
+                  setSaveTemplateNotice(`Saved as "${templateName}"`);
+                  setTimeout(() => setSaveTemplateNotice(""), 3000);
+                }}><FileText size={17} /> Template</button>
                 {detailJob.status === "Draft" ? <button type="button" className="v2-primary-button" disabled={Boolean(activeAction)} onClick={() => void runAction(detailJob, "publish")}><Play size={17} /> Publish</button> : null}
                 {detailJob.status === "Open" ? <button type="button" disabled={Boolean(activeAction)} onClick={() => void runAction(detailJob, "pause")}><Pause size={17} /> Pause</button> : null}
                 {detailJob.status === "Paused" ? <button type="button" className="v2-primary-button" disabled={Boolean(activeAction)} onClick={() => void runAction(detailJob, "resume")}><Play size={17} /> Reopen</button> : null}
                 <button type="button" className="v2-destructive-button" disabled={Boolean(activeAction)} onClick={() => void runAction(detailJob, "close")}><XCircle size={17} /> Close</button>
               </footer>
             ) : null}
+            {saveTemplateNotice ? <p className="v2-saved-search-notice" role="status" style={{ padding: "8px 16px" }}>{saveTemplateNotice}</p> : null}
           </article>
         ) : (
           <article className="v2-work-detail-placeholder">
