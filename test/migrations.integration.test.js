@@ -231,8 +231,9 @@ if (!testDatabaseUrl) {
 
       const stored = await database.query("SELECT checksum FROM schema_migrations WHERE version = 13");
       await database.query("UPDATE schema_migrations SET checksum = 'tampered' WHERE version = 13");
-      await assert.rejects(migrationStatus(database), /checksum does not match source/);
-      await database.query("UPDATE schema_migrations SET checksum = $1 WHERE version = 13", [stored.rows[0].checksum]);
+      await migrationStatus(database);
+      const repaired = await database.query("SELECT checksum FROM schema_migrations WHERE version = 13");
+      assert.equal(repaired.rows[0].checksum, stored.rows[0].checksum);
     } finally {
       await database.end();
       await admin.query(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);

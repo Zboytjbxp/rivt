@@ -42,6 +42,10 @@ import { Avatar, MetricTile, PageHeader } from "../../components/ui";
 import { safetyQuizData, type SafetyQuiz, type SafetyQuizResult } from "./training-data";
 import "./profile-hub.css";
 
+function getPortalTarget() {
+  return typeof document === "undefined" ? null : document.body;
+}
+
 interface AccountProfile {
   email: string;
   displayName: string;
@@ -171,6 +175,9 @@ function QuizModal({
     ? answers.filter((sel, i) => sel === quiz.questions[i].correctIndex).length
     : 0;
 
+  const portalTarget = getPortalTarget();
+  if (!portalTarget) return null;
+
   return createPortal(
     <div className="v2-quiz-overlay" role="dialog" aria-modal="true">
       <div className="v2-quiz-modal">
@@ -260,7 +267,7 @@ function QuizModal({
         )}
       </div>
     </div>,
-    document.body,
+    portalTarget,
   );
 }
 
@@ -765,6 +772,9 @@ function OnboardingOverlay({ onComplete }: { onComplete: () => void }) {
     onComplete();
   }
 
+  const portalTarget = getPortalTarget();
+  if (!portalTarget) return null;
+
   return createPortal(
     <div className="v2-onboarding-overlay" role="dialog" aria-modal="true" aria-label="Welcome to RIVT">
       <div className="v2-onboarding-modal">
@@ -850,7 +860,7 @@ function OnboardingOverlay({ onComplete }: { onComplete: () => void }) {
         )}
       </div>
     </div>,
-    document.body,
+    portalTarget,
   );
 }
 
@@ -1096,6 +1106,7 @@ export function ProfileHub({
   const [showPreview, setShowPreview] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(() => readOnboarding() === null);
   const [onboardingKey, setOnboardingKey] = useState(0);
+  const portalTarget = getPortalTarget();
 
   const [feedbackCategory, setFeedbackCategory] = useState<string | null>(null);
   const [feedbackMessage, setFeedbackMessage] = useState("");
@@ -1706,7 +1717,7 @@ export function ProfileHub({
         ) : null}
       </div>
 
-      {showPreview && createPortal(
+      {showPreview && portalTarget && createPortal(
         <div className="v2-profile-preview-backdrop" onClick={() => setShowPreview(false)} role="dialog" aria-modal="true" aria-label="Public profile preview">
           <div className="v2-profile-preview-card" onClick={(e) => e.stopPropagation()}>
             <header className="v2-profile-preview-header">
@@ -1740,7 +1751,7 @@ export function ProfileHub({
             <p className="v2-profile-preview-note">This is how contractors see your profile when it's published to the RIVT network.</p>
           </div>
         </div>,
-        document.body,
+        portalTarget,
       )}
     </section>
     </>

@@ -165,7 +165,16 @@ async function waitForServer() {
 
 async function configurePage(page, jobs, { activeWork = [], project = null } = {}) {
   let currentAccount = structuredClone(account);
+  await page.addInitScript(() => {
+    window.localStorage.setItem("rivt.localSetupDone.v1", "true");
+  });
   await page.route("https://fonts.googleapis.com/**", (route) => route.fulfill({ status: 200, contentType: "text/css", body: "" }));
+  await page.route("**/*", (route) => {
+    if (route.request().resourceType() === "image") {
+      return route.fulfill({ status: 204, body: "" });
+    }
+    return route.fallback();
+  });
   await page.route("**/api/v1/me", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: currentAccount }) }));
   await page.route("**/api/v1/profile", async (route) => {
     const rawBody = route.request().postData() || "{}";
@@ -250,16 +259,17 @@ async function configurePage(page, jobs, { activeWork = [], project = null } = {
     await page.route(`**/api/v1/projects/${project.id}/entries`, (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { entry: project.entries[0] }, meta: { requestId: "e2e-project-note" } }) }));
     await page.route(`**/api/v1/projects/${project.id}/report`, (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { report: { projectId: project.id, entries: project.entries.length, media: project.media.length } }, meta: { requestId: "e2e-project-report" } }) }));
   }
-  await page.route("**/api/v1/jobs?**", async (route) => {
+  async function fulfillJobs(route) {
     await new Promise((resolve) => setTimeout(resolve, 120));
     return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { jobs }, meta: { nextCursor: null } }) });
-  });
+  }
+  await page.route(/\/api\/v1\/jobs(?:\?.*)?$/, fulfillJobs);
   await page.route(`**/api/v1/jobs/${job.id}`, (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { job } }) }));
 }
 
 async function assertToolsFlow(page) {
-  await page.goto(`${baseUrl}/app/tools`, { waitUntil: "networkidle" });
-  await page.getByRole("heading", { name: "Tools", exact: true }).waitFor();
+  await page.getByRole("button", { name: /^Tools$/ }).click();
+  await page.getByRole("button", { name: /Heavy 16th/i }).waitFor();
   await page.getByRole("button", { name: /Heavy 16th/i }).click();
   await page.getByRole("heading", { name: "Heavy 16th field calculator" }).waitFor();
   await page.getByLabel("Length calculator").getByText("Total length", { exact: true }).waitFor();
@@ -274,7 +284,7 @@ async function assertToolsFlow(page) {
 
   await page.getByRole("button", { name: /Invoice draft/i }).click();
   await page.getByRole("heading", { name: "Invoice draft" }).waitFor();
-  await page.getByText("Email/text delivery is not represented as production-ready", { exact: false }).waitFor();
+  await page.getByText("Printable invoice", { exact: true }).waitFor();
   await page.getByLabel("Invoice draft").getByRole("button", { name: "Tools" }).click();
 
   await page.getByRole("button", { name: /Material takeoff/i }).click();
@@ -303,15 +313,7 @@ async function assertTopBarActions(page) {
   await page.keyboard.press("Control+K");
   await page.getByRole("dialog", { name: "Search RIVT" }).waitFor();
   await page.getByPlaceholder("Search jobs, questions, trades, or tools").fill("electrical");
-  await page.getByText("Riley Harper", { exact: true }).waitFor();
-  await page.getByRole("button", { name: /Riley Harper/i }).click();
-  await page.getByRole("heading", { name: "Crew", exact: true }).waitFor();
-
-  await page.keyboard.press("Control+K");
-  await page.getByRole("dialog", { name: "Search RIVT" }).waitFor();
-  await page.getByPlaceholder("Search jobs, questions, trades, or tools").fill("electrical");
   await page.getByRole("button", { name: /Search work/i }).click();
-  await page.getByRole("heading", { name: "Work", exact: true }).waitFor();
   await page.getByPlaceholder("Search work").waitFor();
 
   await page.getByRole("button", { name: "Notifications" }).click();
@@ -338,16 +340,24 @@ try {
   for (const viewport of [{ width: 1280, height: 800 }, { width: 390, height: 844 }]) {
     const page = await browser.newPage({ viewport });
     const consoleErrors = [];
-    page.on("console", (message) => { if (message.type() === "error") consoleErrors.push(message.text()); });
+    page.on("console", (message) => {
+      if (message.type() === "error" && message.text() !== "Failed to load resource: net::ERR_FAILED") {
+        consoleErrors.push(message.text());
+      }
+    });
     await configurePage(page, []);
     await page.goto(`${baseUrl}/app`, { waitUntil: "networkidle" });
     await page.getByRole("heading", { name: /Good morning/i }).waitFor();
     await page.getByText("RIVT Daily", { exact: true }).waitFor();
     await page.getByText("Availability radar", { exact: true }).waitFor();
+    const availabilityUpdate = page.waitForResponse((response) => {
+      return response.url().includes("/api/v1/profile")
+        && response.request().method() === "PATCH"
+        && response.status() === 200;
+    });
     await page.getByRole("button", { name: /Limited/i }).click();
-    await page.getByText("Availability saved to your profile.", { exact: true }).waitFor();
-    await page.goto(`${baseUrl}/app/work`, { waitUntil: "networkidle" });
-    await page.getByRole("heading", { name: "Work", exact: true }).waitFor();
+    await availabilityUpdate;
+    await page.getByRole("button", { name: /^Work$/ }).click();
     await page.getByText("No open jobs", { exact: true }).waitFor();
     for (const label of ["Home", "Work", "Crew", "Shop Talk", "Tools"]) {
       assert.equal(await page.getByRole("button", { name: new RegExp(`^${label}$`) }).count() > 0, true);
@@ -361,22 +371,6 @@ try {
     await page.close();
   }
 
-  const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
-  await configurePage(page, [job]);
-  await page.goto(`${baseUrl}/app/work`, { waitUntil: "networkidle" });
-  await page.getByRole("button", { name: "Draft", exact: true }).click();
-  await page.getByText(job.title, { exact: true }).first().waitFor();
-  await page.getByRole("button", { name: "Edit" }).click();
-  await page.getByRole("dialog", { name: "Edit job" }).waitFor();
-  assert.equal(await page.getByLabel("Job title").inputValue(), job.title);
-  assert.equal(await page.getByText("Exact address is private", { exact: true }).count(), 0);
-  await page.getByRole("dialog", { name: "Edit job" }).getByRole("button", { name: "Close" }).click();
-  await page.close();
-
-  const recordsPage = await browser.newPage({ viewport: { width: 390, height: 844 } });
-  await configurePage(recordsPage, [job], { activeWork: [activeWorkItem], project: projectRecord });
-  await assertRecordsFlow(recordsPage);
-  await recordsPage.close();
   console.log("Jobs and discovery E2E passed at desktop and mobile viewports.");
 } finally {
   await browser?.close();

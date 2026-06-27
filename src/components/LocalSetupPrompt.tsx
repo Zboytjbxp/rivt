@@ -20,6 +20,14 @@ export interface LocalSetupPromptProps {
   onDone: () => void;
 }
 
+function writeLocalSetupDone() {
+  try {
+    window.localStorage.setItem("rivt.localSetupDone.v1", "true");
+  } catch {
+    // localStorage may be unavailable; proceed anyway.
+  }
+}
+
 export function LocalSetupPrompt({ onDone }: LocalSetupPromptProps) {
   const [displayName, setDisplayName] = useState("");
   const [primaryTrade, setPrimaryTrade] = useState<string>(TRADES[0]);
@@ -27,20 +35,20 @@ export function LocalSetupPrompt({ onDone }: LocalSetupPromptProps) {
 
   function handleSubmit() {
     try {
-      const existing = localStorage.getItem("rivt.profile.v1");
+      const existing = window.localStorage.getItem("rivt.profile.v1");
       const profile = existing ? (JSON.parse(existing) as Record<string, unknown>) : {};
       const updated = { ...profile, displayName, primaryTrade };
-      localStorage.setItem("rivt.profile.v1", JSON.stringify(updated));
-      localStorage.setItem("rivt.rateCard.v1", JSON.stringify({ hourlyRate }));
+      window.localStorage.setItem("rivt.profile.v1", JSON.stringify(updated));
+      window.localStorage.setItem("rivt.rateCard.v1", JSON.stringify({ hourlyRate }));
     } catch {
-      // localStorage may be unavailable; proceed anyway
+      // localStorage may be unavailable; proceed anyway.
     }
-    localStorage.setItem("rivt.localSetupDone.v1", "true");
+    writeLocalSetupDone();
     onDone();
   }
 
   function handleSkip() {
-    localStorage.setItem("rivt.localSetupDone.v1", "true");
+    writeLocalSetupDone();
     onDone();
   }
 
@@ -52,7 +60,7 @@ export function LocalSetupPrompt({ onDone }: LocalSetupPromptProps) {
           Welcome to RIVT
         </h2>
         <p className="v2-setup-subtitle">
-          Set up your profile in seconds — you can change this anytime.
+          Set up your profile in seconds. You can change this anytime.
         </p>
 
         <div className="v2-setup-fields">
