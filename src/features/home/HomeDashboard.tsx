@@ -877,8 +877,10 @@ function RevenueGoalWidget() {
   const earned = Math.round(calcEarnings(periodStart));
   const expensesTotal = Math.round(calcExpenses(periodStart));
   const net = earned - expensesTotal;
+  const netDisplay = Math.max(0, net);
+  const overBudget = net < 0;
   const goalValue = isWeek ? goals.weeklyGoal : goals.monthlyGoal;
-  const progress = goalValue > 0 ? Math.min(1, net / goalValue) : 0;
+  const progress = goalValue > 0 ? Math.min(1, netDisplay / goalValue) : 0;
   const pct = Math.round(progress * 100);
 
   function startEdit() {
@@ -942,13 +944,18 @@ function RevenueGoalWidget() {
               onClick={startEdit}
               aria-label="Edit goal"
             >
-              <strong className="v2-revenue-earned">{currency(net)}</strong>
+              <strong className="v2-revenue-earned">{currency(netDisplay)}</strong>
               <span className="v2-revenue-separator">/</span>
               <span className="v2-revenue-goal-value">{currency(goalValue)}</span>
             </button>
-            {expensesTotal > 0 && (
+            {expensesTotal > 0 && !overBudget && (
               <div className="v2-revenue-expense-note">
                 −{currency(expensesTotal)} expenses · net shown
+              </div>
+            )}
+            {overBudget && (
+              <div className="v2-revenue-expense-note" style={{ color: "var(--v2-warning)" }}>
+                −{currency(expensesTotal)} expenses · {currency(Math.abs(net))} over
               </div>
             )}
             <div className="v2-revenue-bar">

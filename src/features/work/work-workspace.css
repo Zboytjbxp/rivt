@@ -2650,3 +2650,122 @@
   background: transparent;
   border-color: transparent;
 }
+
+/* ── Local Jobs Section ─────────────────────────────────────────────────── */
+
+.v2-local-jobs-section {
+  margin: 12px 16px 0;
+  border: 1px solid var(--v2-border);
+  border-radius: var(--v2-radius-lg);
+  overflow: hidden;
+}
+
+.v2-local-jobs-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px 8px;
+  border-bottom: 1px solid var(--v2-border);
+  background: var(--v2-surface-muted);
+}
+
+.v2-local-jobs-eyebrow {
+  font-size: 11px;
+  font-weight: var(--v2-weight-bold);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--v2-accent);
+}
+
+.v2-local-jobs-header small {
+  font-size: 11px;
+  color: var(--v2-text-muted);
+}
+
+.v2-local-jobs-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.v2-local-job-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--v2-border);
+  background: var(--v2-surface);
+}
+
+.v2-local-job-card:last-child {
+  border-bottom: none;
+}
+
+.v2-local-job-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex: 1;
+}
+
+.v2-local-job-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.v2-local-job-title {
+  display: block;
+  font-size: 13px;
+  font-weight: var(--v2-weight-strong);
+  color: var(--v2-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 180px;
+}
+
+.v2-local-job-meta {
+  display: block;
+  font-size: 11px;
+  color: var(--v2-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.v2-local-job-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.v2-local-job-status-pill {
+  font-size: 10px;
+  font-weight: var(--v2-weight-bold);
+  padding: 2px 7px;
+  border-radius: 20px;
+  white-space: nowrap;
+}
+
+.v2-local-job-delete {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: none;
+  color: var(--v2-text-muted);
+  cursor: pointer;
+  border-radius: var(--v2-radius-sm);
+  transition: background 0.15s, color 0.15s;
+}
+
+.v2-local-job-delete:hover {
+  background: color-mix(in srgb, var(--v2-accent) 10%, transparent);
+  color: var(--v2-accent);
+}

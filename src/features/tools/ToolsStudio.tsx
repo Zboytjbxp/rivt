@@ -4617,7 +4617,12 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", onNavigate, 
           <span>Tool apps</span>
           <h2>{activeJob ? `Loaded from ${activeJob.title}` : "Open tools without needing a job first"}</h2>
         </div>
-        <MetricTile className="v2-tools-context-metric" value={activeJob ? activeJob.trade : "Standalone"} label={activeJob ? activeJob.location : "No active job selected"} />
+        <div className="v2-tools-context-badge">
+          {activeJob
+            ? <><span className="v2-tools-context-trade">{activeJob.trade}</span><span className="v2-tools-context-loc">{activeJob.location}</span></>
+            : <span className="v2-tools-context-none">No job selected — tools work standalone</span>
+          }
+        </div>
       </section>
 
       <div className="v2-tool-launch-grid">

@@ -339,7 +339,7 @@ export function ShopTalkView({
   userLocation,
   getPostReactionState,
   getAnswerReactionState,
-  reactionSummary,
+  reactionSummary: _reactionSummary,
   reactionStatus,
   onVotePost,
   onVoteAnswer,
@@ -555,7 +555,7 @@ export function ShopTalkView({
   const selectedPostReactionState = selectedPost
     ? getPostReactionState(selectedPost)
     : { upvotes: 0, downvotes: 0, reaction: null, serverOwned: reactionStatus === "ready", pending: false };
-  const selectedTradeThreads = filteredPosts.filter((post) => post.trade === selectedJobTrade || post.trade === "General");
+  const _selectedTradeThreads = filteredPosts.filter((post) => post.trade === selectedJobTrade || post.trade === "General");
   const topContributors = Object.entries(
     communityPosts.reduce<Record<string, { answers: number; fixes: number; score: number }>>((contributors, post) => {
       post.replies.forEach((reply) => {
@@ -598,7 +598,7 @@ export function ShopTalkView({
       complete: profileBadges.length > 0,
     },
   ];
-  const reactionLedgerLabel = reactionStatus === "ready"
+  const _reactionLedgerLabel = reactionStatus === "ready"
     ? "Server-backed"
     : reactionStatus === "loading"
       ? "Syncing"
@@ -812,30 +812,21 @@ export function ShopTalkView({
                 )}
               </div>
 
-              <div className="shop-talk-pulse" aria-label="Shop Talk social pulse">
-                <div className="shop-talk-pulse-head">
-                  <span>Social hub</span>
-                  <strong>Reaction integrity</strong>
-                </div>
-                <div className="shop-talk-pulse-grid">
-                  <span><strong>{reactionSummary?.reactionsGiven ?? 0}</strong><small>server reactions</small></span>
-                  <span><strong>{selectedTradeThreads.length}</strong><small>{selectedJobTrade} threads</small></span>
-                  <span><strong>{reactionLedgerLabel}</strong><small>ledger status</small></span>
-                </div>
-                {topContributors.length > 0 ? (
+              {topContributors.length > 0 && (
+                <div className="shop-talk-pulse" aria-label="Top contributors">
+                  <div className="shop-talk-pulse-head">
+                    <span>Top hands this week</span>
+                  </div>
                   <div className="shop-talk-contributors">
-                    <small>Top hands this week</small>
-                    {topContributors.map(([name, stats]) => (
+                    {topContributors.slice(0, 3).map(([name, stats]) => (
                       <span key={name}>
                         <b>{name}</b>
-                        <em>{stats.answers} answers - {stats.fixes} fixes</em>
+                        <em>{stats.answers} answers · {stats.fixes} fixes</em>
                       </span>
                     ))}
                   </div>
-                ) : (
-                  <p>Post a question or answer to start earning reputation.</p>
-                )}
-              </div>
+                </div>
+              )}
 
               <div className="shop-talk-fieldbar" aria-label="Shop Talk filters">
                 <label className="shop-talk-search">

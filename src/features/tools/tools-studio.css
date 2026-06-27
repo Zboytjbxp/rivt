@@ -83,6 +83,30 @@
   justify-items: end;
 }
 
+.v2-tools-context-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.v2-tools-context-trade {
+  font-size: 12px;
+  font-weight: var(--v2-weight-bold);
+  color: var(--v2-text);
+}
+
+.v2-tools-context-loc {
+  font-size: 11px;
+  color: var(--v2-text-muted);
+}
+
+.v2-tools-context-none {
+  font-size: 11px;
+  color: var(--v2-text-muted);
+  text-align: right;
+}
+
 .v2-tool-launch-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

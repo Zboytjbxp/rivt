@@ -598,6 +598,61 @@ function CreateJobModal({ onClose, onCreate }: { onClose: () => void; onCreate: 
   );
 }
 
+// ── Local Jobs Panel ─────────────────────────────────────────────────────────
+
+const LOCAL_STATUS_COLORS: Record<string, string> = {
+  Lead: "#94a3b8",
+  Quoted: "#f59e0b",
+  Active: "#22c55e",
+  Invoiced: "#3b82f6",
+  "Paid / Closed": "#6b7280",
+  Archived: "#6b7280",
+};
+
+function LocalJobsSection({ jobs, onDelete }: { jobs: LocalJob[]; onDelete: (id: string) => void }) {
+  if (!jobs.length) return null;
+
+  return (
+    <section className="v2-local-jobs-section" aria-label="My local jobs">
+      <div className="v2-local-jobs-header">
+        <span className="v2-local-jobs-eyebrow">My Jobs</span>
+        <small>{jobs.length} local {jobs.length === 1 ? "job" : "jobs"}</small>
+      </div>
+      <div className="v2-local-jobs-list">
+        {jobs.map((job) => {
+          const color = LOCAL_STATUS_COLORS[job.status] ?? "#94a3b8";
+          return (
+            <div key={job.id} className="v2-local-job-card">
+              <div className="v2-local-job-left">
+                <span className="v2-local-job-status-dot" style={{ background: color }} />
+                <div>
+                  <strong className="v2-local-job-title">{job.title}</strong>
+                  <span className="v2-local-job-meta">
+                    {job.clientName || job.jobType}
+                    {job.scheduledDate ? ` · ${new Date(job.scheduledDate + "T00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}` : ""}
+                    {job.estimatedValue ? ` · $${job.estimatedValue.toLocaleString()}` : ""}
+                  </span>
+                </div>
+              </div>
+              <div className="v2-local-job-right">
+                <span className="v2-local-job-status-pill" style={{ background: color + "22", color }}>{job.status}</span>
+                <button
+                  type="button"
+                  className="v2-local-job-delete"
+                  aria-label={`Delete ${job.title}`}
+                  onClick={() => onDelete(job.id)}
+                >
+                  <X size={13} />
+                </button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
 // ── Job Checklist ─────────────────────────────────────────────────────────────
 
 interface ChecklistItem {
@@ -1310,6 +1365,7 @@ export function WorkWorkspace({
   const [savedSearchNotice, setSavedSearchNotice] = useState("");
   const [saveTemplateNotice, setSaveTemplateNotice] = useState("");
   const [detailJobId, setDetailJobId] = useState<string | null>(null);
+  const [localJobs, setLocalJobs] = useState<LocalJob[]>(readLocalJobs);
 
   const visibleJobs = useMemo(() => {
     if (role !== "contractor") return jobs;
@@ -1637,7 +1693,18 @@ export function WorkWorkspace({
         </section>
       ) : null}
 
-      {error ? <div className="v2-work-error" role="alert"><div><strong>Jobs could not be loaded</strong><span>{error}</span></div><button type="button" onClick={onRetry}><RefreshCw size={16} /> Retry</button></div> : null}
+      {role === "contractor" && localJobs.length > 0 ? (
+        <LocalJobsSection
+          jobs={localJobs}
+          onDelete={(id) => {
+            const updated = localJobs.filter((j) => j.id !== id);
+            setLocalJobs(updated);
+            writeLocalJobs(updated);
+          }}
+        />
+      ) : null}
+
+      {error && (!localJobs.length || !role || role !== "contractor") ? <div className="v2-work-error" role="alert"><div><strong>Jobs could not be loaded</strong><span>{error}</span></div><button type="button" onClick={onRetry}><RefreshCw size={16} /> Retry</button></div> : null}
 
       {role === "contractor" && contractorSection === "pipeline" ? (
         <PipelineBoard openJobs={jobs.filter((j) => j.status === "Open")} />
@@ -1976,7 +2043,8 @@ export function WorkWorkspace({
       {showCreateJob && (
         <CreateJobModal
           onClose={() => setShowCreateJob(false)}
-          onCreate={(_job) => {
+          onCreate={(job) => {
+            setLocalJobs((prev) => [job, ...prev]);
             setCreateJobNotice("Job created and saved to this device.");
             setTimeout(() => setCreateJobNotice(""), 3000);
           }}
