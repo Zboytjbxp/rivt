@@ -629,8 +629,7 @@ export function ShopTalkView({
       .slice(0, 8)
       .map(([tag]) => tag);
   }, [communityPosts]);
-
-  // ── User total helpful votes (rep) ────────────────────────────────────────
+  // User total helpful votes.
   const myTotalRep = useMemo(() => {
     const fromPosts = communityPosts
       .filter(p => p.author === profile.displayName)
@@ -641,19 +640,9 @@ export function ShopTalkView({
     }, 0);
     return fromPosts + fromAnswers;
   }, [communityPosts, profile.displayName, helpfulVotesMap]);
-
-  // ── Per-author rep (for badges on cards) ─────────────────────────────────
+  // Per-author reputation for badges on cards.
   const authorRepMap = useMemo(() => {
     const map: Record<string, number> = {};
-    // Seeded values for demo posts
-    const seededRep: Record<string, number> = {
-      "FieldPro": 87, "CrewLead": 134, "SparkCheck": 62, "PipeWrench": 45,
-      "RoofKing": 23, "HVACPro": 156, "CodeWatcher": 78, "SafetyFirst": 91,
-    };
-    for (const [name, rep] of Object.entries(seededRep)) {
-      map[name] = rep;
-    }
-    // Add real vote aggregation on top
     for (const post of communityPosts) {
       const votes = (post.helpfulVotes ?? 0) + (helpfulVotesMap[post.id] ?? 0);
       if (votes > 0) map[post.author] = (map[post.author] ?? 0) + votes;

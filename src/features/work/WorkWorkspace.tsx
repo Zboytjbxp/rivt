@@ -451,7 +451,7 @@ function ContractorStatsBar({ jobs }: { jobs: Job[] }) {
   );
 }
 
-// ── Local Jobs (rivt.jobs.v1) ─────────────────────────────────────────────────
+// Local job drafts.
 
 interface LocalJob {
   id: string;
@@ -1360,7 +1360,6 @@ export function WorkWorkspace({
   const [matchOffers, setMatchOffers] = useState<CanonicalOffer[]>([]);
   const [matchActiveWork, setMatchActiveWork] = useState<CanonicalActiveWork[]>([]);
   const [applicationMessage, setApplicationMessage] = useState("I am interested in this work and can confirm tools, timing, and site requirements.");
-  const [demoAppliedJobs, setDemoAppliedJobs] = useState<Set<JobId>>(new Set());
   const [savedSearches, setSavedSearches] = useState<SavedSearch[]>(readSavedSearches);
   const [savedSearchNotice, setSavedSearchNotice] = useState("");
   const [saveTemplateNotice, setSaveTemplateNotice] = useState("");
@@ -1872,25 +1871,17 @@ export function WorkWorkspace({
                         </div>
                       ) : null}
                     </div>
-                  ) : demoAppliedJobs.has(detailJob.id) ? (
-                    <div className="v2-offer-card">
-                      <div>
-                        <span>submitted</span>
-                        <strong>Application submitted</strong>
-                        <p>{applicationMessage || "Your application is on file for this job."}</p>
-                      </div>
-                      <div className="v2-match-actions">
-                        <button type="button" onClick={() => setDemoAppliedJobs((prev) => { const next = new Set(prev); next.delete(detailJob.id); return next; })}>Withdraw</button>
-                      </div>
-                    </div>
                   ) : (
                     <div className="v2-apply-box">
                       {detailJob.status !== "Open" && (
                         <p className="v2-match-note">This job is {detailJob.status.toLowerCase()} and not accepting applications right now.</p>
                       )}
+                      {!detailJob.canonical && (
+                        <p className="v2-match-note">Applications require a server-backed published job. This local draft cannot receive applications yet.</p>
+                      )}
                       <label>
                         <span>Message to contractor</span>
-                        <textarea value={applicationMessage} onChange={(event) => setApplicationMessage(event.target.value)} rows={4} disabled={detailJob.status !== "Open"} />
+                        <textarea value={applicationMessage} onChange={(event) => setApplicationMessage(event.target.value)} rows={4} disabled={detailJob.status !== "Open" || !detailJob.canonical} />
                       </label>
                       <div className="v2-match-actions">
                         {detailJob.canonical ? (
@@ -1899,11 +1890,8 @@ export function WorkWorkspace({
                         <button
                           type="button"
                           className="v2-primary-button"
-                          disabled={Boolean(activeAction) || detailJob.status !== "Open"}
-                          onClick={detailJob.canonical
-                            ? () => void handleSubmitApplication(detailJob)
-                            : () => setDemoAppliedJobs((prev) => new Set([...prev, detailJob.id]))
-                          }
+                          disabled={Boolean(activeAction) || detailJob.status !== "Open" || !detailJob.canonical}
+                          onClick={() => void handleSubmitApplication(detailJob)}
                         >
                           Apply
                         </button>

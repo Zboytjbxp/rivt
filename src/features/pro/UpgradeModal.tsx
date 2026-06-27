@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { Lock, Check, Zap, X } from "lucide-react";
-import { usePro } from "./usePro";
 import { hasStripeConfigured, redirectToStripeCheckout } from "../../lib/billing";
 import "./pro.css";
 
@@ -10,43 +9,37 @@ interface UpgradeModalProps {
 }
 
 const BENEFITS = [
-  "Unlimited history — time logs, expenses, mileage",
+  "Unlimited history - time logs, expenses, mileage",
   "Unlimited photo albums",
   "Unlimited punch lists",
   "Export expenses as CSV",
   "PDF invoices & estimates (send to clients)",
   "Client report share link",
-  "Cloud backup — access from any device",
+  "Cloud backup - access from any device",
 ];
 
 export function UpgradeModal({ reason, onClose }: UpgradeModalProps) {
-  const { activatePro } = usePro();
-  const [state, setState] = useState<"idle" | "paying" | "done">("idle");
+  const [state, setState] = useState<"idle" | "paying" | "unavailable">("idle");
 
   function handleUpgrade() {
     if (hasStripeConfigured()) {
       setState("paying");
       redirectToStripeCheckout();
-      // Page will redirect — no further state needed
+      // Page will redirect; entitlement must still be server-owned.
     } else {
-      // Dev/demo fallback: simulate payment
-      setState("paying");
-      setTimeout(() => {
-        activatePro();
-        setState("done");
-        setTimeout(onClose, 2000);
-      }, 1500);
+      setState("unavailable");
     }
   }
 
   return (
     <div className="v2-upgrade-backdrop" onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className="v2-upgrade-modal" role="dialog" aria-modal="true">
-        {state === "done" ? (
+        {state === "unavailable" ? (
           <div className="v2-upgrade-success">
             <Zap size={40} />
-            <strong>Welcome to RIVT Pro!</strong>
-            <p>All features are now unlocked.</p>
+            <strong>Billing is not live yet</strong>
+            <p>RIVT Pro is disabled until checkout and server-owned entitlements are configured.</p>
+            <button type="button" className="v2-secondary-button" onClick={onClose}>Close</button>
           </div>
         ) : (
           <>
@@ -61,7 +54,7 @@ export function UpgradeModal({ reason, onClose }: UpgradeModalProps) {
             </ul>
             <div className="v2-upgrade-price">
               <strong>$99<span>/year</span></strong>
-              <small>About $8/month · cancel anytime</small>
+              <small>About $8/month - cancel anytime</small>
             </div>
             <button
               type="button"
@@ -70,8 +63,8 @@ export function UpgradeModal({ reason, onClose }: UpgradeModalProps) {
               disabled={state === "paying"}
             >
               {state === "paying"
-                ? (hasStripeConfigured() ? "Redirecting to checkout…" : "Processing…")
-                : "Upgrade to Pro — $99/year"}
+                ? "Redirecting to checkout..."
+                : "Upgrade to Pro - $99/year"}
             </button>
             <button type="button" className="v2-upgrade-skip" onClick={onClose}>Maybe later</button>
           </>

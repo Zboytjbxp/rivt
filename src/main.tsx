@@ -3,17 +3,14 @@ import { createRoot } from "react-dom/client";
 import App from "./App";
 import "./styles.css";
 
-// Handle return from Stripe checkout
+// Handle return from checkout without granting frontend-only entitlements.
+// Paid access must come from server-owned billing state before production
+// features are unlocked.
 (function handleUpgradeReturn() {
   const params = new URLSearchParams(window.location.search);
   if (params.get("upgraded") === "1") {
-    try {
-      localStorage.setItem(
-        "rivt.pro.v1",
-        JSON.stringify({ active: true, activatedAt: new Date().toISOString() })
-      );
-    } catch { /* noop */ }
-    // Clean the URL so refreshing doesn't re-trigger
+    try { sessionStorage.setItem("rivt.billing.returned.v1", new Date().toISOString()); } catch { /* noop */ }
+    // Clean the URL so refreshing does not re-trigger local state.
     const clean = window.location.pathname + window.location.hash;
     window.history.replaceState({}, "", clean);
   }

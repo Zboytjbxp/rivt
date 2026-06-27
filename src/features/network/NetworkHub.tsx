@@ -474,7 +474,7 @@ function JobAssignModal({
           </div>
         )}
         {jobs.length === 0 ? (
-          <p className="v2-crew-assign-empty">No active or quoted jobs found in rivt.jobs.v1.</p>
+          <p className="v2-crew-assign-empty">No active, quoted, open, or scheduled jobs are available to assign yet.</p>
         ) : (
           <div className="v2-crew-assign-list">
             {jobs.map((j) => (

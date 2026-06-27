@@ -1,4 +1,4 @@
-# Packet 08 — Gate A Hardening and Pilot Release
+# Packet 08 - Gate A Hardening and Pilot Release
 
 ## Objective
 

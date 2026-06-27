@@ -66,6 +66,19 @@ Production sender verification was completed on 2026-06-19. The Resend API key i
 
 If `EMAIL_DELIVERY_MODE=resend` and either `RESEND_API_KEY` or `EMAIL_FROM` is missing, signup and password recovery must fail closed with `EMAIL_PROVIDER_UNAVAILABLE` / provider setup-required status. Do not bypass verification, return raw verification tokens, or switch to capture delivery for production users.
 
+## Billing Entitlements
+
+Do not unlock paid features from frontend-only state. `VITE_STRIPE_CHECKOUT_URL` may send a user to checkout, but Pro access must be granted by a server-owned entitlement after provider verification/webhook handling is implemented.
+
+```bash
+STRIPE_SECRET_KEY=
+STRIPE_CHECKOUT_URL=
+VITE_STRIPE_CHECKOUT_URL=
+VITE_ALLOW_LOCAL_PRO=false
+```
+
+`VITE_ALLOW_LOCAL_PRO=true` is local-development only and must not be set on the production Railway service. If Stripe checkout or server-owned entitlements are missing, paid tools must fail closed with truthful setup copy rather than simulated success.
+
 Uploads use private S3-compatible object storage and signed download URLs. RIVT production currently targets Railway Object Storage, which exposes an S3-compatible endpoint (`https://t3.storageapi.dev` in Railway's current storage service). Cloudflare R2, AWS S3, Backblaze B2, Supabase Storage S3 compatibility, or another managed S3-compatible provider can be used only if the same private-bucket and signed-URL behavior is preserved.
 
 ```bash

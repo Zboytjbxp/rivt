@@ -9,8 +9,8 @@
  *      https://rivt.pro/?upgraded=1
  *      (or your local dev URL: http://localhost:8787/?upgraded=1)
  *
- * When VITE_STRIPE_CHECKOUT_URL is not set, the app falls back to a
- * simulated upgrade (sets localStorage directly) — useful for local dev.
+ * Gate A rule: billing must fail closed when checkout is not configured.
+ * Do not unlock paid features from frontend-only state in production.
  */
 
 const CHECKOUT_URL = import.meta.env.VITE_STRIPE_CHECKOUT_URL as string | undefined;
