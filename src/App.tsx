@@ -275,6 +275,18 @@ function App() {
   useEffect(() => {
     let cancelled = false;
     async function hydrateAuth() {
+      // Dev bypass: set localStorage key "rivt_dev_bypass=1" to skip auth
+      if (import.meta.env.DEV && localStorage.getItem("rivt_dev_bypass") === "1") {
+        const mockAccount: CanonicalAccount = {
+          id: "dev-user-1", email: "dev@rivt.app", provider: "Email" as const,
+          status: "active", emailVerified: true, primaryRole: "contractor" as const,
+          profile: { displayName: "Jake Torres", locationText: "Jacksonville, FL", onboardingStatus: "complete" as const, trades: [{ name: "Electrician" }] },
+          organizations: [{ name: "Torres Electric LLC" }],
+        } as unknown as CanonicalAccount;
+        applyCanonicalAccount(mockAccount);
+        setAuthLoading(false);
+        return;
+      }
       try {
         const [meResponse, providersResponse] = await Promise.all([
           fetch(apiPath("/api/v1/me"), { credentials: "include" }),

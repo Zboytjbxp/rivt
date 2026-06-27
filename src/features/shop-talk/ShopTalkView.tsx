@@ -1,4 +1,4 @@
-import { type CSSProperties, useEffect, useState } from "react";
+import { type CSSProperties, useEffect, useMemo, useState } from "react";
 import {
   ArrowLeft,
   Award,
@@ -9,6 +9,7 @@ import {
   ChevronDown,
   ExternalLink,
   Flag,
+  Hash,
   MessageCircle,
   Newspaper,
   Plus,
@@ -16,6 +17,7 @@ import {
   Send,
   ShieldCheck,
   Sparkles,
+  Star,
   ThumbsDown,
   ThumbsUp,
   X,
@@ -77,6 +79,7 @@ export interface CommunityPost {
   body: string;
   upvotes: number;
   downvotes: number;
+  helpfulVotes?: number;
   replies: CommunityAnswer[];
   createdAt: string;
   status: "Open" | "Verified Fix" | "Needs a pro answer";
@@ -116,6 +119,8 @@ export interface CommunityReport {
 }
 
 const specialtyOptions = tradeOptions.filter((trade): trade is Trade => trade !== "All trades");
+
+const PREDEFINED_TAGS = ["#electrical", "#plumbing", "#hvac", "#permits", "#safety", "#tools", "#osha", "#framing", "#roofing"];
 
 const communityBadgeThresholds: CommunityBadgeThresholds = {
   firstAssistVerifiedFixes: 1,
@@ -334,7 +339,7 @@ export function ShopTalkView({
   userLocation,
   getPostReactionState,
   getAnswerReactionState,
-  reactionSummary,
+  reactionSummary: _reactionSummary,
   reactionStatus,
   onVotePost,
   onVoteAnswer,
@@ -376,10 +381,15 @@ export function ShopTalkView({
   const [newsFetched, setNewsFetched] = useState(false);
   const [flairFilter, setFlairFilter] = useState<PostFlair | "All">("All");
   const [bookmarkedIds, setBookmarkedIds] = useState<Set<number>>(() => {
-    try { return new Set(JSON.parse(localStorage.getItem("rivt.bookmarks.v1") ?? "[]") as number[]); }
+    try { return new Set(JSON.parse(localStorage.getItem("rivt.shopTalkBookmarks.v1") ?? "[]") as number[]); }
     catch { return new Set(); }
   });
   const [showBookmarked, setShowBookmarked] = useState(false);
+  const [helpfulVotesMap, setHelpfulVotesMap] = useState<Record<number, number>>(() => {
+    try { return JSON.parse(localStorage.getItem("rivt.shopTalk.v1") ?? "{}") as Record<number, number>; }
+    catch { return {}; }
+  });
+  const [activeTrendingTag, setActiveTrendingTag] = useState<string | null>(null);
   const [locallyAnswered, setLocallyAnswered] = useState<Set<number>>(new Set());
   const [filterType, setFilterType] = useState<PostType | "all">("all");
   const [expandedReplyPostId, setExpandedReplyPostId] = useState<string | null>(null);
@@ -413,7 +423,21 @@ export function ShopTalkView({
     setBookmarkedIds(prev => {
       const next = new Set(prev);
       if (next.has(postId)) next.delete(postId); else next.add(postId);
-      try { localStorage.setItem("rivt.bookmarks.v1", JSON.stringify([...next])); } catch { /* noop */ }
+      try { localStorage.setItem("rivt.shopTalkBookmarks.v1", JSON.stringify([...next])); } catch { /* noop */ }
+      return next;
+    });
+  }
+
+  function incrementHelpfulVote(postId: number) {
+    setHelpfulVotesMap(prev => {
+      const base = communityPosts.find(p => p.id === postId)?.helpfulVotes ?? 0;
+      const extra = prev[postId] ?? 0;
+      const next = { ...prev, [postId]: extra + 1 };
+      const totalForPost = base + extra + 1;
+      // store total delta per post
+      const persistMap = { ...next };
+      try { localStorage.setItem("rivt.shopTalk.v1", JSON.stringify(persistMap)); } catch { /* noop */ }
+      void totalForPost;
       return next;
     });
   }
@@ -482,7 +506,11 @@ export function ShopTalkView({
       const postEffectiveType: PostType = post.type ?? "general";
       if (postEffectiveType !== filterType) return false;
     }
-    if (!normalizedTalkQuery) return true;
+    if (activeTrendingTag) {
+      const needle = activeTrendingTag.slice(1).toLowerCase();
+      const haystack = `${post.title} ${post.body}`.toLowerCase();
+      if (!haystack.includes(needle)) return false;
+    }
 
     const searchable = [
       post.title,
@@ -494,7 +522,8 @@ export function ShopTalkView({
       ...post.replies.map((reply) => `${reply.author} ${reply.body}`),
     ].join(" ").toLowerCase();
 
-    return searchable.includes(normalizedTalkQuery);
+    if (normalizedTalkQuery && !searchable.includes(normalizedTalkQuery)) return false;
+    return true;
   });
   const filteredNews = displayNews.filter((item) => {
     if (!normalizedNewsQuery) return true;
@@ -526,7 +555,7 @@ export function ShopTalkView({
   const selectedPostReactionState = selectedPost
     ? getPostReactionState(selectedPost)
     : { upvotes: 0, downvotes: 0, reaction: null, serverOwned: reactionStatus === "ready", pending: false };
-  const selectedTradeThreads = filteredPosts.filter((post) => post.trade === selectedJobTrade || post.trade === "General");
+  const _selectedTradeThreads = filteredPosts.filter((post) => post.trade === selectedJobTrade || post.trade === "General");
   const topContributors = Object.entries(
     communityPosts.reduce<Record<string, { answers: number; fixes: number; score: number }>>((contributors, post) => {
       post.replies.forEach((reply) => {
@@ -569,13 +598,72 @@ export function ShopTalkView({
       complete: profileBadges.length > 0,
     },
   ];
-  const reactionLedgerLabel = reactionStatus === "ready"
+  const _reactionLedgerLabel = reactionStatus === "ready"
     ? "Server-backed"
     : reactionStatus === "loading"
       ? "Syncing"
       : reactionStatus === "error"
         ? "Offline"
         : "Not loaded";
+
+  // ── Trending tags ─────────────────────────────────────────────────────────
+  const trendingTags = useMemo(() => {
+    const counts: Record<string, number> = {};
+    // Count predefined tags from post content
+    for (const post of communityPosts) {
+      const text = `${post.title} ${post.body}`.toLowerCase();
+      for (const tag of PREDEFINED_TAGS) {
+        if (text.includes(tag.slice(1))) {
+          counts[tag] = (counts[tag] ?? 0) + 1;
+        }
+      }
+      // Also extract inline #hashtags
+      const matches = text.matchAll(/#(\w+)/g);
+      for (const match of matches) {
+        const t = `#${match[1]}`;
+        counts[t] = (counts[t] ?? 0) + 1;
+      }
+    }
+    return Object.entries(counts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 8)
+      .map(([tag]) => tag);
+  }, [communityPosts]);
+
+  // ── User total helpful votes (rep) ────────────────────────────────────────
+  const myTotalRep = useMemo(() => {
+    const fromPosts = communityPosts
+      .filter(p => p.author === profile.displayName)
+      .reduce((sum, p) => sum + (p.helpfulVotes ?? 0) + (helpfulVotesMap[p.id] ?? 0), 0);
+    const fromAnswers = communityPosts.reduce((sum, post) => {
+      const myAnswers = post.replies.filter(r => r.author === profile.displayName);
+      return sum + myAnswers.reduce((s, a) => s + Math.max(0, a.upvotes - a.downvotes), 0);
+    }, 0);
+    return fromPosts + fromAnswers;
+  }, [communityPosts, profile.displayName, helpfulVotesMap]);
+
+  // ── Per-author rep (for badges on cards) ─────────────────────────────────
+  const authorRepMap = useMemo(() => {
+    const map: Record<string, number> = {};
+    // Seeded values for demo posts
+    const seededRep: Record<string, number> = {
+      "FieldPro": 87, "CrewLead": 134, "SparkCheck": 62, "PipeWrench": 45,
+      "RoofKing": 23, "HVACPro": 156, "CodeWatcher": 78, "SafetyFirst": 91,
+    };
+    for (const [name, rep] of Object.entries(seededRep)) {
+      map[name] = rep;
+    }
+    // Add real vote aggregation on top
+    for (const post of communityPosts) {
+      const votes = (post.helpfulVotes ?? 0) + (helpfulVotesMap[post.id] ?? 0);
+      if (votes > 0) map[post.author] = (map[post.author] ?? 0) + votes;
+      for (const reply of post.replies) {
+        const score = Math.max(0, reply.upvotes - reply.downvotes);
+        if (score > 0) map[reply.author] = (map[reply.author] ?? 0) + score;
+      }
+    }
+    return map;
+  }, [communityPosts, helpfulVotesMap]);
 
   function submitAnswer() {
     const body = answerDraft.trim();
@@ -724,30 +812,21 @@ export function ShopTalkView({
                 )}
               </div>
 
-              <div className="shop-talk-pulse" aria-label="Shop Talk social pulse">
-                <div className="shop-talk-pulse-head">
-                  <span>Social hub</span>
-                  <strong>Reaction integrity</strong>
-                </div>
-                <div className="shop-talk-pulse-grid">
-                  <span><strong>{reactionSummary?.reactionsGiven ?? 0}</strong><small>server reactions</small></span>
-                  <span><strong>{selectedTradeThreads.length}</strong><small>{selectedJobTrade} threads</small></span>
-                  <span><strong>{reactionLedgerLabel}</strong><small>ledger status</small></span>
-                </div>
-                {topContributors.length > 0 ? (
+              {topContributors.length > 0 && (
+                <div className="shop-talk-pulse" aria-label="Top contributors">
+                  <div className="shop-talk-pulse-head">
+                    <span>Top hands this week</span>
+                  </div>
                   <div className="shop-talk-contributors">
-                    <small>Top hands this week</small>
-                    {topContributors.map(([name, stats]) => (
+                    {topContributors.slice(0, 3).map(([name, stats]) => (
                       <span key={name}>
                         <b>{name}</b>
-                        <em>{stats.answers} answers - {stats.fixes} fixes</em>
+                        <em>{stats.answers} answers · {stats.fixes} fixes</em>
                       </span>
                     ))}
                   </div>
-                ) : (
-                  <p>Post a question or answer to start earning reputation.</p>
-                )}
-              </div>
+                </div>
+              )}
 
               <div className="shop-talk-fieldbar" aria-label="Shop Talk filters">
                 <label className="shop-talk-search">
@@ -833,6 +912,31 @@ export function ShopTalkView({
                 ))}
               </div>
 
+              {/* Trending tags */}
+              {trendingTags.length > 0 && (
+                <div className="v2-st-trending-row" aria-label="Trending tags">
+                  <span className="v2-st-trending-label"><Hash size={11} /> Trending</span>
+                  <button
+                    key="all"
+                    type="button"
+                    className={`v2-st-trending-pill${activeTrendingTag === null ? " is-active" : ""}`}
+                    onClick={() => setActiveTrendingTag(null)}
+                  >
+                    All
+                  </button>
+                  {trendingTags.map((tag) => (
+                    <button
+                      key={tag}
+                      type="button"
+                      className={`v2-st-trending-pill${activeTrendingTag === tag ? " is-active" : ""}`}
+                      onClick={() => setActiveTrendingTag(prev => prev === tag ? null : tag)}
+                    >
+                      {tag}
+                    </button>
+                  ))}
+                </div>
+              )}
+
               {persona && (
                 <div className="shop-talk-persona-header">
                   <span>{persona.emoji} {persona.shopTalkLabel}</span>
@@ -878,6 +982,11 @@ export function ShopTalkView({
                           {locallyAnswered.has(post.id) && (
                             <span className="shop-talk-answered-badge">Answered ✓</span>
                           )}
+                          {(authorRepMap[post.author] ?? 0) > 0 && (
+                            <span className="v2-st-rep-badge">
+                              <Star size={10} /> {authorRepMap[post.author]} rep
+                            </span>
+                          )}
                         </div>
                         <strong>{post.title}</strong>
                         {(post.subTrade || post.subLocation || post.subRate) && (
@@ -910,6 +1019,15 @@ export function ShopTalkView({
                         }}
                       >
                         💬 Reply ({postReplies.length})
+                      </button>
+                      <button
+                        type="button"
+                        className="v2-st-helpful-btn"
+                        aria-label="Mark as helpful"
+                        onClick={(e) => { e.stopPropagation(); incrementHelpfulVote(post.id); }}
+                      >
+                        <ThumbsUp size={12} />
+                        Helpful ({(post.helpfulVotes ?? 0) + (helpfulVotesMap[post.id] ?? 0)})
                       </button>
                       {isExpanded && (
                         <div className="v2-st-replies">
@@ -1125,6 +1243,7 @@ export function ShopTalkView({
                     <span>Answer as {profile.displayName}</span>
                     <strong>{profileBadges.length ? profileBadges.join(", ") : "New contributor"}</strong>
                   </div>
+                  <span className="v2-st-my-rep-badge"><Star size={12} /> {myTotalRep} rep</span>
                   <span className="answer-trade-tag">{selectedPost.trade}</span>
                 </div>
                 <div className="answer-guidance-card">

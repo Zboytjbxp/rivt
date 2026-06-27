@@ -637,8 +637,24 @@ function ServiceAreaSelector() {
 
 // ── Data Export Button ────────────────────────────────────────────────────────
 
+function downloadBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
 function DataExportButton() {
-  function handleExport() {
+  const [toast, setToast] = useState("");
+
+  function showToast(msg: string) {
+    setToast(msg);
+    setTimeout(() => setToast(""), 3000);
+  }
+
+  function handleExportJSON() {
     const data: Record<string, unknown> = {};
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
@@ -648,20 +664,305 @@ function DataExportButton() {
     }
     const json = JSON.stringify(data, null, 2);
     const blob = new Blob([json], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `rivt-data-${new Date().toISOString().slice(0, 10)}.json`;
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    downloadBlob(blob, `rivt-export-${new Date().toISOString().slice(0, 10)}.json`);
+    showToast("Data exported successfully");
   }
+
+  function handleExportJobsCSV() {
+    type JobRecord = Record<string, unknown>;
+    let jobs: JobRecord[] = [];
+    try { jobs = (JSON.parse(localStorage.getItem("rivt.jobs.v1") ?? "[]") as JobRecord[]); } catch { /* noop */ }
+    if (!Array.isArray(jobs) || jobs.length === 0) {
+      showToast("No jobs found to export");
+      return;
+    }
+    const headers = Array.from(new Set(jobs.flatMap(j => Object.keys(j))));
+    const rows = jobs.map(j => headers.map(h => {
+      const v = j[h];
+      const s = v == null ? "" : typeof v === "object" ? JSON.stringify(v) : String(v);
+      return `"${s.replace(/"/g, '""')}"`;
+    }).join(","));
+    const csv = [headers.join(","), ...rows].join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    downloadBlob(blob, `rivt-jobs-${new Date().toISOString().slice(0, 10)}.csv`);
+    showToast("Data exported successfully");
+  }
+
   return (
-    <div className="v2-data-export">
-      <button type="button" className="v2-btn-secondary" onClick={handleExport}>
-        <Download size={15} /> Export my data
-      </button>
-      <small>Downloads all your locally-stored RIVT data as JSON.</small>
+    <div className="v2-data-export-section">
+      {toast && (
+        <div className="v2-export-toast" role="status">{toast}</div>
+      )}
+      <div className="v2-data-export">
+        <button type="button" className="v2-btn-secondary" onClick={handleExportJSON}>
+          <Download size={15} /> Export data (JSON)
+        </button>
+        <small>Downloads jobs, sessions, expenses, clients, crew &amp; all RIVT data.</small>
+      </div>
+      <div className="v2-data-export">
+        <button type="button" className="v2-btn-secondary" onClick={handleExportJobsCSV}>
+          <Download size={15} /> Export jobs (CSV)
+        </button>
+        <small>Downloads your job records as a spreadsheet.</small>
+      </div>
     </div>
+  );
+}
+
+// ── Onboarding Flow ────────────────────────────────────────────────────────────
+
+const ONBOARDING_TRADES = [
+  "Electrician", "Plumber", "HVAC", "Carpenter", "General Contractor",
+  "Roofer", "Painter", "Welder", "Landscaper", "Mason", "Tile Setter", "Other",
+] as const;
+type OnboardingTrade = typeof ONBOARDING_TRADES[number];
+
+interface OnboardingData {
+  trade: OnboardingTrade;
+  hourlyRate: string;
+  city: string;
+  completedAt: string;
+}
+
+function readOnboarding(): OnboardingData | null {
+  try {
+    const stored = localStorage.getItem("rivt.onboarding.v1");
+    if (!stored) return null;
+    return JSON.parse(stored) as OnboardingData;
+  } catch { return null; }
+}
+
+function OnboardingOverlay({ onComplete }: { onComplete: () => void }) {
+  const [step, setStep] = useState(0);
+  const [selectedTrade, setSelectedTrade] = useState<OnboardingTrade | null>(null);
+  const [hourlyRate, setHourlyRate] = useState("");
+  const [city, setCity] = useState("");
+
+  function finishOnboarding() {
+    if (!selectedTrade) return;
+    const data: OnboardingData = {
+      trade: selectedTrade,
+      hourlyRate,
+      city,
+      completedAt: new Date().toISOString(),
+    };
+    try { localStorage.setItem("rivt.onboarding.v1", JSON.stringify(data)); } catch { /* noop */ }
+    // Also save to rateCard
+    if (selectedTrade && hourlyRate) {
+      const entry = {
+        id: crypto.randomUUID(),
+        trade: selectedTrade,
+        hourlyRate: parseFloat(hourlyRate) || 0,
+        dayRate: 0,
+        minimumCharge: 0,
+        notes: city ? `Based in ${city}` : "",
+      };
+      try {
+        const existing = JSON.parse(localStorage.getItem("rivt.rateCard.v1") ?? "[]") as unknown[];
+        localStorage.setItem("rivt.rateCard.v1", JSON.stringify([entry, ...existing].slice(0, 12)));
+      } catch { /* noop */ }
+    }
+    onComplete();
+  }
+
+  return createPortal(
+    <div className="v2-onboarding-overlay" role="dialog" aria-modal="true" aria-label="Welcome to RIVT">
+      <div className="v2-onboarding-modal">
+        <div className="v2-onboarding-stepper">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className={`v2-onboarding-step${step === i ? " is-active" : step > i ? " is-done" : ""}`} />
+          ))}
+        </div>
+
+        {step === 0 && (
+          <div className="v2-onboarding-body">
+            <h2>What's your trade?</h2>
+            <p>Pick the one that fits best — you can add more later in Settings.</p>
+            <div className="v2-onboarding-trade-grid">
+              {ONBOARDING_TRADES.map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  className={`v2-onboarding-trade-chip${selectedTrade === t ? " is-active" : ""}`}
+                  onClick={() => setSelectedTrade(t)}
+                >
+                  {t}
+                </button>
+              ))}
+            </div>
+            <button
+              type="button"
+              className="v2-primary-button v2-onboarding-next"
+              disabled={!selectedTrade}
+              onClick={() => setStep(1)}
+            >
+              Next
+            </button>
+          </div>
+        )}
+
+        {step === 1 && (
+          <div className="v2-onboarding-body">
+            <h2>Set your rate</h2>
+            <p>This helps contractors match your range. You can update it anytime.</p>
+            <div className="v2-onboarding-fields">
+              <label>
+                <span>Hourly rate ($)</span>
+                <input
+                  type="number"
+                  min="0"
+                  placeholder="e.g. 75"
+                  value={hourlyRate}
+                  onChange={(e) => setHourlyRate(e.target.value)}
+                />
+              </label>
+              <label>
+                <span>What city do you work in?</span>
+                <input
+                  type="text"
+                  placeholder="e.g. Jacksonville, FL"
+                  value={city}
+                  onChange={(e) => setCity(e.target.value)}
+                />
+              </label>
+            </div>
+            <div className="v2-onboarding-actions">
+              <button type="button" className="v2-secondary-button" onClick={() => setStep(0)}>Back</button>
+              <button type="button" className="v2-primary-button" onClick={() => setStep(2)}>Next</button>
+            </div>
+          </div>
+        )}
+
+        {step === 2 && (
+          <div className="v2-onboarding-body v2-onboarding-summary">
+            <div className="v2-onboarding-check">✓</div>
+            <h2>You're all set!</h2>
+            <div className="v2-onboarding-summary-card">
+              <div><span>Trade</span><strong>{selectedTrade}</strong></div>
+              {hourlyRate && <div><span>Hourly rate</span><strong>${hourlyRate}/hr</strong></div>}
+              {city && <div><span>City</span><strong>{city}</strong></div>}
+            </div>
+            <p>Your profile is ready. You can update this anytime in Settings.</p>
+            <button type="button" className="v2-primary-button v2-onboarding-next" onClick={finishOnboarding}>
+              Get Started
+            </button>
+          </div>
+        )}
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
+// ── Business Settings Section ──────────────────────────────────────────────────
+
+interface BusinessInfo {
+  companyName: string;
+  licenseNumber: string;
+  insuranceProvider: string;
+  insuranceExpiry: string;
+  businessAddress: string;
+  website: string;
+  businessPhone: string;
+}
+
+function readBusinessInfo(): BusinessInfo {
+  try {
+    const stored = localStorage.getItem("rivt.business.v1");
+    if (!stored) return { companyName: "", licenseNumber: "", insuranceProvider: "", insuranceExpiry: "", businessAddress: "", website: "", businessPhone: "" };
+    return JSON.parse(stored) as BusinessInfo;
+  } catch {
+    return { companyName: "", licenseNumber: "", insuranceProvider: "", insuranceExpiry: "", businessAddress: "", website: "", businessPhone: "" };
+  }
+}
+
+function insuranceStatus(expiryDate: string): "ok" | "soon" | "expired" {
+  if (!expiryDate) return "ok";
+  const expiry = new Date(expiryDate).getTime();
+  const now = Date.now();
+  if (expiry < now) return "expired";
+  if (expiry - now < 60 * 24 * 60 * 60 * 1000) return "soon";
+  return "ok";
+}
+
+function BusinessSettingsSection() {
+  const [info, setInfo] = useState<BusinessInfo>(readBusinessInfo);
+  const [saved, setSaved] = useState(false);
+
+  function save() {
+    try { localStorage.setItem("rivt.business.v1", JSON.stringify(info)); } catch { /* noop */ }
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2500);
+  }
+
+  const insStatus = insuranceStatus(info.insuranceExpiry);
+
+  return (
+    <section className="v2-profile-panel v2-profile-panel-wide v2-business-section">
+      <header>
+        <span>Business</span>
+        <strong>Company &amp; insurance details</strong>
+      </header>
+      <div className="v2-business-form">
+        <div className="v2-business-grid">
+          <label>
+            <span>Company name</span>
+            <input value={info.companyName} onChange={(e) => setInfo({ ...info, companyName: e.target.value })} placeholder="Acme Electric LLC" />
+          </label>
+          <label>
+            <span>License number</span>
+            <input value={info.licenseNumber} onChange={(e) => setInfo({ ...info, licenseNumber: e.target.value })} placeholder="EC-1234567" />
+          </label>
+          <label>
+            <span>Insurance provider</span>
+            <input value={info.insuranceProvider} onChange={(e) => setInfo({ ...info, insuranceProvider: e.target.value })} placeholder="Acuity, Travelers…" />
+          </label>
+          <label>
+            <span>Insurance expiry</span>
+            <input
+              type="date"
+              value={info.insuranceExpiry}
+              onChange={(e) => setInfo({ ...info, insuranceExpiry: e.target.value })}
+              className={insStatus !== "ok" ? `v2-business-input-warn is-${insStatus}` : ""}
+            />
+            {insStatus === "soon" && <small className="v2-business-warn">Expires within 60 days</small>}
+            {insStatus === "expired" && <small className="v2-business-warn is-expired">Insurance expired</small>}
+          </label>
+          <label className="v2-business-wide">
+            <span>Business address</span>
+            <input value={info.businessAddress} onChange={(e) => setInfo({ ...info, businessAddress: e.target.value })} placeholder="123 Main St, Jacksonville, FL 32202" />
+          </label>
+          <label>
+            <span>Website / portfolio URL</span>
+            <input type="url" value={info.website} onChange={(e) => setInfo({ ...info, website: e.target.value })} placeholder="https://acmeelectric.com" />
+          </label>
+          <label>
+            <span>Business phone</span>
+            <input type="tel" value={info.businessPhone} onChange={(e) => setInfo({ ...info, businessPhone: e.target.value })} placeholder="(904) 555-0100" />
+          </label>
+        </div>
+        {saved && <p className="v2-profile-action-message is-success" role="status">Business info saved.</p>}
+        <button type="button" className="v2-primary-button" onClick={save}>Save business info</button>
+      </div>
+
+      {/* Business Card Preview */}
+      {info.companyName && (
+        <div className="v2-business-card-preview">
+          <div className="v2-biz-card">
+            <div className="v2-biz-card-logo">RIVT</div>
+            <div className="v2-biz-card-body">
+              <strong>{info.companyName}</strong>
+              {info.licenseNumber && <span>Lic #{info.licenseNumber}</span>}
+              {info.businessAddress && <span>{info.businessAddress}</span>}
+              {info.businessPhone && <span>{info.businessPhone}</span>}
+              {info.website && <a href={info.website} target="_blank" rel="noreferrer">{info.website.replace(/^https?:\/\//, "")}</a>}
+              {info.insuranceProvider && <span>Insured by {info.insuranceProvider}</span>}
+            </div>
+          </div>
+          <small>This is how your info appears to clients</small>
+        </div>
+      )}
+    </section>
   );
 }
 
@@ -793,6 +1094,8 @@ export function ProfileHub({
     safetyUpdates: false,
   });
   const [showPreview, setShowPreview] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(() => readOnboarding() === null);
+  const [onboardingKey, setOnboardingKey] = useState(0);
 
   const [feedbackCategory, setFeedbackCategory] = useState<string | null>(null);
   const [feedbackMessage, setFeedbackMessage] = useState("");
@@ -859,18 +1162,23 @@ export function ProfileHub({
 
   if (view === "Safety & Training") {
     return (
-      <section className="v2-profile-page" aria-label="Safety & Training">
-        <PageHeader
-          className="v2-profile-header"
-          title="Safety & Training"
-          description={profileViewDescriptions["Safety & Training"]}
-        />
-        <SafetyTrainingSection
-          safetyQuizResults={safetyQuizResults}
-          safetyCertCount={safetyCertCount}
-          onQuizComplete={onQuizComplete}
-        />
-      </section>
+      <>
+        {showOnboarding && (
+          <OnboardingOverlay key={onboardingKey} onComplete={() => setShowOnboarding(false)} />
+        )}
+        <section className="v2-profile-page" aria-label="Safety & Training">
+          <PageHeader
+            className="v2-profile-header"
+            title="Safety & Training"
+            description={profileViewDescriptions["Safety & Training"]}
+          />
+          <SafetyTrainingSection
+            safetyQuizResults={safetyQuizResults}
+            safetyCertCount={safetyCertCount}
+            onQuizComplete={onQuizComplete}
+          />
+        </section>
+      </>
     );
   }
 
@@ -884,6 +1192,10 @@ export function ProfileHub({
 
   if (view === "Feedback") {
     return (
+      <>
+        {showOnboarding && (
+          <OnboardingOverlay key={onboardingKey} onComplete={() => setShowOnboarding(false)} />
+        )}
       <section className="v2-profile-page" aria-label="Feedback">
         <PageHeader
           className="v2-profile-header"
@@ -945,11 +1257,16 @@ export function ProfileHub({
           </section>
         </div>
       </section>
+      </>
     );
   }
 
   if (view === "Trust & Legal") {
     return (
+      <>
+        {showOnboarding && (
+          <OnboardingOverlay key={onboardingKey} onComplete={() => setShowOnboarding(false)} />
+        )}
       <section className="v2-profile-page" aria-label="Trust & Legal">
         <PageHeader
           className="v2-profile-header"
@@ -1055,10 +1372,15 @@ export function ProfileHub({
           </section>
         </div>
       </section>
+      </>
     );
   }
 
   return (
+    <>
+      {showOnboarding && (
+        <OnboardingOverlay key={onboardingKey} onComplete={() => setShowOnboarding(false)} />
+      )}
     <section className="v2-profile-page" aria-label={view}>
       <PageHeader
         className="v2-profile-header"
@@ -1313,6 +1635,9 @@ export function ProfileHub({
           </section>
         ) : null}
 
+        {/* Business Settings — Settings only */}
+        {view === "Settings" ? <BusinessSettingsSection /> : null}
+
         {/* Cert tracker — Settings only */}
         {view === "Settings" ? <CertTrackerSection /> : null}
 
@@ -1352,6 +1677,23 @@ export function ProfileHub({
             <button type="button" className="v2-secondary-button" onClick={onLogout}>
               <LogOut size={16} />
               Sign out
+            </button>
+          </section>
+        ) : null}
+
+        {/* Redo setup — Settings only */}
+        {view === "Settings" ? (
+          <section className="v2-profile-panel v2-profile-panel-wide v2-settings-signout-section">
+            <div>
+              <strong>Redo setup</strong>
+              <span>Update your trade, rate, and city from the onboarding flow.</span>
+            </div>
+            <button
+              type="button"
+              className="v2-secondary-button"
+              onClick={() => { setOnboardingKey(k => k + 1); setShowOnboarding(true); }}
+            >
+              Redo setup
             </button>
           </section>
         ) : null}
@@ -1401,5 +1743,6 @@ export function ProfileHub({
         document.body,
       )}
     </section>
+    </>
   );
 }

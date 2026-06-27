@@ -11645,3 +11645,19 @@ textarea:focus-visible {
 .v2-st-reply-input-row { display: flex; gap: 6px; margin-top: 10px; }
 .v2-st-reply-input { flex: 1; padding: 8px 10px; border: 1px solid var(--v2-border); border-radius: var(--v2-radius-sm); background: var(--v2-surface-muted); color: var(--v2-text); font-size: 13px; }
 .v2-st-reply-send-btn { padding: 8px 14px; background: var(--v2-accent); color: white; border: none; border-radius: var(--v2-radius-sm); font-size: 13px; font-weight: var(--v2-weight-bold); cursor: pointer; }
+
+/* Trending tags */
+.v2-st-trending-row { display: flex; align-items: center; gap: 6px; overflow-x: auto; padding: 8px 16px; border-bottom: 1px solid var(--v2-border); scrollbar-width: none; }
+.v2-st-trending-row::-webkit-scrollbar { display: none; }
+.v2-st-trending-label { display: inline-flex; align-items: center; gap: 3px; font-size: 10px; font-weight: var(--v2-weight-bold); letter-spacing: 0.07em; text-transform: uppercase; color: var(--v2-text-muted); white-space: nowrap; flex-shrink: 0; }
+.v2-st-trending-pill { padding: 4px 11px; border: 1px solid color-mix(in srgb, var(--v2-border) 70%, transparent); border-radius: 999px; background: var(--v2-surface-muted); color: var(--v2-text-muted); font-size: 12px; font-weight: var(--v2-weight-strong); cursor: pointer; white-space: nowrap; flex-shrink: 0; transition: border-color 0.12s, background 0.12s, color 0.12s; }
+.v2-st-trending-pill:hover { border-color: var(--v2-accent); color: var(--v2-text); }
+.v2-st-trending-pill.is-active { border-color: var(--v2-accent); background: var(--v2-accent-soft); color: var(--v2-accent); }
+
+/* Rep badges */
+.v2-st-rep-badge { display: inline-flex; align-items: center; gap: 3px; padding: 2px 7px; background: color-mix(in srgb, #f59e0b 12%, transparent); color: #b45309; border-radius: 999px; font-size: 10px; font-weight: var(--v2-weight-bold); }
+.v2-st-my-rep-badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; background: color-mix(in srgb, #f59e0b 14%, transparent); color: #b45309; border-radius: 999px; font-size: 12px; font-weight: var(--v2-weight-bold); white-space: nowrap; }
+
+/* Helpful vote button */
+.v2-st-helpful-btn { display: inline-flex; align-items: center; gap: 4px; background: none; border: none; color: var(--v2-text-muted); font-size: 12px; cursor: pointer; padding: 4px 0; transition: color 0.12s; }
+.v2-st-helpful-btn:hover { color: var(--v2-accent); }

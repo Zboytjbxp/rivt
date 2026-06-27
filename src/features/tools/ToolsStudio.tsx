@@ -9,7 +9,6 @@ import {
   CheckCircle2,
   CheckSquare,
   Clipboard,
-  Circle,
   Clock,
   CloudSun,
   Copy,
@@ -24,7 +23,6 @@ import {
   Loader2,
   Lock,
   Mail,
-  MapPin,
   MessageSquare,
   Package2,
   RefreshCw,
@@ -73,7 +71,7 @@ import {
 } from "./album-api";
 import "./tools-studio.css";
 
-type ToolMode = "hub" | "calculator" | "estimate" | "invoice" | "materials" | "daily-log" | "job-photos" | "time-tracker" | "expense-logger" | "earnings" | "bid-builder" | "mileage" | "price-book" | "safety-checklist" | "tax-estimator" | "punch-list" | "contracts" | "job-checklist" | "payments";
+type ToolMode = "hub" | "calculator" | "estimate" | "invoice" | "materials" | "daily-log" | "job-photos" | "time-tracker" | "expense-logger" | "earnings" | "bid-builder" | "mileage" | "price-book" | "safety-checklist" | "tax-estimator" | "punch-list" | "contracts" | "job-checklist" | "payments" | "daily-report" | "tax-summary";
 
 interface PaymentRecord {
   id: number;
@@ -1901,150 +1899,210 @@ function TaxEstimatorTool() {
 
 // ── Punch List ───────────────────────────────────────────────────────────────
 
-const PUNCH_KEY = "rivt.punchLists.v1";
+const PUNCH_V2_KEY = "rivt.punchList.v1";
 
-interface PunchItem {
-  id: string; description: string; location: string;
-  status: "open" | "in-progress" | "done"; assignee: string; createdAt: string;
-}
-interface PunchList { id: string; jobName: string; createdAt: string; items: PunchItem[] }
+const PUNCH_CATEGORIES = ["Electrical", "Plumbing", "Framing", "Finish", "Other"] as const;
+type PunchCategory = typeof PUNCH_CATEGORIES[number];
 
-function readPunchLists(): PunchList[] {
-  try { return JSON.parse(localStorage.getItem(PUNCH_KEY) ?? "[]") as PunchList[]; } catch { return []; }
+interface PunchV2Item {
+  id: string;
+  jobId: string;
+  description: string;
+  category: PunchCategory;
+  photoUrl?: string;
+  createdAt: string;
+  resolvedAt?: string;
 }
-function writePunchLists(lists: PunchList[]) {
-  try { localStorage.setItem(PUNCH_KEY, JSON.stringify(lists)); } catch { /* noop */ }
+
+function readPunchV2(): PunchV2Item[] {
+  try {
+    const stored = localStorage.getItem(PUNCH_V2_KEY);
+    if (!stored) return [];
+    const parsed = JSON.parse(stored) as PunchV2Item[];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch { return []; }
+}
+
+function persistPunchV2(items: PunchV2Item[]) {
+  try { localStorage.setItem(PUNCH_V2_KEY, JSON.stringify(items)); } catch { /* noop */ }
+}
+
+function readSavedJobsV1(): Array<{ id: number; title: string }> {
+  try {
+    const raw = localStorage.getItem("rivt.jobs.v1");
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as Array<{ id: number; title: string }>;
+    return Array.isArray(parsed) ? parsed.slice(0, 20) : [];
+  } catch { return []; }
 }
 
 function PunchListTool() {
-  const { isPro } = usePro();
-  const [upgradeOpen, setUpgradeOpen] = useState(false);
-  const [lists, setLists] = useState<PunchList[]>(readPunchLists);
-  const [activeListId, setActiveListId] = useState<string | null>(() => readPunchLists()[0]?.id ?? null);
-  const [newJobName, setNewJobName] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | "open" | "done">("all");
-  const [addingItem, setAddingItem] = useState(false);
-  const [itemDraft, setItemDraft] = useState({ description: "", location: "", assignee: "" });
+  const [items, setItems] = useState<PunchV2Item[]>(readPunchV2);
+  const [selectedJobId, setSelectedJobId] = useState<string>("");
+  const [desc, setDesc] = useState("");
+  const [category, setCategory] = useState<PunchCategory>("Other");
+  const [photoUrl, setPhotoUrl] = useState<string | undefined>(undefined);
+  const [notice, setNotice] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [savedJobs] = useState<Array<{ id: number; title: string }>>(readSavedJobsV1);
 
-  const activeList = lists.find(l => l.id === activeListId) ?? null;
-  const visibleItems = activeList?.items.filter(i => statusFilter === "all" ? true : statusFilter === "open" ? i.status !== "done" : i.status === "done") ?? [];
-  const doneCount = activeList?.items.filter(i => i.status === "done").length ?? 0;
-
-  function createList() {
-    if (!newJobName.trim()) return;
-    if (!isPro && lists.length >= 1) { setUpgradeOpen(true); setNewJobName(""); return; }
-    const list: PunchList = { id: `pl_${Date.now()}`, jobName: newJobName.trim(), createdAt: new Date().toISOString(), items: [] };
-    const next = [...lists, list];
-    setLists(next); writePunchLists(next);
-    setActiveListId(list.id); setNewJobName("");
-  }
-
-  function cycleStatus(itemId: string) {
-    if (!activeList) return;
-    const cycle: PunchItem["status"][] = ["open", "in-progress", "done"];
-    const next = lists.map(l => l.id !== activeList.id ? l : {
-      ...l, items: l.items.map(i => i.id !== itemId ? i : { ...i, status: cycle[(cycle.indexOf(i.status) + 1) % 3] })
-    });
-    setLists(next); writePunchLists(next);
-  }
+  const jobLabel = (id: string) => {
+    if (!id) return "All jobs";
+    const j = savedJobs.find((jb) => String(jb.id) === id);
+    return j ? j.title : id;
+  };
 
   function addItem() {
-    if (!activeList || !itemDraft.description.trim()) return;
-    const item: PunchItem = { id: `pi_${Date.now()}`, ...itemDraft, status: "open", createdAt: new Date().toISOString() };
-    const next = lists.map(l => l.id !== activeList.id ? l : { ...l, items: [...l.items, item] });
-    setLists(next); writePunchLists(next);
-    setItemDraft({ description: "", location: "", assignee: "" }); setAddingItem(false);
+    if (!desc.trim()) return;
+    const item: PunchV2Item = {
+      id: crypto.randomUUID(),
+      jobId: selectedJobId,
+      description: desc.trim(),
+      category,
+      photoUrl,
+      createdAt: new Date().toISOString(),
+    };
+    const next = [item, ...items];
+    setItems(next);
+    persistPunchV2(next);
+    setDesc("");
+    setPhotoUrl(undefined);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+    setNotice("Item added.");
+    setTimeout(() => setNotice(""), 2000);
   }
 
-  const statusIcon = (s: PunchItem["status"]) =>
-    s === "done" ? <CheckCircle2 size={16} color="var(--v2-success)" /> :
-    s === "in-progress" ? <Clock size={16} color="var(--v2-warning, #f59e0b)" /> :
-    <Circle size={16} color="var(--v2-text-muted)" />;
+  function resolveItem(id: string) {
+    const next = items.map((i) => i.id === id ? { ...i, resolvedAt: new Date().toISOString() } : i);
+    setItems(next);
+    persistPunchV2(next);
+  }
+
+  function deleteItem(id: string) {
+    const next = items.filter((i) => i.id !== id);
+    setItems(next);
+    persistPunchV2(next);
+  }
+
+  function exportReport() {
+    const lines: string[] = ["RIVT PUNCH LIST REPORT", `Generated: ${new Date().toLocaleString()}`, ""];
+    const open = items.filter((i) => !i.resolvedAt);
+    const resolved = items.filter((i) => i.resolvedAt);
+    lines.push(`OPEN ITEMS (${open.length})`);
+    lines.push("─".repeat(40));
+    for (const item of open) {
+      lines.push(`[${item.category}] ${item.description}`);
+      lines.push(`  Job: ${jobLabel(item.jobId) || "Unassigned"}`);
+      lines.push(`  Added: ${new Date(item.createdAt).toLocaleDateString()}`);
+      lines.push("");
+    }
+    lines.push(`RESOLVED ITEMS (${resolved.length})`);
+    lines.push("─".repeat(40));
+    for (const item of resolved) {
+      lines.push(`[${item.category}] ${item.description}`);
+      lines.push(`  Job: ${jobLabel(item.jobId) || "Unassigned"}`);
+      lines.push(`  Resolved: ${item.resolvedAt ? new Date(item.resolvedAt).toLocaleDateString() : "—"}`);
+      lines.push("");
+    }
+    const blob = new Blob([lines.join("\n")], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `punch-list-${new Date().toISOString().slice(0, 10)}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  const openItems = items.filter((i) => !i.resolvedAt);
+  const resolvedItems = items.filter((i) => !!i.resolvedAt);
+
+  const CATEGORY_COLORS: Record<PunchCategory, string> = {
+    Electrical: "var(--v2-warning, #f59e0b)",
+    Plumbing: "#3b82f6",
+    Framing: "#8b5cf6",
+    Finish: "var(--v2-success)",
+    Other: "var(--v2-text-muted)",
+  };
+
+  function renderItem(item: PunchV2Item, resolved: boolean) {
+    return (
+      <article key={item.id} className={`v2-punchv2-item${resolved ? " is-resolved" : ""}`}>
+        <div className="v2-punchv2-item-head">
+          <span className="v2-punchv2-badge" style={{ borderColor: CATEGORY_COLORS[item.category], color: CATEGORY_COLORS[item.category] }}>{item.category}</span>
+          <span className="v2-punchv2-desc">{item.description}</span>
+        </div>
+        <div className="v2-punchv2-item-meta">
+          <small>{jobLabel(item.jobId) || "Unassigned"} · {new Date(item.createdAt).toLocaleDateString()}</small>
+          {resolved && item.resolvedAt && <small className="v2-punchv2-resolved-date">Resolved {new Date(item.resolvedAt).toLocaleDateString()}</small>}
+        </div>
+        {item.photoUrl && (
+          <img src={item.photoUrl} alt="Deficiency photo" className="v2-punchv2-photo" />
+        )}
+        <div className="v2-punchv2-item-actions">
+          {!resolved && (
+            <button type="button" className="v2-primary-button" onClick={() => resolveItem(item.id)}>
+              <CheckCircle2 size={13} /> Mark resolved
+            </button>
+          )}
+          <button type="button" className="v2-destructive-button" onClick={() => deleteItem(item.id)}>
+            <Trash2 size={13} />
+          </button>
+        </div>
+      </article>
+    );
+  }
 
   return (
-    <div className="v2-punch-workbench">
-      <aside className="v2-punch-sidebar">
-        <header>
-          <span>Job lists</span>
-          <button type="button" className="v2-primary-button" onClick={() => setNewJobName(" ")}>+ New</button>
-        </header>
-        {newJobName !== "" && (
-          <div className="v2-punch-new-list">
-            <input autoFocus placeholder="Job name" value={newJobName.trim()} onChange={e => setNewJobName(e.target.value)} onKeyDown={e => e.key === "Enter" && createList()} />
-            <button type="button" className="v2-primary-button" onClick={createList}>Create</button>
-          </div>
-        )}
-        {lists.map(l => {
-          const done = l.items.filter(i => i.status === "done").length;
-          return (
-            <button key={l.id} type="button" className={`v2-punch-list-row${l.id === activeListId ? " active" : ""}`} onClick={() => setActiveListId(l.id)}>
-              <strong>{l.jobName}</strong>
-              <small>{done} / {l.items.length} done</small>
-            </button>
-          );
-        })}
-        {lists.length === 0 && <p className="v2-punch-empty-hint">Create a list for each job.</p>}
-      </aside>
+    <div className="v2-tool-workbench v2-punchv2-workbench">
+      <Panel className="v2-tool-panel" eyebrow="Add deficiency" title="New punch list item">
+        <div className="v2-tool-input-grid">
+          <label>Job
+            <select value={selectedJobId} onChange={(e) => setSelectedJobId(e.target.value)}>
+              <option value="">— Select job (optional) —</option>
+              {savedJobs.map((j) => <option key={j.id} value={String(j.id)}>{j.title}</option>)}
+            </select>
+          </label>
+          <label>Category
+            <select value={category} onChange={(e) => setCategory(e.target.value as PunchCategory)}>
+              {PUNCH_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </label>
+          <label className="is-wide">Description *
+            <input value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Describe the deficiency…" />
+          </label>
+          <label>Photo (optional)
+            <input ref={fileInputRef} type="file" accept="image/*" onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (!file) return;
+              const reader = new FileReader();
+              reader.onload = () => {
+                if (typeof reader.result === "string") setPhotoUrl(reader.result);
+              };
+              reader.readAsDataURL(file);
+            }} />
+          </label>
+          {photoUrl && <img src={photoUrl} alt="Preview" className="v2-punchv2-preview" />}
+        </div>
+        {notice && <p className="v2-record-notice" role="status">{notice}</p>}
+        <button type="button" className="v2-primary-button" disabled={!desc.trim()} onClick={addItem}>
+          <Plus size={14} /> Add item
+        </button>
+      </Panel>
 
-      <main className="v2-punch-items">
-        {activeList ? (
-          <>
-            <header>
-              <div>
-                <strong>{activeList.jobName}</strong>
-                <small>{doneCount} of {activeList.items.length} items done</small>
-              </div>
-              <div className="v2-punch-filter-tabs">
-                {(["all", "open", "done"] as const).map(f => (
-                  <button key={f} type="button" className={statusFilter === f ? "active" : ""} onClick={() => setStatusFilter(f)}>
-                    {f.charAt(0).toUpperCase() + f.slice(1)}
-                  </button>
-                ))}
-              </div>
-            </header>
-            {activeList.items.length > 0 && (
-              <div className="v2-punch-progress">
-                <div className="v2-punch-progress-fill" style={{ width: `${activeList.items.length ? (doneCount / activeList.items.length) * 100 : 0}%` }} />
-              </div>
-            )}
-            <div className="v2-punch-item-list">
-              {visibleItems.map(item => (
-                <div key={item.id} className={`v2-punch-item${item.status === "done" ? " is-done" : ""}`}>
-                  <button type="button" className="v2-punch-status-btn" onClick={() => cycleStatus(item.id)} title="Click to change status">
-                    {statusIcon(item.status)}
-                  </button>
-                  <div>
-                    <strong>{item.description}</strong>
-                    {item.location && <small><MapPin size={11} /> {item.location}</small>}
-                    {item.assignee && <small>→ {item.assignee}</small>}
-                  </div>
-                </div>
-              ))}
-              {visibleItems.length === 0 && <p className="v2-punch-empty-hint">No {statusFilter !== "all" ? statusFilter : ""} items.</p>}
-            </div>
-            {addingItem ? (
-              <div className="v2-punch-add-form">
-                <input autoFocus placeholder="Description*" value={itemDraft.description} onChange={e => setItemDraft(p => ({ ...p, description: e.target.value }))} />
-                <input placeholder="Location (optional)" value={itemDraft.location} onChange={e => setItemDraft(p => ({ ...p, location: e.target.value }))} />
-                <input placeholder="Assignee (optional)" value={itemDraft.assignee} onChange={e => setItemDraft(p => ({ ...p, assignee: e.target.value }))} />
-                <div className="v2-punch-add-actions">
-                  <button type="button" className="v2-primary-button" onClick={addItem}>Add item</button>
-                  <button type="button" onClick={() => setAddingItem(false)}>Cancel</button>
-                </div>
-              </div>
-            ) : (
-              <button type="button" className="v2-punch-add-btn" onClick={() => setAddingItem(true)}>+ Add item</button>
-            )}
-          </>
-        ) : (
-          <div className="v2-punch-no-list">
-            <ClipboardList size={28} />
-            <strong>No list selected</strong>
-            <p>Create a punch list for each job to track deficiencies and final walkthrough items.</p>
-          </div>
-        )}
-      </main>
-      {upgradeOpen && <UpgradeModal reason="Multiple punch lists" onClose={() => setUpgradeOpen(false)} />}
+      <Panel className="v2-tool-panel" eyebrow={`${openItems.length} open · ${resolvedItems.length} resolved`} title="Punch list"
+        action={<button type="button" onClick={exportReport}><Download size={14} /> Export</button>}
+      >
+        <section className="v2-punchv2-section">
+          <h3 className="v2-punchv2-section-title">Open items ({openItems.length})</h3>
+          {openItems.length ? openItems.map((i) => renderItem(i, false)) : <p className="v2-muted-copy">No open items.</p>}
+        </section>
+        <section className="v2-punchv2-section">
+          <h3 className="v2-punchv2-section-title">Resolved ({resolvedItems.length})</h3>
+          {resolvedItems.length ? resolvedItems.map((i) => renderItem(i, true)) : <p className="v2-muted-copy">No resolved items yet.</p>}
+        </section>
+      </Panel>
     </div>
   );
 }
@@ -3649,6 +3707,363 @@ function PaymentTrackerTool() {
   );
 }
 
+// ── Daily Report ──────────────────────────────────────────────────────────────
+
+const DAILY_REPORTS_KEY = "rivt.dailyReports.v1";
+
+const WEATHER_OPTIONS = ["Clear", "Partly Cloudy", "Overcast", "Rain", "Hot"] as const;
+type WeatherOption = typeof WEATHER_OPTIONS[number];
+
+interface DailyReport {
+  id: string;
+  date: string;
+  jobId: string;
+  jobTitle: string;
+  weather: WeatherOption;
+  temperature: string;
+  crewOnSite: number;
+  workCompleted: string;
+  issues: string;
+  materialsUsed: string;
+  visitors: string;
+  savedAt: string;
+}
+
+function readDailyReports(): DailyReport[] {
+  try {
+    const stored = localStorage.getItem(DAILY_REPORTS_KEY);
+    if (!stored) return [];
+    const parsed = JSON.parse(stored) as DailyReport[];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch { return []; }
+}
+
+function persistDailyReports(reports: DailyReport[]) {
+  try { localStorage.setItem(DAILY_REPORTS_KEY, JSON.stringify(reports.slice(0, 365))); } catch { /* noop */ }
+}
+
+function formatDailyReport(r: DailyReport): string {
+  return [
+    `RIVT DAILY SITE REPORT`,
+    `Date: ${r.date}`,
+    `Job: ${r.jobTitle || "Unspecified"}`,
+    `Weather: ${r.weather} · ${r.temperature || "—"}`,
+    `Crew on site: ${r.crewOnSite}`,
+    ``,
+    `WORK COMPLETED`,
+    r.workCompleted || "—",
+    ``,
+    `ISSUES / DELAYS`,
+    r.issues || "None",
+    ``,
+    `MATERIALS USED`,
+    r.materialsUsed || "—",
+    ``,
+    `VISITORS ON SITE`,
+    r.visitors || "None",
+  ].join("\n");
+}
+
+function DailyReportTool() {
+  const [reports, setReports] = useState<DailyReport[]>(readDailyReports);
+  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [jobId, setJobId] = useState("");
+  const [weather, setWeather] = useState<WeatherOption>("Clear");
+  const [temperature, setTemperature] = useState("");
+  const [crewOnSite, setCrewOnSite] = useState("1");
+  const [workCompleted, setWorkCompleted] = useState("");
+  const [issues, setIssues] = useState("");
+  const [materialsUsed, setMaterialsUsed] = useState("");
+  const [visitors, setVisitors] = useState("");
+  const [notice, setNotice] = useState("");
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [savedJobs] = useState<Array<{ id: number; title: string }>>(readSavedJobsV1);
+
+  const selectedJobTitle = savedJobs.find((j) => String(j.id) === jobId)?.title ?? jobId;
+
+  function saveReport() {
+    const report: DailyReport = {
+      id: crypto.randomUUID(),
+      date,
+      jobId,
+      jobTitle: selectedJobTitle,
+      weather,
+      temperature: temperature.trim(),
+      crewOnSite: Math.max(0, parseInt(crewOnSite, 10) || 0),
+      workCompleted: workCompleted.trim(),
+      issues: issues.trim(),
+      materialsUsed: materialsUsed.trim(),
+      visitors: visitors.trim(),
+      savedAt: new Date().toISOString(),
+    };
+    const next = [report, ...reports];
+    setReports(next);
+    persistDailyReports(next);
+    setWorkCompleted("");
+    setIssues("");
+    setMaterialsUsed("");
+    setVisitors("");
+    setNotice("Report saved.");
+    setTimeout(() => setNotice(""), 2500);
+  }
+
+  async function copyReport(report: DailyReport) {
+    try {
+      await navigator.clipboard.writeText(formatDailyReport(report));
+      setCopiedId(report.id);
+      setTimeout(() => setCopiedId(null), 2000);
+    } catch { /* noop */ }
+  }
+
+  function exportAll() {
+    const text = reports.map(formatDailyReport).join("\n\n" + "═".repeat(50) + "\n\n");
+    const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `rivt-daily-reports-${new Date().toISOString().slice(0, 10)}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  return (
+    <div className="v2-tool-workbench v2-daily-report-workbench">
+      <Panel className="v2-tool-panel" eyebrow="New entry" title="Daily site report">
+        <div className="v2-tool-input-grid two">
+          <label>Date
+            <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+          </label>
+          <label>Job
+            <select value={jobId} onChange={(e) => setJobId(e.target.value)}>
+              <option value="">— Select job —</option>
+              {savedJobs.map((j) => <option key={j.id} value={String(j.id)}>{j.title}</option>)}
+            </select>
+          </label>
+          <label>Weather
+            <select value={weather} onChange={(e) => setWeather(e.target.value as WeatherOption)}>
+              {WEATHER_OPTIONS.map((w) => <option key={w} value={w}>{w}</option>)}
+            </select>
+          </label>
+          <label>Temperature
+            <input value={temperature} onChange={(e) => setTemperature(e.target.value)} placeholder="e.g. 78°F" />
+          </label>
+          <label>Crew on site
+            <input type="number" min="0" value={crewOnSite} onChange={(e) => setCrewOnSite(e.target.value)} />
+          </label>
+          <div />
+          <label className="is-wide">Work completed
+            <textarea rows={3} value={workCompleted} onChange={(e) => setWorkCompleted(e.target.value)} placeholder="Summarize work done today…" />
+          </label>
+          <label className="is-wide">Issues / delays
+            <textarea rows={2} value={issues} onChange={(e) => setIssues(e.target.value)} placeholder="Blockers, weather delays, material shortages…" />
+          </label>
+          <label className="is-wide">Materials used
+            <textarea rows={2} value={materialsUsed} onChange={(e) => setMaterialsUsed(e.target.value)} placeholder="List materials consumed today…" />
+          </label>
+          <label className="is-wide">Visitors on site
+            <textarea rows={2} value={visitors} onChange={(e) => setVisitors(e.target.value)} placeholder="Inspectors, owner, subcontractors… (optional)" />
+          </label>
+        </div>
+        {notice && <p className="v2-record-notice" role="status">{notice}</p>}
+        <button type="button" className="v2-primary-button" onClick={saveReport} disabled={!workCompleted.trim()}>
+          <FileText size={14} /> Save report
+        </button>
+      </Panel>
+
+      <Panel className="v2-tool-panel" eyebrow={`${reports.length} reports`} title="Past reports"
+        action={reports.length ? <button type="button" onClick={exportAll}><Download size={14} /> Export all</button> : undefined}
+      >
+        {reports.length ? (
+          <div className="v2-daily-report-list">
+            {reports.map((r) => (
+              <article key={r.id} className="v2-daily-report-row">
+                <div className="v2-daily-report-summary">
+                  <strong>{r.date}</strong>
+                  <span>{r.jobTitle || "No job"} · {r.weather} {r.temperature ? `· ${r.temperature}` : ""} · {r.crewOnSite} crew</span>
+                  <div className="v2-daily-report-actions">
+                    <button type="button" onClick={() => setExpandedId(expandedId === r.id ? null : r.id)}>
+                      {expandedId === r.id ? "Collapse" : "Expand"}
+                    </button>
+                    <button type="button" onClick={() => void copyReport(r)}>
+                      {copiedId === r.id ? <CheckCircle2 size={13} /> : <Copy size={13} />} Copy
+                    </button>
+                  </div>
+                </div>
+                {expandedId === r.id && (
+                  <div className="v2-daily-report-detail">
+                    <pre>{formatDailyReport(r)}</pre>
+                  </div>
+                )}
+              </article>
+            ))}
+          </div>
+        ) : (
+          <p className="v2-muted-copy">No reports yet. Save your first daily site report above.</p>
+        )}
+      </Panel>
+    </div>
+  );
+}
+
+// ── Tax Summary ────────────────────────────────────────────────────────────────
+
+function TaxSummaryTool() {
+  const [selectedYear, setSelectedYear] = useState(() => new Date().getFullYear());
+  const yearOptions = useMemo(() => {
+    const y = new Date().getFullYear();
+    return [y, y - 1, y - 2];
+  }, []);
+  const [copied, setCopied] = useState(false);
+
+  const summary = useMemo(() => {
+    const yearStr = String(selectedYear);
+
+    // Gross income from time sessions × hourly rate
+    const rateCard: { hourlyRate?: number } = (() => {
+      try { return JSON.parse(localStorage.getItem("rivt.rateCard.v1") ?? "null") as { hourlyRate?: number } ?? {}; } catch { return {}; }
+    })();
+    const hourlyRate = rateCard.hourlyRate ?? 65;
+    const timeSessions: Array<{ startedAt: string; endedAt: string | null }> = (() => {
+      try { return JSON.parse(localStorage.getItem("rivt.timeSessions.v1") ?? "[]") as Array<{ startedAt: string; endedAt: string | null }>; } catch { return []; }
+    })();
+    const grossIncome = timeSessions
+      .filter((s) => s.endedAt && s.startedAt.startsWith(yearStr))
+      .reduce((sum, s) => {
+        const hrs = (new Date(s.endedAt!).getTime() - new Date(s.startedAt).getTime()) / 3600000;
+        return sum + hrs * hourlyRate;
+      }, 0);
+
+    // Business expenses
+    const expenses: Array<{ date: string; amount: number }> = (() => {
+      try { return JSON.parse(localStorage.getItem("rivt.expenses.v1") ?? "[]") as Array<{ date: string; amount: number }>; } catch { return []; }
+    })();
+    const totalExpenses = expenses
+      .filter((e) => e.date && e.date.startsWith(yearStr))
+      .reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
+
+    // Mileage deduction at $0.67/mile
+    const mileageEntries: Array<{ date: string; miles: number }> = (() => {
+      try { return JSON.parse(localStorage.getItem("rivt.mileage.v1") ?? "[]") as Array<{ date: string; miles: number }>; } catch { return []; }
+    })();
+    const totalMiles = mileageEntries
+      .filter((m) => m.date && m.date.startsWith(yearStr))
+      .reduce((sum, m) => sum + (Number(m.miles) || 0), 0);
+    const mileageDeduction = totalMiles * 0.67;
+
+    const netProfit = Math.max(0, grossIncome - totalExpenses - mileageDeduction);
+    const seTax = netProfit * 0.9235 * 0.153;
+    const quarterlyPayment = seTax / 4;
+
+    return { grossIncome, totalExpenses, mileageDeduction, totalMiles, netProfit, seTax, quarterlyPayment };
+  }, [selectedYear]);
+
+  const fmt = (n: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(n);
+
+  function getSummaryText() {
+    return [
+      `RIVT TAX SUMMARY — ${selectedYear}`,
+      ``,
+      `Gross Revenue:        ${fmt(summary.grossIncome)}`,
+      `Business Expenses:    ${fmt(summary.totalExpenses)}`,
+      `Mileage Deduction:    ${fmt(summary.mileageDeduction)} (${summary.totalMiles.toFixed(1)} mi @ $0.67)`,
+      `Net Profit:           ${fmt(summary.netProfit)}`,
+      ``,
+      `SE Tax Estimate:      ${fmt(summary.seTax)}`,
+      `Quarterly Payment:    ${fmt(summary.quarterlyPayment)}`,
+      ``,
+      `This is an estimate only. Consult a tax professional.`,
+    ].join("\n");
+  }
+
+  async function copySummary() {
+    try {
+      await navigator.clipboard.writeText(getSummaryText());
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch { /* noop */ }
+  }
+
+  function exportCSV() {
+    const rows = [
+      ["Category", "Amount"],
+      ["Gross Revenue", summary.grossIncome.toFixed(2)],
+      ["Business Expenses", summary.totalExpenses.toFixed(2)],
+      [`Mileage Deduction (${summary.totalMiles.toFixed(1)} mi)`, summary.mileageDeduction.toFixed(2)],
+      ["Net Profit", summary.netProfit.toFixed(2)],
+      ["SE Tax Estimate (15.3% × 92.35%)", summary.seTax.toFixed(2)],
+      ["Quarterly Payment", summary.quarterlyPayment.toFixed(2)],
+    ];
+    const csv = rows.map((r) => r.join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `rivt-tax-summary-${selectedYear}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  return (
+    <div className="v2-tool-workbench v2-tax-summary-workbench">
+      <Panel className="v2-tool-panel" eyebrow="Tax year" title="Tax summary">
+        <div className="v2-tax-summary-year">
+          <label>Tax year
+            <select value={selectedYear} onChange={(e) => setSelectedYear(Number(e.target.value))}>
+              {yearOptions.map((y) => <option key={y} value={y}>{y}</option>)}
+            </select>
+          </label>
+        </div>
+
+        <div className="v2-tax-summary-grid">
+          <div className="v2-tax-summary-card">
+            <small>Gross Revenue</small>
+            <strong>{fmt(summary.grossIncome)}</strong>
+          </div>
+          <div className="v2-tax-summary-card">
+            <small>Business Expenses</small>
+            <strong>{fmt(summary.totalExpenses)}</strong>
+          </div>
+          <div className="v2-tax-summary-card">
+            <small>Mileage Deduction</small>
+            <strong>{fmt(summary.mileageDeduction)}</strong>
+            <span className="v2-tax-summary-sub">{summary.totalMiles.toFixed(1)} mi @ $0.67</span>
+          </div>
+          <div className="v2-tax-summary-card v2-tax-summary-card--highlight">
+            <small>Net Profit</small>
+            <strong>{fmt(summary.netProfit)}</strong>
+          </div>
+          <div className="v2-tax-summary-card v2-tax-summary-card--accent">
+            <small>SE Tax Estimate</small>
+            <strong>{fmt(summary.seTax)}</strong>
+            <span className="v2-tax-summary-sub">15.3% × 92.35% × net profit</span>
+          </div>
+          <div className="v2-tax-summary-card v2-tax-summary-card--accent">
+            <small>Quarterly Payment</small>
+            <strong>{fmt(summary.quarterlyPayment)}</strong>
+            <span className="v2-tax-summary-sub">SE tax ÷ 4</span>
+          </div>
+        </div>
+
+        <p className="v2-tax-disclaimer">This is an estimate only. Consult a tax professional.</p>
+
+        <div className="v2-tax-summary-actions">
+          <button type="button" className="v2-primary-button" onClick={() => void copySummary()}>
+            {copied ? <CheckCircle2 size={14} /> : <Copy size={14} />} Copy summary
+          </button>
+          <button type="button" onClick={exportCSV}>
+            <Download size={14} /> Export CSV
+          </button>
+        </div>
+      </Panel>
+    </div>
+  );
+}
+
 function projectErrorMessage(error: unknown) {
   if (error instanceof ProjectApiError) return error.message;
   return error instanceof Error ? error.message : "RIVT could not update the project record.";
@@ -4156,6 +4571,18 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", onNavigate, 
         description: "Track invoices, outstanding balances, and payment status across all jobs.",
         node: <PaymentTrackerTool />,
       },
+      "daily-report": {
+        eyebrow: "Daily report",
+        title: "Daily site report",
+        description: "Log daily site conditions: weather, crew count, work completed, issues, and materials.",
+        node: <DailyReportTool />,
+      },
+      "tax-summary": {
+        eyebrow: "Tax summary",
+        title: "Annual tax summary",
+        description: "Estimate annual income, expenses, mileage deductions, and self-employment tax.",
+        node: <TaxSummaryTool />,
+      },
     }[activeTool];
 
     if (!toolMeta) return null;
@@ -4190,7 +4617,12 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", onNavigate, 
           <span>Tool apps</span>
           <h2>{activeJob ? `Loaded from ${activeJob.title}` : "Open tools without needing a job first"}</h2>
         </div>
-        <MetricTile className="v2-tools-context-metric" value={activeJob ? activeJob.trade : "Standalone"} label={activeJob ? activeJob.location : "No active job selected"} />
+        <div className="v2-tools-context-badge">
+          {activeJob
+            ? <><span className="v2-tools-context-trade">{activeJob.trade}</span><span className="v2-tools-context-loc">{activeJob.location}</span></>
+            : <span className="v2-tools-context-none">No job selected — tools work standalone</span>
+          }
+        </div>
       </section>
 
       <div className="v2-tool-launch-grid">
@@ -4374,6 +4806,26 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", onNavigate, 
           detail="By status"
           action="Open"
           onAction={() => setActiveTool("payments")}
+        />
+        <ToolCard
+          icon={FileText}
+          title="Daily report"
+          badge="Site log"
+          summary="Log weather, crew, work completed, issues, and materials for each work day."
+          output="Reports"
+          detail="Saved locally"
+          action="Open"
+          onAction={() => setActiveTool("daily-report")}
+        />
+        <ToolCard
+          icon={Calculator}
+          title="Tax summary"
+          badge="Finance"
+          summary="Annual income, expenses, mileage deduction, and SE tax estimate by year."
+          output="SE tax"
+          detail="Export CSV"
+          action="Open"
+          onAction={() => setActiveTool("tax-summary")}
         />
         <ToolCard
           icon={FolderOpen}

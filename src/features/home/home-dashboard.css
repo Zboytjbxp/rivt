@@ -1469,3 +1469,379 @@
 .v2-day-job-status-badge { display: inline-block; margin-top: 6px; padding: 2px 8px; border-radius: 999px; background: var(--v2-accent-soft); color: var(--v2-accent); font-size: 10px; font-weight: var(--v2-weight-bold); text-transform: uppercase; letter-spacing: 0.04em; align-self: flex-start; }
 .v2-day-no-jobs { padding: 16px 12px; text-align: center; color: var(--v2-text-muted); font-size: 13px; margin: 0; }
 .v2-schedule-heading { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: var(--v2-weight-bold); color: var(--v2-text-muted); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 10px; }
+
+/* ── Weather + Drive-Time Widget ──────────────────────────────────────────── */
+.v2-weather-drive-widget {
+  display: grid;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid color-mix(in srgb, var(--v2-border) 66%, transparent);
+  border-radius: var(--v2-radius-lg);
+  background: color-mix(in srgb, var(--v2-surface) 94%, transparent);
+  box-shadow: var(--v2-shadow-card);
+}
+
+.v2-weather-row {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.v2-weather-day-pill {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 4px;
+  border-radius: var(--v2-radius-sm);
+  background: color-mix(in srgb, var(--v2-surface-muted) 72%, transparent);
+}
+
+.v2-weather-day-label {
+  font-size: 10px;
+  font-weight: var(--v2-weight-bold);
+  color: var(--v2-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.v2-weather-icon {
+  color: var(--v2-accent);
+}
+
+.v2-weather-temp {
+  font-size: 13px;
+  font-weight: var(--v2-weight-bold);
+  font-variant-numeric: tabular-nums;
+  color: var(--v2-text);
+}
+
+.v2-drive-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: var(--v2-radius-sm);
+  background: color-mix(in srgb, var(--v2-surface-muted) 72%, transparent);
+  min-height: 40px;
+}
+
+.v2-drive-icon {
+  color: var(--v2-accent);
+  flex-shrink: 0;
+}
+
+.v2-drive-address {
+  flex: 1;
+  font-size: 12px;
+  color: var(--v2-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.v2-drive-empty {
+  font-size: 12px;
+  color: var(--v2-text-muted);
+}
+
+.v2-drive-btn {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  padding: 0 12px;
+  border-radius: var(--v2-radius-sm);
+  background: var(--v2-accent);
+  color: #fff;
+  font-size: 11px;
+  font-weight: var(--v2-weight-bold);
+  text-decoration: none;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.v2-drive-btn:hover {
+  background: color-mix(in srgb, var(--v2-accent) 85%, #000);
+}
+
+/* ── Upcoming Jobs Widget ──────────────────────────────────────────────────── */
+.v2-upcoming-jobs-widget {
+  display: grid;
+  gap: 10px;
+  padding: 14px 16px;
+  border: 1px solid color-mix(in srgb, var(--v2-border) 66%, transparent);
+  border-radius: var(--v2-radius-lg);
+  background: color-mix(in srgb, var(--v2-surface) 94%, transparent);
+  box-shadow: var(--v2-shadow-card);
+}
+
+.v2-upcoming-jobs-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--v2-accent);
+  font-size: 10px;
+  font-weight: var(--v2-weight-bold);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.v2-upcoming-jobs-empty {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 0;
+  color: var(--v2-text-muted);
+  font-size: 13px;
+}
+
+.v2-upcoming-jobs-empty svg {
+  color: var(--v2-text-muted);
+  flex-shrink: 0;
+}
+
+.v2-upcoming-jobs-list {
+  display: grid;
+  gap: 8px;
+}
+
+.v2-upcoming-job-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: var(--v2-radius-md);
+  border: 1px solid color-mix(in srgb, var(--v2-border) 60%, transparent);
+  background: color-mix(in srgb, var(--v2-surface-muted) 70%, transparent);
+}
+
+.v2-upcoming-job-date {
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: var(--v2-weight-bold);
+  color: var(--v2-accent);
+  min-width: 80px;
+}
+
+.v2-upcoming-job-body {
+  flex: 1;
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.v2-upcoming-job-title {
+  font-size: 13px;
+  font-weight: var(--v2-weight-bold);
+  color: var(--v2-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.v2-upcoming-job-client {
+  font-size: 11px;
+  color: var(--v2-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.v2-status-pill {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: var(--v2-weight-bold);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.v2-status-pill--active {
+  background: color-mix(in srgb, var(--v2-success) 14%, transparent);
+  color: var(--v2-success);
+}
+
+.v2-status-pill--done {
+  background: color-mix(in srgb, var(--v2-border) 60%, transparent);
+  color: var(--v2-text-muted);
+}
+
+.v2-status-pill--cancelled {
+  background: color-mix(in srgb, #ef4444 10%, transparent);
+  color: #ef4444;
+}
+
+.v2-status-pill--default {
+  background: var(--v2-accent-soft);
+  color: var(--v2-accent);
+}
+
+/* ── Revenue Goal Widget ───────────────────────────────────────────────────── */
+.v2-revenue-goal-widget {
+  display: grid;
+  gap: 0;
+  border: 1px solid color-mix(in srgb, var(--v2-border) 66%, transparent);
+  border-radius: var(--v2-radius-lg);
+  background: color-mix(in srgb, var(--v2-surface) 94%, transparent);
+  box-shadow: var(--v2-shadow-card);
+  overflow: hidden;
+}
+
+.v2-revenue-goal-tabs {
+  display: flex;
+  border-bottom: 1px solid color-mix(in srgb, var(--v2-border) 66%, transparent);
+}
+
+.v2-revenue-tab {
+  flex: 1;
+  padding: 10px;
+  border: none;
+  background: transparent;
+  color: var(--v2-text-muted);
+  font: inherit;
+  font-size: 12px;
+  font-weight: var(--v2-weight-bold);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: color 120ms, border-color 120ms;
+}
+
+.v2-revenue-tab.is-active {
+  color: var(--v2-accent);
+  border-bottom-color: var(--v2-accent);
+  background: color-mix(in srgb, var(--v2-accent-soft) 40%, transparent);
+}
+
+.v2-revenue-goal-body {
+  display: grid;
+  gap: 10px;
+  padding: 14px 16px;
+}
+
+.v2-revenue-goal-numbers {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+}
+
+.v2-revenue-goal-numbers:hover .v2-revenue-earned {
+  color: color-mix(in srgb, var(--v2-accent) 80%, var(--v2-text));
+}
+
+.v2-revenue-earned {
+  font-size: clamp(24px, 5vw, 34px);
+  font-weight: var(--v2-weight-display);
+  font-variant-numeric: tabular-nums;
+  color: var(--v2-text);
+  line-height: 1;
+  transition: color 120ms;
+}
+
+.v2-revenue-separator {
+  font-size: 18px;
+  color: var(--v2-text-muted);
+}
+
+.v2-revenue-goal-value {
+  font-size: 16px;
+  color: var(--v2-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.v2-revenue-expense-note {
+  font-size: 11px;
+  color: var(--v2-text-muted);
+  margin-top: -4px;
+}
+
+.v2-revenue-bar {
+  height: 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--v2-border) 60%, transparent);
+  overflow: hidden;
+}
+
+.v2-revenue-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--v2-accent);
+  transition: width 600ms ease;
+}
+
+.v2-revenue-pct {
+  font-size: 11px;
+  color: var(--v2-text-muted);
+}
+
+.v2-revenue-goal-edit {
+  display: grid;
+  gap: 10px;
+}
+
+.v2-revenue-goal-edit-label {
+  display: grid;
+  gap: 4px;
+}
+
+.v2-revenue-goal-edit-label small {
+  font-size: 11px;
+  color: var(--v2-text-muted);
+}
+
+.v2-revenue-goal-input {
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid color-mix(in srgb, var(--v2-border) 70%, transparent);
+  border-radius: var(--v2-radius-sm);
+  background: var(--v2-surface);
+  color: var(--v2-text);
+  font: inherit;
+  font-size: 14px;
+}
+
+.v2-revenue-goal-input:focus {
+  outline: 2px solid var(--v2-accent);
+  outline-offset: 1px;
+  border-color: transparent;
+}
+
+.v2-revenue-goal-edit-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.v2-revenue-cancel-btn {
+  padding: 0 14px;
+  min-height: 40px;
+  border: 1px solid color-mix(in srgb, var(--v2-border) 70%, transparent);
+  border-radius: var(--v2-radius-sm);
+  background: transparent;
+  color: var(--v2-text-muted);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+@media (max-width: 430px) {
+  .v2-weather-row {
+    gap: 4px;
+  }
+  .v2-weather-day-pill {
+    padding: 6px 2px;
+  }
+  .v2-weather-temp {
+    font-size: 11px;
+  }
+  .v2-upcoming-job-date {
+    min-width: 68px;
+    font-size: 10px;
+  }
+}

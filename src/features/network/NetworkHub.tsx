@@ -1,9 +1,11 @@
 import {
+  AlertTriangle,
   ArrowRight,
   Briefcase,
   CheckCircle2,
   ChevronDown,
   ChevronRight,
+  Copy,
   Mail,
   MessageSquareText,
   Phone,
@@ -67,10 +69,11 @@ interface StoredJobEntry {
   id: string | number;
   title?: string;
   notes?: string;
+  status?: string;
   [key: string]: unknown;
 }
 
-const emptyForm = { name: "", company: "", phone: "", email: "", notes: "" };
+const emptyClientForm = { name: "", company: "", phone: "", email: "", notes: "" };
 
 function ClientBookView() {
   const load = (): Client[] => {
@@ -80,7 +83,7 @@ function ClientBookView() {
   const [clients, setClients] = useState<Client[]>(load);
   const [showForm, setShowForm] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
-  const [form, setForm] = useState(emptyForm);
+  const [form, setForm] = useState(emptyClientForm);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   function save(list: Client[]) {
@@ -90,7 +93,7 @@ function ClientBookView() {
 
   function openAdd() {
     setEditingClient(null);
-    setForm(emptyForm);
+    setForm(emptyClientForm);
     setShowForm(true);
   }
 
@@ -103,7 +106,7 @@ function ClientBookView() {
   function cancel() {
     setShowForm(false);
     setEditingClient(null);
-    setForm(emptyForm);
+    setForm(emptyClientForm);
   }
 
   function handleSave() {
@@ -282,106 +285,463 @@ function persistStoredReviews(reviews: StoredReview[]) {
   try { localStorage.setItem(reviewsKey, JSON.stringify(reviews)); } catch { /* noop */ }
 }
 
-// ── Sub Roster ────────────────────────────────────────────────────────────────
+// ── Crew Member (rivt.crew.v1) ────────────────────────────────────────────────
 
-const subRosterKey = "rivt.subRoster.v1";
+type CrewAvailability = "available" | "busy" | "unavailable";
+type CrewType = "crew" | "sub";
 
-interface SubRosterEntry {
+interface CrewMember {
   id: string;
+  type: CrewType;
   name: string;
   trade: string;
-  rateNote: string;
+  license?: string;
+  licenseExpiry?: string;
+  phone?: string;
+  email?: string;
+  hourlyRate?: number;
+  availability: CrewAvailability;
+  currentJobId?: string;
+  notes?: string;
   addedAt: string;
 }
 
-function readSubRoster(): SubRosterEntry[] {
+function loadCrew(): CrewMember[] {
   try {
-    const stored = localStorage.getItem(subRosterKey);
+    const stored = localStorage.getItem("rivt.crew.v1");
     if (!stored) return [];
-    const parsed = JSON.parse(stored) as SubRosterEntry[];
-    return Array.isArray(parsed) ? parsed.slice(0, 50) : [];
+    const parsed = JSON.parse(stored) as CrewMember[];
+    return Array.isArray(parsed) ? parsed : [];
   } catch { return []; }
 }
 
-function persistSubRoster(entries: SubRosterEntry[]) {
-  try { localStorage.setItem(subRosterKey, JSON.stringify(entries.slice(0, 50))); } catch { /* noop */ }
+function saveCrew(list: CrewMember[]) {
+  try { localStorage.setItem("rivt.crew.v1", JSON.stringify(list)); } catch { /* noop */ }
 }
 
-function SubRosterPanel() {
-  const [roster, setRoster] = useState<SubRosterEntry[]>(readSubRoster);
-  const [name, setName] = useState("");
-  const [trade, setTrade] = useState("");
-  const [rateNote, setRateNote] = useState("");
-  const [notice, setNotice] = useState("");
+function loadStoredJobs(): StoredJobEntry[] {
+  try {
+    const stored = localStorage.getItem("rivt.jobs.v1");
+    if (!stored) return [];
+    const parsed = JSON.parse(stored) as StoredJobEntry[];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch { return []; }
+}
 
-  function addToRoster() {
-    if (!name.trim()) return;
-    const entry: SubRosterEntry = {
-      id: crypto.randomUUID(),
-      name: name.trim(),
-      trade: trade.trim(),
-      rateNote: rateNote.trim(),
-      addedAt: new Date().toISOString(),
-    };
-    const next = [entry, ...roster];
-    setRoster(next);
-    persistSubRoster(next);
-    setName("");
-    setTrade("");
-    setRateNote("");
-    setNotice("Added to roster.");
-    setTimeout(() => setNotice(""), 3000);
-  }
+// ── License expiry helper ─────────────────────────────────────────────────────
 
-  function removeFromRoster(id: string) {
-    const next = roster.filter((e) => e.id !== id);
-    setRoster(next);
-    persistSubRoster(next);
+function licenseExpiryStatus(expiry?: string): "ok" | "warning" | "expired" | null {
+  if (!expiry) return null;
+  const expiryDate = new Date(expiry);
+  const now = new Date();
+  const diffMs = expiryDate.getTime() - now.getTime();
+  const diffDays = diffMs / (1000 * 60 * 60 * 24);
+  if (diffDays < 0) return "expired";
+  if (diffDays <= 30) return "warning";
+  return "ok";
+}
+
+// ── Crew Member Form ──────────────────────────────────────────────────────────
+
+const emptyCrewForm: Omit<CrewMember, "id" | "addedAt"> = {
+  type: "crew",
+  name: "",
+  trade: "",
+  license: "",
+  licenseExpiry: "",
+  phone: "",
+  email: "",
+  hourlyRate: undefined,
+  availability: "available",
+  currentJobId: undefined,
+  notes: "",
+};
+
+interface CrewMemberFormProps {
+  initial?: Partial<Omit<CrewMember, "id" | "addedAt">>;
+  onSave: (data: Omit<CrewMember, "id" | "addedAt">) => void;
+  onCancel: () => void;
+}
+
+function CrewMemberForm({ initial, onSave, onCancel }: CrewMemberFormProps) {
+  const [form, setForm] = useState<Omit<CrewMember, "id" | "addedAt">>({
+    ...emptyCrewForm,
+    ...initial,
+  });
+
+  function field<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
+    setForm((f) => ({ ...f, [key]: value }));
   }
 
   return (
-    <Panel
-      className="v2-network-panel v2-network-panel-wide"
-      eyebrow={`${roster.length} saved`}
-      title="Sub roster"
-    >
-      <div className="v2-sub-roster">
-        <div className="v2-sub-roster-form">
-          <div className="v2-sub-roster-inputs">
-            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Name or company" />
-            <input value={trade} onChange={(e) => setTrade(e.target.value)} placeholder="Trade (electrical, framing…)" />
-            <input value={rateNote} onChange={(e) => setRateNote(e.target.value)} placeholder="Rate note ($65/hr, $800/day…)" />
-          </div>
-          {notice ? <p className="v2-sub-roster-notice" role="status">{notice}</p> : null}
-          <button type="button" className="v2-primary-button" disabled={!name.trim()} onClick={addToRoster}><Plus size={14} />Add to roster</button>
-        </div>
-        {roster.length ? (
-          <div className="v2-sub-roster-list">
-            {roster.map((entry) => (
-              <article key={entry.id} className="v2-sub-roster-item">
-                <Avatar name={entry.name} size="sm" className="v2-network-avatar" />
-                <div className="v2-sub-roster-item-copy">
-                  <strong>{entry.name}</strong>
-                  {entry.trade ? <span>{entry.trade}</span> : null}
-                  {entry.rateNote ? <small>{entry.rateNote}</small> : null}
-                </div>
-                <button type="button" className="v2-sub-roster-remove" aria-label={`Remove ${entry.name}`} onClick={() => removeFromRoster(entry.id)}><X size={14} /></button>
-              </article>
-            ))}
-          </div>
-        ) : (
-          <EmptyState
-            className="v2-network-empty"
-            icon={<Users size={20} />}
-            title="No roster entries yet"
-            description="Save contractors and tradespeople you rely on for quick access when new work comes in."
-            compact
+    <div className="v2-crew-form">
+      <div className="v2-crew-form-grid">
+        <label>
+          <span>Name *</span>
+          <input value={form.name} onChange={(e) => field("name", e.target.value)} placeholder="Full name" />
+        </label>
+        <label>
+          <span>Trade</span>
+          <input value={form.trade} onChange={(e) => field("trade", e.target.value)} placeholder="Electrical, Plumbing…" />
+        </label>
+        <label>
+          <span>Type</span>
+          <select value={form.type} onChange={(e) => field("type", e.target.value as CrewType)}>
+            <option value="crew">Crew</option>
+            <option value="sub">Sub</option>
+          </select>
+        </label>
+        <label>
+          <span>Availability</span>
+          <select value={form.availability} onChange={(e) => field("availability", e.target.value as CrewAvailability)}>
+            <option value="available">Available</option>
+            <option value="busy">Busy</option>
+            <option value="unavailable">Unavailable</option>
+          </select>
+        </label>
+        <label>
+          <span>Phone</span>
+          <input value={form.phone ?? ""} onChange={(e) => field("phone", e.target.value)} placeholder="+1 555 000 0000" />
+        </label>
+        <label>
+          <span>Email</span>
+          <input value={form.email ?? ""} onChange={(e) => field("email", e.target.value)} placeholder="email@example.com" />
+        </label>
+        <label>
+          <span>Hourly rate ($)</span>
+          <input
+            type="number"
+            value={form.hourlyRate ?? ""}
+            onChange={(e) => field("hourlyRate", e.target.value ? Number(e.target.value) : undefined)}
+            placeholder="75"
           />
-        )}
+        </label>
+        <label>
+          <span>License #</span>
+          <input value={form.license ?? ""} onChange={(e) => field("license", e.target.value)} placeholder="Optional" />
+        </label>
+        <label>
+          <span>License expiry</span>
+          <input type="date" value={form.licenseExpiry ?? ""} onChange={(e) => field("licenseExpiry", e.target.value)} />
+        </label>
+        <label className="v2-crew-form-wide">
+          <span>Notes</span>
+          <textarea value={form.notes ?? ""} onChange={(e) => field("notes", e.target.value)} rows={2} placeholder="Any notes…" />
+        </label>
       </div>
-    </Panel>
+      <div className="v2-crew-form-btns">
+        <button type="button" className="v2-client-save-btn" disabled={!form.name.trim()} onClick={() => onSave(form)}>
+          Save
+        </button>
+        <button type="button" className="v2-client-cancel-btn" onClick={onCancel}>
+          Cancel
+        </button>
+      </div>
+    </div>
   );
 }
+
+// ── Job Assignment Modal ──────────────────────────────────────────────────────
+
+function JobAssignModal({
+  member,
+  onAssign,
+  onUnassign,
+  onClose,
+}: {
+  member: CrewMember;
+  onAssign: (jobId: string) => void;
+  onUnassign: () => void;
+  onClose: () => void;
+}) {
+  const jobs = loadStoredJobs().filter(
+    (j) => j.status === "Active" || j.status === "Quoted" || j.status === "Open" || j.status === "Scheduled"
+  );
+
+  return (
+    <div className="v2-modal-backdrop" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="v2-crew-assign-modal">
+        <header>
+          <strong>Assign {member.name} to job</strong>
+          <button type="button" onClick={onClose} aria-label="Close"><X size={16} /></button>
+        </header>
+        {member.currentJobId && (
+          <div className="v2-crew-assign-current">
+            <span>Currently assigned to job #{member.currentJobId}</span>
+            <button type="button" className="v2-crew-unassign-btn" onClick={onUnassign}>
+              Unassign
+            </button>
+          </div>
+        )}
+        {jobs.length === 0 ? (
+          <p className="v2-crew-assign-empty">No active or quoted jobs found in rivt.jobs.v1.</p>
+        ) : (
+          <div className="v2-crew-assign-list">
+            {jobs.map((j) => (
+              <button
+                key={String(j.id)}
+                type="button"
+                className={`v2-crew-assign-job-btn${member.currentJobId === String(j.id) ? " is-current" : ""}`}
+                onClick={() => onAssign(String(j.id))}
+              >
+                <Briefcase size={14} />
+                <span>{typeof j.title === "string" ? j.title : `Job #${j.id}`}</span>
+                <span className="v2-crew-assign-status">{String(j.status ?? "")}</span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Availability dot ──────────────────────────────────────────────────────────
+
+function AvailDot({ status }: { status: CrewAvailability }) {
+  const color = status === "available" ? "var(--v2-success)" : status === "busy" ? "var(--v2-warning, #f59e0b)" : "#94a3b8";
+  const label = status === "available" ? "Available" : status === "busy" ? "Busy" : "Unavailable";
+  return (
+    <span
+      className="v2-crew-avail-status-dot"
+      style={{ background: color }}
+      title={label}
+      aria-label={label}
+    />
+  );
+}
+
+// ── Crew Card ─────────────────────────────────────────────────────────────────
+
+function CrewCard({
+  member,
+  onEdit,
+  onDelete,
+  onAssign,
+}: {
+  member: CrewMember;
+  onEdit: () => void;
+  onDelete: () => void;
+  onAssign: () => void;
+}) {
+  const jobs = loadStoredJobs();
+  const assignedJob = member.currentJobId
+    ? jobs.find((j) => String(j.id) === member.currentJobId)
+    : null;
+  const licenseStatus = licenseExpiryStatus(member.licenseExpiry);
+
+  return (
+    <article className="v2-crew-card">
+      <div className="v2-crew-card-header">
+        <Avatar name={member.name} size="md" className="v2-network-avatar" />
+        <div className="v2-crew-card-info">
+          <div className="v2-crew-card-name-row">
+            <strong>{member.name}</strong>
+            <AvailDot status={member.availability} />
+          </div>
+          {member.trade && <span className="v2-crew-trade-badge">{member.trade}</span>}
+          {member.hourlyRate && <span className="v2-crew-rate">${member.hourlyRate}/hr</span>}
+        </div>
+      </div>
+
+      {/* Contact icons */}
+      <div className="v2-crew-card-contacts">
+        {member.phone && (
+          <a href={`tel:${member.phone}`} className="v2-crew-contact-link" title={member.phone} aria-label={`Call ${member.name}`}>
+            <Phone size={14} />
+          </a>
+        )}
+        {member.email && (
+          <a href={`mailto:${member.email}`} className="v2-crew-contact-link" title={member.email} aria-label={`Email ${member.name}`}>
+            <Mail size={14} />
+          </a>
+        )}
+      </div>
+
+      {/* License info */}
+      {member.license && (
+        <div className={`v2-crew-license${licenseStatus === "expired" ? " is-expired" : licenseStatus === "warning" ? " is-warning" : ""}`}>
+          <ShieldCheck size={12} />
+          <span>{member.license}</span>
+          {member.licenseExpiry && licenseStatus !== "ok" && (
+            <span className="v2-crew-license-warn">
+              <AlertTriangle size={11} />
+              {licenseStatus === "expired" ? "Expired" : "Expires soon"}
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* Assigned job */}
+      {assignedJob && (
+        <div className="v2-crew-assigned-job">
+          <Briefcase size={12} />
+          <span>{typeof assignedJob.title === "string" ? assignedJob.title : `Job #${assignedJob.id}`}</span>
+        </div>
+      )}
+
+      {member.notes && <p className="v2-crew-card-notes">{member.notes}</p>}
+
+      <div className="v2-crew-card-actions">
+        <button type="button" className="v2-crew-assign-btn" onClick={onAssign}>
+          <Briefcase size={12} />
+          {member.currentJobId ? "Reassign" : "Assign to Job"}
+        </button>
+        <button type="button" className="v2-client-edit-btn" onClick={onEdit}>Edit</button>
+        <button type="button" className="v2-client-delete-btn" onClick={onDelete}>Del</button>
+      </div>
+    </article>
+  );
+}
+
+// ── Crew Manager (the enhanced Crew tab) ──────────────────────────────────────
+
+function CrewManager({ crewType }: { crewType: CrewType }) {
+  const [crew, setCrew] = useState<CrewMember[]>(loadCrew);
+  const [showForm, setShowForm] = useState(false);
+  const [editingMember, setEditingMember] = useState<CrewMember | null>(null);
+  const [assigningMember, setAssigningMember] = useState<CrewMember | null>(null);
+  const [tradeFilter, setTradeFilter] = useState<string>("All");
+
+  const members = crew.filter((m) => m.type === crewType);
+
+  const trades = ["All", ...Array.from(new Set(members.map((m) => m.trade).filter(Boolean)))];
+
+  const filtered = tradeFilter === "All" ? members : members.filter((m) => m.trade === tradeFilter);
+
+  function persist(list: CrewMember[]) {
+    setCrew(list);
+    saveCrew(list);
+  }
+
+  function handleSave(data: Omit<CrewMember, "id" | "addedAt">) {
+    if (editingMember) {
+      persist(crew.map((m) => m.id === editingMember.id ? { ...m, ...data } : m));
+    } else {
+      const next: CrewMember = { id: crypto.randomUUID(), ...data, type: crewType, addedAt: new Date().toISOString() };
+      persist([next, ...crew]);
+    }
+    setShowForm(false);
+    setEditingMember(null);
+  }
+
+  function handleDelete(id: string) {
+    if (!window.confirm("Remove this person from your crew?")) return;
+    persist(crew.filter((m) => m.id !== id));
+  }
+
+  function handleAssign(memberId: string, jobId: string) {
+    persist(crew.map((m) => m.id === memberId ? { ...m, currentJobId: jobId, availability: "busy" } : m));
+    setAssigningMember(null);
+  }
+
+  function handleUnassign(memberId: string) {
+    persist(crew.map((m) => m.id === memberId ? { ...m, currentJobId: undefined, availability: "available" } : m));
+    setAssigningMember(null);
+  }
+
+  function copyInviteTemplate(member: CrewMember) {
+    const text = `Hey ${member.name}, I have a ${member.trade || "trade"} job coming up. Interested?`;
+    navigator.clipboard.writeText(text).catch(() => { /* noop */ });
+  }
+
+  const label = crewType === "crew" ? "Crew" : "Subs";
+
+  return (
+    <div className="v2-crew-manager">
+      <div className="v2-crew-manager-header">
+        <span className="v2-crew-manager-title">{label} ({members.length})</span>
+        <button
+          type="button"
+          className="v2-client-add-btn"
+          onClick={() => { setEditingMember(null); setShowForm(true); }}
+        >
+          <Plus size={14} /> Add {label === "Crew" ? "member" : "sub"}
+        </button>
+      </div>
+
+      {/* Trade filter pills (subs tab) */}
+      {crewType === "sub" && trades.length > 1 && (
+        <div className="v2-crew-trade-filters">
+          {trades.map((t) => (
+            <button
+              key={t}
+              type="button"
+              className={`v2-crew-trade-pill${tradeFilter === t ? " active" : ""}`}
+              onClick={() => setTradeFilter(t)}
+            >
+              {t}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {showForm && (
+        <CrewMemberForm
+          initial={editingMember ? {
+            type: editingMember.type,
+            name: editingMember.name,
+            trade: editingMember.trade,
+            license: editingMember.license,
+            licenseExpiry: editingMember.licenseExpiry,
+            phone: editingMember.phone,
+            email: editingMember.email,
+            hourlyRate: editingMember.hourlyRate,
+            availability: editingMember.availability,
+            currentJobId: editingMember.currentJobId,
+            notes: editingMember.notes,
+          } : { type: crewType }}
+          onSave={handleSave}
+          onCancel={() => { setShowForm(false); setEditingMember(null); }}
+        />
+      )}
+
+      {filtered.length === 0 && !showForm ? (
+        <EmptyState
+          className="v2-network-empty"
+          icon={<Users size={20} />}
+          title={`No ${label.toLowerCase()} yet`}
+          description={crewType === "crew" ? "Add your crew members to track their availability and assignments." : "Add subcontractors you rely on and invite them to jobs."}
+          compact
+        />
+      ) : (
+        <div className="v2-crew-card-list">
+          {filtered.map((member) => (
+            <div key={member.id} className="v2-crew-card-wrapper">
+              <CrewCard
+                member={member}
+                onEdit={() => { setEditingMember(member); setShowForm(true); }}
+                onDelete={() => handleDelete(member.id)}
+                onAssign={() => setAssigningMember(member)}
+              />
+              {crewType === "sub" && (
+                <button
+                  type="button"
+                  className="v2-crew-invite-copy-btn"
+                  onClick={() => copyInviteTemplate(member)}
+                  title="Copy invite text"
+                >
+                  <Copy size={13} />
+                  Invite to Job
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {assigningMember && (
+        <JobAssignModal
+          member={assigningMember}
+          onAssign={(jobId) => handleAssign(assigningMember.id, jobId)}
+          onUnassign={() => handleUnassign(assigningMember.id)}
+          onClose={() => setAssigningMember(null)}
+        />
+      )}
+    </div>
+  );
+}
+
 
 // ── Crew Invite Planner ───────────────────────────────────────────────────────
 
@@ -509,97 +869,6 @@ function CrewInvitePlanner() {
         )}
       </div>
     </Panel>
-  );
-}
-
-// ── Availability dots helper ──────────────────────────────────────────────────
-
-function crewAvailDots(memberId: string | number): Array<"available" | "limited" | "unavailable"> {
-  const seed = String(memberId).split("").reduce((acc, c) => acc + c.charCodeAt(0), 0);
-  const statuses = ["available", "limited", "unavailable"] as const;
-  return Array.from({ length: 7 }, (_, i) => statuses[(seed + i * 3) % 3]);
-}
-
-// ── Group Message Modal ───────────────────────────────────────────────────────
-
-function CrewGroupMessageModal({
-  members,
-  selected,
-  draft,
-  onToggle,
-  onDraftChange,
-  onSend,
-  onClose,
-}: {
-  members: Array<{ id: string; name: string }>;
-  selected: Set<string>;
-  draft: string;
-  onToggle: (id: string) => void;
-  onDraftChange: (v: string) => void;
-  onSend: () => void;
-  onClose: () => void;
-}) {
-  return (
-    <div className="v2-modal-backdrop" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="v2-group-msg-modal">
-        <header>
-          <strong>Group message</strong>
-          <button type="button" onClick={onClose}>✕</button>
-        </header>
-        <div className="v2-group-msg-list">
-          {members.map((m) => (
-            <label key={m.id} className="v2-group-msg-member">
-              <input type="checkbox" checked={selected.has(m.id)} onChange={() => onToggle(m.id)} />
-              {m.name}
-            </label>
-          ))}
-        </div>
-        <textarea
-          value={draft}
-          onChange={(e) => onDraftChange(e.target.value)}
-          placeholder="Type your message..."
-          rows={3}
-          className="v2-group-msg-textarea"
-        />
-        <button
-          type="button"
-          className="v2-primary-button"
-          disabled={selected.size === 0 || !draft.trim()}
-          onClick={onSend}
-        >
-          <Send size={14} />
-          Send to {selected.size} member{selected.size !== 1 ? "s" : ""}
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function TopTalentCard({ person }: { person: Talent }) {
-  return (
-    <article className="v2-network-person-card">
-      <div className="v2-network-person-header">
-        <Avatar name={person.name} size="md" className="v2-network-avatar" />
-        <div>
-          <strong>{person.name}</strong>
-          <span>{person.trade} · {person.location}</span>
-        </div>
-        <strong>{person.match}%</strong>
-      </div>
-
-      <p>{person.availability} · {person.responseTime}</p>
-
-      <div className="v2-crew-avail-dots" aria-label="Estimated availability this week">
-        {crewAvailDots(person.id).map((status, i) => (
-          <span key={i} className={`v2-avail-dot avail-${status}`} title={["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"][i]} />
-        ))}
-      </div>
-
-      <footer>
-        <span>{person.rating.toFixed(1)} rating</span>
-        <span>{person.reviews} reviews</span>
-      </footer>
-    </article>
   );
 }
 
@@ -797,7 +1066,7 @@ function ReviewsView({
   );
 }
 
-type NetworkTab = "Crew" | "Reviews" | "Clients";
+type NetworkTab = "Crew" | "Subs" | "Reviews" | "Clients";
 
 export function NetworkHub({ view, jobs, talent, communityPosts, shoutOuts, displayName, onOpenCrew, onOpenShopTalk, onOpenReviews, onAddShoutOut }: NetworkHubProps) {
   const activeCrew = talent.slice(0, 3);
@@ -805,49 +1074,22 @@ export function NetworkHub({ view, jobs, talent, communityPosts, shoutOuts, disp
   const highlightedShoutOuts = shoutOuts.slice(0, 4);
   const openJobs = jobs.filter((job) => job.status === "Open").length;
 
+  // Read local crew for accurate stat tiles
+  const [localCrewAll] = useState<CrewMember[]>(loadCrew);
+  const localCrewCount = localCrewAll.filter((m) => m.type === "crew").length;
+  const localSubCount = localCrewAll.filter((m) => m.type === "sub").length;
+  const crewMemberCount = localCrewCount + activeCrew.length;
+
   // Internal tab state — derive initial tab from the incoming view prop
   const [activeTab, setActiveTab] = useState<NetworkTab>(() =>
     view === "Reviews" ? "Reviews" : "Crew"
   );
 
-  // Feature 1: Skill matrix view toggle
-  const [crewView, setCrewView] = useState<"list" | "skills">("list");
-
-  // Feature 3: Group message modal
-  const [showGroupMsg, setShowGroupMsg] = useState(false);
-  const [selectedMembers, setSelectedMembers] = useState<Set<string>>(new Set());
-  const [groupMsgDraft, setGroupMsgDraft] = useState("");
-
-  function toggleMember(id: string) {
-    setSelectedMembers((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }
-
-  function handleGroupSend() {
-    setGroupMsgDraft("");
-    setSelectedMembers(new Set());
-    setShowGroupMsg(false);
-  }
-
-  // Skills matrix: group crew by trade
-  const crewByTrade = activeCrew.reduce<Record<string, Talent[]>>((acc, member) => {
-    const key = member.trade || "Other";
-    if (!acc[key]) acc[key] = [];
-    acc[key].push(member);
-    return acc;
-  }, {});
-
-  // Modal member list (all talent, id as string)
-  const modalMembers = talent.map((t) => ({ id: String(t.id), name: t.name }));
 
   // Tab bar shared across all views
   const tabBar = (
     <div className="v2-network-tab-bar">
-      {(["Crew", "Reviews", "Clients"] as NetworkTab[]).map((tab) => (
+      {(["Crew", "Subs", "Reviews", "Clients"] as NetworkTab[]).map((tab) => (
         <button
           key={tab}
           type="button"
@@ -873,7 +1115,7 @@ export function NetworkHub({ view, jobs, talent, communityPosts, shoutOuts, disp
           description="Crew, reviews, and your client book."
           actions={
             <div className="v2-network-header-metrics">
-              <MetricTile icon={<Users size={18} />} value={activeCrew.length} label="crew members" />
+              <MetricTile icon={<Users size={18} />} value={crewMemberCount} label="crew members" />
               <MetricTile icon={<ThumbsUp size={18} />} value={shoutOuts.length} label="shout-outs" />
             </div>
           }
@@ -909,6 +1151,27 @@ export function NetworkHub({ view, jobs, talent, communityPosts, shoutOuts, disp
     );
   }
 
+  if (activeTab === "Subs") {
+    return (
+      <section className="v2-network-page" aria-label="Subs">
+        <PageHeader
+          className="v2-network-header"
+          title="Network"
+          description="Crew, reviews, and your client book."
+          actions={
+            <div className="v2-network-header-metrics">
+              <MetricTile icon={<Users size={18} />} value={localSubCount} label="subs" />
+              <MetricTile icon={<Briefcase size={18} />} value={openJobs} label="open jobs" />
+            </div>
+          }
+        />
+        {tabBar}
+        <CrewManager crewType="sub" />
+      </section>
+    );
+  }
+
+  // Crew tab
   return (
     <section className="v2-network-page" aria-label="Crew">
       <PageHeader
@@ -917,7 +1180,7 @@ export function NetworkHub({ view, jobs, talent, communityPosts, shoutOuts, disp
         description="Crew, reviews, and your client book."
         actions={
         <div className="v2-network-header-metrics">
-          <MetricTile icon={<Users size={18} />} value={activeCrew.length} label="crew members" />
+          <MetricTile icon={<Users size={18} />} value={crewMemberCount} label="crew members" />
           <MetricTile icon={<Briefcase size={18} />} value={openJobs} label="open jobs" />
           <MetricTile icon={<ThumbsUp size={18} />} value={shoutOuts.length} label="shout-outs" />
         </div>
@@ -925,81 +1188,12 @@ export function NetworkHub({ view, jobs, talent, communityPosts, shoutOuts, disp
       />
       {tabBar}
 
-      {showGroupMsg && (
-        <CrewGroupMessageModal
-          members={modalMembers}
-          selected={selectedMembers}
-          draft={groupMsgDraft}
-          onToggle={toggleMember}
-          onDraftChange={setGroupMsgDraft}
-          onSend={handleGroupSend}
-          onClose={() => setShowGroupMsg(false)}
-        />
-      )}
+      {/* Local Crew Manager */}
+      <CrewManager crewType="crew" />
+
+      <CrewInvitePlanner />
 
       <div className="v2-network-grid">
-        <Panel
-          className="v2-network-panel"
-          eyebrow="Top matches"
-          title="People to reach out to"
-          action={
-            <div className="v2-network-panel-actions">
-              <button type="button" className="v2-primary-button v2-group-msg-btn" onClick={() => setShowGroupMsg(true)}>
-                <Users size={13} />
-                Group message
-              </button>
-              <button type="button" onClick={onOpenCrew}>Open crew</button>
-            </div>
-          }
-        >
-          <div className="v2-crew-view-toggle">
-            <button type="button" className={crewView === "list" ? "active" : ""} onClick={() => setCrewView("list")}>List</button>
-            <button type="button" className={crewView === "skills" ? "active" : ""} onClick={() => setCrewView("skills")}>Skills</button>
-          </div>
-
-          {crewView === "list" ? (
-            <div className="v2-network-person-list">
-              {activeCrew.length ? activeCrew.map((person) => <TopTalentCard key={person.id} person={person} />) : (
-                <EmptyState
-                  className="v2-network-empty"
-                  icon={<Users size={20} />}
-                  title="Your crew starts here"
-                  description="Add contractors and tradespeople you have worked with. Your crew is your reputation network."
-                  action={<button type="button" onClick={onOpenCrew}>Find people</button>}
-                  compact
-                />
-              )}
-            </div>
-          ) : (
-            <div className="v2-skill-matrix">
-              {Object.keys(crewByTrade).length ? Object.entries(crewByTrade).map(([trade, members]) => (
-                <div key={trade} className="v2-skill-group">
-                  <strong>{trade}</strong>
-                  <div className="v2-skill-group-chips">
-                    {members.map((m) => (
-                      <span key={m.id} className="v2-skill-member-chip">
-                        {m.name}
-                        {m.reviews > 0 && <span className="v2-skill-chip-badge">{m.reviews}</span>}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )) : (
-                <EmptyState
-                  className="v2-network-empty"
-                  icon={<Users size={20} />}
-                  title="No crew members yet"
-                  description="Add people to see them grouped by trade."
-                  compact
-                />
-              )}
-            </div>
-          )}
-        </Panel>
-
-        <SubRosterPanel />
-
-        <CrewInvitePlanner />
 
         <Panel
           className="v2-network-panel"
@@ -1076,3 +1270,4 @@ export function NetworkHub({ view, jobs, talent, communityPosts, shoutOuts, disp
     </section>
   );
 }
+
