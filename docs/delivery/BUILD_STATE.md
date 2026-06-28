@@ -16,6 +16,7 @@ Production release commit: see live `/api/health` build metadata
 - Rendered QA passed for the Work lifecycle path. Screenshot evidence was saved outside the repo at `C:\Users\zboyt\AppData\Local\Temp\rivt-work-lifecycle-pass`.
 - Required local gates passed after this slice so far: `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test:ui:work-lifecycle`, `npm run test:ui:mobile-actions`, `npm run test:ui:tools`, `npm run test:ui:shop-talk-news`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check`.
 - The full `npm run test` command used the isolated test Postgres through local `TEST_DATABASE_URL`.
+- Production deployment was performed through Railway from `master`. Live `/api/health` served source `b6f6496178e55648eddad5226326007ea6c0a032` with ready migration `0013_album_storage_scope`, PostgreSQL, S3-compatible object storage, and configured Sentry.
 
 ## Latest Packet 08 Pass - Solo Click-Path Audit and Focused Tools Launcher
 

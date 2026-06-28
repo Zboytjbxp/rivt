@@ -17,6 +17,7 @@ Evidence must eventually link to implementation, automated tests, manual accepta
 - `GA-JOB-001` gains regression evidence for the user-reported publish-from-draft path: the new rendered smoke publishes a ready draft without surfacing "Request validation failed" and then verifies the job appears under Open work.
 - `GA-OPS-007` gains local automated evidence for this slice: `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test:ui:work-lifecycle`, `npm run test:ui:mobile-actions`, `npm run test:ui:tools`, `npm run test:ui:shop-talk-news`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check` passed.
 - The full `npm run test` command used the isolated test Postgres through local `TEST_DATABASE_URL`.
+- `GA-OPS-008` gains deployment evidence: source `b6f6496178e55648eddad5226326007ea6c0a032` was deployed through Railway, and live `/api/health` reported ready migration `0013_album_storage_scope`, PostgreSQL, S3-compatible object storage, and configured Sentry.
 
 ## Traceability Addendum - 2026-06-27 Tools, Server, Styles, Shop Talk, and Trade News Liability Reduction
 

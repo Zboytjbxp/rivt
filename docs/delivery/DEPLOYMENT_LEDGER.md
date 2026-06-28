@@ -21,6 +21,26 @@ Add one entry per staging/production deployment.
 - Rollback performed/result:
 - Approval:
 
+## Current Production - Packet 08 Work Lifecycle Bridge
+
+- Environment: Production (`https://rivt.pro`)
+- Date/time/timezone: 2026-06-28 14:41 America/New_York
+- Deployer: Codex through GitHub push to Railway-linked `master`
+- Source repository/branch: `Zboytjbxp/rivt`, `master`
+- Source commit: `b6f6496178e55648eddad5226326007ea6c0a032`
+- Build/artifact ID: Railway deployment `30ba19e3-b8a2-4ffb-94e8-56289ecf3f3c`
+- Migration version before/after: `0013_album_storage_scope` / `0013_album_storage_scope` (no schema migration)
+- Feature-flag/config version: no provider credentials or operational-control flags changed
+- Provider/config changes (no secrets): no provider credentials changed; Sentry remains configured
+- Backup/rollback target: prior successful production source `7c25c738ed166e22d899579e6112c57f56d3c249`; no migration rollback required
+- Automated gates: `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test:ui:work-lifecycle`, `npm run test:ui:mobile-actions`, `npm run test:ui:tools`, `npm run test:ui:shop-talk-news`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check` passed. The full DB-backed test run used local `TEST_DATABASE_URL`.
+- Rendered evidence: Work lifecycle screenshots saved outside the repo at `C:\Users\zboyt\AppData\Local\Temp\rivt-work-lifecycle-pass`; existing mobile, Tools, and Shop Talk/Trade News screenshots refreshed at their established temp directories.
+- Post-deploy smoke tests: live `/api/health` reported exact source `b6f6496178e55648eddad5226326007ea6c0a032`, ready migration `0013_album_storage_scope`, PostgreSQL, S3-compatible object storage, and Sentry configured.
+- Health/readiness result: healthy production health; no schema migration applied.
+- Known risks: this slice adds repeatable rendered coverage for the Work lifecycle and active-work tool bridge, but it does not replace deeper production authenticated click-path testing with a stable seeded production test account.
+- Rollback performed/result: not required.
+- Approval: accepted as controllable Packet 08 Work lifecycle UX hardening evidence.
+
 ## Current Production - Packet 08 Server-Owned Profile Search
 
 - Environment: Production (`https://rivt.pro`)
