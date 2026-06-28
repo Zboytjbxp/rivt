@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowLeft,
   BriefcaseBusiness,
@@ -1426,6 +1426,7 @@ export function WorkWorkspace({
   const [saveTemplateNotice, setSaveTemplateNotice] = useState("");
   const [detailJobId, setDetailJobId] = useState<string | null>(null);
   const [localJobs, setLocalJobs] = useState<LocalJob[]>(readLocalJobs);
+  const detailHydrationRequests = useRef<Set<string>>(new Set());
 
   const visibleJobs = useMemo(() => {
     if (role !== "contractor") return jobs;
@@ -1582,6 +1583,26 @@ export function WorkWorkspace({
   const selectedIsVisible = selectedJob ? visibleJobs.some((job) => job.id === selectedJob.id) : false;
   const detailJob = selectedIsVisible ? selectedJob : visibleJobs[0] ?? null;
   const canonicalJobId = detailJob?.canonical?.id ?? null;
+  const needsPrivateDetailHydration = role === "contractor"
+    && Boolean(canonicalJobId)
+    && Boolean(detailJob?.canonical)
+    && !detailJob?.canonical?.privateLocation;
+
+  useEffect(() => {
+    if (!canonicalJobId || !needsPrivateDetailHydration || detailHydrationRequests.current.has(canonicalJobId)) return;
+    let cancelled = false;
+    detailHydrationRequests.current.add(canonicalJobId);
+    getJob(canonicalJobId)
+      .then((job) => {
+        if (!cancelled) onJobLoaded(toJobViewModel(job));
+      })
+      .catch(() => {
+        detailHydrationRequests.current.delete(canonicalJobId);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [canonicalJobId, needsPrivateDetailHydration, onJobLoaded]);
 
   useEffect(() => {
     let cancelled = false;
