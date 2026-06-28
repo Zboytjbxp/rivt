@@ -10,6 +10,13 @@ Status values:
 
 Evidence must eventually link to implementation, automated tests, manual acceptance proof, and deployed build.
 
+## Traceability Addendum - 2026-06-28 Work Draft Editor Date Normalization Hotfix
+
+- `GA-JOB-001` gains regression evidence for the user-reported Edit job validation failure: `JobEditorModal` now normalizes optional preferred start dates to `YYYY-MM-DD` or `null`, and `npm run test:ui:work-lifecycle` covers opening a saved draft editor with timestamp-shaped date data, saving it, and publishing without surfacing `Request validation failed`.
+- `GA-UX-003` gains copy-polish evidence: preferred-start-date validation issues now map to the user-facing `preferred start date` label instead of the internal `preferredStartDate` field name.
+- `GA-OPS-007` gains local automated evidence for this hotfix: `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test:ui:work-lifecycle`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check` passed.
+- `GA-OPS-008` gains deployment evidence: source `4fa7d083ad19b390e0ac5ddd30c379edd1b85641` was deployed through Railway; live `/api/health` reported PostgreSQL, S3-compatible object storage, and configured Sentry; `EXPECTED_SOURCE_COMMIT=4fa7d083ad19b390e0ac5ddd30c379edd1b85641 npm run monitor:production` passed; authenticated `npm run smoke:contractor-click-path:live` passed with run `contractor-click-20260628212559-2114c1`.
+
 ## Traceability Addendum - 2026-06-28 Live Contractor Click-Path and Mobile Containment
 
 - `GA-JOB-001` gains authenticated production UI evidence: `npm run smoke:contractor-click-path:live` creates a complete draft through the live API, logs into `https://rivt.pro` as the production test contractor, opens the draft in the mobile Work UI, publishes it through the actual button, verifies it appears under Open work, then closes the temporary job during cleanup.
