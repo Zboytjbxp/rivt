@@ -13,9 +13,9 @@ Production release commit: see live `/api/health` build metadata
 - The first live runs caught real issues instead of being treated as test noise: Work mobile tabs pushed off-screen, Work draft detail used list data without the private jobsite address and disabled Publish, and Crew invite planning could land under the fixed mobile nav during automated tap checks.
 - Fixed those issues by making Work section/detail tabs wrap into mobile-safe grids, hydrating selected contractor job details from the canonical job endpoint before publish-readiness checks, and adding mobile scroll-margin for focus/tap targets so controls clear the bottom nav.
 - Required local gates passed for the final slice: `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test:ui:work-lifecycle`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check`.
-- Production deployment was performed through Railway from `master`. Railway deployment `f757a141-2e9c-42b3-a7ee-5077f3473f03` served source `144e5ceb1ad4c5ac909a2342c49a7f67a2b54a5a` on `https://rivt.pro`; live `/api/health` returned ready migration `0013_album_storage_scope`, PostgreSQL, S3-compatible object storage, and configured Sentry.
-- `EXPECTED_SOURCE_COMMIT=144e5ceb1ad4c5ac909a2342c49a7f67a2b54a5a npm run monitor:production` passed with seven anonymous private-route checks, provider dependencies healthy, operational controls off, and 705 ms duration.
-- Final authenticated live contractor smoke passed with run `contractor-click-20260628201138-7e736b`; screenshots were saved outside the repo at `C:\Users\zboyt\AppData\Local\Temp\rivt-contractor-click-path-live`.
+- Production deployment was performed through Railway from `master`. Railway deployment `f3168081-4b7b-4eb0-970c-c83cf82082dc` served source `c911914f90e748c2a8c58763de3196c4865f9382` on `https://rivt.pro`; live `/api/health` returned ready migration `0013_album_storage_scope`, PostgreSQL, S3-compatible object storage, and configured Sentry.
+- `EXPECTED_SOURCE_COMMIT=c911914f90e748c2a8c58763de3196c4865f9382 npm run monitor:production` passed with seven anonymous private-route checks, provider dependencies healthy, operational controls off, and 557 ms duration.
+- Final authenticated live contractor smoke passed with run `contractor-click-20260628201612-637417`; screenshots were saved outside the repo at `C:\Users\zboyt\AppData\Local\Temp\rivt-contractor-click-path-live`.
 
 ## Latest Packet 08 Pass - Work Lifecycle Bridge and Active-Work Tool Paths
 
