@@ -18,7 +18,7 @@ Production release commit: see live `/api/health` build metadata
 - Rendered QA passed for mobile actions, Tools, and Shop Talk/Trade News. Screenshot evidence was saved outside the repo at `C:\Users\zboyt\AppData\Local\Temp\rivt-mobile-actions-pass`, `C:\Users\zboyt\AppData\Local\Temp\rivt-tools-pass`, and `C:\Users\zboyt\AppData\Local\Temp\rivt-shop-talk-news-pass`.
 - Required local gates passed after this slice: `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test:ui:mobile-actions`, `npm run test:ui:tools`, `npm run test:ui:shop-talk-news`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check`.
 - The full `npm run test` command used the isolated test Postgres through local `TEST_DATABASE_URL`. The first default test run hit the command timeout, then passed with a longer timeout.
-- Production deployment is pending for this slice.
+- Production deployment was performed through Railway from `master`. Live `/api/health` served commit `41247df7a0c3abe17b1ef9de26a85b1b30f2e018` with ready migrations, PostgreSQL, S3-compatible object storage, and configured Sentry.
 
 ## Latest Packet 08 Pass - Mobile Action Audit, Install Icon, and Profile Overlay Hardening
 
