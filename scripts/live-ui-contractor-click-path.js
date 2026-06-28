@@ -133,7 +133,8 @@ async function assertNoHorizontalOverflow(page, label) {
 }
 
 async function assertClickable(page, locator, label) {
-  await locator.scrollIntoViewIfNeeded();
+  await locator.evaluate((element) => element.scrollIntoView({ block: "center", inline: "nearest" }));
+  await page.waitForTimeout(100);
   const result = await locator.evaluate((element) => {
     const rect = element.getBoundingClientRect();
     const x = Math.max(0, Math.min(window.innerWidth - 1, rect.left + rect.width / 2));
@@ -172,13 +173,24 @@ async function runUi(jobTitle) {
   const context = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: "block", reducedMotion: "reduce" });
   const page = await context.newPage();
   const errors = [];
+  const failedResponses = [];
+  let auditNetworkFailures = false;
   page.on("console", (message) => {
-    if (["warning", "error"].includes(message.type())) errors.push({ type: message.type(), text: message.text().slice(0, 300) });
+    const text = message.text();
+    if (text.includes("Service Worker registration blocked by Playwright")) return;
+    if (text.includes("Failed to load resource: the server responded with a status of 401")) return;
+    if (["warning", "error"].includes(message.type())) errors.push({ type: message.type(), text: text.slice(0, 300) });
   });
   page.on("pageerror", (error) => errors.push({ type: "pageerror", text: error.message.slice(0, 300) }));
+  page.on("response", (response) => {
+    if (auditNetworkFailures && response.status() >= 400) {
+      failedResponses.push({ status: response.status(), url: response.url() });
+    }
+  });
 
   try {
     await loginUi(page);
+    auditNetworkFailures = true;
 
     await page.getByRole("button", { name: "Search" }).click();
     await page.getByRole("dialog", { name: "Search RIVT" }).waitFor({ timeout: 15_000 });
@@ -201,7 +213,7 @@ async function runUi(jobTitle) {
       page.waitForResponse((response) => response.url().includes("/publish") && response.status() === 200, { timeout: 20_000 }),
       page.getByRole("button", { name: "Publish" }).click(),
     ]);
-    await page.getByRole("button", { name: "Open" }).click();
+    await page.getByRole("button", { name: "Open", exact: true }).click();
     await page.locator(".v2-job-row-inner").filter({ hasText: jobTitle }).first().waitFor({ timeout: 20_000 });
 
     await page.getByRole("button", { name: "Crew", exact: true }).click();
@@ -225,6 +237,7 @@ async function runUi(jobTitle) {
 
     await page.screenshot({ path: path.join(screenshotDir, `${runId}-final.png`), fullPage: true });
     assert.deepEqual(errors, [], `live contractor UI produced console/page errors: ${JSON.stringify(errors)}`);
+    assert.deepEqual(failedResponses, [], `live contractor UI produced failing responses: ${JSON.stringify(failedResponses)}`);
   } finally {
     await context.close();
     await browser.close();
