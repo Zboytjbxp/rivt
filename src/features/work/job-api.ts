@@ -170,11 +170,49 @@ export interface CanonicalActiveWork {
 export class JobApiError extends RivtApiError {
   constructor(status: number, body: ApiErrorBody) {
     super(status, body, "RIVT could not complete the job request.");
+    const message = formatJobApiMessage(this.code, this.message, this.details);
+    if (message) this.message = message;
     this.name = "JobApiError";
   }
 }
 
 const request = makeRequest((s, b) => new JobApiError(s, b));
+
+const jobFieldLabels: Record<string, string> = {
+  expectedVersion: "draft version",
+  consentAccepted: "job consent",
+  consentVersion: "consent version",
+  title: "job title",
+  tradeCode: "trade",
+  summary: "short summary",
+  scopeDescription: "scope description",
+  budgetCents: "pay",
+  durationHours: "duration",
+  publicLocation: "public city/state",
+  privateLocation: "exact jobsite address",
+  applicationDeadline: "application deadline",
+};
+
+function formatJobApiMessage(code: string, fallback: string, details: unknown) {
+  if (code === "JOB_NOT_READY" && isRecord(details) && Array.isArray(details.missing)) {
+    const missing = details.missing.map((field) => jobFieldLabels[String(field)] ?? String(field));
+    return `Publish blocked. Complete ${missing.join(", ")}.`;
+  }
+  if (code === "VALIDATION_FAILED" && isRecord(details) && Array.isArray(details.issues)) {
+    const fields = details.issues
+      .map((issue) => isRecord(issue) ? String(issue.path || "") : "")
+      .filter(Boolean)
+      .map((path) => jobFieldLabels[path] ?? path)
+      .filter((value, index, all) => all.indexOf(value) === index);
+    if (fields.length) return `Request validation failed for ${fields.join(", ")}. Refresh the draft and try again.`;
+  }
+  if (code === "JOB_VERSION_CONFLICT") return "This draft changed since it loaded. Refresh it and try publishing again.";
+  return fallback;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value && typeof value === "object");
+}
 
 export interface JobListFilters {
   query?: string;
@@ -225,6 +263,15 @@ export async function updateJob(jobId: string, expectedVersion: number, input: P
 }
 
 export async function transitionJob(jobId: string, action: "publish" | "pause" | "resume" | "close", expectedVersion: number) {
+  if (!Number.isInteger(expectedVersion) || expectedVersion < 1) {
+    throw new JobApiError(422, {
+      error: {
+        code: "VALIDATION_FAILED",
+        message: "Request validation failed.",
+        details: { issues: [{ path: "expectedVersion", code: "invalid_type", message: "Expected a positive draft version." }] },
+      },
+    });
+  }
   const payload = action === "publish"
     ? { expectedVersion, consentAccepted: true, consentVersion: "2026-06-19" }
     : { expectedVersion, reason: "Updated by the contractor" };

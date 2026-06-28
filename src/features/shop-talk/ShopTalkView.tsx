@@ -33,6 +33,7 @@ import {
   type CommunityBadgeThresholds,
 } from "./community-utils";
 import { apiPath } from "../../lib/api";
+import "./shop-talk.css";
 
 interface AccountProfile {
   displayName: string;
@@ -1053,15 +1054,13 @@ export function ShopTalkView({
             </>
           ) : (
             <>
-              <div className="shop-talk-command">
+              <div className="shop-talk-command news-command">
                 <div className="shop-talk-command-head">
                   <span>Trade news</span>
                   <h2>Code, safety, and permitting updates</h2>
-                </div>
-                <div className="shop-talk-kpi-strip" aria-label="Trade news summary">
-                  <span><strong>{filteredNews.length}</strong><small>articles</small></span>
-                  <span><strong>{newsSourceCount}</strong><small>sources</small></span>
-                  <span><strong>{newsFetched ? "Live" : "Curated"}</strong><small>feed</small></span>
+                  <p className="news-command-meta">
+                    {filteredNews.length} articles · {newsSourceCount} sources · {newsFetched ? "Live feed" : "Curated feed"}
+                  </p>
                 </div>
               </div>
               <div className="shop-talk-fieldbar news-fieldbar" aria-label="Trade News filters">
@@ -1106,8 +1105,8 @@ export function ShopTalkView({
                       onClick={() => { setSelectedNewsId(item.id); setMobileDetail(true); }}
                     >
                       <div className="shop-news-card-body-wrap">
-                        {!isFallbackNewsThumbnail(item) && (
-                          <div className="news-card-thumb">
+                        {item.thumbnailUrl && (
+                          <div className={isFallbackNewsThumbnail(item) ? "news-card-thumb is-fallback" : "news-card-thumb is-real"}>
                             <img src={item.thumbnailUrl} alt={`${item.source} article thumbnail`} loading="lazy" />
                           </div>
                         )}
@@ -1332,8 +1331,8 @@ export function ShopTalkView({
             </button>
             {selectedNews ? (
               <div className="shop-news-detail">
-                {!isFallbackNewsThumbnail(selectedNews) && (
-                  <div className="news-detail-hero" data-urgency={selectedNews.urgency ?? "default"}>
+                {selectedNews.thumbnailUrl && (
+                  <div className={isFallbackNewsThumbnail(selectedNews) ? "news-detail-hero is-fallback" : "news-detail-hero is-real"} data-urgency={selectedNews.urgency ?? "default"}>
                     <img src={selectedNews.thumbnailUrl} alt={`${selectedNews.source} article thumbnail`} loading="lazy" />
                     <div className="news-detail-hero-copy">
                       <span className="news-detail-source">{selectedNews.source}</span>
@@ -1378,4 +1377,4 @@ export function ShopTalkView({
     </>
   );
 }
-
+

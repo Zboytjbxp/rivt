@@ -188,7 +188,7 @@ async function configurePage(page) {
       body: JSON.stringify({ data: { notifications: [], unreadCount: 0 } }),
     }),
   );
-  await page.route("**/api/v1/active-work", (route) =>
+  await page.route(/\/api\/v1\/active-work\/?(?:\?.*)?$/, (route) =>
     route.fulfill({
       status: 200,
       contentType: "application/json",
@@ -236,7 +236,7 @@ async function configurePage(page) {
       body: JSON.stringify({ data: { jobs: [] }, meta: { nextCursor: null } }),
     }),
   );
-  await page.route("**/api/news?**", (route) =>
+  await page.route("**/api/news**", (route) =>
     route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(newsPayload) }),
   );
 }
@@ -267,7 +267,8 @@ try {
     { name: "desktop", width: 1440, height: 900 },
     { name: "mobile", width: 390, height: 844 },
   ]) {
-    const page = await browser.newPage({ viewport });
+    const context = await browser.newContext({ viewport, serviceWorkers: "block" });
+    const page = await context.newPage();
     const errors = [];
     page.on("console", (message) => {
       if (message.type() === "error") errors.push(message.text());
@@ -278,7 +279,7 @@ try {
 
     await page.goto(`${baseUrl}/app/network/talk`, { waitUntil: "networkidle" });
     await page.getByRole("heading", { name: /Field answers/i }).waitFor({ timeout: 15_000 });
-    await page.getByText("Social hub", { exact: true }).waitFor({ timeout: 15_000 });
+    await page.getByText("Community knowledge", { exact: true }).waitFor({ timeout: 15_000 });
     await page.getByText("Answer queue", { exact: true }).waitFor({ timeout: 15_000 });
     await page.getByText("Reputation path", { exact: true }).waitFor({ timeout: 15_000 });
     await page.getByText(/Electrical question/i).waitFor({ timeout: 15_000 });
@@ -330,7 +331,7 @@ try {
     await page.screenshot({ path: path.join(screenshotDir, `${viewport.name}-talk.png`), fullPage: true });
 
     await page.getByRole("button", { name: "Trade News" }).click();
-    await page.getByRole("heading", { name: /Original sources/i }).waitFor({ timeout: 15_000 });
+    await page.getByRole("heading", { name: /Code, safety, and permitting updates/i }).waitFor({ timeout: 15_000 });
     await page.locator('input[placeholder="Search sources, codes, safety, local"]').fill("permit");
     await page
       .locator(".shop-news-list")
@@ -344,7 +345,7 @@ try {
     await page.screenshot({ path: path.join(screenshotDir, `${viewport.name}-news.png`), fullPage: true });
 
     assert.equal(errors.length, 0, `${viewport.name} console errors: ${errors.join("\n")}`);
-    await page.close();
+    await context.close();
   }
 
   console.log(`Shop Talk / Trade News rendered QA passed. Screenshots: ${screenshotDir}`);

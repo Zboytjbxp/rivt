@@ -338,7 +338,8 @@ try {
   browser = await chromium.launch({ headless: true });
 
   for (const viewport of [{ width: 1280, height: 800 }, { width: 390, height: 844 }]) {
-    const page = await browser.newPage({ viewport });
+    const context = await browser.newContext({ viewport, serviceWorkers: "block" });
+    const page = await context.newPage();
     const consoleErrors = [];
     page.on("console", (message) => {
       if (message.type() === "error" && message.text() !== "Failed to load resource: net::ERR_FAILED") {
@@ -347,7 +348,7 @@ try {
     });
     await configurePage(page, []);
     await page.goto(`${baseUrl}/app`, { waitUntil: "networkidle" });
-    await page.getByRole("heading", { name: /Good morning/i }).waitFor();
+    await page.getByRole("heading", { name: /Good (morning|afternoon|evening)/i }).waitFor();
     await page.getByText("RIVT Daily", { exact: true }).waitFor();
     await page.getByText("Availability radar", { exact: true }).waitFor();
     const availabilityUpdate = page.waitForResponse((response) => {
@@ -368,7 +369,7 @@ try {
     await assertToolsFlow(page);
     assert.equal(await page.getByText("Marcus Webb").count(), 0);
     assert.deepEqual(consoleErrors, []);
-    await page.close();
+    await context.close();
   }
 
   console.log("Jobs and discovery E2E passed at desktop and mobile viewports.");

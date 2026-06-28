@@ -170,7 +170,7 @@ async function configurePage(page) {
       }),
     });
   });
-  await page.route("**/api/v1/active-work", (route) =>
+  await page.route(/\/api\/v1\/active-work\/?(?:\?.*)?$/, (route) =>
     route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { activeWork: [activeWorkItem] } }) }),
   );
   await page.route("**/api/v1/jobs?**", (route) =>
@@ -233,7 +233,7 @@ async function runToolsFlow(page, viewportName) {
   await page.getByRole("link", { name: "Text draft" }).waitFor({ timeout: 15_000 });
   await page.getByRole("heading", { name: "Printable invoice" }).waitFor({ timeout: 15_000 });
   await page.getByLabel("Printable invoice preview").getByText("Total due", { exact: true }).waitFor({ timeout: 15_000 });
-  await page.getByText("Email/text delivery is not represented as production-ready", { exact: false }).waitFor({ timeout: 15_000 });
+  await page.getByText("RIVT does not send on your behalf.", { exact: false }).waitFor({ timeout: 15_000 });
   await assertNoHorizontalOverflow(page);
   await page.screenshot({ path: path.join(screenshotDir, `${viewportName}-invoice.png`), fullPage: true });
   await page.getByLabel("Invoice draft").getByRole("button", { name: "Tools" }).click();
@@ -247,7 +247,7 @@ async function runToolsFlow(page, viewportName) {
   await page.getByLabel("Safety note").fill("Verified ladder setup and kept panel covered while working.");
   await page.getByRole("button", { name: "Photos captured" }).click();
   await page.getByRole("button", { name: "Safety condition checked" }).click();
-  await page.getByRole("heading", { name: "Daily log preview" }).waitFor({ timeout: 15_000 });
+  await page.locator(".v2-daily-log-preview").waitFor({ timeout: 15_000 });
   await page.locator(".v2-daily-log-preview").getByText("Installed devices", { exact: false }).waitFor({ timeout: 15_000 });
   await page.getByRole("button", { name: "Save to Records" }).click();
   await page.getByText("Daily log saved to the server-backed Records timeline.", { exact: true }).waitFor({ timeout: 15_000 });
@@ -278,7 +278,8 @@ try {
     { name: "desktop", width: 1440, height: 900 },
     { name: "mobile", width: 390, height: 844 },
   ]) {
-    const page = await browser.newPage({ viewport });
+    const context = await browser.newContext({ viewport, serviceWorkers: "block" });
+    const page = await context.newPage();
     const errors = [];
     page.on("console", (message) => {
       if (message.type() === "error") errors.push(message.text());
@@ -288,7 +289,7 @@ try {
     await configurePage(page);
     await runToolsFlow(page, viewport.name);
     assert.equal(errors.length, 0, `${viewport.name} console errors: ${errors.join("\n")}`);
-    await page.close();
+    await context.close();
   }
 
   console.log(`Tools rendered QA passed. Screenshots: ${screenshotDir}`);

@@ -10,6 +10,16 @@ Status values:
 
 Evidence must eventually link to implementation, automated tests, manual acceptance proof, and deployed build.
 
+## Traceability Addendum - 2026-06-27 Tools, Server, Styles, Shop Talk, and Trade News Liability Reduction
+
+- `GA-UX-001` gains maintainability evidence: invoice drafting, daily log, job photos, material takeoff, time tracking, bid building, expense logging, and earnings dashboard behavior were extracted from `src/features/tools/ToolsStudio.tsx` into dedicated feature modules; Trade News aggregation moved to `server/news.js`; server-owned Shop Talk reaction/reputation routes moved to `server/shop-talk.js`; retired legacy/integration bridge routes moved to `server/legacy-integrations.js`; photo album/media routes moved to `server/albums.js`.
+- `GA-UX-003` and `GA-UX-005` gain UI evidence: Tools now groups standalone field apps, money/tracking apps, and closeout/business apps; Records exposes a clearer closeout workflow strip; Shop Talk and Trade News styles are owned by the Shop Talk feature; Trade News cards/details render article/fallback thumbnails without Google favicon placeholders.
+- `GA-DATA-001` and `GA-FND-004` retain safety boundaries: the pass did not add homeowner flows, seed/demo data, fake provider success, frontend-only Records success, fake invoice sending, fake SMS/email delivery, fake payment processing, or fake closeout records. The legacy/integration bridge extraction preserved the existing retired endpoint, managed upload, identity/Stripe readiness, notification provider check, and invoice provider route contracts; the album route extraction preserved authenticated actor, upload, content-detection, signed-object, and database boundaries.
+- `GA-OPS-007` gains local automated evidence for this slice: `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test:ui:tools`, `npm run test:ui:shop-talk-news`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check` passed.
+- The rendered smoke and jobs-discovery E2E tests now block service workers so Playwright API mocks are not bypassed by PWA caching during local authenticated UI checks, and the Home E2E assertion accepts the product's time-aware morning/afternoon/evening greeting.
+- The full `npm run test` command used the isolated test Postgres through local `TEST_DATABASE_URL`.
+- `GA-OPS-008` is unchanged for production deployment: this slice has not been deployed.
+
 ## Traceability Addendum - 2026-06-22 Tools Extraction and Provider Documentation Hardening
 
 - `GA-UX-001` gains maintainability evidence: Heavy 16th calculator behavior moved into `src/features/tools/FieldCalculatorTool.tsx`, and estimate-builder behavior moved into `src/features/tools/EstimateTool.tsx`; `src/features/tools/ToolsStudio.tsx` is reduced to 1,259 lines.

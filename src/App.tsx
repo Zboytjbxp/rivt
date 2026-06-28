@@ -815,7 +815,12 @@ function App() {
     if (!job.canonical) throw new Error("This job is missing canonical lifecycle data.");
     setJobsError(null);
     try {
-      const updated = toJobViewModel(await transitionJob(job.canonical.id, action, job.canonical.version));
+      let transitionTarget = job;
+      if (action === "publish" || !Number.isInteger(job.canonical.version) || job.canonical.version < 1) {
+        transitionTarget = toJobViewModel(await getJob(job.canonical.id));
+      }
+      if (!transitionTarget.canonical) throw new Error("This job is missing canonical lifecycle data.");
+      const updated = toJobViewModel(await transitionJob(transitionTarget.canonical.id, action, transitionTarget.canonical.version));
       setJobs((current) => current.map((candidate) => candidate.id === updated.id ? updated : candidate));
       setSelectedId(updated.id);
       const activityLabel = { publish: "published", pause: "paused", resume: "reopened", close: "closed" }[action];
@@ -1412,7 +1417,7 @@ function App() {
           onNavigate={(view) => { handleNavigate(view as Parameters<typeof handleNavigate>[0]); setSearchOpen(false); }}
         />
       )}
-      {localSetupOpen && (
+      {isGuest && localSetupOpen && (
         <LocalSetupPrompt onDone={() => setLocalSetupOpen(false)} />
       )}
     </>

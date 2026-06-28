@@ -17,6 +17,20 @@ Packet 00 is merged on `master` at `4c199d903683e44d17b7985272c399c6d7a6cbd6`. T
 
 Do not discard or overwrite the pre-existing Trade News work when committing or splitting this packet.
 
+## Latest Packet 08 Pass - Tools, Server, Styles, Shop Talk, and Trade News Liability Reduction
+
+- Continued the Tools strangler split by extracting invoice drafting, daily log, job photos, material takeoff, time tracking, bid building, expense logging, and earnings dashboard behavior into dedicated feature modules: `src/features/tools/InvoiceDraftTool.tsx`, `src/features/tools/DailyLogTool.tsx`, `src/features/tools/JobPhotosTool.tsx`, `src/features/tools/MaterialsTool.tsx`, `src/features/tools/TimeTrackerTool.tsx`, `src/features/tools/BidBuilderTool.tsx`, `src/features/tools/ExpenseLoggerTool.tsx`, and `src/features/tools/EarningsDashboardTool.tsx`.
+- Preserved the Gate A honesty boundary in Tools: invoice email/text actions still open user-owned drafts only, Records writes still require accepted active work, and no fake SMS, email, payment processing, escrow, payroll, tax filing, or frontend-only closeout success was added.
+- Split server liabilities by extracting Trade News aggregation into `server/news.js`, server-owned Shop Talk reaction/reputation routes into `server/shop-talk.js`, the legacy/integration bridge into `server/legacy-integrations.js`, and photo album/media routes into `server/albums.js`; `server/index.js` now registers those modules instead of owning those implementations inline.
+- The legacy/integration bridge extraction preserved existing route contracts for retired app-state/events/payment-export endpoints, managed uploads, identity and subscription provider readiness stubs, notification provider checks, and invoice email/SMS provider delivery.
+- Split the global stylesheet by moving Shop Talk/Trade News styles into `src/features/shop-talk/shop-talk.css` and legacy Tools styles into `src/features/tools/tools-studio.css`, reducing `src/styles.css` from roughly 218 KB to roughly 180 KB in this pass.
+- Polished the Tools hub into grouped app sections, added a clearer Records command strip, allowed fallback Trade News thumbnails to render in the improved card/detail layout, and fixed the authenticated app so completed users no longer see the legacy local setup dialog.
+- Hardened the Tools, Shop Talk/Trade News, and jobs-discovery rendered smoke/E2E tests by blocking service workers in the Playwright browser context so mocked API calls are not bypassed by PWA caching, kept the Home greeting assertion aligned with the time-aware greeting copy, and extended `lint:security` so extracted server modules remain inside the security-lint gate.
+- Rendered QA passed for Tools and Shop Talk/Trade News at desktop and mobile sizes. Screenshot evidence was saved outside the repo at `C:\Users\zboyt\AppData\Local\Temp\rivt-tools-pass` and `C:\Users\zboyt\AppData\Local\Temp\rivt-shop-talk-news-pass`.
+- Required local gates passed after this slice: `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test:ui:tools`, `npm run test:ui:shop-talk-news`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check`.
+- The full `npm run test` command used the isolated test Postgres through local `TEST_DATABASE_URL`.
+- No production deployment was performed for this refactor/UI slice.
+
 ## Latest Packet 08 Pass - Improvement Backlog and Truthful Entitlement Cleanup
 
 - Added `docs/product/RIVT_IMPROVEMENT_BACKLOG.md` as a 240-item product, architecture, UX, tools, records, Shop Talk, Trade News, operations, and polish backlog. It preserves the trades-only boundary and separates Gate A truthfulness from later product scope.
