@@ -70,7 +70,7 @@ async function createPublishReadyDraft(cookie, organizationId) {
       budgetCents: 65000,
       budgetUnit: "fixed",
       durationHours: 6,
-      preferredStartDate: "2026-07-08",
+      preferredStartDate: null,
       applicationDeadline: null,
       insuranceRequired: true,
       tools: ["Voltage tester", "Ladder"],
@@ -209,6 +209,16 @@ async function runUi(jobTitle) {
     await page.getByRole("button", { name: "Publish" }).waitFor({ timeout: 15_000 });
     await assertNoHorizontalOverflow(page, "live draft detail");
     await page.screenshot({ path: path.join(screenshotDir, `${runId}-draft-detail.png`), fullPage: true });
+
+    await page.getByRole("button", { name: "Edit" }).first().click();
+    await page.getByRole("dialog", { name: "Edit job" }).waitFor({ timeout: 15_000 });
+    await Promise.all([
+      page.waitForResponse((response) => response.url().includes("/api/v1/jobs/") && response.status() === 200, { timeout: 20_000 }),
+      page.getByRole("button", { name: "Save draft" }).click(),
+    ]);
+    assert.equal(await page.getByText(/Request validation failed/i).count(), 0, "draft edit should save without preferredStartDate validation failure");
+    await page.getByRole("button", { name: "Publish" }).waitFor({ timeout: 15_000 });
+
     await Promise.all([
       page.waitForResponse((response) => response.url().includes("/publish") && response.status() === 200, { timeout: 20_000 }),
       page.getByRole("button", { name: "Publish" }).click(),

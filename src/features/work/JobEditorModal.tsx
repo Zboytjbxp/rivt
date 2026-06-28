@@ -62,6 +62,23 @@ function joinList(value: string[] | undefined) {
   return (value ?? []).join(", ");
 }
 
+function dateInputValue(value: string | null | undefined) {
+  const trimmed = String(value ?? "").trim();
+  const match = trimmed.match(/^\d{4}-\d{2}-\d{2}/);
+  return match ? match[0] : "";
+}
+
+function optionalDate(value: string | null | undefined) {
+  return dateInputValue(value) || null;
+}
+
+function optionalDateTime(value: string | null | undefined) {
+  const trimmed = String(value ?? "").trim();
+  if (!trimmed) return null;
+  const date = new Date(trimmed);
+  return Number.isNaN(date.getTime()) ? null : date.toISOString();
+}
+
 function locationParts(location: string) {
   const [city = "", region = ""] = location.split(",").map((part) => part.trim());
   return { city, region };
@@ -91,7 +108,7 @@ export function JobEditorModal({ organizationId, job, defaultLocation, onClose, 
   const [addressLine2, setAddressLine2] = useState(privateLocation?.addressLine2 ?? "");
   const [postalCode, setPostalCode] = useState(privateLocation?.postalCode ?? "");
   const [accessNotes, setAccessNotes] = useState(privateLocation?.accessNotes ?? "");
-  const [preferredStartDate, setPreferredStartDate] = useState(job?.canonical?.preferredStartDate ?? "");
+  const [preferredStartDate, setPreferredStartDate] = useState(dateInputValue(job?.canonical?.preferredStartDate));
   const [applicationDeadline, setApplicationDeadline] = useState(job?.canonical?.applicationDeadline?.slice(0, 16) ?? "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -117,8 +134,8 @@ export function JobEditorModal({ organizationId, job, defaultLocation, onClose, 
     budgetCents: budget ? Math.round(Number(budget) * 100) : null,
     budgetUnit: "fixed",
     durationHours: duration ? Number(duration) : null,
-    preferredStartDate: preferredStartDate || null,
-    applicationDeadline: applicationDeadline ? new Date(applicationDeadline).toISOString() : null,
+    preferredStartDate: optionalDate(preferredStartDate),
+    applicationDeadline: optionalDateTime(applicationDeadline),
     insuranceRequired,
     tools: splitList(tools),
     materials: splitList(materials),

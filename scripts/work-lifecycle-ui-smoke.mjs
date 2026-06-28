@@ -95,8 +95,8 @@ function makeJob(overrides = {}) {
     workType: "side_work",
     budget: { amountCents: 85000, currency: "USD", unit: "fixed" },
     durationHours: 8,
-    preferredStartDate: "2026-07-01",
-    applicationDeadline: "2026-07-03T20:00:00.000Z",
+    preferredStartDate: overrides.preferredStartDate ?? "2026-07-01",
+    applicationDeadline: overrides.applicationDeadline ?? "2026-07-03T20:00:00.000Z",
     insuranceRequired: true,
     publicLocation: { city: "Jacksonville", region: "FL", countryCode: "US", postalPrefix: "322" },
     privateLocation: {
@@ -336,7 +336,30 @@ async function configurePage(page, account, state) {
 
   await page.route(/\/api\/v1\/jobs\/[0-9a-f-]{36}$/, (route) => {
     const jobId = new URL(route.request().url()).pathname.split("/").at(-1);
-    return route.fulfill(json({ data: { job: jobById(state, jobId) } }));
+    const job = jobById(state, jobId);
+    if (route.request().method() === "PATCH") {
+      const body = route.request().postDataJSON();
+      assert.notEqual(body.preferredStartDate, "", "job editor must not send an empty preferredStartDate string");
+      if (body.preferredStartDate !== null && body.preferredStartDate !== undefined) {
+        assert.match(body.preferredStartDate, /^\d{4}-\d{2}-\d{2}$/, "job editor must send preferredStartDate as YYYY-MM-DD");
+      }
+      if (body.applicationDeadline !== null && body.applicationDeadline !== undefined) {
+        assert.match(body.applicationDeadline, /^\d{4}-\d{2}-\d{2}T.+(?:Z|[+-]\d{2}:\d{2})$/, "job editor must send applicationDeadline as an offset datetime");
+      }
+      Object.assign(job, {
+        title: body.title ?? job.title,
+        summary: body.summary ?? job.summary,
+        scopeDescription: body.scopeDescription ?? job.scopeDescription,
+        difficulty: body.difficulty ?? job.difficulty,
+        workType: body.workType ?? job.workType,
+        preferredStartDate: body.preferredStartDate ?? null,
+        applicationDeadline: body.applicationDeadline ?? null,
+        insuranceRequired: body.insuranceRequired ?? job.insuranceRequired,
+        version: job.version + 1,
+        updatedAt: new Date().toISOString(),
+      });
+    }
+    return route.fulfill(json({ data: { job } }));
   });
 
   await page.route(/\/api\/v1\/applications\/[0-9a-f-]{36}\/(shortlist|decline|withdraw)$/, async (route) => {
@@ -456,7 +479,7 @@ async function clickStatusTab(page, label) {
 }
 
 async function runContractorFlow(page) {
-  const draft = makeJob({ id: draftJobId, title: "Electrical service punch list", status: "draft" });
+  const draft = makeJob({ id: draftJobId, title: "Electrical service punch list", status: "draft", preferredStartDate: "2026-07-01T00:00:00.000Z" });
   const open = makeJob();
   const state = makeState({ jobs: [open, draft], applications: [makeApplication("submitted")] });
   await configurePage(page, contractorAccount, state);
@@ -467,6 +490,11 @@ async function runContractorFlow(page) {
 
   await clickStatusTab(page, "Drafts");
   await clickJob(page, "Electrical service punch list");
+  await page.getByRole("button", { name: "Edit" }).first().click();
+  await page.getByRole("dialog", { name: "Edit job" }).waitFor({ timeout: 15_000 });
+  await page.getByRole("button", { name: "Save draft" }).click();
+  assert.equal(await page.getByText(/Request validation failed/i).count(), 0, "draft edit should save without preferredStartDate validation failure");
+  await page.getByRole("button", { name: "Publish" }).waitFor({ timeout: 15_000 });
   await page.getByRole("button", { name: "Publish" }).click();
   assert.equal(await page.getByText(/Request validation failed/i).count(), 0, "ready draft should publish without validation failure");
 

@@ -188,6 +188,7 @@ const jobFieldLabels: Record<string, string> = {
   scopeDescription: "scope description",
   budgetCents: "pay",
   durationHours: "duration",
+  preferredStartDate: "preferred start date",
   publicLocation: "public city/state",
   privateLocation: "exact jobsite address",
   applicationDeadline: "application deadline",
