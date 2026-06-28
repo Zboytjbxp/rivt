@@ -218,11 +218,14 @@ async function runUi(jobTitle) {
     ]);
     assert.equal(await page.getByText(/Request validation failed/i).count(), 0, "draft edit should save without preferredStartDate validation failure");
     await page.getByRole("button", { name: "Publish" }).waitFor({ timeout: 15_000 });
+    await assertClickable(page, page.getByRole("button", { name: "Publish" }), "publish button after draft edit");
 
-    await Promise.all([
-      page.waitForResponse((response) => response.url().includes("/publish") && response.status() === 200, { timeout: 20_000 }),
+    const [publishResponse] = await Promise.all([
+      page.waitForResponse((response) => response.url().includes("/publish"), { timeout: 20_000 }),
       page.getByRole("button", { name: "Publish" }).click(),
     ]);
+    const publishText = await publishResponse.text();
+    assert.equal(publishResponse.status(), 200, `publish returned ${publishResponse.status()}: ${publishText}`);
     await page.getByRole("button", { name: "Open", exact: true }).click();
     await page.locator(".v2-job-row-inner").filter({ hasText: jobTitle }).first().waitFor({ timeout: 20_000 });
 

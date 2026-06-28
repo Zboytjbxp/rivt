@@ -18,6 +18,7 @@ Production release commit: see live `/api/health` build metadata
 - Production deployment was performed through Railway from `master`; live `/api/health` served source `4fa7d083ad19b390e0ac5ddd30c379edd1b85641` on `https://rivt.pro`, with PostgreSQL, S3-compatible object storage, and configured Sentry.
 - `EXPECTED_SOURCE_COMMIT=4fa7d083ad19b390e0ac5ddd30c379edd1b85641 npm run monitor:production` passed with seven anonymous private-route checks, provider dependencies healthy, operational controls off, and 533 ms duration.
 - Final authenticated live contractor smoke passed with run `contractor-click-20260628212559-2114c1`; screenshots were saved outside the repo at `C:\Users\zboyt\AppData\Local\Temp\rivt-contractor-click-path-live`.
+- Follow-up live contractor smoke reruns after the successful verification were stopped by the server-owned production publish rate limit for the shared test contractor (`JOB_PUBLISH_LIMIT_REACHED`, 10 used of 10). That is expected after repeated live verification runs and is not evidence of the date-normalization bug recurring.
 
 ## Latest Packet 08 Pass - Live Contractor Click-Path and Mobile Containment
 
