@@ -18,7 +18,7 @@ Production release commit: see live `/api/health` build metadata
 - Rendered QA passed for the updated Home, Crew, Tools, and Trade News surfaces. Screenshot evidence was saved outside the repo at `C:\Users\zboyt\AppData\Local\Temp\rivt-mobile-actions-pass`, `C:\Users\zboyt\AppData\Local\Temp\rivt-tools-pass`, and `C:\Users\zboyt\AppData\Local\Temp\rivt-shop-talk-news-pass`.
 - Required local gates passed after this slice: `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test:ui:mobile-actions`, `npm run test:ui:tools`, `npm run test:ui:shop-talk-news`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check`.
 - The full `npm run test` command used the isolated test Postgres through local `TEST_DATABASE_URL`.
-- Production deployment evidence for this slice is pending until the commit is pushed and Railway serves the new build.
+- Production deployment was performed through Railway from `master`. Deployment `eda4b53a-7654-4ac7-81ae-b4f8857e260f` served commit `ed7778e6909f1b169f2bb02c5cd932d2bab7f8c9` on `https://rivt.pro`; live `/api/health` returned healthy PostgreSQL, S3-compatible object storage, ready migrations, and configured Sentry.
 
 ## Source State
 
