@@ -183,7 +183,7 @@ async function runUi(jobTitle) {
     await page.getByRole("button", { name: "Search" }).click();
     await page.getByRole("dialog", { name: "Search RIVT" }).waitFor({ timeout: 15_000 });
     await page.getByLabel("Search jobs, questions, trades, or tools").fill("invoice");
-    await page.getByRole("button", { name: /Open Tools/i }).click();
+    await page.locator(".v2-search-command-list button").filter({ hasText: "Open Tools" }).click();
     await page.getByRole("heading", { name: "Tools", exact: true }).waitFor({ timeout: 15_000 });
     await assertNoHorizontalOverflow(page, "live search to tools");
 
