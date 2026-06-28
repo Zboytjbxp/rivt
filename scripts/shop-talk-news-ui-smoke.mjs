@@ -261,6 +261,7 @@ let browser;
 try {
   await waitForServer();
   browser = await chromium.launch({ headless: true });
+  await fs.rm(screenshotDir, { recursive: true, force: true });
   await fs.mkdir(screenshotDir, { recursive: true });
 
   for (const viewport of [

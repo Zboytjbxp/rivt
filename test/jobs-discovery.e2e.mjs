@@ -270,6 +270,8 @@ async function configurePage(page, jobs, { activeWork = [], project = null } = {
 async function assertToolsFlow(page) {
   await page.getByRole("button", { name: /^Tools$/ }).click();
   await page.getByRole("button", { name: /Heavy 16th/i }).waitFor();
+  assert.equal(await page.locator(".v2-tool-launch-card").count(), 5, "Tools hub should expose exactly five primary field apps");
+  assert.equal(await page.getByRole("button", { name: /Material takeoff/i }).count(), 0, "Material takeoff should not be exposed as a primary field app");
   await page.getByRole("button", { name: /Heavy 16th/i }).click();
   await page.getByRole("heading", { name: "Heavy 16th field calculator" }).waitFor();
   await page.getByLabel("Length calculator").getByText("Total length", { exact: true }).waitFor();
@@ -277,19 +279,19 @@ async function assertToolsFlow(page) {
   await page.getByLabel("Equal spacing calculator").getByText("Center-to-center").waitFor();
   await page.getByLabel("Heavy 16th field calculator").getByRole("button", { name: "Tools" }).click();
 
-  await page.getByRole("button", { name: /Estimate builder/i }).click();
+  await page.getByRole("button", { name: /Estimate/i }).click();
   await page.getByRole("heading", { name: "Estimate builder" }).waitFor();
   await page.getByText("Recommended target", { exact: true }).waitFor();
   await page.getByLabel("Estimate builder").getByRole("button", { name: "Tools" }).click();
 
-  await page.getByRole("button", { name: /Invoice draft/i }).click();
+  await page.getByRole("button", { name: /Invoice/i }).click();
   await page.getByRole("heading", { name: "Invoice draft" }).waitFor();
   await page.getByText("Printable invoice", { exact: true }).waitFor();
   await page.getByLabel("Invoice draft").getByRole("button", { name: "Tools" }).click();
 
-  await page.getByRole("button", { name: /Material takeoff/i }).click();
-  await page.getByRole("heading", { name: "Material takeoff" }).waitFor();
-  await page.getByText("Sheets needed", { exact: true }).waitFor();
+  await page.getByRole("button", { name: /Records & photos/i }).click();
+  await page.getByRole("heading", { name: "Records", exact: true }).waitFor();
+  await page.getByText("Closeout system", { exact: true }).waitFor();
 }
 
 async function assertRecordsFlow(page) {

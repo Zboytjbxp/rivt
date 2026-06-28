@@ -3,20 +3,15 @@ import {
   ArrowRight,
   Calculator,
   Car,
-  ClipboardList,
-  Camera,
   CheckCircle2,
   CheckSquare,
   Clipboard,
-  Clock,
   Copy,
   Download,
-  DollarSign,
   FileText,
   FileUp,
   FolderOpen,
   Image,
-  LayoutGrid,
   ListChecks,
   Package2,
   RefreshCw,
@@ -26,8 +21,6 @@ import {
   Search,
   Shield,
   Trash2,
-  TrendingDown,
-  TrendingUp,
   Wrench,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
@@ -1916,7 +1909,6 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
   const requestedTool = mode === "tools" && openTool && openTool !== "hub" ? openTool : null;
   const [localActiveTool, setLocalActiveTool] = useState<ToolMode>("hub");
   const activeTool = requestedTool ?? localActiveTool;
-  const [showMoreTools, setShowMoreTools] = useState(false);
   const [activeWork, setActiveWork] = useState<CanonicalActiveWork[]>([]);
   const [recordsLoading, setRecordsLoading] = useState(true);
   const [recordsError, setRecordsError] = useState<string | null>(null);
@@ -1930,6 +1922,7 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
   const [resolutionNote, setResolutionNote] = useState("");
   const [completionChecklist, setCompletionChecklist] = useState<CompletionChecklistState>(defaultCompletionChecklist);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const autoOpenedRecordRef = useRef<string | null>(null);
   const selectedCompletion = selectedProject?.completionSubmissions.find((completion) => completion.status === "submitted")
     ?? selectedProject?.completionSubmissions.at(-1)
     ?? null;
@@ -1985,6 +1978,39 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
       setProjectAction(null);
     }
   }
+
+  useEffect(() => {
+    if (mode !== "records" || recordsLoading || selectedProject || activeWork.length !== 1 || projectAction) return;
+    const work = activeWork[0];
+    if (!work || autoOpenedRecordRef.current === work.id) return;
+    autoOpenedRecordRef.current = work.id;
+    let cancelled = false;
+    setProjectAction(`open:${work.id}`);
+    setRecordsError(null);
+    setRecordNotice(null);
+    setReportPreview(null);
+    openProjectForActiveWork(work.id)
+      .then((project) => {
+        if (cancelled) return;
+        const hasStoredMedia = project.media.some((item) => item.status === "stored");
+        setSelectedProject(project);
+        setNoteDraft("");
+        setUploadNotes("");
+        setCompletionNote("");
+        setResolutionNote("");
+        setReportPreview(null);
+        setCompletionChecklist({ ...defaultCompletionChecklist, photosProvided: hasStoredMedia });
+      })
+      .catch((error) => {
+        if (!cancelled) setRecordsError(projectErrorMessage(error));
+      })
+      .finally(() => {
+        if (!cancelled) setProjectAction(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [activeWork, mode, projectAction, recordsLoading, selectedProject]);
 
   async function refreshSelectedProject() {
     const work = selectedProject ? activeWork.find((item) => item.id === selectedProject.activeWorkId) : null;
@@ -2124,12 +2150,18 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
             className="v2-tools-panel"
             eyebrow="Accepted work"
             title={recordsLoading ? "Loading records..." : `${activeWork.length} private record${activeWork.length === 1 ? "" : "s"}`}
-            action={<button type="button" onClick={() => onNavigate("work")}>Find work</button>}
+            action={!recordsLoading && activeWork.length === 0 ? <button type="button" onClick={() => onNavigate("work")}>Find work</button> : undefined}
           >
             {activeWork.length ? (
               <div className="v2-record-work-list">
                 {activeWork.map((work) => (
-                  <button key={work.id} type="button" className="v2-record-work-item" onClick={() => void handleOpenRecord(work)} disabled={Boolean(projectAction)}>
+                  <button
+                    key={work.id}
+                    type="button"
+                    className={selectedProject?.activeWorkId === work.id ? "v2-record-work-item is-active" : "v2-record-work-item"}
+                    onClick={() => void handleOpenRecord(work)}
+                    disabled={Boolean(projectAction)}
+                  >
                     <span>
                       <strong>{work.job?.title ?? `Work ${work.id.slice(0, 8)}`}</strong>
                       <small>{work.job?.publicLocation.city ?? "Project"} - {work.status}</small>
@@ -2491,254 +2523,63 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
       <div className="v2-tool-section-stack">
         <section className="v2-tool-section" aria-labelledby="tools-core-field-apps">
           <header className="v2-tool-section-header">
-            <span>Apps</span>
-            <strong id="tools-core-field-apps">Complete field utilities</strong>
+            <span>Launch set</span>
+            <strong id="tools-core-field-apps">Five field apps worth using every day</strong>
           </header>
           <div className="v2-tool-launch-grid">
-        <ToolCard
-          icon={Calculator}
-          title="Heavy 16th"
-          badge="Field calculator"
-          summary="Length math, equal spacing, miter, and crown checks."
-          output="Ft-in-16ths"
-          detail="Copy-ready result"
-          action="Open"
-          featured
-          onAction={() => setActiveTool("calculator")}
-        />
-        <ToolCard
-          icon={Scale}
-          title="Estimate builder"
-          badge="Pricing"
-          summary="Labor, material, overhead, margin, and target price range."
-          output="Target range"
-          detail="Copy estimate"
-          action="Open"
-          onAction={() => setActiveTool("estimate")}
-        />
-        <ToolCard
-          icon={ReceiptText}
-          title="Invoice draft"
-          badge="Direct pay"
-          summary="Line items, totals, terms, email draft, and text draft."
-          output="TXT / draft"
-          detail="No fake sending"
-          action="Open"
-          onAction={() => setActiveTool("invoice")}
-        />
-        <ToolCard
-          icon={Clipboard}
-          title="Daily log"
-          badge="Daily log"
-          summary="Crew hours, site notes, blockers, safety, and next steps."
-          output="Today"
-          detail="Device draft"
-          action="Open"
-          onAction={() => setActiveTool("daily-log")}
-        />
-        <ToolCard
-          icon={LayoutGrid}
-          title="Material takeoff"
-          badge="Takeoff"
-          summary="Area, waste, material cost, presets, and rough sheet count."
-          output="Sq ft / sheets"
-          detail="Trade presets"
-          action="Open"
-          onAction={() => setActiveTool("materials")}
-        />
-        <ToolCard
-          icon={Camera}
-          title="Job Photos"
-          badge="Site docs"
-          summary="Capture, organize, and compare job-site photos by project."
-          output="Cloud storage"
-          detail="Per project"
-          action="Open"
-          onAction={() => setActiveTool("job-photos")}
-        />
-        <ToolCard
-          icon={FolderOpen}
-          title="Records"
-          badge="Closeout"
-          summary="Server-backed closeout packets for accepted work."
-          output={`${activeWork.length}`}
-          detail="accepted records"
-          action="Open"
-          onAction={onOpenRecords}
-        />
+            <ToolCard
+              icon={Calculator}
+              title="Heavy 16th"
+              badge="Calculator"
+              summary="Length math, spacing, miter, crown, and hardware marks."
+              output="Ft-in-16ths"
+              detail="Copy-ready result"
+              action="Open"
+              featured
+              onAction={() => setActiveTool("calculator")}
+            />
+            <ToolCard
+              icon={Scale}
+              title="Estimate"
+              badge="Pricing"
+              summary="Labor, material, overhead, margin, and target range."
+              output="Target range"
+              detail="Copy estimate"
+              action="Open"
+              onAction={() => setActiveTool("estimate")}
+            />
+            <ToolCard
+              icon={ReceiptText}
+              title="Invoice"
+              badge="Direct pay"
+              summary="Line items, totals, terms, printable preview, email and text drafts."
+              output="TXT / print"
+              detail="No fake sending"
+              action="Open"
+              onAction={() => setActiveTool("invoice")}
+            />
+            <ToolCard
+              icon={Clipboard}
+              title="Daily log"
+              badge="Site record"
+              summary="Crew hours, work notes, blockers, safety, and next steps."
+              output="Today"
+              detail="Server when linked"
+              action="Open"
+              onAction={() => setActiveTool("daily-log")}
+            />
+            <ToolCard
+              icon={FolderOpen}
+              title="Records & photos"
+              badge="Closeout"
+              summary="Accepted-work packets with notes, uploads, completion, and reports."
+              output={`${activeWork.length}`}
+              detail="accepted records"
+              action="Open"
+              onAction={onOpenRecords}
+            />
           </div>
         </section>
-
-        <button
-          type="button"
-          className="v2-tools-more-toggle"
-          aria-expanded={showMoreTools}
-          onClick={() => setShowMoreTools((current) => !current)}
-        >
-          <span>{showMoreTools ? "Hide secondary tools" : "Show secondary tools"}</span>
-          <small>{showMoreTools ? "Keep the hub focused" : "Mileage, tax, contracts, punch lists, payments, and more"}</small>
-        </button>
-
-        {showMoreTools ? (
-          <>
-        <section className="v2-tool-section" aria-labelledby="tools-money-tracking">
-          <header className="v2-tool-section-header">
-            <span>Money</span>
-            <strong id="tools-money-tracking">Price, time, cost</strong>
-          </header>
-          <div className="v2-tool-launch-grid">
-        <ToolCard
-          icon={Clock}
-          title="Time tracker"
-          badge="Time"
-          summary="Clock in and out per job. Tracks hours and auto-fills invoice labor line."
-          output="Hours"
-          detail="Per job"
-          action="Open"
-          onAction={() => setActiveTool("time-tracker")}
-        />
-        <ToolCard
-          icon={ReceiptText}
-          title="Expense logger"
-          badge="Costs"
-          summary="Log materials, tool rentals, mileage, and subcontractor costs."
-          output="Totals"
-          detail="By category"
-          action="Open"
-          onAction={() => setActiveTool("expense-logger")}
-        />
-        <ToolCard
-          icon={TrendingUp}
-          title="Earnings"
-          badge="Income"
-          summary="Weekly and monthly income summary, top trade, and avg job size."
-          output="By period"
-          detail="Payment history"
-          action="Open"
-          onAction={() => setActiveTool("earnings")}
-        />
-        <ToolCard
-          icon={ClipboardList}
-          title="Bid builder"
-          badge="Bid / quote"
-          summary="Line-item bids with labor, materials, markup, and client notes."
-          output="Total w/ markup"
-          detail="Save to device"
-          action="Open"
-          onAction={() => setActiveTool("bid-builder")}
-        />
-        <ToolCard
-          icon={Car}
-          title="Mileage logger"
-          badge="Mileage"
-          summary="Log job site trips and calculate your IRS 2025 deduction at $0.70/mile."
-          output="$/mi deduction"
-          detail="Year-to-date"
-          action="Open"
-          onAction={() => setActiveTool("mileage")}
-        />
-        <ToolCard
-          icon={Package2}
-          title="Price book"
-          badge="Materials"
-          summary="Save and search common material prices for estimates and bids."
-          output="Prices"
-          detail="Copy to clipboard"
-          action="Open"
-          onAction={() => setActiveTool("price-book")}
-        />
-          </div>
-        </section>
-        <section className="v2-tool-section" aria-labelledby="tools-closeout-business">
-          <header className="v2-tool-section-header">
-            <span>Closeout</span>
-            <strong id="tools-closeout-business">Proof, safety, records</strong>
-          </header>
-          <div className="v2-tool-launch-grid">
-        <ToolCard
-          icon={Shield}
-          title="Safety checklist"
-          badge="Safety"
-          summary="Daily site check across PPE, fall, electrical, tools, and emergency readiness."
-          output="Sign-off log"
-          detail="Trade checklists"
-          action="Open"
-          onAction={() => setActiveTool("safety-checklist")}
-        />
-        <ToolCard
-          icon={TrendingDown}
-          title="Tax estimator"
-          badge="Finance"
-          summary="Estimate quarterly self-employment taxes based on projected annual income."
-          output="Quarterly"
-          detail="SE + federal"
-          action="Open"
-          onAction={() => setActiveTool("tax-estimator")}
-        />
-        <ToolCard
-          icon={ClipboardList}
-          title="Punch list"
-          badge="Closeout"
-          summary="Track deficiencies and outstanding items for final walkthrough and sign-off."
-          output="By job"
-          detail="Status tracking"
-          action="Open"
-          onAction={() => setActiveTool("punch-list")}
-        />
-        <ToolCard
-          icon={FileText}
-          title="Contracts"
-          badge="Legal"
-          summary="Generate scope of work, change orders, lien waivers, and subcontractor agreements."
-          output="5 templates"
-          detail="Print ready"
-          action="Open"
-          onAction={() => setActiveTool("contracts")}
-        />
-        <ToolCard
-          icon={CheckSquare}
-          title="Checklists"
-          badge="Quality"
-          summary="Trade-specific inspection and job type checklists with progress tracking."
-          output="Per job"
-          detail="Saved locally"
-          action="Open"
-          onAction={() => setActiveTool("job-checklist")}
-        />
-        <ToolCard
-          icon={DollarSign}
-          title="Payments"
-          badge="Finance"
-          summary="Track invoices, outstanding balances, and payment status across jobs."
-          output="Invoice log"
-          detail="By status"
-          action="Open"
-          onAction={() => setActiveTool("payments")}
-        />
-        <ToolCard
-          icon={FileText}
-          title="Daily report"
-          badge="Site log"
-          summary="Log weather, crew, work completed, issues, and materials for each work day."
-          output="Reports"
-          detail="Saved locally"
-          action="Open"
-          onAction={() => setActiveTool("daily-report")}
-        />
-        <ToolCard
-          icon={Calculator}
-          title="Tax summary"
-          badge="Finance"
-          summary="Annual income, expenses, mileage deduction, and SE tax estimate by year."
-          output="SE tax"
-          detail="Export CSV"
-          action="Open"
-          onAction={() => setActiveTool("tax-summary")}
-        />
-          </div>
-        </section>
-          </>
-        ) : null}
       </div>
 
     </section>

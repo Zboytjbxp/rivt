@@ -1367,6 +1367,11 @@
   background: color-mix(in srgb, var(--v2-accent-soft) 48%, transparent);
 }
 
+.v2-record-work-item.is-active {
+  border-left: 3px solid var(--v2-accent);
+  background: color-mix(in srgb, var(--v2-accent-soft) 58%, transparent);
+}
+
 .v2-record-work-item strong,
 .v2-record-timeline strong {
   display: block;

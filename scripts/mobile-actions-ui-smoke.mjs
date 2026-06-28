@@ -183,6 +183,11 @@ async function runMobileFlow(page) {
   await page.goto(`${baseUrl}/app/home`, { waitUntil: "networkidle" });
   await page.getByRole("button", { name: /Post work/i }).waitFor({ timeout: 15_000 });
   await assertNoHorizontalOverflow(page, "Home");
+  await page.getByRole("button", { name: /Post work/i }).click();
+  const createJobDialog = page.getByRole("dialog", { name: "Create a job" });
+  await createJobDialog.waitFor({ timeout: 15_000 });
+  await createJobDialog.getByRole("button", { name: "Close" }).click();
+  await createJobDialog.waitFor({ state: "hidden", timeout: 15_000 });
   assert.equal(await page.locator(".v2-weather-drive-widget").count(), 0, "Home should not render the static forecast widget");
   assert.equal(await page.locator(".v2-quick-actions").count(), 0, "Home should not render the duplicate quick-action strip");
   await page.screenshot({ path: path.join(screenshotDir, "mobile-home-clean.png"), fullPage: true });
@@ -201,9 +206,12 @@ async function runMobileFlow(page) {
 
   await page.getByRole("button", { name: "Tools" }).click();
   await page.getByRole("heading", { name: "Tools", exact: true }).waitFor({ timeout: 15_000 });
-  await page.getByRole("button", { name: /Invoice draft/i }).waitFor({ timeout: 15_000 });
+  await page.getByRole("button", { name: /Invoice/i }).waitFor({ timeout: 15_000 });
+  await page.getByRole("button", { name: /Records & photos/i }).waitFor({ timeout: 15_000 });
+  assert.equal(await page.locator(".v2-tool-launch-card").count(), 5, "mobile Tools hub should expose exactly five primary field apps");
+  assert.equal(await page.getByRole("button", { name: /Material takeoff/i }).count(), 0, "mobile Tools hub should not expose secondary material takeoff");
   await assertNoHorizontalOverflow(page, "Tools hub");
-  await page.getByRole("button", { name: /Invoice draft/i }).click();
+  await page.getByRole("button", { name: /Invoice/i }).click();
   await page.getByRole("heading", { name: "Invoice draft" }).waitFor({ timeout: 15_000 });
   await assertNoHorizontalOverflow(page, "Invoice app");
 
@@ -265,6 +273,13 @@ async function runMobileFlow(page) {
   await page.getByLabel("Name").fill("Test Electrician");
   await page.getByRole("button", { name: "Cancel" }).click();
   await assertNoHorizontalOverflow(page, "Crew add member form");
+
+  await page.getByRole("button", { name: "Shop Talk", exact: true }).click();
+  await page.getByRole("heading", { name: /Field answers/i }).waitFor({ timeout: 15_000 });
+  await page.getByRole("button", { name: "Trade News" }).waitFor({ timeout: 15_000 });
+  await page.getByRole("button", { name: "Trade News" }).click();
+  await page.getByRole("heading", { name: /Code, safety, and permitting updates/i }).waitFor({ timeout: 15_000 });
+  await assertNoHorizontalOverflow(page, "Shop Talk trade news");
 }
 
 let browser;
@@ -272,6 +287,7 @@ let browser;
 try {
   await waitForServer();
   browser = await chromium.launch({ headless: true });
+  await fs.rm(screenshotDir, { recursive: true, force: true });
   await fs.mkdir(screenshotDir, { recursive: true });
 
   const context = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: "block" });

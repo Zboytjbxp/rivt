@@ -189,6 +189,10 @@ async function runToolsFlow(page, viewportName) {
   await page.goto(`${baseUrl}/app/tools`, { waitUntil: "networkidle" });
   await page.getByRole("heading", { name: "Tools", exact: true }).waitFor({ timeout: 15_000 });
   await page.getByRole("button", { name: /Heavy 16th/i }).waitFor({ timeout: 15_000 });
+  await page.getByRole("button", { name: /Records & photos/i }).waitFor({ timeout: 15_000 });
+  assert.equal(await page.locator(".v2-tool-launch-card").count(), 5, "Tools hub should expose exactly five primary field apps");
+  assert.equal(await page.getByRole("button", { name: /Material takeoff/i }).count(), 0, "Material takeoff should not be a primary Tools hub app");
+  assert.equal(await page.getByRole("button", { name: /Time tracker/i }).count(), 0, "Time tracker should not be a primary Tools hub app");
   await assertNoHorizontalOverflow(page);
   await page.screenshot({ path: path.join(screenshotDir, `${viewportName}-tools-hub.png`), fullPage: true });
 
@@ -214,14 +218,14 @@ async function runToolsFlow(page, viewportName) {
   await assertNoHorizontalOverflow(page);
   await page.getByLabel("Heavy 16th field calculator").getByRole("button", { name: "Tools" }).click();
 
-  await page.getByRole("button", { name: /Estimate builder/i }).click();
+  await page.getByRole("button", { name: /Estimate/i }).click();
   await page.getByRole("heading", { name: "Estimate builder" }).waitFor({ timeout: 15_000 });
   await page.getByText("Recommended target", { exact: true }).waitFor({ timeout: 15_000 });
   await page.getByText(/labor load/i).waitFor({ timeout: 15_000 });
   await assertNoHorizontalOverflow(page);
   await page.getByLabel("Estimate builder").getByRole("button", { name: "Tools" }).click();
 
-  await page.getByRole("button", { name: /Invoice draft/i }).click();
+  await page.getByRole("button", { name: /Invoice/i }).click();
   await page.getByRole("heading", { name: "Invoice draft" }).waitFor({ timeout: 15_000 });
   await page.getByLabel("Template name").fill(`${viewportName} invoice template`);
   await page.getByRole("button", { name: "Save template" }).click();
@@ -258,13 +262,12 @@ async function runToolsFlow(page, viewportName) {
   await page.screenshot({ path: path.join(screenshotDir, `${viewportName}-daily-log.png`), fullPage: true });
   await page.getByLabel("Daily log").getByRole("button", { name: "Tools" }).click();
 
-  await page.getByRole("button", { name: /Material takeoff/i }).click();
-  await page.getByRole("heading", { name: "Material takeoff" }).waitFor({ timeout: 15_000 });
-  await page.getByRole("button", { name: "Drywall" }).click();
-  await page.getByText("Sheets needed", { exact: true }).waitFor({ timeout: 15_000 });
-  await page.getByText("Waste added", { exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByRole("button", { name: /Records & photos/i }).click();
+  await page.getByRole("heading", { name: "Records", exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByText("Closeout system", { exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByRole("heading", { name: "Tenant Build-Out", exact: true }).waitFor({ timeout: 15_000 });
   await assertNoHorizontalOverflow(page);
-  await page.screenshot({ path: path.join(screenshotDir, `${viewportName}-materials.png`), fullPage: true });
+  await page.screenshot({ path: path.join(screenshotDir, `${viewportName}-records-photos.png`), fullPage: true });
 }
 
 let browser;
@@ -272,6 +275,7 @@ let browser;
 try {
   await waitForServer();
   browser = await chromium.launch({ headless: true });
+  await fs.rm(screenshotDir, { recursive: true, force: true });
   await fs.mkdir(screenshotDir, { recursive: true });
 
   for (const viewport of [

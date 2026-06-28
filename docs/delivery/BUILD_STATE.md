@@ -7,6 +7,19 @@ Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
 Production release commit: see live `/api/health` build metadata
 
+## Latest Packet 08 Pass - Solo Click-Path Audit and Focused Tools Launcher
+
+- Reduced the Tools hub to five primary field apps only: Heavy 16th calculator, Estimate, Invoice, Daily log, and Records & photos. Secondary utilities remain preserved in code for future access, but they are no longer exposed as cluttered primary launcher buttons.
+- Updated Tools copy so each visible app has a clearer purpose: field math, pricing, direct-pay invoice drafts, site records, and accepted-work closeout records/photos.
+- Improved Records behavior from the Tools launcher: one accepted record now opens automatically, the selected record has a visible active state, and the misleading "Find work" action is hidden when accepted records already exist.
+- Expanded the mobile click-path smoke audit to cover the Home "Post work" modal open/close path, five-card Tools launcher, absence of deprecated Material Takeoff/secondary tool cards from the main launcher, Records & photos routing, Shop Talk bottom-nav routing, Trade News routing, and panel/action tapability without horizontal overflow.
+- Updated Tools and jobs-discovery E2E coverage to match the simplified five-app Tools model and to route Records & photos through the real Records screen instead of the retired primary Material Takeoff card.
+- Cleaned UI screenshot evidence directories before every rendered smoke run so stale screenshots from removed surfaces cannot be mistaken for current QA evidence.
+- Rendered QA passed for mobile actions, Tools, and Shop Talk/Trade News. Screenshot evidence was saved outside the repo at `C:\Users\zboyt\AppData\Local\Temp\rivt-mobile-actions-pass`, `C:\Users\zboyt\AppData\Local\Temp\rivt-tools-pass`, and `C:\Users\zboyt\AppData\Local\Temp\rivt-shop-talk-news-pass`.
+- Required local gates passed after this slice: `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test:ui:mobile-actions`, `npm run test:ui:tools`, `npm run test:ui:shop-talk-news`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check`.
+- The full `npm run test` command used the isolated test Postgres through local `TEST_DATABASE_URL`. The first default test run hit the command timeout, then passed with a longer timeout.
+- Production deployment is pending for this slice.
+
 ## Latest Packet 08 Pass - Mobile Action Audit, Install Icon, and Profile Overlay Hardening
 
 - Updated PWA/install icon metadata so Android and notification surfaces prefer the high-contrast approved dark maskable RIVT mark instead of the low-contrast light shortcut crop.
