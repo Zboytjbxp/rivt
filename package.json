@@ -19,6 +19,7 @@
     "test:e2e": "node test/auth-fail-closed.e2e.mjs && node test/jobs-discovery.e2e.mjs",
     "test:ui:shop-talk-news": "node scripts/shop-talk-news-ui-smoke.mjs",
     "test:ui:tools": "node scripts/tools-ui-smoke.mjs",
+    "test:ui:work-lifecycle": "node scripts/work-lifecycle-ui-smoke.mjs",
     "test:ui:mobile-actions": "node scripts/mobile-actions-ui-smoke.mjs",
     "migrate": "node scripts/migrate.js up",
     "migrate:status": "node scripts/migrate.js status",

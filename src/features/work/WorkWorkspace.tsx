@@ -93,6 +93,8 @@ interface WorkWorkspaceProps {
   onEditJob: (job: Job) => void;
   onTransition: (job: Job, action: JobAction) => Promise<void>;
   onJobLoaded: (job: Job) => void;
+  onOpenTool: (tool: "daily-log" | "invoice") => void;
+  onOpenRecords: () => void;
   onRetry: () => void;
 }
 
@@ -1394,6 +1396,8 @@ export function WorkWorkspace({
   onEditJob,
   onTransition,
   onJobLoaded,
+  onOpenTool,
+  onOpenRecords,
   onRetry,
 }: WorkWorkspaceProps) {
   const persona = usePersona();
@@ -1867,6 +1871,9 @@ export function WorkWorkspace({
                         <small>Started {new Date(activeWork.startedAt).toLocaleString()}</small>
                       </div>
                       <div className="v2-match-actions">
+                        <button type="button" disabled={Boolean(activeAction)} onClick={() => onOpenTool("daily-log")}>Daily log</button>
+                        <button type="button" disabled={Boolean(activeAction)} onClick={() => onOpenRecords()}>Records/photos</button>
+                        <button type="button" disabled={Boolean(activeAction)} onClick={() => onOpenTool("invoice")}>Invoice</button>
                         {activeWork.status === "active" ? (
                           <>
                             <button type="button" disabled={Boolean(activeAction)} onClick={() => openReasonPrompt("reschedule", activeWork)}>Request reschedule</button>

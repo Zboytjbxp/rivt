@@ -71,6 +71,7 @@ import { communityBadgeLabels } from "./features/shop-talk/community-utils";
 import { communityPromptPosts, fallbackNewsItems } from "./features/shop-talk/fallback-data";
 import { useCommunityReactions } from "./features/shop-talk/useCommunityReactions";
 import type { ProfileUpdateInput } from "./features/profile/ProfileHub";
+import type { ToolMode } from "./features/tools/ToolsStudio";
 import { recordChecklist, safetyQuizData, trainingModules, type SafetyQuizResult } from "./features/profile/training-data";
 import { apiPath } from "./lib/api";
 import {
@@ -115,6 +116,7 @@ class RouteErrorBoundary extends Component<{ children: React.ReactNode }, { fail
 
 function App() {
   const [activeView, setActiveView] = useState<NavLabel>(() => viewFromPath(window.location.pathname));
+  const [requestedTool, setRequestedTool] = useState<ToolMode | null>(null);
   const [role, setRole] = useState<Role>("contractor");
   const [onboardingComplete, setOnboardingComplete] = useState(false);
   const [accountProfile, setAccountProfile] = useState<AccountProfile>({
@@ -655,6 +657,7 @@ function App() {
   }
 
   function handleNavigate(view: NavLabel) {
+    if (view !== "Tools") setRequestedTool(null);
     setActiveView(view);
     const nextPath = viewRoutes[view];
     if (window.location.pathname !== nextPath) {
@@ -663,6 +666,11 @@ function App() {
     setActivityOpen(false);
     setAccountOpen(false);
     setPostOpen(false);
+  }
+
+  function handleOpenTool(tool: ToolMode) {
+    setRequestedTool(tool);
+    handleNavigate("Tools");
   }
 
   function handleAddCommunityAnswer(postId: number, body: string) {
@@ -1206,6 +1214,8 @@ function App() {
             onEditJob={(job) => void handleEditJob(job)}
             onTransition={handleJobTransition}
             onJobLoaded={handleJobLoaded}
+            onOpenTool={handleOpenTool}
+            onOpenRecords={() => handleNavigate("Records")}
             onRetry={() => void reloadJobs()}
           />
         ) : activeView === "Shop Talk" ? (
@@ -1323,6 +1333,8 @@ function App() {
             jobs={jobs}
             paymentRecords={paymentRecords}
             mode={activeView === "Records" ? "records" : "tools"}
+            openTool={activeView === "Tools" ? requestedTool : null}
+            onOpenToolConsumed={() => setRequestedTool(null)}
             onNavigate={(destination) => handleNavigate(defaultViewForDestination(destination))}
             onOpenJob={openJob}
             onOpenRecords={() => handleNavigate("Records")}

@@ -10,6 +10,14 @@ Status values:
 
 Evidence must eventually link to implementation, automated tests, manual acceptance proof, and deployed build.
 
+## Traceability Addendum - 2026-06-28 Work Lifecycle Bridge and Active-Work Tool Paths
+
+- `GA-UX-005` gains UI evidence: Work accepted-detail surfaces now route directly to Daily Log, Records/photos, and Invoice Draft using the existing Tools/Records surfaces rather than disconnected buttons or unsupported deep links.
+- `GA-MAT-005`, `GA-MAT-006`, and `GA-PRJ-001` gain rendered lifecycle evidence: `npm run test:ui:work-lifecycle` covers contractor draft publish, applicant shortlist/offer, tradesperson application draft/submit, offer acceptance into active work, active-work Daily Log launch, Records/photos launch, and Invoice Draft launch on a 390px mobile viewport with no page/console errors and no horizontal overflow.
+- `GA-JOB-001` gains regression evidence for the user-reported publish-from-draft path: the new rendered smoke publishes a ready draft without surfacing "Request validation failed" and then verifies the job appears under Open work.
+- `GA-OPS-007` gains local automated evidence for this slice: `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test:ui:work-lifecycle`, `npm run test:ui:mobile-actions`, `npm run test:ui:tools`, `npm run test:ui:shop-talk-news`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check` passed.
+- The full `npm run test` command used the isolated test Postgres through local `TEST_DATABASE_URL`.
+
 ## Traceability Addendum - 2026-06-27 Tools, Server, Styles, Shop Talk, and Trade News Liability Reduction
 
 - `GA-UX-001` gains maintainability evidence: invoice drafting, daily log, job photos, material takeoff, time tracking, bid building, expense logging, and earnings dashboard behavior were extracted from `src/features/tools/ToolsStudio.tsx` into dedicated feature modules; Trade News aggregation moved to `server/news.js`; server-owned Shop Talk reaction/reputation routes moved to `server/shop-talk.js`; retired legacy/integration bridge routes moved to `server/legacy-integrations.js`; photo album/media routes moved to `server/albums.js`.

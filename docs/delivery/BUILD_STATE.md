@@ -7,6 +7,16 @@ Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
 Production release commit: see live `/api/health` build metadata
 
+## Latest Packet 08 Pass - Work Lifecycle Bridge and Active-Work Tool Paths
+
+- Added active-work bridge actions inside Work detail so accepted work can open the real Daily Log mini-app, Records/photos workspace, and Invoice Draft app directly from the job lifecycle surface instead of leaving users to hunt through Tools.
+- Wired App-level tool launch state into `ToolsStudio` so Work can request a specific tool (`daily-log` or `invoice`) while preserving the existing single Tools route and without inventing unsupported deep links.
+- Added repeatable rendered Work lifecycle smoke coverage through `npm run test:ui:work-lifecycle`. The smoke covers contractor draft publish without the previous validation-error path, contractor applicant shortlist/offer, tradesperson application draft/submit, tradesperson offer acceptance, active-work Daily Log launch, Records/photos launch, Invoice Draft launch, zero page/console errors, and no mobile horizontal overflow.
+- Updated the existing Tools rendered smoke to align with the current Records UI text hierarchy instead of waiting for a retired heading role.
+- Rendered QA passed for the Work lifecycle path. Screenshot evidence was saved outside the repo at `C:\Users\zboyt\AppData\Local\Temp\rivt-work-lifecycle-pass`.
+- Required local gates passed after this slice so far: `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test:ui:work-lifecycle`, `npm run test:ui:mobile-actions`, `npm run test:ui:tools`, `npm run test:ui:shop-talk-news`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check`.
+- The full `npm run test` command used the isolated test Postgres through local `TEST_DATABASE_URL`.
+
 ## Latest Packet 08 Pass - Solo Click-Path Audit and Focused Tools Launcher
 
 - Reduced the Tools hub to five primary field apps only: Heavy 16th calculator, Estimate, Invoice, Daily log, and Records & photos. Secondary utilities remain preserved in code for future access, but they are no longer exposed as cluttered primary launcher buttons.

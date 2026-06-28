@@ -265,7 +265,7 @@ async function runToolsFlow(page, viewportName) {
   await page.getByRole("button", { name: /Records & photos/i }).click();
   await page.getByRole("heading", { name: "Records", exact: true }).waitFor({ timeout: 15_000 });
   await page.getByText("Closeout system", { exact: true }).waitFor({ timeout: 15_000 });
-  await page.getByRole("heading", { name: "Tenant Build-Out", exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByText("Tenant Build-Out", { exact: true }).waitFor({ timeout: 15_000 });
   await assertNoHorizontalOverflow(page);
   await page.screenshot({ path: path.join(screenshotDir, `${viewportName}-records-photos.png`), fullPage: true });
 }
