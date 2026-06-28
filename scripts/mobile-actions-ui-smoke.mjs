@@ -108,6 +108,9 @@ async function configurePage(page) {
   await page.route("**/api/v1/notifications", (route) =>
     route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { notifications: [], unreadCount: 0 } }) }),
   );
+  await page.route("**/api/v1/notifications/read", (route) =>
+    route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { unreadCount: 0 } }) }),
+  );
   await page.route("**/api/v1/profiles?**", (route) =>
     route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { profiles: [] } }) }),
   );
@@ -147,6 +150,33 @@ async function assertNoHorizontalOverflow(page, label) {
     () => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1,
   );
   assert.equal(hasOverflow, false, `${label} has horizontal overflow`);
+}
+
+async function assertControlCenterClickable(page, selector, label) {
+  const result = await page.evaluate((targetSelector) => {
+    const element = document.querySelector(targetSelector);
+    if (!(element instanceof HTMLElement)) return { found: false };
+    element.scrollIntoView({ block: "center", inline: "nearest" });
+    const rect = element.getBoundingClientRect();
+    const x = Math.max(0, Math.min(window.innerWidth - 1, rect.left + rect.width / 2));
+    const y = Math.max(0, Math.min(window.innerHeight - 1, rect.top + rect.height / 2));
+    const hit = document.elementFromPoint(x, y);
+    return {
+      found: true,
+      rect: {
+        left: Math.round(rect.left),
+        right: Math.round(rect.right),
+        top: Math.round(rect.top),
+        bottom: Math.round(rect.bottom),
+      },
+      viewport: { width: window.innerWidth, height: window.innerHeight },
+      clickable: Boolean(hit && (element === hit || element.contains(hit) || hit.closest(targetSelector) === element)),
+      hitTag: hit?.tagName ?? null,
+      hitClass: hit instanceof HTMLElement ? hit.className : null,
+    };
+  }, selector);
+  assert.equal(result.found, true, `${label} was not found`);
+  assert.equal(result.clickable, true, `${label} center is occluded: ${JSON.stringify(result)}`);
 }
 
 async function runMobileFlow(page) {
@@ -191,9 +221,50 @@ async function runMobileFlow(page) {
   await page.getByRole("button", { name: "Search" }).click();
   await page.getByRole("dialog", { name: "Search RIVT" }).waitFor({ timeout: 15_000 });
   await page.getByLabel("Search jobs, questions, trades, or tools").fill("invoice");
-  await page.getByRole("button", { name: /Tools/i }).first().waitFor({ timeout: 15_000 });
+  await page.getByRole("button", { name: /Open Tools/i }).waitFor({ timeout: 15_000 });
   await assertNoHorizontalOverflow(page, "Search panel");
   await page.screenshot({ path: path.join(screenshotDir, "mobile-search-panel.png"), fullPage: true });
+  await page.getByRole("button", { name: /Open Tools/i }).click();
+  await page.getByRole("heading", { name: "Tools", exact: true }).waitFor({ timeout: 15_000 });
+  await assertNoHorizontalOverflow(page, "Search to Tools route");
+
+  await page.getByRole("button", { name: "Notifications" }).click();
+  const notificationsDialog = page.getByRole("dialog", { name: "Notifications" });
+  await notificationsDialog.waitFor({ timeout: 15_000 });
+  await assertControlCenterClickable(page, '.side-panel[aria-label="Notifications"] button[aria-label="Close notifications"]', "notifications close button");
+  await assertControlCenterClickable(page, '.side-panel[aria-label="Notifications"] .quick-actions button:nth-of-type(2)', "notifications messages action");
+  await notificationsDialog.getByRole("button", { name: "Messages" }).click();
+  await page.getByRole("heading", { name: "Inbox", exact: true }).waitFor({ timeout: 15_000 });
+  await assertNoHorizontalOverflow(page, "Messages route");
+  await page.getByRole("button", { name: "Home", exact: true }).click();
+  await page.getByRole("button", { name: /Post work/i }).waitFor({ timeout: 15_000 });
+
+  await page.getByRole("button", { name: "Notifications" }).click();
+  const recordsNotificationsDialog = page.getByRole("dialog", { name: "Notifications" });
+  await recordsNotificationsDialog.waitFor({ timeout: 15_000 });
+  await recordsNotificationsDialog.getByRole("button", { name: "Records" }).click();
+  await page.getByRole("heading", { name: "Records", exact: true }).waitFor({ timeout: 15_000 });
+  await assertNoHorizontalOverflow(page, "Records route");
+  await page.getByRole("button", { name: "Home", exact: true }).click();
+  await page.getByRole("button", { name: /Post work/i }).waitFor({ timeout: 15_000 });
+
+  await page.getByRole("button", { name: /Open profile menu for/i }).click();
+  await page.getByRole("dialog", { name: "Settings" }).waitFor({ timeout: 15_000 });
+  await assertControlCenterClickable(page, ".account-signout-btn", "account sign-out button");
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await page.getByRole("heading", { name: "Settings", exact: true }).waitFor({ timeout: 15_000 });
+  await assertNoHorizontalOverflow(page, "Settings route");
+  await page.getByRole("button", { name: "Crew", exact: true }).click();
+  await page.getByRole("heading", { name: "Network", exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByPlaceholder("Name or company").fill("First Coast Electric");
+  await assertControlCenterClickable(page, ".v2-crew-invite-form .v2-primary-button", "crew plan invite button");
+  await page.locator(".v2-crew-invite-form .v2-primary-button").click();
+  await page.getByText("First Coast Electric", { exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByRole("button", { name: /Add member/i }).click();
+  await page.getByLabel("Name").waitFor({ timeout: 15_000 });
+  await page.getByLabel("Name").fill("Test Electrician");
+  await page.getByRole("button", { name: "Cancel" }).click();
+  await assertNoHorizontalOverflow(page, "Crew add member form");
 }
 
 let browser;

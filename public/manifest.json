@@ -9,14 +9,14 @@
   "theme_color": "#030709",
   "orientation": "portrait-primary",
   "icons": [
+    { "src": "/rivt-maskable-icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/rivt-maskable-icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" },
     { "src": "/rivt-app-icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "/rivt-app-icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "/rivt-maskable-icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
-    { "src": "/rivt-maskable-icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    { "src": "/rivt-app-icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
   ],
   "categories": ["business", "productivity", "utilities"],
   "shortcuts": [
-    { "name": "Time Tracker", "url": "/?tool=time-tracker", "description": "Track work hours", "icons": [{ "src": "/rivt-app-icon-192.png", "sizes": "192x192" }] },
-    { "name": "Job Photos", "url": "/?tool=job-photos", "description": "Capture job site photos", "icons": [{ "src": "/rivt-app-icon-192.png", "sizes": "192x192" }] }
+    { "name": "Time Tracker", "url": "/?tool=time-tracker", "description": "Track work hours", "icons": [{ "src": "/rivt-maskable-icon-192.png", "sizes": "192x192", "purpose": "any maskable" }] },
+    { "name": "Job Photos", "url": "/?tool=job-photos", "description": "Capture job site photos", "icons": [{ "src": "/rivt-maskable-icon-192.png", "sizes": "192x192", "purpose": "any maskable" }] }
   ]
 }

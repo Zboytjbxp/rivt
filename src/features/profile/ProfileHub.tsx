@@ -731,14 +731,6 @@ interface OnboardingData {
   completedAt: string;
 }
 
-function readOnboarding(): OnboardingData | null {
-  try {
-    const stored = localStorage.getItem("rivt.onboarding.v1");
-    if (!stored) return null;
-    return JSON.parse(stored) as OnboardingData;
-  } catch { return null; }
-}
-
 function OnboardingOverlay({ onComplete }: { onComplete: () => void }) {
   const [step, setStep] = useState(0);
   const [selectedTrade, setSelectedTrade] = useState<OnboardingTrade | null>(null);
@@ -778,6 +770,14 @@ function OnboardingOverlay({ onComplete }: { onComplete: () => void }) {
   return createPortal(
     <div className="v2-onboarding-overlay" role="dialog" aria-modal="true" aria-label="Welcome to RIVT">
       <div className="v2-onboarding-modal">
+        <button
+          type="button"
+          className="v2-onboarding-close v2-icon-button"
+          onClick={onComplete}
+          aria-label="Close setup"
+        >
+          <XCircle size={18} />
+        </button>
         <div className="v2-onboarding-stepper">
           {[0, 1, 2].map((i) => (
             <div key={i} className={`v2-onboarding-step${step === i ? " is-active" : step > i ? " is-done" : ""}`} />
@@ -1104,7 +1104,7 @@ export function ProfileHub({
     safetyUpdates: false,
   });
   const [showPreview, setShowPreview] = useState(false);
-  const [showOnboarding, setShowOnboarding] = useState(() => readOnboarding() === null);
+  const [showOnboarding, setShowOnboarding] = useState(false);
   const [onboardingKey, setOnboardingKey] = useState(0);
   const portalTarget = getPortalTarget();
 

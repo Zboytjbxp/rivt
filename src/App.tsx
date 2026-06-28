@@ -470,7 +470,7 @@ function App() {
     ) {
       new Notification("RIVT — new message", {
         body: `You have ${unread} unread message${unread === 1 ? "" : "s"}`,
-        icon: "/favicon.ico",
+        icon: "/rivt-maskable-icon-192.png",
       });
     }
     prevUnreadRef.current = unread;

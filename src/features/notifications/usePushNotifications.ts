@@ -66,7 +66,7 @@ export function usePushNotifications() {
       const reg = await navigator.serviceWorker.ready;
       await reg.showNotification("RIVT", {
         body: "Notifications are working. You'll get alerts for new job matches and messages.",
-        icon: "/rivt-app-icon-192.png",
+        icon: "/rivt-maskable-icon-192.png",
         badge: "/rivt-favicon-192.png",
         tag: "rivt-test",
       });
@@ -74,7 +74,7 @@ export function usePushNotifications() {
       // fallback to Notification API directly
       new Notification("RIVT", {
         body: "Notifications are working!",
-        icon: "/rivt-app-icon-192.png",
+        icon: "/rivt-maskable-icon-192.png",
       });
     }
   }

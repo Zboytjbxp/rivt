@@ -35,7 +35,7 @@ self.addEventListener('push', e => {
   e.waitUntil(
     self.registration.showNotification(data.title, {
       body: data.body,
-      icon: '/rivt-app-icon-192.png',
+      icon: '/rivt-maskable-icon-192.png',
       badge: '/rivt-favicon-192.png',
       tag: data.tag || 'rivt-push',
       data: data.url ? { url: data.url } : undefined,

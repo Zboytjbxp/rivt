@@ -7,6 +7,18 @@ Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
 Production release commit: see live `/api/health` build metadata
 
+## Latest Packet 08 Pass - Mobile Action Audit, Install Icon, and Profile Overlay Hardening
+
+- Updated PWA/install icon metadata so Android and notification surfaces prefer the high-contrast approved dark maskable RIVT mark instead of the low-contrast light shortcut crop.
+- Updated notification icons in the app, push-notification hook, and service worker to use the same maskable RIVT icon path for consistency across installed-app and notification surfaces.
+- Raised the legacy account/notification panel backdrop above the fixed mobile nav, added mobile safe-area bottom padding, and tightened panel sizing so panel actions remain tappable instead of sitting under the nav.
+- Stopped the profile setup overlay from auto-opening on Settings/Safety/Reviews/Feedback for already-complete sessions. The setup flow is now launched only from the explicit Settings "Redo setup" action and has a visible close button.
+- Extended the mobile action smoke test to validate notification quick actions, Records routing, Settings routing, Crew invite planning, profile-panel sign-out tapability, global search routing, and absence of horizontal overflow.
+- Rendered QA passed for the updated mobile action paths. Screenshot evidence was saved outside the repo at `C:\Users\zboyt\AppData\Local\Temp\rivt-mobile-actions-pass`, `C:\Users\zboyt\AppData\Local\Temp\rivt-tools-pass`, and `C:\Users\zboyt\AppData\Local\Temp\rivt-shop-talk-news-pass`.
+- Required local gates passed after this slice: `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test:ui:mobile-actions`, `npm run test:ui:tools`, `npm run test:ui:shop-talk-news`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check`.
+- The full `npm run test` command used the isolated test Postgres through local `TEST_DATABASE_URL`.
+- Production deployment evidence will be recorded after this slice is committed and redeployed through Railway.
+
 ## Latest Packet 08 Pass - Five-Point Mobile UX, Tools, Crew, and Trade News Hardening
 
 - Removed the duplicate Home weather/drive-time block and static quick-action strip so Home no longer opens with redundant forecast cards, repeated job-site copy, and a second row of low-context action buttons.
