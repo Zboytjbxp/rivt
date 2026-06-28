@@ -41,6 +41,26 @@ Add one entry per staging/production deployment.
 - Rollback performed/result: not required.
 - Approval: accepted as controllable Packet 08 Work lifecycle UX hardening evidence.
 
+## Current Production - Packet 08 Live Contractor Click-Path and Mobile Containment
+
+- Environment: Production (`https://rivt.pro`)
+- Date/time/timezone: 2026-06-28 16:12 America/New_York
+- Deployer: Codex through GitHub push to Railway-linked `master`
+- Source repository/branch: `Zboytjbxp/rivt`, `master`
+- Source commit: `144e5ceb1ad4c5ac909a2342c49a7f67a2b54a5a`
+- Build/artifact ID: Railway deployment `f757a141-2e9c-42b3-a7ee-5077f3473f03`
+- Migration version before/after: `0013_album_storage_scope` / `0013_album_storage_scope` (no schema migration)
+- Feature-flag/config version: no provider credentials or operational-control flags changed
+- Provider/config changes (no secrets): no provider credentials changed; Sentry remains configured
+- Backup/rollback target: prior successful production source `b6f6496178e55648eddad5226326007ea6c0a032` and intermediate source `181703eb8d3ad0c0dbea3e05b619057a38921266`; no migration rollback required
+- Automated gates: `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test:ui:work-lifecycle`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check` passed. The full DB-backed test run used local `TEST_DATABASE_URL`.
+- Rendered/live evidence: authenticated production contractor UI smoke `npm run smoke:contractor-click-path:live` passed with run `contractor-click-20260628201138-7e736b`; screenshots saved outside the repo at `C:\Users\zboyt\AppData\Local\Temp\rivt-contractor-click-path-live`.
+- Post-deploy smoke tests: live `/api/health` reported exact source `144e5ceb1ad4c5ac909a2342c49a7f67a2b54a5a`, ready migration `0013_album_storage_scope`, PostgreSQL, S3-compatible object storage, and Sentry configured. `EXPECTED_SOURCE_COMMIT=144e5ceb1ad4c5ac909a2342c49a7f67a2b54a5a npm run monitor:production` passed with seven anonymous private-route checks and operational controls off.
+- Health/readiness result: healthy production health; no schema migration applied.
+- Known risks: this slice adds live authenticated contractor click-path coverage and fixes the UI defects it exposed, but it does not close the remaining physical/deeper manual accessibility-device evidence boundary.
+- Rollback performed/result: not required.
+- Approval: accepted as controllable Packet 08 live contractor UX hardening evidence.
+
 ## Current Production - Packet 08 Server-Owned Profile Search
 
 - Environment: Production (`https://rivt.pro`)

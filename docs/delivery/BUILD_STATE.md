@@ -7,6 +7,16 @@ Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
 Production release commit: see live `/api/health` build metadata
 
+## Latest Packet 08 Pass - Live Contractor Click-Path and Mobile Containment
+
+- Added `npm run smoke:contractor-click-path:live` as a repeatable authenticated production UI smoke for the contractor pilot path. The smoke requires `RIVT_LIVE_TEST_PASSWORD`, logs in as the production test contractor, creates a publish-ready draft through the live API, drives the 390px mobile UI, publishes the draft from Work, verifies the job under Open work, checks Search -> Tools, Crew invite planning, Shop Talk -> Trade News, Notifications -> Records, no horizontal overflow, no post-login failed responses, and cleanup closes the temporary job.
+- The first live runs caught real issues instead of being treated as test noise: Work mobile tabs pushed off-screen, Work draft detail used list data without the private jobsite address and disabled Publish, and Crew invite planning could land under the fixed mobile nav during automated tap checks.
+- Fixed those issues by making Work section/detail tabs wrap into mobile-safe grids, hydrating selected contractor job details from the canonical job endpoint before publish-readiness checks, and adding mobile scroll-margin for focus/tap targets so controls clear the bottom nav.
+- Required local gates passed for the final slice: `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test:ui:work-lifecycle`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check`.
+- Production deployment was performed through Railway from `master`. Railway deployment `f757a141-2e9c-42b3-a7ee-5077f3473f03` served source `144e5ceb1ad4c5ac909a2342c49a7f67a2b54a5a` on `https://rivt.pro`; live `/api/health` returned ready migration `0013_album_storage_scope`, PostgreSQL, S3-compatible object storage, and configured Sentry.
+- `EXPECTED_SOURCE_COMMIT=144e5ceb1ad4c5ac909a2342c49a7f67a2b54a5a npm run monitor:production` passed with seven anonymous private-route checks, provider dependencies healthy, operational controls off, and 705 ms duration.
+- Final authenticated live contractor smoke passed with run `contractor-click-20260628201138-7e736b`; screenshots were saved outside the repo at `C:\Users\zboyt\AppData\Local\Temp\rivt-contractor-click-path-live`.
+
 ## Latest Packet 08 Pass - Work Lifecycle Bridge and Active-Work Tool Paths
 
 - Added active-work bridge actions inside Work detail so accepted work can open the real Daily Log mini-app, Records/photos workspace, and Invoice Draft app directly from the job lifecycle surface instead of leaving users to hunt through Tools.

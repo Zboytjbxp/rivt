@@ -10,6 +10,14 @@ Status values:
 
 Evidence must eventually link to implementation, automated tests, manual acceptance proof, and deployed build.
 
+## Traceability Addendum - 2026-06-28 Live Contractor Click-Path and Mobile Containment
+
+- `GA-JOB-001` gains authenticated production UI evidence: `npm run smoke:contractor-click-path:live` creates a complete draft through the live API, logs into `https://rivt.pro` as the production test contractor, opens the draft in the mobile Work UI, publishes it through the actual button, verifies it appears under Open work, then closes the temporary job during cleanup.
+- `GA-UX-003` and `GA-UX-006` gain live mobile click-path evidence: the smoke drives top-bar Search -> Tools, bottom-nav Work/Crew/Shop Talk, Trade News, notification quick action to Records, Crew invite planning, no horizontal/off-screen elements, no post-login failed responses, and no console/page errors on a 390px mobile viewport.
+- `GA-UX-006` also gains responsive fix evidence from the failures the smoke exposed: Work section/detail tabs now use mobile-safe grids instead of off-screen horizontal tab rows, selected contractor Work details hydrate canonical private jobsite data before publish-readiness checks, and mobile focus/tap targets receive bottom-nav scroll margin.
+- `GA-OPS-007` gains automated evidence for this slice: `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test:ui:work-lifecycle`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, `git diff --check`, and authenticated `npm run smoke:contractor-click-path:live` passed.
+- `GA-OPS-008` gains deployment evidence: Railway deployment `f757a141-2e9c-42b3-a7ee-5077f3473f03` served source `144e5ceb1ad4c5ac909a2342c49a7f67a2b54a5a`; live `/api/health` returned ready migration `0013_album_storage_scope`, PostgreSQL, S3-compatible object storage, and configured Sentry; `EXPECTED_SOURCE_COMMIT=144e5ceb1ad4c5ac909a2342c49a7f67a2b54a5a npm run monitor:production` passed.
+
 ## Traceability Addendum - 2026-06-28 Work Lifecycle Bridge and Active-Work Tool Paths
 
 - `GA-UX-005` gains UI evidence: Work accepted-detail surfaces now route directly to Daily Log, Records/photos, and Invoice Draft using the existing Tools/Records surfaces rather than disconnected buttons or unsupported deep links.
