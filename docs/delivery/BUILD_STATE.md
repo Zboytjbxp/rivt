@@ -17,7 +17,7 @@ Production release commit: see live `/api/health` build metadata
 - Rendered QA passed for the updated mobile action paths. Screenshot evidence was saved outside the repo at `C:\Users\zboyt\AppData\Local\Temp\rivt-mobile-actions-pass`, `C:\Users\zboyt\AppData\Local\Temp\rivt-tools-pass`, and `C:\Users\zboyt\AppData\Local\Temp\rivt-shop-talk-news-pass`.
 - Required local gates passed after this slice: `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test:ui:mobile-actions`, `npm run test:ui:tools`, `npm run test:ui:shop-talk-news`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check`.
 - The full `npm run test` command used the isolated test Postgres through local `TEST_DATABASE_URL`.
-- Production deployment evidence will be recorded after this slice is committed and redeployed through Railway.
+- Production deployment was performed through Railway from `master`. Live `/api/health` served commit `c2fd05bc23ae36c346849b4aa9203612f67a039f` with ready migrations, PostgreSQL, S3-compatible object storage, and configured Sentry. Live `/api/storage` returned `401 Unauthorized` without an authenticated session, so public storage readiness was verified through `/api/health`.
 
 ## Latest Packet 08 Pass - Five-Point Mobile UX, Tools, Crew, and Trade News Hardening
 
