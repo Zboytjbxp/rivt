@@ -934,13 +934,18 @@
   }
 
   .v2-section-tabs {
-    overflow-x: auto;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 4px;
     width: 100%;
   }
 
   .v2-section-tabs button {
-    flex: 0 0 auto;
+    min-width: 0;
+    padding: 0 8px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .v2-work-toolbar {
@@ -1072,6 +1077,23 @@
     padding-left: 16px;
   }
 
+  .v2-detail-tabs {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+
+  .v2-detail-tabs button {
+    min-width: 0;
+    padding: 0 4px;
+    overflow: hidden;
+    font-size: 12px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
   .v2-applicant-card,
   .v2-offer-card,
   .v2-active-work-card {
@@ -1088,7 +1110,7 @@
 
   .v2-work-detail-actions {
     position: sticky;
-    bottom: 66px;
+    bottom: calc(66px + env(safe-area-inset-bottom));
     z-index: 5;
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -1100,6 +1122,14 @@
 }
 
 @media (max-width: 520px) {
+  .v2-section-tabs {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .v2-detail-tabs {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
   .v2-work-header .v2-primary-button {
     width: 44px;
     padding: 0;
