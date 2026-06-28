@@ -2488,11 +2488,34 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
         </div>
       </section>
 
+      <nav className="v2-tools-app-strip" aria-label="Tool app launcher">
+        <button type="button" onClick={() => setActiveTool("invoice")} aria-label="Open Invoice app">
+          <ReceiptText size={18} />
+          <span>Invoice</span>
+        </button>
+        <button type="button" onClick={() => setActiveTool("calculator")} aria-label="Open Calculator app">
+          <Calculator size={18} />
+          <span>Calc</span>
+        </button>
+        <button type="button" onClick={() => setActiveTool("job-photos")} aria-label="Open Photos app">
+          <Camera size={18} />
+          <span>Photos</span>
+        </button>
+        <button type="button" onClick={() => setActiveTool("time-tracker")} aria-label="Open Time app">
+          <Clock size={18} />
+          <span>Time</span>
+        </button>
+        <button type="button" onClick={() => setActiveTool("expense-logger")} aria-label="Open Expense app">
+          <DollarSign size={18} />
+          <span>Expense</span>
+        </button>
+      </nav>
+
       <div className="v2-tool-section-stack">
         <section className="v2-tool-section" aria-labelledby="tools-core-field-apps">
           <header className="v2-tool-section-header">
-            <span>Core</span>
-            <strong id="tools-core-field-apps">Tools you use on most jobs</strong>
+            <span>Apps</span>
+            <strong id="tools-core-field-apps">Complete field utilities</strong>
           </header>
           <div className="v2-tool-launch-grid">
         <ToolCard

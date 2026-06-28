@@ -1023,6 +1023,8 @@
 
   .v2-work-detail {
     display: none;
+    width: 100%;
+    max-width: 100%;
     overflow: hidden;
     border: 1px solid color-mix(in srgb, var(--v2-border) 58%, transparent);
     border-radius: var(--v2-radius-lg);
@@ -2768,4 +2770,115 @@
 .v2-local-job-delete:hover {
   background: color-mix(in srgb, var(--v2-accent) 10%, transparent);
   color: var(--v2-accent);
+}
+
+.v2-work-action-error,
+.v2-publish-readiness {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin: 0 16px 12px;
+  padding: 12px 14px;
+  border-radius: var(--v2-radius-lg);
+  font-size: 13px;
+}
+
+.v2-work-action-error > div,
+.v2-publish-readiness > div {
+  min-width: 0;
+}
+
+.v2-work-action-error {
+  border: 1px solid color-mix(in srgb, var(--v2-danger, #dc2626) 28%, var(--v2-border));
+  background: color-mix(in srgb, var(--v2-danger, #dc2626) 7%, var(--v2-surface));
+  color: var(--v2-text);
+}
+
+.v2-publish-readiness {
+  border: 1px solid color-mix(in srgb, var(--v2-warning, #d97706) 30%, var(--v2-border));
+  background: color-mix(in srgb, var(--v2-warning, #d97706) 8%, var(--v2-surface));
+  color: var(--v2-text);
+}
+
+.v2-work-action-error strong,
+.v2-publish-readiness strong,
+.v2-work-action-error span,
+.v2-publish-readiness span {
+  display: block;
+}
+
+.v2-work-action-error strong,
+.v2-publish-readiness strong {
+  margin-bottom: 2px;
+  font-size: 12px;
+  font-weight: var(--v2-weight-bold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.v2-work-action-error span,
+.v2-publish-readiness span {
+  color: var(--v2-text-muted);
+  overflow-wrap: anywhere;
+}
+
+.v2-publish-readiness .v2-secondary-button {
+  flex: 0 0 auto;
+  min-height: 38px;
+  padding: 0 12px;
+}
+
+@media (max-width: 640px) {
+  .v2-work-layout,
+  .v2-work-list,
+  .v2-work-detail {
+    width: 100%;
+    max-width: calc(100vw - 28px);
+    box-sizing: border-box;
+  }
+
+  .v2-detail-facts {
+    grid-template-columns: 1fr;
+  }
+
+  .v2-detail-fact strong {
+    overflow: visible;
+    text-overflow: clip;
+    white-space: normal;
+  }
+
+  .v2-work-action-error,
+  .v2-publish-readiness {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .v2-publish-readiness .v2-secondary-button {
+    width: 100%;
+  }
+
+  .v2-work-detail-actions button {
+    width: 100%;
+    min-width: 0;
+    justify-content: center;
+  }
+
+  .v2-work-detail-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .v2-work-detail-actions .v2-primary-button {
+    grid-column: auto;
+  }
+
+  .v2-work-detail-actions .v2-destructive-button {
+    margin-left: 0;
+  }
+
+  .v2-work-detail-actions .v2-primary-button:disabled {
+    border-color: color-mix(in srgb, var(--v2-accent) 26%, var(--v2-border));
+    background: color-mix(in srgb, var(--v2-accent) 36%, var(--v2-surface-muted));
+    color: color-mix(in srgb, #ffffff 78%, var(--v2-text-muted));
+  }
 }

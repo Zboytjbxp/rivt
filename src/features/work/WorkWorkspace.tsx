@@ -103,6 +103,62 @@ const statusForSection: Partial<Record<ContractorSection, Job["status"]>> = {
   closed: "Closed",
 };
 
+function hasText(value: unknown, minLength = 1) {
+  return typeof value === "string" && value.trim().length >= minLength;
+}
+
+function formatBlockerList(items: string[]) {
+  if (items.length <= 3) return items.join(", ");
+  return `${items.slice(0, 3).join(", ")} and ${items.length - 3} more`;
+}
+
+function formatPublishReadiness(items: string[]) {
+  const shortLabels = items.map((item) => {
+    if (item.startsWith("short summary")) return "summary";
+    if (item.startsWith("detailed scope")) return "scope";
+    if (item === "public city and state") return "city/state";
+    if (item === "exact jobsite address") return "address";
+    if (item === "future application deadline") return "deadline";
+    if (item === "server-backed draft record") return "saved draft";
+    return item;
+  });
+  return `Add ${formatBlockerList(shortLabels)} before publishing.`;
+}
+
+function getPublishBlockers(job: Job) {
+  const blockers: string[] = [];
+  const canonical = job.canonical;
+  const privateLocation = canonical?.privateLocation;
+
+  if (!canonical?.id) blockers.push("server-backed draft record");
+  if (!hasText(job.title)) blockers.push("job title");
+  if (!hasText(canonical?.tradeCode)) blockers.push("trade");
+  if (!hasText(job.summary, 20)) blockers.push("short summary (20+ characters)");
+  if (!hasText(canonical?.scopeDescription, 20)) blockers.push("detailed scope (20+ characters)");
+  if (!Number.isFinite(job.pay) || job.pay <= 0) blockers.push("pay");
+  if (!Number.isFinite(job.durationHours) || job.durationHours <= 0) blockers.push("duration");
+  if (!hasText(canonical?.publicLocation?.city) || !hasText(canonical?.publicLocation?.region)) {
+    blockers.push("public city and state");
+  }
+  if (
+    !privateLocation ||
+    !hasText(privateLocation.addressLine1) ||
+    !hasText(privateLocation.city) ||
+    !hasText(privateLocation.region) ||
+    !hasText(privateLocation.postalCode)
+  ) {
+    blockers.push("exact jobsite address");
+  }
+  if (canonical?.applicationDeadline) {
+    const deadline = new Date(canonical.applicationDeadline);
+    if (!Number.isNaN(deadline.getTime()) && deadline.getTime() < Date.now()) {
+      blockers.push("future application deadline");
+    }
+  }
+
+  return blockers;
+}
+
 // ── Change Order Tracker ──────────────────────────────────────────────────────
 
 const changeOrderKey = "rivt.changeOrders.v1";
@@ -1351,6 +1407,7 @@ export function WorkWorkspace({
   const [detailTab, setDetailTab] = useState<DetailTab>("overview");
   const [contractorSection, setContractorSection] = useState<ContractorSection>("open");
   const [activeAction, setActiveAction] = useState("");
+  const [actionError, setActionError] = useState<string | null>(null);
   const [matchRefreshKey, setMatchRefreshKey] = useState(0);
   const [matchLoading, setMatchLoading] = useState(false);
   const [matchError, setMatchError] = useState<string | null>(null);
@@ -1383,13 +1440,24 @@ export function WorkWorkspace({
   function selectJob(jobId: JobId) {
     onSelectJob(jobId);
     setDetailTab("overview");
+    setActionError(null);
     setMobileDetailOpen(true);
   }
 
   async function runAction(job: Job, action: JobAction) {
+    setActionError(null);
+    if (action === "publish") {
+      const blockers = getPublishBlockers(job);
+      if (blockers.length > 0) {
+        setActionError(`Finish before publishing: ${formatBlockerList(blockers)}.`);
+        return;
+      }
+    }
     setActiveAction(`${job.id}:${action}`);
     try {
       await onTransition(job, action);
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "This action failed. Refresh and try again.");
     } finally {
       setActiveAction("");
     }
@@ -1631,12 +1699,7 @@ export function WorkWorkspace({
             <LayoutGrid size={16} /> Pipeline
           </button>
           {role === "contractor" ? (
-            <>
-              <button type="button" className="v2-filter-button" onClick={() => setShowCreateJob(true)}>
-                <Plus size={16} /> New Job
-              </button>
-              <button type="button" className="v2-primary-button" onClick={onPostJob}><Plus size={17} /> Create job</button>
-            </>
+            <button type="button" className="v2-primary-button" onClick={onPostJob}><Plus size={17} /> Create job</button>
           ) : null}
         </div>
       </header>
@@ -1992,21 +2055,53 @@ export function WorkWorkspace({
               );
             })()}
 
-            {role === "contractor" && detailJob.status !== "Closed" ? (
-              <footer className="v2-work-detail-actions">
-                <button type="button" onClick={() => onEditJob(detailJob)}><Pencil size={17} /> Edit</button>
-                <button type="button" title="Save as template" onClick={() => {
-                  const templateName = saveJobAsTemplate(detailJob);
-                  setSaveTemplateNotice(`Saved as "${templateName}"`);
-                  setTimeout(() => setSaveTemplateNotice(""), 3000);
-                }}><FileText size={17} /> Template</button>
-                <button type="button" style={{ color: "var(--v2-accent)" }} onClick={() => setDetailJobId(String(detailJob.id))}><LayoutList size={17} /> Full Detail</button>
-                {detailJob.status === "Draft" ? <button type="button" className="v2-primary-button" disabled={Boolean(activeAction)} onClick={() => void runAction(detailJob, "publish")}><Play size={17} /> Publish</button> : null}
-                {detailJob.status === "Open" ? <button type="button" disabled={Boolean(activeAction)} onClick={() => void runAction(detailJob, "pause")}><Pause size={17} /> Pause</button> : null}
-                {detailJob.status === "Paused" ? <button type="button" className="v2-primary-button" disabled={Boolean(activeAction)} onClick={() => void runAction(detailJob, "resume")}><Play size={17} /> Reopen</button> : null}
-                <button type="button" className="v2-destructive-button" disabled={Boolean(activeAction)} onClick={() => void runAction(detailJob, "close")}><XCircle size={17} /> Close</button>
-              </footer>
-            ) : (
+            {role === "contractor" && detailJob.status !== "Closed" ? (() => {
+              const publishBlockers = detailJob.status === "Draft" ? getPublishBlockers(detailJob) : [];
+              return (
+                <>
+                  {actionError ? (
+                    <div className="v2-work-action-error" role="alert">
+                      <strong>Action blocked</strong>
+                      <span>{actionError}</span>
+                    </div>
+                  ) : null}
+                  {publishBlockers.length > 0 ? (
+                    <div className="v2-publish-readiness" role="status">
+                      <div>
+                        <strong>Draft is not publish-ready</strong>
+                        <span>{formatPublishReadiness(publishBlockers)}</span>
+                      </div>
+                      <button type="button" className="v2-secondary-button" onClick={() => onEditJob(detailJob)}>
+                        <Pencil size={16} /> Fix draft
+                      </button>
+                    </div>
+                  ) : null}
+                  <footer className="v2-work-detail-actions">
+                    <button type="button" onClick={() => onEditJob(detailJob)}><Pencil size={17} /> Edit</button>
+                    <button type="button" title="Save as template" onClick={() => {
+                      const templateName = saveJobAsTemplate(detailJob);
+                      setSaveTemplateNotice(`Saved as "${templateName}"`);
+                      setTimeout(() => setSaveTemplateNotice(""), 3000);
+                    }}><FileText size={17} /> Template</button>
+                    <button type="button" style={{ color: "var(--v2-accent)" }} onClick={() => setDetailJobId(String(detailJob.id))}><LayoutList size={17} /> Full Detail</button>
+                    {detailJob.status === "Draft" ? (
+                      <button
+                        type="button"
+                        className="v2-primary-button"
+                        disabled={Boolean(activeAction) || publishBlockers.length > 0}
+                        title={publishBlockers.length > 0 ? `Finish before publishing: ${formatBlockerList(publishBlockers)}` : "Publish job"}
+                        onClick={() => void runAction(detailJob, "publish")}
+                      >
+                        <Play size={17} /> Publish
+                      </button>
+                    ) : null}
+                    {detailJob.status === "Open" ? <button type="button" disabled={Boolean(activeAction)} onClick={() => void runAction(detailJob, "pause")}><Pause size={17} /> Pause</button> : null}
+                    {detailJob.status === "Paused" ? <button type="button" className="v2-primary-button" disabled={Boolean(activeAction)} onClick={() => void runAction(detailJob, "resume")}><Play size={17} /> Reopen</button> : null}
+                    <button type="button" className="v2-destructive-button" disabled={Boolean(activeAction)} onClick={() => void runAction(detailJob, "close")}><XCircle size={17} /> Close</button>
+                  </footer>
+                </>
+              );
+            })() : (
               <footer className="v2-work-detail-actions">
                 <button type="button" style={{ color: "var(--v2-accent)" }} onClick={() => setDetailJobId(String(detailJob.id))}><LayoutList size={17} /> Full Detail</button>
               </footer>

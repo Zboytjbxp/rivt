@@ -133,6 +133,16 @@ function isFallbackNewsThumbnail(item: Pick<NewsItem, "thumbnailUrl" | "thumbnai
   return item.thumbnailKind === "fallback" || !item.thumbnailUrl || item.thumbnailUrl.startsWith("/news/");
 }
 
+function newsSourceInitials(source: string) {
+  const words = source
+    .replace(/[^a-zA-Z0-9\s]/g, " ")
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 3);
+  const initials = words.map((word) => word[0]).join("").toUpperCase();
+  return initials || "R";
+}
+
 function EmptyState({
   icon: Icon,
   title,
@@ -1105,9 +1115,14 @@ export function ShopTalkView({
                       onClick={() => { setSelectedNewsId(item.id); setMobileDetail(true); }}
                     >
                       <div className="shop-news-card-body-wrap">
-                        {item.thumbnailUrl && (
-                          <div className={isFallbackNewsThumbnail(item) ? "news-card-thumb is-fallback" : "news-card-thumb is-real"}>
-                            <img src={item.thumbnailUrl} alt={`${item.source} article thumbnail`} loading="lazy" />
+                        {isFallbackNewsThumbnail(item) ? (
+                          <div className="news-card-thumb is-source-tile" aria-hidden="true">
+                            <span>{newsSourceInitials(item.source)}</span>
+                            <small>{item.urgency ?? "Trade"}</small>
+                          </div>
+                        ) : (
+                          <div className="news-card-thumb is-real">
+                            <img src={item.thumbnailUrl} alt={`${item.source} article image`} loading="lazy" />
                           </div>
                         )}
                         <div className="news-card-body">
@@ -1331,15 +1346,19 @@ export function ShopTalkView({
             </button>
             {selectedNews ? (
               <div className="shop-news-detail">
-                {selectedNews.thumbnailUrl && (
-                  <div className={isFallbackNewsThumbnail(selectedNews) ? "news-detail-hero is-fallback" : "news-detail-hero is-real"} data-urgency={selectedNews.urgency ?? "default"}>
-                    <img src={selectedNews.thumbnailUrl} alt={`${selectedNews.source} article thumbnail`} loading="lazy" />
-                    <div className="news-detail-hero-copy">
-                      <span className="news-detail-source">{selectedNews.source}</span>
-                      {selectedNews.urgency && <span className="news-urgency-pill">{selectedNews.urgency}</span>}
+                <div className={isFallbackNewsThumbnail(selectedNews) ? "news-detail-hero is-source-tile" : "news-detail-hero is-real"} data-urgency={selectedNews.urgency ?? "default"}>
+                  {isFallbackNewsThumbnail(selectedNews) ? (
+                    <div className="news-detail-source-mark" aria-hidden="true">
+                      <span>{newsSourceInitials(selectedNews.source)}</span>
                     </div>
+                  ) : (
+                    <img src={selectedNews.thumbnailUrl} alt={`${selectedNews.source} article image`} loading="lazy" />
+                  )}
+                  <div className="news-detail-hero-copy">
+                    <span className="news-detail-source">{selectedNews.source}</span>
+                    {selectedNews.urgency && <span className="news-urgency-pill">{selectedNews.urgency}</span>}
                   </div>
-                )}
+                </div>
                 <div className="shop-news-detail-header">
                   <h2>{selectedNews.headline}</h2>
                   <small>{selectedNews.source} - {selectedNews.date}</small>

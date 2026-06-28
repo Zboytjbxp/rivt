@@ -1805,10 +1805,41 @@
 }
 
 .shop-news-list .news-card-thumb {
-  width: 76px;
-  min-height: 64px;
+  width: 68px;
+  min-height: 56px;
   aspect-ratio: 4 / 3;
   border-radius: var(--v2-radius-sm);
+}
+
+.shop-news-list .news-card-thumb.is-source-tile {
+  display: grid;
+  place-items: center;
+  gap: 2px;
+  padding: 7px;
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--accent) 10%, transparent), transparent 62%),
+    var(--surface-soft);
+  text-align: center;
+}
+
+.shop-news-list .news-card-thumb.is-source-tile span {
+  display: block;
+  color: var(--accent);
+  font-size: 14px;
+  font-weight: var(--v2-weight-display);
+  letter-spacing: 0.04em;
+}
+
+.shop-news-list .news-card-thumb.is-source-tile small {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: 9px;
+  font-weight: var(--v2-weight-bold);
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .shop-news-list .news-card-body {
@@ -1841,13 +1872,36 @@
 }
 
 .shop-news-list .shop-news-source-link {
-  margin: 0 10px 8px 96px;
+  margin: 0 10px 8px 88px;
   padding-top: 6px;
   font-size: 10.5px;
 }
 
 .news-detail-hero img {
   aspect-ratio: 16 / 5;
+}
+
+.news-detail-hero.is-source-tile {
+  display: grid;
+  min-height: 118px;
+  place-items: center;
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--accent) 14%, transparent), transparent 62%),
+    #101922;
+}
+
+.news-detail-source-mark {
+  display: grid;
+  width: 76px;
+  height: 76px;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--accent) 44%, transparent);
+  border-radius: var(--v2-radius-lg);
+  background: rgba(255, 255, 255, 0.07);
+  color: var(--accent);
+  font-size: 20px;
+  font-weight: var(--v2-weight-display);
+  letter-spacing: 0.06em;
 }
 
 .shop-news-detail-header h2 {
@@ -1875,13 +1929,13 @@
   }
 
   .shop-news-list .shop-news-card-body-wrap {
-    grid-template-columns: 64px minmax(0, 1fr);
+    grid-template-columns: 54px minmax(0, 1fr);
     gap: 9px;
   }
 
   .shop-news-list .news-card-thumb {
-    width: 64px;
-    min-height: 58px;
+    width: 54px;
+    min-height: 52px;
     aspect-ratio: 1 / 1;
   }
 
@@ -1894,7 +1948,7 @@
   }
 
   .shop-news-list .shop-news-source-link {
-    margin: 0 10px 8px 83px;
+    margin: 0 10px 8px 73px;
   }
 
   .news-detail-hero img {
