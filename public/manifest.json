@@ -1,19 +1,22 @@
 {
   "name": "RIVT",
   "short_name": "RIVT",
-  "description": "Field contractor tools for the modern tradesperson",
+  "description": "The professional network for skilled trades.",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#f97316",
+  "background_color": "#030709",
+  "theme_color": "#030709",
   "orientation": "portrait-primary",
   "icons": [
-    { "src": "/rivt-icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
-    { "src": "/rivt-icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+    { "src": "/rivt-app-icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/rivt-app-icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/rivt-maskable-icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "/rivt-maskable-icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ],
   "categories": ["business", "productivity", "utilities"],
   "shortcuts": [
-    { "name": "Time Tracker", "url": "/?tool=time-tracker", "description": "Track work hours" },
-    { "name": "Job Photos", "url": "/?tool=job-photos", "description": "Capture job site photos" }
+    { "name": "Time Tracker", "url": "/?tool=time-tracker", "description": "Track work hours", "icons": [{ "src": "/rivt-app-icon-192.png", "sizes": "192x192" }] },
+    { "name": "Job Photos", "url": "/?tool=job-photos", "description": "Capture job site photos", "icons": [{ "src": "/rivt-app-icon-192.png", "sizes": "192x192" }] }
   ]
 }

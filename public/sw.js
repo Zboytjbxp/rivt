@@ -1,4 +1,4 @@
-const CACHE = 'rivt-v1';
+const CACHE = 'rivt-v2';
 const PRECACHE = ['/', '/index.html'];
 
 self.addEventListener('install', e => {
@@ -35,8 +35,8 @@ self.addEventListener('push', e => {
   e.waitUntil(
     self.registration.showNotification(data.title, {
       body: data.body,
-      icon: '/rivt-icon-192.png',
-      badge: '/rivt-favicon.png',
+      icon: '/rivt-app-icon-192.png',
+      badge: '/rivt-favicon-192.png',
       tag: data.tag || 'rivt-push',
       data: data.url ? { url: data.url } : undefined,
     })

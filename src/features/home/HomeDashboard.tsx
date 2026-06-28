@@ -270,7 +270,7 @@ function triggerWeeklyRecapIfDue() {
     navigator.serviceWorker?.ready.then(reg => {
       reg.showNotification("Your week in numbers 🔨", {
         body: `${Math.round(totalHours * 10) / 10}h worked · ~$${earned.toLocaleString()} earned — great week.`,
-        icon: "/rivt-icon-192.png",
+        icon: "/rivt-app-icon-192.png",
         tag: "rivt-weekly-recap",
       });
     }).catch(() => { /* noop */ });
