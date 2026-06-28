@@ -10,6 +10,15 @@ Status values:
 
 Evidence must eventually link to implementation, automated tests, manual acceptance proof, and deployed build.
 
+## Traceability Addendum - 2026-06-28 Launch Readiness Machine Gate Sweep
+
+- `GA-UX-003`, `GA-UX-005`, and `GA-UX-006` gain current rendered mobile evidence: `npm run test:ui:mobile-actions`, `npm run test:ui:work-lifecycle`, `npm run test:ui:tools`, and `npm run test:ui:shop-talk-news` passed after the latest Work editor hotfix and production deployment.
+- `GA-OPS-001`, `GA-OPS-002`, and `GA-OPS-006` retain operational readiness evidence: `npm run incident:readiness -- --require-ready` and `npm run launch:readiness -- --require-ready` passed with the approved backup owner, support hours, incident routing, recovery policy, monitoring, and operational-control requirements recorded.
+- `GA-OPS-007` gains full machine-gate evidence for this sweep: `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check` passed.
+- `GA-OPS-008` gains deployment-monitor evidence: `EXPECTED_SOURCE_COMMIT=aac69811ef6d9b4088e5f4c95bc4bc3886a904ce npm run monitor:production` passed against `https://rivt.pro`, with live health reporting PostgreSQL, S3-compatible object storage, configured Sentry, no missing storage variables, anonymous private-route checks passing, and operational controls off.
+- `GA-JOB-001` retains authenticated production smoke evidence from run `contractor-click-20260628212559-2114c1`; repeat authenticated live publish smokes are currently blocked by the expected server-owned daily publish limit on the shared production test contractor, not by a publish validation regression.
+- Physical/manual device accessibility remains the next launch boundary before widening the pilot: iOS Safari install mode, Android Chrome install mode, desktop keyboard-only use, screen reader labels, and real slow-cellular behavior still need recorded acceptance or written launch risk acceptance.
+
 ## Traceability Addendum - 2026-06-28 Work Draft Editor Date Normalization Hotfix
 
 - `GA-JOB-001` gains regression evidence for the user-reported Edit job validation failure: `JobEditorModal` now normalizes optional preferred start dates to `YYYY-MM-DD` or `null`, and `npm run test:ui:work-lifecycle` covers opening a saved draft editor with timestamp-shaped date data, saving it, and publishing without surfacing `Request validation failed`.

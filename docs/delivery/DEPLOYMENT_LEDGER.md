@@ -21,6 +21,26 @@ Add one entry per staging/production deployment.
 - Rollback performed/result:
 - Approval:
 
+## Current Production - Packet 08 Launch Readiness Machine Gate Sweep
+
+- Environment: Production (`https://rivt.pro`)
+- Date/time/timezone: 2026-06-28 18:34 America/New_York
+- Deployer: Codex verification against Railway-linked `master`
+- Source repository/branch: `Zboytjbxp/rivt`, `master`
+- Source commit: `aac69811ef6d9b4088e5f4c95bc4bc3886a904ce`
+- Build/artifact ID: Railway-linked production deployment serving source `aac69811ef6d9b4088e5f4c95bc4bc3886a904ce`; no new runtime deployment was performed for this evidence-only sweep before the documentation update
+- Migration version before/after: `0013_album_storage_scope` / `0013_album_storage_scope` (no schema migration)
+- Feature-flag/config version: no provider credentials or operational-control flags changed
+- Provider/config changes (no secrets): no provider credentials changed; Sentry remains configured
+- Backup/rollback target: prior successful production source `aac69811ef6d9b4088e5f4c95bc4bc3886a904ce` if reverting the evidence-only documentation update; no migration rollback required
+- Automated gates: `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test:ui:mobile-actions`, `npm run test:ui:work-lifecycle`, `npm run test:ui:tools`, `npm run test:ui:shop-talk-news`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, `git diff --check`, `npm run incident:readiness -- --require-ready`, and `npm run launch:readiness -- --require-ready` passed.
+- Rendered evidence: screenshots saved outside the repo at `C:\Users\zboyt\AppData\Local\Temp\rivt-mobile-actions-pass`, `C:\Users\zboyt\AppData\Local\Temp\rivt-work-lifecycle-pass`, `C:\Users\zboyt\AppData\Local\Temp\rivt-tools-pass`, and `C:\Users\zboyt\AppData\Local\Temp\rivt-shop-talk-news-pass`.
+- Post-deploy smoke tests: `EXPECTED_SOURCE_COMMIT=aac69811ef6d9b4088e5f4c95bc4bc3886a904ce npm run monitor:production` passed with PostgreSQL, S3-compatible object storage, Sentry configured, operational controls off, and seven anonymous private-route checks. Direct live `/api/health` also reported source `aac69811ef6d9b4088e5f4c95bc4bc3886a904ce`.
+- Health/readiness result: healthy production health and synthetic monitor; no schema migration applied.
+- Known risks: physical iOS Safari, Android Chrome, desktop keyboard-only, screen-reader/manual route evidence, and real slow-cellular evidence remain incomplete. Repeating authenticated contractor publish smoke on the shared production test contractor is blocked until daily publish quota reset or a fresh dedicated test contractor is created.
+- Rollback performed/result: not required.
+- Approval: accepted as Packet 08 machine-gate launch-readiness evidence only; widening the pilot still requires accepted physical/manual device evidence or written risk acceptance.
+
 ## Current Production - Packet 08 Work Lifecycle Bridge
 
 - Environment: Production (`https://rivt.pro`)
