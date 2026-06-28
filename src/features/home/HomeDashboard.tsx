@@ -3,34 +3,27 @@ import {
   BriefcaseBusiness,
   CalendarClock,
   CalendarDays,
-  Camera,
-  Car,
   ChevronLeft,
   ChevronRight,
   CircleDollarSign,
   ClipboardCheck,
   Clock,
-  Cloud,
-  CloudRain,
   CloudSun,
   FileText,
   Flame,
   MapPin,
   MessageSquareText,
-  Navigation,
   Navigation2,
   Newspaper,
   Plus,
-  Sun,
   Target,
   Timer,
   Users,
   Wrench,
 } from "lucide-react";
-import { useCallback, useEffect, useRef, useState, type ElementType } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { Job, Role } from "../../types";
 import type { PrimaryDestination } from "../../app-shell/types";
-import type { ToolMode } from "../tools/ToolsStudio";
 import { EmptyState, PageHeader } from "../../components/ui";
 import { usePersona } from "../persona/usePersona";
 import "./home-dashboard.css";
@@ -44,7 +37,6 @@ const WEEKLY_AVAIL_KEY = "rivt.weeklyAvail.v1";
 const TIME_SESSIONS_KEY = "rivt.timeSessions.v1";
 const WEEKLY_GOAL_KEY = "rivt.weeklyGoal.v1";
 const CHECKIN_LOG_KEY = "rivt.checkinLog.v1";
-const MILEAGE_KEY = "rivt.mileage.v1";
 const JOBS_UPCOMING_KEY = "rivt.jobs.v1";
 const GOALS_KEY = "rivt.goals.v1";
 const EXPENSES_KEY = "rivt.expenses.v1";
@@ -69,16 +61,6 @@ interface CheckinEntry {
   lat: number | null;
   lon: number | null;
   label: string;
-}
-
-interface MileageEntry {
-  id: string;
-  date: string;
-  startOdometer: number | null;
-  endOdometer: number | null;
-  notes: string;
-  miles: number | null;
-  purpose: string;
 }
 
 interface WeatherSnapshot {
@@ -501,68 +483,6 @@ function CockpitHero({ onNavigate: _onNavigate }: { onNavigate: (d: PrimaryDesti
   );
 }
 
-function QuickActionsBar({ onOpenTool }: { onOpenTool: (tool: ToolMode) => void }) {
-  const persona = usePersona();
-  const actions: Array<{ label: string; ariaLabel: string; Icon: ElementType; tool: ToolMode }> = [
-    { label: "Time", ariaLabel: "Open time tracker", Icon: Clock, tool: "time-tracker" },
-    { label: "Expense", ariaLabel: "Open expense logger", Icon: CircleDollarSign, tool: "expense-logger" },
-    { label: persona?.quickActionPhotoLabel ?? "Photos", ariaLabel: "Open job photos", Icon: Camera, tool: "job-photos" },
-    { label: "Daily log", ariaLabel: "Open daily log", Icon: ClipboardCheck, tool: "daily-log" },
-  ];
-
-  function handleCommuteStart() {
-    const todayStr = new Date().toISOString().slice(0, 10);
-    try {
-      const mileageRaw = localStorage.getItem(MILEAGE_KEY);
-      const mileage: MileageEntry[] = mileageRaw ? (JSON.parse(mileageRaw) as MileageEntry[]) : [];
-      mileage.push({
-        id: `mi_${Date.now()}`,
-        date: todayStr,
-        startOdometer: null,
-        endOdometer: null,
-        notes: "Commute",
-        miles: null,
-        purpose: "Commute",
-      });
-      localStorage.setItem(MILEAGE_KEY, JSON.stringify(mileage));
-    } catch { /* noop */ }
-
-    try {
-      const sessionsRaw = localStorage.getItem(TIME_SESSIONS_KEY);
-      const sessions: TimeSession[] = sessionsRaw ? (JSON.parse(sessionsRaw) as TimeSession[]) : [];
-      const hasActive = sessions.some((s) => s.endedAt === null);
-      if (!hasActive) {
-        sessions.push({
-          id: `ts_${Date.now()}`,
-          jobId: null,
-          jobTitle: "Commute",
-          startedAt: new Date().toISOString(),
-          endedAt: null,
-          notes: "",
-        });
-        localStorage.setItem(TIME_SESSIONS_KEY, JSON.stringify(sessions));
-      }
-    } catch { /* noop */ }
-
-    onOpenTool("mileage");
-  }
-
-  return (
-    <div className="v2-quick-actions v2-quick-actions--five">
-      {actions.map(({ label, ariaLabel, Icon, tool }) => (
-        <button key={label} type="button" aria-label={ariaLabel} onClick={() => onOpenTool(tool)}>
-          <Icon size={18} />
-          <span>{label}</span>
-        </button>
-      ))}
-      <button type="button" aria-label="Open mileage tracker and start a commute entry" onClick={handleCommuteStart}>
-        <Car size={18} />
-        <span>Commute</span>
-      </button>
-    </div>
-  );
-}
-
 function StreakCounter() {
   const [streak, setStreak] = useState(0);
   const [weekDots, setWeekDots] = useState<boolean[]>([]);
@@ -720,52 +640,6 @@ function WeeklyGoalCard() {
   );
 }
 
-// ── Feature: Weather + Drive-Time ───────────────────────────────────────────
-
-const WEATHER_DAYS: Array<{ label: string; Icon: React.ElementType; temp: string }> = [
-  { label: "Today", Icon: Sun, temp: "74°" },
-  { label: "Tue", Icon: CloudSun, temp: "69°" },
-  { label: "Wed", Icon: Cloud, temp: "63°" },
-  { label: "Thu", Icon: CloudRain, temp: "58°" },
-  { label: "Fri", Icon: Sun, temp: "72°" },
-];
-
-function WeatherDriveWidget() {
-  const todayStr = new Date().toLocaleDateString("en-CA");
-  const jobs = readUpcomingJobs();
-  const todayJob = jobs.find((j) => j.scheduledDate?.slice(0, 10) === todayStr && j.address);
-  const address = todayJob?.address ?? null;
-
-  return (
-    <div className="v2-weather-drive-widget">
-      <div className="v2-weather-row">
-        {WEATHER_DAYS.map(({ label, Icon, temp }) => (
-          <div key={label} className="v2-weather-day-pill">
-            <span className="v2-weather-day-label">{label}</span>
-            <Icon size={18} className="v2-weather-icon" />
-            <span className="v2-weather-temp">{temp}</span>
-          </div>
-        ))}
-      </div>
-      {address ? (
-        <div className="v2-drive-row">
-          <Navigation size={14} className="v2-drive-icon" />
-          <>
-            <span className="v2-drive-address">{address}</span>
-            <a
-              href={`https://maps.google.com/?q=${encodeURIComponent(address)}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="v2-drive-btn"
-            >
-              Get directions
-            </a>
-          </>
-        </div>
-      ) : null}
-    </div>
-  );
-}
 
 // ── Feature: Upcoming Jobs Widget ────────────────────────────────────────────
 
@@ -1123,7 +997,6 @@ interface HomeDashboardProps {
   onPostJob: () => void;
   onOpenJob: (jobId: number) => void;
   onNavigate: (destination: PrimaryDestination) => void;
-  onOpenTool: (tool: ToolMode) => void;
   onSetAvailability: (status: AvailabilityStatus) => Promise<void>;
 }
 
@@ -1145,7 +1018,6 @@ export function HomeDashboard({
   onPostJob,
   onOpenJob,
   onNavigate,
-  onOpenTool,
   onSetAvailability,
 }: HomeDashboardProps) {
   const firstName = name.trim().split(/\s+/)[0] || "there";
@@ -1267,9 +1139,7 @@ export function HomeDashboard({
         )}
       />
 
-      <WeatherDriveWidget />
       <CockpitHero onNavigate={onNavigate} />
-      <QuickActionsBar onOpenTool={onOpenTool} />
       <WeekSchedule />
       <UpcomingJobsWidget />
       <RevenueGoalWidget />

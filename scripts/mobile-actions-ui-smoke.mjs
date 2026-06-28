@@ -150,6 +150,13 @@ async function assertNoHorizontalOverflow(page, label) {
 }
 
 async function runMobileFlow(page) {
+  await page.goto(`${baseUrl}/app/home`, { waitUntil: "networkidle" });
+  await page.getByRole("button", { name: /Post work/i }).waitFor({ timeout: 15_000 });
+  await assertNoHorizontalOverflow(page, "Home");
+  assert.equal(await page.locator(".v2-weather-drive-widget").count(), 0, "Home should not render the static forecast widget");
+  assert.equal(await page.locator(".v2-quick-actions").count(), 0, "Home should not render the duplicate quick-action strip");
+  await page.screenshot({ path: path.join(screenshotDir, "mobile-home-clean.png"), fullPage: true });
+
   await page.goto(`${baseUrl}/app/work`, { waitUntil: "networkidle" });
   await page.getByRole("heading", { name: "Work", exact: true }).waitFor({ timeout: 15_000 });
   await assertNoHorizontalOverflow(page, "Work");
@@ -164,9 +171,9 @@ async function runMobileFlow(page) {
 
   await page.getByRole("button", { name: "Tools" }).click();
   await page.getByRole("heading", { name: "Tools", exact: true }).waitFor({ timeout: 15_000 });
-  await page.getByRole("button", { name: "Open Invoice app" }).waitFor({ timeout: 15_000 });
+  await page.getByRole("button", { name: /Invoice draft/i }).waitFor({ timeout: 15_000 });
   await assertNoHorizontalOverflow(page, "Tools hub");
-  await page.getByRole("button", { name: "Open Invoice app" }).click();
+  await page.getByRole("button", { name: /Invoice draft/i }).click();
   await page.getByRole("heading", { name: "Invoice draft" }).waitFor({ timeout: 15_000 });
   await assertNoHorizontalOverflow(page, "Invoice app");
 
@@ -175,6 +182,11 @@ async function runMobileFlow(page) {
   await page.getByRole("button", { name: "Crew", exact: true }).click();
   await page.getByRole("heading", { name: "Network", exact: true }).waitFor({ timeout: 15_000 });
   await assertNoHorizontalOverflow(page, "Crew");
+  const crewInviteInputs = page.locator(".v2-crew-invite-inputs input");
+  await assert.equal(await crewInviteInputs.count(), 4, "Crew invite planner should render four contained inputs");
+  await crewInviteInputs.nth(1).fill("Electrical framing and service");
+  await assertNoHorizontalOverflow(page, "Crew invite planner");
+  await page.screenshot({ path: path.join(screenshotDir, "mobile-crew-contained.png"), fullPage: true });
 
   await page.getByRole("button", { name: "Search" }).click();
   await page.getByRole("dialog", { name: "Search RIVT" }).waitFor({ timeout: 15_000 });

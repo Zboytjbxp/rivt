@@ -1,11 +1,24 @@
 # RIVT Build State
 
-Last updated: 2026-06-27 America/New_York
+Last updated: 2026-06-28 America/New_York
 Current gate: Gate A launch hardening
 Current phase: Packet 08 controllable UX hardening, improvement backlog and truthful-entitlement cleanup, Tools calculator/estimate extraction and provider-doc hardening, App activity feed hook extraction, App theme hook extraction, Shop Talk reaction hook extraction, App state type extraction, Work empty-state and runtime helper extraction, profile training data extraction, Shop Talk fallback data extraction, Shop Talk community helper extraction, dead guest job fixture removal, Work mapping extraction, app preference helper extraction, app route metadata extraction, account/activity panel extraction, auth screen extraction, legacy sidebar export cleanup, legacy App view cleanup, Shop Talk route split, Profile session ownership split, App profile-route split, frontend smoke-test tripwire, async password hashing, exact direct dependency pinning, founder/support/legal-safety approvals recorded, incident and launch readiness gates passing, Gate A approval packet prepared, incident rehearsal passed, incident routing approved, recovery policy approved, support hours and backup incident owner recorded, Sentry error monitoring and first escalation route configured, server-owned Shop Talk reactions/reputation ledger, Daily Log live UI proof, Daily Log Records bridge, daily engagement loop, Shop Talk answer queue, RIVT Daily home check-in, Trade News real-media and mobile layout pass, production UI smoke regression fixes, Tools studio release, Records workspace upgrade, UI system pass, shared UI primitives, Tools primitive alignment, Shop Talk command center, Tools app surface pass, Heavy 16th multi-mode calculator, Invoice Draft app upgrade, Shop Talk reaction/social pulse pass, expanded production accessibility smoke verified, Claude-audit UI consolidation deployed, global search command surface deployed, server-owned profile search deployed, and local `TEST_DATABASE_URL` configured against isolated test Postgres; physical/deeper manual accessibility-device evidence remains the next launch-quality boundary
 Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
 Production release commit: see live `/api/health` build metadata
+
+## Latest Packet 08 Pass - Five-Point Mobile UX, Tools, Crew, and Trade News Hardening
+
+- Removed the duplicate Home weather/drive-time block and static quick-action strip so Home no longer opens with redundant forecast cards, repeated job-site copy, and a second row of low-context action buttons.
+- Removed the unused Home-to-Tools pending launch bridge after the duplicate quick-action strip was removed, keeping Tools entry through the primary Tools tab and tool hub.
+- Tightened the Crew mobile layout so the invite planner, member panel, input grid, and actions stay inside the viewport on phone widths instead of pushing fields/buttons off-screen.
+- Simplified the Tools hub by removing the duplicate app launcher strip and making the tool cards the single launcher surface, with compact responsive cards and a clearer secondary-tools disclosure.
+- Compressed Trade News cards for mobile reading: smaller thumbnails, tighter headlines/meta, less summary text, denser source links, and smaller detail hero media so users can scan more than one article per screen.
+- Extended the mobile action smoke test to assert the removed Home blocks stay gone, Crew inputs remain contained, and the Tools flow opens from the canonical tool card rather than the removed duplicate launcher.
+- Rendered QA passed for the updated Home, Crew, Tools, and Trade News surfaces. Screenshot evidence was saved outside the repo at `C:\Users\zboyt\AppData\Local\Temp\rivt-mobile-actions-pass`, `C:\Users\zboyt\AppData\Local\Temp\rivt-tools-pass`, and `C:\Users\zboyt\AppData\Local\Temp\rivt-shop-talk-news-pass`.
+- Required local gates passed after this slice: `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test:ui:mobile-actions`, `npm run test:ui:tools`, `npm run test:ui:shop-talk-news`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check`.
+- The full `npm run test` command used the isolated test Postgres through local `TEST_DATABASE_URL`.
+- Production deployment evidence for this slice is pending until the commit is pushed and Railway serves the new build.
 
 ## Source State
 

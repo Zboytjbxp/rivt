@@ -5682,3 +5682,89 @@
     display: none;
   }
 }
+
+/* Final Tools hub pass: one launcher system, compact app entries, no duplicate nav. */
+.v2-tools-page {
+  gap: 18px;
+}
+
+.v2-tools-page .v2-tool-section-stack {
+  gap: 18px;
+}
+
+.v2-tools-page .v2-tool-section-header {
+  margin: 0 0 10px;
+}
+
+.v2-tools-page .v2-tool-section-header span {
+  min-width: auto;
+}
+
+.v2-tools-page .v2-tool-launch-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.v2-tools-page .v2-tool-launch-card,
+.v2-tools-page .v2-tool-launch-card.is-featured {
+  min-height: 84px;
+  grid-template-columns: 38px minmax(0, 1fr) 18px;
+  gap: 10px;
+  padding: 12px;
+}
+
+.v2-tools-page .v2-tool-card-output {
+  display: none;
+}
+
+.v2-tools-page .v2-tool-card-copy small:last-child {
+  white-space: normal;
+  -webkit-line-clamp: 2;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+}
+
+.v2-tools-page .v2-tools-more-toggle {
+  align-items: center;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.v2-tools-page .v2-tools-more-toggle::after {
+  content: "Show";
+  color: var(--v2-accent);
+  font-size: 12px;
+  font-weight: var(--v2-weight-bold);
+}
+
+.v2-tools-page .v2-tools-more-toggle[aria-expanded="true"]::after {
+  content: "Hide";
+}
+
+@media (max-width: 960px) {
+  .v2-tools-page .v2-tool-launch-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .v2-tools-page .v2-tool-launch-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .v2-tools-page .v2-tools-command {
+    padding: 12px;
+  }
+
+  .v2-tools-page .v2-tools-command p {
+    display: none;
+  }
+
+  .v2-tools-page .v2-tool-section-header {
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .v2-tools-page .v2-tool-launch-card,
+  .v2-tools-page .v2-tool-launch-card.is-featured {
+    min-height: 70px;
+  }
+}
