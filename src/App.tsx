@@ -67,6 +67,7 @@ import type {
   PostFlair,
   PostType,
 } from "./features/shop-talk/ShopTalkView";
+import type { ToolMode } from "./features/tools/ToolsStudio";
 import { communityBadgeLabels } from "./features/shop-talk/community-utils";
 import { communityPromptPosts, fallbackNewsItems } from "./features/shop-talk/fallback-data";
 import { useCommunityReactions } from "./features/shop-talk/useCommunityReactions";
@@ -200,6 +201,7 @@ function App() {
   const [isGuest, setIsGuest] = useState(false);
   const [guestPromptOpen, setGuestPromptOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [pendingToolMode, setPendingToolMode] = useState<ToolMode | null>(null);
   const [localSetupOpen, setLocalSetupOpen] = useState(() => localStorage.getItem("rivt.localSetupDone.v1") !== "true");
   const {
     communityReactionStatus,
@@ -663,6 +665,11 @@ function App() {
     setActivityOpen(false);
     setAccountOpen(false);
     setPostOpen(false);
+  }
+
+  function handleOpenTool(tool: ToolMode) {
+    setPendingToolMode(tool);
+    handleNavigate("Tools");
   }
 
   function handleAddCommunityAnswer(postId: number, body: string) {
@@ -1180,6 +1187,7 @@ function App() {
             onPostJob={openCreateJob}
             onOpenJob={openJob}
             onNavigate={(destination) => handleNavigate(defaultViewForDestination(destination))}
+            onOpenTool={handleOpenTool}
             onSetAvailability={handleSetAvailability}
           />
         ) : activeView === "Marketplace" ? (
@@ -1323,6 +1331,8 @@ function App() {
             jobs={jobs}
             paymentRecords={paymentRecords}
             mode={activeView === "Records" ? "records" : "tools"}
+            openTool={activeView === "Tools" ? pendingToolMode : null}
+            onOpenToolConsumed={() => setPendingToolMode(null)}
             onNavigate={(destination) => handleNavigate(defaultViewForDestination(destination))}
             onOpenJob={openJob}
             onOpenRecords={() => handleNavigate("Records")}

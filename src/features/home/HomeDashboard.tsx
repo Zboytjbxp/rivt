@@ -27,9 +27,10 @@ import {
   Users,
   Wrench,
 } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ElementType } from "react";
 import type { Job, Role } from "../../types";
 import type { PrimaryDestination } from "../../app-shell/types";
+import type { ToolMode } from "../tools/ToolsStudio";
 import { EmptyState, PageHeader } from "../../components/ui";
 import { usePersona } from "../persona/usePersona";
 import "./home-dashboard.css";
@@ -500,13 +501,13 @@ function CockpitHero({ onNavigate: _onNavigate }: { onNavigate: (d: PrimaryDesti
   );
 }
 
-function QuickActionsBar({ onNavigate }: { onNavigate: (d: PrimaryDestination) => void }) {
+function QuickActionsBar({ onOpenTool }: { onOpenTool: (tool: ToolMode) => void }) {
   const persona = usePersona();
-  const actions: Array<{ label: string; Icon: React.ElementType; destination: PrimaryDestination }> = [
-    { label: "Clock In/Out", Icon: Clock, destination: "tools" },
-    { label: "Log Expense", Icon: CircleDollarSign, destination: "tools" },
-    { label: persona?.quickActionPhotoLabel ?? "Job photo", Icon: Camera, destination: "tools" },
-    { label: "Daily Log", Icon: ClipboardCheck, destination: "tools" },
+  const actions: Array<{ label: string; ariaLabel: string; Icon: ElementType; tool: ToolMode }> = [
+    { label: "Time", ariaLabel: "Open time tracker", Icon: Clock, tool: "time-tracker" },
+    { label: "Expense", ariaLabel: "Open expense logger", Icon: CircleDollarSign, tool: "expense-logger" },
+    { label: persona?.quickActionPhotoLabel ?? "Photos", ariaLabel: "Open job photos", Icon: Camera, tool: "job-photos" },
+    { label: "Daily log", ariaLabel: "Open daily log", Icon: ClipboardCheck, tool: "daily-log" },
   ];
 
   function handleCommuteStart() {
@@ -543,18 +544,18 @@ function QuickActionsBar({ onNavigate }: { onNavigate: (d: PrimaryDestination) =
       }
     } catch { /* noop */ }
 
-    onNavigate("tools");
+    onOpenTool("mileage");
   }
 
   return (
     <div className="v2-quick-actions v2-quick-actions--five">
-      {actions.map(({ label, Icon, destination }) => (
-        <button key={label} type="button" onClick={() => onNavigate(destination)}>
+      {actions.map(({ label, ariaLabel, Icon, tool }) => (
+        <button key={label} type="button" aria-label={ariaLabel} onClick={() => onOpenTool(tool)}>
           <Icon size={18} />
           <span>{label}</span>
         </button>
       ))}
-      <button type="button" onClick={handleCommuteStart}>
+      <button type="button" aria-label="Open mileage tracker and start a commute entry" onClick={handleCommuteStart}>
         <Car size={18} />
         <span>Commute</span>
       </button>
@@ -746,9 +747,9 @@ function WeatherDriveWidget() {
           </div>
         ))}
       </div>
-      <div className="v2-drive-row">
-        <Navigation size={14} className="v2-drive-icon" />
-        {address ? (
+      {address ? (
+        <div className="v2-drive-row">
+          <Navigation size={14} className="v2-drive-icon" />
           <>
             <span className="v2-drive-address">{address}</span>
             <a
@@ -760,10 +761,8 @@ function WeatherDriveWidget() {
               Get directions
             </a>
           </>
-        ) : (
-          <span className="v2-drive-empty">No job site set for today</span>
-        )}
-      </div>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -1124,6 +1123,7 @@ interface HomeDashboardProps {
   onPostJob: () => void;
   onOpenJob: (jobId: number) => void;
   onNavigate: (destination: PrimaryDestination) => void;
+  onOpenTool: (tool: ToolMode) => void;
   onSetAvailability: (status: AvailabilityStatus) => Promise<void>;
 }
 
@@ -1145,6 +1145,7 @@ export function HomeDashboard({
   onPostJob,
   onOpenJob,
   onNavigate,
+  onOpenTool,
   onSetAvailability,
 }: HomeDashboardProps) {
   const firstName = name.trim().split(/\s+/)[0] || "there";
@@ -1268,7 +1269,7 @@ export function HomeDashboard({
 
       <WeatherDriveWidget />
       <CockpitHero onNavigate={onNavigate} />
-      <QuickActionsBar onNavigate={onNavigate} />
+      <QuickActionsBar onOpenTool={onOpenTool} />
       <WeekSchedule />
       <UpcomingJobsWidget />
       <RevenueGoalWidget />

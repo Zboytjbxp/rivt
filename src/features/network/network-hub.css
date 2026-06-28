@@ -531,6 +531,8 @@
 .v2-crew-invite-form {
   display: grid;
   gap: 10px;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .v2-crew-invite-inputs {
@@ -540,6 +542,9 @@
 }
 
 .v2-crew-invite-inputs input {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   padding: 8px 10px;
   border-radius: var(--v2-radius-md);
   border: 1px solid var(--v2-border);
@@ -603,7 +608,13 @@
 }
 
 @media (max-width: 640px) {
-  .v2-crew-invite-inputs { grid-template-columns: 1fr 1fr; }
+  .v2-crew-invite-inputs {
+    grid-template-columns: 1fr;
+  }
+
+  .v2-crew-invite-form .v2-primary-button {
+    width: 100%;
+  }
 }
 
 /* ── Crew View Toggle ────────────────────────────────────────────────────── */

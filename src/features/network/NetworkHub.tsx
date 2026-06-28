@@ -872,9 +872,9 @@ function CrewInvitePlanner() {
   );
 }
 
-function AnswerPrompt({ post }: { post: CommunityPost }) {
+function AnswerPrompt({ post, onOpenShopTalk }: { post: CommunityPost; onOpenShopTalk: () => void }) {
   return (
-    <button type="button" className="v2-network-prompt">
+    <button type="button" className="v2-network-prompt" onClick={onOpenShopTalk}>
       <span className="v2-network-prompt-icon"><MessageSquareText size={16} /></span>
       <span>
         <strong>{post.title}</strong>
@@ -1229,7 +1229,7 @@ export function NetworkHub({ view, jobs, talent, communityPosts, shoutOuts, disp
           action={<button type="button" onClick={onOpenShopTalk}>View all</button>}
         >
           <div className="v2-network-prompts">
-            {questionPosts.length ? questionPosts.map((post) => <AnswerPrompt key={post.id} post={post} />) : (
+            {questionPosts.length ? questionPosts.map((post) => <AnswerPrompt key={post.id} post={post} onOpenShopTalk={onOpenShopTalk} />) : (
               <EmptyState
                 className="v2-network-empty"
                 icon={<Sparkles size={20} />}

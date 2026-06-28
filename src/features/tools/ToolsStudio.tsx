@@ -57,7 +57,7 @@ import { ExpenseLoggerTool } from "./ExpenseLoggerTool";
 import { EarningsDashboardTool } from "./EarningsDashboardTool";
 import "./tools-studio.css";
 
-type ToolMode = "hub" | "calculator" | "estimate" | "invoice" | "materials" | "daily-log" | "job-photos" | "time-tracker" | "expense-logger" | "earnings" | "bid-builder" | "mileage" | "price-book" | "safety-checklist" | "tax-estimator" | "punch-list" | "contracts" | "job-checklist" | "payments" | "daily-report" | "tax-summary";
+export type ToolMode = "hub" | "calculator" | "estimate" | "invoice" | "materials" | "daily-log" | "job-photos" | "time-tracker" | "expense-logger" | "earnings" | "bid-builder" | "mileage" | "price-book" | "safety-checklist" | "tax-estimator" | "punch-list" | "contracts" | "job-checklist" | "payments" | "daily-report" | "tax-summary";
 
 interface PaymentRecord {
   id: number;
@@ -80,6 +80,8 @@ interface ToolsStudioProps {
   jobs: Job[];
   paymentRecords: PaymentRecord[];
   mode?: "tools" | "records";
+  openTool?: ToolMode | null;
+  onOpenToolConsumed?: () => void;
   onNavigate: (destination: PrimaryDestination) => void;
   onOpenJob: (jobId: number) => void;
   onOpenRecords: () => void;
@@ -1909,9 +1911,11 @@ function projectErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : "RIVT could not update the project record.";
 }
 
-export function ToolsStudio({ jobs, paymentRecords, mode = "tools", onNavigate, onOpenJob, onOpenRecords }: ToolsStudioProps) {
+export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = null, onOpenToolConsumed, onNavigate, onOpenJob, onOpenRecords }: ToolsStudioProps) {
   const activeJob = jobs.find((job) => job.status !== "Paid / Closed") ?? jobs[0] ?? null;
-  const [activeTool, setActiveTool] = useState<ToolMode>("hub");
+  const requestedTool = mode === "tools" && openTool && openTool !== "hub" ? openTool : null;
+  const [localActiveTool, setLocalActiveTool] = useState<ToolMode>("hub");
+  const activeTool = requestedTool ?? localActiveTool;
   const [showMoreTools, setShowMoreTools] = useState(false);
   const [activeWork, setActiveWork] = useState<CanonicalActiveWork[]>([]);
   const [recordsLoading, setRecordsLoading] = useState(true);
@@ -1932,6 +1936,11 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", onNavigate, 
   const storedMedia = selectedProject?.media.filter((item) => item.status === "stored") ?? [];
   const latestEntry = selectedProject?.entries.at(-1) ?? null;
   const actionBusy = Boolean(projectAction);
+
+  function setActiveTool(tool: ToolMode) {
+    onOpenToolConsumed?.();
+    setLocalActiveTool(tool);
+  }
 
   useEffect(() => {
     let cancelled = false;
