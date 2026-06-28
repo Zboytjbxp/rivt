@@ -18,7 +18,7 @@ Evidence must eventually link to implementation, automated tests, manual accepta
 - `GA-OPS-007` gains local automated evidence for this slice: `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test:ui:tools`, `npm run test:ui:shop-talk-news`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check` passed.
 - The rendered smoke and jobs-discovery E2E tests now block service workers so Playwright API mocks are not bypassed by PWA caching during local authenticated UI checks, and the Home E2E assertion accepts the product's time-aware morning/afternoon/evening greeting.
 - The full `npm run test` command used the isolated test Postgres through local `TEST_DATABASE_URL`.
-- `GA-OPS-008` is unchanged for production deployment: this slice has not been deployed.
+- `GA-OPS-008` gains deployment evidence: this slice was pushed to `master` and deployed through Railway. Live `/api/health` returned healthy PostgreSQL, S3-compatible object storage, ready migrations, and configured Sentry; live `/api/news?location=Jacksonville%2C%20FL` returned 30 trade-news items with real article/feed thumbnails where available. Authenticated production publish-path testing remains blocked until a valid production test login is available; local integration/E2E coverage verifies the draft publish path and validation boundaries.
 
 ## Traceability Addendum - 2026-06-22 Tools Extraction and Provider Documentation Hardening
 
