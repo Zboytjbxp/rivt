@@ -68,16 +68,28 @@ If `EMAIL_DELIVERY_MODE=resend` and either `RESEND_API_KEY` or `EMAIL_FROM` is m
 
 ## Billing Entitlements
 
-Do not unlock paid features from frontend-only state. `VITE_STRIPE_CHECKOUT_URL` may send a user to checkout, but Pro access must be granted by a server-owned entitlement after provider verification/webhook handling is implemented.
+Do not unlock paid features from frontend-only state. RIVT Pro access is granted only by the server-owned `billing_entitlements` table after Stripe checkout and webhook verification. The frontend calls `/api/v1/billing/checkout`, Stripe redirects the user to hosted Checkout, and `/api/stripe/webhook` updates the entitlement from signed Stripe events.
 
 ```bash
 STRIPE_SECRET_KEY=
-STRIPE_CHECKOUT_URL=
-VITE_STRIPE_CHECKOUT_URL=
+STRIPE_PRO_PRICE_ID=
+STRIPE_WEBHOOK_SECRET=
+STRIPE_SUCCESS_URL=https://rivt.pro/app/profile/settings?billing=success&session_id={CHECKOUT_SESSION_ID}
+STRIPE_CANCEL_URL=https://rivt.pro/app/profile/settings?billing=cancelled
+STRIPE_PORTAL_RETURN_URL=https://rivt.pro/app/profile/settings
 VITE_ALLOW_LOCAL_PRO=false
 ```
 
-`VITE_ALLOW_LOCAL_PRO=true` is local-development only and must not be set on the production Railway service. If Stripe checkout or server-owned entitlements are missing, paid tools must fail closed with truthful setup copy rather than simulated success.
+Stripe setup required before charging:
+
+1. Create the RIVT Pro product and recurring price in Stripe.
+2. Set the price ID as `STRIPE_PRO_PRICE_ID` on the Railway web service.
+3. Add a Stripe webhook endpoint at `https://rivt.pro/api/stripe/webhook`.
+4. Subscribe the endpoint to `checkout.session.completed`, `customer.subscription.created`, `customer.subscription.updated`, and `customer.subscription.deleted`.
+5. Copy the webhook signing secret into `STRIPE_WEBHOOK_SECRET`.
+6. Enable Stripe Customer Portal and confirm `STRIPE_PORTAL_RETURN_URL` points back to the RIVT account settings screen.
+
+`VITE_ALLOW_LOCAL_PRO=true` is local-development only and must not be set on the production Railway service. If Stripe keys, the Pro price, or webhook signing are missing, paid tools must fail closed with truthful setup copy rather than simulated success.
 
 Uploads use private S3-compatible object storage and signed download URLs. RIVT production currently targets Railway Object Storage, which exposes an S3-compatible endpoint (`https://t3.storageapi.dev` in Railway's current storage service). Cloudflare R2, AWS S3, Backblaze B2, Supabase Storage S3 compatibility, or another managed S3-compatible provider can be used only if the same private-bucket and signed-URL behavior is preserved.
 
@@ -177,6 +189,10 @@ The Express server serves the built frontend from `dist/` and exposes the `/api/
 - `GET /api/v1/sessions`
 - `DELETE /api/v1/sessions/:id`
 - `POST /api/v1/sessions/revoke-others`
+- `GET /api/v1/billing/status`
+- `POST /api/v1/billing/checkout`
+- `POST /api/v1/billing/portal`
+- `POST /api/stripe/webhook`
 
 - `GET /api/health`
 - `GET /api/storage`
@@ -188,7 +204,7 @@ The Express server serves the built frontend from `dist/` and exposes the `/api/
 - `POST /api/uploads`
 - `GET /api/uploads/:id/url`
 - `POST /api/identity/verify`
-- `POST /api/subscriptions/checkout`
+- `POST /api/subscriptions/checkout` (retired legacy compatibility route; must not grant entitlements)
 - `POST /api/notifications/test`
 
 ## First-User Gate
@@ -204,4 +220,5 @@ Do not invite first users until:
 - Contractor and tradesperson test accounts complete role-correct onboarding and remain correct after relogin.
 - A test job can be posted, refreshed, and still appear.
 - A test file upload returns a signed URL.
-- Stripe, identity, and notification provider endpoints no longer return setup-required responses.
+- Stripe billing status reports configured provider keys, a test Checkout Session can be created, the Stripe webhook can update `billing_entitlements`, and Customer Portal opens for an active subscription.
+- Identity and notification provider endpoints no longer return setup-required responses, or they are explicitly deferred from the soft-beta launch scope in writing.

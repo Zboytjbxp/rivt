@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Lock, Check, Zap, X } from "lucide-react";
-import { hasStripeConfigured, redirectToStripeCheckout } from "../../lib/billing";
+import { BillingApiError, startStripeCheckout } from "../../lib/billing";
 import "./pro.css";
 
 interface UpgradeModalProps {
@@ -20,13 +20,21 @@ const BENEFITS = [
 
 export function UpgradeModal({ reason, onClose }: UpgradeModalProps) {
   const [state, setState] = useState<"idle" | "paying" | "unavailable">("idle");
+  const [message, setMessage] = useState("RIVT Pro is disabled until checkout and server-owned entitlements are configured.");
 
-  function handleUpgrade() {
-    if (hasStripeConfigured()) {
-      setState("paying");
-      redirectToStripeCheckout();
-      // Page will redirect; entitlement must still be server-owned.
-    } else {
+  async function handleUpgrade() {
+    setState("paying");
+    try {
+      const checkout = await startStripeCheckout();
+      window.location.href = checkout.url;
+    } catch (error) {
+      const errorDetails = error instanceof BillingApiError && typeof error.details === "object" && error.details !== null
+        ? error.details as { missing?: unknown }
+        : null;
+      const details = Array.isArray(errorDetails?.missing)
+        ? ` Missing: ${errorDetails.missing.join(", ")}.`
+        : "";
+      setMessage(`${error instanceof Error ? error.message : "Billing is not live yet."}${details}`);
       setState("unavailable");
     }
   }
@@ -38,7 +46,7 @@ export function UpgradeModal({ reason, onClose }: UpgradeModalProps) {
           <div className="v2-upgrade-success">
             <Zap size={40} />
             <strong>Billing is not live yet</strong>
-            <p>RIVT Pro is disabled until checkout and server-owned entitlements are configured.</p>
+            <p>{message}</p>
             <button type="button" className="v2-secondary-button" onClick={onClose}>Close</button>
           </div>
         ) : (

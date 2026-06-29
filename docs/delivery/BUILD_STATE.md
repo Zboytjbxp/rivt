@@ -2,10 +2,22 @@
 
 Last updated: 2026-06-29 America/New_York
 Current gate: Gate A launch hardening
-Current phase: Packet 08 controllable UX hardening, invoice and estimate tool polish, no-scroll Heavy 16th calculator fit, Work draft editor date-normalization hotfix, launch-readiness machine gate sweep, improvement backlog and truthful-entitlement cleanup, Tools calculator/estimate extraction and provider-doc hardening, App activity feed hook extraction, App theme hook extraction, Shop Talk reaction hook extraction, App state type extraction, Work empty-state and runtime helper extraction, profile training data extraction, Shop Talk fallback data extraction, Shop Talk community helper extraction, dead guest job fixture removal, Work mapping extraction, app preference helper extraction, app route metadata extraction, account/activity panel extraction, auth screen extraction, legacy sidebar export cleanup, legacy App view cleanup, Shop Talk route split, Profile session ownership split, App profile-route split, frontend smoke-test tripwire, async password hashing, exact direct dependency pinning, founder/support/legal-safety approvals recorded, incident and launch readiness gates passing, Gate A approval packet prepared, incident rehearsal passed, incident routing approved, recovery policy approved, support hours and backup incident owner recorded, Sentry error monitoring and first escalation route configured, server-owned Shop Talk reactions/reputation ledger, Daily Log live UI proof, Daily Log Records bridge, daily engagement loop, Shop Talk answer queue, RIVT Daily home check-in, Trade News real-media and mobile layout pass, production UI smoke regression fixes, Tools studio release, Records workspace upgrade, UI system pass, shared UI primitives, Tools primitive alignment, Shop Talk command center, Tools app surface pass, Heavy 16th multi-mode calculator, Invoice Draft app upgrade, Shop Talk reaction/social pulse pass, expanded production accessibility smoke verified, Claude-audit UI consolidation deployed, global search command surface deployed, server-owned profile search deployed, and local `TEST_DATABASE_URL` configured against isolated test Postgres; physical/deeper manual accessibility-device evidence remains the next launch-quality boundary
+Current phase: Packet 08 controllable UX hardening, server-owned Stripe billing entitlement implementation, invoice and estimate tool polish, no-scroll Heavy 16th calculator fit, Work draft editor date-normalization hotfix, launch-readiness machine gate sweep, improvement backlog and truthful-entitlement cleanup, Tools calculator/estimate extraction and provider-doc hardening, App activity feed hook extraction, App theme hook extraction, Shop Talk reaction hook extraction, App state type extraction, Work empty-state and runtime helper extraction, profile training data extraction, Shop Talk fallback data extraction, Shop Talk community helper extraction, dead guest job fixture removal, Work mapping extraction, app preference helper extraction, app route metadata extraction, account/activity panel extraction, auth screen extraction, legacy sidebar export cleanup, legacy App view cleanup, Shop Talk route split, Profile session ownership split, App profile-route split, frontend smoke-test tripwire, async password hashing, exact direct dependency pinning, founder/support/legal-safety approvals recorded, incident and launch readiness gates passing, Gate A approval packet prepared, incident rehearsal passed, incident routing approved, recovery policy approved, support hours and backup incident owner recorded, Sentry error monitoring and first escalation route configured, server-owned Shop Talk reactions/reputation ledger, Daily Log live UI proof, Daily Log Records bridge, daily engagement loop, Shop Talk answer queue, RIVT Daily home check-in, Trade News real-media and mobile layout pass, production UI smoke regression fixes, Tools studio release, Records workspace upgrade, UI system pass, shared UI primitives, Tools primitive alignment, Shop Talk command center, Tools app surface pass, Heavy 16th multi-mode calculator, Invoice Draft app upgrade, Shop Talk reaction/social pulse pass, expanded production accessibility smoke verified, Claude-audit UI consolidation deployed, global search command surface deployed, server-owned profile search deployed, and local `TEST_DATABASE_URL` configured against isolated test Postgres; physical/deeper manual accessibility-device evidence and production Stripe account variables remain the next launch-quality boundaries
 Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
 Production release commit: see live `/api/health` build metadata
+
+## Latest Packet 08 Pass - Server-Owned Stripe Billing Entitlements
+
+- Added server-owned billing storage through migration `0014_billing_subscriptions`, including Stripe customers, subscriptions, entitlements, and processed webhook event IDs.
+- Added `server/billing.js` with signed Stripe webhook verification, transactional event processing, Checkout Session creation, Customer Portal session creation, and authenticated billing-status lookup.
+- Wired `/api/stripe/webhook`, `/api/v1/billing/status`, `/api/v1/billing/checkout`, and `/api/v1/billing/portal` into the Express app without adding a new Stripe SDK dependency.
+- Updated the Pro upgrade flow so the UI starts server-created Stripe Checkout only; it no longer relies on a frontend-only payment link or frontend-only entitlement.
+- Updated the profile plan card to show real server billing status, truthful setup-required copy when Stripe variables are missing, a refresh action, and a Manage billing action for active Pro users.
+- Updated `.env.example` and `PRODUCTION.md` with required Stripe variables, webhook endpoint `https://rivt.pro/api/stripe/webhook`, required events, and Customer Portal setup.
+- Added billing unit tests for webhook signature verification and entitlement status mapping; updated migration lifecycle coverage through version 14 and rollback.
+- Required local gates passed after this slice: `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, `npm run incident:readiness -- --require-ready`, and `npm run launch:readiness -- --require-ready`.
+- Production deployment is intentionally pending until the founder creates the Stripe product/price, webhook endpoint, and Railway variables. Without those variables the billing UI fails closed with setup-required copy.
 
 ## Latest Packet 08 Pass - Invoice and Estimate Tool Polish
 
@@ -1284,7 +1296,7 @@ Completed on 2026-06-21 as a focused follow-up to the shared UI primitive system
 
 ## Next Exact Task
 
-Continue Gate A launch hardening by running `docs/quality/PHYSICAL_ACCESSIBILITY_CHECKLIST.md` on physical iOS Safari, Android Chrome, desktop keyboard-only, and at least one screen reader, then record the pass/fail evidence before named-cohort launch. Keep `npm run incident:readiness -- --require-ready` and `npm run launch:readiness -- --require-ready` passing as the machine-readiness gates while that manual evidence is gathered.
+Continue Gate A launch hardening by configuring the production Stripe product/price, webhook endpoint, webhook secret, and Customer Portal settings in Stripe/Railway, then deploy and verify `/api/v1/billing/status` and the Checkout redirect path. In parallel, run `docs/quality/PHYSICAL_ACCESSIBILITY_CHECKLIST.md` on physical iOS Safari, Android Chrome, desktop keyboard-only, and at least one screen reader, then record the pass/fail evidence before named-cohort launch. Keep `npm run incident:readiness -- --require-ready` and `npm run launch:readiness -- --require-ready` passing as the machine-readiness gates while that manual evidence is gathered.
 
 ## Blocking Founder Decisions
 
@@ -1293,7 +1305,7 @@ Needed before Gate A recruitment, not before finishing Packet 00:
 - Pilot user count and named cohort.
 - Priority Jacksonville trade clusters and configured service area.
 - Support hours and escalation owner.
-- Email provider and sender-domain plan.
+- Stripe pricing model, product/price creation, webhook setup, and Customer Portal activation.
 - Whether SMS is deferred from Gate A.
 - Review/dispute policy.
 - Pilot retention/deletion policy.

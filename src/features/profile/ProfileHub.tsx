@@ -32,6 +32,7 @@ import { useState } from "react";
 import { usePro } from "../pro/usePro";
 import { usePushNotifications } from "../notifications/usePushNotifications";
 import { UpgradeModal } from "../pro/UpgradeModal";
+import { BillingApiError, startBillingPortal } from "../../lib/billing";
 import { usePersona, useTradeModeToggle } from "../persona/usePersona";
 import "../pro/pro.css";
 import { brandConfig, type ThemeMode, type ThemePalette } from "../../brandConfig";
@@ -1031,8 +1032,31 @@ function PushNotificationsCard() {
 }
 
 function PlanCard() {
-  const { isPro, activatedAt } = usePro();
+  const { isPro, activatedAt, billing, billingLoading, refreshBilling } = usePro();
   const [upgradeOpen, setUpgradeOpen] = useState(false);
+  const [portalState, setPortalState] = useState<"idle" | "opening">("idle");
+  const [billingMessage, setBillingMessage] = useState("");
+
+  const missingBilling = billing?.provider.missing ?? [];
+  const providerReady = Boolean(billing?.provider.checkoutConfigured);
+
+  async function openBillingPortal() {
+    setPortalState("opening");
+    setBillingMessage("");
+    try {
+      const portal = await startBillingPortal();
+      window.location.href = portal.url;
+    } catch (error) {
+      const details = error instanceof BillingApiError && typeof error.details === "object" && error.details !== null
+        ? error.details as { missing?: unknown }
+        : null;
+      const missing = Array.isArray(details?.missing)
+        ? ` Missing: ${details.missing.join(", ")}.`
+        : "";
+      setBillingMessage(`${error instanceof Error ? error.message : "Billing portal is not available yet."}${missing}`);
+      setPortalState("idle");
+    }
+  }
 
   return (
     <div className="v2-plan-card">
@@ -1044,6 +1068,12 @@ function PlanCard() {
           <span style={{fontSize:12,color:'var(--v2-text-muted)'}}>Free</span>
         )}
       </div>
+      {billingLoading && <p className="v2-plan-note">Checking billing status...</p>}
+      {!billingLoading && !providerReady && (
+        <p className="v2-plan-warning">
+          Stripe is wired in but not live yet. Configure {missingBilling.join(", ") || "billing keys"} before charging customers.
+        </p>
+      )}
       {!isPro && (
         <>
           <div className="v2-plan-limits">
@@ -1055,13 +1085,24 @@ function PlanCard() {
           <button type="button" className="v2-plan-upgrade-btn" onClick={() => setUpgradeOpen(true)}>
             Upgrade to Pro — $99/year
           </button>
+          <button type="button" className="v2-plan-secondary-btn" onClick={refreshBilling}>
+            Refresh billing status
+          </button>
         </>
       )}
       {isPro && activatedAt && (
-        <p style={{fontSize:13,color:'var(--v2-text-muted)',margin:0}}>
-          Pro since {new Date(activatedAt).toLocaleDateString("en-US", { month: "long", year: "numeric" })}
-        </p>
+        <>
+          <p className="v2-plan-note">
+            Pro active through {new Date(activatedAt).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
+            {billing?.cancelAtPeriodEnd ? " · cancels at period end" : ""}
+          </p>
+          <button type="button" className="v2-plan-secondary-btn" onClick={openBillingPortal} disabled={portalState === "opening"}>
+            <CreditCard size={16} />
+            {portalState === "opening" ? "Opening..." : "Manage billing"}
+          </button>
+        </>
       )}
+      {billingMessage && <p className="v2-plan-warning">{billingMessage}</p>}
       {upgradeOpen && <UpgradeModal onClose={() => setUpgradeOpen(false)} />}
     </div>
   );

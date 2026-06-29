@@ -23,6 +23,7 @@ import {
   z,
 } from "./api.js";
 import { registerAlbumRoutes } from "./albums.js";
+import { registerBillingRoutes, registerStripeWebhookRoute } from "./billing.js";
 import {
   assertStrongPassword,
   buildGoogleAuthorizationUrl,
@@ -317,6 +318,14 @@ app.use(cors({
   },
 }));
 app.set("trust proxy", 1);
+registerStripeWebhookRoute({
+  app,
+  express,
+  database,
+  appOrigin: productionOrigin,
+  createRequestContext,
+  createRequestLogger,
+});
 app.use(express.json({ limit: "1mb" }));
 
 app.use("/api", createRequestContext);
@@ -4883,6 +4892,15 @@ registerLegacyIntegrationRoutes({
   buildTwilioSmsStatus,
   getTwilioSmsConfig,
   normalizePhoneNumber,
+});
+
+registerBillingRoutes({
+  app,
+  database,
+  appOrigin: productionOrigin,
+  requireAuthenticatedUser,
+  requireV1Actor,
+  writeRateLimit,
 });
 
 if (existsSync(distDir)) {

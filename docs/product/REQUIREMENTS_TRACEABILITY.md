@@ -10,6 +10,14 @@ Status values:
 
 Evidence must eventually link to implementation, automated tests, manual acceptance proof, and deployed build.
 
+## Traceability Addendum - 2026-06-29 Server-Owned Stripe Billing Entitlements
+
+- `GA-FND-004` and `GA-OPS-004` gain entitlement-safety evidence: Pro access now depends on server-owned billing rows updated from verified Stripe webhook events, not frontend-only payment-link state.
+- `GA-OPS-007` gains automated evidence for this slice: `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, `npm run incident:readiness -- --require-ready`, and `npm run launch:readiness -- --require-ready` passed.
+- Migration coverage now includes `0014_billing_subscriptions` creation and rollback for billing customers, subscriptions, entitlements, and webhook event IDs.
+- `PRODUCTION.md` and `.env.example` now document `STRIPE_SECRET_KEY`, `STRIPE_PRO_PRICE_ID`, `STRIPE_WEBHOOK_SECRET`, Checkout return URLs, Customer Portal return URL, and the required `https://rivt.pro/api/stripe/webhook` endpoint/events.
+- `GA-OPS-008` is unchanged until deployment: the code is locally verified, but production Stripe variables and a redeploy are still required before paid billing can be accepted.
+
 ## Traceability Addendum - 2026-06-28 Launch Readiness Machine Gate Sweep
 
 - `GA-UX-003`, `GA-UX-005`, and `GA-UX-006` gain current rendered mobile evidence: `npm run test:ui:mobile-actions`, `npm run test:ui:work-lifecycle`, `npm run test:ui:tools`, and `npm run test:ui:shop-talk-news` passed after the latest Work editor hotfix and production deployment.

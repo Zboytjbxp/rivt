@@ -90,3 +90,44 @@
   font-weight: var(--v2-weight-bold); cursor: pointer;
 }
 .v2-plan-upgrade-btn:hover { opacity: 0.9; }
+
+.v2-plan-secondary-btn {
+  display: inline-flex;
+  width: 100%;
+  min-height: 42px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid var(--v2-border);
+  border-radius: var(--v2-radius-md);
+  background: var(--v2-surface-muted);
+  color: var(--v2-text);
+  font: inherit;
+  font-size: 13px;
+  font-weight: var(--v2-weight-strong);
+  cursor: pointer;
+}
+
+.v2-plan-secondary-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.v2-plan-note,
+.v2-plan-warning {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.v2-plan-note {
+  color: var(--v2-text-muted);
+}
+
+.v2-plan-warning {
+  border: 1px solid var(--v2-warning-soft);
+  border-radius: var(--v2-radius-md);
+  padding: 10px 12px;
+  background: var(--v2-warning-soft);
+  color: var(--v2-warning);
+}

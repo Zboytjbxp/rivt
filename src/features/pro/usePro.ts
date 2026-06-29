@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { getBillingStatus, type BillingStatus } from "../../lib/billing";
 
 const PRO_KEY = "rivt.pro.v1";
 const ALLOW_LOCAL_PRO = import.meta.env.VITE_ALLOW_LOCAL_PRO === "true";
@@ -13,6 +14,47 @@ function readPro(): ProStatus {
 
 export function usePro() {
   const [pro, setPro] = useState<ProStatus>(readPro);
+  const [billing, setBilling] = useState<BillingStatus | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  async function refreshBilling() {
+    try {
+      const status = await getBillingStatus();
+      setBilling(status);
+      setPro({
+        active: status.active || (ALLOW_LOCAL_PRO && readPro().active),
+        activatedAt: status.activeUntil,
+      });
+    } catch {
+      const local = readPro();
+      setBilling(null);
+      setPro(local);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    let cancelled = false;
+    getBillingStatus()
+      .then((status) => {
+        if (cancelled) return;
+        setBilling(status);
+        setPro({
+          active: status.active || (ALLOW_LOCAL_PRO && readPro().active),
+          activatedAt: status.activeUntil,
+        });
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setBilling(null);
+        setPro(readPro());
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, []);
 
   function activatePro() {
     if (!ALLOW_LOCAL_PRO) return false;
@@ -22,7 +64,15 @@ export function usePro() {
     return true;
   }
 
-  return { isPro: pro.active, activatedAt: pro.activatedAt, activatePro, localProEnabled: ALLOW_LOCAL_PRO };
+  return {
+    isPro: pro.active,
+    activatedAt: pro.activatedAt,
+    activatePro,
+    billing,
+    billingLoading: loading,
+    localProEnabled: ALLOW_LOCAL_PRO,
+    refreshBilling,
+  };
 }
 
 export function getIsPro(): boolean {
