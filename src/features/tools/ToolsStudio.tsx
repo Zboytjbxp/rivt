@@ -151,6 +151,7 @@ function ToolAppShell({
   title,
   description,
   activeJob,
+  compact = false,
   onBack,
   children,
 }: {
@@ -158,12 +159,13 @@ function ToolAppShell({
   title: string;
   description: string;
   activeJob: Job | null;
+  compact?: boolean;
   onBack: () => void;
   children: ReactNode;
 }) {
   return (
-    <section className="v2-tools-app" aria-label={title}>
-      <header className="v2-tool-app-header">
+    <section className={compact ? "v2-tools-app is-compact" : "v2-tools-app"} aria-label={title}>
+      <header className={compact ? "v2-tool-app-header is-compact" : "v2-tool-app-header"}>
         <button type="button" onClick={onBack}>
           <ArrowLeft size={16} />
           Tools
@@ -173,10 +175,10 @@ function ToolAppShell({
           <h1>{title}</h1>
           <p>{description}</p>
         </div>
-        <aside title={jobName(activeJob)}>
+        {compact && !activeJob ? null : <aside title={jobName(activeJob)}>
           <Wrench size={15} />
           <span>{activeJob ? activeJob.title : "No job loaded"}</span>
-        </aside>
+        </aside>}
       </header>
       {children}
     </section>
@@ -2362,6 +2364,7 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
         title: "Heavy 16th field calculator",
         description: "Quick length math, spacing, and cut checks without leaving RIVT.",
         node: <FieldCalculatorTool activeJob={activeJob} />,
+        compact: true,
       },
       estimate: {
         eyebrow: "Estimate app",
@@ -2487,6 +2490,7 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
         title={toolMeta.title}
         description={toolMeta.description}
         activeJob={activeJob}
+        compact={"compact" in toolMeta ? Boolean(toolMeta.compact) : false}
         onBack={() => setActiveTool("hub")}
       >
         {toolMeta.node}

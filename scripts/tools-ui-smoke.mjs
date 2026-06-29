@@ -200,6 +200,13 @@ async function runToolsFlow(page, viewportName) {
   await page.getByRole("heading", { name: "Heavy 16th field calculator" }).waitFor({ timeout: 15_000 });
   await page.getByLabel("Length calculator").getByText("Total length", { exact: true }).waitFor({ timeout: 15_000 });
   await page.getByText("Copy result", { exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByLabel("Fraction calculator keypad").getByRole("button", { name: "7" }).click();
+  await page.getByLabel("Sixteenth fractions").getByRole("button", { name: "1/2" }).click();
+  await page.getByLabel("Fraction calculator keypad").getByRole("button", { name: "+" }).click();
+  await page.getByLabel("Fraction calculator keypad").getByRole("button", { name: "2" }).click();
+  await page.getByLabel("Sixteenth fractions").getByRole("button", { name: "1/4" }).click();
+  await page.getByLabel("Fraction calculator keypad").getByRole("button", { name: "=" }).click();
+  await page.locator(".calc-primary-value", { hasText: '9 3/4"' }).waitFor({ timeout: 15_000 });
   await assertNoHorizontalOverflow(page);
   await page.screenshot({ path: path.join(screenshotDir, `${viewportName}-calculator.png`), fullPage: true });
   await page.getByRole("button", { name: "Spacing" }).click();

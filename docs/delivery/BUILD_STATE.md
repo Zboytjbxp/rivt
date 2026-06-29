@@ -7,6 +7,17 @@ Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
 Production release commit: see live `/api/health` build metadata
 
+## Latest Packet 08 Pass - Heavy 16th Fraction Calculator Rebuild
+
+- Rebuilt the visible Heavy 16th calculator from a generic form-style tool into a field calculator modeled on the approved reference direction: dark tool surface, large tape-style measurement readout, FT/IN/fraction entry, sixteenth-inch keys, arithmetic keypad, heavy/light 1/32 modifiers, 1/16 increment buttons, optional 1/8 in blade kerf, piece count, copy-ready cut card, and supporting spacing/cuts/hardware modes.
+- Added a compact calculator app-shell mode so the calculator itself has priority on mobile instead of being buried under generic wrapper copy and the "No job loaded" context card.
+- Kept the existing five-tool launcher model and did not add fake provider behavior, fake payment handling, fake sending, or homeowner scope.
+- Strengthened `npm run test:ui:tools` so it verifies real fractional math, including `7 1/2 + 2 1/4 = 9 3/4`, before screenshot capture.
+- Rendered QA passed for Tools at desktop and mobile through `npm run test:ui:tools`; screenshots were saved outside the repo at `C:\Users\zboyt\AppData\Local\Temp\rivt-tools-pass`.
+- Broader mobile shell QA passed through `npm run test:ui:mobile-actions`; screenshots were saved outside the repo at `C:\Users\zboyt\AppData\Local\Temp\rivt-mobile-actions-pass`.
+- Required local gates passed after this slice: `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check`.
+- Deployment evidence is pending until the commit is pushed and Railway serves the new source revision.
+
 ## Latest Packet 08 Pass - Work Flow Cleanup, Trade News Mobile Thumbnails, and Tools Mobile Header
 
 - Verified the current Work audit findings against `master`: the local-device job creation modal was unreachable, the top Work `Pipeline` button opened a stale local-storage path, and bulk selection mixed API jobs with local-storage mutation/export behavior.
