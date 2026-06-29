@@ -17,7 +17,8 @@ Production release commit: see live `/api/health` build metadata
 - Updated `.env.example` and `PRODUCTION.md` with required Stripe variables, webhook endpoint `https://rivt.pro/api/stripe/webhook`, required events, and Customer Portal setup.
 - Added billing unit tests for webhook signature verification and entitlement status mapping; updated migration lifecycle coverage through version 14 and rollback.
 - Required local gates passed after this slice: `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, `npm run incident:readiness -- --require-ready`, and `npm run launch:readiness -- --require-ready`.
-- Production deployment is intentionally pending until the founder creates the Stripe product/price, webhook endpoint, and Railway variables. Without those variables the billing UI fails closed with setup-required copy.
+- Production deployment completed through Railway from `master`; live `https://rivt.pro/api/health` served source `30cd75325f58eef5ff95202480dda547ba1f31af` with ready migration `0014_billing_subscriptions`, PostgreSQL, S3-compatible object storage, and configured Sentry. `EXPECTED_SOURCE_COMMIT=30cd75325f58eef5ff95202480dda547ba1f31af npm run monitor:production` passed with seven anonymous private-route checks, operational controls off, and 635 ms duration. Anonymous `/api/v1/billing/status` returned `401`, as expected.
+- Production Stripe product/price, webhook endpoint, Customer Portal, and Railway variables still need founder setup before Checkout can create paid subscriptions. Until then the billing UI fails closed with setup-required copy.
 
 ## Latest Packet 08 Pass - Invoice and Estimate Tool Polish
 
