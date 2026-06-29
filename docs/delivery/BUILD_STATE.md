@@ -15,8 +15,8 @@ Production release commit: see live `/api/health` build metadata
 - Compacted spacing, cuts, and hardware modes so they stay inside the same calculator shell instead of becoming scrolling forms.
 - Strengthened `npm run test:ui:tools` with mobile no-vertical-overflow assertions for length, spacing, cuts, and hardware modes, and with mobile fraction selection through the visible tape rail.
 - Rendered QA passed for Tools at desktop and mobile through `npm run test:ui:tools`; screenshots were saved outside the repo at `C:\Users\zboyt\AppData\Local\Temp\rivt-tools-pass`, including `mobile-calculator.png` and `mobile-calculator-hardware.png`.
-- Required local gates passed after this slice: `npm run build`, `npm run lint`, `npm run test`, `npm run test:ui:tools`, `npm run test:e2e`, and `npm audit --omit=dev`.
-- No production deployment was performed in this slice yet.
+- Required local gates passed after this slice: `npm run build`, `npm run lint`, `npm run test`, `npm run test:ui:tools`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check`.
+- Production deployment was performed through Railway from `master`; live `https://rivt.pro` reported the new source through `npm run monitor:production`, with PostgreSQL, S3-compatible object storage, configured Sentry, operational controls off, seven anonymous private-route checks, and 542 ms duration.
 
 ## Latest Packet 08 Pass - Heavy 16th Fraction Calculator Rebuild
 
