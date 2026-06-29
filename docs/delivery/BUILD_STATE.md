@@ -16,7 +16,7 @@ Production release commit: see live `/api/health` build metadata
 - Rendered QA passed for Tools at desktop and mobile through `npm run test:ui:tools`; screenshots were saved outside the repo at `C:\Users\zboyt\AppData\Local\Temp\rivt-tools-pass`.
 - Broader mobile shell QA passed through `npm run test:ui:mobile-actions`; screenshots were saved outside the repo at `C:\Users\zboyt\AppData\Local\Temp\rivt-mobile-actions-pass`.
 - Required local gates passed after this slice: `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check`.
-- Deployment evidence is pending until the commit is pushed and Railway serves the new source revision.
+- Production deployment was performed through Railway from `master`. `EXPECTED_SOURCE_COMMIT=d413dc8577862835bd4af3961d590b3cb3c58dbd npm run monitor:production` passed against `https://rivt.pro` with PostgreSQL, S3-compatible object storage, configured Sentry, operational controls off, seven anonymous private-route checks, and 699 ms duration.
 
 ## Latest Packet 08 Pass - Work Flow Cleanup, Trade News Mobile Thumbnails, and Tools Mobile Header
 
