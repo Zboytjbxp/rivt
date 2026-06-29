@@ -15,7 +15,7 @@ Production release commit: see live `/api/health` build metadata
 - Strengthened `npm run test:ui:tools` with Estimate screenshot evidence in addition to the existing Tools, Heavy 16th, Invoice, Daily Log, and Records/photos coverage.
 - Rendered QA passed for Tools at desktop and mobile through `npm run test:ui:tools`; screenshots were saved outside the repo at `C:\Users\zboyt\AppData\Local\Temp\rivt-tools-pass`, including `mobile-estimate.png`, `mobile-invoice.png`, and `desktop-invoice.png`.
 - Required local gates passed after this slice: `npm run build`, `npm run lint`, `npm run test`, `npm run test:ui:tools`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check`.
-- Production deployment is pending for this slice until the committed source is pushed and Railway monitor confirms the exact build commit on `https://rivt.pro`.
+- Production deployment was performed through Railway from `master`; live `https://rivt.pro` reported build commit `7e8ac1d2ebf5b66f43f4d91f59e8f3d147388f55` through `npm run monitor:production`, with PostgreSQL, S3-compatible object storage, configured Sentry, operational controls off, seven anonymous private-route checks, and 553 ms duration.
 
 ## Latest Packet 08 Pass - No-Scroll Heavy 16th Calculator Fit
 
