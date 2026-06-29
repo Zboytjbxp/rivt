@@ -18,7 +18,7 @@ Production release commit: see live `/api/health` build metadata
 - Rendered QA passed for the affected surfaces: `npm run test:ui:work-lifecycle`, `npm run test:ui:shop-talk-news`, `npm run test:ui:tools`, and `npm run test:ui:mobile-actions`. Screenshot evidence was saved outside the repo at `C:\Users\zboyt\AppData\Local\Temp\rivt-work-lifecycle-pass`, `C:\Users\zboyt\AppData\Local\Temp\rivt-shop-talk-news-pass`, `C:\Users\zboyt\AppData\Local\Temp\rivt-tools-pass`, and `C:\Users\zboyt\AppData\Local\Temp\rivt-mobile-actions-pass`.
 - Required local gates passed after this slice: `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check`.
 - No requirement maturity moved in this pass; this was controllable UX hardening and removal of stale frontend-only production paths.
-- Deployment evidence is still pending for this slice until the commit is pushed and Railway serves the new source revision.
+- Production deployment was performed through Railway from `master`. `EXPECTED_SOURCE_COMMIT=01b7b6b5c5c173091a5413f2db935b4078b8f8e2 npm run monitor:production` passed against `https://rivt.pro` with PostgreSQL, S3-compatible object storage, configured Sentry, operational controls off, seven anonymous private-route checks, and 554 ms duration.
 
 ## Latest Packet 08 Pass - Launch Readiness Machine Gate Sweep
 
