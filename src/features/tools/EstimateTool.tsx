@@ -53,9 +53,25 @@ export function EstimateTool({ activeJob }: { activeJob: Job | null }) {
   }
 
   return (
-    <div className="v2-tool-workbench">
-      <Panel className="v2-tool-panel" eyebrow="Estimate" title="Price the work before you post or bid">
-        <div className="v2-tool-input-grid">
+    <div className="v2-tool-workbench v2-estimate-workbench">
+      <Panel className="v2-tool-panel v2-estimate-builder-panel" eyebrow="Estimate" title="Price the work before you post or bid">
+        <section className="v2-estimate-hero" aria-label="Estimate target">
+          <span>Recommended target</span>
+          <strong>{currency(target)}</strong>
+          <small>{currency(low)} - {currency(high)} / {formatNumber(days, 1)} working days</small>
+          <button type="button" className="v2-primary-button" onClick={copySummary}>
+            <Copy size={15} />
+            {copied ? "Copied" : "Copy estimate"}
+          </button>
+        </section>
+
+        <div className="v2-estimate-quick-stats" aria-label="Estimate quick stats">
+          <article><span>Labor</span><strong>{currency(labor)}</strong></article>
+          <article><span>Material</span><strong>{currency(materials)}</strong></article>
+          <article><span>Cushion</span><strong>{marginShare}%</strong></article>
+        </div>
+
+        <div className="v2-tool-input-grid v2-estimate-input-grid">
           <label>Labor hours<input type="number" min="0" step="0.5" value={laborHours} onChange={(event) => setLaborHours(Math.max(0, Number(event.target.value) || 0))} /></label>
           <label>Hourly rate<input type="number" min="0" value={hourlyRate} onChange={(event) => setHourlyRate(Math.max(0, Number(event.target.value) || 0))} /></label>
           <label>Crew size<input type="number" min="1" value={crewSize} onChange={(event) => setCrewSize(Math.max(1, Number(event.target.value) || 1))} /></label>
@@ -68,11 +84,6 @@ export function EstimateTool({ activeJob }: { activeJob: Job | null }) {
       </Panel>
 
       <Panel as="aside" className="v2-tool-panel v2-tool-summary-panel" eyebrow="Target" title={`${currency(low)} - ${currency(high)}`}>
-        <div className="v2-tool-result-hero">
-          <span>Recommended target</span>
-          <strong>{currency(target)}</strong>
-          <small>{formatNumber(days, 1)} working days estimated</small>
-        </div>
         <div className="v2-estimate-meter" aria-label="Estimate composition">
           <div><span style={{ width: `${laborShare}%` }} /></div>
           <small>{laborShare}% labor load - {marginShare}% margin/contingency cushion</small>
@@ -84,10 +95,6 @@ export function EstimateTool({ activeJob }: { activeJob: Job | null }) {
           <div><span>Margin</span><strong>{currency(margin)}</strong></div>
           <div><span>Contingency</span><strong>{currency(contingency)}</strong></div>
         </div>
-        <button type="button" className="v2-primary-button" onClick={copySummary}>
-          <Copy size={15} />
-          {copied ? "Copied" : "Copy estimate"}
-        </button>
       </Panel>
     </div>
   );

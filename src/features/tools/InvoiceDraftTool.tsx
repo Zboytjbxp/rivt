@@ -179,10 +179,22 @@ export function InvoiceDraftTool({ activeJob }: { activeJob: Job | null }) {
   return (
     <div className="v2-tool-workbench v2-invoice-workbench">
       <Panel className="v2-tool-panel v2-invoice-builder-panel" eyebrow="Invoice draft" title="Build an invoice">
+        <section className="v2-invoice-topline" aria-label="Invoice summary">
+          <div>
+            <span>Total due</span>
+            <strong>{currency(total)}</strong>
+            <small>{invoiceNumber || "RIVT-DRAFT"} / {terms}</small>
+          </div>
+          <div className="v2-invoice-topline-actions">
+            <button type="button" className="v2-primary-button" onClick={copyInvoice}><Copy size={15} />{copied ? "Copied" : "Copy"}</button>
+            <button type="button" onClick={printInvoice}><FileText size={15} />Print</button>
+          </div>
+        </section>
+
         <section className="v2-invoice-template-bar" aria-label="Invoice templates">
           <label>Template name<input value={templateName} onChange={(event) => setTemplateName(event.target.value)} placeholder="Standard labor invoice" /></label>
           <button type="button" className="v2-primary-button" onClick={saveTemplate}><FileText size={14} />Save template</button>
-          <small>Templates are saved to this browser only - they won't appear on other devices.</small>
+          <small>Saved on this device.</small>
         </section>
         {templateNotice ? <p className="v2-record-notice" role="status">{templateNotice}</p> : null}
         {templates.length ? (
@@ -200,8 +212,11 @@ export function InvoiceDraftTool({ activeJob }: { activeJob: Job | null }) {
           </div>
         ) : null}
         <section className="v2-invoice-builder-section" aria-label="Invoice details">
-          <h3>Invoice details</h3>
-          <div className="v2-tool-input-grid two">
+          <header className="v2-invoice-section-title">
+            <h3>Details</h3>
+            <span>{activeJob?.title ?? "Standalone invoice"}</span>
+          </header>
+          <div className="v2-tool-input-grid two v2-invoice-detail-grid">
             <label>Invoice #<input value={invoiceNumber} onChange={(event) => setInvoiceNumber(event.target.value)} /></label>
             <label>Terms<input value={terms} onChange={(event) => setTerms(event.target.value)} /></label>
             <label>Bill to<input value={billTo} onChange={(event) => setBillTo(event.target.value)} placeholder="Contractor or company" /></label>
@@ -237,7 +252,7 @@ export function InvoiceDraftTool({ activeJob }: { activeJob: Job | null }) {
             <div><span>Terms</span><strong>{terms}</strong></div>
             <div><span>Method</span><strong>{paymentMethod}</strong></div>
           </div>
-          <p className="v2-tool-note">Tapping Email or Text opens a draft in your own email or messaging app. RIVT does not send on your behalf.</p>
+          <p className="v2-tool-note">Email and text open drafts from your own apps. RIVT does not send on your behalf.</p>
           <div className="v2-invoice-delivery" aria-label="Invoice draft delivery">
             <a href={recipientEmail ? emailHref : undefined} aria-disabled={!recipientEmail} onClick={(event) => { if (!recipientEmail) event.preventDefault(); }}>
               <Mail size={15} />

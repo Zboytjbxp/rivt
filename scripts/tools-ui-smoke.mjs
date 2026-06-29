@@ -248,6 +248,7 @@ async function runToolsFlow(page, viewportName) {
   await page.getByText("Recommended target", { exact: true }).waitFor({ timeout: 15_000 });
   await page.getByText(/labor load/i).waitFor({ timeout: 15_000 });
   await assertNoHorizontalOverflow(page);
+  await page.screenshot({ path: path.join(screenshotDir, `${viewportName}-estimate.png`), fullPage: true });
   await page.getByLabel("Estimate builder").getByRole("button", { name: "Tools" }).click();
 
   await page.getByRole("button", { name: /Invoice/i }).click();
