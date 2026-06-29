@@ -7,6 +7,19 @@ Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
 Production release commit: see live `/api/health` build metadata
 
+## Latest Packet 08 Pass - Work Flow Cleanup, Trade News Mobile Thumbnails, and Tools Mobile Header
+
+- Verified the current Work audit findings against `master`: the local-device job creation modal was unreachable, the top Work `Pipeline` button opened a stale local-storage path, and bulk selection mixed API jobs with local-storage mutation/export behavior.
+- Removed the unreachable local Work job creation modal, `rivt.jobs.v1` local job helpers, local jobs section, stale top-level pipeline modal trigger, and API/local-storage bulk action bar from `src/features/work/WorkWorkspace.tsx` and `src/features/work/work-workspace.css`.
+- Work now exposes a single contractor creation path through the existing server-backed `Create job` action, and the only visible Pipeline path is the API-backed contractor section tab.
+- Work API load errors are no longer masked by a local browser fallback; failures now surface directly with the existing retry action.
+- Improved mobile Trade News fallback thumbnails so source tiles show a stronger source initial plus visible label instead of looking like blank placeholder media, and added a right-edge fade to horizontally scrollable Shop Talk filter/chip rows.
+- Tightened the Tools mobile section header so the `LAUNCH SET` eyebrow and heading stack cleanly instead of forming an uneven two-column wrap.
+- Rendered QA passed for the affected surfaces: `npm run test:ui:work-lifecycle`, `npm run test:ui:shop-talk-news`, `npm run test:ui:tools`, and `npm run test:ui:mobile-actions`. Screenshot evidence was saved outside the repo at `C:\Users\zboyt\AppData\Local\Temp\rivt-work-lifecycle-pass`, `C:\Users\zboyt\AppData\Local\Temp\rivt-shop-talk-news-pass`, `C:\Users\zboyt\AppData\Local\Temp\rivt-tools-pass`, and `C:\Users\zboyt\AppData\Local\Temp\rivt-mobile-actions-pass`.
+- Required local gates passed after this slice: `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check`.
+- No requirement maturity moved in this pass; this was controllable UX hardening and removal of stale frontend-only production paths.
+- Deployment evidence is still pending for this slice until the commit is pushed and Railway serves the new source revision.
+
 ## Latest Packet 08 Pass - Launch Readiness Machine Gate Sweep
 
 - Re-ran the current automated launch gate set after the Work draft editor date-normalization hotfix and latest production deployment, without adding new product scope.

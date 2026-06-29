@@ -6,10 +6,8 @@ import {
   Check,
   ChevronRight,
   CircleDollarSign,
-  Download,
   FileText,
   Filter,
-  LayoutGrid,
   LayoutList,
   LockKeyhole,
   MapPin,
@@ -61,7 +59,6 @@ import {
 } from "./job-api";
 import "./work-workspace.css";
 import { JobDetailHub } from "../jobs/JobDetailHub";
-import { JobPipeline } from "../pipeline/JobPipeline";
 
 type TradeFilter = (typeof tradeOptions)[number];
 type DifficultyFilter = (typeof difficultyOptions)[number];
@@ -509,37 +506,6 @@ function ContractorStatsBar({ jobs }: { jobs: Job[] }) {
   );
 }
 
-// Local job drafts.
-
-interface LocalJob {
-  id: string;
-  title: string;
-  jobType: string;
-  status: string;
-  scheduledDate: string;
-  address: string;
-  clientName: string;
-  estimatedHours: number;
-  estimatedValue: number;
-  notes: string;
-  createdAt: string;
-}
-
-function readLocalJobs(): LocalJob[] {
-  try {
-    const stored = localStorage.getItem("rivt.jobs.v1");
-    if (!stored) return [];
-    const parsed = JSON.parse(stored) as LocalJob[];
-    return Array.isArray(parsed) ? parsed : [];
-  } catch { return []; }
-}
-
-function writeLocalJobs(jobs: LocalJob[]) {
-  try { localStorage.setItem("rivt.jobs.v1", JSON.stringify(jobs)); } catch { /* noop */ }
-}
-
-// ── Saved Searches ────────────────────────────────────────────────────────────
-
 const savedSearchKey = "rivt.savedSearches.v1";
 
 interface SavedSearch {
@@ -565,153 +531,6 @@ function readSavedSearches(): SavedSearch[] {
 function persistSavedSearches(searches: SavedSearch[]) {
   try { localStorage.setItem(savedSearchKey, JSON.stringify(searches.slice(0, 10))); } catch { /* noop */ }
 }
-
-// ── Create Job Modal ──────────────────────────────────────────────────────────
-
-const JOB_TYPES = ["Residential", "Commercial", "Service Call", "New Install", "Repair", "Inspection"] as const;
-const JOB_STATUSES_CREATE = ["Lead", "Quoted", "Active", "Invoiced", "Paid / Closed"] as const;
-
-function CreateJobModal({ onClose, onCreate }: { onClose: () => void; onCreate: (job: LocalJob) => void }) {
-  const [title, setTitle] = useState("");
-  const [jobType, setJobType] = useState<string>(JOB_TYPES[0]);
-  const [status, setStatus] = useState<string>(JOB_STATUSES_CREATE[0]);
-  const [scheduledDate, setScheduledDate] = useState("");
-  const [address, setAddress] = useState("");
-  const [clientName, setClientName] = useState("");
-  const [estimatedHours, setEstimatedHours] = useState("");
-  const [estimatedValue, setEstimatedValue] = useState("");
-  const [notes, setNotes] = useState("");
-  const [error, setError] = useState("");
-
-  function handleSubmit() {
-    if (!title.trim()) { setError("Title is required."); return; }
-    const job: LocalJob = {
-      id: crypto.randomUUID(),
-      title: title.trim(),
-      jobType,
-      status,
-      scheduledDate,
-      address: address.trim(),
-      clientName: clientName.trim(),
-      estimatedHours: parseFloat(estimatedHours) || 0,
-      estimatedValue: parseFloat(estimatedValue) || 0,
-      notes: notes.trim(),
-      createdAt: new Date().toISOString(),
-    };
-    const existing = readLocalJobs();
-    writeLocalJobs([job, ...existing]);
-    onCreate(job);
-    onClose();
-  }
-
-  return (
-    <div className="v2-create-job-backdrop" onClick={onClose}>
-      <div className="v2-create-job-modal" role="dialog" aria-modal="true" aria-label="Create new job" onClick={(e) => e.stopPropagation()}>
-        <div className="v2-create-job-modal-header">
-          <h2>New Job</h2>
-          <button type="button" onClick={onClose} aria-label="Close"><X size={18} /></button>
-        </div>
-        {error ? <p className="v2-match-error" role="alert">{error}</p> : null}
-        <div className="v2-create-job-fields">
-          <label className="is-full">Title *
-            <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Kitchen rewire" autoFocus />
-          </label>
-          <label>Job Type
-            <select value={jobType} onChange={(e) => setJobType(e.target.value)}>
-              {JOB_TYPES.map((t) => <option key={t}>{t}</option>)}
-            </select>
-          </label>
-          <label>Status
-            <select value={status} onChange={(e) => setStatus(e.target.value)}>
-              {JOB_STATUSES_CREATE.map((s) => <option key={s}>{s}</option>)}
-            </select>
-          </label>
-          <label>Scheduled Date
-            <input type="date" value={scheduledDate} onChange={(e) => setScheduledDate(e.target.value)} />
-          </label>
-          <label>Client Name
-            <input value={clientName} onChange={(e) => setClientName(e.target.value)} placeholder="Client or company" />
-          </label>
-          <label className="is-full">Address
-            <input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="123 Main St, City, ST" />
-          </label>
-          <label>Estimated Hours
-            <input type="number" value={estimatedHours} onChange={(e) => setEstimatedHours(e.target.value)} placeholder="0" min="0" step="0.5" />
-          </label>
-          <label>Estimated Value ($)
-            <input type="number" value={estimatedValue} onChange={(e) => setEstimatedValue(e.target.value)} placeholder="0" min="0" step="100" />
-          </label>
-          <label className="is-full">Notes
-            <textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Scope notes, special instructions…" />
-          </label>
-        </div>
-        <div className="v2-create-job-modal-footer">
-          <button type="button" onClick={onClose}>Cancel</button>
-          <button type="button" className="v2-primary-button" disabled={!title.trim()} onClick={handleSubmit}>
-            <Plus size={16} /> Create Job
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ── Local Jobs Panel ─────────────────────────────────────────────────────────
-
-const LOCAL_STATUS_COLORS: Record<string, string> = {
-  Lead: "#94a3b8",
-  Quoted: "#f59e0b",
-  Active: "#22c55e",
-  Invoiced: "#3b82f6",
-  "Paid / Closed": "#6b7280",
-  Archived: "#6b7280",
-};
-
-function LocalJobsSection({ jobs, onDelete }: { jobs: LocalJob[]; onDelete: (id: string) => void }) {
-  if (!jobs.length) return null;
-
-  return (
-    <section className="v2-local-jobs-section" aria-label="My local jobs">
-      <div className="v2-local-jobs-header">
-        <span className="v2-local-jobs-eyebrow">My Jobs</span>
-        <small>{jobs.length} local {jobs.length === 1 ? "job" : "jobs"}</small>
-      </div>
-      <div className="v2-local-jobs-list">
-        {jobs.map((job) => {
-          const color = LOCAL_STATUS_COLORS[job.status] ?? "#94a3b8";
-          return (
-            <div key={job.id} className="v2-local-job-card">
-              <div className="v2-local-job-left">
-                <span className="v2-local-job-status-dot" style={{ background: color }} />
-                <div>
-                  <strong className="v2-local-job-title">{job.title}</strong>
-                  <span className="v2-local-job-meta">
-                    {job.clientName || job.jobType}
-                    {job.scheduledDate ? ` · ${new Date(job.scheduledDate + "T00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}` : ""}
-                    {job.estimatedValue ? ` · $${job.estimatedValue.toLocaleString()}` : ""}
-                  </span>
-                </div>
-              </div>
-              <div className="v2-local-job-right">
-                <span className="v2-local-job-status-pill" style={{ background: color + "22", color }}>{job.status}</span>
-                <button
-                  type="button"
-                  className="v2-local-job-delete"
-                  aria-label={`Delete ${job.title}`}
-                  onClick={() => onDelete(job.id)}
-                >
-                  <X size={13} />
-                </button>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </section>
-  );
-}
-
-// ── Job Checklist ─────────────────────────────────────────────────────────────
 
 interface ChecklistItem {
   id: string;
@@ -1273,7 +1092,7 @@ function statusTone(status: Job["status"]) {
   return "info";
 }
 
-function JobRow({ job, selected, role, onSelect, selectMode, bulkSelected, onBulkToggle }: { job: Job; selected: boolean; role: Role; onSelect: () => void; selectMode?: boolean; bulkSelected?: boolean; onBulkToggle?: () => void }) {
+function JobRow({ job, selected, role, onSelect }: { job: Job; selected: boolean; role: Role; onSelect: () => void }) {
   const profile = useMemo(() => getProfileFromStorage(), []);
   const score = useMemo(() => matchScore(job, profile.primaryTrade, profile.userLocation), [job, profile]);
 
@@ -1284,21 +1103,12 @@ function JobRow({ job, selected, role, onSelect, selectMode, bulkSelected, onBul
     : "var(--v2-text-muted)";
 
   return (
-    <div className={["v2-job-row", selected ? "is-selected" : "", selectMode ? "select-mode" : ""].filter(Boolean).join(" ")}>
-      {selectMode ? (
-        <label className="v2-job-row-checkbox">
-          <input
-            type="checkbox"
-            checked={bulkSelected ?? false}
-            onChange={() => onBulkToggle?.()}
-          />
-        </label>
-      ) : null}
+    <div className={["v2-job-row", selected ? "is-selected" : ""].filter(Boolean).join(" ")}>
       <div className="v2-job-row-content">
         <button
           type="button"
           className="v2-job-row-inner"
-          onClick={selectMode ? () => onBulkToggle?.() : onSelect}
+          onClick={onSelect}
           aria-pressed={selected}
         >
           <span className="v2-job-row-main">
@@ -1401,11 +1211,6 @@ export function WorkWorkspace({
   onRetry,
 }: WorkWorkspaceProps) {
   const persona = usePersona();
-  const [showPipeline, setShowPipeline] = useState(false);
-  const [showCreateJob, setShowCreateJob] = useState(false);
-  const [createJobNotice, setCreateJobNotice] = useState("");
-  const [selectMode, setSelectMode] = useState(false);
-  const [bulkSelected, setBulkSelected] = useState<Set<string>>(new Set());
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [mobileDetailOpen, setMobileDetailOpen] = useState(false);
   const [detailTab, setDetailTab] = useState<DetailTab>("overview");
@@ -1425,7 +1230,6 @@ export function WorkWorkspace({
   const [savedSearchNotice, setSavedSearchNotice] = useState("");
   const [saveTemplateNotice, setSaveTemplateNotice] = useState("");
   const [detailJobId, setDetailJobId] = useState<string | null>(null);
-  const [localJobs, setLocalJobs] = useState<LocalJob[]>(readLocalJobs);
   const detailHydrationRequests = useRef<Set<string>>(new Set());
 
   const visibleJobs = useMemo(() => {
@@ -1720,9 +1524,6 @@ export function WorkWorkspace({
       <header className="v2-work-header">
         <div><h1>Work</h1><p>{role === "contractor" ? "Post and manage jobs." : "Find open work nearby."}</p></div>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          <button type="button" className="v2-filter-button" onClick={() => setShowPipeline(true)} title="Open job pipeline">
-            <LayoutGrid size={16} /> Pipeline
-          </button>
           {role === "contractor" ? (
             <button type="button" className="v2-primary-button" onClick={onPostJob}><Plus size={17} /> Create job</button>
           ) : null}
@@ -1753,7 +1554,6 @@ export function WorkWorkspace({
       </div>
 
       {savedSearchNotice ? <p className="v2-saved-search-notice" role="status">{savedSearchNotice}</p> : null}
-      {createJobNotice ? <p className="v2-saved-search-notice" role="status">{createJobNotice}</p> : null}
 
       {role === "tradesperson" && savedSearches.length > 0 ? (
         <div className="v2-saved-searches">
@@ -1780,18 +1580,7 @@ export function WorkWorkspace({
         </section>
       ) : null}
 
-      {role === "contractor" && localJobs.length > 0 ? (
-        <LocalJobsSection
-          jobs={localJobs}
-          onDelete={(id) => {
-            const updated = localJobs.filter((j) => j.id !== id);
-            setLocalJobs(updated);
-            writeLocalJobs(updated);
-          }}
-        />
-      ) : null}
-
-      {error && (!localJobs.length || !role || role !== "contractor") ? <div className="v2-work-error" role="alert"><div><strong>Jobs could not be loaded</strong><span>{error}</span></div><button type="button" onClick={onRetry}><RefreshCw size={16} /> Retry</button></div> : null}
+      {error ? <div className="v2-work-error" role="alert"><div><strong>Jobs could not be loaded</strong><span>{error}</span></div><button type="button" onClick={onRetry}><RefreshCw size={16} /> Retry</button></div> : null}
 
       {role === "contractor" && contractorSection === "pipeline" ? (
         <PipelineBoard openJobs={jobs.filter((j) => j.status === "Open")} />
@@ -1807,13 +1596,6 @@ export function WorkWorkspace({
             <span>{visibleJobs.length} {visibleJobs.length === 1 ? "job" : "jobs"}</span>
             <div className="v2-work-list-heading-actions">
               <small>{role === "contractor" ? `${contractorSection} postings` : (persona?.jobSectionLabel ?? "Open work")}</small>
-              <button
-                type="button"
-                className={selectMode ? "v2-select-toggle-btn is-active" : "v2-select-toggle-btn"}
-                onClick={() => { setSelectMode((m) => !m); setBulkSelected(new Set()); }}
-              >
-                Select
-              </button>
             </div>
           </div>
           {loading ? <JobListSkeleton /> : visibleJobs.length ? (
@@ -1825,14 +1607,6 @@ export function WorkWorkspace({
                   role={role}
                   selected={detailJob?.id === job.id}
                   onSelect={() => selectJob(job.id)}
-                  selectMode={selectMode}
-                  bulkSelected={bulkSelected.has(String(job.id))}
-                  onBulkToggle={() => setBulkSelected((prev) => {
-                    const next = new Set(prev);
-                    const key = String(job.id);
-                    if (next.has(key)) { next.delete(key); } else { next.add(key); }
-                    return next;
-                  })}
                 />
               ))}
               <div className="v2-work-end-of-feed">
@@ -2149,67 +1923,7 @@ export function WorkWorkspace({
         <JobDetailHub jobId={detailJobId} onClose={() => setDetailJobId(null)} />
       )}
 
-      {showPipeline && <JobPipeline onClose={() => setShowPipeline(false)} />}
 
-      {showCreateJob && (
-        <CreateJobModal
-          onClose={() => setShowCreateJob(false)}
-          onCreate={(job) => {
-            setLocalJobs((prev) => [job, ...prev]);
-            setCreateJobNotice("Job created and saved to this device.");
-            setTimeout(() => setCreateJobNotice(""), 3000);
-          }}
-        />
-      )}
-
-      {selectMode && bulkSelected.size > 0 && (
-        <div className="v2-bulk-action-bar" role="toolbar" aria-label="Bulk job actions">
-          <span className="v2-bulk-count">{bulkSelected.size} selected</span>
-          <button type="button" onClick={() => {
-            const localJobs = readLocalJobs();
-            const updated = localJobs.map((j) => bulkSelected.has(j.id) ? { ...j, status: "Archived" } : j);
-            writeLocalJobs(updated);
-            setSelectMode(false);
-            setBulkSelected(new Set());
-          }}>Archive</button>
-          <button type="button" onClick={() => {
-            const localJobs = readLocalJobs();
-            const updated = localJobs.map((j) => bulkSelected.has(j.id) ? { ...j, status: "Paid / Closed" } : j);
-            writeLocalJobs(updated);
-            setSelectMode(false);
-            setBulkSelected(new Set());
-          }}>Mark Paid</button>
-          <button type="button" onClick={() => {
-            const localJobs = readLocalJobs();
-            const selectedJobs = localJobs.filter((j) => bulkSelected.has(j.id));
-            const csvRows = [
-              ["Title", "Status", "Client", "Value", "Scheduled Date"],
-              ...selectedJobs.map((j) => [
-                `"${(j.title ?? "").replace(/"/g, '""')}"`,
-                `"${(j.status ?? "").replace(/"/g, '""')}"`,
-                `"${(j.clientName ?? "").replace(/"/g, '""')}"`,
-                String(j.estimatedValue ?? ""),
-                j.scheduledDate ?? "",
-              ]),
-            ];
-            const csv = csvRows.map((r) => r.join(",")).join("\n");
-            const blob = new Blob([csv], { type: "text/csv" });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement("a");
-            a.href = url;
-            a.download = "jobs-export.csv";
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-            setSelectMode(false);
-            setBulkSelected(new Set());
-          }}><Download size={13} />Export CSV</button>
-          <button type="button" className="v2-bulk-cancel" onClick={() => { setSelectMode(false); setBulkSelected(new Set()); }}>
-            <X size={13} />Cancel
-          </button>
-        </div>
-      )}
     </section>
   );
 }

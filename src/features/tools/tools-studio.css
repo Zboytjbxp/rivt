@@ -5764,8 +5764,10 @@
   }
 
   .v2-tools-page .v2-tool-section-header {
-    align-items: center;
-    justify-content: space-between;
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 3px;
+    justify-content: flex-start;
   }
 
   .v2-tools-page .v2-tool-launch-card,
