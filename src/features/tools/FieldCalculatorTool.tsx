@@ -104,7 +104,7 @@ function computeOperation(left32: number, operator: Operator, right32: number) {
   return Math.round(left32 / scalar);
 }
 
-export function FieldCalculatorTool({ activeJob }: { activeJob: Job | null }) {
+export function FieldCalculatorTool({ activeJob, onBack }: { activeJob: Job | null; onBack?: () => void }) {
   const [calculatorMode, setCalculatorMode] = useState<CalculatorMode>("length");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [activeUnit, setActiveUnit] = useState<ActiveUnit>("inches");
@@ -287,15 +287,16 @@ export function FieldCalculatorTool({ activeJob }: { activeJob: Job | null }) {
 
   return (
     <section className="heavy-calc-workbench fraction-calc-workbench" aria-label="Heavy 16th field calculator">
+      <h1 className="sr-only">Heavy 16th field calculator</h1>
       <header className="heavy-calc-topbar">
         <button
           type="button"
-          className="calc-menu-button"
-          aria-label="Toggle calculator tool drawer"
-          aria-expanded={drawerOpen}
-          onClick={() => setDrawerOpen((open) => !open)}
+          className={onBack ? "calc-menu-button calc-tools-button" : "calc-menu-button"}
+          aria-label={onBack ? "Tools" : "Toggle calculator tool drawer"}
+          aria-expanded={onBack ? undefined : drawerOpen}
+          onClick={onBack ?? (() => setDrawerOpen((open) => !open))}
         >
-          <Menu size={20} />
+          {onBack ? "Tools" : <Menu size={20} />}
         </button>
         <div className="heavy-calc-brand">
           <div className="heavy-calc-brand-mark" aria-hidden="true">

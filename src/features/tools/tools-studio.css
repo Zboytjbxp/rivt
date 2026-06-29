@@ -254,6 +254,22 @@
   gap: 10px;
 }
 
+.v2-tools-app.is-calculator-fullscreen {
+  display: block;
+  overflow: hidden;
+}
+
+.v2-tools-app.is-calculator-fullscreen .fraction-calc-workbench {
+  width: 100%;
+}
+
+.v2-tools-app.is-calculator-fullscreen .calc-tools-button {
+  width: auto;
+  min-width: 58px;
+  padding: 0 12px;
+  line-height: 1;
+}
+
 .v2-tool-app-header {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) minmax(150px, auto);
@@ -5899,6 +5915,280 @@
   .calc-pad-grid:not(.fraction-pad) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .suite-sheet-header,
   .suite-summary-foot { flex-direction: column; align-items: stretch; }
+}
+
+@media (max-width: 640px) {
+  .v2-tools-app.is-calculator-fullscreen {
+    margin: -2px -8px 0;
+  }
+
+  .v2-tools-app.is-calculator-fullscreen .fraction-calc-workbench {
+    height: clamp(520px, calc(100dvh - 154px), 720px);
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .v2-tools-app.is-calculator-fullscreen .heavy-calc-topbar {
+    min-height: 46px;
+    flex-wrap: nowrap;
+    gap: 8px;
+    padding: 6px 8px;
+  }
+
+  .v2-tools-app.is-calculator-fullscreen .calc-menu-button,
+  .v2-tools-app.is-calculator-fullscreen .calc-exit-button {
+    height: 34px;
+    border-radius: var(--v2-radius-md);
+    font-size: 10px;
+    letter-spacing: 0.08em;
+  }
+
+  .v2-tools-app.is-calculator-fullscreen .calc-exit-button {
+    width: auto;
+    min-width: 96px;
+    padding: 0 9px;
+  }
+
+  .v2-tools-app.is-calculator-fullscreen .heavy-calc-brand {
+    flex: 1;
+    width: auto;
+    gap: 8px;
+  }
+
+  .v2-tools-app.is-calculator-fullscreen .heavy-calc-brand-mark {
+    width: 30px;
+    height: 30px;
+  }
+
+  .v2-tools-app.is-calculator-fullscreen .heavy-calc-brand strong {
+    font-size: 10px;
+    letter-spacing: 0.08em;
+  }
+
+  .v2-tools-app.is-calculator-fullscreen .heavy-calc-brand span {
+    margin-top: 1px;
+    font-size: 8px;
+    letter-spacing: 0.08em;
+  }
+
+  .v2-tools-app.is-calculator-fullscreen .heavy-calc-shell {
+    display: grid;
+    height: calc(100% - 47px);
+    min-height: 0;
+    grid-template-columns: minmax(0, 1fr) 74px;
+  }
+
+  .v2-tools-app.is-calculator-fullscreen .heavy-calc-drawer,
+  .v2-tools-app.is-calculator-fullscreen .heavy-calc-drawer.is-open {
+    display: none;
+  }
+
+  .v2-tools-app.is-calculator-fullscreen .heavy-calc-main {
+    min-height: 0;
+    gap: 7px;
+    overflow: hidden;
+    padding: 7px;
+  }
+
+  .v2-tools-app.is-calculator-fullscreen .calc-screen-head {
+    display: none;
+  }
+
+  .v2-tools-app.is-calculator-fullscreen .fraction-mode-strip {
+    gap: 4px;
+    padding: 4px;
+    border-radius: var(--v2-radius-md);
+  }
+
+  .v2-tools-app.is-calculator-fullscreen .fraction-mode-strip button {
+    min-height: 30px;
+    border-radius: var(--v2-radius-sm);
+    font-size: 8px;
+    letter-spacing: 0.06em;
+  }
+
+  .v2-tools-app.is-calculator-fullscreen .fraction-calc-grid,
+  .v2-tools-app.is-calculator-fullscreen .fraction-calc-left {
+    min-height: 0;
+    gap: 7px;
+  }
+
+  .v2-tools-app.is-calculator-fullscreen .heavy-calc-main.length-mode .fraction-calc-grid {
+    flex: 1;
+  }
+
+  .v2-tools-app.is-calculator-fullscreen .heavy-calc-main.length-mode .fraction-calc-left {
+    height: 100%;
+    grid-template-rows: minmax(142px, 1fr) auto auto auto;
+  }
+
+  .v2-tools-app.is-calculator-fullscreen .fraction-display {
+    min-height: 0;
+    padding: 24px 12px 10px;
+    border-radius: var(--v2-radius-lg);
+  }
+
+  .v2-tools-app.is-calculator-fullscreen .fraction-history {
+    top: 10px;
+    left: 12px;
+    right: 12px;
+    font-size: 9px;
+    letter-spacing: 0.08em;
+  }
+
+  .v2-tools-app.is-calculator-fullscreen .fraction-display .calc-primary-value {
+    font-size: clamp(48px, 15vw, 64px);
+  }
+
+  .v2-tools-app.is-calculator-fullscreen .calc-secondary-row {
+    margin-top: 9px;
+    font-size: 9px;
+    letter-spacing: 0.08em;
+  }
+
+  .v2-tools-app.is-calculator-fullscreen .fraction-display-meta {
+    display: none;
+  }
+
+  .v2-tools-app.is-calculator-fullscreen .fraction-unit-row {
+    gap: 6px;
+  }
+
+  .v2-tools-app.is-calculator-fullscreen .fraction-unit-row button {
+    min-height: 42px;
+    border-radius: var(--v2-radius-md);
+    padding: 7px 9px;
+  }
+
+  .v2-tools-app.is-calculator-fullscreen .fraction-unit-row span {
+    font-size: 8px;
+  }
+
+  .v2-tools-app.is-calculator-fullscreen .fraction-unit-row strong {
+    margin-top: 3px;
+    font-size: 17px;
+  }
+
+  .v2-tools-app.is-calculator-fullscreen .fraction-action-row {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .v2-tools-app.is-calculator-fullscreen .fraction-action-row button {
+    min-height: 32px;
+    border-radius: var(--v2-radius-md);
+    padding: 0 4px;
+    font-size: 10px;
+  }
+
+  .v2-tools-app.is-calculator-fullscreen .fraction-strip,
+  .v2-tools-app.is-calculator-fullscreen .fraction-result-card {
+    display: none;
+  }
+
+  .v2-tools-app.is-calculator-fullscreen .fraction-pad {
+    gap: 6px;
+  }
+
+  .v2-tools-app.is-calculator-fullscreen .fraction-pad button {
+    min-height: 44px;
+    border-radius: var(--v2-radius-md);
+    font-size: 22px;
+  }
+
+  .v2-tools-app.is-calculator-fullscreen .fraction-pad button.op,
+  .v2-tools-app.is-calculator-fullscreen .fraction-pad button.eq {
+    font-size: 18px;
+  }
+
+  .v2-tools-app.is-calculator-fullscreen .heavy-calc-ruler {
+    display: flex;
+    padding: 7px 4px 7px 0;
+  }
+
+  .v2-tools-app.is-calculator-fullscreen .ruler-tick {
+    gap: 4px;
+    min-height: 26px;
+    font-size: 11px;
+  }
+
+  .v2-tools-app.is-calculator-fullscreen .ruler-tick::before {
+    min-width: 16px;
+  }
+
+  .v2-tools-app.is-calculator-fullscreen .fraction-panel-mode {
+    min-height: 0;
+    gap: 7px;
+    overflow: hidden;
+  }
+
+  .v2-tools-app.is-calculator-fullscreen .miter-config-card,
+  .v2-tools-app.is-calculator-fullscreen .fraction-summary-grid article {
+    border-radius: var(--v2-radius-md);
+    padding: 10px;
+  }
+
+  .v2-tools-app.is-calculator-fullscreen .miter-config-card p {
+    margin-top: 6px;
+    font-size: 12px;
+    line-height: 1.25;
+  }
+
+  .v2-tools-app.is-calculator-fullscreen .fraction-input-grid,
+  .v2-tools-app.is-calculator-fullscreen .fraction-summary-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .v2-tools-app.is-calculator-fullscreen .miter-toggle-row,
+  .v2-tools-app.is-calculator-fullscreen .miter-setup-grid,
+  .v2-tools-app.is-calculator-fullscreen .miter-readout {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .v2-tools-app.is-calculator-fullscreen .fraction-input-grid label,
+  .v2-tools-app.is-calculator-fullscreen .miter-value-card {
+    gap: 4px;
+    font-size: 8px;
+    letter-spacing: 0.06em;
+  }
+
+  .v2-tools-app.is-calculator-fullscreen .fraction-input-grid input,
+  .v2-tools-app.is-calculator-fullscreen .miter-value-card input {
+    min-height: 38px;
+    padding: 0 8px;
+    font-size: 14px;
+  }
+
+  .v2-tools-app.is-calculator-fullscreen .choice-pill {
+    min-height: 38px;
+    border-radius: var(--v2-radius-md);
+    font-size: 11px;
+    letter-spacing: 0.05em;
+  }
+
+  .v2-tools-app.is-calculator-fullscreen .miter-readout > div {
+    min-height: 80px;
+    border-radius: var(--v2-radius-md);
+  }
+
+  .v2-tools-app.is-calculator-fullscreen .miter-readout strong {
+    margin-top: 4px;
+    font-size: clamp(34px, 11vw, 48px);
+  }
+
+  .v2-tools-app.is-calculator-fullscreen .fraction-summary-grid span,
+  .v2-tools-app.is-calculator-fullscreen .miter-readout span,
+  .v2-tools-app.is-calculator-fullscreen .miter-config-card span {
+    font-size: 8px;
+    letter-spacing: 0.08em;
+  }
+
+  .v2-tools-app.is-calculator-fullscreen .fraction-summary-grid strong {
+    margin-top: 4px;
+    font-size: 12px;
+  }
 }
 
 /* Tools hub density pass: make the tab feel like an app launcher, not a marketing grid. */

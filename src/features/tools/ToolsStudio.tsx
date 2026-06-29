@@ -2358,14 +2358,15 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
   }
 
   if (activeTool !== "hub") {
+    if (activeTool === "calculator") {
+      return (
+        <section className="v2-tools-app is-calculator-fullscreen" aria-label="Heavy 16th field calculator">
+          <FieldCalculatorTool activeJob={activeJob} onBack={() => setActiveTool("hub")} />
+        </section>
+      );
+    }
+
     const toolMeta = {
-      calculator: {
-        eyebrow: "Calculator app",
-        title: "Heavy 16th field calculator",
-        description: "Quick length math, spacing, and cut checks without leaving RIVT.",
-        node: <FieldCalculatorTool activeJob={activeJob} />,
-        compact: true,
-      },
       estimate: {
         eyebrow: "Estimate app",
         title: "Estimate builder",
