@@ -1069,6 +1069,20 @@ textarea:focus-visible {
   background: linear-gradient(180deg, #ff8a2d, #ff6f08);
 }
 
+.auth-browse-action {
+  min-height: 38px;
+  border: 0;
+  background: transparent;
+  color: #f26a21;
+  font: inherit;
+  font-weight: var(--v2-weight-strong);
+  cursor: pointer;
+}
+
+.auth-browse-action:hover {
+  color: #ff8a2d;
+}
+
 .sr-only {
   position: absolute;
   width: 1px;

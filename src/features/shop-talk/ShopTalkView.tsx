@@ -579,8 +579,6 @@ export function ShopTalkView({
   const selectedPost = filteredPosts.find((p) => p.id === selectedPostId) ?? filteredPosts[0];
   const selectedNews = filteredNews.find((n) => n.id === selectedNewsId) ?? filteredNews[0];
   const profileBadges = communityBadgeLabels(communityPosts, profile.displayName, communityBadgeThresholds);
-  const unansweredCount = filteredPosts.filter((post) => post.replies.length === 0 || post.status === "Needs a pro answer").length;
-  const verifiedFixCount = filteredPosts.filter((post) => post.status === "Verified Fix").length;
   const newsSourceCount = new Set(filteredNews.map((item) => item.source)).size;
   const selectedPostReactionState = selectedPost
     ? getPostReactionState(selectedPost)
@@ -753,21 +751,15 @@ export function ShopTalkView({
 
           {activeTab === "talk" ? (
             <>
-              <div className="shop-talk-command trade-talk-hero">
-                <div className="shop-talk-command-head">
-                  <span>Trade Talk</span>
-                  <h2>Ask questions. Find real answers.</h2>
-                  <p>Trade-specific conversations, local crew leads, jobs, and field-tested fixes.</p>
-                </div>
-                <button type="button" className="primary-action" onClick={() => setNewPostOpen(true)}>
-                  <Plus size={17} />
-                  Ask the trades
+              <div className="trade-talk-home-actions" aria-label="Trade Talk actions">
+                <button type="button" className="trade-talk-action-card is-ask" onClick={() => setNewPostOpen(true)}>
+                  <MessageCircle size={20} />
+                  <span>Ask the trades</span>
                 </button>
-                <div className="shop-talk-kpi-strip" aria-label="Trade Talk summary">
-                  <span><strong>{filteredPosts.length}</strong><small>threads</small></span>
-                  <span><strong>{unansweredCount}</strong><small>need answers</small></span>
-                  <span><strong>{verifiedFixCount}</strong><small>verified fixes</small></span>
-                </div>
+                <button type="button" className="trade-talk-action-card is-crew" onClick={() => setTalkQuery("Jacksonville Trades")}>
+                  <Users size={20} />
+                  <span>Find your crew</span>
+                </button>
               </div>
 
               <div className="trade-talk-prompt-strip" aria-label="Popular Trade Talk questions">
@@ -1048,6 +1040,7 @@ export function ShopTalkView({
                           )}
                         </div>
                         <strong>{post.title}</strong>
+                        <p className="shop-post-card-body">{post.body}</p>
                         {(post.subTrade || post.subLocation || post.subRate) && (
                           <div className="v2-st-sub-details">
                             {post.subTrade && <span className="v2-st-sub-pill">🔧 {post.subTrade}</span>}

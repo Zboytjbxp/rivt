@@ -2077,7 +2077,7 @@
   --trade-orange: #ff4b00;
   --trade-ink: #0b0b0b;
   --trade-paper: #ffffff;
-  --trade-page: #f2f2ef;
+  --trade-page: #f7f7f4;
 }
 
 .trade-talk-layout .shop-talk-sidebar {
@@ -2085,11 +2085,7 @@
   display: grid;
   gap: 12px;
   border: 0;
-  background:
-    linear-gradient(rgba(11, 11, 11, 0.018) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(11, 11, 11, 0.014) 1px, transparent 1px),
-    var(--trade-page);
-  background-size: 28px 28px, 28px 28px, auto;
+  background: var(--trade-page);
 }
 
 .trade-talk-layout .shop-talk-detail {
@@ -2099,13 +2095,13 @@
 
 .trade-talk-layout .shop-talk-tabs {
   border: 0;
-  border-radius: 18px;
-  background: color-mix(in srgb, var(--trade-ink) 7%, transparent);
+  border-radius: 999px;
+  background: #eeeeeb;
 }
 
 .trade-talk-layout .shop-talk-tabs button {
   min-height: 42px;
-  border-radius: 14px;
+  border-radius: 999px;
   font-weight: var(--v2-weight-bold);
 }
 
@@ -2115,49 +2111,36 @@
   box-shadow: 0 10px 26px rgba(13, 17, 20, 0.08);
 }
 
-.trade-talk-hero {
-  border: 0;
-  border-radius: 26px;
-  background: var(--trade-orange);
-  color: var(--trade-ink);
-  box-shadow: 8px 10px 0 var(--trade-ink);
+.trade-talk-home-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
 }
 
-.trade-talk-hero .shop-talk-command-head span,
-.trade-talk-hero .shop-talk-command-head p {
-  color: rgba(11, 11, 11, 0.72);
-}
-
-.trade-talk-hero .shop-talk-command-head span {
-  font-size: 11px;
-  font-weight: var(--v2-weight-display);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.trade-talk-hero h2 {
-  max-width: 12ch;
-  color: var(--trade-ink);
-  font-size: clamp(32px, 6vw, 58px);
-  letter-spacing: -0.06em;
-}
-
-.trade-talk-hero .primary-action {
-  min-height: 46px;
-  border: 2px solid var(--trade-ink);
+.trade-talk-action-card {
+  display: inline-flex;
+  min-width: 0;
+  min-height: 58px;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  padding: 0 12px;
+  border: 1px solid #e3e5e3;
+  border-radius: 16px;
   background: var(--trade-paper);
   color: var(--trade-ink);
-  box-shadow: 4px 5px 0 var(--trade-ink);
+  font-size: 15px;
+  font-weight: var(--v2-weight-display);
+  line-height: 1;
+  box-shadow: 0 10px 22px rgba(11, 11, 11, 0.045);
 }
 
-.trade-talk-hero .shop-talk-kpi-strip span {
-  border: 1px solid rgba(11, 11, 11, 0.16);
-  background: rgba(255, 255, 255, 0.34);
+.trade-talk-action-card.is-ask {
+  color: var(--trade-orange);
 }
 
-.trade-talk-hero .shop-talk-kpi-strip strong,
-.trade-talk-hero .shop-talk-kpi-strip small {
-  color: var(--trade-ink);
+.trade-talk-action-card.is-crew {
+  color: #008c80;
 }
 
 .trade-talk-prompt-strip {
@@ -2195,10 +2178,10 @@
 .trade-community-discovery {
   display: grid;
   gap: 10px;
-  padding: 14px;
-  border-radius: 22px;
+  padding: 0;
+  border-radius: 0;
   background: var(--trade-paper);
-  box-shadow: 0 14px 30px rgba(13, 17, 20, 0.07);
+  box-shadow: none;
 }
 
 .trade-community-head {
@@ -2220,27 +2203,28 @@
   display: block;
   margin-top: 3px;
   color: var(--trade-ink);
-  font-size: 18px;
+  font-size: 20px;
   line-height: 1.08;
 }
 
 .trade-community-list {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 8px;
 }
 
 .trade-community-card {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 3px 8px;
-  min-height: 70px;
-  padding: 11px;
+  grid-template-columns: 1fr;
+  gap: 4px;
+  min-height: 108px;
+  place-items: center;
+  padding: 14px 10px;
   border: 1px solid #eceeed;
-  border-radius: 16px;
+  border-radius: 14px;
   background: #fbfbfa;
   color: var(--trade-ink);
-  text-align: left;
+  text-align: center;
 }
 
 .trade-community-card span,
@@ -2257,14 +2241,14 @@
 }
 
 .trade-community-card small {
+  display: none;
   color: var(--muted);
   font-size: 11px;
 }
 
 .trade-community-card b {
-  grid-row: 1 / span 2;
   align-self: center;
-  color: var(--trade-orange);
+  color: var(--muted);
   font-size: 15px;
   font-variant-numeric: tabular-nums;
 }
@@ -2275,9 +2259,9 @@
 
 .trade-talk-layout .shop-talk-fieldbar {
   border: 0;
-  border-radius: 22px;
-  background: var(--trade-paper);
-  box-shadow: 0 12px 28px rgba(13, 17, 20, 0.055);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 .trade-talk-layout .shop-talk-search {
@@ -2293,15 +2277,16 @@
   position: relative;
   display: grid;
   gap: 10px;
-  padding: 13px;
-  border: 0;
-  border-radius: 22px;
+  padding: 16px;
+  border: 1px solid #e6e8e6;
+  border-radius: 14px;
   background: var(--trade-paper);
-  box-shadow: 0 12px 28px rgba(13, 17, 20, 0.07);
+  box-shadow: none;
 }
 
 .trade-talk-layout .shop-post-card.selected {
-  box-shadow: inset 4px 0 0 var(--trade-orange), 0 12px 28px rgba(13, 17, 20, 0.07);
+  border-color: color-mix(in srgb, var(--trade-orange) 34%, #e6e8e6);
+  box-shadow: inset 3px 0 0 var(--trade-orange);
 }
 
 .trade-talk-layout .shop-post-card-clickable {
@@ -2317,9 +2302,20 @@
 
 .trade-talk-layout .shop-post-card-clickable > strong {
   color: var(--trade-ink);
-  font-size: 16px;
+  font-size: 18px;
   line-height: 1.18;
   letter-spacing: -0.012em;
+}
+
+.trade-talk-layout .shop-post-card-body {
+  display: -webkit-box;
+  overflow: hidden;
+  margin: 0;
+  color: #3d4547;
+  font-size: 14px;
+  line-height: 1.36;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
 }
 
 .trade-talk-layout .shop-post-card-meta {
@@ -2335,12 +2331,11 @@
 }
 
 .trade-talk-layout .v2-st-type-badge {
-  width: fit-content;
-  border-radius: 999px;
+  display: none;
 }
 
 .trade-talk-layout .shop-post-card-stats span {
-  background: #f2f3f1;
+  background: transparent;
   color: var(--muted);
 }
 
@@ -2353,9 +2348,9 @@
   min-height: 34px;
   width: fit-content;
   padding: 0 10px;
-  border: 1px solid #e2e6e5;
+  border: 0;
   border-radius: 999px;
-  background: #f8f8f6;
+  background: transparent;
   color: var(--muted);
   font-size: 12px;
   font-weight: var(--v2-weight-bold);
@@ -2383,28 +2378,19 @@
   min-height: 52px;
   margin-top: -4px;
   padding: 0 18px;
-  border: 2px solid var(--trade-ink);
+  border: 0;
   border-radius: 999px;
   background: var(--trade-orange);
-  color: var(--trade-ink);
+  color: #ffffff;
   font-size: 14px;
   font-weight: var(--v2-weight-display);
-  box-shadow: 5px 6px 0 var(--trade-ink);
+  box-shadow: 0 16px 32px rgba(255, 75, 0, 0.28);
 }
 
 @media (max-width: 640px) {
   .trade-talk-layout .shop-talk-sidebar {
-    margin: -4px;
-    padding: 10px;
-  }
-
-  .trade-talk-hero {
-    box-shadow: 5px 6px 0 var(--trade-ink);
-  }
-
-  .trade-talk-hero h2 {
-    max-width: 11ch;
-    font-size: 34px;
+    margin: -6px -4px 0;
+    padding: 8px 8px 0;
   }
 
   .trade-community-list {
@@ -2423,7 +2409,7 @@
   }
 
   .trade-community-card {
-    flex: 0 0 196px;
+    flex: 0 0 138px;
     scroll-snap-align: start;
   }
 
@@ -2441,6 +2427,10 @@
   .trade-talk-layout .shop-talk-answer-queue,
   .trade-talk-layout .shop-talk-rules,
   .trade-talk-layout .shop-talk-pulse {
+    display: none;
+  }
+
+  .trade-talk-layout .shop-talk-fieldbar {
     display: none;
   }
 }

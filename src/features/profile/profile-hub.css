@@ -1,6 +1,6 @@
 .v2-profile-page {
   display: grid;
-  gap: 24px;
+  gap: 18px;
 }
 
 .v2-profile-header {
@@ -12,9 +12,10 @@
 
 .v2-profile-header h1 {
   margin: 0;
-  font-size: clamp(31px, 4vw, 48px);
-  font-weight: var(--v2-weight-strong);
-  line-height: 0.98;
+  font-size: clamp(28px, 4vw, 44px);
+  font-weight: var(--v2-weight-display);
+  letter-spacing: -0.04em;
+  line-height: 0.96;
   text-wrap: balance;
 }
 
@@ -50,17 +51,17 @@
 }
 
 .v2-profile-panel {
-  border: 1px solid color-mix(in srgb, var(--v2-border) 58%, transparent);
-  border-radius: var(--v2-radius-lg);
-  background: var(--v2-surface-raised);
-  box-shadow: var(--v2-shadow-card);
+  border: 1px solid var(--v2-border);
+  border-radius: 18px;
+  background: var(--v2-surface);
+  box-shadow: none;
   overflow: hidden;
 }
 
 .v2-profile-panel > header {
-  padding: 18px 20px;
-  border-bottom: 1px solid color-mix(in srgb, var(--v2-border) 62%, transparent);
-  background: color-mix(in srgb, var(--v2-surface-muted) 26%, transparent);
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--v2-border);
+  background: var(--v2-surface);
 }
 
 .v2-profile-panel > header span {
@@ -74,7 +75,8 @@
 .v2-profile-panel > header strong {
   display: block;
   margin-top: 3px;
-  font-size: 16px;
+  font-size: 17px;
+  letter-spacing: -0.015em;
 }
 
 .v2-profile-summary {
@@ -97,7 +99,9 @@
 
 .v2-profile-summary h2 {
   margin: 4px 0 6px;
-  font-size: 22px;
+  font-size: 28px;
+  font-weight: var(--v2-weight-display);
+  letter-spacing: -0.035em;
 }
 
 .v2-profile-specialties {
@@ -110,7 +114,7 @@
 .v2-profile-specialties span {
   padding: 6px 9px;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--v2-accent-soft) 78%, transparent);
+  background: color-mix(in srgb, var(--v2-accent-soft) 88%, transparent);
   color: var(--v2-accent);
   font-size: 11px;
   font-weight: var(--v2-weight-strong);

@@ -7,6 +7,34 @@ Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
 Production release commit: see live `/api/health` build metadata
 
+## Latest Packet 08 Pass - Orange Trade Talk Visual System and Mobile Home Simplification
+
+- Applied the approved orange/white Trade Talk visual direction across the core app shell and primary mobile surfaces:
+  - light, high-contrast app shell with orange active states
+  - readable approved RIVT lockup on light mobile top bars
+  - bold Home headline: `Trade talk, built for the trades.`
+  - simplified Home first screen by suppressing old local time-clock, local schedule, revenue-goal, and weekly availability dashboard widgets from the primary entry path
+  - stronger Shop Talk actions (`Ask the trades`, `Find your crew`) and compact mobile feed cards
+  - mobile Shop Talk fieldbar collapsed so the feed appears sooner
+  - Work mobile duplicate create action removed from the header while keeping the empty-state create path
+  - Tools cards tightened into focused app-style entries
+- Restored a visible `Browse first` auth entry for QA/preview and kept it clearly in guest mode; guest write actions remain gated behind signup or server-owned setup.
+- Disabled the automatic local-device setup modal on guest entry so the cloud-first product does not open with local-only profile setup.
+- Updated `test/jobs-discovery.e2e.mjs` to assert the new Home headline instead of the retired greeting/availability widget.
+- Rendered mobile screenshot evidence captured locally:
+  - `artifacts-rivt-auth-mobile.png`
+  - `artifacts-rivt-home-mobile-logo-final.png`
+  - `artifacts-rivt-shoptalk-mobile-final.png`
+  - `artifacts-rivt-work-mobile-final.png`
+  - `artifacts-rivt-tools-mobile-final.png`
+- Local machine gates run on 2026-06-30:
+  - `npm run build` (pass)
+  - `npm run lint` (pass)
+  - `npm run test` (pass)
+  - `npm run test:e2e` (pass)
+  - `npm audit --omit=dev` (pass; 0 vulnerabilities)
+- Deployment evidence will be added after the Railway deployment for this commit is live and `/api/health`/production monitor confirm the source.
+
 ## Latest Packet 08 Pass - Trade Talk Community UI, Live Billing Env, and Deploy Prep
 
 - Rebuilt the mobile-first Shop Talk surface into a stronger Trade Talk community experience while preserving the `Shop Talk` primary navigation contract required by Gate A:

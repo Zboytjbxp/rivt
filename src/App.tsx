@@ -217,7 +217,7 @@ function App() {
   const [isGuest, setIsGuest] = useState(false);
   const [guestPromptOpen, setGuestPromptOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
-  const [localSetupOpen, setLocalSetupOpen] = useState(() => localStorage.getItem("rivt.localSetupDone.v1") !== "true");
+  const [localSetupOpen, setLocalSetupOpen] = useState(false);
   const {
     communityReactionStatus,
     communityReactionSummary,
@@ -399,7 +399,7 @@ function App() {
   }
 
   const reloadJobs = useCallback(async () => {
-    if (!authUser || !onboardingComplete) return;
+    if (isGuest || !authUser || !onboardingComplete) return;
     const requestId = ++jobsRequestRef.current;
     setJobsLoading(true);
     setJobsError(null);
@@ -426,7 +426,7 @@ function App() {
     } finally {
       if (jobsRequestRef.current === requestId) setJobsLoading(false);
     }
-  }, [authUser, difficulty, locationQuery, onboardingComplete, query, trade, verifiedOnly, workType]);
+  }, [authUser, difficulty, isGuest, locationQuery, onboardingComplete, query, trade, verifiedOnly, workType]);
 
   useEffect(() => {
     const timeout = window.setTimeout(() => { void reloadJobs(); }, 250);
@@ -434,7 +434,7 @@ function App() {
   }, [reloadJobs]);
 
   const reloadInbox = useCallback(async () => {
-    if (!authUser || !onboardingComplete) return;
+    if (isGuest || !authUser || !onboardingComplete) return;
     setInboxLoading(true);
     setInboxError(null);
     try {
@@ -456,10 +456,10 @@ function App() {
     } finally {
       setInboxLoading(false);
     }
-  }, [authUser, onboardingComplete]);
+  }, [authUser, isGuest, onboardingComplete]);
 
   const loadConversationMessages = useCallback(async (conversationId: string | null) => {
-    if (!conversationId || !authUser || !onboardingComplete) {
+    if (!conversationId || isGuest || !authUser || !onboardingComplete) {
       setInboxMessages([]);
       return;
     }
@@ -471,15 +471,15 @@ function App() {
       setInboxMessages([]);
       setInboxError(error instanceof Error ? error.message : "Messages could not be loaded.");
     }
-  }, [authUser, onboardingComplete]);
+  }, [authUser, isGuest, onboardingComplete]);
 
   useEffect(() => {
-    if (!authUser || !onboardingComplete) return;
+    if (isGuest || !authUser || !onboardingComplete) return;
     const timeout = window.setTimeout(() => {
       void reloadInbox();
     }, 0);
     return () => window.clearTimeout(timeout);
-  }, [authUser, onboardingComplete, reloadInbox]);
+  }, [authUser, isGuest, onboardingComplete, reloadInbox]);
 
   useEffect(() => {
     if (activeView !== "Messages") return;
@@ -491,10 +491,10 @@ function App() {
 
   // Poll inbox every 30 seconds while authenticated
   useEffect(() => {
-    if (!authUser || !onboardingComplete) return;
+    if (isGuest || !authUser || !onboardingComplete) return;
     const interval = window.setInterval(() => { void reloadInbox(); }, 30000);
     return () => window.clearInterval(interval);
-  }, [authUser, onboardingComplete, reloadInbox]);
+  }, [authUser, isGuest, onboardingComplete, reloadInbox]);
 
   // Request browser notification permission when user visits Messages
   useEffect(() => {
@@ -1083,6 +1083,9 @@ function App() {
 
   function handleExitGuest() {
     setIsGuest(false);
+    setAuthUser(null);
+    setCanonicalAccount(null);
+    setOnboardingComplete(false);
     setJobs([]);
     setSelectedId(0);
     setAccountProfile((current) => ({ ...current, displayName: "" }));
@@ -1091,14 +1094,56 @@ function App() {
   function handleSignUpFromGuest() {
     setAuthMode("signup");
     setIsGuest(false);
+    setAuthUser(null);
+    setCanonicalAccount(null);
+    setOnboardingComplete(false);
     setJobs([]);
     setSelectedId(0);
     setAccountProfile((current) => ({ ...current, displayName: "" }));
   }
 
+  function handleBrowseAsGuest() {
+    setAuthError(null);
+    setAuthNotice(null);
+    setIsGuest(true);
+    setCanonicalAccount(null);
+    setAuthUser({
+      id: "guest-preview",
+      email: "",
+      provider: "Email",
+      display_name: "Guest",
+      role: "contractor",
+      organization: "",
+      location: "Jacksonville, FL",
+      email_verified: false,
+      account_status: "active",
+      onboarding_status: "complete",
+    });
+    setRole("contractor");
+    setAccountProfile((current) => ({
+      ...current,
+      email: "",
+      displayName: "Guest",
+      organization: "",
+      location: "Jacksonville, FL",
+      specialties: ["Carpentry", "Electrical", "Plumbing"] as Trade[],
+      authMethod: "Email",
+    }));
+    setOnboardingComplete(true);
+    setActiveView("Home");
+    const nextPath = viewRoutes.Home;
+    if (window.location.pathname !== nextPath) {
+      window.history.pushState({}, "", nextPath);
+    }
+  }
+
   const page = pageCopy[activeView];
   const primaryOrganizationId = canonicalAccount?.organizations[0]?.id ?? "";
   function openCreateJob() {
+    if (isGuest) {
+      setGuestPromptOpen(true);
+      return;
+    }
     if (!primaryOrganizationId) {
       setJobsError("Finish your contractor organization setup before creating a job.");
       return;
@@ -1136,6 +1181,7 @@ function App() {
         onModeChange={setAuthMode}
         onSubmit={handleAuthSubmit}
         onForgotPassword={handleForgotPassword}
+        onBrowseAsGuest={handleBrowseAsGuest}
       />
     );
   }

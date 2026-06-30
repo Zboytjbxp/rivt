@@ -1889,3 +1889,136 @@
     font-size: 10px;
   }
 }
+
+/* Trade Talk visual direction pass: suppress the old field-dashboard widgets on Home.
+   The underlying utilities still live in Tools; Home should be a clean community/work entry point. */
+.v2-home-page {
+  gap: 18px;
+}
+
+.v2-home-header {
+  display: grid;
+  gap: 16px;
+}
+
+.v2-home-header h1 {
+  max-width: 900px;
+  font-size: clamp(42px, 10vw, 78px);
+  font-weight: var(--v2-weight-display);
+  line-height: 0.94;
+  letter-spacing: -0.04em;
+}
+
+.v2-home-header p {
+  max-width: 620px;
+  color: #171717;
+  font-size: clamp(18px, 4vw, 24px);
+  line-height: 1.22;
+}
+
+.v2-home-header .v2-primary-button {
+  min-height: 56px;
+  border-radius: 999px;
+  background: #0b0b0b;
+  color: #fff;
+  box-shadow: none;
+}
+
+.v2-cockpit-hero,
+.v2-week-schedule,
+.v2-upcoming-jobs-widget,
+.v2-revenue-goal-widget,
+.v2-home-focus-grid,
+.v2-home-secondary-grid,
+.v2-weekly-calendar {
+  display: none;
+}
+
+.v2-daily-brief {
+  margin-top: 2px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.v2-daily-brief-header {
+  display: none;
+}
+
+.v2-daily-signal-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.v2-daily-signal-grid button {
+  min-height: 142px;
+  padding: 16px;
+  border: 1px solid rgba(11, 11, 11, 0.1);
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: none;
+}
+
+.v2-daily-signal-grid button:first-child,
+.v2-daily-signal-grid button:nth-child(4) {
+  background: #0b0b0b;
+  color: #fff;
+}
+
+.v2-daily-signal-grid button:first-child span,
+.v2-daily-signal-grid button:first-child small,
+.v2-daily-signal-grid button:nth-child(4) span,
+.v2-daily-signal-grid button:nth-child(4) small {
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.v2-daily-signal-grid span {
+  color: #ff4b00;
+  font-size: 11px;
+  letter-spacing: 0.02em;
+}
+
+.v2-daily-signal-grid strong {
+  font-size: clamp(19px, 4.6vw, 28px);
+  line-height: 1.02;
+  letter-spacing: -0.025em;
+}
+
+.v2-daily-signal-grid small {
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.v2-daily-habit-loop {
+  margin-top: 4px;
+  border: 0;
+  border-radius: 20px;
+  background: #fff;
+}
+
+@media (max-width: 640px) {
+  .v2-home-page {
+    padding: 0 2px 14px;
+  }
+
+  .v2-home-header h1 {
+    font-size: clamp(44px, 13.6vw, 58px);
+  }
+
+  .v2-home-header p {
+    font-size: 20px;
+  }
+
+  .v2-daily-signal-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .v2-daily-signal-grid button {
+    min-height: 108px;
+  }
+
+  .v2-daily-habit-loop > div {
+    grid-template-columns: 1fr;
+  }
+}

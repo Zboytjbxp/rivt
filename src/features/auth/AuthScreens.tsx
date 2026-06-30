@@ -213,6 +213,7 @@ export function AuthGate({
   onModeChange,
   onSubmit,
   onForgotPassword,
+  onBrowseAsGuest,
 }: {
   mode: "login" | "signup";
   error: string | null;
@@ -222,6 +223,7 @@ export function AuthGate({
   onModeChange: (mode: "login" | "signup") => void;
   onSubmit: (form: { email: string; password: string; displayName?: string; role?: Role; inviteCode?: string }) => void;
   onForgotPassword: (email: string) => void;
+  onBrowseAsGuest: () => void;
 }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -339,6 +341,9 @@ export function AuthGate({
           className="primary-action"
         >
           {mode === "signup" ? "Create account" : "Log in"}
+        </button>
+        <button type="button" className="auth-browse-action" onClick={onBrowseAsGuest}>
+          Browse first
         </button>
       </form>
     </main>

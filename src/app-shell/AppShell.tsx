@@ -143,7 +143,7 @@ export function AppShell({
 
       <aside className="v2-sidebar" aria-label="Primary navigation">
         <button className="v2-brand" type="button" onClick={() => onNavigate("home")} aria-label="RIVT home">
-          <img src="/brand/rivt-lockup-dark-transparent.png" alt="RIVT" />
+          <img src="/brand/rivt-lockup-light-transparent.png" alt="RIVT" />
         </button>
 
         <nav className="v2-primary-nav">
@@ -191,7 +191,7 @@ export function AppShell({
       <div className="v2-workspace">
         <header className="v2-topbar">
           <button className="v2-mobile-brand" type="button" onClick={() => onNavigate("home")} aria-label="RIVT home">
-            <img src="/brand/rivt-lockup-dark-transparent.png" alt="RIVT" />
+            <img src="/brand/rivt-lockup-light-transparent.png" alt="RIVT" />
           </button>
 
           <form

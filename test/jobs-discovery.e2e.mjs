@@ -360,16 +360,8 @@ try {
     });
     await configurePage(page, []);
     await page.goto(`${baseUrl}/app`, { waitUntil: "networkidle" });
-    await page.getByRole("heading", { name: /Good (morning|afternoon|evening)/i }).waitFor();
-    await page.getByText("RIVT Daily", { exact: true }).waitFor();
-    await page.getByText("Availability radar", { exact: true }).waitFor();
-    const availabilityUpdate = page.waitForResponse((response) => {
-      return response.url().includes("/api/v1/profile")
-        && response.request().method() === "PATCH"
-        && response.status() === 200;
-    });
-    await page.getByRole("button", { name: /Limited/i }).click();
-    await availabilityUpdate;
+    await page.getByRole("heading", { name: "Trade talk, built for the trades." }).waitFor();
+    await page.getByText("Ask questions, find work, show your craft, and connect with real tradespeople.", { exact: true }).waitFor();
     await page.getByRole("button", { name: /^Work$/ }).click();
     await page.getByText("No open jobs", { exact: true }).waitFor();
     for (const label of ["Home", "Work", "Crew", "Shop Talk", "Tools"]) {

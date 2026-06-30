@@ -25,7 +25,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { Job, Role } from "../../types";
 import type { PrimaryDestination } from "../../app-shell/types";
 import { EmptyState, PageHeader } from "../../components/ui";
-import { usePersona } from "../persona/usePersona";
 import "./home-dashboard.css";
 
 type AvailDay = "available" | "limited" | "unavailable";
@@ -144,13 +143,6 @@ function readCheckinLog(): CheckinEntry[] {
     const raw = localStorage.getItem(CHECKIN_LOG_KEY);
     return raw ? (JSON.parse(raw) as CheckinEntry[]) : [];
   } catch { return []; }
-}
-
-function getSmartGreeting(): string {
-  const hour = new Date().getHours();
-  if (hour < 12) return "Good morning";
-  if (hour < 17) return "Good afternoon";
-  return "Good evening";
 }
 
 function readWeeklyAvailability(): Record<number, AvailDay> {
@@ -1002,8 +994,6 @@ interface HomeDashboardProps {
 
 export function HomeDashboard({
   role,
-  name,
-  location,
   activeJob,
   upcomingJobs,
   applicationCount,
@@ -1020,14 +1010,7 @@ export function HomeDashboard({
   onNavigate,
   onSetAvailability,
 }: HomeDashboardProps) {
-  const firstName = name.trim().split(/\s+/)[0] || "there";
-  const persona = usePersona();
-
   useEffect(() => { triggerWeeklyRecapIfDue(); }, []);
-  const profileData = (() => { try { return JSON.parse(localStorage.getItem("rivt.profile.v1") ?? "null"); } catch { return null; } })();
-  const tradeLabel = persona ? `${persona.emoji} ${persona.trade}` : null;
-  const locationLabel = profileData?.location ?? (location || null);
-  const subLabel = [tradeLabel, locationLabel].filter(Boolean).join(" · ");
   const [savingAvailability, setSavingAvailability] = useState<AvailabilityStatus | null>(null);
   const [availabilityMessage, setAvailabilityMessage] = useState("");
   const [weeklyAvail, setWeeklyAvail] = useState<Record<number, AvailDay>>(readWeeklyAvailability);
@@ -1130,8 +1113,8 @@ export function HomeDashboard({
     <section className="v2-home-page" aria-label="Home">
       <PageHeader
         className="v2-home-header"
-        title={`${getSmartGreeting()}, ${firstName}`}
-        description={subLabel || location}
+        title="Trade talk, built for the trades."
+        description="Ask questions, find work, show your craft, and connect with real tradespeople."
         actions={role === "contractor" ? (
           <button
             type="button"
