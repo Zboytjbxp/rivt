@@ -274,6 +274,7 @@ async function configurePage(page, account, state) {
   await page.route("**/api/v1/conversations", (route) => route.fulfill(json({ data: { conversations: [] } })));
   await page.route("**/api/v1/notifications", (route) => route.fulfill(json({ data: { notifications: [], unreadCount: 0 } })));
   await page.route("**/api/v1/notifications/read", (route) => route.fulfill(json({ data: { unreadCount: 0 } })));
+  await page.route("**/api/storage", (route) => route.fulfill(json({ usedBytes: 0, objectCount: 0, plan: {} })));
   await page.route("**/api/v1/shop-talk/reactions/batch", (route) => route.fulfill(json({
     data: {
       reactions: [],

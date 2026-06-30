@@ -1355,6 +1355,19 @@
 .v2-st-type-selector { display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }
 .v2-st-type-chip { padding: 6px 12px; border: 1px solid var(--v2-border); border-radius: 20px; font-size: 12px; cursor: pointer; background: var(--v2-surface-muted); color: var(--v2-text-muted); white-space: nowrap; }
 .v2-st-type-chip.is-active { border-color: var(--v2-accent); background: var(--v2-accent-soft); color: var(--v2-accent); }
+.v2-st-type-chip span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  min-height: 20px;
+  margin-right: 5px;
+  border-radius: 999px;
+  background: color-mix(in srgb, currentColor 12%, transparent);
+  font-size: 9px;
+  font-weight: var(--v2-weight-display);
+  letter-spacing: 0.04em;
+}
 .v2-st-sub-fields { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
 .v2-st-sub-input { padding: 8px 10px; border: 1px solid var(--v2-border); border-radius: var(--v2-radius-sm); background: var(--v2-surface); color: var(--v2-text); font-size: 13px; width: 100%; box-sizing: border-box; }
 
@@ -2056,5 +2069,407 @@
   .news-detail-hero,
   .news-detail-hero img {
     max-height: 160px;
+  }
+}
+
+/* Trade Talk mobile-first community redesign */
+.trade-talk-layout {
+  --trade-orange: #ff4b00;
+  --trade-ink: #0b0b0b;
+  --trade-paper: #ffffff;
+  --trade-page: #f2f2ef;
+}
+
+.trade-talk-layout .shop-talk-sidebar {
+  position: relative;
+  display: grid;
+  gap: 12px;
+  border: 0;
+  background:
+    linear-gradient(rgba(11, 11, 11, 0.018) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(11, 11, 11, 0.014) 1px, transparent 1px),
+    var(--trade-page);
+  background-size: 28px 28px, 28px 28px, auto;
+}
+
+.trade-talk-layout .shop-talk-detail {
+  border: 0;
+  background: var(--trade-paper);
+}
+
+.trade-talk-layout .shop-talk-tabs {
+  border: 0;
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--trade-ink) 7%, transparent);
+}
+
+.trade-talk-layout .shop-talk-tabs button {
+  min-height: 42px;
+  border-radius: 14px;
+  font-weight: var(--v2-weight-bold);
+}
+
+.trade-talk-layout .shop-talk-tabs button.active {
+  background: var(--trade-paper);
+  color: var(--trade-ink);
+  box-shadow: 0 10px 26px rgba(13, 17, 20, 0.08);
+}
+
+.trade-talk-hero {
+  border: 0;
+  border-radius: 26px;
+  background: var(--trade-orange);
+  color: var(--trade-ink);
+  box-shadow: 8px 10px 0 var(--trade-ink);
+}
+
+.trade-talk-hero .shop-talk-command-head span,
+.trade-talk-hero .shop-talk-command-head p {
+  color: rgba(11, 11, 11, 0.72);
+}
+
+.trade-talk-hero .shop-talk-command-head span {
+  font-size: 11px;
+  font-weight: var(--v2-weight-display);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.trade-talk-hero h2 {
+  max-width: 12ch;
+  color: var(--trade-ink);
+  font-size: clamp(32px, 6vw, 58px);
+  letter-spacing: -0.06em;
+}
+
+.trade-talk-hero .primary-action {
+  min-height: 46px;
+  border: 2px solid var(--trade-ink);
+  background: var(--trade-paper);
+  color: var(--trade-ink);
+  box-shadow: 4px 5px 0 var(--trade-ink);
+}
+
+.trade-talk-hero .shop-talk-kpi-strip span {
+  border: 1px solid rgba(11, 11, 11, 0.16);
+  background: rgba(255, 255, 255, 0.34);
+}
+
+.trade-talk-hero .shop-talk-kpi-strip strong,
+.trade-talk-hero .shop-talk-kpi-strip small {
+  color: var(--trade-ink);
+}
+
+.trade-talk-prompt-strip {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 2px 2px 10px;
+  scroll-padding-inline: 2px;
+  scroll-snap-type: x proximity;
+  scrollbar-width: none;
+  -webkit-mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 34px), transparent 100%);
+  mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 34px), transparent 100%);
+}
+
+.trade-talk-prompt-strip::-webkit-scrollbar {
+  display: none;
+}
+
+.trade-talk-prompt-strip button {
+  flex: 0 0 min(72vw, 274px);
+  min-height: 54px;
+  padding: 10px 13px;
+  border: 0;
+  border-radius: 18px;
+  background: var(--trade-paper);
+  color: var(--trade-ink);
+  font-size: 13px;
+  font-weight: var(--v2-weight-bold);
+  line-height: 1.2;
+  text-align: left;
+  scroll-snap-align: start;
+  box-shadow: 0 10px 24px rgba(13, 17, 20, 0.075);
+}
+
+.trade-community-discovery {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 22px;
+  background: var(--trade-paper);
+  box-shadow: 0 14px 30px rgba(13, 17, 20, 0.07);
+}
+
+.trade-community-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.trade-community-head span {
+  color: var(--trade-orange);
+  font-size: 11px;
+  font-weight: var(--v2-weight-display);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.trade-community-head strong {
+  display: block;
+  margin-top: 3px;
+  color: var(--trade-ink);
+  font-size: 18px;
+  line-height: 1.08;
+}
+
+.trade-community-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.trade-community-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 3px 8px;
+  min-height: 70px;
+  padding: 11px;
+  border: 1px solid #eceeed;
+  border-radius: 16px;
+  background: #fbfbfa;
+  color: var(--trade-ink);
+  text-align: left;
+}
+
+.trade-community-card span,
+.trade-community-card small {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.trade-community-card span {
+  font-size: 13px;
+  font-weight: var(--v2-weight-bold);
+}
+
+.trade-community-card small {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.trade-community-card b {
+  grid-row: 1 / span 2;
+  align-self: center;
+  color: var(--trade-orange);
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+}
+
+.trade-talk-layout .shop-talk-reputation-path {
+  display: none;
+}
+
+.trade-talk-layout .shop-talk-fieldbar {
+  border: 0;
+  border-radius: 22px;
+  background: var(--trade-paper);
+  box-shadow: 0 12px 28px rgba(13, 17, 20, 0.055);
+}
+
+.trade-talk-layout .shop-talk-search {
+  border: 1.5px solid #dde2e2;
+  border-radius: 999px;
+}
+
+.trade-talk-layout .shop-post-list {
+  gap: 9px;
+}
+
+.trade-talk-layout .shop-post-card {
+  position: relative;
+  display: grid;
+  gap: 10px;
+  padding: 13px;
+  border: 0;
+  border-radius: 22px;
+  background: var(--trade-paper);
+  box-shadow: 0 12px 28px rgba(13, 17, 20, 0.07);
+}
+
+.trade-talk-layout .shop-post-card.selected {
+  box-shadow: inset 4px 0 0 var(--trade-orange), 0 12px 28px rgba(13, 17, 20, 0.07);
+}
+
+.trade-talk-layout .shop-post-card-clickable {
+  display: grid;
+  gap: 8px;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+}
+
+.trade-talk-layout .shop-post-card-clickable > strong {
+  color: var(--trade-ink);
+  font-size: 16px;
+  line-height: 1.18;
+  letter-spacing: -0.012em;
+}
+
+.trade-talk-layout .shop-post-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.trade-talk-layout .shop-post-card-meta::-webkit-scrollbar {
+  display: none;
+}
+
+.trade-talk-layout .v2-st-type-badge {
+  width: fit-content;
+  border-radius: 999px;
+}
+
+.trade-talk-layout .shop-post-card-stats span {
+  background: #f2f3f1;
+  color: var(--muted);
+}
+
+.trade-talk-layout .shop-post-bookmark,
+.trade-talk-layout .v2-st-reply-btn,
+.trade-talk-layout .v2-st-helpful-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 34px;
+  width: fit-content;
+  padding: 0 10px;
+  border: 1px solid #e2e6e5;
+  border-radius: 999px;
+  background: #f8f8f6;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: var(--v2-weight-bold);
+}
+
+.trade-talk-layout .shop-post-bookmark.active,
+.trade-talk-layout .v2-st-helpful-btn:hover,
+.trade-talk-layout .v2-st-reply-btn:hover {
+  border-color: color-mix(in srgb, var(--trade-orange) 42%, #e2e6e5);
+  color: var(--trade-orange);
+}
+
+.trade-talk-layout .v2-st-replies {
+  border-top-color: #eceeed;
+}
+
+.trade-talk-fab {
+  position: sticky;
+  z-index: 2;
+  bottom: calc(78px + env(safe-area-inset-bottom));
+  justify-self: end;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 52px;
+  margin-top: -4px;
+  padding: 0 18px;
+  border: 2px solid var(--trade-ink);
+  border-radius: 999px;
+  background: var(--trade-orange);
+  color: var(--trade-ink);
+  font-size: 14px;
+  font-weight: var(--v2-weight-display);
+  box-shadow: 5px 6px 0 var(--trade-ink);
+}
+
+@media (max-width: 640px) {
+  .trade-talk-layout .shop-talk-sidebar {
+    margin: -4px;
+    padding: 10px;
+  }
+
+  .trade-talk-hero {
+    box-shadow: 5px 6px 0 var(--trade-ink);
+  }
+
+  .trade-talk-hero h2 {
+    max-width: 11ch;
+    font-size: 34px;
+  }
+
+  .trade-community-list {
+    display: flex;
+    overflow-x: auto;
+    padding-bottom: 2px;
+    scroll-padding-inline: 2px;
+    scroll-snap-type: x proximity;
+    scrollbar-width: none;
+    -webkit-mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 30px), transparent 100%);
+    mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 30px), transparent 100%);
+  }
+
+  .trade-community-list::-webkit-scrollbar {
+    display: none;
+  }
+
+  .trade-community-card {
+    flex: 0 0 196px;
+    scroll-snap-align: start;
+  }
+
+  .trade-talk-layout .v2-st-filter-row {
+    scroll-padding-inline: 16px;
+    scroll-snap-type: x proximity;
+    -webkit-mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 26px), transparent 100%);
+    mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 26px), transparent 100%);
+  }
+
+  .trade-talk-layout .v2-st-filter-pill {
+    scroll-snap-align: start;
+  }
+
+  .trade-talk-layout .shop-talk-answer-queue,
+  .trade-talk-layout .shop-talk-rules,
+  .trade-talk-layout .shop-talk-pulse {
+    display: none;
+  }
+}
+
+/* Final source-badge override: fallback news thumbnails should read as deliberate publisher badges, not missing images. */
+.shop-news-list .news-card-thumb.is-source-tile {
+  display: grid;
+  place-items: center;
+  padding: 5px;
+  border: 1px solid var(--trade-ink, #0b0b0b);
+  background: var(--trade-orange, #ff4d14);
+  box-shadow: 2px 2px 0 var(--trade-ink, #0b0b0b);
+}
+
+.shop-news-list .news-card-thumb.is-source-tile span {
+  display: block;
+  color: var(--trade-ink, #0b0b0b);
+  font-size: 15px;
+  font-weight: var(--v2-weight-display);
+  letter-spacing: 0.02em;
+  line-height: 1;
+}
+
+.shop-news-list .news-card-thumb.is-source-tile small {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  .shop-news-list .news-card-thumb.is-source-tile span {
+    font-size: 14px;
   }
 }

@@ -2,9 +2,35 @@
 
 Gate A is approved only with automated and manual evidence against production-like infrastructure. Screenshots alone are insufficient.
 
-## Current Evidence Snapshot - 2026-06-22
+## Current Evidence Snapshot - 2026-06-30
 
 Gate A machine readiness is approved for the recorded incident, recovery, support, and legal/safety scopes. Physical-device and deeper manual accessibility evidence remains the next non-machine launch-quality boundary before broader rollout.
+
+Machine validation refresh on 2026-06-30:
+
+- `npm run build` OK
+- `npm run lint` OK
+- `npm run test` OK
+- `npm run test:e2e` OK
+- `npm run test:ui:shop-talk-news` OK
+- `npm run test:ui:work-lifecycle` OK
+- `npm run test:ui:tools` OK
+- `npm run test:ui:mobile-actions` OK
+- `npm audit --omit=dev` OK
+- `npm run incident:readiness -- --require-ready` OK
+- `npm run launch:readiness -- --require-ready` OK
+- Railway production variables checked without printing secret values; PostgreSQL, S3-compatible storage, Resend email, Stripe live billing, and webhook variables are present.
+
+Historical machine validation refresh on 2026-06-29:
+
+- `npm run build` ✅
+- `npm run lint` ✅
+- `npm run test` ✅
+- `npm run test:e2e` ✅
+- `npm audit --omit=dev` ✅
+- `npm run incident:readiness -- --require-ready` ✅
+- `npm run launch:readiness -- --require-ready` ✅
+- `npm run monitor:production` against `https://rivt.pro` ✅ (`buildCommit=985e49a66a4c0966e9ec33c51e7c206e3e56985b`, controls not disabled)
 
 Packet 08 hardening evidence now exists for:
 

@@ -221,6 +221,64 @@ textarea:focus-visible {
   line-height: 1.55;
 }
 
+.onboarding-hero-copy--trade h1 {
+  color: #fff;
+  font-size: clamp(32px, 4vw, 52px);
+  letter-spacing: -0.04em;
+}
+
+.onboarding-trade-stack {
+  display: grid;
+  gap: 10px;
+}
+
+.onboarding-trade-stack article {
+  display: grid;
+  gap: 6px;
+  padding: 14px;
+  border-radius: 18px;
+  background: #fff;
+  color: #0d1114;
+}
+
+.onboarding-trade-stack article span {
+  color: #ef5f1a;
+  font-size: 11px;
+  font-weight: var(--v2-weight-display);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.onboarding-trade-stack article strong {
+  font-size: 16px;
+  line-height: 1.15;
+}
+
+.onboarding-trade-stack article p {
+  margin: 0;
+  color: #5f686e;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.onboarding-interest-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.onboarding-interest-strip span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: #ff4b00;
+  color: #0b0b0b;
+  font-size: 11px;
+  font-weight: var(--v2-weight-display);
+}
+
 .onboarding-proof-grid {
   display: grid;
   gap: 10px;
@@ -288,10 +346,10 @@ textarea:focus-visible {
   align-items: center;
   padding: clamp(20px, 3vw, 40px);
   background:
-    radial-gradient(circle at 20% 8%, rgba(255, 106, 0, 0.18), transparent 22%),
-    radial-gradient(circle at 76% 18%, rgba(61, 217, 214, 0.12), transparent 18%),
-    radial-gradient(circle at 50% 100%, rgba(11, 18, 22, 0.1), transparent 26%),
-    linear-gradient(180deg, #020304 0%, #05080a 42%, #0a1012 100%);
+    linear-gradient(rgba(11, 11, 11, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(11, 11, 11, 0.045) 1px, transparent 1px),
+    #ff4b00;
+  background-size: 34px 34px, 34px 34px, auto;
 }
 
 .auth-shell--split {
@@ -306,7 +364,7 @@ textarea:focus-visible {
   gap: 24px;
   align-content: center;
   padding: clamp(14px, 1vw, 22px) 0;
-  color: #edf4f6;
+  color: #0b0b0b;
 }
 
 .auth-story-header {
@@ -319,7 +377,7 @@ textarea:focus-visible {
   font-size: 0.76rem;
   letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: #ff9d60;
+  color: #0b0b0b;
   font-weight: var(--v2-weight-strong);
 }
 
@@ -336,7 +394,90 @@ textarea:focus-visible {
   max-width: 56ch;
   font-size: 1.04rem;
   line-height: 1.6;
-  color: #b9c8cd;
+  color: rgba(11, 11, 11, 0.76);
+}
+
+.auth-trade-phone {
+  display: grid;
+  gap: 12px;
+  width: min(100%, 420px);
+  padding: 18px;
+  border: 6px solid #0b0b0b;
+  border-radius: 34px;
+  background: #fff;
+  box-shadow: 16px 18px 0 #0b0b0b;
+}
+
+.auth-phone-topbar,
+.auth-phone-search,
+.auth-phone-post > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.auth-phone-topbar {
+  color: #111;
+  font-size: 13px;
+}
+
+.auth-phone-search {
+  min-height: 48px;
+  padding: 0 12px;
+  border: 1.5px solid #d9dedf;
+  border-radius: 999px;
+  color: #4f575b;
+  font-size: 13px;
+}
+
+.auth-phone-search span {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.auth-phone-search b {
+  color: #ef5f1a;
+  font-size: 13px;
+}
+
+.auth-phone-feed {
+  display: grid;
+  gap: 10px;
+}
+
+.auth-phone-post {
+  display: grid;
+  gap: 8px;
+  padding: 13px;
+  border: 1px solid #e4e8e8;
+  border-radius: 18px;
+  background: #fbfbfa;
+}
+
+.auth-phone-post span {
+  color: #ef5f1a;
+  font-size: 12px;
+  font-weight: var(--v2-weight-bold);
+}
+
+.auth-phone-post small,
+.auth-phone-post p {
+  color: #60696d;
+  font-size: 12px;
+}
+
+.auth-phone-post strong {
+  color: #0d1114;
+  font-size: 15px;
+  line-height: 1.22;
+}
+
+.auth-phone-post p {
+  margin: 0;
 }
 
 .auth-story-pills {
@@ -350,12 +491,12 @@ textarea:focus-visible {
   align-items: center;
   min-height: 36px;
   padding: 0 14px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(11, 11, 11, 0.18);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.03);
-  color: #edf4f6;
+  background: rgba(255, 255, 255, 0.28);
+  color: #0b0b0b;
   font-size: 13px;
-  font-weight: var(--v2-weight-semibold);
+  font-weight: var(--v2-weight-bold);
 }
 
 .auth-story-grid {
@@ -413,9 +554,9 @@ textarea:focus-visible {
   display: grid;
   gap: 10px;
   padding: 18px 20px;
-  border-radius: var(--v2-radius-lg);
-  background: rgba(8, 13, 15, 0.82);
-  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 22px;
+  background: #0b0b0b;
+  border: 1px solid rgba(11, 11, 11, 0.16);
 }
 
 .auth-story-preview span {

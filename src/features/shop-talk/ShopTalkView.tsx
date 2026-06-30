@@ -20,6 +20,7 @@ import {
   Star,
   ThumbsDown,
   ThumbsUp,
+  Users,
   X,
   type LucideIcon,
 } from "lucide-react";
@@ -188,6 +189,23 @@ const POST_TYPE_CHIPS: { type: PostType; emoji: string; label: string }[] = [
   { type: "general", emoji: "💬", label: "General" },
 ];
 
+const TRADE_TALK_COMMUNITIES = [
+  { name: "Carpentry Talk", meta: "Trim, framing, punch-out", count: "128" },
+  { name: "Electrical Talk", meta: "Code, service, rough-in", count: "96" },
+  { name: "Cabinetry Talk", meta: "Installs, layout, scribing", count: "64" },
+  { name: "Jacksonville Trades", meta: "Local work and referrals", count: "52" },
+  { name: "Remodelers", meta: "Whole-home coordination", count: "44" },
+  { name: "Tool Talk", meta: "Field gear that holds up", count: "39" },
+  { name: "Code Questions", meta: "Permits and inspections", count: "31" },
+  { name: "Side Work", meta: "Short-term help needed", count: "27" },
+];
+
+const TRADE_TALK_PROMPTS = [
+  "Best way to scribe cabinets to stone?",
+  "What are you charging for punch-out work?",
+  "Do I need insurance for side jobs?",
+];
+
 function ShopTalkNewPostModal({
   profile,
   selectedJobTrade,
@@ -232,7 +250,8 @@ function ShopTalkNewPostModal({
               className={`v2-st-type-chip${postType === chip.type ? " is-active" : ""}`}
               onClick={() => setPostType(chip.type)}
             >
-              {chip.emoji} {chip.label}
+              <span aria-hidden="true">{chip.label.slice(0, 3).toUpperCase()}</span>
+              {chip.label}
             </button>
           ))}
         </div>
@@ -710,7 +729,7 @@ export function ShopTalkView({
           }}
         />
       )}
-      <section className={mobileDetail ? "shop-talk-layout mobile-detail-open" : "shop-talk-layout"} aria-label="Shop Talk community">
+      <section className={mobileDetail ? "shop-talk-layout trade-talk-layout mobile-detail-open" : "shop-talk-layout trade-talk-layout"} aria-label="Trade Talk community">
         <aside className="shop-talk-sidebar">
           {/* Tab switcher */}
           <div className="shop-talk-tabs">
@@ -720,7 +739,7 @@ export function ShopTalkView({
               onClick={() => setActiveTab("talk")}
             >
               <MessageCircle size={14} />
-              Shop Talk
+              Trade Talk
             </button>
             <button
               type="button"
@@ -734,21 +753,61 @@ export function ShopTalkView({
 
           {activeTab === "talk" ? (
             <>
-              <div className="shop-talk-command">
+              <div className="shop-talk-command trade-talk-hero">
                 <div className="shop-talk-command-head">
-                  <span>Community knowledge</span>
-                  <h2>Field answers from real trades</h2>
+                  <span>Trade Talk</span>
+                  <h2>Ask questions. Find real answers.</h2>
+                  <p>Trade-specific conversations, local crew leads, jobs, and field-tested fixes.</p>
                 </div>
                 <button type="button" className="primary-action" onClick={() => setNewPostOpen(true)}>
                   <Plus size={17} />
-                  New post
+                  Ask the trades
                 </button>
-                <div className="shop-talk-kpi-strip" aria-label="Shop Talk summary">
+                <div className="shop-talk-kpi-strip" aria-label="Trade Talk summary">
                   <span><strong>{filteredPosts.length}</strong><small>threads</small></span>
                   <span><strong>{unansweredCount}</strong><small>need answers</small></span>
                   <span><strong>{verifiedFixCount}</strong><small>verified fixes</small></span>
                 </div>
               </div>
+
+              <div className="trade-talk-prompt-strip" aria-label="Popular Trade Talk questions">
+                {TRADE_TALK_PROMPTS.map((prompt) => (
+                  <button
+                    key={prompt}
+                    type="button"
+                    onClick={() => {
+                      setTalkQuery(prompt);
+                      setActiveTrendingTag(null);
+                    }}
+                  >
+                    {prompt}
+                  </button>
+                ))}
+              </div>
+
+              <section className="trade-community-discovery" aria-label="Find your crew">
+                <div className="trade-community-head">
+                  <div>
+                    <span>Find your crew</span>
+                    <strong>Trade groups near the work</strong>
+                  </div>
+                  <Users size={18} />
+                </div>
+                <div className="trade-community-list">
+                  {TRADE_TALK_COMMUNITIES.map((community) => (
+                    <button
+                      type="button"
+                      key={community.name}
+                      className="trade-community-card"
+                      onClick={() => setTalkQuery(community.name.replace(" Talk", ""))}
+                    >
+                      <span>{community.name}</span>
+                      <small>{community.meta}</small>
+                      <b>{community.count}</b>
+                    </button>
+                  ))}
+                </div>
+              </section>
 
               <div className="shop-talk-answer-queue" aria-label="Unanswered in your trade">
                 <div>
@@ -772,7 +831,7 @@ export function ShopTalkView({
                 </div>
               </div>
 
-              <div className="shop-talk-reputation-path" aria-label="Shop Talk reputation path">
+              <div className="shop-talk-reputation-path" aria-label="Trade Talk reputation path">
                 <header>
                   <span><Award size={14} /> Reputation path</span>
                   <strong>{reputationGoal}</strong>
@@ -828,15 +887,15 @@ export function ShopTalkView({
                 </div>
               )}
 
-              <div className="shop-talk-fieldbar" aria-label="Shop Talk filters">
+              <div className="shop-talk-fieldbar" aria-label="Trade Talk filters">
                 <label className="shop-talk-search">
                   <Search size={15} />
-                  <span className="sr-only">Search Shop Talk</span>
+                  <span className="sr-only">Search Trade Talk</span>
                   <input
                     type="search"
                     value={talkQuery}
                     onChange={(event) => setTalkQuery(event.target.value)}
-                    placeholder="Search questions, trades, fixes"
+                    placeholder="Search jobs, answers, crews"
                   />
                 </label>
                 <label className="input-control">
@@ -907,7 +966,7 @@ export function ShopTalkView({
                     className={`v2-st-filter-pill${filterType === f.type ? " is-active" : ""}`}
                     onClick={() => setFilterType(f.type)}
                   >
-                    {f.emoji ? `${f.emoji} ` : ""}{f.label}
+                    {f.label}
                   </button>
                 ))}
               </div>
@@ -939,16 +998,16 @@ export function ShopTalkView({
 
               {persona && (
                 <div className="shop-talk-persona-header">
-                  <span>{persona.emoji} {persona.shopTalkLabel}</span>
+                  <span>{persona.shopTalkLabel}</span>
                 </div>
               )}
               <div className="shop-post-list">
                 {sortedPosts.length === 0 ? (
                   <EmptyState
                     icon={MessageCircle}
-                    title="No matching questions"
-                    description="Clear the search, broaden the trade filter, or start the first field question in this lane."
-                    actionLabel={talkQuery ? "Clear search" : "Ask a question"}
+                    title="No matching Trade Talk posts"
+                    description="Clear the search, broaden the trade filter, or ask the first question in this lane."
+                    actionLabel={talkQuery ? "Clear search" : "Ask the trades"}
                     onAction={() => talkQuery ? setTalkQuery("") : setNewPostOpen(true)}
                   />
                 ) : sortedPosts.map((post) => {
@@ -969,7 +1028,7 @@ export function ShopTalkView({
                       >
                         {typeChip && (
                           <span className={typeBadgeClass}>
-                            {typeChip.emoji} {typeChip.label}
+                            {typeChip.label}
                           </span>
                         )}
                         <div className="shop-post-card-meta">
@@ -1061,6 +1120,10 @@ export function ShopTalkView({
                   );
                 })}
               </div>
+              <button type="button" className="trade-talk-fab" onClick={() => setNewPostOpen(true)}>
+                <Plus size={18} />
+                Ask
+              </button>
             </>
           ) : (
             <>
@@ -1331,9 +1394,9 @@ export function ShopTalkView({
               </button>
               <EmptyState
                 icon={MessageCircle}
-                title="No Shop Talk posts yet"
-                description="Create the first field question and let the community answer it."
-                actionLabel="Create post"
+                title="No Trade Talk posts yet"
+                description="Ask the first field question and let the community answer it."
+                actionLabel="Ask the trades"
                 onAction={() => setNewPostOpen(true)}
               />
             </article>
@@ -1371,7 +1434,7 @@ export function ShopTalkView({
                   </a>
                 )}
                 <div className="shop-news-discuss">
-                  <strong>Discuss this in Shop Talk</strong>
+                  <strong>Discuss this in Trade Talk</strong>
                   <p>Have a take on how this affects your work? Start a conversation.</p>
                   <button
                     type="button"

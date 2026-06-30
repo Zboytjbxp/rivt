@@ -1,11 +1,131 @@
 # RIVT Build State
 
-Last updated: 2026-06-29 America/New_York
+Last updated: 2026-06-30 America/New_York
 Current gate: Gate A launch hardening
-Current phase: Packet 08 controllable UX hardening, server-owned Stripe billing entitlement implementation, invoice and estimate tool polish, no-scroll Heavy 16th calculator fit, Work draft editor date-normalization hotfix, launch-readiness machine gate sweep, improvement backlog and truthful-entitlement cleanup, Tools calculator/estimate extraction and provider-doc hardening, App activity feed hook extraction, App theme hook extraction, Shop Talk reaction hook extraction, App state type extraction, Work empty-state and runtime helper extraction, profile training data extraction, Shop Talk fallback data extraction, Shop Talk community helper extraction, dead guest job fixture removal, Work mapping extraction, app preference helper extraction, app route metadata extraction, account/activity panel extraction, auth screen extraction, legacy sidebar export cleanup, legacy App view cleanup, Shop Talk route split, Profile session ownership split, App profile-route split, frontend smoke-test tripwire, async password hashing, exact direct dependency pinning, founder/support/legal-safety approvals recorded, incident and launch readiness gates passing, Gate A approval packet prepared, incident rehearsal passed, incident routing approved, recovery policy approved, support hours and backup incident owner recorded, Sentry error monitoring and first escalation route configured, server-owned Shop Talk reactions/reputation ledger, Daily Log live UI proof, Daily Log Records bridge, daily engagement loop, Shop Talk answer queue, RIVT Daily home check-in, Trade News real-media and mobile layout pass, production UI smoke regression fixes, Tools studio release, Records workspace upgrade, UI system pass, shared UI primitives, Tools primitive alignment, Shop Talk command center, Tools app surface pass, Heavy 16th multi-mode calculator, Invoice Draft app upgrade, Shop Talk reaction/social pulse pass, expanded production accessibility smoke verified, Claude-audit UI consolidation deployed, global search command surface deployed, server-owned profile search deployed, and local `TEST_DATABASE_URL` configured against isolated test Postgres; physical/deeper manual accessibility-device evidence and production Stripe account variables remain the next launch-quality boundaries
+Current phase: Packet 08 Gate A launch hardening: all machine gates are green; live Stripe subscription variables are present in Railway; physical accessibility-device evidence remains the launch-quality boundary.
 Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
 Production release commit: see live `/api/health` build metadata
+
+## Latest Packet 08 Pass - Trade Talk Community UI, Live Billing Env, and Deploy Prep
+
+- Rebuilt the mobile-first Shop Talk surface into a stronger Trade Talk community experience while preserving the `Shop Talk` primary navigation contract required by Gate A:
+  - bold Trade Talk hero with direct `Ask the trades` action
+  - prompt chips for real trade questions
+  - community discovery cards for trade/local groups
+  - compact feed cards and sticky mobile Ask action
+  - Trade News card readability pass with compact source badges for publisher-only articles
+- Rebuilt the auth/entry showcase around the same community-first language:
+  - `Trade talk, built for the trades.`
+  - mobile feed preview with trade posts, communities, and interest chips
+- Confirmed Railway production service variables are present without committing secrets:
+  - PostgreSQL, S3-compatible object storage, Resend email, Stripe secret key, Stripe Pro price ID, webhook secret, and billing return URLs are set.
+  - `STRIPE_PRO_PRICE_ID` points at the live RIVT Pro price configured in Stripe.
+- Updated UI smoke scripts for the new Trade Talk IA and scoped duplicate search placeholders so the tests assert the current product surface.
+- Local machine gates run on 2026-06-30:
+  - `npm run build` (pass)
+  - `npm run lint` (pass)
+  - `npm run test` (pass)
+  - `npm run test:e2e` (pass)
+  - `npm run test:ui:shop-talk-news` (pass)
+  - `npm run test:ui:work-lifecycle` (pass)
+  - `npm run test:ui:tools` (pass)
+  - `npm run test:ui:mobile-actions` (pass)
+  - `npm run incident:readiness -- --require-ready` (pass)
+  - `npm run launch:readiness -- --require-ready` (pass)
+  - `npm audit --omit=dev` (pass; 0 vulnerabilities)
+- Deployment boundary for this pass: commit and push to `master`, then verify Railway deploy and production health.
+- Remaining launch-quality boundary: physical accessibility-device evidence (iOS Safari, Android Chrome, desktop keyboard-only, and screen-reader route checks).
+
+## Latest Packet 08 Pass - Stripe Sandbox Billing Wiring
+
+- Created the Stripe sandbox `RIVT Pro` recurring monthly price at `$9.00 USD` with tax excluded and SaaS business-use tax code.
+- Created a Stripe sandbox webhook endpoint for `https://rivt.pro/api/stripe/webhook` with the required subscription events: `checkout.session.completed`, `customer.subscription.created`, `customer.subscription.updated`, and `customer.subscription.deleted`.
+- Set production Railway service variables for sandbox billing without committing secret values:
+  - `STRIPE_SECRET_KEY`
+  - `STRIPE_PRO_PRICE_ID`
+  - `STRIPE_WEBHOOK_SECRET`
+  - `STRIPE_SUCCESS_URL`
+  - `STRIPE_CANCEL_URL`
+  - `STRIPE_PORTAL_RETURN_URL`
+  - `VITE_ALLOW_LOCAL_PRO=false`
+- Redeployed the RIVT Railway service from source so the runtime picked up the billing variables.
+- Verified authenticated production billing behavior with the shared test account:
+  - `/api/v1/billing/status` returned provider configured with no missing Stripe variables.
+  - `/api/v1/billing/checkout` created a sandbox Checkout Session (`cs_test_...`).
+  - `/api/v1/billing/portal` created a sandbox Customer Portal session.
+- `npm run monitor:production` passed after redeploy with PostgreSQL, S3-compatible object storage, configured Sentry, operational controls off, and anonymous private-route checks healthy.
+- Remaining Stripe launch boundary: repeat the same product/price/webhook/portal setup in Stripe live mode, replace Railway test keys with live keys, redeploy, and verify one live-mode Checkout Session before charging real users.
+
+## Latest Packet 08 Pass - Mobile Click-Path Stabilization (Panel Closure + Billing Mock)
+
+## Latest Packet 08 Pass - Final Gate A Verification Re-run
+
+- Re-run smoke harness verification and close the script gaps that had regressed the Playwright UI smoke bootstrap:
+  - Updated `scripts/shop-talk-news-ui-smoke.mjs` (adds `/api/storage` mock route).
+  - Updated `scripts/work-lifecycle-ui-smoke.mjs` (adds `/api/storage` mock route).
+  - Updated `scripts/tools-ui-smoke.mjs` (adds `/api/storage` mock route).
+- Confirmed rendered UI clicks remain stable on current code:
+  - `npm run test:ui:shop-talk-news` (pass)
+  - `npm run test:ui:work-lifecycle` (pass)
+  - `npm run test:ui:tools` (pass)
+  - `npm run test:ui:mobile-actions` (pass)
+- Re-ran the complete machine checklist for Packet 08 hardening:
+  - `npm run build` (pass)
+  - `npm run lint` (pass)
+  - `npm run test` (pass)
+  - `npm run test:e2e` (pass)
+  - `npm run incident:readiness -- --require-ready` (pass)
+  - `npm run launch:readiness -- --require-ready` (pass)
+  - `npm audit --omit=dev` (pass; 0 vulnerabilities)
+- Risk status unchanged from previous packet:
+  - production Stripe product/price/webhook/portal wiring is still a founder/manual action.
+  - physical accessibility device matrix evidence still pending (iOS Safari, Android Chrome, desktop keyboard-only, screen-reader route checks).
+
+- Fixed the mobile click-path smoke from failing when navigating back to core surfaces by adding deterministic modal/panel dismissal in `scripts/mobile-actions-ui-smoke.mjs`.
+- Added explicit billing endpoint mocking for `/api/v1/billing/status` in the mobile smoke harness to prevent cross-origin console noise and keep the test signal clean.
+- The mobile flow now closes overlay state after draft/job-detail tooling and before top-bar panel entry points so profile/settings/workshop actions remain reliably clickable at 390x844.
+- Rendered QA passed after changes:
+  - `npm run test:ui:mobile-actions` (pass)
+- Full machine gates remain green after this pass:
+  - `npm run build`
+  - `npm run lint`
+  - `npm run test`
+  - `npm run test:e2e`
+  - `npm audit --omit=dev`
+- No production deployment was required for this script-only hardening pass.
+
+## Latest Packet 08 Pass - Full Machine Gate Sweep + Current Live Snapshot
+
+- Executed the full machine verification stack from this workspace:
+  - `npm run build` ✅
+  - `npm run lint` ✅
+  - `npm run test` ✅ (unit + integration; no failures)
+  - `npm run test:e2e` ✅
+  - `npm audit --omit=dev` ✅ (0 vulnerabilities)
+  - `npm run incident:readiness -- --require-ready` ✅
+  - `npm run launch:readiness -- --require-ready` ✅
+- Executed production monitor:
+  - `npm run monitor:production` ✅
+  - build commit observed: `985e49a66a4c0966e9ec33c51e7c206e3e56985b`
+  - controls: signupsDisabled `false`, mutationsDisabled `false`
+  - dependencies: PostgreSQL and S3-compatible storage healthy
+  - observability: Sentry configured
+- Observed production read-through for `/api/health` and internal route checks remain healthy; no critical production-only machine blockers detected.
+- Remaining immediate launch blocker is execution environment, not code:
+  - `npm run smoke:gate-a:live` and `npm run smoke:ui:live` both require `DATABASE_URL` in local environment and currently fail fast with `DATABASE_URL is required`.
+  - these should be executed from Railway-backed context or with matching env for full production route-level evidence.
+- Remaining launch-quality blockers remain:
+  - production Stripe app-side product/price creation, webhook secret, and Railway variable wiring
+  - physical accessibility matrix completion (iPhone Safari, Android Chrome, desktop keyboard-only, screen-reader route validation) per `docs/quality/PHYSICAL_ACCESSIBILITY_CHECKLIST.md`.
+
+## Latest Packet 08 Pass - Storage Usage Visibility and User Quota Surface
+
+- Threaded `/api/storage` usage into the authenticated profile path: `src/App.tsx` now loads storage state on session bootstrap, `src/features/profile/ProfileRoute.tsx` forwards it, and `ProfileHub` renders it in a settings storage card.
+- Added a user-facing panel showing storage location (`S3-compatible object storage (managed in the cloud)`), used bytes/object count, and plan quota when configured.
+- `/api/storage` remains private and server-owned: authenticated sessions only, no local-device storage fallback, and usage values sourced from upload records in PostgreSQL plus managed object-storage object operations.
+- Local quota messaging is explicit: users see `Quota tied to plan` unless an account limit env (`ACCOUNT_STORAGE_GB_LIMIT` or `STORAGE_GB_LIMIT`) is set.
+- Required checks for this packet remain green (`npm run build`, `npm run lint`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`); only manual e2e test-account refresh is pending for fresh production smoke.
 
 ## Latest Packet 08 Pass - Server-Owned Stripe Billing Entitlements
 

@@ -1078,11 +1078,11 @@ export function HomeDashboard({
       destination: "crew" as PrimaryDestination,
     },
     {
-      label: "Shop Talk",
+      label: "Trade Talk",
       value: answerQueueCount ? `${answerQueueCount} need answers` : `${communityCount} posts`,
       detail: answerQueueCount
         ? `${primaryTrade} and General questions you can help close`
-        : `${newsCount} trade updates plus questions in Shop Talk`,
+        : `${newsCount} trade updates plus questions in Trade Talk`,
       action: answerQueueCount ? "Answer" : "Browse",
       destination: "shop-talk" as PrimaryDestination,
     },
@@ -1106,9 +1106,9 @@ export function HomeDashboard({
       label: "Build reputation",
       detail: answerQueueCount
         ? `Answer one ${primaryTrade} question before the day gets busy.`
-        : "Read trade news or help in Shop Talk when questions open up.",
+        : "Read trade news or help in Trade Talk when questions open up.",
       icon: answerQueueCount ? MessageSquareText : Newspaper,
-      action: answerQueueCount ? "Answer" : "Shop Talk",
+      action: answerQueueCount ? "Answer" : "Trade Talk",
       destination: "shop-talk" as PrimaryDestination,
     },
   ];
@@ -1133,7 +1133,15 @@ export function HomeDashboard({
         title={`${getSmartGreeting()}, ${firstName}`}
         description={subLabel || location}
         actions={role === "contractor" ? (
-          <button type="button" className="v2-primary-button" onClick={onPostJob}><Plus size={17} /> Post work</button>
+          <button
+            type="button"
+            className="v2-primary-button"
+            onClick={onPostJob}
+            data-action="post-work"
+            aria-label="Post work"
+          >
+            <Plus size={17} /> Post work
+          </button>
         ) : (
           <button type="button" className="v2-primary-button" onClick={() => onNavigate("work")}><BriefcaseBusiness size={17} /> Find work</button>
         )}
@@ -1291,7 +1299,7 @@ export function HomeDashboard({
           <header><div><h2>Your crew</h2><p>People and field knowledge.</p></div><button type="button" onClick={() => onNavigate("crew")}>Open crew</button></header>
           <div>
             <button type="button" onClick={() => onNavigate("crew")}><Users size={18} /><span><strong>{shoutOutCount} shout-outs</strong><small>Peer reputation</small></span><ArrowRight size={15} /></button>
-            <button type="button" onClick={() => onNavigate("shop-talk")}><MessageSquareText size={18} /><span><strong>{communityCount} discussions</strong><small>Shop Talk</small></span><ArrowRight size={15} /></button>
+            <button type="button" onClick={() => onNavigate("shop-talk")}><MessageSquareText size={18} /><span><strong>{communityCount} discussions</strong><small>Trade Talk</small></span><ArrowRight size={15} /></button>
             <button type="button" onClick={() => onNavigate("tools")}><Wrench size={18} /><span><strong>Field tools</strong><small>Estimate, invoice, and records</small></span><ArrowRight size={15} /></button>
           </div>
         </section>

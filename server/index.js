@@ -940,13 +940,38 @@ app.get("/api/storage", requireAuthenticatedUser, async (_request, response, nex
       database.query("SELECT count(*)::int AS count FROM app_events"),
       database.query("SELECT count(*)::int AS count FROM uploads"),
     ]);
+    const accountStorageUsage = { usedBytes: 0, objectCount: 0 };
+    if (storage.ok && database) {
+      const accountStorageResult = await database.query(
+        `
+          SELECT
+            COALESCE(SUM(size_bytes), 0)::bigint AS used_bytes,
+            COUNT(*)::int AS upload_count
+          FROM uploads
+          WHERE account_id = $1 AND size_bytes IS NOT NULL
+        `,
+        [_request.authUser.id],
+      );
+      accountStorageUsage.usedBytes = Number(accountStorageResult.rows[0]?.used_bytes ?? 0);
+      accountStorageUsage.objectCount = Number(accountStorageResult.rows[0]?.upload_count ?? 0);
+    }
+    const planStorageLimitGb = Number(process.env.ACCOUNT_STORAGE_GB_LIMIT ?? process.env.STORAGE_GB_LIMIT ?? NaN);
+    const planStorageLimitBytes = Number.isFinite(planStorageLimitGb) ? planStorageLimitGb * 1024 * 1024 * 1024 : null;
 
     response.status(storage.ok ? 200 : 503).json({
       ...storage,
+      plan: {
+        storageLimitBytes: planStorageLimitBytes,
+        storageScope: "account",
+      },
       records: {
         appState: stateCount.rows[0].count,
         events: eventCount.rows[0].count,
         uploads: uploadCount.rows[0].count,
+      },
+      accountStorage: {
+        usedBytes: accountStorageUsage.usedBytes,
+        objectCount: accountStorageUsage.objectCount,
       },
     });
   });

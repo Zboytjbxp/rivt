@@ -3,18 +3,15 @@ import {
   AlertTriangle,
   BadgeCheck,
   Bell,
-  BriefcaseBusiness,
   CheckCircle2,
   CreditCard,
   Mail,
   MapPin,
-  MessageCircle,
   Monitor,
   Moon,
-  ReceiptText,
+  Search,
   ShieldCheck,
   Sun,
-  Users,
   X,
 } from "lucide-react";
 import { brandConfig, type ThemeMode, type TrialPlan } from "../../brandConfig";
@@ -143,54 +140,64 @@ export function AuthLinkFlow({ mode }: { mode: "verify" | "reset" }) {
 }
 
 function EntryShowcase() {
-  const pillars = [
-    { icon: BriefcaseBusiness, title: "Find work", copy: "See the jobs, scope, and timing before you commit." },
-    { icon: Users, title: "Build crews", copy: "Keep trusted people and applicants in one place." },
-    { icon: ReceiptText, title: "Run records", copy: "Invoices, completion photos, and payment notes stay together." },
-    { icon: MessageCircle, title: "Stay in touch", copy: "Message crews and ask field questions without the clutter." },
+  const feedPosts = [
+    { community: "Carpentry Talk", author: "Trim lead", title: "Best way to scribe cabinets to stone?", meta: "42 votes · 18 replies" },
+    { community: "Electrical Talk", author: "Service tech", title: "Panel swap pricing when the meter can stays?", meta: "31 votes · 11 replies" },
+    { community: "Jacksonville Trades", author: "Remodeler", title: "Who is free for punch-out work this Friday?", meta: "Local · 7 replies" },
   ];
+
+  const interests = ["Carpentry", "Electrical", "Plumbing", "HVAC", "Tile", "Cabinetry", "Framing", "Side Work"];
 
   return (
     <section className="auth-story" aria-label="Product preview">
       <div className="auth-story-header">
-        <span className="auth-story-eyebrow">Jacksonville launch</span>
-        <h1>The professional network for skilled trades.</h1>
+        <span className="auth-story-eyebrow">Trade Talk</span>
+        <h1>Trade talk, built for the trades.</h1>
         <p>
-          RIVT keeps jobs, crews, tools, invoices, and records in one place so contractors and tradespeople can move faster.
+          Ask questions, find work, show your craft, and connect with real tradespeople.
         </p>
       </div>
 
-      <div className="auth-story-pills" aria-label="Core benefits">
-        <span>Post work</span>
-        <span>Build crews</span>
-        <span>Track records</span>
-        <span>Message on the job</span>
+      <div className="auth-trade-phone" aria-label="Trade Talk preview">
+        <div className="auth-phone-topbar">
+          <strong>RIVT</strong>
+          <span>9:29</span>
+        </div>
+        <label className="auth-phone-search">
+          <Search size={16} />
+          <span>Best way to scribe cabinets to stone?</span>
+          <b>Ask</b>
+        </label>
+        <div className="auth-phone-feed">
+          {feedPosts.map((post) => (
+            <article key={post.title} className="auth-phone-post">
+              <div>
+                <span>{post.community}</span>
+                <small>{post.author}</small>
+              </div>
+              <strong>{post.title}</strong>
+              <p>{post.meta}</p>
+            </article>
+          ))}
+        </div>
       </div>
 
-      <div className="auth-story-grid">
-        {pillars.map(({ icon: Icon, title, copy }) => (
-          <article key={title} className="auth-story-card">
-            <span className="auth-story-icon">
-              <Icon size={17} />
-            </span>
-            <div>
-              <strong>{title}</strong>
-              <p>{copy}</p>
-            </div>
-          </article>
+      <div className="auth-story-pills" aria-label="Trade interests">
+        {interests.map((interest) => (
+          <span key={interest}>{interest}</span>
         ))}
       </div>
 
       <div className="auth-story-preview">
         <article>
-          <span>Work feed</span>
-          <strong>Jobs, match score, and active status</strong>
-          <p>Open work stays visible while applicants, invites, and closeouts stay tied to the same record.</p>
+          <span>Find your crew</span>
+          <strong>Trade groups, local jobs, and real profiles</strong>
+          <p>Carpenters, electricians, plumbers, remodelers, tile setters, framers, and cabinet installers in one trade network.</p>
         </article>
         <article>
-          <span>Tools</span>
-          <strong>Invoice, estimate, and record tools</strong>
-          <p>Utilities stay ready without forcing the user into a separate admin surface.</p>
+          <span>Build reputation</span>
+          <strong>Vote, comment, answer, and connect</strong>
+          <p>Useful answers, portfolio proof, certifications, and reviews make a profile worth hiring.</p>
         </article>
       </div>
     </section>
@@ -545,10 +552,28 @@ export function OnboardingFlow({
             <ThemeToggle themeMode={themeMode} onToggleTheme={onToggleTheme} />
           </div>
 
-          <div className="onboarding-hero-copy">
-            <span>{brandConfig.betaLabel}</span>
-            <h1>{brandConfig.heroHeadline}</h1>
-            <p>{brandConfig.heroBody}</p>
+          <div className="onboarding-hero-copy onboarding-hero-copy--trade">
+            <span>Trade Talk</span>
+            <h1>Powered by real trades</h1>
+            <p>Shape your feed around the trades, local work, and field answers you actually care about.</p>
+          </div>
+
+          <div className="onboarding-trade-stack" aria-label="Trade Talk onboarding preview">
+            <article>
+              <span>Ask & find real answers</span>
+              <strong>What are you charging for punch-out work?</strong>
+              <p>Search first. If the answer is not there, post it to the trade.</p>
+            </article>
+            <article>
+              <span>Vote, comment & connect</span>
+              <strong>Answers build reputation</strong>
+              <p>Helpful posts, verified fixes, reviews, and portfolio proof all point back to your profile.</p>
+            </article>
+            <div className="onboarding-interest-strip">
+              {["Carpentry", "Electrical", "Plumbing", "HVAC", "Tile", "Local Jobs"].map((interest) => (
+                <span key={interest}>{interest}</span>
+              ))}
+            </div>
           </div>
 
           <div className="onboarding-proof-grid" aria-label="Platform guardrails">

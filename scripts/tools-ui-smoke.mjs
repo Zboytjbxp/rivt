@@ -143,6 +143,9 @@ async function configurePage(page) {
   await page.route("**/api/v1/notifications", (route) =>
     route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { notifications: [], unreadCount: 0 } }) }),
   );
+  await page.route("**/api/storage", (route) =>
+    route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ usedBytes: 0, objectCount: 0, plan: {} }) }),
+  );
   await page.route("**/api/v1/shop-talk/reactions/batch", async (route) => {
     const body = route.request().postDataJSON();
     const targets = Array.isArray(body?.targets) ? body.targets : [];

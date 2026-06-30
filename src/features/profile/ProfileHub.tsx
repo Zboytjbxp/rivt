@@ -1,4 +1,4 @@
-import {
+﻿import {
   AlertTriangle,
   BadgeCheck,
   Bell,
@@ -6,11 +6,14 @@ import {
   Calendar,
   Camera,
   CheckCircle,
+  Cloud,
   CreditCard,
+  Database,
   Download,
   Eye,
   FileText,
   GraduationCap,
+  HardDrive,
   LogOut,
   Mail,
   Monitor,
@@ -32,6 +35,7 @@ import { useState } from "react";
 import { usePro } from "../pro/usePro";
 import { usePushNotifications } from "../notifications/usePushNotifications";
 import { UpgradeModal } from "../pro/UpgradeModal";
+import { RIVT_PRO_OFFER } from "../pro/proOffer";
 import { BillingApiError, startBillingPortal } from "../../lib/billing";
 import { usePersona, useTradeModeToggle } from "../persona/usePersona";
 import "../pro/pro.css";
@@ -89,6 +93,11 @@ interface ProfileHubProps {
   view: "Trust & Legal" | "Safety & Training" | "Reviews" | "Feedback" | "Settings";
   role: Role;
   profile: AccountProfile;
+  storageUsage?: {
+    usedBytes: number;
+    objectCount: number;
+    storageLimitBytes?: number | null;
+  } | null;
   canonicalProfile: CanonicalProfileDetails | null;
   sessions: AccountSessionSummary[];
   trustReady: boolean;
@@ -112,6 +121,20 @@ interface ProfileHubProps {
   onRevokeSession: (sessionId: string) => Promise<void>;
   onRevokeOtherSessions: () => Promise<void>;
   onQuizComplete: (result: SafetyQuizResult) => void;
+}
+
+function formatBytes(bytes: number): string {
+  if (!Number.isFinite(bytes) || bytes <= 0) {
+    return "0 B";
+  }
+  const units = ["B", "KB", "MB", "GB", "TB"];
+  let value = bytes;
+  let index = 0;
+  while (value >= 1024 && index < units.length - 1) {
+    value /= 1024;
+    index += 1;
+  }
+  return `${value.toFixed(index === 0 ? 0 : 1)} ${units[index]}`;
 }
 
 function QuizModal({
@@ -333,6 +356,46 @@ function SafetyTrainingSection({
       )}
     </div>
   );
+}
+
+const NO_QUOTA_COPY = "No per-user hard cap configured yet. Storage is measured on your platform account total and can be adjusted by admin at any time.";
+const STORAGE_WARNING_TIER_90 = "Critical: you are at 90%+ of your storage limit. Clean old files or contact support before new uploads are rejected.";
+const STORAGE_WARNING_TIER_80 = "Notice: storage is above 80% of its limit. Review usage now so you do not hit upload interruptions.";
+
+type StorageWarningLevel = "none" | "warning" | "critical";
+
+interface StorageStatus {
+  hasCap: boolean;
+  percent: number;
+  remainingBytes: number;
+  warning: StorageWarningLevel;
+}
+
+function formatStorageCopy(bytes: number): string {
+  return formatBytes(Number.isFinite(bytes) ? Math.max(0, bytes) : 0);
+}
+
+function computeStorageStatus(storageUsage: {
+  usedBytes: number;
+  storageLimitBytes?: number | null;
+} | null): StorageStatus {
+  const hasCap = typeof storageUsage?.storageLimitBytes === "number"
+    && Number.isFinite(storageUsage.storageLimitBytes)
+    && storageUsage.storageLimitBytes > 0;
+  if (!hasCap) {
+    return {
+      hasCap: false,
+      percent: 0,
+      remainingBytes: 0,
+      warning: "none",
+    };
+  }
+  const used = Math.max(0, storageUsage?.usedBytes ?? 0);
+  const limit = storageUsage.storageLimitBytes!;
+  const percent = Math.max(0, Math.min(100, (used / limit) * 100));
+  const remainingBytes = Math.max(0, limit - used);
+  const warning: StorageWarningLevel = percent >= 90 ? "critical" : percent >= 80 ? "warning" : "none";
+  return { hasCap, percent, remainingBytes, warning };
 }
 
 // ── Rate Card ─────────────────────────────────────────────────────────────────
@@ -1038,7 +1101,7 @@ function PlanCard() {
   const [billingMessage, setBillingMessage] = useState("");
 
   const missingBilling = billing?.provider.missing ?? [];
-  const providerReady = Boolean(billing?.provider.checkoutConfigured);
+  const providerReady = billing ? billing.provider.checkoutConfigured : true;
 
   async function openBillingPortal() {
     setPortalState("opening");
@@ -1059,32 +1122,50 @@ function PlanCard() {
   }
 
   return (
-    <div className="v2-plan-card">
+    <div className={isPro ? "v2-plan-card is-pro" : "v2-plan-card"}>
       <div className="v2-plan-header">
-        <span className="v2-plan-name">{isPro ? "RIVT Pro" : "Free plan"}</span>
+        <div>
+          <span className="v2-plan-name">{isPro ? "RIVT Pro" : "Free plan"}</span>
+          <p className="v2-plan-summary">
+            {isPro
+              ? "Advanced records, exports, and billing tools are active."
+              : "Core marketplace, Crew, Shop Talk, and basic tools stay available while the Jacksonville network grows."}
+          </p>
+        </div>
         {isPro ? (
           <span className="v2-pro-badge"><Zap size={10} />Pro</span>
         ) : (
-          <span style={{fontSize:12,color:'var(--v2-text-muted)'}}>Free</span>
+          <span className="v2-plan-free-badge">Free</span>
         )}
       </div>
       {billingLoading && <p className="v2-plan-note">Checking billing status...</p>}
-      {!billingLoading && !providerReady && (
+      {!billingLoading && billing && !providerReady && (
         <p className="v2-plan-warning">
           Stripe is wired in but not live yet. Configure {missingBilling.join(", ") || "billing keys"} before charging customers.
         </p>
       )}
+      {!billingLoading && !billing && (
+        <p className="v2-plan-note">Billing status could not be loaded. You can refresh before starting checkout.</p>
+      )}
       {!isPro && (
         <>
+          <section className="v2-plan-offer" aria-label="RIVT Pro offer">
+            <div>
+              <span>Launch price</span>
+              <strong>{RIVT_PRO_OFFER.price}<small>{RIVT_PRO_OFFER.interval}</small></strong>
+            </div>
+            <p>{RIVT_PRO_OFFER.summary}</p>
+          </section>
           <div className="v2-plan-limits">
-            <div className="v2-plan-limit-row"><span>Photo albums</span><span>Up to 50 photos</span></div>
-            <div className="v2-plan-limit-row"><span>History</span><span>90 days</span></div>
-            <div className="v2-plan-limit-row"><span>Punch lists</span><span>1 active list</span></div>
-            <div className="v2-plan-limit-row"><span>CSV export</span><span>Pro only</span></div>
+            <div className="v2-plan-limit-row"><span><Cloud size={14} /> Records and photos</span><span>Higher limits</span></div>
+            <div className="v2-plan-limit-row"><span><FileText size={14} /> Time and expenses</span><span>Full history</span></div>
+            <div className="v2-plan-limit-row"><span><Download size={14} /> Exports</span><span>CSV included</span></div>
+            <div className="v2-plan-limit-row"><span><ShieldCheck size={14} /> Billing</span><span>Stripe managed</span></div>
           </div>
           <button type="button" className="v2-plan-upgrade-btn" onClick={() => setUpgradeOpen(true)}>
-            Upgrade to Pro — $99/year
+            Start RIVT Pro
           </button>
+          <p className="v2-plan-note">No transaction fees on job payments. RIVT subscriptions are separate from contractor-to-subcontractor payment terms.</p>
           <button type="button" className="v2-plan-secondary-btn" onClick={refreshBilling}>
             Refresh billing status
           </button>
@@ -1135,6 +1216,7 @@ export function ProfileHub({
   onRevokeSession,
   onRevokeOtherSessions,
   onQuizComplete,
+  storageUsage = null,
 }: ProfileHubProps) {
   const persona = usePersona();
   const [tradeModeOn, toggleTradeMode] = useTradeModeToggle();
@@ -1168,6 +1250,10 @@ export function ProfileHub({
   });
   const [actionState, setActionState] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [actionMessage, setActionMessage] = useState("");
+  const storageStatus = computeStorageStatus(storageUsage ? {
+    usedBytes: storageUsage.usedBytes,
+    storageLimitBytes: storageUsage.storageLimitBytes,
+  } : null);
 
   async function saveProfile() {
     setActionState("saving");
@@ -1639,6 +1725,90 @@ export function ProfileHub({
           </section>
         ) : null}
 
+
+        {view === "Settings" ? (
+          <section className="v2-profile-panel v2-profile-panel-wide">
+            <header>
+              <span>Storage</span>
+              <strong>Cloud photos and attachments</strong>
+            </header>
+            <div className="v2-profile-list">
+              <article>
+                <HardDrive size={16} />
+                <div>
+                  <strong>Location</strong>
+                  <span>S3-compatible object storage (managed in the cloud)</span>
+                </div>
+              </article>
+              <article>
+                <CreditCard size={16} />
+                <div>
+                  <strong>Who pays</strong>
+                  <span>Your RIVT infrastructure account pays provider bills; users use what the platform grants.</span>
+                </div>
+              </article>
+              <article>
+                <Cloud size={16} />
+                <div>
+                  <strong>Usage</strong>
+                  <span>{formatStorageCopy(storageUsage?.usedBytes ?? 0)} used / {storageUsage?.objectCount ?? 0} files</span>
+                  {storageStatus.hasCap ? (
+                    <div className="v2-storage-meter-wrap" aria-hidden="true">
+                      <div className="v2-storage-meter">
+                        <div
+                          className={`v2-storage-meter-fill ${storageStatus.warning === "critical" ? "is-critical" : storageStatus.warning === "warning" ? "is-warning" : ""}`}
+                          style={{ width: `${storageStatus.percent}%` }}
+                        />
+                      </div>
+                      <small className="v2-storage-meter-copy">
+                        {formatStorageCopy(storageUsage?.usedBytes ?? 0)} of {formatStorageCopy(storageUsage?.storageLimitBytes ?? 0)} used ({Math.round(storageStatus.percent)}%)
+                      </small>
+                      <small className="v2-storage-meter-copy">
+                        {formatStorageCopy(storageStatus.remainingBytes)} remaining
+                      </small>
+                    </div>
+                  ) : null}
+                </div>
+              </article>
+              <article>
+                <Database size={16} />
+                <div>
+                  <strong>Plan quota</strong>
+                  <span>
+                    {typeof storageUsage?.storageLimitBytes === "number" && Number.isFinite(storageUsage.storageLimitBytes) && storageUsage.storageLimitBytes > 0
+                      ? `${formatBytes(storageUsage.storageLimitBytes)} max`
+                      : "Quota tied to plan"}
+                  </span>
+                </div>
+              </article>
+              <article>
+                <Database size={16} />
+                <div>
+                  <strong>Allocated</strong>
+                  <span>
+                    {typeof storageUsage?.storageLimitBytes === "number" && Number.isFinite(storageUsage.storageLimitBytes) && storageUsage.storageLimitBytes > 0
+                      ? `${formatBytes(storageUsage.storageLimitBytes)} hard cap`
+                      : NO_QUOTA_COPY}
+                  </span>
+                </div>
+              </article>
+              <article>
+                <AlertTriangle size={16} />
+                <div>
+                  <strong>Storage policy</strong>
+                  <span>
+                    Billing is on RIVT&rsquo;s infrastructure account. You receive a quota configured at account level; uploaded files are stored in managed S3-compatible object storage and never on your phone.
+                  </span>
+                </div>
+              </article>
+            </div>
+            {storageStatus.hasCap && storageStatus.warning !== "none" ? (
+              <p className="v2-storage-warning" role="status">
+                {storageStatus.warning === "critical" ? STORAGE_WARNING_TIER_90 : STORAGE_WARNING_TIER_80}
+              </p>
+            ) : null}
+          </section>
+        ) : null}
         {/* Notification preferences — Settings only */}
         {view === "Settings" ? (
           <section className="v2-profile-panel v2-profile-panel-wide v2-notification-prefs">

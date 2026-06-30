@@ -206,8 +206,8 @@ export function AppShell({
               value={searchValue}
               onChange={(event) => handleSearchValueChange(event.target.value)}
               onFocus={openSearch}
-              placeholder="Search jobs, people, or tools"
-              aria-label="Search jobs, people, or tools"
+              placeholder="Search jobs, answers, crews"
+              aria-label="Search jobs, answers, crews"
             />
             <kbd>Ctrl K</kbd>
           </form>
@@ -303,7 +303,7 @@ export function AppShell({
                   <button type="button" onClick={() => submitSearch("shop-talk")} disabled={!canSubmitSearch}>
                     <MessageCircle size={18} />
                     <span>
-                      <strong>Search Shop Talk</strong>
+                      <strong>Search Trade Talk</strong>
                       <small>Questions, fixes, trade news</small>
                     </span>
                   </button>

@@ -43,6 +43,16 @@ interface ProfileRouteProps {
   role: Role;
   accountProfile: AccountProfileForProfileRoute;
   canonicalAccount: CanonicalAccountForProfileRoute | null;
+  storageUsage: {
+    usedBytes: number;
+    objectCount: number;
+    storageLimitBytes?: number | null;
+    storageScope?: string;
+    bucket?: string | null;
+    region?: string | null;
+    endpoint?: string | null;
+    objectStorage?: string;
+  } | null;
   trustReady: boolean;
   recordCount: number;
   trainingProgress: number;
@@ -70,6 +80,7 @@ export function ProfileRoute({
   role,
   accountProfile,
   canonicalAccount,
+  storageUsage,
   trustReady,
   recordCount,
   trainingProgress,
@@ -164,6 +175,7 @@ export function ProfileRoute({
         emailVerified: canonicalAccount.emailVerified,
       } : null}
       sessions={sessions}
+      storageUsage={storageUsage}
       trustReady={trustReady}
       recordCount={recordCount}
       trainingProgress={trainingProgress}

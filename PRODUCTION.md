@@ -29,6 +29,33 @@ APP_SLUG=rivt
 DATABASE_URL=
 ```
 
+### Storage ownership and cost (what bills you)
+
+Media uploads (photos, documents, project evidence) are **never stored in the browser**. They are uploaded to the backend-managed S3-compatible object store and only metadata is written to PostgreSQL (`uploads`, `project_media`).
+
+Your bill for this is controlled by your object-storage provider account:
+
+- **Primary provider in this deployment:** Railway Object Storage (private bucket, S3-compatible API).
+- **Where it is charged:** The provider’s storage and bandwidth usage on your account.
+- **What does not bill per user in the app code:** upload size is aggregated under the platform bucket, not charged per user account by the application.
+
+Current app behavior:
+
+- `/api/v1/projects/:id/media` saves objects with a `PutObject` write and returns metadata rows.
+- `/api/v1/projects/:id/media/:mediaId/url` returns short-lived signed URLs for access.
+- `/api/storage` returns account usage and upload counts sourced from metadata.
+
+Per-user quota defaults are controlled by environment:
+
+```bash
+ACCOUNT_STORAGE_GB_LIMIT=
+STORAGE_GB_LIMIT=
+```
+
+If neither is set, `Plan quota` in settings shows `Quota tied to plan`.
+
+Set `ACCOUNT_STORAGE_GB_LIMIT` when you are ready to enforce an account hard cap.
+
 Versioned migrations create and update the account, profile, audit, and legacy-bridge tables on startup. Check status before release:
 
 ```bash

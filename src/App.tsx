@@ -95,6 +95,20 @@ const ProfileRoute = lazy(() => import("./features/profile/ProfileRoute").then((
 const ToolsStudio = lazy(() => import("./features/tools/ToolsStudio").then((m) => ({ default: m.ToolsStudio })));
 const LegacyBridge = lazy(() => import("./features/legacy/LegacyBridge").then((m) => ({ default: m.LegacyBridge })));
 
+type StorageUsageSnapshot = {
+  usedBytes: number;
+  objectCount: number;
+  storageLimitBytes?: number | null;
+  storageScope?: string;
+  bucket?: string | null;
+  region?: string | null;
+  endpoint?: string | null;
+  objectStorage?: string;
+  mode?: string;
+  database?: string;
+  missing?: string[];
+};
+
 function RouteFallback() {
   return <div className="route-loading" role="status" aria-live="polite" aria-label="Loading" />;
 }
@@ -170,6 +184,7 @@ function App() {
   const [uploadedRecords, setUploadedRecords] = useState<Set<string>>(
     () => new Set(["Signed scope", "Legal consent accepted"]),
   );
+  const [storageUsage, setStorageUsage] = useState<StorageUsageSnapshot | null>(null);
   const [completedTraining] = useState<Set<string>>(
     () => new Set(["Customer-site conduct"]),
   );
@@ -290,18 +305,57 @@ function App() {
         return;
       }
       try {
-        const [meResponse, providersResponse] = await Promise.all([
+        const [meResponse, providersResponse, storageResponse] = await Promise.all([
           fetch(apiPath("/api/v1/me"), { credentials: "include" }),
           fetch(apiPath("/api/auth/providers"), { credentials: "include" }),
+          fetch(apiPath("/api/storage"), { credentials: "include" }),
         ]);
         const meBody = await meResponse.json().catch(() => ({})) as { data?: CanonicalAccount };
         const providersBody = await providersResponse.json().catch(() => ({})) as {
           providers?: Record<string, { ok: boolean; mode: string; missing: string[]; purpose: string }>;
           inviteRequired?: boolean;
         };
+        const storageBody = await storageResponse.json().catch(() => ({})) as {
+          usedBytes?: number;
+          objectCount?: number;
+          plan?: { storageLimitBytes?: number | null; storageScope?: string };
+          bucket?: string | null;
+          region?: string | null;
+          endpoint?: string | null;
+          objectStorage?: string;
+          mode?: string;
+          database?: string;
+          missing?: string[];
+        };
         if (cancelled) return;
         setAuthProviders(providersBody.providers ?? {});
         setPilotInviteRequired(Boolean(providersBody.inviteRequired));
+        if (storageResponse.ok && typeof storageBody.usedBytes === "number") {
+          setStorageUsage({
+            usedBytes: Number(storageBody.usedBytes),
+            objectCount: Number(storageBody.objectCount ?? 0),
+            storageLimitBytes: storageBody.plan?.storageLimitBytes ?? null,
+            storageScope: storageBody.plan?.storageScope ?? "account",
+            bucket: storageBody.bucket ?? null,
+            region: storageBody.region ?? null,
+            endpoint: storageBody.endpoint ?? null,
+            objectStorage: storageBody.objectStorage,
+            mode: storageBody.mode,
+            database: storageBody.database,
+            missing: storageBody.missing ?? [],
+          });
+        } else {
+          setStorageUsage({
+            usedBytes: 0,
+            objectCount: 0,
+            storageLimitBytes: null,
+            storageScope: "account",
+            bucket: null,
+            region: null,
+            endpoint: null,
+            objectStorage: "s3-compatible",
+          });
+        }
         if (meResponse.ok && meBody.data) {
           applyCanonicalAccount(meBody.data);
         } else if (meResponse.status === 401) {
@@ -309,6 +363,7 @@ function App() {
           setCanonicalAccount(null);
           setOnboardingComplete(false);
           resetCommunityReactions();
+          setStorageUsage(null);
         } else {
           throw new Error("Session lookup failed.");
         }
@@ -319,6 +374,7 @@ function App() {
           setOnboardingComplete(false);
           resetCommunityReactions();
           setAuthProviders({});
+          setStorageUsage(null);
           setAuthError("RIVT could not verify your session. Check your connection and sign in again.");
         }
       } finally {
@@ -701,7 +757,7 @@ function App() {
       ),
     );
     addActivity(
-      "Shop Talk answer posted",
+      "Trade Talk answer posted",
       `${accountProfile.displayName} answered "${post.title}".`,
     );
   }
@@ -758,7 +814,7 @@ function App() {
       ];
     });
     addActivity(
-      "Shop Talk report filed",
+      "Trade Talk report filed",
       `"${post.title}" is in the admin moderation queue for ${reason.toLowerCase()}.`,
     );
   }
@@ -784,7 +840,7 @@ function App() {
       },
       ...current,
     ]);
-    addActivity("Shop Talk post created", `"${title}" posted to Shop Talk.`);
+    addActivity("Trade Talk post created", `"${title}" posted to Trade Talk.`);
   }
 
   function handleJobSaved(job: Job, published: boolean) {
@@ -1286,6 +1342,7 @@ function App() {
             canonicalAccount={canonicalAccount}
             trustReady={trustReady}
             recordCount={uploadedRecords.size}
+            storageUsage={storageUsage}
             trainingProgress={Math.round((completedTraining.size / trainingModules.length) * 100)}
             safetyCertCount={Object.values(safetyQuizResults).filter((result) => result.passed).length}
             safetyQuizResults={safetyQuizResults}

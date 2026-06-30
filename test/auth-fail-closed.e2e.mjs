@@ -30,34 +30,66 @@ async function waitForServer() {
 
 let browser;
 let capturedSignupBody;
+
+function routeJson(route, status, payload) {
+  route.fulfill({
+    status,
+    contentType: "application/json",
+    body: JSON.stringify(payload),
+  });
+}
+
+function captureSignupBody(route) {
+  capturedSignupBody = route.request().postDataJSON();
+  routeJson(route, 503, {
+    error: { code: "TEST_UNAVAILABLE", message: "Signup unavailable for test." },
+  });
+}
+
+function failAuthPath(message, path = "TEST_UNAVAILABLE") {
+  return (route) => routeJson(route, 503, {
+    error: { code: path, message },
+  });
+}
+
 try {
   await waitForServer();
   browser = await chromium.launch({ headless: true });
-  const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
-
-  await page.route("**/api/v1/me", (route) => route.fulfill({
-    status: 401,
-    contentType: "application/json",
-    body: JSON.stringify({ error: { code: "AUTH_REQUIRED", message: "Authentication required." } }),
-  }));
-  await page.route("**/api/auth/providers", (route) => route.fulfill({
-    status: 200,
-    contentType: "application/json",
-    body: JSON.stringify({ providers: { email: { ok: true, mode: "configured", missing: [], purpose: "Email/password sign-in" } }, inviteRequired: true }),
-  }));
-  await page.route("**/api/v1/auth/login", (route) => route.fulfill({
-    status: 503,
-    contentType: "application/json",
-    body: JSON.stringify({ error: { code: "TEST_UNAVAILABLE", message: "Service unavailable for test." } }),
-  }));
-  await page.route("**/api/v1/auth/signup", (route) => {
-    capturedSignupBody = route.request().postDataJSON();
-    return route.fulfill({
-      status: 503,
-      contentType: "application/json",
-      body: JSON.stringify({ error: { code: "TEST_UNAVAILABLE", message: "Signup unavailable for test." } }),
-    });
+  const context = await browser.newContext({
+    viewport: { width: 390, height: 844 },
+    serviceWorkers: "block",
   });
+  const page = await context.newPage();
+
+  // Ensure auth bootstrap works even when backend is absent in this environment.
+  await page.route("**/api/v1/me", failAuthPath("Authentication required.", "AUTH_REQUIRED"));
+  await page.route("**/api/me", failAuthPath("Authentication required.", "AUTH_REQUIRED"));
+  await page.route("**/api/auth/providers", (route) => routeJson(route, 200, {
+    providers: {
+      email: { ok: true, mode: "configured", missing: [], purpose: "Email/password sign-in" },
+      google: { ok: true, mode: "configured", missing: [], purpose: "Google OAuth" },
+    },
+    inviteRequired: true,
+  }));
+  await page.route("**/api/v1/auth/providers", (route) => routeJson(route, 200, {
+    providers: {
+      email: { ok: true, mode: "configured", missing: [], purpose: "Email/password sign-in" },
+      google: { ok: true, mode: "configured", missing: [], purpose: "Google OAuth" },
+    },
+    inviteRequired: true,
+  }));
+  const storagePayload = {
+    usedBytes: 0,
+    objectCount: 0,
+    objectStorage: "s3-compatible",
+    plan: { storageLimitBytes: null, storageScope: "account" },
+  };
+  await page.route("**/api/storage", (route) => routeJson(route, 200, storagePayload));
+  await page.route("**/api/v1/storage", (route) => routeJson(route, 200, storagePayload));
+  await page.route("**/api/v1/auth/login", failAuthPath("Service unavailable for test.", "TEST_UNAVAILABLE"));
+  await page.route("**/api/auth/login", failAuthPath("Service unavailable for test.", "TEST_UNAVAILABLE"));
+  await page.route("**/api/v1/auth/signup", captureSignupBody);
+  await page.route("**/api/auth/signup", captureSignupBody);
 
   await page.goto(baseUrl, { waitUntil: "networkidle" });
   await page.locator('input[type="email"]').fill("test@example.com");
@@ -88,6 +120,8 @@ try {
   assert.equal(capturedSignupBody?.inviteCode, "rivt_test_invite");
   console.log("Fail-closed authentication E2E passed.");
 } finally {
-  await browser?.close();
+  if (browser) {
+    await browser.close();
+  }
   vite.kill();
 }

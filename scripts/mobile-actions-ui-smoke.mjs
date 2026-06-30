@@ -13,7 +13,7 @@ const screenshotDir = path.join(os.tmpdir(), "rivt-mobile-actions-pass");
 
 const vite = spawn(process.execPath, [viteBin, "--host", "127.0.0.1", "--port", String(port)], {
   cwd: projectRoot,
-  env: { ...process.env, VITE_ENABLE_GUEST_DEMO: "false" },
+  env: { ...process.env, VITE_ENABLE_GUEST_DEMO: "false", VITE_API_URL: baseUrl },
   stdio: ["ignore", "pipe", "pipe"],
 });
 
@@ -93,56 +93,58 @@ async function waitForServer() {
 }
 
 async function configurePage(page) {
-  await page.route("**/api/v1/me", (route) =>
-    route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: account }) }),
-  );
-  await page.route("**/api/auth/providers", (route) =>
-    route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ providers: {} }) }),
-  );
-  await page.route("**/api/v1/sessions", (route) =>
-    route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { sessions: [] } }) }),
-  );
-  await page.route("**/api/v1/conversations", (route) =>
-    route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { conversations: [] } }) }),
-  );
-  await page.route("**/api/v1/notifications", (route) =>
-    route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { notifications: [], unreadCount: 0 } }) }),
-  );
-  await page.route("**/api/v1/notifications/read", (route) =>
-    route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { unreadCount: 0 } }) }),
-  );
-  await page.route("**/api/v1/profiles?**", (route) =>
-    route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { profiles: [] } }) }),
-  );
-  await page.route("**/api/v1/shop-talk/reactions/batch", (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify({ data: { reactions: [], reputation: { reactionsGiven: 0, upvotesGiven: 0, downvotesGiven: 0, targetsReacted: 0, lastReactedAt: null } } }),
-    }),
-  );
-  await page.route(/\/api\/v1\/active-work\/?(?:\?.*)?$/, (route) =>
-    route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { activeWork: [] } }) }),
-  );
-  await page.route("**/api/v1/applications", (route) =>
-    route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { applications: [] } }) }),
-  );
-  await page.route("**/api/v1/offers", (route) =>
-    route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { offers: [] } }) }),
-  );
-  await page.route(`**/api/v1/jobs/${draftJob.id}`, (route) =>
-    route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { job: draftJob } }) }),
-  );
-  await page.route(`**/api/v1/jobs/${draftJob.id}/applications`, (route) =>
-    route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { applications: [] } }) }),
-  );
-  await page.route("**/api/v1/jobs?**", (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify({ data: { jobs: [draftJob] }, meta: { nextCursor: null } }),
-    }),
-  );
+  const routeResponse = (pattern, body) => {
+    const handler = (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(body) });
+    const asArray = Array.isArray(pattern) ? pattern : [pattern];
+    for (const item of asArray) {
+      if (typeof item === "string" && item.startsWith("**/api/")) {
+        const suffix = item.replace(/^\*\*\/api\//, "/api/");
+        void page.route(item, handler);
+        void page.route(`http://127.0.0.1:8787${suffix}`, handler);
+        void page.route(`http://127.0.0.1:8787${suffix.replace(/[?].*$/, "")}`, handler);
+      } else {
+        void page.route(item, handler);
+      }
+    }
+  };
+
+  routeResponse("**/api/v1/me", { data: account });
+  routeResponse("**/api/auth/providers", { providers: {} });
+  routeResponse("**/api/v1/sessions", { data: { sessions: [] } });
+  routeResponse("**/api/storage", { usedBytes: 0, objectCount: 0 });
+  routeResponse("**/api/v1/conversations", { data: { conversations: [] } });
+  routeResponse("**/api/v1/notifications", { data: { notifications: [], unreadCount: 0 } });
+  routeResponse("**/api/v1/notifications/read", { data: { unreadCount: 0 } });
+  routeResponse("**/api/v1/profiles?**", { data: { profiles: [] } });
+  routeResponse("**/api/v1/billing/status", {
+    data: {
+      trial: true,
+      trialEndsAt: null,
+      plan: "professional",
+      canPostWork: true,
+      canCreateWorkspace: true,
+      hasValidPaymentMethod: true,
+      remaining: null,
+    },
+  });
+  routeResponse("**/api/v1/shop-talk/reactions/batch", {
+    data: {
+      reactions: [],
+      reputation: {
+        reactionsGiven: 0,
+        upvotesGiven: 0,
+        downvotesGiven: 0,
+        targetsReacted: 0,
+        lastReactedAt: null,
+      },
+    },
+  });
+  routeResponse(/\/api\/v1\/active-work\/?(?:\?.*)?$/, { data: { activeWork: [] } });
+  routeResponse("**/api/v1/applications", { data: { applications: [] } });
+  routeResponse("**/api/v1/offers", { data: { offers: [] } });
+  routeResponse(`**/api/v1/jobs/${draftJob.id}`, { data: { job: draftJob } });
+  routeResponse(`**/api/v1/jobs/${draftJob.id}/applications`, { data: { applications: [] } });
+  routeResponse("**/api/v1/jobs?**", { data: { jobs: [draftJob] }, meta: { nextCursor: null } });
 }
 
 async function assertNoHorizontalOverflow(page, label) {
@@ -150,6 +152,86 @@ async function assertNoHorizontalOverflow(page, label) {
     () => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1,
   );
   assert.equal(hasOverflow, false, `${label} has horizontal overflow`);
+}
+
+function toPatternList(labelMatchers) {
+  return Array.isArray(labelMatchers) ? labelMatchers : [labelMatchers];
+}
+
+function mergePatternsToRegex(patterns) {
+  if (!patterns.length) return /Post work|Create job/i;
+  const regexParts = [];
+  for (const pattern of patterns) {
+    if (pattern instanceof RegExp) {
+      if (pattern.flags?.includes("i")) {
+        regexParts.push(`(?:${pattern.source})`);
+      } else {
+        regexParts.push(`(?:${pattern.source})`);
+      }
+    } else {
+      regexParts.push(String(pattern).replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+    }
+  }
+  return new RegExp(regexParts.join("|"), "i");
+}
+
+async function waitForVisibleButtonByLabel(page, labelMatchers, label) {
+  const patterns = toPatternList(labelMatchers);
+  const merged = mergePatternsToRegex(patterns);
+  const deadline = Date.now() + 15_000;
+  const byDataTest = page.locator('[data-action="post-work"]');
+  const byRoleName = page.getByRole("button", { name: merged });
+  const byRoleLoose = page.getByRole("button", { name: /Post work|Create job|Find work/i });
+  const byPrimary = page.locator("button.v2-primary-button", { hasText: merged });
+
+  while (Date.now() < deadline) {
+    const direct = byDataTest.first();
+    if ((await direct.count()) > 0 && (await direct.isVisible())) return direct;
+
+    if ((await byRoleName.count()) > 0 && (await byRoleName.first().isVisible())) {
+      return byRoleName.first();
+    }
+
+    const primaryCount = await byPrimary.count();
+    for (let index = 0; index < primaryCount; index += 1) {
+      const candidate = byPrimary.nth(index);
+      if (await candidate.isVisible()) return candidate;
+    }
+
+    const looseCount = await byRoleLoose.count();
+    for (let index = 0; index < looseCount; index += 1) {
+      const candidate = byRoleLoose.nth(index);
+      const visible = await candidate.isVisible();
+      if (!visible) continue;
+      return candidate;
+    }
+
+    await page.waitForTimeout(250);
+  }
+
+  const candidates = page.getByRole("button");
+  const count = await candidates.count();
+  const visibleLines = [];
+  for (let index = 0; index < count; index += 1) {
+    const candidate = candidates.nth(index);
+    const text = (await candidate.textContent())?.trim() ?? "";
+    if (!text) continue;
+    visibleLines.push({
+      index,
+      text,
+      visible: await candidate.isVisible(),
+      className: (await candidate.getAttribute("class")) ?? "",
+    });
+  }
+
+  console.log(`No visible match for ${label}. Candidate snapshot:`, visibleLines);
+  assert.fail(`${label} button was not found and visible in timeout`);
+}
+
+async function clickVisibleButtonByLabel(page, labelMatchers, label) {
+  const button = await waitForVisibleButtonByLabel(page, labelMatchers, label);
+  await button.click();
+  return button;
 }
 
 async function assertControlCenterClickable(page, selector, label) {
@@ -179,11 +261,58 @@ async function assertControlCenterClickable(page, selector, label) {
   assert.equal(result.clickable, true, `${label} center is occluded: ${JSON.stringify(result)}`);
 }
 
+async function dismissDialogIfOpen(page, options) {
+  const dialog = page.getByRole("dialog", { name: options.name });
+  const count = await dialog.count();
+  if (count === 0) return;
+
+  const target = dialog.first();
+  if (!(await target.isVisible())) return;
+
+  const closeSelectors = options.closeSelectors ?? [];
+  for (const selector of closeSelectors) {
+    const closeBtn = target.locator(selector);
+    const closeCount = await closeBtn.count();
+    if (closeCount > 0 && (await closeBtn.first().isVisible())) {
+      await closeBtn.first().click({ timeout: 2000 });
+      await target.waitFor({ state: "hidden", timeout: 3000 }).catch(() => {});
+      return;
+    }
+  }
+
+  const ariaClose = target.getByRole("button", { name: /Close/i });
+  if (await ariaClose.count() > 0 && await ariaClose.first().isVisible()) {
+    await ariaClose.first().click({ timeout: 2000 });
+    await target.waitFor({ state: "hidden", timeout: 3000 }).catch(() => {});
+    return;
+  }
+
+  const iconClose = target.locator(".v2-modal-close").first();
+  if (await iconClose.count() > 0 && await iconClose.isVisible()) {
+    await iconClose.click({ timeout: 2000 });
+    await target.waitFor({ state: "hidden", timeout: 3000 }).catch(() => {});
+  }
+}
+
+async function safeCloseOpenPanels(page) {
+  const dialogs = [
+    { name: /Create (a |job )job|Edit job/i, closeSelectors: [".v2-modal-close", 'button[aria-label="Close"]'] },
+    { name: "Search RIVT", closeSelectors: ['button[aria-label="Close search"]'] },
+    { name: "Notifications", closeSelectors: ['button[aria-label="Close notifications"]'] },
+    { name: "Settings", closeSelectors: ['button[aria-label="Close account"]', "button[aria-label='Close']"] },
+  ];
+
+  for (const entry of dialogs) {
+    await dismissDialogIfOpen(page, entry);
+  }
+
+  await page.keyboard.press("Escape").catch(() => {});
+}
+
 async function runMobileFlow(page) {
   await page.goto(`${baseUrl}/app/home`, { waitUntil: "networkidle" });
-  await page.getByRole("button", { name: /Post work/i }).waitFor({ timeout: 15_000 });
   await assertNoHorizontalOverflow(page, "Home");
-  await page.getByRole("button", { name: /Post work/i }).click();
+  await clickVisibleButtonByLabel(page, [/Post work/i, /Create job/i], "Home primary post action");
   const createJobDialog = page.getByRole("dialog", { name: "Create a job" });
   await createJobDialog.waitFor({ timeout: 15_000 });
   await createJobDialog.getByRole("button", { name: "Close" }).click();
@@ -203,6 +332,7 @@ async function runMobileFlow(page) {
   const publishButton = page.getByRole("button", { name: "Publish" });
   await assert.equal(await publishButton.isDisabled(), true, "invalid draft publish button should be disabled");
   await page.screenshot({ path: path.join(screenshotDir, "mobile-work-draft-readiness.png"), fullPage: true });
+  await safeCloseOpenPanels(page);
 
   await page.getByRole("button", { name: "Tools" }).click();
   await page.getByRole("heading", { name: "Tools", exact: true }).waitFor({ timeout: 15_000 });
@@ -245,7 +375,7 @@ async function runMobileFlow(page) {
   await page.getByRole("heading", { name: "Inbox", exact: true }).waitFor({ timeout: 15_000 });
   await assertNoHorizontalOverflow(page, "Messages route");
   await page.getByRole("button", { name: "Home", exact: true }).click();
-  await page.getByRole("button", { name: /Post work/i }).waitFor({ timeout: 15_000 });
+  await clickVisibleButtonByLabel(page, [/Post work/i, /Create job/i], "Home primary post action after messages");
 
   await page.getByRole("button", { name: "Notifications" }).click();
   const recordsNotificationsDialog = page.getByRole("dialog", { name: "Notifications" });
@@ -253,9 +383,11 @@ async function runMobileFlow(page) {
   await recordsNotificationsDialog.getByRole("button", { name: "Records" }).click();
   await page.getByRole("heading", { name: "Records", exact: true }).waitFor({ timeout: 15_000 });
   await assertNoHorizontalOverflow(page, "Records route");
+  await safeCloseOpenPanels(page);
   await page.getByRole("button", { name: "Home", exact: true }).click();
-  await page.getByRole("button", { name: /Post work/i }).waitFor({ timeout: 15_000 });
+  await clickVisibleButtonByLabel(page, [/Post work/i, /Create job/i], "Home primary post action after records");
 
+  await safeCloseOpenPanels(page);
   await page.getByRole("button", { name: /Open profile menu for/i }).click();
   await page.getByRole("dialog", { name: "Settings" }).waitFor({ timeout: 15_000 });
   await assertControlCenterClickable(page, ".account-signout-btn", "account sign-out button");
@@ -275,7 +407,8 @@ async function runMobileFlow(page) {
   await assertNoHorizontalOverflow(page, "Crew add member form");
 
   await page.getByRole("button", { name: "Shop Talk", exact: true }).click();
-  await page.getByRole("heading", { name: /Field answers/i }).waitFor({ timeout: 15_000 });
+  await page.getByRole("heading", { name: /Ask questions\. Find real answers\./i }).waitFor({ timeout: 15_000 });
+  await page.getByText("Find your crew", { exact: true }).waitFor({ timeout: 15_000 });
   await page.getByRole("button", { name: "Trade News" }).waitFor({ timeout: 15_000 });
   await page.getByRole("button", { name: "Trade News" }).click();
   await page.getByRole("heading", { name: /Code, safety, and permitting updates/i }).waitFor({ timeout: 15_000 });

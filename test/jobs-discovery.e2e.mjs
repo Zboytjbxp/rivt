@@ -193,6 +193,16 @@ async function configurePage(page, jobs, { activeWork = [], project = null } = {
     });
   });
   await page.route("**/api/auth/providers", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ providers: {} }) }));
+  await page.route("**/api/storage", (route) => route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: JSON.stringify({ usedBytes: 0, objectCount: 0, objectStorage: "s3-compatible", plan: { storageLimitBytes: null, storageScope: "account" } }),
+  }));
+  await page.route("**/api/v1/storage", (route) => route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: JSON.stringify({ usedBytes: 0, objectCount: 0, objectStorage: "s3-compatible", plan: { storageLimitBytes: null, storageScope: "account" } }),
+  }));
   await page.route("**/api/v1/sessions", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { sessions: [] }, meta: { requestId: "e2e-sessions" } }) }));
   await page.route("**/api/v1/profiles**", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { profiles: [profileResult] }, meta: { requestId: "e2e-profiles", count: 1 } }) }));
   await page.route("**/api/v1/conversations", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { conversations: [] }, meta: { requestId: "e2e-conversations" } }) }));

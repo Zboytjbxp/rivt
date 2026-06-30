@@ -236,6 +236,13 @@ async function configurePage(page) {
       body: JSON.stringify({ data: { jobs: [] }, meta: { nextCursor: null } }),
     }),
   );
+  await page.route("**/api/storage", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ usedBytes: 0, objectCount: 0, plan: {} }),
+    }),
+  );
   await page.route("**/api/news**", (route) =>
     route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(newsPayload) }),
   );
@@ -279,20 +286,13 @@ try {
     await configurePage(page);
 
     await page.goto(`${baseUrl}/app/network/talk`, { waitUntil: "networkidle" });
-    await page.getByRole("heading", { name: /Field answers/i }).waitFor({ timeout: 15_000 });
-    await page.getByText("Community knowledge", { exact: true }).waitFor({ timeout: 15_000 });
-    await page.getByText("Answer queue", { exact: true }).waitFor({ timeout: 15_000 });
-    await page.getByText("Reputation path", { exact: true }).waitFor({ timeout: 15_000 });
-    await page.getByText(/Electrical question/i).waitFor({ timeout: 15_000 });
-    await page.getByRole("button", { name: /Answer now/i }).click();
-    await page.getByText("Good answers get specific.", { exact: true }).waitFor({ timeout: 15_000 });
-    await page.getByRole("heading", { name: /NEC 2023/i }).waitFor({ timeout: 15_000 });
-    if (viewport.name === "desktop") {
-      await page.getByText("Electrical answer queue", { exact: true }).waitFor({ timeout: 15_000 });
-    } else {
-      await page.getByRole("button", { name: /Back/i }).first().click();
-    }
+    await page.getByRole("heading", { name: /Ask questions\. Find real answers\./i }).waitFor({ timeout: 15_000 });
+    await page.getByText("Find your crew", { exact: true }).waitFor({ timeout: 15_000 });
+    await page.getByText("Trade groups near the work", { exact: true }).waitFor({ timeout: 15_000 });
+    await page.getByText("Best way to scribe cabinets to stone?", { exact: true }).waitFor({ timeout: 15_000 });
+    await page.getByText(/What.*charging for punch-out work/i).waitFor({ timeout: 15_000 });
     await page.locator(".shop-post-card").first().click();
+    await page.getByText("Good answers get specific.", { exact: true }).waitFor({ timeout: 15_000 });
     const upvoteThread = page.getByRole("button", { name: "Upvote thread" }).first();
     const threadInitial = (await upvoteThread.textContent())?.trim() ?? "";
     await upvoteThread.click();
@@ -322,7 +322,7 @@ try {
     const answerCleared = (await page.getByRole("button", { name: "Upvote answer" }).first().textContent())?.trim() ?? "";
     assert.equal(answerCleared, answerInitial, "clicking the same answer reaction again should clear it");
 
-    const talkSearch = page.locator('input[placeholder="Search questions, trades, fixes"]');
+    const talkSearch = page.locator('.shop-talk-fieldbar input[placeholder="Search jobs, answers, crews"]');
     if (!(await talkSearch.isVisible())) {
       await page.getByRole("button", { name: /Back/i }).first().click();
     }
