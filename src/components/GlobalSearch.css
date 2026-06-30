@@ -146,7 +146,7 @@
   padding: 2px 7px;
   border-radius: 99px;
   background: var(--v2-accent-soft, #fff7ed);
-  color: var(--v2-accent, #f97316);
+  color: var(--v2-accent-text, var(--v2-accent, #ff4b00));
   flex-shrink: 0;
 }
 

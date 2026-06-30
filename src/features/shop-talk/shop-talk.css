@@ -1149,6 +1149,8 @@
   overflow-x: auto;
   padding: 8px 0;
   scrollbar-width: none;
+  -webkit-mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 28px), transparent 100%);
+  mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 28px), transparent 100%);
 }
 
 .shop-talk-flair-row::-webkit-scrollbar {
@@ -1171,7 +1173,7 @@
 
 .flair-chip:hover {
   background: color-mix(in srgb, var(--v2-accent, var(--accent)) 10%, transparent);
-  color: var(--v2-accent, var(--accent));
+  color: var(--v2-accent-text, var(--v2-accent, var(--accent)));
   border-color: color-mix(in srgb, var(--v2-accent, var(--accent)) 40%, transparent);
 }
 
@@ -1206,7 +1208,7 @@
 
 .shop-talk-saved-btn:hover {
   background: color-mix(in srgb, var(--v2-accent, var(--accent)) 10%, transparent);
-  color: var(--v2-accent, var(--accent));
+  color: var(--v2-accent-text, var(--v2-accent, var(--accent)));
   border-color: color-mix(in srgb, var(--v2-accent, var(--accent)) 40%, transparent);
 }
 
@@ -1255,8 +1257,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: 44px;
+  height: 44px;
   padding: 0;
   border: 0;
   border-radius: var(--v2-radius-sm, 4px);
@@ -1268,7 +1270,7 @@
 
 .shop-post-bookmark:hover,
 .shop-post-bookmark.active {
-  color: var(--v2-accent, var(--accent));
+  color: var(--v2-accent-text, var(--v2-accent, var(--accent)));
 }
 
 /* ─── Shop Talk: Detail Bookmark + Header Actions ────────────────────────────── */
@@ -1284,8 +1286,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: 44px;
+  height: 44px;
   padding: 0;
   border: 1px solid var(--border);
   border-radius: var(--v2-radius-md, 6px);
@@ -1297,7 +1299,7 @@
 
 .shop-detail-bookmark:hover,
 .shop-detail-bookmark.active {
-  color: var(--v2-accent, var(--accent));
+  color: var(--v2-accent-text, var(--v2-accent, var(--accent)));
   border-color: var(--v2-accent, var(--accent));
 }
 
@@ -1354,7 +1356,7 @@
 /* Post type chips */
 .v2-st-type-selector { display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }
 .v2-st-type-chip { padding: 6px 12px; border: 1px solid var(--v2-border); border-radius: 20px; font-size: 12px; cursor: pointer; background: var(--v2-surface-muted); color: var(--v2-text-muted); white-space: nowrap; }
-.v2-st-type-chip.is-active { border-color: var(--v2-accent); background: var(--v2-accent-soft); color: var(--v2-accent); }
+.v2-st-type-chip.is-active { border-color: var(--v2-accent); background: var(--v2-accent-soft); color: var(--v2-accent-text); }
 .v2-st-type-chip span {
   display: inline-flex;
   align-items: center;
@@ -1374,12 +1376,12 @@
 /* Filter pills */
 .v2-st-filter-row { display: flex; gap: 6px; overflow-x: auto; padding: 10px 16px; border-bottom: 1px solid var(--v2-border); }
 .v2-st-filter-pill { padding: 5px 12px; border: 1px solid var(--v2-border); border-radius: 20px; font-size: 12px; cursor: pointer; background: var(--v2-surface-muted); color: var(--v2-text-muted); white-space: nowrap; flex-shrink: 0; }
-.v2-st-filter-pill.is-active { background: var(--v2-accent-soft); color: var(--v2-accent); border-color: var(--v2-accent); }
+.v2-st-filter-pill.is-active { background: var(--v2-accent-soft); color: var(--v2-accent-text); border-color: var(--v2-accent); }
 
 /* Post type badge */
 .v2-st-type-badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: var(--v2-weight-bold); margin-bottom: 4px; }
 .v2-st-type-badge.question { background: #dbeafe; color: #1d4ed8; }
-.v2-st-type-badge.sub-request { background: var(--v2-accent-soft); color: var(--v2-accent); }
+.v2-st-type-badge.sub-request { background: var(--v2-accent-soft); color: var(--v2-accent-text); }
 .v2-st-type-badge.safety { background: #fee2e2; color: #dc2626; }
 .v2-st-type-badge.general { background: var(--v2-surface-muted); color: var(--v2-text-muted); }
 
@@ -1401,12 +1403,12 @@
 .v2-st-reply-send-btn { padding: 8px 14px; background: var(--v2-accent); color: white; border: none; border-radius: var(--v2-radius-sm); font-size: 13px; font-weight: var(--v2-weight-bold); cursor: pointer; }
 
 /* Trending tags */
-.v2-st-trending-row { display: flex; align-items: center; gap: 6px; overflow-x: auto; padding: 8px 16px; border-bottom: 1px solid var(--v2-border); scrollbar-width: none; }
+.v2-st-trending-row { display: flex; align-items: center; gap: 6px; overflow-x: auto; padding: 8px 16px; border-bottom: 1px solid var(--v2-border); scrollbar-width: none; -webkit-mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 28px), transparent 100%); mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 28px), transparent 100%); }
 .v2-st-trending-row::-webkit-scrollbar { display: none; }
 .v2-st-trending-label { display: inline-flex; align-items: center; gap: 3px; font-size: 10px; font-weight: var(--v2-weight-bold); letter-spacing: 0.07em; text-transform: uppercase; color: var(--v2-text-muted); white-space: nowrap; flex-shrink: 0; }
 .v2-st-trending-pill { padding: 4px 11px; border: 1px solid color-mix(in srgb, var(--v2-border) 70%, transparent); border-radius: 999px; background: var(--v2-surface-muted); color: var(--v2-text-muted); font-size: 12px; font-weight: var(--v2-weight-strong); cursor: pointer; white-space: nowrap; flex-shrink: 0; transition: border-color 0.12s, background 0.12s, color 0.12s; }
 .v2-st-trending-pill:hover { border-color: var(--v2-accent); color: var(--v2-text); }
-.v2-st-trending-pill.is-active { border-color: var(--v2-accent); background: var(--v2-accent-soft); color: var(--v2-accent); }
+.v2-st-trending-pill.is-active { border-color: var(--v2-accent); background: var(--v2-accent-soft); color: var(--v2-accent-text); }
 
 /* Rep badges */
 .v2-st-rep-badge { display: inline-flex; align-items: center; gap: 3px; padding: 2px 7px; background: color-mix(in srgb, #f59e0b 12%, transparent); color: #b45309; border-radius: 999px; font-size: 10px; font-weight: var(--v2-weight-bold); }
@@ -2035,7 +2037,7 @@
   }
 
   .shop-news-list .news-card-thumb.is-source-tile span {
-    color: var(--v2-accent, var(--accent));
+    color: var(--v2-accent-text, var(--v2-accent, var(--accent)));
     font-size: 13px;
     line-height: 1;
   }
@@ -2140,7 +2142,7 @@
 }
 
 .trade-talk-action-card.is-crew {
-  color: #008c80;
+  color: #006f64;
 }
 
 .trade-talk-prompt-strip {
@@ -2324,6 +2326,8 @@
   gap: 6px;
   overflow-x: auto;
   scrollbar-width: none;
+  -webkit-mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 28px), transparent 100%);
+  mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 28px), transparent 100%);
 }
 
 .trade-talk-layout .shop-post-card-meta::-webkit-scrollbar {
@@ -2441,7 +2445,7 @@
   place-items: center;
   padding: 5px;
   border: 1px solid var(--trade-ink, #0b0b0b);
-  background: var(--trade-orange, #ff4d14);
+  background: var(--trade-orange, #ff4b00);
   box-shadow: 2px 2px 0 var(--trade-ink, #0b0b0b);
 }
 

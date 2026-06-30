@@ -20,6 +20,13 @@ function unixToDate(seconds) {
   return iso ? new Date(iso) : null;
 }
 
+function subscriptionPeriodEnd(subscription) {
+  return subscription?.current_period_end
+    ?? subscription?.items?.data?.[0]?.current_period_end
+    ?? subscription?.items?.data?.find?.((item) => item?.current_period_end)?.current_period_end
+    ?? null;
+}
+
 function billingConfig(appOrigin) {
   const secretKey = envValue("STRIPE_SECRET_KEY");
   const priceId = envValue("STRIPE_PRO_PRICE_ID", envValue("STRIPE_PRICE_ID"));
@@ -222,7 +229,7 @@ async function updateSubscriptionFromStripeObject(client, subscription, eventId 
 
   const priceId = subscription.items?.data?.[0]?.price?.id ?? null;
   const status = String(subscription.status ?? "unknown");
-  const activeUntil = unixToDate(subscription.current_period_end);
+  const activeUntil = unixToDate(subscriptionPeriodEnd(subscription));
   const trialEnd = unixToDate(subscription.trial_end);
   const cancelAtPeriodEnd = Boolean(subscription.cancel_at_period_end);
 
@@ -418,5 +425,6 @@ export const billingInternals = {
   ACTIVE_SUBSCRIPTION_STATUSES,
   billingConfig,
   mapBillingStatus,
+  subscriptionPeriodEnd,
   verifyStripeSignature,
 };

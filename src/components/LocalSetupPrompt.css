@@ -38,7 +38,7 @@
 }
 
 .v2-setup-title-icon {
-  color: var(--v2-accent, #f97316);
+  color: var(--v2-accent-text, var(--v2-accent, #ff4b00));
 }
 
 .v2-setup-subtitle {
@@ -84,7 +84,7 @@
 
 .v2-setup-input:focus,
 .v2-setup-select:focus {
-  border-color: var(--v2-accent, #f97316);
+  border-color: var(--v2-accent, #ff4b00);
 }
 
 .v2-setup-rate-wrap {
@@ -112,7 +112,7 @@
   padding: 14px;
   border: none;
   border-radius: var(--v2-radius-lg, 12px);
-  background: var(--v2-accent, #f97316);
+  background: var(--v2-accent, #ff4b00);
   color: #fff;
   font-size: 15px;
   font-weight: 700;

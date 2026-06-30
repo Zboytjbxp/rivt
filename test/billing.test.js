@@ -44,3 +44,13 @@ test("mapBillingStatus only exposes active pro entitlements", () => {
   assert.equal(inactive.active, false);
   assert.equal(inactive.plan, "free");
 });
+
+test("subscription period end supports current Stripe item-level payloads", () => {
+  assert.equal(billingInternals.subscriptionPeriodEnd({ current_period_end: 123 }), 123);
+  assert.equal(billingInternals.subscriptionPeriodEnd({
+    items: { data: [{ current_period_end: 456 }] },
+  }), 456);
+  assert.equal(billingInternals.subscriptionPeriodEnd({
+    items: { data: [{ id: "si_1" }, { current_period_end: 789 }] },
+  }), 789);
+});

@@ -1,3 +1,5 @@
+import { readPrimaryHourlyRate, readPrimaryTradeFromRateCard } from "../../lib/rateCard";
+
 export interface ReportData {
   jobTitle: string;
   jobLocation: string;
@@ -36,7 +38,6 @@ export function getReportUrl(data: ReportData): string {
 export function buildReportFromStorage(jobTitle: string): ReportData {
   // Reads rivt.* localStorage keys to build report data
   const profile = (() => { try { return JSON.parse(localStorage.getItem("rivt.profile.v1") ?? "null"); } catch { return null; } })();
-  const rateCard = (() => { try { return JSON.parse(localStorage.getItem("rivt.rateCard.v1") ?? "null"); } catch { return null; } })();
   const sessions = (() => { try { return JSON.parse(localStorage.getItem("rivt.sessions.v1") ?? "[]") as Array<{start:string;end:string|null;jobTitle?:string}>; } catch { return []; } })();
   const expenses = (() => { try { return JSON.parse(localStorage.getItem("rivt.expenses.v1") ?? "[]") as Array<{jobTitle?:string;category:string;amount:number;description:string}>; } catch { return []; } })();
 
@@ -46,7 +47,7 @@ export function buildReportFromStorage(jobTitle: string): ReportData {
     return sum + (new Date(s.end).getTime() - new Date(s.start).getTime()) / 3600000;
   }, 0);
 
-  const hourlyRate = rateCard?.hourlyRate ?? 75;
+  const hourlyRate = readPrimaryHourlyRate(75);
   const relevantExpenses = expenses.filter(e => !e.jobTitle || e.jobTitle === jobTitle);
   const materialCost = relevantExpenses.reduce((sum, e) => sum + e.amount, 0);
   const totalAmount = Math.round(hoursWorked * hourlyRate + materialCost);
@@ -58,7 +59,7 @@ export function buildReportFromStorage(jobTitle: string): ReportData {
     jobTitle,
     jobLocation: profile?.location ?? "",
     contractorName: profile?.displayName ?? "Your Contractor",
-    trade: profile?.primaryTrade ?? rateCard?.primaryTrade ?? "Contractor",
+    trade: profile?.primaryTrade || readPrimaryTradeFromRateCard() || "Contractor",
     startDate: dates[0] ? new Date(dates[0]).toLocaleDateString() : new Date().toLocaleDateString(),
     endDate: dates.at(-1) ? new Date(dates.at(-1)!).toLocaleDateString() : new Date().toLocaleDateString(),
     hoursWorked: Math.round(hoursWorked * 10) / 10,

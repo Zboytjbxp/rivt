@@ -25,6 +25,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { Job, Role } from "../../types";
 import type { PrimaryDestination } from "../../app-shell/types";
 import { EmptyState, PageHeader } from "../../components/ui";
+import { readPrimaryHourlyRate } from "../../lib/rateCard";
 import "./home-dashboard.css";
 
 type AvailDay = "available" | "limited" | "unavailable";
@@ -236,8 +237,7 @@ function triggerWeeklyRecapIfDue() {
   const totalHours = weekSessions.reduce((sum, s) => {
     return sum + (new Date(s.endedAt!).getTime() - new Date(s.startedAt).getTime()) / 3_600_000;
   }, 0);
-  const rateCard = (() => { try { return JSON.parse(localStorage.getItem("rivt.rateCard.v1") ?? "null"); } catch { return null; } })();
-  const rate = (rateCard as { hourlyRate?: number } | null)?.hourlyRate ?? 75;
+  const rate = readPrimaryHourlyRate(75);
   const earned = Math.round(totalHours * rate);
 
   if (typeof Notification !== "undefined" && Notification.permission === "granted") {
@@ -328,8 +328,7 @@ function CockpitHero({ onNavigate: _onNavigate }: { onNavigate: (d: PrimaryDesti
     const hours = Math.round(
       (new Date(endedAt).getTime() - new Date(activeSession.startedAt).getTime()) / 360000
     ) / 10;
-    const rateCard = (() => { try { return JSON.parse(localStorage.getItem("rivt.rateCard.v1") ?? "null"); } catch { return null; } })();
-    const rate = (rateCard as { hourlyRate?: number } | null)?.hourlyRate ?? 75;
+    const rate = readPrimaryHourlyRate(75);
     const today = new Date().toISOString().slice(0, 10);
     const expenses: Array<{ date: string; amount: number }> = (() => {
       try { return JSON.parse(localStorage.getItem("rivt.expenses.v1") ?? "[]"); } catch { return []; }
@@ -1024,7 +1023,7 @@ export function HomeDashboard({
       return next_;
     });
   }, []);
-  const moneySignal = activeJob ? currency(activeJob.pay) : role === "contractor" ? "Post work" : `${upcomingJobs.length} matches`;
+  const moneySignal = activeJob ? currency(activeJob.pay) : pendingPaymentCount ? `${pendingPaymentCount} pending` : "$0 pending";
   const workSignal = role === "contractor"
     ? `${applicationCount || "No"} applicants`
     : `${upcomingJobs.length} jobs nearby`;

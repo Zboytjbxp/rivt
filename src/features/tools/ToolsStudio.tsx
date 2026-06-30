@@ -27,6 +27,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { Job } from "../../types";
 import type { PrimaryDestination } from "../../app-shell/types";
 import { EmptyState, MetricTile, PageHeader, Panel } from "../../components/ui";
+import { readPrimaryHourlyRate } from "../../lib/rateCard";
 import { listActiveWork, type CanonicalActiveWork } from "../work/job-api";
 import {
   addProjectNote,
@@ -1759,10 +1760,7 @@ function TaxSummaryTool() {
     const yearStr = String(selectedYear);
 
     // Gross income from time sessions × hourly rate
-    const rateCard: { hourlyRate?: number } = (() => {
-      try { return JSON.parse(localStorage.getItem("rivt.rateCard.v1") ?? "null") as { hourlyRate?: number } ?? {}; } catch { return {}; }
-    })();
-    const hourlyRate = rateCard.hourlyRate ?? 65;
+    const hourlyRate = readPrimaryHourlyRate(65);
     const timeSessions: Array<{ startedAt: string; endedAt: string | null }> = (() => {
       try { return JSON.parse(localStorage.getItem("rivt.timeSessions.v1") ?? "[]") as Array<{ startedAt: string; endedAt: string | null }>; } catch { return []; }
     })();

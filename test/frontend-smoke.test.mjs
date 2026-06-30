@@ -60,6 +60,41 @@ function assertSmokeRender(element, expectedText) {
   assert.match(html, expectedText);
 }
 
+function createMemoryStorage(initial = {}) {
+  const store = new Map(Object.entries(initial));
+  return {
+    getItem: (key) => store.has(key) ? store.get(key) : null,
+    setItem: (key, value) => { store.set(key, String(value)); },
+    removeItem: (key) => { store.delete(key); },
+    clear: () => { store.clear(); },
+  };
+}
+
+test("rate card helper migrates legacy object data and reads array data", async () => {
+  const previousWindow = globalThis.window;
+  const localStorage = createMemoryStorage({
+    "rivt.rateCard.v1": JSON.stringify({ hourlyRate: 88, primaryTrade: "Carpentry" }),
+  });
+  globalThis.window = { localStorage };
+
+  try {
+    const { readPrimaryHourlyRate, readPrimaryTradeFromRateCard, readRateCardEntries } = await loadModule("/src/lib/rateCard.ts");
+    assert.equal(readPrimaryHourlyRate(65), 88);
+    assert.equal(readPrimaryTradeFromRateCard(), "Carpentry");
+    assert.equal(Array.isArray(JSON.parse(localStorage.getItem("rivt.rateCard.v1"))), true);
+
+    localStorage.setItem("rivt.rateCard.v1", JSON.stringify([{ id: "finish", trade: "Finish carpentry", hourlyRate: 95, dayRate: 700, minimumCharge: 250, notes: "", updatedAt: new Date().toISOString() }]));
+    assert.equal(readPrimaryHourlyRate(65), 95);
+    assert.equal(readRateCardEntries()[0].trade, "Finish carpentry");
+  } finally {
+    if (previousWindow === undefined) {
+      delete globalThis.window;
+    } else {
+      globalThis.window = previousWindow;
+    }
+  }
+});
+
 test("Home dashboard renders without crashing", async () => {
   const { HomeDashboard } = await loadModule("/src/features/home/HomeDashboard.tsx");
 

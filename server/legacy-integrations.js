@@ -2,6 +2,12 @@ import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { Buffer } from "node:buffer";
 import { randomUUID } from "node:crypto";
 
+const INVOICE_SEND_WINDOW_MS = 15 * 60 * 1000;
+const INVOICE_SEND_MAX_PER_RECIPIENT = 5;
+const INVOICE_SUBJECT_MAX_LENGTH = 120;
+const INVOICE_MESSAGE_MAX_LENGTH = 4_000;
+const invoiceSendWindows = new Map();
+
 function sendLegacyBridgeRetired(request, response, code, message) {
   response.status(410).json({
     ok: false,
@@ -9,6 +15,79 @@ function sendLegacyBridgeRetired(request, response, code, message) {
     error: message,
     requestId: request.requestId ?? null,
   });
+}
+
+function pruneInvoiceSendWindows(now = Date.now()) {
+  for (const [key, value] of invoiceSendWindows) {
+    if (!value || value.resetAt <= now) invoiceSendWindows.delete(key);
+  }
+}
+
+function validateInvoiceRecipient(channel, recipient, normalizePhoneNumber) {
+  const raw = String(recipient ?? "").trim();
+  if (!raw) return { ok: false, error: "Recipient is required." };
+
+  if (channel === "sms") {
+    const normalized = normalizePhoneNumber(raw);
+    if (!/^\+?[1-9]\d{9,14}$/.test(normalized)) {
+      return { ok: false, error: "Enter a valid phone number for invoice text messages." };
+    }
+    return { ok: true, recipient: normalized };
+  }
+
+  if (raw.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(raw)) {
+    return { ok: false, error: "Enter a valid email address for invoice email delivery." };
+  }
+  return { ok: true, recipient: raw.toLowerCase() };
+}
+
+function validateInvoiceSendPayload({
+  appName,
+  channel,
+  recipient,
+  subject,
+  text,
+  normalizePhoneNumber,
+}) {
+  const recipientResult = validateInvoiceRecipient(channel, recipient, normalizePhoneNumber);
+  if (!recipientResult.ok) return recipientResult;
+
+  const nextSubject = String(subject ?? `${appName} invoice`).trim();
+  const nextText = String(text ?? "").trim();
+  if (!nextText) return { ok: false, error: "Invoice text is required." };
+  if (nextSubject.length > INVOICE_SUBJECT_MAX_LENGTH) {
+    return { ok: false, error: `Invoice subject must be ${INVOICE_SUBJECT_MAX_LENGTH} characters or fewer.` };
+  }
+  if (nextText.length > INVOICE_MESSAGE_MAX_LENGTH) {
+    return { ok: false, error: `Invoice message must be ${INVOICE_MESSAGE_MAX_LENGTH} characters or fewer.` };
+  }
+
+  return {
+    ok: true,
+    recipient: recipientResult.recipient,
+    subject: nextSubject || `${appName} invoice`,
+    text: nextText,
+  };
+}
+
+function recordInvoiceRecipientSend({ accountId, channel, recipient, now = Date.now() }) {
+  pruneInvoiceSendWindows(now);
+  const key = `${accountId || "unknown"}:${channel}:${recipient.toLowerCase()}`;
+  const current = invoiceSendWindows.get(key);
+  const entry = !current || current.resetAt <= now
+    ? { count: 0, resetAt: now + INVOICE_SEND_WINDOW_MS }
+    : current;
+
+  entry.count += 1;
+  invoiceSendWindows.set(key, entry);
+
+  if (entry.count > INVOICE_SEND_MAX_PER_RECIPIENT) {
+    return {
+      ok: false,
+      retryAfterSeconds: Math.max(1, Math.ceil((entry.resetAt - now) / 1000)),
+    };
+  }
+  return { ok: true, remaining: Math.max(0, INVOICE_SEND_MAX_PER_RECIPIENT - entry.count) };
 }
 
 export function registerLegacyIntegrationRoutes({
@@ -233,14 +312,33 @@ export function registerLegacyIntegrationRoutes({
 
   app.post("/api/invoices/send", requireAuthenticatedUser, writeRateLimit, async (request, response) => {
     const channel = request.body?.channel === "sms" ? "sms" : "email";
-    const recipient = String(request.body?.recipient ?? "").trim();
-    const subject = String(request.body?.subject ?? `${appName} invoice`).trim();
-    const text = String(request.body?.message ?? "").trim();
+    const payload = validateInvoiceSendPayload({
+      appName,
+      channel,
+      recipient: request.body?.recipient,
+      subject: request.body?.subject,
+      text: request.body?.message,
+      normalizePhoneNumber,
+    });
 
-    if (!recipient || !text) {
+    if (!payload.ok) {
       response.status(400).json({
         ok: false,
-        error: "Recipient and invoice text are required.",
+        error: payload.error,
+      });
+      return;
+    }
+
+    const throttle = recordInvoiceRecipientSend({
+      accountId: request.actor?.account?.id ?? request.authUser?.id,
+      channel,
+      recipient: payload.recipient,
+    });
+    if (!throttle.ok) {
+      response.setHeader("Retry-After", String(throttle.retryAfterSeconds));
+      response.status(429).json({
+        ok: false,
+        error: "Too many invoice sends to that recipient. Try again later.",
       });
       return;
     }
@@ -264,9 +362,9 @@ export function registerLegacyIntegrationRoutes({
         },
         body: JSON.stringify({
           from: process.env.RESEND_FROM_EMAIL,
-          to: [recipient],
-          subject,
-          text,
+          to: [payload.recipient],
+          subject: payload.subject,
+          text: payload.text,
         }),
       });
 
@@ -285,7 +383,7 @@ export function registerLegacyIntegrationRoutes({
         ok: true,
         provider: "email",
         deliveryId: body.id ?? null,
-        recipient,
+        recipient: payload.recipient,
         message: "Invoice email sent.",
       });
       return;
@@ -303,8 +401,8 @@ export function registerLegacyIntegrationRoutes({
     }
 
     const twilioBody = new URLSearchParams({
-      To: normalizePhoneNumber(recipient),
-      Body: text,
+      To: payload.recipient,
+      Body: payload.text,
     });
 
     if (smsConfig.hasMessagingService) {
@@ -340,8 +438,18 @@ export function registerLegacyIntegrationRoutes({
       ok: true,
       provider: "sms",
       deliveryId: body.sid ?? null,
-      recipient: normalizePhoneNumber(recipient),
+      recipient: payload.recipient,
       message: "Invoice text sent.",
     });
   });
 }
+
+export const legacyIntegrationInternals = {
+  INVOICE_MESSAGE_MAX_LENGTH,
+  INVOICE_SEND_MAX_PER_RECIPIENT,
+  INVOICE_SEND_WINDOW_MS,
+  INVOICE_SUBJECT_MAX_LENGTH,
+  invoiceSendWindows,
+  recordInvoiceRecipientSend,
+  validateInvoiceSendPayload,
+};

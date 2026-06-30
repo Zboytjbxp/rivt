@@ -7,6 +7,39 @@ Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
 Production release commit: see live `/api/health` build metadata
 
+## Latest Packet 08 Pass - Security, Billing, and Rate Card Hardening
+
+- Hardened Trade News server behavior:
+  - `/api/news` now validates and normalizes the optional location query before use.
+  - the in-memory news cache is capped and pruned so arbitrary location strings cannot grow it without bound.
+  - anonymous news requests now have a durable rate limiter scoped only to `/api/news`.
+- Hardened invoice-send provider paths:
+  - email and SMS invoice recipients are validated and normalized before provider calls.
+  - invoice subject/body are length-bounded.
+  - repeated sends are throttled per account, channel, and recipient to reduce abuse risk.
+- Updated Stripe subscription period handling for current API payloads by reading `current_period_end` from subscription items when the top-level field is not present.
+- Added a canonical shared rate-card helper at `src/lib/rateCard.ts` and migrated Home, Work, Profile, Job Detail, Reports, and Tools reads away from the old ad hoc localStorage object shape.
+- Tightened UI/a11y details found during the pass:
+  - added accessible accent-text tokens for light/dark themes.
+  - improved small orange text contrast across search, setup, inbox, reports, and Shop Talk surfaces.
+  - increased compact tool buttons/bookmark targets toward 44px touch sizing.
+  - added fade affordances to mobile horizontal chip rows.
+  - guarded the crown calculator trig input against floating-point domain overflow.
+  - normalized invoice line-total math through numeric parsing.
+- Added coverage:
+  - news query validation/cache pruning.
+  - invoice send validation/throttling.
+  - Stripe item-level subscription period-end mapping.
+  - legacy rate-card migration and canonical array reads.
+- Local machine gates run on 2026-06-30:
+  - `npm run build` (pass)
+  - `npm run lint` (pass)
+  - `npm run test` (pass)
+  - `npm run test:e2e` (pass)
+  - `npm audit --omit=dev` (pass; 0 vulnerabilities)
+  - `git diff --check` (pass; line-ending warnings only)
+- Production deployment was not performed for this local hardening pass; deploy after review/commit/push.
+
 ## Latest Packet 08 Pass - Orange Trade Talk Visual System and Mobile Home Simplification
 
 - Applied the approved orange/white Trade Talk visual direction across the core app shell and primary mobile surfaces:

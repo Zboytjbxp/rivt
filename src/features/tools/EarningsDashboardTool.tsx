@@ -2,6 +2,7 @@ import { TrendingUp } from "lucide-react";
 import { useMemo, useState } from "react";
 import type { Job } from "../../types";
 import { EmptyState, Panel } from "../../components/ui";
+import { readPrimaryHourlyRate } from "../../lib/rateCard";
 
 interface PaymentRecord {
   id: number;
@@ -60,10 +61,7 @@ function EarningsDashboardTool({ jobs, paymentRecords }: { jobs: Job[]; paymentR
     const timeSessions: Array<{ startedAt: string; endedAt: string | null; jobTitle?: string }> = (() => {
       try { return JSON.parse(localStorage.getItem("rivt.timeSessions.v1") ?? "[]") as Array<{ startedAt: string; endedAt: string | null; jobTitle?: string }>; } catch { return []; }
     })();
-    const rateCard: { hourlyRate?: number } = (() => {
-      try { return JSON.parse(localStorage.getItem("rivt.rateCard.v1") ?? "null") as { hourlyRate?: number } ?? {}; } catch { return {}; }
-    })();
-    const hourlyRate = rateCard.hourlyRate ?? 65;
+    const hourlyRate = readPrimaryHourlyRate(65);
     const weekTotals: Record<string, number> = {};
     for (const s of timeSessions) {
       if (!s.endedAt) continue;
@@ -111,10 +109,7 @@ function EarningsDashboardTool({ jobs, paymentRecords }: { jobs: Job[]; paymentR
     const timeSessions: Array<{ startedAt: string; endedAt: string | null; jobTitle?: string }> = (() => {
       try { return JSON.parse(localStorage.getItem("rivt.timeSessions.v1") ?? "[]") as Array<{ startedAt: string; endedAt: string | null; jobTitle?: string }>; } catch { return []; }
     })();
-    const rateCard: { hourlyRate?: number } = (() => {
-      try { return JSON.parse(localStorage.getItem("rivt.rateCard.v1") ?? "null") as { hourlyRate?: number } ?? {}; } catch { return {}; }
-    })();
-    const hourlyRate = rateCard.hourlyRate ?? 65;
+    const hourlyRate = readPrimaryHourlyRate(65);
     const byJob: Record<string, number> = {};
     for (const s of timeSessions) {
       if (!s.endedAt) continue;
