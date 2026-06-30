@@ -156,7 +156,22 @@ async function getOrCreateStripeCustomer(database, config, actor) {
     "SELECT stripe_customer_id FROM billing_customers WHERE account_id = $1 LIMIT 1",
     [actor.account.id],
   );
-  if (existing.rowCount) return existing.rows[0].stripe_customer_id;
+  if (existing.rowCount) {
+    const existingCustomerId = existing.rows[0].stripe_customer_id;
+    try {
+      await stripeRequest(config, `/customers/${existingCustomerId}`, {}, { method: "GET" });
+      return existingCustomerId;
+    } catch (error) {
+      if (!(error instanceof ApiError) || error.details?.code !== "resource_missing") {
+        throw error;
+      }
+      logWarn("billing.stripe_customer_replaced", {
+        accountId: actor.account.id,
+        stripeCustomerId: existingCustomerId,
+        reason: "not_found_in_current_stripe_mode",
+      });
+    }
+  }
 
   const customer = await stripeRequest(config, "/customers", {
     email: actor.account.email,
@@ -390,15 +405,9 @@ export function registerBillingRoutes({
       });
     }
     requireActiveVerifiedBillingActor(request.actor);
-    const customer = await database.query(
-      "SELECT stripe_customer_id FROM billing_customers WHERE account_id = $1 LIMIT 1",
-      [request.actor.account.id],
-    );
-    if (!customer.rowCount) {
-      throw new ApiError(404, "BILLING_CUSTOMER_NOT_FOUND", "Start a subscription before opening the billing portal.");
-    }
+    const stripeCustomerId = await getOrCreateStripeCustomer(database, config, request.actor);
     const session = await stripeRequest(config, "/billing_portal/sessions", {
-      customer: customer.rows[0].stripe_customer_id,
+      customer: stripeCustomerId,
       return_url: config.portalReturnUrl,
     });
     response.status(201).json({ data: { url: session.url }, meta: { requestId: request.requestId } });
