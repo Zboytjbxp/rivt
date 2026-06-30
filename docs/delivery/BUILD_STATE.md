@@ -33,7 +33,12 @@ Production release commit: see live `/api/health` build metadata
   - `npm run test` (pass)
   - `npm run test:e2e` (pass)
   - `npm audit --omit=dev` (pass; 0 vulnerabilities)
-- Deployment evidence will be added after the Railway deployment for this commit is live and `/api/health`/production monitor confirm the source.
+- Production deployment completed from `master`:
+  - live `/api/health` reported build commit `d99747ebf68daf4745ad1ec015d0da12ed835a85`
+  - migration state ready at `0014_billing_subscriptions`
+  - PostgreSQL and S3-compatible object storage healthy
+  - Sentry configured
+  - `EXPECTED_SOURCE_COMMIT=d99747ebf68daf4745ad1ec015d0da12ed835a85 npm run monitor:production` passed with seven anonymous private-route checks and operational controls off
 
 ## Latest Packet 08 Pass - Trade Talk Community UI, Live Billing Env, and Deploy Prep
 

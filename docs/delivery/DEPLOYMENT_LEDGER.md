@@ -21,6 +21,26 @@ Add one entry per staging/production deployment.
 - Rollback performed/result:
 - Approval:
 
+## Current Production - Packet 08 Orange Trade Talk Visual System
+
+- Environment: Production (`https://rivt.pro`)
+- Date/time/timezone: 2026-06-30 01:41 America/New_York
+- Deployer: Codex through GitHub push to Railway-linked `master`
+- Source repository/branch: `Zboytjbxp/rivt`, `master`
+- Source commit: `d99747ebf68daf4745ad1ec015d0da12ed835a85`
+- Build/artifact ID: Railway-linked production deployment serving source `d99747ebf68daf4745ad1ec015d0da12ed835a85`
+- Migration version before/after: `0014_billing_subscriptions` / `0014_billing_subscriptions` (no schema migration)
+- Feature-flag/config version: no provider credentials or operational-control flags changed
+- Provider/config changes (no secrets): no provider credentials changed; Sentry remains configured
+- Backup/rollback target: prior successful production source `c4b546de14fce4576815c5a37fa8d367766b4d9f`; no migration rollback required
+- Automated gates: `npm run build`, `npm run lint`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check` passed.
+- Rendered evidence: mobile screenshots saved outside the repo at `C:\Users\zboyt\Documents\Trade-Work\artifacts-rivt-auth-mobile.png`, `C:\Users\zboyt\Documents\Trade-Work\artifacts-rivt-home-mobile-logo-final.png`, `C:\Users\zboyt\Documents\Trade-Work\artifacts-rivt-shoptalk-mobile-final.png`, `C:\Users\zboyt\Documents\Trade-Work\artifacts-rivt-work-mobile-final.png`, and `C:\Users\zboyt\Documents\Trade-Work\artifacts-rivt-tools-mobile-final.png`.
+- Post-deploy smoke tests: live `/api/health` reported exact source `d99747ebf68daf4745ad1ec015d0da12ed835a85`, ready migration `0014_billing_subscriptions`, PostgreSQL, S3-compatible object storage, and Sentry configured. `EXPECTED_SOURCE_COMMIT=d99747ebf68daf4745ad1ec015d0da12ed835a85 npm run monitor:production` passed with seven anonymous private-route checks, operational controls off, and 542 ms duration.
+- Health/readiness result: healthy production health and synthetic monitor; no schema migration applied.
+- Known risks: this is a visual/UI hardening pass, not a final full-product redesign. Remaining Gate A launch-quality boundary is still physical/manual device evidence for iOS Safari, Android Chrome, desktop keyboard-only, screen reader route checks, and real slow-cellular behavior.
+- Rollback performed/result: not required.
+- Approval: accepted as controllable Packet 08 visual/UI hardening evidence; broader pilot launch still depends on the remaining physical/manual evidence boundary or explicit risk acceptance.
+
 ## Current Production - Packet 08 Launch Readiness Machine Gate Sweep
 
 - Environment: Production (`https://rivt.pro`)
