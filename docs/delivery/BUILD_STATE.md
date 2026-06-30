@@ -34,7 +34,11 @@ Production release commit: see live `/api/health` build metadata
   - `npm run incident:readiness -- --require-ready` (pass)
   - `npm run launch:readiness -- --require-ready` (pass)
   - `npm audit --omit=dev` (pass; 0 vulnerabilities)
-- Deployment boundary for this pass: commit and push to `master`, then verify Railway deploy and production health.
+- Deployment completed for this pass:
+  - pushed to `master`
+  - Railway service returned to `Online`
+  - `/api/health` returned `ok: true` with PostgreSQL, S3-compatible object storage, migrations ready through `0014_billing_subscriptions`, and Sentry configured
+  - `npm run monitor:production` passed against `https://rivt.pro`
 - Remaining launch-quality boundary: physical accessibility-device evidence (iOS Safari, Android Chrome, desktop keyboard-only, and screen-reader route checks).
 
 ## Latest Packet 08 Pass - Stripe Sandbox Billing Wiring

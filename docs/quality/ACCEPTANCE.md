@@ -20,6 +20,7 @@ Machine validation refresh on 2026-06-30:
 - `npm run incident:readiness -- --require-ready` OK
 - `npm run launch:readiness -- --require-ready` OK
 - Railway production variables checked without printing secret values; PostgreSQL, S3-compatible storage, Resend email, Stripe live billing, and webhook variables are present.
+- `npm run monitor:production` OK against `https://rivt.pro` after Railway deployment.
 
 Historical machine validation refresh on 2026-06-29:
 
