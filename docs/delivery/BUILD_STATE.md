@@ -38,7 +38,10 @@ Production release commit: see live `/api/health` build metadata
   - `npm run test:e2e` (pass)
   - `npm audit --omit=dev` (pass; 0 vulnerabilities)
   - `git diff --check` (pass; line-ending warnings only)
-- Production deployment was not performed for this local hardening pass; deploy after review/commit/push.
+- Production deployment completed through Railway from `master`:
+  - pushed hardening commit `7f2d288f432314563e57bc5d7e57092a81d7ba5e`
+  - live `/api/health` reported the same build commit with PostgreSQL and S3-compatible object storage healthy
+  - `EXPECTED_SOURCE_COMMIT=7f2d288f432314563e57bc5d7e57092a81d7ba5e npm run monitor:production` passed with configured Sentry, operational controls off, seven anonymous private-route checks, and 589 ms duration
 
 ## Latest Packet 08 Pass - Orange Trade Talk Visual System and Mobile Home Simplification
 
