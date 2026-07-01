@@ -30,6 +30,8 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { TradePostCard } from "./TradePostCard";
+import { createShopTalkPost } from "./shop-talk-api";
+import { communitySlug, setCommunityMembership } from "./communities-api";
 import { tradeOptions } from "../../data";
 import type { Trade } from "../../types";
 import { usePersona } from "../persona/usePersona";
@@ -378,6 +380,8 @@ export function ShopTalkView({
   communityPosts,
   newsItems,
   initialQuery,
+  initialPostId,
+  openComposer,
   selectedJobTrade,
   userLocation,
   getPostReactionState,
@@ -395,6 +399,8 @@ export function ShopTalkView({
   communityPosts: CommunityPost[];
   newsItems: NewsItem[];
   initialQuery: string;
+  initialPostId?: number | null;
+  openComposer?: boolean;
   selectedJobTrade: Trade | "General";
   userLocation: string;
   getPostReactionState: (post: CommunityPost) => CommunityReactionState;
@@ -413,10 +419,10 @@ export function ShopTalkView({
   const [sortMode, setSortMode] = useState<"hot" | "new" | "unanswered">("hot");
   const [tradeFilter, setTradeFilter] = useState("All trades");
   const [answerQueueOnly, setAnswerQueueOnly] = useState(false);
-  const [selectedPostId, setSelectedPostId] = useState(communityPosts[0]?.id ?? 0);
+  const [selectedPostId, setSelectedPostId] = useState(initialPostId ?? communityPosts[0]?.id ?? 0);
   const [answerDraft, setAnswerDraft] = useState("");
   const [rulesOpen, setRulesOpen] = useState(false);
-  const [newPostOpen, setNewPostOpen] = useState(false);
+  const [newPostOpen, setNewPostOpen] = useState(Boolean(openComposer));
   const [joinedCommunities, setJoinedCommunities] = useState<Set<string>>(() => {
     try { return new Set(JSON.parse(localStorage.getItem("rivt.joinedCommunities.v1") ?? "[]") as string[]); }
     catch { return new Set(); }
@@ -448,7 +454,7 @@ export function ShopTalkView({
   const replyAuthorName = profile.displayName || "Anonymous";
   const displayNews = liveNews.length ? liveNews : newsItems;
   const [selectedNewsId, setSelectedNewsId] = useState(displayNews[0]?.id ?? 0);
-  const [mobileDetail, setMobileDetail] = useState(false);
+  const [mobileDetail, setMobileDetail] = useState(initialPostId != null);
   const [newsDiscussContext, setNewsDiscussContext] = useState<NewsItem | null>(null);
   const tradeFilters = ["All trades", "General", ...specialtyOptions];
   const primaryTrade = profile.specialties[0] ?? selectedJobTrade;
@@ -738,6 +744,8 @@ export function ShopTalkView({
           onClose={() => { setNewPostOpen(false); setNewsDiscussContext(null); }}
           onSubmit={(flair, title, trade, body, postType, subTrade, subLocation, subRate) => {
             onNewPost(flair, title, trade, body, postType, subTrade, subLocation, subRate);
+            // Persist to the server when the backend is reachable; degrade gracefully otherwise.
+            void createShopTalkPost({ title, body, trade, flair, postType });
             setNewPostOpen(false);
             setNewsDiscussContext(null);
           }}
@@ -822,6 +830,9 @@ export function ShopTalkView({
                           className={joined ? "community-join is-joined" : "community-join"}
                           aria-pressed={joined}
                           onClick={() => {
+                            const willJoin = !joinedCommunities.has(community.name);
+                            // Persist to the server when reachable; degrade to local-only otherwise.
+                            void setCommunityMembership(communitySlug(community.name), willJoin);
                             setJoinedCommunities((prev) => {
                               const next = new Set(prev);
                               if (next.has(community.name)) next.delete(community.name);

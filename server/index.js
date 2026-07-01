@@ -78,6 +78,7 @@ import { registerLegacyIntegrationRoutes } from "./legacy-integrations.js";
 import { captureException, errorMonitoringStatus } from "./monitoring.js";
 import { createNewsRouter } from "./news.js";
 import { registerShopTalkRoutes } from "./shop-talk.js";
+import { registerCommunityRoutes } from "./communities.js";
 import {
   buildCloseoutReport,
   completionResolutionSchema,
@@ -4478,6 +4479,14 @@ registerShopTalkRoutes({
   writeRateLimit,
   runIdempotentMutation,
   sendIdempotentResult,
+});
+
+registerCommunityRoutes({
+  app,
+  database,
+  requireV1AuthenticatedUser,
+  requireV1Actor,
+  writeRateLimit,
 });
 
 app.get("/api/readiness", requireAuthenticatedUser, async (_request, response, next) => {

@@ -12,6 +12,7 @@ import { brandConfig, type ThemeMode, type ThemePalette, type TrialPlan } from "
 import { ProfileShowcase } from "../features/profile/ProfileShowcase";
 import { ProgressBar, ThemeToggle, type AuthMethod } from "../features/auth/AuthScreens";
 import type { ThemeSource } from "./useAppTheme";
+import { useFocusTrap } from "./useFocusTrap";
 import type { Role, Trade } from "../types";
 import type { NavLabel } from "./routes";
 
@@ -79,9 +80,10 @@ export function ActivityPanel({
   onMarkAllRead: () => void;
   onNavigate: (view: NavLabel) => void;
 }) {
+  const trapRef = useFocusTrap<HTMLElement>(onClose);
   return (
-    <div className="panel-backdrop" onClick={(event) => { if (event.target === event.currentTarget) onClose(); }}>
-      <aside className="side-panel" role="dialog" aria-modal="true" aria-label="Notifications">
+    <div className="panel-backdrop rivt-v2" onClick={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+      <aside ref={trapRef} className="side-panel" role="dialog" aria-modal="true" aria-label="Notifications">
         <div className="side-panel-header">
           <div>
             <span>Recent activity</span>
@@ -168,9 +170,10 @@ export function AccountPanel({
   onClose: () => void;
   onNavigate: (view: NavLabel) => void;
 }) {
+  const trapRef = useFocusTrap<HTMLElement>(onClose);
   return (
-    <div className="panel-backdrop" onClick={(event) => { if (event.target === event.currentTarget) onClose(); }}>
-      <aside className="side-panel" role="dialog" aria-modal="true" aria-label="Settings">
+    <div className="panel-backdrop rivt-v2" onClick={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+      <aside ref={trapRef} className="side-panel" role="dialog" aria-modal="true" aria-label="Settings">
         <div className="side-panel-header">
           <div>
             <span>{role === "contractor" ? "Contractor account" : "Tradesperson account"}</span>
@@ -186,10 +189,10 @@ export function AccountPanel({
           trade={profile.specialties[0] ?? (role === "contractor" ? "Contractor" : "Tradesperson")}
           location={profile.location}
           verified={trustReady}
-          reviewCount={shoutOutCount}
+          shoutOutCount={shoutOutCount}
           safetyCertCount={safetyCertCount}
-          onMessage={() => onNavigate("Messages")}
-          onViewJobs={() => onNavigate("Marketplace")}
+          onEditProfile={() => onNavigate("Settings")}
+          onNavigate={onNavigate}
         />
 
         <section className="account-standing">

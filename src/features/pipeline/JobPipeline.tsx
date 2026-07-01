@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { ArrowLeft } from "lucide-react";
+import { useFocusTrap } from "../../app-shell/useFocusTrap";
 import "./job-pipeline.css";
 
 const STAGES = ["Lead", "Quoted", "Active", "Invoiced", "Paid"] as const;
@@ -92,8 +93,9 @@ export function JobPipeline({ onClose }: JobPipelineProps) {
     Paid: "stage-paid",
   };
 
+  const trapRef = useFocusTrap<HTMLDivElement>(onClose);
   return (
-    <div className="v2-pipeline-overlay" role="dialog" aria-modal="true" aria-label="Job Pipeline">
+    <div ref={trapRef} className="v2-pipeline-overlay" role="dialog" aria-modal="true" aria-label="Job Pipeline">
       <header className="v2-pipeline-header">
         <button
           type="button"

@@ -32,6 +32,7 @@
 } from "lucide-react";
 import { createPortal } from "react-dom";
 import { useState } from "react";
+import { useFocusTrap } from "../../app-shell/useFocusTrap";
 import { usePro } from "../pro/usePro";
 import { usePushNotifications } from "../notifications/usePushNotifications";
 import { UpgradeModal } from "../pro/UpgradeModal";
@@ -158,6 +159,7 @@ function QuizModal({
   const [confirmed, setConfirmed] = useState(false);
   const [answers, setAnswers] = useState<number[]>([]);
   const [result, setResult] = useState<SafetyQuizResult | null>(null);
+  const quizTrapRef = useFocusTrap<HTMLDivElement>(onClose);
 
   const question = quiz.questions[questionIndex];
   const isLast = questionIndex === quiz.questions.length - 1;
@@ -208,7 +210,7 @@ function QuizModal({
   if (!portalTarget) return null;
 
   return createPortal(
-    <div className="v2-quiz-overlay" role="dialog" aria-modal="true">
+    <div ref={quizTrapRef} className="v2-quiz-overlay" role="dialog" aria-modal="true">
       <div className="v2-quiz-modal">
         {result ? (
           <div className="v2-quiz-result">
@@ -780,6 +782,7 @@ interface OnboardingData {
 function OnboardingOverlay({ onComplete }: { onComplete: () => void }) {
   const [step, setStep] = useState(0);
   const [selectedTrade, setSelectedTrade] = useState<OnboardingTrade | null>(null);
+  const onboardingTrapRef = useFocusTrap<HTMLDivElement>(onComplete);
   const [hourlyRate, setHourlyRate] = useState("");
   const [city, setCity] = useState("");
 
@@ -815,7 +818,7 @@ function OnboardingOverlay({ onComplete }: { onComplete: () => void }) {
   if (!portalTarget) return null;
 
   return createPortal(
-    <div className="v2-onboarding-overlay" role="dialog" aria-modal="true" aria-label="Welcome to RIVT">
+    <div ref={onboardingTrapRef} className="v2-onboarding-overlay" role="dialog" aria-modal="true" aria-label="Welcome to RIVT">
       <div className="v2-onboarding-modal">
         <button
           type="button"
@@ -1210,6 +1213,7 @@ export function ProfileHub({
     safetyUpdates: false,
   });
   const [showPreview, setShowPreview] = useState(false);
+  const previewTrapRef = useFocusTrap<HTMLDivElement>(() => setShowPreview(false), showPreview);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [onboardingKey, setOnboardingKey] = useState(0);
   const portalTarget = getPortalTarget();
@@ -1912,7 +1916,7 @@ export function ProfileHub({
       </div>
 
       {showPreview && portalTarget && createPortal(
-        <div className="v2-profile-preview-backdrop" onClick={() => setShowPreview(false)} role="dialog" aria-modal="true" aria-label="Public profile preview">
+        <div ref={previewTrapRef} className="v2-profile-preview-backdrop" onClick={() => setShowPreview(false)} role="dialog" aria-modal="true" aria-label="Public profile preview">
           <div className="v2-profile-preview-card" onClick={(e) => e.stopPropagation()}>
             <header className="v2-profile-preview-header">
               <span>Public profile preview</span>

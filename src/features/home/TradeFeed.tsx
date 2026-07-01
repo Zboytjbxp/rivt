@@ -6,7 +6,7 @@ import {
   Hammer,
   MessageCircle,
   Plus,
-  SlidersHorizontal,
+  TrendingUp,
   Users,
   Wrench,
   Zap,
@@ -16,7 +16,15 @@ import { TradePostCard } from "../shop-talk/TradePostCard";
 import type { PrimaryDestination } from "../../app-shell/types";
 import "./trade-feed.css";
 
-type FeedTab = "for-you" | "following" | "nearby";
+const BOOKMARK_KEY = "rivt.shopTalkBookmarks.v1";
+const AVAIL_KEY = "rivt.availability.v1";
+type Availability = "available" | "limited" | "booked";
+const AVAIL_LABEL: Record<Availability, string> = {
+  available: "Available this week",
+  limited: "Limited availability",
+  booked: "Booked up",
+};
+const AVAIL_ORDER: Availability[] = ["available", "limited", "booked"];
 
 interface Community {
   name: string;
@@ -38,43 +46,112 @@ function netScore(post: CommunityPost) {
   return post.upvotes - post.downvotes;
 }
 
+function greeting() {
+  const h = new Date().getHours();
+  if (h < 12) return "Good morning";
+  if (h < 18) return "Good afternoon";
+  return "Good evening";
+}
+
+function readBookmarks(): Set<number> {
+  try { return new Set(JSON.parse(localStorage.getItem(BOOKMARK_KEY) ?? "[]") as number[]); }
+  catch { return new Set(); }
+}
+function readAvailability(): Availability {
+  try {
+    const v = localStorage.getItem(AVAIL_KEY);
+    if (v === "available" || v === "limited" || v === "booked") return v;
+  } catch { /* ignore */ }
+  return "available";
+}
+
 interface TradeFeedProps {
   posts: CommunityPost[];
+  name: string;
+  location: string;
+  primaryTrade: string;
   onOpenPost: (postId: number) => void;
   onAsk: () => void;
+  onPostWork: () => void;
+  onOpenCommunity: (name: string) => void;
   onNavigate: (destination: PrimaryDestination) => void;
 }
 
-export function TradeFeed({ posts, onOpenPost, onAsk, onNavigate }: TradeFeedProps) {
-  const [tab, setTab] = useState<FeedTab>("for-you");
-  const [saved, setSaved] = useState<Set<number>>(new Set());
+export function TradeFeed({ posts, name, location, primaryTrade, onOpenPost, onAsk, onPostWork, onOpenCommunity, onNavigate }: TradeFeedProps) {
+  const [saved, setSaved] = useState<Set<number>>(readBookmarks);
+  const [availability, setAvailability] = useState<Availability>(readAvailability);
 
-  const orderedPosts = useMemo(() => {
-    const list = [...posts];
-    if (tab === "for-you") list.sort((a, b) => netScore(b) - netScore(a));
-    return list;
-  }, [posts, tab]);
+  const trendingPosts = useMemo(
+    () => [...posts].sort((a, b) => netScore(b) - netScore(a)),
+    [posts],
+  );
+
+  // Questions in the user's trade that still need an answer — a real, personal nudge.
+  const tradeQuestions = useMemo(
+    () => posts.filter((p) => (p.trade === primaryTrade || p.trade === "General") && p.status !== "Verified Fix").length,
+    [posts, primaryTrade],
+  );
 
   function toggleSave(id: number) {
     setSaved((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
+      try { localStorage.setItem(BOOKMARK_KEY, JSON.stringify([...next])); } catch { /* ignore */ }
+      return next;
+    });
+  }
+
+  function cycleAvailability() {
+    setAvailability((prev) => {
+      const next = AVAIL_ORDER[(AVAIL_ORDER.indexOf(prev) + 1) % AVAIL_ORDER.length];
+      try { localStorage.setItem(AVAIL_KEY, next); } catch { /* ignore */ }
       return next;
     });
   }
 
   return (
     <div className="trade-feed">
+      {/* Personalized header */}
+      <header className="trade-feed-welcome">
+        <div className="trade-feed-welcome-text">
+          <h1>{greeting()}, {name}</h1>
+          {location && <span>{location}</span>}
+        </div>
+        <button
+          type="button"
+          className={`trade-feed-avail is-${availability}`}
+          onClick={cycleAvailability}
+          aria-label={`Availability: ${AVAIL_LABEL[availability]}. Tap to change.`}
+        >
+          <span className="trade-feed-avail-dot" />
+          {AVAIL_LABEL[availability]}
+        </button>
+      </header>
+
+      {/* Primary actions */}
       <div className="trade-feed-cta-row">
-        <button type="button" className="trade-feed-cta is-ask" onClick={onAsk}>
-          <MessageCircle size={18} /> Ask the trades
+        <button type="button" className="trade-feed-cta is-ask" onClick={onPostWork}>
+          <Plus size={18} /> Post work
         </button>
         <button type="button" className="trade-feed-cta is-crew" onClick={() => onNavigate("crew")}>
           <Users size={18} /> Find your crew
         </button>
       </div>
 
+      {/* Answer-queue nudge — deep link into the trades */}
+      {tradeQuestions > 0 && (
+        <button type="button" className="trade-feed-nudge" onClick={onAsk}>
+          <span className="trade-feed-nudge-icon"><MessageCircle size={18} /></span>
+          <span className="trade-feed-nudge-copy">
+            <b>{tradeQuestions} {primaryTrade} question{tradeQuestions === 1 ? "" : "s"} need a hand</b>
+            <small>Answer one to build your reputation</small>
+          </span>
+          <ChevronRight size={18} />
+        </button>
+      )}
+
+      {/* Communities */}
       <div className="trade-feed-communities">
         <div className="trade-feed-section-head">
           <h2>Communities</h2>
@@ -90,7 +167,7 @@ export function TradeFeed({ posts, onOpenPost, onAsk, onNavigate }: TradeFeedPro
                 key={c.name}
                 type="button"
                 className="trade-feed-community-card"
-                onClick={() => onNavigate("shop-talk")}
+                onClick={() => onOpenCommunity(c.name)}
               >
                 <span className="trade-feed-community-icon" style={{ background: c.tone }}>
                   <Icon size={22} strokeWidth={2.4} />
@@ -103,38 +180,46 @@ export function TradeFeed({ posts, onOpenPost, onAsk, onNavigate }: TradeFeedPro
         </div>
       </div>
 
-      <div className="trade-feed-tabs">
-        <div className="trade-feed-tab-group" role="tablist" aria-label="Feed filter">
-          <button type="button" role="tab" aria-selected={tab === "for-you"} className={tab === "for-you" ? "is-active" : ""} onClick={() => setTab("for-you")}>For you</button>
-          <button type="button" role="tab" aria-selected={tab === "following"} className={tab === "following" ? "is-active" : ""} onClick={() => setTab("following")}>Following</button>
-          <button type="button" role="tab" aria-selected={tab === "nearby"} className={tab === "nearby" ? "is-active" : ""} onClick={() => setTab("nearby")}>Nearby</button>
-        </div>
-        <button type="button" className="trade-feed-filter-btn" aria-label="Feed settings">
-          <SlidersHorizontal size={18} />
+      {/* Trending feed */}
+      <div className="trade-feed-section-head trade-feed-trending-head">
+        <h2><TrendingUp size={18} /> Trending in the trades</h2>
+        <button type="button" className="trade-feed-seeall" onClick={() => onNavigate("shop-talk")}>
+          See all
         </button>
       </div>
 
       <div className="trade-feed-list">
-        {orderedPosts.map((post) => (
-          <TradePostCard
-            key={post.id}
-            post={post}
-            saved={saved.has(post.id)}
-            onToggleSave={() => toggleSave(post.id)}
-            onOpen={() => onOpenPost(post.id)}
-          />
-        ))}
+        {trendingPosts.length === 0 ? (
+          <div className="trade-feed-empty">
+            <MessageCircle size={26} />
+            <b>No posts yet</b>
+            <span>Field answers from the trades will show up here.</span>
+            <button type="button" className="trade-feed-cta is-ask" onClick={onAsk}>Ask the trades</button>
+          </div>
+        ) : (
+          trendingPosts.map((post) => (
+            <TradePostCard
+              key={post.id}
+              post={post}
+              saved={saved.has(post.id)}
+              onToggleSave={() => toggleSave(post.id)}
+              onOpen={() => onOpenPost(post.id)}
+            />
+          ))
+        )}
       </div>
+
+      {trendingPosts.length > 0 && (
+        <div className="trade-feed-footer">
+          <button type="button" className="trade-feed-footer-link" onClick={() => onNavigate("shop-talk")}>
+            See all in Shop Talk <ChevronRight size={15} />
+          </button>
+        </div>
+      )}
 
       <button type="button" className="trade-feed-fab" onClick={onAsk}>
         <Plus size={20} /> Ask
       </button>
-
-      <div className="trade-feed-footer">
-        <button type="button" className="trade-feed-footer-link" onClick={() => onNavigate("shop-talk")}>
-          Browse all communities <ChevronRight size={15} />
-        </button>
-      </div>
     </div>
   );
 }

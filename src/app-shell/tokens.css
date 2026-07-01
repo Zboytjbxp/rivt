@@ -21,6 +21,10 @@
   --v2-danger-soft: #faeaea;
   --v2-info: #0066cc;
   --v2-info-soft: #e6f2ff;
+  --v2-teal: #008c80;
+  --v2-teal-text: #04756b;
+  --v2-teal-soft: #e0f2f0;
+  --v2-surface-soft: var(--v2-surface-muted);
   --v2-muted: var(--v2-text-muted);
   --v2-text-sm: 0.875rem;
   --v2-weight-body: 400;
@@ -63,6 +67,9 @@
   --v2-danger-soft: #3b2020;
   --v2-info: #4d9fff;
   --v2-info-soft: #0d2340;
+  --v2-teal: #3ab8ab;
+  --v2-teal-text: #4fc9bc;
+  --v2-teal-soft: #10312e;
   --v2-shadow-sm: 0 1px 1px rgba(0, 0, 0, 0.2), 0 16px 34px rgba(0, 0, 0, 0.22);
   --v2-shadow-md: 0 24px 58px rgba(0, 0, 0, 0.34);
   --v2-shadow-card: 0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 18px 42px rgba(0, 0, 0, 0.28);

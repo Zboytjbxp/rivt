@@ -95,31 +95,22 @@ test("rate card helper migrates legacy object data and reads array data", async 
   }
 });
 
-test("Home dashboard renders without crashing", async () => {
-  const { HomeDashboard } = await loadModule("/src/features/home/HomeDashboard.tsx");
+test("Home trade feed renders without crashing", async () => {
+  const { TradeFeed } = await loadModule("/src/features/home/TradeFeed.tsx");
 
   assertSmokeRender(
-    React.createElement(HomeDashboard, {
-      role: "contractor",
+    React.createElement(TradeFeed, {
+      posts: [],
       name: "RIVT Tester",
       location: "Jacksonville, FL",
-      activeJob: smokeJob,
-      upcomingJobs: [smokeJob],
-      applicationCount: 2,
-      unreadCount: 1,
-      pendingPaymentCount: 0,
-      communityCount: 3,
-      shoutOutCount: 1,
-      availabilityStatus: "available",
       primaryTrade: "Electrical",
-      newsCount: 4,
-      answerQueueCount: 1,
-      onPostJob: noop,
-      onOpenJob: noop,
+      onOpenPost: noop,
+      onAsk: noop,
+      onPostWork: noop,
+      onOpenCommunity: noop,
       onNavigate: noop,
-      onSetAvailability: asyncNoop,
     }),
-    /RIVT Daily/,
+    /Communities/,
   );
 });
 

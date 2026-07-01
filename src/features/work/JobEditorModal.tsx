@@ -1,5 +1,6 @@
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { ArrowLeft, ArrowRight, Check, MapPin, Save, Send, ShieldCheck, X } from "lucide-react";
+import { useFocusTrap } from "../../app-shell/useFocusTrap";
 import { tradeOptions } from "../../data";
 import type { Job } from "../../types";
 import {
@@ -112,7 +113,7 @@ export function JobEditorModal({ organizationId, job, defaultLocation, onClose, 
   const [applicationDeadline, setApplicationDeadline] = useState(job?.canonical?.applicationDeadline?.slice(0, 16) ?? "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-  const modalRef = useRef<HTMLDivElement>(null);
+  const modalRef = useFocusTrap<HTMLDivElement>(saving ? undefined : onClose);
 
   const canSaveBasics = title.trim().length >= 4 && city.trim().length >= 2 && region.trim().length >= 2;
   const canPublish = canSaveBasics

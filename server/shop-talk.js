@@ -99,6 +99,28 @@ async function loadShopTalkReactionSummary(client, accountId) {
   };
 }
 
+const shopTalkPostCreateSchema = z.object({
+  title: z.string().trim().min(1).max(160),
+  body: z.string().trim().max(4000).optional().default(""),
+  trade: z.string().trim().min(1).max(60),
+  flair: z.enum(["Question", "Discussion", "Code Talk", "Compliance", "Tip", "Humor"]).nullable().optional(),
+  postType: z.enum(["question", "sub-request", "safety", "general"]).optional().default("general"),
+});
+
+function mapShopTalkPostRow(row) {
+  return {
+    id: row.id,
+    author: row.author_name,
+    trade: row.trade,
+    flair: row.flair ?? undefined,
+    type: row.post_type,
+    title: row.title,
+    body: row.body,
+    status: row.status,
+    createdAt: row.created_at,
+  };
+}
+
 export function registerShopTalkRoutes({
   app,
   database,
@@ -108,6 +130,58 @@ export function registerShopTalkRoutes({
   runIdempotentMutation,
   sendIdempotentResult,
 }) {
+  app.get("/api/v1/shop-talk/posts", requireV1AuthenticatedUser, requireV1Actor, asyncRoute(async (request, response) => {
+    const result = await database.query(
+      `SELECT id, author_name, trade, flair, post_type, title, body, status, created_at
+       FROM shop_talk_posts
+       ORDER BY created_at DESC, id DESC
+       LIMIT 100`,
+    );
+    response.json({
+      data: { posts: result.rows.map(mapShopTalkPostRow) },
+      meta: { requestId: request.requestId },
+    });
+  }));
+
+  app.post("/api/v1/shop-talk/posts", requireV1AuthenticatedUser, requireV1Actor, writeRateLimit, asyncRoute(async (request, response) => {
+    const input = validate(shopTalkPostCreateSchema, request.body);
+    const result = await runIdempotentMutation(
+      request,
+      request.actor.account.id,
+      "shop-talk.post.create",
+      async (client) => {
+        const profile = await client.query(
+          "SELECT display_name FROM profiles WHERE account_id = $1",
+          [request.actor.account.id],
+        );
+        const authorName = (profile.rows[0]?.display_name || "").trim() || "RIVT member";
+        const inserted = await client.query(
+          `INSERT INTO shop_talk_posts (
+             author_account_id, author_name, trade, flair, post_type, title, body
+           ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+           RETURNING id, author_name, trade, flair, post_type, title, body, status, created_at`,
+          [
+            request.actor.account.id,
+            authorName,
+            input.trade,
+            input.flair ?? null,
+            input.postType,
+            input.title,
+            input.body,
+          ],
+        );
+        return {
+          status: 201,
+          body: {
+            data: { post: mapShopTalkPostRow(inserted.rows[0]) },
+            meta: { requestId: request.requestId },
+          },
+        };
+      },
+    );
+    sendIdempotentResult(response, result);
+  }));
+
   app.post("/api/v1/shop-talk/reactions/batch", requireV1AuthenticatedUser, requireV1Actor, asyncRoute(async (request, response) => {
     const input = validate(shopTalkReactionBatchSchema, request.body);
     const targets = normalizeShopTalkTargets(input.targets);

@@ -156,6 +156,16 @@ function App() {
   const [authNotice, setAuthNotice] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [shopTalkGlobalQuery, setShopTalkGlobalQuery] = useState("");
+  const [shopTalkPostId, setShopTalkPostId] = useState<number | null>(null);
+  const [shopTalkCompose, setShopTalkCompose] = useState(false);
+  // Consume one-shot Shop Talk intents (open a post / open the composer) once we leave the view.
+  useEffect(() => {
+    if (activeView === "Shop Talk") return;
+    /* eslint-disable react-hooks/set-state-in-effect */
+    setShopTalkCompose(false);
+    setShopTalkPostId(null);
+    /* eslint-enable react-hooks/set-state-in-effect */
+  }, [activeView]);
   const [trade, setTrade] = useState<TradeFilter>("All trades");
   const [difficulty, setDifficulty] =
     useState<DifficultyFilter>("Any difficulty");
@@ -1274,8 +1284,13 @@ function App() {
         {activeView === "Home" ? (
           <TradeFeed
             posts={communityPosts}
-            onOpenPost={() => handleNavigate(defaultViewForDestination("shop-talk"))}
-            onAsk={() => handleNavigate(defaultViewForDestination("shop-talk"))}
+            name={accountProfile.displayName || (isGuest ? "there" : "there")}
+            location={accountProfile.location}
+            primaryTrade={primaryProfileTrade}
+            onOpenPost={(postId) => { setShopTalkPostId(postId); setShopTalkCompose(false); setShopTalkGlobalQuery(""); handleNavigate(defaultViewForDestination("shop-talk")); }}
+            onAsk={() => { setShopTalkPostId(null); setShopTalkCompose(true); handleNavigate(defaultViewForDestination("shop-talk")); }}
+            onPostWork={openCreateJob}
+            onOpenCommunity={(name) => { setShopTalkPostId(null); setShopTalkCompose(false); setShopTalkGlobalQuery(name.replace(/ Talk$/, "")); handleNavigate(defaultViewForDestination("shop-talk")); }}
             onNavigate={(destination) => handleNavigate(defaultViewForDestination(destination))}
           />
         ) : activeView === "Marketplace" ? (
@@ -1308,11 +1323,13 @@ function App() {
           />
         ) : activeView === "Shop Talk" ? (
           <ShopTalkView
-            key={`shop-talk-${shopTalkGlobalQuery}`}
+            key={`shop-talk-${shopTalkGlobalQuery}-${shopTalkPostId ?? ""}-${shopTalkCompose ? "c" : ""}`}
             profile={accountProfile}
             communityPosts={communityPosts}
             newsItems={fallbackNewsItems}
             initialQuery={shopTalkGlobalQuery}
+            initialPostId={shopTalkPostId}
+            openComposer={shopTalkCompose}
             selectedJobTrade={selectedJob.trade}
             userLocation={accountProfile.location}
             getPostReactionState={getCommunityPostReactionState}

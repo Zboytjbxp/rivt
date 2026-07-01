@@ -36,6 +36,7 @@ import type { Job, JobId, Role } from "../../types";
 import { difficultyOptions, tradeOptions, workTypeOptions } from "../../data";
 import { EmptyState, StatusPill } from "../../components/ui";
 import { readPrimaryTradeFromRateCard } from "../../lib/rateCard";
+import { useFocusTrap } from "../../app-shell/useFocusTrap";
 import { usePersona } from "../persona/usePersona";
 import {
   acceptOffer,
@@ -1221,6 +1222,7 @@ export function WorkWorkspace({
   const [matchLoading, setMatchLoading] = useState(false);
   const [matchError, setMatchError] = useState<string | null>(null);
   const [reasonPrompt, setReasonPrompt] = useState<{ kind: "reschedule" | "cancel"; target: CanonicalActiveWork } | null>(null);
+  const reasonTrapRef = useFocusTrap<HTMLDivElement>(() => setReasonPrompt(null), reasonPrompt != null);
   const [reasonText, setReasonText] = useState("");
   const [matchApplications, setMatchApplications] = useState<CanonicalApplication[]>([]);
   const [matchOffers, setMatchOffers] = useState<CanonicalOffer[]>([]);
@@ -1497,7 +1499,7 @@ export function WorkWorkspace({
     <section className="v2-work-page" aria-label="Work">
       {reasonPrompt && (
         <div className="v2-reason-backdrop" onClick={() => setReasonPrompt(null)}>
-          <div className="v2-reason-dialog" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+          <div ref={reasonTrapRef} className="v2-reason-dialog" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
             <h3>{reasonPrompt.kind === "reschedule" ? "Request a reschedule" : "Cancel active work"}</h3>
             <p>{reasonPrompt.kind === "reschedule" ? "Let the other party know why the schedule needs to change." : "Explain the reason for cancellation. Both parties will see this."}</p>
             <textarea
