@@ -407,8 +407,8 @@ async function runMobileFlow(page) {
   await assertNoHorizontalOverflow(page, "Crew add member form");
 
   await page.getByRole("button", { name: "Shop Talk", exact: true }).click();
-  await page.getByRole("heading", { name: /Ask questions\. Find real answers\./i }).waitFor({ timeout: 15_000 });
-  await page.getByText("Find your crew", { exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByRole("button", { name: "Trade Talk" }).waitFor({ timeout: 15_000 });
+  await page.getByRole("button", { name: "Find your crew" }).waitFor({ timeout: 15_000 });
   await page.getByRole("button", { name: "Trade News" }).waitFor({ timeout: 15_000 });
   await page.getByRole("button", { name: "Trade News" }).click();
   await page.getByRole("heading", { name: /Code, safety, and permitting updates/i }).waitFor({ timeout: 15_000 });

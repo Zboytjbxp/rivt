@@ -78,7 +78,7 @@ export function InvoiceDraftTool({ activeJob }: { activeJob: Job | null }) {
     `Bill to: ${billTo || "Not entered"}`,
     `Pay to: ${payTo || "Not entered"}`,
     "",
-    ...lines.map((line) => `${line.description || "Line item"} - ${formatNumber(line.qty)} x ${currency(line.rate)} = ${currency(line.qty * line.rate)}`),
+    ...lines.map((line) => `${line.description || "Line item"} - ${formatNumber(line.qty)} x ${currency(line.rate)} = ${currency(numericValue(line.qty) * numericValue(line.rate))}`),
     "",
     `Subtotal: ${currency(subtotal)}`,
     `Tax: ${currency(tax)}`,
@@ -237,7 +237,7 @@ export function InvoiceDraftTool({ activeJob }: { activeJob: Job | null }) {
               <input aria-label="Line description" value={line.description} placeholder="Description" onChange={(event) => updateLine(line.id, "description", event.target.value)} />
               <input type="number" min="0" step="0.5" value={line.qty} aria-label={`${line.description || "Line"} quantity`} onChange={(event) => updateLine(line.id, "qty", Number(event.target.value) || 0)} />
               <input type="number" min="0" value={line.rate} aria-label={`${line.description || "Line"} rate`} onChange={(event) => updateLine(line.id, "rate", Number(event.target.value) || 0)} />
-              <strong>{currency(line.qty * line.rate)}</strong>
+              <strong>{currency(numericValue(line.qty) * numericValue(line.rate))}</strong>
               <button type="button" aria-label={`Remove ${line.description || "line item"}`} onClick={() => removeLine(line.id)}><Trash2 size={14} /></button>
             </div>
           ))}
@@ -298,7 +298,7 @@ export function InvoiceDraftTool({ activeJob }: { activeJob: Job | null }) {
                     <td>{line.description || "Line item"}</td>
                     <td>{formatNumber(line.qty)}</td>
                     <td>{currency(line.rate)}</td>
-                    <td>{currency(line.qty * line.rate)}</td>
+                    <td>{currency(numericValue(line.qty) * numericValue(line.rate))}</td>
                   </tr>
                 ))}
               </tbody>

@@ -10,6 +10,15 @@ Status values:
 
 Evidence must eventually link to implementation, automated tests, manual acceptance proof, and deployed build.
 
+## Traceability Addendum - 2026-07-01 Launch Rehearsal and Mobile Tool Polish
+
+- `GA-UX-003` gains rendered mobile evidence for the top-bar contract: the mobile Search icon is visible again while the full desktop search field stays hidden at phone widths, preserving Search/Messages/Notifications/Profile as top-bar actions.
+- `GA-UX-005` gains rendered Shop Talk / Trade News evidence: mobile Trade Talk and Trade News search bars remain usable instead of being hidden with the fieldbar; the smoke covers Trade Talk reactions, answer posting, Trade News filtering, real thumbnails, and original-source links.
+- `GA-UX-006` gains calculator-fit evidence: the Heavy 16th fullscreen calculator workbench fits the 390x844 mobile viewport without internal vertical overflow, and `npm run test:ui:tools` verifies the calculator, estimate, invoice, daily log, and records/photos tool paths.
+- `GA-OPS-007` gains launch-rehearsal evidence: `npm run build`, `npm run lint`, `npm run test`, `npm run test:e2e`, `npm run test:ui:shop-talk-news`, `npm run test:ui:tools`, `npm run test:ui:work-lifecycle`, `npm run test:ui:mobile-actions`, `npm audit --omit=dev`, `npm run incident:readiness -- --require-ready`, and `npm run launch:readiness -- --require-ready` passed.
+- `GA-OPS-008` gains current production rehearsal evidence: production monitoring and the Railway-backed live smokes for Gate A hardening, jobs, match acceptance, messaging, projects, reviews/admin safety, and server-owned Shop Talk reactions passed. Live Stripe Checkout and Customer Portal sessions were created for the authenticated test account without charging a card; real paid-checkout completion plus webhook entitlement confirmation remains required before collecting money from first users.
+- Pilot operations gain founder copy and first-week control evidence in `docs/launch/JACKSONVILLE_SOFT_LAUNCH_SCRIPT.md`.
+
 ## Traceability Addendum - 2026-06-29 Server-Owned Stripe Billing Entitlements
 
 - `GA-FND-004` and `GA-OPS-004` gain entitlement-safety evidence: Pro access now depends on server-owned billing rows updated from verified Stripe webhook events, not frontend-only payment-link state.

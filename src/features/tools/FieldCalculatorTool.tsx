@@ -145,7 +145,8 @@ export function FieldCalculatorTool({ activeJob, onBack }: { activeJob: Job | nu
   const lastCenter = spacingItems > 1 ? spacingRun - spacingEndReveal - spacingItemWidth / 2 : firstCenter;
   const miter = wallAngle / 2;
   const crownMiter = Math.atan(Math.sin((miter * Math.PI) / 180) / Math.tan((springAngle * Math.PI) / 180)) * (180 / Math.PI);
-  const crownBevel = Math.asin(Math.cos((springAngle * Math.PI) / 180) * Math.cos((miter * Math.PI) / 180)) * (180 / Math.PI);
+  const crownBevelInput = clamp(Math.cos((springAngle * Math.PI) / 180) * Math.cos((miter * Math.PI) / 180), -1, 1);
+  const crownBevel = Math.asin(crownBevelInput) * (180 / Math.PI);
   const hardwareCenterline = hardwareWidth / 2;
   const leftBore = hardwareStyle === "pull" ? hardwareCenterline - hardwareCenter / 2 : hardwareCenterline;
   const rightBore = hardwareStyle === "pull" ? hardwareCenterline + hardwareCenter / 2 : hardwareCenterline;

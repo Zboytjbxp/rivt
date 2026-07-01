@@ -5,7 +5,58 @@ const router = Router();
 const newsCache = new Map(); // key → { items, fetchedAt }
 const NEWS_TTL_MS = 30 * 60 * 1000;
 const NEWS_ARTICLE_IMAGE_LIMIT = 18;
+const NEWS_CACHE_MAX_ENTRIES = 48;
+const NEWS_LOCATION_MAX_LENGTH = 80;
 const _xmlParser = new XMLParser({ ignoreAttributes: false, ignoreDeclaration: true });
+
+function _normalizeNewsLocation(value) {
+  const location = String(value ?? "")
+    .trim()
+    .replace(/\s+/g, " ");
+
+  if (!location) return { ok: true, location: "", cacheKey: "national" };
+  if (location.length > NEWS_LOCATION_MAX_LENGTH) {
+    return {
+      ok: false,
+      status: 400,
+      error: `Location must be ${NEWS_LOCATION_MAX_LENGTH} characters or fewer.`,
+    };
+  }
+  if (!/^[\p{L}\p{N}\s.,'-]+$/u.test(location)) {
+    return {
+      ok: false,
+      status: 400,
+      error: "Location can only include letters, numbers, spaces, commas, periods, apostrophes, and hyphens.",
+    };
+  }
+
+  return {
+    ok: true,
+    location,
+    cacheKey: location.toLowerCase(),
+  };
+}
+
+function _pruneNewsCache(now = Date.now()) {
+  for (const [key, value] of newsCache) {
+    if (!value || now - value.fetchedAt >= NEWS_TTL_MS) {
+      newsCache.delete(key);
+    }
+  }
+
+  while (newsCache.size > NEWS_CACHE_MAX_ENTRIES) {
+    let oldestKey = null;
+    let oldestFetchedAt = Infinity;
+    for (const [key, value] of newsCache) {
+      if ((value?.fetchedAt ?? 0) < oldestFetchedAt) {
+        oldestFetchedAt = value.fetchedAt;
+        oldestKey = key;
+      }
+    }
+    if (!oldestKey) break;
+    newsCache.delete(oldestKey);
+  }
+}
 
 function _stripHtml(str) {
   return (str ?? "")
@@ -311,8 +362,13 @@ async function _fetchFeed(url, fallbackSource) {
 }
 
 router.get("/api/news", async (request, response) => {
-  const location = String(request.query.location ?? "").trim();
-  const cacheKey = location || "national";
+  const normalized = _normalizeNewsLocation(request.query.location);
+  if (!normalized.ok) {
+    return response.status(normalized.status).json({ ok: false, error: normalized.error });
+  }
+
+  _pruneNewsCache();
+  const { location, cacheKey } = normalized;
   const cached = newsCache.get(cacheKey);
   if (cached && Date.now() - cached.fetchedAt < NEWS_TTL_MS) {
     return response.json({ items: cached.items, cached: true });
@@ -363,8 +419,17 @@ router.get("/api/news", async (request, response) => {
     thumbnailKind: item.thumbnailKind ?? "fallback",
   }));
   newsCache.set(cacheKey, { items, fetchedAt: Date.now() });
+  _pruneNewsCache();
   response.json({ items });
 });
 export function createNewsRouter() {
   return router;
 }
+
+export const newsInternals = {
+  NEWS_CACHE_MAX_ENTRIES,
+  NEWS_LOCATION_MAX_LENGTH,
+  _normalizeNewsLocation,
+  _pruneNewsCache,
+  newsCache,
+};

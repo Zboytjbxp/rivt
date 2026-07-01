@@ -1,11 +1,82 @@
 # RIVT Build State
 
-Last updated: 2026-06-30 America/New_York
+Last updated: 2026-07-01 America/New_York
 Current gate: Gate A launch hardening
-Current phase: Packet 08 Gate A launch hardening: all machine gates are green; live Stripe subscription variables are present in Railway; physical accessibility-device evidence remains the launch-quality boundary.
+Current phase: Packet 08 Gate A launch hardening: machine gates and live workflow smokes are green; live Stripe Checkout/Portal session creation is verified; physical accessibility-device evidence and real paid-checkout webhook completion remain launch-quality boundaries.
 Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
 Production release commit: see live `/api/health` build metadata
+
+## Latest Packet 08 Pass - Launch Rehearsal, Mobile Search, Trade News, and Calculator Fit
+
+- Confirmed Railway production inventory:
+  - project `RIVT`, environment `production`, service `RIVT`, custom URL `https://rivt.pro`
+  - managed PostgreSQL online
+  - managed object storage buckets present (`rivt-private`, `RIVT-uploads`)
+- Re-ran production monitoring and live domain smokes from the Railway-backed environment:
+  - `npm run monitor:production` passed against the live site.
+  - `npm run smoke:gate-a:live` passed from Railway SSH with PostgreSQL/S3/Sentry healthy, migrations ready through `0014_billing_subscriptions`, seven anonymous private-route checks, no seed/demo findings, and operational controls off.
+  - `npm run smoke:jobs:live`, `npm run smoke:match:live`, `npm run smoke:messaging:live`, `npm run smoke:projects:live`, `npm run smoke:reviews:live`, and `npm run smoke:shop-talk-reactions:live` all passed from Railway SSH.
+- Verified live Stripe billing setup without charging a card:
+  - authenticated `/api/v1/billing/status` returned provider configured for the shared test account.
+  - authenticated `/api/v1/billing/checkout` created a live-mode Stripe Checkout Session.
+  - authenticated `/api/v1/billing/portal` created a live-mode Stripe Customer Portal Session.
+  - remaining billing boundary: complete one real checkout and confirm the Stripe webhook flips the server-owned entitlement before charging first users.
+- Fixed launch-readiness UI gaps found during rendered QA:
+  - restored the mobile top-bar Search icon by showing the icon trigger and hiding only the full desktop search field on phone widths.
+  - restored compact mobile Trade Talk / Trade News search bars instead of hiding the whole fieldbar.
+  - fixed the Heavy 16th mobile calculator fullscreen workbench so the calculator no longer internally overflows on a 390px phone viewport.
+  - updated rendered smoke scripts to assert the current `Trade Talk` IA rather than retired copy.
+- Added founder-facing Jacksonville soft-launch copy and first-week operating script at `docs/launch/JACKSONVILLE_SOFT_LAUNCH_SCRIPT.md`.
+- Local machine gates run on 2026-07-01:
+  - `npm run build` (pass)
+  - `npm run lint` (pass)
+  - `npm run test` (pass)
+  - `npm run test:e2e` (pass)
+  - `npm run test:ui:shop-talk-news` (pass)
+  - `npm run test:ui:tools` (pass)
+  - `npm run test:ui:work-lifecycle` (pass)
+  - `npm run test:ui:mobile-actions` (pass after one transient upstream 502 rerun)
+  - `npm audit --omit=dev` (pass; 0 vulnerabilities)
+  - `npm run incident:readiness -- --require-ready` (pass)
+  - `npm run launch:readiness -- --require-ready` (pass)
+- Remaining launch-quality boundary: physical accessibility-device evidence (iOS Safari, Android Chrome, desktop keyboard-only, and screen-reader route checks) plus the real Stripe paid-checkout/webhook entitlement proof.
+
+## Latest Packet 08 Pass - Security, Billing, and Rate Card Hardening
+
+- Hardened Trade News server behavior:
+  - `/api/news` now validates and normalizes the optional location query before use.
+  - the in-memory news cache is capped and pruned so arbitrary location strings cannot grow it without bound.
+  - anonymous news requests now have a durable rate limiter scoped only to `/api/news`.
+- Hardened invoice-send provider paths:
+  - email and SMS invoice recipients are validated and normalized before provider calls.
+  - invoice subject/body are length-bounded.
+  - repeated sends are throttled per account, channel, and recipient to reduce abuse risk.
+- Updated Stripe subscription period handling for current API payloads by reading `current_period_end` from subscription items when the top-level field is not present.
+- Added a canonical shared rate-card helper at `src/lib/rateCard.ts` and migrated Home, Work, Profile, Job Detail, Reports, and Tools reads away from the old ad hoc localStorage object shape.
+- Tightened UI/a11y details found during the pass:
+  - added accessible accent-text tokens for light/dark themes.
+  - improved small orange text contrast across search, setup, inbox, reports, and Shop Talk surfaces.
+  - increased compact tool buttons/bookmark targets toward 44px touch sizing.
+  - added fade affordances to mobile horizontal chip rows.
+  - guarded the crown calculator trig input against floating-point domain overflow.
+  - normalized invoice line-total math through numeric parsing.
+- Added coverage:
+  - news query validation/cache pruning.
+  - invoice send validation/throttling.
+  - Stripe item-level subscription period-end mapping.
+  - legacy rate-card migration and canonical array reads.
+- Local machine gates run on 2026-06-30:
+  - `npm run build` (pass)
+  - `npm run lint` (pass)
+  - `npm run test` (pass)
+  - `npm run test:e2e` (pass)
+  - `npm audit --omit=dev` (pass; 0 vulnerabilities)
+  - `git diff --check` (pass; line-ending warnings only)
+- Production deployment completed through Railway from `master`:
+  - pushed hardening commit `7f2d288f432314563e57bc5d7e57092a81d7ba5e`
+  - live `/api/health` reported the same build commit with PostgreSQL and S3-compatible object storage healthy
+  - `EXPECTED_SOURCE_COMMIT=7f2d288f432314563e57bc5d7e57092a81d7ba5e npm run monitor:production` passed with configured Sentry, operational controls off, seven anonymous private-route checks, and 589 ms duration
 
 ## Latest Packet 08 Pass - Orange Trade Talk Visual System and Mobile Home Simplification
 

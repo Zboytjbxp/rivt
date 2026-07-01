@@ -44,6 +44,11 @@ import type { ThemeSource } from "../../app-shell/useAppTheme";
 import { tradeOptions } from "../../data";
 import type { Role, Trade } from "../../types";
 import { Avatar, MetricTile, PageHeader } from "../../components/ui";
+import {
+  persistRateCardEntries,
+  readRateCardEntries,
+  type RateCardEntry,
+} from "../../lib/rateCard";
 import { safetyQuizData, type SafetyQuiz, type SafetyQuizResult } from "./training-data";
 import "./profile-hub.css";
 
@@ -400,30 +405,6 @@ function computeStorageStatus(storageUsage: {
 
 // ── Rate Card ─────────────────────────────────────────────────────────────────
 
-const rateCardKey = "rivt.rateCard.v1";
-
-interface RateCardEntry {
-  id: string;
-  trade: string;
-  hourlyRate: number;
-  dayRate: number;
-  minimumCharge: number;
-  notes: string;
-}
-
-function readRateCard(): RateCardEntry[] {
-  try {
-    const stored = localStorage.getItem(rateCardKey);
-    if (!stored) return [];
-    const parsed = JSON.parse(stored) as RateCardEntry[];
-    return Array.isArray(parsed) ? parsed.slice(0, 12) : [];
-  } catch { return []; }
-}
-
-function persistRateCard(entries: RateCardEntry[]) {
-  try { localStorage.setItem(rateCardKey, JSON.stringify(entries.slice(0, 12))); } catch { /* noop */ }
-}
-
 // ── Cert & License Tracker ────────────────────────────────────────────────────
 
 const certKey = "rivt.certs.v1";
@@ -546,7 +527,7 @@ function CertTrackerSection() {
 }
 
 function RateCardSection() {
-  const [rates, setRates] = useState<RateCardEntry[]>(readRateCard);
+  const [rates, setRates] = useState<RateCardEntry[]>(readRateCardEntries);
   const [trade, setTrade] = useState("");
   const [hourly, setHourly] = useState("");
   const [day, setDay] = useState("");
@@ -563,10 +544,11 @@ function RateCardSection() {
       dayRate: parseFloat(day) || 0,
       minimumCharge: parseFloat(minimum) || 0,
       notes: notes.trim(),
+      updatedAt: new Date().toISOString(),
     };
     const next = [entry, ...rates.filter((r) => r.trade.toLowerCase() !== trade.trim().toLowerCase())];
     setRates(next);
-    persistRateCard(next);
+    persistRateCardEntries(next);
     setTrade("");
     setHourly("");
     setDay("");
@@ -579,7 +561,7 @@ function RateCardSection() {
   function deleteRate(id: string) {
     const next = rates.filter((r) => r.id !== id);
     setRates(next);
-    persistRateCard(next);
+    persistRateCardEntries(next);
   }
 
   function fmt(n: number) {
@@ -636,7 +618,7 @@ function ProfileCompletionCard({ profile }: { profile: AccountProfile }) {
     { label: "Location", done: Boolean(profile.location?.trim()) },
     { label: "Bio", done: (() => { try { const c = JSON.parse(localStorage.getItem("rivt.canonicalProfile.v1") ?? "null"); return Boolean(c?.bio?.trim()); } catch { return false; } })() },
     { label: "Trade specialty", done: Boolean(profile.specialties?.length > 0) },
-    { label: "Rate card", done: (() => { try { const r = JSON.parse(localStorage.getItem("rivt.rateCard.v1") ?? "null"); return Array.isArray(r) && r.length > 0; } catch { return false; } })() },
+    { label: "Rate card", done: readRateCardEntries().length > 0 },
     { label: "Safety cert", done: (() => { try { const c = JSON.parse(localStorage.getItem("rivt.certs.v1") ?? "[]"); return Array.isArray(c) && c.length > 0; } catch { return false; } })() },
   ];
   const score = Math.round((checks.filter((c) => c.done).length / checks.length) * 100);
@@ -819,10 +801,11 @@ function OnboardingOverlay({ onComplete }: { onComplete: () => void }) {
         dayRate: 0,
         minimumCharge: 0,
         notes: city ? `Based in ${city}` : "",
+        updatedAt: new Date().toISOString(),
       };
       try {
-        const existing = JSON.parse(localStorage.getItem("rivt.rateCard.v1") ?? "[]") as unknown[];
-        localStorage.setItem("rivt.rateCard.v1", JSON.stringify([entry, ...existing].slice(0, 12)));
+        const existing = readRateCardEntries();
+        persistRateCardEntries([entry, ...existing].slice(0, 12));
       } catch { /* noop */ }
     }
     onComplete();

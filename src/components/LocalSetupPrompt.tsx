@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Zap } from "lucide-react";
+import { persistRateCardEntries } from "../lib/rateCard";
 import "./LocalSetupPrompt.css";
 
 const TRADES = [
@@ -39,7 +40,15 @@ export function LocalSetupPrompt({ onDone }: LocalSetupPromptProps) {
       const profile = existing ? (JSON.parse(existing) as Record<string, unknown>) : {};
       const updated = { ...profile, displayName, primaryTrade };
       window.localStorage.setItem("rivt.profile.v1", JSON.stringify(updated));
-      window.localStorage.setItem("rivt.rateCard.v1", JSON.stringify({ hourlyRate }));
+      persistRateCardEntries([{
+        id: "standard",
+        trade: primaryTrade || "Standard",
+        hourlyRate,
+        dayRate: 0,
+        minimumCharge: 0,
+        notes: "",
+        updatedAt: new Date().toISOString(),
+      }]);
     } catch {
       // localStorage may be unavailable; proceed anyway.
     }

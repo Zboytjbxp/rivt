@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { ArrowLeft, ChevronDown, ChevronUp } from "lucide-react";
+import { readPrimaryHourlyRate } from "../../lib/rateCard";
 import "./job-detail-hub.css";
 
 interface StoredJob {
@@ -58,10 +59,6 @@ interface MaterialItem {
   unit: string;
   unitCost: number;
   markup: number;
-}
-
-interface RateCard {
-  hourlyRate: number;
 }
 
 interface JobDetailHubProps {
@@ -212,7 +209,7 @@ export function JobDetailHub({ jobId, onClose }: JobDetailHubProps) {
   const [photos, setPhotos] = useState<PhotoEntry[]>([]);
   const [client, setClient] = useState<Client | null>(null);
   const [materials, setMaterials] = useState<MaterialItem[]>([]);
-  const [rate, setRate] = useState<RateCard>({ hourlyRate: 75 });
+  const [rate, setRate] = useState<{ hourlyRate: number }>({ hourlyRate: 75 });
 
   useEffect(() => {
     try {
@@ -256,10 +253,7 @@ export function JobDetailHub({ jobId, onClose }: JobDetailHubProps) {
         Array.isArray(materialsStore[jobId]) ? materialsStore[jobId] : []
       );
 
-      const storedRate: RateCard = JSON.parse(
-        localStorage.getItem("rivt.rateCard.v1") || '{"hourlyRate":75}'
-      );
-      setRate({ hourlyRate: storedRate?.hourlyRate ?? 75 });
+      setRate({ hourlyRate: readPrimaryHourlyRate(75) });
     } catch {
       // silently handle parse errors
     }

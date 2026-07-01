@@ -35,6 +35,7 @@ import {
 import type { Job, JobId, Role } from "../../types";
 import { difficultyOptions, tradeOptions, workTypeOptions } from "../../data";
 import { EmptyState, StatusPill } from "../../components/ui";
+import { readPrimaryTradeFromRateCard } from "../../lib/rateCard";
 import { usePersona } from "../persona/usePersona";
 import {
   acceptOffer,
@@ -1052,15 +1053,14 @@ function JobTemplates({ onPostJob }: { onPostJob: () => void }) {
 
 function getProfileFromStorage(): { primaryTrade: string; userLocation: string } {
   try {
-    const stored = localStorage.getItem("rivt.rateCard.v1");
-    if (!stored) return { primaryTrade: "", userLocation: "" };
-    const parsed = JSON.parse(stored) as { primaryTrade?: string; location?: string };
+    const stored = localStorage.getItem("rivt.profile.v1");
+    const parsed = stored ? JSON.parse(stored) as { primaryTrade?: string; location?: string } : {};
     return {
-      primaryTrade: typeof parsed.primaryTrade === "string" ? parsed.primaryTrade : "",
+      primaryTrade: typeof parsed.primaryTrade === "string" ? parsed.primaryTrade : readPrimaryTradeFromRateCard(),
       userLocation: typeof parsed.location === "string" ? parsed.location : "",
     };
   } catch {
-    return { primaryTrade: "", userLocation: "" };
+    return { primaryTrade: readPrimaryTradeFromRateCard(), userLocation: "" };
   }
 }
 

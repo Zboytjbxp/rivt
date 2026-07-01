@@ -83,7 +83,7 @@
   padding: 0 10px;
   border: 0;
   background: transparent;
-  color: var(--v2-accent);
+  color: var(--v2-accent-text);
   font: inherit;
   font-size: 12px;
   font-weight: var(--v2-weight-strong);
@@ -376,7 +376,7 @@
   place-items: center;
   border-radius: var(--v2-radius-md);
   background: var(--v2-accent-soft);
-  color: var(--v2-accent);
+  color: var(--v2-accent-text);
 }
 
 .v2-inbox-sent article {
@@ -444,7 +444,7 @@
 .v2-archived-toggle.active {
   border-color: var(--v2-accent);
   background: color-mix(in srgb, var(--v2-accent-soft) 70%, transparent);
-  color: var(--v2-accent);
+  color: var(--v2-accent-text);
 }
 
 /* ─── Feature 2: Section dividers (Pinned / All messages) ───────────────── */
@@ -509,11 +509,11 @@
 }
 
 .v2-conv-pin-btn.is-pinned {
-  color: var(--v2-accent);
+  color: var(--v2-accent-text);
 }
 
 .v2-conv-archive-btn.is-archived {
-  color: var(--v2-accent);
+  color: var(--v2-accent-text);
 }
 
 /* ─── Feature 2: Pinned conversation highlight ──────────────────────────── */
@@ -584,7 +584,7 @@
 
 .v2-msg-template-chip > button:first-child:hover {
   background: color-mix(in srgb, var(--v2-accent-soft) 50%, transparent);
-  color: var(--v2-accent);
+  color: var(--v2-accent-text);
 }
 
 .v2-msg-template-chip-delete {

@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { legacyIntegrationInternals } from "../server/legacy-integrations.js";
+import { newsInternals } from "../server/news.js";
 import {
   createDurableRateLimiter,
   createOriginGuard,
@@ -125,4 +127,63 @@ test("authenticated-user middleware attaches verified actor", async () => {
   await middleware(request, responseDouble(), () => { called = true; });
   assert.equal(called, true);
   assert.equal(request.authUser, user);
+});
+
+test("news query validation and cache pruning bound anonymous amplification", () => {
+  const normalized = newsInternals._normalizeNewsLocation("  Jacksonville,   FL  ");
+  assert.equal(normalized.ok, true);
+  assert.equal(normalized.cacheKey, "jacksonville, fl");
+
+  assert.equal(newsInternals._normalizeNewsLocation("x".repeat(newsInternals.NEWS_LOCATION_MAX_LENGTH + 1)).ok, false);
+  assert.equal(newsInternals._normalizeNewsLocation("Jacksonville<script>").ok, false);
+
+  newsInternals.newsCache.clear();
+  const now = Date.now();
+  for (let i = 0; i < newsInternals.NEWS_CACHE_MAX_ENTRIES + 7; i += 1) {
+    newsInternals.newsCache.set(`location-${i}`, { items: [], fetchedAt: now + i });
+  }
+  newsInternals._pruneNewsCache(now + 10);
+  assert.equal(newsInternals.newsCache.size, newsInternals.NEWS_CACHE_MAX_ENTRIES);
+  assert.equal(newsInternals.newsCache.has("location-0"), false);
+  newsInternals.newsCache.clear();
+});
+
+test("invoice send validation rejects bad recipients and throttles repeated sends", () => {
+  const normalizePhoneNumber = (value) => String(value ?? "").replace(/[^\d+]/g, "");
+  const base = {
+    appName: "RIVT",
+    channel: "email",
+    recipient: "customer@example.com",
+    subject: "Invoice",
+    text: "Please see attached invoice.",
+    normalizePhoneNumber,
+  };
+
+  assert.equal(legacyIntegrationInternals.validateInvoiceSendPayload(base).ok, true);
+  assert.equal(legacyIntegrationInternals.validateInvoiceSendPayload({ ...base, recipient: "bad" }).ok, false);
+  assert.equal(legacyIntegrationInternals.validateInvoiceSendPayload({ ...base, subject: "x".repeat(121) }).ok, false);
+  assert.equal(legacyIntegrationInternals.validateInvoiceSendPayload({ ...base, text: "x".repeat(4001) }).ok, false);
+  assert.equal(legacyIntegrationInternals.validateInvoiceSendPayload({
+    ...base,
+    channel: "sms",
+    recipient: "(904) 555-0199",
+  }).ok, true);
+
+  legacyIntegrationInternals.invoiceSendWindows.clear();
+  const now = Date.now();
+  for (let i = 0; i < legacyIntegrationInternals.INVOICE_SEND_MAX_PER_RECIPIENT; i += 1) {
+    assert.equal(legacyIntegrationInternals.recordInvoiceRecipientSend({
+      accountId: "acct-1",
+      channel: "email",
+      recipient: "customer@example.com",
+      now,
+    }).ok, true);
+  }
+  assert.equal(legacyIntegrationInternals.recordInvoiceRecipientSend({
+    accountId: "acct-1",
+    channel: "email",
+    recipient: "customer@example.com",
+    now,
+  }).ok, false);
+  legacyIntegrationInternals.invoiceSendWindows.clear();
 });

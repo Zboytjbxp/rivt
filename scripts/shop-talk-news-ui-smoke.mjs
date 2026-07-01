@@ -286,8 +286,8 @@ try {
     await configurePage(page);
 
     await page.goto(`${baseUrl}/app/network/talk`, { waitUntil: "networkidle" });
-    await page.getByRole("heading", { name: /Ask questions\. Find real answers\./i }).waitFor({ timeout: 15_000 });
-    await page.getByText("Find your crew", { exact: true }).waitFor({ timeout: 15_000 });
+    await page.getByRole("button", { name: "Trade Talk" }).waitFor({ timeout: 15_000 });
+    await page.getByRole("button", { name: "Find your crew" }).waitFor({ timeout: 15_000 });
     await page.getByText("Trade groups near the work", { exact: true }).waitFor({ timeout: 15_000 });
     await page.getByText("Best way to scribe cabinets to stone?", { exact: true }).waitFor({ timeout: 15_000 });
     await page.getByText(/What.*charging for punch-out work/i).waitFor({ timeout: 15_000 });

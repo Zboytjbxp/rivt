@@ -643,6 +643,14 @@ const baseUploadRateLimit = createDurableRateLimiter({
   namespace: "upload",
 });
 
+const baseNewsRateLimit = createDurableRateLimiter({
+  database,
+  databaseAvailable: () => Boolean(database),
+  windowMs: 60 * 1000,
+  max: Number(process.env.NEWS_RATE_LIMIT ?? 30),
+  namespace: "news",
+});
+
 function allowsPendingOnboardingMutation(request) {
   const path = String(request.path ?? request.originalUrl ?? "").split("?", 1)[0];
   return request.method === "POST" && path === "/api/v1/onboarding/complete";
@@ -898,6 +906,7 @@ async function resolveGoogleAccount(identity) {
 
 // ── Trade News Aggregator ────────────────────────────────────────────────────
 
+app.use("/api/news", baseNewsRateLimit);
 app.use(createNewsRouter());
 
 app.get("/api/health", (_request, response) => {
