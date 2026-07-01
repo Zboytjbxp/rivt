@@ -12,6 +12,7 @@
 - RIVT is trades-only; do not add homeowner users or homeowner lead flows.
 - Preserve unrelated and pre-existing working-tree changes.
 - Work on one Gate A packet at a time and stop at its acceptance boundary.
+- For Codex/Claude branch ownership, handoffs, authorship, and deploy rules, follow `docs/operations/AI_COLLABORATION_WORKFLOW.md`.
 - Never present seed/demo data, fake success, local auth fallback, or frontend-only state as production-ready.
 - Authorization is server-side; hidden controls are not authorization.
 - Do not create or migrate production data without a reviewed migration and rollback.

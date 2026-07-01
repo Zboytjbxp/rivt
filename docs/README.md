@@ -10,6 +10,6 @@ Start here for implementation:
 6. `delivery/BUILD_STATE.md` — current exact handoff.
 7. `delivery/packets/README.md` — ordered session-sized implementation prompts.
 8. `quality/ACCEPTANCE.md` — evidence required for release.
-9. `delivery/RISKS.md`, `delivery/DEFERRED.md`, and `operations/RUNBOOKS.md`.
+9. `delivery/RISKS.md`, `delivery/DEFERRED.md`, `operations/RUNBOOKS.md`, and `operations/AI_COLLABORATION_WORKFLOW.md`.
 
 Current next action: `delivery/packets/02_AUTH_ONBOARDING_PROFILES.md`.
