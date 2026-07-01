@@ -156,6 +156,7 @@ function App() {
   const [authNotice, setAuthNotice] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [shopTalkGlobalQuery, setShopTalkGlobalQuery] = useState("");
+  const [shopTalkPostId, setShopTalkPostId] = useState<number | null>(null);
   const [trade, setTrade] = useState<TradeFilter>("All trades");
   const [difficulty, setDifficulty] =
     useState<DifficultyFilter>("Any difficulty");
@@ -1277,9 +1278,10 @@ function App() {
             name={accountProfile.displayName || (isGuest ? "there" : "there")}
             location={accountProfile.location}
             primaryTrade={primaryProfileTrade}
-            onOpenPost={() => handleNavigate(defaultViewForDestination("shop-talk"))}
-            onAsk={() => handleNavigate(defaultViewForDestination("shop-talk"))}
+            onOpenPost={(postId) => { setShopTalkPostId(postId); setShopTalkGlobalQuery(""); handleNavigate(defaultViewForDestination("shop-talk")); }}
+            onAsk={() => { setShopTalkPostId(null); handleNavigate(defaultViewForDestination("shop-talk")); }}
             onPostWork={openCreateJob}
+            onOpenCommunity={(name) => { setShopTalkPostId(null); setShopTalkGlobalQuery(name.replace(/ Talk$/, "")); handleNavigate(defaultViewForDestination("shop-talk")); }}
             onNavigate={(destination) => handleNavigate(defaultViewForDestination(destination))}
           />
         ) : activeView === "Marketplace" ? (
@@ -1312,11 +1314,12 @@ function App() {
           />
         ) : activeView === "Shop Talk" ? (
           <ShopTalkView
-            key={`shop-talk-${shopTalkGlobalQuery}`}
+            key={`shop-talk-${shopTalkGlobalQuery}-${shopTalkPostId ?? ""}`}
             profile={accountProfile}
             communityPosts={communityPosts}
             newsItems={fallbackNewsItems}
             initialQuery={shopTalkGlobalQuery}
+            initialPostId={shopTalkPostId}
             selectedJobTrade={selectedJob.trade}
             userLocation={accountProfile.location}
             getPostReactionState={getCommunityPostReactionState}

@@ -378,6 +378,7 @@ export function ShopTalkView({
   communityPosts,
   newsItems,
   initialQuery,
+  initialPostId,
   selectedJobTrade,
   userLocation,
   getPostReactionState,
@@ -395,6 +396,7 @@ export function ShopTalkView({
   communityPosts: CommunityPost[];
   newsItems: NewsItem[];
   initialQuery: string;
+  initialPostId?: number | null;
   selectedJobTrade: Trade | "General";
   userLocation: string;
   getPostReactionState: (post: CommunityPost) => CommunityReactionState;
@@ -413,7 +415,7 @@ export function ShopTalkView({
   const [sortMode, setSortMode] = useState<"hot" | "new" | "unanswered">("hot");
   const [tradeFilter, setTradeFilter] = useState("All trades");
   const [answerQueueOnly, setAnswerQueueOnly] = useState(false);
-  const [selectedPostId, setSelectedPostId] = useState(communityPosts[0]?.id ?? 0);
+  const [selectedPostId, setSelectedPostId] = useState(initialPostId ?? communityPosts[0]?.id ?? 0);
   const [answerDraft, setAnswerDraft] = useState("");
   const [rulesOpen, setRulesOpen] = useState(false);
   const [newPostOpen, setNewPostOpen] = useState(false);
@@ -448,7 +450,7 @@ export function ShopTalkView({
   const replyAuthorName = profile.displayName || "Anonymous";
   const displayNews = liveNews.length ? liveNews : newsItems;
   const [selectedNewsId, setSelectedNewsId] = useState(displayNews[0]?.id ?? 0);
-  const [mobileDetail, setMobileDetail] = useState(false);
+  const [mobileDetail, setMobileDetail] = useState(initialPostId != null);
   const [newsDiscussContext, setNewsDiscussContext] = useState<NewsItem | null>(null);
   const tradeFilters = ["All trades", "General", ...specialtyOptions];
   const primaryTrade = profile.specialties[0] ?? selectedJobTrade;

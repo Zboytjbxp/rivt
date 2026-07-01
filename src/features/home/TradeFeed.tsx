@@ -73,10 +73,11 @@ interface TradeFeedProps {
   onOpenPost: (postId: number) => void;
   onAsk: () => void;
   onPostWork: () => void;
+  onOpenCommunity: (name: string) => void;
   onNavigate: (destination: PrimaryDestination) => void;
 }
 
-export function TradeFeed({ posts, name, location, primaryTrade, onOpenPost, onAsk, onPostWork, onNavigate }: TradeFeedProps) {
+export function TradeFeed({ posts, name, location, primaryTrade, onOpenPost, onAsk, onPostWork, onOpenCommunity, onNavigate }: TradeFeedProps) {
   const [saved, setSaved] = useState<Set<number>>(readBookmarks);
   const [availability, setAvailability] = useState<Availability>(readAvailability);
 
@@ -166,7 +167,7 @@ export function TradeFeed({ posts, name, location, primaryTrade, onOpenPost, onA
                 key={c.name}
                 type="button"
                 className="trade-feed-community-card"
-                onClick={() => onNavigate("shop-talk")}
+                onClick={() => onOpenCommunity(c.name)}
               >
                 <span className="trade-feed-community-icon" style={{ background: c.tone }}>
                   <Icon size={22} strokeWidth={2.4} />
