@@ -2085,6 +2085,7 @@
 .trade-talk-layout .shop-talk-sidebar {
   position: relative;
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 12px;
   border: 0;
   background: var(--trade-page);
@@ -2273,6 +2274,7 @@
 
 .trade-talk-layout .shop-post-list {
   gap: 9px;
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .trade-talk-layout .shop-post-card {
@@ -2483,4 +2485,109 @@
   .shop-news-list .news-card-thumb.is-source-tile span {
     font-size: 14px;
   }
+}
+
+/* ── Communities board (reference redesign) ──────────────── */
+.community-board {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 16px;
+  border: 1px solid var(--v2-border, #e5e2dd);
+  background: var(--v2-surface, #fff);
+}
+
+.community-board-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.community-board-head strong {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--v2-text, #17130f);
+}
+
+.community-board-head span {
+  font-size: 13px;
+  color: var(--v2-text-muted, #5f6668);
+}
+
+.community-board-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.community-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--v2-border, #eee7dd);
+}
+.community-row:last-child { border-bottom: none; }
+
+.community-row-main {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  padding: 0;
+}
+
+.community-row-icon {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  color: #fff;
+  flex: 0 0 auto;
+}
+
+.community-row-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.community-row-copy b {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--v2-text, #17130f);
+}
+
+.community-row-copy small {
+  font-size: 12.5px;
+  color: var(--v2-text-muted, #5f6668);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.community-join {
+  flex: 0 0 auto;
+  min-height: 34px;
+  padding: 0 18px;
+  border-radius: 999px;
+  border: 1.5px solid #ff4b00;
+  background: #ff4b00;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.community-join.is-joined {
+  background: transparent;
+  color: var(--v2-text-muted, #5f6668);
+  border-color: var(--v2-border, #d8d3cb);
 }

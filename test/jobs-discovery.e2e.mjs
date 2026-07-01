@@ -337,7 +337,7 @@ async function assertTopBarActions(page) {
   await page.getByRole("button", { name: /Open profile menu for/i }).last().click();
   await page.getByRole("dialog", { name: "Settings" }).waitFor();
   await page.getByRole("button", { name: "Sign out" }).waitFor();
-  await page.getByRole("button", { name: "Close account" }).click();
+  await page.getByRole("button", { name: "Close profile" }).click();
 
   await page.getByRole("button", { name: "Messages" }).click();
   await page.getByRole("heading", { name: "Inbox", exact: true }).waitFor();
@@ -360,8 +360,8 @@ try {
     });
     await configurePage(page, []);
     await page.goto(`${baseUrl}/app`, { waitUntil: "networkidle" });
-    await page.getByRole("heading", { name: "Trade talk, built for the trades." }).waitFor();
-    await page.getByText("Ask questions, find work, show your craft, and connect with real tradespeople.", { exact: true }).waitFor();
+    await page.getByRole("button", { name: "Ask the trades" }).waitFor();
+    await page.getByRole("heading", { name: "Communities" }).waitFor();
     await page.getByRole("button", { name: /^Work$/ }).click();
     await page.getByText("No open jobs", { exact: true }).waitFor();
     for (const label of ["Home", "Work", "Crew", "Shop Talk", "Tools"]) {

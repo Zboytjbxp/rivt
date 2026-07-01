@@ -1,20 +1,15 @@
 import {
   BadgeCheck,
   Bell,
-  BriefcaseBusiness,
-  CreditCard,
   Flag,
   FolderOpen,
-  GraduationCap,
   LogOut,
-  Mail,
   MessageSquareText,
   ShieldCheck,
-  ThumbsUp,
   X,
-  type LucideIcon,
 } from "lucide-react";
 import { brandConfig, type ThemeMode, type ThemePalette, type TrialPlan } from "../brandConfig";
+import { ProfileShowcase } from "../features/profile/ProfileShowcase";
 import { ProgressBar, ThemeToggle, type AuthMethod } from "../features/auth/AuthScreens";
 import type { ThemeSource } from "./useAppTheme";
 import type { Role, Trade } from "../types";
@@ -50,42 +45,6 @@ interface AccountProfileForPanel {
 const themePaletteOptions = Object.entries(brandConfig.theme.palettes) as Array<
   [ThemePalette, (typeof brandConfig.theme.palettes)[ThemePalette]]
 >;
-
-function getInitials(name: string) {
-  return name
-    .trim()
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() ?? "")
-    .join("") || "TC";
-}
-
-function avatarTone(name: string) {
-  const palette = ["stone", "slate", "graphite", "smoke", "ember", "steel"];
-  const seed = name
-    .split("")
-    .reduce((sum, char) => sum + char.charCodeAt(0), 0);
-  return palette[seed % palette.length];
-}
-
-function Avatar({
-  name,
-  photoSrc,
-  size = "md",
-  className = "",
-}: {
-  name: string;
-  photoSrc?: string | null;
-  size?: "sm" | "md" | "lg";
-  className?: string;
-}) {
-  const initials = getInitials(name);
-  return (
-    <div className={`avatar avatar-${size} avatar-${avatarTone(name)} ${className}`.trim()}>
-      {photoSrc ? <img src={photoSrc} alt={name} /> : <span>{initials}</span>}
-    </div>
-  );
-}
 
 export function ActivityToast({
   activity,
@@ -215,41 +174,33 @@ export function AccountPanel({
         <div className="side-panel-header">
           <div>
             <span>{role === "contractor" ? "Contractor account" : "Tradesperson account"}</span>
-            <h2>Account</h2>
+            <h2>Profile</h2>
           </div>
-          <button type="button" className="icon-button" onClick={onClose} aria-label="Close account">
+          <button type="button" className="icon-button" onClick={onClose} aria-label="Close profile">
             <X size={18} />
           </button>
         </div>
 
-        <div className="account-profile-card">
-          <Avatar name={profile.displayName} size="lg" className="user-avatar" />
-          <div>
-            <strong>{profile.displayName || profile.organization || "RIVT member"}</strong>
-            {profile.organization && profile.organization !== profile.displayName && (
-              <span className="account-org-name">{profile.organization}</span>
-            )}
-            <span>{profile.location}</span>
-            {profile.specialties.length > 0 && (
-              <div className="account-chip-row account-specialty-chips">
-                {profile.specialties.map((specialty) => (
-                  <strong key={specialty}>{specialty}</strong>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div className="account-stat-grid">
-          <InfoItem icon={Mail} label="Email" value={profile.email} />
-          <InfoItem icon={CreditCard} label="Plan" value={profile.plan} />
-          <InfoItem icon={ShieldCheck} label="Trust" value={trustReady ? "Ready" : "Pending"} />
-          <InfoItem icon={FolderOpen} label="Records" value={`${recordCount}/${recordGoal}`} />
-          <InfoItem icon={GraduationCap} label="Safety" value={`${safetyCertCount}/${safetyModuleCount}`} />
-          <InfoItem icon={ThumbsUp} label="Shout-outs" value={`${shoutOutCount}`} />
-        </div>
+        <ProfileShowcase
+          name={profile.displayName || profile.organization || "RIVT member"}
+          trade={profile.specialties[0] ?? (role === "contractor" ? "Contractor" : "Tradesperson")}
+          location={profile.location}
+          verified={trustReady}
+          reviewCount={shoutOutCount}
+          safetyCertCount={safetyCertCount}
+          onMessage={() => onNavigate("Messages")}
+          onViewJobs={() => onNavigate("Marketplace")}
+        />
 
         <section className="account-standing">
+          <div className="account-standing-row">
+            <span>Records</span>
+            <strong>{recordCount}/{recordGoal}</strong>
+          </div>
+          <div className="account-standing-row">
+            <span>Safety certs</span>
+            <strong>{safetyCertCount}/{safetyModuleCount}</strong>
+          </div>
           <div className="account-standing-row">
             <span>Training</span>
             <ProgressBar value={trainingProgress} />
@@ -336,20 +287,3 @@ function ThemePalettePicker({
   );
 }
 
-function InfoItem({
-  icon: Icon,
-  label,
-  value,
-}: {
-  icon: LucideIcon | typeof BriefcaseBusiness;
-  label: string;
-  value: string;
-}) {
-  return (
-    <div className="info-item">
-      <Icon size={16} />
-      <span>{label}</span>
-      <strong>{value}</strong>
-    </div>
-  );
-}
