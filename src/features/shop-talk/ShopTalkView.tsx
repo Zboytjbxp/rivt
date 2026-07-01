@@ -30,6 +30,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { TradePostCard } from "./TradePostCard";
+import { createShopTalkPost } from "./shop-talk-api";
 import { tradeOptions } from "../../data";
 import type { Trade } from "../../types";
 import { usePersona } from "../persona/usePersona";
@@ -742,6 +743,8 @@ export function ShopTalkView({
           onClose={() => { setNewPostOpen(false); setNewsDiscussContext(null); }}
           onSubmit={(flair, title, trade, body, postType, subTrade, subLocation, subRate) => {
             onNewPost(flair, title, trade, body, postType, subTrade, subLocation, subRate);
+            // Persist to the server when the backend is reachable; degrade gracefully otherwise.
+            void createShopTalkPost({ title, body, trade, flair, postType });
             setNewPostOpen(false);
             setNewsDiscussContext(null);
           }}
