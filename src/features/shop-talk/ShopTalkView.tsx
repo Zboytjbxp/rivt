@@ -31,6 +31,7 @@ import {
 } from "lucide-react";
 import { TradePostCard } from "./TradePostCard";
 import { createShopTalkPost } from "./shop-talk-api";
+import { communitySlug, setCommunityMembership } from "./communities-api";
 import { tradeOptions } from "../../data";
 import type { Trade } from "../../types";
 import { usePersona } from "../persona/usePersona";
@@ -829,6 +830,9 @@ export function ShopTalkView({
                           className={joined ? "community-join is-joined" : "community-join"}
                           aria-pressed={joined}
                           onClick={() => {
+                            const willJoin = !joinedCommunities.has(community.name);
+                            // Persist to the server when reachable; degrade to local-only otherwise.
+                            void setCommunityMembership(communitySlug(community.name), willJoin);
                             setJoinedCommunities((prev) => {
                               const next = new Set(prev);
                               if (next.has(community.name)) next.delete(community.name);
