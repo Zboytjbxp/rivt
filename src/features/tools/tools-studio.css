@@ -6062,7 +6062,7 @@
   }
 
   .v2-tools-app.is-calculator-fullscreen .fraction-calc-workbench {
-    height: clamp(520px, calc(100dvh - 154px), 720px);
+    height: clamp(520px, calc(100dvh - 142px), 720px);
     border-radius: 0;
     box-shadow: none;
   }
@@ -6112,7 +6112,7 @@
 
   .v2-tools-app.is-calculator-fullscreen .heavy-calc-shell {
     display: grid;
-    height: calc(100% - 47px);
+    height: calc(100% - 58px);
     min-height: 0;
     grid-template-columns: minmax(0, 1fr) 74px;
   }
@@ -6214,7 +6214,7 @@
   }
 
   .v2-tools-app.is-calculator-fullscreen .fraction-action-row button {
-    min-height: 32px;
+    min-height: 30px;
     border-radius: var(--v2-radius-md);
     padding: 0 4px;
     font-size: 10px;
@@ -6230,7 +6230,7 @@
   }
 
   .v2-tools-app.is-calculator-fullscreen .fraction-pad button {
-    min-height: 44px;
+    min-height: 42px;
     border-radius: var(--v2-radius-md);
     font-size: 22px;
   }

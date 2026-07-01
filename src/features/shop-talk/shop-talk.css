@@ -2435,7 +2435,24 @@
   }
 
   .trade-talk-layout .shop-talk-fieldbar {
+    display: grid;
+    gap: 8px;
+    padding: 0 0 2px;
+  }
+
+  .trade-talk-layout .shop-talk-fieldbar .input-control,
+  .trade-talk-layout .shop-talk-fieldbar .shop-sort-tabs {
     display: none;
+  }
+
+  .trade-talk-layout .shop-talk-search {
+    min-height: 42px;
+    padding: 0 10px;
+  }
+
+  .trade-talk-layout .shop-talk-search input {
+    min-height: 42px;
+    font-size: 14px;
   }
 }
 
