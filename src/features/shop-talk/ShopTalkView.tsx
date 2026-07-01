@@ -29,6 +29,7 @@ import {
   Zap,
   type LucideIcon,
 } from "lucide-react";
+import { TradePostCard } from "./TradePostCard";
 import { tradeOptions } from "../../data";
 import type { Trade } from "../../types";
 import { usePersona } from "../persona/usePersona";
@@ -438,7 +439,7 @@ export function ShopTalkView({
   const [activeTrendingTag, setActiveTrendingTag] = useState<string | null>(null);
   const [locallyAnswered, setLocallyAnswered] = useState<Set<number>>(new Set());
   const [filterType, setFilterType] = useState<PostType | "all">("all");
-  const [expandedReplyPostId, setExpandedReplyPostId] = useState<string | null>(null);
+  const [_expandedReplyPostId, _setExpandedReplyPostId] = useState<string | null>(null);
   const [replyDrafts, setReplyDrafts] = useState<Record<string, string>>({});
   const [shopTalkReplies, setShopTalkReplies] = useState<Record<string, ShopTalkReply[]>>(() => {
     try { return JSON.parse(localStorage.getItem("rivt.shopTalkReplies.v1") ?? "{}") as Record<string, ShopTalkReply[]>; }
@@ -474,7 +475,7 @@ export function ShopTalkView({
     });
   }
 
-  function incrementHelpfulVote(postId: number) {
+  function _incrementHelpfulVote(postId: number) {
     setHelpfulVotesMap(prev => {
       const base = communityPosts.find(p => p.id === postId)?.helpfulVotes ?? 0;
       const extra = prev[postId] ?? 0;
@@ -492,7 +493,7 @@ export function ShopTalkView({
     try { localStorage.setItem("rivt.shopTalkReplies.v1", JSON.stringify(shopTalkReplies)); } catch { /* noop */ }
   }, [shopTalkReplies]);
 
-  function sendReply(postId: string) {
+  function _sendReply(postId: string) {
     const text = (replyDrafts[postId] ?? "").trim();
     if (!text) return;
     const newReply: ShopTalkReply = {
@@ -508,8 +509,7 @@ export function ShopTalkView({
     setReplyDrafts(prev => ({ ...prev, [postId]: "" }));
   }
 
-  function relativeTime(iso: string): string {
-    // eslint-disable-next-line react-hooks/purity
+  function _relativeTime(iso: string): string {
     const diffMs = Date.now() - new Date(iso).getTime();
     const diffMin = Math.floor(diffMs / 60000);
     if (diffMin < 1) return "just now";
@@ -685,7 +685,7 @@ export function ShopTalkView({
     return fromPosts + fromAnswers;
   }, [communityPosts, profile.displayName, helpfulVotesMap]);
   // Per-author reputation for badges on cards.
-  const authorRepMap = useMemo(() => {
+  const _authorRepMap = useMemo(() => {
     const map: Record<string, number> = {};
     for (const post of communityPosts) {
       const votes = (post.helpfulVotes ?? 0) + (helpfulVotesMap[post.id] ?? 0);
@@ -1040,116 +1040,15 @@ export function ShopTalkView({
                     actionLabel={talkQuery ? "Clear search" : "Ask the trades"}
                     onAction={() => talkQuery ? setTalkQuery("") : setNewPostOpen(true)}
                   />
-                ) : sortedPosts.map((post) => {
-                  const postKey = String(post.id);
-                  const postEffectiveType: PostType = post.type ?? "general";
-                  const postReplies = shopTalkReplies[postKey] ?? [];
-                  const isExpanded = expandedReplyPostId === postKey;
-
-                  const typeChip = POST_TYPE_CHIPS.find(c => c.type === postEffectiveType);
-                  const typeBadgeClass = `v2-st-type-badge ${postEffectiveType}`;
-
-                  return (
-                    <div key={post.id} className={post.id === (selectedPost?.id ?? 0) ? "shop-post-card selected" : "shop-post-card"}>
-                      <button
-                        type="button"
-                        className="shop-post-card-clickable"
-                        onClick={() => { setSelectedPostId(post.id); setMobileDetail(true); }}
-                      >
-                        {typeChip && (
-                          <span className={typeBadgeClass}>
-                            {typeChip.label}
-                          </span>
-                        )}
-                        <div className="shop-post-card-meta">
-                          {post.flair && (
-                            <span className={`flair-pill flair-${post.flair.toLowerCase().replace(/\s/g, "-")}`}>
-                              {post.flair}
-                            </span>
-                          )}
-                          <span className="post-trade-label">{post.trade}</span>
-                          {locallyAnswered.has(post.id) && (
-                            <span className="shop-talk-answered-badge">Answered ✓</span>
-                          )}
-                          {(authorRepMap[post.author] ?? 0) > 0 && (
-                            <span className="v2-st-rep-badge">
-                              <Star size={10} /> {authorRepMap[post.author]} rep
-                            </span>
-                          )}
-                        </div>
-                        <strong>{post.title}</strong>
-                        <p className="shop-post-card-body">{post.body}</p>
-                        {(post.subTrade || post.subLocation || post.subRate) && (
-                          <div className="v2-st-sub-details">
-                            {post.subTrade && <span className="v2-st-sub-pill">🔧 {post.subTrade}</span>}
-                            {post.subLocation && <span className="v2-st-sub-pill">📍 {post.subLocation}</span>}
-                            {post.subRate && <span className="v2-st-sub-pill">💰 {post.subRate}</span>}
-                          </div>
-                        )}
-                        <div className="shop-post-card-stats">
-                          <span>Score {netScore(post)}</span>
-                          <span>{post.replies.length} replies</span>
-                          <span>{post.createdAt}</span>
-                        </div>
-                      </button>
-                      <button
-                        type="button"
-                        className={bookmarkedIds.has(post.id) ? "shop-post-bookmark active" : "shop-post-bookmark"}
-                        aria-label={bookmarkedIds.has(post.id) ? "Remove bookmark" : "Bookmark this post"}
-                        onClick={(e) => { e.stopPropagation(); toggleBookmark(post.id); }}
-                      >
-                        {bookmarkedIds.has(post.id) ? <BookmarkCheck size={14} /> : <Bookmark size={14} />}
-                      </button>
-                      <button
-                        type="button"
-                        className="v2-st-reply-btn"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setExpandedReplyPostId(isExpanded ? null : postKey);
-                        }}
-                      >
-                        💬 Reply ({postReplies.length})
-                      </button>
-                      <button
-                        type="button"
-                        className="v2-st-helpful-btn"
-                        aria-label="Mark as helpful"
-                        onClick={(e) => { e.stopPropagation(); incrementHelpfulVote(post.id); }}
-                      >
-                        <ThumbsUp size={12} />
-                        Helpful ({(post.helpfulVotes ?? 0) + (helpfulVotesMap[post.id] ?? 0)})
-                      </button>
-                      {isExpanded && (
-                        <div className="v2-st-replies">
-                          {postReplies.map((reply) => (
-                            <div key={reply.id} className="v2-st-reply-item">
-                              <span className="v2-st-reply-author">{reply.author}</span>
-                              <span className="v2-st-reply-text">{reply.text}</span>
-                              <div className="v2-st-reply-time">{relativeTime(reply.createdAt)}</div>
-                            </div>
-                          ))}
-                          <div className="v2-st-reply-input-row">
-                            <input
-                              type="text"
-                              className="v2-st-reply-input"
-                              placeholder="Write a reply..."
-                              value={replyDrafts[postKey] ?? ""}
-                              onChange={(e) => setReplyDrafts(prev => ({ ...prev, [postKey]: e.target.value }))}
-                              onKeyDown={(e) => { if (e.key === "Enter") sendReply(postKey); }}
-                            />
-                            <button
-                              type="button"
-                              className="v2-st-reply-send-btn"
-                              onClick={() => sendReply(postKey)}
-                            >
-                              Send
-                            </button>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
+                ) : sortedPosts.map((post) => (
+                  <TradePostCard
+                    key={post.id}
+                    post={post}
+                    saved={bookmarkedIds.has(post.id)}
+                    onToggleSave={() => toggleBookmark(post.id)}
+                    onOpen={() => { setSelectedPostId(post.id); setMobileDetail(true); }}
+                  />
+                ))}
               </div>
               <button type="button" className="trade-talk-fab" onClick={() => setNewPostOpen(true)}>
                 <Plus size={18} />

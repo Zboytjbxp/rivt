@@ -163,8 +163,14 @@
 }
 
 .trade-post {
+  min-width: 0;
   padding: 16px 2px;
   border-bottom: 1px solid var(--v2-border, #e5e2dd);
+}
+
+.trade-post-excerpt,
+.trade-post-title {
+  overflow-wrap: anywhere;
 }
 
 .trade-post-head {
