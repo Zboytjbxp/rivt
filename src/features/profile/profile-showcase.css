@@ -316,10 +316,42 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
+  width: 100%;
   padding: 14px;
   border-radius: 14px;
   border: 1px solid var(--v2-border, #e5e2dd);
+  background: none;
+  text-align: left;
+  cursor: pointer;
 }
+
+.ps-job-status {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--v2-accent-text);
+  white-space: nowrap;
+}
+
+.ps-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 22px 16px;
+  text-align: center;
+  border: 1.5px dashed var(--v2-border);
+  border-radius: 14px;
+  background: none;
+  cursor: pointer;
+  color: var(--v2-text-muted);
+}
+.ps-empty svg { color: var(--v2-accent-text); }
+.ps-empty b { font-size: 15px; color: var(--v2-text); }
+.ps-empty span { font-size: 13px; }
+
+.ps-portfolio-tile.has-photo { overflow: hidden; }
+.ps-portfolio-tile.has-photo img { width: 100%; height: 100%; object-fit: cover; }
 
 .ps-job-top {
   display: flex;

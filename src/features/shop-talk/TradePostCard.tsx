@@ -44,8 +44,14 @@ interface TradePostCardProps {
   onOpen: () => void;
 }
 
+const VOTES_KEY = "rivt.postVotes.v1";
+function readVotes(): Record<string, "up" | "down"> {
+  try { return JSON.parse(localStorage.getItem(VOTES_KEY) ?? "{}") as Record<string, "up" | "down">; }
+  catch { return {}; }
+}
+
 export function TradePostCard({ post, saved, onToggleSave, onOpen }: TradePostCardProps) {
-  const [vote, setVote] = useState<"up" | "down" | null>(null);
+  const [vote, setVote] = useState<"up" | "down" | null>(() => readVotes()[String(post.id)] ?? null);
   const community = communityFor(post.trade);
   const CIcon = community.icon;
   const baseScore = post.upvotes - post.downvotes;
@@ -55,7 +61,16 @@ export function TradePostCard({ post, saved, onToggleSave, onOpen }: TradePostCa
   const [shared, setShared] = useState(false);
 
   function toggleVote(dir: "up" | "down") {
-    setVote((prev) => (prev === dir ? null : dir));
+    setVote((prev) => {
+      const next = prev === dir ? null : dir;
+      try {
+        const map = readVotes();
+        if (next) map[String(post.id)] = next;
+        else delete map[String(post.id)];
+        localStorage.setItem(VOTES_KEY, JSON.stringify(map));
+      } catch { /* ignore */ }
+      return next;
+    });
   }
 
   function handleShare() {

@@ -2,14 +2,13 @@ import {
   Award,
   BadgeCheck,
   Briefcase,
-  ChevronRight,
-  Clock,
   MapPin,
-  MessageCircle,
   Plus,
+  Share2,
   ShieldCheck,
   Star,
 } from "lucide-react";
+import type { NavLabel } from "../../app-shell/routes";
 import "./profile-showcase.css";
 
 interface ProfileShowcaseProps {
@@ -17,10 +16,24 @@ interface ProfileShowcaseProps {
   trade: string;
   location: string;
   verified: boolean;
-  reviewCount: number;
+  shoutOutCount: number;
   safetyCertCount: number;
-  onMessage: () => void;
-  onViewJobs: () => void;
+  onEditProfile: () => void;
+  onNavigate: (view: NavLabel) => void;
+}
+
+interface StoredReview { rating?: number }
+interface StoredJob { id?: string; title?: string; trade?: string; location?: string; status?: string }
+interface StoredCert { name?: string; issuer?: string }
+interface StoredPhoto { id?: string; url?: string; caption?: string }
+
+function readJSON<T>(key: string, fallback: T): T {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return fallback;
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? (parsed as T) : fallback;
+  } catch { return fallback; }
 }
 
 const AVATAR_TONES = ["#c2410c", "#0f766e", "#7c3aed", "#b45309", "#1d4ed8"];
@@ -30,45 +43,47 @@ function toneFor(name: string) {
   return AVATAR_TONES[hash % AVATAR_TONES.length];
 }
 
-const PORTFOLIO_TILES = [0, 1, 2, 3];
-
-const CERTS = [
-  { code: "AWI", label: "Advanced Level", tone: "#334155" },
-  { code: "NCCER", label: "Carpentry", tone: "#7a2e2e" },
-  { code: "OSHA 10", label: "Construction", tone: "#1e3a5f" },
-  { code: "Lead Safe", label: "Certified", tone: "#2f7a4f" },
-];
-
-const LOCAL_JOBS = [
-  {
-    title: "Cabinet install helper",
-    meta: "Residential · Jacksonville, FL",
-    rate: "$22–$26/hr",
-    est: "Est. 2–3 days",
-    posted: "Posted 3h ago",
-  },
-  {
-    title: "Trim & built-ins finish carpenter",
-    meta: "Custom home · Jacksonville Beach, FL",
-    rate: "$28–$35/hr",
-    est: "Est. 1–2 weeks",
-    posted: "Posted 6h ago",
-  },
-];
+const AVAIL_LABEL: Record<string, string> = {
+  available: "Available this week",
+  limited: "Limited availability",
+  booked: "Booked up",
+};
 
 export function ProfileShowcase({
   name,
   trade,
   location,
   verified,
-  reviewCount,
+  shoutOutCount,
   safetyCertCount,
-  onMessage,
-  onViewJobs,
+  onEditProfile,
+  onNavigate,
 }: ProfileShowcaseProps) {
   const displayName = name || "RIVT member";
-  const reviews = reviewCount > 0 ? reviewCount : 27;
-  const certsEarned = safetyCertCount > 0 ? safetyCertCount : CERTS.length;
+
+  const reviews = readJSON<StoredReview[]>("rivt.reviews.v1", []);
+  const jobs = readJSON<StoredJob[]>("rivt.jobs.v1", []);
+  const certs = readJSON<StoredCert[]>("rivt.certs.v1", []);
+  const photos = readJSON<StoredPhoto[]>("rivt.photos.v1", []).filter((p) => p.url);
+
+  const reviewCount = reviews.length;
+  const ratingAvg = reviewCount
+    ? (reviews.reduce((s, r) => s + (Number(r.rating) || 0), 0) / reviewCount)
+    : 0;
+  const completedJobs = jobs.filter((j) => j.status === "Paid / Closed").length || jobs.length;
+  const certTotal = safetyCertCount + certs.length;
+
+  let availability = "available";
+  try {
+    const v = localStorage.getItem("rivt.availability.v1");
+    if (v === "available" || v === "limited" || v === "booked") availability = v;
+  } catch { /* ignore */ }
+
+  function share() {
+    const url = `${window.location.origin}/app`;
+    if (navigator.share) navigator.share({ title: `${displayName} on RIVT`, url }).catch(() => {});
+    else if (navigator.clipboard) navigator.clipboard.writeText(url).catch(() => {});
+  }
 
   return (
     <div className="profile-showcase">
@@ -95,51 +110,43 @@ export function ProfileShowcase({
         </div>
 
         <div className="ps-chip-row">
-          <span className="ps-chip">
-            <Clock size={13} /> 12 years
+          <span className={`ps-chip ${availability === "available" ? "is-avail" : ""}`}>
+            <span className="ps-dot" /> {AVAIL_LABEL[availability]}
           </span>
-          <span className="ps-chip is-teal">
-            <ShieldCheck size={13} /> Self-reported insured
-          </span>
-          <span className="ps-chip is-avail">
-            <span className="ps-dot" /> Available this week
-          </span>
+          {verified && (
+            <span className="ps-chip is-teal">
+              <ShieldCheck size={13} /> Verified
+            </span>
+          )}
         </div>
-
-        <p className="ps-bio">
-          {trade} specializing in custom trim, cabinets, and high-end details. Clean work, on time,
-          every time.
-        </p>
 
         <div className="ps-stats">
           <div className="ps-stat">
             <strong>
-              <Star size={15} className="ps-star" /> 4.9
+              {reviewCount ? <><Star size={15} className="ps-star" /> {ratingAvg.toFixed(1)}</> : "New"}
             </strong>
-            <span>({reviews} reviews)</span>
+            <span>{reviewCount ? `${reviewCount} review${reviewCount === 1 ? "" : "s"}` : "No reviews yet"}</span>
           </div>
           <div className="ps-stat">
-            <strong>{reviews}</strong>
-            <span>Completed jobs</span>
+            <strong>{completedJobs}</strong>
+            <span>Jobs</span>
           </div>
           <div className="ps-stat">
-            <strong>98%</strong>
-            <span>Response rate</span>
+            <strong>{certTotal}</strong>
+            <span>Certifications</span>
           </div>
           <div className="ps-stat">
-            <strong className="ps-toppro">
-              <Award size={15} /> Top Pro
-            </strong>
-            <span>Local badge</span>
+            <strong>{shoutOutCount}</strong>
+            <span>Shout-outs</span>
           </div>
         </div>
 
         <div className="ps-cta-row">
-          <button type="button" className="ps-btn is-primary" onClick={onMessage}>
-            <MessageCircle size={17} /> Message
+          <button type="button" className="ps-btn is-primary" onClick={onEditProfile}>
+            Edit profile
           </button>
-          <button type="button" className="ps-btn is-ghost" onClick={onViewJobs}>
-            View profile
+          <button type="button" className="ps-btn is-ghost" onClick={share}>
+            <Share2 size={16} /> Share
           </button>
         </div>
       </section>
@@ -148,87 +155,93 @@ export function ProfileShowcase({
       <section className="ps-section">
         <div className="ps-section-head">
           <h3>Portfolio</h3>
-          <button type="button" className="ps-seeall">See all</button>
+          {photos.length > 0 && (
+            <button type="button" className="ps-seeall" onClick={() => onNavigate("Records")}>See all</button>
+          )}
         </div>
-        <div className="ps-portfolio-row">
-          {PORTFOLIO_TILES.map((i) => (
-            <div key={i} className="ps-portfolio-tile">
-              <Briefcase size={20} />
-            </div>
-          ))}
-        </div>
-        <div className="ps-dots">
-          <span className="is-active" />
-          <span />
-          <span />
-          <span />
-        </div>
+        {photos.length > 0 ? (
+          <div className="ps-portfolio-row">
+            {photos.slice(0, 4).map((p, i) => (
+              <div key={p.id ?? i} className="ps-portfolio-tile has-photo">
+                <img src={p.url} alt={p.caption ?? "Job photo"} loading="lazy" />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <button type="button" className="ps-empty" onClick={() => onNavigate("Records")}>
+            <Briefcase size={20} />
+            <b>Show your craft</b>
+            <span>Add job photos to build a portfolio clients can see.</span>
+          </button>
+        )}
       </section>
 
       {/* Certifications */}
       <section className="ps-section">
         <div className="ps-section-head">
           <h3>Certifications</h3>
-          <button type="button" className="ps-seeall">See all</button>
+          <button type="button" className="ps-seeall" onClick={() => onNavigate("Safety & Training")}>
+            {certTotal > 0 ? "See all" : "Add"}
+          </button>
         </div>
-        <div className="ps-cert-row">
-          {CERTS.slice(0, certsEarned).map((cert) => (
-            <div key={cert.code} className="ps-cert-card">
-              <span className="ps-cert-badge" style={{ background: cert.tone }}>
-                <Award size={16} />
-              </span>
-              <div className="ps-cert-copy">
-                <strong>{cert.code}</strong>
-                <small>{cert.label}</small>
+        {certTotal > 0 ? (
+          <div className="ps-cert-row">
+            {safetyCertCount > 0 && (
+              <div className="ps-cert-card">
+                <span className="ps-cert-badge"><ShieldCheck size={16} /></span>
+                <div className="ps-cert-copy">
+                  <strong>Safety training</strong>
+                  <small>{safetyCertCount} passed</small>
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
+            )}
+            {certs.map((c, i) => (
+              <div key={i} className="ps-cert-card">
+                <span className="ps-cert-badge"><Award size={16} /></span>
+                <div className="ps-cert-copy">
+                  <strong>{c.name || "Certification"}</strong>
+                  <small>{c.issuer || "Credential"}</small>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <button type="button" className="ps-empty" onClick={() => onNavigate("Safety & Training")}>
+            <Award size={20} />
+            <b>No certifications yet</b>
+            <span>Complete safety training or add credentials to stand out.</span>
+          </button>
+        )}
       </section>
 
       {/* Local work */}
       <section className="ps-section">
         <div className="ps-section-head">
-          <h3>Local work</h3>
-          <button type="button" className="ps-seeall" onClick={onViewJobs}>See all jobs</button>
+          <h3>Your jobs</h3>
+          <button type="button" className="ps-seeall" onClick={() => onNavigate("Marketplace")}>See all</button>
         </div>
-        <div className="ps-jobs">
-          {LOCAL_JOBS.map((job) => (
-            <div key={job.title} className="ps-job-card">
-              <div className="ps-job-top">
-                <div className="ps-job-headings">
-                  <strong>{job.title}</strong>
-                  <span className="ps-job-meta">{job.meta}</span>
+        {jobs.length > 0 ? (
+          <div className="ps-jobs">
+            {jobs.slice(0, 2).map((job, i) => (
+              <button key={job.id ?? i} type="button" className="ps-job-card" onClick={() => onNavigate("Marketplace")}>
+                <div className="ps-job-top">
+                  <div className="ps-job-headings">
+                    <strong>{job.title || "Untitled job"}</strong>
+                    <span className="ps-job-meta">{[job.trade, job.location].filter(Boolean).join(" · ")}</span>
+                  </div>
+                  {job.status && <span className="ps-job-status">{job.status}</span>}
                 </div>
-                <span className="ps-job-posted">{job.posted}</span>
-              </div>
-              <div className="ps-job-rate">
-                <span className="ps-rate">{job.rate}</span>
-                <span className="ps-est">· {job.est}</span>
-              </div>
-              <div className="ps-job-tags">
-                <span className="ps-job-tag"><Briefcase size={12} /> Tools required</span>
-                <span className="ps-job-tag"><ShieldCheck size={12} /> Insurance required</span>
-              </div>
-              <div className="ps-job-actions">
-                <button type="button" className="ps-job-btn is-ghost" onClick={onMessage}>
-                  <MessageCircle size={14} /> Message
-                </button>
-                <button type="button" className="ps-job-btn is-primary" onClick={onViewJobs}>
-                  Apply
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-        <button type="button" className="ps-add-work" onClick={onViewJobs}>
-          <Plus size={15} /> Post local work
-        </button>
+              </button>
+            ))}
+          </div>
+        ) : (
+          <button type="button" className="ps-empty" onClick={() => onNavigate("Marketplace")}>
+            <Plus size={20} />
+            <b>No jobs yet</b>
+            <span>Post work to start building your track record.</span>
+          </button>
+        )}
       </section>
-
-      <p className="ps-footnote">
-        <ChevronRight size={13} /> Stats and portfolio fill in as you complete jobs and add proof.
-      </p>
     </div>
   );
 }

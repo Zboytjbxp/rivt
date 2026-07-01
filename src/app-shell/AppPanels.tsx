@@ -186,10 +186,10 @@ export function AccountPanel({
           trade={profile.specialties[0] ?? (role === "contractor" ? "Contractor" : "Tradesperson")}
           location={profile.location}
           verified={trustReady}
-          reviewCount={shoutOutCount}
+          shoutOutCount={shoutOutCount}
           safetyCertCount={safetyCertCount}
-          onMessage={() => onNavigate("Messages")}
-          onViewJobs={() => onNavigate("Marketplace")}
+          onEditProfile={() => onNavigate("Settings")}
+          onNavigate={onNavigate}
         />
 
         <section className="account-standing">

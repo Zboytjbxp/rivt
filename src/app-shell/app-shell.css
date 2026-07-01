@@ -729,3 +729,8 @@
   top: 0;
   z-index: 100;
 }
+
+/* ── Theme-aware brand logo swap ─────────────────────────── */
+.v2-brand-dark { display: none; }
+[data-theme="dark"] .v2-brand-light { display: none; }
+[data-theme="dark"] .v2-brand-dark { display: inline-block; }
