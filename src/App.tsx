@@ -85,7 +85,7 @@ import {
   type OnboardingResult,
 } from "./features/auth/AuthScreens";
 
-const HomeDashboard = lazy(() => import("./features/home/HomeDashboard").then((m) => ({ default: m.HomeDashboard })));
+const TradeFeed = lazy(() => import("./features/home/TradeFeed").then((m) => ({ default: m.TradeFeed })));
 const WorkWorkspace = lazy(() => import("./features/work/WorkWorkspace").then((m) => ({ default: m.WorkWorkspace })));
 const JobEditorModal = lazy(() => import("./features/work/JobEditorModal").then((m) => ({ default: m.JobEditorModal })));
 const NetworkHub = lazy(() => import("./features/network/NetworkHub").then((m) => ({ default: m.NetworkHub })));
@@ -168,7 +168,7 @@ function App() {
   const [jobsError, setJobsError] = useState<string | null>(null);
   const [editingJob, setEditingJob] = useState<Job | null>(null);
   const jobsRequestRef = useRef(0);
-  const [applications] = useState<ApplicationRecord[]>([]);
+  const [_applications] = useState<ApplicationRecord[]>([]);
   const [isPostOpen, setPostOpen] = useState(false);
   const [isActivityOpen, setActivityOpen] = useState(false);
   const [isAccountOpen, setAccountOpen] = useState(false);
@@ -552,7 +552,7 @@ function App() {
     ?? accountProfile.specialties[0]
     ?? selectedJob.trade
     ?? "General trades";
-  const answerQueueCount = communityPosts.filter((post) => (
+  const _answerQueueCount = communityPosts.filter((post) => (
     (post.trade === primaryProfileTrade || post.trade === "General") &&
     post.status !== "Verified Fix"
   )).length;
@@ -648,7 +648,7 @@ function App() {
     addActivity("Profile saved", "Your network profile and service area are up to date.", "success");
   }
 
-  async function handleSetAvailability(availabilityStatus: CanonicalAccount["profile"]["availabilityStatus"]) {
+  async function _handleSetAvailability(availabilityStatus: CanonicalAccount["profile"]["availabilityStatus"]) {
     const response = await fetch(apiPath("/api/v1/profile"), {
       method: "PATCH",
       credentials: "include",
@@ -1272,25 +1272,11 @@ function App() {
         <RouteErrorBoundary>
         <Suspense fallback={<RouteFallback />}>
         {activeView === "Home" ? (
-          <HomeDashboard
-            role={role}
-            name={accountProfile.displayName || (isGuest ? "Guest" : "RIVT member")}
-            location={accountProfile.location}
-            activeJob={selectedJob.id ? selectedJob : null}
-            upcomingJobs={jobs.filter((job) => job.id !== selectedJob.id)}
-            applicationCount={Math.max(applications.length, selectedJob.applicants || 0)}
-            unreadCount={unreadActivities}
-            pendingPaymentCount={paymentRecords.filter((record) => record.status === "Payment pending").length}
-            communityCount={communityPosts.length}
-            shoutOutCount={shoutOuts.length}
-            availabilityStatus={canonicalAccount?.profile.availabilityStatus ?? "available"}
-            primaryTrade={primaryProfileTrade}
-            newsCount={fallbackNewsItems.length}
-            answerQueueCount={answerQueueCount}
-            onPostJob={openCreateJob}
-            onOpenJob={openJob}
+          <TradeFeed
+            posts={communityPosts}
+            onOpenPost={() => handleNavigate(defaultViewForDestination("shop-talk"))}
+            onAsk={() => handleNavigate(defaultViewForDestination("shop-talk"))}
             onNavigate={(destination) => handleNavigate(defaultViewForDestination(destination))}
-            onSetAvailability={handleSetAvailability}
           />
         ) : activeView === "Marketplace" ? (
           <WorkWorkspace

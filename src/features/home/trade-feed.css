@@ -1,0 +1,357 @@
+.trade-feed {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 12px 0 96px;
+}
+
+/* ── CTA row ─────────────────────────────────────────────── */
+.trade-feed-cta-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.trade-feed-cta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 52px;
+  padding: 0 12px;
+  border-radius: 14px;
+  border: 1.5px solid var(--v2-border, #e5e2dd);
+  background: var(--v2-surface, #fff);
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.trade-feed-cta.is-ask {
+  color: #ff4b00;
+  border-color: color-mix(in srgb, #ff4b00 30%, transparent);
+}
+
+.trade-feed-cta.is-crew {
+  color: #008c80;
+  border-color: color-mix(in srgb, #008c80 30%, transparent);
+}
+
+/* ── Communities ─────────────────────────────────────────── */
+.trade-feed-section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.trade-feed-section-head h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--v2-text, #17130f);
+}
+
+.trade-feed-seeall {
+  border: none;
+  background: none;
+  color: #ff4b00;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.trade-feed-community-row {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding-bottom: 2px;
+  -webkit-mask-image: linear-gradient(to right, #000 88%, transparent);
+  mask-image: linear-gradient(to right, #000 88%, transparent);
+}
+.trade-feed-community-row::-webkit-scrollbar { display: none; }
+
+.trade-feed-community-card {
+  flex: 0 0 auto;
+  width: 108px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 8px 14px;
+  border-radius: 16px;
+  border: 1px solid var(--v2-border, #e5e2dd);
+  background: var(--v2-surface, #fff);
+  cursor: pointer;
+}
+
+.trade-feed-community-icon {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  color: #fff;
+}
+
+.trade-feed-community-name {
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.2;
+  text-align: center;
+  color: var(--v2-text, #17130f);
+}
+
+.trade-feed-community-count {
+  font-size: 12px;
+  color: var(--v2-text-muted, #5f6668);
+}
+
+/* ── Tabs ────────────────────────────────────────────────── */
+.trade-feed-tabs {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--v2-border, #e5e2dd);
+}
+
+.trade-feed-tab-group {
+  display: flex;
+  gap: 22px;
+}
+
+.trade-feed-tab-group button {
+  position: relative;
+  border: none;
+  background: none;
+  padding: 10px 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--v2-text-muted, #5f6668);
+  cursor: pointer;
+}
+
+.trade-feed-tab-group button.is-active {
+  color: #ff4b00;
+}
+
+.trade-feed-tab-group button.is-active::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 3px;
+  border-radius: 3px 3px 0 0;
+  background: #ff4b00;
+}
+
+.trade-feed-filter-btn {
+  border: none;
+  background: none;
+  color: var(--v2-text, #17130f);
+  padding: 6px;
+  cursor: pointer;
+}
+
+/* ── Post list ───────────────────────────────────────────── */
+.trade-feed-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.trade-post {
+  padding: 16px 2px;
+  border-bottom: 1px solid var(--v2-border, #e5e2dd);
+}
+
+.trade-post-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.trade-post-avatar {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 700;
+  flex: 0 0 auto;
+}
+
+.trade-post-byline {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  flex: 1;
+}
+
+.trade-post-author {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--v2-text, #17130f);
+}
+
+.trade-post-verified {
+  color: #008c80;
+}
+
+.trade-post-community {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--v2-text-muted, #5f6668);
+}
+
+.trade-post-more {
+  border: none;
+  background: none;
+  color: var(--v2-text-muted, #5f6668);
+  padding: 4px;
+  cursor: pointer;
+  align-self: flex-start;
+}
+
+.trade-post-body-btn {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: none;
+  background: none;
+  padding: 10px 0 12px;
+  cursor: pointer;
+}
+
+.trade-post-title {
+  margin: 0 0 6px;
+  font-size: 19px;
+  font-weight: 800;
+  line-height: 1.25;
+  color: var(--v2-text, #17130f);
+}
+
+.trade-post-excerpt {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.45;
+  color: var(--v2-text-muted, #4a4f51);
+}
+
+.trade-post-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.trade-post-votes {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid var(--v2-border, #e5e2dd);
+  border-radius: 999px;
+  padding: 2px 4px;
+}
+
+.trade-vote {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: none;
+  background: none;
+  border-radius: 50%;
+  color: var(--v2-text-muted, #5f6668);
+  cursor: pointer;
+}
+
+.trade-vote.is-up { color: #ff4b00; }
+.trade-vote.is-down { color: #4f7fff; }
+
+.trade-vote-count {
+  min-width: 22px;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--v2-text, #17130f);
+}
+
+.trade-post-comment {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 38px;
+  padding: 0 14px;
+  border: 1px solid var(--v2-border, #e5e2dd);
+  border-radius: 999px;
+  background: none;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--v2-text, #17130f);
+  cursor: pointer;
+}
+
+.trade-post-spacer { flex: 1; }
+
+.trade-post-icon {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 38px;
+  border: none;
+  background: none;
+  border-radius: 10px;
+  color: var(--v2-text-muted, #5f6668);
+  cursor: pointer;
+}
+
+.trade-post-icon.is-saved { color: #ff4b00; }
+
+/* ── FAB ─────────────────────────────────────────────────── */
+.trade-feed-fab {
+  position: fixed;
+  right: 18px;
+  bottom: 84px;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 22px;
+  height: 54px;
+  border: none;
+  border-radius: 999px;
+  background: #ff4b00;
+  color: #fff;
+  font-size: 17px;
+  font-weight: 800;
+  box-shadow: 0 10px 26px -8px rgba(255, 75, 0, 0.7);
+  cursor: pointer;
+}
+
+.trade-feed-footer {
+  display: flex;
+  justify-content: center;
+  padding: 8px 0 4px;
+}
+
+.trade-feed-footer-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  border: none;
+  background: none;
+  color: var(--v2-text-muted, #5f6668);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}

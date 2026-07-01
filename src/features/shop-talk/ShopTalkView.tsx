@@ -5,10 +5,13 @@ import {
   BadgeCheck,
   Bookmark,
   BookmarkCheck,
+  Briefcase,
+  Building2,
   CheckCircle2,
   ChevronDown,
   ExternalLink,
   Flag,
+  Hammer,
   Hash,
   MessageCircle,
   Newspaper,
@@ -21,7 +24,9 @@ import {
   ThumbsDown,
   ThumbsUp,
   Users,
+  Wrench,
   X,
+  Zap,
   type LucideIcon,
 } from "lucide-react";
 import { tradeOptions } from "../../data";
@@ -82,6 +87,7 @@ export interface CommunityPost {
   upvotes: number;
   downvotes: number;
   helpfulVotes?: number;
+  commentCount?: number;
   replies: CommunityAnswer[];
   createdAt: string;
   status: "Open" | "Verified Fix" | "Needs a pro answer";
@@ -189,15 +195,21 @@ const POST_TYPE_CHIPS: { type: PostType; emoji: string; label: string }[] = [
   { type: "general", emoji: "💬", label: "General" },
 ];
 
-const TRADE_TALK_COMMUNITIES = [
-  { name: "Carpentry Talk", meta: "Trim, framing, punch-out", count: "128" },
-  { name: "Electrical Talk", meta: "Code, service, rough-in", count: "96" },
-  { name: "Cabinetry Talk", meta: "Installs, layout, scribing", count: "64" },
-  { name: "Jacksonville Trades", meta: "Local work and referrals", count: "52" },
-  { name: "Remodelers", meta: "Whole-home coordination", count: "44" },
-  { name: "Tool Talk", meta: "Field gear that holds up", count: "39" },
-  { name: "Code Questions", meta: "Permits and inspections", count: "31" },
-  { name: "Side Work", meta: "Short-term help needed", count: "27" },
+const TRADE_TALK_COMMUNITIES: {
+  name: string;
+  meta: string;
+  count: string;
+  icon: LucideIcon;
+  tone: string;
+}[] = [
+  { name: "Carpentry Talk", meta: "Trim, framing, punch-out", count: "124K", icon: Hammer, tone: "#7a4a24" },
+  { name: "Electrical Talk", meta: "Code, service, rough-in", count: "98K", icon: Zap, tone: "#1c1c1c" },
+  { name: "Jacksonville Trades", meta: "Local work and referrals", count: "8.7K", icon: Building2, tone: "#0f6b7a" },
+  { name: "Side Work", meta: "Short-term help needed", count: "5.2K", icon: Briefcase, tone: "#1c1c1c" },
+  { name: "Cabinetry Talk", meta: "Installs, layout, scribing", count: "6.1K", icon: Hammer, tone: "#6b4a1c" },
+  { name: "Tile Talk", meta: "Layout, thinset, lippage", count: "5.3K", icon: Wrench, tone: "#3b2a6b" },
+  { name: "Plumbing Talk", meta: "Rough-in, service, code", count: "7.6K", icon: Wrench, tone: "#0f5f6b" },
+  { name: "Remodelers", meta: "Whole-home coordination", count: "4.4K", icon: Users, tone: "#444" },
 ];
 
 const TRADE_TALK_PROMPTS = [
@@ -404,6 +416,10 @@ export function ShopTalkView({
   const [answerDraft, setAnswerDraft] = useState("");
   const [rulesOpen, setRulesOpen] = useState(false);
   const [newPostOpen, setNewPostOpen] = useState(false);
+  const [joinedCommunities, setJoinedCommunities] = useState<Set<string>>(() => {
+    try { return new Set(JSON.parse(localStorage.getItem("rivt.joinedCommunities.v1") ?? "[]") as string[]); }
+    catch { return new Set(); }
+  });
   const [talkQuery, setTalkQuery] = useState(() => initialQuery.trim());
   const [newsQuery, setNewsQuery] = useState("");
   const [liveNews, setLiveNews] = useState<NewsItem[]>([]);
@@ -777,27 +793,49 @@ export function ShopTalkView({
                 ))}
               </div>
 
-              <section className="trade-community-discovery" aria-label="Find your crew">
-                <div className="trade-community-head">
-                  <div>
-                    <span>Find your crew</span>
-                    <strong>Trade groups near the work</strong>
-                  </div>
-                  <Users size={18} />
+              <section className="community-board" aria-label="Communities">
+                <div className="community-board-head">
+                  <strong>Communities</strong>
+                  <span>{joinedCommunities.size} joined</span>
                 </div>
-                <div className="trade-community-list">
-                  {TRADE_TALK_COMMUNITIES.map((community) => (
-                    <button
-                      type="button"
-                      key={community.name}
-                      className="trade-community-card"
-                      onClick={() => setTalkQuery(community.name.replace(" Talk", ""))}
-                    >
-                      <span>{community.name}</span>
-                      <small>{community.meta}</small>
-                      <b>{community.count}</b>
-                    </button>
-                  ))}
+                <div className="community-board-list">
+                  {TRADE_TALK_COMMUNITIES.map((community) => {
+                    const CIcon = community.icon;
+                    const joined = joinedCommunities.has(community.name);
+                    return (
+                      <div key={community.name} className="community-row">
+                        <button
+                          type="button"
+                          className="community-row-main"
+                          onClick={() => setTalkQuery(community.name.replace(" Talk", ""))}
+                        >
+                          <span className="community-row-icon" style={{ background: community.tone }}>
+                            <CIcon size={20} strokeWidth={2.4} />
+                          </span>
+                          <span className="community-row-copy">
+                            <b>{community.name}</b>
+                            <small>{community.count} members · {community.meta}</small>
+                          </span>
+                        </button>
+                        <button
+                          type="button"
+                          className={joined ? "community-join is-joined" : "community-join"}
+                          aria-pressed={joined}
+                          onClick={() => {
+                            setJoinedCommunities((prev) => {
+                              const next = new Set(prev);
+                              if (next.has(community.name)) next.delete(community.name);
+                              else next.add(community.name);
+                              try { localStorage.setItem("rivt.joinedCommunities.v1", JSON.stringify([...next])); } catch { /* ignore */ }
+                              return next;
+                            });
+                          }}
+                        >
+                          {joined ? "Joined" : "Join"}
+                        </button>
+                      </div>
+                    );
+                  })}
                 </div>
               </section>
 
