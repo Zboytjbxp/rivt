@@ -418,7 +418,7 @@
   border: 1px solid color-mix(in srgb, var(--border) 66%, transparent);
   border-radius: var(--v2-radius-lg);
   background:
-    radial-gradient(circle at top right, color-mix(in srgb, var(--teal) 12%, transparent), transparent 44%),
+    radial-gradient(circle at top right, color-mix(in srgb, var(--v2-teal) 12%, transparent), transparent 44%),
     var(--surface-soft);
 }
 
@@ -487,10 +487,10 @@
   display: grid;
   gap: 12px;
   padding: 14px;
-  border: 1px solid color-mix(in srgb, var(--teal) 24%, var(--border));
+  border: 1px solid color-mix(in srgb, var(--v2-teal) 24%, var(--border));
   border-radius: var(--v2-radius-lg);
   background:
-    linear-gradient(135deg, color-mix(in srgb, var(--teal) 10%, transparent), transparent 62%),
+    linear-gradient(135deg, color-mix(in srgb, var(--v2-teal) 10%, transparent), transparent 62%),
     var(--surface-soft);
 }
 
@@ -505,7 +505,7 @@
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  color: var(--teal);
+  color: var(--v2-teal);
   font-size: 10px;
   font-weight: var(--v2-weight-display);
   letter-spacing: 0.08em;
@@ -543,7 +543,7 @@
 }
 
 .shop-talk-reputation-steps svg {
-  color: var(--teal);
+  color: var(--v2-teal);
 }
 
 .shop-talk-reputation-steps span[data-complete="true"] svg {
@@ -803,9 +803,9 @@
 }
 
 .reaction-button.active.negative {
-  border-color: color-mix(in srgb, #d94848 45%, var(--border));
-  background: color-mix(in srgb, #d94848 10%, var(--surface));
-  color: #d94848;
+  border-color: color-mix(in srgb, var(--v2-danger) 45%, var(--border));
+  background: color-mix(in srgb, var(--v2-danger) 10%, var(--surface));
+  color: var(--v2-danger);
 }
 
 .reaction-button.active::after {
@@ -828,9 +828,9 @@
   display: grid;
   gap: 4px;
   padding: 11px 12px;
-  border: 1px solid color-mix(in srgb, var(--teal) 28%, var(--border));
+  border: 1px solid color-mix(in srgb, var(--v2-teal) 28%, var(--border));
   border-radius: var(--v2-radius-lg);
-  background: color-mix(in srgb, var(--teal) 8%, var(--surface));
+  background: color-mix(in srgb, var(--v2-teal) 8%, var(--surface));
 }
 
 .answer-guidance-card strong {
@@ -1380,9 +1380,9 @@
 
 /* Post type badge */
 .v2-st-type-badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: var(--v2-weight-bold); margin-bottom: 4px; }
-.v2-st-type-badge.question { background: #dbeafe; color: #1d4ed8; }
+.v2-st-type-badge.question { background: var(--v2-info-soft); color: var(--v2-info); }
 .v2-st-type-badge.sub-request { background: var(--v2-accent-soft); color: var(--v2-accent-text); }
-.v2-st-type-badge.safety { background: #fee2e2; color: #dc2626; }
+.v2-st-type-badge.safety { background: var(--v2-danger-soft); color: var(--v2-danger); }
 .v2-st-type-badge.general { background: var(--v2-surface-muted); color: var(--v2-text-muted); }
 
 /* Sub request details */
@@ -1411,8 +1411,8 @@
 .v2-st-trending-pill.is-active { border-color: var(--v2-accent); background: var(--v2-accent-soft); color: var(--v2-accent-text); }
 
 /* Rep badges */
-.v2-st-rep-badge { display: inline-flex; align-items: center; gap: 3px; padding: 2px 7px; background: color-mix(in srgb, #f59e0b 12%, transparent); color: #b45309; border-radius: 999px; font-size: 10px; font-weight: var(--v2-weight-bold); }
-.v2-st-my-rep-badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; background: color-mix(in srgb, #f59e0b 14%, transparent); color: #b45309; border-radius: 999px; font-size: 12px; font-weight: var(--v2-weight-bold); white-space: nowrap; }
+.v2-st-rep-badge { display: inline-flex; align-items: center; gap: 3px; padding: 2px 7px; background: color-mix(in srgb, #f59e0b 12%, transparent); color: var(--v2-warning); border-radius: 999px; font-size: 10px; font-weight: var(--v2-weight-bold); }
+.v2-st-my-rep-badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; background: color-mix(in srgb, #f59e0b 14%, transparent); color: var(--v2-warning); border-radius: 999px; font-size: 12px; font-weight: var(--v2-weight-bold); white-space: nowrap; }
 
 /* Helpful vote button */
 .v2-st-helpful-btn { display: inline-flex; align-items: center; gap: 4px; background: none; border: none; color: var(--v2-text-muted); font-size: 12px; cursor: pointer; padding: 4px 0; transition: color 0.12s; }
@@ -2076,10 +2076,10 @@
 
 /* Trade Talk mobile-first community redesign */
 .trade-talk-layout {
-  --trade-orange: #ff4b00;
-  --trade-ink: #0b0b0b;
-  --trade-paper: #ffffff;
-  --trade-page: #f7f7f4;
+  --trade-orange: var(--v2-accent);
+  --trade-ink: var(--v2-text);
+  --trade-paper: var(--v2-surface);
+  --trade-page: var(--v2-bg);
 }
 
 .trade-talk-layout .shop-talk-sidebar {
@@ -2099,7 +2099,7 @@
 .trade-talk-layout .shop-talk-tabs {
   border: 0;
   border-radius: 999px;
-  background: #eeeeeb;
+  background: var(--v2-surface-muted);
 }
 
 .trade-talk-layout .shop-talk-tabs button {
@@ -2128,7 +2128,7 @@
   justify-content: center;
   gap: 9px;
   padding: 0 12px;
-  border: 1px solid #e3e5e3;
+  border: 1px solid var(--v2-border);
   border-radius: 16px;
   background: var(--trade-paper);
   color: var(--trade-ink);
@@ -2143,7 +2143,7 @@
 }
 
 .trade-talk-action-card.is-crew {
-  color: #006f64;
+  color: var(--v2-teal-text);
 }
 
 .trade-talk-prompt-strip {
@@ -2223,9 +2223,9 @@
   min-height: 108px;
   place-items: center;
   padding: 14px 10px;
-  border: 1px solid #eceeed;
+  border: 1px solid var(--v2-surface-muted);
   border-radius: 14px;
-  background: #fbfbfa;
+  background: var(--v2-surface-muted);
   color: var(--trade-ink);
   text-align: center;
 }
@@ -2268,7 +2268,7 @@
 }
 
 .trade-talk-layout .shop-talk-search {
-  border: 1.5px solid #dde2e2;
+  border: 1.5px solid var(--v2-border);
   border-radius: 999px;
 }
 
@@ -2282,14 +2282,14 @@
   display: grid;
   gap: 10px;
   padding: 16px;
-  border: 1px solid #e6e8e6;
+  border: 1px solid var(--v2-surface-muted);
   border-radius: 14px;
   background: var(--trade-paper);
   box-shadow: none;
 }
 
 .trade-talk-layout .shop-post-card.selected {
-  border-color: color-mix(in srgb, var(--trade-orange) 34%, #e6e8e6);
+  border-color: color-mix(in srgb, var(--trade-orange) 34%, var(--v2-surface-muted));
   box-shadow: inset 3px 0 0 var(--trade-orange);
 }
 
@@ -2315,7 +2315,7 @@
   display: -webkit-box;
   overflow: hidden;
   margin: 0;
-  color: #3d4547;
+  color: var(--v2-text-muted);
   font-size: 14px;
   line-height: 1.36;
   -webkit-box-orient: vertical;
@@ -2370,7 +2370,7 @@
 }
 
 .trade-talk-layout .v2-st-replies {
-  border-top-color: #eceeed;
+  border-top-color: var(--v2-surface-muted);
 }
 
 .trade-talk-fab {
@@ -2579,7 +2579,7 @@
   padding: 0 18px;
   border-radius: 999px;
   border: 1.5px solid #ff4b00;
-  background: #ff4b00;
+  background: var(--v2-accent);
   color: #fff;
   font-size: 14px;
   font-weight: 700;

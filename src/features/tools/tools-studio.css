@@ -5100,25 +5100,27 @@
 /* ?? Heavy 16th cabinet calculator redesign ??????????????????????? */
 
 .heavy-calc-workbench {
-  --calc-bg: #0d1524;
-  --calc-panel: #111c2e;
-  --calc-panel-deep: #0b1320;
-  --calc-panel-soft: #16243a;
-  --calc-line: rgba(255, 255, 255, 0.08);
-  --calc-text: #f2f6fb;
-  --calc-muted: rgba(242, 246, 251, 0.62);
-  --calc-lime: #93d623;
-  --calc-lime-deep: #5d8d15;
-  --calc-warn: #f8c537;
-  --calc-red: #ef5350;
+  --calc-bg: var(--v2-bg);
+  --calc-panel: var(--v2-surface);
+  --calc-panel-deep: var(--v2-bg);
+  --calc-panel-soft: var(--v2-surface-muted);
+  --calc-line: var(--v2-border);
+  --calc-text: var(--v2-text);
+  --calc-muted: var(--v2-text-muted);
+  --calc-lime: var(--v2-accent);
+  --calc-accent-text: var(--v2-accent-text);
+  --calc-lime-deep: var(--v2-accent-hover);
+  --calc-warn: var(--v2-warning);
+  --calc-red: var(--v2-danger);
+  --calc-on-accent: #fff;
   position: relative;
   overflow: hidden;
   padding: 0;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--v2-border);
   border-radius: var(--v2-radius-lg);
   background:
-    radial-gradient(circle at top left, rgba(147, 214, 35, 0.08), transparent 28%),
-    linear-gradient(180deg, #0d1524 0%, #101826 100%);
+    radial-gradient(circle at top left, color-mix(in srgb, var(--v2-accent) 7%, transparent), transparent 30%),
+    var(--v2-surface);
   color: var(--calc-text);
 }
 
@@ -5139,7 +5141,7 @@
   min-height: 44px;
   border: none;
   border-radius: var(--v2-radius-lg);
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--v2-surface-muted);
   color: var(--calc-lime);
   display: inline-flex;
   align-items: center;
@@ -5167,8 +5169,8 @@
   width: 42px;
   height: 42px;
   border-radius: var(--v2-radius-lg);
-  background: linear-gradient(180deg, rgba(147, 214, 35, 0.14), rgba(147, 214, 35, 0.04));
-  border: 1px solid rgba(147, 214, 35, 0.25);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--v2-accent) 14%, transparent), color-mix(in srgb, var(--v2-accent) 4%, transparent));
+  border: 1px solid color-mix(in srgb, var(--v2-accent) 25%, transparent);
   display: grid;
   place-items: center;
   color: var(--calc-lime);
@@ -5187,7 +5189,7 @@
   margin-top: 3px;
   font-size: 11px;
   font-weight: var(--v2-weight-bold);
-  color: rgba(147, 214, 35, 0.84);
+  color: color-mix(in srgb, var(--v2-accent) 84%, transparent);
   letter-spacing: 0.14em;
   text-transform: uppercase;
 }
@@ -5216,16 +5218,16 @@
   font-weight: var(--v2-weight-display);
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: rgba(147, 214, 35, 0.72);
+  color: color-mix(in srgb, var(--v2-accent) 72%, transparent);
 }
 .drawer-title strong { display: block; margin-top: 6px; font-size: 20px; line-height: 1.05; color: var(--calc-text); }
 
 .drawer-entry {
   width: 100%;
   padding: 14px 15px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--v2-border);
   border-radius: var(--v2-radius-lg);
-  background: rgba(255, 255, 255, 0.015);
+  background: var(--v2-surface-muted);
   color: var(--calc-text);
   display: flex;
   align-items: center;
@@ -5236,9 +5238,9 @@
 .drawer-entry strong { display: block; font-size: 15px; font-weight: var(--v2-weight-bold); line-height: 1.15; }
 .drawer-entry small { display: block; margin-top: 4px; font-size: 12px; color: var(--calc-muted); }
 .drawer-entry.active {
-  border-color: rgba(147, 214, 35, 0.42);
-  background: linear-gradient(180deg, rgba(147, 214, 35, 0.12), rgba(147, 214, 35, 0.04));
-  box-shadow: inset 0 0 0 1px rgba(147, 214, 35, 0.08);
+  border-color: color-mix(in srgb, var(--v2-accent) 42%, transparent);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--v2-accent) 12%, transparent), color-mix(in srgb, var(--v2-accent) 4%, transparent));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--v2-accent) 8%, transparent);
 }
 .drawer-pill {
   display: inline-flex;
@@ -5248,13 +5250,13 @@
   height: 24px;
   padding: 0 10px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--v2-surface-muted);
   color: var(--calc-text);
   font-size: 11px;
   font-weight: var(--v2-weight-display);
   letter-spacing: 0.08em;
 }
-.drawer-pill.accent { background: rgba(248, 197, 55, 0.16); color: #ffd44d; }
+.drawer-pill.accent { background: var(--v2-warning-soft); color: var(--v2-warning); }
 
 .drawer-section { margin-top: 4px; padding-top: 10px; border-top: 1px solid var(--calc-line); }
 .drawer-section.compact { display: flex; flex-direction: column; gap: 12px; }
@@ -5262,7 +5264,7 @@
 .theme-swatch-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
 .theme-swatch {
   aspect-ratio: 1;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid var(--v2-border);
   border-radius: var(--v2-radius-lg);
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0 50%, rgba(0, 0, 0, 0.85) 50% 100%);
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.03);
@@ -5272,7 +5274,7 @@
 .theme-swatch.teal { background: linear-gradient(135deg, #39c7ff 50%, #f4f4f4 50%); }
 .theme-swatch.green { background: linear-gradient(135deg, #8bd441 50%, #0b0b0b 50%); }
 .theme-swatch.orange { background: linear-gradient(135deg, #ff7d2d 50%, #f4f4f4 50%); }
-.theme-swatch.selected { outline: 2px solid rgba(147, 214, 35, 0.95); outline-offset: 2px; }
+.theme-swatch.selected { outline: 2px solid color-mix(in srgb, var(--v2-accent) 95%, transparent); outline-offset: 2px; }
 
 .drawer-toggle-row,
 .suite-settings-grid label {
@@ -5291,7 +5293,7 @@
   height: 34px;
   border: none;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.09);
+  background: var(--v2-surface-muted);
   padding: 3px;
   display: inline-flex;
   align-items: center;
@@ -5305,7 +5307,7 @@
   background: #f3f6fb;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
-.drawer-switch.on { background: rgba(147, 214, 35, 0.22); justify-content: flex-end; }
+.drawer-switch.on { background: color-mix(in srgb, var(--v2-accent) 22%, transparent); justify-content: flex-end; }
 .drawer-switch.on i { background: var(--calc-lime); }
 
 .heavy-calc-main {
@@ -5317,7 +5319,7 @@
 }
 .heavy-calc-main.miter-mode,
 .heavy-calc-main.crown-mode,
-.heavy-calc-main.suite-mode { background: linear-gradient(180deg, #121b2b 0%, #0f1726 100%); }
+.heavy-calc-main.suite-mode { background: linear-gradient(180deg, var(--v2-surface-muted) 0%, var(--v2-surface-muted) 100%); }
 
 .calc-screen-head,
 .miter-top-row,
@@ -5333,7 +5335,7 @@
 .copy-chip {
   border: none;
   border-radius: var(--v2-radius-lg);
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--v2-surface-muted);
   color: var(--calc-text);
   padding: 11px 14px;
   font-size: 12px;
@@ -5344,8 +5346,8 @@
 .calc-display-stack {
   min-height: 260px;
   border-radius: 24px;
-  background: radial-gradient(circle at top right, rgba(147, 214, 35, 0.1), transparent 30%), linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.01));
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: radial-gradient(circle at top right, color-mix(in srgb, var(--v2-accent) 10%, transparent), transparent 30%), linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.01));
+  border: 1px solid var(--v2-border);
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -5356,7 +5358,7 @@
   line-height: 0.95;
   font-weight: var(--v2-weight-bold);
   text-align: right;
-  color: #fff;
+  color: var(--calc-text);
   letter-spacing: -0.04em;
 }
 .calc-secondary-row {
@@ -5369,7 +5371,7 @@
   font-weight: var(--v2-weight-bold);
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: rgba(242, 246, 251, 0.58);
+  color: var(--v2-text-muted);
 }
 .calc-action-row { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
 .calc-danger,
@@ -5382,17 +5384,17 @@
   min-height: 54px;
   font-size: 18px;
   font-weight: var(--v2-weight-bold);
-  background: #20242a;
-  color: #f5f7fa;
+  background: var(--v2-surface-muted);
+  color: var(--calc-text);
 }
-.calc-danger { background: #5d1f21; color: #ff7c72; }
-.calc-danger.ghost { background: #3d2222; }
-.calc-utility { background: #26321b; color: var(--calc-lime); font-size: 15px; }
+.calc-danger { background: var(--v2-danger-soft); color: var(--v2-danger); }
+.calc-danger.ghost { background: var(--v2-danger-soft); }
+.calc-utility { background: var(--v2-accent-soft); color: var(--calc-lime); font-size: 15px; }
 .calc-pad-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
-.calc-pad-grid button { min-height: 60px; background: #23262b; border-radius: var(--v2-radius-lg); }
-.calc-pad-grid button.op { color: var(--calc-lime); background: #1a2412; }
-.calc-pad-grid button.op.ghost { color: #ff6464; background: #301a1a; }
-.calc-pad-grid button.eq { background: var(--calc-lime); color: #0d1524; }
+.calc-pad-grid button { min-height: 60px; background: var(--v2-surface-muted); border-radius: var(--v2-radius-lg); }
+.calc-pad-grid button.op { color: var(--calc-lime); background: var(--v2-accent-soft); }
+.calc-pad-grid button.op.ghost { color: var(--v2-danger); background: var(--v2-danger-soft); }
+.calc-pad-grid button.eq { background: var(--calc-lime); color: var(--calc-on-accent); }
 .calc-pad-grid button.plus { color: var(--calc-lime); }
 .calc-pad-grid.compact button { min-height: 52px; font-size: 16px; }
 
@@ -5400,10 +5402,10 @@
 .miter-value-card {
   padding: 18px;
   border-radius: var(--v2-radius-lg);
-  background: #23262b;
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: var(--v2-surface-muted);
+  border: 1px solid var(--v2-border);
 }
-.miter-value-card.emphasis { background: #7dcb22; color: #0d1524; }
+.miter-value-card.emphasis { background: var(--v2-accent); color: var(--calc-on-accent); }
 .miter-value-card span,
 .miter-readout span,
 .miter-config-card span,
@@ -5426,15 +5428,15 @@
 .miter-toggle-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .miter-toggle-row.tight { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .choice-pill,
-.preset { min-height: 48px; border-radius: var(--v2-radius-lg); background: #23262b; color: #dfe7ef; font-size: 14px; }
+.preset { min-height: 48px; border-radius: var(--v2-radius-lg); background: var(--v2-surface-muted); color: var(--calc-text); font-size: 14px; }
 .choice-pill.active,
-.preset.active { background: var(--calc-lime); color: #0d1524; }
+.preset.active { background: var(--calc-lime); color: var(--calc-on-accent); }
 .miter-readout { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; padding-top: 4px; }
 .miter-readout > div {
   min-height: 170px;
   border-radius: var(--v2-radius-lg);
-  background: linear-gradient(180deg, #101722, #121d2d);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: linear-gradient(180deg, var(--v2-surface-muted), var(--v2-surface-muted));
+  border: 1px solid var(--v2-border);
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -5445,24 +5447,24 @@
   margin-top: 10px;
   font-size: clamp(54px, 9vw, 86px);
   line-height: 0.95;
-  color: #fff;
+  color: var(--calc-text);
 }
 .miter-config-card,
 .suite-summary-card {
   padding: 18px;
   border-radius: var(--v2-radius-lg);
-  background: #191d24;
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: var(--v2-surface-muted);
+  border: 1px solid var(--v2-border);
 }
 .miter-config-card strong { display: block; margin-top: 8px; font-size: 18px; color: var(--calc-lime); letter-spacing: 0.08em; }
 .miter-config-card p { margin: 10px 0 0; font-size: 16px; font-weight: var(--v2-weight-display); }
-.miter-config-card small { display: block; margin-top: 6px; font-size: 12px; color: rgba(242, 246, 251, 0.45); }
+.miter-config-card small { display: block; margin-top: 6px; font-size: 12px; color: var(--v2-text-muted); }
 
 .suite-list { display: grid; gap: 12px; }
 .suite-card {
   padding: 16px;
   border-radius: var(--v2-radius-lg);
-  background: #1d2230;
+  background: var(--v2-surface-muted);
   display: grid;
   grid-template-columns: 24px minmax(0, 1fr) auto;
   align-items: center;
@@ -5478,7 +5480,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: rgba(248, 197, 55, 0.14);
+  background: var(--v2-warning-soft);
   color: #ffd24d;
   font-size: 11px;
   font-weight: var(--v2-weight-display);
@@ -5489,7 +5491,7 @@
 .theme-row { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
 .theme-card {
   aspect-ratio: 1;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--v2-border);
   border-radius: var(--v2-radius-lg);
   background: #161a22;
   display: grid;
@@ -5508,39 +5510,39 @@
 .theme-card.selected { outline: 2px solid var(--calc-lime); outline-offset: 2px; }
 
 .suite-summary-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
-.suite-stat { padding: 14px; border-radius: var(--v2-radius-lg); background: #222633; text-align: center; }
-.suite-stat strong { display: block; font-size: 28px; color: #fff; }
+.suite-stat { padding: 14px; border-radius: var(--v2-radius-lg); background: var(--v2-surface-muted); text-align: center; }
+.suite-stat strong { display: block; font-size: 28px; color: var(--calc-text); }
 .suite-summary-foot {
   margin-top: 14px;
   padding-top: 14px;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 1px solid var(--v2-border);
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
 }
 .suite-summary-foot strong { display: block; margin-top: 4px; font-size: 20px; }
-.copy-chip { background: var(--calc-lime); color: #0d1524; }
+.copy-chip { background: var(--calc-lime); color: var(--calc-on-accent); }
 
 .heavy-calc-ruler {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   padding: 18px 10px 18px 6px;
-  background: #0b0f17;
+  background: var(--v2-surface-muted);
 }
 .ruler-tick {
   display: flex;
   align-items: center;
   justify-content: flex-end;
   gap: 8px;
-  color: rgba(242, 246, 251, 0.4);
+  color: var(--v2-text-muted);
   font-size: 13px;
   font-weight: var(--v2-weight-display);
 }
-.ruler-tick::before { content: ""; flex: 1; height: 2px; background: rgba(147, 214, 35, 0.18); }
-.ruler-tick.major { color: rgba(242, 246, 251, 0.78); }
-.ruler-tick.major::before { background: rgba(147, 214, 35, 0.58); height: 3px; }
+.ruler-tick::before { content: ""; flex: 1; height: 2px; background: color-mix(in srgb, var(--v2-accent) 18%, transparent); }
+.ruler-tick.major { color: var(--v2-text-muted); }
+.ruler-tick.major::before { background: color-mix(in srgb, var(--v2-accent) 58%, transparent); height: 3px; }
 
 .fraction-calc-workbench {
   min-height: 0;
@@ -5571,10 +5573,10 @@
   display: inline-grid;
   grid-template-columns: 34px 44px 34px;
   align-items: center;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--v2-border);
   border-radius: 999px;
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--v2-surface-muted);
 }
 
 .fraction-stepper button {
@@ -5626,8 +5628,8 @@
   gap: 8px;
   padding: 6px;
   border-radius: var(--v2-radius-lg);
-  background: rgba(0, 0, 0, 0.22);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: var(--v2-surface);
+  border: 1px solid var(--v2-border);
 }
 
 .fraction-mode-strip button {
@@ -5635,7 +5637,7 @@
   border: 0;
   border-radius: var(--v2-radius-md);
   background: transparent;
-  color: rgba(242, 246, 251, 0.66);
+  color: var(--v2-text-muted);
   font-size: 12px;
   font-weight: var(--v2-weight-display);
   letter-spacing: 0.08em;
@@ -5644,7 +5646,7 @@
 
 .fraction-mode-strip button.active {
   background: var(--calc-lime);
-  color: #0d1524;
+  color: var(--calc-on-accent);
 }
 
 .fraction-calc-grid {
@@ -5669,7 +5671,7 @@
   top: 18px;
   left: 22px;
   right: 22px;
-  color: rgba(242, 246, 251, 0.48);
+  color: var(--v2-text-muted);
   font-size: 12px;
   font-weight: var(--v2-weight-bold);
   letter-spacing: 0.1em;
@@ -5696,8 +5698,8 @@
   align-items: center;
   border-radius: 999px;
   padding: 0 9px;
-  background: rgba(255, 255, 255, 0.05);
-  color: rgba(242, 246, 251, 0.66);
+  background: var(--v2-surface-muted);
+  color: var(--v2-text-muted);
   font-size: 11px;
   font-weight: var(--v2-weight-bold);
   font-variant-numeric: tabular-nums;
@@ -5719,8 +5721,8 @@
   min-height: 58px;
   border: 0;
   border-radius: var(--v2-radius-lg);
-  background: #20242a;
-  color: #f5f7fa;
+  background: var(--v2-surface-muted);
+  color: var(--calc-text);
   text-align: left;
   padding: 10px 12px;
 }
@@ -5728,7 +5730,7 @@
 .fraction-unit-row button.active,
 .fraction-action-row button:active {
   background: var(--calc-lime);
-  color: #0d1524;
+  color: var(--calc-on-accent);
 }
 
 .fraction-unit-row span {
@@ -5767,17 +5769,17 @@
   min-height: 42px;
   border: 0;
   border-radius: var(--v2-radius-md);
-  background: #171c24;
-  color: rgba(242, 246, 251, 0.72);
+  background: var(--v2-surface-muted);
+  color: var(--v2-text-muted);
   font-size: 12px;
   font-weight: var(--v2-weight-bold);
   font-variant-numeric: tabular-nums;
 }
 
 .fraction-strip button.active {
-  background: rgba(147, 214, 35, 0.18);
+  background: color-mix(in srgb, var(--v2-accent) 18%, transparent);
   color: var(--calc-lime);
-  box-shadow: inset 0 0 0 1px rgba(147, 214, 35, 0.32);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--v2-accent) 32%, transparent);
 }
 
 .fraction-pad {
@@ -5796,9 +5798,9 @@
   border-radius: var(--v2-radius-lg);
   padding: 18px;
   background:
-    radial-gradient(circle at top right, rgba(147, 214, 35, 0.12), transparent 38%),
-    #141923;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+    radial-gradient(circle at top right, color-mix(in srgb, var(--v2-accent) 12%, transparent), transparent 38%),
+    var(--v2-surface-muted);
+  border: 1px solid var(--v2-border);
 }
 
 .fraction-result-card > svg {
@@ -5808,7 +5810,7 @@
 .fraction-result-card span,
 .fraction-result-card small,
 .fraction-summary-grid span {
-  color: rgba(242, 246, 251, 0.58);
+  color: var(--v2-text-muted);
   font-size: 11px;
   font-weight: var(--v2-weight-display);
   letter-spacing: 0.12em;
@@ -5816,7 +5818,7 @@
 }
 
 .fraction-result-card strong {
-  color: #fff;
+  color: var(--calc-text);
   font-size: clamp(30px, 5vw, 44px);
   line-height: 0.95;
   font-variant-numeric: tabular-nums;
@@ -5827,7 +5829,7 @@
   gap: 5px;
   margin-top: 4px;
   padding-top: 11px;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 1px solid var(--v2-border);
 }
 
 .fraction-result-card b,
@@ -5852,7 +5854,7 @@
 .miter-value-card {
   display: grid;
   gap: 7px;
-  color: rgba(242, 246, 251, 0.66);
+  color: var(--v2-text-muted);
   font-size: 11px;
   font-weight: var(--v2-weight-display);
   letter-spacing: 0.1em;
@@ -5863,9 +5865,9 @@
 .miter-value-card input {
   width: 100%;
   min-height: 46px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--v2-border);
   border-radius: var(--v2-radius-md);
-  background: rgba(0, 0, 0, 0.2);
+  background: var(--v2-surface);
   color: var(--calc-text);
   font: inherit;
   font-size: 18px;
@@ -5875,8 +5877,8 @@
 }
 
 .miter-value-card.emphasis input {
-  background: rgba(255, 255, 255, 0.18);
-  color: #fff;
+  background: var(--v2-surface-muted);
+  color: var(--calc-text);
 }
 
 .fraction-summary-grid {
@@ -5888,7 +5890,7 @@
 .fraction-summary-grid article {
   min-width: 0;
   border-radius: var(--v2-radius-lg);
-  background: #1d2230;
+  background: var(--v2-surface-muted);
   padding: 14px;
 }
 

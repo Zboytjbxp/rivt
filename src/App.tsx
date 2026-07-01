@@ -1274,8 +1274,12 @@ function App() {
         {activeView === "Home" ? (
           <TradeFeed
             posts={communityPosts}
+            name={accountProfile.displayName || (isGuest ? "there" : "there")}
+            location={accountProfile.location}
+            primaryTrade={primaryProfileTrade}
             onOpenPost={() => handleNavigate(defaultViewForDestination("shop-talk"))}
             onAsk={() => handleNavigate(defaultViewForDestination("shop-talk"))}
+            onPostWork={openCreateJob}
             onNavigate={(destination) => handleNavigate(defaultViewForDestination(destination))}
           />
         ) : activeView === "Marketplace" ? (

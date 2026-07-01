@@ -360,7 +360,7 @@ try {
     });
     await configurePage(page, []);
     await page.goto(`${baseUrl}/app`, { waitUntil: "networkidle" });
-    await page.getByRole("button", { name: "Ask the trades" }).waitFor();
+    await page.getByRole("button", { name: /Find your crew/ }).first().waitFor();
     await page.getByRole("heading", { name: "Communities" }).waitFor();
     await page.getByRole("button", { name: /^Work$/ }).click();
     await page.getByText("No open jobs", { exact: true }).waitFor();

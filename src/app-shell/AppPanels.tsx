@@ -80,7 +80,7 @@ export function ActivityPanel({
   onNavigate: (view: NavLabel) => void;
 }) {
   return (
-    <div className="panel-backdrop" onClick={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+    <div className="panel-backdrop rivt-v2" onClick={(event) => { if (event.target === event.currentTarget) onClose(); }}>
       <aside className="side-panel" role="dialog" aria-modal="true" aria-label="Notifications">
         <div className="side-panel-header">
           <div>
@@ -169,7 +169,7 @@ export function AccountPanel({
   onNavigate: (view: NavLabel) => void;
 }) {
   return (
-    <div className="panel-backdrop" onClick={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+    <div className="panel-backdrop rivt-v2" onClick={(event) => { if (event.target === event.currentTarget) onClose(); }}>
       <aside className="side-panel" role="dialog" aria-modal="true" aria-label="Settings">
         <div className="side-panel-header">
           <div>

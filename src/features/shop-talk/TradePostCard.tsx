@@ -5,7 +5,7 @@ import {
   BadgeCheck,
   Bookmark,
   Building2,
-  Ellipsis,
+  Check,
   Hammer,
   MessageCircle,
   Share2,
@@ -52,8 +52,22 @@ export function TradePostCard({ post, saved, onToggleSave, onOpen }: TradePostCa
   const score = baseScore + (vote === "up" ? 1 : vote === "down" ? -1 : 0);
   const comments = post.commentCount ?? post.replies.length;
 
+  const [shared, setShared] = useState(false);
+
   function toggleVote(dir: "up" | "down") {
     setVote((prev) => (prev === dir ? null : dir));
+  }
+
+  function handleShare() {
+    const url = `${window.location.origin}/app?post=${post.id}`;
+    const done = () => { setShared(true); window.setTimeout(() => setShared(false), 1600); };
+    if (navigator.share) {
+      navigator.share({ title: post.title, url }).then(done).catch(() => {});
+    } else if (navigator.clipboard) {
+      navigator.clipboard.writeText(url).then(done).catch(() => {});
+    } else {
+      done();
+    }
   }
 
   return (
@@ -71,9 +85,6 @@ export function TradePostCard({ post, saved, onToggleSave, onOpen }: TradePostCa
             <CIcon size={11} /> {community.label} · {post.createdAt}
           </span>
         </div>
-        <button type="button" className="trade-post-more" aria-label="Post options">
-          <Ellipsis size={18} />
-        </button>
       </header>
 
       <button type="button" className="trade-post-body-btn" onClick={onOpen}>
@@ -116,8 +127,13 @@ export function TradePostCard({ post, saved, onToggleSave, onOpen }: TradePostCa
         >
           <Bookmark size={18} fill={saved ? "currentColor" : "none"} />
         </button>
-        <button type="button" className="trade-post-icon" aria-label="Share">
-          <Share2 size={18} />
+        <button
+          type="button"
+          className={shared ? "trade-post-icon is-saved" : "trade-post-icon"}
+          aria-label={shared ? "Link copied" : "Share"}
+          onClick={handleShare}
+        >
+          {shared ? <Check size={18} /> : <Share2 size={18} />}
         </button>
       </footer>
     </article>

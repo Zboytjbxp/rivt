@@ -30,7 +30,7 @@ function toneFor(name: string) {
   return AVATAR_TONES[hash % AVATAR_TONES.length];
 }
 
-const PORTFOLIO_TONES = ["#e7dccb", "#d8e3e0", "#e6dce8", "#dce3ef"];
+const PORTFOLIO_TILES = [0, 1, 2, 3];
 
 const CERTS = [
   { code: "AWI", label: "Advanced Level", tone: "#334155" },
@@ -151,8 +151,8 @@ export function ProfileShowcase({
           <button type="button" className="ps-seeall">See all</button>
         </div>
         <div className="ps-portfolio-row">
-          {PORTFOLIO_TONES.map((tone, i) => (
-            <div key={i} className="ps-portfolio-tile" style={{ background: tone }}>
+          {PORTFOLIO_TILES.map((i) => (
+            <div key={i} className="ps-portfolio-tile">
               <Briefcase size={20} />
             </div>
           ))}
