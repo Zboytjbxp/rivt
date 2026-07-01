@@ -379,6 +379,7 @@ export function ShopTalkView({
   newsItems,
   initialQuery,
   initialPostId,
+  openComposer,
   selectedJobTrade,
   userLocation,
   getPostReactionState,
@@ -397,6 +398,7 @@ export function ShopTalkView({
   newsItems: NewsItem[];
   initialQuery: string;
   initialPostId?: number | null;
+  openComposer?: boolean;
   selectedJobTrade: Trade | "General";
   userLocation: string;
   getPostReactionState: (post: CommunityPost) => CommunityReactionState;
@@ -418,7 +420,7 @@ export function ShopTalkView({
   const [selectedPostId, setSelectedPostId] = useState(initialPostId ?? communityPosts[0]?.id ?? 0);
   const [answerDraft, setAnswerDraft] = useState("");
   const [rulesOpen, setRulesOpen] = useState(false);
-  const [newPostOpen, setNewPostOpen] = useState(false);
+  const [newPostOpen, setNewPostOpen] = useState(Boolean(openComposer));
   const [joinedCommunities, setJoinedCommunities] = useState<Set<string>>(() => {
     try { return new Set(JSON.parse(localStorage.getItem("rivt.joinedCommunities.v1") ?? "[]") as string[]); }
     catch { return new Set(); }
