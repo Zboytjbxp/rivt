@@ -24,7 +24,7 @@ import { Avatar, EmptyState, MetricTile, PageHeader, Panel } from "../../compone
 import "./network-hub.css";
 
 interface CommunityPost {
-  id: number;
+  id: string;
   title: string;
   trade: string;
   status: string;

@@ -209,6 +209,8 @@ async function configurePage(page, jobs, { activeWork = [], project = null } = {
   await page.route("**/api/v1/notifications", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { notifications: [], unreadCount: 0 }, meta: { requestId: "e2e-notifications" } }) }));
   await page.route("**/api/v1/notifications/read", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { unreadCount: 0 }, meta: { requestId: "e2e-notifications-read" } }) }));
   await page.route("**/api/v1/active-work", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { activeWork }, meta: { requestId: "e2e-active-work" } }) }));
+  await page.route("**/api/v1/shop-talk/posts", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { posts: [] }, meta: { requestId: "e2e-shop-talk-posts" } }) }));
+  await page.route("**/api/v1/communities", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { communities: [] }, meta: { requestId: "e2e-communities" } }) }));
   await page.route("**/api/v1/shop-talk/reactions/batch", async (route) => {
     const body = route.request().postDataJSON();
     const targets = Array.isArray(body?.targets) ? body.targets : [];

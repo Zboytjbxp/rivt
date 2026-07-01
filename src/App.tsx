@@ -67,9 +67,10 @@ import type {
   PostFlair,
   PostType,
 } from "./features/shop-talk/ShopTalkView";
-import { communityBadgeLabels } from "./features/shop-talk/community-utils";
+import { communityBadgeLabels, relativeTime } from "./features/shop-talk/community-utils";
 import { communityPromptPosts, fallbackNewsItems } from "./features/shop-talk/fallback-data";
 import { useCommunityReactions } from "./features/shop-talk/useCommunityReactions";
+import { createShopTalkPost, fetchShopTalkPosts, type ServerShopTalkPost } from "./features/shop-talk/shop-talk-api";
 import type { ProfileUpdateInput } from "./features/profile/ProfileHub";
 import type { ToolMode } from "./features/tools/ToolsStudio";
 import { recordChecklist, safetyQuizData, trainingModules, type SafetyQuizResult } from "./features/profile/training-data";
@@ -156,7 +157,7 @@ function App() {
   const [authNotice, setAuthNotice] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [shopTalkGlobalQuery, setShopTalkGlobalQuery] = useState("");
-  const [shopTalkPostId, setShopTalkPostId] = useState<number | null>(null);
+  const [shopTalkPostId, setShopTalkPostId] = useState<string | null>(null);
   const [shopTalkCompose, setShopTalkCompose] = useState(false);
   // Consume one-shot Shop Talk intents (open a post / open the composer) once we leave the view.
   useEffect(() => {
@@ -491,6 +492,42 @@ function App() {
     return () => window.clearTimeout(timeout);
   }, [authUser, isGuest, onboardingComplete, reloadInbox]);
 
+  function mapServerShopTalkPost(post: ServerShopTalkPost): CommunityPost {
+    return {
+      id: post.id,
+      title: post.title,
+      trade: post.trade as Trade | "General",
+      author: post.author,
+      flair: post.flair as CommunityPost["flair"],
+      body: post.body,
+      upvotes: 0,
+      downvotes: 0,
+      replies: [],
+      createdAt: relativeTime(post.createdAt),
+      status: post.status as CommunityPost["status"],
+      type: post.type as PostType | undefined,
+    };
+  }
+
+  const reloadShopTalkPosts = useCallback(async () => {
+    if (isGuest || !authUser || !onboardingComplete) return;
+    const serverPosts = await fetchShopTalkPosts();
+    // null means offline/unreachable (including a dev/guest session with no
+    // real auth cookie) — keep whatever is currently shown rather than clobber
+    // it. An authenticated success (even an empty array) replaces the seed/
+    // demo posts with the honest server state.
+    if (!serverPosts) return;
+    setCommunityPosts(serverPosts.map(mapServerShopTalkPost));
+  }, [authUser, isGuest, onboardingComplete]);
+
+  useEffect(() => {
+    if (isGuest || !authUser || !onboardingComplete) return;
+    const timeout = window.setTimeout(() => {
+      void reloadShopTalkPosts();
+    }, 0);
+    return () => window.clearTimeout(timeout);
+  }, [authUser, isGuest, onboardingComplete, reloadShopTalkPosts]);
+
   useEffect(() => {
     if (activeView !== "Messages") return;
     const timeout = window.setTimeout(() => {
@@ -739,7 +776,7 @@ function App() {
     handleNavigate("Tools");
   }
 
-  function handleAddCommunityAnswer(postId: number, body: string) {
+  function handleAddCommunityAnswer(postId: string, body: string) {
     const post = communityPosts.find((candidate) => candidate.id === postId);
     if (!post) {
       return;
@@ -772,7 +809,7 @@ function App() {
     );
   }
 
-  function handleVerifyCommunityAnswer(postId: number, answerId: number) {
+  function handleVerifyCommunityAnswer(postId: string, answerId: number) {
     const post = communityPosts.find((candidate) => candidate.id === postId);
     const answer = post?.replies.find((candidate) => candidate.id === answerId);
     if (!post || !answer) {
@@ -798,7 +835,7 @@ function App() {
     );
   }
 
-  function handleReportCommunityPost(postId: number, reason: CommunityReport["reason"]) {
+  function handleReportCommunityPost(postId: string, reason: CommunityReport["reason"]) {
     const post = communityPosts.find((candidate) => candidate.id === postId);
     if (!post) {
       return;
@@ -830,9 +867,12 @@ function App() {
   }
 
   function handleNewShopTalkPost(flair: PostFlair, title: string, trade: Trade | "General", body: string, postType: PostType, subTrade?: string, subLocation?: string, subRate?: string) {
+    // Optimistic local id; reconciled with the server's real id below once
+    // (if) the create call succeeds, so votes/bookmarks key onto the real post.
+    const optimisticId = crypto.randomUUID();
     setCommunityPosts((current) => [
       {
-        id: Date.now(),
+        id: optimisticId,
         title,
         trade,
         flair,
@@ -851,6 +891,15 @@ function App() {
       ...current,
     ]);
     addActivity("Trade Talk post created", `"${title}" posted to Trade Talk.`);
+
+    void createShopTalkPost({ title, body, trade, flair, postType }).then((serverPost) => {
+      if (!serverPost) return; // offline / backend unreachable: keep the local-only post as-is
+      setCommunityPosts((current) => current.map((candidate) =>
+        candidate.id === optimisticId
+          ? { ...candidate, id: serverPost.id, createdAt: relativeTime(serverPost.createdAt) }
+          : candidate,
+      ));
+    });
   }
 
   function handleJobSaved(job: Job, published: boolean) {
