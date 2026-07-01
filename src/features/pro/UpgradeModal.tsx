@@ -12,6 +12,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { BillingApiError, startStripeCheckout } from "../../lib/billing";
+import { useFocusTrap } from "../../app-shell/useFocusTrap";
 import { RIVT_PRO_OFFER } from "./proOffer";
 import "./pro.css";
 
@@ -67,9 +68,10 @@ export function UpgradeModal({ reason, onClose }: UpgradeModalProps) {
     }
   }
 
+  const trapRef = useFocusTrap<HTMLDivElement>(onClose);
   return (
     <div className="v2-upgrade-backdrop" onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="v2-upgrade-modal" role="dialog" aria-modal="true">
+      <div ref={trapRef} className="v2-upgrade-modal" role="dialog" aria-modal="true">
         {state === "unavailable" ? (
           <div className="v2-upgrade-status">
             <CreditCard size={40} />

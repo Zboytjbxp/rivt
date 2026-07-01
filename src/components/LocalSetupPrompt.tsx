@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Zap } from "lucide-react";
 import { persistRateCardEntries } from "../lib/rateCard";
+import { useFocusTrap } from "../app-shell/useFocusTrap";
 import "./LocalSetupPrompt.css";
 
 const TRADES = [
@@ -61,8 +62,9 @@ export function LocalSetupPrompt({ onDone }: LocalSetupPromptProps) {
     onDone();
   }
 
+  const trapRef = useFocusTrap<HTMLDivElement>(handleSkip);
   return (
-    <div className="v2-setup-backdrop" role="dialog" aria-modal="true" aria-label="Welcome setup">
+    <div ref={trapRef} className="v2-setup-backdrop" role="dialog" aria-modal="true" aria-label="Welcome setup">
       <div className="v2-setup-sheet">
         <h2 className="v2-setup-title">
           <Zap size={20} className="v2-setup-title-icon" aria-hidden="true" />
