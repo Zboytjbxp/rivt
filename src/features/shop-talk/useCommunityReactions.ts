@@ -71,7 +71,7 @@ export function useCommunityReactions({
     };
   }, [communityReactionLedger, communityReactionStatus, pendingCommunityReactions]);
 
-  const getCommunityAnswerReactionState = useCallback((postId: number, answer: CommunityAnswer): CommunityReactionState => {
+  const getCommunityAnswerReactionState = useCallback((postId: string, answer: CommunityAnswer): CommunityReactionState => {
     const targetKey = communityAnswerReactionKey(postId, answer.id);
     const ledgerKey = communityReactionLedgerKey("answer", targetKey);
     const aggregate = communityReactionLedger[ledgerKey];
@@ -189,11 +189,11 @@ export function useCommunityReactions({
     setCommunityReactionPending,
   ]);
 
-  const handleVoteCommunityPost = useCallback((postId: number, direction: "up" | "down") => {
+  const handleVoteCommunityPost = useCallback((postId: string, direction: "up" | "down") => {
     void commitCommunityReaction("thread", communityPostReactionKey(postId), direction);
   }, [commitCommunityReaction]);
 
-  const handleVoteCommunityAnswer = useCallback((postId: number, answerId: number, direction: "up" | "down") => {
+  const handleVoteCommunityAnswer = useCallback((postId: string, answerId: number, direction: "up" | "down") => {
     void commitCommunityReaction("answer", communityAnswerReactionKey(postId, answerId), direction);
   }, [commitCommunityReaction]);
 

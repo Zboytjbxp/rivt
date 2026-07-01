@@ -10,6 +10,13 @@ Status values:
 
 Evidence must eventually link to implementation, automated tests, manual acceptance proof, and deployed build.
 
+## Traceability Addendum - 2026-07-01 Shop Talk Server Read Path Wiring
+
+- `GA-UX-001` gains maintainability evidence: Home and Shop Talk now share centralized community display metadata in `src/features/shop-talk/community-directory.ts` instead of maintaining duplicate hardcoded community arrays.
+- `GA-UX-005` gains server-read evidence: authenticated Shop Talk loads canonical `/api/v1/shop-talk/posts` rows and `/api/v1/communities` rows for post IDs, timestamps, member counts, and joined state, while guest/offline fallback remains explicitly a preview path.
+- `GA-COM-001`, `GA-COM-002`, and `GA-COM-003` retain behavior while moving closer to canonical data: post selection/reactions now use string/UUID post IDs, newly created posts use the server-returned UUID when persistence succeeds, and the existing browser-local reply boundary remains unchanged because reply persistence is outside this slice.
+- `GA-OPS-007` gains local automated evidence for this slice: `npm run build`, `npm run lint`, `npm run test`, `npm run test:e2e`, and `npm audit --omit=dev` passed. Production deployment and authenticated live smoke remain required before this becomes production evidence.
+
 ## Traceability Addendum - 2026-07-01 Launch Rehearsal and Mobile Tool Polish
 
 - `GA-UX-003` gains rendered mobile evidence for the top-bar contract: the mobile Search icon is visible again while the full desktop search field stays hidden at phone widths, preserving Search/Messages/Notifications/Profile as top-bar actions.

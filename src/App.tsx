@@ -14,7 +14,7 @@ import { ReportViewer } from "./features/report/ReportViewer";
 import "./components/OfflineBanner.css";
 import "./components/GlobalSearch.css";
 import "./components/LocalSetupPrompt.css";
-import { talent } from "./data";
+import { talent, tradeOptions } from "./data";
 import { brandConfig } from "./brandConfig";
 import type { ApplicationRecord, Job, JobId, Role, Trade } from "./types";
 import { AppShell } from "./app-shell/AppShell";
@@ -67,8 +67,15 @@ import type {
   PostFlair,
   PostType,
 } from "./features/shop-talk/ShopTalkView";
-import { communityBadgeLabels } from "./features/shop-talk/community-utils";
+import { communityBadgeLabels, relativeTime } from "./features/shop-talk/community-utils";
 import { communityPromptPosts, fallbackNewsItems } from "./features/shop-talk/fallback-data";
+import { createShopTalkPost, fetchShopTalkPosts, type ServerShopTalkPost } from "./features/shop-talk/shop-talk-api";
+import { fetchCommunities } from "./features/shop-talk/communities-api";
+import {
+  fallbackCommunities,
+  mapServerCommunity,
+  type CommunityDisplay,
+} from "./features/shop-talk/community-directory";
 import { useCommunityReactions } from "./features/shop-talk/useCommunityReactions";
 import type { ProfileUpdateInput } from "./features/profile/ProfileHub";
 import type { ToolMode } from "./features/tools/ToolsStudio";
@@ -128,6 +135,48 @@ class RouteErrorBoundary extends Component<{ children: React.ReactNode }, { fail
   }
 }
 
+const VALID_POST_FLAIRS: PostFlair[] = ["Question", "Discussion", "Code Talk", "Compliance", "Tip", "Humor"];
+const VALID_POST_TYPES: PostType[] = ["question", "sub-request", "safety", "general"];
+const VALID_POST_STATUSES: CommunityPost["status"][] = ["Open", "Verified Fix", "Needs a pro answer"];
+const TRADE_OPTION_NAMES = new Set<string>(tradeOptions.filter((option) => option !== "All trades"));
+
+function normalizeShopTalkTrade(value: string): Trade | "General" {
+  return TRADE_OPTION_NAMES.has(value) ? value as Trade : "General";
+}
+
+function normalizePostFlair(value?: string): PostFlair | undefined {
+  return value && VALID_POST_FLAIRS.includes(value as PostFlair) ? value as PostFlair : undefined;
+}
+
+function normalizePostType(value?: string): PostType {
+  return value && VALID_POST_TYPES.includes(value as PostType) ? value as PostType : "general";
+}
+
+function normalizePostStatus(value?: string): CommunityPost["status"] {
+  return value && VALID_POST_STATUSES.includes(value as CommunityPost["status"])
+    ? value as CommunityPost["status"]
+    : "Open";
+}
+
+function toCommunityPostViewModel(post: ServerShopTalkPost): CommunityPost {
+  const createdAtMs = new Date(post.createdAt).getTime();
+  return {
+    id: post.id,
+    title: post.title,
+    trade: normalizeShopTalkTrade(post.trade),
+    author: post.author?.trim() || "RIVT member",
+    flair: normalizePostFlair(post.flair),
+    body: post.body,
+    upvotes: 0,
+    downvotes: 0,
+    replies: [],
+    createdAt: relativeTime(post.createdAt),
+    sortOrder: Number.isFinite(createdAtMs) ? createdAtMs : undefined,
+    status: normalizePostStatus(post.status),
+    type: normalizePostType(post.type),
+  };
+}
+
 function App() {
   const [activeView, setActiveView] = useState<NavLabel>(() => viewFromPath(window.location.pathname));
   const [requestedTool, setRequestedTool] = useState<ToolMode | null>(null);
@@ -156,7 +205,7 @@ function App() {
   const [authNotice, setAuthNotice] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [shopTalkGlobalQuery, setShopTalkGlobalQuery] = useState("");
-  const [shopTalkPostId, setShopTalkPostId] = useState<number | null>(null);
+  const [shopTalkPostId, setShopTalkPostId] = useState<string | null>(null);
   const [shopTalkCompose, setShopTalkCompose] = useState(false);
   // Consume one-shot Shop Talk intents (open a post / open the composer) once we leave the view.
   useEffect(() => {
@@ -202,8 +251,11 @@ function App() {
   const [feedbackItems] = useState<FeedbackItem[]>([]);
   const [paymentRecords] = useState<PaymentRecord[]>([]);
   const [communityPosts, setCommunityPosts] = useState<CommunityPost[]>(communityPromptPosts);
+  const [communities, setCommunities] = useState<CommunityDisplay[]>(fallbackCommunities);
   const [, setCommunityReports] = useState<CommunityReport[]>([]);
   const [shoutOuts, setShoutOuts] = useState<ShoutOut[]>([]);
+  const shopTalkPostsRequestRef = useRef(0);
+  const communitiesRequestRef = useRef(0);
   const {
     handleSelectThemePalette,
     handleSetThemeSource,
@@ -442,6 +494,36 @@ function App() {
     const timeout = window.setTimeout(() => { void reloadJobs(); }, 250);
     return () => window.clearTimeout(timeout);
   }, [reloadJobs]);
+
+  const reloadShopTalkPosts = useCallback(async () => {
+    if (isGuest || !authUser || !onboardingComplete) return;
+    const requestId = ++shopTalkPostsRequestRef.current;
+    const posts = await fetchShopTalkPosts();
+    if (shopTalkPostsRequestRef.current !== requestId) return;
+    if (posts === null) return;
+    setCommunityPosts(posts.map(toCommunityPostViewModel));
+  }, [authUser, isGuest, onboardingComplete]);
+
+  useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect */
+    void reloadShopTalkPosts();
+    /* eslint-enable react-hooks/set-state-in-effect */
+  }, [reloadShopTalkPosts]);
+
+  const reloadCommunities = useCallback(async () => {
+    if (isGuest || !authUser || !onboardingComplete) return;
+    const requestId = ++communitiesRequestRef.current;
+    const rows = await fetchCommunities();
+    if (communitiesRequestRef.current !== requestId) return;
+    if (rows === null) return;
+    setCommunities(rows.map(mapServerCommunity));
+  }, [authUser, isGuest, onboardingComplete]);
+
+  useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect */
+    void reloadCommunities();
+    /* eslint-enable react-hooks/set-state-in-effect */
+  }, [reloadCommunities]);
 
   const reloadInbox = useCallback(async () => {
     if (isGuest || !authUser || !onboardingComplete) return;
@@ -739,7 +821,7 @@ function App() {
     handleNavigate("Tools");
   }
 
-  function handleAddCommunityAnswer(postId: number, body: string) {
+  function handleAddCommunityAnswer(postId: string, body: string) {
     const post = communityPosts.find((candidate) => candidate.id === postId);
     if (!post) {
       return;
@@ -772,7 +854,7 @@ function App() {
     );
   }
 
-  function handleVerifyCommunityAnswer(postId: number, answerId: number) {
+  function handleVerifyCommunityAnswer(postId: string, answerId: number) {
     const post = communityPosts.find((candidate) => candidate.id === postId);
     const answer = post?.replies.find((candidate) => candidate.id === answerId);
     if (!post || !answer) {
@@ -798,7 +880,7 @@ function App() {
     );
   }
 
-  function handleReportCommunityPost(postId: number, reason: CommunityReport["reason"]) {
+  function handleReportCommunityPost(postId: string, reason: CommunityReport["reason"]) {
     const post = communityPosts.find((candidate) => candidate.id === postId);
     if (!post) {
       return;
@@ -829,26 +911,37 @@ function App() {
     );
   }
 
-  function handleNewShopTalkPost(flair: PostFlair, title: string, trade: Trade | "General", body: string, postType: PostType, subTrade?: string, subLocation?: string, subRate?: string) {
+  async function handleNewShopTalkPost(flair: PostFlair, title: string, trade: Trade | "General", body: string, postType: PostType, subTrade?: string, subLocation?: string, subRate?: string) {
+    const localPost: CommunityPost = {
+      id: `local-${Date.now()}`,
+      title,
+      trade,
+      flair,
+      author: accountProfile.displayName,
+      body,
+      upvotes: 0,
+      downvotes: 0,
+      replies: [],
+      createdAt: "Just now",
+      sortOrder: Date.now(),
+      status: "Open",
+      type: postType,
+      ...(subTrade ? { subTrade } : {}),
+      ...(subLocation ? { subLocation } : {}),
+      ...(subRate ? { subRate } : {}),
+    };
+
+    let postToAdd = localPost;
+    if (!isGuest && authUser && onboardingComplete) {
+      const serverPost = await createShopTalkPost({ title, body, trade, flair, postType });
+      if (serverPost) {
+        postToAdd = toCommunityPostViewModel(serverPost);
+      }
+    }
+
     setCommunityPosts((current) => [
-      {
-        id: Date.now(),
-        title,
-        trade,
-        flair,
-        author: accountProfile.displayName,
-        body,
-        upvotes: 0,
-        downvotes: 0,
-        replies: [],
-        createdAt: "Just now",
-        status: "Open",
-        type: postType,
-        ...(subTrade ? { subTrade } : {}),
-        ...(subLocation ? { subLocation } : {}),
-        ...(subRate ? { subRate } : {}),
-      },
-      ...current,
+      postToAdd,
+      ...current.filter((post) => post.id !== postToAdd.id),
     ]);
     addActivity("Trade Talk post created", `"${title}" posted to Trade Talk.`);
   }
@@ -1284,6 +1377,7 @@ function App() {
         {activeView === "Home" ? (
           <TradeFeed
             posts={communityPosts}
+            communities={communities}
             name={accountProfile.displayName || (isGuest ? "there" : "there")}
             location={accountProfile.location}
             primaryTrade={primaryProfileTrade}
@@ -1326,6 +1420,7 @@ function App() {
             key={`shop-talk-${shopTalkGlobalQuery}-${shopTalkPostId ?? ""}-${shopTalkCompose ? "c" : ""}`}
             profile={accountProfile}
             communityPosts={communityPosts}
+            communities={communities}
             newsItems={fallbackNewsItems}
             initialQuery={shopTalkGlobalQuery}
             initialPostId={shopTalkPostId}

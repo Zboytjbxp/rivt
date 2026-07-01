@@ -1,19 +1,15 @@
 import { useMemo, useState } from "react";
 import {
-  Briefcase,
-  Building2,
   ChevronRight,
-  Hammer,
   MessageCircle,
   Plus,
   TrendingUp,
   Users,
-  Wrench,
-  Zap,
 } from "lucide-react";
 import type { CommunityPost } from "../shop-talk/ShopTalkView";
 import { TradePostCard } from "../shop-talk/TradePostCard";
 import type { PrimaryDestination } from "../../app-shell/types";
+import { fallbackCommunities, type CommunityDisplay } from "../shop-talk/community-directory";
 import "./trade-feed.css";
 
 const BOOKMARK_KEY = "rivt.shopTalkBookmarks.v1";
@@ -26,22 +22,6 @@ const AVAIL_LABEL: Record<Availability, string> = {
 };
 const AVAIL_ORDER: Availability[] = ["available", "limited", "booked"];
 
-interface Community {
-  name: string;
-  count: string;
-  icon: typeof Hammer;
-  tone: string;
-}
-
-const COMMUNITIES: Community[] = [
-  { name: "Carpentry Talk", count: "124K", icon: Hammer, tone: "#7a4a24" },
-  { name: "Electrical Talk", count: "98K", icon: Zap, tone: "#1c1c1c" },
-  { name: "Jacksonville Trades", count: "8.7K", icon: Building2, tone: "#0f6b7a" },
-  { name: "Side Work", count: "5.2K", icon: Briefcase, tone: "#1c1c1c" },
-  { name: "Tile Talk", count: "5.3K", icon: Wrench, tone: "#3b2a6b" },
-  { name: "Plumbing Talk", count: "7.6K", icon: Wrench, tone: "#0f5f6b" },
-];
-
 function netScore(post: CommunityPost) {
   return post.upvotes - post.downvotes;
 }
@@ -53,8 +33,8 @@ function greeting() {
   return "Good evening";
 }
 
-function readBookmarks(): Set<number> {
-  try { return new Set(JSON.parse(localStorage.getItem(BOOKMARK_KEY) ?? "[]") as number[]); }
+function readBookmarks(): Set<string> {
+  try { return new Set((JSON.parse(localStorage.getItem(BOOKMARK_KEY) ?? "[]") as Array<string | number>).map(String)); }
   catch { return new Set(); }
 }
 function readAvailability(): Availability {
@@ -67,18 +47,19 @@ function readAvailability(): Availability {
 
 interface TradeFeedProps {
   posts: CommunityPost[];
+  communities?: CommunityDisplay[];
   name: string;
   location: string;
   primaryTrade: string;
-  onOpenPost: (postId: number) => void;
+  onOpenPost: (postId: string) => void;
   onAsk: () => void;
   onPostWork: () => void;
   onOpenCommunity: (name: string) => void;
   onNavigate: (destination: PrimaryDestination) => void;
 }
 
-export function TradeFeed({ posts, name, location, primaryTrade, onOpenPost, onAsk, onPostWork, onOpenCommunity, onNavigate }: TradeFeedProps) {
-  const [saved, setSaved] = useState<Set<number>>(readBookmarks);
+export function TradeFeed({ posts, communities = fallbackCommunities, name, location, primaryTrade, onOpenPost, onAsk, onPostWork, onOpenCommunity, onNavigate }: TradeFeedProps) {
+  const [saved, setSaved] = useState<Set<string>>(readBookmarks);
   const [availability, setAvailability] = useState<Availability>(readAvailability);
 
   const trendingPosts = useMemo(
@@ -92,7 +73,7 @@ export function TradeFeed({ posts, name, location, primaryTrade, onOpenPost, onA
     [posts, primaryTrade],
   );
 
-  function toggleSave(id: number) {
+  function toggleSave(id: string) {
     setSaved((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
@@ -160,7 +141,7 @@ export function TradeFeed({ posts, name, location, primaryTrade, onOpenPost, onA
           </button>
         </div>
         <div className="trade-feed-community-row">
-          {COMMUNITIES.map((c) => {
+          {communities.map((c) => {
             const Icon = c.icon;
             return (
               <button

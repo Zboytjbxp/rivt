@@ -64,7 +64,7 @@ export const fallbackNewsItems: NewsItem[] = [
 ];
 export const communityPromptPosts: CommunityPost[] = [
   {
-    id: 1,
+    id: "prompt-1",
     title: "What's the best way to handle a mid-job scope change without losing margin?",
     trade: "General",
     author: "FieldPro",
@@ -78,7 +78,7 @@ export const communityPromptPosts: CommunityPost[] = [
     status: "Needs a pro answer",
   },
   {
-    id: 2,
+    id: "prompt-2",
     title: "How are you handling the new OSHA heat rule on outdoor jobs this summer?",
     trade: "General",
     author: "CrewLead",
@@ -92,7 +92,7 @@ export const communityPromptPosts: CommunityPost[] = [
     status: "Open",
   },
   {
-    id: 3,
+    id: "prompt-3",
     title: "NEC 2023: Are you already pulling permits under the new AFCI expansion rules?",
     trade: "Electrical",
     author: "SparkCheck",
@@ -106,7 +106,7 @@ export const communityPromptPosts: CommunityPost[] = [
     status: "Needs a pro answer",
   },
   {
-    id: 4,
+    id: "prompt-4",
     title: "Best way to scribe cabinets to stone?",
     trade: "Carpentry",
     author: "FinishCarpenterFL",
@@ -120,7 +120,7 @@ export const communityPromptPosts: CommunityPost[] = [
     status: "Open",
   },
   {
-    id: 5,
+    id: "prompt-5",
     title: "What are you charging for punch-out work?",
     trade: "Electrical",
     author: "ElectricianFL",
@@ -134,7 +134,7 @@ export const communityPromptPosts: CommunityPost[] = [
     status: "Open",
   },
   {
-    id: 6,
+    id: "prompt-6",
     title: "Do I need insurance for side jobs?",
     trade: "Plumbing",
     author: "PlumbingProJax",
@@ -148,7 +148,7 @@ export const communityPromptPosts: CommunityPost[] = [
     status: "Needs a pro answer",
   },
   {
-    id: 7,
+    id: "prompt-7",
     title: "Best thinset for large format tile?",
     trade: "Tile",
     author: "TileSetterPro",
@@ -162,7 +162,7 @@ export const communityPromptPosts: CommunityPost[] = [
     status: "Open",
   },
   {
-    id: 8,
+    id: "prompt-8",
     title: "How do you price custom built-ins?",
     trade: "Cabinetry",
     author: "CabinetryCo",

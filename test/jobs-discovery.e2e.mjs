@@ -50,6 +50,58 @@ const profileResult = {
   trades: [{ code: "electrical", name: "Electrical", primary: true }],
 };
 
+const shopTalkPosts = [
+  {
+    id: "11111111-1111-4111-8111-111111111111",
+    author: "FinishCarpenterFL",
+    trade: "Carpentry",
+    flair: "Question",
+    type: "question",
+    title: "Best way to scribe cabinets to stone?",
+    body: "Working on a kitchen with quartz counters and a wavy wall.",
+    status: "Open",
+    createdAt: "2026-06-24T12:00:00.000Z",
+  },
+  {
+    id: "22222222-2222-4222-8222-222222222222",
+    author: "ElectricianFL",
+    trade: "Electrical",
+    flair: "Discussion",
+    type: "general",
+    title: "What are you charging for punch-out work?",
+    body: "Curious what others are billing for small punch-list items.",
+    status: "Open",
+    createdAt: "2026-06-24T11:00:00.000Z",
+  },
+];
+
+const communities = [
+  {
+    id: "33333333-3333-4333-8333-333333333333",
+    slug: "carpentry-talk",
+    name: "Carpentry Talk",
+    description: "Trim, framing, punch-out",
+    memberCount: 124000,
+    joined: false,
+  },
+  {
+    id: "44444444-4444-4444-8444-444444444444",
+    slug: "electrical-talk",
+    name: "Electrical Talk",
+    description: "Code, service, rough-in",
+    memberCount: 98000,
+    joined: true,
+  },
+  {
+    id: "55555555-5555-4555-8555-555555555555",
+    slug: "jacksonville-trades",
+    name: "Jacksonville Trades",
+    description: "Local work and referrals",
+    memberCount: 8700,
+    joined: false,
+  },
+];
+
 const job = {
   id: "6a6b46c8-0870-44fd-97f9-07b061734d58",
   organization: { id: account.organizations[0].id, name: account.organizations[0].name },
@@ -209,6 +261,16 @@ async function configurePage(page, jobs, { activeWork = [], project = null } = {
   await page.route("**/api/v1/notifications", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { notifications: [], unreadCount: 0 }, meta: { requestId: "e2e-notifications" } }) }));
   await page.route("**/api/v1/notifications/read", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { unreadCount: 0 }, meta: { requestId: "e2e-notifications-read" } }) }));
   await page.route("**/api/v1/active-work", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { activeWork }, meta: { requestId: "e2e-active-work" } }) }));
+  await page.route("**/api/v1/shop-talk/posts", (route) => route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: JSON.stringify({ data: { posts: shopTalkPosts }, meta: { requestId: "e2e-shop-talk-posts" } }),
+  }));
+  await page.route("**/api/v1/communities", (route) => route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: JSON.stringify({ data: { communities }, meta: { requestId: "e2e-communities" } }),
+  }));
   await page.route("**/api/v1/shop-talk/reactions/batch", async (route) => {
     const body = route.request().postDataJSON();
     const targets = Array.isArray(body?.targets) ? body.targets : [];

@@ -21,15 +21,8 @@ import {
 import { useState } from "react";
 import type { Job, Talent } from "../../types";
 import { Avatar, EmptyState, MetricTile, PageHeader, Panel } from "../../components/ui";
+import type { CommunityPost } from "../shop-talk/ShopTalkView";
 import "./network-hub.css";
-
-interface CommunityPost {
-  id: number;
-  title: string;
-  trade: string;
-  status: string;
-  flair?: string;
-}
 
 interface ShoutOut {
   id: number;

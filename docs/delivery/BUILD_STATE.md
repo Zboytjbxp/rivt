@@ -7,6 +7,28 @@ Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
 Production release commit: see live `/api/health` build metadata
 
+## Latest Packet 08 Pass - Shop Talk Server Read Path Wiring
+
+- Wired the Shop Talk frontend to the server-owned posts and communities read APIs that landed in migrations `0015_shop_talk_posts` and `0016_communities`:
+  - authenticated sessions now load `/api/v1/shop-talk/posts` instead of relying on bundled prompt posts
+  - authenticated sessions now load `/api/v1/communities` for live member counts and joined state
+  - newly created Shop Talk posts now use the server-returned UUID instead of a client-minted timestamp ID
+  - community post IDs are now string IDs throughout the active frontend, with `null` used for no selected post
+  - relative timestamps are normalized before rendering server `createdAt` values
+- Preserved honest fallback behavior:
+  - guest/offline/API-unavailable views can still show the existing preview/prompt content
+  - a successful authenticated empty server response now renders as empty server state, not fake prompt data
+  - Shop Talk replies remain browser-local because canonical reply persistence is not in this slice
+- Centralized community display metadata in `src/features/shop-talk/community-directory.ts` so Home and Shop Talk share one directory while server data owns membership/counts.
+- Updated local E2E mocks for the new read endpoints so no browser console errors leak from unmocked `/api/v1/shop-talk/posts` or `/api/v1/communities` requests.
+- Local machine gates run on 2026-07-01:
+  - `npm run build` (pass)
+  - `npm run lint` (pass)
+  - `npm run test` (pass)
+  - `npm run test:e2e` (pass)
+  - `npm audit --omit=dev` (pass; 0 vulnerabilities)
+- Deployment not performed in this pass; production read-path verification still requires deploy plus authenticated live smoke against `https://rivt.pro`.
+
 ## Latest Packet 08 Pass - Launch Rehearsal, Mobile Search, Trade News, and Calculator Fit
 
 - Confirmed Railway production inventory:

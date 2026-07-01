@@ -5,13 +5,10 @@ import {
   BadgeCheck,
   Bookmark,
   BookmarkCheck,
-  Briefcase,
-  Building2,
   CheckCircle2,
   ChevronDown,
   ExternalLink,
   Flag,
-  Hammer,
   Hash,
   MessageCircle,
   Newspaper,
@@ -24,14 +21,12 @@ import {
   ThumbsDown,
   ThumbsUp,
   Users,
-  Wrench,
   X,
-  Zap,
   type LucideIcon,
 } from "lucide-react";
 import { TradePostCard } from "./TradePostCard";
-import { createShopTalkPost } from "./shop-talk-api";
 import { communitySlug, setCommunityMembership } from "./communities-api";
+import type { CommunityDisplay } from "./community-directory";
 import { tradeOptions } from "../../data";
 import type { Trade } from "../../types";
 import { usePersona } from "../persona/usePersona";
@@ -80,7 +75,7 @@ export interface ShopTalkReply {
 }
 
 export interface CommunityPost {
-  id: number;
+  id: string;
   title: string;
   trade: Trade | "General";
   author: string;
@@ -93,6 +88,7 @@ export interface CommunityPost {
   commentCount?: number;
   replies: CommunityAnswer[];
   createdAt: string;
+  sortOrder?: number;
   status: "Open" | "Verified Fix" | "Needs a pro answer";
   type?: PostType;
   subTrade?: string;
@@ -123,7 +119,7 @@ export type CommunityReactionSyncStatus = "idle" | "loading" | "ready" | "error"
 
 export interface CommunityReport {
   id: number;
-  postId: number;
+  postId: string;
   postTitle: string;
   reason: "Misinformation" | "Safety concern" | "Spam" | "Harassment";
   status: "Flagged" | "Cleared" | "Hidden" | "Removed" | "Warned";
@@ -198,28 +194,31 @@ const POST_TYPE_CHIPS: { type: PostType; emoji: string; label: string }[] = [
   { type: "general", emoji: "💬", label: "General" },
 ];
 
-const TRADE_TALK_COMMUNITIES: {
-  name: string;
-  meta: string;
-  count: string;
-  icon: LucideIcon;
-  tone: string;
-}[] = [
-  { name: "Carpentry Talk", meta: "Trim, framing, punch-out", count: "124K", icon: Hammer, tone: "#7a4a24" },
-  { name: "Electrical Talk", meta: "Code, service, rough-in", count: "98K", icon: Zap, tone: "#1c1c1c" },
-  { name: "Jacksonville Trades", meta: "Local work and referrals", count: "8.7K", icon: Building2, tone: "#0f6b7a" },
-  { name: "Side Work", meta: "Short-term help needed", count: "5.2K", icon: Briefcase, tone: "#1c1c1c" },
-  { name: "Cabinetry Talk", meta: "Installs, layout, scribing", count: "6.1K", icon: Hammer, tone: "#6b4a1c" },
-  { name: "Tile Talk", meta: "Layout, thinset, lippage", count: "5.3K", icon: Wrench, tone: "#3b2a6b" },
-  { name: "Plumbing Talk", meta: "Rough-in, service, code", count: "7.6K", icon: Wrench, tone: "#0f5f6b" },
-  { name: "Remodelers", meta: "Whole-home coordination", count: "4.4K", icon: Users, tone: "#444" },
-];
-
 const TRADE_TALK_PROMPTS = [
   "Best way to scribe cabinets to stone?",
   "What are you charging for punch-out work?",
   "Do I need insurance for side jobs?",
 ];
+
+function readStringSet(key: string, normalize: (value: string) => string = (value) => value): Set<string> {
+  try {
+    return new Set(
+      (JSON.parse(localStorage.getItem(key) ?? "[]") as Array<string | number>)
+        .map((value) => normalize(String(value)))
+        .filter(Boolean),
+    );
+  } catch {
+    return new Set();
+  }
+}
+
+function postSortValue(post: CommunityPost) {
+  if (typeof post.sortOrder === "number") return post.sortOrder;
+  const parsedDate = new Date(post.createdAt).getTime();
+  if (Number.isFinite(parsedDate)) return parsedDate;
+  const trailingNumber = post.id.match(/(\d+)(?!.*\d)/)?.[1];
+  return trailingNumber ? Number(trailingNumber) : 0;
+}
 
 function ShopTalkNewPostModal({
   profile,
@@ -378,6 +377,7 @@ function ShopTalkNewPostModal({
 export function ShopTalkView({
   profile,
   communityPosts,
+  communities,
   newsItems,
   initialQuery,
   initialPostId,
@@ -397,35 +397,35 @@ export function ShopTalkView({
 }: {
   profile: AccountProfile;
   communityPosts: CommunityPost[];
+  communities: CommunityDisplay[];
   newsItems: NewsItem[];
   initialQuery: string;
-  initialPostId?: number | null;
+  initialPostId?: string | null;
   openComposer?: boolean;
   selectedJobTrade: Trade | "General";
   userLocation: string;
   getPostReactionState: (post: CommunityPost) => CommunityReactionState;
-  getAnswerReactionState: (postId: number, answer: CommunityAnswer) => CommunityReactionState;
+  getAnswerReactionState: (postId: string, answer: CommunityAnswer) => CommunityReactionState;
   reactionSummary: CommunityReactionSummary | null;
   reactionStatus: CommunityReactionSyncStatus;
-  onVotePost: (postId: number, direction: "up" | "down") => void;
-  onVoteAnswer: (postId: number, answerId: number, direction: "up" | "down") => void;
-  onAddAnswer: (postId: number, body: string) => void;
-  onVerifyAnswer: (postId: number, answerId: number) => void;
-  onReportPost: (postId: number, reason: CommunityReport["reason"]) => void;
-  onNewPost: (flair: PostFlair, title: string, trade: Trade | "General", body: string, postType: PostType, subTrade?: string, subLocation?: string, subRate?: string) => void;
+  onVotePost: (postId: string, direction: "up" | "down") => void;
+  onVoteAnswer: (postId: string, answerId: number, direction: "up" | "down") => void;
+  onAddAnswer: (postId: string, body: string) => void;
+  onVerifyAnswer: (postId: string, answerId: number) => void;
+  onReportPost: (postId: string, reason: CommunityReport["reason"]) => void;
+  onNewPost: (flair: PostFlair, title: string, trade: Trade | "General", body: string, postType: PostType, subTrade?: string, subLocation?: string, subRate?: string) => void | Promise<void>;
 }) {
   const persona = usePersona();
   const [activeTab, setActiveTab] = useState<"talk" | "news">("talk");
   const [sortMode, setSortMode] = useState<"hot" | "new" | "unanswered">("hot");
   const [tradeFilter, setTradeFilter] = useState("All trades");
   const [answerQueueOnly, setAnswerQueueOnly] = useState(false);
-  const [selectedPostId, setSelectedPostId] = useState(initialPostId ?? communityPosts[0]?.id ?? 0);
+  const [selectedPostId, setSelectedPostId] = useState<string | null>(initialPostId ?? communityPosts[0]?.id ?? null);
   const [answerDraft, setAnswerDraft] = useState("");
   const [rulesOpen, setRulesOpen] = useState(false);
   const [newPostOpen, setNewPostOpen] = useState(Boolean(openComposer));
   const [joinedCommunities, setJoinedCommunities] = useState<Set<string>>(() => {
-    try { return new Set(JSON.parse(localStorage.getItem("rivt.joinedCommunities.v1") ?? "[]") as string[]); }
-    catch { return new Set(); }
+    return readStringSet("rivt.joinedCommunities.v1", communitySlug);
   });
   const [talkQuery, setTalkQuery] = useState(() => initialQuery.trim());
   const [newsQuery, setNewsQuery] = useState("");
@@ -433,17 +433,14 @@ export function ShopTalkView({
   const [newsLoading, setNewsLoading] = useState(false);
   const [newsFetched, setNewsFetched] = useState(false);
   const [flairFilter, setFlairFilter] = useState<PostFlair | "All">("All");
-  const [bookmarkedIds, setBookmarkedIds] = useState<Set<number>>(() => {
-    try { return new Set(JSON.parse(localStorage.getItem("rivt.shopTalkBookmarks.v1") ?? "[]") as number[]); }
-    catch { return new Set(); }
-  });
+  const [bookmarkedIds, setBookmarkedIds] = useState<Set<string>>(() => readStringSet("rivt.shopTalkBookmarks.v1"));
   const [showBookmarked, setShowBookmarked] = useState(false);
-  const [helpfulVotesMap, setHelpfulVotesMap] = useState<Record<number, number>>(() => {
-    try { return JSON.parse(localStorage.getItem("rivt.shopTalk.v1") ?? "{}") as Record<number, number>; }
+  const [helpfulVotesMap, setHelpfulVotesMap] = useState<Record<string, number>>(() => {
+    try { return JSON.parse(localStorage.getItem("rivt.shopTalk.v1") ?? "{}") as Record<string, number>; }
     catch { return {}; }
   });
   const [activeTrendingTag, setActiveTrendingTag] = useState<string | null>(null);
-  const [locallyAnswered, setLocallyAnswered] = useState<Set<number>>(new Set());
+  const [locallyAnswered, setLocallyAnswered] = useState<Set<string>>(new Set());
   const [filterType, setFilterType] = useState<PostType | "all">("all");
   const [_expandedReplyPostId, _setExpandedReplyPostId] = useState<string | null>(null);
   const [replyDrafts, setReplyDrafts] = useState<Record<string, string>>({});
@@ -456,6 +453,17 @@ export function ShopTalkView({
   const [selectedNewsId, setSelectedNewsId] = useState(displayNews[0]?.id ?? 0);
   const [mobileDetail, setMobileDetail] = useState(initialPostId != null);
   const [newsDiscussContext, setNewsDiscussContext] = useState<NewsItem | null>(null);
+  const serverCommunitiesLoaded = communities.some((community) => community.serverOwned);
+
+  useEffect(() => {
+    if (!serverCommunitiesLoaded) return;
+    const next = new Set(communities.filter((community) => community.joined).map((community) => community.slug));
+    /* eslint-disable react-hooks/set-state-in-effect */
+    setJoinedCommunities(next);
+    /* eslint-enable react-hooks/set-state-in-effect */
+    try { localStorage.setItem("rivt.joinedCommunities.v1", JSON.stringify([...next])); } catch { /* ignore */ }
+  }, [communities, serverCommunitiesLoaded]);
+
   const tradeFilters = ["All trades", "General", ...specialtyOptions];
   const primaryTrade = profile.specialties[0] ?? selectedJobTrade;
   const answerQueuePosts = communityPosts
@@ -468,11 +476,11 @@ export function ShopTalkView({
       if (a.trade !== primaryTrade && b.trade === primaryTrade) return 1;
       if (a.status === "Needs a pro answer" && b.status !== "Needs a pro answer") return -1;
       if (a.status !== "Needs a pro answer" && b.status === "Needs a pro answer") return 1;
-      return b.id - a.id;
+      return postSortValue(b) - postSortValue(a);
     });
   const allReportReasons: CommunityReport["reason"][] = ["Misinformation", "Safety concern", "Spam", "Harassment"];
 
-  function toggleBookmark(postId: number) {
+  function toggleBookmark(postId: string) {
     setBookmarkedIds(prev => {
       const next = new Set(prev);
       if (next.has(postId)) next.delete(postId); else next.add(postId);
@@ -481,7 +489,7 @@ export function ShopTalkView({
     });
   }
 
-  function _incrementHelpfulVote(postId: number) {
+  function _incrementHelpfulVote(postId: string) {
     setHelpfulVotesMap(prev => {
       const base = communityPosts.find(p => p.id === postId)?.helpfulVotes ?? 0;
       const extra = prev[postId] ?? 0;
@@ -513,17 +521,6 @@ export function ShopTalkView({
       return { ...prev, [postId]: [...existing, newReply] };
     });
     setReplyDrafts(prev => ({ ...prev, [postId]: "" }));
-  }
-
-  function _relativeTime(iso: string): string {
-    const diffMs = Date.now() - new Date(iso).getTime();
-    const diffMin = Math.floor(diffMs / 60000);
-    if (diffMin < 1) return "just now";
-    if (diffMin < 60) return `${diffMin}m ago`;
-    const diffH = Math.floor(diffMin / 60);
-    if (diffH < 24) return `${diffH}h ago`;
-    const diffD = Math.floor(diffH / 24);
-    return `${diffD}d ago`;
   }
 
   async function activateNews() {
@@ -582,11 +579,11 @@ export function ShopTalkView({
     return [item.headline, item.summary, item.source, item.urgency ?? "", item.date].join(" ").toLowerCase().includes(normalizedNewsQuery);
   });
   const sortedPosts = [...filteredPosts].sort((a, b) => {
-    if (sortMode === "new") return b.id - a.id;
+    if (sortMode === "new") return postSortValue(b) - postSortValue(a);
     if (sortMode === "unanswered") {
       if (a.replies.length === 0 && b.replies.length > 0) return -1;
       if (a.replies.length > 0 && b.replies.length === 0) return 1;
-      return b.id - a.id;
+      return postSortValue(b) - postSortValue(a);
     }
     // hot: "Needs a pro answer" first, then by score
     if (a.status === "Needs a pro answer" && b.status !== "Needs a pro answer") return -1;
@@ -743,9 +740,7 @@ export function ShopTalkView({
           initialBody={newsDiscussContext ? `Via ${newsDiscussContext.source} · ${newsDiscussContext.date}\n\n` : ""}
           onClose={() => { setNewPostOpen(false); setNewsDiscussContext(null); }}
           onSubmit={(flair, title, trade, body, postType, subTrade, subLocation, subRate) => {
-            onNewPost(flair, title, trade, body, postType, subTrade, subLocation, subRate);
-            // Persist to the server when the backend is reachable; degrade gracefully otherwise.
-            void createShopTalkPost({ title, body, trade, flair, postType });
+            void onNewPost(flair, title, trade, body, postType, subTrade, subLocation, subRate);
             setNewPostOpen(false);
             setNewsDiscussContext(null);
           }}
@@ -807,9 +802,9 @@ export function ShopTalkView({
                   <span>{joinedCommunities.size} joined</span>
                 </div>
                 <div className="community-board-list">
-                  {TRADE_TALK_COMMUNITIES.map((community) => {
+                  {communities.map((community) => {
                     const CIcon = community.icon;
-                    const joined = joinedCommunities.has(community.name);
+                    const joined = joinedCommunities.has(community.slug);
                     return (
                       <div key={community.name} className="community-row">
                         <button
@@ -830,13 +825,12 @@ export function ShopTalkView({
                           className={joined ? "community-join is-joined" : "community-join"}
                           aria-pressed={joined}
                           onClick={() => {
-                            const willJoin = !joinedCommunities.has(community.name);
-                            // Persist to the server when reachable; degrade to local-only otherwise.
-                            void setCommunityMembership(communitySlug(community.name), willJoin);
+                            const willJoin = !joinedCommunities.has(community.slug);
+                            void setCommunityMembership(community.slug, willJoin);
                             setJoinedCommunities((prev) => {
                               const next = new Set(prev);
-                              if (next.has(community.name)) next.delete(community.name);
-                              else next.add(community.name);
+                              if (next.has(community.slug)) next.delete(community.slug);
+                              else next.add(community.slug);
                               try { localStorage.setItem("rivt.joinedCommunities.v1", JSON.stringify([...next])); } catch { /* ignore */ }
                               return next;
                             });
