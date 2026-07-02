@@ -17,7 +17,7 @@ Evidence must eventually link to implementation, automated tests, manual accepta
 - `GA-UX-005` gains honest-tooling evidence: the Tools tab no longer presents active-job context as a required frame for standalone tools, and Estimate/Invoice pricing guidance is explicitly heuristic instead of a server-owned market-rate guarantee.
 - `GA-UX-006` gains rendered mobile evidence at 430x932 for Shop Talk community search/open behavior, the fuller-screen Tools launcher, Estimate pricing signal, and Invoice labor-line pricing signal.
 - `GA-OPS-007` gains local automated evidence for this branch slice: `npm run build`, `npm run lint`, `npm run test`, `npm run test:e2e`, and `npm audit --omit=dev` passed with 0 vulnerabilities.
-- `GA-OPS-008` is unchanged for production deployment: this slice has not been merged or deployed yet.
+- `GA-OPS-008` gains deployment evidence: community/tools source commit `572f401b19a3b60a75bce965e11217e2df464428` was merged to `master`, Railway served it on live `/api/health` with migration `0016_communities`, PostgreSQL/S3-compatible dependencies and Sentry healthy, and `EXPECTED_SOURCE_COMMIT=572f401b19a3b60a75bce965e11217e2df464428 npm run monitor:production` passed.
 
 ## Traceability Addendum - 2026-07-02 Onboarding V2 Hybrid Branch
 
