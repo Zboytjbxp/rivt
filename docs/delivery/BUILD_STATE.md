@@ -7,6 +7,40 @@ Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
 Production release commit: see live `/api/health` build metadata
 
+## Latest Packet 08 Pass - Shop Talk Reddit-Style Community Tightening
+
+- Standardized the visible community surface name to `Shop Talk` across the app shell, onboarding/auth copy, global search panel, activity messages, empty states, and e2e expectations so users no longer see mixed `Trade Talk` / `Shop Talk` product names.
+- Tightened the mobile Shop Talk community flow:
+  - removed the two large top shortcut cards (`Ask the trades`, `Find your crew`) from the Shop Talk tab
+  - removed the preset question strip from the top of Shop Talk
+  - deep-linked Home community taps into a real in-app community page instead of a loose text search
+  - community pages now behave more like destinations: community header, join state, community-specific search, compact flair chips, then the scoped feed
+  - secondary type filters, trending tags, answer queue, reputation, rules, and pulse panels are suppressed inside a selected community on mobile so posts appear sooner
+- Added a Reddit-style optional thumbnail slot to shared Shop Talk post cards:
+  - post cards render compact right-side media when a post has `thumbnailUrl`
+  - local prompt examples demonstrate the media slot with accessible image alt text
+  - canonical server media upload/persistence for Shop Talk posts remains a future backend/schema feature, not claimed as production-complete
+- Cleaned up the Tools hub header so it opens as a compact launcher:
+  - removed the `Field apps...` explanatory page-header sentence
+  - removed the `Launch set` eyebrow and `Five field apps worth using every day` heading
+  - Tools now starts with the `Tools` title and the actual tool app cards
+- Rendered mobile QA through the in-app Browser at 430x932:
+  - first-run intro showed `Shop Talk, built for the trades.`
+  - Home `Carpentry Talk` community card opened the `Carpentry Talk` community page
+  - selected community page showed only the community header, compact search/flair row, and scoped feed with thumbnail media
+  - Tools opened as a clean launcher without unnecessary top explanatory copy
+- Local machine gates run on 2026-07-02:
+  - `npm run build` (pass)
+  - `npm run lint` (pass)
+  - `npm run test:unit` (pass)
+  - `npm run test:e2e` (pass)
+  - `npm audit --omit=dev` (pass; 0 vulnerabilities)
+  - `npm run test` was attempted twice but timed out locally while running the integration half; the integration environment was not treated as green without evidence
+- Production deployment completed from `master`:
+  - Shop Talk tightening source commit `f5ca33caf4450647d09523ae12af9eca864eb1fc` was pushed to GitHub and picked up by Railway production service `RIVT`
+  - live `https://rivt.pro/api/health` reported build commit `f5ca33caf4450647d09523ae12af9eca864eb1fc`
+  - `EXPECTED_SOURCE_COMMIT=f5ca33caf4450647d09523ae12af9eca864eb1fc npm run monitor:production` passed with PostgreSQL, S3-compatible object storage, configured Sentry, controls off, and seven anonymous private-route checks
+
 ## Latest Packet 08 Pass - Community Discovery and Tools Pricing Guidance Branch
 
 - Implemented a focused Shop Talk community-discovery upgrade on branch `codex/community-tools-pass`:
