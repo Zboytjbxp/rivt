@@ -1038,3 +1038,23 @@ Add one entry per staging/production deployment.
 - Known risks: physical/deeper manual accessibility-device matrix and real paid-checkout/webhook entitlement proof remain launch-quality boundaries. Guest preview remains intentionally preview-only; write actions still require real account setup.
 - Rollback performed/result: not required
 - Approval: Onboarding V2 hybrid accepted as controllable Gate A activation UX hardening evidence; overall Gate A still depends on the remaining manual launch boundaries.
+
+## Current Production - Packet 08 UI Polish Phase 1 Launch Blockers
+
+- Environment: Production (`https://rivt.pro`)
+- Date/time/timezone: 2026-07-02 15:43 America/New_York
+- Deployer: Codex through GitHub push to `master` with Railway production auto-deploy and `SOURCE_COMMIT` metadata update
+- Source repository/branch: `Zboytjbxp/rivt`, `master`
+- Source commit: `912332eb7daf561fb2e4c60290b3da5b08268885`
+- Build/artifact ID: Railway deployment `116da2b7-75b9-4f73-8dbd-e79a1543f7ca`
+- Migration version before/after: unchanged (`0016_communities`)
+- Feature-flag/config version: `SOURCE_COMMIT` updated to `912332eb7daf561fb2e4c60290b3da5b08268885`; no operational-control flags changed
+- Provider/config changes: no provider credentials changed
+- Backup/rollback target: prior successful Tools immersive deployment `d134a1118ebb671cde057b9e8e8f0e132eb8d89a`; no migration change
+- Automated gates: local `npm run build`, `npm run lint`, `npm run test:unit`, `npm run test:e2e`, `npm run test:ui:tools`, `npm audit --omit=dev`, and `git diff --check` passed. The aggregate `npm run test` command was attempted and timed out locally during the integration half.
+- Post-deploy smoke tests: `https://rivt.pro/api/health` returned exact source commit `912332eb7daf561fb2e4c60290b3da5b08268885`; `EXPECTED_SOURCE_COMMIT=912332eb7daf561fb2e4c60290b3da5b08268885 npm run monitor:production` passed externally with PostgreSQL/S3-compatible dependencies healthy, Sentry configured, operational controls disabled, seven anonymous private-route checks, and 586 ms duration.
+- Rendered UI evidence: in-app Browser QA covered guest preview top-bar Search opening one `Search RIVT` dialog, Tools -> `Records & photos` opening `Job Photos`, and Heavy 16th calculator control sizing at 430px and 390px with no horizontal overflow or console warnings/errors.
+- Health/readiness result: health reported PostgreSQL and S3-compatible storage healthy with exact source commit `912332eb7daf561fb2e4c60290b3da5b08268885`, migration `0016_communities`, and configured Sentry.
+- Known risks: server-side Verified Fix authorization remains a follow-up before that mechanic is abuse-resistant; physical/deeper manual accessibility-device matrix, full local aggregate integration completion, and real paid-checkout/webhook entitlement proof remain launch-quality boundaries.
+- Rollback performed/result: not required
+- Approval: UI polish phase 1 accepted as controllable Gate A launch-blocker UX hardening evidence; overall Gate A still depends on the remaining manual/external launch boundaries.

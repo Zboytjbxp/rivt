@@ -2,14 +2,14 @@
 
 Last updated: 2026-07-02 America/New_York
 Current gate: Gate A launch hardening
-Current phase: Packet 08 Gate A launch hardening: machine gates and live workflow smokes are mostly green; latest UI polish launch-blocker branch is locally verified and pending merge/deploy; physical accessibility-device evidence, full local integration-suite completion, and real paid-checkout webhook completion remain launch-quality boundaries.
+Current phase: Packet 08 Gate A launch hardening: machine gates and live workflow smokes are mostly green; latest UI polish launch-blocker pass is deployed and production-monitored; physical accessibility-device evidence, full local integration-suite completion, and real paid-checkout webhook completion remain launch-quality boundaries.
 Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
-Repository branch: `codex/ui-polish-phase-1`
+Repository branch: `master`
 Production release commit: see live `/api/health` build metadata
 
 ## Latest Packet 08 Pass - UI Polish Phase 1 Launch Blockers
 
-- Reviewed Claude's `docs/product/UI_POLISH_BUILD_PROMPT.md` from branch `claude/audit` at commit `b9d0bae` and implemented the first launch-blocker slice on `codex/ui-polish-phase-1`.
+- Reviewed Claude's `docs/product/UI_POLISH_BUILD_PROMPT.md` from branch `claude/audit` at commit `b9d0bae` and implemented the first launch-blocker slice on branch `codex/ui-polish-phase-1`, then merged it to `master`.
 - Removed duplicate and confusing navigation/search surfaces:
   - deleted the legacy `GlobalSearch` component and CSS
   - removed the second App-level Cmd/Ctrl+K handler so the AppShell search is the single global search surface
@@ -40,7 +40,11 @@ Production release commit: see live `/api/health` build metadata
   - `npm run test:ui:tools` (pass)
   - `npm audit --omit=dev` (pass; 0 vulnerabilities)
   - `npm run test` was attempted and timed out after roughly four minutes during the integration half; full aggregate local test evidence remains incomplete for this branch
-- Deployment status: not deployed yet. This branch needs merge/push to the production source branch and Railway confirmation before it can count as live production evidence.
+- Production deployment completed from `master`:
+  - UI polish source commit `912332eb7daf561fb2e4c60290b3da5b08268885` was pushed to GitHub and picked up by Railway production service `RIVT`
+  - Railway deployment `116da2b7-75b9-4f73-8dbd-e79a1543f7ca` settled back to Online after the deploy
+  - live `https://rivt.pro/api/health` reported build commit `912332eb7daf561fb2e4c60290b3da5b08268885`, migration `0016_communities`, PostgreSQL, S3-compatible object storage, and configured Sentry
+  - `EXPECTED_SOURCE_COMMIT=912332eb7daf561fb2e4c60290b3da5b08268885 npm run monitor:production` passed with operational controls off and seven anonymous private-route checks
 
 ## Latest Packet 08 Pass - Tools Immersive Mobile Gestures
 

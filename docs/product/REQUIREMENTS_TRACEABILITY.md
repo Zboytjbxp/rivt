@@ -17,7 +17,7 @@ Evidence must eventually link to implementation, automated tests, manual accepta
 - `GA-COM-003` gains partial client-side trust evidence: `Mark fix` is shown only to the post author on the client while already verified answers still display their verified state. Server-side authorization for assigning a Verified Fix remains required before this can be treated as abuse-resistant.
 - `GA-UX-006` gains rendered mobile evidence: in-app Browser QA at 430px and 390px verified one search dialog, the `Job Photos` tool path, Heavy 16th calculator target sizing, and no horizontal overflow or console warnings/errors in the checked flows.
 - `GA-OPS-007` gains local automated evidence for this branch slice: `npm run build`, `npm run lint`, `npm run test:unit`, `npm run test:e2e`, `npm run test:ui:tools`, and `npm audit --omit=dev` passed with 0 vulnerabilities. The aggregate `npm run test` command timed out locally during the integration half, so full local test evidence remains incomplete for this slice.
-- `GA-OPS-008` remains pending for this branch: the changes are not production evidence until merged to the production source branch, deployed by Railway, and verified through live `/api/health` plus production monitoring.
+- `GA-OPS-008` gains deployment evidence: UI polish source commit `912332eb7daf561fb2e4c60290b3da5b08268885` was merged to `master`, Railway deployment `116da2b7-75b9-4f73-8dbd-e79a1543f7ca` served it on live `/api/health` with migration `0016_communities`, PostgreSQL/S3-compatible dependencies and Sentry healthy, and `EXPECTED_SOURCE_COMMIT=912332eb7daf561fb2e4c60290b3da5b08268885 npm run monitor:production` passed.
 
 ## Traceability Addendum - 2026-07-02 Tools Immersive Mobile Gestures
 
