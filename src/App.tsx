@@ -200,6 +200,7 @@ function toCommunityPostViewModel(post: ServerShopTalkPost): CommunityPost {
 function App() {
   const [activeView, setActiveView] = useState<NavLabel>(() => viewFromPath(window.location.pathname));
   const [requestedTool, setRequestedTool] = useState<ToolMode | null>(null);
+  const [toolsImmersive, setToolsImmersive] = useState(false);
   const [role, setRole] = useState<Role>("contractor");
   const [onboardingComplete, setOnboardingComplete] = useState(false);
   const [accountProfile, setAccountProfile] = useState<AccountProfile>({
@@ -856,7 +857,10 @@ function App() {
   }
 
   function handleNavigate(view: NavLabel) {
-    if (view !== "Tools") setRequestedTool(null);
+    if (view !== "Tools") {
+      setRequestedTool(null);
+      setToolsImmersive(false);
+    }
     setActiveView(view);
     const nextPath = viewRoutes[view];
     if (window.location.pathname !== nextPath) {
@@ -1403,6 +1407,7 @@ function App() {
         }
         notificationCount={unreadActivities}
         isGuest={isGuest}
+        mobileNavHidden={toolsImmersive}
         guestBanner={
           <GuestBanner
             onSignUp={handleSignUpFromGuest}
@@ -1617,6 +1622,7 @@ function App() {
             mode={activeView === "Records" ? "records" : "tools"}
             openTool={activeView === "Tools" ? requestedTool : null}
             onOpenToolConsumed={() => setRequestedTool(null)}
+            onImmersiveChange={setToolsImmersive}
             onNavigate={(destination) => handleNavigate(defaultViewForDestination(destination))}
             onOpenRecords={() => handleNavigate("Records")}
           />

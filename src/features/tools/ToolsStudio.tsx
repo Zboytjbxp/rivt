@@ -22,7 +22,7 @@ import {
   Shield,
   Trash2,
 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
 import type { Job } from "../../types";
 import type { PrimaryDestination } from "../../app-shell/types";
 import { EmptyState, MetricTile, PageHeader, Panel } from "../../components/ui";
@@ -75,6 +75,7 @@ interface ToolsStudioProps {
   mode?: "tools" | "records";
   openTool?: ToolMode | null;
   onOpenToolConsumed?: () => void;
+  onImmersiveChange?: (immersive: boolean) => void;
   onNavigate: (destination: PrimaryDestination) => void;
   onOpenRecords: () => void;
 }
@@ -147,6 +148,7 @@ function ToolAppShell({
   description,
   compact = false,
   onBack,
+  swipeHandlers,
   children,
 }: {
   eyebrow: string;
@@ -154,10 +156,11 @@ function ToolAppShell({
   description: string;
   compact?: boolean;
   onBack: () => void;
+  swipeHandlers?: ToolSwipeHandlers;
   children: ReactNode;
 }) {
   return (
-    <section className={compact ? "v2-tools-app is-compact" : "v2-tools-app"} aria-label={title}>
+    <section className={compact ? "v2-tools-app is-compact" : "v2-tools-app"} aria-label={title} {...swipeHandlers}>
       <header className={compact ? "v2-tool-app-header is-compact" : "v2-tool-app-header"}>
         <button type="button" onClick={onBack}>
           <ArrowLeft size={16} />
@@ -172,6 +175,17 @@ function ToolAppShell({
       {children}
     </section>
   );
+}
+
+type ToolSwipeHandlers = {
+  onPointerDown: (event: ReactPointerEvent<HTMLElement>) => void;
+  onPointerUp: (event: ReactPointerEvent<HTMLElement>) => void;
+  onPointerCancel: () => void;
+};
+
+function shouldIgnoreToolSwipe(target: EventTarget | null) {
+  if (!(target instanceof Element)) return false;
+  return Boolean(target.closest("button, a, input, textarea, select, [contenteditable='true'], [role='button']"));
 }
 
 const IRS_RATE_2025 = 0.70;
@@ -1892,7 +1906,7 @@ function projectErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : "RIVT could not update the project record.";
 }
 
-export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = null, onOpenToolConsumed, onNavigate, onOpenRecords }: ToolsStudioProps) {
+export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = null, onOpenToolConsumed, onImmersiveChange, onNavigate, onOpenRecords }: ToolsStudioProps) {
   const activeJob = jobs.find((job) => job.status !== "Paid / Closed") ?? jobs[0] ?? null;
   const requestedTool = mode === "tools" && openTool && openTool !== "hub" ? openTool : null;
   const [localActiveTool, setLocalActiveTool] = useState<ToolMode>("hub");
@@ -1911,6 +1925,7 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
   const [completionChecklist, setCompletionChecklist] = useState<CompletionChecklistState>(defaultCompletionChecklist);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const autoOpenedRecordRef = useRef<string | null>(null);
+  const toolSwipeStartRef = useRef<{ x: number; y: number; pointerId: number } | null>(null);
   const selectedCompletion = selectedProject?.completionSubmissions.find((completion) => completion.status === "submitted")
     ?? selectedProject?.completionSubmissions.at(-1)
     ?? null;
@@ -1922,6 +1937,33 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
     onOpenToolConsumed?.();
     setLocalActiveTool(tool);
   }
+
+  useEffect(() => {
+    const immersive = mode === "tools" && activeTool !== "hub";
+    onImmersiveChange?.(immersive);
+    return () => onImmersiveChange?.(false);
+  }, [activeTool, mode, onImmersiveChange]);
+
+  const toolSwipeHandlers: ToolSwipeHandlers = {
+    onPointerDown(event) {
+      const isEdgeSwipe = event.clientX <= 32;
+      if ((event.pointerType === "mouse" && !isEdgeSwipe) || (!isEdgeSwipe && shouldIgnoreToolSwipe(event.target))) return;
+      toolSwipeStartRef.current = { x: event.clientX, y: event.clientY, pointerId: event.pointerId };
+    },
+    onPointerUp(event) {
+      const start = toolSwipeStartRef.current;
+      toolSwipeStartRef.current = null;
+      if (!start || start.pointerId !== event.pointerId) return;
+      const deltaX = event.clientX - start.x;
+      const deltaY = event.clientY - start.y;
+      if (deltaX > 78 && Math.abs(deltaY) < 58) {
+        setActiveTool("hub");
+      }
+    },
+    onPointerCancel() {
+      toolSwipeStartRef.current = null;
+    },
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -2347,7 +2389,9 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
     if (activeTool === "calculator") {
       return (
         <section className="v2-tools-app is-calculator-fullscreen" aria-label="Heavy 16th field calculator">
-          <FieldCalculatorTool onBack={() => setActiveTool("hub")} />
+          <div className="v2-tools-swipe-surface" {...toolSwipeHandlers}>
+            <FieldCalculatorTool onBack={() => setActiveTool("hub")} />
+          </div>
         </section>
       );
     }
@@ -2478,6 +2522,7 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
         description={toolMeta.description}
         compact={"compact" in toolMeta ? Boolean(toolMeta.compact) : false}
         onBack={() => setActiveTool("hub")}
+        swipeHandlers={toolSwipeHandlers}
       >
         {toolMeta.node}
       </ToolAppShell>

@@ -637,6 +637,10 @@
     padding: 14px 14px 92px;
   }
 
+  .rivt-v2.is-mobile-nav-hidden .v2-main {
+    padding-bottom: max(14px, env(safe-area-inset-bottom));
+  }
+
   .v2-main :is(a, button, input, select, textarea) {
     scroll-margin-bottom: calc(96px + env(safe-area-inset-bottom));
   }
@@ -653,6 +657,13 @@
     background: color-mix(in srgb, var(--v2-surface) 96%, transparent);
     backdrop-filter: blur(16px);
     color: var(--v2-text-muted);
+    transition: transform 180ms ease, opacity 180ms ease;
+  }
+
+  .v2-mobile-nav.is-hidden {
+    transform: translateY(calc(100% + 14px));
+    opacity: 0;
+    pointer-events: none;
   }
 
   .v2-mobile-nav button {

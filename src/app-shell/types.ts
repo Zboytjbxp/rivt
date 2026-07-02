@@ -24,6 +24,7 @@ export interface AppShellProps {
   activeJob: ShellJobContext | null;
   notificationCount: number;
   isGuest: boolean;
+  mobileNavHidden?: boolean;
   children: ReactNode;
   guestBanner?: ReactNode;
   onNavigate: (destination: PrimaryDestination) => void;

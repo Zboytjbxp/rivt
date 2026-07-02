@@ -48,6 +48,7 @@ export function AppShell({
   activeJob,
   notificationCount,
   isGuest,
+  mobileNavHidden = false,
   children,
   guestBanner,
   onNavigate,
@@ -138,7 +139,7 @@ export function AppShell({
   const canSearchPeople = normalizedSearch.length >= 2 && !isGuest;
 
   return (
-    <div className="rivt-v2">
+    <div className={mobileNavHidden ? "rivt-v2 is-mobile-nav-hidden" : "rivt-v2"}>
       <a className="v2-skip-link" href="#main-content">Skip to main content</a>
 
       <aside className="v2-sidebar" aria-label="Primary navigation">
@@ -343,7 +344,7 @@ export function AppShell({
         </main>
       </div>
 
-      <nav className="v2-mobile-nav" aria-label="Primary navigation">
+      <nav className={mobileNavHidden ? "v2-mobile-nav is-hidden" : "v2-mobile-nav"} aria-label="Primary navigation" aria-hidden={mobileNavHidden ? "true" : undefined}>
         {primaryNavigation.map(({ destination, label, icon: Icon }) => (
           <button
             key={destination}
@@ -351,6 +352,7 @@ export function AppShell({
             className={activeDestination === destination ? "is-active" : ""}
             aria-current={activeDestination === destination ? "page" : undefined}
             onClick={() => onNavigate(destination)}
+            tabIndex={mobileNavHidden ? -1 : undefined}
           >
             <Icon size={19} strokeWidth={1.9} />
             <span>{label}</span>

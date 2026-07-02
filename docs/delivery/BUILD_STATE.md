@@ -2,10 +2,40 @@
 
 Last updated: 2026-07-02 America/New_York
 Current gate: Gate A launch hardening
-Current phase: Packet 08 Gate A launch hardening: machine gates and live workflow smokes are green; Onboarding V2 hybrid is locally verified on a codex branch; physical accessibility-device evidence and real paid-checkout webhook completion remain launch-quality boundaries.
+Current phase: Packet 08 Gate A launch hardening: machine gates and live workflow smokes are mostly green; latest Tools immersive mobile pass is locally verified on a codex branch; physical accessibility-device evidence, full local integration-suite completion, and real paid-checkout webhook completion remain launch-quality boundaries.
 Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
 Production release commit: see live `/api/health` build metadata
+
+## Latest Packet 08 Pass - Tools Immersive Mobile Gestures
+
+- Implemented the Tools full-screen mobile behavior requested after the Shop Talk tightening pass:
+  - the mobile bottom nav remains visible on the Tools hub
+  - opening a tool enters an immersive state and slides the bottom nav off-screen
+  - the app shell reduces mobile main padding while a tool is open so tools reclaim the space normally reserved for the bottom toolbar
+  - leaving Tools immediately clears the immersive state so navigation never stays hidden on unrelated tabs
+- Added a conservative swipe-back gesture inside tool detail screens:
+  - swipe right from the left edge returns to the Tools hub
+  - normal taps and drags on buttons, inputs, links, selects, textareas, and content-editable controls are ignored unless the gesture starts at the screen edge
+  - the existing visible `Tools`/back controls remain the primary non-gesture escape path
+- Rendered mobile QA through the in-app Browser at 430x932:
+  - guest preview -> Tools hub showed the bottom nav normally
+  - opening `Heavy 16th` hid the mobile nav (`v2-mobile-nav is-hidden`), set nav opacity to `0`, disabled pointer events, and reduced main bottom padding to `14px`
+  - dragging from the left edge returned to the Tools hub and restored the bottom nav
+  - no browser console warnings/errors were captured during the flow
+- Updated and reran the repeatable Tools rendered QA smoke:
+  - `scripts/tools-ui-smoke.mjs` now mocks the server-owned Shop Talk posts and communities read endpoints so Tools QA does not leak unmocked API requests into the console
+  - the mobile Heavy 16th workbench shell height was corrected so the no-scroll calculator smoke passes at 390x844
+  - screenshots were written outside the repo at `C:\Users\zboyt\AppData\Local\Temp\rivt-tools-pass`
+- Local machine gates run on 2026-07-02:
+  - `npm run build` (pass)
+  - `npm run lint` (pass)
+  - `npm run test:unit` (pass)
+  - `npm run test:e2e` (pass)
+  - `npm run test:ui:tools` (pass)
+  - `npm audit --omit=dev` (pass; 0 vulnerabilities)
+  - `npm run test` was attempted and timed out after five minutes during the integration half; the full aggregate command is not being treated as green without a completed run
+- Deployment not performed yet for this slice.
 
 ## Latest Packet 08 Pass - Shop Talk Reddit-Style Community Tightening
 

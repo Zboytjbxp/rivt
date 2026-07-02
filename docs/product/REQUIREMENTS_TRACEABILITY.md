@@ -10,6 +10,14 @@ Status values:
 
 Evidence must eventually link to implementation, automated tests, manual acceptance proof, and deployed build.
 
+## Traceability Addendum - 2026-07-02 Tools Immersive Mobile Gestures
+
+- `GA-UX-003` gains mobile navigation evidence on branch `codex/tools-immersive-swipe`: the bottom nav remains available on the Tools hub, hides only while a specific tool is open, and restores when the user returns to the hub or leaves Tools.
+- `GA-UX-006` gains rendered mobile evidence at 430x932: the in-app Browser verified Tools hub -> `Heavy 16th` hides the bottom toolbar and frees the bottom viewport, then an edge swipe-right returns to the Tools hub with the bottom nav restored and no console warnings/errors.
+- `GA-UX-006` also gains repeatable rendered-smoke evidence: `npm run test:ui:tools` passed after the smoke was updated to mock server-owned Shop Talk/community read endpoints and after the mobile Heavy 16th workbench height math was corrected for the 390x844 no-scroll calculator check.
+- `GA-UX-005` retains honesty boundaries: this slice changes shell/tool navigation only; it does not claim fake invoice sending, SMS delivery, payment processing, escrow, payroll, tax filing, or frontend-only Records success.
+- `GA-OPS-007` gains partial local automated evidence for this slice: `npm run build`, `npm run lint`, `npm run test:unit`, `npm run test:e2e`, `npm run test:ui:tools`, and `npm audit --omit=dev` passed with 0 vulnerabilities. The aggregate `npm run test` command was attempted and timed out after five minutes during the integration half, so full local test evidence remains incomplete for this slice.
+
 ## Traceability Addendum - 2026-07-02 Community Discovery and Tools Pricing Guidance Branch
 
 - `GA-UX-003` gains local navigation clarity evidence on branch `codex/community-tools-pass`: Shop Talk community discovery now has searchable community rows, community pages, back navigation to all communities, and visible member/post/join state.
