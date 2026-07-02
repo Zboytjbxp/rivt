@@ -10,6 +10,15 @@ Status values:
 
 Evidence must eventually link to implementation, automated tests, manual acceptance proof, and deployed build.
 
+## Traceability Addendum - 2026-07-02 UI Polish Phase 1 Launch Blockers
+
+- `GA-UX-003` gains local navigation clarity evidence on branch `codex/ui-polish-phase-1`: duplicate global search surfaces were removed, the AppShell search is the single Cmd/Ctrl+K and top-bar search entry, and the normal-user `/admin` dead-end now redirects back to the app.
+- `GA-UX-005` gains honest-state evidence: the shared offline banner is now the only user-visible offline state, Verified Fix no longer says `during testing`, failed Shop Talk thumbnails are hidden instead of displayed as broken placeholders, and `Records & photos` opens the real `Job Photos` tool instead of a misleading Records route.
+- `GA-COM-003` gains partial client-side trust evidence: `Mark fix` is shown only to the post author on the client while already verified answers still display their verified state. Server-side authorization for assigning a Verified Fix remains required before this can be treated as abuse-resistant.
+- `GA-UX-006` gains rendered mobile evidence: in-app Browser QA at 430px and 390px verified one search dialog, the `Job Photos` tool path, Heavy 16th calculator target sizing, and no horizontal overflow or console warnings/errors in the checked flows.
+- `GA-OPS-007` gains local automated evidence for this branch slice: `npm run build`, `npm run lint`, `npm run test:unit`, `npm run test:e2e`, `npm run test:ui:tools`, and `npm audit --omit=dev` passed with 0 vulnerabilities. The aggregate `npm run test` command timed out locally during the integration half, so full local test evidence remains incomplete for this slice.
+- `GA-OPS-008` remains pending for this branch: the changes are not production evidence until merged to the production source branch, deployed by Railway, and verified through live `/api/health` plus production monitoring.
+
 ## Traceability Addendum - 2026-07-02 Tools Immersive Mobile Gestures
 
 - `GA-UX-003` gains mobile navigation evidence on branch `codex/tools-immersive-swipe`: the bottom nav remains available on the Tools hub, hides only while a specific tool is open, and restores when the user returns to the hub or leaves Tools.

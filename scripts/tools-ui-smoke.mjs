@@ -149,6 +149,9 @@ async function configurePage(page) {
   await page.route("**/api/v1/communities", (route) =>
     route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { communities: [] } }) }),
   );
+  await page.route("**/api/v1/albums", (route) =>
+    route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { albums: [] } }) }),
+  );
   await page.route("**/api/storage", (route) =>
     route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ usedBytes: 0, objectCount: 0, plan: {} }) }),
   );
@@ -298,11 +301,11 @@ async function runToolsFlow(page, viewportName) {
   await page.getByLabel("Daily log").getByRole("button", { name: "Tools" }).click();
 
   await page.getByRole("button", { name: /Records & photos/i }).click();
-  await page.getByRole("heading", { name: "Records", exact: true }).waitFor({ timeout: 15_000 });
-  await page.getByText("Closeout system", { exact: true }).waitFor({ timeout: 15_000 });
-  await page.getByText("Tenant Build-Out", { exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByRole("heading", { name: "Job Photos", exact: true, level: 1 }).waitFor({ timeout: 15_000 });
+  await page.getByText("Document any job", { exact: false }).waitFor({ timeout: 15_000 });
+  await page.getByRole("button", { name: /New album/i }).waitFor({ timeout: 15_000 });
   await assertNoHorizontalOverflow(page);
-  await page.screenshot({ path: path.join(screenshotDir, `${viewportName}-records-photos.png`), fullPage: true });
+  await page.screenshot({ path: path.join(screenshotDir, `${viewportName}-job-photos.png`), fullPage: true });
 }
 
 let browser;

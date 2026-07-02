@@ -271,6 +271,11 @@ async function configurePage(page, jobs, { activeWork = [], project = null } = {
     contentType: "application/json",
     body: JSON.stringify({ data: { communities }, meta: { requestId: "e2e-communities" } }),
   }));
+  await page.route("**/api/v1/albums", (route) => route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: JSON.stringify({ data: { albums: [] }, meta: { requestId: "e2e-albums" } }),
+  }));
   await page.route("**/api/v1/shop-talk/reactions/batch", async (route) => {
     const body = route.request().postDataJSON();
     const targets = Array.isArray(body?.targets) ? body.targets : [];
@@ -362,8 +367,9 @@ async function assertToolsFlow(page) {
   await page.getByLabel("Invoice draft").getByRole("button", { name: "Tools" }).click();
 
   await page.getByRole("button", { name: /Records & photos/i }).click();
-  await page.getByRole("heading", { name: "Records", exact: true }).waitFor();
-  await page.getByText("Closeout system", { exact: true }).waitFor();
+  await page.getByRole("heading", { name: "Job Photos", exact: true, level: 1 }).waitFor();
+  await page.getByText("Document any job", { exact: false }).waitFor();
+  await page.getByRole("button", { name: /New album/i }).waitFor();
 }
 
 async function assertRecordsFlow(page) {

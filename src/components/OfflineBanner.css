@@ -1,9 +1,9 @@
-.v2-offline-banner {
+.rivt-offline-banner {
   position: fixed;
   bottom: 80px;
   left: 50%;
   transform: translateX(-50%);
-  z-index: 9999;
+  z-index: 70;
   padding: 10px 20px;
   border-radius: 99px;
   font-size: 13px;
@@ -16,17 +16,17 @@
   white-space: nowrap;
 }
 
-.v2-offline-banner.is-offline {
+.rivt-offline-banner.is-offline {
   background: var(--v2-warning, #f59e0b);
   color: #fff;
 }
 
-.v2-offline-banner.is-online {
+.rivt-offline-banner.is-online {
   background: var(--v2-success, #22c55e);
   color: #fff;
 }
 
-.v2-offline-banner.is-hidden {
+.rivt-offline-banner.is-hidden {
   opacity: 0;
   pointer-events: none;
   transform: translateX(-50%) translateY(10px);

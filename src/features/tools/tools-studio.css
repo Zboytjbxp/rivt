@@ -6141,10 +6141,10 @@
   }
 
   .v2-tools-app.is-calculator-fullscreen .fraction-mode-strip button {
-    min-height: 30px;
+    min-height: 42px;
     border-radius: var(--v2-radius-sm);
-    font-size: 8px;
-    letter-spacing: 0.06em;
+    font-size: 11px;
+    letter-spacing: 0.03em;
   }
 
   .v2-tools-app.is-calculator-fullscreen .fraction-calc-grid,
@@ -6201,7 +6201,7 @@
   }
 
   .v2-tools-app.is-calculator-fullscreen .fraction-unit-row span {
-    font-size: 8px;
+    font-size: 10px;
   }
 
   .v2-tools-app.is-calculator-fullscreen .fraction-unit-row strong {
@@ -6215,10 +6215,10 @@
   }
 
   .v2-tools-app.is-calculator-fullscreen .fraction-action-row button {
-    min-height: 30px;
+    min-height: 40px;
     border-radius: var(--v2-radius-md);
     padding: 0 4px;
-    font-size: 10px;
+    font-size: 11px;
   }
 
   .v2-tools-app.is-calculator-fullscreen .fraction-strip,
@@ -6290,15 +6290,15 @@
   .v2-tools-app.is-calculator-fullscreen .fraction-input-grid label,
   .v2-tools-app.is-calculator-fullscreen .miter-value-card {
     gap: 4px;
-    font-size: 8px;
-    letter-spacing: 0.06em;
+    font-size: 11px;
+    letter-spacing: 0.04em;
   }
 
   .v2-tools-app.is-calculator-fullscreen .fraction-input-grid input,
   .v2-tools-app.is-calculator-fullscreen .miter-value-card input {
-    min-height: 38px;
+    min-height: 42px;
     padding: 0 8px;
-    font-size: 14px;
+    font-size: 16px;
   }
 
   .v2-tools-app.is-calculator-fullscreen .choice-pill {
@@ -6321,13 +6321,24 @@
   .v2-tools-app.is-calculator-fullscreen .fraction-summary-grid span,
   .v2-tools-app.is-calculator-fullscreen .miter-readout span,
   .v2-tools-app.is-calculator-fullscreen .miter-config-card span {
-    font-size: 8px;
-    letter-spacing: 0.08em;
+    font-size: 10px;
+    letter-spacing: 0.05em;
   }
 
   .v2-tools-app.is-calculator-fullscreen .fraction-summary-grid strong {
     margin-top: 4px;
     font-size: 12px;
+  }
+}
+
+@media (max-width: 640px) and (max-height: 700px) {
+  .v2-tools-app.is-calculator-fullscreen .heavy-calc-main {
+    overflow-y: auto;
+    scrollbar-width: none;
+  }
+
+  .v2-tools-app.is-calculator-fullscreen .heavy-calc-main::-webkit-scrollbar {
+    display: none;
   }
 }
 

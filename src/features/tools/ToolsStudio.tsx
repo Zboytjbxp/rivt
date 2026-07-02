@@ -77,7 +77,6 @@ interface ToolsStudioProps {
   onOpenToolConsumed?: () => void;
   onImmersiveChange?: (immersive: boolean) => void;
   onNavigate: (destination: PrimaryDestination) => void;
-  onOpenRecords: () => void;
 }
 
 function currency(value: number) {
@@ -1906,7 +1905,7 @@ function projectErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : "RIVT could not update the project record.";
 }
 
-export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = null, onOpenToolConsumed, onImmersiveChange, onNavigate, onOpenRecords }: ToolsStudioProps) {
+export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = null, onOpenToolConsumed, onImmersiveChange, onNavigate }: ToolsStudioProps) {
   const activeJob = jobs.find((job) => job.status !== "Paid / Closed") ?? jobs[0] ?? null;
   const requestedTool = mode === "tools" && openTool && openTool !== "hub" ? openTool : null;
   const [localActiveTool, setLocalActiveTool] = useState<ToolMode>("hub");
@@ -2584,11 +2583,11 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
               icon={FolderOpen}
               title="Records & photos"
               badge="Closeout"
-              summary="Accepted-work packets with notes, uploads, completion, and reports."
+              summary="Camera capture, before/after albums, notes, and project photo records."
               output={`${activeWork.length}`}
-              detail="accepted records"
+              detail="job albums"
               action="Open"
-              onAction={onOpenRecords}
+              onAction={() => setActiveTool("job-photos")}
             />
           </div>
         </section>

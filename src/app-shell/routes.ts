@@ -52,7 +52,7 @@ export const viewRoutes: Record<NavLabel, string> = {
   Reviews: "/app/profile/reviews",
   Feedback: "/app/profile/feedback",
   Settings: "/app/profile/settings",
-  Admin: "/admin",
+  Admin: "/app",
 };
 
 export function viewFromPath(pathname: string): NavLabel {

@@ -43,12 +43,12 @@ export function OfflineBanner() {
 
   return (
     <div
-      className={`v2-offline-banner ${stateClass}${isHidden ? " is-hidden" : ""}`}
+      className={`rivt-offline-banner ${stateClass}${isHidden ? " is-hidden" : ""}`}
       role="status"
       aria-live="polite"
     >
       {!online && <WifiOff size={14} aria-hidden="true" />}
-      {showOnline ? "Back online" : "No internet — changes saved locally"}
+      {showOnline ? "Back online" : "No internet - changes will sync when you're back online"}
     </div>
   );
 }

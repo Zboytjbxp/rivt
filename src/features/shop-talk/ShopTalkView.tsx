@@ -1365,7 +1365,7 @@ export function ShopTalkView({
                   <article className="empty-ledger">
                     <MessageCircle size={18} />
                     <strong>This needs a real trade answer.</strong>
-                    <span>Answer it, then mark the best response as Verified Fix during testing.</span>
+                    <span>Answer it, then mark the best response as the Verified Fix.</span>
                   </article>
                 ) : sortedAnswers(selectedPost.replies).map((answer) => {
                   const answerReactionState = getAnswerReactionState(selectedPost.id, answer);
@@ -1403,10 +1403,12 @@ export function ShopTalkView({
                           <ThumbsDown size={14} />
                           {answerReactionState.downvotes}
                         </button>
-                        <button type="button" disabled={answer.verifiedFix} onClick={() => onVerifyAnswer(selectedPost.id, answer.id)}>
-                          <BadgeCheck size={14} />
-                          {answer.verifiedFix ? "Verified" : "Mark fix"}
-                        </button>
+                        {(selectedPost.author === profile.displayName || answer.verifiedFix) && (
+                          <button type="button" disabled={answer.verifiedFix} onClick={() => onVerifyAnswer(selectedPost.id, answer.id)}>
+                            <BadgeCheck size={14} />
+                            {answer.verifiedFix ? "Verified" : "Mark fix"}
+                          </button>
+                        )}
                       </div>
                     </article>
                   );

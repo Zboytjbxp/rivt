@@ -52,11 +52,13 @@ function readVotes(): Record<string, "up" | "down"> {
 
 export function TradePostCard({ post, saved, onToggleSave, onOpen }: TradePostCardProps) {
   const [vote, setVote] = useState<"up" | "down" | null>(() => readVotes()[String(post.id)] ?? null);
+  const [failedThumbnailUrl, setFailedThumbnailUrl] = useState<string | null>(null);
   const community = communityFor(post.trade);
   const CIcon = community.icon;
   const baseScore = post.upvotes - post.downvotes;
   const score = baseScore + (vote === "up" ? 1 : vote === "down" ? -1 : 0);
   const comments = post.commentCount ?? post.replies.length;
+  const hasThumbnail = Boolean(post.thumbnailUrl && failedThumbnailUrl !== post.thumbnailUrl);
 
   const [shared, setShared] = useState(false);
 
@@ -102,14 +104,14 @@ export function TradePostCard({ post, saved, onToggleSave, onOpen }: TradePostCa
         </div>
       </header>
 
-      <button type="button" className={post.thumbnailUrl ? "trade-post-body-btn has-thumbnail" : "trade-post-body-btn"} onClick={onOpen}>
+      <button type="button" className={hasThumbnail ? "trade-post-body-btn has-thumbnail" : "trade-post-body-btn"} onClick={onOpen}>
         <span className="trade-post-copy">
           <h3 className="trade-post-title">{post.title}</h3>
           <p className="trade-post-excerpt">{post.body}</p>
         </span>
-        {post.thumbnailUrl ? (
+        {hasThumbnail ? (
           <span className="trade-post-thumbnail">
-            <img src={post.thumbnailUrl} alt={post.thumbnailAlt ?? ""} loading="lazy" />
+            <img src={post.thumbnailUrl} alt={post.thumbnailAlt ?? ""} loading="lazy" onError={() => setFailedThumbnailUrl(post.thumbnailUrl ?? null)} />
           </span>
         ) : null}
       </button>
