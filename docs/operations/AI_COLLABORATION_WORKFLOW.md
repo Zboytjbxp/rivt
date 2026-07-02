@@ -76,6 +76,17 @@ If the tree is dirty and the changes are not yours:
 - stop and identify whether they are user work, Codex work, or Claude work
 - do not clean them up automatically
 
+If a local hook or policy script claims commits are "unverified" or "unpushed":
+
+- check whether it is diffing against a stale branch-specific upstream ref
+- confirm whether the flagged commits are already reachable from `origin/master` or another `origin/*` ref
+- treat already-public commits as shared trunk history, not as new commits that the current AI must re-sign or re-author
+
+Practical rule:
+
+- commit-verification tooling should evaluate commits that are new relative to public remote history
+- it should not flag already-public commits merely because the current local branch tracks an outdated upstream ref
+
 ## Commit Rules
 
 Every meaningful change should end in a real commit before handoff.
@@ -171,6 +182,24 @@ Important distinction:
 - pushed is not deployed
 - deployed backend is not proof the frontend bundle changed
 - production proof should reference the live build commit, not assumptions
+
+## Tooling Hygiene
+
+If an AI-specific branch is reset or rebased onto fresh `origin/master`, old remote-tracking refs can create false alarms in local hooks.
+
+Before trusting a hook failure about commit ownership or verification:
+
+1. run `git fetch origin`
+2. inspect `git branch -vv`
+3. confirm whether the branch is comparing against a stale upstream
+4. confirm whether the flagged commits are already public on `origin/master`
+
+If the commits are already public:
+
+- do not amend them
+- do not change authorship
+- do not force-push shared history just to satisfy the local hook
+- fix the hook logic or branch tracking instead
 
 ## What To Never Do
 
