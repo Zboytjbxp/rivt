@@ -1266,6 +1266,17 @@ function App() {
     role === "contractor"
       ? accountProfile.organization
       : accountProfile.specialties.slice(0, 2).join(", ");
+  const homeProfileName = canonicalAccount?.profile.displayName || accountProfile.displayName;
+  const homeProfileLocation = canonicalAccount?.profile.locationText
+    || [
+      canonicalAccount?.profile.serviceArea.city,
+      canonicalAccount?.profile.serviceArea.region,
+    ].filter(Boolean).join(", ")
+    || accountProfile.location;
+  const homeProfileTradeCount = canonicalAccount?.profile.trades.length ?? accountProfile.specialties.length;
+  const homeProfileHasBasics = Boolean(homeProfileName.trim()) && Boolean(homeProfileLocation.trim()) && homeProfileTradeCount > 0;
+  const homeProfileHasBio = Boolean(canonicalAccount?.profile.headline.trim() || canonicalAccount?.profile.bio.trim());
+  const safetyCertCount = Object.values(safetyQuizResults).filter((result) => result.passed).length;
   if (authLoading) {
     return <LaunchLoader />;
   }
@@ -1386,14 +1397,22 @@ function App() {
           <TradeFeed
             posts={communityPosts}
             communities={communities}
+            jobs={jobs}
+            role={role}
             name={accountProfile.displayName || (isGuest ? "there" : "there")}
             location={accountProfile.location}
             primaryTrade={primaryProfileTrade}
+            profileHasBasics={homeProfileHasBasics}
+            profileHasBio={homeProfileHasBio}
+            recordCount={uploadedRecords.size}
+            safetyCertCount={safetyCertCount}
             onOpenPost={(postId) => { setShopTalkPostId(postId); setShopTalkCompose(false); setShopTalkGlobalQuery(""); handleNavigate(defaultViewForDestination("shop-talk")); }}
             onAsk={() => { setShopTalkPostId(null); setShopTalkCompose(true); handleNavigate(defaultViewForDestination("shop-talk")); }}
             onPostWork={openCreateJob}
             onOpenCommunity={(name) => { setShopTalkPostId(null); setShopTalkCompose(false); setShopTalkGlobalQuery(name.replace(/ Talk$/, "")); handleNavigate(defaultViewForDestination("shop-talk")); }}
             onNavigate={(destination) => handleNavigate(defaultViewForDestination(destination))}
+            onOpenProfile={() => handleNavigate("Settings")}
+            onOpenTool={handleOpenTool}
           />
         ) : activeView === "Marketplace" ? (
           <WorkWorkspace

@@ -10,6 +10,14 @@ Status values:
 
 Evidence must eventually link to implementation, automated tests, manual acceptance proof, and deployed build.
 
+## Traceability Addendum - 2026-07-02 Home Getting Started Checklist
+
+- `GA-PRO-001` gains post-onboarding activation evidence: Home now shows a role-aware `Get RIVT working for you` checklist so new contractors and tradespeople understand the next useful actions after account setup.
+- `GA-UX-005` gains honest state evidence: checklist progress is derived from real app state where available, including jobs/drafts, profile basics, profile bio/headline, joined communities, authored Trade Talk posts, records beyond the legal baseline, and passed safety certs. Action clicks route to existing product surfaces and do not fabricate completion.
+- `GA-UX-006` gains rendered mobile QA evidence: the checklist was tested through the in-app Browser at 430x932 using the guest path; the pass verified zero console warnings/errors, legible dark-mode action pills after a fix, correct `Find communities` routing to Shop Talk, and a working dismiss control.
+- `GA-DATA-001` and `GA-FND-004` retain honesty boundaries: this slice did not add homeowner flows, seed/demo success, provider claims, server authorization changes, or frontend-only production readiness claims.
+- `GA-OPS-007` gains local automated evidence for this slice: `npm run build`, `npm run lint`, `npm run test`, `npm run test:e2e`, and `npm audit --omit=dev` passed with 0 vulnerabilities. Production deployment evidence remains pending.
+
 ## Traceability Addendum - 2026-07-02 Onboarding Education and Activation
 
 - `GA-PRO-001` gains UX activation evidence: post-signup onboarding now asks each user what they are trying to do first, shapes the feed with trade and topic interests, and routes them to the relevant first product surface instead of always dropping them on Home.

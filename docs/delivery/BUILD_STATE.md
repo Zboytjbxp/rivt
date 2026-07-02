@@ -2,10 +2,42 @@
 
 Last updated: 2026-07-02 America/New_York
 Current gate: Gate A launch hardening
-Current phase: Packet 08 Gate A launch hardening: machine gates and live workflow smokes are green; live Stripe Checkout/Portal session creation is verified; physical accessibility-device evidence and real paid-checkout webhook completion remain launch-quality boundaries.
+Current phase: Packet 08 Gate A launch hardening: machine gates and live workflow smokes are green; onboarding activation now includes a Home getting-started checklist; physical accessibility-device evidence and real paid-checkout webhook completion remain launch-quality boundaries.
 Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
 Production release commit: see live `/api/health` build metadata
+
+## Latest Packet 08 Pass - Home Getting Started Checklist
+
+- Added a role-aware Home `Get RIVT working for you` checklist in `src/features/home/TradeFeed.tsx`:
+  - contractors see steps for posting/drafting work, setting company basics, following a trade community, asking the trades, and trying the invoice tool
+  - tradespeople see steps for confirming trade/location, adding a work bio, checking local work, joining a trade community, and adding proof through records/safety/daily log
+- Checklist progress is derived from real app state where available:
+  - jobs/drafts
+  - profile basics
+  - profile headline/bio
+  - joined communities
+  - authored Trade Talk posts
+  - records beyond the default legal baseline or passed safety certificates
+- Preserved Gate A honesty boundaries:
+  - no homeowner flow
+  - no fake completion claim for server/provider features
+  - checklist action clicks route to existing product surfaces instead of marking steps complete
+  - the dismiss control is a local UI preference only, not production data
+- Rendered mobile QA through the in-app Browser at `430x932`:
+  - loaded local `http://127.0.0.1:5173/`
+  - entered `Browse first`
+  - verified the checklist rendered on Home with zero console warnings/errors
+  - caught and fixed unreadable checklist action pills in dark mode
+  - verified `Find communities` routes to Shop Talk at `/app/network/talk`
+  - verified the dismiss control hides the checklist without leaving Home
+- Local machine gates run on 2026-07-02:
+  - `npm run build` (pass)
+  - `npm run lint` (pass)
+  - `npm run test` (pass)
+  - `npm run test:e2e` (pass)
+  - `npm audit --omit=dev` (pass; 0 vulnerabilities)
+- Deployment not performed in this pass; production evidence still requires push, Railway deploy, live `/api/health`, and `npm run monitor:production`.
 
 ## Latest Packet 08 Pass - Onboarding Education and Activation
 

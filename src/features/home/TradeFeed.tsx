@@ -1,19 +1,26 @@
 import { useMemo, useState } from "react";
 import {
   ChevronRight,
+  CheckCircle2,
+  Circle,
+  ClipboardList,
   MessageCircle,
   Plus,
   TrendingUp,
   Users,
+  X,
 } from "lucide-react";
 import type { CommunityPost } from "../shop-talk/ShopTalkView";
 import { TradePostCard } from "../shop-talk/TradePostCard";
 import type { PrimaryDestination } from "../../app-shell/types";
 import { fallbackCommunities, type CommunityDisplay } from "../shop-talk/community-directory";
+import type { Job, Role } from "../../types";
+import type { ToolMode } from "../tools/ToolsStudio";
 import "./trade-feed.css";
 
 const BOOKMARK_KEY = "rivt.shopTalkBookmarks.v1";
 const AVAIL_KEY = "rivt.availability.v1";
+const GET_STARTED_DISMISS_KEY = "rivt.homeGetStarted.dismissed.v1";
 type Availability = "available" | "limited" | "booked";
 const AVAIL_LABEL: Record<Availability, string> = {
   available: "Available this week",
@@ -21,6 +28,7 @@ const AVAIL_LABEL: Record<Availability, string> = {
   booked: "Booked up",
 };
 const AVAIL_ORDER: Availability[] = ["available", "limited", "booked"];
+const SETUP_RECORD_BASELINE = 2;
 
 function netScore(post: CommunityPost) {
   return post.upvotes - post.downvotes;
@@ -45,22 +53,64 @@ function readAvailability(): Availability {
   return "available";
 }
 
+function readGetStartedDismissed(): boolean {
+  try { return localStorage.getItem(GET_STARTED_DISMISS_KEY) === "1"; }
+  catch { return false; }
+}
+
+type StartStep = {
+  id: string;
+  title: string;
+  body: string;
+  done: boolean;
+  actionLabel: string;
+  onAction: () => void;
+};
+
 interface TradeFeedProps {
   posts: CommunityPost[];
   communities?: CommunityDisplay[];
+  jobs: Job[];
+  role: Role;
   name: string;
   location: string;
   primaryTrade: string;
+  profileHasBasics: boolean;
+  profileHasBio: boolean;
+  recordCount: number;
+  safetyCertCount: number;
   onOpenPost: (postId: string) => void;
   onAsk: () => void;
   onPostWork: () => void;
   onOpenCommunity: (name: string) => void;
   onNavigate: (destination: PrimaryDestination) => void;
+  onOpenProfile: () => void;
+  onOpenTool: (tool: ToolMode) => void;
 }
 
-export function TradeFeed({ posts, communities = fallbackCommunities, name, location, primaryTrade, onOpenPost, onAsk, onPostWork, onOpenCommunity, onNavigate }: TradeFeedProps) {
+export function TradeFeed({
+  posts,
+  communities = fallbackCommunities,
+  jobs = [],
+  role = "contractor",
+  name,
+  location,
+  primaryTrade,
+  profileHasBasics = false,
+  profileHasBio = false,
+  recordCount = 0,
+  safetyCertCount = 0,
+  onOpenPost,
+  onAsk,
+  onPostWork,
+  onOpenCommunity,
+  onNavigate,
+  onOpenProfile = () => undefined,
+  onOpenTool = () => undefined,
+}: TradeFeedProps) {
   const [saved, setSaved] = useState<Set<string>>(readBookmarks);
   const [availability, setAvailability] = useState<Availability>(readAvailability);
+  const [getStartedDismissed, setGetStartedDismissed] = useState(readGetStartedDismissed);
 
   const trendingPosts = useMemo(
     () => [...posts].sort((a, b) => netScore(b) - netScore(a)),
@@ -72,6 +122,127 @@ export function TradeFeed({ posts, communities = fallbackCommunities, name, loca
     () => posts.filter((p) => (p.trade === primaryTrade || p.trade === "General") && p.status !== "Verified Fix").length,
     [posts, primaryTrade],
   );
+
+  const getStartedSteps = useMemo<StartStep[]>(() => {
+    const normalizedName = name.trim().toLowerCase();
+    const hasPostedOrDraftedWork = jobs.some((job) => job.status !== "Closed" && job.status !== "Paid / Closed");
+    const hasOpenWork = jobs.some((job) => ["Open", "Shortlisting", "Scheduled"].includes(job.status));
+    const hasJoinedCommunity = communities.some((community) => community.joined);
+    const hasAuthoredPost = normalizedName.length > 0 && posts.some((post) => post.author.trim().toLowerCase() === normalizedName);
+    const hasFieldProof = recordCount > SETUP_RECORD_BASELINE || safetyCertCount > 0;
+    const openFirstCommunity = () => {
+      const target = communities.find((community) => !community.joined)?.name ?? communities[0]?.name;
+      if (target) onOpenCommunity(target);
+      else onNavigate("shop-talk");
+    };
+
+    if (role === "contractor") {
+      return [
+        {
+          id: "post-work",
+          title: "Post or draft your first job",
+          body: "Create a clear scope so tradespeople know location, tools, timing, and expectations.",
+          done: hasPostedOrDraftedWork,
+          actionLabel: "Post work",
+          onAction: onPostWork,
+        },
+        {
+          id: "service-area",
+          title: "Set your company basics",
+          body: "Add your service area and profile details so local crews understand who is hiring.",
+          done: profileHasBasics,
+          actionLabel: "Edit profile",
+          onAction: onOpenProfile,
+        },
+        {
+          id: "community",
+          title: "Follow one trade community",
+          body: "Start with Jacksonville Trades or your primary trade to see questions and local work signals.",
+          done: hasJoinedCommunity,
+          actionLabel: "Find communities",
+          onAction: openFirstCommunity,
+        },
+        {
+          id: "ask-trades",
+          title: "Ask the trades",
+          body: "Use Shop Talk for pricing, staffing, code, tool, and field questions before they become problems.",
+          done: hasAuthoredPost,
+          actionLabel: "Ask",
+          onAction: onAsk,
+        },
+        {
+          id: "invoice",
+          title: "Try the invoice tool",
+          body: "Build a draft invoice or daily record before you need it on a live job.",
+          done: hasFieldProof,
+          actionLabel: "Open invoice",
+          onAction: () => onOpenTool("invoice"),
+        },
+      ];
+    }
+
+    return [
+      {
+        id: "trade-basics",
+        title: "Confirm your trade and location",
+        body: "Your feed, job matches, and communities are tuned from your trade profile.",
+        done: profileHasBasics,
+        actionLabel: "Edit profile",
+        onAction: onOpenProfile,
+      },
+      {
+        id: "bio",
+        title: "Add a short work bio",
+        body: "A few lines about your craft, tools, and best work makes your profile easier to trust.",
+        done: profileHasBio,
+        actionLabel: "Add bio",
+        onAction: onOpenProfile,
+      },
+      {
+        id: "work-feed",
+        title: "Check local work",
+        body: "Browse open jobs in your trades and save the ones worth a message.",
+        done: hasOpenWork,
+        actionLabel: "Open Work",
+        onAction: () => onNavigate("work"),
+      },
+      {
+        id: "community",
+        title: "Join one trade community",
+        body: "Follow the conversations where your skills can earn reputation before you need work.",
+        done: hasJoinedCommunity,
+        actionLabel: "Find communities",
+        onAction: openFirstCommunity,
+      },
+      {
+        id: "proof",
+        title: "Add proof of your work",
+        body: "A record, photo, or safety cert gives contractors a reason to trust you faster.",
+        done: hasFieldProof,
+        actionLabel: "Open daily log",
+        onAction: () => onOpenTool("daily-log"),
+      },
+    ];
+  }, [
+    communities,
+    jobs,
+    name,
+    onAsk,
+    onNavigate,
+    onOpenCommunity,
+    onOpenProfile,
+    onOpenTool,
+    onPostWork,
+    posts,
+    profileHasBasics,
+    profileHasBio,
+    recordCount,
+    role,
+    safetyCertCount,
+  ]);
+
+  const completedGetStartedSteps = getStartedSteps.filter((step) => step.done).length;
+  const showGetStarted = !getStartedDismissed && completedGetStartedSteps < getStartedSteps.length;
 
   function toggleSave(id: string) {
     setSaved((prev) => {
@@ -89,6 +260,11 @@ export function TradeFeed({ posts, communities = fallbackCommunities, name, loca
       try { localStorage.setItem(AVAIL_KEY, next); } catch { /* ignore */ }
       return next;
     });
+  }
+
+  function dismissGetStarted() {
+    setGetStartedDismissed(true);
+    try { localStorage.setItem(GET_STARTED_DISMISS_KEY, "1"); } catch { /* ignore */ }
   }
 
   return (
@@ -120,7 +296,56 @@ export function TradeFeed({ posts, communities = fallbackCommunities, name, loca
         </button>
       </div>
 
-      {/* Answer-queue nudge — deep link into the trades */}
+      {/* Getting-started checklist */}
+      {showGetStarted && (
+        <section className="trade-feed-start-card" aria-labelledby="trade-feed-start-title">
+          <div className="trade-feed-start-top">
+            <span className="trade-feed-start-icon" aria-hidden="true">
+              <ClipboardList size={19} />
+            </span>
+            <div className="trade-feed-start-copy">
+              <p className="trade-feed-start-kicker">
+                {role === "contractor" ? "Contractor setup" : "Tradesperson setup"}
+              </p>
+              <h2 id="trade-feed-start-title">Get RIVT working for you</h2>
+              <span>{completedGetStartedSteps} of {getStartedSteps.length} steps ready</span>
+            </div>
+            <button
+              type="button"
+              className="trade-feed-start-dismiss"
+              onClick={dismissGetStarted}
+              aria-label="Hide getting started checklist"
+            >
+              <X size={17} />
+            </button>
+          </div>
+          <div className="trade-feed-start-progress" aria-hidden="true">
+            <span style={{ width: `${(completedGetStartedSteps / getStartedSteps.length) * 100}%` }} />
+          </div>
+          <div className="trade-feed-start-list">
+            {getStartedSteps.map((step) => (
+              <article key={step.id} className={`trade-feed-start-item${step.done ? " is-done" : ""}`}>
+                <span className="trade-feed-start-check" aria-hidden="true">
+                  {step.done ? <CheckCircle2 size={19} /> : <Circle size={19} />}
+                </span>
+                <div className="trade-feed-start-item-copy">
+                  <strong>{step.title}</strong>
+                  <small>{step.body}</small>
+                </div>
+                {step.done ? (
+                  <span className="trade-feed-start-status">Ready</span>
+                ) : (
+                  <button type="button" className="trade-feed-start-action" onClick={step.onAction}>
+                    {step.actionLabel}
+                  </button>
+                )}
+              </article>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Answer-queue nudge */}
       {tradeQuestions > 0 && (
         <button type="button" className="trade-feed-nudge" onClick={onAsk}>
           <span className="trade-feed-nudge-icon"><MessageCircle size={18} /></span>
