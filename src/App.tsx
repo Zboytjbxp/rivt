@@ -8,11 +8,9 @@ import {
   useRef,
   useState } from "react";
 import { OfflineBanner } from "./components/OfflineBanner";
-import { GlobalSearch } from "./components/GlobalSearch";
 import { LocalSetupPrompt } from "./components/LocalSetupPrompt";
 import { ReportViewer } from "./features/report/ReportViewer";
 import "./components/OfflineBanner.css";
-import "./components/GlobalSearch.css";
 import "./components/LocalSetupPrompt.css";
 import { talent, tradeOptions } from "./data";
 import { brandConfig } from "./brandConfig";
@@ -301,7 +299,6 @@ function App() {
   });
   const [isGuest, setIsGuest] = useState(false);
   const [guestPromptOpen, setGuestPromptOpen] = useState(false);
-  const [searchOpen, setSearchOpen] = useState(false);
   const [localSetupOpen, setLocalSetupOpen] = useState(false);
   const {
     communityReactionStatus,
@@ -647,18 +644,6 @@ function App() {
       void Notification.requestPermission();
     }
   }, [activeView]);
-
-  // Cmd+K / Ctrl+K global search shortcut
-  useEffect(() => {
-    const h = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
-        e.preventDefault();
-        setSearchOpen(true);
-      }
-    };
-    window.addEventListener("keydown", h);
-    return () => window.removeEventListener("keydown", h);
-  }, []);
 
   // Show browser notification on new unread inbox messages
   const prevUnreadRef = useRef(0);
@@ -1598,23 +1583,6 @@ function App() {
             onActivity={addActivity}
             onQuizComplete={handleQuizComplete}
           />
-        ) : activeView === "Admin" ? (
-          <section className="v2-profile-page" aria-label="Admin access">
-            <header className="v2-profile-hero">
-              <span>Staff access</span>
-              <h1>Admin console</h1>
-              <p>Admin tools are only available to authorized RIVT staff. Normal user sessions cannot access moderation, support, or account restriction controls.</p>
-            </header>
-            <section className="v2-profile-panel v2-profile-panel-wide">
-              <header>
-                <span>Access boundary</span>
-                <strong>Server-side permission required</strong>
-              </header>
-              <p className="v2-profile-note">
-                If you need help with an account, use Support from the profile menu. Admin-only actions require a staff role and an auditable reason.
-              </p>
-            </section>
-          </section>
         ) : ["Tools", "Records"].includes(activeView) ? (
           <ToolsStudio
             jobs={jobs}
@@ -1624,7 +1592,6 @@ function App() {
             onOpenToolConsumed={() => setRequestedTool(null)}
             onImmersiveChange={setToolsImmersive}
             onNavigate={(destination) => handleNavigate(defaultViewForDestination(destination))}
-            onOpenRecords={() => handleNavigate("Records")}
           />
         ) : (
           <LegacyBridge
@@ -1708,14 +1675,6 @@ function App() {
       )}
 
       <OfflineBanner />
-      {searchOpen && (
-        <GlobalSearch
-          jobs={jobs.map((j) => ({ id: j.id, title: j.title, trade: j.trade, location: j.location, status: j.status }))}
-          open={searchOpen}
-          onClose={() => setSearchOpen(false)}
-          onNavigate={(view) => { handleNavigate(view as Parameters<typeof handleNavigate>[0]); setSearchOpen(false); }}
-        />
-      )}
       {isGuest && localSetupOpen && (
         <LocalSetupPrompt onDone={() => setLocalSetupOpen(false)} />
       )}

@@ -2,10 +2,45 @@
 
 Last updated: 2026-07-02 America/New_York
 Current gate: Gate A launch hardening
-Current phase: Packet 08 Gate A launch hardening: machine gates and live workflow smokes are mostly green; latest Tools immersive mobile pass is deployed and production-monitored; physical accessibility-device evidence, full local integration-suite completion, and real paid-checkout webhook completion remain launch-quality boundaries.
+Current phase: Packet 08 Gate A launch hardening: machine gates and live workflow smokes are mostly green; latest UI polish launch-blocker branch is locally verified and pending merge/deploy; physical accessibility-device evidence, full local integration-suite completion, and real paid-checkout webhook completion remain launch-quality boundaries.
 Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
-Repository branch: `master`
+Repository branch: `codex/ui-polish-phase-1`
 Production release commit: see live `/api/health` build metadata
+
+## Latest Packet 08 Pass - UI Polish Phase 1 Launch Blockers
+
+- Reviewed Claude's `docs/product/UI_POLISH_BUILD_PROMPT.md` from branch `claude/audit` at commit `b9d0bae` and implemented the first launch-blocker slice on `codex/ui-polish-phase-1`.
+- Removed duplicate and confusing navigation/search surfaces:
+  - deleted the legacy `GlobalSearch` component and CSS
+  - removed the second App-level Cmd/Ctrl+K handler so the AppShell search is the single global search surface
+  - redirected the normal-user `/admin` dead-end back to the app instead of rendering a user-facing placeholder
+- Collapsed user-visible system noise:
+  - removed the inline AppShell offline banner so the shared offline banner is the only offline state
+  - renamed the shared offline banner class to avoid legacy CSS collisions
+  - lowered its stacking layer so it does not sit above intentional modal/sheet surfaces
+- Tightened Shop Talk trust/visual states:
+  - removed the phrase `during testing` from Verified Fix copy
+  - gated the `Mark fix` action to the post author on the client while preserving existing display for already verified answers
+  - hid post thumbnails that fail to load instead of leaving blank/broken media cards
+  - server-side Verified Fix authorization remains a required follow-up before this is treated as abuse-proof
+- Repaired Tools routing and mobile fit:
+  - `Records & photos` now opens the real `Job Photos` tool instead of routing away to Records
+  - tool smoke tests and e2e expectations now cover the `Job Photos` route
+  - Heavy 16th calculator controls were tightened at phone widths so mode buttons, action buttons, inputs, and keypad targets fit better without horizontal overflow
+- Rendered mobile QA through the in-app Browser:
+  - guest preview -> top-bar Search opened a single `Search RIVT` dialog
+  - Tools -> `Records & photos` opened `Job Photos` with `Document any job` and `New album`
+  - Tools -> `Heavy 16th` at 430px and 390px showed 42px mode/keypad controls, 40px action controls, and no horizontal overflow
+  - no browser console warnings/errors were captured in the checked flows
+- Local machine gates run on 2026-07-02:
+  - `npm run build` (pass)
+  - `npm run lint` (pass)
+  - `npm run test:unit` (pass)
+  - `npm run test:e2e` (pass)
+  - `npm run test:ui:tools` (pass)
+  - `npm audit --omit=dev` (pass; 0 vulnerabilities)
+  - `npm run test` was attempted and timed out after roughly four minutes during the integration half; full aggregate local test evidence remains incomplete for this branch
+- Deployment status: not deployed yet. This branch needs merge/push to the production source branch and Railway confirmation before it can count as live production evidence.
 
 ## Latest Packet 08 Pass - Tools Immersive Mobile Gestures
 

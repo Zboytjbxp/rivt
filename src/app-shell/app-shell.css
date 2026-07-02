@@ -726,21 +726,6 @@
   }
 }
 
-/* Offline banner */
-.v2-offline-banner {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 20px;
-  background: #78350f;
-  color: #fef3c7;
-  font-size: 13px;
-  font-weight: 600;
-  position: sticky;
-  top: 0;
-  z-index: 100;
-}
-
 /* ── Theme-aware brand logo swap ─────────────────────────── */
 .v2-brand .v2-brand-dark,
 .v2-mobile-brand .v2-brand-dark { display: none; }
