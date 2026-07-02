@@ -3,14 +3,19 @@ import {
   AlertTriangle,
   BadgeCheck,
   Bell,
+  BriefcaseBusiness,
   CheckCircle2,
+  ClipboardList,
   CreditCard,
   Mail,
   MapPin,
+  MessageCircle,
   Monitor,
   Moon,
   Search,
   ShieldCheck,
+  Users,
+  Wrench,
   Sun,
   X,
 } from "lucide-react";
@@ -24,6 +29,9 @@ export type AuthMethod = "Google" | "Facebook" | "Apple" | "Email";
 
 export interface OnboardingResult {
   role: Role;
+  goal: OnboardingGoal;
+  topicInterests: OnboardingTopic[];
+  preferredStartView: OnboardingStartView;
   serviceAreaCity: string;
   serviceAreaRegion: string;
   serviceRadiusMiles: number;
@@ -37,10 +45,150 @@ export interface OnboardingResult {
 }
 
 type ProviderStatus = Record<string, { ok: boolean; mode: string; missing: string[]; purpose: string }>;
+export type OnboardingStartView = "home" | "work" | "crew" | "shop-talk" | "tools" | "profile";
+export type OnboardingGoal =
+  | "contractor_find_help"
+  | "contractor_build_crew"
+  | "contractor_network"
+  | "contractor_tools"
+  | "tradesperson_find_work"
+  | "tradesperson_build_profile"
+  | "tradesperson_trade_talk"
+  | "tradesperson_connect";
+export type OnboardingTopic =
+  | "Local jobs"
+  | "Code questions"
+  | "Tools"
+  | "Business/pricing"
+  | "Safety"
+  | "Project photos";
 
 const specialtyOptions = tradeOptions.filter(
   (option): option is Trade => option !== "All trades",
 );
+
+const entryCapabilities = [
+  {
+    key: "talk",
+    title: "Ask the trades",
+    body: "Get answers from people who have actually done the work.",
+    icon: MessageCircle,
+  },
+  {
+    key: "work",
+    title: "Find work or help",
+    body: "Post jobs, apply for openings, and keep the address private until accepted.",
+    icon: BriefcaseBusiness,
+  },
+  {
+    key: "crew",
+    title: "Build your crew",
+    body: "Follow contractors, subs, and specialty crews you would call again.",
+    icon: Users,
+  },
+  {
+    key: "tools",
+    title: "Run the job",
+    body: "Use calculator, invoices, daily logs, records, and job photos from one place.",
+    icon: Wrench,
+  },
+] as const;
+
+const onboardingTopics: OnboardingTopic[] = [
+  "Local jobs",
+  "Code questions",
+  "Tools",
+  "Business/pricing",
+  "Safety",
+  "Project photos",
+];
+
+const contractorGoals = [
+  {
+    id: "contractor_find_help",
+    label: "Find help for a job",
+    body: "Post work, review applicants, and move the right person into an active job thread.",
+    startView: "work",
+    icon: BriefcaseBusiness,
+  },
+  {
+    id: "contractor_build_crew",
+    label: "Build a bench of subs",
+    body: "Find tradespeople you can trust before the next rush hits.",
+    startView: "crew",
+    icon: Users,
+  },
+  {
+    id: "contractor_network",
+    label: "Stay connected locally",
+    body: "Follow local trade talk, see who is active, and keep your name visible.",
+    startView: "shop-talk",
+    icon: MessageCircle,
+  },
+  {
+    id: "contractor_tools",
+    label: "Use tools and records",
+    body: "Start with calculator, invoice drafts, daily logs, and job photos.",
+    startView: "tools",
+    icon: ClipboardList,
+  },
+] satisfies Array<{
+  id: OnboardingGoal;
+  label: string;
+  body: string;
+  startView: OnboardingStartView;
+  icon: typeof BriefcaseBusiness;
+}>;
+
+const tradespersonGoals = [
+  {
+    id: "tradesperson_find_work",
+    label: "Find side work",
+    body: "See matching jobs near your trade and save the ones worth chasing.",
+    startView: "work",
+    icon: BriefcaseBusiness,
+  },
+  {
+    id: "tradesperson_build_profile",
+    label: "Build my profile",
+    body: "Show specialties, photos, safety badges, availability, and proof.",
+    startView: "profile",
+    icon: BadgeCheck,
+  },
+  {
+    id: "tradesperson_trade_talk",
+    label: "Answer and learn",
+    body: "Join Trade Talk, ask questions, answer fixes, and build reputation.",
+    startView: "shop-talk",
+    icon: MessageCircle,
+  },
+  {
+    id: "tradesperson_connect",
+    label: "Connect with contractors",
+    body: "Find crews, message people, and stay visible even between jobs.",
+    startView: "crew",
+    icon: Users,
+  },
+] satisfies Array<{
+  id: OnboardingGoal;
+  label: string;
+  body: string;
+  startView: OnboardingStartView;
+  icon: typeof BriefcaseBusiness;
+}>;
+
+function goalsForRole(role: Role) {
+  return role === "contractor" ? contractorGoals : tradespersonGoals;
+}
+
+function defaultGoalForRole(role: Role): OnboardingGoal {
+  return role === "contractor" ? "contractor_find_help" : "tradesperson_find_work";
+}
+
+function startViewForGoal(goal: OnboardingGoal): OnboardingStartView {
+  const match = [...contractorGoals, ...tradespersonGoals].find((item) => item.id === goal);
+  return match?.startView ?? "home";
+}
 
 export function LaunchLoader() {
   return (
@@ -140,6 +288,7 @@ export function AuthLinkFlow({ mode }: { mode: "verify" | "reset" }) {
 }
 
 function EntryShowcase() {
+  const [activeCapability, setActiveCapability] = useState<(typeof entryCapabilities)[number]["key"]>("talk");
   const feedPosts = [
     { community: "Carpentry Talk", author: "Trim lead", title: "Best way to scribe cabinets to stone?", meta: "42 votes · 18 replies" },
     { community: "Electrical Talk", author: "Service tech", title: "Panel swap pricing when the meter can stays?", meta: "31 votes · 11 replies" },
@@ -156,6 +305,22 @@ function EntryShowcase() {
         <p>
           Ask questions, find work, show your craft, and connect with real tradespeople.
         </p>
+      </div>
+
+      <div className="auth-capability-grid" aria-label="What you can do in RIVT">
+        {entryCapabilities.map(({ key, title, body, icon: Icon }) => (
+          <button
+            key={key}
+            type="button"
+            className={activeCapability === key ? "auth-capability-card is-active" : "auth-capability-card"}
+            aria-pressed={activeCapability === key}
+            onClick={() => setActiveCapability(key)}
+          >
+            <Icon size={18} />
+            <span>{title}</span>
+            <small>{body}</small>
+          </button>
+        ))}
       </div>
 
       <div className="auth-trade-phone" aria-label="Trade Talk preview">
@@ -180,6 +345,19 @@ function EntryShowcase() {
             </article>
           ))}
         </div>
+      </div>
+
+      <div className="auth-activation-strip" aria-label="First actions">
+        <span>First wins</span>
+        <strong>
+          {activeCapability === "talk"
+            ? "Ask, answer, save, and build a visible reputation."
+            : activeCapability === "work"
+              ? "Post work, apply, message, and keep job details private."
+              : activeCapability === "crew"
+                ? "Find people by trade, location, proof, and availability."
+                : "Open a calculator, draft an invoice, log work, and store photos."}
+        </strong>
       </div>
 
       <div className="auth-story-pills" aria-label="Trade interests">
@@ -471,6 +649,7 @@ export function OnboardingFlow({
 }) {
   const [role, setRole] = useState<Role>(initialRole === "pending" ? "contractor" : initialRole);
   const roleLocked = initialRole !== "pending";
+  const [goal, setGoal] = useState<OnboardingGoal>(defaultGoalForRole(initialRole === "pending" ? "contractor" : initialRole));
   const [displayName, setDisplayName] = useState(initialDisplayName);
   const [organization, setOrganization] = useState(initialOrganization);
   const [initialCity = "Jacksonville", initialRegion = "FL"] = initialLocation.split(",").map((part) => part.trim());
@@ -480,24 +659,29 @@ export function OnboardingFlow({
   const [specialties, setSpecialties] = useState<Trade[]>(
     initialSpecialties.length ? initialSpecialties : ["Electrical", "Carpentry"],
   );
+  const [topicInterests, setTopicInterests] = useState<OnboardingTopic[]>(["Local jobs", "Tools", "Business/pricing"]);
   const [showAllSpecialties, setShowAllSpecialties] = useState(false);
   const [legalConsent, setLegalConsent] = useState(false);
   const plan: TrialPlan = brandConfig.pricing.betaPlan.label;
+  const goalOptions = goalsForRole(role);
+  const selectedGoal = goalOptions.find((option) => option.id === goal) ?? goalOptions[0];
 
   const accountReady = Boolean(displayName.trim()) && Boolean(serviceAreaCity.trim()) && Boolean(serviceAreaRegion.trim());
   const profileReady = specialties.length > 0;
   const legalReady = legalConsent;
   const completionChecks = [
     Boolean(role),
+    Boolean(goal),
     emailVerified,
     accountReady,
     profileReady,
+    topicInterests.length > 0,
     legalReady,
   ];
   const completion = Math.round(
     (completionChecks.filter(Boolean).length / completionChecks.length) * 100,
   );
-  const canEnter = emailVerified && accountReady && profileReady && legalReady;
+  const canEnter = emailVerified && accountReady && profileReady && topicInterests.length > 0 && legalReady;
   const roleNoun = role === "contractor" ? "Contractor" : "Tradesperson";
   const specialtyHeading =
     role === "contractor" ? "Trades you hire for" : "Your trade specialties";
@@ -517,6 +701,23 @@ export function OnboardingFlow({
     });
   }
 
+  function toggleTopic(option: OnboardingTopic) {
+    setTopicInterests((current) => {
+      if (current.includes(option)) {
+        return current.filter((item) => item !== option);
+      }
+
+      return [...current, option];
+    });
+  }
+
+  function chooseRole(nextRole: Role) {
+    setRole(nextRole);
+    const nextGoal = defaultGoalForRole(nextRole);
+    setGoal(nextGoal);
+    setTopicInterests(nextRole === "contractor" ? ["Local jobs", "Business/pricing"] : ["Local jobs", "Project photos"]);
+  }
+
   function submit() {
     if (!canEnter) {
       return;
@@ -524,6 +725,9 @@ export function OnboardingFlow({
 
     onComplete({
       role,
+      goal,
+      topicInterests,
+      preferredStartView: startViewForGoal(goal),
       authMethod: initialAuthMethod,
       email: initialEmail,
       displayName: displayName.trim(),
@@ -559,23 +763,23 @@ export function OnboardingFlow({
 
           <div className="onboarding-hero-copy onboarding-hero-copy--trade">
             <span>Trade Talk</span>
-            <h1>Powered by real trades</h1>
-            <p>Shape your feed around the trades, local work, and field answers you actually care about.</p>
+            <h1>{role === "contractor" ? "Build your trade network" : "Turn your trade into opportunity"}</h1>
+            <p>{selectedGoal.body}</p>
           </div>
 
           <div className="onboarding-trade-stack" aria-label="Trade Talk onboarding preview">
             <article>
-              <span>Ask & find real answers</span>
-              <strong>What are you charging for punch-out work?</strong>
-              <p>Search first. If the answer is not there, post it to the trade.</p>
+              <span>{selectedGoal.startView === "shop-talk" ? "Trade Talk first" : "Always useful"}</span>
+              <strong>{role === "contractor" ? "Who can help this week?" : "Where can I earn next?"}</strong>
+              <p>{role === "contractor" ? "Post work, ask your network, or find tradespeople by specialty." : "Find work, ask questions, and let contractors see your proof."}</p>
             </article>
             <article>
-              <span>Vote, comment & connect</span>
-              <strong>Answers build reputation</strong>
-              <p>Helpful posts, verified fixes, reviews, and portfolio proof all point back to your profile.</p>
+              <span>{selectedGoal.label}</span>
+              <strong>{selectedGoal.startView === "tools" ? "Tools are ready when the job starts" : "Your first screen will match your goal"}</strong>
+              <p>{selectedGoal.startView === "tools" ? "Calculator, invoices, daily logs, records, and photos live together." : "You can change direction anytime from the five main tabs."}</p>
             </article>
             <div className="onboarding-interest-strip">
-              {["Carpentry", "Electrical", "Plumbing", "HVAC", "Tile", "Local Jobs"].map((interest) => (
+              {[...specialties.slice(0, 4), ...topicInterests.slice(0, 2)].map((interest) => (
                 <span key={interest}>{interest}</span>
               ))}
             </div>
@@ -624,15 +828,52 @@ export function OnboardingFlow({
               </div>
             ) : (
               <div className="auth-toggle role-toggle" aria-label="Choose account type">
-                <button type="button" className={role === "contractor" ? "selected" : ""} aria-pressed={role === "contractor"} onClick={() => setRole("contractor")}>Contractor</button>
-                <button type="button" className={role === "tradesperson" ? "selected" : ""} aria-pressed={role === "tradesperson"} onClick={() => setRole("tradesperson")}>Tradesperson</button>
+                <button type="button" className={role === "contractor" ? "selected" : ""} aria-pressed={role === "contractor"} onClick={() => chooseRole("contractor")}>Contractor</button>
+                <button type="button" className={role === "tradesperson" ? "selected" : ""} aria-pressed={role === "tradesperson"} onClick={() => chooseRole("tradesperson")}>Tradesperson</button>
               </div>
             )}
           </section>
 
-          <section className="onboarding-section" aria-label="Profile basics">
+          <section className="onboarding-section" aria-label="First goal">
             <div className="onboarding-section-heading">
               <span>Step 2</span>
+              <h3>What are you here to do first?</h3>
+              <p>We will shape your first screen around this. You can still use everything else.</p>
+            </div>
+            <div className="onboarding-goal-grid">
+              {goalOptions.map(({ id, label, body, icon: Icon }) => (
+                <button
+                  key={id}
+                  type="button"
+                  className={goal === id ? "onboarding-goal-card selected" : "onboarding-goal-card"}
+                  aria-pressed={goal === id}
+                  onClick={() => setGoal(id)}
+                >
+                  <Icon size={18} />
+                  <span>{label}</span>
+                  <small>{body}</small>
+                </button>
+              ))}
+            </div>
+            <div className="onboarding-goal-preview" role="status">
+              <strong>Your first stop: {selectedGoal.label}</strong>
+              <span>
+                {selectedGoal.startView === "work"
+                  ? "We will open the Work feed first."
+                  : selectedGoal.startView === "crew"
+                    ? "We will open Crew first."
+                    : selectedGoal.startView === "shop-talk"
+                      ? "We will open Trade Talk first."
+                      : selectedGoal.startView === "tools"
+                        ? "We will open Tools first."
+                        : "We will open your profile first."}
+              </span>
+            </div>
+          </section>
+
+          <section className="onboarding-section" aria-label="Profile basics">
+            <div className="onboarding-section-heading">
+              <span>Step 3</span>
               <h3>{roleNoun} profile</h3>
             </div>
             <div className="onboarding-form-grid">
@@ -695,9 +936,13 @@ export function OnboardingFlow({
 
           <section className="onboarding-section" aria-label="Trade specialties">
             <div className="onboarding-section-heading">
-              <span>Step 3</span>
-              <h3>{specialtyHeading}</h3>
+              <span>Step 4</span>
+              <h3>Shape your feed</h3>
               <p>{specialtyHelp}</p>
+            </div>
+            <div className="onboarding-picker-label">
+              <strong>{specialtyHeading}</strong>
+              <span>{specialties.length ? `${specialties.length} selected` : "Choose at least one trade"}</span>
             </div>
             <div className="specialty-picker">
               {specialtyOptionsToShow.map((option) => (
@@ -729,11 +974,36 @@ export function OnboardingFlow({
                 </button>
               )}
             </div>
+            <div className="onboarding-picker-label onboarding-topic-label">
+              <strong>Topics you want in your feed</strong>
+              <span>{topicInterests.length ? `${topicInterests.length} selected` : "Choose at least one topic"}</span>
+            </div>
+            <div className="onboarding-topic-picker">
+              {onboardingTopics.map((topic) => (
+                <button
+                  key={topic}
+                  type="button"
+                  className={topicInterests.includes(topic) ? "selected" : ""}
+                  aria-pressed={topicInterests.includes(topic)}
+                  onClick={() => toggleTopic(topic)}
+                >
+                  {topic}
+                </button>
+              ))}
+            </div>
+            <div className="onboarding-feed-preview" role="status">
+              <strong>
+                {role === "contractor"
+                  ? `You will see ${specialties.slice(0, 2).join(" and ") || "trade"} people, local jobs, and crew leads first.`
+                  : `Your Work feed will start with ${specialties[0] || "your trade"} and local opportunities near ${serviceAreaCity || "your city"}.`}
+              </strong>
+              <span>{topicInterests.join(", ")}</span>
+            </div>
           </section>
 
           <section className="onboarding-section onboarding-trust-section" aria-label="Trust setup">
             <div className="onboarding-section-heading">
-              <span>Step 4</span>
+              <span>Step 5</span>
               <h3>Consent agreement</h3>
               <p>{brandConfig.legal.trustCardBody}</p>
             </div>

@@ -10,6 +10,15 @@ Status values:
 
 Evidence must eventually link to implementation, automated tests, manual acceptance proof, and deployed build.
 
+## Traceability Addendum - 2026-07-02 Onboarding Education and Activation
+
+- `GA-PRO-001` gains UX activation evidence: post-signup onboarding now asks each user what they are trying to do first, shapes the feed with trade and topic interests, and routes them to the relevant first product surface instead of always dropping them on Home.
+- `GA-UX-003` gains onboarding clarity evidence: the auth entry screen now explains RIVT's core surfaces through interactive capability cards for Trade Talk, Work, Crew, and Tools without adding a long modal tour.
+- `GA-UX-004` retains the role boundary: the role selector remains an onboarding-only setup control and no authenticated Contractor/Tradesperson role toggle was reintroduced.
+- `GA-DATA-001` and `GA-FND-004` retain honesty boundaries: this slice did not add homeowner flows, fake seed users, frontend-only verification, new permissions, or fake provider success.
+- `GA-OPS-007` gains local automated evidence for this slice: `npm run build`, `npm run lint`, `npm run test`, `npm run test:e2e`, and `npm audit --omit=dev` passed with 0 vulnerabilities.
+- `GA-OPS-008` is unchanged until this slice is pushed, deployed, and verified against live `/api/health` source metadata.
+
 ## Traceability Addendum - 2026-07-01 Shop Talk Server Read Path Wiring
 
 - `GA-UX-001` gains maintainability evidence: Home and Shop Talk now share centralized community display metadata in `src/features/shop-talk/community-directory.ts` instead of maintaining duplicate hardcoded community arrays.

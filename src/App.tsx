@@ -1047,11 +1047,19 @@ function App() {
     setUploadedRecords(
       () => new Set(["Signed scope", "Legal consent accepted"]),
     );
-    setActiveView("Home");
+    const postOnboardingView = ({
+      home: "Home",
+      work: "Marketplace",
+      crew: "My Crew",
+      "shop-talk": "Shop Talk",
+      tools: "Tools",
+      profile: "Settings",
+    } as const satisfies Record<OnboardingResult["preferredStartView"], typeof activeView>)[result.preferredStartView];
+    setActiveView(postOnboardingView);
     setOnboardingComplete(true);
     addActivity(
       "Account setup complete",
-      `${result.role === "contractor" ? "Contractor" : "Tradesperson"} testing is ready with ${result.plan}.`,
+      `${result.role === "contractor" ? "Contractor" : "Tradesperson"} setup is ready. Opening ${postOnboardingView}.`,
     );
   }
 

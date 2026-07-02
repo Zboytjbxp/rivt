@@ -1,11 +1,40 @@
 # RIVT Build State
 
-Last updated: 2026-07-01 America/New_York
+Last updated: 2026-07-02 America/New_York
 Current gate: Gate A launch hardening
 Current phase: Packet 08 Gate A launch hardening: machine gates and live workflow smokes are green; live Stripe Checkout/Portal session creation is verified; physical accessibility-device evidence and real paid-checkout webhook completion remain launch-quality boundaries.
 Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
 Production release commit: see live `/api/health` build metadata
+
+## Latest Packet 08 Pass - Onboarding Education and Activation
+
+- Added `docs/product/ONBOARDING_STRATEGY.md` as the product plan for a two-layer RIVT onboarding system:
+  - entry education before signup so users understand Trade Talk, Work, Crew, and Tools
+  - role-based activation after signup so contractors and tradespeople reach a first useful action faster
+- Reworked the auth entry showcase in `src/features/auth/AuthScreens.tsx` with interactive capability cards for:
+  - Ask the trades
+  - Find work or help
+  - Build your crew
+  - Run the job
+- Reworked post-signup onboarding into a more intentional activation flow:
+  - role remains chosen once, with existing immutable-role behavior preserved after setup
+  - users choose an immediate goal based on role
+  - users shape their feed with trade specialties plus topics such as Local jobs, Code questions, Tools, Business/pricing, Safety, and Project photos
+  - the left preview updates based on selected role, goal, trades, and topics
+  - completion now routes users to the relevant first destination: Work, Crew, Shop Talk, Tools, or Profile
+- Preserved Gate A honesty and safety boundaries:
+  - no homeowner flow
+  - no fake provider success
+  - no new permissions or authorization logic
+  - no server onboarding contract changes in this slice
+- Local machine gates run on 2026-07-02:
+  - `npm run build` (pass)
+  - `npm run lint` (pass)
+  - `npm run test` (pass)
+  - `npm run test:e2e` (pass)
+  - `npm audit --omit=dev` (pass; 0 vulnerabilities)
+- Deployment not yet verified in this pass; production confirmation requires push/deploy plus live `/api/health` source metadata.
 
 ## Latest Packet 08 Pass - Shop Talk Server Read Path Wiring
 
