@@ -2697,7 +2697,7 @@
 
 .community-empty {
   display: grid;
-  gap: 4px;
+  gap: 8px;
   padding: 14px;
   border-radius: var(--v2-radius-lg);
   background: var(--v2-surface-muted, #f5f2ed);
@@ -2712,6 +2712,56 @@
   color: var(--v2-text-muted, #5f6668);
   font-size: 12px;
   line-height: 1.35;
+}
+
+.community-empty .primary-action,
+.community-start-button {
+  justify-self: start;
+  min-height: 38px;
+  padding: 0 14px;
+  border-radius: 999px;
+  font-size: 12px;
+}
+
+.community-start-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid var(--v2-border, #e5e2dd);
+  background: var(--v2-surface-muted, #f5f2ed);
+  color: var(--v2-text, #17130f);
+  font-weight: var(--v2-weight-bold);
+  cursor: pointer;
+}
+
+.community-create-feedback {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border-radius: var(--v2-radius-lg);
+  background: color-mix(in srgb, var(--trade-orange, #ff4b00) 8%, var(--v2-surface-muted, #f5f2ed));
+  color: var(--v2-text, #17130f);
+  font-size: 12px;
+}
+
+.community-duplicate-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.community-duplicate-list button,
+.community-create-feedback .secondary-action {
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid var(--v2-border, #e5e2dd);
+  border-radius: 999px;
+  background: var(--v2-surface, #fff);
+  color: var(--v2-text, #17130f);
+  font: inherit;
+  font-size: 12px;
+  font-weight: var(--v2-weight-bold);
+  cursor: pointer;
 }
 
 @media (max-width: 640px) {

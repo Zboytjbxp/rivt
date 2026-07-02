@@ -48,7 +48,7 @@ export function communityPostReactionKey(postId: string) {
   return `post:${postId}`;
 }
 
-export function communityAnswerReactionKey(postId: string, answerId: number) {
+export function communityAnswerReactionKey(postId: string, answerId: string) {
   return `answer:${postId}:${answerId}`;
 }
 

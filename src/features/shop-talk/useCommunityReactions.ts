@@ -193,7 +193,7 @@ export function useCommunityReactions({
     void commitCommunityReaction("thread", communityPostReactionKey(postId), direction);
   }, [commitCommunityReaction]);
 
-  const handleVoteCommunityAnswer = useCallback((postId: string, answerId: number, direction: "up" | "down") => {
+  const handleVoteCommunityAnswer = useCallback((postId: string, answerId: string, direction: "up" | "down") => {
     void commitCommunityReaction("answer", communityAnswerReactionKey(postId, answerId), direction);
   }, [commitCommunityReaction]);
 

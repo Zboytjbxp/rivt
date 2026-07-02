@@ -24,7 +24,12 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { TradePostCard } from "./TradePostCard";
-import { communitySlug, setCommunityMembership } from "./communities-api";
+import {
+  communitySlug,
+  createCommunity,
+  setCommunityMembership,
+  type ServerCommunity,
+} from "./communities-api";
 import type { CommunityDisplay } from "./community-directory";
 import { tradeOptions } from "../../data";
 import type { Trade } from "../../types";
@@ -56,7 +61,7 @@ export interface NewsItem {
 }
 
 export interface CommunityAnswer {
-  id: number;
+  id: string;
   author: string;
   body: string;
   upvotes: number;
@@ -65,13 +70,6 @@ export interface CommunityAnswer {
 }
 
 export type PostType = "question" | "sub-request" | "safety" | "general";
-
-export interface ShopTalkReply {
-  id: string;
-  author: string;
-  text: string;
-  createdAt: string;
-}
 
 export interface CommunityPost {
   id: string;
@@ -95,6 +93,8 @@ export interface CommunityPost {
   subRate?: string;
   thumbnailUrl?: string;
   thumbnailAlt?: string;
+  communitySlug?: string;
+  communityName?: string;
 }
 
 export type PostFlair = "Question" | "Discussion" | "Code Talk" | "Compliance" | "Tip" | "Humor";
@@ -222,6 +222,7 @@ function textIncludesAny(text: string, needles: string[]) {
 
 function postBelongsToCommunity(post: CommunityPost, community: CommunityDisplay) {
   const slug = community.slug;
+  if (post.communitySlug) return post.communitySlug === slug;
   const titleBody = `${post.title} ${post.body} ${post.subTrade ?? ""} ${post.subLocation ?? ""}`;
   const tradeSlug = communitySlug(post.trade === "General" ? "General Talk" : `${post.trade} Talk`);
 
@@ -241,6 +242,8 @@ function ShopTalkNewPostModal({
   initialFlair = "Question",
   initialTitle = "",
   initialBody = "",
+  communities,
+  initialCommunitySlug,
   onClose,
   onSubmit,
 }: {
@@ -249,12 +252,15 @@ function ShopTalkNewPostModal({
   initialFlair?: PostFlair;
   initialTitle?: string;
   initialBody?: string;
+  communities: CommunityDisplay[];
+  initialCommunitySlug?: string | null;
   onClose: () => void;
-  onSubmit: (flair: PostFlair, title: string, trade: Trade | "General", body: string, postType: PostType, subTrade?: string, subLocation?: string, subRate?: string) => void;
+  onSubmit: (flair: PostFlair, title: string, trade: Trade | "General", body: string, postType: PostType, subTrade?: string, subLocation?: string, subRate?: string, communitySlug?: string | null) => void;
 }) {
   const [flair, setFlair] = useState<PostFlair>(initialFlair);
   const [title, setTitle] = useState(initialTitle);
   const [trade, setTrade] = useState<Trade | "General">(selectedJobTrade);
+  const [selectedPostCommunitySlug, setSelectedPostCommunitySlug] = useState<string | null>(initialCommunitySlug ?? communities[0]?.slug ?? null);
   const [body, setBody] = useState(initialBody);
   const [postType, setPostType] = useState<PostType>("general");
   const [subTrade, setSubTrade] = useState("");
@@ -302,6 +308,18 @@ function ShopTalkNewPostModal({
           </div>
           <small>{FLAIR_CONFIG[flair].description}</small>
         </div>
+
+        <label className="input-control">
+          <span>Community</span>
+          <select
+            value={selectedPostCommunitySlug ?? ""}
+            onChange={(e) => setSelectedPostCommunitySlug(e.target.value || null)}
+          >
+            {communities.map((community) => (
+              <option key={community.slug} value={community.slug}>{community.name}</option>
+            ))}
+          </select>
+        </label>
 
         <label className="input-control">
           <span>Trade</span>
@@ -374,6 +392,7 @@ function ShopTalkNewPostModal({
                   postType === "sub-request" ? subTrade : undefined,
                   postType === "sub-request" ? subLocation : undefined,
                   postType === "sub-request" ? subRate : undefined,
+                  selectedPostCommunitySlug,
                 );
                 onClose();
               }
@@ -410,6 +429,7 @@ export function ShopTalkView({
   onVerifyAnswer,
   onReportPost,
   onNewPost,
+  onCommunityCreated,
 }: {
   profile: AccountProfile;
   communityPosts: CommunityPost[];
@@ -426,11 +446,12 @@ export function ShopTalkView({
   reactionSummary: CommunityReactionSummary | null;
   reactionStatus: CommunityReactionSyncStatus;
   onVotePost: (postId: string, direction: "up" | "down") => void;
-  onVoteAnswer: (postId: string, answerId: number, direction: "up" | "down") => void;
-  onAddAnswer: (postId: string, body: string) => void;
-  onVerifyAnswer: (postId: string, answerId: number) => void;
+  onVoteAnswer: (postId: string, answerId: string, direction: "up" | "down") => void;
+  onAddAnswer: (postId: string, body: string) => void | Promise<void>;
+  onVerifyAnswer: (postId: string, answerId: string) => void | Promise<void>;
   onReportPost: (postId: string, reason: CommunityReport["reason"]) => void;
-  onNewPost: (flair: PostFlair, title: string, trade: Trade | "General", body: string, postType: PostType, subTrade?: string, subLocation?: string, subRate?: string) => void | Promise<void>;
+  onNewPost: (flair: PostFlair, title: string, trade: Trade | "General", body: string, postType: PostType, subTrade?: string, subLocation?: string, subRate?: string, communitySlug?: string | null) => void | Promise<void>;
+  onCommunityCreated: (community: ServerCommunity) => void;
 }) {
   const persona = usePersona();
   const [activeTab, setActiveTab] = useState<"talk" | "news">("talk");
@@ -445,6 +466,9 @@ export function ShopTalkView({
     return readStringSet("rivt.joinedCommunities.v1", communitySlug);
   });
   const [communityQuery, setCommunityQuery] = useState("");
+  const [communityCreateError, setCommunityCreateError] = useState<string | null>(null);
+  const [communityCreateBusy, setCommunityCreateBusy] = useState(false);
+  const [duplicateCommunityCandidates, setDuplicateCommunityCandidates] = useState<ServerCommunity[]>([]);
   const [selectedCommunitySlug, setSelectedCommunitySlug] = useState<string | null>(initialCommunitySlug ?? null);
   const [talkQuery, setTalkQuery] = useState(() => initialQuery.trim());
   const [newsQuery, setNewsQuery] = useState("");
@@ -461,13 +485,6 @@ export function ShopTalkView({
   const [activeTrendingTag, setActiveTrendingTag] = useState<string | null>(null);
   const [locallyAnswered, setLocallyAnswered] = useState<Set<string>>(new Set());
   const [filterType, setFilterType] = useState<PostType | "all">("all");
-  const [_expandedReplyPostId, _setExpandedReplyPostId] = useState<string | null>(null);
-  const [replyDrafts, setReplyDrafts] = useState<Record<string, string>>({});
-  const [shopTalkReplies, setShopTalkReplies] = useState<Record<string, ShopTalkReply[]>>(() => {
-    try { return JSON.parse(localStorage.getItem("rivt.shopTalkReplies.v1") ?? "{}") as Record<string, ShopTalkReply[]>; }
-    catch { return {}; }
-  });
-  const replyAuthorName = profile.displayName || "Anonymous";
   const displayNews = liveNews.length ? liveNews : newsItems;
   const [selectedNewsId, setSelectedNewsId] = useState(displayNews[0]?.id ?? 0);
   const [mobileDetail, setMobileDetail] = useState(initialPostId != null);
@@ -500,6 +517,8 @@ export function ShopTalkView({
       [community.name, community.meta, community.slug].join(" ").toLowerCase().includes(normalized)
     ));
   }, [communities, communityQuery]);
+  const canStartCommunity = communityQuery.trim().length >= 2 &&
+    !communities.some((community) => community.slug === communitySlug(communityQuery));
   const answerQueuePosts = communityPosts
     .filter((post) => (
       (post.trade === primaryTrade || post.trade === "General") &&
@@ -538,6 +557,35 @@ export function ShopTalkView({
     if (communityPostsForView[0]) setSelectedPostId(communityPostsForView[0].id);
   }
 
+  async function handleCreateCommunity(confirmDuplicate = false) {
+    const name = communityQuery.trim();
+    if (name.length < 2) return;
+    setCommunityCreateBusy(true);
+    setCommunityCreateError(null);
+    setDuplicateCommunityCandidates([]);
+    try {
+      const result = await createCommunity({
+        name,
+        description: `${name} community`,
+        confirmDuplicate,
+      });
+      if (result?.community) {
+        onCommunityCreated(result.community);
+        setSelectedCommunitySlug(result.community.slug);
+        setCommunityQuery("");
+        return;
+      }
+      if (result?.duplicateCandidates?.length) {
+        setDuplicateCommunityCandidates(result.duplicateCandidates);
+        setCommunityCreateError(result.error ?? "A similar community already exists.");
+        return;
+      }
+      setCommunityCreateError(result?.error ?? "Community could not be created.");
+    } finally {
+      setCommunityCreateBusy(false);
+    }
+  }
+
   function closeCommunity() {
     setSelectedCommunitySlug(null);
     setCommunityQuery("");
@@ -556,26 +604,6 @@ export function ShopTalkView({
       void totalForPost;
       return next;
     });
-  }
-
-  useEffect(() => {
-    try { localStorage.setItem("rivt.shopTalkReplies.v1", JSON.stringify(shopTalkReplies)); } catch { /* noop */ }
-  }, [shopTalkReplies]);
-
-  function _sendReply(postId: string) {
-    const text = (replyDrafts[postId] ?? "").trim();
-    if (!text) return;
-    const newReply: ShopTalkReply = {
-      id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
-      author: replyAuthorName,
-      text,
-      createdAt: new Date().toISOString(),
-    };
-    setShopTalkReplies(prev => {
-      const existing = prev[postId] ?? [];
-      return { ...prev, [postId]: [...existing, newReply] };
-    });
-    setReplyDrafts(prev => ({ ...prev, [postId]: "" }));
   }
 
   async function activateNews() {
@@ -761,7 +789,7 @@ export function ShopTalkView({
   function submitAnswer() {
     const body = answerDraft.trim();
     if (!selectedPost || !body) return;
-    onAddAnswer(selectedPost.id, body);
+    void onAddAnswer(selectedPost.id, body);
     setAnswerDraft("");
   }
 
@@ -792,12 +820,14 @@ export function ShopTalkView({
         <ShopTalkNewPostModal
           profile={profile}
           selectedJobTrade={selectedJobTrade}
+          communities={communities}
+          initialCommunitySlug={selectedCommunitySlug}
           initialFlair={newsDiscussContext ? "Discussion" : "Question"}
           initialTitle={newsDiscussContext ? newsDiscussContext.headline.slice(0, 120) : ""}
           initialBody={newsDiscussContext ? `Via ${newsDiscussContext.source} · ${newsDiscussContext.date}\n\n` : ""}
           onClose={() => { setNewPostOpen(false); setNewsDiscussContext(null); }}
-          onSubmit={(flair, title, trade, body, postType, subTrade, subLocation, subRate) => {
-            void onNewPost(flair, title, trade, body, postType, subTrade, subLocation, subRate);
+          onSubmit={(flair, title, trade, body, postType, subTrade, subLocation, subRate, communitySlug) => {
+            void onNewPost(flair, title, trade, body, postType, subTrade, subLocation, subRate, communitySlug);
             setNewPostOpen(false);
             setNewsDiscussContext(null);
           }}
@@ -892,6 +922,12 @@ export function ShopTalkView({
                     <div className="community-empty">
                       <strong>No communities found</strong>
                       <span>Try a trade, city, or topic like tile, side work, or code.</span>
+                      {canStartCommunity && (
+                        <button type="button" className="primary-action" onClick={() => void handleCreateCommunity()} disabled={communityCreateBusy}>
+                          <Plus size={14} />
+                          Start "{communityQuery.trim()}"
+                        </button>
+                      )}
                     </div>
                   ) : filteredCommunities.map((community) => {
                     const CIcon = community.icon;
@@ -933,6 +969,38 @@ export function ShopTalkView({
                     );
                   })}
                 </div>
+                {communityCreateError && (
+                  <div className="community-create-feedback" role="status">
+                    <strong>{communityCreateError}</strong>
+                    {duplicateCommunityCandidates.length > 0 && (
+                      <>
+                        <div className="community-duplicate-list">
+                          {duplicateCommunityCandidates.map((candidate) => (
+                            <button
+                              type="button"
+                              key={candidate.slug}
+                              onClick={() => {
+                                const match = communities.find((community) => community.slug === candidate.slug);
+                                if (match) openCommunity(match);
+                              }}
+                            >
+                              Join {candidate.name}
+                            </button>
+                          ))}
+                        </div>
+                        <button type="button" className="secondary-action" onClick={() => void handleCreateCommunity(true)} disabled={communityCreateBusy}>
+                          Create separate community anyway
+                        </button>
+                      </>
+                    )}
+                  </div>
+                )}
+                {filteredCommunities.length > 0 && canStartCommunity && (
+                  <button type="button" className="community-start-button" onClick={() => void handleCreateCommunity()} disabled={communityCreateBusy}>
+                    <Plus size={14} />
+                    Start "{communityQuery.trim()}"
+                  </button>
+                )}
               </section>
               ) : null}
 
@@ -1404,7 +1472,7 @@ export function ShopTalkView({
                           {answerReactionState.downvotes}
                         </button>
                         {(selectedPost.author === profile.displayName || answer.verifiedFix) && (
-                          <button type="button" disabled={answer.verifiedFix} onClick={() => onVerifyAnswer(selectedPost.id, answer.id)}>
+                          <button type="button" disabled={answer.verifiedFix} onClick={() => { void onVerifyAnswer(selectedPost.id, answer.id); }}>
                             <BadgeCheck size={14} />
                             {answer.verifiedFix ? "Verified" : "Mark fix"}
                           </button>

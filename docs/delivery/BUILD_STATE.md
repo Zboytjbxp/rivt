@@ -2,10 +2,44 @@
 
 Last updated: 2026-07-02 America/New_York
 Current gate: Gate A launch hardening
-Current phase: Packet 08 Gate A launch hardening: machine gates and live workflow smokes are mostly green; latest UI polish launch-blocker pass is deployed and production-monitored; physical accessibility-device evidence, full local integration-suite completion, and real paid-checkout webhook completion remain launch-quality boundaries.
+Current phase: Packet 08 Gate A launch hardening plus Gate B behind-flag backbone work: machine gates and live workflow smokes are mostly green; latest deployed UI polish remains production-monitored; the Shop Talk Reddit-model backbone is implemented and DB-verified on a `codex/*` branch and still requires merge, deploy, `/api/health`, and live workflow smoke before exposure.
 Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
-Repository branch: `master`
+Repository branch: `codex/shop-talk-reddit-backbone`
 Production release commit: see live `/api/health` build metadata
+
+## Latest Branch Pass - Shop Talk Reddit Backbone
+
+- Reviewed Claude's `docs/product/SHOP_TALK_REDDIT_MODEL_BUILD_PROMPT.md` from branch `claude/audit` at commit `2e61be4` and implemented the first durable backbone slice on branch `codex/shop-talk-reddit-backbone`.
+- Added migration `0017_shop_talk_reddit_backbone`:
+  - resets seeded community member counts to real membership counts instead of fake public-size numbers
+  - adds community ownership/moderator/member roles and archived-community support
+  - links every Shop Talk post to a real community
+  - adds server-owned `shop_talk_answers` with one verified fix per post
+- Expanded the community API:
+  - `GET /api/v1/communities` now returns real counts, joined state, viewer role, and supports search
+  - `POST /api/v1/communities` creates user-owned communities with reserved-slug checks, duplicate suggestions, and a one-community-per-day throttle
+  - joining/leaving updates real membership counts and prevents the last owner from leaving
+- Expanded the Shop Talk API:
+  - posts can be created inside a community and listed by community slug
+  - recent posts include server-owned answers
+  - answers can be created through `POST /api/v1/shop-talk/posts/:postId/answers`
+  - only the original post author can mark a server-owned answer as the Verified Fix
+- Wired the frontend to the new backbone:
+  - community/post/answer IDs now use durable string IDs
+  - the post composer chooses a community
+  - community discovery can start a new community from search
+  - fallback community counts no longer display fake `K`-scale membership
+  - old localStorage-only reply plumbing was removed from the Shop Talk view
+- Local gates run on 2026-07-02:
+  - `npm run build` (pass)
+  - `npm run lint` (pass)
+  - `npm run lint:security` (pass)
+  - `npm run test:unit` (pass)
+  - `npm run test:integration` (pass; Railway-backed `TEST_DATABASE_URL`)
+  - `npm run test:e2e` (pass)
+  - `npm audit --omit=dev` (pass; 0 vulnerabilities)
+  - focused migration/community/post integration pass also passed after updating the migration lifecycle test for `0017`
+- Deployment status: not deployed yet. This branch introduces migration `0017`, so merge/deploy must include migration readiness, `/api/health` verification, and a live/read-path smoke before any public Shop Talk exposure.
 
 ## Latest Packet 08 Pass - UI Polish Phase 1 Launch Blockers
 

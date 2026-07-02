@@ -30,14 +30,14 @@ export interface CommunityDisplay {
 }
 
 const COMMUNITY_SEEDS: CommunityDisplaySeed[] = [
-  { name: "Carpentry Talk", meta: "Trim, framing, punch-out", memberCount: 124000, icon: Hammer, tone: "#7a4a24" },
-  { name: "Electrical Talk", meta: "Code, service, rough-in", memberCount: 98000, icon: Zap, tone: "#1c1c1c" },
-  { name: "Jacksonville Trades", meta: "Local work and referrals", memberCount: 8700, icon: Building2, tone: "#0f6b7a" },
-  { name: "Side Work", meta: "Short-term help needed", memberCount: 5200, icon: Briefcase, tone: "#1c1c1c" },
-  { name: "Cabinetry Talk", meta: "Installs, layout, scribing", memberCount: 6100, icon: Hammer, tone: "#6b4a1c" },
-  { name: "Tile Talk", meta: "Layout, thinset, lippage", memberCount: 5300, icon: Wrench, tone: "#3b2a6b" },
-  { name: "Plumbing Talk", meta: "Rough-in, service, code", memberCount: 7600, icon: Wrench, tone: "#0f5f6b" },
-  { name: "Remodelers", meta: "Whole-home coordination", memberCount: 4400, icon: Users, tone: "#444" },
+  { name: "Carpentry Talk", meta: "Trim, framing, punch-out", memberCount: 0, icon: Hammer, tone: "#7a4a24" },
+  { name: "Electrical Talk", meta: "Code, service, rough-in", memberCount: 0, icon: Zap, tone: "#1c1c1c" },
+  { name: "Jacksonville Trades", meta: "Local work and referrals", memberCount: 0, icon: Building2, tone: "#0f6b7a" },
+  { name: "Side Work", meta: "Short-term help needed", memberCount: 0, icon: Briefcase, tone: "#1c1c1c" },
+  { name: "Cabinetry Talk", meta: "Installs, layout, scribing", memberCount: 0, icon: Hammer, tone: "#6b4a1c" },
+  { name: "Tile Talk", meta: "Layout, thinset, lippage", memberCount: 0, icon: Wrench, tone: "#3b2a6b" },
+  { name: "Plumbing Talk", meta: "Rough-in, service, code", memberCount: 0, icon: Wrench, tone: "#0f5f6b" },
+  { name: "Remodelers", meta: "Whole-home coordination", memberCount: 0, icon: Users, tone: "#444" },
 ];
 
 const COMMUNITY_META = new Map(

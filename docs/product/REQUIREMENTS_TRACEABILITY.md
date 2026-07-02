@@ -10,6 +10,15 @@ Status values:
 
 Evidence must eventually link to implementation, automated tests, manual acceptance proof, and deployed build.
 
+## Traceability Addendum - 2026-07-02 Shop Talk Reddit Backbone Branch
+
+- `GA-COM-001` gains branch-level backend evidence on `codex/shop-talk-reddit-backbone`: Shop Talk posts now require a real `community_id`, can be created/listed by community slug, and existing posts are backfilled into starter communities by migration `0017_shop_talk_reddit_backbone`.
+- `GA-COM-002` gains branch-level community evidence: authenticated users can create communities, creators become owners, duplicate candidates are surfaced before creation, and member counts are derived from actual `community_members` rows rather than seeded fake values.
+- `GA-COM-003` gains branch-level server-owned answer evidence: `shop_talk_answers` persists answers, the UI writes answers through the API when authenticated, and Verified Fix assignment is enforced server-side so only the original post author can mark the fix.
+- `GA-UX-005` gains honesty evidence: fallback/offline community metadata no longer claims large fake member counts, and the old localStorage-only reply pathway was removed from the Shop Talk view.
+- `GA-OPS-007` gains local automated evidence for this branch slice: `npm run build`, `npm run lint`, `npm run test:unit`, `npm run test:e2e`, and `npm audit --omit=dev` passed. The changed DB integration tests skip locally because `TEST_DATABASE_URL` is not configured, and the aggregate integration command timed out locally; this is not production verification.
+- `GA-OPS-008` is unchanged for deployment: this branch has not been merged/deployed, and migration `0017_shop_talk_reddit_backbone` needs CI/production migration evidence plus a live read/write smoke before this can be treated as production-ready.
+
 ## Traceability Addendum - 2026-07-02 UI Polish Phase 1 Launch Blockers
 
 - `GA-UX-003` gains local navigation clarity evidence on branch `codex/ui-polish-phase-1`: duplicate global search surfaces were removed, the AppShell search is the single Cmd/Ctrl+K and top-bar search entry, and the normal-user `/admin` dead-end now redirects back to the app.

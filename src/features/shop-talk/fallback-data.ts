@@ -76,6 +76,7 @@ export const communityPromptPosts: CommunityPost[] = [
     replies: [],
     createdAt: "Jun 2026",
     status: "Needs a pro answer",
+    communitySlug: "jacksonville-trades",
   },
   {
     id: "prompt-2",
@@ -90,6 +91,7 @@ export const communityPromptPosts: CommunityPost[] = [
     replies: [],
     createdAt: "Jun 2026",
     status: "Open",
+    communitySlug: "jacksonville-trades",
   },
   {
     id: "prompt-3",
@@ -104,6 +106,7 @@ export const communityPromptPosts: CommunityPost[] = [
     replies: [],
     createdAt: "May 2026",
     status: "Needs a pro answer",
+    communitySlug: "electrical-talk",
   },
   {
     id: "prompt-4",
@@ -120,6 +123,7 @@ export const communityPromptPosts: CommunityPost[] = [
     status: "Open",
     thumbnailUrl: "https://images.unsplash.com/photo-1556911220-bff31c812dba?auto=format&fit=crop&w=360&q=70",
     thumbnailAlt: "Cabinet detail in a finished kitchen",
+    communitySlug: "carpentry-talk",
   },
   {
     id: "prompt-5",
@@ -134,6 +138,7 @@ export const communityPromptPosts: CommunityPost[] = [
     replies: [],
     createdAt: "3h",
     status: "Open",
+    communitySlug: "electrical-talk",
   },
   {
     id: "prompt-6",
@@ -148,6 +153,7 @@ export const communityPromptPosts: CommunityPost[] = [
     replies: [],
     createdAt: "5h",
     status: "Needs a pro answer",
+    communitySlug: "plumbing-talk",
   },
   {
     id: "prompt-7",
@@ -164,6 +170,7 @@ export const communityPromptPosts: CommunityPost[] = [
     status: "Open",
     thumbnailUrl: "https://images.unsplash.com/photo-1600566752355-35792bedcfea?auto=format&fit=crop&w=360&q=70",
     thumbnailAlt: "Large format tile and bathroom finish work",
+    communitySlug: "tile-talk",
   },
   {
     id: "prompt-8",
@@ -180,5 +187,6 @@ export const communityPromptPosts: CommunityPost[] = [
     status: "Open",
     thumbnailUrl: "https://images.unsplash.com/photo-1600607687920-4e2a09cf159d?auto=format&fit=crop&w=360&q=70",
     thumbnailAlt: "Custom built-in cabinetry and interior finish work",
+    communitySlug: "cabinetry-talk",
   },
 ];

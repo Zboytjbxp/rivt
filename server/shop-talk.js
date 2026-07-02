@@ -13,6 +13,19 @@ const shopTalkReactionSchema = shopTalkTargetSchema.extend({
   reaction: z.enum(["up", "down"]).nullable(),
 });
 
+const shopTalkPostsQuerySchema = z.object({
+  community: z.string().trim().min(1).max(60).regex(/^[a-z0-9-]+$/).optional(),
+});
+
+const shopTalkPostParamsSchema = z.object({
+  postId: z.uuid(),
+});
+
+const shopTalkAnswerParamsSchema = z.object({
+  postId: z.uuid(),
+  answerId: z.uuid(),
+});
+
 function shopTalkTargetSubject(target) {
   return `${target.targetType}:${target.targetKey}`;
 }
@@ -105,7 +118,44 @@ const shopTalkPostCreateSchema = z.object({
   trade: z.string().trim().min(1).max(60),
   flair: z.enum(["Question", "Discussion", "Code Talk", "Compliance", "Tip", "Humor"]).nullable().optional(),
   postType: z.enum(["question", "sub-request", "safety", "general"]).optional().default("general"),
+  communitySlug: z.string().trim().min(1).max(60).regex(/^[a-z0-9-]+$/).optional(),
 });
+
+const shopTalkAnswerCreateSchema = z.object({
+  body: z.string().trim().min(1).max(1000),
+});
+
+function defaultCommunitySlugForTrade(trade) {
+  switch (String(trade ?? "").trim().toLowerCase()) {
+    case "carpentry":
+      return "carpentry-talk";
+    case "electrical":
+      return "electrical-talk";
+    case "plumbing":
+      return "plumbing-talk";
+    case "tile":
+      return "tile-talk";
+    case "cabinetry":
+      return "cabinetry-talk";
+    case "remodeling":
+    case "remodelers":
+      return "remodelers";
+    case "side work":
+      return "side-work";
+    default:
+      return "jacksonville-trades";
+  }
+}
+
+function mapShopTalkAnswerRow(row) {
+  return {
+    id: row.id,
+    author: row.author_name,
+    body: row.body,
+    verifiedFix: Boolean(row.verified_fix),
+    createdAt: row.created_at,
+  };
+}
 
 function mapShopTalkPostRow(row) {
   return {
@@ -118,7 +168,81 @@ function mapShopTalkPostRow(row) {
     body: row.body,
     status: row.status,
     createdAt: row.created_at,
+    communityId: row.community_id,
+    communitySlug: row.community_slug,
+    communityName: row.community_name,
+    answers: Array.isArray(row.answers) ? row.answers.map(mapShopTalkAnswerRow) : [],
   };
+}
+
+async function requireCommunityForPost(client, slug) {
+  const found = await client.query(
+    `SELECT id, slug, name
+     FROM communities
+     WHERE slug = $1 AND archived_at IS NULL`,
+    [slug],
+  );
+  if (!found.rowCount) {
+    throw new ApiError(422, "COMMUNITY_REQUIRED", "Choose an active community for this post.");
+  }
+  return found.rows[0];
+}
+
+async function fetchShopTalkPostRows(client, { communitySlug = null } = {}) {
+  const params = [];
+  let whereClause = "WHERE community.archived_at IS NULL";
+  if (communitySlug) {
+    params.push(communitySlug);
+    whereClause += ` AND community.slug = $${params.length}`;
+  }
+  const result = await client.query(
+    `SELECT post.id,
+            post.author_name,
+            post.trade,
+            post.flair,
+            post.post_type,
+            post.title,
+            post.body,
+            post.status,
+            post.created_at,
+            post.community_id,
+            community.slug AS community_slug,
+            community.name AS community_name,
+            COALESCE(
+              jsonb_agg(
+                jsonb_build_object(
+                  'id', answer.id,
+                  'author_name', answer.author_name,
+                  'body', answer.body,
+                  'verified_fix', answer.verified_fix,
+                  'created_at', answer.created_at
+                )
+                ORDER BY answer.verified_fix DESC, answer.created_at ASC, answer.id ASC
+              ) FILTER (WHERE answer.id IS NOT NULL),
+              '[]'::jsonb
+            ) AS answers
+     FROM shop_talk_posts post
+     JOIN communities community ON community.id = post.community_id
+     LEFT JOIN shop_talk_answers answer
+       ON answer.post_id = post.id AND answer.deleted_at IS NULL
+     ${whereClause}
+     GROUP BY post.id, community.slug, community.name
+     ORDER BY post.created_at DESC, post.id DESC
+     LIMIT 100`,
+    params,
+  );
+  return result.rows;
+}
+
+async function fetchShopTalkAnswerRows(client, postId) {
+  const result = await client.query(
+    `SELECT id, author_name, body, verified_fix, created_at
+     FROM shop_talk_answers
+     WHERE post_id = $1 AND deleted_at IS NULL
+     ORDER BY verified_fix DESC, created_at ASC, id ASC`,
+    [postId],
+  );
+  return result.rows;
 }
 
 export function registerShopTalkRoutes({
@@ -131,14 +255,10 @@ export function registerShopTalkRoutes({
   sendIdempotentResult,
 }) {
   app.get("/api/v1/shop-talk/posts", requireV1AuthenticatedUser, requireV1Actor, asyncRoute(async (request, response) => {
-    const result = await database.query(
-      `SELECT id, author_name, trade, flair, post_type, title, body, status, created_at
-       FROM shop_talk_posts
-       ORDER BY created_at DESC, id DESC
-       LIMIT 100`,
-    );
+    const { community } = validate(shopTalkPostsQuerySchema, request.query);
+    const rows = await fetchShopTalkPostRows(database, { communitySlug: community ?? null });
     response.json({
-      data: { posts: result.rows.map(mapShopTalkPostRow) },
+      data: { posts: rows.map(mapShopTalkPostRow) },
       meta: { requestId: request.requestId },
     });
   }));
@@ -155,14 +275,19 @@ export function registerShopTalkRoutes({
           [request.actor.account.id],
         );
         const authorName = (profile.rows[0]?.display_name || "").trim() || "RIVT member";
+        const community = await requireCommunityForPost(
+          client,
+          input.communitySlug ?? defaultCommunitySlugForTrade(input.trade),
+        );
         const inserted = await client.query(
           `INSERT INTO shop_talk_posts (
-             author_account_id, author_name, trade, flair, post_type, title, body
-           ) VALUES ($1, $2, $3, $4, $5, $6, $7)
-           RETURNING id, author_name, trade, flair, post_type, title, body, status, created_at`,
+             author_account_id, author_name, community_id, trade, flair, post_type, title, body
+           ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+           RETURNING id, author_name, community_id, trade, flair, post_type, title, body, status, created_at`,
           [
             request.actor.account.id,
             authorName,
+            community.id,
             input.trade,
             input.flair ?? null,
             input.postType,
@@ -170,10 +295,153 @@ export function registerShopTalkRoutes({
             input.body,
           ],
         );
+        inserted.rows[0].community_slug = community.slug;
+        inserted.rows[0].community_name = community.name;
+        inserted.rows[0].answers = [];
         return {
           status: 201,
           body: {
             data: { post: mapShopTalkPostRow(inserted.rows[0]) },
+            meta: { requestId: request.requestId },
+          },
+        };
+      },
+    );
+    sendIdempotentResult(response, result);
+  }));
+
+  app.get("/api/v1/shop-talk/posts/:postId/answers", requireV1AuthenticatedUser, requireV1Actor, asyncRoute(async (request, response) => {
+    const { postId } = validate(shopTalkPostParamsSchema, request.params);
+    const found = await database.query(
+      "SELECT id FROM shop_talk_posts WHERE id = $1",
+      [postId],
+    );
+    if (!found.rowCount) {
+      throw new ApiError(404, "SHOP_TALK_POST_NOT_FOUND", "That Shop Talk post does not exist.");
+    }
+    const rows = await fetchShopTalkAnswerRows(database, postId);
+    response.json({
+      data: { answers: rows.map(mapShopTalkAnswerRow) },
+      meta: { requestId: request.requestId },
+    });
+  }));
+
+  app.post("/api/v1/shop-talk/posts/:postId/answers", requireV1AuthenticatedUser, requireV1Actor, writeRateLimit, asyncRoute(async (request, response) => {
+    const { postId } = validate(shopTalkPostParamsSchema, request.params);
+    const input = validate(shopTalkAnswerCreateSchema, request.body);
+    const result = await runIdempotentMutation(
+      request,
+      request.actor.account.id,
+      `shop-talk.answer.create:${postId}`,
+      async (client) => {
+        const post = await client.query(
+          "SELECT id FROM shop_talk_posts WHERE id = $1 FOR UPDATE",
+          [postId],
+        );
+        if (!post.rowCount) {
+          throw new ApiError(404, "SHOP_TALK_POST_NOT_FOUND", "That Shop Talk post does not exist.");
+        }
+        const profile = await client.query(
+          "SELECT display_name FROM profiles WHERE account_id = $1",
+          [request.actor.account.id],
+        );
+        const authorName = (profile.rows[0]?.display_name || "").trim() || "RIVT member";
+        const inserted = await client.query(
+          `INSERT INTO shop_talk_answers (post_id, author_account_id, author_name, body)
+           VALUES ($1, $2, $3, $4)
+           RETURNING id, author_name, body, verified_fix, created_at`,
+          [postId, request.actor.account.id, authorName, input.body],
+        );
+        await client.query(
+          `UPDATE shop_talk_posts
+           SET status = CASE WHEN status = 'Needs a pro answer' THEN 'Open' ELSE status END,
+               updated_at = now()
+           WHERE id = $1`,
+          [postId],
+        );
+        await client.query(
+          `INSERT INTO audit_events (request_id, actor_account_id, action, subject_type, subject_id, metadata)
+           VALUES ($1, $2, 'shop_talk.answer.created', 'shop_talk_answer', $3, $4::jsonb)`,
+          [
+            request.requestId,
+            request.actor.account.id,
+            inserted.rows[0].id,
+            JSON.stringify({ postId }),
+          ],
+        );
+        return {
+          status: 201,
+          body: {
+            data: { answer: mapShopTalkAnswerRow(inserted.rows[0]) },
+            meta: { requestId: request.requestId },
+          },
+        };
+      },
+    );
+    sendIdempotentResult(response, result);
+  }));
+
+  app.post("/api/v1/shop-talk/posts/:postId/answers/:answerId/verified-fix", requireV1AuthenticatedUser, requireV1Actor, writeRateLimit, asyncRoute(async (request, response) => {
+    const { postId, answerId } = validate(shopTalkAnswerParamsSchema, request.params);
+    const result = await runIdempotentMutation(
+      request,
+      request.actor.account.id,
+      `shop-talk.answer.verify:${postId}:${answerId}`,
+      async (client) => {
+        const post = await client.query(
+          `SELECT id, author_account_id
+           FROM shop_talk_posts
+           WHERE id = $1
+           FOR UPDATE`,
+          [postId],
+        );
+        if (!post.rowCount) {
+          throw new ApiError(404, "SHOP_TALK_POST_NOT_FOUND", "That Shop Talk post does not exist.");
+        }
+        if (post.rows[0].author_account_id !== request.actor.account.id) {
+          throw new ApiError(403, "SHOP_TALK_VERIFY_FORBIDDEN", "Only the original poster can mark a verified fix.");
+        }
+        const answer = await client.query(
+          `SELECT id
+           FROM shop_talk_answers
+           WHERE id = $1 AND post_id = $2 AND deleted_at IS NULL
+           FOR UPDATE`,
+          [answerId, postId],
+        );
+        if (!answer.rowCount) {
+          throw new ApiError(404, "SHOP_TALK_ANSWER_NOT_FOUND", "That answer does not exist.");
+        }
+        await client.query(
+          `UPDATE shop_talk_answers
+           SET verified_fix = false, updated_at = now()
+           WHERE post_id = $1 AND verified_fix = true`,
+          [postId],
+        );
+        await client.query(
+          `UPDATE shop_talk_answers
+           SET verified_fix = true, updated_at = now()
+           WHERE id = $1`,
+          [answerId],
+        );
+        await client.query(
+          "UPDATE shop_talk_posts SET status = 'Verified Fix', updated_at = now() WHERE id = $1",
+          [postId],
+        );
+        await client.query(
+          `INSERT INTO audit_events (request_id, actor_account_id, action, subject_type, subject_id, metadata)
+           VALUES ($1, $2, 'shop_talk.answer.verified_fix', 'shop_talk_answer', $3, $4::jsonb)`,
+          [
+            request.requestId,
+            request.actor.account.id,
+            answerId,
+            JSON.stringify({ postId }),
+          ],
+        );
+        const answers = await fetchShopTalkAnswerRows(client, postId);
+        return {
+          status: 200,
+          body: {
+            data: { answers: answers.map(mapShopTalkAnswerRow) },
             meta: { requestId: request.requestId },
           },
         };

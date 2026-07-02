@@ -98,6 +98,7 @@ if (!testDatabaseUrl) {
     });
 
     const author = await createAccount(baseUrl, "tradesperson", "Shop Talk Author");
+    const answerer = await createAccount(baseUrl, "tradesperson", "Shop Talk Answerer");
 
     // Anonymous access is rejected.
     const anonList = await requestJson(baseUrl, "/api/v1/shop-talk/posts");
@@ -129,6 +130,7 @@ if (!testDatabaseUrl) {
         trade: "Electrical",
         flair: "Question",
         postType: "question",
+        communitySlug: "electrical-talk",
       },
     });
     assert.equal(created.response.status, 201);
@@ -140,6 +142,9 @@ if (!testDatabaseUrl) {
     assert.equal(post.type, "question");
     assert.equal(post.author, "Shop Talk Author");
     assert.equal(post.status, "Open");
+    assert.equal(post.communitySlug, "electrical-talk");
+    assert.equal(post.communityName, "Electrical Talk");
+    assert.deepEqual(post.answers, []);
 
     // Same idempotency key replays the same result.
     const replay = await requestJson(baseUrl, "/api/v1/shop-talk/posts", {
@@ -152,6 +157,7 @@ if (!testDatabaseUrl) {
         trade: "Electrical",
         flair: "Question",
         postType: "question",
+        communitySlug: "electrical-talk",
       },
     });
     assert.equal(replay.response.status, 201);
@@ -163,6 +169,46 @@ if (!testDatabaseUrl) {
     assert.equal(list.response.status, 200);
     assert.ok(Array.isArray(list.payload.data.posts));
     assert.ok(list.payload.data.posts.some((entry) => entry.id === post.id));
+
+    const scopedList = await requestJson(baseUrl, "/api/v1/shop-talk/posts?community=electrical-talk", { cookie: author.cookie });
+    assert.equal(scopedList.response.status, 200);
+    assert.ok(scopedList.payload.data.posts.every((entry) => entry.communitySlug === "electrical-talk"));
+
+    const answerCreated = await requestJson(baseUrl, `/api/v1/shop-talk/posts/${post.id}/answers`, {
+      method: "POST",
+      cookie: answerer.cookie,
+      idempotencyKey: randomUUID(),
+      body: {
+        body: "Use the multiplier, mark both bends, and check the box offset before you pull wire.",
+      },
+    });
+    assert.equal(answerCreated.response.status, 201);
+    const answer = answerCreated.payload.data.answer;
+    assert.ok(answer.id);
+    assert.equal(answer.author, "Shop Talk Answerer");
+    assert.equal(answer.verifiedFix, false);
+
+    const answers = await requestJson(baseUrl, `/api/v1/shop-talk/posts/${post.id}/answers`, { cookie: author.cookie });
+    assert.equal(answers.response.status, 200);
+    assert.ok(answers.payload.data.answers.some((entry) => entry.id === answer.id));
+
+    const forbiddenVerify = await requestJson(baseUrl, `/api/v1/shop-talk/posts/${post.id}/answers/${answer.id}/verified-fix`, {
+      method: "POST",
+      cookie: answerer.cookie,
+      idempotencyKey: randomUUID(),
+    });
+    assert.equal(forbiddenVerify.response.status, 403);
+
+    const verified = await requestJson(baseUrl, `/api/v1/shop-talk/posts/${post.id}/answers/${answer.id}/verified-fix`, {
+      method: "POST",
+      cookie: author.cookie,
+      idempotencyKey: randomUUID(),
+    });
+    assert.equal(verified.response.status, 200);
+    assert.equal(
+      verified.payload.data.answers.find((entry) => entry.id === answer.id).verifiedFix,
+      true,
+    );
 
     // Validation rejects an empty title.
     const invalid = await requestJson(baseUrl, "/api/v1/shop-talk/posts", {

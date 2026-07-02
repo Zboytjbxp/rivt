@@ -6,6 +6,15 @@ export interface ShopTalkPostInput {
   trade: string;
   flair?: string | null;
   postType?: "question" | "sub-request" | "safety" | "general";
+  communitySlug?: string;
+}
+
+export interface ServerShopTalkAnswer {
+  id: string;
+  author: string;
+  body: string;
+  verifiedFix: boolean;
+  createdAt: string;
 }
 
 export interface ServerShopTalkPost {
@@ -18,6 +27,10 @@ export interface ServerShopTalkPost {
   body: string;
   status: string;
   createdAt: string;
+  communityId?: string;
+  communitySlug?: string;
+  communityName?: string;
+  answers?: ServerShopTalkAnswer[];
 }
 
 /**
@@ -45,12 +58,50 @@ export async function createShopTalkPost(input: ShopTalkPostInput): Promise<Serv
 }
 
 /** Fetch recent Shop Talk posts, or null if the API is unavailable. */
-export async function fetchShopTalkPosts(): Promise<ServerShopTalkPost[] | null> {
+export async function fetchShopTalkPosts(communitySlug?: string | null): Promise<ServerShopTalkPost[] | null> {
   try {
-    const response = await fetch(apiPath("/api/v1/shop-talk/posts"), { credentials: "include" });
+    const suffix = communitySlug ? `?community=${encodeURIComponent(communitySlug)}` : "";
+    const response = await fetch(apiPath(`/api/v1/shop-talk/posts${suffix}`), { credentials: "include" });
     if (!response.ok) return null;
     const body = await response.json().catch(() => null) as { data?: { posts?: ServerShopTalkPost[] } } | null;
     return Array.isArray(body?.data?.posts) ? body!.data!.posts! : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function createShopTalkAnswer(postId: string, body: string): Promise<ServerShopTalkAnswer | null> {
+  try {
+    const response = await fetch(apiPath(`/api/v1/shop-talk/posts/${encodeURIComponent(postId)}/answers`), {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+        "Idempotency-Key": crypto.randomUUID(),
+      },
+      body: JSON.stringify({ body }),
+    });
+    if (!response.ok) return null;
+    const payload = await response.json().catch(() => null) as { data?: { answer?: ServerShopTalkAnswer } } | null;
+    return payload?.data?.answer ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export async function verifyShopTalkAnswer(postId: string, answerId: string): Promise<ServerShopTalkAnswer[] | null> {
+  try {
+    const response = await fetch(
+      apiPath(`/api/v1/shop-talk/posts/${encodeURIComponent(postId)}/answers/${encodeURIComponent(answerId)}/verified-fix`),
+      {
+        method: "POST",
+        credentials: "include",
+        headers: { "Idempotency-Key": crypto.randomUUID() },
+      },
+    );
+    if (!response.ok) return null;
+    const payload = await response.json().catch(() => null) as { data?: { answers?: ServerShopTalkAnswer[] } } | null;
+    return Array.isArray(payload?.data?.answers) ? payload!.data!.answers! : null;
   } catch {
     return null;
   }

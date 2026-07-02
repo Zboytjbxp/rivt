@@ -106,7 +106,8 @@ if (!testDatabaseUrl) {
     const carpentry = list.payload.data.communities.find((c) => c.slug === "carpentry-talk");
     assert.ok(carpentry, "seeded carpentry-talk community exists");
     assert.equal(carpentry.joined, false);
-    assert.ok(carpentry.memberCount >= 124000);
+    assert.ok(Number.isInteger(carpentry.memberCount));
+    assert.ok(carpentry.memberCount >= 0);
     const baseline = carpentry.memberCount;
 
     // Join increments the member count and flips joined.
@@ -143,5 +144,39 @@ if (!testDatabaseUrl) {
       cookie: member.cookie,
     });
     assert.equal(missing.response.status, 404);
+
+    // Users can create a new community; creator becomes owner and first member.
+    const uniqueName = `Jacksonville Carpentry ${randomUUID().slice(0, 8)}`;
+    const created = await requestJson(baseUrl, "/api/v1/communities", {
+      method: "POST",
+      cookie: member.cookie,
+      body: {
+        name: uniqueName,
+        description: "Local finish carpentry questions and referrals.",
+      },
+    });
+    assert.equal(created.response.status, 201);
+    assert.equal(created.payload.data.community.name, uniqueName);
+    assert.equal(created.payload.data.community.joined, true);
+    assert.equal(created.payload.data.community.role, "owner");
+    assert.equal(created.payload.data.community.memberCount, 1);
+
+    const duplicate = await requestJson(baseUrl, "/api/v1/communities", {
+      method: "POST",
+      cookie: member.cookie,
+      body: {
+        name: uniqueName,
+        description: "Duplicate room.",
+      },
+    });
+    assert.equal(duplicate.response.status, 409);
+    assert.equal(duplicate.payload.error.code, "COMMUNITY_DUPLICATE_CANDIDATES");
+
+    const ownerLeave = await requestJson(baseUrl, `/api/v1/communities/${created.payload.data.community.slug}/join`, {
+      method: "DELETE",
+      cookie: member.cookie,
+    });
+    assert.equal(ownerLeave.response.status, 409);
+    assert.equal(ownerLeave.payload.error.code, "COMMUNITY_OWNER_REQUIRED");
   });
 }

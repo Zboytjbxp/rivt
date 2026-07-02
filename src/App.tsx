@@ -67,8 +67,15 @@ import type {
 } from "./features/shop-talk/ShopTalkView";
 import { communityBadgeLabels, relativeTime } from "./features/shop-talk/community-utils";
 import { communityPromptPosts, fallbackNewsItems } from "./features/shop-talk/fallback-data";
-import { createShopTalkPost, fetchShopTalkPosts, type ServerShopTalkPost } from "./features/shop-talk/shop-talk-api";
-import { communitySlug, fetchCommunities } from "./features/shop-talk/communities-api";
+import {
+  createShopTalkAnswer,
+  createShopTalkPost,
+  fetchShopTalkPosts,
+  verifyShopTalkAnswer,
+  type ServerShopTalkAnswer,
+  type ServerShopTalkPost,
+} from "./features/shop-talk/shop-talk-api";
+import { communitySlug, fetchCommunities, type ServerCommunity } from "./features/shop-talk/communities-api";
 import {
   fallbackCommunities,
   mapServerCommunity,
@@ -162,6 +169,23 @@ function normalizeShopTalkTrade(value: string): Trade | "General" {
   return TRADE_OPTION_NAMES.has(value) ? value as Trade : "General";
 }
 
+function defaultShopTalkCommunitySlug(trade: Trade | "General") {
+  switch (trade) {
+    case "Carpentry":
+      return "carpentry-talk";
+    case "Electrical":
+      return "electrical-talk";
+    case "Plumbing":
+      return "plumbing-talk";
+    case "Tile":
+      return "tile-talk";
+    case "Cabinetry":
+      return "cabinetry-talk";
+    default:
+      return "jacksonville-trades";
+  }
+}
+
 function normalizePostFlair(value?: string): PostFlair | undefined {
   return value && VALID_POST_FLAIRS.includes(value as PostFlair) ? value as PostFlair : undefined;
 }
@@ -176,6 +200,17 @@ function normalizePostStatus(value?: string): CommunityPost["status"] {
     : "Open";
 }
 
+function toCommunityAnswerViewModel(answer: ServerShopTalkAnswer): CommunityPost["replies"][number] {
+  return {
+    id: answer.id,
+    author: answer.author?.trim() || "RIVT member",
+    body: answer.body,
+    upvotes: 0,
+    downvotes: 0,
+    verifiedFix: Boolean(answer.verifiedFix),
+  };
+}
+
 function toCommunityPostViewModel(post: ServerShopTalkPost): CommunityPost {
   const createdAtMs = new Date(post.createdAt).getTime();
   return {
@@ -187,11 +222,13 @@ function toCommunityPostViewModel(post: ServerShopTalkPost): CommunityPost {
     body: post.body,
     upvotes: 0,
     downvotes: 0,
-    replies: [],
+    replies: Array.isArray(post.answers) ? post.answers.map(toCommunityAnswerViewModel) : [],
     createdAt: relativeTime(post.createdAt),
     sortOrder: Number.isFinite(createdAtMs) ? createdAtMs : undefined,
     status: normalizePostStatus(post.status),
     type: normalizePostType(post.type),
+    communitySlug: post.communitySlug,
+    communityName: post.communityName,
   };
 }
 
@@ -861,10 +898,28 @@ function App() {
     handleNavigate("Tools");
   }
 
-  function handleAddCommunityAnswer(postId: string, body: string) {
+  async function handleAddCommunityAnswer(postId: string, body: string) {
     const post = communityPosts.find((candidate) => candidate.id === postId);
     if (!post) {
       return;
+    }
+
+    let answerToAdd: CommunityPost["replies"][number] = {
+      id: `local-answer-${Date.now()}`,
+      author: accountProfile.displayName,
+      body,
+      upvotes: 0,
+      downvotes: 0,
+      verifiedFix: false,
+    };
+
+    if (!isGuest && authUser && onboardingComplete && !postId.startsWith("local-") && !postId.startsWith("prompt-")) {
+      const serverAnswer = await createShopTalkAnswer(postId, body);
+      if (!serverAnswer) {
+        addActivity("Shop Talk answer not saved", "Your answer could not reach the server. Try again when your connection is stable.");
+        return;
+      }
+      answerToAdd = toCommunityAnswerViewModel(serverAnswer);
     }
 
     setCommunityPosts((current) =>
@@ -873,17 +928,7 @@ function App() {
           ? {
               ...candidate,
               status: candidate.status === "Needs a pro answer" ? "Open" : candidate.status,
-              replies: [
-                {
-                  id: Date.now(),
-                  author: accountProfile.displayName,
-                  body,
-                  upvotes: 0,
-                  downvotes: 0,
-                  verifiedFix: false,
-                },
-                ...candidate.replies,
-              ],
+              replies: [answerToAdd, ...candidate.replies],
             }
           : candidate,
       ),
@@ -894,10 +939,34 @@ function App() {
     );
   }
 
-  function handleVerifyCommunityAnswer(postId: string, answerId: number) {
+  async function handleVerifyCommunityAnswer(postId: string, answerId: string) {
     const post = communityPosts.find((candidate) => candidate.id === postId);
     const answer = post?.replies.find((candidate) => candidate.id === answerId);
     if (!post || !answer) {
+      return;
+    }
+
+    if (!isGuest && authUser && onboardingComplete && !postId.startsWith("local-") && !postId.startsWith("prompt-")) {
+      const serverAnswers = await verifyShopTalkAnswer(postId, answerId);
+      if (!serverAnswers) {
+        addActivity("Verified Fix not saved", "Only the original poster can mark a server-owned verified fix.");
+        return;
+      }
+      setCommunityPosts((current) =>
+        current.map((candidate) =>
+          candidate.id === postId
+            ? {
+                ...candidate,
+                status: "Verified Fix",
+                replies: serverAnswers.map(toCommunityAnswerViewModel),
+              }
+            : candidate,
+        ),
+      );
+      addActivity(
+        "Verified Fix marked",
+        `${answer.author}'s answer on "${post.title}" now appears as the trusted fix.`,
+      );
       return;
     }
 
@@ -951,7 +1020,7 @@ function App() {
     );
   }
 
-  async function handleNewShopTalkPost(flair: PostFlair, title: string, trade: Trade | "General", body: string, postType: PostType, subTrade?: string, subLocation?: string, subRate?: string) {
+  async function handleNewShopTalkPost(flair: PostFlair, title: string, trade: Trade | "General", body: string, postType: PostType, subTrade?: string, subLocation?: string, subRate?: string, communitySlugOverride?: string | null) {
     const localPost: CommunityPost = {
       id: `local-${Date.now()}`,
       title,
@@ -966,6 +1035,7 @@ function App() {
       sortOrder: Date.now(),
       status: "Open",
       type: postType,
+      communitySlug: communitySlugOverride ?? defaultShopTalkCommunitySlug(trade),
       ...(subTrade ? { subTrade } : {}),
       ...(subLocation ? { subLocation } : {}),
       ...(subRate ? { subRate } : {}),
@@ -973,7 +1043,14 @@ function App() {
 
     let postToAdd = localPost;
     if (!isGuest && authUser && onboardingComplete) {
-      const serverPost = await createShopTalkPost({ title, body, trade, flair, postType });
+      const serverPost = await createShopTalkPost({
+        title,
+        body,
+        trade,
+        flair,
+        postType,
+        communitySlug: communitySlugOverride ?? undefined,
+      });
       if (serverPost) {
         postToAdd = toCommunityPostViewModel(serverPost);
       }
@@ -984,6 +1061,15 @@ function App() {
       ...current.filter((post) => post.id !== postToAdd.id),
     ]);
     addActivity("Shop Talk post created", `"${title}" posted to Shop Talk.`);
+  }
+
+  function handleCommunityCreated(community: ServerCommunity) {
+    const display = mapServerCommunity(community);
+    setCommunities((current) => [
+      display,
+      ...current.filter((candidate) => candidate.slug !== display.slug),
+    ]);
+    addActivity("Community created", `${display.name} is ready for posts and local discussion.`);
   }
 
   function handleJobSaved(job: Job, published: boolean) {
@@ -1508,6 +1594,7 @@ function App() {
             onVerifyAnswer={handleVerifyCommunityAnswer}
             onReportPost={handleReportCommunityPost}
             onNewPost={handleNewShopTalkPost}
+            onCommunityCreated={handleCommunityCreated}
           />
         ) : ["My Crew", "Reviews"].includes(activeView) ? (
           <NetworkHub
