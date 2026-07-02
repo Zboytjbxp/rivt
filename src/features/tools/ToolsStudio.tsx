@@ -21,7 +21,6 @@ import {
   Search,
   Shield,
   Trash2,
-  Wrench,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { Job } from "../../types";
@@ -77,7 +76,6 @@ interface ToolsStudioProps {
   openTool?: ToolMode | null;
   onOpenToolConsumed?: () => void;
   onNavigate: (destination: PrimaryDestination) => void;
-  onOpenJob: (jobId: number) => void;
   onOpenRecords: () => void;
 }
 
@@ -104,10 +102,6 @@ const defaultCompletionChecklist: CompletionChecklistState = {
   clientApproved: false,
   photosProvided: false,
 };
-
-function jobName(job: Job | null) {
-  return job ? `${job.title} - ${job.location}` : "Standalone tool";
-}
 
 function ToolCard({
   icon: Icon,
@@ -151,7 +145,6 @@ function ToolAppShell({
   eyebrow,
   title,
   description,
-  activeJob,
   compact = false,
   onBack,
   children,
@@ -159,7 +152,6 @@ function ToolAppShell({
   eyebrow: string;
   title: string;
   description: string;
-  activeJob: Job | null;
   compact?: boolean;
   onBack: () => void;
   children: ReactNode;
@@ -176,10 +168,6 @@ function ToolAppShell({
           <h1>{title}</h1>
           <p>{description}</p>
         </div>
-        {compact && !activeJob ? null : <aside title={jobName(activeJob)}>
-          <Wrench size={15} />
-          <span>{activeJob ? activeJob.title : "No job loaded"}</span>
-        </aside>}
       </header>
       {children}
     </section>
@@ -1904,7 +1892,7 @@ function projectErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : "RIVT could not update the project record.";
 }
 
-export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = null, onOpenToolConsumed, onNavigate, onOpenJob, onOpenRecords }: ToolsStudioProps) {
+export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = null, onOpenToolConsumed, onNavigate, onOpenRecords }: ToolsStudioProps) {
   const activeJob = jobs.find((job) => job.status !== "Paid / Closed") ?? jobs[0] ?? null;
   const requestedTool = mode === "tools" && openTool && openTool !== "hub" ? openTool : null;
   const [localActiveTool, setLocalActiveTool] = useState<ToolMode>("hub");
@@ -2359,7 +2347,7 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
     if (activeTool === "calculator") {
       return (
         <section className="v2-tools-app is-calculator-fullscreen" aria-label="Heavy 16th field calculator">
-          <FieldCalculatorTool activeJob={activeJob} onBack={() => setActiveTool("hub")} />
+          <FieldCalculatorTool onBack={() => setActiveTool("hub")} />
         </section>
       );
     }
@@ -2488,7 +2476,6 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
         eyebrow={toolMeta.eyebrow}
         title={toolMeta.title}
         description={toolMeta.description}
-        activeJob={activeJob}
         compact={"compact" in toolMeta ? Boolean(toolMeta.compact) : false}
         onBack={() => setActiveTool("hub")}
       >
@@ -2503,25 +2490,7 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
         className="v2-tools-header"
         title="Tools"
         description="Field apps for estimating, documenting, invoicing, and closing out work."
-        actions={<button type="button" className="v2-primary-button" onClick={() => activeJob ? onOpenJob(activeJob.id) : onNavigate("work")}>
-          <Wrench size={16} />
-          {activeJob ? "Use active job" : "Open work"}
-        </button>}
       />
-
-      <section className="v2-tools-command">
-        <div>
-          <span>Job context</span>
-          <h2>{activeJob ? activeJob.title : "Standalone tools"}</h2>
-          <p>{activeJob ? "Supported tools can use this work order as context." : "Records unlock after accepted work. Everything else works standalone."}</p>
-        </div>
-        <div className="v2-tools-context-badge">
-          {activeJob
-            ? <><span className="v2-tools-context-trade">{activeJob.trade}</span><span className="v2-tools-context-loc">{activeJob.location}</span></>
-            : <span className="v2-tools-context-none">No job selected - tools work standalone</span>
-          }
-        </div>
-      </section>
 
       <div className="v2-tool-section-stack">
         <section className="v2-tool-section" aria-labelledby="tools-core-field-apps">

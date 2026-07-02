@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { Copy, Download, FileText, Mail, MessageSquare, Plus, Trash2 } from "lucide-react";
 import type { Job } from "../../types";
 import { Panel } from "../../components/ui";
+import { getInvoiceLinePriceSignal } from "./priceGuidance";
 
 function currency(value: number) {
   return `$${Math.round(value).toLocaleString()}`;
@@ -71,6 +72,18 @@ export function InvoiceDraftTool({ activeJob }: { activeJob: Job | null }) {
   const subtotal = lines.reduce((sum, line) => sum + numericValue(line.qty) * numericValue(line.rate), 0);
   const tax = subtotal * (taxPct / 100);
   const total = subtotal + tax;
+  const lineSignals = lines.map((line) => ({
+    lineId: line.id,
+    signal: getInvoiceLinePriceSignal({
+      description: line.description,
+      qty: numericValue(line.qty),
+      rate: numericValue(line.rate),
+      trade: activeJob?.trade ?? null,
+    }),
+  }));
+  const primarySignal =
+    lineSignals.find(({ signal }) => signal && signal.tone !== "unknown")?.signal ??
+    lineSignals.find(({ signal }) => signal)?.signal;
 
   const invoiceText = useMemo(() => [
     `RIVT invoice draft ${invoiceNumber}`,
@@ -232,20 +245,42 @@ export function InvoiceDraftTool({ activeJob }: { activeJob: Job | null }) {
             <span>Line items</span>
             <button type="button" onClick={addLine}><Plus size={14} />Add item</button>
           </div>
-          {lines.map((line) => (
-            <div className="v2-invoice-line" key={line.id}>
-              <input aria-label="Line description" value={line.description} placeholder="Description" onChange={(event) => updateLine(line.id, "description", event.target.value)} />
-              <input type="number" min="0" step="0.5" value={line.qty} aria-label={`${line.description || "Line"} quantity`} onChange={(event) => updateLine(line.id, "qty", Number(event.target.value) || 0)} />
-              <input type="number" min="0" value={line.rate} aria-label={`${line.description || "Line"} rate`} onChange={(event) => updateLine(line.id, "rate", Number(event.target.value) || 0)} />
-              <strong>{currency(numericValue(line.qty) * numericValue(line.rate))}</strong>
-              <button type="button" aria-label={`Remove ${line.description || "line item"}`} onClick={() => removeLine(line.id)}><Trash2 size={14} /></button>
+          {lines.map((line) => {
+            const signal = lineSignals.find((item) => item.lineId === line.id)?.signal;
+            return (
+              <div className="v2-invoice-line-group" key={line.id}>
+                <div className="v2-invoice-line">
+                  <input aria-label="Line description" value={line.description} placeholder="Description" onChange={(event) => updateLine(line.id, "description", event.target.value)} />
+                  <input type="number" min="0" step="0.5" value={line.qty} aria-label={`${line.description || "Line"} quantity`} onChange={(event) => updateLine(line.id, "qty", Number(event.target.value) || 0)} />
+                  <input type="number" min="0" value={line.rate} aria-label={`${line.description || "Line"} rate`} onChange={(event) => updateLine(line.id, "rate", Number(event.target.value) || 0)} />
+                  <strong>{currency(numericValue(line.qty) * numericValue(line.rate))}</strong>
+                  <button type="button" aria-label={`Remove ${line.description || "line item"}`} onClick={() => removeLine(line.id)}><Trash2 size={14} /></button>
+                </div>
+                {signal ? (
+                  <div className={`v2-line-price-signal is-${signal.tone}`}>
+                    <span>{signal.verdict}</span>
+                    <small>{signal.label}: {signal.rangeLabel}</small>
+                  </div>
+                ) : null}
             </div>
-          ))}
+            );
+          })}
         </div>
       </Panel>
 
       <aside className="v2-invoice-side-stack">
         <Panel className="v2-tool-panel v2-tool-summary-panel v2-invoice-summary-panel" eyebrow="Total due" title={currency(total)}>
+          {primarySignal ? (
+            <section className={`v2-price-signal is-${primarySignal.tone}`} aria-label="Invoice pricing signal">
+              <div>
+                <span>Pricing signal</span>
+                <strong>{primarySignal.verdict}</strong>
+              </div>
+              <p>{primarySignal.label}: {primarySignal.rangeLabel}</p>
+              <small>{primarySignal.basisLabel}</small>
+              <em>{primarySignal.note}</em>
+            </section>
+          ) : null}
           <div className="v2-tool-breakdown">
             <div><span>Subtotal</span><strong>{currency(subtotal)}</strong></div>
             <div><span>Tax</span><strong>{currency(tax)}</strong></div>

@@ -220,6 +220,26 @@ function postSortValue(post: CommunityPost) {
   return trailingNumber ? Number(trailingNumber) : 0;
 }
 
+function textIncludesAny(text: string, needles: string[]) {
+  const haystack = text.toLowerCase();
+  return needles.some((needle) => haystack.includes(needle));
+}
+
+function postBelongsToCommunity(post: CommunityPost, community: CommunityDisplay) {
+  const slug = community.slug;
+  const titleBody = `${post.title} ${post.body} ${post.subTrade ?? ""} ${post.subLocation ?? ""}`;
+  const tradeSlug = communitySlug(post.trade === "General" ? "General Talk" : `${post.trade} Talk`);
+
+  if (slug === tradeSlug) return true;
+  if (slug === "side-work") return post.type === "sub-request" || textIncludesAny(titleBody, ["side work", "weekend", "sub", "helper"]);
+  if (slug === "jacksonville-trades") return textIncludesAny(titleBody, ["jacksonville", "jax", "beach", "st. johns", "orange park"]);
+  if (slug === "remodelers") return textIncludesAny(titleBody, ["remodel", "renovation", "bath", "kitchen", "whole home"]);
+  if (slug === "cabinetry-talk") return post.trade === "Cabinetry";
+  if (slug === "tile-talk") return post.trade === "Tile";
+  if (slug === "carpentry-talk") return post.trade === "Carpentry" || post.trade === "Framing";
+  return false;
+}
+
 function ShopTalkNewPostModal({
   profile,
   selectedJobTrade,
@@ -427,6 +447,8 @@ export function ShopTalkView({
   const [joinedCommunities, setJoinedCommunities] = useState<Set<string>>(() => {
     return readStringSet("rivt.joinedCommunities.v1", communitySlug);
   });
+  const [communityQuery, setCommunityQuery] = useState("");
+  const [selectedCommunitySlug, setSelectedCommunitySlug] = useState<string | null>(null);
   const [talkQuery, setTalkQuery] = useState(() => initialQuery.trim());
   const [newsQuery, setNewsQuery] = useState("");
   const [liveNews, setLiveNews] = useState<NewsItem[]>([]);
@@ -466,6 +488,21 @@ export function ShopTalkView({
 
   const tradeFilters = ["All trades", "General", ...specialtyOptions];
   const primaryTrade = profile.specialties[0] ?? selectedJobTrade;
+  const selectedCommunity = communities.find((community) => community.slug === selectedCommunitySlug) ?? null;
+  const communityPostCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const community of communities) {
+      counts[community.slug] = communityPosts.filter((post) => postBelongsToCommunity(post, community)).length;
+    }
+    return counts;
+  }, [communities, communityPosts]);
+  const filteredCommunities = useMemo(() => {
+    const normalized = communityQuery.trim().toLowerCase();
+    if (!normalized) return communities;
+    return communities.filter((community) => (
+      [community.name, community.meta, community.slug].join(" ").toLowerCase().includes(normalized)
+    ));
+  }, [communities, communityQuery]);
   const answerQueuePosts = communityPosts
     .filter((post) => (
       (post.trade === primaryTrade || post.trade === "General") &&
@@ -487,6 +524,32 @@ export function ShopTalkView({
       try { localStorage.setItem("rivt.shopTalkBookmarks.v1", JSON.stringify([...next])); } catch { /* noop */ }
       return next;
     });
+  }
+
+  function openCommunity(community: CommunityDisplay) {
+    const communityPostsForView = communityPosts.filter((post) => postBelongsToCommunity(post, community));
+    setSelectedCommunitySlug(community.slug);
+    setTalkQuery("");
+    setTradeFilter("All trades");
+    setActiveTrendingTag(null);
+    setAnswerQueueOnly(false);
+    setShowBookmarked(false);
+    setFlairFilter("All");
+    setFilterType("all");
+    setSortMode("hot");
+    setMobileDetail(false);
+    if (communityPostsForView[0]) setSelectedPostId(communityPostsForView[0].id);
+  }
+
+  function openCommunityBySlug(slug: string) {
+    const community = communities.find((item) => item.slug === slug);
+    if (community) openCommunity(community);
+  }
+
+  function closeCommunity() {
+    setSelectedCommunitySlug(null);
+    setCommunityQuery("");
+    setMobileDetail(false);
   }
 
   function _incrementHelpfulVote(postId: string) {
@@ -547,6 +610,7 @@ export function ShopTalkView({
   const filteredPosts = communityPosts.filter((post) => {
     const needsAnswer = post.status !== "Verified Fix";
     if (answerQueueOnly && !((post.trade === primaryTrade || post.trade === "General") && needsAnswer)) return false;
+    if (selectedCommunity && !postBelongsToCommunity(post, selectedCommunity)) return false;
     const tradeMatches = tradeFilter === "All trades" || post.trade === tradeFilter;
     if (!tradeMatches) return false;
     if (flairFilter !== "All" && post.flair !== flairFilter) return false;
@@ -602,6 +666,7 @@ export function ShopTalkView({
   const selectedPostReactionState = selectedPost
     ? getPostReactionState(selectedPost)
     : { upvotes: 0, downvotes: 0, reaction: null, serverOwned: reactionStatus === "ready", pending: false };
+  const SelectedCommunityIcon = selectedCommunity?.icon;
   const _selectedTradeThreads = filteredPosts.filter((post) => post.trade === selectedJobTrade || post.trade === "General");
   const topContributors = Object.entries(
     communityPosts.reduce<Record<string, { answers: number; fixes: number; score: number }>>((contributors, post) => {
@@ -775,7 +840,7 @@ export function ShopTalkView({
                   <MessageCircle size={20} />
                   <span>Ask the trades</span>
                 </button>
-                <button type="button" className="trade-talk-action-card is-crew" onClick={() => setTalkQuery("Jacksonville Trades")}>
+                <button type="button" className="trade-talk-action-card is-crew" onClick={() => openCommunityBySlug("jacksonville-trades")}>
                   <Users size={20} />
                   <span>Find your crew</span>
                 </button>
@@ -796,28 +861,84 @@ export function ShopTalkView({
                 ))}
               </div>
 
-              <section className="community-board" aria-label="Communities">
+              {selectedCommunity && SelectedCommunityIcon ? (
+                <section className="community-page-card" aria-label={`${selectedCommunity.name} community`}>
+                  <div className="community-page-main">
+                    <span className="community-row-icon" style={{ background: selectedCommunity.tone }}>
+                      <SelectedCommunityIcon size={24} strokeWidth={2.4} />
+                    </span>
+                    <div>
+                      <button type="button" className="community-back-link" onClick={closeCommunity}>
+                        <ArrowLeft size={13} />
+                        All communities
+                      </button>
+                      <h2>{selectedCommunity.name}</h2>
+                      <p>{selectedCommunity.meta}</p>
+                      <div className="community-page-stats">
+                        <span>{selectedCommunity.count} members</span>
+                        <span>{communityPostCounts[selectedCommunity.slug] ?? 0} posts</span>
+                        <span>{joinedCommunities.has(selectedCommunity.slug) ? "Joined" : "Open community"}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    className={joinedCommunities.has(selectedCommunity.slug) ? "community-join is-joined" : "community-join"}
+                    aria-pressed={joinedCommunities.has(selectedCommunity.slug)}
+                    onClick={() => {
+                      const willJoin = !joinedCommunities.has(selectedCommunity.slug);
+                      void setCommunityMembership(selectedCommunity.slug, willJoin);
+                      setJoinedCommunities((prev) => {
+                        const next = new Set(prev);
+                        if (next.has(selectedCommunity.slug)) next.delete(selectedCommunity.slug);
+                        else next.add(selectedCommunity.slug);
+                        try { localStorage.setItem("rivt.joinedCommunities.v1", JSON.stringify([...next])); } catch { /* ignore */ }
+                        return next;
+                      });
+                    }}
+                  >
+                    {joinedCommunities.has(selectedCommunity.slug) ? "Joined" : "Join"}
+                  </button>
+                </section>
+              ) : null}
+
+              <section className="community-board" aria-label="Discover communities">
                 <div className="community-board-head">
-                  <strong>Communities</strong>
+                  <strong>{selectedCommunity ? "Discover more" : "Discover communities"}</strong>
                   <span>{joinedCommunities.size} joined</span>
                 </div>
+                <label className="community-discover-search">
+                  <Search size={14} />
+                  <span className="sr-only">Search communities</span>
+                  <input
+                    type="search"
+                    value={communityQuery}
+                    onChange={(event) => setCommunityQuery(event.target.value)}
+                    placeholder="Search communities"
+                  />
+                </label>
                 <div className="community-board-list">
-                  {communities.map((community) => {
+                  {filteredCommunities.length === 0 ? (
+                    <div className="community-empty">
+                      <strong>No communities found</strong>
+                      <span>Try a trade, city, or topic like tile, side work, or code.</span>
+                    </div>
+                  ) : filteredCommunities.map((community) => {
                     const CIcon = community.icon;
                     const joined = joinedCommunities.has(community.slug);
                     return (
-                      <div key={community.name} className="community-row">
+                      <div key={community.name} className={selectedCommunitySlug === community.slug ? "community-row is-active" : "community-row"}>
                         <button
                           type="button"
                           className="community-row-main"
-                          onClick={() => setTalkQuery(community.name.replace(" Talk", ""))}
+                          onClick={() => openCommunity(community)}
                         >
                           <span className="community-row-icon" style={{ background: community.tone }}>
                             <CIcon size={20} strokeWidth={2.4} />
                           </span>
                           <span className="community-row-copy">
                             <b>{community.name}</b>
-                            <small>{community.count} members · {community.meta}</small>
+                            <small>{community.count} members · {communityPostCounts[community.slug] ?? 0} posts · {community.meta}</small>
                           </span>
                         </button>
                         <button

@@ -5595,13 +5595,6 @@
   font-variant-numeric: tabular-nums;
 }
 
-.fraction-job-context {
-  margin: 0;
-  color: var(--calc-muted);
-  font-size: 13px;
-  line-height: 1.4;
-}
-
 .fraction-calc-main {
   min-width: 0;
 }
@@ -6832,4 +6825,231 @@
   font-size: 16px;
   line-height: 1.15;
   letter-spacing: -0.015em;
+}
+
+/* Community/tools workspace pass: Tools should feel like full-screen field apps. */
+.v2-tools-page {
+  width: min(100%, 1480px);
+  margin-inline: auto;
+  gap: 14px;
+}
+
+.v2-tools-page .v2-tools-header {
+  align-items: center;
+  padding-inline: 2px;
+}
+
+.v2-tools-page .v2-tools-header h1 {
+  font-size: clamp(34px, 5vw, 56px);
+}
+
+.v2-tools-page .v2-tools-header p {
+  max-width: 58ch;
+}
+
+.v2-tools-page .v2-tool-section-stack {
+  min-height: min(760px, calc(100dvh - 190px));
+}
+
+.v2-tools-page .v2-tool-launch-grid {
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 12px;
+}
+
+.v2-tools-page .v2-tool-launch-card,
+.v2-tools-page .v2-tool-launch-card.is-featured {
+  min-height: 116px;
+  grid-template-columns: 48px minmax(0, 1fr) 20px;
+  padding: 18px;
+}
+
+.v2-tools-page .v2-tool-card-icon {
+  width: 48px;
+  height: 48px;
+}
+
+.v2-tools-page .v2-tool-card-copy small:last-child {
+  max-width: 42ch;
+}
+
+.v2-tools-app {
+  width: min(100%, 1500px);
+  margin-inline: auto;
+}
+
+.v2-tool-app-header {
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  grid-template-columns: auto minmax(0, 1fr);
+  border-color: color-mix(in srgb, var(--v2-border) 72%, transparent);
+  background: color-mix(in srgb, var(--v2-surface-raised) 94%, transparent);
+  backdrop-filter: blur(12px);
+  box-shadow: none;
+}
+
+.v2-tool-app-header > button {
+  width: fit-content;
+}
+
+.v2-tool-workbench {
+  grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.65fr);
+  gap: 16px;
+}
+
+.v2-invoice-workbench {
+  grid-template-columns: minmax(0, 1.05fr) minmax(420px, 0.95fr);
+}
+
+.v2-price-signal,
+.v2-line-price-signal {
+  border: 1px solid color-mix(in srgb, var(--v2-info) 32%, var(--v2-border));
+  background: color-mix(in srgb, var(--v2-info-soft) 62%, var(--v2-surface));
+}
+
+.v2-price-signal {
+  display: grid;
+  gap: 8px;
+  padding: 13px;
+  border-radius: var(--v2-radius-lg);
+}
+
+.v2-price-signal div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.v2-price-signal span,
+.v2-line-price-signal span {
+  color: var(--v2-text-muted);
+  font-size: 10px;
+  font-weight: var(--v2-weight-display);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.v2-price-signal strong {
+  color: var(--v2-info);
+  font-size: 18px;
+  line-height: 1.1;
+}
+
+.v2-price-signal p,
+.v2-price-signal small,
+.v2-price-signal em {
+  margin: 0;
+  color: var(--v2-text-muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.v2-price-signal p {
+  color: var(--v2-text);
+  font-weight: var(--v2-weight-bold);
+}
+
+.v2-price-signal em {
+  font-style: normal;
+}
+
+.v2-price-signal.is-low,
+.v2-line-price-signal.is-low {
+  border-color: color-mix(in srgb, var(--v2-warning) 42%, var(--v2-border));
+  background: color-mix(in srgb, var(--v2-warning-soft) 72%, var(--v2-surface));
+}
+
+.v2-price-signal.is-low strong,
+.v2-line-price-signal.is-low span {
+  color: var(--v2-warning);
+}
+
+.v2-price-signal.is-high,
+.v2-line-price-signal.is-high {
+  border-color: color-mix(in srgb, var(--v2-danger) 36%, var(--v2-border));
+  background: color-mix(in srgb, var(--v2-danger-soft) 72%, var(--v2-surface));
+}
+
+.v2-price-signal.is-high strong,
+.v2-line-price-signal.is-high span {
+  color: var(--v2-danger);
+}
+
+.v2-price-signal.is-fair,
+.v2-line-price-signal.is-fair {
+  border-color: color-mix(in srgb, var(--v2-success) 34%, var(--v2-border));
+  background: color-mix(in srgb, var(--v2-success-soft) 70%, var(--v2-surface));
+}
+
+.v2-price-signal.is-fair strong,
+.v2-line-price-signal.is-fair span {
+  color: var(--v2-success);
+}
+
+.v2-invoice-line-group {
+  display: grid;
+  gap: 6px;
+}
+
+.v2-line-price-signal {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 32px;
+  padding: 6px 10px;
+  border-radius: var(--v2-radius-md);
+}
+
+.v2-line-price-signal small {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--v2-text-muted);
+  font-size: 11px;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 860px) {
+  .v2-tools-page {
+    gap: 12px;
+  }
+
+  .v2-tools-page .v2-tools-header {
+    gap: 6px;
+  }
+
+  .v2-tools-page .v2-tool-section-stack {
+    min-height: auto;
+  }
+
+  .v2-tools-page .v2-tool-launch-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .v2-tools-page .v2-tool-launch-card,
+  .v2-tools-page .v2-tool-launch-card.is-featured {
+    min-height: 92px;
+    padding: 15px;
+  }
+
+  .v2-tool-app-header {
+    top: calc(env(safe-area-inset-top) + 58px);
+  }
+
+  .v2-tool-workbench,
+  .v2-invoice-workbench {
+    grid-template-columns: 1fr;
+  }
+
+  .v2-line-price-signal {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .v2-line-price-signal small {
+    white-space: normal;
+  }
 }

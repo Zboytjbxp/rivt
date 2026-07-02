@@ -7,6 +7,35 @@ Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
 Production release commit: see live `/api/health` build metadata
 
+## Latest Packet 08 Pass - Community Discovery and Tools Pricing Guidance Branch
+
+- Implemented a focused Shop Talk community-discovery upgrade on branch `codex/community-tools-pass`:
+  - community discovery now has its own search field
+  - tapping a community opens an in-app community page with member/post counts, join state, and scoped posts
+  - trade-specific communities now use strict trade matching so a `Cabinetry Talk` page does not pull unrelated `Carpentry Talk` posts just because the post text mentions cabinets
+  - broader communities such as `Jacksonville Trades`, `Side Work`, and `Remodelers` still use topic/location matching where there is not yet a canonical post-community relation
+- Cleaned up the Tools entry surface so Tools is no longer visually framed around an active job:
+  - removed the top-level `Use active job` action
+  - removed the Tools `Job context` command panel
+  - removed the calculator drawer's active-job context block
+  - expanded the Tools hub and tool detail layouts toward a fuller-screen field-app workspace
+- Added pilot pricing guidance to the Estimate and Invoice tools:
+  - Estimate now shows a high/low/in-range pricing signal based on labor rate, labor hours, trade, and target total
+  - Invoice line items now show pricing guidance for labor/service lines while leaving pure material/supply rows unjudged
+  - all guidance is framed as pilot/local heuristics, not a marketplace guarantee or production rate card
+- Rendered mobile QA through the in-app Browser at 430x932:
+  - guest preview -> Shop Talk -> community search -> `Cabinetry Talk` opened correctly and showed only the Cabinetry post
+  - Tools opened as a clean tool launcher with no active-job context copy
+  - Estimate rendered a pricing signal
+  - Invoice rendered a labor pricing signal and no longer marked the Materials line as high/low
+- Local machine gates run on 2026-07-02:
+  - `npm run build` (pass)
+  - `npm run lint` (pass)
+  - `npm run test` (pass)
+  - `npm run test:e2e` (pass)
+  - `npm audit --omit=dev` (pass; 0 vulnerabilities)
+- Deployment not performed in this pass; production verification requires merge/deploy plus live `/api/health` source confirmation.
+
 ## Latest Packet 08 Pass - Onboarding V2 Hybrid Branch
 
 - Reviewed Claude's `docs/product/ONBOARDING_V2_BUILD_PROMPT.md` from branch `claude/new-session-2wxmgd` at commit `269e964` before implementation.

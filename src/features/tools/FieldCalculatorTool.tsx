@@ -9,7 +9,6 @@ import {
   SlidersHorizontal,
 } from "lucide-react";
 import { useMemo, useState } from "react";
-import type { Job } from "../../types";
 
 type CalculatorMode = "length" | "spacing" | "cuts" | "hardware";
 type ActiveUnit = "feet" | "inches";
@@ -104,7 +103,7 @@ function computeOperation(left32: number, operator: Operator, right32: number) {
   return Math.round(left32 / scalar);
 }
 
-export function FieldCalculatorTool({ activeJob, onBack }: { activeJob: Job | null; onBack?: () => void }) {
+export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
   const [calculatorMode, setCalculatorMode] = useState<CalculatorMode>("length");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [activeUnit, setActiveUnit] = useState<ActiveUnit>("inches");
@@ -377,14 +376,6 @@ export function FieldCalculatorTool({ activeJob, onBack }: { activeJob: Job | nu
             </label>
           </div>
 
-          {activeJob ? (
-            <div className="drawer-section">
-              <div className="drawer-section-head">
-                <span>Job context</span>
-              </div>
-              <p className="fraction-job-context">{activeJob.title}</p>
-            </div>
-          ) : null}
         </aside>
 
         <main className={`heavy-calc-main fraction-calc-main ${calculatorMode}-mode`}>

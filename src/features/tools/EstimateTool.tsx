@@ -2,6 +2,7 @@ import { Copy } from "lucide-react";
 import { useState } from "react";
 import { Panel } from "../../components/ui";
 import type { Job } from "../../types";
+import { getEstimatePriceSignal } from "./priceGuidance";
 
 function currency(value: number) {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(value);
@@ -33,6 +34,13 @@ export function EstimateTool({ activeJob }: { activeJob: Job | null }) {
   const days = Math.max(0.5, laborHours / Math.max(1, crewSize) / 7);
   const marginShare = target > 0 ? Math.min(100, Math.round(((margin + contingency) / target) * 100)) : 0;
   const laborShare = target > 0 ? Math.min(100, Math.round((labor / target) * 100)) : 0;
+  const priceSignal = getEstimatePriceSignal({
+    title: activeJob?.title,
+    trade: activeJob?.trade ?? null,
+    target,
+    hourlyRate,
+    laborHours,
+  });
 
   async function copySummary() {
     const summary = [
@@ -84,6 +92,15 @@ export function EstimateTool({ activeJob }: { activeJob: Job | null }) {
       </Panel>
 
       <Panel as="aside" className="v2-tool-panel v2-tool-summary-panel" eyebrow="Target" title={`${currency(low)} - ${currency(high)}`}>
+        <section className={`v2-price-signal is-${priceSignal.tone}`} aria-label="Pricing signal">
+          <div>
+            <span>Pricing signal</span>
+            <strong>{priceSignal.verdict}</strong>
+          </div>
+          <p>{priceSignal.label}: {priceSignal.rangeLabel}</p>
+          <small>{priceSignal.basisLabel}</small>
+          <em>{priceSignal.note}</em>
+        </section>
         <div className="v2-estimate-meter" aria-label="Estimate composition">
           <div><span style={{ width: `${laborShare}%` }} /></div>
           <small>{laborShare}% labor load - {marginShare}% margin/contingency cushion</small>

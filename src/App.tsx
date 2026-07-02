@@ -1112,11 +1112,6 @@ function App() {
     );
   }
 
-  function openJob(jobId: JobId) {
-    setSelectedId(jobId);
-    handleNavigate("Marketplace");
-  }
-
   async function handleSendMessage() {
     const trimmed = messageDraft.trim();
     if (!trimmed) {
@@ -1619,7 +1614,6 @@ function App() {
             openTool={activeView === "Tools" ? requestedTool : null}
             onOpenToolConsumed={() => setRequestedTool(null)}
             onNavigate={(destination) => handleNavigate(defaultViewForDestination(destination))}
-            onOpenJob={openJob}
             onOpenRecords={() => handleNavigate("Records")}
           />
         ) : (
