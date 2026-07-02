@@ -1018,3 +1018,23 @@ Add one entry per staging/production deployment.
 - Known risks: full Gate A remains blocked by dedicated error monitoring/paging, completed incident-routing fields and rehearsal, founder/support/legal-safety approvals, RPO/RTO policy approval, physical/deeper manual accessibility-device matrix, remaining `src/App.tsx` strangler/component cleanup, and production-grade server Shop Talk posts/reactions/reputation if promoted from Gate B to launch scope
 - Rollback performed/result: not required
 - Approval: Shop Talk reaction and social pulse pass accepted as controllable social-hub UX hardening evidence; overall Gate A not approved
+
+## Current Production - Packet 08 Onboarding V2 Hybrid
+
+- Environment: Production (`https://rivt.pro`)
+- Date/time/timezone: 2026-07-02 01:43 America/New_York
+- Deployer: Codex through GitHub push to `master` with Railway production auto-deploy
+- Source repository/branch: `Zboytjbxp/rivt`, `master`
+- Source commit: `fc59728ed34318fb72da9e5506a29cd602b9d5e2`
+- Build/artifact ID: Railway deployment ID not captured from the local CLI in this pass; live `/api/health` is the source-of-truth runtime proof.
+- Migration version before/after: unchanged (`0016_communities`)
+- Feature-flag/config version: no provider credentials or operational-control flags changed
+- Provider/config changes: none
+- Backup/rollback target: prior successful Home getting-started checklist deployment `285ce7a8841b2ca921d98692143e7632333b96cf`; no migration change
+- Automated gates: local `npm run build`, `npm run lint`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check` passed.
+- Post-deploy smoke tests: `https://rivt.pro/api/health` returned exact source commit `fc59728ed34318fb72da9e5506a29cd602b9d5e2`; `EXPECTED_SOURCE_COMMIT=fc59728ed34318fb72da9e5506a29cd602b9d5e2 npm run monitor:production` passed externally with PostgreSQL/S3-compatible dependencies healthy, Sentry configured, operational controls disabled, seven anonymous private-route checks, and 661 ms duration.
+- Rendered UI evidence: local mobile QA covered the new orange first-visit intro, trade/location guest preview, and logged-in Home checklist/FAB spacing at 430x932. Screenshots are outside the repo at `C:\Users\zboyt\AppData\Local\Temp\rivt-onboarding-intro-430.png`, `C:\Users\zboyt\AppData\Local\Temp\rivt-onboarding-preview-430.png`, and `C:\Users\zboyt\AppData\Local\Temp\rivt-onboarding-logged-in-430.png`.
+- Health/readiness result: health reported PostgreSQL and S3-compatible storage healthy with exact source commit `fc59728ed34318fb72da9e5506a29cd602b9d5e2`, migration `0016_communities`, and configured Sentry.
+- Known risks: physical/deeper manual accessibility-device matrix and real paid-checkout/webhook entitlement proof remain launch-quality boundaries. Guest preview remains intentionally preview-only; write actions still require real account setup.
+- Rollback performed/result: not required
+- Approval: Onboarding V2 hybrid accepted as controllable Gate A activation UX hardening evidence; overall Gate A still depends on the remaining manual launch boundaries.

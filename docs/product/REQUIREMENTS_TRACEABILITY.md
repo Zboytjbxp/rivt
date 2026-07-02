@@ -18,7 +18,7 @@ Evidence must eventually link to implementation, automated tests, manual accepta
 - `GA-UX-005` gains fail-closed first-visit evidence: anonymous session bootstrap no longer shows a red `Authentication required` message before the user tries to log in, while failed login/signup attempts still surface server-owned errors.
 - `GA-UX-006` gains rendered mobile evidence at 430x932 for the orange intro, guest preview selector, and logged-in Home checklist spacing. Screenshot evidence was saved outside the repo at `C:\Users\zboyt\AppData\Local\Temp\rivt-onboarding-intro-430.png`, `C:\Users\zboyt\AppData\Local\Temp\rivt-onboarding-preview-430.png`, and `C:\Users\zboyt\AppData\Local\Temp\rivt-onboarding-logged-in-430.png`.
 - `GA-OPS-007` gains local automated evidence for this branch slice: `npm run build`, `npm run lint`, `npm run test`, `npm run test:e2e`, and `npm audit --omit=dev` passed with 0 vulnerabilities.
-- `GA-OPS-008` is unchanged for production deployment: this slice has not been deployed, and live proof still requires merge, Railway redeploy, live `/api/health` source confirmation, and production monitor/smoke evidence.
+- `GA-OPS-008` gains deployment evidence: onboarding V2 hybrid source commit `fc59728ed34318fb72da9e5506a29cd602b9d5e2` was pushed to `master`, Railway production service `RIVT` served that source on live `/api/health` with migration `0016_communities`, PostgreSQL/S3-compatible dependencies and Sentry healthy, and `EXPECTED_SOURCE_COMMIT=fc59728ed34318fb72da9e5506a29cd602b9d5e2 npm run monitor:production` passed.
 
 ## Traceability Addendum - 2026-07-02 Home Getting Started Checklist
 
