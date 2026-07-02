@@ -34,7 +34,11 @@ Production release commit: see live `/api/health` build metadata
   - `npm run test` (pass)
   - `npm run test:e2e` (pass)
   - `npm audit --omit=dev` (pass; 0 vulnerabilities)
-- Deployment not yet verified in this pass; production confirmation requires push/deploy plus live `/api/health` source metadata.
+- Production deployment completed from `master`:
+  - onboarding runtime source commit `cf7fa3a53d2fab9f5378957b0fdb68b8c37f0894` was pushed to GitHub
+  - Railway source redeploy was accepted for service `RIVT` in environment `production`
+  - live `https://rivt.pro/api/health` reported the onboarding source commit with PostgreSQL and S3-compatible object storage healthy
+  - `EXPECTED_SOURCE_COMMIT=cf7fa3a53d2fab9f5378957b0fdb68b8c37f0894 npm run monitor:production` passed with configured Sentry, operational controls off, and seven anonymous private-route checks
 
 ## Latest Packet 08 Pass - Shop Talk Server Read Path Wiring
 

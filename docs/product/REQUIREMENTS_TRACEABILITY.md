@@ -17,7 +17,7 @@ Evidence must eventually link to implementation, automated tests, manual accepta
 - `GA-UX-004` retains the role boundary: the role selector remains an onboarding-only setup control and no authenticated Contractor/Tradesperson role toggle was reintroduced.
 - `GA-DATA-001` and `GA-FND-004` retain honesty boundaries: this slice did not add homeowner flows, fake seed users, frontend-only verification, new permissions, or fake provider success.
 - `GA-OPS-007` gains local automated evidence for this slice: `npm run build`, `npm run lint`, `npm run test`, `npm run test:e2e`, and `npm audit --omit=dev` passed with 0 vulnerabilities.
-- `GA-OPS-008` is unchanged until this slice is pushed, deployed, and verified against live `/api/health` source metadata.
+- `GA-OPS-008` gains deployment evidence: onboarding runtime source commit `cf7fa3a53d2fab9f5378957b0fdb68b8c37f0894` was pushed to `master`, Railway source redeploy was accepted for production service `RIVT`, live `/api/health` reported the source with PostgreSQL/S3-compatible dependencies healthy, and `EXPECTED_SOURCE_COMMIT=cf7fa3a53d2fab9f5378957b0fdb68b8c37f0894 npm run monitor:production` passed.
 
 ## Traceability Addendum - 2026-07-01 Shop Talk Server Read Path Wiring
 
