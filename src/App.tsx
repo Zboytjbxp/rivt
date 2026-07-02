@@ -86,9 +86,11 @@ import {
   AuthLinkFlow,
   GuestBanner,
   GuestSignUpPrompt,
+  GUEST_PREVIEW_PREFS_KEY,
   LaunchLoader,
   OnboardingFlow,
   type AuthMethod,
+  type GuestPreviewPreferences,
   type OnboardingResult,
 } from "./features/auth/AuthScreens";
 
@@ -101,6 +103,24 @@ const ShopTalkView = lazy(() => import("./features/shop-talk/ShopTalkView").then
 const ProfileRoute = lazy(() => import("./features/profile/ProfileRoute").then((m) => ({ default: m.ProfileRoute })));
 const ToolsStudio = lazy(() => import("./features/tools/ToolsStudio").then((m) => ({ default: m.ToolsStudio })));
 const LegacyBridge = lazy(() => import("./features/legacy/LegacyBridge").then((m) => ({ default: m.LegacyBridge })));
+
+const validGuestPreviewTrades = new Set<Trade>(
+  tradeOptions.filter((option): option is Trade => option !== "All trades"),
+);
+
+function readGuestPreviewPreferences(): GuestPreviewPreferences | null {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(GUEST_PREVIEW_PREFS_KEY) ?? "null") as Partial<GuestPreviewPreferences> | null;
+    if (!parsed || typeof parsed.location !== "string" || !validGuestPreviewTrades.has(parsed.trade as Trade)) return null;
+    return {
+      trade: parsed.trade as Trade,
+      location: parsed.location.trim() || "Jacksonville, FL",
+      role: parsed.role === "tradesperson" ? "tradesperson" : "contractor",
+    };
+  } catch {
+    return null;
+  }
+}
 
 type StorageUsageSnapshot = {
   usedBytes: number;
@@ -357,11 +377,40 @@ function App() {
       // Dev bypass: set localStorage key "rivt_dev_bypass=1" to skip auth
       if (import.meta.env.DEV && localStorage.getItem("rivt_dev_bypass") === "1") {
         const mockAccount: CanonicalAccount = {
-          id: "dev-user-1", email: "dev@rivt.app", provider: "Email" as const,
-          status: "active", emailVerified: true, primaryRole: "contractor" as const,
-          profile: { displayName: "Jake Torres", locationText: "Jacksonville, FL", onboardingStatus: "complete" as const, trades: [{ name: "Electrician" }] },
-          organizations: [{ name: "Torres Electric LLC" }],
-        } as unknown as CanonicalAccount;
+          id: "dev-user-1",
+          email: "dev@rivt.app",
+          provider: "email",
+          status: "active",
+          emailVerified: true,
+          primaryRole: "contractor",
+          profile: {
+            displayName: "Jake Torres",
+            headline: "Commercial electrician and service contractor",
+            bio: "Jacksonville contractor using RIVT for work, crews, records, and tools.",
+            locationText: "Jacksonville, FL",
+            visibility: "network",
+            onboardingStatus: "complete",
+            serviceArea: {
+              city: "Jacksonville",
+              region: "FL",
+              countryCode: "US",
+              radiusMiles: 25,
+            },
+            availabilityStatus: "available",
+            contactEmailVisibility: "connections",
+            phoneE164: null,
+            phoneVisibility: "private",
+            avatarUploadId: null,
+            trades: [{ code: "electrical", name: "Electrical", primary: true }],
+          },
+          organizations: [{ id: "dev-org-1", name: "Torres Electric LLC", role: "owner" }],
+          capabilities: {
+            canCompleteOnboarding: true,
+            canPostWork: true,
+            canApplyToWork: true,
+            canPublishProfile: true,
+          },
+        };
         applyCanonicalAccount(mockAccount);
         setAuthLoading(false);
         return;
@@ -437,7 +486,7 @@ function App() {
           resetCommunityReactions();
           setAuthProviders({});
           setStorageUsage(null);
-          setAuthError("RIVT could not verify your session. Check your connection and sign in again.");
+          setAuthError(null);
         }
       } finally {
         if (!cancelled) {
@@ -1214,6 +1263,10 @@ function App() {
   }
 
   function handleBrowseAsGuest() {
+    const previewPreferences = readGuestPreviewPreferences();
+    const previewTrade = previewPreferences?.trade ?? "Carpentry";
+    const previewLocation = previewPreferences?.location ?? "Jacksonville, FL";
+    const previewRole = previewPreferences?.role ?? "contractor";
     setAuthError(null);
     setAuthNotice(null);
     setIsGuest(true);
@@ -1223,23 +1276,25 @@ function App() {
       email: "",
       provider: "Email",
       display_name: "Guest",
-      role: "contractor",
+      role: previewRole,
       organization: "",
-      location: "Jacksonville, FL",
+      location: previewLocation,
       email_verified: false,
       account_status: "active",
       onboarding_status: "complete",
     });
-    setRole("contractor");
+    setRole(previewRole);
     setAccountProfile((current) => ({
       ...current,
       email: "",
       displayName: "Guest",
       organization: "",
-      location: "Jacksonville, FL",
-      specialties: ["Carpentry", "Electrical", "Plumbing"] as Trade[],
+      location: previewLocation,
+      specialties: [previewTrade, "Electrical", "Plumbing"].filter((item, index, list) => list.indexOf(item) === index) as Trade[],
       authMethod: "Email",
     }));
+    setTrade(previewTrade);
+    setLocationQuery(previewLocation);
     setOnboardingComplete(true);
     setActiveView("Home");
     const nextPath = viewRoutes.Home;
@@ -1275,7 +1330,7 @@ function App() {
     || accountProfile.location;
   const homeProfileTradeCount = canonicalAccount?.profile.trades.length ?? accountProfile.specialties.length;
   const homeProfileHasBasics = Boolean(homeProfileName.trim()) && Boolean(homeProfileLocation.trim()) && homeProfileTradeCount > 0;
-  const homeProfileHasBio = Boolean(canonicalAccount?.profile.headline.trim() || canonicalAccount?.profile.bio.trim());
+  const homeProfileHasBio = Boolean(canonicalAccount?.profile.headline?.trim() || canonicalAccount?.profile.bio?.trim());
   const safetyCertCount = Object.values(safetyQuizResults).filter((result) => result.passed).length;
   if (authLoading) {
     return <LaunchLoader />;

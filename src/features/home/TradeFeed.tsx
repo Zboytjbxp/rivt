@@ -268,7 +268,7 @@ export function TradeFeed({
   }
 
   return (
-    <div className="trade-feed">
+    <div className={showGetStarted ? "trade-feed has-start-card" : "trade-feed"}>
       {/* Personalized header */}
       <header className="trade-feed-welcome">
         <div className="trade-feed-welcome-text">

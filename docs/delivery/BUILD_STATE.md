@@ -2,10 +2,38 @@
 
 Last updated: 2026-07-02 America/New_York
 Current gate: Gate A launch hardening
-Current phase: Packet 08 Gate A launch hardening: machine gates and live workflow smokes are green; onboarding activation now includes a Home getting-started checklist; physical accessibility-device evidence and real paid-checkout webhook completion remain launch-quality boundaries.
+Current phase: Packet 08 Gate A launch hardening: machine gates and live workflow smokes are green; Onboarding V2 hybrid is locally verified on a codex branch; physical accessibility-device evidence and real paid-checkout webhook completion remain launch-quality boundaries.
 Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
 Production release commit: see live `/api/health` build metadata
+
+## Latest Packet 08 Pass - Onboarding V2 Hybrid Branch
+
+- Reviewed Claude's `docs/product/ONBOARDING_V2_BUILD_PROMPT.md` from branch `claude/new-session-2wxmgd` at commit `269e964` before implementation.
+- Implemented the agreed hybrid onboarding model on branch `codex/onboarding-v2-hybrid`:
+  - anonymous first visit now opens a skippable, swipe/click-driven Trade Talk intro instead of a login-first wall
+  - the intro leads into a preview-first trade/location selector so users can understand RIVT before account creation
+  - guest preview preferences seed the existing guest workspace honestly by trade and area without presenting fake live work as production data
+  - signup/login remain available from the intro and preview surfaces, and write actions still require real account setup
+  - post-signup onboarding now behaves like a focused one-question-at-a-time setup flow while preserving the existing `OnboardingResult` payload and server gate
+- Fixed the dev-bypass profile crash risk by making the mock account conform to the canonical account shape and by guarding optional `headline`/`bio` reads before `trim()`.
+- Removed the scary anonymous bootstrap error on ordinary first visit; real auth errors still surface in the login flow when users attempt to authenticate.
+- Adjusted the Home checklist/FAB mobile interaction so the `+ Ask` floating action does not overlap the getting-started checklist on phone widths.
+- Updated `test/auth-fail-closed.e2e.mjs` to reflect the new intro-first flow while keeping the fail-closed guarantees:
+  - no red anonymous session error on first visit
+  - no `Browse local demo` escape hatch when guest demo is disabled
+  - failed login and invite-required signup still fail closed through mocked server errors
+- Rendered QA evidence captured outside the repo:
+  - `C:\Users\zboyt\AppData\Local\Temp\rivt-onboarding-intro-430.png`
+  - `C:\Users\zboyt\AppData\Local\Temp\rivt-onboarding-preview-430.png`
+  - `C:\Users\zboyt\AppData\Local\Temp\rivt-onboarding-logged-in-430.png`
+- Local machine gates run on 2026-07-02:
+  - `npm run build` (pass)
+  - `npm run lint` (pass)
+  - `npm run test` (pass)
+  - `npm run test:e2e` (pass)
+  - `npm audit --omit=dev` (pass; 0 vulnerabilities)
+- Deployment status: not deployed in this branch pass. Production verification still requires merging/pushing the branch, Railway redeploy, live `/api/health` source confirmation, and production monitor/smoke evidence.
 
 ## Latest Packet 08 Pass - Home Getting Started Checklist
 

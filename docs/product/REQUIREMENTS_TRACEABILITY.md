@@ -10,6 +10,16 @@ Status values:
 
 Evidence must eventually link to implementation, automated tests, manual acceptance proof, and deployed build.
 
+## Traceability Addendum - 2026-07-02 Onboarding V2 Hybrid Branch
+
+- `GA-PRO-001` gains onboarding activation evidence on branch `codex/onboarding-v2-hybrid`: first-time users now see a short Trade Talk/product education sequence, then choose a trade and area for a preview workspace before they decide to create an account.
+- `GA-UX-003` gains mobile onboarding clarity evidence: the intro is skippable, the preview is explicit about being non-production, and signup/login remain available without blocking product understanding.
+- `GA-UX-004` and `GA-FND-004` retain trades-only and server-gated behavior: no homeowner flow was added, no role-switching was reintroduced after setup, and apply/post/message/save/publish actions still require account setup instead of frontend-only success.
+- `GA-UX-005` gains fail-closed first-visit evidence: anonymous session bootstrap no longer shows a red `Authentication required` message before the user tries to log in, while failed login/signup attempts still surface server-owned errors.
+- `GA-UX-006` gains rendered mobile evidence at 430x932 for the orange intro, guest preview selector, and logged-in Home checklist spacing. Screenshot evidence was saved outside the repo at `C:\Users\zboyt\AppData\Local\Temp\rivt-onboarding-intro-430.png`, `C:\Users\zboyt\AppData\Local\Temp\rivt-onboarding-preview-430.png`, and `C:\Users\zboyt\AppData\Local\Temp\rivt-onboarding-logged-in-430.png`.
+- `GA-OPS-007` gains local automated evidence for this branch slice: `npm run build`, `npm run lint`, `npm run test`, `npm run test:e2e`, and `npm audit --omit=dev` passed with 0 vulnerabilities.
+- `GA-OPS-008` is unchanged for production deployment: this slice has not been deployed, and live proof still requires merge, Railway redeploy, live `/api/health` source confirmation, and production monitor/smoke evidence.
+
 ## Traceability Addendum - 2026-07-02 Home Getting Started Checklist
 
 - `GA-PRO-001` gains post-onboarding activation evidence: Home now shows a role-aware `Get RIVT working for you` checklist so new contractors and tradespeople understand the next useful actions after account setup.

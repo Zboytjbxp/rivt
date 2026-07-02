@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import {
   AlertTriangle,
+  ArrowLeft,
+  ArrowRight,
   BadgeCheck,
   Bell,
   BriefcaseBusiness,
@@ -45,6 +47,12 @@ export interface OnboardingResult {
 }
 
 type ProviderStatus = Record<string, { ok: boolean; mode: string; missing: string[]; purpose: string }>;
+export const GUEST_PREVIEW_PREFS_KEY = "rivt.guestPreview.v1";
+export interface GuestPreviewPreferences {
+  trade: Trade;
+  location: string;
+  role: Role;
+}
 export type OnboardingStartView = "home" | "work" | "crew" | "shop-talk" | "tools" | "profile";
 export type OnboardingGoal =
   | "contractor_find_help"
@@ -102,6 +110,60 @@ const onboardingTopics: OnboardingTopic[] = [
   "Safety",
   "Project photos",
 ];
+
+const entrySlides = [
+  {
+    kicker: "Trade Talk",
+    title: "Trade talk, built for the trades.",
+    body: "Ask questions and get answers from people who have actually done the work.",
+    posts: [
+      { community: "Carpentry Talk", title: "Best way to scribe cabinets to stone?", meta: "128 votes · 67 replies" },
+      { community: "Electrical Talk", title: "Panel swap pricing when the meter can stay?", meta: "96 votes · 54 replies" },
+      { community: "Plumbing Talk", title: "Do I need insurance for side jobs?", meta: "71 votes · 38 replies" },
+    ],
+  },
+  {
+    kicker: "Work + Crew",
+    title: "Find work. Build your crew.",
+    body: "Real jobs and real tradespeople near you. Exact addresses stay private until work is accepted.",
+    posts: [
+      { community: "Jacksonville Trades", title: "Finish carpenter needed for built-ins", meta: "$28-$35/hr · tools required" },
+      { community: "Side Work", title: "Cabinet helper for two-day install", meta: "Jacksonville Beach · insured preferred" },
+      { community: "Crew Leads", title: "Tile setter available this week", meta: "Portfolio ready · message first" },
+    ],
+  },
+  {
+    kicker: "Tools + Records",
+    title: "Run the job from your phone.",
+    body: "Calculator, invoice drafts, daily logs, photos, and records stay close to the work.",
+    posts: [
+      { community: "Calculator", title: "Fraction math that fits the field", meta: "Sixteenths · feet/inches · quick copy" },
+      { community: "Invoice", title: "Draft a clean invoice before you leave", meta: "Email-ready · job-backed records" },
+      { community: "Daily log", title: "Photos, notes, and closeout proof", meta: "Private records · exportable" },
+    ],
+  },
+] as const;
+
+const previewTradeOptions: Trade[] = [
+  "Carpentry",
+  "Electrical",
+  "Plumbing",
+  "HVAC",
+  "Tile",
+  "Cabinetry",
+  "Framing",
+  "Roofing",
+  "Painting/Finishing",
+  "General Labor",
+];
+
+function saveGuestPreviewPreferences(preferences: GuestPreviewPreferences) {
+  try {
+    localStorage.setItem(GUEST_PREVIEW_PREFS_KEY, JSON.stringify(preferences));
+  } catch {
+    // Storage can be unavailable in private browsing. The preview still opens with defaults.
+  }
+}
 
 const contractorGoals = [
   {
@@ -291,7 +353,7 @@ function EntryShowcase() {
   const [activeCapability, setActiveCapability] = useState<(typeof entryCapabilities)[number]["key"]>("talk");
   const feedPosts = [
     { community: "Carpentry Talk", author: "Trim lead", title: "Best way to scribe cabinets to stone?", meta: "42 votes · 18 replies" },
-    { community: "Electrical Talk", author: "Service tech", title: "Panel swap pricing when the meter can stays?", meta: "31 votes · 11 replies" },
+    { community: "Electrical Talk", author: "Service tech", title: "Panel swap pricing when the meter can stay?", meta: "31 votes · 11 replies" },
     { community: "Jacksonville Trades", author: "Remodeler", title: "Who is free for punch-out work this Friday?", meta: "Local · 7 replies" },
   ];
 
@@ -382,6 +444,211 @@ function EntryShowcase() {
   );
 }
 
+function SwipeEntryShowcase({
+  onPreview,
+  onLogin,
+  onCreateAccount,
+}: {
+  onPreview: () => void;
+  onLogin: () => void;
+  onCreateAccount: () => void;
+}) {
+  const [activeSlide, setActiveSlide] = useState(0);
+  const touchStartX = useRef<number | null>(null);
+
+  function moveSlide(direction: -1 | 1) {
+    setActiveSlide((current) => Math.max(0, Math.min(entrySlides.length - 1, current + direction)));
+  }
+
+  return (
+    <section
+      className="auth-intro"
+      aria-label="RIVT intro"
+      onTouchStart={(event) => {
+        touchStartX.current = event.touches[0]?.clientX ?? null;
+      }}
+      onTouchEnd={(event) => {
+        if (touchStartX.current === null) return;
+        const delta = (event.changedTouches[0]?.clientX ?? touchStartX.current) - touchStartX.current;
+        touchStartX.current = null;
+        if (Math.abs(delta) < 42) return;
+        if (delta < 0) moveSlide(1);
+        else moveSlide(-1);
+      }}
+    >
+      <button type="button" className="auth-intro-skip" onClick={onPreview}>
+        Skip
+      </button>
+
+      <div className="auth-intro-brand">
+        <strong>{brandConfig.appName}</strong>
+      </div>
+
+      <div className="auth-intro-window">
+        <div className="auth-intro-track" style={{ transform: `translateX(-${activeSlide * 100}%)` }}>
+          {entrySlides.map((slide, index) => (
+            <article key={slide.title} className="auth-intro-slide" aria-hidden={index !== activeSlide}>
+              <div className="auth-story-header">
+                <span className="auth-story-eyebrow">{slide.kicker}</span>
+                <h1>{slide.title}</h1>
+                <p>{slide.body}</p>
+              </div>
+              <div className="auth-trade-phone" aria-label={`${slide.kicker} preview`}>
+                <div className="auth-phone-topbar">
+                  <strong>RIVT</strong>
+                  <span>9:29</span>
+                </div>
+                <label className="auth-phone-search">
+                  <Search size={16} />
+                  <span>{slide.posts[0]?.title}</span>
+                  <b>Ask</b>
+                </label>
+                <div className="auth-phone-feed">
+                  {slide.posts.map((post) => (
+                    <article key={post.title} className="auth-phone-post">
+                      <div>
+                        <span>{post.community}</span>
+                        <small>{post.meta.split("·")[0]?.trim()}</small>
+                      </div>
+                      <strong>{post.title}</strong>
+                      <p>{post.meta}</p>
+                    </article>
+                  ))}
+                </div>
+              </div>
+            </article>
+          ))}
+        </div>
+      </div>
+
+      <div className="auth-intro-dots" aria-label="Intro progress">
+        {entrySlides.map((slide, index) => (
+          <button
+            key={slide.title}
+            type="button"
+            className={index === activeSlide ? "is-active" : ""}
+            aria-label={`Go to intro slide ${index + 1}`}
+            aria-pressed={index === activeSlide}
+            onClick={() => setActiveSlide(index)}
+          />
+        ))}
+      </div>
+
+      <div className="auth-intro-actions">
+        <button
+          type="button"
+          className="primary-action"
+          onClick={activeSlide === entrySlides.length - 1 ? onPreview : () => moveSlide(1)}
+        >
+          {activeSlide === entrySlides.length - 1 ? "Preview RIVT" : "Next"}
+          <ArrowRight size={17} />
+        </button>
+        {activeSlide > 0 ? (
+          <button type="button" className="secondary-action" onClick={() => moveSlide(-1)}>
+            <ArrowLeft size={17} />
+            Back
+          </button>
+        ) : null}
+      </div>
+
+      <div className="auth-intro-secondary">
+        <button type="button" onClick={onCreateAccount}>Create account</button>
+        <button type="button" onClick={onLogin}>Log in</button>
+      </div>
+    </section>
+  );
+}
+
+function GuestPreviewEntry({
+  onBrowseAsGuest,
+  onCreateAccount,
+  onLogin,
+}: {
+  onBrowseAsGuest: () => void;
+  onCreateAccount: () => void;
+  onLogin: () => void;
+}) {
+  const [trade, setTrade] = useState<Trade>("Carpentry");
+  const [location, setLocation] = useState("Jacksonville, FL");
+
+  function openPreview() {
+    saveGuestPreviewPreferences({ trade, location: location.trim() || "Jacksonville, FL", role: "contractor" });
+    onBrowseAsGuest();
+  }
+
+  return (
+    <section className="auth-preview-entry" aria-label="Personalize your RIVT preview">
+      <div className="auth-preview-copy">
+        <span>Preview first</span>
+        <h1>Shape RIVT around your trade.</h1>
+        <p>Pick a trade and area so the guest preview opens on useful conversations, local work signals, and tools without pretending anything is live work.</p>
+      </div>
+
+      <div className="auth-preview-board">
+        <div className="auth-preview-field">
+          <strong>Trade</strong>
+          <div className="auth-preview-trades">
+            {previewTradeOptions.map((option) => (
+              <button
+                key={option}
+                type="button"
+                className={trade === option ? "is-selected" : ""}
+                aria-pressed={trade === option}
+                onClick={() => setTrade(option)}
+              >
+                {option}
+              </button>
+            ))}
+          </div>
+        </div>
+        <label className="auth-preview-field">
+          <strong>Area</strong>
+          <input value={location} onChange={(event) => setLocation(event.target.value)} placeholder="Jacksonville, FL" />
+          <button type="button" onClick={() => setLocation("Jacksonville, FL")}>
+            <MapPin size={15} />
+            Use Jacksonville pilot area
+          </button>
+        </label>
+      </div>
+
+      <div className="auth-preview-phone" aria-label="Personalized preview example">
+        <div className="auth-phone-topbar">
+          <strong>{trade} Talk</strong>
+          <span>{location || "Your area"}</span>
+        </div>
+        <article className="auth-phone-post">
+          <div>
+            <span>{trade} Talk</span>
+            <small>Preview</small>
+          </div>
+          <strong>{trade === "Electrical" ? "What are you charging for punch-out work?" : trade === "Plumbing" ? "Do I need separate insurance for weekend side jobs?" : "Best way to scribe cabinets to stone?"}</strong>
+          <p>Guest mode lets you look around. Apply, post, message, save, and publish require a real account.</p>
+        </article>
+        <article className="auth-phone-post">
+          <div>
+            <span>Work</span>
+            <small>{location || "Local"} filter</small>
+          </div>
+          <strong>Local work and crew matches use your selected trade first.</strong>
+          <p>If there is nothing real in the pilot area yet, RIVT shows an honest empty state.</p>
+        </article>
+      </div>
+
+      <div className="auth-preview-actions">
+        <button type="button" className="primary-action" onClick={openPreview}>
+          Browse RIVT preview
+        </button>
+        <button type="button" className="secondary-action" onClick={onCreateAccount}>
+          Create account
+        </button>
+        <button type="button" className="auth-browse-action" onClick={onLogin}>
+          Log in instead
+        </button>
+      </div>
+    </section>
+  );
+}
+
 export function AuthGate({
   mode,
   error,
@@ -403,6 +670,7 @@ export function AuthGate({
   onForgotPassword: (email: string) => void;
   onBrowseAsGuest: () => void;
 }) {
+  const [entryStage, setEntryStage] = useState<"intro" | "preview" | "auth">(() => (error ? "auth" : "intro"));
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
@@ -410,8 +678,40 @@ export function AuthGate({
   const [inviteCode, setInviteCode] = useState("");
   const emailInputRef = useRef<HTMLInputElement>(null);
 
+  function openAuth(nextMode: "login" | "signup") {
+    onModeChange(nextMode);
+    setEntryStage("auth");
+    window.requestAnimationFrame(() => {
+      if (nextMode === "login") emailInputRef.current?.focus();
+    });
+  }
+
+  if (entryStage === "intro") {
+    return (
+      <main className="auth-shell auth-shell--intro">
+        <SwipeEntryShowcase
+          onPreview={() => setEntryStage("preview")}
+          onCreateAccount={() => openAuth("signup")}
+          onLogin={() => openAuth("login")}
+        />
+      </main>
+    );
+  }
+
+  if (entryStage === "preview") {
+    return (
+      <main className="auth-shell auth-shell--preview">
+        <GuestPreviewEntry
+          onBrowseAsGuest={onBrowseAsGuest}
+          onCreateAccount={() => openAuth("signup")}
+          onLogin={() => openAuth("login")}
+        />
+      </main>
+    );
+  }
+
   return (
-    <main className="auth-shell auth-shell--split">
+    <main className="auth-shell auth-shell--split auth-shell--form">
       <EntryShowcase />
 
       <form
@@ -662,6 +962,8 @@ export function OnboardingFlow({
   const [topicInterests, setTopicInterests] = useState<OnboardingTopic[]>(["Local jobs", "Tools", "Business/pricing"]);
   const [showAllSpecialties, setShowAllSpecialties] = useState(false);
   const [legalConsent, setLegalConsent] = useState(false);
+  const [stepIndex, setStepIndex] = useState(0);
+  const setupTouchStartX = useRef<number | null>(null);
   const plan: TrialPlan = brandConfig.pricing.betaPlan.label;
   const goalOptions = goalsForRole(role);
   const selectedGoal = goalOptions.find((option) => option.id === goal) ?? goalOptions[0];
@@ -669,19 +971,29 @@ export function OnboardingFlow({
   const accountReady = Boolean(displayName.trim()) && Boolean(serviceAreaCity.trim()) && Boolean(serviceAreaRegion.trim());
   const profileReady = specialties.length > 0;
   const legalReady = legalConsent;
-  const completionChecks = [
-    Boolean(role),
-    Boolean(goal),
-    emailVerified,
-    accountReady,
-    profileReady,
-    topicInterests.length > 0,
-    legalReady,
-  ];
-  const completion = Math.round(
-    (completionChecks.filter(Boolean).length / completionChecks.length) * 100,
-  );
-  const canEnter = emailVerified && accountReady && profileReady && topicInterests.length > 0 && legalReady;
+  const canEnter = emailVerified && accountReady && profileReady && legalReady;
+  const setupSteps = roleLocked
+    ? (["goal", "profile", "feed", "trust"] as const)
+    : (["role", "goal", "profile", "feed", "trust"] as const);
+  const safeStepIndex = Math.min(stepIndex, setupSteps.length - 1);
+  const currentStepId = setupSteps[safeStepIndex];
+  const setupProgress = Math.round(((safeStepIndex + 1) / setupSteps.length) * 100);
+  const currentStepTitle = currentStepId === "role"
+    ? "Choose your account type"
+    : currentStepId === "goal"
+      ? "What are you here to do first?"
+      : currentStepId === "profile"
+        ? `${role === "contractor" ? "Contractor" : "Tradesperson"} profile`
+        : currentStepId === "feed"
+          ? "Shape your feed"
+          : "Consent agreement";
+  const canMoveForward = currentStepId === "profile"
+    ? accountReady
+    : currentStepId === "feed"
+      ? profileReady
+      : currentStepId === "trust"
+        ? canEnter
+        : true;
   const roleNoun = role === "contractor" ? "Contractor" : "Tradesperson";
   const specialtyHeading =
     role === "contractor" ? "Trades you hire for" : "Your trade specialties";
@@ -716,6 +1028,25 @@ export function OnboardingFlow({
     const nextGoal = defaultGoalForRole(nextRole);
     setGoal(nextGoal);
     setTopicInterests(nextRole === "contractor" ? ["Local jobs", "Business/pricing"] : ["Local jobs", "Project photos"]);
+  }
+
+  function goBack() {
+    setStepIndex((current) => Math.max(0, current - 1));
+  }
+
+  function goNext() {
+    if (currentStepId === "trust") {
+      submit();
+      return;
+    }
+    if (!canMoveForward) return;
+    setStepIndex((current) => Math.min(setupSteps.length - 1, current + 1));
+  }
+
+  function handleSetupSwipe(delta: number) {
+    if (Math.abs(delta) < 42) return;
+    if (delta < 0) goNext();
+    else goBack();
   }
 
   function submit() {
@@ -804,19 +1135,30 @@ export function OnboardingFlow({
           </div>
         </aside>
 
-        <section className="onboarding-panel">
+        <section
+          className="onboarding-panel onboarding-panel--swipe"
+          onTouchStart={(event) => {
+            setupTouchStartX.current = event.touches[0]?.clientX ?? null;
+          }}
+          onTouchEnd={(event) => {
+            if (setupTouchStartX.current === null) return;
+            const delta = (event.changedTouches[0]?.clientX ?? setupTouchStartX.current) - setupTouchStartX.current;
+            setupTouchStartX.current = null;
+            handleSetupSwipe(delta);
+          }}
+        >
           <div className="onboarding-panel-header">
             <div>
-              <span>Account setup</span>
-              <h2>{completion}% ready</h2>
+              <span>Step {safeStepIndex + 1} of {setupSteps.length}</span>
+              <h2>{currentStepTitle}</h2>
             </div>
             <div>
               <span>{plan}</span>
-              <ProgressBar value={completion} />
+              <ProgressBar value={setupProgress} />
             </div>
           </div>
 
-          <section className="onboarding-section" aria-label="Account role">
+          <section className={currentStepId === "role" ? "onboarding-section is-current" : "onboarding-section"} aria-label="Account role">
             <div className="onboarding-section-heading">
               <span>Step 1</span>
               <h3>Choose your account type</h3>
@@ -834,7 +1176,7 @@ export function OnboardingFlow({
             )}
           </section>
 
-          <section className="onboarding-section" aria-label="First goal">
+          <section className={currentStepId === "goal" ? "onboarding-section is-current" : "onboarding-section"} aria-label="First goal">
             <div className="onboarding-section-heading">
               <span>Step 2</span>
               <h3>What are you here to do first?</h3>
@@ -871,7 +1213,7 @@ export function OnboardingFlow({
             </div>
           </section>
 
-          <section className="onboarding-section" aria-label="Profile basics">
+          <section className={currentStepId === "profile" ? "onboarding-section is-current" : "onboarding-section"} aria-label="Profile basics">
             <div className="onboarding-section-heading">
               <span>Step 3</span>
               <h3>{roleNoun} profile</h3>
@@ -934,7 +1276,7 @@ export function OnboardingFlow({
             ) : null}
           </section>
 
-          <section className="onboarding-section" aria-label="Trade specialties">
+          <section className={currentStepId === "feed" ? "onboarding-section is-current" : "onboarding-section"} aria-label="Trade specialties">
             <div className="onboarding-section-heading">
               <span>Step 4</span>
               <h3>Shape your feed</h3>
@@ -1001,7 +1343,7 @@ export function OnboardingFlow({
             </div>
           </section>
 
-          <section className="onboarding-section onboarding-trust-section" aria-label="Trust setup">
+          <section className={currentStepId === "trust" ? "onboarding-section onboarding-trust-section is-current" : "onboarding-section onboarding-trust-section"} aria-label="Trust setup">
             <div className="onboarding-section-heading">
               <span>Step 5</span>
               <h3>Consent agreement</h3>
@@ -1029,23 +1371,36 @@ export function OnboardingFlow({
 
           <div className="onboarding-actions">
             <div>
-              <strong>{canEnter ? `Ready to enter ${brandConfig.appName}` : "Finish the basics"}</strong>
+              <strong>{currentStepId === "trust" ? (canEnter ? `Ready to enter ${brandConfig.appName}` : "Finish the basics") : "Keep moving"}</strong>
               <span>
-                {canEnter
-                  ? "Your verified account, role, profile, and consent are ready."
-                  : "Verify your email, finish your service area, select a trade, and accept the agreement."}
+                {currentStepId === "trust"
+                  ? canEnter
+                    ? "Your verified account, role, profile, and consent are ready."
+                    : "Verify your email, finish your service area, select a trade, and accept the agreement."
+                  : currentStepId === "feed"
+                    ? "Topics are optional. Choose the trades that should drive your feed."
+                    : "One question per screen. Swipe or use the buttons."}
               </span>
               {notice ? <span className="auth-notice" role="status">{notice}</span> : null}
               {error ? <span className="auth-error" role="alert">{error}</span> : null}
             </div>
             <button
               type="button"
-              className="primary-action"
-              onClick={submit}
-              disabled={!canEnter}
+              className="secondary-action onboarding-back-action"
+              onClick={goBack}
+              disabled={safeStepIndex === 0}
             >
-              <BadgeCheck size={18} />
-              Enter network
+              <ArrowLeft size={17} />
+              Back
+            </button>
+            <button
+              type="button"
+              className="primary-action"
+              onClick={goNext}
+              disabled={!canMoveForward}
+            >
+              {currentStepId === "trust" ? <BadgeCheck size={18} /> : <ArrowRight size={17} />}
+              {currentStepId === "trust" ? "Enter network" : "Next"}
             </button>
           </div>
         </section>

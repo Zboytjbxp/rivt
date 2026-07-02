@@ -438,6 +438,16 @@
   cursor: pointer;
 }
 
+.trade-feed.has-start-card .trade-feed-fab {
+  bottom: 118px;
+}
+
+@media (max-width: 560px) {
+  .trade-feed.has-start-card .trade-feed-fab {
+    display: none;
+  }
+}
+
 .trade-feed-footer {
   display: flex;
   justify-content: center;
