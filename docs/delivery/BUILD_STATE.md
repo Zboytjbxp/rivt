@@ -2,7 +2,7 @@
 
 Last updated: 2026-07-02 America/New_York
 Current gate: Gate A launch hardening
-Current phase: Packet 08 Gate A launch hardening: machine gates and live workflow smokes are mostly green; latest Tools immersive mobile pass is locally verified on a codex branch; physical accessibility-device evidence, full local integration-suite completion, and real paid-checkout webhook completion remain launch-quality boundaries.
+Current phase: Packet 08 Gate A launch hardening: machine gates and live workflow smokes are mostly green; latest Tools immersive mobile pass is deployed and production-monitored; physical accessibility-device evidence, full local integration-suite completion, and real paid-checkout webhook completion remain launch-quality boundaries.
 Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
 Production release commit: see live `/api/health` build metadata
@@ -35,7 +35,10 @@ Production release commit: see live `/api/health` build metadata
   - `npm run test:ui:tools` (pass)
   - `npm audit --omit=dev` (pass; 0 vulnerabilities)
   - `npm run test` was attempted and timed out after five minutes during the integration half; the full aggregate command is not being treated as green without a completed run
-- Deployment not performed yet for this slice.
+- Production deployment completed from `master`:
+  - Tools immersive source commit `f29e0e34e96fa3d4b43d2f283fc0b7f297d2344d` was pushed to GitHub and picked up by Railway production service `RIVT`
+  - live `https://rivt.pro/api/health` reported build commit `f29e0e34e96fa3d4b43d2f283fc0b7f297d2344d`, migration `0016_communities`, PostgreSQL, S3-compatible object storage, and configured Sentry
+  - `EXPECTED_SOURCE_COMMIT=f29e0e34e96fa3d4b43d2f283fc0b7f297d2344d npm run monitor:production` passed with operational controls off and seven anonymous private-route checks
 
 ## Latest Packet 08 Pass - Shop Talk Reddit-Style Community Tightening
 

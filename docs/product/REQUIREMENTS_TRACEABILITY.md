@@ -17,6 +17,7 @@ Evidence must eventually link to implementation, automated tests, manual accepta
 - `GA-UX-006` also gains repeatable rendered-smoke evidence: `npm run test:ui:tools` passed after the smoke was updated to mock server-owned Shop Talk/community read endpoints and after the mobile Heavy 16th workbench height math was corrected for the 390x844 no-scroll calculator check.
 - `GA-UX-005` retains honesty boundaries: this slice changes shell/tool navigation only; it does not claim fake invoice sending, SMS delivery, payment processing, escrow, payroll, tax filing, or frontend-only Records success.
 - `GA-OPS-007` gains partial local automated evidence for this slice: `npm run build`, `npm run lint`, `npm run test:unit`, `npm run test:e2e`, `npm run test:ui:tools`, and `npm audit --omit=dev` passed with 0 vulnerabilities. The aggregate `npm run test` command was attempted and timed out after five minutes during the integration half, so full local test evidence remains incomplete for this slice.
+- `GA-OPS-008` gains deployment evidence: Tools immersive source commit `f29e0e34e96fa3d4b43d2f283fc0b7f297d2344d` was pushed to `master`, Railway production service `RIVT` served that source on live `/api/health` with migration `0016_communities`, PostgreSQL/S3-compatible dependencies and Sentry healthy, and `EXPECTED_SOURCE_COMMIT=f29e0e34e96fa3d4b43d2f283fc0b7f297d2344d npm run monitor:production` passed.
 
 ## Traceability Addendum - 2026-07-02 Community Discovery and Tools Pricing Guidance Branch
 
