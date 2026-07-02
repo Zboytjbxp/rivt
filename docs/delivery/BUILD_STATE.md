@@ -37,7 +37,10 @@ Production release commit: see live `/api/health` build metadata
   - `npm run test` (pass)
   - `npm run test:e2e` (pass)
   - `npm audit --omit=dev` (pass; 0 vulnerabilities)
-- Deployment not performed in this pass; production evidence still requires push, Railway deploy, live `/api/health`, and `npm run monitor:production`.
+- Production deployment completed from `master`:
+  - checklist runtime source commit `285ce7a8841b2ca921d98692143e7632333b96cf` was pushed to GitHub and picked up by Railway production service `RIVT`
+  - live `https://rivt.pro/api/health` reported source `285ce7a8841b2ca921d98692143e7632333b96cf` with migration `0016_communities`, PostgreSQL, S3-compatible object storage, and Sentry configured
+  - `EXPECTED_SOURCE_COMMIT=285ce7a8841b2ca921d98692143e7632333b96cf npm run monitor:production` passed with operational controls off and seven anonymous private-route checks
 
 ## Latest Packet 08 Pass - Onboarding Education and Activation
 

@@ -16,7 +16,8 @@ Evidence must eventually link to implementation, automated tests, manual accepta
 - `GA-UX-005` gains honest state evidence: checklist progress is derived from real app state where available, including jobs/drafts, profile basics, profile bio/headline, joined communities, authored Trade Talk posts, records beyond the legal baseline, and passed safety certs. Action clicks route to existing product surfaces and do not fabricate completion.
 - `GA-UX-006` gains rendered mobile QA evidence: the checklist was tested through the in-app Browser at 430x932 using the guest path; the pass verified zero console warnings/errors, legible dark-mode action pills after a fix, correct `Find communities` routing to Shop Talk, and a working dismiss control.
 - `GA-DATA-001` and `GA-FND-004` retain honesty boundaries: this slice did not add homeowner flows, seed/demo success, provider claims, server authorization changes, or frontend-only production readiness claims.
-- `GA-OPS-007` gains local automated evidence for this slice: `npm run build`, `npm run lint`, `npm run test`, `npm run test:e2e`, and `npm audit --omit=dev` passed with 0 vulnerabilities. Production deployment evidence remains pending.
+- `GA-OPS-007` gains local automated evidence for this slice: `npm run build`, `npm run lint`, `npm run test`, `npm run test:e2e`, and `npm audit --omit=dev` passed with 0 vulnerabilities.
+- `GA-OPS-008` gains deployment evidence: checklist runtime source commit `285ce7a8841b2ca921d98692143e7632333b96cf` was pushed to `master`, Railway production service `RIVT` served that source on live `/api/health` with migration `0016_communities`, PostgreSQL/S3-compatible dependencies and Sentry healthy, and `EXPECTED_SOURCE_COMMIT=285ce7a8841b2ca921d98692143e7632333b96cf npm run monitor:production` passed.
 
 ## Traceability Addendum - 2026-07-02 Onboarding Education and Activation
 
