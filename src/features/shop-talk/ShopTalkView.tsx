@@ -20,7 +20,6 @@ import {
   Star,
   ThumbsDown,
   ThumbsUp,
-  Users,
   X,
   type LucideIcon,
 } from "lucide-react";
@@ -94,6 +93,8 @@ export interface CommunityPost {
   subTrade?: string;
   subLocation?: string;
   subRate?: string;
+  thumbnailUrl?: string;
+  thumbnailAlt?: string;
 }
 
 export type PostFlair = "Question" | "Discussion" | "Code Talk" | "Compliance" | "Tip" | "Humor";
@@ -192,12 +193,6 @@ const POST_TYPE_CHIPS: { type: PostType; emoji: string; label: string }[] = [
   { type: "sub-request", emoji: "🔧", label: "Looking for Sub" },
   { type: "safety", emoji: "⚠️", label: "Safety Alert" },
   { type: "general", emoji: "💬", label: "General" },
-];
-
-const TRADE_TALK_PROMPTS = [
-  "Best way to scribe cabinets to stone?",
-  "What are you charging for punch-out work?",
-  "Do I need insurance for side jobs?",
 ];
 
 function readStringSet(key: string, normalize: (value: string) => string = (value) => value): Set<string> {
@@ -401,6 +396,7 @@ export function ShopTalkView({
   newsItems,
   initialQuery,
   initialPostId,
+  initialCommunitySlug,
   openComposer,
   selectedJobTrade,
   userLocation,
@@ -421,6 +417,7 @@ export function ShopTalkView({
   newsItems: NewsItem[];
   initialQuery: string;
   initialPostId?: string | null;
+  initialCommunitySlug?: string | null;
   openComposer?: boolean;
   selectedJobTrade: Trade | "General";
   userLocation: string;
@@ -448,7 +445,7 @@ export function ShopTalkView({
     return readStringSet("rivt.joinedCommunities.v1", communitySlug);
   });
   const [communityQuery, setCommunityQuery] = useState("");
-  const [selectedCommunitySlug, setSelectedCommunitySlug] = useState<string | null>(null);
+  const [selectedCommunitySlug, setSelectedCommunitySlug] = useState<string | null>(initialCommunitySlug ?? null);
   const [talkQuery, setTalkQuery] = useState(() => initialQuery.trim());
   const [newsQuery, setNewsQuery] = useState("");
   const [liveNews, setLiveNews] = useState<NewsItem[]>([]);
@@ -539,11 +536,6 @@ export function ShopTalkView({
     setSortMode("hot");
     setMobileDetail(false);
     if (communityPostsForView[0]) setSelectedPostId(communityPostsForView[0].id);
-  }
-
-  function openCommunityBySlug(slug: string) {
-    const community = communities.find((item) => item.slug === slug);
-    if (community) openCommunity(community);
   }
 
   function closeCommunity() {
@@ -811,7 +803,10 @@ export function ShopTalkView({
           }}
         />
       )}
-      <section className={mobileDetail ? "shop-talk-layout trade-talk-layout mobile-detail-open" : "shop-talk-layout trade-talk-layout"} aria-label="Trade Talk community">
+      <section
+        className={`${mobileDetail ? "shop-talk-layout trade-talk-layout mobile-detail-open" : "shop-talk-layout trade-talk-layout"}${selectedCommunity ? " community-open" : ""}`}
+        aria-label="Shop Talk community"
+      >
         <aside className="shop-talk-sidebar">
           {/* Tab switcher */}
           <div className="shop-talk-tabs">
@@ -821,7 +816,7 @@ export function ShopTalkView({
               onClick={() => setActiveTab("talk")}
             >
               <MessageCircle size={14} />
-              Trade Talk
+              Shop Talk
             </button>
             <button
               type="button"
@@ -835,32 +830,6 @@ export function ShopTalkView({
 
           {activeTab === "talk" ? (
             <>
-              <div className="trade-talk-home-actions" aria-label="Trade Talk actions">
-                <button type="button" className="trade-talk-action-card is-ask" onClick={() => setNewPostOpen(true)}>
-                  <MessageCircle size={20} />
-                  <span>Ask the trades</span>
-                </button>
-                <button type="button" className="trade-talk-action-card is-crew" onClick={() => openCommunityBySlug("jacksonville-trades")}>
-                  <Users size={20} />
-                  <span>Find your crew</span>
-                </button>
-              </div>
-
-              <div className="trade-talk-prompt-strip" aria-label="Popular Trade Talk questions">
-                {TRADE_TALK_PROMPTS.map((prompt) => (
-                  <button
-                    key={prompt}
-                    type="button"
-                    onClick={() => {
-                      setTalkQuery(prompt);
-                      setActiveTrendingTag(null);
-                    }}
-                  >
-                    {prompt}
-                  </button>
-                ))}
-              </div>
-
               {selectedCommunity && SelectedCommunityIcon ? (
                 <section className="community-page-card" aria-label={`${selectedCommunity.name} community`}>
                   <div className="community-page-main">
@@ -902,6 +871,7 @@ export function ShopTalkView({
                 </section>
               ) : null}
 
+              {!selectedCommunity ? (
               <section className="community-board" aria-label="Discover communities">
                 <div className="community-board-head">
                   <strong>{selectedCommunity ? "Discover more" : "Discover communities"}</strong>
@@ -964,6 +934,7 @@ export function ShopTalkView({
                   })}
                 </div>
               </section>
+              ) : null}
 
               <div className="shop-talk-answer-queue" aria-label="Unanswered in your trade">
                 <div>
@@ -987,7 +958,7 @@ export function ShopTalkView({
                 </div>
               </div>
 
-              <div className="shop-talk-reputation-path" aria-label="Trade Talk reputation path">
+              <div className="shop-talk-reputation-path" aria-label="Shop Talk reputation path">
                 <header>
                   <span><Award size={14} /> Reputation path</span>
                   <strong>{reputationGoal}</strong>
@@ -1043,15 +1014,15 @@ export function ShopTalkView({
                 </div>
               )}
 
-              <div className="shop-talk-fieldbar" aria-label="Trade Talk filters">
+              <div className="shop-talk-fieldbar" aria-label="Shop Talk filters">
                 <label className="shop-talk-search">
                   <Search size={15} />
-                  <span className="sr-only">Search Trade Talk</span>
+                  <span className="sr-only">Search Shop Talk</span>
                   <input
                     type="search"
                     value={talkQuery}
                     onChange={(event) => setTalkQuery(event.target.value)}
-                    placeholder="Search jobs, answers, crews"
+                    placeholder={selectedCommunity ? `Search ${selectedCommunity.name}` : "Search Shop Talk"}
                   />
                 </label>
                 <label className="input-control">
@@ -1161,7 +1132,7 @@ export function ShopTalkView({
                 {sortedPosts.length === 0 ? (
                   <EmptyState
                     icon={MessageCircle}
-                    title="No matching Trade Talk posts"
+                    title="No matching Shop Talk posts"
                     description="Clear the search, broaden the trade filter, or ask the first question in this lane."
                     actionLabel={talkQuery ? "Clear search" : "Ask the trades"}
                     onAction={() => talkQuery ? setTalkQuery("") : setNewPostOpen(true)}
@@ -1450,7 +1421,7 @@ export function ShopTalkView({
               </button>
               <EmptyState
                 icon={MessageCircle}
-                title="No Trade Talk posts yet"
+                title="No Shop Talk posts yet"
                 description="Ask the first field question and let the community answer it."
                 actionLabel="Ask the trades"
                 onAction={() => setNewPostOpen(true)}
@@ -1490,7 +1461,7 @@ export function ShopTalkView({
                   </a>
                 )}
                 <div className="shop-news-discuss">
-                  <strong>Discuss this in Trade Talk</strong>
+                  <strong>Discuss this in Shop Talk</strong>
                   <p>Have a take on how this affects your work? Start a conversation.</p>
                   <button
                     type="button"

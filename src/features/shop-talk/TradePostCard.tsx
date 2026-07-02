@@ -102,9 +102,16 @@ export function TradePostCard({ post, saved, onToggleSave, onOpen }: TradePostCa
         </div>
       </header>
 
-      <button type="button" className="trade-post-body-btn" onClick={onOpen}>
-        <h3 className="trade-post-title">{post.title}</h3>
-        <p className="trade-post-excerpt">{post.body}</p>
+      <button type="button" className={post.thumbnailUrl ? "trade-post-body-btn has-thumbnail" : "trade-post-body-btn"} onClick={onOpen}>
+        <span className="trade-post-copy">
+          <h3 className="trade-post-title">{post.title}</h3>
+          <p className="trade-post-excerpt">{post.body}</p>
+        </span>
+        {post.thumbnailUrl ? (
+          <span className="trade-post-thumbnail">
+            <img src={post.thumbnailUrl} alt={post.thumbnailAlt ?? ""} loading="lazy" />
+          </span>
+        ) : null}
       </button>
 
       <footer className="trade-post-actions">

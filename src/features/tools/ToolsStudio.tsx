@@ -2489,15 +2489,10 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
       <PageHeader
         className="v2-tools-header"
         title="Tools"
-        description="Field apps for estimating, documenting, invoicing, and closing out work."
       />
 
       <div className="v2-tool-section-stack">
-        <section className="v2-tool-section" aria-labelledby="tools-core-field-apps">
-          <header className="v2-tool-section-header">
-            <span>Launch set</span>
-            <strong id="tools-core-field-apps">Five field apps worth using every day</strong>
-          </header>
+        <section className="v2-tool-section" aria-label="Field tools">
           <div className="v2-tool-launch-grid">
             <ToolCard
               icon={Calculator}

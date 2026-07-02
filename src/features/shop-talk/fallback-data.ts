@@ -118,6 +118,8 @@ export const communityPromptPosts: CommunityPost[] = [
     replies: [],
     createdAt: "2h",
     status: "Open",
+    thumbnailUrl: "https://images.unsplash.com/photo-1556911220-bff31c812dba?auto=format&fit=crop&w=360&q=70",
+    thumbnailAlt: "Cabinet detail in a finished kitchen",
   },
   {
     id: "prompt-5",
@@ -160,6 +162,8 @@ export const communityPromptPosts: CommunityPost[] = [
     replies: [],
     createdAt: "4h",
     status: "Open",
+    thumbnailUrl: "https://images.unsplash.com/photo-1600566752355-35792bedcfea?auto=format&fit=crop&w=360&q=70",
+    thumbnailAlt: "Large format tile and bathroom finish work",
   },
   {
     id: "prompt-8",
@@ -174,5 +178,7 @@ export const communityPromptPosts: CommunityPost[] = [
     replies: [],
     createdAt: "5h",
     status: "Open",
+    thumbnailUrl: "https://images.unsplash.com/photo-1600607687920-4e2a09cf159d?auto=format&fit=crop&w=360&q=70",
+    thumbnailAlt: "Custom built-in cabinetry and interior finish work",
   },
 ];

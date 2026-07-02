@@ -113,8 +113,8 @@ const onboardingTopics: OnboardingTopic[] = [
 
 const entrySlides = [
   {
-    kicker: "Trade Talk",
-    title: "Trade talk, built for the trades.",
+    kicker: "Shop Talk",
+    title: "Shop Talk, built for the trades.",
     body: "Ask questions and get answers from people who have actually done the work.",
     posts: [
       { community: "Carpentry Talk", title: "Best way to scribe cabinets to stone?", meta: "128 votes · 67 replies" },
@@ -183,7 +183,7 @@ const contractorGoals = [
   {
     id: "contractor_network",
     label: "Stay connected locally",
-    body: "Follow local trade talk, see who is active, and keep your name visible.",
+    body: "Follow local Shop Talk, see who is active, and keep your name visible.",
     startView: "shop-talk",
     icon: MessageCircle,
   },
@@ -220,7 +220,7 @@ const tradespersonGoals = [
   {
     id: "tradesperson_trade_talk",
     label: "Answer and learn",
-    body: "Join Trade Talk, ask questions, answer fixes, and build reputation.",
+    body: "Join Shop Talk, ask questions, answer fixes, and build reputation.",
     startView: "shop-talk",
     icon: MessageCircle,
   },
@@ -362,8 +362,8 @@ function EntryShowcase() {
   return (
     <section className="auth-story" aria-label="Product preview">
       <div className="auth-story-header">
-        <span className="auth-story-eyebrow">Trade Talk</span>
-        <h1>Trade talk, built for the trades.</h1>
+        <span className="auth-story-eyebrow">Shop Talk</span>
+        <h1>Shop Talk, built for the trades.</h1>
         <p>
           Ask questions, find work, show your craft, and connect with real tradespeople.
         </p>
@@ -385,7 +385,7 @@ function EntryShowcase() {
         ))}
       </div>
 
-      <div className="auth-trade-phone" aria-label="Trade Talk preview">
+      <div className="auth-trade-phone" aria-label="Shop Talk preview">
         <div className="auth-phone-topbar">
           <strong>RIVT</strong>
           <span>9:29</span>
@@ -1093,14 +1093,14 @@ export function OnboardingFlow({
           </div>
 
           <div className="onboarding-hero-copy onboarding-hero-copy--trade">
-            <span>Trade Talk</span>
+            <span>Shop Talk</span>
             <h1>{role === "contractor" ? "Build your trade network" : "Turn your trade into opportunity"}</h1>
             <p>{selectedGoal.body}</p>
           </div>
 
-          <div className="onboarding-trade-stack" aria-label="Trade Talk onboarding preview">
+          <div className="onboarding-trade-stack" aria-label="Shop Talk onboarding preview">
             <article>
-              <span>{selectedGoal.startView === "shop-talk" ? "Trade Talk first" : "Always useful"}</span>
+              <span>{selectedGoal.startView === "shop-talk" ? "Shop Talk first" : "Always useful"}</span>
               <strong>{role === "contractor" ? "Who can help this week?" : "Where can I earn next?"}</strong>
               <p>{role === "contractor" ? "Post work, ask your network, or find tradespeople by specialty." : "Find work, ask questions, and let contractors see your proof."}</p>
             </article>
@@ -1205,7 +1205,7 @@ export function OnboardingFlow({
                   : selectedGoal.startView === "crew"
                     ? "We will open Crew first."
                     : selectedGoal.startView === "shop-talk"
-                      ? "We will open Trade Talk first."
+                      ? "We will open Shop Talk first."
                       : selectedGoal.startView === "tools"
                         ? "We will open Tools first."
                         : "We will open your profile first."}

@@ -78,14 +78,14 @@ export function viewFromPath(pathname: string): NavLabel {
 export const pageCopy: Record<NavLabel, { title: string; description: string }> = {
   Home: {
     title: "Home",
-    description: "Your daily trade feed: news, Trade Talk, shout-outs, tools, and work signal.",
+    description: "Your daily trade feed: news, Shop Talk, shout-outs, tools, and work signal.",
   },
   Marketplace: {
     title: "Work Feed",
     description: "Post paid side work, find openings, and keep each work order record clean.",
   },
   "Shop Talk": {
-    title: "Trade Talk",
+    title: "Shop Talk",
     description: "Ask field questions and get answers from tradespeople who've solved it.",
   },
   Tools: {

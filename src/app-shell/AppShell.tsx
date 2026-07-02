@@ -305,7 +305,7 @@ export function AppShell({
                   <button type="button" onClick={() => submitSearch("shop-talk")} disabled={!canSubmitSearch}>
                     <MessageCircle size={18} />
                     <span>
-                      <strong>Search Trade Talk</strong>
+                      <strong>Search Shop Talk</strong>
                       <small>Questions, fixes, trade news</small>
                     </span>
                   </button>

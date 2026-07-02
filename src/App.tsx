@@ -70,7 +70,7 @@ import type {
 import { communityBadgeLabels, relativeTime } from "./features/shop-talk/community-utils";
 import { communityPromptPosts, fallbackNewsItems } from "./features/shop-talk/fallback-data";
 import { createShopTalkPost, fetchShopTalkPosts, type ServerShopTalkPost } from "./features/shop-talk/shop-talk-api";
-import { fetchCommunities } from "./features/shop-talk/communities-api";
+import { communitySlug, fetchCommunities } from "./features/shop-talk/communities-api";
 import {
   fallbackCommunities,
   mapServerCommunity,
@@ -227,12 +227,14 @@ function App() {
   const [shopTalkGlobalQuery, setShopTalkGlobalQuery] = useState("");
   const [shopTalkPostId, setShopTalkPostId] = useState<string | null>(null);
   const [shopTalkCompose, setShopTalkCompose] = useState(false);
+  const [shopTalkCommunitySlug, setShopTalkCommunitySlug] = useState<string | null>(null);
   // Consume one-shot Shop Talk intents (open a post / open the composer) once we leave the view.
   useEffect(() => {
     if (activeView === "Shop Talk") return;
     /* eslint-disable react-hooks/set-state-in-effect */
     setShopTalkCompose(false);
     setShopTalkPostId(null);
+    setShopTalkCommunitySlug(null);
     /* eslint-enable react-hooks/set-state-in-effect */
   }, [activeView]);
   const [trade, setTrade] = useState<TradeFilter>("All trades");
@@ -898,7 +900,7 @@ function App() {
       ),
     );
     addActivity(
-      "Trade Talk answer posted",
+      "Shop Talk answer posted",
       `${accountProfile.displayName} answered "${post.title}".`,
     );
   }
@@ -955,7 +957,7 @@ function App() {
       ];
     });
     addActivity(
-      "Trade Talk report filed",
+      "Shop Talk report filed",
       `"${post.title}" is in the admin moderation queue for ${reason.toLowerCase()}.`,
     );
   }
@@ -992,7 +994,7 @@ function App() {
       postToAdd,
       ...current.filter((post) => post.id !== postToAdd.id),
     ]);
-    addActivity("Trade Talk post created", `"${title}" posted to Trade Talk.`);
+    addActivity("Shop Talk post created", `"${title}" posted to Shop Talk.`);
   }
 
   function handleJobSaved(job: Job, published: boolean) {
@@ -1420,6 +1422,7 @@ function App() {
         onSearch={(nextQuery, target = "work") => {
           if (target === "shop-talk") {
             setShopTalkGlobalQuery(nextQuery);
+            setShopTalkCommunitySlug(null);
             handleNavigate("Shop Talk");
             return;
           }
@@ -1459,7 +1462,7 @@ function App() {
             onOpenPost={(postId) => { setShopTalkPostId(postId); setShopTalkCompose(false); setShopTalkGlobalQuery(""); handleNavigate(defaultViewForDestination("shop-talk")); }}
             onAsk={() => { setShopTalkPostId(null); setShopTalkCompose(true); handleNavigate(defaultViewForDestination("shop-talk")); }}
             onPostWork={openCreateJob}
-            onOpenCommunity={(name) => { setShopTalkPostId(null); setShopTalkCompose(false); setShopTalkGlobalQuery(name.replace(/ Talk$/, "")); handleNavigate(defaultViewForDestination("shop-talk")); }}
+            onOpenCommunity={(name) => { setShopTalkPostId(null); setShopTalkCompose(false); setShopTalkGlobalQuery(""); setShopTalkCommunitySlug(communitySlug(name)); handleNavigate(defaultViewForDestination("shop-talk")); }}
             onNavigate={(destination) => handleNavigate(defaultViewForDestination(destination))}
             onOpenProfile={() => handleNavigate("Settings")}
             onOpenTool={handleOpenTool}
@@ -1494,13 +1497,14 @@ function App() {
           />
         ) : activeView === "Shop Talk" ? (
           <ShopTalkView
-            key={`shop-talk-${shopTalkGlobalQuery}-${shopTalkPostId ?? ""}-${shopTalkCompose ? "c" : ""}`}
+            key={`shop-talk-${shopTalkGlobalQuery}-${shopTalkCommunitySlug ?? ""}-${shopTalkPostId ?? ""}-${shopTalkCompose ? "c" : ""}`}
             profile={accountProfile}
             communityPosts={communityPosts}
             communities={communities}
             newsItems={fallbackNewsItems}
             initialQuery={shopTalkGlobalQuery}
             initialPostId={shopTalkPostId}
+            initialCommunitySlug={shopTalkCommunitySlug}
             openComposer={shopTalkCompose}
             selectedJobTrade={selectedJob.trade}
             userLocation={accountProfile.location}

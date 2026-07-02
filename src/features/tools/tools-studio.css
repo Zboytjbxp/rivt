@@ -6784,7 +6784,7 @@
   }
 }
 
-/* Trade Talk visual system pass: Tools should feel like compact field apps. */
+/* Shop Talk visual system pass: Tools should feel like compact field apps. */
 .v2-tools-page .v2-tools-command {
   border: 1px solid var(--v2-border);
   border-radius: 18px;
@@ -7052,4 +7052,20 @@
   .v2-line-price-signal small {
     white-space: normal;
   }
+}
+
+/* Screen-real-estate cleanup: Tools is a launcher, not a marketing section. */
+.v2-tools-page .v2-tools-header {
+  min-height: 0;
+  margin: 0;
+  padding-block: 0 2px;
+}
+
+.v2-tools-page .v2-tools-header h1 {
+  font-size: clamp(28px, 4vw, 44px);
+  line-height: 1;
+}
+
+.v2-tools-page .v2-tool-section-stack {
+  gap: 10px;
 }
