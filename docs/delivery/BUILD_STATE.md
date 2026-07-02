@@ -2,14 +2,14 @@
 
 Last updated: 2026-07-02 America/New_York
 Current gate: Gate A launch hardening
-Current phase: Packet 08 Gate A launch hardening plus Gate B behind-flag backbone work: machine gates and live workflow smokes are mostly green; latest deployed UI polish remains production-monitored; the Shop Talk Reddit-model backbone is implemented and DB-verified on a `codex/*` branch and still requires merge, deploy, `/api/health`, and live workflow smoke before exposure.
+Current phase: Packet 08 Gate A launch hardening plus Gate B behind-flag backbone work: machine gates and live workflow smokes are mostly green; the Shop Talk Reddit-model backbone is merged, deployed, migration-ready, and live-smoked while still hidden behind launch-readiness boundaries before broad exposure.
 Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `codex/shop-talk-reddit-backbone`
 Production release commit: see live `/api/health` build metadata
 
-## Latest Branch Pass - Shop Talk Reddit Backbone
+## Latest Packet 08 Pass - Shop Talk Reddit Backbone
 
-- Reviewed Claude's `docs/product/SHOP_TALK_REDDIT_MODEL_BUILD_PROMPT.md` from branch `claude/audit` at commit `2e61be4` and implemented the first durable backbone slice on branch `codex/shop-talk-reddit-backbone`.
+- Reviewed Claude's `docs/product/SHOP_TALK_REDDIT_MODEL_BUILD_PROMPT.md` from branch `claude/audit` at commit `2e61be4`, implemented the first durable backbone slice on branch `codex/shop-talk-reddit-backbone`, then fast-forwarded it to `master`.
 - Added migration `0017_shop_talk_reddit_backbone`:
   - resets seeded community member counts to real membership counts instead of fake public-size numbers
   - adds community ownership/moderator/member roles and archived-community support
@@ -39,7 +39,12 @@ Production release commit: see live `/api/health` build metadata
   - `npm run test:e2e` (pass)
   - `npm audit --omit=dev` (pass; 0 vulnerabilities)
   - focused migration/community/post integration pass also passed after updating the migration lifecycle test for `0017`
-- Deployment status: not deployed yet. This branch introduces migration `0017`, so merge/deploy must include migration readiness, `/api/health` verification, and a live/read-path smoke before any public Shop Talk exposure.
+- Production deployment completed from `master`:
+  - runtime source commit `dba2acb77a3cc36d9757c895591e81e4bb24cf6e` was pushed to GitHub and picked up by Railway production service `RIVT`
+  - live `https://rivt.pro/api/health` returned `ok: true`, build commit `dba2acb77a3cc36d9757c895591e81e4bb24cf6e`, migration `0017_shop_talk_reddit_backbone`, PostgreSQL, S3-compatible object storage, and configured Sentry
+  - `EXPECTED_SOURCE_COMMIT=dba2acb77a3cc36d9757c895591e81e4bb24cf6e npm run monitor:production` passed with seven anonymous private-route checks and operational controls off
+  - live cross-user Shop Talk smoke `shop-talk-reddit-20260702233531-a72dd0` passed against production: disposable users created a community, duplicate-community guard fired, scoped post listing worked, a second user answered, non-author Verified Fix was rejected, author Verified Fix succeeded, and cleanup left `0` smoke communities, `0` smoke posts, and `0` open smoke accounts
+- Exposure boundary: the backbone is deployed, but broad public Shop Talk exposure still requires the moderation/reporting policy and Gate B public-UGC readiness work tracked under R-024.
 
 ## Latest Packet 08 Pass - UI Polish Phase 1 Launch Blockers
 

@@ -10,14 +10,14 @@ Status values:
 
 Evidence must eventually link to implementation, automated tests, manual acceptance proof, and deployed build.
 
-## Traceability Addendum - 2026-07-02 Shop Talk Reddit Backbone Branch
+## Traceability Addendum - 2026-07-02 Shop Talk Reddit Backbone
 
-- `GA-COM-001` gains branch-level backend evidence on `codex/shop-talk-reddit-backbone`: Shop Talk posts now require a real `community_id`, can be created/listed by community slug, and existing posts are backfilled into starter communities by migration `0017_shop_talk_reddit_backbone`.
-- `GA-COM-002` gains branch-level community evidence: authenticated users can create communities, creators become owners, duplicate candidates are surfaced before creation, and member counts are derived from actual `community_members` rows rather than seeded fake values.
-- `GA-COM-003` gains branch-level server-owned answer evidence: `shop_talk_answers` persists answers, the UI writes answers through the API when authenticated, and Verified Fix assignment is enforced server-side so only the original post author can mark the fix.
+- `GA-COM-001` gains deployed backend evidence on `master` commit `dba2acb77a3cc36d9757c895591e81e4bb24cf6e`: Shop Talk posts now require a real `community_id`, can be created/listed by community slug, and existing posts are backfilled into starter communities by migration `0017_shop_talk_reddit_backbone`.
+- `GA-COM-002` gains deployed community evidence: authenticated users can create communities, creators become owners, duplicate candidates are surfaced before creation, and member counts are derived from actual `community_members` rows rather than seeded fake values.
+- `GA-COM-003` gains deployed server-owned answer evidence: `shop_talk_answers` persists answers, the UI writes answers through the API when authenticated, and Verified Fix assignment is enforced server-side so only the original post author can mark the fix.
 - `GA-UX-005` gains honesty evidence: fallback/offline community metadata no longer claims large fake member counts, and the old localStorage-only reply pathway was removed from the Shop Talk view.
-- `GA-OPS-007` gains local automated evidence for this branch slice: `npm run build`, `npm run lint`, `npm run test:unit`, `npm run test:e2e`, and `npm audit --omit=dev` passed. The changed DB integration tests skip locally because `TEST_DATABASE_URL` is not configured, and the aggregate integration command timed out locally; this is not production verification.
-- `GA-OPS-008` is unchanged for deployment: this branch has not been merged/deployed, and migration `0017_shop_talk_reddit_backbone` needs CI/production migration evidence plus a live read/write smoke before this can be treated as production-ready.
+- `GA-OPS-007` gains automated evidence: `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test:unit`, `npm run test:integration`, `npm run test:e2e`, and `npm audit --omit=dev` passed; the integration pass used a Railway-backed `TEST_DATABASE_URL` and included migration lifecycle coverage through `0017`.
+- `GA-OPS-008` gains production evidence: live `https://rivt.pro/api/health` reported commit `dba2acb77a3cc36d9757c895591e81e4bb24cf6e` with migration `0017_shop_talk_reddit_backbone`; `EXPECTED_SOURCE_COMMIT=dba2acb77a3cc36d9757c895591e81e4bb24cf6e npm run monitor:production` passed; live cross-user smoke `shop-talk-reddit-20260702233531-a72dd0` proved community creation, duplicate guard, scoped post listing, answer persistence, non-author Verified Fix rejection, author Verified Fix success, and cleanup.
 
 ## Traceability Addendum - 2026-07-02 UI Polish Phase 1 Launch Blockers
 
