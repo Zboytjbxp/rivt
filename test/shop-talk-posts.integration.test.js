@@ -250,5 +250,32 @@ if (!testDatabaseUrl) {
       body: { title: "", trade: "Electrical" },
     });
     assert.equal(invalid.response.status, 422);
+
+    const forbiddenDelete = await requestJson(baseUrl, `/api/v1/shop-talk/posts/${post.id}`, {
+      method: "DELETE",
+      cookie: answerer.cookie,
+      idempotencyKey: randomUUID(),
+    });
+    assert.equal(forbiddenDelete.response.status, 403);
+
+    const deleteMissingKey = await requestJson(baseUrl, `/api/v1/shop-talk/posts/${post.id}`, {
+      method: "DELETE",
+      cookie: author.cookie,
+    });
+    assert.equal(deleteMissingKey.response.status, 400);
+    assert.equal(deleteMissingKey.payload.error.code, "IDEMPOTENCY_KEY_REQUIRED");
+
+    const deleted = await requestJson(baseUrl, `/api/v1/shop-talk/posts/${post.id}`, {
+      method: "DELETE",
+      cookie: author.cookie,
+      idempotencyKey: randomUUID(),
+    });
+    assert.equal(deleted.response.status, 200);
+    assert.equal(deleted.payload.data.deleted, true);
+    assert.equal(deleted.payload.data.postId, post.id);
+
+    const listAfterDelete = await requestJson(baseUrl, "/api/v1/shop-talk/posts", { cookie: author.cookie });
+    assert.equal(listAfterDelete.response.status, 200);
+    assert.equal(listAfterDelete.payload.data.posts.some((entry) => entry.id === post.id), false);
   });
 }

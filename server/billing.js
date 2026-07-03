@@ -4,6 +4,7 @@ import { logInfo, logWarn } from "./logger.js";
 
 const STRIPE_API_VERSION = "2026-02-25.clover";
 const ACTIVE_SUBSCRIPTION_STATUSES = new Set(["active", "trialing"]);
+const MUTABLE_SUBSCRIPTION_STATUSES = new Set(["active", "trialing", "past_due", "unpaid", "incomplete"]);
 
 function envValue(name, fallback = undefined) {
   const value = process.env[name]?.trim();
@@ -146,6 +147,27 @@ async function getBillingStatus(database, accountId, config) {
   return mapBillingStatus(result.rows[0] ?? null, config);
 }
 
+async function getLatestMutableSubscription(database, accountId) {
+  const result = await database.query(
+    `SELECT stripe_subscription_id, status, current_period_end, cancel_at_period_end
+     FROM billing_subscriptions
+     WHERE account_id = $1
+       AND stripe_subscription_id IS NOT NULL
+       AND status <> 'canceled'
+       AND status <> 'incomplete_expired'
+     ORDER BY
+       CASE WHEN status = ANY($2::text[]) THEN 0 ELSE 1 END,
+       updated_at DESC
+     LIMIT 1`,
+    [accountId, [...MUTABLE_SUBSCRIPTION_STATUSES]],
+  );
+  const subscription = result.rows[0];
+  if (!subscription?.stripe_subscription_id) {
+    throw new ApiError(409, "BILLING_SUBSCRIPTION_NOT_FOUND", "No active Stripe subscription was found for this account.");
+  }
+  return subscription;
+}
+
 async function upsertBillingCustomer(client, { accountId, stripeCustomerId, email }) {
   await client.query(
     `INSERT INTO billing_customers (account_id, stripe_customer_id, email)
@@ -276,6 +298,68 @@ async function updateSubscriptionFromStripeObject(client, subscription, eventId 
   );
 
   return { accountId, updated: true };
+}
+
+async function updateSubscriptionCancellation(database, config, request, cancelAtPeriodEnd) {
+  if (!config.secretKey) {
+    throw new ApiError(424, "BILLING_PROVIDER_UNAVAILABLE", "Stripe is not configured yet.", {
+      provider: "stripe",
+      mode: "setup_required",
+      missing: ["STRIPE_SECRET_KEY"],
+    });
+  }
+  requireActiveVerifiedBillingActor(request.actor);
+  const current = await getLatestMutableSubscription(database, request.actor.account.id);
+  if (Boolean(current.cancel_at_period_end) === cancelAtPeriodEnd) {
+    return {
+      subscriptionId: current.stripe_subscription_id,
+      changed: false,
+      billing: await getBillingStatus(database, request.actor.account.id, config),
+    };
+  }
+
+  const subscription = await stripeRequest(
+    config,
+    `/subscriptions/${encodeURIComponent(current.stripe_subscription_id)}`,
+    { cancel_at_period_end: cancelAtPeriodEnd ? "true" : "false" },
+    { idempotencyKey: request.get("idempotency-key") || `${request.requestId}:${cancelAtPeriodEnd ? "cancel" : "resume"}` },
+  );
+
+  const client = await database.connect();
+  try {
+    await client.query("BEGIN");
+    await updateSubscriptionFromStripeObject(client, subscription, `manual.${request.requestId}`);
+    await client.query(
+      `INSERT INTO audit_events (request_id, actor_account_id, action, subject_type, subject_id, metadata)
+       VALUES ($1, $2, $3, 'stripe_subscription', $4, $5)`,
+      [
+        request.requestId,
+        request.actor.account.id,
+        cancelAtPeriodEnd ? "billing.subscription_cancel_requested" : "billing.subscription_resume_requested",
+        subscription.id,
+        JSON.stringify({ cancelAtPeriodEnd, status: subscription.status ?? null }),
+      ],
+    );
+    await client.query("COMMIT");
+  } catch (error) {
+    await client.query("ROLLBACK").catch(() => {});
+    throw error;
+  } finally {
+    client.release();
+  }
+
+  logInfo(cancelAtPeriodEnd ? "billing.subscription_cancel_requested" : "billing.subscription_resume_requested", {
+    requestId: request.requestId,
+    accountId: request.actor.account.id,
+    stripeSubscriptionId: subscription.id,
+    status: subscription.status ?? null,
+  });
+
+  return {
+    subscriptionId: subscription.id,
+    changed: true,
+    billing: await getBillingStatus(database, request.actor.account.id, config),
+  };
 }
 
 async function processStripeEvent(database, event) {
@@ -419,11 +503,24 @@ export function registerBillingRoutes({
     });
     response.status(201).json({ data: { url: session.url }, meta: { requestId: request.requestId } });
   }));
+
+  app.post("/api/v1/billing/subscription/cancel", requireAuthenticatedUser, requireV1Actor, writeRateLimit, asyncRoute(async (request, response) => {
+    const config = billingConfig(appOrigin);
+    const result = await updateSubscriptionCancellation(database, config, request, true);
+    response.json({ data: result, meta: { requestId: request.requestId } });
+  }));
+
+  app.post("/api/v1/billing/subscription/resume", requireAuthenticatedUser, requireV1Actor, writeRateLimit, asyncRoute(async (request, response) => {
+    const config = billingConfig(appOrigin);
+    const result = await updateSubscriptionCancellation(database, config, request, false);
+    response.json({ data: result, meta: { requestId: request.requestId } });
+  }));
 }
 
 export const billingInternals = {
   ACTIVE_SUBSCRIPTION_STATUSES,
   billingConfig,
+  getLatestMutableSubscription,
   mapBillingStatus,
   subscriptionPeriodEnd,
   verifyStripeSignature,

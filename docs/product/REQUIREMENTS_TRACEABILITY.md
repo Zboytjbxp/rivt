@@ -10,6 +10,15 @@ Status values:
 
 Evidence must eventually link to implementation, automated tests, manual acceptance proof, and deployed build.
 
+## Traceability Addendum - 2026-07-03 Subscription Controls and Shop Talk Cleanup
+
+- `GA-UX-005` gains customer-control billing evidence on branch `codex/subscription-cleanup-controls`: RIVT Pro users can cancel directly from Settings without contacting support, keep access through the paid-through date, and resume a scheduled cancellation from the same screen.
+- `GA-UX-005` also gains honest billing-copy evidence: the free/pro plan UI now distinguishes Stripe-managed payment details from RIVT-owned cancel/resume controls and does not imply RIVT takes a cut of job payments.
+- `GA-COM-001` gains cleanup evidence: Shop Talk authors can delete their own posts through a server-owned route that hides the post from feeds and removes active media/upload records instead of leaving test or mistake posts stuck.
+- `GA-OPS-004` gains auditability evidence: subscription cancel/resume requests and Shop Talk post deletions write audit events, preserving support visibility instead of making destructive client-only changes.
+- `GA-OPS-007` gains local automated evidence: `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test:unit`, targeted billing/Shop Talk integration tests, `npm run test:e2e`, `npm audit --omit=dev`, and `npm run test:integration` passed. Aggregate `npm run test` first exceeded a 5-minute local command window, so the equivalent unit and integration scripts were run and recorded separately.
+- `GA-OPS-008` production deployment evidence is pending for this branch at the time of this addendum.
+
 ## Traceability Addendum - 2026-07-03 Shop Talk Post Photos
 
 - `GA-COM-001` gains local implementation evidence on branch `codex/shop-talk-image-posts`: Shop Talk posts can now carry server-owned photo media through `POST /api/v1/shop-talk/posts/:postId/media`, and post reads include signed thumbnail data for feed/detail rendering.

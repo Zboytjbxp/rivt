@@ -37,7 +37,7 @@ import { usePro } from "../pro/usePro";
 import { usePushNotifications } from "../notifications/usePushNotifications";
 import { UpgradeModal } from "../pro/UpgradeModal";
 import { RIVT_PRO_OFFER } from "../pro/proOffer";
-import { BillingApiError, startBillingPortal } from "../../lib/billing";
+import { BillingApiError, cancelSubscription, resumeSubscription, startBillingPortal } from "../../lib/billing";
 import { usePersona, useTradeModeToggle } from "../persona/usePersona";
 import "../pro/pro.css";
 import { brandConfig, type ThemeMode, type ThemePalette } from "../../brandConfig";
@@ -1084,14 +1084,20 @@ function PlanCard() {
   const { isPro, activatedAt, billing, billingLoading, refreshBilling } = usePro();
   const [upgradeOpen, setUpgradeOpen] = useState(false);
   const [portalState, setPortalState] = useState<"idle" | "opening">("idle");
-  const [billingMessage, setBillingMessage] = useState("");
+  const [subscriptionAction, setSubscriptionAction] = useState<"idle" | "cancelling" | "resuming">("idle");
+  const [confirmCancel, setConfirmCancel] = useState(false);
+  const [billingMessage, setBillingMessage] = useState<{ kind: "success" | "warning"; text: string } | null>(null);
 
   const missingBilling = billing?.provider.missing ?? [];
   const providerReady = billing ? billing.provider.checkoutConfigured : true;
+  const activeThroughLabel = activatedAt
+    ? new Date(activatedAt).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })
+    : null;
+  const actionBusy = subscriptionAction !== "idle";
 
   async function openBillingPortal() {
     setPortalState("opening");
-    setBillingMessage("");
+    setBillingMessage(null);
     try {
       const portal = await startBillingPortal();
       window.location.href = portal.url;
@@ -1102,8 +1108,46 @@ function PlanCard() {
       const missing = Array.isArray(details?.missing)
         ? ` Missing: ${details.missing.join(", ")}.`
         : "";
-      setBillingMessage(`${error instanceof Error ? error.message : "Billing portal is not available yet."}${missing}`);
+      setBillingMessage({ kind: "warning", text: `${error instanceof Error ? error.message : "Billing portal is not available yet."}${missing}` });
       setPortalState("idle");
+    }
+  }
+
+  async function handleCancelSubscription() {
+    setSubscriptionAction("cancelling");
+    setBillingMessage(null);
+    try {
+      const result = await cancelSubscription();
+      await refreshBilling();
+      setConfirmCancel(false);
+      const paidThrough = result.billing.activeUntil
+        ? new Date(result.billing.activeUntil).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })
+        : activeThroughLabel;
+      setBillingMessage({
+        kind: "success",
+        text: paidThrough
+          ? `Cancellation scheduled. You keep RIVT Pro through ${paidThrough}.`
+          : "Cancellation scheduled. Your RIVT Pro subscription will not renew.",
+      });
+    } catch (error) {
+      setBillingMessage({ kind: "warning", text: error instanceof Error ? error.message : "Could not cancel the subscription right now." });
+    } finally {
+      setSubscriptionAction("idle");
+    }
+  }
+
+  async function handleResumeSubscription() {
+    setSubscriptionAction("resuming");
+    setBillingMessage(null);
+    try {
+      await resumeSubscription();
+      await refreshBilling();
+      setConfirmCancel(false);
+      setBillingMessage({ kind: "success", text: "Your RIVT Pro subscription will continue." });
+    } catch (error) {
+      setBillingMessage({ kind: "warning", text: error instanceof Error ? error.message : "Could not resume the subscription right now." });
+    } finally {
+      setSubscriptionAction("idle");
     }
   }
 
@@ -1151,7 +1195,7 @@ function PlanCard() {
           <button type="button" className="v2-plan-upgrade-btn" onClick={() => setUpgradeOpen(true)}>
             Start RIVT Pro
           </button>
-          <p className="v2-plan-note">No transaction fees on job payments. RIVT subscriptions are separate from contractor-to-subcontractor payment terms.</p>
+          <p className="v2-plan-note">No transaction fees on job payments. Cancel from this screen anytime; no support ticket required.</p>
           <button type="button" className="v2-plan-secondary-btn" onClick={refreshBilling}>
             Refresh billing status
           </button>
@@ -1159,17 +1203,43 @@ function PlanCard() {
       )}
       {isPro && activatedAt && (
         <>
-          <p className="v2-plan-note">
-            Pro active through {new Date(activatedAt).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
-            {billing?.cancelAtPeriodEnd ? " · cancels at period end" : ""}
+          <p className={billing?.cancelAtPeriodEnd ? "v2-plan-warning" : "v2-plan-note"}>
+            {billing?.cancelAtPeriodEnd
+              ? `Cancellation scheduled. You keep Pro through ${activeThroughLabel}.`
+              : `Pro active through ${activeThroughLabel}.`}
           </p>
-          <button type="button" className="v2-plan-secondary-btn" onClick={openBillingPortal} disabled={portalState === "opening"}>
-            <CreditCard size={16} />
-            {portalState === "opening" ? "Opening..." : "Manage billing"}
-          </button>
+          <div className="v2-plan-action-grid">
+            <button type="button" className="v2-plan-secondary-btn" onClick={openBillingPortal} disabled={portalState === "opening"}>
+              <CreditCard size={16} />
+              {portalState === "opening" ? "Opening..." : "Manage payment details"}
+            </button>
+            {billing?.cancelAtPeriodEnd ? (
+              <button type="button" className="v2-plan-keep-btn" onClick={handleResumeSubscription} disabled={actionBusy}>
+                {subscriptionAction === "resuming" ? "Keeping Pro..." : "Keep Pro subscription"}
+              </button>
+            ) : (
+              <button type="button" className="v2-plan-cancel-btn" onClick={() => setConfirmCancel(true)} disabled={actionBusy}>
+                Cancel subscription
+              </button>
+            )}
+          </div>
+          {confirmCancel && !billing?.cancelAtPeriodEnd && (
+            <section className="v2-plan-cancel-panel" aria-label="Confirm subscription cancellation">
+              <strong>Cancel RIVT Pro?</strong>
+              <p>You will keep Pro through {activeThroughLabel}. After that, your account returns to the free plan. No call, no email, no runaround.</p>
+              <div>
+                <button type="button" onClick={handleCancelSubscription} disabled={actionBusy}>
+                  {subscriptionAction === "cancelling" ? "Cancelling..." : "Yes, cancel renewal"}
+                </button>
+                <button type="button" onClick={() => setConfirmCancel(false)} disabled={actionBusy}>
+                  Keep it active
+                </button>
+              </div>
+            </section>
+          )}
         </>
       )}
-      {billingMessage && <p className="v2-plan-warning">{billingMessage}</p>}
+      {billingMessage && <p className={billingMessage.kind === "success" ? "v2-plan-success" : "v2-plan-warning"}>{billingMessage.text}</p>}
       {upgradeOpen && <UpgradeModal onClose={() => setUpgradeOpen(false)} />}
     </div>
   );

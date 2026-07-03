@@ -102,6 +102,19 @@ export async function uploadShopTalkPostPhoto(postId: string, file: File): Promi
   }
 }
 
+export async function deleteShopTalkPost(postId: string): Promise<boolean> {
+  try {
+    const response = await fetch(apiPath(`/api/v1/shop-talk/posts/${encodeURIComponent(postId)}`), {
+      method: "DELETE",
+      credentials: "include",
+      headers: { "Idempotency-Key": crypto.randomUUID() },
+    });
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
+
 /** Fetch recent Shop Talk posts, or null if the API is unavailable. */
 export async function fetchShopTalkPosts(communitySlug?: string | null): Promise<ServerShopTalkPost[] | null> {
   try {

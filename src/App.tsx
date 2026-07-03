@@ -70,6 +70,7 @@ import { communityPromptPosts, fallbackNewsItems } from "./features/shop-talk/fa
 import {
   createShopTalkAnswer,
   createShopTalkPost,
+  deleteShopTalkPost,
   fetchShopTalkPosts,
   reportShopTalkTarget,
   uploadShopTalkPostPhoto,
@@ -1164,6 +1165,26 @@ function App() {
     );
   }
 
+  async function handleDeleteShopTalkPost(postId: string) {
+    const target = communityPosts.find((candidate) => candidate.id === postId);
+    const serverOwned = Boolean(target && !target.badge && !postId.startsWith("local-"));
+    if (serverOwned && (!isGuest && authUser && onboardingComplete)) {
+      const deleted = await deleteShopTalkPost(postId);
+      if (!deleted) {
+        addActivity("Shop Talk post was not deleted", "RIVT could not remove that post from the server. Try again in a minute.");
+        return false;
+      }
+    } else if (serverOwned) {
+      addActivity("Sign in required", "Sign in again before deleting a server-owned Shop Talk post.");
+      return false;
+    }
+
+    setCommunityPosts((current) => current.filter((post) => post.id !== postId));
+    if (shopTalkPostId === postId) setShopTalkPostId(null);
+    addActivity("Shop Talk post deleted", target ? `"${target.title}" was removed from the feed.` : "The post was removed from the feed.");
+    return true;
+  }
+
   function handleCommunityCreated(community: ServerCommunity) {
     const display = mapServerCommunity(community);
     setCommunities((current) => [
@@ -1703,6 +1724,7 @@ function App() {
             onReportAnswer={handleReportCommunityAnswer}
             onReportCommunity={handleReportCommunity}
             onNewPost={handleNewShopTalkPost}
+            onDeletePost={handleDeleteShopTalkPost}
             onCommunityCreated={handleCommunityCreated}
           />
         ) : ["Crew", "Reviews"].includes(activeView) ? (

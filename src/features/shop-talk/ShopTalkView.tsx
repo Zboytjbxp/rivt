@@ -593,6 +593,7 @@ export function ShopTalkView({
   onReportAnswer,
   onReportCommunity,
   onNewPost,
+  onDeletePost,
   onCommunityCreated,
 }: {
   profile: AccountProfile;
@@ -618,6 +619,7 @@ export function ShopTalkView({
   onReportAnswer: (postId: string, answerId: string, reason: CommunityReport["reason"], note?: string) => void | Promise<void>;
   onReportCommunity: (community: CommunityDisplay, reason: CommunityReport["reason"], note?: string) => void | Promise<void>;
   onNewPost: (flair: PostFlair, title: string, trade: Trade | "General", body: string, postType: PostType, subTrade?: string, subLocation?: string, subRate?: string, communitySlug?: string | null, photoFile?: File | null) => void | Promise<void>;
+  onDeletePost: (postId: string) => boolean | Promise<boolean>;
   onCommunityCreated: (community: ServerCommunity) => void;
 }) {
   const persona = usePersona();
@@ -635,6 +637,7 @@ export function ShopTalkView({
   const [communityCreateError, setCommunityCreateError] = useState<string | null>(null);
   const [communityCreateBusy, setCommunityCreateBusy] = useState(false);
   const [duplicateCommunityCandidates, setDuplicateCommunityCandidates] = useState<ServerCommunity[]>([]);
+  const [deletingPostId, setDeletingPostId] = useState<string | null>(null);
   const [selectedCommunitySlug, setSelectedCommunitySlug] = useState<string | null>(initialCommunitySlug ?? null);
   const [talkQuery, setTalkQuery] = useState(() => initialQuery.trim());
   const [newsQuery, setNewsQuery] = useState("");
@@ -888,6 +891,7 @@ export function ShopTalkView({
   const selectedPostReactionState = selectedPost
     ? getPostReactionState(selectedPost)
     : { upvotes: 0, downvotes: 0, reaction: null, serverOwned: reactionStatus === "ready", pending: false };
+  const canDeleteSelectedPost = Boolean(selectedPost && selectedPost.author === profile.displayName && !selectedPost.badge);
   const SelectedCommunityIcon = selectedCommunity?.icon;
   const _selectedTradeThreads = filteredPosts.filter((post) => post.trade === selectedJobTrade || post.trade === "General");
   const _reactionLedgerLabel = reactionStatus === "ready"
@@ -897,6 +901,22 @@ export function ShopTalkView({
       : reactionStatus === "error"
         ? "Offline"
         : "Not loaded";
+
+  async function handleDeleteSelectedPost() {
+    if (!selectedPost) return;
+    const confirmed = window.confirm("Delete this Shop Talk post? It will be removed from the feed and any attached photo will be removed from active records.");
+    if (!confirmed) return;
+    setDeletingPostId(selectedPost.id);
+    try {
+      const deleted = await onDeletePost(selectedPost.id);
+      if (deleted) {
+        setSelectedPostId(null);
+        setMobileDetail(false);
+      }
+    } finally {
+      setDeletingPostId(null);
+    }
+  }
 
   // ── Trending tags ─────────────────────────────────────────────────────────
   const trendingTags = useMemo(() => {
@@ -1433,6 +1453,17 @@ export function ShopTalkView({
                   >
                     {bookmarkedIds.has(selectedPost.id) ? <BookmarkCheck size={16} /> : <Bookmark size={16} />}
                   </button>
+                  {canDeleteSelectedPost && (
+                    <button
+                      type="button"
+                      className="shop-detail-delete"
+                      aria-label="Delete this post"
+                      disabled={deletingPostId === selectedPost.id}
+                      onClick={() => void handleDeleteSelectedPost()}
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  )}
                 </div>
               </div>
               {locallyAnswered.has(selectedPost.id) && (

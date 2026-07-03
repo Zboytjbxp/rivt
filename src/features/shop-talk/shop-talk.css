@@ -1010,7 +1010,8 @@
   flex-shrink: 0;
 }
 
-.shop-detail-bookmark {
+.shop-detail-bookmark,
+.shop-detail-delete {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1029,6 +1030,20 @@
 .shop-detail-bookmark.active {
   color: var(--v2-accent-text, var(--v2-accent, var(--accent)));
   border-color: var(--v2-accent, var(--accent));
+}
+
+.shop-detail-delete {
+  color: var(--v2-danger, #ef4444);
+}
+
+.shop-detail-delete:hover {
+  border-color: color-mix(in srgb, var(--v2-danger, #ef4444) 60%, var(--border));
+  background: color-mix(in srgb, var(--v2-danger, #ef4444) 8%, transparent);
+}
+
+.shop-detail-delete:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
 }
 
 /* ─── Shop Talk: Answered Banner + Badge ─────────────────────────────────────── */

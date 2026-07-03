@@ -407,8 +407,97 @@
   opacity: 0.55;
 }
 
+.v2-plan-action-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 10px;
+}
+
+.v2-plan-cancel-btn,
+.v2-plan-keep-btn {
+  display: inline-flex;
+  width: 100%;
+  min-height: 42px;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--v2-radius-md);
+  font: inherit;
+  font-size: 13px;
+  font-weight: var(--v2-weight-strong);
+  cursor: pointer;
+}
+
+.v2-plan-cancel-btn {
+  border: 1px solid color-mix(in srgb, var(--v2-danger, #ef4444) 45%, var(--v2-border));
+  background: color-mix(in srgb, var(--v2-danger, #ef4444) 8%, var(--v2-surface));
+  color: var(--v2-danger, #ef4444);
+}
+
+.v2-plan-keep-btn {
+  border: 1px solid color-mix(in srgb, var(--v2-success, #22c55e) 45%, var(--v2-border));
+  background: color-mix(in srgb, var(--v2-success, #22c55e) 10%, var(--v2-surface));
+  color: var(--v2-success, #22c55e);
+}
+
+.v2-plan-cancel-btn:disabled,
+.v2-plan-keep-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.v2-plan-cancel-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid color-mix(in srgb, var(--v2-danger, #ef4444) 30%, var(--v2-border));
+  border-radius: var(--v2-radius-md);
+  background: color-mix(in srgb, var(--v2-danger, #ef4444) 6%, var(--v2-surface));
+}
+
+.v2-plan-cancel-panel strong {
+  color: var(--v2-text);
+  font-size: 14px;
+}
+
+.v2-plan-cancel-panel p {
+  margin: 0;
+  color: var(--v2-text-muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.v2-plan-cancel-panel div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 8px;
+}
+
+.v2-plan-cancel-panel button {
+  min-height: 40px;
+  border-radius: var(--v2-radius-md);
+  border: 1px solid var(--v2-border);
+  background: var(--v2-surface-muted);
+  color: var(--v2-text);
+  font: inherit;
+  font-size: 13px;
+  font-weight: var(--v2-weight-strong);
+  cursor: pointer;
+}
+
+.v2-plan-cancel-panel button:first-child {
+  border-color: color-mix(in srgb, var(--v2-danger, #ef4444) 46%, var(--v2-border));
+  color: var(--v2-danger, #ef4444);
+}
+
+.v2-plan-cancel-panel button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
 .v2-plan-note,
-.v2-plan-warning {
+.v2-plan-warning,
+.v2-plan-success {
   margin: 0;
   font-size: 13px;
   line-height: 1.45;
@@ -426,6 +515,14 @@
   color: var(--v2-warning);
 }
 
+.v2-plan-success {
+  border: 1px solid color-mix(in srgb, var(--v2-success, #22c55e) 34%, var(--v2-border));
+  border-radius: var(--v2-radius-md);
+  padding: 10px 12px;
+  background: color-mix(in srgb, var(--v2-success, #22c55e) 10%, var(--v2-surface));
+  color: var(--v2-success, #22c55e);
+}
+
 @media (max-width: 640px) {
   .v2-plan-offer {
     grid-template-columns: 1fr;
@@ -433,5 +530,10 @@
 
   .v2-plan-limit-row {
     align-items: flex-start;
+  }
+
+  .v2-plan-action-grid,
+  .v2-plan-cancel-panel div {
+    grid-template-columns: 1fr;
   }
 }

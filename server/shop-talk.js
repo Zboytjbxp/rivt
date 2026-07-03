@@ -521,6 +521,79 @@ export function registerShopTalkRoutes({
     }),
   );
 
+  app.delete("/api/v1/shop-talk/posts/:postId", requireV1AuthenticatedUser, requireV1Actor, writeRateLimit, asyncRoute(async (request, response) => {
+    const { postId } = validate(shopTalkPostParamsSchema, request.params);
+    const result = await runIdempotentMutation(
+      request,
+      request.actor.account.id,
+      `shop-talk.post.delete:${postId}`,
+      async (client) => {
+        const post = await client.query(
+          `SELECT id, author_account_id, moderation_status
+           FROM shop_talk_posts
+           WHERE id = $1`,
+          [postId],
+        );
+        if (!post.rowCount) {
+          throw new ApiError(404, "SHOP_TALK_POST_NOT_FOUND", "That Shop Talk post does not exist.");
+        }
+        if (post.rows[0].author_account_id !== request.actor.account.id) {
+          throw new ApiError(403, "SHOP_TALK_DELETE_FORBIDDEN", "Only the post author can delete this Shop Talk post.");
+        }
+
+        const uploadRows = await client.query(
+          `SELECT upload_id
+           FROM shop_talk_post_media
+           WHERE post_id = $1
+             AND status = 'active'`,
+          [postId],
+        );
+        const uploadIds = uploadRows.rows.map((row) => row.upload_id);
+
+        await client.query(
+          `UPDATE shop_talk_posts
+           SET moderation_status = 'hidden'
+           WHERE id = $1`,
+          [postId],
+        );
+        await client.query(
+          `UPDATE shop_talk_post_media
+           SET status = 'removed', updated_at = now()
+           WHERE post_id = $1
+             AND status = 'active'`,
+          [postId],
+        );
+        if (uploadIds.length) {
+          await client.query(
+            `UPDATE uploads
+             SET upload_status = 'removed', verified_at = now()
+             WHERE id = ANY($1::uuid[])`,
+            [uploadIds],
+          );
+        }
+        await client.query(
+          `INSERT INTO audit_events (request_id, actor_account_id, action, subject_type, subject_id, metadata)
+           VALUES ($1, $2, 'shop_talk.post_deleted', 'shop_talk_post', $3, $4)`,
+          [
+            request.requestId,
+            request.actor.account.id,
+            postId,
+            JSON.stringify({ removedUploadCount: uploadIds.length }),
+          ],
+        );
+
+        return {
+          status: 200,
+          body: {
+            data: { deleted: true, postId, removedUploadCount: uploadIds.length },
+            meta: { requestId: request.requestId },
+          },
+        };
+      },
+    );
+    sendIdempotentResult(response, result);
+  }));
+
   app.get("/api/v1/shop-talk/posts/:postId/answers", requireV1AuthenticatedUser, requireV1Actor, asyncRoute(async (request, response) => {
     const { postId } = validate(shopTalkPostParamsSchema, request.params);
     const found = await database.query(

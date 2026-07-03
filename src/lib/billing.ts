@@ -52,3 +52,33 @@ export async function startBillingPortal() {
   });
   return body.data;
 }
+
+export async function cancelSubscription() {
+  const body = await billingRequest<{ data: { billing: BillingStatus; changed: boolean; subscriptionId: string } }>(
+    "/api/v1/billing/subscription/cancel",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Idempotency-Key": crypto.randomUUID(),
+      },
+      body: "{}",
+    },
+  );
+  return body.data;
+}
+
+export async function resumeSubscription() {
+  const body = await billingRequest<{ data: { billing: BillingStatus; changed: boolean; subscriptionId: string } }>(
+    "/api/v1/billing/subscription/resume",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Idempotency-Key": crypto.randomUUID(),
+      },
+      body: "{}",
+    },
+  );
+  return body.data;
+}

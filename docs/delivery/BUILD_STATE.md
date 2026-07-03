@@ -7,6 +7,42 @@ Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
 Production release commit: verify with live `/api/health`; latest runtime feature evidence is recorded below and docs-only evidence commits may supersede the served build SHA.
 
+## Latest Packet 08 Pass - Subscription Controls and Shop Talk Cleanup
+
+- Implemented subscription cancellation controls and Shop Talk cleanup on branch `codex/subscription-cleanup-controls`.
+- Added customer-friendly RIVT Pro subscription controls:
+  - authenticated `POST /api/v1/billing/subscription/cancel` schedules Stripe cancellation at period end
+  - authenticated `POST /api/v1/billing/subscription/resume` clears a scheduled cancellation
+  - both routes update server-owned billing rows immediately from Stripe's subscription response
+  - both routes record append-only audit events
+  - cancellation does not depend on Stripe Customer Portal setup; only the Stripe secret key and an existing subscription are required
+- Updated the Settings plan card:
+  - free-plan copy now explicitly says subscriptions can be cancelled from the screen without a support ticket
+  - Pro users see `Manage payment details` for Stripe portal access
+  - Pro users also see a direct `Cancel subscription` control
+  - scheduled cancellations show the paid-through date and a `Keep Pro subscription` resume action
+- Added safe Shop Talk post cleanup:
+  - authenticated `DELETE /api/v1/shop-talk/posts/:postId` requires an idempotency key
+  - only the post author can delete the post
+  - deletion hides the post, marks attached Shop Talk media as removed, marks linked upload records removed, and records an audit event
+  - the Shop Talk detail view shows a delete control only for the current user's own posts
+- Preserved launch boundaries:
+  - no homeowner flows, fake verification, payment escrow, job-payment processing, or frontend-only billing entitlement was added
+  - Stripe remains the billing provider; RIVT only exposes a straightforward control layer around subscription management
+  - Shop Talk cleanup is soft-delete/audited rather than destructive production data removal
+- Local gates:
+  - `npm run build` (pass)
+  - `npm run lint` (pass)
+  - `npm run lint:security` (pass)
+  - `npm run test:unit` (pass; 44/44)
+  - `node --env-file-if-exists=.env --test --test-concurrency=1 test/billing.test.js test/shop-talk-posts.integration.test.js` (pass)
+  - `npm run test:e2e` (pass; desktop and mobile jobs/discovery)
+  - `npm audit --omit=dev` (pass; 0 vulnerabilities)
+  - `npm run test:integration` (pass with extended local command window; 17/17 integration tests)
+  - aggregate `npm run test` was attempted first and exceeded a 5-minute local command window; `test:unit` plus `test:integration` passed separately afterward
+- Production deployment status:
+  - pending for this branch at the time of this doc update
+
 ## Latest Packet 08 Pass - Shop Talk Post Photos
 
 - Implemented server-owned Shop Talk photo posts on branch `codex/shop-talk-image-posts`.
