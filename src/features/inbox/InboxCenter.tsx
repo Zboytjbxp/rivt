@@ -25,6 +25,7 @@ import {
   syncClientRecords,
   upsertClientRecord,
   type ClientRecord,
+  type ClientRecordMessage,
 } from "../clients/client-records";
 import "./inbox-center.css";
 
@@ -84,17 +85,64 @@ function saveClientThreads(threads: ClientThreads) {
   try { localStorage.setItem(CLIENT_THREADS_KEY, JSON.stringify(threads)); } catch { /* noop */ }
 }
 
+function sanitizeClientThreadMessages(messages: ClientMessage[] = []): ClientRecordMessage[] {
+  return messages
+    .filter((message) => !message.attachmentUrl)
+    .map(({ id, text, sentAt, from }) => ({ id, text, sentAt, from }))
+    .slice(-100);
+}
+
+function sortMessages(messages: ClientMessage[]): ClientMessage[] {
+  return [...messages].sort((a, b) => new Date(a.sentAt).getTime() - new Date(b.sentAt).getTime());
+}
+
+function mergeClientThreads(...sources: ClientThreads[]): ClientThreads {
+  const merged: ClientThreads = {};
+  for (const source of sources) {
+    for (const [clientId, messages] of Object.entries(source)) {
+      const byId = new Map<string, ClientMessage>();
+      for (const message of [...(merged[clientId] ?? []), ...messages]) {
+        byId.set(message.id, message);
+      }
+      merged[clientId] = sortMessages([...byId.values()]);
+    }
+  }
+  return merged;
+}
+
+function clientThreadsFromContacts(contacts: ClientContact[]): ClientThreads {
+  const threads: ClientThreads = {};
+  for (const contact of contacts) {
+    if (contact.threadMessages?.length) {
+      threads[contact.id] = contact.threadMessages.map((message) => ({ ...message }));
+    }
+  }
+  return threads;
+}
+
+function contactWithThreadMessages(contact: ClientContact, messages: ClientMessage[]): ClientContact {
+  return {
+    ...contact,
+    threadMessages: sanitizeClientThreadMessages(messages),
+  };
+}
+
 // ─── Client Conversation UI ───────────────────────────────────────────────────
 
 function ClientThread({
   contact,
   onBack,
+  onThreadSync,
 }: {
   contact: ClientContact;
   onBack: () => void;
+  onThreadSync: (contact: ClientContact) => void;
 }) {
   const [threads, setThreads] = useState<ClientThreads>(loadClientThreads);
   const [text, setText] = useState("");
+  const [syncMessage, setSyncMessage] = useState(
+    (contact.threadMessages?.length ?? 0) > 0 ? "Synced to your RIVT account." : "Saved on this device."
+  );
   const fileRef = useRef<HTMLInputElement>(null);
   const messagesRef = useRef<HTMLDivElement>(null);
 
@@ -104,6 +152,11 @@ function ClientThread({
     setThreads((prev) => {
       const next: ClientThreads = { ...prev, [contact.id]: [...(prev[contact.id] ?? []), msg] };
       saveClientThreads(next);
+      const updatedContact = contactWithThreadMessages(contact, next[contact.id] ?? []);
+      onThreadSync(updatedContact);
+      void upsertClientRecord(updatedContact).then((ok) => {
+        setSyncMessage(ok ? "Synced to your RIVT account." : "Saved on this device. Sync will retry when your account is reachable.");
+      });
       return next;
     });
     // Scroll to bottom
@@ -174,6 +227,7 @@ function ClientThread({
         <Avatar name={contact.name} size="sm" />
         <strong>{contact.name}</strong>
       </div>
+      <p className="v2-client-sync-note" role="status">{syncMessage}</p>
 
       <div className="v2-client-thread-messages" ref={messagesRef}>
         {messages.length === 0 ? (
@@ -252,8 +306,24 @@ function ClientsTab() {
     let cancelled = false;
     void syncClientRecords().then((result) => {
       if (cancelled) return;
-      setContacts(result.clients);
+      const localThreads = loadClientThreads();
+      const serverThreads = clientThreadsFromContacts(result.clients);
+      const mergedThreads = mergeClientThreads(serverThreads, localThreads);
+      saveClientThreads(mergedThreads);
+      const contactsWithThreads = result.clients.map((contact) => contactWithThreadMessages(contact, mergedThreads[contact.id] ?? []));
+      setContacts(contactsWithThreads);
       setSyncMessage(result.message);
+      if (Object.keys(localThreads).length) {
+        void Promise.all(
+          contactsWithThreads
+            .filter((contact) => mergedThreads[contact.id]?.length)
+            .map((contact) => upsertClientRecord(contact))
+        ).then((results) => {
+          if (!cancelled && results.some(Boolean)) {
+            setSyncMessage("Client records and text threads synced to your RIVT account.");
+          }
+        });
+      }
     });
     return () => { cancelled = true; };
   }, []);
@@ -269,6 +339,7 @@ function ClientsTab() {
       email: "",
       notes: "",
       createdAt: new Date().toISOString(),
+      threadMessages: [],
     };
     const next = [c, ...contacts];
     setContacts(next);
@@ -290,11 +361,21 @@ function ClientsTab() {
     return null;
   }
 
+  function syncContactThread(updated: ClientContact) {
+    setContacts((current) => {
+      const next = current.map((contact) => contact.id === updated.id ? updated : contact);
+      saveClientRecordsLocal(next);
+      return next;
+    });
+    setSelectedContact(updated);
+  }
+
   if (selectedContact) {
     return (
       <ClientThread
         contact={selectedContact}
         onBack={() => setSelectedContact(null)}
+        onThreadSync={syncContactThread}
       />
     );
   }

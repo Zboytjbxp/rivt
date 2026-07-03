@@ -119,7 +119,7 @@ function ClientBookView() {
       const updated = { ...editingClient, ...form };
       save(clients.map((c) => c.id === editingClient.id ? updated : c), updated);
     } else {
-      const next: Client = { id: crypto.randomUUID(), ...form, createdAt: new Date().toISOString() };
+      const next: Client = { id: crypto.randomUUID(), ...form, createdAt: new Date().toISOString(), threadMessages: [] };
       save([next, ...clients], next);
     }
     cancel();
