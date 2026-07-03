@@ -17,7 +17,7 @@ Evidence must eventually link to implementation, automated tests, manual accepta
 - `GA-UX-005` gains honesty evidence: report submission remains server-first and only falls back to local feedback when persistence fails; the UI no longer hides hardcoded reasons behind one-tap report actions.
 - `GA-UX-006` gains rendered mobile evidence: Playwright QA at 430px loaded the admin console with mocked reports, submitted a queue action, opened the Shop Talk report sheet, verified reason options, and found no horizontal overflow.
 - `GA-OPS-007` gains local automated evidence: `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test:unit`, `npm run test`, `npm run test:e2e`, and `npm audit --omit=dev` passed; the aggregate test pass included 15/15 DB-backed integration suites.
-- Deployment evidence remains pending until this branch is merged to `master`, Railway serves the new source, and live `/api/health` plus `npm run monitor:production` are recorded.
+- `GA-OPS-008` gains production evidence: live `https://rivt.pro/api/health` reported commit `f4db07fee34b760d10d9f16cc7593e163524e1a4` with migration `0018_shop_talk_moderation`; `EXPECTED_SOURCE_COMMIT=f4db07fee34b760d10d9f16cc7593e163524e1a4 npm run monitor:production` passed with seven anonymous private-route checks and configured Sentry.
 - Remaining boundary: this closes the first usable support console/report-reason UX gap, but broad public Shop Talk still requires an explicit moderation SLA/process and a live-support-window report review exercise.
 
 ## Traceability Addendum - 2026-07-03 Shop Talk Moderation and Reporting Backend

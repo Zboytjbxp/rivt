@@ -5,7 +5,7 @@ Current gate: Gate A launch hardening
 Current phase: Packet 08 Gate A launch hardening plus Gate B behind-flag backbone work: machine gates and live workflow smokes are mostly green; the Shop Talk Reddit-model backbone, moderation/reporting backend, and human-facing moderation console/report UX are implemented while still hidden behind launch-readiness boundaries before broad exposure.
 Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
-Production release commit: `87923e9f34723b3fb12cf7f20a6b5b4c96e8cfb5`
+Production release commit: `f4db07fee34b760d10d9f16cc7593e163524e1a4`
 
 ## Latest Packet 08 Pass - Shop Talk Human Moderation Console and Report UX
 
@@ -37,7 +37,10 @@ Production release commit: `87923e9f34723b3fb12cf7f20a6b5b4c96e8cfb5`
   - `npm run test` (pass; unit plus integration, 15/15 suites)
   - `npm run test:e2e` (pass)
   - `npm audit --omit=dev` (pass; 0 vulnerabilities)
-- Deployment status: pending merge to `master`, Railway production deploy, live `/api/health`, and `npm run monitor:production` evidence.
+- Production deployment completed from `master`:
+  - moderation-console source commit `f4db07fee34b760d10d9f16cc7593e163524e1a4` was pushed to GitHub and picked up by Railway production service `RIVT`
+  - live `https://rivt.pro/api/health` returned `ok: true`, build commit `f4db07fee34b760d10d9f16cc7593e163524e1a4`, migration `0018_shop_talk_moderation`, PostgreSQL, S3-compatible object storage, and configured Sentry
+  - `EXPECTED_SOURCE_COMMIT=f4db07fee34b760d10d9f16cc7593e163524e1a4 npm run monitor:production` passed with operational controls off, seven anonymous private-route checks, and 630 ms duration
 - Remaining boundary: this makes report review usable for support/admin staff, but broad public Shop Talk still needs the committed SLA/review process exercised against live production reports during the support window.
 
 ## Latest Packet 08 Pass - Shop Talk Moderation and Reporting Backend

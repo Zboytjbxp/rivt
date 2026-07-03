@@ -21,6 +21,26 @@ Add one entry per staging/production deployment.
 - Rollback performed/result:
 - Approval:
 
+## Current Production - Packet 08 Shop Talk Human Moderation Console and Report UX
+
+- Environment: Production (`https://rivt.pro`)
+- Date/time/timezone: 2026-07-03 America/New_York
+- Deployer: Codex through GitHub push to Railway-linked `master`
+- Source repository/branch: `Zboytjbxp/rivt`, `master`
+- Source commit: `f4db07fee34b760d10d9f16cc7593e163524e1a4`
+- Build/artifact ID: Railway-linked production deployment serving source `f4db07fee34b760d10d9f16cc7593e163524e1a4`; live `/api/health` is the runtime proof
+- Migration version before/after: `0018_shop_talk_moderation` / `0018_shop_talk_moderation` (no schema migration)
+- Feature-flag/config version: no provider credentials or operational-control flags changed
+- Provider/config changes (no secrets): no provider credentials changed; Sentry remains configured
+- Backup/rollback target: prior successful Shop Talk moderation backend deployment `87923e9f34723b3fb12cf7f20a6b5b4c96e8cfb5`; rollback is a normal source rollback because no migration changed
+- Automated gates: `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test:unit`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check` passed. The aggregate test pass included 15/15 integration suites.
+- Rendered evidence: local 430px Playwright QA loaded `/app/admin` with mocked report data, submitted a moderation action, opened the Shop Talk report reason picker, verified reason options, and found no horizontal overflow. Screenshot evidence was written locally at `tmp-moderation-ui-smoke.png`.
+- Post-deploy smoke tests: live `https://rivt.pro/api/health` returned exact source commit `f4db07fee34b760d10d9f16cc7593e163524e1a4`, ready migration `0018_shop_talk_moderation`, PostgreSQL, S3-compatible object storage, and configured Sentry. `EXPECTED_SOURCE_COMMIT=f4db07fee34b760d10d9f16cc7593e163524e1a4 npm run monitor:production` passed with operational controls off, seven anonymous private-route checks, and 630 ms duration.
+- Health/readiness result: healthy production health and synthetic monitor; no schema migration applied.
+- Known risks: staff now have a usable report queue/review surface and users have richer report reasons, but broad public Shop Talk still needs an explicit moderation SLA/process and live evidence that reports are reviewed inside the committed support window.
+- Rollback performed/result: not required.
+- Approval: accepted as controllable Gate B behind-flag community-safety operations work; Gate A pilot remains governed by existing launch-readiness boundaries.
+
 ## Current Production - Packet 08 Shop Talk Moderation and Reporting Backend
 
 - Environment: Production (`https://rivt.pro`)
