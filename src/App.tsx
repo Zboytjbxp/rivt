@@ -71,9 +71,11 @@ import {
   createShopTalkAnswer,
   createShopTalkPost,
   fetchShopTalkPosts,
+  reportShopTalkTarget,
   verifyShopTalkAnswer,
   type ServerShopTalkAnswer,
   type ServerShopTalkPost,
+  type ShopTalkReportReason,
 } from "./features/shop-talk/shop-talk-api";
 import { communitySlug, fetchCommunities, type ServerCommunity } from "./features/shop-talk/communities-api";
 import {
@@ -108,6 +110,21 @@ const ShopTalkView = lazy(() => import("./features/shop-talk/ShopTalkView").then
 const ProfileRoute = lazy(() => import("./features/profile/ProfileRoute").then((m) => ({ default: m.ProfileRoute })));
 const ToolsStudio = lazy(() => import("./features/tools/ToolsStudio").then((m) => ({ default: m.ToolsStudio })));
 const LegacyBridge = lazy(() => import("./features/legacy/LegacyBridge").then((m) => ({ default: m.LegacyBridge })));
+
+function communityReportReasonCode(reason: CommunityReport["reason"]): ShopTalkReportReason {
+  switch (reason) {
+    case "Misinformation":
+      return "misinformation";
+    case "Safety concern":
+      return "unsafe_advice";
+    case "Spam":
+      return "spam";
+    case "Harassment":
+      return "harassment";
+    default:
+      return "other";
+  }
+}
 
 const validGuestPreviewTrades = new Set<Trade>(
   tradeOptions.filter((option): option is Trade => option !== "All trades"),
@@ -989,11 +1006,17 @@ function App() {
     );
   }
 
-  function handleReportCommunityPost(postId: string, reason: CommunityReport["reason"]) {
+  async function handleReportCommunityPost(postId: string, reason: CommunityReport["reason"]) {
     const post = communityPosts.find((candidate) => candidate.id === postId);
     if (!post) {
       return;
     }
+    const persisted = await reportShopTalkTarget({
+      targetType: "post",
+      targetId: postId,
+      reasonCode: communityReportReasonCode(reason),
+      note: reason,
+    });
 
     setCommunityReports((current) => {
       const alreadyFlagged = current.some(
@@ -1015,8 +1038,52 @@ function App() {
       ];
     });
     addActivity(
-      "Shop Talk report filed",
-      `"${post.title}" is in the admin moderation queue for ${reason.toLowerCase()}.`,
+      persisted ? "Shop Talk report filed" : "Shop Talk report saved locally",
+      persisted
+        ? `"${post.title}" is in the admin moderation queue for ${reason.toLowerCase()}.`
+        : `"${post.title}" was flagged in this session, but the server report could not be filed.`,
+    );
+  }
+
+  async function handleReportCommunityAnswer(postId: string, answerId: string, reason: CommunityReport["reason"]) {
+    const post = communityPosts.find((candidate) => candidate.id === postId);
+    const answer = post?.replies.find((candidate) => candidate.id === answerId);
+    if (!post || !answer) return;
+
+    const persisted = await reportShopTalkTarget({
+      targetType: "answer",
+      targetId: answerId,
+      reasonCode: communityReportReasonCode(reason),
+      note: `${reason} on answer for "${post.title}"`,
+    });
+    addActivity(
+      persisted ? "Shop Talk answer reported" : "Shop Talk answer flagged locally",
+      persisted
+        ? `An answer from ${answer.author} is in the admin moderation queue for ${reason.toLowerCase()}.`
+        : `An answer from ${answer.author} was flagged in this session, but the server report could not be filed.`,
+    );
+  }
+
+  async function handleReportCommunity(community: CommunityDisplay, reason: CommunityReport["reason"]) {
+    if (!community.id) {
+      addActivity(
+        "Community report unavailable",
+        `${community.name} is not loaded as a server community yet, so it cannot be sent to the admin queue.`,
+      );
+      return;
+    }
+
+    const persisted = await reportShopTalkTarget({
+      targetType: "community",
+      targetId: community.id,
+      reasonCode: communityReportReasonCode(reason),
+      note: `${reason} in ${community.name}`,
+    });
+    addActivity(
+      persisted ? "Community report filed" : "Community report saved locally",
+      persisted
+        ? `${community.name} is in the admin moderation queue for ${reason.toLowerCase()}.`
+        : `${community.name} was flagged in this session, but the server report could not be filed.`,
     );
   }
 
@@ -1593,6 +1660,8 @@ function App() {
             onAddAnswer={handleAddCommunityAnswer}
             onVerifyAnswer={handleVerifyCommunityAnswer}
             onReportPost={handleReportCommunityPost}
+            onReportAnswer={handleReportCommunityAnswer}
+            onReportCommunity={handleReportCommunity}
             onNewPost={handleNewShopTalkPost}
             onCommunityCreated={handleCommunityCreated}
           />

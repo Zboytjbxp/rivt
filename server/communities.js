@@ -56,14 +56,17 @@ function mapCommunityRow(row) {
     joined: Boolean(row.joined),
     role: row.role ?? null,
     createdByAccountId: row.created_by_account_id ?? null,
+    moderationStatus: row.moderation_status ?? "visible",
   };
 }
 
 async function requireCommunity(database, slug) {
   const found = await database.query(
-    `SELECT id, slug, name, description, member_count, created_by_account_id
+    `SELECT id, slug, name, description, member_count, created_by_account_id, moderation_status
      FROM communities
-     WHERE slug = $1 AND archived_at IS NULL`,
+     WHERE slug = $1
+       AND archived_at IS NULL
+       AND moderation_status <> 'hidden'`,
     [slug],
   );
   if (!found.rowCount) {
@@ -105,6 +108,7 @@ export function registerCommunityRoutes({
     const result = await database.query(
       `SELECT c.id, c.slug, c.name, c.description,
               COALESCE(m.cnt, 0) AS member_count,
+              c.moderation_status,
               c.created_by_account_id,
               vm.role,
               (vm.account_id IS NOT NULL) AS joined
@@ -117,6 +121,7 @@ export function registerCommunityRoutes({
        LEFT JOIN community_members vm
          ON vm.community_id = c.id AND vm.account_id = $1
        WHERE c.archived_at IS NULL
+         AND c.moderation_status <> 'hidden'
        ${searchClause}
        ORDER BY COALESCE(m.cnt, 0) DESC, c.updated_at DESC, c.id DESC
        LIMIT 100`,
@@ -139,6 +144,7 @@ export function registerCommunityRoutes({
       `SELECT slug, name, description, member_count
        FROM communities
        WHERE archived_at IS NULL
+         AND moderation_status <> 'hidden'
          AND (
            slug = $1
            OR slug LIKE $2

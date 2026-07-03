@@ -18,6 +18,7 @@ interface CommunityDisplaySeed {
 }
 
 export interface CommunityDisplay {
+  id?: string;
   slug: string;
   name: string;
   meta: string;
@@ -75,6 +76,7 @@ export function mapServerCommunity(community: ServerCommunity): CommunityDisplay
   const memberCount = Number.isFinite(community.memberCount) ? community.memberCount : fallback?.memberCount ?? 0;
 
   return {
+    id: community.id,
     slug: community.slug,
     name: community.name || fallback?.name || community.slug,
     meta: community.description || fallback?.meta || "Trade community",

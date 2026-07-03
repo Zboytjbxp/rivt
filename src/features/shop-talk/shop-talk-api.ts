@@ -15,6 +15,7 @@ export interface ServerShopTalkAnswer {
   body: string;
   verifiedFix: boolean;
   createdAt: string;
+  moderationStatus?: string;
 }
 
 export interface ServerShopTalkPost {
@@ -27,10 +28,20 @@ export interface ServerShopTalkPost {
   body: string;
   status: string;
   createdAt: string;
+  moderationStatus?: string;
   communityId?: string;
   communitySlug?: string;
   communityName?: string;
   answers?: ServerShopTalkAnswer[];
+}
+
+export type ShopTalkReportReason = "spam" | "harassment" | "unsafe_advice" | "misinformation" | "privacy" | "duplicate" | "other";
+
+export interface ShopTalkReportInput {
+  targetType: "community" | "post" | "answer";
+  targetId: string;
+  reasonCode: ShopTalkReportReason;
+  note?: string;
 }
 
 /**
@@ -104,5 +115,22 @@ export async function verifyShopTalkAnswer(postId: string, answerId: string): Pr
     return Array.isArray(payload?.data?.answers) ? payload!.data!.answers! : null;
   } catch {
     return null;
+  }
+}
+
+export async function reportShopTalkTarget(input: ShopTalkReportInput): Promise<boolean> {
+  try {
+    const response = await fetch(apiPath("/api/v1/shop-talk/reports"), {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+        "Idempotency-Key": crypto.randomUUID(),
+      },
+      body: JSON.stringify(input),
+    });
+    return response.ok;
+  } catch {
+    return false;
   }
 }

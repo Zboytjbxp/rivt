@@ -428,6 +428,8 @@ export function ShopTalkView({
   onAddAnswer,
   onVerifyAnswer,
   onReportPost,
+  onReportAnswer,
+  onReportCommunity,
   onNewPost,
   onCommunityCreated,
 }: {
@@ -449,7 +451,9 @@ export function ShopTalkView({
   onVoteAnswer: (postId: string, answerId: string, direction: "up" | "down") => void;
   onAddAnswer: (postId: string, body: string) => void | Promise<void>;
   onVerifyAnswer: (postId: string, answerId: string) => void | Promise<void>;
-  onReportPost: (postId: string, reason: CommunityReport["reason"]) => void;
+  onReportPost: (postId: string, reason: CommunityReport["reason"]) => void | Promise<void>;
+  onReportAnswer: (postId: string, answerId: string, reason: CommunityReport["reason"]) => void | Promise<void>;
+  onReportCommunity: (community: CommunityDisplay, reason: CommunityReport["reason"]) => void | Promise<void>;
   onNewPost: (flair: PostFlair, title: string, trade: Trade | "General", body: string, postType: PostType, subTrade?: string, subLocation?: string, subRate?: string, communitySlug?: string | null) => void | Promise<void>;
   onCommunityCreated: (community: ServerCommunity) => void;
 }) {
@@ -880,24 +884,36 @@ export function ShopTalkView({
                       </div>
                     </div>
                   </div>
-                  <button
-                    type="button"
-                    className={joinedCommunities.has(selectedCommunity.slug) ? "community-join is-joined" : "community-join"}
-                    aria-pressed={joinedCommunities.has(selectedCommunity.slug)}
-                    onClick={() => {
-                      const willJoin = !joinedCommunities.has(selectedCommunity.slug);
-                      void setCommunityMembership(selectedCommunity.slug, willJoin);
-                      setJoinedCommunities((prev) => {
-                        const next = new Set(prev);
-                        if (next.has(selectedCommunity.slug)) next.delete(selectedCommunity.slug);
-                        else next.add(selectedCommunity.slug);
-                        try { localStorage.setItem("rivt.joinedCommunities.v1", JSON.stringify([...next])); } catch { /* ignore */ }
-                        return next;
-                      });
-                    }}
-                  >
-                    {joinedCommunities.has(selectedCommunity.slug) ? "Joined" : "Join"}
-                  </button>
+                  <div className="community-page-actions">
+                    <button
+                      type="button"
+                      className={joinedCommunities.has(selectedCommunity.slug) ? "community-join is-joined" : "community-join"}
+                      aria-pressed={joinedCommunities.has(selectedCommunity.slug)}
+                      onClick={() => {
+                        const willJoin = !joinedCommunities.has(selectedCommunity.slug);
+                        void setCommunityMembership(selectedCommunity.slug, willJoin);
+                        setJoinedCommunities((prev) => {
+                          const next = new Set(prev);
+                          if (next.has(selectedCommunity.slug)) next.delete(selectedCommunity.slug);
+                          else next.add(selectedCommunity.slug);
+                          try { localStorage.setItem("rivt.joinedCommunities.v1", JSON.stringify([...next])); } catch { /* ignore */ }
+                          return next;
+                        });
+                      }}
+                    >
+                      {joinedCommunities.has(selectedCommunity.slug) ? "Joined" : "Join"}
+                    </button>
+                    {selectedCommunity.serverOwned && (
+                      <button
+                        type="button"
+                        className="community-report"
+                        onClick={() => { void onReportCommunity(selectedCommunity, "Spam"); }}
+                      >
+                        <Flag size={13} />
+                        Report
+                      </button>
+                    )}
+                  </div>
                 </section>
               ) : null}
 
@@ -1477,6 +1493,10 @@ export function ShopTalkView({
                             {answer.verifiedFix ? "Verified" : "Mark fix"}
                           </button>
                         )}
+                        <button type="button" onClick={() => { void onReportAnswer(selectedPost.id, answer.id, "Safety concern"); }}>
+                          <Flag size={14} />
+                          Report
+                        </button>
                       </div>
                     </article>
                   );

@@ -154,6 +154,7 @@ function mapShopTalkAnswerRow(row) {
     body: row.body,
     verifiedFix: Boolean(row.verified_fix),
     createdAt: row.created_at,
+    moderationStatus: row.moderation_status ?? "visible",
   };
 }
 
@@ -168,6 +169,7 @@ function mapShopTalkPostRow(row) {
     body: row.body,
     status: row.status,
     createdAt: row.created_at,
+    moderationStatus: row.moderation_status ?? "visible",
     communityId: row.community_id,
     communitySlug: row.community_slug,
     communityName: row.community_name,
@@ -177,20 +179,27 @@ function mapShopTalkPostRow(row) {
 
 async function requireCommunityForPost(client, slug) {
   const found = await client.query(
-    `SELECT id, slug, name
+    `SELECT id, slug, name, moderation_status
      FROM communities
-     WHERE slug = $1 AND archived_at IS NULL`,
+     WHERE slug = $1
+       AND archived_at IS NULL
+       AND moderation_status <> 'hidden'`,
     [slug],
   );
   if (!found.rowCount) {
     throw new ApiError(422, "COMMUNITY_REQUIRED", "Choose an active community for this post.");
+  }
+  if (found.rows[0].moderation_status === "locked") {
+    throw new ApiError(409, "COMMUNITY_LOCKED", "This community is locked and cannot receive new posts.");
   }
   return found.rows[0];
 }
 
 async function fetchShopTalkPostRows(client, { communitySlug = null } = {}) {
   const params = [];
-  let whereClause = "WHERE community.archived_at IS NULL";
+  let whereClause = `WHERE community.archived_at IS NULL
+     AND community.moderation_status <> 'hidden'
+     AND post.moderation_status <> 'hidden'`;
   if (communitySlug) {
     params.push(communitySlug);
     whereClause += ` AND community.slug = $${params.length}`;
@@ -205,6 +214,7 @@ async function fetchShopTalkPostRows(client, { communitySlug = null } = {}) {
             post.body,
             post.status,
             post.created_at,
+            post.moderation_status,
             post.community_id,
             community.slug AS community_slug,
             community.name AS community_name,
@@ -215,7 +225,8 @@ async function fetchShopTalkPostRows(client, { communitySlug = null } = {}) {
                   'author_name', answer.author_name,
                   'body', answer.body,
                   'verified_fix', answer.verified_fix,
-                  'created_at', answer.created_at
+                  'created_at', answer.created_at,
+                  'moderation_status', answer.moderation_status
                 )
                 ORDER BY answer.verified_fix DESC, answer.created_at ASC, answer.id ASC
               ) FILTER (WHERE answer.id IS NOT NULL),
@@ -224,7 +235,9 @@ async function fetchShopTalkPostRows(client, { communitySlug = null } = {}) {
      FROM shop_talk_posts post
      JOIN communities community ON community.id = post.community_id
      LEFT JOIN shop_talk_answers answer
-       ON answer.post_id = post.id AND answer.deleted_at IS NULL
+       ON answer.post_id = post.id
+      AND answer.deleted_at IS NULL
+      AND answer.moderation_status <> 'hidden'
      ${whereClause}
      GROUP BY post.id, community.slug, community.name
      ORDER BY post.created_at DESC, post.id DESC
@@ -236,9 +249,11 @@ async function fetchShopTalkPostRows(client, { communitySlug = null } = {}) {
 
 async function fetchShopTalkAnswerRows(client, postId) {
   const result = await client.query(
-    `SELECT id, author_name, body, verified_fix, created_at
+    `SELECT id, author_name, body, verified_fix, created_at, moderation_status
      FROM shop_talk_answers
-     WHERE post_id = $1 AND deleted_at IS NULL
+     WHERE post_id = $1
+       AND deleted_at IS NULL
+       AND moderation_status <> 'hidden'
      ORDER BY verified_fix DESC, created_at ASC, id ASC`,
     [postId],
   );
@@ -283,7 +298,7 @@ export function registerShopTalkRoutes({
           `INSERT INTO shop_talk_posts (
              author_account_id, author_name, community_id, trade, flair, post_type, title, body
            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-           RETURNING id, author_name, community_id, trade, flair, post_type, title, body, status, created_at`,
+           RETURNING id, author_name, community_id, trade, flair, post_type, title, body, status, created_at, moderation_status`,
           [
             request.actor.account.id,
             authorName,
@@ -313,7 +328,13 @@ export function registerShopTalkRoutes({
   app.get("/api/v1/shop-talk/posts/:postId/answers", requireV1AuthenticatedUser, requireV1Actor, asyncRoute(async (request, response) => {
     const { postId } = validate(shopTalkPostParamsSchema, request.params);
     const found = await database.query(
-      "SELECT id FROM shop_talk_posts WHERE id = $1",
+      `SELECT post.id
+       FROM shop_talk_posts post
+       JOIN communities community ON community.id = post.community_id
+       WHERE post.id = $1
+         AND post.moderation_status <> 'hidden'
+         AND community.archived_at IS NULL
+         AND community.moderation_status <> 'hidden'`,
       [postId],
     );
     if (!found.rowCount) {
@@ -335,11 +356,21 @@ export function registerShopTalkRoutes({
       `shop-talk.answer.create:${postId}`,
       async (client) => {
         const post = await client.query(
-          "SELECT id FROM shop_talk_posts WHERE id = $1 FOR UPDATE",
+          `SELECT post.id, post.moderation_status, community.moderation_status AS community_moderation_status
+           FROM shop_talk_posts post
+           JOIN communities community ON community.id = post.community_id
+           WHERE post.id = $1
+             AND community.archived_at IS NULL
+             AND post.moderation_status <> 'hidden'
+             AND community.moderation_status <> 'hidden'
+           FOR UPDATE OF post`,
           [postId],
         );
         if (!post.rowCount) {
           throw new ApiError(404, "SHOP_TALK_POST_NOT_FOUND", "That Shop Talk post does not exist.");
+        }
+        if (post.rows[0].moderation_status === "locked" || post.rows[0].community_moderation_status === "locked") {
+          throw new ApiError(409, "SHOP_TALK_LOCKED", "This conversation is locked and cannot receive new answers.");
         }
         const profile = await client.query(
           "SELECT display_name FROM profiles WHERE account_id = $1",
@@ -349,7 +380,7 @@ export function registerShopTalkRoutes({
         const inserted = await client.query(
           `INSERT INTO shop_talk_answers (post_id, author_account_id, author_name, body)
            VALUES ($1, $2, $3, $4)
-           RETURNING id, author_name, body, verified_fix, created_at`,
+           RETURNING id, author_name, body, verified_fix, created_at, moderation_status`,
           [postId, request.actor.account.id, authorName, input.body],
         );
         await client.query(
@@ -389,10 +420,14 @@ export function registerShopTalkRoutes({
       `shop-talk.answer.verify:${postId}:${answerId}`,
       async (client) => {
         const post = await client.query(
-          `SELECT id, author_account_id
-           FROM shop_talk_posts
-           WHERE id = $1
-           FOR UPDATE`,
+          `SELECT post.id, post.author_account_id
+           FROM shop_talk_posts post
+           JOIN communities community ON community.id = post.community_id
+           WHERE post.id = $1
+             AND post.moderation_status <> 'hidden'
+             AND community.archived_at IS NULL
+             AND community.moderation_status <> 'hidden'
+           FOR UPDATE OF post`,
           [postId],
         );
         if (!post.rowCount) {
@@ -404,7 +439,10 @@ export function registerShopTalkRoutes({
         const answer = await client.query(
           `SELECT id
            FROM shop_talk_answers
-           WHERE id = $1 AND post_id = $2 AND deleted_at IS NULL
+           WHERE id = $1
+             AND post_id = $2
+             AND deleted_at IS NULL
+             AND moderation_status <> 'hidden'
            FOR UPDATE`,
           [answerId, postId],
         );
