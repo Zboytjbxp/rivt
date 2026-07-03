@@ -38,7 +38,9 @@ Production release commit: verify with live `/api/health`; latest runtime featur
   - `npm audit --omit=dev` (pass; 0 vulnerabilities)
   - aggregate `npm run test` was attempted with a 10-minute local command window and timed out; aggregate completion is not claimed for this pass
 - Production deployment status:
-  - pending merge/push/deploy verification for this pass
+  - runtime release commit `b57faf9d923a61f2fcb682c0e6eef78a5a1cde32` was pushed to GitHub and picked up by Railway production service `RIVT`
+  - live `https://rivt.pro/api/health` returned `ok: true`, build commit `b57faf9d923a61f2fcb682c0e6eef78a5a1cde32`, migration `0020_network_records`, PostgreSQL, S3-compatible object storage, and configured Sentry
+  - `EXPECTED_SOURCE_COMMIT=b57faf9d923a61f2fcb682c0e6eef78a5a1cde32 npm run monitor:production` passed with operational controls off, seven anonymous private-route checks, and 730 ms duration
 
 ## Latest Packet 08 Pass - Non-Tool Local State Boundaries
 
