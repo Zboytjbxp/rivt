@@ -4,6 +4,7 @@ import type { Job } from "../../types";
 import { EmptyState, Panel } from "../../components/ui";
 import { usePro } from "../pro/usePro";
 import { UpgradeModal } from "../pro/UpgradeModal";
+import { deleteToolRecordByLocalId, fetchToolRecords, upsertToolRecord, type ServerToolRecord } from "./tool-records-api";
 
 const timeTrackerKey = "rivt.timeSessions.v1";
 
@@ -54,16 +55,88 @@ function persistTimeSessions(sessions: TimeSession[]) {
   }
 }
 
+function isTimeSession(value: unknown): value is TimeSession {
+  if (!value || typeof value !== "object") return false;
+  const candidate = value as Partial<TimeSession>;
+  return typeof candidate.id === "string"
+    && (candidate.jobId === null || typeof candidate.jobId === "number")
+    && typeof candidate.jobTitle === "string"
+    && typeof candidate.startedAt === "string"
+    && (candidate.endedAt === null || typeof candidate.endedAt === "string")
+    && typeof candidate.notes === "string";
+}
+
+function timeSessionFromServer(record: ServerToolRecord): TimeSession | null {
+  if (!isTimeSession(record.payload)) return null;
+  return {
+    ...record.payload,
+    id: record.localId,
+    jobTitle: record.payload.jobTitle || record.title,
+  };
+}
+
+function timeSessionToServerInput(session: TimeSession) {
+  return {
+    recordType: "time_session" as const,
+    localId: session.id,
+    title: session.jobTitle || "Standalone time session",
+    status: session.endedAt ? "complete" : "running",
+    recordDate: session.startedAt.slice(0, 10),
+    amountCents: null,
+    payload: { ...session },
+  };
+}
+
 export function TimeTrackerTool({ activeJob, jobs }: { activeJob: Job | null; jobs: Job[] }) {
   const { isPro } = usePro();
   const [upgradeOpen, setUpgradeOpen] = useState(false);
   const [sessions, setSessions] = useState<TimeSession[]>(readTimeSessions);
+  const [syncMessage, setSyncMessage] = useState("Saved on this device.");
   const [running, setRunning] = useState<TimeSession | null>(
     () => readTimeSessions().find((s) => !s.endedAt) ?? null,
   );
   const [elapsed, setElapsed] = useState(0);
   const [jobId, setJobId] = useState<number | null>(activeJob?.id ?? null);
   const [clockNotes, setClockNotes] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    void fetchToolRecords("time_session").then((serverRecords) => {
+      if (cancelled) return;
+      if (!serverRecords) {
+        setSyncMessage("Saved on this device. Sign in with network access to sync.");
+        return;
+      }
+      const mapped = serverRecords.map(timeSessionFromServer).filter((session): session is TimeSession => Boolean(session));
+      if (mapped.length) {
+        setSessions(mapped);
+        setRunning(mapped.find((session) => !session.endedAt) ?? null);
+        persistTimeSessions(mapped);
+        setSyncMessage("Synced to your RIVT account.");
+        return;
+      }
+      const localSnapshot = readTimeSessions();
+      if (localSnapshot.length) {
+        void Promise.all(localSnapshot.map((session) => upsertToolRecord(timeSessionToServerInput(session)))).then((results) => {
+          setSyncMessage(results.some(Boolean)
+            ? "Local time sessions synced to your RIVT account."
+            : "Saved on this device. Sync will retry when your account is reachable.");
+        });
+        return;
+      }
+      setSyncMessage("New time sessions sync to your RIVT account.");
+    });
+    return () => { cancelled = true; };
+  }, []);
+
+  function persistSessions(next: TimeSession[], changedSession?: TimeSession) {
+    setSessions(next);
+    persistTimeSessions(next);
+    if (!changedSession) return;
+    void upsertToolRecord(timeSessionToServerInput(changedSession)).then((record) => {
+      setSyncMessage(record ? "Synced to your RIVT account." : "Saved on this device. Sync will retry when your account is reachable.");
+    });
+  }
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -87,19 +160,17 @@ export function TimeTrackerTool({ activeJob, jobs }: { activeJob: Job | null; jo
       notes: "",
     };
     const next = [session, ...sessions];
-    setSessions(next);
+    persistSessions(next, session);
     setRunning(session);
-    persistTimeSessions(next);
   }
 
   function clockOut() {
     if (!running) return;
     const ended: TimeSession = { ...running, endedAt: new Date().toISOString(), notes: clockNotes.trim() };
     const next = sessions.map((s) => s.id === running.id ? ended : s);
-    setSessions(next);
+    persistSessions(next, ended);
     setRunning(null);
     setClockNotes("");
-    persistTimeSessions(next);
   }
 
   function deleteSession(sessionId: string) {
@@ -107,6 +178,9 @@ export function TimeTrackerTool({ activeJob, jobs }: { activeJob: Job | null; jo
     setSessions(next);
     if (running?.id === sessionId) setRunning(null);
     persistTimeSessions(next);
+    void deleteToolRecordByLocalId("time_session", sessionId).then((ok) => {
+      setSyncMessage(ok ? "Deleted from this device and your RIVT account." : "Deleted on this device. Cloud sync will catch up when reachable.");
+    });
   }
 
   function hoursFor(s: TimeSession): number {
@@ -158,6 +232,7 @@ export function TimeTrackerTool({ activeJob, jobs }: { activeJob: Job | null; jo
             </>
           )}
         </div>
+        <p className="v2-record-notice" role="status">{syncMessage}</p>
       </Panel>
       <Panel className="v2-tool-panel" eyebrow={`${completed.length} sessions`} title={`${formatNumber(totalHours, 1)} total hours`}>
         <div className="v2-tt-weekly-chart">

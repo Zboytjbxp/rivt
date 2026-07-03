@@ -343,8 +343,43 @@ function persistMileage(entries: MileageEntry[]) {
   try { localStorage.setItem(mileageKey, JSON.stringify(entries.slice(0, 500))); } catch { /* noop */ }
 }
 
+function isMileageEntry(value: unknown): value is MileageEntry {
+  if (!value || typeof value !== "object") return false;
+  const candidate = value as Partial<MileageEntry>;
+  return typeof candidate.id === "string"
+    && typeof candidate.date === "string"
+    && typeof candidate.from === "string"
+    && typeof candidate.to === "string"
+    && typeof candidate.jobRef === "string"
+    && typeof candidate.miles === "number"
+    && typeof candidate.purpose === "string";
+}
+
+function mileageFromServer(record: ServerToolRecord): MileageEntry | null {
+  if (!isMileageEntry(record.payload)) return null;
+  return {
+    ...record.payload,
+    id: record.localId,
+    date: record.payload.date || record.recordDate || new Date().toISOString().slice(0, 10),
+    miles: typeof record.payload.miles === "number" ? record.payload.miles : 0,
+  };
+}
+
+function mileageToServerInput(entry: MileageEntry) {
+  return {
+    recordType: "mileage" as const,
+    localId: entry.id,
+    title: entry.jobRef || entry.purpose || "Mileage trip",
+    status: "active",
+    recordDate: entry.date || null,
+    amountCents: null,
+    payload: { ...entry },
+  };
+}
+
 function MileageLoggerTool({ activeJob }: { activeJob: Job | null }) {
   const [entries, setEntries] = useState<MileageEntry[]>(readMileage);
+  const [syncMessage, setSyncMessage] = useState("Saved on this device.");
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [from, setFrom] = useState("");
   const [to, setTo] = useState(activeJob?.location ?? "");
@@ -352,6 +387,44 @@ function MileageLoggerTool({ activeJob }: { activeJob: Job | null }) {
   const [miles, setMiles] = useState("");
   const [purpose, setPurpose] = useState("Job travel");
   const [notice, setNotice] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    void fetchToolRecords("mileage").then((serverRecords) => {
+      if (cancelled) return;
+      if (!serverRecords) {
+        setSyncMessage("Saved on this device. Sign in with network access to sync.");
+        return;
+      }
+      const mapped = serverRecords.map(mileageFromServer).filter((entry): entry is MileageEntry => Boolean(entry));
+      if (mapped.length) {
+        setEntries(mapped);
+        persistMileage(mapped);
+        setSyncMessage("Synced to your RIVT account.");
+        return;
+      }
+      const localSnapshot = readMileage();
+      if (localSnapshot.length) {
+        void Promise.all(localSnapshot.map((entry) => upsertToolRecord(mileageToServerInput(entry)))).then((results) => {
+          setSyncMessage(results.some(Boolean)
+            ? "Local mileage trips synced to your RIVT account."
+            : "Saved on this device. Sync will retry when your account is reachable.");
+        });
+        return;
+      }
+      setSyncMessage("New mileage trips sync to your RIVT account.");
+    });
+    return () => { cancelled = true; };
+  }, []);
+
+  function persistMileageEntries(next: MileageEntry[], changedEntry?: MileageEntry) {
+    setEntries(next);
+    persistMileage(next);
+    if (!changedEntry) return;
+    void upsertToolRecord(mileageToServerInput(changedEntry)).then((record) => {
+      setSyncMessage(record ? "Synced to your RIVT account." : "Saved on this device. Sync will retry when your account is reachable.");
+    });
+  }
 
   function addEntry() {
     if (!miles || parseFloat(miles) <= 0) return;
@@ -365,8 +438,7 @@ function MileageLoggerTool({ activeJob }: { activeJob: Job | null }) {
       purpose: purpose.trim() || "Job travel",
     };
     const next = [entry, ...entries];
-    setEntries(next);
-    persistMileage(next);
+    persistMileageEntries(next, entry);
     setFrom("");
     setMiles("");
     setNotice("Trip logged.");
@@ -377,6 +449,9 @@ function MileageLoggerTool({ activeJob }: { activeJob: Job | null }) {
     const next = entries.filter((e) => e.id !== id);
     setEntries(next);
     persistMileage(next);
+    void deleteToolRecordByLocalId("mileage", id).then((ok) => {
+      setSyncMessage(ok ? "Deleted from this device and your RIVT account." : "Deleted on this device. Cloud sync will catch up when reachable.");
+    });
   }
 
   const thisYear = new Date().getFullYear().toString();
@@ -397,6 +472,7 @@ function MileageLoggerTool({ activeJob }: { activeJob: Job | null }) {
           <label>Purpose<input value={purpose} onChange={(e) => setPurpose(e.target.value)} placeholder="Job travel, supply run…" /></label>
         </div>
         {notice ? <p className="v2-record-notice" role="status">{notice}</p> : null}
+        <p className="v2-record-notice" role="status">{syncMessage}</p>
         <button type="button" className="v2-primary-button" disabled={!miles || parseFloat(miles) <= 0} onClick={addEntry}><Car size={14} />Log trip</button>
         {entries.length ? (
           <div className="v2-mileage-list">

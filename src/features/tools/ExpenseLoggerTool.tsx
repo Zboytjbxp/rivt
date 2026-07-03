@@ -1,9 +1,10 @@
 import { Download, Lock, Plus, ReceiptText, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { Job } from "../../types";
 import { EmptyState, Panel } from "../../components/ui";
 import { usePro } from "../pro/usePro";
 import { UpgradeModal } from "../pro/UpgradeModal";
+import { deleteToolRecordByLocalId, fetchToolRecords, upsertToolRecord, type ServerToolRecord } from "./tool-records-api";
 
 function currency(value: number) {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(value);
@@ -37,6 +38,41 @@ function persistExpenses(entries: ExpenseEntry[]) {
   try { localStorage.setItem(expenseLogKey, JSON.stringify(entries.slice(0, 200))); } catch { /* noop */ }
 }
 
+function isExpenseEntry(value: unknown): value is ExpenseEntry {
+  if (!value || typeof value !== "object") return false;
+  const candidate = value as Partial<ExpenseEntry>;
+  return typeof candidate.id === "string"
+    && (candidate.jobId === null || typeof candidate.jobId === "number")
+    && typeof candidate.jobTitle === "string"
+    && EXPENSE_CATEGORIES.includes(candidate.category as ExpenseCategory)
+    && typeof candidate.amount === "number"
+    && typeof candidate.description === "string"
+    && typeof candidate.date === "string";
+}
+
+function expenseFromServer(record: ServerToolRecord): ExpenseEntry | null {
+  if (!isExpenseEntry(record.payload)) return null;
+  return {
+    ...record.payload,
+    id: record.localId,
+    description: record.payload.description || record.title,
+    amount: typeof record.payload.amount === "number" ? record.payload.amount : (record.amountCents ?? 0) / 100,
+    date: record.payload.date || record.recordDate || new Date().toISOString().slice(0, 10),
+  };
+}
+
+function expenseToServerInput(entry: ExpenseEntry) {
+  return {
+    recordType: "expense" as const,
+    localId: entry.id,
+    title: entry.description || entry.category,
+    status: "active",
+    recordDate: entry.date || null,
+    amountCents: Math.round(Math.max(0, entry.amount) * 100),
+    payload: { ...entry },
+  };
+}
+
 function exportExpensesCSV(expenses: ExpenseEntry[]) {
   const header = "Date,Category,Amount,Description";
   const rows = expenses.map((e) =>
@@ -58,6 +94,7 @@ function ExpenseLoggerTool({ activeJob, jobs }: { activeJob: Job | null; jobs: J
   const { isPro } = usePro();
   const [upgradeOpen, setUpgradeOpen] = useState(false);
   const [expenses, setExpenses] = useState<ExpenseEntry[]>(readExpenses);
+  const [syncMessage, setSyncMessage] = useState("Saved on this device.");
   const [jobId, setJobId] = useState<number | null>(activeJob?.id ?? null);
   const [category, setCategory] = useState<ExpenseCategory>("Materials");
   const [amount, setAmount] = useState("");
@@ -65,6 +102,44 @@ function ExpenseLoggerTool({ activeJob, jobs }: { activeJob: Job | null; jobs: J
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [notice, setNotice] = useState("");
   const [quickMode, setQuickMode] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    void fetchToolRecords("expense").then((serverRecords) => {
+      if (cancelled) return;
+      if (!serverRecords) {
+        setSyncMessage("Saved on this device. Sign in with network access to sync.");
+        return;
+      }
+      const mapped = serverRecords.map(expenseFromServer).filter((entry): entry is ExpenseEntry => Boolean(entry));
+      if (mapped.length) {
+        setExpenses(mapped);
+        persistExpenses(mapped);
+        setSyncMessage("Synced to your RIVT account.");
+        return;
+      }
+      const localSnapshot = readExpenses();
+      if (localSnapshot.length) {
+        void Promise.all(localSnapshot.map((entry) => upsertToolRecord(expenseToServerInput(entry)))).then((results) => {
+          setSyncMessage(results.some(Boolean)
+            ? "Local expenses synced to your RIVT account."
+            : "Saved on this device. Sync will retry when your account is reachable.");
+        });
+        return;
+      }
+      setSyncMessage("New expenses sync to your RIVT account.");
+    });
+    return () => { cancelled = true; };
+  }, []);
+
+  function persistExpenseEntries(next: ExpenseEntry[], changedEntry?: ExpenseEntry) {
+    setExpenses(next);
+    persistExpenses(next);
+    if (!changedEntry) return;
+    void upsertToolRecord(expenseToServerInput(changedEntry)).then((record) => {
+      setSyncMessage(record ? "Synced to your RIVT account." : "Saved on this device. Sync will retry when your account is reachable.");
+    });
+  }
 
   function addExpense() {
     const amt = parseFloat(amount);
@@ -80,8 +155,7 @@ function ExpenseLoggerTool({ activeJob, jobs }: { activeJob: Job | null; jobs: J
       date,
     };
     const next = [entry, ...expenses];
-    setExpenses(next);
-    persistExpenses(next);
+    persistExpenseEntries(next, entry);
     setAmount("");
     setDescription("");
     setNotice("Expense logged.");
@@ -92,6 +166,9 @@ function ExpenseLoggerTool({ activeJob, jobs }: { activeJob: Job | null; jobs: J
     const next = expenses.filter((e) => e.id !== expenseId);
     setExpenses(next);
     persistExpenses(next);
+    void deleteToolRecordByLocalId("expense", expenseId).then((ok) => {
+      setSyncMessage(ok ? "Deleted from this device and your RIVT account." : "Deleted on this device. Cloud sync will catch up when reachable.");
+    });
   }
 
   const total = expenses.reduce((sum, e) => sum + e.amount, 0);
@@ -165,8 +242,7 @@ function ExpenseLoggerTool({ activeJob, jobs }: { activeJob: Job | null; jobs: J
                   date: new Date().toISOString().slice(0, 10),
                 };
                 const next = [entry, ...expenses];
-                setExpenses(next);
-                persistExpenses(next);
+                persistExpenseEntries(next, entry);
                 setAmount("");
                 setNotice(`${category} — $${amt.toFixed(2)} logged.`);
                 setTimeout(() => setNotice(""), 3000);
@@ -203,6 +279,7 @@ function ExpenseLoggerTool({ activeJob, jobs }: { activeJob: Job | null; jobs: J
             </div>
           </>
         )}
+        <p className="v2-record-notice" role="status">{syncMessage}</p>
       </Panel>
       <aside className="v2-invoice-side-stack">
         {upgradeOpen && <UpgradeModal reason="Export CSV" onClose={() => setUpgradeOpen(false)} />}
