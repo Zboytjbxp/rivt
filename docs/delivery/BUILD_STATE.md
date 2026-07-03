@@ -1,11 +1,48 @@
 # RIVT Build State
 
-Last updated: 2026-07-02 America/New_York
+Last updated: 2026-07-03 America/New_York
 Current gate: Gate A launch hardening
-Current phase: Packet 08 Gate A launch hardening plus Gate B behind-flag backbone work: machine gates and live workflow smokes are mostly green; the Shop Talk Reddit-model backbone is merged, deployed, migration-ready, and live-smoked while still hidden behind launch-readiness boundaries before broad exposure.
+Current phase: Packet 08 Gate A launch hardening plus Gate B behind-flag backbone work: machine gates and live workflow smokes are mostly green; the Shop Talk Reddit-model backbone and moderation/reporting backend are merged, deployed, migration-ready, and verified while still hidden behind launch-readiness boundaries before broad exposure.
 Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
-Repository branch: `codex/shop-talk-reddit-backbone`
-Production release commit: see live `/api/health` build metadata
+Repository branch: `master`
+Production release commit: `87923e9f34723b3fb12cf7f20a6b5b4c96e8cfb5`
+
+## Latest Packet 08 Pass - Shop Talk Moderation and Reporting Backend
+
+- Reviewed the Gate B Shop Talk Reddit-model guidance and implemented the next durable public-community safety slice on branch `codex/shop-talk-moderation`, then fast-forwarded it to `master`.
+- Added migration `0018_shop_talk_moderation`:
+  - moderation states for communities, Shop Talk posts, and Shop Talk answers
+  - server-owned `shop_talk_reports` with target snapshots, reason codes, status workflow, and open-report dedupe
+  - server-owned `shop_talk_moderation_actions` with append-only audit protection
+  - moderation/status indexes for queue and feed filtering
+- Added authenticated reporting and admin moderation APIs:
+  - `POST /api/v1/shop-talk/reports` reports communities, posts, or answers with idempotent dedupe
+  - `GET /api/v1/admin/shop-talk/reports` lists the queue for owner/support/moderator roles only
+  - `POST /api/v1/admin/shop-talk/reports/:reportId/actions` supports dismiss, hide, lock, archive community, and restore actions with admin audit events
+- Enforced moderation state in the public API:
+  - hidden communities, posts, and answers are excluded from public reads
+  - locked communities reject new posts
+  - locked posts or communities reject new answers
+  - hidden answers cannot become Verified Fixes, and hiding a verified answer clears that flag
+- Wired the frontend to the server-owned report path:
+  - Shop Talk post reports now attempt server persistence first and only fall back to session-local feedback if the server report fails
+  - community pages expose a report action for server-owned communities
+  - answer cards expose a report action tied to the server-owned answer ID
+  - activity feedback distinguishes durable admin-queue reports from local-only fallback flags
+- Local gates run on 2026-07-03:
+  - `npm run build` (pass)
+  - `npm run lint` (pass)
+  - `npm run lint:security` (pass)
+  - `npm run test:unit` (pass)
+  - `npm run test:integration` (pass; Railway-backed `TEST_DATABASE_URL`, 15/15 suites, 975s)
+  - `npm run test:e2e` (pass)
+  - `npm audit --omit=dev` (pass; 0 vulnerabilities)
+  - `git diff --check` (pass)
+- Production deployment completed from `master`:
+  - runtime source commit `87923e9f34723b3fb12cf7f20a6b5b4c96e8cfb5` was pushed to GitHub and picked up by Railway production service `RIVT`
+  - live `https://rivt.pro/api/health` returned `ok: true`, build commit `87923e9f34723b3fb12cf7f20a6b5b4c96e8cfb5`, migration `0018_shop_talk_moderation`, PostgreSQL, S3-compatible object storage, and configured Sentry
+  - `EXPECTED_SOURCE_COMMIT=87923e9f34723b3fb12cf7f20a6b5b4c96e8cfb5 npm run monitor:production` passed with seven anonymous private-route checks and operational controls off
+- Exposure boundary: this closes the first server-owned moderation/reporting backend slice for Shop Talk, but broad public Shop Talk exposure still needs a human-facing moderation console/SLA process and a better report-reason picker UX before it should be treated as fully public-scale community ops.
 
 ## Latest Packet 08 Pass - Shop Talk Reddit Backbone
 

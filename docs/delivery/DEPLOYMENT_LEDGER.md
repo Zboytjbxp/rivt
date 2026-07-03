@@ -21,6 +21,25 @@ Add one entry per staging/production deployment.
 - Rollback performed/result:
 - Approval:
 
+## Current Production - Packet 08 Shop Talk Moderation and Reporting Backend
+
+- Environment: Production (`https://rivt.pro`)
+- Date/time/timezone: 2026-07-02 21:23 America/New_York
+- Deployer: Codex through GitHub push to Railway-linked `master`
+- Source repository/branch: `Zboytjbxp/rivt`, `master`
+- Source commit: `87923e9f34723b3fb12cf7f20a6b5b4c96e8cfb5`
+- Build/artifact ID: Railway-linked production deployment serving source `87923e9f34723b3fb12cf7f20a6b5b4c96e8cfb5`; live `/api/health` is the source-of-truth runtime proof
+- Migration version before/after: `0017_shop_talk_reddit_backbone` / `0018_shop_talk_moderation`
+- Feature-flag/config version: no provider credentials or operational-control flags changed
+- Provider/config changes (no secrets): no provider credentials changed; Sentry remains configured
+- Backup/rollback target: prior successful Shop Talk backbone deployment `dba2acb77a3cc36d9757c895591e81e4bb24cf6e`; rollback requires applying `migrations/0018_shop_talk_moderation.down.sql` after traffic is drained if moderation tables/status columns must be removed
+- Automated gates: `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test:unit`, `npm run test:integration`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check` passed. The full integration pass used a Railway-backed `TEST_DATABASE_URL` and passed 15/15 suites in 975s.
+- Post-deploy smoke tests: live `https://rivt.pro/api/health` returned exact source commit `87923e9f34723b3fb12cf7f20a6b5b4c96e8cfb5`, ready migration `0018_shop_talk_moderation`, PostgreSQL, S3-compatible object storage, and configured Sentry. `EXPECTED_SOURCE_COMMIT=87923e9f34723b3fb12cf7f20a6b5b4c96e8cfb5 npm run monitor:production` passed with operational controls off, seven anonymous private-route checks, and 582 ms duration.
+- Health/readiness result: healthy production health and synthetic monitor; moderation migration applied.
+- Known risks: this is the server-owned moderation/reporting backend. Broad public Shop Talk still needs a human-facing moderation console/SLA, richer report-reason picker UX, and evidence that reports are reviewed within the committed support window.
+- Rollback performed/result: not required.
+- Approval: accepted as controllable Gate B behind-flag community-safety backend work; Gate A pilot remains governed by existing launch-readiness boundaries.
+
 ## Current Production - Packet 08 Orange Trade Talk Visual System
 
 - Environment: Production (`https://rivt.pro`)

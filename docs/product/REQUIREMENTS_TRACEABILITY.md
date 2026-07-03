@@ -10,6 +10,16 @@ Status values:
 
 Evidence must eventually link to implementation, automated tests, manual acceptance proof, and deployed build.
 
+## Traceability Addendum - 2026-07-03 Shop Talk Moderation and Reporting Backend
+
+- `GA-COM-001`, `GA-COM-002`, and `GA-COM-003` gain deployed moderation evidence on `master` commit `87923e9f34723b3fb12cf7f20a6b5b4c96e8cfb5`: communities, Shop Talk posts, and Shop Talk answers now have server-owned moderation states, and public read/write paths filter hidden content and reject writes into locked communities/posts.
+- `GA-COM-004` gains deployed abuse-reporting evidence: authenticated users can report communities, posts, or answers through `POST /api/v1/shop-talk/reports`; reports are deduped while open/reviewing and retain a target snapshot for review.
+- `GA-OPS-004` gains admin-control evidence: owner/support/moderator actors can list report queues and apply dismiss/hide/lock/archive/restore actions through admin-only routes; actions are recorded in append-only `shop_talk_moderation_actions` and mirrored into admin action events.
+- `GA-UX-005` gains honesty evidence: user-facing Shop Talk report actions now distinguish durable server reports from local fallback feedback when persistence fails.
+- `GA-OPS-007` gains automated evidence: `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test:unit`, `npm run test:integration`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check` passed. The integration pass used a Railway-backed `TEST_DATABASE_URL` and included migration lifecycle coverage through `0018_shop_talk_moderation`.
+- `GA-OPS-008` gains production evidence: live `https://rivt.pro/api/health` reported commit `87923e9f34723b3fb12cf7f20a6b5b4c96e8cfb5` with migration `0018_shop_talk_moderation`; `EXPECTED_SOURCE_COMMIT=87923e9f34723b3fb12cf7f20a6b5b4c96e8cfb5 npm run monitor:production` passed.
+- Remaining boundary: this is the server-owned moderation/reporting backend, not the final public moderation operation. A human-facing moderation console/SLA, richer reason picker, and queue-review evidence are still required before broad public Shop Talk exposure.
+
 ## Traceability Addendum - 2026-07-02 Shop Talk Reddit Backbone
 
 - `GA-COM-001` gains deployed backend evidence on `master` commit `dba2acb77a3cc36d9757c895591e81e4bb24cf6e`: Shop Talk posts now require a real `community_id`, can be created/listed by community slug, and existing posts are backfilled into starter communities by migration `0017_shop_talk_reddit_backbone`.
