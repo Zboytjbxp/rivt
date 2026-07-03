@@ -2446,22 +2446,96 @@ function DailyReportTool() {
 
 // ── Tax Summary ────────────────────────────────────────────────────────────────
 
+type TaxTimeSession = {
+  startedAt: string;
+  endedAt: string | null;
+};
+
+type TaxExpenseEntry = {
+  date: string;
+  amount: number;
+};
+
+function readTaxTimeSessions(): TaxTimeSession[] {
+  try {
+    const parsed = JSON.parse(localStorage.getItem("rivt.timeSessions.v1") ?? "[]") as TaxTimeSession[];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function readTaxExpenses(): TaxExpenseEntry[] {
+  try {
+    const parsed = JSON.parse(localStorage.getItem("rivt.expenses.v1") ?? "[]") as TaxExpenseEntry[];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function isTaxTimeSession(value: unknown): value is TaxTimeSession {
+  if (!value || typeof value !== "object") return false;
+  const candidate = value as Partial<TaxTimeSession>;
+  return typeof candidate.startedAt === "string" && (candidate.endedAt === null || typeof candidate.endedAt === "string");
+}
+
+function isTaxExpenseEntry(value: unknown): value is TaxExpenseEntry {
+  if (!value || typeof value !== "object") return false;
+  const candidate = value as Partial<TaxExpenseEntry>;
+  return typeof candidate.date === "string" && typeof candidate.amount === "number";
+}
+
+function taxTimeSessionFromServer(record: ServerToolRecord): TaxTimeSession | null {
+  return isTaxTimeSession(record.payload) ? record.payload : null;
+}
+
+function taxExpenseFromServer(record: ServerToolRecord): TaxExpenseEntry | null {
+  return isTaxExpenseEntry(record.payload) ? record.payload : null;
+}
+
 function TaxSummaryTool() {
   const [selectedYear, setSelectedYear] = useState(() => new Date().getFullYear());
+  const [timeSessions, setTimeSessions] = useState<TaxTimeSession[]>(readTaxTimeSessions);
+  const [expenses, setExpenses] = useState<TaxExpenseEntry[]>(readTaxExpenses);
+  const [mileageEntries, setMileageEntries] = useState<MileageEntry[]>(readMileage);
+  const [recordSource, setRecordSource] = useState("Using saved records on this device.");
   const yearOptions = useMemo(() => {
     const y = new Date().getFullYear();
     return [y, y - 1, y - 2];
   }, []);
   const [copied, setCopied] = useState(false);
 
+  useEffect(() => {
+    let cancelled = false;
+    void Promise.all([
+      fetchToolRecords("time_session"),
+      fetchToolRecords("expense"),
+      fetchToolRecords("mileage"),
+    ]).then(([serverSessions, serverExpenses, serverMileage]) => {
+      if (cancelled) return;
+      const mappedSessions = serverSessions?.map(taxTimeSessionFromServer).filter((session): session is TaxTimeSession => Boolean(session)) ?? [];
+      const mappedExpenses = serverExpenses?.map(taxExpenseFromServer).filter((expense): expense is TaxExpenseEntry => Boolean(expense)) ?? [];
+      const mappedMileage = serverMileage?.map(mileageFromServer).filter((entry): entry is MileageEntry => Boolean(entry)) ?? [];
+      if (mappedSessions.length) setTimeSessions(mappedSessions);
+      if (mappedExpenses.length) setExpenses(mappedExpenses);
+      if (mappedMileage.length) setMileageEntries(mappedMileage);
+      if (serverSessions || serverExpenses || serverMileage) {
+        setRecordSource(mappedSessions.length || mappedExpenses.length || mappedMileage.length
+          ? "Using synced RIVT account records."
+          : "No synced time, expense, or mileage records yet.");
+        return;
+      }
+      setRecordSource("Using saved records on this device. Sign in with network access to sync.");
+    });
+    return () => { cancelled = true; };
+  }, []);
+
   const summary = useMemo(() => {
     const yearStr = String(selectedYear);
 
     // Gross income from time sessions × hourly rate
     const hourlyRate = readPrimaryHourlyRate(65);
-    const timeSessions: Array<{ startedAt: string; endedAt: string | null }> = (() => {
-      try { return JSON.parse(localStorage.getItem("rivt.timeSessions.v1") ?? "[]") as Array<{ startedAt: string; endedAt: string | null }>; } catch { return []; }
-    })();
     const grossIncome = timeSessions
       .filter((s) => s.endedAt && s.startedAt.startsWith(yearStr))
       .reduce((sum, s) => {
@@ -2470,17 +2544,11 @@ function TaxSummaryTool() {
       }, 0);
 
     // Business expenses
-    const expenses: Array<{ date: string; amount: number }> = (() => {
-      try { return JSON.parse(localStorage.getItem("rivt.expenses.v1") ?? "[]") as Array<{ date: string; amount: number }>; } catch { return []; }
-    })();
     const totalExpenses = expenses
       .filter((e) => e.date && e.date.startsWith(yearStr))
       .reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
 
     // Estimated mileage deduction using the shared mileage-tool rate.
-    const mileageEntries: Array<{ date: string; miles: number }> = (() => {
-      try { return JSON.parse(localStorage.getItem("rivt.mileage.v1") ?? "[]") as Array<{ date: string; miles: number }>; } catch { return []; }
-    })();
     const totalMiles = mileageEntries
       .filter((m) => m.date && m.date.startsWith(yearStr))
       .reduce((sum, m) => sum + (Number(m.miles) || 0), 0);
@@ -2491,7 +2559,7 @@ function TaxSummaryTool() {
     const quarterlyPayment = seTax / 4;
 
     return { grossIncome, totalExpenses, mileageDeduction, totalMiles, netProfit, seTax, quarterlyPayment };
-  }, [selectedYear]);
+  }, [expenses, mileageEntries, selectedYear, timeSessions]);
 
   const fmt = (n: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(n);
 
@@ -2582,6 +2650,7 @@ function TaxSummaryTool() {
           </div>
         </div>
 
+        <p className="v2-record-notice" role="status">{recordSource}</p>
         <p className="v2-tax-disclaimer">This is an estimate only. Consult a tax professional.</p>
 
         <div className="v2-tax-summary-actions">

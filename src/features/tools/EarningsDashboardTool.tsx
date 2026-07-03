@@ -1,8 +1,9 @@
 import { TrendingUp } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { Job } from "../../types";
 import { EmptyState, Panel } from "../../components/ui";
 import { readPrimaryHourlyRate } from "../../lib/rateCard";
+import { fetchToolRecords, type ServerToolRecord } from "./tool-records-api";
 
 interface PaymentRecord {
   id: number;
@@ -15,8 +16,59 @@ interface PaymentRecord {
   date: string;
 }
 
+type EarningsTimeSession = {
+  startedAt: string;
+  endedAt: string | null;
+  jobTitle?: string;
+};
+
+type EarningsExpense = {
+  category: string;
+  amount: number;
+};
+
 function currency(value: number) {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(value);
+}
+
+function readCachedTimeSessions(): EarningsTimeSession[] {
+  try {
+    const parsed = JSON.parse(localStorage.getItem("rivt.timeSessions.v1") ?? "[]") as EarningsTimeSession[];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function readCachedExpenses(): EarningsExpense[] {
+  try {
+    const parsed = JSON.parse(localStorage.getItem("rivt.expenses.v1") ?? "[]") as EarningsExpense[];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function isEarningsTimeSession(value: unknown): value is EarningsTimeSession {
+  if (!value || typeof value !== "object") return false;
+  const candidate = value as Partial<EarningsTimeSession>;
+  return typeof candidate.startedAt === "string"
+    && (candidate.endedAt === null || typeof candidate.endedAt === "string")
+    && (candidate.jobTitle === undefined || typeof candidate.jobTitle === "string");
+}
+
+function isEarningsExpense(value: unknown): value is EarningsExpense {
+  if (!value || typeof value !== "object") return false;
+  const candidate = value as Partial<EarningsExpense>;
+  return typeof candidate.category === "string" && typeof candidate.amount === "number";
+}
+
+function timeSessionFromServer(record: ServerToolRecord): EarningsTimeSession | null {
+  return isEarningsTimeSession(record.payload) ? record.payload : null;
+}
+
+function expenseFromServer(record: ServerToolRecord): EarningsExpense | null {
+  return isEarningsExpense(record.payload) ? record.payload : null;
 }
 
 function getISOWeek(date: Date): number {
@@ -35,8 +87,32 @@ function getWeekStartDate(year: number, week: number): Date {
 
 function EarningsDashboardTool({ jobs, paymentRecords }: { jobs: Job[]; paymentRecords: PaymentRecord[] }) {
   const [period, setPeriod] = useState<"week" | "month" | "all">("month");
+  const [timeSessions, setTimeSessions] = useState<EarningsTimeSession[]>(readCachedTimeSessions);
+  const [expenses, setExpenses] = useState<EarningsExpense[]>(readCachedExpenses);
+  const [recordSource, setRecordSource] = useState("Using saved records on this device.");
+
+  useEffect(() => {
+    let cancelled = false;
+    void Promise.all([fetchToolRecords("time_session"), fetchToolRecords("expense")]).then(([serverSessions, serverExpenses]) => {
+      if (cancelled) return;
+      const mappedSessions = serverSessions?.map(timeSessionFromServer).filter((session): session is EarningsTimeSession => Boolean(session)) ?? [];
+      const mappedExpenses = serverExpenses?.map(expenseFromServer).filter((expense): expense is EarningsExpense => Boolean(expense)) ?? [];
+      if (mappedSessions.length) setTimeSessions(mappedSessions);
+      if (mappedExpenses.length) setExpenses(mappedExpenses);
+      if (serverSessions || serverExpenses) {
+        setRecordSource(mappedSessions.length || mappedExpenses.length
+          ? "Using synced RIVT account records."
+          : "No synced time or expense records yet.");
+        return;
+      }
+      setRecordSource("Using saved records on this device. Sign in with network access to sync.");
+    });
+    return () => { cancelled = true; };
+  }, []);
 
   const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentWeek = getISOWeek(now);
   const cutoff = period === "week"
     ? new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7)
     : period === "month"
@@ -58,9 +134,6 @@ function EarningsDashboardTool({ jobs, paymentRecords }: { jobs: Job[]; paymentR
 
   // ── Weekly earnings chart data (last 8 weeks from time sessions × hourly rate) ──
   const weeklyData = useMemo(() => {
-    const timeSessions: Array<{ startedAt: string; endedAt: string | null; jobTitle?: string }> = (() => {
-      try { return JSON.parse(localStorage.getItem("rivt.timeSessions.v1") ?? "[]") as Array<{ startedAt: string; endedAt: string | null; jobTitle?: string }>; } catch { return []; }
-    })();
     const hourlyRate = readPrimaryHourlyRate(65);
     const weekTotals: Record<string, number> = {};
     for (const s of timeSessions) {
@@ -72,8 +145,6 @@ function EarningsDashboardTool({ jobs, paymentRecords }: { jobs: Job[]; paymentR
       const key = `${year}-W${String(week).padStart(2, "0")}`;
       weekTotals[key] = (weekTotals[key] ?? 0) + hrs * hourlyRate;
     }
-    const currentYear = now.getFullYear();
-    const currentWeek = getISOWeek(now);
     const weeks: Array<{ label: string; amount: number }> = [];
     for (let i = 7; i >= 0; i--) {
       let targetWeek = currentWeek - i;
@@ -85,15 +156,12 @@ function EarningsDashboardTool({ jobs, paymentRecords }: { jobs: Job[]; paymentR
       weeks.push({ label, amount: weekTotals[key] ?? 0 });
     }
     return weeks;
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [currentWeek, currentYear, timeSessions]);
 
   const maxWeekAmount = Math.max(...weeklyData.map((w) => w.amount), 1);
 
   // ── Expense category breakdown ──
   const categoryData = useMemo(() => {
-    const expenses: Array<{ category: string; amount: number }> = (() => {
-      try { return JSON.parse(localStorage.getItem("rivt.expenses.v1") ?? "[]") as Array<{ category: string; amount: number }>; } catch { return []; }
-    })();
     const totals: Record<string, number> = {};
     for (const e of expenses) {
       totals[e.category] = (totals[e.category] ?? 0) + e.amount;
@@ -102,13 +170,10 @@ function EarningsDashboardTool({ jobs, paymentRecords }: { jobs: Job[]; paymentR
     return Object.entries(totals)
       .sort(([, a], [, b]) => b - a)
       .map(([name, catTotal]) => ({ name, total: catTotal, pct: grandExpTotal > 0 ? (catTotal / grandExpTotal) * 100 : 0 }));
-  }, []);
+  }, [expenses]);
 
   // ── Top jobs by earnings (time sessions × rate) ──
   const topJobs = useMemo(() => {
-    const timeSessions: Array<{ startedAt: string; endedAt: string | null; jobTitle?: string }> = (() => {
-      try { return JSON.parse(localStorage.getItem("rivt.timeSessions.v1") ?? "[]") as Array<{ startedAt: string; endedAt: string | null; jobTitle?: string }>; } catch { return []; }
-    })();
     const hourlyRate = readPrimaryHourlyRate(65);
     const byJob: Record<string, number> = {};
     for (const s of timeSessions) {
@@ -121,7 +186,7 @@ function EarningsDashboardTool({ jobs, paymentRecords }: { jobs: Job[]; paymentR
       .sort(([, a], [, b]) => b - a)
       .slice(0, 5)
       .map(([title, earned]) => ({ title, earned }));
-  }, []);
+  }, [timeSessions]);
 
   return (
     <div className="v2-tool-workbench v2-earnings-workbench">
@@ -139,6 +204,7 @@ function EarningsDashboardTool({ jobs, paymentRecords }: { jobs: Job[]; paymentR
           <article><span>Avg job size</span><strong>{currency(avgJobSize)}</strong></article>
           <article><span>Top trade</span><strong>{topTrade}</strong></article>
         </div>
+        <p className="v2-record-notice" role="status">{recordSource}</p>
         {pending.length ? (
           <div className="v2-earnings-pending-bar">
             <strong>{pending.length} pending</strong>

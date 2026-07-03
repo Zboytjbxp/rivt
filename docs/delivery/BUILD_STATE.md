@@ -7,6 +7,31 @@ Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
 Production release commit: verify with live `/api/health`; latest runtime feature evidence is recorded below and docs-only evidence commits may supersede the served build SHA.
 
+## Latest Packet 08 Pass - Tool Summary Account Records
+
+- Implemented the next tool-records cleanup slice on branch `codex/tool-summary-account-records`.
+- Reduced remaining local-only summary ambiguity:
+  - Earnings now hydrates synced `time_session` and `expense` tool records before rendering weekly earnings, expense categories, and top jobs
+  - Tax Summary now hydrates synced `time_session`, `expense`, and `mileage` tool records before calculating annual revenue, expenses, mileage deduction, net profit, and estimated self-employment tax
+  - both summaries retain local device fallback when signed out, offline, or the account record API is unreachable
+  - both summaries now show a short source notice so account-backed vs device-backed numbers are not overstated
+- Updated rendered Tools QA after recent copy cleanup:
+  - the smoke now clicks `Save draft` and expects `Daily log draft saved.` instead of stale `Save local draft` copy
+- Preserved the Gate A honesty boundary:
+  - no new production data migration, fake provider behavior, payment processing, homeowner flow, or authorization change was added
+  - no new package dependency was added
+- Local gates:
+  - `npm run build` (pass)
+  - `npm run lint` (pass)
+  - `npm run test:unit` (pass; 44/44)
+  - `npm run test:e2e` (pass; desktop and mobile jobs/discovery)
+  - `npm run test:ui:tools` (pass; screenshots at `C:\Users\zboyt\AppData\Local\Temp\rivt-tools-pass`)
+  - `npm audit --omit=dev` (pass; 0 vulnerabilities)
+  - `node --test test/tool-records.integration.test.js` was attempted but skipped because `TEST_DATABASE_URL` is not configured in this shell
+  - aggregate `npm run test` was attempted and exceeded the local command window; aggregate completion is not claimed for this pass
+- Production deployment status:
+  - pending merge and Railway deploy verification for this pass
+
 ## Latest Packet 08 Pass - Daily Log Draft Sync
 
 - Implemented the next accepted tool-records cleanup slice on branch `codex/tool-records-local-sync-polish`.

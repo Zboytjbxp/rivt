@@ -296,8 +296,8 @@ async function runToolsFlow(page, viewportName) {
   await page.locator(".v2-daily-log-preview").getByText("Installed devices", { exact: false }).waitFor({ timeout: 15_000 });
   await page.getByRole("button", { name: "Save to Records" }).click();
   await page.getByText("Daily log saved to the server-backed Records timeline.", { exact: true }).waitFor({ timeout: 15_000 });
-  await page.getByRole("button", { name: "Save local draft" }).click();
-  await page.getByText("Daily log draft saved on this device.", { exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByRole("button", { name: "Save draft" }).click();
+  await page.getByText("Daily log draft saved.", { exact: true }).waitFor({ timeout: 15_000 });
   await page.getByRole("button", { name: "Copy daily log" }).waitFor({ timeout: 15_000 });
   await assertNoHorizontalOverflow(page);
   await page.screenshot({ path: path.join(screenshotDir, `${viewportName}-daily-log.png`), fullPage: true });
