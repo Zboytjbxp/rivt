@@ -29,7 +29,10 @@ Production release commit: verify with live `/api/health`; latest runtime featur
   - `npm run test:e2e` (pass)
   - `npm run test:ui:tools` (pass; screenshots outside the repo at `C:\Users\zboyt\AppData\Local\Temp\rivt-tools-pass`)
   - `npm audit --omit=dev` (pass; 0 vulnerabilities)
-- Production deployment status: pending until this docs/evidence commit is merged to `master`, pushed, picked up by Railway, and verified against live `/api/health` plus `npm run monitor:production`.
+- Production deployment completed from `master`:
+  - release commit `5545a90f79ff7ac4067c162f9bae3bff9b8f1b27` was pushed to GitHub and picked up by Railway production service `RIVT`
+  - live `https://rivt.pro/api/health` returned `ok: true`, build commit `5545a90f79ff7ac4067c162f9bae3bff9b8f1b27`, migration `0019_tool_records`, PostgreSQL, S3-compatible object storage, and configured Sentry
+  - `EXPECTED_SOURCE_COMMIT=5545a90f79ff7ac4067c162f9bae3bff9b8f1b27 npm run monitor:production` passed with operational controls off, seven anonymous private-route checks, and 649 ms duration
 
 ## Latest Packet 08 Pass - Tool Records Persistence Slice
 
