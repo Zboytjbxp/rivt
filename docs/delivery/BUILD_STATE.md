@@ -43,7 +43,9 @@ Production release commit: verify with live `/api/health`; latest runtime featur
   - `npm audit --omit=dev` (pass; 0 vulnerabilities)
   - `git diff --check` (pass; line-ending warnings only)
 - Production deployment status:
-  - not deployed in this pass yet; branch is ready for review/merge/deploy after commit
+  - release commit `b38760b4ceb9b08b77c82508d407d78987a1dea0` was pushed to GitHub and picked up by Railway production service `RIVT`
+  - live `https://rivt.pro/api/health` returned `ok: true`, build commit `b38760b4ceb9b08b77c82508d407d78987a1dea0`, PostgreSQL, S3-compatible object storage, and configured Sentry
+  - `EXPECTED_SOURCE_COMMIT=b38760b4ceb9b08b77c82508d407d78987a1dea0 npm run monitor:production` passed with operational controls off, seven anonymous private-route checks, and 1003 ms duration
 
 ## Latest Packet 08 Pass - Remaining Tool Records Sync Slice
 
