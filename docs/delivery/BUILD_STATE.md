@@ -30,7 +30,9 @@ Production release commit: verify with live `/api/health`; latest runtime featur
   - `npm audit --omit=dev` (pass; 0 vulnerabilities)
   - `node --test test/tool-records.integration.test.js` was attempted but skipped because `TEST_DATABASE_URL` is not configured in this shell
 - Production deployment status:
-  - pending merge and Railway deploy verification for this pass
+  - runtime release commit `dee7df54a27470a17c7f74f9599aab9e71b3bef3` was pushed to GitHub and picked up by Railway production service `RIVT`
+  - live `https://rivt.pro/api/health` returned `ok: true`, build commit `dee7df54a27470a17c7f74f9599aab9e71b3bef3`, migration `0019_tool_records`, PostgreSQL, S3-compatible object storage, and configured Sentry
+  - `EXPECTED_SOURCE_COMMIT=dee7df54a27470a17c7f74f9599aab9e71b3bef3 npm run monitor:production` passed with operational controls off, seven anonymous private-route checks, and 684 ms duration
 
 ## Latest Packet 08 Pass - Home, Shop Talk, and Tools Polish
 
