@@ -16,6 +16,14 @@ export interface ClientRecord {
   email: string;
   notes: string;
   createdAt: string;
+  threadMessages?: ClientRecordMessage[];
+}
+
+export interface ClientRecordMessage {
+  id: string;
+  text: string;
+  sentAt: string;
+  from: "me" | "client";
 }
 
 export interface ClientRecordSyncResult {
@@ -35,6 +43,22 @@ function normalizeClientRecord(value: unknown): ClientRecord | null {
     email: typeof candidate.email === "string" ? candidate.email : "",
     notes: typeof candidate.notes === "string" ? candidate.notes : "",
     createdAt: typeof candidate.createdAt === "string" ? candidate.createdAt : new Date().toISOString(),
+    threadMessages: Array.isArray(candidate.threadMessages)
+      ? candidate.threadMessages.map(normalizeClientRecordMessage).filter((message): message is ClientRecordMessage => Boolean(message))
+      : [],
+  };
+}
+
+function normalizeClientRecordMessage(value: unknown): ClientRecordMessage | null {
+  if (!value || typeof value !== "object") return null;
+  const candidate = value as Partial<ClientRecordMessage>;
+  if (typeof candidate.id !== "string" || typeof candidate.text !== "string" || typeof candidate.sentAt !== "string") return null;
+  if (candidate.from !== "me" && candidate.from !== "client") return null;
+  return {
+    id: candidate.id,
+    text: candidate.text,
+    sentAt: candidate.sentAt,
+    from: candidate.from,
   };
 }
 

@@ -2,10 +2,40 @@
 
 Last updated: 2026-07-03 America/New_York
 Current gate: Gate A launch hardening
-Current phase: Packet 08 Gate A launch hardening plus Gate B behind-flag backbone work: machine gates and live workflow smokes are mostly green; the Shop Talk Reddit-model backbone, moderation/reporting backend, human-facing moderation console/report UX, reachability/naming cleanup, Tools hub consolidation, Payment Tracker server records, money-tools sync, and the remaining accepted tool-records sync slice are implemented while still respecting launch-readiness boundaries before broad exposure.
+Current phase: Packet 08 Gate A launch hardening plus Gate B behind-flag backbone work: machine gates and live workflow smokes are mostly green; the Shop Talk Reddit-model backbone, moderation/reporting backend, human-facing moderation console/report UX, reachability/naming cleanup, Tools hub consolidation, Payment Tracker server records, money-tools sync, the accepted tool-records sync slices, and the non-tool local-state boundary cleanup are implemented while still respecting launch-readiness boundaries before broad exposure.
 Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
 Production release commit: verify with live `/api/health`; latest runtime feature evidence is recorded below and docs-only evidence commits may supersede the served build SHA.
+
+## Latest Packet 08 Pass - Non-Tool Local State Boundaries
+
+- Implemented the non-tool local-only surface cleanup on branch `codex/non-tool-local-state-boundaries`.
+- Converted the safe non-tool data slice to account-backed storage without a new migration:
+  - client contacts were already backed by authenticated `client` tool records
+  - Inbox client text threads now hydrate from, merge into, and sync through each client record payload
+  - old local text client threads are promoted to the account-backed client payload when the account record API is reachable
+  - text threads retain local device fallback when signed out, offline, or the account record API is unreachable
+- Kept harmless UI preferences local by design:
+  - Inbox message templates
+  - pinned conversation IDs
+  - archived conversation IDs
+  - per-message emoji reactions
+- Preserved honest boundaries instead of overstating readiness:
+  - client thread photo attachments remain device-local until routed through the object-storage media upload path
+  - Crew saves/roster, crew invite planner, and reviews/shout-outs are product records that need dedicated server domain tables/APIs before public readiness
+  - those Crew records were not shoved into generic client records or tool records because that would create a misleading source of truth
+- Preserved the Gate A honesty boundary:
+  - no homeowner flows, fake verification, fake provider behavior, payment processing, production data migration, or authorization changes were added
+  - no new package dependency was added
+- Local gates:
+  - `npm run build` (pass)
+  - `npm run lint` (pass)
+  - `npm run test:unit` (pass; 44/44)
+  - `npm run test:e2e` (pass; desktop and mobile jobs/discovery)
+  - `npm audit --omit=dev` (pass; 0 vulnerabilities)
+  - aggregate `npm run test` was attempted and exceeded the local command window; aggregate completion is not claimed for this pass
+- Production deployment status:
+  - pending merge/deploy evidence for this pass
 
 ## Latest Packet 08 Pass - Tool Summary Account Records
 
