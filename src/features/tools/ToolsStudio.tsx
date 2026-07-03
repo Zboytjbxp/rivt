@@ -48,6 +48,7 @@ import { TimeTrackerTool } from "./TimeTrackerTool";
 import { BidBuilderTool } from "./BidBuilderTool";
 import { ExpenseLoggerTool } from "./ExpenseLoggerTool";
 import { EarningsDashboardTool } from "./EarningsDashboardTool";
+import { deleteToolRecordByLocalId, fetchToolRecords, upsertToolRecord, type ServerToolRecord } from "./tool-records-api";
 import "./tools-studio.css";
 
 export type ToolMode = "hub" | "calculator" | "estimate" | "invoice" | "materials" | "daily-log" | "job-photos" | "time-tracker" | "expense-logger" | "earnings" | "bid-builder" | "mileage" | "price-book" | "safety-checklist" | "tax-estimator" | "punch-list" | "contracts" | "job-checklist" | "payments" | "daily-report" | "tax-summary";
@@ -1505,6 +1506,41 @@ function savePaymentTrackerRecords(records: PaymentTrackerRecord[]) {
   try { localStorage.setItem(paymentsTrackerKey, JSON.stringify(records)); } catch { /* noop */ }
 }
 
+function isPaymentTrackerRecord(value: unknown): value is PaymentTrackerRecord {
+  if (!value || typeof value !== "object") return false;
+  const candidate = value as Partial<PaymentTrackerRecord>;
+  return typeof candidate.id === "string"
+    && typeof candidate.jobId === "string"
+    && typeof candidate.jobTitle === "string"
+    && typeof candidate.invoiceDate === "string"
+    && typeof candidate.invoiceAmount === "number"
+    && ["invoiced", "partial", "paid", "overdue"].includes(String(candidate.status));
+}
+
+function paymentRecordFromServer(record: ServerToolRecord): PaymentTrackerRecord | null {
+  const payload = record.payload;
+  if (!isPaymentTrackerRecord(payload)) return null;
+  return {
+    ...payload,
+    id: record.localId,
+    jobTitle: payload.jobTitle || record.title,
+    invoiceDate: payload.invoiceDate || record.recordDate || new Date().toISOString().slice(0, 10),
+    invoiceAmount: typeof payload.invoiceAmount === "number" ? payload.invoiceAmount : (record.amountCents ?? 0) / 100,
+  };
+}
+
+function paymentRecordToServerInput(record: PaymentTrackerRecord) {
+  return {
+    recordType: "payment_record" as const,
+    localId: record.id,
+    title: record.jobTitle || "Standalone invoice",
+    status: record.status,
+    recordDate: record.invoiceDate || null,
+    amountCents: Math.round(Math.max(0, record.invoiceAmount) * 100),
+    payload: { ...record },
+  };
+}
+
 function readLocalJobsForPayments(): Array<{ id: string; title: string }> {
   try {
     const stored = localStorage.getItem("rivt.jobs.v1");
@@ -1525,6 +1561,7 @@ function getDisplayStatus(record: PaymentTrackerRecord): PaymentTrackerRecord["s
 
 function PaymentTrackerTool() {
   const [records, setRecords] = useState<PaymentTrackerRecord[]>(readPaymentTrackerRecords);
+  const [syncMessage, setSyncMessage] = useState("Saved on this device.");
   const localJobs = readLocalJobsForPayments();
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({
@@ -1538,6 +1575,44 @@ function PaymentTrackerTool() {
   const received = records.filter((r) => r.status === "paid").reduce((sum, r) => sum + (r.paidAmount ?? 0), 0);
   const outstanding = totalInvoiced - received;
 
+  useEffect(() => {
+    let cancelled = false;
+    void fetchToolRecords("payment_record").then((serverRecords) => {
+      if (cancelled) return;
+      if (!serverRecords) {
+        setSyncMessage("Saved on this device. Sign in with network access to sync.");
+        return;
+      }
+      const mapped = serverRecords.map(paymentRecordFromServer).filter((record): record is PaymentTrackerRecord => Boolean(record));
+      if (mapped.length) {
+        setRecords(mapped);
+        savePaymentTrackerRecords(mapped);
+        setSyncMessage("Synced to your RIVT account.");
+        return;
+      }
+      const localSnapshot = readPaymentTrackerRecords();
+      if (localSnapshot.length) {
+        void Promise.all(localSnapshot.map((record) => upsertToolRecord(paymentRecordToServerInput(record)))).then((results) => {
+          setSyncMessage(results.some(Boolean)
+            ? "Local payment records synced to your RIVT account."
+            : "Saved on this device. Sync will retry when your account is reachable.");
+        });
+        return;
+      }
+      setSyncMessage("New payment records sync to your RIVT account.");
+    });
+    return () => { cancelled = true; };
+  }, []);
+
+  function persistRecords(next: PaymentTrackerRecord[], changedRecord?: PaymentTrackerRecord) {
+    setRecords(next);
+    savePaymentTrackerRecords(next);
+    if (!changedRecord) return;
+    void upsertToolRecord(paymentRecordToServerInput(changedRecord)).then((record) => {
+      setSyncMessage(record ? "Synced to your RIVT account." : "Saved on this device. Sync will retry when your account is reachable.");
+    });
+  }
+
   function saveInvoice() {
     const job = localJobs.find((j) => j.id === form.jobId);
     const record: PaymentTrackerRecord = {
@@ -1550,27 +1625,33 @@ function PaymentTrackerTool() {
       notes: form.notes || undefined,
     };
     const next = [record, ...records];
-    setRecords(next);
-    savePaymentTrackerRecords(next);
+    persistRecords(next, record);
     setShowForm(false);
     setForm({ jobId: localJobs[0]?.id ?? "", invoiceAmount: "", invoiceDate: new Date().toISOString().slice(0, 10), notes: "" });
   }
 
   function markPaid(id: string) {
-    const next = records.map((r) => r.id === id ? {
-      ...r,
-      paidDate: new Date().toISOString().slice(0, 10),
-      paidAmount: r.invoiceAmount,
-      status: "paid" as const,
-    } : r);
-    setRecords(next);
-    savePaymentTrackerRecords(next);
+    let changed: PaymentTrackerRecord | undefined;
+    const next = records.map((r) => {
+      if (r.id !== id) return r;
+      changed = {
+        ...r,
+        paidDate: new Date().toISOString().slice(0, 10),
+        paidAmount: r.invoiceAmount,
+        status: "paid" as const,
+      };
+      return changed;
+    });
+    persistRecords(next, changed);
   }
 
   function deleteRecord(id: string) {
     const next = records.filter((r) => r.id !== id);
     setRecords(next);
     savePaymentTrackerRecords(next);
+    void deleteToolRecordByLocalId("payment_record", id).then((ok) => {
+      setSyncMessage(ok ? "Deleted from this device and your RIVT account." : "Deleted on this device. Cloud sync will catch up when reachable.");
+    });
   }
 
   const sorted = [...records].sort((a, b) => b.invoiceDate.localeCompare(a.invoiceDate));
@@ -1605,6 +1686,7 @@ function PaymentTrackerTool() {
       <button type="button" className="v2-payment-add-btn" onClick={() => setShowForm(!showForm)}>
         {showForm ? "Cancel" : "+ Add Invoice"}
       </button>
+      <p className="v2-record-notice" role="status">{syncMessage}</p>
 
       {showForm && (
         <div className="v2-payment-form">

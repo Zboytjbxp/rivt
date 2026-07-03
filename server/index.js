@@ -80,6 +80,7 @@ import { createNewsRouter } from "./news.js";
 import { registerShopTalkRoutes } from "./shop-talk.js";
 import { registerShopTalkModerationRoutes } from "./shop-talk-moderation.js";
 import { registerCommunityRoutes } from "./communities.js";
+import { registerToolRecordRoutes } from "./tool-records.js";
 import {
   buildCloseoutReport,
   completionResolutionSchema,
@@ -4508,6 +4509,16 @@ registerShopTalkModerationRoutes({
   runIdempotentMutation,
   sendIdempotentResult,
   insertAdminAction,
+});
+
+registerToolRecordRoutes({
+  app,
+  database,
+  requireV1AuthenticatedUser,
+  requireV1Actor,
+  writeRateLimit,
+  runIdempotentMutation,
+  sendIdempotentResult,
 });
 
 app.get("/api/readiness", requireAuthenticatedUser, async (_request, response, next) => {
