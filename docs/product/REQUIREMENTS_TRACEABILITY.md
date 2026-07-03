@@ -17,7 +17,7 @@ Evidence must eventually link to implementation, automated tests, manual accepta
 - `GA-COM-001` gains cleanup evidence: Shop Talk authors can delete their own posts through a server-owned route that hides the post from feeds and removes active media/upload records instead of leaving test or mistake posts stuck.
 - `GA-OPS-004` gains auditability evidence: subscription cancel/resume requests and Shop Talk post deletions write audit events, preserving support visibility instead of making destructive client-only changes.
 - `GA-OPS-007` gains local automated evidence: `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test:unit`, targeted billing/Shop Talk integration tests, `npm run test:e2e`, `npm audit --omit=dev`, and `npm run test:integration` passed. Aggregate `npm run test` first exceeded a 5-minute local command window, so the equivalent unit and integration scripts were run and recorded separately.
-- `GA-OPS-008` production deployment evidence is pending for this branch at the time of this addendum.
+- `GA-OPS-008` gains production deployment evidence: live `https://rivt.pro/api/health` reported commit `98afa82dd23811457a0213b9a8e46ebc2bc88d05` with migration `0021_shop_talk_post_media`, PostgreSQL/S3-compatible storage, and configured Sentry; `EXPECTED_SOURCE_COMMIT=98afa82dd23811457a0213b9a8e46ebc2bc88d05 npm run monitor:production` passed.
 
 ## Traceability Addendum - 2026-07-03 Shop Talk Post Photos
 

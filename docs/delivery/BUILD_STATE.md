@@ -41,7 +41,9 @@ Production release commit: verify with live `/api/health`; latest runtime featur
   - `npm run test:integration` (pass with extended local command window; 17/17 integration tests)
   - aggregate `npm run test` was attempted first and exceeded a 5-minute local command window; `test:unit` plus `test:integration` passed separately afterward
 - Production deployment status:
-  - pending for this branch at the time of this doc update
+  - runtime release commit `98afa82dd23811457a0213b9a8e46ebc2bc88d05` was pushed to GitHub and picked up by Railway production service `RIVT`
+  - live `https://rivt.pro/api/health` returned `ok: true`, build commit `98afa82dd23811457a0213b9a8e46ebc2bc88d05`, migration `0021_shop_talk_post_media`, PostgreSQL, S3-compatible object storage, and configured Sentry
+  - `EXPECTED_SOURCE_COMMIT=98afa82dd23811457a0213b9a8e46ebc2bc88d05 npm run monitor:production` passed with operational controls off, seven anonymous private-route checks, and 648 ms duration
 
 ## Latest Packet 08 Pass - Shop Talk Post Photos
 
