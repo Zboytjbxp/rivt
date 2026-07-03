@@ -17,9 +17,17 @@ import {
   Users,
   X,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { ProfileSearchResult } from "../../app-shell/types";
 import { Avatar, EmptyState, PageHeader, Panel } from "../../components/ui";
+import {
+  deleteClientRecord,
+  readClientRecordsLocal,
+  saveClientRecordsLocal,
+  syncClientRecords,
+  upsertClientRecord,
+  type ClientRecord,
+} from "../clients/client-records";
 import type { CommunityPost } from "../shop-talk/ShopTalkView";
 import "./network-hub.css";
 
@@ -47,15 +55,7 @@ interface NetworkHubProps {
 
 // ── Clients ───────────────────────────────────────────────────────────────────
 
-interface Client {
-  id: string;
-  name: string;
-  company: string;
-  phone: string;
-  email: string;
-  notes: string;
-  createdAt: string;
-}
+type Client = ClientRecord;
 
 interface StoredJobEntry {
   id: string | number;
@@ -68,19 +68,31 @@ interface StoredJobEntry {
 const emptyClientForm = { name: "", company: "", phone: "", email: "", notes: "" };
 
 function ClientBookView() {
-  const load = (): Client[] => {
-    try { return JSON.parse(localStorage.getItem("rivt.clients.v1") || "[]") as Client[]; } catch { return []; }
-  };
-
-  const [clients, setClients] = useState<Client[]>(load);
+  const [clients, setClients] = useState<Client[]>(readClientRecordsLocal);
   const [showForm, setShowForm] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [form, setForm] = useState(emptyClientForm);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [syncMessage, setSyncMessage] = useState("Saved on this device.");
 
-  function save(list: Client[]) {
-    try { localStorage.setItem("rivt.clients.v1", JSON.stringify(list)); } catch { /* noop */ }
+  useEffect(() => {
+    let cancelled = false;
+    void syncClientRecords().then((result) => {
+      if (cancelled) return;
+      setClients(result.clients);
+      setSyncMessage(result.message);
+    });
+    return () => { cancelled = true; };
+  }, []);
+
+  function save(list: Client[], changedClient?: Client) {
+    saveClientRecordsLocal(list);
     setClients(list);
+    if (changedClient) {
+      void upsertClientRecord(changedClient).then((ok) => {
+        setSyncMessage(ok ? "Synced to your RIVT account." : "Saved on this device. Sync will retry when your account is reachable.");
+      });
+    }
   }
 
   function openAdd() {
@@ -104,10 +116,11 @@ function ClientBookView() {
   function handleSave() {
     if (!form.name.trim()) return;
     if (editingClient) {
-      save(clients.map((c) => c.id === editingClient.id ? { ...c, ...form } : c));
+      const updated = { ...editingClient, ...form };
+      save(clients.map((c) => c.id === editingClient.id ? updated : c), updated);
     } else {
       const next: Client = { id: crypto.randomUUID(), ...form, createdAt: new Date().toISOString() };
-      save([next, ...clients]);
+      save([next, ...clients], next);
     }
     cancel();
   }
@@ -115,6 +128,9 @@ function ClientBookView() {
   function handleDelete(id: string) {
     if (!window.confirm("Delete this client?")) return;
     save(clients.filter((c) => c.id !== id));
+    void deleteClientRecord(id).then((ok) => {
+      setSyncMessage(ok ? "Client record removed from your RIVT account." : "Removed on this device. Sync will retry when your account is reachable.");
+    });
     if (expandedId === id) setExpandedId(null);
   }
 
@@ -137,6 +153,7 @@ function ClientBookView() {
           <Plus size={14} /> Add
         </button>
       </div>
+      <p className="v2-client-sync-note" role="status">{syncMessage}</p>
 
       {showForm && (
         <div className="v2-client-form">

@@ -625,8 +625,44 @@ function persistPriceBook(entries: PriceEntry[]) {
   try { localStorage.setItem(priceBookKey, JSON.stringify(entries.slice(0, 200))); } catch { /* noop */ }
 }
 
+function isPriceEntry(value: unknown): value is PriceEntry {
+  if (!value || typeof value !== "object") return false;
+  const candidate = value as Partial<PriceEntry>;
+  return typeof candidate.id === "string"
+    && typeof candidate.name === "string"
+    && typeof candidate.unit === "string"
+    && typeof candidate.price === "number"
+    && typeof candidate.supplier === "string"
+    && typeof candidate.notes === "string"
+    && typeof candidate.updatedAt === "string";
+}
+
+function priceEntryFromServer(record: ServerToolRecord): PriceEntry | null {
+  if (!isPriceEntry(record.payload)) return null;
+  return {
+    ...record.payload,
+    id: record.localId,
+    name: record.payload.name || record.title,
+    price: typeof record.payload.price === "number" ? record.payload.price : (record.amountCents ?? 0) / 100,
+    updatedAt: record.payload.updatedAt || record.updatedAt || new Date().toISOString(),
+  };
+}
+
+function priceEntryToServerInput(entry: PriceEntry) {
+  return {
+    recordType: "price_book" as const,
+    localId: entry.id,
+    title: entry.name || "Price book item",
+    status: "active",
+    recordDate: entry.updatedAt.slice(0, 10),
+    amountCents: Math.round(Math.max(0, entry.price) * 100),
+    payload: { ...entry },
+  };
+}
+
 function PriceBookTool() {
   const [entries, setEntries] = useState<PriceEntry[]>(readPriceBook);
+  const [syncMessage, setSyncMessage] = useState("Saved on this device.");
 
   useEffect(() => {
     const trade = (() => { try { return JSON.parse(localStorage.getItem("rivt.profile.v1") ?? "null")?.primaryTrade ?? null; } catch { return null; } })();
@@ -646,10 +682,44 @@ function PriceBookTool() {
         // eslint-disable-next-line react-hooks/set-state-in-effect
         setEntries(seededEntries);
         persistPriceBook(seededEntries);
+        void Promise.all(seededEntries.map((entry) => upsertToolRecord(priceEntryToServerInput(entry)))).then((results) => {
+          setSyncMessage(results.some(Boolean)
+            ? "Starter price book synced to your RIVT account."
+            : "Starter prices saved on this device. Sync will retry when your account is reachable.");
+        });
         localStorage.setItem("rivt.priceBookSeeded.v1", "1");
       }
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    let cancelled = false;
+    void fetchToolRecords("price_book").then((serverRecords) => {
+      if (cancelled) return;
+      if (!serverRecords) {
+        setSyncMessage("Saved on this device. Sign in with network access to sync.");
+        return;
+      }
+      const mapped = serverRecords.map(priceEntryFromServer).filter((entry): entry is PriceEntry => Boolean(entry));
+      if (mapped.length) {
+        setEntries(mapped);
+        persistPriceBook(mapped);
+        setSyncMessage("Synced to your RIVT account.");
+        return;
+      }
+      const localSnapshot = readPriceBook();
+      if (localSnapshot.length) {
+        void Promise.all(localSnapshot.map((entry) => upsertToolRecord(priceEntryToServerInput(entry)))).then((results) => {
+          setSyncMessage(results.some(Boolean)
+            ? "Local price book synced to your RIVT account."
+            : "Saved on this device. Sync will retry when your account is reachable.");
+        });
+        return;
+      }
+      setSyncMessage("New price book items sync to your RIVT account.");
+    });
+    return () => { cancelled = true; };
+  }, []);
 
   const [search, setSearch] = useState("");
   const [name, setName] = useState("");
@@ -661,6 +731,15 @@ function PriceBookTool() {
   const [copiedId, setCopiedId] = useState("");
 
   const filtered = entries.filter((e) => !search.trim() || e.name.toLowerCase().includes(search.toLowerCase()) || e.supplier.toLowerCase().includes(search.toLowerCase()));
+
+  function persistPriceEntries(next: PriceEntry[], changedEntry?: PriceEntry) {
+    setEntries(next);
+    persistPriceBook(next);
+    if (!changedEntry) return;
+    void upsertToolRecord(priceEntryToServerInput(changedEntry)).then((record) => {
+      setSyncMessage(record ? "Synced to your RIVT account." : "Saved on this device. Sync will retry when your account is reachable.");
+    });
+  }
 
   function addEntry() {
     if (!name.trim() || !price) return;
@@ -677,8 +756,7 @@ function PriceBookTool() {
     const next = existingIndex >= 0
       ? entries.map((e, i) => i === existingIndex ? entry : e)
       : [entry, ...entries];
-    setEntries(next);
-    persistPriceBook(next);
+    persistPriceEntries(next, entry);
     setName(""); setUnit(""); setPrice(""); setSupplier(""); setNotes("");
     setNotice(existingIndex >= 0 ? "Price updated." : "Price saved.");
     setTimeout(() => setNotice(""), 2500);
@@ -686,8 +764,10 @@ function PriceBookTool() {
 
   function removeEntry(id: string) {
     const next = entries.filter((e) => e.id !== id);
-    setEntries(next);
-    persistPriceBook(next);
+    persistPriceEntries(next);
+    void deleteToolRecordByLocalId("price_book", id).then((ok) => {
+      setSyncMessage(ok ? "Deleted from this device and your RIVT account." : "Deleted on this device. Cloud sync will catch up when reachable.");
+    });
   }
 
   async function copyPrice(entry: PriceEntry) {
@@ -710,6 +790,7 @@ function PriceBookTool() {
           <label className="is-wide">Notes<input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="SKU, grade, size spec, date checked…" /></label>
         </div>
         {notice ? <p className="v2-record-notice" role="status">{notice}</p> : null}
+        <p className="v2-record-notice" role="status">{syncMessage}</p>
         <button type="button" className="v2-primary-button" disabled={!name.trim() || !price} onClick={addEntry}><Package2 size={14} />Save price</button>
       </Panel>
 
@@ -782,6 +863,42 @@ function readSafetyLogs(): SafetyLog[] {
 
 function persistSafetyLogs(logs: SafetyLog[]) {
   try { localStorage.setItem(safetyLogKey, JSON.stringify(logs.slice(0, 200))); } catch { /* noop */ }
+}
+
+function isSafetyLog(value: unknown): value is SafetyLog {
+  if (!value || typeof value !== "object") return false;
+  const candidate = value as Partial<SafetyLog>;
+  return typeof candidate.id === "string"
+    && typeof candidate.date === "string"
+    && typeof candidate.jobRef === "string"
+    && typeof candidate.completedBy === "string"
+    && typeof candidate.checks === "object"
+    && candidate.checks !== null
+    && typeof candidate.notes === "string"
+    && typeof candidate.signedAt === "string";
+}
+
+function safetyLogFromServer(record: ServerToolRecord): SafetyLog | null {
+  if (!isSafetyLog(record.payload)) return null;
+  return {
+    ...record.payload,
+    id: record.localId,
+    jobRef: record.payload.jobRef || record.title,
+    date: record.payload.date || record.recordDate || new Date().toISOString().slice(0, 10),
+    signedAt: record.payload.signedAt || record.updatedAt || new Date().toISOString(),
+  };
+}
+
+function safetyLogToServerInput(log: SafetyLog) {
+  return {
+    recordType: "safety_check" as const,
+    localId: log.id,
+    title: log.jobRef || "Safety check",
+    status: "signed",
+    recordDate: log.date || null,
+    amountCents: null,
+    payload: { ...log },
+  };
 }
 
 // ── Tax Estimator ───────────────────────────────────────────────────────────
@@ -880,6 +997,40 @@ function persistPunchV2(items: PunchV2Item[]) {
   try { localStorage.setItem(PUNCH_V2_KEY, JSON.stringify(items)); } catch { /* noop */ }
 }
 
+function isPunchV2Item(value: unknown): value is PunchV2Item {
+  if (!value || typeof value !== "object") return false;
+  const candidate = value as Partial<PunchV2Item>;
+  return typeof candidate.id === "string"
+    && typeof candidate.jobId === "string"
+    && typeof candidate.description === "string"
+    && PUNCH_CATEGORIES.includes(candidate.category as PunchCategory)
+    && typeof candidate.createdAt === "string"
+    && (candidate.photoUrl === undefined || typeof candidate.photoUrl === "string")
+    && (candidate.resolvedAt === undefined || typeof candidate.resolvedAt === "string");
+}
+
+function punchItemFromServer(record: ServerToolRecord): PunchV2Item | null {
+  if (!isPunchV2Item(record.payload)) return null;
+  return {
+    ...record.payload,
+    id: record.localId,
+    description: record.payload.description || record.title,
+    createdAt: record.payload.createdAt || record.updatedAt || new Date().toISOString(),
+  };
+}
+
+function punchItemToServerInput(item: PunchV2Item) {
+  return {
+    recordType: "punch_item" as const,
+    localId: item.id,
+    title: item.description || "Punch item",
+    status: item.resolvedAt ? "resolved" : "open",
+    recordDate: item.createdAt.slice(0, 10),
+    amountCents: null,
+    payload: { ...item },
+  };
+}
+
 function readSavedJobsV1(): Array<{ id: number; title: string }> {
   try {
     const raw = localStorage.getItem("rivt.jobs.v1");
@@ -896,8 +1047,47 @@ function PunchListTool() {
   const [category, setCategory] = useState<PunchCategory>("Other");
   const [photoUrl, setPhotoUrl] = useState<string | undefined>(undefined);
   const [notice, setNotice] = useState("");
+  const [syncMessage, setSyncMessage] = useState("Saved on this device.");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [savedJobs] = useState<Array<{ id: number; title: string }>>(readSavedJobsV1);
+
+  useEffect(() => {
+    let cancelled = false;
+    void fetchToolRecords("punch_item").then((serverRecords) => {
+      if (cancelled) return;
+      if (!serverRecords) {
+        setSyncMessage("Saved on this device. Sign in with network access to sync.");
+        return;
+      }
+      const mapped = serverRecords.map(punchItemFromServer).filter((item): item is PunchV2Item => Boolean(item));
+      if (mapped.length) {
+        setItems(mapped);
+        persistPunchV2(mapped);
+        setSyncMessage("Synced to your RIVT account.");
+        return;
+      }
+      const localSnapshot = readPunchV2();
+      if (localSnapshot.length) {
+        void Promise.all(localSnapshot.map((item) => upsertToolRecord(punchItemToServerInput(item)))).then((results) => {
+          setSyncMessage(results.some(Boolean)
+            ? "Local punch items synced to your RIVT account."
+            : "Saved on this device. Sync will retry when your account is reachable.");
+        });
+        return;
+      }
+      setSyncMessage("New punch items sync to your RIVT account.");
+    });
+    return () => { cancelled = true; };
+  }, []);
+
+  function persistPunchItems(next: PunchV2Item[], changedItem?: PunchV2Item) {
+    setItems(next);
+    persistPunchV2(next);
+    if (!changedItem) return;
+    void upsertToolRecord(punchItemToServerInput(changedItem)).then((record) => {
+      setSyncMessage(record ? "Synced to your RIVT account." : "Saved on this device. Sync will retry when your account is reachable.");
+    });
+  }
 
   const jobLabel = (id: string) => {
     if (!id) return "All jobs";
@@ -916,8 +1106,7 @@ function PunchListTool() {
       createdAt: new Date().toISOString(),
     };
     const next = [item, ...items];
-    setItems(next);
-    persistPunchV2(next);
+    persistPunchItems(next, item);
     setDesc("");
     setPhotoUrl(undefined);
     if (fileInputRef.current) fileInputRef.current.value = "";
@@ -927,14 +1116,16 @@ function PunchListTool() {
 
   function resolveItem(id: string) {
     const next = items.map((i) => i.id === id ? { ...i, resolvedAt: new Date().toISOString() } : i);
-    setItems(next);
-    persistPunchV2(next);
+    const changed = next.find((i) => i.id === id);
+    persistPunchItems(next, changed);
   }
 
   function deleteItem(id: string) {
     const next = items.filter((i) => i.id !== id);
-    setItems(next);
-    persistPunchV2(next);
+    persistPunchItems(next);
+    void deleteToolRecordByLocalId("punch_item", id).then((ok) => {
+      setSyncMessage(ok ? "Deleted from this device and your RIVT account." : "Deleted on this device. Cloud sync will catch up when reachable.");
+    });
   }
 
   function exportReport() {
@@ -1039,6 +1230,7 @@ function PunchListTool() {
           {photoUrl && <img src={photoUrl} alt="Preview" className="v2-punchv2-preview" />}
         </div>
         {notice && <p className="v2-record-notice" role="status">{notice}</p>}
+        <p className="v2-record-notice" role="status">{syncMessage}</p>
         <button type="button" className="v2-primary-button" disabled={!desc.trim()} onClick={addItem}>
           <Plus size={14} /> Add item
         </button>
@@ -1068,7 +1260,46 @@ function SafetyChecklistTool({ activeJob }: { activeJob: Job | null }) {
   const [completedBy, setCompletedBy] = useState("");
   const [notes, setNotes] = useState("");
   const [logs, setLogs] = useState<SafetyLog[]>(readSafetyLogs);
+  const [syncMessage, setSyncMessage] = useState("Saved on this device.");
   const [notice, setNotice] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    void fetchToolRecords("safety_check").then((serverRecords) => {
+      if (cancelled) return;
+      if (!serverRecords) {
+        setSyncMessage("Saved on this device. Sign in with network access to sync.");
+        return;
+      }
+      const mapped = serverRecords.map(safetyLogFromServer).filter((log): log is SafetyLog => Boolean(log));
+      if (mapped.length) {
+        setLogs(mapped);
+        persistSafetyLogs(mapped);
+        setSyncMessage("Synced to your RIVT account.");
+        return;
+      }
+      const localSnapshot = readSafetyLogs();
+      if (localSnapshot.length) {
+        void Promise.all(localSnapshot.map((log) => upsertToolRecord(safetyLogToServerInput(log)))).then((results) => {
+          setSyncMessage(results.some(Boolean)
+            ? "Local safety checks synced to your RIVT account."
+            : "Saved on this device. Sync will retry when your account is reachable.");
+        });
+        return;
+      }
+      setSyncMessage("New safety checks sync to your RIVT account.");
+    });
+    return () => { cancelled = true; };
+  }, []);
+
+  function persistSafetyEntries(next: SafetyLog[], changedLog?: SafetyLog) {
+    setLogs(next);
+    persistSafetyLogs(next);
+    if (!changedLog) return;
+    void upsertToolRecord(safetyLogToServerInput(changedLog)).then((record) => {
+      setSyncMessage(record ? "Synced to your RIVT account." : "Saved on this device. Sync will retry when your account is reachable.");
+    });
+  }
 
   function toggleCheck(item: string) {
     setChecks((prev) => ({ ...prev, [item]: !prev[item] }));
@@ -1088,8 +1319,7 @@ function SafetyChecklistTool({ activeJob }: { activeJob: Job | null }) {
       signedAt: new Date().toISOString(),
     };
     const next = [log, ...logs];
-    setLogs(next);
-    persistSafetyLogs(next);
+    persistSafetyEntries(next, log);
     clearAll();
     setNotes("");
     setNotice("Site check signed off and saved.");
@@ -1127,6 +1357,7 @@ function SafetyChecklistTool({ activeJob }: { activeJob: Job | null }) {
         ))}
         <label>Notes / hazards<textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} placeholder="Site-specific hazards, exceptions, or additional notes…" /></label>
         {notice ? <p className="v2-record-notice" role="status">{notice}</p> : null}
+        <p className="v2-record-notice" role="status">{syncMessage}</p>
         <button type="button" className="v2-primary-button" onClick={signOff}><Shield size={14} />Sign off site check</button>
       </Panel>
 
@@ -1453,6 +1684,70 @@ function saveChecklistsToStorage(data: Record<string, Record<string, boolean>>) 
   try { localStorage.setItem(checklistStorageKey, JSON.stringify(data)); } catch { /* noop */ }
 }
 
+function checklistRecordLocalId(storageKey: string) {
+  const normalized = storageKey
+    .trim()
+    .replace(/[^A-Za-z0-9:_-]+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+  return (normalized || "default-checklist").slice(0, 120);
+}
+
+interface StoredChecklistRecord {
+  storageKey: string;
+  trade: string;
+  jobType: string;
+  jobId: string;
+  checks: Record<string, boolean>;
+  updatedAt: string;
+}
+
+function parseChecklistStorageKey(storageKey: string) {
+  const [trade = "", jobType = "", jobId = "default"] = storageKey.split(":");
+  return { trade, jobType, jobId };
+}
+
+function isStoredChecklistRecord(value: unknown): value is StoredChecklistRecord {
+  if (!value || typeof value !== "object") return false;
+  const candidate = value as Partial<StoredChecklistRecord>;
+  return typeof candidate.storageKey === "string"
+    && typeof candidate.trade === "string"
+    && typeof candidate.jobType === "string"
+    && typeof candidate.jobId === "string"
+    && typeof candidate.checks === "object"
+    && candidate.checks !== null
+    && typeof candidate.updatedAt === "string";
+}
+
+function checklistRecordFromServer(record: ServerToolRecord): StoredChecklistRecord | null {
+  if (!isStoredChecklistRecord(record.payload)) return null;
+  return {
+    ...record.payload,
+    updatedAt: record.payload.updatedAt || record.updatedAt || new Date().toISOString(),
+  };
+}
+
+function checklistRecordToServerInput(storageKey: string, checks: Record<string, boolean>) {
+  const parsed = parseChecklistStorageKey(storageKey);
+  const payload: StoredChecklistRecord = {
+    storageKey,
+    trade: parsed.trade,
+    jobType: parsed.jobType,
+    jobId: parsed.jobId,
+    checks,
+    updatedAt: new Date().toISOString(),
+  };
+  return {
+    recordType: "job_checklist" as const,
+    localId: checklistRecordLocalId(storageKey),
+    title: `${parsed.trade || "Job"} ${parsed.jobType || "checklist"}`.trim(),
+    status: "active",
+    recordDate: payload.updatedAt.slice(0, 10),
+    amountCents: null,
+    payload: { ...payload } as Record<string, unknown>,
+  };
+}
+
 function getActiveJobId(): string {
   try {
     const stored = localStorage.getItem("rivt.jobs.v1");
@@ -1470,11 +1765,46 @@ function JobChecklistTool() {
   const [selectedJobType, setSelectedJobType] = useState(jobTypes[0]);
   const activeJobId = getActiveJobId();
   const storageKey = `${selectedTrade}:${selectedJobType}:${activeJobId}`;
+  const [syncMessage, setSyncMessage] = useState("Saved on this device.");
 
   const [checks, setChecks] = useState<Record<string, boolean>>(() => {
     const all = readChecklistsFromStorage();
     return all[storageKey] ?? {};
   });
+
+  useEffect(() => {
+    let cancelled = false;
+    void fetchToolRecords("job_checklist").then((serverRecords) => {
+      if (cancelled) return;
+      if (!serverRecords) {
+        setSyncMessage("Saved on this device. Sign in with network access to sync.");
+        return;
+      }
+      const mapped = serverRecords.map(checklistRecordFromServer).filter((record): record is StoredChecklistRecord => Boolean(record));
+      if (mapped.length) {
+        const all = mapped.reduce<Record<string, Record<string, boolean>>>((records, record) => {
+          records[record.storageKey] = record.checks;
+          return records;
+        }, {});
+        saveChecklistsToStorage(all);
+        setChecks(all[storageKey] ?? {});
+        setSyncMessage("Synced to your RIVT account.");
+        return;
+      }
+      const localSnapshot = readChecklistsFromStorage();
+      const snapshotEntries = Object.entries(localSnapshot);
+      if (snapshotEntries.length) {
+        void Promise.all(snapshotEntries.map(([key, value]) => upsertToolRecord(checklistRecordToServerInput(key, value)))).then((results) => {
+          setSyncMessage(results.some(Boolean)
+            ? "Local job checklists synced to your RIVT account."
+            : "Saved on this device. Sync will retry when your account is reachable.");
+        });
+        return;
+      }
+      setSyncMessage("New job checklist progress syncs to your RIVT account.");
+    });
+    return () => { cancelled = true; };
+  }, [storageKey]);
 
   useEffect(() => {
     const all = readChecklistsFromStorage();
@@ -1491,6 +1821,9 @@ function JobChecklistTool() {
     const all = readChecklistsFromStorage();
     all[storageKey] = next;
     saveChecklistsToStorage(all);
+    void upsertToolRecord(checklistRecordToServerInput(storageKey, next)).then((record) => {
+      setSyncMessage(record ? "Synced to your RIVT account." : "Saved on this device. Sync will retry when your account is reachable.");
+    });
   }
 
   function resetChecklist() {
@@ -1500,6 +1833,9 @@ function JobChecklistTool() {
     const all = readChecklistsFromStorage();
     all[storageKey] = next;
     saveChecklistsToStorage(all);
+    void upsertToolRecord(checklistRecordToServerInput(storageKey, next)).then((record) => {
+      setSyncMessage(record ? "Synced to your RIVT account." : "Saved on this device. Sync will retry when your account is reachable.");
+    });
   }
 
   function handleTradeChange(trade: string) {
@@ -1560,6 +1896,7 @@ function JobChecklistTool() {
           </div>
         ))}
       </div>
+      <p className="v2-record-notice" role="status">{syncMessage}</p>
       <button type="button" className="v2-checklist-reset-btn" onClick={resetChecklist}>Reset Checklist</button>
     </div>
   );
@@ -1868,6 +2205,46 @@ function persistDailyReports(reports: DailyReport[]) {
   try { localStorage.setItem(DAILY_REPORTS_KEY, JSON.stringify(reports.slice(0, 365))); } catch { /* noop */ }
 }
 
+function isDailyReport(value: unknown): value is DailyReport {
+  if (!value || typeof value !== "object") return false;
+  const candidate = value as Partial<DailyReport>;
+  return typeof candidate.id === "string"
+    && typeof candidate.date === "string"
+    && typeof candidate.jobId === "string"
+    && typeof candidate.jobTitle === "string"
+    && WEATHER_OPTIONS.includes(candidate.weather as WeatherOption)
+    && typeof candidate.temperature === "string"
+    && typeof candidate.crewOnSite === "number"
+    && typeof candidate.workCompleted === "string"
+    && typeof candidate.issues === "string"
+    && typeof candidate.materialsUsed === "string"
+    && typeof candidate.visitors === "string"
+    && typeof candidate.savedAt === "string";
+}
+
+function dailyReportFromServer(record: ServerToolRecord): DailyReport | null {
+  if (!isDailyReport(record.payload)) return null;
+  return {
+    ...record.payload,
+    id: record.localId,
+    jobTitle: record.payload.jobTitle || record.title,
+    date: record.payload.date || record.recordDate || new Date().toISOString().slice(0, 10),
+    savedAt: record.payload.savedAt || record.updatedAt || new Date().toISOString(),
+  };
+}
+
+function dailyReportToServerInput(report: DailyReport) {
+  return {
+    recordType: "daily_report" as const,
+    localId: report.id,
+    title: report.jobTitle || "Daily report",
+    status: "complete",
+    recordDate: report.date || null,
+    amountCents: null,
+    payload: { ...report },
+  };
+}
+
 function formatDailyReport(r: DailyReport): string {
   return [
     `RIVT DAILY SITE REPORT`,
@@ -1892,6 +2269,7 @@ function formatDailyReport(r: DailyReport): string {
 
 function DailyReportTool() {
   const [reports, setReports] = useState<DailyReport[]>(readDailyReports);
+  const [syncMessage, setSyncMessage] = useState("Saved on this device.");
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [jobId, setJobId] = useState("");
   const [weather, setWeather] = useState<WeatherOption>("Clear");
@@ -1907,6 +2285,44 @@ function DailyReportTool() {
   const [savedJobs] = useState<Array<{ id: number; title: string }>>(readSavedJobsV1);
 
   const selectedJobTitle = savedJobs.find((j) => String(j.id) === jobId)?.title ?? jobId;
+
+  useEffect(() => {
+    let cancelled = false;
+    void fetchToolRecords("daily_report").then((serverRecords) => {
+      if (cancelled) return;
+      if (!serverRecords) {
+        setSyncMessage("Saved on this device. Sign in with network access to sync.");
+        return;
+      }
+      const mapped = serverRecords.map(dailyReportFromServer).filter((report): report is DailyReport => Boolean(report));
+      if (mapped.length) {
+        setReports(mapped);
+        persistDailyReports(mapped);
+        setSyncMessage("Synced to your RIVT account.");
+        return;
+      }
+      const localSnapshot = readDailyReports();
+      if (localSnapshot.length) {
+        void Promise.all(localSnapshot.map((report) => upsertToolRecord(dailyReportToServerInput(report)))).then((results) => {
+          setSyncMessage(results.some(Boolean)
+            ? "Local daily reports synced to your RIVT account."
+            : "Saved on this device. Sync will retry when your account is reachable.");
+        });
+        return;
+      }
+      setSyncMessage("New daily reports sync to your RIVT account.");
+    });
+    return () => { cancelled = true; };
+  }, []);
+
+  function persistDailyReportEntries(next: DailyReport[], changedReport?: DailyReport) {
+    setReports(next);
+    persistDailyReports(next);
+    if (!changedReport) return;
+    void upsertToolRecord(dailyReportToServerInput(changedReport)).then((record) => {
+      setSyncMessage(record ? "Synced to your RIVT account." : "Saved on this device. Sync will retry when your account is reachable.");
+    });
+  }
 
   function saveReport() {
     const report: DailyReport = {
@@ -1924,8 +2340,7 @@ function DailyReportTool() {
       savedAt: new Date().toISOString(),
     };
     const next = [report, ...reports];
-    setReports(next);
-    persistDailyReports(next);
+    persistDailyReportEntries(next, report);
     setWorkCompleted("");
     setIssues("");
     setMaterialsUsed("");
@@ -1994,6 +2409,7 @@ function DailyReportTool() {
           </label>
         </div>
         {notice && <p className="v2-record-notice" role="status">{notice}</p>}
+        <p className="v2-record-notice" role="status">{syncMessage}</p>
         <button type="button" className="v2-primary-button" onClick={saveReport} disabled={!workCompleted.trim()}>
           <FileText size={14} /> Save report
         </button>

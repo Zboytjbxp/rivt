@@ -1,7 +1,8 @@
 import { Briefcase, FileText, Plus, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { Job } from "../../types";
 import { Panel } from "../../components/ui";
+import { deleteToolRecordByLocalId, fetchToolRecords, upsertToolRecord, type ServerToolRecord } from "./tool-records-api";
 
 function currency(value: number) {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(value);
@@ -123,6 +124,42 @@ function readSavedBids(): SavedBid[] {
   } catch { return []; }
 }
 
+function isSavedBid(value: unknown): value is SavedBid {
+  if (!value || typeof value !== "object") return false;
+  const candidate = value as Partial<SavedBid>;
+  return typeof candidate.id === "string"
+    && typeof candidate.name === "string"
+    && typeof candidate.jobRef === "string"
+    && typeof candidate.markupPct === "number"
+    && typeof candidate.notes === "string"
+    && typeof candidate.savedAt === "string"
+    && Array.isArray(candidate.lines);
+}
+
+function savedBidFromServer(record: ServerToolRecord): SavedBid | null {
+  if (!isSavedBid(record.payload)) return null;
+  return {
+    ...record.payload,
+    id: record.localId,
+    name: record.payload.name || record.title,
+    savedAt: record.payload.savedAt || record.updatedAt || new Date().toISOString(),
+  };
+}
+
+function savedBidToServerInput(bid: SavedBid) {
+  const subtotal = bid.lines.reduce((sum, line) => sum + line.qty * line.unitPrice, 0);
+  const total = subtotal + subtotal * (bid.markupPct / 100);
+  return {
+    recordType: "bid" as const,
+    localId: bid.id,
+    title: bid.name || "Bid",
+    status: "active",
+    recordDate: bid.savedAt.slice(0, 10),
+    amountCents: Math.round(Math.max(0, total) * 100),
+    payload: { ...bid },
+  };
+}
+
 function BidBuilderTool({ activeJob }: { activeJob: Job | null }) {
   const [lines, setLines] = useState<BidLineItem[]>(() =>
     getDefaultBidLines(readTradForBid(), activeJob?.durationHours, activeJob?.pay).map(l => ({ ...l, id: crypto.randomUUID() }))
@@ -132,12 +169,53 @@ function BidBuilderTool({ activeJob }: { activeJob: Job | null }) {
   const [jobRef, setJobRef] = useState(activeJob?.title ?? "");
   const [notes, setNotes] = useState("");
   const [savedBids, setSavedBids] = useState<SavedBid[]>(readSavedBids);
+  const [syncMessage, setSyncMessage] = useState("Saved on this device.");
   const [notice, setNotice] = useState("");
   const [bidAccepted, setBidAccepted] = useState(false);
 
   const subtotal = lines.reduce((sum, l) => sum + l.qty * l.unitPrice, 0);
   const markup = subtotal * (markupPct / 100);
   const total = subtotal + markup;
+
+  useEffect(() => {
+    let cancelled = false;
+    void fetchToolRecords("bid").then((serverRecords) => {
+      if (cancelled) return;
+      if (!serverRecords) {
+        setSyncMessage("Saved on this device. Sign in with network access to sync.");
+        return;
+      }
+      const mapped = serverRecords.map(savedBidFromServer).filter((bid): bid is SavedBid => Boolean(bid));
+      if (mapped.length) {
+        const limited = mapped.slice(0, 10);
+        setSavedBids(limited);
+        try { localStorage.setItem(bidStorageKey, JSON.stringify(limited)); } catch { /* noop */ }
+        setSyncMessage("Synced to your RIVT account.");
+        return;
+      }
+      const localSnapshot = readSavedBids();
+      if (localSnapshot.length) {
+        void Promise.all(localSnapshot.map((bid) => upsertToolRecord(savedBidToServerInput(bid)))).then((results) => {
+          setSyncMessage(results.some(Boolean)
+            ? "Local bids synced to your RIVT account."
+            : "Saved on this device. Sync will retry when your account is reachable.");
+        });
+        return;
+      }
+      setSyncMessage("New bids sync to your RIVT account.");
+    });
+    return () => { cancelled = true; };
+  }, []);
+
+  function persistSavedBids(next: SavedBid[], changedBid?: SavedBid) {
+    const limited = next.slice(0, 10);
+    setSavedBids(limited);
+    try { localStorage.setItem(bidStorageKey, JSON.stringify(limited)); } catch { /* noop */ }
+    if (!changedBid) return;
+    void upsertToolRecord(savedBidToServerInput(changedBid)).then((record) => {
+      setSyncMessage(record ? "Synced to your RIVT account." : "Saved on this device. Sync will retry when your account is reachable.");
+    });
+  }
 
   function addLine() {
     setLines((prev) => [...prev, { id: crypto.randomUUID(), description: "", qty: 1, unit: "ea", unitPrice: 0 }]);
@@ -162,9 +240,8 @@ function BidBuilderTool({ activeJob }: { activeJob: Job | null }) {
       savedAt: new Date().toISOString(),
     };
     const next = [bid, ...savedBids.filter((b) => b.name.toLowerCase() !== bid.name.toLowerCase())].slice(0, 10);
-    setSavedBids(next);
-    try { localStorage.setItem(bidStorageKey, JSON.stringify(next)); } catch { /* noop */ }
-    setNotice("Bid saved to this device.");
+    persistSavedBids(next, bid);
+    setNotice("Bid saved.");
     setTimeout(() => setNotice(""), 3000);
   }
 
@@ -180,8 +257,10 @@ function BidBuilderTool({ activeJob }: { activeJob: Job | null }) {
 
   function deleteBid(id: string) {
     const next = savedBids.filter((b) => b.id !== id);
-    setSavedBids(next);
-    try { localStorage.setItem(bidStorageKey, JSON.stringify(next)); } catch { /* noop */ }
+    persistSavedBids(next);
+    void deleteToolRecordByLocalId("bid", id).then((ok) => {
+      setSyncMessage(ok ? "Deleted from this device and your RIVT account." : "Deleted on this device. Cloud sync will catch up when reachable.");
+    });
   }
 
   function acceptBid() {
@@ -228,6 +307,7 @@ function BidBuilderTool({ activeJob }: { activeJob: Job | null }) {
           </div>
         ) : null}
         {notice ? <p className="v2-record-notice" role="status">{notice}</p> : null}
+        <p className="v2-record-notice" role="status">{syncMessage}</p>
         <div className="v2-tool-input-grid two">
           <label>Bid name<input value={bidName} onChange={(e) => setBidName(e.target.value)} placeholder="Roof replacement bid" /></label>
           <label>Job / client ref<input value={jobRef} onChange={(e) => setJobRef(e.target.value)} placeholder="Smith Residence, Job #42…" /></label>

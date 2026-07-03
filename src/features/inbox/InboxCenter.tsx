@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   AlertTriangle,
   Archive,
@@ -19,6 +19,13 @@ import {
 import type { PrimaryDestination } from "../../app-shell/types";
 import type { InboxConversation, InboxMessage, InboxNotification } from "./inbox-api";
 import { Avatar, EmptyState, MetricTile, PageHeader, Panel, SkeletonCard } from "../../components/ui";
+import {
+  readClientRecordsLocal,
+  saveClientRecordsLocal,
+  syncClientRecords,
+  upsertClientRecord,
+  type ClientRecord,
+} from "../clients/client-records";
 import "./inbox-center.css";
 
 // ─── localStorage keys ────────────────────────────────────────────────────────
@@ -49,11 +56,7 @@ const SIMULATE_REPLIES = [
 
 // ─── Client thread types ──────────────────────────────────────────────────────
 
-interface ClientContact {
-  id: string;
-  name: string;
-  createdAt: string;
-}
+type ClientContact = ClientRecord;
 
 interface ClientMessage {
   id: string;
@@ -66,15 +69,7 @@ interface ClientMessage {
 type ClientThreads = Record<string, ClientMessage[]>;
 
 function loadClientContacts(): ClientContact[] {
-  // Try rivt.clients.v1 first (shared with NetworkHub)
-  try {
-    const raw = localStorage.getItem("rivt.clients.v1");
-    if (raw) {
-      const parsed = JSON.parse(raw) as ClientContact[];
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-    }
-  } catch { /* noop */ }
-  return [];
+  return readClientRecordsLocal();
 }
 
 function loadClientThreads(): ClientThreads {
@@ -251,18 +246,36 @@ function ClientsTab() {
   const [selectedContact, setSelectedContact] = useState<ClientContact | null>(null);
   const [addingName, setAddingName] = useState(false);
   const [newName, setNewName] = useState("");
+  const [syncMessage, setSyncMessage] = useState("Saved on this device.");
+
+  useEffect(() => {
+    let cancelled = false;
+    void syncClientRecords().then((result) => {
+      if (cancelled) return;
+      setContacts(result.clients);
+      setSyncMessage(result.message);
+    });
+    return () => { cancelled = true; };
+  }, []);
 
   function addContact() {
     const trimmed = newName.trim();
     if (!trimmed) return;
-    const c: ClientContact = { id: crypto.randomUUID(), name: trimmed, createdAt: new Date().toISOString() };
+    const c: ClientContact = {
+      id: crypto.randomUUID(),
+      name: trimmed,
+      company: "",
+      phone: "",
+      email: "",
+      notes: "",
+      createdAt: new Date().toISOString(),
+    };
     const next = [c, ...contacts];
     setContacts(next);
-    // Also persist to rivt.clients.v1 for cross-tab consistency (minimal shape)
-    try {
-      const existing = JSON.parse(localStorage.getItem("rivt.clients.v1") || "[]") as ClientContact[];
-      localStorage.setItem("rivt.clients.v1", JSON.stringify([c, ...existing]));
-    } catch { /* noop */ }
+    saveClientRecordsLocal(next);
+    void upsertClientRecord(c).then((ok) => {
+      setSyncMessage(ok ? "Synced to your RIVT account." : "Saved on this device. Sync will retry when your account is reachable.");
+    });
     setNewName("");
     setAddingName(false);
     setSelectedContact(c);
@@ -308,6 +321,7 @@ function ClientsTab() {
           </button>
         )}
       </div>
+      <p className="v2-client-sync-note" role="status">{syncMessage}</p>
 
       {contacts.length === 0 ? (
         <EmptyState

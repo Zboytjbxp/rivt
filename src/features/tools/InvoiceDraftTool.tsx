@@ -1,8 +1,9 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Copy, Download, FileText, Mail, MessageSquare, Plus, Trash2 } from "lucide-react";
 import type { Job } from "../../types";
 import { Panel } from "../../components/ui";
 import { getInvoiceLinePriceSignal } from "./priceGuidance";
+import { deleteToolRecordByLocalId, fetchToolRecords, upsertToolRecord, type ServerToolRecord } from "./tool-records-api";
 
 function currency(value: number) {
   return `$${Math.round(value).toLocaleString()}`;
@@ -50,6 +51,45 @@ function readInvoiceTemplates() {
   }
 }
 
+function isInvoiceTemplate(value: unknown): value is InvoiceTemplate {
+  if (!value || typeof value !== "object") return false;
+  const candidate = value as Partial<InvoiceTemplate>;
+  return typeof candidate.id === "string"
+    && typeof candidate.name === "string"
+    && typeof candidate.savedAt === "string"
+    && typeof candidate.invoiceNumber === "string"
+    && typeof candidate.billTo === "string"
+    && typeof candidate.payTo === "string"
+    && typeof candidate.terms === "string"
+    && typeof candidate.paymentMethod === "string"
+    && typeof candidate.recipientEmail === "string"
+    && typeof candidate.recipientPhone === "string"
+    && typeof candidate.taxPct === "number"
+    && Array.isArray(candidate.lines);
+}
+
+function invoiceTemplateFromServer(record: ServerToolRecord): InvoiceTemplate | null {
+  if (!isInvoiceTemplate(record.payload)) return null;
+  return {
+    ...record.payload,
+    id: record.localId,
+    name: record.payload.name || record.title,
+    savedAt: record.payload.savedAt || record.updatedAt || new Date().toISOString(),
+  };
+}
+
+function invoiceTemplateToServerInput(template: InvoiceTemplate) {
+  return {
+    recordType: "invoice_template" as const,
+    localId: template.id,
+    title: template.name || "Invoice template",
+    status: "active",
+    recordDate: template.savedAt.slice(0, 10),
+    amountCents: null,
+    payload: { ...template },
+  };
+}
+
 export function InvoiceDraftTool({ activeJob }: { activeJob: Job | null }) {
   const [invoiceNumber, setInvoiceNumber] = useState(activeJob ? `RIVT-${activeJob.id}` : "RIVT-DRAFT");
   const [billTo, setBillTo] = useState(activeJob?.contractor ?? "");
@@ -62,6 +102,7 @@ export function InvoiceDraftTool({ activeJob }: { activeJob: Job | null }) {
   const [copied, setCopied] = useState(false);
   const [downloaded, setDownloaded] = useState(false);
   const [templates, setTemplates] = useState<InvoiceTemplate[]>(readInvoiceTemplates);
+  const [syncMessage, setSyncMessage] = useState("Saved on this device.");
   const [templateName, setTemplateName] = useState(activeJob ? `${activeJob.title} invoice` : "Standard invoice");
   const [templateNotice, setTemplateNotice] = useState("");
   const [lines, setLines] = useState<InvoiceLine[]>([
@@ -103,6 +144,36 @@ export function InvoiceDraftTool({ activeJob }: { activeJob: Job | null }) {
   const emailHref = `mailto:${encodeURIComponent(recipientEmail)}?subject=${encodeURIComponent(`Invoice ${invoiceNumber}`)}&body=${encodeURIComponent(invoiceText)}`;
   const smsHref = `sms:${encodeURIComponent(recipientPhone)}?body=${encodeURIComponent(`RIVT invoice ${invoiceNumber}: ${currency(total)} due. ${terms}. ${paymentMethod}.`)}`;
 
+  useEffect(() => {
+    let cancelled = false;
+    void fetchToolRecords("invoice_template").then((serverRecords) => {
+      if (cancelled) return;
+      if (!serverRecords) {
+        setSyncMessage("Saved on this device. Sign in with network access to sync.");
+        return;
+      }
+      const mapped = serverRecords.map(invoiceTemplateFromServer).filter((template): template is InvoiceTemplate => Boolean(template));
+      if (mapped.length) {
+        const limited = mapped.slice(0, 8);
+        setTemplates(limited);
+        try { localStorage.setItem(invoiceTemplateStorageKey, JSON.stringify(limited)); } catch { /* noop */ }
+        setSyncMessage("Synced to your RIVT account.");
+        return;
+      }
+      const localSnapshot = readInvoiceTemplates();
+      if (localSnapshot.length) {
+        void Promise.all(localSnapshot.map((template) => upsertToolRecord(invoiceTemplateToServerInput(template)))).then((results) => {
+          setSyncMessage(results.some(Boolean)
+            ? "Local invoice templates synced to your RIVT account."
+            : "Saved on this device. Sync will retry when your account is reachable.");
+        });
+        return;
+      }
+      setSyncMessage("New invoice templates sync to your RIVT account.");
+    });
+    return () => { cancelled = true; };
+  }, []);
+
   function updateLine(id: string, field: keyof InvoiceLine, value: string | number) {
     setLines((current) => current.map((line) => line.id === id ? { ...line, [field]: value } : line));
   }
@@ -115,7 +186,7 @@ export function InvoiceDraftTool({ activeJob }: { activeJob: Job | null }) {
     setLines((current) => current.length > 1 ? current.filter((line) => line.id !== id) : current);
   }
 
-  function persistTemplates(nextTemplates: InvoiceTemplate[], notice: string) {
+  function persistTemplates(nextTemplates: InvoiceTemplate[], notice: string, changedTemplate?: InvoiceTemplate) {
     const limited = nextTemplates.slice(0, 8);
     setTemplates(limited);
     setTemplateNotice(notice);
@@ -124,6 +195,10 @@ export function InvoiceDraftTool({ activeJob }: { activeJob: Job | null }) {
     } catch {
       setTemplateNotice("Template could not be saved on this device.");
     }
+    if (!changedTemplate) return;
+    void upsertToolRecord(invoiceTemplateToServerInput(changedTemplate)).then((record) => {
+      setSyncMessage(record ? "Synced to your RIVT account." : "Saved on this device. Sync will retry when your account is reachable.");
+    });
   }
 
   function saveTemplate() {
@@ -142,7 +217,7 @@ export function InvoiceDraftTool({ activeJob }: { activeJob: Job | null }) {
       taxPct,
       lines: lines.map((line) => ({ ...line, id: crypto.randomUUID() })),
     };
-    persistTemplates([template, ...templates.filter((item) => item.name.toLowerCase() !== cleanName.toLowerCase())], "Template saved on this device.");
+    persistTemplates([template, ...templates.filter((item) => item.name.toLowerCase() !== cleanName.toLowerCase())], "Template saved.", template);
   }
 
   function loadTemplate(template: InvoiceTemplate) {
@@ -161,6 +236,9 @@ export function InvoiceDraftTool({ activeJob }: { activeJob: Job | null }) {
 
   function deleteTemplate(templateId: string) {
     persistTemplates(templates.filter((template) => template.id !== templateId), "Template removed from this device.");
+    void deleteToolRecordByLocalId("invoice_template", templateId).then((ok) => {
+      setSyncMessage(ok ? "Deleted from this device and your RIVT account." : "Deleted on this device. Cloud sync will catch up when reachable.");
+    });
   }
 
   async function copyInvoice() {
@@ -207,7 +285,7 @@ export function InvoiceDraftTool({ activeJob }: { activeJob: Job | null }) {
         <section className="v2-invoice-template-bar" aria-label="Invoice templates">
           <label>Template name<input value={templateName} onChange={(event) => setTemplateName(event.target.value)} placeholder="Standard labor invoice" /></label>
           <button type="button" className="v2-primary-button" onClick={saveTemplate}><FileText size={14} />Save template</button>
-          <small>Saved on this device.</small>
+          <small>{syncMessage}</small>
         </section>
         {templateNotice ? <p className="v2-record-notice" role="status">{templateNotice}</p> : null}
         {templates.length ? (
