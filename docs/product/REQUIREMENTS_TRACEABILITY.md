@@ -16,7 +16,8 @@ Evidence must eventually link to implementation, automated tests, manual accepta
 - `GA-UX-003` gains Reddit-style community UX evidence: the Shop Talk composer now supports add/change/remove photo, shows a preview before posting, and allows title-plus-photo posts instead of requiring body text for image-led questions.
 - `GA-UX-005` gains honest storage evidence: photos are not treated as production-ready local blobs; authenticated uploads require S3-compatible object storage and Postgres media rows, while storage failures return a visible post-created-without-photo state instead of fake success.
 - `GA-OPS-007` gains local automated evidence: `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test:unit`, targeted Shop Talk posts/migration integration tests, `npm run test:e2e`, and `npm audit --omit=dev` passed. Aggregate `npm run test` and `npm run test:integration` exceeded local command windows, so aggregate completion is not claimed for this pass.
-- Remaining boundary: production evidence is pending deployment of migration `0021_shop_talk_post_media` and a live authenticated photo-post smoke against configured object storage.
+- `GA-OPS-008` gains production deployment evidence: live `https://rivt.pro/api/health` reported commit `5c8ef97859bb02eb0db5cec0520c44e223cbdb20` with migration `0021_shop_talk_post_media`, PostgreSQL/S3-compatible storage, and Sentry configured; `EXPECTED_SOURCE_COMMIT=5c8ef97859bb02eb0db5cec0520c44e223cbdb20 npm run monitor:production` passed.
+- Remaining boundary: live authenticated photo-post smoke is still intentionally not claimed because the current API has no safe production cleanup/delete route for test posts.
 
 ## Traceability Addendum - 2026-07-03 Tools Hub Consolidation
 

@@ -43,8 +43,10 @@ Production release commit: verify with live `/api/health`; latest runtime featur
   - `npm audit --omit=dev` (pass; 0 vulnerabilities)
   - aggregate `npm run test` and `npm run test:integration` were attempted with extended local command windows and timed out; aggregate completion is not claimed for this pass
 - Production deployment status:
-  - pending push/deploy at the time this section was added
-  - live post-photo upload smoke still requires deployed migration `0021_shop_talk_post_media` and configured object storage
+  - runtime release commit `5c8ef97859bb02eb0db5cec0520c44e223cbdb20` was pushed to GitHub and picked up by Railway production service `RIVT`
+  - live `https://rivt.pro/api/health` returned `ok: true`, build commit `5c8ef97859bb02eb0db5cec0520c44e223cbdb20`, migration `0021_shop_talk_post_media`, PostgreSQL, S3-compatible object storage, and configured Sentry
+  - `EXPECTED_SOURCE_COMMIT=5c8ef97859bb02eb0db5cec0520c44e223cbdb20 npm run monitor:production` passed with operational controls off, seven anonymous private-route checks, and 561 ms duration
+  - live authenticated photo-post smoke is still intentionally not claimed because the current API has no safe production cleanup/delete route for test posts
 
 ## Latest Packet 08 Pass - Network Records Sync
 
