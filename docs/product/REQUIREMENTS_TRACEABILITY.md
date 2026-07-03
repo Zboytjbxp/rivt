@@ -10,6 +10,15 @@ Status values:
 
 Evidence must eventually link to implementation, automated tests, manual acceptance proof, and deployed build.
 
+## Traceability Addendum - 2026-07-03 Minimal Truthfulness and UI Subtraction
+
+- `GA-UX-005` gains honesty evidence on `master`: fake-looking Shop Talk fallback posts with fabricated authors, stock thumbnails, timestamps, upvotes, and comment counts were removed; remaining fallback prompts are clearly labeled `RIVT` starter prompts with zero votes and no fake comments.
+- `GA-UX-005` also gains trust-copy evidence: the account profile showcase no longer renders a hardcoded `Verified` badge/chip, account facts now say `Consent` instead of `Trust`, and identity/payment readiness claims are no longer derived from the generic consent flag.
+- `GA-UX-003` gains navigation/duplication evidence: the Home duplicate `Post work` / `Find your crew` CTA row and duplicate empty-state `Ask the trades` button were removed in favor of persistent Work/Crew navigation and the Shop Talk FAB; the `questions need a hand` nudge now opens the answer queue path instead of the ask composer.
+- `GA-UX-006` gains rendered mobile evidence at 390x844: local Playwright QA verified zero duplicate Home CTA rows, zero fake seed authors, zero Tools dev-speak strings, zero standalone fake `Verified` labels, and zero console errors; screenshots are stored at `artifacts/ui-audit-2026-07-03/`.
+- `GA-OPS-007` gains partial local automated evidence: `npm run lint`, `npm run build`, `npm run test:unit`, `npm run test:e2e`, and `npm audit --omit=dev` passed. `npm run test` and `npm run test:integration` timed out during the integration half locally, so full aggregate integration evidence is not claimed for this pass.
+- Remaining boundary: this is a focused truthfulness/subtraction pass. Broader audit items around tool consolidation, duplicate data surfaces, search profile routing, token/typography/breakpoint consolidation, and server persistence for local-only business records remain open.
+
 ## Traceability Addendum - 2026-07-03 Shop Talk Human Moderation Console and Report UX
 
 - `GA-COM-004` gains local product evidence on branch `codex/shop-talk-moderation-console`: Shop Talk users now report communities, posts, and answers through a reason picker with explicit unsafe-advice, misinformation, spam, harassment, privacy/contact-info, duplicate/off-topic, and other categories plus optional reporter context.

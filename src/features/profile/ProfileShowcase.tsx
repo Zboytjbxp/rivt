@@ -1,6 +1,5 @@
 import {
   Award,
-  BadgeCheck,
   Briefcase,
   MapPin,
   Plus,
@@ -15,7 +14,6 @@ interface ProfileShowcaseProps {
   name: string;
   trade: string;
   location: string;
-  verified: boolean;
   shoutOutCount: number;
   safetyCertCount: number;
   onEditProfile: () => void;
@@ -53,7 +51,6 @@ export function ProfileShowcase({
   name,
   trade,
   location,
-  verified,
   shoutOutCount,
   safetyCertCount,
   onEditProfile,
@@ -94,11 +91,6 @@ export function ProfileShowcase({
             <span className="ps-avatar" style={{ background: toneFor(displayName) }}>
               {displayName.slice(0, 1).toUpperCase()}
             </span>
-            {verified && (
-              <span className="ps-avatar-badge" aria-label="Verified">
-                <BadgeCheck size={16} />
-              </span>
-            )}
           </div>
           <div className="ps-hero-id">
             <h2>{displayName}</h2>
@@ -113,11 +105,6 @@ export function ProfileShowcase({
           <span className={`ps-chip ${availability === "available" ? "is-avail" : ""}`}>
             <span className="ps-dot" /> {AVAIL_LABEL[availability]}
           </span>
-          {verified && (
-            <span className="ps-chip is-teal">
-              <ShieldCheck size={13} /> Verified
-            </span>
-          )}
         </div>
 
         <div className="ps-stats">

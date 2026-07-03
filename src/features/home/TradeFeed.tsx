@@ -7,7 +7,6 @@ import {
   MessageCircle,
   Plus,
   TrendingUp,
-  Users,
   X,
 } from "lucide-react";
 import type { CommunityPost } from "../shop-talk/ShopTalkView";
@@ -81,6 +80,7 @@ interface TradeFeedProps {
   safetyCertCount: number;
   onOpenPost: (postId: string) => void;
   onAsk: () => void;
+  onOpenAnswerQueue: () => void;
   onPostWork: () => void;
   onOpenCommunity: (name: string) => void;
   onNavigate: (destination: PrimaryDestination) => void;
@@ -102,6 +102,7 @@ export function TradeFeed({
   safetyCertCount = 0,
   onOpenPost,
   onAsk,
+  onOpenAnswerQueue,
   onPostWork,
   onOpenCommunity,
   onNavigate,
@@ -286,16 +287,6 @@ export function TradeFeed({
         </button>
       </header>
 
-      {/* Primary actions */}
-      <div className="trade-feed-cta-row">
-        <button type="button" className="trade-feed-cta is-ask" onClick={onPostWork}>
-          <Plus size={18} /> Post work
-        </button>
-        <button type="button" className="trade-feed-cta is-crew" onClick={() => onNavigate("crew")}>
-          <Users size={18} /> Find your crew
-        </button>
-      </div>
-
       {/* Getting-started checklist */}
       {showGetStarted && (
         <section className="trade-feed-start-card" aria-labelledby="trade-feed-start-title">
@@ -347,7 +338,7 @@ export function TradeFeed({
 
       {/* Answer-queue nudge */}
       {tradeQuestions > 0 && (
-        <button type="button" className="trade-feed-nudge" onClick={onAsk}>
+        <button type="button" className="trade-feed-nudge" onClick={onOpenAnswerQueue}>
           <span className="trade-feed-nudge-icon"><MessageCircle size={18} /></span>
           <span className="trade-feed-nudge-copy">
             <b>{tradeQuestions} {primaryTrade} question{tradeQuestions === 1 ? "" : "s"} need a hand</b>
@@ -399,8 +390,7 @@ export function TradeFeed({
           <div className="trade-feed-empty">
             <MessageCircle size={26} />
             <b>No posts yet</b>
-            <span>Field answers from the trades will show up here.</span>
-            <button type="button" className="trade-feed-cta is-ask" onClick={onAsk}>Ask the trades</button>
+            <span>Field answers from the trades will show up here. Use the Ask button when you're ready to start one.</span>
           </div>
         ) : (
           trendingPosts.map((post) => (

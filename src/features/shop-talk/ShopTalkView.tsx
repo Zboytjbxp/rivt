@@ -522,6 +522,7 @@ export function ShopTalkView({
   initialQuery,
   initialPostId,
   initialCommunitySlug,
+  initialAnswerQueue,
   openComposer,
   selectedJobTrade,
   userLocation,
@@ -546,6 +547,7 @@ export function ShopTalkView({
   initialQuery: string;
   initialPostId?: string | null;
   initialCommunitySlug?: string | null;
+  initialAnswerQueue?: boolean;
   openComposer?: boolean;
   selectedJobTrade: Trade | "General";
   userLocation: string;
@@ -565,9 +567,9 @@ export function ShopTalkView({
 }) {
   const persona = usePersona();
   const [activeTab, setActiveTab] = useState<"talk" | "news">("talk");
-  const [sortMode, setSortMode] = useState<"hot" | "new" | "unanswered">("hot");
+  const [sortMode, setSortMode] = useState<"hot" | "new" | "unanswered">(initialAnswerQueue ? "unanswered" : "hot");
   const [tradeFilter, setTradeFilter] = useState("All trades");
-  const [answerQueueOnly, setAnswerQueueOnly] = useState(false);
+  const [answerQueueOnly, setAnswerQueueOnly] = useState(Boolean(initialAnswerQueue));
   const [selectedPostId, setSelectedPostId] = useState<string | null>(initialPostId ?? communityPosts[0]?.id ?? null);
   const [answerDraft, setAnswerDraft] = useState("");
   const [rulesOpen, setRulesOpen] = useState(false);
@@ -597,7 +599,7 @@ export function ShopTalkView({
   const [filterType, setFilterType] = useState<PostType | "all">("all");
   const displayNews = liveNews.length ? liveNews : newsItems;
   const [selectedNewsId, setSelectedNewsId] = useState(displayNews[0]?.id ?? 0);
-  const [mobileDetail, setMobileDetail] = useState(initialPostId != null);
+  const [mobileDetail, setMobileDetail] = useState(initialPostId != null || Boolean(initialAnswerQueue));
   const [newsDiscussContext, setNewsDiscussContext] = useState<NewsItem | null>(null);
   const [reportTarget, setReportTarget] = useState<ReportTarget | null>(null);
   const [reportReason, setReportReason] = useState<CommunityReportReason>("Safety concern");
@@ -633,7 +635,7 @@ export function ShopTalkView({
   }, [communities, communityQuery]);
   const canStartCommunity = communityQuery.trim().length >= 2 &&
     !communities.some((community) => community.slug === communitySlug(communityQuery));
-  const answerQueuePosts = communityPosts
+  const answerQueuePosts = useMemo(() => communityPosts
     .filter((post) => (
       (post.trade === primaryTrade || post.trade === "General") &&
       post.status !== "Verified Fix"
@@ -644,7 +646,17 @@ export function ShopTalkView({
       if (a.status === "Needs a pro answer" && b.status !== "Needs a pro answer") return -1;
       if (a.status !== "Needs a pro answer" && b.status === "Needs a pro answer") return 1;
       return postSortValue(b) - postSortValue(a);
-    });
+    }), [communityPosts, primaryTrade]);
+
+  useEffect(() => {
+    if (!initialAnswerQueue) return;
+    const nextPost = answerQueuePosts[0];
+    if (!nextPost) return;
+    /* eslint-disable react-hooks/set-state-in-effect */
+    setSelectedPostId(nextPost.id);
+    setMobileDetail(true);
+    /* eslint-enable react-hooks/set-state-in-effect */
+  }, [answerQueuePosts, initialAnswerQueue]);
   function toggleBookmark(postId: string) {
     setBookmarkedIds(prev => {
       const next = new Set(prev);

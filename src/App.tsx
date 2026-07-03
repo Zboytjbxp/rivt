@@ -288,6 +288,7 @@ function App() {
   const [shopTalkPostId, setShopTalkPostId] = useState<string | null>(null);
   const [shopTalkCompose, setShopTalkCompose] = useState(false);
   const [shopTalkCommunitySlug, setShopTalkCommunitySlug] = useState<string | null>(null);
+  const [shopTalkAnswerQueue, setShopTalkAnswerQueue] = useState(false);
   // Consume one-shot Shop Talk intents (open a post / open the composer) once we leave the view.
   useEffect(() => {
     if (activeView === "Shop Talk") return;
@@ -295,6 +296,7 @@ function App() {
     setShopTalkCompose(false);
     setShopTalkPostId(null);
     setShopTalkCommunitySlug(null);
+    setShopTalkAnswerQueue(false);
     /* eslint-enable react-hooks/set-state-in-effect */
   }, [activeView]);
   const [trade, setTrade] = useState<TradeFilter>("All trades");
@@ -313,7 +315,7 @@ function App() {
   const [isPostOpen, setPostOpen] = useState(false);
   const [isActivityOpen, setActivityOpen] = useState(false);
   const [isAccountOpen, setAccountOpen] = useState(false);
-  const [trustReady, setTrustReady] = useState(true);
+  const [trustReady, setTrustReady] = useState(false);
   const [messageDraft, setMessageDraft] = useState("");
   const [inboxConversations, setInboxConversations] = useState<InboxConversation[]>([]);
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
@@ -430,7 +432,9 @@ function App() {
       plan: current.plan,
       authMethod,
     }));
-    setOnboardingComplete(account.status === "active" && account.profile.onboardingStatus === "complete");
+    const accountOnboardingComplete = account.status === "active" && account.profile.onboardingStatus === "complete";
+    setOnboardingComplete(accountOnboardingComplete);
+    setTrustReady(accountOnboardingComplete);
   }, []);
 
   useEffect(() => {
@@ -1611,10 +1615,11 @@ function App() {
             profileHasBio={homeProfileHasBio}
             recordCount={uploadedRecords.size}
             safetyCertCount={safetyCertCount}
-            onOpenPost={(postId) => { setShopTalkPostId(postId); setShopTalkCompose(false); setShopTalkGlobalQuery(""); handleNavigate(defaultViewForDestination("shop-talk")); }}
-            onAsk={() => { setShopTalkPostId(null); setShopTalkCompose(true); handleNavigate(defaultViewForDestination("shop-talk")); }}
+            onOpenPost={(postId) => { setShopTalkPostId(postId); setShopTalkCompose(false); setShopTalkAnswerQueue(false); setShopTalkGlobalQuery(""); handleNavigate(defaultViewForDestination("shop-talk")); }}
+            onAsk={() => { setShopTalkPostId(null); setShopTalkAnswerQueue(false); setShopTalkCompose(true); handleNavigate(defaultViewForDestination("shop-talk")); }}
+            onOpenAnswerQueue={() => { setShopTalkPostId(null); setShopTalkCompose(false); setShopTalkGlobalQuery(""); setShopTalkCommunitySlug(null); setShopTalkAnswerQueue(true); handleNavigate(defaultViewForDestination("shop-talk")); }}
             onPostWork={openCreateJob}
-            onOpenCommunity={(name) => { setShopTalkPostId(null); setShopTalkCompose(false); setShopTalkGlobalQuery(""); setShopTalkCommunitySlug(communitySlug(name)); handleNavigate(defaultViewForDestination("shop-talk")); }}
+            onOpenCommunity={(name) => { setShopTalkPostId(null); setShopTalkCompose(false); setShopTalkAnswerQueue(false); setShopTalkGlobalQuery(""); setShopTalkCommunitySlug(communitySlug(name)); handleNavigate(defaultViewForDestination("shop-talk")); }}
             onNavigate={(destination) => handleNavigate(defaultViewForDestination(destination))}
             onOpenProfile={() => handleNavigate("Settings")}
             onOpenTool={handleOpenTool}
@@ -1649,7 +1654,7 @@ function App() {
           />
         ) : activeView === "Shop Talk" ? (
           <ShopTalkView
-            key={`shop-talk-${shopTalkGlobalQuery}-${shopTalkCommunitySlug ?? ""}-${shopTalkPostId ?? ""}-${shopTalkCompose ? "c" : ""}`}
+            key={`shop-talk-${shopTalkGlobalQuery}-${shopTalkCommunitySlug ?? ""}-${shopTalkPostId ?? ""}-${shopTalkCompose ? "c" : ""}-${shopTalkAnswerQueue ? "answers" : ""}`}
             profile={accountProfile}
             communityPosts={communityPosts}
             communities={communities}
@@ -1657,6 +1662,7 @@ function App() {
             initialQuery={shopTalkGlobalQuery}
             initialPostId={shopTalkPostId}
             initialCommunitySlug={shopTalkCommunitySlug}
+            initialAnswerQueue={shopTalkAnswerQueue}
             openComposer={shopTalkCompose}
             selectedJobTrade={selectedJob.trade}
             userLocation={accountProfile.location}
@@ -1797,7 +1803,6 @@ function App() {
         <AccountPanel
           role={role}
           profile={accountProfile}
-          trustReady={trustReady}
           recordCount={uploadedRecords.size}
           recordGoal={recordChecklist.length}
           trainingProgress={Math.round((completedTraining.size / trainingModules.length) * 100)}

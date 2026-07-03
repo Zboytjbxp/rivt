@@ -132,7 +132,6 @@ export function ActivityPanel({
 export function AccountPanel({
   role,
   profile,
-  trustReady,
   recordCount,
   recordGoal,
   trainingProgress,
@@ -153,7 +152,6 @@ export function AccountPanel({
 }: {
   role: Role;
   profile: AccountProfileForPanel;
-  trustReady: boolean;
   recordCount: number;
   recordGoal: number;
   trainingProgress: number;
@@ -190,7 +188,6 @@ export function AccountPanel({
           name={profile.displayName || profile.organization || "RIVT member"}
           trade={profile.specialties[0] ?? (role === "contractor" ? "Contractor" : "Tradesperson")}
           location={profile.location}
-          verified={trustReady}
           shoutOutCount={shoutOutCount}
           safetyCertCount={safetyCertCount}
           onEditProfile={() => onNavigate("Settings")}

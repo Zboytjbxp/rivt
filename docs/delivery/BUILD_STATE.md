@@ -7,6 +7,41 @@ Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
 Production release commit: verify with live `/api/health`; latest runtime feature evidence is recorded below and docs-only evidence commits may supersede the served build SHA.
 
+## Latest Packet 08 Pass - Minimal Truthfulness and UI Subtraction
+
+- Reviewed the 2026-07-03 minimal-professional audit against deployed commit `e8fff84f8c5aa875909a1d5d0171dec892ca593f` and implemented the highest-trust, lowest-risk subtraction slice on `master`.
+- Removed fake-looking Shop Talk fallback activity:
+  - deleted prompt posts 4-8 that used fabricated people, stock thumbnails, timestamps, upvote counts, and comment counts
+  - kept only three clearly labeled `RIVT` starter prompts with `Community Prompt` badges, zero votes, no fake comments, and `Starter prompt` timestamps
+  - removed stale dated heat-rule copy from the starter prompt body
+- Removed overclaiming profile trust UI:
+  - removed the hardcoded `Verified` avatar badge and profile chip from the account profile showcase
+  - changed account facts from `Trust: Ready` to `Consent: Current/Needs review`
+  - removed identity-readiness and payment-method claims that were previously driven by the same generic `trustReady` flag
+  - changed the consent flag default to false and now derives it from completed canonical onboarding when available
+- Reduced Home duplication:
+  - removed the top `Post work` / `Find your crew` CTA row, leaving Work and Crew in persistent nav and the role-appropriate Shop Talk FAB
+  - removed the duplicate `Ask the trades` button from the empty feed state
+  - wired the `questions need a hand` nudge to open the Shop Talk answer queue instead of opening the new-question composer
+- Tightened the visible Tools surface:
+  - simplified tool launch cards to icon, badge, title, one short line, and arrow
+  - removed internal/dev-speak copy such as `No fake sending` and `Server when linked`
+  - changed tool detail shells from eyebrow + title + paragraph into a compact title bar so tools reclaim first-viewport space
+  - unified the mileage logger and tax summary deduction math on one shared mileage-rate constant and removed stale `IRS 2025` wording from visible tool metadata
+- Rendered mobile QA at 390x844 with a temporary Vite server and Playwright:
+  - Home had `0` duplicate CTA rows, `0` fake seed authors, and no console errors
+  - Tools had `0` dev-speak strings and no console errors
+  - Profile panel had `0` fake standalone `Verified` labels and no console errors
+  - screenshots were saved in-repo at `artifacts/ui-audit-2026-07-03/home-mobile.png`, `tools-mobile.png`, and `profile-panel-mobile.png`
+- Local gates run on 2026-07-03:
+  - `npm run lint` (pass)
+  - `npm run build` (pass)
+  - `npm run test:unit` (pass; 44/44)
+  - `npm run test:e2e` (pass after updating the e2e expectation from the removed duplicate `Find your crew` CTA to the persistent `Crew` nav)
+  - `npm audit --omit=dev` (pass; 0 vulnerabilities)
+  - `npm run test` timed out after 4 minutes during the integration half; `npm run test:integration` also timed out after 10 minutes with no completed local result, so aggregate local integration evidence is not being claimed for this pass
+- Remaining boundary: this pass improves visible truthfulness and reduces clutter, but it does not complete the broader audit findings around full tool consolidation, duplicate client/payment/checklist surfaces, global search profile routing, token/radius/font/breakpoint consolidation, or server persistence for local-only business records.
+
 ## Latest Packet 08 Pass - Shop Talk Human Moderation Console and Report UX
 
 - Implemented the next human-facing moderation operations slice on branch `codex/shop-talk-moderation-console`.

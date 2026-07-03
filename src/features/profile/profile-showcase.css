@@ -44,20 +44,6 @@
   font-weight: 800;
 }
 
-.ps-avatar-badge {
-  position: absolute;
-  right: -2px;
-  bottom: -2px;
-  display: grid;
-  place-items: center;
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  background: var(--v2-teal);
-  color: #fff;
-  border: 2px solid var(--v2-surface, #fff);
-}
-
 .ps-hero-id {
   display: flex;
   flex-direction: column;

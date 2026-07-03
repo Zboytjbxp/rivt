@@ -1409,14 +1409,6 @@ export function ProfileHub({
                 <ShieldCheck size={16} className={trustReady ? "icon-success" : "icon-warn"} />
                 <span>Platform consent {trustReady ? "signed and current" : "not yet reviewed"}</span>
               </article>
-              <article>
-                <BadgeCheck size={16} />
-                <span>Identity readiness: {trustReady ? "ready" : "incomplete"}</span>
-              </article>
-              <article>
-                <CreditCard size={16} />
-                <span>Payment method: {trustReady ? "on file" : "not added"}</span>
-              </article>
             </div>
             {!trustReady && (
               <div className="v2-trust-action">
@@ -1548,7 +1540,7 @@ export function ProfileHub({
             <MetricTile icon={<Mail size={16} />} value={profile.email || "—"} label="Email" />
             <MetricTile icon={<CreditCard size={16} />} value={profile.plan} label="Plan" />
             <MetricTile icon={<UserCheck size={16} />} value={profile.authMethod} label="Signup method" />
-            <MetricTile icon={<BadgeCheck size={16} />} value={trustReady ? "Ready" : "Needs review"} label="Trust" />
+            <MetricTile icon={<ShieldCheck size={16} />} value={trustReady ? "Current" : "Needs review"} label="Consent" />
           </div>
         </section>
 

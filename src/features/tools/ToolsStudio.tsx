@@ -109,8 +109,6 @@ function ToolCard({
   summary,
   action,
   badge,
-  output,
-  detail,
   featured = false,
   onAction,
 }: {
@@ -119,8 +117,6 @@ function ToolCard({
   summary: string;
   action: string;
   badge: string;
-  output: string;
-  detail: string;
   featured?: boolean;
   onAction: () => void;
 }) {
@@ -132,27 +128,19 @@ function ToolCard({
         <strong>{title}</strong>
         <small>{summary}</small>
       </span>
-      <span className="v2-tool-card-output">
-        <strong>{output}</strong>
-        <small>{detail}</small>
-      </span>
       <em>{action}<ArrowRight size={14} /></em>
     </button>
   );
 }
 
 function ToolAppShell({
-  eyebrow,
   title,
-  description,
   compact = false,
   onBack,
   swipeHandlers,
   children,
 }: {
-  eyebrow: string;
   title: string;
-  description: string;
   compact?: boolean;
   onBack: () => void;
   swipeHandlers?: ToolSwipeHandlers;
@@ -166,9 +154,7 @@ function ToolAppShell({
           Tools
         </button>
         <div>
-          <span>{eyebrow}</span>
           <h1>{title}</h1>
-          <p>{description}</p>
         </div>
       </header>
       {children}
@@ -187,7 +173,8 @@ function shouldIgnoreToolSwipe(target: EventTarget | null) {
   return Boolean(target.closest("button, a, input, textarea, select, [contenteditable='true'], [role='button']"));
 }
 
-const IRS_RATE_2025 = 0.70;
+const MILEAGE_RATE_PER_MILE = 0.70;
+const MILEAGE_RATE_LABEL = "$0.70/mi";
 const mileageKey = "rivt.mileage.v1";
 
 interface MileageEntry {
@@ -252,7 +239,7 @@ function MileageLoggerTool({ activeJob }: { activeJob: Job | null }) {
   const thisYear = new Date().getFullYear().toString();
   const yearEntries = entries.filter((e) => e.date.startsWith(thisYear));
   const yearMiles = yearEntries.reduce((sum, e) => sum + e.miles, 0);
-  const yearDeduction = yearMiles * IRS_RATE_2025;
+  const yearDeduction = yearMiles * MILEAGE_RATE_PER_MILE;
   const totalMiles = entries.reduce((sum, e) => sum + e.miles, 0);
 
   return (
@@ -275,7 +262,7 @@ function MileageLoggerTool({ activeJob }: { activeJob: Job | null }) {
                 <div className="v2-mileage-entry-head">
                   <strong>{e.miles.toFixed(1)} mi</strong>
                   <span>{e.date}</span>
-                  <span className="v2-mileage-deduction">{currency(e.miles * IRS_RATE_2025)} deduction</span>
+                  <span className="v2-mileage-deduction">{currency(e.miles * MILEAGE_RATE_PER_MILE)} deduction</span>
                   <button type="button" aria-label="Delete trip" onClick={() => removeEntry(e.id)}><Trash2 size={13} /></button>
                 </div>
                 <div className="v2-mileage-entry-meta">
@@ -301,7 +288,7 @@ function MileageLoggerTool({ activeJob }: { activeJob: Job | null }) {
         <Panel className="v2-tool-panel" eyebrow="All time" title={`${totalMiles.toFixed(1)} mi`}>
           <div className="v2-tool-breakdown">
             <div><span>Total trips</span><strong>{entries.length}</strong></div>
-            <div><span>Total deductible</span><strong>{currency(totalMiles * IRS_RATE_2025)}</strong></div>
+            <div><span>Total deductible</span><strong>{currency(totalMiles * MILEAGE_RATE_PER_MILE)}</strong></div>
           </div>
         </Panel>
       </aside>
@@ -1780,14 +1767,14 @@ function TaxSummaryTool() {
       .filter((e) => e.date && e.date.startsWith(yearStr))
       .reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
 
-    // Mileage deduction at $0.67/mile
+    // Estimated mileage deduction using the shared mileage-tool rate.
     const mileageEntries: Array<{ date: string; miles: number }> = (() => {
       try { return JSON.parse(localStorage.getItem("rivt.mileage.v1") ?? "[]") as Array<{ date: string; miles: number }>; } catch { return []; }
     })();
     const totalMiles = mileageEntries
       .filter((m) => m.date && m.date.startsWith(yearStr))
       .reduce((sum, m) => sum + (Number(m.miles) || 0), 0);
-    const mileageDeduction = totalMiles * 0.67;
+    const mileageDeduction = totalMiles * MILEAGE_RATE_PER_MILE;
 
     const netProfit = Math.max(0, grossIncome - totalExpenses - mileageDeduction);
     const seTax = netProfit * 0.9235 * 0.153;
@@ -1804,7 +1791,7 @@ function TaxSummaryTool() {
       ``,
       `Gross Revenue:        ${fmt(summary.grossIncome)}`,
       `Business Expenses:    ${fmt(summary.totalExpenses)}`,
-      `Mileage Deduction:    ${fmt(summary.mileageDeduction)} (${summary.totalMiles.toFixed(1)} mi @ $0.67)`,
+      `Mileage Deduction:    ${fmt(summary.mileageDeduction)} (${summary.totalMiles.toFixed(1)} mi @ ${MILEAGE_RATE_LABEL})`,
       `Net Profit:           ${fmt(summary.netProfit)}`,
       ``,
       `SE Tax Estimate:      ${fmt(summary.seTax)}`,
@@ -1867,7 +1854,7 @@ function TaxSummaryTool() {
           <div className="v2-tax-summary-card">
             <small>Mileage Deduction</small>
             <strong>{fmt(summary.mileageDeduction)}</strong>
-            <span className="v2-tax-summary-sub">{summary.totalMiles.toFixed(1)} mi @ $0.67</span>
+            <span className="v2-tax-summary-sub">{summary.totalMiles.toFixed(1)} mi @ {MILEAGE_RATE_LABEL}</span>
           </div>
           <div className="v2-tax-summary-card v2-tax-summary-card--highlight">
             <small>Net Profit</small>
@@ -2453,7 +2440,7 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
       mileage: {
         eyebrow: "Mileage log",
         title: "Mileage logger",
-        description: "Log job site trips and calculate your IRS 2025 standard mileage deduction ($0.70/mile).",
+        description: `Log job site trips and estimate mileage deductions at ${MILEAGE_RATE_LABEL}.`,
         node: <MileageLoggerTool activeJob={activeJob} />,
       },
       "price-book": {
@@ -2516,10 +2503,8 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
 
     return (
       <ToolAppShell
-        eyebrow={toolMeta.eyebrow}
         title={toolMeta.title}
-        description={toolMeta.description}
-        compact={"compact" in toolMeta ? Boolean(toolMeta.compact) : false}
+        compact
         onBack={() => setActiveTool("hub")}
         swipeHandlers={toolSwipeHandlers}
       >
@@ -2542,9 +2527,7 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
               icon={Calculator}
               title="Heavy 16th"
               badge="Calculator"
-              summary="Length math, spacing, miter, crown, and hardware marks."
-              output="Ft-in-16ths"
-              detail="Copy-ready result"
+              summary="Fractions, feet, and job math."
               action="Open"
               featured
               onAction={() => setActiveTool("calculator")}
@@ -2553,9 +2536,7 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
               icon={Scale}
               title="Estimate"
               badge="Pricing"
-              summary="Labor, material, overhead, margin, and target range."
-              output="Target range"
-              detail="Copy estimate"
+              summary="Build a clean price range."
               action="Open"
               onAction={() => setActiveTool("estimate")}
             />
@@ -2563,9 +2544,7 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
               icon={ReceiptText}
               title="Invoice"
               badge="Direct pay"
-              summary="Line items, totals, terms, printable preview, email and text drafts."
-              output="TXT / print"
-              detail="No fake sending"
+              summary="Draft, print, send from email."
               action="Open"
               onAction={() => setActiveTool("invoice")}
             />
@@ -2573,9 +2552,7 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
               icon={Clipboard}
               title="Daily log"
               badge="Site record"
-              summary="Crew hours, work notes, blockers, safety, and next steps."
-              output="Today"
-              detail="Server when linked"
+              summary="Labor, notes, safety, blockers."
               action="Open"
               onAction={() => setActiveTool("daily-log")}
             />
@@ -2583,9 +2560,7 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
               icon={FolderOpen}
               title="Records & photos"
               badge="Closeout"
-              summary="Camera capture, before/after albums, notes, and project photo records."
-              output={`${activeWork.length}`}
-              detail="job albums"
+              summary="Photos, albums, and closeout proof."
               action="Open"
               onAction={() => setActiveTool("job-photos")}
             />

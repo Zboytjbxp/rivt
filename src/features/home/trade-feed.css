@@ -56,37 +56,6 @@
 .trade-feed-avail.is-booked { color: var(--v2-text-muted); }
 
 /* ── CTA row ─────────────────────────────────────────────── */
-.trade-feed-cta-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-}
-
-.trade-feed-cta {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  min-height: 52px;
-  padding: 0 12px;
-  border-radius: 14px;
-  border: 1.5px solid transparent;
-  font-size: 15px;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.trade-feed-cta.is-ask {
-  background: var(--v2-accent);
-  color: #fff;
-}
-
-.trade-feed-cta.is-crew {
-  background: var(--v2-surface);
-  color: var(--v2-teal-text);
-  border-color: color-mix(in srgb, var(--v2-teal) 32%, transparent);
-}
-
 /* ── Getting-started checklist ───────────────────────────── */
 .trade-feed-start-card {
   display: flex;
@@ -415,8 +384,6 @@
 .trade-feed-empty svg { color: var(--v2-accent-text); }
 .trade-feed-empty b { font-size: 16px; color: var(--v2-text); }
 .trade-feed-empty span { font-size: 14px; }
-.trade-feed-empty .trade-feed-cta { margin-top: 8px; padding: 0 22px; min-height: 44px; }
-
 /* ── FAB ─────────────────────────────────────────────────── */
 .trade-feed-fab {
   position: fixed;
