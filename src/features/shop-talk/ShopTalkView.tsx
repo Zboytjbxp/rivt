@@ -36,6 +36,7 @@ import type { Trade } from "../../types";
 import { usePersona } from "../persona/usePersona";
 import {
   communityBadgeLabels,
+  inferCommunityDefaultTrade,
   netScore,
   sortedAnswers,
   type CommunityBadgeThresholds,
@@ -354,10 +355,13 @@ function ShopTalkNewPostModal({
   onClose: () => void;
   onSubmit: (flair: PostFlair, title: string, trade: Trade | "General", body: string, postType: PostType, subTrade?: string, subLocation?: string, subRate?: string, communitySlug?: string | null) => void;
 }) {
+  const posterDefaultTrade = profile.specialties[0] ?? selectedJobTrade;
+  const initialPostCommunitySlug = initialCommunitySlug ?? communities[0]?.slug ?? null;
+  const initialPostCommunity = communities.find((community) => community.slug === initialPostCommunitySlug) ?? null;
   const [flair, setFlair] = useState<PostFlair>(initialFlair);
   const [title, setTitle] = useState(initialTitle);
-  const [trade, setTrade] = useState<Trade | "General">(selectedJobTrade);
-  const [selectedPostCommunitySlug, setSelectedPostCommunitySlug] = useState<string | null>(initialCommunitySlug ?? communities[0]?.slug ?? null);
+  const [trade, setTrade] = useState<Trade | "General">(() => inferCommunityDefaultTrade(initialPostCommunity, posterDefaultTrade));
+  const [selectedPostCommunitySlug, setSelectedPostCommunitySlug] = useState<string | null>(initialPostCommunitySlug);
   const [body, setBody] = useState(initialBody);
   const [postType, setPostType] = useState<PostType>("general");
   const [subTrade, setSubTrade] = useState("");
@@ -410,7 +414,12 @@ function ShopTalkNewPostModal({
           <span>Community</span>
           <select
             value={selectedPostCommunitySlug ?? ""}
-            onChange={(e) => setSelectedPostCommunitySlug(e.target.value || null)}
+            onChange={(e) => {
+              const nextSlug = e.target.value || null;
+              const nextCommunity = communities.find((community) => community.slug === nextSlug) ?? null;
+              setSelectedPostCommunitySlug(nextSlug);
+              setTrade(inferCommunityDefaultTrade(nextCommunity, posterDefaultTrade));
+            }}
           >
             {communities.map((community) => (
               <option key={community.slug} value={community.slug}>{community.name}</option>

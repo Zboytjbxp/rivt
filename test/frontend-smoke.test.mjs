@@ -245,3 +245,20 @@ test("Moderation console renders without crashing", async () => {
     /Shop Talk moderation/,
   );
 });
+
+test("Shop Talk composer defaults trade from selected community before poster trade", async () => {
+  const { inferCommunityDefaultTrade } = await loadModule("/src/features/shop-talk/community-utils.ts");
+
+  assert.equal(
+    inferCommunityDefaultTrade({ slug: "carpentry-talk", name: "Carpentry Talk", meta: "Trim and framing" }, "Electrical"),
+    "Carpentry",
+  );
+  assert.equal(
+    inferCommunityDefaultTrade({ slug: "jacksonville-carpentry", name: "Jacksonville Carpentry", meta: "Local crews" }, "Electrical"),
+    "Carpentry",
+  );
+  assert.equal(
+    inferCommunityDefaultTrade({ slug: "jacksonville-trades", name: "Jacksonville Trades", meta: "Local work and referrals" }, "Plumbing"),
+    "Plumbing",
+  );
+});
