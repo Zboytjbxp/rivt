@@ -6559,9 +6559,9 @@
 .v2-tools-page .v2-tool-launch-card,
 .v2-tools-page .v2-tool-launch-card.is-featured {
   display: grid;
-  grid-template-columns: 40px minmax(0, 1fr) auto;
-  min-height: 70px;
-  padding: 9px 10px;
+  grid-template-columns: 38px minmax(0, 1fr) 18px;
+  min-height: 62px;
+  padding: 8px 10px;
   border-radius: var(--v2-radius-md);
   border: 1px solid color-mix(in srgb, var(--v2-border) 76%, transparent);
   background: var(--v2-surface);
@@ -6585,19 +6585,13 @@
 
 .v2-tools-page .v2-tool-card-copy {
   align-items: flex-start;
-  gap: 2px;
+  gap: 3px;
   min-width: 0;
   text-align: left;
 }
 
-.v2-tools-page .v2-tool-card-copy small:first-child {
-  color: var(--v2-text-muted);
-  font-size: 13px;
-  letter-spacing: 0.08em;
-}
-
 .v2-tools-page .v2-tool-launch-card strong {
-  font-size: 14px;
+  font-size: 15px;
   line-height: 1.15;
 }
 
@@ -6632,6 +6626,7 @@
   align-self: center;
   color: var(--v2-text-muted);
   font-size: 0;
+  justify-self: end;
 }
 
 .v2-tools-page .v2-tool-launch-card em svg {
@@ -7107,23 +7102,19 @@
 }
 
 .v2-tool-group-header {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
+  display: block;
   min-width: 0;
 }
 
 .v2-tool-group-header span {
-  color: var(--v2-accent);
-  font-size: 13px;
-  font-weight: var(--v2-weight-display);
+  display: none;
 }
 
 .v2-tool-group-header strong {
   min-width: 0;
   overflow: hidden;
   color: var(--v2-text);
-  font-size: 14px;
+  font-size: 15px;
   font-weight: var(--v2-weight-bold);
   line-height: 1.2;
   text-overflow: ellipsis;
@@ -7217,11 +7208,11 @@
 
   .v2-tools-page .v2-tool-launch-card,
   .v2-tools-page .v2-tool-launch-card.is-featured {
-    grid-template-columns: minmax(0, 1fr);
+    grid-template-columns: 42px minmax(0, 1fr) 18px;
     gap: 8px;
-    min-height: 124px;
-    align-content: start;
-    padding: 14px;
+    min-height: 68px;
+    align-content: center;
+    padding: 10px;
   }
 
   .v2-tools-page .v2-tool-card-icon {
@@ -7233,15 +7224,8 @@
     gap: 4px;
   }
 
-  .v2-tools-page .v2-tool-card-copy small:first-child {
-    padding: 0;
-    background: transparent;
-  }
-
   .v2-tools-page .v2-tool-launch-card em {
-    position: absolute;
-    right: 13px;
-    bottom: 12px;
+    position: static;
   }
 
   .v2-tools-page .v2-tool-launch-card strong {

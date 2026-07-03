@@ -24,11 +24,6 @@
   font-size: 14px;
 }
 
-.v2-inbox-summary {
-  display: flex;
-  gap: 12px;
-}
-
 .v2-inbox-panel {
   border: 1px solid color-mix(in srgb, var(--v2-border) 58%, transparent);
   border-radius: var(--v2-radius-lg);
@@ -774,11 +769,6 @@
     align-items: start;
   }
 
-  .v2-inbox-summary {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
   .v2-inbox-badge {
     min-width: 0;
     padding: 10px;
@@ -816,22 +806,10 @@
   }
 }
 
-@media (max-width: 640px) {
-  .v2-inbox-summary {
-    grid-template-columns: 1fr;
-  }
-}
-
 @media (max-width: 900px) {
   .v2-inbox-header {
     align-items: flex-start;
     flex-direction: column;
-  }
-
-  .v2-inbox-summary {
-    width: 100%;
-    overflow-x: auto;
-    padding-bottom: 4px;
   }
 }
 

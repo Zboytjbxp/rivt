@@ -7,6 +7,35 @@ Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
 Production release commit: verify with live `/api/health`; latest runtime feature evidence is recorded below and docs-only evidence commits may supersede the served build SHA.
 
+## Latest Packet 08 Pass - Naming and Repetition Cleanup
+
+- Implemented the next minimal-professional audit slice on branch `codex/naming-repetition-cleanup`.
+- Normalized user-facing route copy around the five core concepts:
+  - legacy Work sub-routes now present as `Work` instead of separate `My Jobs`, `Applications`, and `Invites` destination names
+  - condensed Tools, Crew, Messages, Settings, and Admin descriptions so headers read like product navigation rather than onboarding copy
+  - removed the legacy fallback page paragraph from non-primary page headings
+- Reduced repeated header/stat chrome:
+  - replaced the Shop Talk moderation dashboard's four stat cards with a compact inline status summary
+  - removed extra moderation header eyebrow/description copy so reports are closer to the first viewport
+  - replaced the Inbox three-card stat block with one compact unread/update line
+  - deleted stale Crew/Inbox header-metric CSS that no longer maps to rendered UI
+- Reduced Tools bloat:
+  - simplified tool cards to icon, title, one short line, and a chevron
+  - removed badge/action copy such as repeated `Open` labels from launch cards
+  - shortened grouped tool section labels to `Money`, `Site`, and `Business`
+  - removed unused tool-shell eyebrow/description metadata so active tools stay title-only and screen space belongs to the tool itself
+- Preserved the Gate A honesty boundary:
+  - no homeowner flows, fake verification, fake provider behavior, payment processing, production data migration, or authorization changes were added
+  - legacy route identifiers remain internally for backwards-compatible redirects, but visible copy now points users back to the current Home / Work / Crew / Shop Talk / Tools model
+- Local gates run on 2026-07-03:
+  - `npm run build` (pass)
+  - `npm run lint` (pass)
+  - `npm run test` (pass; unit plus integration, 44/44 unit tests and 16/16 integration suites)
+  - `npm run test:e2e` (pass; desktop and mobile jobs/discovery flow updated for the compact Inbox copy)
+  - `npm audit --omit=dev` (pass; 0 vulnerabilities)
+- Production deployment status:
+  - pending until this branch is merged and picked up by Railway
+
 ## Latest Packet 08 Pass - Visual System Consolidation
 
 - Implemented the next minimal-professional UI foundation slice on branch `codex/ui-system-consolidation`.

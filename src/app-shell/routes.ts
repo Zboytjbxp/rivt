@@ -91,27 +91,27 @@ export const pageCopy: Record<NavLabel, { title: string; description: string }> 
   },
   Tools: {
     title: "Tools",
-    description: "Invoice builder, estimate calculator, and field tools for active work orders.",
+    description: "Calculator, invoices, estimates, logs, and records.",
   },
   "My Jobs": {
-    title: "My Jobs",
-    description: "Track each job from posted to paid and closed.",
+    title: "Work",
+    description: "Track jobs from posted to paid and closed.",
   },
   Applications: {
-    title: "Applications",
-    description: "See who raised a hand and move fast on good matches.",
+    title: "Work",
+    description: "Review applications and good matches.",
   },
   Invites: {
-    title: "Invites",
+    title: "Work",
     description: "Invite nearby tradespeople who fit the job.",
   },
   Crew: {
     title: "Crew",
-    description: "Compare specialties, tools, self-reported insurance, and availability.",
+    description: "People, reviews, clients, and saved subs.",
   },
   Messages: {
     title: "Messages",
-    description: "Keep job messages in one permanent thread.",
+    description: "Job messages and notifications.",
   },
   "Trust & Legal": {
     title: "Trust & Legal",
@@ -135,10 +135,10 @@ export const pageCopy: Record<NavLabel, { title: string; description: string }> 
   },
   Settings: {
     title: "Settings",
-    description: "Review account status, trust readiness, and launch checklist.",
+    description: "Account, theme, notifications, and profile controls.",
   },
   Admin: {
     title: "Admin",
-    description: "Watch the beta, handle reports, and keep bad accounts out.",
+    description: "Moderation, support, and launch operations.",
   },
 };

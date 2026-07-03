@@ -1594,7 +1594,6 @@ function App() {
           <header className="page-heading" aria-label={`${page.title} heading`}>
             <div>
               <h1>{page.title}</h1>
-              <p>{page.description}</p>
             </div>
           </header>
         )}

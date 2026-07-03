@@ -10,7 +10,7 @@ import {
   ShieldAlert,
   ShieldCheck,
 } from "lucide-react";
-import { EmptyState, MetricTile, PageHeader, Panel, SkeletonCard, StatusPill } from "../../components/ui";
+import { EmptyState, PageHeader, Panel, SkeletonCard, StatusPill } from "../../components/ui";
 import {
   fetchShopTalkModerationReports,
   resolveShopTalkModerationReport,
@@ -241,9 +241,7 @@ export function ModerationConsole({
     <main className="moderation-console">
       <PageHeader
         className="moderation-page-header"
-        eyebrow="Admin"
         title="Shop Talk moderation"
-        description="Review community, post, and answer reports with enough context to make a support decision quickly."
         actions={(
           <button type="button" className="v2-secondary-button" onClick={() => void loadReports()} disabled={loading}>
             <RefreshCw size={16} />
@@ -271,11 +269,11 @@ export function ModerationConsole({
         ))}
       </section>
 
-      <section className="moderation-metrics" aria-label="Moderation metrics">
-        <MetricTile value={metrics.open} label="Open reports" detail="Needs first review" icon={<Flag size={16} />} />
-        <MetricTile value={metrics.safety} label="Safety priority" detail="Unsafe or misinformation" icon={<ShieldAlert size={16} />} />
-        <MetricTile value={metrics.community} label="Community reports" detail="Rooms, not threads" icon={<Archive size={16} />} />
-        <MetricTile value={relativeTime(metrics.oldest)} label="Oldest report" detail="SLA pressure" icon={<CheckCircle2 size={16} />} />
+      <section className="moderation-summary-line" aria-label="Moderation summary">
+        <span><strong>{metrics.open}</strong> open</span>
+        <span><strong>{metrics.safety}</strong> safety</span>
+        <span><strong>{metrics.community}</strong> community</span>
+        <span><strong>{relativeTime(metrics.oldest)}</strong> oldest</span>
       </section>
 
       {error ? (

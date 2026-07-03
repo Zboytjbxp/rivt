@@ -420,7 +420,7 @@ async function assertTopBarActions(page) {
 
   await page.getByRole("button", { name: "Messages" }).click();
   await page.getByRole("heading", { name: "Inbox", exact: true }).waitFor();
-  await page.getByText("Server-owned job messages and notifications", { exact: false }).waitFor();
+  await page.getByText(/unread messages .* new updates/).waitFor();
 }
 
 let browser;

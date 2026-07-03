@@ -87,7 +87,6 @@ interface ToolLauncher {
   mode: LaunchableToolMode;
   icon: ToolIcon;
   title: string;
-  badge: string;
   summary: string;
 }
 
@@ -125,28 +124,28 @@ function ToolCard({
   icon: Icon,
   title,
   summary,
-  action,
-  badge,
   featured = false,
   onAction,
 }: {
   icon: typeof Calculator;
   title: string;
   summary: string;
-  action: string;
-  badge: string;
   featured?: boolean;
   onAction: () => void;
 }) {
   return (
-    <button type="button" className={featured ? "v2-tool-launch-card is-featured" : "v2-tool-launch-card"} onClick={onAction}>
+    <button
+      type="button"
+      className={featured ? "v2-tool-launch-card is-featured" : "v2-tool-launch-card"}
+      onClick={onAction}
+      aria-label={`Open ${title}`}
+    >
       <span className="v2-tool-card-icon"><Icon size={19} /></span>
       <span className="v2-tool-card-copy">
-        <small>{badge}</small>
         <strong>{title}</strong>
         <small>{summary}</small>
       </span>
-      <em>{action}<ArrowRight size={14} /></em>
+      <em aria-hidden="true"><ArrowRight size={14} /></em>
     </button>
   );
 }
@@ -251,35 +250,30 @@ const PRIMARY_TOOL_LAUNCHERS: ToolLauncher[] = [
     mode: "calculator",
     icon: Calculator,
     title: "Heavy 16th",
-    badge: "Calculator",
     summary: "Fractions, feet, and job math.",
   },
   {
     mode: "estimate",
     icon: Scale,
     title: "Estimate",
-    badge: "Pricing",
     summary: "Build a clean price range.",
   },
   {
     mode: "invoice",
     icon: ReceiptText,
     title: "Invoice",
-    badge: "Direct pay",
     summary: "Draft, print, send from email.",
   },
   {
     mode: "daily-log",
     icon: Clipboard,
     title: "Daily log",
-    badge: "Site record",
     summary: "Labor, notes, safety, blockers.",
   },
   {
     mode: "job-photos",
     icon: FolderOpen,
     title: "Records & photos",
-    badge: "Closeout",
     summary: "Photos, albums, and closeout proof.",
   },
 ];
@@ -287,35 +281,35 @@ const PRIMARY_TOOL_LAUNCHERS: ToolLauncher[] = [
 const TOOL_GROUPS: ToolGroup[] = [
   {
     label: "Money",
-    title: "Price, track, and close out",
+    title: "Money",
     tools: [
-      { mode: "bid-builder", icon: FileText, title: "Bid builder", badge: "Quote", summary: "Line-item bids." },
-      { mode: "payments", icon: ReceiptText, title: "Payment tracker", badge: "Payments", summary: "Invoices and balances." },
-      { mode: "expense-logger", icon: ReceiptText, title: "Expenses", badge: "Costs", summary: "Job costs by category." },
-      { mode: "mileage", icon: Car, title: "Mileage", badge: "Trips", summary: "Job travel log." },
-      { mode: "earnings", icon: Download, title: "Earnings", badge: "Income", summary: "Paid work summary." },
-      { mode: "tax-summary", icon: FileUp, title: "Tax summary", badge: "Year end", summary: "Exportable estimate." },
-      { mode: "tax-estimator", icon: Scale, title: "Tax estimator", badge: "Planning", summary: "Quarterly estimate." },
+      { mode: "bid-builder", icon: FileText, title: "Bid builder", summary: "Line-item bids." },
+      { mode: "payments", icon: ReceiptText, title: "Payment tracker", summary: "Invoices and balances." },
+      { mode: "expense-logger", icon: ReceiptText, title: "Expenses", summary: "Job costs by category." },
+      { mode: "mileage", icon: Car, title: "Mileage", summary: "Job travel log." },
+      { mode: "earnings", icon: Download, title: "Earnings", summary: "Paid work summary." },
+      { mode: "tax-summary", icon: FileUp, title: "Tax summary", summary: "Exportable estimate." },
+      { mode: "tax-estimator", icon: Scale, title: "Tax estimator", summary: "Quarterly estimate." },
     ],
   },
   {
     label: "Site",
-    title: "Run the day in the field",
+    title: "Site",
     tools: [
-      { mode: "materials", icon: Package2, title: "Materials", badge: "Takeoff", summary: "Area, waste, rough cost." },
-      { mode: "daily-report", icon: FileText, title: "Daily report", badge: "Report", summary: "Weather, crew, issues." },
-      { mode: "punch-list", icon: ListChecks, title: "Punch list", badge: "Closeout", summary: "Open items and fixes." },
-      { mode: "safety-checklist", icon: Shield, title: "Safety checklist", badge: "Safety", summary: "Daily site check." },
-      { mode: "job-checklist", icon: CheckSquare, title: "Job checklists", badge: "Workflow", summary: "Trade-specific steps." },
-      { mode: "time-tracker", icon: RefreshCw, title: "Time tracker", badge: "Hours", summary: "Clock jobs and tasks." },
+      { mode: "materials", icon: Package2, title: "Materials", summary: "Area, waste, rough cost." },
+      { mode: "daily-report", icon: FileText, title: "Daily report", summary: "Weather, crew, issues." },
+      { mode: "punch-list", icon: ListChecks, title: "Punch list", summary: "Open items and fixes." },
+      { mode: "safety-checklist", icon: Shield, title: "Safety checklist", summary: "Daily site check." },
+      { mode: "job-checklist", icon: CheckSquare, title: "Job checklists", summary: "Trade-specific steps." },
+      { mode: "time-tracker", icon: RefreshCw, title: "Time tracker", summary: "Clock jobs and tasks." },
     ],
   },
   {
     label: "Business",
-    title: "Reusable setup",
+    title: "Business",
     tools: [
-      { mode: "price-book", icon: Search, title: "Price book", badge: "Materials", summary: "Save common prices." },
-      { mode: "contracts", icon: FileText, title: "Contracts", badge: "Docs", summary: "Scope and terms drafts." },
+      { mode: "price-book", icon: Search, title: "Price book", summary: "Save common prices." },
+      { mode: "contracts", icon: FileText, title: "Contracts", summary: "Scope and terms drafts." },
     ],
   },
 ];
@@ -3100,117 +3094,79 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
 
     const toolMeta = {
       estimate: {
-        eyebrow: "Estimate app",
         title: "Estimate builder",
-        description: "Build a practical target range from labor, material, overhead, and margin assumptions.",
         node: <EstimateTool activeJob={activeJob} />,
       },
       invoice: {
-        eyebrow: "Invoice app",
         title: "Invoice draft",
-        description: "Build an invoice draft. Copy, download, or send it from your own email or text.",
         node: <InvoiceDraftTool activeJob={activeJob} />,
       },
       "daily-log": {
-        eyebrow: "Daily log",
         title: "Daily log",
-        description: "Capture crew hours, site notes, blockers, safety, and next steps before the details disappear.",
         node: <DailyLogTool activeJob={activeJob} activeWork={activeWork} />,
       },
       materials: {
-        eyebrow: "Materials app",
         title: "Material takeoff",
-        description: "Estimate area, waste, material cost, and rough sheet count.",
         node: <MaterialsTool activeJob={activeJob} />,
       },
       "job-photos": {
-        eyebrow: "Site documentation",
         title: "Job Photos",
-        description: "Capture, organize, and compare job-site photos tied to your active project record.",
         node: <JobPhotosTool activeWork={activeWork} />,
       },
       "time-tracker": {
-        eyebrow: "Time tracker",
         title: "Time tracker",
-        description: "Clock in and out per job. Track hours across all active and recent work.",
         node: <TimeTrackerTool activeJob={activeJob} jobs={jobs} />,
       },
       "expense-logger": {
-        eyebrow: "Expense logger",
         title: "Expense logger",
-        description: "Log materials, tool rentals, mileage, and subcontractor costs by job.",
         node: <ExpenseLoggerTool activeJob={activeJob} jobs={jobs} />,
       },
       earnings: {
-        eyebrow: "Earnings",
         title: "Earnings dashboard",
-        description: "Weekly and monthly income summary: total earned, jobs completed, top trade, average job size.",
         node: <EarningsDashboardTool jobs={jobs} paymentRecords={paymentRecords} />,
       },
       "bid-builder": {
-        eyebrow: "Bid / quote",
         title: "Bid builder",
-        description: "Line-item bids with labor, materials, overhead markup, client notes, and save-to-device.",
         node: <BidBuilderTool activeJob={activeJob} />,
       },
       mileage: {
-        eyebrow: "Mileage log",
         title: "Mileage logger",
-        description: `Log job site trips and estimate mileage deductions at ${MILEAGE_RATE_LABEL}.`,
         node: <MileageLoggerTool activeJob={activeJob} />,
       },
       "price-book": {
-        eyebrow: "Price book",
         title: "Material price book",
-        description: "Save common material prices for quick lookup when building estimates and bids.",
         node: <PriceBookTool />,
       },
       "safety-checklist": {
-        eyebrow: "Safety",
         title: "Field safety checklist",
-        description: "Pre-built daily site check across PPE, fall protection, electrical, tools, and emergency readiness.",
         node: <SafetyChecklistTool activeJob={activeJob} />,
       },
       "tax-estimator": {
-        eyebrow: "Tax planning",
         title: "Tax estimator",
-        description: "Estimate quarterly self-employment tax payments based on your projected annual income.",
         node: <TaxEstimatorTool />,
       },
       "punch-list": {
-        eyebrow: "Closeout",
         title: "Punch list",
-        description: "Track deficiencies and outstanding items for final walkthrough and sign-off.",
         node: <PunchListTool />,
       },
       contracts: {
-        eyebrow: "Contracts",
         title: "Contract templates",
-        description: "Generate scope of work, change orders, payment terms, lien waivers, and subcontractor agreements.",
         node: <ContractTemplateTool />,
       },
       "job-checklist": {
-        eyebrow: "Checklists",
         title: "Job checklists",
-        description: "Trade-specific inspection and job type checklists with progress tracking.",
         node: <JobChecklistTool />,
       },
       payments: {
-        eyebrow: "Payments",
         title: "Payment tracker",
-        description: "Track invoices, outstanding balances, and payment status across all jobs.",
         node: <PaymentTrackerTool />,
       },
       "daily-report": {
-        eyebrow: "Daily report",
         title: "Daily site report",
-        description: "Log daily site conditions: weather, crew count, work completed, issues, and materials.",
         node: <DailyReportTool />,
       },
       "tax-summary": {
-        eyebrow: "Tax summary",
         title: "Annual tax summary",
-        description: "Estimate annual income, expenses, mileage deductions, and self-employment tax.",
         node: <TaxSummaryTool />,
       },
     }[activeTool];
@@ -3244,9 +3200,7 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
                 key={tool.mode}
                 icon={tool.icon}
                 title={tool.title}
-                badge={tool.badge}
                 summary={tool.summary}
-                action="Open"
                 featured={index === 0}
                 onAction={() => setActiveTool(tool.mode)}
               />

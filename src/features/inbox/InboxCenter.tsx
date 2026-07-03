@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import type { PrimaryDestination } from "../../app-shell/types";
 import type { InboxConversation, InboxMessage, InboxNotification } from "./inbox-api";
-import { Avatar, EmptyState, MetricTile, PageHeader, Panel, SkeletonCard } from "../../components/ui";
+import { Avatar, EmptyState, PageHeader, Panel, SkeletonCard } from "../../components/ui";
 import {
   readClientRecordsLocal,
   saveClientRecordsLocal,
@@ -572,14 +572,7 @@ export function InboxCenter({
       <PageHeader
         className="v2-inbox-header"
         title="Inbox"
-        description="Server-owned job messages and notifications for accepted work."
-        actions={
-          <div className="v2-inbox-summary">
-            <MetricTile icon={<MessageCircle size={18} />} value={unreadThreads} label="unread messages" />
-            <MetricTile icon={<Bell size={18} />} value={unreadNotifications.length} label="new updates" />
-            <MetricTile icon={<Clock3 size={18} />} value={conversations.length} label="work threads" />
-          </div>
-        }
+        description={`${unreadThreads} unread messages · ${unreadNotifications.length} new updates`}
       />
 
       {error ? (
