@@ -40,6 +40,10 @@ Production release commit: verify with live `/api/health`; latest runtime featur
   - `npm run test:e2e` (pass after updating the e2e expectation from the removed duplicate `Find your crew` CTA to the persistent `Crew` nav)
   - `npm audit --omit=dev` (pass; 0 vulnerabilities)
   - `npm run test` timed out after 4 minutes during the integration half; `npm run test:integration` also timed out after 10 minutes with no completed local result, so aggregate local integration evidence is not being claimed for this pass
+- Production deployment completed from `master`:
+  - runtime source commit `e2d50f9a1d7a3d7d89f44c355b88c218d74c4aad` was pushed to GitHub and picked up by Railway production service `RIVT`
+  - live `https://rivt.pro/api/health` returned `ok: true`, build commit `e2d50f9a1d7a3d7d89f44c355b88c218d74c4aad`, migration `0018_shop_talk_moderation`, PostgreSQL, S3-compatible object storage, and configured Sentry
+  - `EXPECTED_SOURCE_COMMIT=e2d50f9a1d7a3d7d89f44c355b88c218d74c4aad npm run monitor:production` passed with operational controls off, seven anonymous private-route checks, and 559 ms duration
 - Remaining boundary: this pass improves visible truthfulness and reduces clutter, but it does not complete the broader audit findings around full tool consolidation, duplicate client/payment/checklist surfaces, global search profile routing, token/radius/font/breakpoint consolidation, or server persistence for local-only business records.
 
 ## Latest Packet 08 Pass - Shop Talk Human Moderation Console and Report UX
