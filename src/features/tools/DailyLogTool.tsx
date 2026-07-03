@@ -4,6 +4,7 @@ import type { Job } from "../../types";
 import { Panel } from "../../components/ui";
 import type { CanonicalActiveWork } from "../work/job-api";
 import { addProjectNote, openProjectForActiveWork, ProjectApiError } from "./project-api";
+import { fetchToolRecords, upsertToolRecord, type ServerToolRecord } from "./tool-records-api";
 
 function formatNumber(value: number, digits = 1) {
   return Number.isFinite(value) ? value.toFixed(digits) : "0";
@@ -14,6 +15,7 @@ function projectErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : "RIVT could not complete the Records request.";
 }
 const dailyLogStorageKey = "rivt.dailyLogDraft.v1";
+const dailyLogDraftRecordId = "daily-log-draft";
 const dailyLogChecklist = [
   "Photos captured",
   "Scope change noted",
@@ -39,6 +41,45 @@ interface DailyLogDraft {
   checklist: Record<DailyLogChecklistItem, boolean>;
 }
 
+function isDailyLogDraft(value: unknown): value is DailyLogDraft {
+  if (!value || typeof value !== "object") return false;
+  const candidate = value as Partial<DailyLogDraft>;
+  return typeof candidate.date === "string"
+    && typeof candidate.site === "string"
+    && typeof candidate.trade === "string"
+    && typeof candidate.weather === "string"
+    && typeof candidate.crewCount === "number"
+    && typeof candidate.hours === "number"
+    && typeof candidate.completed === "string"
+    && typeof candidate.blockers === "string"
+    && typeof candidate.materials === "string"
+    && typeof candidate.safety === "string"
+    && typeof candidate.nextStep === "string"
+    && typeof candidate.checklist === "object"
+    && candidate.checklist !== null;
+}
+
+function dailyLogDraftFromServer(record: ServerToolRecord, fallback: DailyLogDraft): DailyLogDraft | null {
+  if (record.localId !== dailyLogDraftRecordId || record.status !== "draft" || !isDailyLogDraft(record.payload)) return null;
+  return {
+    ...fallback,
+    ...record.payload,
+    checklist: { ...fallback.checklist, ...record.payload.checklist },
+  };
+}
+
+function dailyLogDraftToServerInput(draft: DailyLogDraft) {
+  return {
+    recordType: "daily_report" as const,
+    localId: dailyLogDraftRecordId,
+    title: draft.site || "Daily log draft",
+    status: "draft",
+    recordDate: draft.date || null,
+    amountCents: null,
+    payload: { ...draft },
+  };
+}
+
 function defaultDailyLogDraft(activeJob: Job | null): DailyLogDraft {
   return {
     date: new Date().toISOString().slice(0, 10),
@@ -61,10 +102,55 @@ export function DailyLogTool({ activeJob, activeWork }: { activeJob: Job | null;
   const [copied, setCopied] = useState(false);
   const [downloaded, setDownloaded] = useState(false);
   const [notice, setNotice] = useState("");
+  const [syncMessage, setSyncMessage] = useState("Draft saved on this device.");
   const [savingRecord, setSavingRecord] = useState(false);
   const [wxData, setWxData] = useState<{ temp: number; condition: string } | null>(() => {
     try { return JSON.parse(localStorage.getItem("rivt.lastWeather.v1") ?? "null") as { temp: number; condition: string } | null; } catch { return null; }
   });
+
+  useEffect(() => {
+    let cancelled = false;
+    const fallback = defaultDailyLogDraft(activeJob);
+    void fetchToolRecords("daily_report").then((serverRecords) => {
+      if (cancelled) return;
+      if (!serverRecords) {
+        setSyncMessage("Draft saved on this device. Sign in with network access to sync.");
+        return;
+      }
+      const serverDraft = serverRecords
+        .map((record) => dailyLogDraftFromServer(record, fallback))
+        .find((record): record is DailyLogDraft => Boolean(record));
+      if (serverDraft) {
+        setDraft(serverDraft);
+        try { localStorage.setItem(dailyLogStorageKey, JSON.stringify(serverDraft)); } catch { /* noop */ }
+        setSyncMessage("Draft synced to your RIVT account.");
+        return;
+      }
+      try {
+        const stored = localStorage.getItem(dailyLogStorageKey);
+        if (!stored) {
+          setSyncMessage("New drafts sync to your RIVT account.");
+          return;
+        }
+        const parsed = JSON.parse(stored) as Partial<DailyLogDraft>;
+        const localDraft = {
+          ...fallback,
+          ...parsed,
+          checklist: { ...fallback.checklist, ...(parsed.checklist ?? {}) },
+        };
+        if (!isDailyLogDraft(localDraft)) {
+          setSyncMessage("New drafts sync to your RIVT account.");
+          return;
+        }
+        void upsertToolRecord(dailyLogDraftToServerInput(localDraft)).then((record) => {
+          setSyncMessage(record ? "Local daily log draft synced to your RIVT account." : "Draft saved on this device. Sync will retry when your account is reachable.");
+        });
+      } catch {
+        setSyncMessage("New drafts sync to your RIVT account.");
+      }
+    });
+    return () => { cancelled = true; };
+  }, [activeJob]);
 
   useEffect(() => {
     if (wxData) return;
@@ -112,7 +198,7 @@ export function DailyLogTool({ activeJob, activeWork }: { activeJob: Job | null;
     "Checklist:",
     ...dailyLogChecklist.map((item) => `${draft.checklist[item] ? "[x]" : "[ ]"} ${item}`),
     "",
-    "Device-local draft. Save official closeout evidence in RIVT Records for accepted work.",
+    "Standalone draft. Save official closeout evidence in RIVT Records for accepted work.",
   ].join("\n"), [draft]);
 
   function updateDraft<K extends keyof DailyLogDraft>(key: K, value: DailyLogDraft[K]) {
@@ -131,10 +217,14 @@ export function DailyLogTool({ activeJob, activeWork }: { activeJob: Job | null;
   function saveLocalDraft() {
     try {
       localStorage.setItem(dailyLogStorageKey, JSON.stringify(draft));
-      setNotice("Daily log draft saved on this device.");
+      setNotice("Daily log draft saved.");
     } catch {
       setNotice("Daily log draft could not be saved on this device.");
+      return;
     }
+    void upsertToolRecord(dailyLogDraftToServerInput(draft)).then((record) => {
+      setSyncMessage(record ? "Draft synced to your RIVT account." : "Draft saved on this device. Sync will retry when your account is reachable.");
+    });
   }
 
   function loadLocalDraft() {
@@ -151,6 +241,7 @@ export function DailyLogTool({ activeJob, activeWork }: { activeJob: Job | null;
         checklist: { ...defaultDailyLogDraft(activeJob).checklist, ...(parsed.checklist ?? {}) },
       });
       setNotice("Loaded the last daily log draft on this device.");
+      setSyncMessage("Loaded the local backup draft.");
     } catch {
       setNotice("Daily log draft could not be loaded.");
     }
@@ -238,11 +329,11 @@ export function DailyLogTool({ activeJob, activeWork }: { activeJob: Job | null;
           <div className="v2-tool-result-grid compact">
             <article><span>Crew hours</span><strong>{formatNumber(draft.crewCount * draft.hours)}h</strong></article>
             <article><span>Checklist</span><strong>{completedChecks}/{dailyLogChecklist.length}</strong></article>
-            <article><span>Mode</span><strong>{recordWork ? "Records-ready" : "Local draft"}</strong></article>
+            <article><span>Mode</span><strong>{recordWork ? "Records-ready" : "Draft"}</strong></article>
           </div>
           <div className={recordWork ? "v2-daily-log-record-target is-ready" : "v2-daily-log-record-target"}>
             <span>{recordWork ? "Accepted work target" : "No accepted work loaded"}</span>
-            <strong>{recordWork ? recordWorkLabel : "Use local draft or open Records after a hire"}</strong>
+            <strong>{recordWork ? recordWorkLabel : "Save draft or open Records after a hire"}</strong>
             <small>{recordWork ? "This log can be added to the private project timeline." : "Server-backed Records are available after a job is accepted by both sides."}</small>
           </div>
           <div className="v2-daily-log-checklist" aria-label="Daily log checklist">
@@ -255,6 +346,7 @@ export function DailyLogTool({ activeJob, activeWork }: { activeJob: Job | null;
           </div>
           <pre className="v2-daily-log-preview">{dailyLogText}</pre>
           {notice ? <p className="v2-record-notice" role="status">{notice}</p> : null}
+          <p className="v2-record-notice" role="status">{syncMessage}</p>
           <div className="v2-tool-action-row">
             <button type="button" className="v2-primary-button" onClick={() => void saveToRecords()} disabled={savingRecord || !recordWork}>
               <FolderOpen size={15} />
@@ -262,13 +354,13 @@ export function DailyLogTool({ activeJob, activeWork }: { activeJob: Job | null;
             </button>
             <button type="button" className="v2-primary-button" onClick={copyDailyLog}><Copy size={15} />{copied ? "Copied" : "Copy daily log"}</button>
             <button type="button" onClick={downloadDailyLog}><Download size={15} />{downloaded ? "Downloaded" : "Download TXT"}</button>
-            <button type="button" onClick={saveLocalDraft}><FileText size={15} />Save local draft</button>
+            <button type="button" onClick={saveLocalDraft}><FileText size={15} />Save draft</button>
             <button type="button" onClick={loadLocalDraft}><RefreshCw size={15} />Load last draft</button>
           </div>
           <p className="v2-tool-note">
             {recordWork
-              ? "Save to Records writes a private project timeline note through RIVT's authenticated Records API. Copy/download/local draft remain available for field backup."
-              : "Without accepted work this stays a device-local field note. Accepted-work closeouts, uploads, and official records stay in server-backed Records."}
+              ? "Save to Records writes a private project timeline note through RIVT's authenticated Records API. Draft sync, copy, and download remain available for field backup."
+              : "Draft sync keeps this field note available through your RIVT account when signed in. Accepted-work closeouts, uploads, and official records stay in server-backed Records."}
           </p>
         </Panel>
       </aside>

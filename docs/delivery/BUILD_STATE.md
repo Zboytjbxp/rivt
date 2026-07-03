@@ -7,6 +7,31 @@ Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
 Production release commit: verify with live `/api/health`; latest runtime feature evidence is recorded below and docs-only evidence commits may supersede the served build SHA.
 
+## Latest Packet 08 Pass - Daily Log Draft Sync
+
+- Implemented the next accepted tool-records cleanup slice on branch `codex/tool-records-local-sync-polish`.
+- Reduced the remaining local-only tool-record ambiguity:
+  - standalone Daily Log drafts now hydrate from the authenticated `daily_report` tool-record path when available
+  - existing local Daily Log drafts are promoted to a `draft` tool record on load when the account API is reachable
+  - saving a Daily Log draft now keeps the local backup and attempts account sync through `/api/v1/tool-records`
+  - accepted-work `Save to Records` behavior is unchanged and still writes official closeout notes through the authenticated Records/project timeline API
+- Tightened Daily Log copy:
+  - replaced `Save local draft` with `Save draft`
+  - changed stale `Local draft` labels to `Draft`
+  - kept honest fallback copy for signed-out/offline states: drafts remain saved on the device when account sync is unavailable
+- Preserved the Gate A honesty boundary:
+  - no new production data migration, fake provider behavior, payment processing, homeowner flow, or authorization change was added
+  - no new package dependency was added
+- Local gates:
+  - `npm run build` (pass)
+  - `npm run lint` (pass)
+  - `npm run test:unit` (pass; 44/44)
+  - `npm run test:e2e` (pass; desktop and mobile jobs/discovery)
+  - `npm audit --omit=dev` (pass; 0 vulnerabilities)
+  - `node --test test/tool-records.integration.test.js` was attempted but skipped because `TEST_DATABASE_URL` is not configured in this shell
+- Production deployment status:
+  - pending merge and Railway deploy verification for this pass
+
 ## Latest Packet 08 Pass - Home, Shop Talk, and Tools Polish
 
 - Implemented the next minimal-professional polish slice on branch `codex/home-shoptalk-tools-polish`.
