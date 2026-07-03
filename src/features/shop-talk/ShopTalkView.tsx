@@ -1,12 +1,10 @@
 import { type CSSProperties, useEffect, useMemo, useState } from "react";
 import {
   ArrowLeft,
-  Award,
   BadgeCheck,
   Bookmark,
   BookmarkCheck,
   CheckCircle2,
-  ChevronDown,
   ExternalLink,
   Flag,
   Hash,
@@ -15,8 +13,6 @@ import {
   Plus,
   Search,
   Send,
-  ShieldCheck,
-  Sparkles,
   Star,
   ThumbsDown,
   ThumbsUp,
@@ -572,7 +568,6 @@ export function ShopTalkView({
   const [answerQueueOnly, setAnswerQueueOnly] = useState(Boolean(initialAnswerQueue));
   const [selectedPostId, setSelectedPostId] = useState<string | null>(initialPostId ?? communityPosts[0]?.id ?? null);
   const [answerDraft, setAnswerDraft] = useState("");
-  const [rulesOpen, setRulesOpen] = useState(false);
   const [newPostOpen, setNewPostOpen] = useState(Boolean(openComposer));
   const [joinedCommunities, setJoinedCommunities] = useState<Set<string>>(() => {
     return readStringSet("rivt.joinedCommunities.v1", communitySlug);
@@ -836,48 +831,6 @@ export function ShopTalkView({
     : { upvotes: 0, downvotes: 0, reaction: null, serverOwned: reactionStatus === "ready", pending: false };
   const SelectedCommunityIcon = selectedCommunity?.icon;
   const _selectedTradeThreads = filteredPosts.filter((post) => post.trade === selectedJobTrade || post.trade === "General");
-  const topContributors = Object.entries(
-    communityPosts.reduce<Record<string, { answers: number; fixes: number; score: number }>>((contributors, post) => {
-      post.replies.forEach((reply) => {
-        const contributor = contributors[reply.author] ?? { answers: 0, fixes: 0, score: 0 };
-        contributor.answers += 1;
-        contributor.fixes += reply.verifiedFix ? 1 : 0;
-        contributor.score += Math.max(0, netScore(reply)) + (reply.verifiedFix ? 5 : 0);
-        contributors[reply.author] = contributor;
-      });
-      return contributors;
-    }, {}),
-  )
-    .sort(([, a], [, b]) => b.score - a.score)
-    .slice(0, 3);
-  const profileAnswerCount = communityPosts.reduce((count, post) => (
-    count + post.replies.filter((reply) => reply.author === profile.displayName).length
-  ), 0);
-  const profileFixCount = communityPosts.reduce((count, post) => (
-    count + post.replies.filter((reply) => reply.author === profile.displayName && reply.verifiedFix).length
-  ), 0);
-  const reputationGoal = profileFixCount > 0
-    ? "Keep your Top Hand signal fresh"
-    : profileAnswerCount > 0
-      ? "Earn a Verified Fix"
-      : "Give your first field answer";
-  const reputationSteps = [
-    {
-      label: "Answer one question",
-      value: profileAnswerCount ? `${profileAnswerCount} posted` : "Start here",
-      complete: profileAnswerCount > 0,
-    },
-    {
-      label: "Get marked as a fix",
-      value: profileFixCount ? `${profileFixCount} fix${profileFixCount === 1 ? "" : "es"}` : "Next proof",
-      complete: profileFixCount > 0,
-    },
-    {
-      label: "Show it on your profile",
-      value: profileBadges.length ? profileBadges.join(", ") : "Badge path",
-      complete: profileBadges.length > 0,
-    },
-  ];
   const _reactionLedgerLabel = reactionStatus === "ready"
     ? "Server-backed"
     : reactionStatus === "loading"
@@ -940,27 +893,6 @@ export function ShopTalkView({
     void onAddAnswer(selectedPost.id, body);
     setAnswerDraft("");
   }
-
-  function openAnswerQueue() {
-    setActiveTab("talk");
-    setAnswerQueueOnly(true);
-    setSortMode("unanswered");
-    setTradeFilter("All trades");
-    const nextPost = answerQueuePosts[0];
-    if (nextPost) {
-      setSelectedPostId(nextPost.id);
-      setMobileDetail(true);
-    }
-  }
-
-  const SHOP_RULES = [
-    "Keep it field-relevant - no recruiting or solicitation",
-    "Cite the code section when referencing code requirements",
-    "No pricing disputes or bidding wars",
-    "Mark your answer as a Verified Fix only if you've done it",
-    "Be specific - \"I've seen this on X job\" beats generic advice",
-    "No spam, no harassment - violations get removed, not warned",
-  ];
 
   return (
     <>
@@ -1169,84 +1101,6 @@ export function ShopTalkView({
               </section>
               ) : null}
 
-              <div className="shop-talk-answer-queue" aria-label="Unanswered in your trade">
-                <div>
-                  <span>Answer queue</span>
-                  <strong>
-                    {answerQueuePosts.length
-                      ? `${answerQueuePosts.length} ${primaryTrade} question${answerQueuePosts.length === 1 ? "" : "s"} need a hand`
-                      : `${primaryTrade} is caught up`}
-                  </strong>
-                </div>
-                <div className="shop-talk-answer-actions">
-                  <button type="button" className="primary-action" onClick={openAnswerQueue} disabled={answerQueuePosts.length === 0}>
-                    <MessageCircle size={15} />
-                    Answer now
-                  </button>
-                  {answerQueueOnly && (
-                    <button type="button" onClick={() => setAnswerQueueOnly(false)}>
-                      Show all
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              <div className="shop-talk-reputation-path" aria-label="Shop Talk reputation path">
-                <header>
-                  <span><Award size={14} /> Reputation path</span>
-                  <strong>{reputationGoal}</strong>
-                </header>
-                <div className="shop-talk-reputation-steps">
-                  {reputationSteps.map((step) => (
-                    <span key={step.label} data-complete={step.complete ? "true" : "false"}>
-                      {step.complete ? <CheckCircle2 size={14} /> : <Sparkles size={14} />}
-                      <b>{step.label}</b>
-                      <em>{step.value}</em>
-                    </span>
-                  ))}
-                </div>
-                <p>
-                  Field-tested answers become part of your trade reputation once they are tied to your profile.
-                </p>
-              </div>
-
-              {/* Community Rules */}
-              <div className="shop-talk-rules">
-                <button
-                  type="button"
-                  className="rules-toggle"
-                  onClick={() => setRulesOpen((v) => !v)}
-                  aria-expanded={rulesOpen}
-                >
-                  <ShieldCheck size={14} />
-                  <span>Community Rules</span>
-                  <ChevronDown size={13} style={{ transform: rulesOpen ? "rotate(180deg)" : undefined, transition: "transform 0.2s" }} />
-                </button>
-                {rulesOpen && (
-                  <ol className="rules-list">
-                    {SHOP_RULES.map((rule, i) => (
-                      <li key={i}>{rule}</li>
-                    ))}
-                  </ol>
-                )}
-              </div>
-
-              {topContributors.length > 0 && (
-                <div className="shop-talk-pulse" aria-label="Top contributors">
-                  <div className="shop-talk-pulse-head">
-                    <span>Top hands this week</span>
-                  </div>
-                  <div className="shop-talk-contributors">
-                    {topContributors.slice(0, 3).map(([name, stats]) => (
-                      <span key={name}>
-                        <b>{name}</b>
-                        <em>{stats.answers} answers · {stats.fixes} fixes</em>
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-
               <div className="shop-talk-fieldbar" aria-label="Shop Talk filters">
                 <label className="shop-talk-search">
                   <Search size={15} />
@@ -1366,9 +1220,9 @@ export function ShopTalkView({
                   <EmptyState
                     icon={MessageCircle}
                     title="No matching Shop Talk posts"
-                    description="Clear the search, broaden the trade filter, or ask the first question in this lane."
-                    actionLabel={talkQuery ? "Clear search" : "Ask the trades"}
-                    onAction={() => talkQuery ? setTalkQuery("") : setNewPostOpen(true)}
+                    description={talkQuery ? "Clear the search or broaden the trade filter." : "Use the Ask button when you're ready to start the first post in this lane."}
+                    actionLabel={talkQuery ? "Clear search" : undefined}
+                    onAction={talkQuery ? () => setTalkQuery("") : undefined}
                   />
                 ) : sortedPosts.map((post) => (
                   <TradePostCard
@@ -1676,9 +1530,7 @@ export function ShopTalkView({
               <EmptyState
                 icon={MessageCircle}
                 title="No Shop Talk posts yet"
-                description="Ask the first field question and let the community answer it."
-                actionLabel="Ask the trades"
-                onAction={() => setNewPostOpen(true)}
+                description="Use the Ask button when you're ready to start the first field question."
               />
             </article>
           )

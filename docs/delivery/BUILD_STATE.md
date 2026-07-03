@@ -7,6 +7,39 @@ Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
 Production release commit: verify with live `/api/health`; latest runtime feature evidence is recorded below and docs-only evidence commits may supersede the served build SHA.
 
+## Latest Packet 08 Pass - Home, Shop Talk, and Tools Polish
+
+- Implemented the next minimal-professional polish slice on branch `codex/home-shoptalk-tools-polish`.
+- Reduced Home repetition:
+  - the first-run setup card now hides once onboarding is complete
+  - when setup is still relevant, Home shows only the next incomplete setup action instead of the full checklist
+  - the Home floating action button is role-aware: contractors see `Post work`; tradespeople see `Ask`
+- Reduced Shop Talk clutter while preserving the Reddit-style community/feed model:
+  - removed the extra answer-queue panel, reputation-path panel, community-rules accordion, and top-contributors pulse from the feed column
+  - removed the related stale CSS so the feature no longer carries hidden panel styles
+  - shortened repeated empty-state CTA copy and kept the floating `Ask` control as the single compose action on empty community feeds
+  - kept community discovery, community pages, filters, post cards, answers, reports, and moderation hooks intact
+- Tightened Tools as app-like surfaces:
+  - active tools now use the existing immersive mode with a compact `All tools` header
+  - added a fullscreen-tool layout class so individual tools get more viewport height while the mobile bottom nav remains hidden inside tools
+- Preserved the Gate A honesty boundary:
+  - no homeowner flows, fake verification, fake provider behavior, payment processing, production data migration, or authorization changes were added
+  - no new package dependency was added
+- Local gates run on 2026-07-03:
+  - `npm run build` (pass)
+  - `npm run lint` (pass)
+  - `npm run test:unit` (pass; 44/44)
+  - `npm run test:e2e` (pass; desktop and mobile jobs/discovery)
+  - `npm audit --omit=dev` (pass; 0 vulnerabilities)
+  - targeted integration evidence passed by individual file with extended local time windows, including project completion, Shop Talk posts/reactions/moderation, communities, tool records, migrations, and the remaining Gate A domain flows
+  - aggregate `npm run test` was attempted and exceeded local timeout windows; aggregate completion is not claimed for this pass because the database-backed integration suite now runs longer than the local command window
+  - rendered mobile QA at 430px in the in-app browser:
+    - Home product shell loads with no completed-onboarding setup card, no removed panel copy, and a role-aware FAB
+    - Shop Talk loads with community discovery, community-page navigation, no removed side panels, and one visible `Ask` action on empty community pages
+    - Tools hub loads without the old active-job/job-context banner or dev-copy phrases; opening Invoice uses compact fullscreen-tool mode with the bottom mobile nav visually hidden
+- Production deployment status:
+  - pending merge and Railway deploy verification for this pass
+
 ## Latest Packet 08 Pass - Naming and Repetition Cleanup
 
 - Implemented the next minimal-professional audit slice on branch `codex/naming-repetition-cleanup`.

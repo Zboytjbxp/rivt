@@ -215,11 +215,11 @@ function ToolAppShell({
   children: ReactNode;
 }) {
   return (
-    <section className={compact ? "v2-tools-app is-compact" : "v2-tools-app"} aria-label={title} {...swipeHandlers}>
+    <section className={compact ? "v2-tools-app is-compact is-fullscreen-tool" : "v2-tools-app"} aria-label={title} {...swipeHandlers}>
       <header className={compact ? "v2-tool-app-header is-compact" : "v2-tool-app-header"}>
         <button type="button" onClick={onBack}>
           <ArrowLeft size={16} />
-          Tools
+          All tools
         </button>
         <div>
           <h1>{title}</h1>

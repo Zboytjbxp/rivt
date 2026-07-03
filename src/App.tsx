@@ -1611,6 +1611,7 @@ function App() {
             primaryTrade={primaryProfileTrade}
             profileHasBasics={homeProfileHasBasics}
             profileHasBio={homeProfileHasBio}
+            onboardingComplete={onboardingComplete}
             recordCount={uploadedRecords.size}
             safetyCertCount={safetyCertCount}
             onOpenPost={(postId) => { setShopTalkPostId(postId); setShopTalkCompose(false); setShopTalkAnswerQueue(false); setShopTalkGlobalQuery(""); handleNavigate(defaultViewForDestination("shop-talk")); }}

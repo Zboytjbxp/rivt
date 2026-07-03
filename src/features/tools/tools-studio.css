@@ -240,6 +240,10 @@
   gap: 10px;
 }
 
+.v2-tools-app.is-fullscreen-tool {
+  min-height: calc(100dvh - var(--v2-topbar-height, 58px) - 26px);
+}
+
 .v2-tools-app.is-calculator-fullscreen {
   display: block;
   overflow: hidden;
@@ -1385,6 +1389,7 @@
   grid-template-columns: auto minmax(0, 1fr) minmax(120px, auto);
   gap: 10px;
   padding: 10px 12px;
+  border-radius: var(--v2-radius-md);
   box-shadow: none;
 }
 
@@ -1970,6 +1975,10 @@
 
   .v2-tool-app-header {
     padding: 14px;
+  }
+
+  .v2-tools-app.is-fullscreen-tool {
+    min-height: calc(100dvh - var(--v2-topbar-height, 58px) - env(safe-area-inset-top) - 12px);
   }
 
   .v2-tool-app-header.is-compact {

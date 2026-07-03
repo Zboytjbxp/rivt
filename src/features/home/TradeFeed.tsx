@@ -1,7 +1,6 @@
 import { useMemo, useState } from "react";
 import {
   ChevronRight,
-  CheckCircle2,
   Circle,
   ClipboardList,
   MessageCircle,
@@ -76,6 +75,7 @@ interface TradeFeedProps {
   primaryTrade: string;
   profileHasBasics: boolean;
   profileHasBio: boolean;
+  onboardingComplete?: boolean;
   recordCount: number;
   safetyCertCount: number;
   onOpenPost: (postId: string) => void;
@@ -98,6 +98,7 @@ export function TradeFeed({
   primaryTrade,
   profileHasBasics = false,
   profileHasBio = false,
+  onboardingComplete = false,
   recordCount = 0,
   safetyCertCount = 0,
   onOpenPost,
@@ -165,7 +166,7 @@ export function TradeFeed({
         },
         {
           id: "ask-trades",
-          title: "Ask the trades",
+          title: "Start a Shop Talk post",
           body: "Use Shop Talk for pricing, staffing, code, tool, and field questions before they become problems.",
           done: hasAuthoredPost,
           actionLabel: "Ask",
@@ -243,7 +244,8 @@ export function TradeFeed({
   ]);
 
   const completedGetStartedSteps = getStartedSteps.filter((step) => step.done).length;
-  const showGetStarted = !getStartedDismissed && completedGetStartedSteps < getStartedSteps.length;
+  const nextGetStartedStep = getStartedSteps.find((step) => !step.done) ?? null;
+  const showGetStarted = !onboardingComplete && !getStartedDismissed && Boolean(nextGetStartedStep);
 
   function toggleSave(id: string) {
     setSaved((prev) => {
@@ -313,26 +315,22 @@ export function TradeFeed({
           <div className="trade-feed-start-progress" aria-hidden="true">
             <span style={{ width: `${(completedGetStartedSteps / getStartedSteps.length) * 100}%` }} />
           </div>
-          <div className="trade-feed-start-list">
-            {getStartedSteps.map((step) => (
-              <article key={step.id} className={`trade-feed-start-item${step.done ? " is-done" : ""}`}>
+          {nextGetStartedStep ? (
+            <div className="trade-feed-start-list">
+              <article className="trade-feed-start-item">
                 <span className="trade-feed-start-check" aria-hidden="true">
-                  {step.done ? <CheckCircle2 size={19} /> : <Circle size={19} />}
+                  <Circle size={19} />
                 </span>
                 <div className="trade-feed-start-item-copy">
-                  <strong>{step.title}</strong>
-                  <small>{step.body}</small>
+                  <strong>{nextGetStartedStep.title}</strong>
+                  <small>{nextGetStartedStep.body}</small>
                 </div>
-                {step.done ? (
-                  <span className="trade-feed-start-status">Ready</span>
-                ) : (
-                  <button type="button" className="trade-feed-start-action" onClick={step.onAction}>
-                    {step.actionLabel}
-                  </button>
-                )}
+                <button type="button" className="trade-feed-start-action" onClick={nextGetStartedStep.onAction}>
+                  {nextGetStartedStep.actionLabel}
+                </button>
               </article>
-            ))}
-          </div>
+            </div>
+          ) : null}
         </section>
       )}
 
@@ -413,8 +411,8 @@ export function TradeFeed({
         </div>
       )}
 
-      <button type="button" className="trade-feed-fab" onClick={onAsk}>
-        <Plus size={20} /> Ask
+      <button type="button" className="trade-feed-fab" onClick={role === "contractor" ? onPostWork : onAsk}>
+        <Plus size={20} /> {role === "contractor" ? "Post work" : "Ask"}
       </button>
     </div>
   );

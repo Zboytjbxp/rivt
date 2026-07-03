@@ -411,37 +411,6 @@
   text-transform: uppercase;
 }
 
-.shop-talk-pulse {
-  display: grid;
-  gap: 12px;
-  padding: 14px;
-  border: 1px solid color-mix(in srgb, var(--border) 66%, transparent);
-  border-radius: var(--v2-radius-lg);
-  background:
-    radial-gradient(circle at top right, color-mix(in srgb, var(--v2-teal) 12%, transparent), transparent 44%),
-    var(--surface-soft);
-}
-
-.shop-talk-answer-queue {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 14px;
-  align-items: center;
-  padding: 14px;
-  border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--border));
-  border-radius: var(--v2-radius-lg);
-  background:
-    linear-gradient(135deg, color-mix(in srgb, var(--accent) 12%, transparent), transparent 58%),
-    color-mix(in srgb, var(--surface-soft) 94%, var(--surface));
-}
-
-.shop-talk-answer-queue > div:first-child {
-  display: grid;
-  gap: 5px;
-  min-width: 0;
-}
-
-.shop-talk-answer-queue span,
 .shop-talk-active-filter span {
   color: var(--accent);
   font-size: 13px;
@@ -449,211 +418,6 @@
   letter-spacing: 0.08em;
   line-height: 1.1;
   text-transform: uppercase;
-}
-
-.shop-talk-answer-queue strong {
-  color: var(--text);
-  font-size: 15px;
-  line-height: 1.25;
-}
-
-.shop-talk-answer-queue p {
-  margin: 0;
-  color: var(--muted);
-  font-size: 13px;
-  line-height: 1.4;
-}
-
-.shop-talk-answer-actions {
-  display: grid;
-  gap: 7px;
-}
-
-.shop-talk-answer-actions button {
-  min-height: 44px;
-  white-space: nowrap;
-}
-
-.shop-talk-answer-actions button:not(.primary-action) {
-  border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
-  border-radius: var(--v2-radius-lg);
-  background: var(--surface);
-  color: var(--text);
-  font-size: 13px;
-  font-weight: var(--v2-weight-bold);
-}
-
-.shop-talk-reputation-path {
-  display: grid;
-  gap: 12px;
-  padding: 14px;
-  border: 1px solid color-mix(in srgb, var(--v2-teal) 24%, var(--border));
-  border-radius: var(--v2-radius-lg);
-  background:
-    linear-gradient(135deg, color-mix(in srgb, var(--v2-teal) 10%, transparent), transparent 62%),
-    var(--surface-soft);
-}
-
-.shop-talk-reputation-path header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.shop-talk-reputation-path header span {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  color: var(--v2-teal);
-  font-size: 13px;
-  font-weight: var(--v2-weight-display);
-  letter-spacing: 0.08em;
-  line-height: 1.1;
-  text-transform: uppercase;
-}
-
-.shop-talk-reputation-path header strong {
-  color: var(--text);
-  font-size: 14px;
-  text-align: right;
-}
-
-.shop-talk-reputation-steps {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
-}
-
-.shop-talk-reputation-steps span {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: 4px 7px;
-  align-items: center;
-  min-width: 0;
-  padding: 10px;
-  border: 1px solid color-mix(in srgb, var(--border) 58%, transparent);
-  border-radius: var(--v2-radius-lg);
-  background: color-mix(in srgb, var(--surface) 84%, transparent);
-}
-
-.shop-talk-reputation-steps span[data-complete="true"] {
-  border-color: color-mix(in srgb, var(--success) 34%, var(--border));
-  background: color-mix(in srgb, var(--success) 9%, var(--surface));
-}
-
-.shop-talk-reputation-steps svg {
-  color: var(--v2-teal);
-}
-
-.shop-talk-reputation-steps span[data-complete="true"] svg {
-  color: var(--success);
-}
-
-.shop-talk-reputation-steps b,
-.shop-talk-reputation-steps em {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.shop-talk-reputation-steps b {
-  color: var(--text);
-  font-size: 13px;
-}
-
-.shop-talk-reputation-steps em {
-  grid-column: 2;
-  color: var(--muted);
-  font-size: 13px;
-  font-style: normal;
-  font-weight: var(--v2-weight-strong);
-}
-
-.shop-talk-reputation-path p {
-  margin: 0;
-  color: var(--muted);
-  font-size: 13px;
-  line-height: 1.4;
-}
-
-.shop-talk-pulse-head {
-  display: flex;
-  align-items: end;
-  justify-content: space-between;
-  gap: 10px;
-}
-
-.shop-talk-pulse-head span,
-.shop-talk-contributors small {
-  color: var(--accent);
-  font-size: 13px;
-  font-weight: var(--v2-weight-display);
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-}
-
-.shop-talk-pulse-head strong {
-  color: var(--text);
-  font-size: 15px;
-}
-
-.shop-talk-pulse-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
-}
-
-.shop-talk-pulse-grid span {
-  display: grid;
-  gap: 3px;
-  min-width: 0;
-  padding: 10px;
-  border-radius: var(--v2-radius-lg);
-  background: color-mix(in srgb, var(--surface) 86%, transparent);
-}
-
-.shop-talk-pulse-grid strong {
-  color: var(--text);
-  font-size: 18px;
-  font-variant-numeric: tabular-nums;
-  line-height: 1;
-}
-
-.shop-talk-pulse-grid small,
-.shop-talk-contributors em,
-.shop-talk-pulse p {
-  color: var(--muted);
-  font-size: 13px;
-  font-style: normal;
-  font-weight: var(--v2-weight-strong);
-  line-height: 1.25;
-}
-
-.shop-talk-contributors {
-  display: grid;
-  gap: 8px;
-}
-
-.shop-talk-contributors span {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  min-width: 0;
-  padding: 9px 10px;
-  border-radius: var(--v2-radius-lg);
-  background: color-mix(in srgb, var(--surface) 82%, transparent);
-}
-
-.shop-talk-contributors b {
-  min-width: 0;
-  overflow: hidden;
-  color: var(--text);
-  font-size: 13px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .shop-talk-fieldbar {
@@ -945,32 +709,6 @@
     padding: 14px;
   }
 
-  .shop-talk-answer-queue {
-    grid-template-columns: 1fr;
-  }
-
-  .shop-talk-answer-actions {
-    grid-template-columns: 1fr 1fr;
-  }
-
-  .shop-talk-answer-actions .primary-action {
-    width: 100%;
-    justify-content: center;
-  }
-
-  .shop-talk-reputation-path header {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
-  .shop-talk-reputation-path header strong {
-    text-align: left;
-  }
-
-  .shop-talk-reputation-steps {
-    grid-template-columns: 1fr;
-  }
-
   .shop-talk-command .primary-action {
     width: 100%;
     justify-content: center;
@@ -978,16 +716,6 @@
 
   .shop-talk-kpi-strip {
     grid-template-columns: 1fr;
-  }
-
-  .shop-talk-pulse-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .shop-talk-contributors span {
-    align-items: start;
-    flex-direction: column;
-    gap: 3px;
   }
 
   .shop-talk-fieldbar {
@@ -1448,38 +1176,6 @@
   color: var(--accent);
   border-bottom-color: var(--accent);
 }
-
-.shop-talk-rules {
-  margin-bottom: 10px;
-  border: 1px solid var(--border);
-  border-radius: var(--v2-radius-md);
-  overflow: hidden;
-}
-.rules-toggle {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  width: 100%;
-  min-height: 44px;
-  padding: 10px 12px;
-  font-size: 13px;
-  font-weight: var(--v2-weight-semibold);
-  color: var(--text-muted);
-  background: none;
-  border: none;
-  cursor: pointer;
-  text-align: left;
-}
-.rules-toggle:hover { color: var(--text); }
-.rules-toggle span { flex: 1; }
-.rules-list {
-  margin: 0;
-  padding: 0 14px 12px 28px;
-  font-size: 13px;
-  line-height: 1.7;
-  color: var(--text-muted);
-}
-.rules-list li { margin-bottom: 4px; }
 
 .shop-sort-tabs {
   display: flex;
@@ -2192,10 +1888,6 @@
   font-variant-numeric: tabular-nums;
 }
 
-.shop-talk-community-layout .shop-talk-reputation-path {
-  display: none;
-}
-
 .shop-talk-community-layout .shop-talk-fieldbar {
   border: 0;
   border-radius: 0;
@@ -2364,12 +2056,6 @@
 
   .shop-talk-community-layout .v2-st-filter-pill {
     scroll-snap-align: start;
-  }
-
-  .shop-talk-community-layout .shop-talk-answer-queue,
-  .shop-talk-community-layout .shop-talk-rules,
-  .shop-talk-community-layout .shop-talk-pulse {
-    display: none;
   }
 
   .shop-talk-community-layout .shop-talk-fieldbar {
@@ -2740,14 +2426,6 @@
     flex-direction: row;
     flex-wrap: wrap;
   }
-}
-
-/* Community pages should behave like destinations: header, controls, feed. */
-.shop-talk-community-layout.community-open .shop-talk-answer-queue,
-.shop-talk-community-layout.community-open .shop-talk-reputation-path,
-.shop-talk-community-layout.community-open .shop-talk-rules,
-.shop-talk-community-layout.community-open .shop-talk-pulse {
-  display: none;
 }
 
 .shop-talk-community-layout.community-open .community-page-card {
