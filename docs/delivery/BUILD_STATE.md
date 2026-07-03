@@ -2,10 +2,43 @@
 
 Last updated: 2026-07-03 America/New_York
 Current gate: Gate A launch hardening
-Current phase: Packet 08 Gate A launch hardening plus Gate B behind-flag backbone work: machine gates and live workflow smokes are mostly green; the Shop Talk Reddit-model backbone, moderation/reporting backend, human-facing moderation console/report UX, reachability/naming cleanup, Tools hub consolidation, Payment Tracker server records, and the first money-tools sync slice are implemented while still respecting launch-readiness boundaries before broad exposure.
+Current phase: Packet 08 Gate A launch hardening plus Gate B behind-flag backbone work: machine gates and live workflow smokes are mostly green; the Shop Talk Reddit-model backbone, moderation/reporting backend, human-facing moderation console/report UX, reachability/naming cleanup, Tools hub consolidation, Payment Tracker server records, money-tools sync, and the remaining accepted tool-records sync slice are implemented while still respecting launch-readiness boundaries before broad exposure.
 Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
-Repository branch: `master`
+Repository branch: `codex/all-tools-records-sync`
 Production release commit: verify with live `/api/health`; latest runtime feature evidence is recorded below and docs-only evidence commits may supersede the served build SHA.
+
+## Latest Packet 08 Pass - Remaining Tool Records Sync Slice
+
+- Implemented the remaining accepted `tool_records` sync slice on branch `codex/all-tools-records-sync`.
+- Reused the accepted `0019_tool_records` schema and API; no schema change or production data migration was added.
+- Added a shared client-record adapter for Crew and Inbox so client contacts share one typed local/cache shape and authenticated `tool_records` persistence.
+- Wired these additional business-record surfaces to authenticated `tool_records` sync:
+  - Invoice templates now load server-owned templates, upload existing device-local templates when the account has no server records, sync saves, and delete by local id.
+  - Bid Builder now loads server-owned saved bids, uploads existing device-local bids when needed, syncs saved bids, and deletes by local id.
+  - Price Book now loads server-owned price entries, syncs added/deleted entries, and uploads existing device-local trade price entries when the account has no server records.
+  - Safety Checklist now loads server-owned signoff logs, uploads existing device-local signoffs, and syncs new signoffs.
+  - Punch List now loads server-owned punch items, uploads existing device-local punch items, syncs new/resolved items, and deletes by local id.
+  - Daily Report now loads server-owned reports, uploads existing device-local reports, and syncs saved reports.
+  - Job Checklists now load server-owned checklist progress, uploads existing device-local checklist progress, and syncs check/reset changes.
+  - Client contacts in Crew and Inbox now load server-owned client records, upload existing device-local contacts, sync new/edited contacts, and delete by local id from Crew.
+- Preserved the Gate A honesty boundary:
+  - each tool still saves instantly on-device first and reports when records are only device-local because the account/API is unavailable
+  - no payment processing, SMS/email delivery, tax filing, payroll, escrow, official invoice sending, or fake provider behavior was added
+  - short-lived field drafts/caches such as Daily Log drafts, weather cache, tax-estimator scratch input, and simulated client message threads remain explicitly local/browser-only until a reviewed record type or domain API is accepted
+- Runtime source commit: `57c38c2a1a651ce65ad87918de3e7e391fb8714c`.
+- Local gates run on 2026-07-03:
+  - `npm run build` (pass)
+  - `npm run lint` (pass)
+  - `npm run lint:security` (pass)
+  - `npm run test:unit` (pass; 44/44)
+  - `npm run test:integration` (pass; 16/16 integration suites; completed in about 17.3 minutes)
+  - targeted `node --env-file-if-exists=.env --test --test-concurrency=1 test/tool-records.integration.test.js` (pass)
+  - `npm run test:e2e` (pass)
+  - `npm audit --omit=dev` (pass; 0 vulnerabilities)
+  - `git diff --check` (pass; line-ending warnings only)
+- Production deployment status:
+  - not deployed from this branch yet
+  - after merge, verify live `/api/health` reports the merged source SHA and migration `0019_tool_records`, then run `EXPECTED_SOURCE_COMMIT=<merged-sha> npm run monitor:production`
 
 ## Latest Packet 08 Pass - Money Tools Sync Slice
 
