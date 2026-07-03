@@ -1781,7 +1781,7 @@ export function ProfileHub({
               <span>Storage</span>
               <strong>Cloud photos and attachments</strong>
             </header>
-            <div className="v2-profile-list">
+            <div className="v2-profile-list v2-storage-list">
               <article>
                 <HardDrive size={16} />
                 <div>

@@ -7,6 +7,33 @@ Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
 Production release commit: verify with live `/api/health`; latest runtime feature evidence is recorded below and docs-only evidence commits may supersede the served build SHA.
 
+## Latest Packet 08 Pass - Live Subscription QA and Storage Settings Polish
+
+- Recorded founder live QA evidence from 2026-07-03:
+  - the owner account subscribed to RIVT Pro in production
+  - cancellation was scheduled from Settings without a support ticket
+  - the Settings card showed continued Pro access through August 3, 2026
+  - the owner resumed the subscription from the same Settings card and saw the continued-subscription state
+- Tightened the Settings storage panel after live mobile screenshots showed row labels and values colliding:
+  - storage rows now stack label/value text in a dedicated storage-list layout
+  - long provider/storage policy copy wraps inside the card instead of running into labels
+  - the patch keeps the existing cloud-storage honesty copy: uploads use managed S3-compatible object storage, not device-local storage
+- Preserved launch boundaries:
+  - no homeowner flows, fake verification, escrow, payroll, job-payment processing, or frontend-only entitlement claims were added
+  - this pass records live manual billing evidence and mobile UI polish only
+- Local gates:
+  - `npm run build` (pass)
+  - `npm run lint` (pass)
+  - `npm run lint:security` (pass)
+  - `npm run test:unit` (pass; 44/44)
+  - `npm run test:e2e` (pass; desktop and mobile jobs/discovery)
+  - `npm audit --omit=dev` (pass; 0 vulnerabilities)
+  - `git diff --check` (pass)
+- Rendered QA:
+  - in-app Browser was available and used for local app orientation, but the unauthenticated local browser session could not reach the authenticated Settings storage card
+  - Playwright fallback with mocked authenticated state at 390x844 verified six storage rows, no horizontal overflow, and stacked label/value geometry for `Location`, `Who pays`, and the remaining storage facts
+  - screenshot evidence was saved outside the repo at `C:\Users\zboyt\AppData\Local\Temp\rivt-settings-storage-polish-storage-card.png`
+
 ## Latest Packet 08 Pass - Subscription Controls and Shop Talk Cleanup
 
 - Implemented subscription cancellation controls and Shop Talk cleanup on branch `codex/subscription-cleanup-controls`.

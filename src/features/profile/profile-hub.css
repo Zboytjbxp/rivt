@@ -147,6 +147,32 @@
   font-size: 13px;
 }
 
+.v2-storage-list article {
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.v2-storage-list article > div {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.v2-storage-list strong,
+.v2-storage-list span {
+  display: block;
+}
+
+.v2-storage-list strong {
+  line-height: 1.22;
+}
+
+.v2-storage-list span {
+  color: var(--v2-text-muted);
+  line-height: 1.38;
+  overflow-wrap: anywhere;
+}
+
 .v2-storage-meter-wrap {
   margin-top: 10px;
   display: grid;
@@ -193,6 +219,13 @@
   color: var(--v2-warning);
   font-size: 13px;
   font-weight: var(--v2-weight-semibold);
+}
+
+@media (max-width: 480px) {
+  .v2-storage-list article {
+    grid-template-columns: 22px minmax(0, 1fr);
+    padding: 14px 16px;
+  }
 }
 
 

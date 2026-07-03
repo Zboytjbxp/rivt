@@ -10,6 +10,14 @@ Status values:
 
 Evidence must eventually link to implementation, automated tests, manual acceptance proof, and deployed build.
 
+## Traceability Addendum - 2026-07-03 Live Subscription QA and Storage Settings Polish
+
+- `GA-UX-005` gains live manual billing evidence: the owner account completed RIVT Pro signup, scheduled cancellation from Settings, confirmed continued paid-through access through August 3, 2026, and resumed the subscription from the same screen.
+- `GA-UX-006` gains mobile polish evidence: live Android screenshots exposed Settings storage label/value collisions, and the storage panel now uses dedicated stacked rows so S3 location, payer, quota, allocation, and policy copy wrap cleanly inside the card.
+- `GA-UX-005` keeps the storage honesty boundary: the UI continues to state that cloud photos and attachments are stored in managed S3-compatible object storage and billed to RIVT's infrastructure account, not silently kept only on the user's phone.
+- `GA-OPS-007` gains local automated evidence: `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test:unit`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check` passed.
+- `GA-UX-006` gains rendered evidence: after the in-app Browser could not reach the authenticated Settings storage card from its unauthenticated local session, Playwright fallback at 390x844 with mocked authenticated state verified stacked storage rows, no horizontal overflow, and no relevant app console/page errors; screenshot evidence is outside the repo at `C:\Users\zboyt\AppData\Local\Temp\rivt-settings-storage-polish-storage-card.png`.
+
 ## Traceability Addendum - 2026-07-03 Subscription Controls and Shop Talk Cleanup
 
 - `GA-UX-005` gains customer-control billing evidence on branch `codex/subscription-cleanup-controls`: RIVT Pro users can cancel directly from Settings without contacting support, keep access through the paid-through date, and resume a scheduled cancellation from the same screen.
