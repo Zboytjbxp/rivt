@@ -2,10 +2,41 @@
 
 Last updated: 2026-07-03 America/New_York
 Current gate: Gate A launch hardening
-Current phase: Packet 08 Gate A launch hardening plus Gate B behind-flag backbone work: machine gates and live workflow smokes are mostly green; the Shop Talk Reddit-model backbone, moderation/reporting backend, and human-facing moderation console/report UX are implemented while still hidden behind launch-readiness boundaries before broad exposure.
+Current phase: Packet 08 Gate A launch hardening plus Gate B behind-flag backbone work: machine gates and live workflow smokes are mostly green; the Shop Talk Reddit-model backbone, moderation/reporting backend, human-facing moderation console/report UX, and first reachability/naming cleanup pass are implemented while still respecting launch-readiness boundaries before broad exposure.
 Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
 Production release commit: verify with live `/api/health`; latest runtime feature evidence is recorded below and docs-only evidence commits may supersede the served build SHA.
+
+## Latest Packet 08 Pass - Reachability and Naming Cleanup
+
+- Implemented the next minimal-professional polish slice on branch `codex/reachability-naming-pass`, then fast-forwarded it to `master`.
+- Normalized primary route naming around the five product concepts:
+  - changed the active Work route label from `Marketplace` to `Work`
+  - changed the active Crew route label from `My Crew` to `Crew`
+  - updated route aliases, page copy, onboarding post-setup destinations, profile links, and legacy bridge copy to use the same Home / Work / Crew / Shop Talk / Tools vocabulary
+  - removed remaining active `Trade Talk` / `trade-talk` class names from the Shop Talk surface so public naming is consistently `Shop Talk`
+- Improved global search reachability:
+  - top-bar person search results now pass the selected profile into the Crew surface instead of discarding the account id and landing on a generic Crew page
+  - Crew now renders a compact search-result spotlight with the selected person's name, headline, trades, location, and availability plus a dismiss action
+  - the jobs/discovery E2E now covers searching for `Riley Harper`, opening the person result, and seeing the Crew search-result landing state on mobile
+- Reduced Crew screen repetition:
+  - removed repeated `Network` headers, descriptions, and decorative metric tiles from Crew sub-tabs
+  - hoisted one compact `Crew` header above Crew / Subs / Reviews / Clients
+  - removed the old demo-talent-derived crew stat path from the visible Crew header
+- Local gates run on 2026-07-03:
+  - `npm run build` (pass)
+  - `npm run lint` (pass)
+  - `npm run lint:security` (pass)
+  - `npm run test:unit` (pass; 44/44)
+  - `npm run test:e2e` (pass; includes the new profile-search landing assertion)
+  - `npm audit --omit=dev` (pass; 0 vulnerabilities)
+  - `git diff --check` (pass)
+  - `npm run test` was attempted and timed out after roughly 15 minutes with no completed local aggregate result, so full local integration evidence is not claimed for this pass
+- Production deployment completed from `master`:
+  - reachability/naming source commit `c974faf1bd96f16da19c678ad6880965632fd214` was pushed to GitHub and picked up by Railway production service `RIVT`
+  - live `https://rivt.pro/api/health` returned `ok: true`, build commit `c974faf1bd96f16da19c678ad6880965632fd214`, migration `0018_shop_talk_moderation`, PostgreSQL, S3-compatible object storage, and configured Sentry
+  - `EXPECTED_SOURCE_COMMIT=c974faf1bd96f16da19c678ad6880965632fd214 npm run monitor:production` passed with operational controls off, seven anonymous private-route checks, and 572 ms duration
+- Remaining boundary: this closes a first reachability/naming cleanup slice, but it does not complete the larger polish backlog around full tool consolidation, duplicate client/payment/checklist surfaces, global visual-token consolidation, typography/breakpoint consolidation, or server persistence for local-only business records.
 
 ## Latest Packet 08 Pass - Minimal Truthfulness and UI Subtraction
 

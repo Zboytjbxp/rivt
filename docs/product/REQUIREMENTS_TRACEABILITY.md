@@ -10,6 +10,16 @@ Status values:
 
 Evidence must eventually link to implementation, automated tests, manual acceptance proof, and deployed build.
 
+## Traceability Addendum - 2026-07-03 Reachability and Naming Cleanup
+
+- `GA-UX-003` gains deployed navigation clarity evidence on `master` commit `c974faf1bd96f16da19c678ad6880965632fd214`: the active product vocabulary now uses `Work` instead of `Marketplace`, `Crew` instead of `My Crew`, and `Shop Talk` instead of lingering `Trade Talk` naming/class paths across routes, onboarding destinations, profile links, legacy bridge copy, and active Shop Talk CSS hooks.
+- `GA-UX-003` also gains reachability evidence: global person search no longer drops users on a generic Crew page; selecting a person result opens Crew with a focused search-result spotlight showing the selected profile's name, headline, trade/location, and availability.
+- `GA-UX-006` gains mobile E2E evidence: `npm run test:e2e` now covers top-bar search for `Riley Harper`, tapping the person result, and verifying the Crew search-result landing state.
+- `GA-UX-005` gains subtraction evidence: Crew no longer repeats `Network` page headers/descriptions and decorative metric tiles across Crew, Subs, Reviews, and Clients; the screen now uses one compact `Crew` header and tab content.
+- `GA-OPS-007` gains local automated evidence: `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test:unit`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check` passed. `npm run test` timed out after roughly 15 minutes, so full aggregate local integration evidence is not claimed for this pass.
+- `GA-OPS-008` gains production evidence: live `https://rivt.pro/api/health` reported commit `c974faf1bd96f16da19c678ad6880965632fd214` with migration `0018_shop_talk_moderation`; `EXPECTED_SOURCE_COMMIT=c974faf1bd96f16da19c678ad6880965632fd214 npm run monitor:production` passed.
+- Remaining boundary: this pass resolves first-order naming/reachability issues only. Tool consolidation, duplicate money/client/checklist surfaces, typography/token/breakpoint consolidation, and server persistence for local-only business records remain open.
+
 ## Traceability Addendum - 2026-07-03 Minimal Truthfulness and UI Subtraction
 
 - `GA-UX-005` gains honesty evidence on `master`: fake-looking Shop Talk fallback posts with fabricated authors, stock thumbnails, timestamps, upvotes, and comment counts were removed; remaining fallback prompts are clearly labeled `RIVT` starter prompts with zero votes and no fake comments.
