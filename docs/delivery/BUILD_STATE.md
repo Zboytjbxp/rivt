@@ -38,7 +38,9 @@ Production release commit: verify with live `/api/health`; latest runtime featur
     - Shop Talk loads with community discovery, community-page navigation, no removed side panels, and one visible `Ask` action on empty community pages
     - Tools hub loads without the old active-job/job-context banner or dev-copy phrases; opening Invoice uses compact fullscreen-tool mode with the bottom mobile nav visually hidden
 - Production deployment status:
-  - pending merge and Railway deploy verification for this pass
+  - runtime release commit `0992ee144532df88471a643ac01e67df86d1832f` was pushed to GitHub and picked up by Railway production service `RIVT`
+  - live `https://rivt.pro/api/health` returned `ok: true`, build commit `0992ee144532df88471a643ac01e67df86d1832f`, migration `0019_tool_records`, PostgreSQL, S3-compatible object storage, and configured Sentry
+  - `EXPECTED_SOURCE_COMMIT=0992ee144532df88471a643ac01e67df86d1832f npm run monitor:production` passed with operational controls off, seven anonymous private-route checks, and 593 ms duration
 
 ## Latest Packet 08 Pass - Naming and Repetition Cleanup
 
