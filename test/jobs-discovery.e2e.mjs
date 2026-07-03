@@ -346,9 +346,12 @@ async function configurePage(page, jobs, { activeWork = [], project = null } = {
 
 async function assertToolsFlow(page) {
   await page.getByRole("button", { name: /^Tools$/ }).click();
+  const primaryTool = (name) => page.locator(".v2-tool-launch-card").filter({ hasText: name }).first();
   await page.getByRole("button", { name: /Heavy 16th/i }).waitFor();
   assert.equal(await page.locator(".v2-tool-launch-card").count(), 5, "Tools hub should expose exactly five primary field apps");
-  assert.equal(await page.getByRole("button", { name: /Material takeoff/i }).count(), 0, "Material takeoff should not be exposed as a primary field app");
+  assert.equal(await page.locator(".v2-tool-mini-card").count(), 15, "Tools hub should expose supporting utilities as compact launchers");
+  await page.getByRole("button", { name: /Materials/i }).waitFor();
+  await page.getByRole("button", { name: /Payment tracker/i }).waitFor();
   await page.getByRole("button", { name: /Heavy 16th/i }).click();
   await page.getByRole("heading", { name: "Heavy 16th field calculator" }).waitFor();
   await page.getByLabel("Length calculator").getByText("Total length", { exact: true }).waitFor();
@@ -356,17 +359,17 @@ async function assertToolsFlow(page) {
   await page.getByLabel("Equal spacing calculator").getByText("Center-to-center").waitFor();
   await page.getByLabel("Heavy 16th field calculator").getByRole("button", { name: "Tools" }).click();
 
-  await page.getByRole("button", { name: /Estimate/i }).click();
+  await primaryTool("Estimate").click();
   await page.getByRole("heading", { name: "Estimate builder" }).waitFor();
   await page.getByText("Recommended target", { exact: true }).waitFor();
   await page.getByLabel("Estimate builder").getByRole("button", { name: "Tools" }).click();
 
-  await page.getByRole("button", { name: /Invoice/i }).click();
+  await primaryTool("Invoice").click();
   await page.getByRole("heading", { name: "Invoice draft" }).waitFor();
   await page.getByText("Printable invoice", { exact: true }).waitFor();
   await page.getByLabel("Invoice draft").getByRole("button", { name: "Tools" }).click();
 
-  await page.getByRole("button", { name: /Records & photos/i }).click();
+  await primaryTool("Records & photos").click();
   await page.getByRole("heading", { name: "Job Photos", exact: true, level: 1 }).waitFor();
   await page.getByText("Document any job", { exact: false }).waitFor();
   await page.getByRole("button", { name: /New album/i }).waitFor();

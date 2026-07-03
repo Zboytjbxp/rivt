@@ -79,6 +79,23 @@ interface ToolsStudioProps {
   onNavigate: (destination: PrimaryDestination) => void;
 }
 
+type LaunchableToolMode = Exclude<ToolMode, "hub">;
+type ToolIcon = typeof Calculator;
+
+interface ToolLauncher {
+  mode: LaunchableToolMode;
+  icon: ToolIcon;
+  title: string;
+  badge: string;
+  summary: string;
+}
+
+interface ToolGroup {
+  label: string;
+  title: string;
+  tools: ToolLauncher[];
+}
+
 function currency(value: number) {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(value);
 }
@@ -133,6 +150,57 @@ function ToolCard({
   );
 }
 
+function ToolMiniCard({
+  icon: Icon,
+  title,
+  summary,
+  onAction,
+}: {
+  icon: ToolIcon;
+  title: string;
+  summary: string;
+  onAction: () => void;
+}) {
+  return (
+    <button type="button" className="v2-tool-mini-card" onClick={onAction}>
+      <span className="v2-tool-mini-icon"><Icon size={16} /></span>
+      <span>
+        <strong>{title}</strong>
+        <small>{summary}</small>
+      </span>
+      <ArrowRight size={14} />
+    </button>
+  );
+}
+
+function ToolLauncherSection({
+  group,
+  onOpen,
+}: {
+  group: ToolGroup;
+  onOpen: (tool: LaunchableToolMode) => void;
+}) {
+  return (
+    <section className="v2-tool-group" aria-label={group.title}>
+      <header className="v2-tool-group-header">
+        <span>{group.label}</span>
+        <strong>{group.title}</strong>
+      </header>
+      <div className="v2-tool-mini-grid">
+        {group.tools.map((tool) => (
+          <ToolMiniCard
+            key={tool.mode}
+            icon={tool.icon}
+            title={tool.title}
+            summary={tool.summary}
+            onAction={() => onOpen(tool.mode)}
+          />
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function ToolAppShell({
   title,
   compact = false,
@@ -176,6 +244,80 @@ function shouldIgnoreToolSwipe(target: EventTarget | null) {
 const MILEAGE_RATE_PER_MILE = 0.70;
 const MILEAGE_RATE_LABEL = "$0.70/mi";
 const mileageKey = "rivt.mileage.v1";
+
+const PRIMARY_TOOL_LAUNCHERS: ToolLauncher[] = [
+  {
+    mode: "calculator",
+    icon: Calculator,
+    title: "Heavy 16th",
+    badge: "Calculator",
+    summary: "Fractions, feet, and job math.",
+  },
+  {
+    mode: "estimate",
+    icon: Scale,
+    title: "Estimate",
+    badge: "Pricing",
+    summary: "Build a clean price range.",
+  },
+  {
+    mode: "invoice",
+    icon: ReceiptText,
+    title: "Invoice",
+    badge: "Direct pay",
+    summary: "Draft, print, send from email.",
+  },
+  {
+    mode: "daily-log",
+    icon: Clipboard,
+    title: "Daily log",
+    badge: "Site record",
+    summary: "Labor, notes, safety, blockers.",
+  },
+  {
+    mode: "job-photos",
+    icon: FolderOpen,
+    title: "Records & photos",
+    badge: "Closeout",
+    summary: "Photos, albums, and closeout proof.",
+  },
+];
+
+const TOOL_GROUPS: ToolGroup[] = [
+  {
+    label: "Money",
+    title: "Price, track, and close out",
+    tools: [
+      { mode: "bid-builder", icon: FileText, title: "Bid builder", badge: "Quote", summary: "Line-item bids." },
+      { mode: "payments", icon: ReceiptText, title: "Payment tracker", badge: "Payments", summary: "Invoices and balances." },
+      { mode: "expense-logger", icon: ReceiptText, title: "Expenses", badge: "Costs", summary: "Job costs by category." },
+      { mode: "mileage", icon: Car, title: "Mileage", badge: "Trips", summary: "Job travel log." },
+      { mode: "earnings", icon: Download, title: "Earnings", badge: "Income", summary: "Paid work summary." },
+      { mode: "tax-summary", icon: FileUp, title: "Tax summary", badge: "Year end", summary: "Exportable estimate." },
+      { mode: "tax-estimator", icon: Scale, title: "Tax estimator", badge: "Planning", summary: "Quarterly estimate." },
+    ],
+  },
+  {
+    label: "Site",
+    title: "Run the day in the field",
+    tools: [
+      { mode: "materials", icon: Package2, title: "Materials", badge: "Takeoff", summary: "Area, waste, rough cost." },
+      { mode: "daily-report", icon: FileText, title: "Daily report", badge: "Report", summary: "Weather, crew, issues." },
+      { mode: "punch-list", icon: ListChecks, title: "Punch list", badge: "Closeout", summary: "Open items and fixes." },
+      { mode: "safety-checklist", icon: Shield, title: "Safety checklist", badge: "Safety", summary: "Daily site check." },
+      { mode: "job-checklist", icon: CheckSquare, title: "Job checklists", badge: "Workflow", summary: "Trade-specific steps." },
+      { mode: "time-tracker", icon: RefreshCw, title: "Time tracker", badge: "Hours", summary: "Clock jobs and tasks." },
+    ],
+  },
+  {
+    label: "Business",
+    title: "Reusable setup",
+    tools: [
+      { mode: "price-book", icon: Search, title: "Price book", badge: "Materials", summary: "Save common prices." },
+      { mode: "contracts", icon: FileText, title: "Contracts", badge: "Docs", summary: "Scope and terms drafts." },
+    ],
+  },
+];
 
 interface MileageEntry {
   id: string;
@@ -2523,49 +2665,30 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
       <div className="v2-tool-section-stack">
         <section className="v2-tool-section" aria-label="Field tools">
           <div className="v2-tool-launch-grid">
-            <ToolCard
-              icon={Calculator}
-              title="Heavy 16th"
-              badge="Calculator"
-              summary="Fractions, feet, and job math."
-              action="Open"
-              featured
-              onAction={() => setActiveTool("calculator")}
-            />
-            <ToolCard
-              icon={Scale}
-              title="Estimate"
-              badge="Pricing"
-              summary="Build a clean price range."
-              action="Open"
-              onAction={() => setActiveTool("estimate")}
-            />
-            <ToolCard
-              icon={ReceiptText}
-              title="Invoice"
-              badge="Direct pay"
-              summary="Draft, print, send from email."
-              action="Open"
-              onAction={() => setActiveTool("invoice")}
-            />
-            <ToolCard
-              icon={Clipboard}
-              title="Daily log"
-              badge="Site record"
-              summary="Labor, notes, safety, blockers."
-              action="Open"
-              onAction={() => setActiveTool("daily-log")}
-            />
-            <ToolCard
-              icon={FolderOpen}
-              title="Records & photos"
-              badge="Closeout"
-              summary="Photos, albums, and closeout proof."
-              action="Open"
-              onAction={() => setActiveTool("job-photos")}
-            />
+            {PRIMARY_TOOL_LAUNCHERS.map((tool, index) => (
+              <ToolCard
+                key={tool.mode}
+                icon={tool.icon}
+                title={tool.title}
+                badge={tool.badge}
+                summary={tool.summary}
+                action="Open"
+                featured={index === 0}
+                onAction={() => setActiveTool(tool.mode)}
+              />
+            ))}
           </div>
         </section>
+
+        <p className="v2-tools-storage-note">
+          Standalone drafts save on this device. Accepted-work records and uploaded photos use cloud storage.
+        </p>
+
+        <div className="v2-tool-group-grid" aria-label="More tools">
+          {TOOL_GROUPS.map((group) => (
+            <ToolLauncherSection key={group.label} group={group} onOpen={setActiveTool} />
+          ))}
+        </div>
       </div>
 
     </section>

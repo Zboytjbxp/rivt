@@ -211,11 +211,14 @@ async function assertCalculatorNoVerticalOverflow(page) {
 async function runToolsFlow(page, viewportName) {
   await page.goto(`${baseUrl}/app/tools`, { waitUntil: "networkidle" });
   await page.getByRole("heading", { name: "Tools", exact: true }).waitFor({ timeout: 15_000 });
+  const primaryTool = (name) => page.locator(".v2-tool-launch-card").filter({ hasText: name }).first();
   await page.getByRole("button", { name: /Heavy 16th/i }).waitFor({ timeout: 15_000 });
   await page.getByRole("button", { name: /Records & photos/i }).waitFor({ timeout: 15_000 });
   assert.equal(await page.locator(".v2-tool-launch-card").count(), 5, "Tools hub should expose exactly five primary field apps");
-  assert.equal(await page.getByRole("button", { name: /Material takeoff/i }).count(), 0, "Material takeoff should not be a primary Tools hub app");
-  assert.equal(await page.getByRole("button", { name: /Time tracker/i }).count(), 0, "Time tracker should not be a primary Tools hub app");
+  assert.equal(await page.locator(".v2-tool-mini-card").count(), 15, "Tools hub should expose supporting utilities as compact launchers");
+  await page.getByRole("button", { name: /Materials/i }).waitFor({ timeout: 15_000 });
+  await page.getByRole("button", { name: /Time tracker/i }).waitFor({ timeout: 15_000 });
+  await page.getByRole("button", { name: /Payment tracker/i }).waitFor({ timeout: 15_000 });
   await assertNoHorizontalOverflow(page);
   await page.screenshot({ path: path.join(screenshotDir, `${viewportName}-tools-hub.png`), fullPage: true });
 
@@ -255,7 +258,7 @@ async function runToolsFlow(page, viewportName) {
   await page.screenshot({ path: path.join(screenshotDir, `${viewportName}-calculator-hardware.png`), fullPage: true });
   await page.getByLabel("Heavy 16th field calculator").getByRole("button", { name: "Tools" }).click();
 
-  await page.getByRole("button", { name: /Estimate/i }).click();
+  await primaryTool("Estimate").click();
   await page.getByRole("heading", { name: "Estimate builder" }).waitFor({ timeout: 15_000 });
   await page.getByText("Recommended target", { exact: true }).waitFor({ timeout: 15_000 });
   await page.getByText(/labor load/i).waitFor({ timeout: 15_000 });
@@ -263,7 +266,7 @@ async function runToolsFlow(page, viewportName) {
   await page.screenshot({ path: path.join(screenshotDir, `${viewportName}-estimate.png`), fullPage: true });
   await page.getByLabel("Estimate builder").getByRole("button", { name: "Tools" }).click();
 
-  await page.getByRole("button", { name: /Invoice/i }).click();
+  await primaryTool("Invoice").click();
   await page.getByRole("heading", { name: "Invoice draft" }).waitFor({ timeout: 15_000 });
   await page.getByLabel("Template name").fill(`${viewportName} invoice template`);
   await page.getByRole("button", { name: "Save template" }).click();
@@ -280,7 +283,7 @@ async function runToolsFlow(page, viewportName) {
   await page.screenshot({ path: path.join(screenshotDir, `${viewportName}-invoice.png`), fullPage: true });
   await page.getByLabel("Invoice draft").getByRole("button", { name: "Tools" }).click();
 
-  await page.getByRole("button", { name: /Daily log/i }).click();
+  await primaryTool("Daily log").click();
   await page.getByRole("heading", { name: "Daily log", exact: true }).waitFor({ timeout: 15_000 });
   await page.getByText("Records-ready", { exact: true }).waitFor({ timeout: 15_000 });
   await page.getByText("Tenant Build-Out", { exact: true }).waitFor({ timeout: 15_000 });
@@ -300,7 +303,7 @@ async function runToolsFlow(page, viewportName) {
   await page.screenshot({ path: path.join(screenshotDir, `${viewportName}-daily-log.png`), fullPage: true });
   await page.getByLabel("Daily log").getByRole("button", { name: "Tools" }).click();
 
-  await page.getByRole("button", { name: /Records & photos/i }).click();
+  await primaryTool("Records & photos").click();
   await page.getByRole("heading", { name: "Job Photos", exact: true, level: 1 }).waitFor({ timeout: 15_000 });
   await page.getByText("Document any job", { exact: false }).waitFor({ timeout: 15_000 });
   await page.getByRole("button", { name: /New album/i }).waitFor({ timeout: 15_000 });

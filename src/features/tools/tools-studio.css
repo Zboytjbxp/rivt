@@ -7065,3 +7065,195 @@
 .v2-tools-page .v2-tool-section-stack {
   gap: 10px;
 }
+
+/* Tools hub consolidation: primary apps first, supporting utilities grouped without extra copy. */
+.v2-tools-page .v2-tool-section-stack {
+  gap: 16px;
+}
+
+.v2-tools-page .v2-tool-launch-grid {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+}
+
+.v2-tools-page .v2-tool-launch-card,
+.v2-tools-page .v2-tool-launch-card.is-featured {
+  min-height: 96px;
+  border-radius: var(--v2-radius-lg);
+}
+
+.v2-tools-storage-note {
+  display: flex;
+  align-items: center;
+  margin: 0;
+  padding: 10px 2px 0;
+  color: var(--v2-text-muted);
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.v2-tool-group-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 22px;
+  align-items: start;
+}
+
+.v2-tool-group {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+.v2-tool-group-header {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+
+.v2-tool-group-header span {
+  color: var(--v2-accent);
+  font-size: 12px;
+  font-weight: var(--v2-weight-display);
+}
+
+.v2-tool-group-header strong {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--v2-text);
+  font-size: 14px;
+  font-weight: var(--v2-weight-bold);
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.v2-tool-mini-grid {
+  display: grid;
+  gap: 8px;
+}
+
+.v2-tool-mini-card {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) 16px;
+  gap: 10px;
+  align-items: center;
+  min-height: 58px;
+  padding: 9px 10px;
+  border: 1px solid var(--v2-border);
+  border-radius: var(--v2-radius-md);
+  background: var(--v2-surface);
+  color: var(--v2-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 120ms ease, transform 80ms ease, background 120ms ease;
+}
+
+.v2-tool-mini-card:hover {
+  border-color: color-mix(in srgb, var(--v2-accent) 34%, var(--v2-border));
+  background: color-mix(in srgb, var(--v2-accent-soft) 30%, var(--v2-surface));
+}
+
+.v2-tool-mini-card:active {
+  transform: translateY(1px);
+}
+
+.v2-tool-mini-card > span:not(.v2-tool-mini-icon) {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.v2-tool-mini-card strong {
+  overflow: hidden;
+  font-size: 14px;
+  font-weight: var(--v2-weight-bold);
+  line-height: 1.15;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.v2-tool-mini-card small {
+  overflow: hidden;
+  color: var(--v2-text-muted);
+  font-size: 12px;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.v2-tool-mini-card > svg {
+  color: var(--v2-text-muted);
+}
+
+.v2-tool-mini-icon {
+  display: inline-flex;
+  width: 34px;
+  height: 34px;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--v2-radius-sm);
+  background: color-mix(in srgb, var(--v2-accent-soft) 74%, var(--v2-surface-muted));
+  color: var(--v2-accent);
+}
+
+@media (max-width: 1080px) {
+  .v2-tool-group-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 700px) {
+  .v2-tools-page .v2-tool-launch-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .v2-tool-group-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .v2-tools-page .v2-tool-launch-card,
+  .v2-tools-page .v2-tool-launch-card.is-featured {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+    min-height: 124px;
+    align-content: start;
+    padding: 14px;
+  }
+
+  .v2-tools-page .v2-tool-card-icon {
+    width: 42px;
+    height: 42px;
+  }
+
+  .v2-tools-page .v2-tool-card-copy {
+    gap: 4px;
+  }
+
+  .v2-tools-page .v2-tool-card-copy small:first-child {
+    padding: 0;
+    background: transparent;
+  }
+
+  .v2-tools-page .v2-tool-launch-card em {
+    position: absolute;
+    right: 13px;
+    bottom: 12px;
+  }
+
+  .v2-tools-page .v2-tool-launch-card strong {
+    font-size: 15px;
+  }
+
+  .v2-tools-page .v2-tool-card-copy small:last-child {
+    font-size: 12px;
+    line-height: 1.25;
+  }
+
+  .v2-tools-storage-note {
+    padding-top: 2px;
+    font-size: 12px;
+  }
+}
