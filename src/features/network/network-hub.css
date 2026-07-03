@@ -60,7 +60,7 @@
 
 .v2-network-header-metrics span {
   color: var(--v2-text-muted);
-  font-size: 11px;
+  font-size: 13px;
   font-weight: var(--v2-weight-strong);
   text-transform: uppercase;
 }
@@ -92,7 +92,7 @@
 
 .v2-network-panel > header span {
   color: var(--v2-text-muted);
-  font-size: 10px;
+  font-size: 13px;
   font-weight: var(--v2-weight-bold);
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -114,7 +114,7 @@
   background: transparent;
   color: var(--v2-accent);
   font: inherit;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: var(--v2-weight-strong);
 }
 
@@ -162,7 +162,7 @@
 .v2-network-trust-stack span,
 .v2-network-prompt small {
   color: var(--v2-text-muted);
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .v2-network-person-card p,
@@ -220,7 +220,7 @@
   color: var(--v2-accent);
 }
 
-@media (max-width: 1040px) {
+@media (max-width: 1180px) {
   .v2-network-grid {
     grid-template-columns: 1fr;
   }
@@ -230,7 +230,7 @@
   }
 }
 
-@media (max-width: 860px) {
+@media (max-width: 900px) {
   .v2-network-header {
     align-items: flex-start;
     flex-direction: column;
@@ -275,7 +275,7 @@
 }
 
 .v2-reviews-panel > header span {
-  font-size: 10px;
+  font-size: 13px;
   font-weight: var(--v2-weight-bold);
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -383,7 +383,7 @@
 }
 
 .v2-review-item-header span {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--v2-text-muted);
 }
 
@@ -394,7 +394,7 @@
   color: var(--v2-text);
 }
 
-@media (max-width: 600px) {
+@media (max-width: 640px) {
   .v2-reviews-grid {
     grid-template-columns: 1fr;
   }
@@ -420,7 +420,7 @@
 }
 
 .v2-network-panel-actions .v2-primary-button {
-  font-size: 12px;
+  font-size: 13px;
   padding: 6px 12px;
   min-height: unset;
   height: auto;
@@ -431,7 +431,7 @@
   border: 0;
   color: var(--v2-accent);
   font: inherit;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: var(--v2-weight-strong);
   cursor: pointer;
   padding: 4px 8px;
@@ -472,7 +472,7 @@
 }
 
 .v2-sub-roster-notice {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--v2-accent);
   margin: 0;
 }
@@ -501,8 +501,8 @@
   min-width: 0;
 }
 .v2-sub-roster-item-copy strong { font-size: 13px; }
-.v2-sub-roster-item-copy span { font-size: 12px; color: var(--v2-text-secondary); }
-.v2-sub-roster-item-copy small { font-size: 11px; color: var(--v2-text-muted); }
+.v2-sub-roster-item-copy span { font-size: 13px; color: var(--v2-text-secondary); }
+.v2-sub-roster-item-copy small { font-size: 13px; color: var(--v2-text-muted); }
 
 .v2-sub-roster-remove {
   width: 28px;
@@ -586,11 +586,11 @@
 }
 
 .v2-crew-invite-copy strong { font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.v2-crew-invite-copy span { font-size: 12px; color: var(--v2-text-muted); }
-.v2-crew-invite-copy small { font-size: 11px; color: var(--v2-text-muted); }
+.v2-crew-invite-copy span { font-size: 13px; color: var(--v2-text-muted); }
+.v2-crew-invite-copy small { font-size: 13px; color: var(--v2-text-muted); }
 
 .v2-ci-pill {
-  font-size: 11px;
+  font-size: 13px;
   font-weight: var(--v2-weight-strong);
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -632,7 +632,7 @@
   background: var(--v2-surface-muted);
   color: var(--v2-text-muted);
   font: inherit;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: var(--v2-weight-strong);
   cursor: pointer;
   transition: background 120ms ease, color 120ms ease;
@@ -691,7 +691,7 @@
 }
 
 .v2-skill-group > strong {
-  font-size: 11px;
+  font-size: 13px;
   font-weight: var(--v2-weight-bold);
   text-transform: uppercase;
   letter-spacing: 0.07em;
@@ -726,7 +726,7 @@
   border-radius: 999px;
   background: var(--v2-accent);
   color: #fff;
-  font-size: 10px;
+  font-size: 13px;
   font-weight: var(--v2-weight-bold);
   font-variant-numeric: tabular-nums;
 }
@@ -734,7 +734,7 @@
 /* ── Group Message Button ────────────────────────────────────────────────── */
 
 .v2-group-msg-btn {
-  font-size: 12px;
+  font-size: 13px;
   padding: 6px 12px;
   min-height: unset;
   height: auto;
@@ -926,7 +926,7 @@
 .v2-network-spotlight-main span {
   display: block;
   color: var(--v2-accent);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: var(--v2-weight-bold);
   text-transform: uppercase;
 }
@@ -962,7 +962,7 @@
   background: var(--v2-success-soft);
   color: var(--v2-success);
   padding: 7px 10px;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: var(--v2-weight-bold);
 }
 
@@ -1012,7 +1012,7 @@
 .v2-client-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; }
 .v2-client-title { font-size: 15px; font-weight: var(--v2-weight-bold); color: var(--v2-text); }
 .v2-client-add-btn { display: flex; align-items: center; gap: 4px; font-size: 13px; color: var(--v2-accent); font-weight: var(--v2-weight-bold); background: none; border: none; cursor: pointer; padding: 4px 8px; border-radius: var(--v2-radius-sm); }
-.v2-client-sync-note { margin: -4px 16px 12px; font-size: 12px; color: var(--v2-text-muted); }
+.v2-client-sync-note { margin: -4px 16px 12px; font-size: 13px; color: var(--v2-text-muted); }
 .v2-client-form { padding: 0 16px 16px; display: flex; flex-direction: column; gap: 10px; }
 .v2-client-form input, .v2-client-form textarea { width: 100%; padding: 10px 12px; border: 1px solid var(--v2-border); border-radius: var(--v2-radius-sm); background: var(--v2-surface); color: var(--v2-text); font-size: 14px; font-family: inherit; box-sizing: border-box; }
 .v2-client-form input:focus, .v2-client-form textarea:focus { outline: none; border-color: var(--v2-accent); }
@@ -1026,7 +1026,7 @@
 .v2-client-card-top { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; cursor: pointer; user-select: none; }
 .v2-client-card-top:hover { background: color-mix(in srgb, var(--v2-accent-soft) 40%, transparent); }
 .v2-client-name { font-weight: var(--v2-weight-bold); color: var(--v2-text); font-size: 15px; }
-.v2-client-company { font-size: 12px; color: var(--v2-text-muted); margin-top: 2px; }
+.v2-client-company { font-size: 13px; color: var(--v2-text-muted); margin-top: 2px; }
 .v2-client-phone-link { color: var(--v2-accent); display: flex; align-items: center; padding: 4px; }
 .v2-client-detail { padding: 0 14px 14px; border-top: 1px solid var(--v2-border); }
 .v2-client-detail-row { display: flex; gap: 8px; align-items: center; padding: 6px 0; font-size: 13px; color: var(--v2-text-muted); border-bottom: 1px solid var(--v2-border); }
@@ -1036,7 +1036,7 @@
 .v2-client-edit-btn { flex: 1; padding: 8px; background: var(--v2-surface-muted); border: 1px solid var(--v2-border); border-radius: var(--v2-radius-sm); font-size: 13px; font-family: inherit; cursor: pointer; color: var(--v2-text); }
 .v2-client-delete-btn { padding: 8px 14px; background: none; border: 1px solid #ef4444; border-radius: var(--v2-radius-sm); font-size: 13px; font-family: inherit; cursor: pointer; color: #ef4444; }
 .v2-client-empty { text-align: center; padding: 40px 20px; color: var(--v2-text-muted); font-size: 14px; }
-.v2-client-jobs-badge { font-size: 11px; background: var(--v2-accent-soft); color: var(--v2-accent); padding: 2px 6px; border-radius: 20px; }
+.v2-client-jobs-badge { font-size: 13px; background: var(--v2-accent-soft); color: var(--v2-accent); padding: 2px 6px; border-radius: 20px; }
 
 /* ── Crew Manager ────────────────────────────────────────────────────────── */
 
@@ -1082,7 +1082,7 @@
   background: transparent;
   color: var(--v2-text-muted);
   font: inherit;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: var(--v2-weight-bold);
   cursor: pointer;
   transition: background 0.12s, color 0.12s, border-color 0.12s;
@@ -1166,13 +1166,13 @@
   border-radius: 999px;
   background: var(--v2-accent-soft);
   color: var(--v2-accent);
-  font-size: 11px;
+  font-size: 13px;
   font-weight: var(--v2-weight-bold);
   align-self: flex-start;
 }
 
 .v2-crew-rate {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--v2-text-muted);
   font-weight: var(--v2-weight-strong);
 }
@@ -1203,7 +1203,7 @@
   display: flex;
   align-items: center;
   gap: 5px;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--v2-text-muted);
   padding: 4px 8px;
   border-radius: var(--v2-radius-sm);
@@ -1224,7 +1224,7 @@
   display: inline-flex;
   align-items: center;
   gap: 3px;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: var(--v2-weight-bold);
 }
 
@@ -1232,7 +1232,7 @@
   display: flex;
   align-items: center;
   gap: 5px;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--v2-text-muted);
   padding: 4px 8px;
   border-radius: var(--v2-radius-sm);
@@ -1242,7 +1242,7 @@
 
 .v2-crew-card-notes {
   margin: 0;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--v2-text-muted);
   line-height: 1.4;
 }
@@ -1264,7 +1264,7 @@
   border: none;
   border-radius: var(--v2-radius-sm);
   font: inherit;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: var(--v2-weight-bold);
   cursor: pointer;
   transition: opacity 0.12s;
@@ -1283,7 +1283,7 @@
   background: transparent;
   color: var(--v2-accent);
   font: inherit;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: var(--v2-weight-bold);
   cursor: pointer;
   transition: background 0.12s;
@@ -1314,7 +1314,7 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--v2-text-muted);
   font-weight: var(--v2-weight-strong);
 }
@@ -1415,7 +1415,7 @@
   background: none;
   color: #ef4444;
   font: inherit;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: var(--v2-weight-bold);
   cursor: pointer;
 }
@@ -1463,7 +1463,7 @@
 }
 
 .v2-crew-assign-status {
-  font-size: 11px;
+  font-size: 13px;
   padding: 2px 6px;
   border-radius: 999px;
   background: color-mix(in srgb, var(--v2-accent-soft) 50%, transparent);
@@ -1490,7 +1490,7 @@
 }
 
 /* Final mobile containment pass: keep Crew forms inside the viewport. */
-@media (max-width: 760px) {
+@media (max-width: 900px) {
   .v2-network-page,
   .v2-network-grid,
   .v2-network-panel,

@@ -50,7 +50,7 @@ const account = {
   },
 };
 
-const newsPhotoDataUri = (label, accent = "#ff6a00") =>
+const newsPhotoDataUri = (label, accent = "#ff4b00") =>
   `data:image/svg+xml,${encodeURIComponent(`
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 560">
       <defs>
@@ -157,6 +157,13 @@ async function configurePage(page) {
     window.localStorage.removeItem(storageKey);
   }, reactionStorageKey);
   reactionLedger.clear();
+  await page.route("http://127.0.0.1:8787/api/**", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ data: {}, meta: { nextCursor: null } }),
+    }),
+  );
   await page.route("**/api/v1/me", (route) =>
     route.fulfill({
       status: 200,
@@ -286,12 +293,15 @@ try {
     await configurePage(page);
 
     await page.goto(`${baseUrl}/app/network/talk`, { waitUntil: "networkidle" });
-    await page.getByRole("button", { name: "Trade Talk" }).waitFor({ timeout: 15_000 });
-    await page.getByRole("button", { name: "Find your crew" }).waitFor({ timeout: 15_000 });
-    await page.getByText("Trade groups near the work", { exact: true }).waitFor({ timeout: 15_000 });
-    await page.getByText("Best way to scribe cabinets to stone?", { exact: true }).waitFor({ timeout: 15_000 });
-    await page.getByText(/What.*charging for punch-out work/i).waitFor({ timeout: 15_000 });
-    await page.locator(".shop-post-card").first().click();
+    await page.getByLabel("Shop Talk community").getByRole("button", { name: "Shop Talk" }).waitFor({ timeout: 15_000 });
+    await page.locator('section[aria-label="Discover communities"]').waitFor({ timeout: 15_000 });
+    await page.locator(".trade-post").filter({ hasText: "mid-job scope change" }).first().waitFor({ timeout: 15_000 });
+    await page.getByText(/OSHA heat rule/i).waitFor({ timeout: 15_000 });
+    const talkSearch = page.locator('.shop-talk-search input[type="search"]');
+    await talkSearch.fill("scope");
+    await assertNoHorizontalOverflow(page);
+    await talkSearch.fill("");
+    await page.locator(".trade-post").first().click();
     await page.getByText("Good answers get specific.", { exact: true }).waitFor({ timeout: 15_000 });
     const upvoteThread = page.getByRole("button", { name: "Upvote thread" }).first();
     const threadInitial = (await upvoteThread.textContent())?.trim() ?? "";
@@ -322,15 +332,14 @@ try {
     const answerCleared = (await page.getByRole("button", { name: "Upvote answer" }).first().textContent())?.trim() ?? "";
     assert.equal(answerCleared, answerInitial, "clicking the same answer reaction again should clear it");
 
-    const talkSearch = page.locator('.shop-talk-fieldbar input[placeholder="Search jobs, answers, crews"]');
-    if (!(await talkSearch.isVisible())) {
-      await page.getByRole("button", { name: /Back/i }).first().click();
-    }
-    await talkSearch.fill("scope");
     await assertNoHorizontalOverflow(page);
     await prepareScreenshot(page);
     await page.screenshot({ path: path.join(screenshotDir, `${viewport.name}-talk.png`), fullPage: true });
 
+    const mobileBack = page.locator(".mobile-back-btn").filter({ hasText: "Back" }).first();
+    if ((await mobileBack.count()) > 0 && (await mobileBack.isVisible())) {
+      await mobileBack.click();
+    }
     await page.getByRole("button", { name: "Trade News" }).click();
     await page.getByRole("heading", { name: /Code, safety, and permitting updates/i }).waitFor({ timeout: 15_000 });
     await page.locator('input[placeholder="Search sources, codes, safety, local"]').fill("permit");

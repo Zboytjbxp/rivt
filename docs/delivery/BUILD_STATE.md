@@ -7,6 +7,44 @@ Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
 Production release commit: verify with live `/api/health`; latest runtime feature evidence is recorded below and docs-only evidence commits may supersede the served build SHA.
 
+## Latest Packet 08 Pass - Visual System Consolidation
+
+- Implemented the next minimal-professional UI foundation slice on branch `codex/ui-system-consolidation`.
+- Figma was not used for this pass because the immediate risk was code-level drift, not missing mockups:
+  - duplicated/conflicting CSS tokens
+  - inconsistent RIVT orange values
+  - loose typography and breakpoint scales
+  - oversized theme-picker cards
+  - stale rendered QA selectors after recent IA cleanup
+- Consolidated the visual system toward the current RIVT app direction:
+  - normalized RIVT orange to the v2 accent (`#ff4b00`) across runtime styles, brand config, avatar seed color, test SVG art, and smoke expectations
+  - aligned v2 radius tokens between `tokens.css` and the legacy root token layer
+  - raised tiny CSS text declarations to a 13px floor for better mobile readability
+  - normalized responsive media breakpoints to the 640 / 900 / 1180 scale while preserving fixed container widths
+  - renamed the saved theme palette key from `tradeGreen` to `rivtOrange` with a compatibility migration for existing saved preferences
+  - compressed the account-panel theme chooser from large text cards into compact color-swatch icon buttons
+  - adjusted the fullscreen Heavy 16th calculator shell so it fits the mobile viewport without vertical overflow
+- Updated rendered QA scripts to match the current product truth:
+  - Tools smoke now checks the current invoice template success copy
+  - mobile action smoke no longer expects removed duplicate Home CTAs and targets the primary Invoice tool launcher
+  - Shop Talk/news smoke now checks the honest RIVT starter prompts and the current community/search/detail navigation structure instead of deleted fake demo posts
+- Preserved the Gate A honesty boundary:
+  - no homeowner flows, fake provider behavior, fake verification claims, payment processing, SMS/email delivery, or production data migration was added
+  - the only remaining `tradeGreen` string is the one-time localStorage migration for old theme preferences
+- Local gates run on 2026-07-03:
+  - `npm run build` (pass)
+  - `npm run lint` (pass)
+  - `npm run lint:security` (pass)
+  - `npm run test` (pass; unit plus integration, 44/44 unit tests and 16/16 integration suites)
+  - `npm run test:e2e` (pass)
+  - `npm run test:ui:tools` (pass; screenshots outside the repo at `C:\Users\zboyt\AppData\Local\Temp\rivt-tools-pass`)
+  - `npm run test:ui:mobile-actions` (pass; screenshots outside the repo at `C:\Users\zboyt\AppData\Local\Temp\rivt-mobile-actions-pass`)
+  - `npm run test:ui:shop-talk-news` (pass; screenshots outside the repo at `C:\Users\zboyt\AppData\Local\Temp\rivt-shop-talk-news-pass`)
+  - `npm audit --omit=dev` (pass; 0 vulnerabilities)
+  - `git diff --check` (pass; line-ending warnings only)
+- Production deployment status:
+  - not deployed in this pass yet; branch is ready for review/merge/deploy after commit
+
 ## Latest Packet 08 Pass - Remaining Tool Records Sync Slice
 
 - Implemented the remaining accepted `tool_records` sync slice on branch `codex/all-tools-records-sync`.

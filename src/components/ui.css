@@ -105,7 +105,7 @@
   display: inline-flex;
   align-items: center;
   color: var(--v2-muted);
-  font-size: 0.72rem;
+  font-size: 13px;
   font-weight: var(--v2-weight-bold);
   letter-spacing: 0.12em;
   line-height: 1.2;
@@ -259,7 +259,7 @@
 
 .rivt-metric-tile span {
   color: var(--v2-muted);
-  font-size: 0.78rem;
+  font-size: 13px;
   font-weight: var(--v2-weight-strong);
   letter-spacing: 0.04em;
   line-height: 1.15;
@@ -268,12 +268,12 @@
 }
 
 .rivt-metric-tile.has-icon span {
-  font-size: 0.72rem;
+  font-size: 13px;
 }
 
 .rivt-metric-tile small {
   color: var(--v2-muted);
-  font-size: 0.78rem;
+  font-size: 13px;
 }
 
 .rivt-status-pill {
@@ -287,7 +287,7 @@
   border-radius: var(--v2-radius-sm);
   background: var(--v2-surface-raised);
   color: var(--v2-muted);
-  font-size: 0.72rem;
+  font-size: 13px;
   font-weight: var(--v2-weight-bold);
   letter-spacing: 0.06em;
   line-height: 1;
@@ -398,7 +398,7 @@
   }
 }
 
-@media (max-width: 720px) {
+@media (max-width: 900px) {
   .rivt-page-header {
     align-items: stretch;
     flex-direction: column;

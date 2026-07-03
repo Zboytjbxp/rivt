@@ -144,7 +144,7 @@
 .ps-toppro { color: var(--v2-teal-text); }
 
 .ps-stat span {
-  font-size: 11px;
+  font-size: 13px;
   line-height: 1.2;
   color: var(--v2-text-muted, #5f6668);
 }
@@ -287,7 +287,7 @@
 }
 
 .ps-cert-copy small {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--v2-text-muted, #5f6668);
 }
 
@@ -312,7 +312,7 @@
 }
 
 .ps-job-status {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
   color: var(--v2-accent-text);
   white-space: nowrap;
@@ -363,7 +363,7 @@
 }
 
 .ps-job-posted {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--v2-text-muted, #8a8f90);
   white-space: nowrap;
 }
@@ -398,7 +398,7 @@
   padding: 6px 10px;
   border-radius: 8px;
   background: var(--v2-surface-soft, #f4f1ec);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--v2-text-muted, #4a4f51);
 }

@@ -140,7 +140,7 @@
 .v2-job-context-copy small,
 .v2-job-context-copy span {
   color: #93a0a5;
-  font-size: 11px;
+  font-size: 13px;
 }
 
 .v2-job-context-copy strong {
@@ -154,7 +154,7 @@
 .v2-job-status {
   grid-column: 2;
   color: #8ad2a6;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: var(--v2-weight-strong);
 }
 
@@ -193,7 +193,7 @@
 .v2-sidebar-profile small,
 .v2-account-copy small {
   color: var(--v2-text-muted);
-  font-size: 11px;
+  font-size: 13px;
 }
 
 .v2-workspace {
@@ -252,7 +252,7 @@
   border-radius: var(--v2-radius-sm);
   background: var(--v2-surface-raised);
   color: var(--v2-text-subtle);
-  font-size: 10px;
+  font-size: 13px;
 }
 
 .v2-topbar-actions {
@@ -290,7 +290,7 @@
   border-radius: var(--v2-radius-md);
   background: var(--v2-accent);
   color: #ffffff;
-  font-size: 10px;
+  font-size: 13px;
   font-weight: var(--v2-weight-bold);
 }
 
@@ -447,7 +447,7 @@
   border-radius: 999px;
   background: var(--v2-surface-muted);
   color: var(--v2-text-muted);
-  font-size: 11px;
+  font-size: 13px;
   font-style: normal;
   font-weight: var(--v2-weight-semibold);
   text-transform: capitalize;
@@ -516,7 +516,7 @@
   margin: 0;
 }
 
-@media (min-width: 861px) {
+@media (min-width: 900px) {
   .v2-topbar .v2-account-button {
     min-width: 44px;
     grid-template-columns: auto;
@@ -553,7 +553,7 @@
   outline-offset: 2px;
 }
 
-@media (max-width: 860px) {
+@media (max-width: 900px) {
   .v2-sidebar {
     display: none;
   }
@@ -674,7 +674,7 @@
     gap: 3px;
     padding: 0 2px;
     color: inherit;
-    font-size: 10px;
+    font-size: 13px;
     font-weight: var(--v2-weight-strong);
   }
 
@@ -702,7 +702,7 @@
   .rivt-v2 .guest-banner > span {
     display: -webkit-box;
     overflow: hidden;
-    font-size: 11px;
+    font-size: 13px;
     line-height: 1.3;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 2;

@@ -291,7 +291,7 @@
   width: fit-content;
 }
 
-@media (max-width: 920px) {
+@media (max-width: 900px) {
   .moderation-metrics {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -301,7 +301,7 @@
   }
 }
 
-@media (max-width: 560px) {
+@media (max-width: 640px) {
   .moderation-console {
     gap: 10px;
     padding: 0 0 92px;
@@ -321,7 +321,7 @@
   }
 
   .moderation-page-header .rivt-page-header-copy > span {
-    font-size: 0.66rem;
+    font-size: 13px;
     letter-spacing: 0.1em;
   }
 
@@ -371,7 +371,7 @@
   .moderation-filter-row button {
     min-height: 36px;
     padding-inline: 13px;
-    font-size: 0.78rem;
+    font-size: 13px;
   }
 
   .moderation-metrics {
@@ -406,7 +406,7 @@
   }
 
   .moderation-metrics .rivt-metric-tile span {
-    font-size: 0.66rem;
+    font-size: 13px;
     letter-spacing: 0.03em;
   }
 
@@ -460,7 +460,7 @@
   .moderation-report-row .rivt-status-pill {
     min-height: 21px;
     padding: 3px 6px;
-    font-size: 0.62rem;
+    font-size: 13px;
   }
 
   .moderation-review-heading {
@@ -482,11 +482,11 @@
   }
 
   .moderation-context-grid dt {
-    font-size: 0.66rem;
+    font-size: 13px;
   }
 
   .moderation-context-grid dd {
-    font-size: 0.82rem;
+    font-size: 13px;
   }
 
   .moderation-snapshot {
@@ -497,7 +497,7 @@
 
   .moderation-snapshot p,
   .moderation-snapshot blockquote {
-    font-size: 0.82rem;
+    font-size: 13px;
     line-height: 1.42;
   }
 
@@ -518,7 +518,7 @@
   }
 
   .moderation-action-grid strong {
-    font-size: 0.78rem;
+    font-size: 13px;
     line-height: 1.15;
   }
 
@@ -537,7 +537,7 @@
   }
 
   .moderation-error {
-    font-size: 0.82rem;
+    font-size: 13px;
   }
 
   .moderation-submit {

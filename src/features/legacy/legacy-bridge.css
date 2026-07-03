@@ -11,7 +11,7 @@
 }
 
 .v2-legacy-eyebrow {
-  font-size: 0.74rem;
+  font-size: 13px;
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--v2-accent);
@@ -98,7 +98,7 @@
   border: 1px solid color-mix(in srgb, var(--v2-border) 60%, transparent);
 }
 
-@media (max-width: 720px) {
+@media (max-width: 900px) {
   .v2-legacy-bridge {
     gap: 18px;
   }

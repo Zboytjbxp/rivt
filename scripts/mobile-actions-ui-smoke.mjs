@@ -108,6 +108,14 @@ async function configurePage(page) {
     }
   };
 
+  const apiFallback = (route) => route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: JSON.stringify({ data: {}, meta: { nextCursor: null } }),
+  });
+  void page.route("**/api/**", apiFallback);
+  void page.route("http://127.0.0.1:8787/api/**", apiFallback);
+
   routeResponse("**/api/v1/me", { data: account });
   routeResponse("**/api/auth/providers", { providers: {} });
   routeResponse("**/api/v1/sessions", { data: { sessions: [] } });
@@ -312,13 +320,9 @@ async function safeCloseOpenPanels(page) {
 async function runMobileFlow(page) {
   await page.goto(`${baseUrl}/app/home`, { waitUntil: "networkidle" });
   await assertNoHorizontalOverflow(page, "Home");
-  await clickVisibleButtonByLabel(page, [/Post work/i, /Create job/i], "Home primary post action");
-  const createJobDialog = page.getByRole("dialog", { name: "Create a job" });
-  await createJobDialog.waitFor({ timeout: 15_000 });
-  await createJobDialog.getByRole("button", { name: "Close" }).click();
-  await createJobDialog.waitFor({ state: "hidden", timeout: 15_000 });
   assert.equal(await page.locator(".v2-weather-drive-widget").count(), 0, "Home should not render the static forecast widget");
   assert.equal(await page.locator(".v2-quick-actions").count(), 0, "Home should not render the duplicate quick-action strip");
+  assert.equal(await page.locator(".trade-feed-cta-row").count(), 0, "Home should not render duplicate post/crew CTA rows");
   await page.screenshot({ path: path.join(screenshotDir, "mobile-home-clean.png"), fullPage: true });
 
   await page.goto(`${baseUrl}/app/work`, { waitUntil: "networkidle" });
@@ -336,19 +340,20 @@ async function runMobileFlow(page) {
 
   await page.getByRole("button", { name: "Tools" }).click();
   await page.getByRole("heading", { name: "Tools", exact: true }).waitFor({ timeout: 15_000 });
-  await page.getByRole("button", { name: /Invoice/i }).waitFor({ timeout: 15_000 });
+  const primaryInvoiceTool = page.locator(".v2-tool-launch-card").filter({ hasText: "Invoice" }).first();
+  await primaryInvoiceTool.waitFor({ timeout: 15_000 });
   await page.getByRole("button", { name: /Records & photos/i }).waitFor({ timeout: 15_000 });
   assert.equal(await page.locator(".v2-tool-launch-card").count(), 5, "mobile Tools hub should expose exactly five primary field apps");
-  assert.equal(await page.getByRole("button", { name: /Material takeoff/i }).count(), 0, "mobile Tools hub should not expose secondary material takeoff");
+  assert.ok(await page.locator(".v2-tool-mini-card").count() >= 10, "mobile Tools hub should expose compact supporting tools");
   await assertNoHorizontalOverflow(page, "Tools hub");
-  await page.getByRole("button", { name: /Invoice/i }).click();
+  await primaryInvoiceTool.click();
   await page.getByRole("heading", { name: "Invoice draft" }).waitFor({ timeout: 15_000 });
   await assertNoHorizontalOverflow(page, "Invoice app");
 
   await page.getByLabel("Invoice draft").getByRole("button", { name: "Tools" }).click();
   await page.getByRole("heading", { name: "Tools", exact: true }).waitFor({ timeout: 15_000 });
   await page.getByRole("button", { name: "Crew", exact: true }).click();
-  await page.getByRole("heading", { name: "Network", exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByRole("heading", { name: "Crew", exact: true }).waitFor({ timeout: 15_000 });
   await assertNoHorizontalOverflow(page, "Crew");
   const crewInviteInputs = page.locator(".v2-crew-invite-inputs input");
   await assert.equal(await crewInviteInputs.count(), 4, "Crew invite planner should render four contained inputs");
@@ -375,7 +380,7 @@ async function runMobileFlow(page) {
   await page.getByRole("heading", { name: "Inbox", exact: true }).waitFor({ timeout: 15_000 });
   await assertNoHorizontalOverflow(page, "Messages route");
   await page.getByRole("button", { name: "Home", exact: true }).click();
-  await clickVisibleButtonByLabel(page, [/Post work/i, /Create job/i], "Home primary post action after messages");
+  await assertNoHorizontalOverflow(page, "Home after messages");
 
   await page.getByRole("button", { name: "Notifications" }).click();
   const recordsNotificationsDialog = page.getByRole("dialog", { name: "Notifications" });
@@ -385,7 +390,7 @@ async function runMobileFlow(page) {
   await assertNoHorizontalOverflow(page, "Records route");
   await safeCloseOpenPanels(page);
   await page.getByRole("button", { name: "Home", exact: true }).click();
-  await clickVisibleButtonByLabel(page, [/Post work/i, /Create job/i], "Home primary post action after records");
+  await assertNoHorizontalOverflow(page, "Home after records");
 
   await safeCloseOpenPanels(page);
   await page.getByRole("button", { name: /Open profile menu for/i }).click();
@@ -395,7 +400,7 @@ async function runMobileFlow(page) {
   await page.getByRole("heading", { name: "Settings", exact: true }).waitFor({ timeout: 15_000 });
   await assertNoHorizontalOverflow(page, "Settings route");
   await page.getByRole("button", { name: "Crew", exact: true }).click();
-  await page.getByRole("heading", { name: "Network", exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByRole("heading", { name: "Crew", exact: true }).waitFor({ timeout: 15_000 });
   await page.getByPlaceholder("Name or company").fill("First Coast Electric");
   await assertControlCenterClickable(page, ".v2-crew-invite-form .v2-primary-button", "crew plan invite button");
   await page.locator(".v2-crew-invite-form .v2-primary-button").click();
@@ -407,8 +412,7 @@ async function runMobileFlow(page) {
   await assertNoHorizontalOverflow(page, "Crew add member form");
 
   await page.getByRole("button", { name: "Shop Talk", exact: true }).click();
-  await page.getByRole("button", { name: "Trade Talk" }).waitFor({ timeout: 15_000 });
-  await page.getByRole("button", { name: "Find your crew" }).waitFor({ timeout: 15_000 });
+  await page.getByRole("button", { name: "Shop Talk" }).waitFor({ timeout: 15_000 });
   await page.getByRole("button", { name: "Trade News" }).waitFor({ timeout: 15_000 });
   await page.getByRole("button", { name: "Trade News" }).click();
   await page.getByRole("heading", { name: /Code, safety, and permitting updates/i }).waitFor({ timeout: 15_000 });

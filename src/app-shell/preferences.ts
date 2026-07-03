@@ -25,6 +25,10 @@ export function readThemePalettePreference(): ThemePalette {
 
   try {
     const storedPalette = window.localStorage.getItem(THEME_PALETTE_STORAGE_KEY);
+    if (storedPalette === "tradeGreen") {
+      window.localStorage.setItem(THEME_PALETTE_STORAGE_KEY, "rivtOrange");
+      return "rivtOrange";
+    }
     if (storedPalette && storedPalette in brandConfig.theme.palettes) {
       return storedPalette as ThemePalette;
     }

@@ -154,7 +154,7 @@ export function SkeletonCard() {
 }
 
 const avatarColors = [
-  "#ef5f1a",
+  "#ff4b00",
   "#1f6f5e",
   "#4a7fa5",
   "#8b5c43",

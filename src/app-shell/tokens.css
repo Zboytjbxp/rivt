@@ -26,7 +26,11 @@
   --v2-teal-soft: #e0f2f0;
   --v2-surface-soft: var(--v2-surface-muted);
   --v2-muted: var(--v2-text-muted);
-  --v2-text-sm: 0.875rem;
+  --v2-text-xs: 13px;
+  --v2-text-sm: 15px;
+  --v2-text-base: 17px;
+  --v2-text-lg: 21px;
+  --v2-text-xl: 26px;
   --v2-weight-body: 400;
   --v2-weight-semibold: 600;
   --v2-weight-strong: 700;
@@ -35,9 +39,9 @@
   --v2-shadow-sm: 0 1px 1px rgba(11, 11, 11, 0.035), 0 10px 24px rgba(11, 11, 11, 0.06);
   --v2-shadow-md: 0 22px 54px rgba(11, 11, 11, 0.14);
   --v2-shadow-card: 0 1px 0 rgba(255, 255, 255, 0.9) inset, 0 12px 28px rgba(11, 11, 11, 0.07);
-  --v2-radius-sm: 10px;
-  --v2-radius-md: 14px;
-  --v2-radius-lg: 22px;
+  --v2-radius-sm: 6px;
+  --v2-radius-md: 8px;
+  --v2-radius-lg: 14px;
   --v2-sidebar-width: 220px;
   --v2-topbar-height: 58px;
   color: var(--v2-text);

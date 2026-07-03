@@ -185,7 +185,7 @@ test("Profile hub renders without crashing", async () => {
       shoutOutCount: 2,
       feedbackCount: 0,
       themeMode: "light",
-      themePalette: "tradeGreen",
+      themePalette: "rivtOrange",
       onToggleTheme: noop,
       onSelectThemePalette: noop,
       onReviewConsent: noop,

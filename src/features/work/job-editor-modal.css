@@ -54,7 +54,7 @@
   place-items: center;
   border: 1px solid var(--border-strong);
   border-radius: 50%;
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .job-editor-steps .is-current { color: var(--text); }
@@ -96,7 +96,7 @@
   .job-editor-steps { padding: 0 16px; }
   .job-editor-body { padding: 20px 16px 24px; }
   .job-editor-error { margin-inline: 16px; }
-  .job-editor-steps li { font-size: 12px; }
+  .job-editor-steps li { font-size: 13px; }
   .job-editor-footer > div:last-child { flex: 1; justify-content: flex-end; }
   .job-editor-footer .secondary-action { padding-inline: 12px; }
   .three-columns { grid-template-columns: 1fr; }
