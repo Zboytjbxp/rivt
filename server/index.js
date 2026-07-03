@@ -1032,6 +1032,7 @@ const canonicalAccountSchema = z.object({
     name: z.string(),
     role: z.enum(["owner", "admin", "member"]),
   })),
+  adminRoles: z.array(z.string()),
   capabilities: z.object({
     canCompleteOnboarding: z.boolean(),
     canPostWork: z.boolean(),
@@ -1042,6 +1043,12 @@ const canonicalAccountSchema = z.object({
 
 app.get("/api/v1/me", requireV1AuthenticatedUser, requireV1Actor, asyncRoute(async (request, response) => {
   const { account: actorAccount, profile, memberships } = request.actor;
+  const adminRoles = await database.query(
+    `SELECT role FROM admin_role_grants
+     WHERE account_id = $1 AND status = 'active'
+     ORDER BY role`,
+    [actorAccount.id],
+  );
   const account = canonicalAccountSchema.parse({
     id: actorAccount.id,
     status: actorAccount.status,
@@ -1055,6 +1062,7 @@ app.get("/api/v1/me", requireV1AuthenticatedUser, requireV1Actor, asyncRoute(asy
       name: membership.organizationName,
       role: membership.role,
     })),
+    adminRoles: adminRoles.rows.map((row) => String(row.role)),
     capabilities: {
       canCompleteOnboarding: actorAccount.emailVerified && profile.onboardingStatus === "draft",
       canPostWork: actorAccount.status === "active" && actorAccount.primaryRole === "contractor",

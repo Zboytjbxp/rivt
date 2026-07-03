@@ -109,6 +109,7 @@ const InboxCenter = lazy(() => import("./features/inbox/InboxCenter").then((m) =
 const ShopTalkView = lazy(() => import("./features/shop-talk/ShopTalkView").then((m) => ({ default: m.ShopTalkView })));
 const ProfileRoute = lazy(() => import("./features/profile/ProfileRoute").then((m) => ({ default: m.ProfileRoute })));
 const ToolsStudio = lazy(() => import("./features/tools/ToolsStudio").then((m) => ({ default: m.ToolsStudio })));
+const ModerationConsole = lazy(() => import("./features/admin/ModerationConsole").then((m) => ({ default: m.ModerationConsole })));
 const LegacyBridge = lazy(() => import("./features/legacy/LegacyBridge").then((m) => ({ default: m.LegacyBridge })));
 
 function communityReportReasonCode(reason: CommunityReport["reason"]): ShopTalkReportReason {
@@ -121,6 +122,12 @@ function communityReportReasonCode(reason: CommunityReport["reason"]): ShopTalkR
       return "spam";
     case "Harassment":
       return "harassment";
+    case "Privacy/contact info":
+      return "privacy";
+    case "Duplicate/off-topic":
+      return "duplicate";
+    case "Other":
+      return "other";
     default:
       return "other";
   }
@@ -397,9 +404,10 @@ function App() {
   }, []);
 
   const applyCanonicalAccount = useCallback((account: CanonicalAccount) => {
+    const normalizedAccount = { ...account, adminRoles: account.adminRoles ?? [] };
     const accountRole = account.primaryRole === "tradesperson" ? "tradesperson" : "contractor";
     const authMethod: AuthMethod = account.provider === "google" ? "Google" : account.provider === "facebook" ? "Facebook" : account.provider === "apple" ? "Apple" : "Email";
-    setCanonicalAccount(account);
+    setCanonicalAccount(normalizedAccount);
     setAuthUser({
       id: account.id,
       email: account.email,
@@ -458,6 +466,7 @@ function App() {
             trades: [{ code: "electrical", name: "Electrical", primary: true }],
           },
           organizations: [{ id: "dev-org-1", name: "Torres Electric LLC", role: "owner" }],
+          adminRoles: ["moderator", "owner", "support"],
           capabilities: {
             canCompleteOnboarding: true,
             canPostWork: true,
@@ -1006,7 +1015,7 @@ function App() {
     );
   }
 
-  async function handleReportCommunityPost(postId: string, reason: CommunityReport["reason"]) {
+  async function handleReportCommunityPost(postId: string, reason: CommunityReport["reason"], note?: string) {
     const post = communityPosts.find((candidate) => candidate.id === postId);
     if (!post) {
       return;
@@ -1015,7 +1024,7 @@ function App() {
       targetType: "post",
       targetId: postId,
       reasonCode: communityReportReasonCode(reason),
-      note: reason,
+      note: (note ? `${reason}: ${note}` : reason).slice(0, 1000),
     });
 
     setCommunityReports((current) => {
@@ -1045,7 +1054,7 @@ function App() {
     );
   }
 
-  async function handleReportCommunityAnswer(postId: string, answerId: string, reason: CommunityReport["reason"]) {
+  async function handleReportCommunityAnswer(postId: string, answerId: string, reason: CommunityReport["reason"], note?: string) {
     const post = communityPosts.find((candidate) => candidate.id === postId);
     const answer = post?.replies.find((candidate) => candidate.id === answerId);
     if (!post || !answer) return;
@@ -1054,7 +1063,7 @@ function App() {
       targetType: "answer",
       targetId: answerId,
       reasonCode: communityReportReasonCode(reason),
-      note: `${reason} on answer for "${post.title}"`,
+      note: (note ? `${reason} on answer for "${post.title}": ${note}` : `${reason} on answer for "${post.title}"`).slice(0, 1000),
     });
     addActivity(
       persisted ? "Shop Talk answer reported" : "Shop Talk answer flagged locally",
@@ -1064,7 +1073,7 @@ function App() {
     );
   }
 
-  async function handleReportCommunity(community: CommunityDisplay, reason: CommunityReport["reason"]) {
+  async function handleReportCommunity(community: CommunityDisplay, reason: CommunityReport["reason"], note?: string) {
     if (!community.id) {
       addActivity(
         "Community report unavailable",
@@ -1077,7 +1086,7 @@ function App() {
       targetType: "community",
       targetId: community.id,
       reasonCode: communityReportReasonCode(reason),
-      note: `${reason} in ${community.name}`,
+      note: (note ? `${reason} in ${community.name}: ${note}` : `${reason} in ${community.name}`).slice(0, 1000),
     });
     addActivity(
       persisted ? "Community report filed" : "Community report saved locally",
@@ -1749,6 +1758,11 @@ function App() {
             onImmersiveChange={setToolsImmersive}
             onNavigate={(destination) => handleNavigate(defaultViewForDestination(destination))}
           />
+        ) : activeView === "Admin" ? (
+          <ModerationConsole
+            adminRoles={canonicalAccount?.adminRoles ?? []}
+            onActivity={addActivity}
+          />
         ) : (
           <LegacyBridge
             view={activeView as "My Jobs" | "Applications" | "Invites" | "My Crew" | "Messages" | "Trust & Legal" | "Records" | "Safety & Training" | "Reviews" | "Feedback" | "Settings" | "Admin" | "Marketplace" | "Home" | "Shop Talk" | "Tools"}
@@ -1792,6 +1806,7 @@ function App() {
           themeMode={themeMode}
           themeSource={themeSource}
           themePalette={themePalette}
+          adminRoles={canonicalAccount?.adminRoles ?? []}
           communityBadges={communityBadgeLabels(communityPosts, accountProfile.displayName)}
           shoutOutCount={
             shoutOuts.filter(

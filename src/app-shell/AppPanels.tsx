@@ -141,6 +141,7 @@ export function AccountPanel({
   themeMode,
   themeSource,
   themePalette,
+  adminRoles,
   communityBadges,
   shoutOutCount,
   onToggleTheme,
@@ -161,6 +162,7 @@ export function AccountPanel({
   themeMode: ThemeMode;
   themeSource: ThemeSource;
   themePalette: ThemePalette;
+  adminRoles: string[];
   communityBadges: string[];
   shoutOutCount: number;
   onToggleTheme: () => void;
@@ -243,6 +245,12 @@ export function AccountPanel({
         </section>
 
         <div className="quick-actions">
+          {adminRoles.length ? (
+            <button type="button" onClick={() => onNavigate("Admin")}>
+              <Flag size={15} />
+              Admin
+            </button>
+          ) : null}
           <button type="button" onClick={() => onNavigate("Settings")}>
             <ShieldCheck size={15} />
             Settings

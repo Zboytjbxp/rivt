@@ -122,9 +122,23 @@ export interface CommunityReport {
   id: number;
   postId: string;
   postTitle: string;
-  reason: "Misinformation" | "Safety concern" | "Spam" | "Harassment";
+  reason: CommunityReportReason;
   status: "Flagged" | "Cleared" | "Hidden" | "Removed" | "Warned";
 }
+
+export type CommunityReportReason =
+  | "Misinformation"
+  | "Safety concern"
+  | "Spam"
+  | "Harassment"
+  | "Privacy/contact info"
+  | "Duplicate/off-topic"
+  | "Other";
+
+type ReportTarget =
+  | { kind: "post"; postId: string; title: string; description: string }
+  | { kind: "answer"; postId: string; answerId: string; title: string; description: string }
+  | { kind: "community"; community: CommunityDisplay; title: string; description: string };
 
 const specialtyOptions = tradeOptions.filter((trade): trade is Trade => trade !== "All trades");
 
@@ -179,6 +193,79 @@ function EmptyState({
   );
 }
 
+function ReportSheet({
+  target,
+  selectedReason,
+  note,
+  busy,
+  onReasonChange,
+  onNoteChange,
+  onSubmit,
+  onClose,
+}: {
+  target: ReportTarget;
+  selectedReason: CommunityReportReason;
+  note: string;
+  busy: boolean;
+  onReasonChange: (reason: CommunityReportReason) => void;
+  onNoteChange: (note: string) => void;
+  onSubmit: () => void;
+  onClose: () => void;
+}) {
+  return (
+    <div className="shop-report-backdrop" role="presentation" onClick={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+      <aside className="shop-report-sheet" role="dialog" aria-modal="true" aria-labelledby="shop-report-title">
+        <div className="shop-report-header">
+          <div>
+            <span>Report {target.kind}</span>
+            <h2 id="shop-report-title">{target.title}</h2>
+            <p>{target.description}</p>
+          </div>
+          <button type="button" className="shop-report-close" onClick={onClose} aria-label="Close report form">
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="shop-report-reasons" aria-label="Report reason">
+          {REPORT_REASON_OPTIONS.map((option) => (
+            <button
+              key={option.reason}
+              type="button"
+              className={selectedReason === option.reason ? "is-selected" : ""}
+              aria-pressed={selectedReason === option.reason}
+              onClick={() => onReasonChange(option.reason)}
+            >
+              <strong>{option.label}</strong>
+              <span>{option.description}</span>
+            </button>
+          ))}
+        </div>
+
+        <label className="shop-report-note">
+          <span>Optional context for support</span>
+          <textarea
+            value={note}
+            maxLength={1000}
+            rows={3}
+            onChange={(event) => onNoteChange(event.target.value)}
+            placeholder="Add details that help us review this faster."
+          />
+        </label>
+
+        <div className="shop-report-footer">
+          <button type="button" className="secondary-action" onClick={onClose} disabled={busy}>
+            Cancel
+          </button>
+          <button type="button" className="primary-action" onClick={onSubmit} disabled={busy}>
+            <Flag size={15} />
+            {busy ? "Sending..." : "Send report"}
+          </button>
+        </div>
+      </aside>
+    </div>
+  );
+}
+
 const FLAIR_CONFIG: Record<PostFlair, { color: string; description: string }> = {
   "Question": { color: "#e8a857", description: "Looking for a specific answer" },
   "Discussion": { color: "#6b9fd4", description: "Open conversation, multiple perspectives" },
@@ -193,6 +280,16 @@ const POST_TYPE_CHIPS: { type: PostType; emoji: string; label: string }[] = [
   { type: "sub-request", emoji: "🔧", label: "Looking for Sub" },
   { type: "safety", emoji: "⚠️", label: "Safety Alert" },
   { type: "general", emoji: "💬", label: "General" },
+];
+
+const REPORT_REASON_OPTIONS: Array<{ reason: CommunityReportReason; label: string; description: string }> = [
+  { reason: "Safety concern", label: "Unsafe trade advice", description: "Could cause injury, property damage, or illegal work." },
+  { reason: "Misinformation", label: "Wrong or misleading", description: "Bad code, licensing, pricing, or technical information." },
+  { reason: "Spam", label: "Spam or promotion", description: "Repeated, irrelevant, salesy, or low-quality posting." },
+  { reason: "Harassment", label: "Harassment", description: "Threats, hate, bullying, or personal attacks." },
+  { reason: "Privacy/contact info", label: "Private info", description: "Phone, address, email, or personal details shared wrongly." },
+  { reason: "Duplicate/off-topic", label: "Duplicate or off-topic", description: "Does not belong in this community or repeats another thread." },
+  { reason: "Other", label: "Something else", description: "Use the note field so support knows what to review." },
 ];
 
 function readStringSet(key: string, normalize: (value: string) => string = (value) => value): Set<string> {
@@ -451,9 +548,9 @@ export function ShopTalkView({
   onVoteAnswer: (postId: string, answerId: string, direction: "up" | "down") => void;
   onAddAnswer: (postId: string, body: string) => void | Promise<void>;
   onVerifyAnswer: (postId: string, answerId: string) => void | Promise<void>;
-  onReportPost: (postId: string, reason: CommunityReport["reason"]) => void | Promise<void>;
-  onReportAnswer: (postId: string, answerId: string, reason: CommunityReport["reason"]) => void | Promise<void>;
-  onReportCommunity: (community: CommunityDisplay, reason: CommunityReport["reason"]) => void | Promise<void>;
+  onReportPost: (postId: string, reason: CommunityReport["reason"], note?: string) => void | Promise<void>;
+  onReportAnswer: (postId: string, answerId: string, reason: CommunityReport["reason"], note?: string) => void | Promise<void>;
+  onReportCommunity: (community: CommunityDisplay, reason: CommunityReport["reason"], note?: string) => void | Promise<void>;
   onNewPost: (flair: PostFlair, title: string, trade: Trade | "General", body: string, postType: PostType, subTrade?: string, subLocation?: string, subRate?: string, communitySlug?: string | null) => void | Promise<void>;
   onCommunityCreated: (community: ServerCommunity) => void;
 }) {
@@ -493,6 +590,10 @@ export function ShopTalkView({
   const [selectedNewsId, setSelectedNewsId] = useState(displayNews[0]?.id ?? 0);
   const [mobileDetail, setMobileDetail] = useState(initialPostId != null);
   const [newsDiscussContext, setNewsDiscussContext] = useState<NewsItem | null>(null);
+  const [reportTarget, setReportTarget] = useState<ReportTarget | null>(null);
+  const [reportReason, setReportReason] = useState<CommunityReportReason>("Safety concern");
+  const [reportNote, setReportNote] = useState("");
+  const [reportBusy, setReportBusy] = useState(false);
   const serverCommunitiesLoaded = communities.some((community) => community.serverOwned);
 
   useEffect(() => {
@@ -535,8 +636,6 @@ export function ShopTalkView({
       if (a.status !== "Needs a pro answer" && b.status === "Needs a pro answer") return 1;
       return postSortValue(b) - postSortValue(a);
     });
-  const allReportReasons: CommunityReport["reason"][] = ["Misinformation", "Safety concern", "Spam", "Harassment"];
-
   function toggleBookmark(postId: string) {
     setBookmarkedIds(prev => {
       const next = new Set(prev);
@@ -594,6 +693,30 @@ export function ShopTalkView({
     setSelectedCommunitySlug(null);
     setCommunityQuery("");
     setMobileDetail(false);
+  }
+
+  function openReport(target: ReportTarget, defaultReason: CommunityReportReason = "Safety concern") {
+    setReportTarget(target);
+    setReportReason(defaultReason);
+    setReportNote("");
+  }
+
+  async function submitReport() {
+    if (!reportTarget) return;
+    setReportBusy(true);
+    const note = reportNote.trim();
+    try {
+      if (reportTarget.kind === "post") {
+        await onReportPost(reportTarget.postId, reportReason, note || undefined);
+      } else if (reportTarget.kind === "answer") {
+        await onReportAnswer(reportTarget.postId, reportTarget.answerId, reportReason, note || undefined);
+      } else {
+        await onReportCommunity(reportTarget.community, reportReason, note || undefined);
+      }
+      setReportTarget(null);
+    } finally {
+      setReportBusy(false);
+    }
   }
 
   function _incrementHelpfulVote(postId: string) {
@@ -907,7 +1030,12 @@ export function ShopTalkView({
                       <button
                         type="button"
                         className="community-report"
-                        onClick={() => { void onReportCommunity(selectedCommunity, "Spam"); }}
+                        onClick={() => openReport({
+                          kind: "community",
+                          community: selectedCommunity,
+                          title: selectedCommunity.name,
+                          description: selectedCommunity.meta || "Report a community for spam, abuse, unsafe content, or off-topic activity.",
+                        }, "Spam")}
                       >
                         <Flag size={13} />
                         Report
@@ -1394,12 +1522,18 @@ export function ShopTalkView({
                   <ThumbsDown size={15} />
                   {selectedPostReactionState.downvotes}
                 </button>
-                {allReportReasons.map((reason) => (
-                  <button type="button" key={reason} onClick={() => onReportPost(selectedPost.id, reason)}>
-                    <Flag size={15} />
-                    {reason}
-                  </button>
-                ))}
+                <button
+                  type="button"
+                  onClick={() => openReport({
+                    kind: "post",
+                    postId: selectedPost.id,
+                    title: selectedPost.title,
+                    description: "Report a Shop Talk post for unsafe advice, spam, harassment, misinformation, or other review needs.",
+                  })}
+                >
+                  <Flag size={15} />
+                  Report
+                </button>
                 {selectedPost.author === profile.displayName &&
                   selectedPost.status !== "Verified Fix" &&
                   !locallyAnswered.has(selectedPost.id) && (
@@ -1493,7 +1627,16 @@ export function ShopTalkView({
                             {answer.verifiedFix ? "Verified" : "Mark fix"}
                           </button>
                         )}
-                        <button type="button" onClick={() => { void onReportAnswer(selectedPost.id, answer.id, "Safety concern"); }}>
+                        <button
+                          type="button"
+                          onClick={() => openReport({
+                            kind: "answer",
+                            postId: selectedPost.id,
+                            answerId: answer.id,
+                            title: `Answer from ${answer.author}`,
+                            description: selectedPost.title,
+                          })}
+                        >
                           <Flag size={14} />
                           Report
                         </button>
@@ -1573,6 +1716,18 @@ export function ShopTalkView({
           </article>
         )}
       </section>
+      {reportTarget ? (
+        <ReportSheet
+          target={reportTarget}
+          selectedReason={reportReason}
+          note={reportNote}
+          busy={reportBusy}
+          onReasonChange={setReportReason}
+          onNoteChange={setReportNote}
+          onSubmit={() => { void submitReport(); }}
+          onClose={() => setReportTarget(null)}
+        />
+      ) : null}
     </>
   );
 }

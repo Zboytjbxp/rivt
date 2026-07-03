@@ -52,7 +52,7 @@ export const viewRoutes: Record<NavLabel, string> = {
   Reviews: "/app/profile/reviews",
   Feedback: "/app/profile/feedback",
   Settings: "/app/profile/settings",
-  Admin: "/app",
+  Admin: "/app/admin",
 };
 
 export function viewFromPath(pathname: string): NavLabel {
@@ -69,6 +69,7 @@ export function viewFromPath(pathname: string): NavLabel {
     "/app/profile/feedback": "Feedback",
     "/app/profile/settings": "Settings",
     "/app/tools/records": "Records",
+    "/app/admin": "Admin",
   };
   if (aliases[normalized]) return aliases[normalized];
   const match = (Object.entries(viewRoutes) as Array<[NavLabel, string]>).find(([, route]) => route === normalized);

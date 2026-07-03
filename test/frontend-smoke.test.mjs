@@ -233,3 +233,15 @@ test("App shell renders without crashing", async () => {
     /Smoke content/,
   );
 });
+
+test("Moderation console renders without crashing", async () => {
+  const { ModerationConsole } = await loadModule("/src/features/admin/ModerationConsole.tsx");
+
+  assertSmokeRender(
+    React.createElement(ModerationConsole, {
+      adminRoles: ["moderator", "support"],
+      onActivity: noop,
+    }),
+    /Shop Talk moderation/,
+  );
+});

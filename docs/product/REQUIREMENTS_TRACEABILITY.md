@@ -10,6 +10,16 @@ Status values:
 
 Evidence must eventually link to implementation, automated tests, manual acceptance proof, and deployed build.
 
+## Traceability Addendum - 2026-07-03 Shop Talk Human Moderation Console and Report UX
+
+- `GA-COM-004` gains local product evidence on branch `codex/shop-talk-moderation-console`: Shop Talk users now report communities, posts, and answers through a reason picker with explicit unsafe-advice, misinformation, spam, harassment, privacy/contact-info, duplicate/off-topic, and other categories plus optional reporter context.
+- `GA-OPS-004` gains local staff-operations evidence: owner/support/moderator accounts receive an Admin account-menu entry, `/app/admin` renders a human-facing Shop Talk moderation console, and staff can inspect report queues, target snapshots, reporter context, and apply dismiss/hide/lock/archive/restore actions with required support notes.
+- `GA-UX-005` gains honesty evidence: report submission remains server-first and only falls back to local feedback when persistence fails; the UI no longer hides hardcoded reasons behind one-tap report actions.
+- `GA-UX-006` gains rendered mobile evidence: Playwright QA at 430px loaded the admin console with mocked reports, submitted a queue action, opened the Shop Talk report sheet, verified reason options, and found no horizontal overflow.
+- `GA-OPS-007` gains local automated evidence: `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test:unit`, `npm run test`, `npm run test:e2e`, and `npm audit --omit=dev` passed; the aggregate test pass included 15/15 DB-backed integration suites.
+- Deployment evidence remains pending until this branch is merged to `master`, Railway serves the new source, and live `/api/health` plus `npm run monitor:production` are recorded.
+- Remaining boundary: this closes the first usable support console/report-reason UX gap, but broad public Shop Talk still requires an explicit moderation SLA/process and a live-support-window report review exercise.
+
 ## Traceability Addendum - 2026-07-03 Shop Talk Moderation and Reporting Backend
 
 - `GA-COM-001`, `GA-COM-002`, and `GA-COM-003` gain deployed moderation evidence on `master` commit `87923e9f34723b3fb12cf7f20a6b5b4c96e8cfb5`: communities, Shop Talk posts, and Shop Talk answers now have server-owned moderation states, and public read/write paths filter hidden content and reject writes into locked communities/posts.

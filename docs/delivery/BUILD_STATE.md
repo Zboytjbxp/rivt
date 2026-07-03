@@ -2,10 +2,43 @@
 
 Last updated: 2026-07-03 America/New_York
 Current gate: Gate A launch hardening
-Current phase: Packet 08 Gate A launch hardening plus Gate B behind-flag backbone work: machine gates and live workflow smokes are mostly green; the Shop Talk Reddit-model backbone and moderation/reporting backend are merged, deployed, migration-ready, and verified while still hidden behind launch-readiness boundaries before broad exposure.
+Current phase: Packet 08 Gate A launch hardening plus Gate B behind-flag backbone work: machine gates and live workflow smokes are mostly green; the Shop Talk Reddit-model backbone, moderation/reporting backend, and human-facing moderation console/report UX are implemented while still hidden behind launch-readiness boundaries before broad exposure.
 Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
 Production release commit: `87923e9f34723b3fb12cf7f20a6b5b4c96e8cfb5`
+
+## Latest Packet 08 Pass - Shop Talk Human Moderation Console and Report UX
+
+- Implemented the next human-facing moderation operations slice on branch `codex/shop-talk-moderation-console`.
+- Added staff-only admin console routing and account context:
+  - `GET /api/v1/me` now includes active `admin_role_grants` as `adminRoles`
+  - the account menu exposes an `Admin` entry only for accounts with active owner/support/moderator roles
+  - `/app/admin` renders the Shop Talk moderation console instead of sending staff through an unreachable placeholder
+- Added a responsive Shop Talk moderation console:
+  - status filters for Open, Reviewing, Actioned, Dismissed, and All reports
+  - queue metrics for open reports, safety-priority reports, community reports, and oldest report age
+  - target snapshots for community, post, and answer reports
+  - role-aware review actions for dismiss, hide, lock, archive community, and restore
+  - required support notes before applying moderation actions
+  - clear empty/error/loading states for support use on mobile and desktop
+- Upgraded user-facing report reasons in Shop Talk:
+  - replaced one-tap/hardcoded report actions with a bottom-sheet reason picker
+  - added richer reasons: unsafe trade advice, wrong/misleading, spam/promotion, harassment, private info, duplicate/off-topic, and other
+  - added optional reporter context notes and preserved server-first report persistence with local feedback fallback if the report API fails
+- Rendered local mobile QA at 430px with Playwright route mocks and service workers blocked:
+  - `/app/admin` loaded the console, reviewed a mocked post report, submitted a `hide` action, and updated the queue
+  - `/app/network/talk` opened a post report sheet, rendered reason options, and showed no horizontal overflow
+  - screenshot evidence was saved locally at `tmp-moderation-ui-smoke.png`
+- Local gates run on 2026-07-03:
+  - `npm run build` (pass)
+  - `npm run lint` (pass)
+  - `npm run lint:security` (pass)
+  - `npm run test:unit` (pass)
+  - `npm run test` (pass; unit plus integration, 15/15 suites)
+  - `npm run test:e2e` (pass)
+  - `npm audit --omit=dev` (pass; 0 vulnerabilities)
+- Deployment status: pending merge to `master`, Railway production deploy, live `/api/health`, and `npm run monitor:production` evidence.
+- Remaining boundary: this makes report review usable for support/admin staff, but broad public Shop Talk still needs the committed SLA/review process exercised against live production reports during the support window.
 
 ## Latest Packet 08 Pass - Shop Talk Moderation and Reporting Backend
 

@@ -58,6 +58,7 @@ export interface CanonicalAccount {
     trades: Array<{ code: string; name: string; primary: boolean }>;
   };
   organizations: Array<{ id: string; name: string; role: "owner" | "admin" | "member" }>;
+  adminRoles: string[];
   capabilities: {
     canCompleteOnboarding: boolean;
     canPostWork: boolean;
