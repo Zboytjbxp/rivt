@@ -38,7 +38,10 @@ Production release commit: verify with live `/api/health`; latest runtime featur
   - `npm audit --omit=dev` (pass; 0 vulnerabilities)
   - `git diff --check` (pass; line-ending warnings only)
   - `npm run test` was attempted twice and exceeded the local timeout window; full aggregate local test evidence is not claimed for this pass
-- Deployment status: pending merge/push/deploy verification at the time this section was written.
+- Production deployment completed from `master`:
+  - docs/build commit `f251145db9e6febd0ce44f0769cf2efef8f01ff7` was pushed to GitHub and picked up by Railway production service `RIVT`
+  - live `https://rivt.pro/api/health` returned `ok: true`, build commit `f251145db9e6febd0ce44f0769cf2efef8f01ff7`, migration `0019_tool_records`, PostgreSQL, S3-compatible object storage, and configured Sentry
+  - `EXPECTED_SOURCE_COMMIT=f251145db9e6febd0ce44f0769cf2efef8f01ff7 npm run monitor:production` passed with operational controls off, seven anonymous private-route checks, and 610 ms duration
 - Remaining boundary: this closes Payment Tracker's first server-persistence slice only. Expenses, mileage, time sessions, bids, price book, punch lists, daily reports, safety checks, checklists, and clients still need their own server-backed sync passes before they can be described as cloud-backed business records.
 
 ## Latest Packet 08 Pass - Tools Hub Consolidation
