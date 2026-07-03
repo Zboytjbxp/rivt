@@ -80,6 +80,7 @@ import { createNewsRouter } from "./news.js";
 import { registerShopTalkRoutes } from "./shop-talk.js";
 import { registerShopTalkModerationRoutes } from "./shop-talk-moderation.js";
 import { registerCommunityRoutes } from "./communities.js";
+import { registerNetworkRecordRoutes } from "./network-records.js";
 import { registerToolRecordRoutes } from "./tool-records.js";
 import {
   buildCloseoutReport,
@@ -4512,6 +4513,16 @@ registerShopTalkModerationRoutes({
 });
 
 registerToolRecordRoutes({
+  app,
+  database,
+  requireV1AuthenticatedUser,
+  requireV1Actor,
+  writeRateLimit,
+  runIdempotentMutation,
+  sendIdempotentResult,
+});
+
+registerNetworkRecordRoutes({
   app,
   database,
   requireV1AuthenticatedUser,

@@ -2,10 +2,43 @@
 
 Last updated: 2026-07-03 America/New_York
 Current gate: Gate A launch hardening
-Current phase: Packet 08 Gate A launch hardening plus Gate B behind-flag backbone work: machine gates and live workflow smokes are mostly green; the Shop Talk Reddit-model backbone, moderation/reporting backend, human-facing moderation console/report UX, reachability/naming cleanup, Tools hub consolidation, Payment Tracker server records, money-tools sync, the accepted tool-records sync slices, and the non-tool local-state boundary cleanup are implemented while still respecting launch-readiness boundaries before broad exposure.
+Current phase: Packet 08 Gate A launch hardening plus Gate B behind-flag backbone work: machine gates and live workflow smokes are mostly green; the Shop Talk Reddit-model backbone, moderation/reporting backend, human-facing moderation console/report UX, reachability/naming cleanup, Tools hub consolidation, Payment Tracker server records, money-tools sync, the accepted tool-records sync slices, non-tool local-state boundary cleanup, and dedicated network-records sync for Crew/Invites/informal written shout-outs are implemented while still respecting launch-readiness boundaries before broad exposure.
 Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
 Production release commit: verify with live `/api/health`; latest runtime feature evidence is recorded below and docs-only evidence commits may supersede the served build SHA.
+
+## Latest Packet 08 Pass - Network Records Sync
+
+- Implemented the remaining non-tool product-record sync slice on branch `codex/network-records-sync`.
+- Added reviewed database migration `0020_network_records` with rollback:
+  - account-owned `network_records` table
+  - record types: `crew_member`, `crew_invite`, and `network_review`
+  - active-record uniqueness by account, type, and local id
+  - soft delete support for removing local records from the account-backed set
+- Added authenticated `/api/v1/network-records` routes:
+  - `GET /api/v1/network-records?type=...`
+  - `POST /api/v1/network-records` with idempotency enforcement
+  - `DELETE /api/v1/network-records/:recordType/:localId`
+  - account isolation and server-side auth are enforced by the same v1 actor path as tool records
+- Wired Crew surfaces to the new account-backed path:
+  - Crew and Subs rosters hydrate synced records, upload existing device-local records when reachable, and sync adds/edits/job-assignment changes/removals
+  - Crew invite planner hydrates synced planned invites, uploads existing device-local invites when reachable, and syncs planned/accepted/declined/removed invite states
+  - informal written shout-outs hydrate synced `network_review` records, upload existing device-local written shout-outs when reachable, and display them under `Reviews you've written` instead of incorrectly treating them as received reviews
+- Preserved the review truth boundary:
+  - `network_review` is an informal, account-owned written shout-out/note record
+  - official completed-work reviews, disputes, and approval flows still live in the existing `work_reviews` domain
+  - no new verified badge, public reputation claim, homeowner flow, payment processing, fake provider behavior, or authorization shortcut was added
+- Local gates:
+  - `npm run build` (pass)
+  - `npm run lint` (pass)
+  - `npm run test:unit` (pass; 44/44)
+  - `npm run test:e2e` (pass; desktop and mobile jobs/discovery)
+  - `node --env-file-if-exists=.env --test --test-concurrency=1 test/network-records.integration.test.js` (pass against the env-file test database)
+  - `node --env-file-if-exists=.env --test --test-concurrency=1 test/migrations.integration.test.js` (pass against the env-file test database)
+  - `npm audit --omit=dev` (pass; 0 vulnerabilities)
+  - aggregate `npm run test` was attempted with a 10-minute local command window and timed out; aggregate completion is not claimed for this pass
+- Production deployment status:
+  - pending merge/push/deploy verification for this pass
 
 ## Latest Packet 08 Pass - Non-Tool Local State Boundaries
 

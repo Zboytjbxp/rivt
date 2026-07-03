@@ -29,6 +29,13 @@ import {
   type ClientRecord,
 } from "../clients/client-records";
 import type { CommunityPost } from "../shop-talk/ShopTalkView";
+import {
+  deleteNetworkRecordByLocalId,
+  fetchNetworkRecords,
+  upsertNetworkRecord,
+  type NetworkRecordInput,
+  type ServerNetworkRecord,
+} from "./network-records-api";
 import "./network-hub.css";
 
 interface ShoutOut {
@@ -276,6 +283,7 @@ const reviewsKey = "rivt.reviews.v1";
 interface StoredReview {
   id: string;
   reviewer: string;
+  trade?: string;
   reviewText: string;
   rating: number;
   date: string;
@@ -611,6 +619,17 @@ function CrewManager({ crewType }: { crewType: CrewType }) {
   const [editingMember, setEditingMember] = useState<CrewMember | null>(null);
   const [assigningMember, setAssigningMember] = useState<CrewMember | null>(null);
   const [tradeFilter, setTradeFilter] = useState<string>("All");
+  const [syncMessage, setSyncMessage] = useState("Saved on this device.");
+
+  useEffect(() => {
+    let cancelled = false;
+    void syncCrewRecords().then((result) => {
+      if (cancelled) return;
+      setCrew(result.records);
+      setSyncMessage(result.message);
+    });
+    return () => { cancelled = true; };
+  }, []);
 
   const members = crew.filter((m) => m.type === crewType);
 
@@ -618,17 +637,23 @@ function CrewManager({ crewType }: { crewType: CrewType }) {
 
   const filtered = tradeFilter === "All" ? members : members.filter((m) => m.trade === tradeFilter);
 
-  function persist(list: CrewMember[]) {
+  function persist(list: CrewMember[], changedMember?: CrewMember) {
     setCrew(list);
     saveCrew(list);
+    if (changedMember) {
+      void upsertNetworkRecord(crewMemberToNetworkRecord(changedMember)).then((record) => {
+        setSyncMessage(record ? "Synced to your RIVT account." : "Saved on this device. Sync will retry when your account is reachable.");
+      });
+    }
   }
 
   function handleSave(data: Omit<CrewMember, "id" | "addedAt">) {
     if (editingMember) {
-      persist(crew.map((m) => m.id === editingMember.id ? { ...m, ...data } : m));
+      const updated = { ...editingMember, ...data };
+      persist(crew.map((m) => m.id === editingMember.id ? updated : m), updated);
     } else {
       const next: CrewMember = { id: crypto.randomUUID(), ...data, type: crewType, addedAt: new Date().toISOString() };
-      persist([next, ...crew]);
+      persist([next, ...crew], next);
     }
     setShowForm(false);
     setEditingMember(null);
@@ -637,15 +662,20 @@ function CrewManager({ crewType }: { crewType: CrewType }) {
   function handleDelete(id: string) {
     if (!window.confirm("Remove this person from your crew?")) return;
     persist(crew.filter((m) => m.id !== id));
+    void deleteNetworkRecordByLocalId("crew_member", id).then((ok) => {
+      setSyncMessage(ok ? "Removed from your RIVT account." : "Removed on this device. Sync will retry when your account is reachable.");
+    });
   }
 
   function handleAssign(memberId: string, jobId: string) {
-    persist(crew.map((m) => m.id === memberId ? { ...m, currentJobId: jobId, availability: "busy" } : m));
+    const updated = crew.map((m) => m.id === memberId ? { ...m, currentJobId: jobId, availability: "busy" as const } : m);
+    persist(updated, updated.find((m) => m.id === memberId));
     setAssigningMember(null);
   }
 
   function handleUnassign(memberId: string) {
-    persist(crew.map((m) => m.id === memberId ? { ...m, currentJobId: undefined, availability: "available" } : m));
+    const updated = crew.map((m) => m.id === memberId ? { ...m, currentJobId: undefined, availability: "available" as const } : m);
+    persist(updated, updated.find((m) => m.id === memberId));
     setAssigningMember(null);
   }
 
@@ -668,6 +698,7 @@ function CrewManager({ crewType }: { crewType: CrewType }) {
           <Plus size={14} /> Add {label === "Crew" ? "member" : "sub"}
         </button>
       </div>
+      <p className="v2-client-sync-note" role="status">{syncMessage}</p>
 
       {/* Trade filter pills (subs tab) */}
       {crewType === "sub" && trades.length > 1 && (
@@ -781,6 +812,169 @@ function persistCrewInvites(invites: CrewInvite[]) {
   try { localStorage.setItem(crewInviteKey, JSON.stringify(invites.slice(0, 50))); } catch { /* noop */ }
 }
 
+function recordObject(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
+}
+
+function recordString(value: unknown, fallback = ""): string {
+  return typeof value === "string" ? value : fallback;
+}
+
+function recordNumber(value: unknown): number | undefined {
+  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
+}
+
+function recordAvailability(value: unknown): CrewAvailability {
+  return value === "busy" || value === "unavailable" ? value : "available";
+}
+
+function recordCrewType(value: unknown): CrewType {
+  return value === "sub" ? "sub" : "crew";
+}
+
+function recordInviteStatus(value: unknown): InviteStatus {
+  return value === "accepted" || value === "declined" ? value : "pending";
+}
+
+function networkRecordDate(iso: string): string | null {
+  return iso ? iso.slice(0, 10) : null;
+}
+
+function mergeNetworkRows<T extends { id: string }>(localRows: T[], remoteRows: T[]): T[] {
+  const remoteIds = new Set(remoteRows.map((row) => row.id));
+  return [...remoteRows, ...localRows.filter((row) => !remoteIds.has(row.id))];
+}
+
+function crewMemberFromNetworkRecord(record: ServerNetworkRecord): CrewMember | null {
+  const payload = recordObject(record.payload);
+  const name = recordString(payload.name, record.title).trim();
+  if (!name) return null;
+  return {
+    id: record.localId,
+    type: recordCrewType(payload.type),
+    name,
+    trade: recordString(payload.trade),
+    license: recordString(payload.license) || undefined,
+    licenseExpiry: recordString(payload.licenseExpiry) || undefined,
+    phone: recordString(payload.phone) || undefined,
+    email: recordString(payload.email) || undefined,
+    hourlyRate: recordNumber(payload.hourlyRate),
+    availability: recordAvailability(payload.availability ?? record.status),
+    currentJobId: recordString(payload.currentJobId) || undefined,
+    notes: recordString(payload.notes) || undefined,
+    addedAt: recordString(payload.addedAt, record.createdAt ?? new Date().toISOString()),
+  };
+}
+
+function crewMemberToNetworkRecord(member: CrewMember): NetworkRecordInput {
+  return {
+    recordType: "crew_member",
+    localId: member.id,
+    title: member.name || "Crew member",
+    status: member.availability,
+    recordDate: networkRecordDate(member.addedAt),
+    payload: { ...member },
+  };
+}
+
+async function syncCrewRecords(): Promise<{ records: CrewMember[]; message: string }> {
+  const localRows = loadCrew();
+  const serverRows = await fetchNetworkRecords("crew_member");
+  if (!serverRows) {
+    return { records: localRows, message: "Saved on this device. Sync will retry when your account is reachable." };
+  }
+  const remoteRows = serverRows.map(crewMemberFromNetworkRecord).filter((row): row is CrewMember => Boolean(row));
+  const remoteIds = new Set(remoteRows.map((row) => row.id));
+  const localOnlyRows = localRows.filter((row) => !remoteIds.has(row.id));
+  const merged = mergeNetworkRows(localRows, remoteRows);
+  saveCrew(merged);
+  await Promise.all(localOnlyRows.map((member) => upsertNetworkRecord(crewMemberToNetworkRecord(member))));
+  return { records: merged, message: "Synced to your RIVT account." };
+}
+
+function crewInviteFromNetworkRecord(record: ServerNetworkRecord): CrewInvite | null {
+  const payload = recordObject(record.payload);
+  const name = recordString(payload.name, record.title).trim();
+  if (!name) return null;
+  return {
+    id: record.localId,
+    jobRef: recordString(payload.jobRef),
+    name,
+    trade: recordString(payload.trade),
+    note: recordString(payload.note),
+    status: recordInviteStatus(payload.status ?? record.status),
+    createdAt: recordString(payload.createdAt, record.createdAt ?? new Date().toISOString()),
+  };
+}
+
+function crewInviteToNetworkRecord(invite: CrewInvite): NetworkRecordInput {
+  return {
+    recordType: "crew_invite",
+    localId: invite.id,
+    title: invite.name || "Crew invite",
+    status: invite.status,
+    recordDate: networkRecordDate(invite.createdAt),
+    payload: { ...invite },
+  };
+}
+
+async function syncCrewInviteRecords(): Promise<{ records: CrewInvite[]; message: string }> {
+  const localRows = readCrewInvites();
+  const serverRows = await fetchNetworkRecords("crew_invite");
+  if (!serverRows) {
+    return { records: localRows, message: "Saved on this device. Sync will retry when your account is reachable." };
+  }
+  const remoteRows = serverRows.map(crewInviteFromNetworkRecord).filter((row): row is CrewInvite => Boolean(row));
+  const remoteIds = new Set(remoteRows.map((row) => row.id));
+  const localOnlyRows = localRows.filter((row) => !remoteIds.has(row.id));
+  const merged = mergeNetworkRows(localRows, remoteRows).slice(0, 50);
+  persistCrewInvites(merged);
+  await Promise.all(localOnlyRows.map((invite) => upsertNetworkRecord(crewInviteToNetworkRecord(invite))));
+  return { records: merged, message: "Synced to your RIVT account." };
+}
+
+function storedReviewFromNetworkRecord(record: ServerNetworkRecord): StoredReview | null {
+  const payload = recordObject(record.payload);
+  const reviewer = recordString(payload.reviewer, record.title).trim();
+  const reviewText = recordString(payload.reviewText).trim();
+  if (!reviewer || !reviewText) return null;
+  const rating = Math.min(5, Math.max(1, Math.round(recordNumber(payload.rating) ?? 5)));
+  return {
+    id: record.localId,
+    reviewer,
+    trade: recordString(payload.trade) || undefined,
+    reviewText,
+    rating,
+    date: recordString(payload.date, record.createdAt ?? new Date().toISOString()),
+  };
+}
+
+function storedReviewToNetworkRecord(review: StoredReview): NetworkRecordInput {
+  return {
+    recordType: "network_review",
+    localId: review.id,
+    title: review.reviewer || "Network review",
+    status: "written",
+    recordDate: networkRecordDate(review.date),
+    payload: { ...review },
+  };
+}
+
+async function syncStoredReviewRecords(): Promise<{ records: StoredReview[]; message: string }> {
+  const localRows = readStoredReviews();
+  const serverRows = await fetchNetworkRecords("network_review");
+  if (!serverRows) {
+    return { records: localRows, message: "Saved on this device. Sync will retry when your account is reachable." };
+  }
+  const remoteRows = serverRows.map(storedReviewFromNetworkRecord).filter((row): row is StoredReview => Boolean(row));
+  const remoteIds = new Set(remoteRows.map((row) => row.id));
+  const localOnlyRows = localRows.filter((row) => !remoteIds.has(row.id));
+  const merged = mergeNetworkRows(localRows, remoteRows);
+  persistStoredReviews(merged);
+  await Promise.all(localOnlyRows.map((review) => upsertNetworkRecord(storedReviewToNetworkRecord(review))));
+  return { records: merged, message: "Synced to your RIVT account." };
+}
+
 function CrewInvitePlanner() {
   const [invites, setInvites] = useState<CrewInvite[]>(readCrewInvites);
   const [jobRef, setJobRef] = useState("");
@@ -788,6 +982,27 @@ function CrewInvitePlanner() {
   const [trade, setTrade] = useState("");
   const [note, setNote] = useState("");
   const [notice, setNotice] = useState("");
+  const [syncMessage, setSyncMessage] = useState("Saved on this device.");
+
+  useEffect(() => {
+    let cancelled = false;
+    void syncCrewInviteRecords().then((result) => {
+      if (cancelled) return;
+      setInvites(result.records);
+      setSyncMessage(result.message);
+    });
+    return () => { cancelled = true; };
+  }, []);
+
+  function persist(inviteRows: CrewInvite[], changedInvite?: CrewInvite) {
+    setInvites(inviteRows);
+    persistCrewInvites(inviteRows);
+    if (changedInvite) {
+      void upsertNetworkRecord(crewInviteToNetworkRecord(changedInvite)).then((record) => {
+        setSyncMessage(record ? "Synced to your RIVT account." : "Saved on this device. Sync will retry when your account is reachable.");
+      });
+    }
+  }
 
   function addInvite() {
     if (!name.trim()) return;
@@ -801,8 +1016,7 @@ function CrewInvitePlanner() {
       createdAt: new Date().toISOString(),
     };
     const next = [invite, ...invites];
-    setInvites(next);
-    persistCrewInvites(next);
+    persist(next, invite);
     setJobRef("");
     setName("");
     setTrade("");
@@ -813,14 +1027,15 @@ function CrewInvitePlanner() {
 
   function updateStatus(id: string, status: InviteStatus) {
     const next = invites.map((i) => i.id === id ? { ...i, status } : i);
-    setInvites(next);
-    persistCrewInvites(next);
+    persist(next, next.find((i) => i.id === id));
   }
 
   function removeInvite(id: string) {
     const next = invites.filter((i) => i.id !== id);
-    setInvites(next);
-    persistCrewInvites(next);
+    persist(next);
+    void deleteNetworkRecordByLocalId("crew_invite", id).then((ok) => {
+      setSyncMessage(ok ? "Removed from your RIVT account." : "Removed on this device. Sync will retry when your account is reachable.");
+    });
   }
 
   const pending = invites.filter((i) => i.status === "pending").length;
@@ -833,6 +1048,7 @@ function CrewInvitePlanner() {
       title="Crew invite planner"
     >
       <div className="v2-crew-invite-planner">
+        <p className="v2-client-sync-note" role="status">{syncMessage}</p>
         <div className="v2-crew-invite-form">
           <div className="v2-crew-invite-inputs">
             <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Name or company" />
@@ -949,9 +1165,22 @@ function ReviewsView({
   const [rating, setRating] = useState(5);
   const [submitted, setSubmitted] = useState(false);
   const [storedReviews, setStoredReviews] = useState<StoredReview[]>(readStoredReviews);
+  const [syncMessage, setSyncMessage] = useState("Saved on this device.");
 
   const received = shoutOuts.filter((s) => s.to === displayName);
   const given = shoutOuts.filter((s) => s.from === displayName);
+  const storedGivenKeys = new Set(storedReviews.map((review) => `${review.reviewer}|${review.trade ?? ""}|${review.reviewText}`));
+  const transientGiven = given.filter((item) => !storedGivenKeys.has(`${item.to}|${item.trade ?? ""}|${item.message}`));
+
+  useEffect(() => {
+    let cancelled = false;
+    void syncStoredReviewRecords().then((result) => {
+      if (cancelled) return;
+      setStoredReviews(result.records);
+      setSyncMessage(result.message);
+    });
+    return () => { cancelled = true; };
+  }, []);
 
   function submit() {
     if (!to.trim() || !message.trim()) return;
@@ -959,6 +1188,7 @@ function ReviewsView({
     const newReview: StoredReview = {
       id: crypto.randomUUID(),
       reviewer: to.trim(),
+      trade: trade.trim(),
       reviewText: message.trim(),
       rating,
       date: new Date().toISOString(),
@@ -966,6 +1196,9 @@ function ReviewsView({
     const next = [newReview, ...storedReviews];
     setStoredReviews(next);
     persistStoredReviews(next);
+    void upsertNetworkRecord(storedReviewToNetworkRecord(newReview)).then((record) => {
+      setSyncMessage(record ? "Synced to your RIVT account." : "Saved on this device. Sync will retry when your account is reachable.");
+    });
     setTo("");
     setTrade("");
     setMessage("");
@@ -982,6 +1215,7 @@ function ReviewsView({
           eyebrow="Write a review"
           title="Shout out someone you worked with"
         >
+          <p className="v2-client-sync-note" role="status">{syncMessage}</p>
           <div className="v2-review-form">
             <label>
               <span>Who are you reviewing?</span>
@@ -1034,25 +1268,11 @@ function ReviewsView({
 
         <Panel
           className="v2-reviews-panel"
-          eyebrow={`${storedReviews.length + received.length} received`}
+          eyebrow={`${received.length} received`}
           title="Reviews you've received"
         >
-          {(storedReviews.length > 0 || received.length > 0) ? (
+          {received.length > 0 ? (
             <div className="v2-reviews-list">
-              {storedReviews.map((review) => (
-                <article key={review.id} className="v2-review-item">
-                  <div className="v2-review-item-header">
-                    <Avatar name={review.reviewer} size="sm" />
-                    <div>
-                      <strong>{review.reviewer}</strong>
-                    </div>
-                  </div>
-                  <div className="v2-review-stars-display">
-                    {"★".repeat(review.rating)}{"☆".repeat(5 - review.rating)}
-                  </div>
-                  <p>{review.reviewText}</p>
-                </article>
-              ))}
               {received.map((item) => (
                 <article key={item.id} className="v2-review-item">
                   <div className="v2-review-item-header">
@@ -1080,12 +1300,27 @@ function ReviewsView({
 
         <Panel
           className="v2-reviews-panel"
-          eyebrow={`${given.length} given`}
+          eyebrow={`${storedReviews.length + transientGiven.length} written`}
           title="Reviews you've written"
         >
-          {given.length ? (
+          {(storedReviews.length > 0 || transientGiven.length > 0) ? (
             <div className="v2-reviews-list">
-              {given.map((item) => (
+              {storedReviews.map((review) => (
+                <article key={review.id} className="v2-review-item">
+                  <div className="v2-review-item-header">
+                    <Avatar name={review.reviewer} size="sm" />
+                    <div>
+                      <strong>{review.reviewer}</strong>
+                      {review.trade && <span>{review.trade}</span>}
+                    </div>
+                  </div>
+                  <div className="v2-review-stars-display" aria-label={`${review.rating} out of 5 stars`}>
+                    {review.rating}/5
+                  </div>
+                  <p>{review.reviewText}</p>
+                </article>
+              ))}
+              {transientGiven.map((item) => (
                 <article key={item.id} className="v2-review-item">
                   <div className="v2-review-item-header">
                     <Avatar name={item.to} size="sm" />
