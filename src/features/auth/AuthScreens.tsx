@@ -117,9 +117,9 @@ const entrySlides = [
     title: "Shop Talk, built for the trades.",
     body: "Ask questions and get answers from people who have actually done the work.",
     posts: [
-      { community: "Carpentry Talk", title: "Best way to scribe cabinets to stone?", meta: "128 votes · 67 replies" },
-      { community: "Electrical Talk", title: "Panel swap pricing when the meter can stay?", meta: "96 votes · 54 replies" },
-      { community: "Plumbing Talk", title: "Do I need insurance for side jobs?", meta: "71 votes · 38 replies" },
+      { community: "Carpentry Talk", title: "Best way to scribe cabinets to stone?", meta: "Example question" },
+      { community: "Electrical Talk", title: "Panel swap pricing when the meter can stay?", meta: "Example question" },
+      { community: "Plumbing Talk", title: "Do I need insurance for side jobs?", meta: "Example question" },
     ],
   },
   {
@@ -352,9 +352,9 @@ export function AuthLinkFlow({ mode }: { mode: "verify" | "reset" }) {
 function EntryShowcase() {
   const [activeCapability, setActiveCapability] = useState<(typeof entryCapabilities)[number]["key"]>("talk");
   const feedPosts = [
-    { community: "Carpentry Talk", author: "Trim lead", title: "Best way to scribe cabinets to stone?", meta: "42 votes · 18 replies" },
-    { community: "Electrical Talk", author: "Service tech", title: "Panel swap pricing when the meter can stay?", meta: "31 votes · 11 replies" },
-    { community: "Jacksonville Trades", author: "Remodeler", title: "Who is free for punch-out work this Friday?", meta: "Local · 7 replies" },
+    { community: "Carpentry Talk", author: "Trim lead", title: "Best way to scribe cabinets to stone?", meta: "Example community post" },
+    { community: "Electrical Talk", author: "Service tech", title: "Panel swap pricing when the meter can stay?", meta: "Example community post" },
+    { community: "Jacksonville Trades", author: "Remodeler", title: "Who is free for punch-out work this Friday?", meta: "Example local post" },
   ];
 
   const interests = ["Carpentry", "Electrical", "Plumbing", "HVAC", "Tile", "Cabinetry", "Framing", "Side Work"];

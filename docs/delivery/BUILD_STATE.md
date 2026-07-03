@@ -7,6 +7,31 @@ Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
 Production release commit: verify with live `/api/health`; latest runtime feature evidence is recorded below and docs-only evidence commits may supersede the served build SHA.
 
+## Latest Packet 08 Pass - Claude Audit Auth Preview Honesty
+
+- Closed one remaining Claude-audit truthfulness residue in the public auth/onboarding preview:
+  - removed fabricated vote/reply counts from the Shop Talk intro carousel
+  - removed fabricated vote/reply counts from the unauthenticated product-preview phone feed
+  - replaced those labels with neutral `Example question`, `Example community post`, and `Example local post` copy so preview content teaches the flow without pretending there is existing engagement
+- Preserved launch boundaries:
+  - no homeowner flows, fake verification, job-payment processing, escrow, payroll, or frontend-only production claims were added
+  - this pass changes preview/onboarding copy only; server data, auth, billing, and production storage paths are untouched
+- Local gates:
+  - `npm run build` (pass)
+  - `npm run lint` (pass)
+  - `npm run lint:security` (pass)
+  - `npm run test:unit` (pass; 44/44)
+  - `npm run test:e2e` (pass; desktop and mobile jobs/discovery)
+  - `npm audit --omit=dev` (pass; 0 vulnerabilities)
+  - `npm run incident:readiness -- --require-ready` (pass)
+  - `npm run launch:readiness -- --require-ready` (pass)
+  - `git diff --check` (pass; CRLF warning only for the touched TSX file)
+- Rendered QA:
+  - built-client Vite preview at 390x844 verified the auth preview no longer renders `128 votes`, `96 votes`, `71 votes`, `67 replies`, `54 replies`, `38 replies`, `42 votes`, or `31 votes`
+  - the same smoke verified replacement copy renders and saved screenshot evidence outside the repo at `C:\Users\zboyt\AppData\Local\Temp\rivt-auth-preview-honesty.png`
+- Remaining boundary:
+  - this is not a broad UI redesign pass; remaining Claude-audit themes still include physical-device onboarding walkthrough, typography/token/breakpoint consolidation, and continued mobile layout sweeps as product surfaces change
+
 ## Latest Packet 08 Pass - Live Subscription QA and Storage Settings Polish
 
 - Recorded founder live QA evidence from 2026-07-03:

@@ -10,6 +10,14 @@ Status values:
 
 Evidence must eventually link to implementation, automated tests, manual acceptance proof, and deployed build.
 
+## Traceability Addendum - 2026-07-03 Claude Audit Auth Preview Honesty
+
+- `GA-UX-005` gains honesty evidence: the public auth/onboarding preview no longer shows fabricated Shop Talk vote/reply counts as if preview posts already have organic engagement.
+- `GA-UX-003` gains onboarding clarity evidence: preview cards now use neutral example labels so new users can understand Shop Talk, Work/Crew, and Tools without fake social proof.
+- `GA-OPS-007` gains local automated evidence: `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test:unit`, `npm run test:e2e`, `npm audit --omit=dev`, `npm run incident:readiness -- --require-ready`, `npm run launch:readiness -- --require-ready`, and `git diff --check` passed.
+- `GA-UX-006` gains rendered mobile evidence: built-client Playwright smoke at 390x844 verified the auth preview no longer renders the old fake engagement labels and does render the replacement example copy; screenshot evidence is outside the repo at `C:\Users\zboyt\AppData\Local\Temp\rivt-auth-preview-honesty.png`.
+- Remaining boundary: this addendum covers preview truthfulness only. It does not claim completion of physical-device onboarding QA, typography/token consolidation, or remaining broad mobile layout polish.
+
 ## Traceability Addendum - 2026-07-03 Live Subscription QA and Storage Settings Polish
 
 - `GA-UX-005` gains live manual billing evidence: the owner account completed RIVT Pro signup, scheduled cancellation from Settings, confirmed continued paid-through access through August 3, 2026, and resumed the subscription from the same screen.
