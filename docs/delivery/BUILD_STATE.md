@@ -2,10 +2,34 @@
 
 Last updated: 2026-07-03 America/New_York
 Current gate: Gate A launch hardening
-Current phase: Packet 08 Gate A launch hardening plus Gate B behind-flag backbone work: machine gates and live workflow smokes are mostly green; the Shop Talk Reddit-model backbone, moderation/reporting backend, human-facing moderation console/report UX, reachability/naming cleanup, Tools hub consolidation, and first server-owned Payment Tracker records slice are implemented while still respecting launch-readiness boundaries before broad exposure.
+Current phase: Packet 08 Gate A launch hardening plus Gate B behind-flag backbone work: machine gates and live workflow smokes are mostly green; the Shop Talk Reddit-model backbone, moderation/reporting backend, human-facing moderation console/report UX, reachability/naming cleanup, Tools hub consolidation, Payment Tracker server records, and the first money-tools sync slice are implemented while still respecting launch-readiness boundaries before broad exposure.
 Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
 Production release commit: verify with live `/api/health`; latest runtime feature evidence is recorded below and docs-only evidence commits may supersede the served build SHA.
+
+## Latest Packet 08 Pass - Money Tools Sync Slice
+
+- Implemented the next server-owned Tools records slice on branch `codex/tool-records-money-sync`.
+- Reused the accepted `0019_tool_records` schema and API; no schema change or production data migration was added.
+- Wired three more money/time utilities to authenticated `tool_records` sync:
+  - Expense Logger now loads server-owned expense records, uploads existing device-local expenses when the account has no server records, syncs new expenses, and deletes by local id.
+  - Mileage Logger now loads server-owned mileage trips, uploads existing device-local trips when the account has no server records, syncs new trips, and deletes by local id.
+  - Time Tracker now loads server-owned time sessions, preserves the running-session state from cloud records, uploads existing device-local sessions when the account has no server records, syncs clock-in/clock-out, and deletes by local id.
+- Preserved the Gate A honesty boundary:
+  - each tool still saves instantly on-device first and reports when records are only device-local because the account/API is unavailable
+  - no payment processing, SMS/email delivery, tax filing, payroll, escrow, or fake provider behavior was added
+  - bids, price book, punch lists, daily reports, safety checks, job checklists, contracts, clients, and other business records still need their own accepted persistence passes before they can be described as fully cloud-backed
+- Runtime source commit: `f9953ddba345514fe15cfc18fa428e0b756d9586`.
+- Local gates run on 2026-07-03:
+  - `npm run build` (pass)
+  - `npm run lint` (pass)
+  - `npm run lint:security` (pass)
+  - `npm run test:unit` (pass; 44/44)
+  - `npm run test` (pass; unit plus integration, 16/16 integration suites)
+  - `npm run test:e2e` (pass)
+  - `npm run test:ui:tools` (pass; screenshots outside the repo at `C:\Users\zboyt\AppData\Local\Temp\rivt-tools-pass`)
+  - `npm audit --omit=dev` (pass; 0 vulnerabilities)
+- Production deployment status: pending until this docs/evidence commit is merged to `master`, pushed, picked up by Railway, and verified against live `/api/health` plus `npm run monitor:production`.
 
 ## Latest Packet 08 Pass - Tool Records Persistence Slice
 
