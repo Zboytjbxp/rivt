@@ -14,13 +14,12 @@ import {
   ShieldCheck,
   Sparkles,
   Star,
-  ThumbsUp,
   Users,
   X,
 } from "lucide-react";
 import { useState } from "react";
-import type { Job, Talent } from "../../types";
-import { Avatar, EmptyState, MetricTile, PageHeader, Panel } from "../../components/ui";
+import type { ProfileSearchResult } from "../../app-shell/types";
+import { Avatar, EmptyState, PageHeader, Panel } from "../../components/ui";
 import type { CommunityPost } from "../shop-talk/ShopTalkView";
 import "./network-hub.css";
 
@@ -34,12 +33,12 @@ interface ShoutOut {
 }
 
 interface NetworkHubProps {
-  view: "My Crew" | "Reviews";
-  jobs: Job[];
-  talent: Talent[];
+  view: "Crew" | "Reviews";
   communityPosts: CommunityPost[];
   shoutOuts: ShoutOut[];
   displayName: string;
+  profileFocus?: ProfileSearchResult | null;
+  onClearProfileFocus?: () => void;
   onOpenCrew: () => void;
   onOpenShopTalk: () => void;
   onOpenReviews: () => void;
@@ -878,6 +877,44 @@ function AnswerPrompt({ post, onOpenShopTalk }: { post: CommunityPost; onOpenSho
   );
 }
 
+function ProfileSearchSpotlight({
+  profile,
+  onDismiss,
+}: {
+  profile: ProfileSearchResult;
+  onDismiss: () => void;
+}) {
+  const tradeLine = profile.trades.map((trade) => trade.name).filter(Boolean).join(", ");
+  const roleLabel = profile.primaryRole === "contractor" ? "Contractor" : "Tradesperson";
+  const availability =
+    profile.availabilityStatus === "available"
+      ? "Available"
+      : profile.availabilityStatus === "limited"
+        ? "Limited availability"
+        : "Unavailable";
+
+  return (
+    <Panel className="v2-network-spotlight">
+      <div className="v2-network-spotlight-main">
+        <Avatar name={profile.displayName} size="lg" className="v2-network-avatar" />
+        <div>
+          <span>Search result</span>
+          <h2>{profile.displayName}</h2>
+          <p>{profile.headline || roleLabel}</p>
+          <small>{[tradeLine, profile.locationText].filter(Boolean).join(" · ") || roleLabel}</small>
+        </div>
+      </div>
+      <div className="v2-network-spotlight-actions">
+        <span>{availability}</span>
+        <button type="button" onClick={onDismiss} aria-label="Dismiss selected profile">
+          <X size={15} />
+          Dismiss
+        </button>
+      </div>
+    </Panel>
+  );
+}
+
 function ReviewsView({
   shoutOuts,
   displayName,
@@ -1061,18 +1098,20 @@ function ReviewsView({
 
 type NetworkTab = "Crew" | "Subs" | "Reviews" | "Clients";
 
-export function NetworkHub({ view, jobs, talent, communityPosts, shoutOuts, displayName, onOpenCrew, onOpenShopTalk, onOpenReviews, onAddShoutOut }: NetworkHubProps) {
-  const activeCrew = talent.slice(0, 3);
+export function NetworkHub({
+  view,
+  communityPosts,
+  shoutOuts,
+  displayName,
+  profileFocus = null,
+  onClearProfileFocus = () => undefined,
+  onOpenCrew,
+  onOpenShopTalk,
+  onOpenReviews,
+  onAddShoutOut,
+}: NetworkHubProps) {
   const questionPosts = communityPosts.filter((post) => post.flair === "Question" || post.status !== "Open").slice(0, 4);
   const highlightedShoutOuts = shoutOuts.slice(0, 4);
-  const openJobs = jobs.filter((job) => job.status === "Open").length;
-
-  // Read local crew for accurate stat tiles
-  const [localCrewAll] = useState<CrewMember[]>(loadCrew);
-  const localCrewCount = localCrewAll.filter((m) => m.type === "crew").length;
-  const localSubCount = localCrewAll.filter((m) => m.type === "sub").length;
-  const crewMemberCount = localCrewCount + activeCrew.length;
-
   // Internal tab state — derive initial tab from the incoming view prop
   const [activeTab, setActiveTab] = useState<NetworkTab>(() =>
     view === "Reviews" ? "Reviews" : "Crew"
@@ -1099,20 +1138,12 @@ export function NetworkHub({ view, jobs, talent, communityPosts, shoutOuts, disp
     </div>
   );
 
+  const pageHeader = <PageHeader className="v2-network-header" title="Crew" />;
+
   if (activeTab === "Clients") {
     return (
       <section className="v2-network-page" aria-label="Clients">
-        <PageHeader
-          className="v2-network-header"
-          title="Network"
-          description="Crew, reviews, and your client book."
-          actions={
-            <div className="v2-network-header-metrics">
-              <MetricTile icon={<Users size={18} />} value={crewMemberCount} label="crew members" />
-              <MetricTile icon={<ThumbsUp size={18} />} value={shoutOuts.length} label="shout-outs" />
-            </div>
-          }
-        />
+        {pageHeader}
         {tabBar}
         <ClientBookView />
       </section>
@@ -1122,17 +1153,7 @@ export function NetworkHub({ view, jobs, talent, communityPosts, shoutOuts, disp
   if (activeTab === "Reviews") {
     return (
       <section className="v2-network-page" aria-label="Reviews">
-        <PageHeader
-          className="v2-network-header"
-          title="Network"
-          description="Crew, reviews, and your client book."
-          actions={
-            <div className="v2-network-header-metrics">
-              <MetricTile icon={<Star size={18} />} value={shoutOuts.filter((s) => s.to === displayName).length} label="received" />
-              <MetricTile icon={<ThumbsUp size={18} />} value={shoutOuts.filter((s) => s.from === displayName).length} label="given" />
-            </div>
-          }
-        />
+        {pageHeader}
         {tabBar}
         <ReviewsView
           shoutOuts={shoutOuts}
@@ -1147,17 +1168,7 @@ export function NetworkHub({ view, jobs, talent, communityPosts, shoutOuts, disp
   if (activeTab === "Subs") {
     return (
       <section className="v2-network-page" aria-label="Subs">
-        <PageHeader
-          className="v2-network-header"
-          title="Network"
-          description="Crew, reviews, and your client book."
-          actions={
-            <div className="v2-network-header-metrics">
-              <MetricTile icon={<Users size={18} />} value={localSubCount} label="subs" />
-              <MetricTile icon={<Briefcase size={18} />} value={openJobs} label="open jobs" />
-            </div>
-          }
-        />
+        {pageHeader}
         {tabBar}
         <CrewManager crewType="sub" />
       </section>
@@ -1167,19 +1178,9 @@ export function NetworkHub({ view, jobs, talent, communityPosts, shoutOuts, disp
   // Crew tab
   return (
     <section className="v2-network-page" aria-label="Crew">
-      <PageHeader
-        className="v2-network-header"
-        title="Network"
-        description="Crew, reviews, and your client book."
-        actions={
-        <div className="v2-network-header-metrics">
-          <MetricTile icon={<Users size={18} />} value={crewMemberCount} label="crew members" />
-          <MetricTile icon={<Briefcase size={18} />} value={openJobs} label="open jobs" />
-          <MetricTile icon={<ThumbsUp size={18} />} value={shoutOuts.length} label="shout-outs" />
-        </div>
-        }
-      />
+      {pageHeader}
       {tabBar}
+      {profileFocus ? <ProfileSearchSpotlight profile={profileFocus} onDismiss={onClearProfileFocus} /> : null}
 
       {/* Local Crew Manager */}
       <CrewManager crewType="crew" />

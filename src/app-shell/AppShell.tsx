@@ -11,21 +11,11 @@ import {
   Wrench,
   X,
 } from "lucide-react";
-import type { AppShellProps, PrimaryDestination, SearchTarget } from "./types";
+import type { AppShellProps, PrimaryDestination, ProfileSearchResult, SearchTarget } from "./types";
 import { Avatar } from "../components/ui";
 import { apiPath } from "../lib/api";
 import "./tokens.css";
 import "./app-shell.css";
-
-interface ProfileSearchResult {
-  accountId: string;
-  displayName: string;
-  headline: string;
-  locationText: string;
-  primaryRole: "contractor" | "tradesperson";
-  availabilityStatus: "available" | "limited" | "unavailable";
-  trades: Array<{ code: string; name: string; primary: boolean }>;
-}
 
 const primaryNavigation: Array<{
   destination: PrimaryDestination;
@@ -55,6 +45,7 @@ export function AppShell({
   onOpenNotifications,
   onOpenActiveJob,
   onSearch,
+  onOpenProfileResult,
 }: AppShellProps) {
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchValue, setSearchValue] = useState("");
@@ -126,8 +117,12 @@ export function AppShell({
     setSearchOpen(false);
   }
 
-  function openProfileResult() {
-    onNavigate("crew");
+  function openProfileResult(person: ProfileSearchResult) {
+    if (onOpenProfileResult) {
+      onOpenProfileResult(person);
+    } else {
+      onNavigate("crew");
+    }
     setSearchOpen(false);
   }
 
@@ -276,7 +271,7 @@ export function AppShell({
                       <div className="v2-search-result-state is-error">{peopleError}</div>
                     ) : peopleResults.length ? (
                       peopleResults.map((person) => (
-                        <button key={person.accountId} type="button" className="v2-search-person-result" onClick={openProfileResult}>
+                        <button key={person.accountId} type="button" className="v2-search-person-result" onClick={() => openProfileResult(person)}>
                           <Avatar name={person.displayName} size="sm" className="v2-avatar" />
                           <span>
                             <strong>{person.displayName}</strong>

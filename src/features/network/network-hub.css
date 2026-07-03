@@ -900,6 +900,107 @@
   border-bottom-color: var(--v2-accent);
 }
 
+.v2-network-spotlight {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 14px 0 18px;
+  border-color: color-mix(in srgb, var(--v2-accent) 46%, var(--v2-border));
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--v2-accent-soft) 58%, transparent), transparent 62%),
+    var(--v2-surface-raised);
+}
+
+.v2-network-spotlight-main {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 14px;
+}
+
+.v2-network-spotlight-main > div {
+  min-width: 0;
+}
+
+.v2-network-spotlight-main span {
+  display: block;
+  color: var(--v2-accent);
+  font-size: 12px;
+  font-weight: var(--v2-weight-bold);
+  text-transform: uppercase;
+}
+
+.v2-network-spotlight-main h2 {
+  margin: 2px 0 4px;
+  color: var(--v2-text);
+  font-size: 22px;
+  line-height: 1.05;
+}
+
+.v2-network-spotlight-main p,
+.v2-network-spotlight-main small {
+  display: block;
+  margin: 0;
+  color: var(--v2-text-muted);
+}
+
+.v2-network-spotlight-main p {
+  color: var(--v2-text);
+  font-weight: var(--v2-weight-semibold);
+}
+
+.v2-network-spotlight-actions {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 10px;
+}
+
+.v2-network-spotlight-actions > span {
+  border-radius: 999px;
+  background: var(--v2-success-soft);
+  color: var(--v2-success);
+  padding: 7px 10px;
+  font-size: 12px;
+  font-weight: var(--v2-weight-bold);
+}
+
+.v2-network-spotlight-actions button {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--v2-border);
+  border-radius: var(--v2-radius-md);
+  background: var(--v2-surface);
+  color: var(--v2-text-muted);
+  font: inherit;
+  font-weight: var(--v2-weight-semibold);
+  cursor: pointer;
+}
+
+.v2-network-spotlight-actions button:hover {
+  color: var(--v2-text);
+  border-color: var(--v2-accent);
+}
+
+@media (max-width: 640px) {
+  .v2-network-spotlight,
+  .v2-network-spotlight-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .v2-network-spotlight-actions {
+    gap: 8px;
+  }
+
+  .v2-network-spotlight-actions button {
+    justify-content: center;
+  }
+}
+
 /* ── Client Book ─────────────────────────────────────────────────────────── */
 
 .v2-client-book {

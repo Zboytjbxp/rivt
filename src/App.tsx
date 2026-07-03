@@ -4,7 +4,6 @@ import {
   Suspense,
   useCallback,
   useEffect,
-  useMemo,
   useRef,
   useState } from "react";
 import { OfflineBanner } from "./components/OfflineBanner";
@@ -12,10 +11,11 @@ import { LocalSetupPrompt } from "./components/LocalSetupPrompt";
 import { ReportViewer } from "./features/report/ReportViewer";
 import "./components/OfflineBanner.css";
 import "./components/LocalSetupPrompt.css";
-import { talent, tradeOptions } from "./data";
+import { tradeOptions } from "./data";
 import { brandConfig } from "./brandConfig";
 import type { ApplicationRecord, Job, JobId, Role, Trade } from "./types";
 import { AppShell } from "./app-shell/AppShell";
+import type { ProfileSearchResult } from "./app-shell/types";
 import { AccountPanel, ActivityPanel, ActivityToast } from "./app-shell/AppPanels";
 import type {
   AccountProfile,
@@ -284,6 +284,7 @@ function App() {
   const [pilotInviteRequired, setPilotInviteRequired] = useState(false);
   const [authNotice, setAuthNotice] = useState<string | null>(null);
   const [query, setQuery] = useState("");
+  const [profileSearchFocus, setProfileSearchFocus] = useState<ProfileSearchResult | null>(null);
   const [shopTalkGlobalQuery, setShopTalkGlobalQuery] = useState("");
   const [shopTalkPostId, setShopTalkPostId] = useState<string | null>(null);
   const [shopTalkCompose, setShopTalkCompose] = useState(false);
@@ -754,12 +755,6 @@ function App() {
   )).length;
 
   const filteredJobs = jobs;
-
-  const matchingTalent = useMemo(() => {
-    return talent
-      .filter((person) => person.trade === selectedJob.trade)
-      .sort((a, b) => b.match - a.match);
-  }, [selectedJob.trade]);
 
   async function handleAuthSubmit(form: { email: string; password: string; displayName?: string; role?: Role; inviteCode?: string }) {
     setAuthError(null);
@@ -1255,8 +1250,8 @@ function App() {
     );
     const postOnboardingView = ({
       home: "Home",
-      work: "Marketplace",
-      crew: "My Crew",
+      work: "Work",
+      crew: "Crew",
       "shop-talk": "Shop Talk",
       tools: "Tools",
       profile: "Settings",
@@ -1574,7 +1569,7 @@ function App() {
           setActivityOpen(true);
           void handleMarkNotificationsRead();
         }}
-        onOpenActiveJob={() => handleNavigate("Marketplace")}
+        onOpenActiveJob={() => handleNavigate("Work")}
         onSearch={(nextQuery, target = "work") => {
           if (target === "shop-talk") {
             setShopTalkGlobalQuery(nextQuery);
@@ -1587,11 +1582,15 @@ function App() {
             return;
           }
           setQuery(nextQuery);
-          handleNavigate("Marketplace");
+          handleNavigate("Work");
+        }}
+        onOpenProfileResult={(profileResult) => {
+          setProfileSearchFocus(profileResult);
+          handleNavigate("Crew");
         }}
       >
 
-        {["Home", "Marketplace", "My Crew", "Shop Talk", "Reviews", "Messages", "Tools", "Records", "Trust & Legal", "Safety & Training", "Feedback", "Settings", "Admin"].includes(activeView) ? null : (
+        {["Home", "Work", "Crew", "Shop Talk", "Reviews", "Messages", "Tools", "Records", "Trust & Legal", "Safety & Training", "Feedback", "Settings", "Admin"].includes(activeView) ? null : (
           <header className="page-heading" aria-label={`${page.title} heading`}>
             <div>
               <h1>{page.title}</h1>
@@ -1624,7 +1623,7 @@ function App() {
             onOpenProfile={() => handleNavigate("Settings")}
             onOpenTool={handleOpenTool}
           />
-        ) : activeView === "Marketplace" ? (
+        ) : activeView === "Work" ? (
           <WorkWorkspace
             role={role}
             jobs={filteredJobs}
@@ -1680,15 +1679,15 @@ function App() {
             onNewPost={handleNewShopTalkPost}
             onCommunityCreated={handleCommunityCreated}
           />
-        ) : ["My Crew", "Reviews"].includes(activeView) ? (
+        ) : ["Crew", "Reviews"].includes(activeView) ? (
           <NetworkHub
-            view={activeView as "My Crew" | "Reviews"}
-            jobs={jobs}
-            talent={matchingTalent}
+            view={activeView as "Crew" | "Reviews"}
             communityPosts={communityPosts}
             shoutOuts={shoutOuts}
             displayName={accountProfile.displayName}
-            onOpenCrew={() => handleNavigate("My Crew")}
+            profileFocus={profileSearchFocus}
+            onClearProfileFocus={() => setProfileSearchFocus(null)}
+            onOpenCrew={() => handleNavigate("Crew")}
             onOpenShopTalk={() => handleNavigate("Shop Talk")}
             onOpenReviews={() => handleNavigate("Reviews")}
             onAddShoutOut={handleAddShoutOut}
@@ -1771,7 +1770,7 @@ function App() {
           />
         ) : (
           <LegacyBridge
-            view={activeView as "My Jobs" | "Applications" | "Invites" | "My Crew" | "Messages" | "Trust & Legal" | "Records" | "Safety & Training" | "Reviews" | "Feedback" | "Settings" | "Admin" | "Marketplace" | "Home" | "Shop Talk" | "Tools"}
+            view={activeView as "My Jobs" | "Applications" | "Invites" | "Crew" | "Messages" | "Trust & Legal" | "Records" | "Safety & Training" | "Reviews" | "Feedback" | "Settings" | "Admin" | "Work" | "Home" | "Shop Talk" | "Tools"}
             onNavigate={(view) => handleNavigate(view)}
             onOpenAccount={() => handleNavigate("Settings")}
           />

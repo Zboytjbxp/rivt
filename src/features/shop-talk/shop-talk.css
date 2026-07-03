@@ -2075,14 +2075,14 @@
 }
 
 /* Shop Talk mobile-first community redesign */
-.trade-talk-layout {
+.shop-talk-community-layout {
   --trade-orange: var(--v2-accent);
   --trade-ink: var(--v2-text);
   --trade-paper: var(--v2-surface);
   --trade-page: var(--v2-bg);
 }
 
-.trade-talk-layout .shop-talk-sidebar {
+.shop-talk-community-layout .shop-talk-sidebar {
   position: relative;
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -2091,91 +2091,27 @@
   background: var(--trade-page);
 }
 
-.trade-talk-layout .shop-talk-detail {
+.shop-talk-community-layout .shop-talk-detail {
   border: 0;
   background: var(--trade-paper);
 }
 
-.trade-talk-layout .shop-talk-tabs {
+.shop-talk-community-layout .shop-talk-tabs {
   border: 0;
   border-radius: 999px;
   background: var(--v2-surface-muted);
 }
 
-.trade-talk-layout .shop-talk-tabs button {
+.shop-talk-community-layout .shop-talk-tabs button {
   min-height: 42px;
   border-radius: 999px;
   font-weight: var(--v2-weight-bold);
 }
 
-.trade-talk-layout .shop-talk-tabs button.active {
+.shop-talk-community-layout .shop-talk-tabs button.active {
   background: var(--trade-paper);
   color: var(--trade-ink);
   box-shadow: 0 10px 26px rgba(13, 17, 20, 0.08);
-}
-
-.trade-talk-home-actions {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-}
-
-.trade-talk-action-card {
-  display: inline-flex;
-  min-width: 0;
-  min-height: 58px;
-  align-items: center;
-  justify-content: center;
-  gap: 9px;
-  padding: 0 12px;
-  border: 1px solid var(--v2-border);
-  border-radius: 16px;
-  background: var(--trade-paper);
-  color: var(--trade-ink);
-  font-size: 15px;
-  font-weight: var(--v2-weight-display);
-  line-height: 1;
-  box-shadow: 0 10px 22px rgba(11, 11, 11, 0.045);
-}
-
-.trade-talk-action-card.is-ask {
-  color: var(--trade-orange);
-}
-
-.trade-talk-action-card.is-crew {
-  color: var(--v2-teal-text);
-}
-
-.trade-talk-prompt-strip {
-  display: flex;
-  gap: 8px;
-  overflow-x: auto;
-  padding: 2px 2px 10px;
-  scroll-padding-inline: 2px;
-  scroll-snap-type: x proximity;
-  scrollbar-width: none;
-  -webkit-mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 34px), transparent 100%);
-  mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 34px), transparent 100%);
-}
-
-.trade-talk-prompt-strip::-webkit-scrollbar {
-  display: none;
-}
-
-.trade-talk-prompt-strip button {
-  flex: 0 0 min(72vw, 274px);
-  min-height: 54px;
-  padding: 10px 13px;
-  border: 0;
-  border-radius: 18px;
-  background: var(--trade-paper);
-  color: var(--trade-ink);
-  font-size: 13px;
-  font-weight: var(--v2-weight-bold);
-  line-height: 1.2;
-  text-align: left;
-  scroll-snap-align: start;
-  box-shadow: 0 10px 24px rgba(13, 17, 20, 0.075);
 }
 
 .trade-community-discovery {
@@ -2256,28 +2192,28 @@
   font-variant-numeric: tabular-nums;
 }
 
-.trade-talk-layout .shop-talk-reputation-path {
+.shop-talk-community-layout .shop-talk-reputation-path {
   display: none;
 }
 
-.trade-talk-layout .shop-talk-fieldbar {
+.shop-talk-community-layout .shop-talk-fieldbar {
   border: 0;
   border-radius: 0;
   background: transparent;
   box-shadow: none;
 }
 
-.trade-talk-layout .shop-talk-search {
+.shop-talk-community-layout .shop-talk-search {
   border: 1.5px solid var(--v2-border);
   border-radius: 999px;
 }
 
-.trade-talk-layout .shop-post-list {
+.shop-talk-community-layout .shop-post-list {
   gap: 9px;
   grid-template-columns: minmax(0, 1fr);
 }
 
-.trade-talk-layout .shop-post-card {
+.shop-talk-community-layout .shop-post-card {
   position: relative;
   display: grid;
   gap: 10px;
@@ -2288,12 +2224,12 @@
   box-shadow: none;
 }
 
-.trade-talk-layout .shop-post-card.selected {
+.shop-talk-community-layout .shop-post-card.selected {
   border-color: color-mix(in srgb, var(--trade-orange) 34%, var(--v2-surface-muted));
   box-shadow: inset 3px 0 0 var(--trade-orange);
 }
 
-.trade-talk-layout .shop-post-card-clickable {
+.shop-talk-community-layout .shop-post-card-clickable {
   display: grid;
   gap: 8px;
   width: 100%;
@@ -2304,14 +2240,14 @@
   text-align: left;
 }
 
-.trade-talk-layout .shop-post-card-clickable > strong {
+.shop-talk-community-layout .shop-post-card-clickable > strong {
   color: var(--trade-ink);
   font-size: 18px;
   line-height: 1.18;
   letter-spacing: -0.012em;
 }
 
-.trade-talk-layout .shop-post-card-body {
+.shop-talk-community-layout .shop-post-card-body {
   display: -webkit-box;
   overflow: hidden;
   margin: 0;
@@ -2322,7 +2258,7 @@
   -webkit-line-clamp: 3;
 }
 
-.trade-talk-layout .shop-post-card-meta {
+.shop-talk-community-layout .shop-post-card-meta {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -2332,22 +2268,22 @@
   mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 28px), transparent 100%);
 }
 
-.trade-talk-layout .shop-post-card-meta::-webkit-scrollbar {
+.shop-talk-community-layout .shop-post-card-meta::-webkit-scrollbar {
   display: none;
 }
 
-.trade-talk-layout .v2-st-type-badge {
+.shop-talk-community-layout .v2-st-type-badge {
   display: none;
 }
 
-.trade-talk-layout .shop-post-card-stats span {
+.shop-talk-community-layout .shop-post-card-stats span {
   background: transparent;
   color: var(--muted);
 }
 
-.trade-talk-layout .shop-post-bookmark,
-.trade-talk-layout .v2-st-reply-btn,
-.trade-talk-layout .v2-st-helpful-btn {
+.shop-talk-community-layout .shop-post-bookmark,
+.shop-talk-community-layout .v2-st-reply-btn,
+.shop-talk-community-layout .v2-st-helpful-btn {
   display: inline-flex;
   align-items: center;
   gap: 5px;
@@ -2362,18 +2298,18 @@
   font-weight: var(--v2-weight-bold);
 }
 
-.trade-talk-layout .shop-post-bookmark.active,
-.trade-talk-layout .v2-st-helpful-btn:hover,
-.trade-talk-layout .v2-st-reply-btn:hover {
+.shop-talk-community-layout .shop-post-bookmark.active,
+.shop-talk-community-layout .v2-st-helpful-btn:hover,
+.shop-talk-community-layout .v2-st-reply-btn:hover {
   border-color: color-mix(in srgb, var(--trade-orange) 42%, #e2e6e5);
   color: var(--trade-orange);
 }
 
-.trade-talk-layout .v2-st-replies {
+.shop-talk-community-layout .v2-st-replies {
   border-top-color: var(--v2-surface-muted);
 }
 
-.trade-talk-fab {
+.shop-talk-fab {
   position: sticky;
   z-index: 2;
   bottom: calc(78px + env(safe-area-inset-bottom));
@@ -2394,7 +2330,7 @@
 }
 
 @media (max-width: 640px) {
-  .trade-talk-layout .shop-talk-sidebar {
+  .shop-talk-community-layout .shop-talk-sidebar {
     margin: -6px -4px 0;
     padding: 8px 8px 0;
   }
@@ -2419,40 +2355,40 @@
     scroll-snap-align: start;
   }
 
-  .trade-talk-layout .v2-st-filter-row {
+  .shop-talk-community-layout .v2-st-filter-row {
     scroll-padding-inline: 16px;
     scroll-snap-type: x proximity;
     -webkit-mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 26px), transparent 100%);
     mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 26px), transparent 100%);
   }
 
-  .trade-talk-layout .v2-st-filter-pill {
+  .shop-talk-community-layout .v2-st-filter-pill {
     scroll-snap-align: start;
   }
 
-  .trade-talk-layout .shop-talk-answer-queue,
-  .trade-talk-layout .shop-talk-rules,
-  .trade-talk-layout .shop-talk-pulse {
+  .shop-talk-community-layout .shop-talk-answer-queue,
+  .shop-talk-community-layout .shop-talk-rules,
+  .shop-talk-community-layout .shop-talk-pulse {
     display: none;
   }
 
-  .trade-talk-layout .shop-talk-fieldbar {
+  .shop-talk-community-layout .shop-talk-fieldbar {
     display: grid;
     gap: 8px;
     padding: 0 0 2px;
   }
 
-  .trade-talk-layout .shop-talk-fieldbar .input-control,
-  .trade-talk-layout .shop-talk-fieldbar .shop-sort-tabs {
+  .shop-talk-community-layout .shop-talk-fieldbar .input-control,
+  .shop-talk-community-layout .shop-talk-fieldbar .shop-sort-tabs {
     display: none;
   }
 
-  .trade-talk-layout .shop-talk-search {
+  .shop-talk-community-layout .shop-talk-search {
     min-height: 42px;
     padding: 0 10px;
   }
 
-  .trade-talk-layout .shop-talk-search input {
+  .shop-talk-community-layout .shop-talk-search input {
     min-height: 42px;
     font-size: 14px;
   }
@@ -2807,14 +2743,14 @@
 }
 
 /* Community pages should behave like destinations: header, controls, feed. */
-.trade-talk-layout.community-open .shop-talk-answer-queue,
-.trade-talk-layout.community-open .shop-talk-reputation-path,
-.trade-talk-layout.community-open .shop-talk-rules,
-.trade-talk-layout.community-open .shop-talk-pulse {
+.shop-talk-community-layout.community-open .shop-talk-answer-queue,
+.shop-talk-community-layout.community-open .shop-talk-reputation-path,
+.shop-talk-community-layout.community-open .shop-talk-rules,
+.shop-talk-community-layout.community-open .shop-talk-pulse {
   display: none;
 }
 
-.trade-talk-layout.community-open .community-page-card {
+.shop-talk-community-layout.community-open .community-page-card {
   border: 0;
   background:
     linear-gradient(135deg, color-mix(in srgb, var(--trade-orange, #ff4b00) 20%, transparent), transparent 62%),
@@ -2822,13 +2758,13 @@
   box-shadow: 0 10px 28px rgba(13, 17, 20, 0.06);
 }
 
-.trade-talk-layout.community-open .shop-talk-fieldbar {
+.shop-talk-community-layout.community-open .shop-talk-fieldbar {
   padding-top: 0;
 }
 
 @media (max-width: 640px) {
-  .trade-talk-layout.community-open .v2-st-filter-row,
-  .trade-talk-layout.community-open .v2-st-trending-row {
+  .shop-talk-community-layout.community-open .v2-st-filter-row,
+  .shop-talk-community-layout.community-open .v2-st-trending-row {
     display: none;
   }
 }

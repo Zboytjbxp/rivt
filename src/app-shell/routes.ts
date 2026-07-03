@@ -2,13 +2,13 @@ import type { PrimaryDestination } from "./types";
 
 export type NavLabel =
   | "Home"
-  | "Marketplace"
+  | "Work"
   | "Shop Talk"
   | "Tools"
   | "My Jobs"
   | "Applications"
   | "Invites"
-  | "My Crew"
+  | "Crew"
   | "Messages"
   | "Trust & Legal"
   | "Records"
@@ -20,8 +20,8 @@ export type NavLabel =
 
 export function primaryDestinationForView(view: NavLabel): PrimaryDestination | null {
   if (view === "Home") return "home";
-  if (["Marketplace", "My Jobs", "Applications", "Invites"].includes(view)) return "work";
-  if (["My Crew", "Reviews"].includes(view)) return "crew";
+  if (["Work", "My Jobs", "Applications", "Invites"].includes(view)) return "work";
+  if (["Crew", "Reviews"].includes(view)) return "crew";
   if (view === "Shop Talk") return "shop-talk";
   if (["Tools", "Records"].includes(view)) return "tools";
   return null;
@@ -29,8 +29,8 @@ export function primaryDestinationForView(view: NavLabel): PrimaryDestination | 
 
 export function defaultViewForDestination(destination: PrimaryDestination): NavLabel {
   if (destination === "home") return "Home";
-  if (destination === "work") return "Marketplace";
-  if (destination === "crew") return "My Crew";
+  if (destination === "work") return "Work";
+  if (destination === "crew") return "Crew";
   if (destination === "shop-talk") return "Shop Talk";
   if (destination === "messages") return "Messages";
   return "Tools";
@@ -38,13 +38,13 @@ export function defaultViewForDestination(destination: PrimaryDestination): NavL
 
 export const viewRoutes: Record<NavLabel, string> = {
   Home: "/app",
-  Marketplace: "/app/work",
+  Work: "/app/work",
   "Shop Talk": "/app/network/talk",
   Tools: "/app/tools",
   "My Jobs": "/app/work",
   Applications: "/app/work",
   Invites: "/app/work",
-  "My Crew": "/app/network",
+  Crew: "/app/network",
   Messages: "/app/inbox",
   "Trust & Legal": "/app/profile/trust",
   Records: "/app/tools/records",
@@ -58,9 +58,9 @@ export const viewRoutes: Record<NavLabel, string> = {
 export function viewFromPath(pathname: string): NavLabel {
   const normalized = pathname.replace(/\/$/, "") || "/";
   const aliases: Record<string, NavLabel> = {
-    "/app/work/jobs": "Marketplace",
-    "/app/work/applications": "Marketplace",
-    "/app/work/invites": "Marketplace",
+    "/app/work/jobs": "Work",
+    "/app/work/applications": "Work",
+    "/app/work/invites": "Work",
     "/app/network/talk": "Shop Talk",
     "/app/network/reviews": "Reviews",
     "/app/profile/trust": "Trust & Legal",
@@ -81,8 +81,8 @@ export const pageCopy: Record<NavLabel, { title: string; description: string }> 
     title: "Home",
     description: "Your daily trade feed: news, Shop Talk, shout-outs, tools, and work signal.",
   },
-  Marketplace: {
-    title: "Work Feed",
+  Work: {
+    title: "Work",
     description: "Post paid side work, find openings, and keep each work order record clean.",
   },
   "Shop Talk": {
@@ -105,8 +105,8 @@ export const pageCopy: Record<NavLabel, { title: string; description: string }> 
     title: "Invites",
     description: "Invite nearby tradespeople who fit the job.",
   },
-  "My Crew": {
-    title: "My Crew",
+  Crew: {
+    title: "Crew",
     description: "Compare specialties, tools, self-reported insurance, and availability.",
   },
   Messages: {

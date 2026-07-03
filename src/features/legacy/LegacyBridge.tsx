@@ -5,7 +5,7 @@ type BridgeView =
   | "Applications"
   | "Invites"
   | "My Jobs"
-  | "My Crew"
+  | "Crew"
   | "Messages"
   | "Trust & Legal"
   | "Safety & Training"
@@ -14,7 +14,7 @@ type BridgeView =
   | "Settings"
   | "Admin"
   | "Records"
-  | "Marketplace"
+  | "Work"
   | "Home"
   | "Shop Talk"
   | "Tools";
@@ -32,8 +32,8 @@ const destinations: Array<{
   view: BridgeView;
 }> = [
   { label: "Home", hint: "Dashboard, updates, and shortcuts", icon: Home, view: "Home" },
-  { label: "Work", hint: "Jobs, applications, invites, and job detail", icon: BriefcaseBusiness, view: "Marketplace" },
-  { label: "Network", hint: "Crew, Shop Talk, and reviews", icon: Users, view: "My Crew" },
+  { label: "Work", hint: "Jobs, applications, invites, and job detail", icon: BriefcaseBusiness, view: "Work" },
+  { label: "Crew", hint: "Subs, clients, reviews, and reputation", icon: Users, view: "Crew" },
   { label: "Inbox", hint: "Messages and active coordination", icon: Inbox, view: "Messages" },
   { label: "Tools", hint: "Calculator, invoice, and records", icon: Wrench, view: "Tools" },
   { label: "Profile", hint: "Settings, trust, safety, and sign out", icon: Settings, view: "Settings" },
@@ -68,7 +68,7 @@ export function LegacyBridge({ view, onNavigate, onOpenAccount }: LegacyBridgePr
 
       <div className="v2-legacy-note">
         <p>
-          If you were looking for a specific old panel, the core workflow is still available through Home, Work, Network, Tools, and the profile menu.
+          If you were looking for a specific old panel, the core workflow is still available through Home, Work, Crew, Tools, and the profile menu.
         </p>
       </div>
     </section>

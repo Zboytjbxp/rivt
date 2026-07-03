@@ -396,6 +396,14 @@ async function assertTopBarActions(page) {
   await page.getByRole("button", { name: /Search work/i }).click();
   await page.getByPlaceholder("Search work").waitFor();
 
+  await page.keyboard.press("Control+K");
+  await page.getByRole("dialog", { name: "Search RIVT" }).waitFor();
+  await page.getByPlaceholder("Search jobs, questions, trades, or tools").fill("riley");
+  await page.getByRole("button", { name: /Riley Harper/i }).click();
+  await page.getByRole("heading", { name: "Crew", exact: true }).waitFor();
+  await page.getByText("Search result", { exact: true }).waitFor();
+  await page.getByRole("heading", { name: "Riley Harper", exact: true }).waitFor();
+
   await page.getByRole("button", { name: "Notifications" }).click();
   await page.getByRole("dialog", { name: "Notifications" }).waitFor();
   await page.getByRole("button", { name: /Mark read/i }).waitFor();

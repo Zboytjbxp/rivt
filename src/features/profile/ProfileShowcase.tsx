@@ -205,12 +205,12 @@ export function ProfileShowcase({
       <section className="ps-section">
         <div className="ps-section-head">
           <h3>Your jobs</h3>
-          <button type="button" className="ps-seeall" onClick={() => onNavigate("Marketplace")}>See all</button>
+          <button type="button" className="ps-seeall" onClick={() => onNavigate("Work")}>See all</button>
         </div>
         {jobs.length > 0 ? (
           <div className="ps-jobs">
             {jobs.slice(0, 2).map((job, i) => (
-              <button key={job.id ?? i} type="button" className="ps-job-card" onClick={() => onNavigate("Marketplace")}>
+              <button key={job.id ?? i} type="button" className="ps-job-card" onClick={() => onNavigate("Work")}>
                 <div className="ps-job-top">
                   <div className="ps-job-headings">
                     <strong>{job.title || "Untitled job"}</strong>
@@ -222,7 +222,7 @@ export function ProfileShowcase({
             ))}
           </div>
         ) : (
-          <button type="button" className="ps-empty" onClick={() => onNavigate("Marketplace")}>
+          <button type="button" className="ps-empty" onClick={() => onNavigate("Work")}>
             <Plus size={20} />
             <b>No jobs yet</b>
             <span>Post work to start building your track record.</span>

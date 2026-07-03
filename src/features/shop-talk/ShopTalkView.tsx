@@ -982,7 +982,7 @@ export function ShopTalkView({
         />
       )}
       <section
-        className={`${mobileDetail ? "shop-talk-layout trade-talk-layout mobile-detail-open" : "shop-talk-layout trade-talk-layout"}${selectedCommunity ? " community-open" : ""}`}
+        className={`${mobileDetail ? "shop-talk-layout shop-talk-community-layout mobile-detail-open" : "shop-talk-layout shop-talk-community-layout"}${selectedCommunity ? " community-open" : ""}`}
         aria-label="Shop Talk community"
       >
         <aside className="shop-talk-sidebar">
@@ -1380,7 +1380,7 @@ export function ShopTalkView({
                   />
                 ))}
               </div>
-              <button type="button" className="trade-talk-fab" onClick={() => setNewPostOpen(true)}>
+              <button type="button" className="shop-talk-fab" onClick={() => setNewPostOpen(true)}>
                 <Plus size={18} />
                 Ask
               </button>
