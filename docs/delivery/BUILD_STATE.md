@@ -4,7 +4,7 @@ Last updated: 2026-07-03 America/New_York
 Current gate: Gate A launch hardening
 Current phase: Packet 08 Gate A launch hardening plus Gate B behind-flag backbone work: machine gates and live workflow smokes are mostly green; the Shop Talk Reddit-model backbone, moderation/reporting backend, human-facing moderation console/report UX, reachability/naming cleanup, Tools hub consolidation, Payment Tracker server records, money-tools sync, and the remaining accepted tool-records sync slice are implemented while still respecting launch-readiness boundaries before broad exposure.
 Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
-Repository branch: `codex/all-tools-records-sync`
+Repository branch: `master`
 Production release commit: verify with live `/api/health`; latest runtime feature evidence is recorded below and docs-only evidence commits may supersede the served build SHA.
 
 ## Latest Packet 08 Pass - Remaining Tool Records Sync Slice
@@ -37,8 +37,9 @@ Production release commit: verify with live `/api/health`; latest runtime featur
   - `npm audit --omit=dev` (pass; 0 vulnerabilities)
   - `git diff --check` (pass; line-ending warnings only)
 - Production deployment status:
-  - not deployed from this branch yet
-  - after merge, verify live `/api/health` reports the merged source SHA and migration `0019_tool_records`, then run `EXPECTED_SOURCE_COMMIT=<merged-sha> npm run monitor:production`
+  - release commit `31ff8050b4b3b1db01d46983bc583e203d16fdc3` was pushed to GitHub and picked up by Railway production service `RIVT`
+  - live `https://rivt.pro/api/health` returned `ok: true`, build commit `31ff8050b4b3b1db01d46983bc583e203d16fdc3`, migration `0019_tool_records`, PostgreSQL, S3-compatible object storage, and configured Sentry
+  - `EXPECTED_SOURCE_COMMIT=31ff8050b4b3b1db01d46983bc583e203d16fdc3 npm run monitor:production` passed with operational controls off, seven anonymous private-route checks, and 607 ms duration
 
 ## Latest Packet 08 Pass - Money Tools Sync Slice
 
