@@ -29,6 +29,9 @@ Production release commit: verify with live `/api/health`; latest runtime featur
 - Rendered QA:
   - built-client Vite preview at 390x844 verified the auth preview no longer renders `128 votes`, `96 votes`, `71 votes`, `67 replies`, `54 replies`, `38 replies`, `42 votes`, or `31 votes`
   - the same smoke verified replacement copy renders and saved screenshot evidence outside the repo at `C:\Users\zboyt\AppData\Local\Temp\rivt-auth-preview-honesty.png`
+- Production deployment status:
+  - runtime release commit `7bab3358e28b5d994ccba02ecb5b832bfd239cfb` was pushed to GitHub and picked up by Railway production service `RIVT`
+  - `EXPECTED_SOURCE_COMMIT=7bab3358e28b5d994ccba02ecb5b832bfd239cfb npm run monitor:production` passed with PostgreSQL, S3-compatible object storage, configured Sentry, controls off, seven anonymous private-route checks, and 562 ms duration
 - Remaining boundary:
   - this is not a broad UI redesign pass; remaining Claude-audit themes still include physical-device onboarding walkthrough, typography/token/breakpoint consolidation, and continued mobile layout sweeps as product surfaces change
 
