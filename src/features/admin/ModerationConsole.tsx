@@ -240,6 +240,7 @@ export function ModerationConsole({
   return (
     <main className="moderation-console">
       <PageHeader
+        className="moderation-page-header"
         eyebrow="Admin"
         title="Shop Talk moderation"
         description="Review community, post, and answer reports with enough context to make a support decision quickly."
@@ -290,7 +291,11 @@ export function ModerationConsole({
         />
       ) : (
         <div className="moderation-layout">
-          <Panel title="Report queue" description="Newest reports appear first. Select one to review the captured context.">
+          <Panel
+            className="moderation-queue-panel"
+            title="Report queue"
+            description="Newest reports appear first. Select one to review the captured context."
+          >
             {loading ? (
               <div className="moderation-skeleton-list">
                 <SkeletonCard />
@@ -325,7 +330,11 @@ export function ModerationConsole({
             )}
           </Panel>
 
-          <Panel title="Review" description="Use the snapshot before applying a visible content action.">
+          <Panel
+            className="moderation-review-panel"
+            title="Review"
+            description="Use the snapshot before applying a visible content action."
+          >
             {selectedReport ? (
               <div className="moderation-review">
                 <div className="moderation-review-heading">

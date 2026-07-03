@@ -7,6 +7,10 @@
   padding: 4px 0 32px;
 }
 
+.moderation-page-header {
+  align-items: flex-start;
+}
+
 .moderation-role-strip {
   display: inline-flex;
   width: fit-content;
@@ -25,7 +29,13 @@
   display: flex;
   gap: 8px;
   overflow-x: auto;
-  padding-bottom: 2px;
+  margin-inline: -2px;
+  padding: 2px 2px 4px;
+  scrollbar-width: none;
+}
+
+.moderation-filter-row::-webkit-scrollbar {
+  display: none;
 }
 
 .moderation-filter-row button,
@@ -66,6 +76,11 @@
   align-items: start;
 }
 
+.moderation-queue-panel,
+.moderation-review-panel {
+  padding: 16px;
+}
+
 .moderation-skeleton-list,
 .moderation-report-list,
 .moderation-review {
@@ -77,10 +92,10 @@
 .moderation-report-row {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 7px;
   width: 100%;
-  min-height: 92px;
-  padding: 14px;
+  min-height: 84px;
+  padding: 13px;
   border: 1px solid var(--v2-border);
   border-radius: var(--v2-radius-lg);
   background: var(--v2-surface);
@@ -104,6 +119,7 @@
 .moderation-report-row strong {
   font-size: var(--v2-text-sm);
   line-height: 1.25;
+  text-wrap: pretty;
 }
 
 .moderation-report-row span:not(.rivt-status-pill),
@@ -287,17 +303,245 @@
 
 @media (max-width: 560px) {
   .moderation-console {
-    gap: 14px;
-    padding-bottom: 88px;
+    gap: 10px;
+    padding: 0 0 92px;
   }
 
-  .moderation-metrics,
-  .moderation-context-grid,
+  .moderation-page-header {
+    flex-direction: row;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+    padding-bottom: 2px;
+  }
+
+  .moderation-page-header .rivt-page-header-copy {
+    flex: 1 1 auto;
+    max-width: calc(100% - 56px);
+  }
+
+  .moderation-page-header .rivt-page-header-copy > span {
+    font-size: 0.66rem;
+    letter-spacing: 0.1em;
+  }
+
+  .moderation-page-header h1 {
+    max-width: 12ch;
+    font-size: clamp(1.4rem, 7.5vw, 1.7rem);
+    letter-spacing: -0.045em;
+    line-height: 0.96;
+  }
+
+  .moderation-page-header p {
+    display: none;
+  }
+
+  .moderation-page-header .rivt-page-header-actions {
+    width: auto;
+    flex: 0 0 auto;
+    margin-top: 4px;
+  }
+
+  .moderation-page-header .rivt-page-header-actions > .v2-secondary-button {
+    width: 42px;
+    min-width: 42px;
+    min-height: 38px;
+    padding-inline: 0;
+    gap: 0;
+    font-size: 0;
+  }
+
+  .moderation-role-strip {
+    width: 100%;
+    min-height: 32px;
+    justify-content: center;
+    padding-inline: 10px;
+  }
+
+  .moderation-filter-row {
+    position: sticky;
+    z-index: 3;
+    top: calc(var(--v2-topbar-height, 58px) + env(safe-area-inset-top));
+    margin-inline: -8px;
+    padding: 6px 8px 8px;
+    background:
+      linear-gradient(180deg, var(--v2-bg) 0%, color-mix(in srgb, var(--v2-bg) 88%, transparent) 100%);
+  }
+
+  .moderation-filter-row button {
+    min-height: 36px;
+    padding-inline: 13px;
+    font-size: 0.78rem;
+  }
+
+  .moderation-metrics {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    margin-inline: -8px;
+    padding-inline: 8px;
+    scrollbar-width: none;
+  }
+
+  .moderation-metrics::-webkit-scrollbar {
+    display: none;
+  }
+
+  .moderation-metrics .rivt-metric-tile {
+    flex: 0 0 136px;
+    gap: 8px;
+    min-height: 56px;
+    padding: 10px;
+    border-radius: var(--v2-radius-md);
+  }
+
+  .moderation-metrics .rivt-metric-icon {
+    width: 30px;
+    height: 30px;
+    border-radius: var(--v2-radius-sm);
+  }
+
+  .moderation-metrics .rivt-metric-tile strong {
+    font-size: 0.9rem;
+  }
+
+  .moderation-metrics .rivt-metric-tile span {
+    font-size: 0.66rem;
+    letter-spacing: 0.03em;
+  }
+
+  .moderation-metrics .rivt-metric-tile small {
+    display: none;
+  }
+
+  .moderation-layout {
+    gap: 10px;
+  }
+
+  .moderation-queue-panel,
+  .moderation-review-panel {
+    padding: 12px;
+    border-color: color-mix(in srgb, var(--v2-border) 58%, transparent);
+    box-shadow: none;
+  }
+
+  .moderation-queue-panel .rivt-panel-header,
+  .moderation-review-panel .rivt-panel-header {
+    padding-bottom: 10px;
+  }
+
+  .moderation-queue-panel .rivt-panel-header p,
+  .moderation-review-panel .rivt-panel-header p {
+    display: none;
+  }
+
+  .moderation-report-list,
+  .moderation-review {
+    gap: 9px;
+  }
+
+  .moderation-report-row {
+    min-height: 76px;
+    padding: 11px;
+    border-radius: var(--v2-radius-md);
+  }
+
+  .moderation-report-row-top {
+    align-items: center;
+  }
+
+  .moderation-report-row strong {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  .moderation-report-row .rivt-status-pill {
+    min-height: 21px;
+    padding: 3px 6px;
+    font-size: 0.62rem;
+  }
+
+  .moderation-review-heading {
+    gap: 10px;
+  }
+
+  .moderation-review-heading h2 {
+    font-size: 1.06rem;
+    line-height: 1.12;
+  }
+
+  .moderation-context-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .moderation-context-grid div {
+    padding: 9px;
+  }
+
+  .moderation-context-grid dt {
+    font-size: 0.66rem;
+  }
+
+  .moderation-context-grid dd {
+    font-size: 0.82rem;
+  }
+
+  .moderation-snapshot {
+    gap: 8px;
+    padding: 11px;
+    border-radius: var(--v2-radius-md);
+  }
+
+  .moderation-snapshot p,
+  .moderation-snapshot blockquote {
+    font-size: 0.82rem;
+    line-height: 1.42;
+  }
+
   .moderation-action-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .moderation-action-grid button {
+    min-height: 54px;
+    align-items: center;
+    padding: 9px;
+    border-radius: var(--v2-radius-md);
+  }
+
+  .moderation-action-grid span {
+    gap: 0;
+  }
+
+  .moderation-action-grid strong {
+    font-size: 0.78rem;
+    line-height: 1.15;
+  }
+
+  .moderation-action-grid small {
+    display: none;
+  }
+
+  .moderation-note-field {
+    gap: 6px;
+  }
+
+  .moderation-note-field textarea {
+    min-height: 84px;
+    padding: 10px;
+    font-size: 0.86rem;
+  }
+
+  .moderation-error {
+    font-size: 0.82rem;
   }
 
   .moderation-submit {
     width: 100%;
+    min-height: 46px;
   }
 }
