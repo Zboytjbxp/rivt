@@ -2,10 +2,49 @@
 
 Last updated: 2026-07-03 America/New_York
 Current gate: Gate A launch hardening
-Current phase: Packet 08 Gate A launch hardening plus Gate B behind-flag backbone work: machine gates and live workflow smokes are mostly green; the Shop Talk Reddit-model backbone, moderation/reporting backend, human-facing moderation console/report UX, reachability/naming cleanup, Tools hub consolidation, Payment Tracker server records, money-tools sync, the accepted tool-records sync slices, non-tool local-state boundary cleanup, and dedicated network-records sync for Crew/Invites/informal written shout-outs are implemented while still respecting launch-readiness boundaries before broad exposure.
+Current phase: Packet 08 Gate A launch hardening plus Gate B behind-flag backbone work: machine gates and live workflow smokes are mostly green; the Shop Talk Reddit-model backbone, moderation/reporting backend, human-facing moderation console/report UX, post photo media, reachability/naming cleanup, Tools hub consolidation, Payment Tracker server records, money-tools sync, the accepted tool-records sync slices, non-tool local-state boundary cleanup, and dedicated network-records sync for Crew/Invites/informal written shout-outs are implemented while still respecting launch-readiness boundaries before broad exposure.
 Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
 Production release commit: verify with live `/api/health`; latest runtime feature evidence is recorded below and docs-only evidence commits may supersede the served build SHA.
+
+## Latest Packet 08 Pass - Shop Talk Post Photos
+
+- Implemented server-owned Shop Talk photo posts on branch `codex/shop-talk-image-posts`.
+- Added reviewed database migration `0021_shop_talk_post_media` with rollback:
+  - explicit `shop-talk` upload storage scope
+  - account-owned `shop_talk_post_media` table
+  - active media indexes by post, upload, and uploader
+  - rollback removes the media table and restores the prior upload scope constraint
+- Added authenticated `POST /api/v1/shop-talk/posts/:postId/media`:
+  - requires a real post and authenticated actor
+  - only the post author can attach a photo
+  - accepts image uploads only and validates content signatures before object storage writes
+  - stores the file in configured S3-compatible storage and records the upload/media rows in Postgres
+  - returns the updated post with signed media URL so the feed can render the image
+- Updated the Shop Talk read path:
+  - post list responses now include active media, signed thumbnail URLs, and thumbnail alt text
+  - answer and media aggregation use separate lateral subqueries so answers and photos do not duplicate each other
+- Updated the mobile composer and feed/detail UX:
+  - users can add, preview, change, and remove a photo before posting
+  - title plus photo is allowed, matching the expected Reddit-style image-post flow
+  - feed thumbnails use the existing `TradePostCard` image slot
+  - post detail now renders the attached image at full content width
+- Preserved the Gate A honesty boundary:
+  - no device-local fake upload success is presented as production-ready
+  - if the post saves but the photo upload fails, the activity message says the post was created without the photo
+  - no homeowner flows, fake verification, fake provider behavior, payment processing, or authorization shortcut was added
+- Local gates:
+  - `npm run build` (pass)
+  - `npm run lint` (pass)
+  - `npm run lint:security` (pass)
+  - `npm run test:unit` (pass; 44/44)
+  - `node --env-file-if-exists=.env --test --test-concurrency=1 test/shop-talk-posts.integration.test.js test/migrations.integration.test.js` (pass against the env-file test database)
+  - `npm run test:e2e` (pass; desktop and mobile jobs/discovery)
+  - `npm audit --omit=dev` (pass; 0 vulnerabilities)
+  - aggregate `npm run test` and `npm run test:integration` were attempted with extended local command windows and timed out; aggregate completion is not claimed for this pass
+- Production deployment status:
+  - pending push/deploy at the time this section was added
+  - live post-photo upload smoke still requires deployed migration `0021_shop_talk_post_media` and configured object storage
 
 ## Latest Packet 08 Pass - Network Records Sync
 

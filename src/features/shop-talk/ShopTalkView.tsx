@@ -8,6 +8,7 @@ import {
   ExternalLink,
   Flag,
   Hash,
+  ImagePlus,
   MessageCircle,
   Newspaper,
   Plus,
@@ -16,6 +17,7 @@ import {
   Star,
   ThumbsDown,
   ThumbsUp,
+  Trash2,
   X,
   type LucideIcon,
 } from "lucide-react";
@@ -349,7 +351,7 @@ function ShopTalkNewPostModal({
   communities: CommunityDisplay[];
   initialCommunitySlug?: string | null;
   onClose: () => void;
-  onSubmit: (flair: PostFlair, title: string, trade: Trade | "General", body: string, postType: PostType, subTrade?: string, subLocation?: string, subRate?: string, communitySlug?: string | null) => void;
+  onSubmit: (flair: PostFlair, title: string, trade: Trade | "General", body: string, postType: PostType, subTrade?: string, subLocation?: string, subRate?: string, communitySlug?: string | null, photoFile?: File | null) => void;
 }) {
   const posterDefaultTrade = profile.specialties[0] ?? selectedJobTrade;
   const initialPostCommunitySlug = initialCommunitySlug ?? communities[0]?.slug ?? null;
@@ -363,8 +365,31 @@ function ShopTalkNewPostModal({
   const [subTrade, setSubTrade] = useState("");
   const [subLocation, setSubLocation] = useState("");
   const [subRate, setSubRate] = useState("");
-  const canSubmit = title.trim().length > 0 && body.trim().length > 0;
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoError, setPhotoError] = useState("");
+  const canSubmit = title.trim().length > 0 && (body.trim().length > 0 || Boolean(photoFile));
   const tradeOptions: (Trade | "General")[] = ["General", ...specialtyOptions];
+  const photoPreviewUrl = useMemo(() => photoFile ? URL.createObjectURL(photoFile) : null, [photoFile]);
+
+  useEffect(() => {
+    return () => {
+      if (photoPreviewUrl) URL.revokeObjectURL(photoPreviewUrl);
+    };
+  }, [photoPreviewUrl]);
+
+  function handlePhotoSelected(file: File | undefined) {
+    setPhotoError("");
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setPhotoError("Choose an image file.");
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      setPhotoError("Photos must be 10 MB or less.");
+      return;
+    }
+    setPhotoFile(file);
+  }
 
   return (
     <div className="modal-backdrop" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
@@ -452,6 +477,39 @@ function ShopTalkNewPostModal({
           />
         </label>
 
+        <div className="shop-post-media-picker">
+          <input
+            id="shop-talk-photo-upload"
+            type="file"
+            accept="image/*"
+            onChange={(event) => handlePhotoSelected(event.target.files?.[0])}
+          />
+          <label htmlFor="shop-talk-photo-upload" className="shop-post-media-button">
+            <ImagePlus size={16} />
+            {photoFile ? "Change photo" : "Add photo"}
+          </label>
+          {photoFile && (
+            <button
+              type="button"
+              className="shop-post-media-remove"
+              onClick={() => {
+                setPhotoFile(null);
+                setPhotoError("");
+              }}
+            >
+              <Trash2 size={15} />
+              Remove
+            </button>
+          )}
+        </div>
+        {photoError && <p className="shop-post-media-error">{photoError}</p>}
+        {photoPreviewUrl && (
+          <figure className="shop-post-photo-preview">
+            <img src={photoPreviewUrl} alt={photoFile?.name ?? "Selected Shop Talk post"} />
+            <figcaption>{photoFile?.name}</figcaption>
+          </figure>
+        )}
+
         {postType === "sub-request" && (
           <div className="v2-st-sub-fields">
             <input
@@ -495,6 +553,7 @@ function ShopTalkNewPostModal({
                   postType === "sub-request" ? subLocation : undefined,
                   postType === "sub-request" ? subRate : undefined,
                   selectedPostCommunitySlug,
+                  photoFile,
                 );
                 onClose();
               }
@@ -558,7 +617,7 @@ export function ShopTalkView({
   onReportPost: (postId: string, reason: CommunityReport["reason"], note?: string) => void | Promise<void>;
   onReportAnswer: (postId: string, answerId: string, reason: CommunityReport["reason"], note?: string) => void | Promise<void>;
   onReportCommunity: (community: CommunityDisplay, reason: CommunityReport["reason"], note?: string) => void | Promise<void>;
-  onNewPost: (flair: PostFlair, title: string, trade: Trade | "General", body: string, postType: PostType, subTrade?: string, subLocation?: string, subRate?: string, communitySlug?: string | null) => void | Promise<void>;
+  onNewPost: (flair: PostFlair, title: string, trade: Trade | "General", body: string, postType: PostType, subTrade?: string, subLocation?: string, subRate?: string, communitySlug?: string | null, photoFile?: File | null) => void | Promise<void>;
   onCommunityCreated: (community: ServerCommunity) => void;
 }) {
   const persona = usePersona();
@@ -906,8 +965,8 @@ export function ShopTalkView({
           initialTitle={newsDiscussContext ? newsDiscussContext.headline.slice(0, 120) : ""}
           initialBody={newsDiscussContext ? `Via ${newsDiscussContext.source} · ${newsDiscussContext.date}\n\n` : ""}
           onClose={() => { setNewPostOpen(false); setNewsDiscussContext(null); }}
-          onSubmit={(flair, title, trade, body, postType, subTrade, subLocation, subRate, communitySlug) => {
-            void onNewPost(flair, title, trade, body, postType, subTrade, subLocation, subRate, communitySlug);
+          onSubmit={(flair, title, trade, body, postType, subTrade, subLocation, subRate, communitySlug, photoFile) => {
+            void onNewPost(flair, title, trade, body, postType, subTrade, subLocation, subRate, communitySlug, photoFile);
             setNewPostOpen(false);
             setNewsDiscussContext(null);
           }}
@@ -1351,7 +1410,16 @@ export function ShopTalkView({
                     <span>{selectedPost.trade} - {selectedPost.createdAt}</span>
                   </div>
                   <h2>{selectedPost.title}</h2>
-                  <p>{selectedPost.body}</p>
+                  {selectedPost.body && <p>{selectedPost.body}</p>}
+                  {selectedPost.thumbnailUrl && (
+                    <figure className="shop-question-media">
+                      <img
+                        src={selectedPost.thumbnailUrl}
+                        alt={selectedPost.thumbnailAlt ?? ""}
+                        loading="lazy"
+                      />
+                    </figure>
+                  )}
                 </div>
                 <div className="shop-question-header-actions">
                   <span className={selectedPost.status === "Verified Fix" ? "state-pill verified" : "state-pill"}>

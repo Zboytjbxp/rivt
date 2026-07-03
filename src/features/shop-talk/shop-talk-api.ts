@@ -18,6 +18,19 @@ export interface ServerShopTalkAnswer {
   moderationStatus?: string;
 }
 
+export interface ServerShopTalkMedia {
+  id: string;
+  uploadId: string;
+  originalName: string;
+  mimeType: string;
+  sizeBytes: number;
+  mediaKind: "photo";
+  reviewStatus?: string;
+  altText?: string;
+  signedUrl?: string | null;
+  createdAt: string;
+}
+
 export interface ServerShopTalkPost {
   id: string;
   author: string;
@@ -33,6 +46,9 @@ export interface ServerShopTalkPost {
   communitySlug?: string;
   communityName?: string;
   answers?: ServerShopTalkAnswer[];
+  media?: ServerShopTalkMedia[];
+  thumbnailUrl?: string | null;
+  thumbnailAlt?: string | null;
 }
 
 export type ShopTalkReportReason = "spam" | "harassment" | "unsafe_advice" | "misinformation" | "privacy" | "duplicate" | "other";
@@ -59,6 +75,24 @@ export async function createShopTalkPost(input: ShopTalkPostInput): Promise<Serv
         "Idempotency-Key": crypto.randomUUID(),
       },
       body: JSON.stringify(input),
+    });
+    if (!response.ok) return null;
+    const body = await response.json().catch(() => null) as { data?: { post?: ServerShopTalkPost } } | null;
+    return body?.data?.post ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export async function uploadShopTalkPostPhoto(postId: string, file: File): Promise<ServerShopTalkPost | null> {
+  try {
+    const formData = new FormData();
+    formData.append("file", file);
+    const response = await fetch(apiPath(`/api/v1/shop-talk/posts/${encodeURIComponent(postId)}/media`), {
+      method: "POST",
+      credentials: "include",
+      headers: { "Idempotency-Key": crypto.randomUUID() },
+      body: formData,
     });
     if (!response.ok) return null;
     const body = await response.json().catch(() => null) as { data?: { post?: ServerShopTalkPost } } | null;

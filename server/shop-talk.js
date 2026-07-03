@@ -1,4 +1,7 @@
+import { PutObjectCommand } from "@aws-sdk/client-s3";
+import { createHash, randomUUID } from "node:crypto";
 import { ApiError, asyncRoute, validate, z } from "./api.js";
+import { detectUploadContent, mediaKindForMime } from "./projects.js";
 
 const shopTalkTargetSchema = z.object({
   targetType: z.enum(["thread", "answer"]),
@@ -158,7 +161,27 @@ function mapShopTalkAnswerRow(row) {
   };
 }
 
+function sha256Buffer(buffer) {
+  return createHash("sha256").update(buffer).digest("hex");
+}
+
+function mapShopTalkPostMediaRow(row) {
+  return {
+    id: row.id,
+    uploadId: row.upload_id,
+    originalName: row.original_name,
+    mimeType: row.mime_type,
+    sizeBytes: Number(row.size_bytes ?? 0),
+    mediaKind: row.media_kind,
+    reviewStatus: row.review_status ?? "not_scanned",
+    altText: row.alt_text ?? "",
+    signedUrl: row.signed_url ?? null,
+    createdAt: row.created_at,
+  };
+}
+
 function mapShopTalkPostRow(row) {
+  const media = Array.isArray(row.media) ? row.media.map(mapShopTalkPostMediaRow) : [];
   return {
     id: row.id,
     author: row.author_name,
@@ -174,7 +197,19 @@ function mapShopTalkPostRow(row) {
     communitySlug: row.community_slug,
     communityName: row.community_name,
     answers: Array.isArray(row.answers) ? row.answers.map(mapShopTalkAnswerRow) : [],
+    media,
+    thumbnailUrl: media[0]?.signedUrl ?? null,
+    thumbnailAlt: media[0]?.altText || media[0]?.originalName || row.title,
   };
+}
+
+async function mapShopTalkPostRowWithMedia(row, signedObjectUrl) {
+  const rawMedia = Array.isArray(row.media) ? row.media : [];
+  const media = await Promise.all(rawMedia.map(async (item) => ({
+    ...item,
+    signed_url: await signedObjectUrl(item.object_key),
+  })));
+  return mapShopTalkPostRow({ ...row, media });
 }
 
 async function requireCommunityForPost(client, slug) {
@@ -195,11 +230,15 @@ async function requireCommunityForPost(client, slug) {
   return found.rows[0];
 }
 
-async function fetchShopTalkPostRows(client, { communitySlug = null } = {}) {
+async function fetchShopTalkPostRows(client, { communitySlug = null, postId = null } = {}) {
   const params = [];
   let whereClause = `WHERE community.archived_at IS NULL
      AND community.moderation_status <> 'hidden'
      AND post.moderation_status <> 'hidden'`;
+  if (postId) {
+    params.push(postId);
+    whereClause += ` AND post.id = $${params.length}`;
+  }
   if (communitySlug) {
     params.push(communitySlug);
     whereClause += ` AND community.slug = $${params.length}`;
@@ -218,28 +257,56 @@ async function fetchShopTalkPostRows(client, { communitySlug = null } = {}) {
             post.community_id,
             community.slug AS community_slug,
             community.name AS community_name,
-            COALESCE(
-              jsonb_agg(
-                jsonb_build_object(
-                  'id', answer.id,
-                  'author_name', answer.author_name,
-                  'body', answer.body,
-                  'verified_fix', answer.verified_fix,
-                  'created_at', answer.created_at,
-                  'moderation_status', answer.moderation_status
-                )
-                ORDER BY answer.verified_fix DESC, answer.created_at ASC, answer.id ASC
-              ) FILTER (WHERE answer.id IS NOT NULL),
-              '[]'::jsonb
-            ) AS answers
+            answers.answers,
+            media.media
      FROM shop_talk_posts post
      JOIN communities community ON community.id = post.community_id
-     LEFT JOIN shop_talk_answers answer
-       ON answer.post_id = post.id
-      AND answer.deleted_at IS NULL
-      AND answer.moderation_status <> 'hidden'
+     LEFT JOIN LATERAL (
+       SELECT COALESCE(
+         jsonb_agg(
+           jsonb_build_object(
+             'id', answer.id,
+             'author_name', answer.author_name,
+             'body', answer.body,
+             'verified_fix', answer.verified_fix,
+             'created_at', answer.created_at,
+             'moderation_status', answer.moderation_status
+           )
+           ORDER BY answer.verified_fix DESC, answer.created_at ASC, answer.id ASC
+         ),
+         '[]'::jsonb
+       ) AS answers
+       FROM shop_talk_answers answer
+       WHERE answer.post_id = post.id
+         AND answer.deleted_at IS NULL
+         AND answer.moderation_status <> 'hidden'
+     ) answers ON true
+     LEFT JOIN LATERAL (
+       SELECT COALESCE(
+         jsonb_agg(
+           jsonb_build_object(
+             'id', media.id,
+             'upload_id', media.upload_id,
+             'object_key', uploads.object_key,
+             'original_name', media.original_name,
+             'mime_type', media.mime_type,
+             'size_bytes', media.size_bytes,
+             'media_kind', media.media_kind,
+             'review_status', media.review_status,
+             'alt_text', media.alt_text,
+             'created_at', media.created_at
+           )
+           ORDER BY media.created_at ASC, media.id ASC
+         ),
+         '[]'::jsonb
+       ) AS media
+       FROM shop_talk_post_media media
+       JOIN uploads ON uploads.id = media.upload_id
+       WHERE media.post_id = post.id
+         AND media.status = 'active'
+         AND uploads.upload_status = 'stored'
+     ) media ON true
      ${whereClause}
-     GROUP BY post.id, community.slug, community.name
      ORDER BY post.created_at DESC, post.id DESC
      LIMIT 100`,
     params,
@@ -266,6 +333,12 @@ export function registerShopTalkRoutes({
   requireV1AuthenticatedUser,
   requireV1Actor,
   writeRateLimit,
+  uploadRateLimit,
+  upload,
+  s3Client,
+  s3Bucket,
+  safeObjectName,
+  signedObjectUrl,
   runIdempotentMutation,
   sendIdempotentResult,
 }) {
@@ -273,7 +346,7 @@ export function registerShopTalkRoutes({
     const { community } = validate(shopTalkPostsQuerySchema, request.query);
     const rows = await fetchShopTalkPostRows(database, { communitySlug: community ?? null });
     response.json({
-      data: { posts: rows.map(mapShopTalkPostRow) },
+      data: { posts: await Promise.all(rows.map((row) => mapShopTalkPostRowWithMedia(row, signedObjectUrl))) },
       meta: { requestId: request.requestId },
     });
   }));
@@ -324,6 +397,129 @@ export function registerShopTalkRoutes({
     );
     sendIdempotentResult(response, result);
   }));
+
+  app.post(
+    "/api/v1/shop-talk/posts/:postId/media",
+    requireV1AuthenticatedUser,
+    requireV1Actor,
+    uploadRateLimit,
+    upload.single("file"),
+    asyncRoute(async (request, response) => {
+      const { postId } = validate(shopTalkPostParamsSchema, request.params);
+      if (!request.file) throw new ApiError(400, "UPLOAD_REQUIRED", "A file field named `file` is required.");
+      if (!String(request.file.mimetype ?? "").startsWith("image/")) {
+        throw new ApiError(415, "SHOP_TALK_IMAGE_REQUIRED", "Shop Talk posts only support image uploads.");
+      }
+
+      const detection = detectUploadContent(request.file);
+      if (!detection.ok) {
+        throw new ApiError(422, detection.code, detection.message);
+      }
+
+      if (mediaKindForMime(request.file.mimetype) !== "photo") {
+        throw new ApiError(415, "SHOP_TALK_IMAGE_REQUIRED", "Shop Talk posts only support image uploads.");
+      }
+
+      if (!s3Client || !s3Bucket) {
+        throw new ApiError(503, "OBJECT_STORAGE_UNAVAILABLE", "Managed object storage is unavailable.");
+      }
+
+      const result = await runIdempotentMutation(
+        request,
+        request.actor.account.id,
+        `shop-talk.post.media:${postId}`,
+        async (client) => {
+          const post = await client.query(
+            `SELECT id, author_account_id, title, moderation_status
+             FROM shop_talk_posts
+             WHERE id = $1
+               AND moderation_status <> 'hidden'`,
+            [postId],
+          );
+          if (!post.rowCount) {
+            throw new ApiError(404, "SHOP_TALK_POST_NOT_FOUND", "That Shop Talk post does not exist.");
+          }
+          if (post.rows[0].author_account_id !== request.actor.account.id) {
+            throw new ApiError(403, "SHOP_TALK_MEDIA_FORBIDDEN", "Only the post author can add a photo to this post.");
+          }
+
+          const uploadId = randomUUID();
+          const mediaId = randomUUID();
+          const contentHash = sha256Buffer(request.file.buffer);
+          const originalName = String(request.file.originalname ?? "shop-talk-photo").trim().slice(0, 240) || "shop-talk-photo";
+          const objectKey = `shop-talk/${safeObjectName(request.actor.account.id)}/${safeObjectName(postId)}/${uploadId}-${safeObjectName(originalName)}`;
+
+          await s3Client.send(
+            new PutObjectCommand({
+              Bucket: s3Bucket,
+              Key: objectKey,
+              Body: request.file.buffer,
+              ContentType: request.file.mimetype,
+              Metadata: {
+                originalName: originalName.slice(0, 256),
+                source: "rivt-shop-talk",
+                contentSha256: contentHash,
+              },
+            }),
+          );
+
+          await client.query(
+            `INSERT INTO uploads (
+               id, session_id, account_id, kind, name, object_key, original_name,
+               mime_type, size_bytes, upload_status, storage_scope, content_sha256, verified_at
+             ) VALUES ($1, $2::text, $2::uuid, 'shop-talk-media', $3, $4, $5, $6, $7, 'stored', 'shop-talk', $8, now())`,
+            [
+              uploadId,
+              request.actor.account.id,
+              originalName,
+              objectKey,
+              originalName,
+              request.file.mimetype,
+              request.file.size,
+              contentHash,
+            ],
+          );
+
+          const mediaRow = await client.query(
+            `INSERT INTO shop_talk_post_media (
+               id, post_id, upload_id, uploader_account_id, original_name, mime_type, size_bytes,
+               content_sha256, media_kind, status, review_status, alt_text
+             ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'photo', 'active', $9, $10)
+             RETURNING *`,
+            [
+              mediaId,
+              postId,
+              uploadId,
+              request.actor.account.id,
+              originalName,
+              request.file.mimetype,
+              request.file.size,
+              contentHash,
+              detection.reviewStatus ?? "not_scanned",
+              post.rows[0].title,
+            ],
+          );
+
+          const [updatedPostRow] = await fetchShopTalkPostRows(client, { postId });
+          return {
+            status: 201,
+            body: {
+              data: {
+                media: mapShopTalkPostMediaRow({
+                  ...mediaRow.rows[0],
+                  signed_url: await signedObjectUrl(objectKey),
+                }),
+                post: updatedPostRow ? await mapShopTalkPostRowWithMedia(updatedPostRow, signedObjectUrl) : null,
+              },
+              meta: { requestId: request.requestId },
+            },
+          };
+        },
+      );
+
+      sendIdempotentResult(response, result);
+    }),
+  );
 
   app.get("/api/v1/shop-talk/posts/:postId/answers", requireV1AuthenticatedUser, requireV1Actor, asyncRoute(async (request, response) => {
     const { postId } = validate(shopTalkPostParamsSchema, request.params);
