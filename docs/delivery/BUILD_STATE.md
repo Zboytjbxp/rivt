@@ -30,7 +30,9 @@ Production release commit: verify with live `/api/health`; latest runtime featur
   - `node --test test/tool-records.integration.test.js` was attempted but skipped because `TEST_DATABASE_URL` is not configured in this shell
   - aggregate `npm run test` was attempted and exceeded the local command window; aggregate completion is not claimed for this pass
 - Production deployment status:
-  - pending merge and Railway deploy verification for this pass
+  - runtime release commit `ca59d7f71a95d7506724c8efd0d1fd1359716472` was pushed to GitHub and picked up by Railway production service `RIVT`
+  - live `https://rivt.pro/api/health` returned `ok: true`, build commit `ca59d7f71a95d7506724c8efd0d1fd1359716472`, migration `0019_tool_records`, PostgreSQL, S3-compatible object storage, and configured Sentry
+  - `EXPECTED_SOURCE_COMMIT=ca59d7f71a95d7506724c8efd0d1fd1359716472 npm run monitor:production` passed with operational controls off, seven anonymous private-route checks, and 748 ms duration
 
 ## Latest Packet 08 Pass - Daily Log Draft Sync
 
