@@ -21,6 +21,26 @@ Add one entry per staging/production deployment.
 - Rollback performed/result:
 - Approval:
 
+## Current Production - Packet 08 Tools Hub Consolidation
+
+- Environment: Production (`https://rivt.pro`)
+- Date/time/timezone: 2026-07-03 America/New_York
+- Deployer: Codex through GitHub push to Railway-linked `master`
+- Source repository/branch: `Zboytjbxp/rivt`, `master`
+- Source commit: `85ce42cab4f938b217e21359aecd700a505dd53f`
+- Build/artifact ID: Railway-linked production deployment serving source `85ce42cab4f938b217e21359aecd700a505dd53f`; live `/api/health` is the runtime proof
+- Migration version before/after: `0018_shop_talk_moderation` / `0018_shop_talk_moderation` (no schema migration)
+- Feature-flag/config version: no provider credentials or operational-control flags changed
+- Provider/config changes (no secrets): no provider credentials changed; Sentry remains configured
+- Backup/rollback target: prior successful reachability/naming deployment `c974faf1bd96f16da19c678ad6880965632fd214`; rollback is a normal source rollback because no migration changed
+- Automated gates: `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test:unit`, `npm run test`, `npm run test:e2e`, `npm run test:ui:tools`, `npm audit --omit=dev`, and `git diff --check` passed. The aggregate test pass included 15/15 DB-backed integration suites.
+- Rendered evidence: `npm run test:ui:tools` rendered the updated Tools hub and core tool paths at mobile and desktop sizes; screenshots were written outside the repo at `C:\Users\zboyt\AppData\Local\Temp\rivt-tools-pass`.
+- Post-deploy smoke tests: live `https://rivt.pro/api/health` returned exact source commit `85ce42cab4f938b217e21359aecd700a505dd53f`, ready migration `0018_shop_talk_moderation`, PostgreSQL, S3-compatible object storage, and configured Sentry. `EXPECTED_SOURCE_COMMIT=85ce42cab4f938b217e21359aecd700a505dd53f npm run monitor:production` passed with operational controls off, seven anonymous private-route checks, and 558 ms duration.
+- Health/readiness result: healthy production health and synthetic monitor; no schema migration applied.
+- Known risks: all launchable supporting Tools utilities are now reachable, but duplicate client/payment/checklist surfaces and server persistence for local-only money/business records remain open.
+- Rollback performed/result: not required.
+- Approval: accepted as a Gate A UI/reachability improvement with no provider, schema, auth, billing, or security boundary changes.
+
 ## Current Production - Packet 08 Shop Talk Human Moderation Console and Report UX
 
 - Environment: Production (`https://rivt.pro`)

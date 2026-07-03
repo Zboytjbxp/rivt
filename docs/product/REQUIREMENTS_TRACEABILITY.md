@@ -10,6 +10,15 @@ Status values:
 
 Evidence must eventually link to implementation, automated tests, manual acceptance proof, and deployed build.
 
+## Traceability Addendum - 2026-07-03 Tools Hub Consolidation
+
+- `GA-UX-003` gains deployed Tools reachability evidence on `master` commit `85ce42cab4f938b217e21359aecd700a505dd53f`: the Tools hub keeps the five primary field apps visible while exposing all fifteen supporting utilities through compact Money / Site / Business launchers instead of leaving implemented tools unreachable.
+- `GA-UX-005` gains honest-state evidence: the Tools hub now labels the storage boundary directly, stating that standalone drafts save on the device while accepted-work records and uploaded photos use cloud storage.
+- `GA-UX-006` gains rendered mobile evidence: `npm run test:ui:tools` passed and saved mobile/desktop screenshots under `C:\Users\zboyt\AppData\Local\Temp\rivt-tools-pass`; the smoke asserts five primary launch cards, fifteen compact supporting launchers, and intact calculator/estimate/invoice/daily-log/records paths.
+- `GA-OPS-007` gains local automated evidence: `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test:unit`, `npm run test`, `npm run test:e2e`, `npm run test:ui:tools`, `npm audit --omit=dev`, and `git diff --check` passed. The aggregate `npm run test` pass included all 15 DB-backed integration suites.
+- `GA-OPS-008` gains production evidence: live `https://rivt.pro/api/health` reported commit `85ce42cab4f938b217e21359aecd700a505dd53f` with migration `0018_shop_talk_moderation`; `EXPECTED_SOURCE_COMMIT=85ce42cab4f938b217e21359aecd700a505dd53f npm run monitor:production` passed.
+- Remaining boundary: the hidden-tool launcher problem is closed, but duplicate client/payment/checklist surfaces and server persistence for local-only money/business records remain open.
+
 ## Traceability Addendum - 2026-07-03 Reachability and Naming Cleanup
 
 - `GA-UX-003` gains deployed navigation clarity evidence on `master` commit `c974faf1bd96f16da19c678ad6880965632fd214`: the active product vocabulary now uses `Work` instead of `Marketplace`, `Crew` instead of `My Crew`, and `Shop Talk` instead of lingering `Trade Talk` naming/class paths across routes, onboarding destinations, profile links, legacy bridge copy, and active Shop Talk CSS hooks.

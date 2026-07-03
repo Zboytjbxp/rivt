@@ -2,10 +2,42 @@
 
 Last updated: 2026-07-03 America/New_York
 Current gate: Gate A launch hardening
-Current phase: Packet 08 Gate A launch hardening plus Gate B behind-flag backbone work: machine gates and live workflow smokes are mostly green; the Shop Talk Reddit-model backbone, moderation/reporting backend, human-facing moderation console/report UX, and first reachability/naming cleanup pass are implemented while still respecting launch-readiness boundaries before broad exposure.
+Current phase: Packet 08 Gate A launch hardening plus Gate B behind-flag backbone work: machine gates and live workflow smokes are mostly green; the Shop Talk Reddit-model backbone, moderation/reporting backend, human-facing moderation console/report UX, reachability/naming cleanup, and Tools hub consolidation are implemented while still respecting launch-readiness boundaries before broad exposure.
 Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
 Production release commit: verify with live `/api/health`; latest runtime feature evidence is recorded below and docs-only evidence commits may supersede the served build SHA.
+
+## Latest Packet 08 Pass - Tools Hub Consolidation
+
+- Implemented the next Tools reachability slice on branch `codex/tools-hub-consolidation`, then fast-forwarded it to `master`.
+- Kept the five primary field apps as the main Tools surface:
+  - Heavy 16th
+  - Estimate
+  - Invoice
+  - Daily log
+  - Records & photos
+- Exposed the previously hidden supporting tools as compact grouped launchers instead of leaving them unreachable in the bundle:
+  - Money: Bid builder, Payment tracker, Expenses, Mileage, Earnings, Tax summary, Tax estimator
+  - Site: Materials, Daily report, Punch list, Safety checklist, Job checklists, Time tracker
+  - Business: Price book, Contracts
+- Added one honest storage boundary line on the hub: standalone drafts save on the device; accepted-work records and uploaded photos use cloud storage.
+- Updated rendered and E2E checks so the Tools hub must expose exactly five primary launch cards plus fifteen compact supporting launchers, while primary Estimate/Invoice/Daily log/Records click paths remain unambiguous.
+- Rendered mobile QA through `npm run test:ui:tools`; screenshots were saved outside the repo at `C:\Users\zboyt\AppData\Local\Temp\rivt-tools-pass`.
+- Local gates run on 2026-07-03:
+  - `npm run build` (pass)
+  - `npm run lint` (pass)
+  - `npm run lint:security` (pass)
+  - `npm run test:unit` (pass; 44/44)
+  - `npm run test` (pass; unit plus integration, 15/15 integration suites)
+  - `npm run test:e2e` (pass; includes the expanded Tools launcher assertions)
+  - `npm run test:ui:tools` (pass)
+  - `npm audit --omit=dev` (pass; 0 vulnerabilities)
+  - `git diff --check` (pass)
+- Production deployment completed from `master`:
+  - Tools consolidation source commit `85ce42cab4f938b217e21359aecd700a505dd53f` was pushed to GitHub and picked up by Railway production service `RIVT`
+  - live `https://rivt.pro/api/health` returned `ok: true`, build commit `85ce42cab4f938b217e21359aecd700a505dd53f`, migration `0018_shop_talk_moderation`, PostgreSQL, S3-compatible object storage, and configured Sentry
+  - `EXPECTED_SOURCE_COMMIT=85ce42cab4f938b217e21359aecd700a505dd53f npm run monitor:production` passed with operational controls off, seven anonymous private-route checks, and 558 ms duration
+- Remaining boundary: this closes the hidden-tool reachability gap and makes the hub more logical, but it does not merge duplicate client/payment/checklist surfaces or make local-only money/business records server-backed.
 
 ## Latest Packet 08 Pass - Reachability and Naming Cleanup
 
