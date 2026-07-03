@@ -2,10 +2,44 @@
 
 Last updated: 2026-07-03 America/New_York
 Current gate: Gate A launch hardening
-Current phase: Packet 08 Gate A launch hardening plus Gate B behind-flag backbone work: machine gates and live workflow smokes are mostly green; the Shop Talk Reddit-model backbone, moderation/reporting backend, human-facing moderation console/report UX, reachability/naming cleanup, and Tools hub consolidation are implemented while still respecting launch-readiness boundaries before broad exposure.
+Current phase: Packet 08 Gate A launch hardening plus Gate B behind-flag backbone work: machine gates and live workflow smokes are mostly green; the Shop Talk Reddit-model backbone, moderation/reporting backend, human-facing moderation console/report UX, reachability/naming cleanup, Tools hub consolidation, and first server-owned Payment Tracker records slice are implemented while still respecting launch-readiness boundaries before broad exposure.
 Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
 Production release commit: verify with live `/api/health`; latest runtime feature evidence is recorded below and docs-only evidence commits may supersede the served build SHA.
+
+## Latest Packet 08 Pass - Tool Records Persistence Slice
+
+- Implemented the first server-owned Tools records slice on branch `codex/tool-records-persistence`.
+- Added migration `0019_tool_records` with rollback:
+  - authenticated `tool_records` table scoped to `account_id`
+  - constrained record types for payment records, invoice templates, expenses, mileage, time sessions, bids, price books, punch items, daily reports, safety checks, job checklists, and clients
+  - partial unique index on active `(account_id, record_type, local_id)` plus account/type recency indexes
+  - soft-delete support through `deleted_at`
+- Added authenticated `/api/v1/tool-records` API routes:
+  - `GET /api/v1/tool-records?type=...`
+  - idempotent `POST /api/v1/tool-records`
+  - idempotent `DELETE /api/v1/tool-records/:recordType/:localId`
+  - all routes require a real v1 authenticated account/actor; anonymous requests fail closed
+- Wired the Payment Tracker tool to the new API:
+  - signed-in users load server-owned payment records when available
+  - existing device-local payment records are uploaded once when the account has no server records yet
+  - new invoices, paid-state updates, and deletes continue to save instantly on-device and sync to the account in the background
+  - visible copy now reports whether the record is synced to the RIVT account or only saved on this device
+- Preserved the Gate A honesty boundary:
+  - no payment processing, escrow, payroll, tax filing, or fake delivery was added
+  - other local-only Tools records are not claimed as server-backed until their own persistence slices are wired and tested
+- Runtime source commit: `c3462b13be0dbf6f5579db412ba62ad80af3d0fd`.
+- Local gates run on 2026-07-03:
+  - `npm run build` (pass)
+  - `npm run lint` (pass)
+  - `npm run lint:security` (pass)
+  - targeted `node --env-file-if-exists=.env --test --test-concurrency=1 test\tool-records.integration.test.js test\migrations.integration.test.js` (pass; migration lifecycle plus tool-records API, 2/2)
+  - `npm run test:e2e` (pass)
+  - `npm audit --omit=dev` (pass; 0 vulnerabilities)
+  - `git diff --check` (pass; line-ending warnings only)
+  - `npm run test` was attempted twice and exceeded the local timeout window; full aggregate local test evidence is not claimed for this pass
+- Deployment status: pending merge/push/deploy verification at the time this section was written.
+- Remaining boundary: this closes Payment Tracker's first server-persistence slice only. Expenses, mileage, time sessions, bids, price book, punch lists, daily reports, safety checks, checklists, and clients still need their own server-backed sync passes before they can be described as cloud-backed business records.
 
 ## Latest Packet 08 Pass - Tools Hub Consolidation
 
