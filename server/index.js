@@ -4488,6 +4488,12 @@ registerShopTalkRoutes({
   requireV1AuthenticatedUser,
   requireV1Actor,
   writeRateLimit,
+  uploadRateLimit,
+  upload,
+  s3Client,
+  s3Bucket,
+  safeObjectName,
+  signedObjectUrl,
   runIdempotentMutation,
   sendIdempotentResult,
 });

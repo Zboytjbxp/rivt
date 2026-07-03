@@ -44,6 +44,21 @@ if (!testDatabaseUrl) {
     return { response, payload };
   }
 
+  async function requestMultipart(baseUrl, path, { cookie, file, idempotencyKey, method = "POST" } = {}) {
+    const headers = { Origin: "https://rivt.pro" };
+    if (cookie) headers.Cookie = cookie;
+    if (idempotencyKey) headers["Idempotency-Key"] = idempotencyKey;
+    const formData = new FormData();
+    formData.append("file", new Blob([file.buffer], { type: file.type }), file.name);
+    const response = await fetch(`${baseUrl}${path}`, {
+      method,
+      headers,
+      body: formData,
+    });
+    const payload = await response.json();
+    return { response, payload };
+  }
+
   function tokenFor(email) {
     const message = [...capturedEmailMessages()].reverse().find((candidate) => candidate.to === email);
     const match = message?.text.match(/verify-email\?token=([^\s]+)/);
@@ -145,6 +160,23 @@ if (!testDatabaseUrl) {
     assert.equal(post.communitySlug, "electrical-talk");
     assert.equal(post.communityName, "Electrical Talk");
     assert.deepEqual(post.answers, []);
+    assert.deepEqual(post.media, []);
+    assert.equal(post.thumbnailUrl, null);
+
+    const uploadWithoutStorage = await requestMultipart(baseUrl, `/api/v1/shop-talk/posts/${post.id}/media`, {
+      cookie: author.cookie,
+      idempotencyKey: randomUUID(),
+      file: {
+        name: "offset-bend.png",
+        type: "image/png",
+        buffer: Buffer.from(
+          "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=",
+          "base64",
+        ),
+      },
+    });
+    assert.equal(uploadWithoutStorage.response.status, 503);
+    assert.equal(uploadWithoutStorage.payload.error.code, "OBJECT_STORAGE_UNAVAILABLE");
 
     // Same idempotency key replays the same result.
     const replay = await requestJson(baseUrl, "/api/v1/shop-talk/posts", {

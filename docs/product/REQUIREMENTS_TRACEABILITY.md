@@ -10,6 +10,14 @@ Status values:
 
 Evidence must eventually link to implementation, automated tests, manual acceptance proof, and deployed build.
 
+## Traceability Addendum - 2026-07-03 Shop Talk Post Photos
+
+- `GA-COM-001` gains local implementation evidence on branch `codex/shop-talk-image-posts`: Shop Talk posts can now carry server-owned photo media through `POST /api/v1/shop-talk/posts/:postId/media`, and post reads include signed thumbnail data for feed/detail rendering.
+- `GA-UX-003` gains Reddit-style community UX evidence: the Shop Talk composer now supports add/change/remove photo, shows a preview before posting, and allows title-plus-photo posts instead of requiring body text for image-led questions.
+- `GA-UX-005` gains honest storage evidence: photos are not treated as production-ready local blobs; authenticated uploads require S3-compatible object storage and Postgres media rows, while storage failures return a visible post-created-without-photo state instead of fake success.
+- `GA-OPS-007` gains local automated evidence: `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test:unit`, targeted Shop Talk posts/migration integration tests, `npm run test:e2e`, and `npm audit --omit=dev` passed. Aggregate `npm run test` and `npm run test:integration` exceeded local command windows, so aggregate completion is not claimed for this pass.
+- Remaining boundary: production evidence is pending deployment of migration `0021_shop_talk_post_media` and a live authenticated photo-post smoke against configured object storage.
+
 ## Traceability Addendum - 2026-07-03 Tools Hub Consolidation
 
 - `GA-UX-003` gains deployed Tools reachability evidence on `master` commit `85ce42cab4f938b217e21359aecd700a505dd53f`: the Tools hub keeps the five primary field apps visible while exposing all fifteen supporting utilities through compact Money / Site / Business launchers instead of leaving implemented tools unreachable.

@@ -72,6 +72,7 @@ import {
   createShopTalkPost,
   fetchShopTalkPosts,
   reportShopTalkTarget,
+  uploadShopTalkPostPhoto,
   verifyShopTalkAnswer,
   type ServerShopTalkAnswer,
   type ServerShopTalkPost,
@@ -237,6 +238,8 @@ function toCommunityAnswerViewModel(answer: ServerShopTalkAnswer): CommunityPost
 
 function toCommunityPostViewModel(post: ServerShopTalkPost): CommunityPost {
   const createdAtMs = new Date(post.createdAt).getTime();
+  const firstMedia = Array.isArray(post.media) ? post.media[0] : undefined;
+  const thumbnailUrl = post.thumbnailUrl ?? firstMedia?.signedUrl ?? undefined;
   return {
     id: post.id,
     title: post.title,
@@ -253,6 +256,8 @@ function toCommunityPostViewModel(post: ServerShopTalkPost): CommunityPost {
     type: normalizePostType(post.type),
     communitySlug: post.communitySlug,
     communityName: post.communityName,
+    ...(thumbnailUrl ? { thumbnailUrl } : {}),
+    ...(thumbnailUrl ? { thumbnailAlt: post.thumbnailAlt ?? firstMedia?.altText ?? firstMedia?.originalName ?? post.title } : {}),
   };
 }
 
@@ -1095,7 +1100,19 @@ function App() {
     );
   }
 
-  async function handleNewShopTalkPost(flair: PostFlair, title: string, trade: Trade | "General", body: string, postType: PostType, subTrade?: string, subLocation?: string, subRate?: string, communitySlugOverride?: string | null) {
+  async function handleNewShopTalkPost(
+    flair: PostFlair,
+    title: string,
+    trade: Trade | "General",
+    body: string,
+    postType: PostType,
+    subTrade?: string,
+    subLocation?: string,
+    subRate?: string,
+    communitySlugOverride?: string | null,
+    photoFile?: File | null,
+  ) {
+    const localThumbnailUrl = photoFile ? URL.createObjectURL(photoFile) : undefined;
     const localPost: CommunityPost = {
       id: `local-${Date.now()}`,
       title,
@@ -1111,12 +1128,14 @@ function App() {
       status: "Open",
       type: postType,
       communitySlug: communitySlugOverride ?? defaultShopTalkCommunitySlug(trade),
+      ...(localThumbnailUrl ? { thumbnailUrl: localThumbnailUrl, thumbnailAlt: photoFile?.name ?? title } : {}),
       ...(subTrade ? { subTrade } : {}),
       ...(subLocation ? { subLocation } : {}),
       ...(subRate ? { subRate } : {}),
     };
 
     let postToAdd = localPost;
+    let photoUploadFailed = false;
     if (!isGuest && authUser && onboardingComplete) {
       const serverPost = await createShopTalkPost({
         title,
@@ -1127,7 +1146,9 @@ function App() {
         communitySlug: communitySlugOverride ?? undefined,
       });
       if (serverPost) {
-        postToAdd = toCommunityPostViewModel(serverPost);
+        const mediaPost = photoFile ? await uploadShopTalkPostPhoto(serverPost.id, photoFile) : null;
+        photoUploadFailed = Boolean(photoFile && !mediaPost);
+        postToAdd = toCommunityPostViewModel(mediaPost ?? serverPost);
       }
     }
 
@@ -1135,7 +1156,12 @@ function App() {
       postToAdd,
       ...current.filter((post) => post.id !== postToAdd.id),
     ]);
-    addActivity("Shop Talk post created", `"${title}" posted to Shop Talk.`);
+    addActivity(
+      photoUploadFailed ? "Shop Talk post created without photo" : "Shop Talk post created",
+      photoUploadFailed
+        ? `"${title}" posted, but the photo could not be uploaded. Try editing or reposting with the image.`
+        : `"${title}" posted to Shop Talk${photoFile ? " with a photo" : ""}.`,
+    );
   }
 
   function handleCommunityCreated(community: ServerCommunity) {
