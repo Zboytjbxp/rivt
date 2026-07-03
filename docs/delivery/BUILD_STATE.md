@@ -33,6 +33,10 @@ Production release commit: verify with live `/api/health`; latest runtime featur
   - in-app Browser was available and used for local app orientation, but the unauthenticated local browser session could not reach the authenticated Settings storage card
   - Playwright fallback with mocked authenticated state at 390x844 verified six storage rows, no horizontal overflow, and stacked label/value geometry for `Location`, `Who pays`, and the remaining storage facts
   - screenshot evidence was saved outside the repo at `C:\Users\zboyt\AppData\Local\Temp\rivt-settings-storage-polish-storage-card.png`
+- Production deployment status:
+  - runtime release commit `2f1717094d5eaa0c4749acf887694ae5c7afd400` was pushed to GitHub and picked up by Railway production service `RIVT`
+  - live `https://rivt.pro/api/health` returned `ok: true`, build commit `2f1717094d5eaa0c4749acf887694ae5c7afd400`, migration `0021_shop_talk_post_media`, PostgreSQL, S3-compatible object storage, and configured Sentry
+  - `EXPECTED_SOURCE_COMMIT=2f1717094d5eaa0c4749acf887694ae5c7afd400 npm run monitor:production` passed with operational controls off, seven anonymous private-route checks, and 573 ms duration
 
 ## Latest Packet 08 Pass - Subscription Controls and Shop Talk Cleanup
 

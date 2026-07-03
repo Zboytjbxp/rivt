@@ -17,6 +17,7 @@ Evidence must eventually link to implementation, automated tests, manual accepta
 - `GA-UX-005` keeps the storage honesty boundary: the UI continues to state that cloud photos and attachments are stored in managed S3-compatible object storage and billed to RIVT's infrastructure account, not silently kept only on the user's phone.
 - `GA-OPS-007` gains local automated evidence: `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test:unit`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check` passed.
 - `GA-UX-006` gains rendered evidence: after the in-app Browser could not reach the authenticated Settings storage card from its unauthenticated local session, Playwright fallback at 390x844 with mocked authenticated state verified stacked storage rows, no horizontal overflow, and no relevant app console/page errors; screenshot evidence is outside the repo at `C:\Users\zboyt\AppData\Local\Temp\rivt-settings-storage-polish-storage-card.png`.
+- `GA-OPS-008` gains production deployment evidence: live `https://rivt.pro/api/health` reported commit `2f1717094d5eaa0c4749acf887694ae5c7afd400` with migration `0021_shop_talk_post_media`, PostgreSQL/S3-compatible storage, and Sentry configured; `EXPECTED_SOURCE_COMMIT=2f1717094d5eaa0c4749acf887694ae5c7afd400 npm run monitor:production` passed.
 
 ## Traceability Addendum - 2026-07-03 Subscription Controls and Shop Talk Cleanup
 
