@@ -35,7 +35,8 @@ Production release commit: verify with live `/api/health`; latest runtime featur
   - the same smoke verified `Sign out` remains reachable
   - screenshot evidence was saved outside the repo at `C:\Users\zboyt\AppData\Local\Temp\rivt-settings-no-redo-setup.png`
 - Production deployment status:
-  - pending merge, push, and synthetic monitor for this pass
+  - runtime release commit `2b714896e4a7913c8f67b734bf11171c50d80bb8` was pushed to GitHub and picked up by Railway production service `RIVT`
+  - `EXPECTED_SOURCE_COMMIT=2b714896e4a7913c8f67b734bf11171c50d80bb8 npm run monitor:production` passed with PostgreSQL, S3-compatible object storage, configured Sentry, controls off, seven anonymous private-route checks, and 568 ms duration
 - Remaining boundary:
   - this pass closes the duplicate local Profile onboarding path only. Remaining Claude-audit themes still include typography/token/breakpoint consolidation, continued mobile layout sweeps, and broader onboarding walkthrough polish.
 

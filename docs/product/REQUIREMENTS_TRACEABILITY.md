@@ -16,7 +16,7 @@ Evidence must eventually link to implementation, automated tests, manual accepta
 - `GA-UX-005` gains honest-state evidence: the removed modal wrote trade, rate, and city to `rivt.onboarding.v1` and local rate-card storage, so it is no longer presented as a production account setup path.
 - `GA-UX-006` gains rendered mobile evidence: authenticated Settings smoke at 390x844 verified the `Redo setup` card/copy is gone and `Sign out` remains reachable; screenshot evidence is outside the repo at `C:\Users\zboyt\AppData\Local\Temp\rivt-settings-no-redo-setup.png`.
 - `GA-OPS-007` gains local automated evidence: `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test:unit`, `npm run test:e2e`, `npm audit --omit=dev`, `npm run incident:readiness -- --require-ready`, `npm run launch:readiness -- --require-ready`, and `git diff --check` passed.
-- `GA-OPS-008` production evidence is pending merge, push, and synthetic monitor for this pass.
+- `GA-OPS-008` gains production evidence: live synthetic monitor reported commit `2b714896e4a7913c8f67b734bf11171c50d80bb8`, PostgreSQL/S3-compatible storage, configured Sentry, and passing anonymous private-route checks.
 - Remaining boundary: this addendum covers duplicate local Profile onboarding removal only. It does not claim completion of broad onboarding sequence polish, typography/token consolidation, or all remaining mobile layout items.
 
 ## Traceability Addendum - 2026-07-03 Claude Audit Auth Preview Honesty
