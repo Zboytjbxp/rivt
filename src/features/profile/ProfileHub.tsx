@@ -764,156 +764,6 @@ function DataExportButton() {
   );
 }
 
-// ── Onboarding Flow ────────────────────────────────────────────────────────────
-
-const ONBOARDING_TRADES = [
-  "Electrician", "Plumber", "HVAC", "Carpenter", "General Contractor",
-  "Roofer", "Painter", "Welder", "Landscaper", "Mason", "Tile Setter", "Other",
-] as const;
-type OnboardingTrade = typeof ONBOARDING_TRADES[number];
-
-interface OnboardingData {
-  trade: OnboardingTrade;
-  hourlyRate: string;
-  city: string;
-  completedAt: string;
-}
-
-function OnboardingOverlay({ onComplete }: { onComplete: () => void }) {
-  const [step, setStep] = useState(0);
-  const [selectedTrade, setSelectedTrade] = useState<OnboardingTrade | null>(null);
-  const onboardingTrapRef = useFocusTrap<HTMLDivElement>(onComplete);
-  const [hourlyRate, setHourlyRate] = useState("");
-  const [city, setCity] = useState("");
-
-  function finishOnboarding() {
-    if (!selectedTrade) return;
-    const data: OnboardingData = {
-      trade: selectedTrade,
-      hourlyRate,
-      city,
-      completedAt: new Date().toISOString(),
-    };
-    try { localStorage.setItem("rivt.onboarding.v1", JSON.stringify(data)); } catch { /* noop */ }
-    // Also save to rateCard
-    if (selectedTrade && hourlyRate) {
-      const entry = {
-        id: crypto.randomUUID(),
-        trade: selectedTrade,
-        hourlyRate: parseFloat(hourlyRate) || 0,
-        dayRate: 0,
-        minimumCharge: 0,
-        notes: city ? `Based in ${city}` : "",
-        updatedAt: new Date().toISOString(),
-      };
-      try {
-        const existing = readRateCardEntries();
-        persistRateCardEntries([entry, ...existing].slice(0, 12));
-      } catch { /* noop */ }
-    }
-    onComplete();
-  }
-
-  const portalTarget = getPortalTarget();
-  if (!portalTarget) return null;
-
-  return createPortal(
-    <div ref={onboardingTrapRef} className="v2-onboarding-overlay" role="dialog" aria-modal="true" aria-label="Welcome to RIVT">
-      <div className="v2-onboarding-modal">
-        <button
-          type="button"
-          className="v2-onboarding-close v2-icon-button"
-          onClick={onComplete}
-          aria-label="Close setup"
-        >
-          <XCircle size={18} />
-        </button>
-        <div className="v2-onboarding-stepper">
-          {[0, 1, 2].map((i) => (
-            <div key={i} className={`v2-onboarding-step${step === i ? " is-active" : step > i ? " is-done" : ""}`} />
-          ))}
-        </div>
-
-        {step === 0 && (
-          <div className="v2-onboarding-body">
-            <h2>What's your trade?</h2>
-            <p>Pick the one that fits best — you can add more later in Settings.</p>
-            <div className="v2-onboarding-trade-grid">
-              {ONBOARDING_TRADES.map((t) => (
-                <button
-                  key={t}
-                  type="button"
-                  className={`v2-onboarding-trade-chip${selectedTrade === t ? " is-active" : ""}`}
-                  onClick={() => setSelectedTrade(t)}
-                >
-                  {t}
-                </button>
-              ))}
-            </div>
-            <button
-              type="button"
-              className="v2-primary-button v2-onboarding-next"
-              disabled={!selectedTrade}
-              onClick={() => setStep(1)}
-            >
-              Next
-            </button>
-          </div>
-        )}
-
-        {step === 1 && (
-          <div className="v2-onboarding-body">
-            <h2>Set your rate</h2>
-            <p>This helps contractors match your range. You can update it anytime.</p>
-            <div className="v2-onboarding-fields">
-              <label>
-                <span>Hourly rate ($)</span>
-                <input
-                  type="number"
-                  min="0"
-                  placeholder="e.g. 75"
-                  value={hourlyRate}
-                  onChange={(e) => setHourlyRate(e.target.value)}
-                />
-              </label>
-              <label>
-                <span>What city do you work in?</span>
-                <input
-                  type="text"
-                  placeholder="e.g. Jacksonville, FL"
-                  value={city}
-                  onChange={(e) => setCity(e.target.value)}
-                />
-              </label>
-            </div>
-            <div className="v2-onboarding-actions">
-              <button type="button" className="v2-secondary-button" onClick={() => setStep(0)}>Back</button>
-              <button type="button" className="v2-primary-button" onClick={() => setStep(2)}>Next</button>
-            </div>
-          </div>
-        )}
-
-        {step === 2 && (
-          <div className="v2-onboarding-body v2-onboarding-summary">
-            <div className="v2-onboarding-check">✓</div>
-            <h2>You're all set!</h2>
-            <div className="v2-onboarding-summary-card">
-              <div><span>Trade</span><strong>{selectedTrade}</strong></div>
-              {hourlyRate && <div><span>Hourly rate</span><strong>${hourlyRate}/hr</strong></div>}
-              {city && <div><span>City</span><strong>{city}</strong></div>}
-            </div>
-            <p>Your profile is ready. You can update this anytime in Settings.</p>
-            <button type="button" className="v2-primary-button v2-onboarding-next" onClick={finishOnboarding}>
-              Get Started
-            </button>
-          </div>
-        )}
-      </div>
-    </div>,
-    portalTarget,
-  );
-}
-
 // ── Business Settings Section ──────────────────────────────────────────────────
 
 interface BusinessInfo {
@@ -1284,8 +1134,6 @@ export function ProfileHub({
   });
   const [showPreview, setShowPreview] = useState(false);
   const previewTrapRef = useFocusTrap<HTMLDivElement>(() => setShowPreview(false), showPreview);
-  const [showOnboarding, setShowOnboarding] = useState(false);
-  const [onboardingKey, setOnboardingKey] = useState(0);
   const portalTarget = getPortalTarget();
 
   const [feedbackCategory, setFeedbackCategory] = useState<string | null>(null);
@@ -1357,23 +1205,18 @@ export function ProfileHub({
 
   if (view === "Safety & Training") {
     return (
-      <>
-        {showOnboarding && (
-          <OnboardingOverlay key={onboardingKey} onComplete={() => setShowOnboarding(false)} />
-        )}
-        <section className="v2-profile-page" aria-label="Safety & Training">
-          <PageHeader
-            className="v2-profile-header"
-            title="Safety & Training"
-            description={profileViewDescriptions["Safety & Training"]}
-          />
-          <SafetyTrainingSection
-            safetyQuizResults={safetyQuizResults}
-            safetyCertCount={safetyCertCount}
-            onQuizComplete={onQuizComplete}
-          />
-        </section>
-      </>
+      <section className="v2-profile-page" aria-label="Safety & Training">
+        <PageHeader
+          className="v2-profile-header"
+          title="Safety & Training"
+          description={profileViewDescriptions["Safety & Training"]}
+        />
+        <SafetyTrainingSection
+          safetyQuizResults={safetyQuizResults}
+          safetyCertCount={safetyCertCount}
+          onQuizComplete={onQuizComplete}
+        />
+      </section>
     );
   }
 
@@ -1387,10 +1230,6 @@ export function ProfileHub({
 
   if (view === "Feedback") {
     return (
-      <>
-        {showOnboarding && (
-          <OnboardingOverlay key={onboardingKey} onComplete={() => setShowOnboarding(false)} />
-        )}
       <section className="v2-profile-page" aria-label="Feedback">
         <PageHeader
           className="v2-profile-header"
@@ -1452,16 +1291,11 @@ export function ProfileHub({
           </section>
         </div>
       </section>
-      </>
     );
   }
 
   if (view === "Trust & Legal") {
     return (
-      <>
-        {showOnboarding && (
-          <OnboardingOverlay key={onboardingKey} onComplete={() => setShowOnboarding(false)} />
-        )}
       <section className="v2-profile-page" aria-label="Trust & Legal">
         <PageHeader
           className="v2-profile-header"
@@ -1559,15 +1393,11 @@ export function ProfileHub({
           </section>
         </div>
       </section>
-      </>
     );
   }
 
   return (
     <>
-      {showOnboarding && (
-        <OnboardingOverlay key={onboardingKey} onComplete={() => setShowOnboarding(false)} />
-      )}
     <section className="v2-profile-page" aria-label={view}>
       <PageHeader
         className="v2-profile-header"
@@ -1948,23 +1778,6 @@ export function ProfileHub({
             <button type="button" className="v2-secondary-button" onClick={onLogout}>
               <LogOut size={16} />
               Sign out
-            </button>
-          </section>
-        ) : null}
-
-        {/* Redo setup — Settings only */}
-        {view === "Settings" ? (
-          <section className="v2-profile-panel v2-profile-panel-wide v2-settings-signout-section">
-            <div>
-              <strong>Redo setup</strong>
-              <span>Update your trade, rate, and city from the onboarding flow.</span>
-            </div>
-            <button
-              type="button"
-              className="v2-secondary-button"
-              onClick={() => { setOnboardingKey(k => k + 1); setShowOnboarding(true); }}
-            >
-              Redo setup
             </button>
           </section>
         ) : null}

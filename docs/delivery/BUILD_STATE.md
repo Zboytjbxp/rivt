@@ -7,6 +7,38 @@ Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
 Production release commit: verify with live `/api/health`; latest runtime feature evidence is recorded below and docs-only evidence commits may supersede the served build SHA.
 
+## Latest Packet 08 Pass - Profile Onboarding Subtraction
+
+- Closed one remaining onboarding/repetition issue from the minimal-professional audit:
+  - removed the duplicate Profile Settings `Redo setup` card
+  - removed the separate localStorage-only onboarding modal that wrote `rivt.onboarding.v1`
+  - removed the dead `.v2-onboarding-*` CSS from Profile styling
+- Preserved the real onboarding boundary:
+  - signup/onboarding remains the server-owned product path
+  - users who have already completed onboarding are no longer offered a second, local setup flow from Settings
+  - no local-only rate/trade/city setup is presented as production account data
+- Preserved launch boundaries:
+  - no homeowner flows, fake verification, job-payment processing, escrow, payroll, or frontend-only production claims were added
+  - server data, auth, billing, storage, and subscription controls were not changed
+- Local gates:
+  - `npm run build` (pass)
+  - `npm run lint` (pass)
+  - `npm run lint:security` (pass)
+  - `npm run test:unit` (pass; 44/44)
+  - `npm run test:e2e` (pass; desktop and mobile jobs/discovery)
+  - `npm audit --omit=dev` (pass; 0 vulnerabilities)
+  - `npm run incident:readiness -- --require-ready` (pass)
+  - `npm run launch:readiness -- --require-ready` (pass)
+  - `git diff --check` (pass; CRLF warnings only for touched Profile files)
+- Rendered QA:
+  - authenticated Settings smoke at 390x844 verified the Settings screen no longer renders `Redo setup` or `Update your trade, rate, and city from the onboarding flow`
+  - the same smoke verified `Sign out` remains reachable
+  - screenshot evidence was saved outside the repo at `C:\Users\zboyt\AppData\Local\Temp\rivt-settings-no-redo-setup.png`
+- Production deployment status:
+  - pending merge, push, and synthetic monitor for this pass
+- Remaining boundary:
+  - this pass closes the duplicate local Profile onboarding path only. Remaining Claude-audit themes still include typography/token/breakpoint consolidation, continued mobile layout sweeps, and broader onboarding walkthrough polish.
+
 ## Latest Packet 08 Pass - Claude Audit Auth Preview Honesty
 
 - Closed one remaining Claude-audit truthfulness residue in the public auth/onboarding preview:
