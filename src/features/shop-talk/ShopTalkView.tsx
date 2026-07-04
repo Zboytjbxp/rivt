@@ -399,142 +399,144 @@ function ShopTalkNewPostModal({
           <button type="button" className="icon-button" onClick={onClose} aria-label="Close"><X size={18} /></button>
         </div>
 
-        <div className="v2-st-type-selector">
-          {POST_TYPE_CHIPS.map((chip) => (
-            <button
-              key={chip.type}
-              type="button"
-              className={`v2-st-type-chip${postType === chip.type ? " is-active" : ""}`}
-              onClick={() => setPostType(chip.type)}
-            >
-              <span aria-hidden="true">{chip.label.slice(0, 3).toUpperCase()}</span>
-              {chip.label}
-            </button>
-          ))}
-        </div>
-
-        <div className="new-post-flair-picker">
-          <span>Choose a flair</span>
-          <div className="flair-options">
-            {(Object.keys(FLAIR_CONFIG) as PostFlair[]).map((f) => (
+        <div className="new-post-modal-body">
+          <div className="v2-st-type-selector">
+            {POST_TYPE_CHIPS.map((chip) => (
               <button
-                key={f}
+                key={chip.type}
                 type="button"
-                className={`flair-option${flair === f ? " selected" : ""}`}
-                style={{ "--flair-color": FLAIR_CONFIG[f].color } as CSSProperties}
-                onClick={() => setFlair(f)}
+                className={`v2-st-type-chip${postType === chip.type ? " is-active" : ""}`}
+                onClick={() => setPostType(chip.type)}
               >
-                {f}
+                <span aria-hidden="true">{chip.label.slice(0, 3).toUpperCase()}</span>
+                {chip.label}
               </button>
             ))}
           </div>
-          <small>{FLAIR_CONFIG[flair].description}</small>
-        </div>
 
-        <label className="input-control">
-          <span>Community</span>
-          <select
-            value={selectedPostCommunitySlug ?? ""}
-            onChange={(e) => {
-              const nextSlug = e.target.value || null;
-              const nextCommunity = communities.find((community) => community.slug === nextSlug) ?? null;
-              setSelectedPostCommunitySlug(nextSlug);
-              setTrade(inferCommunityDefaultTrade(nextCommunity, posterDefaultTrade));
-            }}
-          >
-            {communities.map((community) => (
-              <option key={community.slug} value={community.slug}>{community.name}</option>
-            ))}
-          </select>
-        </label>
+          <div className="new-post-flair-picker">
+            <span>Choose a flair</span>
+            <div className="flair-options">
+              {(Object.keys(FLAIR_CONFIG) as PostFlair[]).map((f) => (
+                <button
+                  key={f}
+                  type="button"
+                  className={`flair-option${flair === f ? " selected" : ""}`}
+                  style={{ "--flair-color": FLAIR_CONFIG[f].color } as CSSProperties}
+                  onClick={() => setFlair(f)}
+                >
+                  {f}
+                </button>
+              ))}
+            </div>
+            <small>{FLAIR_CONFIG[flair].description}</small>
+          </div>
 
-        <label className="input-control">
-          <span>Trade</span>
-          <select value={trade} onChange={(e) => setTrade(e.target.value as Trade | "General")}>
-            {tradeOptions.map((t) => <option key={t}>{t}</option>)}
-          </select>
-        </label>
-
-        <label className="input-control">
-          <span>Title</span>
-          <input
-            type="text"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder={flair === "Question" ? "What would you check first on...?" : "What's on your mind?"}
-            maxLength={120}
-          />
-          <small>{title.length}/120</small>
-        </label>
-
-        <label className="input-control">
-          <span>Body</span>
-          <textarea
-            value={body}
-            onChange={(e) => setBody(e.target.value)}
-            rows={5}
-            placeholder="Add context, photos, site conditions, tools on hand..."
-          />
-        </label>
-
-        <div className="shop-post-media-picker">
-          <input
-            id="shop-talk-photo-upload"
-            type="file"
-            accept="image/*"
-            onChange={(event) => handlePhotoSelected(event.target.files?.[0])}
-          />
-          <label htmlFor="shop-talk-photo-upload" className="shop-post-media-button">
-            <ImagePlus size={16} />
-            {photoFile ? "Change photo" : "Add photo"}
-          </label>
-          {photoFile && (
-            <button
-              type="button"
-              className="shop-post-media-remove"
-              onClick={() => {
-                setPhotoFile(null);
-                setPhotoError("");
+          <label className="input-control">
+            <span>Community</span>
+            <select
+              value={selectedPostCommunitySlug ?? ""}
+              onChange={(e) => {
+                const nextSlug = e.target.value || null;
+                const nextCommunity = communities.find((community) => community.slug === nextSlug) ?? null;
+                setSelectedPostCommunitySlug(nextSlug);
+                setTrade(inferCommunityDefaultTrade(nextCommunity, posterDefaultTrade));
               }}
             >
-              <Trash2 size={15} />
-              Remove
-            </button>
+              {communities.map((community) => (
+                <option key={community.slug} value={community.slug}>{community.name}</option>
+              ))}
+            </select>
+          </label>
+
+          <label className="input-control">
+            <span>Trade</span>
+            <select value={trade} onChange={(e) => setTrade(e.target.value as Trade | "General")}>
+              {tradeOptions.map((t) => <option key={t}>{t}</option>)}
+            </select>
+          </label>
+
+          <label className="input-control">
+            <span>Title</span>
+            <input
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder={flair === "Question" ? "What would you check first on...?" : "What's on your mind?"}
+              maxLength={120}
+            />
+            <small>{title.length}/120</small>
+          </label>
+
+          <label className="input-control">
+            <span>Body</span>
+            <textarea
+              value={body}
+              onChange={(e) => setBody(e.target.value)}
+              rows={5}
+              placeholder="Add context, photos, site conditions, tools on hand..."
+            />
+          </label>
+
+          <div className="shop-post-media-picker">
+            <input
+              id="shop-talk-photo-upload"
+              type="file"
+              accept="image/*"
+              onChange={(event) => handlePhotoSelected(event.target.files?.[0])}
+            />
+            <label htmlFor="shop-talk-photo-upload" className="shop-post-media-button">
+              <ImagePlus size={16} />
+              {photoFile ? "Change photo" : "Add photo"}
+            </label>
+            {photoFile && (
+              <button
+                type="button"
+                className="shop-post-media-remove"
+                onClick={() => {
+                  setPhotoFile(null);
+                  setPhotoError("");
+                }}
+              >
+                <Trash2 size={15} />
+                Remove
+              </button>
+            )}
+          </div>
+          {photoError && <p className="shop-post-media-error">{photoError}</p>}
+          {photoPreviewUrl && (
+            <figure className="shop-post-photo-preview">
+              <img src={photoPreviewUrl} alt={photoFile?.name ?? "Selected Shop Talk post"} />
+              <figcaption>{photoFile?.name}</figcaption>
+            </figure>
+          )}
+
+          {postType === "sub-request" && (
+            <div className="v2-st-sub-fields">
+              <input
+                type="text"
+                className="v2-st-sub-input"
+                placeholder="Trade needed (e.g. Plumber, Electrician)"
+                value={subTrade}
+                onChange={(e) => setSubTrade(e.target.value)}
+              />
+              <input
+                type="text"
+                className="v2-st-sub-input"
+                placeholder="Location (City or zip code)"
+                value={subLocation}
+                onChange={(e) => setSubLocation(e.target.value)}
+              />
+              <input
+                type="text"
+                className="v2-st-sub-input"
+                placeholder="Rate (e.g. $400/day or $55/hr)"
+                value={subRate}
+                onChange={(e) => setSubRate(e.target.value)}
+              />
+            </div>
           )}
         </div>
-        {photoError && <p className="shop-post-media-error">{photoError}</p>}
-        {photoPreviewUrl && (
-          <figure className="shop-post-photo-preview">
-            <img src={photoPreviewUrl} alt={photoFile?.name ?? "Selected Shop Talk post"} />
-            <figcaption>{photoFile?.name}</figcaption>
-          </figure>
-        )}
-
-        {postType === "sub-request" && (
-          <div className="v2-st-sub-fields">
-            <input
-              type="text"
-              className="v2-st-sub-input"
-              placeholder="Trade needed (e.g. Plumber, Electrician)"
-              value={subTrade}
-              onChange={(e) => setSubTrade(e.target.value)}
-            />
-            <input
-              type="text"
-              className="v2-st-sub-input"
-              placeholder="Location (City or zip code)"
-              value={subLocation}
-              onChange={(e) => setSubLocation(e.target.value)}
-            />
-            <input
-              type="text"
-              className="v2-st-sub-input"
-              placeholder="Rate (e.g. $400/day or $55/hr)"
-              value={subRate}
-              onChange={(e) => setSubRate(e.target.value)}
-            />
-          </div>
-        )}
 
         <div className="new-post-modal-footer">
           <small>Posting as {profile.displayName}</small>

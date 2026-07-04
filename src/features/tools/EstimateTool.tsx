@@ -3,10 +3,7 @@ import { useState } from "react";
 import { Panel } from "../../components/ui";
 import type { Job } from "../../types";
 import { getEstimatePriceSignal } from "./priceGuidance";
-
-function currency(value: number) {
-  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(value);
-}
+import { centsToDollars, currency, formatQuantity, toCents } from "./money";
 
 function formatNumber(value: number, digits = 1) {
   return Number.isInteger(value) ? String(value) : value.toFixed(digits);
@@ -16,6 +13,7 @@ export interface EstimateInvoiceDraftLine {
   description: string;
   qty: number;
   rate: number;
+  kind?: "labor" | "material" | "other" | "adjustment";
 }
 
 export interface EstimateInvoiceDraft {
@@ -69,7 +67,7 @@ export function EstimateTool({
       `RIVT estimate${activeJob ? ` - ${activeJob.title}` : ""}`,
       `Target range: ${currency(low)} - ${currency(high)}`,
       `Target price: ${currency(target)}`,
-      `Labor: ${formatNumber(laborHours)} hrs at ${currency(hourlyRate)}/hr`,
+      `Labor: ${formatQuantity(laborHours)} hrs at ${currency(hourlyRate)}/hr`,
       `Materials: ${currency(materials)}`,
       `Sub costs: ${currency(subCosts)}`,
       `Timeline: ${formatNumber(days, 1)} working days with ${crewSize} person${crewSize === 1 ? "" : "s"}`,
@@ -84,45 +82,47 @@ export function EstimateTool({
 
   function convertToInvoice() {
     const title = activeJob?.title?.trim() || "Estimate";
-    const draftLines: EstimateInvoiceDraftLine[] = [
+    const targetCents = Math.max(0, toCents(target));
+    const baseLines = [
       {
         description: `${title} labor`,
-        qty: laborHours,
-        rate: hourlyRate,
+        qty: Math.max(0.5, laborHours),
+        baseTotal: Math.max(0, labor),
+        kind: "labor" as const,
       },
-    ];
-
-    if (materials > 0) {
-      draftLines.push({
-        description: `${title} materials`,
+      {
+        description: `${title} materials and handling`,
         qty: 1,
-        rate: Math.round(materials),
-      });
-    }
-
-    if (subCosts > 0) {
-      draftLines.push({
-        description: `${title} subcontractor / specialty costs`,
+        baseTotal: Math.max(0, materials),
+        kind: "material" as const,
+      },
+      {
+        description: `${title} specialty costs`,
         qty: 1,
-        rate: Math.round(subCosts),
-      });
-    }
+        baseTotal: Math.max(0, subCosts),
+        kind: "other" as const,
+      },
+    ].filter((line) => line.baseTotal > 0);
 
-    if (overhead > 0) {
-      draftLines.push({
-        description: "Overhead",
-        qty: 1,
-        rate: Math.round(overhead),
-      });
-    }
+    const allocationLines = baseLines.length
+      ? baseLines
+      : [{ description: `${title} scope`, qty: 1, baseTotal: target, kind: "other" as const }];
 
-    if (margin + contingency > 0) {
-      draftLines.push({
-        description: "Margin and contingency",
-        qty: 1,
-        rate: Math.round(margin + contingency),
-      });
-    }
+    const baseTotal = allocationLines.reduce((sum, line) => sum + line.baseTotal, 0);
+    let allocatedCents = 0;
+    const draftLines: EstimateInvoiceDraftLine[] = allocationLines.map((line, index) => {
+      const isLast = index === allocationLines.length - 1;
+      const lineCents = isLast
+        ? targetCents - allocatedCents
+        : Math.round(targetCents * (line.baseTotal / Math.max(1, baseTotal)));
+      allocatedCents += lineCents;
+      return {
+        description: line.description,
+        qty: line.qty,
+        rate: centsToDollars(lineCents) / Math.max(1, line.qty),
+        kind: line.kind,
+      };
+    });
 
     onConvertToInvoice?.({
       invoiceNumber: `RIVT-${Date.now().toString(36).toUpperCase()}`,
@@ -131,7 +131,7 @@ export function EstimateTool({
       terms: "Due on completion",
       paymentMethod: "Direct payment",
       lines: draftLines,
-      sourceNote: `Converted from estimate target ${currency(target)} (${currency(low)} - ${currency(high)}). Review scope, tax, and payment terms before sending.`,
+      sourceNote: `Converted from estimate total ${currency(target)} (${currency(low)} - ${currency(high)}). Overhead, margin, and contingency are included in the line rates. Review scope, tax, and payment terms before sending.`,
     });
   }
 

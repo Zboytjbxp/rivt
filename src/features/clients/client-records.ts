@@ -131,7 +131,7 @@ export async function syncClientRecords(): Promise<ClientRecordSyncResult> {
       clients: localSnapshot,
       message: results.some(Boolean)
         ? "Local client records synced to your RIVT account."
-        : "Saved on this device. Sync will retry when your account is reachable.",
+        : "Couldn't sync - saved on this device only.",
     };
   }
 

@@ -728,6 +728,8 @@
 }
 
 .v2-converted-estimate-note {
+  display: grid;
+  gap: 10px;
   margin: 0;
   padding: 12px 14px;
   border: 1px solid color-mix(in srgb, var(--v2-info) 32%, transparent);
@@ -737,6 +739,28 @@
   font-size: 13px;
   font-weight: var(--v2-weight-strong);
   line-height: 1.45;
+}
+
+.v2-converted-estimate-note p {
+  margin: 0;
+}
+
+.v2-converted-estimate-note span {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.v2-converted-estimate-note button {
+  min-height: 34px;
+  padding: 0 10px;
+  border: 1px solid color-mix(in srgb, var(--v2-border) 64%, transparent);
+  border-radius: var(--v2-radius-sm);
+  background: var(--v2-surface);
+  color: var(--v2-text);
+  font: inherit;
+  font-size: 13px;
+  font-weight: var(--v2-weight-strong);
 }
 
 .v2-invoice-template-bar {
@@ -3177,7 +3201,11 @@
 
 @media (max-width: 900px) {
   .v2-bid-workbench { grid-template-columns: 1fr; }
-  .v2-bid-summary-stack { display: none; }
+  .v2-bid-summary-stack {
+    position: sticky;
+    bottom: calc(82px + env(safe-area-inset-bottom));
+    z-index: 3;
+  }
   .v2-bid-line-header,
   .v2-bid-line { grid-template-columns: 1fr 48px 48px 68px 64px 28px; }
 }
@@ -3232,7 +3260,11 @@
 
 @media (max-width: 900px) {
   .v2-mileage-workbench { grid-template-columns: 1fr; }
-  .v2-mileage-summary { display: none; }
+  .v2-mileage-summary {
+    position: sticky;
+    bottom: calc(82px + env(safe-area-inset-bottom));
+    z-index: 3;
+  }
 }
 
 /* ── Material Price Book ─────────────────────────────────────────────────── */
@@ -3721,7 +3753,11 @@
 
 @media (max-width: 900px) {
   .v2-safety-workbench { grid-template-columns: 1fr; }
-  .v2-safety-summary { display: none; }
+  .v2-safety-summary {
+    position: sticky;
+    bottom: calc(82px + env(safe-area-inset-bottom));
+    z-index: 3;
+  }
   .v2-safety-meta-inputs { grid-template-columns: 1fr; }
 }
 
@@ -6364,7 +6400,7 @@
   }
 
   .v2-invoice-line {
-    grid-template-columns: minmax(0, 1fr) 58px 72px;
+    grid-template-columns: minmax(52px, 0.5fr) minmax(92px, 1fr) minmax(76px, 0.75fr) 40px;
     padding: 8px;
   }
 

@@ -97,7 +97,7 @@ function ClientBookView() {
     setClients(list);
     if (changedClient) {
       void upsertClientRecord(changedClient).then((ok) => {
-        setSyncMessage(ok ? "Synced to your RIVT account." : "Saved on this device. Sync will retry when your account is reachable.");
+        setSyncMessage(ok ? "Synced to your RIVT account." : "Couldn't sync - saved on this device only.");
       });
     }
   }
@@ -136,7 +136,7 @@ function ClientBookView() {
     if (!window.confirm("Delete this client?")) return;
     save(clients.filter((c) => c.id !== id));
     void deleteClientRecord(id).then((ok) => {
-      setSyncMessage(ok ? "Client record removed from your RIVT account." : "Removed on this device. Sync will retry when your account is reachable.");
+      setSyncMessage(ok ? "Client record removed from your RIVT account." : "Removed on this device only. Could not sync removal.");
     });
     if (expandedId === id) setExpandedId(null);
   }
@@ -642,7 +642,7 @@ function CrewManager({ crewType }: { crewType: CrewType }) {
     saveCrew(list);
     if (changedMember) {
       void upsertNetworkRecord(crewMemberToNetworkRecord(changedMember)).then((record) => {
-        setSyncMessage(record ? "Synced to your RIVT account." : "Saved on this device. Sync will retry when your account is reachable.");
+        setSyncMessage(record ? "Synced to your RIVT account." : "Couldn't sync - saved on this device only.");
       });
     }
   }
@@ -663,7 +663,7 @@ function CrewManager({ crewType }: { crewType: CrewType }) {
     if (!window.confirm("Remove this person from your crew?")) return;
     persist(crew.filter((m) => m.id !== id));
     void deleteNetworkRecordByLocalId("crew_member", id).then((ok) => {
-      setSyncMessage(ok ? "Removed from your RIVT account." : "Removed on this device. Sync will retry when your account is reachable.");
+      setSyncMessage(ok ? "Removed from your RIVT account." : "Removed on this device only. Could not sync removal.");
     });
   }
 
@@ -881,7 +881,7 @@ async function syncCrewRecords(): Promise<{ records: CrewMember[]; message: stri
   const localRows = loadCrew();
   const serverRows = await fetchNetworkRecords("crew_member");
   if (!serverRows) {
-    return { records: localRows, message: "Saved on this device. Sync will retry when your account is reachable." };
+    return { records: localRows, message: "Couldn't sync - saved on this device only." };
   }
   const remoteRows = serverRows.map(crewMemberFromNetworkRecord).filter((row): row is CrewMember => Boolean(row));
   const remoteIds = new Set(remoteRows.map((row) => row.id));
@@ -922,7 +922,7 @@ async function syncCrewInviteRecords(): Promise<{ records: CrewInvite[]; message
   const localRows = readCrewInvites();
   const serverRows = await fetchNetworkRecords("crew_invite");
   if (!serverRows) {
-    return { records: localRows, message: "Saved on this device. Sync will retry when your account is reachable." };
+    return { records: localRows, message: "Couldn't sync - saved on this device only." };
   }
   const remoteRows = serverRows.map(crewInviteFromNetworkRecord).filter((row): row is CrewInvite => Boolean(row));
   const remoteIds = new Set(remoteRows.map((row) => row.id));
@@ -964,7 +964,7 @@ async function syncStoredReviewRecords(): Promise<{ records: StoredReview[]; mes
   const localRows = readStoredReviews();
   const serverRows = await fetchNetworkRecords("network_review");
   if (!serverRows) {
-    return { records: localRows, message: "Saved on this device. Sync will retry when your account is reachable." };
+    return { records: localRows, message: "Couldn't sync - saved on this device only." };
   }
   const remoteRows = serverRows.map(storedReviewFromNetworkRecord).filter((row): row is StoredReview => Boolean(row));
   const remoteIds = new Set(remoteRows.map((row) => row.id));
@@ -999,7 +999,7 @@ function CrewInvitePlanner() {
     persistCrewInvites(inviteRows);
     if (changedInvite) {
       void upsertNetworkRecord(crewInviteToNetworkRecord(changedInvite)).then((record) => {
-        setSyncMessage(record ? "Synced to your RIVT account." : "Saved on this device. Sync will retry when your account is reachable.");
+        setSyncMessage(record ? "Synced to your RIVT account." : "Couldn't sync - saved on this device only.");
       });
     }
   }
@@ -1034,7 +1034,7 @@ function CrewInvitePlanner() {
     const next = invites.filter((i) => i.id !== id);
     persist(next);
     void deleteNetworkRecordByLocalId("crew_invite", id).then((ok) => {
-      setSyncMessage(ok ? "Removed from your RIVT account." : "Removed on this device. Sync will retry when your account is reachable.");
+      setSyncMessage(ok ? "Removed from your RIVT account." : "Removed on this device only. Could not sync removal.");
     });
   }
 
@@ -1197,7 +1197,7 @@ function ReviewsView({
     setStoredReviews(next);
     persistStoredReviews(next);
     void upsertNetworkRecord(storedReviewToNetworkRecord(newReview)).then((record) => {
-      setSyncMessage(record ? "Synced to your RIVT account." : "Saved on this device. Sync will retry when your account is reachable.");
+      setSyncMessage(record ? "Synced to your RIVT account." : "Couldn't sync - saved on this device only.");
     });
     setTo("");
     setTrade("");
