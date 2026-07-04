@@ -2693,8 +2693,18 @@ Completed on 2026-07-04 on branch `codex/launch-polish-phase-2` as a controllabl
 - Production deployment status:
   - runtime release commit `57c2f773376ae9a7178a99b0911c8dd3fee93c88` was pushed to GitHub and picked up by Railway production service `RIVT`
   - `EXPECTED_SOURCE_COMMIT=57c2f773376ae9a7178a99b0911c8dd3fee93c88 npm run monitor:production` passed with PostgreSQL, S3-compatible object storage, configured Sentry, operational controls off, seven anonymous private-route checks, and 542 ms duration
+- Follow-up smoke-tool robustness patch:
+  - production runtime commit `771bc4948976d483fed9099194ab43197b667f78` was deployed after the smoke learned to accept Stripe webhook signature failures that return HTTP 400 with an empty body
+  - `EXPECTED_SOURCE_COMMIT=771bc4948976d483fed9099194ab43197b667f78 npm run monitor:production` passed with PostgreSQL, S3-compatible object storage, configured Sentry, operational controls off, seven anonymous private-route checks, and 579 ms duration
+- Founder-run live billing smoke evidence:
+  - `npm run smoke:billing:live` passed against `https://rivt.pro` for the dedicated testing account
+  - billing provider reported `checkoutConfigured: true`, `webhookConfigured: true`, and `portalConfigured: true`
+  - unsigned webhook probe was rejected with HTTP 400 (`rejected_unsigned_event_http_400`), proving the webhook is not falling through as setup-required
+  - live Checkout Session creation returned a `cs_live_` session on `checkout.stripe.com`
+  - live Customer Portal session creation returned `billing.stripe.com`
+  - the smoke account remained `plan: free`, `active: false`, `status: inactive`, so this did not charge a card or prove paid entitlement activation
 - Remaining boundary:
-  - the live billing smoke was not run from this terminal because `RIVT_SMOKE_EMAIL` and `RIVT_SMOKE_PASSWORD` are not present in the local environment, and the password was not echoed into the shell command. Run it from an operator terminal with those environment variables set.
+  - complete one real paid checkout and confirm the signed Stripe webhook updates `/api/v1/billing/status` to active Pro before charging first cohort users.
 
 ## Next Exact Task
 
