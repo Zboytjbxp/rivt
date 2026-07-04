@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Copy, Download, FileText, Mail, MessageSquare, Plus, Trash2 } from "lucide-react";
 import type { Job } from "../../types";
 import { Panel } from "../../components/ui";
+import type { EstimateInvoiceDraft } from "./EstimateTool";
 import { getInvoiceLinePriceSignal } from "./priceGuidance";
 import { deleteToolRecordByLocalId, fetchToolRecords, upsertToolRecord, type ServerToolRecord } from "./tool-records-api";
 
@@ -90,12 +91,31 @@ function invoiceTemplateToServerInput(template: InvoiceTemplate) {
   };
 }
 
-export function InvoiceDraftTool({ activeJob }: { activeJob: Job | null }) {
-  const [invoiceNumber, setInvoiceNumber] = useState(activeJob ? `RIVT-${activeJob.id}` : "RIVT-DRAFT");
-  const [billTo, setBillTo] = useState(activeJob?.contractor ?? "");
+function defaultInvoiceLines(activeJob: Job | null): InvoiceLine[] {
+  return [
+    { id: "labor", description: "Labor", qty: activeJob?.durationHours ?? 8, rate: activeJob ? Math.max(45, Math.round(activeJob.pay / Math.max(1, activeJob.durationHours) * 0.78)) : 65 },
+    { id: "materials", description: "Materials", qty: 1, rate: activeJob ? Math.max(50, Math.round(activeJob.pay * 0.2)) : 250 },
+  ];
+}
+
+function invoiceLinesFromEstimate(draft: EstimateInvoiceDraft): InvoiceLine[] {
+  return draft.lines.length
+    ? draft.lines.map((line) => ({ ...line, id: crypto.randomUUID() }))
+    : [{ id: crypto.randomUUID(), description: "Converted estimate", qty: 1, rate: 0 }];
+}
+
+export function InvoiceDraftTool({
+  activeJob,
+  estimateDraft = null,
+}: {
+  activeJob: Job | null;
+  estimateDraft?: EstimateInvoiceDraft | null;
+}) {
+  const [invoiceNumber, setInvoiceNumber] = useState(estimateDraft?.invoiceNumber ?? (activeJob ? `RIVT-${activeJob.id}` : "RIVT-DRAFT"));
+  const [billTo, setBillTo] = useState(estimateDraft?.billTo ?? activeJob?.contractor ?? "");
   const [payTo, setPayTo] = useState("");
-  const [terms, setTerms] = useState("Due on completion");
-  const [paymentMethod, setPaymentMethod] = useState("Direct payment");
+  const [terms, setTerms] = useState(estimateDraft?.terms ?? "Due on completion");
+  const [paymentMethod, setPaymentMethod] = useState(estimateDraft?.paymentMethod ?? "Direct payment");
   const [recipientEmail, setRecipientEmail] = useState("");
   const [recipientPhone, setRecipientPhone] = useState("");
   const [taxPct, setTaxPct] = useState(0);
@@ -103,12 +123,10 @@ export function InvoiceDraftTool({ activeJob }: { activeJob: Job | null }) {
   const [downloaded, setDownloaded] = useState(false);
   const [templates, setTemplates] = useState<InvoiceTemplate[]>(readInvoiceTemplates);
   const [syncMessage, setSyncMessage] = useState("Saved on this device.");
-  const [templateName, setTemplateName] = useState(activeJob ? `${activeJob.title} invoice` : "Standard invoice");
-  const [templateNotice, setTemplateNotice] = useState("");
-  const [lines, setLines] = useState<InvoiceLine[]>([
-    { id: "labor", description: "Labor", qty: activeJob?.durationHours ?? 8, rate: activeJob ? Math.max(45, Math.round(activeJob.pay / Math.max(1, activeJob.durationHours) * 0.78)) : 65 },
-    { id: "materials", description: "Materials", qty: 1, rate: activeJob ? Math.max(50, Math.round(activeJob.pay * 0.2)) : 250 },
-  ]);
+  const [templateName, setTemplateName] = useState(estimateDraft?.templateName ?? (activeJob ? `${activeJob.title} invoice` : "Standard invoice"));
+  const [templateNotice, setTemplateNotice] = useState(estimateDraft ? "Estimate converted. Review details before sending." : "");
+  const [conversionNotice] = useState(estimateDraft?.sourceNote ?? "");
+  const [lines, setLines] = useState<InvoiceLine[]>(() => estimateDraft ? invoiceLinesFromEstimate(estimateDraft) : defaultInvoiceLines(activeJob));
 
   const subtotal = lines.reduce((sum, line) => sum + numericValue(line.qty) * numericValue(line.rate), 0);
   const tax = subtotal * (taxPct / 100);
@@ -282,6 +300,7 @@ export function InvoiceDraftTool({ activeJob }: { activeJob: Job | null }) {
           </div>
         </section>
 
+        {conversionNotice ? <p className="v2-converted-estimate-note" role="status">{conversionNotice}</p> : null}
         <section className="v2-invoice-template-bar" aria-label="Invoice templates">
           <label>Template name<input value={templateName} onChange={(event) => setTemplateName(event.target.value)} placeholder="Standard labor invoice" /></label>
           <button type="button" className="v2-primary-button" onClick={saveTemplate}><FileText size={14} />Save template</button>

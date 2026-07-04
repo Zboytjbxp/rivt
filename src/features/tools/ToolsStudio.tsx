@@ -39,7 +39,7 @@ import {
   type ProjectRecord,
 } from "./project-api";
 import { FieldCalculatorTool } from "./FieldCalculatorTool";
-import { EstimateTool } from "./EstimateTool";
+import { EstimateTool, type EstimateInvoiceDraft } from "./EstimateTool";
 import { InvoiceDraftTool } from "./InvoiceDraftTool";
 import { MaterialsTool } from "./MaterialsTool";
 import { DailyLogTool } from "./DailyLogTool";
@@ -2683,6 +2683,7 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
   const [projectAction, setProjectAction] = useState<string | null>(null);
   const [reportPreview, setReportPreview] = useState<string | null>(null);
   const [recordNotice, setRecordNotice] = useState<string | null>(null);
+  const [convertedEstimateDraft, setConvertedEstimateDraft] = useState<EstimateInvoiceDraft | null>(null);
   const [noteDraft, setNoteDraft] = useState("");
   const [uploadNotes, setUploadNotes] = useState("");
   const [completionNote, setCompletionNote] = useState("");
@@ -2701,6 +2702,16 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
   function setActiveTool(tool: ToolMode) {
     onOpenToolConsumed?.();
     setLocalActiveTool(tool);
+  }
+
+  function openToolFromHub(tool: LaunchableToolMode) {
+    if (tool === "invoice") setConvertedEstimateDraft(null);
+    setActiveTool(tool);
+  }
+
+  function handleConvertEstimateToInvoice(draft: EstimateInvoiceDraft) {
+    setConvertedEstimateDraft(draft);
+    setActiveTool("invoice");
   }
 
   useEffect(() => {
@@ -3149,11 +3160,11 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
     const toolMeta = {
       estimate: {
         title: "Estimate builder",
-        node: <EstimateTool activeJob={activeJob} />,
+        node: <EstimateTool activeJob={activeJob} onConvertToInvoice={handleConvertEstimateToInvoice} />,
       },
       invoice: {
         title: "Invoice draft",
-        node: <InvoiceDraftTool activeJob={activeJob} />,
+        node: <InvoiceDraftTool activeJob={activeJob} estimateDraft={convertedEstimateDraft} />,
       },
       "daily-log": {
         title: "Daily log",
@@ -3256,7 +3267,7 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
                 title={tool.title}
                 summary={tool.summary}
                 featured={index === 0}
-                onAction={() => setActiveTool(tool.mode)}
+                onAction={() => openToolFromHub(tool.mode)}
               />
             ))}
           </div>
@@ -3268,7 +3279,7 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
 
         <div className="v2-tool-group-grid" aria-label="More tools">
           {TOOL_GROUPS.map((group) => (
-            <ToolLauncherSection key={group.label} group={group} onOpen={setActiveTool} />
+            <ToolLauncherSection key={group.label} group={group} onOpen={openToolFromHub} />
           ))}
         </div>
       </div>

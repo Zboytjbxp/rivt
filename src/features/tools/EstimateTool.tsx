@@ -1,4 +1,4 @@
-import { Copy } from "lucide-react";
+import { Copy, FileText } from "lucide-react";
 import { useState } from "react";
 import { Panel } from "../../components/ui";
 import type { Job } from "../../types";
@@ -12,7 +12,29 @@ function formatNumber(value: number, digits = 1) {
   return Number.isInteger(value) ? String(value) : value.toFixed(digits);
 }
 
-export function EstimateTool({ activeJob }: { activeJob: Job | null }) {
+export interface EstimateInvoiceDraftLine {
+  description: string;
+  qty: number;
+  rate: number;
+}
+
+export interface EstimateInvoiceDraft {
+  invoiceNumber: string;
+  templateName: string;
+  billTo: string;
+  terms: string;
+  paymentMethod: string;
+  lines: EstimateInvoiceDraftLine[];
+  sourceNote: string;
+}
+
+export function EstimateTool({
+  activeJob,
+  onConvertToInvoice,
+}: {
+  activeJob: Job | null;
+  onConvertToInvoice?: (draft: EstimateInvoiceDraft) => void;
+}) {
   const [laborHours, setLaborHours] = useState(activeJob?.durationHours ?? 8);
   const [hourlyRate, setHourlyRate] = useState(65);
   const [crewSize, setCrewSize] = useState(1);
@@ -60,6 +82,59 @@ export function EstimateTool({ activeJob }: { activeJob: Job | null }) {
     }
   }
 
+  function convertToInvoice() {
+    const title = activeJob?.title?.trim() || "Estimate";
+    const draftLines: EstimateInvoiceDraftLine[] = [
+      {
+        description: `${title} labor`,
+        qty: laborHours,
+        rate: hourlyRate,
+      },
+    ];
+
+    if (materials > 0) {
+      draftLines.push({
+        description: `${title} materials`,
+        qty: 1,
+        rate: Math.round(materials),
+      });
+    }
+
+    if (subCosts > 0) {
+      draftLines.push({
+        description: `${title} subcontractor / specialty costs`,
+        qty: 1,
+        rate: Math.round(subCosts),
+      });
+    }
+
+    if (overhead > 0) {
+      draftLines.push({
+        description: "Overhead",
+        qty: 1,
+        rate: Math.round(overhead),
+      });
+    }
+
+    if (margin + contingency > 0) {
+      draftLines.push({
+        description: "Margin and contingency",
+        qty: 1,
+        rate: Math.round(margin + contingency),
+      });
+    }
+
+    onConvertToInvoice?.({
+      invoiceNumber: `RIVT-${Date.now().toString(36).toUpperCase()}`,
+      templateName: `${title} invoice`,
+      billTo: activeJob?.contractor ?? "",
+      terms: "Due on completion",
+      paymentMethod: "Direct payment",
+      lines: draftLines,
+      sourceNote: `Converted from estimate target ${currency(target)} (${currency(low)} - ${currency(high)}). Review scope, tax, and payment terms before sending.`,
+    });
+  }
+
   return (
     <div className="v2-tool-workbench v2-estimate-workbench">
       <Panel className="v2-tool-panel v2-estimate-builder-panel" eyebrow="Estimate" title="Price the work before you post or bid">
@@ -67,10 +142,18 @@ export function EstimateTool({ activeJob }: { activeJob: Job | null }) {
           <span>Recommended target</span>
           <strong>{currency(target)}</strong>
           <small>{currency(low)} - {currency(high)} / {formatNumber(days, 1)} working days</small>
-          <button type="button" className="v2-primary-button" onClick={copySummary}>
-            <Copy size={15} />
-            {copied ? "Copied" : "Copy estimate"}
-          </button>
+          <div className="v2-estimate-hero-actions">
+            <button type="button" className="v2-primary-button" onClick={copySummary}>
+              <Copy size={15} />
+              {copied ? "Copied" : "Copy estimate"}
+            </button>
+            {onConvertToInvoice ? (
+              <button type="button" onClick={convertToInvoice}>
+                <FileText size={15} />
+                Convert to invoice
+              </button>
+            ) : null}
+          </div>
         </section>
 
         <div className="v2-estimate-quick-stats" aria-label="Estimate quick stats">

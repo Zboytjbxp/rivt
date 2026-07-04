@@ -362,10 +362,19 @@ async function assertToolsFlow(page) {
   await primaryTool("Estimate").click();
   await page.getByRole("heading", { name: "Estimate builder" }).waitFor();
   await page.getByText("Recommended target", { exact: true }).waitFor();
+  await page.getByRole("button", { name: /Convert to invoice/i }).click();
+  await page.getByRole("heading", { name: "Invoice draft" }).waitFor();
+  await page.getByText(/Converted from estimate target/i).waitFor();
+  await page.getByText("Printable invoice", { exact: true }).waitFor();
+  await page.getByLabel("Invoice draft").getByRole("button", { name: "Tools" }).click();
+
+  await primaryTool("Estimate").click();
+  await page.getByRole("heading", { name: "Estimate builder" }).waitFor();
   await page.getByLabel("Estimate builder").getByRole("button", { name: "Tools" }).click();
 
   await primaryTool("Invoice").click();
   await page.getByRole("heading", { name: "Invoice draft" }).waitFor();
+  assert.equal(await page.getByText(/Converted from estimate target/i).count(), 0, "Opening Invoice directly should not reuse a converted estimate draft");
   await page.getByText("Printable invoice", { exact: true }).waitFor();
   await page.getByLabel("Invoice draft").getByRole("button", { name: "Tools" }).click();
 
