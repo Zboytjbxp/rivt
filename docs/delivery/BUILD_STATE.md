@@ -2,10 +2,46 @@
 
 Last updated: 2026-07-03 America/New_York
 Current gate: Gate A launch hardening
-Current phase: Packet 08 Gate A launch hardening plus Gate B behind-flag backbone work: machine gates and live workflow smokes are mostly green; the Shop Talk Reddit-model backbone, moderation/reporting backend, human-facing moderation console/report UX, post photo media, reachability/naming cleanup, Tools hub consolidation, Payment Tracker server records, money-tools sync, the accepted tool-records sync slices, non-tool local-state boundary cleanup, and dedicated network-records sync for Crew/Invites/informal written shout-outs are implemented while still respecting launch-readiness boundaries before broad exposure.
+Current phase: Packet 08 Gate A launch hardening plus Gate B behind-flag backbone work: machine gates and live workflow smokes are mostly green; the Shop Talk Reddit-model backbone, moderation/reporting backend, human-facing moderation console/report UX, post photo media, reachability/naming cleanup, Tools hub consolidation, Payment Tracker server records, money-tools sync, the accepted tool-records sync slices, non-tool local-state boundary cleanup, dedicated network-records sync for Crew/Invites/informal written shout-outs, and the latest screen-density polish slice are implemented while still respecting launch-readiness boundaries before broad exposure.
 Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
 Production release commit: verify with live `/api/health`; latest runtime feature evidence is recorded below and docs-only evidence commits may supersede the served build SHA.
+
+## Latest Packet 08 Pass - Screen Density Polish
+
+- Continued the minimal-professional UI audit cleanup after the typography/breakpoint pass:
+  - tightened the Tools hub into denser two-column primary cards plus shorter grouped list rows
+  - shortened the Tools storage boundary copy to one clear sentence: local drafts stay on the device; records/photos sync to cloud storage
+  - made individual tool headers sticky, compact, and title-first so tools get more usable screen space
+  - reduced Shop Talk command/card padding and hid nonessential KPI copy on mobile
+  - tightened Trade News mobile article cards so more headlines fit per viewport, source links remain visible, and fallback thumbnails read as source-initial badges rather than blank placeholders
+  - tightened Work job rows, detail headers, facts, tabs, and action bars while keeping tap targets at or above the 44px floor
+  - tightened Settings/Profile panels, storage rows, completion, portfolio, rate card, and certification surfaces so the page reads less like stacked dashboard cards
+- Preserved launch boundaries:
+  - no homeowner flows, fake verification, job-payment processing, escrow, payroll, local-auth fallback, or frontend-only production claims were added
+  - no server data, auth, billing, storage, subscription, moderation, or migration contracts were changed
+- Local gates:
+  - `npm run build` (pass)
+  - `npm run lint` (pass)
+  - `npm run lint:security` (pass)
+  - `npm run test` (pass; unit plus 17 DB-backed integration tests)
+  - `npm run test:e2e` (pass; fail-closed auth plus desktop/mobile jobs/discovery)
+  - `npm audit --omit=dev` (pass; 0 vulnerabilities)
+  - `npm run incident:readiness -- --require-ready` (pass)
+  - `npm run launch:readiness -- --require-ready` (pass)
+  - `git diff --check` (pass; CRLF warnings only for touched files)
+- Rendered QA:
+  - Browser plugin instructions were loaded, but the in-app browser runtime exposed no usable `documentation`/`tabs` API in this session; Playwright was used with the local Chrome channel
+  - fresh branch-specific Vite client was started at `http://127.0.0.1:5177`
+  - mobile guest-preview smoke at 430x932 checked Home, Tools hub, Heavy 16th calculator, Shop Talk, Trade News, Work, and Profile/Settings
+  - the smoke found no document-wide horizontal overflow on any checked surface
+  - local API checks during rendered QA used a setup-required dev process, so CORS/setup console noise was treated as an environment artifact rather than app UI evidence
+  - screenshot evidence was saved outside the repo at `C:\Users\zboyt\AppData\Local\Temp\rivt-density-home.png`, `rivt-density-tools-hub.png`, `rivt-density-tool-calculator.png`, `rivt-density-shop-talk.png`, `rivt-density-trade-news-final2.png`, `rivt-density-work.png`, and `rivt-density-profile-settings.png`
+- Production deployment status:
+  - runtime release commit `cdaf0af3b71bc855f057cc525468a0a58db19040` was pushed to GitHub and picked up by Railway production service `RIVT`
+  - `EXPECTED_SOURCE_COMMIT=cdaf0af3b71bc855f057cc525468a0a58db19040 npm run monitor:production` passed with PostgreSQL, S3-compatible object storage, configured Sentry, controls off, seven anonymous private-route checks, and 591 ms duration
+- Remaining boundary:
+  - this pass is focused screen-density polish. Physical/manual device evidence, route-level keyboard/screen-reader checks, and continued feature-specific UI simplification remain open launch-quality work.
 
 ## Latest Packet 08 Pass - Typography and Breakpoint Polish
 

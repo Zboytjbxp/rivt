@@ -608,6 +608,14 @@ Evidence must eventually link to implementation, automated tests, manual accepta
 - `GA-OPS-007` gains local automated evidence for this refactor slice: `npm run build`, `npm run lint`, `npm run test:unit`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check` passed.
 - `GA-OPS-008` is unchanged for production deployment: this slice has not been deployed.
 
+## Traceability Addendum - 2026-07-03 Screen Density Polish
+
+- `GA-UX-006` gains rendered mobile evidence for a screen-density polish slice across Home, Tools hub, Heavy 16th calculator, Shop Talk, Trade News, Work, and Profile/Settings at 430x932 with no document-wide horizontal overflow.
+- `GA-UX-005` gains clearer mobile information hierarchy evidence: Tools and Work now expose more usable first-screen content, Profile/Settings card rhythm is tighter, and Trade News fallback thumbnails render as deliberate source-initial badges instead of blank placeholder tiles.
+- `GA-OPS-007` gains local automated evidence for this slice: `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, `npm run incident:readiness -- --require-ready`, `npm run launch:readiness -- --require-ready`, and `git diff --check` passed.
+- `GA-OPS-008` gains deployment evidence: production now serves source `cdaf0af3b71bc855f057cc525468a0a58db19040`; live `/api/health` reached that commit and `EXPECTED_SOURCE_COMMIT=cdaf0af3b71bc855f057cc525468a0a58db19040 npm run monitor:production` passed with PostgreSQL, S3-compatible storage, configured Sentry, controls off, seven anonymous private-route checks, and 591 ms duration.
+- Remaining boundary: this is UI-density polish only. Physical device coverage, keyboard/screen-reader route sweeps, and additional screen-by-screen simplification remain open launch-quality work.
+
 ## Current Gate A Summary
 
 - Production infrastructure is reachable and managed storage is healthy.
