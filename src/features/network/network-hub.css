@@ -28,7 +28,7 @@
 .v2-network-header p {
   margin: 7px 0 0;
   color: var(--v2-text-muted);
-  font-size: 14px;
+  font-size: var(--v2-text-body);
 }
 
 .v2-network-panel {
@@ -65,7 +65,7 @@
 
 .v2-network-panel > header span {
   color: var(--v2-text-muted);
-  font-size: 13px;
+  font-size: var(--v2-text-label);
   font-weight: var(--v2-weight-bold);
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -73,7 +73,7 @@
 
 .v2-network-panel > header h2 {
   margin: 3px 0 0;
-  font-size: 16px;
+  font-size: var(--v2-text-body-lg);
   letter-spacing: 0;
 }
 
@@ -87,7 +87,7 @@
   background: transparent;
   color: var(--v2-accent);
   font: inherit;
-  font-size: 13px;
+  font-size: var(--v2-text-label);
   font-weight: var(--v2-weight-strong);
 }
 
@@ -135,7 +135,7 @@
 .v2-network-trust-stack span,
 .v2-network-prompt small {
   color: var(--v2-text-muted);
-  font-size: 13px;
+  font-size: var(--v2-text-caption);
 }
 
 .v2-network-person-card p,
@@ -163,7 +163,7 @@
 .v2-network-trust-stack article strong,
 .v2-network-prompt strong {
   display: block;
-  font-size: 14px;
+  font-size: var(--v2-text-body);
 }
 
 .v2-network-prompt {

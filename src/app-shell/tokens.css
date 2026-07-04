@@ -33,6 +33,15 @@
   --v2-text-base: 17px;
   --v2-text-lg: 21px;
   --v2-text-xl: 26px;
+  --v2-text-caption: var(--v2-text-xs);
+  --v2-text-label: var(--v2-text-xs);
+  --v2-text-body: var(--v2-text-sm);
+  --v2-text-body-lg: var(--v2-text-base);
+  --v2-text-title: var(--v2-text-lg);
+  --v2-text-display: clamp(30px, 4vw, 42px);
+  --v2-space-tight: 8px;
+  --v2-space-card: 16px;
+  --v2-space-section: 24px;
   --v2-weight-body: 400;
   --v2-weight-medium: var(--v2-weight-semibold);
   --v2-weight-semibold: 600;
@@ -51,6 +60,16 @@
   font-family: "Instrument Sans", "Arial", "Helvetica Neue", "Segoe UI Variable", "Segoe UI", ui-sans-serif, system-ui, sans-serif;
   font-feature-settings: "cv02", "cv03", "cv04";
   letter-spacing: 0;
+  text-size-adjust: 100%;
+  -webkit-text-size-adjust: 100%;
+}
+
+.rivt-v2 :where(h1, h2, h3) {
+  text-wrap: balance;
+}
+
+.rivt-v2 :where(p, li) {
+  text-wrap: pretty;
 }
 
 [data-theme="dark"] .rivt-v2 {

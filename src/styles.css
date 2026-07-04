@@ -22,6 +22,15 @@
   --text-lg: 21px;
   --text-xl: 26px;
   --text-2xl: 34px;
+  --v2-text-caption: var(--text-xs);
+  --v2-text-label: var(--text-xs);
+  --v2-text-body: var(--text-sm);
+  --v2-text-body-lg: var(--text-base);
+  --v2-text-title: var(--text-lg);
+  --v2-text-display: clamp(30px, 4vw, 42px);
+  --v2-space-tight: 8px;
+  --v2-space-card: 16px;
+  --v2-space-section: 24px;
   --bg: #f4f5f4;
   --surface: #ffffff;
   --surface-soft: #f3f5f5;
@@ -7036,7 +7045,7 @@ textarea:focus-visible {
   min-width: 0;
   padding: 14px;
   border: 1px solid transparent;
-  border-radius: 11px;
+  border-radius: var(--v2-radius-lg);
   background: var(--surface);
   color: var(--text);
   text-align: left;
@@ -7267,7 +7276,7 @@ textarea:focus-visible {
 .modern-readiness-grid .info-item {
   min-height: 86px;
   border: 1px solid var(--border);
-  border-radius: 11px;
+  border-radius: var(--v2-radius-lg);
   background: var(--surface-soft);
 }
 

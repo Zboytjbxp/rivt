@@ -12,7 +12,7 @@
 
 .v2-work-header h1 {
   margin: 0;
-  font-size: clamp(30px, 4vw, 50px);
+  font-size: var(--v2-text-display);
   font-weight: var(--v2-weight-display);
   letter-spacing: -0.045em;
   line-height: 0.95;
@@ -23,7 +23,7 @@
   max-width: 620px;
   margin: 7px 0 0;
   color: var(--v2-text-muted);
-  font-size: 14px;
+  font-size: var(--v2-text-body);
   line-height: 1.5;
 }
 
@@ -62,7 +62,7 @@
   background: transparent;
   color: var(--v2-text-muted);
   font: inherit;
-  font-size: 13px;
+  font-size: var(--v2-text-label);
   font-weight: var(--v2-weight-strong);
   transition: background 150ms ease, color 150ms ease, box-shadow 150ms ease;
 }
@@ -150,7 +150,7 @@
   place-items: center;
   border-radius: var(--v2-radius-md);
   background: var(--v2-accent-soft);
-  font-size: 13px;
+  font-size: var(--v2-text-label);
 }
 
 .v2-sort-button {
@@ -176,7 +176,7 @@
   display: grid;
   gap: 6px;
   color: var(--v2-text-muted);
-  font-size: 13px;
+  font-size: var(--v2-text-label);
   font-weight: var(--v2-weight-strong);
 }
 
@@ -220,7 +220,7 @@
   min-height: 620px;
   overflow: hidden;
   border: 1px solid var(--v2-border);
-  border-radius: 18px;
+  border-radius: var(--v2-radius-lg);
   background: var(--v2-surface-raised);
   box-shadow: none;
 }
@@ -241,13 +241,13 @@
 }
 
 .v2-work-list-heading span {
-  font-size: 13px;
+  font-size: var(--v2-text-label);
   font-weight: var(--v2-weight-bold);
 }
 
 .v2-work-list-heading small {
   color: var(--v2-text-subtle);
-  font-size: 13px;
+  font-size: var(--v2-text-caption);
   text-transform: uppercase;
 }
 

@@ -7,6 +7,36 @@ Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
 Production release commit: verify with live `/api/health`; latest runtime feature evidence is recorded below and docs-only evidence commits may supersede the served build SHA.
 
+## Latest Packet 08 Pass - Typography and Breakpoint Polish
+
+- Continued the minimal-professional UI audit cleanup after the Settings/Profile foundation pass:
+  - added semantic v2 text aliases (`caption`, `label`, `body`, `body-lg`, `title`, `display`) and spacing aliases so feature CSS stops inventing one-off sizes
+  - added app-wide text-size adjustment guards plus balanced headings and prettier paragraph wrapping inside the v2 shell
+  - moved Home feed, Work, Crew, Profile/Settings storage, and Shop Talk/Trade News visible text onto the shared token scale
+  - normalized remaining odd scanned values in these surfaces: no 9-12px font sizes, no 15.5px news body text, no 480px breakpoint, and no 11px card radius remains in the checked CSS paths
+  - kept calculator/tool display sizing out of the broad sweep because those controls need field-calculator ergonomics rather than normal content typography
+- Preserved launch boundaries:
+  - no homeowner flows, fake verification, job-payment processing, escrow, payroll, local-auth fallback, or frontend-only production claims were added
+  - no server data, auth, billing, storage, subscription, or moderation contracts were changed
+- Local gates:
+  - `npm run build` (pass)
+  - `npm run lint` (pass)
+  - `npm run lint:security` (pass)
+  - `npm run test:unit` (pass; 44/44)
+  - `npm run test:e2e` (pass; fail-closed auth plus desktop/mobile jobs/discovery)
+  - `npm run test` (pass; unit plus 17 DB-backed integration tests)
+  - `npm audit --omit=dev` (pass; 0 vulnerabilities)
+  - `npm run incident:readiness -- --require-ready` (pass)
+  - `npm run launch:readiness -- --require-ready` (pass)
+  - `git diff --check` (pass; CRLF warnings only for touched files)
+- Rendered QA:
+  - fresh branch-specific Vite client was started at `http://127.0.0.1:5177`
+  - Playwright used the local Chrome channel because the bundled Playwright browser was not installed in this environment
+  - mobile guest-preview smoke at 430x932 checked Home, Work, Crew, Shop Talk, Tools, and the Profile/Settings menu
+  - the smoke found no document-wide horizontal overflow; detected offscreen items were intentional horizontal-scroll community/chip rows with `scrollWidth` equal to the viewport
+- Production deployment status:
+  - pending merge, push, Railway redeploy, and live source monitor for this pass
+
 ## Latest Packet 08 Pass - UI System and Settings Polish
 
 - Started the paired UI-system/Profile-Settings pass from the minimal-professional audit:
