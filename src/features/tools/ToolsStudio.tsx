@@ -76,6 +76,7 @@ interface ToolsStudioProps {
   mode?: "tools" | "records";
   openTool?: ToolMode | null;
   onOpenToolConsumed?: () => void;
+  onToolChange?: (tool: ToolMode) => void;
   onImmersiveChange?: (immersive: boolean) => void;
   onNavigate: (destination: PrimaryDestination) => void;
 }
@@ -2671,9 +2672,9 @@ function projectErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : "RIVT could not update the project record.";
 }
 
-export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = null, onOpenToolConsumed, onImmersiveChange, onNavigate }: ToolsStudioProps) {
+export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = null, onOpenToolConsumed, onToolChange, onImmersiveChange, onNavigate }: ToolsStudioProps) {
   const activeJob = jobs.find((job) => job.status !== "Paid / Closed") ?? jobs[0] ?? null;
-  const requestedTool = mode === "tools" && openTool && openTool !== "hub" ? openTool : null;
+  const requestedTool = mode === "tools" && openTool ? openTool : null;
   const [localActiveTool, setLocalActiveTool] = useState<ToolMode>("hub");
   const activeTool = requestedTool ?? localActiveTool;
   const [activeWork, setActiveWork] = useState<CanonicalActiveWork[]>([]);
@@ -2700,11 +2701,14 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
   const actionBusy = Boolean(projectAction);
 
   function setActiveTool(tool: ToolMode, options: { keepConvertedInvoice?: boolean } = {}) {
-    onOpenToolConsumed?.();
+    if (!onToolChange) {
+      onOpenToolConsumed?.();
+    }
     if (!options.keepConvertedInvoice) {
       setConvertedEstimateDraft(null);
     }
     setLocalActiveTool(tool);
+    onToolChange?.(tool);
   }
 
   function openToolFromHub(tool: LaunchableToolMode) {

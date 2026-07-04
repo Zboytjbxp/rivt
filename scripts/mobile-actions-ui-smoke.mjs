@@ -411,6 +411,17 @@ async function runMobileFlow(page) {
   await page.getByRole("button", { name: "Cancel" }).click();
   await assertNoHorizontalOverflow(page, "Crew add member form");
 
+  await page.getByRole("button", { name: "Tools", exact: true }).click();
+  await page.getByRole("heading", { name: "Tools", exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByRole("button", { name: "Open Heavy 16th" }).click();
+  await page.getByRole("heading", { name: "Heavy 16th field calculator", exact: true }).waitFor({ timeout: 15_000 });
+  assert.equal(new URL(page.url()).searchParams.get("tool"), "calculator", "Calculator should create a tool-specific history entry");
+  await page.goBack();
+  await page.getByRole("heading", { name: "Tools", exact: true }).waitFor({ timeout: 15_000 });
+  assert.equal(new URL(page.url()).pathname, "/app/tools", "Browser back from calculator should return to Tools");
+  assert.equal(new URL(page.url()).searchParams.get("tool"), null, "Browser back from calculator should clear tool query state");
+  await assertNoHorizontalOverflow(page, "Tools after calculator browser back");
+
   await page.getByRole("button", { name: "Shop Talk", exact: true }).click();
   await page.getByRole("button", { name: "Shop Talk" }).waitFor({ timeout: 15_000 });
   await page.getByRole("button", { name: "Trade News" }).waitFor({ timeout: 15_000 });

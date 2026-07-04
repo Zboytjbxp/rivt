@@ -114,6 +114,44 @@ const ToolsStudio = lazy(() => import("./features/tools/ToolsStudio").then((m) =
 const ModerationConsole = lazy(() => import("./features/admin/ModerationConsole").then((m) => ({ default: m.ModerationConsole })));
 const LegacyBridge = lazy(() => import("./features/legacy/LegacyBridge").then((m) => ({ default: m.LegacyBridge })));
 
+const toolModes = new Set<ToolMode>([
+  "calculator",
+  "estimate",
+  "invoice",
+  "materials",
+  "daily-log",
+  "job-photos",
+  "time-tracker",
+  "expense-logger",
+  "earnings",
+  "bid-builder",
+  "mileage",
+  "price-book",
+  "safety-checklist",
+  "tax-estimator",
+  "punch-list",
+  "contracts",
+  "job-checklist",
+  "payments",
+  "daily-report",
+  "tax-summary",
+]);
+
+function readToolFromUrl() {
+  if (typeof window === "undefined") return null;
+  const tool = new URLSearchParams(window.location.search).get("tool");
+  return tool && toolModes.has(tool as ToolMode) ? tool as ToolMode : null;
+}
+
+function pathForTool(tool: ToolMode | null) {
+  if (!tool || tool === "hub") return viewRoutes.Tools;
+  return `${viewRoutes.Tools}?tool=${encodeURIComponent(tool)}`;
+}
+
+function currentPathAndSearch() {
+  return `${window.location.pathname}${window.location.search}`;
+}
+
 function communityReportReasonCode(reason: CommunityReport["reason"]): ShopTalkReportReason {
   switch (reason) {
     case "Misinformation":
@@ -264,7 +302,7 @@ function toCommunityPostViewModel(post: ServerShopTalkPost): CommunityPost {
 
 function App() {
   const [activeView, setActiveView] = useState<NavLabel>(() => viewFromPath(window.location.pathname));
-  const [requestedTool, setRequestedTool] = useState<ToolMode | null>(null);
+  const [requestedTool, setRequestedTool] = useState<ToolMode | null>(() => readToolFromUrl());
   const [toolsImmersive, setToolsImmersive] = useState(false);
   const [role, setRole] = useState<Role>("contractor");
   const [onboardingComplete, setOnboardingComplete] = useState(false);
@@ -403,7 +441,11 @@ function App() {
 
   useEffect(() => {
     function handleHistoryNavigation() {
-      setActiveView(viewFromPath(window.location.pathname));
+      const nextView = viewFromPath(window.location.pathname);
+      const nextTool = nextView === "Tools" ? readToolFromUrl() : null;
+      setActiveView(nextView);
+      setRequestedTool(nextTool);
+      setToolsImmersive(Boolean(nextTool));
       setActivityOpen(false);
       setAccountOpen(false);
       setPostOpen(false);
@@ -949,13 +991,11 @@ function App() {
   }
 
   function handleNavigate(view: NavLabel) {
-    if (view !== "Tools") {
-      setRequestedTool(null);
-      setToolsImmersive(false);
-    }
+    setRequestedTool(null);
+    setToolsImmersive(false);
     setActiveView(view);
     const nextPath = viewRoutes[view];
-    if (window.location.pathname !== nextPath) {
+    if (currentPathAndSearch() !== nextPath) {
       window.history.pushState({ view }, "", nextPath);
     }
     setActivityOpen(false);
@@ -964,8 +1004,30 @@ function App() {
   }
 
   function handleOpenTool(tool: ToolMode) {
-    setRequestedTool(tool);
-    handleNavigate("Tools");
+    const nextTool = tool === "hub" ? null : tool;
+    setRequestedTool(nextTool);
+    setToolsImmersive(Boolean(nextTool));
+    setActiveView("Tools");
+    const nextPath = pathForTool(nextTool);
+    if (currentPathAndSearch() !== nextPath) {
+      window.history.pushState({ view: "Tools", tool: nextTool }, "", nextPath);
+    }
+    setActivityOpen(false);
+    setAccountOpen(false);
+    setPostOpen(false);
+  }
+
+  function handleToolChange(tool: ToolMode) {
+    const nextTool = tool === "hub" ? null : tool;
+    setRequestedTool(nextTool);
+    setToolsImmersive(Boolean(nextTool));
+    const nextPath = pathForTool(nextTool);
+    if (currentPathAndSearch() === nextPath) return;
+    if (nextTool) {
+      window.history.pushState({ view: "Tools", tool: nextTool }, "", nextPath);
+    } else {
+      window.history.replaceState({ view: "Tools" }, "", nextPath);
+    }
   }
 
   async function handleAddCommunityAnswer(postId: string, body: string) {
@@ -1847,8 +1909,8 @@ function App() {
             jobs={jobs}
             paymentRecords={paymentRecords}
             mode={activeView === "Records" ? "records" : "tools"}
-            openTool={activeView === "Tools" ? requestedTool : null}
-            onOpenToolConsumed={() => setRequestedTool(null)}
+            openTool={activeView === "Tools" ? requestedTool ?? "hub" : null}
+            onToolChange={handleToolChange}
             onImmersiveChange={setToolsImmersive}
             onNavigate={(destination) => handleNavigate(defaultViewForDestination(destination))}
           />

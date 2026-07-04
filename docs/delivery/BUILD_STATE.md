@@ -7,6 +7,29 @@ Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
 Production release commit: `f3d15a8b37fa652aad35228782c727ca2156422d` verified with live `/api/health`; latest runtime feature evidence is recorded below and docs-only evidence commits may supersede the served build SHA.
 
+## Latest Packet 08 Pass - Tools Back Navigation Fix
+
+- Fixed a mobile navigation bug in Tools:
+  - opening a tool now creates a tool-specific URL state such as `/app/tools?tool=calculator`
+  - browser/system back from the calculator returns to the Tools hub at `/app/tools`
+  - the in-tool back control still returns to the Tools hub without leaving the app
+  - direct links to valid tool URLs hydrate the correct tool, while invalid tool query values fall back to the Tools hub
+- Added regression coverage to `scripts/mobile-actions-ui-smoke.mjs`:
+  - Tools -> Heavy 16th calculator -> browser back -> Tools hub
+  - asserts the `tool=calculator` query exists while the calculator is open and is cleared after back
+- Local gates:
+  - `npm run build` (pass)
+  - `npm run lint` (pass)
+  - `npm run test:ui:mobile-actions` (pass)
+  - `npm run test:unit` (pass; 44/44)
+  - `npm run test:e2e` (pass; fail-closed auth plus desktop/mobile jobs/discovery)
+  - `npm audit --omit=dev` (pass; 0 vulnerabilities)
+- Rendered QA:
+  - Browser plugin instructions were loaded first; the in-app browser runtime connected but did not expose the documented `browser.documentation()` API in this session, so Playwright fallback was used
+  - screenshot evidence from the mobile action smoke is outside the repo at `C:\Users\zboyt\AppData\Local\Temp\rivt-mobile-actions-pass`
+- Production deployment status:
+  - not deployed from this fix yet.
+
 ## Latest Packet 08 Pass - Launch QA Merge Train
 
 - Merged `origin/codex/launch-polish-phase-1` into `codex/launch-go-train` and completed the remaining no-go diffs from Claude's July 4 launch QA:
