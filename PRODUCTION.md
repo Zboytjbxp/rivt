@@ -116,6 +116,15 @@ Stripe setup required before charging:
 5. Copy the webhook signing secret into `STRIPE_WEBHOOK_SECRET`.
 6. Enable Stripe Customer Portal and confirm `STRIPE_PORTAL_RETURN_URL` points back to the RIVT account settings screen.
 
+After the variables are saved and the Railway web service is redeployed, run the live billing smoke from an operator terminal. Keep the credentials in the process environment only; do not commit them or paste them into docs:
+
+```bash
+RIVT_SMOKE_EMAIL=<testing-account-email> RIVT_SMOKE_PASSWORD=<testing-account-password> npm run smoke:billing:live
+RIVT_SMOKE_EMAIL=<testing-account-email> RIVT_SMOKE_PASSWORD=<testing-account-password> RIVT_BILLING_EXERCISE_REDIRECTS=true npm run smoke:billing:live
+```
+
+The first command verifies authenticated billing status and that unsigned Stripe webhook payloads are rejected by signature verification rather than setup failure. The second command also creates Stripe-hosted Checkout and Customer Portal sessions without entering a card or charging the account. Do not consider billing launch-ready until one real paid checkout has completed and the signed Stripe webhook updates the server-owned entitlement.
+
 `VITE_ALLOW_LOCAL_PRO=true` is local-development only and must not be set on the production Railway service. If Stripe keys, the Pro price, or webhook signing are missing, paid tools must fail closed with truthful setup copy rather than simulated success.
 
 Uploads use private S3-compatible object storage and signed download URLs. RIVT production currently targets Railway Object Storage, which exposes an S3-compatible endpoint (`https://t3.storageapi.dev` in Railway's current storage service). Cloudflare R2, AWS S3, Backblaze B2, Supabase Storage S3 compatibility, or another managed S3-compatible provider can be used only if the same private-bucket and signed-URL behavior is preserved.

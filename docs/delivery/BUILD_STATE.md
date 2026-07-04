@@ -2673,9 +2673,29 @@ Completed on 2026-07-04 on branch `codex/launch-polish-phase-2` as a controllabl
 - Remaining boundary:
   - this closes the controllable production-verification pass for Settings storage, support, legal links, notification persistence, and onboarding reload recovery. It does not replace physical-device accessibility checks, legal counsel review, or Stripe live webhook/Customer Portal configuration.
 
+## Latest Packet 08 Pass - Stripe Billing Smoke Tooling
+
+- Added a repeatable live Stripe billing smoke command:
+  - `npm run smoke:billing:live` logs in with environment-provided smoke credentials, checks `/api/v1/billing/status`, verifies required billing provider variables report configured, and confirms unsigned webhook payloads fail with `STRIPE_SIGNATURE_INVALID` instead of setup failure
+  - setting `RIVT_BILLING_EXERCISE_REDIRECTS=true` also creates hosted Stripe Checkout and Customer Portal sessions without entering card details or charging the account
+- Added the script to security lint coverage and documented the smoke environment variables in `.env.example` and `PRODUCTION.md`.
+- Preserved launch boundaries:
+  - no Stripe keys, testing passwords, webhook secrets, or live session URLs were committed
+  - no frontend-only entitlement, job-payment processing, escrow, payroll, or homeowner flow was added
+  - the smoke only verifies subscription billing infrastructure and does not mark billing launch-ready until a real paid checkout webhook updates server-owned entitlements
+- Local gates:
+  - `node --check scripts/live-smoke-billing.js` (pass)
+  - `npm run build` (pass)
+  - `npm run lint` (pass)
+  - `npm run lint:security` (pass)
+  - `npm run test:unit` (pass; 44/44)
+  - `git diff --check` (pass; CRLF warnings only)
+- Remaining boundary:
+  - the live billing smoke was not run from this terminal because `RIVT_SMOKE_EMAIL` and `RIVT_SMOKE_PASSWORD` are not present in the local environment, and the password was not echoed into the shell command. Run it from an operator terminal with those environment variables set.
+
 ## Next Exact Task
 
-Continue Gate A launch hardening by configuring the production Stripe webhook endpoint, webhook secret, and Customer Portal settings in Stripe/Railway, then verify `/api/v1/billing/status` and the Checkout/Portal redirect paths. In parallel, run `docs/quality/PHYSICAL_ACCESSIBILITY_CHECKLIST.md` on physical iOS Safari, Android Chrome, desktop keyboard-only, and at least one screen reader, then record the pass/fail evidence before named-cohort launch. Keep `npm run incident:readiness -- --require-ready` and `npm run launch:readiness -- --require-ready` passing as the machine-readiness gates while that manual evidence is gathered.
+Run `npm run smoke:billing:live` with `RIVT_SMOKE_EMAIL` and `RIVT_SMOKE_PASSWORD` set, then run it again with `RIVT_BILLING_EXERCISE_REDIRECTS=true` to verify Checkout and Customer Portal redirects without charging a card. After that, complete one real paid checkout and confirm the signed Stripe webhook updates `/api/v1/billing/status` to active Pro. In parallel, run `docs/quality/PHYSICAL_ACCESSIBILITY_CHECKLIST.md` on physical iOS Safari, Android Chrome, desktop keyboard-only, and at least one screen reader, then record the pass/fail evidence before named-cohort launch. Keep `npm run incident:readiness -- --require-ready` and `npm run launch:readiness -- --require-ready` passing as the machine-readiness gates while that manual evidence is gathered.
 
 ## Blocking Founder Decisions
 
