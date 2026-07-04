@@ -369,9 +369,10 @@ async function assertToolsFlow(page) {
   await page.getByRole("button", { name: /Payment tracker/i }).waitFor();
   await page.getByRole("button", { name: /Heavy 16th/i }).click();
   await page.getByRole("heading", { name: "Heavy 16th field calculator" }).waitFor();
-  await page.getByLabel("Length calculator").getByText("Total length", { exact: true }).waitFor();
-  await page.getByRole("button", { name: "Spacing" }).click();
-  await page.getByLabel("Equal spacing calculator").getByText("Center-to-center").waitFor();
+  await page.getByLabel("Length calculator").getByText("Decimal", { exact: true }).waitFor();
+  await page.getByLabel("Input unit").getByRole("button", { name: /MM/i }).waitFor();
+  await page.getByLabel("Heavy, light, double, and half controls").getByRole("button", { name: "Heavy plus one thirty-second" }).waitFor();
+  await page.getByLabel("Heavy, light, double, and half controls").getByRole("button", { name: "Divide measurement by two" }).waitFor();
   await page.getByLabel("Heavy 16th field calculator").getByRole("button", { name: "Tools" }).click();
 
   await primaryTool("Estimate").click();

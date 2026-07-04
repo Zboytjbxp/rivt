@@ -415,6 +415,9 @@ async function runMobileFlow(page) {
   await page.getByRole("heading", { name: "Tools", exact: true }).waitFor({ timeout: 15_000 });
   await page.getByRole("button", { name: "Open Heavy 16th" }).click();
   await page.getByRole("heading", { name: "Heavy 16th field calculator", exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByLabel("Input unit").getByRole("button", { name: /MM/i }).waitFor({ timeout: 15_000 });
+  await page.getByLabel("Heavy, light, double, and half controls").getByRole("button", { name: "Heavy plus one thirty-second" }).waitFor({ timeout: 15_000 });
+  await page.getByLabel("Heavy, light, double, and half controls").getByRole("button", { name: "Multiply measurement by two" }).waitFor({ timeout: 15_000 });
   assert.equal(new URL(page.url()).searchParams.get("tool"), "calculator", "Calculator should create a tool-specific history entry");
   await page.goBack();
   await page.getByRole("heading", { name: "Tools", exact: true }).waitFor({ timeout: 15_000 });

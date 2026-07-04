@@ -143,6 +143,9 @@ async function configurePage(page) {
   await page.route("**/api/v1/notifications", (route) =>
     route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { notifications: [], unreadCount: 0 } }) }),
   );
+  await page.route("**/api/v1/notification-preferences", (route) =>
+    route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { preferences: [] } }) }),
+  );
   await page.route("**/api/v1/shop-talk/posts", (route) =>
     route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { posts: [] } }) }),
   );
@@ -152,6 +155,36 @@ async function configurePage(page) {
   await page.route("**/api/v1/albums", (route) =>
     route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { albums: [] } }) }),
   );
+  await page.route(/\/api\/v1\/tool-records(?:\/.*|\?.*)?$/, (route) => {
+    const method = route.request().method();
+    if (method === "GET") {
+      return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { records: [] } }) });
+    }
+    if (method === "POST") {
+      const input = route.request().postDataJSON();
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          data: {
+            record: {
+              id: `tool-record-${input?.localId ?? "saved"}`,
+              recordType: input?.recordType ?? "daily_report",
+              localId: input?.localId ?? "saved",
+              title: input?.title ?? "Saved record",
+              status: input?.status ?? "active",
+              recordDate: input?.recordDate ?? null,
+              amountCents: input?.amountCents ?? null,
+              payload: input?.payload ?? {},
+              createdAt: "2026-07-04T12:00:00.000Z",
+              updatedAt: "2026-07-04T12:00:00.000Z",
+            },
+          },
+        }),
+      });
+    }
+    return route.fulfill({ status: 204, body: "" });
+  });
   await page.route("**/api/storage", (route) =>
     route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ usedBytes: 0, objectCount: 0, plan: {} }) }),
   );
@@ -224,8 +257,13 @@ async function runToolsFlow(page, viewportName) {
 
   await page.getByRole("button", { name: /Heavy 16th/i }).click();
   await page.getByRole("heading", { name: "Heavy 16th field calculator" }).waitFor({ timeout: 15_000 });
-  await page.getByLabel("Length calculator").getByText("Total length", { exact: true }).waitFor({ timeout: 15_000 });
-  await page.getByText("Copy result", { exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByLabel("Length calculator").getByText("Decimal", { exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByText("Copy", { exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByLabel("Input unit").getByRole("button", { name: /MM/i }).click();
+  await page.getByLabel("Heavy, light, double, and half controls").getByRole("button", { name: "Heavy plus one thirty-second" }).waitFor({ timeout: 15_000 });
+  await page.getByLabel("Heavy, light, double, and half controls").getByRole("button", { name: "Light minus one thirty-second" }).waitFor({ timeout: 15_000 });
+  await page.getByLabel("Heavy, light, double, and half controls").getByRole("button", { name: "Multiply measurement by two" }).waitFor({ timeout: 15_000 });
+  await page.getByLabel("Heavy, light, double, and half controls").getByRole("button", { name: "Divide measurement by two" }).waitFor({ timeout: 15_000 });
   const fractionButtons = viewportName === "mobile"
     ? page.getByLabel("Sixteenth tape reference")
     : page.getByLabel("Sixteenth fractions");
@@ -236,26 +274,17 @@ async function runToolsFlow(page, viewportName) {
   await fractionButtons.getByRole("button", { name: "1/4" }).click();
   await page.getByLabel("Fraction calculator keypad").getByRole("button", { name: "=" }).click();
   await page.locator(".calc-primary-value", { hasText: '9 3/4"' }).waitFor({ timeout: 15_000 });
+  await page.getByLabel("Heavy, light, double, and half controls").getByRole("button", { name: "Divide measurement by two" }).click();
+  await page.locator(".calc-primary-value", { hasText: '4 7/8"' }).waitFor({ timeout: 15_000 });
+  await page.getByLabel("Heavy, light, double, and half controls").getByRole("button", { name: "Multiply measurement by two" }).click();
+  await page.locator(".calc-primary-value", { hasText: '9 3/4"' }).waitFor({ timeout: 15_000 });
+  await page.getByLabel("Heavy, light, double, and half controls").getByRole("button", { name: "Heavy plus one thirty-second" }).click();
+  await page.locator(".calc-primary-value", { hasText: '9 25/32"' }).waitFor({ timeout: 15_000 });
+  await page.getByLabel("Heavy, light, double, and half controls").getByRole("button", { name: "Light minus one thirty-second" }).click();
+  await page.locator(".calc-primary-value", { hasText: '9 3/4"' }).waitFor({ timeout: 15_000 });
   if (viewportName === "mobile") await assertCalculatorNoVerticalOverflow(page);
   await assertNoHorizontalOverflow(page);
   await page.screenshot({ path: path.join(screenshotDir, `${viewportName}-calculator.png`), fullPage: true });
-  await page.getByRole("button", { name: "Spacing" }).click();
-  await page.getByLabel("Equal spacing calculator").getByText("Center-to-center").waitFor({ timeout: 15_000 });
-  await page.getByText("First center", { exact: true }).waitFor({ timeout: 15_000 });
-  if (viewportName === "mobile") await assertCalculatorNoVerticalOverflow(page);
-  await assertNoHorizontalOverflow(page);
-  await page.getByRole("button", { name: "Cuts" }).click();
-  await page.getByLabel("Cut angle calculator").getByText("Flat miter", { exact: true }).waitFor({ timeout: 15_000 });
-  await page.getByRole("button", { name: "Inside" }).waitFor({ timeout: 15_000 });
-  if (viewportName === "mobile") await assertCalculatorNoVerticalOverflow(page);
-  await assertNoHorizontalOverflow(page);
-  await page.getByRole("button", { name: "Hardware" }).click();
-  await page.getByLabel("Hardware layout calculator").getByText("Centerline", { exact: true }).waitFor({ timeout: 15_000 });
-  await page.getByRole("button", { name: "Knob" }).click();
-  await page.getByText("Height mark", { exact: true }).waitFor({ timeout: 15_000 });
-  if (viewportName === "mobile") await assertCalculatorNoVerticalOverflow(page);
-  await assertNoHorizontalOverflow(page);
-  await page.screenshot({ path: path.join(screenshotDir, `${viewportName}-calculator-hardware.png`), fullPage: true });
   await page.getByLabel("Heavy 16th field calculator").getByRole("button", { name: "Tools" }).click();
 
   await primaryTool("Estimate").click();
@@ -305,7 +334,7 @@ async function runToolsFlow(page, viewportName) {
 
   await primaryTool("Records & photos").click();
   await page.getByRole("heading", { name: "Job Photos", exact: true, level: 1 }).waitFor({ timeout: 15_000 });
-  await page.getByText("Document any job", { exact: false }).waitFor({ timeout: 15_000 });
+  await page.getByText("Private cloud photo records.", { exact: true }).waitFor({ timeout: 15_000 });
   await page.getByRole("button", { name: /New album/i }).waitFor({ timeout: 15_000 });
   await assertNoHorizontalOverflow(page);
   await page.screenshot({ path: path.join(screenshotDir, `${viewportName}-job-photos.png`), fullPage: true });
@@ -328,6 +357,9 @@ try {
     const errors = [];
     page.on("console", (message) => {
       if (message.type() === "error") errors.push(message.text());
+    });
+    page.on("requestfailed", (request) => {
+      errors.push(`${request.url()} :: ${request.failure()?.errorText ?? "request failed"}`);
     });
     page.on("pageerror", (error) => errors.push(error.message));
 

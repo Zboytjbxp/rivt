@@ -7,6 +7,37 @@ Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
 Production release commit: `1d5f968fe0076f79eb5294d0bf3e43309b403b79` verified with live `/api/health`; latest runtime feature evidence is recorded below and docs-only evidence commits may supersede the served build SHA.
 
+## Latest Packet 08 Pass - Fraction Calculator Simplification
+
+- Simplified the Heavy 16th calculator into a dedicated fraction calculator:
+  - removed the visible spacing, cut-angle, and hardware-layout modes from the calculator experience
+  - removed the calculator drawer mode switcher so the tool opens directly into the fraction keypad
+  - added a metric toggle (`MM`) that shows the metric equivalent in the main display
+  - replaced the old `+1/16` / `-1/16` controls with field-style `H` and `L` controls for heavy/light one-thirty-second nudges
+  - added dedicated `x2` and `/2` controls for fast doubling and splitting measurements
+  - reduced copy/output to result-focused calculator language instead of cut-card, kerf, spacing, or hardware language
+- Updated calculator regression coverage:
+  - `scripts/tools-ui-smoke.mjs` now verifies `MM`, `H`, `L`, `x2`, and `/2` controls, plus actual half/double/heavy/light results
+  - removed stale smoke expectations for spacing, cut-angle, and hardware calculator panels
+  - added missing UI-smoke mocks for tool-records and notification preferences so the tools smoke stays frontend-only
+  - `scripts/mobile-actions-ui-smoke.mjs` now checks the new calculator controls before the browser-back regression
+  - `test/jobs-discovery.e2e.mjs` now expects the fraction-only calculator controls instead of the removed spacing panel
+- Preserved launch boundaries:
+  - no homeowner flows, fake verification, job-payment processing, escrow, payroll, local-auth fallback, or frontend-only production claims were added
+  - no server data, auth, billing, storage, subscription, moderation, or migration contracts were changed
+- Local gates:
+  - `npm run build` (pass)
+  - `npm run lint` (pass)
+  - `npm run test:unit` (pass; 44/44)
+  - `npm run test:e2e` (pass; fail-closed auth plus desktop/mobile jobs/discovery)
+  - `npm run test:ui:tools` (pass; screenshots at `C:\Users\zboyt\AppData\Local\Temp\rivt-tools-pass`)
+  - `npm run test:ui:mobile-actions` (pass; screenshots at `C:\Users\zboyt\AppData\Local\Temp\rivt-mobile-actions-pass`)
+  - `git diff --check` (pass; CRLF warnings only for touched files)
+- Rendered QA:
+  - mobile calculator screenshot confirmed the calculator fits the smoke viewport without the removed mode panels or drawer
+- Production deployment status:
+  - not deployed from this pass yet.
+
 ## Latest Packet 08 Pass - Tools Back Navigation Fix
 
 - Fixed a mobile navigation bug in Tools:

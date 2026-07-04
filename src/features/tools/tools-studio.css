@@ -5550,6 +5550,10 @@
   min-height: 760px;
 }
 
+.fraction-only-shell {
+  grid-template-columns: minmax(0, 1fr) 96px;
+}
+
 .fraction-calc-workbench .drawer-entry > span {
   display: flex;
   align-items: center;
@@ -5612,33 +5616,6 @@
   text-transform: uppercase;
 }
 
-.fraction-mode-strip {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 8px;
-  padding: 6px;
-  border-radius: var(--v2-radius-lg);
-  background: var(--v2-surface);
-  border: 1px solid var(--v2-border);
-}
-
-.fraction-mode-strip button {
-  min-height: 44px;
-  border: 0;
-  border-radius: var(--v2-radius-md);
-  background: transparent;
-  color: var(--v2-text-muted);
-  font-size: 13px;
-  font-weight: var(--v2-weight-display);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.fraction-mode-strip button.active {
-  background: var(--calc-lime);
-  color: var(--calc-on-accent);
-}
-
 .fraction-calc-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 210px;
@@ -5698,7 +5675,7 @@
 .fraction-unit-row,
 .fraction-action-row {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
 }
 
@@ -5798,8 +5775,7 @@
 }
 
 .fraction-result-card span,
-.fraction-result-card small,
-.fraction-summary-grid span {
+.fraction-result-card small {
   color: var(--v2-text-muted);
   font-size: 13px;
   font-weight: var(--v2-weight-display);
@@ -5823,70 +5799,10 @@
 }
 
 .fraction-result-card b,
-.fraction-summary-grid strong {
+.fraction-result-card b {
   color: var(--calc-text);
   font-size: 15px;
   font-variant-numeric: tabular-nums;
-}
-
-.fraction-panel-mode {
-  display: grid;
-  gap: 13px;
-}
-
-.fraction-input-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
-}
-
-.fraction-input-grid label,
-.miter-value-card {
-  display: grid;
-  gap: 7px;
-  color: var(--v2-text-muted);
-  font-size: 13px;
-  font-weight: var(--v2-weight-display);
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-}
-
-.fraction-input-grid input,
-.miter-value-card input {
-  width: 100%;
-  min-height: 46px;
-  border: 1px solid var(--v2-border);
-  border-radius: var(--v2-radius-md);
-  background: var(--v2-surface);
-  color: var(--calc-text);
-  font: inherit;
-  font-size: 18px;
-  font-weight: var(--v2-weight-bold);
-  letter-spacing: 0;
-  padding: 0 12px;
-}
-
-.miter-value-card.emphasis input {
-  background: var(--v2-surface-muted);
-  color: var(--calc-text);
-}
-
-.fraction-summary-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
-}
-
-.fraction-summary-grid article {
-  min-width: 0;
-  border-radius: var(--v2-radius-lg);
-  background: var(--v2-surface-muted);
-  padding: 14px;
-}
-
-.fraction-summary-grid strong {
-  display: block;
-  margin-top: 6px;
 }
 
 .fraction-ruler button {
@@ -5906,6 +5822,7 @@
 
 @media (max-width: 1180px) {
   .heavy-calc-shell { grid-template-columns: 260px minmax(0, 1fr); }
+  .fraction-only-shell { grid-template-columns: minmax(0, 1fr); }
   .heavy-calc-ruler { display: none; }
 }
 
@@ -5939,6 +5856,7 @@
   }
 
   .heavy-calc-shell { grid-template-columns: minmax(0, 1fr); }
+  .fraction-only-shell { grid-template-columns: minmax(0, 1fr); }
   .heavy-calc-drawer { border-right: none; border-bottom: 1px solid var(--calc-line); }
   .fraction-calc-shell { min-height: 0; }
   .fraction-calc-grid { grid-template-columns: 1fr; }
@@ -5999,15 +5917,6 @@
   .fraction-calc-workbench .heavy-calc-main {
     padding: 12px;
   }
-  .fraction-mode-strip {
-    gap: 5px;
-    padding: 5px;
-  }
-  .fraction-mode-strip button {
-    min-height: 40px;
-    font-size: 13px;
-    letter-spacing: 0.04em;
-  }
   .fraction-display {
     min-height: 210px;
     padding: 28px 18px 18px;
@@ -6037,11 +5946,6 @@
   .fraction-pad button {
     min-height: 56px;
   }
-  .fraction-input-grid,
-  .fraction-summary-grid,
-  .miter-toggle-row,
-  .miter-setup-grid,
-  .miter-readout,
   .suite-summary-grid { grid-template-columns: 1fr; }
   .calc-pad-grid:not(.fraction-pad) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .suite-sheet-header,
@@ -6126,19 +6030,6 @@
     display: none;
   }
 
-  .v2-tools-app.is-calculator-fullscreen .fraction-mode-strip {
-    gap: 4px;
-    padding: 4px;
-    border-radius: var(--v2-radius-md);
-  }
-
-  .v2-tools-app.is-calculator-fullscreen .fraction-mode-strip button {
-    min-height: 42px;
-    border-radius: var(--v2-radius-sm);
-    font-size: 13px;
-    letter-spacing: 0.03em;
-  }
-
   .v2-tools-app.is-calculator-fullscreen .fraction-calc-grid,
   .v2-tools-app.is-calculator-fullscreen .fraction-calc-left {
     min-height: 0;
@@ -6194,11 +6085,12 @@
 
   .v2-tools-app.is-calculator-fullscreen .fraction-unit-row span {
     font-size: 13px;
+    letter-spacing: 0.08em;
   }
 
   .v2-tools-app.is-calculator-fullscreen .fraction-unit-row strong {
     margin-top: 3px;
-    font-size: 17px;
+    font-size: 16px;
   }
 
   .v2-tools-app.is-calculator-fullscreen .fraction-action-row {
@@ -6248,79 +6140,6 @@
     min-width: 16px;
   }
 
-  .v2-tools-app.is-calculator-fullscreen .fraction-panel-mode {
-    min-height: 0;
-    gap: 7px;
-    overflow: hidden;
-  }
-
-  .v2-tools-app.is-calculator-fullscreen .miter-config-card,
-  .v2-tools-app.is-calculator-fullscreen .fraction-summary-grid article {
-    border-radius: var(--v2-radius-md);
-    padding: 10px;
-  }
-
-  .v2-tools-app.is-calculator-fullscreen .miter-config-card p {
-    margin-top: 6px;
-    font-size: 13px;
-    line-height: 1.25;
-  }
-
-  .v2-tools-app.is-calculator-fullscreen .fraction-input-grid,
-  .v2-tools-app.is-calculator-fullscreen .fraction-summary-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 6px;
-  }
-
-  .v2-tools-app.is-calculator-fullscreen .miter-toggle-row,
-  .v2-tools-app.is-calculator-fullscreen .miter-setup-grid,
-  .v2-tools-app.is-calculator-fullscreen .miter-readout {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 6px;
-  }
-
-  .v2-tools-app.is-calculator-fullscreen .fraction-input-grid label,
-  .v2-tools-app.is-calculator-fullscreen .miter-value-card {
-    gap: 4px;
-    font-size: 13px;
-    letter-spacing: 0.04em;
-  }
-
-  .v2-tools-app.is-calculator-fullscreen .fraction-input-grid input,
-  .v2-tools-app.is-calculator-fullscreen .miter-value-card input {
-    min-height: 42px;
-    padding: 0 8px;
-    font-size: 16px;
-  }
-
-  .v2-tools-app.is-calculator-fullscreen .choice-pill {
-    min-height: 38px;
-    border-radius: var(--v2-radius-md);
-    font-size: 13px;
-    letter-spacing: 0.05em;
-  }
-
-  .v2-tools-app.is-calculator-fullscreen .miter-readout > div {
-    min-height: 80px;
-    border-radius: var(--v2-radius-md);
-  }
-
-  .v2-tools-app.is-calculator-fullscreen .miter-readout strong {
-    margin-top: 4px;
-    font-size: clamp(34px, 11vw, 48px);
-  }
-
-  .v2-tools-app.is-calculator-fullscreen .fraction-summary-grid span,
-  .v2-tools-app.is-calculator-fullscreen .miter-readout span,
-  .v2-tools-app.is-calculator-fullscreen .miter-config-card span {
-    font-size: 13px;
-    letter-spacing: 0.05em;
-  }
-
-  .v2-tools-app.is-calculator-fullscreen .fraction-summary-grid strong {
-    margin-top: 4px;
-    font-size: 13px;
-  }
 }
 
 @media (max-width: 640px) and (max-height: 700px) {
