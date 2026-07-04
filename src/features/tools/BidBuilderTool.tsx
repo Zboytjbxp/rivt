@@ -1,4 +1,4 @@
-import { Briefcase, FileText, Plus, Trash2 } from "lucide-react";
+import { FileText, Plus, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { Job } from "../../types";
 import { Panel } from "../../components/ui";
@@ -171,7 +171,6 @@ function BidBuilderTool({ activeJob }: { activeJob: Job | null }) {
   const [savedBids, setSavedBids] = useState<SavedBid[]>(readSavedBids);
   const [syncMessage, setSyncMessage] = useState("Saved on this device.");
   const [notice, setNotice] = useState("");
-  const [bidAccepted, setBidAccepted] = useState(false);
 
   const subtotal = lines.reduce((sum, l) => sum + l.qty * l.unitPrice, 0);
   const markup = subtotal * (markupPct / 100);
@@ -198,7 +197,7 @@ function BidBuilderTool({ activeJob }: { activeJob: Job | null }) {
         void Promise.all(localSnapshot.map((bid) => upsertToolRecord(savedBidToServerInput(bid)))).then((results) => {
           setSyncMessage(results.some(Boolean)
             ? "Local bids synced to your RIVT account."
-            : "Saved on this device. Sync will retry when your account is reachable.");
+            : "Couldn't sync - saved on this device only.");
         });
         return;
       }
@@ -213,7 +212,7 @@ function BidBuilderTool({ activeJob }: { activeJob: Job | null }) {
     try { localStorage.setItem(bidStorageKey, JSON.stringify(limited)); } catch { /* noop */ }
     if (!changedBid) return;
     void upsertToolRecord(savedBidToServerInput(changedBid)).then((record) => {
-      setSyncMessage(record ? "Synced to your RIVT account." : "Saved on this device. Sync will retry when your account is reachable.");
+      setSyncMessage(record ? "Synced to your RIVT account." : "Couldn't sync - saved on this device only.");
     });
   }
 
@@ -259,34 +258,12 @@ function BidBuilderTool({ activeJob }: { activeJob: Job | null }) {
     const next = savedBids.filter((b) => b.id !== id);
     persistSavedBids(next);
     void deleteToolRecordByLocalId("bid", id).then((ok) => {
-      setSyncMessage(ok ? "Deleted from this device and your RIVT account." : "Deleted on this device. Cloud sync will catch up when reachable.");
+      setSyncMessage(ok ? "Deleted from this device and your RIVT account." : "Deleted on this device only. Could not sync deletion.");
     });
   }
 
   function acceptBid() {
-    try {
-      const stored = localStorage.getItem("rivt.jobs.v1");
-      const jobs: unknown[] = Array.isArray(JSON.parse(stored ?? "null")) ? (JSON.parse(stored!) as unknown[]) : [];
-      const grandTotal = total;
-      const newJob = {
-        id: crypto.randomUUID(),
-        title: bidName || "Untitled Job",
-        status: "active",
-        startDate: new Date().toISOString(),
-        trade: "",
-        location: "",
-        description: `Accepted bid — total: $${grandTotal.toFixed(2)}`,
-        bidTotal: grandTotal,
-        source: "bid",
-        createdAt: new Date().toISOString(),
-      };
-      jobs.push(newJob);
-      localStorage.setItem("rivt.jobs.v1", JSON.stringify(jobs));
-      setBidAccepted(true);
-      setTimeout(() => setBidAccepted(false), 3000);
-    } catch {
-      // silently fail if localStorage is unavailable
-    }
+    saveBid();
   }
 
   return (
@@ -354,14 +331,10 @@ function BidBuilderTool({ activeJob }: { activeJob: Job | null }) {
             ) : null)}
           </div>
           {lines.some((l) => l.qty * l.unitPrice > 0) && total > 0 ? (
-            bidAccepted ? (
-              <div className="v2-bid-accepted-banner">✓ Job created! Open the Work tab to find it.</div>
-            ) : (
-              <button type="button" className="v2-bid-accept-btn" onClick={acceptBid}>
-                <Briefcase size={16} />
-                Accept Bid → Create Job
-              </button>
-            )
+            <button type="button" className="v2-bid-accept-btn" onClick={acceptBid}>
+              <FileText size={16} />
+              Save bid
+            </button>
           ) : null}
         </Panel>
       </aside>

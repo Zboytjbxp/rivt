@@ -7,6 +7,31 @@ Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
 Production release commit: verify with live `/api/health`; latest runtime feature evidence is recorded below and docs-only evidence commits may supersede the served build SHA.
 
+## Latest Packet 08 Pass - Launch Polish Phase 1
+
+- Implemented the Phase 1 launch-polish blockers from Claude's July 4 audit on branch `codex/launch-polish-phase-1`:
+  - made the Shop Talk create-post modal usable on short phones with a scrollable body, fixed header/footer, safe-area-aware footer padding, and a mobile smoke assertion at 390x664
+  - changed Estimate -> Invoice conversion so overhead, margin, and contingency are included in billable line rates instead of appearing as client-facing invoice lines
+  - moved invoice totals to cents-based math, clamped line quantity/rate inputs to non-negative values, added a "Start blank invoice" escape hatch, and limited price-guidance chips to labor lines only
+  - removed the Bid Builder path that wrote accepted bids into `rivt.jobs.v1` and replaced the mobile summary action with an honest "Save bid" action
+  - kept Bid, Mileage, and Safety summaries visible on mobile instead of hiding them under the 900px breakpoint
+  - replaced unsupported "sync will retry"/"cloud sync will catch up" copy across local-only record surfaces with honest saved-on-device / could-not-sync wording
+- Preserved launch boundaries:
+  - no homeowner flows, fake verification, job-payment processing, escrow, payroll, local-auth fallback, or frontend-only production claims were added
+  - no production data, migrations, auth, billing, storage, or moderation authorization contracts were changed
+- Local gates:
+  - `npm run build` (pass)
+  - `npm run lint` (pass)
+  - `npm run test:unit` (pass; 44/44)
+  - `npm run test:e2e` (pass; fail-closed auth plus desktop/mobile jobs/discovery)
+  - `npm run test:ui:mobile-actions` (pass; includes Shop Talk composer Post-button reachability at 390x664)
+  - `npm audit --omit=dev` (pass; 0 vulnerabilities)
+  - `git diff --check` (pass; CRLF warnings only for touched files)
+- Local limitation:
+  - full `npm run test` was attempted twice and timed out because `test:integration` did not return in this local environment; `test:unit` and the targeted e2e/mobile gates passed, and `test/server.integration.test.js` passed when isolated. Re-run the full integration suite in CI or a DB-provisioned shell before deploying this phase.
+- Production deployment status:
+  - not deployed from this branch yet.
+
 ## Latest Packet 08 Pass - Mobile Layout and Device Accessibility Subtraction
 
 - Continued Claude's minimal-professional audit cleanup with a device-accessibility pass:

@@ -3,25 +3,24 @@ import { Copy, Download, FileText, Mail, MessageSquare, Plus, Trash2 } from "luc
 import type { Job } from "../../types";
 import { Panel } from "../../components/ui";
 import type { EstimateInvoiceDraft } from "./EstimateTool";
+import { clampNumber, currency, formatQuantity, toCents, centsToDollars } from "./money";
 import { getInvoiceLinePriceSignal } from "./priceGuidance";
 import { deleteToolRecordByLocalId, fetchToolRecords, upsertToolRecord, type ServerToolRecord } from "./tool-records-api";
 
-function currency(value: number) {
-  return `$${Math.round(value).toLocaleString()}`;
-}
-
-function formatNumber(value: number, digits = 1) {
-  return Number.isFinite(value) ? value.toFixed(digits) : "0";
-}
-
 function numericValue(value: number, fallback = 0) {
-  return Number.isFinite(value) ? value : fallback;
+  return Number.isFinite(value) ? Math.max(0, value) : fallback;
 }
+
+function lineTotalCents(line: InvoiceLine) {
+  return toCents(numericValue(line.qty) * numericValue(line.rate));
+}
+
 interface InvoiceLine {
   id: string;
   description: string;
   qty: number;
   rate: number;
+  kind?: "labor" | "material" | "other" | "adjustment";
 }
 
 interface InvoiceTemplate {
@@ -93,8 +92,8 @@ function invoiceTemplateToServerInput(template: InvoiceTemplate) {
 
 function defaultInvoiceLines(activeJob: Job | null): InvoiceLine[] {
   return [
-    { id: "labor", description: "Labor", qty: activeJob?.durationHours ?? 8, rate: activeJob ? Math.max(45, Math.round(activeJob.pay / Math.max(1, activeJob.durationHours) * 0.78)) : 65 },
-    { id: "materials", description: "Materials", qty: 1, rate: activeJob ? Math.max(50, Math.round(activeJob.pay * 0.2)) : 250 },
+    { id: "labor", description: "Labor", qty: activeJob?.durationHours ?? 8, rate: activeJob ? Math.max(45, Math.round(activeJob.pay / Math.max(1, activeJob.durationHours) * 0.78)) : 65, kind: "labor" },
+    { id: "materials", description: "Materials", qty: 1, rate: activeJob ? Math.max(50, Math.round(activeJob.pay * 0.2)) : 250, kind: "material" },
   ];
 }
 
@@ -124,22 +123,28 @@ export function InvoiceDraftTool({
   const [templates, setTemplates] = useState<InvoiceTemplate[]>(readInvoiceTemplates);
   const [syncMessage, setSyncMessage] = useState("Saved on this device.");
   const [templateName, setTemplateName] = useState(estimateDraft?.templateName ?? (activeJob ? `${activeJob.title} invoice` : "Standard invoice"));
-  const [templateNotice, setTemplateNotice] = useState(estimateDraft ? "Estimate converted. Review details before sending." : "");
-  const [conversionNotice] = useState(estimateDraft?.sourceNote ?? "");
+  const [templateNotice, setTemplateNotice] = useState("");
+  const [conversionNotice, setConversionNotice] = useState(estimateDraft?.sourceNote ?? "");
   const [lines, setLines] = useState<InvoiceLine[]>(() => estimateDraft ? invoiceLinesFromEstimate(estimateDraft) : defaultInvoiceLines(activeJob));
 
-  const subtotal = lines.reduce((sum, line) => sum + numericValue(line.qty) * numericValue(line.rate), 0);
-  const tax = subtotal * (taxPct / 100);
-  const total = subtotal + tax;
-  const lineSignals = lines.map((line) => ({
-    lineId: line.id,
-    signal: getInvoiceLinePriceSignal({
+  const subtotalCents = lines.reduce((sum, line) => sum + lineTotalCents(line), 0);
+  const taxCents = Math.round(subtotalCents * (numericValue(taxPct) / 100));
+  const totalCents = subtotalCents + taxCents;
+  const subtotal = centsToDollars(subtotalCents);
+  const tax = centsToDollars(taxCents);
+  const total = centsToDollars(totalCents);
+  const lineSignals = lines.map((line) => {
+    const isHourlyLabor = line.kind === "labor";
+    return {
+      lineId: line.id,
+      signal: isHourlyLabor ? getInvoiceLinePriceSignal({
       description: line.description,
       qty: numericValue(line.qty),
       rate: numericValue(line.rate),
       trade: activeJob?.trade ?? null,
-    }),
-  }));
+      }) : null,
+    };
+  });
   const primarySignal =
     lineSignals.find(({ signal }) => signal && signal.tone !== "unknown")?.signal ??
     lineSignals.find(({ signal }) => signal)?.signal;
@@ -150,7 +155,7 @@ export function InvoiceDraftTool({
     `Bill to: ${billTo || "Not entered"}`,
     `Pay to: ${payTo || "Not entered"}`,
     "",
-    ...lines.map((line) => `${line.description || "Line item"} - ${formatNumber(line.qty)} x ${currency(line.rate)} = ${currency(numericValue(line.qty) * numericValue(line.rate))}`),
+    ...lines.map((line) => `${line.description || "Line item"} - ${formatQuantity(line.qty)} x ${currency(line.rate)} = ${currency(centsToDollars(lineTotalCents(line)))}`),
     "",
     `Subtotal: ${currency(subtotal)}`,
     `Tax: ${currency(tax)}`,
@@ -181,9 +186,9 @@ export function InvoiceDraftTool({
       const localSnapshot = readInvoiceTemplates();
       if (localSnapshot.length) {
         void Promise.all(localSnapshot.map((template) => upsertToolRecord(invoiceTemplateToServerInput(template)))).then((results) => {
-          setSyncMessage(results.some(Boolean)
+        setSyncMessage(results.some(Boolean)
             ? "Local invoice templates synced to your RIVT account."
-            : "Saved on this device. Sync will retry when your account is reachable.");
+            : "Couldn't sync - saved on this device only.");
         });
         return;
       }
@@ -193,11 +198,17 @@ export function InvoiceDraftTool({
   }, []);
 
   function updateLine(id: string, field: keyof InvoiceLine, value: string | number) {
-    setLines((current) => current.map((line) => line.id === id ? { ...line, [field]: value } : line));
+    setLines((current) => current.map((line) => {
+      if (line.id !== id) return line;
+      if (field === "qty" || field === "rate") {
+        return { ...line, [field]: clampNumber(Number(value) || 0) };
+      }
+      return { ...line, [field]: value };
+    }));
   }
 
   function addLine() {
-    setLines((current) => [...current, { id: crypto.randomUUID(), description: "", qty: 1, rate: 0 }]);
+    setLines((current) => [...current, { id: crypto.randomUUID(), description: "", qty: 1, rate: 0, kind: "other" }]);
   }
 
   function removeLine(id: string) {
@@ -215,7 +226,7 @@ export function InvoiceDraftTool({
     }
     if (!changedTemplate) return;
     void upsertToolRecord(invoiceTemplateToServerInput(changedTemplate)).then((record) => {
-      setSyncMessage(record ? "Synced to your RIVT account." : "Saved on this device. Sync will retry when your account is reachable.");
+      setSyncMessage(record ? "Synced to your RIVT account." : "Couldn't sync - saved on this device only.");
     });
   }
 
@@ -248,15 +259,30 @@ export function InvoiceDraftTool({
     setRecipientEmail(template.recipientEmail);
     setRecipientPhone(template.recipientPhone);
     setTaxPct(template.taxPct);
-    setLines(template.lines.length ? template.lines.map((line) => ({ ...line, id: crypto.randomUUID() })) : [{ id: crypto.randomUUID(), description: "", qty: 1, rate: 0 }]);
+    setLines(template.lines.length ? template.lines.map((line) => ({ ...line, id: crypto.randomUUID() })) : [{ id: crypto.randomUUID(), description: "", qty: 1, rate: 0, kind: "other" }]);
     setTemplateNotice(`Loaded ${template.name}.`);
   }
 
   function deleteTemplate(templateId: string) {
     persistTemplates(templates.filter((template) => template.id !== templateId), "Template removed from this device.");
     void deleteToolRecordByLocalId("invoice_template", templateId).then((ok) => {
-      setSyncMessage(ok ? "Deleted from this device and your RIVT account." : "Deleted on this device. Cloud sync will catch up when reachable.");
+      setSyncMessage(ok ? "Deleted from this device and your RIVT account." : "Deleted on this device only. Could not sync deletion.");
     });
+  }
+
+  function startBlankInvoice() {
+    setInvoiceNumber("RIVT-DRAFT");
+    setBillTo("");
+    setPayTo("");
+    setTerms("Due on completion");
+    setPaymentMethod("Direct payment");
+    setRecipientEmail("");
+    setRecipientPhone("");
+    setTaxPct(0);
+    setTemplateName("Standard invoice");
+    setLines(defaultInvoiceLines(null));
+    setConversionNotice("");
+    setTemplateNotice("Blank invoice started.");
   }
 
   async function copyInvoice() {
@@ -300,7 +326,15 @@ export function InvoiceDraftTool({
           </div>
         </section>
 
-        {conversionNotice ? <p className="v2-converted-estimate-note" role="status">{conversionNotice}</p> : null}
+        {conversionNotice ? (
+          <div className="v2-converted-estimate-note" role="status">
+            <p>{conversionNotice}</p>
+            <span>
+              <button type="button" onClick={() => setConversionNotice("")}>Dismiss</button>
+              <button type="button" onClick={startBlankInvoice}>Start blank invoice</button>
+            </span>
+          </div>
+        ) : null}
         <section className="v2-invoice-template-bar" aria-label="Invoice templates">
           <label>Template name<input value={templateName} onChange={(event) => setTemplateName(event.target.value)} placeholder="Standard labor invoice" /></label>
           <button type="button" className="v2-primary-button" onClick={saveTemplate}><FileText size={14} />Save template</button>
@@ -350,7 +384,7 @@ export function InvoiceDraftTool({
                   <input aria-label="Line description" value={line.description} placeholder="Description" onChange={(event) => updateLine(line.id, "description", event.target.value)} />
                   <input type="number" min="0" step="0.5" value={line.qty} aria-label={`${line.description || "Line"} quantity`} onChange={(event) => updateLine(line.id, "qty", Number(event.target.value) || 0)} />
                   <input type="number" min="0" value={line.rate} aria-label={`${line.description || "Line"} rate`} onChange={(event) => updateLine(line.id, "rate", Number(event.target.value) || 0)} />
-                  <strong>{currency(numericValue(line.qty) * numericValue(line.rate))}</strong>
+                  <strong>{currency(centsToDollars(lineTotalCents(line)))}</strong>
                   <button type="button" aria-label={`Remove ${line.description || "line item"}`} onClick={() => removeLine(line.id)}><Trash2 size={14} /></button>
                 </div>
                 {signal ? (
@@ -428,9 +462,9 @@ export function InvoiceDraftTool({
                 {lines.map((line) => (
                   <tr key={line.id}>
                     <td>{line.description || "Line item"}</td>
-                    <td>{formatNumber(line.qty)}</td>
+                    <td>{formatQuantity(line.qty)}</td>
                     <td>{currency(line.rate)}</td>
-                    <td>{currency(numericValue(line.qty) * numericValue(line.rate))}</td>
+                    <td>{currency(centsToDollars(lineTotalCents(line)))}</td>
                   </tr>
                 ))}
               </tbody>

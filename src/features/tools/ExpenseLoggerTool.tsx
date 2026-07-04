@@ -123,7 +123,7 @@ function ExpenseLoggerTool({ activeJob, jobs }: { activeJob: Job | null; jobs: J
         void Promise.all(localSnapshot.map((entry) => upsertToolRecord(expenseToServerInput(entry)))).then((results) => {
           setSyncMessage(results.some(Boolean)
             ? "Local expenses synced to your RIVT account."
-            : "Saved on this device. Sync will retry when your account is reachable.");
+            : "Couldn't sync - saved on this device only.");
         });
         return;
       }
@@ -137,7 +137,7 @@ function ExpenseLoggerTool({ activeJob, jobs }: { activeJob: Job | null; jobs: J
     persistExpenses(next);
     if (!changedEntry) return;
     void upsertToolRecord(expenseToServerInput(changedEntry)).then((record) => {
-      setSyncMessage(record ? "Synced to your RIVT account." : "Saved on this device. Sync will retry when your account is reachable.");
+      setSyncMessage(record ? "Synced to your RIVT account." : "Couldn't sync - saved on this device only.");
     });
   }
 
@@ -167,7 +167,7 @@ function ExpenseLoggerTool({ activeJob, jobs }: { activeJob: Job | null; jobs: J
     setExpenses(next);
     persistExpenses(next);
     void deleteToolRecordByLocalId("expense", expenseId).then((ok) => {
-      setSyncMessage(ok ? "Deleted from this device and your RIVT account." : "Deleted on this device. Cloud sync will catch up when reachable.");
+      setSyncMessage(ok ? "Deleted from this device and your RIVT account." : "Deleted on this device only. Could not sync deletion.");
     });
   }
 

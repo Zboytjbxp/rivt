@@ -143,7 +143,7 @@ export function DailyLogTool({ activeJob, activeWork }: { activeJob: Job | null;
           return;
         }
         void upsertToolRecord(dailyLogDraftToServerInput(localDraft)).then((record) => {
-          setSyncMessage(record ? "Local daily log draft synced to your RIVT account." : "Draft saved on this device. Sync will retry when your account is reachable.");
+          setSyncMessage(record ? "Local daily log draft synced to your RIVT account." : "Couldn't sync - draft saved on this device only.");
         });
       } catch {
         setSyncMessage("New drafts sync to your RIVT account.");
@@ -223,7 +223,7 @@ export function DailyLogTool({ activeJob, activeWork }: { activeJob: Job | null;
       return;
     }
     void upsertToolRecord(dailyLogDraftToServerInput(draft)).then((record) => {
-      setSyncMessage(record ? "Draft synced to your RIVT account." : "Draft saved on this device. Sync will retry when your account is reachable.");
+      setSyncMessage(record ? "Draft synced to your RIVT account." : "Couldn't sync - draft saved on this device only.");
     });
   }
 

@@ -414,6 +414,16 @@ async function runMobileFlow(page) {
   await page.getByRole("button", { name: "Shop Talk", exact: true }).click();
   await page.getByRole("button", { name: "Shop Talk" }).waitFor({ timeout: 15_000 });
   await page.getByRole("button", { name: "Trade News" }).waitFor({ timeout: 15_000 });
+  await page.setViewportSize({ width: 390, height: 664 });
+  await page.locator(".shop-talk-fab").click();
+  const postButton = page.locator(".new-post-modal-footer .primary-action");
+  await postButton.waitFor({ timeout: 15_000 });
+  const postButtonBox = await postButton.boundingBox();
+  assert.ok(postButtonBox, "Shop Talk post button should have a bounding box");
+  assert.ok(postButtonBox.y >= 0, `Shop Talk post button should not sit above the viewport: ${JSON.stringify(postButtonBox)}`);
+  assert.ok(postButtonBox.y + postButtonBox.height <= 664, `Shop Talk post button should be visible at 390x664: ${JSON.stringify(postButtonBox)}`);
+  await page.getByRole("button", { name: "Close" }).click();
+  await page.setViewportSize({ width: 390, height: 844 });
   await page.getByRole("button", { name: "Trade News" }).click();
   await page.getByRole("heading", { name: /Code, safety, and permitting updates/i }).waitFor({ timeout: 15_000 });
   await assertNoHorizontalOverflow(page, "Shop Talk trade news");

@@ -155,7 +155,7 @@ function ClientThread({
       const updatedContact = contactWithThreadMessages(contact, next[contact.id] ?? []);
       onThreadSync(updatedContact);
       void upsertClientRecord(updatedContact).then((ok) => {
-        setSyncMessage(ok ? "Synced to your RIVT account." : "Saved on this device. Sync will retry when your account is reachable.");
+        setSyncMessage(ok ? "Synced to your RIVT account." : "Couldn't sync - saved on this device only.");
       });
       return next;
     });
@@ -345,7 +345,7 @@ function ClientsTab() {
     setContacts(next);
     saveClientRecordsLocal(next);
     void upsertClientRecord(c).then((ok) => {
-      setSyncMessage(ok ? "Synced to your RIVT account." : "Saved on this device. Sync will retry when your account is reachable.");
+      setSyncMessage(ok ? "Synced to your RIVT account." : "Couldn't sync - saved on this device only.");
     });
     setNewName("");
     setAddingName(false);

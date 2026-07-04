@@ -402,7 +402,7 @@ function MileageLoggerTool({ activeJob }: { activeJob: Job | null }) {
         void Promise.all(localSnapshot.map((entry) => upsertToolRecord(mileageToServerInput(entry)))).then((results) => {
           setSyncMessage(results.some(Boolean)
             ? "Local mileage trips synced to your RIVT account."
-            : "Saved on this device. Sync will retry when your account is reachable.");
+            : "Couldn't sync - saved on this device only.");
         });
         return;
       }
@@ -416,7 +416,7 @@ function MileageLoggerTool({ activeJob }: { activeJob: Job | null }) {
     persistMileage(next);
     if (!changedEntry) return;
     void upsertToolRecord(mileageToServerInput(changedEntry)).then((record) => {
-      setSyncMessage(record ? "Synced to your RIVT account." : "Saved on this device. Sync will retry when your account is reachable.");
+      setSyncMessage(record ? "Synced to your RIVT account." : "Couldn't sync - saved on this device only.");
     });
   }
 
@@ -444,7 +444,7 @@ function MileageLoggerTool({ activeJob }: { activeJob: Job | null }) {
     setEntries(next);
     persistMileage(next);
     void deleteToolRecordByLocalId("mileage", id).then((ok) => {
-      setSyncMessage(ok ? "Deleted from this device and your RIVT account." : "Deleted on this device. Cloud sync will catch up when reachable.");
+      setSyncMessage(ok ? "Deleted from this device and your RIVT account." : "Deleted on this device only. Could not sync deletion.");
     });
   }
 
@@ -679,7 +679,7 @@ function PriceBookTool() {
         void Promise.all(seededEntries.map((entry) => upsertToolRecord(priceEntryToServerInput(entry)))).then((results) => {
           setSyncMessage(results.some(Boolean)
             ? "Starter price book synced to your RIVT account."
-            : "Starter prices saved on this device. Sync will retry when your account is reachable.");
+            : "Couldn't sync - starter prices saved on this device only.");
         });
         localStorage.setItem("rivt.priceBookSeeded.v1", "1");
       }
@@ -706,7 +706,7 @@ function PriceBookTool() {
         void Promise.all(localSnapshot.map((entry) => upsertToolRecord(priceEntryToServerInput(entry)))).then((results) => {
           setSyncMessage(results.some(Boolean)
             ? "Local price book synced to your RIVT account."
-            : "Saved on this device. Sync will retry when your account is reachable.");
+            : "Couldn't sync - saved on this device only.");
         });
         return;
       }
@@ -731,7 +731,7 @@ function PriceBookTool() {
     persistPriceBook(next);
     if (!changedEntry) return;
     void upsertToolRecord(priceEntryToServerInput(changedEntry)).then((record) => {
-      setSyncMessage(record ? "Synced to your RIVT account." : "Saved on this device. Sync will retry when your account is reachable.");
+      setSyncMessage(record ? "Synced to your RIVT account." : "Couldn't sync - saved on this device only.");
     });
   }
 
@@ -760,7 +760,7 @@ function PriceBookTool() {
     const next = entries.filter((e) => e.id !== id);
     persistPriceEntries(next);
     void deleteToolRecordByLocalId("price_book", id).then((ok) => {
-      setSyncMessage(ok ? "Deleted from this device and your RIVT account." : "Deleted on this device. Cloud sync will catch up when reachable.");
+      setSyncMessage(ok ? "Deleted from this device and your RIVT account." : "Deleted on this device only. Could not sync deletion.");
     });
   }
 
@@ -1065,7 +1065,7 @@ function PunchListTool() {
         void Promise.all(localSnapshot.map((item) => upsertToolRecord(punchItemToServerInput(item)))).then((results) => {
           setSyncMessage(results.some(Boolean)
             ? "Local punch items synced to your RIVT account."
-            : "Saved on this device. Sync will retry when your account is reachable.");
+            : "Couldn't sync - saved on this device only.");
         });
         return;
       }
@@ -1079,7 +1079,7 @@ function PunchListTool() {
     persistPunchV2(next);
     if (!changedItem) return;
     void upsertToolRecord(punchItemToServerInput(changedItem)).then((record) => {
-      setSyncMessage(record ? "Synced to your RIVT account." : "Saved on this device. Sync will retry when your account is reachable.");
+      setSyncMessage(record ? "Synced to your RIVT account." : "Couldn't sync - saved on this device only.");
     });
   }
 
@@ -1118,7 +1118,7 @@ function PunchListTool() {
     const next = items.filter((i) => i.id !== id);
     persistPunchItems(next);
     void deleteToolRecordByLocalId("punch_item", id).then((ok) => {
-      setSyncMessage(ok ? "Deleted from this device and your RIVT account." : "Deleted on this device. Cloud sync will catch up when reachable.");
+      setSyncMessage(ok ? "Deleted from this device and your RIVT account." : "Deleted on this device only. Could not sync deletion.");
     });
   }
 
@@ -1277,7 +1277,7 @@ function SafetyChecklistTool({ activeJob }: { activeJob: Job | null }) {
         void Promise.all(localSnapshot.map((log) => upsertToolRecord(safetyLogToServerInput(log)))).then((results) => {
           setSyncMessage(results.some(Boolean)
             ? "Local safety checks synced to your RIVT account."
-            : "Saved on this device. Sync will retry when your account is reachable.");
+            : "Couldn't sync - saved on this device only.");
         });
         return;
       }
@@ -1291,7 +1291,7 @@ function SafetyChecklistTool({ activeJob }: { activeJob: Job | null }) {
     persistSafetyLogs(next);
     if (!changedLog) return;
     void upsertToolRecord(safetyLogToServerInput(changedLog)).then((record) => {
-      setSyncMessage(record ? "Synced to your RIVT account." : "Saved on this device. Sync will retry when your account is reachable.");
+      setSyncMessage(record ? "Synced to your RIVT account." : "Couldn't sync - saved on this device only.");
     });
   }
 
@@ -1791,7 +1791,7 @@ function JobChecklistTool() {
         void Promise.all(snapshotEntries.map(([key, value]) => upsertToolRecord(checklistRecordToServerInput(key, value)))).then((results) => {
           setSyncMessage(results.some(Boolean)
             ? "Local job checklists synced to your RIVT account."
-            : "Saved on this device. Sync will retry when your account is reachable.");
+            : "Couldn't sync - saved on this device only.");
         });
         return;
       }
@@ -1816,7 +1816,7 @@ function JobChecklistTool() {
     all[storageKey] = next;
     saveChecklistsToStorage(all);
     void upsertToolRecord(checklistRecordToServerInput(storageKey, next)).then((record) => {
-      setSyncMessage(record ? "Synced to your RIVT account." : "Saved on this device. Sync will retry when your account is reachable.");
+      setSyncMessage(record ? "Synced to your RIVT account." : "Couldn't sync - saved on this device only.");
     });
   }
 
@@ -1828,7 +1828,7 @@ function JobChecklistTool() {
     all[storageKey] = next;
     saveChecklistsToStorage(all);
     void upsertToolRecord(checklistRecordToServerInput(storageKey, next)).then((record) => {
-      setSyncMessage(record ? "Synced to your RIVT account." : "Saved on this device. Sync will retry when your account is reachable.");
+      setSyncMessage(record ? "Synced to your RIVT account." : "Couldn't sync - saved on this device only.");
     });
   }
 
@@ -2002,7 +2002,7 @@ function PaymentTrackerTool() {
         void Promise.all(localSnapshot.map((record) => upsertToolRecord(paymentRecordToServerInput(record)))).then((results) => {
           setSyncMessage(results.some(Boolean)
             ? "Local payment records synced to your RIVT account."
-            : "Saved on this device. Sync will retry when your account is reachable.");
+            : "Couldn't sync - saved on this device only.");
         });
         return;
       }
@@ -2016,7 +2016,7 @@ function PaymentTrackerTool() {
     savePaymentTrackerRecords(next);
     if (!changedRecord) return;
     void upsertToolRecord(paymentRecordToServerInput(changedRecord)).then((record) => {
-      setSyncMessage(record ? "Synced to your RIVT account." : "Saved on this device. Sync will retry when your account is reachable.");
+      setSyncMessage(record ? "Synced to your RIVT account." : "Couldn't sync - saved on this device only.");
     });
   }
 
@@ -2057,7 +2057,7 @@ function PaymentTrackerTool() {
     setRecords(next);
     savePaymentTrackerRecords(next);
     void deleteToolRecordByLocalId("payment_record", id).then((ok) => {
-      setSyncMessage(ok ? "Deleted from this device and your RIVT account." : "Deleted on this device. Cloud sync will catch up when reachable.");
+      setSyncMessage(ok ? "Deleted from this device and your RIVT account." : "Deleted on this device only. Could not sync deletion.");
     });
   }
 
@@ -2300,7 +2300,7 @@ function DailyReportTool() {
         void Promise.all(localSnapshot.map((report) => upsertToolRecord(dailyReportToServerInput(report)))).then((results) => {
           setSyncMessage(results.some(Boolean)
             ? "Local daily reports synced to your RIVT account."
-            : "Saved on this device. Sync will retry when your account is reachable.");
+            : "Couldn't sync - saved on this device only.");
         });
         return;
       }
@@ -2314,7 +2314,7 @@ function DailyReportTool() {
     persistDailyReports(next);
     if (!changedReport) return;
     void upsertToolRecord(dailyReportToServerInput(changedReport)).then((record) => {
-      setSyncMessage(record ? "Synced to your RIVT account." : "Saved on this device. Sync will retry when your account is reachable.");
+      setSyncMessage(record ? "Synced to your RIVT account." : "Couldn't sync - saved on this device only.");
     });
   }
 
@@ -2699,19 +2699,21 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
   const latestEntry = selectedProject?.entries.at(-1) ?? null;
   const actionBusy = Boolean(projectAction);
 
-  function setActiveTool(tool: ToolMode) {
+  function setActiveTool(tool: ToolMode, options: { keepConvertedInvoice?: boolean } = {}) {
     onOpenToolConsumed?.();
+    if (!options.keepConvertedInvoice) {
+      setConvertedEstimateDraft(null);
+    }
     setLocalActiveTool(tool);
   }
 
   function openToolFromHub(tool: LaunchableToolMode) {
-    if (tool === "invoice") setConvertedEstimateDraft(null);
     setActiveTool(tool);
   }
 
   function handleConvertEstimateToInvoice(draft: EstimateInvoiceDraft) {
     setConvertedEstimateDraft(draft);
-    setActiveTool("invoice");
+    setActiveTool("invoice", { keepConvertedInvoice: true });
   }
 
   useEffect(() => {

@@ -120,7 +120,7 @@ export function TimeTrackerTool({ activeJob, jobs }: { activeJob: Job | null; jo
         void Promise.all(localSnapshot.map((session) => upsertToolRecord(timeSessionToServerInput(session)))).then((results) => {
           setSyncMessage(results.some(Boolean)
             ? "Local time sessions synced to your RIVT account."
-            : "Saved on this device. Sync will retry when your account is reachable.");
+            : "Couldn't sync - saved on this device only.");
         });
         return;
       }
@@ -134,7 +134,7 @@ export function TimeTrackerTool({ activeJob, jobs }: { activeJob: Job | null; jo
     persistTimeSessions(next);
     if (!changedSession) return;
     void upsertToolRecord(timeSessionToServerInput(changedSession)).then((record) => {
-      setSyncMessage(record ? "Synced to your RIVT account." : "Saved on this device. Sync will retry when your account is reachable.");
+      setSyncMessage(record ? "Synced to your RIVT account." : "Couldn't sync - saved on this device only.");
     });
   }
 
@@ -179,7 +179,7 @@ export function TimeTrackerTool({ activeJob, jobs }: { activeJob: Job | null; jo
     if (running?.id === sessionId) setRunning(null);
     persistTimeSessions(next);
     void deleteToolRecordByLocalId("time_session", sessionId).then((ok) => {
-      setSyncMessage(ok ? "Deleted from this device and your RIVT account." : "Deleted on this device. Cloud sync will catch up when reachable.");
+      setSyncMessage(ok ? "Deleted from this device and your RIVT account." : "Deleted on this device only. Could not sync deletion.");
     });
   }
 
