@@ -215,7 +215,7 @@ function ToolAppShell({
   children: ReactNode;
 }) {
   return (
-    <section className={compact ? "v2-tools-app is-compact is-fullscreen-tool" : "v2-tools-app"} aria-label={title} {...swipeHandlers}>
+    <section className={compact ? "v2-tools-app is-compact" : "v2-tools-app"} aria-label={title} {...swipeHandlers}>
       <header className={compact ? "v2-tool-app-header is-compact" : "v2-tool-app-header"}>
         <button type="button" onClick={onBack}>
           <ArrowLeft size={16} />
@@ -2918,7 +2918,6 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
         <PageHeader
           className="v2-tools-header"
           title="Records"
-          description="Private closeout packets for accepted work. Photos, notes, completion, and reports are server-backed."
           actions={<button type="button" className="v2-primary-button" onClick={() => onNavigate("work")}>
             <FolderOpen size={16} />
             Open work
@@ -2926,19 +2925,6 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
         />
 
         {recordsError ? <p className="v2-record-error" role="alert">{recordsError}</p> : null}
-
-        <section className="v2-records-command" aria-label="Records workflow">
-          <div>
-            <span>Closeout system</span>
-            <strong>One accepted job, one private record.</strong>
-            <p>Keep notes, photos, completion proof, and reports tied to the actual work instead of scattered across texts and camera rolls.</p>
-          </div>
-          <div className="v2-records-command-steps" aria-label="Records steps">
-            <span><FileUp size={15} /> Evidence</span>
-            <span><CheckCircle2 size={15} /> Completion</span>
-            <span><Clipboard size={15} /> Report</span>
-          </div>
-        </section>
 
         <div className="v2-records-layout">
           <Panel
@@ -2974,7 +2960,6 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
             className="v2-tools-panel v2-record-detail-panel"
             eyebrow={selectedProject ? recordStatusLabel(selectedProject.status) : "Record detail"}
             title={selectedProject ? selectedProject.job.title : "Select an accepted job"}
-            description={selectedProject ? `${selectedProject.job.publicLocation.city}, ${selectedProject.job.publicLocation.region} - Updated ${new Date(selectedProject.updatedAt).toLocaleString()}` : "Open a record to add closeout evidence, submit completion, or generate the closeout report."}
             action={selectedProject ? (
               <div className="v2-record-header-actions">
                 <button type="button" onClick={() => void refreshSelectedProject()} disabled={actionBusy}>

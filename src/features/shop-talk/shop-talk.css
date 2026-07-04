@@ -1824,7 +1824,7 @@
 }
 
 .shop-talk-community-layout .shop-talk-tabs button {
-  min-height: 42px;
+  min-height: 44px;
   border-radius: 999px;
   font-weight: var(--v2-weight-bold);
 }
@@ -2228,7 +2228,7 @@
 
 .community-join {
   flex: 0 0 auto;
-  min-height: 34px;
+  min-height: 44px;
   padding: 0 18px;
   border-radius: 999px;
   border: 1.5px solid #ff4b00;
@@ -2247,7 +2247,7 @@
 
 .community-report {
   flex: 0 0 auto;
-  min-height: 34px;
+  min-height: 44px;
   padding: 0 12px;
   border-radius: 999px;
   border: 1px solid var(--v2-border, #d8d3cb);
@@ -2297,7 +2297,7 @@
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  min-height: 30px;
+  min-height: 44px;
   padding: 0;
   border: 0;
   background: transparent;
@@ -2350,7 +2350,7 @@
   grid-template-columns: auto minmax(0, 1fr);
   gap: 8px;
   align-items: center;
-  min-height: 42px;
+  min-height: 44px;
   padding: 0 11px;
   border: 1px solid var(--v2-border, #e5e2dd);
   border-radius: 999px;
@@ -2361,7 +2361,7 @@
 .community-discover-search input {
   min-width: 0;
   width: 100%;
-  min-height: 40px;
+  min-height: 44px;
   border: 0;
   outline: 0;
   background: transparent;
@@ -2720,3 +2720,24 @@
 }
 
 .shop-question-media { margin-top: 14px; }
+
+.shop-talk-layout :is(button, input, textarea, select, a, [role="button"], [role="switch"]):focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--v2-accent, var(--accent)) 38%, transparent);
+  outline-offset: 2px;
+}
+
+.shop-talk-layout :is(.shop-talk-search, .input-control),
+.shop-talk-layout :is(.shop-talk-search input, .input-control input, .input-control select, .input-control textarea),
+.shop-talk-community-layout .shop-talk-search input,
+.shop-talk-community-layout .shop-talk-fieldbar .input-control,
+.v2-st-sub-input,
+.v2-st-reply-input {
+  min-height: 44px;
+}
+
+.shop-talk-community-layout :is(.shop-post-bookmark, .v2-st-reply-btn, .v2-st-helpful-btn),
+.v2-st-filter-pill,
+.v2-st-trending-pill,
+.v2-st-reply-send-btn {
+  min-height: 44px;
+}

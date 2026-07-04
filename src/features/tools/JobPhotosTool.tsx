@@ -514,8 +514,8 @@ export function JobPhotosTool({ activeWork }: { activeWork: CanonicalActiveWork[
     <div className="v2-job-photos-workbench">
       <div className="v2-job-photos-albums-header">
         <div>
-          <h2 className="v2-job-photos-albums-title">Job Photos</h2>
-          <p className="v2-job-photos-albums-sub">Document any job — marketplace or not. Albums are private to your account.</p>
+          <h2 className="v2-job-photos-albums-title">Albums</h2>
+          <p className="v2-job-photos-albums-sub">Private cloud photo records.</p>
         </div>
         <button type="button" className="v2-primary-button" onClick={() => setShowNewAlbum(true)}>
           <Plus size={15} />New album
@@ -565,12 +565,12 @@ export function JobPhotosTool({ activeWork }: { activeWork: CanonicalActiveWork[
       ) : null}
 
       {albumsLoading ? (
-        <p className="v2-job-photos-loading">Loading albums…</p>
+        <p className="v2-job-photos-loading">Loading...</p>
       ) : albums.length === 0 && !showNewAlbum ? (
         <div className="v2-job-photos-empty">
           <Camera size={28} />
           <strong>No albums yet</strong>
-          <p>Create an album for any job — even ones you found outside RIVT. Your photos are stored privately on your account.</p>
+          <p>Create a private album for job proof, progress, and closeout photos.</p>
           <button type="button" className="v2-primary-button" onClick={() => setShowNewAlbum(true)}>
             <Plus size={15} />Create first album
           </button>

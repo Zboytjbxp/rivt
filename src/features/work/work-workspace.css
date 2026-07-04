@@ -943,18 +943,30 @@
   }
 
   .v2-section-tabs {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 4px;
-    width: 100%;
+    display: flex;
+    width: auto;
+    max-width: calc(100vw - 32px);
+    gap: 6px;
+    margin-inline: -2px;
+    padding: 0 2px 4px;
+    overflow-x: auto;
+    border-radius: 0;
+    background: transparent;
+    scroll-snap-type: x proximity;
+    scrollbar-width: none;
+  }
+
+  .v2-section-tabs::-webkit-scrollbar {
+    display: none;
   }
 
   .v2-section-tabs button {
-    min-width: 0;
-    padding: 0 8px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    min-width: max-content;
+    min-height: 44px;
+    padding: 0 16px;
+    border: 1px solid var(--v2-border);
+    background: var(--v2-surface-raised);
+    scroll-snap-align: start;
   }
 
   .v2-work-toolbar {
@@ -1139,10 +1151,6 @@
 }
 
 @media (max-width: 640px) {
-  .v2-section-tabs {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
   .v2-detail-tabs {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
@@ -2583,4 +2591,9 @@
   .v2-work-header .v2-primary-button {
     display: none;
   }
+}
+
+.v2-work-page :is(button, input, textarea, select, a, [role="button"], [role="switch"]):focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--v2-accent) 38%, transparent);
+  outline-offset: 2px;
 }

@@ -32,6 +32,7 @@
   align-items: center;
   gap: 6px;
   flex: 0 0 auto;
+  min-height: 44px;
   padding: 7px 12px;
   border-radius: 999px;
   border: 1px solid var(--v2-border);
@@ -120,8 +121,8 @@
 .trade-feed-start-dismiss {
   display: grid;
   place-items: center;
-  width: 34px;
-  height: 34px;
+  width: 44px;
+  height: 44px;
   flex: 0 0 auto;
   border: 0;
   border-radius: 999px;
@@ -204,7 +205,7 @@
 .trade-feed-start-action,
 .trade-feed-start-status {
   display: inline-flex;
-  min-height: 34px;
+  min-height: 44px;
   align-items: center;
   justify-content: center;
   border-radius: 999px;
@@ -241,6 +242,10 @@
     grid-column: 2;
     justify-self: start;
     margin-top: 2px;
+  }
+
+  .trade-feed-start-item-copy small {
+    display: none;
   }
 }
 
@@ -309,12 +314,22 @@
 .trade-feed-trending-head h2 svg { color: var(--v2-accent-text); }
 
 .trade-feed-seeall {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 8px;
   border: none;
-  background: none;
+  border-radius: var(--v2-radius-md);
+  background: transparent;
   color: var(--v2-accent-text);
   font-size: var(--v2-text-body);
   font-weight: var(--v2-weight-strong);
   cursor: pointer;
+}
+
+.trade-feed-seeall:hover {
+  background: var(--v2-surface-muted);
 }
 
 /* ── Communities ─────────────────────────────────────────── */
@@ -562,8 +577,8 @@
 .trade-vote {
   display: grid;
   place-items: center;
-  width: 34px;
-  height: 34px;
+  width: 44px;
+  height: 44px;
   border: none;
   background: none;
   border-radius: 50%;
@@ -586,7 +601,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  min-height: 38px;
+  min-height: 44px;
   padding: 0 14px;
   border: 1px solid var(--v2-border);
   border-radius: 999px;
@@ -603,7 +618,7 @@
   display: grid;
   place-items: center;
   width: 44px;
-  height: 38px;
+  height: 44px;
   border: none;
   background: none;
   border-radius: var(--v2-radius-md);
@@ -614,6 +629,22 @@
 .trade-post-icon.is-saved { color: var(--v2-accent-text); }
 
 @media (max-width: 640px) {
+  .trade-feed {
+    gap: 12px;
+  }
+
+  .trade-feed-welcome {
+    align-items: center;
+  }
+
+  .trade-feed-nudge-copy small {
+    display: none;
+  }
+
+  .trade-feed-section-head {
+    margin-bottom: 8px;
+  }
+
   .trade-post-body-btn.has-thumbnail {
     grid-template-columns: minmax(0, 1fr) 82px;
     gap: 10px;

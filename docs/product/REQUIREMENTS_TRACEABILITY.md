@@ -10,6 +10,15 @@ Status values:
 
 Evidence must eventually link to implementation, automated tests, manual acceptance proof, and deployed build.
 
+## Traceability Addendum - 2026-07-04 Mobile Layout and Device Accessibility Subtraction
+
+- `GA-UX-006` gains rendered mobile evidence for a device-accessibility slice across Home, Work, Crew, Shop Talk, Tools, Records, and Profile/Settings at 390x844 with no document-wide horizontal overflow and no sampled visible sub-44px touch targets.
+- `GA-UX-003` gains subtraction evidence: Work mobile tabs are now compact horizontal chips, Records and non-calculator tool shells no longer spend the first viewport on explanatory command blocks, and Crew/Profile/Moderation copy was shortened where screens were narrating themselves.
+- `GA-UX-005` gains clearer-state evidence: Records/Job Photos now describes private cloud photo records without broad marketing copy, and the pass did not add fake verification, fake storage success, or frontend-only production claims.
+- `GA-OPS-007` gains local automated evidence for this slice: `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, `npm run incident:readiness -- --require-ready`, `npm run launch:readiness -- --require-ready`, and `git diff --check` passed.
+- `GA-OPS-008` is unchanged until this branch is merged and deployed; no production runtime claim is made for this branch-only pass.
+- Remaining boundary: physical iOS Safari, Android Chrome, desktop keyboard-only, and screen-reader evidence remain required before the deeper accessibility boundary can be considered verified.
+
 ## Traceability Addendum - 2026-07-03 Typography and Breakpoint Polish
 
 - `GA-UX-003` gains visual-system clarity evidence: Home, Work, Crew, Profile/Settings, and Shop Talk/Trade News now share semantic v2 text aliases instead of screen-specific hardcoded 14/16/19px patterns.

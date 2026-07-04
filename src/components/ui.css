@@ -437,3 +437,18 @@
     justify-content: center;
   }
 }
+
+@media (max-width: 640px) {
+  .rivt-page-header p,
+  .rivt-panel-header p {
+    display: none;
+  }
+
+  .rivt-page-header {
+    gap: 10px;
+  }
+
+  .rivt-panel-header {
+    padding-bottom: 10px;
+  }
+}

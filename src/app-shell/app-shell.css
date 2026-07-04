@@ -548,9 +548,28 @@
 
 .rivt-v2 button:focus-visible,
 .rivt-v2 input:focus-visible,
-.rivt-v2 a:focus-visible {
+.rivt-v2 textarea:focus-visible,
+.rivt-v2 select:focus-visible,
+.rivt-v2 a:focus-visible,
+.rivt-v2 [role="button"]:focus-visible,
+.rivt-v2 [role="switch"]:focus-visible {
   outline: 3px solid color-mix(in srgb, var(--v2-accent) 38%, transparent);
   outline-offset: 2px;
+}
+
+@media (pointer: coarse) {
+  .rivt-v2 button,
+  .rivt-v2 [role="button"],
+  .rivt-v2 [role="switch"] {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .rivt-v2 input:not([type="checkbox"]):not([type="radio"]),
+  .rivt-v2 select,
+  .rivt-v2 textarea {
+    min-height: 44px;
+  }
 }
 
 @media (max-width: 900px) {
@@ -608,10 +627,10 @@
   }
 
   .v2-topbar .v2-icon-button {
-    width: 38px;
-    min-width: 38px;
-    height: 38px;
-    min-height: 38px;
+    width: 44px;
+    min-width: 44px;
+    height: 44px;
+    min-height: 44px;
     border-color: transparent;
     background: transparent;
     color: var(--v2-text);
@@ -623,7 +642,7 @@
 
   .v2-account-button {
     min-width: 0;
-    min-height: 38px;
+    min-height: 44px;
     padding: 4px;
     color: var(--v2-text);
   }
@@ -713,7 +732,7 @@
   }
 
   .rivt-v2 .guest-banner-actions button {
-    min-height: 36px;
+    min-height: 44px;
   }
 }
 

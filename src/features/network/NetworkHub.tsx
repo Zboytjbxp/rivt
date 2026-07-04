@@ -741,7 +741,7 @@ function CrewManager({ crewType }: { crewType: CrewType }) {
           className="v2-network-empty"
           icon={<Users size={20} />}
           title={`No ${label.toLowerCase()} yet`}
-          description={crewType === "crew" ? "Add your crew members to track their availability and assignments." : "Add subcontractors you rely on and invite them to jobs."}
+          description={crewType === "crew" ? "Track availability and assignments." : "Save subs you rely on."}
           compact
         />
       ) : (
@@ -1088,7 +1088,7 @@ function CrewInvitePlanner() {
             className="v2-network-empty"
             icon={<Users size={20} />}
             title="No planned invites yet"
-            description="Track who you plan to bring on to upcoming jobs. Mark accepted or declined as responses come in."
+            description="Plan who to bring on next."
             compact
           />
         )}
@@ -1291,7 +1291,7 @@ function ReviewsView({
               className="v2-network-empty"
               icon={<Star size={20} />}
               title="No reviews yet"
-              description="Complete jobs and build connections. Reviews from contractors you've worked with will appear here."
+              description="Reviews from completed work appear here."
               action={<button type="button" onClick={onOpenCrew}>Find crew</button>}
               compact
             />
@@ -1461,7 +1461,7 @@ export function NetworkHub({
                 className="v2-network-empty"
                 icon={<Star size={20} />}
                 title="No shout-outs yet"
-                description="Shout-outs from jobs and Shop Talk will appear here."
+                description="Shout-outs will appear here."
                 compact
               />
             )}
@@ -1480,7 +1480,7 @@ export function NetworkHub({
                 className="v2-network-empty"
                 icon={<Sparkles size={20} />}
                 title="Nothing posted in your trade yet"
-                description="Be the first to ask a question or share a field-tested fix."
+                description="Ask or share a field-tested fix."
                 action={<button type="button" onClick={onOpenShopTalk}>Post in Shop Talk</button>}
                 compact
               />
@@ -1498,17 +1498,17 @@ export function NetworkHub({
             <article>
               <ShieldCheck size={18} />
               <strong>Evidence states</strong>
-              <span>Self-reported, uploaded, and verified markers stay distinct.</span>
+              <span>Self-reported, uploaded, and verified stay separate.</span>
             </article>
             <article>
               <Star size={18} />
               <strong>High reputation</strong>
-              <span>Shout-outs and field answers build trust before the first deal.</span>
+              <span>Shout-outs and field answers build trust.</span>
             </article>
             <article>
               <Users size={18} />
               <strong>Active crew</strong>
-              <span>Jobs, invites, and referrals in one network view.</span>
+              <span>Jobs, invites, and referrals in one view.</span>
             </article>
           </div>
         </Panel>

@@ -292,7 +292,6 @@ export function ModerationConsole({
           <Panel
             className="moderation-queue-panel"
             title="Report queue"
-            description="Newest reports appear first. Select one to review the captured context."
           >
             {loading ? (
               <div className="moderation-skeleton-list">
@@ -305,7 +304,7 @@ export function ModerationConsole({
                 compact
                 icon={<ShieldCheck size={20} />}
                 title="No reports in this queue"
-                description="When public Shop Talk activity is reported, it will land here with the target snapshot and reporter context."
+                description="Reported Shop Talk activity will land here."
               />
             ) : (
               <div className="moderation-report-list">
@@ -331,7 +330,6 @@ export function ModerationConsole({
           <Panel
             className="moderation-review-panel"
             title="Review"
-            description="Use the snapshot before applying a visible content action."
           >
             {selectedReport ? (
               <div className="moderation-review">
@@ -413,7 +411,7 @@ export function ModerationConsole({
                 compact
                 icon={<Flag size={20} />}
                 title="Select a report"
-                description="Choose a queue item to see the report context and available staff actions."
+                description="Choose a queue item to review it."
               />
             )}
           </Panel>

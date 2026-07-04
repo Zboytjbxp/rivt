@@ -1,11 +1,44 @@
 # RIVT Build State
 
-Last updated: 2026-07-03 America/New_York
+Last updated: 2026-07-04 America/New_York
 Current gate: Gate A launch hardening
-Current phase: Packet 08 Gate A launch hardening plus Gate B behind-flag backbone work: machine gates and live workflow smokes are mostly green; the Shop Talk Reddit-model backbone, moderation/reporting backend, human-facing moderation console/report UX, post photo media, reachability/naming cleanup, Tools hub consolidation, Payment Tracker server records, money-tools sync, the accepted tool-records sync slices, non-tool local-state boundary cleanup, dedicated network-records sync for Crew/Invites/informal written shout-outs, and the latest screen-density polish slice are implemented while still respecting launch-readiness boundaries before broad exposure.
+Current phase: Packet 08 Gate A launch hardening plus Gate B behind-flag backbone work: machine gates and live workflow smokes are mostly green; the Shop Talk Reddit-model backbone, moderation/reporting backend, human-facing moderation console/report UX, post photo media, reachability/naming cleanup, Tools hub consolidation, Payment Tracker server records, money-tools sync, the accepted tool-records sync slices, non-tool local-state boundary cleanup, dedicated network-records sync for Crew/Invites/informal written shout-outs, screen-density polish, and the latest mobile layout/device-accessibility subtraction slice are implemented while still respecting launch-readiness boundaries before broad exposure.
 Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
-Repository branch: `master`
+Repository branch: `codex/mobile-accessibility-subtraction`
 Production release commit: verify with live `/api/health`; latest runtime feature evidence is recorded below and docs-only evidence commits may supersede the served build SHA.
+
+## Latest Packet 08 Pass - Mobile Layout and Device Accessibility Subtraction
+
+- Continued Claude's minimal-professional audit cleanup with a device-accessibility pass:
+  - added broader `:focus-visible` coverage for shell, shared UI, Work, Crew, Shop Talk, Inbox, Profile/Settings, Tools, and admin surfaces
+  - raised sampled mobile controls, top-bar controls, tab buttons, report buttons, filter chips, community actions, and tool launch controls to the 44px touch-target floor on coarse pointers
+  - converted the Work section tabs into a horizontal mobile chip row so the first viewport is content-first rather than tab-grid-first
+  - compacted Records and non-calculator tool shells by removing redundant explanatory headers and the oversized Records command block
+  - shortened Records/Job Photos album copy, Crew empty-state copy, Profile/Settings theme/personalization copy, and moderation console descriptions
+  - kept Tools as Tools only: no active-job/job-context marketing block was reintroduced
+- Preserved launch boundaries:
+  - no homeowner flows, fake verification, job-payment processing, escrow, payroll, local-auth fallback, or frontend-only production claims were added
+  - no server data, auth, billing, storage, subscription, moderation, or migration contracts were changed
+- Local gates:
+  - `npm run build` (pass)
+  - `npm run lint` (pass)
+  - `npm run lint:security` (pass)
+  - `npm run test` (pass; unit plus DB-backed integration tests)
+  - `npm run test:e2e` (pass; fail-closed auth plus desktop/mobile jobs/discovery)
+  - `npm audit --omit=dev` (pass; 0 vulnerabilities)
+  - `npm run incident:readiness -- --require-ready` (pass)
+  - `npm run launch:readiness -- --require-ready` (pass)
+  - `git diff --check` (pass; CRLF warnings only for touched files)
+- Rendered QA:
+  - Browser plugin instructions were loaded; previous in-app browser runtime attempts in this session did not expose a usable documentation/tabs API for the mocked authenticated flow, so Playwright fallback was used
+  - branch-specific Vite client was started at `http://127.0.0.1:5177`
+  - mobile route-mocked smoke at 390x844 checked Home, Work, Crew, Shop Talk, Tools, Records, and Settings
+  - the smoke reported `overflowX: 0` and no sampled sub-44px visible targets on every checked page
+  - screenshot evidence was saved outside the repo at `C:\Users\zboyt\AppData\Local\Temp\rivt-mobile-accessibility-nav-smoke-final-3\`
+- Production deployment status:
+  - not deployed yet from this branch; merge/redeploy is the next step if accepted
+- Remaining boundary:
+  - this is automated and rendered mobile evidence, not physical iOS Safari/Android Chrome/screen-reader certification. The physical accessibility checklist remains the manual launch-quality boundary.
 
 ## Latest Packet 08 Pass - Screen Density Polish
 

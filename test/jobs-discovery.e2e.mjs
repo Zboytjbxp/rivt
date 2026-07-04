@@ -371,7 +371,7 @@ async function assertToolsFlow(page) {
 
   await primaryTool("Records & photos").click();
   await page.getByRole("heading", { name: "Job Photos", exact: true, level: 1 }).waitFor();
-  await page.getByText("Document any job", { exact: false }).waitFor();
+  await page.getByText("Private cloud photo records.", { exact: true }).waitFor();
   await page.getByRole("button", { name: /New album/i }).waitFor();
 }
 
@@ -420,7 +420,7 @@ async function assertTopBarActions(page) {
 
   await page.getByRole("button", { name: "Messages" }).click();
   await page.getByRole("heading", { name: "Inbox", exact: true }).waitFor();
-  await page.getByText(/unread messages .* new updates/).waitFor();
+  await page.getByRole("button", { name: "Clients" }).waitFor();
 }
 
 let browser;

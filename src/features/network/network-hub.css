@@ -381,9 +381,8 @@
 
 .v2-network-panel-actions .v2-primary-button {
   font-size: 13px;
-  padding: 6px 12px;
-  min-height: unset;
-  height: auto;
+  min-height: 44px;
+  padding: 0 12px;
 }
 
 .v2-network-panel-actions > button:not(.v2-primary-button) {
@@ -1496,5 +1495,64 @@
 
   .v2-crew-invite-actions button {
     min-width: 0;
+  }
+}
+
+.v2-network-page :is(button, input, textarea, select, a, [role="button"], [role="switch"]):focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--v2-accent) 38%, transparent);
+  outline-offset: 2px;
+}
+
+.v2-network-tab-bar {
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.v2-network-tab-bar::-webkit-scrollbar {
+  display: none;
+}
+
+.v2-network-tab-btn {
+  min-height: 44px;
+}
+
+.v2-crew-invite-inputs input,
+.v2-sub-roster-inputs input,
+.v2-client-form input,
+.v2-client-form textarea,
+.v2-review-form input,
+.v2-review-form textarea {
+  min-height: 44px;
+}
+
+.v2-client-add-btn,
+.v2-client-save-btn,
+.v2-client-cancel-btn,
+.v2-client-edit-btn,
+.v2-client-delete-btn,
+.v2-client-phone-link {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+}
+
+@media (max-width: 900px) {
+  .v2-network-page {
+    padding-bottom: calc(92px + env(safe-area-inset-bottom));
+  }
+
+  .v2-network-tab-bar {
+    gap: 4px;
+    padding: 0;
+  }
+
+  .v2-network-tab-btn {
+    flex: 0 0 auto;
+    padding: 0 16px;
+  }
+
+  .v2-crew-invite-form .v2-primary-button {
+    min-height: 44px;
   }
 }

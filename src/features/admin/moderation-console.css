@@ -45,7 +45,7 @@
 }
 
 .moderation-filter-row button {
-  min-height: 40px;
+  min-height: 44px;
   padding: 0 14px;
   border: 1px solid var(--v2-border);
   border-radius: 999px;
@@ -362,9 +362,9 @@
   }
 
   .moderation-page-header .rivt-page-header-actions > .v2-secondary-button {
-    width: 42px;
-    min-width: 42px;
-    min-height: 38px;
+    width: 44px;
+    min-width: 44px;
+    min-height: 44px;
     padding-inline: 0;
     gap: 0;
     font-size: 0;
@@ -388,7 +388,7 @@
   }
 
   .moderation-filter-row button {
-    min-height: 36px;
+    min-height: 44px;
     padding-inline: 13px;
     font-size: 13px;
   }

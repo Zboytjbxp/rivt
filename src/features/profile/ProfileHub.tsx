@@ -651,7 +651,7 @@ function PortfolioSection({ onNavigate }: { onNavigate?: (dest: string) => void 
         <Camera size={16} />
         <span>Portfolio &amp; Work Samples</span>
       </header>
-      <p>Your job photos from RIVT albums are your portfolio. They're private by default — only you see them.</p>
+      <p>Private until shared.</p>
       <button type="button" className="v2-primary-button" onClick={() => onNavigate?.("tools")}>
         View job photos
       </button>
@@ -1693,7 +1693,6 @@ export function ProfileHub({
             <div className="v2-trade-mode-toggle">
               <div>
                 <strong>Trade personalization</strong>
-                <p>Tailor the app — job feed, Shop Talk, and tools — to your trade.</p>
               </div>
               <button
                 type="button"
@@ -1767,7 +1766,6 @@ export function ProfileHub({
           <section className="v2-profile-panel v2-profile-panel-wide v2-settings-signout-section">
             <div>
               <strong>Sign out</strong>
-              <span>You'll be signed out of this session on this device.</span>
             </div>
             <button type="button" className="v2-secondary-button" onClick={onLogout}>
               <LogOut size={16} />
