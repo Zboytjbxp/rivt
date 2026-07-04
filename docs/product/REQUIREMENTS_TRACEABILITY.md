@@ -16,7 +16,8 @@ Evidence must eventually link to implementation, automated tests, manual accepta
 - `GA-UX-006` gains mobile polish evidence: a 430x932 rendered guest-preview smoke checked Home, Work, Crew, Shop Talk, Tools, and the Profile/Settings menu with no document-wide horizontal overflow; intentionally scrollable community/chip rows were the only offscreen detections.
 - `GA-UX-006` also gains breakpoint cleanup evidence: the checked CSS no longer contains 9-12px font sizes, 15.5px Trade News body text, a stray 480px breakpoint, or 11px card radii.
 - `GA-OPS-007` gains local automated evidence: `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test:unit`, `npm run test:e2e`, `npm run test`, `npm audit --omit=dev`, `npm run incident:readiness -- --require-ready`, `npm run launch:readiness -- --require-ready`, and `git diff --check` passed.
-- Remaining boundary: this addendum covers the typography/token/breakpoint polish slice only. It does not claim final product-wide design completion or production deployment until the branch is merged, pushed, redeployed, and source-monitored.
+- `GA-OPS-008` gains production deployment evidence: live `https://rivt.pro/api/health` reported commit `530fe4f2152c1e191d7dc4e2c9d2b36ebb93119f` with migration `0021_shop_talk_post_media`, PostgreSQL/S3-compatible storage, and configured Sentry; `EXPECTED_SOURCE_COMMIT=530fe4f2152c1e191d7dc4e2c9d2b36ebb93119f npm run monitor:production` passed.
+- Remaining boundary: this addendum covers the typography/token/breakpoint polish slice only. It does not claim final product-wide design completion.
 
 ## Traceability Addendum - 2026-07-03 UI System and Settings Polish
 

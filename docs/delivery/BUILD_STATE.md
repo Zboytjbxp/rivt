@@ -35,7 +35,9 @@ Production release commit: verify with live `/api/health`; latest runtime featur
   - mobile guest-preview smoke at 430x932 checked Home, Work, Crew, Shop Talk, Tools, and the Profile/Settings menu
   - the smoke found no document-wide horizontal overflow; detected offscreen items were intentional horizontal-scroll community/chip rows with `scrollWidth` equal to the viewport
 - Production deployment status:
-  - pending merge, push, Railway redeploy, and live source monitor for this pass
+  - runtime release commit `530fe4f2152c1e191d7dc4e2c9d2b36ebb93119f` was pushed to GitHub and picked up by Railway production service `RIVT`
+  - live `https://rivt.pro/api/health` returned `ok: true`, build commit `530fe4f2152c1e191d7dc4e2c9d2b36ebb93119f`, migration `0021_shop_talk_post_media`, PostgreSQL, S3-compatible object storage, and configured Sentry
+  - `EXPECTED_SOURCE_COMMIT=530fe4f2152c1e191d7dc4e2c9d2b36ebb93119f npm run monitor:production` passed with operational controls off, seven anonymous private-route checks, and 565 ms duration
 
 ## Latest Packet 08 Pass - UI System and Settings Polish
 
