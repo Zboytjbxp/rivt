@@ -5,7 +5,7 @@ Current gate: Gate A launch hardening
 Current phase: Packet 08 Gate A launch hardening plus Gate B behind-flag backbone work: machine gates and live workflow smokes are mostly green; the Shop Talk Reddit-model backbone, moderation/reporting backend, human-facing moderation console/report UX, post photo media, reachability/naming cleanup, Tools hub consolidation, Payment Tracker server records, money-tools sync, the accepted tool-records sync slices, non-tool local-state boundary cleanup, dedicated network-records sync for Crew/Invites/informal written shout-outs, screen-density polish, and the latest mobile layout/device-accessibility subtraction slice are implemented while still respecting launch-readiness boundaries before broad exposure.
 Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
-Production release commit: `f3d15a8b37fa652aad35228782c727ca2156422d` verified with live `/api/health`; latest runtime feature evidence is recorded below and docs-only evidence commits may supersede the served build SHA.
+Production release commit: `1d5f968fe0076f79eb5294d0bf3e43309b403b79` verified with live `/api/health`; latest runtime feature evidence is recorded below and docs-only evidence commits may supersede the served build SHA.
 
 ## Latest Packet 08 Pass - Tools Back Navigation Fix
 
@@ -28,7 +28,9 @@ Production release commit: `f3d15a8b37fa652aad35228782c727ca2156422d` verified w
   - Browser plugin instructions were loaded first; the in-app browser runtime connected but did not expose the documented `browser.documentation()` API in this session, so Playwright fallback was used
   - screenshot evidence from the mobile action smoke is outside the repo at `C:\Users\zboyt\AppData\Local\Temp\rivt-mobile-actions-pass`
 - Production deployment status:
-  - not deployed from this fix yet.
+  - runtime release commit `1d5f968fe0076f79eb5294d0bf3e43309b403b79` was pushed to GitHub and picked up by Railway production service `RIVT`
+  - live `https://rivt.pro/api/health` returned `ok: true`, build commit `1d5f968fe0076f79eb5294d0bf3e43309b403b79`, migration `0021_shop_talk_post_media`, PostgreSQL, S3-compatible object storage, and configured Sentry
+  - `EXPECTED_SOURCE_COMMIT=1d5f968fe0076f79eb5294d0bf3e43309b403b79 npm run monitor:production` passed with operational controls off, seven anonymous private-route checks, and 558 ms duration
 
 ## Latest Packet 08 Pass - Launch QA Merge Train
 
