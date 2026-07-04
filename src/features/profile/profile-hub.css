@@ -3,7 +3,7 @@
   width: 100%;
   max-width: 1080px;
   margin-inline: auto;
-  gap: 16px;
+  gap: 14px;
 }
 
 .v2-profile-header {
@@ -53,7 +53,7 @@
 .v2-profile-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
+  gap: 14px;
 }
 
 .v2-profile-panel {
@@ -65,7 +65,7 @@
 }
 
 .v2-profile-panel > header {
-  padding: 14px 16px;
+  padding: 12px 16px;
   border-bottom: 1px solid color-mix(in srgb, var(--v2-border) 60%, transparent);
   background: color-mix(in srgb, var(--v2-surface-muted) 34%, var(--v2-surface));
 }
@@ -88,10 +88,10 @@
 .v2-profile-summary {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
-  gap: 14px;
+  gap: 12px;
   align-items: start;
   align-content: start;
-  padding: 18px;
+  padding: 16px;
 }
 
 .v2-profile-summary span,
@@ -132,16 +132,16 @@
 }
 
 .v2-profile-facts {
-  gap: 10px;
-  padding: 16px 18px 18px;
+  gap: 8px;
+  padding: 14px 16px 16px;
 }
 
 .v2-profile-list article {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
-  gap: 10px;
+  gap: 9px;
   align-items: center;
-  padding: 15px 20px;
+  padding: 13px 16px;
   border-bottom: 1px solid color-mix(in srgb, var(--v2-border) 56%, transparent);
 }
 
@@ -155,7 +155,7 @@
 
 .v2-storage-list article {
   align-items: flex-start;
-  gap: 12px;
+  gap: 10px;
 }
 
 .v2-storage-list article > div {
@@ -180,7 +180,7 @@
 }
 
 .v2-storage-meter-wrap {
-  margin-top: 10px;
+  margin-top: 8px;
   display: grid;
   gap: 6px;
 }
@@ -228,9 +228,29 @@
 }
 
 @media (max-width: 640px) {
+  .v2-profile-page {
+    gap: 12px;
+  }
+
+  .v2-profile-header p {
+    display: none;
+  }
+
+  .v2-profile-grid {
+    gap: 12px;
+  }
+
+  .v2-profile-panel > header {
+    padding: 11px 14px;
+  }
+
+  .v2-profile-summary {
+    padding: 14px;
+  }
+
   .v2-storage-list article {
     grid-template-columns: 22px minmax(0, 1fr);
-    padding: 14px 16px;
+    padding: 12px 14px;
   }
 }
 
@@ -1403,17 +1423,17 @@
 .v2-rate-card-list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
 
 .v2-rate-card-item {
-  padding: 14px 16px;
-  border: 1px solid var(--v2-border);
-  border-radius: var(--v2-radius-lg);
-  background: var(--v2-surface-raised);
+  padding: 12px 14px;
+  border: 1px solid color-mix(in srgb, var(--v2-border) 68%, transparent);
+  border-radius: var(--v2-radius-md);
+  background: color-mix(in srgb, var(--v2-surface-muted) 50%, var(--v2-surface-raised));
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
 
 .v2-rate-card-item-head {
@@ -1442,10 +1462,10 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
-  padding: 8px 10px;
+  padding: 7px 9px;
   border-radius: var(--v2-radius-md);
   background: var(--v2-surface-muted);
-  border: 1px solid var(--v2-border);
+  border: 0;
 }
 .v2-rate-card-item-rates > div span { font-size: 13px; color: var(--v2-text-muted); text-transform: uppercase; letter-spacing: 0.05em; font-weight: var(--v2-weight-bold); }
 .v2-rate-card-item-rates > div strong { font-size: 15px; font-weight: var(--v2-weight-strong); }
@@ -1467,7 +1487,7 @@
 
 .v2-cert-tracker-section {
   display: grid;
-  gap: 20px;
+  gap: 14px;
 }
 
 .v2-cert-alert-badge {
@@ -1514,16 +1534,16 @@
 
 .v2-cert-list {
   display: grid;
-  gap: 10px;
+  gap: 8px;
 }
 
 .v2-cert-item {
-  padding: 14px 16px;
+  padding: 12px 14px;
   border-radius: var(--v2-radius-md);
-  background: var(--v2-surface-muted);
-  border: 1px solid var(--v2-border);
+  background: color-mix(in srgb, var(--v2-surface-muted) 70%, transparent);
+  border: 1px solid color-mix(in srgb, var(--v2-border) 68%, transparent);
   display: grid;
-  gap: 10px;
+  gap: 8px;
 }
 
 .v2-cert-item.cert-status-expired { border-color: color-mix(in srgb, #ef4444 35%, var(--v2-border)); background: color-mix(in srgb, #ef4444 5%, var(--v2-surface-muted)); }
@@ -1617,8 +1637,8 @@
 
 .v2-profile-completion {
   display: grid;
-  gap: 12px;
-  padding: 20px;
+  gap: 10px;
+  padding: 16px;
 }
 
 .v2-profile-completion > header {
@@ -1694,8 +1714,8 @@
 .v2-portfolio-section {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 20px;
+  gap: 10px;
+  padding: 16px;
 }
 
 .v2-portfolio-section > header {

@@ -3278,7 +3278,7 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
         </section>
 
         <p className="v2-tools-storage-note">
-          Standalone drafts save on this device. Accepted-work records and uploaded photos use cloud storage.
+          Local drafts stay on this device. Records and photos sync to cloud storage.
         </p>
 
         <div className="v2-tool-group-grid" aria-label="More tools">

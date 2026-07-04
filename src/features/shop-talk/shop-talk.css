@@ -314,11 +314,11 @@
 }
 
 .shop-talk-sidebar {
-  padding: 14px;
+  padding: 12px;
 }
 
 .shop-talk-detail {
-  padding: 18px;
+  padding: 16px;
 }
 
 .shop-talk-tabs {
@@ -348,8 +348,8 @@
 .shop-talk-command {
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: start;
-  gap: 14px;
-  padding: 16px;
+  gap: 12px;
+  padding: 14px;
   border-radius: var(--v2-radius-lg);
   background:
     linear-gradient(135deg, color-mix(in srgb, var(--accent) 8%, transparent), transparent 54%),
@@ -365,11 +365,11 @@
 }
 
 .shop-talk-command h2 {
-  max-width: 16ch;
+  max-width: 20ch;
   margin: 4px 0 0;
-  font-size: clamp(22px, 2.2vw, 30px);
-  line-height: 1.04;
-  letter-spacing: -0.025em;
+  font-size: var(--v2-text-title);
+  line-height: 1.12;
+  letter-spacing: 0;
   text-wrap: balance;
 }
 
@@ -388,7 +388,7 @@
 .shop-talk-kpi-strip span {
   display: grid;
   gap: 3px;
-  padding: 10px;
+  padding: 8px;
   border: 1px solid color-mix(in srgb, var(--border) 68%, transparent);
   border-radius: var(--v2-radius-lg);
   background: color-mix(in srgb, var(--surface) 86%, transparent);
@@ -397,7 +397,7 @@
 
 .shop-talk-kpi-strip strong {
   color: var(--text);
-  font-size: 17px;
+  font-size: var(--v2-text-body);
   font-variant-numeric: tabular-nums;
   line-height: 1;
 }
@@ -501,12 +501,12 @@
 .shop-post-list,
 .shop-news-list,
 .answer-list {
-  gap: 10px;
+  gap: 8px;
 }
 
 .shop-post-card {
   border-radius: var(--v2-radius-lg);
-  padding: 14px;
+  padding: 12px;
   background: var(--surface-soft);
   transition: background 0.16s ease, border-color 0.16s ease, transform 0.16s ease;
 }
@@ -700,13 +700,13 @@
 @media (max-width: 640px) {
   .shop-talk-sidebar,
   .shop-talk-detail {
-    padding: 12px;
+    padding: 10px;
     border-radius: var(--v2-radius-lg);
   }
 
   .shop-talk-command {
     grid-template-columns: 1fr;
-    padding: 14px;
+    padding: 10px;
   }
 
   .shop-talk-command .primary-action {
@@ -715,11 +715,11 @@
   }
 
   .shop-talk-kpi-strip {
-    grid-template-columns: 1fr;
+    display: none;
   }
 
   .shop-talk-fieldbar {
-    padding: 10px;
+    padding: 8px;
   }
 
   .shop-news-card-main {
@@ -823,18 +823,16 @@
 
 @media (max-width: 640px) {
   .shop-talk-command {
-    gap: 12px;
+    gap: 8px;
   }
 
   .shop-talk-command h2 {
-    max-width: 18ch;
-    font-size: var(--v2-text-title);
+    max-width: none;
+    font-size: var(--v2-text-body-lg);
   }
 
   .shop-talk-command p {
-    margin-top: 6px;
-    font-size: var(--v2-text-caption);
-    line-height: 1.45;
+    display: none;
   }
 
   .shop-talk-kpi-strip {
@@ -853,20 +851,32 @@
 
   .shop-news-list .shop-news-card-main {
     grid-template-columns: 1fr;
+    padding: 10px;
   }
 
   .shop-news-list .shop-news-card-body-wrap {
-    grid-template-columns: 1fr;
+    grid-template-columns: 92px minmax(0, 1fr);
+    gap: 10px;
   }
 
   .shop-news-list .news-card-thumb {
-    width: 100%;
-    min-height: 108px;
-    aspect-ratio: 16 / 9;
+    width: 92px;
+    min-height: 92px;
+    aspect-ratio: 1;
+  }
+
+  .shop-news-list .news-card-body {
+    gap: 5px;
+  }
+
+  .shop-news-list .news-card-body p {
+    -webkit-line-clamp: 2;
   }
 
   .shop-news-list .shop-news-source-link {
-    margin: -2px 12px 12px;
+    margin: -2px 10px 10px 112px;
+    min-height: 32px;
+    justify-content: flex-start;
   }
 }
 
@@ -2107,11 +2117,17 @@
 
 .shop-news-list .news-card-thumb.is-source-tile span {
   display: block;
+  position: static;
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  overflow: hidden;
   color: var(--trade-ink, #0b0b0b);
   font-size: 15px;
   font-weight: var(--v2-weight-display);
-  letter-spacing: 0.02em;
+  letter-spacing: 0;
   line-height: 1;
+  text-overflow: clip;
 }
 
 .shop-news-list .news-card-thumb.is-source-tile small {
