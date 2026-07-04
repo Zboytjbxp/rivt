@@ -236,3 +236,41 @@ Residual (new P2s from the train, fold into the next copy sweep):
 **Final: GO for Jacksonville soft launch** pending the physical-device
 checklist above (run it on at least one iPhone + one small Android before
 announcing).
+
+---
+
+# Residual audit of 3c66aac (post-train, second pass)
+
+Live sweep at 375×553 and 390×664 across Home/Work/Crew/Shop Talk/Tools/
+Settings: no page-level horizontal overflow anywhere; job wizard steps 1–3
+fine at SE size (actions visible, page scrolls); community create, answers,
+and verified fix all previously verified server-owned on this build.
+
+**New P1 — Settings forms clip off-screen on 375px-class phones (iPhone
+SE/mini).** `.v2-rate-card-inputs` (profile-hub.css:1392) is a fixed
+`1.5fr 1fr 1fr 1fr` grid with no mobile breakpoint and no `min-width: 0`;
+the cert-tracker grid has the same pattern. Visually confirmed at 375px:
+"License #", "Issue date", "Notes" (cert tracker) and "Minimum ($)" (rate
+card) inputs truncated ~44–61px past the right edge inside a clipped
+container — a user cannot see what they type. Clean at 390px. Fix: collapse
+to 1–2 columns under 480px + `minmax(0, 1fr)`.
+
+**P1 carried from the train:** UpgradeModal "90-day time history" is the
+free tier's cap written as a Pro benefit (Pro removes the cap). One-line
+copy fix: "Time history beyond 90 days".
+
+P2 rollup (unchanged backlog + two new cosmetic): QUE-chip stutter,
+"1 members/1 posts" plurals, dual Shop Talk filter rows, feed-card
+community label + localStorage votes divergence, device-local rep badges,
+Crew sync-status noise ×4, decorative Calendar tab, templates don't
+prefill, canned application message, duplicate service-radius controls,
+"More room for…" Pro outcome copy, dead `plan` field (App.tsx:277), inert
+sticky on mobile summaries; new: section headings ghost through the
+translucent top bar when scrolled (visible on Settings; same family as
+Tools list bleeding through the bottom bar — one systemic opaque/blur bar
+fix), and the "Save rate" button renders a double-layer ghost at 375px.
+
+Verdict unchanged: **GO** — nothing found blocks the soft launch. The 375px
+Settings clipping and the backwards Pro benefit line should ride the next
+copy/CSS train (both small), and the physical-device checklist remains the
+final gate before announcing.
