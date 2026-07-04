@@ -192,3 +192,47 @@ core (auth, onboarding, communities, answers, verified fix, moderation, jobs,
 live billing with honest 2-tap cancel, support, legal) is genuinely solid and
 honestly presented. Nothing found requires new features — it is one merge,
 five small diffs, and a copy sweep.
+
+---
+
+# Post-train verification addendum (same day, master @ 3c66aac)
+
+The launch-go train shipped and was independently verified — production
+serves 3c66aac (/api/health), phase-1 merged (80afbe7), train commit f3d15a8.
+
+Verified fixed, live at mobile viewport against 3c66aac:
+- **P0-1 composer**: Post button in-viewport at 390×664 (y=597) and 375×553
+  (y=486); real tap → POST /posts 201 → post visible in feed. FIXED.
+- **P0-2 invoice**: banner and TOTAL DUE both $1,100.00; margin folded into
+  line rates; guidance only on the labor line ($93/hr); single dismissible
+  banner + "Start blank invoice". Sub-hour probe (0.5h): $400.00 == $400.00.
+  FIXED (including the pre-merge divisor one-liner).
+- **P0-4 plan tile**: render removed from Account facts. FIXED
+  (App.tsx:277 still sets the dead field — harmless, cleanup later).
+- **P0-5 billing return**: `?billing=success|cancel` handled — confirmation
+  banner, URL cleaned, up to 5 status re-polls at 1.5s, entitlement only
+  from server billing status. FIXED.
+- **P0-6**: "Quick apply" → "View & apply". FIXED. The localStorage match
+  heuristic is deleted; the badge is tradesperson-only with the single
+  server match value. FIXED.
+- Env-var strings gone from src ("Stripe is wired…", STRIPE_* in copy);
+  VAPID note now honest user copy. Shout-out toast now "was saved to your
+  records"; "Reviews you've received" panel removed; Invites promise copy
+  removed. FIXED.
+- **Codex's caveat closed**: full DB integration suite (15 files,
+  concurrency 1) run here against a configured PostgreSQL on 3c66aac —
+  exit 0, all passing.
+
+Residual (new P2s from the train, fold into the next copy sweep):
+- UpgradeModal INCLUDED says **"90-day time history"** — backwards: 90 days
+  is the FREE cap (TimeTrackerTool cutoff); Pro is unlimited. Should read
+  "Time history beyond 90 days".
+- "More room for daily logs…" outcome copy still implies a quota that
+  doesn't differ by plan; "Cloud project photos and records" still reads as
+  a Pro differentiator though free accounts sync records too.
+- Inert `position: sticky` on bid/mileage/safety mobile summaries (works,
+  sits in flow instead of floating). Dead `plan` field in App.tsx:277.
+
+**Final: GO for Jacksonville soft launch** pending the physical-device
+checklist above (run it on at least one iPhone + one small Android before
+announcing).
