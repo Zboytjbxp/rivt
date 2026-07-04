@@ -10,6 +10,15 @@ Status values:
 
 Evidence must eventually link to implementation, automated tests, manual acceptance proof, and deployed build.
 
+## Traceability Addendum - 2026-07-03 UI System and Settings Polish
+
+- `GA-UX-003` gains Settings/Profile clarity evidence: Settings copy now names the actual work of the screen (`Profile, billing, storage, and alerts`), theme controls are compact icon swatches, and redundant storage allocation copy was removed.
+- `GA-UX-005` gains honest-state evidence: the storage panel now says RIVT pays the infrastructure provider while user accounts consume plan quota, and it keeps the cloud/device boundary explicit without implying uploads are only on the user's phone.
+- `GA-UX-006` gains mobile polish evidence: authenticated Settings at 390x844 verified no horizontal overflow, compact theme swatches, readable stacked storage rows, and reachable plan/storage sections; screenshot evidence is outside the repo at `C:\Users\zboyt\AppData\Local\Temp\rivt-settings-ui-system-polish.png`.
+- `GA-OPS-007` gains local automated evidence: `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test:unit`, `npm run test:e2e`, `npm run test`, `npm audit --omit=dev`, `npm run incident:readiness -- --require-ready`, `npm run launch:readiness -- --require-ready`, and `git diff --check` passed.
+- `GA-OPS-008` remains pending for this addendum until the packet commit is pushed, Railway serves it, and production monitoring confirms the live source commit.
+- Remaining boundary: this addendum covers the foundational UI-system/Profile-Settings cleanup only. It does not claim completion of the broader typography scale sweep, breakpoint consolidation, or all remaining screen-by-screen mobile polish.
+
 ## Traceability Addendum - 2026-07-03 Profile Onboarding Subtraction
 
 - `GA-UX-003` gains onboarding clarity evidence: Settings no longer exposes a second `Redo setup` flow after signup/onboarding has already been completed.

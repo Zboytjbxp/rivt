@@ -21,7 +21,7 @@ export function readThemePreference(): ThemeMode {
 }
 
 export function readThemePalettePreference(): ThemePalette {
-  if (typeof window === "undefined") return "orangeRidge";
+  if (typeof window === "undefined") return "rivtOrange";
 
   try {
     const storedPalette = window.localStorage.getItem(THEME_PALETTE_STORAGE_KEY);
@@ -33,10 +33,10 @@ export function readThemePalettePreference(): ThemePalette {
       return storedPalette as ThemePalette;
     }
   } catch {
-    return "orangeRidge";
+    return "rivtOrange";
   }
 
-  return "orangeRidge";
+  return "rivtOrange";
 }
 
 export function readThemeSourcePreference(): "system" | ThemeMode {

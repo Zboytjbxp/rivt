@@ -7,6 +7,41 @@ Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
 Production release commit: verify with live `/api/health`; latest runtime feature evidence is recorded below and docs-only evidence commits may supersede the served build SHA.
 
+## Latest Packet 08 Pass - UI System and Settings Polish
+
+- Started the paired UI-system/Profile-Settings pass from the minimal-professional audit:
+  - default app palette now falls back to the approved RIVT orange instead of the older tool-theme placeholder
+  - v2 surfaces now bridge the selected palette into accent, hover, soft, deep, and text compatibility tokens
+  - missing compatibility tokens were added so Profile, Settings, Pro, and older surfaces stop fighting over text/weight/accent values
+  - Profile/Settings page width, section spacing, panel headers, card borders, and typography were tightened around one calmer visual rhythm
+  - Profile Settings theme choices now render as compact icon swatches instead of large text-heavy blocks
+  - Settings storage copy was shortened and clarified: RIVT pays the infrastructure provider and user accounts consume assigned plan quota
+  - duplicate storage allocation copy was removed, leaving usage, quota, payer, and cloud/device boundary information once
+  - the RIVT Pro card styling was softened to match the cleaned Settings/Profile card system without changing Stripe billing logic
+- Preserved launch boundaries:
+  - no homeowner flows, fake verification, job-payment processing, escrow, payroll, local-auth fallback, or frontend-only production claims were added
+  - subscription, auth, storage, and server data contracts were not changed
+- Local gates:
+  - `npm run build` (pass)
+  - `npm run lint` (pass)
+  - `npm run lint:security` (pass)
+  - `npm run test:unit` (pass; 44/44)
+  - `npm run test:e2e` (pass; fail-closed auth plus desktop/mobile jobs/discovery)
+  - `npm run test` (pass; unit plus 17 DB-backed integration tests)
+  - `npm audit --omit=dev` (pass; 0 vulnerabilities)
+  - `npm run incident:readiness -- --require-ready` (pass)
+  - `npm run launch:readiness -- --require-ready` (pass)
+  - `git diff --check` (pass; CRLF warnings only for touched files)
+- Rendered QA:
+  - the Browser plugin guidance was read completely before browser-capable QA
+  - authenticated Settings at 390x844 was verified with a Playwright fallback harness because the authenticated Settings state requires route-mocked account, billing, and storage responses
+  - the smoke verified no horizontal overflow, compact theme swatches, removed `Allocated` storage duplication, cleaned `Billing` storage copy, and the current-plan/storage sections still render
+  - screenshot evidence was saved outside the repo at `C:\Users\zboyt\AppData\Local\Temp\rivt-settings-ui-system-polish.png`
+- Production deployment status:
+  - pending until this packet commit is pushed to `master`, Railway deploys it, and `npm run monitor:production` passes against the served commit
+- Remaining boundary:
+  - this pass addresses the foundational Settings/Profile/token/card-style cleanup. Broader typography scale sweeps, breakpoint consolidation, and remaining screen-by-screen mobile layout cleanup are still open.
+
 ## Latest Packet 08 Pass - Profile Onboarding Subtraction
 
 - Closed one remaining onboarding/repetition issue from the minimal-professional audit:

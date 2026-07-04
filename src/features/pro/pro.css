@@ -253,14 +253,14 @@
 /* Plan card in settings */
 .v2-plan-card {
   background:
-    linear-gradient(135deg, color-mix(in srgb, var(--v2-accent-soft) 52%, transparent), transparent 58%),
-    var(--v2-surface);
-  border: 1px solid var(--v2-border);
+    linear-gradient(135deg, color-mix(in srgb, var(--v2-accent-soft) 42%, transparent), transparent 56%),
+    var(--v2-surface-raised);
+  border: 1px solid color-mix(in srgb, var(--v2-border) 72%, transparent);
   border-radius: var(--v2-radius-lg);
-  padding: 20px;
+  padding: 18px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
 }
 
 .v2-plan-card.is-pro {
@@ -277,16 +277,16 @@
 .v2-plan-name {
   display: block;
   color: var(--v2-text);
-  font-size: 17px;
+  font-size: var(--v2-text-base);
   font-weight: var(--v2-weight-bold);
 }
 
 .v2-plan-summary {
-  max-width: 56ch;
+  max-width: 48ch;
   margin: 5px 0 0;
   color: var(--v2-text-muted);
-  font-size: 13px;
-  line-height: 1.4;
+  font-size: var(--v2-text-sm);
+  line-height: 1.42;
 }
 
 .v2-plan-free-badge {
@@ -304,11 +304,11 @@
 .v2-plan-offer {
   display: grid;
   grid-template-columns: minmax(105px, max-content) 1fr;
-  gap: 14px;
+  gap: 12px;
   align-items: center;
   border: 1px solid color-mix(in srgb, var(--v2-accent) 28%, var(--v2-border));
   border-radius: var(--v2-radius-lg);
-  padding: 14px;
+  padding: 13px;
   background: var(--v2-surface-muted);
 }
 
@@ -325,7 +325,7 @@
   display: block;
   margin-top: 2px;
   color: var(--v2-text);
-  font-size: 30px;
+  font-size: var(--v2-text-xl);
   font-weight: var(--v2-weight-display);
   line-height: 1;
   font-variant-numeric: tabular-nums;
@@ -409,7 +409,7 @@
 
 .v2-plan-action-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
   gap: 10px;
 }
 
@@ -499,7 +499,7 @@
 .v2-plan-warning,
 .v2-plan-success {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--v2-text-xs);
   line-height: 1.45;
 }
 

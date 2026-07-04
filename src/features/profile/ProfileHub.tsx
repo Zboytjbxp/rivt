@@ -365,7 +365,6 @@ function SafetyTrainingSection({
   );
 }
 
-const NO_QUOTA_COPY = "No per-user hard cap configured yet. Storage is measured on your platform account total and can be adjusted by admin at any time.";
 const STORAGE_WARNING_TIER_90 = "Critical: you are at 90%+ of your storage limit. Clean old files or contact support before new uploads are rejected.";
 const STORAGE_WARNING_TIER_80 = "Notice: storage is above 80% of its limit. Review usage now so you do not hit upload interruptions.";
 
@@ -1199,7 +1198,7 @@ export function ProfileHub({
     "Safety & Training": "OSHA-aligned modules. Pass each quiz to earn a certificate.",
     "Trust & Legal": "Consent, legal agreements, and your trust status.",
     "Reviews": "Shout-outs and reputation from people you've worked with.",
-    "Settings": "Manage your account, profile, and preferences.",
+    "Settings": "Profile, billing, storage, and alerts.",
     "Feedback": "Share feedback to help improve RIVT.",
   };
 
@@ -1490,8 +1489,8 @@ export function ProfileHub({
 
         <section className="v2-profile-panel">
           <header>
-            <span>Themes</span>
-            <strong>Tool-inspired appearance</strong>
+            <span>Theme</span>
+            <strong>Appearance</strong>
           </header>
           <div className="v2-profile-theme-row">
             <div className="v2-theme-source-group" role="group" aria-label="Theme mode">
@@ -1516,11 +1515,17 @@ export function ProfileHub({
                 <button
                   key={palette}
                   type="button"
+                  title={brandConfig.theme.palettes[palette].label}
                   className={palette === themePalette ? "is-selected" : ""}
                   onClick={() => onSelectThemePalette(palette)}
                   aria-label={`Use ${brandConfig.theme.palettes[palette].label} theme`}
                 >
-                  <span aria-hidden="true" style={{ background: `linear-gradient(135deg, ${brandConfig.theme.palettes[palette].swatches[0]}, ${brandConfig.theme.palettes[palette].swatches[1]})` }} />
+                  <span
+                    aria-hidden="true"
+                    style={{
+                      background: `conic-gradient(${brandConfig.theme.palettes[palette].swatches[0]} 0 33%, ${brandConfig.theme.palettes[palette].swatches[1]} 0 66%, ${brandConfig.theme.palettes[palette].swatches[2]} 0)`,
+                    }}
+                  />
                 </button>
               ))}
             </div>
@@ -1622,8 +1627,8 @@ export function ProfileHub({
               <article>
                 <CreditCard size={16} />
                 <div>
-                  <strong>Who pays</strong>
-                  <span>Your RIVT infrastructure account pays provider bills; users use what the platform grants.</span>
+                  <strong>Billing</strong>
+                  <span>RIVT pays the infrastructure provider. Your account uses the quota assigned to your plan.</span>
                 </div>
               </article>
               <article>
@@ -1661,22 +1666,11 @@ export function ProfileHub({
                 </div>
               </article>
               <article>
-                <Database size={16} />
-                <div>
-                  <strong>Allocated</strong>
-                  <span>
-                    {typeof storageUsage?.storageLimitBytes === "number" && Number.isFinite(storageUsage.storageLimitBytes) && storageUsage.storageLimitBytes > 0
-                      ? `${formatBytes(storageUsage.storageLimitBytes)} hard cap`
-                      : NO_QUOTA_COPY}
-                  </span>
-                </div>
-              </article>
-              <article>
                 <AlertTriangle size={16} />
                 <div>
-                  <strong>Storage policy</strong>
+                  <strong>Device copy</strong>
                   <span>
-                    Billing is on RIVT&rsquo;s infrastructure account. You receive a quota configured at account level; uploaded files are stored in managed S3-compatible object storage and never on your phone.
+                    Uploaded files are stored in managed cloud storage, not only on your phone.
                   </span>
                 </div>
               </article>

@@ -7,6 +7,7 @@
   --weight-semibold: 600;
   --weight-label: 800;
   --v2-weight-body: 400;
+  --v2-weight-medium: var(--v2-weight-semibold);
   --v2-weight-semibold: 600;
   --v2-weight-strong: 700;
   --v2-weight-bold: 800;
@@ -27,6 +28,7 @@
   --text: #0d1114;
   --muted: #5f686e;
   --faint: #88959b;
+  --v2-text-secondary: var(--muted);
   --border: #e3e8ea;
   --border-strong: #cad3d7;
   --nav: #080d10;
@@ -34,6 +36,7 @@
   --accent: #ff4b00;
   --accent-deep: #b33400;
   --accent-soft: #fff0e8;
+  --v2-accent-deep: var(--accent-deep);
   --blue: #334f5b;
   --blue-soft: #edf3f5;
   --amber: #ff8a1d;
