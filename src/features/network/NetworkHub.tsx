@@ -1152,12 +1152,10 @@ function ReviewsView({
   shoutOuts,
   displayName,
   onAddShoutOut,
-  onOpenCrew,
 }: {
   shoutOuts: ShoutOut[];
   displayName: string;
   onAddShoutOut: (to: string, trade: string, message: string) => void;
-  onOpenCrew: () => void;
 }) {
   const [to, setTo] = useState("");
   const [trade, setTrade] = useState("");
@@ -1167,7 +1165,6 @@ function ReviewsView({
   const [storedReviews, setStoredReviews] = useState<StoredReview[]>(readStoredReviews);
   const [syncMessage, setSyncMessage] = useState("Saved on this device.");
 
-  const received = shoutOuts.filter((s) => s.to === displayName);
   const given = shoutOuts.filter((s) => s.from === displayName);
   const storedGivenKeys = new Set(storedReviews.map((review) => `${review.reviewer}|${review.trade ?? ""}|${review.reviewText}`));
   const transientGiven = given.filter((item) => !storedGivenKeys.has(`${item.to}|${item.trade ?? ""}|${item.message}`));
@@ -1264,38 +1261,6 @@ function ReviewsView({
               </button>
             </div>
           </div>
-        </Panel>
-
-        <Panel
-          className="v2-reviews-panel"
-          eyebrow={`${received.length} received`}
-          title="Reviews you've received"
-        >
-          {received.length > 0 ? (
-            <div className="v2-reviews-list">
-              {received.map((item) => (
-                <article key={item.id} className="v2-review-item">
-                  <div className="v2-review-item-header">
-                    <Avatar name={item.from} size="sm" />
-                    <div>
-                      <strong>{item.from}</strong>
-                      {item.trade && <span>{item.trade}</span>}
-                    </div>
-                  </div>
-                  <p>{item.message}</p>
-                </article>
-              ))}
-            </div>
-          ) : (
-            <EmptyState
-              className="v2-network-empty"
-              icon={<Star size={20} />}
-              title="No reviews yet"
-              description="Reviews from completed work appear here."
-              action={<button type="button" onClick={onOpenCrew}>Find crew</button>}
-              compact
-            />
-          )}
         </Panel>
 
         <Panel
@@ -1411,7 +1376,6 @@ export function NetworkHub({
           shoutOuts={shoutOuts}
           displayName={displayName}
           onAddShoutOut={onAddShoutOut}
-          onOpenCrew={onOpenCrew}
         />
       </section>
     );

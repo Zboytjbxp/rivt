@@ -22,7 +22,7 @@ export const emptyJob: Job = {
   reviewCount: 0,
   applicants: 0,
   status: "Open",
-  summary: "Post the first real job to start building the live marketplace.",
+  summary: "Post the first real job to start building the live Work feed.",
   guidance: ["No active work order yet."],
   risks: ["No active work order"],
   deliverables: ["Job posting", "Acceptance", "Closeout"],

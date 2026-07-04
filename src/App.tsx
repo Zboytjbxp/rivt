@@ -1473,7 +1473,7 @@ function App() {
         createdAt: new Date().toISOString(),
       },
     ]);
-    addActivity("Review posted", `Your shout-out for ${to} is now part of their crew record.`, "success");
+    addActivity("Review posted", `Your shout-out for ${to} was saved to your records.`, "success");
   }
 
   function handleExitGuest() {

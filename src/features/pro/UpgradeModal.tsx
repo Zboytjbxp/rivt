@@ -40,11 +40,11 @@ const OUTCOMES: Array<{ icon: LucideIcon; title: string; copy: string }> = [
 ];
 
 const INCLUDED = [
-  "Full time and expense history",
+  "90-day time history",
   "CSV expense export",
-  "Cloud-backed project photos and records",
+  "Cloud project photos and records",
   "Invoice, estimate, daily log, and closeout tools",
-  "Customer portal for plan changes and receipts",
+  "Self-serve cancellation and receipts",
 ];
 
 export function UpgradeModal({ reason, onClose }: UpgradeModalProps) {
@@ -57,13 +57,7 @@ export function UpgradeModal({ reason, onClose }: UpgradeModalProps) {
       const checkout = await startStripeCheckout();
       window.location.href = checkout.url;
     } catch (error) {
-      const errorDetails = error instanceof BillingApiError && typeof error.details === "object" && error.details !== null
-        ? error.details as { missing?: unknown }
-        : null;
-      const details = Array.isArray(errorDetails?.missing)
-        ? ` Missing: ${errorDetails.missing.join(", ")}.`
-        : "";
-      setMessage(`${error instanceof Error ? error.message : "Billing is not available right now."}${details}`);
+      setMessage(error instanceof BillingApiError ? "Subscriptions are temporarily unavailable. Try again in a moment." : "Billing is not available right now.");
       setState("unavailable");
     }
   }

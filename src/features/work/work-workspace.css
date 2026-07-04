@@ -2270,17 +2270,6 @@
 
 /* ── Match Score Badge ───────────────────────────────────────────────────────── */
 
-.v2-match-badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 2px 7px;
-  border-radius: 999px;
-  font-size: 13px;
-  font-weight: var(--v2-weight-bold);
-  line-height: 1.4;
-  white-space: nowrap;
-}
-
 /* ── Quick Apply Button ──────────────────────────────────────────────────────── */
 
 .v2-quick-apply-btn {

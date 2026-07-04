@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { getBillingStatus, type BillingStatus } from "../../lib/billing";
 
 const PRO_KEY = "rivt.pro.v1";
@@ -17,7 +17,7 @@ export function usePro() {
   const [billing, setBilling] = useState<BillingStatus | null>(null);
   const [loading, setLoading] = useState(true);
 
-  async function refreshBilling() {
+  const refreshBilling = useCallback(async () => {
     try {
       const status = await getBillingStatus();
       setBilling(status);
@@ -25,14 +25,16 @@ export function usePro() {
         active: status.active || (ALLOW_LOCAL_PRO && readPro().active),
         activatedAt: status.activeUntil,
       });
+      return status;
     } catch {
       const local = readPro();
       setBilling(null);
       setPro(local);
+      return null;
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
 
   useEffect(() => {
     let cancelled = false;

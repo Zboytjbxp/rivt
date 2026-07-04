@@ -103,7 +103,7 @@ export const pageCopy: Record<NavLabel, { title: string; description: string }> 
   },
   Invites: {
     title: "Work",
-    description: "Invite nearby tradespeople who fit the job.",
+    description: "Track crew follow-ups and job conversations.",
   },
   Crew: {
     title: "Crew",

@@ -279,7 +279,7 @@ export function TimeTrackerTool({ activeJob, jobs }: { activeJob: Job | null; jo
           <EmptyState className="v2-tools-empty" icon={<Clock size={20} />} title="No sessions yet" description="Clock in to start tracking time against a job." compact />
         )}
       </Panel>
-      {upgradeOpen && <UpgradeModal reason="Full time history" onClose={() => setUpgradeOpen(false)} />}
+      {upgradeOpen && <UpgradeModal reason="90-day time history" onClose={() => setUpgradeOpen(false)} />}
     </div>
   );
 }

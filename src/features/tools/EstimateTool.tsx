@@ -119,7 +119,7 @@ export function EstimateTool({
       return {
         description: line.description,
         qty: line.qty,
-        rate: centsToDollars(lineCents) / Math.max(1, line.qty),
+        rate: centsToDollars(lineCents) / Math.max(0.5, line.qty),
         kind: line.kind,
       };
     });

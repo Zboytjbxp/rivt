@@ -4,8 +4,41 @@ Last updated: 2026-07-04 America/New_York
 Current gate: Gate A launch hardening
 Current phase: Packet 08 Gate A launch hardening plus Gate B behind-flag backbone work: machine gates and live workflow smokes are mostly green; the Shop Talk Reddit-model backbone, moderation/reporting backend, human-facing moderation console/report UX, post photo media, reachability/naming cleanup, Tools hub consolidation, Payment Tracker server records, money-tools sync, the accepted tool-records sync slices, non-tool local-state boundary cleanup, dedicated network-records sync for Crew/Invites/informal written shout-outs, screen-density polish, and the latest mobile layout/device-accessibility subtraction slice are implemented while still respecting launch-readiness boundaries before broad exposure.
 Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
-Repository branch: `master`
+Repository branch: `codex/launch-go-train`
 Production release commit: `57c2f773376ae9a7178a99b0911c8dd3fee93c88` verified with live `/api/health`; latest runtime feature evidence is recorded below and docs-only evidence commits may supersede the served build SHA.
+
+## Latest Packet 08 Pass - Launch QA Merge Train
+
+- Merged `origin/codex/launch-polish-phase-1` into `codex/launch-go-train` and completed the remaining no-go diffs from Claude's July 4 launch QA:
+  - kept the Phase 1 mobile Shop Talk composer reachability fix and its 390x664 Post-button assertion
+  - fixed the remaining sub-1-hour Estimate -> Invoice rate mismatch by using the same 0.5-hour quantity floor in invoice line-rate math
+  - removed the duplicate Account Plan fact so Settings has one authoritative subscription surface instead of showing stale beta/free copy above the RIVT Pro card
+  - added a post-checkout `billing=success` banner that polls server-owned billing status without granting any frontend-only entitlement
+  - replaced provider/setup internals with user-safe subscription-unavailable copy across Settings and the upgrade modal
+  - rewrote Pro benefit copy around the real gates: cloud records/photos, 90-day time history, CSV export, and self-serve cancellation/receipts
+  - changed active Pro copy from "active through" to renewal/cancellation-period wording
+  - renamed Work's misleading "Quick apply" button to "View & apply" and removed the extra localStorage-derived match badge/calculation from job rows
+  - softened unsupported social proof: shout-out activity now says it was saved to your records, and the empty "Reviews you've received" panel is hidden until a delivered-review path exists
+  - reworded the Invites route and remaining visible marketplace copy so the UI stays aligned to Home, Work, Crew, Shop Talk, and Tools
+- Preserved launch boundaries:
+  - no homeowner flows, fake verification, job-payment processing, escrow, payroll, local-auth fallback, or frontend-only production claims were added
+  - no auth, storage, moderation, migration, or production data contracts were changed
+  - Stripe billing authority remains server-owned; checkout-return UI only polls the server
+- Local gates:
+  - `npm run build` (pass)
+  - `npm run lint` (pass)
+  - `npm run lint:security` (pass)
+  - `npm run test:unit` (pass; 44/44)
+  - `npm run test:e2e` (pass; fail-closed auth plus desktop/mobile jobs/discovery)
+  - `npm run test:ui:mobile-actions` (pass; includes Shop Talk composer Post-button reachability at 390x664; screenshots at `C:\Users\zboyt\AppData\Local\Temp\rivt-mobile-actions-pass`)
+  - `npm audit --omit=dev` (pass; 0 vulnerabilities)
+  - `npm run incident:readiness -- --require-ready` (pass)
+  - `npm run launch:readiness -- --require-ready` (pass)
+  - `git diff --check` (pass; CRLF warnings only for touched files)
+- Local limitation:
+  - full `npm run test` / `npm run test:integration` was attempted, but `test:integration` did not return within a 5-minute local timeout and `TEST_DATABASE_URL` is not configured in this shell. Re-run the full DB-backed integration suite in CI or a configured test database shell before treating this train as fully release-certified.
+- Production deployment status:
+  - not deployed from this merge train yet.
 
 ## Latest Packet 08 Pass - Launch Polish Phase 1
 

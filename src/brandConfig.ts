@@ -10,7 +10,7 @@ export const brandConfig = {
   missionLine: "The professional network for skilled trades.",
   pricing: {
     betaPlan: {
-      label: "Founding beta",
+      label: "Free plan",
       summary: "Free while Jacksonville supply and demand are seeded.",
       monthlyUsd: 0,
       dailyFrame: "Free during beta",

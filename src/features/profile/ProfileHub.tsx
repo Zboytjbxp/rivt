@@ -974,7 +974,7 @@ function PushNotificationsCard() {
       </div>
 
       {!import.meta.env.VITE_VAPID_PUBLIC_KEY && subscribed && (
-        <p className="v2-push-note">Local notifications active. Set VITE_VAPID_PUBLIC_KEY to enable background push alerts.</p>
+        <p className="v2-push-note">In-app notifications are active. Background push alerts are not available yet.</p>
       )}
     </div>
   );
@@ -988,12 +988,59 @@ function PlanCard() {
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [billingMessage, setBillingMessage] = useState<{ kind: "success" | "warning"; text: string } | null>(null);
 
-  const missingBilling = billing?.provider.missing ?? [];
   const providerReady = billing ? billing.provider.checkoutConfigured : true;
   const activeThroughLabel = activatedAt
     ? new Date(activatedAt).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })
     : null;
   const actionBusy = subscriptionAction !== "idle";
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const billingResult = params.get("billing");
+    if (billingResult !== "success" && billingResult !== "cancel") return;
+
+    const cleanUrl = window.location.pathname + window.location.hash;
+    window.history.replaceState({}, "", cleanUrl);
+
+    if (billingResult === "cancel") {
+      queueMicrotask(() => {
+        setBillingMessage({ kind: "warning", text: "Checkout was closed before the subscription was started." });
+      });
+      return;
+    }
+
+    let cancelled = false;
+    let timeout: ReturnType<typeof setTimeout> | null = null;
+    let attempts = 0;
+
+    queueMicrotask(() => {
+      setBillingMessage({ kind: "success", text: "Payment confirmed. Finalizing RIVT Pro access..." });
+    });
+
+    const pollBilling = async () => {
+      attempts += 1;
+      const status = await refreshBilling();
+      if (cancelled) return;
+      if (status?.active) {
+        setBillingMessage({ kind: "success", text: "RIVT Pro is active on this account." });
+        return;
+      }
+      if (attempts < 5) {
+        timeout = setTimeout(() => { void pollBilling(); }, 1500);
+        return;
+      }
+      setBillingMessage({
+        kind: "warning",
+        text: "Payment is still processing. Refresh billing status in a moment if Pro is not active yet.",
+      });
+    };
+
+    void pollBilling();
+    return () => {
+      cancelled = true;
+      if (timeout) clearTimeout(timeout);
+    };
+  }, [refreshBilling]);
 
   async function openBillingPortal() {
     setPortalState("opening");
@@ -1002,13 +1049,7 @@ function PlanCard() {
       const portal = await startBillingPortal();
       window.location.href = portal.url;
     } catch (error) {
-      const details = error instanceof BillingApiError && typeof error.details === "object" && error.details !== null
-        ? error.details as { missing?: unknown }
-        : null;
-      const missing = Array.isArray(details?.missing)
-        ? ` Missing: ${details.missing.join(", ")}.`
-        : "";
-      setBillingMessage({ kind: "warning", text: `${error instanceof Error ? error.message : "Billing portal is not available yet."}${missing}` });
+      setBillingMessage({ kind: "warning", text: error instanceof BillingApiError ? "Billing management is temporarily unavailable. Try again in a moment." : "Billing portal is not available yet." });
       setPortalState("idle");
     }
   }
@@ -1059,7 +1100,7 @@ function PlanCard() {
           <p className="v2-plan-summary">
             {isPro
               ? "Advanced records, exports, and billing tools are active."
-              : "Core marketplace, Crew, Shop Talk, and basic tools stay available while the Jacksonville network grows."}
+              : "Work, Crew, Shop Talk, and basic tools stay available while the Jacksonville network grows."}
           </p>
         </div>
         {isPro ? (
@@ -1071,7 +1112,7 @@ function PlanCard() {
       {billingLoading && <p className="v2-plan-note">Checking billing status...</p>}
       {!billingLoading && billing && !providerReady && (
         <p className="v2-plan-warning">
-          Stripe is wired in but not live yet. Configure {missingBilling.join(", ") || "billing keys"} before charging customers.
+          Subscriptions are temporarily unavailable. Existing account access is unaffected.
         </p>
       )}
       {!billingLoading && !billing && (
@@ -1087,10 +1128,10 @@ function PlanCard() {
             <p>{RIVT_PRO_OFFER.summary}</p>
           </section>
           <div className="v2-plan-limits">
-            <div className="v2-plan-limit-row"><span><Cloud size={14} /> Records and photos</span><span>Higher limits</span></div>
-            <div className="v2-plan-limit-row"><span><FileText size={14} /> Time and expenses</span><span>Full history</span></div>
+            <div className="v2-plan-limit-row"><span><Cloud size={14} /> Records and photos</span><span>Cloud storage</span></div>
+            <div className="v2-plan-limit-row"><span><FileText size={14} /> Time history</span><span>90 days</span></div>
             <div className="v2-plan-limit-row"><span><Download size={14} /> Exports</span><span>CSV included</span></div>
-            <div className="v2-plan-limit-row"><span><ShieldCheck size={14} /> Billing</span><span>Stripe managed</span></div>
+            <div className="v2-plan-limit-row"><span><ShieldCheck size={14} /> Plan control</span><span>Cancel anytime</span></div>
           </div>
           <button type="button" className="v2-plan-upgrade-btn" onClick={() => setUpgradeOpen(true)}>
             Start RIVT Pro
@@ -1101,12 +1142,14 @@ function PlanCard() {
           </button>
         </>
       )}
-      {isPro && activatedAt && (
+      {isPro && (
         <>
           <p className={billing?.cancelAtPeriodEnd ? "v2-plan-warning" : "v2-plan-note"}>
             {billing?.cancelAtPeriodEnd
-              ? `Cancellation scheduled. You keep Pro through ${activeThroughLabel}.`
-              : `Pro active through ${activeThroughLabel}.`}
+              ? `Cancellation scheduled. You keep Pro${activeThroughLabel ? ` through ${activeThroughLabel}` : " until the current billing period ends"}.`
+              : activeThroughLabel
+              ? `Renews ${activeThroughLabel}.`
+              : "RIVT Pro is active."}
           </p>
           <div className="v2-plan-action-grid">
             <button type="button" className="v2-plan-secondary-btn" onClick={openBillingPortal} disabled={portalState === "opening"}>
@@ -1126,7 +1169,7 @@ function PlanCard() {
           {confirmCancel && !billing?.cancelAtPeriodEnd && (
             <section className="v2-plan-cancel-panel" aria-label="Confirm subscription cancellation">
               <strong>Cancel RIVT Pro?</strong>
-              <p>You will keep Pro through {activeThroughLabel}. After that, your account returns to the free plan. No call, no email, no runaround.</p>
+              <p>You will keep Pro{activeThroughLabel ? ` through ${activeThroughLabel}` : " until the current billing period ends"}. After that, your account returns to the free plan. No call, no email, no runaround.</p>
               <div>
                 <button type="button" onClick={handleCancelSubscription} disabled={actionBusy}>
                   {subscriptionAction === "cancelling" ? "Cancelling..." : "Yes, cancel renewal"}
@@ -1569,7 +1612,6 @@ export function ProfileHub({
           </header>
           <div className="v2-profile-facts">
             <MetricTile icon={<Mail size={16} />} value={profile.email || "—"} label="Email" />
-            <MetricTile icon={<CreditCard size={16} />} value={profile.plan} label="Plan" />
             <MetricTile icon={<UserCheck size={16} />} value={profile.authMethod} label="Signup method" />
             <MetricTile icon={<ShieldCheck size={16} />} value={trustReady ? "Current" : "Needs review"} label="Consent" />
           </div>

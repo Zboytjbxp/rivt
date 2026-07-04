@@ -35,7 +35,6 @@ import {
 import type { Job, JobId, Role } from "../../types";
 import { difficultyOptions, tradeOptions, workTypeOptions } from "../../data";
 import { EmptyState, StatusPill } from "../../components/ui";
-import { readPrimaryTradeFromRateCard } from "../../lib/rateCard";
 import { useFocusTrap } from "../../app-shell/useFocusTrap";
 import { usePersona } from "../persona/usePersona";
 import {
@@ -1052,32 +1051,6 @@ function JobTemplates({ onPostJob }: { onPostJob: () => void }) {
   );
 }
 
-function getProfileFromStorage(): { primaryTrade: string; userLocation: string } {
-  try {
-    const stored = localStorage.getItem("rivt.profile.v1");
-    const parsed = stored ? JSON.parse(stored) as { primaryTrade?: string; location?: string } : {};
-    return {
-      primaryTrade: typeof parsed.primaryTrade === "string" ? parsed.primaryTrade : readPrimaryTradeFromRateCard(),
-      userLocation: typeof parsed.location === "string" ? parsed.location : "",
-    };
-  } catch {
-    return { primaryTrade: readPrimaryTradeFromRateCard(), userLocation: "" };
-  }
-}
-
-function matchScore(job: Job, primaryTrade: string, userLocation: string): number {
-  let score = 0;
-  if (primaryTrade && job.trade === primaryTrade) score += 40;
-  if (userLocation && job.location) {
-    const jobWord = job.location.trim().split(/[\s,]+/)[0].toLowerCase();
-    const userWord = userLocation.trim().split(/[\s,]+/)[0].toLowerCase();
-    if (jobWord && userWord && jobWord === userWord) score += 30;
-  }
-  if (job.pay >= 1000) score += 30;
-  else if (job.pay >= 500) score += 15;
-  return Math.min(100, Math.max(10, score));
-}
-
 function money(value: number) {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
@@ -1094,15 +1067,6 @@ function statusTone(status: Job["status"]) {
 }
 
 function JobRow({ job, selected, role, onSelect }: { job: Job; selected: boolean; role: Role; onSelect: () => void }) {
-  const profile = useMemo(() => getProfileFromStorage(), []);
-  const score = useMemo(() => matchScore(job, profile.primaryTrade, profile.userLocation), [job, profile]);
-
-  const badgeColor = score >= 80
-    ? "var(--v2-success)"
-    : score >= 50
-    ? "var(--v2-accent)"
-    : "var(--v2-text-muted)";
-
   return (
     <div className={["v2-job-row", selected ? "is-selected" : ""].filter(Boolean).join(" ")}>
       <div className="v2-job-row-content">
@@ -1129,19 +1093,13 @@ function JobRow({ job, selected, role, onSelect }: { job: Job; selected: boolean
           </span>
         </button>
         <div className="v2-job-row-footer">
-          <span
-            className="v2-match-badge"
-            style={{ color: badgeColor, background: `color-mix(in srgb, ${badgeColor} 12%, transparent)` }}
-          >
-            {score}% match
-          </span>
           {role !== "contractor" && job.status === "Open" ? (
             <button
               type="button"
               className="v2-quick-apply-btn"
               onClick={(e) => { e.stopPropagation(); onSelect(); }}
             >
-              <Zap size={12} />Quick apply
+              <Zap size={12} />View & apply
             </button>
           ) : null}
         </div>
