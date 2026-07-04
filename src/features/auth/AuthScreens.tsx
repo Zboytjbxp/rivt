@@ -1047,7 +1047,6 @@ export function OnboardingFlow({
       : currentStepId === "trust"
         ? canEnter
         : true;
-  const roleNoun = role === "contractor" ? "Contractor" : "Tradesperson";
   const specialtyHeading =
     role === "contractor" ? "Trades you hire for" : "Your trade specialties";
   const specialtyHelp =
@@ -1268,9 +1267,6 @@ export function OnboardingFlow({
           </div>
 
           <section className={currentStepId === "role" ? "onboarding-section is-current" : "onboarding-section"} aria-label="Account role">
-            <div className="onboarding-section-heading">
-              <h3>Choose your account type</h3>
-            </div>
             {roleLocked ? (
               <div className="role-locked-note">
                 <strong>{role === "contractor" ? "Contractor" : "Tradesperson"}</strong>
@@ -1286,7 +1282,6 @@ export function OnboardingFlow({
 
           <section className={currentStepId === "goal" ? "onboarding-section is-current" : "onboarding-section"} aria-label="First goal">
             <div className="onboarding-section-heading">
-              <h3>What are you here to do first?</h3>
               <p>We will shape your first screen around this. You can still use everything else.</p>
             </div>
             <div className="onboarding-goal-grid">
@@ -1321,9 +1316,6 @@ export function OnboardingFlow({
           </section>
 
           <section className={currentStepId === "profile" ? "onboarding-section is-current" : "onboarding-section"} aria-label="Profile basics">
-            <div className="onboarding-section-heading">
-              <h3>{roleNoun} profile</h3>
-            </div>
             <div className="onboarding-form-grid">
               <label>
                 <span>{role === "contractor" ? "Owner name" : "Full name"}</span>
@@ -1384,7 +1376,6 @@ export function OnboardingFlow({
 
           <section className={currentStepId === "feed" ? "onboarding-section is-current" : "onboarding-section"} aria-label="Trade specialties">
             <div className="onboarding-section-heading">
-              <h3>Shape your feed</h3>
               <p>{specialtyHelp}</p>
             </div>
             <div className="onboarding-picker-label">
