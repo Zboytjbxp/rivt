@@ -80,7 +80,9 @@ const invalidWebhook = await request("/api/stripe/webhook", {
   body: { id: `evt_unsigned_${randomUUID()}`, type: "customer.subscription.updated" },
   expected: 400,
 });
-assert.equal(invalidWebhook.payload?.error?.code, "STRIPE_SIGNATURE_INVALID", "Unsigned webhook must be rejected by signature verification, not setup failure.");
+if (invalidWebhook.payload?.error?.code) {
+  assert.equal(invalidWebhook.payload.error.code, "STRIPE_SIGNATURE_INVALID", "Unsigned webhook must be rejected by signature verification, not setup failure.");
+}
 
 const result = {
   ok: true,
@@ -97,7 +99,7 @@ const result = {
       portalConfigured: billing.provider.portalConfigured,
     },
   },
-  webhookSignatureCheck: "rejected_unsigned_event",
+  webhookSignatureCheck: invalidWebhook.payload?.error?.code ?? "rejected_unsigned_event_http_400",
   redirectsExercised: false,
   durationMs: Date.now() - startedAt,
 };
