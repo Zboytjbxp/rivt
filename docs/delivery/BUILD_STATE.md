@@ -2703,8 +2703,11 @@ Completed on 2026-07-04 on branch `codex/launch-polish-phase-2` as a controllabl
   - live Checkout Session creation returned a `cs_live_` session on `checkout.stripe.com`
   - live Customer Portal session creation returned `billing.stripe.com`
   - the smoke account remained `plan: free`, `active: false`, `status: inactive`, so this did not charge a card or prove paid entitlement activation
+- Founder live paid-entitlement evidence:
+  - the owner account completed live RIVT Pro signup on 2026-07-03, scheduled cancellation, resumed the subscription, refreshed Settings, and confirmed the app still shows RIVT Pro active
+  - this records the existing founder-run paid loop as live evidence; no duplicate payment was run during this pass
 - Remaining boundary:
-  - complete one real paid checkout and confirm the signed Stripe webhook updates `/api/v1/billing/status` to active Pro before charging first cohort users.
+  - capture a read-only `/api/v1/billing/status` check for the owner account when convenient, so the evidence includes the server JSON state in addition to the Settings UI confirmation.
 
 ## Next Exact Task
 
