@@ -16,7 +16,7 @@ Evidence must eventually link to implementation, automated tests, manual accepta
 - `GA-UX-003` gains subtraction evidence: Work mobile tabs are now compact horizontal chips, Records and non-calculator tool shells no longer spend the first viewport on explanatory command blocks, and Crew/Profile/Moderation copy was shortened where screens were narrating themselves.
 - `GA-UX-005` gains clearer-state evidence: Records/Job Photos now describes private cloud photo records without broad marketing copy, and the pass did not add fake verification, fake storage success, or frontend-only production claims.
 - `GA-OPS-007` gains local automated evidence for this slice: `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, `npm run incident:readiness -- --require-ready`, `npm run launch:readiness -- --require-ready`, and `git diff --check` passed.
-- `GA-OPS-008` is unchanged until this branch is merged and deployed; no production runtime claim is made for this branch-only pass.
+- `GA-OPS-008` gains production evidence: live `https://rivt.pro/api/health` reported commit `c33200506efd8018552fa847eda3fabdcf2bf5d6` with migration `0021_shop_talk_post_media`, PostgreSQL/S3-compatible storage, and configured Sentry; `EXPECTED_SOURCE_COMMIT=c33200506efd8018552fa847eda3fabdcf2bf5d6 npm run monitor:production` passed.
 - Remaining boundary: physical iOS Safari, Android Chrome, desktop keyboard-only, and screen-reader evidence remain required before the deeper accessibility boundary can be considered verified.
 
 ## Traceability Addendum - 2026-07-03 Typography and Breakpoint Polish

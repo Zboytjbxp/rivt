@@ -4,7 +4,7 @@ Last updated: 2026-07-04 America/New_York
 Current gate: Gate A launch hardening
 Current phase: Packet 08 Gate A launch hardening plus Gate B behind-flag backbone work: machine gates and live workflow smokes are mostly green; the Shop Talk Reddit-model backbone, moderation/reporting backend, human-facing moderation console/report UX, post photo media, reachability/naming cleanup, Tools hub consolidation, Payment Tracker server records, money-tools sync, the accepted tool-records sync slices, non-tool local-state boundary cleanup, dedicated network-records sync for Crew/Invites/informal written shout-outs, screen-density polish, and the latest mobile layout/device-accessibility subtraction slice are implemented while still respecting launch-readiness boundaries before broad exposure.
 Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
-Repository branch: `codex/mobile-accessibility-subtraction`
+Repository branch: `master`
 Production release commit: verify with live `/api/health`; latest runtime feature evidence is recorded below and docs-only evidence commits may supersede the served build SHA.
 
 ## Latest Packet 08 Pass - Mobile Layout and Device Accessibility Subtraction
@@ -36,7 +36,9 @@ Production release commit: verify with live `/api/health`; latest runtime featur
   - the smoke reported `overflowX: 0` and no sampled sub-44px visible targets on every checked page
   - screenshot evidence was saved outside the repo at `C:\Users\zboyt\AppData\Local\Temp\rivt-mobile-accessibility-nav-smoke-final-3\`
 - Production deployment status:
-  - not deployed yet from this branch; merge/redeploy is the next step if accepted
+  - runtime release commit `c33200506efd8018552fa847eda3fabdcf2bf5d6` was pushed to GitHub and picked up by Railway production service `RIVT`
+  - live `https://rivt.pro/api/health` returned `ok: true`, build commit `c33200506efd8018552fa847eda3fabdcf2bf5d6`, migration `0021_shop_talk_post_media`, PostgreSQL, S3-compatible object storage, and configured Sentry
+  - `EXPECTED_SOURCE_COMMIT=c33200506efd8018552fa847eda3fabdcf2bf5d6 npm run monitor:production` passed with operational controls off, seven anonymous private-route checks, and 587 ms duration
 - Remaining boundary:
   - this is automated and rendered mobile evidence, not physical iOS Safari/Android Chrome/screen-reader certification. The physical accessibility checklist remains the manual launch-quality boundary.
 
