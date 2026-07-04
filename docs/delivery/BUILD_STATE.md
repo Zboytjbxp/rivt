@@ -5,7 +5,7 @@ Current gate: Gate A launch hardening
 Current phase: Packet 08 Gate A launch hardening plus Gate B behind-flag backbone work: machine gates and live workflow smokes are mostly green; the Shop Talk Reddit-model backbone, moderation/reporting backend, human-facing moderation console/report UX, post photo media, reachability/naming cleanup, Tools hub consolidation, Payment Tracker server records, money-tools sync, the accepted tool-records sync slices, non-tool local-state boundary cleanup, dedicated network-records sync for Crew/Invites/informal written shout-outs, screen-density polish, and the latest mobile layout/device-accessibility subtraction slice are implemented while still respecting launch-readiness boundaries before broad exposure.
 Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
-Production release commit: verify with live `/api/health`; latest runtime feature evidence is recorded below and docs-only evidence commits may supersede the served build SHA.
+Production release commit: `44d208b983e0029ef524f0690ab2b9fefa491b74` verified with live `/api/health`; latest runtime feature evidence is recorded below and docs-only evidence commits may supersede the served build SHA.
 
 ## Latest Packet 08 Pass - Mobile Layout and Device Accessibility Subtraction
 
@@ -2651,9 +2651,31 @@ Completed on 2026-07-04 on branch `codex/launch-polish-phase-2` as a controllabl
 - `npm run monitor:production` passed with exact build commit `b823330f2d3b33dee6a93cdf29ce871031f4446c`, PostgreSQL/S3-compatible dependencies healthy, operational controls disabled, seven anonymous private-route checks, and 507 ms duration.
 - This is accepted as controllable trust/support/onboarding polish only. It does not close remaining external/manual Gate A blockers, Stripe production configuration, physical accessibility checks, legal counsel review, or incident-readiness approvals.
 
+## Latest Packet 08 Pass - Launch Polish Production Verification
+
+- Verified the launch-polish Phase 2 runtime after the duplicate onboarding-heading cleanup was deployed:
+  - production runtime commit `44d208b983e0029ef524f0690ab2b9fefa491b74` was picked up by Railway service `RIVT`
+  - `npm run monitor:production` passed with PostgreSQL, S3-compatible object storage, configured Sentry, operational controls off, seven anonymous private-route checks, and 838 ms duration
+- Live authenticated Settings QA used the dedicated testing account and verified:
+  - Storage no longer reads as a broken flat `0 B` response; the Settings panel renders the nested account-storage shape and beta quota copy
+  - notification preferences persist across reload through the server-backed preferences API
+  - Terms, Privacy, and Subcontractor Agreement links return HTTP 200 from `/legal/terms.html`, `/legal/privacy.html`, and `/legal/subcontractor-agreement.html`
+  - Feedback creates a real support case through `/api/v1/support/cases` and displays `Support case created` instead of a fake local success state
+- Fresh-signup onboarding QA used the deployed production frontend at 390x664 with mocked pending-account API responses to avoid creating throwaway production accounts:
+  - first step rendered one visible `Choose your account type` heading and one `STEP 1 OF 5` label
+  - profile draft fields survived reload (`Codex QA Tradesperson`, `Jacksonville`, `FL`)
+  - the smoke finished with no console/page errors after filtering Playwright's expected service-worker-block message
+- Rendered evidence saved outside the repo:
+  - Settings/legal/support: `C:\Users\zboyt\AppData\Local\Temp\rivt-live-qa-1783176076700\`
+  - Onboarding reload recovery: `C:\Users\zboyt\AppData\Local\Temp\rivt-onboarding-qa-1783176956481\`
+- Browser tooling note:
+  - the Browser plugin instructions were loaded, but the current in-app Browser runtime did not expose usable documentation/tabs APIs for route-mocked authenticated QA; Playwright fallback was used for the mobile smokes.
+- Remaining boundary:
+  - this closes the controllable production-verification pass for Settings storage, support, legal links, notification persistence, and onboarding reload recovery. It does not replace physical-device accessibility checks, legal counsel review, or Stripe live webhook/Customer Portal configuration.
+
 ## Next Exact Task
 
-Verify Settings storage display, support-case submission, legal links, notification preference persistence, and onboarding reload recovery on the deployed commit. After that, continue Gate A launch hardening by configuring the production Stripe webhook endpoint, webhook secret, and Customer Portal settings in Stripe/Railway, then verify `/api/v1/billing/status` and the Checkout/Portal redirect paths. In parallel, run `docs/quality/PHYSICAL_ACCESSIBILITY_CHECKLIST.md` on physical iOS Safari, Android Chrome, desktop keyboard-only, and at least one screen reader, then record the pass/fail evidence before named-cohort launch. Keep `npm run incident:readiness -- --require-ready` and `npm run launch:readiness -- --require-ready` passing as the machine-readiness gates while that manual evidence is gathered.
+Continue Gate A launch hardening by configuring the production Stripe webhook endpoint, webhook secret, and Customer Portal settings in Stripe/Railway, then verify `/api/v1/billing/status` and the Checkout/Portal redirect paths. In parallel, run `docs/quality/PHYSICAL_ACCESSIBILITY_CHECKLIST.md` on physical iOS Safari, Android Chrome, desktop keyboard-only, and at least one screen reader, then record the pass/fail evidence before named-cohort launch. Keep `npm run incident:readiness -- --require-ready` and `npm run launch:readiness -- --require-ready` passing as the machine-readiness gates while that manual evidence is gathered.
 
 ## Blocking Founder Decisions
 
