@@ -39,8 +39,8 @@ export const brandConfig = {
       "I accept that I am responsible for required licenses, permits, insurance, local compliance, direct payment terms, and the permanent job record.",
     trustCardTitle: "RIVT network",
     trustCardBody:
-      "Users stay responsible for licenses, permits, insurance, compliance, payment, and job terms. ID checks happen before posting or accepting work.",
-    idGateLabel: "Government ID check required before posting or accepting work",
+      "Users stay responsible for licenses, permits, insurance, compliance, payment, and job terms. RIVT currently requires verified email and signed platform consent before account setup is complete.",
+    idGateLabel: "Email verification and platform consent are required before using RIVT.",
     insuranceLabel: "Self-reported insurance",
   },
   theme: {

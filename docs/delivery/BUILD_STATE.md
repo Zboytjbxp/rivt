@@ -2631,9 +2631,27 @@ Completed on 2026-06-21 as a focused follow-up to the shared UI primitive system
 - `npm run monitor:production` passed with PostgreSQL/S3-compatible dependencies healthy, operational controls disabled, seven anonymous private-route checks, and 494 ms duration.
 - This is accepted as controllable UI hardening evidence only. It does not close the remaining Gate A external/manual blockers or the remaining large-component strangler work in `src/App.tsx`.
 
+## Packet 08 Launch Polish Phase 2 - Trust, Support, and Onboarding Honesty
+
+Completed on 2026-07-04 on branch `codex/launch-polish-phase-2` as a controllable follow-up to Claude's launch-polish audit:
+
+- Removed the unenforced Government-ID posting/accepting claim from product copy and type definitions. Trust copy now states only what the app currently enforces: email verification and platform consent before account setup is complete.
+- Fixed the storage account display so Settings reads the nested `accountStorage` shape returned by `/api/storage` instead of always showing `0 B`. Storage quota copy now says no cap is set during beta when no account quota exists, and quota warnings only appear when a configured limit is actually present.
+- Replaced the fake feedback success loop with a real support-case submission path using `/api/v1/support/cases`, idempotency keys, inline sending/error states, and a direct `support@rivt.pro` mail link.
+- Made legal rows reachable from Settings by adding static launch placeholders for Terms, Privacy, and Subcontractor Agreement under `public/legal/`. Data-export requests now create a support case instead of doing nothing.
+- Converted notification preferences from local-only toggles to server-backed `/api/v1/notification-preferences` reads and writes for messages, new jobs, work updates, and system notifications. Message browser notifications now honor the persisted Messages/Push preference.
+- Removed the unrelated trade-personalization toggle from the notification panel so Settings no longer mixes notification delivery with feed personalization.
+- Simplified onboarding to one visible step panel, changed "Enter network" language to "Open RIVT", removed repeated inner step numbers, persisted draft progress in `localStorage` across reloads, best-effort syncs profile draft fields during onboarding, and sends onboarding goal/topic interests to the server on completion.
+- Adjusted pending-onboarding server policy to allow `PATCH /api/v1/profile` and `POST /api/v1/onboarding/complete` before full account activation, while keeping other authenticated writes fail-closed.
+- Updated desktop/mobile E2E route mocks to cover the new notification-preferences read path.
+- Required local gates passed: `npm run build`, `npm run lint`, `npm run test:unit`, `npm run test:e2e`, `npm audit --omit=dev`, targeted `node --test test/auth.test.js test/api.test.js test/frontend-smoke.test.mjs`, and `git diff --check`.
+- `npm run test:integration` could not complete locally because this workstation has no `TEST_DATABASE_URL`; the suite timed out after 184 seconds without assertion output. This is recorded as an environment limitation, not a launch acceptance pass.
+- Live deployment status: not deployed from this branch yet. This slice must be merged and deployed before production evidence can be recorded.
+- This is accepted as controllable trust/support/onboarding polish only. It does not close remaining external/manual Gate A blockers, Stripe production configuration, physical accessibility checks, legal counsel review, or incident-readiness approvals.
+
 ## Next Exact Task
 
-Continue Gate A launch hardening by configuring the production Stripe product/price, webhook endpoint, webhook secret, and Customer Portal settings in Stripe/Railway, then deploy and verify `/api/v1/billing/status` and the Checkout redirect path. In parallel, run `docs/quality/PHYSICAL_ACCESSIBILITY_CHECKLIST.md` on physical iOS Safari, Android Chrome, desktop keyboard-only, and at least one screen reader, then record the pass/fail evidence before named-cohort launch. Keep `npm run incident:readiness -- --require-ready` and `npm run launch:readiness -- --require-ready` passing as the machine-readiness gates while that manual evidence is gathered.
+Merge and deploy `codex/launch-polish-phase-2`, then verify the deployed commit through `/api/health`, Settings storage display, support-case submission, legal links, notification preference persistence, and onboarding reload recovery. After that, continue Gate A launch hardening by configuring the production Stripe webhook endpoint, webhook secret, and Customer Portal settings in Stripe/Railway, then verify `/api/v1/billing/status` and the Checkout/Portal redirect paths. In parallel, run `docs/quality/PHYSICAL_ACCESSIBILITY_CHECKLIST.md` on physical iOS Safari, Android Chrome, desktop keyboard-only, and at least one screen reader, then record the pass/fail evidence before named-cohort launch. Keep `npm run incident:readiness -- --require-ready` and `npm run launch:readiness -- --require-ready` passing as the machine-readiness gates while that manual evidence is gathered.
 
 ## Blocking Founder Decisions
 

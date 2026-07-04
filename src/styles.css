@@ -1309,8 +1309,9 @@ textarea:focus-visible {
   margin: 0;
   padding: 10px 12px;
   border-radius: var(--radius);
-  background: var(--danger-soft);
-  color: #9b1c1c;
+  border: 1px solid color-mix(in srgb, #ef4444 52%, transparent);
+  background: color-mix(in srgb, #ef4444 16%, var(--surface));
+  color: var(--text);
   font-weight: var(--v2-weight-strong);
 }
 

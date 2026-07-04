@@ -328,6 +328,7 @@ function App() {
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
   const [inboxMessages, setInboxMessages] = useState<InboxMessage[]>([]);
   const [inboxNotifications, setInboxNotifications] = useState<InboxNotification[]>([]);
+  const [messageBrowserNotificationsEnabled, setMessageBrowserNotificationsEnabled] = useState(true);
   const [inboxLoading, setInboxLoading] = useState(false);
   const [inboxSending, setInboxSending] = useState(false);
   const [inboxError, setInboxError] = useState<string | null>(null);
@@ -503,6 +504,7 @@ function App() {
         const storageBody = await storageResponse.json().catch(() => ({})) as {
           usedBytes?: number;
           objectCount?: number;
+          accountStorage?: { usedBytes?: number; objectCount?: number };
           plan?: { storageLimitBytes?: number | null; storageScope?: string };
           bucket?: string | null;
           region?: string | null;
@@ -515,10 +517,11 @@ function App() {
         if (cancelled) return;
         setAuthProviders(providersBody.providers ?? {});
         setPilotInviteRequired(Boolean(providersBody.inviteRequired));
-        if (storageResponse.ok && typeof storageBody.usedBytes === "number") {
+        const storageSnapshot = storageBody.accountStorage ?? storageBody;
+        if (storageResponse.ok && typeof storageSnapshot.usedBytes === "number") {
           setStorageUsage({
-            usedBytes: Number(storageBody.usedBytes),
-            objectCount: Number(storageBody.objectCount ?? 0),
+            usedBytes: Number(storageSnapshot.usedBytes),
+            objectCount: Number(storageSnapshot.objectCount ?? 0),
             storageLimitBytes: storageBody.plan?.storageLimitBytes ?? null,
             storageScope: storageBody.plan?.storageScope ?? "account",
             bucket: storageBody.bucket ?? null,
@@ -711,6 +714,41 @@ function App() {
     return () => window.clearInterval(interval);
   }, [authUser, isGuest, onboardingComplete, reloadInbox]);
 
+  useEffect(() => {
+    function handleNotificationPreference(event: Event) {
+      const detail = (event as CustomEvent<{
+        notificationType?: string;
+        channel?: string;
+        enabled?: boolean;
+      }>).detail;
+      if (detail?.notificationType === "messages" && detail.channel === "push" && typeof detail.enabled === "boolean") {
+        setMessageBrowserNotificationsEnabled(detail.enabled);
+      }
+    }
+    window.addEventListener("rivt:notification-pref", handleNotificationPreference);
+    return () => window.removeEventListener("rivt:notification-pref", handleNotificationPreference);
+  }, []);
+
+  useEffect(() => {
+    if (isGuest || !authUser || !onboardingComplete) return;
+    let cancelled = false;
+    async function loadMessageNotificationPreference() {
+      try {
+        const response = await fetch(apiPath("/api/v1/notification-preferences"), { credentials: "include" });
+        const body = await response.json().catch(() => ({})) as {
+          data?: { preferences?: Array<{ notificationType: string; channel: string; enabled: boolean }> };
+        };
+        if (!response.ok || cancelled) return;
+        const messagesPush = body.data?.preferences?.find((item) => item.notificationType === "messages" && item.channel === "push");
+        setMessageBrowserNotificationsEnabled(messagesPush?.enabled ?? true);
+      } catch {
+        if (!cancelled) setMessageBrowserNotificationsEnabled(true);
+      }
+    }
+    void loadMessageNotificationPreference();
+    return () => { cancelled = true; };
+  }, [authUser, isGuest, onboardingComplete]);
+
   // Request browser notification permission when user visits Messages
   useEffect(() => {
     if (activeView !== "Messages") return;
@@ -725,6 +763,7 @@ function App() {
     const unread = inboxConversations.reduce((sum, c) => sum + c.unreadCount, 0);
     if (
       unread > prevUnreadRef.current &&
+      messageBrowserNotificationsEnabled &&
       "Notification" in window &&
       Notification.permission === "granted" &&
       activeView !== "Messages"
@@ -735,7 +774,7 @@ function App() {
       });
     }
     prevUnreadRef.current = unread;
-  }, [inboxConversations, activeView]);
+  }, [inboxConversations, activeView, messageBrowserNotificationsEnabled]);
 
   useEffect(() => {
     const timeout = window.setTimeout(() => {
@@ -1264,6 +1303,8 @@ function App() {
           organizationName: result.role === "contractor" ? result.organization : undefined,
           consentAccepted: true,
           consentVersion: "2026-06-19",
+          onboardingGoal: result.goal,
+          topicInterests: result.topicInterests,
         }),
       });
       const body = await response.json().catch(() => ({})) as { error?: { message?: string } };

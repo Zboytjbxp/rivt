@@ -25,6 +25,7 @@ import { brandConfig, type ThemeMode, type TrialPlan } from "../../brandConfig";
 import type { ThemeSource } from "../../app-shell/useAppTheme";
 import { tradeOptions } from "../../data";
 import { apiPath } from "../../lib/api";
+import { tradeCodeByName } from "../work/work-mappings";
 import type { Role, Trade } from "../../types";
 
 export type AuthMethod = "Google" | "Facebook" | "Apple" | "Email";
@@ -74,6 +75,55 @@ export type OnboardingTopic =
 const specialtyOptions = tradeOptions.filter(
   (option): option is Trade => option !== "All trades",
 );
+
+const ONBOARDING_DRAFT_KEY = "rivt.onboardingDraft.v1";
+
+interface OnboardingDraft {
+  email: string;
+  role: Role;
+  goal: OnboardingGoal;
+  displayName: string;
+  organization: string;
+  serviceAreaCity: string;
+  serviceAreaRegion: string;
+  serviceRadiusMiles: number;
+  specialties: Trade[];
+  topicInterests: OnboardingTopic[];
+  legalConsent: boolean;
+  stepIndex: number;
+}
+
+function readOnboardingDraft(email: string): OnboardingDraft | null {
+  if (!email) return null;
+  try {
+    const parsed = JSON.parse(localStorage.getItem(ONBOARDING_DRAFT_KEY) ?? "null") as Partial<OnboardingDraft> | null;
+    if (!parsed || parsed.email !== email) return null;
+    return {
+      email,
+      role: parsed.role === "tradesperson" ? "tradesperson" : "contractor",
+      goal: parsed.goal ?? defaultGoalForRole(parsed.role === "tradesperson" ? "tradesperson" : "contractor"),
+      displayName: parsed.displayName ?? "",
+      organization: parsed.organization ?? "",
+      serviceAreaCity: parsed.serviceAreaCity ?? "Jacksonville",
+      serviceAreaRegion: parsed.serviceAreaRegion ?? "FL",
+      serviceRadiusMiles: Number(parsed.serviceRadiusMiles ?? 25),
+      specialties: Array.isArray(parsed.specialties) ? parsed.specialties.filter((item): item is Trade => specialtyOptions.includes(item as Trade)) : [],
+      topicInterests: Array.isArray(parsed.topicInterests) ? parsed.topicInterests.filter((item): item is OnboardingTopic => onboardingTopics.includes(item as OnboardingTopic)) : [],
+      legalConsent: Boolean(parsed.legalConsent),
+      stepIndex: Number.isFinite(parsed.stepIndex) ? Number(parsed.stepIndex) : 0,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function writeOnboardingDraft(draft: OnboardingDraft) {
+  try {
+    localStorage.setItem(ONBOARDING_DRAFT_KEY, JSON.stringify(draft));
+  } catch {
+    // Browser storage may be unavailable; server-backed completion still owns the final state.
+  }
+}
 
 const entryCapabilities = [
   {
@@ -947,22 +997,25 @@ export function OnboardingFlow({
   notice?: string | null;
   error?: string | null;
 }) {
-  const [role, setRole] = useState<Role>(initialRole === "pending" ? "contractor" : initialRole);
+  const [initialDraft] = useState<OnboardingDraft | null>(() => readOnboardingDraft(initialEmail));
+  const startingRole = initialRole === "pending" ? (initialDraft?.role ?? "contractor") : initialRole;
+  const startingGoal = initialDraft?.role === startingRole ? initialDraft.goal : defaultGoalForRole(startingRole);
+  const [role, setRole] = useState<Role>(startingRole);
   const roleLocked = initialRole !== "pending";
-  const [goal, setGoal] = useState<OnboardingGoal>(defaultGoalForRole(initialRole === "pending" ? "contractor" : initialRole));
-  const [displayName, setDisplayName] = useState(initialDisplayName);
-  const [organization, setOrganization] = useState(initialOrganization);
+  const [goal, setGoal] = useState<OnboardingGoal>(startingGoal);
+  const [displayName, setDisplayName] = useState(initialDraft?.displayName || initialDisplayName);
+  const [organization, setOrganization] = useState(initialDraft?.organization || initialOrganization);
   const [initialCity = "Jacksonville", initialRegion = "FL"] = initialLocation.split(",").map((part) => part.trim());
-  const [serviceAreaCity, setServiceAreaCity] = useState(initialCity || "Jacksonville");
-  const [serviceAreaRegion, setServiceAreaRegion] = useState(initialRegion || "FL");
-  const [serviceRadiusMiles, setServiceRadiusMiles] = useState(25);
+  const [serviceAreaCity, setServiceAreaCity] = useState(initialDraft?.serviceAreaCity || initialCity || "Jacksonville");
+  const [serviceAreaRegion, setServiceAreaRegion] = useState(initialDraft?.serviceAreaRegion || initialRegion || "FL");
+  const [serviceRadiusMiles, setServiceRadiusMiles] = useState(initialDraft?.serviceRadiusMiles ?? 25);
   const [specialties, setSpecialties] = useState<Trade[]>(
-    initialSpecialties.length ? initialSpecialties : ["Electrical", "Carpentry"],
+    initialDraft?.specialties.length ? initialDraft.specialties : initialSpecialties.length ? initialSpecialties : ["Electrical", "Carpentry"],
   );
-  const [topicInterests, setTopicInterests] = useState<OnboardingTopic[]>(["Local jobs", "Tools", "Business/pricing"]);
+  const [topicInterests, setTopicInterests] = useState<OnboardingTopic[]>(initialDraft?.topicInterests.length ? initialDraft.topicInterests : ["Local jobs", "Tools", "Business/pricing"]);
   const [showAllSpecialties, setShowAllSpecialties] = useState(false);
-  const [legalConsent, setLegalConsent] = useState(false);
-  const [stepIndex, setStepIndex] = useState(0);
+  const [legalConsent, setLegalConsent] = useState(initialDraft?.legalConsent ?? false);
+  const [stepIndex, setStepIndex] = useState(initialDraft?.stepIndex ?? 0);
   const setupTouchStartX = useRef<number | null>(null);
   const plan: TrialPlan = brandConfig.pricing.betaPlan.label;
   const goalOptions = goalsForRole(role);
@@ -1003,6 +1056,37 @@ export function OnboardingFlow({
       : "Your first specialty becomes the default job feed filter.";
   const specialtyOptionsToShow = showAllSpecialties ? specialtyOptions : specialtyOptions.slice(0, 12);
 
+  useEffect(() => {
+    if (!initialEmail) return;
+    writeOnboardingDraft({
+      email: initialEmail,
+      role,
+      goal,
+      displayName,
+      organization,
+      serviceAreaCity,
+      serviceAreaRegion,
+      serviceRadiusMiles,
+      specialties,
+      topicInterests,
+      legalConsent,
+      stepIndex: safeStepIndex,
+    });
+  }, [
+    displayName,
+    goal,
+    initialEmail,
+    legalConsent,
+    organization,
+    role,
+    safeStepIndex,
+    serviceAreaCity,
+    serviceAreaRegion,
+    serviceRadiusMiles,
+    specialties,
+    topicInterests,
+  ]);
+
   function toggleSpecialty(option: Trade) {
     setSpecialties((current) => {
       if (current.includes(option)) {
@@ -1034,12 +1118,37 @@ export function OnboardingFlow({
     setStepIndex((current) => Math.max(0, current - 1));
   }
 
+  async function saveProfileDraft() {
+    const trimmedName = displayName.trim();
+    const trimmedCity = serviceAreaCity.trim();
+    const trimmedRegion = serviceAreaRegion.trim();
+    const tradeCodes = specialties.map((specialty) => tradeCodeByName[specialty]).filter(Boolean);
+    if (trimmedName.length < 2 || trimmedCity.length < 2 || trimmedRegion.length < 2 || !tradeCodes.length) return;
+    try {
+      await fetch(apiPath("/api/v1/profile"), {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          displayName: trimmedName,
+          serviceAreaCity: trimmedCity,
+          serviceAreaRegion: trimmedRegion,
+          serviceRadiusMiles,
+          tradeCodes,
+        }),
+      });
+    } catch {
+      // Draft persistence is best-effort; final onboarding completion still validates server-side.
+    }
+  }
+
   function goNext() {
     if (currentStepId === "trust") {
       submit();
       return;
     }
     if (!canMoveForward) return;
+    void saveProfileDraft();
     setStepIndex((current) => Math.min(setupSteps.length - 1, current + 1));
   }
 
@@ -1120,7 +1229,7 @@ export function OnboardingFlow({
             <div>
               <ShieldCheck size={17} />
               <strong>{brandConfig.legal.trustCardTitle}</strong>
-              <span>Consent now. ID before posting or accepting real work.</span>
+              <span>Verified email, signed consent, and factual trust states.</span>
             </div>
             <div>
               <CreditCard size={17} />
@@ -1160,7 +1269,6 @@ export function OnboardingFlow({
 
           <section className={currentStepId === "role" ? "onboarding-section is-current" : "onboarding-section"} aria-label="Account role">
             <div className="onboarding-section-heading">
-              <span>Step 1</span>
               <h3>Choose your account type</h3>
             </div>
             {roleLocked ? (
@@ -1178,7 +1286,6 @@ export function OnboardingFlow({
 
           <section className={currentStepId === "goal" ? "onboarding-section is-current" : "onboarding-section"} aria-label="First goal">
             <div className="onboarding-section-heading">
-              <span>Step 2</span>
               <h3>What are you here to do first?</h3>
               <p>We will shape your first screen around this. You can still use everything else.</p>
             </div>
@@ -1215,7 +1322,6 @@ export function OnboardingFlow({
 
           <section className={currentStepId === "profile" ? "onboarding-section is-current" : "onboarding-section"} aria-label="Profile basics">
             <div className="onboarding-section-heading">
-              <span>Step 3</span>
               <h3>{roleNoun} profile</h3>
             </div>
             <div className="onboarding-form-grid">
@@ -1278,7 +1384,6 @@ export function OnboardingFlow({
 
           <section className={currentStepId === "feed" ? "onboarding-section is-current" : "onboarding-section"} aria-label="Trade specialties">
             <div className="onboarding-section-heading">
-              <span>Step 4</span>
               <h3>Shape your feed</h3>
               <p>{specialtyHelp}</p>
             </div>
@@ -1345,7 +1450,6 @@ export function OnboardingFlow({
 
           <section className={currentStepId === "trust" ? "onboarding-section onboarding-trust-section is-current" : "onboarding-section onboarding-trust-section"} aria-label="Trust setup">
             <div className="onboarding-section-heading">
-              <span>Step 5</span>
               <h3>Consent agreement</h3>
               <p>{brandConfig.legal.trustCardBody}</p>
             </div>
@@ -1371,7 +1475,7 @@ export function OnboardingFlow({
 
           <div className="onboarding-actions">
             <div>
-              <strong>{currentStepId === "trust" ? (canEnter ? `Ready to enter ${brandConfig.appName}` : "Finish the basics") : "Keep moving"}</strong>
+              <strong>{currentStepId === "trust" ? (canEnter ? `Ready to open ${brandConfig.appName}` : "Finish the basics") : "Keep moving"}</strong>
               <span>
                 {currentStepId === "trust"
                   ? canEnter
@@ -1400,7 +1504,7 @@ export function OnboardingFlow({
               disabled={!canMoveForward}
             >
               {currentStepId === "trust" ? <BadgeCheck size={18} /> : <ArrowRight size={17} />}
-              {currentStepId === "trust" ? "Enter network" : "Next"}
+              {currentStepId === "trust" ? "Open RIVT" : "Next"}
             </button>
           </div>
         </section>

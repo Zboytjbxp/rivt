@@ -1,7 +1,7 @@
 export const recordChecklist = [
   "Signed scope",
   "Legal consent accepted",
-  "ID check before post/accept",
+  "Email verification before writes",
   "Completion photos",
   "Payment method note",
   "Review prompt",

@@ -115,7 +115,7 @@ export const pageCopy: Record<NavLabel, { title: string; description: string }> 
   },
   "Trust & Legal": {
     title: "Trust & Legal",
-    description: "Keep consent, ID readiness, and address privacy clear.",
+    description: "Keep consent, account data, and address privacy clear.",
   },
   Records: {
     title: "Records",

@@ -34,7 +34,6 @@ export type Trade =
 
 export type TrustRequirement =
   | "Legal agreement required"
-  | "ID check required"
   | "Completion photos required";
 
 export type WorkType = "Side work" | "Emergency" | "Multi-day" | "Inspection prep";

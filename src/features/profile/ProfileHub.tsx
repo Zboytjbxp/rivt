@@ -31,14 +31,15 @@
   Zap,
 } from "lucide-react";
 import { createPortal } from "react-dom";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useFocusTrap } from "../../app-shell/useFocusTrap";
 import { usePro } from "../pro/usePro";
 import { usePushNotifications } from "../notifications/usePushNotifications";
 import { UpgradeModal } from "../pro/UpgradeModal";
 import { RIVT_PRO_OFFER } from "../pro/proOffer";
 import { BillingApiError, cancelSubscription, resumeSubscription, startBillingPortal } from "../../lib/billing";
-import { usePersona, useTradeModeToggle } from "../persona/usePersona";
+import { apiPath, requestKey } from "../../lib/api";
+import { usePersona } from "../persona/usePersona";
 import "../pro/pro.css";
 import { brandConfig, type ThemeMode, type ThemePalette } from "../../brandConfig";
 import type { ThemeSource } from "../../app-shell/useAppTheme";
@@ -120,7 +121,6 @@ interface ProfileHubProps {
   onToggleTheme: () => void;
   onSetThemeSource: (source: ThemeSource) => void;
   onSelectThemePalette: (palette: ThemePalette) => void;
-  onReviewConsent: () => void;
   onLogout: () => void;
   onSaveProfile: (input: ProfileUpdateInput) => Promise<void>;
   onSetProfileVisibility: (visibility: "private" | "network") => Promise<void>;
@@ -365,8 +365,36 @@ function SafetyTrainingSection({
   );
 }
 
-const STORAGE_WARNING_TIER_90 = "Critical: you are at 90%+ of your storage limit. Clean old files or contact support before new uploads are rejected.";
-const STORAGE_WARNING_TIER_80 = "Notice: storage is above 80% of its limit. Review usage now so you do not hit upload interruptions.";
+const STORAGE_WARNING_TIER_90 = "Storage is above 90% of the plan quota currently configured for this account.";
+const STORAGE_WARNING_TIER_80 = "Storage is above 80% of the plan quota currently configured for this account.";
+const SUPPORT_EMAIL = (import.meta.env.VITE_SUPPORT_EMAIL as string | undefined) || "support@rivt.pro";
+
+type NotificationPrefKey = "jobMatches" | "messages" | "workUpdates" | "system";
+type NotificationPreference = {
+  notificationType: "new_jobs" | "new_applicants" | "messages" | "work_updates" | "system";
+  channel: "in_app" | "email" | "push";
+  enabled: boolean;
+};
+
+const notificationPrefRows: Array<{
+  key: NotificationPrefKey;
+  notificationType: NotificationPreference["notificationType"];
+  channel: NotificationPreference["channel"];
+  label: string;
+  detail: string;
+}> = [
+  { key: "jobMatches", notificationType: "new_jobs", channel: "push", label: "Job alerts", detail: "Browser alerts for matching jobs near your service area" },
+  { key: "messages", notificationType: "messages", channel: "push", label: "Messages", detail: "Browser alerts for unread job and crew threads" },
+  { key: "workUpdates", notificationType: "work_updates", channel: "push", label: "Work updates", detail: "Status changes on jobs, applications, and invites" },
+  { key: "system", notificationType: "system", channel: "push", label: "Account notices", detail: "Security, billing, and platform updates" },
+];
+
+const defaultNotificationPrefs: Record<NotificationPrefKey, boolean> = {
+  jobMatches: true,
+  messages: true,
+  workUpdates: true,
+  system: true,
+};
 
 type StorageWarningLevel = "none" | "warning" | "critical";
 
@@ -700,6 +728,29 @@ function downloadBlob(blob: Blob, filename: string) {
   URL.revokeObjectURL(url);
 }
 
+async function createSupportCase(input: {
+  category: "account" | "payment" | "technical" | "other";
+  title: string;
+  description: string;
+}) {
+  const response = await fetch(apiPath("/api/v1/support/cases"), {
+    method: "POST",
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+      "Idempotency-Key": requestKey(),
+    },
+    body: JSON.stringify({
+      subjectAccountId: null,
+      activeWorkId: null,
+      projectId: null,
+      ...input,
+    }),
+  });
+  const body = await response.json().catch(() => ({})) as { error?: { message?: string } };
+  if (!response.ok) throw new Error(body.error?.message || "Support request could not be created.");
+}
+
 function DataExportButton() {
   const [toast, setToast] = useState("");
 
@@ -719,7 +770,7 @@ function DataExportButton() {
     const json = JSON.stringify(data, null, 2);
     const blob = new Blob([json], { type: "application/json" });
     downloadBlob(blob, `rivt-export-${new Date().toISOString().slice(0, 10)}.json`);
-    showToast("Data exported successfully");
+    showToast("Device data exported");
   }
 
   function handleExportJobsCSV() {
@@ -739,7 +790,7 @@ function DataExportButton() {
     const csv = [headers.join(","), ...rows].join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
     downloadBlob(blob, `rivt-jobs-${new Date().toISOString().slice(0, 10)}.csv`);
-    showToast("Data exported successfully");
+    showToast("Device job data exported");
   }
 
   return (
@@ -751,13 +802,13 @@ function DataExportButton() {
         <button type="button" className="v2-btn-secondary" onClick={handleExportJSON}>
           <Download size={15} /> Export data (JSON)
         </button>
-        <small>Downloads jobs, sessions, expenses, clients, crew &amp; all RIVT data.</small>
+        <small>Downloads device-stored RIVT tool data from this browser.</small>
       </div>
       <div className="v2-data-export">
         <button type="button" className="v2-btn-secondary" onClick={handleExportJobsCSV}>
           <Download size={15} /> Export jobs (CSV)
         </button>
-        <small>Downloads your job records as a spreadsheet.</small>
+        <small>Downloads device-stored job drafts from this browser.</small>
       </div>
     </div>
   );
@@ -1114,7 +1165,6 @@ export function ProfileHub({
   onToggleTheme: _onToggleTheme,
   onSetThemeSource,
   onSelectThemePalette,
-  onReviewConsent,
   onLogout,
   onSaveProfile,
   onSetProfileVisibility,
@@ -1124,20 +1174,17 @@ export function ProfileHub({
   storageUsage = null,
 }: ProfileHubProps) {
   const persona = usePersona();
-  const [tradeModeOn, toggleTradeMode] = useTradeModeToggle();
-  const [notificationPrefs, setNotificationPrefs] = useState({
-    jobMatches: true,
-    messages: true,
-    shoutOuts: true,
-    safetyUpdates: false,
-  });
+  const [notificationPrefs, setNotificationPrefs] = useState<Record<NotificationPrefKey, boolean>>(defaultNotificationPrefs);
+  const [notificationPrefStatus, setNotificationPrefStatus] = useState("");
+  const [savingNotificationKey, setSavingNotificationKey] = useState<NotificationPrefKey | null>(null);
   const [showPreview, setShowPreview] = useState(false);
   const previewTrapRef = useFocusTrap<HTMLDivElement>(() => setShowPreview(false), showPreview);
   const portalTarget = getPortalTarget();
 
   const [feedbackCategory, setFeedbackCategory] = useState<string | null>(null);
   const [feedbackMessage, setFeedbackMessage] = useState("");
-  const [feedbackSent, setFeedbackSent] = useState(false);
+  const [feedbackState, setFeedbackState] = useState<"idle" | "sending" | "sent" | "error">("idle");
+  const [feedbackStatus, setFeedbackStatus] = useState("");
 
   const [draft, setDraft] = useState<ProfileUpdateInput>({
     displayName: profile.displayName,
@@ -1159,6 +1206,64 @@ export function ProfileHub({
     storageLimitBytes: storageUsage.storageLimitBytes,
   } : null);
 
+  useEffect(() => {
+    let cancelled = false;
+    async function loadNotificationPrefs() {
+      try {
+        const response = await fetch(apiPath("/api/v1/notification-preferences"), { credentials: "include" });
+        const body = await response.json().catch(() => ({})) as {
+          data?: { preferences?: NotificationPreference[] };
+        };
+        if (!response.ok || cancelled) return;
+        const next = { ...defaultNotificationPrefs };
+        for (const row of body.data?.preferences ?? []) {
+          const match = notificationPrefRows.find((item) => item.notificationType === row.notificationType && item.channel === row.channel);
+          if (match) next[match.key] = row.enabled;
+        }
+        setNotificationPrefs(next);
+        window.dispatchEvent(new CustomEvent("rivt:notification-pref", {
+          detail: { notificationType: "messages", channel: "push", enabled: next.messages },
+        }));
+      } catch {
+        // Keep defaults if preferences cannot be loaded; the server remains the source once reachable.
+      }
+    }
+    void loadNotificationPrefs();
+    return () => { cancelled = true; };
+  }, []);
+
+  async function toggleNotificationPref(row: typeof notificationPrefRows[number]) {
+    const enabled = !notificationPrefs[row.key];
+    setSavingNotificationKey(row.key);
+    setNotificationPrefStatus("");
+    setNotificationPrefs((current) => ({ ...current, [row.key]: enabled }));
+    try {
+      const response = await fetch(apiPath("/api/v1/notification-preferences"), {
+        method: "PUT",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          notificationType: row.notificationType,
+          channel: row.channel,
+          enabled,
+          quietHoursStart: null,
+          quietHoursEnd: null,
+        }),
+      });
+      const body = await response.json().catch(() => ({})) as { error?: { message?: string } };
+      if (!response.ok) throw new Error(body.error?.message || "Notification preference could not be saved.");
+      setNotificationPrefStatus("Notification preferences saved.");
+      window.dispatchEvent(new CustomEvent("rivt:notification-pref", {
+        detail: { notificationType: row.notificationType, channel: row.channel, enabled },
+      }));
+    } catch (error) {
+      setNotificationPrefs((current) => ({ ...current, [row.key]: !enabled }));
+      setNotificationPrefStatus(error instanceof Error ? error.message : "Notification preference could not be saved.");
+    } finally {
+      setSavingNotificationKey(null);
+    }
+  }
+
   async function saveProfile() {
     setActionState("saving");
     setActionMessage("");
@@ -1172,13 +1277,13 @@ export function ProfileHub({
     }
   }
 
-  async function runAccountAction(action: () => Promise<void>) {
+  async function runAccountAction(action: () => Promise<void>, successMessage = "Account security updated.") {
     setActionState("saving");
     setActionMessage("");
     try {
       await action();
       setActionState("saved");
-      setActionMessage("Account security updated.");
+      setActionMessage(successMessage);
     } catch (error) {
       setActionState("error");
       setActionMessage(error instanceof Error ? error.message : "Account security could not be updated.");
@@ -1219,12 +1324,29 @@ export function ProfileHub({
     );
   }
 
-  function submitFeedback() {
+  async function submitFeedback() {
     if (!feedbackMessage.trim() || !feedbackCategory) return;
-    setFeedbackSent(true);
-    setFeedbackMessage("");
-    setFeedbackCategory(null);
-    setTimeout(() => setFeedbackSent(false), 4000);
+    setFeedbackState("sending");
+    setFeedbackStatus("");
+    const category = feedbackCategory === "Bug" || feedbackCategory === "Confusing"
+      ? "technical"
+      : feedbackCategory === "Pricing"
+        ? "payment"
+        : "other";
+    try {
+      await createSupportCase({
+        category,
+        title: `Feedback: ${feedbackCategory}`,
+        description: feedbackMessage.trim(),
+      });
+      setFeedbackState("sent");
+      setFeedbackStatus("Support case created. RIVT support can review it in the moderation console.");
+      setFeedbackMessage("");
+      setFeedbackCategory(null);
+    } catch (error) {
+      setFeedbackState("error");
+      setFeedbackStatus(error instanceof Error ? error.message : "Support request could not be created.");
+    }
   }
 
   if (view === "Feedback") {
@@ -1268,12 +1390,13 @@ export function ProfileHub({
                 <button
                   type="button"
                   className="v2-primary-button"
-                  disabled={!feedbackMessage.trim() || !feedbackCategory}
-                  onClick={submitFeedback}
+                  disabled={!feedbackMessage.trim() || !feedbackCategory || feedbackState === "sending"}
+                  onClick={() => void submitFeedback()}
                 >
-                  {feedbackSent ? <><Sparkles size={15} /> Sent!</> : "Send feedback"}
+                  {feedbackState === "sending" ? "Sending..." : "Send to support"}
                 </button>
               </div>
+              {feedbackStatus ? <p className={`v2-profile-action-message is-${feedbackState === "sent" ? "success" : feedbackState}`} role="status">{feedbackStatus}</p> : null}
             </div>
           </section>
 
@@ -1283,9 +1406,9 @@ export function ProfileHub({
               <strong>{feedbackCount > 0 ? `${feedbackCount} note${feedbackCount === 1 ? "" : "s"} on file` : "Nothing submitted yet"}</strong>
             </header>
             <div className="v2-profile-list">
-              <article><Sparkles size={16} /><span>Beta feedback shapes future releases</span></article>
-              <article><ShieldCheck size={16} /><span>Notes are reviewed by the RIVT team</span></article>
-              <article><Mail size={16} /><span>Replies go to {profile.email || "your account email"}</span></article>
+              <article><Sparkles size={16} /><span>Feedback opens a support case tied to your account</span></article>
+              <article><ShieldCheck size={16} /><span>Support can review it from the staff console</span></article>
+              <article><Mail size={16} /><span>Email support directly at <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a></span></article>
             </div>
           </section>
         </div>
@@ -1315,10 +1438,10 @@ export function ProfileHub({
             </div>
             {!trustReady && (
               <div className="v2-trust-action">
-                <button type="button" className="v2-primary-button" onClick={onReviewConsent}>
+                <a className="v2-primary-button" href="/legal/terms.html" target="_blank" rel="noreferrer">
                   <ShieldCheck size={15} />
-                  Review consent
-                </button>
+                  Review terms
+                </a>
               </div>
             )}
           </section>
@@ -1329,18 +1452,18 @@ export function ProfileHub({
               <strong>Your agreements</strong>
             </header>
             <div className="v2-profile-list">
-              <article className="v2-trust-doc-link">
+              <a className="v2-trust-doc-link" href="/legal/terms.html" target="_blank" rel="noreferrer">
                 <FileText size={16} />
                 <span>Terms of Service</span>
-              </article>
-              <article className="v2-trust-doc-link">
+              </a>
+              <a className="v2-trust-doc-link" href="/legal/privacy.html" target="_blank" rel="noreferrer">
                 <FileText size={16} />
                 <span>Privacy Policy</span>
-              </article>
-              <article className="v2-trust-doc-link">
+              </a>
+              <a className="v2-trust-doc-link" href="/legal/subcontractor-agreement.html" target="_blank" rel="noreferrer">
                 <FileText size={16} />
                 <span>Subcontractor Agreement</span>
-              </article>
+              </a>
             </div>
           </section>
 
@@ -1380,7 +1503,15 @@ export function ProfileHub({
               </div>
             </div>
             <div className="v2-trust-data-actions">
-              <button type="button" className="v2-secondary-button">
+              <button
+                type="button"
+                className="v2-secondary-button"
+                onClick={() => void runAccountAction(() => createSupportCase({
+                  category: "account",
+                  title: "Account data export request",
+                  description: "Please prepare an account data export for this RIVT account.",
+                }), "Data export request sent to support.")}
+              >
                 <Download size={15} />
                 Request data export
               </button>
@@ -1389,6 +1520,7 @@ export function ProfileHub({
                 Sign out
               </button>
             </div>
+            {actionMessage ? <p className={`v2-profile-action-message is-${actionState === "saved" ? "success" : actionState}`} role="status">{actionMessage}</p> : null}
           </section>
         </div>
       </section>
@@ -1661,7 +1793,7 @@ export function ProfileHub({
                   <span>
                     {typeof storageUsage?.storageLimitBytes === "number" && Number.isFinite(storageUsage.storageLimitBytes) && storageUsage.storageLimitBytes > 0
                       ? `${formatBytes(storageUsage.storageLimitBytes)} max`
-                      : "Quota tied to plan"}
+                      : "No storage cap is set during beta"}
                   </span>
                 </div>
               </article>
@@ -1690,42 +1822,27 @@ export function ProfileHub({
               <strong>What alerts you</strong>
             </header>
             <PushNotificationsCard />
-            <div className="v2-trade-mode-toggle">
-              <div>
-                <strong>Trade personalization</strong>
-              </div>
-              <button
-                type="button"
-                role="switch"
-                aria-checked={tradeModeOn}
-                className={`v2-toggle-switch${tradeModeOn ? " is-on" : ""}`}
-                onClick={toggleTradeMode}
-              />
-            </div>
             <div className="v2-notif-pref-list">
-              {([
-                { key: "jobMatches" as const, label: "Job matches", detail: "New jobs that match your trades and service area" },
-                { key: "messages" as const, label: "Messages", detail: "New messages on active job threads" },
-                { key: "shoutOuts" as const, label: "Shout-outs", detail: "When someone leaves you a review" },
-                { key: "safetyUpdates" as const, label: "Safety updates", detail: "OSHA code changes relevant to your trades" },
-              ]).map(({ key, label, detail }) => (
-                <label key={key} className="v2-notif-pref-row">
+              {notificationPrefRows.map((row) => (
+                <label key={row.key} className="v2-notif-pref-row">
                   <div>
-                    <strong>{label}</strong>
-                    <span>{detail}</span>
+                    <strong>{row.label}</strong>
+                    <span>{row.detail}</span>
                   </div>
                   <button
                     type="button"
                     role="switch"
-                    aria-checked={notificationPrefs[key]}
-                    className={notificationPrefs[key] ? "v2-notif-toggle is-on" : "v2-notif-toggle"}
-                    onClick={() => setNotificationPrefs((prev) => ({ ...prev, [key]: !prev[key] }))}
+                    aria-checked={notificationPrefs[row.key]}
+                    className={notificationPrefs[row.key] ? "v2-notif-toggle is-on" : "v2-notif-toggle"}
+                    disabled={savingNotificationKey === row.key}
+                    onClick={() => void toggleNotificationPref(row)}
                   >
                     <span aria-hidden="true" />
                   </button>
                 </label>
               ))}
             </div>
+            {notificationPrefStatus ? <p className="v2-profile-action-message" role="status">{notificationPrefStatus}</p> : null}
           </section>
         ) : null}
 

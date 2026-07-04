@@ -190,7 +190,6 @@ export function ProfileRoute({
       onToggleTheme={onToggleTheme}
       onSetThemeSource={onSetThemeSource}
       onSelectThemePalette={onSelectThemePalette}
-      onReviewConsent={() => {}}
       onLogout={onLogout}
       onSaveProfile={onSaveProfile}
       onSetProfileVisibility={onSetProfileVisibility}

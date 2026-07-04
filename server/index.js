@@ -657,7 +657,8 @@ const baseNewsRateLimit = createDurableRateLimiter({
 
 function allowsPendingOnboardingMutation(request) {
   const path = String(request.path ?? request.originalUrl ?? "").split("?", 1)[0];
-  return request.method === "POST" && path === "/api/v1/onboarding/complete";
+  return (request.method === "POST" && path === "/api/v1/onboarding/complete")
+    || (request.method === "PATCH" && path === "/api/v1/profile");
 }
 
 function allowsOperationalMutation(request) {
@@ -1105,6 +1106,8 @@ const onboardingSchema = profileFieldsSchema.extend({
   organizationName: z.string().trim().max(160).optional(),
   consentAccepted: z.literal(true),
   consentVersion: z.string().trim().min(1).max(80),
+  onboardingGoal: z.string().trim().min(1).max(80).optional(),
+  topicInterests: z.array(z.string().trim().min(1).max(80)).max(12).optional(),
 });
 
 async function saveProfileFields(client, accountId, input) {
@@ -1239,7 +1242,12 @@ app.post("/api/v1/onboarding/complete", requireV1AuthenticatedUser, requireV1Act
     await client.query(
       `INSERT INTO audit_events (request_id, actor_account_id, action, subject_type, subject_id, metadata)
        VALUES ($1, $2::uuid, 'onboarding.completed', 'account', ($2::uuid)::text, $3::jsonb)`,
-      [request.requestId, request.actor.account.id, JSON.stringify({ role: input.role, consentVersion: expectedConsentVersion })],
+      [request.requestId, request.actor.account.id, JSON.stringify({
+        role: input.role,
+        consentVersion: expectedConsentVersion,
+        onboardingGoal: input.onboardingGoal ?? null,
+        topicInterests: input.topicInterests ?? [],
+      })],
     );
   });
 
