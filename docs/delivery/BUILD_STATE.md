@@ -38,7 +38,8 @@ Production release commit: verify with live `/api/health`; latest runtime featur
   - the smoke verified no horizontal overflow, compact theme swatches, removed `Allocated` storage duplication, cleaned `Billing` storage copy, and the current-plan/storage sections still render
   - screenshot evidence was saved outside the repo at `C:\Users\zboyt\AppData\Local\Temp\rivt-settings-ui-system-polish.png`
 - Production deployment status:
-  - pending until this packet commit is pushed to `master`, Railway deploys it, and `npm run monitor:production` passes against the served commit
+  - runtime release commit `8f31a49b6ecd37a841bd7e72094ba9913e65dd2e` was pushed to GitHub and picked up by Railway production service `RIVT`
+  - `EXPECTED_SOURCE_COMMIT=8f31a49b6ecd37a841bd7e72094ba9913e65dd2e npm run monitor:production` passed with PostgreSQL, S3-compatible object storage, configured Sentry, controls off, seven anonymous private-route checks, and 538 ms duration
 - Remaining boundary:
   - this pass addresses the foundational Settings/Profile/token/card-style cleanup. Broader typography scale sweeps, breakpoint consolidation, and remaining screen-by-screen mobile layout cleanup are still open.
 
