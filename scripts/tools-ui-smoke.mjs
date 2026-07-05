@@ -241,6 +241,31 @@ async function assertCalculatorNoVerticalOverflow(page) {
   );
 }
 
+async function assertCalculatorOwnsHandsetWidth(page) {
+  const metrics = await page.locator(".fraction-calc-workbench").evaluate((element) => {
+    const rect = element.getBoundingClientRect();
+    return {
+      width: rect.width,
+      left: rect.left,
+      right: rect.right,
+      viewportWidth: window.innerWidth,
+    };
+  });
+  assert.ok(
+    metrics.width >= metrics.viewportWidth * 0.9,
+    `calculator should fill the handset width; got ${metrics.width}px inside ${metrics.viewportWidth}px viewport`,
+  );
+  assert.ok(
+    metrics.left <= 12 && metrics.right >= metrics.viewportWidth - 12,
+    `calculator should sit edge-to-edge on handset; got bounds ${JSON.stringify(metrics)}`,
+  );
+  assert.equal(
+    await page.locator(".v2-mobile-nav").isVisible(),
+    false,
+    "immersive calculator should hide the app mobile nav",
+  );
+}
+
 async function runToolsFlow(page, viewportName) {
   const isHandsetViewport = viewportName !== "desktop";
   await page.goto(`${baseUrl}/app/tools`, { waitUntil: "networkidle" });
@@ -283,7 +308,10 @@ async function runToolsFlow(page, viewportName) {
   await page.locator(".calc-primary-value", { hasText: '9 25/32"' }).waitFor({ timeout: 15_000 });
   await page.getByLabel("Heavy, light, double, and half controls").getByRole("button", { name: "Light minus one thirty-second" }).click();
   await page.locator(".calc-primary-value", { hasText: '9 3/4"' }).waitFor({ timeout: 15_000 });
-  if (isHandsetViewport) await assertCalculatorNoVerticalOverflow(page);
+  if (isHandsetViewport) {
+    await assertCalculatorNoVerticalOverflow(page);
+    await assertCalculatorOwnsHandsetWidth(page);
+  }
   await assertNoHorizontalOverflow(page);
   await page.screenshot({ path: path.join(screenshotDir, `${viewportName}-calculator.png`), fullPage: true });
   await page.getByLabel("Heavy 16th field calculator").getByRole("button", { name: "Tools" }).click();

@@ -775,9 +775,14 @@ html[data-rivt-compact-device="true"] .v2-mobile-nav {
 }
 
 html[data-rivt-immersive-tool] .v2-mobile-nav {
+  display: none !important;
   transform: translateY(calc(100% + 14px));
   opacity: 0;
   pointer-events: none;
+}
+
+html[data-rivt-immersive-tool] .mobile-nav-strip {
+  display: none !important;
 }
 
 html[data-rivt-immersive-tool] .v2-topbar {
@@ -786,6 +791,7 @@ html[data-rivt-immersive-tool] .v2-topbar {
 
 html[data-rivt-immersive-tool] .rivt-v2 .v2-main {
   padding-top: 14px;
+  padding-inline: 0;
   padding-bottom: max(14px, env(safe-area-inset-bottom));
 }
 

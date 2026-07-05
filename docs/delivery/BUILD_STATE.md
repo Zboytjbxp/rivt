@@ -7,7 +7,30 @@ Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
 Production release commit: `c9b2a0033bc7155abd031f47db414d71bcfc028f` verified with live `/api/health`; latest runtime feature evidence is recorded below and docs-only evidence commits may supersede the served build SHA.
 
-## Latest Packet 08 Pass - Immersive Tools Small-Phone Containment
+## Latest Packet 08 Pass - SE Tool Fullscreen Ownership
+
+- Closed the remaining SE-class immersive-tool shell/layout regression reported from a physical small iPhone:
+  - immersive-tool mode now force-hides both the current shell mobile nav and the older legacy mobile-nav strip, preventing tool surfaces from sharing the viewport with bottom-nav chrome
+  - immersive-tool mode now removes inherited inline app-shell padding so fullscreen tools can use the full narrow-phone width instead of rendering inside a squeezed central column
+  - fullscreen calculator wrappers now explicitly opt out of late-file max-width/grid inheritance, keeping the Heavy 16th tool at full handset width on compact devices
+  - calculator compact-device rules now force a single-column fullscreen grid even when late desktop-like width assumptions would otherwise survive on a tiny physical phone
+  - `scripts/tools-ui-smoke.mjs` now asserts that the immersive calculator owns the handset width and that the app mobile nav is not visible while the calculator is open
+- Preserved launch boundaries:
+  - no homeowner flows, fake verification, job-payment processing, escrow, payroll, local-auth fallback, or frontend-only production claims were added
+  - no server data, auth, billing, storage, moderation, subscription, migration, or provider contracts were changed
+- Local gates:
+  - `npm run build` (pass)
+  - `npm run lint` (pass)
+  - `npm run test:unit` (pass)
+  - `npm run test:e2e` (pass)
+  - `npm run test:ui:tools` (pass; refreshed screenshots at `C:\Users\zboyt\AppData\Local\Temp\rivt-tools-pass`)
+  - `npm run test:ui:mobile-actions` (pass)
+  - `npm audit --omit=dev` (pass; 0 vulnerabilities)
+  - `npm run test` / `npm run test:integration` still exceeded the local command window in this pass, so aggregate integration completion is not newly claimed here
+- Rendered QA:
+  - refreshed `mobile-calculator.png` and `se-calculator.png` now show the Heavy 16th calculator using the handset width instead of collapsing into the prior narrow left rail
+- Production deployment status:
+  - pending push/deploy verification for this slice; runtime source must still be confirmed through live `/api/health` before this section becomes production evidence
 
 - Closed the remaining SE-class tool containment issues that were still visible after the compact-device shell pass:
   - immersive tools now set a document-level `data-rivt-immersive-tool` flag while any non-hub tool is open

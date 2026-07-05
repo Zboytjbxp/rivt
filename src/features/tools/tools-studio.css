@@ -246,11 +246,18 @@
 
 .v2-tools-app.is-calculator-fullscreen {
   display: block;
+  width: 100%;
+  max-width: none;
+  min-width: 0;
+  margin-inline: 0;
   overflow: hidden;
 }
 
+.v2-tools-app.is-calculator-fullscreen .v2-tools-swipe-surface,
 .v2-tools-app.is-calculator-fullscreen .fraction-calc-workbench {
   width: 100%;
+  max-width: none;
+  min-width: 0;
 }
 
 .v2-tools-app.is-calculator-fullscreen .calc-tools-button {
@@ -5568,11 +5575,15 @@
 
 .fraction-calc-workbench {
   min-height: 0;
+  width: 100%;
+  max-width: none;
   box-shadow: 0 22px 60px rgba(4, 8, 14, 0.24);
 }
 
 .fraction-calc-shell {
   min-height: 760px;
+  width: 100%;
+  max-width: none;
 }
 
 .fraction-only-shell {
@@ -5644,12 +5655,14 @@
 .fraction-calc-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 210px;
+  width: 100%;
   gap: 14px;
 }
 
 .fraction-calc-left {
   min-width: 0;
   display: grid;
+  width: 100%;
   gap: 12px;
 }
 
@@ -6345,6 +6358,9 @@ html[data-rivt-compact-device="true"] .v2-invoice-print-preview table {
 }
 
 html[data-rivt-compact-device="true"] .v2-tools-app.is-calculator-fullscreen {
+  width: 100%;
+  max-width: none;
+  min-width: 0;
   margin: -2px -8px 0;
 }
 
@@ -6404,6 +6420,8 @@ html[data-rivt-compact-device="true"] .v2-tools-app.is-calculator-fullscreen .he
 html[data-rivt-compact-device="true"] .fraction-only-shell {
   grid-template-columns: minmax(0, 1fr);
   min-height: 0;
+  width: 100%;
+  max-width: none;
 }
 
 html[data-rivt-compact-device="true"] .v2-tools-app.is-calculator-fullscreen .heavy-calc-ruler,
@@ -6426,7 +6444,17 @@ html[data-rivt-compact-device="true"] .v2-tools-app.is-calculator-fullscreen .ca
 html[data-rivt-compact-device="true"] .v2-tools-app.is-calculator-fullscreen .fraction-calc-grid,
 html[data-rivt-compact-device="true"] .v2-tools-app.is-calculator-fullscreen .fraction-calc-left {
   min-height: 0;
+  width: 100%;
+  max-width: none;
   gap: 6px;
+}
+
+html[data-rivt-compact-device="true"] .v2-tools-app.is-calculator-fullscreen .fraction-calc-grid {
+  grid-template-columns: minmax(0, 1fr) !important;
+}
+
+html[data-rivt-compact-device="true"] .v2-tools-app.is-calculator-fullscreen .fraction-calc-left {
+  grid-template-columns: minmax(0, 1fr);
 }
 
 html[data-rivt-compact-device="true"] .v2-tools-app.is-calculator-fullscreen .heavy-calc-main.length-mode .fraction-calc-left {
