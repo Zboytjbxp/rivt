@@ -25,6 +25,7 @@ Evidence must eventually link to implementation, automated tests, manual accepta
 - `GA-UX-006` also gains shell truth evidence: when the compact-device flag is present, the desktop sidebar/search layout is forcibly suppressed and the mobile shell/nav is restored even if the browser reports an odd desktop-like viewport mode.
 - `GA-PRO-001` gains onboarding reachability evidence: the auth intro and guest-preview orange screens reuse the compact narrow-phone containment rules under the same compact-device flag, preventing desktop-style preview compositions from overflowing on tiny physical phones.
 - `GA-OPS-007` gains local automated evidence for this slice: `npm run build`, `npm run lint`, `npm run test:ui:mobile-actions`, `npm run test:e2e`, and `npm audit --omit=dev` passed. Full `npm run test` exceeded the local command window, so aggregate DB-backed completion is not claimed here.
+- `GA-OPS-008` gains production evidence: live `https://rivt.pro/api/health` reported commit `8a6377c70fa664ff4dd800beac50df3795aafacd` with migration `0021_shop_talk_post_media`, PostgreSQL/S3-compatible storage, and configured Sentry; `EXPECTED_SOURCE_COMMIT=8a6377c70fa664ff4dd800beac50df3795aafacd npm run monitor:production` passed.
 - Remaining boundary: this addendum strengthens shell/auth behavior on physically small phones, but it is still not a substitute for a final real-device pass across Safari/PWA installed mode and Android Chrome before broad launch.
 
 ## Traceability Addendum - 2026-07-04 Mobile Layout and Device Accessibility Subtraction

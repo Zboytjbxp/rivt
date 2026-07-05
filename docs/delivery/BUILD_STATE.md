@@ -5,7 +5,7 @@ Current gate: Gate A launch hardening
 Current phase: Packet 08 Gate A launch hardening plus Gate B behind-flag backbone work: machine gates and live workflow smokes are mostly green; the Shop Talk Reddit-model backbone, moderation/reporting backend, human-facing moderation console/report UX, post photo media, reachability/naming cleanup, Tools hub consolidation, Payment Tracker server records, money-tools sync, the accepted tool-records sync slices, non-tool local-state boundary cleanup, dedicated network-records sync for Crew/Invites/informal written shout-outs, screen-density polish, mobile layout/device-accessibility subtraction, fraction calculator ergonomics, and iPhone SE layout containment slices are implemented while still respecting launch-readiness boundaries before broad exposure.
 Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
-Production release commit: `2fe69d39d6290a67d9d886047ad90f41aef844b6` verified with live `/api/health`; latest runtime feature evidence is recorded below and docs-only evidence commits may supersede the served build SHA.
+Production release commit: `8a6377c70fa664ff4dd800beac50df3795aafacd` verified with live `/api/health`; latest runtime feature evidence is recorded below and docs-only evidence commits may supersede the served build SHA.
 
 ## Latest Packet 08 Pass - Physical Small-Phone Compact Guard
 
@@ -27,7 +27,9 @@ Production release commit: `2fe69d39d6290a67d9d886047ad90f41aef844b6` verified w
 - Local limitation:
   - full `npm run test` was attempted but exceeded the local command window; this slice is UI-only and the targeted mobile smoke plus e2e gates passed
 - Production deployment status:
-  - pending merge/push from `codex/se-compact-mobile-guard`
+  - runtime release commit `8a6377c70fa664ff4dd800beac50df3795aafacd` was pushed to GitHub and picked up by Railway production service `RIVT`
+  - live `https://rivt.pro/api/health` returned `ok: true`, build commit `8a6377c70fa664ff4dd800beac50df3795aafacd`, migration `0021_shop_talk_post_media`, PostgreSQL, S3-compatible object storage, and configured Sentry
+  - `EXPECTED_SOURCE_COMMIT=8a6377c70fa664ff4dd800beac50df3795aafacd npm run monitor:production` passed with operational controls available, seven anonymous private-route checks, and 562 ms duration
 
 ## Latest Packet 08 Pass - Launch QA Trust Cleanup
 
