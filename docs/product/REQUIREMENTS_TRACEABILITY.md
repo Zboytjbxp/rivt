@@ -10,6 +10,14 @@ Status values:
 
 Evidence must eventually link to implementation, automated tests, manual acceptance proof, and deployed build.
 
+## Traceability Addendum - 2026-07-05 SE Tool Fullscreen Ownership
+
+- `GA-UX-006` gains narrow-phone immersive-tool evidence: the deployed calculator/tool shell now force-hides both shell mobile-nav layers and removes inherited inline app-shell padding so fullscreen tools can use the handset width on SE-class phones.
+- `GA-UX-003` gains calculator-layout clarity evidence: compact-device calculator wrappers now explicitly opt out of late max-width/grid inheritance and the tool smoke asserts handset-width ownership instead of checking overflow alone.
+- `GA-OPS-007` gains local automated evidence for this slice: `npm run build`, `npm run lint`, `npm run test:unit`, `npm run test:e2e`, `npm run test:ui:tools`, `npm run test:ui:mobile-actions`, and `npm audit --omit=dev` passed. `npm run test` / `npm run test:integration` still exceeded the local command window in this pass, so aggregate integration completion is not newly claimed here.
+- `GA-OPS-008` gains production evidence: live `https://rivt.pro/api/health` reported commit `f3971fe8b12cae0d88f66774ff3211f6bc53c17d` with migration `0021_shop_talk_post_media`, PostgreSQL/S3-compatible storage, and configured Sentry.
+- Remaining boundary: one final human recheck on the physical small iPhone is still useful, but the live runtime now matches the fixed immersive-tool source.
+
 ## Traceability Addendum - 2026-07-04 Launch QA Trust Cleanup
 
 - `GA-UX-005` gains honesty evidence: authenticated Shop Talk post creation now fails visibly when server persistence fails instead of inserting a local-only post that disappears on reload.

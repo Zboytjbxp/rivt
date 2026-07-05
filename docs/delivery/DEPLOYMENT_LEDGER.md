@@ -21,6 +21,26 @@ Add one entry per staging/production deployment.
 - Rollback performed/result:
 - Approval:
 
+## Current Production - Packet 08 SE Tool Fullscreen Ownership
+
+- Environment: Production (`https://rivt.pro`)
+- Date/time/timezone: 2026-07-05 America/New_York
+- Deployer: Codex through GitHub push to Railway-linked `master`
+- Source repository/branch: `Zboytjbxp/rivt`, `master`
+- Source commit: `f3971fe8b12cae0d88f66774ff3211f6bc53c17d`
+- Build/artifact ID: Railway-linked production deployment serving source `f3971fe8b12cae0d88f66774ff3211f6bc53c17d`; live `/api/health` is the runtime proof
+- Migration version before/after: `0021_shop_talk_post_media` / `0021_shop_talk_post_media` (no schema migration)
+- Feature-flag/config version: no provider credentials or operational-control flags changed
+- Provider/config changes (no secrets): no provider credentials changed; Sentry remains configured
+- Backup/rollback target: prior successful immersive-tool containment deployment `c9b2a0033bc7155abd031f47db414d71bcfc028f`; rollback is a normal source rollback because no migration changed
+- Automated gates: `npm run build`, `npm run lint`, `npm run test:unit`, `npm run test:e2e`, `npm run test:ui:tools`, `npm run test:ui:mobile-actions`, and `npm audit --omit=dev` passed. `npm run test` / `npm run test:integration` still exceeded the local command window in this pass, so aggregate integration completion is not newly claimed here.
+- Rendered evidence: refreshed `mobile-calculator.png` and `se-calculator.png` were written outside the repo at `C:\Users\zboyt\AppData\Local\Temp\rivt-tools-pass` and show the Heavy 16th calculator using the handset width instead of the previously reported narrow left rail.
+- Post-deploy smoke tests: live `https://rivt.pro/api/health` returned exact source commit `f3971fe8b12cae0d88f66774ff3211f6bc53c17d`, ready migration `0021_shop_talk_post_media`, PostgreSQL, S3-compatible object storage, and configured Sentry.
+- Health/readiness result: healthy production health; no schema migration applied.
+- Known risks: this closes the deployed-runtime regression behind the reported small-phone tool screenshots, but one final human recheck on the physical iPhone is still useful before considering the device-specific confidence gap fully closed.
+- Rollback performed/result: not required.
+- Approval: accepted as a Gate A immersive-tool mobile containment fix with no provider, auth, billing, storage, moderation, or migration boundary changes.
+
 ## Current Production - Packet 08 Immersive Tools Small-Phone Containment
 
 - Environment: Production (`https://rivt.pro`)
