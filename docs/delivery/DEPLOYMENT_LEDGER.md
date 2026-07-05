@@ -21,6 +21,26 @@ Add one entry per staging/production deployment.
 - Rollback performed/result:
 - Approval:
 
+## Current Production - Packet 08 SE Tool Chrome Cleanup
+
+- Environment: Production (`https://rivt.pro`)
+- Date/time/timezone: 2026-07-05 America/New_York
+- Deployer: Codex through GitHub push to Railway-linked `master`
+- Source repository/branch: `Zboytjbxp/rivt`, `master`
+- Source commit: `88d5adab057ba2848e6e4b692f8fba18b3239d55`
+- Build/artifact ID: Railway-linked production deployment serving source `88d5adab057ba2848e6e4b692f8fba18b3239d55`; live `/api/health` is the runtime proof
+- Migration version before/after: `0021_shop_talk_post_media` / `0021_shop_talk_post_media` (no schema migration)
+- Feature-flag/config version: no provider credentials or operational-control flags changed
+- Provider/config changes (no secrets): no provider credentials changed; Sentry remains configured
+- Backup/rollback target: prior successful SE immersive-tool deployment `f3971fe8b12cae0d88f66774ff3211f6bc53c17d`; rollback is a normal source rollback because no migration changed
+- Automated gates: `npm run build`, `npm run lint`, `npm run test:ui:tools`, `npm run test:ui:mobile-actions`, `npm run test:e2e`, and `npm audit --omit=dev` passed. `npm run test` still exceeded the local command window in this pass, so aggregate unit+integration completion is not newly claimed here.
+- Rendered evidence: refreshed `se-calculator.png` and `se-invoice.png` were written outside the repo at `C:\Users\zboyt\AppData\Local\Temp\rivt-tools-pass` and show cleaner SE calculator controls plus contained invoice layout with the immersive nav hidden.
+- Post-deploy smoke tests: live `https://rivt.pro/api/health` returned exact source commit `88d5adab057ba2848e6e4b692f8fba18b3239d55`, ready migration `0021_shop_talk_post_media`, PostgreSQL, S3-compatible object storage, and configured Sentry. `EXPECTED_SOURCE_COMMIT=88d5adab057ba2848e6e4b692f8fba18b3239d55 npm run monitor:production` passed with operational controls off, seven anonymous private-route checks, and 606 ms duration.
+- Health/readiness result: healthy production health and synthetic monitor; no schema migration applied.
+- Known risks: the specific SE tool-shell/readability regressions from the latest phone screenshots are now closed at the deployed runtime, but one final physical-device sweep is still useful before broad launch.
+- Rollback performed/result: not required.
+- Approval: accepted as a Gate A small-phone tool-polish deployment with no provider, auth, billing, storage, moderation, or migration boundary changes.
+
 ## Current Production - Packet 08 SE Tool Fullscreen Ownership
 
 - Environment: Production (`https://rivt.pro`)

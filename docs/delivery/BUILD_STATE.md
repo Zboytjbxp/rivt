@@ -2,10 +2,38 @@
 
 Last updated: 2026-07-05 America/New_York
 Current gate: Gate A launch hardening
-Current phase: Packet 08 Gate A launch hardening plus Gate B behind-flag backbone work: machine gates and live workflow smokes are mostly green; the Shop Talk Reddit-model backbone, moderation/reporting backend, human-facing moderation console/report UX, post photo media, reachability/naming cleanup, Tools hub consolidation, Payment Tracker server records, money-tools sync, the accepted tool-records sync slices, non-tool local-state boundary cleanup, dedicated network-records sync for Crew/Invites/informal written shout-outs, screen-density polish, mobile layout/device-accessibility subtraction, fraction calculator ergonomics, iPhone SE layout containment, and immersive-tool compact-device containment slices are implemented while still respecting launch-readiness boundaries before broad exposure.
+Current phase: Packet 08 Gate A launch hardening plus Gate B behind-flag backbone work: machine gates and live workflow smokes are mostly green; the Shop Talk Reddit-model backbone, moderation/reporting backend, human-facing moderation console/report UX, post photo media, reachability/naming cleanup, Tools hub consolidation, Payment Tracker server records, money-tools sync, the accepted tool-records sync slices, non-tool local-state boundary cleanup, dedicated network-records sync for Crew/Invites/informal written shout-outs, screen-density polish, mobile layout/device-accessibility subtraction, fraction calculator ergonomics, iPhone SE layout containment, immersive-tool compact-device containment, and SE tool chrome cleanup slices are implemented while still respecting launch-readiness boundaries before broad exposure.
 Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
-Production release commit: `f3971fe8b12cae0d88f66774ff3211f6bc53c17d` verified with live `/api/health`; latest runtime feature evidence is recorded below and docs-only evidence commits may supersede the served build SHA.
+Production release commit: `88d5adab057ba2848e6e4b692f8fba18b3239d55` verified with live `/api/health`; latest runtime feature evidence is recorded below and docs-only evidence commits may supersede the served build SHA.
+
+## Latest Packet 08 Pass - SE Tool Chrome Cleanup
+
+- Closed the remaining SE-class tool readability issues that were still visible after the immersive containment work:
+  - non-calculator tool shells now opt into the fullscreen-tool layout class so compact devices use the same full-viewport framing intent instead of inheriting hub-like spacing
+  - compact-device invoice/tool workbenches and panels now force `min-width: 0`, `width: 100%`, and hidden overflow so invoice/detail/preview content cannot push past the narrow-phone viewport
+  - compact-device invoice action buttons and template rows now compress more aggressively, preventing the right-side drift reported from the physical small-phone screenshots
+  - the Heavy 16th calculator top bar now hides non-essential label text on SE-class widths, and the `L / H / ÷2 / ×2` helper labels collapse to the core controls instead of turning into unreadable stacked text
+  - `scripts/tools-ui-smoke.mjs` now asserts that the immersive invoice also hides the app mobile nav and that the SE calculator no longer renders helper-label clutter
+- Preserved launch boundaries:
+  - no homeowner flows, fake verification, job-payment processing, escrow, payroll, local-auth fallback, or frontend-only production claims were added
+  - no server data, auth, billing, storage, moderation, subscription, migration, or provider contracts were changed
+- Local gates:
+  - `npm run build` (pass)
+  - `npm run lint` (pass)
+  - `npm run test:ui:tools` (pass; refreshed screenshots at `C:\Users\zboyt\AppData\Local\Temp\rivt-tools-pass`)
+  - `npm run test:ui:mobile-actions` (pass)
+  - `npm run test:e2e` (pass)
+  - `npm audit --omit=dev` (pass; 0 vulnerabilities)
+  - `npm run test` still exceeded the local command window in this pass, so aggregate unit+integration completion is not newly claimed here
+- Rendered QA:
+  - refreshed `se-calculator.png` now shows the Heavy 16th calculator using icon-only top-bar affordances and uncluttered `L / H / ÷2 / ×2` controls
+  - refreshed `se-invoice.png` shows the invoice shell staying inside the handset width with the immersive mobile nav hidden while the tool is open
+- Production deployment status:
+  - deployed to Railway production from master commit `88d5adab057ba2848e6e4b692f8fba18b3239d55`
+  - live `https://rivt.pro/api/health` returned 200 with exact build commit `88d5adab057ba2848e6e4b692f8fba18b3239d55`, migration `0021_shop_talk_post_media`, PostgreSQL dependency `postgres`, S3-compatible object storage, and configured Sentry
+  - `EXPECTED_SOURCE_COMMIT=88d5adab057ba2848e6e4b692f8fba18b3239d55 npm run monitor:production` passed with operational controls off, seven anonymous private-route checks, and 606 ms duration
+  - this closes the currently visible compact-tool chrome/readability regressions from the latest phone screenshots at the deployed-runtime level; one final human recheck on the physical device is still useful
 
 ## Latest Packet 08 Pass - SE Tool Fullscreen Ownership
 

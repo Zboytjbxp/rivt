@@ -10,6 +10,14 @@ Status values:
 
 Evidence must eventually link to implementation, automated tests, manual acceptance proof, and deployed build.
 
+## Traceability Addendum - 2026-07-05 SE Tool Chrome Cleanup
+
+- `GA-UX-006` gains additional small-phone evidence: compact-device tool shells now force full-width containment for invoice and other immersive tools, preventing the narrow-phone right-edge clipping reported from the physical handset screenshots.
+- `GA-UX-003` gains calculator-clarity evidence: the Heavy 16th tool now collapses non-essential top-bar text and hides `Light/Heavy/Half/Double` helper labels on SE-class widths so the core controls remain readable.
+- `GA-OPS-007` gains local automated evidence for this slice: `npm run build`, `npm run lint`, `npm run test:ui:tools`, `npm run test:ui:mobile-actions`, `npm run test:e2e`, and `npm audit --omit=dev` passed. `npm run test` still exceeded the local command window in this pass, so aggregate unit+integration completion is not newly claimed here.
+- `GA-OPS-008` gains production evidence: live `https://rivt.pro/api/health` reported commit `88d5adab057ba2848e6e4b692f8fba18b3239d55` with migration `0021_shop_talk_post_media`, PostgreSQL/S3-compatible storage, and configured Sentry; `EXPECTED_SOURCE_COMMIT=88d5adab057ba2848e6e4b692f8fba18b3239d55 npm run monitor:production` passed.
+- Remaining boundary: this addendum hardens the currently reported SE tool-shell/calculator readability issues, but it is still not a substitute for a final physical-device sweep across the rest of the app before broad launch.
+
 ## Traceability Addendum - 2026-07-05 SE Tool Fullscreen Ownership
 
 - `GA-UX-006` gains narrow-phone immersive-tool evidence: the deployed calculator/tool shell now force-hides both shell mobile-nav layers and removes inherited inline app-shell padding so fullscreen tools can use the handset width on SE-class phones.
