@@ -2,10 +2,34 @@
 
 Last updated: 2026-07-04 America/New_York
 Current gate: Gate A launch hardening
-Current phase: Packet 08 Gate A launch hardening plus Gate B behind-flag backbone work: machine gates and live workflow smokes are mostly green; the Shop Talk Reddit-model backbone, moderation/reporting backend, human-facing moderation console/report UX, post photo media, reachability/naming cleanup, Tools hub consolidation, Payment Tracker server records, money-tools sync, the accepted tool-records sync slices, non-tool local-state boundary cleanup, dedicated network-records sync for Crew/Invites/informal written shout-outs, screen-density polish, mobile layout/device-accessibility subtraction, and fraction calculator ergonomics slices are implemented while still respecting launch-readiness boundaries before broad exposure.
+Current phase: Packet 08 Gate A launch hardening plus Gate B behind-flag backbone work: machine gates and live workflow smokes are mostly green; the Shop Talk Reddit-model backbone, moderation/reporting backend, human-facing moderation console/report UX, post photo media, reachability/naming cleanup, Tools hub consolidation, Payment Tracker server records, money-tools sync, the accepted tool-records sync slices, non-tool local-state boundary cleanup, dedicated network-records sync for Crew/Invites/informal written shout-outs, screen-density polish, mobile layout/device-accessibility subtraction, fraction calculator ergonomics, and iPhone SE layout containment slices are implemented while still respecting launch-readiness boundaries before broad exposure.
 Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
-Production release commit: `9e62aaadea0c39ef9bd659454aa71314739e4cb7` verified with live `/api/health`; latest runtime feature evidence is recorded below and docs-only evidence commits may supersede the served build SHA.
+Production release commit: `6a6dd99dff11f3d65c62843ebcac0af0a2d10f87` verified with live `/api/health`; latest runtime feature evidence is recorded below and docs-only evidence commits may supersede the served build SHA.
+
+## Latest Packet 08 Pass - iPhone SE Layout Containment
+
+- Fixed small-phone layout failures reported from a physical iPhone SE:
+  - added a true `max-width: 360px` auth/onboarding layer so the orange intro and preview screens stop cropping oversized text and phone mockups
+  - compressed intro/preview copy, phone mockups, trade pills, and preview cards only on narrow phones while preserving the larger mobile layout
+  - hid the decorative preview phone on the narrow preview-picker screen so the trade/area picker owns the viewport instead of overlapping the headline
+  - added a defensive app-shell media query for coarse pointer devices so the desktop sidebar cannot appear on narrow iPhones even if Safari reports an odd desktop-like viewport
+  - added an iPhone SE assertion to `scripts/mobile-actions-ui-smoke.mjs`: Home at `320x568` must have no horizontal overflow, no visible desktop sidebar, and a visible mobile nav
+- Preserved launch boundaries:
+  - no homeowner flows, fake verification, job-payment processing, escrow, payroll, local-auth fallback, or frontend-only production claims were added
+  - no server data, auth, billing, storage, subscription, moderation, migration, or production data contracts were changed
+- Local gates:
+  - `npm run build` (pass)
+  - `npm run lint` (pass)
+  - `npm run test:unit` (pass; 44/44)
+  - `npm run test:e2e` (pass; fail-closed auth plus desktop/mobile jobs/discovery)
+  - `npm run test:ui:mobile-actions` (pass; includes the new `320x568` iPhone SE shell assertion; screenshots at `C:\Users\zboyt\AppData\Local\Temp\rivt-mobile-actions-pass`)
+  - `npm audit --omit=dev` (pass; 0 vulnerabilities)
+- Rendered QA:
+  - Browser plugin setup was attempted, but the in-app browser runtime did not expose the documented `browser.documentation()` API in this session, so Playwright fallback was used
+  - manual SE screenshots were captured outside the repo at `C:\Users\zboyt\AppData\Local\Temp\rivt-se-after-auth.png`, `C:\Users\zboyt\AppData\Local\Temp\rivt-se-after-preview.png`, and `C:\Users\zboyt\AppData\Local\Temp\rivt-se-after-guest.png`
+- Production deployment status:
+  - pending push/deploy for this pass.
 
 ## Latest Packet 08 Pass - Fraction Calculator Ergonomics
 

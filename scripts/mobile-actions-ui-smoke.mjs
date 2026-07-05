@@ -320,6 +320,12 @@ async function safeCloseOpenPanels(page) {
 async function runMobileFlow(page) {
   await page.goto(`${baseUrl}/app/home`, { waitUntil: "networkidle" });
   await assertNoHorizontalOverflow(page, "Home");
+  await page.setViewportSize({ width: 320, height: 568 });
+  await assertNoHorizontalOverflow(page, "Home iPhone SE");
+  assert.equal(await page.locator(".v2-sidebar").isVisible(), false, "iPhone SE should not render the desktop sidebar");
+  assert.equal(await page.locator(".v2-mobile-nav").isVisible(), true, "iPhone SE should render the mobile nav");
+  await page.screenshot({ path: path.join(screenshotDir, "mobile-home-iphone-se.png"), fullPage: false });
+  await page.setViewportSize({ width: 390, height: 844 });
   assert.equal(await page.locator(".v2-weather-drive-widget").count(), 0, "Home should not render the static forecast widget");
   assert.equal(await page.locator(".v2-quick-actions").count(), 0, "Home should not render the duplicate quick-action strip");
   assert.equal(await page.locator(".trade-feed-cta-row").count(), 0, "Home should not render duplicate post/crew CTA rows");
