@@ -262,6 +262,21 @@ function toCommunityPostViewModel(post: ServerShopTalkPost): CommunityPost {
   };
 }
 
+const SAFETY_QUIZ_RESULTS_KEY = "rivt.safetyQuizResults.v1";
+
+function readSafetyQuizResults(): Record<string, SafetyQuizResult> {
+  try {
+    const stored = localStorage.getItem(SAFETY_QUIZ_RESULTS_KEY);
+    if (!stored) return {};
+    const parsed = JSON.parse(stored) as Record<string, SafetyQuizResult>;
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch { return {}; }
+}
+
+function persistSafetyQuizResults(results: Record<string, SafetyQuizResult>) {
+  try { localStorage.setItem(SAFETY_QUIZ_RESULTS_KEY, JSON.stringify(results)); } catch { /* noop */ }
+}
+
 function App() {
   const [activeView, setActiveView] = useState<NavLabel>(() => viewFromPath(window.location.pathname));
   const [requestedTool, setRequestedTool] = useState<ToolMode | null>(null);
@@ -332,14 +347,10 @@ function App() {
   const [inboxLoading, setInboxLoading] = useState(false);
   const [inboxSending, setInboxSending] = useState(false);
   const [inboxError, setInboxError] = useState<string | null>(null);
-  const [uploadedRecords, setUploadedRecords] = useState<Set<string>>(
-    () => new Set(["Signed scope", "Legal consent accepted"]),
-  );
+  const [uploadedRecords, setUploadedRecords] = useState<Set<string>>(() => new Set());
   const [storageUsage, setStorageUsage] = useState<StorageUsageSnapshot | null>(null);
-  const [completedTraining] = useState<Set<string>>(
-    () => new Set(["Customer-site conduct"]),
-  );
-  const [safetyQuizResults, setSafetyQuizResults] = useState<Record<string, SafetyQuizResult>>({});
+  const [completedTraining] = useState<Set<string>>(() => new Set());
+  const [safetyQuizResults, setSafetyQuizResults] = useState<Record<string, SafetyQuizResult>>(() => readSafetyQuizResults());
   const [feedbackItems] = useState<FeedbackItem[]>([]);
   const [paymentRecords] = useState<PaymentRecord[]>([]);
   const [communityPosts, setCommunityPosts] = useState<CommunityPost[]>(communityPromptPosts);
@@ -1185,11 +1196,18 @@ function App() {
         postType,
         communitySlug: communitySlugOverride ?? undefined,
       });
-      if (serverPost) {
-        const mediaPost = photoFile ? await uploadShopTalkPostPhoto(serverPost.id, photoFile) : null;
-        photoUploadFailed = Boolean(photoFile && !mediaPost);
-        postToAdd = toCommunityPostViewModel(mediaPost ?? serverPost);
+      if (!serverPost) {
+        if (localThumbnailUrl) URL.revokeObjectURL(localThumbnailUrl);
+        addActivity(
+          "Shop Talk post not saved",
+          "Your post could not reach the server. Try again when your connection is stable.",
+          "error",
+        );
+        return;
       }
+      const mediaPost = photoFile ? await uploadShopTalkPostPhoto(serverPost.id, photoFile) : null;
+      photoUploadFailed = Boolean(photoFile && !mediaPost);
+      postToAdd = toCommunityPostViewModel(mediaPost ?? serverPost);
     }
 
     setCommunityPosts((current) => [
@@ -1333,9 +1351,7 @@ function App() {
         : "All trades",
     );
     setTrustReady(true);
-    setUploadedRecords(
-      () => new Set(["Signed scope", "Legal consent accepted"]),
-    );
+    setUploadedRecords(() => new Set());
     const postOnboardingView = ({
       home: "Home",
       work: "Work",
@@ -1450,12 +1466,16 @@ function App() {
   }
 
   function handleQuizComplete(result: SafetyQuizResult) {
-    setSafetyQuizResults((prev) => ({ ...prev, [result.quizId]: result }));
+    setSafetyQuizResults((prev) => {
+      const next = { ...prev, [result.quizId]: result };
+      persistSafetyQuizResults(next);
+      return next;
+    });
     const quiz = safetyQuizData.find((q) => q.id === result.quizId);
     addActivity(
       result.passed ? "Safety cert earned" : "Quiz complete",
       result.passed
-        ? `You passed ${quiz?.title ?? result.quizId}. Certificate added to your safety record.`
+        ? `You passed ${quiz?.title ?? result.quizId}. Saved to your safety training on this device.`
         : `Score: ${result.score}%. You need 80% to earn the certificate. Try again.`,
       result.passed ? "success" : "info",
     );

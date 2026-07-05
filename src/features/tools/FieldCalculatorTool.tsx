@@ -289,15 +289,27 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
     <section className="heavy-calc-workbench fraction-calc-workbench" aria-label="Heavy 16th field calculator">
       <h1 className="sr-only">Heavy 16th field calculator</h1>
       <header className="heavy-calc-topbar">
-        <button
-          type="button"
-          className={onBack ? "calc-menu-button calc-tools-button" : "calc-menu-button"}
-          aria-label={onBack ? "Tools" : "Toggle calculator tool drawer"}
-          aria-expanded={onBack ? undefined : drawerOpen}
-          onClick={onBack ?? (() => setDrawerOpen((open) => !open))}
-        >
-          {onBack ? "Tools" : <Menu size={20} />}
-        </button>
+        <div className="calc-topbar-lead">
+          <button
+            type="button"
+            className="calc-menu-button calc-drawer-toggle"
+            aria-label="Toggle calculator tool drawer"
+            aria-expanded={drawerOpen}
+            onClick={() => setDrawerOpen((open) => !open)}
+          >
+            <Menu size={20} />
+          </button>
+          {onBack && (
+            <button
+              type="button"
+              className="calc-menu-button calc-tools-button"
+              aria-label="Back to tools"
+              onClick={onBack}
+            >
+              Tools
+            </button>
+          )}
+        </div>
         <div className="heavy-calc-brand">
           <div className="heavy-calc-brand-mark" aria-hidden="true">
             <Ruler size={22} />
@@ -318,6 +330,14 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
           <div className="drawer-title">
             <span>Pro tools suite</span>
             <strong>Field math that acts like a tool.</strong>
+            <button
+              type="button"
+              className="drawer-close"
+              aria-label="Close tool drawer"
+              onClick={() => setDrawerOpen(false)}
+            >
+              Done
+            </button>
           </div>
           {(["length", "spacing", "cuts", "hardware"] as const).map((mode) => {
             const drawerLabel = {

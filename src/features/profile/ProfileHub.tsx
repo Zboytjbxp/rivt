@@ -221,7 +221,7 @@ function QuizModal({
             <p className="v2-quiz-score-line">{result.score}% · {correctCount}/{quiz.questions.length} correct</p>
             <p className="v2-quiz-result-desc">
               {result.passed
-                ? `You passed ${quiz.title}. This certificate is now on your safety record.`
+                ? `You passed ${quiz.title}. Your result is saved to your safety training on this device.`
                 : `Passing score is 80% (${Math.ceil(quiz.questions.length * 0.8)} of ${quiz.questions.length} correct). Review the explanations and try again.`}
             </p>
             <div className="v2-quiz-result-actions">

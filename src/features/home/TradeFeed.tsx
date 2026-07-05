@@ -26,7 +26,6 @@ const AVAIL_LABEL: Record<Availability, string> = {
   booked: "Booked up",
 };
 const AVAIL_ORDER: Availability[] = ["available", "limited", "booked"];
-const SETUP_RECORD_BASELINE = 2;
 
 function netScore(post: CommunityPost) {
   return post.upvotes - post.downvotes;
@@ -131,7 +130,7 @@ export function TradeFeed({
     const hasOpenWork = jobs.some((job) => ["Open", "Shortlisting", "Scheduled"].includes(job.status));
     const hasJoinedCommunity = communities.some((community) => community.joined);
     const hasAuthoredPost = normalizedName.length > 0 && posts.some((post) => post.author.trim().toLowerCase() === normalizedName);
-    const hasFieldProof = recordCount > SETUP_RECORD_BASELINE || safetyCertCount > 0;
+    const hasFieldProof = recordCount > 0 || safetyCertCount > 0;
     const openFirstCommunity = () => {
       const target = communities.find((community) => !community.joined)?.name ?? communities[0]?.name;
       if (target) onOpenCommunity(target);

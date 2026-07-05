@@ -5155,6 +5155,35 @@
   flex: 0 0 auto;
 }
 
+.calc-topbar-lead {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+/* The drawer is a persistent column on wide layouts, so the toggle is only
+   needed once the drawer collapses to an overlay at narrow widths. */
+@media (min-width: 861px) {
+  .calc-drawer-toggle { display: none; }
+}
+
+.drawer-close {
+  display: none;
+  margin-top: 8px;
+  align-self: flex-start;
+  border: 1px solid var(--calc-line);
+  border-radius: var(--v2-radius-md);
+  background: var(--v2-surface-muted);
+  color: var(--calc-lime);
+  font-size: 12px;
+  font-weight: var(--v2-weight-bold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 8px 16px;
+  min-height: 40px;
+}
+
 .heavy-calc-brand {
   display: flex;
   align-items: center;
