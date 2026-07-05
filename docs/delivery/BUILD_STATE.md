@@ -2,10 +2,37 @@
 
 Last updated: 2026-07-04 America/New_York
 Current gate: Gate A launch hardening
-Current phase: Packet 08 Gate A launch hardening plus Gate B behind-flag backbone work: machine gates and live workflow smokes are mostly green; the Shop Talk Reddit-model backbone, moderation/reporting backend, human-facing moderation console/report UX, post photo media, reachability/naming cleanup, Tools hub consolidation, Payment Tracker server records, money-tools sync, the accepted tool-records sync slices, non-tool local-state boundary cleanup, dedicated network-records sync for Crew/Invites/informal written shout-outs, screen-density polish, and the latest mobile layout/device-accessibility subtraction slice are implemented while still respecting launch-readiness boundaries before broad exposure.
+Current phase: Packet 08 Gate A launch hardening plus Gate B behind-flag backbone work: machine gates and live workflow smokes are mostly green; the Shop Talk Reddit-model backbone, moderation/reporting backend, human-facing moderation console/report UX, post photo media, reachability/naming cleanup, Tools hub consolidation, Payment Tracker server records, money-tools sync, the accepted tool-records sync slices, non-tool local-state boundary cleanup, dedicated network-records sync for Crew/Invites/informal written shout-outs, screen-density polish, mobile layout/device-accessibility subtraction, and fraction calculator ergonomics slices are implemented while still respecting launch-readiness boundaries before broad exposure.
 Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
 Production release commit: `0b31628568c3ab83c056f96ab26d45559994d764` verified with live `/api/health`; latest runtime feature evidence is recorded below and docs-only evidence commits may supersede the served build SHA.
+
+## Latest Packet 08 Pass - Fraction Calculator Ergonomics
+
+- Took the Heavy 16th fraction calculator one step closer to a shippable field app:
+  - kept the fraction-only calculator direction instead of adding the dense spacing/hardware calculator panels back
+  - reduced unused display height so the keypad owns more of the first mobile viewport
+  - enlarged the fullscreen phone controls for the unit row, heavy/light row, and numeric keypad
+  - made the `FT`, `IN`, `FRAC`, and `MM` unit controls centered and visually consistent
+  - changed `H`, `L`, `x2`, and `/2` into self-explaining two-line buttons: Heavy, Light, Double, and Half
+  - replaced raw multiply/divide glyphs in JSX with HTML entities so Windows source encoding cannot corrupt the labels
+- Preserved launch boundaries:
+  - no homeowner flows, fake verification, job-payment processing, escrow, payroll, local-auth fallback, or frontend-only production claims were added
+  - no server data, auth, billing, storage, subscription, moderation, migration, or production data contracts were changed
+- Local gates:
+  - `npm run build` (pass)
+  - `npm run lint` (pass)
+  - `npm run test:unit` (pass; 44/44)
+  - `npm run test:e2e` (pass; fail-closed auth plus desktop/mobile jobs/discovery)
+  - `npm run test:ui:tools` (pass; screenshots at `C:\Users\zboyt\AppData\Local\Temp\rivt-tools-pass`)
+  - `npm run test:ui:mobile-actions` (pass; screenshots at `C:\Users\zboyt\AppData\Local\Temp\rivt-mobile-actions-pass`)
+  - `npm audit --omit=dev` (pass; 0 vulnerabilities)
+- Local limitation:
+  - full `npm run test` and standalone `npm run test:integration` were attempted, but the DB-backed integration suite did not return within a 5-minute local timeout. The calculator change is frontend-only and the targeted UI, unit, and e2e gates passed.
+- Rendered QA:
+  - mobile calculator screenshot confirmed the calculator remains no-scroll in the smoke viewport with larger thumb targets and clearer H/L/half/double controls.
+- Production deployment status:
+  - pending push/deploy for this pass.
 
 ## Latest Packet 08 Pass - Fraction Calculator Simplification
 

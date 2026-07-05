@@ -289,21 +289,21 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
               </div>
 
               <div className="fraction-unit-row" aria-label="Input unit">
-                <button type="button" className={activeUnit === "feet" ? "active" : ""} onClick={() => setActiveUnit("feet")}>
+                <button type="button" className={activeUnit === "feet" ? "active unit-feet" : "unit-feet"} onClick={() => setActiveUnit("feet")}>
                   <span>FT</span>
                   <strong>{feetText}</strong>
                 </button>
-                <button type="button" className={activeUnit === "inches" ? "active" : ""} onClick={() => setActiveUnit("inches")}>
+                <button type="button" className={activeUnit === "inches" ? "active unit-inches" : "unit-inches"} onClick={() => setActiveUnit("inches")}>
                   <span>IN</span>
                   <strong>{inchesText}</strong>
                 </button>
-                <button type="button" className={fraction32 ? "active" : ""} onClick={() => setFraction32(0)}>
+                <button type="button" className={fraction32 ? "active unit-fraction" : "unit-fraction"} onClick={() => setFraction32(0)}>
                   <span>FRAC</span>
                   <strong>{reduceFraction(fraction32) || "--"}</strong>
                 </button>
                 <button
                   type="button"
-                  className={metricEnabled ? "active" : ""}
+                  className={metricEnabled ? "active unit-metric" : "unit-metric"}
                   aria-pressed={metricEnabled}
                   onClick={() => setMetricEnabled((enabled) => !enabled)}
                 >
@@ -313,10 +313,22 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
               </div>
 
               <div className="fraction-action-row" aria-label="Heavy, light, double, and half controls">
-                <button type="button" aria-label="Light minus one thirty-second" onClick={() => adjustEntry(-1)}>L</button>
-                <button type="button" aria-label="Heavy plus one thirty-second" onClick={() => adjustEntry(1)}>H</button>
-                <button type="button" aria-label="Divide measurement by two" onClick={() => scaleEntry(0.5)}>÷2</button>
-                <button type="button" aria-label="Multiply measurement by two" onClick={() => scaleEntry(2)}>×2</button>
+                <button type="button" aria-label="Light minus one thirty-second" onClick={() => adjustEntry(-1)}>
+                  <strong>L</strong>
+                  <small>Light</small>
+                </button>
+                <button type="button" aria-label="Heavy plus one thirty-second" onClick={() => adjustEntry(1)}>
+                  <strong>H</strong>
+                  <small>Heavy</small>
+                </button>
+                <button type="button" aria-label="Divide measurement by two" onClick={() => scaleEntry(0.5)}>
+                  <strong>&divide;2</strong>
+                  <small>Half</small>
+                </button>
+                <button type="button" aria-label="Multiply measurement by two" onClick={() => scaleEntry(2)}>
+                  <strong>&times;2</strong>
+                  <small>Double</small>
+                </button>
               </div>
 
               <div className="fraction-strip" aria-label="Sixteenth fractions">
