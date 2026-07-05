@@ -21,6 +21,26 @@ Add one entry per staging/production deployment.
 - Rollback performed/result:
 - Approval:
 
+## Current Production - Packet 08 Immersive Tools Small-Phone Containment
+
+- Environment: Production (`https://rivt.pro`)
+- Date/time/timezone: 2026-07-05 America/New_York
+- Deployer: Codex through GitHub push to Railway-linked `master`
+- Source repository/branch: `Zboytjbxp/rivt`, `master`
+- Source commit: `c9b2a0033bc7155abd031f47db414d71bcfc028f`
+- Build/artifact ID: Railway-linked production deployment serving source `c9b2a0033bc7155abd031f47db414d71bcfc028f`; live `/api/health` is the runtime proof
+- Migration version before/after: `0021_shop_talk_post_media` / `0021_shop_talk_post_media` (no schema migration)
+- Feature-flag/config version: no provider credentials or operational-control flags changed
+- Provider/config changes (no secrets): no provider credentials changed; Sentry remains configured
+- Backup/rollback target: prior successful physical small-phone compact-guard deployment `8a6377c70fa664ff4dd800beac50df3795aafacd`; rollback is a normal source rollback because no migration changed
+- Automated gates: `npm run build`, `npm run lint`, `npm run test`, `npm run test:e2e`, `npm run test:ui:tools`, `npm run test:ui:mobile-actions`, and `npm audit --omit=dev` passed.
+- Rendered evidence: refreshed SE-sized screenshots were written outside the repo at `C:\Users\zboyt\AppData\Local\Temp\rivt-tools-pass` and `C:\Users\zboyt\AppData\Local\Temp\rivt-mobile-actions-pass`.
+- Post-deploy smoke tests: live `https://rivt.pro/api/health` returned exact source commit `c9b2a0033bc7155abd031f47db414d71bcfc028f`, ready migration `0021_shop_talk_post_media`, PostgreSQL, S3-compatible object storage, and configured Sentry.
+- Health/readiness result: healthy production health; no schema migration applied.
+- Known risks: the shell/tool containment fixes are live, but one final physical iPhone SE recheck is still required before the small-phone confidence gap can be treated as fully closed.
+- Rollback performed/result: not required.
+- Approval: accepted as a Gate A UI containment fix with no provider, auth, billing, storage, moderation, or migration boundary changes.
+
 ## Current Production - Packet 08 Tools Hub Consolidation
 
 - Environment: Production (`https://rivt.pro`)

@@ -21,11 +21,11 @@ Evidence must eventually link to implementation, automated tests, manual accepta
 
 ## Traceability Addendum - 2026-07-05 Immersive Tools Small-Phone Containment
 
-- `GA-UX-006` gains local rendered small-phone evidence: immersive tools now hide shell chrome on compact devices so the top bar, guest banner, and bottom nav do not overlap the Heavy 16th calculator or invoice builder on SE-class phones.
+- `GA-UX-006` gains rendered small-phone evidence: immersive tools now hide shell chrome on compact devices so the top bar, guest banner, and bottom nav do not overlap the Heavy 16th calculator or invoice builder on SE-class phones.
 - `GA-UX-003` gains tool-layout clarity evidence: invoice, daily-log, and tool workbenches now collapse to single-column compact-device layouts instead of relying only on wider breakpoint math, and the fraction calculator gets a dedicated compact fullscreen arrangement.
 - `GA-OPS-007` gains local automated evidence for this slice: `npm run build`, `npm run lint`, `npm run test`, `npm run test:e2e`, `npm run test:ui:tools`, `npm run test:ui:mobile-actions`, and `npm audit --omit=dev` passed. The DB-backed integration half of `npm run test` completed in this pass rather than timing out.
-- `GA-OPS-008` explicitly remains unchanged for this addendum: this is a local-only containment pass and has not been deployed yet, so no new production SHA is claimed here.
-- Remaining boundary: one post-deploy physical iPhone SE recheck is still required before this slice can be treated as production-verified instead of locally rendered.
+- `GA-OPS-008` gains production evidence: live `https://rivt.pro/api/health` reported commit `c9b2a0033bc7155abd031f47db414d71bcfc028f` with migration `0021_shop_talk_post_media`, PostgreSQL/S3-compatible storage, and configured Sentry.
+- Remaining boundary: one physical iPhone SE recheck is still required before this slice can be treated as fully real-device verified instead of smoke/deploy verified.
 
 ## Traceability Addendum - 2026-07-05 Physical Small-Phone Compact Guard
 

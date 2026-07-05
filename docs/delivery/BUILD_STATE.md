@@ -5,7 +5,7 @@ Current gate: Gate A launch hardening
 Current phase: Packet 08 Gate A launch hardening plus Gate B behind-flag backbone work: machine gates and live workflow smokes are mostly green; the Shop Talk Reddit-model backbone, moderation/reporting backend, human-facing moderation console/report UX, post photo media, reachability/naming cleanup, Tools hub consolidation, Payment Tracker server records, money-tools sync, the accepted tool-records sync slices, non-tool local-state boundary cleanup, dedicated network-records sync for Crew/Invites/informal written shout-outs, screen-density polish, mobile layout/device-accessibility subtraction, fraction calculator ergonomics, iPhone SE layout containment, and immersive-tool compact-device containment slices are implemented while still respecting launch-readiness boundaries before broad exposure.
 Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
-Production release commit: `8a6377c70fa664ff4dd800beac50df3795aafacd` verified with live `/api/health`; latest runtime feature evidence is recorded below and docs-only evidence commits may supersede the served build SHA.
+Production release commit: `c9b2a0033bc7155abd031f47db414d71bcfc028f` verified with live `/api/health`; latest runtime feature evidence is recorded below and docs-only evidence commits may supersede the served build SHA.
 
 ## Latest Packet 08 Pass - Immersive Tools Small-Phone Containment
 
@@ -29,8 +29,9 @@ Production release commit: `8a6377c70fa664ff4dd800beac50df3795aafacd` verified w
 - Rendered QA:
   - refreshed SE-sized smoke screenshots confirmed the Heavy 16th calculator no longer renders under the shell top bar and the invoice layout no longer clips horizontally in the compact viewport
 - Production deployment status:
-  - not deployed yet from this local pass; production remains on commit `8a6377c70fa664ff4dd800beac50df3795aafacd`
-  - the next deployment should include one physical recheck on the small iPhone SE after Railway picks up the build
+  - deployed to Railway production from master commit `c9b2a0033bc7155abd031f47db414d71bcfc028f`
+  - live `https://rivt.pro/api/health` returned 200 with exact build commit `c9b2a0033bc7155abd031f47db414d71bcfc028f`, migration `0021_shop_talk_post_media`, PostgreSQL dependency `postgres`, S3-compatible object storage, and configured Sentry
+  - one physical recheck on the small iPhone SE is still required to close the remaining real-device confidence gap for this slice
 
 ## Latest Packet 08 Pass - Physical Small-Phone Compact Guard
 
