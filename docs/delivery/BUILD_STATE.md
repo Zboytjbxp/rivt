@@ -2,10 +2,35 @@
 
 Last updated: 2026-07-05 America/New_York
 Current gate: Gate A launch hardening
-Current phase: Packet 08 Gate A launch hardening plus Gate B behind-flag backbone work: machine gates and live workflow smokes are mostly green; the Shop Talk Reddit-model backbone, moderation/reporting backend, human-facing moderation console/report UX, post photo media, reachability/naming cleanup, Tools hub consolidation, Payment Tracker server records, money-tools sync, the accepted tool-records sync slices, non-tool local-state boundary cleanup, dedicated network-records sync for Crew/Invites/informal written shout-outs, screen-density polish, mobile layout/device-accessibility subtraction, fraction calculator ergonomics, and iPhone SE layout containment slices are implemented while still respecting launch-readiness boundaries before broad exposure.
+Current phase: Packet 08 Gate A launch hardening plus Gate B behind-flag backbone work: machine gates and live workflow smokes are mostly green; the Shop Talk Reddit-model backbone, moderation/reporting backend, human-facing moderation console/report UX, post photo media, reachability/naming cleanup, Tools hub consolidation, Payment Tracker server records, money-tools sync, the accepted tool-records sync slices, non-tool local-state boundary cleanup, dedicated network-records sync for Crew/Invites/informal written shout-outs, screen-density polish, mobile layout/device-accessibility subtraction, fraction calculator ergonomics, iPhone SE layout containment, and immersive-tool compact-device containment slices are implemented while still respecting launch-readiness boundaries before broad exposure.
 Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
 Production release commit: `8a6377c70fa664ff4dd800beac50df3795aafacd` verified with live `/api/health`; latest runtime feature evidence is recorded below and docs-only evidence commits may supersede the served build SHA.
+
+## Latest Packet 08 Pass - Immersive Tools Small-Phone Containment
+
+- Closed the remaining SE-class tool containment issues that were still visible after the compact-device shell pass:
+  - immersive tools now set a document-level `data-rivt-immersive-tool` flag while any non-hub tool is open
+  - the app shell hides the global top bar, bottom nav, and guest banner while an immersive tool is open, so the calculator and invoice surfaces get the full tiny-phone viewport instead of fighting shell chrome
+  - compact-device tool CSS now force-collapses invoice/daily-log/tool workbenches into single-column layouts and tightens padding, panel spacing, action rows, and preview tables for SE-sized viewports
+  - the Heavy 16th calculator receives a true compact-device fullscreen layout: reduced chrome, tighter display/action rows, hidden secondary meta blocks, and keypad sizing that fits 320x568 without overlap
+  - Shop Talk compact-device spacing was tightened at the same time so community discovery/search rows keep consistent breathing room above the mobile nav
+- Preserved launch boundaries:
+  - no homeowner flows, fake verification, job-payment processing, escrow, payroll, local-auth fallback, or frontend-only production claims were added
+  - no server data, auth, billing, storage, moderation, migration, or production data contracts were changed
+- Local gates:
+  - `npm run build` (pass)
+  - `npm run lint` (pass)
+  - `npm run test` (pass; unit plus DB-backed integration)
+  - `npm run test:e2e` (pass)
+  - `npm run test:ui:tools` (pass; screenshots at `C:\Users\zboyt\AppData\Local\Temp\rivt-tools-pass`)
+  - `npm run test:ui:mobile-actions` (pass; screenshots at `C:\Users\zboyt\AppData\Local\Temp\rivt-mobile-actions-pass`)
+  - `npm audit --omit=dev` (pass; 0 vulnerabilities)
+- Rendered QA:
+  - refreshed SE-sized smoke screenshots confirmed the Heavy 16th calculator no longer renders under the shell top bar and the invoice layout no longer clips horizontally in the compact viewport
+- Production deployment status:
+  - not deployed yet from this local pass; production remains on commit `8a6377c70fa664ff4dd800beac50df3795aafacd`
+  - the next deployment should include one physical recheck on the small iPhone SE after Railway picks up the build
 
 ## Latest Packet 08 Pass - Physical Small-Phone Compact Guard
 

@@ -2726,6 +2726,19 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
     return () => onImmersiveChange?.(false);
   }, [activeTool, mode, onImmersiveChange]);
 
+  useEffect(() => {
+    const root = document.documentElement;
+    const immersive = mode === "tools" && activeTool !== "hub";
+    if (immersive) {
+      root.setAttribute("data-rivt-immersive-tool", activeTool);
+    } else {
+      root.removeAttribute("data-rivt-immersive-tool");
+    }
+    return () => {
+      root.removeAttribute("data-rivt-immersive-tool");
+    };
+  }, [activeTool, mode]);
+
   const toolSwipeHandlers: ToolSwipeHandlers = {
     onPointerDown(event) {
       const isEdgeSwipe = event.clientX <= 32;

@@ -768,11 +768,30 @@ html[data-rivt-compact-device="true"] .v2-mobile-nav {
     transition: transform 180ms ease, opacity 180ms ease;
   }
 
-  .v2-mobile-nav.is-hidden {
-    transform: translateY(calc(100% + 14px));
-    opacity: 0;
-    pointer-events: none;
-  }
+.v2-mobile-nav.is-hidden {
+  transform: translateY(calc(100% + 14px));
+  opacity: 0;
+  pointer-events: none;
+}
+
+html[data-rivt-immersive-tool] .v2-mobile-nav {
+  transform: translateY(calc(100% + 14px));
+  opacity: 0;
+  pointer-events: none;
+}
+
+html[data-rivt-immersive-tool] .v2-topbar {
+  display: none;
+}
+
+html[data-rivt-immersive-tool] .rivt-v2 .v2-main {
+  padding-top: 14px;
+  padding-bottom: max(14px, env(safe-area-inset-bottom));
+}
+
+html[data-rivt-immersive-tool] .guest-banner {
+  display: none;
+}
 
   .v2-mobile-nav button {
     min-width: 0;

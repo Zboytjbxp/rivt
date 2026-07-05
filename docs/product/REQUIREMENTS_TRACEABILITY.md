@@ -19,6 +19,14 @@ Evidence must eventually link to implementation, automated tests, manual accepta
 - `GA-OPS-007` gains rendered local evidence: `npm run test:ui:tools` and `npm run test:ui:mobile-actions` passed for this slice. Full machine-gate results are recorded in `docs/delivery/BUILD_STATE.md`.
 - `GA-OPS-008` gains production evidence: live `https://rivt.pro/api/health` reported commit `90f19da845519507a2a523672e822990ff9920de` with PostgreSQL/S3-compatible storage and configured Sentry; `EXPECTED_SOURCE_COMMIT=90f19da845519507a2a523672e822990ff9920de npm run monitor:production` passed.
 
+## Traceability Addendum - 2026-07-05 Immersive Tools Small-Phone Containment
+
+- `GA-UX-006` gains local rendered small-phone evidence: immersive tools now hide shell chrome on compact devices so the top bar, guest banner, and bottom nav do not overlap the Heavy 16th calculator or invoice builder on SE-class phones.
+- `GA-UX-003` gains tool-layout clarity evidence: invoice, daily-log, and tool workbenches now collapse to single-column compact-device layouts instead of relying only on wider breakpoint math, and the fraction calculator gets a dedicated compact fullscreen arrangement.
+- `GA-OPS-007` gains local automated evidence for this slice: `npm run build`, `npm run lint`, `npm run test`, `npm run test:e2e`, `npm run test:ui:tools`, `npm run test:ui:mobile-actions`, and `npm audit --omit=dev` passed. The DB-backed integration half of `npm run test` completed in this pass rather than timing out.
+- `GA-OPS-008` explicitly remains unchanged for this addendum: this is a local-only containment pass and has not been deployed yet, so no new production SHA is claimed here.
+- Remaining boundary: one post-deploy physical iPhone SE recheck is still required before this slice can be treated as production-verified instead of locally rendered.
+
 ## Traceability Addendum - 2026-07-05 Physical Small-Phone Compact Guard
 
 - `GA-UX-006` gains narrow-device containment evidence: SE-class phones and other truly narrow coarse-pointer devices now set a root compact-device flag based on physical screen/viewport floor instead of relying only on CSS viewport breakpoints.

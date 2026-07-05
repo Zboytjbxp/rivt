@@ -9321,6 +9321,32 @@ html[data-rivt-compact-device="true"] .auth-intro-secondary {
   font-size: 13px;
 }
 
+html[data-rivt-compact-device="true"] .guest-banner {
+  min-height: 42px;
+  gap: 8px;
+  padding: 6px 10px;
+}
+
+html[data-rivt-compact-device="true"] .guest-banner > span {
+  display: -webkit-box;
+  overflow: hidden;
+  font-size: 12px;
+  line-height: 1.25;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+}
+
+html[data-rivt-compact-device="true"] .guest-banner-actions {
+  gap: 6px;
+}
+
+html[data-rivt-compact-device="true"] .guest-banner .primary-action,
+html[data-rivt-compact-device="true"] .guest-exit {
+  min-height: 32px;
+  padding-inline: 10px;
+  font-size: 12px;
+}
+
 .guest-exit {
   min-height: 36px;
   padding: 0 10px;

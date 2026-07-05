@@ -242,6 +242,7 @@ async function assertCalculatorNoVerticalOverflow(page) {
 }
 
 async function runToolsFlow(page, viewportName) {
+  const isHandsetViewport = viewportName !== "desktop";
   await page.goto(`${baseUrl}/app/tools`, { waitUntil: "networkidle" });
   await page.getByRole("heading", { name: "Tools", exact: true }).waitFor({ timeout: 15_000 });
   const primaryTool = (name) => page.locator(".v2-tool-launch-card").filter({ hasText: name }).first();
@@ -264,7 +265,7 @@ async function runToolsFlow(page, viewportName) {
   await page.getByLabel("Heavy, light, double, and half controls").getByRole("button", { name: "Light minus one thirty-second" }).waitFor({ timeout: 15_000 });
   await page.getByLabel("Heavy, light, double, and half controls").getByRole("button", { name: "Multiply measurement by two" }).waitFor({ timeout: 15_000 });
   await page.getByLabel("Heavy, light, double, and half controls").getByRole("button", { name: "Divide measurement by two" }).waitFor({ timeout: 15_000 });
-  const fractionButtons = viewportName === "mobile"
+  const fractionButtons = isHandsetViewport
     ? page.getByLabel("Sixteenth tape reference")
     : page.getByLabel("Sixteenth fractions");
   await page.getByLabel("Fraction calculator keypad").getByRole("button", { name: "7" }).click();
@@ -282,7 +283,7 @@ async function runToolsFlow(page, viewportName) {
   await page.locator(".calc-primary-value", { hasText: '9 25/32"' }).waitFor({ timeout: 15_000 });
   await page.getByLabel("Heavy, light, double, and half controls").getByRole("button", { name: "Light minus one thirty-second" }).click();
   await page.locator(".calc-primary-value", { hasText: '9 3/4"' }).waitFor({ timeout: 15_000 });
-  if (viewportName === "mobile") await assertCalculatorNoVerticalOverflow(page);
+  if (isHandsetViewport) await assertCalculatorNoVerticalOverflow(page);
   await assertNoHorizontalOverflow(page);
   await page.screenshot({ path: path.join(screenshotDir, `${viewportName}-calculator.png`), fullPage: true });
   await page.getByLabel("Heavy 16th field calculator").getByRole("button", { name: "Tools" }).click();
@@ -351,6 +352,7 @@ try {
   for (const viewport of [
     { name: "desktop", width: 1440, height: 900 },
     { name: "mobile", width: 390, height: 844 },
+    { name: "se", width: 320, height: 568 },
   ]) {
     const context = await browser.newContext({ viewport, serviceWorkers: "block" });
     const page = await context.newPage();
