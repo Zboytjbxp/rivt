@@ -19,6 +19,14 @@ Evidence must eventually link to implementation, automated tests, manual accepta
 - `GA-OPS-007` gains rendered local evidence: `npm run test:ui:tools` and `npm run test:ui:mobile-actions` passed for this slice. Full machine-gate results are recorded in `docs/delivery/BUILD_STATE.md`.
 - `GA-OPS-008` gains production evidence: live `https://rivt.pro/api/health` reported commit `90f19da845519507a2a523672e822990ff9920de` with PostgreSQL/S3-compatible storage and configured Sentry; `EXPECTED_SOURCE_COMMIT=90f19da845519507a2a523672e822990ff9920de npm run monitor:production` passed.
 
+## Traceability Addendum - 2026-07-05 Physical Small-Phone Compact Guard
+
+- `GA-UX-006` gains narrow-device containment evidence: SE-class phones and other truly narrow coarse-pointer devices now set a root compact-device flag based on physical screen/viewport floor instead of relying only on CSS viewport breakpoints.
+- `GA-UX-006` also gains shell truth evidence: when the compact-device flag is present, the desktop sidebar/search layout is forcibly suppressed and the mobile shell/nav is restored even if the browser reports an odd desktop-like viewport mode.
+- `GA-PRO-001` gains onboarding reachability evidence: the auth intro and guest-preview orange screens reuse the compact narrow-phone containment rules under the same compact-device flag, preventing desktop-style preview compositions from overflowing on tiny physical phones.
+- `GA-OPS-007` gains local automated evidence for this slice: `npm run build`, `npm run lint`, `npm run test:ui:mobile-actions`, `npm run test:e2e`, and `npm audit --omit=dev` passed. Full `npm run test` exceeded the local command window, so aggregate DB-backed completion is not claimed here.
+- Remaining boundary: this addendum strengthens shell/auth behavior on physically small phones, but it is still not a substitute for a final real-device pass across Safari/PWA installed mode and Android Chrome before broad launch.
+
 ## Traceability Addendum - 2026-07-04 Mobile Layout and Device Accessibility Subtraction
 
 - `GA-UX-006` gains rendered mobile evidence for a device-accessibility slice across Home, Work, Crew, Shop Talk, Tools, Records, and Profile/Settings at 390x844 with no document-wide horizontal overflow and no sampled visible sub-44px touch targets.

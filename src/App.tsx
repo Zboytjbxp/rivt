@@ -470,6 +470,37 @@ function App() {
   });
 
   useEffect(() => {
+    const root = document.documentElement;
+    const mediaQuery = window.matchMedia("(pointer: coarse)");
+    const visualViewport = window.visualViewport;
+
+    function syncCompactDeviceFlag() {
+      const viewportFloor = Math.min(window.innerWidth || Number.MAX_SAFE_INTEGER, window.innerHeight || Number.MAX_SAFE_INTEGER);
+      const screenFloor = Math.min(window.screen.width || Number.MAX_SAFE_INTEGER, window.screen.height || Number.MAX_SAFE_INTEGER);
+      const isCompactDevice = mediaQuery.matches && (screenFloor <= 375 || viewportFloor <= 360);
+
+      if (isCompactDevice) {
+        root.setAttribute("data-rivt-compact-device", "true");
+      } else {
+        root.removeAttribute("data-rivt-compact-device");
+      }
+    }
+
+    syncCompactDeviceFlag();
+    mediaQuery.addEventListener?.("change", syncCompactDeviceFlag);
+    window.addEventListener("resize", syncCompactDeviceFlag);
+    window.addEventListener("orientationchange", syncCompactDeviceFlag);
+    visualViewport?.addEventListener("resize", syncCompactDeviceFlag);
+
+    return () => {
+      mediaQuery.removeEventListener?.("change", syncCompactDeviceFlag);
+      window.removeEventListener("resize", syncCompactDeviceFlag);
+      window.removeEventListener("orientationchange", syncCompactDeviceFlag);
+      visualViewport?.removeEventListener("resize", syncCompactDeviceFlag);
+    };
+  }, []);
+
+  useEffect(() => {
     if (typeof window === "undefined") return;
     try {
       window.sessionStorage.setItem(AUTH_MODE_KEY, authMode);

@@ -1,11 +1,33 @@
 # RIVT Build State
 
-Last updated: 2026-07-04 America/New_York
+Last updated: 2026-07-05 America/New_York
 Current gate: Gate A launch hardening
 Current phase: Packet 08 Gate A launch hardening plus Gate B behind-flag backbone work: machine gates and live workflow smokes are mostly green; the Shop Talk Reddit-model backbone, moderation/reporting backend, human-facing moderation console/report UX, post photo media, reachability/naming cleanup, Tools hub consolidation, Payment Tracker server records, money-tools sync, the accepted tool-records sync slices, non-tool local-state boundary cleanup, dedicated network-records sync for Crew/Invites/informal written shout-outs, screen-density polish, mobile layout/device-accessibility subtraction, fraction calculator ergonomics, and iPhone SE layout containment slices are implemented while still respecting launch-readiness boundaries before broad exposure.
 Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
 Production release commit: `2fe69d39d6290a67d9d886047ad90f41aef844b6` verified with live `/api/health`; latest runtime feature evidence is recorded below and docs-only evidence commits may supersede the served build SHA.
+
+## Latest Packet 08 Pass - Physical Small-Phone Compact Guard
+
+- Added a defensive compact-device guard for SE-class phones and other truly narrow coarse-pointer devices:
+  - `App.tsx` now sets `data-rivt-compact-device="true"` on the document root when the physical screen floor is `<= 375px` or the active viewport floor is `<= 360px`
+  - this guard is independent of browser viewport honesty, so odd desktop-mode rendering on a tiny physical phone still collapses to the mobile shell
+  - the AppShell now force-hides the desktop sidebar, suppresses the desktop search field, restores the mobile brand/search controls, and forces the bottom nav back on when the compact-device flag is present
+  - auth/onboarding intro and preview screens now reuse the narrow-phone containment rules when the compact-device flag is present, preventing the orange preview layouts from staying in wide two-column mode on a small physical phone
+- Preserved launch boundaries:
+  - no homeowner flows, fake verification, job-payment processing, escrow, payroll, local-auth fallback, or frontend-only production claims were added
+  - no server data, auth, billing, storage, moderation, migration, or production data contracts were changed
+- Local gates:
+  - `npm run build` (pass)
+  - `npm run lint` (pass)
+  - `npm run test:ui:mobile-actions` (pass)
+  - `npm run test:e2e` (pass)
+  - `npm audit --omit=dev` (pass; 0 vulnerabilities)
+  - `git diff --check` (pass; CRLF warnings only for touched files)
+- Local limitation:
+  - full `npm run test` was attempted but exceeded the local command window; this slice is UI-only and the targeted mobile smoke plus e2e gates passed
+- Production deployment status:
+  - pending merge/push from `codex/se-compact-mobile-guard`
 
 ## Latest Packet 08 Pass - Launch QA Trust Cleanup
 
