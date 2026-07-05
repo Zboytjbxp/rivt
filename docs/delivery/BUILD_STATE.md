@@ -5,7 +5,7 @@ Current gate: Gate A launch hardening
 Current phase: Packet 08 Gate A launch hardening plus Gate B behind-flag backbone work: machine gates and live workflow smokes are mostly green; the Shop Talk Reddit-model backbone, moderation/reporting backend, human-facing moderation console/report UX, post photo media, reachability/naming cleanup, Tools hub consolidation, Payment Tracker server records, money-tools sync, the accepted tool-records sync slices, non-tool local-state boundary cleanup, dedicated network-records sync for Crew/Invites/informal written shout-outs, screen-density polish, mobile layout/device-accessibility subtraction, fraction calculator ergonomics, and iPhone SE layout containment slices are implemented while still respecting launch-readiness boundaries before broad exposure.
 Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
-Production release commit: `6a6dd99dff11f3d65c62843ebcac0af0a2d10f87` verified with live `/api/health`; latest runtime feature evidence is recorded below and docs-only evidence commits may supersede the served build SHA.
+Production release commit: `2fe69d39d6290a67d9d886047ad90f41aef844b6` verified with live `/api/health`; latest runtime feature evidence is recorded below and docs-only evidence commits may supersede the served build SHA.
 
 ## Latest Packet 08 Pass - iPhone SE Layout Containment
 
@@ -29,7 +29,9 @@ Production release commit: `6a6dd99dff11f3d65c62843ebcac0af0a2d10f87` verified w
   - Browser plugin setup was attempted, but the in-app browser runtime did not expose the documented `browser.documentation()` API in this session, so Playwright fallback was used
   - manual SE screenshots were captured outside the repo at `C:\Users\zboyt\AppData\Local\Temp\rivt-se-after-auth.png`, `C:\Users\zboyt\AppData\Local\Temp\rivt-se-after-preview.png`, and `C:\Users\zboyt\AppData\Local\Temp\rivt-se-after-guest.png`
 - Production deployment status:
-  - pending push/deploy for this pass.
+  - deployed to Railway production from master commit `2fe69d39d6290a67d9d886047ad90f41aef844b6`
+  - live `https://rivt.pro/api/health` returned 200 with exact build commit `2fe69d39d6290a67d9d886047ad90f41aef844b6`, migration `0021_shop_talk_post_media`, PostgreSQL dependency `postgres`, S3-compatible object storage, and Sentry configured
+  - `EXPECTED_SOURCE_COMMIT=2fe69d39d6290a67d9d886047ad90f41aef844b6 npm run monitor:production` passed with operational controls off, seven anonymous private-route checks, and 562 ms duration
 
 ## Latest Packet 08 Pass - Fraction Calculator Ergonomics
 
