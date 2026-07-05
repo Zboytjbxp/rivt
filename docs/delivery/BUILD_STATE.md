@@ -34,7 +34,10 @@ Production release commit: `2fe69d39d6290a67d9d886047ad90f41aef844b6` verified w
   - `npm run test:e2e` (pass; fail-closed auth plus desktop/mobile jobs/discovery)
   - `npm audit --omit=dev` (pass; 0 vulnerabilities)
 - Production deployment status:
-  - pending merge/deploy from `codex/launch-qa-trust-cleanup`
+  - merged to `master` and deployed from code commit `90f19da845519507a2a523672e822990ff9920de`
+  - live `https://rivt.pro/api/health` returned 200 with exact build commit `90f19da845519507a2a523672e822990ff9920de`, PostgreSQL dependency `postgres`, S3-compatible object storage, and Sentry configured
+  - `EXPECTED_SOURCE_COMMIT=90f19da845519507a2a523672e822990ff9920de npm run monitor:production` passed with operational controls off, seven anonymous private-route checks, and 579 ms duration
+  - this docs-only evidence update may supersede the served source SHA without changing runtime code
 
 ## Latest Packet 08 Pass - iPhone SE Layout Containment
 

@@ -17,7 +17,7 @@ Evidence must eventually link to implementation, automated tests, manual accepta
 - `GA-UX-006` gains mobile polish evidence: Profile/Settings no longer exposes a duplicate local-only service-radius control, Pro copy reflects real launch gates, and bid-line fields have a 375px containment layout.
 - `GA-FND-004` gains session-safety evidence: API, Shop Talk, and tool-record 401 responses now dispatch a shared session-ended signal so users are prompted to sign in again after revocation/expiry.
 - `GA-OPS-007` gains rendered local evidence: `npm run test:ui:tools` and `npm run test:ui:mobile-actions` passed for this slice. Full machine-gate results are recorded in `docs/delivery/BUILD_STATE.md`.
-- Remaining boundary: production deployment evidence is pending merge/deploy from `codex/launch-qa-trust-cleanup`.
+- `GA-OPS-008` gains production evidence: live `https://rivt.pro/api/health` reported commit `90f19da845519507a2a523672e822990ff9920de` with PostgreSQL/S3-compatible storage and configured Sentry; `EXPECTED_SOURCE_COMMIT=90f19da845519507a2a523672e822990ff9920de npm run monitor:production` passed.
 
 ## Traceability Addendum - 2026-07-04 Mobile Layout and Device Accessibility Subtraction
 
