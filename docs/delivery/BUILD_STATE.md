@@ -5,7 +5,7 @@ Current gate: Gate A launch hardening
 Current phase: Packet 08 Gate A launch hardening plus Gate B behind-flag backbone work: machine gates and live workflow smokes are mostly green; the Shop Talk Reddit-model backbone, moderation/reporting backend, human-facing moderation console/report UX, post photo media, reachability/naming cleanup, Tools hub consolidation, Payment Tracker server records, money-tools sync, the accepted tool-records sync slices, non-tool local-state boundary cleanup, dedicated network-records sync for Crew/Invites/informal written shout-outs, screen-density polish, mobile layout/device-accessibility subtraction, and fraction calculator ergonomics slices are implemented while still respecting launch-readiness boundaries before broad exposure.
 Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
-Production release commit: `0b31628568c3ab83c056f96ab26d45559994d764` verified with live `/api/health`; latest runtime feature evidence is recorded below and docs-only evidence commits may supersede the served build SHA.
+Production release commit: `9e62aaadea0c39ef9bd659454aa71314739e4cb7` verified with live `/api/health`; latest runtime feature evidence is recorded below and docs-only evidence commits may supersede the served build SHA.
 
 ## Latest Packet 08 Pass - Fraction Calculator Ergonomics
 
@@ -32,7 +32,9 @@ Production release commit: `0b31628568c3ab83c056f96ab26d45559994d764` verified w
 - Rendered QA:
   - mobile calculator screenshot confirmed the calculator remains no-scroll in the smoke viewport with larger thumb targets and clearer H/L/half/double controls.
 - Production deployment status:
-  - pending push/deploy for this pass.
+  - runtime release commit `9e62aaadea0c39ef9bd659454aa71314739e4cb7` was pushed to GitHub and picked up by Railway production service `RIVT`
+  - live `https://rivt.pro/api/health` returned `ok: true`, build commit `9e62aaadea0c39ef9bd659454aa71314739e4cb7`, migration `0021_shop_talk_post_media`, PostgreSQL, S3-compatible object storage, and configured Sentry
+  - `EXPECTED_SOURCE_COMMIT=9e62aaadea0c39ef9bd659454aa71314739e4cb7 npm run monitor:production` passed with operational controls off, seven anonymous private-route checks, and 654 ms duration
 
 ## Latest Packet 08 Pass - Fraction Calculator Simplification
 
