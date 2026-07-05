@@ -40,11 +40,11 @@ const OUTCOMES: Array<{ icon: LucideIcon; title: string; copy: string }> = [
 ];
 
 const INCLUDED = [
-  "90-day time history",
+  "Full time-history access",
   "CSV expense export",
-  "Cloud project photos and records",
-  "Invoice, estimate, daily log, and closeout tools",
-  "Self-serve cancellation and receipts",
+  "Expanded records and closeout exports",
+  "Billing receipts and payment details",
+  "Self-serve cancellation from Settings",
 ];
 
 export function UpgradeModal({ reason, onClose }: UpgradeModalProps) {

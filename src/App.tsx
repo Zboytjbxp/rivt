@@ -89,7 +89,7 @@ import { useCommunityReactions } from "./features/shop-talk/useCommunityReaction
 import type { ProfileUpdateInput } from "./features/profile/ProfileHub";
 import type { ToolMode } from "./features/tools/ToolsStudio";
 import { recordChecklist, safetyQuizData, trainingModules, type SafetyQuizResult } from "./features/profile/training-data";
-import { apiPath } from "./lib/api";
+import { apiPath, RIVT_SESSION_EXPIRED_EVENT } from "./lib/api";
 import {
   AuthGate,
   AuthLinkFlow,
@@ -204,6 +204,52 @@ type StorageUsageSnapshot = {
   database?: string;
   missing?: string[];
 };
+
+const SAFETY_QUIZ_RESULTS_KEY = "rivt.safetyQuizResults.v1";
+
+function readSafetyQuizResults(): Record<string, SafetyQuizResult> {
+  if (typeof window === "undefined") return {};
+  try {
+    const raw = window.localStorage.getItem(SAFETY_QUIZ_RESULTS_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw) as unknown;
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {};
+
+    return Object.entries(parsed as Record<string, Partial<SafetyQuizResult>>).reduce<Record<string, SafetyQuizResult>>(
+      (acc, [quizId, result]) => {
+        if (
+          result &&
+          typeof result.quizId === "string" &&
+          typeof result.score === "number" &&
+          typeof result.passed === "boolean" &&
+          typeof result.completedAt === "string" &&
+          typeof result.attempts === "number"
+        ) {
+          acc[quizId] = {
+            quizId: result.quizId,
+            score: result.score,
+            passed: result.passed,
+            completedAt: result.completedAt,
+            attempts: result.attempts,
+          };
+        }
+        return acc;
+      },
+      {},
+    );
+  } catch {
+    return {};
+  }
+}
+
+function writeSafetyQuizResults(results: Record<string, SafetyQuizResult>) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(SAFETY_QUIZ_RESULTS_KEY, JSON.stringify(results));
+  } catch {
+    // Device storage can be unavailable in private browsing; quiz state remains in memory.
+  }
+}
 
 function RouteFallback() {
   return <div className="route-loading" role="status" aria-live="polite" aria-label="Loading" />;
@@ -371,13 +417,13 @@ function App() {
   const [inboxSending, setInboxSending] = useState(false);
   const [inboxError, setInboxError] = useState<string | null>(null);
   const [uploadedRecords, setUploadedRecords] = useState<Set<string>>(
-    () => new Set(["Signed scope", "Legal consent accepted"]),
+    () => new Set(),
   );
   const [storageUsage, setStorageUsage] = useState<StorageUsageSnapshot | null>(null);
   const [completedTraining] = useState<Set<string>>(
-    () => new Set(["Customer-site conduct"]),
+    () => new Set(),
   );
-  const [safetyQuizResults, setSafetyQuizResults] = useState<Record<string, SafetyQuizResult>>({});
+  const [safetyQuizResults, setSafetyQuizResults] = useState<Record<string, SafetyQuizResult>>(readSafetyQuizResults);
   const [feedbackItems] = useState<FeedbackItem[]>([]);
   const [paymentRecords] = useState<PaymentRecord[]>([]);
   const [communityPosts, setCommunityPosts] = useState<CommunityPost[]>(communityPromptPosts);
@@ -431,6 +477,32 @@ function App() {
       // no-op
     }
   }, [authMode]);
+
+  useEffect(() => {
+    writeSafetyQuizResults(safetyQuizResults);
+  }, [safetyQuizResults]);
+
+  useEffect(() => {
+    function handleSessionExpired() {
+      if (!authUser || isGuest) return;
+      setAuthUser(null);
+      setCanonicalAccount(null);
+      setOnboardingComplete(false);
+      resetCommunityReactions();
+      setStorageUsage(null);
+      setActiveView("Home");
+      setRequestedTool(null);
+      setToolsImmersive(false);
+      addActivity(
+        "Session ended",
+        "Your account session ended or was signed out on another device. Sign in again to keep working.",
+        "warning",
+      );
+    }
+
+    window.addEventListener(RIVT_SESSION_EXPIRED_EVENT, handleSessionExpired);
+    return () => window.removeEventListener(RIVT_SESSION_EXPIRED_EVENT, handleSessionExpired);
+  }, [addActivity, authUser, isGuest, resetCommunityReactions]);
 
   useEffect(() => {
     const url = new URL(window.location.href);
@@ -1247,11 +1319,17 @@ function App() {
         postType,
         communitySlug: communitySlugOverride ?? undefined,
       });
-      if (serverPost) {
-        const mediaPost = photoFile ? await uploadShopTalkPostPhoto(serverPost.id, photoFile) : null;
-        photoUploadFailed = Boolean(photoFile && !mediaPost);
-        postToAdd = toCommunityPostViewModel(mediaPost ?? serverPost);
+      if (!serverPost) {
+        addActivity(
+          "Shop Talk post was not saved",
+          "RIVT could not save that post to the server. Nothing was published. Try again in a minute.",
+          "error",
+        );
+        return;
       }
+      const mediaPost = photoFile ? await uploadShopTalkPostPhoto(serverPost.id, photoFile) : null;
+      photoUploadFailed = Boolean(photoFile && !mediaPost);
+      postToAdd = toCommunityPostViewModel(mediaPost ?? serverPost);
     }
 
     setCommunityPosts((current) => [
@@ -1395,9 +1473,7 @@ function App() {
         : "All trades",
     );
     setTrustReady(true);
-    setUploadedRecords(
-      () => new Set(["Signed scope", "Legal consent accepted"]),
-    );
+    setUploadedRecords(() => new Set());
     const postOnboardingView = ({
       home: "Home",
       work: "Work",
@@ -1517,7 +1593,7 @@ function App() {
     addActivity(
       result.passed ? "Safety cert earned" : "Quiz complete",
       result.passed
-        ? `You passed ${quiz?.title ?? result.quizId}. Certificate added to your safety record.`
+        ? `You passed ${quiz?.title ?? result.quizId}. Certificate saved on this device.`
         : `Score: ${result.score}%. You need 80% to earn the certificate. Try again.`,
       result.passed ? "success" : "info",
     );

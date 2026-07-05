@@ -10,6 +10,15 @@ Status values:
 
 Evidence must eventually link to implementation, automated tests, manual acceptance proof, and deployed build.
 
+## Traceability Addendum - 2026-07-04 Launch QA Trust Cleanup
+
+- `GA-UX-005` gains honesty evidence: authenticated Shop Talk post creation now fails visibly when server persistence fails instead of inserting a local-only post that disappears on reload.
+- `GA-UX-005` also gains fresh-account truthfulness evidence: new accounts no longer begin with fabricated record/training progress, and safety quiz copy no longer claims server safety-record persistence before that record type exists.
+- `GA-UX-006` gains mobile polish evidence: Profile/Settings no longer exposes a duplicate local-only service-radius control, Pro copy reflects real launch gates, and bid-line fields have a 375px containment layout.
+- `GA-FND-004` gains session-safety evidence: API, Shop Talk, and tool-record 401 responses now dispatch a shared session-ended signal so users are prompted to sign in again after revocation/expiry.
+- `GA-OPS-007` gains rendered local evidence: `npm run test:ui:tools` and `npm run test:ui:mobile-actions` passed for this slice. Full machine-gate results are recorded in `docs/delivery/BUILD_STATE.md`.
+- Remaining boundary: production deployment evidence is pending merge/deploy from `codex/launch-qa-trust-cleanup`.
+
 ## Traceability Addendum - 2026-07-04 Mobile Layout and Device Accessibility Subtraction
 
 - `GA-UX-006` gains rendered mobile evidence for a device-accessibility slice across Home, Work, Crew, Shop Talk, Tools, Records, and Profile/Settings at 390x844 with no document-wide horizontal overflow and no sampled visible sub-44px touch targets.

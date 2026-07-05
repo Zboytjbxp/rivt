@@ -217,11 +217,11 @@ function QuizModal({
             <div className={`v2-quiz-result-icon ${result.passed ? "is-pass" : "is-fail"}`}>
               {result.passed ? <CheckCircle size={52} /> : <XCircle size={52} />}
             </div>
-            <h3>{result.passed ? "Certificate earned" : "Not quite yet"}</h3>
+            <h3>{result.passed ? "Quiz complete" : "Not quite yet"}</h3>
             <p className="v2-quiz-score-line">{result.score}% · {correctCount}/{quiz.questions.length} correct</p>
             <p className="v2-quiz-result-desc">
               {result.passed
-                ? `You passed ${quiz.title}. This certificate is now on your safety record.`
+                ? `You passed ${quiz.title}. This result is saved on this device until account-backed safety records are available.`
                 : `Passing score is 80% (${Math.ceil(quiz.questions.length * 0.8)} of ${quiz.questions.length} correct). Review the explanations and try again.`}
             </p>
             <div className="v2-quiz-result-actions">
@@ -683,36 +683,6 @@ function PortfolioSection({ onNavigate }: { onNavigate?: (dest: string) => void 
       <button type="button" className="v2-primary-button" onClick={() => onNavigate?.("tools")}>
         View job photos
       </button>
-    </div>
-  );
-}
-
-// ── Service Area Selector ─────────────────────────────────────────────────────
-
-function ServiceAreaSelector() {
-  const options = ["10", "25", "50", "100", "Any"];
-  const [radius, setRadius] = useState(() => {
-    try { return localStorage.getItem("rivt.serviceRadius.v1") ?? "25"; } catch { return "25"; }
-  });
-  function pick(r: string) {
-    setRadius(r);
-    try { localStorage.setItem("rivt.serviceRadius.v1", r); } catch { /* noop */ }
-  }
-  return (
-    <div className="v2-service-area">
-      <span className="v2-service-area-label">Service radius</span>
-      <div className="v2-service-area-chips">
-        {options.map((opt) => (
-          <button
-            key={opt}
-            type="button"
-            className={`v2-service-chip${radius === opt ? " active" : ""}`}
-            onClick={() => pick(opt)}
-          >
-            {opt === "Any" ? "Any distance" : `${opt} mi`}
-          </button>
-        ))}
-      </div>
     </div>
   );
 }
@@ -1636,7 +1606,6 @@ export function ProfileHub({
               <label><span>Contact visibility</span><select value={draft.contactEmailVisibility} onChange={(event) => setDraft({ ...draft, contactEmailVisibility: event.target.value as ProfileUpdateInput["contactEmailVisibility"] })}><option value="private">Private</option><option value="connections">Connections only</option></select></label>
               <label><span>Phone visibility</span><select value={draft.phoneVisibility} onChange={(event) => setDraft({ ...draft, phoneVisibility: event.target.value as ProfileUpdateInput["phoneVisibility"] })}><option value="private">Private</option><option value="connections">Connections only</option></select></label>
             </div>
-            <ServiceAreaSelector />
             <div className="v2-profile-trade-picker" aria-label="Trade specialties">
               {tradeOptions.filter((trade) => trade !== "All trades").map((trade) => (
                 <button key={trade} type="button" className={draft.specialties.includes(trade as Trade) ? "is-selected" : ""} onClick={() => toggleSpecialty(trade as Trade)}>{trade}</button>

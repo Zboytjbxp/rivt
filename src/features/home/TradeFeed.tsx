@@ -26,7 +26,7 @@ const AVAIL_LABEL: Record<Availability, string> = {
   booked: "Booked up",
 };
 const AVAIL_ORDER: Availability[] = ["available", "limited", "booked"];
-const SETUP_RECORD_BASELINE = 2;
+const SETUP_RECORD_BASELINE = 0;
 
 function netScore(post: CommunityPost) {
   return post.upvotes - post.downvotes;

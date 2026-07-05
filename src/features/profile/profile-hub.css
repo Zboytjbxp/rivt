@@ -1382,6 +1382,7 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
+  min-width: 0;
   padding: 16px;
   border: 1px solid var(--v2-border);
   border-radius: var(--v2-radius-lg);
@@ -1393,12 +1394,14 @@
   display: grid;
   grid-template-columns: 1.5fr 1fr 1fr 1fr;
   gap: 10px;
+  min-width: 0;
 }
 
 .v2-rate-card-inputs label {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  min-width: 0;
   font-size: 13px;
   color: var(--v2-text-muted);
   font-weight: var(--v2-weight-strong);
@@ -1407,6 +1410,8 @@
 .v2-rate-card-inputs label.is-wide { grid-column: 1 / -1; }
 
 .v2-rate-card-inputs input {
+  min-width: 0;
+  width: 100%;
   padding: 8px 10px;
   border-radius: var(--v2-radius-md);
   border: 1px solid var(--v2-border);
@@ -1485,6 +1490,13 @@
   .v2-rate-card-item-rates { grid-template-columns: repeat(3, 1fr); }
 }
 
+@media (max-width: 390px) {
+  .v2-rate-card-inputs,
+  .v2-rate-card-item-rates {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* ── Cert & License Tracker ──────────────────────────────────────────────── */
 
 .v2-cert-tracker-section {
@@ -1508,24 +1520,29 @@
 .v2-cert-form {
   display: grid;
   gap: 12px;
+  min-width: 0;
 }
 
 .v2-cert-inputs {
   display: grid;
   grid-template-columns: 1.5fr 1fr 1fr 1fr 1fr 1.5fr;
   gap: 10px;
+  min-width: 0;
 }
 
 .v2-cert-inputs label {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  min-width: 0;
   font-size: 13px;
   font-weight: var(--v2-weight-medium);
   color: var(--v2-text-muted);
 }
 
 .v2-cert-inputs input {
+  min-width: 0;
+  width: 100%;
   padding: 8px 10px;
   border-radius: var(--v2-radius-md);
   border: 1px solid var(--v2-border);
@@ -1610,6 +1627,10 @@
 
 @media (max-width: 640px) {
   .v2-cert-inputs { grid-template-columns: 1fr 1fr; }
+}
+
+@media (max-width: 390px) {
+  .v2-cert-inputs { grid-template-columns: 1fr; }
 }
 
 /* ── Profile Top Cards container ─────────────────────────────────────────── */
@@ -1755,51 +1776,6 @@
 }
 
 /* ── Service Area Selector ───────────────────────────────────────────────── */
-
-.v2-service-area {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  flex-wrap: wrap;
-  padding: 0 18px 16px;
-}
-
-.v2-service-area-label {
-  font-size: 13px;
-  font-weight: var(--v2-weight-strong);
-  color: var(--v2-text-muted);
-  white-space: nowrap;
-}
-
-.v2-service-area-chips {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-
-.v2-service-chip {
-  min-height: 34px;
-  padding: 0 12px;
-  border: 1px solid color-mix(in srgb, var(--v2-border) 70%, transparent);
-  border-radius: 999px;
-  background: var(--v2-surface-raised);
-  color: var(--v2-text-muted);
-  font-size: 13px;
-  font-weight: var(--v2-weight-strong);
-  cursor: pointer;
-  transition: border-color 0.12s, background 0.12s, color 0.12s;
-}
-
-.v2-service-chip:hover {
-  border-color: var(--v2-accent);
-  color: var(--v2-text);
-}
-
-.v2-service-chip.active {
-  border-color: var(--v2-accent);
-  background: var(--v2-accent-soft);
-  color: var(--v2-accent);
-}
 
 /* ── Data Export Button ──────────────────────────────────────────────────── */
 

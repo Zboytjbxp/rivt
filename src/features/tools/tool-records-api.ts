@@ -1,4 +1,4 @@
-import { apiPath, requestKey } from "../../lib/api";
+import { apiPath, notifySessionExpired, requestKey } from "../../lib/api";
 
 export type ToolRecordType =
   | "payment_record"
@@ -41,6 +41,7 @@ export async function fetchToolRecords(recordType?: ToolRecordType): Promise<Ser
   try {
     const suffix = recordType ? `?type=${encodeURIComponent(recordType)}` : "";
     const response = await fetch(apiPath(`/api/v1/tool-records${suffix}`), { credentials: "include" });
+    if (response.status === 401) notifySessionExpired();
     if (!response.ok) return null;
     const body = await response.json().catch(() => null) as { data?: { records?: ServerToolRecord[] } } | null;
     return Array.isArray(body?.data?.records) ? body!.data!.records! : null;
@@ -60,6 +61,7 @@ export async function upsertToolRecord(input: ToolRecordInput): Promise<ServerTo
       },
       body: JSON.stringify(input),
     });
+    if (response.status === 401) notifySessionExpired();
     if (!response.ok) return null;
     const body = await response.json().catch(() => null) as { data?: { record?: ServerToolRecord } } | null;
     return body?.data?.record ?? null;
@@ -78,6 +80,7 @@ export async function deleteToolRecordByLocalId(recordType: ToolRecordType, loca
         headers: { "Idempotency-Key": requestKey() },
       },
     );
+    if (response.status === 401) notifySessionExpired();
     return response.ok || response.status === 404;
   } catch {
     return false;

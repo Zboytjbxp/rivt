@@ -22,6 +22,13 @@ export class RivtApiError extends Error {
   }
 }
 
+export const RIVT_SESSION_EXPIRED_EVENT = "rivt:session-expired";
+
+export function notifySessionExpired() {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new CustomEvent(RIVT_SESSION_EXPIRED_EVENT));
+}
+
 export function requestKey() {
   return globalThis.crypto?.randomUUID?.() ?? `rivt-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
@@ -32,7 +39,10 @@ export function makeRequest<E extends RivtApiError>(
   return async function request<T>(path: string, options: RequestInit = {}) {
     const response = await fetch(apiPath(path), { credentials: "include", ...options });
     const body = await response.json().catch(() => ({})) as ApiErrorBody & T;
-    if (!response.ok) throw factory(response.status, body);
+    if (!response.ok) {
+      if (response.status === 401) notifySessionExpired();
+      throw factory(response.status, body);
+    }
     return body;
   };
 }

@@ -1,4 +1,4 @@
-import { apiPath } from "../../lib/api";
+import { apiPath, notifySessionExpired } from "../../lib/api";
 
 export interface ShopTalkPostInput {
   title: string;
@@ -62,8 +62,8 @@ export interface ShopTalkReportInput {
 
 /**
  * Persist a Shop Talk post to the server. Returns the created post, or null if
- * the API is unavailable (e.g. offline / no backend) so callers can degrade
- * gracefully to local-only behavior.
+ * the API is unavailable so callers can decide whether local-only preview is
+ * appropriate for the current auth mode.
  */
 export async function createShopTalkPost(input: ShopTalkPostInput): Promise<ServerShopTalkPost | null> {
   try {
@@ -76,6 +76,7 @@ export async function createShopTalkPost(input: ShopTalkPostInput): Promise<Serv
       },
       body: JSON.stringify(input),
     });
+    if (response.status === 401) notifySessionExpired();
     if (!response.ok) return null;
     const body = await response.json().catch(() => null) as { data?: { post?: ServerShopTalkPost } } | null;
     return body?.data?.post ?? null;
@@ -94,6 +95,7 @@ export async function uploadShopTalkPostPhoto(postId: string, file: File): Promi
       headers: { "Idempotency-Key": crypto.randomUUID() },
       body: formData,
     });
+    if (response.status === 401) notifySessionExpired();
     if (!response.ok) return null;
     const body = await response.json().catch(() => null) as { data?: { post?: ServerShopTalkPost } } | null;
     return body?.data?.post ?? null;
@@ -109,6 +111,7 @@ export async function deleteShopTalkPost(postId: string): Promise<boolean> {
       credentials: "include",
       headers: { "Idempotency-Key": crypto.randomUUID() },
     });
+    if (response.status === 401) notifySessionExpired();
     return response.ok;
   } catch {
     return false;
@@ -120,6 +123,7 @@ export async function fetchShopTalkPosts(communitySlug?: string | null): Promise
   try {
     const suffix = communitySlug ? `?community=${encodeURIComponent(communitySlug)}` : "";
     const response = await fetch(apiPath(`/api/v1/shop-talk/posts${suffix}`), { credentials: "include" });
+    if (response.status === 401) notifySessionExpired();
     if (!response.ok) return null;
     const body = await response.json().catch(() => null) as { data?: { posts?: ServerShopTalkPost[] } } | null;
     return Array.isArray(body?.data?.posts) ? body!.data!.posts! : null;
@@ -139,6 +143,7 @@ export async function createShopTalkAnswer(postId: string, body: string): Promis
       },
       body: JSON.stringify({ body }),
     });
+    if (response.status === 401) notifySessionExpired();
     if (!response.ok) return null;
     const payload = await response.json().catch(() => null) as { data?: { answer?: ServerShopTalkAnswer } } | null;
     return payload?.data?.answer ?? null;
@@ -157,6 +162,7 @@ export async function verifyShopTalkAnswer(postId: string, answerId: string): Pr
         headers: { "Idempotency-Key": crypto.randomUUID() },
       },
     );
+    if (response.status === 401) notifySessionExpired();
     if (!response.ok) return null;
     const payload = await response.json().catch(() => null) as { data?: { answers?: ServerShopTalkAnswer[] } } | null;
     return Array.isArray(payload?.data?.answers) ? payload!.data!.answers! : null;
@@ -176,6 +182,7 @@ export async function reportShopTalkTarget(input: ShopTalkReportInput): Promise<
       },
       body: JSON.stringify(input),
     });
+    if (response.status === 401) notifySessionExpired();
     return response.ok;
   } catch {
     return false;

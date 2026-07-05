@@ -7,6 +7,35 @@ Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
 Production release commit: `2fe69d39d6290a67d9d886047ad90f41aef844b6` verified with live `/api/health`; latest runtime feature evidence is recorded below and docs-only evidence commits may supersede the served build SHA.
 
+## Latest Packet 08 Pass - Launch QA Trust Cleanup
+
+- Addressed the remaining high-priority launch QA trust blockers on branch `codex/launch-qa-trust-cleanup`:
+  - authenticated Shop Talk posting no longer creates a local success when the server rejects or drops the post; users now get an explicit not-saved message and nothing is published locally
+  - fresh accounts no longer start with fabricated `2/6` records progress or `25%` training completion
+  - safety quiz results persist locally across reloads and the copy now says the result is saved on this device instead of claiming a server safety record
+  - revoked/expired sessions now dispatch a shared session-ended event from API, Shop Talk, and tool-record sync paths so the app prompts re-authentication instead of mislabeling the event as generic storage sync trouble
+  - removed the duplicate local-only service-radius control from Profile/Settings, leaving the canonical account-backed service-area control
+  - corrected Pro copy around real launch gates: full time-history access, CSV expense export, expanded records/closeout exports, billing details, and self-serve cancellation
+  - tightened the 375px bid-line layout so line-item fields wrap inside the viewport instead of clipping
+- Preserved launch boundaries:
+  - no homeowner flows, fake verification, job-payment processing, escrow, payroll, local-auth fallback, or frontend-only production claims were added
+  - no production migrations, provider contracts, billing entitlements, or object-storage contracts were changed
+  - the Heavy 16th calculator remains the simplified fraction-only tool; stale kerf/pieces drawer findings were not reintroduced
+- Rendered QA:
+  - `npm run test:ui:tools` passed; screenshots at `C:\Users\zboyt\AppData\Local\Temp\rivt-tools-pass`
+  - `npm run test:ui:mobile-actions` passed; screenshots at `C:\Users\zboyt\AppData\Local\Temp\rivt-mobile-actions-pass`
+  - Browser plugin setup was attempted, but this session's in-app browser runtime did not expose the documented `browser.documentation()` API, so Playwright fallback evidence was used
+- Local gates:
+  - `git diff --check` (pass)
+  - stale-copy grep for the corrected launch QA phrases (pass; no source hits)
+  - `npm run build` (pass)
+  - `npm run lint` (pass)
+  - `npm run test` (pass; 44/44 unit and 17/17 integration)
+  - `npm run test:e2e` (pass; fail-closed auth plus desktop/mobile jobs/discovery)
+  - `npm audit --omit=dev` (pass; 0 vulnerabilities)
+- Production deployment status:
+  - pending merge/deploy from `codex/launch-qa-trust-cleanup`
+
 ## Latest Packet 08 Pass - iPhone SE Layout Containment
 
 - Fixed small-phone layout failures reported from a physical iPhone SE:
@@ -128,7 +157,7 @@ Production release commit: `2fe69d39d6290a67d9d886047ad90f41aef844b6` verified w
   - removed the duplicate Account Plan fact so Settings has one authoritative subscription surface instead of showing stale beta/free copy above the RIVT Pro card
   - added a post-checkout `billing=success` banner that polls server-owned billing status without granting any frontend-only entitlement
   - replaced provider/setup internals with user-safe subscription-unavailable copy across Settings and the upgrade modal
-  - rewrote Pro benefit copy around the real gates: cloud records/photos, 90-day time history, CSV export, and self-serve cancellation/receipts
+  - rewrote Pro benefit copy around the real gates: full time-history access, CSV expense export, expanded record/closeout exports, billing details, and self-serve cancellation
   - changed active Pro copy from "active through" to renewal/cancellation-period wording
   - renamed Work's misleading "Quick apply" button to "View & apply" and removed the extra localStorage-derived match badge/calculation from job rows
   - softened unsupported social proof: shout-out activity now says it was saved to your records, and the empty "Reviews you've received" panel is hidden until a delivered-review path exists
