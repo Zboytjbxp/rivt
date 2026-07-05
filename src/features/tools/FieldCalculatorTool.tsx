@@ -241,20 +241,25 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
           aria-label={onBack ? "Tools" : "Clear calculator"}
           onClick={onBack ?? clearAll}
         >
-          {onBack ? "Tools" : <RotateCcw size={18} />}
+          {onBack ? (
+            <>
+              <RotateCcw size={16} />
+              <span className="calc-topbar-label">Tools</span>
+            </>
+          ) : <RotateCcw size={18} />}
         </button>
         <div className="heavy-calc-brand">
           <div className="heavy-calc-brand-mark" aria-hidden="true">
             <Ruler size={22} />
           </div>
           <div>
-            <strong>THE HEAVY 16TH</strong>
+            <strong>HEAVY 16TH</strong>
             <span>Fraction calculator</span>
           </div>
         </div>
-        <button type="button" className="calc-exit-button" onClick={copyCalculatorResult}>
+        <button type="button" className="calc-exit-button" aria-label={copied ? "Copied" : "Copy"} onClick={copyCalculatorResult}>
           <Copy size={15} />
-          {copied ? "Copied" : "Copy"}
+          <span className="calc-topbar-label">{copied ? "Copied" : "Copy"}</span>
         </button>
       </header>
 

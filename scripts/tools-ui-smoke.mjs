@@ -266,6 +266,14 @@ async function assertCalculatorOwnsHandsetWidth(page) {
   );
 }
 
+async function assertImmersiveToolChromeHidden(page, toolName) {
+  assert.equal(
+    await page.locator(".v2-mobile-nav").isVisible(),
+    false,
+    `${toolName} should hide the app mobile nav while open`,
+  );
+}
+
 async function runToolsFlow(page, viewportName) {
   const isHandsetViewport = viewportName !== "desktop";
   await page.goto(`${baseUrl}/app/tools`, { waitUntil: "networkidle" });
@@ -284,7 +292,7 @@ async function runToolsFlow(page, viewportName) {
   await page.getByRole("button", { name: /Heavy 16th/i }).click();
   await page.getByRole("heading", { name: "Heavy 16th field calculator" }).waitFor({ timeout: 15_000 });
   await page.getByLabel("Length calculator").getByText("Decimal", { exact: true }).waitFor({ timeout: 15_000 });
-  await page.getByText("Copy", { exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByRole("button", { name: "Copy" }).waitFor({ timeout: 15_000 });
   await page.getByLabel("Input unit").getByRole("button", { name: /MM/i }).click();
   await page.getByLabel("Heavy, light, double, and half controls").getByRole("button", { name: "Heavy plus one thirty-second" }).waitFor({ timeout: 15_000 });
   await page.getByLabel("Heavy, light, double, and half controls").getByRole("button", { name: "Light minus one thirty-second" }).waitFor({ timeout: 15_000 });
@@ -311,6 +319,13 @@ async function runToolsFlow(page, viewportName) {
   if (isHandsetViewport) {
     await assertCalculatorNoVerticalOverflow(page);
     await assertCalculatorOwnsHandsetWidth(page);
+    if (viewportName === "se") {
+      assert.equal(
+        await page.locator(".fraction-action-row button small").first().isVisible(),
+        false,
+        "compact calculator helper labels should collapse on SE-sized screens",
+      );
+    }
   }
   await assertNoHorizontalOverflow(page);
   await page.screenshot({ path: path.join(screenshotDir, `${viewportName}-calculator.png`), fullPage: true });
@@ -337,6 +352,9 @@ async function runToolsFlow(page, viewportName) {
   await page.getByRole("heading", { name: "Printable invoice" }).waitFor({ timeout: 15_000 });
   await page.getByLabel("Printable invoice preview").getByText("Total due", { exact: true }).waitFor({ timeout: 15_000 });
   await page.getByText("RIVT does not send on your behalf.", { exact: false }).waitFor({ timeout: 15_000 });
+  if (isHandsetViewport) {
+    await assertImmersiveToolChromeHidden(page, "invoice draft");
+  }
   await assertNoHorizontalOverflow(page);
   await page.screenshot({ path: path.join(screenshotDir, `${viewportName}-invoice.png`), fullPage: true });
   await page.getByLabel("Invoice draft").getByRole("button", { name: "Tools" }).click();

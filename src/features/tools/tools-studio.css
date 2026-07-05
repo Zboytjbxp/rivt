@@ -5181,6 +5181,11 @@
   text-transform: uppercase;
 }
 
+.calc-topbar-label {
+  display: inline-flex;
+  align-items: center;
+}
+
 .calc-menu-button {
   width: 42px;
   justify-content: center;
@@ -6223,6 +6228,25 @@
   }
 }
 
+@media (max-width: 375px) {
+  .v2-tools-app.is-calculator-fullscreen .calc-topbar-label,
+  .fraction-calc-workbench .calc-topbar-label,
+  .v2-tools-app.is-calculator-fullscreen .fraction-action-row button small,
+  .fraction-calc-workbench .fraction-action-row button small {
+    display: none;
+  }
+
+  .v2-tools-app.is-calculator-fullscreen .calc-exit-button,
+  .fraction-calc-workbench .calc-exit-button {
+    min-width: 40px;
+  }
+
+  .v2-tools-app.is-calculator-fullscreen .fraction-action-row button,
+  .fraction-calc-workbench .fraction-action-row button {
+    line-height: 1;
+  }
+}
+
 html[data-rivt-compact-device="true"] .v2-tools-app {
   gap: 8px;
 }
@@ -6240,7 +6264,8 @@ html[data-rivt-compact-device="true"] .v2-tools-app:not(.is-calculator-fullscree
 }
 
 html[data-rivt-compact-device="true"] .v2-tools-app:not(.is-calculator-fullscreen) .v2-tool-app-header h1 {
-  font-size: 20px;
+  font-size: 18px;
+  line-height: 1.15;
 }
 
 html[data-rivt-compact-device="true"] .v2-tool-workbench,
@@ -6248,6 +6273,8 @@ html[data-rivt-compact-device="true"] .v2-invoice-workbench,
 html[data-rivt-compact-device="true"] .v2-invoice-side-stack {
   grid-template-columns: 1fr;
   gap: 10px;
+  width: 100%;
+  min-width: 0;
 }
 
 html[data-rivt-compact-device="true"] .v2-tool-panel,
@@ -6256,6 +6283,8 @@ html[data-rivt-compact-device="true"] .v2-invoice-summary-panel,
 html[data-rivt-compact-device="true"] .v2-invoice-preview-panel {
   gap: 12px;
   padding: 12px;
+  min-width: 0;
+  overflow: hidden;
 }
 
 html[data-rivt-compact-device="true"] .v2-tool-panel .rivt-panel-header h2 {
@@ -6281,6 +6310,9 @@ html[data-rivt-compact-device="true"] .v2-invoice-topline-actions {
 html[data-rivt-compact-device="true"] .v2-invoice-topline-actions button {
   width: 100%;
   min-width: 0;
+  min-height: 40px;
+  padding-inline: 8px;
+  font-size: 12px;
 }
 
 html[data-rivt-compact-device="true"] .v2-converted-estimate-note,
@@ -6292,6 +6324,10 @@ html[data-rivt-compact-device="true"] .v2-invoice-builder-section {
 html[data-rivt-compact-device="true"] .v2-invoice-template-bar {
   grid-template-columns: 1fr;
   gap: 8px;
+}
+
+html[data-rivt-compact-device="true"] .v2-invoice-template-list article {
+  grid-template-columns: minmax(0, 1fr) auto;
 }
 
 html[data-rivt-compact-device="true"] .v2-invoice-template-bar small {
@@ -6341,6 +6377,8 @@ html[data-rivt-compact-device="true"] .v2-invoice-delivery {
 html[data-rivt-compact-device="true"] .v2-invoice-print-preview {
   gap: 14px;
   padding: 14px;
+  min-width: 0;
+  overflow: hidden;
 }
 
 html[data-rivt-compact-device="true"] .v2-invoice-print-preview header {
@@ -6355,6 +6393,7 @@ html[data-rivt-compact-device="true"] .v2-invoice-print-preview header aside {
 html[data-rivt-compact-device="true"] .v2-invoice-print-preview table {
   display: block;
   overflow-x: auto;
+  width: 100%;
 }
 
 html[data-rivt-compact-device="true"] .v2-tools-app.is-calculator-fullscreen {
@@ -6391,7 +6430,11 @@ html[data-rivt-compact-device="true"] .v2-tools-app.is-calculator-fullscreen .ca
 }
 
 html[data-rivt-compact-device="true"] .v2-tools-app.is-calculator-fullscreen .calc-exit-button {
-  min-width: 84px;
+  min-width: 40px;
+}
+
+html[data-rivt-compact-device="true"] .v2-tools-app.is-calculator-fullscreen .calc-topbar-label {
+  display: none;
 }
 
 html[data-rivt-compact-device="true"] .v2-tools-app.is-calculator-fullscreen .heavy-calc-brand {
@@ -6516,6 +6559,7 @@ html[data-rivt-compact-device="true"] .v2-tools-app.is-calculator-fullscreen .fr
   min-height: 38px;
   padding: 4px 3px;
   border-radius: var(--v2-radius-md);
+  line-height: 1;
 }
 
 html[data-rivt-compact-device="true"] .v2-tools-app.is-calculator-fullscreen .fraction-action-row button strong {
@@ -6523,7 +6567,7 @@ html[data-rivt-compact-device="true"] .v2-tools-app.is-calculator-fullscreen .fr
 }
 
 html[data-rivt-compact-device="true"] .v2-tools-app.is-calculator-fullscreen .fraction-action-row button small {
-  font-size: 10px;
+  display: none;
 }
 
 html[data-rivt-compact-device="true"] .v2-tools-app.is-calculator-fullscreen .fraction-pad {
@@ -7494,6 +7538,10 @@ html[data-rivt-compact-device="true"] .v2-tools-app.is-calculator-fullscreen .fr
 
 .v2-tools-app:not(.is-calculator-fullscreen) {
   min-height: 0;
+  width: 100%;
+  max-width: none;
+  min-width: 0;
+  overflow-x: hidden;
 }
 
 .v2-tools-app:not(.is-calculator-fullscreen) .v2-tool-app-header,
