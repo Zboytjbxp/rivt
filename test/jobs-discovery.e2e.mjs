@@ -275,7 +275,17 @@ async function configurePage(page, jobs, { activeWork = [], project = null } = {
       meta: { requestId: "e2e-notification-preferences" },
     }),
   }));
-  await page.route("**/api/v1/active-work", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { activeWork }, meta: { requestId: "e2e-active-work" } }) }));
+  await page.route(/\/api\/v1\/tool-records(?:\?.*)?$/, (route) => route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: JSON.stringify({ data: { records: [] }, meta: { requestId: "e2e-tool-records" } }),
+  }));
+  await page.route(/\/api\/v1\/network-records(?:\?.*)?$/, (route) => route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: JSON.stringify({ data: { records: [] }, meta: { requestId: "e2e-network-records" } }),
+  }));
+  await page.route(/\/api\/v1\/active-work\/?(?:\?.*)?$/, (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { activeWork }, meta: { requestId: "e2e-active-work" } }) }));
   await page.route("**/api/v1/shop-talk/posts", (route) => route.fulfill({
     status: 200,
     contentType: "application/json",
@@ -396,10 +406,20 @@ async function assertToolsFlow(page) {
   await page.getByText("Printable invoice", { exact: true }).waitFor();
   await page.getByLabel("Invoice draft").getByRole("button", { name: "All tools" }).click();
 
-  await primaryTool("Records & photos").click();
-  await page.getByRole("heading", { name: "Job Photos", exact: true, level: 1 }).waitFor();
-  await page.getByText("Private cloud photo records.", { exact: true }).waitFor();
-  await page.getByRole("button", { name: /New album/i }).waitFor();
+  await primaryTool("Camera").click();
+  await page.getByText("Jobsite camera", { exact: true }).waitFor();
+  await page.getByText("Live jobsite", { exact: true }).waitFor();
+  await page.waitForFunction(
+    () => document.body.innerText.includes("No live job open") || document.body.innerText.includes("Active job"),
+    null,
+    { timeout: 15_000 },
+  );
+  await page.waitForFunction(
+    () => document.body.innerText.includes("Recent live captures") || document.body.innerText.includes("Side work albums") || document.body.innerText.includes("Keep side-work albums separate"),
+    null,
+    { timeout: 15_000 },
+  );
+  await page.getByRole("button", { name: /New album/i }).first().waitFor();
 }
 
 async function assertRecordsFlow(page) {
@@ -487,3 +507,5 @@ try {
   await browser?.close();
   vite.kill();
 }
+
+
