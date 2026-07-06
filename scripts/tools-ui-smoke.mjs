@@ -311,7 +311,7 @@ async function runToolsFlow(page, viewportName) {
   await page.getByRole("heading", { name: "Tools", exact: true }).waitFor({ timeout: 15_000 });
   const primaryTool = (name) => page.locator(".v2-tool-launch-card").filter({ hasText: name }).first();
   await page.getByRole("button", { name: /Heavy 16th/i }).waitFor({ timeout: 15_000 });
-  await page.getByRole("button", { name: /Records & photos/i }).waitFor({ timeout: 15_000 });
+  await page.getByRole("button", { name: /Open Camera/i }).waitFor({ timeout: 15_000 });
   assert.equal(await page.locator(".v2-tool-launch-card").count(), 5, "Tools hub should expose exactly five primary field apps");
   assert.equal(await page.locator(".v2-tool-group").count(), 3, "Tools hub should keep supporting utilities in three grouped sections");
   await page.locator(".v2-tool-group").filter({ hasText: "Money" }).locator("summary").click();
@@ -434,10 +434,16 @@ async function runToolsFlow(page, viewportName) {
   await page.screenshot({ path: path.join(screenshotDir, `${viewportName}-daily-log.png`), fullPage: true });
   await page.getByLabel("Daily log").getByRole("button", { name: "Tools" }).click();
 
-  await primaryTool("Records & photos").click();
-  await page.getByRole("heading", { name: "Job Photos", exact: true, level: 1 }).waitFor({ timeout: 15_000 });
-  await page.getByText("Private cloud photo records.", { exact: true }).waitFor({ timeout: 15_000 });
-  await page.getByRole("button", { name: /New album/i }).waitFor({ timeout: 15_000 });
+  await primaryTool("Camera").click();
+  await page.getByText("Jobsite camera", { exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByText("Live jobsite", { exact: true }).waitFor({ timeout: 15_000 });
+  await page.waitForFunction(() => document.body.innerText.includes("Recent live captures") || document.body.innerText.includes("No field captures yet"), null, { timeout: 15_000 });
+  await page.getByRole("button", { name: /Shoot /i }).first().waitFor({ timeout: 15_000 });
+  await page.waitForFunction(
+    () => document.body.innerText.includes("Side work albums") || document.body.innerText.includes("Keep side-work albums separate"),
+    null,
+    { timeout: 15_000 },
+  );
   await assertNoHorizontalOverflow(page);
   await page.screenshot({ path: path.join(screenshotDir, `${viewportName}-job-photos.png`), fullPage: true });
 }
@@ -477,3 +483,5 @@ try {
   await browser?.close();
   vite.kill();
 }
+
+

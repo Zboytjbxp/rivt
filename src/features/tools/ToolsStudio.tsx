@@ -277,8 +277,8 @@ const PRIMARY_TOOL_LAUNCHERS: ToolLauncher[] = [
   {
     mode: "job-photos",
     icon: FolderOpen,
-    title: "Records & photos",
-    summary: "Albums and closeout proof.",
+    title: "Camera",
+    summary: "Live jobsite feed.",
   },
 ];
 
@@ -3197,7 +3197,7 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
         node: <MaterialsTool activeJob={activeJob} />,
       },
       "job-photos": {
-        title: "Job Photos",
+        title: "Camera",
         node: <JobPhotosTool activeWork={activeWork} />,
       },
       "time-tracker": {
