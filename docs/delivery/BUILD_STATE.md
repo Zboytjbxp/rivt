@@ -5,7 +5,7 @@ Current gate: Gate A launch hardening
 Current phase: Packet 08 Gate A launch hardening plus Gate B behind-flag backbone work: machine gates and live workflow smokes are mostly green; the Shop Talk Reddit-model backbone, moderation/reporting backend, human-facing moderation console/report UX, post photo media, reachability/naming cleanup, Tools hub consolidation, Payment Tracker server records, money-tools sync, the accepted tool-records sync slices, non-tool local-state boundary cleanup, dedicated network-records sync for Crew/Invites/informal written shout-outs, screen-density polish, mobile layout/device-accessibility subtraction, fraction calculator ergonomics, iPhone SE layout containment, immersive-tool compact-device containment, SE tool chrome cleanup slices, and the native metric calculator rebuild are implemented while still respecting launch-readiness boundaries before broad exposure.
 Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
-Production release commit: `6695c69e91f0bd6a925f5d3fa70176bad2f66131` verified with live `/api/health` and `npm run monitor:production`; latest runtime feature evidence is recorded below and docs-only evidence commits may supersede the served build SHA.
+Production release commit: `e6ae1b25e7789204ab7b46552412a8f4e59e21c1` verified with live `/api/health` and `npm run monitor:production`; latest runtime feature evidence is recorded below and docs-only evidence commits may supersede the served build SHA.
 
 ## Latest Packet 08 Pass - Responsive Shell and Token Bridge
 
@@ -42,8 +42,9 @@ Production release commit: `6695c69e91f0bd6a925f5d3fa70176bad2f66131` verified w
   - `npm run test:ui:tools` (pass; refreshed screenshots at `C:\Users\zboyt\AppData\Local\Temp\rivt-tools-pass`)
   - `npm audit --omit=dev` (pass; 0 vulnerabilities)
 - Production deployment status:
-  - not deployed in this pass
-  - production remains on release commit `6695c69e91f0bd6a925f5d3fa70176bad2f66131` until this branch is merged and redeployed
+  - fast-forward merged to `master`, pushed to origin, and picked up by Railway production
+  - live `https://rivt.pro/api/health` reported exact build commit `e6ae1b25e7789204ab7b46552412a8f4e59e21c1`
+  - `EXPECTED_SOURCE_COMMIT=e6ae1b25e7789204ab7b46552412a8f4e59e21c1 npm run monitor:production` passed with PostgreSQL, S3-compatible object storage, configured Sentry, operational controls off, seven anonymous private-route checks, and 643 ms duration
 
 ## Latest Packet 08 Pass - Truth / Profile Cleanup Deployment
 
