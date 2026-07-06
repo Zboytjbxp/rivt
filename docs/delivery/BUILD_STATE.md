@@ -4,8 +4,35 @@ Last updated: 2026-07-06 America/New_York
 Current gate: Gate A launch hardening
 Current phase: Packet 08 Gate A launch hardening plus Gate B behind-flag backbone work: machine gates and live workflow smokes are mostly green; the Shop Talk Reddit-model backbone, moderation/reporting backend, human-facing moderation console/report UX, post photo media, reachability/naming cleanup, Tools hub consolidation, Payment Tracker server records, money-tools sync, the accepted tool-records sync slices, non-tool local-state boundary cleanup, dedicated network-records sync for Crew/Invites/informal written shout-outs, screen-density polish, mobile layout/device-accessibility subtraction, fraction calculator ergonomics, iPhone SE layout containment, immersive-tool compact-device containment, SE tool chrome cleanup slices, and the native metric calculator rebuild are implemented while still respecting launch-readiness boundaries before broad exposure.
 Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
-Repository branch: `codex/metric-mode-rebuild`
+Repository branch: `master`
 Production release commit: `5ce29c2f7c2768402a0dce24f3744df254be4b20` verified with live `/api/health`; latest runtime feature evidence is recorded below and docs-only evidence commits may supersede the served build SHA.
+
+## Latest Packet 08 Pass - Camera Tool Launch-Line Merge
+
+- Reviewed the isolated camera-only branch `codex/camera-tool-polish-clean` before merging it onto the launch line.
+- Confirmed the slice was limited to five camera-related files only:
+  - `src/features/tools/JobPhotosTool.tsx`
+  - `src/features/tools/ToolsStudio.tsx`
+  - `src/features/tools/tools-studio.css`
+  - `scripts/tools-ui-smoke.mjs`
+  - `test/jobs-discovery.e2e.mjs`
+- Merged that clean branch onto `master` in a fresh worktree instead of trying to untangle the dirty `codex/camera-tool-rebuild` worktree.
+- Camera-tool outcomes in this slice:
+  - the launcher and immersive tool shell now consistently present the tool as `Camera`
+  - the tool now reads as a live project-feed camera surface instead of an album-first photo utility
+  - live job language now emphasizes `project feed`, `live jobsite`, and `recent live captures`
+  - side-work albums were pushed into a more secondary lane
+  - capture-type filters now let the live feed be narrowed by progress / before / after / issue / material / closeout
+- Local verification on the launch-line merge worktree:
+  - `npm run build` (pass)
+  - `npm run lint` (pass)
+  - `npm run test:unit` (pass)
+  - `npm run test:e2e` (pass)
+  - `node scripts/tools-ui-smoke.mjs` (pass; refreshed screenshots at `C:\Users\zboyt\AppData\Local\Temp\rivt-tools-pass`)
+  - `npm audit --omit=dev` (pass; 0 vulnerabilities)
+- Production deployment status:
+  - merged locally onto `master`; deployment verification pending live `/api/health` after push
+  - production remains on release commit `5ce29c2f7c2768402a0dce24f3744df254be4b20` until the pushed master build is confirmed live
 
 ## Latest Packet 08 Pass - Native Metric Calculator Mode
 
