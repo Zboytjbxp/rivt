@@ -30,6 +30,29 @@ Production release commit: `1a9bc4b7b2d90554777d02f718397a57f92598f8` verified w
   - not deployed in this pass
   - production remains on release commit `1a9bc4b7b2d90554777d02f718397a57f92598f8` until this branch is reviewed, merged, and redeployed
 
+## Latest Packet 08 Pass - Home / Profile Subtraction
+
+- Continued `codex/truth-trust-cleanup` with a second subtraction pass focused on repeated explanatory copy in Home and Profile/Settings.
+- Density/copy outcomes in this slice:
+  - shortened the Home getting-started card from title-plus-body to a single clear next step
+  - changed Home setup progress from `steps ready` to a simpler completed-count
+  - tightened the empty Shop Talk prompt on Home to a single-line action hint
+  - removed the redundant contractor/tradesperson profile label above the account name in Settings
+  - simplified top-level page descriptions and section headers across Feedback, Settings, Trust, Training, Community, Reputation, Subscription, Storage, Notifications, and Sessions
+  - kept the same actions and information architecture while reducing the amount of explanatory chrome above the real controls
+- Preserved launch boundaries:
+  - no auth, billing, moderation, storage-contract, provider, migration, or persistence behavior changed in this pass
+  - no onboarding flow rules, permissions, or data contracts were altered
+- Local verification:
+  - `npm run build` (pass)
+  - `npm run lint` (pass)
+  - `npm run test` (pass; unit suite green, integration suite skipped DB-backed cases because `TEST_DATABASE_URL` is not configured in this workstation context)
+  - `npm run test:e2e` (pass)
+  - `npm audit --omit=dev` (pass; 0 vulnerabilities)
+- Production deployment status:
+  - not deployed in this pass
+  - production remains on release commit `1a9bc4b7b2d90554777d02f718397a57f92598f8` until this branch is reviewed, merged, and redeployed
+
 ## Latest Packet 08 Pass - Camera Tool Launch-Line Merge
 
 - Reviewed the isolated camera-only branch `codex/camera-tool-polish-clean` before merging it onto the launch line.

@@ -311,7 +311,7 @@ export function TradeFeed({
                 {role === "contractor" ? "Contractor setup" : "Tradesperson setup"}
               </p>
               <h2 id="trade-feed-start-title">Get RIVT working for you</h2>
-              <span>{completedGetStartedSteps} of {getStartedSteps.length} steps ready</span>
+              <span>{completedGetStartedSteps} of {getStartedSteps.length} done</span>
             </div>
             <button
               type="button"
@@ -333,7 +333,6 @@ export function TradeFeed({
                 </span>
                 <div className="trade-feed-start-item-copy">
                   <strong>{nextGetStartedStep.title}</strong>
-                  <small>{nextGetStartedStep.body}</small>
                 </div>
                 <button type="button" className="trade-feed-start-action" onClick={nextGetStartedStep.onAction}>
                   {nextGetStartedStep.actionLabel}
@@ -400,7 +399,7 @@ export function TradeFeed({
           <div className="trade-feed-empty">
             <MessageCircle size={26} />
             <b>No posts yet</b>
-            <span>Field answers from the trades will show up here. Use the Ask button when you're ready to start one.</span>
+            <span>Use Ask to start one.</span>
           </div>
         ) : (
           trendingPosts.map((post) => (

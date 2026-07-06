@@ -1182,7 +1182,7 @@ function PlanCard() {
 
 export function ProfileHub({
   view,
-  role,
+  role: _role,
   profile,
   canonicalProfile,
   sessions,
@@ -1335,11 +1335,11 @@ export function ProfileHub({
   }
 
   const profileViewDescriptions: Record<string, string> = {
-    "Safety & Training": "OSHA-aligned modules. Pass each quiz to earn a certificate.",
+    "Safety & Training": "OSHA-aligned modules and quizzes.",
     "Trust & Legal": "Consent, documents, and data controls.",
-    "Reviews": "Shout-outs and reputation from people you've worked with.",
-    "Settings": "Profile, billing, storage, and alerts.",
-    "Feedback": "Share feedback to help improve RIVT.",
+    "Reviews": "Shout-outs and reputation.",
+    "Settings": "",
+    "Feedback": "Send a note to support.",
   };
 
   if (view === "Safety & Training") {
@@ -1390,13 +1390,13 @@ export function ProfileHub({
         <PageHeader
           className="v2-profile-header"
           title="Feedback"
-          description="Share what's working, what's confusing, and what you need next."
+          description="Send a note to support."
         />
         <div className="v2-feedback-layout">
           <section className="v2-profile-panel v2-feedback-form-panel">
             <header>
-              <span>Submit feedback</span>
-              <strong>What's on your mind?</strong>
+              <span>Support note</span>
+              <strong>Tell us what you need</strong>
             </header>
             <div className="v2-feedback-body">
               <div className="v2-feedback-categories" role="group" aria-label="Feedback type">
@@ -1568,7 +1568,7 @@ export function ProfileHub({
       <PageHeader
         className="v2-profile-header"
         title={view}
-        description={profileViewDescriptions[view] ?? brandConfig.tagline}
+        description={profileViewDescriptions[view] || undefined}
       />
 
       <div className="v2-profile-grid">
@@ -1583,7 +1583,6 @@ export function ProfileHub({
         <section className="v2-profile-panel v2-profile-summary">
           <Avatar name={profile.displayName || profile.organization || "RIVT member"} size="lg" className="v2-profile-avatar" />
           <div>
-            <span>{role === "contractor" ? "Contractor profile" : "Tradesperson profile"}</span>
             <h2>{profile.organization || profile.displayName}</h2>
             <p>{profile.location}</p>
             {persona && (
@@ -1613,8 +1612,8 @@ export function ProfileHub({
         {view === "Settings" && canonicalProfile ? (
           <section className="v2-profile-panel v2-profile-panel-wide v2-profile-editor">
             <header>
-              <span>Profile details</span>
-              <strong>How the network sees you</strong>
+              <span>Profile</span>
+              <strong>Edit public details</strong>
             </header>
             <div className="v2-profile-form-grid">
               <label><span>Display name</span><input value={draft.displayName} onChange={(event) => setDraft({ ...draft, displayName: event.target.value })} /></label>
@@ -1655,7 +1654,7 @@ export function ProfileHub({
         <section className="v2-profile-panel">
           <header>
             <span>Theme</span>
-            <strong>Appearance</strong>
+            <strong>Colors and mode</strong>
           </header>
           <div className="v2-profile-theme-row">
             <div className="v2-theme-source-group" role="group" aria-label="Theme mode">
@@ -1703,7 +1702,7 @@ export function ProfileHub({
             <section className="v2-profile-panel">
             <header>
               <span>Trust</span>
-              <strong>Consent and work history</strong>
+              <strong>Consent and records</strong>
             </header>
             <div className="v2-profile-list">
                 <article><ShieldCheck size={16} /><span>Consent {trustReady ? "on file" : "review needed"}</span></article>
@@ -1715,7 +1714,7 @@ export function ProfileHub({
             <section className="v2-profile-panel">
               <header>
                 <span>Training</span>
-                <strong>Safety and proof</strong>
+                <strong>Safety progress</strong>
               </header>
               <div className="v2-profile-list">
                 <article><GraduationCap size={16} /><span>{trainingProgress}% complete</span></article>
@@ -1727,7 +1726,7 @@ export function ProfileHub({
             <section className="v2-profile-panel v2-profile-panel-wide">
               <header>
                 <span>Community</span>
-                <strong>Profile signals</strong>
+                <strong>Badges and notes</strong>
               </header>
             <div className="v2-profile-badge-row">
               {communityBadges.length ? communityBadges.map((badge) => <span key={badge}>{badge}</span>) : <span>New contributor</span>}
@@ -1739,8 +1738,8 @@ export function ProfileHub({
 
             <section className="v2-profile-panel v2-profile-panel-wide v2-profile-reputation">
               <header>
-                <span>Reputation momentum</span>
-                <strong>Proof that follows the work</strong>
+                <span>Reputation</span>
+                <strong>Work and community proof</strong>
               </header>
               <div className="v2-profile-reputation-grid">
                 <article>
@@ -1768,7 +1767,7 @@ export function ProfileHub({
           <section className="v2-profile-panel v2-profile-panel-wide">
             <header>
               <span>Subscription</span>
-              <strong>Your current plan</strong>
+              <strong>Plan</strong>
             </header>
             <PlanCard />
           </section>
@@ -1779,7 +1778,7 @@ export function ProfileHub({
           <section className="v2-profile-panel v2-profile-panel-wide">
             <header>
               <span>Storage</span>
-              <strong>Cloud photos and attachments</strong>
+              <strong>Cloud storage</strong>
             </header>
             <div className="v2-profile-list v2-storage-list">
               <article>
@@ -1852,7 +1851,7 @@ export function ProfileHub({
           <section className="v2-profile-panel v2-profile-panel-wide v2-notification-prefs">
             <header>
               <span>Notifications</span>
-              <strong>What alerts you</strong>
+              <strong>Alert preferences</strong>
             </header>
             <PushNotificationsCard />
             <div className="v2-notif-pref-list">
@@ -1893,7 +1892,7 @@ export function ProfileHub({
           <section className="v2-profile-panel v2-profile-panel-wide v2-profile-sessions">
             <header>
               <span>Security</span>
-              <strong>Signed-in devices</strong>
+              <strong>Sessions</strong>
             </header>
             <div className="v2-session-list">
               {sessions.length ? sessions.map((session) => (
