@@ -5814,6 +5814,10 @@
   gap: 7px;
 }
 
+.metric-strip {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
 .fraction-strip button {
   min-height: 42px;
   border: 0;
@@ -5829,6 +5833,11 @@
   background: color-mix(in srgb, var(--v2-accent) 18%, transparent);
   color: var(--calc-lime);
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--v2-accent) 32%, transparent);
+}
+
+.unit-metric-readout {
+  cursor: default;
+  pointer-events: none;
 }
 
 .fraction-pad {

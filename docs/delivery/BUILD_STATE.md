@@ -2,10 +2,35 @@
 
 Last updated: 2026-07-06 America/New_York
 Current gate: Gate A launch hardening
-Current phase: Packet 08 Gate A launch hardening plus Gate B behind-flag backbone work: machine gates and live workflow smokes are mostly green; the Shop Talk Reddit-model backbone, moderation/reporting backend, human-facing moderation console/report UX, post photo media, reachability/naming cleanup, Tools hub consolidation, Payment Tracker server records, money-tools sync, the accepted tool-records sync slices, non-tool local-state boundary cleanup, dedicated network-records sync for Crew/Invites/informal written shout-outs, screen-density polish, mobile layout/device-accessibility subtraction, fraction calculator ergonomics, iPhone SE layout containment, immersive-tool compact-device containment, and SE tool chrome cleanup slices are implemented while still respecting launch-readiness boundaries before broad exposure.
+Current phase: Packet 08 Gate A launch hardening plus Gate B behind-flag backbone work: machine gates and live workflow smokes are mostly green; the Shop Talk Reddit-model backbone, moderation/reporting backend, human-facing moderation console/report UX, post photo media, reachability/naming cleanup, Tools hub consolidation, Payment Tracker server records, money-tools sync, the accepted tool-records sync slices, non-tool local-state boundary cleanup, dedicated network-records sync for Crew/Invites/informal written shout-outs, screen-density polish, mobile layout/device-accessibility subtraction, fraction calculator ergonomics, iPhone SE layout containment, immersive-tool compact-device containment, SE tool chrome cleanup slices, and the native metric calculator rebuild are implemented while still respecting launch-readiness boundaries before broad exposure.
 Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
-Repository branch: `codex/small-phone-polish`
+Repository branch: `codex/metric-mode-rebuild`
 Production release commit: `5ce29c2f7c2768402a0dce24f3744df254be4b20` verified with live `/api/health`; latest runtime feature evidence is recorded below and docs-only evidence commits may supersede the served build SHA.
+
+## Latest Packet 08 Pass - Native Metric Calculator Mode
+
+- Continued Packet 08 on branch `codex/metric-mode-rebuild` with a true metric-first rebuild of the Heavy 16th calculator for SI users rather than a metric display toggle on top of imperial-only entry.
+- Metric-mode outcomes in this slice:
+  - calculator state now uses a shared exact internal measurement unit so imperial sixteenths/thirty-seconds and metric millimetres can round-trip cleanly
+  - metric mode now has native millimetre entry, decimal-tenth quick chips, `mm / cm / m` readouts, half-millimetre `H/L` trim nudges, and metric-aware multiply/divide behavior
+  - imperial mode remains available as the paired fallback, and switching between modes carries the active value across instead of resetting the calculation
+  - locale-aware number formatting is now used for metric displays so decimal separators follow the device/browser locale
+- QA coverage updates:
+  - `scripts/tools-ui-smoke.mjs` now exercises the real metric flow on desktop, standard mobile, and SE-class compact layouts before switching back to imperial math
+  - `test/jobs-discovery.e2e.mjs` now checks for the real mode-switch control instead of the retired `MM` toggle wording
+- Local verification:
+  - `npm run build` (pass)
+  - `npm run lint` (pass)
+  - `npm run test:unit` (pass)
+  - `npm run test:e2e` (pass)
+  - `npm run test:ui:tools` (pass; refreshed screenshots at `C:\Users\zboyt\AppData\Local\Temp\rivt-tools-pass`)
+  - `npm audit --omit=dev` (pass; 0 vulnerabilities)
+  - `npm run test:integration` still timed out on this workstation with no `TEST_DATABASE_URL` configured, so no fresh DB-backed integration claim is recorded in this slice
+- Rendered QA:
+  - refreshed calculator screenshots in `C:\Users\zboyt\AppData\Local\Temp\rivt-tools-pass` now cover the native metric path on desktop, 390px mobile, and 320px SE widths
+- Production deployment status:
+  - not deployed in this pass
+  - production remains on release commit `5ce29c2f7c2768402a0dce24f3744df254be4b20` until this branch is merged and redeployed
 
 ## Latest Packet 08 Pass - SE Home Compression
 
