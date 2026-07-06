@@ -15,6 +15,8 @@
   --v2-radius-sm: 6px;
   --v2-radius-md: 8px;
   --v2-radius-lg: 14px;
+  --v2-radius-xl: 20px;
+  --v2-radius-pill: 999px;
   --text-xs: 13px;
   --text-sm: 15px;
   --text-base: 17px;
@@ -50,7 +52,14 @@
   --blue-soft: #edf3f5;
   --amber: #ff8a1d;
   --amber-soft: #fff2df;
+  --success: #2f7a4f;
+  --success-soft: #e8f4ec;
+  --warning: #9a5b0a;
+  --warning-soft: #fff2d9;
+  --danger: #b73d3d;
   --danger-soft: #ffecec;
+  --info: #0066cc;
+  --info-soft: #e6f2ff;
   --topbar: rgba(255, 255, 255, 0.92);
   --radius: 8px;
   --shadow: 0 24px 58px rgba(13, 17, 20, 0.105);
@@ -109,7 +118,14 @@ body::selection {
   --blue: #4d9fff;
   --blue-soft: #0d2340;
   --amber-soft: #372a17;
+  --success: #66b986;
+  --success-soft: #173226;
+  --warning: #e0a44f;
+  --warning-soft: #372a17;
+  --danger: #e37878;
   --danger-soft: #3b2020;
+  --info: #4d9fff;
+  --info-soft: #0d2340;
   --topbar: rgba(20, 25, 24, 0.94);
 }
 

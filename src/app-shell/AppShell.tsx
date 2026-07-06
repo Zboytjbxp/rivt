@@ -324,7 +324,7 @@ export function AppShell({
 
         {isGuest ? guestBanner : null}
 
-        <main id="main-content" className="v2-main">
+        <main id="main-content" className="v2-main" data-destination={activeDestination}>
           {children}
         </main>
       </div>

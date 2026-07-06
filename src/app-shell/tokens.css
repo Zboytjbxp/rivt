@@ -61,6 +61,10 @@
   --v2-font-mono: "IBM Plex Mono", "SFMono-Regular", "Cascadia Code", "Roboto Mono", Consolas, monospace;
   --v2-sidebar-width: 220px;
   --v2-topbar-height: 58px;
+  --v2-content-max: 1360px;
+  --v2-content-gutter: 34px;
+  --v2-nav-bg: #0c1110;
+  --v2-nav-bg-strong: #080d10;
   color: var(--v2-text);
   font-family: "Instrument Sans", "Arial", "Helvetica Neue", "Segoe UI Variable", "Segoe UI", ui-sans-serif, system-ui, sans-serif;
   font-feature-settings: "cv02", "cv03", "cv04";
@@ -106,6 +110,8 @@
   --v2-shadow-sm: 0 1px 1px rgba(0, 0, 0, 0.2), 0 16px 34px rgba(0, 0, 0, 0.22);
   --v2-shadow-md: 0 24px 58px rgba(0, 0, 0, 0.34);
   --v2-shadow-card: 0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 18px 42px rgba(0, 0, 0, 0.28);
+  --v2-nav-bg: #0c1110;
+  --v2-nav-bg-strong: #080d10;
 }
 
 :root[data-palette] .rivt-v2 {

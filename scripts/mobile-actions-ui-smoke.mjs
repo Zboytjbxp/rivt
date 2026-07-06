@@ -348,7 +348,7 @@ async function runMobileFlow(page) {
   await page.getByRole("heading", { name: "Tools", exact: true }).waitFor({ timeout: 15_000 });
   const primaryInvoiceTool = page.locator(".v2-tool-launch-card").filter({ hasText: "Invoice" }).first();
   await primaryInvoiceTool.waitFor({ timeout: 15_000 });
-  await page.getByRole("button", { name: /Records & photos/i }).waitFor({ timeout: 15_000 });
+  await page.getByRole("button", { name: /Camera/i }).waitFor({ timeout: 15_000 });
   assert.equal(await page.locator(".v2-tool-launch-card").count(), 5, "mobile Tools hub should expose exactly five primary field apps");
   assert.ok(await page.locator(".v2-tool-mini-card").count() >= 10, "mobile Tools hub should expose compact supporting tools");
   await assertNoHorizontalOverflow(page, "Tools hub");
@@ -421,7 +421,7 @@ async function runMobileFlow(page) {
   await page.getByRole("heading", { name: "Tools", exact: true }).waitFor({ timeout: 15_000 });
   await page.getByRole("button", { name: "Open Heavy 16th" }).click();
   await page.getByRole("heading", { name: "Heavy 16th field calculator", exact: true }).waitFor({ timeout: 15_000 });
-  await page.getByLabel("Input unit").getByRole("button", { name: /MM/i }).waitFor({ timeout: 15_000 });
+  await page.getByLabel("Input unit").getByRole("button", { name: "Switch to metric mode" }).waitFor({ timeout: 15_000 });
   await page.getByLabel("Heavy, light, double, and half controls").getByRole("button", { name: "Heavy plus one thirty-second" }).waitFor({ timeout: 15_000 });
   await page.getByLabel("Heavy, light, double, and half controls").getByRole("button", { name: "Multiply measurement by two" }).waitFor({ timeout: 15_000 });
   await page.setViewportSize({ width: 375, height: 553 });

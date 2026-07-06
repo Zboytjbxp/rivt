@@ -84,7 +84,7 @@
   flex: 0 0 auto;
   border-radius: var(--v2-radius-md);
   background: var(--v2-accent);
-  color: #fff;
+  color: var(--v2-on-accent);
 }
 
 .trade-feed-start-copy {
@@ -218,7 +218,7 @@
   padding: 0 12px;
   border: 0;
   background: var(--v2-accent);
-  color: #fff;
+  color: var(--v2-on-accent);
   cursor: pointer;
 }
 
@@ -270,7 +270,7 @@
   height: 38px;
   border-radius: var(--v2-radius-md);
   background: var(--v2-accent);
-  color: #fff;
+  color: var(--v2-on-accent);
   flex: 0 0 auto;
 }
 
@@ -415,7 +415,7 @@
   border: none;
   border-radius: var(--v2-radius-pill);
   background: var(--v2-accent);
-  color: #fff;
+  color: var(--v2-on-accent);
   font-size: var(--v2-text-body-lg);
   font-weight: var(--v2-weight-bold);
   box-shadow: 0 10px 26px -8px color-mix(in srgb, var(--v2-accent) 70%, transparent);
@@ -757,7 +757,7 @@
   }
 }
 
-@media (max-width: 360px) {
+@media (max-width: 430px) {
   .trade-feed-fab {
     width: 48px;
     padding: 0;
@@ -767,5 +767,86 @@
 
   .trade-feed-fab-label {
     display: none;
+  }
+}
+
+@media (min-width: 1181px) {
+  .trade-feed {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(320px, 390px);
+    align-items: start;
+    gap: 18px 22px;
+    padding-top: 0;
+    padding-bottom: 44px;
+  }
+
+  .trade-feed-welcome {
+    grid-column: 1 / -1;
+    padding: 2px 0 6px;
+  }
+
+  .trade-feed-welcome-text h1 {
+    font-size: clamp(32px, 3.4vw, 48px);
+    letter-spacing: 0;
+  }
+
+  .trade-feed-start-card,
+  .trade-feed-nudge,
+  .trade-feed-communities {
+    grid-column: 2;
+  }
+
+  .trade-feed-start-card {
+    grid-row: 2 / span 2;
+  }
+
+  .trade-feed-nudge {
+    position: sticky;
+    top: calc(var(--v2-topbar-height, 58px) + 20px);
+  }
+
+  .trade-feed-communities {
+    padding: 16px;
+    border: 1px solid var(--v2-border);
+    border-radius: var(--v2-radius-xl);
+    background: var(--v2-surface-raised);
+    box-shadow: var(--v2-shadow-card);
+  }
+
+  .trade-feed-community-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    overflow: visible;
+    padding-bottom: 0;
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+
+  .trade-feed-community-card {
+    width: auto;
+    min-height: 136px;
+  }
+
+  .trade-feed-trending-head,
+  .trade-feed-list,
+  .trade-feed-footer {
+    grid-column: 1;
+  }
+
+  .trade-feed-list {
+    border: 1px solid var(--v2-border);
+    border-radius: var(--v2-radius-xl);
+    background: var(--v2-surface-raised);
+    box-shadow: var(--v2-shadow-card);
+  }
+
+  .trade-feed-list .trade-post {
+    padding-right: 18px;
+    padding-left: 18px;
+  }
+
+  .trade-feed-fab {
+    right: clamp(28px, 3vw, 48px);
+    bottom: 28px;
   }
 }

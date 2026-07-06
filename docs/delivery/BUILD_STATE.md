@@ -7,6 +7,44 @@ Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
 Production release commit: `6695c69e91f0bd6a925f5d3fa70176bad2f66131` verified with live `/api/health` and `npm run monitor:production`; latest runtime feature evidence is recorded below and docs-only evidence commits may supersede the served build SHA.
 
+## Latest Packet 08 Pass - Responsive Shell and Token Bridge
+
+- Continued Packet 08 on branch `codex/responsive-token-polish` from `origin/master` commit `107c6e2dfe803f78bec554f01202cce10e3ad151`.
+- Responsive shell outcomes:
+  - added destination-aware main content widths so Work, Shop Talk, and Tools can use wider desktop workspaces without stretching every screen the same way
+  - added tablet and wide-desktop shell rules for sidebar width, search width, gutters, nav spacing, and main-canvas padding
+  - gave the desktop Home feed a real two-column composition with the community rail/nudge on the right and feed content on the left
+  - expanded the desktop Tools hub into a denser three-column tool workspace instead of a phone-shaped column on large screens
+- Token/visual-system outcomes:
+  - added shell/content/nav tokens in `tokens.css`
+  - added missing legacy bridge tokens for `--v2-radius-xl`, `--v2-radius-pill`, success/warning/danger/info colors, and related soft states
+  - moved touched accent-on-orange text from hardcoded white to `--v2-on-accent`
+  - fixed compact-device logo specificity so the mobile header shows one theme-correct RIVT lockup instead of both logo variants stacked
+  - reduced the Home floating action to an icon-only button on phone widths so it no longer covers feed titles as aggressively
+- Smoke-maintenance outcomes:
+  - updated `scripts/mobile-actions-ui-smoke.mjs` to recognize the current `Camera` primary tool launcher and the current accessible `Switch to metric mode` calculator control
+- Rendered QA:
+  - Browser plugin instructions were loaded first, but this runtime's in-app Browser connector did not expose the documented `browser.documentation()` API; Playwright fallback was used
+  - local Vite QA at `http://127.0.0.1:5317` captured desktop Home, desktop Tools, and 390x664 mobile Home screenshots outside the repo:
+    - `C:\Users\zboyt\AppData\Local\Temp\rivt-responsive-desktop-home.png`
+    - `C:\Users\zboyt\AppData\Local\Temp\rivt-responsive-desktop-tools.png`
+    - `C:\Users\zboyt\AppData\Local\Temp\rivt-responsive-mobile-home.png`
+  - rendered metrics reported zero horizontal overflow and no Vite error overlay for desktop Home, desktop Tools, and mobile Home
+  - console noise during the fallback run was limited to expected client-only API fetch failures because the local API was not running
+- Local verification:
+  - `git diff --check` (pass; CRLF warnings only)
+  - `npm run build` (pass)
+  - `npm run lint` (pass)
+  - `npm run lint:security` (pass)
+  - `npm run test` (pass; unit suite green, integration suite passed non-DB checks and skipped 15 DB-backed cases because `TEST_DATABASE_URL` is not configured)
+  - `npm run test:e2e` (pass)
+  - `npm run test:ui:mobile-actions` (pass; refreshed screenshots at `C:\Users\zboyt\AppData\Local\Temp\rivt-mobile-actions-pass`)
+  - `npm run test:ui:tools` (pass; refreshed screenshots at `C:\Users\zboyt\AppData\Local\Temp\rivt-tools-pass`)
+  - `npm audit --omit=dev` (pass; 0 vulnerabilities)
+- Production deployment status:
+  - not deployed in this pass
+  - production remains on release commit `6695c69e91f0bd6a925f5d3fa70176bad2f66131` until this branch is merged and redeployed
+
 ## Latest Packet 08 Pass - Truth / Profile Cleanup Deployment
 
 - Fast-forward merged `codex/truth-trust-cleanup` into `master` and pushed `master` to origin.
