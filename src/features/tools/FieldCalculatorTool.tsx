@@ -2,10 +2,17 @@ import { ArrowLeft, Clipboard, Copy, RotateCcw, Ruler } from "lucide-react";
 import { useState } from "react";
 
 type ActiveUnit = "feet" | "inches";
+type InputMode = "imperial" | "metric";
 type Operator = "+" | "-" | "x" | "/";
 
-const THIRTY_SECONDS_PER_INCH = 32;
+const UNITS_PER_MM = 160;
+const UNITS_PER_INCH = 4064;
+const UNITS_PER_FOOT = UNITS_PER_INCH * 12;
+const UNITS_PER_THIRTY_SECOND = 127;
+const IMPERIAL_TRIM_UNITS = UNITS_PER_THIRTY_SECOND;
+const METRIC_TRIM_UNITS = UNITS_PER_MM / 2;
 const FRACTION_BUTTONS = Array.from({ length: 15 }, (_, index) => index + 1);
+const METRIC_TENTH_BUTTONS = Array.from({ length: 9 }, (_, index) => index + 1);
 const RULER_TICKS = [
   { label: "1/16", value: 2 },
   { label: "1/8", value: 4 },
@@ -25,7 +32,15 @@ const RULER_TICKS = [
 ];
 
 function formatNumber(value: number, digits = 2) {
-  return Number.isInteger(value) ? String(value) : value.toFixed(digits);
+  if (Number.isInteger(value)) return new Intl.NumberFormat().format(value);
+  return new Intl.NumberFormat(undefined, {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: digits,
+  }).format(value);
+}
+
+function getDecimalSeparator() {
+  return new Intl.NumberFormat().formatToParts(1.1).find((part) => part.type === "decimal")?.value ?? ".";
 }
 
 function gcd(a: number, b: number): number {
@@ -34,19 +49,33 @@ function gcd(a: number, b: number): number {
 
 function reduceFraction(thirtySeconds: number) {
   if (!thirtySeconds) return "";
-  const divisor = gcd(thirtySeconds, THIRTY_SECONDS_PER_INCH);
-  return `${thirtySeconds / divisor}/${THIRTY_SECONDS_PER_INCH / divisor}`;
+  const divisor = gcd(thirtySeconds, 32);
+  return `${thirtySeconds / divisor}/${32 / divisor}`;
 }
 
 function fractionLabelFromSixteenth(value: number) {
   return reduceFraction(value * 2);
 }
 
-function formatMeasurement(value32: number) {
-  const sign = value32 < 0 ? "-" : "";
-  const safeValue = Math.abs(Math.round(value32));
-  const totalInches = Math.floor(safeValue / THIRTY_SECONDS_PER_INCH);
-  const fraction32 = safeValue % THIRTY_SECONDS_PER_INCH;
+function formatMillimeters(units: number) {
+  const millimeters = units / UNITS_PER_MM;
+  return `${formatNumber(millimeters, 1)} mm`;
+}
+
+function formatCentimeters(units: number) {
+  return `${formatNumber(units / (UNITS_PER_MM * 10), 2)} cm`;
+}
+
+function formatMeters(units: number) {
+  return `${formatNumber(units / (UNITS_PER_MM * 1000), 3)} m`;
+}
+
+function formatMeasurement(units: number) {
+  const sign = units < 0 ? "-" : "";
+  const safeValue = Math.abs(Math.round(units));
+  const totalThirtySeconds = Math.round(safeValue / UNITS_PER_THIRTY_SECOND);
+  const totalInches = Math.floor(totalThirtySeconds / 32);
+  const fraction32 = totalThirtySeconds % 32;
   const feet = Math.floor(totalInches / 12);
   const inches = totalInches % 12;
   const fraction = reduceFraction(fraction32);
@@ -58,78 +87,126 @@ function formatMeasurement(value32: number) {
   return `${sign}${inches}${fraction ? ` ${fraction}` : ""}"`;
 }
 
-function formatMeasurementLong(value32: number) {
-  const inches = value32 / THIRTY_SECONDS_PER_INCH;
-  return `${formatMeasurement(value32)} / ${formatNumber(inches, 3)} in`;
+function formatMeasurementLong(units: number) {
+  return `${formatMeasurement(units)} / ${formatNumber(units / UNITS_PER_INCH, 3)} in`;
 }
 
-function formatMetric(value32: number) {
-  const millimeters = (value32 / THIRTY_SECONDS_PER_INCH) * 25.4;
-  const absMillimeters = Math.abs(millimeters);
-
-  if (absMillimeters >= 1000) {
-    return `${formatNumber(millimeters / 1000, 3)} m`;
-  }
-
-  if (absMillimeters >= 100) {
-    return `${formatNumber(millimeters, 0)} mm`;
-  }
-
-  return `${formatNumber(millimeters, 1)} mm`;
-}
-
-function valueFromEntry(feetText: string, inchesText: string, fraction32: number) {
+function valueFromImperialEntry(feetText: string, inchesText: string, fraction32: number) {
   const feet = Math.max(0, Number(feetText) || 0);
   const inches = Math.max(0, Number(inchesText) || 0);
-  return Math.round((feet * 12 + inches) * THIRTY_SECONDS_PER_INCH + fraction32);
+  return feet * UNITS_PER_FOOT + inches * UNITS_PER_INCH + fraction32 * UNITS_PER_THIRTY_SECOND;
 }
 
-function fieldsFromValue(value32: number) {
-  const safeValue = Math.max(0, Math.round(value32));
-  const totalInches = Math.floor(safeValue / THIRTY_SECONDS_PER_INCH);
+function fieldsFromImperialValue(units: number) {
+  const safeValue = Math.max(0, Math.round(units));
+  const totalThirtySeconds = Math.round(safeValue / UNITS_PER_THIRTY_SECOND);
+  const totalInches = Math.floor(totalThirtySeconds / 32);
   return {
     feet: String(Math.floor(totalInches / 12)),
     inches: String(totalInches % 12),
-    fraction32: safeValue % THIRTY_SECONDS_PER_INCH,
+    fraction32: totalThirtySeconds % 32,
   };
 }
 
-function computeOperation(left32: number, operator: Operator, right32: number) {
-  if (operator === "+") return left32 + right32;
-  if (operator === "-") return left32 - right32;
+function valueFromMetricEntry(metricText: string, metricTenths: number) {
+  const millimeters = Math.max(0, Number(metricText) || 0) + metricTenths / 10;
+  return Math.round(millimeters * UNITS_PER_MM);
+}
 
-  const scalar = right32 / THIRTY_SECONDS_PER_INCH;
-  if (operator === "x") return Math.round(left32 * scalar);
-  if (!scalar) return left32;
-  return Math.round(left32 / scalar);
+function fieldsFromMetricValue(units: number) {
+  const totalTenths = Math.max(0, Math.round((units / UNITS_PER_MM) * 10));
+  return {
+    metricText: String(Math.floor(totalTenths / 10)),
+    metricTenths: totalTenths % 10,
+  };
+}
+
+function formatMetricEntry(metricText: string, metricTenths: number) {
+  const decimalSeparator = getDecimalSeparator();
+  return `${new Intl.NumberFormat().format(Number(metricText) || 0)}${metricTenths ? `${decimalSeparator}${metricTenths}` : ""} mm`;
+}
+
+function computeOperation(leftUnits: number, operator: Operator, rightUnits: number, inputMode: InputMode) {
+  if (operator === "+") return leftUnits + rightUnits;
+  if (operator === "-") return leftUnits - rightUnits;
+
+  const scalar = inputMode === "metric"
+    ? rightUnits / UNITS_PER_MM
+    : rightUnits / UNITS_PER_INCH;
+
+  if (operator === "x") return Math.round(leftUnits * scalar);
+  if (!scalar) return leftUnits;
+  return Math.round(leftUnits / scalar);
 }
 
 export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
+  const [inputMode, setInputMode] = useState<InputMode>("imperial");
   const [activeUnit, setActiveUnit] = useState<ActiveUnit>("inches");
   const [feetText, setFeetText] = useState("0");
   const [inchesText, setInchesText] = useState("0");
   const [fraction32, setFraction32] = useState(0);
-  const [metricEnabled, setMetricEnabled] = useState(false);
-  const [accumulator32, setAccumulator32] = useState<number | null>(null);
+  const [metricText, setMetricText] = useState("0");
+  const [metricTenths, setMetricTenths] = useState(0);
+  const [accumulatorUnits, setAccumulatorUnits] = useState<number | null>(null);
   const [pendingOperator, setPendingOperator] = useState<Operator | null>(null);
-  const [result32, setResult32] = useState<number | null>(null);
+  const [resultUnits, setResultUnits] = useState<number | null>(null);
   const [historyLabel, setHistoryLabel] = useState("Ready");
   const [copied, setCopied] = useState(false);
 
-  const entryValue32 = valueFromEntry(feetText, inchesText, fraction32);
-  const displayValue32 = result32 ?? entryValue32;
+  const entryValueUnits = inputMode === "metric"
+    ? valueFromMetricEntry(metricText, metricTenths)
+    : valueFromImperialEntry(feetText, inchesText, fraction32);
+  const displayValueUnits = resultUnits ?? entryValueUnits;
 
-  function setEntryFromValue(nextValue32: number) {
-    const fields = fieldsFromValue(nextValue32);
+  function setImperialEntryFromValue(nextUnits: number) {
+    const fields = fieldsFromImperialValue(nextUnits);
     setFeetText(fields.feet);
     setInchesText(fields.inches);
     setFraction32(fields.fraction32);
-    setResult32(null);
+  }
+
+  function setMetricEntryFromValue(nextUnits: number) {
+    const fields = fieldsFromMetricValue(nextUnits);
+    setMetricText(fields.metricText);
+    setMetricTenths(fields.metricTenths);
+  }
+
+  function setEntryFromValue(nextUnits: number, mode = inputMode) {
+    if (mode === "metric") {
+      setMetricEntryFromValue(nextUnits);
+    } else {
+      setImperialEntryFromValue(nextUnits);
+    }
+    setResultUnits(null);
+  }
+
+  function switchMode(nextMode: InputMode) {
+    if (nextMode === inputMode) return;
+    const base = displayValueUnits;
+    setInputMode(nextMode);
+    if (nextMode === "metric") {
+      setMetricEntryFromValue(base);
+    } else {
+      setImperialEntryFromValue(base);
+      setActiveUnit("inches");
+    }
+    setCopied(false);
   }
 
   function handleDigit(digit: string) {
-    if (result32 !== null && pendingOperator === null) {
+    if (resultUnits !== null && pendingOperator === null) {
       setEntryFromValue(0);
+    }
+
+    if (inputMode === "metric") {
+      setMetricText((current) => {
+        const clean = current === "0" ? "" : current;
+        const next = `${clean}${digit}`.slice(0, 5);
+        return next || "0";
+      });
+      setResultUnits(null);
+      setCopied(false);
+      return;
     }
 
     const setter = activeUnit === "feet" ? setFeetText : setInchesText;
@@ -138,80 +215,102 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
       const next = `${clean}${digit}`.slice(0, activeUnit === "feet" ? 3 : 2);
       return next || "0";
     });
-    setResult32(null);
+    setResultUnits(null);
     setCopied(false);
   }
 
   function handleBackspace() {
+    if (inputMode === "metric") {
+      if (metricTenths) {
+        setMetricTenths(0);
+      } else {
+        setMetricText((current) => current.length > 1 ? current.slice(0, -1) : "0");
+      }
+      setResultUnits(null);
+      return;
+    }
+
     if (fraction32) {
       setFraction32(0);
-      setResult32(null);
+      setResultUnits(null);
       return;
     }
 
     const setter = activeUnit === "feet" ? setFeetText : setInchesText;
     setter((current) => current.length > 1 ? current.slice(0, -1) : "0");
-    setResult32(null);
+    setResultUnits(null);
   }
 
   function clearAll() {
     setFeetText("0");
     setInchesText("0");
     setFraction32(0);
-    setAccumulator32(null);
+    setMetricText("0");
+    setMetricTenths(0);
+    setAccumulatorUnits(null);
     setPendingOperator(null);
-    setResult32(null);
+    setResultUnits(null);
     setHistoryLabel("Ready");
     setCopied(false);
   }
 
-  function adjustEntry(delta32: number) {
-    const base = result32 ?? entryValue32;
-    setEntryFromValue(Math.max(0, base + delta32));
+  function adjustEntry(deltaUnits: number) {
+    const base = resultUnits ?? entryValueUnits;
+    setEntryFromValue(Math.max(0, base + deltaUnits));
     setCopied(false);
   }
 
   function scaleEntry(multiplier: number) {
-    const base = result32 ?? entryValue32;
+    const base = resultUnits ?? entryValueUnits;
     const next = Math.max(0, Math.round(base * multiplier));
     setEntryFromValue(next);
-    setHistoryLabel(`${formatMeasurement(base)} ${multiplier === 2 ? "x2" : "/2"}`);
-    setAccumulator32(null);
+    setHistoryLabel(`${inputMode === "metric" ? formatMillimeters(base) : formatMeasurement(base)} ${multiplier === 2 ? "x2" : "/2"}`);
+    setAccumulatorUnits(null);
     setPendingOperator(null);
     setCopied(false);
   }
 
   function chooseFraction(sixteenth: number) {
     setFraction32(sixteenth * 2);
-    setResult32(null);
+    setResultUnits(null);
+    setCopied(false);
+  }
+
+  function chooseMetricTenth(tenth: number) {
+    setMetricTenths(tenth);
+    setResultUnits(null);
     setCopied(false);
   }
 
   function applyOperator(operator: Operator) {
-    const current = result32 ?? entryValue32;
-    const nextAccumulator = accumulator32 !== null && pendingOperator
-      ? computeOperation(accumulator32, pendingOperator, current)
+    const current = resultUnits ?? entryValueUnits;
+    const nextAccumulator = accumulatorUnits !== null && pendingOperator
+      ? computeOperation(accumulatorUnits, pendingOperator, current, inputMode)
       : current;
 
-    setAccumulator32(nextAccumulator);
+    setAccumulatorUnits(nextAccumulator);
     setPendingOperator(operator);
-    setHistoryLabel(`${formatMeasurement(nextAccumulator)} ${operator}`);
+    setHistoryLabel(`${inputMode === "metric" ? formatMillimeters(nextAccumulator) : formatMeasurement(nextAccumulator)} ${operator}`);
     setEntryFromValue(0);
-    setActiveUnit("inches");
+    if (inputMode === "imperial") {
+      setActiveUnit("inches");
+    }
   }
 
   function evaluate() {
-    const current = result32 ?? entryValue32;
-    if (accumulator32 === null || !pendingOperator) {
-      setResult32(current);
-      setHistoryLabel(formatMeasurement(current));
+    const current = resultUnits ?? entryValueUnits;
+    if (accumulatorUnits === null || !pendingOperator) {
+      setResultUnits(current);
+      setHistoryLabel(inputMode === "metric" ? formatMillimeters(current) : formatMeasurement(current));
       return;
     }
 
-    const nextResult = computeOperation(accumulator32, pendingOperator, current);
-    setResult32(nextResult);
-    setHistoryLabel(`${formatMeasurement(accumulator32)} ${pendingOperator} ${formatMeasurement(current)}`);
-    setAccumulator32(null);
+    const nextResult = computeOperation(accumulatorUnits, pendingOperator, current, inputMode);
+    setResultUnits(nextResult);
+    setHistoryLabel(
+      `${inputMode === "metric" ? formatMillimeters(accumulatorUnits) : formatMeasurement(accumulatorUnits)} ${pendingOperator} ${inputMode === "metric" ? formatMillimeters(current) : formatMeasurement(current)}`,
+    );
+    setAccumulatorUnits(null);
     setPendingOperator(null);
     setCopied(false);
   }
@@ -219,9 +318,9 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
   async function copyCalculatorResult() {
     const text = [
       "RIVT Heavy 16th",
-      `Result: ${formatMeasurementLong(displayValue32)}`,
-      metricEnabled ? `Metric: ${formatMetric(displayValue32)}` : null,
-    ].filter(Boolean).join("\n");
+      `Result: ${formatMeasurementLong(displayValueUnits)}`,
+      `Metric: ${formatMillimeters(displayValueUnits)} (${formatMeters(displayValueUnits)})`,
+    ].join("\n");
 
     try {
       await navigator.clipboard.writeText(text);
@@ -230,6 +329,25 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
       setCopied(false);
     }
   }
+
+  const primaryValue = inputMode === "metric" ? formatMillimeters(displayValueUnits) : formatMeasurement(displayValueUnits);
+  const secondaryLabel = inputMode === "metric" ? "Metres" : "Decimal";
+  const secondaryValue = inputMode === "metric"
+    ? formatMeters(displayValueUnits)
+    : `${formatNumber(displayValueUnits / UNITS_PER_INCH, 3)} in`;
+  const metaValues = inputMode === "metric"
+    ? [formatMillimeters(displayValueUnits), formatCentimeters(displayValueUnits), formatMeters(displayValueUnits), formatMeasurement(displayValueUnits)]
+    : [
+        `${formatNumber(displayValueUnits / UNITS_PER_INCH, 3)} in`,
+        `${formatNumber(displayValueUnits / UNITS_PER_FOOT, 3)} ft`,
+        formatMillimeters(displayValueUnits),
+        pendingOperator ? `${pendingOperator} pending` : activeUnit === "feet" ? "Entering feet" : "Entering inches",
+      ];
+  const resultCardPrimary = inputMode === "metric" ? formatMillimeters(displayValueUnits) : formatMeasurement(displayValueUnits);
+  const resultCardSecondaryLabel = inputMode === "metric" ? "Imperial" : "Metric";
+  const resultCardSecondaryValue = inputMode === "metric"
+    ? formatMeasurement(displayValueUnits)
+    : formatMillimeters(displayValueUnits);
 
   return (
     <section className="heavy-calc-workbench fraction-calc-workbench" aria-label="Heavy 16th field calculator">
@@ -253,7 +371,7 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
             <Ruler size={22} />
           </div>
           <div>
-            <strong>HEAVY 16TH</strong>
+            <strong>{inputMode === "metric" ? "METRIC CUT" : "HEAVY 16TH"}</strong>
           </div>
         </div>
         <div className="heavy-calc-actions">
@@ -274,51 +392,84 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
             <div className="fraction-calc-left">
               <div className="calc-display-stack fraction-display">
                 <span className="fraction-history">{historyLabel}</span>
-                <strong className="calc-primary-value">{formatMeasurement(displayValue32)}</strong>
+                <strong className="calc-primary-value">{primaryValue}</strong>
                 <div className="calc-secondary-row">
-                  <span>{metricEnabled ? "Metric" : "Decimal"}</span>
-                  <strong>{metricEnabled ? formatMetric(displayValue32) : `${formatNumber(displayValue32 / THIRTY_SECONDS_PER_INCH, 3)} in`}</strong>
+                  <span>{secondaryLabel}</span>
+                  <strong>{secondaryValue}</strong>
                 </div>
                 <div className="fraction-display-meta">
-                  <span>{formatNumber(displayValue32 / THIRTY_SECONDS_PER_INCH, 3)} in</span>
-                  <span>{formatNumber(displayValue32 / THIRTY_SECONDS_PER_INCH / 12, 3)} ft</span>
-                  <span>{formatMetric(displayValue32)}</span>
-                  {pendingOperator ? <span>{pendingOperator} pending</span> : <span>{activeUnit === "feet" ? "Entering feet" : "Entering inches"}</span>}
+                  {metaValues.map((value, index) => <span key={`${index}-${value}`}>{value}</span>)}
                 </div>
               </div>
 
-              <div className="fraction-unit-row" aria-label="Input unit">
-                <button type="button" className={activeUnit === "feet" ? "active unit-feet" : "unit-feet"} onClick={() => setActiveUnit("feet")}>
-                  <span>FT</span>
-                  <strong>{feetText}</strong>
-                </button>
-                <button type="button" className={activeUnit === "inches" ? "active unit-inches" : "unit-inches"} onClick={() => setActiveUnit("inches")}>
-                  <span>IN</span>
-                  <strong>{inchesText}</strong>
-                </button>
-                <button type="button" className={fraction32 ? "active unit-fraction" : "unit-fraction"} onClick={() => setFraction32(0)}>
-                  <span>FRAC</span>
-                  <strong>{reduceFraction(fraction32) || "--"}</strong>
-                </button>
-                <button
-                  type="button"
-                  className={metricEnabled ? "active unit-metric" : "unit-metric"}
-                  aria-pressed={metricEnabled}
-                  onClick={() => setMetricEnabled((enabled) => !enabled)}
-                >
-                  <span>MM</span>
-                  <strong>{metricEnabled ? "ON" : "OFF"}</strong>
-                </button>
+              <div className="fraction-unit-row" aria-label={inputMode === "metric" ? "Metric input and conversions" : "Input unit"}>
+                {inputMode === "metric" ? (
+                  <>
+                    <button type="button" className="active unit-metric" aria-pressed="true">
+                      <span>MM</span>
+                      <strong>{formatMetricEntry(metricText, metricTenths).replace(" mm", "")}</strong>
+                    </button>
+                    <button type="button" className="unit-metric-readout" tabIndex={-1}>
+                      <span>CM</span>
+                      <strong>{formatNumber(displayValueUnits / (UNITS_PER_MM * 10), 2)}</strong>
+                    </button>
+                    <button type="button" className="unit-metric-readout" tabIndex={-1}>
+                      <span>M</span>
+                      <strong>{formatNumber(displayValueUnits / (UNITS_PER_MM * 1000), 3)}</strong>
+                    </button>
+                    <button
+                      type="button"
+                      className="unit-metric"
+                      aria-label="Switch to imperial mode"
+                      onClick={() => switchMode("imperial")}
+                    >
+                      <span>IMP</span>
+                      <strong>ON</strong>
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button type="button" className={activeUnit === "feet" ? "active unit-feet" : "unit-feet"} onClick={() => setActiveUnit("feet")}>
+                      <span>FT</span>
+                      <strong>{feetText}</strong>
+                    </button>
+                    <button type="button" className={activeUnit === "inches" ? "active unit-inches" : "unit-inches"} onClick={() => setActiveUnit("inches")}>
+                      <span>IN</span>
+                      <strong>{inchesText}</strong>
+                    </button>
+                    <button type="button" className={fraction32 ? "active unit-fraction" : "unit-fraction"} onClick={() => setFraction32(0)}>
+                      <span>FRAC</span>
+                      <strong>{reduceFraction(fraction32) || "--"}</strong>
+                    </button>
+                    <button
+                      type="button"
+                      className="unit-metric"
+                      aria-label="Switch to metric mode"
+                      onClick={() => switchMode("metric")}
+                    >
+                      <span>MET</span>
+                      <strong>ON</strong>
+                    </button>
+                  </>
+                )}
               </div>
 
               <div className="fraction-action-row" aria-label="Heavy, light, double, and half controls">
-                <button type="button" aria-label="Light minus one thirty-second" onClick={() => adjustEntry(-1)}>
+                <button
+                  type="button"
+                  aria-label={inputMode === "metric" ? "Light minus half millimetre" : "Light minus one thirty-second"}
+                  onClick={() => adjustEntry(inputMode === "metric" ? -METRIC_TRIM_UNITS : -IMPERIAL_TRIM_UNITS)}
+                >
                   <strong>L</strong>
-                  <small>Light</small>
+                  <small>{inputMode === "metric" ? "-0.5 mm" : "Light"}</small>
                 </button>
-                <button type="button" aria-label="Heavy plus one thirty-second" onClick={() => adjustEntry(1)}>
+                <button
+                  type="button"
+                  aria-label={inputMode === "metric" ? "Heavy plus half millimetre" : "Heavy plus one thirty-second"}
+                  onClick={() => adjustEntry(inputMode === "metric" ? METRIC_TRIM_UNITS : IMPERIAL_TRIM_UNITS)}
+                >
                   <strong>H</strong>
-                  <small>Heavy</small>
+                  <small>{inputMode === "metric" ? "+0.5 mm" : "Heavy"}</small>
                 </button>
                 <button type="button" aria-label="Divide measurement by two" onClick={() => scaleEntry(0.5)}>
                   <strong>&divide;2</strong>
@@ -330,20 +481,35 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
                 </button>
               </div>
 
-              <div className="fraction-strip" aria-label="Sixteenth fractions">
-                {FRACTION_BUTTONS.map((value) => (
-                  <button
-                    key={value}
-                    type="button"
-                    className={fraction32 === value * 2 ? "active" : ""}
-                    onClick={() => chooseFraction(value)}
-                  >
-                    {fractionLabelFromSixteenth(value)}
-                  </button>
-                ))}
-              </div>
+              {inputMode === "metric" ? (
+                <div className="fraction-strip metric-strip" aria-label="Metric decimal tenths">
+                  {METRIC_TENTH_BUTTONS.map((value) => (
+                    <button
+                      key={value}
+                      type="button"
+                      className={metricTenths === value ? "active" : ""}
+                      onClick={() => chooseMetricTenth(value)}
+                    >
+                      .{value}
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div className="fraction-strip" aria-label="Sixteenth fractions">
+                  {FRACTION_BUTTONS.map((value) => (
+                    <button
+                      key={value}
+                      type="button"
+                      className={fraction32 === value * 2 ? "active" : ""}
+                      onClick={() => chooseFraction(value)}
+                    >
+                      {fractionLabelFromSixteenth(value)}
+                    </button>
+                  ))}
+                </div>
+              )}
 
-              <div className="calc-pad-grid fraction-pad" aria-label="Fraction calculator keypad">
+              <div className="calc-pad-grid fraction-pad" aria-label={inputMode === "metric" ? "Metric calculator keypad" : "Fraction calculator keypad"}>
                 {["7", "8", "9"].map((digit) => <button key={digit} type="button" onClick={() => handleDigit(digit)}>{digit}</button>)}
                 <button type="button" className="op" onClick={() => applyOperator("/")}>/</button>
                 {["4", "5", "6"].map((digit) => <button key={digit} type="button" onClick={() => handleDigit(digit)}>{digit}</button>)}
@@ -360,11 +526,11 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
             <aside className="fraction-result-card" aria-label="Result card">
               <Clipboard size={18} />
               <span>Result</span>
-              <strong>{formatMeasurement(displayValue32)}</strong>
-              <small>{formatNumber(displayValue32 / THIRTY_SECONDS_PER_INCH, 3)} in</small>
+              <strong>{resultCardPrimary}</strong>
+              <small>{inputMode === "metric" ? formatCentimeters(displayValueUnits) : `${formatNumber(displayValueUnits / UNITS_PER_INCH, 3)} in`}</small>
               <div>
-                <span>Metric</span>
-                <b>{formatMetric(displayValue32)}</b>
+                <span>{resultCardSecondaryLabel}</span>
+                <b>{resultCardSecondaryValue}</b>
               </div>
             </aside>
           </section>
