@@ -275,9 +275,7 @@ async function assertImmersiveToolChromeHidden(page, toolName) {
 }
 
 async function clickVisibleFraction(page, label, viewportName) {
-  const selector = viewportName === "mobile"
-    ? ".heavy-calc-ruler .ruler-tick"
-    : ".fraction-strip button";
+  const selector = ".fraction-strip button";
   const result = await page.evaluate(
     ({ selector, label }) => {
       const isVisible = (element) => {
@@ -315,10 +313,12 @@ async function runToolsFlow(page, viewportName) {
   await page.getByRole("button", { name: /Heavy 16th/i }).waitFor({ timeout: 15_000 });
   await page.getByRole("button", { name: /Records & photos/i }).waitFor({ timeout: 15_000 });
   assert.equal(await page.locator(".v2-tool-launch-card").count(), 5, "Tools hub should expose exactly five primary field apps");
-  assert.equal(await page.locator(".v2-tool-mini-card").count(), 15, "Tools hub should expose supporting utilities as compact launchers");
+  assert.equal(await page.locator(".v2-tool-group").count(), 3, "Tools hub should keep supporting utilities in three grouped sections");
+  await page.locator(".v2-tool-group").filter({ hasText: "Money" }).locator("summary").click();
+  await page.getByRole("button", { name: /Payment tracker/i }).waitFor({ timeout: 15_000 });
+  await page.locator(".v2-tool-group").filter({ hasText: "Site" }).locator("summary").click();
   await page.getByRole("button", { name: /Materials/i }).waitFor({ timeout: 15_000 });
   await page.getByRole("button", { name: /Time tracker/i }).waitFor({ timeout: 15_000 });
-  await page.getByRole("button", { name: /Payment tracker/i }).waitFor({ timeout: 15_000 });
   await assertNoHorizontalOverflow(page);
   await page.screenshot({ path: path.join(screenshotDir, `${viewportName}-tools-hub.png`), fullPage: true });
 
@@ -354,6 +354,11 @@ async function runToolsFlow(page, viewportName) {
   if (isHandsetViewport) {
     await assertCalculatorNoVerticalOverflow(page);
     await assertCalculatorOwnsHandsetWidth(page);
+    assert.equal(
+      await page.locator(".heavy-calc-ruler").isVisible(),
+      false,
+      "Handset calculator should use the visible fraction strip instead of the ruler rail",
+    );
     if (viewportName === "se") {
       assert.equal(
         await page.locator(".fraction-action-row button small").first().isVisible(),
@@ -364,7 +369,7 @@ async function runToolsFlow(page, viewportName) {
   }
   await assertNoHorizontalOverflow(page);
   await page.screenshot({ path: path.join(screenshotDir, `${viewportName}-calculator.png`), fullPage: true });
-  await page.getByLabel("Heavy 16th field calculator").getByRole("button", { name: "Tools" }).click();
+  await page.getByLabel("Heavy 16th field calculator").getByRole("button", { name: "Back to tools" }).click();
 
   await primaryTool("Estimate").click();
   await page.getByRole("heading", { name: "Estimate builder" }).waitFor({ timeout: 15_000 });
@@ -385,6 +390,7 @@ async function runToolsFlow(page, viewportName) {
   await page.getByRole("link", { name: "Email draft" }).waitFor({ timeout: 15_000 });
   await page.getByRole("link", { name: "Text draft" }).waitFor({ timeout: 15_000 });
   await page.getByRole("heading", { name: "Printable invoice" }).waitFor({ timeout: 15_000 });
+  await page.getByLabel("Printable invoice preview").getByText("Open preview", { exact: true }).click();
   await page.getByLabel("Printable invoice preview").getByText("Total due", { exact: true }).waitFor({ timeout: 15_000 });
   await page.getByText("RIVT does not send on your behalf.", { exact: false }).waitFor({ timeout: 15_000 });
   if (isHandsetViewport) {
@@ -395,14 +401,16 @@ async function runToolsFlow(page, viewportName) {
   await page.getByLabel("Invoice draft").getByRole("button", { name: "Tools" }).click();
 
   await primaryTool("Daily log").click();
-  await page.getByRole("heading", { name: "Daily log", exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByRole("heading", { name: "Jobsite note", exact: true }).waitFor({ timeout: 15_000 });
   await page.getByText("Records-ready", { exact: true }).waitFor({ timeout: 15_000 });
   await page.getByText("Tenant Build-Out", { exact: true }).waitFor({ timeout: 15_000 });
   await page.getByLabel("Work completed").fill("Installed devices, labeled panel schedule, and cleaned up the work area.");
   await page.getByLabel("Blockers / changes").fill("Waiting on final fixture selections before trim-out can close.");
   await page.getByLabel("Safety note").fill("Verified ladder setup and kept panel covered while working.");
+  await page.getByLabel("Daily log checklist").getByText("Checklist", { exact: true }).click();
   await page.getByRole("button", { name: "Photos captured" }).click();
   await page.getByRole("button", { name: "Safety condition checked" }).click();
+  await page.getByLabel("Daily log text preview").getByText("Open text preview", { exact: true }).click();
   await page.locator(".v2-daily-log-preview").waitFor({ timeout: 15_000 });
   await page.locator(".v2-daily-log-preview").getByText("Installed devices", { exact: false }).waitFor({ timeout: 15_000 });
   await page.getByRole("button", { name: "Save to Records" }).click();

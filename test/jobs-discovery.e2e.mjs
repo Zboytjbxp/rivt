@@ -364,16 +364,18 @@ async function assertToolsFlow(page) {
   const primaryTool = (name) => page.locator(".v2-tool-launch-card").filter({ hasText: name }).first();
   await page.getByRole("button", { name: /Heavy 16th/i }).waitFor();
   assert.equal(await page.locator(".v2-tool-launch-card").count(), 5, "Tools hub should expose exactly five primary field apps");
-  assert.equal(await page.locator(".v2-tool-mini-card").count(), 15, "Tools hub should expose supporting utilities as compact launchers");
-  await page.getByRole("button", { name: /Materials/i }).waitFor();
+  assert.equal(await page.locator(".v2-tool-group").count(), 3, "Tools hub should keep supporting utilities in three grouped sections");
+  await page.locator(".v2-tool-group").filter({ hasText: "Money" }).locator("summary").click();
   await page.getByRole("button", { name: /Payment tracker/i }).waitFor();
+  await page.locator(".v2-tool-group").filter({ hasText: "Site" }).locator("summary").click();
+  await page.getByRole("button", { name: /Materials/i }).waitFor();
   await page.getByRole("button", { name: /Heavy 16th/i }).click();
   await page.getByRole("heading", { name: "Heavy 16th field calculator" }).waitFor();
   await page.getByLabel("Length calculator").getByText("Decimal", { exact: true }).waitFor();
   await page.getByLabel("Input unit").getByRole("button", { name: /MM/i }).waitFor();
   await page.getByLabel("Heavy, light, double, and half controls").getByRole("button", { name: "Heavy plus one thirty-second" }).waitFor();
   await page.getByLabel("Heavy, light, double, and half controls").getByRole("button", { name: "Divide measurement by two" }).waitFor();
-  await page.getByLabel("Heavy 16th field calculator").getByRole("button", { name: "Tools" }).click();
+  await page.getByLabel("Heavy 16th field calculator").getByRole("button", { name: "Back to tools" }).click();
 
   await primaryTool("Estimate").click();
   await page.getByRole("heading", { name: "Estimate builder" }).waitFor();
@@ -382,17 +384,17 @@ async function assertToolsFlow(page) {
   await page.getByRole("heading", { name: "Invoice draft" }).waitFor();
   await page.getByText(/Converted from estimate total/i).waitFor();
   await page.getByText("Printable invoice", { exact: true }).waitFor();
-  await page.getByLabel("Invoice draft").getByRole("button", { name: "Tools" }).click();
+  await page.getByLabel("Invoice draft").getByRole("button", { name: "All tools" }).click();
 
   await primaryTool("Estimate").click();
   await page.getByRole("heading", { name: "Estimate builder" }).waitFor();
-  await page.getByLabel("Estimate builder").getByRole("button", { name: "Tools" }).click();
+  await page.getByLabel("Estimate builder").getByRole("button", { name: "All tools" }).click();
 
   await primaryTool("Invoice").click();
   await page.getByRole("heading", { name: "Invoice draft" }).waitFor();
   assert.equal(await page.getByText(/Converted from estimate total/i).count(), 0, "Opening Invoice directly should not reuse a converted estimate draft");
   await page.getByText("Printable invoice", { exact: true }).waitFor();
-  await page.getByLabel("Invoice draft").getByRole("button", { name: "Tools" }).click();
+  await page.getByLabel("Invoice draft").getByRole("button", { name: "All tools" }).click();
 
   await primaryTool("Records & photos").click();
   await page.getByRole("heading", { name: "Job Photos", exact: true, level: 1 }).waitFor();

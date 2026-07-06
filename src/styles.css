@@ -9237,6 +9237,126 @@ html[data-rivt-compact-device="true"] .auth-intro-secondary {
   }
 }
 
+@media (max-width: 430px) {
+  .auth-intro,
+  .auth-preview-entry {
+    min-height: 100svh;
+    padding: 16px 12px;
+  }
+
+  .auth-intro {
+    gap: 10px;
+  }
+
+  .auth-intro-skip {
+    top: 14px;
+    right: 12px;
+    min-height: 38px;
+    padding-inline: 12px;
+    font-size: 13px;
+  }
+
+  .auth-intro-slide,
+  .auth-preview-entry {
+    grid-template-columns: 1fr;
+    align-content: start;
+    gap: 12px;
+  }
+
+  .auth-intro-slide .auth-story-header,
+  .auth-preview-copy {
+    gap: 8px;
+    max-width: 100%;
+  }
+
+  .auth-intro-slide .auth-story-header h1,
+  .auth-preview-copy h1 {
+    font-size: clamp(28px, 10vw, 34px);
+    line-height: 0.98;
+    letter-spacing: -0.03em;
+    text-wrap: balance;
+  }
+
+  .auth-intro-slide .auth-story-header p,
+  .auth-preview-copy p {
+    max-width: 100%;
+    font-size: 14px;
+    line-height: 1.34;
+  }
+
+  .auth-intro-slide .auth-trade-phone,
+  .auth-preview-phone,
+  .auth-preview-board {
+    width: 100%;
+    max-width: 100%;
+    padding: 10px;
+    border-width: 4px;
+    border-radius: 20px;
+    box-shadow: 4px 6px 0 #0b0b0b;
+  }
+
+  .auth-phone-feed {
+    max-height: 228px;
+  }
+
+  .auth-phone-post {
+    padding: 10px;
+  }
+
+  .auth-phone-post > div {
+    gap: 6px;
+  }
+
+  .auth-phone-post small:last-child,
+  .auth-phone-post p {
+    display: none;
+  }
+
+  .auth-preview-trades {
+    gap: 6px;
+  }
+
+  .auth-preview-trades button,
+  .auth-preview-field > button {
+    min-height: 36px;
+    padding-inline: 10px;
+    font-size: 13px;
+  }
+
+  .auth-preview-field input {
+    min-height: 42px;
+  }
+
+  .auth-preview-phone {
+    display: none;
+  }
+
+  .auth-intro-actions .primary-action,
+  .auth-intro-actions .secondary-action,
+  .auth-preview-actions .primary-action,
+  .auth-preview-actions .secondary-action {
+    min-height: 46px;
+    width: 100%;
+  }
+
+  .guest-banner {
+    gap: 6px;
+    padding: 6px 8px;
+  }
+
+  .guest-banner > span {
+    font-size: 12px;
+    line-height: 1.2;
+  }
+
+  .guest-banner .primary-action,
+  .guest-exit {
+    min-height: 32px;
+    padding-inline: 8px;
+    font-size: 12px;
+  }
+}
+
 /* ── Guest mode ───────────────────────────────────────────── */
 
 .ghost-action {

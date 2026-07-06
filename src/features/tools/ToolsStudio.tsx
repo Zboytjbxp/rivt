@@ -182,11 +182,14 @@ function ToolLauncherSection({
   onOpen: (tool: LaunchableToolMode) => void;
 }) {
   return (
-    <section className="v2-tool-group" aria-label={group.title}>
-      <header className="v2-tool-group-header">
-        <span>{group.label}</span>
-        <strong>{group.title}</strong>
-      </header>
+    <details className="v2-tool-group" aria-label={group.title}>
+      <summary className="v2-tool-group-summary">
+        <span className="v2-tool-group-header">
+          <strong>{group.title}</strong>
+          <small>{group.tools.length} tools</small>
+        </span>
+        <ArrowRight size={16} aria-hidden="true" />
+      </summary>
       <div className="v2-tool-mini-grid">
         {group.tools.map((tool) => (
           <ToolMiniCard
@@ -198,7 +201,7 @@ function ToolLauncherSection({
           />
         ))}
       </div>
-    </section>
+    </details>
   );
 }
 
@@ -251,31 +254,31 @@ const PRIMARY_TOOL_LAUNCHERS: ToolLauncher[] = [
     mode: "calculator",
     icon: Calculator,
     title: "Heavy 16th",
-    summary: "Fractions, feet, and job math.",
+    summary: "Fractions and cut math.",
   },
   {
     mode: "estimate",
     icon: Scale,
     title: "Estimate",
-    summary: "Build a clean price range.",
+    summary: "Build a price range.",
   },
   {
     mode: "invoice",
     icon: ReceiptText,
     title: "Invoice",
-    summary: "Draft, print, send from email.",
+    summary: "Draft and export.",
   },
   {
     mode: "daily-log",
     icon: Clipboard,
     title: "Daily log",
-    summary: "Labor, notes, safety, blockers.",
+    summary: "Notes, labor, blockers.",
   },
   {
     mode: "job-photos",
     icon: FolderOpen,
     title: "Records & photos",
-    summary: "Photos, albums, and closeout proof.",
+    summary: "Albums and closeout proof.",
   },
 ];
 
@@ -3292,15 +3295,15 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
           </div>
         </section>
 
-        <p className="v2-tools-storage-note">
-          Local drafts stay on this device. Records and photos sync to cloud storage.
-        </p>
-
         <div className="v2-tool-group-grid" aria-label="More tools">
           {TOOL_GROUPS.map((group) => (
             <ToolLauncherSection key={group.label} group={group} onOpen={openToolFromHub} />
           ))}
         </div>
+
+        <p className="v2-tools-storage-note">
+          Drafts save on this device. Records and photos sync to cloud storage.
+        </p>
       </div>
 
     </section>

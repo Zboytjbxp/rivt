@@ -1,11 +1,136 @@
 # RIVT Build State
 
-Last updated: 2026-07-05 America/New_York
+Last updated: 2026-07-06 America/New_York
 Current gate: Gate A launch hardening
 Current phase: Packet 08 Gate A launch hardening plus Gate B behind-flag backbone work: machine gates and live workflow smokes are mostly green; the Shop Talk Reddit-model backbone, moderation/reporting backend, human-facing moderation console/report UX, post photo media, reachability/naming cleanup, Tools hub consolidation, Payment Tracker server records, money-tools sync, the accepted tool-records sync slices, non-tool local-state boundary cleanup, dedicated network-records sync for Crew/Invites/informal written shout-outs, screen-density polish, mobile layout/device-accessibility subtraction, fraction calculator ergonomics, iPhone SE layout containment, immersive-tool compact-device containment, and SE tool chrome cleanup slices are implemented while still respecting launch-readiness boundaries before broad exposure.
 Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
-Repository branch: `master`
+Repository branch: `codex/small-phone-polish`
 Production release commit: `5ce29c2f7c2768402a0dce24f3744df254be4b20` verified with live `/api/health`; latest runtime feature evidence is recorded below and docs-only evidence commits may supersede the served build SHA.
+
+## Latest Packet 08 Pass - SE Home Compression
+
+- Continued `codex/small-phone-polish` with one more SE-class pass aimed at the Home feed rather than tool internals:
+  - tightened the welcome block spacing and headline scaling so the first viewport stops feeling over-inflated on narrow phones
+  - reduced the answer-queue nudge density and community-card footprint so the early Home stack fits more naturally on first-generation iPhone SE-class widths
+  - resized and simplified the floating primary action so it no longer dominates the lower viewport on `<= 430px`
+  - hid the FAB label on ultra-tight widths (`<= 360px`) so the icon stays tappable without covering neighboring content
+- Preserved launch boundaries:
+  - no auth, billing, moderation, storage-contract, or data-shape behavior changed in this pass
+  - this was a UI-density and responsive-layout slice only
+- Local gates:
+  - `npm run build` (pass)
+  - `npm run lint` (pass)
+  - `npm run test:unit` (pass)
+  - `npm run test:e2e` (pass)
+  - `npm run test:ui:mobile-actions` (pass; refreshed screenshots at `C:\Users\zboyt\AppData\Local\Temp\rivt-mobile-actions-pass`)
+  - `npm run test:ui:tools` (pass; refreshed screenshots at `C:\Users\zboyt\AppData\Local\Temp\rivt-tools-pass`)
+  - `npm audit --omit=dev` (pass; 0 vulnerabilities)
+  - `npm run test:integration` still exceeded extended local command windows in this pass, so no fresh integration claim is recorded here
+- Rendered QA:
+  - refreshed `mobile-home-iphone-se.png` now shows the Home surface in the mobile shell with a smaller floating action instead of the broken split/sidebar presentation from the physical-device reports
+  - refreshed `se-calculator.png`, `se-invoice.png`, and `se-tools-hub.png` remain contained after the Home pass, confirming the narrower feed CTA did not re-break adjacent small-phone surfaces
+- Production deployment status:
+  - not deployed in this pass
+  - production remains on release commit `5ce29c2f7c2768402a0dce24f3744df254be4b20` until this branch is merged and redeployed
+
+## Latest Packet 08 Pass - Compact Tool Detail Collapse
+
+- Continued `codex/small-phone-polish` with a compact-phone density pass focused on the immersive invoice and daily-log surfaces:
+  - shortened the invoice builder header to a simple `Invoice` title and moved saved templates behind a compact fold-down row
+  - collapsed the printable invoice preview into an explicit `Open preview` section so the builder and send/export actions stay in view first on SE-class screens
+  - shortened the daily-log primary title to `Jobsite note`
+  - moved the daily-log checklist and raw text preview into fold-down sections so the summary panel stays useful without becoming a wall of content on small phones
+  - added shared compact collapsible styles for these secondary sections to keep the visual language consistent across tool surfaces
+- Preserved launch boundaries:
+  - no billing, moderation, auth, storage-contract, or data-shape behavior changed in this pass
+  - this pass only changed UI density, copy, and test expectations for already-shipped tool workflows
+- Local gates:
+  - `npm run build` (pass)
+  - `npm run lint` (pass)
+  - `npm run test:unit` (pass)
+  - `npm run test:e2e` (pass)
+  - `npm run test:ui:tools` (pass; refreshed screenshots at `C:\Users\zboyt\AppData\Local\Temp\rivt-tools-pass`)
+  - `npm audit --omit=dev` (pass; 0 vulnerabilities)
+  - `npm run test` still exceeded the local command window in this pass, so no fresh aggregate test claim is recorded here
+- Rendered QA:
+  - refreshed `se-invoice.png` now shows the invoice builder leading with total / template / line-item editing while templates and printable preview use compact fold-down rows
+  - refreshed `se-daily-log.png` confirms the daily-log summary no longer has to show the checklist and raw text body at full height by default
+- Production deployment status:
+  - not deployed in this pass
+  - production remains on release commit `5ce29c2f7c2768402a0dce24f3744df254be4b20` until this branch is merged and redeployed
+
+## Latest Packet 08 Pass - Calmer Tools Hub
+
+- Continued `codex/small-phone-polish` with one more tools-only subtraction pass aimed at tiny-phone readability rather than new functionality:
+  - shortened the five primary tool summaries so the first viewport reads like a toolbox instead of a feature brochure
+  - moved the local/cloud storage honesty note below the secondary groups so the first screen shows tools first and explanation second
+  - tightened the small-phone tool-card, group, and mini-card spacing so the Tools hub stops feeling bloated on SE-class screens
+  - preserved the grouped secondary-tool layout while keeping the five primary launchers as the clear first actions
+- Preserved launch boundaries:
+  - no auth, billing, moderation, storage-contract, or data-shape behavior changed in this pass
+  - no tool persistence rules changed; this was a UI-density and copy-only slice
+- Local gates:
+  - `npm run build` (pass)
+  - `npm run lint` (pass)
+  - `npm run test:ui:tools` (pass; refreshed screenshots at `C:\Users\zboyt\AppData\Local\Temp\rivt-tools-pass`)
+- Rendered QA:
+  - refreshed `se-tools-hub.png` now shows a calmer first screen with shorter tool blurbs and the storage note pushed below the grouped utilities
+  - refreshed `se-calculator.png` confirms the Heavy 16th fullscreen chrome remains intact after the hub-density pass
+- Production deployment status:
+  - not deployed in this pass
+  - production remains on release commit `5ce29c2f7c2768402a0dce24f3744df254be4b20` until this branch is merged and redeployed
+
+## Latest Packet 08 Pass - Calculator Chrome Cleanup
+
+- Continued `codex/small-phone-polish` with a focused Heavy 16th pass aimed at the fullscreen calculator experience rather than broader tool behavior:
+  - replaced the misleading reset-style left chrome with a real back affordance when the calculator is opened from Tools
+  - restored an always-visible clear action in the top bar so compact phones no longer lose the full reset control when the inner calculator header is hidden
+  - removed the duplicate inner calculator header block so the keypad and fraction controls reclaim more of the first viewport
+  - tightened the calculator top-bar action group styling across default, fullscreen, and compact-device breakpoints so the back / clear / copy controls stay readable without reintroducing overflow
+- Preserved launch boundaries:
+  - no billing, moderation, auth, data-shape, or provider behavior changed in this pass
+  - the calculator remains fraction-only with `H`, `L`, `÷2`, `×2`, and metric toggle behavior intact
+- Local gates:
+  - `npm run build` (pass)
+  - `npm run lint` (pass)
+  - `npm run test:unit` (pass)
+  - `npm run test:e2e` (pass)
+  - `npm run test:ui:tools` (pass; refreshed screenshots at `C:\Users\zboyt\AppData\Local\Temp\rivt-tools-pass`)
+  - `npm audit --omit=dev` (pass; 0 vulnerabilities)
+  - `npm run test` still exceeded the local command window in this pass, so no fresh full-unit-plus-integration claim is recorded here
+- Rendered QA:
+  - refreshed `se-calculator.png` now shows a real back arrow plus dedicated clear/copy controls while keeping the fraction strip and keypad fully in view on an SE-sized smoke viewport
+  - refreshed `se-invoice.png` and `se-tools-hub.png` remain clean, confirming the calculator chrome change did not re-break neighboring tool surfaces
+- Production deployment status:
+  - not deployed in this pass
+  - production remains on release commit `5ce29c2f7c2768402a0dce24f3744df254be4b20` until this branch is merged and redeployed
+
+## Latest Packet 08 Pass - Small-Phone Polish
+
+- Advanced branch `codex/small-phone-polish` to close the remaining SE-class and narrow-phone layout regressions without changing launch-boundary behavior:
+  - strengthened the compact-device detector so true small touch devices still fall into compact mode even when the browser reports an odd desktop-like viewport
+  - added a narrow-phone shell fallback that forces the mobile brand/search/actions layout and suppresses sidebar-sized chrome at `<= 430px`
+  - tightened auth/onboarding preview spacing, copy, pills, and guest-banner density for tiny phones so the orange preview screens stop overlapping and cropping
+  - added a final narrow-phone tools override layer so invoice/detail/preview surfaces stay single-column and inside the handset width even when late-file CSS duplicates compete
+  - aligned the Heavy 16th calculator with the current product direction on phones: visible fraction strip, hidden ruler rail, tighter top chrome, tighter display, and smaller helper copy
+  - updated `scripts/tools-ui-smoke.mjs` so handset QA now asserts the visible fraction strip path instead of the retired ruler-entry path
+- Preserved launch boundaries:
+  - no homeowner flows, fake success, fake verification, billing/provider changes, moderation/auth relaxations, or data-contract changes were introduced
+- Local gates:
+  - `npm run build` (pass)
+  - `npm run lint` (pass)
+  - `npm run test:unit` (pass)
+  - `npm run test:e2e` (pass)
+  - `npm run test:ui:tools` (pass; refreshed screenshots at `C:\Users\zboyt\AppData\Local\Temp\rivt-tools-pass`)
+  - `npm run test:ui:mobile-actions` (pass; refreshed screenshots at `C:\Users\zboyt\AppData\Local\Temp\rivt-mobile-actions-pass`)
+  - `npm audit --omit=dev` (pass; 0 vulnerabilities)
+  - `npm run test:integration` still exceeded extended local command windows twice in this pass, so no fresh integration claim is recorded here
+- Rendered QA:
+  - refreshed `mobile-home-iphone-se.png` confirms the small-phone shell is now using the mobile layout instead of the sidebar/search split seen in the physical iPhone reports
+  - refreshed `se-calculator.png` and `se-invoice.png` confirm the calculator and invoice stay in-viewport on SE-class screens with no clipped right rail or helper-label pileup
+- Production deployment status:
+  - not deployed in this pass
+  - production remains on release commit `5ce29c2f7c2768402a0dce24f3744df254be4b20` until this branch is merged and redeployed
 
 ## Latest Packet 08 Pass - Launch Final Train Deployment
 

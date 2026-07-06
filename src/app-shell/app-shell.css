@@ -544,7 +544,7 @@ html[data-rivt-compact-device="true"] .v2-workspace {
 html[data-rivt-compact-device="true"] .v2-topbar {
   min-height: max(58px, calc(58px + env(safe-area-inset-top)));
   gap: 8px;
-  padding: env(safe-area-inset-top) 12px 0;
+  padding: env(safe-area-inset-top) 10px 0;
   border-bottom-color: var(--v2-border);
   background: color-mix(in srgb, var(--v2-surface) 99%, var(--v2-bg));
   color: var(--v2-text);
@@ -552,7 +552,7 @@ html[data-rivt-compact-device="true"] .v2-topbar {
 
 html[data-rivt-compact-device="true"] .v2-mobile-brand {
   display: grid;
-  width: 86px;
+  width: 76px;
   min-height: 44px;
   place-items: center start;
   padding: 0;
@@ -590,8 +590,12 @@ html[data-rivt-compact-device="true"] .v2-topbar .v2-icon-button {
 html[data-rivt-compact-device="true"] .v2-account-button {
   min-width: 0;
   min-height: 44px;
-  padding: 4px;
+  padding: 2px;
   color: var(--v2-text);
+}
+
+html[data-rivt-compact-device="true"] .v2-topbar-actions {
+  gap: 0;
 }
 
 html[data-rivt-compact-device="true"] .v2-account-copy,
@@ -600,7 +604,7 @@ html[data-rivt-compact-device="true"] .v2-account-button > svg {
 }
 
 html[data-rivt-compact-device="true"] .v2-main {
-  padding: 14px 14px 92px;
+  padding: 12px 12px 92px;
 }
 
 html[data-rivt-compact-device="true"] .rivt-v2.is-mobile-nav-hidden .v2-main {
@@ -620,6 +624,63 @@ html[data-rivt-compact-device="true"] .v2-mobile-nav {
   backdrop-filter: blur(16px);
   color: var(--v2-text-muted);
   transition: transform 180ms ease, opacity 180ms ease;
+}
+
+@media (max-width: 430px) {
+  .v2-sidebar {
+    display: none !important;
+  }
+
+  .v2-workspace {
+    margin-left: 0 !important;
+  }
+
+  .v2-topbar {
+    gap: 6px;
+    padding: env(safe-area-inset-top) 10px 0;
+  }
+
+  .v2-mobile-brand {
+    display: grid;
+    width: 76px;
+    min-height: 44px;
+    place-items: center start;
+  }
+
+  .v2-mobile-brand img {
+    width: 100%;
+    max-height: 26px;
+  }
+
+  .v2-search {
+    display: none !important;
+  }
+
+  .v2-mobile-search {
+    display: inline-flex;
+  }
+
+  .v2-topbar .v2-icon-button,
+  .v2-account-button {
+    width: 40px;
+    min-width: 40px;
+    height: 40px;
+    min-height: 40px;
+    padding: 0;
+  }
+
+  .v2-account-copy,
+  .v2-account-button > svg {
+    display: none !important;
+  }
+
+  .v2-topbar-actions {
+    gap: 0;
+  }
+
+  .v2-main {
+    padding: 12px 12px 92px;
+  }
 }
 
 .rivt-v2 button,

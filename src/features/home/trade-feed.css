@@ -422,6 +422,11 @@
   cursor: pointer;
 }
 
+.trade-feed-fab-label {
+  display: inline-flex;
+  align-items: center;
+}
+
 .trade-feed.has-start-card .trade-feed-fab {
   bottom: calc(118px + env(safe-area-inset-bottom));
 }
@@ -655,5 +660,112 @@
   .trade-post-thumbnail {
     width: 82px;
     border-radius: var(--v2-radius-md);
+  }
+}
+
+@media (max-width: 430px) {
+  .trade-feed {
+    gap: 10px;
+    padding-bottom: 88px;
+  }
+
+  .trade-feed-welcome {
+    gap: 8px;
+  }
+
+  .trade-feed-welcome-text h1 {
+    font-size: clamp(34px, 12vw, 48px);
+    line-height: 0.98;
+  }
+
+  .trade-feed-welcome-text span {
+    font-size: 14px;
+  }
+
+  .trade-feed-avail {
+    min-height: 38px;
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+
+  .trade-feed-nudge {
+    gap: 10px;
+    padding: 12px;
+  }
+
+  .trade-feed-nudge-icon {
+    width: 34px;
+    height: 34px;
+  }
+
+  .trade-feed-nudge-copy b {
+    font-size: 16px;
+    line-height: 1.2;
+  }
+
+  .trade-feed-section-head h2 {
+    font-size: 18px;
+  }
+
+  .trade-feed-seeall {
+    min-height: 36px;
+    padding: 0 4px;
+    font-size: 14px;
+  }
+
+  .trade-feed-community-row {
+    gap: 8px;
+  }
+
+  .trade-feed-community-card {
+    width: 100px;
+    gap: 6px;
+    padding: 14px 8px 12px;
+  }
+
+  .trade-feed-community-icon {
+    width: 46px;
+    height: 46px;
+  }
+
+  .trade-feed-community-name {
+    font-size: 13px;
+  }
+
+  .trade-feed-community-count {
+    font-size: 11px;
+    min-height: 14px;
+  }
+
+  .trade-feed-fab {
+    right: 14px;
+    bottom: calc(78px + env(safe-area-inset-bottom));
+    gap: 6px;
+    height: 48px;
+    padding: 0 16px;
+    font-size: 15px;
+    box-shadow: 0 8px 18px -8px color-mix(in srgb, var(--v2-accent) 70%, transparent);
+  }
+
+  .trade-feed-fab svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .trade-feed.has-start-card .trade-feed-fab {
+    bottom: calc(78px + env(safe-area-inset-bottom));
+  }
+}
+
+@media (max-width: 360px) {
+  .trade-feed-fab {
+    width: 48px;
+    padding: 0;
+    justify-content: center;
+    border-radius: 24px;
+  }
+
+  .trade-feed-fab-label {
+    display: none;
   }
 }

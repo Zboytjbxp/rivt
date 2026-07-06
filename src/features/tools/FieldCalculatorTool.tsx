@@ -1,4 +1,4 @@
-import { Clipboard, Copy, RotateCcw, Ruler } from "lucide-react";
+import { ArrowLeft, Clipboard, Copy, RotateCcw, Ruler } from "lucide-react";
 import { useState } from "react";
 
 type ActiveUnit = "feet" | "inches";
@@ -237,14 +237,14 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
       <header className="heavy-calc-topbar">
         <button
           type="button"
-          className={onBack ? "calc-menu-button calc-tools-button" : "calc-menu-button"}
-          aria-label={onBack ? "Tools" : "Clear calculator"}
+          className={onBack ? "calc-menu-button calc-back-button calc-tools-button" : "calc-menu-button"}
+          aria-label={onBack ? "Back to tools" : "Clear calculator"}
           onClick={onBack ?? clearAll}
         >
           {onBack ? (
             <>
-              <RotateCcw size={16} />
-              <span className="calc-topbar-label">Tools</span>
+              <ArrowLeft size={16} />
+              <span className="calc-topbar-label">Back</span>
             </>
           ) : <RotateCcw size={18} />}
         </button>
@@ -254,28 +254,22 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
           </div>
           <div>
             <strong>HEAVY 16TH</strong>
-            <span>Fraction calculator</span>
           </div>
         </div>
-        <button type="button" className="calc-exit-button" aria-label={copied ? "Copied" : "Copy"} onClick={copyCalculatorResult}>
-          <Copy size={15} />
-          <span className="calc-topbar-label">{copied ? "Copied" : "Copy"}</span>
-        </button>
+        <div className="heavy-calc-actions">
+          <button type="button" className="calc-action-button" aria-label="Clear calculator" onClick={clearAll}>
+            <RotateCcw size={15} />
+            <span className="calc-topbar-label">Clear</span>
+          </button>
+          <button type="button" className="calc-exit-button calc-action-button" aria-label={copied ? "Copied result" : "Copy result"} onClick={copyCalculatorResult}>
+            <Copy size={15} />
+            <span className="calc-topbar-label">{copied ? "Copied" : "Copy"}</span>
+          </button>
+        </div>
       </header>
 
       <div className="heavy-calc-shell fraction-calc-shell fraction-only-shell">
         <main className="heavy-calc-main fraction-calc-main length-mode">
-          <div className="calc-screen-head">
-            <div>
-              <span className="fraction-eyebrow">Fractions</span>
-              <h2>Heavy 16th calculator</h2>
-            </div>
-            <button type="button" className="screen-ghost-button" onClick={clearAll}>
-              <RotateCcw size={14} />
-              Clear
-            </button>
-          </div>
-
           <section className="fraction-calc-grid" aria-label="Length calculator">
             <div className="fraction-calc-left">
               <div className="calc-display-stack fraction-display">

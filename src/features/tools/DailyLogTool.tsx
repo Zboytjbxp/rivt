@@ -289,7 +289,7 @@ export function DailyLogTool({ activeJob, activeWork }: { activeJob: Job | null;
 
   return (
     <div className="v2-tool-workbench v2-daily-log-workbench">
-      <Panel className="v2-tool-panel" eyebrow="Daily log" title="Capture the jobsite while it is fresh">
+      <Panel className="v2-tool-panel" eyebrow="Daily log" title="Jobsite note">
         <div className="v2-tool-input-grid three">
           <label>Date<input type="date" value={draft.date} onChange={(event) => updateDraft("date", event.target.value)} /></label>
           <label>Trade<input value={draft.trade} onChange={(event) => updateDraft("trade", event.target.value)} placeholder="Electrical, HVAC, Carpentry..." /></label>
@@ -325,7 +325,7 @@ export function DailyLogTool({ activeJob, activeWork }: { activeJob: Job | null;
       </Panel>
 
       <aside className="v2-daily-log-side">
-        <Panel className="v2-tool-panel v2-tool-summary-panel" eyebrow="Daily log" title="Preview">
+        <Panel className="v2-tool-panel v2-tool-summary-panel" eyebrow="Daily log" title="Summary">
           <div className="v2-tool-result-grid compact">
             <article><span>Crew hours</span><strong>{formatNumber(draft.crewCount * draft.hours)}h</strong></article>
             <article><span>Checklist</span><strong>{completedChecks}/{dailyLogChecklist.length}</strong></article>
@@ -336,15 +336,27 @@ export function DailyLogTool({ activeJob, activeWork }: { activeJob: Job | null;
             <strong>{recordWork ? recordWorkLabel : "Save draft or open Records after a hire"}</strong>
             <small>{recordWork ? "This log can be added to the private project timeline." : "Server-backed Records are available after a job is accepted by both sides."}</small>
           </div>
-          <div className="v2-daily-log-checklist" aria-label="Daily log checklist">
-            {dailyLogChecklist.map((item) => (
-              <button key={item} type="button" className={draft.checklist[item] ? "active" : ""} aria-pressed={draft.checklist[item]} onClick={() => toggleChecklist(item)}>
-                <CheckCircle2 size={15} />
-                {item}
-              </button>
-            ))}
-          </div>
-          <pre className="v2-daily-log-preview">{dailyLogText}</pre>
+          <details className="v2-tool-collapsible" aria-label="Daily log checklist">
+            <summary>
+              <span>Checklist</span>
+              <small>{completedChecks}/{dailyLogChecklist.length}</small>
+            </summary>
+            <div className="v2-daily-log-checklist">
+              {dailyLogChecklist.map((item) => (
+                <button key={item} type="button" className={draft.checklist[item] ? "active" : ""} aria-pressed={draft.checklist[item]} onClick={() => toggleChecklist(item)}>
+                  <CheckCircle2 size={15} />
+                  {item}
+                </button>
+              ))}
+            </div>
+          </details>
+          <details className="v2-tool-collapsible" aria-label="Daily log text preview">
+            <summary>
+              <span>Open text preview</span>
+              <small>{draft.date || "draft"}</small>
+            </summary>
+            <pre className="v2-daily-log-preview">{dailyLogText}</pre>
+          </details>
           {notice ? <p className="v2-record-notice" role="status">{notice}</p> : null}
           <p className="v2-record-notice" role="status">{syncMessage}</p>
           <div className="v2-tool-action-row">

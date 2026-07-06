@@ -313,7 +313,7 @@ export function InvoiceDraftTool({
 
   return (
     <div className="v2-tool-workbench v2-invoice-workbench">
-      <Panel className="v2-tool-panel v2-invoice-builder-panel" eyebrow="Invoice draft" title="Build an invoice">
+      <Panel className="v2-tool-panel v2-invoice-builder-panel" eyebrow="Invoice draft" title="Invoice">
         <section className="v2-invoice-topline" aria-label="Invoice summary">
           <div>
             <span>Total due</span>
@@ -342,18 +342,24 @@ export function InvoiceDraftTool({
         </section>
         {templateNotice ? <p className="v2-record-notice" role="status">{templateNotice}</p> : null}
         {templates.length ? (
-          <div className="v2-invoice-template-list" aria-label="Saved invoice templates">
-            {templates.map((template) => (
-              <article key={template.id}>
-                <span>
-                  <strong>{template.name}</strong>
-                  <small>Saved {new Date(template.savedAt).toLocaleDateString()}</small>
-                </span>
-                <button type="button" onClick={() => loadTemplate(template)}>Load</button>
-                <button type="button" aria-label={`Delete ${template.name}`} onClick={() => deleteTemplate(template.id)}><Trash2 size={14} /></button>
-              </article>
-            ))}
-          </div>
+          <details className="v2-tool-collapsible" aria-label="Saved invoice templates">
+            <summary>
+              <span>Saved templates</span>
+              <small>{templates.length}</small>
+            </summary>
+            <div className="v2-invoice-template-list">
+              {templates.map((template) => (
+                <article key={template.id}>
+                  <span>
+                    <strong>{template.name}</strong>
+                    <small>Saved {new Date(template.savedAt).toLocaleDateString()}</small>
+                  </span>
+                  <button type="button" onClick={() => loadTemplate(template)}>Load</button>
+                  <button type="button" aria-label={`Delete ${template.name}`} onClick={() => deleteTemplate(template.id)}><Trash2 size={14} /></button>
+                </article>
+              ))}
+            </div>
+          </details>
         ) : null}
         <section className="v2-invoice-builder-section" aria-label="Invoice details">
           <header className="v2-invoice-section-title">
@@ -437,48 +443,54 @@ export function InvoiceDraftTool({
         </Panel>
 
         <Panel className="v2-tool-panel v2-invoice-preview-panel" eyebrow="Preview" title="Printable invoice">
-          <article className="v2-invoice-print-preview" aria-label="Printable invoice preview">
-            <header>
-              <div>
-                <strong>RIVT</strong>
-                <span>Invoice draft</span>
-              </div>
-              <aside>
-                <span>Invoice</span>
-                <strong>{invoiceNumber || "RIVT-DRAFT"}</strong>
-              </aside>
-            </header>
-            <section className="v2-invoice-preview-meta">
-              <div><span>Bill to</span><strong>{billTo || "Contractor / company"}</strong></div>
-              <div><span>Pay to</span><strong>{payTo || "Your company / name"}</strong></div>
-              <div><span>Job</span><strong>{activeJob?.title ?? "Unlinked work"}</strong></div>
-              <div><span>Terms</span><strong>{terms}</strong></div>
-            </section>
-            <table>
-              <thead>
-                <tr><th>Description</th><th>Qty</th><th>Rate</th><th>Total</th></tr>
-              </thead>
-              <tbody>
-                {lines.map((line) => (
-                  <tr key={line.id}>
-                    <td>{line.description || "Line item"}</td>
-                    <td>{formatQuantity(line.qty)}</td>
-                    <td>{currency(line.rate)}</td>
-                    <td>{currency(centsToDollars(lineTotalCents(line)))}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            <section className="v2-invoice-preview-totals">
-              <div><span>Subtotal</span><strong>{currency(subtotal)}</strong></div>
-              <div><span>Tax</span><strong>{currency(tax)}</strong></div>
-              <div><span>Total due</span><strong>{currency(total)}</strong></div>
-            </section>
-            <footer>
-              <span>{paymentMethod}</span>
-              <p>RIVT generates this invoice for your records. Payments are collected directly between you and the client - not through RIVT.</p>
-            </footer>
-          </article>
+          <details className="v2-tool-collapsible" aria-label="Printable invoice preview">
+            <summary>
+              <span>Open preview</span>
+              <small>{invoiceNumber || "RIVT-DRAFT"}</small>
+            </summary>
+            <article className="v2-invoice-print-preview" aria-label="Printable invoice preview">
+              <header>
+                <div>
+                  <strong>RIVT</strong>
+                  <span>Invoice draft</span>
+                </div>
+                <aside>
+                  <span>Invoice</span>
+                  <strong>{invoiceNumber || "RIVT-DRAFT"}</strong>
+                </aside>
+              </header>
+              <section className="v2-invoice-preview-meta">
+                <div><span>Bill to</span><strong>{billTo || "Contractor / company"}</strong></div>
+                <div><span>Pay to</span><strong>{payTo || "Your company / name"}</strong></div>
+                <div><span>Job</span><strong>{activeJob?.title ?? "Unlinked work"}</strong></div>
+                <div><span>Terms</span><strong>{terms}</strong></div>
+              </section>
+              <table>
+                <thead>
+                  <tr><th>Description</th><th>Qty</th><th>Rate</th><th>Total</th></tr>
+                </thead>
+                <tbody>
+                  {lines.map((line) => (
+                    <tr key={line.id}>
+                      <td>{line.description || "Line item"}</td>
+                      <td>{formatQuantity(line.qty)}</td>
+                      <td>{currency(line.rate)}</td>
+                      <td>{currency(centsToDollars(lineTotalCents(line)))}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <section className="v2-invoice-preview-totals">
+                <div><span>Subtotal</span><strong>{currency(subtotal)}</strong></div>
+                <div><span>Tax</span><strong>{currency(tax)}</strong></div>
+                <div><span>Total due</span><strong>{currency(total)}</strong></div>
+              </section>
+              <footer>
+                <span>{paymentMethod}</span>
+                <p>RIVT generates this invoice for your records. Payments are collected directly between you and the client - not through RIVT.</p>
+              </footer>
+            </article>
+          </details>
         </Panel>
       </aside>
     </div>
