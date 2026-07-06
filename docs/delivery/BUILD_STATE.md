@@ -4,8 +4,36 @@ Last updated: 2026-07-05 America/New_York
 Current gate: Gate A launch hardening
 Current phase: Packet 08 Gate A launch hardening plus Gate B behind-flag backbone work: machine gates and live workflow smokes are mostly green; the Shop Talk Reddit-model backbone, moderation/reporting backend, human-facing moderation console/report UX, post photo media, reachability/naming cleanup, Tools hub consolidation, Payment Tracker server records, money-tools sync, the accepted tool-records sync slices, non-tool local-state boundary cleanup, dedicated network-records sync for Crew/Invites/informal written shout-outs, screen-density polish, mobile layout/device-accessibility subtraction, fraction calculator ergonomics, iPhone SE layout containment, immersive-tool compact-device containment, and SE tool chrome cleanup slices are implemented while still respecting launch-readiness boundaries before broad exposure.
 Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
-Repository branch: `master`
+Repository branch: `codex/launch-final-train`
 Production release commit: `88d5adab057ba2848e6e4b692f8fba18b3239d55` verified with live `/api/health`; latest runtime feature evidence is recorded below and docs-only evidence commits may supersede the served build SHA.
+
+## Latest Packet 08 Pass - Launch Final Train Local Verification
+
+- Advanced the current launch-final-train slice on branch `codex/launch-final-train` without crossing Gate A trust/auth/moderation boundaries:
+  - the Heavy 16th calculator smoke now exercises the real visible fraction controls across desktop, standard mobile, and SE-class compact layouts instead of the decorative ruler
+  - SE-class smoke now explicitly applies the compact-device flag in automation, matching the real coarse-pointer device behavior the product code already uses on a physical first-generation iPhone SE
+  - the fraction ruler is now removed from the accessibility tree (`aria-hidden` plus non-focusable tick buttons), so automated and assistive navigation resolve to the actual interactive fraction-entry controls instead of a decorative measurement reference
+  - launch-final-train functional work from the active branch remains in place: billing reconcile client/server path, logout local-state purge, server-backed feed-card vote plumbing, cross-surface 401 session-expiry handling, and the zero-target estimate-to-invoice guard
+- Preserved launch boundaries:
+  - no homeowner flows, fake verification, job-payment processing, escrow, payroll, frontend-only production claims, or auth/moderation relaxations were introduced
+  - no migrations, provider secrets, Stripe entitlements, or production data were changed in this verification pass
+- Local gates:
+  - `npm run build` (pass)
+  - `npm run lint` (pass)
+  - `npm run lint:security` (pass)
+  - `npm run test` (pass; 44/44 unit and 18/18 integration after extended local runtime)
+  - `npm run test:unit` (pass)
+  - `npm run test:e2e` (pass)
+  - `npm run test:ui:mobile-actions` (pass)
+  - `npm run test:ui:tools` (pass; refreshed screenshots at `C:\Users\zboyt\AppData\Local\Temp\rivt-tools-pass`)
+  - `npm audit --omit=dev` (pass; 0 vulnerabilities)
+  - `npm run test:integration` (pass; 18/18 after allowing the full DB-backed runtime to complete)
+- Rendered QA:
+  - refreshed `desktop-calculator.png`, `mobile-calculator.png`, and `se-tools-hub.png` were written outside the repo at `C:\Users\zboyt\AppData\Local\Temp\rivt-tools-pass`
+  - SE compact smoke now proves the 15-button fraction strip remains available in the compact fullscreen calculator path rather than forcing ruler-only or repeated tap entry
+- Production deployment status:
+  - not deployed in this pass
+  - production remains on source commit `88d5adab057ba2848e6e4b692f8fba18b3239d55` until the launch-final-train branch is merged and Railway is redeployed
 
 ## Latest Packet 08 Pass - SE Tool Chrome Cleanup
 

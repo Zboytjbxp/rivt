@@ -148,7 +148,7 @@ export function EstimateTool({
               {copied ? "Copied" : "Copy estimate"}
             </button>
             {onConvertToInvoice ? (
-              <button type="button" onClick={convertToInvoice}>
+              <button type="button" onClick={convertToInvoice} disabled={target <= 0}>
                 <FileText size={15} />
                 Convert to invoice
               </button>

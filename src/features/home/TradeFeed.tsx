@@ -9,6 +9,7 @@ import {
   X,
 } from "lucide-react";
 import type { CommunityPost } from "../shop-talk/ShopTalkView";
+import type { CommunityReactionState } from "../shop-talk/ShopTalkView";
 import { TradePostCard } from "../shop-talk/TradePostCard";
 import type { PrimaryDestination } from "../../app-shell/types";
 import { fallbackCommunities, type CommunityDisplay } from "../shop-talk/community-directory";
@@ -27,6 +28,11 @@ const AVAIL_LABEL: Record<Availability, string> = {
 };
 const AVAIL_ORDER: Availability[] = ["available", "limited", "booked"];
 const SETUP_RECORD_BASELINE = 0;
+
+function formatCommunityCardCount(memberCount: number) {
+  if (memberCount <= 0) return "";
+  return `${memberCount} member${memberCount === 1 ? "" : "s"}`;
+}
 
 function netScore(post: CommunityPost) {
   return post.upvotes - post.downvotes;
@@ -78,6 +84,8 @@ interface TradeFeedProps {
   onboardingComplete?: boolean;
   recordCount: number;
   safetyCertCount: number;
+  getPostReactionState: (post: CommunityPost) => CommunityReactionState;
+  onVotePost: (postId: string, direction: "up" | "down") => void;
   onOpenPost: (postId: string) => void;
   onAsk: () => void;
   onOpenAnswerQueue: () => void;
@@ -101,6 +109,8 @@ export function TradeFeed({
   onboardingComplete = false,
   recordCount = 0,
   safetyCertCount = 0,
+  getPostReactionState,
+  onVotePost,
   onOpenPost,
   onAsk,
   onOpenAnswerQueue,
@@ -364,11 +374,13 @@ export function TradeFeed({
                 className="trade-feed-community-card"
                 onClick={() => onOpenCommunity(c.name)}
               >
-                <span className="trade-feed-community-icon" style={{ background: c.tone }}>
+                <span className="trade-feed-community-icon">
                   <Icon size={22} strokeWidth={2.4} />
                 </span>
                 <span className="trade-feed-community-name">{c.name}</span>
-                <span className="trade-feed-community-count">{c.count}</span>
+                {formatCommunityCardCount(c.memberCount) ? (
+                  <span className="trade-feed-community-count">{formatCommunityCardCount(c.memberCount)}</span>
+                ) : null}
               </button>
             );
           })}
@@ -395,8 +407,10 @@ export function TradeFeed({
             <TradePostCard
               key={post.id}
               post={post}
+              reactionState={getPostReactionState(post)}
               saved={saved.has(post.id)}
               onToggleSave={() => toggleSave(post.id)}
+              onVote={(direction) => onVotePost(post.id, direction)}
               onOpen={() => onOpenPost(post.id)}
             />
           ))

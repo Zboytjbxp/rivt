@@ -53,6 +53,21 @@ export async function startBillingPortal() {
   return body.data;
 }
 
+export async function reconcileStripeCheckout(sessionId: string) {
+  const body = await billingRequest<{ data: { billing: BillingStatus; reconciled: boolean; sessionId: string } }>(
+    "/api/v1/billing/reconcile",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Idempotency-Key": crypto.randomUUID(),
+      },
+      body: JSON.stringify({ sessionId }),
+    },
+  );
+  return body.data;
+}
+
 export async function cancelSubscription() {
   const body = await billingRequest<{ data: { billing: BillingStatus; changed: boolean; subscriptionId: string } }>(
     "/api/v1/billing/subscription/cancel",

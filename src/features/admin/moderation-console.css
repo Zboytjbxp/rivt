@@ -18,7 +18,7 @@
   gap: 8px;
   min-height: 36px;
   padding: 0 12px;
-  border-radius: 999px;
+  border-radius: var(--v2-radius-pill);
   background: var(--v2-surface-muted);
   color: var(--v2-text-muted);
   font-size: var(--v2-text-xs);
@@ -48,7 +48,7 @@
   min-height: 44px;
   padding: 0 14px;
   border: 1px solid var(--v2-border);
-  border-radius: 999px;
+  border-radius: var(--v2-radius-pill);
   background: var(--v2-surface);
   color: var(--v2-text-muted);
   font-size: var(--v2-text-sm);

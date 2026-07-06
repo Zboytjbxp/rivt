@@ -554,7 +554,7 @@
   text-transform: uppercase;
   letter-spacing: 0.04em;
   padding: 2px 8px;
-  border-radius: 999px;
+  border-radius: var(--v2-radius-pill);
 }
 
 .v2-ci-pill.ci-status-pending { background: color-mix(in srgb, #f59e0b 15%, transparent); color: #b45309; }
@@ -668,7 +668,7 @@
   align-items: center;
   gap: 5px;
   padding: 4px 10px;
-  border-radius: 999px;
+  border-radius: var(--v2-radius-pill);
   background: var(--v2-accent-soft);
   color: var(--v2-text);
   font-size: 13px;
@@ -682,7 +682,7 @@
   min-width: 18px;
   height: 18px;
   padding: 0 4px;
-  border-radius: 999px;
+  border-radius: var(--v2-radius-pill);
   background: var(--v2-accent);
   color: #fff;
   font-size: 13px;
@@ -917,7 +917,7 @@
 }
 
 .v2-network-spotlight-actions > span {
-  border-radius: 999px;
+  border-radius: var(--v2-radius-pill);
   background: var(--v2-success-soft);
   color: var(--v2-success);
   padding: 7px 10px;
@@ -1037,7 +1037,7 @@
 .v2-crew-trade-pill {
   padding: 4px 12px;
   border: 1px solid color-mix(in srgb, var(--v2-border) 70%, transparent);
-  border-radius: 999px;
+  border-radius: var(--v2-radius-pill);
   background: transparent;
   color: var(--v2-text-muted);
   font: inherit;
@@ -1122,7 +1122,7 @@
 .v2-crew-trade-badge {
   display: inline-block;
   padding: 2px 8px;
-  border-radius: 999px;
+  border-radius: var(--v2-radius-pill);
   background: var(--v2-accent-soft);
   color: var(--v2-accent);
   font-size: 13px;
@@ -1424,7 +1424,7 @@
 .v2-crew-assign-status {
   font-size: 13px;
   padding: 2px 6px;
-  border-radius: 999px;
+  border-radius: var(--v2-radius-pill);
   background: color-mix(in srgb, var(--v2-accent-soft) 50%, transparent);
   color: var(--v2-accent);
   font-weight: var(--v2-weight-bold);

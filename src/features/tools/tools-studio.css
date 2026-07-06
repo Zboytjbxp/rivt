@@ -1047,7 +1047,7 @@
 .v2-estimate-meter > div {
   overflow: hidden;
   height: 10px;
-  border-radius: 999px;
+  border-radius: var(--v2-radius-pill);
   background: color-mix(in srgb, var(--v2-surface-muted) 88%, transparent);
 }
 
@@ -2432,7 +2432,7 @@
   z-index: 10;
   color: #fff;
   background: rgba(0, 0, 0, 0.45);
-  border-radius: 9999px;
+  border-radius: var(--v2-radius-pill);
   padding: 9px 20px;
   font-size: 15px;
   font-weight: 600;
@@ -2483,7 +2483,7 @@
   z-index: 10;
   color: #fff;
   background: rgba(0, 0, 0, 0.5);
-  border-radius: 9999px;
+  border-radius: var(--v2-radius-pill);
   padding: 5px 13px;
   font-size: 13px;
   font-weight: 600;
@@ -2914,7 +2914,7 @@
   padding: 8px 14px;
   background: var(--v2-surface-muted);
   border: 1px solid var(--v2-border);
-  border-radius: 99px;
+  border-radius: var(--v2-radius-pill);
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
@@ -3535,7 +3535,7 @@
 .v2-punch-filter-tabs button {
   padding: 4px 10px;
   border: 1px solid color-mix(in srgb, var(--v2-border) 60%, transparent);
-  border-radius: 999px;
+  border-radius: var(--v2-radius-pill);
   background: transparent;
   color: var(--v2-text-muted);
   font: inherit;
@@ -4170,7 +4170,7 @@
 .rivt-v2 .v2-mileage-active-badge {
   display: inline-block;
   padding: 3px 10px;
-  border-radius: 999px;
+  border-radius: var(--v2-radius-pill);
   background: var(--v2-accent);
   color: #fff;
   font-size: 13px;
@@ -5141,7 +5141,7 @@
   --calc-lime-deep: var(--v2-accent-hover);
   --calc-warn: var(--v2-warning);
   --calc-red: var(--v2-danger);
-  --calc-on-accent: #fff;
+  --calc-on-accent: var(--v2-on-accent);
   position: relative;
   overflow: hidden;
   padding: 0;
@@ -5160,7 +5160,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 14px;
-  padding: 16px 18px 14px;
+  padding: calc(16px + env(safe-area-inset-top)) calc(18px + env(safe-area-inset-right)) 14px calc(18px + env(safe-area-inset-left));
   border-bottom: 1px solid var(--calc-line);
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.01), transparent);
 }
@@ -5283,7 +5283,7 @@
   min-width: 40px;
   height: 24px;
   padding: 0 10px;
-  border-radius: 999px;
+  border-radius: var(--v2-radius-pill);
   background: var(--v2-surface-muted);
   color: var(--calc-text);
   font-size: 13px;
@@ -5326,7 +5326,7 @@
   width: 56px;
   height: 34px;
   border: none;
-  border-radius: 999px;
+  border-radius: var(--v2-radius-pill);
   background: var(--v2-surface-muted);
   padding: 3px;
   display: inline-flex;
@@ -5509,7 +5509,7 @@
 .suite-card small { margin-top: 4px; color: var(--calc-muted); }
 .suite-badge {
   height: 24px;
-  border-radius: 999px;
+  border-radius: var(--v2-radius-pill);
   padding: 0 10px;
   display: inline-flex;
   align-items: center;
@@ -5616,7 +5616,7 @@
   grid-template-columns: 34px 44px 34px;
   align-items: center;
   border: 1px solid var(--v2-border);
-  border-radius: 999px;
+  border-radius: var(--v2-radius-pill);
   overflow: hidden;
   background: var(--v2-surface-muted);
 }
@@ -5706,7 +5706,7 @@
   display: inline-flex;
   min-height: 26px;
   align-items: center;
-  border-radius: 999px;
+  border-radius: var(--v2-radius-pill);
   padding: 0 9px;
   background: var(--v2-surface-muted);
   color: var(--v2-text-muted);
@@ -6400,7 +6400,7 @@ html[data-rivt-compact-device="true"] .v2-tools-app.is-calculator-fullscreen {
   width: 100%;
   max-width: none;
   min-width: 0;
-  margin: -2px -8px 0;
+  margin: 0;
 }
 
 html[data-rivt-compact-device="true"] .v2-tools-app.is-calculator-fullscreen .fraction-calc-workbench {
@@ -6416,7 +6416,7 @@ html[data-rivt-compact-device="true"] .v2-tools-app.is-calculator-fullscreen .he
   min-height: 42px;
   flex-wrap: nowrap;
   gap: 6px;
-  padding: 6px 8px;
+  padding: calc(6px + env(safe-area-inset-top)) calc(8px + env(safe-area-inset-right)) 6px calc(8px + env(safe-area-inset-left));
 }
 
 html[data-rivt-compact-device="true"] .v2-tools-app.is-calculator-fullscreen .calc-menu-button,
@@ -6529,9 +6529,21 @@ html[data-rivt-compact-device="true"] .v2-tools-app.is-calculator-fullscreen .ca
 }
 
 html[data-rivt-compact-device="true"] .v2-tools-app.is-calculator-fullscreen .fraction-display-meta,
-html[data-rivt-compact-device="true"] .v2-tools-app.is-calculator-fullscreen .fraction-strip,
 html[data-rivt-compact-device="true"] .v2-tools-app.is-calculator-fullscreen .fraction-result-card {
   display: none;
+}
+
+html[data-rivt-compact-device="true"] .v2-tools-app.is-calculator-fullscreen .fraction-strip {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 4px;
+}
+
+html[data-rivt-compact-device="true"] .v2-tools-app.is-calculator-fullscreen .fraction-strip button {
+  min-height: 40px;
+  padding: 0 4px;
+  border-radius: var(--v2-radius-md);
+  font-size: 13px;
 }
 
 html[data-rivt-compact-device="true"] .v2-tools-app.is-calculator-fullscreen .fraction-unit-row,

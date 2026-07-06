@@ -37,7 +37,7 @@ import { usePro } from "../pro/usePro";
 import { usePushNotifications } from "../notifications/usePushNotifications";
 import { UpgradeModal } from "../pro/UpgradeModal";
 import { RIVT_PRO_OFFER } from "../pro/proOffer";
-import { BillingApiError, cancelSubscription, resumeSubscription, startBillingPortal } from "../../lib/billing";
+import { BillingApiError, cancelSubscription, reconcileStripeCheckout, resumeSubscription, startBillingPortal } from "../../lib/billing";
 import { apiPath, requestKey } from "../../lib/api";
 import { usePersona } from "../persona/usePersona";
 import "../pro/pro.css";
@@ -967,6 +967,7 @@ function PlanCard() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const billingResult = params.get("billing");
+    const checkoutSessionId = params.get("session_id");
     if (billingResult !== "success" && billingResult !== "cancel") return;
 
     const cleanUrl = window.location.pathname + window.location.hash;
@@ -998,6 +999,27 @@ function PlanCard() {
       if (attempts < 5) {
         timeout = setTimeout(() => { void pollBilling(); }, 1500);
         return;
+      }
+      if (checkoutSessionId) {
+        try {
+          setBillingMessage({ kind: "success", text: "Payment confirmed. Finalizing RIVT Pro access..." });
+          const result = await reconcileStripeCheckout(checkoutSessionId);
+          if (cancelled) return;
+          if (result.billing.active) {
+            await refreshBilling();
+            setBillingMessage({ kind: "success", text: "RIVT Pro is active on this account." });
+            return;
+          }
+        } catch (error) {
+          if (cancelled) return;
+          setBillingMessage({
+            kind: "warning",
+            text: error instanceof Error
+              ? error.message
+              : "Payment is still processing. Refresh billing status in a moment if Pro is not active yet.",
+          });
+          return;
+        }
       }
       setBillingMessage({
         kind: "warning",

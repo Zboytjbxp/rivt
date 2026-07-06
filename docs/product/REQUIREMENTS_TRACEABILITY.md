@@ -628,6 +628,12 @@ Evidence must eventually link to implementation, automated tests, manual accepta
 - `GA-AUTH-001` gains server hardening evidence: email signup, Google first-account creation, login verification, and password reset now use promisified async `scrypt` instead of blocking `scryptSync`, while preserving salt generation, 64-byte derived keys, and timing-safe comparison.
 - `GA-OPS-007` gains local automated evidence for this slice: `npm run build`, `npm run lint`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check` passed.
 - The first sandboxed `npm run test` attempt timed out without useful output; the same command passed after explicit network access was granted for the isolated test Postgres.
+
+## Traceability Addendum - 2026-07-05 Launch Final Train Local Verification
+
+- `GA-UX-006` gains compact-device regression coverage for the Heavy 16th calculator: the decorative tape ruler is no longer exposed as the interactive control path in automation/accessibility, and the SE-class compact fullscreen path now explicitly verifies visible fraction-strip availability instead of repeated nudge-only entry.
+- `GA-OPS-007` gains fresh local evidence on branch `codex/launch-final-train`: `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test`, `npm run test:unit`, `npm run test:integration`, `npm run test:e2e`, `npm run test:ui:mobile-actions`, `npm run test:ui:tools`, and `npm audit --omit=dev` all passed after the launch-final-train calculator/smoke alignment. The long DB-backed integration leg completed cleanly once given the full runtime window (44/44 unit, 18/18 integration).
+- `GA-OPS-008` is unchanged in production for this slice: the work is currently local on `codex/launch-final-train`, not yet merged or redeployed, so no new runtime commit or Railway build is claimed here.
 - `GA-OPS-008` is unchanged for production deployment: this slice has not been deployed.
 
 ## Traceability Addendum - 2026-06-22 Frontend Smoke Test Tripwire

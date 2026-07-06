@@ -169,7 +169,7 @@
   min-width: 24px;
   height: 24px;
   place-items: center;
-  border-radius: 999px;
+  border-radius: var(--v2-radius-pill);
   background: var(--v2-accent);
   color: #fff;
   font-size: 13px;
@@ -240,7 +240,7 @@
   width: 7px;
   height: 7px;
   margin-right: 7px;
-  border-radius: 999px;
+  border-radius: var(--v2-radius-pill);
   background: var(--v2-accent);
   vertical-align: 1px;
 }
@@ -421,7 +421,7 @@
   gap: 5px;
   padding: 4px 10px;
   border: 1px solid color-mix(in srgb, var(--v2-border) 62%, transparent);
-  border-radius: 999px;
+  border-radius: var(--v2-radius-pill);
   background: transparent;
   color: var(--v2-text-muted);
   font: inherit;
@@ -530,7 +530,7 @@
   margin: 8px 0 6px;
   padding: 4px 10px;
   border: 1px solid color-mix(in srgb, var(--v2-border) 62%, transparent);
-  border-radius: 999px;
+  border-radius: var(--v2-radius-pill);
   background: transparent;
   color: var(--v2-text-muted);
   font: inherit;
@@ -560,7 +560,7 @@
   align-items: center;
   flex-shrink: 0;
   border: 1px solid color-mix(in srgb, var(--v2-border) 62%, transparent);
-  border-radius: 999px;
+  border-radius: var(--v2-radius-pill);
   background: var(--v2-surface-raised);
   overflow: hidden;
 }
@@ -609,7 +609,7 @@
   width: 28px;
   height: 28px;
   border: 1px dashed color-mix(in srgb, var(--v2-border) 70%, transparent);
-  border-radius: 999px;
+  border-radius: var(--v2-radius-pill);
   background: transparent;
   color: var(--v2-text-muted);
   cursor: pointer;
@@ -628,7 +628,7 @@
   gap: 4px;
   padding: 3px 3px 3px 8px;
   border: 1px solid var(--v2-accent);
-  border-radius: 999px;
+  border-radius: var(--v2-radius-pill);
   background: var(--v2-surface-raised);
 }
 
@@ -645,7 +645,7 @@
 .v2-msg-template-add-form button {
   padding: 3px 8px;
   border: 0;
-  border-radius: 999px;
+  border-radius: var(--v2-radius-pill);
   background: transparent;
   color: var(--v2-text-muted);
   font: inherit;
@@ -673,7 +673,7 @@
   align-items: center;
   padding: 2px 7px;
   border: 1px solid color-mix(in srgb, var(--v2-border) 62%, transparent);
-  border-radius: 999px;
+  border-radius: var(--v2-radius-pill);
   background: color-mix(in srgb, var(--v2-accent-soft) 40%, var(--v2-surface-raised));
   color: var(--v2-text);
   font-size: 14px;
@@ -691,7 +691,7 @@
   width: 22px;
   height: 22px;
   border: 1px solid transparent;
-  border-radius: 999px;
+  border-radius: var(--v2-radius-pill);
   background: transparent;
   color: var(--v2-text-muted);
   font-size: 13px;
@@ -718,7 +718,7 @@
   gap: 4px;
   padding: 4px 8px;
   border: 1px solid var(--v2-border);
-  border-radius: 999px;
+  border-radius: var(--v2-radius-pill);
   background: var(--v2-surface-raised);
   box-shadow: var(--v2-shadow-card);
   z-index: 10;
@@ -736,7 +736,7 @@
   width: 30px;
   height: 30px;
   border: 1px solid transparent;
-  border-radius: 999px;
+  border-radius: var(--v2-radius-pill);
   background: transparent;
   font-size: 16px;
   cursor: pointer;
@@ -1193,7 +1193,7 @@
 .v2-ct-sim-btn {
   padding: 4px 12px;
   border: 1px dashed color-mix(in srgb, var(--v2-border) 70%, transparent);
-  border-radius: 999px;
+  border-radius: var(--v2-radius-pill);
   background: transparent;
   color: var(--v2-text-muted);
   font: inherit;

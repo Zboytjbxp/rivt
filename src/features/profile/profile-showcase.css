@@ -83,7 +83,7 @@
   align-items: center;
   gap: 5px;
   padding: 7px 11px;
-  border-radius: 999px;
+  border-radius: var(--v2-radius-pill);
   background: var(--v2-surface-soft, #f4f1ec);
   font-size: 13px;
   font-weight: 600;

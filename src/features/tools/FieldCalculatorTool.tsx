@@ -376,11 +376,12 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
           </section>
         </main>
 
-        <aside className="heavy-calc-ruler fraction-ruler" aria-label="Sixteenth tape reference">
+        <aside className="heavy-calc-ruler fraction-ruler" aria-label="Sixteenth tape reference" aria-hidden="true">
           {RULER_TICKS.map((tick) => (
             <button
               key={tick.value}
               type="button"
+              tabIndex={-1}
               className={fraction32 === tick.value ? "ruler-tick major active" : tick.value % 8 === 0 ? "ruler-tick major" : "ruler-tick"}
               onClick={() => setFraction32(tick.value)}
             >

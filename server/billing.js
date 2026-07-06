@@ -404,6 +404,97 @@ async function processStripeEvent(database, event) {
   }
 }
 
+async function reconcileCheckoutSession(database, config, request, sessionId) {
+  requireBillingReady(config);
+  requireActiveVerifiedBillingActor(request.actor);
+
+  const trimmedSessionId = String(sessionId ?? "").trim();
+  if (!trimmedSessionId) {
+    throw new ApiError(422, "BILLING_SESSION_ID_REQUIRED", "Provide the Stripe Checkout Session ID to reconcile billing.");
+  }
+
+  const session = await stripeRequest(
+    config,
+    `/checkout/sessions/${encodeURIComponent(trimmedSessionId)}`,
+    {},
+    { method: "GET" },
+  );
+
+  const stripeCustomerId = typeof session.customer === "string" ? session.customer : session.customer?.id ?? null;
+  const accountIdFromSession = session.metadata?.account_id || session.client_reference_id || null;
+  const ownerResult = accountIdFromSession
+    ? { rows: [{ id: accountIdFromSession }] }
+    : stripeCustomerId
+      ? await database.query("SELECT account_id AS id FROM billing_customers WHERE stripe_customer_id = $1 LIMIT 1", [stripeCustomerId])
+      : { rows: [] };
+  const ownerAccountId = ownerResult.rows[0]?.id ?? null;
+
+  if (!ownerAccountId || ownerAccountId !== request.actor.account.id) {
+    throw new ApiError(403, "BILLING_SESSION_FORBIDDEN", "This Checkout Session does not belong to the signed-in account.");
+  }
+
+  const subscriptionId = typeof session.subscription === "string" ? session.subscription : session.subscription?.id ?? null;
+  if (!subscriptionId) {
+    throw new ApiError(409, "BILLING_SUBSCRIPTION_NOT_READY", "Stripe has not finished creating the subscription for this Checkout Session yet.");
+  }
+
+  const subscription = typeof session.subscription === "object" && session.subscription?.id
+    ? session.subscription
+    : await stripeRequest(
+      config,
+      `/subscriptions/${encodeURIComponent(subscriptionId)}`,
+      {},
+      { method: "GET" },
+    );
+
+  const client = await database.connect();
+  try {
+    await client.query("BEGIN");
+    if (stripeCustomerId) {
+      await upsertBillingCustomer(client, {
+        accountId: request.actor.account.id,
+        stripeCustomerId,
+        email: request.actor.account.email,
+      });
+    }
+    await updateSubscriptionFromStripeObject(client, subscription, `manual.reconcile.${request.requestId}`);
+    await client.query(
+      `INSERT INTO audit_events (request_id, actor_account_id, action, subject_type, subject_id, metadata)
+       VALUES ($1, $2, 'billing.checkout_reconciled', 'stripe_checkout_session', $3, $4)`,
+      [
+        request.requestId,
+        request.actor.account.id,
+        session.id,
+        JSON.stringify({
+          stripeCustomerId,
+          stripeSubscriptionId: subscription.id ?? null,
+          paymentStatus: session.payment_status ?? null,
+          sessionStatus: session.status ?? null,
+        }),
+      ],
+    );
+    await client.query("COMMIT");
+  } catch (error) {
+    await client.query("ROLLBACK").catch(() => {});
+    throw error;
+  } finally {
+    client.release();
+  }
+
+  logInfo("billing.checkout_reconciled", {
+    requestId: request.requestId,
+    accountId: request.actor.account.id,
+    stripeCheckoutSessionId: session.id,
+    stripeSubscriptionId: subscription.id ?? null,
+  });
+
+  return {
+    sessionId: session.id,
+    reconciled: true,
+    billing: await getBillingStatus(database, request.actor.account.id, config),
+  };
+}
+
 export function registerStripeWebhookRoute({
   app,
   express,
@@ -504,6 +595,12 @@ export function registerBillingRoutes({
     response.status(201).json({ data: { url: session.url }, meta: { requestId: request.requestId } });
   }));
 
+  app.post("/api/v1/billing/reconcile", requireAuthenticatedUser, requireV1Actor, writeRateLimit, asyncRoute(async (request, response) => {
+    const config = billingConfig(appOrigin);
+    const result = await reconcileCheckoutSession(database, config, request, request.body?.sessionId);
+    response.json({ data: result, meta: { requestId: request.requestId } });
+  }));
+
   app.post("/api/v1/billing/subscription/cancel", requireAuthenticatedUser, requireV1Actor, writeRateLimit, asyncRoute(async (request, response) => {
     const config = billingConfig(appOrigin);
     const result = await updateSubscriptionCancellation(database, config, request, true);
@@ -522,6 +619,7 @@ export const billingInternals = {
   billingConfig,
   getLatestMutableSubscription,
   mapBillingStatus,
+  reconcileCheckoutSession,
   subscriptionPeriodEnd,
   verifyStripeSignature,
 };

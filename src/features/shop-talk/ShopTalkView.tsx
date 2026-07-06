@@ -163,6 +163,10 @@ function newsSourceInitials(source: string) {
   return initials || "R";
 }
 
+function pluralize(count: number, noun: string) {
+  return `${count} ${noun}${count === 1 ? "" : "s"}`;
+}
+
 function EmptyState({
   icon: Icon,
   title,
@@ -408,7 +412,6 @@ function ShopTalkNewPostModal({
                 className={`v2-st-type-chip${postType === chip.type ? " is-active" : ""}`}
                 onClick={() => setPostType(chip.type)}
               >
-                <span aria-hidden="true">{chip.label.slice(0, 3).toUpperCase()}</span>
                 {chip.label}
               </button>
             ))}
@@ -1122,7 +1125,11 @@ export function ShopTalkView({
                           </span>
                           <span className="community-row-copy">
                             <b>{community.name}</b>
-                            <small>{community.count} members · {communityPostCounts[community.slug] ?? 0} posts · {community.meta}</small>
+                            <small>
+                              <span>{pluralize(community.memberCount, "member")}</span>
+                              <span>{pluralize(communityPostCounts[community.slug] ?? 0, "post")}</span>
+                              <span>{community.meta}</span>
+                            </small>
                           </span>
                         </button>
                         <button
@@ -1309,8 +1316,10 @@ export function ShopTalkView({
                   <TradePostCard
                     key={post.id}
                     post={post}
+                    reactionState={getPostReactionState(post)}
                     saved={bookmarkedIds.has(post.id)}
                     onToggleSave={() => toggleBookmark(post.id)}
+                    onVote={(direction) => onVotePost(post.id, direction)}
                     onOpen={() => { setSelectedPostId(post.id); setMobileDetail(true); }}
                   />
                 ))}

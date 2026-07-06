@@ -54,6 +54,11 @@
   --v2-radius-sm: 6px;
   --v2-radius-md: 8px;
   --v2-radius-lg: 14px;
+  --v2-radius-xl: 20px;
+  --v2-radius-pill: 999px;
+  --v2-destructive: var(--v2-danger);
+  --v2-on-accent: #fff;
+  --v2-font-mono: "IBM Plex Mono", "SFMono-Regular", "Cascadia Code", "Roboto Mono", Consolas, monospace;
   --v2-sidebar-width: 220px;
   --v2-topbar-height: 58px;
   color: var(--v2-text);

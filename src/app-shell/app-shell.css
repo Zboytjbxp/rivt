@@ -211,7 +211,7 @@
   gap: 16px;
   padding: env(safe-area-inset-top) 24px 0;
   border-bottom: 1px solid var(--v2-border);
-  background: color-mix(in srgb, var(--v2-surface) 94%, transparent);
+  background: color-mix(in srgb, var(--v2-surface) 99%, var(--v2-bg));
   backdrop-filter: blur(18px);
 }
 
@@ -228,7 +228,7 @@
   gap: 9px;
   padding: 0 10px;
   border: 1px solid var(--v2-border);
-  border-radius: 999px;
+  border-radius: var(--v2-radius-pill);
   background: var(--v2-surface);
   color: var(--v2-text-muted);
   box-shadow: none;
@@ -303,7 +303,7 @@
   min-height: 44px;
   padding: 4px 8px;
   border: 1px solid transparent;
-  border-radius: 999px;
+  border-radius: var(--v2-radius-pill);
   background: transparent;
   color: var(--v2-text);
   text-align: left;
@@ -444,7 +444,7 @@
 .v2-search-person-result em {
   align-self: start;
   padding: 4px 7px;
-  border-radius: 999px;
+  border-radius: var(--v2-radius-pill);
   background: var(--v2-surface-muted);
   color: var(--v2-text-muted);
   font-size: 13px;
@@ -546,7 +546,7 @@ html[data-rivt-compact-device="true"] .v2-topbar {
   gap: 8px;
   padding: env(safe-area-inset-top) 12px 0;
   border-bottom-color: var(--v2-border);
-  background: color-mix(in srgb, var(--v2-surface) 96%, transparent);
+  background: color-mix(in srgb, var(--v2-surface) 99%, var(--v2-bg));
   color: var(--v2-text);
 }
 
@@ -675,7 +675,7 @@ html[data-rivt-compact-device="true"] .v2-mobile-nav {
     gap: 8px;
     padding: env(safe-area-inset-top) 12px 0;
     border-bottom-color: var(--v2-border);
-    background: color-mix(in srgb, var(--v2-surface) 96%, transparent);
+    background: color-mix(in srgb, var(--v2-surface) 99%, var(--v2-bg));
     color: var(--v2-text);
   }
 
@@ -762,7 +762,7 @@ html[data-rivt-compact-device="true"] .v2-mobile-nav {
     min-height: 70px;
     padding: 6px 8px max(8px, env(safe-area-inset-bottom));
     border-top: 1px solid var(--v2-border);
-    background: color-mix(in srgb, var(--v2-surface) 96%, transparent);
+    background: color-mix(in srgb, var(--v2-surface) 99%, var(--v2-bg));
     backdrop-filter: blur(16px);
     color: var(--v2-text-muted);
     transition: transform 180ms ease, opacity 180ms ease;

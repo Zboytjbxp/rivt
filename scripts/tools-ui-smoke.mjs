@@ -274,6 +274,39 @@ async function assertImmersiveToolChromeHidden(page, toolName) {
   );
 }
 
+async function clickVisibleFraction(page, label, viewportName) {
+  const selector = viewportName === "mobile"
+    ? ".heavy-calc-ruler .ruler-tick"
+    : ".fraction-strip button";
+  const result = await page.evaluate(
+    ({ selector, label }) => {
+      const isVisible = (element) => {
+        const style = window.getComputedStyle(element);
+        const rect = element.getBoundingClientRect();
+        return style.display !== "none"
+          && style.visibility !== "hidden"
+          && rect.width > 0
+          && rect.height > 0;
+      };
+      const visibleLabels = Array.from(document.querySelectorAll(selector))
+        .filter((element) => isVisible(element))
+        .map((element) => element.textContent?.trim() ?? "");
+      const target = Array.from(document.querySelectorAll(selector)).find(
+        (element) => element.textContent?.trim() === label && isVisible(element),
+      );
+      if (!(target instanceof HTMLElement)) return { clicked: false, visibleLabels };
+      target.click();
+      return { clicked: true, visibleLabels };
+    },
+    { selector, label },
+  );
+  assert.equal(
+    result.clicked,
+    true,
+    `expected visible fraction control ${label} in ${viewportName} viewport; visible: ${result.visibleLabels.join(", ")}`,
+  );
+}
+
 async function runToolsFlow(page, viewportName) {
   const isHandsetViewport = viewportName !== "desktop";
   await page.goto(`${baseUrl}/app/tools`, { waitUntil: "networkidle" });
@@ -291,6 +324,11 @@ async function runToolsFlow(page, viewportName) {
 
   await page.getByRole("button", { name: /Heavy 16th/i }).click();
   await page.getByRole("heading", { name: "Heavy 16th field calculator" }).waitFor({ timeout: 15_000 });
+  if (viewportName === "se") {
+    await page.evaluate(() => {
+      document.documentElement.setAttribute("data-rivt-compact-device", "true");
+    });
+  }
   await page.getByLabel("Length calculator").getByText("Decimal", { exact: true }).waitFor({ timeout: 15_000 });
   await page.getByRole("button", { name: "Copy" }).waitFor({ timeout: 15_000 });
   await page.getByLabel("Input unit").getByRole("button", { name: /MM/i }).click();
@@ -298,14 +336,11 @@ async function runToolsFlow(page, viewportName) {
   await page.getByLabel("Heavy, light, double, and half controls").getByRole("button", { name: "Light minus one thirty-second" }).waitFor({ timeout: 15_000 });
   await page.getByLabel("Heavy, light, double, and half controls").getByRole("button", { name: "Multiply measurement by two" }).waitFor({ timeout: 15_000 });
   await page.getByLabel("Heavy, light, double, and half controls").getByRole("button", { name: "Divide measurement by two" }).waitFor({ timeout: 15_000 });
-  const fractionButtons = isHandsetViewport
-    ? page.getByLabel("Sixteenth tape reference")
-    : page.getByLabel("Sixteenth fractions");
   await page.getByLabel("Fraction calculator keypad").getByRole("button", { name: "7" }).click();
-  await fractionButtons.getByRole("button", { name: "1/2" }).click();
+  await clickVisibleFraction(page, "1/2", viewportName);
   await page.getByLabel("Fraction calculator keypad").getByRole("button", { name: "+" }).click();
   await page.getByLabel("Fraction calculator keypad").getByRole("button", { name: "2" }).click();
-  await fractionButtons.getByRole("button", { name: "1/4" }).click();
+  await clickVisibleFraction(page, "1/4", viewportName);
   await page.getByLabel("Fraction calculator keypad").getByRole("button", { name: "=" }).click();
   await page.locator(".calc-primary-value", { hasText: '9 3/4"' }).waitFor({ timeout: 15_000 });
   await page.getByLabel("Heavy, light, double, and half controls").getByRole("button", { name: "Divide measurement by two" }).click();

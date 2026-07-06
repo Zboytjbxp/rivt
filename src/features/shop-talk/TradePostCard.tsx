@@ -13,6 +13,7 @@ import {
   Wrench,
 } from "lucide-react";
 import type { CommunityPost } from "./ShopTalkView";
+import type { CommunityReactionState } from "./ShopTalkView";
 import "../home/trade-feed.css";
 
 // Map a post's trade to its community label + icon so cards read like the references.
@@ -39,41 +40,24 @@ function avatarTone(name: string) {
 
 interface TradePostCardProps {
   post: CommunityPost;
+  reactionState: CommunityReactionState;
   saved: boolean;
   onToggleSave: () => void;
+  onVote: (direction: "up" | "down") => void;
   onOpen: () => void;
 }
 
-const VOTES_KEY = "rivt.postVotes.v1";
-function readVotes(): Record<string, "up" | "down"> {
-  try { return JSON.parse(localStorage.getItem(VOTES_KEY) ?? "{}") as Record<string, "up" | "down">; }
-  catch { return {}; }
-}
-
-export function TradePostCard({ post, saved, onToggleSave, onOpen }: TradePostCardProps) {
-  const [vote, setVote] = useState<"up" | "down" | null>(() => readVotes()[String(post.id)] ?? null);
+export function TradePostCard({ post, reactionState, saved, onToggleSave, onVote, onOpen }: TradePostCardProps) {
   const [failedThumbnailUrl, setFailedThumbnailUrl] = useState<string | null>(null);
-  const community = communityFor(post.trade);
+  const community = post.communityName
+    ? { ...communityFor(post.trade), label: post.communityName }
+    : communityFor(post.trade);
   const CIcon = community.icon;
-  const baseScore = post.upvotes - post.downvotes;
-  const score = baseScore + (vote === "up" ? 1 : vote === "down" ? -1 : 0);
+  const score = reactionState.upvotes - reactionState.downvotes;
   const comments = post.commentCount ?? post.replies.length;
   const hasThumbnail = Boolean(post.thumbnailUrl && failedThumbnailUrl !== post.thumbnailUrl);
 
   const [shared, setShared] = useState(false);
-
-  function toggleVote(dir: "up" | "down") {
-    setVote((prev) => {
-      const next = prev === dir ? null : dir;
-      try {
-        const map = readVotes();
-        if (next) map[String(post.id)] = next;
-        else delete map[String(post.id)];
-        localStorage.setItem(VOTES_KEY, JSON.stringify(map));
-      } catch { /* ignore */ }
-      return next;
-    });
-  }
 
   function handleShare() {
     const url = `${window.location.origin}/app?post=${post.id}`;
@@ -120,20 +104,22 @@ export function TradePostCard({ post, saved, onToggleSave, onOpen }: TradePostCa
         <div className="trade-post-votes">
           <button
             type="button"
-            className={vote === "up" ? "trade-vote is-up" : "trade-vote"}
+            className={reactionState.reaction === "up" ? "trade-vote is-up" : "trade-vote"}
             aria-label="Upvote"
-            aria-pressed={vote === "up"}
-            onClick={() => toggleVote("up")}
+            aria-pressed={reactionState.reaction === "up"}
+            disabled={reactionState.pending}
+            onClick={() => onVote("up")}
           >
             <ArrowBigUp size={20} />
           </button>
           <span className="trade-vote-count">{score}</span>
           <button
             type="button"
-            className={vote === "down" ? "trade-vote is-down" : "trade-vote"}
+            className={reactionState.reaction === "down" ? "trade-vote is-down" : "trade-vote"}
             aria-label="Downvote"
-            aria-pressed={vote === "down"}
-            onClick={() => toggleVote("down")}
+            aria-pressed={reactionState.reaction === "down"}
+            disabled={reactionState.pending}
+            onClick={() => onVote("down")}
           >
             <ArrowBigDown size={20} />
           </button>

@@ -34,7 +34,7 @@
   flex: 0 0 auto;
   min-height: 44px;
   padding: 7px 12px;
-  border-radius: 999px;
+  border-radius: var(--v2-radius-pill);
   border: 1px solid var(--v2-border);
   background: var(--v2-surface);
   font-size: var(--v2-text-label);
@@ -125,7 +125,7 @@
   height: 44px;
   flex: 0 0 auto;
   border: 0;
-  border-radius: 999px;
+  border-radius: var(--v2-radius-pill);
   background: transparent;
   color: var(--v2-text-muted);
   cursor: pointer;
@@ -139,7 +139,7 @@
 .trade-feed-start-progress {
   height: 6px;
   overflow: hidden;
-  border-radius: 999px;
+  border-radius: var(--v2-radius-pill);
   background: color-mix(in srgb, var(--v2-text-muted) 16%, transparent);
 }
 
@@ -208,7 +208,7 @@
   min-height: 44px;
   align-items: center;
   justify-content: center;
-  border-radius: 999px;
+  border-radius: var(--v2-radius-pill);
   font-size: var(--v2-text-label);
   font-weight: var(--v2-weight-bold);
   white-space: nowrap;
@@ -364,7 +364,8 @@
   width: 52px;
   height: 52px;
   border-radius: 50%;
-  color: #fff;
+  background: var(--v2-accent-soft);
+  color: var(--v2-accent);
 }
 
 .trade-feed-community-name {
@@ -378,6 +379,7 @@
 .trade-feed-community-count {
   font-size: var(--v2-text-caption);
   color: var(--v2-text-muted);
+  min-height: 16px;
 }
 
 /* ── Post list ───────────────────────────────────────────── */
@@ -403,7 +405,7 @@
 .trade-feed-fab {
   position: fixed;
   right: 18px;
-  bottom: 84px;
+  bottom: calc(84px + env(safe-area-inset-bottom));
   z-index: 40;
   display: flex;
   align-items: center;
@@ -411,7 +413,7 @@
   padding: 0 22px;
   height: 54px;
   border: none;
-  border-radius: 999px;
+  border-radius: var(--v2-radius-pill);
   background: var(--v2-accent);
   color: #fff;
   font-size: var(--v2-text-body-lg);
@@ -421,7 +423,7 @@
 }
 
 .trade-feed.has-start-card .trade-feed-fab {
-  bottom: 118px;
+  bottom: calc(118px + env(safe-area-inset-bottom));
 }
 
 @media (max-width: 640px) {
@@ -570,7 +572,7 @@
   align-items: center;
   gap: 4px;
   border: 1px solid var(--v2-border);
-  border-radius: 999px;
+  border-radius: var(--v2-radius-pill);
   padding: 2px 4px;
 }
 
@@ -604,7 +606,7 @@
   min-height: 44px;
   padding: 0 14px;
   border: 1px solid var(--v2-border);
-  border-radius: 999px;
+  border-radius: var(--v2-radius-pill);
   background: none;
   font-size: var(--v2-text-body);
   font-weight: var(--v2-weight-strong);

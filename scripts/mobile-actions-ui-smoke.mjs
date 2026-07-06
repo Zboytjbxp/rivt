@@ -424,6 +424,34 @@ async function runMobileFlow(page) {
   await page.getByLabel("Input unit").getByRole("button", { name: /MM/i }).waitFor({ timeout: 15_000 });
   await page.getByLabel("Heavy, light, double, and half controls").getByRole("button", { name: "Heavy plus one thirty-second" }).waitFor({ timeout: 15_000 });
   await page.getByLabel("Heavy, light, double, and half controls").getByRole("button", { name: "Multiply measurement by two" }).waitFor({ timeout: 15_000 });
+  await page.setViewportSize({ width: 375, height: 553 });
+  await page.evaluate(() => {
+    document.documentElement.setAttribute("data-rivt-compact-device", "true");
+  });
+  const compactFraction = page.locator(".fraction-strip button").filter({ hasText: "5/8" }).first();
+  await compactFraction.waitFor({ timeout: 15_000 });
+  const compactFractionBox = await page.evaluate(() => {
+    const buttons = [...document.querySelectorAll(".fraction-strip button")];
+    const target = buttons.find((button) => button.textContent?.trim() === "5/8");
+    if (!(target instanceof HTMLElement)) return null;
+    const rect = target.getBoundingClientRect();
+    return {
+      x: rect.x,
+      y: rect.y,
+      width: rect.width,
+      height: rect.height,
+    };
+  });
+  assert.ok(compactFractionBox, "compact 5/8 fraction button should have a bounding box");
+  assert.ok(compactFractionBox.x >= 0 && compactFractionBox.y >= 0, `compact 5/8 button should stay in viewport: ${JSON.stringify(compactFractionBox)}`);
+  assert.ok(
+    compactFractionBox.x + compactFractionBox.width <= 375 && compactFractionBox.y + compactFractionBox.height <= 553,
+    `compact 5/8 button should be fully visible at 375x553: ${JSON.stringify(compactFractionBox)}`,
+  );
+  await page.evaluate(() => {
+    document.documentElement.removeAttribute("data-rivt-compact-device");
+  });
+  await page.setViewportSize({ width: 390, height: 844 });
   assert.equal(new URL(page.url()).searchParams.get("tool"), "calculator", "Calculator should create a tool-specific history entry");
   await page.goBack();
   await page.getByRole("heading", { name: "Tools", exact: true }).waitFor({ timeout: 15_000 });

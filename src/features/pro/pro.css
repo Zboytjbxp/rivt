@@ -43,7 +43,7 @@
   background: var(--v2-surface-muted);
   border: 1px solid var(--v2-border);
   cursor: pointer;
-  border-radius: 999px;
+  border-radius: var(--v2-radius-pill);
   width: 36px;
   height: 36px;
   display: flex;
@@ -61,7 +61,7 @@
 .v2-upgrade-kicker {
   width: max-content;
   border: 1px solid var(--v2-border);
-  border-radius: 999px;
+  border-radius: var(--v2-radius-pill);
   padding: 5px 9px;
   background: var(--v2-surface-muted);
   color: var(--v2-accent);
@@ -246,7 +246,7 @@
 .v2-pro-badge {
   display: inline-flex; align-items: center; gap: 4px;
   background: var(--v2-accent); color: white; font-size: 13px;
-  font-weight: var(--v2-weight-bold); padding: 2px 8px; border-radius: 99px;
+  font-weight: var(--v2-weight-bold); padding: 2px 8px; border-radius: var(--v2-radius-pill);
   letter-spacing: 0.05em; text-transform: uppercase;
 }
 
@@ -293,7 +293,7 @@
   display: inline-flex;
   align-items: center;
   border: 1px solid var(--v2-border);
-  border-radius: 999px;
+  border-radius: var(--v2-radius-pill);
   padding: 4px 9px;
   background: var(--v2-surface-muted);
   color: var(--v2-text-muted);

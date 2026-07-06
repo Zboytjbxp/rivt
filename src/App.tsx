@@ -39,6 +39,9 @@ import {
 import {
   AUTH_MODE_KEY,
   readAuthModePreference,
+  THEME_PALETTE_STORAGE_KEY,
+  THEME_SOURCE_KEY,
+  THEME_STORAGE_KEY,
 } from "./app-shell/preferences";
 import { useAppTheme } from "./app-shell/useAppTheme";
 import { useActivityFeed } from "./app-shell/useActivityFeed";
@@ -206,6 +209,22 @@ type StorageUsageSnapshot = {
 };
 
 const SAFETY_QUIZ_RESULTS_KEY = "rivt.safetyQuizResults.v1";
+const PRESERVED_LOCAL_KEYS = new Set([
+  THEME_STORAGE_KEY,
+  THEME_SOURCE_KEY,
+  THEME_PALETTE_STORAGE_KEY,
+]);
+
+function clearRivtLocalState() {
+  if (typeof window === "undefined") return;
+  const keysToRemove: string[] = [];
+  for (let index = 0; index < window.localStorage.length; index += 1) {
+    const key = window.localStorage.key(index);
+    if (!key?.startsWith("rivt.") || PRESERVED_LOCAL_KEYS.has(key)) continue;
+    keysToRemove.push(key);
+  }
+  keysToRemove.forEach((key) => window.localStorage.removeItem(key));
+}
 
 function readSafetyQuizResults(): Record<string, SafetyQuizResult> {
   if (typeof window === "undefined") return {};
@@ -516,6 +535,7 @@ function App() {
   useEffect(() => {
     function handleSessionExpired() {
       if (!authUser || isGuest) return;
+      clearRivtLocalState();
       setAuthUser(null);
       setCanonicalAccount(null);
       setOnboardingComplete(false);
@@ -1066,6 +1086,7 @@ function App() {
   }
 
   function handleCurrentSessionRevoked() {
+    clearRivtLocalState();
     setAuthUser(null);
     setCanonicalAccount(null);
     setOnboardingComplete(false);
@@ -1081,6 +1102,7 @@ function App() {
     } catch {
       // Ignore logout network hiccups; the local session can still be cleared.
     } finally {
+      clearRivtLocalState();
       setAuthUser(null);
       setCanonicalAccount(null);
       setOnboardingComplete(false);
@@ -1871,6 +1893,8 @@ function App() {
             onboardingComplete={onboardingComplete}
             recordCount={uploadedRecords.size}
             safetyCertCount={safetyCertCount}
+            getPostReactionState={getCommunityPostReactionState}
+            onVotePost={handleVoteCommunityPost}
             onOpenPost={(postId) => { setShopTalkPostId(postId); setShopTalkCompose(false); setShopTalkAnswerQueue(false); setShopTalkGlobalQuery(""); handleNavigate(defaultViewForDestination("shop-talk")); }}
             onAsk={() => { setShopTalkPostId(null); setShopTalkAnswerQueue(false); setShopTalkCompose(true); handleNavigate(defaultViewForDestination("shop-talk")); }}
             onOpenAnswerQueue={() => { setShopTalkPostId(null); setShopTalkCompose(false); setShopTalkGlobalQuery(""); setShopTalkCommunitySlug(null); setShopTalkAnswerQueue(true); handleNavigate(defaultViewForDestination("shop-talk")); }}

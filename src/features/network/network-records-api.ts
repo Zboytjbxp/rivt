@@ -1,4 +1,4 @@
-import { apiPath, requestKey } from "../../lib/api";
+import { apiPath, notifySessionExpired, requestKey } from "../../lib/api";
 
 export type NetworkRecordType = "crew_member" | "crew_invite" | "network_review";
 
@@ -27,6 +27,7 @@ export async function fetchNetworkRecords(recordType?: NetworkRecordType): Promi
   try {
     const suffix = recordType ? `?type=${encodeURIComponent(recordType)}` : "";
     const response = await fetch(apiPath(`/api/v1/network-records${suffix}`), { credentials: "include" });
+    if (response.status === 401) notifySessionExpired();
     if (!response.ok) return null;
     const body = await response.json().catch(() => null) as { data?: { records?: ServerNetworkRecord[] } } | null;
     return Array.isArray(body?.data?.records) ? body!.data!.records! : null;
@@ -46,6 +47,7 @@ export async function upsertNetworkRecord(input: NetworkRecordInput): Promise<Se
       },
       body: JSON.stringify(input),
     });
+    if (response.status === 401) notifySessionExpired();
     if (!response.ok) return null;
     const body = await response.json().catch(() => null) as { data?: { record?: ServerNetworkRecord } } | null;
     return body?.data?.record ?? null;
@@ -64,6 +66,7 @@ export async function deleteNetworkRecordByLocalId(recordType: NetworkRecordType
         headers: { "Idempotency-Key": requestKey() },
       },
     );
+    if (response.status === 401) notifySessionExpired();
     return response.ok || response.status === 404;
   } catch {
     return false;

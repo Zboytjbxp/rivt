@@ -284,7 +284,7 @@ textarea:focus-visible {
   align-items: center;
   min-height: 30px;
   padding: 0 10px;
-  border-radius: 999px;
+  border-radius: var(--v2-radius-pill);
   background: #ff4b00;
   color: #0b0b0b;
   font-size: 13px;
@@ -409,7 +409,7 @@ textarea:focus-visible {
   min-height: 44px;
   padding: 0 16px;
   border: 0;
-  border-radius: 999px;
+  border-radius: var(--v2-radius-pill);
   background: rgba(11, 11, 11, 0.12);
   color: #0b0b0b;
   font-weight: var(--v2-weight-bold);
@@ -457,7 +457,7 @@ textarea:focus-visible {
   width: 9px;
   height: 9px;
   border: 0;
-  border-radius: 999px;
+  border-radius: var(--v2-radius-pill);
   background: rgba(11, 11, 11, 0.24);
   cursor: pointer;
 }
@@ -574,7 +574,7 @@ textarea:focus-visible {
   min-height: 42px;
   padding: 0 13px;
   border: 1.5px solid rgba(11, 11, 11, 0.16);
-  border-radius: 999px;
+  border-radius: var(--v2-radius-pill);
   background: rgba(255, 255, 255, 0.62);
   color: #0b0b0b;
   font-weight: var(--v2-weight-bold);
@@ -737,7 +737,7 @@ textarea:focus-visible {
   min-height: 48px;
   padding: 0 12px;
   border: 1.5px solid #d9dedf;
-  border-radius: 999px;
+  border-radius: var(--v2-radius-pill);
   color: #4f575b;
   font-size: 13px;
 }
@@ -827,7 +827,7 @@ textarea:focus-visible {
   min-height: 36px;
   padding: 0 14px;
   border: 1px solid rgba(11, 11, 11, 0.18);
-  border-radius: 999px;
+  border-radius: var(--v2-radius-pill);
   background: rgba(255, 255, 255, 0.28);
   color: #0b0b0b;
   font-size: 13px;
@@ -1190,7 +1190,7 @@ textarea:focus-visible {
   align-items: center;
   min-height: 20px;
   padding: 0 8px;
-  border-radius: 999px;
+  border-radius: var(--v2-radius-pill);
   background: rgba(255, 75, 0, 0.14);
   color: var(--accent);
   font-size: 13px;
@@ -2272,7 +2272,7 @@ textarea:focus-visible {
   display: block;
   height: 5px;
   overflow: hidden;
-  border-radius: 999px;
+  border-radius: var(--v2-radius-pill);
   background: rgba(255, 255, 255, 0.14);
 }
 
@@ -2388,7 +2388,7 @@ textarea:focus-visible {
   place-items: center;
   padding-inline: 5px;
   border: 2px solid var(--surface);
-  border-radius: 999px;
+  border-radius: var(--v2-radius-pill);
   background: var(--accent);
   color: #080d10;
   font-size: 13px;
@@ -2396,19 +2396,19 @@ textarea:focus-visible {
 }
 
 .primary-action {
-  border: 1px solid #080d10;
-  padding: 0 17px;
-  background: #080d10;
-  color: #fff;
-  box-shadow: 0 10px 24px rgba(7, 11, 15, 0.18);
+  border: 0;
+  padding: 0 18px;
+  background: var(--v2-accent);
+  color: var(--v2-on-accent);
+  box-shadow: 0 10px 24px color-mix(in srgb, var(--v2-accent) 24%, transparent);
   white-space: nowrap;
 }
 
 .secondary-action {
-  border: 1px solid var(--border);
-  padding: 0 14px;
-  background: var(--surface);
-  color: var(--text);
+  border: 1.5px solid var(--v2-border-strong);
+  padding: 0 18px;
+  background: var(--v2-surface);
+  color: var(--v2-text);
 }
 
 .save-search.saved {
@@ -2832,7 +2832,7 @@ textarea:focus-visible {
   min-height: 30px;
   align-items: center;
   padding: 0 10px;
-  border-radius: 999px;
+  border-radius: var(--v2-radius-pill);
   background: var(--accent-soft);
   color: var(--accent-deep);
   font-size: 13px;
@@ -2995,7 +2995,7 @@ textarea:focus-visible {
   align-items: center;
   min-height: 24px;
   padding: 0 10px;
-  border-radius: 999px;
+  border-radius: var(--v2-radius-pill);
   background: var(--accent-soft);
   color: var(--accent-deep);
   font-size: 13px;
@@ -3345,7 +3345,7 @@ textarea:focus-visible {
   min-height: 44px;
   padding: 0 12px;
   border: 1px solid var(--border);
-  border-radius: 999px;
+  border-radius: var(--v2-radius-pill);
   background: var(--surface);
   color: var(--text);
   font-size: 13px;
@@ -3930,7 +3930,7 @@ textarea:focus-visible {
 
 .network-card-meta span {
   padding: 5px 7px;
-  border-radius: 999px;
+  border-radius: var(--v2-radius-pill);
   background: var(--surface-soft);
 }
 
@@ -3982,7 +3982,7 @@ textarea:focus-visible {
   min-height: 34px;
   padding: 0 12px;
   border: 1px solid rgba(255, 75, 0, 0.22);
-  border-radius: 999px;
+  border-radius: var(--v2-radius-pill);
   background: linear-gradient(180deg, rgba(255, 75, 0, 0.12), rgba(255, 75, 0, 0.05));
   color: var(--accent-deep);
   font-size: 13px;
@@ -4103,7 +4103,7 @@ textarea:focus-visible {
   align-items: center;
   min-height: 30px;
   padding: 0 10px;
-  border-radius: 999px;
+  border-radius: var(--v2-radius-pill);
   background: var(--surface-soft);
   color: var(--text);
   font-size: 13px;
@@ -4960,7 +4960,7 @@ textarea:focus-visible {
 .progress-bar {
   overflow: hidden;
   height: 9px;
-  border-radius: 999px;
+  border-radius: var(--v2-radius-pill);
   background: var(--surface-soft);
 }
 
@@ -5504,7 +5504,7 @@ textarea:focus-visible {
   display: block;
   height: 5px;
   overflow: hidden;
-  border-radius: 999px;
+  border-radius: var(--v2-radius-pill);
   background: #e7ecef;
 }
 
@@ -5784,7 +5784,7 @@ textarea:focus-visible {
   right: 8px;
   bottom: 8px;
   padding: 2px 6px;
-  border-radius: 999px;
+  border-radius: var(--v2-radius-pill);
   background: rgba(9, 13, 16, 0.72);
   color: #fff;
   font-size: 13px;
@@ -6080,7 +6080,7 @@ textarea:focus-visible {
   align-items: center;
   height: 22px;
   padding: 0 8px;
-  border-radius: 999px;
+  border-radius: var(--v2-radius-pill);
   background: var(--accent-soft);
   color: var(--accent-deep);
   font-size: 13px;
@@ -6239,7 +6239,7 @@ textarea:focus-visible {
   min-height: 30px;
   align-items: center;
   padding: 0 10px;
-  border-radius: 999px;
+  border-radius: var(--v2-radius-pill);
   background: var(--accent-soft);
   color: var(--accent-deep);
   font-size: 13px;
@@ -6504,7 +6504,7 @@ textarea:focus-visible {
   min-height: 40px;
   padding: 0 12px;
   border: 1px solid var(--border);
-  border-radius: 999px;
+  border-radius: var(--v2-radius-pill);
   background: var(--surface-soft);
   color: var(--text);
   font-size: 13px;
@@ -6542,7 +6542,7 @@ textarea:focus-visible {
   min-width: 0;
   min-height: 40px;
   padding: 0 12px;
-  border-radius: 999px;
+  border-radius: var(--v2-radius-pill);
   background: var(--accent-soft);
   color: var(--accent-deep);
   font-size: 13px;
@@ -6712,7 +6712,7 @@ textarea:focus-visible {
   min-height: 24px;
   align-items: center;
   padding: 0 7px;
-  border-radius: 999px;
+  border-radius: var(--v2-radius-pill);
   background: var(--accent-soft);
   color: var(--accent-deep);
   font-size: 13px;
@@ -6883,7 +6883,7 @@ textarea:focus-visible {
   min-height: 44px;
   padding: 0 14px;
   border: 1px solid var(--border);
-  border-radius: 999px;
+  border-radius: var(--v2-radius-pill);
   background: var(--surface);
   color: var(--text);
   font-size: 13px;
@@ -6901,7 +6901,7 @@ textarea:focus-visible {
   align-items: center;
   min-height: 30px;
   padding: 0 10px;
-  border-radius: 999px;
+  border-radius: var(--v2-radius-pill);
   background: var(--surface-soft);
   color: var(--muted);
   font-size: 13px;
@@ -6953,7 +6953,7 @@ textarea:focus-visible {
   min-height: 44px;
   padding: 0 14px;
   border: 1px solid var(--border);
-  border-radius: 999px;
+  border-radius: var(--v2-radius-pill);
   background: var(--surface-soft);
   color: var(--text);
   font-weight: var(--v2-weight-bold);
@@ -7155,7 +7155,7 @@ textarea:focus-visible {
   align-items: center;
   padding: 0 9px;
   border: 1px solid var(--border);
-  border-radius: 999px;
+  border-radius: var(--v2-radius-pill);
   background: var(--surface-soft);
   color: #40535c;
   font-size: 13px;
@@ -8463,7 +8463,7 @@ textarea:focus-visible {
     justify-content: center;
     width: 38px;
     height: 38px;
-    border-radius: 999px;
+    border-radius: var(--v2-radius-pill);
     background: rgba(255, 75, 0, 0.14);
     color: var(--accent);
     font-size: 13px;
@@ -8560,7 +8560,7 @@ textarea:focus-visible {
     min-height: 44px;
     padding: 0 10px;
     border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 999px;
+    border-radius: var(--v2-radius-pill);
     background: rgba(255, 255, 255, 0.04);
     color: #b8c5c9;
     font-size: 13px;
@@ -9774,7 +9774,7 @@ html[data-rivt-compact-device="true"] .guest-exit {
   right: 8px;
   bottom: 8px;
   padding: 2px 6px;
-  border-radius: 999px;
+  border-radius: var(--v2-radius-pill);
   background: rgba(9, 13, 16, 0.68);
   color: #fff;
   font-size: 13px;
