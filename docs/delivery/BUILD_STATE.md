@@ -4,8 +4,35 @@ Last updated: 2026-07-05 America/New_York
 Current gate: Gate A launch hardening
 Current phase: Packet 08 Gate A launch hardening plus Gate B behind-flag backbone work: machine gates and live workflow smokes are mostly green; the Shop Talk Reddit-model backbone, moderation/reporting backend, human-facing moderation console/report UX, post photo media, reachability/naming cleanup, Tools hub consolidation, Payment Tracker server records, money-tools sync, the accepted tool-records sync slices, non-tool local-state boundary cleanup, dedicated network-records sync for Crew/Invites/informal written shout-outs, screen-density polish, mobile layout/device-accessibility subtraction, fraction calculator ergonomics, iPhone SE layout containment, immersive-tool compact-device containment, and SE tool chrome cleanup slices are implemented while still respecting launch-readiness boundaries before broad exposure.
 Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
-Repository branch: `codex/launch-final-train`
-Production release commit: `88d5adab057ba2848e6e4b692f8fba18b3239d55` verified with live `/api/health`; latest runtime feature evidence is recorded below and docs-only evidence commits may supersede the served build SHA.
+Repository branch: `master`
+Production release commit: `5ce29c2f7c2768402a0dce24f3744df254be4b20` verified with live `/api/health`; latest runtime feature evidence is recorded below and docs-only evidence commits may supersede the served build SHA.
+
+## Latest Packet 08 Pass - Launch Final Train Deployment
+
+- Merged `codex/launch-final-train` into `master` as a fast-forward and deployed the launch-final-train slice to Railway production.
+- Runtime launch-final-train outcomes now live on `https://rivt.pro`:
+  - billing reconcile path is available so authenticated post-checkout recovery can repair entitlements when Stripe checkout succeeds but the webhook path lags
+  - logout and session-expiry cleanup now purge `rivt.*` local state while preserving the device theme key
+  - feed-card votes use the existing server-backed Shop Talk reaction path instead of a second local-only vote cache
+  - network-record 401s now route through the shared session-expiry flow instead of surfacing as misleading sync failures
+  - estimate-to-invoice conversion stays disabled for a zero target, avoiding empty invoice promotion
+  - compact and SE-class calculator verification now exercises the real visible fraction controls, and the decorative ruler is removed from the accessibility tree
+- Preserved launch boundaries:
+  - no homeowner flows, fake verification, job-payment processing, escrow, payroll, local-auth fallback, or moderation/auth relaxations were introduced
+  - no migration or provider-secret changes were required for this train
+- Local gates:
+  - `npm run build` (pass)
+  - `npm run lint` (pass)
+  - `npm run lint:security` (pass)
+  - `npm run test` (pass; 44/44 unit and 18/18 integration)
+  - `npm run test:e2e` (pass)
+  - `npm run test:ui:mobile-actions` (pass)
+  - `npm run test:ui:tools` (pass)
+  - `npm audit --omit=dev` (pass; 0 vulnerabilities)
+- Production verification:
+  - live `https://rivt.pro/api/health` returned 200 with exact build commit `5ce29c2f7c2768402a0dce24f3744df254be4b20`, migration `0021_shop_talk_post_media`, PostgreSQL dependency `postgres`, S3-compatible object storage, and configured Sentry
+  - `EXPECTED_SOURCE_COMMIT=5ce29c2f7c2768402a0dce24f3744df254be4b20 npm run monitor:production` passed with operational controls off, seven anonymous private-route checks, and 589 ms duration
+  - refreshed local screenshot evidence remains at `C:\Users\zboyt\AppData\Local\Temp\rivt-tools-pass` and `C:\Users\zboyt\AppData\Local\Temp\rivt-mobile-actions-pass`
 
 ## Latest Packet 08 Pass - Launch Final Train Local Verification
 

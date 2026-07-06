@@ -10,6 +10,14 @@ Status values:
 
 Evidence must eventually link to implementation, automated tests, manual acceptance proof, and deployed build.
 
+## Traceability Addendum - 2026-07-05 Launch Final Train Deployment
+
+- `GA-UX-006` gains deployed compact-device calculator evidence: production now serves the launch-final-train slice where the SE-class calculator smoke exercises the real visible fraction-strip controls and the decorative ruler is removed from the accessibility tree.
+- `GA-OPS-007` gains full local gate evidence for the deployed train: `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test`, `npm run test:e2e`, `npm run test:ui:mobile-actions`, `npm run test:ui:tools`, and `npm audit --omit=dev` all passed before merge. The aggregate `npm run test` pass included 44/44 unit tests and 18/18 integration tests.
+- `GA-OPS-008` gains production deployment evidence: `codex/launch-final-train` was merged into `master`, Railway production now serves commit `5ce29c2f7c2768402a0dce24f3744df254be4b20`, live `https://rivt.pro/api/health` reports migration `0021_shop_talk_post_media`, PostgreSQL, S3-compatible object storage, and configured Sentry, and `EXPECTED_SOURCE_COMMIT=5ce29c2f7c2768402a0dce24f3744df254be4b20 npm run monitor:production` passed with seven anonymous private-route checks in 589 ms.
+- `GA-UX-005` gains deployed billing/session honesty evidence: production now includes the Stripe billing reconcile path, the logout/session-expiry purge for `rivt.*` local state, server-backed feed-card votes, and the shared 401 session-expiry handling instead of misleading local-only sync behavior.
+- Remaining boundary: this addendum records the merged/deployed launch-final-train slice only. Physical-device QA, final cohort validation, and other manual launch checks remain separate launch-quality evidence.
+
 ## Traceability Addendum - 2026-07-05 SE Tool Chrome Cleanup
 
 - `GA-UX-006` gains additional small-phone evidence: compact-device tool shells now force full-width containment for invoice and other immersive tools, preventing the narrow-phone right-edge clipping reported from the physical handset screenshots.

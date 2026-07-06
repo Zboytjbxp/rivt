@@ -21,6 +21,25 @@ Add one entry per staging/production deployment.
 - Rollback performed/result:
 - Approval:
 
+## Current Production - Packet 08 Launch Final Train Deployment
+
+- Environment: Production (`https://rivt.pro`)
+- Date/time/timezone: 2026-07-05 America/New_York
+- Deployer: Codex through GitHub push to Railway-linked `master`
+- Source repository/branch: `Zboytjbxp/rivt`, `master`
+- Source commit: `5ce29c2f7c2768402a0dce24f3744df254be4b20`
+- Build/artifact ID: Railway-linked production deployment serving source `5ce29c2f7c2768402a0dce24f3744df254be4b20`; live `/api/health` is the runtime proof
+- Migration version before/after: `0021_shop_talk_post_media` / `0021_shop_talk_post_media` (no schema migration)
+- Feature-flag/config version: no provider credentials or operational-control flags changed
+- Provider/config changes (no secrets): no provider credentials changed; Sentry remains configured
+- Backup/rollback target: prior successful production source `88d5adab057ba2848e6e4b692f8fba18b3239d55`; rollback is a normal source rollback because no migration changed
+- Automated gates: `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test`, `npm run test:e2e`, `npm run test:ui:mobile-actions`, `npm run test:ui:tools`, and `npm audit --omit=dev` passed. The aggregate `npm run test` pass included 44/44 unit tests and 18/18 integration tests.
+- Post-deploy smoke tests: live `https://rivt.pro/api/health` returned exact source commit `5ce29c2f7c2768402a0dce24f3744df254be4b20`, ready migration `0021_shop_talk_post_media`, PostgreSQL, S3-compatible object storage, and configured Sentry. `EXPECTED_SOURCE_COMMIT=5ce29c2f7c2768402a0dce24f3744df254be4b20 npm run monitor:production` passed with operational controls off, seven anonymous private-route checks, and 589 ms duration.
+- Health/readiness result: healthy production health and synthetic monitor; no schema migration applied.
+- Known risks: physical-device and final manual launch checks remain open evidence items, but the launch-final-train runtime slice is live and healthy.
+- Rollback performed/result: not required.
+- Approval: accepted as the Packet 08 launch-final-train merge/deploy with no provider, schema, auth, moderation, or billing-boundary regressions.
+
 ## Current Production - Packet 08 SE Tool Chrome Cleanup
 
 - Environment: Production (`https://rivt.pro`)
