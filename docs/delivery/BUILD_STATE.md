@@ -7,6 +7,29 @@ Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
 Production release commit: `1a9bc4b7b2d90554777d02f718397a57f92598f8` verified with live `/api/health`; latest runtime feature evidence is recorded below and docs-only evidence commits may supersede the served build SHA.
 
+## Latest Packet 08 Pass - Truth / Trust Copy Cleanup
+
+- Continued Packet 08 on branch `codex/truth-trust-cleanup` with a small subtraction-only pass aimed at trust, settings, and profile language rather than layout or data-shape changes.
+- Truth/copy outcomes in this slice:
+  - replaced checklist-y record goal labels with calmer factual wording (`Work scope`, `Platform consent`, `Verified email`, `Payment notes`, `Review request`)
+  - shortened the passed safety-quiz result copy so it stays honest about device-only persistence without over-explaining future architecture
+  - changed device export controls and toasts from vague `Export` wording to explicit `Download device ...` wording
+  - simplified support-case success copy and feedback-history notes so they describe the real support flow without staff-console jargon
+  - tightened Trust & Legal wording so the surface reads as `Platform consent`, `Documents`, and `What you can review or request` instead of sounding like a prototype trust dashboard
+  - normalized account-fact labels from `Signup method` / `Current` to clearer `Sign-in method` / `On file`
+- Preserved launch boundaries:
+  - no auth, billing, moderation, storage-contract, provider, migration, or persistence behavior changed in this pass
+  - no new fake trust claims, fake verification, or frontend-only success paths were introduced
+- Local verification:
+  - `npm run build` (pass)
+  - `npm run lint` (pass)
+  - `npm run test` (pass; unit suite green, integration suite skipped DB-backed cases because `TEST_DATABASE_URL` is not configured in this workstation context)
+  - `npm run test:e2e` (pass)
+  - `npm audit --omit=dev` (pass; 0 vulnerabilities)
+- Production deployment status:
+  - not deployed in this pass
+  - production remains on release commit `1a9bc4b7b2d90554777d02f718397a57f92598f8` until this branch is reviewed, merged, and redeployed
+
 ## Latest Packet 08 Pass - Camera Tool Launch-Line Merge
 
 - Reviewed the isolated camera-only branch `codex/camera-tool-polish-clean` before merging it onto the launch line.

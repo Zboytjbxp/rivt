@@ -221,7 +221,7 @@ function QuizModal({
             <p className="v2-quiz-score-line">{result.score}% · {correctCount}/{quiz.questions.length} correct</p>
             <p className="v2-quiz-result-desc">
               {result.passed
-                ? `You passed ${quiz.title}. This result is saved on this device until account-backed safety records are available.`
+                ? `You passed ${quiz.title}. This result is saved on this device for now.`
                 : `Passing score is 80% (${Math.ceil(quiz.questions.length * 0.8)} of ${quiz.questions.length} correct). Review the explanations and try again.`}
             </p>
             <div className="v2-quiz-result-actions">
@@ -740,7 +740,7 @@ function DataExportButton() {
     const json = JSON.stringify(data, null, 2);
     const blob = new Blob([json], { type: "application/json" });
     downloadBlob(blob, `rivt-export-${new Date().toISOString().slice(0, 10)}.json`);
-    showToast("Device data exported");
+    showToast("Downloaded device data");
   }
 
   function handleExportJobsCSV() {
@@ -760,7 +760,7 @@ function DataExportButton() {
     const csv = [headers.join(","), ...rows].join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
     downloadBlob(blob, `rivt-jobs-${new Date().toISOString().slice(0, 10)}.csv`);
-    showToast("Device job data exported");
+    showToast("Downloaded device job CSV");
   }
 
   return (
@@ -770,13 +770,13 @@ function DataExportButton() {
       )}
       <div className="v2-data-export">
         <button type="button" className="v2-btn-secondary" onClick={handleExportJSON}>
-          <Download size={15} /> Export data (JSON)
+          <Download size={15} /> Download device data (JSON)
         </button>
         <small>Downloads device-stored RIVT tool data from this browser.</small>
       </div>
       <div className="v2-data-export">
         <button type="button" className="v2-btn-secondary" onClick={handleExportJobsCSV}>
-          <Download size={15} /> Export jobs (CSV)
+          <Download size={15} /> Download device jobs (CSV)
         </button>
         <small>Downloads device-stored job drafts from this browser.</small>
       </div>
@@ -1336,7 +1336,7 @@ export function ProfileHub({
 
   const profileViewDescriptions: Record<string, string> = {
     "Safety & Training": "OSHA-aligned modules. Pass each quiz to earn a certificate.",
-    "Trust & Legal": "Consent, legal agreements, and your trust status.",
+    "Trust & Legal": "Consent, documents, and data controls.",
     "Reviews": "Shout-outs and reputation from people you've worked with.",
     "Settings": "Profile, billing, storage, and alerts.",
     "Feedback": "Share feedback to help improve RIVT.",
@@ -1375,7 +1375,7 @@ export function ProfileHub({
         description: feedbackMessage.trim(),
       });
       setFeedbackState("sent");
-      setFeedbackStatus("Support case created. RIVT support can review it in the moderation console.");
+      setFeedbackStatus("Support case created.");
       setFeedbackMessage("");
       setFeedbackCategory(null);
     } catch (error) {
@@ -1441,8 +1441,8 @@ export function ProfileHub({
               <strong>{feedbackCount > 0 ? `${feedbackCount} note${feedbackCount === 1 ? "" : "s"} on file` : "Nothing submitted yet"}</strong>
             </header>
             <div className="v2-profile-list">
-              <article><Sparkles size={16} /><span>Feedback opens a support case tied to your account</span></article>
-              <article><ShieldCheck size={16} /><span>Support can review it from the staff console</span></article>
+              <article><Sparkles size={16} /><span>Every note becomes a support case for your account</span></article>
+              <article><ShieldCheck size={16} /><span>Support reviews it with your account context</span></article>
               <article><Mail size={16} /><span>Email support directly at <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a></span></article>
             </div>
           </section>
@@ -1457,18 +1457,18 @@ export function ProfileHub({
         <PageHeader
           className="v2-profile-header"
           title="Trust & Legal"
-          description="Consent status, your agreements, and data rights."
+          description="Consent, documents, and data controls."
         />
         <div className="v2-trust-grid">
           <section className="v2-profile-panel v2-trust-status-card">
             <header>
-              <span>Consent status</span>
-              <strong className={trustReady ? "is-ready" : "is-pending"}>{trustReady ? "Current" : "Action needed"}</strong>
+              <span>Platform consent</span>
+              <strong className={trustReady ? "is-ready" : "is-pending"}>{trustReady ? "On file" : "Review needed"}</strong>
             </header>
             <div className="v2-profile-list">
               <article>
                 <ShieldCheck size={16} className={trustReady ? "icon-success" : "icon-warn"} />
-                <span>Platform consent {trustReady ? "signed and current" : "not yet reviewed"}</span>
+                <span>{trustReady ? "Platform consent is on file." : "Review consent before using RIVT."}</span>
               </article>
             </div>
             {!trustReady && (
@@ -1483,8 +1483,8 @@ export function ProfileHub({
 
           <section className="v2-profile-panel">
             <header>
-              <span>Legal documents</span>
-              <strong>Your agreements</strong>
+              <span>Documents</span>
+              <strong>Terms, privacy, and agreements</strong>
             </header>
             <div className="v2-profile-list">
               <a className="v2-trust-doc-link" href="/legal/terms.html" target="_blank" rel="noreferrer">
@@ -1505,7 +1505,7 @@ export function ProfileHub({
           <section className="v2-profile-panel v2-profile-panel-wide">
             <header>
               <span>Your data</span>
-              <strong>What we store and what you control</strong>
+              <strong>What you can review or request</strong>
             </header>
             <div className="v2-trust-data-grid">
               <div className="v2-trust-data-item">
@@ -1548,7 +1548,7 @@ export function ProfileHub({
                 }), "Data export request sent to support.")}
               >
                 <Download size={15} />
-                Request data export
+                Request account export
               </button>
               <button type="button" className="v2-secondary-button v2-trust-signout-btn" onClick={onLogout}>
                 <LogOut size={15} />
@@ -1604,8 +1604,8 @@ export function ProfileHub({
           </header>
           <div className="v2-profile-facts">
             <MetricTile icon={<Mail size={16} />} value={profile.email || "—"} label="Email" />
-            <MetricTile icon={<UserCheck size={16} />} value={profile.authMethod} label="Signup method" />
-            <MetricTile icon={<ShieldCheck size={16} />} value={trustReady ? "Current" : "Needs review"} label="Consent" />
+            <MetricTile icon={<UserCheck size={16} />} value={profile.authMethod} label="Sign-in method" />
+            <MetricTile icon={<ShieldCheck size={16} />} value={trustReady ? "On file" : "Review needed"} label="Consent" />
           </div>
         </section>
 
@@ -1701,12 +1701,12 @@ export function ProfileHub({
         {view !== "Settings" ? (
           <>
             <section className="v2-profile-panel">
-              <header>
-                <span>Trust</span>
-                <strong>Readiness and records</strong>
-              </header>
-              <div className="v2-profile-list">
-                <article><ShieldCheck size={16} /><span>Consent {trustReady ? "ready" : "pending"}</span></article>
+            <header>
+              <span>Trust</span>
+              <strong>Consent and work history</strong>
+            </header>
+            <div className="v2-profile-list">
+                <article><ShieldCheck size={16} /><span>Consent {trustReady ? "on file" : "review needed"}</span></article>
                 <article><CreditCard size={16} /><span>{recordCount} records saved</span></article>
                 <article><Sparkles size={16} /><span>{communityBadges.length} community badge{communityBadges.length === 1 ? "" : "s"}</span></article>
               </div>
@@ -1729,13 +1729,13 @@ export function ProfileHub({
                 <span>Community</span>
                 <strong>Profile signals</strong>
               </header>
-              <div className="v2-profile-badge-row">
-                {communityBadges.length ? communityBadges.map((badge) => <span key={badge}>{badge}</span>) : <span>New contributor</span>}
-              </div>
-              {feedbackCount > 0 ? (
-                <p className="v2-profile-note">{feedbackCount} beta feedback note{feedbackCount === 1 ? "" : "s"}.</p>
-              ) : null}
-            </section>
+            <div className="v2-profile-badge-row">
+              {communityBadges.length ? communityBadges.map((badge) => <span key={badge}>{badge}</span>) : <span>New contributor</span>}
+            </div>
+            {feedbackCount > 0 ? (
+                <p className="v2-profile-note">{feedbackCount} support note{feedbackCount === 1 ? "" : "s"} on file.</p>
+            ) : null}
+          </section>
 
             <section className="v2-profile-panel v2-profile-panel-wide v2-profile-reputation">
               <header>

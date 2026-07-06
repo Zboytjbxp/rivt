@@ -1,10 +1,10 @@
 export const recordChecklist = [
-  "Signed scope",
-  "Legal consent accepted",
-  "Email verification before writes",
+  "Work scope",
+  "Platform consent",
+  "Verified email",
   "Completion photos",
-  "Payment method note",
-  "Review prompt",
+  "Payment notes",
+  "Review request",
 ];
 
 export const trainingModules = [
