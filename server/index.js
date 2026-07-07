@@ -1867,7 +1867,9 @@ async function loadProjectBundle(client, project, actor) {
       [project.id],
     ),
     client.query(
-      `SELECT * FROM project_media
+      `SELECT pm.*, u.object_key
+       FROM project_media pm
+       LEFT JOIN uploads u ON u.id = pm.upload_id
        WHERE project_id = $1
        ORDER BY created_at ASC, id ASC`,
       [project.id],
@@ -1895,12 +1897,20 @@ async function loadProjectBundle(client, project, actor) {
     ...submission,
     resolutions: resolutionMap.get(submission.id) ?? [],
   }));
-  return mapProject(project, {
+  const mappedMedia = await Promise.all(
+    media.rows.map(async (row) => {
+      const signedUrl = row.status === "stored" && row.object_key
+        ? await signedObjectUrl(row.object_key).catch(() => null)
+        : null;
+      return mapProjectMedia(row, { signedUrl });
+    }),
+  );
+  const mappedProject = mapProject(project, {
     entries: entries.rows,
-    media: media.rows,
     submissions: submissionsWithResolutions,
     actor,
   });
+  return { ...mappedProject, media: mappedMedia };
 }
 
 async function loadProjectMediaById(client, projectId, mediaId, actor) {

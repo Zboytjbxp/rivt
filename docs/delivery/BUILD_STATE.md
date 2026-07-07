@@ -7,6 +7,51 @@ Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
 Production release commit: `826cfd38220fea65250690cea4d11d52b06964d9` verified with live `/api/health` and `npm run monitor:production`; latest runtime feature evidence is recorded below and docs-only evidence commits may supersede the served build SHA.
 
+## Latest Packet 08 Pass - Project Feed Camera Upload Truthfulness
+
+- Fixed the active-job camera/project-feed seam after a live report that the app celebrated a successful upload but showed no photo anywhere after backing out:
+  - project bundle reads now attach signed object URLs to stored project media instead of returning only raw `project_media` rows
+  - the camera/project-feed client now immediately merges uploaded media + entry records into the open project state before the follow-up refresh, so a successful snap shows up in the live feed right away
+  - the follow-up `getProject()` refresh remains in place, but it no longer strips the photo back out because the server bundle now returns renderable media objects
+- Preserved launch boundaries:
+  - no fake local success state, auth fallback, provider change, billing change, or production data migration was added
+  - uploads still go through the existing authenticated `/api/v1/projects/:id/media` contract
+  - media authorization remains server-side and signed URLs are only generated for stored uploads already visible to a project participant
+- Local verification:
+  - `npm run build` (pass)
+  - `npm run lint` (pass)
+  - `npm run test:unit` (pass; 45/45)
+  - `npm run test:e2e` (pass)
+  - `npm run test:ui:tools` (pass; refreshed screenshots at `C:\Users\zboyt\AppData\Local\Temp\rivt-tools-pass`)
+  - `npm audit --omit=dev` (pass; 0 vulnerabilities)
+  - `npm run test` still timed out in this workstation shell after 364 seconds without yielding a useful integration failure or completion signal; no new DB-backed integration evidence is claimed for this pass
+- Live verification:
+  - not deployed in this pass
+
+## Latest Packet 08 Pass - Shared Device + Return Loop Hardening
+
+- Tightened three launch-quality gaps that were easy to miss in day-to-day phone use:
+  - shared-device logout/session-revocation now clears the saved auth-mode session preference alongside `rivt.*` local state, so a borrowed phone or shared browser does not keep nudging the next user into the last account's sign-in mode
+  - session-revocation and logout now clear signed-in-only in-memory surfaces too: jobs, selected job, inbox conversations/messages/notifications, active-work focus, uploaded-record state, storage usage, shout-outs, and one-shot Shop Talk intents
+  - session-revocation now fails closed with a plain notice on the auth gate: `This session ended on this device. Sign in again to keep going.`
+  - the account panel now has a compact `This device` section that says who is signed in here and reminds the user to sign out before handing the phone or browser to someone else
+  - Home now adds a real `Pick up where you left off` section instead of more generic dashboard narration
+  - that return-loop section surfaces unread messages, recent tools used on this phone, and honest device-state messaging when the app is offline or local tool workspaces still live on the device
+- Preserved launch boundaries:
+  - no auth fallback, fake sync state, billing behavior, provider configuration, new server contract, or production-data mutation was added
+  - the new Home cues are derived from real inbox counts, actual recent-tool history, `navigator.onLine`, and existing local tool state keys
+  - session authorization remains server-side; this pass only improves what the client forgets and how honestly it explains device state
+- Local verification:
+  - `npm run build` (pass)
+  - `npm run lint` (pass)
+  - `npm run test:unit` (pass; 45/45)
+  - `npm run test:e2e` (pass)
+  - `npm run test:ui:mobile-actions` (pass; refreshed screenshots at `C:\Users\zboyt\AppData\Local\Temp\rivt-mobile-actions-pass`)
+  - `npm audit --omit=dev` (pass; 0 vulnerabilities)
+  - `npm run test` still timed out in this workstation shell because `npm run test:integration` did not return before the shell timeout; no new DB-backed integration evidence is claimed for this small UI/client-state slice
+- Live verification:
+  - not deployed in this pass
+
 ## Latest Packet 08 Pass - Active Work Workspace Deep-Link QA
 
 - Tightened the accepted-offer lifecycle after live phone testing exposed a mushy handoff between notifications, closed job cards, and the real active-work record:

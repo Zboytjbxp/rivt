@@ -138,6 +138,11 @@ function newestFirst<T extends { createdAt: string }>(rows: T[]) {
   return [...rows].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 }
 
+function mergeById<T extends { id: string }>(incoming: T[], existing: T[]) {
+  const seen = new Set(incoming.map((item) => item.id));
+  return [...incoming, ...existing.filter((item) => !seen.has(item.id))];
+}
+
 function projectPhotoNotes(project: ProjectRecord | null) {
   const notesByUploadId = new Map<string, string>();
   if (!project) return notesByUploadId;
@@ -800,14 +805,28 @@ export function JobPhotosTool({ activeWork }: { activeWork: CanonicalActiveWork[
     setJobUploading(true);
     setJobUploadError("");
     let uploadFailure: unknown = null;
+    const uploadedMedia: ProjectMedia[] = [];
+    const uploadedEntries: ProjectRecord["entries"] = [];
     for (const file of files) {
       try {
-        await uploadProjectMedia(project.id, file, note ?? captureIntentNote(captureIntent));
+        const uploaded = await uploadProjectMedia(project.id, file, note ?? captureIntentNote(captureIntent));
+        if (uploaded?.media) uploadedMedia.push(uploaded.media);
+        if (uploaded?.entry) uploadedEntries.push(uploaded.entry);
       } catch (err) {
         setJobUploadError(projectErrorMessage(err));
         uploadFailure = err;
         break;
       }
+    }
+    if (uploadedMedia.length || uploadedEntries.length) {
+      setProject((current) => current && current.id === project.id
+        ? {
+            ...current,
+            media: mergeById(uploadedMedia, current.media),
+            entries: mergeById(uploadedEntries, current.entries),
+            updatedAt: new Date().toISOString(),
+          }
+        : current);
     }
     try {
       setProject(await getProject(project.id));

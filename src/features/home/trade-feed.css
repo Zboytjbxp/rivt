@@ -115,6 +115,98 @@
   grid-column: 1 / -1;
 }
 
+.trade-feed-pickup {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: var(--v2-space-card);
+  border: 1px solid var(--v2-border);
+  border-radius: var(--v2-radius-lg);
+  background: var(--v2-surface);
+}
+
+.trade-feed-pickup-head {
+  margin-bottom: 0;
+}
+
+.trade-feed-pickup-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.trade-feed-pickup-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 12px;
+  border: 1px solid var(--v2-border);
+  border-radius: var(--v2-radius-lg);
+  background: color-mix(in srgb, var(--v2-surface-muted) 72%, transparent);
+  color: var(--v2-text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.trade-feed-pickup-row-static {
+  cursor: default;
+}
+
+.trade-feed-pickup-icon {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: var(--v2-radius-md);
+  background: var(--v2-accent-soft);
+  color: var(--v2-accent);
+  flex: 0 0 auto;
+}
+
+.trade-feed-pickup-copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.trade-feed-pickup-copy strong {
+  color: var(--v2-text);
+  font-size: var(--v2-text-body);
+  font-weight: var(--v2-weight-bold);
+  line-height: 1.2;
+}
+
+.trade-feed-pickup-copy small {
+  color: var(--v2-text-muted);
+  font-size: var(--v2-text-caption);
+  line-height: 1.35;
+}
+
+.trade-feed-pickup-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.trade-feed-pickup-chip {
+  display: inline-flex;
+  min-height: 36px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 10px;
+  border: 1px solid var(--v2-border);
+  border-radius: var(--v2-radius-pill);
+  background: var(--v2-surface);
+  color: var(--v2-text);
+  font-size: var(--v2-text-label);
+  font-weight: var(--v2-weight-strong);
+  cursor: pointer;
+}
+
 /* ── CTA row ─────────────────────────────────────────────── */
 /* ── Getting-started checklist ───────────────────────────── */
 .trade-feed-start-card {
@@ -755,6 +847,21 @@
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     min-width: 0;
+  }
+
+  .trade-feed-pickup-row {
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: flex-start;
+  }
+
+  .trade-feed-pickup-row > svg {
+    display: none;
+  }
+
+  .trade-feed-pickup-chip-row {
+    grid-column: 2;
+    justify-content: flex-start;
+    margin-top: 4px;
   }
 
   .trade-feed-nudge {

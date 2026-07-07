@@ -49,6 +49,12 @@ const themePaletteOptions = Object.entries(brandConfig.theme.palettes) as Array<
   [ThemePalette, (typeof brandConfig.theme.palettes)[ThemePalette]]
 >;
 
+function authMethodLabel(method: AuthMethod) {
+  if (method === "Google") return "Google sign-in";
+  if (method === "Email") return "Email sign-in";
+  return "Pilot access";
+}
+
 export function ActivityToast({
   activity,
   onDismiss,
@@ -247,6 +253,17 @@ export function AccountPanel({
                 : <strong>New contributor</strong>}
             </div>
           </div>
+        </section>
+
+        <section className="account-section">
+          <div className="settings-section-heading">
+            <span>This device</span>
+            <strong>Signed in here as {profile.displayName || profile.organization || "RIVT member"}</strong>
+            <small>{profile.email} • {authMethodLabel(profile.authMethod)}</small>
+          </div>
+          <p className="account-note">
+            Sign out before handing this phone or browser to someone else.
+          </p>
         </section>
 
         <section className="account-section theme-settings-section">

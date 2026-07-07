@@ -232,6 +232,11 @@ function clearRivtLocalState() {
     keysToRemove.push(key);
   }
   keysToRemove.forEach((key) => window.localStorage.removeItem(key));
+  try {
+    window.sessionStorage.removeItem(AUTH_MODE_KEY);
+  } catch {
+    // Session storage is a convenience only.
+  }
 }
 
 function readSafetyQuizResults(): Record<string, SafetyQuizResult> {
@@ -1208,7 +1213,33 @@ function App() {
     setAuthUser(null);
     setCanonicalAccount(null);
     setOnboardingComplete(false);
+    setJobs([]);
+    setSelectedId(0);
+    setEditingJob(null);
+    setMessageDraft("");
+    setInboxConversations([]);
+    setSelectedConversationId(null);
+    setInboxMessages([]);
+    setInboxNotifications([]);
+    setActiveWork([]);
+    setFocusedActiveWorkId(null);
+    setInboxError(null);
+    setJobsError(null);
+    setUploadedRecords(() => new Set());
+    setStorageUsage(null);
+    setShoutOuts([]);
+    setProfileSearchFocus(null);
+    setShopTalkPostId(null);
+    setShopTalkCompose(false);
+    setShopTalkCommunitySlug(null);
+    setShopTalkAnswerQueue(false);
     resetCommunityReactions();
+    setAuthNotice("This session ended on this device. Sign in again to keep going.");
+    setAccountOpen(false);
+    setActivityOpen(false);
+    setPostOpen(false);
+    setActiveView("Home");
+    window.history.replaceState({}, "", "/");
   }
 
   async function handleLogout() {
@@ -1224,10 +1255,31 @@ function App() {
       setAuthUser(null);
       setCanonicalAccount(null);
       setOnboardingComplete(false);
+      setJobs([]);
+      setSelectedId(0);
+      setEditingJob(null);
+      setMessageDraft("");
+      setInboxConversations([]);
+      setSelectedConversationId(null);
+      setInboxMessages([]);
+      setInboxNotifications([]);
+      setActiveWork([]);
+      setFocusedActiveWorkId(null);
+      setInboxError(null);
+      setJobsError(null);
+      setUploadedRecords(() => new Set());
+      setStorageUsage(null);
+      setShoutOuts([]);
+      setProfileSearchFocus(null);
+      setShopTalkPostId(null);
+      setShopTalkCompose(false);
+      setShopTalkCommunitySlug(null);
+      setShopTalkAnswerQueue(false);
       resetCommunityReactions();
       setAuthNotice(null);
       setAccountOpen(false);
       setActivityOpen(false);
+      setPostOpen(false);
       setActiveView("Home");
       window.history.replaceState({}, "", "/");
     }
@@ -2174,6 +2226,7 @@ function App() {
             name={accountProfile.displayName || (isGuest ? "there" : "there")}
             location={accountProfile.location}
             primaryTrade={primaryProfileTrade}
+            unreadMessages={unreadMessages}
             profileHasBasics={homeProfileHasBasics}
             profileHasBio={homeProfileHasBio}
             onboardingComplete={onboardingComplete}
