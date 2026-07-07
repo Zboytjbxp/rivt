@@ -5,25 +5,28 @@ Current gate: Gate A launch hardening
 Current phase: Packet 08 Gate A launch hardening plus Gate B behind-flag backbone work: machine gates and live workflow smokes are mostly green; the Shop Talk Reddit-model backbone, moderation/reporting backend, human-facing moderation console/report UX, post photo media, reachability/naming cleanup, Tools hub consolidation, Payment Tracker server records, money-tools sync, the accepted tool-records sync slices, non-tool local-state boundary cleanup, dedicated network-records sync for Crew/Invites/informal written shout-outs, screen-density polish, mobile layout/device-accessibility subtraction, fraction calculator ergonomics, iPhone SE layout containment, immersive-tool compact-device containment, SE tool chrome cleanup slices, native metric calculator rebuild, and the camera-first records/photos tool rebuild are implemented while still respecting launch-readiness boundaries before broad exposure.
 Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
-Production release commit: `6e60e03827409c6dc52d31f936bf5eba3d402cab` verified with live `/api/health` and `npm run monitor:production`; latest runtime feature evidence is recorded below and docs-only evidence commits may supersede the served build SHA.
+Production release commit: `8be08d7768f3796257d7b669a0c9eddd38d38df9` verified with live `/api/health` and `npm run monitor:production`; latest runtime feature evidence is recorded below and docs-only evidence commits may supersede the served build SHA.
 
 ## Latest Packet 08 Pass - Jacksonville Beta Invite Code
 
 - Added support for the named Jacksonville beta access code `JAX26`:
   - signup request validation now accepts 5-character pilot codes while invite consumption remains server-side and hash-backed
   - `scripts/create-pilot-invite.js` can now create a reviewed fixed code with `--code=...` instead of only random one-time strings
+  - `scripts/create-pilot-invite.js` can also raise the capacity of an existing active fixed code with `--update-max-uses=...`, avoiding one-off production SQL for launch-code adjustments
   - integration coverage includes a short-code invite signup path so this does not regress silently
 - Created the production invite through Railway SSH inside the production service network:
   - code: `JAX26`
   - invite id: `b6ce645b-bb30-4279-875a-405b85ec5879`
   - email lock: none
   - role lock: none
-  - max uses: 100
+  - max uses: 500
+  - uses consumed at update time: 0
   - expires: `2026-10-05T01:09:24.224Z`
 - Live verification:
-  - production `/api/health` reported exact build commit `6e60e03827409c6dc52d31f936bf5eba3d402cab`
+  - production `/api/health` reported exact build commit `8be08d7768f3796257d7b669a0c9eddd38d38df9`
+  - Railway SSH update returned the active `JAX26` invite with `maxUses: 500`, `useCount: 0`, and `revokedAt: null`
   - non-consuming signup probe with `JAX26` reached password-policy validation instead of request-shape rejection, proving the short code is accepted by the deployed API without consuming the invite
-  - `EXPECTED_SOURCE_COMMIT=6e60e03827409c6dc52d31f936bf5eba3d402cab npm run monitor:production` passed with PostgreSQL, S3-compatible object storage, configured Sentry, operational controls off, seven anonymous private-route checks, and 578 ms duration
+  - `EXPECTED_SOURCE_COMMIT=8be08d7768f3796257d7b669a0c9eddd38d38df9 npm run monitor:production` passed with PostgreSQL, S3-compatible object storage, configured Sentry, operational controls off, seven anonymous private-route checks, and 593 ms duration
 - Preserved boundaries:
   - the code remains revocable, expiring, max-use-limited, and stored only as a hash
   - no homeowner flows, fake success paths, auth bypasses, production migrations, provider-secret changes, or invite-gating relaxations beyond accepting the reviewed short beta code length
