@@ -4679,7 +4679,7 @@ const signupSchema = z.object({
   password: z.string(),
   role: z.enum(["contractor", "tradesperson"]),
   displayName: z.string().trim().min(2).max(100),
-  inviteCode: z.string().trim().min(8).max(256).optional(),
+  inviteCode: z.string().trim().min(5).max(256).optional(),
 });
 
 const loginSchema = z.object({

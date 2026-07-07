@@ -309,9 +309,28 @@ if (!testDatabaseUrl) {
     assert.equal(missingInvite.response.status, 403);
     assert.equal(missingInvite.payload.error.code, "INVITATION_REQUIRED");
 
+    const shortInviteCode = `J${randomUUID().replaceAll("-", "").slice(0, 4)}`;
+    const shortInviteEmail = `short-invite-${randomUUID()}@example.test`;
+    const hash = (value) => createHash("sha256").update(value).digest("hex");
+    await database.query(
+      `INSERT INTO signup_invites (code_hash, email_hash, allowed_role, expires_at)
+       VALUES ($1, $2, 'contractor', now() + interval '1 day')`,
+      [hash(shortInviteCode), hash(shortInviteEmail)],
+    );
+    const shortInvited = await requestJson(baseUrl, "/api/v1/auth/signup", {
+      method: "POST",
+      body: {
+        email: shortInviteEmail,
+        password: "SafePassword!1234",
+        displayName: "Short Invite",
+        role: "contractor",
+        inviteCode: shortInviteCode,
+      },
+    });
+    assert.equal(shortInvited.response.status, 201);
+
     const inviteCode = `rivt_${randomUUID()}`;
     const invitedEmail = `invited-${randomUUID()}@example.test`;
-    const hash = (value) => createHash("sha256").update(value).digest("hex");
     await database.query(
       `INSERT INTO signup_invites (code_hash, email_hash, allowed_role, expires_at)
        VALUES ($1, $2, 'tradesperson', now() + interval '1 day')`,

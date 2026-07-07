@@ -17,19 +17,22 @@ const databaseUrl = process.env.DATABASE_URL?.trim();
 if (!databaseUrl) {
   fail("DATABASE_URL is required.");
 } else {
+  const requestedCode = readArgument("code");
   const email = readArgument("email").toLowerCase();
   const role = readArgument("role");
   const days = Number.parseInt(readArgument("days") || "14", 10);
   const maxUses = Number.parseInt(readArgument("max-uses") || "1", 10);
 
-  if (role && !["contractor", "tradesperson"].includes(role)) {
+  if (requestedCode && !/^[A-Za-z0-9_-]{5,64}$/.test(requestedCode)) {
+    fail("--code must be 5-64 characters using letters, numbers, underscores, or hyphens.");
+  } else if (role && !["contractor", "tradesperson"].includes(role)) {
     fail("--role must be contractor or tradesperson.");
   } else if (!Number.isInteger(days) || days < 1 || days > 90) {
     fail("--days must be an integer between 1 and 90.");
   } else if (!Number.isInteger(maxUses) || maxUses < 1 || maxUses > 100) {
     fail("--max-uses must be an integer between 1 and 100.");
   } else {
-    const rawCode = `rivt_${randomBytes(24).toString("base64url")}`;
+    const rawCode = requestedCode || `rivt_${randomBytes(24).toString("base64url")}`;
     const sha256 = (value) => createHash("sha256").update(value).digest("hex");
     const pool = new pg.Pool({
       connectionString: databaseUrl,
