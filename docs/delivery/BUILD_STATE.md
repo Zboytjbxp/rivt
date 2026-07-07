@@ -5,7 +5,7 @@ Current gate: Gate A launch hardening
 Current phase: Packet 08 Gate A launch hardening plus Gate B behind-flag backbone work: machine gates and live workflow smokes are mostly green; the Shop Talk Reddit-model backbone, moderation/reporting backend, human-facing moderation console/report UX, post photo media, reachability/naming cleanup, Tools hub consolidation, Payment Tracker server records, money-tools sync, the accepted tool-records sync slices, non-tool local-state boundary cleanup, dedicated network-records sync for Crew/Invites/informal written shout-outs, screen-density polish, mobile layout/device-accessibility subtraction, fraction calculator ergonomics, iPhone SE layout containment, immersive-tool compact-device containment, SE tool chrome cleanup slices, native metric calculator rebuild, the camera-first records/photos tool rebuild, admin support-case review for account-type requests, and offer start-date normalization are implemented while still respecting launch-readiness boundaries before broad exposure.
 Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
-Production release commit: `727986f630fc4d7d7166d3e516e79817dc8bf270` verified with live `/api/health` and `npm run monitor:production`; latest runtime feature evidence is recorded below and docs-only evidence commits may supersede the served build SHA.
+Production release commit: `901996e6a35a625cf0a07aa58fa24f2b7e66ef90` verified with live `/api/health` and `npm run monitor:production`; latest runtime feature evidence is recorded below and docs-only evidence commits may supersede the served build SHA.
 
 ## Latest Packet 08 Pass - Offer Start Date Normalization
 
@@ -19,6 +19,9 @@ Production release commit: `727986f630fc4d7d7166d3e516e79817dc8bf270` verified w
   - no new role, authorization, billing, invite, or production-data behavior was added
   - the backend offer contract remains server-owned and idempotent
   - no frontend-only success state was added
+- Live verification:
+  - production `/api/health` reported exact build commit `901996e6a35a625cf0a07aa58fa24f2b7e66ef90`
+  - `EXPECTED_SOURCE_COMMIT=901996e6a35a625cf0a07aa58fa24f2b7e66ef90 npm run monitor:production` passed with PostgreSQL, S3-compatible object storage, configured Sentry, operational controls off, seven anonymous private-route checks, and 571 ms duration
 - Local verification:
   - `npm run build` (pass)
   - `npm run lint` (pass)
