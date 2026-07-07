@@ -5,7 +5,7 @@ Current gate: Gate A launch hardening
 Current phase: Packet 08 Gate A launch hardening plus Gate B behind-flag backbone work: machine gates and live workflow smokes are mostly green; the Shop Talk Reddit-model backbone, moderation/reporting backend, human-facing moderation console/report UX, post photo media, reachability/naming cleanup, Tools hub consolidation, Payment Tracker server records, money-tools sync, the accepted tool-records sync slices, non-tool local-state boundary cleanup, dedicated network-records sync for Crew/Invites/informal written shout-outs, screen-density polish, mobile layout/device-accessibility subtraction, fraction calculator ergonomics, iPhone SE layout containment, immersive-tool compact-device containment, SE tool chrome cleanup slices, native metric calculator rebuild, and the camera-first records/photos tool rebuild are implemented while still respecting launch-readiness boundaries before broad exposure.
 Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
-Production release commit: `e6ae1b25e7789204ab7b46552412a8f4e59e21c1` verified with live `/api/health` and `npm run monitor:production`; latest runtime feature evidence is recorded below and docs-only evidence commits may supersede the served build SHA.
+Production release commit: `1bd570335f41c9b0038c3d99c4650df6829b16af` verified with live `/api/health` and `npm run monitor:production`; latest runtime feature evidence is recorded below and docs-only evidence commits may supersede the served build SHA.
 
 ## Latest Packet 08 Pass - Responsive Shell and Token Bridge
 
@@ -165,8 +165,9 @@ Production release commit: `e6ae1b25e7789204ab7b46552412a8f4e59e21c1` verified w
   - Browser plugin invocation failed in this session at the required documentation call (`browser.documentation is not a function`), so the repo's Playwright smoke scripts were used as the rendered QA fallback
   - refreshed `desktop-job-photos.png`, `mobile-job-photos.png`, and `se-job-photos.png` show the current camera/project-feed surface contained across desktop, 390px mobile, and 320px SE-class screens
 - Production deployment status:
-  - not deployed in this pass
-  - production remains on the current `master` release until this rebase verification commit is merged and redeployed
+  - fast-forward merged to `master`, pushed to origin, and picked up by Railway production
+  - live `https://rivt.pro/api/health` reported exact build commit `1bd570335f41c9b0038c3d99c4650df6829b16af`
+  - `EXPECTED_SOURCE_COMMIT=1bd570335f41c9b0038c3d99c4650df6829b16af npm run monitor:production` passed with PostgreSQL, S3-compatible object storage, configured Sentry, operational controls off, seven anonymous private-route checks, and 562 ms duration
 
 ## Latest Packet 08 Pass - Native Metric Calculator Mode
 
