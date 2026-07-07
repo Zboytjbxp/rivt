@@ -1260,6 +1260,16 @@ function App() {
     setPostOpen(false);
   }
 
+  function handleOpenActiveWorkTool(activeWorkId: string, tool: ToolMode) {
+    setFocusedActiveWorkId(activeWorkId);
+    handleOpenTool(tool);
+  }
+
+  function handleOpenActiveWorkRecords(activeWorkId: string) {
+    setFocusedActiveWorkId(activeWorkId);
+    handleNavigate("Records");
+  }
+
   function mergeActiveWorkRecord(nextWork: CanonicalActiveWork) {
     setActiveWork((current) => [
       nextWork,
@@ -1817,6 +1827,12 @@ function App() {
     setActivityOpen(false);
     setAccountOpen(false);
 
+    if (activeWorkId && (routeText.includes("message") || routeText.includes("conversation") || routeText.includes("inbox"))) {
+      void reloadActiveWork();
+      await handleOpenActiveWorkMessages(activeWorkId);
+      return;
+    }
+
     if (notification.sourceType === "active_work" && activeWorkId) {
       const activeMatch = activeWork.find((candidate) => candidate.id === activeWorkId) ?? null;
       const resolvedJobId = jobId ?? activeMatch?.jobId ?? null;
@@ -1851,8 +1867,11 @@ function App() {
 
     if (routeText.includes("record") || routeText.includes("project") || routeText.includes("photo") || routeText.includes("media") || routeText.includes("tool")) {
       void projectId;
-      if (activeWorkId) setFocusedActiveWorkId(activeWorkId);
-      handleNavigate("Records");
+      if (activeWorkId) {
+        handleOpenActiveWorkRecords(activeWorkId);
+      } else {
+        handleNavigate("Records");
+      }
       return;
     }
 
@@ -2171,6 +2190,8 @@ function App() {
             onOpenProfile={() => handleNavigate("Settings")}
             onOpenTool={handleOpenTool}
             onOpenActiveWorkMessages={(activeWorkId) => void handleOpenActiveWorkMessages(activeWorkId)}
+            onOpenActiveWorkRecords={handleOpenActiveWorkRecords}
+            onOpenActiveWorkTool={handleOpenActiveWorkTool}
           />
         ) : activeView === "Work" ? (
           <WorkWorkspace
@@ -2198,8 +2219,20 @@ function App() {
             onEditJob={(job) => void handleEditJob(job)}
             onTransition={handleJobTransition}
             onJobLoaded={handleJobLoaded}
-            onOpenTool={handleOpenTool}
-            onOpenRecords={() => handleNavigate("Records")}
+            onOpenTool={(tool, activeWorkId) => {
+              if (activeWorkId) {
+                handleOpenActiveWorkTool(activeWorkId, tool);
+              } else {
+                handleOpenTool(tool);
+              }
+            }}
+            onOpenRecords={(activeWorkId) => {
+              if (activeWorkId) {
+                handleOpenActiveWorkRecords(activeWorkId);
+              } else {
+                handleNavigate("Records");
+              }
+            }}
             onOpenActiveWorkMessages={(activeWorkId) => void handleOpenActiveWorkMessages(activeWorkId)}
             onRetry={() => void reloadJobs()}
             onOfferAccepted={(nextWork) => {
@@ -2332,6 +2365,7 @@ function App() {
             onToolChange={handleToolChange}
             onImmersiveChange={setToolsImmersive}
             onNavigate={(destination) => handleNavigate(defaultViewForDestination(destination))}
+            focusedActiveWorkId={focusedActiveWorkId}
           />
         ) : activeView === "Admin" ? (
           <ModerationConsole

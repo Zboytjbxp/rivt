@@ -75,6 +75,7 @@ interface ToolsStudioProps {
   paymentRecords: PaymentRecord[];
   mode?: "tools" | "records";
   openTool?: ToolMode | null;
+  focusedActiveWorkId?: string | null;
   onOpenToolConsumed?: () => void;
   onToolChange?: (tool: ToolMode) => void;
   onImmersiveChange?: (immersive: boolean) => void;
@@ -2701,7 +2702,16 @@ function projectErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : "RIVT could not update the project record.";
 }
 
-export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = null, onOpenToolConsumed, onToolChange, onImmersiveChange, onNavigate }: ToolsStudioProps) {
+function focusedActiveWorkFirst(items: CanonicalActiveWork[], focusedActiveWorkId: string | null) {
+  if (!focusedActiveWorkId) return items;
+  return [...items].sort((a, b) => {
+    if (a.id === focusedActiveWorkId) return -1;
+    if (b.id === focusedActiveWorkId) return 1;
+    return 0;
+  });
+}
+
+export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = null, focusedActiveWorkId = null, onOpenToolConsumed, onToolChange, onImmersiveChange, onNavigate }: ToolsStudioProps) {
   const activeJob = jobs.find((job) => job.status !== "Paid / Closed") ?? jobs[0] ?? null;
   const requestedTool = mode === "tools" && openTool ? openTool : null;
   const [localActiveTool, setLocalActiveTool] = useState<ToolMode>("hub");
@@ -2733,6 +2743,10 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
     const byMode = new Map(allToolLaunchers().map((tool) => [tool.mode, tool]));
     return recentTools.map((tool) => byMode.get(tool)).filter((tool): tool is ToolLauncher => Boolean(tool));
   }, [recentTools]);
+  const orderedActiveWork = useMemo(
+    () => focusedActiveWorkFirst(activeWork, focusedActiveWorkId),
+    [activeWork, focusedActiveWorkId],
+  );
 
   function setActiveTool(tool: ToolMode, options: { keepConvertedInvoice?: boolean } = {}) {
     if (!onToolChange) {
@@ -2846,40 +2860,49 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
   }
 
   useEffect(() => {
-    if (mode !== "records" || recordsLoading || selectedProject || activeWork.length !== 1 || projectAction) return;
-    const work = activeWork[0];
+    if (mode !== "records" || recordsLoading || projectAction) return;
+    const work = focusedActiveWorkId
+      ? orderedActiveWork.find((item) => item.id === focusedActiveWorkId) ?? null
+      : orderedActiveWork.length === 1
+        ? orderedActiveWork[0]
+        : null;
     if (!work || autoOpenedRecordRef.current === work.id) return;
+    if (selectedProject?.activeWorkId === work.id) return;
     autoOpenedRecordRef.current = work.id;
     let cancelled = false;
-    setProjectAction(`open:${work.id}`);
-    setRecordsError(null);
-    setRecordNotice(null);
-    setReportPreview(null);
-    openProjectForActiveWork(work.id)
-      .then((project) => {
-        if (cancelled) return;
-        const hasStoredMedia = project.media.some((item) => item.status === "stored");
-        setSelectedProject(project);
-        setNoteDraft("");
-        setUploadNotes("");
-        setCompletionNote("");
-        setResolutionNote("");
-        setReportPreview(null);
-        setCompletionChecklist({ ...defaultCompletionChecklist, photosProvided: hasStoredMedia });
-      })
-      .catch((error) => {
-        if (!cancelled) setRecordsError(projectErrorMessage(error));
-      })
-      .finally(() => {
-        if (!cancelled) setProjectAction(null);
-      });
+    const timer = setTimeout(() => {
+      if (cancelled) return;
+      setProjectAction(`open:${work.id}`);
+      setRecordsError(null);
+      setRecordNotice(null);
+      setReportPreview(null);
+      openProjectForActiveWork(work.id)
+        .then((project) => {
+          if (cancelled) return;
+          const hasStoredMedia = project.media.some((item) => item.status === "stored");
+          setSelectedProject(project);
+          setNoteDraft("");
+          setUploadNotes("");
+          setCompletionNote("");
+          setResolutionNote("");
+          setReportPreview(null);
+          setCompletionChecklist({ ...defaultCompletionChecklist, photosProvided: hasStoredMedia });
+        })
+        .catch((error) => {
+          if (!cancelled) setRecordsError(projectErrorMessage(error));
+        })
+        .finally(() => {
+          if (!cancelled) setProjectAction(null);
+        });
+    }, 0);
     return () => {
       cancelled = true;
+      clearTimeout(timer);
     };
-  }, [activeWork, mode, projectAction, recordsLoading, selectedProject]);
+  }, [focusedActiveWorkId, mode, orderedActiveWork, projectAction, recordsLoading, selectedProject]);
 
   async function refreshSelectedProject() {
-    const work = selectedProject ? activeWork.find((item) => item.id === selectedProject.activeWorkId) : null;
+    const work = selectedProject ? orderedActiveWork.find((item) => item.id === selectedProject.activeWorkId) : null;
     if (work) setSelectedProject(await openProjectForActiveWork(work.id));
   }
 
@@ -3001,12 +3024,12 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
           <Panel
             className="v2-tools-panel"
             eyebrow="Accepted work"
-            title={recordsLoading ? "Loading records..." : `${activeWork.length} private record${activeWork.length === 1 ? "" : "s"}`}
-            action={!recordsLoading && activeWork.length === 0 ? <button type="button" onClick={() => onNavigate("work")}>Find work</button> : undefined}
+            title={recordsLoading ? "Loading records..." : `${orderedActiveWork.length} private record${orderedActiveWork.length === 1 ? "" : "s"}`}
+            action={!recordsLoading && orderedActiveWork.length === 0 ? <button type="button" onClick={() => onNavigate("work")}>Find work</button> : undefined}
           >
-            {activeWork.length ? (
+            {orderedActiveWork.length ? (
               <div className="v2-record-work-list">
-                {activeWork.map((work) => (
+                {orderedActiveWork.map((work) => (
                   <button
                     key={work.id}
                     type="button"
@@ -3228,7 +3251,7 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
       },
       "daily-log": {
         title: "Daily log",
-        node: <DailyLogTool activeJob={activeJob} activeWork={activeWork} />,
+        node: <DailyLogTool activeJob={activeJob} activeWork={orderedActiveWork} />,
       },
       materials: {
         title: "Material takeoff",
@@ -3236,7 +3259,7 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
       },
       "job-photos": {
         title: "Camera",
-        node: <JobPhotosTool activeWork={activeWork} />,
+        node: <JobPhotosTool activeWork={orderedActiveWork} />,
       },
       "time-tracker": {
         title: "Time tracker",

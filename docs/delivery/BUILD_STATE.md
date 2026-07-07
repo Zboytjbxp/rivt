@@ -7,15 +7,18 @@ Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
 Production release commit: `826cfd38220fea65250690cea4d11d52b06964d9` verified with live `/api/health` and `npm run monitor:production`; latest runtime feature evidence is recorded below and docs-only evidence commits may supersede the served build SHA.
 
-## Latest Packet 08 Pass - Active Work Deep-Link QA
+## Latest Packet 08 Pass - Active Work Workspace Deep-Link QA
 
 - Tightened the accepted-offer lifecycle after live phone testing exposed a mushy handoff between notifications, closed job cards, and the real active-work record:
   - accepted offers now merge the returned canonical active-work record into app state immediately instead of waiting for a later reload to reveal it
-  - Home active-work cards now surface a direct `Messages` action beside `Open Work`, so the accepted side can go straight into the conversation that continues the job
+  - Home active-work cards now clearly say `You're active now` and group the post-acceptance workspace actions: `Open workspace`, `Messages`, `Photos`, and `Daily log`
   - Work now keeps track of a focused active-work relationship, so offer-accepted notifications and active-work notifications can land on the correct accepted job even after the public listing closes
+  - offer-accepted notifications whose canonical destination is messages now open the exact active-work conversation instead of stopping on the generic Work tab
   - contractor-side `Open active work` now switches the Work section to `Closed` when needed before selecting the accepted job, preventing the detail pane from silently falling back to another open listing
-  - active-work notifications now read `Open active work` instead of blending into generic work labels
+  - active-work notification labels now distinguish `Open message` from `Open active work`, so the tap target says where it goes
   - project/photo/media notifications tied to active work now land on `Records`, which is the user-facing destination for the photos/logs proof path
+  - Records/photos and Daily log now receive the focused active-work id, so opening either tool from Home, Work, or a notification puts the accepted job first instead of making the user hunt for it
+  - the Work detail active-job area now treats `Messages`, `Photos`, and `Daily log` as the primary workspace trio, with invoice/reschedule/cancel kept as secondary lifecycle actions
 - Preserved launch boundaries:
   - no new authorization path, fake active-work state, local auth fallback, billing behavior, provider config, or production data mutation was added
   - the accepted-work transition still depends on the existing server-owned offer acceptance, active-work, and inbox conversation endpoints
@@ -23,12 +26,13 @@ Production release commit: `826cfd38220fea65250690cea4d11d52b06964d9` verified w
 - Local verification:
   - `npm run build` (pass)
   - `npm run lint` (pass)
+  - `npm run lint:security` (pass)
   - `npm run test:unit` (pass; 45/45)
   - `npm run test:e2e` (pass)
-  - `npm run test:ui:work-lifecycle` (pass; refreshed screenshots at `C:\Users\zboyt\AppData\Local\Temp\rivt-work-lifecycle-pass`)
+  - `npm run test:ui:work-lifecycle` (pass; now asserts offer-accepted notification opens the exact active-work conversation; refreshed screenshots at `C:\Users\zboyt\AppData\Local\Temp\rivt-work-lifecycle-pass`)
   - `npm audit --omit=dev` (pass; 0 vulnerabilities)
   - `git diff --check` (pass; CRLF warnings only)
-  - `npm run test:integration` and full `npm run test` both completed, but the suite is currently red in four unrelated existing areas outside this slice: `communities.integration`, `migrations.integration`, `reviews-admin-safety.integration`, and `shop-talk-reactions.integration`
+  - full `npm run test` timed out in this local shell after 304 seconds without producing useful failure output; targeted unit/e2e/work-lifecycle evidence above is newly green for this slice
 - Live verification:
   - production `/api/health` reported exact build commit `826cfd38220fea65250690cea4d11d52b06964d9`
   - `EXPECTED_SOURCE_COMMIT=826cfd38220fea65250690cea4d11d52b06964d9 npm run monitor:production` passed with PostgreSQL, S3-compatible object storage, configured Sentry, operational controls off, seven anonymous private-route checks, and 577 ms duration

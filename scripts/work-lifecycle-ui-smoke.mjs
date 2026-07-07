@@ -226,6 +226,49 @@ function makeNotification(overrides = {}) {
   };
 }
 
+function makeConversation(overrides = {}) {
+  return {
+    id: overrides.id ?? "f4e20a5f-0df0-40d0-bdc0-2bfac97ca41e",
+    activeWorkId: overrides.activeWorkId ?? activeWorkId,
+    jobId: overrides.jobId ?? openJobId,
+    organizationId: overrides.organizationId ?? orgId,
+    status: "open",
+    activeWorkStatus: "active",
+    createdByAccountId: overrides.createdByAccountId ?? contractorId,
+    createdAt: "2026-06-28T15:31:00.000Z",
+    updatedAt: "2026-06-28T15:31:00.000Z",
+    job: {
+      id: overrides.jobId ?? openJobId,
+      title: "Warehouse panel assist",
+      status: "closed",
+      organization: { id: orgId, name: "RIVT Test Electric" },
+      publicLocation: { city: "Jacksonville", region: "FL", countryCode: "US" },
+    },
+    participants: [
+      {
+        accountId: contractorId,
+        role: "contractor",
+        mutedUntil: null,
+        lastReadAt: null,
+        displayName: "RIVT Test Electric",
+        headline: "Electrical contractor",
+        serviceArea: { city: "Jacksonville", region: "FL" },
+      },
+      {
+        accountId: tradespersonId,
+        role: "tradesperson",
+        mutedUntil: null,
+        lastReadAt: null,
+        displayName: "Riley Harper",
+        headline: "Commercial electrician",
+        serviceArea: { city: "Jacksonville", region: "FL" },
+      },
+    ],
+    lastMessage: null,
+    unreadCount: 1,
+  };
+}
+
 function makeProject() {
   return {
     id: projectId,
@@ -247,13 +290,14 @@ function makeProject() {
   };
 }
 
-function makeState({ jobs = [makeJob()], applications = [], offers = [], activeWork = [], notifications = [] } = {}) {
+function makeState({ jobs = [makeJob()], applications = [], offers = [], activeWork = [], notifications = [], conversations = [] } = {}) {
   return {
     jobs: structuredClone(jobs),
     applications: structuredClone(applications),
     offers: structuredClone(offers),
     activeWork: structuredClone(activeWork),
     notifications: structuredClone(notifications),
+    conversations: structuredClone(conversations),
     project: makeProject(),
   };
 }
@@ -297,7 +341,19 @@ async function configurePage(page, account, state) {
   await page.route("**/api/auth/providers", (route) => route.fulfill(json({ providers: {} })));
   await page.route("**/api/v1/sessions", (route) => route.fulfill(json({ data: { sessions: [] } })));
   await page.route("**/api/v1/profiles**", (route) => route.fulfill(json({ data: { profiles: [] } })));
-  await page.route("**/api/v1/conversations", (route) => route.fulfill(json({ data: { conversations: [] } })));
+  await page.route("**/api/v1/conversations", (route) => route.fulfill(json({ data: { conversations: state.conversations } })));
+  await page.route(/\/api\/v1\/active-work\/[0-9a-f-]{36}\/conversation$/, (route) => {
+    const id = new URL(route.request().url()).pathname.split("/").at(-2);
+    const active = state.activeWork.find((item) => item.id === id);
+    assert.ok(active, `Missing active work ${id}`);
+    let conversation = state.conversations.find((item) => item.activeWorkId === id);
+    if (!conversation) {
+      conversation = makeConversation({ activeWorkId: id, jobId: active.jobId });
+      state.conversations.unshift(conversation);
+    }
+    return route.fulfill(json({ data: { conversation } }));
+  });
+  await page.route(/\/api\/v1\/conversations\/[0-9a-f-]{36}\/messages$/, (route) => route.fulfill(json({ data: { messages: [] } })));
   await page.route("**/api/v1/notifications", (route) => {
     const notifications = state.notifications.filter((item) => item.accountId === account.id);
     const unreadCount = notifications.filter((item) => !item.readAt).length;
@@ -588,14 +644,14 @@ async function runTradespersonOfferFlow(page) {
   await page.getByRole("button", { name: "Accept work" }).click();
   await page.getByText("Accepted and active", { exact: true }).waitFor({ timeout: 15_000 });
 
-  await page.getByRole("button", { name: "Daily log" }).click();
+  await page.getByLabel("Hiring workflow").getByRole("button", { name: "Daily log" }).click();
   await page.getByRole("heading", { name: "Daily log", exact: true }).waitFor({ timeout: 15_000 });
   await page.getByText("Records-ready", { exact: true }).waitFor({ timeout: 15_000 });
 
   await page.goto(`${baseUrl}/app/work`, { waitUntil: "networkidle" });
   await clickJob(page, "Warehouse panel assist");
   await page.getByText("Accepted and active", { exact: true }).waitFor({ timeout: 15_000 });
-  await page.getByLabel("Hiring workflow").getByRole("button", { name: "Records/photos" }).click();
+  await page.getByLabel("Hiring workflow").getByRole("button", { name: "Photos" }).click();
   await page.getByRole("heading", { name: "Records", exact: true }).waitFor({ timeout: 15_000 });
 
   await page.goto(`${baseUrl}/app/work`, { waitUntil: "networkidle" });
@@ -613,6 +669,7 @@ async function runNotificationActiveWorkFlow(page) {
     jobs: [closedJob],
     activeWork: [active],
     notifications: [makeNotification()],
+    conversations: [makeConversation()],
   });
   await configurePage(page, contractorAccount, state);
 
@@ -620,10 +677,9 @@ async function runNotificationActiveWorkFlow(page) {
   await page.getByRole("button", { name: "Notifications" }).click();
   const notificationsDialog = page.getByRole("dialog", { name: "Notifications" });
   await notificationsDialog.waitFor({ timeout: 15_000 });
-  await notificationsDialog.getByRole("button", { name: /Open work: Offer accepted/i }).click();
-  await page.getByRole("heading", { name: "Work", exact: true }).waitFor({ timeout: 15_000 });
-  await page.getByRole("region", { name: "Active work ready" }).waitFor({ timeout: 15_000 });
-  await page.getByText("The offer was accepted", { exact: false }).waitFor({ timeout: 15_000 });
+  await notificationsDialog.getByRole("button", { name: /Open message: Offer accepted/i }).click();
+  await page.getByRole("heading", { name: "Inbox", exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByRole("heading", { name: "Warehouse panel assist", exact: true }).waitFor({ timeout: 15_000 });
   await assertNoHorizontalOverflow(page, "Notification active work route");
   await page.screenshot({ path: path.join(screenshotDir, "notification-active-work-route.png"), fullPage: true });
 }

@@ -22,6 +22,14 @@ function notificationActionLabel(notification: InboxNotification) {
     return href.includes("community") ? "Open community" : "Open post";
   }
   if (
+    notification.sourceType === "message" ||
+    (notification.sourceType === "active_work" && href.includes("messages")) ||
+    typeof notification.metadata?.conversationId === "string" ||
+    href.includes("messages")
+  ) {
+    return "Open message";
+  }
+  if (
     notification.sourceType === "offer" ||
     notification.sourceType === "job" ||
     typeof notification.metadata?.jobId === "string" ||
@@ -32,13 +40,6 @@ function notificationActionLabel(notification: InboxNotification) {
   }
   if (notification.sourceType === "active_work") {
     return "Open active work";
-  }
-  if (
-    notification.sourceType === "message" ||
-    typeof notification.metadata?.conversationId === "string" ||
-    href.includes("messages")
-  ) {
-    return "Open message";
   }
   if (notification.sourceType === "project" || href.includes("tools")) {
     return "Open records";

@@ -1,8 +1,10 @@
 import { useMemo, useState } from "react";
 import {
+  Camera,
   ChevronRight,
   Circle,
   ClipboardList,
+  FileText,
   MessageCircle,
   Plus,
   TrendingUp,
@@ -103,6 +105,8 @@ interface TradeFeedProps {
   onOpenProfile: () => void;
   onOpenTool: (tool: ToolMode) => void;
   onOpenActiveWorkMessages: (activeWorkId: string) => void;
+  onOpenActiveWorkRecords: (activeWorkId: string) => void;
+  onOpenActiveWorkTool: (activeWorkId: string, tool: ToolMode) => void;
 }
 
 export function TradeFeed({
@@ -130,6 +134,8 @@ export function TradeFeed({
   onOpenProfile = () => undefined,
   onOpenTool = () => undefined,
   onOpenActiveWorkMessages,
+  onOpenActiveWorkRecords,
+  onOpenActiveWorkTool,
 }: TradeFeedProps) {
   const [saved, setSaved] = useState<Set<string>>(readBookmarks);
   const [availability, setAvailability] = useState<Availability>(readAvailability);
@@ -314,26 +320,41 @@ export function TradeFeed({
       {primaryActiveWork ? (
         <section className="trade-feed-active-work" aria-label="Active work">
           <div className="trade-feed-active-copy">
-            <span>Active work</span>
+            <span>You're active now</span>
             <h2>{primaryActiveWork.job?.title ?? "Accepted work"}</h2>
             <p>
-              Offer accepted. The posting is closed to new applicants and now lives in active work.
+              Offer accepted. Messages, photos, and daily logs stay tied to this job.
             </p>
             {activeWorkLocation(primaryActiveWork) ? <small>{activeWorkLocation(primaryActiveWork)}</small> : null}
           </div>
           <div className="trade-feed-active-actions">
             <button type="button" className="v2-primary-button" onClick={() => onNavigate("work")}>
-              Open Work
+              Open workspace
             </button>
-            {primaryActiveWork ? (
-              <button
-                type="button"
-                className="v2-secondary-button"
-                onClick={() => onOpenActiveWorkMessages(primaryActiveWork.id)}
-              >
-                Messages
-              </button>
-            ) : null}
+            <button
+              type="button"
+              className="v2-secondary-button"
+              onClick={() => onOpenActiveWorkMessages(primaryActiveWork.id)}
+            >
+              <MessageCircle size={15} />
+              Messages
+            </button>
+            <button
+              type="button"
+              className="v2-secondary-button"
+              onClick={() => onOpenActiveWorkRecords(primaryActiveWork.id)}
+            >
+              <Camera size={15} />
+              Photos
+            </button>
+            <button
+              type="button"
+              className="v2-secondary-button"
+              onClick={() => onOpenActiveWorkTool(primaryActiveWork.id, "daily-log")}
+            >
+              <FileText size={15} />
+              Daily log
+            </button>
           </div>
         </section>
       ) : null}
