@@ -318,10 +318,29 @@ async function safeCloseOpenPanels(page) {
 }
 
 async function runMobileFlow(page) {
+  await page.addInitScript(() => {
+    localStorage.setItem("rivt.recentTools.v1", JSON.stringify(["job-photos", "daily-log", "estimate"]));
+  });
   await page.goto(`${baseUrl}/app/home`, { waitUntil: "networkidle" });
   await assertNoHorizontalOverflow(page, "Home");
   await page.setViewportSize({ width: 320, height: 568 });
+  await page.locator(".trade-feed-pickup").waitFor({ timeout: 15_000 });
   await assertNoHorizontalOverflow(page, "Home iPhone SE");
+  const pickupContained = await page.locator(".trade-feed-pickup").evaluate((element) => ({
+    clientWidth: element.clientWidth,
+    scrollWidth: element.scrollWidth,
+    chipCount: element.querySelectorAll(".trade-feed-pickup-chip").length,
+    chipOverflow: [...element.querySelectorAll(".trade-feed-pickup-chip")].some((chip) => {
+      if (!(chip instanceof HTMLElement)) return false;
+      return chip.scrollWidth > chip.clientWidth + 1;
+    }),
+  }));
+  assert.ok(pickupContained.chipCount >= 3, "Home old-SE smoke should exercise recent-tool chips");
+  assert.ok(
+    pickupContained.scrollWidth <= pickupContained.clientWidth + 1,
+    `Home pickup card should not overflow on old iPhone SE: ${JSON.stringify(pickupContained)}`,
+  );
+  assert.equal(pickupContained.chipOverflow, false, "Home recent-tool chips should not clip their labels on old iPhone SE");
   assert.equal(await page.locator(".v2-sidebar").isVisible(), false, "iPhone SE should not render the desktop sidebar");
   assert.equal(await page.locator(".v2-mobile-nav").isVisible(), true, "iPhone SE should render the mobile nav");
   await page.screenshot({ path: path.join(screenshotDir, "mobile-home-iphone-se.png"), fullPage: false });
@@ -348,7 +367,7 @@ async function runMobileFlow(page) {
   await page.getByRole("heading", { name: "Tools", exact: true }).waitFor({ timeout: 15_000 });
   const primaryInvoiceTool = page.locator(".v2-tool-launch-card").filter({ hasText: "Invoice" }).first();
   await primaryInvoiceTool.waitFor({ timeout: 15_000 });
-  await page.getByRole("button", { name: /Camera/i }).waitFor({ timeout: 15_000 });
+  await page.getByRole("button", { name: "Open Camera" }).waitFor({ timeout: 15_000 });
   assert.equal(await page.locator(".v2-tool-launch-card").count(), 5, "mobile Tools hub should expose exactly five primary field apps");
   assert.ok(await page.locator(".v2-tool-mini-card").count() >= 10, "mobile Tools hub should expose compact supporting tools");
   await assertNoHorizontalOverflow(page, "Tools hub");
@@ -430,6 +449,14 @@ async function runMobileFlow(page) {
   });
   const compactFraction = page.locator(".fraction-strip button").filter({ hasText: "5/8" }).first();
   await compactFraction.waitFor({ timeout: 15_000 });
+  assert.equal(await page.locator(".v2-mobile-nav").isVisible(), false, "immersive calculator should hide the app bottom nav on compact phones");
+  assert.equal(await page.locator(".v2-topbar").isVisible(), false, "immersive calculator should hide the app topbar on compact phones");
+  const compactWorkbenchBox = await page.locator(".fraction-calc-workbench").boundingBox();
+  assert.ok(compactWorkbenchBox, "compact calculator workbench should have a bounding box");
+  assert.ok(
+    compactWorkbenchBox.height >= 548,
+    `compact calculator should use the full old-SE viewport height: ${JSON.stringify(compactWorkbenchBox)}`,
+  );
   const compactFractionBox = await page.evaluate(() => {
     const buttons = [...document.querySelectorAll(".fraction-strip button")];
     const target = buttons.find((button) => button.textContent?.trim() === "5/8");

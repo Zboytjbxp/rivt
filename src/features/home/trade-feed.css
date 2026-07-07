@@ -864,6 +864,10 @@
     margin-top: 4px;
   }
 
+  .trade-feed-pickup-row-static {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
   .trade-feed-nudge {
     gap: 10px;
     padding: 12px;
@@ -943,6 +947,67 @@
 
   .trade-feed-fab-label {
     display: none;
+  }
+}
+
+@media (max-width: 360px) {
+  .trade-feed {
+    gap: 14px;
+  }
+
+  .trade-feed-welcome {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .trade-feed-welcome-text h1 {
+    font-size: clamp(32px, 11vw, 40px);
+  }
+
+  .trade-feed-avail {
+    max-width: 100%;
+  }
+
+  .trade-feed-pickup {
+    padding: 12px;
+  }
+
+  .trade-feed-pickup-row,
+  .trade-feed-pickup-row-static {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+    padding: 12px;
+  }
+
+  .trade-feed-pickup-icon {
+    display: none;
+  }
+
+  .trade-feed-pickup-copy small {
+    display: none;
+  }
+
+  .trade-feed-pickup-chip-row {
+    grid-column: 1;
+    display: grid;
+    grid-template-columns: 1fr;
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .trade-feed-pickup-chip {
+    width: 100%;
+    min-height: 42px;
+    border-radius: var(--v2-radius-lg);
+    white-space: normal;
+  }
+
+  .trade-feed-fab {
+    position: static;
+    right: auto;
+    bottom: calc(76px + env(safe-area-inset-bottom));
+    align-self: flex-end;
+    margin-top: 0;
   }
 }
 

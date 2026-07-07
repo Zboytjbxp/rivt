@@ -1498,6 +1498,50 @@
   }
 }
 
+@media (max-width: 360px) {
+  .v2-network-page {
+    gap: 16px;
+  }
+
+  .v2-network-header h1 {
+    font-size: clamp(30px, 12vw, 38px);
+  }
+
+  .v2-network-panel > header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+    padding: 14px;
+  }
+
+  .v2-network-panel > header h2 {
+    font-size: 20px;
+    line-height: 1.08;
+  }
+
+  .v2-network-panel > header button {
+    width: fit-content;
+    max-width: 100%;
+    justify-self: start;
+    padding-inline: 0;
+    text-align: left;
+  }
+
+  .v2-network-prompt {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 10px;
+    padding: 14px;
+  }
+
+  .v2-network-prompt-icon {
+    display: none;
+  }
+
+  .v2-network-trust-stack article {
+    padding: 14px;
+  }
+}
+
 .v2-network-page :is(button, input, textarea, select, a, [role="button"], [role="switch"]):focus-visible {
   outline: 3px solid color-mix(in srgb, var(--v2-accent) 38%, transparent);
   outline-offset: 2px;

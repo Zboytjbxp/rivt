@@ -7101,7 +7101,7 @@ html[data-rivt-compact-device="true"] .v2-tools-app.is-calculator-fullscreen {
 }
 
 html[data-rivt-compact-device="true"] .v2-tools-app.is-calculator-fullscreen .fraction-calc-workbench {
-  height: calc(100dvh - var(--v2-topbar-height, 58px) - env(safe-area-inset-top));
+  height: 100dvh;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
   overflow: hidden;
