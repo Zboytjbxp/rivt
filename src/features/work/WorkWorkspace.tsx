@@ -71,6 +71,7 @@ type JobAction = "publish" | "pause" | "resume" | "close";
 interface WorkWorkspaceProps {
   role: Role;
   jobs: Job[];
+  activeWorkRecords?: CanonicalActiveWork[];
   selectedJob: Job | null;
   loading: boolean;
   error: string | null;
@@ -1168,6 +1169,7 @@ function WorkEmptyState({ role, section, onPostJob }: { role: Role; section: Con
 export function WorkWorkspace({
   role,
   jobs,
+  activeWorkRecords = [],
   selectedJob,
   loading,
   error,
@@ -1221,6 +1223,11 @@ export function WorkWorkspace({
     const status = statusForSection[contractorSection];
     return status ? jobs.filter((job) => job.status === status) : jobs;
   }, [contractorSection, jobs, role]);
+  const activeWorkReady = useMemo(
+    () => activeWorkRecords.filter((work) => work.status === "active"),
+    [activeWorkRecords],
+  );
+  const primaryActiveWorkRecord = activeWorkReady[0] ?? null;
 
   const activeFilterCount = [
     trade !== "All trades",
@@ -1235,6 +1242,15 @@ export function WorkWorkspace({
     setDetailTab("overview");
     setActionError(null);
     setMobileDetailOpen(true);
+  }
+
+  function openActiveWorkJob(work: CanonicalActiveWork) {
+    const matchingJob = jobs.find((job) => job.canonical?.id === work.jobId);
+    if (matchingJob) {
+      selectJob(matchingJob.id);
+      return;
+    }
+    onOpenRecords();
   }
 
   async function runAction(job: Job, action: JobAction) {
@@ -1569,6 +1585,24 @@ export function WorkWorkspace({
       ) : null}
 
       {error ? <div className="v2-work-error" role="alert"><div><strong>Jobs could not be loaded</strong><span>{error}</span></div><button type="button" onClick={onRetry}><RefreshCw size={16} /> Retry</button></div> : null}
+
+      {primaryActiveWorkRecord ? (
+        <section className="v2-active-work-strip" aria-label="Active work ready">
+          <div>
+            <span>Active work</span>
+            <h2>{primaryActiveWorkRecord.job?.title ?? "Accepted work is ready"}</h2>
+            <p>The offer was accepted. The public listing can close now; the job lives here as a private active-work record with records, photos, daily logs, and invoices.</p>
+          </div>
+          <div className="v2-active-work-strip-actions">
+            <button type="button" className="v2-primary-button" onClick={() => openActiveWorkJob(primaryActiveWorkRecord)}>
+              Open active work
+            </button>
+            <button type="button" className="v2-secondary-button" onClick={() => onOpenRecords()}>
+              Records/photos
+            </button>
+          </div>
+        </section>
+      ) : null}
 
       {role === "contractor" && contractorSection === "pipeline" ? (
         <PipelineBoard openJobs={jobs.filter((j) => j.status === "Open")} />

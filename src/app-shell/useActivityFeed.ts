@@ -11,6 +11,29 @@ interface UseActivityFeedOptions {
   role: Role;
 }
 
+function notificationActionLabel(notification: InboxNotification) {
+  const href = notification.actionHref || "";
+  if (
+    notification.sourceType === "offer" ||
+    notification.sourceType === "active_work" ||
+    typeof notification.metadata?.jobId === "string" ||
+    href.includes("work")
+  ) {
+    return "Open work";
+  }
+  if (
+    notification.sourceType === "message" ||
+    typeof notification.metadata?.conversationId === "string" ||
+    href.includes("messages")
+  ) {
+    return "Open message";
+  }
+  if (notification.sourceType === "project" || href.includes("tools")) {
+    return "Open records";
+  }
+  return "Open";
+}
+
 export function useActivityFeed({ activeView, notifications, role }: UseActivityFeedOptions) {
   const [activityFeed, setActivityFeed] = useState<ActivityItem[]>([]);
   const [uiToast, setUiToast] = useState<AppToast | null>(null);
@@ -22,6 +45,7 @@ export function useActivityFeed({ activeView, notifications, role }: UseActivity
     timestamp: item.createdAt ? new Date(item.createdAt).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "",
     unread: !item.readAt,
     kind: item.priority === "high" ? "warning" : item.type === "message" ? "info" : "success",
+    actionLabel: notificationActionLabel(item),
   })), [notifications]);
 
   const unreadActivities = notifications.filter((item) => !item.readAt).length;

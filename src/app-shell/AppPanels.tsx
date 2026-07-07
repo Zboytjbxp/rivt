@@ -1,6 +1,7 @@
 import {
   BadgeCheck,
   Bell,
+  ChevronRight,
   Flag,
   FolderOpen,
   LogOut,
@@ -23,6 +24,7 @@ export interface ActivityItemForPanel {
   timestamp: string;
   unread: boolean;
   kind?: "info" | "success" | "warning" | "error";
+  actionLabel?: string;
 }
 
 export interface AppToastForPanel {
@@ -73,11 +75,13 @@ export function ActivityPanel({
   items,
   onClose,
   onMarkAllRead,
+  onOpenItem,
   onNavigate,
 }: {
   items: ActivityItemForPanel[];
   onClose: () => void;
   onMarkAllRead: () => void;
+  onOpenItem?: (item: ActivityItemForPanel) => void;
   onNavigate: (view: NavLabel) => void;
 }) {
   const trapRef = useFocusTrap<HTMLElement>(onClose);
@@ -116,13 +120,41 @@ export function ActivityPanel({
               <strong>No activity yet</strong>
               <span>Use any feature in the app and activity will appear here.</span>
             </article>
-          ) : items.map((item) => (
-            <article key={item.id} className={item.unread ? "activity-item unread" : "activity-item"}>
-              <span>{item.timestamp}</span>
-              <strong>{item.title}</strong>
-              <p>{item.detail}</p>
-            </article>
-          ))}
+          ) : items.map((item) => {
+            const className = [
+              "activity-item",
+              item.unread ? "unread" : "",
+              item.actionLabel ? "is-actionable" : "",
+            ].filter(Boolean).join(" ");
+            const content = (
+              <>
+                <span>{item.timestamp}</span>
+                <strong>{item.title}</strong>
+                <p>{item.detail}</p>
+                {item.actionLabel ? (
+                  <small className="activity-item-action">
+                    {item.actionLabel}
+                    <ChevronRight size={15} aria-hidden="true" />
+                  </small>
+                ) : null}
+              </>
+            );
+            return item.actionLabel && onOpenItem ? (
+              <button
+                key={item.id}
+                type="button"
+                className={className}
+                onClick={() => onOpenItem(item)}
+                aria-label={`${item.actionLabel}: ${item.title}`}
+              >
+                {content}
+              </button>
+            ) : (
+              <article key={item.id} className={className}>
+                {content}
+              </article>
+            );
+          })}
         </div>
       </aside>
     </div>

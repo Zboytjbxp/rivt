@@ -2731,6 +2731,28 @@ textarea:focus-visible {
   padding: 12px;
 }
 
+button.activity-item {
+  width: 100%;
+  appearance: none;
+  border: 1px solid var(--border);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.activity-item.is-actionable {
+  position: relative;
+  padding-right: 14px;
+}
+
+.activity-item.is-actionable:hover,
+.activity-item.is-actionable:focus-visible {
+  border-color: color-mix(in srgb, var(--accent) 46%, var(--border));
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface-soft));
+  outline: none;
+}
+
 .activity-item.unread {
   border-color: rgba(255, 75, 0, 0.24);
   background: var(--accent-soft);
@@ -2750,6 +2772,19 @@ textarea:focus-visible {
   font-size: 13px;
   font-weight: var(--v2-weight-strong);
   line-height: 1.42;
+}
+
+.activity-item-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  width: fit-content;
+  margin-top: 3px;
+  color: var(--accent-deep);
+  font-size: 13px;
+  font-weight: var(--v2-weight-bold);
+  line-height: 1;
+  text-transform: none;
 }
 
 .empty-panel-state {

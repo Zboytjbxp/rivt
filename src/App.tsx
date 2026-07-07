@@ -1234,18 +1234,27 @@ function App() {
     }
 
     const metadataJobId = typeof notification.metadata?.jobId === "string" ? notification.metadata.jobId : null;
+    const metadataActiveWorkId = typeof notification.metadata?.activeWorkId === "string"
+      ? notification.metadata.activeWorkId
+      : notification.sourceType === "active_work" && typeof notification.sourceId === "string"
+        ? notification.sourceId
+        : null;
     const metadataConversationId = typeof notification.metadata?.conversationId === "string"
       ? notification.metadata.conversationId
       : null;
     const actionHref = notification.actionHref || "";
+    const notificationActiveWork = metadataActiveWorkId
+      ? activeWork.find((work) => work.id === metadataActiveWorkId)
+      : null;
+    const targetJobId = metadataJobId ?? notificationActiveWork?.jobId ?? null;
 
     if (
-      metadataJobId ||
+      targetJobId ||
       notification.sourceType === "offer" ||
       notification.sourceType === "active_work" ||
       actionHref.includes("work")
     ) {
-      if (metadataJobId) selectJobByCanonicalId(metadataJobId);
+      if (targetJobId) selectJobByCanonicalId(targetJobId);
       handleNavigate("Work");
       void reloadActiveWork();
       void reloadJobs();
@@ -2028,6 +2037,7 @@ function App() {
           <WorkWorkspace
             role={role}
             jobs={filteredJobs}
+            activeWorkRecords={activeWork}
             selectedJob={selectedJob.id ? selectedJob : null}
             loading={jobsLoading}
             error={jobsError}
@@ -2201,6 +2211,10 @@ function App() {
           onMarkAllRead={() => {
             markAllActivityRead();
             void handleMarkNotificationsRead();
+          }}
+          onOpenItem={(item) => {
+            const notification = inboxNotifications.find((candidate) => candidate.id === item.id);
+            if (notification) void handleOpenNotification(notification);
           }}
           onNavigate={handleNavigate}
         />

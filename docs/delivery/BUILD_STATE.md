@@ -7,6 +7,28 @@ Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
 Production release commit: `dbdcdaea65483ba872d48a33d294075b8fcec6be` verified with live `/api/health` and `npm run monitor:production`; latest runtime feature evidence is recorded below and docs-only evidence commits may supersede the served build SHA.
 
+## Latest Packet 08 Pass - Interactable Notifications + Active Work Landing
+
+- Tightened the accepted-offer handoff after mobile testing showed notification rows were visible but not directly useful:
+  - notification/activity rows that can open a destination now render as real tappable controls with visible `Open work`, `Open message`, or `Open records` labels
+  - activity rows preserve keyboard focus states and accessible labels instead of relying on card-looking static markup
+  - offer and active-work notifications now resolve `activeWorkId` from either notification metadata or the canonical notification source id
+  - opening an offer/active-work notification marks it read, closes the panel, refreshes jobs and active work, navigates to Work, and selects the related job when the listing is still available
+  - Work now shows an `Active work ready` landing strip whenever a canonical active-work relationship exists, even if the public job listing is closed or filtered out
+  - the landing strip explains the transition plainly: the accepted offer closes the public listing, and the job now lives as a private active-work record with logs, records/photos, and invoices
+- Preserved launch boundaries:
+  - no fake active-work state, local auth fallback, new provider, billing behavior, or production-data migration was added
+  - active-work visibility still comes from the existing authenticated active-work endpoint
+  - notification routing remains navigation only; server authorization still owns access
+- Local verification:
+  - `npm run build` (pass)
+  - `npm run lint` (pass)
+  - `npm run test -- --runInBand` (pass for unit tests; DB-backed integration cases skipped because `TEST_DATABASE_URL` is not configured locally)
+  - `npm run test:e2e` (pass)
+  - `npm run test:ui:mobile-actions` (pass; refreshed screenshots at `C:\Users\zboyt\AppData\Local\Temp\rivt-mobile-actions-pass`)
+  - `node scripts/work-lifecycle-ui-smoke.mjs` (pass; includes a mobile notification click-path that opens Work and reveals the `Active work ready` region)
+  - `npm audit --omit=dev` (pass; 0 vulnerabilities)
+
 ## Latest Packet 08 Pass - Active Job Camera Upload Handoff
 
 - Fixed the active-job camera handoff after mobile testing showed tradespeople could snap a photo and see no obvious upload result:

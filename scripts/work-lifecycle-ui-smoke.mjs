@@ -209,6 +209,23 @@ function makeActiveWork(events = []) {
   };
 }
 
+function makeNotification(overrides = {}) {
+  return {
+    id: overrides.id ?? "f0171b86-7444-4358-a412-7c2ab75088d6",
+    accountId: overrides.accountId ?? contractorId,
+    type: overrides.type ?? "work",
+    title: overrides.title ?? "Offer accepted",
+    body: overrides.body ?? "Warehouse panel assist - Jacksonville, FL",
+    actionHref: overrides.actionHref ?? "/app/messages",
+    sourceType: overrides.sourceType ?? "active_work",
+    sourceId: overrides.sourceId ?? activeWorkId,
+    priority: overrides.priority ?? "high",
+    metadata: overrides.metadata ?? { jobId: openJobId, offerId },
+    readAt: overrides.readAt ?? null,
+    createdAt: overrides.createdAt ?? "2026-06-28T15:31:00.000Z",
+  };
+}
+
 function makeProject() {
   return {
     id: projectId,
@@ -230,12 +247,13 @@ function makeProject() {
   };
 }
 
-function makeState({ jobs = [makeJob()], applications = [], offers = [], activeWork = [] } = {}) {
+function makeState({ jobs = [makeJob()], applications = [], offers = [], activeWork = [], notifications = [] } = {}) {
   return {
     jobs: structuredClone(jobs),
     applications: structuredClone(applications),
     offers: structuredClone(offers),
     activeWork: structuredClone(activeWork),
+    notifications: structuredClone(notifications),
     project: makeProject(),
   };
 }
@@ -280,8 +298,26 @@ async function configurePage(page, account, state) {
   await page.route("**/api/v1/sessions", (route) => route.fulfill(json({ data: { sessions: [] } })));
   await page.route("**/api/v1/profiles**", (route) => route.fulfill(json({ data: { profiles: [] } })));
   await page.route("**/api/v1/conversations", (route) => route.fulfill(json({ data: { conversations: [] } })));
-  await page.route("**/api/v1/notifications", (route) => route.fulfill(json({ data: { notifications: [], unreadCount: 0 } })));
-  await page.route("**/api/v1/notifications/read", (route) => route.fulfill(json({ data: { unreadCount: 0 } })));
+  await page.route("**/api/v1/notifications", (route) => {
+    const notifications = state.notifications.filter((item) => item.accountId === account.id);
+    const unreadCount = notifications.filter((item) => !item.readAt).length;
+    return route.fulfill(json({ data: { notifications, unreadCount } }));
+  });
+  await page.route("**/api/v1/notifications/read", async (route) => {
+    const body = route.request().postDataJSON();
+    const now = new Date().toISOString();
+    if (body.all) {
+      state.notifications = state.notifications.map((item) => item.accountId === account.id ? { ...item, readAt: item.readAt ?? now } : item);
+    } else if (Array.isArray(body.ids)) {
+      state.notifications = state.notifications.map((item) => (
+        item.accountId === account.id && body.ids.includes(item.id)
+          ? { ...item, readAt: item.readAt ?? now }
+          : item
+      ));
+    }
+    const unreadCount = state.notifications.filter((item) => item.accountId === account.id && !item.readAt).length;
+    return route.fulfill(json({ data: { unreadCount } }));
+  });
   await page.route("**/api/v1/notification-preferences", (route) => route.fulfill(json({ data: { preferences: [] } })));
   await page.route("**/api/storage", (route) => route.fulfill(json({ usedBytes: 0, objectCount: 0, plan: {} })));
   await page.route("**/api/v1/shop-talk/posts**", (route) => route.fulfill(json({ data: { posts: [] } })));
@@ -559,7 +595,7 @@ async function runTradespersonOfferFlow(page) {
   await page.goto(`${baseUrl}/app/work`, { waitUntil: "networkidle" });
   await clickJob(page, "Warehouse panel assist");
   await page.getByText("Accepted and active", { exact: true }).waitFor({ timeout: 15_000 });
-  await page.getByRole("button", { name: "Records/photos" }).click();
+  await page.getByLabel("Hiring workflow").getByRole("button", { name: "Records/photos" }).click();
   await page.getByRole("heading", { name: "Records", exact: true }).waitFor({ timeout: 15_000 });
 
   await page.goto(`${baseUrl}/app/work`, { waitUntil: "networkidle" });
@@ -568,6 +604,28 @@ async function runTradespersonOfferFlow(page) {
   await page.getByRole("heading", { name: "Invoice draft", exact: true }).waitFor({ timeout: 15_000 });
   await assertNoHorizontalOverflow(page, "Active work tool bridge");
   await page.screenshot({ path: path.join(screenshotDir, "active-work-tool-bridge.png"), fullPage: true });
+}
+
+async function runNotificationActiveWorkFlow(page) {
+  const active = makeActiveWork();
+  const closedJob = makeJob({ status: "closed" });
+  const state = makeState({
+    jobs: [closedJob],
+    activeWork: [active],
+    notifications: [makeNotification()],
+  });
+  await configurePage(page, contractorAccount, state);
+
+  await page.goto(`${baseUrl}/app/home`, { waitUntil: "networkidle" });
+  await page.getByRole("button", { name: "Notifications" }).click();
+  const notificationsDialog = page.getByRole("dialog", { name: "Notifications" });
+  await notificationsDialog.waitFor({ timeout: 15_000 });
+  await notificationsDialog.getByRole("button", { name: /Open work: Offer accepted/i }).click();
+  await page.getByRole("heading", { name: "Work", exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByRole("region", { name: "Active work ready" }).waitFor({ timeout: 15_000 });
+  await page.getByText("The offer was accepted", { exact: false }).waitFor({ timeout: 15_000 });
+  await assertNoHorizontalOverflow(page, "Notification active work route");
+  await page.screenshot({ path: path.join(screenshotDir, "notification-active-work-route.png"), fullPage: true });
 }
 
 let browser;
@@ -582,6 +640,7 @@ try {
     ["contractor", runContractorFlow],
     ["tradesperson-apply", runTradespersonApplicationFlow],
     ["tradesperson-offer", runTradespersonOfferFlow],
+    ["notification-active-work", runNotificationActiveWorkFlow],
   ]) {
     const context = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: "block" });
     const page = await context.newPage();
