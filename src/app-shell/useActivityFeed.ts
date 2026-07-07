@@ -13,6 +13,7 @@ interface UseActivityFeedOptions {
 
 function notificationActionLabel(notification: InboxNotification) {
   const href = notification.actionHref || "";
+  const routeText = `${notification.type} ${notification.sourceType} ${href}`.toLowerCase();
   if (
     notification.sourceType.startsWith("shop_talk") ||
     typeof notification.metadata?.postId === "string" ||
@@ -29,6 +30,9 @@ function notificationActionLabel(notification: InboxNotification) {
   ) {
     return "Open message";
   }
+  if (routeText.includes("photo") || routeText.includes("media") || routeText.includes("job-photos")) {
+    return "Open photos";
+  }
   if (
     notification.sourceType === "offer" ||
     notification.sourceType === "job" ||
@@ -42,7 +46,7 @@ function notificationActionLabel(notification: InboxNotification) {
     return "Open active work";
   }
   if (notification.sourceType === "project" || href.includes("tools")) {
-    return "Open records";
+    return routeText.includes("closeout") ? "Open closeout" : "Open project";
   }
   if (notification.sourceType === "support" || href.includes("support") || href.includes("feedback")) {
     return "Open support";

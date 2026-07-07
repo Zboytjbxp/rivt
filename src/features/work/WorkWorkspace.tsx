@@ -73,6 +73,7 @@ interface WorkWorkspaceProps {
   jobs: Job[];
   activeWorkRecords?: CanonicalActiveWork[];
   focusedActiveWorkId?: string | null;
+  openDetailOnMount?: boolean;
   selectedJob: Job | null;
   loading: boolean;
   error: string | null;
@@ -1174,6 +1175,7 @@ export function WorkWorkspace({
   jobs,
   activeWorkRecords = [],
   focusedActiveWorkId = null,
+  openDetailOnMount = false,
   selectedJob,
   loading,
   error,
@@ -1203,7 +1205,7 @@ export function WorkWorkspace({
 }: WorkWorkspaceProps) {
   const persona = usePersona();
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const [mobileDetailOpen, setMobileDetailOpen] = useState(false);
+  const [mobileDetailOpen, setMobileDetailOpen] = useState(() => Boolean(openDetailOnMount));
   const [detailTab, setDetailTab] = useState<DetailTab>("overview");
   const [contractorSection, setContractorSection] = useState<ContractorSection>("open");
   const [activeAction, setActiveAction] = useState("");

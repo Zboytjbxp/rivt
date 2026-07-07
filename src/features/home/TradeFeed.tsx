@@ -157,6 +157,7 @@ interface TradeFeedProps {
   onNavigate: (destination: PrimaryDestination) => void;
   onOpenProfile: () => void;
   onOpenTool: (tool: ToolMode) => void;
+  onOpenActiveWorkWorkspace: (activeWorkId: string) => void;
   onOpenActiveWorkMessages: (activeWorkId: string) => void;
   onOpenActiveWorkTool: (activeWorkId: string, tool: ToolMode) => void;
 }
@@ -186,6 +187,7 @@ export function TradeFeed({
   onNavigate,
   onOpenProfile = () => undefined,
   onOpenTool = () => undefined,
+  onOpenActiveWorkWorkspace = () => undefined,
   onOpenActiveWorkMessages,
   onOpenActiveWorkTool,
 }: TradeFeedProps) {
@@ -411,7 +413,7 @@ export function TradeFeed({
             {activeWorkLocation(primaryActiveWork) ? <small>{activeWorkLocation(primaryActiveWork)}</small> : null}
           </div>
           <div className="trade-feed-active-actions">
-            <button type="button" className="v2-primary-button" onClick={() => onNavigate("work")}>
+            <button type="button" className="v2-primary-button" onClick={() => onOpenActiveWorkWorkspace(primaryActiveWork.id)}>
               Open workspace
             </button>
             <button

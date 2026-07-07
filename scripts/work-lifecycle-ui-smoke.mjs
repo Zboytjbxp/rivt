@@ -646,6 +646,22 @@ async function runTradespersonOfferFlow(page) {
   await page.getByRole("button", { name: "Accept work" }).click();
   await page.getByText("Accepted and active", { exact: true }).waitFor({ timeout: 15_000 });
 
+  await page.goto(`${baseUrl}/app/home`, { waitUntil: "networkidle" });
+  const homeActiveWork = page.getByLabel("Active work");
+  await homeActiveWork.getByText("You're active now", { exact: true }).waitFor({ timeout: 15_000 });
+  await homeActiveWork.getByRole("button", { name: "Open workspace" }).click();
+  await page.waitForURL(/\/app\/work/, { timeout: 15_000 });
+  await page.getByText("Accepted and active", { exact: true }).waitFor({ timeout: 15_000 });
+
+  await page.goto(`${baseUrl}/app/home`, { waitUntil: "networkidle" });
+  await page.getByLabel("Active work").getByRole("button", { name: "Photos" }).click();
+  await page.waitForURL(/\/app\/tools\?tool=job-photos/, { timeout: 15_000 });
+  await page.getByText("Live project feed", { exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByLabel("Camera").getByText("Warehouse panel assist", { exact: true }).waitFor({ timeout: 15_000 });
+
+  await page.goto(`${baseUrl}/app/work`, { waitUntil: "networkidle" });
+  await clickJob(page, "Warehouse panel assist");
+  await page.getByText("Accepted and active", { exact: true }).waitFor({ timeout: 15_000 });
   await page.getByLabel("Hiring workflow").getByRole("button", { name: "Daily log" }).click();
   await page.getByRole("heading", { name: "Daily log", exact: true }).waitFor({ timeout: 15_000 });
   await page.getByText("Records-ready", { exact: true }).waitFor({ timeout: 15_000 });
@@ -688,6 +704,36 @@ async function runNotificationActiveWorkFlow(page) {
   await page.screenshot({ path: path.join(screenshotDir, "notification-active-work-route.png"), fullPage: true });
 }
 
+async function runNotificationProjectPhotoFlow(page) {
+  const active = makeActiveWork();
+  const closedJob = makeJob({ status: "closed" });
+  const state = makeState({
+    jobs: [closedJob],
+    activeWork: [active],
+    notifications: [makeNotification({
+      id: "dd13a602-febe-421e-9b26-8da6131634f3",
+      title: "Photo uploaded",
+      body: "Warehouse panel assist - progress photo saved",
+      actionHref: `/app/tools?tool=job-photos&activeWorkId=${activeWorkId}`,
+      sourceType: "project",
+      sourceId: projectId,
+      metadata: { activeWorkId, projectId, jobId: openJobId },
+    })],
+  });
+  await configurePage(page, contractorAccount, state);
+
+  await page.goto(`${baseUrl}/app/home`, { waitUntil: "networkidle" });
+  await page.getByRole("button", { name: "Notifications" }).click();
+  const notificationsDialog = page.getByRole("dialog", { name: "Notifications" });
+  await notificationsDialog.waitFor({ timeout: 15_000 });
+  await notificationsDialog.getByRole("button", { name: /Open photos: Photo uploaded/i }).click();
+  await page.waitForURL(/\/app\/tools\?tool=job-photos/, { timeout: 15_000 });
+  await page.getByText("Live project feed", { exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByLabel("Camera").getByText("Warehouse panel assist", { exact: true }).waitFor({ timeout: 15_000 });
+  await assertNoHorizontalOverflow(page, "Notification project photo route");
+  await page.screenshot({ path: path.join(screenshotDir, "notification-project-photo-route.png"), fullPage: true });
+}
+
 let browser;
 
 try {
@@ -701,6 +747,7 @@ try {
     ["tradesperson-apply", runTradespersonApplicationFlow],
     ["tradesperson-offer", runTradespersonOfferFlow],
     ["notification-active-work", runNotificationActiveWorkFlow],
+    ["notification-project-photo", runNotificationProjectPhotoFlow],
   ]) {
     const context = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: "block" });
     const page = await context.newPage();
