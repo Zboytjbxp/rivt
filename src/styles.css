@@ -10075,3 +10075,239 @@ html[data-rivt-compact-device="true"] .guest-exit {
     grid-template-columns: 1fr auto auto;
   }
 }
+
+/* Old iPhone SE containment: auth, preview, and onboarding need a task-first layout. */
+@media (max-width: 360px) {
+  .auth-shell,
+  .onboarding-shell {
+    width: 100%;
+    overflow-x: hidden;
+  }
+
+  .auth-shell--form {
+    display: flex;
+    min-height: 100svh;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 12px;
+    overflow-y: auto;
+    background:
+      linear-gradient(rgba(11, 11, 11, 0.06) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(11, 11, 11, 0.045) 1px, transparent 1px),
+      #ff4b00;
+    background-size: 28px 28px, 28px 28px, auto;
+  }
+
+  .auth-shell--form .auth-story {
+    display: none;
+  }
+
+  .auth-card--entry {
+    width: 100%;
+    max-width: 324px;
+    justify-self: center;
+    gap: 10px;
+    padding: 12px;
+    border-radius: 18px;
+  }
+
+  .auth-card--entry > .rivt-lockup .rivt-wordmark {
+    max-width: 150px;
+    margin-inline: auto;
+  }
+
+  .auth-card-heading {
+    gap: 6px;
+  }
+
+  .auth-card-heading h2 {
+    font-size: 24px;
+    line-height: 1.05;
+  }
+
+  .auth-card-heading p {
+    display: none;
+  }
+
+  .auth-card-heading p,
+  .auth-form-grid small {
+    font-size: 13px;
+    line-height: 1.35;
+  }
+
+  .auth-provider-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .auth-provider-tile {
+    min-height: 42px;
+    justify-content: center;
+    padding-inline: 10px;
+  }
+
+  .auth-provider-tile span {
+    display: none;
+  }
+
+  .auth-card--entry > .auth-toggle button {
+    min-height: 38px;
+  }
+
+  .auth-form-grid {
+    gap: 9px;
+  }
+
+  .auth-form-grid input {
+    min-height: 40px;
+  }
+
+  .auth-card--entry .primary-action {
+    min-height: 42px;
+  }
+
+  .auth-card--entry .auth-browse-action,
+  .auth-link-action {
+    min-height: 34px;
+  }
+
+  .auth-shell--intro .auth-intro,
+  .auth-shell--preview .auth-preview-entry {
+    min-height: 100svh;
+    overflow-y: auto;
+  }
+
+  .auth-intro-window {
+    min-height: 0;
+  }
+
+  .auth-intro-slide .auth-story-header {
+    padding-top: 42px;
+  }
+
+  .auth-intro-slide .auth-trade-phone {
+    display: none;
+  }
+
+  .auth-intro-dots {
+    padding-top: 4px;
+  }
+
+  .auth-intro-actions,
+  .auth-preview-actions,
+  .auth-intro-secondary {
+    width: 100%;
+  }
+
+  .auth-intro-actions,
+  .auth-preview-actions {
+    gap: 8px;
+  }
+
+  .auth-intro-secondary {
+    flex-wrap: wrap;
+    gap: 8px 14px;
+  }
+
+  .auth-preview-entry {
+    display: grid;
+    grid-template-columns: 1fr;
+    align-content: start;
+    gap: 12px;
+  }
+
+  .auth-preview-copy {
+    gap: 8px;
+  }
+
+  .auth-preview-copy h1 {
+    font-size: 34px;
+    line-height: 0.98;
+  }
+
+  .auth-preview-copy p {
+    font-size: 14px;
+    line-height: 1.35;
+  }
+
+  .auth-preview-board {
+    width: 100%;
+    max-width: 100%;
+    padding: 12px;
+    border-radius: 20px;
+  }
+
+  .auth-preview-trades {
+    gap: 6px;
+  }
+
+  .auth-preview-trades button,
+  .auth-preview-field > button {
+    min-height: 38px;
+    padding-inline: 10px;
+    font-size: 13px;
+  }
+
+  .auth-preview-phone,
+  .auth-story-preview,
+  .auth-story-pills,
+  .auth-activation-strip {
+    display: none;
+  }
+
+  .auth-capability-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .auth-capability-card {
+    min-height: 54px;
+    padding: 10px;
+  }
+
+  .auth-capability-card small {
+    display: none;
+  }
+
+  .onboarding-shell {
+    min-height: 100svh;
+    padding: 0;
+  }
+
+  .onboarding-layout {
+    display: block;
+    min-height: 100svh;
+  }
+
+  .onboarding-rail {
+    display: none;
+  }
+
+  .onboarding-panel {
+    min-height: 100svh;
+    gap: 10px;
+    padding: 12px;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .onboarding-panel-header,
+  .onboarding-actions,
+  .onboarding-section {
+    padding: 12px;
+  }
+
+  .onboarding-panel-header h2 {
+    font-size: 22px;
+  }
+
+  .onboarding-panel--swipe > .onboarding-section.is-current {
+    min-height: auto;
+  }
+
+  .onboarding-goal-grid,
+  .onboarding-form-grid,
+  .onboarding-topic-picker,
+  .trust-check-grid {
+    grid-template-columns: 1fr;
+  }
+}
