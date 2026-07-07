@@ -1,11 +1,38 @@
 # RIVT Build State
 
-Last updated: 2026-07-06 America/New_York
+Last updated: 2026-07-07 America/New_York
 Current gate: Gate A launch hardening
-Current phase: Packet 08 Gate A launch hardening plus Gate B behind-flag backbone work: machine gates and live workflow smokes are mostly green; the Shop Talk Reddit-model backbone, moderation/reporting backend, human-facing moderation console/report UX, post photo media, reachability/naming cleanup, Tools hub consolidation, Payment Tracker server records, money-tools sync, the accepted tool-records sync slices, non-tool local-state boundary cleanup, dedicated network-records sync for Crew/Invites/informal written shout-outs, screen-density polish, mobile layout/device-accessibility subtraction, fraction calculator ergonomics, iPhone SE layout containment, immersive-tool compact-device containment, SE tool chrome cleanup slices, native metric calculator rebuild, and the camera-first records/photos tool rebuild are implemented while still respecting launch-readiness boundaries before broad exposure.
+Current phase: Packet 08 Gate A launch hardening plus Gate B behind-flag backbone work: machine gates and live workflow smokes are mostly green; the Shop Talk Reddit-model backbone, moderation/reporting backend, human-facing moderation console/report UX, post photo media, reachability/naming cleanup, Tools hub consolidation, Payment Tracker server records, money-tools sync, the accepted tool-records sync slices, non-tool local-state boundary cleanup, dedicated network-records sync for Crew/Invites/informal written shout-outs, screen-density polish, mobile layout/device-accessibility subtraction, fraction calculator ergonomics, iPhone SE layout containment, immersive-tool compact-device containment, SE tool chrome cleanup slices, native metric calculator rebuild, the camera-first records/photos tool rebuild, and admin support-case review for account-type requests are implemented while still respecting launch-readiness boundaries before broad exposure.
 Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
-Repository branch: `master`
-Production release commit: `ccd115667e2f58936373d43ced6e327884c36bdb` verified with live `/api/health` and `npm run monitor:production`; latest runtime feature evidence is recorded below and docs-only evidence commits may supersede the served build SHA.
+Repository branch: `codex/admin-support-role-review`
+Production release commit: `1029d63c282f273cfb9bf00662dce64512b8c0af` verified with live `/api/health` and `npm run monitor:production`; latest runtime feature evidence is recorded below and docs-only evidence commits may supersede the served build SHA.
+
+## Latest Packet 08 Pass - Admin Support Account Review
+
+- Added a human-facing support review path for account-type change requests:
+  - Admin now has two sections: `Shop Talk moderation` and `Support cases`
+  - support staff can review account support cases with requester email, display name, current role, request text, and status
+  - account-type requests can be approved to `Contractor` or `Tradesperson` from the support queue
+  - contractor approvals require or reuse a business/crew organization name and create/attach an owner organization when needed
+  - support can also close a request without changing account type, with user-visible notes and an admin audit trail
+- Preserved server-side boundaries:
+  - users still cannot instantly toggle roles after onboarding
+  - the approval route requires authenticated admin access with `owner` or `support`
+  - staff cannot approve their own account type change request
+  - closed support cases and closed accounts fail closed
+  - account role, legacy auth user role, organization ownership, support-case events, and admin actions are mutated in one idempotent transaction
+- Test coverage:
+  - added DB-backed integration coverage for creating an account support case, approving contractor access through the admin route, verifying the user's canonical role and organization, and asserting the admin action audit event
+  - the DB-backed assertion is skipped locally unless `TEST_DATABASE_URL` is configured, matching the existing integration suite behavior
+- Local verification:
+  - `npm run build` (pass)
+  - `npm run lint` (pass)
+  - `npm run lint:security` (pass)
+  - `npm run test:unit` (pass; 45/45)
+  - `npm run test:e2e` (pass)
+  - `npm run test` (pass; unit suite green, integration suite passed non-DB checks and skipped 15 DB-backed cases because `TEST_DATABASE_URL` is not configured)
+  - `npm audit --omit=dev` (pass; 0 vulnerabilities)
+  - `git diff --check` (pass; CRLF warnings only)
 
 ## Latest Packet 08 Pass - Account Type Change Request
 

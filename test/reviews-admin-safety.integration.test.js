@@ -387,6 +387,36 @@ if (!testDatabaseUrl) {
     });
     assert.equal(supportAdminEvent.response.status, 201);
 
+    const roleChangeAccount = await createAccount(baseUrl, "tradesperson", "Role Change Carpenter");
+    const roleChangeCase = await requestJson(baseUrl, "/api/v1/support/cases", {
+      method: "POST",
+      cookie: roleChangeAccount.cookie,
+      idempotencyKey: `role-change-${randomUUID()}`,
+      body: {
+        category: "account",
+        title: "Change account type to contractor",
+        description: "I need contractor access so I can post work for my crew.",
+      },
+    });
+    assert.equal(roleChangeCase.response.status, 201);
+    const approvedRoleChange = await requestJson(baseUrl, `/api/v1/admin/support-cases/${roleChangeCase.payload.data.case.id}/account-type`, {
+      method: "POST",
+      cookie: admin.cookie,
+      idempotencyKey: `approve-role-change-${randomUUID()}`,
+      body: {
+        targetRole: "contractor",
+        organizationName: "Role Change Carpentry LLC",
+        reasonCode: "account_type_change",
+        reason: "Support reviewed the request and approved contractor access.",
+      },
+    });
+    assert.equal(approvedRoleChange.response.status, 200);
+    assert.equal(approvedRoleChange.payload.data.case.status, "resolved");
+    const roleChangeMe = await requestJson(baseUrl, "/api/v1/me", { cookie: roleChangeAccount.cookie });
+    assert.equal(roleChangeMe.response.status, 200);
+    assert.equal(roleChangeMe.payload.data.account.primaryRole, "contractor");
+    assert.equal(roleChangeMe.payload.data.organizations[0].name, "Role Change Carpentry LLC");
+
     const lifted = await requestJson(baseUrl, `/api/v1/admin/restrictions/${restriction.payload.data.restriction.id}/lift`, {
       method: "POST",
       cookie: admin.cookie,
@@ -403,6 +433,7 @@ if (!testDatabaseUrl) {
     assert.ok(adminActions.rows.some((row) => row.action === "account.restriction.imposed" && row.reason_code === "safety_review"));
     assert.ok(adminActions.rows.some((row) => row.action === "account.restriction.lifted" && row.reason_code === "appeal_resolved"));
     assert.ok(adminActions.rows.some((row) => row.action === "support_case.event_added" && row.reason_code === "appeal_opened"));
+    assert.ok(adminActions.rows.some((row) => row.action === "account.primary_role_changed" && row.reason_code === "account_type_change"));
     assert.ok(adminActions.rows.every((row) => row.reason.length > 0));
   });
 }

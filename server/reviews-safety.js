@@ -63,6 +63,12 @@ export const adminSupportCaseEventSchema = z.object({
   ...adminReason,
 });
 
+export const adminAccountTypeChangeSchema = z.object({
+  targetRole: z.enum(["contractor", "tradesperson"]),
+  organizationName: z.string().trim().min(2).max(120).optional(),
+  ...adminReason,
+});
+
 export const restrictionCreateSchema = z.object({
   restrictionType: z.enum(["warning", "mutation_restricted", "timeout_24h", "suspension", "ban"]),
   endsAt: z.iso.datetime({ offset: true }).nullable().default(null),
@@ -187,6 +193,13 @@ export function mapSupportCase(row, { events = [] } = {}) {
   return {
     id: row.id,
     openedByAccountId: row.opened_by_account_id,
+    openedBy: row.opened_by_email || row.opened_by_display_name || row.opened_by_primary_role ? {
+      accountId: row.opened_by_account_id,
+      email: row.opened_by_email ?? "",
+      displayName: row.opened_by_display_name ?? "",
+      primaryRole: row.opened_by_primary_role ?? "",
+      status: row.opened_by_status ?? "",
+    } : null,
     subjectAccountId: row.subject_account_id,
     activeWorkId: row.active_work_id,
     projectId: row.project_id,

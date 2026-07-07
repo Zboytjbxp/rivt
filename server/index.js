@@ -95,6 +95,7 @@ import {
   projectEntryCreateSchema,
 } from "./projects.js";
 import {
+  adminAccountTypeChangeSchema,
   adminReviewResolveSchema,
   adminSupportCaseEventSchema,
   mapReputation,
@@ -2110,6 +2111,24 @@ async function insertAdminAction(client, actorAccountId, {
   return inserted.rows[0];
 }
 
+const adminSupportCasesSelect = `
+  SELECT sc.*,
+         opened_account.primary_role AS opened_by_primary_role,
+         opened_account.status AS opened_by_status,
+         opened_profile.display_name AS opened_by_display_name,
+         opened_identity.email AS opened_by_email
+  FROM support_cases sc
+  JOIN accounts opened_account ON opened_account.id = sc.opened_by_account_id
+  LEFT JOIN profiles opened_profile ON opened_profile.account_id = opened_account.id
+  LEFT JOIN LATERAL (
+    SELECT email
+    FROM auth_identities
+    WHERE account_id = opened_account.id AND email IS NOT NULL AND email <> ''
+    ORDER BY CASE WHEN provider = 'email' THEN 0 ELSE 1 END, created_at ASC
+    LIMIT 1
+  ) opened_identity ON true
+`;
+
 async function loadSupportCaseEvents(client, supportCaseIds, { includeInternal = false } = {}) {
   if (!supportCaseIds.length) return new Map();
   const result = await client.query(
@@ -2602,7 +2621,7 @@ app.get("/api/v1/admin/overview", requireV1AuthenticatedUser, requireV1AdminActo
     database.query(`${reviewSelectBase} WHERE wr.status = 'disputed' ORDER BY wr.disputed_at DESC NULLS LAST, wr.submitted_at DESC LIMIT 25`),
     database.query("SELECT * FROM safety_reports WHERE status IN ('open', 'reviewing') ORDER BY created_at DESC, id DESC LIMIT 25"),
     database.query("SELECT * FROM unsafe_work_reports WHERE status IN ('open', 'acknowledged') ORDER BY created_at DESC, id DESC LIMIT 25"),
-    database.query("SELECT * FROM support_cases WHERE status IN ('open', 'reviewing') ORDER BY created_at DESC, id DESC LIMIT 25"),
+    database.query(`${adminSupportCasesSelect} WHERE sc.status IN ('open', 'reviewing') ORDER BY sc.created_at DESC, sc.id DESC LIMIT 25`),
     database.query("SELECT * FROM account_restrictions WHERE status = 'active' AND (ends_at IS NULL OR ends_at > now()) ORDER BY created_at DESC, id DESC LIMIT 25"),
   ]);
   response.json({
@@ -2677,9 +2696,146 @@ app.post("/api/v1/admin/support-cases/:id/events", requireV1AuthenticatedUser, r
       reason: input.reason,
       metadata: { eventType: input.eventType, status: input.status ?? null, visibility: input.visibility },
     });
-    const updated = (await client.query("SELECT * FROM support_cases WHERE id = $1", [supportCaseId])).rows[0];
-    const [mapped] = await mapSupportCaseRows(client, [updated], { includeInternal: true });
+    const updated = await client.query(`${adminSupportCasesSelect} WHERE sc.id = $1`, [supportCaseId]);
+    const [mapped] = await mapSupportCaseRows(client, updated.rows, { includeInternal: true });
     return { status: 201, body: { data: { case: mapped }, meta: { requestId: request.requestId } } };
+  });
+  sendIdempotentResult(response, result);
+}));
+
+app.post("/api/v1/admin/support-cases/:id/account-type", requireV1AuthenticatedUser, requireV1AdminActor, writeRateLimit, asyncRoute(async (request, response) => {
+  requireAdminRole(request.admin, ["owner", "support"]);
+  const supportCaseId = validate(z.uuid(), request.params.id);
+  const input = validate(adminAccountTypeChangeSchema, request.body);
+  const result = await runIdempotentMutation(request, request.actor.account.id, `admin.support.account-type:${supportCaseId}:${input.targetRole}`, async (client) => {
+    const supportCaseResult = await client.query("SELECT * FROM support_cases WHERE id = $1 FOR UPDATE", [supportCaseId]);
+    if (!supportCaseResult.rowCount) throw new ApiError(404, "SUPPORT_CASE_NOT_FOUND", "Support case not found.");
+    const supportCase = supportCaseResult.rows[0];
+    if (supportCase.category !== "account") {
+      throw new ApiError(422, "SUPPORT_CASE_NOT_ACCOUNT", "Account type changes require an account support case.");
+    }
+    if (["resolved", "closed"].includes(supportCase.status)) {
+      throw new ApiError(409, "SUPPORT_CASE_CLOSED", "Closed support cases cannot change account type.");
+    }
+
+    const targetAccountId = supportCase.subject_account_id ?? supportCase.opened_by_account_id;
+    if (targetAccountId === request.actor.account.id) {
+      throw new ApiError(422, "ACCOUNT_TYPE_SELF_CHANGE_DENIED", "Staff cannot approve their own account type change.");
+    }
+
+    const targetResult = await client.query(
+      `SELECT a.id, a.status, a.primary_role, p.display_name, opened_identity.email
+       FROM accounts a
+       LEFT JOIN profiles p ON p.account_id = a.id
+       LEFT JOIN LATERAL (
+         SELECT email
+         FROM auth_identities
+         WHERE account_id = a.id AND email IS NOT NULL AND email <> ''
+         ORDER BY CASE WHEN provider = 'email' THEN 0 ELSE 1 END, created_at ASC
+         LIMIT 1
+       ) opened_identity ON true
+       WHERE a.id = $1
+       FOR UPDATE OF a`,
+      [targetAccountId],
+    );
+    if (!targetResult.rowCount) throw new ApiError(404, "ACCOUNT_NOT_FOUND", "Account not found.");
+    const targetAccount = targetResult.rows[0];
+    if (targetAccount.status === "closed") {
+      throw new ApiError(422, "ACCOUNT_CLOSED", "Closed accounts cannot change account type.");
+    }
+
+    const previousRole = targetAccount.primary_role;
+    let organizationId = null;
+    let organizationName = "";
+    if (input.targetRole === "contractor") {
+      const existingOrganization = await client.query(
+        `SELECT o.id, o.name
+         FROM organization_memberships m
+         JOIN organizations o ON o.id = m.organization_id
+         WHERE m.account_id = $1
+           AND m.status = 'active'
+           AND m.membership_role = 'owner'
+           AND o.status = 'active'
+         ORDER BY o.created_at ASC
+         LIMIT 1
+         FOR UPDATE OF o`,
+        [targetAccountId],
+      );
+      organizationName = input.organizationName?.trim() || existingOrganization.rows[0]?.name || "";
+      if (!organizationName) {
+        throw new ApiError(422, "ORGANIZATION_NAME_REQUIRED", "Approving contractor access requires a business or crew name.");
+      }
+      if (existingOrganization.rowCount) {
+        organizationId = existingOrganization.rows[0].id;
+        if (input.organizationName?.trim()) {
+          await client.query("UPDATE organizations SET name = $2, updated_at = now() WHERE id = $1", [organizationId, organizationName]);
+        }
+      } else {
+        const createdOrganization = await client.query(
+          "INSERT INTO organizations (name, created_by_account_id) VALUES ($1, $2) RETURNING id",
+          [organizationName, targetAccountId],
+        );
+        organizationId = createdOrganization.rows[0].id;
+        await client.query(
+          `INSERT INTO organization_memberships (organization_id, account_id, membership_role, status)
+           VALUES ($1, $2, 'owner', 'active')`,
+          [organizationId, targetAccountId],
+        );
+      }
+    }
+
+    await client.query(
+      `UPDATE accounts
+       SET primary_role = $2,
+           status = CASE WHEN status = 'onboarding' THEN 'active' ELSE status END,
+           updated_at = now()
+       WHERE id = $1`,
+      [targetAccountId, input.targetRole],
+    );
+    await client.query(
+      `UPDATE auth_users
+       SET role = $2,
+           organization = CASE WHEN $2 = 'contractor' THEN $3 ELSE '' END,
+           updated_at = now()
+       WHERE id = $1`,
+      [targetAccountId, input.targetRole, organizationName],
+    );
+    await client.query(
+      `UPDATE support_cases
+       SET status = 'resolved',
+           subject_account_id = COALESCE(subject_account_id, opened_by_account_id),
+           updated_at = now()
+       WHERE id = $1`,
+      [supportCaseId],
+    );
+    await client.query(
+      `INSERT INTO support_case_events (
+         support_case_id, actor_account_id, event_type, visibility, note, metadata
+       ) VALUES ($1, $2, 'status_changed', 'user', $3, $4::jsonb)`,
+      [
+        supportCaseId,
+        request.actor.account.id,
+        `Support approved account type change to ${input.targetRole === "contractor" ? "Contractor" : "Tradesperson"}.`,
+        JSON.stringify({ previousRole, targetRole: input.targetRole, organizationId, organizationName }),
+      ],
+    );
+    await insertAdminAction(client, request.actor.account.id, {
+      action: "account.primary_role_changed",
+      subjectType: "account",
+      subjectId: targetAccountId,
+      reasonCode: input.reasonCode,
+      reason: input.reason,
+      metadata: {
+        supportCaseId,
+        previousRole,
+        targetRole: input.targetRole,
+        organizationId,
+      },
+    });
+
+    const updatedCase = await client.query(`${adminSupportCasesSelect} WHERE sc.id = $1`, [supportCaseId]);
+    const [mapped] = await mapSupportCaseRows(client, updatedCase.rows, { includeInternal: true });
+    return { status: 200, body: { data: { case: mapped }, meta: { requestId: request.requestId } } };
   });
   sendIdempotentResult(response, result);
 }));
