@@ -5,7 +5,7 @@ Current gate: Gate A launch hardening
 Current phase: Packet 08 Gate A launch hardening plus Gate B behind-flag backbone work: machine gates and live workflow smokes are mostly green; the Shop Talk Reddit-model backbone, moderation/reporting backend, human-facing moderation console/report UX, post photo media, reachability/naming cleanup, Tools hub consolidation, Payment Tracker server records, money-tools sync, the accepted tool-records sync slices, non-tool local-state boundary cleanup, dedicated network-records sync for Crew/Invites/informal written shout-outs, screen-density polish, mobile layout/device-accessibility subtraction, fraction calculator ergonomics, iPhone SE layout containment, immersive-tool compact-device containment, SE tool chrome cleanup slices, native metric calculator rebuild, the camera-first records/photos tool rebuild, admin support-case review for account-type requests, and offer start-date normalization are implemented while still respecting launch-readiness boundaries before broad exposure.
 Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
-Production release commit: `d9b3a9866d4e8cfabd04c16f3d79c176331902cd` verified with live `/api/health` and `npm run monitor:production`; latest runtime feature evidence is recorded below and docs-only evidence commits may supersede the served build SHA.
+Production release commit: `dbdcdaea65483ba872d48a33d294075b8fcec6be` verified with live `/api/health` and `npm run monitor:production`; latest runtime feature evidence is recorded below and docs-only evidence commits may supersede the served build SHA.
 
 ## Latest Packet 08 Pass - Active Job Camera Upload Handoff
 
@@ -18,6 +18,9 @@ Production release commit: `d9b3a9866d4e8cfabd04c16f3d79c176331902cd` verified w
   - no new storage provider, fake local success state, auth fallback, billing behavior, or production-data migration was added
   - photos still go through the existing authenticated project-media and album upload endpoints
   - upload authorization remains server-side
+- Live verification:
+  - production `/api/health` reported exact build commit `dbdcdaea65483ba872d48a33d294075b8fcec6be`
+  - `EXPECTED_SOURCE_COMMIT=dbdcdaea65483ba872d48a33d294075b8fcec6be npm run monitor:production` passed with PostgreSQL, S3-compatible object storage, configured Sentry, operational controls off, seven anonymous private-route checks, and 484 ms duration
 - Local verification:
   - `npm run test:ui:tools` (pass; exercised fake camera stream -> shutter -> mocked project-media upload -> saved status -> job feed row at desktop, 390px mobile, and 320px SE)
   - `npm run build` (pass)
