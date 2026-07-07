@@ -5,7 +5,27 @@ Current gate: Gate A launch hardening
 Current phase: Packet 08 Gate A launch hardening plus Gate B behind-flag backbone work: machine gates and live workflow smokes are mostly green; the Shop Talk Reddit-model backbone, moderation/reporting backend, human-facing moderation console/report UX, post photo media, reachability/naming cleanup, Tools hub consolidation, Payment Tracker server records, money-tools sync, the accepted tool-records sync slices, non-tool local-state boundary cleanup, dedicated network-records sync for Crew/Invites/informal written shout-outs, screen-density polish, mobile layout/device-accessibility subtraction, fraction calculator ergonomics, iPhone SE layout containment, immersive-tool compact-device containment, SE tool chrome cleanup slices, native metric calculator rebuild, the camera-first records/photos tool rebuild, admin support-case review for account-type requests, and offer start-date normalization are implemented while still respecting launch-readiness boundaries before broad exposure.
 Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
-Production release commit: `826cfd38220fea65250690cea4d11d52b06964d9` verified with live `/api/health` and `npm run monitor:production`; latest runtime feature evidence is recorded below and docs-only evidence commits may supersede the served build SHA.
+Production release commit: `6b4f49db82a17a90da0377aad842e73285a17bcd` verified with live `/api/health` and `npm run monitor:production`; latest runtime feature evidence is recorded below and docs-only evidence commits may supersede the served build SHA.
+
+## Latest Packet 08 Pass - Railway Live Smoke Environment Automation
+
+- Removed the recurring local DB URL scavenger hunt without committing or printing secrets:
+  - added `npm run with:railway-public-db -- <command>` to resolve Railway's Postgres `DATABASE_PUBLIC_URL` at runtime and inject it into the child command as `DATABASE_URL`
+  - documented why Railway app `DATABASE_URL` is an internal-only host while Postgres `DATABASE_PUBLIC_URL` is the correct local live-smoke URL
+  - added opt-in `RIVT_RAILWAY_INCLUDE_STORAGE=true` support for project/media smokes so the child process can clean up temporary S3 objects after upload verification
+  - copied the ignored local `.env` into existing worktrees so `TEST_DATABASE_URL` is available there without committing the secret
+- Preserved launch boundaries:
+  - no database URL, storage credential, or Railway secret was committed or printed
+  - the helper only injects secrets into the child process environment and exits with the child command
+  - no app behavior, auth boundary, billing path, provider configuration, or production data migration was changed
+- Local verification:
+  - `node --env-file-if-exists=.env --test --test-concurrency=1 test/project-completion.integration.test.js` (pass)
+  - `node --env-file-if-exists=.env --test --test-concurrency=1 test/tool-records.integration.test.js` (pass)
+  - `node --env-file-if-exists=.env --test --test-concurrency=1 test/network-records.integration.test.js` (pass)
+  - `npm run lint:security` (pass)
+- Live verification:
+  - `npm run with:railway-public-db -- npm run monitor:production` (pass; production commit `6b4f49db82a17a90da0377aad842e73285a17bcd`)
+  - `RIVT_RAILWAY_INCLUDE_STORAGE=true npm run with:railway-public-db -- npm run smoke:projects:live` (pass; production project/media smoke verified uploads, signed URLs, authorization, completion/dispute flow, and storage cleanup path)
 
 ## Latest Packet 08 Pass - Project Feed Camera Upload Truthfulness
 
