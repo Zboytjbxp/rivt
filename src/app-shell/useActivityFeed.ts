@@ -14,9 +14,19 @@ interface UseActivityFeedOptions {
 function notificationActionLabel(notification: InboxNotification) {
   const href = notification.actionHref || "";
   if (
+    notification.sourceType.startsWith("shop_talk") ||
+    typeof notification.metadata?.postId === "string" ||
+    typeof notification.metadata?.post_id === "string" ||
+    href.includes("shop-talk")
+  ) {
+    return href.includes("community") ? "Open community" : "Open post";
+  }
+  if (
     notification.sourceType === "offer" ||
     notification.sourceType === "active_work" ||
+    notification.sourceType === "job" ||
     typeof notification.metadata?.jobId === "string" ||
+    typeof notification.metadata?.job_id === "string" ||
     href.includes("work")
   ) {
     return "Open work";
@@ -30,6 +40,15 @@ function notificationActionLabel(notification: InboxNotification) {
   }
   if (notification.sourceType === "project" || href.includes("tools")) {
     return "Open records";
+  }
+  if (notification.sourceType === "support" || href.includes("support") || href.includes("feedback")) {
+    return "Open support";
+  }
+  if (notification.sourceType === "review" || href.includes("review")) {
+    return "Open review";
+  }
+  if (href.includes("profile") || href.includes("account")) {
+    return "Open profile";
   }
   return "Open";
 }

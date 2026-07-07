@@ -7,6 +7,28 @@ Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
 Production release commit: `9b715a288dd03e62fab19f257f8f2095ad23e88f` verified with live `/api/health` and `npm run monitor:production`; latest runtime feature evidence is recorded below and docs-only evidence commits may supersede the served build SHA.
 
+## Latest Packet 08 Pass - Notification and Community Tightening
+
+- Tightened a small set of launch-facing loose ends without widening scope:
+  - notification activity labels now name their destination for Shop Talk posts/communities, work/job updates, support, reviews, profile/account events, messages, and records instead of falling back to a generic `Open` label for common non-work paths
+  - Shop Talk community pages no longer repeat the audience label twice in the stat row; unjoined communities now clearly read `Not joined`
+  - public landing footer legal links now route to the real Privacy and Terms pages
+  - Jacksonville launch script vocabulary now consistently says `Shop Talk`
+- Preserved launch boundaries:
+  - no fake notification state, local-only success path, auth fallback, billing behavior, provider config, database migration, or production data mutation was added
+  - notification routing still uses existing authenticated notification metadata/action URLs and server authorization remains the access boundary
+  - community membership display continues to hydrate from server-owned community rows when available
+- Local verification:
+  - `npm run build` (pass)
+  - `npm run lint` (pass)
+  - `npm run lint:security` (pass)
+  - `npm run test:unit` (pass; 45/45)
+  - `npm run test:e2e` (pass)
+  - `npm run test:ui:mobile-actions` (pass; refreshed screenshots at `C:\Users\zboyt\AppData\Local\Temp\rivt-mobile-actions-pass`)
+  - `npm audit --omit=dev` (pass; 0 vulnerabilities)
+  - `git diff --check` (pass; CRLF warnings only)
+  - `npm run test` and `npm run test:integration` did not complete in this local shell before command timeouts; `TEST_DATABASE_URL` and `DATABASE_URL` are not configured in this shell, so DB-backed integration evidence is not newly claimed for this small tightening slice
+
 ## Latest Packet 08 Pass - Interactable Notifications + Active Work Landing
 
 - Tightened the accepted-offer handoff after mobile testing showed notification rows were visible but not directly useful:

@@ -37,7 +37,7 @@ The first pilot is small and local. I am not trying to sell homeowner leads. I w
 Day 1:
 - Invite 10 contractors and 10 tradespeople from separate networks.
 - Ask every contractor to post one real or upcoming work need.
-- Ask every tradesperson to complete profile basics and answer or ask one Trade Talk question.
+- Ask every tradesperson to complete profile basics and answer or ask one Shop Talk question.
 
 Day 2:
 - Message every new user personally.
@@ -46,7 +46,7 @@ Day 2:
 
 Day 3:
 - Invite 15 more users only if support inbox, monitoring, and smoke tests are healthy.
-- Track jobs posted, applications, messages, Trade Talk posts, and support requests.
+- Track jobs posted, applications, messages, Shop Talk posts, and support requests.
 
 Days 4-7:
 - Keep support response under one business day.
@@ -56,9 +56,9 @@ Days 4-7:
 ## Success Signals
 
 - Contractors post real work without a walkthrough.
-- Tradespeople understand Work, Crew, Trade Talk, Tools, and Profile on mobile.
+- Tradespeople understand Work, Crew, Shop Talk, Tools, and Profile on mobile.
 - At least one contractor-to-sub conversation starts inside RIVT.
-- Trade Talk gets real questions or answers from the first cohort.
+- Shop Talk gets real questions or answers from the first cohort.
 - Users can explain RIVT as a trades-only network in their own words.
 
 ## Stop Conditions

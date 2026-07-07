@@ -1121,7 +1121,7 @@ export function ShopTalkView({
                         <span>{pluralize(selectedCommunity.memberCount, "member")}</span>
                         <span>{pluralize(communityPostCounts[selectedCommunity.slug] ?? 0, "post")}</span>
                         <span>{selectedCommunity.audienceLabel}</span>
-                        <span>{joinedCommunities.has(selectedCommunity.slug) ? "Joined" : selectedCommunity.audienceLabel}</span>
+                        <span>{joinedCommunities.has(selectedCommunity.slug) ? "Joined" : "Not joined"}</span>
                       </div>
                     </div>
                   </div>
