@@ -5,7 +5,32 @@ Current gate: Gate A launch hardening
 Current phase: Packet 08 Gate A launch hardening plus Gate B behind-flag backbone work: machine gates and live workflow smokes are mostly green; the Shop Talk Reddit-model backbone, moderation/reporting backend, human-facing moderation console/report UX, post photo media, reachability/naming cleanup, Tools hub consolidation, Payment Tracker server records, money-tools sync, the accepted tool-records sync slices, non-tool local-state boundary cleanup, dedicated network-records sync for Crew/Invites/informal written shout-outs, screen-density polish, mobile layout/device-accessibility subtraction, fraction calculator ergonomics, iPhone SE layout containment, immersive-tool compact-device containment, SE tool chrome cleanup slices, native metric calculator rebuild, and the camera-first records/photos tool rebuild are implemented while still respecting launch-readiness boundaries before broad exposure.
 Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
-Production release commit: `5db08797fbe640a8314422301a3cc9d7506fe7bb` verified with live `/api/health` and `npm run monitor:production`; latest runtime feature evidence is recorded below and docs-only evidence commits may supersede the served build SHA.
+Production release commit: `c8953404bd58f63f97f71e3a143afe6ee325a59b` verified with live `/api/health`, `npm run monitor:production`, and a live password-reset smoke; latest runtime feature evidence is recorded below and docs-only evidence commits may supersede the served build SHA.
+
+## Latest Packet 08 Pass - Password Reset Link Grace
+
+- Improved password-reset reliability after a real mobile reset-link failure:
+  - forgot-password requests no longer consume earlier unexpired reset links
+  - any valid unexpired reset link from the last 30 minutes can reset the password
+  - successful reset still consumes all outstanding reset tokens for the account and revokes active sessions
+  - reset-link error copy now tells users to request a fresh reset email when the link is invalid, expired, incomplete, or already used
+- Preserved security boundaries:
+  - reset links remain one-time-use after successful reset
+  - reset links still expire after 30 minutes
+  - forgot-password remains account-enumeration-safe and always returns accepted
+  - rate limiting and the three reset requests per hour cap remain in place
+- Live verification:
+  - production `/api/health` reported exact build commit `c8953404bd58f63f97f71e3a143afe6ee325a59b`
+  - `npm run monitor:production` passed with PostgreSQL, S3-compatible object storage, configured Sentry, operational controls off, seven anonymous private-route checks, and 527 ms duration
+  - Railway SSH live reset smoke created a disposable verified account, inserted an older reset token, requested a newer reset email, verified the older token stayed unconsumed, reset the password with that older token, confirmed the new password could log in, confirmed all reset tokens were consumed, and closed the disposable account
+- Local verification:
+  - `npm run build` (pass)
+  - `npm run lint` (pass)
+  - `npm run lint:security` (pass)
+  - `npm run test:unit` (pass; 45/45)
+  - `npm run test:e2e` (pass)
+  - `npm run test:integration` (pass for non-DB checks; 15 DB-backed cases skipped because `TEST_DATABASE_URL` is not configured locally)
+  - `npm audit --omit=dev` (pass; 0 vulnerabilities)
 
 ## Latest Packet 08 Pass - Signup Failure Guidance
 
