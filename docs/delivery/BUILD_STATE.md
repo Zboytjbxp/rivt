@@ -34,8 +34,8 @@ Production release commit: `826cfd38220fea65250690cea4d11d52b06964d9` verified w
   - `git diff --check` (pass; CRLF warnings only)
   - full `npm run test` timed out in this local shell after 304 seconds without producing useful failure output; targeted unit/e2e/work-lifecycle evidence above is newly green for this slice
 - Live verification:
-  - production `/api/health` reported exact build commit `826cfd38220fea65250690cea4d11d52b06964d9`
-  - `EXPECTED_SOURCE_COMMIT=826cfd38220fea65250690cea4d11d52b06964d9 npm run monitor:production` passed with PostgreSQL, S3-compatible object storage, configured Sentry, operational controls off, seven anonymous private-route checks, and 577 ms duration
+  - production `/api/health` reported exact build commit `059b8f45b6361b0cd2ae67a99b928fe9aa06ba30`
+  - `EXPECTED_SOURCE_COMMIT=059b8f45b6361b0cd2ae67a99b928fe9aa06ba30 npm run monitor:production` passed with PostgreSQL, S3-compatible object storage, configured Sentry, operational controls off, seven anonymous private-route checks, and 570 ms duration
 
 ## Latest Packet 08 Pass - Notification and Community Tightening
 
