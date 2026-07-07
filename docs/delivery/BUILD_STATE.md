@@ -5,7 +5,7 @@ Current gate: Gate A launch hardening
 Current phase: Packet 08 Gate A launch hardening plus Gate B behind-flag backbone work: machine gates and live workflow smokes are mostly green; the Shop Talk Reddit-model backbone, moderation/reporting backend, human-facing moderation console/report UX, post photo media, reachability/naming cleanup, Tools hub consolidation, Payment Tracker server records, money-tools sync, the accepted tool-records sync slices, non-tool local-state boundary cleanup, dedicated network-records sync for Crew/Invites/informal written shout-outs, screen-density polish, mobile layout/device-accessibility subtraction, fraction calculator ergonomics, iPhone SE layout containment, immersive-tool compact-device containment, SE tool chrome cleanup slices, native metric calculator rebuild, the camera-first records/photos tool rebuild, admin support-case review for account-type requests, and offer start-date normalization are implemented while still respecting launch-readiness boundaries before broad exposure.
 Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
-Production release commit: `15b11eaacf3c742203b0c4d5d186cf9041d7d77c` verified with live `/api/health` and `npm run monitor:production`; latest runtime feature evidence is recorded below and docs-only evidence commits may supersede the served build SHA.
+Production release commit: `826cfd38220fea65250690cea4d11d52b06964d9` verified with live `/api/health` and `npm run monitor:production`; latest runtime feature evidence is recorded below and docs-only evidence commits may supersede the served build SHA.
 
 ## Latest Packet 08 Pass - Active Work Deep-Link QA
 
@@ -30,7 +30,8 @@ Production release commit: `15b11eaacf3c742203b0c4d5d186cf9041d7d77c` verified w
   - `git diff --check` (pass; CRLF warnings only)
   - `npm run test:integration` and full `npm run test` both completed, but the suite is currently red in four unrelated existing areas outside this slice: `communities.integration`, `migrations.integration`, `reviews-admin-safety.integration`, and `shop-talk-reactions.integration`
 - Live verification:
-  - pending deploy for this pass; production evidence will be appended once the new commit is on `master` and `/api/health` plus `npm run monitor:production` are re-run
+  - production `/api/health` reported exact build commit `826cfd38220fea65250690cea4d11d52b06964d9`
+  - `EXPECTED_SOURCE_COMMIT=826cfd38220fea65250690cea4d11d52b06964d9 npm run monitor:production` passed with PostgreSQL, S3-compatible object storage, configured Sentry, operational controls off, seven anonymous private-route checks, and 577 ms duration
 
 ## Latest Packet 08 Pass - Notification and Community Tightening
 
