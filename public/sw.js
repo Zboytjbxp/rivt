@@ -1,4 +1,4 @@
-const CACHE = 'rivt-v2';
+const CACHE = 'rivt-v3-2026-07-07';
 const PRECACHE = ['/', '/index.html'];
 
 self.addEventListener('install', e => {
@@ -15,6 +15,7 @@ self.addEventListener('activate', e => {
 
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
+  if (new URL(e.request.url).origin !== self.location.origin) return;
   e.respondWith(
     fetch(e.request)
       .then(res => {
@@ -50,7 +51,10 @@ self.addEventListener('notificationclick', e => {
   e.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
       const existing = list.find(c => c.url.includes(self.location.origin));
-      if (existing) return existing.focus();
+      if (existing) {
+        if ('navigate' in existing) return existing.navigate(url).then(c => c?.focus());
+        return existing.focus();
+      }
       return clients.openWindow(url);
     })
   );
