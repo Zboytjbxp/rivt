@@ -119,6 +119,7 @@ import {
   createOriginGuard,
   createDurableRateLimiter,
   createRequireAuthenticatedUser,
+  isAllowedOrigin,
   parseCookies,
   readSessionId,
 } from "./security.js";
@@ -312,7 +313,7 @@ app.use(compression());
 app.use(cors({
   credentials: true,
   origin(origin, callback) {
-    if (!origin || allowedOrigins.includes(origin)) {
+    if (isAllowedOrigin(origin, allowedOrigins)) {
       callback(null, true);
       return;
     }

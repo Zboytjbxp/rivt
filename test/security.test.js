@@ -7,6 +7,7 @@ import {
   createOriginGuard,
   createRateLimiter,
   createRequireAuthenticatedUser,
+  isAllowedOrigin,
   parseCookies,
   readSessionId,
 } from "../server/security.js";
@@ -48,6 +49,18 @@ test("origin guard rejects unsafe cross-origin requests", () => {
 
   guard({ method: "GET", get: () => "https://attacker.example" }, responseDouble(), () => { nextCalled = true; });
   assert.equal(nextCalled, true);
+});
+
+test("dev origin matcher allows localhost ports but still rejects arbitrary origins", () => {
+  const previousNodeEnv = process.env.NODE_ENV;
+  process.env.NODE_ENV = "test";
+  try {
+    assert.equal(isAllowedOrigin("http://127.0.0.1:5188", ["https://rivt.pro"]), true);
+    assert.equal(isAllowedOrigin("http://localhost:4174", ["https://rivt.pro"]), true);
+    assert.equal(isAllowedOrigin("https://attacker.example", ["https://rivt.pro"]), false);
+  } finally {
+    process.env.NODE_ENV = previousNodeEnv;
+  }
 });
 
 test("rate limiter blocks after configured request count", () => {

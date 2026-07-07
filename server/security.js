@@ -2,6 +2,7 @@ import { createHash, createHmac } from "node:crypto";
 
 const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 const SESSION_ID_PATTERN = /^[0-9a-f-]{36}$/i;
+const LOCAL_DEV_ORIGIN_PATTERN = /^http:\/\/(?:127\.0\.0\.1|localhost):\d+$/i;
 
 function decodeCookiePart(value) {
   try {
@@ -33,9 +34,15 @@ export function readSessionId(request, cookieName) {
   return SESSION_ID_PATTERN.test(value ?? "") ? value : null;
 }
 
-export function createOriginGuard(allowedOrigins) {
-  const allowed = new Set(allowedOrigins.filter(Boolean));
+export function isAllowedOrigin(origin, allowedOrigins) {
+  if (!origin) return true;
+  const allowed = new Set((allowedOrigins ?? []).filter(Boolean));
+  if (allowed.has(origin)) return true;
+  if (process.env.NODE_ENV !== "production" && LOCAL_DEV_ORIGIN_PATTERN.test(origin)) return true;
+  return false;
+}
 
+export function createOriginGuard(allowedOrigins) {
   return function originGuard(request, response, next) {
     if (SAFE_METHODS.has(request.method)) {
       next();
@@ -43,7 +50,7 @@ export function createOriginGuard(allowedOrigins) {
     }
 
     const origin = request.get("origin");
-    if (!origin || allowed.has(origin)) {
+    if (isAllowedOrigin(origin, allowedOrigins)) {
       next();
       return;
     }

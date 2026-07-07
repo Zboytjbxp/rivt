@@ -2,7 +2,7 @@
 
 Last updated: 2026-07-06 America/New_York
 Current gate: Gate A launch hardening
-Current phase: Packet 08 Gate A launch hardening plus Gate B behind-flag backbone work: machine gates and live workflow smokes are mostly green; the Shop Talk Reddit-model backbone, moderation/reporting backend, human-facing moderation console/report UX, post photo media, reachability/naming cleanup, Tools hub consolidation, Payment Tracker server records, money-tools sync, the accepted tool-records sync slices, non-tool local-state boundary cleanup, dedicated network-records sync for Crew/Invites/informal written shout-outs, screen-density polish, mobile layout/device-accessibility subtraction, fraction calculator ergonomics, iPhone SE layout containment, immersive-tool compact-device containment, SE tool chrome cleanup slices, and the native metric calculator rebuild are implemented while still respecting launch-readiness boundaries before broad exposure.
+Current phase: Packet 08 Gate A launch hardening plus Gate B behind-flag backbone work: machine gates and live workflow smokes are mostly green; the Shop Talk Reddit-model backbone, moderation/reporting backend, human-facing moderation console/report UX, post photo media, reachability/naming cleanup, Tools hub consolidation, Payment Tracker server records, money-tools sync, the accepted tool-records sync slices, non-tool local-state boundary cleanup, dedicated network-records sync for Crew/Invites/informal written shout-outs, screen-density polish, mobile layout/device-accessibility subtraction, fraction calculator ergonomics, iPhone SE layout containment, immersive-tool compact-device containment, SE tool chrome cleanup slices, native metric calculator rebuild, and the camera-first records/photos tool rebuild are implemented while still respecting launch-readiness boundaries before broad exposure.
 Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
 Production release commit: `e6ae1b25e7789204ab7b46552412a8f4e59e21c1` verified with live `/api/health` and `npm run monitor:production`; latest runtime feature evidence is recorded below and docs-only evidence commits may supersede the served build SHA.
@@ -135,6 +135,38 @@ Production release commit: `e6ae1b25e7789204ab7b46552412a8f4e59e21c1` verified w
   - pushed to `master` and verified live at `/api/health`
   - production now serves release commit `1a9bc4b7b2d90554777d02f718397a57f92598f8`
   - `npm run monitor:production` passed against the deployed build
+
+## Latest Packet 08 Pass - Camera Rebase Verification
+
+- Rebased the in-flight `codex/camera-tool-rebuild` work over current `origin/master` and preserved the newer master camera/project-feed implementation from the already-merged launch-line camera pass.
+- Camera surface preserved in this slice:
+  - the primary Tools launcher opens `Camera`
+  - live job photos remain centered on the project-feed workflow instead of a passive album-first gallery
+  - active-job photos keep capture-type filters for progress / before / after / issue / material / closeout
+  - side-work albums remain secondary to live jobsite capture
+  - desktop, standard mobile, and SE-class smoke coverage still verifies the Camera flow
+- Supporting launch-hardening change retained from the rebase:
+  - dev-only localhost origin matching is centralized in `isAllowedOrigin()` so local rendered UI smokes can use dynamic ports without weakening production origin checks
+- Preserved launch boundaries:
+  - no homeowner flows, fake success, fake verification, job-payment processing, escrow, payroll, local-auth fallback, or moderation/auth relaxations were introduced
+  - no production data migration or provider-secret change was required for this pass
+- Local gates:
+  - `npm run build` (pass)
+  - `npm run lint` (pass)
+  - `npm run lint:security` (pass)
+  - `npm run test:unit` (pass; 45/45)
+  - `npm run test:e2e` (pass)
+  - `npm run test:ui:tools` (pass; refreshed screenshots at `C:\Users\zboyt\AppData\Local\Temp\rivt-tools-pass`)
+  - `npm run test:ui:mobile-actions` (pass; refreshed screenshots at `C:\Users\zboyt\AppData\Local\Temp\rivt-mobile-actions-pass`)
+  - `npm run test:integration` (pass; 18/18 after allowing the full DB-backed runtime to complete)
+  - `npm audit --omit=dev` (pass; 0 vulnerabilities)
+  - `git diff --check` (pass)
+- Rendered QA:
+  - Browser plugin invocation failed in this session at the required documentation call (`browser.documentation is not a function`), so the repo's Playwright smoke scripts were used as the rendered QA fallback
+  - refreshed `desktop-job-photos.png`, `mobile-job-photos.png`, and `se-job-photos.png` show the current camera/project-feed surface contained across desktop, 390px mobile, and 320px SE-class screens
+- Production deployment status:
+  - not deployed in this pass
+  - production remains on the current `master` release until this rebase verification commit is merged and redeployed
 
 ## Latest Packet 08 Pass - Native Metric Calculator Mode
 
