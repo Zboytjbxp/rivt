@@ -11,6 +11,7 @@ const communitiesQuerySchema = z.object({
 const communityCreateSchema = z.object({
   name: z.string().trim().min(2).max(80),
   description: z.string().trim().max(240).optional().default(""),
+  audience: z.enum(["public", "contractors", "tradespeople"]).optional().default("public"),
   confirmDuplicate: z.boolean().optional().default(false),
 });
 
@@ -52,6 +53,7 @@ function mapCommunityRow(row) {
     slug: row.slug,
     name: row.name,
     description: row.description,
+    audience: row.audience ?? "public",
     memberCount: Number(row.member_count ?? 0),
     joined: Boolean(row.joined),
     role: row.role ?? null,
@@ -60,9 +62,32 @@ function mapCommunityRow(row) {
   };
 }
 
+function actorRole(actor) {
+  return actor?.account?.primaryRole === "contractor" || actor?.account?.primaryRole === "tradesperson"
+    ? actor.account.primaryRole
+    : "pending";
+}
+
+function communityAudienceAllowed(audience, role) {
+  return audience === "public" ||
+    (audience === "contractors" && role === "contractor") ||
+    (audience === "tradespeople" && role === "tradesperson");
+}
+
+function audienceRestrictionMessage(audience) {
+  if (audience === "contractors") return "This community is limited to contractor accounts.";
+  if (audience === "tradespeople") return "This community is limited to tradesperson accounts.";
+  return "This community is not available for your account.";
+}
+
+function assertCommunityAudience(community, actor) {
+  if (communityAudienceAllowed(community.audience ?? "public", actorRole(actor))) return;
+  throw new ApiError(403, "COMMUNITY_AUDIENCE_RESTRICTED", audienceRestrictionMessage(community.audience));
+}
+
 async function requireCommunity(database, slug) {
   const found = await database.query(
-    `SELECT id, slug, name, description, member_count, created_by_account_id, moderation_status
+    `SELECT id, slug, name, description, audience, member_count, created_by_account_id, moderation_status
      FROM communities
      WHERE slug = $1
        AND archived_at IS NULL
@@ -99,14 +124,14 @@ export function registerCommunityRoutes({
 }) {
   app.get("/api/v1/communities", requireV1AuthenticatedUser, requireV1Actor, asyncRoute(async (request, response) => {
     const { q } = validate(communitiesQuerySchema, request.query);
-    const params = [request.actor.account.id];
+    const params = [request.actor.account.id, actorRole(request.actor)];
     let searchClause = "";
     if (q) {
       params.push(`%${q.toLowerCase()}%`);
       searchClause = `AND (lower(c.name) LIKE $${params.length} OR lower(c.slug) LIKE $${params.length})`;
     }
     const result = await database.query(
-      `SELECT c.id, c.slug, c.name, c.description,
+      `SELECT c.id, c.slug, c.name, c.description, c.audience,
               COALESCE(m.cnt, 0) AS member_count,
               c.moderation_status,
               c.created_by_account_id,
@@ -122,6 +147,12 @@ export function registerCommunityRoutes({
          ON vm.community_id = c.id AND vm.account_id = $1
        WHERE c.archived_at IS NULL
          AND c.moderation_status <> 'hidden'
+         AND (
+           c.audience = 'public'
+           OR (c.audience = 'contractors' AND $2 = 'contractor')
+           OR (c.audience = 'tradespeople' AND $2 = 'tradesperson')
+           OR vm.account_id IS NOT NULL
+         )
        ${searchClause}
        ORDER BY COALESCE(m.cnt, 0) DESC, c.updated_at DESC, c.id DESC
        LIMIT 100`,
@@ -141,18 +172,29 @@ export function registerCommunityRoutes({
     }
 
     const similar = await database.query(
-      `SELECT slug, name, description, member_count
+      `SELECT communities.slug, communities.name, communities.description, communities.audience, communities.member_count,
+              community_members.role,
+              (community_members.account_id IS NOT NULL) AS joined
        FROM communities
-       WHERE archived_at IS NULL
-         AND moderation_status <> 'hidden'
+       LEFT JOIN community_members
+         ON community_members.community_id = communities.id
+        AND community_members.account_id = $4
+       WHERE communities.archived_at IS NULL
+         AND communities.moderation_status <> 'hidden'
          AND (
-           slug = $1
-           OR slug LIKE $2
-           OR lower(name) LIKE $3
+           communities.audience = 'public'
+           OR (communities.audience = 'contractors' AND $5 = 'contractor')
+           OR (communities.audience = 'tradespeople' AND $5 = 'tradesperson')
+           OR community_members.account_id IS NOT NULL
          )
-       ORDER BY CASE WHEN slug = $1 THEN 0 ELSE 1 END, member_count DESC, created_at ASC
+         AND (
+           communities.slug = $1
+           OR communities.slug LIKE $2
+           OR lower(communities.name) LIKE $3
+       )
+       ORDER BY CASE WHEN communities.slug = $1 THEN 0 ELSE 1 END, communities.member_count DESC, communities.created_at ASC
        LIMIT 5`,
-      [slug, `%${slug}%`, `%${input.name.toLowerCase()}%`],
+      [slug, `%${slug}%`, `%${input.name.toLowerCase()}%`, request.actor.account.id, actorRole(request.actor)],
     );
 
     if (similar.rowCount && !input.confirmDuplicate) {
@@ -180,10 +222,10 @@ export function registerCommunityRoutes({
 
     const created = await withTransaction(database, async (client) => {
       const inserted = await client.query(
-        `INSERT INTO communities (slug, name, description, created_by_account_id, member_count)
-         VALUES ($1, $2, $3, $4, 1)
-         RETURNING id, slug, name, description, member_count, created_by_account_id`,
-        [slug, input.name, input.description, request.actor.account.id],
+        `INSERT INTO communities (slug, name, description, audience, created_by_account_id, member_count)
+         VALUES ($1, $2, $3, $4, $5, 1)
+         RETURNING id, slug, name, description, audience, member_count, created_by_account_id`,
+        [slug, input.name, input.description, input.audience, request.actor.account.id],
       );
       await client.query(
         `INSERT INTO community_members (community_id, account_id, role)
@@ -197,7 +239,7 @@ export function registerCommunityRoutes({
           request.requestId,
           request.actor.account.id,
           inserted.rows[0].id,
-          JSON.stringify({ slug, name: input.name }),
+          JSON.stringify({ slug, name: input.name, audience: input.audience }),
         ],
       );
       return inserted.rows[0];
@@ -212,6 +254,7 @@ export function registerCommunityRoutes({
   app.post("/api/v1/communities/:slug/join", requireV1AuthenticatedUser, requireV1Actor, writeRateLimit, asyncRoute(async (request, response) => {
     const { slug } = validate(communitySlugSchema, request.params);
     const community = await requireCommunity(database, slug);
+    assertCommunityAudience(community, request.actor);
     await withTransaction(database, async (client) => {
       const inserted = await client.query(
         `INSERT INTO community_members (community_id, account_id, role)

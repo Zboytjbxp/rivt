@@ -45,6 +45,7 @@ export interface ServerShopTalkPost {
   communityId?: string;
   communitySlug?: string;
   communityName?: string;
+  communityAudience?: "public" | "contractors" | "tradespeople";
   answers?: ServerShopTalkAnswer[];
   media?: ServerShopTalkMedia[];
   thumbnailUrl?: string | null;

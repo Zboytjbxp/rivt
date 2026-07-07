@@ -1,10 +1,13 @@
 import { apiPath } from "../../lib/api";
 
+export type CommunityAudience = "public" | "contractors" | "tradespeople";
+
 export interface ServerCommunity {
   id: string;
   slug: string;
   name: string;
   description: string;
+  audience: CommunityAudience;
   memberCount: number;
   joined: boolean;
   role?: "member" | "moderator" | "owner" | null;
@@ -37,6 +40,7 @@ export interface CreateCommunityResult {
 export async function createCommunity(input: {
   name: string;
   description?: string;
+  audience?: CommunityAudience;
   confirmDuplicate?: boolean;
 }): Promise<CreateCommunityResult | null> {
   try {

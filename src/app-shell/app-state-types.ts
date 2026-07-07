@@ -73,8 +73,8 @@ export interface ActivityItem {
   detail: string;
   timestamp: string;
   unread: boolean;
-  kind?: "info" | "success" | "warning" | "error";
   actionLabel?: string;
+  kind?: "info" | "success" | "warning" | "error";
 }
 
 export interface AppToast {

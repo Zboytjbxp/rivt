@@ -26,11 +26,16 @@ import {
   communitySlug,
   createCommunity,
   setCommunityMembership,
+  type CommunityAudience,
   type ServerCommunity,
 } from "./communities-api";
-import type { CommunityDisplay } from "./community-directory";
+import {
+  communityAudienceDescription,
+  roleCanAccessCommunity,
+  type CommunityDisplay,
+} from "./community-directory";
 import { tradeOptions } from "../../data";
-import type { Trade } from "../../types";
+import type { Role, Trade } from "../../types";
 import { usePersona } from "../persona/usePersona";
 import {
   communityBadgeLabels,
@@ -94,6 +99,7 @@ export interface CommunityPost {
   thumbnailAlt?: string;
   communitySlug?: string;
   communityName?: string;
+  communityAudience?: CommunityAudience;
 }
 
 export type PostFlair = "Question" | "Discussion" | "Code Talk" | "Compliance" | "Tip" | "Humor";
@@ -635,6 +641,7 @@ export function ShopTalkView({
   onNewPost,
   onDeletePost,
   onCommunityCreated,
+  role,
 }: {
   profile: AccountProfile;
   communityPosts: CommunityPost[];
@@ -661,6 +668,7 @@ export function ShopTalkView({
   onNewPost: (flair: PostFlair, title: string, trade: Trade | "General", body: string, postType: PostType, subTrade?: string, subLocation?: string, subRate?: string, communitySlug?: string | null, photoFile?: File | null) => void | Promise<void>;
   onDeletePost: (postId: string) => boolean | Promise<boolean>;
   onCommunityCreated: (community: ServerCommunity) => void;
+  role: Role;
 }) {
   const persona = usePersona();
   const [activeTab, setActiveTab] = useState<"talk" | "news">("talk");
@@ -678,6 +686,7 @@ export function ShopTalkView({
   const [communityQuery, setCommunityQuery] = useState("");
   const [communityCreateError, setCommunityCreateError] = useState<string | null>(null);
   const [communityCreateBusy, setCommunityCreateBusy] = useState(false);
+  const [communityCreateAudience, setCommunityCreateAudience] = useState<CommunityAudience>("public");
   const [duplicateCommunityCandidates, setDuplicateCommunityCandidates] = useState<ServerCommunity[]>([]);
   const [deletingPostId, setDeletingPostId] = useState<string | null>(null);
   const [selectedCommunitySlug, setSelectedCommunitySlug] = useState<string | null>(initialCommunitySlug ?? null);
@@ -794,6 +803,7 @@ export function ShopTalkView({
       const result = await createCommunity({
         name,
         description: `${name} community`,
+        audience: communityCreateAudience,
         confirmDuplicate,
       });
       if (result?.community) {
@@ -811,6 +821,35 @@ export function ShopTalkView({
     } finally {
       setCommunityCreateBusy(false);
     }
+  }
+
+  async function toggleCommunityMembership(community: CommunityDisplay) {
+    const joined = joinedCommunities.has(community.slug);
+    const willJoin = !joined;
+    if (willJoin && !roleCanAccessCommunity(community.audience, role)) {
+      setCommunityCreateError(communityAudienceDescription(community.audience));
+      return;
+    }
+    setCommunityCreateError(null);
+    setJoinedCommunities((prev) => {
+      const next = new Set(prev);
+      if (willJoin) next.add(community.slug);
+      else next.delete(community.slug);
+      try { localStorage.setItem("rivt.joinedCommunities.v1", JSON.stringify([...next])); } catch { /* ignore */ }
+      return next;
+    });
+    const saved = await setCommunityMembership(community.slug, willJoin);
+    if (saved) return;
+    setJoinedCommunities((prev) => {
+      const next = new Set(prev);
+      if (willJoin) next.delete(community.slug);
+      else next.add(community.slug);
+      try { localStorage.setItem("rivt.joinedCommunities.v1", JSON.stringify([...next])); } catch { /* ignore */ }
+      return next;
+    });
+    setCommunityCreateError(willJoin
+      ? "That community could not be joined. It may be restricted or temporarily unavailable."
+      : "That community could not be left. Try again in a minute.");
   }
 
   function closeCommunity() {
@@ -1079,9 +1118,10 @@ export function ShopTalkView({
                       <h2>{selectedCommunity.name}</h2>
                       <p>{selectedCommunity.meta}</p>
                       <div className="community-page-stats">
-                        <span>{selectedCommunity.count} members</span>
-                        <span>{communityPostCounts[selectedCommunity.slug] ?? 0} posts</span>
-                        <span>{joinedCommunities.has(selectedCommunity.slug) ? "Joined" : "Open community"}</span>
+                        <span>{pluralize(selectedCommunity.memberCount, "member")}</span>
+                        <span>{pluralize(communityPostCounts[selectedCommunity.slug] ?? 0, "post")}</span>
+                        <span>{selectedCommunity.audienceLabel}</span>
+                        <span>{joinedCommunities.has(selectedCommunity.slug) ? "Joined" : selectedCommunity.audienceLabel}</span>
                       </div>
                     </div>
                   </div>
@@ -1090,19 +1130,14 @@ export function ShopTalkView({
                       type="button"
                       className={joinedCommunities.has(selectedCommunity.slug) ? "community-join is-joined" : "community-join"}
                       aria-pressed={joinedCommunities.has(selectedCommunity.slug)}
-                      onClick={() => {
-                        const willJoin = !joinedCommunities.has(selectedCommunity.slug);
-                        void setCommunityMembership(selectedCommunity.slug, willJoin);
-                        setJoinedCommunities((prev) => {
-                          const next = new Set(prev);
-                          if (next.has(selectedCommunity.slug)) next.delete(selectedCommunity.slug);
-                          else next.add(selectedCommunity.slug);
-                          try { localStorage.setItem("rivt.joinedCommunities.v1", JSON.stringify([...next])); } catch { /* ignore */ }
-                          return next;
-                        });
-                      }}
+                      disabled={!joinedCommunities.has(selectedCommunity.slug) && !roleCanAccessCommunity(selectedCommunity.audience, role)}
+                      onClick={() => { void toggleCommunityMembership(selectedCommunity); }}
                     >
-                      {joinedCommunities.has(selectedCommunity.slug) ? "Joined" : "Join"}
+                      {joinedCommunities.has(selectedCommunity.slug)
+                        ? "Joined"
+                        : roleCanAccessCommunity(selectedCommunity.audience, role)
+                          ? "Join"
+                          : selectedCommunity.audienceLabel}
                     </button>
                     {selectedCommunity.serverOwned && (
                       <button
@@ -1139,6 +1174,26 @@ export function ShopTalkView({
                     placeholder="Search communities"
                   />
                 </label>
+                {canStartCommunity && (
+                  <div className="community-audience-picker" aria-label="Choose who can join this community">
+                    {([
+                      ["public", "Public"],
+                      ["contractors", "Contractors"],
+                      ["tradespeople", "Tradespeople"],
+                    ] as const satisfies Array<[CommunityAudience, string]>).map(([audience, label]) => (
+                      <button
+                        key={audience}
+                        type="button"
+                        className={communityCreateAudience === audience ? "is-active" : ""}
+                        onClick={() => setCommunityCreateAudience(audience)}
+                        aria-pressed={communityCreateAudience === audience}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                    <span>{communityAudienceDescription(communityCreateAudience)}</span>
+                  </div>
+                )}
                 <div className="community-board-list">
                   {filteredCommunities.length === 0 ? (
                     <div className="community-empty">
@@ -1169,6 +1224,7 @@ export function ShopTalkView({
                             <small>
                               <span>{pluralize(community.memberCount, "member")}</span>
                               <span>{pluralize(communityPostCounts[community.slug] ?? 0, "post")}</span>
+                              <span>{community.audienceLabel}</span>
                               <span>{community.meta}</span>
                             </small>
                           </span>
@@ -1177,19 +1233,14 @@ export function ShopTalkView({
                           type="button"
                           className={joined ? "community-join is-joined" : "community-join"}
                           aria-pressed={joined}
-                          onClick={() => {
-                            const willJoin = !joinedCommunities.has(community.slug);
-                            void setCommunityMembership(community.slug, willJoin);
-                            setJoinedCommunities((prev) => {
-                              const next = new Set(prev);
-                              if (next.has(community.slug)) next.delete(community.slug);
-                              else next.add(community.slug);
-                              try { localStorage.setItem("rivt.joinedCommunities.v1", JSON.stringify([...next])); } catch { /* ignore */ }
-                              return next;
-                            });
-                          }}
+                          disabled={!joined && !roleCanAccessCommunity(community.audience, role)}
+                          onClick={() => { void toggleCommunityMembership(community); }}
                         >
-                          {joined ? "Joined" : "Join"}
+                          {joined
+                            ? "Joined"
+                            : roleCanAccessCommunity(community.audience, role)
+                              ? "Join"
+                              : community.audienceLabel}
                         </button>
                       </div>
                     );
