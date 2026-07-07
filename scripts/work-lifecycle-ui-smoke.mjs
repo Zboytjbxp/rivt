@@ -376,6 +376,8 @@ async function configurePage(page, account, state) {
   });
   await page.route("**/api/v1/notification-preferences", (route) => route.fulfill(json({ data: { preferences: [] } })));
   await page.route("**/api/storage", (route) => route.fulfill(json({ usedBytes: 0, objectCount: 0, plan: {} })));
+  await page.route("**/api/v1/albums", (route) => route.fulfill(json({ data: { albums: [] } })));
+  await page.route(/\/api\/v1\/albums\/[0-9a-f-]+$/, (route) => route.fulfill(json({ data: { album: { id: "album-empty", name: "Smoke album", photoCount: 0, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), photos: [] } } })));
   await page.route("**/api/v1/shop-talk/posts**", (route) => route.fulfill(json({ data: { posts: [] } })));
   await page.route("**/api/v1/communities**", (route) => route.fulfill(json({ data: { communities: [] } })));
   await page.route("**/api/v1/shop-talk/reactions/batch", (route) => route.fulfill(json({
@@ -652,7 +654,9 @@ async function runTradespersonOfferFlow(page) {
   await clickJob(page, "Warehouse panel assist");
   await page.getByText("Accepted and active", { exact: true }).waitFor({ timeout: 15_000 });
   await page.getByLabel("Hiring workflow").getByRole("button", { name: "Photos" }).click();
-  await page.getByRole("heading", { name: "Records", exact: true }).waitFor({ timeout: 15_000 });
+  await page.waitForURL(/\/app\/tools\?tool=job-photos/, { timeout: 15_000 });
+  await page.getByText("Live project feed", { exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByLabel("Camera").getByText("Warehouse panel assist", { exact: true }).waitFor({ timeout: 15_000 });
 
   await page.goto(`${baseUrl}/app/work`, { waitUntil: "networkidle" });
   await clickJob(page, "Warehouse panel assist");

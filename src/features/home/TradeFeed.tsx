@@ -158,7 +158,6 @@ interface TradeFeedProps {
   onOpenProfile: () => void;
   onOpenTool: (tool: ToolMode) => void;
   onOpenActiveWorkMessages: (activeWorkId: string) => void;
-  onOpenActiveWorkRecords: (activeWorkId: string) => void;
   onOpenActiveWorkTool: (activeWorkId: string, tool: ToolMode) => void;
 }
 
@@ -188,7 +187,6 @@ export function TradeFeed({
   onOpenProfile = () => undefined,
   onOpenTool = () => undefined,
   onOpenActiveWorkMessages,
-  onOpenActiveWorkRecords,
   onOpenActiveWorkTool,
 }: TradeFeedProps) {
   const [saved, setSaved] = useState<Set<string>>(readBookmarks);
@@ -427,7 +425,7 @@ export function TradeFeed({
             <button
               type="button"
               className="v2-secondary-button"
-              onClick={() => onOpenActiveWorkRecords(primaryActiveWork.id)}
+              onClick={() => onOpenActiveWorkTool(primaryActiveWork.id, "job-photos")}
             >
               <Camera size={15} />
               Photos

@@ -93,7 +93,7 @@ interface WorkWorkspaceProps {
   onEditJob: (job: Job) => void;
   onTransition: (job: Job, action: JobAction) => Promise<void>;
   onJobLoaded: (job: Job) => void;
-  onOpenTool: (tool: "daily-log" | "invoice", activeWorkId?: string) => void;
+  onOpenTool: (tool: "daily-log" | "invoice" | "job-photos", activeWorkId?: string) => void;
   onOpenRecords: (activeWorkId?: string) => void;
   onOpenActiveWorkMessages: (activeWorkId: string) => void;
   onRetry: () => void;
@@ -1623,7 +1623,7 @@ export function WorkWorkspace({
             <button type="button" className="v2-secondary-button" onClick={() => onOpenActiveWorkMessages(primaryActiveWorkRecord.id)}>
               Messages
             </button>
-            <button type="button" className="v2-secondary-button" onClick={() => onOpenRecords(primaryActiveWorkRecord.id)}>
+            <button type="button" className="v2-secondary-button" onClick={() => onOpenTool("job-photos", primaryActiveWorkRecord.id)}>
               Photos
             </button>
             <button type="button" className="v2-secondary-button" onClick={() => onOpenTool("daily-log", primaryActiveWorkRecord.id)}>
@@ -1721,11 +1721,11 @@ export function WorkWorkspace({
                       </p>
                       <div className="v2-active-work-primary-actions" aria-label="Active job workspace actions">
                         <button type="button" disabled={Boolean(activeAction)} onClick={() => onOpenActiveWorkMessages(activeWork.id)}>Messages</button>
-                        <button type="button" disabled={Boolean(activeAction)} onClick={() => onOpenRecords(activeWork.id)}>Photos</button>
+                        <button type="button" disabled={Boolean(activeAction)} onClick={() => onOpenTool("job-photos", activeWork.id)}>Photos</button>
                         <button type="button" disabled={Boolean(activeAction)} onClick={() => onOpenTool("daily-log", activeWork.id)}>Daily log</button>
                       </div>
                       <div className="v2-match-actions">
-                        <button type="button" disabled={Boolean(activeAction)} onClick={() => onOpenTool("invoice")}>Invoice</button>
+                        <button type="button" disabled={Boolean(activeAction)} onClick={() => onOpenTool("invoice", activeWork.id)}>Invoice</button>
                         {activeWork.status === "active" ? (
                           <>
                             <button type="button" disabled={Boolean(activeAction)} onClick={() => openReasonPrompt("reschedule", activeWork)}>Request reschedule</button>

@@ -639,7 +639,10 @@ function PhotoGallery({
   );
 }
 
-export function JobPhotosTool({ activeWork }: { activeWork: CanonicalActiveWork[] }) {
+export function JobPhotosTool({ activeWork, autoOpenActiveJob = false }: {
+  activeWork: CanonicalActiveWork[];
+  autoOpenActiveJob?: boolean;
+}) {
   const recordWork = activeWork.find((work) => work.status === "active") ?? activeWork[0] ?? null;
   const recordWorkId = recordWork?.id ?? null;
 
@@ -666,6 +669,14 @@ export function JobPhotosTool({ activeWork }: { activeWork: CanonicalActiveWork[
   const [captureIntent, setCaptureIntent] = useState<CaptureIntent>("progress");
   const currentProject = project?.activeWorkId === recordWorkId ? project : null;
   const photoNotes = useMemo(() => projectPhotoNotes(currentProject), [currentProject]);
+  const autoOpenedActiveJobRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!autoOpenActiveJob || !recordWorkId) return;
+    if (autoOpenedActiveJobRef.current === recordWorkId) return;
+    autoOpenedActiveJobRef.current = recordWorkId;
+    setMode("active-job");
+  }, [autoOpenActiveJob, recordWorkId]);
 
   useEffect(() => {
     let cancelled = false;

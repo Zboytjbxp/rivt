@@ -2243,7 +2243,6 @@ function App() {
             onOpenProfile={() => handleNavigate("Settings")}
             onOpenTool={handleOpenTool}
             onOpenActiveWorkMessages={(activeWorkId) => void handleOpenActiveWorkMessages(activeWorkId)}
-            onOpenActiveWorkRecords={handleOpenActiveWorkRecords}
             onOpenActiveWorkTool={handleOpenActiveWorkTool}
           />
         ) : activeView === "Work" ? (
