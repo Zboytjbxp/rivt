@@ -11,6 +11,17 @@ interface UseActivityFeedOptions {
   role: Role;
 }
 
+function notificationActionLabel(item: InboxNotification): string | undefined {
+  const source = `${item.type} ${item.sourceType} ${item.actionHref}`.toLowerCase();
+  if (source.includes("message") || source.includes("conversation") || source.includes("inbox")) return "Open message";
+  if (source.includes("shop-talk") || source.includes("community") || source.includes("answer")) return "Open Shop Talk";
+  if (source.includes("work") || source.includes("job") || source.includes("offer")) return "Open work";
+  if (source.includes("record") || source.includes("project") || source.includes("photo") || source.includes("media") || source.includes("tool")) return "Open records";
+  if (source.includes("profile") || source.includes("review") || source.includes("account")) return "Open profile";
+  if (source.includes("support") || source.includes("feedback")) return "Open support";
+  return item.actionHref ? "Open" : undefined;
+}
+
 export function useActivityFeed({ activeView, notifications, role }: UseActivityFeedOptions) {
   const [activityFeed, setActivityFeed] = useState<ActivityItem[]>([]);
   const [uiToast, setUiToast] = useState<AppToast | null>(null);
@@ -21,6 +32,7 @@ export function useActivityFeed({ activeView, notifications, role }: UseActivity
     detail: item.body,
     timestamp: item.createdAt ? new Date(item.createdAt).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "",
     unread: !item.readAt,
+    actionLabel: notificationActionLabel(item),
     kind: item.priority === "high" ? "warning" : item.type === "message" ? "info" : "success",
   })), [notifications]);
 

@@ -472,6 +472,7 @@ interface InboxCenterProps {
   onSendMessage: () => void;
   onMarkSelectedRead: () => void;
   onMarkNotificationsRead: () => void;
+  onOpenNotification?: (notification: InboxNotification) => void;
   onMuteSelected: () => void;
   onReportSelected: () => void;
   onRefresh: () => void;
@@ -516,6 +517,7 @@ export function InboxCenter({
   onSendMessage,
   onMarkSelectedRead,
   onMarkNotificationsRead,
+  onOpenNotification,
   onMuteSelected,
   onReportSelected,
   onRefresh,
@@ -972,15 +974,33 @@ export function InboxCenter({
             }
           >
             <div className="v2-inbox-list">
-              {notifications.length ? notifications.map((item) => (
-                <article key={item.id} className={item.readAt ? "v2-inbox-item" : "v2-inbox-item unread"}>
-                  <div>
-                    <strong>{item.title}</strong>
-                    <span>{item.body}</span>
-                  </div>
-                  <small>{timeLabel(item.createdAt)}</small>
-                </article>
-              )) : (
+              {notifications.length ? notifications.map((item) => {
+                const className = item.readAt ? "v2-inbox-item" : "v2-inbox-item unread";
+                const content = (
+                  <>
+                    <div>
+                      <strong>{item.title}</strong>
+                      <span>{item.body}</span>
+                    </div>
+                    <small>{timeLabel(item.createdAt)}</small>
+                  </>
+                );
+                return onOpenNotification ? (
+                  <button
+                    key={item.id}
+                    type="button"
+                    className={`${className} v2-inbox-item-button`}
+                    onClick={() => onOpenNotification(item)}
+                    aria-label={`Open notification: ${item.title}`}
+                  >
+                    {content}
+                  </button>
+                ) : (
+                  <article key={item.id} className={className}>
+                    {content}
+                  </article>
+                );
+              }) : (
                 <EmptyState
                   className="v2-inbox-empty"
                   icon={<Bell size={20} />}

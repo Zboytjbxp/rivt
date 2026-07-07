@@ -95,6 +95,8 @@ if (!testDatabaseUrl) {
     });
 
     const member = await createAccount(baseUrl, "tradesperson", "Community Member");
+    const contractor = await createAccount(baseUrl, "contractor", "Community Contractor");
+    const tradeOwner = await createAccount(baseUrl, "tradesperson", "Trade Community Owner");
 
     // Anonymous access is rejected.
     const anon = await requestJson(baseUrl, "/api/v1/communities");
@@ -160,6 +162,7 @@ if (!testDatabaseUrl) {
     assert.equal(created.payload.data.community.joined, true);
     assert.equal(created.payload.data.community.role, "owner");
     assert.equal(created.payload.data.community.memberCount, 1);
+    assert.equal(created.payload.data.community.audience, "public");
 
     const duplicate = await requestJson(baseUrl, "/api/v1/communities", {
       method: "POST",
@@ -178,5 +181,58 @@ if (!testDatabaseUrl) {
     });
     assert.equal(ownerLeave.response.status, 409);
     assert.equal(ownerLeave.payload.error.code, "COMMUNITY_OWNER_REQUIRED");
+
+    const contractorRoomName = `Contractor Bench ${randomUUID().slice(0, 8)}`;
+    const contractorRoom = await requestJson(baseUrl, "/api/v1/communities", {
+      method: "POST",
+      cookie: contractor.cookie,
+      body: {
+        name: contractorRoomName,
+        description: "Contractor-only hiring and bench planning.",
+        audience: "contractors",
+      },
+    });
+    assert.equal(contractorRoom.response.status, 201);
+    assert.equal(contractorRoom.payload.data.community.audience, "contractors");
+    assert.equal(contractorRoom.payload.data.community.joined, true);
+
+    const tradespersonCannotJoinContractors = await requestJson(baseUrl, `/api/v1/communities/${contractorRoom.payload.data.community.slug}/join`, {
+      method: "POST",
+      cookie: member.cookie,
+    });
+    assert.equal(tradespersonCannotJoinContractors.response.status, 403);
+    assert.equal(tradespersonCannotJoinContractors.payload.error.code, "COMMUNITY_AUDIENCE_RESTRICTED");
+
+    const hiddenFromTradesperson = await requestJson(baseUrl, "/api/v1/communities", { cookie: member.cookie });
+    assert.equal(
+      hiddenFromTradesperson.payload.data.communities.some((community) => community.slug === contractorRoom.payload.data.community.slug),
+      false,
+    );
+
+    const visibleToContractor = await requestJson(baseUrl, "/api/v1/communities", { cookie: contractor.cookie });
+    assert.equal(
+      visibleToContractor.payload.data.communities.some((community) => community.slug === contractorRoom.payload.data.community.slug),
+      true,
+    );
+
+    const tradesRoomName = `Trades Bench ${randomUUID().slice(0, 8)}`;
+    const tradesRoom = await requestJson(baseUrl, "/api/v1/communities", {
+      method: "POST",
+      cookie: tradeOwner.cookie,
+      body: {
+        name: tradesRoomName,
+        description: "Tradesperson-only coordination.",
+        audience: "tradespeople",
+      },
+    });
+    assert.equal(tradesRoom.response.status, 201);
+    assert.equal(tradesRoom.payload.data.community.audience, "tradespeople");
+
+    const contractorCannotJoinTrades = await requestJson(baseUrl, `/api/v1/communities/${tradesRoom.payload.data.community.slug}/join`, {
+      method: "POST",
+      cookie: contractor.cookie,
+    });
+    assert.equal(contractorCannotJoinTrades.response.status, 403);
+    assert.equal(contractorCannotJoinTrades.payload.error.code, "COMMUNITY_AUDIENCE_RESTRICTED");
   });
 }

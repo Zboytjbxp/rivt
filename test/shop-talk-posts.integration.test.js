@@ -114,6 +114,7 @@ if (!testDatabaseUrl) {
 
     const author = await createAccount(baseUrl, "tradesperson", "Shop Talk Author");
     const answerer = await createAccount(baseUrl, "tradesperson", "Shop Talk Answerer");
+    const contractor = await createAccount(baseUrl, "contractor", "Shop Talk Contractor");
 
     // Anonymous access is rejected.
     const anonList = await requestJson(baseUrl, "/api/v1/shop-talk/posts");
@@ -132,6 +133,34 @@ if (!testDatabaseUrl) {
     });
     assert.equal(missingKey.response.status, 400);
     assert.equal(missingKey.payload.error.code, "IDEMPOTENCY_KEY_REQUIRED");
+
+    const restrictedCommunityName = `Contractor Shop ${randomUUID().slice(0, 8)}`;
+    const restrictedCommunity = await requestJson(baseUrl, "/api/v1/communities", {
+      method: "POST",
+      cookie: contractor.cookie,
+      body: {
+        name: restrictedCommunityName,
+        description: "Contractor-only work planning.",
+        audience: "contractors",
+      },
+    });
+    assert.equal(restrictedCommunity.response.status, 201);
+
+    const restrictedPost = await requestJson(baseUrl, "/api/v1/shop-talk/posts", {
+      method: "POST",
+      cookie: author.cookie,
+      idempotencyKey: randomUUID(),
+      body: {
+        title: "Can I see the contractor room?",
+        body: "This should not be allowed for tradesperson accounts.",
+        trade: "Electrical",
+        flair: "Question",
+        postType: "question",
+        communitySlug: restrictedCommunity.payload.data.community.slug,
+      },
+    });
+    assert.equal(restrictedPost.response.status, 403);
+    assert.equal(restrictedPost.payload.error.code, "SHOP_TALK_COMMUNITY_RESTRICTED");
 
     // Create a post.
     const key = randomUUID();

@@ -2731,6 +2731,18 @@ textarea:focus-visible {
   padding: 12px;
 }
 
+.activity-item.is-actionable {
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+
+.activity-item.is-actionable:hover {
+  border-color: color-mix(in srgb, var(--accent) 42%, var(--border));
+  background: color-mix(in srgb, var(--accent) 7%, var(--surface-soft));
+}
+
 .activity-item.unread {
   border-color: rgba(255, 75, 0, 0.24);
   background: var(--accent-soft);
@@ -2750,6 +2762,16 @@ textarea:focus-visible {
   font-size: 13px;
   font-weight: var(--v2-weight-strong);
   line-height: 1.42;
+}
+
+.activity-item em {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--accent);
+  font-size: 13px;
+  font-style: normal;
+  font-weight: var(--v2-weight-bold);
 }
 
 .empty-panel-state {

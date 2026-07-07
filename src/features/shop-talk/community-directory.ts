@@ -7,12 +7,14 @@ import {
   Zap,
   type LucideIcon,
 } from "lucide-react";
-import { communitySlug, type ServerCommunity } from "./communities-api";
+import { communitySlug, type CommunityAudience, type ServerCommunity } from "./communities-api";
+import type { Role } from "../../types";
 
 interface CommunityDisplaySeed {
   name: string;
   meta: string;
   memberCount: number;
+  audience?: CommunityAudience;
   icon: LucideIcon;
   tone: string;
 }
@@ -24,6 +26,8 @@ export interface CommunityDisplay {
   meta: string;
   memberCount: number;
   count: string;
+  audience: CommunityAudience;
+  audienceLabel: string;
   icon: LucideIcon;
   tone: string;
   joined: boolean;
@@ -55,13 +59,34 @@ export function formatMemberCount(memberCount: number) {
   return String(memberCount);
 }
 
+export function communityAudienceLabel(audience: CommunityAudience = "public") {
+  if (audience === "contractors") return "Contractors only";
+  if (audience === "tradespeople") return "Tradespeople only";
+  return "Public";
+}
+
+export function communityAudienceDescription(audience: CommunityAudience = "public") {
+  if (audience === "contractors") return "Only contractor accounts can join, post, or answer.";
+  if (audience === "tradespeople") return "Only tradesperson accounts can join, post, or answer.";
+  return "Anyone in RIVT can join, post, and answer.";
+}
+
+export function roleCanAccessCommunity(audience: CommunityAudience = "public", role?: Role) {
+  return audience === "public" ||
+    (audience === "contractors" && role === "contractor") ||
+    (audience === "tradespeople" && role === "tradesperson");
+}
+
 function seedToDisplay(seed: CommunityDisplaySeed): CommunityDisplay {
+  const audience = seed.audience ?? "public";
   return {
     slug: communitySlug(seed.name),
     name: seed.name,
     meta: seed.meta,
     memberCount: seed.memberCount,
     count: formatMemberCount(seed.memberCount),
+    audience,
+    audienceLabel: communityAudienceLabel(audience),
     icon: seed.icon,
     tone: seed.tone,
     joined: false,
@@ -74,6 +99,7 @@ export const fallbackCommunities: CommunityDisplay[] = COMMUNITY_SEEDS.map(seedT
 export function mapServerCommunity(community: ServerCommunity): CommunityDisplay {
   const fallback = COMMUNITY_META.get(community.slug);
   const memberCount = Number.isFinite(community.memberCount) ? community.memberCount : fallback?.memberCount ?? 0;
+  const audience = community.audience ?? "public";
 
   return {
     id: community.id,
@@ -82,6 +108,8 @@ export function mapServerCommunity(community: ServerCommunity): CommunityDisplay
     meta: community.description || fallback?.meta || "Trade community",
     memberCount,
     count: formatMemberCount(memberCount),
+    audience,
+    audienceLabel: communityAudienceLabel(audience),
     icon: fallback?.icon ?? Users,
     tone: fallback?.tone ?? "#444",
     joined: community.joined,

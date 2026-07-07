@@ -19,6 +19,7 @@ import type { ProfileSearchResult } from "./app-shell/types";
 import { AccountPanel, ActivityPanel, ActivityToast } from "./app-shell/AppPanels";
 import type {
   AccountProfile,
+  ActivityItem,
   AuthUser,
   CanonicalAccount,
   DifficultyFilter,
@@ -360,6 +361,7 @@ function toCommunityPostViewModel(post: ServerShopTalkPost): CommunityPost {
     type: normalizePostType(post.type),
     communitySlug: post.communitySlug,
     communityName: post.communityName,
+    communityAudience: post.communityAudience,
     ...(thumbnailUrl ? { thumbnailUrl } : {}),
     ...(thumbnailUrl ? { thumbnailAlt: post.thumbnailAlt ?? firstMedia?.altText ?? firstMedia?.originalName ?? post.title } : {}),
   };
@@ -1665,6 +1667,118 @@ function App() {
     }
   }
 
+  function notificationMetadataValue(notification: InboxNotification, keys: string[]) {
+    for (const key of keys) {
+      const value = notification.metadata?.[key];
+      if (typeof value === "string" && value.trim()) return value.trim();
+    }
+    return null;
+  }
+
+  function notificationSearchParams(notification: InboxNotification) {
+    try {
+      const parsed = new URL(notification.actionHref || "/", window.location.origin);
+      return parsed.searchParams;
+    } catch {
+      return new URLSearchParams();
+    }
+  }
+
+  function notificationRouteText(notification: InboxNotification) {
+    return `${notification.type} ${notification.sourceType} ${notification.actionHref}`.toLowerCase();
+  }
+
+  async function handleOpenNotification(notification: InboxNotification) {
+    const readAt = new Date().toISOString();
+    setInboxNotifications((current) => current.map((candidate) => (
+      candidate.id === notification.id ? { ...candidate, readAt: candidate.readAt ?? readAt } : candidate
+    )));
+    void markNotificationsRead([notification.id], false).catch(() => {
+      // Navigation is more important than blocking on read-state persistence.
+    });
+
+    const params = notificationSearchParams(notification);
+    const routeText = notificationRouteText(notification);
+    const sourceId = notification.sourceId ?? null;
+    const conversationId = notificationMetadataValue(notification, ["conversationId", "conversation_id"]) ??
+      params.get("conversation") ??
+      params.get("conversationId") ??
+      (notification.sourceType === "message" ? sourceId : null);
+    const postId = notificationMetadataValue(notification, ["postId", "post_id", "shopTalkPostId"]) ??
+      params.get("post") ??
+      params.get("postId") ??
+      (notification.sourceType === "shop_talk_post" ? sourceId : null);
+    const communitySlugValue = notificationMetadataValue(notification, ["communitySlug", "community_slug"]) ??
+      params.get("community") ??
+      params.get("communitySlug");
+    const jobId = notificationMetadataValue(notification, ["jobId", "job_id"]) ??
+      params.get("job") ??
+      params.get("jobId") ??
+      (notification.sourceType === "job" ? sourceId : null);
+    const activeWorkId = notificationMetadataValue(notification, ["activeWorkId", "active_work_id"]) ??
+      params.get("activeWork") ??
+      params.get("activeWorkId") ??
+      (notification.sourceType === "active_work" ? sourceId : null);
+    const projectId = notificationMetadataValue(notification, ["projectId", "project_id"]) ??
+      params.get("project") ??
+      params.get("projectId") ??
+      (notification.sourceType === "project" ? sourceId : null);
+
+    setActivityOpen(false);
+    setAccountOpen(false);
+
+    if (conversationId || routeText.includes("message") || routeText.includes("conversation") || routeText.includes("inbox")) {
+      if (conversationId) setSelectedConversationId(conversationId);
+      handleNavigate("Messages");
+      void reloadInbox();
+      return;
+    }
+
+    if (routeText.includes("shop-talk") || routeText.includes("community") || routeText.includes("answer")) {
+      setShopTalkGlobalQuery("");
+      setShopTalkCompose(false);
+      setShopTalkAnswerQueue(false);
+      setShopTalkCommunitySlug(communitySlugValue ?? null);
+      setShopTalkPostId(postId ?? null);
+      handleNavigate("Shop Talk");
+      return;
+    }
+
+    if (routeText.includes("record") || routeText.includes("project") || routeText.includes("photo") || routeText.includes("media") || routeText.includes("tool")) {
+      void projectId;
+      handleOpenTool("job-photos");
+      return;
+    }
+
+    if (routeText.includes("support") || routeText.includes("feedback")) {
+      handleNavigate("Feedback");
+      return;
+    }
+
+    if (routeText.includes("profile") || routeText.includes("review") || routeText.includes("account")) {
+      handleNavigate(routeText.includes("review") ? "Reviews" : "Settings");
+      return;
+    }
+
+    if (routeText.includes("work") || routeText.includes("job") || routeText.includes("offer") || activeWorkId || jobId) {
+      const match = jobs.find((candidate) => (
+        jobId && (candidate.canonical?.id === jobId || String(candidate.id) === jobId)
+      ));
+      if (match) setSelectedId(match.id);
+      handleNavigate("Work");
+      void reloadJobs();
+      return;
+    }
+
+    handleNavigate("Home");
+  }
+
+  async function handleOpenActivityItem(item: ActivityItem) {
+    const notification = inboxNotifications.find((candidate) => String(candidate.id) === String(item.id));
+    if (!notification) return;
+    await handleOpenNotification(notification);
+  }
+
   async function handleMuteSelectedConversation() {
     if (!selectedConversationId) return;
     try {
@@ -1982,6 +2096,7 @@ function App() {
         ) : activeView === "Shop Talk" ? (
           <ShopTalkView
             key={`shop-talk-${shopTalkGlobalQuery}-${shopTalkCommunitySlug ?? ""}-${shopTalkPostId ?? ""}-${shopTalkCompose ? "c" : ""}-${shopTalkAnswerQueue ? "answers" : ""}`}
+            role={role}
             profile={accountProfile}
             communityPosts={communityPosts}
             communities={communities}
@@ -2043,6 +2158,9 @@ function App() {
             }}
             onMarkSelectedRead={() => void handleMarkSelectedConversationRead()}
             onMarkNotificationsRead={() => void handleMarkNotificationsRead()}
+            onOpenNotification={(notification) => {
+              void handleOpenNotification(notification);
+            }}
             onMuteSelected={() => void handleMuteSelectedConversation()}
             onReportSelected={() => void handleReportSelectedConversation()}
             onRefresh={() => void reloadInbox()}
@@ -2124,6 +2242,7 @@ function App() {
             void handleMarkNotificationsRead();
           }}
           onNavigate={handleNavigate}
+          onOpenItem={handleOpenActivityItem}
         />
       )}
 

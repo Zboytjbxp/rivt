@@ -1,6 +1,7 @@
 import {
   BadgeCheck,
   Bell,
+  ChevronRight,
   Flag,
   FolderOpen,
   LogOut,
@@ -22,6 +23,7 @@ export interface ActivityItemForPanel {
   detail: string;
   timestamp: string;
   unread: boolean;
+  actionLabel?: string;
   kind?: "info" | "success" | "warning" | "error";
 }
 
@@ -74,11 +76,13 @@ export function ActivityPanel({
   onClose,
   onMarkAllRead,
   onNavigate,
+  onOpenItem,
 }: {
   items: ActivityItemForPanel[];
   onClose: () => void;
   onMarkAllRead: () => void;
   onNavigate: (view: NavLabel) => void;
+  onOpenItem?: (item: ActivityItemForPanel) => void;
 }) {
   const trapRef = useFocusTrap<HTMLElement>(onClose);
   return (
@@ -116,13 +120,37 @@ export function ActivityPanel({
               <strong>No activity yet</strong>
               <span>Use any feature in the app and activity will appear here.</span>
             </article>
-          ) : items.map((item) => (
-            <article key={item.id} className={item.unread ? "activity-item unread" : "activity-item"}>
-              <span>{item.timestamp}</span>
-              <strong>{item.title}</strong>
-              <p>{item.detail}</p>
-            </article>
-          ))}
+          ) : items.map((item) => {
+            const className = item.unread ? "activity-item unread" : "activity-item";
+            const content = (
+              <>
+                <span>{item.timestamp}</span>
+                <strong>{item.title}</strong>
+                <p>{item.detail}</p>
+                {item.actionLabel ? (
+                  <em>
+                    {item.actionLabel}
+                    <ChevronRight size={13} />
+                  </em>
+                ) : null}
+              </>
+            );
+            return item.actionLabel && onOpenItem ? (
+              <button
+                key={item.id}
+                type="button"
+                className={`${className} is-actionable`}
+                onClick={() => onOpenItem(item)}
+                aria-label={`${item.actionLabel}: ${item.title}`}
+              >
+                {content}
+              </button>
+            ) : (
+              <article key={item.id} className={className}>
+                {content}
+              </article>
+            );
+          })}
         </div>
       </aside>
     </div>

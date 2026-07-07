@@ -150,6 +150,29 @@ function defaultCommunitySlugForTrade(trade) {
   }
 }
 
+function actorRole(actor) {
+  return actor?.account?.primaryRole === "contractor" || actor?.account?.primaryRole === "tradesperson"
+    ? actor.account.primaryRole
+    : "pending";
+}
+
+function communityAudienceAllowed(audience, role) {
+  return audience === "public" ||
+    (audience === "contractors" && role === "contractor") ||
+    (audience === "tradespeople" && role === "tradesperson");
+}
+
+function audienceRestrictionMessage(audience) {
+  if (audience === "contractors") return "This Shop Talk community is limited to contractor accounts.";
+  if (audience === "tradespeople") return "This Shop Talk community is limited to tradesperson accounts.";
+  return "This Shop Talk community is not available for your account.";
+}
+
+function assertCommunityAudience(community, actor) {
+  if (communityAudienceAllowed(community.audience ?? "public", actorRole(actor))) return;
+  throw new ApiError(403, "SHOP_TALK_COMMUNITY_RESTRICTED", audienceRestrictionMessage(community.audience));
+}
+
 function mapShopTalkAnswerRow(row) {
   return {
     id: row.id,
@@ -196,6 +219,7 @@ function mapShopTalkPostRow(row) {
     communityId: row.community_id,
     communitySlug: row.community_slug,
     communityName: row.community_name,
+    communityAudience: row.community_audience ?? "public",
     answers: Array.isArray(row.answers) ? row.answers.map(mapShopTalkAnswerRow) : [],
     media,
     thumbnailUrl: media[0]?.signedUrl ?? null,
@@ -212,9 +236,9 @@ async function mapShopTalkPostRowWithMedia(row, signedObjectUrl) {
   return mapShopTalkPostRow({ ...row, media });
 }
 
-async function requireCommunityForPost(client, slug) {
+async function requireCommunityForPost(client, slug, actor) {
   const found = await client.query(
-    `SELECT id, slug, name, moderation_status
+    `SELECT id, slug, name, audience, moderation_status
      FROM communities
      WHERE slug = $1
        AND archived_at IS NULL
@@ -227,14 +251,20 @@ async function requireCommunityForPost(client, slug) {
   if (found.rows[0].moderation_status === "locked") {
     throw new ApiError(409, "COMMUNITY_LOCKED", "This community is locked and cannot receive new posts.");
   }
+  assertCommunityAudience(found.rows[0], actor);
   return found.rows[0];
 }
 
-async function fetchShopTalkPostRows(client, { communitySlug = null, postId = null } = {}) {
-  const params = [];
+async function fetchShopTalkPostRows(client, { actor, communitySlug = null, postId = null } = {}) {
+  const params = [actorRole(actor)];
   let whereClause = `WHERE community.archived_at IS NULL
      AND community.moderation_status <> 'hidden'
-     AND post.moderation_status <> 'hidden'`;
+     AND post.moderation_status <> 'hidden'
+     AND (
+       community.audience = 'public'
+       OR (community.audience = 'contractors' AND $1 = 'contractor')
+       OR (community.audience = 'tradespeople' AND $1 = 'tradesperson')
+     )`;
   if (postId) {
     params.push(postId);
     whereClause += ` AND post.id = $${params.length}`;
@@ -257,6 +287,7 @@ async function fetchShopTalkPostRows(client, { communitySlug = null, postId = nu
             post.community_id,
             community.slug AS community_slug,
             community.name AS community_name,
+            community.audience AS community_audience,
             answers.answers,
             media.media
      FROM shop_talk_posts post
@@ -344,7 +375,7 @@ export function registerShopTalkRoutes({
 }) {
   app.get("/api/v1/shop-talk/posts", requireV1AuthenticatedUser, requireV1Actor, asyncRoute(async (request, response) => {
     const { community } = validate(shopTalkPostsQuerySchema, request.query);
-    const rows = await fetchShopTalkPostRows(database, { communitySlug: community ?? null });
+    const rows = await fetchShopTalkPostRows(database, { actor: request.actor, communitySlug: community ?? null });
     response.json({
       data: { posts: await Promise.all(rows.map((row) => mapShopTalkPostRowWithMedia(row, signedObjectUrl))) },
       meta: { requestId: request.requestId },
@@ -366,6 +397,7 @@ export function registerShopTalkRoutes({
         const community = await requireCommunityForPost(
           client,
           input.communitySlug ?? defaultCommunitySlugForTrade(input.trade),
+          request.actor,
         );
         const inserted = await client.query(
           `INSERT INTO shop_talk_posts (
@@ -385,6 +417,7 @@ export function registerShopTalkRoutes({
         );
         inserted.rows[0].community_slug = community.slug;
         inserted.rows[0].community_name = community.name;
+        inserted.rows[0].community_audience = community.audience;
         inserted.rows[0].answers = [];
         return {
           status: 201,
@@ -500,7 +533,7 @@ export function registerShopTalkRoutes({
             ],
           );
 
-          const [updatedPostRow] = await fetchShopTalkPostRows(client, { postId });
+          const [updatedPostRow] = await fetchShopTalkPostRows(client, { actor: request.actor, postId });
           return {
             status: 201,
             body: {
@@ -603,8 +636,13 @@ export function registerShopTalkRoutes({
        WHERE post.id = $1
          AND post.moderation_status <> 'hidden'
          AND community.archived_at IS NULL
-         AND community.moderation_status <> 'hidden'`,
-      [postId],
+         AND community.moderation_status <> 'hidden'
+         AND (
+           community.audience = 'public'
+           OR (community.audience = 'contractors' AND $2 = 'contractor')
+           OR (community.audience = 'tradespeople' AND $2 = 'tradesperson')
+         )`,
+      [postId, actorRole(request.actor)],
     );
     if (!found.rowCount) {
       throw new ApiError(404, "SHOP_TALK_POST_NOT_FOUND", "That Shop Talk post does not exist.");
@@ -632,8 +670,13 @@ export function registerShopTalkRoutes({
              AND community.archived_at IS NULL
              AND post.moderation_status <> 'hidden'
              AND community.moderation_status <> 'hidden'
+             AND (
+               community.audience = 'public'
+               OR (community.audience = 'contractors' AND $2 = 'contractor')
+               OR (community.audience = 'tradespeople' AND $2 = 'tradesperson')
+             )
            FOR UPDATE OF post`,
-          [postId],
+          [postId, actorRole(request.actor)],
         );
         if (!post.rowCount) {
           throw new ApiError(404, "SHOP_TALK_POST_NOT_FOUND", "That Shop Talk post does not exist.");
@@ -696,8 +739,13 @@ export function registerShopTalkRoutes({
              AND post.moderation_status <> 'hidden'
              AND community.archived_at IS NULL
              AND community.moderation_status <> 'hidden'
+             AND (
+               community.audience = 'public'
+               OR (community.audience = 'contractors' AND $2 = 'contractor')
+               OR (community.audience = 'tradespeople' AND $2 = 'tradesperson')
+             )
            FOR UPDATE OF post`,
-          [postId],
+          [postId, actorRole(request.actor)],
         );
         if (!post.rowCount) {
           throw new ApiError(404, "SHOP_TALK_POST_NOT_FOUND", "That Shop Talk post does not exist.");
