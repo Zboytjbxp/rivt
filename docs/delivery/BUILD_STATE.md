@@ -2,10 +2,31 @@
 
 Last updated: 2026-07-07 America/New_York
 Current gate: Gate A launch hardening
-Current phase: Packet 08 Gate A launch hardening plus Gate B behind-flag backbone work: machine gates and live workflow smokes are mostly green; the Shop Talk Reddit-model backbone, moderation/reporting backend, human-facing moderation console/report UX, post photo media, reachability/naming cleanup, Tools hub consolidation, Payment Tracker server records, money-tools sync, the accepted tool-records sync slices, non-tool local-state boundary cleanup, dedicated network-records sync for Crew/Invites/informal written shout-outs, screen-density polish, mobile layout/device-accessibility subtraction, fraction calculator ergonomics, iPhone SE layout containment, immersive-tool compact-device containment, SE tool chrome cleanup slices, native metric calculator rebuild, the camera-first records/photos tool rebuild, and admin support-case review for account-type requests are implemented while still respecting launch-readiness boundaries before broad exposure.
+Current phase: Packet 08 Gate A launch hardening plus Gate B behind-flag backbone work: machine gates and live workflow smokes are mostly green; the Shop Talk Reddit-model backbone, moderation/reporting backend, human-facing moderation console/report UX, post photo media, reachability/naming cleanup, Tools hub consolidation, Payment Tracker server records, money-tools sync, the accepted tool-records sync slices, non-tool local-state boundary cleanup, dedicated network-records sync for Crew/Invites/informal written shout-outs, screen-density polish, mobile layout/device-accessibility subtraction, fraction calculator ergonomics, iPhone SE layout containment, immersive-tool compact-device containment, SE tool chrome cleanup slices, native metric calculator rebuild, the camera-first records/photos tool rebuild, admin support-case review for account-type requests, and offer start-date normalization are implemented while still respecting launch-readiness boundaries before broad exposure.
 Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
 Production release commit: `727986f630fc4d7d7166d3e516e79817dc8bf270` verified with live `/api/health` and `npm run monitor:production`; latest runtime feature evidence is recorded below and docs-only evidence commits may supersede the served build SHA.
+
+## Latest Packet 08 Pass - Offer Start Date Normalization
+
+- Fixed the contractor `Send offer` path after a real mobile failure showing `Request validation failed for startDate`:
+  - job API mapping now serializes `preferredStartDate` as `YYYY-MM-DD` instead of allowing a database date/timestamp object to become a full ISO datetime in the client payload
+  - the Work UI defensively normalizes offer start dates before calling `/api/v1/applications/:id/offer`
+  - the offer uses the applicant's proposed start date first, then the job's preferred start date, and otherwise sends `null` rather than inventing a date
+  - applicant cards now show the start date that will be used for the offer, so the contractor is not sending a hidden value
+  - validation copy now labels `startDate` as `offer start date`
+- Preserved launch boundaries:
+  - no new role, authorization, billing, invite, or production-data behavior was added
+  - the backend offer contract remains server-owned and idempotent
+  - no frontend-only success state was added
+- Local verification:
+  - `npm run build` (pass)
+  - `npm run lint` (pass)
+  - `npm run lint:security` (pass)
+  - `npm run test:unit` (pass; 45/45)
+  - `npm run test:e2e` (pass)
+  - `npm run test:integration` (pass for non-DB checks; 15 DB-backed cases skipped because `TEST_DATABASE_URL` is not configured locally)
+  - `npm audit --omit=dev` (pass; 0 vulnerabilities)
 
 ## Latest Packet 08 Pass - Admin Support Account Review
 

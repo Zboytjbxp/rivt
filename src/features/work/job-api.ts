@@ -192,6 +192,8 @@ const jobFieldLabels: Record<string, string> = {
   publicLocation: "public city/state",
   privateLocation: "exact jobsite address",
   applicationDeadline: "application deadline",
+  startDate: "offer start date",
+  expiresAt: "offer expiration",
 };
 
 function formatJobApiMessage(code: string, fallback: string, details: unknown) {

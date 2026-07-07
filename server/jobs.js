@@ -139,6 +139,15 @@ export function requirementsByKind(rows = []) {
   return result;
 }
 
+function isoDate(value) {
+  if (!value) return null;
+  return typeof value === "string" ? value.slice(0, 10) : value.toISOString().slice(0, 10);
+}
+
+function isoDateTime(value) {
+  return value ? new Date(value).toISOString() : null;
+}
+
 export function calculateMatchScore(job, actor) {
   if (!actor || actor.account.primaryRole !== "tradesperson") return null;
   const tradeCodes = new Set(actor.profile.trades.map((trade) => trade.code));
@@ -166,8 +175,8 @@ export function mapJobRecord(row, { includePrivateLocation = false, actor = null
       unit: row.budget_unit,
     },
     durationHours: row.duration_hours === null ? null : Number(row.duration_hours),
-    preferredStartDate: row.preferred_start_date,
-    applicationDeadline: row.application_deadline,
+    preferredStartDate: isoDate(row.preferred_start_date),
+    applicationDeadline: isoDateTime(row.application_deadline),
     insuranceRequired: row.insurance_required,
     publicLocation: {
       city: row.public_city,
@@ -179,18 +188,18 @@ export function mapJobRecord(row, { includePrivateLocation = false, actor = null
     addressPrivacy: "Exact address is shared only after an accepted work relationship.",
     matchScore: calculateMatchScore(row, actor),
     version: row.version,
-    publishedAt: row.published_at,
-    pausedAt: row.paused_at,
-    closedAt: row.closed_at,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
+    publishedAt: isoDateTime(row.published_at),
+    pausedAt: isoDateTime(row.paused_at),
+    closedAt: isoDateTime(row.closed_at),
+    createdAt: isoDateTime(row.created_at),
+    updatedAt: isoDateTime(row.updated_at),
     events: events.map((event) => ({
       id: event.id,
       type: event.event_type,
       fromStatus: event.from_status,
       toStatus: event.to_status,
       reason: event.reason,
-      occurredAt: event.occurred_at,
+      occurredAt: isoDateTime(event.occurred_at),
     })),
   };
 

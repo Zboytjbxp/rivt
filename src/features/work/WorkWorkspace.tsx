@@ -159,6 +159,28 @@ function getPublishBlockers(job: Job) {
   return blockers;
 }
 
+function normalizeOfferDate(value: unknown) {
+  const raw = String(value ?? "").trim();
+  if (!raw) return null;
+  const directMatch = raw.match(/^\d{4}-\d{2}-\d{2}/);
+  if (directMatch) return directMatch[0];
+  const date = new Date(raw);
+  return Number.isNaN(date.getTime()) ? null : date.toISOString().slice(0, 10);
+}
+
+function offerStartDateFor(job: Job, application: CanonicalApplication) {
+  return normalizeOfferDate(application.proposedStartDate) ?? normalizeOfferDate(job.canonical?.preferredStartDate);
+}
+
+function formatOfferStartDate(value: string | null) {
+  if (!value) return "No start date set";
+  return new Date(`${value}T00:00:00`).toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
 // ── Change Order Tracker ──────────────────────────────────────────────────────
 
 const changeOrderKey = "rivt.changeOrders.v1";
@@ -1267,9 +1289,10 @@ export function WorkWorkspace({
   }
 
   async function handleSendOffer(job: Job, application: CanonicalApplication) {
+    const startDate = offerStartDateFor(job, application);
     await runMatchAction(`offer:${application.id}`, async () => {
       await sendOffer(application.id, {
-        startDate: job.canonical?.preferredStartDate ?? null,
+        startDate,
         scopeSummary: job.canonical?.scopeDescription || job.summary,
         message: `Offer for ${job.title}. Accept to unlock the exact jobsite and active work record.`,
       });
@@ -1645,25 +1668,29 @@ export function WorkWorkspace({
                   ) : role === "contractor" ? (
                     matchApplications.length ? (
                       <div className="v2-applicant-list">
-                        {matchApplications.map((application) => (
-                          <article className="v2-applicant-card" key={application.id}>
-                            <div>
-                              <span>{application.status}</span>
-                              <strong>{application.applicant?.displayName || "Tradesperson"}</strong>
-                              <small>{application.applicant?.headline || `${application.applicant?.serviceArea.city ?? ""}, ${application.applicant?.serviceArea.region ?? ""}`}</small>
-                              {application.message ? <p>{application.message}</p> : null}
-                            </div>
-                            <div className="v2-match-actions">
-                              {application.status === "submitted" ? <button type="button" disabled={Boolean(activeAction)} onClick={() => void handleShortlist(application)}>Shortlist</button> : null}
-                              {["submitted", "shortlisted"].includes(application.status) ? (
-                                <>
-                                  <button type="button" className="v2-primary-button" disabled={Boolean(activeAction)} onClick={() => void handleSendOffer(detailJob, application)}>Send offer</button>
-                                  <button type="button" disabled={Boolean(activeAction)} onClick={() => void handleDeclineApplication(application)}>Decline</button>
-                                </>
-                              ) : <small>{application.status === "offered" ? "Offer sent" : "No action needed"}</small>}
-                            </div>
-                          </article>
-                        ))}
+                        {matchApplications.map((application) => {
+                          const offerStartDate = offerStartDateFor(detailJob, application);
+                          return (
+                            <article className="v2-applicant-card" key={application.id}>
+                              <div>
+                                <span>{application.status}</span>
+                                <strong>{application.applicant?.displayName || "Tradesperson"}</strong>
+                                <small>{application.applicant?.headline || `${application.applicant?.serviceArea.city ?? ""}, ${application.applicant?.serviceArea.region ?? ""}`}</small>
+                                <small className="v2-offer-start-note">Offer start: {formatOfferStartDate(offerStartDate)}</small>
+                                {application.message ? <p>{application.message}</p> : null}
+                              </div>
+                              <div className="v2-match-actions">
+                                {application.status === "submitted" ? <button type="button" disabled={Boolean(activeAction)} onClick={() => void handleShortlist(application)}>Shortlist</button> : null}
+                                {["submitted", "shortlisted"].includes(application.status) ? (
+                                  <>
+                                    <button type="button" className="v2-primary-button" disabled={Boolean(activeAction)} onClick={() => void handleSendOffer(detailJob, application)}>Send offer</button>
+                                    <button type="button" disabled={Boolean(activeAction)} onClick={() => void handleDeclineApplication(application)}>Decline</button>
+                                  </>
+                                ) : <small>{application.status === "offered" ? "Offer sent" : "No action needed"}</small>}
+                              </div>
+                            </article>
+                          );
+                        })}
                       </div>
                     ) : (
                       <div className="v2-match-empty"><strong>No applicants yet</strong><span>{detailJob.status === "Open" ? "Tradespeople who apply will appear here." : `This job is ${detailJob.status.toLowerCase()} — publish it to start receiving applicants.`}</span></div>
