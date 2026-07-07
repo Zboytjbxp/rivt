@@ -5,7 +5,7 @@ Current gate: Gate A launch hardening
 Current phase: Packet 08 Gate A launch hardening plus Gate B behind-flag backbone work: machine gates and live workflow smokes are mostly green; the Shop Talk Reddit-model backbone, moderation/reporting backend, human-facing moderation console/report UX, post photo media, reachability/naming cleanup, Tools hub consolidation, Payment Tracker server records, money-tools sync, the accepted tool-records sync slices, non-tool local-state boundary cleanup, dedicated network-records sync for Crew/Invites/informal written shout-outs, screen-density polish, mobile layout/device-accessibility subtraction, fraction calculator ergonomics, iPhone SE layout containment, immersive-tool compact-device containment, SE tool chrome cleanup slices, native metric calculator rebuild, and the camera-first records/photos tool rebuild are implemented while still respecting launch-readiness boundaries before broad exposure.
 Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
-Production release commit: `c8953404bd58f63f97f71e3a143afe6ee325a59b` verified with live `/api/health`, `npm run monitor:production`, and a live password-reset smoke; latest runtime feature evidence is recorded below and docs-only evidence commits may supersede the served build SHA.
+Production release commit: `ccd115667e2f58936373d43ced6e327884c36bdb` verified with live `/api/health` and `npm run monitor:production`; latest runtime feature evidence is recorded below and docs-only evidence commits may supersede the served build SHA.
 
 ## Latest Packet 08 Pass - Account Type Change Request
 
@@ -18,6 +18,9 @@ Production release commit: `c8953404bd58f63f97f71e3a143afe6ee325a59b` verified w
   - the existing server guard still rejects direct post-onboarding role mutation with `ROLE_IMMUTABLE`
   - support requests use the authenticated `/api/v1/support/cases` path with idempotency and existing rate limiting
   - no database migrations, provider configuration, auth flow, billing flow, invite flow, or production data changes were made
+- Live verification:
+  - production `/api/health` reported exact build commit `ccd115667e2f58936373d43ced6e327884c36bdb`
+  - `EXPECTED_SOURCE_COMMIT=ccd115667e2f58936373d43ced6e327884c36bdb npm run monitor:production` passed with PostgreSQL, S3-compatible object storage, configured Sentry, operational controls off, seven anonymous private-route checks, and 565 ms duration
 - Local verification:
   - `npm run build` (pass)
   - `npm run lint` (pass)
