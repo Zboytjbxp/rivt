@@ -23,13 +23,15 @@ function notificationActionLabel(notification: InboxNotification) {
   }
   if (
     notification.sourceType === "offer" ||
-    notification.sourceType === "active_work" ||
     notification.sourceType === "job" ||
     typeof notification.metadata?.jobId === "string" ||
     typeof notification.metadata?.job_id === "string" ||
     href.includes("work")
   ) {
     return "Open work";
+  }
+  if (notification.sourceType === "active_work") {
+    return "Open active work";
   }
   if (
     notification.sourceType === "message" ||

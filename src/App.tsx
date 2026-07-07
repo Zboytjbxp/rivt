@@ -62,6 +62,7 @@ import {
   markConversationRead,
   markNotificationsRead,
   muteConversation,
+  openActiveWorkConversation,
   reportConversation,
   sendConversationMessage,
   type InboxConversation,
@@ -482,6 +483,7 @@ function App() {
   const [inboxMessages, setInboxMessages] = useState<InboxMessage[]>([]);
   const [inboxNotifications, setInboxNotifications] = useState<InboxNotification[]>([]);
   const [activeWork, setActiveWork] = useState<CanonicalActiveWork[]>([]);
+  const [focusedActiveWorkId, setFocusedActiveWorkId] = useState<string | null>(null);
   const [messageBrowserNotificationsEnabled, setMessageBrowserNotificationsEnabled] = useState(true);
   const [inboxLoading, setInboxLoading] = useState(false);
   const [inboxSending, setInboxSending] = useState(false);
@@ -1258,6 +1260,14 @@ function App() {
     setPostOpen(false);
   }
 
+  function mergeActiveWorkRecord(nextWork: CanonicalActiveWork) {
+    setActiveWork((current) => [
+      nextWork,
+      ...current.filter((candidate) => candidate.id !== nextWork.id),
+    ]);
+    setFocusedActiveWorkId(nextWork.id);
+  }
+
   function handleToolChange(tool: ToolMode) {
     const nextTool = tool === "hub" ? null : tool;
     setRequestedTool(nextTool);
@@ -1755,6 +1765,19 @@ function App() {
     return `${notification.type} ${notification.sourceType} ${notification.actionHref}`.toLowerCase();
   }
 
+  async function handleOpenActiveWorkMessages(activeWorkId: string) {
+    setFocusedActiveWorkId(activeWorkId);
+    try {
+      const conversation = await openActiveWorkConversation(activeWorkId);
+      setSelectedConversationId(conversation.id);
+      handleNavigate("Messages");
+      void reloadInbox();
+    } catch {
+      handleNavigate("Messages");
+      void reloadInbox();
+    }
+  }
+
   async function handleOpenNotification(notification: InboxNotification) {
     const readAt = new Date().toISOString();
     setInboxNotifications((current) => current.map((candidate) => (
@@ -1794,6 +1817,21 @@ function App() {
     setActivityOpen(false);
     setAccountOpen(false);
 
+    if (notification.sourceType === "active_work" && activeWorkId) {
+      const activeMatch = activeWork.find((candidate) => candidate.id === activeWorkId) ?? null;
+      const resolvedJobId = jobId ?? activeMatch?.jobId ?? null;
+      const match = jobs.find((candidate) => (
+        resolvedJobId && (candidate.canonical?.id === resolvedJobId || String(candidate.id) === resolvedJobId)
+      ));
+      setFocusedActiveWorkId(activeWorkId);
+      if (match) setSelectedId(match.id);
+      handleNavigate("Work");
+      void reloadActiveWork();
+      void reloadJobs();
+      void reloadInbox();
+      return;
+    }
+
     if (conversationId || routeText.includes("message") || routeText.includes("conversation") || routeText.includes("inbox")) {
       if (conversationId) setSelectedConversationId(conversationId);
       handleNavigate("Messages");
@@ -1813,7 +1851,8 @@ function App() {
 
     if (routeText.includes("record") || routeText.includes("project") || routeText.includes("photo") || routeText.includes("media") || routeText.includes("tool")) {
       void projectId;
-      handleOpenTool("job-photos");
+      if (activeWorkId) setFocusedActiveWorkId(activeWorkId);
+      handleNavigate("Records");
       return;
     }
 
@@ -1828,12 +1867,16 @@ function App() {
     }
 
     if (routeText.includes("work") || routeText.includes("job") || routeText.includes("offer") || activeWorkId || jobId) {
+      const activeMatch = activeWorkId ? activeWork.find((candidate) => candidate.id === activeWorkId) ?? null : null;
+      const resolvedJobId = jobId ?? activeMatch?.jobId ?? null;
       const match = jobs.find((candidate) => (
-        jobId && (candidate.canonical?.id === jobId || String(candidate.id) === jobId)
+        resolvedJobId && (candidate.canonical?.id === resolvedJobId || String(candidate.id) === resolvedJobId)
       ));
+      if (activeWorkId) setFocusedActiveWorkId(activeWorkId);
       if (match) setSelectedId(match.id);
       handleNavigate("Work");
       void reloadJobs();
+      void reloadActiveWork();
       return;
     }
 
@@ -2127,12 +2170,14 @@ function App() {
             onNavigate={(destination) => handleNavigate(defaultViewForDestination(destination))}
             onOpenProfile={() => handleNavigate("Settings")}
             onOpenTool={handleOpenTool}
+            onOpenActiveWorkMessages={(activeWorkId) => void handleOpenActiveWorkMessages(activeWorkId)}
           />
         ) : activeView === "Work" ? (
           <WorkWorkspace
             role={role}
             jobs={filteredJobs}
             activeWorkRecords={activeWork}
+            focusedActiveWorkId={focusedActiveWorkId}
             selectedJob={selectedJob.id ? selectedJob : null}
             loading={jobsLoading}
             error={jobsError}
@@ -2155,7 +2200,16 @@ function App() {
             onJobLoaded={handleJobLoaded}
             onOpenTool={handleOpenTool}
             onOpenRecords={() => handleNavigate("Records")}
+            onOpenActiveWorkMessages={(activeWorkId) => void handleOpenActiveWorkMessages(activeWorkId)}
             onRetry={() => void reloadJobs()}
+            onOfferAccepted={(nextWork) => {
+              mergeActiveWorkRecord(nextWork);
+              addActivity(
+                "Active work started",
+                `${nextWork.job?.title ?? "Accepted work"} moved into active work. Open Work, messages, records, or the daily log next.`,
+                "success",
+              );
+            }}
             onActiveWorkChanged={() => {
               void reloadActiveWork();
               void reloadJobs();

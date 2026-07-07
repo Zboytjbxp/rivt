@@ -72,6 +72,7 @@ interface WorkWorkspaceProps {
   role: Role;
   jobs: Job[];
   activeWorkRecords?: CanonicalActiveWork[];
+  focusedActiveWorkId?: string | null;
   selectedJob: Job | null;
   loading: boolean;
   error: string | null;
@@ -94,7 +95,9 @@ interface WorkWorkspaceProps {
   onJobLoaded: (job: Job) => void;
   onOpenTool: (tool: "daily-log" | "invoice") => void;
   onOpenRecords: () => void;
+  onOpenActiveWorkMessages: (activeWorkId: string) => void;
   onRetry: () => void;
+  onOfferAccepted?: (activeWork: CanonicalActiveWork) => void;
   onActiveWorkChanged?: () => void;
 }
 
@@ -1170,6 +1173,7 @@ export function WorkWorkspace({
   role,
   jobs,
   activeWorkRecords = [],
+  focusedActiveWorkId = null,
   selectedJob,
   loading,
   error,
@@ -1192,7 +1196,9 @@ export function WorkWorkspace({
   onJobLoaded,
   onOpenTool,
   onOpenRecords,
+  onOpenActiveWorkMessages,
   onRetry,
+  onOfferAccepted,
   onActiveWorkChanged,
 }: WorkWorkspaceProps) {
   const persona = usePersona();
@@ -1227,7 +1233,11 @@ export function WorkWorkspace({
     () => activeWorkRecords.filter((work) => work.status === "active"),
     [activeWorkRecords],
   );
-  const primaryActiveWorkRecord = activeWorkReady[0] ?? null;
+  const focusedActiveWorkRecord = useMemo(
+    () => (focusedActiveWorkId ? activeWorkRecords.find((work) => work.id === focusedActiveWorkId) ?? null : null),
+    [activeWorkRecords, focusedActiveWorkId],
+  );
+  const primaryActiveWorkRecord = focusedActiveWorkRecord ?? activeWorkReady[0] ?? activeWorkRecords[0] ?? null;
 
   const activeFilterCount = [
     trade !== "All trades",
@@ -1247,6 +1257,9 @@ export function WorkWorkspace({
   function openActiveWorkJob(work: CanonicalActiveWork) {
     const matchingJob = jobs.find((job) => job.canonical?.id === work.jobId);
     if (matchingJob) {
+      if (role === "contractor" && matchingJob.status === "Closed") {
+        setContractorSection("closed");
+      }
       selectJob(matchingJob.id);
       return;
     }
@@ -1319,7 +1332,15 @@ export function WorkWorkspace({
 
   async function handleAcceptOffer(offer: CanonicalOffer) {
     await runMatchAction(`accept:${offer.id}`, async () => {
-      await acceptOffer(offer.id, "Confirmed in RIVT.");
+      const accepted = await acceptOffer(offer.id, "Confirmed in RIVT.");
+      setMatchOffers((current) => current.map((candidate) => (
+        candidate.id === offer.id ? accepted.offer : candidate
+      )));
+      setMatchActiveWork((current) => [
+        accepted.activeWork,
+        ...current.filter((candidate) => candidate.id !== accepted.activeWork.id),
+      ]);
+      onOfferAccepted?.(accepted.activeWork);
       await refreshDetailJob();
       onActiveWorkChanged?.();
     });
@@ -1493,9 +1514,11 @@ export function WorkWorkspace({
   const acceptedOffer = canonicalJobId
     ? matchOffers.find((offer) => offer.jobId === canonicalJobId && offer.status === "accepted")
     : undefined;
-  const activeWork = canonicalJobId
-    ? matchActiveWork.find((work) => work.jobId === canonicalJobId)
-    : undefined;
+  const activeWork = focusedActiveWorkId
+    ? matchActiveWork.find((work) => work.id === focusedActiveWorkId) ?? matchActiveWork.find((work) => work.jobId === canonicalJobId)
+    : canonicalJobId
+      ? matchActiveWork.find((work) => work.jobId === canonicalJobId)
+      : undefined;
 
   return (
     <section className="v2-work-page" aria-label="Work">
@@ -1597,6 +1620,9 @@ export function WorkWorkspace({
             <button type="button" className="v2-primary-button" onClick={() => openActiveWorkJob(primaryActiveWorkRecord)}>
               Open active work
             </button>
+            <button type="button" className="v2-secondary-button" onClick={() => onOpenActiveWorkMessages(primaryActiveWorkRecord.id)}>
+              Messages
+            </button>
             <button type="button" className="v2-secondary-button" onClick={() => onOpenRecords()}>
               Records/photos
             </button>
@@ -1691,6 +1717,7 @@ export function WorkWorkspace({
                         The original posting is closed to new applicants. This job now lives here as active work for both sides.
                       </p>
                       <div className="v2-match-actions">
+                        <button type="button" disabled={Boolean(activeAction)} onClick={() => onOpenActiveWorkMessages(activeWork.id)}>Messages</button>
                         <button type="button" disabled={Boolean(activeAction)} onClick={() => onOpenTool("daily-log")}>Daily log</button>
                         <button type="button" disabled={Boolean(activeAction)} onClick={() => onOpenRecords()}>Records/photos</button>
                         <button type="button" disabled={Boolean(activeAction)} onClick={() => onOpenTool("invoice")}>Invoice</button>

@@ -7,6 +7,31 @@ Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
 Production release commit: `15b11eaacf3c742203b0c4d5d186cf9041d7d77c` verified with live `/api/health` and `npm run monitor:production`; latest runtime feature evidence is recorded below and docs-only evidence commits may supersede the served build SHA.
 
+## Latest Packet 08 Pass - Active Work Deep-Link QA
+
+- Tightened the accepted-offer lifecycle after live phone testing exposed a mushy handoff between notifications, closed job cards, and the real active-work record:
+  - accepted offers now merge the returned canonical active-work record into app state immediately instead of waiting for a later reload to reveal it
+  - Home active-work cards now surface a direct `Messages` action beside `Open Work`, so the accepted side can go straight into the conversation that continues the job
+  - Work now keeps track of a focused active-work relationship, so offer-accepted notifications and active-work notifications can land on the correct accepted job even after the public listing closes
+  - contractor-side `Open active work` now switches the Work section to `Closed` when needed before selecting the accepted job, preventing the detail pane from silently falling back to another open listing
+  - active-work notifications now read `Open active work` instead of blending into generic work labels
+  - project/photo/media notifications tied to active work now land on `Records`, which is the user-facing destination for the photos/logs proof path
+- Preserved launch boundaries:
+  - no new authorization path, fake active-work state, local auth fallback, billing behavior, provider config, or production data mutation was added
+  - the accepted-work transition still depends on the existing server-owned offer acceptance, active-work, and inbox conversation endpoints
+  - notification clicks remain navigation only; server authorization still owns access to jobs, records, and messages
+- Local verification:
+  - `npm run build` (pass)
+  - `npm run lint` (pass)
+  - `npm run test:unit` (pass; 45/45)
+  - `npm run test:e2e` (pass)
+  - `npm run test:ui:work-lifecycle` (pass; refreshed screenshots at `C:\Users\zboyt\AppData\Local\Temp\rivt-work-lifecycle-pass`)
+  - `npm audit --omit=dev` (pass; 0 vulnerabilities)
+  - `git diff --check` (pass; CRLF warnings only)
+  - `npm run test:integration` and full `npm run test` both completed, but the suite is currently red in four unrelated existing areas outside this slice: `communities.integration`, `migrations.integration`, `reviews-admin-safety.integration`, and `shop-talk-reactions.integration`
+- Live verification:
+  - pending deploy for this pass; production evidence will be appended once the new commit is on `master` and `/api/health` plus `npm run monitor:production` are re-run
+
 ## Latest Packet 08 Pass - Notification and Community Tightening
 
 - Tightened a small set of launch-facing loose ends without widening scope:

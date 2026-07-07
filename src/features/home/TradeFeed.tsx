@@ -102,6 +102,7 @@ interface TradeFeedProps {
   onNavigate: (destination: PrimaryDestination) => void;
   onOpenProfile: () => void;
   onOpenTool: (tool: ToolMode) => void;
+  onOpenActiveWorkMessages: (activeWorkId: string) => void;
 }
 
 export function TradeFeed({
@@ -128,6 +129,7 @@ export function TradeFeed({
   onNavigate,
   onOpenProfile = () => undefined,
   onOpenTool = () => undefined,
+  onOpenActiveWorkMessages,
 }: TradeFeedProps) {
   const [saved, setSaved] = useState<Set<string>>(readBookmarks);
   const [availability, setAvailability] = useState<Availability>(readAvailability);
@@ -323,9 +325,15 @@ export function TradeFeed({
             <button type="button" className="v2-primary-button" onClick={() => onNavigate("work")}>
               Open Work
             </button>
-            <button type="button" className="v2-secondary-button" onClick={() => onOpenTool("daily-log")}>
-              Daily log
-            </button>
+            {primaryActiveWork ? (
+              <button
+                type="button"
+                className="v2-secondary-button"
+                onClick={() => onOpenActiveWorkMessages(primaryActiveWork.id)}
+              >
+                Messages
+              </button>
+            ) : null}
           </div>
         </section>
       ) : null}
