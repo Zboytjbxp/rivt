@@ -11,6 +11,14 @@ const projectRoot = process.cwd();
 const viteBin = path.join(projectRoot, "node_modules", "vite", "bin", "vite.js");
 const screenshotDir = path.join(os.tmpdir(), "rivt-work-lifecycle-pass");
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+function futureIso(days) {
+  return new Date(Date.now() + days * DAY_MS).toISOString();
+}
+function futureDate(days) {
+  return futureIso(days).slice(0, 10);
+}
+
 const contractorId = "8f681cb1-8244-4855-a392-a62a679d5a60";
 const tradespersonId = "4ddf5f60-4db8-43dd-9fc4-4239d2a0b4d5";
 const orgId = "753bb8d1-e46d-4921-89c2-ee80f1fc8db1";
@@ -95,8 +103,8 @@ function makeJob(overrides = {}) {
     workType: "side_work",
     budget: { amountCents: 85000, currency: "USD", unit: "fixed" },
     durationHours: 8,
-    preferredStartDate: overrides.preferredStartDate ?? "2026-07-01",
-    applicationDeadline: overrides.applicationDeadline ?? "2026-07-03T20:00:00.000Z",
+    preferredStartDate: overrides.preferredStartDate ?? futureDate(7),
+    applicationDeadline: overrides.applicationDeadline ?? futureIso(4),
     insuranceRequired: true,
     publicLocation: { city: "Jacksonville", region: "FL", countryCode: "US", postalPrefix: "322" },
     privateLocation: {
@@ -274,7 +282,10 @@ async function configurePage(page, account, state) {
   await page.route("**/api/v1/conversations", (route) => route.fulfill(json({ data: { conversations: [] } })));
   await page.route("**/api/v1/notifications", (route) => route.fulfill(json({ data: { notifications: [], unreadCount: 0 } })));
   await page.route("**/api/v1/notifications/read", (route) => route.fulfill(json({ data: { unreadCount: 0 } })));
+  await page.route("**/api/v1/notification-preferences", (route) => route.fulfill(json({ data: { preferences: [] } })));
   await page.route("**/api/storage", (route) => route.fulfill(json({ usedBytes: 0, objectCount: 0, plan: {} })));
+  await page.route("**/api/v1/shop-talk/posts**", (route) => route.fulfill(json({ data: { posts: [] } })));
+  await page.route("**/api/v1/communities**", (route) => route.fulfill(json({ data: { communities: [] } })));
   await page.route("**/api/v1/shop-talk/reactions/batch", (route) => route.fulfill(json({
     data: {
       reactions: [],
@@ -480,7 +491,7 @@ async function clickStatusTab(page, label) {
 }
 
 async function runContractorFlow(page) {
-  const draft = makeJob({ id: draftJobId, title: "Electrical service punch list", status: "draft", preferredStartDate: "2026-07-01T00:00:00.000Z" });
+  const draft = makeJob({ id: draftJobId, title: "Electrical service punch list", status: "draft", preferredStartDate: futureDate(7) });
   const open = makeJob();
   const state = makeState({ jobs: [open, draft], applications: [makeApplication("submitted")] });
   await configurePage(page, contractorAccount, state);
