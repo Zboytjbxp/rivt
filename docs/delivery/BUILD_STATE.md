@@ -5,7 +5,27 @@ Current gate: Gate A launch hardening
 Current phase: Packet 08 Gate A launch hardening plus Gate B behind-flag backbone work: machine gates and live workflow smokes are mostly green; the Shop Talk Reddit-model backbone, moderation/reporting backend, human-facing moderation console/report UX, post photo media, reachability/naming cleanup, Tools hub consolidation, Payment Tracker server records, money-tools sync, the accepted tool-records sync slices, non-tool local-state boundary cleanup, dedicated network-records sync for Crew/Invites/informal written shout-outs, screen-density polish, mobile layout/device-accessibility subtraction, fraction calculator ergonomics, iPhone SE layout containment, immersive-tool compact-device containment, SE tool chrome cleanup slices, native metric calculator rebuild, and the camera-first records/photos tool rebuild are implemented while still respecting launch-readiness boundaries before broad exposure.
 Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
-Production release commit: `8be08d7768f3796257d7b669a0c9eddd38d38df9` verified with live `/api/health` and `npm run monitor:production`; latest runtime feature evidence is recorded below and docs-only evidence commits may supersede the served build SHA.
+Production release commit: `5db08797fbe640a8314422301a3cc9d7506fe7bb` verified with live `/api/health` and `npm run monitor:production`; latest runtime feature evidence is recorded below and docs-only evidence commits may supersede the served build SHA.
+
+## Latest Packet 08 Pass - Signup Failure Guidance
+
+- Improved signup failure copy so users see practical next steps instead of the dead-end generic account-creation message:
+  - existing or possibly existing email: directs the user to log in or use Forgot password
+  - missing invite: asks for a pilot invitation code
+  - invalid/expired/full invite: explains that the code may be invalid, expired, fully used, or not assigned to the selected email/account type
+  - validation errors: gives field-specific guidance for email, display name, and invite-code length
+  - email-provider/signups-disabled states: points users to retry later or contact `support@rivt.pro`
+- Preserved the server-side privacy boundary:
+  - the backend still does not expose an email-existence lookup
+  - the UI uses the existing safe error codes returned by the signup endpoint
+  - no auth, invite-consumption, provider-secret, database, or production-data behavior changed
+- Live verification:
+  - production `/api/health` reported exact build commit `5db08797fbe640a8314422301a3cc9d7506fe7bb`
+  - `npm run monitor:production` passed with PostgreSQL, S3-compatible object storage, configured Sentry, operational controls off, seven anonymous private-route checks, and 593 ms duration
+- Local verification:
+  - `npm run build` (pass)
+  - `npm run lint` (pass)
+  - `npm run lint:security` (pass)
 
 ## Latest Packet 08 Pass - Jacksonville Beta Invite Code
 
