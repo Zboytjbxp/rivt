@@ -83,6 +83,7 @@ interface ToolsStudioProps {
 
 type LaunchableToolMode = Exclude<ToolMode, "hub">;
 type ToolIcon = typeof Calculator;
+const recentToolsStorageKey = "rivt.recentTools.v1";
 
 interface ToolLauncher {
   mode: LaunchableToolMode;
@@ -243,6 +244,31 @@ type ToolSwipeHandlers = {
 function shouldIgnoreToolSwipe(target: EventTarget | null) {
   if (!(target instanceof Element)) return false;
   return Boolean(target.closest("button, a, input, textarea, select, [contenteditable='true'], [role='button']"));
+}
+
+function allToolLaunchers(): ToolLauncher[] {
+  return [...PRIMARY_TOOL_LAUNCHERS, ...TOOL_GROUPS.flatMap((group) => group.tools)];
+}
+
+function readRecentTools(): LaunchableToolMode[] {
+  try {
+    const stored = localStorage.getItem(recentToolsStorageKey);
+    if (!stored) return [];
+    const parsed = JSON.parse(stored) as unknown;
+    if (!Array.isArray(parsed)) return [];
+    const allowed = new Set(allToolLaunchers().map((tool) => tool.mode));
+    return parsed.filter((mode): mode is LaunchableToolMode => typeof mode === "string" && allowed.has(mode as LaunchableToolMode)).slice(0, 4);
+  } catch {
+    return [];
+  }
+}
+
+function persistRecentTools(tools: LaunchableToolMode[]) {
+  try {
+    localStorage.setItem(recentToolsStorageKey, JSON.stringify(tools.slice(0, 4)));
+  } catch {
+    // Recent tools are a convenience only.
+  }
 }
 
 const MILEAGE_RATE_PER_MILE = 0.70;
@@ -2680,6 +2706,7 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
   const requestedTool = mode === "tools" && openTool ? openTool : null;
   const [localActiveTool, setLocalActiveTool] = useState<ToolMode>("hub");
   const activeTool = requestedTool ?? localActiveTool;
+  const [recentTools, setRecentTools] = useState(readRecentTools);
   const [activeWork, setActiveWork] = useState<CanonicalActiveWork[]>([]);
   const [recordsLoading, setRecordsLoading] = useState(true);
   const [recordsError, setRecordsError] = useState<string | null>(null);
@@ -2702,10 +2729,21 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
   const storedMedia = selectedProject?.media.filter((item) => item.status === "stored") ?? [];
   const latestEntry = selectedProject?.entries.at(-1) ?? null;
   const actionBusy = Boolean(projectAction);
+  const recentToolLaunchers = useMemo(() => {
+    const byMode = new Map(allToolLaunchers().map((tool) => [tool.mode, tool]));
+    return recentTools.map((tool) => byMode.get(tool)).filter((tool): tool is ToolLauncher => Boolean(tool));
+  }, [recentTools]);
 
   function setActiveTool(tool: ToolMode, options: { keepConvertedInvoice?: boolean } = {}) {
     if (!onToolChange) {
       onOpenToolConsumed?.();
+    }
+    if (tool !== "hub") {
+      setRecentTools((current) => {
+        const next = [tool, ...current.filter((item) => item !== tool)].slice(0, 4);
+        persistRecentTools(next);
+        return next;
+      });
     }
     if (!options.keepConvertedInvoice) {
       setConvertedEstimateDraft(null);
@@ -3280,6 +3318,26 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
       />
 
       <div className="v2-tool-section-stack">
+        {recentToolLaunchers.length ? (
+          <section className="v2-tool-section v2-tool-recent-section" aria-label="Recent tools">
+            <div className="v2-tool-section-header">
+              <span>Recent</span>
+              <strong>Pick up where you left off</strong>
+            </div>
+            <div className="v2-tool-mini-grid">
+              {recentToolLaunchers.map((tool) => (
+                <ToolMiniCard
+                  key={tool.mode}
+                  icon={tool.icon}
+                  title={tool.title}
+                  summary={tool.summary}
+                  onAction={() => openToolFromHub(tool.mode)}
+                />
+              ))}
+            </div>
+          </section>
+        ) : null}
+
         <section className="v2-tool-section" aria-label="Field tools">
           <div className="v2-tool-launch-grid">
             {PRIMARY_TOOL_LAUNCHERS.map((tool, index) => (

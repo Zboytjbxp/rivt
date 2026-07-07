@@ -4505,6 +4505,7 @@ registerShopTalkRoutes({
   signedObjectUrl,
   runIdempotentMutation,
   sendIdempotentResult,
+  createInAppNotification,
 });
 
 registerCommunityRoutes({

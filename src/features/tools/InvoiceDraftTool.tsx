@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Copy, Download, FileText, Mail, MessageSquare, Plus, Trash2 } from "lucide-react";
 import type { Job } from "../../types";
 import { Panel } from "../../components/ui";
+import { readPrimaryHourlyRate } from "../../lib/rateCard";
 import type { EstimateInvoiceDraft } from "./EstimateTool";
 import { clampNumber, currency, formatQuantity, toCents, centsToDollars } from "./money";
 import { getInvoiceLinePriceSignal } from "./priceGuidance";
@@ -39,6 +40,42 @@ interface InvoiceTemplate {
 }
 
 const invoiceTemplateStorageKey = "rivt.invoiceTemplates.v1";
+const invoicePrefsStorageKey = "rivt.invoicePrefs.v1";
+
+interface InvoicePrefs {
+  payTo: string;
+  terms: string;
+  paymentMethod: string;
+  recipientEmail: string;
+  recipientPhone: string;
+  taxPct: number;
+}
+
+function readInvoicePrefs(): InvoicePrefs {
+  const fallback: InvoicePrefs = {
+    payTo: "",
+    terms: "Due on completion",
+    paymentMethod: "Direct payment",
+    recipientEmail: "",
+    recipientPhone: "",
+    taxPct: 0,
+  };
+  try {
+    const stored = localStorage.getItem(invoicePrefsStorageKey);
+    if (!stored) return fallback;
+    const parsed = JSON.parse(stored) as Partial<InvoicePrefs>;
+    return {
+      payTo: typeof parsed.payTo === "string" ? parsed.payTo : fallback.payTo,
+      terms: typeof parsed.terms === "string" && parsed.terms.trim() ? parsed.terms : fallback.terms,
+      paymentMethod: typeof parsed.paymentMethod === "string" && parsed.paymentMethod.trim() ? parsed.paymentMethod : fallback.paymentMethod,
+      recipientEmail: typeof parsed.recipientEmail === "string" ? parsed.recipientEmail : fallback.recipientEmail,
+      recipientPhone: typeof parsed.recipientPhone === "string" ? parsed.recipientPhone : fallback.recipientPhone,
+      taxPct: clampNumber(Number(parsed.taxPct), fallback.taxPct),
+    };
+  } catch {
+    return fallback;
+  }
+}
 
 function readInvoiceTemplates() {
   try {
@@ -91,8 +128,9 @@ function invoiceTemplateToServerInput(template: InvoiceTemplate) {
 }
 
 function defaultInvoiceLines(activeJob: Job | null): InvoiceLine[] {
+  const savedHourlyRate = readPrimaryHourlyRate(65);
   return [
-    { id: "labor", description: "Labor", qty: activeJob?.durationHours ?? 8, rate: activeJob ? Math.max(45, Math.round(activeJob.pay / Math.max(1, activeJob.durationHours) * 0.78)) : 65, kind: "labor" },
+    { id: "labor", description: "Labor", qty: activeJob?.durationHours ?? 8, rate: activeJob ? Math.max(savedHourlyRate, Math.round(activeJob.pay / Math.max(1, activeJob.durationHours) * 0.78)) : savedHourlyRate, kind: "labor" },
     { id: "materials", description: "Materials", qty: 1, rate: activeJob ? Math.max(50, Math.round(activeJob.pay * 0.2)) : 250, kind: "material" },
   ];
 }
@@ -110,14 +148,15 @@ export function InvoiceDraftTool({
   activeJob: Job | null;
   estimateDraft?: EstimateInvoiceDraft | null;
 }) {
+  const [invoicePrefs] = useState(readInvoicePrefs);
   const [invoiceNumber, setInvoiceNumber] = useState(estimateDraft?.invoiceNumber ?? (activeJob ? `RIVT-${activeJob.id}` : "RIVT-DRAFT"));
   const [billTo, setBillTo] = useState(estimateDraft?.billTo ?? activeJob?.contractor ?? "");
-  const [payTo, setPayTo] = useState("");
-  const [terms, setTerms] = useState(estimateDraft?.terms ?? "Due on completion");
-  const [paymentMethod, setPaymentMethod] = useState(estimateDraft?.paymentMethod ?? "Direct payment");
-  const [recipientEmail, setRecipientEmail] = useState("");
-  const [recipientPhone, setRecipientPhone] = useState("");
-  const [taxPct, setTaxPct] = useState(0);
+  const [payTo, setPayTo] = useState(invoicePrefs.payTo);
+  const [terms, setTerms] = useState(estimateDraft?.terms ?? invoicePrefs.terms);
+  const [paymentMethod, setPaymentMethod] = useState(estimateDraft?.paymentMethod ?? invoicePrefs.paymentMethod);
+  const [recipientEmail, setRecipientEmail] = useState(invoicePrefs.recipientEmail);
+  const [recipientPhone, setRecipientPhone] = useState(invoicePrefs.recipientPhone);
+  const [taxPct, setTaxPct] = useState(invoicePrefs.taxPct);
   const [copied, setCopied] = useState(false);
   const [downloaded, setDownloaded] = useState(false);
   const [templates, setTemplates] = useState<InvoiceTemplate[]>(readInvoiceTemplates);
@@ -166,6 +205,21 @@ export function InvoiceDraftTool({
   ].join("\n"), [activeJob, billTo, invoiceNumber, lines, paymentMethod, payTo, subtotal, tax, terms, total]);
   const emailHref = `mailto:${encodeURIComponent(recipientEmail)}?subject=${encodeURIComponent(`Invoice ${invoiceNumber}`)}&body=${encodeURIComponent(invoiceText)}`;
   const smsHref = `sms:${encodeURIComponent(recipientPhone)}?body=${encodeURIComponent(`RIVT invoice ${invoiceNumber}: ${currency(total)} due. ${terms}. ${paymentMethod}.`)}`;
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(invoicePrefsStorageKey, JSON.stringify({
+        payTo,
+        terms,
+        paymentMethod,
+        recipientEmail,
+        recipientPhone,
+        taxPct,
+      }));
+    } catch {
+      // Invoice defaults are a convenience only; templates and manual entry still work.
+    }
+  }, [paymentMethod, payTo, recipientEmail, recipientPhone, taxPct, terms]);
 
   useEffect(() => {
     let cancelled = false;
@@ -271,14 +325,15 @@ export function InvoiceDraftTool({
   }
 
   function startBlankInvoice() {
+    const latestPrefs = readInvoicePrefs();
     setInvoiceNumber("RIVT-DRAFT");
     setBillTo("");
-    setPayTo("");
-    setTerms("Due on completion");
-    setPaymentMethod("Direct payment");
-    setRecipientEmail("");
-    setRecipientPhone("");
-    setTaxPct(0);
+    setPayTo(latestPrefs.payTo);
+    setTerms(latestPrefs.terms);
+    setPaymentMethod(latestPrefs.paymentMethod);
+    setRecipientEmail(latestPrefs.recipientEmail);
+    setRecipientPhone(latestPrefs.recipientPhone);
+    setTaxPct(latestPrefs.taxPct);
     setTemplateName("Standard invoice");
     setLines(defaultInvoiceLines(null));
     setConversionNotice("");

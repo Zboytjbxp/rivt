@@ -1,10 +1,11 @@
 import { ArrowLeft, Clipboard, Copy, RotateCcw, Ruler } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 type ActiveUnit = "feet" | "inches";
 type InputMode = "imperial" | "metric";
 type Operator = "+" | "-" | "x" | "/";
 
+const CALCULATOR_PREFS_KEY = "rivt.calculatorPrefs.v1";
 const UNITS_PER_MM = 160;
 const UNITS_PER_INCH = 4064;
 const UNITS_PER_FOOT = UNITS_PER_INCH * 12;
@@ -87,10 +88,6 @@ function formatMeasurement(units: number) {
   return `${sign}${inches}${fraction ? ` ${fraction}` : ""}"`;
 }
 
-function formatMeasurementLong(units: number) {
-  return `${formatMeasurement(units)} / ${formatNumber(units / UNITS_PER_INCH, 3)} in`;
-}
-
 function valueFromImperialEntry(feetText: string, inchesText: string, fraction32: number) {
   const feet = Math.max(0, Number(feetText) || 0);
   const inches = Math.max(0, Number(inchesText) || 0);
@@ -139,8 +136,17 @@ function computeOperation(leftUnits: number, operator: Operator, rightUnits: num
   return Math.round(leftUnits / scalar);
 }
 
+function readCalculatorInputMode(): InputMode {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(CALCULATOR_PREFS_KEY) ?? "null") as { inputMode?: InputMode } | null;
+    return parsed?.inputMode === "metric" ? "metric" : "imperial";
+  } catch {
+    return "imperial";
+  }
+}
+
 export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
-  const [inputMode, setInputMode] = useState<InputMode>("imperial");
+  const [inputMode, setInputMode] = useState<InputMode>(() => readCalculatorInputMode());
   const [activeUnit, setActiveUnit] = useState<ActiveUnit>("inches");
   const [feetText, setFeetText] = useState("0");
   const [inchesText, setInchesText] = useState("0");
@@ -157,6 +163,10 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
     ? valueFromMetricEntry(metricText, metricTenths)
     : valueFromImperialEntry(feetText, inchesText, fraction32);
   const displayValueUnits = resultUnits ?? entryValueUnits;
+
+  useEffect(() => {
+    try { localStorage.setItem(CALCULATOR_PREFS_KEY, JSON.stringify({ inputMode })); } catch { /* harmless preference */ }
+  }, [inputMode]);
 
   function setImperialEntryFromValue(nextUnits: number) {
     const fields = fieldsFromImperialValue(nextUnits);
@@ -316,11 +326,9 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
   }
 
   async function copyCalculatorResult() {
-    const text = [
-      "RIVT Heavy 16th",
-      `Result: ${formatMeasurementLong(displayValueUnits)}`,
-      `Metric: ${formatMillimeters(displayValueUnits)} (${formatMeters(displayValueUnits)})`,
-    ].join("\n");
+    const text = inputMode === "metric"
+      ? formatMillimeters(displayValueUnits)
+      : formatMeasurement(displayValueUnits);
 
     try {
       await navigator.clipboard.writeText(text);

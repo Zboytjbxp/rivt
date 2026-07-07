@@ -1,7 +1,8 @@
 import { Copy, FileText } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Panel } from "../../components/ui";
 import type { Job } from "../../types";
+import { readPrimaryHourlyRate } from "../../lib/rateCard";
 import { getEstimatePriceSignal } from "./priceGuidance";
 import { centsToDollars, currency, formatQuantity, toCents } from "./money";
 
@@ -26,6 +27,45 @@ export interface EstimateInvoiceDraft {
   sourceNote: string;
 }
 
+interface EstimatePrefs {
+  hourlyRate: number;
+  crewSize: number;
+  overheadPct: number;
+  marginPct: number;
+  contingencyPct: number;
+}
+
+const estimatePrefsStorageKey = "rivt.estimatePrefs.v1";
+
+function clampEstimateNumber(value: unknown, fallback: number, min = 0) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? Math.max(min, parsed) : fallback;
+}
+
+function readEstimatePrefs(): EstimatePrefs {
+  const fallback: EstimatePrefs = {
+    hourlyRate: readPrimaryHourlyRate(65),
+    crewSize: 1,
+    overheadPct: 12,
+    marginPct: 18,
+    contingencyPct: 7,
+  };
+  try {
+    const stored = localStorage.getItem(estimatePrefsStorageKey);
+    if (!stored) return fallback;
+    const parsed = JSON.parse(stored) as Partial<EstimatePrefs>;
+    return {
+      hourlyRate: clampEstimateNumber(parsed.hourlyRate, fallback.hourlyRate),
+      crewSize: clampEstimateNumber(parsed.crewSize, fallback.crewSize, 1),
+      overheadPct: clampEstimateNumber(parsed.overheadPct, fallback.overheadPct),
+      marginPct: clampEstimateNumber(parsed.marginPct, fallback.marginPct),
+      contingencyPct: clampEstimateNumber(parsed.contingencyPct, fallback.contingencyPct),
+    };
+  } catch {
+    return fallback;
+  }
+}
+
 export function EstimateTool({
   activeJob,
   onConvertToInvoice,
@@ -33,15 +73,30 @@ export function EstimateTool({
   activeJob: Job | null;
   onConvertToInvoice?: (draft: EstimateInvoiceDraft) => void;
 }) {
+  const [estimatePrefs] = useState(readEstimatePrefs);
   const [laborHours, setLaborHours] = useState(activeJob?.durationHours ?? 8);
-  const [hourlyRate, setHourlyRate] = useState(65);
-  const [crewSize, setCrewSize] = useState(1);
+  const [hourlyRate, setHourlyRate] = useState(estimatePrefs.hourlyRate);
+  const [crewSize, setCrewSize] = useState(estimatePrefs.crewSize);
   const [materials, setMaterials] = useState(activeJob ? Math.round(activeJob.pay * 0.22) : 250);
   const [subCosts, setSubCosts] = useState(0);
-  const [overheadPct, setOverheadPct] = useState(12);
-  const [marginPct, setMarginPct] = useState(18);
-  const [contingencyPct, setContingencyPct] = useState(7);
+  const [overheadPct, setOverheadPct] = useState(estimatePrefs.overheadPct);
+  const [marginPct, setMarginPct] = useState(estimatePrefs.marginPct);
+  const [contingencyPct, setContingencyPct] = useState(estimatePrefs.contingencyPct);
   const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(estimatePrefsStorageKey, JSON.stringify({
+        hourlyRate,
+        crewSize,
+        overheadPct,
+        marginPct,
+        contingencyPct,
+      }));
+    } catch {
+      // Estimate preferences are optional; defaults still work when storage is unavailable.
+    }
+  }, [contingencyPct, crewSize, hourlyRate, marginPct, overheadPct]);
 
   const labor = laborHours * hourlyRate;
   const base = labor + materials + subCosts;

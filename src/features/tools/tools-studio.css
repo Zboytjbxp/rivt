@@ -2926,6 +2926,35 @@
   -webkit-backdrop-filter: blur(4px);
 }
 
+.v2-camera-save-status {
+  position: absolute;
+  left: 24px;
+  right: 24px;
+  bottom: max(196px, calc(env(safe-area-inset-bottom, 0px) + 196px));
+  z-index: 10;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 9px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: var(--v2-radius-pill);
+  background: rgba(0, 0, 0, 0.58);
+  color: #fff;
+  font-size: 13px;
+  font-weight: var(--v2-weight-semibold);
+  line-height: 1.2;
+  text-align: center;
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.v2-camera-save-status.is-saving {
+  color: var(--v2-accent);
+}
+
 .v2-camera-flash {
   position: absolute;
   inset: 0;
