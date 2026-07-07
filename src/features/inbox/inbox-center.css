@@ -309,8 +309,21 @@
   align-items: start;
   justify-content: space-between;
   gap: 12px;
+  width: 100%;
   padding: 15px 20px;
+  border: 0;
   border-bottom: 1px solid color-mix(in srgb, var(--v2-border) 56%, transparent);
+  background: transparent;
+  color: var(--v2-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.v2-inbox-item:hover,
+.v2-inbox-item:focus-visible {
+  background: color-mix(in srgb, var(--v2-accent-soft) 30%, transparent);
+  outline: none;
 }
 
 .v2-inbox-item:last-child {

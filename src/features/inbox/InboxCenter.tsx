@@ -476,6 +476,7 @@ interface InboxCenterProps {
   onReportSelected: () => void;
   onRefresh: () => void;
   onNavigate: (destination: PrimaryDestination) => void;
+  onOpenNotification: (notification: InboxNotification) => void;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -520,6 +521,7 @@ export function InboxCenter({
   onReportSelected,
   onRefresh,
   onNavigate,
+  onOpenNotification,
 }: InboxCenterProps) {
   // ── Tab state ─────────────────────────────────────────────────────────────
   const [activeTab, setActiveTab] = useState<InboxTab>("Messages");
@@ -973,13 +975,18 @@ export function InboxCenter({
           >
             <div className="v2-inbox-list">
               {notifications.length ? notifications.map((item) => (
-                <article key={item.id} className={item.readAt ? "v2-inbox-item" : "v2-inbox-item unread"}>
+                <button
+                  key={item.id}
+                  type="button"
+                  className={item.readAt ? "v2-inbox-item" : "v2-inbox-item unread"}
+                  onClick={() => onOpenNotification(item)}
+                >
                   <div>
                     <strong>{item.title}</strong>
                     <span>{item.body}</span>
                   </div>
                   <small>{timeLabel(item.createdAt)}</small>
-                </article>
+                </button>
               )) : (
                 <EmptyState
                   className="v2-inbox-empty"

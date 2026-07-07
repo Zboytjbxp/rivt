@@ -45,7 +45,14 @@ import {
 } from "./app-shell/preferences";
 import { useAppTheme } from "./app-shell/useAppTheme";
 import { useActivityFeed } from "./app-shell/useActivityFeed";
-import { getJob, listJobs, toJobViewModel, transitionJob } from "./features/work/job-api";
+import {
+  getJob,
+  listActiveWork,
+  listJobs,
+  toJobViewModel,
+  transitionJob,
+  type CanonicalActiveWork,
+} from "./features/work/job-api";
 import { canonicalDifficultyByLabel, canonicalWorkTypeByLabel, tradeCodeByName } from "./features/work/work-mappings";
 import { emptyJob } from "./features/work/empty-job";
 import {
@@ -431,6 +438,7 @@ function App() {
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
   const [inboxMessages, setInboxMessages] = useState<InboxMessage[]>([]);
   const [inboxNotifications, setInboxNotifications] = useState<InboxNotification[]>([]);
+  const [activeWork, setActiveWork] = useState<CanonicalActiveWork[]>([]);
   const [messageBrowserNotificationsEnabled, setMessageBrowserNotificationsEnabled] = useState(true);
   const [inboxLoading, setInboxLoading] = useState(false);
   const [inboxSending, setInboxSending] = useState(false);
@@ -789,6 +797,23 @@ function App() {
     const timeout = window.setTimeout(() => { void reloadJobs(); }, 250);
     return () => window.clearTimeout(timeout);
   }, [reloadJobs]);
+
+  const reloadActiveWork = useCallback(async () => {
+    if (isGuest || !authUser || !onboardingComplete) {
+      setActiveWork([]);
+      return;
+    }
+    try {
+      setActiveWork(await listActiveWork());
+    } catch {
+      setActiveWork([]);
+    }
+  }, [authUser, isGuest, onboardingComplete]);
+
+  useEffect(() => {
+    const timeout = window.setTimeout(() => { void reloadActiveWork(); }, 0);
+    return () => window.clearTimeout(timeout);
+  }, [reloadActiveWork]);
 
   const reloadShopTalkPosts = useCallback(async () => {
     if (isGuest || !authUser || !onboardingComplete) return;
@@ -1187,6 +1212,53 @@ function App() {
     setActivityOpen(false);
     setAccountOpen(false);
     setPostOpen(false);
+  }
+
+  function selectJobByCanonicalId(jobId: unknown) {
+    if (typeof jobId !== "string" || !jobId) return false;
+    const match = jobs.find((job) => job.canonical?.id === jobId);
+    if (!match) return false;
+    setSelectedId(match.id);
+    return true;
+  }
+
+  async function handleOpenNotification(notification: InboxNotification) {
+    const now = new Date().toISOString();
+    setInboxNotifications((current) => current.map((item) => (
+      item.id === notification.id ? { ...item, readAt: item.readAt ?? now } : item
+    )));
+    try {
+      await markNotificationsRead([notification.id], false);
+    } catch {
+      // Opening still routes the user; read-state can be retried from the notification center.
+    }
+
+    const metadataJobId = typeof notification.metadata?.jobId === "string" ? notification.metadata.jobId : null;
+    const metadataConversationId = typeof notification.metadata?.conversationId === "string"
+      ? notification.metadata.conversationId
+      : null;
+    const actionHref = notification.actionHref || "";
+
+    if (
+      metadataJobId ||
+      notification.sourceType === "offer" ||
+      notification.sourceType === "active_work" ||
+      actionHref.includes("work")
+    ) {
+      if (metadataJobId) selectJobByCanonicalId(metadataJobId);
+      handleNavigate("Work");
+      void reloadActiveWork();
+      void reloadJobs();
+      return;
+    }
+
+    if (metadataConversationId || notification.sourceType === "message" || actionHref.includes("messages")) {
+      handleNavigate("Messages");
+      if (metadataConversationId) handleSelectConversation(metadataConversationId);
+      return;
+    }
+
+    addActivity(notification.title, notification.body, "info");
   }
 
   function handleToolChange(tool: ToolMode) {
@@ -1931,6 +2003,7 @@ function App() {
             posts={communityPosts}
             communities={communities}
             jobs={jobs}
+            activeWork={activeWork}
             role={role}
             name={accountProfile.displayName || (isGuest ? "there" : "there")}
             location={accountProfile.location}
@@ -1978,6 +2051,11 @@ function App() {
             onOpenTool={handleOpenTool}
             onOpenRecords={() => handleNavigate("Records")}
             onRetry={() => void reloadJobs()}
+            onActiveWorkChanged={() => {
+              void reloadActiveWork();
+              void reloadJobs();
+              void reloadInbox();
+            }}
           />
         ) : activeView === "Shop Talk" ? (
           <ShopTalkView
@@ -2047,6 +2125,7 @@ function App() {
             onReportSelected={() => void handleReportSelectedConversation()}
             onRefresh={() => void reloadInbox()}
             onNavigate={(destination) => handleNavigate(defaultViewForDestination(destination))}
+            onOpenNotification={(notification) => { void handleOpenNotification(notification); }}
           />
         ) : ["Trust & Legal", "Safety & Training", "Reviews", "Feedback", "Settings"].includes(activeView) ? (
           <ProfileRoute

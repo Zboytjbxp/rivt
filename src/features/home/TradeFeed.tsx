@@ -14,6 +14,7 @@ import { TradePostCard } from "../shop-talk/TradePostCard";
 import type { PrimaryDestination } from "../../app-shell/types";
 import { fallbackCommunities, type CommunityDisplay } from "../shop-talk/community-directory";
 import type { Job, Role } from "../../types";
+import type { CanonicalActiveWork } from "../work/job-api";
 import type { ToolMode } from "../tools/ToolsStudio";
 import "./trade-feed.css";
 
@@ -32,6 +33,12 @@ const SETUP_RECORD_BASELINE = 0;
 function formatCommunityCardCount(memberCount: number) {
   if (memberCount <= 0) return "";
   return `${memberCount} member${memberCount === 1 ? "" : "s"}`;
+}
+
+function activeWorkLocation(work: CanonicalActiveWork) {
+  const location = work.job?.publicLocation;
+  if (!location?.city && !location?.region) return "";
+  return [location.city, location.region].filter(Boolean).join(", ");
 }
 
 function netScore(post: CommunityPost) {
@@ -75,6 +82,7 @@ interface TradeFeedProps {
   posts: CommunityPost[];
   communities?: CommunityDisplay[];
   jobs: Job[];
+  activeWork?: CanonicalActiveWork[];
   role: Role;
   name: string;
   location: string;
@@ -100,6 +108,7 @@ export function TradeFeed({
   posts,
   communities = fallbackCommunities,
   jobs = [],
+  activeWork = [],
   role = "contractor",
   name,
   location,
@@ -123,6 +132,7 @@ export function TradeFeed({
   const [saved, setSaved] = useState<Set<string>>(readBookmarks);
   const [availability, setAvailability] = useState<Availability>(readAvailability);
   const [getStartedDismissed, setGetStartedDismissed] = useState(readGetStartedDismissed);
+  const primaryActiveWork = activeWork.find((work) => work.status === "active") ?? activeWork[0] ?? null;
 
   const trendingPosts = useMemo(
     () => [...posts].sort((a, b) => netScore(b) - netScore(a)),
@@ -298,6 +308,27 @@ export function TradeFeed({
           {AVAIL_LABEL[availability]}
         </button>
       </header>
+
+      {primaryActiveWork ? (
+        <section className="trade-feed-active-work" aria-label="Active work">
+          <div className="trade-feed-active-copy">
+            <span>Active work</span>
+            <h2>{primaryActiveWork.job?.title ?? "Accepted work"}</h2>
+            <p>
+              Offer accepted. The posting is closed to new applicants and now lives in active work.
+            </p>
+            {activeWorkLocation(primaryActiveWork) ? <small>{activeWorkLocation(primaryActiveWork)}</small> : null}
+          </div>
+          <div className="trade-feed-active-actions">
+            <button type="button" className="v2-primary-button" onClick={() => onNavigate("work")}>
+              Open Work
+            </button>
+            <button type="button" className="v2-secondary-button" onClick={() => onOpenTool("daily-log")}>
+              Daily log
+            </button>
+          </div>
+        </section>
+      ) : null}
 
       {/* Getting-started checklist */}
       {showGetStarted && (

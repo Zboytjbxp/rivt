@@ -94,6 +94,7 @@ interface WorkWorkspaceProps {
   onOpenTool: (tool: "daily-log" | "invoice") => void;
   onOpenRecords: () => void;
   onRetry: () => void;
+  onActiveWorkChanged?: () => void;
 }
 
 const statusForSection: Partial<Record<ContractorSection, Job["status"]>> = {
@@ -1190,6 +1191,7 @@ export function WorkWorkspace({
   onOpenTool,
   onOpenRecords,
   onRetry,
+  onActiveWorkChanged,
 }: WorkWorkspaceProps) {
   const persona = usePersona();
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -1303,6 +1305,7 @@ export function WorkWorkspace({
     await runMatchAction(`accept:${offer.id}`, async () => {
       await acceptOffer(offer.id, "Confirmed in RIVT.");
       await refreshDetailJob();
+      onActiveWorkChanged?.();
     });
   }
 
@@ -1325,10 +1328,12 @@ export function WorkWorkspace({
     if (kind === "reschedule") {
       await runMatchAction(`reschedule:${target.id}`, async () => {
         await requestWorkReschedule(target.id, reason);
+        onActiveWorkChanged?.();
       });
     } else {
       await runMatchAction(`cancel:${target.id}`, async () => {
         await cancelActiveWork(target.id, reason);
+        onActiveWorkChanged?.();
       });
     }
   }
@@ -1648,6 +1653,9 @@ export function WorkWorkspace({
                         <strong>{activeWork.status === "active" ? "Accepted and active" : activeWork.status}</strong>
                         <small>Started {new Date(activeWork.startedAt).toLocaleString()}</small>
                       </div>
+                      <p className="v2-active-work-explain">
+                        The original posting is closed to new applicants. This job now lives here as active work for both sides.
+                      </p>
                       <div className="v2-match-actions">
                         <button type="button" disabled={Boolean(activeAction)} onClick={() => onOpenTool("daily-log")}>Daily log</button>
                         <button type="button" disabled={Boolean(activeAction)} onClick={() => onOpenRecords()}>Records/photos</button>

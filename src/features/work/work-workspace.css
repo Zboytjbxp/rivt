@@ -814,6 +814,14 @@
   line-height: 1.45;
 }
 
+.v2-active-work-explain {
+  grid-column: 1 / -1;
+  margin: -2px 0 0;
+  color: var(--v2-text-muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
 .v2-applicant-card .v2-offer-start-note {
   color: var(--v2-text);
   font-weight: var(--v2-weight-semibold);

@@ -7,6 +7,30 @@ Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
 Production release commit: `901996e6a35a625cf0a07aa58fa24f2b7e66ef90` verified with live `/api/health` and `npm run monitor:production`; latest runtime feature evidence is recorded below and docs-only evidence commits may supersede the served build SHA.
 
+## Latest Packet 08 Pass - Active Work Notification Handoff
+
+- Fixed the accepted-offer experience after mobile testing showed notification cards were inert and accepted work was hard to discover:
+  - notification rows in the Inbox notification center are now tappable controls
+  - opening offer, active-work, or work-linked notifications marks the notification read and navigates to Work instead of leaving the user in the notification panel
+  - the app now fetches canonical active-work relationships separately from open job listings
+  - Home shows an `Active work` card when an accepted offer exists, explaining that the original posting is closed to new applicants and that the job now lives as active work
+  - Work refreshes active-work state after offer acceptance, reschedule requests, and cancellation requests
+  - active-work cards include explicit copy explaining why the public job posting may read closed while the relationship is active
+- Preserved launch boundaries:
+  - no new fake active-work state, local auth fallback, billing behavior, provider config, invite behavior, or production-data migration was added
+  - active-work visibility remains backed by the existing canonical server active-work endpoint
+  - notification routing uses existing metadata/action fields and does not grant authorization by hiding or showing UI
+- Local verification:
+  - `npm run build` (pass)
+  - `npm run lint` (pass)
+  - `npm run lint:security` (pass)
+  - `npm run test:unit` (pass; 45/45)
+  - `npm run test:e2e` (pass)
+  - `npm run test:integration` (pass for non-DB checks; 15 DB-backed cases skipped because `TEST_DATABASE_URL` is not configured locally)
+  - `npm run test:ui:work-lifecycle` (pass; refreshed screenshots at `C:\Users\zboyt\AppData\Local\Temp\rivt-work-lifecycle-pass`)
+  - `npm run test:ui:mobile-actions` (pass; refreshed screenshots at `C:\Users\zboyt\AppData\Local\Temp\rivt-mobile-actions-pass`)
+  - `npm audit --omit=dev` (pass; 0 vulnerabilities)
+
 ## Latest Packet 08 Pass - Offer Start Date Normalization
 
 - Fixed the contractor `Send offer` path after a real mobile failure showing `Request validation failed for startDate`:
