@@ -1182,7 +1182,7 @@ function PlanCard() {
 
 export function ProfileHub({
   view,
-  role: _role,
+  role,
   profile,
   canonicalProfile,
   sessions,
@@ -1236,10 +1236,14 @@ export function ProfileHub({
   });
   const [actionState, setActionState] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [actionMessage, setActionMessage] = useState("");
+  const [roleRequestState, setRoleRequestState] = useState<"idle" | "sending" | "sent" | "error">("idle");
+  const [roleRequestMessage, setRoleRequestMessage] = useState("");
   const storageStatus = computeStorageStatus(storageUsage ? {
     usedBytes: storageUsage.usedBytes,
     storageLimitBytes: storageUsage.storageLimitBytes,
   } : null);
+  const currentRoleLabel = role === "contractor" ? "Contractor" : "Tradesperson";
+  const requestedRoleLabel = role === "contractor" ? "Tradesperson" : "Contractor";
 
   useEffect(() => {
     let cancelled = false;
@@ -1322,6 +1326,26 @@ export function ProfileHub({
     } catch (error) {
       setActionState("error");
       setActionMessage(error instanceof Error ? error.message : "Account security could not be updated.");
+    }
+  }
+
+  async function requestAccountTypeChange() {
+    setRoleRequestState("sending");
+    setRoleRequestMessage("");
+    try {
+      await createSupportCase({
+        category: "account",
+        title: `Account type change request: ${currentRoleLabel} to ${requestedRoleLabel}`,
+        description: [
+          `Please review my request to change this RIVT account from ${currentRoleLabel} to ${requestedRoleLabel}.`,
+          "I understand support may need to review work history, organization setup, open jobs, applications, and marketplace access before changing the account type.",
+        ].join(" "),
+      });
+      setRoleRequestState("sent");
+      setRoleRequestMessage("Request sent. Support will review this before changing your account access.");
+    } catch (error) {
+      setRoleRequestState("error");
+      setRoleRequestMessage(error instanceof Error ? error.message : "Account type request could not be sent.");
     }
   }
 
@@ -1606,6 +1630,28 @@ export function ProfileHub({
             <MetricTile icon={<UserCheck size={16} />} value={profile.authMethod} label="Sign-in method" />
             <MetricTile icon={<ShieldCheck size={16} />} value={trustReady ? "On file" : "Review needed"} label="Consent" />
           </div>
+          {view === "Settings" ? (
+            <div className="v2-account-type-card">
+              <div>
+                <span>Account type</span>
+                <strong>{currentRoleLabel}</strong>
+                <p>Changing account type is reviewed by support so work history, applications, and contractor access stay clean.</p>
+              </div>
+              <button
+                type="button"
+                className="v2-secondary-button"
+                onClick={() => void requestAccountTypeChange()}
+                disabled={roleRequestState === "sending" || roleRequestState === "sent"}
+              >
+                {roleRequestState === "sending" ? "Sending..." : `Request ${requestedRoleLabel.toLowerCase()} access`}
+              </button>
+              {roleRequestMessage ? (
+                <p className={`v2-profile-action-message is-${roleRequestState === "sent" ? "success" : roleRequestState}`} role="status">
+                  {roleRequestMessage}
+                </p>
+              ) : null}
+            </div>
+          ) : null}
         </section>
 
         {/* Profile editor — near top in Settings so it's immediately reachable */}

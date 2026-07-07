@@ -155,6 +155,42 @@
   font-size: var(--v2-text-caption);
 }
 
+.v2-account-type-card {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border-top: 1px solid color-mix(in srgb, var(--v2-border) 56%, transparent);
+}
+
+.v2-account-type-card > div {
+  display: grid;
+  gap: 4px;
+}
+
+.v2-account-type-card > div > span {
+  color: var(--v2-text-muted);
+  font-size: var(--v2-text-xs);
+  font-weight: var(--v2-weight-bold);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.v2-account-type-card > div > strong {
+  font-size: var(--v2-text-base);
+  font-weight: var(--v2-weight-display);
+}
+
+.v2-account-type-card > div > p {
+  margin: 0;
+  color: var(--v2-text-muted);
+  font-size: var(--v2-text-caption);
+  line-height: 1.45;
+}
+
+.v2-account-type-card .v2-profile-action-message {
+  margin: 0;
+}
+
 .v2-storage-list article {
   align-items: flex-start;
   gap: 10px;

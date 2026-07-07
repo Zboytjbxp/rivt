@@ -7,6 +7,26 @@ Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
 Production release commit: `c8953404bd58f63f97f71e3a143afe6ee325a59b` verified with live `/api/health`, `npm run monitor:production`, and a live password-reset smoke; latest runtime feature evidence is recorded below and docs-only evidence commits may supersede the served build SHA.
 
+## Latest Packet 08 Pass - Account Type Change Request
+
+- Added a Settings account-type control without weakening server-side role immutability:
+  - Settings now shows the current account type (`Contractor` or `Tradesperson`) under Account basics
+  - users can request the opposite account type through the existing support-case system
+  - the request copy makes clear that support reviews work history, applications, organization setup, open jobs, and marketplace access before any role change
+  - no instant frontend role toggle, local auth fallback, authorization bypass, or onboarding role mutation was added
+- Preserved launch boundaries:
+  - the existing server guard still rejects direct post-onboarding role mutation with `ROLE_IMMUTABLE`
+  - support requests use the authenticated `/api/v1/support/cases` path with idempotency and existing rate limiting
+  - no database migrations, provider configuration, auth flow, billing flow, invite flow, or production data changes were made
+- Local verification:
+  - `npm run build` (pass)
+  - `npm run lint` (pass)
+  - `npm run lint:security` (pass)
+  - `npm run test:unit` (pass; 45/45)
+  - `npm run test:e2e` (pass)
+  - `npm audit --omit=dev` (pass; 0 vulnerabilities)
+  - `npm run test` did not complete in this workstation shell after two attempts because the integration half did not return output before the command timeouts; `TEST_DATABASE_URL` and `DATABASE_URL` are not configured in this shell, so DB-backed integration coverage remains a deploy/CI or configured-local verification item for this slice
+
 ## Latest Packet 08 Pass - Password Reset Link Grace
 
 - Improved password-reset reliability after a real mobile reset-link failure:
