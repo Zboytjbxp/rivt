@@ -33,6 +33,7 @@ export interface AppShellProps {
   profile: ShellProfile;
   activeJob: ShellJobContext | null;
   notificationCount: number;
+  messageCount?: number;
   isGuest: boolean;
   mobileNavHidden?: boolean;
   children: ReactNode;

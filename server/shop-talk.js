@@ -203,6 +203,82 @@ function mapShopTalkPostRow(row) {
   };
 }
 
+async function notifyShopTalkPostAuthor(client, {
+  createInAppNotification,
+  post,
+  actorAccountId,
+  title,
+  body,
+  sourceType,
+  sourceId,
+  metadata = {},
+}) {
+  if (!createInAppNotification) return;
+  if (!post?.author_account_id || post.author_account_id === actorAccountId) return;
+  await createInAppNotification(client, {
+    accountId: post.author_account_id,
+    type: "system",
+    title,
+    body,
+    actionHref: `/app/shop-talk?post=${post.id}`,
+    sourceType,
+    sourceId,
+    priority: "normal",
+    metadata: {
+      postId: post.id,
+      communitySlug: post.community_slug ?? null,
+      communityName: post.community_name ?? null,
+      ...metadata,
+    },
+  });
+}
+
+async function loadShopTalkReactionNotificationTarget(client, target) {
+  if (target.targetType === "thread") {
+    const postId = target.targetKey.replace(/^post:/, "");
+    const result = await client.query(
+      `SELECT post.id,
+              post.title,
+              post.author_account_id,
+              community.slug AS community_slug,
+              community.name AS community_name
+       FROM shop_talk_posts post
+       LEFT JOIN communities community ON community.id = post.community_id
+       WHERE post.id = $1
+         AND post.moderation_status <> 'hidden'`,
+      [postId],
+    );
+    const post = result.rows[0] ?? null;
+    return post ? { post, ownerAccountId: post.author_account_id, answerId: null } : null;
+  }
+
+  const answerId = target.targetKey.replace(/^answer:/, "");
+  const result = await client.query(
+    `SELECT answer.id AS answer_id,
+            answer.author_account_id AS owner_account_id,
+            post.id,
+            post.title,
+            post.author_account_id,
+            community.slug AS community_slug,
+            community.name AS community_name
+     FROM shop_talk_answers answer
+     JOIN shop_talk_posts post ON post.id = answer.post_id
+     LEFT JOIN communities community ON community.id = post.community_id
+     WHERE answer.id = $1
+       AND answer.deleted_at IS NULL
+       AND answer.moderation_status <> 'hidden'
+       AND post.moderation_status <> 'hidden'`,
+    [answerId],
+  );
+  const row = result.rows[0] ?? null;
+  if (!row) return null;
+  return {
+    post: row,
+    ownerAccountId: row.owner_account_id,
+    answerId: row.answer_id,
+  };
+}
+
 async function mapShopTalkPostRowWithMedia(row, signedObjectUrl) {
   const rawMedia = Array.isArray(row.media) ? row.media : [];
   const media = await Promise.all(rawMedia.map(async (item) => ({
@@ -341,6 +417,7 @@ export function registerShopTalkRoutes({
   signedObjectUrl,
   runIdempotentMutation,
   sendIdempotentResult,
+  createInAppNotification,
 }) {
   app.get("/api/v1/shop-talk/posts", requireV1AuthenticatedUser, requireV1Actor, asyncRoute(async (request, response) => {
     const { community } = validate(shopTalkPostsQuerySchema, request.query);
@@ -625,7 +702,13 @@ export function registerShopTalkRoutes({
       `shop-talk.answer.create:${postId}`,
       async (client) => {
         const post = await client.query(
-          `SELECT post.id, post.moderation_status, community.moderation_status AS community_moderation_status
+          `SELECT post.id,
+                  post.title,
+                  post.author_account_id,
+                  post.moderation_status,
+                  community.slug AS community_slug,
+                  community.name AS community_name,
+                  community.moderation_status AS community_moderation_status
            FROM shop_talk_posts post
            JOIN communities community ON community.id = post.community_id
            WHERE post.id = $1
@@ -669,6 +752,16 @@ export function registerShopTalkRoutes({
             JSON.stringify({ postId }),
           ],
         );
+        await notifyShopTalkPostAuthor(client, {
+          createInAppNotification,
+          post: post.rows[0],
+          actorAccountId: request.actor.account.id,
+          title: `${authorName} answered your Shop Talk post`,
+          body: `"${post.rows[0].title}" has a new answer.`,
+          sourceType: "shop_talk_answer",
+          sourceId: inserted.rows[0].id,
+          metadata: { answerId: inserted.rows[0].id },
+        });
         return {
           status: 201,
           body: {
@@ -689,7 +782,11 @@ export function registerShopTalkRoutes({
       `shop-talk.answer.verify:${postId}:${answerId}`,
       async (client) => {
         const post = await client.query(
-          `SELECT post.id, post.author_account_id
+          `SELECT post.id,
+                  post.title,
+                  post.author_account_id,
+                  community.slug AS community_slug,
+                  community.name AS community_name
            FROM shop_talk_posts post
            JOIN communities community ON community.id = post.community_id
            WHERE post.id = $1
@@ -706,7 +803,7 @@ export function registerShopTalkRoutes({
           throw new ApiError(403, "SHOP_TALK_VERIFY_FORBIDDEN", "Only the original poster can mark a verified fix.");
         }
         const answer = await client.query(
-          `SELECT id
+          `SELECT id, author_account_id, author_name
            FROM shop_talk_answers
            WHERE id = $1
              AND post_id = $2
@@ -744,6 +841,24 @@ export function registerShopTalkRoutes({
             JSON.stringify({ postId }),
           ],
         );
+        if (createInAppNotification && answer.rows[0].author_account_id !== request.actor.account.id) {
+          await createInAppNotification(client, {
+            accountId: answer.rows[0].author_account_id,
+            type: "system",
+            title: "Your answer was marked Verified Fix",
+            body: `"${post.rows[0].title}" now highlights your answer.`,
+            actionHref: `/app/shop-talk?post=${postId}`,
+            sourceType: "shop_talk_answer",
+            sourceId: answerId,
+            priority: "normal",
+            metadata: {
+              postId,
+              answerId,
+              communitySlug: post.rows[0].community_slug ?? null,
+              communityName: post.rows[0].community_name ?? null,
+            },
+          });
+        }
         const answers = await fetchShopTalkAnswerRows(client, postId);
         return {
           status: 200,
@@ -843,6 +958,29 @@ export function registerShopTalkRoutes({
               JSON.stringify({ previousReaction, nextReaction: input.reaction }),
             ],
           );
+          if (createInAppNotification && input.reaction === "up" && previousReaction !== "up") {
+            const targetOwner = await loadShopTalkReactionNotificationTarget(client, target);
+            if (targetOwner?.ownerAccountId && targetOwner.ownerAccountId !== request.actor.account.id) {
+              const isAnswer = target.targetType === "answer";
+              await createInAppNotification(client, {
+                accountId: targetOwner.ownerAccountId,
+                type: "system",
+                title: isAnswer ? "Your Shop Talk answer got an upvote" : "Your Shop Talk post got an upvote",
+                body: `"${targetOwner.post.title}" got new activity.`,
+                actionHref: `/app/shop-talk?post=${targetOwner.post.id}`,
+                sourceType: isAnswer ? "shop_talk_answer" : "shop_talk_post",
+                sourceId: isAnswer ? targetOwner.answerId : targetOwner.post.id,
+                priority: "low",
+                metadata: {
+                  postId: targetOwner.post.id,
+                  answerId: targetOwner.answerId,
+                  communitySlug: targetOwner.post.community_slug ?? null,
+                  communityName: targetOwner.post.community_name ?? null,
+                  reaction: input.reaction,
+                },
+              });
+            }
+          }
         }
 
         const [reaction] = await loadShopTalkReactionAggregates(client, request.actor.account.id, [target]);

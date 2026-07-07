@@ -307,6 +307,41 @@ function readStringSet(key: string, normalize: (value: string) => string = (valu
   }
 }
 
+const SHOP_TALK_FILTER_PREFS_KEY = "rivt.shopTalkFilters.v1";
+
+interface ShopTalkFilterPrefs {
+  sortMode: "hot" | "new" | "unanswered";
+  tradeFilter: string;
+  flairFilter: PostFlair | "All";
+  filterType: PostType | "all";
+}
+
+function readShopTalkFilterPrefs(): ShopTalkFilterPrefs {
+  const fallback: ShopTalkFilterPrefs = {
+    sortMode: "hot",
+    tradeFilter: "All trades",
+    flairFilter: "All",
+    filterType: "all",
+  };
+  try {
+    const parsed = JSON.parse(localStorage.getItem(SHOP_TALK_FILTER_PREFS_KEY) ?? "null") as Partial<ShopTalkFilterPrefs> | null;
+    if (!parsed || typeof parsed !== "object") return fallback;
+    const sortMode = parsed.sortMode === "new" || parsed.sortMode === "unanswered" ? parsed.sortMode : fallback.sortMode;
+    return {
+      sortMode,
+      tradeFilter: typeof parsed.tradeFilter === "string" ? parsed.tradeFilter : fallback.tradeFilter,
+      flairFilter: typeof parsed.flairFilter === "string" ? parsed.flairFilter as PostFlair | "All" : fallback.flairFilter,
+      filterType: typeof parsed.filterType === "string" ? parsed.filterType as PostType | "all" : fallback.filterType,
+    };
+  } catch {
+    return fallback;
+  }
+}
+
+function writeShopTalkFilterPrefs(next: ShopTalkFilterPrefs) {
+  try { localStorage.setItem(SHOP_TALK_FILTER_PREFS_KEY, JSON.stringify(next)); } catch { /* harmless preference */ }
+}
+
 function postSortValue(post: CommunityPost) {
   if (typeof post.sortOrder === "number") return post.sortOrder;
   const parsedDate = new Date(post.createdAt).getTime();
@@ -629,8 +664,10 @@ export function ShopTalkView({
 }) {
   const persona = usePersona();
   const [activeTab, setActiveTab] = useState<"talk" | "news">("talk");
-  const [sortMode, setSortMode] = useState<"hot" | "new" | "unanswered">(initialAnswerQueue ? "unanswered" : "hot");
-  const [tradeFilter, setTradeFilter] = useState("All trades");
+  const [sortMode, setSortMode] = useState<"hot" | "new" | "unanswered">(() => (
+    initialAnswerQueue ? "unanswered" : readShopTalkFilterPrefs().sortMode
+  ));
+  const [tradeFilter, setTradeFilter] = useState(() => readShopTalkFilterPrefs().tradeFilter);
   const [answerQueueOnly, setAnswerQueueOnly] = useState(Boolean(initialAnswerQueue));
   const [selectedPostId, setSelectedPostId] = useState<string | null>(initialPostId ?? communityPosts[0]?.id ?? null);
   const [answerDraft, setAnswerDraft] = useState("");
@@ -649,7 +686,7 @@ export function ShopTalkView({
   const [liveNews, setLiveNews] = useState<NewsItem[]>([]);
   const [newsLoading, setNewsLoading] = useState(false);
   const [newsFetched, setNewsFetched] = useState(false);
-  const [flairFilter, setFlairFilter] = useState<PostFlair | "All">("All");
+  const [flairFilter, setFlairFilter] = useState<PostFlair | "All">(() => readShopTalkFilterPrefs().flairFilter);
   const [bookmarkedIds, setBookmarkedIds] = useState<Set<string>>(() => readStringSet("rivt.shopTalkBookmarks.v1"));
   const [showBookmarked, setShowBookmarked] = useState(false);
   const [helpfulVotesMap, setHelpfulVotesMap] = useState<Record<string, number>>(() => {
@@ -658,7 +695,7 @@ export function ShopTalkView({
   });
   const [activeTrendingTag, setActiveTrendingTag] = useState<string | null>(null);
   const [locallyAnswered, setLocallyAnswered] = useState<Set<string>>(new Set());
-  const [filterType, setFilterType] = useState<PostType | "all">("all");
+  const [filterType, setFilterType] = useState<PostType | "all">(() => readShopTalkFilterPrefs().filterType);
   const displayNews = liveNews.length ? liveNews : newsItems;
   const [selectedNewsId, setSelectedNewsId] = useState(displayNews[0]?.id ?? 0);
   const [mobileDetail, setMobileDetail] = useState(initialPostId != null || Boolean(initialAnswerQueue));
@@ -667,6 +704,10 @@ export function ShopTalkView({
   const [reportReason, setReportReason] = useState<CommunityReportReason>("Safety concern");
   const [reportNote, setReportNote] = useState("");
   const [reportBusy, setReportBusy] = useState(false);
+  useEffect(() => {
+    if (answerQueueOnly) return;
+    writeShopTalkFilterPrefs({ sortMode, tradeFilter, flairFilter, filterType });
+  }, [answerQueueOnly, flairFilter, filterType, sortMode, tradeFilter]);
   const serverCommunitiesLoaded = communities.some((community) => community.serverOwned);
 
   useEffect(() => {
@@ -1549,6 +1590,12 @@ export function ShopTalkView({
                 <textarea
                   value={answerDraft}
                   onChange={(e) => setAnswerDraft(e.target.value.slice(0, 1000))}
+                  onKeyDown={(event) => {
+                    if ((event.metaKey || event.ctrlKey) && event.key === "Enter" && answerDraft.trim()) {
+                      event.preventDefault();
+                      submitAnswer();
+                    }
+                  }}
                   rows={4}
                   placeholder="Share the field habit, safety check, tool setup, or closeout proof that would prevent a callback."
                 />

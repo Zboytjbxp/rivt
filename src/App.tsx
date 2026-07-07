@@ -299,6 +299,45 @@ class RouteErrorBoundary extends Component<{ children: React.ReactNode }, { fail
 const VALID_POST_FLAIRS: PostFlair[] = ["Question", "Discussion", "Code Talk", "Compliance", "Tip", "Humor"];
 const VALID_POST_TYPES: PostType[] = ["question", "sub-request", "safety", "general"];
 const VALID_POST_STATUSES: CommunityPost["status"][] = ["Open", "Verified Fix", "Needs a pro answer"];
+const WORK_FILTER_PREFS_KEY = "rivt.workFilters.v1";
+
+interface WorkFilterPrefs {
+  query: string;
+  trade: TradeFilter;
+  difficulty: DifficultyFilter;
+  workType: WorkTypeFilter;
+  locationQuery: string;
+  verifiedOnly: boolean;
+}
+
+function readWorkFilterPrefs(): WorkFilterPrefs {
+  const fallback: WorkFilterPrefs = {
+    query: "",
+    trade: "All trades",
+    difficulty: "Any difficulty",
+    workType: "All work types",
+    locationQuery: "",
+    verifiedOnly: false,
+  };
+  try {
+    const parsed = JSON.parse(localStorage.getItem(WORK_FILTER_PREFS_KEY) ?? "null") as Partial<WorkFilterPrefs> | null;
+    if (!parsed || typeof parsed !== "object") return fallback;
+    return {
+      query: typeof parsed.query === "string" ? parsed.query : fallback.query,
+      trade: typeof parsed.trade === "string" ? parsed.trade as TradeFilter : fallback.trade,
+      difficulty: typeof parsed.difficulty === "string" ? parsed.difficulty as DifficultyFilter : fallback.difficulty,
+      workType: typeof parsed.workType === "string" ? parsed.workType as WorkTypeFilter : fallback.workType,
+      locationQuery: typeof parsed.locationQuery === "string" ? parsed.locationQuery : fallback.locationQuery,
+      verifiedOnly: Boolean(parsed.verifiedOnly),
+    };
+  } catch {
+    return fallback;
+  }
+}
+
+function writeWorkFilterPrefs(next: WorkFilterPrefs) {
+  try { localStorage.setItem(WORK_FILTER_PREFS_KEY, JSON.stringify(next)); } catch { /* harmless preference */ }
+}
 const TRADE_OPTION_NAMES = new Set<string>(tradeOptions.filter((option) => option !== "All trades"));
 
 function normalizeShopTalkTrade(value: string): Trade | "General" {
@@ -399,7 +438,7 @@ function App() {
   const [authProviders, setAuthProviders] = useState<Record<string, { ok: boolean; mode: string; missing: string[]; purpose: string }>>({});
   const [pilotInviteRequired, setPilotInviteRequired] = useState(false);
   const [authNotice, setAuthNotice] = useState<string | null>(null);
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(() => readWorkFilterPrefs().query);
   const [profileSearchFocus, setProfileSearchFocus] = useState<ProfileSearchResult | null>(null);
   const [shopTalkGlobalQuery, setShopTalkGlobalQuery] = useState("");
   const [shopTalkPostId, setShopTalkPostId] = useState<string | null>(null);
@@ -416,18 +455,21 @@ function App() {
     setShopTalkAnswerQueue(false);
     /* eslint-enable react-hooks/set-state-in-effect */
   }, [activeView]);
-  const [trade, setTrade] = useState<TradeFilter>("All trades");
+  const [trade, setTrade] = useState<TradeFilter>(() => readWorkFilterPrefs().trade);
   const [difficulty, setDifficulty] =
-    useState<DifficultyFilter>("Any difficulty");
-  const [workType, setWorkType] = useState<WorkTypeFilter>("All work types");
-  const [locationQuery, setLocationQuery] = useState("");
-  const [verifiedOnly, setVerifiedOnly] = useState(false);
+    useState<DifficultyFilter>(() => readWorkFilterPrefs().difficulty);
+  const [workType, setWorkType] = useState<WorkTypeFilter>(() => readWorkFilterPrefs().workType);
+  const [locationQuery, setLocationQuery] = useState(() => readWorkFilterPrefs().locationQuery);
+  const [verifiedOnly, setVerifiedOnly] = useState(() => readWorkFilterPrefs().verifiedOnly);
   const [jobs, setJobs] = useState<Job[]>([]);
   const [selectedId, setSelectedId] = useState<JobId>(0);
   const [jobsLoading, setJobsLoading] = useState(false);
   const [jobsError, setJobsError] = useState<string | null>(null);
   const [editingJob, setEditingJob] = useState<Job | null>(null);
   const jobsRequestRef = useRef(0);
+  useEffect(() => {
+    writeWorkFilterPrefs({ query, trade, difficulty, workType, locationQuery, verifiedOnly });
+  }, [difficulty, locationQuery, query, trade, verifiedOnly, workType]);
   const [_applications] = useState<ApplicationRecord[]>([]);
   const [isPostOpen, setPostOpen] = useState(false);
   const [isActivityOpen, setActivityOpen] = useState(false);
@@ -479,6 +521,7 @@ function App() {
     notifications: inboxNotifications,
     role,
   });
+  const unreadMessages = inboxConversations.reduce((sum, conversation) => sum + Math.max(0, conversation.unreadCount || 0), 0);
   const [isGuest, setIsGuest] = useState(false);
   const [guestPromptOpen, setGuestPromptOpen] = useState(false);
   const [localSetupOpen, setLocalSetupOpen] = useState(false);
@@ -1959,6 +2002,7 @@ function App() {
             : null
         }
         notificationCount={unreadActivities}
+        messageCount={unreadMessages}
         isGuest={isGuest}
         mobileNavHidden={toolsImmersive}
         guestBanner={

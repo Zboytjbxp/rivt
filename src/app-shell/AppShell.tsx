@@ -35,6 +35,7 @@ export function AppShell({
   profile,
   activeJob,
   notificationCount,
+  messageCount = 0,
   isGuest,
   mobileNavHidden = false,
   children,
@@ -213,6 +214,7 @@ export function AppShell({
             </button>
             <button type="button" className="v2-icon-button" aria-label="Messages" onClick={onOpenMessages}>
               <MessageCircle size={19} />
+              {messageCount > 0 ? <span>{messageCount > 9 ? "9+" : messageCount}</span> : null}
             </button>
             <button type="button" className="v2-icon-button" aria-label="Notifications" onClick={onOpenNotifications}>
               <Bell size={19} />
