@@ -5,7 +5,7 @@ Current gate: Gate A launch hardening
 Current phase: Packet 08 Gate A launch hardening plus Gate B behind-flag backbone work: machine gates and live workflow smokes are mostly green; the Shop Talk Reddit-model backbone, moderation/reporting backend, human-facing moderation console/report UX, post photo media, reachability/naming cleanup, Tools hub consolidation, Payment Tracker server records, money-tools sync, the accepted tool-records sync slices, non-tool local-state boundary cleanup, dedicated network-records sync for Crew/Invites/informal written shout-outs, screen-density polish, mobile layout/device-accessibility subtraction, fraction calculator ergonomics, iPhone SE layout containment, immersive-tool compact-device containment, SE tool chrome cleanup slices, native metric calculator rebuild, the camera-first records/photos tool rebuild, admin support-case review for account-type requests, and offer start-date normalization are implemented while still respecting launch-readiness boundaries before broad exposure.
 Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
-Production release commit: `9b715a288dd03e62fab19f257f8f2095ad23e88f` verified with live `/api/health` and `npm run monitor:production`; latest runtime feature evidence is recorded below and docs-only evidence commits may supersede the served build SHA.
+Production release commit: `15b11eaacf3c742203b0c4d5d186cf9041d7d77c` verified with live `/api/health` and `npm run monitor:production`; latest runtime feature evidence is recorded below and docs-only evidence commits may supersede the served build SHA.
 
 ## Latest Packet 08 Pass - Notification and Community Tightening
 
@@ -28,6 +28,9 @@ Production release commit: `9b715a288dd03e62fab19f257f8f2095ad23e88f` verified w
   - `npm audit --omit=dev` (pass; 0 vulnerabilities)
   - `git diff --check` (pass; CRLF warnings only)
   - `npm run test` and `npm run test:integration` did not complete in this local shell before command timeouts; `TEST_DATABASE_URL` and `DATABASE_URL` are not configured in this shell, so DB-backed integration evidence is not newly claimed for this small tightening slice
+- Live verification:
+  - production `/api/health` reported exact build commit `15b11eaacf3c742203b0c4d5d186cf9041d7d77c`
+  - `EXPECTED_SOURCE_COMMIT=15b11eaacf3c742203b0c4d5d186cf9041d7d77c npm run monitor:production` passed with PostgreSQL, S3-compatible object storage, configured Sentry, operational controls off, seven anonymous private-route checks, and 587 ms duration
 
 ## Latest Packet 08 Pass - Interactable Notifications + Active Work Landing
 
