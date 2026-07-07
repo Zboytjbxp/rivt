@@ -177,7 +177,7 @@ function photoFromAlbumPhoto(photo: AlbumPhoto): UnifiedPhoto {
 }
 
 function CameraCapture({ onCapture, onClose }: {
-  onCapture: (blob: Blob) => void;
+  onCapture: (blob: Blob) => Promise<void>;
   onClose: () => void;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -187,6 +187,8 @@ function CameraCapture({ onCapture, onClose }: {
   const [captureCount, setCaptureCount] = useState(0);
   const [flash, setFlash] = useState(false);
   const [lastSnapUrl, setLastSnapUrl] = useState<string | null>(null);
+  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "failed">("idle");
+  const [saveMessage, setSaveMessage] = useState("");
   const lastSnapRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -226,10 +228,20 @@ function CameraCapture({ onCapture, onClose }: {
       const nextUrl = URL.createObjectURL(blob);
       lastSnapRef.current = nextUrl;
       setLastSnapUrl(nextUrl);
-      onCapture(blob);
-      setCaptureCount((current) => current + 1);
+      setSaveState("saving");
+      setSaveMessage("Saving to the live job...");
       setFlash(true);
       setTimeout(() => setFlash(false), 200);
+      void onCapture(blob)
+        .then(() => {
+          setCaptureCount((current) => current + 1);
+          setSaveState("saved");
+          setSaveMessage("Saved to this job's project feed.");
+        })
+        .catch((err: unknown) => {
+          setSaveState("failed");
+          setSaveMessage(projectErrorMessage(err));
+        });
     }, "image/jpeg", 0.92);
   }
 
@@ -258,10 +270,15 @@ function CameraCapture({ onCapture, onClose }: {
           type="button"
           className="v2-camera-shutter"
           onClick={shoot}
-          disabled={!ready || Boolean(error)}
+          disabled={!ready || Boolean(error) || saveState === "saving"}
           aria-label="Take photo"
         />
       </div>
+      {saveState !== "idle" ? (
+        <span className={`v2-camera-save-status is-${saveState}`} role={saveState === "failed" ? "alert" : "status"}>
+          {saveMessage}
+        </span>
+      ) : null}
       {lastSnapUrl ? (
         <img
           key={lastSnapUrl}
@@ -299,7 +316,7 @@ function PhotoGallery({
   uploadError: string;
   onBack: () => void;
   backLabel?: string;
-  onUploadFiles: (files: FileList | null, note?: string) => Promise<void>;
+  onUploadFiles: (files: File[], note?: string) => Promise<void>;
   onFileRef: (ref: HTMLInputElement | null) => void;
   initialShowCameraToken?: number;
   layout?: PhotoGalleryLayout;
@@ -332,8 +349,8 @@ function PhotoGallery({
     onFileRef(fileRef.current);
   }, [onFileRef]);
 
-  async function handleUpload(files: FileList | null, note = captureIntentNote(captureIntent)) {
-    if (!files?.length) return;
+  async function handleUploadFiles(files: File[], note = captureIntentNote(captureIntent)) {
+    if (!files.length) return;
     const count = files.length;
     setPendingCount((current) => current + count);
     try {
@@ -343,11 +360,13 @@ function PhotoGallery({
     }
   }
 
-  function handleCapturePhoto(blob: Blob) {
+  async function handleUpload(files: FileList | null, note = captureIntentNote(captureIntent)) {
+    await handleUploadFiles(files ? Array.from(files) : [], note);
+  }
+
+  async function handleCapturePhoto(blob: Blob) {
     const file = new File([blob], `photo-${Date.now()}.jpg`, { type: "image/jpeg" });
-    const transfer = new DataTransfer();
-    transfer.items.add(file);
-    void handleUpload(transfer.files);
+    await handleUploadFiles([file], captureIntentNote(captureIntent));
   }
 
   function startCompare() {
@@ -728,16 +747,19 @@ export function JobPhotosTool({ activeWork }: { activeWork: CanonicalActiveWork[
     }
   }
 
-  async function handleAlbumFiles(files: FileList | null, note?: string) {
-    if (!files?.length || !openAlbum) return;
+  async function handleAlbumFiles(files: File[], note?: string) {
+    if (!files.length) return;
+    if (!openAlbum) throw new Error("Open an album before adding photos.");
     setAlbumUploading(true);
     setAlbumUploadError("");
     const newPhotos: AlbumPhoto[] = [];
-    for (const file of Array.from(files)) {
+    let uploadFailure: unknown = null;
+    for (const file of files) {
       try {
         newPhotos.push(await uploadAlbumPhoto(openAlbum.id, file, note ?? ""));
       } catch (err) {
         setAlbumUploadError(albumErrorMessage(err));
+        uploadFailure = err;
         break;
       }
     }
@@ -750,6 +772,7 @@ export function JobPhotosTool({ activeWork }: { activeWork: CanonicalActiveWork[
     }
     setAlbumUploading(false);
     if (albumFileRef.current) albumFileRef.current.value = "";
+    if (uploadFailure) throw uploadFailure;
   }
 
   async function openActiveJob(options?: { launchCamera?: boolean }) {
@@ -771,15 +794,18 @@ export function JobPhotosTool({ activeWork }: { activeWork: CanonicalActiveWork[
     }
   }
 
-  async function handleJobFiles(files: FileList | null, note?: string) {
-    if (!files?.length || !project) return;
+  async function handleJobFiles(files: File[], note?: string) {
+    if (!files.length) return;
+    if (!project) throw new Error("Open the live job project feed before adding photos.");
     setJobUploading(true);
     setJobUploadError("");
-    for (const file of Array.from(files)) {
+    let uploadFailure: unknown = null;
+    for (const file of files) {
       try {
         await uploadProjectMedia(project.id, file, note ?? captureIntentNote(captureIntent));
       } catch (err) {
         setJobUploadError(projectErrorMessage(err));
+        uploadFailure = err;
         break;
       }
     }
@@ -790,6 +816,7 @@ export function JobPhotosTool({ activeWork }: { activeWork: CanonicalActiveWork[
     }
     setJobUploading(false);
     if (jobFileRef.current) jobFileRef.current.value = "";
+    if (uploadFailure) throw uploadFailure;
   }
 
   if (mode === "active-job" && currentProject) {

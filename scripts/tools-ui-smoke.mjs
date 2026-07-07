@@ -105,8 +105,41 @@ async function waitForServer() {
 }
 
 async function configurePage(page) {
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, "mediaDevices", {
+      configurable: true,
+      value: {
+        getUserMedia: async () => {
+          const canvas = document.createElement("canvas");
+          canvas.width = 640;
+          canvas.height = 480;
+          const context = canvas.getContext("2d");
+          if (context) {
+            context.fillStyle = "#101820";
+            context.fillRect(0, 0, canvas.width, canvas.height);
+            context.fillStyle = "#ff4b00";
+            context.fillRect(48, 48, 220, 120);
+            context.fillStyle = "#ffffff";
+            context.font = "42px sans-serif";
+            context.fillText("RIVT", 72, 124);
+          }
+          return canvas.captureStream(5);
+        },
+      },
+    });
+  });
+  let mediaCounter = 0;
+  const pageProjectRecord = {
+    ...projectRecord,
+    entries: [...projectRecord.entries],
+    media: [],
+    completionSubmissions: [...projectRecord.completionSubmissions],
+  };
   await page.route(`**/api/v1/active-work/${activeWorkItem.id}/project`, (route) =>
-    route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { project: projectRecord } }) }),
+    route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { project: pageProjectRecord } }) }),
+  );
+  await page.route(`**/api/v1/projects/${projectRecord.id}`, (route) =>
+    route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { project: pageProjectRecord } }) }),
   );
   await page.route(`**/api/v1/projects/${projectRecord.id}/entries`, (route) =>
     route.fulfill({
@@ -128,6 +161,43 @@ async function configurePage(page) {
       }),
     }),
   );
+  await page.route(`**/api/v1/projects/${projectRecord.id}/media`, (route) => {
+    mediaCounter += 1;
+    const uploadId = `tools-media-upload-${mediaCounter}`;
+    const createdAt = `2026-06-21T13:0${mediaCounter}:00.000Z`;
+    const media = {
+      id: `tools-media-${mediaCounter}`,
+      projectId: projectRecord.id,
+      uploadId,
+      originalName: `photo-${mediaCounter}.jpg`,
+      mimeType: "image/jpeg",
+      sizeBytes: 2048,
+      contentSha256: `tools-hash-${mediaCounter}`,
+      mediaKind: "photo",
+      status: "stored",
+      reviewStatus: "accepted",
+      failureReason: "",
+      createdAt,
+      signedUrl: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='320' height='220' viewBox='0 0 320 220'%3E%3Crect width='320' height='220' fill='%23101820'/%3E%3Crect x='36' y='42' width='248' height='136' rx='14' fill='%23ff4b00'/%3E%3Ctext x='160' y='124' text-anchor='middle' font-family='Arial' font-size='42' font-weight='700' fill='white'%3ERIVT%3C/text%3E%3C/svg%3E",
+    };
+    const entry = {
+      id: `tools-media-entry-${mediaCounter}`,
+      projectId: projectRecord.id,
+      actorAccountId: account.id,
+      entryType: "media",
+      body: "Progress photo",
+      checklist: {},
+      metadata: { uploadId },
+      createdAt,
+    };
+    pageProjectRecord.media = [media, ...pageProjectRecord.media];
+    pageProjectRecord.entries = [entry, ...pageProjectRecord.entries];
+    return route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ data: { media, entry } }),
+    });
+  });
   await page.route("**/api/v1/me", (route) =>
     route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: account }) }),
   );
@@ -444,6 +514,20 @@ async function runToolsFlow(page, viewportName) {
     null,
     { timeout: 15_000 },
   );
+  await page.getByRole("button", { name: /Open project feed/i }).first().click();
+  await page.getByText("Live project feed", { exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByRole("button", { name: "Shoot" }).click();
+  await page.getByRole("button", { name: "Take photo" }).waitFor({ timeout: 15_000 });
+  await page.waitForFunction(() => {
+    const shutter = document.querySelector(".v2-camera-shutter");
+    return shutter instanceof HTMLButtonElement && !shutter.disabled;
+  }, null, { timeout: 15_000 });
+  await page.getByRole("button", { name: "Take photo" }).click();
+  await page.getByText("Saved to this job's project feed.", { exact: true }).waitFor({ timeout: 15_000 });
+  await page.locator(".v2-camera-badge").filter({ hasText: "1 photo" }).waitFor({ timeout: 15_000 });
+  await page.getByRole("button", { name: "Done" }).click();
+  await page.locator(".v2-job-photos-stats strong", { hasText: "1" }).waitFor({ timeout: 15_000 });
+  await page.locator(".v2-job-photo-timeline-row").first().waitFor({ timeout: 15_000 });
   await assertNoHorizontalOverflow(page);
   await page.screenshot({ path: path.join(screenshotDir, `${viewportName}-job-photos.png`), fullPage: true });
 }

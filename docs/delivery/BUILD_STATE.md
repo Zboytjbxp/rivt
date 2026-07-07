@@ -7,6 +7,27 @@ Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
 Production release commit: `d9b3a9866d4e8cfabd04c16f3d79c176331902cd` verified with live `/api/health` and `npm run monitor:production`; latest runtime feature evidence is recorded below and docs-only evidence commits may supersede the served build SHA.
 
+## Latest Packet 08 Pass - Active Job Camera Upload Handoff
+
+- Fixed the active-job camera handoff after mobile testing showed tradespeople could snap a photo and see no obvious upload result:
+  - camera captures now upload the captured `Blob` as a direct `File[]` instead of relying on `DataTransfer` to synthesize a `FileList`, which is brittle on iOS Safari
+  - the camera overlay now shows `Saving`, `Saved`, and `Failed` status feedback so users know whether a photo landed on the live job record
+  - active-job and side-album upload handlers now throw upload failures back to the camera after setting the visible error state, preventing silent failures
+  - the saved confirmation explicitly says the photo was saved to the job's project feed
+- Preserved launch boundaries:
+  - no new storage provider, fake local success state, auth fallback, billing behavior, or production-data migration was added
+  - photos still go through the existing authenticated project-media and album upload endpoints
+  - upload authorization remains server-side
+- Local verification:
+  - `npm run test:ui:tools` (pass; exercised fake camera stream -> shutter -> mocked project-media upload -> saved status -> job feed row at desktop, 390px mobile, and 320px SE)
+  - `npm run build` (pass)
+  - `npm run lint` (pass)
+  - `npm run lint:security` (pass)
+  - `npm run test:unit` (pass; 45/45)
+  - `npm run test:e2e` (pass)
+  - `npm run test:integration` (pass for non-DB checks; 15 DB-backed cases skipped because `TEST_DATABASE_URL` is not configured locally)
+  - `npm audit --omit=dev` (pass; 0 vulnerabilities)
+
 ## Latest Packet 08 Pass - Active Work Notification Handoff
 
 - Fixed the accepted-offer experience after mobile testing showed notification cards were inert and accepted work was hard to discover:
