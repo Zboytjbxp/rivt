@@ -970,11 +970,54 @@ function App() {
 
   const filteredJobs = jobs;
 
+  type AuthFailureBody = {
+    error?: {
+      code?: string;
+      message?: string;
+      details?: {
+        issues?: Array<{ path?: string; message?: string }>;
+      };
+    };
+  };
+
+  function formatAuthFailure(mode: "login" | "signup", body: AuthFailureBody) {
+    const code = body.error?.code;
+    if (mode === "signup") {
+      switch (code) {
+        case "SIGNUP_NOT_AVAILABLE":
+          return "That email may already be registered. Log in instead, or use Forgot password to reset it.";
+        case "INVITATION_REQUIRED":
+          return "Enter your pilot invitation code to create an account.";
+        case "INVITATION_INVALID":
+          return "That invite code is invalid, expired, fully used, or not assigned to this email or account type. Check the code and try again.";
+        case "PASSWORD_POLICY_FAILED":
+          return body.error?.message || "Use at least 8 characters with uppercase, lowercase, a number, and a symbol.";
+        case "VALIDATION_FAILED": {
+          const fields = body.error?.details?.issues
+            ?.map((issue) => issue.path)
+            .filter((path): path is string => Boolean(path));
+          if (fields?.includes("inviteCode")) return "Invite codes must be at least 5 characters. Check the code and try again.";
+          if (fields?.includes("email")) return "Enter a valid email address.";
+          if (fields?.includes("displayName")) return "Enter your name or business name with at least 2 characters.";
+          return "Check the signup fields and try again.";
+        }
+        case "EMAIL_PROVIDER_UNAVAILABLE":
+          return "Email signup is temporarily unavailable. Try again shortly or contact support@rivt.pro.";
+        case "SIGNUPS_DISABLED":
+          return "RIVT signups are temporarily closed. Try again later or contact support@rivt.pro.";
+        default:
+          return body.error?.message || "Account could not be created. Check your email, password, account type, and invite code.";
+      }
+    }
+    return body.error?.message || "Sign-in failed.";
+  }
+
   async function handleAuthSubmit(form: { email: string; password: string; displayName?: string; role?: Role; inviteCode?: string }) {
     setAuthError(null);
     setAuthNotice(null);
     try {
-      const path = authMode === "signup" ? "/api/v1/auth/signup" : "/api/v1/auth/login";
+      const requestMode = authMode;
+      const path = requestMode === "signup" ? "/api/v1/auth/signup" : "/api/v1/auth/login";
       const response = await fetch(apiPath(path), {
         method: "POST",
         credentials: "include",
@@ -983,10 +1026,10 @@ function App() {
       });
       const body = await response.json().catch(() => ({})) as {
         data?: { user?: AuthUser; verificationRequired?: boolean; verificationDelivered?: boolean };
-        error?: { message?: string };
+        error?: AuthFailureBody["error"];
       };
       if (!response.ok || !body.data?.user) {
-        throw new Error(body.error?.message || "Sign-in failed.");
+        throw new Error(formatAuthFailure(requestMode, body));
       }
       const account = await refreshCanonicalAccount();
       if (body.data.verificationRequired || !account.emailVerified) {
