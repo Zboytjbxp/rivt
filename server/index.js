@@ -4847,10 +4847,6 @@ app.post("/api/v1/auth/password/forgot", authRateLimit, asyncRoute(async (reques
         if (recent.rows[0].count >= 3) return null;
         const raw = createOpaqueToken();
         await client.query(
-          "UPDATE password_reset_tokens SET consumed_at = now() WHERE account_id = $1 AND consumed_at IS NULL",
-          [user.id],
-        );
-        await client.query(
           `INSERT INTO password_reset_tokens (account_id, token_hash, expires_at)
            VALUES ($1, $2, now() + interval '30 minutes')`,
           [user.id, hashOpaqueToken(raw)],

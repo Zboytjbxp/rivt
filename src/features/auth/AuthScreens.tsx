@@ -322,6 +322,19 @@ export function AuthLinkFlow({ mode }: { mode: "verify" | "reset" }) {
     : "Choose a new password for your RIVT account.");
   const [password, setPassword] = useState("");
 
+  function resetFailureMessage(code?: string, fallback = "Password reset failed.") {
+    if (code === "RESET_TOKEN_INVALID") {
+      return "This reset link is invalid, expired, or already used. Go back to sign in and request a fresh password reset email.";
+    }
+    if (code === "PASSWORD_POLICY_FAILED") {
+      return "Use at least 8 characters with uppercase, lowercase, a number, and a symbol.";
+    }
+    if (code === "VALIDATION_FAILED") {
+      return "This reset link is incomplete. Request a fresh password reset email from sign in.";
+    }
+    return fallback;
+  }
+
   useEffect(() => {
     if (mode !== "verify" || started.current) return;
     started.current = true;
@@ -356,8 +369,8 @@ export function AuthLinkFlow({ mode }: { mode: "verify" | "reset" }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ token, password }),
       });
-      const body = await response.json().catch(() => ({})) as { error?: { message?: string } };
-      if (!response.ok) throw new Error(body.error?.message || "Password reset failed.");
+      const body = await response.json().catch(() => ({})) as { error?: { code?: string; message?: string } };
+      if (!response.ok) throw new Error(resetFailureMessage(body.error?.code, body.error?.message || "Password reset failed."));
       setStatus("success");
       setMessage("Your password has been changed. Sign in again on your devices.");
     } catch (error) {

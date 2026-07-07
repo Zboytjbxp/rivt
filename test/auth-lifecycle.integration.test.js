@@ -267,22 +267,23 @@ if (!testDatabaseUrl) {
     assert.equal(forgotAgain.response.status, 202);
     const resetToken = tokenFromLatestEmail(contractor.email, "reset-password");
     assert.notEqual(resetToken, firstResetToken);
-    const supersededReset = await requestJson(baseUrl, "/api/v1/auth/password/reset", {
+    const firstRequestedReset = await requestJson(baseUrl, "/api/v1/auth/password/reset", {
       method: "POST",
-      body: { token: firstResetToken, password: "UnusedPassword!9876" },
+      body: { token: firstResetToken, password: "NewSafePassword!5678" },
     });
-    assert.equal(supersededReset.response.status, 400);
-    const reset = await requestJson(baseUrl, "/api/v1/auth/password/reset", {
-      method: "POST",
-      body: { token: resetToken, password: "NewSafePassword!5678" },
-    });
-    assert.equal(reset.response.status, 200);
+    assert.equal(firstRequestedReset.response.status, 200);
     const resetReplay = await requestJson(baseUrl, "/api/v1/auth/password/reset", {
       method: "POST",
-      body: { token: resetToken, password: "AnotherPassword!9" },
+      body: { token: firstResetToken, password: "AnotherPassword!9" },
     });
     assert.equal(resetReplay.response.status, 400);
     assert.equal(resetReplay.payload.error.code, "RESET_TOKEN_INVALID");
+    const laterEmailAfterReset = await requestJson(baseUrl, "/api/v1/auth/password/reset", {
+      method: "POST",
+      body: { token: resetToken, password: "AnotherPassword!9" },
+    });
+    assert.equal(laterEmailAfterReset.response.status, 400);
+    assert.equal(laterEmailAfterReset.payload.error.code, "RESET_TOKEN_INVALID");
     assert.equal((await requestJson(baseUrl, "/api/v1/me", { cookie: secondCookie })).response.status, 401);
 
     const oldPassword = await requestJson(baseUrl, "/api/v1/auth/login", {
