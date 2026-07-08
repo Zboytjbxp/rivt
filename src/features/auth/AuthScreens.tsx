@@ -614,9 +614,15 @@ function SwipeEntryShowcase({
         ) : null}
       </div>
 
-      <div className="auth-intro-secondary">
-        <button type="button" onClick={onCreateAccount}>Create account</button>
-        <button type="button" onClick={onLogin}>Log in</button>
+      <div className="auth-intro-secondary" aria-label="Account options">
+        <button type="button" className="auth-intro-account-action" onClick={onCreateAccount}>
+          <span>New here</span>
+          <strong>Create account</strong>
+        </button>
+        <button type="button" className="auth-intro-account-action is-login" onClick={onLogin}>
+          <span>Returning</span>
+          <strong>Log in</strong>
+        </button>
       </div>
     </section>
   );

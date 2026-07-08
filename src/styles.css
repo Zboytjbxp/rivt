@@ -511,18 +511,67 @@ textarea:focus-visible {
 }
 
 .auth-intro-secondary {
-  display: flex;
-  justify-content: center;
-  gap: 18px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  width: min(100%, 430px);
+  margin: 0 auto;
+  gap: 10px;
 }
 
-.auth-intro-secondary button {
-  min-height: 44px;
-  border: 0;
-  background: transparent;
+.auth-intro-account-action {
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  min-height: 58px;
+  padding: 8px 12px;
+  border: 1px solid rgba(11, 11, 11, 0.18);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.38);
   color: #0b0b0b;
-  font-weight: var(--v2-weight-bold);
+  font-family: inherit;
   cursor: pointer;
+  transition: transform 120ms ease, background 120ms ease, border-color 120ms ease;
+}
+
+.auth-intro-account-action span {
+  color: rgba(11, 11, 11, 0.58);
+  font-size: 11px;
+  font-weight: var(--v2-weight-bold);
+  letter-spacing: 0.12em;
+  line-height: 1.1;
+  text-transform: uppercase;
+}
+
+.auth-intro-account-action strong {
+  font-size: 15px;
+  line-height: 1.15;
+}
+
+.auth-intro-account-action:hover,
+.auth-intro-account-action:focus-visible {
+  border-color: rgba(11, 11, 11, 0.36);
+  background: rgba(255, 255, 255, 0.52);
+}
+
+.auth-intro-account-action:active {
+  transform: translateY(1px);
+}
+
+.auth-intro-account-action.is-login {
+  border-color: #0b0b0b;
+  background: #0b0b0b;
+  color: #fff;
+  box-shadow: 0 14px 34px rgba(11, 11, 11, 0.2);
+}
+
+.auth-intro-account-action.is-login span {
+  color: rgba(255, 255, 255, 0.66);
+}
+
+.auth-intro-account-action.is-login:hover,
+.auth-intro-account-action.is-login:focus-visible {
+  border-color: #0b0b0b;
+  background: #171717;
 }
 
 .auth-preview-entry {
@@ -10414,8 +10463,7 @@ html[data-rivt-compact-device="true"] .guest-exit {
   min-width: min(100%, 360px);
 }
 
-.auth-intro-secondary button,
-.auth-browse-action {
+.auth-shell--preview .auth-browse-action {
   color: #0b0b0b;
   font-weight: var(--v2-weight-bold);
   text-decoration: none;
@@ -10576,10 +10624,38 @@ html[data-rivt-compact-device="true"] .guest-exit {
   }
 
   html[data-rivt-compact-device="true"] .auth-intro-slide .auth-trade-phone {
-    max-height: 246px;
+    max-height: 196px;
   }
 
   html[data-rivt-compact-device="true"] .auth-intro-slide .auth-phone-post:nth-child(n+2) {
+    display: none;
+  }
+
+  html[data-rivt-compact-device="true"] .auth-intro {
+    gap: 8px;
+  }
+
+  html[data-rivt-compact-device="true"] .auth-intro-slide {
+    gap: 10px;
+  }
+
+  html[data-rivt-compact-device="true"] .auth-intro-actions .primary-action,
+  html[data-rivt-compact-device="true"] .auth-intro-actions .secondary-action {
+    min-height: 48px;
+  }
+
+  html[data-rivt-compact-device="true"] .auth-intro-secondary {
+    gap: 8px;
+    padding-bottom: 0;
+  }
+
+  html[data-rivt-compact-device="true"] .auth-intro-account-action {
+    min-height: 46px;
+    padding: 6px 8px;
+    border-radius: 16px;
+  }
+
+  html[data-rivt-compact-device="true"] .auth-intro-account-action span {
     display: none;
   }
 
