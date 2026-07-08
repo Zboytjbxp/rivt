@@ -900,7 +900,7 @@ export function GuestBanner({
 }) {
   return (
     <div className="guest-banner" role="status">
-      <span>Guest mode. Sign up to apply, post jobs, and message crews.</span>
+      <span>Guest preview.</span>
       <div className="guest-banner-actions">
         <button type="button" className="primary-action" onClick={onSignUp}>
           Sign up

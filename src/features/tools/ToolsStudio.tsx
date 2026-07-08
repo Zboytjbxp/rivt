@@ -3324,7 +3324,13 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
       },
       "job-photos": {
         title: "Camera",
-        node: <JobPhotosTool activeWork={orderedActiveWork} autoOpenActiveJob={requestedTool === "job-photos" && Boolean(focusedActiveWorkId)} />,
+        node: (
+          <JobPhotosTool
+            activeWork={orderedActiveWork}
+            focusedActiveWorkId={focusedActiveWorkId}
+            autoOpenActiveJob={requestedTool === "job-photos" && Boolean(focusedActiveWorkId)}
+          />
+        ),
       },
       "time-tracker": {
         title: "Time tracker",

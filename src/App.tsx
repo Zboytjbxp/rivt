@@ -154,9 +154,17 @@ function readToolFromUrl() {
   return tool && toolModes.has(tool as ToolMode) ? tool as ToolMode : null;
 }
 
-function pathForTool(tool: ToolMode | null) {
+function readActiveWorkFromUrl() {
+  if (typeof window === "undefined") return null;
+  const params = new URLSearchParams(window.location.search);
+  return params.get("activeWork") ?? params.get("activeWorkId");
+}
+
+function pathForTool(tool: ToolMode | null, activeWorkId: string | null = null) {
   if (!tool || tool === "hub") return viewRoutes.Tools;
-  return `${viewRoutes.Tools}?tool=${encodeURIComponent(tool)}`;
+  const params = new URLSearchParams({ tool });
+  if (activeWorkId) params.set("activeWork", activeWorkId);
+  return `${viewRoutes.Tools}?${params.toString()}`;
 }
 
 function currentPathAndSearch() {
@@ -488,7 +496,9 @@ function App() {
   const [inboxMessages, setInboxMessages] = useState<InboxMessage[]>([]);
   const [inboxNotifications, setInboxNotifications] = useState<InboxNotification[]>([]);
   const [activeWork, setActiveWork] = useState<CanonicalActiveWork[]>([]);
-  const [focusedActiveWorkId, setFocusedActiveWorkId] = useState<string | null>(null);
+  const [focusedActiveWorkId, setFocusedActiveWorkId] = useState<string | null>(() => (
+    readToolFromUrl() ? readActiveWorkFromUrl() : null
+  ));
   const [focusedReviewId, setFocusedReviewId] = useState<string | null>(null);
   const [workWorkspaceOpenKey, setWorkWorkspaceOpenKey] = useState(0);
   const [messageBrowserNotificationsEnabled, setMessageBrowserNotificationsEnabled] = useState(true);
@@ -631,9 +641,11 @@ function App() {
     function handleHistoryNavigation() {
       const nextView = viewFromPath(window.location.pathname);
       const nextTool = nextView === "Tools" ? readToolFromUrl() : null;
+      const nextActiveWorkId = nextView === "Tools" && nextTool ? readActiveWorkFromUrl() : null;
       setActiveView(nextView);
       setRequestedTool(nextTool);
       setToolsImmersive(Boolean(nextTool));
+      setFocusedActiveWorkId(nextActiveWorkId);
       setActivityOpen(false);
       setAccountOpen(false);
       setPostOpen(false);
@@ -1307,6 +1319,7 @@ function App() {
     const nextTool = tool === "hub" ? null : tool;
     setRequestedTool(nextTool);
     setToolsImmersive(Boolean(nextTool));
+    setFocusedActiveWorkId(null);
     setActiveView("Tools");
     const nextPath = pathForTool(nextTool);
     if (currentPathAndSearch() !== nextPath) {
@@ -1318,8 +1331,18 @@ function App() {
   }
 
   function handleOpenActiveWorkTool(activeWorkId: string, tool: ToolMode) {
-    setFocusedActiveWorkId(activeWorkId);
-    handleOpenTool(tool);
+    const nextTool = tool === "hub" ? null : tool;
+    setFocusedActiveWorkId(nextTool ? activeWorkId : null);
+    setRequestedTool(nextTool);
+    setToolsImmersive(Boolean(nextTool));
+    setActiveView("Tools");
+    const nextPath = pathForTool(nextTool, nextTool ? activeWorkId : null);
+    if (currentPathAndSearch() !== nextPath) {
+      window.history.pushState({ view: "Tools", tool: nextTool, activeWorkId }, "", nextPath);
+    }
+    setActivityOpen(false);
+    setAccountOpen(false);
+    setPostOpen(false);
   }
 
   function findJobForActiveWork(activeWorkId: string, fallbackJobId: string | null = null) {
@@ -1358,12 +1381,14 @@ function App() {
 
   function handleToolChange(tool: ToolMode) {
     const nextTool = tool === "hub" ? null : tool;
+    const nextActiveWorkId = nextTool ? focusedActiveWorkId : null;
     setRequestedTool(nextTool);
     setToolsImmersive(Boolean(nextTool));
-    const nextPath = pathForTool(nextTool);
+    setFocusedActiveWorkId(nextActiveWorkId);
+    const nextPath = pathForTool(nextTool, nextActiveWorkId);
     if (currentPathAndSearch() === nextPath) return;
     if (nextTool) {
-      window.history.pushState({ view: "Tools", tool: nextTool }, "", nextPath);
+      window.history.pushState({ view: "Tools", tool: nextTool, activeWorkId: nextActiveWorkId }, "", nextPath);
     } else {
       window.history.replaceState({ view: "Tools" }, "", nextPath);
     }
@@ -1905,6 +1930,10 @@ function App() {
       params.get("review") ??
       params.get("reviewId") ??
       (notification.sourceType === "review" ? sourceId : null);
+    const toolParam = params.get("tool");
+    const notificationTool = toolParam && toolModes.has(toolParam as ToolMode)
+      ? toolParam as ToolMode
+      : null;
 
     setActivityOpen(false);
     setAccountOpen(false);
@@ -1917,6 +1946,16 @@ function App() {
 
     const wantsPhotos = routeText.includes("photo") || routeText.includes("media") || params.get("tool") === "job-photos";
     const wantsRecords = routeText.includes("record") || routeText.includes("project") || routeText.includes("closeout");
+
+    if (notificationTool) {
+      if (activeWorkId) {
+        handleOpenActiveWorkTool(activeWorkId, notificationTool);
+        void reloadActiveWork();
+      } else {
+        handleOpenTool(notificationTool);
+      }
+      return;
+    }
 
     if (notification.sourceType === "active_work" && activeWorkId) {
       if (wantsPhotos) {

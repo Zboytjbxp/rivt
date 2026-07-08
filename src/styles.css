@@ -9520,6 +9520,33 @@ html[data-rivt-compact-device="true"] .guest-exit {
   font-size: 12px;
 }
 
+@media (max-width: 430px) {
+  .guest-banner {
+    gap: 8px;
+    padding: 8px 12px;
+  }
+
+  .guest-banner > span {
+    display: -webkit-box;
+    overflow: hidden;
+    font-size: 13px;
+    line-height: 1.25;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  .guest-banner-actions {
+    gap: 6px;
+  }
+
+  .guest-banner .primary-action,
+  .guest-exit {
+    min-height: 36px;
+    padding-inline: 10px;
+    font-size: 12px;
+  }
+}
+
 .guest-exit {
   min-height: 36px;
   padding: 0 10px;
