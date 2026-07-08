@@ -834,7 +834,7 @@
   }
 
   .trade-feed-avail {
-    min-height: 38px;
+    min-height: 44px;
     padding: 6px 10px;
     font-size: 12px;
   }
@@ -888,7 +888,7 @@
   }
 
   .trade-feed-seeall {
-    min-height: 36px;
+    min-height: 44px;
     padding: 0 4px;
     font-size: 14px;
   }
