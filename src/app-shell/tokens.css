@@ -15,6 +15,7 @@
   --v2-accent-deep: #b33400;
   --v2-accent-hover: #dc3e00;
   --v2-accent-soft: #fff0e8;
+  --v2-focus-ring: color-mix(in srgb, var(--v2-accent) 40%, transparent);
   --v2-success: #2f7a4f;
   --v2-success-soft: #e8f4ec;
   --v2-warning: #9a5b0a;
@@ -96,6 +97,7 @@
   --v2-accent-soft: #392015;
   --v2-accent-text: #ff7a45;
   --v2-accent-deep: #ff9a6b;
+  --v2-focus-ring: color-mix(in srgb, var(--v2-accent) 48%, transparent);
   --v2-success: #66b986;
   --v2-success-soft: #173226;
   --v2-warning: #e0a44f;

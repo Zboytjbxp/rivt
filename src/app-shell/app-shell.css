@@ -809,7 +809,7 @@ html[data-rivt-compact-device="true"] .v2-mobile-nav {
 .rivt-v2 a:focus-visible,
 .rivt-v2 [role="button"]:focus-visible,
 .rivt-v2 [role="switch"]:focus-visible {
-  outline: 3px solid color-mix(in srgb, var(--v2-accent) 38%, transparent);
+  outline: 3px solid var(--v2-focus-ring);
   outline-offset: 2px;
 }
 

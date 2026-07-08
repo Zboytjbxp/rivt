@@ -36,6 +36,9 @@
   --bg: #f4f5f4;
   --surface: #ffffff;
   --surface-soft: #f3f5f5;
+  --v2-surface: var(--surface);
+  --v2-surface-muted: var(--surface-soft);
+  --v2-surface-strong: #0b0b0b;
   --text: #0d1114;
   --muted: #5f686e;
   --faint: #88959b;
@@ -45,9 +48,14 @@
   --nav: #080d10;
   --nav-deep: #030506;
   --accent: #ff4b00;
+  --v2-accent: var(--accent);
+  --v2-accent-text: #d63f00;
   --accent-deep: #b33400;
   --accent-soft: #fff0e8;
+  --v2-accent-hover: #dc3e00;
   --v2-accent-deep: var(--accent-deep);
+  --v2-on-accent: #ffffff;
+  --focus-ring: color-mix(in srgb, var(--accent) 42%, transparent);
   --blue: #334f5b;
   --blue-soft: #edf3f5;
   --amber: #ff8a1d;
@@ -108,13 +116,20 @@ body::selection {
   --bg: #0c1110;
   --surface: #141918;
   --surface-soft: #1a211f;
+  --v2-surface: var(--surface);
+  --v2-surface-muted: var(--surface-soft);
+  --v2-surface-strong: #f2f5f6;
   --text: #f2f5f6;
   --muted: #a4b0ac;
   --faint: #788681;
   --border: rgba(242, 245, 246, 0.09);
   --border-strong: rgba(242, 245, 246, 0.16);
   --accent-soft: #392015;
+  --v2-accent-text: #ff7a45;
   --accent-deep: #ff7a45;
+  --v2-accent-hover: #ff6a1f;
+  --v2-on-accent: #080d10;
+  --focus-ring: color-mix(in srgb, var(--accent) 50%, transparent);
   --blue: #4d9fff;
   --blue-soft: #0d2340;
   --amber-soft: #372a17;
@@ -148,7 +163,7 @@ button:focus-visible,
 input:focus-visible,
 select:focus-visible,
 textarea:focus-visible {
-  outline: 2px solid rgba(255, 75, 0, 0.72);
+  outline: 3px solid var(--focus-ring);
   outline-offset: 2px;
 }
 
@@ -1451,7 +1466,7 @@ textarea:focus-visible {
 
 .auth-shell .auth-status strong svg,
 .auth-shell .auth-provider-grid button svg {
-  color: #fff;
+  color: var(--v2-on-accent);
 }
 
 .auth-shell .auth-provider-grid button.disabled {
@@ -1460,44 +1475,48 @@ textarea:focus-visible {
 
 .auth-shell .primary-action {
   min-height: 46px;
-  border: 1px solid #ff4b00;
-  background: linear-gradient(180deg, #ff4b00, #dc3e00);
-  color: #fff;
+  border: 1px solid var(--v2-accent);
+  background: linear-gradient(180deg, var(--v2-accent), var(--v2-accent-hover));
+  color: var(--v2-on-accent);
   box-shadow: 0 14px 28px rgba(255, 75, 0, 0.24);
   font-weight: var(--weight-label);
 }
 
 .auth-shell .primary-action:hover {
-  border-color: #ff8f33;
-  background: linear-gradient(180deg, #ff8a2d, #ff6f08);
+  border-color: color-mix(in srgb, var(--v2-accent) 72%, var(--v2-surface) 28%);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--v2-accent) 84%, var(--v2-surface) 16%),
+    var(--v2-accent)
+  );
 }
 
 .auth-shell .auth-intro-actions .primary-action,
 .auth-shell .auth-preview-actions .primary-action {
-  border-color: #0b0b0b;
-  background: #0b0b0b;
-  color: #fff;
+  border-color: var(--v2-surface-strong);
+  background: var(--v2-surface-strong);
+  color: var(--v2-surface);
   box-shadow: 0 18px 42px rgba(11, 11, 11, 0.24);
 }
 
 .auth-shell .auth-intro-actions .primary-action:hover,
 .auth-shell .auth-preview-actions .primary-action:hover {
-  border-color: #0b0b0b;
-  background: #171717;
+  border-color: var(--v2-surface-strong);
+  background: color-mix(in srgb, var(--v2-surface-strong) 88%, var(--v2-surface) 12%);
 }
 
 .auth-browse-action {
   min-height: 38px;
   border: 0;
   background: transparent;
-  color: #f26a21;
+  color: var(--v2-accent-text, var(--v2-accent));
   font: inherit;
   font-weight: var(--v2-weight-strong);
   cursor: pointer;
 }
 
 .auth-browse-action:hover {
-  color: #ff8a2d;
+  color: var(--v2-accent);
 }
 
 .sr-only {
@@ -2436,6 +2455,12 @@ textarea:focus-visible {
   font-size: 13px;
   font-weight: var(--v2-weight-bold);
   letter-spacing: 0;
+  transition:
+    background 160ms ease,
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    color 160ms ease,
+    transform 80ms ease;
 }
 
 .icon-button {
@@ -2473,11 +2498,26 @@ textarea:focus-visible {
   white-space: nowrap;
 }
 
+.primary-action:hover:not(:disabled) {
+  background: var(--v2-accent-hover);
+  box-shadow: 0 12px 28px color-mix(in srgb, var(--v2-accent) 26%, transparent);
+}
+
+.primary-action:active:not(:disabled),
+.secondary-action:active:not(:disabled) {
+  transform: translateY(1px) scale(0.99);
+}
+
 .secondary-action {
   border: 1.5px solid var(--v2-border-strong);
   padding: 0 18px;
   background: var(--v2-surface);
   color: var(--v2-text);
+}
+
+.secondary-action:hover:not(:disabled) {
+  border-color: var(--v2-accent);
+  background: var(--v2-surface-muted);
 }
 
 .save-search.saved {
