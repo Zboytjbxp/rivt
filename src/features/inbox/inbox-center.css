@@ -447,9 +447,11 @@
 /* ─── Feature 3: Archive toggle button ──────────────────────────────────── */
 .v2-archived-toggle {
   display: inline-flex;
+  min-height: 44px;
   align-items: center;
+  justify-content: center;
   gap: 5px;
-  padding: 4px 10px;
+  padding: 0 10px;
   border: 1px solid color-mix(in srgb, var(--v2-border) 62%, transparent);
   border-radius: var(--v2-radius-pill);
   background: transparent;
@@ -853,9 +855,11 @@
 
 .v2-inbox-tab {
   display: inline-flex;
+  min-height: 44px;
   align-items: center;
+  justify-content: center;
   gap: 6px;
-  padding: 10px 16px;
+  padding: 0 16px;
   border: 0;
   border-bottom: 2px solid transparent;
   margin-bottom: -2px;
