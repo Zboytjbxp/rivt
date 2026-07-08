@@ -2252,6 +2252,7 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
+  flex: 1;
   min-width: 0;
 }
 
@@ -2264,11 +2265,20 @@
 .community-row-copy small {
   font-size: 13px;
   color: var(--v2-text-muted, #5f6668);
+  min-width: 0;
+  max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   display: flex;
   gap: 8px;
+}
+
+.community-row-copy small span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .community-join {
@@ -2651,8 +2661,31 @@ html[data-rivt-compact-device="true"] .community-join {
 }
 
 @media (max-width: 420px) {
+  .community-row-copy small span:nth-child(n + 3) {
+    display: none;
+  }
+
   .community-row-copy small span:last-child {
     display: none;
+  }
+}
+
+@media (max-width: 360px) {
+  .community-row {
+    gap: 6px;
+  }
+
+  .community-row-main {
+    gap: 8px;
+  }
+
+  .community-row-icon {
+    width: 36px;
+    height: 36px;
+  }
+
+  .community-join {
+    padding-inline: 12px;
   }
 }
 

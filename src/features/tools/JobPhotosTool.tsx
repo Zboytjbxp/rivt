@@ -639,11 +639,15 @@ function PhotoGallery({
   );
 }
 
-export function JobPhotosTool({ activeWork, autoOpenActiveJob = false }: {
+export function JobPhotosTool({ activeWork, focusedActiveWorkId = null, autoOpenActiveJob = false }: {
   activeWork: CanonicalActiveWork[];
+  focusedActiveWorkId?: string | null;
   autoOpenActiveJob?: boolean;
 }) {
-  const recordWork = activeWork.find((work) => work.status === "active") ?? activeWork[0] ?? null;
+  const focusedWork = focusedActiveWorkId
+    ? activeWork.find((work) => work.id === focusedActiveWorkId) ?? null
+    : null;
+  const recordWork = focusedWork ?? activeWork.find((work) => work.status === "active") ?? activeWork[0] ?? null;
   const recordWorkId = recordWork?.id ?? null;
 
   const [mode, setMode] = useState<JobPhotosMode>("home");

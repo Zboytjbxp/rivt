@@ -33,6 +33,10 @@ function shopTalkTargetSubject(target) {
   return `${target.targetType}:${target.targetKey}`;
 }
 
+function isUuid(value) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+}
+
 function normalizeShopTalkTargets(targets) {
   const seen = new Set();
   return targets.filter((target) => {
@@ -260,6 +264,7 @@ async function notifyShopTalkPostAuthor(client, {
 async function loadShopTalkReactionNotificationTarget(client, target) {
   if (target.targetType === "thread") {
     const postId = target.targetKey.replace(/^post:/, "");
+    if (!isUuid(postId)) return null;
     const result = await client.query(
       `SELECT post.id,
               post.title,
@@ -277,6 +282,7 @@ async function loadShopTalkReactionNotificationTarget(client, target) {
   }
 
   const answerId = target.targetKey.replace(/^answer:/, "");
+  if (!isUuid(answerId)) return null;
   const result = await client.query(
     `SELECT answer.id AS answer_id,
             answer.author_account_id AS owner_account_id,
