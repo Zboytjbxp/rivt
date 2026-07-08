@@ -513,29 +513,30 @@ textarea:focus-visible {
 .auth-intro-secondary {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  width: min(100%, 430px);
+  width: min(100%, 520px);
   margin: 0 auto;
-  gap: 10px;
+  gap: 12px;
 }
 
 .auth-intro-account-action {
   display: grid;
   align-content: center;
-  justify-items: center;
-  min-height: 58px;
-  padding: 8px 12px;
+  justify-items: start;
+  min-height: 64px;
+  padding: 10px 14px;
   border: 1px solid rgba(11, 11, 11, 0.18);
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.38);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.58);
   color: #0b0b0b;
   font-family: inherit;
+  text-align: left;
   cursor: pointer;
   transition: transform 120ms ease, background 120ms ease, border-color 120ms ease;
 }
 
 .auth-intro-account-action span {
   color: rgba(11, 11, 11, 0.58);
-  font-size: 11px;
+  font-size: 10px;
   font-weight: var(--v2-weight-bold);
   letter-spacing: 0.12em;
   line-height: 1.1;
@@ -543,7 +544,8 @@ textarea:focus-visible {
 }
 
 .auth-intro-account-action strong {
-  font-size: 15px;
+  margin-top: 5px;
+  font-size: 17px;
   line-height: 1.15;
 }
 
@@ -10650,8 +10652,8 @@ html[data-rivt-compact-device="true"] .guest-exit {
   }
 
   html[data-rivt-compact-device="true"] .auth-intro-account-action {
-    min-height: 46px;
-    padding: 6px 8px;
+    min-height: 50px;
+    padding: 8px 10px;
     border-radius: 16px;
   }
 

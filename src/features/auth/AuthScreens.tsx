@@ -616,11 +616,11 @@ function SwipeEntryShowcase({
 
       <div className="auth-intro-secondary" aria-label="Account options">
         <button type="button" className="auth-intro-account-action" onClick={onCreateAccount}>
-          <span>New here</span>
+          <span>New to RIVT</span>
           <strong>Create account</strong>
         </button>
         <button type="button" className="auth-intro-account-action is-login" onClick={onLogin}>
-          <span>Returning</span>
+          <span>Already have an account</span>
           <strong>Log in</strong>
         </button>
       </div>

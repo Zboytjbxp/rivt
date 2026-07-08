@@ -52,7 +52,11 @@ function notificationActionLabel(notification: InboxNotification) {
     return "Open support";
   }
   if (notification.sourceType === "review" || href.includes("review")) {
-    return "Open review";
+    const hasReviewTarget =
+      typeof notification.metadata?.reviewId === "string" ||
+      typeof notification.metadata?.review_id === "string" ||
+      href.includes("review=");
+    return hasReviewTarget ? "Open review" : "Open reviews";
   }
   if (href.includes("profile") || href.includes("account")) {
     return "Open profile";

@@ -3737,6 +3737,22 @@ Completed on 2026-07-04 on branch `codex/launch-polish-phase-2` as a controllabl
 - Remaining boundary:
   - capture a read-only `/api/v1/billing/status` check for the owner account when convenient, so the evidence includes the server JSON state in addition to the Settings UI confirmation.
 
+## Latest Packet 08 Pass - Soft Launch Polish Checkpoint
+
+- Added a small launch-polish checkpoint focused on truthfulness and first-run clarity:
+  - returning-user entry on the onboarding/landing carousel now reads as an intentional account path (`Already have an account` / `Log in`) instead of a small afterthought beside account creation
+  - review notifications now say `Open reviews` when they only route to the reviews surface, and reserve `Open review` for notifications that carry an exact review target
+  - the fail-closed auth e2e selector now matches the current three-slide onboarding headlines instead of stale `Shop Talk, built for the trades` copy
+- Local gates:
+  - `npm run build` (pass)
+  - `npm run lint` (pass)
+  - `npm run test:unit` (pass; 45/45)
+  - `npm run test:e2e` (pass; auth fail-closed and jobs/discovery)
+  - `npm audit --omit=dev` (pass; 0 vulnerabilities)
+- Boundary:
+  - `npm run test` timed out after four minutes because it proceeds into the full integration suite; run `npm run test:integration` separately with `TEST_DATABASE_URL` configured before using this checkpoint as full integration evidence.
+  - No production deployment has been performed for this checkpoint yet.
+
 ## Next Exact Task
 
 Run `npm run smoke:billing:live` with `RIVT_SMOKE_EMAIL` and `RIVT_SMOKE_PASSWORD` set, then run it again with `RIVT_BILLING_EXERCISE_REDIRECTS=true` to verify Checkout and Customer Portal redirects without charging a card. After that, complete one real paid checkout and confirm the signed Stripe webhook updates `/api/v1/billing/status` to active Pro. In parallel, run `docs/quality/PHYSICAL_ACCESSIBILITY_CHECKLIST.md` on physical iOS Safari, Android Chrome, desktop keyboard-only, and at least one screen reader, then record the pass/fail evidence before named-cohort launch. Keep `npm run incident:readiness -- --require-ready` and `npm run launch:readiness -- --require-ready` passing as the machine-readiness gates while that manual evidence is gathered.

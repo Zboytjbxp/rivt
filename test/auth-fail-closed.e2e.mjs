@@ -92,7 +92,7 @@ try {
   await page.route("**/api/auth/signup", captureSignupBody);
 
   await page.goto(baseUrl, { waitUntil: "networkidle" });
-  await page.getByRole("heading", { name: /Shop Talk, built for the trades/i }).waitFor();
+  await page.getByRole("heading", { name: /Real answers from the trades|Find work\. Build your crew\.|Run the job from your phone\./i }).waitFor();
   assert.equal(await page.getByText("Authentication required.").count(), 0);
   assert.equal(await page.getByText("Browse local demo").count(), 0);
   await page.getByRole("button", { name: "Log in", exact: true }).click();
