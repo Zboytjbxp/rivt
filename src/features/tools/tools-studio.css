@@ -1568,6 +1568,107 @@
   font-size: 22px;
 }
 
+.v2-record-proof-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, auto);
+  gap: 14px;
+  margin: 14px 18px 0;
+  padding: 16px;
+  border: 1px solid color-mix(in srgb, var(--v2-accent) 34%, var(--v2-border));
+  border-radius: var(--v2-radius-lg);
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--v2-accent-soft) 68%, transparent), transparent 68%),
+    color-mix(in srgb, var(--v2-surface-muted) 80%, transparent);
+}
+
+.v2-record-proof-copy {
+  min-width: 0;
+}
+
+.v2-record-proof-copy span {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--v2-accent);
+  font-size: 13px;
+  font-weight: var(--v2-weight-display);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.v2-record-proof-copy strong {
+  display: block;
+  color: var(--v2-text);
+  font-size: clamp(20px, 3vw, 28px);
+  font-weight: var(--v2-weight-display);
+  line-height: 1;
+}
+
+.v2-record-proof-copy p {
+  margin: 8px 0 0;
+  color: var(--v2-text-muted);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.v2-record-proof-checks,
+.v2-record-proof-actions {
+  display: grid;
+  gap: 8px;
+}
+
+.v2-record-proof-checks span {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  padding: 7px 10px;
+  border: 1px solid color-mix(in srgb, var(--v2-border) 56%, transparent);
+  border-radius: var(--v2-radius-md);
+  background: var(--v2-surface-raised);
+  color: var(--v2-text-muted);
+  font-size: 13px;
+  font-weight: var(--v2-weight-strong);
+}
+
+.v2-record-proof-checks span.is-ready {
+  border-color: color-mix(in srgb, var(--v2-success) 34%, var(--v2-border));
+  color: var(--v2-text);
+}
+
+.v2-record-proof-checks svg {
+  color: var(--v2-accent);
+}
+
+.v2-record-proof-checks span.is-ready svg {
+  color: var(--v2-success);
+}
+
+.v2-record-proof-actions {
+  grid-column: 1 / -1;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.v2-record-proof-actions button {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: 1px solid color-mix(in srgb, var(--v2-border) 62%, transparent);
+  border-radius: var(--v2-radius-md);
+  background: var(--v2-surface-raised);
+  color: var(--v2-text);
+  font: inherit;
+  font-size: 13px;
+  font-weight: var(--v2-weight-bold);
+  cursor: pointer;
+}
+
+.v2-record-proof-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
 .v2-record-actions {
   display: flex;
   flex-wrap: wrap;
@@ -1818,7 +1919,12 @@
 
   .v2-records-layout,
   .v2-record-metrics,
+  .v2-record-proof-card,
   .v2-record-workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .v2-record-proof-actions {
     grid-template-columns: 1fr;
   }
 

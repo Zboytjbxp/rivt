@@ -24,26 +24,26 @@ interface UpgradeModalProps {
 const OUTCOMES: Array<{ icon: LucideIcon; title: string; copy: string }> = [
   {
     icon: ClipboardCheck,
-    title: "Keep the job record",
-    copy: "More room for daily logs, closeout notes, punch lists, and project photos.",
+    title: "Build a proof packet",
+    copy: "Photos, field notes, completion status, and closeout records stay tied to the job.",
   },
   {
     icon: FileText,
     title: "Send cleaner paperwork",
-    copy: "Use polished invoice, estimate, and expense exports without rebuilding forms by hand.",
+    copy: "Turn job details into estimates, invoices, and exports without rebuilding forms by hand.",
   },
   {
     icon: BriefcaseBusiness,
-    title: "Run the side work",
-    copy: "Time, mileage, expenses, records, and work history stay tied to the account.",
+    title: "Protect repeat work",
+    copy: "Time, mileage, expenses, and work history stay attached to the account.",
   },
 ];
 
 const INCLUDED = [
-  "Full time-history access",
+  "Job proof packets for accepted work",
+  "Closeout records and reports",
+  "Estimate and invoice workflow",
   "CSV expense export",
-  "Expanded records and closeout exports",
-  "Billing receipts and payment details",
   "Self-serve cancellation from Settings",
 ];
 
@@ -79,7 +79,7 @@ export function UpgradeModal({ reason, onClose }: UpgradeModalProps) {
             <header className="v2-upgrade-hero">
               <span className="v2-upgrade-kicker">RIVT Pro</span>
               <div>
-                <strong>Keep better records. Send better paperwork.</strong>
+                <strong>Prove the work. Send the paperwork.</strong>
                 <p>{reason ? `${reason} is included with Pro.` : RIVT_PRO_OFFER.summary}</p>
               </div>
             </header>

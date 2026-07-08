@@ -2783,12 +2783,22 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
   const [resolutionNote, setResolutionNote] = useState("");
   const [completionChecklist, setCompletionChecklist] = useState<CompletionChecklistState>(defaultCompletionChecklist);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const noteTextareaRef = useRef<HTMLTextAreaElement | null>(null);
   const autoOpenedRecordRef = useRef<string | null>(null);
   const toolSwipeStartRef = useRef<{ x: number; y: number; pointerId: number } | null>(null);
   const selectedCompletion = selectedProject?.completionSubmissions.find((completion) => completion.status === "submitted")
     ?? selectedProject?.completionSubmissions.at(-1)
     ?? null;
   const storedMedia = selectedProject?.media.filter((item) => item.status === "stored") ?? [];
+  const fieldNoteCount = selectedProject?.entries.filter((entry) => entry.entryType === "note").length ?? 0;
+  const proofReadyCount = [storedMedia.length > 0, fieldNoteCount > 0, Boolean(selectedCompletion)].filter(Boolean).length;
+  const proofNextStep = storedMedia.length === 0
+    ? "Add a jobsite photo or closeout file."
+    : fieldNoteCount === 0
+      ? "Add one field note for context."
+      : !selectedCompletion
+        ? "Submit completion when the work is ready."
+        : "Load the closeout report when you need the packet.";
   const latestEntry = selectedProject?.entries.at(-1) ?? null;
   const actionBusy = Boolean(projectAction);
   const recentToolLaunchers = useMemo(() => {
@@ -3141,6 +3151,33 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
                   <MetricTile value={selectedCompletion?.status ?? "open"} label="completion status" />
                 </div>
 
+                <section className="v2-record-proof-card" aria-label="Job proof packet">
+                  <div className="v2-record-proof-copy">
+                    <span>Job proof packet</span>
+                    <strong>{proofReadyCount}/3 ready for closeout</strong>
+                    <p>{proofNextStep}</p>
+                  </div>
+                  <div className="v2-record-proof-checks" aria-label="Proof packet status">
+                    <span className={storedMedia.length ? "is-ready" : ""}><CheckCircle2 size={14} />{storedMedia.length} photo/file{storedMedia.length === 1 ? "" : "s"}</span>
+                    <span className={fieldNoteCount ? "is-ready" : ""}><FileText size={14} />{fieldNoteCount} field note{fieldNoteCount === 1 ? "" : "s"}</span>
+                    <span className={selectedCompletion ? "is-ready" : ""}><Clipboard size={14} />{selectedCompletion?.status ?? "not submitted"}</span>
+                  </div>
+                  <div className="v2-record-proof-actions">
+                    <button type="button" onClick={() => fileInputRef.current?.click()} disabled={actionBusy}>
+                      <FileUp size={14} />
+                      Add photo
+                    </button>
+                    <button type="button" onClick={() => noteTextareaRef.current?.focus()} disabled={actionBusy}>
+                      <FileText size={14} />
+                      Add note
+                    </button>
+                    <button type="button" onClick={() => void handleLoadReport()} disabled={actionBusy || proofReadyCount < 2}>
+                      <Clipboard size={14} />
+                      Report
+                    </button>
+                  </div>
+                </section>
+
                 <div className="v2-record-workspace">
                   <section className="v2-record-card">
                     <header>
@@ -3148,6 +3185,7 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
                       <small>Private timeline note</small>
                     </header>
                     <textarea
+                      ref={noteTextareaRef}
                       value={noteDraft}
                       onChange={(event) => setNoteDraft(event.target.value)}
                       placeholder="What changed on site? Access issue, material condition, measurement, weather, or owner approval..."
