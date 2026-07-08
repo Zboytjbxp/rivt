@@ -95,7 +95,6 @@ interface WorkWorkspaceProps {
   onTransition: (job: Job, action: JobAction) => Promise<void>;
   onJobLoaded: (job: Job) => void;
   onOpenTool: (tool: "daily-log" | "invoice" | "job-photos", activeWorkId?: string) => void;
-  onOpenRecords: (activeWorkId?: string) => void;
   onOpenActiveWorkMessages: (activeWorkId: string) => void;
   onRetry: () => void;
   onOfferAccepted?: (activeWork: CanonicalActiveWork) => void;
@@ -1170,6 +1169,44 @@ function WorkEmptyState({ role, section, onPostJob }: { role: Role; section: Con
   );
 }
 
+function numericJobIdFromCanonicalId(jobId: string) {
+  const parsed = Number.parseInt(jobId.replaceAll("-", "").slice(0, 12), 16);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function activeWorkSummaryJob(work: CanonicalActiveWork): Job | null {
+  if (!work.job) return null;
+  const location = [work.job.publicLocation.city, work.job.publicLocation.region].filter(Boolean).join(", ");
+  return {
+    id: numericJobIdFromCanonicalId(work.jobId),
+    title: work.job.title,
+    contractor: work.job.organization.name,
+    trade: "General Labor",
+    location,
+    state: work.job.publicLocation.region,
+    distance: 0,
+    pay: 0,
+    durationHours: 0,
+    workType: "Side work",
+    difficulty: "Moderate",
+    insuranceRequired: false,
+    tools: [],
+    trustRequirement: "Legal agreement required",
+    addressPolicy: "Exact address is shared only after an accepted work relationship.",
+    posted: "Active",
+    match: 0,
+    rating: 0,
+    reviewCount: 0,
+    applicants: 0,
+    status: "Scheduled",
+    summary: "Accepted active work.",
+    guidance: [],
+    risks: [],
+    deliverables: [],
+    matchFactors: [],
+  };
+}
+
 export function WorkWorkspace({
   role,
   jobs,
@@ -1197,7 +1234,6 @@ export function WorkWorkspace({
   onTransition,
   onJobLoaded,
   onOpenTool,
-  onOpenRecords,
   onOpenActiveWorkMessages,
   onRetry,
   onOfferAccepted,
@@ -1240,6 +1276,12 @@ export function WorkWorkspace({
     [activeWorkRecords, focusedActiveWorkId],
   );
   const primaryActiveWorkRecord = focusedActiveWorkRecord ?? activeWorkReady[0] ?? activeWorkRecords[0] ?? null;
+  const focusedActiveJob = useMemo(() => {
+    if (!focusedActiveWorkRecord) return null;
+    const jobId = focusedActiveWorkRecord.jobId;
+    return jobs.find((job) => job.canonical?.id === jobId || String(job.id) === jobId)
+      ?? activeWorkSummaryJob(focusedActiveWorkRecord);
+  }, [focusedActiveWorkRecord, jobs]);
 
   const activeFilterCount = [
     trade !== "All trades",
@@ -1265,7 +1307,7 @@ export function WorkWorkspace({
       selectJob(matchingJob.id);
       return;
     }
-    onOpenRecords(work.id);
+    setMobileDetailOpen(true);
   }
 
   async function runAction(job: Job, action: JobAction) {
@@ -1412,12 +1454,28 @@ export function WorkWorkspace({
   }
 
   const selectedIsVisible = selectedJob ? visibleJobs.some((job) => job.id === selectedJob.id) : false;
-  const detailJob = selectedIsVisible ? selectedJob : visibleJobs[0] ?? null;
+  const detailJob = focusedActiveJob ?? (selectedIsVisible ? selectedJob : visibleJobs[0] ?? null);
   const canonicalJobId = detailJob?.canonical?.id ?? null;
   const needsPrivateDetailHydration = role === "contractor"
     && Boolean(canonicalJobId)
     && Boolean(detailJob?.canonical)
     && !detailJob?.canonical?.privateLocation;
+
+  useEffect(() => {
+    const focusedJobId = focusedActiveWorkRecord?.jobId ?? null;
+    if (!focusedJobId || jobs.some((job) => job.canonical?.id === focusedJobId)) return;
+    let cancelled = false;
+    getJob(focusedJobId)
+      .then((job) => {
+        if (!cancelled) onJobLoaded(toJobViewModel(job));
+      })
+      .catch(() => {
+        // The active-work summary still keeps the workspace on the right job.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [focusedActiveWorkRecord, jobs, onJobLoaded]);
 
   useEffect(() => {
     if (!canonicalJobId || !needsPrivateDetailHydration || detailHydrationRequests.current.has(canonicalJobId)) return;

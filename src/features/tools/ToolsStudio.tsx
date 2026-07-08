@@ -76,6 +76,7 @@ interface ToolsStudioProps {
   mode?: "tools" | "records";
   openTool?: ToolMode | null;
   focusedActiveWorkId?: string | null;
+  activeWorkRecords?: CanonicalActiveWork[];
   onOpenToolConsumed?: () => void;
   onToolChange?: (tool: ToolMode) => void;
   onImmersiveChange?: (immersive: boolean) => void;
@@ -2711,13 +2712,64 @@ function focusedActiveWorkFirst(items: CanonicalActiveWork[], focusedActiveWorkI
   });
 }
 
-export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = null, focusedActiveWorkId = null, onOpenToolConsumed, onToolChange, onImmersiveChange, onNavigate }: ToolsStudioProps) {
-  const activeJob = jobs.find((job) => job.status !== "Paid / Closed") ?? jobs[0] ?? null;
+function numericJobIdFromCanonicalId(jobId: string) {
+  const parsed = Number.parseInt(jobId.replaceAll("-", "").slice(0, 12), 16);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function activeWorkSummaryJob(work: CanonicalActiveWork): Job | null {
+  if (!work.job) return null;
+  const location = [work.job.publicLocation.city, work.job.publicLocation.region].filter(Boolean).join(", ");
+  return {
+    id: numericJobIdFromCanonicalId(work.jobId),
+    title: work.job.title,
+    contractor: work.job.organization.name,
+    trade: "General Labor",
+    location,
+    state: work.job.publicLocation.region,
+    distance: 0,
+    pay: 0,
+    durationHours: 0,
+    workType: "Side work",
+    difficulty: "Moderate",
+    insuranceRequired: false,
+    tools: [],
+    trustRequirement: "Legal agreement required",
+    addressPolicy: "Exact address is shared only after an accepted work relationship.",
+    posted: "Active",
+    match: 0,
+    rating: 0,
+    reviewCount: 0,
+    applicants: 0,
+    status: "Scheduled",
+    summary: "Accepted active work.",
+    guidance: [],
+    risks: [],
+    deliverables: [],
+    matchFactors: [],
+  };
+}
+
+function resolveActiveToolJob(jobs: Job[], orderedActiveWork: CanonicalActiveWork[], focusedActiveWorkId: string | null) {
+  const focusedWork = focusedActiveWorkId
+    ? orderedActiveWork.find((work) => work.id === focusedActiveWorkId) ?? null
+    : null;
+  const focusedJobId = focusedWork?.jobId ?? focusedWork?.job?.id ?? null;
+  if (focusedJobId) {
+    const exactJob = jobs.find((job) => job.canonical?.id === focusedJobId || String(job.id) === focusedJobId);
+    if (exactJob) return exactJob;
+    const fallback = focusedWork ? activeWorkSummaryJob(focusedWork) : null;
+    if (fallback) return fallback;
+  }
+  return jobs.find((job) => job.status !== "Paid / Closed") ?? jobs[0] ?? null;
+}
+
+export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = null, focusedActiveWorkId = null, activeWorkRecords = [], onOpenToolConsumed, onToolChange, onImmersiveChange, onNavigate }: ToolsStudioProps) {
   const requestedTool = mode === "tools" && openTool ? openTool : null;
   const [localActiveTool, setLocalActiveTool] = useState<ToolMode>("hub");
   const activeTool = requestedTool ?? localActiveTool;
   const [recentTools, setRecentTools] = useState(readRecentTools);
-  const [activeWork, setActiveWork] = useState<CanonicalActiveWork[]>([]);
+  const [fetchedActiveWork, setFetchedActiveWork] = useState<CanonicalActiveWork[]>([]);
   const [recordsLoading, setRecordsLoading] = useState(true);
   const [recordsError, setRecordsError] = useState<string | null>(null);
   const [selectedProject, setSelectedProject] = useState<ProjectRecord | null>(null);
@@ -2740,12 +2792,25 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
   const latestEntry = selectedProject?.entries.at(-1) ?? null;
   const actionBusy = Boolean(projectAction);
   const recentToolLaunchers = useMemo(() => {
+    const primaryModes = new Set(PRIMARY_TOOL_LAUNCHERS.map((tool) => tool.mode));
     const byMode = new Map(allToolLaunchers().map((tool) => [tool.mode, tool]));
-    return recentTools.map((tool) => byMode.get(tool)).filter((tool): tool is ToolLauncher => Boolean(tool));
+    return recentTools
+      .map((tool) => byMode.get(tool))
+      .filter((tool): tool is ToolLauncher => {
+        if (!tool) {
+          return false;
+        }
+        return !primaryModes.has(tool.mode);
+      });
   }, [recentTools]);
+  const activeWork = activeWorkRecords.length ? activeWorkRecords : fetchedActiveWork;
   const orderedActiveWork = useMemo(
     () => focusedActiveWorkFirst(activeWork, focusedActiveWorkId),
     [activeWork, focusedActiveWorkId],
+  );
+  const activeJob = useMemo(
+    () => resolveActiveToolJob(jobs, orderedActiveWork, focusedActiveWorkId),
+    [focusedActiveWorkId, jobs, orderedActiveWork],
   );
 
   function setActiveTool(tool: ToolMode, options: { keepConvertedInvoice?: boolean } = {}) {
@@ -2820,7 +2885,7 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
     listActiveWork()
       .then((items) => {
         if (cancelled) return;
-        setActiveWork(Array.isArray(items) ? items : []);
+        setFetchedActiveWork(Array.isArray(items) ? items : []);
       })
       .catch((error: unknown) => {
         if (!cancelled) setRecordsError(error instanceof Error ? error.message : "Could not load active work.");

@@ -326,6 +326,11 @@
   background: var(--v2-surface-raised);
 }
 
+.v2-review-item.is-focused {
+  border-color: var(--v2-accent);
+  box-shadow: 0 0 0 3px var(--v2-accent-soft);
+}
+
 .v2-review-item-header {
   display: flex;
   align-items: center;

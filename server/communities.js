@@ -220,30 +220,38 @@ export function registerCommunityRoutes({
       throw new ApiError(429, "COMMUNITY_CREATE_LIMIT", "You can create one community per day.");
     }
 
-    const created = await withTransaction(database, async (client) => {
-      const inserted = await client.query(
-        `INSERT INTO communities (slug, name, description, audience, created_by_account_id, member_count)
-         VALUES ($1, $2, $3, $4, $5, 1)
-         RETURNING id, slug, name, description, audience, member_count, created_by_account_id`,
-        [slug, input.name, input.description, input.audience, request.actor.account.id],
-      );
-      await client.query(
-        `INSERT INTO community_members (community_id, account_id, role)
-         VALUES ($1, $2, 'owner')`,
-        [inserted.rows[0].id, request.actor.account.id],
-      );
-      await client.query(
-        `INSERT INTO audit_events (request_id, actor_account_id, action, subject_type, subject_id, metadata)
-         VALUES ($1, $2, 'community.created', 'community', $3, $4::jsonb)`,
-        [
-          request.requestId,
-          request.actor.account.id,
-          inserted.rows[0].id,
-          JSON.stringify({ slug, name: input.name, audience: input.audience }),
-        ],
-      );
-      return inserted.rows[0];
-    });
+    let created;
+    try {
+      created = await withTransaction(database, async (client) => {
+        const inserted = await client.query(
+          `INSERT INTO communities (slug, name, description, audience, created_by_account_id, member_count)
+           VALUES ($1, $2, $3, $4, $5, 1)
+           RETURNING id, slug, name, description, audience, member_count, created_by_account_id`,
+          [slug, input.name, input.description, input.audience, request.actor.account.id],
+        );
+        await client.query(
+          `INSERT INTO community_members (community_id, account_id, role)
+            VALUES ($1, $2, 'owner')`,
+          [inserted.rows[0].id, request.actor.account.id],
+        );
+        await client.query(
+          `INSERT INTO audit_events (request_id, actor_account_id, action, subject_type, subject_id, metadata)
+            VALUES ($1, $2, 'community.created', 'community', $3, $4::jsonb)`,
+          [
+            request.requestId,
+            request.actor.account.id,
+            inserted.rows[0].id,
+            JSON.stringify({ slug, name: input.name, audience: input.audience }),
+          ],
+        );
+        return inserted.rows[0];
+      });
+    } catch (error) {
+      if (error && typeof error === "object" && "code" in error && error.code === "23505") {
+        throw new ApiError(422, "COMMUNITY_NAME_UNAVAILABLE", "That community name is already taken.");
+      }
+      throw error;
+    }
 
     response.status(201).json({
       data: { community: mapCommunityRow({ ...created, joined: true, role: "owner" }) },

@@ -489,6 +489,7 @@ function App() {
   const [inboxNotifications, setInboxNotifications] = useState<InboxNotification[]>([]);
   const [activeWork, setActiveWork] = useState<CanonicalActiveWork[]>([]);
   const [focusedActiveWorkId, setFocusedActiveWorkId] = useState<string | null>(null);
+  const [focusedReviewId, setFocusedReviewId] = useState<string | null>(null);
   const [workWorkspaceOpenKey, setWorkWorkspaceOpenKey] = useState(0);
   const [messageBrowserNotificationsEnabled, setMessageBrowserNotificationsEnabled] = useState(true);
   const [inboxLoading, setInboxLoading] = useState(false);
@@ -816,7 +817,7 @@ function App() {
   }
 
   const reloadJobs = useCallback(async () => {
-    if (isGuest || !authUser || !onboardingComplete) return;
+    if (isGuest || !authUser || !onboardingComplete) return [];
     const requestId = ++jobsRequestRef.current;
     setJobsLoading(true);
     setJobsError(null);
@@ -831,15 +832,17 @@ function App() {
         region: locationRegion || undefined,
         insuranceRequired: verifiedOnly ? true : undefined,
       });
-      if (jobsRequestRef.current !== requestId) return;
+      if (jobsRequestRef.current !== requestId) return undefined;
       const nextJobs = canonicalJobs.map(toJobViewModel);
       setJobs(nextJobs);
       setSelectedId((current) => nextJobs.some((job) => job.id === current) ? current : nextJobs[0]?.id ?? 0);
+      return nextJobs;
     } catch (cause) {
-      if (jobsRequestRef.current !== requestId) return;
+      if (jobsRequestRef.current !== requestId) return undefined;
       setJobs([]);
       setSelectedId(0);
       setJobsError(cause instanceof Error ? cause.message : "Jobs could not be loaded.");
+      return [];
     } finally {
       if (jobsRequestRef.current === requestId) setJobsLoading(false);
     }
@@ -1289,6 +1292,7 @@ function App() {
   function handleNavigate(view: NavLabel) {
     setRequestedTool(null);
     setToolsImmersive(false);
+    if (view !== "Reviews") setFocusedReviewId(null);
     setActiveView(view);
     const nextPath = viewRoutes[view];
     if (currentPathAndSearch() !== nextPath) {
@@ -1897,6 +1901,10 @@ function App() {
       params.get("project") ??
       params.get("projectId") ??
       (notification.sourceType === "project" ? sourceId : null);
+    const reviewId = notificationMetadataValue(notification, ["reviewId", "review_id"]) ??
+      params.get("review") ??
+      params.get("reviewId") ??
+      (notification.sourceType === "review" ? sourceId : null);
 
     setActivityOpen(false);
     setAccountOpen(false);
@@ -1959,8 +1967,14 @@ function App() {
       return;
     }
 
-    if (routeText.includes("profile") || routeText.includes("review") || routeText.includes("account")) {
-      handleNavigate(routeText.includes("review") ? "Reviews" : "Settings");
+    if (routeText.includes("review") || notification.sourceType === "review") {
+      setFocusedReviewId(reviewId);
+      handleNavigate("Reviews");
+      return;
+    }
+
+    if (routeText.includes("profile") || routeText.includes("account")) {
+      handleNavigate("Settings");
       return;
     }
 
@@ -1973,7 +1987,12 @@ function App() {
         ));
         if (match) setSelectedId(match.id);
         handleNavigate("Work");
-        void reloadJobs();
+        void reloadJobs().then((nextJobs) => {
+          const lateMatch = nextJobs?.find((candidate) => (
+            jobId && (candidate.canonical?.id === jobId || String(candidate.id) === jobId)
+          ));
+          if (lateMatch) setSelectedId(lateMatch.id);
+        });
         void reloadActiveWork();
       }
       return;
@@ -2309,13 +2328,6 @@ function App() {
                 handleOpenTool(tool);
               }
             }}
-            onOpenRecords={(activeWorkId) => {
-              if (activeWorkId) {
-                handleOpenActiveWorkRecords(activeWorkId);
-              } else {
-                handleNavigate("Records");
-              }
-            }}
             onOpenActiveWorkMessages={(activeWorkId) => void handleOpenActiveWorkMessages(activeWorkId)}
             onRetry={() => void reloadJobs()}
             onOfferAccepted={(nextWork) => {
@@ -2369,6 +2381,7 @@ function App() {
             shoutOuts={shoutOuts}
             displayName={accountProfile.displayName}
             profileFocus={profileSearchFocus}
+            focusedReviewId={focusedReviewId}
             onClearProfileFocus={() => setProfileSearchFocus(null)}
             onOpenCrew={() => handleNavigate("Crew")}
             onOpenShopTalk={() => handleNavigate("Shop Talk")}
@@ -2445,6 +2458,7 @@ function App() {
             paymentRecords={paymentRecords}
             mode={activeView === "Records" ? "records" : "tools"}
             openTool={activeView === "Tools" ? requestedTool ?? "hub" : null}
+            activeWorkRecords={activeWork}
             onToolChange={handleToolChange}
             onImmersiveChange={setToolsImmersive}
             onNavigate={(destination) => handleNavigate(defaultViewForDestination(destination))}

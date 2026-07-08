@@ -126,7 +126,6 @@ function readDeviceToolStateCount() {
 type StartStep = {
   id: string;
   title: string;
-  body: string;
   done: boolean;
   actionLabel: string;
   onAction: () => void;
@@ -250,7 +249,6 @@ export function TradeFeed({
         {
           id: "post-work",
           title: "Post or draft your first job",
-          body: "Create a clear scope so tradespeople know location, tools, timing, and expectations.",
           done: hasPostedOrDraftedWork,
           actionLabel: "Post work",
           onAction: onPostWork,
@@ -258,7 +256,6 @@ export function TradeFeed({
         {
           id: "service-area",
           title: "Set your company basics",
-          body: "Add your service area and profile details so local crews understand who is hiring.",
           done: profileHasBasics,
           actionLabel: "Edit profile",
           onAction: onOpenProfile,
@@ -266,7 +263,6 @@ export function TradeFeed({
         {
           id: "community",
           title: "Follow one trade community",
-          body: "Start with Jacksonville Trades or your primary trade to see questions and local work signals.",
           done: hasJoinedCommunity,
           actionLabel: "Find communities",
           onAction: openFirstCommunity,
@@ -274,7 +270,6 @@ export function TradeFeed({
         {
           id: "ask-trades",
           title: "Start a Shop Talk post",
-          body: "Use Shop Talk for pricing, staffing, code, tool, and field questions before they become problems.",
           done: hasAuthoredPost,
           actionLabel: "Ask",
           onAction: onAsk,
@@ -282,7 +277,6 @@ export function TradeFeed({
         {
           id: "invoice",
           title: "Try the invoice tool",
-          body: "Build a draft invoice or daily record before you need it on a live job.",
           done: hasFieldProof,
           actionLabel: "Open invoice",
           onAction: () => onOpenTool("invoice"),
@@ -294,7 +288,6 @@ export function TradeFeed({
       {
         id: "trade-basics",
         title: "Confirm your trade and location",
-        body: "Your feed, job matches, and communities are tuned from your trade profile.",
         done: profileHasBasics,
         actionLabel: "Edit profile",
         onAction: onOpenProfile,
@@ -302,7 +295,6 @@ export function TradeFeed({
       {
         id: "bio",
         title: "Add a short work bio",
-        body: "A few lines about your craft, tools, and best work makes your profile easier to trust.",
         done: profileHasBio,
         actionLabel: "Add bio",
         onAction: onOpenProfile,
@@ -310,7 +302,6 @@ export function TradeFeed({
       {
         id: "work-feed",
         title: "Check local work",
-        body: "Browse open jobs in your trades and save the ones worth a message.",
         done: hasOpenWork,
         actionLabel: "Open Work",
         onAction: () => onNavigate("work"),
@@ -318,7 +309,6 @@ export function TradeFeed({
       {
         id: "community",
         title: "Join one trade community",
-        body: "Follow the conversations where your skills can earn reputation before you need work.",
         done: hasJoinedCommunity,
         actionLabel: "Find communities",
         onAction: openFirstCommunity,
@@ -326,7 +316,6 @@ export function TradeFeed({
       {
         id: "proof",
         title: "Add proof of your work",
-        body: "A record, photo, or safety cert gives contractors a reason to trust you faster.",
         done: hasFieldProof,
         actionLabel: "Open daily log",
         onAction: () => onOpenTool("daily-log"),
@@ -623,14 +612,6 @@ export function TradeFeed({
           ))
         )}
       </div>
-
-      {trendingPosts.length > 0 && (
-        <div className="trade-feed-footer">
-          <button type="button" className="trade-feed-footer-link" onClick={() => onNavigate("shop-talk")}>
-            See all in Shop Talk <ChevronRight size={15} />
-          </button>
-        </div>
-      )}
 
       <button
         type="button"

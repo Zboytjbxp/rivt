@@ -17,7 +17,7 @@ import {
   Users,
   X,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ProfileSearchResult } from "../../app-shell/types";
 import { Avatar, EmptyState, PageHeader, Panel } from "../../components/ui";
 import {
@@ -53,6 +53,7 @@ interface NetworkHubProps {
   shoutOuts: ShoutOut[];
   displayName: string;
   profileFocus?: ProfileSearchResult | null;
+  focusedReviewId?: string | null;
   onClearProfileFocus?: () => void;
   onOpenCrew: () => void;
   onOpenShopTalk: () => void;
@@ -1151,10 +1152,12 @@ function ProfileSearchSpotlight({
 function ReviewsView({
   shoutOuts,
   displayName,
+  focusedReviewId,
   onAddShoutOut,
 }: {
   shoutOuts: ShoutOut[];
   displayName: string;
+  focusedReviewId?: string | null;
   onAddShoutOut: (to: string, trade: string, message: string) => void;
 }) {
   const [to, setTo] = useState("");
@@ -1164,10 +1167,12 @@ function ReviewsView({
   const [submitted, setSubmitted] = useState(false);
   const [storedReviews, setStoredReviews] = useState<StoredReview[]>(readStoredReviews);
   const [syncMessage, setSyncMessage] = useState("Saved on this device.");
+  const focusedReviewRef = useRef<HTMLElement | null>(null);
 
   const given = shoutOuts.filter((s) => s.from === displayName);
   const storedGivenKeys = new Set(storedReviews.map((review) => `${review.reviewer}|${review.trade ?? ""}|${review.reviewText}`));
   const transientGiven = given.filter((item) => !storedGivenKeys.has(`${item.to}|${item.trade ?? ""}|${item.message}`));
+  const normalizedFocusedReviewId = focusedReviewId ? String(focusedReviewId) : null;
 
   useEffect(() => {
     let cancelled = false;
@@ -1178,6 +1183,11 @@ function ReviewsView({
     });
     return () => { cancelled = true; };
   }, []);
+
+  useEffect(() => {
+    if (!normalizedFocusedReviewId) return;
+    focusedReviewRef.current?.scrollIntoView({ block: "center", behavior: "smooth" });
+  }, [normalizedFocusedReviewId, storedReviews.length, transientGiven.length]);
 
   function submit() {
     if (!to.trim() || !message.trim()) return;
@@ -1270,8 +1280,10 @@ function ReviewsView({
         >
           {(storedReviews.length > 0 || transientGiven.length > 0) ? (
             <div className="v2-reviews-list">
-              {storedReviews.map((review) => (
-                <article key={review.id} className="v2-review-item">
+              {storedReviews.map((review) => {
+                const isFocused = String(review.id) === normalizedFocusedReviewId;
+                return (
+                <article key={review.id} ref={isFocused ? focusedReviewRef : undefined} className={`v2-review-item${isFocused ? " is-focused" : ""}`}>
                   <div className="v2-review-item-header">
                     <Avatar name={review.reviewer} size="sm" />
                     <div>
@@ -1284,9 +1296,12 @@ function ReviewsView({
                   </div>
                   <p>{review.reviewText}</p>
                 </article>
-              ))}
-              {transientGiven.map((item) => (
-                <article key={item.id} className="v2-review-item">
+                );
+              })}
+              {transientGiven.map((item) => {
+                const isFocused = String(item.id) === normalizedFocusedReviewId;
+                return (
+                <article key={item.id} ref={isFocused ? focusedReviewRef : undefined} className={`v2-review-item${isFocused ? " is-focused" : ""}`}>
                   <div className="v2-review-item-header">
                     <Avatar name={item.to} size="sm" />
                     <div>
@@ -1296,7 +1311,8 @@ function ReviewsView({
                   </div>
                   <p>{item.message}</p>
                 </article>
-              ))}
+                );
+              })}
             </div>
           ) : (
             <EmptyState
@@ -1321,6 +1337,7 @@ export function NetworkHub({
   shoutOuts,
   displayName,
   profileFocus = null,
+  focusedReviewId = null,
   onClearProfileFocus = () => undefined,
   onOpenCrew,
   onOpenShopTalk,
@@ -1375,6 +1392,7 @@ export function NetworkHub({
         <ReviewsView
           shoutOuts={shoutOuts}
           displayName={displayName}
+          focusedReviewId={focusedReviewId}
           onAddShoutOut={onAddShoutOut}
         />
       </section>
