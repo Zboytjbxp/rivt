@@ -2947,3 +2947,21 @@ html[data-rivt-compact-device="true"] .shop-talk-community-layout .shop-talk-sea
 .v2-st-reply-send-btn {
   min-height: 44px;
 }
+
+.shop-talk-layout :is(.flair-chip, .shop-talk-saved-btn, .v2-st-filter-pill) {
+  display: inline-flex;
+  min-width: 44px;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+}
+
+.shop-talk-layout .trade-post-icon {
+  display: inline-flex;
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+}
