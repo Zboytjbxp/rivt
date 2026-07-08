@@ -215,6 +215,18 @@ async function collectUiAudit(page, label) {
       const style = window.getComputedStyle(el);
       return rect.width > 0 && rect.height > 0 && style.visibility !== "hidden" && style.display !== "none";
     }
+    function insideHorizontalScroller(el) {
+      let current = el.parentElement;
+      while (current && current !== document.body) {
+        const style = window.getComputedStyle(current);
+        const clipsHorizontally = /(auto|scroll|hidden|clip)/.test(style.overflowX);
+        if (clipsHorizontally && current.scrollWidth > current.clientWidth + 2) {
+          return true;
+        }
+        current = current.parentElement;
+      }
+      return false;
+    }
     const interactive = [...document.querySelectorAll("button,a,input,select,textarea,[role='button'],[tabindex]:not([tabindex='-1'])")]
       .filter(visible);
     const fields = [...document.querySelectorAll("input,select,textarea")]
@@ -240,9 +252,10 @@ async function collectUiAudit(page, label) {
           left: Math.round(rect.left),
           right: Math.round(rect.right),
           width: Math.round(rect.width),
+          insideHorizontalScroller: insideHorizontalScroller(el),
         };
       })
-      .filter((entry) => entry.left < -2 || entry.right > window.innerWidth + 2)
+      .filter((entry) => !entry.insideHorizontalScroller && (entry.left < -2 || entry.right > window.innerWidth + 2))
       .slice(0, 20);
 
     return {

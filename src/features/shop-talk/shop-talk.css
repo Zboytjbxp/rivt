@@ -2229,6 +2229,7 @@
   align-items: center;
   gap: 12px;
   flex: 1;
+  min-height: 44px;
   min-width: 0;
   border: none;
   background: none;
@@ -2581,7 +2582,7 @@ html[data-rivt-compact-device="true"] .shop-talk-community-layout .shop-talk-tab
 }
 
 html[data-rivt-compact-device="true"] .shop-talk-community-layout .shop-talk-tabs button {
-  min-height: 40px;
+  min-height: 44px;
   padding-inline: 14px;
   font-size: 13px;
 }
@@ -2602,12 +2603,12 @@ html[data-rivt-compact-device="true"] .community-row-copy small {
 }
 
 html[data-rivt-compact-device="true"] .community-discover-search {
-  min-height: 40px;
+  min-height: 44px;
   padding-inline: 10px;
 }
 
 html[data-rivt-compact-device="true"] .community-discover-search input {
-  min-height: 38px;
+  min-height: 44px;
   font-size: 13px;
 }
 
@@ -2644,7 +2645,7 @@ html[data-rivt-compact-device="true"] .community-row-copy b {
 }
 
 html[data-rivt-compact-device="true"] .community-join {
-  min-height: 38px;
+  min-height: 44px;
   padding-inline: 14px;
   font-size: 13px;
 }
@@ -2679,7 +2680,7 @@ html[data-rivt-compact-device="true"] .shop-talk-community-layout .shop-talk-fie
 }
 
 html[data-rivt-compact-device="true"] .shop-talk-community-layout .shop-talk-search input {
-  min-height: 40px;
+  min-height: 44px;
   font-size: 13px;
 }
 .shop-report-backdrop {
