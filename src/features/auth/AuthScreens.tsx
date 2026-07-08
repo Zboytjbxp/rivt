@@ -164,8 +164,8 @@ const onboardingTopics: OnboardingTopic[] = [
 const entrySlides = [
   {
     kicker: "Shop Talk",
-    title: "Shop Talk, built for the trades.",
-    body: "Ask questions and get answers from people who have actually done the work.",
+    title: "Real answers from the trades.",
+    body: "Ask field questions, save useful fixes, and follow communities that match the work you do.",
     posts: [
       { community: "Carpentry Talk", title: "Best way to scribe cabinets to stone?", meta: "Example question" },
       { community: "Electrical Talk", title: "Panel swap pricing when the meter can stay?", meta: "Example question" },
@@ -175,7 +175,7 @@ const entrySlides = [
   {
     kicker: "Work + Crew",
     title: "Find work. Build your crew.",
-    body: "Real jobs and real tradespeople near you. Exact addresses stay private until work is accepted.",
+    body: "Browse nearby work, apply when it fits, and connect with contractors and subs without exposing private job details early.",
     posts: [
       { community: "Jacksonville Trades", title: "Finish carpenter needed for built-ins", meta: "$28-$35/hr · tools required" },
       { community: "Side Work", title: "Cabinet helper for two-day install", meta: "Jacksonville Beach · insured preferred" },
@@ -185,7 +185,7 @@ const entrySlides = [
   {
     kicker: "Tools + Records",
     title: "Run the job from your phone.",
-    body: "Calculator, invoice drafts, daily logs, photos, and records stay close to the work.",
+    body: "Open calculator, invoices, daily logs, and job photos from the same workspace once work is active.",
     posts: [
       { community: "Calculator", title: "Fraction math that fits the field", meta: "Sixteenths · feet/inches · quick copy" },
       { community: "Invoice", title: "Draft a clean invoice before you leave", meta: "Email-ready · job-backed records" },
@@ -644,7 +644,7 @@ function GuestPreviewEntry({
       <div className="auth-preview-copy">
         <span>Preview first</span>
         <h1>Shape RIVT around your trade.</h1>
-        <p>Pick a trade and area so the guest preview opens on useful conversations, local work signals, and tools without pretending anything is live work.</p>
+        <p>Pick a trade and area. The preview opens around useful conversations, local work signals, and tools without pretending anything is live work.</p>
       </div>
 
       <div className="auth-preview-board">
