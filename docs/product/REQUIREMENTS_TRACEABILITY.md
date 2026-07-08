@@ -681,6 +681,14 @@ Evidence must eventually link to implementation, automated tests, manual accepta
 - `GA-OPS-008` gains deployment evidence: production now serves source `cdaf0af3b71bc855f057cc525468a0a58db19040`; live `/api/health` reached that commit and `EXPECTED_SOURCE_COMMIT=cdaf0af3b71bc855f057cc525468a0a58db19040 npm run monitor:production` passed with PostgreSQL, S3-compatible storage, configured Sentry, controls off, seven anonymous private-route checks, and 591 ms duration.
 - Remaining boundary: this is UI-density polish only. Physical device coverage, keyboard/screen-reader route sweeps, and additional screen-by-screen simplification remain open launch-quality work.
 
+## Traceability Addendum - 2026-07-08 Soft Launch Polish Checkpoint
+
+- `GA-UX-005` gains notification truthfulness evidence: review notifications now distinguish exact review targets from generic reviews-surface routes, so the action label no longer promises a specific review unless the notification carries one.
+- `GA-UX-006` gains entry-screen hierarchy evidence: the returning-user path on the onboarding/landing carousel is promoted to an intentional account action while preserving the create-account path.
+- `GA-OPS-007` gains local automated evidence for this slice: `npm run build`, `npm run lint`, `npm run test:unit`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check` passed. The aggregate `npm run test` command was attempted and timed out locally during the integration half; full DB-backed evidence still requires `npm run test:integration` with `TEST_DATABASE_URL`.
+- `GA-OPS-008` gains deployment evidence: production now serves source `6cd8f5d6b87d057eb836f10bc79efc69a289d106`; live `/api/health` reached that commit and `EXPECTED_SOURCE_COMMIT=6cd8f5d6b87d057eb836f10bc79efc69a289d106 npm run monitor:production` passed with PostgreSQL, S3-compatible storage, configured Sentry, controls off, seven anonymous private-route checks, and 622 ms duration.
+- Remaining boundary: this is a small launch-polish checkpoint only. Physical-device acceptance, screen-reader/keyboard route sweeps, and full DB-backed integration evidence remain separate launch-quality work.
+
 ## Current Gate A Summary
 
 - Production infrastructure is reachable and managed storage is healthy.

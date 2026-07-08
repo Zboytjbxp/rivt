@@ -3751,7 +3751,10 @@ Completed on 2026-07-04 on branch `codex/launch-polish-phase-2` as a controllabl
   - `npm audit --omit=dev` (pass; 0 vulnerabilities)
 - Boundary:
   - `npm run test` timed out after four minutes because it proceeds into the full integration suite; run `npm run test:integration` separately with `TEST_DATABASE_URL` configured before using this checkpoint as full integration evidence.
-  - No production deployment has been performed for this checkpoint yet.
+- Production deployment status:
+  - branch `codex/soft-launch-ultimate-finish` was fast-forward merged to `master`
+  - production now serves source commit `6cd8f5d6b87d057eb836f10bc79efc69a289d106`; live `/api/health` reports PostgreSQL, S3-compatible object storage, configured Sentry, and migration `0022_community_audiences`
+  - `EXPECTED_SOURCE_COMMIT=6cd8f5d6b87d057eb836f10bc79efc69a289d106 npm run monitor:production` passed with operational controls off, seven anonymous private-route checks, and 622 ms duration.
 
 ## Next Exact Task
 

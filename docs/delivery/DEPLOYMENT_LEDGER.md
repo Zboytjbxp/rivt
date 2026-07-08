@@ -1196,3 +1196,23 @@ Add one entry per staging/production deployment.
 - Known risks: server-side Verified Fix authorization remains a follow-up before that mechanic is abuse-resistant; physical/deeper manual accessibility-device matrix, full local aggregate integration completion, and real paid-checkout/webhook entitlement proof remain launch-quality boundaries.
 - Rollback performed/result: not required
 - Approval: UI polish phase 1 accepted as controllable Gate A launch-blocker UX hardening evidence; overall Gate A still depends on the remaining manual/external launch boundaries.
+
+## Current Production - Packet 08 Soft Launch Polish Checkpoint
+
+- Environment: Production (`https://rivt.pro`)
+- Date/time/timezone: 2026-07-08 18:44 America/New_York
+- Deployer: Codex through GitHub push to `master` with Railway production auto-deploy
+- Source repository/branch: `Zboytjbxp/rivt`, `master`
+- Source commit: `6cd8f5d6b87d057eb836f10bc79efc69a289d106`
+- Build/artifact ID: Railway deployment ID not captured from the local CLI in this pass; live `/api/health` is the source-of-truth runtime proof.
+- Migration version before/after: unchanged (`0022_community_audiences`)
+- Feature-flag/config version: no provider credentials or operational-control flags changed
+- Provider/config changes: none
+- Backup/rollback target: prior successful Pro proof packet deployment `0391165b6bba1a36aaaafa5c682c2e27637a4422`; no migration change
+- Automated gates: local `npm run build`, `npm run lint`, `npm run test:unit`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check` passed. The aggregate `npm run test` command was attempted and timed out locally during the integration half; run `npm run test:integration` with `TEST_DATABASE_URL` for full DB-backed evidence.
+- Post-deploy smoke tests: `https://rivt.pro/api/health` returned exact source commit `6cd8f5d6b87d057eb836f10bc79efc69a289d106`; `EXPECTED_SOURCE_COMMIT=6cd8f5d6b87d057eb836f10bc79efc69a289d106 npm run monitor:production` passed externally with PostgreSQL/S3-compatible dependencies healthy, Sentry configured, operational controls disabled, seven anonymous private-route checks, and 622 ms duration.
+- Rendered UI evidence: not captured in this pass; this was a small copy/routing/test-maintenance checkpoint.
+- Health/readiness result: health reported PostgreSQL and S3-compatible storage healthy with exact source commit `6cd8f5d6b87d057eb836f10bc79efc69a289d106`, migration `0022_community_audiences`, and configured Sentry.
+- Known risks: physical-device accessibility checks, full DB-backed integration run with `TEST_DATABASE_URL`, and final real-user soft-launch acceptance remain launch-quality boundaries.
+- Rollback performed/result: not required
+- Approval: Soft launch polish checkpoint accepted as minor Gate A UX/truthfulness hardening evidence; overall Gate A still depends on the remaining manual/external launch boundaries.
