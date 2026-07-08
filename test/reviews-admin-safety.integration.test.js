@@ -414,7 +414,7 @@ if (!testDatabaseUrl) {
     assert.equal(approvedRoleChange.payload.data.case.status, "resolved");
     const roleChangeMe = await requestJson(baseUrl, "/api/v1/me", { cookie: roleChangeAccount.cookie });
     assert.equal(roleChangeMe.response.status, 200);
-    assert.equal(roleChangeMe.payload.data.account.primaryRole, "contractor");
+    assert.equal(roleChangeMe.payload.data.primaryRole, "contractor");
     assert.equal(roleChangeMe.payload.data.organizations[0].name, "Role Change Carpentry LLC");
 
     const lifted = await requestJson(baseUrl, `/api/v1/admin/restrictions/${restriction.payload.data.restriction.id}/lift`, {
