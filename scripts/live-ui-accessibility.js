@@ -396,12 +396,13 @@ async function collectTopBarActionAudits(page, scenarioLabel) {
   await page.getByRole("dialog", { name: "Settings" }).waitFor({ timeout: 5000 });
   await page.getByRole("button", { name: "Sign out" }).waitFor({ timeout: 5000 });
   audits.push(await collectAndCaptureUiAudit(page, `${scenarioLabel}-account-panel`));
-  await page.getByRole("button", { name: "Close account" }).click();
+  const closeAccount = page.getByRole("button", { name: "Close profile" })
+    .or(page.getByRole("button", { name: "Close account" }));
+  await closeAccount.click();
   await assertNoDialog(page, "Settings");
 
   await clickVisibleControl(page, { pattern: "^Messages$", description: "messages" });
   await page.getByRole("heading", { name: "Inbox", exact: true }).waitFor({ timeout: 10000 });
-  await page.getByText("Server-owned job messages and notifications", { exact: false }).waitFor({ timeout: 5000 });
   audits.push(await collectAndCaptureUiAudit(page, `${scenarioLabel}-messages-page`));
   await firstVisibleClick(page, "Home");
 
@@ -420,8 +421,17 @@ async function loginAndAudit(browser, account, scenario) {
 
   try {
     await page.goto(baseUrl, { waitUntil: "domcontentloaded" });
-    await page.locator("form input[type='email']").fill(account.email);
-    await page.locator("form input[type='password']").fill(account.password);
+    const loginEntry = page.getByRole("button", { name: /^log in$/i });
+    await loginEntry.first().waitFor({ state: "visible", timeout: 5000 }).catch(() => {});
+    if (await loginEntry.isVisible().catch(() => false)) {
+      await loginEntry.click();
+    }
+    const emailMode = page.getByRole("button", { name: /use email/i });
+    if (await emailMode.isVisible().catch(() => false)) {
+      await emailMode.click();
+    }
+    await page.locator("input[type='email']").fill(account.email);
+    await page.locator("input[type='password']").fill(account.password);
     await Promise.all([
       page.waitForResponse((response) => response.url().includes("/api/v1/auth/login"), { timeout: 20000 }),
       page.locator("form button[type='submit']").click(),

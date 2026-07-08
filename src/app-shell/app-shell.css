@@ -694,7 +694,7 @@ html[data-rivt-compact-device="true"] .v2-topbar .v2-icon-button {
 }
 
 html[data-rivt-compact-device="true"] .v2-account-button {
-  min-width: 0;
+  min-width: 44px;
   min-height: 44px;
   padding: 2px;
   color: var(--v2-text);
@@ -768,10 +768,10 @@ html[data-rivt-compact-device="true"] .v2-mobile-nav {
 
   .v2-topbar .v2-icon-button,
   .v2-account-button {
-    width: 40px;
-    min-width: 40px;
-    height: 40px;
-    min-height: 40px;
+    width: 44px;
+    min-width: 44px;
+    height: 44px;
+    min-height: 44px;
     padding: 0;
   }
 
