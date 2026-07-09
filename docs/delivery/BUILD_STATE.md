@@ -32,7 +32,9 @@ Production release commit: `7f6aed13a046da80c5adc45270a02cbdcd75dcdb` verified w
   - `npm audit --omit=dev` (pass; 0 vulnerabilities)
   - full `npm run test` was attempted but timed out after 604 seconds during the broader DB-backed integration run; the targeted auth lifecycle and server integration evidence above is newly green for this auth-provider slice
 - Live verification:
-  - not deployed in this pass yet
+  - branch `codex/auth-onboarding-redesign` was pushed and fast-forwarded to `master`
+  - production `/api/health` reported exact build commit `4cc911107926232f72d184c39f358e4bea0b21fa`
+  - `EXPECTED_SOURCE_COMMIT=4cc911107926232f72d184c39f358e4bea0b21fa npm run monitor:production` passed with PostgreSQL, S3-compatible object storage, configured Sentry, seven anonymous private-route checks, and 568 ms duration
   - Apple end-to-end login cannot be live-smoked until the Apple Developer Services ID/key are configured in Railway
 
 ## Latest Packet 08 Pass - Guest Preview Black-Screen Hardening
