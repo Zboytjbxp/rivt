@@ -26,12 +26,15 @@ import { registerAlbumRoutes } from "./albums.js";
 import { registerBillingRoutes, registerStripeWebhookRoute } from "./billing.js";
 import {
   assertStrongPassword,
+  buildAppleAuthorizationUrl,
+  buildAppleClientSecret,
   buildGoogleAuthorizationUrl,
   createOpaqueToken,
   hashOpaqueToken,
   pkceChallenge,
   requestMetadata,
   safeRedirectPath,
+  verifyAppleIdToken,
   verifyGoogleIdToken,
 } from "./auth.js";
 import { loadActorContext, requireOrganizationRole } from "./authorization.js";
@@ -333,6 +336,7 @@ registerStripeWebhookRoute({
   createRequestLogger,
 });
 app.use(express.json({ limit: "1mb" }));
+app.use(express.urlencoded({ extended: false, limit: "64kb" }));
 
 app.use("/api", createRequestContext);
 app.use("/api", createRequestLogger());
@@ -846,69 +850,83 @@ async function consumePilotInvite(client, { inviteCode, email, role }) {
   return invite.id;
 }
 
-async function resolveGoogleAccount(identity) {
+async function resolveOAuthAccount(provider, identity) {
+  const providerLabel = provider === "apple" ? "Apple" : "Google";
   return withTransaction(async (client) => {
     const bySubject = await client.query(
       `SELECT account_id FROM auth_identities
-       WHERE provider = 'google' AND subject_kind = 'provider_subject' AND provider_subject = $1
+       WHERE provider = $1 AND subject_kind = 'provider_subject' AND provider_subject = $2
        LIMIT 1`,
-      [identity.subject],
+      [provider, identity.subject],
     );
 
     let accountId = bySubject.rows[0]?.account_id;
-    if (!accountId) {
+    if (!accountId && identity.email) {
       const byEmail = await client.query("SELECT id FROM auth_users WHERE email_hash = $1 LIMIT 1", [sha256(identity.email)]);
       accountId = byEmail.rows[0]?.id;
     }
 
     if (!accountId) {
+      if (!identity.email) {
+        throw new ApiError(422, "OAUTH_EMAIL_REQUIRED", `${providerLabel} did not share a verified email address. Try again and allow email sharing, or use email sign-in.`);
+      }
       accountId = randomUUID();
       const credentials = await hashPassword(createOpaqueToken());
       await client.query(
         `INSERT INTO auth_users (
            id, email, email_hash, password_salt, password_hash, provider, display_name,
            role, organization, location, email_verified_at, last_login_at
-         ) VALUES ($1, $2, $3, $4, $5, 'google', $6, 'pending', '', '', now(), now())`,
-        [accountId, identity.email, sha256(identity.email), credentials.salt, credentials.hash, identity.displayName],
+         ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending', '', '', now(), now())`,
+        [accountId, identity.email, sha256(identity.email), credentials.salt, credentials.hash, provider, identity.displayName],
       );
     }
 
     const existingIdentity = await client.query(
-      "SELECT id, provider_subject, subject_kind FROM auth_identities WHERE account_id = $1 AND provider = 'google' LIMIT 1 FOR UPDATE",
-      [accountId],
+      "SELECT id, provider_subject, subject_kind, email, email_hash FROM auth_identities WHERE account_id = $1 AND provider = $2 LIMIT 1 FOR UPDATE",
+      [accountId, provider],
     );
     if (existingIdentity.rowCount
       && existingIdentity.rows[0].subject_kind === "provider_subject"
       && existingIdentity.rows[0].provider_subject !== identity.subject) {
-      throw new ApiError(409, "OAUTH_IDENTITY_CONFLICT", "This Google identity requires support review.");
+      throw new ApiError(409, "OAUTH_IDENTITY_CONFLICT", `This ${providerLabel} identity requires support review.`);
     }
 
+    const identityEmail = identity.email ?? existingIdentity.rows[0]?.email ?? null;
+    const identityEmailHash = identity.email ? sha256(identity.email) : (existingIdentity.rows[0]?.email_hash ?? null);
     if (existingIdentity.rowCount) {
       await client.query(
         `UPDATE auth_identities
          SET provider_subject = $2, subject_kind = 'provider_subject', email = $3, email_hash = $4, updated_at = now()
          WHERE id = $1`,
-        [existingIdentity.rows[0].id, identity.subject, identity.email, sha256(identity.email)],
+        [existingIdentity.rows[0].id, identity.subject, identityEmail, identityEmailHash],
       );
     } else {
       await client.query(
         `INSERT INTO auth_identities (account_id, provider, provider_subject, subject_kind, email, email_hash)
-         VALUES ($1, 'google', $2, 'provider_subject', $3, $4)`,
-        [accountId, identity.subject, identity.email, sha256(identity.email)],
+         VALUES ($1, $2, $3, 'provider_subject', $4, $5)`,
+        [accountId, provider, identity.subject, identityEmail, identityEmailHash],
       );
     }
 
     const updated = await client.query(
       `UPDATE auth_users
-       SET provider = 'google', email_verified_at = COALESCE(email_verified_at, now()),
-           display_name = CASE WHEN trim(display_name) = '' THEN $2 ELSE display_name END,
+       SET provider = $2, email_verified_at = COALESCE(email_verified_at, now()),
+           display_name = CASE WHEN trim(display_name) = '' THEN $3 ELSE display_name END,
            last_login_at = now(), updated_at = now()
        WHERE id = $1
        RETURNING id, email, provider, display_name, role, organization, location, email_verified_at`,
-      [accountId, identity.displayName],
+      [accountId, provider, identity.displayName],
     );
     return updated.rows[0];
   });
+}
+
+async function resolveGoogleAccount(identity) {
+  return resolveOAuthAccount("google", identity);
+}
+
+async function resolveAppleAccount(identity) {
+  return resolveOAuthAccount("apple", identity);
 }
 
 // ── Trade News Aggregator ────────────────────────────────────────────────────
@@ -4841,6 +4859,113 @@ app.get("/api/auth/google/callback", authRateLimit, asyncRoute(async (request, r
   response.redirect(safeRedirectPath(transaction.redirect_path, "/"));
 }));
 
+function displayNameFromAppleUser(rawUser) {
+  if (!rawUser) return "";
+  try {
+    const parsed = JSON.parse(String(rawUser));
+    const firstName = String(parsed?.name?.firstName ?? "").trim();
+    const lastName = String(parsed?.name?.lastName ?? "").trim();
+    return [firstName, lastName].filter(Boolean).join(" ");
+  } catch {
+    return "";
+  }
+}
+
+app.get("/api/auth/apple/start", authRateLimit, asyncRoute(async (request, response) => {
+  requireAuthSecurity();
+  const status = integrationStatus("apple", ["APPLE_CLIENT_ID", "APPLE_TEAM_ID", "APPLE_KEY_ID", "APPLE_PRIVATE_KEY"], "Apple sign-in");
+  if (!status.ok) {
+    throw new ApiError(503, "OAUTH_PROVIDER_UNAVAILABLE", "Apple sign-in is temporarily unavailable.");
+  }
+
+  await ensureDatabaseReady();
+  const state = createOpaqueToken();
+  const nonce = createOpaqueToken();
+  const redirectPath = safeRedirectPath(request.query.redirect, "/");
+  await database.query("DELETE FROM oauth_transactions WHERE expires_at <= now()");
+  await database.query(
+    `INSERT INTO oauth_transactions (state_hash, provider, code_verifier, nonce, redirect_path, expires_at)
+     VALUES ($1, 'apple', '', $2, $3, now() + interval '10 minutes')`,
+    [hashOpaqueToken(state), nonce, redirectPath],
+  );
+  response.cookie(`${sessionCookieName}_oauth_state`, state, {
+    httpOnly: true,
+    path: "/",
+    sameSite: "none",
+    secure: true,
+    maxAge: 1000 * 60 * 10,
+  });
+
+  const redirectUri = envValue("APPLE_REDIRECT_URI", "https://rivt.pro/api/auth/apple/callback");
+  response.redirect(buildAppleAuthorizationUrl({
+    clientId: process.env.APPLE_CLIENT_ID,
+    redirectUri,
+    state,
+    nonce,
+  }));
+}));
+
+async function handleAppleCallback(request, response) {
+  await ensureDatabaseReady();
+  const source = request.method === "POST" ? request.body : request.query;
+  const state = String(source.state ?? "");
+  const stateCookie = parseCookies(request)[`${sessionCookieName}_oauth_state`];
+  const code = String(source.code ?? "");
+  if (!state || !stateCookie || stateCookie !== state || !code) {
+    throw new ApiError(400, "OAUTH_TRANSACTION_INVALID", "Apple sign-in could not be completed.");
+  }
+
+  const transactionResult = await database.query(
+    `DELETE FROM oauth_transactions
+     WHERE state_hash = $1 AND provider = 'apple' AND expires_at > now()
+     RETURNING nonce, redirect_path`,
+    [hashOpaqueToken(state)],
+  );
+  if (!transactionResult.rowCount) {
+    throw new ApiError(400, "OAUTH_TRANSACTION_EXPIRED", "Apple sign-in expired. Start again.");
+  }
+  const transaction = transactionResult.rows[0];
+  const redirectUri = envValue("APPLE_REDIRECT_URI", "https://rivt.pro/api/auth/apple/callback");
+  const clientSecret = await buildAppleClientSecret({
+    clientId: process.env.APPLE_CLIENT_ID,
+    teamId: process.env.APPLE_TEAM_ID,
+    keyId: process.env.APPLE_KEY_ID,
+    privateKey: process.env.APPLE_PRIVATE_KEY,
+  });
+  const tokenResponse = await fetch("https://appleid.apple.com/auth/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      code,
+      client_id: process.env.APPLE_CLIENT_ID,
+      client_secret: clientSecret,
+      redirect_uri: redirectUri,
+      grant_type: "authorization_code",
+    }),
+  });
+  if (!tokenResponse.ok) {
+    await tokenResponse.text();
+    throw new ApiError(502, "OAUTH_EXCHANGE_FAILED", "Apple sign-in could not be completed.");
+  }
+  const tokenBody = await tokenResponse.json();
+  const identity = await verifyAppleIdToken(tokenBody.id_token, {
+    clientId: process.env.APPLE_CLIENT_ID,
+    nonce: transaction.nonce,
+    displayName: displayNameFromAppleUser(source.user),
+  });
+  const user = await resolveAppleAccount(identity);
+  await rotateAuthSession(request, response, user.id);
+  response.clearCookie(`${sessionCookieName}_oauth_state`, {
+    path: "/",
+    sameSite: "none",
+    secure: true,
+  });
+  response.redirect(safeRedirectPath(transaction.redirect_path, "/"));
+}
+
+app.post("/api/auth/apple/callback", authRateLimit, asyncRoute(handleAppleCallback));
+app.get("/api/auth/apple/callback", authRateLimit, asyncRoute(handleAppleCallback));
+
 const signupSchema = z.object({
   email: z.email().max(320).transform((value) => normalizeEmail(value)),
   password: z.string(),
@@ -5207,6 +5332,10 @@ app.use((error, request, response, _next) => {
   }
   if (request.path === "/api/auth/google/callback" && !response.headersSent) {
     response.redirect(`${productionOrigin}/?auth_error=google`);
+    return;
+  }
+  if (request.path === "/api/auth/apple/callback" && !response.headersSent) {
+    response.redirect(`${productionOrigin}/?auth_error=apple`);
     return;
   }
   if (request.path.startsWith("/api/v1/")) {

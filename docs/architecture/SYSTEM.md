@@ -12,7 +12,7 @@ Browser / React
   └─ canonical /api/v1 domain workflows; no app-state hydrate/save loop
 
 Express process on Railway
-  ├─ email auth and Google OAuth
+  ├─ email auth, Google OAuth, and configuration-gated Apple OAuth
   ├─ session cookie
   ├─ canonical /api/v1 domain endpoints plus managed upload/provider endpoints
   ├─ retired legacy app-state/event/payment-export endpoints returning 410

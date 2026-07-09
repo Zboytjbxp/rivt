@@ -85,6 +85,11 @@ EMAIL_DELIVERY_MODE=resend
 GOOGLE_CLIENT_ID=
 GOOGLE_CLIENT_SECRET=
 GOOGLE_REDIRECT_URI=https://rivt.pro/api/auth/google/callback
+APPLE_CLIENT_ID=
+APPLE_TEAM_ID=
+APPLE_KEY_ID=
+APPLE_PRIVATE_KEY=
+APPLE_REDIRECT_URI=https://rivt.pro/api/auth/apple/callback
 ```
 
 Verify `rivt.pro` with the email provider before inviting users. Never use capture delivery in production. Generate invitation codes from an authorized operations terminal with `npm run invite:create -- --email=user@example.com --role=contractor`; only the one-time raw code is printed.
@@ -92,6 +97,8 @@ Verify `rivt.pro` with the email provider before inviting users. Never use captu
 Production sender verification was completed on 2026-06-19. The Resend API key is sending-only and restricted to `rivt.pro`; the verified sender remains `RIVT <support@rivt.pro>`. Keep the existing Google Workspace root MX record intact. Resend uses only the `send.rivt.pro` return-path MX/SPF records.
 
 If `EMAIL_DELIVERY_MODE=resend` and either `RESEND_API_KEY` or `EMAIL_FROM` is missing, signup and password recovery must fail closed with `EMAIL_PROVIDER_UNAVAILABLE` / provider setup-required status. Do not bypass verification, return raw verification tokens, or switch to capture delivery for production users.
+
+Apple sign-in stays hidden until all Apple variables above are configured. In Apple Developer, create a Services ID for `APPLE_CLIENT_ID`, enable Sign in with Apple for the `rivt.pro` web domain, register `https://rivt.pro/api/auth/apple/callback` as the return URL, and create a Sign in with Apple private key for `APPLE_KEY_ID` / `APPLE_TEAM_ID`. Store `APPLE_PRIVATE_KEY` in Railway with escaped `\n` sequences or as the full PEM block; never commit it.
 
 ## Billing Entitlements
 

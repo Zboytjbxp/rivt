@@ -1147,6 +1147,10 @@ textarea:focus-visible {
   color: #fff;
 }
 
+.auth-provider-tile[data-provider="email"] {
+  grid-column: 1 / -1;
+}
+
 .sr-only {
   position: absolute;
   width: 1px;

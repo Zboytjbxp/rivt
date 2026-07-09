@@ -844,21 +844,31 @@ export function AuthGate({
         </div>
 
         <div className="auth-provider-grid">
-          {([["google", GoogleIcon, "Continue with Google"], ["email", EmailIcon, "Use email"]] as const).map(([key, label, providerLabel]) => {
+          {([
+            ["google", GoogleIcon, "Continue with Google"],
+            ["apple", AppleIcon, "Continue with Apple"],
+            ["email", EmailIcon, "Use email"],
+          ] as const).map(([key, label, providerLabel]) => {
             const provider = providers[key];
             const ok = provider?.ok ?? (key === "email");
             const Icon = label;
+            if (key !== "email" && !ok) return null;
 
             return (
               <button
                 type="button"
                 key={key}
                 className={ok ? "auth-provider-tile" : "auth-provider-tile disabled"}
+                data-provider={key}
                 title={ok ? provider?.purpose ?? key : "Temporarily unavailable"}
                 onClick={() => {
                   if (!ok) return;
                   if (key === "google") {
                     window.location.assign(apiPath("/api/auth/google/start"));
+                    return;
+                  }
+                  if (key === "apple") {
+                    window.location.assign(apiPath("/api/auth/apple/start"));
                     return;
                   }
                   if (key === "email") {
@@ -1018,6 +1028,14 @@ function GoogleIcon() {
       <path fill="#34A853" d="M21 12.2c0-.7-.1-1.4-.2-2H12v3.8h5.1c-.2 1-.8 1.9-1.6 2.5l2.8 2.2C19.9 16.9 21 14.8 21 12.2Z" />
       <path fill="#FBBC05" d="M5.5 14.1A5.4 5.4 0 0 1 5.2 12c0-.7.1-1.4.3-2.1L2.6 7.7A9 9 0 0 0 3 16.6l2.5-2.5Z" />
       <path fill="#EA4335" d="M12 21a9 9 0 0 0 6.4-2.4l-2.8-2.2c-.8.5-1.8.8-3.1.8-2.6 0-4.8-1.7-5.6-4.1L4.4 15.6A9 9 0 0 0 12 21Z" />
+    </svg>
+  );
+}
+
+function AppleIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path fill="currentColor" d="M16.6 12.6c0-2.5 2-3.7 2.1-3.8-1.2-1.7-3-1.9-3.6-1.9-1.5-.2-3 .9-3.8.9-.8 0-2-.9-3.3-.9-1.7 0-3.3 1-4.2 2.5-1.8 3.1-.5 7.7 1.3 10.3.9 1.2 1.9 2.6 3.2 2.5 1.3-.1 1.8-.8 3.3-.8 1.5 0 2 .8 3.4.8 1.4 0 2.3-1.2 3.1-2.5 1-1.4 1.4-2.8 1.4-2.9 0-.1-2.8-1.1-2.9-4.2ZM14.1 5.3c.7-.8 1.1-1.9 1-3-.9 0-2 .6-2.7 1.4-.6.7-1.2 1.9-1 2.9 1 .1 2-.5 2.7-1.3Z" />
     </svg>
   );
 }

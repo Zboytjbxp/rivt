@@ -7,6 +7,34 @@ Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
 Production release commit: `7f6aed13a046da80c5adc45270a02cbdcd75dcdb` verified with live `/api/health` and `npm run monitor:production`; latest runtime feature evidence is recorded below and docs-only evidence commits may supersede the served build SHA.
 
+## Latest Packet 08 Pass - Configuration-Gated Apple Sign-In
+
+- Added Apple sign-in support alongside the existing Google OAuth path without creating a second auth system:
+  - `/api/auth/providers` already reported Apple setup state; the auth screen now renders Apple only when that provider is fully configured, so no dead Apple promise appears before credentials exist
+  - `/api/auth/apple/start` creates a state/nonce transaction and redirects to Apple's OIDC authorization endpoint
+  - `/api/auth/apple/callback` handles Apple's `form_post` callback, exchanges the code, verifies the Apple `id_token` through Apple's JWKS, and rotates the RIVT session like email/Google auth
+  - Apple and Google now share the same server-owned account-linking rules: match provider subject first, then verified email, otherwise create a pending-onboarding account only when a verified email is available
+  - Apple OAuth state uses a dedicated `SameSite=None; Secure` state cookie so Apple's cross-site POST callback can still pass CSRF/state validation in production
+  - deployment docs and `.env.example` now document the Apple Services ID, Team ID, Key ID, private key, and redirect URI required before the button appears
+- Preserved launch boundaries:
+  - no Apple credentials, provider secrets, auth bypass, local auth fallback, role override, billing behavior, production data migration, or fake provider success was added
+  - Apple remains hidden until Railway has `APPLE_CLIENT_ID`, `APPLE_TEAM_ID`, `APPLE_KEY_ID`, and `APPLE_PRIVATE_KEY`
+  - existing email and Google paths remain fail-closed and still rotate sessions
+- Local verification:
+  - `node --test test/auth.test.js` (pass; added Apple authorization URL coverage)
+  - `npm run build` (pass)
+  - `npm run lint` (pass)
+  - `npm run lint:security` (pass)
+  - `npm run test:unit` (pass; 46/46)
+  - `npm run test:e2e` (pass)
+  - `node --env-file-if-exists=.env --test --test-concurrency=1 test/auth-lifecycle.integration.test.js` (pass)
+  - `node --env-file-if-exists=.env --test --test-concurrency=1 test/server.integration.test.js` (pass)
+  - `npm audit --omit=dev` (pass; 0 vulnerabilities)
+  - full `npm run test` was attempted but timed out after 604 seconds during the broader DB-backed integration run; the targeted auth lifecycle and server integration evidence above is newly green for this auth-provider slice
+- Live verification:
+  - not deployed in this pass yet
+  - Apple end-to-end login cannot be live-smoked until the Apple Developer Services ID/key are configured in Railway
+
 ## Latest Packet 08 Pass - Guest Preview Black-Screen Hardening
 
 - Hardened the anonymous `Browse RIVT preview` path after a phone report that both Contractor and Subcontractor preview could land on a black screen:

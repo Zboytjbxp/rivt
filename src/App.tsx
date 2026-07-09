@@ -453,11 +453,12 @@ function App() {
   const [canonicalAccount, setCanonicalAccount] = useState<CanonicalAccount | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [authMode, setAuthMode] = useState<"login" | "signup">(readAuthModePreference);
-  const [authError, setAuthError] = useState<string | null>(() => (
-    new URLSearchParams(window.location.search).get("auth_error") === "google"
-      ? "Google sign-in could not be completed. Try again or use email."
-      : null
-  ));
+  const [authError, setAuthError] = useState<string | null>(() => {
+    const authErrorProvider = new URLSearchParams(window.location.search).get("auth_error");
+    if (authErrorProvider === "google") return "Google sign-in could not be completed. Try again or use email.";
+    if (authErrorProvider === "apple") return "Apple sign-in could not be completed. Try again or use email.";
+    return null;
+  });
   const [authProviders, setAuthProviders] = useState<Record<string, { ok: boolean; mode: string; missing: string[]; purpose: string }>>({});
   const [pilotInviteRequired, setPilotInviteRequired] = useState(false);
   const [authNotice, setAuthNotice] = useState<string | null>(null);
