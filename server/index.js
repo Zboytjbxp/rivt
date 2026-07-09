@@ -147,6 +147,12 @@ let migrationVersion = envValue("MIGRATION_VERSION", "uninitialized");
 let migrationState = "pending"; // "pending" | "running" | "ready" | "failed"
 let migrationErrorDetail = null;
 const productionOrigin = envValue("APP_ORIGIN", "https://rivt.pro");
+const securityTxt = `Contact: mailto:support@rivt.pro?subject=Security%20report
+Preferred-Languages: en
+Canonical: https://rivt.pro/.well-known/security.txt
+Policy: https://rivt.pro/legal/security.html
+Expires: 2027-07-09T00:00:00.000Z
+`;
 const scrypt = promisify(scryptCb);
 
 function envValue(name, fallback = undefined) {
@@ -312,6 +318,12 @@ const allowedOrigins = [
     ? []
     : ["http://127.0.0.1:5173", "http://localhost:5173", "http://127.0.0.1:4173", "http://localhost:4173"]),
 ];
+
+app.get(/^\/\.well-known\/security\.txt$/, (_request, response) => {
+  response.type("text/plain; charset=utf-8");
+  response.setHeader("Cache-Control", "public, max-age=3600");
+  response.send(securityTxt);
+});
 
 app.use(compression());
 app.use(cors({
@@ -5293,17 +5305,6 @@ registerBillingRoutes({
 });
 
 if (existsSync(distDir)) {
-  app.get("/.well-known/security.txt", (_request, response, next) => {
-    const securityTxtPath = path.join(distDir, ".well-known", "security.txt");
-    if (!existsSync(securityTxtPath)) {
-      next();
-      return;
-    }
-    response.type("text/plain; charset=utf-8");
-    response.setHeader("Cache-Control", "public, max-age=3600");
-    response.sendFile(securityTxtPath);
-  });
-
   app.use(express.static(distDir, {
     index: false,
     setHeaders(response, filePath) {
