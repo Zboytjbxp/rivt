@@ -5293,6 +5293,17 @@ registerBillingRoutes({
 });
 
 if (existsSync(distDir)) {
+  app.get("/.well-known/security.txt", (_request, response, next) => {
+    const securityTxtPath = path.join(distDir, ".well-known", "security.txt");
+    if (!existsSync(securityTxtPath)) {
+      next();
+      return;
+    }
+    response.type("text/plain; charset=utf-8");
+    response.setHeader("Cache-Control", "public, max-age=3600");
+    response.sendFile(securityTxtPath);
+  });
+
   app.use(express.static(distDir, {
     index: false,
     setHeaders(response, filePath) {

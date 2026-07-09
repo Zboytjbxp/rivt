@@ -26,6 +26,7 @@ Production release commit: `7f6aed13a046da80c5adc45270a02cbdcd75dcdb` verified w
   - no background-check verification claim
   - no completed third-party penetration-test claim
 - Linked the Security page from the public landing footer and the authenticated Profile > Trust & Legal document list.
+- Added an explicit `/.well-known/security.txt` server route because Express static serving otherwise falls through dot-directory paths to the SPA shell.
 - Contact remains `support@rivt.pro` with subject `Security report`; a separate `security@rivt.pro` mailbox/alias has not been confirmed configured.
 - Local verification:
   - `npm run build` (pass)
