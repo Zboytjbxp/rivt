@@ -9606,7 +9606,7 @@ html[data-rivt-compact-device="true"] .guest-banner-actions {
 
 html[data-rivt-compact-device="true"] .guest-banner .primary-action,
 html[data-rivt-compact-device="true"] .guest-exit {
-  min-height: 32px;
+  min-height: 44px;
   padding-inline: 10px;
   font-size: 12px;
 }
@@ -9632,14 +9632,14 @@ html[data-rivt-compact-device="true"] .guest-exit {
 
   .guest-banner .primary-action,
   .guest-exit {
-    min-height: 36px;
+    min-height: 44px;
     padding-inline: 10px;
     font-size: 12px;
   }
 }
 
 .guest-exit {
-  min-height: 36px;
+  min-height: 44px;
   padding: 0 10px;
   font-size: 13px;
   border-color: transparent;
