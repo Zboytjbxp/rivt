@@ -10733,6 +10733,54 @@ html[data-rivt-compact-device="true"] .guest-exit {
 html[data-rivt-compact-device="true"] .auth-preview-phone {
   display: none;
 }
+
+.auth-preview-roles {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.auth-preview-roles button {
+  display: grid;
+  gap: 4px;
+  min-height: 72px;
+  padding: 12px;
+  border: 1px solid rgba(8, 13, 16, 0.16);
+  border-radius: var(--v2-radius-lg);
+  background: rgba(255, 255, 255, 0.72);
+  color: #0b0b0b;
+  text-align: left;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.auth-preview-roles button span {
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.auth-preview-roles button small {
+  color: rgba(8, 13, 16, 0.62);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.auth-preview-roles button.is-selected {
+  border-color: #0b0b0b;
+  background: #0b0b0b;
+  color: #fff;
+  box-shadow: 0 14px 32px rgba(8, 13, 16, 0.18);
+}
+
+.auth-preview-roles button.is-selected small {
+  color: rgba(255, 255, 255, 0.74);
+}
+
+html[data-rivt-compact-device="true"] .auth-preview-roles {
+  grid-template-columns: 1fr;
+}
 }
 
 /* Auth/onboarding redesign pass: stable entry screens before decorative motion. */

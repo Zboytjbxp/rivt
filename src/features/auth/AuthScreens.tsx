@@ -639,9 +639,10 @@ function GuestPreviewEntry({
 }) {
   const [trade, setTrade] = useState<Trade>("Carpentry");
   const [location, setLocation] = useState("Jacksonville, FL");
+  const [role, setRole] = useState<Role>("contractor");
 
   function openPreview() {
-    saveGuestPreviewPreferences({ trade, location: location.trim() || "Jacksonville, FL", role: "contractor" });
+    saveGuestPreviewPreferences({ trade, location: location.trim() || "Jacksonville, FL", role });
     onBrowseAsGuest();
   }
 
@@ -654,6 +655,29 @@ function GuestPreviewEntry({
       </div>
 
       <div className="auth-preview-board">
+        <div className="auth-preview-field">
+          <strong>Preview as</strong>
+          <div className="auth-preview-roles" role="group" aria-label="Choose preview role">
+            <button
+              type="button"
+              className={role === "contractor" ? "is-selected" : ""}
+              aria-pressed={role === "contractor"}
+              onClick={() => setRole("contractor")}
+            >
+              <span>Contractor</span>
+              <small>Post work, manage crews</small>
+            </button>
+            <button
+              type="button"
+              className={role === "tradesperson" ? "is-selected" : ""}
+              aria-pressed={role === "tradesperson"}
+              onClick={() => setRole("tradesperson")}
+            >
+              <span>Subcontractor</span>
+              <small>Find work, build reputation</small>
+            </button>
+          </div>
+        </div>
         <div className="auth-preview-field">
           <strong>Trade</strong>
           <div className="auth-preview-trades">
@@ -682,7 +706,7 @@ function GuestPreviewEntry({
 
       <div className="auth-preview-phone" aria-label="Personalized preview example">
         <div className="auth-phone-topbar">
-          <strong>{trade} Talk</strong>
+          <strong>{role === "contractor" ? "Contractor preview" : "Subcontractor preview"}</strong>
           <span>{location || "Your area"}</span>
         </div>
         <article className="auth-phone-post">
@@ -695,11 +719,15 @@ function GuestPreviewEntry({
         </article>
         <article className="auth-phone-post">
           <div>
-            <span>Work</span>
+            <span>{role === "contractor" ? "Crew" : "Work"}</span>
             <small>{location || "Local"} filter</small>
           </div>
-          <strong>Local work and crew matches use your selected trade first.</strong>
-          <p>If there is nothing real in the pilot area yet, RIVT shows an honest empty state.</p>
+          <strong>
+            {role === "contractor"
+              ? "See applicants, offers, messages, and job records in one workspace."
+              : "Browse local work, apply, accept offers, and keep job records together."}
+          </strong>
+          <p>This is sample preview content. Real applications, posts, and messages require an account.</p>
         </article>
       </div>
 
@@ -906,7 +934,7 @@ export function GuestBanner({
 }) {
   return (
     <div className="guest-banner" role="status">
-      <span>Guest preview.</span>
+      <span>Demo preview. Sample jobs, posts, messages, and records show what RIVT can look like once your account is active.</span>
       <div className="guest-banner-actions">
         <button type="button" className="primary-action" onClick={onSignUp}>
           Sign up

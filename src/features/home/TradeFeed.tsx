@@ -545,7 +545,7 @@ export function TradeFeed({
         <button type="button" className="trade-feed-nudge" onClick={onOpenAnswerQueue}>
           <span className="trade-feed-nudge-icon"><MessageCircle size={18} /></span>
           <span className="trade-feed-nudge-copy">
-            <b>{tradeQuestions} {primaryTrade} question{tradeQuestions === 1 ? "" : "s"} need a hand</b>
+            <b>{tradeQuestions} {primaryTrade} question{tradeQuestions === 1 ? " needs" : "s need"} a hand</b>
             <small>Answer one to build your reputation</small>
           </span>
           <ChevronRight size={18} />

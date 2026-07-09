@@ -113,6 +113,7 @@ import {
   type GuestPreviewPreferences,
   type OnboardingResult,
 } from "./features/auth/AuthScreens";
+import { createGuestPreviewWorkspace } from "./demo/guestPreview";
 
 const TradeFeed = lazy(() => import("./features/home/TradeFeed").then((m) => ({ default: m.TradeFeed })));
 const WorkWorkspace = lazy(() => import("./features/work/WorkWorkspace").then((m) => ({ default: m.WorkWorkspace })));
@@ -2096,6 +2097,16 @@ function App() {
     setOnboardingComplete(false);
     setJobs([]);
     setSelectedId(0);
+    setActiveWork([]);
+    setFocusedActiveWorkId(null);
+    setInboxConversations([]);
+    setSelectedConversationId(null);
+    setInboxMessages([]);
+    setInboxNotifications([]);
+    setUploadedRecords(new Set());
+    setCommunityPosts(communityPromptPosts);
+    setCommunities(fallbackCommunities);
+    setShoutOuts([]);
     setAccountProfile((current) => ({ ...current, displayName: "" }));
   }
 
@@ -2107,6 +2118,16 @@ function App() {
     setOnboardingComplete(false);
     setJobs([]);
     setSelectedId(0);
+    setActiveWork([]);
+    setFocusedActiveWorkId(null);
+    setInboxConversations([]);
+    setSelectedConversationId(null);
+    setInboxMessages([]);
+    setInboxNotifications([]);
+    setUploadedRecords(new Set());
+    setCommunityPosts(communityPromptPosts);
+    setCommunities(fallbackCommunities);
+    setShoutOuts([]);
     setAccountProfile((current) => ({ ...current, displayName: "" }));
   }
 
@@ -2115,6 +2136,11 @@ function App() {
     const previewTrade = previewPreferences?.trade ?? "Carpentry";
     const previewLocation = previewPreferences?.location ?? "Jacksonville, FL";
     const previewRole = previewPreferences?.role ?? "contractor";
+    const previewWorkspace = createGuestPreviewWorkspace({
+      role: previewRole,
+      trade: previewTrade,
+      location: previewLocation,
+    });
     setAuthError(null);
     setAuthNotice(null);
     setIsGuest(true);
@@ -2123,24 +2149,28 @@ function App() {
       id: "guest-preview",
       email: "",
       provider: "Email",
-      display_name: "Guest",
+      display_name: previewWorkspace.profile.displayName,
       role: previewRole,
-      organization: "",
+      organization: previewWorkspace.profile.organization,
       location: previewLocation,
       email_verified: false,
       account_status: "active",
       onboarding_status: "complete",
     });
     setRole(previewRole);
-    setAccountProfile((current) => ({
-      ...current,
-      email: "",
-      displayName: "Guest",
-      organization: "",
-      location: previewLocation,
-      specialties: [previewTrade, "Electrical", "Plumbing"].filter((item, index, list) => list.indexOf(item) === index) as Trade[],
-      authMethod: "Email",
-    }));
+    setAccountProfile(previewWorkspace.profile);
+    setJobs(previewWorkspace.jobs);
+    setSelectedId(previewWorkspace.jobs[0]?.id ?? 0);
+    setActiveWork(previewWorkspace.activeWork);
+    setFocusedActiveWorkId(previewWorkspace.activeWork[0]?.id ?? null);
+    setInboxConversations(previewWorkspace.conversations);
+    setSelectedConversationId(previewWorkspace.conversations[0]?.id ?? null);
+    setInboxMessages(previewWorkspace.messages);
+    setInboxNotifications(previewWorkspace.notifications);
+    setUploadedRecords(new Set(previewWorkspace.recordIds));
+    setCommunityPosts(previewWorkspace.posts);
+    setCommunities(previewWorkspace.communities);
+    setShoutOuts(previewWorkspace.shoutOuts);
     setTrade(previewTrade);
     setLocationQuery(previewLocation);
     setOnboardingComplete(true);
