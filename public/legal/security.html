@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>RIVT Security</title>
+    <style>
+      body { margin: 0; font-family: Inter, Arial, sans-serif; color: #111; background: #f6f5f1; line-height: 1.55; }
+      main { max-width: 760px; margin: 0 auto; padding: 40px 20px 72px; }
+      h1 { font-size: clamp(32px, 7vw, 56px); line-height: 0.95; margin: 0 0 18px; letter-spacing: -0.03em; }
+      h2 { margin-top: 32px; font-size: 20px; }
+      p, li { font-size: 16px; }
+      a { color: #ff4b00; }
+      .card { background: #fff; border: 1px solid rgba(17, 17, 17, 0.12); border-radius: 18px; padding: 18px; margin: 22px 0; }
+      .label { display: inline-flex; margin-bottom: 10px; color: #ff4b00; font-size: 13px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>RIVT Security</h1>
+      <p>Effective July 9, 2026. RIVT is built for contractors, subcontractors, and skilled tradespeople. Security and privacy matter because the product handles work records, messages, photos, account data, and subscription status.</p>
+
+      <section class="card">
+        <span class="label">Current safeguards</span>
+        <ul>
+          <li>RIVT uses HTTPS for production traffic.</li>
+          <li>Passwords are hashed before storage and are not stored in plain text.</li>
+          <li>Account sessions use protected server-issued cookies.</li>
+          <li>Private API routes require a real authenticated account.</li>
+          <li>Jobsite addresses are not public and are shared only under product rules for real work relationships.</li>
+          <li>Uploads are stored in managed cloud object storage when users upload photos or attachments.</li>
+          <li>Subscription billing is handled through Stripe. RIVT does not store full card numbers.</li>
+          <li>Production monitoring checks health, storage dependencies, and private-route protections.</li>
+        </ul>
+      </section>
+
+      <h2>Payments</h2>
+      <p>RIVT uses Stripe-hosted billing flows for subscriptions. Payment card details are handled by Stripe's payment infrastructure, not stored directly by RIVT.</p>
+
+      <h2>Responsible disclosure</h2>
+      <p>If you believe you found a security issue, email <a href="mailto:support@rivt.pro?subject=Security%20report">support@rivt.pro</a> with the subject line "Security report." Please include the affected page or endpoint, steps to reproduce, and any screenshots or request IDs that help us verify the issue.</p>
+      <p>Do not access another user's account, download private data, disrupt service, or publicly disclose a vulnerability before RIVT has had a reasonable chance to investigate and fix it.</p>
+
+      <h2>What we do not claim yet</h2>
+      <p>RIVT is in beta. We do not currently claim SOC 2 certification, PCI certification by RIVT, government accreditation, background-check verification, or a completed third-party penetration test. When those reviews are completed, this page will be updated with the real evidence.</p>
+
+      <h2>Contact</h2>
+      <p>General support: <a href="mailto:support@rivt.pro">support@rivt.pro</a>. Security reports: <a href="mailto:support@rivt.pro?subject=Security%20report">support@rivt.pro</a> with the subject "Security report."</p>
+    </main>
+  </body>
+</html>

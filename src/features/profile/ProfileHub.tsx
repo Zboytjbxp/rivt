@@ -1508,7 +1508,7 @@ export function ProfileHub({
           <section className="v2-profile-panel">
             <header>
               <span>Documents</span>
-              <strong>Terms, privacy, and agreements</strong>
+              <strong>Terms, privacy, security, and agreements</strong>
             </header>
             <div className="v2-profile-list">
               <a className="v2-trust-doc-link" href="/legal/terms.html" target="_blank" rel="noreferrer">
@@ -1518,6 +1518,10 @@ export function ProfileHub({
               <a className="v2-trust-doc-link" href="/legal/privacy.html" target="_blank" rel="noreferrer">
                 <FileText size={16} />
                 <span>Privacy Policy</span>
+              </a>
+              <a className="v2-trust-doc-link" href="/legal/security.html" target="_blank" rel="noreferrer">
+                <FileText size={16} />
+                <span>Security & Disclosure</span>
               </a>
               <a className="v2-trust-doc-link" href="/legal/subcontractor-agreement.html" target="_blank" rel="noreferrer">
                 <FileText size={16} />

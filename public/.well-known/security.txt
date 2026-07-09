@@ -1,0 +1,5 @@
+Contact: mailto:support@rivt.pro?subject=Security%20report
+Preferred-Languages: en
+Canonical: https://rivt.pro/.well-known/security.txt
+Policy: https://rivt.pro/legal/security.html
+Expires: 2027-07-09T00:00:00.000Z

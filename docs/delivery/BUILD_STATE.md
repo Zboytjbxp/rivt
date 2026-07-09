@@ -1,11 +1,43 @@
 # RIVT Build State
 
-Last updated: 2026-07-08 America/New_York
+Last updated: 2026-07-09 America/New_York
 Current gate: Gate A launch hardening
 Current phase: Packet 08 Gate A launch hardening plus Gate B behind-flag backbone work: machine gates and live workflow smokes are mostly green; the Shop Talk Reddit-model backbone, moderation/reporting backend, human-facing moderation console/report UX, post photo media, reachability/naming cleanup, Tools hub consolidation, Payment Tracker server records, money-tools sync, the accepted tool-records sync slices, non-tool local-state boundary cleanup, dedicated network-records sync for Crew/Invites/informal written shout-outs, screen-density polish, mobile layout/device-accessibility subtraction, fraction calculator ergonomics, iPhone SE layout containment, immersive-tool compact-device containment, SE tool chrome cleanup slices, native metric calculator rebuild, the camera-first records/photos tool rebuild, admin support-case review for account-type requests, offer start-date normalization, and guest-preview black-screen hardening are implemented while still respecting launch-readiness boundaries before broad exposure.
 Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
 Production release commit: `7f6aed13a046da80c5adc45270a02cbdcd75dcdb` verified with live `/api/health` and `npm run monitor:production`; latest runtime feature evidence is recorded below and docs-only evidence commits may supersede the served build SHA.
+
+## Latest Packet 08 Pass - Public Security and Disclosure Page
+
+- Added a public `/legal/security.html` page and `/.well-known/security.txt` so beta users, Reddit reviewers, and security-minded contractors have a plain responsible-disclosure path instead of a fake security badge.
+- The page states current safeguards honestly:
+  - HTTPS production traffic
+  - hashed passwords
+  - protected server-issued cookies
+  - authenticated private API routes
+  - private jobsite address handling
+  - managed cloud object storage for uploads
+  - Stripe-hosted subscription billing with no full-card storage by RIVT
+  - production monitoring of health, storage dependencies, and private-route protections
+- The page explicitly avoids overclaiming:
+  - no SOC 2 certification
+  - no RIVT PCI certification
+  - no government accreditation
+  - no background-check verification claim
+  - no completed third-party penetration-test claim
+- Linked the Security page from the public landing footer and the authenticated Profile > Trust & Legal document list.
+- Contact remains `support@rivt.pro` with subject `Security report`; a separate `security@rivt.pro` mailbox/alias has not been confirmed configured.
+- Local verification:
+  - `npm run build` (pass)
+  - `npm run lint` (pass)
+  - `npm run lint:security` (pass)
+  - `npm run test:unit` (pass; 46/46)
+  - `npm run test:e2e` (pass)
+  - `npm audit --omit=dev` (pass; 0 vulnerabilities)
+  - `git diff --check` (pass; CRLF warnings only)
+  - full `npm run test` was attempted but timed out after 304 seconds; `TEST_DATABASE_URL` was not set in this shell, so no full DB-backed integration evidence is claimed for this static security/disclosure slice
+- Live verification:
+  - not deployed yet
 
 ## Latest Packet 08 Pass - Configuration-Gated Apple Sign-In
 
