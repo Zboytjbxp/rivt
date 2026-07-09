@@ -1,11 +1,38 @@
 # RIVT Build State
 
-Last updated: 2026-07-07 America/New_York
+Last updated: 2026-07-08 America/New_York
 Current gate: Gate A launch hardening
 Current phase: Packet 08 Gate A launch hardening plus Gate B behind-flag backbone work: machine gates and live workflow smokes are mostly green; the Shop Talk Reddit-model backbone, moderation/reporting backend, human-facing moderation console/report UX, post photo media, reachability/naming cleanup, Tools hub consolidation, Payment Tracker server records, money-tools sync, the accepted tool-records sync slices, non-tool local-state boundary cleanup, dedicated network-records sync for Crew/Invites/informal written shout-outs, screen-density polish, mobile layout/device-accessibility subtraction, fraction calculator ergonomics, iPhone SE layout containment, immersive-tool compact-device containment, SE tool chrome cleanup slices, native metric calculator rebuild, the camera-first records/photos tool rebuild, admin support-case review for account-type requests, and offer start-date normalization are implemented while still respecting launch-readiness boundaries before broad exposure.
 Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
-Production release commit: `6b4f49db82a17a90da0377aad842e73285a17bcd` verified with live `/api/health` and `npm run monitor:production`; latest runtime feature evidence is recorded below and docs-only evidence commits may supersede the served build SHA.
+Production release commit: `2ae4627674c71a2d28b8ba0ea24915d3fdce9744` verified with live `/api/health` and `npm run monitor:production`; latest runtime feature evidence is recorded below and docs-only evidence commits may supersede the served build SHA.
+
+## Latest Packet 08 Pass - Guest Preview Demo Workspace
+
+- Rebuilt `Browse RIVT preview` into a labeled demo workspace instead of an empty guest shell:
+  - preview setup now lets visitors choose Contractor or Subcontractor plus trade and area before entering the app
+  - preview mode seeds demo-only jobs, active work, Shop Talk posts, communities, an unread message, a notification, records, and a shout-out so visitors can see the intended mature product loop without needing real production density
+  - the guest banner now explicitly says this is a demo preview with sample jobs, posts, messages, and records
+  - exiting preview or moving to signup clears the demo workspace surfaces so sample data does not bleed into authenticated state
+  - Home copy now pluralizes the answer-queue nudge correctly for one question versus multiple questions
+- Preserved launch boundaries:
+  - no seed/demo data was inserted into production tables
+  - no authenticated workflow, authorization boundary, billing behavior, storage provider, or server mutation path was changed
+  - demo content is generated client-side only for explicit guest preview mode and is labeled as sample/demo content
+- Local verification:
+  - `npm run build` (pass)
+  - `npm run lint` (pass)
+  - `npm run test:unit` (pass; 45/45)
+  - `npm run test:e2e` (pass)
+  - `npm audit --omit=dev` (pass; 0 vulnerabilities)
+  - full `npm run test` and DB-backed `npm run test:integration` were not claimed because `TEST_DATABASE_URL` was not configured in this shell
+- Rendered QA:
+  - local Chrome connector smoke opened the preview flow, selected the preview path, and verified the demo banner, demo account, demo job, and demo Shop Talk post rendered in the authenticated app shell
+  - in-app Browser tooling was unavailable in this session and Playwright browser binaries were not installed, so Chrome connector evidence was used instead
+- Live verification:
+  - branch `codex/auth-onboarding-redesign` was merged to `master`
+  - production `/api/health` reported exact build commit `2ae4627674c71a2d28b8ba0ea24915d3fdce9744`
+  - `EXPECTED_SOURCE_COMMIT=2ae4627674c71a2d28b8ba0ea24915d3fdce9744 npm run monitor:production` passed with PostgreSQL, S3-compatible object storage, configured Sentry, operational controls off, seven anonymous private-route checks, and 636 ms duration
 
 ## Latest Packet 08 Pass - Railway Live Smoke Environment Automation
 
