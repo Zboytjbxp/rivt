@@ -163,19 +163,28 @@ const onboardingTopics: OnboardingTopic[] = [
 
 const entrySlides = [
   {
-    kicker: "Shop Talk",
-    title: "Real answers from the trades.",
-    body: "Ask field questions, save useful fixes, and follow communities that match the work you do.",
+    kicker: "Trades only",
+    title: "Contractors and subs in one place.",
+    body: "A trades-only network for real work: jobs, crews, local communities, messages, records, and tools connected to the job.",
+    search: "Jacksonville carpenter available this week",
+    action: "Search",
     posts: [
-      { community: "Carpentry Talk", title: "Best way to scribe cabinets to stone?", meta: "Example question" },
-      { community: "Electrical Talk", title: "Panel swap pricing when the meter can stay?", meta: "Example question" },
-      { community: "Plumbing Talk", title: "Do I need insurance for side jobs?", meta: "Example question" },
+      { community: "Jacksonville Trades", title: "Cabinet installer needed this week", meta: "$28-$35/hr - tools required" },
+      { community: "Crew Leads", title: "Finish carpenter available Friday", meta: "Portfolio ready - message first" },
+      { community: "Carpentry Talk", title: "How are you pricing punch-out work?", meta: "Local answers - saved fixes" },
     ],
   },
   {
-    kicker: "Work + Crew",
-    title: "Find work. Build your crew.",
-    body: "Browse nearby work, apply when it fits, and connect with contractors and subs without exposing private job details early.",
+    kicker: "Active work",
+    title: "One workspace for every job.",
+    body: "Once an offer is accepted, messages, photos, daily logs, invoices, schedule changes, and closeout proof stay attached to the job.",
+    search: "Cabinet installation - active",
+    action: "Open",
+    cards: [
+      { community: "Messages", title: "Confirm start time and site access", meta: "Job thread - exact record" },
+      { community: "Photos", title: "Upload progress and closeout proof", meta: "Cloud saved - job scoped" },
+      { community: "Daily log", title: "Track labor, blockers, and notes", meta: "Private record - exportable" },
+    ],
     posts: [
       { community: "Jacksonville Trades", title: "Finish carpenter needed for built-ins", meta: "$28-$35/hr · tools required" },
       { community: "Side Work", title: "Cabinet helper for two-day install", meta: "Jacksonville Beach · insured preferred" },
@@ -183,9 +192,16 @@ const entrySlides = [
     ],
   },
   {
-    kicker: "Tools + Records",
-    title: "Run the job from your phone.",
-    body: "Open calculator, invoices, daily logs, and job photos from the same workspace once work is active.",
+    kicker: "Shop Talk",
+    title: "Communities that know the work.",
+    body: "Create or join trade and local communities. Ask with photos, answer from experience, and mark the fix that actually solved it.",
+    search: "Best way to scribe cabinets to stone?",
+    action: "Ask",
+    cards: [
+      { community: "Carpentry Talk", title: "Best way to scribe cabinets to stone?", meta: "4 answers - verified fix" },
+      { community: "Electrical Talk", title: "Panel swap pricing when the meter can stay?", meta: "Local pricing - saved" },
+      { community: "Jacksonville Trades", title: "Who is free for punch-out work Friday?", meta: "Public community - local" },
+    ],
     posts: [
       { community: "Calculator", title: "Fraction math that fits the field", meta: "Sixteenths · feet/inches · quick copy" },
       { community: "Invoice", title: "Draft a clean invoice before you leave", meta: "Email-ready · job-backed records" },
@@ -563,15 +579,15 @@ function SwipeEntryShowcase({
                 </div>
                 <label className="auth-phone-search">
                   <Search size={16} />
-                  <span>{slide.posts[0]?.title}</span>
-                  <b>Ask</b>
+                  <span>{slide.search}</span>
+                  <b>{slide.action}</b>
                 </label>
                 <div className="auth-phone-feed">
-                  {slide.posts.map((post) => (
+                  {("cards" in slide ? slide.cards : slide.posts).map((post) => (
                     <article key={post.title} className="auth-phone-post">
                       <div>
                         <span>{post.community}</span>
-                        <small>{post.meta.split("·")[0]?.trim()}</small>
+                        <small>{post.meta.split(" - ")[0]?.split("·")[0]?.trim()}</small>
                       </div>
                       <strong>{post.title}</strong>
                       <p>{post.meta}</p>
