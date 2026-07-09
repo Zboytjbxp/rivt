@@ -21,6 +21,25 @@ Add one entry per staging/production deployment.
 - Rollback performed/result:
 - Approval:
 
+## Current Production - Packet 08 Guest Preview Black-Screen Hardening
+
+- Environment: Production (`https://rivt.pro`)
+- Date/time/timezone: 2026-07-08 22:57 America/New_York
+- Deployer: Codex through GitHub push to Railway-linked `master`
+- Source repository/branch: `Zboytjbxp/rivt`, `master`
+- Source commit: `7f6aed13a046da80c5adc45270a02cbdcd75dcdb`
+- Build/artifact ID: Railway-linked production deployment serving source `7f6aed13a046da80c5adc45270a02cbdcd75dcdb`; live `/api/health` is the runtime proof
+- Migration version before/after: `0022_community_audiences` / `0022_community_audiences` (no schema migration)
+- Feature-flag/config version: no provider credentials or operational-control flags changed
+- Provider/config changes (no secrets): no provider credentials changed; Sentry remains configured
+- Backup/rollback target: prior successful production source `aa827923410b5e52a328ea59b16fd301dabbbad4`; rollback is a normal source rollback because no migration changed
+- Automated gates: `npm run build`, `npm run lint`, `npm run test:unit`, `npm run test:e2e`, `npm run test:ui:guest-preview`, `npm audit --omit=dev`, and `git diff --check` passed. Full `npm run test` and `npm run test:integration` exceeded local command windows against the remote test DB; the previously stuck `test/shop-talk-moderation.integration.test.js` file was then run individually and passed.
+- Post-deploy smoke tests: live `https://rivt.pro/api/health` returned exact source commit `7f6aed13a046da80c5adc45270a02cbdcd75dcdb`, ready migration `0022_community_audiences`, PostgreSQL, S3-compatible object storage, and configured Sentry. `EXPECTED_SOURCE_COMMIT=7f6aed13a046da80c5adc45270a02cbdcd75dcdb npm run monitor:production` passed with operational controls off, seven anonymous private-route checks, and 613 ms duration.
+- Health/readiness result: healthy production health and synthetic monitor; no schema migration applied.
+- Known risks: this closes the black-screen failure mode with visible recovery and a mobile guest-preview smoke. Physical iOS Safari/PWA cache behavior should still be rechecked on the reported device; one refresh or app restart may be needed for the old service worker to install the new cache version.
+- Rollback performed/result: not required.
+- Approval: accepted as a small Gate A preview-loading hardening deployment with no provider, auth, billing, storage, moderation, or migration boundary changes.
+
 ## Current Production - Packet 08 Launch Final Train Deployment
 
 - Environment: Production (`https://rivt.pro`)

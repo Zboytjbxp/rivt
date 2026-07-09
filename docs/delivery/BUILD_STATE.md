@@ -5,7 +5,7 @@ Current gate: Gate A launch hardening
 Current phase: Packet 08 Gate A launch hardening plus Gate B behind-flag backbone work: machine gates and live workflow smokes are mostly green; the Shop Talk Reddit-model backbone, moderation/reporting backend, human-facing moderation console/report UX, post photo media, reachability/naming cleanup, Tools hub consolidation, Payment Tracker server records, money-tools sync, the accepted tool-records sync slices, non-tool local-state boundary cleanup, dedicated network-records sync for Crew/Invites/informal written shout-outs, screen-density polish, mobile layout/device-accessibility subtraction, fraction calculator ergonomics, iPhone SE layout containment, immersive-tool compact-device containment, SE tool chrome cleanup slices, native metric calculator rebuild, the camera-first records/photos tool rebuild, admin support-case review for account-type requests, offer start-date normalization, and guest-preview black-screen hardening are implemented while still respecting launch-readiness boundaries before broad exposure.
 Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
-Production release commit: `2ae4627674c71a2d28b8ba0ea24915d3fdce9744` verified with live `/api/health` and `npm run monitor:production`; latest runtime feature evidence is recorded below and docs-only evidence commits may supersede the served build SHA.
+Production release commit: `7f6aed13a046da80c5adc45270a02cbdcd75dcdb` verified with live `/api/health` and `npm run monitor:production`; latest runtime feature evidence is recorded below and docs-only evidence commits may supersede the served build SHA.
 
 ## Latest Packet 08 Pass - Guest Preview Black-Screen Hardening
 
@@ -32,7 +32,9 @@ Production release commit: `2ae4627674c71a2d28b8ba0ea24915d3fdce9744` verified w
   - local Playwright/Chrome fallback verified the preview flow opens the real app shell instead of a black page for both role choices
   - in-app Browser tooling was unavailable in this session, so Playwright/Chrome screenshots were used
 - Live verification:
-  - not deployed in this pass
+  - branch `codex/auth-onboarding-redesign` was pushed and fast-forwarded to `master`
+  - production `/api/health` reported exact build commit `7f6aed13a046da80c5adc45270a02cbdcd75dcdb`
+  - `EXPECTED_SOURCE_COMMIT=7f6aed13a046da80c5adc45270a02cbdcd75dcdb npm run monitor:production` passed with PostgreSQL, S3-compatible object storage, configured Sentry, operational controls off, seven anonymous private-route checks, and 613 ms duration
 
 ## Latest Packet 08 Pass - Guest Preview Demo Workspace
 

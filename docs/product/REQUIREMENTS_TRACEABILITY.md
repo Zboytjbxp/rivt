@@ -10,6 +10,15 @@ Status values:
 
 Evidence must eventually link to implementation, automated tests, manual acceptance proof, and deployed build.
 
+## Traceability Addendum - 2026-07-08 Guest Preview Black-Screen Hardening
+
+- `GA-PRO-001` gains preview reachability evidence: Contractor and Subcontractor guest preview now run through a dedicated compact mobile smoke at 320px and must render the authenticated app shell with demo content instead of a blank/black screen.
+- `GA-UX-005` gains error/recovery evidence: route crashes now render a visible recovery panel with reload and sign-in actions, and failed preview startup returns the user to the auth form with an explicit message instead of leaving the intro/preview carousel in an ambiguous state.
+- `GA-UX-006` gains service-worker freshness evidence: production now serves a bumped service-worker cache version that skips API caching, refreshes app-shell assets with `no-cache`, and uses `index.html` as a navigation fallback only when the network fails.
+- `GA-OPS-007` gains local automated evidence for this slice: `npm run build`, `npm run lint`, `npm run test:unit`, `npm run test:e2e`, `npm run test:ui:guest-preview`, `npm audit --omit=dev`, and `git diff --check` passed. Full `npm run test` and `npm run test:integration` exceeded local command windows against the remote test DB; the previously stuck `test/shop-talk-moderation.integration.test.js` file was then run individually and passed.
+- `GA-OPS-008` gains production evidence: live `https://rivt.pro/api/health` reported commit `7f6aed13a046da80c5adc45270a02cbdcd75dcdb` with migration `0022_community_audiences`, PostgreSQL/S3-compatible storage, and configured Sentry; `EXPECTED_SOURCE_COMMIT=7f6aed13a046da80c5adc45270a02cbdcd75dcdb npm run monitor:production` passed.
+- Remaining boundary: this addendum hardens and deploys the guest-preview black-screen failure mode. It does not replace physical iOS Safari/PWA verification on the reported device, where an old service worker may require one refresh or app restart before the new cache version takes over.
+
 ## Traceability Addendum - 2026-07-05 Launch Final Train Deployment
 
 - `GA-UX-006` gains deployed compact-device calculator evidence: production now serves the launch-final-train slice where the SE-class calculator smoke exercises the real visible fraction-strip controls and the decorative ruler is removed from the accessibility tree.
