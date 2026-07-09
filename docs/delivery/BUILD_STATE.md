@@ -2,10 +2,37 @@
 
 Last updated: 2026-07-08 America/New_York
 Current gate: Gate A launch hardening
-Current phase: Packet 08 Gate A launch hardening plus Gate B behind-flag backbone work: machine gates and live workflow smokes are mostly green; the Shop Talk Reddit-model backbone, moderation/reporting backend, human-facing moderation console/report UX, post photo media, reachability/naming cleanup, Tools hub consolidation, Payment Tracker server records, money-tools sync, the accepted tool-records sync slices, non-tool local-state boundary cleanup, dedicated network-records sync for Crew/Invites/informal written shout-outs, screen-density polish, mobile layout/device-accessibility subtraction, fraction calculator ergonomics, iPhone SE layout containment, immersive-tool compact-device containment, SE tool chrome cleanup slices, native metric calculator rebuild, the camera-first records/photos tool rebuild, admin support-case review for account-type requests, and offer start-date normalization are implemented while still respecting launch-readiness boundaries before broad exposure.
+Current phase: Packet 08 Gate A launch hardening plus Gate B behind-flag backbone work: machine gates and live workflow smokes are mostly green; the Shop Talk Reddit-model backbone, moderation/reporting backend, human-facing moderation console/report UX, post photo media, reachability/naming cleanup, Tools hub consolidation, Payment Tracker server records, money-tools sync, the accepted tool-records sync slices, non-tool local-state boundary cleanup, dedicated network-records sync for Crew/Invites/informal written shout-outs, screen-density polish, mobile layout/device-accessibility subtraction, fraction calculator ergonomics, iPhone SE layout containment, immersive-tool compact-device containment, SE tool chrome cleanup slices, native metric calculator rebuild, the camera-first records/photos tool rebuild, admin support-case review for account-type requests, offer start-date normalization, and guest-preview black-screen hardening are implemented while still respecting launch-readiness boundaries before broad exposure.
 Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
 Production release commit: `2ae4627674c71a2d28b8ba0ea24915d3fdce9744` verified with live `/api/health` and `npm run monitor:production`; latest runtime feature evidence is recorded below and docs-only evidence commits may supersede the served build SHA.
+
+## Latest Packet 08 Pass - Guest Preview Black-Screen Hardening
+
+- Hardened the anonymous `Browse RIVT preview` path after a phone report that both Contractor and Subcontractor preview could land on a black screen:
+  - preview setup now fails visibly instead of leaving the user on a blank route if demo workspace creation throws on-device
+  - the route error boundary now renders a full recovery panel with `Reload RIVT` and `Back to sign in` actions instead of a small inline paragraph that could disappear into a dark/blank state
+  - the auth gate now surfaces preview/login errors on the auth form instead of staying on the intro/preview carousel after a failed action
+  - the service worker cache was bumped and tightened so app-shell assets refresh cleanly, API responses are never cached by the service worker, and navigations fall back to `index.html` only when the network fails
+  - added `npm run test:ui:guest-preview` to exercise Contractor and Subcontractor guest preview at a 320px mobile viewport with mocked anonymous APIs
+- Preserved launch boundaries:
+  - no production data, auth fallback, billing behavior, provider config, or server mutation path changed
+  - guest preview remains explicitly labeled demo/sample content and still clears when exiting preview or moving to signup
+  - route recovery only offers reload/sign-in recovery; it does not bypass server authorization
+- Local verification:
+  - `npm run build` (pass)
+  - `npm run lint` (pass)
+  - `npm run test:unit` (pass; 45/45)
+  - `npm run test:e2e` (pass)
+  - `npm run test:ui:guest-preview` (pass; Contractor and Subcontractor at 320px, screenshots in `C:\Users\zboyt\AppData\Local\Temp\rivt-guest-preview-pass`)
+  - `npm audit --omit=dev` (pass; 0 vulnerabilities)
+  - `git diff --check` (pass; CRLF warnings only)
+  - full `npm run test` and `npm run test:integration` did not complete before local command timeouts against the remote test DB; `test/shop-talk-moderation.integration.test.js` was then run by itself and passed, confirming the previously stuck integration file was not failing this patch
+- Rendered QA:
+  - local Playwright/Chrome fallback verified the preview flow opens the real app shell instead of a black page for both role choices
+  - in-app Browser tooling was unavailable in this session, so Playwright/Chrome screenshots were used
+- Live verification:
+  - not deployed in this pass
 
 ## Latest Packet 08 Pass - Guest Preview Demo Workspace
 

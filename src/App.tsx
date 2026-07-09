@@ -302,8 +302,15 @@ class RouteErrorBoundary extends Component<{ children: React.ReactNode }, { fail
   render() {
     if (this.state.failed) {
       return (
-        <div className="route-error" role="alert">
-          <p>This page couldn't load. <button type="button" onClick={() => window.location.reload()}>Reload</button></p>
+        <div className="route-error" role="alert" aria-live="assertive">
+          <div className="route-error-card">
+            <strong>RIVT could not load this screen.</strong>
+            <p>If this happened after opening preview mode, reload the app or return to sign in to start a clean session.</p>
+            <div className="route-error-actions">
+              <button type="button" onClick={() => window.location.reload()}>Reload RIVT</button>
+              <button type="button" onClick={() => window.location.assign("/")}>Back to sign in</button>
+            </div>
+          </div>
         </div>
       );
     }
@@ -2132,52 +2139,62 @@ function App() {
   }
 
   function handleBrowseAsGuest() {
-    const previewPreferences = readGuestPreviewPreferences();
-    const previewTrade = previewPreferences?.trade ?? "Carpentry";
-    const previewLocation = previewPreferences?.location ?? "Jacksonville, FL";
-    const previewRole = previewPreferences?.role ?? "contractor";
-    const previewWorkspace = createGuestPreviewWorkspace({
-      role: previewRole,
-      trade: previewTrade,
-      location: previewLocation,
-    });
-    setAuthError(null);
-    setAuthNotice(null);
-    setIsGuest(true);
-    setCanonicalAccount(null);
-    setAuthUser({
-      id: "guest-preview",
-      email: "",
-      provider: "Email",
-      display_name: previewWorkspace.profile.displayName,
-      role: previewRole,
-      organization: previewWorkspace.profile.organization,
-      location: previewLocation,
-      email_verified: false,
-      account_status: "active",
-      onboarding_status: "complete",
-    });
-    setRole(previewRole);
-    setAccountProfile(previewWorkspace.profile);
-    setJobs(previewWorkspace.jobs);
-    setSelectedId(previewWorkspace.jobs[0]?.id ?? 0);
-    setActiveWork(previewWorkspace.activeWork);
-    setFocusedActiveWorkId(previewWorkspace.activeWork[0]?.id ?? null);
-    setInboxConversations(previewWorkspace.conversations);
-    setSelectedConversationId(previewWorkspace.conversations[0]?.id ?? null);
-    setInboxMessages(previewWorkspace.messages);
-    setInboxNotifications(previewWorkspace.notifications);
-    setUploadedRecords(new Set(previewWorkspace.recordIds));
-    setCommunityPosts(previewWorkspace.posts);
-    setCommunities(previewWorkspace.communities);
-    setShoutOuts(previewWorkspace.shoutOuts);
-    setTrade(previewTrade);
-    setLocationQuery(previewLocation);
-    setOnboardingComplete(true);
-    setActiveView("Home");
-    const nextPath = viewRoutes.Home;
-    if (window.location.pathname !== nextPath) {
-      window.history.pushState({}, "", nextPath);
+    try {
+      const previewPreferences = readGuestPreviewPreferences();
+      const previewTrade = previewPreferences?.trade ?? "Carpentry";
+      const previewLocation = previewPreferences?.location ?? "Jacksonville, FL";
+      const previewRole = previewPreferences?.role ?? "contractor";
+      const previewWorkspace = createGuestPreviewWorkspace({
+        role: previewRole,
+        trade: previewTrade,
+        location: previewLocation,
+      });
+      setAuthError(null);
+      setAuthNotice(null);
+      setIsGuest(true);
+      setCanonicalAccount(null);
+      setAuthUser({
+        id: "guest-preview",
+        email: "",
+        provider: "Email",
+        display_name: previewWorkspace.profile.displayName,
+        role: previewRole,
+        organization: previewWorkspace.profile.organization,
+        location: previewLocation,
+        email_verified: false,
+        account_status: "active",
+        onboarding_status: "complete",
+      });
+      setRole(previewRole);
+      setAccountProfile(previewWorkspace.profile);
+      setJobs(previewWorkspace.jobs);
+      setSelectedId(previewWorkspace.jobs[0]?.id ?? 0);
+      setActiveWork(previewWorkspace.activeWork);
+      setFocusedActiveWorkId(previewWorkspace.activeWork[0]?.id ?? null);
+      setInboxConversations(previewWorkspace.conversations);
+      setSelectedConversationId(previewWorkspace.conversations[0]?.id ?? null);
+      setInboxMessages(previewWorkspace.messages);
+      setInboxNotifications(previewWorkspace.notifications);
+      setUploadedRecords(new Set(previewWorkspace.recordIds));
+      setCommunityPosts(previewWorkspace.posts);
+      setCommunities(previewWorkspace.communities);
+      setShoutOuts(previewWorkspace.shoutOuts);
+      setTrade(previewTrade);
+      setLocationQuery(previewLocation);
+      setOnboardingComplete(true);
+      setActiveView("Home");
+      const nextPath = viewRoutes.Home;
+      if (window.location.pathname !== nextPath) {
+        window.history.pushState({}, "", nextPath);
+      }
+    } catch {
+      handleExitGuest();
+      setAuthMode("login");
+      setAuthNotice(null);
+      setAuthError("Preview could not load on this device. Reload RIVT and try again, or sign in to continue.");
+      if (window.location.pathname !== "/") {
+        window.history.pushState({}, "", "/");
+      }
     }
   }
 

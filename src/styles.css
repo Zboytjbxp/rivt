@@ -1519,6 +1519,70 @@ textarea:focus-visible {
   color: var(--v2-accent);
 }
 
+.route-loading,
+.route-error {
+  display: grid;
+  min-height: min(72svh, 680px);
+  place-items: center;
+  padding: 24px;
+}
+
+.route-error-card {
+  display: grid;
+  width: min(100%, 420px);
+  gap: 12px;
+  padding: 20px;
+  border: 1px solid var(--v2-border, var(--border));
+  border-radius: var(--v2-radius-lg);
+  background: var(--v2-surface, var(--surface));
+  color: var(--v2-text, var(--text));
+  box-shadow: var(--shadow);
+}
+
+.route-error-card strong {
+  font-size: var(--v2-text-lg, 21px);
+  line-height: 1.15;
+}
+
+.route-error-card p {
+  margin: 0;
+  color: var(--v2-text-muted, var(--muted));
+  line-height: 1.45;
+}
+
+.route-error-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.route-error-actions button {
+  min-height: 44px;
+  border: 1.5px solid var(--v2-border-strong, var(--border));
+  border-radius: var(--v2-radius-md);
+  background: var(--v2-surface, var(--surface));
+  color: var(--v2-text, var(--text));
+  font: inherit;
+  font-weight: var(--v2-weight-strong);
+}
+
+.route-error-actions button:first-child {
+  border-color: var(--v2-accent);
+  background: var(--v2-accent);
+  color: var(--v2-on-accent, #fff);
+}
+
+@media (max-width: 390px) {
+  .route-error {
+    min-height: 62svh;
+    padding: 16px;
+  }
+
+  .route-error-actions {
+    grid-template-columns: 1fr;
+  }
+}
+
 .sr-only {
   position: absolute;
   width: 1px;

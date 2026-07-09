@@ -1,4 +1,4 @@
-const CACHE = 'rivt-v3-2026-07-07';
+const CACHE = 'rivt-v4-2026-07-08';
 const PRECACHE = ['/', '/index.html'];
 
 self.addEventListener('install', e => {
@@ -15,15 +15,24 @@ self.addEventListener('activate', e => {
 
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
-  if (new URL(e.request.url).origin !== self.location.origin) return;
+  const url = new URL(e.request.url);
+  if (url.origin !== self.location.origin) return;
+  if (url.pathname.startsWith('/api/')) return;
   e.respondWith(
-    fetch(e.request)
+    fetch(e.request, { cache: 'no-cache' })
       .then(res => {
-        const clone = res.clone();
-        caches.open(CACHE).then(c => c.put(e.request, clone));
+        if (res.ok && res.type === 'basic') {
+          const clone = res.clone();
+          caches.open(CACHE).then(c => c.put(e.request, clone));
+        }
         return res;
       })
-      .catch(() => caches.match(e.request))
+      .catch(async () => {
+        const cached = await caches.match(e.request);
+        if (cached) return cached;
+        if (e.request.mode === 'navigate') return caches.match('/index.html');
+        return Response.error();
+      })
   );
 });
 

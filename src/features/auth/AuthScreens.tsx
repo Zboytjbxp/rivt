@@ -790,6 +790,7 @@ export function AuthGate({
   const [role, setRole] = useState<Role>("contractor");
   const [inviteCode, setInviteCode] = useState("");
   const emailInputRef = useRef<HTMLInputElement>(null);
+  const visibleEntryStage = error ? "auth" : entryStage;
 
   function openAuth(nextMode: "login" | "signup") {
     onModeChange(nextMode);
@@ -799,7 +800,7 @@ export function AuthGate({
     });
   }
 
-  if (entryStage === "intro") {
+  if (visibleEntryStage === "intro") {
     return (
       <main className="auth-shell auth-shell--intro">
         <SwipeEntryShowcase
@@ -811,7 +812,7 @@ export function AuthGate({
     );
   }
 
-  if (entryStage === "preview") {
+  if (visibleEntryStage === "preview") {
     return (
       <main className="auth-shell auth-shell--preview">
         <GuestPreviewEntry
@@ -831,6 +832,7 @@ export function AuthGate({
         className="auth-card auth-card--entry"
         onSubmit={(event) => {
           event.preventDefault();
+          setEntryStage("auth");
           onSubmit({ email, password, displayName, role, inviteCode: inviteCode.trim() || undefined });
         }}
       >
