@@ -255,6 +255,10 @@ if (!testDatabaseUrl) {
     assert.equal(accepted.response.status, 200);
     assert.equal(accepted.payload.data.offer.status, "accepted");
     assert.equal(accepted.payload.data.activeWork.status, "active");
+    assert.equal(accepted.payload.data.activeWork.job.trade.code, "electrical");
+    assert.equal(accepted.payload.data.activeWork.job.trade.name, "Electrical");
+    assert.equal(accepted.payload.data.activeWork.job.durationHours, 8);
+    assert.equal(accepted.payload.data.activeWork.job.budget.amountCents, 95000);
     const activeWorkId = accepted.payload.data.activeWork.id;
 
     const contractorAcceptedNotifications = await requestJson(baseUrl, "/api/v1/notifications", { cookie: contractor.cookie });

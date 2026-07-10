@@ -203,6 +203,9 @@ function demoActiveWork(input: GuestPreviewInput, job: Job): CanonicalActiveWork
       title: job.title,
       status: "active",
       organization: { id: DEMO_ORG_ID, name: demoIdentity.contractor.organization },
+      trade: { code: job.canonical?.tradeCode ?? "general_labor", name: job.trade },
+      durationHours: job.durationHours,
+      budget: { amountCents: Math.round(job.pay * 100), currency: "USD", unit: job.canonical?.budgetUnit ?? "fixed" },
       publicLocation: { city, region, countryCode: "US" },
     },
     events: [

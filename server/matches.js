@@ -92,6 +92,20 @@ export function mapApplication(row, { events = [] } = {}) {
       title: row.job_title,
       status: row.job_status,
       organization: { id: row.organization_id, name: row.organization_name },
+      trade: row.job_trade_code ? {
+        code: row.job_trade_code,
+        name: row.job_trade_name || row.job_trade_code,
+      } : undefined,
+      durationHours: row.job_duration_hours === null || row.job_duration_hours === undefined
+        ? null
+        : Number(row.job_duration_hours),
+      budget: row.job_budget_cents === null || row.job_budget_cents === undefined
+        ? null
+        : {
+            amountCents: Number(row.job_budget_cents),
+            currency: "USD",
+            unit: row.job_budget_unit || "fixed",
+          },
       publicLocation: {
         city: row.public_city,
         region: row.public_region,

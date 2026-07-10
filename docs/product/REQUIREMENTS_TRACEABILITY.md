@@ -10,6 +10,14 @@ Status values:
 
 Evidence must eventually link to implementation, automated tests, manual acceptance proof, and deployed build.
 
+## Traceability Addendum - 2026-07-10 Job-Scoped Tool Context
+
+- `GA-PRO-001` gains accepted-work record coherence: active-work API data now includes the job's trade, duration, budget, and public location summary, allowing job-aware tools to initialize against the accepted job even after it leaves open-work discovery.
+- `GA-UX-003` gains context evidence: active-work URLs wait for their exact work record, label the active job in the compact tool header, and prevent Estimate, Invoice, Daily Log, Materials, Time, Expenses, Bid Builder, Mileage, and Safety from retaining an unrelated tool context.
+- `GA-UX-005` gains Daily Log isolation evidence: accepted-work drafts use distinct browser/server record keys and cannot silently reuse an unscoped or other-job Daily Log draft.
+- `GA-OPS-007` gains local evidence: build, lint, 46/46 unit tests, E2E, the expanded Work lifecycle smoke, dependency audit, and diff checks passed. The new rendered regression places an unrelated job first and proves Invoice/Daily Log retain the job selected by the active-work URL.
+- `GA-OPS-008` remains pending until the branch is merged, Railway serves the exact runtime SHA, and the production monitor passes.
+
 ## Traceability Addendum - 2026-07-10 Exact Notification Destinations
 
 - `GA-UX-003` gains navigation-coherence evidence: application, offer, active-work, project, review, message, and Shop Talk actions now encode and restore the exact object instead of routing to a generic destination.

@@ -162,6 +162,13 @@ export interface CanonicalActiveWork {
     title: string;
     status: string;
     organization: { id: string; name: string };
+    trade?: { code: string; name: string };
+    durationHours: number | null;
+    budget: {
+      amountCents: number;
+      currency: "USD";
+      unit: "fixed" | "hourly";
+    } | null;
     publicLocation: { city: string; region: string; countryCode: string };
   };
   events: CanonicalTimelineEvent[];

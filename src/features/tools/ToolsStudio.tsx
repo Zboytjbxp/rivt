@@ -210,12 +210,14 @@ function ToolLauncherSection({
 
 function ToolAppShell({
   title,
+  contextLabel,
   compact = false,
   onBack,
   swipeHandlers,
   children,
 }: {
   title: string;
+  contextLabel?: string | null;
   compact?: boolean;
   onBack: () => void;
   swipeHandlers?: ToolSwipeHandlers;
@@ -230,6 +232,7 @@ function ToolAppShell({
         </button>
         <div>
           <h1>{title}</h1>
+          {contextLabel ? <p className="v2-tool-context-inline" aria-label={`Current job: ${contextLabel}`}>{contextLabel}</p> : null}
         </div>
       </header>
       {children}
@@ -2724,12 +2727,12 @@ function activeWorkSummaryJob(work: CanonicalActiveWork): Job | null {
     id: numericJobIdFromCanonicalId(work.jobId),
     title: work.job.title,
     contractor: work.job.organization.name,
-    trade: "General Labor",
+    trade: (work.job.trade?.name ?? "General Labor") as Job["trade"],
     location,
     state: work.job.publicLocation.region,
     distance: 0,
-    pay: 0,
-    durationHours: 0,
+    pay: Math.round((work.job.budget?.amountCents ?? 0) / 100),
+    durationHours: work.job.durationHours ?? 0,
     workType: "Side work",
     difficulty: "Moderate",
     insuranceRequired: false,
@@ -2747,6 +2750,26 @@ function activeWorkSummaryJob(work: CanonicalActiveWork): Job | null {
     risks: [],
     deliverables: [],
     matchFactors: [],
+    canonical: {
+      id: work.jobId,
+      organizationId: work.organizationId,
+      tradeCode: work.job.trade?.code ?? "general_labor",
+      version: 1,
+      scopeDescription: "Accepted active work.",
+      materials: [],
+      publicLocation: {
+        city: work.job.publicLocation.city,
+        region: work.job.publicLocation.region,
+        countryCode: work.job.publicLocation.countryCode,
+        postalPrefix: null,
+      },
+      preferredStartDate: null,
+      applicationDeadline: null,
+      budgetUnit: work.job.budget?.unit ?? "fixed",
+      createdAt: work.createdAt,
+      updatedAt: work.updatedAt,
+      events: [],
+    },
   };
 }
 
@@ -2754,6 +2777,7 @@ function resolveActiveToolJob(jobs: Job[], orderedActiveWork: CanonicalActiveWor
   const focusedWork = focusedActiveWorkId
     ? orderedActiveWork.find((work) => work.id === focusedActiveWorkId) ?? null
     : null;
+  if (focusedActiveWorkId && !focusedWork) return null;
   const focusedJobId = focusedWork?.jobId ?? focusedWork?.job?.id ?? null;
   if (focusedJobId) {
     const exactJob = jobs.find((job) => job.canonical?.id === focusedJobId || String(job.id) === focusedJobId);
@@ -2822,6 +2846,9 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
     () => resolveActiveToolJob(jobs, orderedActiveWork, focusedActiveWorkId),
     [focusedActiveWorkId, jobs, orderedActiveWork],
   );
+  const activeJobScopeKey = focusedActiveWorkId
+    ? `${focusedActiveWorkId}:${activeJob?.canonical?.id ?? activeJob?.id ?? "loading"}`
+    : "standalone";
 
   function setActiveTool(tool: ToolMode, options: { keepConvertedInvoice?: boolean } = {}) {
     if (!onToolChange) {
@@ -3346,19 +3373,19 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
     const toolMeta = {
       estimate: {
         title: "Estimate builder",
-        node: <EstimateTool activeJob={activeJob} onConvertToInvoice={handleConvertEstimateToInvoice} />,
+        node: <EstimateTool key={`estimate:${activeJobScopeKey}`} activeJob={activeJob} onConvertToInvoice={handleConvertEstimateToInvoice} />,
       },
       invoice: {
         title: "Invoice draft",
-        node: <InvoiceDraftTool activeJob={activeJob} estimateDraft={convertedEstimateDraft} />,
+        node: <InvoiceDraftTool key={`invoice:${activeJobScopeKey}`} activeJob={activeJob} estimateDraft={convertedEstimateDraft} />,
       },
       "daily-log": {
         title: "Daily log",
-        node: <DailyLogTool activeJob={activeJob} activeWork={orderedActiveWork} />,
+        node: <DailyLogTool key={`daily-log:${activeJobScopeKey}`} activeJob={activeJob} activeWork={orderedActiveWork} focusedActiveWorkId={focusedActiveWorkId} />,
       },
       materials: {
         title: "Material takeoff",
-        node: <MaterialsTool activeJob={activeJob} />,
+        node: <MaterialsTool key={`materials:${activeJobScopeKey}`} activeJob={activeJob} />,
       },
       "job-photos": {
         title: "Camera",
@@ -3372,11 +3399,11 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
       },
       "time-tracker": {
         title: "Time tracker",
-        node: <TimeTrackerTool activeJob={activeJob} jobs={jobs} />,
+        node: <TimeTrackerTool key={`time-tracker:${activeJobScopeKey}`} activeJob={activeJob} jobs={jobs} />,
       },
       "expense-logger": {
         title: "Expense logger",
-        node: <ExpenseLoggerTool activeJob={activeJob} jobs={jobs} />,
+        node: <ExpenseLoggerTool key={`expense-logger:${activeJobScopeKey}`} activeJob={activeJob} jobs={jobs} />,
       },
       earnings: {
         title: "Earnings dashboard",
@@ -3384,11 +3411,11 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
       },
       "bid-builder": {
         title: "Bid builder",
-        node: <BidBuilderTool activeJob={activeJob} />,
+        node: <BidBuilderTool key={`bid-builder:${activeJobScopeKey}`} activeJob={activeJob} />,
       },
       mileage: {
         title: "Mileage logger",
-        node: <MileageLoggerTool activeJob={activeJob} />,
+        node: <MileageLoggerTool key={`mileage:${activeJobScopeKey}`} activeJob={activeJob} />,
       },
       "price-book": {
         title: "Material price book",
@@ -3396,7 +3423,7 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
       },
       "safety-checklist": {
         title: "Field safety checklist",
-        node: <SafetyChecklistTool activeJob={activeJob} />,
+        node: <SafetyChecklistTool key={`safety-checklist:${activeJobScopeKey}`} activeJob={activeJob} />,
       },
       "tax-estimator": {
         title: "Tax estimator",
@@ -3430,9 +3457,30 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
 
     if (!toolMeta) return null;
 
+    if (focusedActiveWorkId && !activeJob) {
+      const loadingContext = recordsLoading && !recordsError;
+      return (
+        <ToolAppShell
+          title={toolMeta.title}
+          compact
+          onBack={() => setActiveTool("hub")}
+          swipeHandlers={toolSwipeHandlers}
+        >
+          <Panel className="v2-tool-panel" eyebrow="Job workspace" title={loadingContext ? "Loading accepted work" : "Accepted work unavailable"}>
+            <p className="v2-tool-note">
+              {loadingContext
+                ? "RIVT is loading this job before opening the tool."
+                : recordsError || "This active work record is no longer available to your account."}
+            </p>
+          </Panel>
+        </ToolAppShell>
+      );
+    }
+
     return (
       <ToolAppShell
         title={toolMeta.title}
+        contextLabel={focusedActiveWorkId ? activeJob?.title ?? null : null}
         compact
         onBack={() => setActiveTool("hub")}
         swipeHandlers={toolSwipeHandlers}

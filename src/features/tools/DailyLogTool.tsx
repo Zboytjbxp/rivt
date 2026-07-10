@@ -15,8 +15,8 @@ function projectErrorMessage(error: unknown) {
   if (error instanceof ProjectApiError) return error.message;
   return error instanceof Error ? error.message : "RIVT could not complete the Records request.";
 }
-const dailyLogStorageKey = "rivt.dailyLogDraft.v1";
-const dailyLogDraftRecordId = "daily-log-draft";
+const legacyDailyLogStorageKey = "rivt.dailyLogDraft.v1";
+const legacyDailyLogDraftRecordId = "daily-log-draft";
 const dailyLogChecklist = [
   "Photos captured",
   "Scope change noted",
@@ -60,8 +60,25 @@ function isDailyLogDraft(value: unknown): value is DailyLogDraft {
     && candidate.checklist !== null;
 }
 
-function dailyLogDraftFromServer(record: ServerToolRecord, fallback: DailyLogDraft): DailyLogDraft | null {
-  if (record.localId !== dailyLogDraftRecordId || record.status !== "draft" || !isDailyLogDraft(record.payload)) return null;
+function dailyLogStorageKey(activeWorkId: string | null) {
+  return `rivt.dailyLogDraft.v1:${activeWorkId ?? "standalone"}`;
+}
+
+function dailyLogDraftRecordId(activeWorkId: string | null) {
+  return `daily-log-draft:${activeWorkId ?? "standalone"}`;
+}
+
+function readStoredDailyLog(storageKey: string, allowLegacy: boolean) {
+  try {
+    return localStorage.getItem(storageKey) ?? (allowLegacy ? localStorage.getItem(legacyDailyLogStorageKey) : null);
+  } catch {
+    return null;
+  }
+}
+
+function dailyLogDraftFromServer(record: ServerToolRecord, fallback: DailyLogDraft, recordId: string, allowLegacy: boolean): DailyLogDraft | null {
+  const matchesRecord = record.localId === recordId || (allowLegacy && record.localId === legacyDailyLogDraftRecordId);
+  if (!matchesRecord || record.status !== "draft" || !isDailyLogDraft(record.payload)) return null;
   return {
     ...fallback,
     ...record.payload,
@@ -69,10 +86,10 @@ function dailyLogDraftFromServer(record: ServerToolRecord, fallback: DailyLogDra
   };
 }
 
-function dailyLogDraftToServerInput(draft: DailyLogDraft) {
+function dailyLogDraftToServerInput(draft: DailyLogDraft, recordId: string) {
   return {
     recordType: "daily_report" as const,
-    localId: dailyLogDraftRecordId,
+    localId: recordId,
     title: draft.site || "Daily log draft",
     status: "draft",
     recordDate: draft.date || null,
@@ -98,7 +115,23 @@ function defaultDailyLogDraft(activeJob: Job | null): DailyLogDraft {
   };
 }
 
-export function DailyLogTool({ activeJob, activeWork }: { activeJob: Job | null; activeWork: CanonicalActiveWork[] }) {
+export function DailyLogTool({
+  activeJob,
+  activeWork,
+  focusedActiveWorkId = null,
+}: {
+  activeJob: Job | null;
+  activeWork: CanonicalActiveWork[];
+  focusedActiveWorkId?: string | null;
+}) {
+  const focusedWork = focusedActiveWorkId
+    ? activeWork.find((work) => work.id === focusedActiveWorkId) ?? null
+    : null;
+  const recordWork = focusedWork ?? activeWork.find((work) => work.status === "active") ?? activeWork[0] ?? null;
+  const recordWorkId = recordWork?.id ?? null;
+  const scopedStorageKey = dailyLogStorageKey(recordWorkId);
+  const scopedRecordId = dailyLogDraftRecordId(recordWorkId);
+  const allowLegacyDraft = !recordWorkId;
   const [draft, setDraft] = useState<DailyLogDraft>(() => defaultDailyLogDraft(activeJob));
   const [copied, setCopied] = useState(false);
   const [downloaded, setDownloaded] = useState(false);
@@ -119,16 +152,16 @@ export function DailyLogTool({ activeJob, activeWork }: { activeJob: Job | null;
         return;
       }
       const serverDraft = serverRecords
-        .map((record) => dailyLogDraftFromServer(record, fallback))
+        .map((record) => dailyLogDraftFromServer(record, fallback, scopedRecordId, allowLegacyDraft))
         .find((record): record is DailyLogDraft => Boolean(record));
       if (serverDraft) {
         setDraft(serverDraft);
-        try { localStorage.setItem(dailyLogStorageKey, JSON.stringify(serverDraft)); } catch { /* noop */ }
+        try { localStorage.setItem(scopedStorageKey, JSON.stringify(serverDraft)); } catch { /* noop */ }
         setSyncMessage("Draft synced to your RIVT account.");
         return;
       }
       try {
-        const stored = localStorage.getItem(dailyLogStorageKey);
+        const stored = readStoredDailyLog(scopedStorageKey, allowLegacyDraft);
         if (!stored) {
           setSyncMessage("New drafts sync to your RIVT account.");
           return;
@@ -143,7 +176,7 @@ export function DailyLogTool({ activeJob, activeWork }: { activeJob: Job | null;
           setSyncMessage("New drafts sync to your RIVT account.");
           return;
         }
-        void upsertToolRecord(dailyLogDraftToServerInput(localDraft)).then((record) => {
+        void upsertToolRecord(dailyLogDraftToServerInput(localDraft, scopedRecordId)).then((record) => {
           setSyncMessage(record ? "Local daily log draft synced to your RIVT account." : "Couldn't sync - draft saved on this device only.");
         });
       } catch {
@@ -151,7 +184,7 @@ export function DailyLogTool({ activeJob, activeWork }: { activeJob: Job | null;
       }
     });
     return () => { cancelled = true; };
-  }, [activeJob]);
+  }, [activeJob, allowLegacyDraft, scopedRecordId, scopedStorageKey]);
 
   useEffect(() => {
     if (wxData) return;
@@ -172,7 +205,6 @@ export function DailyLogTool({ activeJob, activeWork }: { activeJob: Job | null;
   }, [wxData]);
 
   const completedChecks = dailyLogChecklist.filter((item) => draft.checklist[item]).length;
-  const recordWork = activeWork.find((work) => work.status === "active") ?? activeWork[0] ?? null;
   const recordWorkLabel = recordWork?.job?.title ?? activeJob?.title ?? "Accepted work";
   const dailyLogText = useMemo(() => [
     `RIVT daily log - ${draft.date || "undated"}`,
@@ -217,20 +249,20 @@ export function DailyLogTool({ activeJob, activeWork }: { activeJob: Job | null;
 
   function saveLocalDraft() {
     try {
-      localStorage.setItem(dailyLogStorageKey, JSON.stringify(draft));
+      localStorage.setItem(scopedStorageKey, JSON.stringify(draft));
       setNotice("Daily log draft saved.");
     } catch {
       setNotice("Daily log draft could not be saved on this device.");
       return;
     }
-    void upsertToolRecord(dailyLogDraftToServerInput(draft)).then((record) => {
+    void upsertToolRecord(dailyLogDraftToServerInput(draft, scopedRecordId)).then((record) => {
       setSyncMessage(record ? "Draft synced to your RIVT account." : "Couldn't sync - draft saved on this device only.");
     });
   }
 
   function loadLocalDraft() {
     try {
-      const stored = localStorage.getItem(dailyLogStorageKey);
+      const stored = readStoredDailyLog(scopedStorageKey, allowLegacyDraft);
       if (!stored) {
         setNotice("No daily log draft found on this device.");
         return;

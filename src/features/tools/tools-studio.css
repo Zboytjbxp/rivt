@@ -323,6 +323,16 @@
   text-wrap: balance;
 }
 
+.v2-tool-context-inline {
+  margin: 3px 0 0;
+  overflow: hidden;
+  color: var(--v2-text-muted);
+  font-size: 13px;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .v2-tool-workbench {
   display: grid;
   grid-template-columns: minmax(0, 1.1fr) minmax(310px, 0.9fr);
@@ -1457,6 +1467,10 @@
 
 .v2-tool-app-header.is-compact p {
   display: none;
+}
+
+.v2-tool-app-header.is-compact .v2-tool-context-inline {
+  display: block;
 }
 
 .v2-record-detail-panel {

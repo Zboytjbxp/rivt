@@ -203,6 +203,9 @@ function makeActiveWork(events = []) {
       title: "Warehouse panel assist",
       status: "closed",
       organization: { id: orgId, name: "RIVT Test Electric" },
+      trade: { code: "electrical", name: "Electrical" },
+      durationHours: 8,
+      budget: { amountCents: 85000, currency: "USD", unit: "fixed" },
       publicLocation: { city: "Jacksonville", region: "FL", countryCode: "US" },
     },
     events,
@@ -332,6 +335,7 @@ async function configurePage(page, account, state) {
   });
 
   await page.route("https://fonts.googleapis.com/**", (route) => route.fulfill({ status: 200, contentType: "text/css", body: "" }));
+  await page.route("https://api.open-meteo.com/**", (route) => route.fulfill(json({ current_weather: { temperature: 76, weathercode: 1 } })));
   await page.route("**/*", (route) => {
     if (route.request().resourceType() === "image") return route.fulfill({ status: 204, body: "" });
     return route.fallback();
@@ -375,6 +379,7 @@ async function configurePage(page, account, state) {
     return route.fulfill(json({ data: { unreadCount } }));
   });
   await page.route("**/api/v1/notification-preferences", (route) => route.fulfill(json({ data: { preferences: [] } })));
+  await page.route("**/api/v1/tool-records**", (route) => route.fulfill(json({ data: { records: [] } })));
   await page.route("**/api/storage", (route) => route.fulfill(json({ usedBytes: 0, objectCount: 0, plan: {} })));
   await page.route("**/api/v1/albums", (route) => route.fulfill(json({ data: { albums: [] } })));
   await page.route(/\/api\/v1\/albums\/[0-9a-f-]+$/, (route) => route.fulfill(json({ data: { album: { id: "album-empty", name: "Smoke album", photoCount: 0, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), photos: [] } } })));
@@ -657,7 +662,7 @@ async function runTradespersonOfferFlow(page) {
   await page.getByLabel("Active work").getByRole("button", { name: "Photos" }).click();
   await page.waitForURL(/\/app\/tools\?tool=job-photos/, { timeout: 15_000 });
   await page.getByText("Live project feed", { exact: true }).waitFor({ timeout: 15_000 });
-  await page.getByLabel("Camera").getByText("Warehouse panel assist", { exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByLabel("Camera").locator(".v2-job-photos-job-name").getByText("Warehouse panel assist", { exact: true }).waitFor({ timeout: 15_000 });
 
   await page.goto(`${baseUrl}/app/work`, { waitUntil: "networkidle" });
   await clickJob(page, "Warehouse panel assist");
@@ -672,7 +677,7 @@ async function runTradespersonOfferFlow(page) {
   await page.getByLabel("Hiring workflow").getByRole("button", { name: "Photos" }).click();
   await page.waitForURL(/\/app\/tools\?tool=job-photos/, { timeout: 15_000 });
   await page.getByText("Live project feed", { exact: true }).waitFor({ timeout: 15_000 });
-  await page.getByLabel("Camera").getByText("Warehouse panel assist", { exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByLabel("Camera").locator(".v2-job-photos-job-name").getByText("Warehouse panel assist", { exact: true }).waitFor({ timeout: 15_000 });
 
   await page.goto(`${baseUrl}/app/work`, { waitUntil: "networkidle" });
   await clickJob(page, "Warehouse panel assist");
@@ -714,6 +719,28 @@ async function runColdStartActiveWorkLink(page) {
   await assertNoHorizontalOverflow(page, "Cold-start active work deep link");
 }
 
+async function runScopedToolContextFlow(page) {
+  const active = makeActiveWork();
+  const unrelatedJob = makeJob({ id: draftJobId, title: "Unrelated service call", status: "open" });
+  const closedJob = makeJob({ status: "closed" });
+  const state = makeState({ jobs: [unrelatedJob, closedJob], activeWork: [active] });
+  await configurePage(page, contractorAccount, state);
+
+  await page.goto(`${baseUrl}/app/tools?tool=invoice&activeWork=${activeWorkId}`, { waitUntil: "networkidle" });
+  await page.getByLabel("Current job: Warehouse panel assist").waitFor({ timeout: 15_000 });
+  await page.getByRole("heading", { name: "Invoice draft", exact: true }).waitFor({ timeout: 15_000 });
+  await assertNoHorizontalOverflow(page, "Scoped invoice tool route");
+
+  await page.goto(`${baseUrl}/app/tools?tool=daily-log&activeWork=${activeWorkId}`, { waitUntil: "networkidle" });
+  await page.getByLabel("Current job: Warehouse panel assist").waitFor({ timeout: 15_000 });
+  await page.getByLabel("Site / job").waitFor({ timeout: 15_000 });
+  const dailyLogSite = await page.getByLabel("Site / job").inputValue();
+  assert.match(dailyLogSite, /Warehouse panel assist/);
+  assert.equal(dailyLogSite.includes("Unrelated service call"), false);
+  await assertNoHorizontalOverflow(page, "Scoped daily log route");
+  await page.screenshot({ path: path.join(screenshotDir, "scoped-job-tools.png"), fullPage: true });
+}
+
 async function runNotificationProjectPhotoFlow(page) {
   const active = makeActiveWork();
   const closedJob = makeJob({ status: "closed" });
@@ -739,7 +766,7 @@ async function runNotificationProjectPhotoFlow(page) {
   await notificationsDialog.getByRole("button", { name: /Open photos: Photo uploaded/i }).click();
   await page.waitForURL(/\/app\/tools\?tool=job-photos/, { timeout: 15_000 });
   await page.getByText("Live project feed", { exact: true }).waitFor({ timeout: 15_000 });
-  await page.getByLabel("Camera").getByText("Warehouse panel assist", { exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByLabel("Camera").locator(".v2-job-photos-job-name").getByText("Warehouse panel assist", { exact: true }).waitFor({ timeout: 15_000 });
   await assertNoHorizontalOverflow(page, "Notification project photo route");
   await page.screenshot({ path: path.join(screenshotDir, "notification-project-photo-route.png"), fullPage: true });
 }
@@ -786,18 +813,21 @@ try {
     ["tradesperson-offer", runTradespersonOfferFlow],
     ["notification-active-work", runNotificationActiveWorkFlow],
     ["cold-start-active-work", runColdStartActiveWorkLink],
+    ["scoped-tool-context", runScopedToolContextFlow],
     ["notification-project-photo", runNotificationProjectPhotoFlow],
     ["notification-project-record", runNotificationProjectRecordFlow],
   ]) {
     const context = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: "block" });
     const page = await context.newPage();
     const errors = [];
+    const failedRequests = [];
     page.on("console", (message) => {
       if (message.type() === "error" && message.text() !== "Failed to load resource: net::ERR_FAILED") errors.push(message.text());
     });
     page.on("pageerror", (error) => errors.push(error.message));
+    page.on("requestfailed", (request) => failedRequests.push(`${request.failure()?.errorText ?? "request failed"}: ${request.url()}`));
     await flow(page);
-    assert.deepEqual(errors, [], `${name} console/page errors`);
+    assert.deepEqual(errors, [], `${name} console/page errors\n${failedRequests.join("\n")}`);
     await context.close();
   }
 

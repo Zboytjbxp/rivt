@@ -1564,12 +1564,16 @@ const offerSelectBase = `
 
 const activeWorkSelectBase = `
   SELECT aw.*, j.title AS job_title, j.status AS job_status,
+         j.trade_code AS job_trade_code, t.name AS job_trade_name,
+         j.duration_hours AS job_duration_hours, j.budget_cents AS job_budget_cents,
+         j.budget_unit AS job_budget_unit,
          o.name AS organization_name, pl.city AS public_city, pl.region AS public_region,
          pl.country_code AS public_country_code
   FROM active_work aw
   INNER JOIN jobs j ON j.id = aw.job_id
   INNER JOIN organizations o ON o.id = aw.organization_id
-  INNER JOIN job_public_locations pl ON pl.job_id = j.id`;
+  INNER JOIN job_public_locations pl ON pl.job_id = j.id
+  LEFT JOIN trades t ON t.code = j.trade_code`;
 
 async function loadApplicationEvents(client, applicationId) {
   const result = await client.query(

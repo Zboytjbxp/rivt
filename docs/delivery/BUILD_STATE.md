@@ -4,8 +4,27 @@ Last updated: 2026-07-10 America/New_York
 Current gate: Gate A launch hardening
 Current phase: Packet 08 Gate A launch hardening plus Gate B behind-flag backbone work: machine gates and live workflow smokes are mostly green; the Shop Talk Reddit-model backbone, moderation/reporting backend, human-facing moderation console/report UX, post photo media, reachability/naming cleanup, Tools hub consolidation, Payment Tracker server records, money-tools sync, the accepted tool-records sync slices, non-tool local-state boundary cleanup, dedicated network-records sync for Crew/Invites/informal written shout-outs, screen-density polish, mobile layout/device-accessibility subtraction, fraction calculator ergonomics, iPhone SE layout containment, immersive-tool compact-device containment, SE tool chrome cleanup slices, native metric calculator rebuild, the camera-first records/photos tool rebuild, admin support-case review for account-type requests, offer start-date normalization, guest-preview black-screen hardening, a mature one-year guest demo, and a nationwide-readiness audit are implemented while still respecting launch-readiness boundaries before broad exposure.
 Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
-Repository branch: `master` (exact-notification work merged from `codex/exact-notification-destinations`)
+Repository branch: `codex/job-scoped-tools` (pending merge to `master`)
 Production feature release commit: `e0b4fb518018989fcf8a433af5c528ff52fe7cba` verified with live `/api/health` and `npm run monitor:production`; docs-only evidence commits may supersede the served build SHA without changing runtime behavior.
+
+## Latest Packet 08 Pass - Job-Scoped Tool Context
+
+- Removed the remaining active-work ambiguity from job-aware tools:
+  - a tool opened from accepted work waits for its exact active-work record instead of borrowing the first job in the Work list
+  - Estimate, Invoice, Daily Log, Materials, Time, Expenses, Bid Builder, Mileage, and Safety remount only when their active-work context changes, so their initial values cannot remain attached to a prior job
+  - compact tool headers now show the current job name without adding a separate dashboard panel
+- Made active-work data sufficient for tool initialization even when an accepted job is no longer part of the open-work list:
+  - active-work responses now include the job trade, duration, budget, and location summary
+  - the client uses that exact summary as the tool context instead of a generic or unrelated fallback
+- Made Daily Log drafts job-specific:
+  - active-work drafts use distinct browser and server record keys per accepted-work relationship
+  - a Daily Log opened from a job saves its timeline note to that same job
+  - existing unscoped drafts remain readable only for standalone Daily Log use; they are not silently assigned to an accepted job
+- Local verification:
+  - `npm run build`, `npm run lint`, `npm run test:unit` (46/46), `npm run test:e2e`, `npm run test:ui:work-lifecycle`, `npm audit --omit=dev`, and `git diff --check` passed
+  - the lifecycle smoke now places an unrelated job first, opens Invoice and Daily Log through an active-work URL, and proves both retain the accepted job context with no horizontal overflow
+- Scope boundary: server-backed background push, matching-job fan-out, and email digests remain deliberate Gate B/provider work. This pass makes the existing in-app and active-work tool flows exact without claiming background delivery.
+- Deployment boundary: pending merge to `master`, Railway deployment, exact `/api/health` source proof, and production monitor.
 
 ## Latest Packet 08 Pass - Exact Notification Destinations and Active Work
 
