@@ -2935,7 +2935,7 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
   }
 
   useEffect(() => {
-    if (mode !== "records" || recordsLoading || projectAction) return;
+    if (mode !== "records" || recordsLoading) return;
     const work = focusedActiveWorkId
       ? orderedActiveWork.find((item) => item.id === focusedActiveWorkId) ?? null
       : orderedActiveWork.length === 1
@@ -2974,7 +2974,7 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [focusedActiveWorkId, mode, orderedActiveWork, projectAction, recordsLoading, selectedProject]);
+  }, [focusedActiveWorkId, mode, orderedActiveWork, recordsLoading, selectedProject]);
 
   async function refreshSelectedProject() {
     const work = selectedProject ? orderedActiveWork.find((item) => item.id === selectedProject.activeWorkId) : null;

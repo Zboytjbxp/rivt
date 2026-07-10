@@ -156,10 +156,38 @@ function readToolFromUrl() {
   return tool && toolModes.has(tool as ToolMode) ? tool as ToolMode : null;
 }
 
-function readActiveWorkFromUrl() {
+function readRouteParam(...keys: string[]) {
   if (typeof window === "undefined") return null;
   const params = new URLSearchParams(window.location.search);
-  return params.get("activeWork") ?? params.get("activeWorkId");
+  for (const key of keys) {
+    const value = params.get(key)?.trim();
+    if (value) return value;
+  }
+  return null;
+}
+
+function readActiveWorkFromUrl() {
+  return readRouteParam("activeWork", "activeWorkId");
+}
+
+function readJobFromUrl() {
+  return readRouteParam("job", "jobId");
+}
+
+function readConversationFromUrl() {
+  return readRouteParam("conversation", "conversationId");
+}
+
+function readShopTalkPostFromUrl() {
+  return readRouteParam("post", "postId");
+}
+
+function readShopTalkCommunityFromUrl() {
+  return readRouteParam("community", "communitySlug");
+}
+
+function readReviewFromUrl() {
+  return readRouteParam("review", "reviewId");
 }
 
 function pathForTool(tool: ToolMode | null, activeWorkId: string | null = null) {
@@ -481,9 +509,9 @@ function App() {
   const [query, setQuery] = useState(() => readWorkFilterPrefs().query);
   const [profileSearchFocus, setProfileSearchFocus] = useState<ProfileSearchResult | null>(null);
   const [shopTalkGlobalQuery, setShopTalkGlobalQuery] = useState("");
-  const [shopTalkPostId, setShopTalkPostId] = useState<string | null>(null);
+  const [shopTalkPostId, setShopTalkPostId] = useState<string | null>(() => readShopTalkPostFromUrl());
   const [shopTalkCompose, setShopTalkCompose] = useState(false);
-  const [shopTalkCommunitySlug, setShopTalkCommunitySlug] = useState<string | null>(null);
+  const [shopTalkCommunitySlug, setShopTalkCommunitySlug] = useState<string | null>(() => readShopTalkCommunityFromUrl());
   const [shopTalkAnswerQueue, setShopTalkAnswerQueue] = useState(false);
   // Consume one-shot Shop Talk intents (open a post / open the composer) once we leave the view.
   useEffect(() => {
@@ -510,6 +538,18 @@ function App() {
   useEffect(() => {
     writeWorkFilterPrefs({ query, trade, difficulty, workType, locationQuery, verifiedOnly });
   }, [difficulty, locationQuery, query, trade, verifiedOnly, workType]);
+
+  useEffect(() => {
+    if (activeView !== "Work") return;
+    const routeJobId = readJobFromUrl();
+    if (!routeJobId) return;
+    const match = jobs.find((candidate) => (
+      candidate.canonical?.id === routeJobId || String(candidate.id) === routeJobId
+    ));
+    if (!match || selectedId === match.id) return;
+    /* eslint-disable-next-line react-hooks/set-state-in-effect */
+    setSelectedId(match.id);
+  }, [activeView, jobs, selectedId]);
   const [_applications] = useState<ApplicationRecord[]>([]);
   const [isPostOpen, setPostOpen] = useState(false);
   const [isActivityOpen, setActivityOpen] = useState(false);
@@ -517,14 +557,12 @@ function App() {
   const [trustReady, setTrustReady] = useState(false);
   const [messageDraft, setMessageDraft] = useState("");
   const [inboxConversations, setInboxConversations] = useState<InboxConversation[]>([]);
-  const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
+  const [selectedConversationId, setSelectedConversationId] = useState<string | null>(() => readConversationFromUrl());
   const [inboxMessages, setInboxMessages] = useState<InboxMessage[]>([]);
   const [inboxNotifications, setInboxNotifications] = useState<InboxNotification[]>([]);
   const [activeWork, setActiveWork] = useState<CanonicalActiveWork[]>([]);
-  const [focusedActiveWorkId, setFocusedActiveWorkId] = useState<string | null>(() => (
-    readToolFromUrl() ? readActiveWorkFromUrl() : null
-  ));
-  const [focusedReviewId, setFocusedReviewId] = useState<string | null>(null);
+  const [focusedActiveWorkId, setFocusedActiveWorkId] = useState<string | null>(() => readActiveWorkFromUrl());
+  const [focusedReviewId, setFocusedReviewId] = useState<string | null>(() => readReviewFromUrl());
   const [workWorkspaceOpenKey, setWorkWorkspaceOpenKey] = useState(0);
   const [messageBrowserNotificationsEnabled, setMessageBrowserNotificationsEnabled] = useState(true);
   const [inboxLoading, setInboxLoading] = useState(false);
@@ -667,11 +705,17 @@ function App() {
     function handleHistoryNavigation() {
       const nextView = viewFromPath(window.location.pathname);
       const nextTool = nextView === "Tools" ? readToolFromUrl() : null;
-      const nextActiveWorkId = nextView === "Tools" && nextTool ? readActiveWorkFromUrl() : null;
+      const nextActiveWorkId = ["Work", "Tools", "Records", "Messages"].includes(nextView)
+        ? readActiveWorkFromUrl()
+        : null;
       setActiveView(nextView);
       setRequestedTool(nextTool);
       setToolsImmersive(Boolean(nextTool));
       setFocusedActiveWorkId(nextActiveWorkId);
+      setSelectedConversationId(nextView === "Messages" ? readConversationFromUrl() : null);
+      setShopTalkPostId(nextView === "Shop Talk" ? readShopTalkPostFromUrl() : null);
+      setShopTalkCommunitySlug(nextView === "Shop Talk" ? readShopTalkCommunityFromUrl() : null);
+      setFocusedReviewId(nextView === "Reviews" ? readReviewFromUrl() : null);
       setActivityOpen(false);
       setAccountOpen(false);
       setPostOpen(false);
@@ -1389,7 +1433,17 @@ function App() {
     setWorkWorkspaceOpenKey((current) => current + 1);
     const match = findJobForActiveWork(activeWorkId, fallbackJobId);
     if (match) setSelectedId(match.id);
-    handleNavigate("Work");
+    setActiveView("Work");
+    const params = new URLSearchParams({ activeWork: activeWorkId });
+    const jobId = fallbackJobId ?? match?.canonical?.id ?? null;
+    if (jobId) params.set("job", jobId);
+    const nextPath = `${viewRoutes.Work}?${params.toString()}`;
+    if (currentPathAndSearch() !== nextPath) {
+      window.history.pushState({ view: "Work", activeWorkId, jobId }, "", nextPath);
+    }
+    setActivityOpen(false);
+    setAccountOpen(false);
+    setPostOpen(false);
     void reloadActiveWork();
     void reloadJobs();
   }
@@ -1398,9 +1452,18 @@ function App() {
     handleOpenActiveWorkTool(activeWorkId, "job-photos");
   }
 
-  function handleOpenActiveWorkRecords(activeWorkId: string) {
+  function handleOpenActiveWorkRecords(activeWorkId: string, projectId: string | null = null) {
     setFocusedActiveWorkId(activeWorkId);
-    handleNavigate("Records");
+    setActiveView("Records");
+    const params = new URLSearchParams({ activeWork: activeWorkId });
+    if (projectId) params.set("project", projectId);
+    const nextPath = `${viewRoutes.Records}?${params.toString()}`;
+    if (currentPathAndSearch() !== nextPath) {
+      window.history.pushState({ view: "Records", activeWorkId, projectId }, "", nextPath);
+    }
+    setActivityOpen(false);
+    setAccountOpen(false);
+    setPostOpen(false);
   }
 
   function mergeActiveWorkRecord(nextWork: CanonicalActiveWork) {
@@ -1915,7 +1978,15 @@ function App() {
     try {
       const conversation = await openActiveWorkConversation(activeWorkId);
       setSelectedConversationId(conversation.id);
-      handleNavigate("Messages");
+      setActiveView("Messages");
+      const params = new URLSearchParams({ conversation: conversation.id, activeWork: activeWorkId });
+      const nextPath = `${viewRoutes.Messages}?${params.toString()}`;
+      if (currentPathAndSearch() !== nextPath) {
+        window.history.pushState({ view: "Messages", conversationId: conversation.id, activeWorkId }, "", nextPath);
+      }
+      setActivityOpen(false);
+      setAccountOpen(false);
+      setPostOpen(false);
       void reloadInbox();
     } catch {
       handleNavigate("Messages");
@@ -2024,9 +2095,8 @@ function App() {
     }
 
     if (wantsRecords || routeText.includes("tool")) {
-      void projectId;
       if (activeWorkId) {
-        handleOpenActiveWorkRecords(activeWorkId);
+        handleOpenActiveWorkRecords(activeWorkId, projectId);
       } else {
         handleNavigate("Records");
       }

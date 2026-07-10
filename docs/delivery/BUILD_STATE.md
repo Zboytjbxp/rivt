@@ -4,8 +4,32 @@ Last updated: 2026-07-10 America/New_York
 Current gate: Gate A launch hardening
 Current phase: Packet 08 Gate A launch hardening plus Gate B behind-flag backbone work: machine gates and live workflow smokes are mostly green; the Shop Talk Reddit-model backbone, moderation/reporting backend, human-facing moderation console/report UX, post photo media, reachability/naming cleanup, Tools hub consolidation, Payment Tracker server records, money-tools sync, the accepted tool-records sync slices, non-tool local-state boundary cleanup, dedicated network-records sync for Crew/Invites/informal written shout-outs, screen-density polish, mobile layout/device-accessibility subtraction, fraction calculator ergonomics, iPhone SE layout containment, immersive-tool compact-device containment, SE tool chrome cleanup slices, native metric calculator rebuild, the camera-first records/photos tool rebuild, admin support-case review for account-type requests, offer start-date normalization, guest-preview black-screen hardening, a mature one-year guest demo, and a nationwide-readiness audit are implemented while still respecting launch-readiness boundaries before broad exposure.
 Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
-Repository branch: `master` (field-reliability work merged from `codex/field-reliability-train`)
+Repository branch: `codex/exact-notification-destinations` (pending merge to `master`)
 Production feature release commit: `504e1db2e5b6fc9db23883ed17a3cb7444a3a66e` verified with live `/api/health` and `npm run monitor:production`; docs-only evidence commits may supersede the served build SHA without changing runtime behavior.
+
+## Latest Packet 08 Pass - Exact Notification Destinations and Active Work
+
+- Replaced generic notification destinations with exact object routes:
+  - applications, shortlist/decline decisions, offers, unsafe-work reports, cancellations, and reschedule requests carry the exact job and active-work identifiers
+  - project completion events carry the exact accepted-work project and open its Records detail
+  - review notifications carry the exact review identifier
+  - messages, Shop Talk posts/communities, and existing active-work notifications preserve their exact conversation or community object through cold starts and browser history
+- Hardened direct and history-based navigation:
+  - `/app/work`, `/app/inbox`, `/app/tools/records`, `/app/profile/reviews`, and Shop Talk routes hydrate their query intent after authenticated data loads
+  - legacy authenticated aliases now resolve to their real destination instead of silently falling back to Home
+- Tightened the accepted-work workspace:
+  - workspace, Messages, Photos/Records, and Daily Log actions preserve the accepted-work identifier
+  - Records now auto-opens the intended project instead of cancelling its own request after state changes
+  - activity labels distinguish projects, closeout, reviews, jobs, and tools instead of presenting every job-linked event as generic Work
+- Added server notifications for the previously silent application loop:
+  - contractors are notified when someone applies
+  - applicants are notified when shortlisted or declined
+  - all actions deep-link to the exact application and job
+- Local verification:
+  - `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test:unit` (46/46), `npm run test:e2e`, `npm run test:ui:work-lifecycle`, `npm audit --omit=dev`, and `git diff --check` passed
+  - affected PostgreSQL integration suites passed individually: `match-acceptance`, `project-completion`, and `reviews-admin-safety`
+  - aggregate `npm run test` exceeded the local wrapper window while running the same slow database suites, so no aggregate completion is claimed
+- Deployment boundary: pending merge to `master`, Railway deployment, exact `/api/health` source proof, production monitor, and authenticated exact-destination live smoke.
 
 ## Latest Packet 08 Pass - Field Reliability Train
 

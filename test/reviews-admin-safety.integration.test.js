@@ -251,6 +251,14 @@ if (!testDatabaseUrl) {
     });
     assert.equal(review.response.status, 201);
     assert.equal(review.payload.data.review.status, "pending_approval");
+    const reviewId = review.payload.data.review.id;
+
+    const tradespersonNotifications = await requestJson(baseUrl, "/api/v1/notifications", { cookie: tradesperson.cookie });
+    const reviewNotification = tradespersonNotifications.payload.data.notifications.find((item) => (
+      item.sourceType === "review" && item.sourceId === reviewId
+    ));
+    assert.equal(reviewNotification.actionHref, `/app/profile/reviews?review=${reviewId}`);
+    assert.equal(reviewNotification.metadata.reviewId, reviewId);
 
     const duplicateReview = await requestJson(baseUrl, `/api/v1/active-work/${activeWork.id}/reviews`, {
       method: "POST",
@@ -267,7 +275,7 @@ if (!testDatabaseUrl) {
     assert.equal(duplicateReview.response.status, 409);
     assert.equal(duplicateReview.payload.error.code, "REVIEW_ALREADY_EXISTS");
 
-    const disputed = await requestJson(baseUrl, `/api/v1/reviews/${review.payload.data.review.id}/dispute`, {
+    const disputed = await requestJson(baseUrl, `/api/v1/reviews/${reviewId}/dispute`, {
       method: "POST",
       cookie: tradesperson.cookie,
       idempotencyKey: `review-dispute-${randomUUID()}`,
@@ -275,7 +283,7 @@ if (!testDatabaseUrl) {
     });
     assert.equal(disputed.response.status, 200);
     assert.equal(disputed.payload.data.review.status, "disputed");
-    const responseNote = await requestJson(baseUrl, `/api/v1/reviews/${review.payload.data.review.id}/responses`, {
+    const responseNote = await requestJson(baseUrl, `/api/v1/reviews/${reviewId}/responses`, {
       method: "POST",
       cookie: contractor.cookie,
       idempotencyKey: `review-response-${randomUUID()}`,
@@ -284,11 +292,11 @@ if (!testDatabaseUrl) {
     assert.equal(responseNote.response.status, 201);
     assert.ok(responseNote.payload.data.review.events.some((event) => event.type === "response_added"));
     await assert.rejects(
-      database.query("UPDATE review_events SET note = 'tampered' WHERE review_id = $1", [review.payload.data.review.id]),
+      database.query("UPDATE review_events SET note = 'tampered' WHERE review_id = $1", [reviewId]),
       /append-only/,
     );
 
-    const resolved = await requestJson(baseUrl, `/api/v1/admin/reviews/${review.payload.data.review.id}/resolve`, {
+    const resolved = await requestJson(baseUrl, `/api/v1/admin/reviews/${reviewId}/resolve`, {
       method: "POST",
       cookie: admin.cookie,
       idempotencyKey: `admin-review-${randomUUID()}`,

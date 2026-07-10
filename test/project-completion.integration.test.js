@@ -325,6 +325,13 @@ if (!testDatabaseUrl) {
     assert.equal(completion.response.status, 201);
     const completionId = completion.payload.data.completion.id;
 
+    const contractorNotifications = await requestJson(baseUrl, "/api/v1/notifications", { cookie: contractor.cookie });
+    const completionNotification = contractorNotifications.payload.data.notifications.find((item) => (
+      item.sourceType === "project" && item.sourceId === project.id && item.title === "Completion submitted"
+    ));
+    assert.equal(completionNotification.actionHref, `/app/tools/records?activeWork=${activeWork.id}&project=${project.id}`);
+    assert.equal(completionNotification.metadata.projectId, project.id);
+
     const outsiderConfirm = await requestJson(baseUrl, `/api/v1/projects/${project.id}/completion/${completionId}/confirm`, {
       method: "POST",
       cookie: outsider.cookie,
@@ -343,6 +350,13 @@ if (!testDatabaseUrl) {
     assert.equal(confirmed.payload.data.completion.status, "confirmed");
     assert.equal(confirmed.payload.data.completion.resolutions[0].reason, "Work inspected and accepted.");
     assert.equal((await database.query("SELECT status FROM active_work WHERE id = $1", [activeWork.id])).rows[0].status, "completed");
+
+    const tradespersonNotifications = await requestJson(baseUrl, "/api/v1/notifications", { cookie: tradesperson.cookie });
+    const confirmedNotification = tradespersonNotifications.payload.data.notifications.find((item) => (
+      item.sourceType === "project" && item.sourceId === project.id && item.title === "Completion confirmed"
+    ));
+    assert.equal(confirmedNotification.actionHref, `/app/tools/records?activeWork=${activeWork.id}&project=${project.id}`);
+    assert.equal(confirmedNotification.metadata.projectId, project.id);
 
     const firstReport = await requestJson(baseUrl, `/api/v1/projects/${project.id}/report`, { cookie: contractor.cookie });
     assert.equal(firstReport.response.status, 200);

@@ -13,7 +13,7 @@ interface UseActivityFeedOptions {
 
 function notificationActionLabel(notification: InboxNotification) {
   const href = notification.actionHref || "";
-  const routeText = `${notification.type} ${notification.sourceType} ${href}`.toLowerCase();
+  const routeText = `${notification.title} ${notification.type} ${notification.sourceType} ${href}`.toLowerCase();
   if (
     notification.sourceType.startsWith("shop_talk") ||
     typeof notification.metadata?.postId === "string" ||
@@ -33,6 +33,16 @@ function notificationActionLabel(notification: InboxNotification) {
   if (routeText.includes("photo") || routeText.includes("media") || routeText.includes("job-photos")) {
     return "Open photos";
   }
+  if (notification.sourceType === "project" || href.includes("tools/records")) {
+    return routeText.includes("closeout") || routeText.includes("completion") ? "Open closeout" : "Open project";
+  }
+  if (notification.sourceType === "review" || href.includes("review")) {
+    const hasReviewTarget =
+      typeof notification.metadata?.reviewId === "string" ||
+      typeof notification.metadata?.review_id === "string" ||
+      href.includes("review=");
+    return hasReviewTarget ? "Open review" : "Open reviews";
+  }
   if (
     notification.sourceType === "offer" ||
     notification.sourceType === "job" ||
@@ -45,18 +55,9 @@ function notificationActionLabel(notification: InboxNotification) {
   if (notification.sourceType === "active_work") {
     return "Open active work";
   }
-  if (notification.sourceType === "project" || href.includes("tools")) {
-    return routeText.includes("closeout") ? "Open closeout" : "Open project";
-  }
+  if (href.includes("tools")) return "Open tool";
   if (notification.sourceType === "support" || href.includes("support") || href.includes("feedback")) {
     return "Open support";
-  }
-  if (notification.sourceType === "review" || href.includes("review")) {
-    const hasReviewTarget =
-      typeof notification.metadata?.reviewId === "string" ||
-      typeof notification.metadata?.review_id === "string" ||
-      href.includes("review=");
-    return hasReviewTarget ? "Open review" : "Open reviews";
   }
   if (href.includes("profile") || href.includes("account")) {
     return "Open profile";

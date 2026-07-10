@@ -180,6 +180,13 @@ if (!testDatabaseUrl) {
     assert.equal(submitted.payload.data.application.status, "submitted");
     const applicationId = submitted.payload.data.application.id;
 
+    const contractorApplicationNotifications = await requestJson(baseUrl, "/api/v1/notifications", { cookie: contractor.cookie });
+    const submittedNotification = contractorApplicationNotifications.payload.data.notifications.find((item) => (
+      item.sourceType === "application" && item.sourceId === applicationId
+    ));
+    assert.equal(submittedNotification.actionHref, `/app/work?job=${job.id}&application=${applicationId}`);
+    assert.equal(submittedNotification.metadata.jobId, job.id);
+
     const duplicateApplication = await requestJson(baseUrl, `/api/v1/jobs/${job.id}/applications`, {
       method: "POST",
       cookie: tradesperson.cookie,
@@ -200,6 +207,21 @@ if (!testDatabaseUrl) {
     assert.equal(applicants.response.status, 200);
     assert.equal(applicants.payload.data.applications.length, 1);
     assert.equal(applicants.payload.data.applications[0].applicant.accountId, tradesperson.id);
+
+    const shortlisted = await requestJson(baseUrl, `/api/v1/applications/${applicationId}/shortlist`, {
+      method: "POST",
+      cookie: contractor.cookie,
+      idempotencyKey: `shortlist-${randomUUID()}`,
+      body: { reason: "Strong fit for the scope." },
+    });
+    assert.equal(shortlisted.response.status, 200);
+    assert.equal(shortlisted.payload.data.application.status, "shortlisted");
+    const tradespersonApplicationNotifications = await requestJson(baseUrl, "/api/v1/notifications", { cookie: tradesperson.cookie });
+    const shortlistNotification = tradespersonApplicationNotifications.payload.data.notifications.find((item) => (
+      item.sourceType === "application" && item.sourceId === applicationId
+    ));
+    assert.equal(shortlistNotification.actionHref, `/app/work?job=${job.id}&application=${applicationId}`);
+    assert.equal(shortlistNotification.metadata.status, "shortlisted");
 
     const offer = await requestJson(baseUrl, `/api/v1/applications/${applicationId}/offer`, {
       method: "POST",
@@ -234,6 +256,13 @@ if (!testDatabaseUrl) {
     assert.equal(accepted.payload.data.offer.status, "accepted");
     assert.equal(accepted.payload.data.activeWork.status, "active");
     const activeWorkId = accepted.payload.data.activeWork.id;
+
+    const contractorAcceptedNotifications = await requestJson(baseUrl, "/api/v1/notifications", { cookie: contractor.cookie });
+    const acceptedNotification = contractorAcceptedNotifications.payload.data.notifications.find((item) => (
+      item.sourceType === "active_work" && item.sourceId === activeWorkId
+    ));
+    assert.equal(acceptedNotification.actionHref, `/app/work?activeWork=${activeWorkId}&job=${job.id}`);
+    assert.equal(acceptedNotification.metadata.activeWorkId, activeWorkId);
 
     const acceptedAgain = await requestJson(baseUrl, `/api/v1/offers/${offerId}/accept`, {
       method: "POST",

@@ -216,11 +216,11 @@ function makeNotification(overrides = {}) {
     type: overrides.type ?? "work",
     title: overrides.title ?? "Offer accepted",
     body: overrides.body ?? "Warehouse panel assist - Jacksonville, FL",
-    actionHref: overrides.actionHref ?? "/app/messages",
+    actionHref: overrides.actionHref ?? `/app/work?activeWork=${activeWorkId}&job=${openJobId}`,
     sourceType: overrides.sourceType ?? "active_work",
     sourceId: overrides.sourceId ?? activeWorkId,
     priority: overrides.priority ?? "high",
-    metadata: overrides.metadata ?? { jobId: openJobId, offerId },
+    metadata: overrides.metadata ?? { activeWorkId, jobId: openJobId, offerId },
     readAt: overrides.readAt ?? null,
     createdAt: overrides.createdAt ?? "2026-06-28T15:31:00.000Z",
   };
@@ -697,11 +697,21 @@ async function runNotificationActiveWorkFlow(page) {
   await page.getByRole("button", { name: "Notifications" }).click();
   const notificationsDialog = page.getByRole("dialog", { name: "Notifications" });
   await notificationsDialog.waitFor({ timeout: 15_000 });
-  await notificationsDialog.getByRole("button", { name: /Open message: Offer accepted/i }).click();
-  await page.getByRole("heading", { name: "Inbox", exact: true }).waitFor({ timeout: 15_000 });
-  await page.getByRole("heading", { name: "Warehouse panel assist", exact: true }).waitFor({ timeout: 15_000 });
+  await notificationsDialog.getByRole("button", { name: /Open work: Offer accepted/i }).click();
+  await page.getByLabel("Hiring workflow").getByText("Accepted and active", { exact: true }).waitFor({ timeout: 15_000 });
   await assertNoHorizontalOverflow(page, "Notification active work route");
   await page.screenshot({ path: path.join(screenshotDir, "notification-active-work-route.png"), fullPage: true });
+}
+
+async function runColdStartActiveWorkLink(page) {
+  const active = makeActiveWork();
+  const closedJob = makeJob({ status: "closed" });
+  const state = makeState({ jobs: [closedJob], activeWork: [active] });
+  await configurePage(page, contractorAccount, state);
+
+  await page.goto(`${baseUrl}/app/work?activeWork=${activeWorkId}&job=${openJobId}`, { waitUntil: "networkidle" });
+  await page.getByLabel("Hiring workflow").getByText("Accepted and active", { exact: true }).waitFor({ timeout: 15_000 });
+  await assertNoHorizontalOverflow(page, "Cold-start active work deep link");
 }
 
 async function runNotificationProjectPhotoFlow(page) {
@@ -734,6 +744,34 @@ async function runNotificationProjectPhotoFlow(page) {
   await page.screenshot({ path: path.join(screenshotDir, "notification-project-photo-route.png"), fullPage: true });
 }
 
+async function runNotificationProjectRecordFlow(page) {
+  const active = makeActiveWork();
+  const closedJob = makeJob({ status: "closed" });
+  const state = makeState({
+    jobs: [closedJob],
+    activeWork: [active],
+    notifications: [makeNotification({
+      id: "a953efc2-f1c8-4a63-918b-8be0b3ebcb54",
+      title: "Completion submitted",
+      body: "Warehouse panel assist - review the closeout record",
+      actionHref: `/app/tools/records?activeWork=${activeWorkId}&project=${projectId}`,
+      sourceType: "project",
+      sourceId: projectId,
+      metadata: { activeWorkId, projectId, jobId: openJobId },
+    })],
+  });
+  await configurePage(page, contractorAccount, state);
+
+  await page.goto(`${baseUrl}/app/home`, { waitUntil: "networkidle" });
+  await page.getByRole("button", { name: "Notifications" }).click();
+  const notificationsDialog = page.getByRole("dialog", { name: "Notifications" });
+  await notificationsDialog.waitFor({ timeout: 15_000 });
+  await notificationsDialog.getByRole("button", { name: /Open closeout: Completion submitted/i }).click();
+  await page.waitForURL(/\/app\/tools\/records\?/, { timeout: 15_000 });
+  await page.getByLabel("Job proof packet").waitFor({ timeout: 15_000 });
+  await assertNoHorizontalOverflow(page, "Notification project record route");
+}
+
 let browser;
 
 try {
@@ -747,7 +785,9 @@ try {
     ["tradesperson-apply", runTradespersonApplicationFlow],
     ["tradesperson-offer", runTradespersonOfferFlow],
     ["notification-active-work", runNotificationActiveWorkFlow],
+    ["cold-start-active-work", runColdStartActiveWorkLink],
     ["notification-project-photo", runNotificationProjectPhotoFlow],
+    ["notification-project-record", runNotificationProjectRecordFlow],
   ]) {
     const context = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: "block" });
     const page = await context.newPage();

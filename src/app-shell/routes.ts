@@ -58,16 +58,22 @@ export const viewRoutes: Record<NavLabel, string> = {
 export function viewFromPath(pathname: string): NavLabel {
   const normalized = pathname.replace(/\/$/, "") || "/";
   const aliases: Record<string, NavLabel> = {
+    "/app/home": "Home",
     "/app/work/jobs": "Work",
     "/app/work/applications": "Work",
     "/app/work/invites": "Work",
+    "/app/shop-talk": "Shop Talk",
     "/app/network/talk": "Shop Talk",
+    "/app/crew": "Crew",
+    "/app/messages": "Messages",
     "/app/network/reviews": "Reviews",
+    "/app/profile": "Settings",
     "/app/profile/trust": "Trust & Legal",
     "/app/profile/training": "Safety & Training",
     "/app/profile/reviews": "Reviews",
     "/app/profile/feedback": "Feedback",
     "/app/profile/settings": "Settings",
+    "/app/records": "Records",
     "/app/tools/records": "Records",
     "/app/admin": "Admin",
   };

@@ -10,6 +10,14 @@ Status values:
 
 Evidence must eventually link to implementation, automated tests, manual acceptance proof, and deployed build.
 
+## Traceability Addendum - 2026-07-10 Exact Notification Destinations
+
+- `GA-UX-003` gains navigation-coherence evidence: application, offer, active-work, project, review, message, and Shop Talk actions now encode and restore the exact object instead of routing to a generic destination.
+- `GA-UX-005` gains state-continuity evidence: cold starts and browser history restore exact Work, Inbox, Records, Reviews, and Shop Talk intent after authenticated data loads, and legacy authenticated aliases no longer fall through to Home.
+- `GA-PRO-001` gains accepted-work workflow evidence: the workspace, Messages, Photos/Records, and Daily Log actions retain accepted-work context, while Records automatically opens the intended project detail without cancelling its own load.
+- `GA-OPS-007` gains automated evidence: build, lint, security lint, 46/46 unit tests, E2E, the rendered Work lifecycle smoke, dependency audit, and diff checks passed. The affected `match-acceptance`, `project-completion`, and `reviews-admin-safety` PostgreSQL suites also passed individually. The aggregate wrapper exceeded its local time window, so aggregate completion is not claimed.
+- `GA-OPS-008` remains pending until the branch is merged, Railway serves the exact runtime SHA, the production monitor passes, and an authenticated production smoke proves the exact-destination path.
+
 ## Traceability Addendum - 2026-07-10 Field Reliability Train
 
 - `GA-UX-005` gains recovery-honesty evidence: client requests now time out, boot-time 5xx/network failures show a retry state instead of false logout, rate limits use human copy, and the offline banner no longer promises a sync queue that does not exist.

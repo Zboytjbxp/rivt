@@ -2400,11 +2400,11 @@ app.post("/api/v1/active-work/:id/reviews", requireV1AuthenticatedUser, requireV
       type: "work",
       title: "Review pending approval",
       body: `${activeWork.job_title} - ${activeWork.public_city}, ${activeWork.public_region}`,
-      actionHref: "/app/profile",
+      actionHref: `/app/profile/reviews?review=${reviewId}`,
       sourceType: "review",
       sourceId: reviewId,
       priority: "normal",
-      metadata: { activeWorkId },
+      metadata: { activeWorkId, reviewId },
     });
     const [review] = await mapReviewRows(client, [await loadReviewById(client, reviewId)]);
     return { status: 201, body: { data: { review }, meta: { requestId: request.requestId } } };
@@ -2429,11 +2429,11 @@ app.post("/api/v1/reviews/:id/approve", requireV1AuthenticatedUser, requireV1Act
       type: "work",
       title: "Review approved",
       body: `${review.job_title} - ${review.public_city}, ${review.public_region}`,
-      actionHref: "/app/profile",
+      actionHref: `/app/profile/reviews?review=${reviewId}`,
       sourceType: "review",
       sourceId: reviewId,
       priority: "normal",
-      metadata: { activeWorkId: review.active_work_id },
+      metadata: { activeWorkId: review.active_work_id, reviewId },
     });
     const [mapped] = await mapReviewRows(client, [await loadReviewById(client, reviewId)]);
     return { status: 200, body: { data: { review: mapped }, meta: { requestId: request.requestId } } };
@@ -2462,11 +2462,11 @@ app.post("/api/v1/reviews/:id/dispute", requireV1AuthenticatedUser, requireV1Act
       type: "work",
       title: "Review disputed",
       body: `${review.job_title} - ${review.public_city}, ${review.public_region}`,
-      actionHref: "/app/profile",
+      actionHref: `/app/profile/reviews?review=${reviewId}`,
       sourceType: "review",
       sourceId: reviewId,
       priority: "normal",
-      metadata: { activeWorkId: review.active_work_id },
+      metadata: { activeWorkId: review.active_work_id, reviewId },
     });
     const [mapped] = await mapReviewRows(client, [await loadReviewById(client, reviewId)]);
     return { status: 200, body: { data: { review: mapped }, meta: { requestId: request.requestId } } };
@@ -2561,11 +2561,11 @@ app.post("/api/v1/active-work/:id/unsafe-reports", requireV1AuthenticatedUser, r
       type: "work",
       title: input.conditionType === "stop_work" ? "Stop-work report opened" : "Unsafe-work report opened",
       body: `${activeWork.job_title} - ${activeWork.public_city}, ${activeWork.public_region}`,
-      actionHref: "/app/messages",
+      actionHref: `/app/work?activeWork=${activeWorkId}&job=${activeWork.job_id}`,
       sourceType: "unsafe_work_report",
       sourceId: inserted.rows[0].id,
       priority: input.severity === "urgent" || input.conditionType === "stop_work" ? "high" : "normal",
-      metadata: { activeWorkId, conditionType: input.conditionType },
+      metadata: { activeWorkId, jobId: activeWork.job_id, conditionType: input.conditionType },
     });
     await client.query(
       `INSERT INTO audit_events (request_id, actor_account_id, organization_id, action, subject_type, subject_id, metadata)
@@ -3319,8 +3319,12 @@ app.post("/api/v1/jobs/:id/applications", requireV1AuthenticatedUser, requireV1A
   const input = validate(applicationSubmitSchema, request.body);
   const result = await runIdempotentMutation(request, request.actor.account.id, `applications.submit:${jobId}`, async (client) => {
     const job = (await client.query(
-      `SELECT id, status, created_by_account_id, application_deadline
-       FROM jobs WHERE id = $1 FOR UPDATE`,
+      `SELECT j.id, j.status, j.created_by_account_id, j.application_deadline, j.title,
+              jpl.city AS public_city, jpl.region AS public_region
+       FROM jobs j
+       LEFT JOIN job_public_locations jpl ON jpl.job_id = j.id
+       WHERE j.id = $1
+       FOR UPDATE OF j`,
       [jobId],
     )).rows[0];
     if (!job || job.status !== "open") throw new ApiError(404, "JOB_NOT_FOUND", "Job not found.");
@@ -3371,6 +3375,17 @@ app.post("/api/v1/jobs/:id/applications", requireV1AuthenticatedUser, requireV1A
        VALUES ($1, $2::uuid, 'application.submitted', 'application', ($3::uuid)::text, $4::jsonb)`,
       [request.requestId, request.actor.account.id, applicationId, JSON.stringify({ jobId })],
     );
+    await createInAppNotification(client, {
+      accountId: job.created_by_account_id,
+      type: "work",
+      title: "New application received",
+      body: `${job.title} - ${job.public_city}, ${job.public_region}`,
+      actionHref: `/app/work?job=${jobId}&application=${applicationId}`,
+      sourceType: "application",
+      sourceId: applicationId,
+      priority: "normal",
+      metadata: { jobId, applicationId },
+    });
     const row = await loadApplicationById(client, applicationId);
     return {
       status: existing.rowCount ? 200 : 201,
@@ -3471,6 +3486,17 @@ async function decideApplication(request, response, nextStatus) {
        ) VALUES ($1, $2, $3, $4, $5, $6)`,
       [applicationId, request.actor.account.id, applicationLifecycleEvent(nextStatus), application.status, nextStatus, input.reason],
     );
+    await createInAppNotification(client, {
+      accountId: application.applicant_account_id,
+      type: "work",
+      title: nextStatus === "shortlisted" ? "Application shortlisted" : "Application declined",
+      body: `${application.job_title} - ${application.public_city}, ${application.public_region}`,
+      actionHref: `/app/work?job=${application.job_id}&application=${applicationId}`,
+      sourceType: "application",
+      sourceId: applicationId,
+      priority: nextStatus === "shortlisted" ? "normal" : "low",
+      metadata: { jobId: application.job_id, applicationId, status: nextStatus },
+    });
     const row = await loadApplicationById(client, applicationId);
     return { status: 200, body: { data: { application: await mappedApplicationWithEvents(client, row) }, meta: { requestId: request.requestId } } };
   });
@@ -3674,11 +3700,11 @@ app.post("/api/v1/offers/:id/accept", requireV1AuthenticatedUser, requireV1Actor
       type: "work",
       title: "Offer accepted",
       body: `${offer.job_title} - ${offer.public_city}, ${offer.public_region}`,
-      actionHref: `/app/messages`,
+      actionHref: `/app/work?activeWork=${activeWorkId}&job=${offer.job_id}`,
       sourceType: "active_work",
       sourceId: activeWorkId,
       priority: "high",
-      metadata: { jobId: offer.job_id, offerId },
+      metadata: { activeWorkId, jobId: offer.job_id, offerId },
     });
     const acceptedOffer = await loadOfferById(client, offerId);
     const activeWork = (await client.query(`${activeWorkSelectBase} WHERE aw.id = $1`, [activeWorkId])).rows[0];
@@ -3777,11 +3803,11 @@ app.post("/api/v1/active-work/:id/cancel", requireV1AuthenticatedUser, requireV1
       type: "work",
       title: "Work cancelled",
       body: `${activeWork.job_title} - ${activeWork.public_city}, ${activeWork.public_region}`,
-      actionHref: "/app/messages",
+      actionHref: `/app/work?activeWork=${activeWorkId}&job=${activeWork.job_id}`,
       sourceType: "active_work",
       sourceId: activeWorkId,
       priority: "high",
-      metadata: { jobId: activeWork.job_id, reason: input.reason },
+      metadata: { activeWorkId, jobId: activeWork.job_id, reason: input.reason },
     });
     const row = await loadActiveWorkById(client, activeWorkId, request.actor);
     return { status: 200, body: { data: { activeWork: await mappedActiveWorkWithEvents(client, row) }, meta: { requestId: request.requestId } } };
@@ -3809,11 +3835,11 @@ app.post("/api/v1/active-work/:id/reschedule", requireV1AuthenticatedUser, requi
       type: "work",
       title: "Reschedule requested",
       body: `${activeWork.job_title} - ${activeWork.public_city}, ${activeWork.public_region}`,
-      actionHref: "/app/messages",
+      actionHref: `/app/work?activeWork=${activeWorkId}&job=${activeWork.job_id}`,
       sourceType: "active_work",
       sourceId: activeWorkId,
       priority: "normal",
-      metadata: { jobId: activeWork.job_id, reason: input.reason },
+      metadata: { activeWorkId, jobId: activeWork.job_id, reason: input.reason },
     });
     const row = await loadActiveWorkById(client, activeWorkId, request.actor);
     return { status: 200, body: { data: { activeWork: await mappedActiveWorkWithEvents(client, row) }, meta: { requestId: request.requestId } } };
@@ -4173,11 +4199,11 @@ app.post("/api/v1/projects/:id/completion", requireV1AuthenticatedUser, requireV
       type: "work",
       title: "Completion submitted",
       body: `${project.job_title} - ${project.public_city}, ${project.public_region}`,
-      actionHref: "/app/tools",
+      actionHref: `/app/tools/records?activeWork=${project.active_work_id}&project=${projectId}`,
       sourceType: "project",
       sourceId: projectId,
       priority: "high",
-      metadata: { activeWorkId: project.active_work_id, submissionId: submission.rows[0].id },
+      metadata: { activeWorkId: project.active_work_id, projectId, jobId: project.job_id, submissionId: submission.rows[0].id },
     });
     await client.query(
       `INSERT INTO audit_events (request_id, actor_account_id, organization_id, action, subject_type, subject_id, metadata)
@@ -4280,11 +4306,11 @@ async function resolveCompletion(request, projectId, submissionId, decision) {
       type: "work",
       title: decision === "confirmed" ? "Completion confirmed" : "Completion disputed",
       body: `${project.job_title} - ${project.public_city}, ${project.public_region}`,
-      actionHref: "/app/tools",
+      actionHref: `/app/tools/records?activeWork=${project.active_work_id}&project=${projectId}`,
       sourceType: "project",
       sourceId: projectId,
       priority: "high",
-      metadata: { activeWorkId: project.active_work_id, submissionId, decision },
+      metadata: { activeWorkId: project.active_work_id, projectId, jobId: project.job_id, submissionId, decision },
     });
     await client.query(
       `INSERT INTO audit_events (request_id, actor_account_id, organization_id, action, subject_type, subject_id, metadata)
