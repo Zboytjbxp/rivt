@@ -21,6 +21,25 @@ Add one entry per staging/production deployment.
 - Rollback performed/result:
 - Approval:
 
+## Current Production - Packet 08 Desktop Workspaces
+
+- Environment: Production (`https://rivt.pro`)
+- Date/time/timezone: 2026-07-09 23:28 America/New_York
+- Deployer: Codex through GitHub push to Railway-linked `master`
+- Source repository/branch: `Zboytjbxp/rivt`, `master`
+- Source commit: `be6a6d211eae8bef81c40d55e2054bf49e3148b9`
+- Build/artifact ID: Railway deployment `73eadb90-aa92-4b79-9f99-2aa03d68abe2`; live `/api/health` is the runtime proof
+- Migration version before/after: `0022_community_audiences` / `0022_community_audiences` (no schema migration)
+- Feature-flag/config version: no provider credentials or operational-control flags changed
+- Provider/config changes (no secrets): no provider credentials changed; Sentry remains configured
+- Backup/rollback target: prior successful production source `9dbde85050c30414f84aa9461a2a436a837e46e6`; rollback is a normal source rollback because no migration changed
+- Automated gates: `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test:ui:guest-preview`, `npm run test:ui:shop-talk-news`, `npm run test:e2e`, and `npm audit --omit=dev` passed. Unit tests passed 46/46. The broader database integration phase was attempted through `npm run test`, but the configured remote test PostgreSQL reset its connection during setup; no server/database code changed in this UI pass.
+- Post-deploy smoke tests: live `https://rivt.pro/api/health` returned exact source commit `be6a6d211eae8bef81c40d55e2054bf49e3148b9`, ready migration `0022_community_audiences`, PostgreSQL, S3-compatible object storage, and configured Sentry. `EXPECTED_SOURCE_COMMIT=be6a6d211eae8bef81c40d55e2054bf49e3148b9 npm run monitor:production` passed with operational controls off, seven anonymous private-route checks, and 445 ms duration.
+- Health/readiness result: healthy production health and synthetic monitor; no schema migration applied.
+- Known risks: this is a visual/layout deployment. Desktop production browser/keyboard verification remains a manual evidence item; the remote test database connection reset must be resolved before a future server/data packet claims aggregate integration evidence.
+- Rollback performed/result: not required.
+- Approval: accepted as a Gate A desktop workspace and navigation-density improvement with no provider, auth, billing, storage, moderation, or migration boundary changes.
+
 ## Current Production - Packet 08 Guest Preview Black-Screen Hardening
 
 - Environment: Production (`https://rivt.pro`)

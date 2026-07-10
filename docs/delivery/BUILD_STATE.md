@@ -4,8 +4,8 @@ Last updated: 2026-07-09 America/New_York
 Current gate: Gate A launch hardening
 Current phase: Packet 08 Gate A launch hardening plus Gate B behind-flag backbone work: machine gates and live workflow smokes are mostly green; the Shop Talk Reddit-model backbone, moderation/reporting backend, human-facing moderation console/report UX, post photo media, reachability/naming cleanup, Tools hub consolidation, Payment Tracker server records, money-tools sync, the accepted tool-records sync slices, non-tool local-state boundary cleanup, dedicated network-records sync for Crew/Invites/informal written shout-outs, screen-density polish, mobile layout/device-accessibility subtraction, fraction calculator ergonomics, iPhone SE layout containment, immersive-tool compact-device containment, SE tool chrome cleanup slices, native metric calculator rebuild, the camera-first records/photos tool rebuild, admin support-case review for account-type requests, offer start-date normalization, guest-preview black-screen hardening, a mature one-year guest demo, and a nationwide-readiness audit are implemented while still respecting launch-readiness boundaries before broad exposure.
 Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
-Repository branch: `codex/desktop-workspace-pass` (pending review/merge)
-Production feature release commit: `39886b12495c4134b09bbb32b6c7d13058f00122` verified with live `/api/health` and `npm run monitor:production`; docs-only evidence commits may supersede the served build SHA without changing runtime behavior.
+Repository branch: `master`
+Production feature release commit: `be6a6d211eae8bef81c40d55e2054bf49e3148b9` verified with live `/api/health` and `npm run monitor:production`; docs-only evidence commits may supersede the served build SHA without changing runtime behavior.
 
 ## Latest Packet 08 Pass - Desktop Workspaces
 
@@ -25,7 +25,7 @@ Production feature release commit: `39886b12495c4134b09bbb32b6c7d13058f00122` ve
   - `npm audit --omit=dev` (pass; 0 vulnerabilities)
   - `npm run test:unit` ran as part of `npm run test` and passed (46/46)
   - full `npm run test` reached the integration phase but the configured remote PostgreSQL reset connections during setup (`ECONNRESET` / `Connection terminated unexpectedly`); this pass changes no server routes, migrations, or database behavior, so no integration pass is claimed
-- Deployment boundary: no deployment is possible until the Railway project is reactivated after its trial expiration. This branch remains reviewable and safe to merge independently of that provider action.
+- Live deployment: `codex/desktop-workspace-pass` fast-forwarded to `master`; Railway deployment `73eadb90-aa92-4b79-9f99-2aa03d68abe2` succeeded. Live `/api/health` reports exact source `be6a6d211eae8bef81c40d55e2054bf49e3148b9`, ready migration `0022_community_audiences`, PostgreSQL, S3-compatible storage, and configured Sentry. `EXPECTED_SOURCE_COMMIT=be6a6d211eae8bef81c40d55e2054bf49e3148b9 npm run monitor:production` passed with seven anonymous private-route checks in 445 ms.
 
 ## Latest Packet 08 Pass - Preview Phone Recovery
 
