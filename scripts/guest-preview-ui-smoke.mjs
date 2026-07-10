@@ -76,6 +76,8 @@ async function openPreview(page, roleLabel, expectedHeading) {
 
   const shellVisible = await page.locator(".v2-main").isVisible();
   assert.equal(shellVisible, true, `${roleLabel} preview shell is not visible`);
+  assert.equal(await page.locator("#rivt-boot-fallback").isVisible(), false, `${roleLabel} preview left the boot recovery layer visible`);
+  assert.equal(await page.evaluate(() => document.documentElement.classList.contains("rivt-app-ready")), true, `${roleLabel} preview never reported an app-ready state`);
   const visibleText = (await page.locator("body").innerText()).trim();
   assert.match(visibleText, new RegExp(`${roleLabel} demo`, "i"), `${roleLabel} preview did not render the demo banner`);
   assert.match(visibleText, /One-year sample account/i, `${roleLabel} preview is missing the mature account context`);
@@ -98,6 +100,25 @@ async function openPreview(page, roleLabel, expectedHeading) {
     path: path.join(screenshotDir, `${roleLabel.toLowerCase()}-preview-320.png`),
     fullPage: false,
   });
+}
+
+async function verifyBootRecovery(browser) {
+  const context = await browser.newContext({
+    viewport: { width: 320, height: 568 },
+    deviceScaleFactor: 2,
+    isMobile: true,
+    hasTouch: true,
+  });
+  const page = await context.newPage();
+  await page.route("**/src/main.tsx", (route) => route.abort());
+  await page.goto(baseUrl, { waitUntil: "domcontentloaded" });
+  await page.getByRole("button", { name: "Refresh RIVT" }).waitFor({ timeout: 15_000 });
+  assert.match(
+    await page.locator("#rivt-boot-fallback").innerText(),
+    /older RIVT update/i,
+    "Boot recovery does not explain the stale-shell path",
+  );
+  await context.close();
 }
 
 try {
@@ -133,6 +154,7 @@ try {
   await openPreview(page, "Subcontractor", /A year of work, proof, and reputation/i);
 
   assert.deepEqual(consoleErrors, [], `Unexpected preview console errors:\n${consoleErrors.join("\n")}`);
+  await verifyBootRecovery(browser);
   await browser.close();
   console.log(JSON.stringify({ ok: true, screenshotDir }, null, 2));
 } finally {

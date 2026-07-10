@@ -1,8 +1,8 @@
-const CACHE = 'rivt-v4-2026-07-08';
-const PRECACHE = ['/', '/index.html'];
+const CACHE = 'rivt-v5-2026-07-09-preview-recovery';
+const OFFLINE_DOCUMENT = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>RIVT needs a connection</title><style>body{margin:0;display:grid;min-height:100vh;place-items:center;padding:24px;box-sizing:border-box;background:#ff4b00;color:#0b0b0b;font:16px/1.45 Arial,sans-serif}main{width:min(100%,380px)}h1{margin:10px 0;font-size:34px;line-height:1}strong{letter-spacing:.12em}</style></head><body><main><strong>RIVT</strong><h1>Connect to open RIVT.</h1><p>This app update needs a connection before it can open safely. Your server-backed account and records are not affected.</p></main></body></html>`;
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(PRECACHE)));
+  e.waitUntil(caches.open(CACHE));
   self.skipWaiting();
 });
 
@@ -18,21 +18,25 @@ self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
   if (url.origin !== self.location.origin) return;
   if (url.pathname.startsWith('/api/')) return;
+  if (e.request.mode === 'navigate') {
+    e.respondWith(
+      fetch(e.request, { cache: 'no-store' })
+        .catch(() => new Response(OFFLINE_DOCUMENT, {
+          headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' },
+          status: 503,
+        }))
+    );
+    return;
+  }
+  if (!url.pathname.startsWith('/assets/')) return;
   e.respondWith(
-    fetch(e.request, { cache: 'no-cache' })
-      .then(res => {
-        if (res.ok && res.type === 'basic') {
-          const clone = res.clone();
-          caches.open(CACHE).then(c => c.put(e.request, clone));
-        }
-        return res;
-      })
-      .catch(async () => {
-        const cached = await caches.match(e.request);
-        if (cached) return cached;
-        if (e.request.mode === 'navigate') return caches.match('/index.html');
-        return Response.error();
-      })
+    caches.match(e.request).then((cached) => cached || fetch(e.request).then((response) => {
+      if (response.ok && response.type === 'basic') {
+        const clone = response.clone();
+        void caches.open(CACHE).then((cache) => cache.put(e.request, clone));
+      }
+      return response;
+    }))
   );
 });
 

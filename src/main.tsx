@@ -1,6 +1,7 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App";
+import { AppBootstrap } from "./AppBootstrap";
 import "./styles.css";
 
 // Handle return from checkout without granting frontend-only entitlements.
@@ -18,6 +19,8 @@ import "./styles.css";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <App />
+    <AppBootstrap>
+      <App />
+    </AppBootstrap>
   </StrictMode>,
 );

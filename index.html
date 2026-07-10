@@ -35,6 +35,28 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="RIVT">
     <title>RIVT | Where skilled trades connect</title>
+    <style>
+      #rivt-boot-fallback {
+        box-sizing: border-box;
+        position: fixed;
+        inset: 0;
+        z-index: 2147483647;
+        display: grid;
+        place-items: center;
+        padding: 24px;
+        background: #ff4b00;
+        color: #0b0b0b;
+        font-family: Arial, sans-serif;
+      }
+      #rivt-boot-fallback[hidden],
+      html.rivt-app-ready #rivt-boot-fallback { display: none; }
+      #rivt-boot-fallback > div { width: min(100%, 380px); }
+      #rivt-boot-fallback strong { display: block; font-size: 16px; letter-spacing: .12em; text-transform: uppercase; }
+      #rivt-boot-fallback h1 { margin: 12px 0 10px; font-size: 34px; line-height: 1; }
+      #rivt-boot-fallback p { margin: 0; font-size: 16px; line-height: 1.45; }
+      #rivt-boot-fallback button { display: none; width: 100%; min-height: 50px; margin-top: 20px; border: 0; border-radius: 10px; background: #0b0b0b; color: #fff; font: 700 16px Arial, sans-serif; }
+      #rivt-boot-fallback.is-recovery button { display: block; }
+    </style>
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
@@ -47,14 +69,63 @@
     </script>
   </head>
   <body>
+    <div id="rivt-boot-fallback" role="status" aria-live="polite">
+      <div>
+        <strong>RIVT</strong>
+        <h1>Opening RIVT</h1>
+        <p id="rivt-boot-copy">Loading your workspace.</p>
+        <button id="rivt-boot-refresh" type="button">Refresh RIVT</button>
+      </div>
+    </div>
     <div id="root"></div>
+    <script>
+      (function () {
+        var fallback = document.getElementById('rivt-boot-fallback');
+        var copy = document.getElementById('rivt-boot-copy');
+        var refresh = document.getElementById('rivt-boot-refresh');
+        var ready = function () { return document.documentElement.classList.contains('rivt-app-ready'); };
+        var showRecovery = function () {
+          if (!fallback || ready()) return;
+          fallback.classList.add('is-recovery');
+          fallback.setAttribute('role', 'alert');
+          if (copy) copy.textContent = 'This phone may be holding an older RIVT update. Refresh to load the latest version.';
+        };
+        var refreshShell = async function () {
+          try {
+            if ('serviceWorker' in navigator) {
+              var registrations = await navigator.serviceWorker.getRegistrations();
+              await Promise.all(registrations.map(function (registration) { return registration.unregister(); }));
+            }
+            if ('caches' in window) {
+              var keys = await caches.keys();
+              await Promise.all(keys.map(function (key) { return caches.delete(key); }));
+            }
+          } finally {
+            window.location.replace('/');
+          }
+        };
+        if (refresh) refresh.addEventListener('click', refreshShell);
+        window.addEventListener('error', showRecovery);
+        window.addEventListener('unhandledrejection', showRecovery);
+        window.setTimeout(showRecovery, 12000);
+      })();
+    </script>
     <script type="module" src="/src/main.tsx"></script>
     <script>
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/sw.js').catch(() => {});
-    });
-  }
-</script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function () {
+          var hadController = Boolean(navigator.serviceWorker.controller);
+          navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' }).then(function (registration) {
+            registration.update().catch(function () {});
+            navigator.serviceWorker.addEventListener('controllerchange', function () {
+              var refreshKey = 'rivt.sw.refresh.v5';
+              if (!hadController || sessionStorage.getItem(refreshKey) === '1') return;
+              sessionStorage.setItem(refreshKey, '1');
+              window.location.reload();
+            }, { once: true });
+          }).catch(function () {});
+        });
+      }
+    </script>
   </body>
 </html>

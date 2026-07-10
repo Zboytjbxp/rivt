@@ -7,6 +7,23 @@ Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
 Production feature release commit: `39886b12495c4134b09bbb32b6c7d13058f00122` verified with live `/api/health` and `npm run monitor:production`; docs-only evidence commits may supersede the served build SHA without changing runtime behavior.
 
+## Latest Packet 08 Pass - Preview Phone Recovery
+
+- Hardened the anonymous preview app-shell path after a physical-phone black-screen report:
+  - added a static boot/recovery layer that stays visible until React reports a successful first render
+  - added a root React error boundary with a clear `Refresh RIVT` action instead of allowing a render failure to become a blank page
+  - recovery clears only stale service-worker/cache shell files and reloads the app; it does not clear account, record, or job data
+  - upgraded the service worker to network-only navigation and asset-only caching so an old cached `index.html` cannot point at deleted build assets
+  - an installed client with an older service-worker controller reloads once when the new v5 shell takes over
+- Expanded `test:ui:guest-preview`:
+  - contractor/subcontractor demo paths must hide the boot layer and set an explicit app-ready state
+  - a deliberately blocked app module must display the recovery action and stale-shell explanation instead of a black screen
+- Local verification on `codex/preview-phone-recovery`:
+  - `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test:unit` (46/46), `npm run test:e2e`, `npm run test:ui:guest-preview`, `npm audit --omit=dev`, and `git diff --check` passed
+  - fresh production-style Chromium and WebKit runs both opened contractor and subcontractor previews successfully before this recovery hardening
+  - `npm run test:integration` was attempted twice but the configured remote test PostgreSQL ended connections during test setup (`ECONNRESET` / `Connection terminated unexpectedly`); no server code or migration changed in this pass
+- Deployment boundary: pending merge/deploy and exact live preview verification on production.
+
 ## Latest Packet 08 Pass - Mature Guest Demo and Nationwide Readiness Boundary
 
 - Rebuilt the explicit guest preview around outcomes instead of a thin feature carousel:

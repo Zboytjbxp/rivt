@@ -11647,3 +11647,66 @@ html[data-rivt-compact-device="true"] .auth-preview-phone {
     display: none;
   }
 }
+
+.app-bootstrap-recovery {
+  display: grid;
+  min-height: 100svh;
+  place-items: center;
+  padding: 24px;
+  background:
+    linear-gradient(rgba(11, 11, 11, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(11, 11, 11, 0.04) 1px, transparent 1px),
+    #ff4b00;
+  background-size: 30px 30px, 30px 30px, auto;
+  color: #0b0b0b;
+}
+
+.app-bootstrap-recovery section {
+  display: grid;
+  gap: 14px;
+  width: min(100%, 430px);
+  padding: 24px;
+  border: 1px solid rgba(11, 11, 11, 0.18);
+  border-radius: var(--v2-radius-xl);
+  background: rgba(255, 255, 255, 0.88);
+  box-shadow: 0 24px 56px rgba(11, 11, 11, 0.2);
+}
+
+.app-bootstrap-recovery span {
+  font-size: 13px;
+  font-weight: var(--v2-weight-bold);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.app-bootstrap-recovery h1,
+.app-bootstrap-recovery p {
+  margin: 0;
+}
+
+.app-bootstrap-recovery h1 {
+  font-size: clamp(30px, 8vw, 42px);
+  line-height: 0.98;
+}
+
+.app-bootstrap-recovery p {
+  color: rgba(11, 11, 11, 0.7);
+  line-height: 1.45;
+}
+
+.app-bootstrap-recovery button {
+  min-height: 48px;
+  border: 1px solid rgba(11, 11, 11, 0.18);
+  border-radius: var(--v2-radius-md);
+  background: rgba(255, 255, 255, 0.8);
+  color: #0b0b0b;
+  font: inherit;
+  font-weight: var(--v2-weight-bold);
+  cursor: pointer;
+}
+
+.app-bootstrap-recovery button:first-of-type {
+  border-color: #0b0b0b;
+  background: #0b0b0b;
+  color: #fff;
+}
