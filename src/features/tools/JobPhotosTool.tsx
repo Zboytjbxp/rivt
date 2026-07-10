@@ -37,6 +37,11 @@ interface UnifiedPhoto {
 
 type PhotoGalleryLayout = "grid" | "timeline";
 
+interface UploadBatchResult {
+  failedFiles: File[];
+  message: string;
+}
+
 const CAPTURE_INTENTS: Array<{
   value: CaptureIntent;
   label: string;
@@ -194,6 +199,7 @@ function CameraCapture({ onCapture, onClose }: {
   const [lastSnapUrl, setLastSnapUrl] = useState<string | null>(null);
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "failed">("idle");
   const [saveMessage, setSaveMessage] = useState("");
+  const [failedCapture, setFailedCapture] = useState<Blob | null>(null);
   const lastSnapRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -218,6 +224,22 @@ function CameraCapture({ onCapture, onClose }: {
     };
   }, []);
 
+  async function saveCapture(blob: Blob) {
+    setSaveState("saving");
+    setSaveMessage("Saving to the live job...");
+    try {
+      await onCapture(blob);
+      setFailedCapture(null);
+      setCaptureCount((current) => current + 1);
+      setSaveState("saved");
+      setSaveMessage("Saved to this job's project feed.");
+    } catch (err) {
+      setFailedCapture(blob);
+      setSaveState("failed");
+      setSaveMessage(projectErrorMessage(err));
+    }
+  }
+
   function shoot() {
     const video = videoRef.current;
     const canvas = canvasRef.current;
@@ -233,27 +255,17 @@ function CameraCapture({ onCapture, onClose }: {
       const nextUrl = URL.createObjectURL(blob);
       lastSnapRef.current = nextUrl;
       setLastSnapUrl(nextUrl);
-      setSaveState("saving");
-      setSaveMessage("Saving to the live job...");
+      setFailedCapture(null);
       setFlash(true);
       setTimeout(() => setFlash(false), 200);
-      void onCapture(blob)
-        .then(() => {
-          setCaptureCount((current) => current + 1);
-          setSaveState("saved");
-          setSaveMessage("Saved to this job's project feed.");
-        })
-        .catch((err: unknown) => {
-          setSaveState("failed");
-          setSaveMessage(projectErrorMessage(err));
-        });
+      void saveCapture(blob);
     }, "image/jpeg", 0.92);
   }
 
   return (
     <div className="v2-camera-overlay">
       {flash ? <div className="v2-camera-flash" aria-hidden="true" /> : null}
-      <button type="button" className="v2-camera-close" onClick={onClose}>Done</button>
+      <button type="button" className="v2-camera-close" onClick={onClose} disabled={saveState === "saving"}>Done</button>
       {error ? (
         <div className="v2-camera-error">
           <strong>Camera unavailable</strong>
@@ -283,6 +295,11 @@ function CameraCapture({ onCapture, onClose }: {
         <span className={`v2-camera-save-status is-${saveState}`} role={saveState === "failed" ? "alert" : "status"}>
           {saveMessage}
         </span>
+      ) : null}
+      {failedCapture && saveState === "failed" ? (
+        <button type="button" className="v2-camera-retry" onClick={() => void saveCapture(failedCapture)}>
+          <RefreshCw size={15} /> Retry upload
+        </button>
       ) : null}
       {lastSnapUrl ? (
         <img
@@ -321,7 +338,7 @@ function PhotoGallery({
   uploadError: string;
   onBack: () => void;
   backLabel?: string;
-  onUploadFiles: (files: File[], note?: string) => Promise<void>;
+  onUploadFiles: (files: File[], note?: string) => Promise<UploadBatchResult>;
   onFileRef: (ref: HTMLInputElement | null) => void;
   initialShowCameraToken?: number;
   layout?: PhotoGalleryLayout;
@@ -335,6 +352,7 @@ function PhotoGallery({
   const [pendingCount, setPendingCount] = useState(0);
   const [showCamera, setShowCamera] = useState(initialShowCameraToken > 0);
   const [photoFilter, setPhotoFilter] = useState<PhotoFilter>("all");
+  const [retryBatch, setRetryBatch] = useState<{ files: File[]; note: string; message: string } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const visiblePhotos = useMemo(() => (
     photoFilter === "all"
@@ -354,24 +372,47 @@ function PhotoGallery({
     onFileRef(fileRef.current);
   }, [onFileRef]);
 
-  async function handleUploadFiles(files: File[], note = captureIntentNote(captureIntent)) {
+  async function runUpload(files: File[], note = captureIntentNote(captureIntent)) {
     if (!files.length) return;
     const count = files.length;
     setPendingCount((current) => current + count);
     try {
-      await onUploadFiles(files, note);
+      return await onUploadFiles(files, note);
+    } catch (error) {
+      return {
+        failedFiles: files,
+        message: error instanceof Error ? error.message : `${files.length} photos did not upload.`,
+      };
     } finally {
       setPendingCount((current) => Math.max(0, current - count));
     }
   }
 
   async function handleUpload(files: FileList | null, note = captureIntentNote(captureIntent)) {
-    await handleUploadFiles(files ? Array.from(files) : [], note);
+    const selectedFiles = files ? Array.from(files) : [];
+    const result = await runUpload(selectedFiles, note);
+    if (!result) return;
+    setRetryBatch(result.failedFiles.length ? { files: result.failedFiles, note, message: result.message } : null);
   }
 
   async function handleCapturePhoto(blob: Blob) {
     const file = new File([blob], `photo-${Date.now()}.jpg`, { type: "image/jpeg" });
-    await handleUploadFiles([file], captureIntentNote(captureIntent));
+    const note = captureIntentNote(captureIntent);
+    const result = await runUpload([file], note);
+    if (result?.failedFiles.length) {
+      setRetryBatch({ files: result.failedFiles, note, message: result.message });
+      throw new Error(result.message);
+    }
+    setRetryBatch(null);
+  }
+
+  async function retryFailedBatch() {
+    if (!retryBatch) return;
+    const result = await runUpload(retryBatch.files, retryBatch.note);
+    if (!result) return;
+    setRetryBatch(result.failedFiles.length
+      ? { files: result.failedFiles, note: retryBatch.note, message: result.message }
+      : null);
   }
 
   function startCompare() {
@@ -551,7 +592,14 @@ function PhotoGallery({
       ) : null}
 
       {subtitle ? <p className="v2-job-photos-subtitle">{subtitle}</p> : null}
-      {uploadError ? <p className="v2-record-notice v2-job-photos-upload-error" role="alert">{uploadError}</p> : null}
+      {retryBatch ? (
+        <div className="v2-record-notice v2-job-photos-upload-error" role="alert">
+          <span>{retryBatch.message}</span>
+          <button type="button" onClick={() => void retryFailedBatch()} disabled={uploading}>
+            <RefreshCw size={15} /> Retry {retryBatch.files.length === 1 ? "photo" : `${retryBatch.files.length} photos`}
+          </button>
+        </div>
+      ) : uploadError ? <p className="v2-record-notice v2-job-photos-upload-error" role="alert">{uploadError}</p> : null}
 
       {visiblePhotos.length === 0 && pendingCount === 0 ? (
         <div className="v2-job-photos-empty">
@@ -767,20 +815,19 @@ export function JobPhotosTool({ activeWork, focusedActiveWorkId = null, autoOpen
     }
   }
 
-  async function handleAlbumFiles(files: File[], note?: string) {
-    if (!files.length) return;
+  async function handleAlbumFiles(files: File[], note?: string): Promise<UploadBatchResult> {
+    if (!files.length) return { failedFiles: [], message: "" };
     if (!openAlbum) throw new Error("Open an album before adding photos.");
     setAlbumUploading(true);
     setAlbumUploadError("");
     const newPhotos: AlbumPhoto[] = [];
-    let uploadFailure: unknown = null;
+    const failedFiles: File[] = [];
     for (const file of files) {
       try {
         newPhotos.push(await uploadAlbumPhoto(openAlbum.id, file, note ?? ""));
       } catch (err) {
+        failedFiles.push(file);
         setAlbumUploadError(albumErrorMessage(err));
-        uploadFailure = err;
-        break;
       }
     }
     if (newPhotos.length) {
@@ -792,7 +839,11 @@ export function JobPhotosTool({ activeWork, focusedActiveWorkId = null, autoOpen
     }
     setAlbumUploading(false);
     if (albumFileRef.current) albumFileRef.current.value = "";
-    if (uploadFailure) throw uploadFailure;
+    const message = failedFiles.length
+      ? `${failedFiles.length} of ${files.length} didn't upload - retry the failed ${failedFiles.length === 1 ? "photo" : "photos"}.`
+      : "";
+    if (message) setAlbumUploadError(message);
+    return { failedFiles, message };
   }
 
   async function openActiveJob(options?: { launchCamera?: boolean }) {
@@ -814,12 +865,12 @@ export function JobPhotosTool({ activeWork, focusedActiveWorkId = null, autoOpen
     }
   }
 
-  async function handleJobFiles(files: File[], note?: string) {
-    if (!files.length) return;
+  async function handleJobFiles(files: File[], note?: string): Promise<UploadBatchResult> {
+    if (!files.length) return { failedFiles: [], message: "" };
     if (!project) throw new Error("Open the live job project feed before adding photos.");
     setJobUploading(true);
     setJobUploadError("");
-    let uploadFailure: unknown = null;
+    const failedFiles: File[] = [];
     const uploadedMedia: ProjectMedia[] = [];
     const uploadedEntries: ProjectRecord["entries"] = [];
     for (const file of files) {
@@ -828,9 +879,8 @@ export function JobPhotosTool({ activeWork, focusedActiveWorkId = null, autoOpen
         if (uploaded?.media) uploadedMedia.push(uploaded.media);
         if (uploaded?.entry) uploadedEntries.push(uploaded.entry);
       } catch (err) {
+        failedFiles.push(file);
         setJobUploadError(projectErrorMessage(err));
-        uploadFailure = err;
-        break;
       }
     }
     if (uploadedMedia.length || uploadedEntries.length) {
@@ -850,7 +900,11 @@ export function JobPhotosTool({ activeWork, focusedActiveWorkId = null, autoOpen
     }
     setJobUploading(false);
     if (jobFileRef.current) jobFileRef.current.value = "";
-    if (uploadFailure) throw uploadFailure;
+    const message = failedFiles.length
+      ? `${failedFiles.length} of ${files.length} didn't upload - retry the failed ${failedFiles.length === 1 ? "photo" : "photos"}.`
+      : "";
+    if (message) setJobUploadError(message);
+    return { failedFiles, message };
   }
 
   if (mode === "active-job" && currentProject) {

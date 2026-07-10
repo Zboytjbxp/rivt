@@ -14,6 +14,7 @@ import {
   MessageCircle,
   Monitor,
   Moon,
+  RefreshCw,
   Search,
   ShieldCheck,
   Users,
@@ -24,7 +25,7 @@ import {
 import { brandConfig, type ThemeMode, type TrialPlan } from "../../brandConfig";
 import type { ThemeSource } from "../../app-shell/useAppTheme";
 import { tradeOptions } from "../../data";
-import { apiPath } from "../../lib/api";
+import { apiPath, fetchWithTimeout } from "../../lib/api";
 import { tradeCodeByName } from "../work/work-mappings";
 import type { Role, Trade } from "../../types";
 
@@ -355,7 +356,7 @@ export function AuthLinkFlow({ mode }: { mode: "verify" | "reset" }) {
     if (mode !== "verify" || started.current) return;
     started.current = true;
     if (!token) return;
-    void fetch(apiPath("/api/v1/auth/email/verify"), {
+    void fetchWithTimeout(apiPath("/api/v1/auth/email/verify"), {
       method: "POST",
       credentials: "include",
       headers: { "Content-Type": "application/json" },
@@ -379,7 +380,7 @@ export function AuthLinkFlow({ mode }: { mode: "verify" | "reset" }) {
     }
     setStatus("working");
     try {
-      const response = await fetch(apiPath("/api/v1/auth/password/reset"), {
+      const response = await fetchWithTimeout(apiPath("/api/v1/auth/password/reset"), {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
@@ -764,6 +765,27 @@ function GuestPreviewEntry({
         </details>
       </div>
     </section>
+  );
+}
+
+export function LaunchConnectionError({ message, onRetry }: { message: string; onRetry: () => void }) {
+  return (
+    <main className="auth-shell">
+      <section className="auth-card auth-link-card">
+        <LogoLockup />
+        <div className="auth-link-status" data-status="error">
+          <AlertTriangle size={24} />
+          <div>
+            <span>Connection problem</span>
+            <h2>RIVT is having trouble connecting</h2>
+            <p>{message}</p>
+          </div>
+        </div>
+        <button type="button" className="primary-action" onClick={onRetry}>
+          <RefreshCw size={18} /> Retry
+        </button>
+      </section>
+    </main>
   );
 }
 
@@ -1247,7 +1269,7 @@ export function OnboardingFlow({
     const tradeCodes = specialties.map((specialty) => tradeCodeByName[specialty]).filter(Boolean);
     if (trimmedName.length < 2 || trimmedCity.length < 2 || trimmedRegion.length < 2 || !tradeCodes.length) return;
     try {
-      await fetch(apiPath("/api/v1/profile"), {
+      await fetchWithTimeout(apiPath("/api/v1/profile"), {
         method: "PATCH",
         credentials: "include",
         headers: { "Content-Type": "application/json" },

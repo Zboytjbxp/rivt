@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import type { AppShellProps, PrimaryDestination, ProfileSearchResult, SearchTarget } from "./types";
 import { Avatar } from "../components/ui";
-import { apiPath } from "../lib/api";
+import { apiPath, fetchWithTimeout } from "../lib/api";
 import "./tokens.css";
 import "./app-shell.css";
 
@@ -83,7 +83,7 @@ export function AppShell({
     setPeopleError("");
 
     try {
-      const response = await fetch(apiPath(`/api/v1/profiles?q=${encodeURIComponent(normalized)}&limit=4`), {
+      const response = await fetchWithTimeout(apiPath(`/api/v1/profiles?q=${encodeURIComponent(normalized)}&limit=4`), {
         credentials: "include",
       });
       const body = await response.json().catch(() => ({}));

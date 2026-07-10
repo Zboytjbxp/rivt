@@ -1,4 +1,4 @@
-import { apiPath, RivtApiError, type ApiErrorBody } from "./api";
+import { makeRequest, RivtApiError, type ApiErrorBody } from "./api";
 
 export interface BillingStatus {
   active: boolean;
@@ -23,12 +23,7 @@ export class BillingApiError extends RivtApiError {
   }
 }
 
-async function billingRequest<T>(path: string, options: RequestInit = {}) {
-  const response = await fetch(apiPath(path), { credentials: "include", ...options });
-  const body = await response.json().catch(() => ({})) as ApiErrorBody & T;
-  if (!response.ok) throw new BillingApiError(response.status, body);
-  return body;
-}
+const billingRequest = makeRequest((status, body) => new BillingApiError(status, body));
 
 export async function getBillingStatus() {
   const body = await billingRequest<{ data: { billing: BillingStatus } }>("/api/v1/billing/status");

@@ -52,6 +52,21 @@ function failAuthPath(message, path = "TEST_UNAVAILABLE") {
   });
 }
 
+function unauthenticated(route) {
+  return routeJson(route, 401, {
+    error: { code: "AUTH_REQUIRED", message: "Authentication required." },
+  });
+}
+
+function rateLimitedLogin(route) {
+  return route.fulfill({
+    status: 429,
+    headers: { "Retry-After": "45" },
+    contentType: "application/json",
+    body: JSON.stringify({ error: { code: "RATE_LIMITED", message: "Too many requests." } }),
+  });
+}
+
 try {
   await waitForServer();
   browser = await chromium.launch({ headless: true });
@@ -61,9 +76,9 @@ try {
   });
   const page = await context.newPage();
 
-  // Ensure auth bootstrap works even when backend is absent in this environment.
-  await page.route("**/api/v1/me", failAuthPath("Authentication required.", "AUTH_REQUIRED"));
-  await page.route("**/api/me", failAuthPath("Authentication required.", "AUTH_REQUIRED"));
+  // A real 401 means signed out; provider failures remain fail-closed below.
+  await page.route("**/api/v1/me", unauthenticated);
+  await page.route("**/api/me", unauthenticated);
   await page.route("**/api/auth/providers", (route) => routeJson(route, 200, {
     providers: {
       email: { ok: true, mode: "configured", missing: [], purpose: "Email/password sign-in" },
@@ -86,7 +101,7 @@ try {
   };
   await page.route("**/api/storage", (route) => routeJson(route, 200, storagePayload));
   await page.route("**/api/v1/storage", (route) => routeJson(route, 200, storagePayload));
-  await page.route("**/api/v1/auth/login", failAuthPath("Service unavailable for test.", "TEST_UNAVAILABLE"));
+  await page.route("**/api/v1/auth/login", rateLimitedLogin);
   await page.route("**/api/auth/login", failAuthPath("Service unavailable for test.", "TEST_UNAVAILABLE"));
   await page.route("**/api/v1/auth/signup", captureSignupBody);
   await page.route("**/api/auth/signup", captureSignupBody);
@@ -100,6 +115,10 @@ try {
   await page.locator('input[type="password"]').fill("wrong-password");
   await page.locator('button[type="submit"]').click();
 
+  await page.getByText("You're doing that too fast - wait a minute and try again.").waitFor();
+  await page.unroute("**/api/v1/auth/login", rateLimitedLogin);
+  await page.route("**/api/v1/auth/login", failAuthPath("Service unavailable for test.", "TEST_UNAVAILABLE"));
+  await page.locator('button[type="submit"]').click();
   await page.getByText("Service unavailable for test.").waitFor();
   assert.equal(await page.getByText("Welcome back").isVisible(), true);
   assert.equal(await page.getByText("Browse local demo").count(), 0);

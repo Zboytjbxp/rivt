@@ -380,6 +380,7 @@ async function runMobileFlow(page) {
   await page.getByRole("button", { name: "Crew", exact: true }).click();
   await page.getByRole("heading", { name: "Crew", exact: true }).waitFor({ timeout: 15_000 });
   await assertNoHorizontalOverflow(page, "Crew");
+  await page.getByRole("button", { name: "Plan invite", exact: true }).click();
   const crewInviteInputs = page.locator(".v2-crew-invite-inputs input");
   await assert.equal(await crewInviteInputs.count(), 4, "Crew invite planner should render four contained inputs");
   await crewInviteInputs.nth(1).fill("Electrical framing and service");
@@ -426,6 +427,7 @@ async function runMobileFlow(page) {
   await assertNoHorizontalOverflow(page, "Settings route");
   await page.getByRole("button", { name: "Crew", exact: true }).click();
   await page.getByRole("heading", { name: "Crew", exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByRole("button", { name: "Plan invite", exact: true }).click();
   await page.getByPlaceholder("Name or company").fill("First Coast Electric");
   await assertControlCenterClickable(page, ".v2-crew-invite-form .v2-primary-button", "crew plan invite button");
   await page.locator(".v2-crew-invite-form .v2-primary-button").click();

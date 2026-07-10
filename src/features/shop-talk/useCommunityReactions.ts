@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { apiPath } from "../../lib/api";
+import { apiPath, fetchWithTimeout } from "../../lib/api";
 import { idempotencyKey } from "../../lib/app-helpers";
 import type { CommunityReactionTargetType } from "./community-utils";
 import {
@@ -100,7 +100,7 @@ export function useCommunityReactions({
     async function loadCommunityReactionLedger() {
       setCommunityReactionStatus("loading");
       try {
-        const response = await fetch(apiPath("/api/v1/shop-talk/reactions/batch"), {
+        const response = await fetchWithTimeout(apiPath("/api/v1/shop-talk/reactions/batch"), {
           method: "POST",
           credentials: "include",
           headers: { "Content-Type": "application/json" },
@@ -157,7 +157,7 @@ export function useCommunityReactions({
     const nextReaction = previousReaction === direction ? null : direction;
     setCommunityReactionPending(ledgerKey, true);
     try {
-      const response = await fetch(apiPath("/api/v1/shop-talk/reactions"), {
+      const response = await fetchWithTimeout(apiPath("/api/v1/shop-talk/reactions"), {
         method: "POST",
         credentials: "include",
         headers: {

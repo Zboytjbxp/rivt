@@ -10,6 +10,15 @@ Status values:
 
 Evidence must eventually link to implementation, automated tests, manual acceptance proof, and deployed build.
 
+## Traceability Addendum - 2026-07-10 Field Reliability Train
+
+- `GA-UX-005` gains recovery-honesty evidence: client requests now time out, boot-time 5xx/network failures show a retry state instead of false logout, rate limits use human copy, and the offline banner no longer promises a sync queue that does not exist.
+- `GA-UX-005` also gains upload-recovery evidence: job-camera and album batches continue after individual failures, preserve failed files for retry, and a rendered tool smoke proves the original captured image can be retried into the active job timeline.
+- `GA-UX-006` gains update-safety evidence: a service-worker activation no longer reloads a visible form; a refresh prompt is shown while the page is visible, and asset cache names derive from the built module hash rather than a hand-maintained version string.
+- `GA-PRO-001` gains public-link evidence: Open Graph/Twitter metadata now uses a 1200x630 RIVT-owned image rendered from the approved logo asset, with canonical URL, robots, sitemap, and route-specific document titles.
+- `GA-OPS-007` gains local verification evidence: build, lint, security lint, 46/46 unit tests, E2E, guest-preview recovery, Tools upload retry, mobile actions, dependency audit, and diff checks passed. The configured remote PostgreSQL stalled both the full integration command and a targeted project test without output, so this addendum does not claim new DB-backed evidence.
+- `GA-OPS-008` remains pending until the branch is merged, Railway serves the exact runtime SHA, and `npm run monitor:production` passes.
+
 ## Traceability Addendum - 2026-07-09 Desktop Workspace Pass
 
 - `GA-UX-003` gains desktop information-hierarchy evidence: Home, Tools, Crew, and Shop Talk now use desktop-specific work lanes instead of stretching a single mobile stack across the available width. The pass keeps the existing five primary destinations and does not introduce a parallel desktop navigation model.

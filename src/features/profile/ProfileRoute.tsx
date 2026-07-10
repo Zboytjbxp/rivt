@@ -4,7 +4,7 @@ import type { Role, Trade } from "../../types";
 import { useCallback, useEffect, useState } from "react";
 import { ProfileHub, type AccountSessionSummary, type ProfileUpdateInput } from "./ProfileHub";
 import type { SafetyQuizResult } from "./training-data";
-import { apiPath } from "../../lib/api";
+import { apiPath, fetchWithTimeout } from "../../lib/api";
 
 export type ProfileRouteView = "Trust & Legal" | "Safety & Training" | "Reviews" | "Feedback" | "Settings";
 
@@ -105,7 +105,7 @@ export function ProfileRoute({
   const [sessions, setSessions] = useState<AccountSessionSummary[]>([]);
 
   const fetchAccountSessions = useCallback(async () => {
-    const response = await fetch(apiPath("/api/v1/sessions"), { credentials: "include" });
+    const response = await fetchWithTimeout(apiPath("/api/v1/sessions"), { credentials: "include" });
     const body = await response.json().catch(() => ({})) as {
       data?: { sessions?: AccountSessionSummary[] };
       error?: { message?: string };
@@ -123,7 +123,7 @@ export function ProfileRoute({
   }, [fetchAccountSessions]);
 
   async function revokeSession(sessionId: string) {
-    const response = await fetch(apiPath(`/api/v1/sessions/${sessionId}`), {
+    const response = await fetchWithTimeout(apiPath(`/api/v1/sessions/${sessionId}`), {
       method: "DELETE",
       credentials: "include",
     });
@@ -138,7 +138,7 @@ export function ProfileRoute({
   }
 
   async function revokeOtherSessions() {
-    const response = await fetch(apiPath("/api/v1/sessions/revoke-others"), {
+    const response = await fetchWithTimeout(apiPath("/api/v1/sessions/revoke-others"), {
       method: "POST",
       credentials: "include",
     });

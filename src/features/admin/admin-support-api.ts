@@ -1,4 +1,4 @@
-import { apiPath, requestKey } from "../../lib/api";
+import { apiPath, fetchWithTimeout, requestKey } from "../../lib/api";
 import type { Role } from "../../types";
 
 export type SupportCaseStatus = "open" | "reviewing" | "resolved" | "closed";
@@ -39,7 +39,7 @@ export interface SupportCase {
 }
 
 export async function fetchAdminSupportCases(): Promise<SupportCase[]> {
-  const response = await fetch(apiPath("/api/v1/admin/overview"), { credentials: "include" });
+  const response = await fetchWithTimeout(apiPath("/api/v1/admin/overview"), { credentials: "include" });
   if (!response.ok) {
     throw new Error(`Could not load support cases (${response.status}).`);
   }
@@ -51,7 +51,7 @@ export async function approveAccountTypeChange(
   supportCaseId: string,
   input: { targetRole: Role; organizationName?: string; reasonCode: string; reason: string },
 ): Promise<SupportCase> {
-  const response = await fetch(apiPath(`/api/v1/admin/support-cases/${encodeURIComponent(supportCaseId)}/account-type`), {
+  const response = await fetchWithTimeout(apiPath(`/api/v1/admin/support-cases/${encodeURIComponent(supportCaseId)}/account-type`), {
     method: "POST",
     credentials: "include",
     headers: {
@@ -74,7 +74,7 @@ export async function updateSupportCaseStatus(
   supportCaseId: string,
   input: { status: SupportCaseStatus; note: string; reasonCode: string; reason: string },
 ): Promise<SupportCase> {
-  const response = await fetch(apiPath(`/api/v1/admin/support-cases/${encodeURIComponent(supportCaseId)}/events`), {
+  const response = await fetchWithTimeout(apiPath(`/api/v1/admin/support-cases/${encodeURIComponent(supportCaseId)}/events`), {
     method: "POST",
     credentials: "include",
     headers: {

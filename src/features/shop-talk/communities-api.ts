@@ -1,4 +1,4 @@
-import { apiPath } from "../../lib/api";
+import { apiPath, fetchWithTimeout, notifySessionExpired } from "../../lib/api";
 
 export type CommunityAudience = "public" | "contractors" | "tradespeople";
 
@@ -22,7 +22,8 @@ export function communitySlug(name: string): string {
 export async function fetchCommunities(query?: string): Promise<ServerCommunity[] | null> {
   try {
     const suffix = query?.trim() ? `?q=${encodeURIComponent(query.trim())}` : "";
-    const response = await fetch(apiPath(`/api/v1/communities${suffix}`), { credentials: "include" });
+    const response = await fetchWithTimeout(apiPath(`/api/v1/communities${suffix}`), { credentials: "include" });
+    if (response.status === 401) notifySessionExpired();
     if (!response.ok) return null;
     const body = await response.json().catch(() => null) as { data?: { communities?: ServerCommunity[] } } | null;
     return Array.isArray(body?.data?.communities) ? body!.data!.communities! : null;
@@ -44,7 +45,7 @@ export async function createCommunity(input: {
   confirmDuplicate?: boolean;
 }): Promise<CreateCommunityResult | null> {
   try {
-    const response = await fetch(apiPath("/api/v1/communities"), {
+    const response = await fetchWithTimeout(apiPath("/api/v1/communities"), {
       method: "POST",
       credentials: "include",
       headers: { "Content-Type": "application/json" },
@@ -54,6 +55,7 @@ export async function createCommunity(input: {
       data?: { community?: ServerCommunity };
       error?: { code?: string; message?: string; details?: { candidates?: ServerCommunity[] } };
     } | null;
+    if (response.status === 401) notifySessionExpired();
     if (response.status === 409 && body?.error?.code === "COMMUNITY_DUPLICATE_CANDIDATES") {
       return {
         duplicateCandidates: Array.isArray(body.error.details?.candidates) ? body.error.details!.candidates! : [],
@@ -70,10 +72,11 @@ export async function createCommunity(input: {
 /** Join or leave a community by slug. Fails silently when the backend is unavailable. */
 export async function setCommunityMembership(slug: string, joined: boolean): Promise<boolean> {
   try {
-    const response = await fetch(apiPath(`/api/v1/communities/${encodeURIComponent(slug)}/join`), {
+    const response = await fetchWithTimeout(apiPath(`/api/v1/communities/${encodeURIComponent(slug)}/join`), {
       method: joined ? "POST" : "DELETE",
       credentials: "include",
     });
+    if (response.status === 401) notifySessionExpired();
     return response.ok;
   } catch {
     return false;

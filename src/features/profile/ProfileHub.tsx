@@ -38,7 +38,7 @@ import { usePushNotifications } from "../notifications/usePushNotifications";
 import { UpgradeModal } from "../pro/UpgradeModal";
 import { RIVT_PRO_OFFER } from "../pro/proOffer";
 import { BillingApiError, cancelSubscription, reconcileStripeCheckout, resumeSubscription, startBillingPortal } from "../../lib/billing";
-import { apiPath, requestKey } from "../../lib/api";
+import { apiPath, fetchWithTimeout, requestKey } from "../../lib/api";
 import { usePersona } from "../persona/usePersona";
 import "../pro/pro.css";
 import { brandConfig, type ThemeMode, type ThemePalette } from "../../brandConfig";
@@ -703,7 +703,7 @@ async function createSupportCase(input: {
   title: string;
   description: string;
 }) {
-  const response = await fetch(apiPath("/api/v1/support/cases"), {
+  const response = await fetchWithTimeout(apiPath("/api/v1/support/cases"), {
     method: "POST",
     credentials: "include",
     headers: {
@@ -1249,7 +1249,7 @@ export function ProfileHub({
     let cancelled = false;
     async function loadNotificationPrefs() {
       try {
-        const response = await fetch(apiPath("/api/v1/notification-preferences"), { credentials: "include" });
+        const response = await fetchWithTimeout(apiPath("/api/v1/notification-preferences"), { credentials: "include" });
         const body = await response.json().catch(() => ({})) as {
           data?: { preferences?: NotificationPreference[] };
         };
@@ -1277,7 +1277,7 @@ export function ProfileHub({
     setNotificationPrefStatus("");
     setNotificationPrefs((current) => ({ ...current, [row.key]: enabled }));
     try {
-      const response = await fetch(apiPath("/api/v1/notification-preferences"), {
+      const response = await fetchWithTimeout(apiPath("/api/v1/notification-preferences"), {
         method: "PUT",
         credentials: "include",
         headers: { "Content-Type": "application/json" },

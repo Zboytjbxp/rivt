@@ -50,11 +50,15 @@ async function configurePage(page) {
     contentType: "application/json",
     body: JSON.stringify({ error: { code: "UNAUTHENTICATED", message: "Sign in required." } }),
   }));
-  await page.route("**/api/**", (route) => route.fulfill({
-    status: 200,
-    contentType: "application/json",
-    body: JSON.stringify({ data: {}, meta: { nextCursor: null } }),
-  }));
+  await page.route("**/api/**", (route) => {
+    const pathname = new URL(route.request().url()).pathname;
+    if (pathname === "/api/v1/me" || pathname === "/api/auth/providers") return route.fallback();
+    return route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ data: {}, meta: { nextCursor: null } }),
+    });
+  });
 }
 
 async function openPreview(page, roleLabel, expectedHeading) {
@@ -121,6 +125,49 @@ async function verifyBootRecovery(browser) {
   await context.close();
 }
 
+async function verifyAuthConnectionRecovery(browser) {
+  const context = await browser.newContext({ viewport: { width: 390, height: 664 } });
+  const page = await context.newPage();
+  let sessionLookupRecovered = false;
+  await page.route("**/api/v1/me", (route) => {
+    if (!sessionLookupRecovered) {
+      return route.fulfill({
+        status: 503,
+        contentType: "application/json",
+        body: JSON.stringify({ error: { code: "SERVICE_UNAVAILABLE", message: "Temporary outage." } }),
+      });
+    }
+    return route.fulfill({
+      status: 401,
+      contentType: "application/json",
+      body: JSON.stringify({ error: { code: "UNAUTHENTICATED", message: "Sign in required." } }),
+    });
+  });
+  await page.route("**/api/auth/providers", (route) => route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: JSON.stringify({ providers: {} }),
+  }));
+  await page.route("**/api/storage", (route) => route.fulfill({
+    status: 401,
+    contentType: "application/json",
+    body: JSON.stringify({ error: { code: "UNAUTHENTICATED", message: "Sign in required." } }),
+  }));
+
+  await page.goto(baseUrl, { waitUntil: "networkidle" });
+  await page.getByRole("heading", { name: "RIVT is having trouble connecting" }).waitFor({ timeout: 10_000 });
+  assert.equal(
+    await page.getByRole("button", { name: "Retry" }).isVisible(),
+    true,
+    "Boot-time 5xx should offer retry instead of presenting sign-in",
+  );
+  await page.screenshot({ path: path.join(screenshotDir, "auth-connection-recovery-390.png"), fullPage: false });
+  sessionLookupRecovered = true;
+  await page.getByRole("button", { name: "Retry" }).click();
+  await page.getByRole("button", { name: /Skip/i }).waitFor({ timeout: 10_000 });
+  await context.close();
+}
+
 try {
   await fs.rm(screenshotDir, { recursive: true, force: true });
   await fs.mkdir(screenshotDir, { recursive: true });
@@ -139,7 +186,9 @@ try {
 
   const consoleErrors = [];
   page.on("console", (message) => {
-    if (message.type() === "error") consoleErrors.push(message.text());
+    if (message.type() === "error" && !/status of 401 \(Unauthorized\)/i.test(message.text())) {
+      consoleErrors.push(message.text());
+    }
   });
   page.on("pageerror", (error) => consoleErrors.push(error.message));
 
@@ -155,6 +204,7 @@ try {
 
   assert.deepEqual(consoleErrors, [], `Unexpected preview console errors:\n${consoleErrors.join("\n")}`);
   await verifyBootRecovery(browser);
+  await verifyAuthConnectionRecovery(browser);
   await browser.close();
   console.log(JSON.stringify({ ok: true, screenshotDir }, null, 2));
 } finally {

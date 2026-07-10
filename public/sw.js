@@ -1,4 +1,5 @@
-const CACHE = 'rivt-v5-2026-07-09-preview-recovery';
+const BUILD_ID = new URL(self.location.href).searchParams.get('build') || 'development';
+const CACHE = `rivt-assets-${BUILD_ID.replace(/[^a-z0-9_-]+/gi, '-').slice(-72)}`;
 const OFFLINE_DOCUMENT = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>RIVT needs a connection</title><style>body{margin:0;display:grid;min-height:100vh;place-items:center;padding:24px;box-sizing:border-box;background:#ff4b00;color:#0b0b0b;font:16px/1.45 Arial,sans-serif}main{width:min(100%,380px)}h1{margin:10px 0;font-size:34px;line-height:1}strong{letter-spacing:.12em}</style></head><body><main><strong>RIVT</strong><h1>Connect to open RIVT.</h1><p>This app update needs a connection before it can open safely. Your server-backed account and records are not affected.</p></main></body></html>`;
 
 self.addEventListener('install', e => {

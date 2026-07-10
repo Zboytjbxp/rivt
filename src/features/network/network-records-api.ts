@@ -1,4 +1,4 @@
-import { apiPath, notifySessionExpired, requestKey } from "../../lib/api";
+import { apiPath, fetchWithTimeout, notifySessionExpired, requestKey } from "../../lib/api";
 
 export type NetworkRecordType = "crew_member" | "crew_invite" | "network_review";
 
@@ -26,7 +26,7 @@ export interface NetworkRecordInput {
 export async function fetchNetworkRecords(recordType?: NetworkRecordType): Promise<ServerNetworkRecord[] | null> {
   try {
     const suffix = recordType ? `?type=${encodeURIComponent(recordType)}` : "";
-    const response = await fetch(apiPath(`/api/v1/network-records${suffix}`), { credentials: "include" });
+    const response = await fetchWithTimeout(apiPath(`/api/v1/network-records${suffix}`), { credentials: "include" });
     if (response.status === 401) notifySessionExpired();
     if (!response.ok) return null;
     const body = await response.json().catch(() => null) as { data?: { records?: ServerNetworkRecord[] } } | null;
@@ -38,7 +38,7 @@ export async function fetchNetworkRecords(recordType?: NetworkRecordType): Promi
 
 export async function upsertNetworkRecord(input: NetworkRecordInput): Promise<ServerNetworkRecord | null> {
   try {
-    const response = await fetch(apiPath("/api/v1/network-records"), {
+    const response = await fetchWithTimeout(apiPath("/api/v1/network-records"), {
       method: "POST",
       credentials: "include",
       headers: {
@@ -58,7 +58,7 @@ export async function upsertNetworkRecord(input: NetworkRecordInput): Promise<Se
 
 export async function deleteNetworkRecordByLocalId(recordType: NetworkRecordType, localId: string): Promise<boolean> {
   try {
-    const response = await fetch(
+    const response = await fetchWithTimeout(
       apiPath(`/api/v1/network-records/${encodeURIComponent(recordType)}/${encodeURIComponent(localId)}`),
       {
         method: "DELETE",

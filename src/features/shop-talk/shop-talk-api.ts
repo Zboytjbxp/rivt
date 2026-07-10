@@ -1,4 +1,4 @@
-import { apiPath, notifySessionExpired } from "../../lib/api";
+import { apiPath, fetchWithTimeout, notifySessionExpired, UPLOAD_REQUEST_TIMEOUT_MS } from "../../lib/api";
 
 export interface ShopTalkPostInput {
   title: string;
@@ -68,7 +68,7 @@ export interface ShopTalkReportInput {
  */
 export async function createShopTalkPost(input: ShopTalkPostInput): Promise<ServerShopTalkPost | null> {
   try {
-    const response = await fetch(apiPath("/api/v1/shop-talk/posts"), {
+    const response = await fetchWithTimeout(apiPath("/api/v1/shop-talk/posts"), {
       method: "POST",
       credentials: "include",
       headers: {
@@ -90,12 +90,12 @@ export async function uploadShopTalkPostPhoto(postId: string, file: File): Promi
   try {
     const formData = new FormData();
     formData.append("file", file);
-    const response = await fetch(apiPath(`/api/v1/shop-talk/posts/${encodeURIComponent(postId)}/media`), {
+    const response = await fetchWithTimeout(apiPath(`/api/v1/shop-talk/posts/${encodeURIComponent(postId)}/media`), {
       method: "POST",
       credentials: "include",
       headers: { "Idempotency-Key": crypto.randomUUID() },
       body: formData,
-    });
+    }, UPLOAD_REQUEST_TIMEOUT_MS);
     if (response.status === 401) notifySessionExpired();
     if (!response.ok) return null;
     const body = await response.json().catch(() => null) as { data?: { post?: ServerShopTalkPost } } | null;
@@ -107,7 +107,7 @@ export async function uploadShopTalkPostPhoto(postId: string, file: File): Promi
 
 export async function deleteShopTalkPost(postId: string): Promise<boolean> {
   try {
-    const response = await fetch(apiPath(`/api/v1/shop-talk/posts/${encodeURIComponent(postId)}`), {
+    const response = await fetchWithTimeout(apiPath(`/api/v1/shop-talk/posts/${encodeURIComponent(postId)}`), {
       method: "DELETE",
       credentials: "include",
       headers: { "Idempotency-Key": crypto.randomUUID() },
@@ -123,7 +123,7 @@ export async function deleteShopTalkPost(postId: string): Promise<boolean> {
 export async function fetchShopTalkPosts(communitySlug?: string | null): Promise<ServerShopTalkPost[] | null> {
   try {
     const suffix = communitySlug ? `?community=${encodeURIComponent(communitySlug)}` : "";
-    const response = await fetch(apiPath(`/api/v1/shop-talk/posts${suffix}`), { credentials: "include" });
+    const response = await fetchWithTimeout(apiPath(`/api/v1/shop-talk/posts${suffix}`), { credentials: "include" });
     if (response.status === 401) notifySessionExpired();
     if (!response.ok) return null;
     const body = await response.json().catch(() => null) as { data?: { posts?: ServerShopTalkPost[] } } | null;
@@ -135,7 +135,7 @@ export async function fetchShopTalkPosts(communitySlug?: string | null): Promise
 
 export async function createShopTalkAnswer(postId: string, body: string): Promise<ServerShopTalkAnswer | null> {
   try {
-    const response = await fetch(apiPath(`/api/v1/shop-talk/posts/${encodeURIComponent(postId)}/answers`), {
+    const response = await fetchWithTimeout(apiPath(`/api/v1/shop-talk/posts/${encodeURIComponent(postId)}/answers`), {
       method: "POST",
       credentials: "include",
       headers: {
@@ -155,7 +155,7 @@ export async function createShopTalkAnswer(postId: string, body: string): Promis
 
 export async function verifyShopTalkAnswer(postId: string, answerId: string): Promise<ServerShopTalkAnswer[] | null> {
   try {
-    const response = await fetch(
+    const response = await fetchWithTimeout(
       apiPath(`/api/v1/shop-talk/posts/${encodeURIComponent(postId)}/answers/${encodeURIComponent(answerId)}/verified-fix`),
       {
         method: "POST",
@@ -174,7 +174,7 @@ export async function verifyShopTalkAnswer(postId: string, answerId: string): Pr
 
 export async function reportShopTalkTarget(input: ShopTalkReportInput): Promise<boolean> {
   try {
-    const response = await fetch(apiPath("/api/v1/shop-talk/reports"), {
+    const response = await fetchWithTimeout(apiPath("/api/v1/shop-talk/reports"), {
       method: "POST",
       credentials: "include",
       headers: {

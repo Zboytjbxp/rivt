@@ -100,13 +100,14 @@ import { useCommunityReactions } from "./features/shop-talk/useCommunityReaction
 import type { ProfileUpdateInput } from "./features/profile/ProfileHub";
 import type { ToolMode } from "./features/tools/ToolsStudio";
 import { recordChecklist, safetyQuizData, trainingModules, type SafetyQuizResult } from "./features/profile/training-data";
-import { apiPath, RIVT_SESSION_EXPIRED_EVENT } from "./lib/api";
+import { apiPath, fetchWithTimeout, RIVT_SESSION_EXPIRED_EVENT } from "./lib/api";
 import {
   AuthGate,
   AuthLinkFlow,
   GuestBanner,
   GuestSignUpPrompt,
   GUEST_PREVIEW_PREFS_KEY,
+  LaunchConnectionError,
   LaunchLoader,
   OnboardingFlow,
   type AuthMethod,
@@ -460,6 +461,8 @@ function App() {
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
   const [canonicalAccount, setCanonicalAccount] = useState<CanonicalAccount | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
+  const [authConnectionError, setAuthConnectionError] = useState<string | null>(null);
+  const [authRetryKey, setAuthRetryKey] = useState(0);
   const [authMode, setAuthMode] = useState<"login" | "signup">(readAuthModePreference);
   const [authError, setAuthError] = useState<string | null>(() => {
     const authErrorProvider = new URLSearchParams(window.location.search).get("auth_error");
@@ -470,6 +473,11 @@ function App() {
   const [authProviders, setAuthProviders] = useState<Record<string, { ok: boolean; mode: string; missing: string[]; purpose: string }>>({});
   const [pilotInviteRequired, setPilotInviteRequired] = useState(false);
   const [authNotice, setAuthNotice] = useState<string | null>(null);
+  useEffect(() => {
+    document.title = authUser && onboardingComplete
+      ? `${pageCopy[activeView].title} - RIVT`
+      : "RIVT | Where skilled trades connect";
+  }, [activeView, authUser, onboardingComplete]);
   const [query, setQuery] = useState(() => readWorkFilterPrefs().query);
   const [profileSearchFocus, setProfileSearchFocus] = useState<ProfileSearchResult | null>(null);
   const [shopTalkGlobalQuery, setShopTalkGlobalQuery] = useState("");
@@ -752,9 +760,9 @@ function App() {
       }
       try {
         const [meResponse, providersResponse, storageResponse] = await Promise.all([
-          fetch(apiPath("/api/v1/me"), { credentials: "include" }),
-          fetch(apiPath("/api/auth/providers"), { credentials: "include" }),
-          fetch(apiPath("/api/storage"), { credentials: "include" }),
+          fetchWithTimeout(apiPath("/api/v1/me"), { credentials: "include" }),
+          fetchWithTimeout(apiPath("/api/auth/providers"), { credentials: "include" }),
+          fetchWithTimeout(apiPath("/api/storage"), { credentials: "include" }),
         ]);
         const meBody = await meResponse.json().catch(() => ({})) as { data?: CanonicalAccount };
         const providersBody = await providersResponse.json().catch(() => ({})) as {
@@ -805,8 +813,10 @@ function App() {
           });
         }
         if (meResponse.ok && meBody.data) {
+          setAuthConnectionError(null);
           applyCanonicalAccount(meBody.data);
         } else if (meResponse.status === 401) {
+          setAuthConnectionError(null);
           setAuthUser(null);
           setCanonicalAccount(null);
           setOnboardingComplete(false);
@@ -817,13 +827,7 @@ function App() {
         }
       } catch {
         if (!cancelled) {
-          setAuthUser(null);
-          setCanonicalAccount(null);
-          setOnboardingComplete(false);
-          resetCommunityReactions();
-          setAuthProviders({});
-          setStorageUsage(null);
-          setAuthError(null);
+          setAuthConnectionError("Your account is still here. Check your connection, then retry.");
         }
       } finally {
         if (!cancelled) {
@@ -836,10 +840,10 @@ function App() {
     return () => {
       cancelled = true;
     };
-  }, [applyCanonicalAccount, resetCommunityReactions]);
+  }, [applyCanonicalAccount, authRetryKey, resetCommunityReactions]);
 
   async function refreshCanonicalAccount() {
-    const response = await fetch(apiPath("/api/v1/me"), { credentials: "include" });
+    const response = await fetchWithTimeout(apiPath("/api/v1/me"), { credentials: "include" });
     const body = await response.json().catch(() => ({})) as { data?: CanonicalAccount; error?: { message?: string } };
     if (!response.ok || !body.data) throw new Error(body.error?.message || "RIVT could not load your account.");
     applyCanonicalAccount(body.data);
@@ -1015,7 +1019,7 @@ function App() {
     let cancelled = false;
     async function loadMessageNotificationPreference() {
       try {
-        const response = await fetch(apiPath("/api/v1/notification-preferences"), { credentials: "include" });
+        const response = await fetchWithTimeout(apiPath("/api/v1/notification-preferences"), { credentials: "include" });
         const body = await response.json().catch(() => ({})) as {
           data?: { preferences?: Array<{ notificationType: string; channel: string; enabled: boolean }> };
         };
@@ -1130,7 +1134,7 @@ function App() {
     try {
       const requestMode = authMode;
       const path = requestMode === "signup" ? "/api/v1/auth/signup" : "/api/v1/auth/login";
-      const response = await fetch(apiPath(path), {
+      const response = await fetchWithTimeout(apiPath(path), {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
@@ -1162,7 +1166,7 @@ function App() {
     setAuthError(null);
     setAuthNotice(null);
     try {
-      const response = await fetch(apiPath("/api/v1/auth/password/forgot"), {
+      const response = await fetchWithTimeout(apiPath("/api/v1/auth/password/forgot"), {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
@@ -1180,7 +1184,7 @@ function App() {
     setAuthError(null);
     setAuthNotice(null);
     try {
-      const response = await fetch(apiPath("/api/v1/auth/email/resend"), {
+      const response = await fetchWithTimeout(apiPath("/api/v1/auth/email/resend"), {
         method: "POST",
         credentials: "include",
       });
@@ -1197,7 +1201,7 @@ function App() {
       setGuestPromptOpen(true);
       return;
     }
-    const response = await fetch(apiPath("/api/v1/profile"), {
+    const response = await fetchWithTimeout(apiPath("/api/v1/profile"), {
       method: "PATCH",
       credentials: "include",
       headers: { "Content-Type": "application/json" },
@@ -1213,7 +1217,7 @@ function App() {
   }
 
   async function _handleSetAvailability(availabilityStatus: CanonicalAccount["profile"]["availabilityStatus"]) {
-    const response = await fetch(apiPath("/api/v1/profile"), {
+    const response = await fetchWithTimeout(apiPath("/api/v1/profile"), {
       method: "PATCH",
       credentials: "include",
       headers: { "Content-Type": "application/json" },
@@ -1238,7 +1242,7 @@ function App() {
       setGuestPromptOpen(true);
       return;
     }
-    const response = await fetch(apiPath(`/api/v1/profile/${visibility === "network" ? "publish" : "unpublish"}`), {
+    const response = await fetchWithTimeout(apiPath(`/api/v1/profile/${visibility === "network" ? "publish" : "unpublish"}`), {
       method: "POST",
       credentials: "include",
     });
@@ -1288,7 +1292,7 @@ function App() {
 
   async function handleLogout() {
     try {
-      await fetch(apiPath("/api/v1/auth/logout"), {
+      await fetchWithTimeout(apiPath("/api/v1/auth/logout"), {
         method: "POST",
         credentials: "include",
       });
@@ -1749,7 +1753,7 @@ function App() {
   async function handleOnboardingComplete(result: OnboardingResult) {
     setAuthError(null);
     try {
-      const response = await fetch(apiPath("/api/v1/onboarding/complete"), {
+      const response = await fetchWithTimeout(apiPath("/api/v1/onboarding/complete"), {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
@@ -2262,6 +2266,19 @@ function App() {
   const safetyCertCount = Object.values(safetyQuizResults).filter((result) => result.passed).length;
   if (authLoading) {
     return <LaunchLoader />;
+  }
+
+  if (authConnectionError) {
+    return (
+      <LaunchConnectionError
+        message={authConnectionError}
+        onRetry={() => {
+          setAuthConnectionError(null);
+          setAuthLoading(true);
+          setAuthRetryKey((current) => current + 1);
+        }}
+      />
+    );
   }
 
   // Check for report share URL — publicly accessible, no auth needed

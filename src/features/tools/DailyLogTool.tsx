@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { CheckCircle2, CloudSun, Copy, Download, FileText, FolderOpen, RefreshCw } from "lucide-react";
 import type { Job } from "../../types";
 import { Panel } from "../../components/ui";
+import { fetchWithTimeout } from "../../lib/api";
 import type { CanonicalActiveWork } from "../work/job-api";
 import { addProjectNote, openProjectForActiveWork, ProjectApiError } from "./project-api";
 import { fetchToolRecords, upsertToolRecord, type ServerToolRecord } from "./tool-records-api";
@@ -156,7 +157,7 @@ export function DailyLogTool({ activeJob, activeWork }: { activeJob: Job | null;
     if (wxData) return;
     if (!navigator.geolocation) return;
     navigator.geolocation.getCurrentPosition((pos) => {
-      fetch(`https://api.open-meteo.com/v1/forecast?latitude=${pos.coords.latitude}&longitude=${pos.coords.longitude}&current_weather=true&temperature_unit=fahrenheit`)
+      fetchWithTimeout(`https://api.open-meteo.com/v1/forecast?latitude=${pos.coords.latitude}&longitude=${pos.coords.longitude}&current_weather=true&temperature_unit=fahrenheit`)
         .then((r) => r.json())
         .then((data: { current_weather?: { temperature: number; weathercode: number } }) => {
           const cw = data.current_weather;

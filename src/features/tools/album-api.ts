@@ -1,4 +1,4 @@
-import { type ApiErrorBody, RivtApiError, apiPath, requestKey, makeRequest } from "../../lib/api";
+import { type ApiErrorBody, RivtApiError, UPLOAD_REQUEST_TIMEOUT_MS, apiPath, fetchWithTimeout, requestKey, makeRequest, notifySessionExpired } from "../../lib/api";
 
 export class AlbumApiError extends RivtApiError {
   constructor(status: number, body: ApiErrorBody) {
@@ -57,13 +57,14 @@ export async function uploadAlbumPhoto(albumId: string, file: File, caption = ""
   form.append("file", file);
   form.append("name", file.name);
   form.append("caption", caption);
-  const response = await fetch(apiPath(`/api/v1/albums/${albumId}/photos`), {
+  const response = await fetchWithTimeout(apiPath(`/api/v1/albums/${albumId}/photos`), {
     method: "POST",
     credentials: "include",
     headers: { "Idempotency-Key": requestKey() },
     body: form,
-  });
+  }, UPLOAD_REQUEST_TIMEOUT_MS);
   const body = await response.json().catch(() => ({})) as ApiErrorBody & { data?: { photo: AlbumPhoto } };
+  if (response.status === 401) notifySessionExpired();
   if (!response.ok) throw new AlbumApiError(response.status, body);
   return body.data!.photo;
 }

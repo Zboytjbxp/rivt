@@ -44,7 +44,7 @@ import {
   sortedAnswers,
   type CommunityBadgeThresholds,
 } from "./community-utils";
-import { apiPath } from "../../lib/api";
+import { apiPath, fetchWithTimeout } from "../../lib/api";
 import "./shop-talk.css";
 
 interface AccountProfile {
@@ -902,7 +902,7 @@ export function ShopTalkView({
     if (newsFetched) return;
     setNewsLoading(true);
     try {
-      const response = await fetch(apiPath(`/api/news?location=${encodeURIComponent(userLocation)}`));
+      const response = await fetchWithTimeout(apiPath(`/api/news?location=${encodeURIComponent(userLocation)}`));
       const data = await response.json() as { items?: NewsItem[] };
       const items = Array.isArray(data.items) && data.items.length > 0 ? data.items : newsItems;
       setLiveNews(items);

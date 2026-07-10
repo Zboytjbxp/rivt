@@ -1,4 +1,4 @@
-import { apiPath } from "../../lib/api";
+import { apiPath, fetchWithTimeout } from "../../lib/api";
 import type { ShopTalkReportReason } from "../shop-talk/shop-talk-api";
 
 export type ModerationReportStatus = "open" | "reviewing" | "actioned" | "dismissed" | "all";
@@ -37,7 +37,7 @@ export interface ModerationReport {
 }
 
 export async function fetchShopTalkModerationReports(status: ModerationReportStatus): Promise<ModerationReport[]> {
-  const response = await fetch(
+  const response = await fetchWithTimeout(
     apiPath(`/api/v1/admin/shop-talk/reports?status=${encodeURIComponent(status)}`),
     { credentials: "include" },
   );
@@ -52,7 +52,7 @@ export async function resolveShopTalkModerationReport(
   reportId: string,
   input: { action: ModerationAction; reasonCode: string; reason: string },
 ): Promise<ModerationReport> {
-  const response = await fetch(apiPath(`/api/v1/admin/shop-talk/reports/${encodeURIComponent(reportId)}/actions`), {
+  const response = await fetchWithTimeout(apiPath(`/api/v1/admin/shop-talk/reports/${encodeURIComponent(reportId)}/actions`), {
     method: "POST",
     credentials: "include",
     headers: {

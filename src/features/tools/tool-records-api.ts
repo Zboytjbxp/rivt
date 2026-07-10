@@ -1,4 +1,4 @@
-import { apiPath, notifySessionExpired, requestKey } from "../../lib/api";
+import { apiPath, fetchWithTimeout, notifySessionExpired, requestKey } from "../../lib/api";
 
 export type ToolRecordType =
   | "payment_record"
@@ -40,7 +40,7 @@ export interface ToolRecordInput {
 export async function fetchToolRecords(recordType?: ToolRecordType): Promise<ServerToolRecord[] | null> {
   try {
     const suffix = recordType ? `?type=${encodeURIComponent(recordType)}` : "";
-    const response = await fetch(apiPath(`/api/v1/tool-records${suffix}`), { credentials: "include" });
+    const response = await fetchWithTimeout(apiPath(`/api/v1/tool-records${suffix}`), { credentials: "include" });
     if (response.status === 401) notifySessionExpired();
     if (!response.ok) return null;
     const body = await response.json().catch(() => null) as { data?: { records?: ServerToolRecord[] } } | null;
@@ -52,7 +52,7 @@ export async function fetchToolRecords(recordType?: ToolRecordType): Promise<Ser
 
 export async function upsertToolRecord(input: ToolRecordInput): Promise<ServerToolRecord | null> {
   try {
-    const response = await fetch(apiPath("/api/v1/tool-records"), {
+    const response = await fetchWithTimeout(apiPath("/api/v1/tool-records"), {
       method: "POST",
       credentials: "include",
       headers: {
@@ -72,7 +72,7 @@ export async function upsertToolRecord(input: ToolRecordInput): Promise<ServerTo
 
 export async function deleteToolRecordByLocalId(recordType: ToolRecordType, localId: string): Promise<boolean> {
   try {
-    const response = await fetch(
+    const response = await fetchWithTimeout(
       apiPath(`/api/v1/tool-records/${encodeURIComponent(recordType)}/${encodeURIComponent(localId)}`),
       {
         method: "DELETE",

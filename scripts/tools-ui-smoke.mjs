@@ -129,6 +129,7 @@ async function configurePage(page) {
     });
   });
   let mediaCounter = 0;
+  let rejectNextMediaUpload = true;
   const pageProjectRecord = {
     ...projectRecord,
     entries: [...projectRecord.entries],
@@ -162,6 +163,14 @@ async function configurePage(page) {
     }),
   );
   await page.route(`**/api/v1/projects/${projectRecord.id}/media`, (route) => {
+    if (rejectNextMediaUpload) {
+      rejectNextMediaUpload = false;
+      return route.fulfill({
+        status: 503,
+        contentType: "application/json",
+        body: JSON.stringify({ error: { code: "UPLOAD_TEMPORARILY_UNAVAILABLE", message: "Photo upload was interrupted." } }),
+      });
+    }
     mediaCounter += 1;
     const uploadId = `tools-media-upload-${mediaCounter}`;
     const createdAt = `2026-06-21T13:0${mediaCounter}:00.000Z`;
@@ -523,6 +532,8 @@ async function runToolsFlow(page, viewportName) {
     return shutter instanceof HTMLButtonElement && !shutter.disabled;
   }, null, { timeout: 15_000 });
   await page.getByRole("button", { name: "Take photo" }).click();
+  await page.locator(".v2-camera-save-status", { hasText: "1 of 1 didn't upload - retry the failed photo." }).waitFor({ timeout: 15_000 });
+  await page.locator(".v2-camera-retry").click();
   await page.getByText("Saved to this job's project feed.", { exact: true }).waitFor({ timeout: 15_000 });
   await page.locator(".v2-camera-badge").filter({ hasText: "1 photo" }).waitFor({ timeout: 15_000 });
   await page.getByRole("button", { name: "Done" }).click();
@@ -549,7 +560,9 @@ try {
     const page = await context.newPage();
     const errors = [];
     page.on("console", (message) => {
-      if (message.type() === "error") errors.push(message.text());
+      if (message.type() === "error" && !/status of 503 \(Service Unavailable\)/i.test(message.text())) {
+        errors.push(message.text());
+      }
     });
     page.on("requestfailed", (request) => {
       errors.push(`${request.url()} :: ${request.failure()?.errorText ?? "request failed"}`);

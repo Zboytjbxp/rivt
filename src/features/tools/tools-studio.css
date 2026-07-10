@@ -2528,7 +2528,19 @@
 }
 
 .v2-job-photos-upload-error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
   margin: 0;
+}
+
+.v2-job-photos-upload-error button {
+  display: inline-flex;
+  min-height: 40px;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 7px;
 }
 
 .v2-camera-mode-bar {
@@ -3059,6 +3071,25 @@
 
 .v2-camera-save-status.is-failed {
   background: rgba(132, 28, 35, 0.84);
+}
+
+.v2-camera-retry {
+  position: absolute;
+  right: 24px;
+  bottom: max(190px, calc(env(safe-area-inset-bottom, 0px) + 190px));
+  z-index: 12;
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  gap: 7px;
+  padding: 0 14px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: var(--v2-radius-pill);
+  background: rgba(0, 0, 0, 0.74);
+  color: #fff;
+  font-weight: var(--v2-weight-strong);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
 .v2-camera-flash {

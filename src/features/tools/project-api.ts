@@ -1,4 +1,4 @@
-import { type ApiErrorBody, RivtApiError, apiPath, requestKey, makeRequest } from "../../lib/api";
+import { type ApiErrorBody, RivtApiError, UPLOAD_REQUEST_TIMEOUT_MS, apiPath, fetchWithTimeout, requestKey, makeRequest, notifySessionExpired } from "../../lib/api";
 
 export class ProjectApiError extends RivtApiError {
   constructor(status: number, body: ApiErrorBody) {
@@ -97,15 +97,16 @@ export async function uploadProjectMedia(projectId: string, file: File, notes = 
   form.append("name", file.name);
   form.append("notes", notes);
   form.append("file", file);
-  const response = await fetch(apiPath(`/api/v1/projects/${projectId}/media`), {
+  const response = await fetchWithTimeout(apiPath(`/api/v1/projects/${projectId}/media`), {
     method: "POST",
     credentials: "include",
     headers: { "Idempotency-Key": requestKey() },
     body: form,
-  });
+  }, UPLOAD_REQUEST_TIMEOUT_MS);
   const body = await response.json().catch(() => ({})) as ApiErrorBody & {
     data?: { media: ProjectMedia; entry?: ProjectEntry };
   };
+  if (response.status === 401) notifySessionExpired();
   if (!response.ok) throw new ProjectApiError(response.status, body);
   return body.data;
 }
