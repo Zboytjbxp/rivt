@@ -705,3 +705,12 @@ Evidence must eventually link to implementation, automated tests, manual accepta
 - Packet 08 hardening audit passed live with exact source, migration status, anonymous fail-closed routes, operational controls, durable rate-limit storage, and zero seed/demo findings after cleanup.
 - Founder/support/legal-safety signoff is recorded, and the machine-readable incident and launch readiness gates now report `ready`. Expanded production accessibility smoke now passes on source `d4e6f06a70e3dad8f59d54b6698b79ab08d6fd2d`, but physical/deeper manual accessibility-device evidence remains the next non-machine launch-quality boundary. Error-monitoring capture code, Sentry ingestion, first pilot escalation, backup owner, support hours, incident routing, incident rehearsal, and the Gate A recovery policy are now configured.
 - The app must continue to avoid fake seed data, frontend-only success, and homeowner flows.
+
+## Traceability Addendum - 2026-07-09 Mature Guest Demo and Nationwide Audit
+
+- `GA-UX-005` gains a clearer anonymous first-value path: contractor and subcontractor previews now demonstrate a labeled one-year sample account with completed work, records, repeat relationships, active work, messages, and reputation rather than an empty or lightly populated shell.
+- `GA-UX-006` gains compact-device rendered evidence for both preview roles at 320x568, including reduced-motion rendering, no horizontal overflow, visible initial demo entry, persistent active-work context, and a working Messages-to-Home return path.
+- `GA-AUTH-007` retains fail-closed behavior: guest preview remains client-isolated, makes no authenticated reaction calls, and is cleared when leaving preview for signup or sign-in.
+- `GA-OPS-007` gains fresh local evidence on `codex/nationwide-launch-hardening`: build, lint, security lint, 46/46 unit tests, 18/18 PostgreSQL integration suites, E2E, guest-preview, mobile-actions, work-lifecycle, Tools, Shop Talk/Trade News, Gate A readiness, incident readiness, dependency audit, and diff checks passed.
+- `GA-OPS-008` is unchanged until this branch is merged and production serves its exact source commit.
+- `docs/product/NATIONWIDE_FINAL_LAUNCH_AUDIT_2026-07-09.md` is a product/architecture readiness audit, not a certification. It deliberately does not upgrade Gate A requirement maturity and records that pilot readiness is not nationwide readiness.

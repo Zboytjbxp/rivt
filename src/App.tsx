@@ -113,7 +113,7 @@ import {
   type GuestPreviewPreferences,
   type OnboardingResult,
 } from "./features/auth/AuthScreens";
-import { createGuestPreviewWorkspace } from "./demo/guestPreview";
+import { createGuestPreviewWorkspace, type GuestPreviewSummary } from "./demo/guestPreview";
 
 const TradeFeed = lazy(() => import("./features/home/TradeFeed").then((m) => ({ default: m.TradeFeed })));
 const WorkWorkspace = lazy(() => import("./features/work/WorkWorkspace").then((m) => ({ default: m.WorkWorkspace })));
@@ -245,6 +245,14 @@ function clearRivtLocalState() {
     window.sessionStorage.removeItem(AUTH_MODE_KEY);
   } catch {
     // Session storage is a convenience only.
+  }
+}
+
+function writeGuestPreviewPreferences(preferences: GuestPreviewPreferences) {
+  try {
+    localStorage.setItem(GUEST_PREVIEW_PREFS_KEY, JSON.stringify(preferences));
+  } catch {
+    // Preview preferences are optional; the demo still opens with defaults.
   }
 }
 
@@ -552,6 +560,7 @@ function App() {
   });
   const unreadMessages = inboxConversations.reduce((sum, conversation) => sum + Math.max(0, conversation.unreadCount || 0), 0);
   const [isGuest, setIsGuest] = useState(false);
+  const [guestPreviewSummary, setGuestPreviewSummary] = useState<GuestPreviewSummary | null>(null);
   const [guestPromptOpen, setGuestPromptOpen] = useState(false);
   const [localSetupOpen, setLocalSetupOpen] = useState(false);
   const {
@@ -563,7 +572,7 @@ function App() {
     handleVoteCommunityPost,
     resetCommunityReactions,
   } = useCommunityReactions({
-    authReady: Boolean(authUser && canonicalAccount && onboardingComplete),
+    authReady: Boolean(!isGuest && authUser && canonicalAccount && onboardingComplete),
     communityPosts,
     onReactionError: (message) => addActivity("Reaction not saved", message, "error"),
   });
@@ -875,7 +884,8 @@ function App() {
   }, [reloadJobs]);
 
   const reloadActiveWork = useCallback(async () => {
-    if (isGuest || !authUser || !onboardingComplete) {
+    if (isGuest) return;
+    if (!authUser || !onboardingComplete) {
       setActiveWork([]);
       return;
     }
@@ -947,7 +957,8 @@ function App() {
   }, [authUser, isGuest, onboardingComplete]);
 
   const loadConversationMessages = useCallback(async (conversationId: string | null) => {
-    if (!conversationId || isGuest || !authUser || !onboardingComplete) {
+    if (isGuest) return;
+    if (!conversationId || !authUser || !onboardingComplete) {
       setInboxMessages([]);
       return;
     }
@@ -1182,6 +1193,10 @@ function App() {
   }
 
   async function handleSaveProfile(input: ProfileUpdateInput) {
+    if (isGuest) {
+      setGuestPromptOpen(true);
+      return;
+    }
     const response = await fetch(apiPath("/api/v1/profile"), {
       method: "PATCH",
       credentials: "include",
@@ -1219,6 +1234,10 @@ function App() {
   }
 
   async function handleSetProfileVisibility(visibility: "private" | "network") {
+    if (isGuest) {
+      setGuestPromptOpen(true);
+      return;
+    }
     const response = await fetch(apiPath(`/api/v1/profile/${visibility === "network" ? "publish" : "unpublish"}`), {
       method: "POST",
       credentials: "include",
@@ -2100,6 +2119,7 @@ function App() {
 
   function handleExitGuest() {
     setIsGuest(false);
+    setGuestPreviewSummary(null);
     setAuthUser(null);
     setCanonicalAccount(null);
     setOnboardingComplete(false);
@@ -2121,6 +2141,7 @@ function App() {
   function handleSignUpFromGuest() {
     setAuthMode("signup");
     setIsGuest(false);
+    setGuestPreviewSummary(null);
     setAuthUser(null);
     setCanonicalAccount(null);
     setOnboardingComplete(false);
@@ -2153,7 +2174,8 @@ function App() {
       setAuthError(null);
       setAuthNotice(null);
       setIsGuest(true);
-      setCanonicalAccount(null);
+      setCanonicalAccount(previewWorkspace.canonicalAccount);
+      setGuestPreviewSummary(previewWorkspace.summary);
       setAuthUser({
         id: "guest-preview",
         email: "",
@@ -2197,6 +2219,16 @@ function App() {
         window.history.pushState({}, "", "/");
       }
     }
+  }
+
+  function handleSwitchGuestRole() {
+    const current = readGuestPreviewPreferences();
+    writeGuestPreviewPreferences({
+      role: role === "contractor" ? "tradesperson" : "contractor",
+      trade: current?.trade ?? (accountProfile.specialties[0] as Trade | undefined) ?? "Carpentry",
+      location: current?.location ?? accountProfile.location ?? "Jacksonville, FL",
+    });
+    handleBrowseAsGuest();
   }
 
   const page = pageCopy[activeView];
@@ -2306,6 +2338,8 @@ function App() {
         mobileNavHidden={toolsImmersive}
         guestBanner={
           <GuestBanner
+            role={role}
+            onSwitchRole={handleSwitchGuestRole}
             onSignUp={handleSignUpFromGuest}
             onExit={handleExitGuest}
           />
@@ -2366,6 +2400,7 @@ function App() {
             onboardingComplete={onboardingComplete}
             recordCount={uploadedRecords.size}
             safetyCertCount={safetyCertCount}
+            demoSummary={isGuest ? guestPreviewSummary : null}
             getPostReactionState={getCommunityPostReactionState}
             onVotePost={handleVoteCommunityPost}
             onOpenPost={(postId) => { setShopTalkPostId(postId); setShopTalkCompose(false); setShopTalkAnswerQueue(false); setShopTalkGlobalQuery(""); handleNavigate(defaultViewForDestination("shop-talk")); }}

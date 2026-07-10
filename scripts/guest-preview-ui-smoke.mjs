@@ -61,15 +61,33 @@ async function openPreview(page, roleLabel, expectedHeading) {
   await page.goto(baseUrl, { waitUntil: "networkidle" });
   await page.getByRole("button", { name: /Skip/i }).click();
   await page.getByRole("button", { name: new RegExp(`^${roleLabel}\\b`, "i") }).click();
-  await page.getByRole("button", { name: /Browse RIVT preview/i }).click();
+  const openDemoButton = page.getByRole("button", { name: new RegExp(`Open ${roleLabel.toLowerCase()} demo`, "i") });
+  await openDemoButton.waitFor({ state: "visible" });
+  const openDemoBox = await openDemoButton.boundingBox();
+  assert.ok(openDemoBox, `${roleLabel} demo button has no layout box`);
+  assert.ok(openDemoBox.y >= 0 && openDemoBox.y + openDemoBox.height <= 568, `${roleLabel} demo button is outside the initial compact viewport`);
+  await page.screenshot({
+    path: path.join(screenshotDir, `${roleLabel.toLowerCase()}-entry-320.png`),
+    fullPage: false,
+  });
+  await openDemoButton.click();
   await page.waitForURL("**/app", { timeout: 10_000 });
   await page.getByRole("heading", { name: expectedHeading }).waitFor({ timeout: 10_000 });
 
   const shellVisible = await page.locator(".v2-main").isVisible();
   assert.equal(shellVisible, true, `${roleLabel} preview shell is not visible`);
   const visibleText = (await page.locator("body").innerText()).trim();
-  assert.match(visibleText, /Demo preview/i, `${roleLabel} preview did not render the demo banner`);
-  assert.match(visibleText, /Trending in the trades|Communities|You're active now/i, `${roleLabel} preview body is missing app content`);
+  assert.match(visibleText, new RegExp(`${roleLabel} demo`, "i"), `${roleLabel} preview did not render the demo banner`);
+  assert.match(visibleText, /One-year sample account/i, `${roleLabel} preview is missing the mature account context`);
+  assert.match(visibleText, /completed jobs/i, `${roleLabel} preview is missing the sample outcome metrics`);
+  assert.match(visibleText, /You're active now/i, `${roleLabel} preview is missing the active-work path`);
+
+  await page.getByLabel("Messages", { exact: true }).click();
+  await page.getByText(/cabinet run is ready for closeout photos/i).waitFor({ timeout: 10_000 });
+  await page.getByRole("button", { name: "Home", exact: true }).click();
+  await page.getByRole("heading", { name: expectedHeading }).waitFor({ timeout: 10_000 });
+  await page.locator(".trade-feed-demo-metrics").waitFor({ state: "visible", timeout: 10_000 });
+  await page.waitForTimeout(800);
 
   const hasOverflow = await page.evaluate(
     () => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1,
@@ -93,6 +111,7 @@ try {
     deviceScaleFactor: 2,
     isMobile: true,
     hasTouch: true,
+    reducedMotion: "reduce",
   });
   const page = await context.newPage();
   await configurePage(page);
@@ -103,13 +122,15 @@ try {
   });
   page.on("pageerror", (error) => consoleErrors.push(error.message));
 
-  await openPreview(page, "Contractor", /Good (morning|afternoon|evening), Demo contractor account/i);
+  await openPreview(page, "Contractor", /A year of jobs, crew, and records/i);
+  await page.getByRole("button", { name: /View subcontractor/i }).click();
+  await page.getByRole("heading", { name: /A year of work, proof, and reputation/i }).waitFor({ timeout: 10_000 });
   await context.clearCookies();
   await page.evaluate(() => {
     localStorage.clear();
     sessionStorage.clear();
   });
-  await openPreview(page, "Subcontractor", /Good (morning|afternoon|evening), Demo subcontractor account/i);
+  await openPreview(page, "Subcontractor", /A year of work, proof, and reputation/i);
 
   assert.deepEqual(consoleErrors, [], `Unexpected preview console errors:\n${consoleErrors.join("\n")}`);
   await browser.close();

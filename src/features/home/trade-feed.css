@@ -1092,3 +1092,173 @@
     bottom: 28px;
   }
 }
+
+.trade-feed-demo {
+  display: grid;
+  gap: 16px;
+  padding: clamp(18px, 3vw, 28px);
+  border: 1px solid color-mix(in srgb, var(--v2-accent) 34%, var(--v2-border));
+  border-radius: var(--v2-radius-xl);
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--v2-accent-soft) 72%, var(--v2-surface)) 0%, var(--v2-surface-raised) 58%);
+  box-shadow: var(--v2-shadow-card);
+}
+
+.trade-feed-demo-labels,
+.trade-feed-demo-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.trade-feed-demo-labels > span,
+.trade-feed-demo-copy > span {
+  color: var(--v2-accent-text, var(--v2-accent));
+  font-size: var(--v2-text-xs);
+  font-weight: var(--v2-weight-bold);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.trade-feed-demo-labels small,
+.trade-feed-demo-foot > span {
+  color: var(--v2-text-muted);
+  font-size: var(--v2-text-sm);
+}
+
+.trade-feed-demo-copy {
+  display: grid;
+  gap: 8px;
+}
+
+.trade-feed-demo-copy h1 {
+  max-width: 18ch;
+  margin: 0;
+  color: var(--v2-text);
+  font-size: clamp(29px, 5vw, 44px);
+  line-height: 1;
+  letter-spacing: 0;
+  text-wrap: balance;
+}
+
+.trade-feed-demo-copy p {
+  max-width: 68ch;
+  margin: 0;
+  color: var(--v2-text-muted);
+  font-size: var(--v2-text-body, 15px);
+  line-height: 1.5;
+}
+
+.trade-feed-demo-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border-block: 1px solid var(--v2-border);
+}
+
+.trade-feed-demo-metrics article {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  padding: 14px 12px;
+}
+
+.trade-feed-demo-metrics article + article {
+  border-left: 1px solid var(--v2-border);
+}
+
+.trade-feed-demo-metrics strong {
+  color: var(--v2-text);
+  font-size: clamp(20px, 3vw, 28px);
+  font-variant-numeric: tabular-nums;
+}
+
+.trade-feed-demo-metrics span {
+  color: var(--v2-text-muted);
+  font-size: var(--v2-text-sm);
+}
+
+@media (max-width: 640px) {
+  .trade-feed-demo {
+    gap: 14px;
+    padding: 16px;
+  }
+
+  .trade-feed-demo-labels {
+    align-items: flex-start;
+  }
+
+  .trade-feed-demo-labels small {
+    max-width: 15ch;
+    text-align: right;
+  }
+
+  .trade-feed-demo-copy h1 {
+    font-size: 30px;
+  }
+
+  .trade-feed-demo-copy p {
+    font-size: 15px;
+  }
+
+  .trade-feed-demo-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .trade-feed-demo-metrics article:nth-child(3) {
+    border-left: 0;
+  }
+
+  .trade-feed-demo-metrics article:nth-child(n + 3) {
+    border-top: 1px solid var(--v2-border);
+  }
+
+  .trade-feed-demo-foot {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .trade-feed-demo-foot > span {
+    text-align: center;
+  }
+}
+
+@media (max-width: 360px) {
+  .trade-feed-demo {
+    gap: 11px;
+    padding: 14px;
+  }
+
+  .trade-feed-demo-copy h1 {
+    max-width: none;
+    font-size: 27px;
+    line-height: 1.04;
+  }
+
+  .trade-feed-demo-copy p {
+    display: -webkit-box;
+    overflow: hidden;
+    font-size: 14px;
+    line-height: 1.4;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+  }
+
+  .trade-feed-demo-metrics article {
+    padding: 9px 8px;
+  }
+
+  .trade-feed-demo-metrics strong {
+    font-size: 19px;
+  }
+
+  .trade-feed-demo-metrics span {
+    font-size: 12px;
+  }
+}
+
+@media (min-width: 1181px) {
+  .trade-feed-demo {
+    grid-column: 1 / -1;
+  }
+}

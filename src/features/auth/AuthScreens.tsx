@@ -662,103 +662,124 @@ function GuestPreviewEntry({
     onBrowseAsGuest();
   }
 
+  const snapshot = role === "contractor"
+    ? [
+        ["27", "completed jobs"],
+        ["$68.4k", "work invoiced"],
+        ["186", "job records"],
+        ["11", "repeat crew"],
+      ]
+    : [
+        ["34", "completed jobs"],
+        ["$79.3k", "work recorded"],
+        ["214", "job records"],
+        ["14", "repeat contractors"],
+      ];
+
   return (
     <section className="auth-preview-entry" aria-label="Personalize your RIVT preview">
-      <div className="auth-preview-copy">
-        <span>Preview first</span>
-        <h1>Shape RIVT around your trade.</h1>
-        <p>Pick a trade and area. The preview opens around useful conversations, local work signals, and tools without pretending anything is live work.</p>
-      </div>
-
-      <div className="auth-preview-board">
-        <div className="auth-preview-field">
-          <strong>Preview as</strong>
-          <div className="auth-preview-roles" role="group" aria-label="Choose preview role">
-            <button
-              type="button"
-              className={role === "contractor" ? "is-selected" : ""}
-              aria-pressed={role === "contractor"}
-              onClick={() => setRole("contractor")}
-            >
-              <span>Contractor</span>
-              <small>Post work, manage crews</small>
-            </button>
-            <button
-              type="button"
-              className={role === "tradesperson" ? "is-selected" : ""}
-              aria-pressed={role === "tradesperson"}
-              onClick={() => setRole("tradesperson")}
-            >
-              <span>Subcontractor</span>
-              <small>Find work, build reputation</small>
-            </button>
-          </div>
+      <div className="auth-preview-lead">
+        <div className="auth-preview-copy">
+          <span>Interactive product demo</span>
+          <h1>See RIVT after a year of real use.</h1>
+          <p>Open a clearly labeled sample account with work history, active jobs, Shop Talk, crew relationships, messages, photos, records, and paperwork already in place.</p>
         </div>
-        <div className="auth-preview-field">
-          <strong>Trade</strong>
-          <div className="auth-preview-trades">
-            {previewTradeOptions.map((option) => (
-              <button
-                key={option}
-                type="button"
-                className={trade === option ? "is-selected" : ""}
-                aria-pressed={trade === option}
-                onClick={() => setTrade(option)}
-              >
-                {option}
-              </button>
+
+        <div className="auth-preview-snapshot" aria-label="Sample account results">
+          <div>
+            <span>{role === "contractor" ? "Contractor sample" : "Subcontractor sample"}</span>
+            <strong>One year in RIVT</strong>
+          </div>
+          <div className="auth-preview-snapshot-grid">
+            {snapshot.map(([value, label]) => (
+              <article key={label}><strong>{value}</strong><span>{label}</span></article>
             ))}
           </div>
         </div>
-        <label className="auth-preview-field">
-          <strong>Area</strong>
-          <input value={location} onChange={(event) => setLocation(event.target.value)} placeholder="Jacksonville, FL" />
-          <button type="button" onClick={() => setLocation("Jacksonville, FL")}>
-            <MapPin size={15} />
-            Use Jacksonville pilot area
-          </button>
-        </label>
-      </div>
 
-      <div className="auth-preview-phone" aria-label="Personalized preview example">
-        <div className="auth-phone-topbar">
-          <strong>{role === "contractor" ? "Contractor preview" : "Subcontractor preview"}</strong>
-          <span>{location || "Your area"}</span>
+        <div className="auth-preview-assurance">
+          <ShieldCheck size={18} />
+          <span>Sample data only. No real members, jobs, messages, or records appear in this demo.</span>
         </div>
-        <article className="auth-phone-post">
-          <div>
-            <span>{trade} Talk</span>
-            <small>Preview</small>
-          </div>
-          <strong>{trade === "Electrical" ? "What are you charging for punch-out work?" : trade === "Plumbing" ? "Do I need separate insurance for weekend side jobs?" : "Best way to scribe cabinets to stone?"}</strong>
-          <p>Guest mode lets you look around. Apply, post, message, save, and publish require a real account.</p>
-        </article>
-        <article className="auth-phone-post">
-          <div>
-            <span>{role === "contractor" ? "Crew" : "Work"}</span>
-            <small>{location || "Local"} filter</small>
-          </div>
-          <strong>
-            {role === "contractor"
-              ? "See applicants, offers, messages, and job records in one workspace."
-              : "Browse local work, apply, accept offers, and keep job records together."}
-          </strong>
-          <p>This is sample preview content. Real applications, posts, and messages require an account.</p>
-        </article>
       </div>
 
-      <div className="auth-preview-actions">
-        <button type="button" className="primary-action" onClick={openPreview}>
-          Browse RIVT preview
-        </button>
-        <button type="button" className="secondary-action" onClick={onCreateAccount}>
-          Create account
-        </button>
-        <button type="button" className="auth-browse-action" onClick={onLogin}>
-          Log in instead
-        </button>
+      <div className="auth-preview-control">
+        <div className="auth-preview-board">
+          <div className="auth-preview-field">
+            <strong>Choose the account you want to explore</strong>
+            <div className="auth-preview-roles" role="group" aria-label="Choose preview role">
+              <button
+                type="button"
+                className={role === "contractor" ? "is-selected" : ""}
+                aria-pressed={role === "contractor"}
+                onClick={() => setRole("contractor")}
+              >
+                <span>Contractor</span>
+                <small>Hire, coordinate, close out</small>
+              </button>
+              <button
+                type="button"
+                className={role === "tradesperson" ? "is-selected" : ""}
+                aria-pressed={role === "tradesperson"}
+                onClick={() => setRole("tradesperson")}
+              >
+                <span>Subcontractor</span>
+                <small>Find work, prove the work</small>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="auth-preview-actions">
+          <button type="button" className="primary-action" onClick={openPreview}>
+            Open {role === "contractor" ? "contractor" : "subcontractor"} demo
+            <ArrowRight size={17} />
+          </button>
+          <button type="button" className="secondary-action" onClick={onCreateAccount}>
+            Create account
+          </button>
+          <button type="button" className="auth-browse-action" onClick={onLogin}>
+            Already a member? Log in
+          </button>
+        </div>
+
+        <details className="auth-preview-customize">
+          <summary>Personalize trade and area</summary>
+          <div className="auth-preview-customize-fields">
+            <label className="auth-preview-field">
+              <strong>Trade</strong>
+              <select value={trade} onChange={(event) => setTrade(event.target.value as Trade)}>
+                {previewTradeOptions.map((option) => <option key={option} value={option}>{option}</option>)}
+              </select>
+            </label>
+            <label className="auth-preview-field">
+              <strong>Area</strong>
+              <input value={location} onChange={(event) => setLocation(event.target.value)} placeholder="Jacksonville, FL" />
+              <button type="button" onClick={() => setLocation("Jacksonville, FL")}>
+                <MapPin size={15} />
+                Use Jacksonville pilot area
+              </button>
+            </label>
+          </div>
+        </details>
       </div>
     </section>
+  );
+}
+
+function AuthTrustLinks() {
+  return (
+    <div className="auth-trust-links">
+      <div>
+        <ShieldCheck size={17} />
+        <span>Private job details, protected server sessions, and Stripe-hosted billing.</span>
+      </div>
+      <nav aria-label="Trust and legal links">
+        <a href="/legal/security.html">Security</a>
+        <a href="/legal/privacy.html">Privacy</a>
+        <a href="/legal/terms.html">Terms</a>
+      </nav>
+    </div>
   );
 }
 
@@ -948,22 +969,41 @@ export function AuthGate({
         <button type="button" className="auth-browse-action" onClick={onBrowseAsGuest}>
           Browse first
         </button>
+        <AuthTrustLinks />
       </form>
     </main>
   );
 }
 
 export function GuestBanner({
+  role,
+  onSwitchRole,
   onSignUp,
   onExit,
 }: {
+  role: Role;
+  onSwitchRole: () => void;
   onSignUp: () => void;
   onExit: () => void;
 }) {
   return (
     <div className="guest-banner" role="status">
-      <span>Demo preview. Sample jobs, posts, messages, and records show what RIVT can look like once your account is active.</span>
+      <span>
+        <strong>
+          <span className="guest-role-wide">{role === "contractor" ? "Contractor demo" : "Subcontractor demo"}</span>
+          <span className="guest-role-compact">{role === "contractor" ? "Contractor" : "Sub demo"}</span>
+        </strong>
+        <small>Sample jobs, posts, messages, and records. No live member activity.</small>
+      </span>
       <div className="guest-banner-actions">
+        <button
+          type="button"
+          className="ghost-action guest-switch"
+          aria-label={`View ${role === "contractor" ? "subcontractor" : "contractor"} demo`}
+          onClick={onSwitchRole}
+        >
+          Switch role
+        </button>
         <button type="button" className="primary-action" onClick={onSignUp}>
           Sign up
         </button>

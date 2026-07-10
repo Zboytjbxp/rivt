@@ -20,6 +20,7 @@ import { fallbackCommunities, type CommunityDisplay } from "../shop-talk/communi
 import type { Job, Role } from "../../types";
 import type { CanonicalActiveWork } from "../work/job-api";
 import type { ToolMode } from "../tools/ToolsStudio";
+import type { GuestPreviewSummary } from "../../demo/guestPreview";
 import "./trade-feed.css";
 
 const BOOKMARK_KEY = "rivt.shopTalkBookmarks.v1";
@@ -146,6 +147,7 @@ interface TradeFeedProps {
   onboardingComplete?: boolean;
   recordCount: number;
   safetyCertCount: number;
+  demoSummary?: GuestPreviewSummary | null;
   getPostReactionState: (post: CommunityPost) => CommunityReactionState;
   onVotePost: (postId: string, direction: "up" | "down") => void;
   onOpenPost: (postId: string) => void;
@@ -176,6 +178,7 @@ export function TradeFeed({
   onboardingComplete = false,
   recordCount = 0,
   safetyCertCount = 0,
+  demoSummary = null,
   getPostReactionState,
   onVotePost,
   onOpenPost,
@@ -375,21 +378,45 @@ export function TradeFeed({
   return (
     <div className={showGetStarted ? "trade-feed has-start-card" : "trade-feed"}>
       {/* Personalized header */}
-      <header className="trade-feed-welcome">
-        <div className="trade-feed-welcome-text">
-          <h1>{greeting()}, {name}</h1>
-          {location && <span>{location}</span>}
-        </div>
-        <button
-          type="button"
-          className={`trade-feed-avail is-${availability}`}
-          onClick={cycleAvailability}
-          aria-label={`Availability: ${AVAIL_LABEL[availability]}. Tap to change.`}
-        >
-          <span className="trade-feed-avail-dot" />
-          {AVAIL_LABEL[availability]}
-        </button>
-      </header>
+      {demoSummary ? (
+        <section className="trade-feed-demo" aria-labelledby="trade-feed-demo-title">
+          <div className="trade-feed-demo-labels">
+            <span>{demoSummary.roleLabel}</span>
+            <small>Clearly labeled sample data</small>
+          </div>
+          <div className="trade-feed-demo-copy">
+            <span>{demoSummary.accountAge}</span>
+            <h1 id="trade-feed-demo-title">{demoSummary.headline}</h1>
+            <p>{demoSummary.body}</p>
+          </div>
+          <div className="trade-feed-demo-metrics" aria-label="Sample account results">
+            <article><strong>{demoSummary.completedJobs}</strong><span>completed jobs</span></article>
+            <article><strong>${demoSummary.moneyValue.toLocaleString()}</strong><span>{demoSummary.moneyLabel}</span></article>
+            <article><strong>{demoSummary.photoCount}</strong><span>job records</span></article>
+            <article><strong>{demoSummary.repeatConnections}</strong><span>{role === "contractor" ? "repeat crew" : "repeat contractors"}</span></article>
+          </div>
+          <div className="trade-feed-demo-foot">
+            <button type="button" className="v2-secondary-button" onClick={onOpenProfile}>View sample profile</button>
+            <span>{demoSummary.reputation}</span>
+          </div>
+        </section>
+      ) : (
+        <header className="trade-feed-welcome">
+          <div className="trade-feed-welcome-text">
+            <h1>{greeting()}, {name}</h1>
+            {location && <span>{location}</span>}
+          </div>
+          <button
+            type="button"
+            className={`trade-feed-avail is-${availability}`}
+            onClick={cycleAvailability}
+            aria-label={`Availability: ${AVAIL_LABEL[availability]}. Tap to change.`}
+          >
+            <span className="trade-feed-avail-dot" />
+            {AVAIL_LABEL[availability]}
+          </button>
+        </header>
+      )}
 
       {primaryActiveWork ? (
         <section className="trade-feed-active-work" aria-label="Active work">

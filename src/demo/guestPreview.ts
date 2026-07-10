@@ -1,4 +1,4 @@
-import type { AccountProfile, ShoutOut } from "../app-shell/app-state-types";
+import type { AccountProfile, CanonicalAccount, ShoutOut } from "../app-shell/app-state-types";
 import { brandConfig } from "../brandConfig";
 import type { InboxConversation, InboxMessage, InboxNotification } from "../features/inbox/inbox-api";
 import type { CommunityPost } from "../features/shop-talk/ShopTalkView";
@@ -19,6 +19,8 @@ export interface GuestPreviewInput {
 
 export interface GuestPreviewWorkspace {
   profile: AccountProfile;
+  canonicalAccount: CanonicalAccount;
+  summary: GuestPreviewSummary;
   jobs: Job[];
   activeWork: CanonicalActiveWork[];
   posts: CommunityPost[];
@@ -30,6 +32,19 @@ export interface GuestPreviewWorkspace {
   recordIds: string[];
 }
 
+export interface GuestPreviewSummary {
+  roleLabel: string;
+  accountAge: string;
+  completedJobs: number;
+  moneyLabel: string;
+  moneyValue: number;
+  photoCount: number;
+  repeatConnections: number;
+  reputation: string;
+  headline: string;
+  body: string;
+}
+
 const DEMO_ACCOUNT_ID = "guest-preview";
 const DEMO_CONTRACTOR_ID = "demo-contractor";
 const DEMO_TRADESPERSON_ID = "demo-tradesperson";
@@ -38,6 +53,21 @@ const DEMO_ACTIVE_WORK_ID = "demo-active-work-1";
 const DEMO_JOB_ID = "demo-job-1";
 const DEMO_OFFER_ID = "demo-offer-1";
 const DEMO_CONVERSATION_ID = "demo-conversation-1";
+
+const demoIdentity = {
+  contractor: {
+    displayName: "Marcus Reed",
+    organization: "Reed Finish & Build",
+    headline: "Residential contractor and finish-work lead",
+    bio: "Jacksonville contractor coordinating remodel crews, finish carpentry, job records, and closeout paperwork in one place.",
+  },
+  tradesperson: {
+    displayName: "Elena Torres",
+    organization: "",
+    headline: "Finish carpenter and cabinet installer",
+    bio: "Finish carpenter focused on built-ins, cabinet installation, clean scribe work, and photo-documented closeouts.",
+  },
+} as const;
 
 const tradeJobTitles: Partial<Record<Trade, string>> = {
   Carpentry: "Built-in cabinet install",
@@ -84,7 +114,7 @@ function demoJob(input: GuestPreviewInput, overrides: Partial<Job> = {}): Job {
   return {
     id,
     title,
-    contractor: "Harborline Builders",
+    contractor: demoIdentity.contractor.organization,
     trade,
     location: city,
     state: region,
@@ -172,7 +202,7 @@ function demoActiveWork(input: GuestPreviewInput, job: Job): CanonicalActiveWork
       id: job.canonical?.id ?? DEMO_JOB_ID,
       title: job.title,
       status: "active",
-      organization: { id: DEMO_ORG_ID, name: "Harborline Builders" },
+      organization: { id: DEMO_ORG_ID, name: demoIdentity.contractor.organization },
       publicLocation: { city, region, countryCode: "US" },
     },
     events: [
@@ -294,20 +324,20 @@ function demoInbox(input: GuestPreviewInput, job: Job) {
     ? {
         accountId: DEMO_TRADESPERSON_ID,
         role: "tradesperson" as const,
-        displayName: "Demo subcontractor",
+        displayName: "Elena Torres",
         headline: `${input.trade} specialist`,
       }
     : {
         accountId: DEMO_CONTRACTOR_ID,
         role: "contractor" as const,
-        displayName: "Demo contractor",
+        displayName: "Marcus Reed",
         headline: "General contractor",
       };
   const currentParty = {
     accountId: DEMO_ACCOUNT_ID,
     role: input.role,
-    displayName: input.role === "contractor" ? "Demo contractor account" : "Demo subcontractor account",
-    headline: input.role === "contractor" ? "Contractor preview" : `${input.trade} preview`,
+    displayName: demoIdentity[input.role].displayName,
+    headline: demoIdentity[input.role].headline,
   };
   const conversation: InboxConversation = {
     id: DEMO_CONVERSATION_ID,
@@ -323,7 +353,7 @@ function demoInbox(input: GuestPreviewInput, job: Job) {
       id: job.canonical?.id ?? DEMO_JOB_ID,
       title: job.title,
       status: "active",
-      organization: { id: DEMO_ORG_ID, name: "Harborline Builders" },
+      organization: { id: DEMO_ORG_ID, name: demoIdentity.contractor.organization },
       publicLocation: { city, region, countryCode: "US" },
     },
     participants: [currentParty, otherParty].map((participant) => ({
@@ -340,7 +370,7 @@ function demoInbox(input: GuestPreviewInput, job: Job) {
       id: "demo-message-1",
       conversationId: DEMO_CONVERSATION_ID,
       senderAccountId: otherParty.accountId,
-      body: "Demo message: once work is active, job messages, photos, logs, and invoices stay connected here.",
+      body: "Demo message: the cabinet run is ready for closeout photos. I added today's labor and the final punch-list note to this job.",
       kind: "user",
       createdAt: "2026-07-08T13:25:00.000Z",
       editedAt: null,
@@ -374,12 +404,89 @@ function demoInbox(input: GuestPreviewInput, job: Job) {
   return { conversations: [conversation], messages, notifications };
 }
 
+function demoCanonicalAccount(input: GuestPreviewInput): CanonicalAccount {
+  const { city, region } = splitLocation(input.location);
+  const identity = demoIdentity[input.role];
+  return {
+    id: DEMO_ACCOUNT_ID,
+    status: "active",
+    primaryRole: input.role,
+    email: "",
+    provider: "email",
+    emailVerified: true,
+    profile: {
+      displayName: identity.displayName,
+      headline: identity.headline,
+      bio: identity.bio,
+      locationText: input.location,
+      visibility: "network",
+      onboardingStatus: "complete",
+      serviceArea: {
+        city,
+        region,
+        countryCode: "US",
+        radiusMiles: 35,
+      },
+      availabilityStatus: "available",
+      contactEmailVisibility: "connections",
+      phoneE164: null,
+      phoneVisibility: "private",
+      avatarUploadId: null,
+      trades: uniqueTrades(input.trade).map((trade, index) => ({
+        code: trade.toLowerCase().replace(/[^a-z0-9]+/g, "_"),
+        name: trade,
+        primary: index === 0,
+      })),
+    },
+    organizations: input.role === "contractor"
+      ? [{ id: DEMO_ORG_ID, name: identity.organization, role: "owner" }]
+      : [],
+    adminRoles: [],
+    capabilities: {
+      canCompleteOnboarding: false,
+      canPostWork: input.role === "contractor",
+      canApplyToWork: input.role === "tradesperson",
+      canPublishProfile: true,
+    },
+  };
+}
+
+function demoSummary(input: GuestPreviewInput): GuestPreviewSummary {
+  if (input.role === "contractor") {
+    return {
+      roleLabel: "Contractor demo",
+      accountAge: "One-year sample account",
+      completedJobs: 27,
+      moneyLabel: "Work invoiced",
+      moneyValue: 68420,
+      photoCount: 186,
+      repeatConnections: 11,
+      reputation: "4.9 average review",
+      headline: "A year of jobs, crew, and records.",
+      body: "See how hiring, active work, photos, logs, invoices, and closeout stay connected.",
+    };
+  }
+  return {
+    roleLabel: "Subcontractor demo",
+    accountAge: "One-year sample account",
+    completedJobs: 34,
+    moneyLabel: "Work recorded",
+    moneyValue: 79280,
+    photoCount: 214,
+    repeatConnections: 14,
+    reputation: "4.9 average review",
+    headline: "A year of work, proof, and reputation.",
+    body: "See how local jobs, messages, photos, invoices, reviews, and repeat contractors stay connected.",
+  };
+}
+
 export function createGuestPreviewWorkspace(input: GuestPreviewInput): GuestPreviewWorkspace {
   const specialties = uniqueTrades(input.trade);
+  const identity = demoIdentity[input.role];
   const profile: AccountProfile = {
     email: "",
-    displayName: input.role === "contractor" ? "Demo contractor account" : "Demo subcontractor account",
-    organization: input.role === "contractor" ? "Harborline Builders" : "",
+    displayName: identity.displayName,
+    organization: identity.organization,
     location: input.location,
     specialties,
     plan: brandConfig.pricing.betaPlan.label,
@@ -408,27 +515,49 @@ export function createGuestPreviewWorkspace(input: GuestPreviewInput): GuestPrev
     posted: "Demo preview",
     summary: "Sample completed job showing the history a mature RIVT account can build.",
   });
+  const completedHistory = [
+    [7104, "Kitchen trim and cabinet closeout", 3850, 28],
+    [7105, "Built-in bench and paneling", 2725, 20],
+    [7106, "Punch-list finish package", 1680, 14],
+    [7107, "Mudroom cabinetry install", 4120, 32],
+    [7108, "Stair skirt and handrail finish", 2360, 18],
+  ].map(([id, title, pay, durationHours]) => demoJob(input, {
+    id: id as number,
+    title: title as string,
+    status: "Paid / Closed",
+    pay: pay as number,
+    durationHours: durationHours as number,
+    applicants: 4,
+    match: 90,
+    posted: "Sample history",
+    summary: "Representative completed record in this labeled one-year demo account.",
+  }));
   const activeWork = [demoActiveWork(input, activeJob)];
   const inbox = demoInbox(input, activeJob);
   return {
     profile,
-    jobs: [activeJob, secondaryJob, completedJob],
+    canonicalAccount: demoCanonicalAccount(input),
+    summary: demoSummary(input),
+    jobs: [activeJob, secondaryJob, completedJob, ...completedHistory],
     activeWork,
     posts: demoPosts(input),
     communities: demoCommunities(input),
     shoutOuts: [
-      {
-        id: 1,
-        from: input.role === "contractor" ? "Demo subcontractor" : "Demo contractor",
-        to: profile.displayName,
-        trade: input.trade,
-        message: "Demo shout-out: clean communication, complete records, and strong closeout photos.",
-        createdAt: "Demo preview",
-      },
-    ],
+      [1, input.role === "contractor" ? "Elena Torres" : "Marcus Reed", "Clean communication, complete records, and strong closeout photos."],
+      [2, "Jordan Price", "Showed up ready, documented changes, and kept the punch list moving."],
+      [3, "Avery Cole", "The job thread made schedule changes and closeout simple."],
+      [4, "Luis Hernandez", "Good work, clear photos, and no surprises at invoice time."],
+    ].map(([id, from, message]) => ({
+      id: id as number,
+      from: from as string,
+      to: profile.displayName,
+      trade: input.trade,
+      message: `Demo shout-out: ${message as string}`,
+      createdAt: "Demo preview",
+    })),
     conversations: inbox.conversations,
     messages: inbox.messages,
     notifications: inbox.notifications,
-    recordIds: ["demo-photo-1", "demo-log-1", "demo-invoice-1", "demo-expense-1", "demo-closeout-1"],
+    recordIds: Array.from({ length: demoSummary(input).photoCount }, (_, index) => `demo-record-${index + 1}`),
   };
 }

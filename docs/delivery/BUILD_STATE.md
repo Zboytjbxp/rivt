@@ -2,10 +2,49 @@
 
 Last updated: 2026-07-09 America/New_York
 Current gate: Gate A launch hardening
-Current phase: Packet 08 Gate A launch hardening plus Gate B behind-flag backbone work: machine gates and live workflow smokes are mostly green; the Shop Talk Reddit-model backbone, moderation/reporting backend, human-facing moderation console/report UX, post photo media, reachability/naming cleanup, Tools hub consolidation, Payment Tracker server records, money-tools sync, the accepted tool-records sync slices, non-tool local-state boundary cleanup, dedicated network-records sync for Crew/Invites/informal written shout-outs, screen-density polish, mobile layout/device-accessibility subtraction, fraction calculator ergonomics, iPhone SE layout containment, immersive-tool compact-device containment, SE tool chrome cleanup slices, native metric calculator rebuild, the camera-first records/photos tool rebuild, admin support-case review for account-type requests, offer start-date normalization, and guest-preview black-screen hardening are implemented while still respecting launch-readiness boundaries before broad exposure.
+Current phase: Packet 08 Gate A launch hardening plus Gate B behind-flag backbone work: machine gates and live workflow smokes are mostly green; the Shop Talk Reddit-model backbone, moderation/reporting backend, human-facing moderation console/report UX, post photo media, reachability/naming cleanup, Tools hub consolidation, Payment Tracker server records, money-tools sync, the accepted tool-records sync slices, non-tool local-state boundary cleanup, dedicated network-records sync for Crew/Invites/informal written shout-outs, screen-density polish, mobile layout/device-accessibility subtraction, fraction calculator ergonomics, iPhone SE layout containment, immersive-tool compact-device containment, SE tool chrome cleanup slices, native metric calculator rebuild, the camera-first records/photos tool rebuild, admin support-case review for account-type requests, offer start-date normalization, guest-preview black-screen hardening, a mature one-year guest demo, and a nationwide-readiness audit are implemented while still respecting launch-readiness boundaries before broad exposure.
 Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
 Production release commit: `159bdac16009a81b5e0e00f286515f0cf2c32404` verified with live `/api/health` and `npm run monitor:production`; latest runtime feature evidence is recorded below and docs-only evidence commits may supersede the served build SHA.
+
+## Latest Packet 08 Pass - Mature Guest Demo and Nationwide Readiness Boundary
+
+- Rebuilt the explicit guest preview around outcomes instead of a thin feature carousel:
+  - contractor and subcontractor paths now open clearly labeled one-year sample accounts
+  - the entry preview shows completed jobs, work value, job-record count, repeat relationships, and role-specific value before entering the app
+  - the in-app preview keeps active work, messages, communities, Shop Talk, notifications, records, completed history, and reputation cues connected
+  - role switching remains available inside the sample workspace without changing a real account role
+- Fixed a real preview lifecycle bug:
+  - authenticated background loaders no longer clear guest active work or guest conversation messages while someone is exploring the demo
+  - the compact mobile smoke now opens Messages, verifies the demo job thread, returns Home, and proves the mature account survives navigation
+- Tightened preview trust:
+  - all fictional activity remains isolated to explicit guest-preview state and labeled sample/demo content
+  - the old recycled seed-company name was removed from the demo story
+  - auth surfaces now link directly to factual Security, Privacy, and Terms pages
+  - guest preview reaction state does not call authenticated server reaction paths
+- Added `docs/product/NATIONWIDE_FINAL_LAUNCH_AUDIT_2026-07-09.md`.
+  - verdict: the current core can support controlled Jacksonville launch work, but it is **not** a responsible nationwide-final launch yet
+  - nationwide P0 boundaries are geospatial discovery, durable server ownership for business records, malware scanning/quarantine, complete legal/data-rights flows, reliable notification delivery, and nationwide moderation/support/on-call capacity
+  - the audit defines twelve measurable acceptance gates and a five-train build order
+- Local verification on `codex/nationwide-launch-hardening`:
+  - `npm run build` (pass)
+  - `npm run lint` (pass)
+  - `npm run lint:security` (pass)
+  - `npm run test:unit` (pass; 46/46)
+  - `npm run test:integration` (pass; 18/18 against configured PostgreSQL)
+  - `npm run test:e2e` (pass)
+  - `npm run test:ui:guest-preview` (pass; contractor/subcontractor at 320x568 with reduced motion)
+  - `npm run test:ui:mobile-actions` (pass)
+  - `npm run test:ui:work-lifecycle` (pass)
+  - `npm run test:ui:tools` (pass)
+  - `npm run test:ui:shop-talk-news` (pass)
+  - `npm run launch:readiness -- --require-ready` (pass for the existing Gate A policy)
+  - `npm run incident:readiness -- --require-ready` (pass for the existing Gate A policy)
+  - `npm audit --omit=dev` (pass; 0 vulnerabilities)
+  - `git diff --check` (pass; CRLF warnings only)
+- Deployment boundary:
+  - this pass is not yet merged or deployed
+  - the Gate A readiness scripts remain pilot-scoped and must not be presented as nationwide-readiness certification
 
 ## Latest Packet 08 Pass - Public Security and Disclosure Page
 
