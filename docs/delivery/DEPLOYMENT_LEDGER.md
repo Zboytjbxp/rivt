@@ -1274,3 +1274,24 @@ Add one entry per staging/production deployment.
 - Known risks: nationwide release remains blocked on real geospatial discovery, durable server ownership for critical business records, upload malware scanning/quarantine, complete legal/data-rights execution, reliable notification delivery, and nationwide moderation/support/on-call capacity.
 - Rollback performed/result: not required
 - Approval: mature guest demo and trust hardening accepted for the current controlled-launch product; nationwide-final release is not approved.
+
+## Current Production - Packet 08 Field Reliability Train
+
+- Environment: Production (`https://rivt.pro`)
+- Date/time/timezone: 2026-07-10 01:52 America/New_York
+- Deployer: Codex through fast-forward push to `master` with Railway production auto-deploy
+- Source repository/branch: `Zboytjbxp/rivt`, `master`
+- Source commit: `504e1db2e5b6fc9db23883ed17a3cb7444a3a66e`
+- Build/artifact ID: Railway deployment ID not captured; exact live `/api/health` source metadata is the runtime proof
+- Migration version before/after: unchanged (`0022_community_audiences`)
+- Feature-flag/config version: no provider credentials, rollout flags, or operational controls changed
+- Provider/config changes: none
+- Backup/rollback target: prior production source `93569161379c7e237a590337e49b3829d895618b`; no migration change
+- Automated gates: `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test:unit` (46/46), `npm run test:e2e`, `npm run test:ui:guest-preview`, `npm run test:ui:tools`, `npm run test:ui:mobile-actions`, `npm audit --omit=dev`, and `git diff --check` passed. The configured remote database stalled both `npm run test:integration` and a targeted project-completion integration suite without output; this release changes no server route, migration, or database behavior.
+- Post-deploy smoke tests: `https://rivt.pro/api/health` returned exact source `504e1db2e5b6fc9db23883ed17a3cb7444a3a66e`; `EXPECTED_SOURCE_COMMIT=504e1db2e5b6fc9db23883ed17a3cb7444a3a66e npm run monitor:production` passed with PostgreSQL/S3-compatible dependencies healthy, Sentry configured, controls disabled, seven anonymous private-route checks, and 552 ms duration.
+- Public-resource evidence: `rivt-social-card.png`, `robots.txt`, and `sitemap.xml` returned HTTP 200; production HTML contained the absolute Open Graph image and URL.
+- Rendered UI evidence: guest-preview smoke covered retryable boot 5xx and signed-out 401 behavior; Tools smoke deliberately rejected the first captured job-photo upload, retried the retained capture, and verified it entered the project timeline; mobile-actions smoke remained green.
+- Health/readiness result: production is healthy on the exact source with no operational controls active.
+- Known risks: physical weak-signal/offline, update-during-form, and retained-camera-retry checks remain to be performed on iOS Safari/PWA and Android Chrome. The remote test database stall remains an infrastructure/test-runner reliability issue, not a claimed integration pass.
+- Rollback performed/result: not required
+- Approval: field-reliability train accepted as deployed Gate A reliability hardening evidence; broader/nationwide readiness remains subject to the existing separate boundaries.

@@ -4,8 +4,8 @@ Last updated: 2026-07-10 America/New_York
 Current gate: Gate A launch hardening
 Current phase: Packet 08 Gate A launch hardening plus Gate B behind-flag backbone work: machine gates and live workflow smokes are mostly green; the Shop Talk Reddit-model backbone, moderation/reporting backend, human-facing moderation console/report UX, post photo media, reachability/naming cleanup, Tools hub consolidation, Payment Tracker server records, money-tools sync, the accepted tool-records sync slices, non-tool local-state boundary cleanup, dedicated network-records sync for Crew/Invites/informal written shout-outs, screen-density polish, mobile layout/device-accessibility subtraction, fraction calculator ergonomics, iPhone SE layout containment, immersive-tool compact-device containment, SE tool chrome cleanup slices, native metric calculator rebuild, the camera-first records/photos tool rebuild, admin support-case review for account-type requests, offer start-date normalization, guest-preview black-screen hardening, a mature one-year guest demo, and a nationwide-readiness audit are implemented while still respecting launch-readiness boundaries before broad exposure.
 Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
-Repository branch: `codex/field-reliability-train`
-Production feature release commit: `be6a6d211eae8bef81c40d55e2054bf49e3148b9` verified with live `/api/health` and `npm run monitor:production`; docs-only evidence commits may supersede the served build SHA without changing runtime behavior.
+Repository branch: `master` (field-reliability work merged from `codex/field-reliability-train`)
+Production feature release commit: `504e1db2e5b6fc9db23883ed17a3cb7444a3a66e` verified with live `/api/health` and `npm run monitor:production`; docs-only evidence commits may supersede the served build SHA without changing runtime behavior.
 
 ## Latest Packet 08 Pass - Field Reliability Train
 
@@ -39,7 +39,11 @@ Production feature release commit: `be6a6d211eae8bef81c40d55e2054bf49e3148b9` ve
   - `npm audit --omit=dev` (pass; 0 vulnerabilities)
   - `git diff --check` (pass; CRLF conversion warnings only)
   - `npm run test:integration` and a targeted `test/project-completion.integration.test.js` were attempted with configured `TEST_DATABASE_URL`; both stalled without test output against the remote database and were terminated. No server route, migration, or database behavior changed in this pass, so no new DB-backed integration result is claimed.
-- Deployment boundary: pending merge, Railway deployment, exact `/api/health` source verification, and production synthetic monitor.
+- Deployment evidence:
+  - `codex/field-reliability-train` was fast-forwarded into `master` and pushed to GitHub
+  - Railway served exact source `504e1db2e5b6fc9db23883ed17a3cb7444a3a66e`
+  - `EXPECTED_SOURCE_COMMIT=504e1db2e5b6fc9db23883ed17a3cb7444a3a66e npm run monitor:production` passed with PostgreSQL, S3-compatible object storage, configured Sentry, controls off, seven anonymous private-route checks, and 552 ms duration
+  - the public social image, `robots.txt`, and sitemap returned HTTP 200, and the production HTML exposed the expected absolute Open Graph image and URL
 
 ## Latest Packet 08 Pass - Desktop Workspaces
 
