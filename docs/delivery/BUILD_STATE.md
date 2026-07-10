@@ -5,7 +5,7 @@ Current gate: Gate A launch hardening
 Current phase: Packet 08 Gate A launch hardening plus Gate B behind-flag backbone work: machine gates and live workflow smokes are mostly green; the Shop Talk Reddit-model backbone, moderation/reporting backend, human-facing moderation console/report UX, post photo media, reachability/naming cleanup, Tools hub consolidation, Payment Tracker server records, money-tools sync, the accepted tool-records sync slices, non-tool local-state boundary cleanup, dedicated network-records sync for Crew/Invites/informal written shout-outs, screen-density polish, mobile layout/device-accessibility subtraction, fraction calculator ergonomics, iPhone SE layout containment, immersive-tool compact-device containment, SE tool chrome cleanup slices, native metric calculator rebuild, the camera-first records/photos tool rebuild, admin support-case review for account-type requests, offer start-date normalization, guest-preview black-screen hardening, a mature one-year guest demo, and a nationwide-readiness audit are implemented while still respecting launch-readiness boundaries before broad exposure.
 Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `master`
-Production release commit: `159bdac16009a81b5e0e00f286515f0cf2c32404` verified with live `/api/health` and `npm run monitor:production`; latest runtime feature evidence is recorded below and docs-only evidence commits may supersede the served build SHA.
+Production feature release commit: `39886b12495c4134b09bbb32b6c7d13058f00122` verified with live `/api/health` and `npm run monitor:production`; docs-only evidence commits may supersede the served build SHA without changing runtime behavior.
 
 ## Latest Packet 08 Pass - Mature Guest Demo and Nationwide Readiness Boundary
 
@@ -43,7 +43,9 @@ Production release commit: `159bdac16009a81b5e0e00f286515f0cf2c32404` verified w
   - `npm audit --omit=dev` (pass; 0 vulnerabilities)
   - `git diff --check` (pass; CRLF warnings only)
 - Deployment boundary:
-  - this pass is not yet merged or deployed
+  - `codex/nationwide-launch-hardening` was fast-forwarded into `master`, and Railway production served exact feature commit `39886b12495c4134b09bbb32b6c7d13058f00122`
+  - live `/api/health` reported PostgreSQL, S3-compatible object storage, configured Sentry, and migration `0022_community_audiences`; `EXPECTED_SOURCE_COMMIT=39886b12495c4134b09bbb32b6c7d13058f00122 npm run monitor:production` passed with operational controls off and seven anonymous private-route checks
+  - production browser QA opened the contractor one-year sample workspace and verified its metrics, active-work context, and connected demo navigation
   - the Gate A readiness scripts remain pilot-scoped and must not be presented as nationwide-readiness certification
 
 ## Latest Packet 08 Pass - Public Security and Disclosure Page

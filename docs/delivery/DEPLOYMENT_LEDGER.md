@@ -1235,3 +1235,23 @@ Add one entry per staging/production deployment.
 - Known risks: physical-device accessibility checks, full DB-backed integration run with `TEST_DATABASE_URL`, and final real-user soft-launch acceptance remain launch-quality boundaries.
 - Rollback performed/result: not required
 - Approval: Soft launch polish checkpoint accepted as minor Gate A UX/truthfulness hardening evidence; overall Gate A still depends on the remaining manual/external launch boundaries.
+
+## Current Production - Mature Guest Demo and Nationwide Readiness Boundary
+
+- Environment: Production (`https://rivt.pro`)
+- Date/time/timezone: 2026-07-09 20:13 America/New_York
+- Deployer: Codex through fast-forward push to `master` with Railway production auto-deploy
+- Source repository/branch: `Zboytjbxp/rivt`, `master`
+- Source commit: `39886b12495c4134b09bbb32b6c7d13058f00122`
+- Build/artifact ID: Railway deployment ID not captured; exact live `/api/health` source metadata is the runtime proof.
+- Migration version before/after: unchanged (`0022_community_audiences`)
+- Feature-flag/config version: no provider credentials, rollout flags, or operational controls changed
+- Provider/config changes: none
+- Backup/rollback target: prior production feature release `159bdac16009a81b5e0e00f286515f0cf2c32404`; no migration change
+- Automated gates: `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test:unit` (46/46), `npm run test:integration` (18/18 against configured PostgreSQL), `npm run test:e2e`, `npm run test:ui:guest-preview`, `npm run test:ui:mobile-actions`, `npm run test:ui:work-lifecycle`, `npm run test:ui:tools`, `npm run test:ui:shop-talk-news`, `npm run launch:readiness -- --require-ready`, `npm run incident:readiness -- --require-ready`, `npm audit --omit=dev`, and `git diff --check` passed.
+- Post-deploy smoke tests: `https://rivt.pro/api/health` returned exact feature source `39886b12495c4134b09bbb32b6c7d13058f00122`; `EXPECTED_SOURCE_COMMIT=39886b12495c4134b09bbb32b6c7d13058f00122 npm run monitor:production` passed with PostgreSQL/S3-compatible dependencies healthy, Sentry configured, controls disabled, seven anonymous private-route checks, and 519 ms duration.
+- Rendered UI evidence: compact local guest-preview screenshots for contractor and subcontractor entry/workspace states are at `C:\Users\zboyt\AppData\Local\Temp\rivt-guest-preview-pass`; production browser QA opened the contractor one-year sample workspace and verified the 27-job, $68,420 invoiced, 186-record, 11-repeat-crew sample metrics plus active-work and messaging context.
+- Health/readiness result: Gate A launch and incident readiness checks passed under their existing pilot policy. The separate nationwide audit remains a NO-GO and is not a certification.
+- Known risks: nationwide release remains blocked on real geospatial discovery, durable server ownership for critical business records, upload malware scanning/quarantine, complete legal/data-rights execution, reliable notification delivery, and nationwide moderation/support/on-call capacity.
+- Rollback performed/result: not required
+- Approval: mature guest demo and trust hardening accepted for the current controlled-launch product; nationwide-final release is not approved.
