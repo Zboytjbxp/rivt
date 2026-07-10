@@ -266,10 +266,9 @@ async function configurePage(page, jobs, { activeWork = [], project = null } = {
     body: JSON.stringify({
       data: {
         preferences: [
-          { notificationType: "messages", channel: "push", enabled: true },
-          { notificationType: "new_jobs", channel: "push", enabled: true },
-          { notificationType: "work_updates", channel: "push", enabled: true },
-          { notificationType: "system", channel: "push", enabled: true },
+          { notificationType: "messages", channel: "in_app", enabled: true },
+          { notificationType: "work_updates", channel: "in_app", enabled: true },
+          { notificationType: "system", channel: "in_app", enabled: true },
         ],
       },
       meta: { requestId: "e2e-notification-preferences" },

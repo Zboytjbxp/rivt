@@ -424,6 +424,9 @@ async function runMobileFlow(page) {
   await assertControlCenterClickable(page, ".account-signout-btn", "account sign-out button");
   await page.getByRole("button", { name: "Settings", exact: true }).click();
   await page.getByRole("heading", { name: "Settings", exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByText("In-app alert preferences", { exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByText("Background device alerts are not connected yet.", { exact: false }).waitFor({ timeout: 15_000 });
+  assert.equal(await page.getByRole("button", { name: "Enable notifications", exact: true }).count(), 0);
   await assertNoHorizontalOverflow(page, "Settings route");
   await page.getByRole("button", { name: "Crew", exact: true }).click();
   await page.getByRole("heading", { name: "Crew", exact: true }).waitFor({ timeout: 15_000 });

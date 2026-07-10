@@ -7,6 +7,20 @@ Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
 Repository branch: `codex/job-scoped-tools` (pending merge to `master`)
 Production feature release commit: `e0b4fb518018989fcf8a433af5c528ff52fe7cba` verified with live `/api/health` and `npm run monitor:production`; docs-only evidence commits may supersede the served build SHA without changing runtime behavior.
 
+## Latest Packet 08 Pass - Notification Delivery Truthfulness
+
+- Removed the browser-local push subscription flag and automatic notification-permission prompt. Neither represented server-backed background delivery.
+- Reframed Settings around the notification system that is actually live:
+  - Messages, Work updates, and Community/account notices now save as `in_app` preferences.
+  - Those preferences are enforced by the existing server notification insert path and control the notification bell.
+  - Settings explicitly states that background device alerts are not connected yet.
+- Verified production provider configuration without printing secret values:
+  - Resend API key and sender are configured in Railway.
+  - Twilio account/auth/sender variables are not configured in Railway.
+  - VAPID public/private/client keys are not configured, and no server push subscription path exists.
+- Preserved the Gate A boundary: no VAPID dependency, push-subscription schema, SMS expansion, job-alert fan-out, or email digest was added. Twilio remains limited in source to explicit invoice SMS delivery when configured.
+- Local verification: `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test:unit` (46/46), `npm run test:e2e`, `npm run test:ui:mobile-actions`, `npm audit --omit=dev`, and `git diff --check` pass. The mobile smoke asserts the truthful boundary copy and rejects a reintroduced `Enable notifications` control. The aggregate `npm run test` entered the integration phase and stalled without output; this checkout has no `TEST_DATABASE_URL`, and this frontend-only pass changes no server route, schema, or authorization behavior.
+
 ## Latest Packet 08 Pass - Job-Scoped Tool Context
 
 - Removed the remaining active-work ambiguity from job-aware tools:

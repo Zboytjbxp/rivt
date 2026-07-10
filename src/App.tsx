@@ -564,7 +564,6 @@ function App() {
   const [focusedActiveWorkId, setFocusedActiveWorkId] = useState<string | null>(() => readActiveWorkFromUrl());
   const [focusedReviewId, setFocusedReviewId] = useState<string | null>(() => readReviewFromUrl());
   const [workWorkspaceOpenKey, setWorkWorkspaceOpenKey] = useState(0);
-  const [messageBrowserNotificationsEnabled, setMessageBrowserNotificationsEnabled] = useState(true);
   const [inboxLoading, setInboxLoading] = useState(false);
   const [inboxSending, setInboxSending] = useState(false);
   const [inboxError, setInboxError] = useState<string | null>(null);
@@ -1042,68 +1041,6 @@ function App() {
     const interval = window.setInterval(() => { void reloadInbox(); }, 30000);
     return () => window.clearInterval(interval);
   }, [authUser, isGuest, onboardingComplete, reloadInbox]);
-
-  useEffect(() => {
-    function handleNotificationPreference(event: Event) {
-      const detail = (event as CustomEvent<{
-        notificationType?: string;
-        channel?: string;
-        enabled?: boolean;
-      }>).detail;
-      if (detail?.notificationType === "messages" && detail.channel === "push" && typeof detail.enabled === "boolean") {
-        setMessageBrowserNotificationsEnabled(detail.enabled);
-      }
-    }
-    window.addEventListener("rivt:notification-pref", handleNotificationPreference);
-    return () => window.removeEventListener("rivt:notification-pref", handleNotificationPreference);
-  }, []);
-
-  useEffect(() => {
-    if (isGuest || !authUser || !onboardingComplete) return;
-    let cancelled = false;
-    async function loadMessageNotificationPreference() {
-      try {
-        const response = await fetchWithTimeout(apiPath("/api/v1/notification-preferences"), { credentials: "include" });
-        const body = await response.json().catch(() => ({})) as {
-          data?: { preferences?: Array<{ notificationType: string; channel: string; enabled: boolean }> };
-        };
-        if (!response.ok || cancelled) return;
-        const messagesPush = body.data?.preferences?.find((item) => item.notificationType === "messages" && item.channel === "push");
-        setMessageBrowserNotificationsEnabled(messagesPush?.enabled ?? true);
-      } catch {
-        if (!cancelled) setMessageBrowserNotificationsEnabled(true);
-      }
-    }
-    void loadMessageNotificationPreference();
-    return () => { cancelled = true; };
-  }, [authUser, isGuest, onboardingComplete]);
-
-  // Request browser notification permission when user visits Messages
-  useEffect(() => {
-    if (activeView !== "Messages") return;
-    if ("Notification" in window && Notification.permission === "default") {
-      void Notification.requestPermission();
-    }
-  }, [activeView]);
-
-  // Show browser notification on new unread inbox messages
-  const prevUnreadRef = useRef(0);
-  useEffect(() => {
-    const unread = inboxConversations.reduce((sum, c) => sum + c.unreadCount, 0);
-    if (
-      unread > prevUnreadRef.current &&
-      messageBrowserNotificationsEnabled &&
-      "Notification" in window &&
-      Notification.permission === "granted" &&
-      activeView !== "Messages"
-    ) {
-      new Notification("RIVT — new message", {
-        body: `You have ${unread} unread message${unread === 1 ? "" : "s"}`,
-        icon: "/rivt-maskable-icon-192.png",
-      });
-    }
-    prevUnreadRef.current = unread;
-  }, [inboxConversations, activeView, messageBrowserNotificationsEnabled]);
 
   useEffect(() => {
     const timeout = window.setTimeout(() => {

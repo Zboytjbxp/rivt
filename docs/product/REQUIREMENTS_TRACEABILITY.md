@@ -762,3 +762,10 @@ Evidence must eventually link to implementation, automated tests, manual accepta
 - `GA-OPS-008` gains deployment evidence: `codex/field-reliability-train` was fast-forwarded into `master`, live `/api/health` served exact source `504e1db2e5b6fc9db23883ed17a3cb7444a3a66e` with migration `0022_community_audiences`, PostgreSQL, S3-compatible object storage, and configured Sentry, and `EXPECTED_SOURCE_COMMIT=504e1db2e5b6fc9db23883ed17a3cb7444a3a66e npm run monitor:production` passed with controls off, seven anonymous private-route checks, and 552 ms duration.
 - Public-link evidence also passed: the 1200x630 approved-logo social image, `robots.txt`, and sitemap returned HTTP 200, while production HTML contained the absolute Open Graph image and canonical Open Graph URL.
 - Remaining boundary: physically verify stalled LTE/offline transitions, retained-photo retry, and an update arriving during an in-progress form on iOS Safari/PWA and Android Chrome.
+
+## Traceability Addendum - 2026-07-10 Notification Delivery Truthfulness
+
+- `GA-UX-006` gains truthful notification controls: Settings now labels and saves only server-enforced in-app preferences, and no longer presents a browser-local flag as background push delivery.
+- `GA-OPS-007` gains provider-boundary evidence collected without printing secret values: Railway has configured Resend credentials and sender identity, while Twilio and VAPID variables are absent.
+- Local evidence includes build, lint, security lint, 46/46 unit tests, E2E, mobile Settings QA, and a zero-vulnerability production dependency audit. The aggregate integration phase stalled without output and no `TEST_DATABASE_URL` is available in this checkout; no database-backed pass is claimed for this frontend-only change.
+- Background Web Push, matching-job fan-out, general-alert SMS, and email digests remain outside Packet 08. They require a reviewed Gate B packet with consent, quiet hours, unsubscribe/STOP handling where applicable, delivery failure handling, and production acceptance evidence.

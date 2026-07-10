@@ -1,8 +1,6 @@
 ﻿import {
   AlertTriangle,
   BadgeCheck,
-  Bell,
-  BellOff,
   Calendar,
   Camera,
   CheckCircle,
@@ -34,7 +32,6 @@ import { createPortal } from "react-dom";
 import { useEffect, useState } from "react";
 import { useFocusTrap } from "../../app-shell/useFocusTrap";
 import { usePro } from "../pro/usePro";
-import { usePushNotifications } from "../notifications/usePushNotifications";
 import { UpgradeModal } from "../pro/UpgradeModal";
 import { RIVT_PRO_OFFER } from "../pro/proOffer";
 import { BillingApiError, cancelSubscription, reconcileStripeCheckout, resumeSubscription, startBillingPortal } from "../../lib/billing";
@@ -369,7 +366,7 @@ const STORAGE_WARNING_TIER_90 = "Storage is above 90% of the plan quota currentl
 const STORAGE_WARNING_TIER_80 = "Storage is above 80% of the plan quota currently configured for this account.";
 const SUPPORT_EMAIL = (import.meta.env.VITE_SUPPORT_EMAIL as string | undefined) || "support@rivt.pro";
 
-type NotificationPrefKey = "jobMatches" | "messages" | "workUpdates" | "system";
+type NotificationPrefKey = "messages" | "workUpdates" | "system";
 type NotificationPreference = {
   notificationType: "new_jobs" | "new_applicants" | "messages" | "work_updates" | "system";
   channel: "in_app" | "email" | "push";
@@ -383,14 +380,12 @@ const notificationPrefRows: Array<{
   label: string;
   detail: string;
 }> = [
-  { key: "jobMatches", notificationType: "new_jobs", channel: "push", label: "Job alerts", detail: "Browser alerts for matching jobs near your service area" },
-  { key: "messages", notificationType: "messages", channel: "push", label: "Messages", detail: "Browser alerts for unread job and crew threads" },
-  { key: "workUpdates", notificationType: "work_updates", channel: "push", label: "Work updates", detail: "Status changes on jobs, applications, and invites" },
-  { key: "system", notificationType: "system", channel: "push", label: "Account notices", detail: "Security, billing, and platform updates" },
+  { key: "messages", notificationType: "messages", channel: "in_app", label: "Messages", detail: "Unread job and crew threads in RIVT" },
+  { key: "workUpdates", notificationType: "work_updates", channel: "in_app", label: "Work updates", detail: "Applications, offers, schedule changes, and active work" },
+  { key: "system", notificationType: "system", channel: "in_app", label: "Community and account notices", detail: "Shop Talk activity, security, billing, and platform updates" },
 ];
 
 const defaultNotificationPrefs: Record<NotificationPrefKey, boolean> = {
-  jobMatches: true,
   messages: true,
   workUpdates: true,
   system: true,
@@ -898,58 +893,6 @@ function BusinessSettingsSection() {
 
 const themePaletteOrder = Object.keys(brandConfig.theme.palettes) as ThemePalette[];
 
-function PushNotificationsCard() {
-  const { permission, subscribed, busy, error, requestAndSubscribe, sendTestNotification, unsubscribe } = usePushNotifications();
-
-  return (
-    <div className="v2-push-card">
-      <div className="v2-push-header">
-        <div>
-          <strong>Push notifications</strong>
-          <p>Get alerted for new job matches, messages, and Shop Talk replies.</p>
-        </div>
-        {subscribed
-          ? <span className="v2-push-status is-on">On</span>
-          : <span className="v2-push-status">Off</span>}
-      </div>
-
-      {permission === "denied" && (
-        <p className="v2-push-denied">Blocked in browser settings. Open site settings to allow notifications.</p>
-      )}
-
-      {error && <p className="v2-push-error">{error}</p>}
-
-      <div className="v2-push-actions">
-        {!subscribed && permission !== "denied" && (
-          <button
-            type="button"
-            className="v2-primary-button"
-            onClick={requestAndSubscribe}
-            disabled={busy}
-          >
-            <Bell size={14} />
-            {busy ? "Enabling…" : "Enable notifications"}
-          </button>
-        )}
-        {subscribed && (
-          <>
-            <button type="button" className="v2-primary-button" onClick={sendTestNotification}>
-              <Bell size={14} />Test notification
-            </button>
-            <button type="button" onClick={unsubscribe}>
-              <BellOff size={14} />Turn off
-            </button>
-          </>
-        )}
-      </div>
-
-      {!import.meta.env.VITE_VAPID_PUBLIC_KEY && subscribed && (
-        <p className="v2-push-note">In-app notifications are active. Background push alerts are not available yet.</p>
-      )}
-    </div>
-  );
-}
-
 function PlanCard() {
   const { isPro, activatedAt, billing, billingLoading, refreshBilling } = usePro();
   const [upgradeOpen, setUpgradeOpen] = useState(false);
@@ -1260,9 +1203,6 @@ export function ProfileHub({
           if (match) next[match.key] = row.enabled;
         }
         setNotificationPrefs(next);
-        window.dispatchEvent(new CustomEvent("rivt:notification-pref", {
-          detail: { notificationType: "messages", channel: "push", enabled: next.messages },
-        }));
       } catch {
         // Keep defaults if preferences cannot be loaded; the server remains the source once reachable.
       }
@@ -1292,9 +1232,6 @@ export function ProfileHub({
       const body = await response.json().catch(() => ({})) as { error?: { message?: string } };
       if (!response.ok) throw new Error(body.error?.message || "Notification preference could not be saved.");
       setNotificationPrefStatus("Notification preferences saved.");
-      window.dispatchEvent(new CustomEvent("rivt:notification-pref", {
-        detail: { notificationType: row.notificationType, channel: row.channel, enabled },
-      }));
     } catch (error) {
       setNotificationPrefs((current) => ({ ...current, [row.key]: !enabled }));
       setNotificationPrefStatus(error instanceof Error ? error.message : "Notification preference could not be saved.");
@@ -1901,9 +1838,11 @@ export function ProfileHub({
           <section className="v2-profile-panel v2-profile-panel-wide v2-notification-prefs">
             <header>
               <span>Notifications</span>
-              <strong>Alert preferences</strong>
+              <strong>In-app alert preferences</strong>
             </header>
-            <PushNotificationsCard />
+            <p className="v2-notification-boundary">
+              These settings control alerts in RIVT and the notification bell. Background device alerts are not connected yet.
+            </p>
             <div className="v2-notif-pref-list">
               {notificationPrefRows.map((row) => (
                 <label key={row.key} className="v2-notif-pref-row">
