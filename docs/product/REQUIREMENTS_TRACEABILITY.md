@@ -10,6 +10,13 @@ Status values:
 
 Evidence must eventually link to implementation, automated tests, manual acceptance proof, and deployed build.
 
+## Traceability Addendum - 2026-07-09 Desktop Workspace Pass
+
+- `GA-UX-003` gains desktop information-hierarchy evidence: Home, Tools, Crew, and Shop Talk now use desktop-specific work lanes instead of stretching a single mobile stack across the available width. The pass keeps the existing five primary destinations and does not introduce a parallel desktop navigation model.
+- `GA-UX-006` gains rendered desktop evidence: a 1440px guest-preview check found no document-wide horizontal overflow. Shop Talk initializes as community discovery plus feed, adding a third thread panel only after selection; Crew uses distinct roster and invite-planning columns on the same viewport.
+- `GA-OPS-007` gains local verification evidence: `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test:ui:guest-preview`, `npm run test:ui:shop-talk-news`, `npm run test:e2e`, and `npm audit --omit=dev` passed; unit tests passed 46/46. The aggregate database integration phase was attempted but the configured remote test PostgreSQL reset its connection during setup, so this addendum does not claim a new DB-backed integration pass.
+- Remaining boundary: desktop visual verification is local preview evidence only. Production deployment and live verification remain blocked until the Railway project is reactivated.
+
 ## Traceability Addendum - 2026-07-08 Guest Preview Black-Screen Hardening
 
 - `GA-PRO-001` gains preview reachability evidence: Contractor and Subcontractor guest preview now run through a dedicated compact mobile smoke at 320px and must render the authenticated app shell with demo content instead of a blank/black screen.

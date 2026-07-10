@@ -3471,6 +3471,10 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
         ) : null}
 
         <section className="v2-tool-section" aria-label="Field tools">
+          <div className="v2-tool-section-header v2-tool-core-header">
+            <span>Core tools</span>
+            <strong>Run the job</strong>
+          </div>
           <div className="v2-tool-launch-grid">
             {PRIMARY_TOOL_LAUNCHERS.map((tool, index) => (
               <ToolCard

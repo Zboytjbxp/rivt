@@ -1503,6 +1503,30 @@
   }
 }
 
+/* On desktop, crew management is a workbench: roster on the left and invite
+   planning on the right. Mobile deliberately keeps the existing single flow. */
+.v2-crew-workbench {
+  display: grid;
+  gap: 20px;
+  min-width: 0;
+}
+
+@media (min-width: 1181px) {
+  .v2-crew-workbench {
+    grid-template-columns: minmax(0, 1.45fr) minmax(320px, 0.78fr);
+    align-items: start;
+  }
+
+  .v2-crew-workbench .v2-crew-invite-planner {
+    position: sticky;
+    top: calc(var(--v2-topbar-height) + 22px);
+  }
+
+  .v2-crew-workbench .v2-crew-invite-inputs {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (max-width: 360px) {
   .v2-network-page {
     gap: 16px;
@@ -1544,6 +1568,33 @@
 
   .v2-network-trust-stack article {
     padding: 14px;
+  }
+}
+
+/* Keep the planning surface beside the roster on a real desktop. This uses a
+   later, scoped rule so legacy network layout declarations cannot restack it. */
+@media (min-width: 1181px) {
+  .v2-network-page .v2-crew-workbench {
+    display: grid;
+    grid-template-columns: minmax(0, 1.45fr) minmax(320px, 0.78fr);
+    align-items: start;
+    gap: 20px;
+  }
+
+  .v2-network-page .v2-crew-workbench > .v2-crew-invite-planner {
+    grid-column: 2;
+    grid-row: 1;
+    position: sticky;
+    top: calc(var(--v2-topbar-height) + 22px);
+  }
+
+  .v2-network-page .v2-crew-workbench > .v2-crew-manager {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .v2-network-page .v2-crew-workbench > .v2-network-panel-wide {
+    grid-column: 2;
   }
 }
 

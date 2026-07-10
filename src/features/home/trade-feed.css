@@ -1261,4 +1261,43 @@
   .trade-feed-demo {
     grid-column: 1 / -1;
   }
+
+  /* Desktop is a working surface: active work and the feed lead on the left;
+     community context and attention cues stay in a quieter right rail. */
+  .trade-feed-active-work {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  .trade-feed-pickup {
+    grid-column: 1;
+  }
+
+  .trade-feed-start-card {
+    grid-column: 2;
+    grid-row: 2;
+  }
+
+  .trade-feed-nudge {
+    grid-column: 2;
+    grid-row: 3;
+  }
+
+  .trade-feed-communities {
+    grid-column: 2;
+    grid-row: 4;
+  }
+
+  .trade-feed-active-work {
+    min-height: 198px;
+  }
+
+  .trade-feed-active-actions {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    width: min(100%, 540px);
+  }
+
+  .trade-feed-active-actions .v2-primary-button {
+    grid-column: 1 / -1;
+  }
 }

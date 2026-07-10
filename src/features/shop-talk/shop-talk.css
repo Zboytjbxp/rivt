@@ -321,6 +321,13 @@
   padding: 16px;
 }
 
+.shop-talk-detail-empty {
+  display: grid;
+  min-height: 360px;
+  place-items: center;
+  text-align: center;
+}
+
 .shop-talk-tabs {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1487,6 +1494,28 @@
 }
 .route-loading {
   min-height: 240px;
+}
+
+@media (min-width: 1181px) {
+  .shop-talk-community-layout {
+    grid-template-columns: minmax(360px, 0.82fr) minmax(420px, 1.18fr);
+    align-items: start;
+  }
+
+  .shop-talk-community-layout .shop-talk-sidebar {
+    min-height: calc(100dvh - var(--v2-topbar-height) - 136px);
+  }
+
+  .shop-talk-community-layout .shop-talk-detail {
+    position: sticky;
+    top: calc(var(--v2-topbar-height) + 20px);
+    max-height: calc(100dvh - var(--v2-topbar-height) - 40px);
+    overflow-y: auto;
+  }
+
+  .shop-talk-community-layout .shop-talk-detail-empty {
+    min-height: 420px;
+  }
 }
 .skeleton-pill {
   width: 72px;
@@ -2968,6 +2997,62 @@ html[data-rivt-compact-device="true"] .shop-talk-community-layout .shop-talk-sea
   min-height: 44px;
   align-items: center;
   justify-content: center;
+}
+
+/* Desktop is a reading workspace: discovery, feed, then a thread only once
+   the user deliberately selects one. Keep the single-column reading flow on
+   tablet and phone. */
+.shop-talk-feed-panel {
+  display: grid;
+  min-width: 0;
+  align-content: start;
+  gap: 12px;
+}
+
+@media (min-width: 1181px) {
+  .shop-talk-community-layout {
+    grid-template-columns: minmax(270px, 0.6fr) minmax(460px, 1.4fr);
+    align-items: start;
+  }
+
+  .shop-talk-community-layout.thread-selected {
+    grid-template-columns: minmax(250px, 0.54fr) minmax(380px, 0.9fr) minmax(360px, 0.82fr);
+  }
+
+  .shop-talk-community-layout .shop-talk-sidebar {
+    position: sticky;
+    top: calc(var(--v2-topbar-height) + 20px);
+    max-height: calc(100dvh - var(--v2-topbar-height) - 40px);
+    min-height: 0;
+    overflow-y: auto;
+  }
+
+  .shop-talk-community-layout .shop-talk-feed-panel {
+    min-height: calc(100dvh - var(--v2-topbar-height) - 40px);
+    padding: 4px 0 32px;
+  }
+
+  .shop-talk-community-layout:not(.thread-selected) .shop-talk-detail {
+    display: none;
+  }
+
+  .shop-talk-community-layout .shop-talk-detail {
+    position: sticky;
+    top: calc(var(--v2-topbar-height) + 20px);
+    max-height: calc(100dvh - var(--v2-topbar-height) - 40px);
+    overflow-y: auto;
+  }
+}
+
+@media (max-width: 1180px) {
+  .shop-talk-community-layout.mobile-detail-open > .shop-talk-sidebar,
+  .shop-talk-community-layout.mobile-detail-open > .shop-talk-feed-panel {
+    display: none;
+  }
+
+  .shop-talk-community-layout.mobile-detail-open > .shop-talk-detail {
+    display: block;
+  }
 }
 
 .shop-talk-layout .trade-post-icon {

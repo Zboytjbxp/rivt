@@ -677,7 +677,9 @@ export function ShopTalkView({
   ));
   const [tradeFilter, setTradeFilter] = useState(() => readShopTalkFilterPrefs().tradeFilter);
   const [answerQueueOnly, setAnswerQueueOnly] = useState(Boolean(initialAnswerQueue));
-  const [selectedPostId, setSelectedPostId] = useState<string | null>(initialPostId ?? communityPosts[0]?.id ?? null);
+  // Desktop opens on the feed. A thread is a deliberate second step unless a
+  // deep link or answer queue has already named the exact post to open.
+  const [selectedPostId, setSelectedPostId] = useState<string | null>(initialPostId ?? null);
   const [answerDraft, setAnswerDraft] = useState("");
   const [newPostOpen, setNewPostOpen] = useState(Boolean(openComposer));
   const [joinedCommunities, setJoinedCommunities] = useState<Set<string>>(() => {
@@ -779,7 +781,6 @@ export function ShopTalkView({
   }
 
   function openCommunity(community: CommunityDisplay) {
-    const communityPostsForView = communityPosts.filter((post) => postBelongsToCommunity(post, community));
     setSelectedCommunitySlug(community.slug);
     setTalkQuery("");
     setTradeFilter("All trades");
@@ -790,7 +791,7 @@ export function ShopTalkView({
     setFilterType("all");
     setSortMode("hot");
     setMobileDetail(false);
-    if (communityPostsForView[0]) setSelectedPostId(communityPostsForView[0].id);
+    setSelectedPostId(null);
   }
 
   async function handleCreateCommunity(confirmDuplicate = false) {
@@ -969,7 +970,7 @@ export function ShopTalkView({
     const bMatch = (b.trade === persona.trade || b.trade === "General") ? 0 : 1;
     return aMatch - bMatch;
   });
-  const selectedPost = filteredPosts.find((p) => p.id === selectedPostId) ?? filteredPosts[0];
+  const selectedPost = filteredPosts.find((p) => p.id === selectedPostId) ?? null;
   const selectedNews = filteredNews.find((n) => n.id === selectedNewsId) ?? filteredNews[0];
   const profileBadges = communityBadgeLabels(communityPosts, profile.displayName, communityBadgeThresholds);
   const newsSourceCount = new Set(filteredNews.map((item) => item.source)).size;
@@ -1078,7 +1079,7 @@ export function ShopTalkView({
         />
       )}
       <section
-        className={`${mobileDetail ? "shop-talk-layout shop-talk-community-layout mobile-detail-open" : "shop-talk-layout shop-talk-community-layout"}${selectedCommunity ? " community-open" : ""}`}
+        className={`${mobileDetail ? "shop-talk-layout shop-talk-community-layout mobile-detail-open" : "shop-talk-layout shop-talk-community-layout"}${selectedCommunity ? " community-open" : ""}${selectedPost ? " thread-selected" : ""}`}
         aria-label="Shop Talk community"
       >
         <aside className="shop-talk-sidebar">
@@ -1280,7 +1281,13 @@ export function ShopTalkView({
                 )}
               </section>
               ) : null}
+            </>
+          ) : null}
+        </aside>
 
+        <main className="shop-talk-feed-panel" aria-label={activeTab === "talk" ? "Shop Talk feed" : "Trade News feed"}>
+          {activeTab === "talk" ? (
+            <>
               <div className="shop-talk-fieldbar" aria-label="Shop Talk filters">
                 <label className="shop-talk-search">
                   <Search size={15} />
@@ -1511,7 +1518,7 @@ export function ShopTalkView({
               </div>
             </>
           )}
-        </aside>
+        </main>
 
         {/* Right panel */}
         {activeTab === "talk" ? (
@@ -1737,8 +1744,8 @@ export function ShopTalkView({
               </button>
               <EmptyState
                 icon={MessageCircle}
-                title="No Shop Talk posts yet"
-                description="Use the Ask button when you're ready to start the first field question."
+                title="Select a thread"
+                description="Choose a question from the feed to read the conversation or add a field-tested answer."
               />
             </article>
           )

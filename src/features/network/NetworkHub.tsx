@@ -978,6 +978,7 @@ async function syncStoredReviewRecords(): Promise<{ records: StoredReview[]; mes
 
 function CrewInvitePlanner() {
   const [invites, setInvites] = useState<CrewInvite[]>(readCrewInvites);
+  const [composerOpen, setComposerOpen] = useState(false);
   const [jobRef, setJobRef] = useState("");
   const [name, setName] = useState("");
   const [trade, setTrade] = useState("");
@@ -1022,6 +1023,7 @@ function CrewInvitePlanner() {
     setName("");
     setTrade("");
     setNote("");
+    setComposerOpen(false);
     setNotice("Invite planned.");
     setTimeout(() => setNotice(""), 2500);
   }
@@ -1047,10 +1049,21 @@ function CrewInvitePlanner() {
       className="v2-network-panel v2-network-panel-wide"
       eyebrow={`${pending} pending · ${accepted} accepted`}
       title="Crew invite planner"
+      action={
+        <button
+          type="button"
+          className="v2-secondary-button"
+          aria-expanded={composerOpen}
+          onClick={() => setComposerOpen((open) => !open)}
+        >
+          <Plus size={14} />
+          {composerOpen ? "Close" : "Plan invite"}
+        </button>
+      }
     >
       <div className="v2-crew-invite-planner">
         <p className="v2-client-sync-note" role="status">{syncMessage}</p>
-        <div className="v2-crew-invite-form">
+        {composerOpen ? <div className="v2-crew-invite-form" aria-label="Plan a crew invite">
           <div className="v2-crew-invite-inputs">
             <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Name or company" />
             <input value={trade} onChange={(e) => setTrade(e.target.value)} placeholder="Trade (electrical, framing…)" />
@@ -1059,7 +1072,7 @@ function CrewInvitePlanner() {
           </div>
           {notice ? <p className="v2-sub-roster-notice" role="status">{notice}</p> : null}
           <button type="button" className="v2-primary-button" disabled={!name.trim()} onClick={addInvite}><Plus size={14} />Plan invite</button>
-        </div>
+        </div> : null}
         {invites.length ? (
           <div className="v2-crew-invite-list">
             {invites.map((inv) => (
@@ -1417,9 +1430,10 @@ export function NetworkHub({
       {profileFocus ? <ProfileSearchSpotlight profile={profileFocus} onDismiss={onClearProfileFocus} /> : null}
 
       {/* Local Crew Manager */}
-      <CrewManager crewType="crew" />
-
-      <CrewInvitePlanner />
+      <div className="v2-crew-workbench">
+        <CrewManager crewType="crew" />
+        <CrewInvitePlanner />
+      </div>
 
       <div className="v2-network-grid">
 

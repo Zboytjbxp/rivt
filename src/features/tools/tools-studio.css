@@ -7653,6 +7653,45 @@ html[data-rivt-compact-device="true"] .v2-tools-app.is-calculator-fullscreen .fr
   text-align: left;
 }
 
+/* Desktop launcher: keep the core field apps dense enough to scan in one
+   glance, while the expandable utility groups remain compact below. */
+@media (min-width: 1181px) {
+  .v2-tools-page .v2-tool-section-stack {
+    gap: 20px;
+  }
+
+  .v2-tools-page .v2-tool-core-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 16px;
+  }
+
+  .v2-tools-page .v2-tool-launch-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+  }
+
+  .v2-tools-page .v2-tool-launch-card,
+  .v2-tools-page .v2-tool-launch-card.is-featured {
+    min-height: 108px;
+    padding: 16px;
+  }
+
+  .v2-tools-page .v2-tool-group-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+  }
+
+  .v2-tools-page .v2-tool-group-summary {
+    min-height: 82px;
+  }
+
+  .v2-tools-page .v2-tools-storage-note {
+    margin-top: 4px;
+  }
+}
+
 .v2-tools-page .v2-tool-launch-card:hover {
   border-color: color-mix(in srgb, var(--v2-accent) 46%, var(--v2-border));
   background: color-mix(in srgb, var(--v2-surface) 94%, var(--v2-accent-soft));
