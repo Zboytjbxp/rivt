@@ -1336,3 +1336,23 @@ Add one entry per staging/production deployment.
 - Known risks: run the affected PostgreSQL integration suite when `TEST_DATABASE_URL` is configured, then use a physical accepted-work account to open Invoice and Daily Log from the job workspace and confirm the accepted job title is visible before entering data.
 - Rollback performed/result: not required.
 - Approval: job-scoped tool context is deployed Gate A UX hardening; broader/nationwide readiness remains subject to the existing separate boundaries.
+
+## Current Production - Packet 08 Notification Delivery Truthfulness
+
+- Environment: Production (`https://rivt.pro`)
+- Date/time/timezone: 2026-07-10 18:23 America/New_York
+- Deployer: Codex through fast-forward push to `master` with Railway production auto-deploy
+- Source repository/branch: `Zboytjbxp/rivt`, `master`
+- Source commit: `ecbd470ba9fc126eea685121030ad00f5b3b4ad0`
+- Build/artifact ID: Railway deployment ID not captured; exact live `/api/health` source metadata is the runtime proof.
+- Migration version before/after: unchanged (`0022_community_audiences`)
+- Feature-flag/config version: no provider credentials, rollout flags, or operational controls changed.
+- Provider/config changes: none. A secret-safe Railway check found Resend configured and Twilio/VAPID unconfigured.
+- Backup/rollback target: prior production source `d45dbfb5d6c74b185cd410f862dc426701e1a0d8`; no migration change.
+- Automated gates: `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test:unit` (46/46), `npm run test:e2e`, `npm run test:ui:mobile-actions`, `npm audit --omit=dev`, and `git diff --check` passed. The aggregate `npm run test` entered the integration phase and stalled without output; `TEST_DATABASE_URL` was absent and no database-backed pass is claimed.
+- Post-deploy smoke tests: `https://rivt.pro/api/health` returned exact source `ecbd470ba9fc126eea685121030ad00f5b3b4ad0`; `EXPECTED_SOURCE_COMMIT=ecbd470ba9fc126eea685121030ad00f5b3b4ad0 npm run monitor:production` passed with PostgreSQL/S3-compatible dependencies healthy, Sentry configured, controls disabled, seven anonymous private-route checks, and 649 ms duration.
+- Rendered UI evidence: mobile Settings smoke verifies the `In-app alert preferences` heading, the background-delivery boundary copy, absence of an `Enable notifications` control, and no horizontal overflow.
+- Health/readiness result: production is healthy on the exact source with no operational controls active.
+- Known risks: Web Push and general-alert SMS are not implemented. Twilio remains invoice-SMS-only in source and unconfigured in production.
+- Rollback performed/result: not required.
+- Approval: notification truthfulness accepted as deployed Gate A hardening; background delivery remains reviewed Gate B/provider work.
