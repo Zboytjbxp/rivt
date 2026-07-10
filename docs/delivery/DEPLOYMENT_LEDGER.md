@@ -1316,3 +1316,23 @@ Add one entry per staging/production deployment.
 - Known risks: one newly generated application/offer/project/review notification should still be tapped on a physical production phone to close the final live acceptance boundary for exact destinations.
 - Rollback performed/result: not required
 - Approval: exact-destination and accepted-work workspace coherence accepted as deployed Gate A UX hardening; broader/nationwide readiness remains subject to the existing separate boundaries.
+
+## Current Production - Packet 08 Job-Scoped Tool Context
+
+- Environment: Production (`https://rivt.pro`)
+- Date/time/timezone: 2026-07-10 14:09 America/New_York
+- Deployer: Codex through fast-forward push to `master` with Railway production auto-deploy
+- Source repository/branch: `Zboytjbxp/rivt`, `master`
+- Source commit: `1f9580ca388ed2c6e28864227d58f3787165f110`
+- Build/artifact ID: Railway deployment ID not captured; exact live `/api/health` source metadata is the runtime proof.
+- Migration version before/after: unchanged (`0022_community_audiences`)
+- Feature-flag/config version: no provider credentials, rollout flags, or operational controls changed.
+- Provider/config changes: none.
+- Backup/rollback target: prior production source `25b7153a507092ca924463a8aa617fdab7ceb330`; no migration change.
+- Automated gates: `npm run build`, `npm run lint`, `npm run test:unit` (46/46), `npm run test:e2e`, `npm run test:ui:work-lifecycle`, `npm audit --omit=dev`, and `git diff --check` passed. The current server-query assertion was added to the integration suite but was not run here because `TEST_DATABASE_URL` is absent from this checkout.
+- Post-deploy smoke tests: `https://rivt.pro/api/health` returned exact source `1f9580ca388ed2c6e28864227d58f3787165f110`; `EXPECTED_SOURCE_COMMIT=1f9580ca388ed2c6e28864227d58f3787165f110 npm run monitor:production` passed with PostgreSQL/S3-compatible dependencies healthy, Sentry configured, controls disabled, seven anonymous private-route checks, and 619 ms duration.
+- Rendered UI evidence: the rendered Work lifecycle smoke puts an unrelated job first, then opens Invoice and Daily Log by focused active-work route and verifies both retain the accepted job context without horizontal overflow.
+- Health/readiness result: production is healthy on the exact source with no operational controls active.
+- Known risks: run the affected PostgreSQL integration suite when `TEST_DATABASE_URL` is configured, then use a physical accepted-work account to open Invoice and Daily Log from the job workspace and confirm the accepted job title is visible before entering data.
+- Rollback performed/result: not required.
+- Approval: job-scoped tool context is deployed Gate A UX hardening; broader/nationwide readiness remains subject to the existing separate boundaries.
