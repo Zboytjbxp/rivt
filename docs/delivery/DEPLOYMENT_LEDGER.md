@@ -1356,3 +1356,19 @@ Add one entry per staging/production deployment.
 - Known risks: Web Push and general-alert SMS are not implemented. Twilio remains invoice-SMS-only in source and unconfigured in production.
 - Rollback performed/result: not required.
 - Approval: notification truthfulness accepted as deployed Gate A hardening; background delivery remains reviewed Gate B/provider work.
+
+## Current Production - Packet 09 Gate B Web Push
+
+- Environment: Production (`https://rivt.pro`)
+- Date/time/timezone: 2026-07-10 19:29 America/New_York
+- Deployer: Codex through fast-forward push to `master`, Railway source deployment, secret-safe VAPID configuration, and a clean Railway redeploy
+- Source repository/branch: `Zboytjbxp/rivt`, `master`
+- Source commit: `535e21bf1c2b76c7547b9c5ac5dc9ef54b8d5b79`
+- Railway deployment ID: `1af25317-a227-4e7a-ad8f-abdffcaeaa9f`
+- Migration version before/after: `0022_community_audiences` -> `0024_push_subscription_sessions`
+- Provider/config changes: generated one VAPID key pair in memory; stored public/private keys and `mailto:support@rivt.pro` subject in Railway. No key value was printed or committed. Twilio scope did not change.
+- Rollback target: source `623034859f0e1babacbb530695ca12c4296f5c3d`; remove VAPID variables to stop queueing/worker delivery, then roll back application source. Roll back migration 0024 before 0023 only if subscription/outbox deletion is accepted.
+- Automated gates: build, full lint, security lint, 49/49 unit tests, E2E, mobile Settings QA, zero-vulnerability dependency audit, diff checks, dedicated PostgreSQL push integration, migration lifecycle, and match acceptance passed. The aggregate PostgreSQL run completed 17/19 before two fixture/mapper failures; both were fixed and their affected suites passed individually.
+- Post-deploy proof: live `/api/health` returned exact source, migration 0024, PostgreSQL/S3 health, configured Sentry, and configured Web Push. `EXPECTED_SOURCE_COMMIT=535e21bf1c2b76c7547b9c5ac5dc9ef54b8d5b79 npm run monitor:production` passed with controls off and seven anonymous private-route checks in 591 ms.
+- Known boundary: a human must enable alerts from Settings in an installed PWA, close RIVT, receive/tap `Send test`, and then prove logout stops later alerts. No physical-delivery claim is made yet.
+- Approval: production configuration accepted; broad push fan-out remains blocked until the physical-device proof and operator outbox monitoring are recorded.
