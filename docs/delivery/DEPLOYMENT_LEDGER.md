@@ -1295,3 +1295,24 @@ Add one entry per staging/production deployment.
 - Known risks: physical weak-signal/offline, update-during-form, and retained-camera-retry checks remain to be performed on iOS Safari/PWA and Android Chrome. The remote test database stall remains an infrastructure/test-runner reliability issue, not a claimed integration pass.
 - Rollback performed/result: not required
 - Approval: field-reliability train accepted as deployed Gate A reliability hardening evidence; broader/nationwide readiness remains subject to the existing separate boundaries.
+
+## Current Production - Packet 08 Exact Notification Destinations
+
+- Environment: Production (`https://rivt.pro`)
+- Date/time/timezone: 2026-07-10 07:40 America/New_York
+- Deployer: Codex through fast-forward push to `master` with Railway production auto-deploy
+- Source repository/branch: `Zboytjbxp/rivt`, `master`
+- Source commit: `e0b4fb518018989fcf8a433af5c528ff52fe7cba`
+- Build/artifact ID: Railway deployment ID not captured; exact live `/api/health` source metadata is the runtime proof
+- Migration version before/after: unchanged (`0022_community_audiences`)
+- Feature-flag/config version: no provider credentials, rollout flags, or operational controls changed
+- Provider/config changes: none
+- Backup/rollback target: prior production source `c68491919ddb966da9c3026f565cd41be05a7bf1`; no migration change
+- Automated gates: `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test:unit` (46/46), `npm run test:e2e`, `npm run test:ui:work-lifecycle`, `npm audit --omit=dev`, and `git diff --check` passed. The affected `match-acceptance`, `project-completion`, and `reviews-admin-safety` PostgreSQL suites passed individually. The aggregate test wrapper exceeded its local window during the same slow database phase, so aggregate completion is not claimed.
+- Post-deploy smoke tests: `https://rivt.pro/api/health` returned exact source `e0b4fb518018989fcf8a433af5c528ff52fe7cba`; `EXPECTED_SOURCE_COMMIT=e0b4fb518018989fcf8a433af5c528ff52fe7cba npm run monitor:production` passed with PostgreSQL/S3-compatible dependencies healthy, Sentry configured, controls disabled, seven anonymous private-route checks, and 589 ms duration.
+- Authenticated evidence: a non-destructive production login and notifications/active-work read passed for the shared testing account. It had no current notification or active-work records, so this check does not claim a live notification click-through. The production match smoke could not run from this checkout because `DATABASE_URL` was absent.
+- Rendered UI evidence: `npm run test:ui:work-lifecycle` proves offer notification to exact Work record, cold-start active-work restoration, project notification to exact Records detail, and visible `Job proof packet` content.
+- Health/readiness result: production is healthy on the exact source with no operational controls active.
+- Known risks: one newly generated application/offer/project/review notification should still be tapped on a physical production phone to close the final live acceptance boundary for exact destinations.
+- Rollback performed/result: not required
+- Approval: exact-destination and accepted-work workspace coherence accepted as deployed Gate A UX hardening; broader/nationwide readiness remains subject to the existing separate boundaries.

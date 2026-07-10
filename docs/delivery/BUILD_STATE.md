@@ -4,8 +4,8 @@ Last updated: 2026-07-10 America/New_York
 Current gate: Gate A launch hardening
 Current phase: Packet 08 Gate A launch hardening plus Gate B behind-flag backbone work: machine gates and live workflow smokes are mostly green; the Shop Talk Reddit-model backbone, moderation/reporting backend, human-facing moderation console/report UX, post photo media, reachability/naming cleanup, Tools hub consolidation, Payment Tracker server records, money-tools sync, the accepted tool-records sync slices, non-tool local-state boundary cleanup, dedicated network-records sync for Crew/Invites/informal written shout-outs, screen-density polish, mobile layout/device-accessibility subtraction, fraction calculator ergonomics, iPhone SE layout containment, immersive-tool compact-device containment, SE tool chrome cleanup slices, native metric calculator rebuild, the camera-first records/photos tool rebuild, admin support-case review for account-type requests, offer start-date normalization, guest-preview black-screen hardening, a mature one-year guest demo, and a nationwide-readiness audit are implemented while still respecting launch-readiness boundaries before broad exposure.
 Active packet: `docs/delivery/packets/08_GATE_A_HARDENING.md`
-Repository branch: `codex/exact-notification-destinations` (pending merge to `master`)
-Production feature release commit: `504e1db2e5b6fc9db23883ed17a3cb7444a3a66e` verified with live `/api/health` and `npm run monitor:production`; docs-only evidence commits may supersede the served build SHA without changing runtime behavior.
+Repository branch: `master` (exact-notification work merged from `codex/exact-notification-destinations`)
+Production feature release commit: `e0b4fb518018989fcf8a433af5c528ff52fe7cba` verified with live `/api/health` and `npm run monitor:production`; docs-only evidence commits may supersede the served build SHA without changing runtime behavior.
 
 ## Latest Packet 08 Pass - Exact Notification Destinations and Active Work
 
@@ -29,7 +29,12 @@ Production feature release commit: `504e1db2e5b6fc9db23883ed17a3cb7444a3a66e` ve
   - `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test:unit` (46/46), `npm run test:e2e`, `npm run test:ui:work-lifecycle`, `npm audit --omit=dev`, and `git diff --check` passed
   - affected PostgreSQL integration suites passed individually: `match-acceptance`, `project-completion`, and `reviews-admin-safety`
   - aggregate `npm run test` exceeded the local wrapper window while running the same slow database suites, so no aggregate completion is claimed
-- Deployment boundary: pending merge to `master`, Railway deployment, exact `/api/health` source proof, production monitor, and authenticated exact-destination live smoke.
+- Deployment evidence:
+  - `codex/exact-notification-destinations` was fast-forwarded into `master` and pushed to GitHub
+  - Railway served exact source `e0b4fb518018989fcf8a433af5c528ff52fe7cba` with ready migration `0022_community_audiences`, PostgreSQL, S3-compatible storage, and configured Sentry
+  - `EXPECTED_SOURCE_COMMIT=e0b4fb518018989fcf8a433af5c528ff52fe7cba npm run monitor:production` passed with seven anonymous authorization probes in 589 ms
+  - a non-destructive authenticated production probe logged in as the shared test account and read notifications/active work successfully; that account had zero current notifications and zero active work, so no production click-through event is claimed
+  - the synthetic production match smoke could not run because this deployment worktree does not contain `DATABASE_URL`; creating a fresh production notification and tapping it on a physical device remains the final manual acceptance boundary for this slice
 
 ## Latest Packet 08 Pass - Field Reliability Train
 
