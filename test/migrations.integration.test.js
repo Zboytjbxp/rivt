@@ -5,7 +5,7 @@ import pg from "pg";
 import { migrateUp, migrationStatus, rollbackLatest } from "../server/migrations.js";
 
 const testDatabaseUrl = process.env.TEST_DATABASE_URL?.trim();
-const latestMigrationVersion = 22;
+const latestMigrationVersion = 24;
 const expectedPendingAfter = (version) => latestMigrationVersion - version;
 
 if (!testDatabaseUrl) {
@@ -165,6 +165,11 @@ if (!testDatabaseUrl) {
       assert.notEqual((await database.query("SELECT to_regclass('album_photos') AS table_name")).rows[0].table_name, null);
       assert.notEqual((await database.query("SELECT to_regclass('billing_entitlements') AS table_name")).rows[0].table_name, null);
       assert.notEqual((await database.query("SELECT to_regclass('shop_talk_answers') AS table_name")).rows[0].table_name, null);
+      assert.notEqual((await database.query("SELECT to_regclass('push_subscriptions') AS table_name")).rows[0].table_name, null);
+      assert.notEqual((await database.query("SELECT to_regclass('push_delivery_outbox') AS table_name")).rows[0].table_name, null);
+      assert.equal((await database.query(
+        "SELECT count(*)::int AS count FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = 'push_subscriptions' AND column_name = 'auth_session_id'",
+      )).rows[0].count, 1);
 
       const smokeReaction = await database.query(
         `INSERT INTO shop_talk_reactions (actor_account_id, target_type, target_key, reaction)
@@ -187,6 +192,18 @@ if (!testDatabaseUrl) {
         database.query("UPDATE shop_talk_reaction_events SET next_reaction = 'down' WHERE target_key = 'post:migration_smoke'"),
         /append-only/,
       );
+
+      const rolledBackPushSessionBinding = await rollbackLatest(database);
+      assert.equal(rolledBackPushSessionBinding.latestVersion, 23);
+      assert.equal((await database.query(
+        "SELECT count(*)::int AS count FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = 'push_subscriptions' AND column_name = 'auth_session_id'",
+      )).rows[0].count, 0);
+      assert.notEqual((await database.query("SELECT to_regclass('push_subscriptions') AS table_name")).rows[0].table_name, null);
+
+      const rolledBackPushDelivery = await rollbackLatest(database);
+      assert.equal(rolledBackPushDelivery.latestVersion, 22);
+      assert.equal((await database.query("SELECT to_regclass('push_subscriptions') AS table_name")).rows[0].table_name, null);
+      assert.equal((await database.query("SELECT to_regclass('push_delivery_outbox') AS table_name")).rows[0].table_name, null);
 
       const rolledBackCommunityAudiences = await rollbackLatest(database);
       assert.equal(rolledBackCommunityAudiences.latestVersion, 21);

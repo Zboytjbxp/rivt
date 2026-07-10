@@ -169,6 +169,15 @@ export function mapActiveWork(row, { events = [] } = {}) {
       title: row.job_title,
       status: row.job_status,
       organization: { id: row.organization_id, name: row.organization_name },
+      trade: row.job_trade_code ? {
+        code: row.job_trade_code,
+        name: row.job_trade_name || row.job_trade_code,
+      } : undefined,
+      durationHours: row.job_duration_hours == null ? null : Number(row.job_duration_hours),
+      budget: {
+        amountCents: Number(row.job_budget_cents ?? 0),
+        unit: row.job_budget_unit || "fixed",
+      },
       publicLocation: {
         city: row.public_city,
         region: row.public_region,

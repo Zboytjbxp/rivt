@@ -1902,6 +1902,46 @@
   font-size: var(--v2-text-sm);
   line-height: 1.5;
 }
+
+.v2-push-card {
+  display: grid;
+  gap: 14px;
+  margin: 0 0 16px;
+  padding: 16px;
+  border: 1px solid var(--v2-border);
+  border-radius: var(--v2-radius-lg);
+  background: var(--v2-surface-muted);
+}
+
+.v2-push-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.v2-push-header strong { color: var(--v2-text); }
+.v2-push-header p,
+.v2-push-note,
+.v2-push-error,
+.v2-push-notice { margin: 4px 0 0; font-size: var(--v2-text-sm); line-height: 1.45; }
+.v2-push-header p,
+.v2-push-note { color: var(--v2-text-muted); }
+.v2-push-error { color: var(--v2-danger); }
+.v2-push-notice { color: var(--v2-success); }
+
+.v2-push-status {
+  flex: 0 0 auto;
+  padding: 5px 9px;
+  border-radius: var(--v2-radius-pill);
+  background: var(--v2-surface);
+  color: var(--v2-text-muted);
+  font-size: var(--v2-text-xs);
+  font-weight: var(--v2-weight-strong);
+}
+
+.v2-push-status.is-on { background: var(--v2-success-soft); color: var(--v2-success); }
+.v2-push-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .v2-toggle-switch.is-on::after { transform: translateX(18px); }
 
 /* ── Data Export Section ─────────────────────────────────────────────────── */

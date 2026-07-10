@@ -86,6 +86,13 @@ import { registerCommunityRoutes } from "./communities.js";
 import { registerNetworkRecordRoutes } from "./network-records.js";
 import { registerToolRecordRoutes } from "./tool-records.js";
 import {
+  pushProviderStatus,
+  queuePushDeliveries,
+  registerPushNotificationRoutes,
+  startPushDeliveryWorker,
+  stopPushDeliveryWorker,
+} from "./push-notifications.js";
+import {
   buildCloseoutReport,
   completionResolutionSchema,
   completionSubmitSchema,
@@ -949,6 +956,7 @@ app.use(createNewsRouter());
 app.get("/api/health", (_request, response) => {
   const storage = storageConfiguration();
   const monitoring = errorMonitoringStatus();
+  const webPush = pushProviderStatus();
   const ok = storage.ok && migrationState !== "failed";
 
   response.status(ok ? 200 : 503).json({
@@ -972,6 +980,11 @@ app.get("/api/health", (_request, response) => {
         ok: monitoring.ok,
         provider: monitoring.provider,
         mode: monitoring.mode,
+      },
+      webPush: {
+        ok: webPush.ok,
+        provider: webPush.provider,
+        mode: webPush.mode,
       },
     },
     timestamp: new Date().toISOString(),
@@ -1998,10 +2011,11 @@ async function createInAppNotification(client, {
   priority = "normal",
   metadata = {},
 }) {
+  const preferenceType = type === "message" ? "messages" : type === "work" ? "work_updates" : "system";
   const preference = await client.query(
     `SELECT enabled FROM notification_preferences
      WHERE account_id = $1 AND notification_type = $2 AND channel = 'in_app'`,
-    [accountId, type === "message" ? "messages" : type === "work" ? "work_updates" : "system"],
+    [accountId, preferenceType],
   );
   if (preference.rowCount && preference.rows[0].enabled === false) return null;
   const inserted = await client.query(
@@ -2011,6 +2025,11 @@ async function createInAppNotification(client, {
      RETURNING *`,
     [accountId, type, title, body, actionHref, sourceType, sourceId, priority, JSON.stringify(metadata)],
   );
+  await queuePushDeliveries(client, {
+    notificationId: inserted.rows[0].id,
+    accountId,
+    notificationType: preferenceType,
+  });
   return inserted.rows[0];
 }
 
@@ -4717,6 +4736,15 @@ app.put("/api/v1/notification-preferences", requireV1AuthenticatedUser, requireV
   });
 }));
 
+registerPushNotificationRoutes({
+  app,
+  database,
+  requireV1AuthenticatedUser,
+  requireV1Actor,
+  writeRateLimit,
+  createInAppNotification,
+});
+
 registerShopTalkRoutes({
   app,
   database,
@@ -4795,6 +4823,7 @@ app.get("/api/readiness", requireAuthenticatedUser, async (_request, response, n
         database: storage.database,
         objectStorage: storage.objectStorage,
         errorMonitoring: errorMonitoringStatus(),
+        webPush: { mode: pushProviderStatus().mode },
       },
       controls: operationalControls(),
       timestamp: new Date().toISOString(),
@@ -5240,6 +5269,7 @@ app.post("/api/auth/logout", authRateLimit, async (request, response, next) => {
     const sessionId = readSessionId(request, sessionCookieName);
     if (sessionId) {
       await database.query("UPDATE auth_sessions SET revoked_at = now() WHERE session_id = $1", [sessionId]);
+      await database.query("DELETE FROM push_subscriptions WHERE auth_session_id = $1", [sessionId]);
     }
     response.clearCookie(sessionCookieName, { path: "/", sameSite: "lax", secure: process.env.NODE_ENV === "production" });
     response.json({ ok: true });
@@ -5248,6 +5278,7 @@ app.post("/api/auth/logout", authRateLimit, async (request, response, next) => {
 
 app.post("/api/v1/auth/logout", authRateLimit, requireV1AuthenticatedUser, asyncRoute(async (request, response) => {
   await database.query("UPDATE auth_sessions SET revoked_at = now() WHERE session_id = $1", [request.authSessionId]);
+  await database.query("DELETE FROM push_subscriptions WHERE auth_session_id = $1", [request.authSessionId]);
   response.clearCookie(sessionCookieName, { path: "/", sameSite: "lax", secure: process.env.NODE_ENV === "production" });
   response.json({ data: { loggedOut: true }, meta: { requestId: request.requestId } });
 }));
@@ -5284,6 +5315,7 @@ app.delete("/api/v1/sessions/:id", requireV1AuthenticatedUser, writeRateLimit, a
     [sessionId, request.authUser.id],
   );
   if (!result.rowCount) throw new ApiError(404, "SESSION_NOT_FOUND", "Session was not found.");
+  await database.query("DELETE FROM push_subscriptions WHERE auth_session_id = $1", [result.rows[0].session_id]);
   const revokedCurrent = result.rows[0].session_id === request.authSessionId;
   if (revokedCurrent) {
     response.clearCookie(sessionCookieName, { path: "/", sameSite: "lax", secure: process.env.NODE_ENV === "production" });
@@ -5295,9 +5327,15 @@ app.post("/api/v1/sessions/revoke-others", requireV1AuthenticatedUser, writeRate
   const result = await database.query(
     `UPDATE auth_sessions SET revoked_at = now()
      WHERE user_id = $1 AND session_id <> $2 AND revoked_at IS NULL
-     RETURNING id`,
+     RETURNING session_id`,
     [request.authUser.id, request.authSessionId],
   );
+  if (result.rowCount) {
+    await database.query(
+      "DELETE FROM push_subscriptions WHERE auth_session_id = ANY($1::text[])",
+      [result.rows.map((row) => row.session_id)],
+    );
+  }
   response.json({ data: { revokedCount: result.rowCount }, meta: { requestId: request.requestId } });
 }));
 
@@ -5412,6 +5450,10 @@ export async function startServer(listenPort = port) {
   if (database) {
     ensureDatabaseReady().then(() => {
       logInfo("server.migrations_ready", { migrationVersion });
+      const pushStatus = startPushDeliveryWorker(database);
+      if (!pushStatus.ok) {
+        logWarn("push.setup_required", { missing: pushStatus.missing });
+      }
     }).catch((error) => {
       logError("server.migration_failed", {
         message: error.message,
@@ -5422,6 +5464,7 @@ export async function startServer(listenPort = port) {
 }
 
 export async function closeDatabase() {
+  stopPushDeliveryWorker();
   if (database) {
     await database.end();
   }

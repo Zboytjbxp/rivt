@@ -122,7 +122,8 @@ async function configurePage(page) {
   routeResponse("**/api/storage", { usedBytes: 0, objectCount: 0 });
   routeResponse("**/api/v1/conversations", { data: { conversations: [] } });
   routeResponse("**/api/v1/notifications", { data: { notifications: [], unreadCount: 0 } });
-  routeResponse("**/api/v1/notifications/read", { data: { unreadCount: 0 } });
+    routeResponse("**/api/v1/notifications/read", { data: { unreadCount: 0 } });
+    routeResponse("**/api/v1/push/config", { data: { configured: false, publicKey: null, subscriptionCount: 0 } });
   routeResponse("**/api/v1/profiles?**", { data: { profiles: [] } });
   routeResponse("**/api/v1/billing/status", {
     data: {
@@ -425,8 +426,8 @@ async function runMobileFlow(page) {
   await page.getByRole("button", { name: "Settings", exact: true }).click();
   await page.getByRole("heading", { name: "Settings", exact: true }).waitFor({ timeout: 15_000 });
   await page.getByText("In-app alert preferences", { exact: true }).waitFor({ timeout: 15_000 });
-  await page.getByText("Background device alerts are not connected yet.", { exact: false }).waitFor({ timeout: 15_000 });
-  assert.equal(await page.getByRole("button", { name: "Enable notifications", exact: true }).count(), 0);
+    await page.getByText("Device delivery is not configured for this environment.", { exact: true }).waitFor({ timeout: 15_000 });
+    assert.equal(await page.getByRole("button", { name: "Enable device alerts", exact: true }).count(), 0);
   await assertNoHorizontalOverflow(page, "Settings route");
   await page.getByRole("button", { name: "Crew", exact: true }).click();
   await page.getByRole("heading", { name: "Crew", exact: true }).waitFor({ timeout: 15_000 });

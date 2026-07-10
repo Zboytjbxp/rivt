@@ -769,3 +769,13 @@ Evidence must eventually link to implementation, automated tests, manual accepta
 - `GA-OPS-007` gains provider-boundary evidence collected without printing secret values: Railway has configured Resend credentials and sender identity, while Twilio and VAPID variables are absent.
 - Local evidence includes build, lint, security lint, 46/46 unit tests, E2E, mobile Settings QA, and a zero-vulnerability production dependency audit. The aggregate integration phase stalled without output and no `TEST_DATABASE_URL` is available in this checkout; no database-backed pass is claimed for this frontend-only change.
 - Background Web Push, matching-job fan-out, general-alert SMS, and email digests remain outside Packet 08. They require a reviewed Gate B packet with consent, quiet hours, unsubscribe/STOP handling where applicable, delivery failure handling, and production acceptance evidence.
+
+## Gate B Addendum - 2026-07-10 Web Push Delivery
+
+- Packet 09 adds explicit-consent Web Push without weakening or replacing the server-owned notification center.
+- Browser subscriptions are authenticated, PostgreSQL-owned, HTTPS-only, and bound to the current login session. Revoked and expired sessions are excluded from fan-out.
+- Notification creation and outbox insertion share the existing server transaction, while a separate bounded worker handles provider delivery/retry so user actions are not held open by push-provider latency.
+- Existing Messages, Work updates, and Community/account category preferences gate both the notification bell and enabled device delivery. No automatic permission prompt or browser-local success flag exists.
+- Same-origin service-worker click handling preserves the exact message/job/project/review/Shop Talk destinations already verified in Packet 08.
+- Local evidence: 48/48 unit tests, isolated PostgreSQL migration/subscription/outbox/revocation integration, E2E, mobile Settings smoke, build/lint/security lint, and zero production dependency vulnerabilities.
+- Maturity remains `local/integration verified` until production VAPID configuration, live migration/readiness evidence, and one closed-PWA physical notification delivery/click are recorded.

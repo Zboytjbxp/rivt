@@ -61,7 +61,11 @@ self.addEventListener('push', e => {
 // Notification click handler
 self.addEventListener('notificationclick', e => {
   e.notification.close();
-  const url = e.notification.data?.url || '/';
+  let url = '/';
+  try {
+    const requested = new URL(e.notification.data?.url || '/', self.location.origin);
+    if (requested.origin === self.location.origin) url = `${requested.pathname}${requested.search}${requested.hash}`;
+  } catch {}
   e.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
       const existing = list.find(c => c.url.includes(self.location.origin));

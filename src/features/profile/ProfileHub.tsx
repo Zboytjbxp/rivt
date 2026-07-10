@@ -1,6 +1,8 @@
 ﻿import {
   AlertTriangle,
   BadgeCheck,
+  Bell,
+  BellOff,
   Calendar,
   Camera,
   CheckCircle,
@@ -32,6 +34,7 @@ import { createPortal } from "react-dom";
 import { useEffect, useState } from "react";
 import { useFocusTrap } from "../../app-shell/useFocusTrap";
 import { usePro } from "../pro/usePro";
+import { usePushNotifications } from "../notifications/usePushNotifications";
 import { UpgradeModal } from "../pro/UpgradeModal";
 import { RIVT_PRO_OFFER } from "../pro/proOffer";
 import { BillingApiError, cancelSubscription, reconcileStripeCheckout, resumeSubscription, startBillingPortal } from "../../lib/billing";
@@ -892,6 +895,72 @@ function BusinessSettingsSection() {
 }
 
 const themePaletteOrder = Object.keys(brandConfig.theme.palettes) as ThemePalette[];
+
+function PushNotificationsCard() {
+  const {
+    permission,
+    providerConfigured,
+    supported,
+    installedAsApp,
+    subscribed,
+    busy,
+    loading,
+    error,
+    notice,
+    requestAndSubscribe,
+    sendTestNotification,
+    unsubscribe,
+  } = usePushNotifications();
+
+  const status = loading ? "Checking" : subscribed ? "On" : providerConfigured ? "Off" : "Unavailable";
+
+  return (
+    <div className="v2-push-card">
+      <div className="v2-push-header">
+        <div>
+          <strong>Device alerts</strong>
+          <p>Receive messages, work updates, and Shop Talk activity when RIVT is closed.</p>
+        </div>
+        <span className={subscribed ? "v2-push-status is-on" : "v2-push-status"}>{status}</span>
+      </div>
+
+      {!providerConfigured && !loading ? (
+        <p className="v2-push-note">Device delivery is not configured for this environment.</p>
+      ) : null}
+      {providerConfigured && !supported ? (
+        <p className="v2-push-note">
+          {installedAsApp
+            ? "This browser does not support device alerts."
+            : "On iPhone or iPad, add RIVT to your Home Screen before enabling device alerts."}
+        </p>
+      ) : null}
+      {permission === "denied" ? (
+        <p className="v2-push-error">Device alerts are blocked in your browser or phone settings.</p>
+      ) : null}
+      {error ? <p className="v2-push-error" role="alert">{error}</p> : null}
+      {notice ? <p className="v2-push-notice" role="status">{notice}</p> : null}
+
+      <div className="v2-push-actions">
+        {!subscribed && providerConfigured && supported && permission !== "denied" ? (
+          <button type="button" className="v2-primary-button" onClick={() => void requestAndSubscribe()} disabled={busy || loading}>
+            <Bell size={16} />
+            {busy ? "Enabling…" : "Enable device alerts"}
+          </button>
+        ) : null}
+        {subscribed ? (
+          <>
+            <button type="button" className="v2-secondary-button" onClick={() => void sendTestNotification()} disabled={busy}>
+              <Bell size={16} /> Send test
+            </button>
+            <button type="button" className="v2-secondary-button" onClick={() => void unsubscribe()} disabled={busy}>
+              <BellOff size={16} /> Turn off
+            </button>
+          </>
+        ) : null}
+      </div>
+    </div>
+  );
+}
 
 function PlanCard() {
   const { isPro, activatedAt, billing, billingLoading, refreshBilling } = usePro();
@@ -1840,8 +1909,9 @@ export function ProfileHub({
               <span>Notifications</span>
               <strong>In-app alert preferences</strong>
             </header>
+            <PushNotificationsCard />
             <p className="v2-notification-boundary">
-              These settings control alerts in RIVT and the notification bell. Background device alerts are not connected yet.
+              Alert categories control the RIVT notification bell and any enabled device alerts.
             </p>
             <div className="v2-notif-pref-list">
               {notificationPrefRows.map((row) => (
