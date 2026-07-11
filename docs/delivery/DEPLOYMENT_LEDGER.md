@@ -21,6 +21,25 @@ Add one entry per staging/production deployment.
 - Rollback performed/result:
 - Approval:
 
+## Current Production - Packet 16 Workspace Focus Handoff
+
+- Environment: Production (`https://rivt.pro`)
+- Date/time/timezone: 2026-07-11 America/New_York
+- Deployer: Codex through GitHub push to Railway-linked `master`
+- Source repository/branch: `Zboytjbxp/rivt`, `master`
+- Source commit: `5e766ca22f5d20bdfa52f7ef632274fe425f2326`
+- Build/artifact ID: Railway-linked production deployment; live `/api/health` is the runtime proof
+- Migration version before/after: `0026_standalone_projects` / `0026_standalone_projects` (no schema migration)
+- Feature-flag/config version: no provider credentials or operational-control flags changed
+- Provider/config changes (no secrets): none
+- Backup/rollback target: prior successful production source `aaf3a8701b4dceb084bdaf007a04ea2bcba74385`; rollback is a normal source rollback because no migration changed
+- Automated gates: build, lint, security lint, 53 unit tests, E2E, Work lifecycle UI smoke twice, mobile-action UI smoke, Tools UI smoke, dependency audit, and diff check passed. The aggregate test command exceeded the local two-minute runner limit before reporting its integration result.
+- Post-deploy smoke tests: live health reported the exact source commit with PostgreSQL, S3-compatible storage, configured Sentry, and configured Web Push. `EXPECTED_SOURCE_COMMIT=5e766ca22f5d20bdfa52f7ef632274fe425f2326 npm run monitor:production` passed with matching alerts enabled, controls off, seven anonymous private-route checks, and 621 ms duration.
+- Health/readiness result: healthy production health and synthetic monitor; no schema or provider change
+- Known risks: physical phone proof remains for a Home or Work `Open workspace` tap visibly focusing the intended active job
+- Rollback performed/result: not required
+- Approval: deployed as a client-only active-work continuity correction with no auth, billing, storage, moderation, provider, or migration boundary changes
+
 ## Current Production - Packet 13 Workflow Coherence
 
 - Environment: Production (`https://rivt.pro`)

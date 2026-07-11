@@ -19,8 +19,16 @@ Evidence must eventually link to implementation, automated tests, manual accepta
 - `GA-UX-006` gains rendered accessibility evidence: the job title receives
   focus without forcing an additional scroll, and the lifecycle smoke asserts
   both focus and viewport visibility at 390px.
-- `GA-OPS-007` will record the full local gate result before merge; this packet
-  has no schema, provider, authorization, or billing change.
+- `GA-OPS-007` gains local evidence: build, lint, security lint, 53/53 unit
+  tests, E2E, Work lifecycle UI smoke (twice), mobile-action UI smoke, Tools
+  rendered QA, dependency audit, and diff check passed. The aggregate test
+  command exceeded the local two-minute runner limit before reporting an
+  integration result, so this addendum does not claim an aggregate pass.
+- `GA-OPS-008` gains production evidence: `master` serves exact source
+  `5e766ca22f5d20bdfa52f7ef632274fe425f2326`; live health reports ready
+  migration `0026_standalone_projects`, PostgreSQL/S3-compatible storage,
+  configured Sentry, and configured Web Push. The expected-source production
+  monitor passed with seven anonymous private-route checks in 621 ms.
 
 ## Traceability Addendum - 2026-07-10 Active Work Continuity (Unmerged)
 

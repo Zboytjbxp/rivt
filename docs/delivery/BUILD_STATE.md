@@ -2,10 +2,10 @@
 
 Last updated: 2026-07-11 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Packet 16 Workspace Focus Handoff is active. This small continuity pass makes the accepted-work handoff visibly land on the exact job workspace instead of relying on a route change or toast alone.
+Current phase: Packet 16 Workspace Focus Handoff is production verified. This small continuity pass makes the accepted-work handoff visibly land on the exact job workspace instead of relying on a route change or toast alone.
 Active packet: `docs/delivery/packets/16_WORKSPACE_FOCUS_HANDOFF.md`
-Repository branch: `codex/workspace-continuity-followup`
-Production feature release commit: `aaf3a8701b4dceb084bdaf007a04ea2bcba74385` verified with live `/api/health`, ready migration `0026_standalone_projects`, and `npm run monitor:production`; docs-only evidence commits may supersede the served build SHA without changing runtime behavior.
+Repository branch: `master`
+Production feature release commit: `5e766ca22f5d20bdfa52f7ef632274fe425f2326` verified with live `/api/health`, ready migration `0026_standalone_projects`, and `npm run monitor:production`; docs-only evidence commits may supersede the served build SHA without changing runtime behavior.
 
 ## Packet 16 - Workspace Focus Handoff (Local Verification)
 
@@ -22,8 +22,14 @@ Production feature release commit: `aaf3a8701b4dceb084bdaf007a04ea2bcba74385` ve
   dependency audit, and diff check. The aggregate `npm run test` exceeded the
   local runner's two-minute limit before reporting an integration result, so
   no aggregate pass is claimed for this client-only packet.
-- Deployment boundary: pending merge, Railway exact
-  source health proof, production monitor, and one physical phone check.
+- Production evidence: `master` serves exact source
+  `5e766ca22f5d20bdfa52f7ef632274fe425f2326`; live health reports ready
+  migration `0026_standalone_projects`, PostgreSQL, S3-compatible object
+  storage, configured Sentry, and configured Web Push. The production monitor
+  passed with matching alerts enabled, controls off, seven anonymous
+  private-route checks, and a 621 ms duration.
+- Remaining field-proof boundary: tap `Open workspace` from an active-work
+  card on a physical phone and confirm the job detail scrolls into view.
 
 ## Packet 15 Follow-up - Mobile Experience Train (Production Verified)
 
