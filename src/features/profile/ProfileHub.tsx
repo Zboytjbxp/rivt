@@ -6,6 +6,7 @@
   Calendar,
   Camera,
   CheckCircle,
+  Clock3,
   Cloud,
   CreditCard,
   Database,
@@ -1106,8 +1107,8 @@ function PlanCard() {
           <span className="v2-plan-name">{isPro ? "RIVT Pro" : "Free plan"}</span>
           <p className="v2-plan-summary">
             {isPro
-              ? "Job proof packets, closeout records, and paperwork tools are active."
-              : "Work, Crew, Shop Talk, and basic tools stay available while the Jacksonville network grows."}
+              ? "Extended time history and CSV exports are active on this account."
+              : "Core Work, Crew, Shop Talk, and field tools stay available on the free plan."}
           </p>
         </div>
         {isPro ? (
@@ -1135,9 +1136,9 @@ function PlanCard() {
             <p>{RIVT_PRO_OFFER.summary}</p>
           </section>
           <div className="v2-plan-limits">
-            <div className="v2-plan-limit-row"><span><Cloud size={14} /> Records and photos</span><span>Cloud storage</span></div>
-            <div className="v2-plan-limit-row"><span><FileText size={14} /> Job proof packets</span><span>Included</span></div>
-            <div className="v2-plan-limit-row"><span><Download size={14} /> Closeout exports</span><span>Included</span></div>
+            <div className="v2-plan-limit-row"><span><Clock3 size={14} /> Time records</span><span>Extended history</span></div>
+            <div className="v2-plan-limit-row"><span><Download size={14} /> CSV exports</span><span>Included</span></div>
+            <div className="v2-plan-limit-row"><span><FileText size={14} /> Work records</span><span>Core plan too</span></div>
             <div className="v2-plan-limit-row"><span><ShieldCheck size={14} /> Plan control</span><span>Cancel anytime</span></div>
           </div>
           <button type="button" className="v2-plan-upgrade-btn" onClick={() => setUpgradeOpen(true)}>

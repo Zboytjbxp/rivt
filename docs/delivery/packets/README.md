@@ -13,6 +13,10 @@ Run packets in order. A packet is one AI session or a small number of tightly co
 | 06 | Private project records, uploads, completion, and closeout report |
 | 07 | Eligible reviews, disputes, blocks/reports, and pilot admin/support |
 | 08 | Gate A hardening, migration, restore, security, accessibility, and pilot release |
+| 09 | Gate B Web Push delivery |
+| 10 | Gate B matching job alerts |
+| 11 | Active work continuity |
+| 12 | Gate B daily use |
 
 Before each packet read:
 

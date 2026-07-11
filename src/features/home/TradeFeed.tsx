@@ -20,6 +20,7 @@ import { fallbackCommunities, type CommunityDisplay } from "../shop-talk/communi
 import type { Job, Role } from "../../types";
 import type { CanonicalActiveWork } from "../work/job-api";
 import type { ToolMode } from "../tools/ToolsStudio";
+import { getProjectForActiveWork, type ProjectRecord } from "../tools/project-api";
 import type { GuestPreviewSummary } from "../../demo/guestPreview";
 import "./trade-feed.css";
 
@@ -56,6 +57,20 @@ const RECENT_TOOL_LABELS: Partial<Record<ToolMode, string>> = {
   materials: "Materials",
   payments: "Payments",
 };
+
+function isToday(iso: string | null | undefined) {
+  if (!iso) return false;
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return false;
+  const today = new Date();
+  return date.getFullYear() === today.getFullYear()
+    && date.getMonth() === today.getMonth()
+    && date.getDate() === today.getDate();
+}
+
+function isDailyLogEntry(body: string) {
+  return body.trimStart().toLowerCase().startsWith("rivt daily log");
+}
 
 function formatCommunityCardCount(memberCount: number) {
   if (memberCount <= 0) return "";
@@ -199,7 +214,62 @@ export function TradeFeed({
   const [recentTools, setRecentTools] = useState<ToolMode[]>(readRecentTools);
   const [deviceToolStateCount, setDeviceToolStateCount] = useState(readDeviceToolStateCount);
   const [isOnline, setIsOnline] = useState(() => (typeof window === "undefined" ? true : window.navigator.onLine));
+  const [activeProject, setActiveProject] = useState<ProjectRecord | null>(null);
+  const [activeProjectLoading, setActiveProjectLoading] = useState(false);
   const primaryActiveWork = activeWork.find((work) => work.status === "active") ?? activeWork[0] ?? null;
+
+  useEffect(() => {
+    let cancelled = false;
+    const activeWorkId = primaryActiveWork?.id ?? null;
+    if (!activeWorkId || demoSummary) {
+      void Promise.resolve().then(() => {
+        if (cancelled) return;
+        setActiveProject(null);
+        setActiveProjectLoading(false);
+      });
+      return () => { cancelled = true; };
+    }
+
+    void Promise.resolve()
+      .then(() => {
+        if (cancelled) return null;
+        setActiveProjectLoading(true);
+        return getProjectForActiveWork(activeWorkId);
+      })
+      .then((project) => {
+        if (!cancelled && project) setActiveProject(project);
+      })
+      .catch(() => {
+        // The workspace remains usable when an anonymous preview or a brief
+        // network interruption cannot read the private project timeline.
+        if (!cancelled) setActiveProject(null);
+      })
+      .finally(() => {
+        if (!cancelled) setActiveProjectLoading(false);
+      });
+
+    return () => { cancelled = true; };
+  }, [demoSummary, primaryActiveWork?.id]);
+
+  const activeWorkPulse = useMemo(() => {
+    if (!primaryActiveWork) return null;
+    if (activeProjectLoading) return { state: "loading" as const, label: "Loading today’s work" };
+    if (!activeProject) return { state: "unavailable" as const, label: "Open the workspace for today’s record" };
+
+    const dailyLogSaved = activeProject.entries.some((entry) => entry.entryType === "note" && isToday(entry.createdAt) && isDailyLogEntry(entry.body));
+    const photoCount = activeProject.media.filter((media) => media.status === "stored").length;
+    const completionPending = activeProject.status === "completion_submitted";
+
+    if (completionPending) return { state: "completion" as const, label: "Completion is waiting for review" };
+    if (dailyLogSaved) return {
+      state: "complete" as const,
+      label: `${photoCount ? `${photoCount} photo${photoCount === 1 ? "" : "s"} on record · ` : ""}Daily log saved today`,
+    };
+    return {
+      state: "due" as const,
+      label: photoCount ? `${photoCount} photo${photoCount === 1 ? "" : "s"} on record · Add today’s log` : "No log yet today",
+    };
+  }, [activeProject, activeProjectLoading, primaryActiveWork]);
 
   useEffect(() => {
     if (typeof window === "undefined") return undefined;
@@ -427,6 +497,12 @@ export function TradeFeed({
               Offer accepted. Messages, photos, and daily logs stay tied to this job.
             </p>
             {activeWorkLocation(primaryActiveWork) ? <small>{activeWorkLocation(primaryActiveWork)}</small> : null}
+            {activeWorkPulse ? (
+              <div className={`trade-feed-work-pulse is-${activeWorkPulse.state}`} aria-live="polite">
+                <Circle size={9} fill="currentColor" aria-hidden="true" />
+                <span>{activeWorkPulse.label}</span>
+              </div>
+            ) : null}
           </div>
           <div className="trade-feed-active-actions">
             <button type="button" className="v2-primary-button" onClick={() => onOpenActiveWorkWorkspace(primaryActiveWork.id)}>
@@ -450,11 +526,11 @@ export function TradeFeed({
             </button>
             <button
               type="button"
-              className="v2-secondary-button"
+              className={activeWorkPulse?.state === "due" ? "v2-secondary-button trade-feed-log-due" : "v2-secondary-button"}
               onClick={() => onOpenActiveWorkTool(primaryActiveWork.id, "daily-log")}
             >
               <FileText size={15} />
-              Daily log
+              {activeWorkPulse?.state === "due" ? "Log today" : "Daily log"}
             </button>
           </div>
         </section>

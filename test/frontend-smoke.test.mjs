@@ -114,6 +114,54 @@ test("Home trade feed renders without crashing", async () => {
   );
 });
 
+test("Home active-work card keeps a daily-work route available when the project pulse is unavailable", async () => {
+  const { TradeFeed } = await loadModule("/src/features/home/TradeFeed.tsx");
+  const activeWork = {
+    id: "c5ee1300-4a11-4e64-85c5-5f4f8f296204",
+    jobId: "9a672730-f3a2-4e90-9716-4349a4daaef0",
+    offerId: "d8a5aa73-4f5a-49e1-aa5a-6c2601d81210",
+    organizationId: "a38864d0-c3aa-46d3-a72f-98a7b2207b4d",
+    contractorAccountId: "e76f323a-f4e9-4e2e-b5f8-c0c547f85a10",
+    tradespersonAccountId: "16d6531d-857d-42e8-b3fb-9b098338e926",
+    status: "active",
+    startedAt: new Date().toISOString(),
+    completedAt: null,
+    cancelledAt: null,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    events: [],
+    job: {
+      id: "9a672730-f3a2-4e90-9716-4349a4daaef0",
+      title: "Warehouse trim closeout",
+      status: "closed",
+      organization: { id: "a38864d0-c3aa-46d3-a72f-98a7b2207b4d", name: "RIVT Test Co." },
+      trade: { code: "carpentry", name: "Carpentry" },
+      durationHours: 8,
+      budget: { amountCents: 85000, currency: "USD", unit: "fixed" },
+      publicLocation: { city: "Jacksonville", region: "FL", countryCode: "US" },
+    },
+  };
+
+  assertSmokeRender(
+    React.createElement(TradeFeed, {
+      posts: [],
+      activeWork: [activeWork],
+      name: "RIVT Tester",
+      location: "Jacksonville, FL",
+      primaryTrade: "Carpentry",
+      onOpenPost: noop,
+      onAsk: noop,
+      onPostWork: noop,
+      onOpenCommunity: noop,
+      onNavigate: noop,
+      onOpenActiveWorkWorkspace: noop,
+      onOpenActiveWorkMessages: noop,
+      onOpenActiveWorkTool: noop,
+    }),
+    /workspace for today/,
+  );
+});
+
 test("Work workspace renders without crashing", async () => {
   const { WorkWorkspace } = await loadModule("/src/features/work/WorkWorkspace.tsx");
 

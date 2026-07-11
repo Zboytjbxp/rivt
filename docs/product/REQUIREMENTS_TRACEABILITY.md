@@ -747,6 +747,14 @@ Evidence must eventually link to implementation, automated tests, manual accepta
 - Founder/support/legal-safety signoff is recorded, and the machine-readable incident and launch readiness gates now report `ready`. Expanded production accessibility smoke now passes on source `d4e6f06a70e3dad8f59d54b6698b79ab08d6fd2d`, but physical/deeper manual accessibility-device evidence remains the next non-machine launch-quality boundary. Error-monitoring capture code, Sentry ingestion, first pilot escalation, backup owner, support hours, incident routing, incident rehearsal, and the Gate A recovery policy are now configured.
 - The app must continue to avoid fake seed data, frontend-only success, and homeowner flows.
 
+## Traceability Addendum - 2026-07-10 Gate B Daily Use (Local)
+
+- `GA-UX-005` gains an honest active-work continuation surface: Home reads the participant-authorized project timeline and distinguishes loading, unavailable, completion-waiting, daily-log-saved-today, and no-log-yet-today states without manufacturing work progress.
+- `GA-UX-003` retains exact-object routing: the Home workspace, Messages, Photos, and Daily Log actions preserve the active-work identifier instead of falling back to a generic Records list or unrelated job.
+- `GA-OPS-007` gains controlled-engagement operating guidance in `docs/operations/GATE_B_CONTROLLED_ENGAGEMENT.md` for Shop Talk moderation, device alerts, matching-job privacy, support escalation, and job-record recovery.
+- `GA-OPS-007` gains local evidence on `codex/gate-b-daily-use`: build, lint, security lint, 53/53 unit tests, E2E, active-work lifecycle UI smoke, mobile-action UI smoke, Shop Talk/Trade News UI smoke, dependency audit, and diff check passed. The aggregate remote PostgreSQL runner exceeded the local wrapper window without output or a test failure; no aggregate-pass claim is made.
+- `GA-OPS-008` remains unchanged until this focused client/operations pass is merged and production serves its exact source commit.
+
 ## Traceability Addendum - 2026-07-09 Mature Guest Demo and Nationwide Audit
 
 - `GA-UX-005` gains a clearer anonymous first-value path: contractor and subcontractor previews now demonstrate a labeled one-year sample account with completed work, records, repeat relationships, active work, messages, and reputation rather than an empty or lightly populated shell.

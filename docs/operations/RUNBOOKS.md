@@ -2,6 +2,8 @@
 
 These are minimum pilot procedures. Add provider-specific commands and owners before launch.
 
+For controlled Gate B engagement operations, including community moderation, device alerts, matching-job privacy, and exact active-work record recovery, use [GATE_B_CONTROLLED_ENGAGEMENT.md](GATE_B_CONTROLLED_ENGAGEMENT.md).
+
 ## Deployment Verification
 
 1. Record branch, commit, artifact/build ID, migration version, and environment.
