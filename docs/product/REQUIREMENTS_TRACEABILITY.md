@@ -832,9 +832,12 @@ Evidence must eventually link to implementation, automated tests, manual accepta
 - `GA-OPS-007` gains database evidence: standalone projects, tool records, and
   albums reject cross-account access; dual-context writes fail validation; and
   migration 0026 applies and rolls back cleanly. Build, lint/security, 53 unit
-  tests, E2E, and mobile actions pass. The aggregate integration run passed
-  every suite except the stale migration-count fixture, which was corrected
-  and then passed independently.
-- `GA-OPS-008` remains pending until Packet 15 is merged, Railway applies
-  migration 0026, live health serves the exact source, the production monitor
-  passes, and physical Camera context/capture behavior is confirmed.
+  tests, E2E, mobile actions, and all 19 PostgreSQL integration suites pass.
+- `GA-OPS-008` gains production evidence: Packet 15 was fast-forwarded into
+  `master`; live health serves exact source
+  `1b38d144f83db07a305348e5e633256c666f55c2` with ready migration
+  `0026_standalone_projects`, PostgreSQL/S3-compatible storage, configured
+  Sentry, and configured Web Push. The production monitor passed with matching
+  alerts enabled, controls off, seven anonymous private-route checks, and a
+  592 ms duration. Physical Camera context/capture behavior remains the field
+  acceptance boundary.

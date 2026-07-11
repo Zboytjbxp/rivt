@@ -2,12 +2,12 @@
 
 Last updated: 2026-07-11 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Packet 15 Standalone Tool Context is active. This pass makes Camera, Estimate, and Invoice useful for off-platform work without silently borrowing an unrelated RIVT job.
+Current phase: Packet 15 Standalone Tool Context is production verified. Camera, Estimate, and Invoice support explicit off-platform and accepted-work destinations without borrowing an unrelated RIVT job.
 Active packet: `docs/delivery/packets/15_STANDALONE_TOOL_CONTEXT.md`
-Repository branch: `codex/standalone-work-context`
-Production feature release commit: `dc009c799b856b45f64fda90ee22b8ff853ef4e8` verified with live `/api/health` and `npm run monitor:production`; docs-only evidence commits may supersede the served build SHA without changing runtime behavior.
+Repository branch: `master`
+Production feature release commit: `1b38d144f83db07a305348e5e633256c666f55c2` verified with live `/api/health`, ready migration `0026_standalone_projects`, and `npm run monitor:production`; docs-only evidence commits may supersede the served build SHA without changing runtime behavior.
 
-## Packet 15 - Standalone Tool Context (Local Verification)
+## Packet 15 - Standalone Tool Context (Production Verified)
 
 - Added explicit Quick use, standalone-project, and accepted-RIVT-work context
   selection to Camera, Estimate, and Invoice. Opening a tool from the Tools hub
@@ -28,14 +28,19 @@ Production feature release commit: `dc009c799b856b45f64fda90ee22b8ff853ef4e8` ve
 - Added `docs/product/FIELD_TOOL_INTERACTION_STANDARD.md` to preserve explicit
   context, one-handed placement, truthful save state, and narrow-device
   verification in future tools.
-- Local evidence: build, lint, security lint, 53/53 unit tests, E2E, Tools
-  rendered QA, and mobile action smoke pass. The standalone ownership integration suite passed. The
-  complete integration run passed 18/19 suites and identified only a stale
-  migration-count fixture; after correction, the migration apply/rollback
-  lifecycle passed independently.
-- Deployment boundary: pending review/merge, Railway migration 0026,
-  exact-source health proof, production monitor, and physical-phone context
-  switching/capture confirmation.
+- Automated evidence: build, lint, security lint, 53/53 unit tests, E2E,
+  mobile-action and Tools rendered QA, dependency audit, and the complete
+  PostgreSQL run passed with 19/19 integration suites. Migration 0026 applies
+  and rolls back cleanly.
+- Production evidence: `master` serves exact source
+  `1b38d144f83db07a305348e5e633256c666f55c2`; health reports ready migration
+  `0026_standalone_projects`, PostgreSQL, S3-compatible object storage,
+  configured Sentry, and configured Web Push. The production monitor passed
+  with matching alerts enabled, controls off, seven anonymous private-route
+  checks, and a 592 ms duration.
+- Remaining field-proof boundary: switch among Quick use, one standalone
+  project, and one accepted RIVT workspace on a physical phone, then capture a
+  real photo and confirm it remains in the selected destination.
 
 ## Packet 14 - Field Camera (Local Verification)
 

@@ -57,13 +57,14 @@ an unrelated RIVT marketplace job.
 - `test/tool-records.integration.test.js` passed account ownership,
   cross-account denial, context-linked estimates, ambiguous-context rejection,
   and standalone album ownership.
-- The full integration run passed 18/19 suites; its only failure was the
-  migration fixture's prior-version count. After making the fixture derive the
-  latest version and adding migration-0026 rollback assertions,
-  `test/migrations.integration.test.js` passed.
+- The complete `npm run test` gate passed 53/53 unit tests and 19/19
+  PostgreSQL integration suites, including migration-0026 apply/rollback and
+  standalone project/tool-record/album ownership.
 
 ## Deployment boundary
 
-Pending code review, merge to `master`, Railway migration 0026, exact-source
-health proof, production monitor, and a physical-phone Camera/Estimate/Invoice
-context check.
+Merged to `master` and deployed at exact source
+`1b38d144f83db07a305348e5e633256c666f55c2`. Railway reports ready migration
+`0026_standalone_projects`; the production monitor passed. A physical-phone
+Camera/Estimate/Invoice context switch and real capture remain the final field
+acceptance check.

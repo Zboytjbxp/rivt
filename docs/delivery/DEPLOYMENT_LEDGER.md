@@ -1410,3 +1410,19 @@ Add one entry per staging/production deployment.
 - Privacy/authorization evidence: tests prove wrong-trade, wrong-city, blocked, opted-out, and poster accounts are excluded; payloads contain public job title/trade/city only and omit private address/access data; replay does not duplicate delivery.
 - Known boundary: no fake production job was created for evidence. The next controlled legitimate Jacksonville publish must confirm receipt by one eligible physical device, exclusion behavior, and exact-job tap-through before Packet 10 is field-verified.
 - Approval: code, database behavior, rollout controls, and production configuration accepted; field verification remains pending.
+
+## Current Production - Packet 15 Standalone Tool Context
+
+- Environment: Production (`https://rivt.pro`)
+- Date/time/timezone: 2026-07-11 11:46 America/New_York
+- Deployer: Codex through verified feature-branch push, fast-forward merge to `master`, and Railway production auto-deploy
+- Source repository/branch: `Zboytjbxp/rivt`, `master`
+- Source commit: `1b38d144f83db07a305348e5e633256c666f55c2`
+- Migration version before/after: `0025_project_financial_records` -> `0026_standalone_projects`
+- Provider/config changes: none; no auth, billing, storage-provider, Web Push, email, SMS, moderation, or rollout configuration changed.
+- Rollback target: source `f4e14820b8170fda775d5d062cca1079c420c09c`; apply `migrations/0026_standalone_projects.down.sql` only after confirming deletion of standalone-project links is acceptable.
+- Automated gates: build, lint, security lint, 53/53 unit tests, E2E, mobile-actions UI, Tools UI at desktop/mobile/SE widths, zero-vulnerability dependency audit, diff checks, and the complete PostgreSQL run with 19/19 integration suites passed.
+- Post-deploy proof: live `/api/health` returned exact source `1b38d144f83db07a305348e5e633256c666f55c2` and ready migration `0026_standalone_projects`; `EXPECTED_SOURCE_COMMIT=1b38d144f83db07a305348e5e633256c666f55c2 npm run monitor:production` passed with PostgreSQL/S3-compatible dependencies healthy, configured Sentry and Web Push, matching alerts enabled, controls disabled, seven anonymous private-route checks, and a 592 ms duration.
+- Authorization evidence: integration coverage proves another account cannot list or modify a standalone project, attach records to it, or create an album for it; a record referencing both standalone and accepted-work context is rejected.
+- Known boundary: switch Quick use -> standalone project -> accepted RIVT work on a physical phone, then capture one real photo and confirm it persists only in the selected destination.
+- Approval: Packet 15 runtime, migration, authorization, and rendered-device gates are production verified; physical field acceptance remains open.
