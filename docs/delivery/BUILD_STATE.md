@@ -2,12 +2,12 @@
 
 Last updated: 2026-07-10 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Packet 12 Gate B Daily Use. This pass builds on the production active-work foundation with an honest daily-work signal, exact workspace recovery, truthful Pro copy, and controlled-engagement operations.
+Current phase: Packet 12 Gate B Daily Use is production verified. This pass builds on the active-work foundation with an honest daily-work signal, exact workspace recovery, truthful Pro copy, and controlled-engagement operations.
 Active packet: `docs/delivery/packets/12_GATE_B_DAILY_USE.md`
 Repository branch: `codex/gate-b-daily-use`
 Production feature release commit: `4e0d079101fd065d7eb5b7bb7a7ee2d6bea8132b` verified with live `/api/health` and `npm run monitor:production`; docs-only evidence commits may supersede the served build SHA without changing runtime behavior.
 
-## Packet 12 - Gate B Daily Use (Local)
+## Packet 12 - Gate B Daily Use (Production Verified)
 
 - Home now reads the authenticated participant's exact active-work project timeline and makes the daily state explicit: loading, unavailable, completion waiting, daily log saved today, or no daily log today.
 - The daily-work action remains scoped to the same accepted-work id. It never substitutes a generic Records list or another open job.
@@ -15,7 +15,8 @@ Production feature release commit: `4e0d079101fd065d7eb5b7bb7a7ee2d6bea8132b` ve
 - Pro language now reflects enforced capability boundaries: extended time history and CSV exports are Pro; core work records and field tools remain available on the free plan.
 - Added `docs/operations/GATE_B_CONTROLLED_ENGAGEMENT.md` for moderation, device-alert, matching-job, active-work-record recovery, and support escalation routines.
 - Local verification passed: build, lint, security lint, 53/53 unit tests, E2E, active-work lifecycle UI smoke, mobile-action UI smoke, Shop Talk/Trade News UI smoke, dependency audit, and diff check. The aggregate `npm run test` ran for eleven minutes against sequential remote PostgreSQL suites without emitting a failure but exceeded the wrapper deadline, so no aggregate completion is claimed.
-- Deployment boundary: merge this focused client/operations pass, confirm Home's exact active-work pulse on a genuine active job, and run the production monitor. The legitimate two-participant closeout walkthrough remains a separate field-proof boundary.
+- Production evidence: `master` serves exact source `e44eb6a8e1b7d8c804880d1f956b3052f1596898`; `EXPECTED_SOURCE_COMMIT=e44eb6a8e1b7d8c804880d1f956b3052f1596898 npm run monitor:production` passed with PostgreSQL, S3-compatible storage, configured Sentry, configured Web Push, matching alerts enabled, controls off, and seven anonymous private-route checks.
+- Remaining field-proof boundary: confirm Home's daily pulse against a genuine active job where a participant saves a real daily log. The legitimate two-participant closeout walkthrough remains a separate operational proof.
 
 ## Packet 10 - Gate B Matching Job Alerts (Production Configured)
 
