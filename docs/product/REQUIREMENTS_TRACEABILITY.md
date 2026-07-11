@@ -10,6 +10,18 @@ Status values:
 
 Evidence must eventually link to implementation, automated tests, manual acceptance proof, and deployed build.
 
+## Traceability Addendum - 2026-07-11 Workspace Focus Handoff (Unmerged)
+
+- `GA-UX-003` gains visible-destination evidence: Work's accepted-work action
+  now delegates to the canonical active-work route, then scrolls and focuses
+  the resolved job detail. The user sees the exact workspace rather than an
+  unchanged Work header after a successful handoff.
+- `GA-UX-006` gains rendered accessibility evidence: the job title receives
+  focus without forcing an additional scroll, and the lifecycle smoke asserts
+  both focus and viewport visibility at 390px.
+- `GA-OPS-007` will record the full local gate result before merge; this packet
+  has no schema, provider, authorization, or billing change.
+
 ## Traceability Addendum - 2026-07-10 Active Work Continuity (Unmerged)
 
 - `GA-PRO-001` gains durable private-work evidence: job invoices, direct-payment records, project timeline entries, closeout proof, and reviews attach to the same server-owned active-work relationship. Job payments remain participant-supplied records; RIVT does not process, escrow, guarantee, or certify a payment.

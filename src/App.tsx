@@ -2480,6 +2480,7 @@ function App() {
                 handleOpenTool(tool);
               }
             }}
+            onOpenActiveWorkWorkspace={handleOpenActiveWorkWorkspace}
             onOpenActiveWorkMessages={(activeWorkId) => void handleOpenActiveWorkMessages(activeWorkId)}
             onOpenActiveWorkRecords={(activeWorkId) => handleOpenActiveWorkRecords(activeWorkId)}
             onRetry={() => void reloadJobs()}

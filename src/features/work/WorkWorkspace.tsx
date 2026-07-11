@@ -95,6 +95,7 @@ interface WorkWorkspaceProps {
   onTransition: (job: Job, action: JobAction) => Promise<void>;
   onJobLoaded: (job: Job) => void;
   onOpenTool: (tool: "daily-log" | "estimate" | "invoice" | "job-photos", activeWorkId?: string) => void;
+  onOpenActiveWorkWorkspace: (activeWorkId: string, fallbackJobId?: string | null) => void;
   onOpenActiveWorkMessages: (activeWorkId: string) => void;
   onOpenActiveWorkRecords: (activeWorkId: string) => void;
   onRetry: () => void;
@@ -1235,6 +1236,7 @@ export function WorkWorkspace({
   onTransition,
   onJobLoaded,
   onOpenTool,
+  onOpenActiveWorkWorkspace,
   onOpenActiveWorkMessages,
   onOpenActiveWorkRecords,
   onRetry,
@@ -1264,6 +1266,7 @@ export function WorkWorkspace({
   const [detailJobId, setDetailJobId] = useState<string | null>(null);
   const detailHydrationRequests = useRef<Set<string>>(new Set());
   const workLayoutRef = useRef<HTMLDivElement>(null);
+  const detailHeadingRef = useRef<HTMLHeadingElement>(null);
 
   const visibleJobs = useMemo(() => {
     if (role !== "contractor") return jobs;
@@ -1294,12 +1297,13 @@ export function WorkWorkspace({
     verifiedOnly,
   ].filter(Boolean).length;
 
-  function revealJobWorkspace() {
+  function revealJobWorkspace(moveFocus = false) {
     window.requestAnimationFrame(() => {
       workLayoutRef.current?.scrollIntoView({
         behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
         block: "start",
       });
+      if (moveFocus) detailHeadingRef.current?.focus({ preventScroll: true });
     });
   }
 
@@ -1312,16 +1316,9 @@ export function WorkWorkspace({
   }
 
   function openActiveWorkJob(work: CanonicalActiveWork) {
-    const matchingJob = jobs.find((job) => job.canonical?.id === work.jobId);
-    if (matchingJob) {
-      if (role === "contractor" && matchingJob.status === "Closed") {
-        setContractorSection("closed");
-      }
-      selectJob(matchingJob.id, true);
-      return;
-    }
-    setMobileDetailOpen(true);
-    revealJobWorkspace();
+    // Use the route-level handoff so URL, hydration, selected job, and the
+    // visible workspace agree even after the original job is closed to browsing.
+    onOpenActiveWorkWorkspace(work.id, work.jobId);
   }
 
   async function runAction(job: Job, action: JobAction) {
@@ -1594,6 +1591,14 @@ export function WorkWorkspace({
       ? matchActiveWork.find((work) => work.jobId === canonicalJobId)
       : undefined;
 
+  const focusedJobTitle = detailJob?.title ?? "";
+
+  useEffect(() => {
+    if (!openDetailOnMount || !focusedJobTitle) return;
+    const timeout = window.setTimeout(() => revealJobWorkspace(true), 0);
+    return () => window.clearTimeout(timeout);
+  }, [focusedJobTitle, openDetailOnMount]);
+
   return (
     <section className="v2-work-page" aria-label="Work">
       {reasonPrompt && (
@@ -1750,7 +1755,7 @@ export function WorkWorkspace({
           <article className="v2-work-detail" aria-label={detailJob.title}>
             <button type="button" className="v2-detail-back" onClick={() => setMobileDetailOpen(false)}><ArrowLeft size={16} /> All work</button>
             <header className="v2-work-detail-header">
-              <div><span className="v2-detail-trade">{detailJob.trade}</span><h2>{detailJob.title}</h2><p><MapPin size={14} /> {detailJob.location} · {detailJob.status === "Draft" ? "Last saved" : "Posted"} {detailJob.posted}</p></div>
+              <div><span className="v2-detail-trade">{detailJob.trade}</span><h2 ref={detailHeadingRef} tabIndex={-1}>{detailJob.title}</h2><p><MapPin size={14} /> {detailJob.location} · {detailJob.status === "Draft" ? "Last saved" : "Posted"} {detailJob.posted}</p></div>
               {role === "tradesperson" && detailJob.match > 0 ? <div className="v2-match-score"><strong>{detailJob.match}%</strong><span>match</span></div> : <StatusPill tone={statusTone(detailJob.status)} className={`v2-work-status status-${detailJob.status.toLowerCase()}`}>{detailJob.status}</StatusPill>}
             </header>
 

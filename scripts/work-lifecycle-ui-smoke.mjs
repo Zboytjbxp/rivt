@@ -579,8 +579,17 @@ async function assertNoHorizontalOverflow(page, label) {
   assert.equal(hasOverflow, false, `${label} has horizontal overflow`);
 }
 
+async function assertInViewport(locator, label) {
+  const box = await locator.boundingBox();
+  assert.ok(box, `${label} must have a layout box`);
+  const viewport = locator.page().viewportSize();
+  assert.ok(viewport, "Expected a configured viewport");
+  assert.ok(box.y >= 0 && box.y < viewport.height, `${label} must be visible without another scroll`);
+}
+
 async function clickJob(page, title) {
   const jobRow = page.locator(".v2-job-row-inner").filter({ hasText: title });
+  await jobRow.first().waitFor({ state: "visible", timeout: 15_000 });
   assert.equal(await jobRow.count(), 1, `Expected one job row for ${title}`);
   await jobRow.click();
 }
@@ -665,8 +674,11 @@ async function runTradespersonOfferFlow(page) {
   const homeActiveWork = page.getByLabel("Active work");
   await homeActiveWork.getByText("You're active now", { exact: true }).waitFor({ timeout: 15_000 });
   await homeActiveWork.getByRole("button", { name: "Open workspace" }).click();
-  await page.waitForURL(/\/app\/work/, { timeout: 15_000 });
+  await page.waitForURL(new RegExp(`/app/work\\?activeWork=${activeWorkId}`), { timeout: 15_000 });
   await page.getByText("Accepted and active", { exact: true }).waitFor({ timeout: 15_000 });
+  const workspaceHeading = page.getByRole("heading", { name: "Warehouse panel assist", exact: true });
+  await assertInViewport(workspaceHeading, "Active-work workspace heading");
+  assert.equal(await workspaceHeading.evaluate((element) => document.activeElement === element), true, "Active-work workspace heading should receive focus after opening");
   await page.getByLabel("Hiring workflow").getByRole("button", { name: "Photos" }).click();
   await page.waitForURL(/\/app\/tools\?tool=job-photos/, { timeout: 15_000 });
   await page.getByText("Live project feed", { exact: true }).waitFor({ timeout: 15_000 });
