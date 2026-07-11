@@ -2,12 +2,12 @@
 
 Last updated: 2026-07-11 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Packet 15 Standalone Tool Context is production verified. The Mobile Experience Train is locally verified and pending production deployment.
+Current phase: Packet 15 Standalone Tool Context and its Mobile Experience Train follow-up are production verified.
 Active packet: `docs/delivery/packets/15_STANDALONE_TOOL_CONTEXT.md`
 Repository branch: `master`
-Production feature release commit: `1b38d144f83db07a305348e5e633256c666f55c2` verified with live `/api/health`, ready migration `0026_standalone_projects`, and `npm run monitor:production`; docs-only evidence commits may supersede the served build SHA without changing runtime behavior.
+Production feature release commit: `aaf3a8701b4dceb084bdaf007a04ea2bcba74385` verified with live `/api/health`, ready migration `0026_standalone_projects`, and `npm run monitor:production`; docs-only evidence commits may supersede the served build SHA without changing runtime behavior.
 
-## Packet 15 Follow-up - Mobile Experience Train (Local Verified)
+## Packet 15 Follow-up - Mobile Experience Train (Production Verified)
 
 - Returning-user provider actions keep their Google/Apple/Email labels at phone widths, intro pager dots now have 44px targets, and the account drawer clips no content horizontally.
 - Shop Talk is feed-first on mobile. Community discovery remains available as a compact horizontal rail with an explicit expand action for search, audience selection, joining, and user-created communities.
@@ -17,7 +17,8 @@ Production feature release commit: `1b38d144f83db07a305348e5e633256c666f55c2` ve
 - The labeled one-year guest preview now carries mature sample state into Crew, Subs, invites, and profile completion without writing demo records into real account storage.
 - Automated evidence passed: build, full lint, security lint, 53/53 unit tests, E2E, mobile-actions, Tools at desktop/mobile/SE widths, Work lifecycle, Shop Talk/Trade News, both guest-role previews, dependency audit with zero vulnerabilities, diff check, and all 19 PostgreSQL integration tests.
 - Rendered evidence is stored outside the repository under `C:\Users\zboyt\AppData\Local\Temp\rivt-*-pass`.
-- Remaining boundary: physical iOS/Android review of the new Settings section navigation, Shop Talk feed/directory order, and return-user provider labels after production deployment.
+- Production evidence: exact source `aaf3a8701b4dceb084bdaf007a04ea2bcba74385` is live with migration `0026_standalone_projects`, PostgreSQL, S3-compatible storage, Sentry, Web Push, and matching-job alerts configured. The synthetic monitor passed with controls off, seven anonymous private-route checks, and a 752 ms duration.
+- Remaining boundary: physical iOS/Android review of the new Settings section navigation, Shop Talk feed/directory order, and return-user provider labels.
 
 ## Packet 15 - Standalone Tool Context (Production Verified)
 

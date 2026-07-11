@@ -1426,3 +1426,19 @@ Add one entry per staging/production deployment.
 - Authorization evidence: integration coverage proves another account cannot list or modify a standalone project, attach records to it, or create an album for it; a record referencing both standalone and accepted-work context is rejected.
 - Known boundary: switch Quick use -> standalone project -> accepted RIVT work on a physical phone, then capture one real photo and confirm it persists only in the selected destination.
 - Approval: Packet 15 runtime, migration, authorization, and rendered-device gates are production verified; physical field acceptance remains open.
+
+## Current Production - Packet 15 Mobile Experience Train
+
+- Environment: Production (`https://rivt.pro`)
+- Date/time/timezone: 2026-07-11 14:34 America/New_York
+- Deployer: Codex through verified feature-branch push, fast-forward merge to `master`, and Railway production auto-deploy
+- Source repository/branch: `Zboytjbxp/rivt`, `master`
+- Runtime feature source: `aaf3a8701b4dceb084bdaf007a04ea2bcba74385`
+- Migration version before/after: unchanged (`0026_standalone_projects`)
+- Provider/config changes: none; no auth, billing, storage, Web Push, email, SMS, moderation, migration, or rollout configuration changed.
+- Rollback target: source `0df8397264f3d0c739d22ccae182a33570c9f898`; no database rollback is required.
+- Automated gates: build, full lint, security lint, 53/53 unit tests, E2E, mobile-actions, Tools at desktop/mobile/SE, Work lifecycle, Shop Talk/Trade News, both guest-role previews, dependency audit with zero vulnerabilities, diff checks, and the complete PostgreSQL run with 19/19 integration tests passed.
+- Rendered evidence: screenshots under `C:\Users\zboyt\AppData\Local\Temp\rivt-mobile-actions-pass`, `rivt-tools-pass`, `rivt-work-lifecycle-pass`, `rivt-shop-talk-news-pass`, and `rivt-guest-preview-pass` cover 320px and 390px mobile behavior plus desktop tool rendering.
+- Post-deploy proof: `/api/health` returned exact source `aaf3a8701b4dceb084bdaf007a04ea2bcba74385`, ready migration `0026_standalone_projects`, PostgreSQL/S3-compatible storage, configured Sentry and Web Push, and enabled matching-job alerts. `EXPECTED_SOURCE_COMMIT=aaf3a8701b4dceb084bdaf007a04ea2bcba74385 npm run monitor:production` passed with controls off, seven anonymous private-route checks, and a 752 ms duration.
+- Known boundary: physically review Settings section navigation, Shop Talk feed/discovery order, returning-user provider labels, and Work selectors on iOS and Android.
+- Approval: Mobile Experience Train runtime and automated/rendered gates are production verified; physical field acceptance remains open.
