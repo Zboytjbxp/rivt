@@ -2,10 +2,10 @@
 
 Last updated: 2026-07-10 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Packet 11 Active Work Continuity. The active-work/project/review foundation is server-owned; this packet connects the private workspace, closeout/review, and job-scoped estimate/invoice/external-payment record flow without adding job-payment processing.
+Current phase: Packet 11 Active Work Continuity is production-verified. The active-work/project/review foundation is server-owned; this packet connects the private workspace, closeout/review, and job-scoped estimate/invoice/external-payment record flow without adding job-payment processing. A legitimate two-participant field walkthrough remains the operational proof boundary.
 Active packet: `docs/delivery/packets/11_ACTIVE_WORK_CONTINUITY.md`
-Repository branch: `codex/active-work-workspace`
-Production feature release commit: `43a1fa5eb9528a1fc06a0bea95da81122448c990` verified with live `/api/health` and `npm run monitor:production`; docs-only evidence commits may supersede the served build SHA without changing runtime behavior.
+Repository branch: `master`
+Production feature release commit: `4e0d079101fd065d7eb5b7bb7a7ee2d6bea8132b` verified with live `/api/health` and `npm run monitor:production`; docs-only evidence commits may supersede the served build SHA without changing runtime behavior.
 
 ## Packet 10 - Gate B Matching Job Alerts (Production Configured)
 
@@ -18,7 +18,7 @@ Production feature release commit: `43a1fa5eb9528a1fc06a0bea95da81122448c990` ve
 - Production evidence: Railway deployment `79bc9d5c-d20b-4c30-9b1a-955225d77876` serves exact source `43a1fa5eb9528a1fc06a0bea95da81122448c990`. Live health reports matching alerts enabled, a 200-recipient cap, and the exact public service-area rule. The production monitor passed with PostgreSQL, S3-compatible storage, Sentry, Web Push, controls off, and seven anonymous private-route probes.
 - Pending boundary: perform one controlled legitimate production publish and physical exact-job tap. Do not create a fake live job solely to manufacture this evidence.
 
-## Packet 11 - Active Work Continuity (Ready For Review / Merge)
+## Packet 11 - Active Work Continuity (Production Verified)
 
 - Added migration `0025_project_financial_records` with server-owned private `project_invoices` and append-only `project_invoice_payments`. Records are scoped through the existing active-work participant authorization; invoice recipient contact data remains private project data.
 - Work now offers an exact `Open workspace` action alongside Messages, Photos, Daily log, Estimate, and Invoice. The action preserves the active-work id and opens that job's project record instead of a generic Records list.
@@ -27,7 +27,8 @@ Production feature release commit: `43a1fa5eb9528a1fc06a0bea95da81122448c990` ve
 - Added an exact server review-context route and closeout review form: after contractor confirmation completes the work, either participant can leave one review for the other; it remains pending the reviewee's existing approval workflow.
 - Targeted PostgreSQL evidence passed using the configured test database: `test/project-completion.integration.test.js` proved outsider rejection, participant invoice creation, author-only state changes, partial/final payment records, overage rejection, closeout-report persistence, and review eligibility. `test/migrations.integration.test.js` passed migration 25 apply/rollback lifecycle.
 - Local verification passed: build, lint, security lint, 52/52 unit tests, E2E, Work lifecycle UI smoke, Tools UI smoke, dependency audit, and diff check. The aggregate `npm run test` ran for ten minutes against sequential remote PostgreSQL suites without emitting a failure but exceeded the wrapper deadline, so no aggregate completion is claimed.
-- Deployment boundary: not merged or deployed. Before release, review/merge this branch, let Railway apply migration 25, confirm `/api/health` serves the exact source and migration, run the production monitor, and perform one real participant acceptance -> workspace -> invoice -> external-payment-record -> closeout-review check.
+- Production evidence: `master` serves exact source `4e0d079101fd065d7eb5b7bb7a7ee2d6bea8132b`; Railway applied migration `0025_project_financial_records`; and `EXPECTED_SOURCE_COMMIT=4e0d079101fd065d7eb5b7bb7a7ee2d6bea8132b npm run monitor:production` passed with PostgreSQL, S3-compatible storage, configured Sentry, configured Web Push, matching alerts enabled, controls off, and seven anonymous private-route checks.
+- Remaining operational proof: perform one legitimate participant acceptance -> exact workspace -> invoice -> external-payment-record -> closeout-review walkthrough. Do not create fake production work merely to manufacture this evidence.
 - Matching-alert field proof remains a separate legitimate-job operational boundary.
 
 ## Packet 09 - Gate B Web Push (Production Verified)
