@@ -88,6 +88,19 @@
 .privacy-callout span { color: var(--muted); font-size: 13px; }
 .job-editor-error { margin: 0 22px 16px; padding: 12px 14px; background: var(--danger-soft); color: #a82d2d; font-size: 14px; }
 
+.job-editor-publish-readiness {
+  display: grid;
+  gap: 4px;
+  padding: 13px 14px;
+  border-left: 3px solid var(--v2-warning);
+  background: var(--v2-warning-soft);
+  color: var(--v2-text);
+}
+
+.job-editor-publish-readiness strong { font-size: 14px; }
+.job-editor-publish-readiness span { color: var(--v2-text-muted); font-size: 13px; line-height: 1.4; }
+.job-editor-publish-readiness.is-ready { border-left-color: var(--v2-success); background: var(--v2-success-soft); }
+
 @media (max-width: 640px) {
   .job-editor { width: 100%; max-height: 100dvh; height: 100dvh; border: 0; border-radius: 0; }
   .job-editor-header,

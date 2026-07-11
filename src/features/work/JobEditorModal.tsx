@@ -111,18 +111,26 @@ export function JobEditorModal({ organizationId, job, defaultLocation, onClose, 
   const [accessNotes, setAccessNotes] = useState(privateLocation?.accessNotes ?? "");
   const [preferredStartDate, setPreferredStartDate] = useState(dateInputValue(job?.canonical?.preferredStartDate));
   const [applicationDeadline, setApplicationDeadline] = useState(job?.canonical?.applicationDeadline?.slice(0, 16) ?? "");
+  const [applicationDeadlineIsPast, setApplicationDeadlineIsPast] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const modalRef = useFocusTrap<HTMLDivElement>(saving ? undefined : onClose);
 
   const canSaveBasics = title.trim().length >= 4 && city.trim().length >= 2 && region.trim().length >= 2;
-  const canPublish = canSaveBasics
-    && summary.trim().length >= 20
-    && scopeDescription.trim().length >= 20
-    && Number(budget) >= 50
-    && Number(duration) > 0
-    && addressLine1.trim().length > 0
-    && postalCode.trim().length > 0;
+  const publishBlockers = useMemo(() => {
+    const blockers: string[] = [];
+    if (title.trim().length < 4) blockers.push("job title");
+    if (city.trim().length < 2 || region.trim().length < 2) blockers.push("city and state");
+    if (summary.trim().length < 20) blockers.push("20-character summary");
+    if (scopeDescription.trim().length < 20) blockers.push("20-character detailed scope");
+    if (!Number.isFinite(Number(budget)) || Number(budget) < 50) blockers.push("budget of at least $50");
+    if (!Number.isFinite(Number(duration)) || Number(duration) <= 0) blockers.push("estimated hours");
+    if (!addressLine1.trim()) blockers.push("private street address");
+    if (!postalCode.trim()) blockers.push("postal code");
+    if (applicationDeadlineIsPast) blockers.push("a future application deadline");
+    return blockers;
+  }, [addressLine1, applicationDeadlineIsPast, budget, city, duration, postalCode, region, scopeDescription, summary, title]);
+  const canPublish = publishBlockers.length === 0;
 
   const input = useMemo<JobEditorInput>(() => ({
     organizationId,
@@ -180,6 +188,12 @@ export function JobEditorModal({ organizationId, job, defaultLocation, onClose, 
 
   async function finish(publish: boolean) {
     setError("");
+    const deadlineIsPast = Boolean(applicationDeadline) && new Date(applicationDeadline).getTime() <= Date.now();
+    if (publish && deadlineIsPast) {
+      setApplicationDeadlineIsPast(true);
+      setError("Choose a future application deadline before publishing.");
+      return;
+    }
     if (publish && !canPublish) {
       setError("Finish the scope, budget, duration, and exact address before publishing.");
       return;
@@ -264,7 +278,19 @@ export function JobEditorModal({ organizationId, job, defaultLocation, onClose, 
               <label>Access notes <span className="optional-label">Private</span><textarea value={accessNotes} onChange={(event) => setAccessNotes(event.target.value)} rows={3} placeholder="Gate, parking, lockbox, or arrival instructions" /></label>
               <div className="form-grid">
                 <label>Preferred start<input type="date" value={preferredStartDate} onChange={(event) => setPreferredStartDate(event.target.value)} /></label>
-                <label>Apply by <span className="optional-label">Optional</span><input type="datetime-local" value={applicationDeadline} onChange={(event) => setApplicationDeadline(event.target.value)} /></label>
+                <label>Apply by <span className="optional-label">Optional</span><input type="datetime-local" value={applicationDeadline} onChange={(event) => {
+                  const nextDeadline = event.target.value;
+                  setApplicationDeadline(nextDeadline);
+                  setApplicationDeadlineIsPast(Boolean(nextDeadline) && new Date(nextDeadline).getTime() <= Date.now());
+                }} /></label>
+              </div>
+              <div className={`job-editor-publish-readiness ${canPublish ? "is-ready" : ""}`} id="job-editor-publish-readiness" role="status">
+                <strong>{canPublish ? "Ready to publish" : "Finish these before publishing"}</strong>
+                <span>
+                  {canPublish
+                    ? "Your public listing and private jobsite details are complete."
+                    : publishBlockers.join(" · ")}
+                </span>
               </div>
             </section>
           ) : null}
@@ -281,7 +307,16 @@ export function JobEditorModal({ organizationId, job, defaultLocation, onClose, 
             {step < stepLabels.length - 1 ? (
               <button type="button" className="primary-action" onClick={() => void continueStep()} disabled={saving || !canSaveBasics}>Continue <ArrowRight size={16} /></button>
             ) : (
-              <button type="button" className="primary-action" onClick={() => void finish(true)} disabled={saving || !canPublish}><Send size={16} /> Publish job</button>
+              <button
+                type="button"
+                className="primary-action"
+                onClick={() => void finish(true)}
+                disabled={saving || !canPublish}
+                aria-describedby="job-editor-publish-readiness"
+                title={canPublish ? "Publish job" : `Finish before publishing: ${publishBlockers.join(", ")}`}
+              >
+                <Send size={16} /> Publish job
+              </button>
             )}
           </div>
         </footer>
