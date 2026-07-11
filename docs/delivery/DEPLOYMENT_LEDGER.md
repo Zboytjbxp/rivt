@@ -21,6 +21,25 @@ Add one entry per staging/production deployment.
 - Rollback performed/result:
 - Approval:
 
+## Current Production - Packet 17 Active Work Action Simplification
+
+- Environment: Production (`https://rivt.pro`)
+- Date/time/timezone: 2026-07-11 America/New_York
+- Deployer: Codex through GitHub push to Railway-linked `master`
+- Source repository/branch: `Zboytjbxp/rivt`, `master`
+- Source commit: `596d824b34d1f6ec84e644ec2f2a20c790907279`
+- Build/artifact ID: Railway-linked production deployment; live `/api/health` is the runtime proof
+- Migration version before/after: `0026_standalone_projects` / `0026_standalone_projects` (no schema migration)
+- Feature-flag/config version: no provider credentials or operational controls changed
+- Provider/config changes (no secrets): none
+- Backup/rollback target: prior successful production source `5e766ca22f5d20bdfa52f7ef632274fe425f2326`; normal source rollback only
+- Automated gates: build, lint, security lint, 53 unit tests, E2E, Work lifecycle UI smoke, mobile-action UI smoke, Tools UI smoke, dependency audit, and diff check passed
+- Post-deploy smoke tests: exact-source health passed with PostgreSQL, S3-compatible storage, configured Sentry, and configured Web Push. `EXPECTED_SOURCE_COMMIT=596d824b34d1f6ec84e644ec2f2a20c790907279 npm run monitor:production` passed with matching-job alerts enabled, controls off, seven anonymous private-route checks, and 527 ms duration.
+- Health/readiness result: healthy production health and synthetic monitor; no schema or provider change
+- Known risks: physical iOS and Android one-handed confirmation remains for the simplified accepted-work card
+- Rollback performed/result: not required
+- Approval: deployed as a client-only active-work hierarchy correction with no auth, billing, storage, moderation, provider, or migration boundary changes
+
 ## Current Production - Packet 16 Workspace Focus Handoff
 
 - Environment: Production (`https://rivt.pro`)

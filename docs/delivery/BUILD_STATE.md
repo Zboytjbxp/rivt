@@ -2,10 +2,10 @@
 
 Last updated: 2026-07-11 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Packet 17 Active Work Action Simplification is locally verified. It reduces the accepted-job action wall into one project-record action, three daily field actions, a compact Money group, and collapsed rare controls without changing exact destinations.
+Current phase: Packet 17 Active Work Action Simplification is production verified. It reduces the accepted-job action wall into one project-record action, three daily field actions, a compact Money group, and collapsed rare controls without changing exact destinations.
 Active packet: `docs/delivery/packets/17_ACTIVE_WORK_ACTION_SIMPLIFICATION.md`
-Repository branch: `codex/active-work-action-simplification`
-Production feature release commit: `5e766ca22f5d20bdfa52f7ef632274fe425f2326` verified with live `/api/health`, ready migration `0026_standalone_projects`, and `npm run monitor:production`; docs-only evidence commits may supersede the served build SHA without changing runtime behavior.
+Repository branch: `master`
+Production feature release commit: `596d824b34d1f6ec84e644ec2f2a20c790907279` verified with live `/api/health`, ready migration `0026_standalone_projects`, and `npm run monitor:production`; docs-only evidence commits may supersede the served build SHA without changing runtime behavior.
 
 ## Packet 17 - Active Work Action Simplification (Local Verification)
 
@@ -22,8 +22,14 @@ Production feature release commit: `5e766ca22f5d20bdfa52f7ef632274fe425f2326` ve
   dependency audit, and diff check. The aggregate test command was not
   repeated because this client-only presentation packet does not touch server
   or database code.
-- Pending: commit, deploy, live health/monitor evidence, and a physical
-  one-hand confirmation on an accepted job.
+- Production evidence: `master` serves exact source
+  `596d824b34d1f6ec84e644ec2f2a20c790907279`; health reports PostgreSQL,
+  S3-compatible storage, configured Sentry, configured Web Push, and ready
+  migration `0026_standalone_projects`. The expected-source production monitor
+  passed with matching-job alerts enabled, controls off, seven anonymous
+  private-route checks, and a 527 ms duration.
+- Remaining field-proof boundary: one-handed physical-phone confirmation on
+  an accepted job.
 
 ## Packet 16 - Workspace Focus Handoff (Local Verification)
 

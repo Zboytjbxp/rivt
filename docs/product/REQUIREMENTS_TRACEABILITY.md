@@ -21,6 +21,11 @@ Evidence must eventually link to implementation, automated tests, manual accepta
   the focused exact workspace, the visible primary and daily actions, and
   collapsed rare controls before proving the Camera still opens the matching
   active job.
+- `GA-OPS-008` gains production evidence: `master` serves exact source
+  `596d824b34d1f6ec84e644ec2f2a20c790907279`; live health reports ready
+  migration `0026_standalone_projects`, PostgreSQL/S3-compatible storage,
+  configured Sentry, and configured Web Push. The expected-source production
+  monitor passed with seven anonymous private-route checks in 527 ms.
 
 ## Traceability Addendum - 2026-07-11 Workspace Focus Handoff (Unmerged)
 
