@@ -55,6 +55,8 @@ visible without duplicating navigation that already exists elsewhere.
 ## Risk and deployment boundary
 
 No server route, authorization rule, migration, provider, or stored-data
-behavior changes in this packet. The only remaining evidence is normal source
-deployment, exact health commit verification, production monitoring, and a
-founder visual check of the simplified Home/Work handoff.
+behavior changes in this packet. Production served source
+`cab4c9e89f6422480a79c781a2e2aa7a41929377`; its monitor passed with PostgreSQL,
+S3-compatible storage, configured Sentry, configured Web Push, matching alerts
+enabled, controls off, and seven anonymous private-route checks. The remaining
+evidence is a founder visual check of the simplified Home/Work handoff.

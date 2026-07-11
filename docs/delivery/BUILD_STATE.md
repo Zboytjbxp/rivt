@@ -2,12 +2,12 @@
 
 Last updated: 2026-07-11 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Packet 13 Workflow Coherence is active. This pass reduces duplicate actions and explanatory chrome while preserving exact active-work destinations and controlled-engagement operations.
+Current phase: Packet 13 Workflow Coherence is production verified. This pass reduced duplicate actions and explanatory chrome while preserving exact active-work destinations and controlled-engagement operations.
 Active packet: `docs/delivery/packets/13_WORKFLOW_COHERENCE.md`
 Repository branch: `codex/gate-b-daily-use`
 Production feature release commit: `4e0d079101fd065d7eb5b7bb7a7ee2d6bea8132b` verified with live `/api/health` and `npm run monitor:production`; docs-only evidence commits may supersede the served build SHA without changing runtime behavior.
 
-## Packet 13 - Workflow Coherence (Local Verified, Deployment Pending)
+## Packet 13 - Workflow Coherence (Production Verified)
 
 - Reduced Home and Work accepted-work summaries to one clear `Open workspace`
   handoff. Messages, Photos, Daily log, money, and other job actions remain
@@ -24,9 +24,13 @@ Production feature release commit: `4e0d079101fd065d7eb5b7bb7a7ee2d6bea8132b` ve
   Work lifecycle UI smoke, mobile actions UI smoke, dependency audit, and diff
   check. This packet is client/docs only; no migration or integration suite is
   required.
-- Deployment boundary: merge to `master`, verify the exact commit from
-  `/api/health`, run `monitor:production`, and visually check Home -> Open
-  workspace -> job-scoped Photos on a phone.
+- Production evidence: `master` source `cab4c9e89f6422480a79c781a2e2aa7a41929377`
+  is served by `https://rivt.pro/api/health`; the live monitor passed with
+  PostgreSQL, S3-compatible storage, configured Sentry, configured Web Push,
+  enabled matching alerts, controls off, seven anonymous private-route checks,
+  and a 606 ms duration.
+- Remaining field-proof boundary: visually check the simplified Home -> Open
+  workspace -> job-scoped Photos handoff on a physical phone.
 
 ## Packet 12 - Gate B Daily Use (Production Verified)
 

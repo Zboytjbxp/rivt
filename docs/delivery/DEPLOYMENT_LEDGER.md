@@ -21,6 +21,25 @@ Add one entry per staging/production deployment.
 - Rollback performed/result:
 - Approval:
 
+## Current Production - Packet 13 Workflow Coherence
+
+- Environment: Production (`https://rivt.pro`)
+- Date/time/timezone: 2026-07-11 02:02 America/New_York
+- Deployer: Codex through GitHub push to Railway-linked `master`
+- Source repository/branch: `Zboytjbxp/rivt`, `master`
+- Source commit: `cab4c9e89f6422480a79c781a2e2aa7a41929377`
+- Build/artifact ID: Railway-linked production deployment; live `/api/health` is the runtime proof
+- Migration version before/after: `0025_project_financial_records` / `0025_project_financial_records` (no schema migration)
+- Feature-flag/config version: no provider credentials or operational-control flags changed
+- Provider/config changes (no secrets): none
+- Backup/rollback target: prior successful production source `dc8cf73dbce299726f43967b29ad336dddccd273`; rollback is a normal source rollback because no migration changed
+- Automated gates: build, lint, security lint, 53 unit tests, E2E, Work lifecycle UI smoke, mobile action UI smoke, dependency audit, and diff check passed
+- Post-deploy smoke tests: `/api/health` reported the exact source commit with PostgreSQL, S3-compatible storage, configured Sentry, and configured Web Push. `EXPECTED_SOURCE_COMMIT=cab4c9e89f6422480a79c781a2e2aa7a41929377 npm run monitor:production` passed with matching alerts enabled, controls off, seven anonymous private-route checks, and 606 ms duration.
+- Health/readiness result: healthy production health and synthetic monitor; no schema or provider change
+- Known risks: founder physical-phone validation remains for the simplified Home -> exact workspace -> job-scoped Photos handoff
+- Rollback performed/result: not required
+- Approval: accepted as a client-only workflow-subtraction deployment with no auth, billing, storage, moderation, provider, or migration boundary changes
+
 ## Current Production - Packet 08 Desktop Workspaces
 
 - Environment: Production (`https://rivt.pro`)
