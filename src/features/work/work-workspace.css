@@ -898,6 +898,33 @@
   cursor: not-allowed;
 }
 
+.v2-active-work-secondary-actions {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.v2-active-work-secondary-actions button {
+  min-width: 0;
+  min-height: 40px;
+  padding: 0 10px;
+  border: 1px solid color-mix(in srgb, var(--v2-border) 62%, transparent);
+  border-radius: var(--v2-radius-sm);
+  background: var(--v2-surface);
+  color: var(--v2-text);
+  font: inherit;
+  font-size: 13px;
+  font-weight: var(--v2-weight-strong);
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+
+.v2-active-work-secondary-actions .v2-destructive-button {
+  border-color: var(--v2-danger);
+  color: var(--v2-danger);
+}
+
 .v2-applicant-card .v2-offer-start-note {
   color: var(--v2-text);
   font-weight: var(--v2-weight-semibold);
@@ -1242,10 +1269,12 @@
     grid-template-columns: 1fr;
   }
 
+  .v2-active-work-secondary-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .v2-work-detail-actions {
-    position: sticky;
-    bottom: calc(66px + env(safe-area-inset-bottom));
-    z-index: 5;
+    position: static;
     display: grid;
     grid-template-columns: 1fr 1fr;
   }

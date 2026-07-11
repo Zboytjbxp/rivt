@@ -1787,7 +1787,7 @@ export function WorkWorkspace({
                         <button type="button" disabled={Boolean(activeAction)} onClick={() => onOpenTool("job-photos", activeWork.id)}>Photos</button>
                         <button type="button" disabled={Boolean(activeAction)} onClick={() => onOpenTool("daily-log", activeWork.id)}>Daily log</button>
                       </div>
-                      <div className="v2-match-actions">
+                      <div className="v2-active-work-secondary-actions" aria-label="More active job actions">
                         <button type="button" disabled={Boolean(activeAction)} onClick={() => onOpenTool("invoice", activeWork.id)}>Invoice</button>
                         <button type="button" disabled={Boolean(activeAction)} onClick={() => onOpenTool("estimate", activeWork.id)}>Estimate</button>
                         {activeWork.status === "active" ? (
