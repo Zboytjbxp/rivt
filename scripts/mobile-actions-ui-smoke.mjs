@@ -335,29 +335,14 @@ async function safeCloseOpenPanels(page) {
 }
 
 async function runMobileFlow(page) {
-  await page.addInitScript(() => {
-    localStorage.setItem("rivt.recentTools.v1", JSON.stringify(["job-photos", "daily-log", "estimate"]));
-  });
   await page.goto(`${baseUrl}/app/home`, { waitUntil: "networkidle" });
   await assertNoHorizontalOverflow(page, "Home");
   await page.setViewportSize({ width: 320, height: 568 });
-  await page.locator(".trade-feed-pickup").waitFor({ timeout: 15_000 });
+  await page.locator(".trade-feed").waitFor({ timeout: 15_000 });
   await assertNoHorizontalOverflow(page, "Home iPhone SE");
-  const pickupContained = await page.locator(".trade-feed-pickup").evaluate((element) => ({
-    clientWidth: element.clientWidth,
-    scrollWidth: element.scrollWidth,
-    chipCount: element.querySelectorAll(".trade-feed-pickup-chip").length,
-    chipOverflow: [...element.querySelectorAll(".trade-feed-pickup-chip")].some((chip) => {
-      if (!(chip instanceof HTMLElement)) return false;
-      return chip.scrollWidth > chip.clientWidth + 1;
-    }),
-  }));
-  assert.ok(pickupContained.chipCount >= 3, "Home old-SE smoke should exercise recent-tool chips");
-  assert.ok(
-    pickupContained.scrollWidth <= pickupContained.clientWidth + 1,
-    `Home pickup card should not overflow on old iPhone SE: ${JSON.stringify(pickupContained)}`,
-  );
-  assert.equal(pickupContained.chipOverflow, false, "Home recent-tool chips should not clip their labels on old iPhone SE");
+  assert.equal(await page.locator(".trade-feed-pickup").count(), 0, "Home should not repeat recovery actions already available in navigation");
+  assert.equal(await page.locator(".trade-feed-nudge").count(), 0, "Home should not repeat the Shop Talk answer action above the feed");
+  await page.locator(".trade-feed-fab").waitFor({ timeout: 15_000 });
   assert.equal(await page.locator(".v2-sidebar").isVisible(), false, "iPhone SE should not render the desktop sidebar");
   assert.equal(await page.locator(".v2-mobile-nav").isVisible(), true, "iPhone SE should render the mobile nav");
   await page.screenshot({ path: path.join(screenshotDir, "mobile-home-iphone-se.png"), fullPage: false });

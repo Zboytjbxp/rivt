@@ -2,10 +2,27 @@
 
 Last updated: 2026-07-11 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Packet 19 Job Workspace Simplification is locally verified. It groups job detail into Today, Job, Money, and More while retaining all current records.
-Active packet: `docs/delivery/packets/19_JOB_WORKSPACE_SIMPLIFICATION.md`
-Repository branch: `codex/job-workspace-simplification`
+Current phase: Packet 20 Core Surface Subtraction is locally verified. It
+removes duplicate Home launchers and keeps the Tools hub compact without
+removing reachable field utilities.
+Active packet: `docs/delivery/packets/20_CORE_SURFACE_SUBTRACTION.md`
+Repository branch: `codex/core-surface-subtraction`
 Production feature release commit: `8e2c757d690513318daf3fe85583aa7674a7725d` verified with live `/api/health`, ready migration `0026_standalone_projects`, and `npm run monitor:production`; docs-only evidence commits may supersede the served build SHA without changing runtime behavior.
+
+## Packet 20 - Core Surface Subtraction (Local Verification)
+
+- Home removes duplicate recent-tool, offline/device-state, and answer-queue
+  panels. The persistent shell, Tools, and Shop Talk own those destinations.
+- Tools now treats every recently opened tool as recent, then keeps five core
+  field apps visible and all supporting utilities in three compact groups.
+- The hub-level storage copy is removed; each record surface remains
+  responsible for explaining its own persistence state.
+- Local verification passed: build, lint, 53/53 unit tests, E2E,
+  mobile-action UI smoke, Tools rendered UI smoke, dependency audit, and diff
+  check. The packet has no server or migration change, so the PostgreSQL
+  integration suite was not repeated.
+- Pending: commit, deploy, live health/monitor evidence, and one physical
+  phone scan of the reduced Home and Tools hubs.
 
 ## Packet 19 - Job Workspace Simplification (Local Verification)
 

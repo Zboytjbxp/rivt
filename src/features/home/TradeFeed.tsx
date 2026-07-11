@@ -1,11 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import {
-  Clock3,
-  ChevronRight,
   Circle,
   ClipboardList,
   MessageCircle,
-  SignalLow,
   Plus,
   TrendingUp,
   X,
@@ -25,16 +22,6 @@ import "./trade-feed.css";
 const BOOKMARK_KEY = "rivt.shopTalkBookmarks.v1";
 const AVAIL_KEY = "rivt.availability.v1";
 const GET_STARTED_DISMISS_KEY = "rivt.homeGetStarted.dismissed.v1";
-const RECENT_TOOLS_KEY = "rivt.recentTools.v1";
-const DEVICE_DRAFT_KEYS = [
-  "rivt.dailyLogDraft.v1",
-  "rivt.bids.v1",
-  "rivt.expenses.v1",
-  "rivt.timeSessions.v1",
-  "rivt.mileage.v1",
-  "rivt.payments.v1",
-  "rivt.dailyReports.v1",
-];
 type Availability = "available" | "limited" | "booked";
 const AVAIL_LABEL: Record<Availability, string> = {
   available: "Available this week",
@@ -43,18 +30,6 @@ const AVAIL_LABEL: Record<Availability, string> = {
 };
 const AVAIL_ORDER: Availability[] = ["available", "limited", "booked"];
 const SETUP_RECORD_BASELINE = 0;
-const RECENT_TOOL_LABELS: Partial<Record<ToolMode, string>> = {
-  calculator: "Calculator",
-  invoice: "Invoice",
-  estimate: "Estimate",
-  "daily-log": "Daily log",
-  "job-photos": "Records & photos",
-  "expense-logger": "Expenses",
-  "time-tracker": "Time tracker",
-  mileage: "Mileage",
-  materials: "Materials",
-  payments: "Payments",
-};
 
 function isToday(iso: string | null | undefined) {
   if (!iso) return false;
@@ -109,34 +84,6 @@ function readGetStartedDismissed(): boolean {
   catch { return false; }
 }
 
-function readRecentTools(): ToolMode[] {
-  try {
-    const stored = localStorage.getItem(RECENT_TOOLS_KEY);
-    if (!stored) return [];
-    const parsed = JSON.parse(stored) as unknown;
-    if (!Array.isArray(parsed)) return [];
-    return parsed.filter((tool): tool is ToolMode => typeof tool === "string").slice(0, 3);
-  } catch {
-    return [];
-  }
-}
-
-function hasStoredValue(raw: string | null) {
-  if (!raw) return false;
-  const trimmed = raw.trim();
-  return trimmed.length > 0 && trimmed !== "[]" && trimmed !== "{}" && trimmed !== "null";
-}
-
-function readDeviceToolStateCount() {
-  try {
-    return DEVICE_DRAFT_KEYS.reduce((count, key) => (
-      hasStoredValue(localStorage.getItem(key)) ? count + 1 : count
-    ), 0);
-  } catch {
-    return 0;
-  }
-}
-
 type StartStep = {
   id: string;
   title: string;
@@ -153,8 +100,6 @@ interface TradeFeedProps {
   role: Role;
   name: string;
   location: string;
-  primaryTrade: string;
-  unreadMessages?: number;
   profileHasBasics: boolean;
   profileHasBio: boolean;
   onboardingComplete?: boolean;
@@ -165,7 +110,6 @@ interface TradeFeedProps {
   onVotePost: (postId: string, direction: "up" | "down") => void;
   onOpenPost: (postId: string) => void;
   onAsk: () => void;
-  onOpenAnswerQueue: () => void;
   onPostWork: () => void;
   onOpenCommunity: (name: string) => void;
   onNavigate: (destination: PrimaryDestination) => void;
@@ -182,8 +126,6 @@ export function TradeFeed({
   role = "contractor",
   name,
   location,
-  primaryTrade,
-  unreadMessages = 0,
   profileHasBasics = false,
   profileHasBio = false,
   onboardingComplete = false,
@@ -194,7 +136,6 @@ export function TradeFeed({
   onVotePost,
   onOpenPost,
   onAsk,
-  onOpenAnswerQueue,
   onPostWork,
   onOpenCommunity,
   onNavigate,
@@ -205,9 +146,6 @@ export function TradeFeed({
   const [saved, setSaved] = useState<Set<string>>(readBookmarks);
   const [availability, setAvailability] = useState<Availability>(readAvailability);
   const [getStartedDismissed, setGetStartedDismissed] = useState(readGetStartedDismissed);
-  const [recentTools, setRecentTools] = useState<ToolMode[]>(readRecentTools);
-  const [deviceToolStateCount, setDeviceToolStateCount] = useState(readDeviceToolStateCount);
-  const [isOnline, setIsOnline] = useState(() => (typeof window === "undefined" ? true : window.navigator.onLine));
   const [activeProject, setActiveProject] = useState<ProjectRecord | null>(null);
   const [activeProjectLoading, setActiveProjectLoading] = useState(false);
   const primaryActiveWork = activeWork.find((work) => work.status === "active") ?? activeWork[0] ?? null;
@@ -265,37 +203,9 @@ export function TradeFeed({
     };
   }, [activeProject, activeProjectLoading, primaryActiveWork]);
 
-  useEffect(() => {
-    if (typeof window === "undefined") return undefined;
-    const syncDeviceState = () => {
-      setRecentTools(readRecentTools());
-      setDeviceToolStateCount(readDeviceToolStateCount());
-      setIsOnline(window.navigator.onLine);
-    };
-    syncDeviceState();
-    window.addEventListener("focus", syncDeviceState);
-    window.addEventListener("online", syncDeviceState);
-    window.addEventListener("offline", syncDeviceState);
-    window.addEventListener("storage", syncDeviceState);
-    document.addEventListener("visibilitychange", syncDeviceState);
-    return () => {
-      window.removeEventListener("focus", syncDeviceState);
-      window.removeEventListener("online", syncDeviceState);
-      window.removeEventListener("offline", syncDeviceState);
-      window.removeEventListener("storage", syncDeviceState);
-      document.removeEventListener("visibilitychange", syncDeviceState);
-    };
-  }, []);
-
   const trendingPosts = useMemo(
     () => [...posts].sort((a, b) => netScore(b) - netScore(a)),
     [posts],
-  );
-
-  // Questions in the user's trade that still need an answer — a real, personal nudge.
-  const tradeQuestions = useMemo(
-    () => posts.filter((p) => (p.trade === primaryTrade || p.trade === "General") && p.status !== "Verified Fix").length,
-    [posts, primaryTrade],
   );
 
   const getStartedSteps = useMemo<StartStep[]>(() => {
@@ -409,13 +319,6 @@ export function TradeFeed({
   const completedGetStartedSteps = getStartedSteps.filter((step) => step.done).length;
   const nextGetStartedStep = getStartedSteps.find((step) => !step.done) ?? null;
   const showGetStarted = !onboardingComplete && !getStartedDismissed && Boolean(nextGetStartedStep);
-  const showPickup = onboardingComplete && (
-    unreadMessages > 0
-    || recentTools.length > 0
-    || deviceToolStateCount > 0
-    || !isOnline
-  );
-
   function toggleSave(id: string) {
     setSaved((prev) => {
       const next = new Set(prev);
@@ -504,69 +407,6 @@ export function TradeFeed({
         </section>
       ) : null}
 
-      {showPickup ? (
-        <section className="trade-feed-pickup" aria-labelledby="trade-feed-pickup-title">
-          <div className="trade-feed-section-head trade-feed-pickup-head">
-            <h2 id="trade-feed-pickup-title">Pick up where you left off</h2>
-          </div>
-          <div className="trade-feed-pickup-list">
-            {unreadMessages > 0 ? (
-              <button type="button" className="trade-feed-pickup-row" onClick={() => onNavigate("messages")}>
-                <span className="trade-feed-pickup-icon">
-                  <MessageCircle size={18} />
-                </span>
-                <span className="trade-feed-pickup-copy">
-                  <strong>{unreadMessages} unread message{unreadMessages === 1 ? "" : "s"}</strong>
-                  <small>Open the latest conversation and keep the job moving.</small>
-                </span>
-                <ChevronRight size={18} />
-              </button>
-            ) : null}
-
-            {recentTools.length > 0 ? (
-              <div className="trade-feed-pickup-row trade-feed-pickup-row-static">
-                <span className="trade-feed-pickup-icon">
-                  <Clock3 size={18} />
-                </span>
-                <span className="trade-feed-pickup-copy">
-                  <strong>Recent tools</strong>
-                  <small>Jump back into the tools you've been using on this phone.</small>
-                </span>
-                <div className="trade-feed-pickup-chip-row">
-                  {recentTools.map((tool) => (
-                    <button
-                      key={tool}
-                      type="button"
-                      className="trade-feed-pickup-chip"
-                      onClick={() => onOpenTool(tool)}
-                    >
-                      {RECENT_TOOL_LABELS[tool] ?? tool}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ) : null}
-
-            {!isOnline || deviceToolStateCount > 0 ? (
-              <button type="button" className="trade-feed-pickup-row" onClick={() => onNavigate("tools")}>
-                <span className="trade-feed-pickup-icon">
-                  <SignalLow size={18} />
-                </span>
-                <span className="trade-feed-pickup-copy">
-                  <strong>{!isOnline ? "You're offline" : "Saved on this phone"}</strong>
-                  <small>
-                    {!isOnline
-                      ? "New tool changes stay on this phone until service returns."
-                      : `${deviceToolStateCount} tool workspace${deviceToolStateCount === 1 ? "" : "s"} still live on this device.`}
-                  </small>
-                </span>
-                <ChevronRight size={18} />
-              </button>
-            ) : null}
-          </div>
-        </section>
-      ) : null}
-
       {/* Getting-started checklist */}
       {showGetStarted && (
         <section className="trade-feed-start-card" aria-labelledby="trade-feed-start-title">
@@ -609,18 +449,6 @@ export function TradeFeed({
             </div>
           ) : null}
         </section>
-      )}
-
-      {/* Answer-queue nudge */}
-      {tradeQuestions > 0 && (
-        <button type="button" className="trade-feed-nudge" onClick={onOpenAnswerQueue}>
-          <span className="trade-feed-nudge-icon"><MessageCircle size={18} /></span>
-          <span className="trade-feed-nudge-copy">
-            <b>{tradeQuestions} {primaryTrade} question{tradeQuestions === 1 ? " needs" : "s need"} a hand</b>
-            <small>Answer one to build your reputation</small>
-          </span>
-          <ChevronRight size={18} />
-        </button>
       )}
 
       {/* Communities */}

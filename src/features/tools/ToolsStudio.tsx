@@ -2853,16 +2853,10 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
   const latestEntry = selectedProject?.entries.at(-1) ?? null;
   const actionBusy = Boolean(projectAction);
   const recentToolLaunchers = useMemo(() => {
-    const primaryModes = new Set(PRIMARY_TOOL_LAUNCHERS.map((tool) => tool.mode));
     const byMode = new Map(allToolLaunchers().map((tool) => [tool.mode, tool]));
     return recentTools
       .map((tool) => byMode.get(tool))
-      .filter((tool): tool is ToolLauncher => {
-        if (!tool) {
-          return false;
-        }
-        return !primaryModes.has(tool.mode);
-      });
+      .filter((tool): tool is ToolLauncher => Boolean(tool));
   }, [recentTools]);
   const activeWork = activeWorkRecords.length ? activeWorkRecords : fetchedActiveWork;
   const orderedActiveWork = useMemo(
@@ -3729,9 +3723,6 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
         ) : null}
 
         <section className="v2-tool-section" aria-label="Field tools">
-          <div className="v2-tool-section-header v2-tool-core-header is-simple">
-            <strong>Core apps</strong>
-          </div>
           <div className="v2-tool-launch-grid">
             {PRIMARY_TOOL_LAUNCHERS.map((tool, index) => (
               <ToolCard
@@ -3752,9 +3743,6 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
           ))}
         </div>
 
-        <p className="v2-tools-storage-note">
-          Drafts save on this device. Records and photos sync to cloud storage.
-        </p>
       </div>
 
     </section>

@@ -2425,8 +2425,6 @@ function App() {
             role={role}
             name={accountProfile.displayName || (isGuest ? "there" : "there")}
             location={accountProfile.location}
-            primaryTrade={primaryProfileTrade}
-            unreadMessages={unreadMessages}
             profileHasBasics={homeProfileHasBasics}
             profileHasBio={homeProfileHasBio}
             onboardingComplete={onboardingComplete}
@@ -2437,7 +2435,6 @@ function App() {
             onVotePost={handleVoteCommunityPost}
             onOpenPost={(postId) => { setShopTalkPostId(postId); setShopTalkCompose(false); setShopTalkAnswerQueue(false); setShopTalkGlobalQuery(""); handleNavigate(defaultViewForDestination("shop-talk")); }}
             onAsk={() => { setShopTalkPostId(null); setShopTalkAnswerQueue(false); setShopTalkCompose(true); handleNavigate(defaultViewForDestination("shop-talk")); }}
-            onOpenAnswerQueue={() => { setShopTalkPostId(null); setShopTalkCompose(false); setShopTalkGlobalQuery(""); setShopTalkCommunitySlug(null); setShopTalkAnswerQueue(true); handleNavigate(defaultViewForDestination("shop-talk")); }}
             onPostWork={openCreateJob}
             onOpenCommunity={(name) => { setShopTalkPostId(null); setShopTalkCompose(false); setShopTalkAnswerQueue(false); setShopTalkGlobalQuery(""); setShopTalkCommunitySlug(communitySlug(name)); handleNavigate(defaultViewForDestination("shop-talk")); }}
             onNavigate={(destination) => handleNavigate(defaultViewForDestination(destination))}

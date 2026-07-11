@@ -10,6 +10,20 @@ Status values:
 
 Evidence must eventually link to implementation, automated tests, manual acceptance proof, and deployed build.
 
+## Traceability Addendum - 2026-07-11 Core Surface Subtraction (Local Verification)
+
+- `GA-UX-003` gains deliberate hierarchy evidence: Home no longer repeats
+  tool, offline, and answer actions that already have a persistent destination;
+  its remaining daily decisions are active work, communities, the feed, and
+  one role-aware action.
+- `GA-UX-006` gains rendered mobile coverage: the mobile-action smoke asserts
+  the removed duplicate panels stay absent at 320px while the single Home FAB
+  remains visible; the Tools smoke preserves all five core apps and three
+  expandable utility groups.
+- `GA-OPS-007` gains local evidence: build, lint, 53/53 unit tests, E2E,
+  mobile-action UI smoke, Tools rendered UI smoke, dependency audit, and diff
+  check passed. Production evidence remains pending deployment.
+
 ## Traceability Addendum - 2026-07-11 Job Workspace Simplification (In Progress)
 
 - `GA-UX-003` gains workspace clarity evidence: eight peer job-detail tabs are
