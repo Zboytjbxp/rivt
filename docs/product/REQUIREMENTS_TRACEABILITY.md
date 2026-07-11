@@ -10,6 +10,18 @@ Status values:
 
 Evidence must eventually link to implementation, automated tests, manual acceptance proof, and deployed build.
 
+## Traceability Addendum - 2026-07-11 Active Work Action Simplification (In Progress)
+
+- `GA-UX-003` gains field-workspace hierarchy evidence: an accepted job now
+  leads with one exact project-record handoff, exposes Messages, Camera, and
+  Daily Log as the daily field actions, and groups Estimate and Invoice under
+  Money. Reschedule and cancellation remain available behind a deliberate
+  disclosure instead of competing with normal job work.
+- `GA-UX-006` gains rendered mobile coverage: the Work lifecycle smoke asserts
+  the focused exact workspace, the visible primary and daily actions, and
+  collapsed rare controls before proving the Camera still opens the matching
+  active job.
+
 ## Traceability Addendum - 2026-07-11 Workspace Focus Handoff (Unmerged)
 
 - `GA-UX-003` gains visible-destination evidence: Work's accepted-work action

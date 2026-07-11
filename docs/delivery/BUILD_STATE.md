@@ -2,10 +2,28 @@
 
 Last updated: 2026-07-11 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Packet 16 Workspace Focus Handoff is production verified. This small continuity pass makes the accepted-work handoff visibly land on the exact job workspace instead of relying on a route change or toast alone.
-Active packet: `docs/delivery/packets/16_WORKSPACE_FOCUS_HANDOFF.md`
-Repository branch: `master`
+Current phase: Packet 17 Active Work Action Simplification is locally verified. It reduces the accepted-job action wall into one project-record action, three daily field actions, a compact Money group, and collapsed rare controls without changing exact destinations.
+Active packet: `docs/delivery/packets/17_ACTIVE_WORK_ACTION_SIMPLIFICATION.md`
+Repository branch: `codex/active-work-action-simplification`
 Production feature release commit: `5e766ca22f5d20bdfa52f7ef632274fe425f2326` verified with live `/api/health`, ready migration `0026_standalone_projects`, and `npm run monitor:production`; docs-only evidence commits may supersede the served build SHA without changing runtime behavior.
+
+## Packet 17 - Active Work Action Simplification (Local Verification)
+
+- The accepted-work panel now leads with one `Open project records` command.
+  `Messages`, `Camera`, and `Daily log` form the visible daily field row;
+  Estimate and Invoice sit in a compact Money group.
+- Reschedule and cancellation are still available, but begin collapsed under
+  `Job controls` so exceptional job changes do not compete with normal field
+  work.
+- The Work lifecycle smoke now asserts the focused exact workspace, visible
+  field actions, collapsed job controls, and the exact-job Camera handoff.
+- Local verification passed: build, lint, security lint, 53/53 unit tests,
+  E2E, Work lifecycle UI smoke, mobile-action UI smoke, Tools rendered QA,
+  dependency audit, and diff check. The aggregate test command was not
+  repeated because this client-only presentation packet does not touch server
+  or database code.
+- Pending: commit, deploy, live health/monitor evidence, and a physical
+  one-hand confirmation on an accepted job.
 
 ## Packet 16 - Workspace Focus Handoff (Local Verification)
 

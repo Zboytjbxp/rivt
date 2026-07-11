@@ -1800,8 +1800,8 @@ export function WorkWorkspace({
                 <section className="v2-match-panel" aria-label="Hiring workflow">
                   <div className="v2-match-panel-heading">
                     <div>
-                      <span>{role === "contractor" ? "Applicants" : "Your hiring status"}</span>
-                      <h3>{role === "contractor" ? "Move one real applicant to active work" : "Apply, accept, and unlock the jobsite"}</h3>
+                      <span>{activeWork ? "Active work" : role === "contractor" ? "Applicants" : "Your hiring status"}</span>
+                      <h3>{activeWork ? "Keep this job moving" : role === "contractor" ? "Move one real applicant to active work" : "Apply, accept, and unlock the jobsite"}</h3>
                     </div>
                     {matchLoading ? <small>Loading...</small> : null}
                   </div>
@@ -1814,24 +1814,32 @@ export function WorkWorkspace({
                         <small>Started {new Date(activeWork.startedAt).toLocaleString()}</small>
                       </div>
                       <p className="v2-active-work-explain">
-                        The listing is closed to new applicants. Both sides now use this private workspace for coordination and proof.
+                        The listing is closed. Keep messages, job photos, daily proof, and money records together here.
                       </p>
-                      <div className="v2-active-work-primary-actions" aria-label="Active job workspace actions">
+                      <div className="v2-active-work-record-action" aria-label="Project record">
                         <button type="button" className="v2-primary-button" disabled={Boolean(activeAction)} onClick={() => onOpenActiveWorkRecords(activeWork.id)}>Open project records</button>
+                      </div>
+                      <div className="v2-active-work-daily-actions" aria-label="Daily job actions">
                         <button type="button" disabled={Boolean(activeAction)} onClick={() => onOpenActiveWorkMessages(activeWork.id)}>Messages</button>
-                        <button type="button" disabled={Boolean(activeAction)} onClick={() => onOpenTool("job-photos", activeWork.id)}>Photos</button>
+                        <button type="button" disabled={Boolean(activeAction)} onClick={() => onOpenTool("job-photos", activeWork.id)}>Camera</button>
                         <button type="button" disabled={Boolean(activeAction)} onClick={() => onOpenTool("daily-log", activeWork.id)}>Daily log</button>
                       </div>
-                      <div className="v2-active-work-secondary-actions" aria-label="More active job actions">
-                        <button type="button" disabled={Boolean(activeAction)} onClick={() => onOpenTool("invoice", activeWork.id)}>Invoice</button>
-                        <button type="button" disabled={Boolean(activeAction)} onClick={() => onOpenTool("estimate", activeWork.id)}>Estimate</button>
-                        {activeWork.status === "active" ? (
-                          <>
+                      <div className="v2-active-work-money-actions" aria-label="Job money tools">
+                        <span>Money</span>
+                        <div>
+                          <button type="button" disabled={Boolean(activeAction)} onClick={() => onOpenTool("estimate", activeWork.id)}>Estimate</button>
+                          <button type="button" disabled={Boolean(activeAction)} onClick={() => onOpenTool("invoice", activeWork.id)}>Invoice</button>
+                        </div>
+                      </div>
+                      {activeWork.status === "active" ? (
+                        <details className="v2-active-work-controls">
+                          <summary>Job controls</summary>
+                          <div>
                             <button type="button" disabled={Boolean(activeAction)} onClick={() => openReasonPrompt("reschedule", activeWork)}>Request reschedule</button>
                             <button type="button" className="v2-destructive-button" disabled={Boolean(activeAction)} onClick={() => openReasonPrompt("cancel", activeWork)}>Cancel work</button>
-                          </>
-                        ) : null}
-                      </div>
+                          </div>
+                        </details>
+                      ) : null}
                       {activeWork.events.length ? (
                         <ol className="v2-mini-timeline">
                           {activeWork.events.slice(0, 4).map((event) => { const label = event.type.replaceAll("_", " "); return <li key={event.id}><strong>{label.charAt(0).toUpperCase() + label.slice(1)}</strong><small>{event.reason || new Date(event.occurredAt).toLocaleString()}</small></li>; })}
