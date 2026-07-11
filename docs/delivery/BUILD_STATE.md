@@ -2,12 +2,12 @@
 
 Last updated: 2026-07-10 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Packet 09 Web Push delivery. Durable subscriptions, transactional outbox queueing, bounded retry delivery, session revocation, exact-route clicks, explicit Settings consent, migrations 0023/0024, and production VAPID configuration are live; physical-device delivery/click proof remains pending.
+Current phase: Packet 09 Web Push delivery is production-verified. Durable subscriptions, transactional outbox queueing, bounded retry delivery, session revocation, exact-route clicks, explicit Settings consent, migrations 0023/0024, production VAPID configuration, and physical background delivery/click-through are live.
 Active packet: `docs/delivery/packets/09_GATE_B_WEB_PUSH.md`
 Repository branch: `master`
 Production feature release commit: `535e21bf1c2b76c7547b9c5ac5dc9ef54b8d5b79` verified with live `/api/health` and `npm run monitor:production`; docs-only evidence commits may supersede the served build SHA without changing runtime behavior.
 
-## Packet 09 - Gate B Web Push (Production, Physical Proof Pending)
+## Packet 09 - Gate B Web Push (Production Verified)
 
 - Added PostgreSQL-owned browser subscriptions and a durable delivery outbox in migrations 0023/0024.
 - Bound every subscription to an active login session; logout, single-device revocation, and revoke-other-devices remove the corresponding delivery endpoints.
@@ -17,7 +17,7 @@ Production feature release commit: `535e21bf1c2b76c7547b9c5ac5dc9ef54b8d5b79` ve
 - Notification clicks accept only same-origin RIVT destinations and reuse existing exact-object routing.
 - Local evidence so far: build, full lint, unit tests (49/49), E2E, mobile action smoke, dependency audit, and diff checks pass. The aggregate PostgreSQL run completed 17/19 suites; its migration fixture and an accepted-work mapper assertion failed, were corrected, and both affected suites then passed individually. The dedicated push subscription/outbox/session-revocation suite passed in 17.2 seconds.
 - Production evidence: Railway deployment `1af25317-a227-4e7a-ad8f-abdffcaeaa9f` succeeded; live health served exact source `535e21bf1c2b76c7547b9c5ac5dc9ef54b8d5b79`, migration `0024_push_subscription_sessions`, and configured Web Push without exposing keys. The production monitor passed with PostgreSQL, S3-compatible storage, Sentry, Web Push, controls off, and seven anonymous private-route probes.
-- Remaining boundary: enable device alerts in an installed physical RIVT PWA, send the Settings test alert while the app is closed, tap it, and verify the notification center opens. Then log out and verify that device no longer receives account alerts.
+- Physical evidence: on 2026-07-10, the founder enabled device alerts on a physical phone, received the RIVT test alert in the phone notification tray while outside the app, tapped it, and returned to RIVT. The first alert exposed a white-square Android status icon; the follow-up replaces the full-background badge with an approved-mark-derived monochrome transparent badge. Session-bound deletion and post-revocation delivery exclusion remain integration-proven.
 
 ## Latest Packet 08 Pass - Notification Delivery Truthfulness
 

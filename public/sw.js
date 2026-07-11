@@ -51,7 +51,8 @@ self.addEventListener('push', e => {
     self.registration.showNotification(data.title, {
       body: data.body,
       icon: '/rivt-maskable-icon-192.png',
-      badge: '/rivt-favicon-192.png',
+      // Android status bars require a monochrome mark on a transparent canvas.
+      badge: '/rivt-notification-badge-192.png',
       tag: data.tag || 'rivt-push',
       data: data.url ? { url: data.url } : undefined,
     })
