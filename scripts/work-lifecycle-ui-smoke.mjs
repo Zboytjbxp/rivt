@@ -670,6 +670,15 @@ async function runTradespersonOfferFlow(page) {
   await page.getByRole("button", { name: "Accept work" }).click();
   await page.getByText("Accepted and active", { exact: true }).waitFor({ timeout: 15_000 });
 
+  await page.goto(`${baseUrl}/app/work`, { waitUntil: "networkidle" });
+  const workActiveStrip = page.getByLabel("Active work ready");
+  await workActiveStrip.getByText("You're active now", { exact: true }).waitFor({ timeout: 15_000 });
+  const activeStripBox = await workActiveStrip.boundingBox();
+  const workToolbarBox = await page.locator(".v2-work-toolbar").boundingBox();
+  assert.ok(activeStripBox && workToolbarBox && activeStripBox.y < workToolbarBox.y, "Active work must appear before work browsing controls");
+  await assertInViewport(workActiveStrip, "Active-work priority strip");
+  await page.screenshot({ path: path.join(screenshotDir, "active-work-priority.png"), fullPage: true });
+
   await page.goto(`${baseUrl}/app/home`, { waitUntil: "networkidle" });
   const homeActiveWork = page.getByLabel("Active work");
   await homeActiveWork.getByText("You're active now", { exact: true }).waitFor({ timeout: 15_000 });

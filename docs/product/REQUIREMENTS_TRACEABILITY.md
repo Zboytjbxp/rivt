@@ -10,6 +10,15 @@ Status values:
 
 Evidence must eventually link to implementation, automated tests, manual acceptance proof, and deployed build.
 
+## Traceability Addendum - 2026-07-11 Work Mobile Priority (In Progress)
+
+- `GA-UX-003` gains mobile hierarchy evidence: the active accepted job renders
+  immediately after Work's heading, before job status browsing, metrics, and
+  search. The exact workspace route remains unchanged.
+- `GA-UX-006` gains rendered priority coverage: the lifecycle smoke asserts
+  the active-work strip is in the viewport and precedes Work's browsing
+  controls at a phone viewport.
+
 ## Traceability Addendum - 2026-07-11 Active Work Action Simplification (In Progress)
 
 - `GA-UX-003` gains field-workspace hierarchy evidence: an accepted job now

@@ -1636,6 +1636,21 @@ export function WorkWorkspace({
         </div>
       </header>
 
+      {primaryActiveWorkRecord ? (
+        <section className={detailJob?.canonical?.id === primaryActiveWorkRecord.jobId && mobileDetailOpen ? "v2-active-work-strip is-current-detail" : "v2-active-work-strip"} aria-label="Active work ready">
+          <div>
+            <span>You're active now</span>
+            <h2>{primaryActiveWorkRecord.job?.title ?? "Accepted work is ready"}</h2>
+            <p>Open this job to keep messages, photos, logs, and money records together.</p>
+          </div>
+          <div className="v2-active-work-strip-actions">
+            <button type="button" className="v2-primary-button" onClick={() => openActiveWorkJob(primaryActiveWorkRecord)}>
+              Open workspace
+            </button>
+          </div>
+        </section>
+      ) : null}
+
       {role === "contractor" ? (
         <>
           <nav className="v2-section-tabs" aria-label="Job status">
@@ -1645,7 +1660,7 @@ export function WorkWorkspace({
             })}
           </nav>
           <label className="v2-mobile-work-select">
-            <span>View</span>
+            <span>{primaryActiveWorkRecord ? "Other work" : "View"}</span>
             <select value={contractorSection} onChange={(event) => { setContractorSection(event.target.value as ContractorSection); setMobileDetailOpen(false); }}>
               <option value="open">Open jobs</option>
               <option value="draft">Drafts</option>
@@ -1659,7 +1674,7 @@ export function WorkWorkspace({
         </>
       ) : null}
 
-      {role === "contractor" ? <ContractorStatsBar jobs={jobs} /> : null}
+      {role === "contractor" && !primaryActiveWorkRecord ? <ContractorStatsBar jobs={jobs} /> : null}
 
       <div className="v2-work-toolbar">
         <label className="v2-list-search"><Search size={16} /><input value={query} onChange={(event) => onQueryChange(event.target.value)} placeholder="Search work" /></label>
@@ -1701,21 +1716,6 @@ export function WorkWorkspace({
       ) : null}
 
       {error ? <div className="v2-work-error" role="alert"><div><strong>Jobs could not be loaded</strong><span>{error}</span></div><button type="button" onClick={onRetry}><RefreshCw size={16} /> Retry</button></div> : null}
-
-      {primaryActiveWorkRecord ? (
-        <section className={detailJob?.canonical?.id === primaryActiveWorkRecord.jobId && mobileDetailOpen ? "v2-active-work-strip is-current-detail" : "v2-active-work-strip"} aria-label="Active work ready">
-          <div>
-            <span>You're active now</span>
-            <h2>{primaryActiveWorkRecord.job?.title ?? "Accepted work is ready"}</h2>
-            <p>Messages, photos, logs, and money records stay together in one workspace.</p>
-          </div>
-          <div className="v2-active-work-strip-actions">
-            <button type="button" className="v2-primary-button" onClick={() => openActiveWorkJob(primaryActiveWorkRecord)}>
-              Open workspace
-            </button>
-          </div>
-        </section>
-      ) : null}
 
       {role === "contractor" && contractorSection === "pipeline" ? (
         <PipelineBoard openJobs={jobs.filter((j) => j.status === "Open")} />

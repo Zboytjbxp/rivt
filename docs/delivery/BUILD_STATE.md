@@ -2,10 +2,28 @@
 
 Last updated: 2026-07-11 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Packet 17 Active Work Action Simplification is production verified. It reduces the accepted-job action wall into one project-record action, three daily field actions, a compact Money group, and collapsed rare controls without changing exact destinations.
-Active packet: `docs/delivery/packets/17_ACTIVE_WORK_ACTION_SIMPLIFICATION.md`
-Repository branch: `master`
+Current phase: Packet 18 Work Mobile Priority is locally verified. It makes accepted active work the first Work-screen decision and pushes browsing/administration into a clearly secondary path.
+Active packet: `docs/delivery/packets/18_WORK_MOBILE_PRIORITY.md`
+Repository branch: `codex/work-mobile-priority`
 Production feature release commit: `596d824b34d1f6ec84e644ec2f2a20c790907279` verified with live `/api/health`, ready migration `0026_standalone_projects`, and `npm run monitor:production`; docs-only evidence commits may supersede the served build SHA without changing runtime behavior.
+
+## Packet 18 - Work Mobile Priority (Local Verification)
+
+- Active work renders immediately after the Work heading, ahead of status
+  browsing, metrics, search, and filters. This makes the current job the first
+  decision for a person who has accepted work.
+- Contractor summary metrics are withheld while active work exists. Other
+  listings and administration remain available through the unchanged status
+  controls, labeled `Other work` on small screens.
+- The lifecycle smoke asserts that the active-work strip is visible and above
+  Work browsing controls before exercising the exact workspace handoff.
+- Local verification passed: build, lint, security lint, 53/53 unit tests,
+  E2E, Work lifecycle UI smoke, mobile-action UI smoke, Tools rendered QA,
+  dependency audit, and diff check. The aggregate test command was not
+  repeated because this client-only hierarchy packet does not touch server or
+  database code.
+- Pending: commit, deploy, live health/monitor evidence, and a physical phone
+  check with a contractor who has active work.
 
 ## Packet 17 - Active Work Action Simplification (Local Verification)
 

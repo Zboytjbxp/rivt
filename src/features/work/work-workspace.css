@@ -230,6 +230,7 @@
   background:
     linear-gradient(135deg, color-mix(in srgb, var(--v2-accent) 11%, transparent), transparent 46%),
     var(--v2-surface-raised);
+  box-shadow: var(--v2-shadow-card);
 }
 
 .v2-active-work-strip span {
@@ -1346,6 +1347,10 @@
 
   .v2-active-work-strip.is-current-detail {
     display: none;
+  }
+
+  .v2-work-page > .v2-mobile-work-select {
+    margin-top: 2px;
   }
 
   .v2-detail-tabs {
