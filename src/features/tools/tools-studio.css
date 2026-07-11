@@ -1152,6 +1152,10 @@
   align-items: end;
 }
 
+.v2-invoice-template-tools > .v2-invoice-template-bar {
+  margin-top: 10px;
+}
+
 .v2-invoice-section-title {
   display: flex;
   align-items: baseline;
@@ -7600,9 +7604,41 @@ html[data-rivt-compact-device="true"] .v2-invoice-print-preview header aside {
 }
 
 html[data-rivt-compact-device="true"] .v2-invoice-print-preview table {
-  display: block;
-  overflow-x: auto;
   width: 100%;
+  table-layout: fixed;
+}
+
+html[data-rivt-compact-device="true"] .v2-invoice-print-preview th:nth-child(2),
+html[data-rivt-compact-device="true"] .v2-invoice-print-preview td:nth-child(2),
+html[data-rivt-compact-device="true"] .v2-invoice-print-preview th:nth-child(3),
+html[data-rivt-compact-device="true"] .v2-invoice-print-preview td:nth-child(3) {
+  display: none;
+}
+
+html[data-rivt-compact-device="true"] .v2-invoice-print-preview th:first-child,
+html[data-rivt-compact-device="true"] .v2-invoice-print-preview td:first-child {
+  width: 62%;
+  overflow-wrap: anywhere;
+}
+
+html[data-rivt-compact-device="true"] .v2-tool-action-dock {
+  grid-template-columns: minmax(0, 1fr) auto auto auto;
+  gap: 6px;
+  padding: 6px;
+}
+
+html[data-rivt-compact-device="true"] .v2-tool-action-dock > span {
+  padding-inline: 4px;
+}
+
+html[data-rivt-compact-device="true"] .v2-tool-action-dock > span small {
+  display: none;
+}
+
+html[data-rivt-compact-device="true"] .v2-tool-action-dock > button {
+  min-width: 44px;
+  min-height: 44px;
+  padding-inline: 10px;
 }
 
 html[data-rivt-compact-device="true"] .v2-tools-app.is-calculator-fullscreen {

@@ -56,6 +56,14 @@
   gap: 14px;
 }
 
+.v2-settings-section-nav {
+  display: none;
+}
+
+.v2-settings-section-group {
+  display: contents;
+}
+
 .v2-profile-panel {
   border: 1px solid color-mix(in srgb, var(--v2-border) 72%, transparent);
   border-radius: var(--v2-radius-lg);
@@ -266,6 +274,60 @@
 }
 
 @media (max-width: 640px) {
+  .v2-settings-section-nav {
+    position: sticky;
+    top: calc(var(--v2-topbar-height) + env(safe-area-inset-top));
+    z-index: 8;
+    display: flex;
+    gap: 6px;
+    margin-inline: -4px;
+    padding: 6px 4px;
+    overflow-x: auto;
+    background: color-mix(in srgb, var(--v2-bg) 96%, transparent);
+    scrollbar-width: none;
+  }
+
+  .v2-settings-section-nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .v2-settings-section-nav button {
+    flex: 0 0 auto;
+    min-height: 44px;
+    padding: 0 14px;
+    border: 1px solid var(--v2-border);
+    border-radius: var(--v2-radius-pill);
+    background: var(--v2-surface-raised);
+    color: var(--v2-text-muted);
+    font: inherit;
+    font-size: var(--v2-text-label);
+    font-weight: var(--v2-weight-strong);
+  }
+
+  .v2-settings-section-nav button.is-active {
+    border-color: var(--v2-accent);
+    background: var(--v2-accent-soft);
+    color: var(--v2-accent);
+  }
+
+  .v2-profile-grid[data-active-settings-section] > [data-settings-section] {
+    display: none;
+  }
+
+  .v2-profile-grid[data-active-settings-section="account"] > [data-settings-section="account"],
+  .v2-profile-grid[data-active-settings-section="alerts"] > [data-settings-section="alerts"],
+  .v2-profile-grid[data-active-settings-section="profile"] > [data-settings-section="profile"],
+  .v2-profile-grid[data-active-settings-section="appearance"] > [data-settings-section="appearance"],
+  .v2-profile-grid[data-active-settings-section="billing"] > [data-settings-section="billing"],
+  .v2-profile-grid[data-active-settings-section="business"] > [data-settings-section="business"],
+  .v2-profile-grid[data-active-settings-section="security"] > [data-settings-section="security"] {
+    display: grid;
+  }
+
+  .v2-profile-grid[data-active-settings-section="security"] > .v2-settings-signout-section {
+    display: flex;
+  }
+
   .v2-profile-page {
     gap: 12px;
   }

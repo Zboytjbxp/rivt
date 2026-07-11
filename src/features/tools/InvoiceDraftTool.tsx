@@ -592,18 +592,18 @@ export function InvoiceDraftTool({
             </span>
           </div>
         ) : null}
-        <section className="v2-invoice-template-bar" aria-label="Invoice templates">
+        <details className="v2-tool-collapsible v2-invoice-template-tools" aria-label="Invoice templates">
+          <summary>
+            <span>Templates</span>
+            <small>{templates.length ? `${templates.length} saved` : "Optional"}</small>
+          </summary>
+        <section className="v2-invoice-template-bar">
           <label>Template name<input value={templateName} onChange={(event) => setTemplateName(event.target.value)} placeholder="Standard labor invoice" /></label>
           <button type="button" className="v2-primary-button" onClick={saveTemplate}><FileText size={14} />Save template</button>
           <small>{syncMessage}</small>
         </section>
         {templateNotice ? <p className="v2-record-notice" role="status">{templateNotice}</p> : null}
         {templates.length ? (
-          <details className="v2-tool-collapsible" aria-label="Saved invoice templates">
-            <summary>
-              <span>Saved templates</span>
-              <small>{templates.length}</small>
-            </summary>
             <div className="v2-invoice-template-list">
               {templates.map((template) => (
                 <article key={template.id}>
@@ -616,8 +616,8 @@ export function InvoiceDraftTool({
                 </article>
               ))}
             </div>
-          </details>
         ) : null}
+        </details>
         <section className="v2-invoice-builder-section" aria-label="Invoice details">
           <header className="v2-invoice-section-title">
             <h3>Details</h3>

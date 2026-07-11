@@ -841,3 +841,12 @@ Evidence must eventually link to implementation, automated tests, manual accepta
   alerts enabled, controls off, seven anonymous private-route checks, and a
   592 ms duration. Physical Camera context/capture behavior remains the field
   acceptance boundary.
+
+## Traceability Addendum - 2026-07-11 Mobile Experience Train
+
+- `GA-UX-003` gains clearer exact-destination hierarchy: mobile Work uses labeled status/detail selectors, and the active-work summary disappears when that exact workspace is already open instead of repeating the same destination.
+- `GA-UX-005` gains a feed-first Shop Talk entry while retaining community search, audience selection, joining, and creation in an expandable discovery rail.
+- `GA-UX-006` gains 44px intro pagination targets, visible provider labels, contained account-drawer rendering, a navigable Settings section index, compact invoice preview tables, and mature demo-state continuity at 320px/390px widths.
+- `GA-AUTH-007` remains fail-closed: demo crew/profile state is supplied only under the existing isolated guest-preview flag, skips account sync, and cannot write sample records to authenticated storage.
+- `GA-OPS-007` gains complete local evidence: build/lint/security lint, 53 unit tests, E2E, five rendered UI suites, zero-vulnerability dependency audit, diff check, and all 19 PostgreSQL integration tests pass.
+- `GA-OPS-008` remains unchanged until production health serves the exact Mobile Experience Train commit and the synthetic monitor passes.

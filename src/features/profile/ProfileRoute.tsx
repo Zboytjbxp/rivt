@@ -73,6 +73,7 @@ interface ProfileRouteProps {
   onCurrentSessionRevoked: () => void;
   onActivity: (title: string, detail: string, kind: "info" | "success" | "warning" | "error") => void;
   onQuizComplete: (result: SafetyQuizResult) => void;
+  isDemo?: boolean;
 }
 
 export function ProfileRoute({
@@ -101,6 +102,7 @@ export function ProfileRoute({
   onCurrentSessionRevoked,
   onActivity,
   onQuizComplete,
+  isDemo = false,
 }: ProfileRouteProps) {
   const [sessions, setSessions] = useState<AccountSessionSummary[]>([]);
 
@@ -115,12 +117,13 @@ export function ProfileRoute({
   }, []);
 
   useEffect(() => {
+    if (isDemo) return;
     let cancelled = false;
     void fetchAccountSessions()
       .then((nextSessions) => { if (!cancelled) setSessions(nextSessions); })
       .catch(() => { if (!cancelled) setSessions([]); });
     return () => { cancelled = true; };
-  }, [fetchAccountSessions]);
+  }, [fetchAccountSessions, isDemo]);
 
   async function revokeSession(sessionId: string) {
     const response = await fetchWithTimeout(apiPath(`/api/v1/sessions/${sessionId}`), {
@@ -196,6 +199,7 @@ export function ProfileRoute({
       onRevokeSession={revokeSession}
       onRevokeOtherSessions={revokeOtherSessions}
       onQuizComplete={onQuizComplete}
+      isDemo={isDemo}
     />
   );
 }

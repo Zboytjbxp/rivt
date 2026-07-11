@@ -327,7 +327,7 @@ const PRIMARY_TOOL_LAUNCHERS: ToolLauncher[] = [
     mode: "job-photos",
     icon: FolderOpen,
     title: "Camera",
-    summary: "Live jobsite feed.",
+    summary: "Project photos and proof.",
   },
 ];
 

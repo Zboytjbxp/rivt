@@ -686,6 +686,7 @@ export function ShopTalkView({
     return readStringSet("rivt.joinedCommunities.v1", communitySlug);
   });
   const [communityQuery, setCommunityQuery] = useState("");
+  const [mobileCommunityDirectoryOpen, setMobileCommunityDirectoryOpen] = useState(false);
   const [communityCreateError, setCommunityCreateError] = useState<string | null>(null);
   const [communityCreateBusy, setCommunityCreateBusy] = useState(false);
   const [communityCreateAudience, setCommunityCreateAudience] = useState<CommunityAudience>("public");
@@ -1082,27 +1083,25 @@ export function ShopTalkView({
         className={`${mobileDetail ? "shop-talk-layout shop-talk-community-layout mobile-detail-open" : "shop-talk-layout shop-talk-community-layout"}${selectedCommunity ? " community-open" : ""}${selectedPost ? " thread-selected" : ""}`}
         aria-label="Shop Talk community"
       >
+        <div className="shop-talk-tabs shop-talk-primary-tabs">
+          <button
+            type="button"
+            className={activeTab === "talk" ? "active" : ""}
+            onClick={() => setActiveTab("talk")}
+          >
+            <MessageCircle size={14} />
+            Shop Talk
+          </button>
+          <button
+            type="button"
+            className={activeTab === "news" ? "active" : ""}
+            onClick={activateNews}
+          >
+            <Newspaper size={14} />
+            Trade News
+          </button>
+        </div>
         <aside className="shop-talk-sidebar">
-          {/* Tab switcher */}
-          <div className="shop-talk-tabs">
-            <button
-              type="button"
-              className={activeTab === "talk" ? "active" : ""}
-              onClick={() => setActiveTab("talk")}
-            >
-              <MessageCircle size={14} />
-              Shop Talk
-            </button>
-            <button
-              type="button"
-              className={activeTab === "news" ? "active" : ""}
-              onClick={activateNews}
-            >
-              <Newspaper size={14} />
-              Trade News
-            </button>
-          </div>
-
           {activeTab === "talk" ? (
             <>
               {selectedCommunity && SelectedCommunityIcon ? (
@@ -1160,11 +1159,19 @@ export function ShopTalkView({
               ) : null}
 
               {!selectedCommunity ? (
-              <section className="community-board" aria-label="Discover communities">
+              <section className={mobileCommunityDirectoryOpen ? "community-board is-expanded" : "community-board"} aria-label="Discover communities">
                 <div className="community-board-head">
                   <strong>{selectedCommunity ? "Discover more" : "Discover communities"}</strong>
                   <span>{joinedCommunities.size} joined</span>
                 </div>
+                <button
+                  type="button"
+                  className="community-directory-toggle"
+                  aria-expanded={mobileCommunityDirectoryOpen}
+                  onClick={() => setMobileCommunityDirectoryOpen((open) => !open)}
+                >
+                  {mobileCommunityDirectoryOpen ? "Show community rail" : "Search or start a community"}
+                </button>
                 <label className="community-discover-search">
                   <Search size={14} />
                   <span className="sr-only">Search communities</span>

@@ -2540,6 +2540,7 @@ function App() {
             onOpenShopTalk={() => handleNavigate("Shop Talk")}
             onOpenReviews={() => handleNavigate("Reviews")}
             onAddShoutOut={handleAddShoutOut}
+            isDemo={isGuest}
           />
         ) : activeView === "Messages" ? (
           <InboxCenter
@@ -2604,6 +2605,7 @@ function App() {
             onCurrentSessionRevoked={handleCurrentSessionRevoked}
             onActivity={addActivity}
             onQuizComplete={handleQuizComplete}
+            isDemo={isGuest}
           />
         ) : ["Tools", "Records"].includes(activeView) ? (
           <ToolsStudio

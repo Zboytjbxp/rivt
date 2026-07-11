@@ -381,6 +381,7 @@ async function configurePage(page, account, state) {
   });
   await page.route("**/api/v1/notification-preferences", (route) => route.fulfill(json({ data: { preferences: [] } })));
   await page.route("**/api/v1/tool-records**", (route) => route.fulfill(json({ data: { records: [] } })));
+  await page.route("**/api/v1/standalone-projects**", (route) => route.fulfill(json({ data: { projects: [] } })));
   await page.route("**/api/storage", (route) => route.fulfill(json({ usedBytes: 0, objectCount: 0, plan: {} })));
   await page.route("**/api/v1/albums", (route) => route.fulfill(json({ data: { albums: [] } })));
   await page.route(/\/api\/v1\/albums\/[0-9a-f-]+$/, (route) => route.fulfill(json({ data: { album: { id: "album-empty", name: "Smoke album", photoCount: 0, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), photos: [] } } })));
@@ -585,6 +586,14 @@ async function clickJob(page, title) {
 }
 
 async function clickStatusTab(page, label) {
+  const mobileSelect = page.locator(".v2-mobile-work-select select").first();
+  if (await mobileSelect.isVisible()) {
+    const values = { Open: "open", Drafts: "draft", Paused: "paused", Closed: "closed", Pipeline: "pipeline", Calendar: "calendar", Templates: "templates" };
+    const value = values[label];
+    assert.ok(value, `Expected a mobile status value for ${label}`);
+    await mobileSelect.selectOption(value);
+    return;
+  }
   const tab = page.locator(".v2-section-tabs button").filter({ hasText: label });
   assert.equal(await tab.count(), 1, `Expected one status tab for ${label}`);
   await tab.click();

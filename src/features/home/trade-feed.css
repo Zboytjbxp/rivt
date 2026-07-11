@@ -609,6 +609,10 @@
 }
 
 @media (max-width: 640px) {
+  .trade-feed.is-demo {
+    padding-bottom: calc(128px + env(safe-area-inset-bottom));
+  }
+
   .trade-feed.has-start-card .trade-feed-fab {
     display: none;
   }

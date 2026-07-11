@@ -2,10 +2,22 @@
 
 Last updated: 2026-07-11 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Packet 15 Standalone Tool Context is production verified. Camera, Estimate, and Invoice support explicit off-platform and accepted-work destinations without borrowing an unrelated RIVT job.
+Current phase: Packet 15 Standalone Tool Context is production verified. The Mobile Experience Train is locally verified and pending production deployment.
 Active packet: `docs/delivery/packets/15_STANDALONE_TOOL_CONTEXT.md`
 Repository branch: `master`
 Production feature release commit: `1b38d144f83db07a305348e5e633256c666f55c2` verified with live `/api/health`, ready migration `0026_standalone_projects`, and `npm run monitor:production`; docs-only evidence commits may supersede the served build SHA without changing runtime behavior.
+
+## Packet 15 Follow-up - Mobile Experience Train (Local Verified)
+
+- Returning-user provider actions keep their Google/Apple/Email labels at phone widths, intro pager dots now have 44px targets, and the account drawer clips no content horizontally.
+- Shop Talk is feed-first on mobile. Community discovery remains available as a compact horizontal rail with an explicit expand action for search, audience selection, joining, and user-created communities.
+- Work replaces clipped seven/eight-tab strips with labeled mobile selectors, and suppresses the duplicate active-work banner once that exact workspace is open.
+- Settings now has a sticky mobile section index for Account, Alerts, Profile, Theme, Plan, Business, and Security instead of one undifferentiated page. Notification controls are one tap from the Settings header.
+- Invoice templates are optional and collapsed by default; compact printable previews prioritize description and total without sideways table overflow. Camera launcher copy now covers project photos and proof for RIVT and standalone work.
+- The labeled one-year guest preview now carries mature sample state into Crew, Subs, invites, and profile completion without writing demo records into real account storage.
+- Automated evidence passed: build, full lint, security lint, 53/53 unit tests, E2E, mobile-actions, Tools at desktop/mobile/SE widths, Work lifecycle, Shop Talk/Trade News, both guest-role previews, dependency audit with zero vulnerabilities, diff check, and all 19 PostgreSQL integration tests.
+- Rendered evidence is stored outside the repository under `C:\Users\zboyt\AppData\Local\Temp\rivt-*-pass`.
+- Remaining boundary: physical iOS/Android review of the new Settings section navigation, Shop Talk feed/directory order, and return-user provider labels after production deployment.
 
 ## Packet 15 - Standalone Tool Context (Production Verified)
 

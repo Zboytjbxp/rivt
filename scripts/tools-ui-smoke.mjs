@@ -475,10 +475,10 @@ async function runToolsFlow(page, viewportName) {
 
   await primaryTool("Invoice").click();
   await page.getByRole("heading", { name: "Invoice draft" }).waitFor({ timeout: 15_000 });
+  await page.getByLabel("Invoice templates").getByText("Templates", { exact: true }).click();
   await page.getByLabel("Template name").fill(`${viewportName} invoice template`);
   await page.getByRole("button", { name: "Save template" }).click();
   await page.getByText("Template saved.", { exact: true }).waitFor({ timeout: 15_000 });
-  await page.getByLabel("Saved invoice templates").getByText("Saved templates", { exact: true }).click();
   await page.getByRole("button", { name: "Load" }).first().waitFor({ timeout: 15_000 });
   await page.getByLabel("Recipient email").fill("billing@example.com");
   await page.getByLabel("Recipient phone").fill("+19045550123");

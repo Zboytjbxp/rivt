@@ -440,7 +440,7 @@ export function TradeFeed({
   }
 
   return (
-    <div className={showGetStarted ? "trade-feed has-start-card" : "trade-feed"}>
+    <div className={`${showGetStarted ? "trade-feed has-start-card" : "trade-feed"}${demoSummary ? " is-demo" : ""}`}>
       {/* Personalized header */}
       {demoSummary ? (
         <section className="trade-feed-demo" aria-labelledby="trade-feed-demo-title">

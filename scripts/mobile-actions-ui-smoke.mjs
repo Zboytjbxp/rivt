@@ -371,7 +371,7 @@ async function runMobileFlow(page) {
   await page.getByRole("heading", { name: "Work", exact: true }).waitFor({ timeout: 15_000 });
   await assertNoHorizontalOverflow(page, "Work");
 
-  await page.getByRole("button", { name: "Drafts" }).click();
+  await page.locator(".v2-mobile-work-select select").first().selectOption("draft");
   await page.locator(".v2-job-row-inner").filter({ hasText: "Kitchen trim-out support" }).first().click();
   await page.getByText("Draft is not publish-ready", { exact: true }).waitFor({ timeout: 15_000 });
   await page.getByText(/Add summary, scope/i).waitFor({ timeout: 15_000 });
@@ -463,6 +463,7 @@ async function runMobileFlow(page) {
   await assertControlCenterClickable(page, ".account-signout-btn", "account sign-out button");
   await page.getByRole("button", { name: "Settings", exact: true }).click();
   await page.getByRole("heading", { name: "Settings", exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByRole("button", { name: "Alerts", exact: true }).click();
   await page.getByText("In-app alert preferences", { exact: true }).waitFor({ timeout: 15_000 });
     await page.getByText("Device delivery is not configured for this environment.", { exact: true }).waitFor({ timeout: 15_000 });
     assert.equal(await page.getByRole("button", { name: "Enable device alerts", exact: true }).count(), 0);

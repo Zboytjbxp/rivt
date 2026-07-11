@@ -59,6 +59,7 @@ interface NetworkHubProps {
   onOpenShopTalk: () => void;
   onOpenReviews: () => void;
   onAddShoutOut: (to: string, trade: string, message: string) => void;
+  isDemo?: boolean;
 }
 
 // ── Clients ───────────────────────────────────────────────────────────────────
@@ -323,6 +324,13 @@ interface CrewMember {
   notes?: string;
   addedAt: string;
 }
+
+const demoCrewMembers: CrewMember[] = [
+  { id: "demo-crew-1", type: "crew", name: "Elena Torres", trade: "Finish carpentry", availability: "available", notes: "Repeat collaborator · 8 completed jobs", addedAt: "2025-08-12T12:00:00.000Z" },
+  { id: "demo-crew-2", type: "crew", name: "Jordan Price", trade: "Electrical", availability: "busy", currentJobId: "demo-job-1", notes: "Licensed · 5 completed jobs", addedAt: "2025-10-02T12:00:00.000Z" },
+  { id: "demo-sub-1", type: "sub", name: "Avery Cole", trade: "Tile", availability: "available", notes: "Preferred sub · 4.9 rating", addedAt: "2025-11-18T12:00:00.000Z" },
+  { id: "demo-sub-2", type: "sub", name: "Luis Hernandez", trade: "Plumbing", availability: "available", notes: "Insured · 6 completed jobs", addedAt: "2026-01-08T12:00:00.000Z" },
+];
 
 function loadCrew(): CrewMember[] {
   try {
@@ -614,15 +622,18 @@ function CrewCard({
 
 // ── Crew Manager (the enhanced Crew tab) ──────────────────────────────────────
 
-function CrewManager({ crewType }: { crewType: CrewType }) {
-  const [crew, setCrew] = useState<CrewMember[]>(loadCrew);
+function CrewManager({ crewType, isDemo = false }: { crewType: CrewType; isDemo?: boolean }) {
+  const [crew, setCrew] = useState<CrewMember[]>(() => isDemo ? demoCrewMembers : loadCrew());
   const [showForm, setShowForm] = useState(false);
   const [editingMember, setEditingMember] = useState<CrewMember | null>(null);
   const [assigningMember, setAssigningMember] = useState<CrewMember | null>(null);
   const [tradeFilter, setTradeFilter] = useState<string>("All");
-  const [syncMessage, setSyncMessage] = useState("Saved on this device.");
+  const [syncMessage, setSyncMessage] = useState(isDemo ? "Sample one-year crew history." : "Saved on this device.");
 
   useEffect(() => {
+    if (isDemo) {
+      return;
+    }
     let cancelled = false;
     void syncCrewRecords().then((result) => {
       if (cancelled) return;
@@ -630,7 +641,7 @@ function CrewManager({ crewType }: { crewType: CrewType }) {
       setSyncMessage(result.message);
     });
     return () => { cancelled = true; };
-  }, []);
+  }, [isDemo]);
 
   const members = crew.filter((m) => m.type === crewType);
 
@@ -640,6 +651,7 @@ function CrewManager({ crewType }: { crewType: CrewType }) {
 
   function persist(list: CrewMember[], changedMember?: CrewMember) {
     setCrew(list);
+    if (isDemo) return;
     saveCrew(list);
     if (changedMember) {
       void upsertNetworkRecord(crewMemberToNetworkRecord(changedMember)).then((record) => {
@@ -799,6 +811,11 @@ interface CrewInvite {
   status: InviteStatus;
   createdAt: string;
 }
+
+const demoCrewInvites: CrewInvite[] = [
+  { id: "demo-invite-1", jobRef: "Kitchen closeout", name: "Maya Brooks", trade: "Painting", note: "Available next Tuesday", status: "pending", createdAt: "2026-07-07T12:00:00.000Z" },
+  { id: "demo-invite-2", jobRef: "Built-in install", name: "Caleb Wright", trade: "Carpentry", note: "Confirmed for two days", status: "accepted", createdAt: "2026-07-03T12:00:00.000Z" },
+];
 
 function readCrewInvites(): CrewInvite[] {
   try {
@@ -976,17 +993,20 @@ async function syncStoredReviewRecords(): Promise<{ records: StoredReview[]; mes
   return { records: merged, message: "Synced to your RIVT account." };
 }
 
-function CrewInvitePlanner() {
-  const [invites, setInvites] = useState<CrewInvite[]>(readCrewInvites);
+function CrewInvitePlanner({ isDemo = false }: { isDemo?: boolean }) {
+  const [invites, setInvites] = useState<CrewInvite[]>(() => isDemo ? demoCrewInvites : readCrewInvites());
   const [composerOpen, setComposerOpen] = useState(false);
   const [jobRef, setJobRef] = useState("");
   const [name, setName] = useState("");
   const [trade, setTrade] = useState("");
   const [note, setNote] = useState("");
   const [notice, setNotice] = useState("");
-  const [syncMessage, setSyncMessage] = useState("Saved on this device.");
+  const [syncMessage, setSyncMessage] = useState(isDemo ? "Sample invite history." : "Saved on this device.");
 
   useEffect(() => {
+    if (isDemo) {
+      return;
+    }
     let cancelled = false;
     void syncCrewInviteRecords().then((result) => {
       if (cancelled) return;
@@ -994,10 +1014,11 @@ function CrewInvitePlanner() {
       setSyncMessage(result.message);
     });
     return () => { cancelled = true; };
-  }, []);
+  }, [isDemo]);
 
   function persist(inviteRows: CrewInvite[], changedInvite?: CrewInvite) {
     setInvites(inviteRows);
+    if (isDemo) return;
     persistCrewInvites(inviteRows);
     if (changedInvite) {
       void upsertNetworkRecord(crewInviteToNetworkRecord(changedInvite)).then((record) => {
@@ -1356,6 +1377,7 @@ export function NetworkHub({
   onOpenShopTalk,
   onOpenReviews,
   onAddShoutOut,
+  isDemo = false,
 }: NetworkHubProps) {
   const questionPosts = communityPosts.filter((post) => post.flair === "Question" || post.status !== "Open").slice(0, 4);
   const highlightedShoutOuts = shoutOuts.slice(0, 4);
@@ -1417,7 +1439,7 @@ export function NetworkHub({
       <section className="v2-network-page" aria-label="Subs">
         {pageHeader}
         {tabBar}
-        <CrewManager crewType="sub" />
+        <CrewManager crewType="sub" isDemo={isDemo} />
       </section>
     );
   }
@@ -1431,8 +1453,8 @@ export function NetworkHub({
 
       {/* Local Crew Manager */}
       <div className="v2-crew-workbench">
-        <CrewManager crewType="crew" />
-        <CrewInvitePlanner />
+        <CrewManager crewType="crew" isDemo={isDemo} />
+        <CrewInvitePlanner isDemo={isDemo} />
       </div>
 
       <div className="v2-network-grid">

@@ -1632,12 +1632,26 @@ export function WorkWorkspace({
       </header>
 
       {role === "contractor" ? (
-        <nav className="v2-section-tabs" aria-label="Job status">
-          {(["open", "draft", "paused", "closed", "pipeline", "calendar", "templates"] as ContractorSection[]).map((section) => {
-            const sectionLabel: Record<ContractorSection, string> = { open: "Open", draft: "Drafts", paused: "Paused", closed: "Closed", pipeline: "Pipeline", calendar: "Calendar", templates: "Templates" };
-            return <button key={section} type="button" className={contractorSection === section ? "is-active" : ""} onClick={() => { setContractorSection(section); setMobileDetailOpen(false); }}>{sectionLabel[section]}</button>;
-          })}
-        </nav>
+        <>
+          <nav className="v2-section-tabs" aria-label="Job status">
+            {(["open", "draft", "paused", "closed", "pipeline", "calendar", "templates"] as ContractorSection[]).map((section) => {
+              const sectionLabel: Record<ContractorSection, string> = { open: "Open", draft: "Drafts", paused: "Paused", closed: "Closed", pipeline: "Pipeline", calendar: "Calendar", templates: "Templates" };
+              return <button key={section} type="button" className={contractorSection === section ? "is-active" : ""} onClick={() => { setContractorSection(section); setMobileDetailOpen(false); }}>{sectionLabel[section]}</button>;
+            })}
+          </nav>
+          <label className="v2-mobile-work-select">
+            <span>View</span>
+            <select value={contractorSection} onChange={(event) => { setContractorSection(event.target.value as ContractorSection); setMobileDetailOpen(false); }}>
+              <option value="open">Open jobs</option>
+              <option value="draft">Drafts</option>
+              <option value="paused">Paused</option>
+              <option value="closed">Closed</option>
+              <option value="pipeline">Applicant pipeline</option>
+              <option value="calendar">Calendar</option>
+              <option value="templates">Templates</option>
+            </select>
+          </label>
+        </>
       ) : null}
 
       {role === "contractor" ? <ContractorStatsBar jobs={jobs} /> : null}
@@ -1684,7 +1698,7 @@ export function WorkWorkspace({
       {error ? <div className="v2-work-error" role="alert"><div><strong>Jobs could not be loaded</strong><span>{error}</span></div><button type="button" onClick={onRetry}><RefreshCw size={16} /> Retry</button></div> : null}
 
       {primaryActiveWorkRecord ? (
-        <section className="v2-active-work-strip" aria-label="Active work ready">
+        <section className={detailJob?.canonical?.id === primaryActiveWorkRecord.jobId && mobileDetailOpen ? "v2-active-work-strip is-current-detail" : "v2-active-work-strip"} aria-label="Active work ready">
           <div>
             <span>You're active now</span>
             <h2>{primaryActiveWorkRecord.job?.title ?? "Accepted work is ready"}</h2>
@@ -1746,6 +1760,19 @@ export function WorkWorkspace({
                 return <button key={tab} type="button" className={detailTab === tab ? "is-active" : ""} onClick={() => setDetailTab(tab)}>{labels[tab]}</button>;
               })}
             </nav>
+            <label className="v2-mobile-work-select v2-mobile-detail-select">
+              <span>Job section</span>
+              <select value={detailTab} onChange={(event) => setDetailTab(event.target.value as DetailTab)}>
+                <option value="overview">Overview</option>
+                <option value="requirements">Requirements</option>
+                <option value="activity">Activity</option>
+                <option value="changes">Changes</option>
+                <option value="checklist">Checklist</option>
+                <option value="payments">Payments</option>
+                <option value="notes">Notes</option>
+                <option value="contacts">Contacts</option>
+              </select>
+            </label>
 
             {detailTab === "overview" ? (
               <div className="v2-detail-content">

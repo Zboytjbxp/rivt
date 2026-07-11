@@ -485,15 +485,29 @@ textarea:focus-visible {
 }
 
 .auth-intro-dots button {
-  width: 9px;
-  height: 9px;
+  position: relative;
+  width: 44px;
+  height: 44px;
   border: 0;
   border-radius: var(--v2-radius-pill);
-  background: rgba(11, 11, 11, 0.24);
+  background: transparent;
   cursor: pointer;
 }
 
-.auth-intro-dots button.is-active {
+.auth-intro-dots button::after {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 9px;
+  height: 9px;
+  border-radius: var(--v2-radius-pill);
+  background: rgba(11, 11, 11, 0.24);
+  content: "";
+  transform: translate(-50%, -50%);
+  transition: width 140ms ease, background 140ms ease;
+}
+
+.auth-intro-dots button.is-active::after {
   width: 28px;
   background: #0b0b0b;
 }
@@ -2801,6 +2815,7 @@ textarea:focus-visible {
   gap: 14px;
   width: min(420px, 100%);
   max-height: calc(100dvh - 28px);
+  overflow-x: hidden;
   overflow-y: auto;
   padding: 16px;
   border: 1px solid var(--border);
@@ -8138,7 +8153,10 @@ button.activity-item {
     justify-self: stretch;
   }
 
-  .auth-provider-grid,
+  .auth-provider-grid {
+    grid-template-columns: 1fr;
+  }
+
   .auth-status-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -8157,12 +8175,13 @@ button.activity-item {
   }
 
   .auth-provider-tile {
-    justify-content: center;
-    padding-inline: 12px;
+    min-height: 48px;
+    justify-content: flex-start;
+    padding-inline: 16px;
   }
 
   .auth-provider-tile span {
-    display: none;
+    display: inline;
   }
 
   .panel-backdrop {
@@ -8171,8 +8190,10 @@ button.activity-item {
 
   .side-panel {
     width: 100%;
+    min-width: 0;
     min-height: 100dvh;
     max-height: 100dvh;
+    overflow-x: hidden;
     padding-bottom: calc(96px + env(safe-area-inset-bottom));
     border-radius: 0;
   }
@@ -10332,17 +10353,17 @@ html[data-rivt-compact-device="true"] .guest-exit {
   }
 
   .auth-provider-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: 1fr;
   }
 
   .auth-provider-tile {
-    min-height: 42px;
-    justify-content: center;
-    padding-inline: 10px;
+    min-height: 48px;
+    justify-content: flex-start;
+    padding-inline: 16px;
   }
 
   .auth-provider-tile span {
-    display: none;
+    display: inline;
   }
 
   .auth-card--entry > .auth-toggle button {
@@ -11490,9 +11511,11 @@ html[data-rivt-compact-device="true"] .auth-preview-roles {
   }
 
   .guest-banner > span small {
+    display: -webkit-box;
     overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    white-space: normal;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
   }
 
   .guest-switch {

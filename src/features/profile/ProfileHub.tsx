@@ -128,6 +128,7 @@ interface ProfileHubProps {
   onRevokeSession: (sessionId: string) => Promise<void>;
   onRevokeOtherSessions: () => Promise<void>;
   onQuizComplete: (result: SafetyQuizResult) => void;
+  isDemo?: boolean;
 }
 
 function formatBytes(bytes: number): string {
@@ -643,7 +644,7 @@ function RateCardSection() {
 
 // ── Profile Completion Card ───────────────────────────────────────────────────
 
-function ProfileCompletionCard({ profile }: { profile: AccountProfile }) {
+function ProfileCompletionCard({ profile, isDemo = false }: { profile: AccountProfile; isDemo?: boolean }) {
   const checks = [
     { label: "Display name", done: Boolean(profile.displayName?.trim()) },
     { label: "Location", done: Boolean(profile.location?.trim()) },
@@ -652,8 +653,8 @@ function ProfileCompletionCard({ profile }: { profile: AccountProfile }) {
     { label: "Rate card", done: readRateCardEntries().length > 0 },
     { label: "Safety cert", done: (() => { try { const c = JSON.parse(localStorage.getItem("rivt.certs.v1") ?? "[]"); return Array.isArray(c) && c.length > 0; } catch { return false; } })() },
   ];
-  const score = Math.round((checks.filter((c) => c.done).length / checks.length) * 100);
-  const missing = checks.filter((c) => !c.done).slice(0, 3);
+  const score = isDemo ? 100 : Math.round((checks.filter((c) => c.done).length / checks.length) * 100);
+  const missing = isDemo ? [] : checks.filter((c) => !c.done).slice(0, 3);
   return (
     <div className="v2-profile-completion">
       <header>
@@ -1227,9 +1228,11 @@ export function ProfileHub({
   onRevokeOtherSessions,
   onQuizComplete,
   storageUsage = null,
+  isDemo = false,
 }: ProfileHubProps) {
   const persona = usePersona();
   const [notificationPrefs, setNotificationPrefs] = useState<Record<NotificationPrefKey, boolean>>(defaultNotificationPrefs);
+  const [settingsSection, setSettingsSection] = useState<"account" | "alerts" | "profile" | "appearance" | "billing" | "business" | "security">("account");
   const [notificationPrefStatus, setNotificationPrefStatus] = useState("");
   const [savingNotificationKey, setSavingNotificationKey] = useState<NotificationPrefKey | null>(null);
   const [showPreview, setShowPreview] = useState(false);
@@ -1614,16 +1617,34 @@ export function ProfileHub({
         description={profileViewDescriptions[view] || undefined}
       />
 
-      <div className="v2-profile-grid">
+      {view === "Settings" ? (
+        <nav className="v2-settings-section-nav" aria-label="Settings sections">
+          {([
+            ["account", "Account"],
+            ["alerts", "Alerts"],
+            ["profile", "Profile"],
+            ["appearance", "Theme"],
+            ["billing", "Plan"],
+            ["business", "Business"],
+            ["security", "Security"],
+          ] as const).map(([section, label]) => (
+            <button key={section} type="button" className={settingsSection === section ? "is-active" : ""} onClick={() => setSettingsSection(section)}>
+              {label}
+            </button>
+          ))}
+        </nav>
+      ) : null}
+
+      <div className="v2-profile-grid" data-active-settings-section={view === "Settings" ? settingsSection : undefined}>
         {/* Profile completion + portfolio — Settings only, at the very top */}
         {view === "Settings" ? (
-          <div className="v2-profile-panel v2-profile-panel-wide v2-profile-top-cards">
-            <ProfileCompletionCard profile={profile} />
+          <div className="v2-profile-panel v2-profile-panel-wide v2-profile-top-cards" data-settings-section="profile">
+            <ProfileCompletionCard profile={profile} isDemo={isDemo} />
             <PortfolioSection />
           </div>
         ) : null}
 
-        <section className="v2-profile-panel v2-profile-summary">
+        <section className="v2-profile-panel v2-profile-summary" data-settings-section={view === "Settings" ? "account" : undefined}>
           <Avatar name={profile.displayName || profile.organization || "RIVT member"} size="lg" className="v2-profile-avatar" />
           <div>
             <h2>{profile.organization || profile.displayName}</h2>
@@ -1639,7 +1660,7 @@ export function ProfileHub({
           </div>
         </section>
 
-        <section className="v2-profile-panel">
+        <section className="v2-profile-panel" data-settings-section={view === "Settings" ? "account" : undefined}>
           <header>
             <span>Account</span>
             <strong>Basics and access</strong>
@@ -1675,7 +1696,7 @@ export function ProfileHub({
 
         {/* Notifications are intentionally near the top of Settings: users should not have to hunt for delivery controls. */}
         {view === "Settings" ? (
-          <section className="v2-profile-panel v2-profile-panel-wide v2-notification-prefs">
+          <section className="v2-profile-panel v2-profile-panel-wide v2-notification-prefs" data-settings-section="alerts">
             <header>
               <span>Notifications</span>
               <strong>In-app alert preferences</strong>
@@ -1710,7 +1731,7 @@ export function ProfileHub({
 
         {/* Profile editor — near top in Settings so it's immediately reachable */}
         {view === "Settings" && canonicalProfile ? (
-          <section className="v2-profile-panel v2-profile-panel-wide v2-profile-editor">
+          <section className="v2-profile-panel v2-profile-panel-wide v2-profile-editor" data-settings-section="profile">
             <header>
               <span>Profile</span>
               <strong>Edit public details</strong>
@@ -1751,7 +1772,7 @@ export function ProfileHub({
           </section>
         ) : null}
 
-        <section className="v2-profile-panel">
+        <section className="v2-profile-panel" data-settings-section={view === "Settings" ? "appearance" : undefined}>
           <header>
             <span>Theme</span>
             <strong>Colors and mode</strong>
@@ -1864,7 +1885,7 @@ export function ProfileHub({
 
         {/* Subscription plan — Settings only */}
         {view === "Settings" ? (
-          <section className="v2-profile-panel v2-profile-panel-wide">
+          <section className="v2-profile-panel v2-profile-panel-wide" data-settings-section="billing">
             <header>
               <span>Subscription</span>
               <strong>Plan</strong>
@@ -1875,7 +1896,7 @@ export function ProfileHub({
 
 
         {view === "Settings" ? (
-          <section className="v2-profile-panel v2-profile-panel-wide">
+          <section className="v2-profile-panel v2-profile-panel-wide" data-settings-section="billing">
             <header>
               <span>Storage</span>
               <strong>Cloud storage</strong>
@@ -1947,17 +1968,17 @@ export function ProfileHub({
           </section>
         ) : null}
         {/* Business Settings — Settings only */}
-        {view === "Settings" ? <BusinessSettingsSection /> : null}
+        {view === "Settings" ? <div className="v2-settings-section-group" data-settings-section="business"><BusinessSettingsSection /></div> : null}
 
         {/* Cert tracker — Settings only */}
-        {view === "Settings" ? <CertTrackerSection /> : null}
+        {view === "Settings" ? <div className="v2-settings-section-group" data-settings-section="business"><CertTrackerSection /></div> : null}
 
         {/* Rate card — Settings only, tradesperson-facing */}
-        {view === "Settings" ? <RateCardSection /> : null}
+        {view === "Settings" ? <div className="v2-settings-section-group" data-settings-section="business"><RateCardSection /></div> : null}
 
         {/* Sessions — Settings only */}
         {view === "Settings" ? (
-          <section className="v2-profile-panel v2-profile-panel-wide v2-profile-sessions">
+          <section className="v2-profile-panel v2-profile-panel-wide v2-profile-sessions" data-settings-section="security">
             <header>
               <span>Security</span>
               <strong>Sessions</strong>
@@ -1980,7 +2001,7 @@ export function ProfileHub({
 
         {/* Sign out — at the bottom of Settings so it's available but not the first thing you see */}
         {view === "Settings" ? (
-          <section className="v2-profile-panel v2-profile-panel-wide v2-settings-signout-section">
+          <section className="v2-profile-panel v2-profile-panel-wide v2-settings-signout-section" data-settings-section="security">
             <div>
               <strong>Sign out</strong>
             </div>
@@ -1993,7 +2014,7 @@ export function ProfileHub({
 
         {/* Data export — very last item in Settings */}
         {view === "Settings" ? (
-          <section className="v2-profile-panel v2-profile-panel-wide">
+          <section className="v2-profile-panel v2-profile-panel-wide" data-settings-section="security">
             <DataExportButton />
           </section>
         ) : null}
