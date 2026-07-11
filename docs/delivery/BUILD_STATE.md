@@ -2,10 +2,40 @@
 
 Last updated: 2026-07-11 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Packet 14 Field Camera is active. This pass rebuilds the live job photo capture experience around one-handed field use while preserving the existing project-media authorization and upload path.
-Active packet: `docs/delivery/packets/14_FIELD_CAMERA.md`
-Repository branch: `codex/field-camera`
+Current phase: Packet 15 Standalone Tool Context is active. This pass makes Camera, Estimate, and Invoice useful for off-platform work without silently borrowing an unrelated RIVT job.
+Active packet: `docs/delivery/packets/15_STANDALONE_TOOL_CONTEXT.md`
+Repository branch: `codex/standalone-work-context`
 Production feature release commit: `dc009c799b856b45f64fda90ee22b8ff853ef4e8` verified with live `/api/health` and `npm run monitor:production`; docs-only evidence commits may supersede the served build SHA without changing runtime behavior.
+
+## Packet 15 - Standalone Tool Context (Local Verification)
+
+- Added explicit Quick use, standalone-project, and accepted-RIVT-work context
+  selection to Camera, Estimate, and Invoice. Opening a tool from the Tools hub
+  no longer borrows the first loaded job or active-work record.
+- Added account-owned standalone projects and context ownership columns for
+  tool records and albums in migration `0026_standalone_projects`.
+- Estimate and Invoice drafts are partitioned by context locally and can sync
+  to the matching standalone project or exact RIVT workspace. A record cannot
+  claim both contexts. A Quick-use draft carries into a newly selected context
+  only when that destination has no existing draft, so attach-later never
+  overwrites project work.
+- Camera now presents only the selected destination: private albums for Quick
+  use, one standalone project feed for off-platform work, or one accepted-job
+  feed for RIVT work. Choosing context inside Camera stays on the capture home;
+  only an exact workspace deep link auto-opens the project feed.
+- Camera, Estimate, and Invoice use lower-screen action docks with 48px targets;
+  top-of-screen duplicate Invoice actions were removed.
+- Added `docs/product/FIELD_TOOL_INTERACTION_STANDARD.md` to preserve explicit
+  context, one-handed placement, truthful save state, and narrow-device
+  verification in future tools.
+- Local evidence: build, lint, security lint, 53/53 unit tests, E2E, Tools
+  rendered QA, and mobile action smoke pass. The standalone ownership integration suite passed. The
+  complete integration run passed 18/19 suites and identified only a stale
+  migration-count fixture; after correction, the migration apply/rollback
+  lifecycle passed independently.
+- Deployment boundary: pending review/merge, Railway migration 0026,
+  exact-source health proof, production monitor, and physical-phone context
+  switching/capture confirmation.
 
 ## Packet 14 - Field Camera (Local Verification)
 

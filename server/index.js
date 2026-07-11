@@ -88,6 +88,7 @@ import { registerShopTalkModerationRoutes } from "./shop-talk-moderation.js";
 import { registerCommunityRoutes } from "./communities.js";
 import { registerNetworkRecordRoutes } from "./network-records.js";
 import { registerToolRecordRoutes } from "./tool-records.js";
+import { registerStandaloneProjectRoutes } from "./standalone-projects.js";
 import {
   pushProviderStatus,
   queuePushDeliveries,
@@ -5100,6 +5101,16 @@ registerShopTalkModerationRoutes({
 });
 
 registerToolRecordRoutes({
+  app,
+  database,
+  requireV1AuthenticatedUser,
+  requireV1Actor,
+  writeRateLimit,
+  runIdempotentMutation,
+  sendIdempotentResult,
+});
+
+registerStandaloneProjectRoutes({
   app,
   database,
   requireV1AuthenticatedUser,

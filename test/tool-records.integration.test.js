@@ -192,6 +192,103 @@ if (!testDatabaseUrl) {
     assert.equal(isolated.response.status, 200);
     assert.equal(isolated.payload.data.records.length, 0);
 
+    const projectCreated = await requestJson(baseUrl, "/api/v1/standalone-projects", {
+      method: "POST",
+      cookie: owner.cookie,
+      idempotencyKey: randomUUID(),
+      body: {
+        title: "Kitchen refresh",
+        clientName: "Jordan Client",
+        locationText: "Jacksonville, FL",
+        tradeCode: "carpentry",
+      },
+    });
+    assert.equal(projectCreated.response.status, 201);
+    const standaloneProjectId = projectCreated.payload.data.project.id;
+    assert.equal(projectCreated.payload.data.project.title, "Kitchen refresh");
+
+    const ownerProjects = await requestJson(baseUrl, "/api/v1/standalone-projects", { cookie: owner.cookie });
+    assert.equal(ownerProjects.response.status, 200);
+    assert.equal(ownerProjects.payload.data.projects.some((project) => project.id === standaloneProjectId), true);
+
+    const otherProjects = await requestJson(baseUrl, "/api/v1/standalone-projects", { cookie: other.cookie });
+    assert.equal(otherProjects.response.status, 200);
+    assert.equal(otherProjects.payload.data.projects.some((project) => project.id === standaloneProjectId), false);
+
+    const otherCannotEdit = await requestJson(baseUrl, `/api/v1/standalone-projects/${standaloneProjectId}`, {
+      method: "PATCH",
+      cookie: other.cookie,
+      idempotencyKey: randomUUID(),
+      body: { title: "Taken over" },
+    });
+    assert.equal(otherCannotEdit.response.status, 404);
+
+    const estimateCreated = await requestJson(baseUrl, "/api/v1/tool-records", {
+      method: "POST",
+      cookie: owner.cookie,
+      idempotencyKey: randomUUID(),
+      body: {
+        recordType: "estimate",
+        localId: `estimate:standalone:${standaloneProjectId}`,
+        title: "Kitchen refresh estimate",
+        status: "draft",
+        amountCents: 248500,
+        payload: { laborHours: 24, materialCost: 900 },
+        standaloneProjectId,
+      },
+    });
+    assert.equal(estimateCreated.response.status, 200);
+    assert.equal(estimateCreated.payload.data.record.standaloneProjectId, standaloneProjectId);
+
+    const otherCannotAttach = await requestJson(baseUrl, "/api/v1/tool-records", {
+      method: "POST",
+      cookie: other.cookie,
+      idempotencyKey: randomUUID(),
+      body: {
+        recordType: "estimate",
+        localId: `estimate:standalone:${standaloneProjectId}`,
+        title: "Unauthorized estimate",
+        status: "draft",
+        amountCents: 100,
+        payload: {},
+        standaloneProjectId,
+      },
+    });
+    assert.equal(otherCannotAttach.response.status, 403);
+    assert.equal(otherCannotAttach.payload.error.code, "STANDALONE_PROJECT_ACCESS_DENIED");
+
+    const ambiguousContext = await requestJson(baseUrl, "/api/v1/tool-records", {
+      method: "POST",
+      cookie: owner.cookie,
+      idempotencyKey: randomUUID(),
+      body: {
+        recordType: "estimate",
+        localId: "estimate:ambiguous",
+        title: "Ambiguous estimate",
+        status: "draft",
+        payload: {},
+        standaloneProjectId,
+        activeWorkId: randomUUID(),
+      },
+    });
+    assert.equal(ambiguousContext.response.status, 422);
+
+    const projectAlbum = await requestJson(baseUrl, "/api/v1/albums", {
+      method: "POST",
+      cookie: owner.cookie,
+      body: { name: "Kitchen refresh", standaloneProjectId },
+    });
+    assert.equal(projectAlbum.response.status, 201);
+    assert.equal(projectAlbum.payload.data.album.standaloneProjectId, standaloneProjectId);
+
+    const otherCannotCreateAlbum = await requestJson(baseUrl, "/api/v1/albums", {
+      method: "POST",
+      cookie: other.cookie,
+      body: { name: "Unauthorized album", standaloneProjectId },
+    });
+    assert.equal(otherCannotCreateAlbum.response.status, 403);
+    assert.equal(otherCannotCreateAlbum.payload.error.code, "STANDALONE_PROJECT_ACCESS_DENIED");
+
     const invalidType = await requestJson(baseUrl, "/api/v1/tool-records?type=not-real", { cookie: owner.cookie });
     assert.equal(invalidType.response.status, 422);
 

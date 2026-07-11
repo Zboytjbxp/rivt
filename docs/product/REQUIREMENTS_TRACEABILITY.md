@@ -810,3 +810,31 @@ Evidence must eventually link to implementation, automated tests, manual accepta
 - Exact job routes and payload tests prove no private address/access-note data enters notifications. Replay and resume do not create duplicate publish alerts.
 - Bulk recipient/notification/outbox queries, a 200-recipient default/500 hard cap, and `MATCHING_JOB_ALERTS_ENABLED=false` by default keep the first rollout controllable.
 - Evidence: 50/50 unit tests, isolated jobs + push PostgreSQL integration, and the complete 19/19 PostgreSQL aggregate pass. Railway serves exact source `43a1fa5eb9528a1fc06a0bea95da81122448c990`; health reports the feature enabled with a 200-recipient cap and exact-area rule; the production monitor passes. Maturity is `production configured`; one controlled legitimate publish and physical exact-job tap remain before field verification.
+
+## Traceability Addendum - 2026-07-11 Standalone Tool Context
+
+- `GA-PRO-001` gains off-platform utility evidence: Camera, Estimate, and
+  Invoice support Quick use and private standalone projects in addition to
+  accepted RIVT work. The Tools hub no longer requires or invents a marketplace
+  job before these apps are useful.
+- `GA-UX-003` gains explicit-destination evidence: each contextual tool shows a
+  selected save destination and exact deep links remain authoritative. The
+  previous first-job / first-active-work fallback is removed.
+- `GA-UX-005` gains state-isolation evidence: Estimate and Invoice drafts use
+  context-specific storage keys, server records carry one reviewed context,
+  and Camera hides unrelated album/work surfaces while a project is selected.
+  Quick drafts carry forward only into an empty destination, preventing an
+  attach-later action from overwriting established project work.
+- `GA-UX-006` gains one-handed evidence: Camera, Estimate, and Invoice expose
+  48px lower-screen primary actions; mobile smoke verifies Quick-use isolation,
+  standalone-project switching, no horizontal overflow, and in-viewport Save
+  and Camera controls at 390x844.
+- `GA-OPS-007` gains database evidence: standalone projects, tool records, and
+  albums reject cross-account access; dual-context writes fail validation; and
+  migration 0026 applies and rolls back cleanly. Build, lint/security, 53 unit
+  tests, E2E, and mobile actions pass. The aggregate integration run passed
+  every suite except the stale migration-count fixture, which was corrected
+  and then passed independently.
+- `GA-OPS-008` remains pending until Packet 15 is merged, Railway applies
+  migration 0026, live health serves the exact source, the production monitor
+  passes, and physical Camera context/capture behavior is confirmed.

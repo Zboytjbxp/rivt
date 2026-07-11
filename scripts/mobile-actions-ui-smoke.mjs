@@ -78,6 +78,20 @@ const draftJob = {
   events: [],
 };
 
+const standaloneProject = {
+  id: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+  accountId: account.id,
+  title: "Miller kitchen",
+  clientName: "Miller family",
+  locationText: "Jacksonville, FL",
+  tradeCode: "carpentry",
+  status: "active",
+  photoCount: 0,
+  albumId: null,
+  createdAt: "2026-07-11T10:00:00.000Z",
+  updatedAt: "2026-07-11T10:00:00.000Z",
+};
+
 async function waitForServer() {
   const deadline = Date.now() + 30_000;
   while (Date.now() < deadline) {
@@ -151,6 +165,8 @@ async function configurePage(page) {
   routeResponse(/\/api\/v1\/active-work\/?(?:\?.*)?$/, { data: { activeWork: [] } });
   routeResponse("**/api/v1/applications", { data: { applications: [] } });
   routeResponse("**/api/v1/offers", { data: { offers: [] } });
+  routeResponse("**/api/v1/standalone-projects", { data: { projects: [standaloneProject] } });
+  routeResponse("**/api/v1/albums", { data: { albums: [] } });
   routeResponse(`**/api/v1/jobs/${draftJob.id}`, { data: { job: draftJob } });
   routeResponse(`**/api/v1/jobs/${draftJob.id}/applications`, { data: { applications: [] } });
   routeResponse("**/api/v1/jobs?**", { data: { jobs: [draftJob] }, meta: { nextCursor: null } });
@@ -374,9 +390,31 @@ async function runMobileFlow(page) {
   await assertNoHorizontalOverflow(page, "Tools hub");
   await primaryInvoiceTool.click();
   await page.getByRole("heading", { name: "Invoice draft" }).waitFor({ timeout: 15_000 });
+  await page.getByRole("button", { name: "Work context: Quick use. Change context." }).waitFor({ timeout: 15_000 });
+  assert.equal(await page.getByLabel("Bill to").inputValue(), "", "Quick-use invoice must not prefill an unrelated job or client");
+  const invoiceSaveButton = page.getByLabel("Invoice actions").getByRole("button", { name: /Save/i });
+  const invoiceSaveBox = await invoiceSaveButton.boundingBox();
+  assert.ok(invoiceSaveBox && invoiceSaveBox.y + invoiceSaveBox.height <= 844, `Invoice save action should stay in the thumb-zone viewport: ${JSON.stringify(invoiceSaveBox)}`);
+  await page.getByRole("button", { name: "Work context: Quick use. Change context." }).click();
+  await page.getByRole("dialog", { name: "Choose work context" }).getByRole("button", { name: /Miller kitchen/i }).click();
+  await page.getByRole("button", { name: "Work context: Miller kitchen. Change context." }).waitFor({ timeout: 15_000 });
+  assert.equal(await page.getByLabel("Bill to").inputValue(), "Miller family", "Standalone context should prefill its own client");
   await assertNoHorizontalOverflow(page, "Invoice app");
+  await page.screenshot({ path: path.join(screenshotDir, "mobile-invoice-standalone-context.png"), fullPage: true });
 
   await page.getByLabel("Invoice draft").getByRole("button", { name: "Tools" }).click();
+  await page.getByRole("heading", { name: "Tools", exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByRole("button", { name: "Open Camera" }).click();
+  await page.getByRole("heading", { name: "Camera", exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByRole("button", { name: "Work context: Quick use. Change context." }).click();
+  await page.getByRole("dialog", { name: "Choose work context" }).getByRole("button", { name: /Miller kitchen/i }).click();
+  await page.getByRole("button", { name: "Work context: Miller kitchen. Change context." }).waitFor({ timeout: 15_000 });
+  const cameraAction = page.getByLabel("Camera actions").getByRole("button", { name: "Open camera" });
+  const cameraActionBox = await cameraAction.boundingBox();
+  assert.ok(cameraActionBox && cameraActionBox.y + cameraActionBox.height <= 844, `Camera action should stay in the thumb-zone viewport: ${JSON.stringify(cameraActionBox)}`);
+  await assertNoHorizontalOverflow(page, "Standalone camera app");
+  await page.screenshot({ path: path.join(screenshotDir, "mobile-camera-standalone-context.png"), fullPage: true });
+  await page.getByLabel("Camera").getByRole("button", { name: "Tools" }).click();
   await page.getByRole("heading", { name: "Tools", exact: true }).waitFor({ timeout: 15_000 });
   await page.getByRole("button", { name: "Crew", exact: true }).click();
   await page.getByRole("heading", { name: "Crew", exact: true }).waitFor({ timeout: 15_000 });

@@ -3,6 +3,8 @@ import { apiPath, fetchWithTimeout, notifySessionExpired, requestKey } from "../
 export type ToolRecordType =
   | "payment_record"
   | "invoice_template"
+  | "invoice_draft"
+  | "estimate"
   | "expense"
   | "mileage"
   | "time_session"
@@ -22,6 +24,8 @@ export interface ServerToolRecord {
   status: string;
   recordDate: string | null;
   amountCents: number | null;
+  standaloneProjectId: string | null;
+  activeWorkId: string | null;
   payload: Record<string, unknown>;
   createdAt: string | null;
   updatedAt: string | null;
@@ -34,6 +38,8 @@ export interface ToolRecordInput {
   status?: string;
   recordDate?: string | null;
   amountCents?: number | null;
+  standaloneProjectId?: string | null;
+  activeWorkId?: string | null;
   payload?: Record<string, unknown>;
 }
 

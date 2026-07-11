@@ -1426,6 +1426,14 @@ function App() {
     }
   }
 
+  function handleToolWorkContextChange(activeWorkId: string | null) {
+    setFocusedActiveWorkId(activeWorkId);
+    const nextPath = pathForTool(requestedTool, activeWorkId);
+    if (currentPathAndSearch() !== nextPath) {
+      window.history.replaceState({ view: "Tools", tool: requestedTool, activeWorkId }, "", nextPath);
+    }
+  }
+
   async function handleAddCommunityAnswer(postId: string, body: string) {
     const post = communityPosts.find((candidate) => candidate.id === postId);
     if (!post) {
@@ -2605,6 +2613,7 @@ function App() {
             openTool={activeView === "Tools" ? requestedTool ?? "hub" : null}
             activeWorkRecords={activeWork}
             onToolChange={handleToolChange}
+            onWorkContextChange={handleToolWorkContextChange}
             onImmersiveChange={setToolsImmersive}
             onNavigate={(destination) => handleNavigate(defaultViewForDestination(destination))}
             focusedActiveWorkId={focusedActiveWorkId}

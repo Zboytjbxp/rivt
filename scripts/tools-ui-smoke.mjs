@@ -49,7 +49,7 @@ const account = {
 };
 
 const activeWorkItem = {
-  id: "tools-active-work-1",
+  id: "cccccccc-cccc-cccc-cccc-cccccccccccc",
   jobId: "tools-job-1",
   offerId: "tools-offer-1",
   organizationId: "org-tools-ui",
@@ -233,6 +233,9 @@ async function configurePage(page) {
   );
   await page.route("**/api/v1/albums", (route) =>
     route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { albums: [] } }) }),
+  );
+  await page.route("**/api/v1/standalone-projects", (route) =>
+    route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { projects: [] } }) }),
   );
   await page.route(/\/api\/v1\/tool-records(?:\/.*|\?.*)?$/, (route) => {
     const method = route.request().method();
@@ -475,6 +478,7 @@ async function runToolsFlow(page, viewportName) {
   await page.getByLabel("Template name").fill(`${viewportName} invoice template`);
   await page.getByRole("button", { name: "Save template" }).click();
   await page.getByText("Template saved.", { exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByLabel("Saved invoice templates").getByText("Saved templates", { exact: true }).click();
   await page.getByRole("button", { name: "Load" }).first().waitFor({ timeout: 15_000 });
   await page.getByLabel("Recipient email").fill("billing@example.com");
   await page.getByLabel("Recipient phone").fill("+19045550123");
@@ -514,14 +518,11 @@ async function runToolsFlow(page, viewportName) {
   await page.getByLabel("Daily log").getByRole("button", { name: "Tools" }).click();
 
   await primaryTool("Camera").click();
-  await page.getByText("Tenant Build-Out", { exact: true }).waitFor({ timeout: 15_000 });
-  await page.waitForFunction(() => document.body.innerText.includes("Recent field photos") || document.body.innerText.includes("No photos on this job yet"), null, { timeout: 15_000 });
+  await page.getByRole("button", { name: "Work context: Quick use. Change context." }).click();
+  await page.getByRole("dialog", { name: "Choose work context" }).getByRole("button", { name: /Tenant Build-Out/i }).click();
+  await page.getByRole("heading", { name: "Tenant Build-Out", exact: true }).waitFor({ timeout: 15_000 });
   await page.getByRole("button", { name: "Open camera" }).first().waitFor({ timeout: 15_000 });
-  await page.waitForFunction(
-    () => document.body.innerText.includes("Side work albums") || document.body.innerText.includes("Keep side-work albums separate"),
-    null,
-    { timeout: 15_000 },
-  );
+  assert.equal(await page.getByText("Private albums", { exact: true }).count(), 0, "RIVT job context should not mix in private albums");
   await assertNoHorizontalOverflow(page);
   await page.screenshot({ path: path.join(screenshotDir, `${viewportName}-camera-home.png`), fullPage: true });
   await page.getByRole("button", { name: "Open camera" }).first().click();

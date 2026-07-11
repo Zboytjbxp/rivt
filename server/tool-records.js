@@ -3,6 +3,8 @@ import { ApiError, asyncRoute, validate, z } from "./api.js";
 const toolRecordTypeSchema = z.enum([
   "payment_record",
   "invoice_template",
+  "invoice_draft",
+  "estimate",
   "expense",
   "mileage",
   "time_session",
@@ -34,6 +36,10 @@ const toolRecordUpsertSchema = z.object({
   recordDate: z.iso.date().nullable().optional().default(null),
   amountCents: z.number().int().min(0).max(1_000_000_000).nullable().optional().default(null),
   payload: z.object({}).passthrough().default({}),
+  standaloneProjectId: z.uuid().nullable().optional().default(null),
+  activeWorkId: z.uuid().nullable().optional().default(null),
+}).refine((value) => !(value.standaloneProjectId && value.activeWorkId), {
+  message: "Choose either standalone work or RIVT work, not both.",
 });
 
 function mapToolRecord(row) {
@@ -45,6 +51,8 @@ function mapToolRecord(row) {
     status: row.status,
     recordDate: row.record_date ? row.record_date.toISOString().slice(0, 10) : null,
     amountCents: row.amount_cents === null ? null : Number(row.amount_cents),
+    standaloneProjectId: row.standalone_project_id ?? null,
+    activeWorkId: row.active_work_id ?? null,
     payload: row.payload ?? {},
     createdAt: row.created_at ? new Date(row.created_at).toISOString() : null,
     updatedAt: row.updated_at ? new Date(row.updated_at).toISOString() : null,
@@ -91,16 +99,37 @@ export function registerToolRecordRoutes({
       request.actor.account.id,
       `tool-records.upsert:${input.recordType}:${input.localId}`,
       async (client) => {
+        if (input.standaloneProjectId) {
+          const ownedProject = await client.query(
+            "SELECT id FROM standalone_projects WHERE id = $1 AND account_id = $2 AND status = 'active'",
+            [input.standaloneProjectId, request.actor.account.id],
+          );
+          if (!ownedProject.rowCount) {
+            throw new ApiError(403, "STANDALONE_PROJECT_ACCESS_DENIED", "You cannot save records to that standalone project.");
+          }
+        }
+        if (input.activeWorkId) {
+          const participant = await client.query(
+            "SELECT 1 FROM work_participants WHERE active_work_id = $1 AND account_id = $2",
+            [input.activeWorkId, request.actor.account.id],
+          );
+          if (!participant.rowCount) {
+            throw new ApiError(403, "ACTIVE_WORK_ACCESS_DENIED", "You cannot save records to that RIVT workspace.");
+          }
+        }
         const upserted = await client.query(
           `INSERT INTO tool_records (
-             account_id, record_type, local_id, title, status, record_date, amount_cents, payload
-           ) VALUES ($1, $2, $3, $4, $5, $6::date, $7, $8::jsonb)
+             account_id, record_type, local_id, title, status, record_date, amount_cents, payload,
+             standalone_project_id, active_work_id
+           ) VALUES ($1, $2, $3, $4, $5, $6::date, $7, $8::jsonb, $9, $10)
            ON CONFLICT (account_id, record_type, local_id) WHERE deleted_at IS NULL
            DO UPDATE SET title = EXCLUDED.title,
                          status = EXCLUDED.status,
                          record_date = EXCLUDED.record_date,
                          amount_cents = EXCLUDED.amount_cents,
                          payload = EXCLUDED.payload,
+                         standalone_project_id = EXCLUDED.standalone_project_id,
+                         active_work_id = EXCLUDED.active_work_id,
                          updated_at = now()
            RETURNING *`,
           [
@@ -112,6 +141,8 @@ export function registerToolRecordRoutes({
             input.recordDate,
             input.amountCents,
             JSON.stringify(input.payload),
+            input.standaloneProjectId,
+            input.activeWorkId,
           ],
         );
         return {

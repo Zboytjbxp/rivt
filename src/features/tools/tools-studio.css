@@ -333,10 +333,247 @@
   white-space: nowrap;
 }
 
+.v2-tool-context-trigger {
+  display: flex;
+  width: 100%;
+  min-height: 56px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 2px 0 12px;
+  padding: 8px 12px;
+  border: 1px solid color-mix(in srgb, var(--v2-border) 68%, transparent);
+  border-radius: var(--v2-radius-md);
+  background: var(--v2-surface);
+  color: var(--v2-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.v2-tool-context-trigger span {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.v2-tool-context-trigger small,
+.v2-tool-context-sheet header small {
+  color: var(--v2-accent);
+  font-size: 12px;
+  font-weight: var(--v2-weight-bold);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.v2-tool-context-trigger strong {
+  overflow: hidden;
+  font-size: 15px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.v2-tool-context-backdrop {
+  position: fixed;
+  z-index: 160;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 16px;
+  padding-bottom: max(16px, env(safe-area-inset-bottom));
+  background: rgb(0 0 0 / 0.58);
+}
+
+.v2-tool-context-sheet {
+  display: grid;
+  width: min(100%, 620px);
+  max-height: min(82dvh, 760px);
+  gap: 8px;
+  overflow-y: auto;
+  padding: 16px;
+  border: 1px solid var(--v2-border);
+  border-radius: var(--v2-radius-xl) var(--v2-radius-xl) var(--v2-radius-md) var(--v2-radius-md);
+  background: var(--v2-surface-raised);
+  box-shadow: var(--v2-shadow-md);
+}
+
+.v2-tool-context-sheet header,
+.v2-tool-context-group-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.v2-tool-context-sheet h2,
+.v2-tool-context-sheet p {
+  margin: 0;
+}
+
+.v2-tool-context-sheet h2 {
+  font-size: 21px;
+}
+
+.v2-tool-context-sheet > p {
+  color: var(--v2-text-muted);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.v2-tool-context-sheet header button,
+.v2-tool-context-group-title button {
+  display: inline-flex;
+  min-height: 48px;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 0;
+  background: transparent;
+  color: var(--v2-text);
+  font: inherit;
+  font-weight: var(--v2-weight-strong);
+}
+
+.v2-tool-context-group {
+  display: grid;
+  gap: 6px;
+  padding-top: 8px;
+  border-top: 1px solid var(--v2-border);
+}
+
+.v2-tool-context-group-title span {
+  color: var(--v2-text-muted);
+  font-size: 13px;
+  font-weight: var(--v2-weight-bold);
+  text-transform: uppercase;
+}
+
+.v2-tool-context-option {
+  display: grid;
+  min-height: 58px;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: var(--v2-radius-md);
+  background: var(--v2-surface-muted);
+  color: var(--v2-text);
+  font: inherit;
+  text-align: left;
+}
+
+.v2-tool-context-option span,
+.v2-tool-context-create {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.v2-tool-context-option small {
+  overflow: hidden;
+  color: var(--v2-text-muted);
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.v2-tool-context-create {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  padding: 10px;
+  border-radius: var(--v2-radius-md);
+  background: var(--v2-surface-muted);
+}
+
+.v2-tool-context-create label {
+  display: grid;
+  min-width: 0;
+  gap: 5px;
+  color: var(--v2-text-muted);
+  font-size: 13px;
+  font-weight: var(--v2-weight-strong);
+}
+
+.v2-tool-context-create input {
+  width: 100%;
+  min-width: 0;
+  min-height: 48px;
+  padding: 0 10px;
+  border: 1px solid var(--v2-border);
+  border-radius: var(--v2-radius-sm);
+  background: var(--v2-surface);
+  color: var(--v2-text);
+  font: inherit;
+}
+
+.v2-tool-context-create .v2-primary-button {
+  grid-column: 1 / -1;
+}
+
 .v2-tool-workbench {
   display: grid;
   grid-template-columns: minmax(0, 1.1fr) minmax(310px, 0.9fr);
   gap: 18px;
+}
+
+.v2-tool-action-dock {
+  position: sticky;
+  z-index: 8;
+  bottom: max(10px, env(safe-area-inset-bottom));
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: minmax(0, 1fr) auto auto auto;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid color-mix(in srgb, var(--v2-border-strong) 72%, transparent);
+  border-radius: var(--v2-radius-lg);
+  background: color-mix(in srgb, var(--v2-surface-raised) 97%, transparent);
+  box-shadow: var(--v2-shadow-md);
+  backdrop-filter: blur(16px);
+}
+
+.v2-tool-action-dock > span {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+  padding-inline: 6px;
+}
+
+.v2-tool-action-dock > span strong {
+  font-size: 17px;
+  font-variant-numeric: tabular-nums;
+}
+
+.v2-tool-action-dock > span small {
+  overflow: hidden;
+  color: var(--v2-text-muted);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.v2-tool-action-dock > button {
+  display: inline-flex;
+  min-width: 48px;
+  min-height: 48px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 0 13px;
+  border: 1px solid var(--v2-border);
+  border-radius: var(--v2-radius-md);
+  background: var(--v2-surface);
+  color: var(--v2-text);
+  font: inherit;
+  font-weight: var(--v2-weight-strong);
+}
+
+.v2-tool-action-dock > .v2-primary-button {
+  border-color: transparent;
+  background: var(--v2-accent);
+  color: var(--v2-on-accent);
 }
 
 .v2-tool-panel {
@@ -605,7 +842,7 @@
 }
 
 .v2-estimate-hero {
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr);
   align-items: end;
 }
 
@@ -2052,6 +2289,35 @@
 }
 
 @media (max-width: 900px) {
+  .v2-tool-context-create {
+    grid-template-columns: 1fr;
+  }
+
+  .v2-tool-context-create .v2-primary-button {
+    grid-column: auto;
+  }
+
+  .v2-estimate-workbench,
+  .v2-invoice-workbench,
+  .v2-camera-home {
+    padding-bottom: calc(82px + env(safe-area-inset-bottom));
+  }
+
+  .v2-tool-action-dock {
+    position: fixed;
+    right: 8px;
+    bottom: max(8px, env(safe-area-inset-bottom));
+    left: 8px;
+    grid-template-columns: minmax(0, 1fr) 48px auto 48px;
+  }
+
+  .v2-tool-action-dock > button {
+    padding: 0 12px;
+  }
+
+  .v2-camera-action-dock {
+    grid-template-columns: minmax(0, 1fr) minmax(140px, auto);
+  }
   .v2-tools-header {
     align-items: flex-start;
     flex-direction: column;
@@ -2293,6 +2559,8 @@
   .v2-topbar,
   .v2-mobile-nav,
   .v2-tool-app-header,
+  .v2-tool-context-trigger,
+  .v2-tool-action-dock,
   .v2-invoice-builder-panel,
   .v2-invoice-summary-panel,
   .v2-invoice-preview-panel .rivt-panel-header {

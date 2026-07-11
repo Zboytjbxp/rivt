@@ -52,6 +52,9 @@ import { BidBuilderTool } from "./BidBuilderTool";
 import { ExpenseLoggerTool } from "./ExpenseLoggerTool";
 import { EarningsDashboardTool } from "./EarningsDashboardTool";
 import { deleteToolRecordByLocalId, fetchToolRecords, upsertToolRecord, type ServerToolRecord } from "./tool-records-api";
+import { ToolContextPicker } from "./ToolContextPicker";
+import { createStandaloneProject, listStandaloneProjects, type StandaloneProject } from "./standalone-project-api";
+import { toolContextStorageId, type ToolWorkContext } from "./tool-work-context";
 import "./tools-studio.css";
 
 export type ToolMode = "hub" | "calculator" | "estimate" | "invoice" | "materials" | "daily-log" | "job-photos" | "time-tracker" | "expense-logger" | "earnings" | "bid-builder" | "mileage" | "price-book" | "safety-checklist" | "tax-estimator" | "punch-list" | "contracts" | "job-checklist" | "payments" | "daily-report" | "tax-summary";
@@ -82,6 +85,7 @@ interface ToolsStudioProps {
   activeWorkRecords?: CanonicalActiveWork[];
   onOpenToolConsumed?: () => void;
   onToolChange?: (tool: ToolMode) => void;
+  onWorkContextChange?: (activeWorkId: string | null) => void;
   onImmersiveChange?: (immersive: boolean) => void;
   onNavigate: (destination: PrimaryDestination) => void;
 }
@@ -89,6 +93,17 @@ interface ToolsStudioProps {
 type LaunchableToolMode = Exclude<ToolMode, "hub">;
 type ToolIcon = typeof Calculator;
 const recentToolsStorageKey = "rivt.recentTools.v1";
+const toolContextStorageKey = "rivt.toolContexts.v1";
+const contextualToolModes = new Set<ToolMode>(["estimate", "invoice", "job-photos"]);
+
+function readToolContextProjects(): Partial<Record<ToolMode, string>> {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(toolContextStorageKey) || "{}") as Record<string, unknown>;
+    return Object.fromEntries(Object.entries(parsed).filter(([, value]) => typeof value === "string"));
+  } catch {
+    return {};
+  }
+}
 
 interface ToolLauncher {
   mode: LaunchableToolMode;
@@ -2777,6 +2792,7 @@ function activeWorkSummaryJob(work: CanonicalActiveWork): Job | null {
 }
 
 function resolveActiveToolJob(jobs: Job[], orderedActiveWork: CanonicalActiveWork[], focusedActiveWorkId: string | null) {
+  if (!focusedActiveWorkId) return null;
   const focusedWork = focusedActiveWorkId
     ? orderedActiveWork.find((work) => work.id === focusedActiveWorkId) ?? null
     : null;
@@ -2788,14 +2804,19 @@ function resolveActiveToolJob(jobs: Job[], orderedActiveWork: CanonicalActiveWor
     const fallback = focusedWork ? activeWorkSummaryJob(focusedWork) : null;
     if (fallback) return fallback;
   }
-  return jobs.find((job) => job.status !== "Paid / Closed") ?? jobs[0] ?? null;
+  return null;
 }
 
-export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = null, focusedActiveWorkId = null, activeWorkRecords = [], onOpenToolConsumed, onToolChange, onImmersiveChange, onNavigate }: ToolsStudioProps) {
+export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = null, focusedActiveWorkId = null, activeWorkRecords = [], onOpenToolConsumed, onToolChange, onWorkContextChange, onImmersiveChange, onNavigate }: ToolsStudioProps) {
   const requestedTool = mode === "tools" && openTool ? openTool : null;
   const [localActiveTool, setLocalActiveTool] = useState<ToolMode>("hub");
   const activeTool = requestedTool ?? localActiveTool;
   const [recentTools, setRecentTools] = useState(readRecentTools);
+  const [standaloneProjects, setStandaloneProjects] = useState<StandaloneProject[]>([]);
+  const [standaloneProjectsError, setStandaloneProjectsError] = useState("");
+  const [standaloneProjectBusy, setStandaloneProjectBusy] = useState(false);
+  const [toolContextProjects, setToolContextProjects] = useState(readToolContextProjects);
+  const [contextChosenTool, setContextChosenTool] = useState<ToolMode | null>(null);
   const [fetchedActiveWork, setFetchedActiveWork] = useState<CanonicalActiveWork[]>([]);
   const [recordsLoading, setRecordsLoading] = useState(true);
   const [recordsError, setRecordsError] = useState<string | null>(null);
@@ -2852,11 +2873,98 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
     () => resolveActiveToolJob(jobs, orderedActiveWork, focusedActiveWorkId),
     [focusedActiveWorkId, jobs, orderedActiveWork],
   );
-  const activeJobScopeKey = focusedActiveWorkId
-    ? `${focusedActiveWorkId}:${activeJob?.canonical?.id ?? activeJob?.id ?? "loading"}`
-    : "standalone";
+  const focusedWork = focusedActiveWorkId
+    ? orderedActiveWork.find((work) => work.id === focusedActiveWorkId) ?? null
+    : null;
+  const selectedStandaloneProject = standaloneProjects.find((project) => project.id === toolContextProjects[activeTool]) ?? null;
+  const toolWorkContext: ToolWorkContext = focusedActiveWorkId && focusedWork
+    ? { kind: "rivt", activeWorkId: focusedActiveWorkId, work: focusedWork, job: activeJob }
+    : selectedStandaloneProject
+      ? { kind: "standalone", project: selectedStandaloneProject }
+      : { kind: "quick" };
+  const activeJobScopeKey = `${toolContextStorageId(toolWorkContext)}:${activeJob?.canonical?.id ?? activeJob?.id ?? "none"}`;
+
+  useEffect(() => {
+    let cancelled = false;
+    void listStandaloneProjects()
+      .then((projects) => { if (!cancelled) setStandaloneProjects(projects); })
+      .catch((error: unknown) => {
+        if (!cancelled) setStandaloneProjectsError(error instanceof Error ? error.message : "Standalone projects could not be loaded.");
+      });
+    return () => { cancelled = true; };
+  }, []);
+
+  function persistToolContextProject(tool: ToolMode, projectId: string | null) {
+    setToolContextProjects((current) => {
+      const next = { ...current };
+      if (projectId) next[tool] = projectId;
+      else delete next[tool];
+      try {
+        localStorage.setItem(toolContextStorageKey, JSON.stringify(next));
+      } catch {
+        // The selection remains active for this session when device storage is unavailable.
+      }
+      return next;
+    });
+  }
+
+  function carryQuickDraftIntoContext(tool: ToolMode, destinationId: string) {
+    if (toolWorkContext.kind !== "quick") return;
+    const prefix = tool === "estimate"
+      ? "rivt.estimateDraft.v2:"
+      : tool === "invoice"
+        ? "rivt.invoiceDraft.v2:"
+        : null;
+    if (!prefix) return;
+    try {
+      const source = localStorage.getItem(`${prefix}quick`);
+      const destinationKey = `${prefix}${destinationId}`;
+      if (source && !localStorage.getItem(destinationKey)) {
+        localStorage.setItem(destinationKey, source);
+      }
+    } catch {
+      // A draft remains usable in memory when device storage is unavailable.
+    }
+  }
+
+  function chooseQuickContext() {
+    setContextChosenTool(activeTool);
+    persistToolContextProject(activeTool, null);
+    onWorkContextChange?.(null);
+  }
+
+  function chooseStandaloneContext(project: StandaloneProject) {
+    setContextChosenTool(activeTool);
+    carryQuickDraftIntoContext(activeTool, `standalone:${project.id}`);
+    persistToolContextProject(activeTool, project.id);
+    onWorkContextChange?.(null);
+  }
+
+  function chooseActiveWorkContext(work: CanonicalActiveWork) {
+    setContextChosenTool(activeTool);
+    carryQuickDraftIntoContext(activeTool, `rivt:${work.id}`);
+    persistToolContextProject(activeTool, null);
+    onWorkContextChange?.(work.id);
+  }
+
+  async function createStandaloneContext(input: { title: string; clientName: string; locationText: string }) {
+    setStandaloneProjectBusy(true);
+    setStandaloneProjectsError("");
+    try {
+      const project = await createStandaloneProject(input);
+      setStandaloneProjects((current) => [project, ...current]);
+      chooseStandaloneContext(project);
+      return true;
+    } catch (error) {
+      setStandaloneProjectsError(error instanceof Error ? error.message : "The standalone project could not be created.");
+      return false;
+    } finally {
+      setStandaloneProjectBusy(false);
+    }
+  }
 
   function setActiveTool(tool: ToolMode, options: { keepConvertedInvoice?: boolean } = {}) {
+    if (tool !== activeTool) setContextChosenTool(null);
     if (!onToolChange) {
       onOpenToolConsumed?.();
     }
@@ -3461,11 +3569,11 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
     const toolMeta = {
       estimate: {
         title: "Estimate builder",
-        node: <EstimateTool key={`estimate:${activeJobScopeKey}`} activeJob={activeJob} onConvertToInvoice={handleConvertEstimateToInvoice} />,
+        node: <EstimateTool key={`estimate:${activeJobScopeKey}`} activeJob={activeJob} workContext={toolWorkContext} onConvertToInvoice={handleConvertEstimateToInvoice} />,
       },
       invoice: {
         title: "Invoice draft",
-        node: <InvoiceDraftTool key={`invoice:${activeJobScopeKey}`} activeJob={activeJob} estimateDraft={convertedEstimateDraft} activeWorkId={focusedActiveWorkId} />,
+        node: <InvoiceDraftTool key={`invoice:${activeJobScopeKey}`} activeJob={activeJob} workContext={toolWorkContext} estimateDraft={convertedEstimateDraft} activeWorkId={toolWorkContext.kind === "rivt" ? toolWorkContext.activeWorkId : null} />,
       },
       "daily-log": {
         title: "Daily log",
@@ -3479,9 +3587,11 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
         title: "Camera",
         node: (
           <JobPhotosTool
+            key={`camera:${activeJobScopeKey}`}
             activeWork={orderedActiveWork}
-            focusedActiveWorkId={focusedActiveWorkId}
-            autoOpenActiveJob={requestedTool === "job-photos" && Boolean(focusedActiveWorkId)}
+            focusedActiveWorkId={toolWorkContext.kind === "rivt" ? toolWorkContext.activeWorkId : null}
+            standaloneProject={toolWorkContext.kind === "standalone" ? toolWorkContext.project : null}
+            autoOpenActiveJob={requestedTool === "job-photos" && Boolean(focusedActiveWorkId) && contextChosenTool !== activeTool}
           />
         ),
       },
@@ -3573,6 +3683,19 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
         onBack={() => setActiveTool("hub")}
         swipeHandlers={toolSwipeHandlers}
       >
+        {contextualToolModes.has(activeTool) ? (
+          <ToolContextPicker
+            context={toolWorkContext}
+            standaloneProjects={standaloneProjects}
+            activeWork={orderedActiveWork}
+            busy={standaloneProjectBusy}
+            error={standaloneProjectsError}
+            onChooseQuick={chooseQuickContext}
+            onChooseStandalone={chooseStandaloneContext}
+            onChooseActiveWork={chooseActiveWorkContext}
+            onCreateStandalone={createStandaloneContext}
+          />
+        ) : null}
         {toolMeta.node}
       </ToolAppShell>
     );

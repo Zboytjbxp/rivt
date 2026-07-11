@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Copy, Download, FileText, Mail, MessageSquare, Plus, Trash2 } from "lucide-react";
+import { Copy, FileText, Mail, MessageSquare, Plus, Save, Trash2 } from "lucide-react";
 import type { Job } from "../../types";
 import { Panel } from "../../components/ui";
 import { readPrimaryHourlyRate } from "../../lib/rateCard";
@@ -14,6 +14,7 @@ import {
   updateProjectInvoiceStatus,
   type ProjectInvoice,
 } from "./project-api";
+import { toolContextLabel, toolContextRecordFields, toolContextStorageId, type ToolWorkContext } from "./tool-work-context";
 
 function numericValue(value: number, fallback = 0) {
   return Number.isFinite(value) ? Math.max(0, value) : fallback;
@@ -48,6 +49,32 @@ interface InvoiceTemplate {
 
 const invoiceTemplateStorageKey = "rivt.invoiceTemplates.v1";
 const invoicePrefsStorageKey = "rivt.invoicePrefs.v1";
+
+interface InvoiceDraftSnapshot {
+  invoiceNumber: string;
+  billTo: string;
+  payTo: string;
+  terms: string;
+  paymentMethod: string;
+  recipientEmail: string;
+  recipientPhone: string;
+  taxPct: number;
+  templateName: string;
+  lines: InvoiceLine[];
+}
+
+function invoiceDraftStorageKey(context: ToolWorkContext) {
+  return `rivt.invoiceDraft.v2:${toolContextStorageId(context)}`;
+}
+
+function readInvoiceDraft(context: ToolWorkContext): Partial<InvoiceDraftSnapshot> {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(invoiceDraftStorageKey(context)) || "{}") as Partial<InvoiceDraftSnapshot>;
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return {};
+  }
+}
 
 interface InvoicePrefs {
   payTo: string;
@@ -150,31 +177,42 @@ function invoiceLinesFromEstimate(draft: EstimateInvoiceDraft): InvoiceLine[] {
 
 export function InvoiceDraftTool({
   activeJob,
+  workContext,
   estimateDraft = null,
   activeWorkId = null,
 }: {
   activeJob: Job | null;
+  workContext: ToolWorkContext;
   estimateDraft?: EstimateInvoiceDraft | null;
   activeWorkId?: string | null;
 }) {
   const [invoicePrefs] = useState(readInvoicePrefs);
-  const [invoiceNumber, setInvoiceNumber] = useState(estimateDraft?.invoiceNumber ?? (activeJob ? `RIVT-${activeJob.id}` : "RIVT-DRAFT"));
+  const [initialDraft] = useState(() => readInvoiceDraft(workContext));
+  const [invoiceNumber, setInvoiceNumber] = useState(estimateDraft?.invoiceNumber ?? initialDraft.invoiceNumber ?? (activeJob ? `RIVT-${activeJob.id}` : `RIVT-${crypto.randomUUID().slice(0, 8).toUpperCase()}`));
   const initialProjectInvoiceNumber = useRef(estimateDraft?.invoiceNumber ?? (activeJob ? `RIVT-${activeJob.id}` : "RIVT-DRAFT"));
-  const [billTo, setBillTo] = useState(estimateDraft?.billTo ?? activeJob?.contractor ?? "");
-  const [payTo, setPayTo] = useState(invoicePrefs.payTo);
-  const [terms, setTerms] = useState(estimateDraft?.terms ?? invoicePrefs.terms);
-  const [paymentMethod, setPaymentMethod] = useState(estimateDraft?.paymentMethod ?? invoicePrefs.paymentMethod);
-  const [recipientEmail, setRecipientEmail] = useState(invoicePrefs.recipientEmail);
-  const [recipientPhone, setRecipientPhone] = useState(invoicePrefs.recipientPhone);
-  const [taxPct, setTaxPct] = useState(invoicePrefs.taxPct);
-  const [copied, setCopied] = useState(false);
-  const [downloaded, setDownloaded] = useState(false);
+  const [billTo, setBillTo] = useState(
+    estimateDraft?.billTo
+      || initialDraft.billTo
+      || activeJob?.contractor
+      || (workContext.kind === "standalone" ? workContext.project.clientName : ""),
+  );
+  const [payTo, setPayTo] = useState(initialDraft.payTo ?? invoicePrefs.payTo);
+  const [terms, setTerms] = useState(estimateDraft?.terms ?? initialDraft.terms ?? invoicePrefs.terms);
+  const [paymentMethod, setPaymentMethod] = useState(estimateDraft?.paymentMethod ?? initialDraft.paymentMethod ?? invoicePrefs.paymentMethod);
+  const [recipientEmail, setRecipientEmail] = useState(initialDraft.recipientEmail ?? invoicePrefs.recipientEmail);
+  const [recipientPhone, setRecipientPhone] = useState(initialDraft.recipientPhone ?? invoicePrefs.recipientPhone);
+  const [taxPct, setTaxPct] = useState(initialDraft.taxPct ?? invoicePrefs.taxPct);
   const [templates, setTemplates] = useState<InvoiceTemplate[]>(readInvoiceTemplates);
   const [syncMessage, setSyncMessage] = useState("Saved on this device.");
-  const [templateName, setTemplateName] = useState(estimateDraft?.templateName ?? (activeJob ? `${activeJob.title} invoice` : "Standard invoice"));
+  const [templateName, setTemplateName] = useState(estimateDraft?.templateName ?? initialDraft.templateName ?? (activeJob ? `${activeJob.title} invoice` : "Standard invoice"));
   const [templateNotice, setTemplateNotice] = useState("");
   const [conversionNotice, setConversionNotice] = useState(estimateDraft?.sourceNote ?? "");
-  const [lines, setLines] = useState<InvoiceLine[]>(() => estimateDraft ? invoiceLinesFromEstimate(estimateDraft) : defaultInvoiceLines(activeJob));
+  const [lines, setLines] = useState<InvoiceLine[]>(() => estimateDraft
+    ? invoiceLinesFromEstimate(estimateDraft)
+    : initialDraft.lines?.length
+      ? initialDraft.lines.map((line) => ({ ...line, id: crypto.randomUUID() }))
+      : defaultInvoiceLines(activeJob));
+  const [draftSaveMessage, setDraftSaveMessage] = useState("Autosaved on this device.");
   const [projectInvoice, setProjectInvoice] = useState<ProjectInvoice | null>(null);
   const [projectInvoiceBusy, setProjectInvoiceBusy] = useState(false);
   const [projectInvoiceNotice, setProjectInvoiceNotice] = useState("");
@@ -207,7 +245,7 @@ export function InvoiceDraftTool({
 
   const invoiceText = useMemo(() => [
     `RIVT invoice draft ${invoiceNumber}`,
-    activeJob ? `Job: ${activeJob.title}` : "Job: unlinked",
+    `Work: ${toolContextLabel(workContext)}`,
     `Bill to: ${billTo || "Not entered"}`,
     `Pay to: ${payTo || "Not entered"}`,
     "",
@@ -219,7 +257,7 @@ export function InvoiceDraftTool({
     `Terms: ${terms}`,
     `Payment method: ${paymentMethod}`,
     "RIVT records direct-payment details only. RIVT does not process, escrow, or hold job payments.",
-  ].join("\n"), [activeJob, billTo, invoiceNumber, lines, paymentMethod, payTo, subtotal, tax, terms, total]);
+  ].join("\n"), [billTo, invoiceNumber, lines, paymentMethod, payTo, subtotal, tax, terms, total, workContext]);
   const emailHref = `mailto:${encodeURIComponent(recipientEmail)}?subject=${encodeURIComponent(`Invoice ${invoiceNumber}`)}&body=${encodeURIComponent(invoiceText)}`;
   const smsHref = `sms:${encodeURIComponent(recipientPhone)}?body=${encodeURIComponent(`RIVT invoice ${invoiceNumber}: ${currency(total)} due. ${terms}. ${paymentMethod}.`)}`;
 
@@ -253,6 +291,15 @@ export function InvoiceDraftTool({
       // Invoice defaults are a convenience only; templates and manual entry still work.
     }
   }, [paymentMethod, payTo, recipientEmail, recipientPhone, taxPct, terms]);
+
+  useEffect(() => {
+    const snapshot: InvoiceDraftSnapshot = { invoiceNumber, billTo, payTo, terms, paymentMethod, recipientEmail, recipientPhone, taxPct, templateName, lines };
+    try {
+      localStorage.setItem(invoiceDraftStorageKey(workContext), JSON.stringify(snapshot));
+    } catch {
+      // The in-memory invoice remains usable when device storage is unavailable.
+    }
+  }, [billTo, invoiceNumber, lines, paymentMethod, payTo, recipientEmail, recipientPhone, taxPct, templateName, terms, workContext]);
 
   useEffect(() => {
     let cancelled = false;
@@ -398,8 +445,32 @@ export function InvoiceDraftTool({
     };
   }
 
+  async function saveInvoiceDraft() {
+    if (activeWorkId) {
+      if (projectInvoice) {
+        setDraftSaveMessage("Already saved to this RIVT workspace.");
+        return;
+      }
+      const saved = await saveToActiveWork();
+      setDraftSaveMessage(saved ? "Saved to this RIVT workspace." : "The invoice could not be saved to this workspace.");
+      return;
+    }
+    const snapshot: InvoiceDraftSnapshot = { invoiceNumber, billTo, payTo, terms, paymentMethod, recipientEmail, recipientPhone, taxPct, templateName, lines };
+    const record = await upsertToolRecord({
+      recordType: "invoice_draft",
+      localId: `invoice:${toolContextStorageId(workContext)}`,
+      title: `${toolContextLabel(workContext)} invoice`,
+      status: "draft",
+      recordDate: new Date().toISOString().slice(0, 10),
+      amountCents: totalCents,
+      payload: { ...snapshot },
+      ...toolContextRecordFields(workContext),
+    });
+    setDraftSaveMessage(record ? "Draft saved to your RIVT account." : "Saved on this device only. Account sync failed.");
+  }
+
   async function saveToActiveWork() {
-    if (!activeWorkId) return;
+    if (!activeWorkId) return false;
     setProjectInvoiceBusy(true);
     setProjectInvoiceError("");
     setProjectInvoiceNotice("");
@@ -408,8 +479,10 @@ export function InvoiceDraftTool({
       setProjectInvoice(saved);
       setPaymentAmount((saved.balanceCents / 100).toFixed(2));
       setProjectInvoiceNotice("Invoice saved to this job workspace.");
+      return true;
     } catch (error) {
       setProjectInvoiceError(error instanceof Error ? error.message : "RIVT could not save this invoice to the job.");
+      return false;
     } finally {
       setProjectInvoiceBusy(false);
     }
@@ -462,23 +535,10 @@ export function InvoiceDraftTool({
   async function copyInvoice() {
     try {
       await navigator.clipboard.writeText(invoiceText);
-      setCopied(true);
+      setDraftSaveMessage("Invoice copied.");
     } catch {
-      setCopied(false);
+      setDraftSaveMessage("Copy failed. Open the preview and try again.");
     }
-  }
-
-  function downloadInvoice() {
-    const blob = new Blob([invoiceText], { type: "text/plain;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `${invoiceNumber.toLowerCase().replace(/[^a-z0-9-]+/g, "-")}.txt`;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(url);
-    setDownloaded(true);
   }
 
   function printInvoice() {
@@ -493,10 +553,6 @@ export function InvoiceDraftTool({
             <span>Total due</span>
             <strong>{currency(total)}</strong>
             <small>{invoiceNumber || "RIVT-DRAFT"} / {terms}</small>
-          </div>
-          <div className="v2-invoice-topline-actions">
-            <button type="button" className="v2-primary-button" onClick={copyInvoice}><Copy size={15} />{copied ? "Copied" : "Copy"}</button>
-            <button type="button" onClick={printInvoice}><FileText size={15} />Print</button>
           </div>
         </section>
 
@@ -565,7 +621,7 @@ export function InvoiceDraftTool({
         <section className="v2-invoice-builder-section" aria-label="Invoice details">
           <header className="v2-invoice-section-title">
             <h3>Details</h3>
-            <span>{activeJob?.title ?? "Standalone invoice"}</span>
+            <span>{toolContextLabel(workContext)}</span>
           </header>
           <div className="v2-tool-input-grid two v2-invoice-detail-grid">
             <label>Invoice #<input value={invoiceNumber} onChange={(event) => setInvoiceNumber(event.target.value)} /></label>
@@ -636,11 +692,6 @@ export function InvoiceDraftTool({
               Text draft
             </a>
           </div>
-          <div className="v2-tool-action-row">
-            <button type="button" className="v2-primary-button" onClick={copyInvoice}><Copy size={15} />{copied ? "Copied" : "Copy invoice"}</button>
-            <button type="button" onClick={downloadInvoice}><Download size={15} />{downloaded ? "Downloaded" : "Download TXT"}</button>
-            <button type="button" onClick={printInvoice}><FileText size={15} />Print</button>
-          </div>
         </Panel>
 
         <Panel className="v2-tool-panel v2-invoice-preview-panel" eyebrow="Preview" title="Printable invoice">
@@ -663,7 +714,7 @@ export function InvoiceDraftTool({
               <section className="v2-invoice-preview-meta">
                 <div><span>Bill to</span><strong>{billTo || "Contractor / company"}</strong></div>
                 <div><span>Pay to</span><strong>{payTo || "Your company / name"}</strong></div>
-                <div><span>Job</span><strong>{activeJob?.title ?? "Unlinked work"}</strong></div>
+                <div><span>Work</span><strong>{toolContextLabel(workContext)}</strong></div>
                 <div><span>Terms</span><strong>{terms}</strong></div>
               </section>
               <table>
@@ -694,6 +745,12 @@ export function InvoiceDraftTool({
           </details>
         </Panel>
       </aside>
+      <div className="v2-tool-action-dock" aria-label="Invoice actions">
+        <span><strong>{currency(total)}</strong><small>{draftSaveMessage}</small></span>
+        <button type="button" onClick={copyInvoice} aria-label="Copy invoice"><Copy size={18} /></button>
+        <button type="button" className="v2-primary-button" onClick={() => void saveInvoiceDraft()} disabled={projectInvoiceBusy || totalCents <= 0}><Save size={18} />Save</button>
+        <button type="button" onClick={printInvoice} aria-label="Print invoice"><FileText size={18} /></button>
+      </div>
     </div>
   );
 }

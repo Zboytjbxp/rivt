@@ -19,6 +19,7 @@ import {
   type AlbumPhoto,
   type PhotoAlbum,
 } from "./album-api";
+import type { StandaloneProject } from "./standalone-project-api";
 
 type PhotoView = "gallery" | "detail" | "compare-a" | "compare-b" | "compare-view";
 type JobPhotosMode = "home" | "album-detail" | "active-job";
@@ -717,15 +718,16 @@ function PhotoGallery({
   );
 }
 
-export function JobPhotosTool({ activeWork, focusedActiveWorkId = null, autoOpenActiveJob = false }: {
+export function JobPhotosTool({ activeWork, focusedActiveWorkId = null, standaloneProject = null, autoOpenActiveJob = false }: {
   activeWork: CanonicalActiveWork[];
   focusedActiveWorkId?: string | null;
+  standaloneProject?: StandaloneProject | null;
   autoOpenActiveJob?: boolean;
 }) {
   const focusedWork = focusedActiveWorkId
     ? activeWork.find((work) => work.id === focusedActiveWorkId) ?? null
     : null;
-  const recordWork = focusedWork ?? activeWork.find((work) => work.status === "active") ?? activeWork[0] ?? null;
+  const recordWork = focusedWork;
   const recordWorkId = recordWork?.id ?? null;
 
   const [mode, setMode] = useState<JobPhotosMode>("home");
@@ -842,6 +844,27 @@ export function JobPhotosTool({ activeWork, focusedActiveWorkId = null, autoOpen
       setAlbumsError(albumErrorMessage(err));
     } finally {
       setCreatingAlbum(false);
+    }
+  }
+
+  async function openStandaloneProject(options?: { launchCamera?: boolean }) {
+    if (!standaloneProject) return;
+    setAlbumLoading(true);
+    setAlbumsError("");
+    try {
+      let album = albums.find((item) => item.standaloneProjectId === standaloneProject.id) ?? null;
+      if (!album) {
+        album = await createAlbum(standaloneProject.title, standaloneProject.id);
+        setAlbums((current) => [album!, ...current.filter((item) => item.id !== album!.id)]);
+      }
+      const detail = await getAlbum(album.id);
+      setOpenAlbum(detail);
+      if (options?.launchCamera) setCameraLaunchToken((current) => current + 1);
+      setMode("album-detail");
+    } catch (error) {
+      setAlbumsError(albumErrorMessage(error));
+    } finally {
+      setAlbumLoading(false);
     }
   }
 
@@ -967,7 +990,7 @@ export function JobPhotosTool({ activeWork, focusedActiveWorkId = null, autoOpen
     return (
       <PhotoGallery
         title={openAlbum.name}
-        subtitle="Side work album"
+        subtitle={openAlbum.standaloneProjectId ? "Standalone project" : "Private album"}
         photos={albumPhotos}
         uploading={albumUploading}
         uploadError={albumUploadError}
@@ -975,6 +998,7 @@ export function JobPhotosTool({ activeWork, focusedActiveWorkId = null, autoOpen
         backLabel="Camera"
         onUploadFiles={handleAlbumFiles}
         onFileRef={(ref) => { albumFileRef.current = ref; }}
+        initialShowCameraToken={cameraLaunchToken}
       />
     );
   }
@@ -1029,15 +1053,6 @@ export function JobPhotosTool({ activeWork, focusedActiveWorkId = null, autoOpen
           <p className="v2-camera-live-command-copy">Photos save to this job's private project feed.</p>
           <button
             type="button"
-            className="v2-primary-button"
-            onClick={() => void openActiveJob({ launchCamera: true })}
-            disabled={projectLoading}
-          >
-            <Camera size={16} />
-            {projectLoading ? "Opening..." : "Open camera"}
-          </button>
-          <button
-            type="button"
             className="v2-camera-project-link"
             onClick={() => void openActiveJob()}
             disabled={projectLoading}
@@ -1046,6 +1061,18 @@ export function JobPhotosTool({ activeWork, focusedActiveWorkId = null, autoOpen
             Open project feed
           </button>
           {projectError ? <p className="v2-record-notice v2-job-photos-upload-error" role="alert">{projectError}</p> : null}
+        </section>
+      ) : standaloneProject ? (
+        <section className="v2-camera-home-panel v2-camera-live-command">
+          <div className="v2-job-photos-active-job-info">
+            <span className="v2-job-photos-active-badge">Standalone project</span>
+            <h2>{standaloneProject.title}</h2>
+            <small>{standaloneProject.clientName || standaloneProject.locationText || "Private off-platform work"} - {standaloneProject.photoCount} {standaloneProject.photoCount === 1 ? "photo" : "photos"}</small>
+          </div>
+          <p className="v2-camera-live-command-copy">Photos stay private in your RIVT account and are not shared with a marketplace job.</p>
+          <button type="button" className="v2-camera-project-link" onClick={() => void openStandaloneProject()} disabled={albumLoading}>
+            <FolderOpen size={16} />Open project feed
+          </button>
         </section>
       ) : (
         <section className="v2-camera-home-panel v2-camera-live-command">
@@ -1111,11 +1138,11 @@ export function JobPhotosTool({ activeWork, focusedActiveWorkId = null, autoOpen
         </section>
       ) : null}
 
-      <section className="v2-camera-home-panel">
+      {!recordWork && !standaloneProject ? <section className="v2-camera-home-panel">
         <div className="v2-camera-home-section-head">
           <h3>Private albums</h3>
         </div>
-        <details className="v2-camera-albums-fold" open={!recordWork}>
+        <details className="v2-camera-albums-fold" open>
           <summary className="v2-camera-albums-summary">
             <span>
               <strong>{albums.length ? `${albums.length} side-work ${albums.length === 1 ? "album" : "albums"}` : "Keep side-work albums separate"}</strong>
@@ -1163,7 +1190,25 @@ export function JobPhotosTool({ activeWork, focusedActiveWorkId = null, autoOpen
             )}
           </div>
         </details>
-      </section>
+      </section> : null}
+      <div className="v2-tool-action-dock v2-camera-action-dock" aria-label="Camera actions">
+        <span>
+          <strong>{recordWork?.job?.title ?? standaloneProject?.title ?? "Private album"}</strong>
+          <small>{recordWork ? "RIVT workspace" : standaloneProject ? "Standalone project" : "Choose a private album"}</small>
+        </span>
+        <button
+          type="button"
+          className="v2-primary-button"
+          disabled={projectLoading || albumLoading}
+          onClick={() => {
+            if (recordWork) void openActiveJob({ launchCamera: true });
+            else if (standaloneProject) void openStandaloneProject({ launchCamera: true });
+            else setShowNewAlbum(true);
+          }}
+        >
+          <Camera size={18} />{recordWork || standaloneProject ? "Open camera" : "New album"}
+        </button>
+      </div>
     </div>
   );
 }

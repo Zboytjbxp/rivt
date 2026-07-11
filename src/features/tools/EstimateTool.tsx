@@ -1,10 +1,12 @@
-import { Copy, FileText } from "lucide-react";
+import { Copy, FileText, Save } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Panel } from "../../components/ui";
 import type { Job } from "../../types";
 import { readPrimaryHourlyRate } from "../../lib/rateCard";
 import { getEstimatePriceSignal } from "./priceGuidance";
 import { centsToDollars, currency, formatQuantity, toCents } from "./money";
+import { upsertToolRecord } from "./tool-records-api";
+import { toolContextLabel, toolContextRecordFields, toolContextStorageId, type ToolWorkContext } from "./tool-work-context";
 
 function formatNumber(value: number, digits = 1) {
   return Number.isInteger(value) ? String(value) : value.toFixed(digits);
@@ -37,6 +39,30 @@ interface EstimatePrefs {
 
 const estimatePrefsStorageKey = "rivt.estimatePrefs.v1";
 
+interface EstimateDraftState {
+  laborHours: number;
+  hourlyRate: number;
+  crewSize: number;
+  materials: number;
+  subCosts: number;
+  overheadPct: number;
+  marginPct: number;
+  contingencyPct: number;
+}
+
+function estimateDraftStorageKey(context: ToolWorkContext) {
+  return `rivt.estimateDraft.v2:${toolContextStorageId(context)}`;
+}
+
+function readEstimateDraft(context: ToolWorkContext): Partial<EstimateDraftState> {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(estimateDraftStorageKey(context)) || "{}") as Partial<EstimateDraftState>;
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
 function clampEstimateNumber(value: unknown, fallback: number, min = 0) {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? Math.max(min, parsed) : fallback;
@@ -68,21 +94,24 @@ function readEstimatePrefs(): EstimatePrefs {
 
 export function EstimateTool({
   activeJob,
+  workContext,
   onConvertToInvoice,
 }: {
   activeJob: Job | null;
+  workContext: ToolWorkContext;
   onConvertToInvoice?: (draft: EstimateInvoiceDraft) => void;
 }) {
   const [estimatePrefs] = useState(readEstimatePrefs);
-  const [laborHours, setLaborHours] = useState(activeJob?.durationHours ?? 8);
-  const [hourlyRate, setHourlyRate] = useState(estimatePrefs.hourlyRate);
-  const [crewSize, setCrewSize] = useState(estimatePrefs.crewSize);
-  const [materials, setMaterials] = useState(activeJob ? Math.round(activeJob.pay * 0.22) : 250);
-  const [subCosts, setSubCosts] = useState(0);
-  const [overheadPct, setOverheadPct] = useState(estimatePrefs.overheadPct);
-  const [marginPct, setMarginPct] = useState(estimatePrefs.marginPct);
-  const [contingencyPct, setContingencyPct] = useState(estimatePrefs.contingencyPct);
-  const [copied, setCopied] = useState(false);
+  const [initialDraft] = useState(() => readEstimateDraft(workContext));
+  const [laborHours, setLaborHours] = useState(initialDraft.laborHours ?? activeJob?.durationHours ?? 8);
+  const [hourlyRate, setHourlyRate] = useState(initialDraft.hourlyRate ?? estimatePrefs.hourlyRate);
+  const [crewSize, setCrewSize] = useState(initialDraft.crewSize ?? estimatePrefs.crewSize);
+  const [materials, setMaterials] = useState(initialDraft.materials ?? (activeJob ? Math.round(activeJob.pay * 0.22) : 250));
+  const [subCosts, setSubCosts] = useState(initialDraft.subCosts ?? 0);
+  const [overheadPct, setOverheadPct] = useState(initialDraft.overheadPct ?? estimatePrefs.overheadPct);
+  const [marginPct, setMarginPct] = useState(initialDraft.marginPct ?? estimatePrefs.marginPct);
+  const [contingencyPct, setContingencyPct] = useState(initialDraft.contingencyPct ?? estimatePrefs.contingencyPct);
+  const [saveMessage, setSaveMessage] = useState("Autosaved on this device.");
 
   useEffect(() => {
     try {
@@ -97,6 +126,15 @@ export function EstimateTool({
       // Estimate preferences are optional; defaults still work when storage is unavailable.
     }
   }, [contingencyPct, crewSize, hourlyRate, marginPct, overheadPct]);
+
+  useEffect(() => {
+    const draft: EstimateDraftState = { laborHours, hourlyRate, crewSize, materials, subCosts, overheadPct, marginPct, contingencyPct };
+    try {
+      localStorage.setItem(estimateDraftStorageKey(workContext), JSON.stringify(draft));
+    } catch {
+      // The in-memory draft remains usable when device storage is unavailable.
+    }
+  }, [contingencyPct, crewSize, hourlyRate, laborHours, marginPct, materials, overheadPct, subCosts, workContext]);
 
   const labor = laborHours * hourlyRate;
   const base = labor + materials + subCosts;
@@ -119,7 +157,7 @@ export function EstimateTool({
 
   async function copySummary() {
     const summary = [
-      `RIVT estimate${activeJob ? ` - ${activeJob.title}` : ""}`,
+      `RIVT estimate - ${toolContextLabel(workContext)}`,
       `Target range: ${currency(low)} - ${currency(high)}`,
       `Target price: ${currency(target)}`,
       `Labor: ${formatQuantity(laborHours)} hrs at ${currency(hourlyRate)}/hr`,
@@ -129,14 +167,29 @@ export function EstimateTool({
     ].join("\n");
     try {
       await navigator.clipboard.writeText(summary);
-      setCopied(true);
+      setSaveMessage("Estimate copied.");
     } catch {
-      setCopied(false);
+      setSaveMessage("Copy failed. Select the estimate text and try again.");
     }
   }
 
+  async function saveDraft() {
+    const draft: EstimateDraftState = { laborHours, hourlyRate, crewSize, materials, subCosts, overheadPct, marginPct, contingencyPct };
+    const record = await upsertToolRecord({
+      recordType: "estimate",
+      localId: `estimate:${toolContextStorageId(workContext)}`,
+      title: `${toolContextLabel(workContext)} estimate`,
+      status: "draft",
+      recordDate: new Date().toISOString().slice(0, 10),
+      amountCents: toCents(target),
+      payload: { ...draft, target, low, high },
+      ...toolContextRecordFields(workContext),
+    });
+    setSaveMessage(record ? "Draft saved to your RIVT account." : "Saved on this device only. Account sync failed.");
+  }
+
   function convertToInvoice() {
-    const title = activeJob?.title?.trim() || "Estimate";
+    const title = activeJob?.title?.trim() || (workContext.kind === "standalone" ? workContext.project.title : "Estimate");
     const targetCents = Math.max(0, toCents(target));
     const baseLines = [
       {
@@ -182,7 +235,7 @@ export function EstimateTool({
     onConvertToInvoice?.({
       invoiceNumber: `RIVT-${Date.now().toString(36).toUpperCase()}`,
       templateName: `${title} invoice`,
-      billTo: activeJob?.contractor ?? "",
+      billTo: activeJob?.contractor ?? (workContext.kind === "standalone" ? workContext.project.clientName : ""),
       terms: "Due on completion",
       paymentMethod: "Direct payment",
       lines: draftLines,
@@ -197,18 +250,6 @@ export function EstimateTool({
           <span>Recommended target</span>
           <strong>{currency(target)}</strong>
           <small>{currency(low)} - {currency(high)} / {formatNumber(days, 1)} working days</small>
-          <div className="v2-estimate-hero-actions">
-            <button type="button" className="v2-primary-button" onClick={copySummary}>
-              <Copy size={15} />
-              {copied ? "Copied" : "Copy estimate"}
-            </button>
-            {onConvertToInvoice ? (
-              <button type="button" onClick={convertToInvoice} disabled={target <= 0}>
-                <FileText size={15} />
-                Convert to invoice
-              </button>
-            ) : null}
-          </div>
         </section>
 
         <div className="v2-estimate-quick-stats" aria-label="Estimate quick stats">
@@ -251,6 +292,12 @@ export function EstimateTool({
           <div><span>Contingency</span><strong>{currency(contingency)}</strong></div>
         </div>
       </Panel>
+      <div className="v2-tool-action-dock" aria-label="Estimate actions">
+        <span><strong>{currency(target)}</strong><small>{saveMessage}</small></span>
+        <button type="button" onClick={copySummary} aria-label="Copy estimate"><Copy size={18} /></button>
+        <button type="button" className="v2-primary-button" onClick={() => void saveDraft()}><Save size={18} />Save</button>
+        {onConvertToInvoice ? <button type="button" onClick={convertToInvoice} disabled={target <= 0} aria-label="Convert to invoice"><FileText size={18} />Invoice</button> : null}
+      </div>
     </div>
   );
 }

@@ -4,6 +4,7 @@ import { ApiError, asyncRoute, validate, z } from "./api.js";
 
 const albumCreateSchema = z.object({
   name: z.string().trim().min(1).max(120),
+  standaloneProjectId: z.uuid().nullable().optional().default(null),
 });
 
 async function mapAlbumRow(database, signedObjectUrl, row, { withPhotos = false } = {}) {
@@ -11,6 +12,7 @@ async function mapAlbumRow(database, signedObjectUrl, row, { withPhotos = false 
     id: row.id,
     accountId: row.account_id,
     name: row.name,
+    standaloneProjectId: row.standalone_project_id ?? null,
     photoCount: Number(row.photo_count ?? 0),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -76,9 +78,15 @@ export function registerAlbumRoutes({
     const input = validate(albumCreateSchema, request.body);
     const id = randomUUID();
     const row = await database.query(
-      `INSERT INTO photo_albums (id, account_id, name) VALUES ($1, $2, $3) RETURNING *`,
-      [id, request.actor.account.id, input.name],
+      `INSERT INTO photo_albums (id, account_id, name, standalone_project_id)
+       SELECT $1, $2, $3, sp.id
+       FROM (SELECT $4::uuid AS requested_id) requested
+       LEFT JOIN standalone_projects sp ON sp.id = requested.requested_id AND sp.account_id = $2 AND sp.status = 'active'
+       WHERE requested.requested_id IS NULL OR sp.id IS NOT NULL
+       RETURNING *`,
+      [id, request.actor.account.id, input.name, input.standaloneProjectId],
     );
+    if (!row.rowCount) throw new ApiError(403, "STANDALONE_PROJECT_ACCESS_DENIED", "You cannot create an album for that standalone project.");
     response.status(201).json({
       data: { album: await mapAlbumRow(database, signedObjectUrl, { ...row.rows[0], photo_count: 0 }) },
       meta: { requestId: request.requestId },
