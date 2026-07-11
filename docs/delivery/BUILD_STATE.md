@@ -5,7 +5,7 @@ Current gate: Gate B controlled engagement
 Current phase: Packet 14 Field Camera is active. This pass rebuilds the live job photo capture experience around one-handed field use while preserving the existing project-media authorization and upload path.
 Active packet: `docs/delivery/packets/14_FIELD_CAMERA.md`
 Repository branch: `codex/field-camera`
-Production feature release commit: `4e0d079101fd065d7eb5b7bb7a7ee2d6bea8132b` verified with live `/api/health` and `npm run monitor:production`; docs-only evidence commits may supersede the served build SHA without changing runtime behavior.
+Production feature release commit: `dc009c799b856b45f64fda90ee22b8ff853ef4e8` verified with live `/api/health` and `npm run monitor:production`; docs-only evidence commits may supersede the served build SHA without changing runtime behavior.
 
 ## Packet 14 - Field Camera (Local Verification)
 
@@ -26,9 +26,14 @@ Production feature release commit: `4e0d079101fd065d7eb5b7bb7a7ee2d6bea8132b` ve
   failed-upload retry, saved confirmation, feed return, and no horizontal
   overflow. The aggregate `npm run test` exceeded its ten-minute wrapper
   without a failure or completion, so no aggregate-pass claim is made.
-- Deployment boundary: merge, confirm the served source SHA and production
-  monitor, then take a real camera photo into a legitimate active job on iOS
-  Safari/PWA and Android Chrome.
+- Production evidence: `master` serves exact source
+  `dc009c799b856b45f64fda90ee22b8ff853ef4e8`; health reports ready migration
+  `0025_project_financial_records`, PostgreSQL, S3-compatible object storage,
+  configured Sentry, and configured Web Push. The production monitor passed
+  with matching alerts enabled, controls off, seven anonymous private-route
+  checks, and a 569 ms duration.
+- Remaining field-proof boundary: take a real camera photo into a legitimate
+  active job on iOS Safari/PWA and Android Chrome.
 
 ## Packet 13 - Workflow Coherence (Production Verified)
 
