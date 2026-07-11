@@ -906,6 +906,7 @@ function PushNotificationsCard() {
     providerConfigured,
     supported,
     installedAsApp,
+    requiresHomeScreenInstall,
     subscribed,
     busy,
     loading,
@@ -931,7 +932,10 @@ function PushNotificationsCard() {
       {!providerConfigured && !loading ? (
         <p className="v2-push-note">Device delivery is not configured for this environment.</p>
       ) : null}
-      {providerConfigured && !supported ? (
+      {providerConfigured && requiresHomeScreenInstall ? (
+        <p className="v2-push-note">On iPhone or iPad: open the Share menu, choose <strong>Add to Home Screen</strong>, open RIVT from that app icon, then enable device alerts here.</p>
+      ) : null}
+      {providerConfigured && !supported && !requiresHomeScreenInstall ? (
         <p className="v2-push-note">
           {installedAsApp
             ? "This browser does not support device alerts."
@@ -945,7 +949,7 @@ function PushNotificationsCard() {
       {notice ? <p className="v2-push-notice" role="status">{notice}</p> : null}
 
       <div className="v2-push-actions">
-        {!subscribed && providerConfigured && supported && permission !== "denied" ? (
+        {!subscribed && providerConfigured && supported && !requiresHomeScreenInstall && permission !== "denied" ? (
           <button type="button" className="v2-primary-button" onClick={() => void requestAndSubscribe()} disabled={busy || loading}>
             <Bell size={16} />
             {busy ? "Enabling…" : "Enable device alerts"}

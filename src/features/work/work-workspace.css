@@ -1489,10 +1489,10 @@
   gap: 10px;
 }
 
-.v2-change-order-inputs label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--v2-text-muted); }
+.v2-change-order-inputs label { display: flex; min-width: 0; flex-direction: column; gap: 4px; font-size: 13px; color: var(--v2-text-muted); }
 .v2-change-order-inputs label.is-wide { grid-column: 1 / -1; }
 .v2-change-order-inputs input,
-.v2-change-order-inputs textarea { font-size: 13px; }
+.v2-change-order-inputs textarea { width: 100%; min-width: 0; box-sizing: border-box; font-size: 13px; }
 
 .v2-co-approved-delta {
   display: flex;
@@ -2174,6 +2174,7 @@
 
 .v2-site-contact-inputs label {
   display: flex;
+  min-width: 0;
   flex-direction: column;
   gap: 4px;
   font-size: 13px;
@@ -2183,6 +2184,9 @@
 
 .v2-site-contact-inputs input,
 .v2-site-contact-inputs select {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   padding: 8px 10px;
   border-radius: var(--v2-radius-md);
   border: 1px solid var(--v2-border);
@@ -2268,6 +2272,13 @@
 
 @media (max-width: 640px) {
   .v2-site-contact-inputs { grid-template-columns: 1fr 1fr; }
+}
+
+@media (max-width: 420px) {
+  .v2-change-order-inputs,
+  .v2-site-contact-inputs { grid-template-columns: 1fr; }
+
+  .v2-change-order-inputs label.is-wide { grid-column: auto; }
 }
 
 /* ── Job Templates ───────────────────────────────────────────────────────── */

@@ -22,6 +22,13 @@ function installedAsApp() {
   return window.matchMedia("(display-mode: standalone)").matches || navigatorWithStandalone.standalone === true;
 }
 
+function appleMobileDevice() {
+  if (typeof navigator === "undefined") return false;
+  const platform = navigator.userAgent || navigator.platform || "";
+  return /iPhone|iPad|iPod/i.test(platform)
+    || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+}
+
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
   const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
@@ -62,6 +69,9 @@ async function removeSubscription(endpoint: string) {
 }
 
 export function usePushNotifications() {
+  const isAppleMobile = appleMobileDevice();
+  const installed = installedAsApp();
+  const requiresHomeScreenInstall = isAppleMobile && !installed;
   const [permission, setPermission] = useState<PushPermission>(() => (
     typeof Notification === "undefined" ? "default" : Notification.permission as PushPermission
   ));
@@ -81,7 +91,7 @@ export function usePushNotifications() {
         if (cancelled) return;
         setProviderConfigured(config.configured);
         setPublicKey(config.publicKey);
-        if (!supported() || !config.configured) return;
+        if (!supported() || requiresHomeScreenInstall || !config.configured) return;
         const registration = await navigator.serviceWorker.ready;
         const current = await registration.pushManager.getSubscription();
         if (cancelled) return;
@@ -95,9 +105,13 @@ export function usePushNotifications() {
     }
     void hydrate();
     return () => { cancelled = true; };
-  }, []);
+  }, [requiresHomeScreenInstall]);
 
   async function requestAndSubscribe() {
+    if (requiresHomeScreenInstall) {
+      setError("On iPhone or iPad, add RIVT to your Home Screen and open it from the app icon before enabling device alerts.");
+      return;
+    }
     if (!supported()) {
       setError("Device alerts are not supported in this browser.");
       return;
@@ -181,7 +195,8 @@ export function usePushNotifications() {
     permission,
     providerConfigured,
     supported: supported(),
-    installedAsApp: installedAsApp(),
+    installedAsApp: installed,
+    requiresHomeScreenInstall,
     subscribed,
     busy,
     loading,
