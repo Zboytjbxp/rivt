@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Copy, Download, FileText, Mail, MessageSquare, Plus, Trash2 } from "lucide-react";
 import type { Job } from "../../types";
 import { Panel } from "../../components/ui";
@@ -7,6 +7,13 @@ import type { EstimateInvoiceDraft } from "./EstimateTool";
 import { clampNumber, currency, formatQuantity, toCents, centsToDollars } from "./money";
 import { getInvoiceLinePriceSignal } from "./priceGuidance";
 import { deleteToolRecordByLocalId, fetchToolRecords, upsertToolRecord, type ServerToolRecord } from "./tool-records-api";
+import {
+  createProjectInvoice,
+  getProjectForActiveWork,
+  recordProjectInvoicePayment,
+  updateProjectInvoiceStatus,
+  type ProjectInvoice,
+} from "./project-api";
 
 function numericValue(value: number, fallback = 0) {
   return Number.isFinite(value) ? Math.max(0, value) : fallback;
@@ -144,12 +151,15 @@ function invoiceLinesFromEstimate(draft: EstimateInvoiceDraft): InvoiceLine[] {
 export function InvoiceDraftTool({
   activeJob,
   estimateDraft = null,
+  activeWorkId = null,
 }: {
   activeJob: Job | null;
   estimateDraft?: EstimateInvoiceDraft | null;
+  activeWorkId?: string | null;
 }) {
   const [invoicePrefs] = useState(readInvoicePrefs);
   const [invoiceNumber, setInvoiceNumber] = useState(estimateDraft?.invoiceNumber ?? (activeJob ? `RIVT-${activeJob.id}` : "RIVT-DRAFT"));
+  const initialProjectInvoiceNumber = useRef(estimateDraft?.invoiceNumber ?? (activeJob ? `RIVT-${activeJob.id}` : "RIVT-DRAFT"));
   const [billTo, setBillTo] = useState(estimateDraft?.billTo ?? activeJob?.contractor ?? "");
   const [payTo, setPayTo] = useState(invoicePrefs.payTo);
   const [terms, setTerms] = useState(estimateDraft?.terms ?? invoicePrefs.terms);
@@ -165,6 +175,13 @@ export function InvoiceDraftTool({
   const [templateNotice, setTemplateNotice] = useState("");
   const [conversionNotice, setConversionNotice] = useState(estimateDraft?.sourceNote ?? "");
   const [lines, setLines] = useState<InvoiceLine[]>(() => estimateDraft ? invoiceLinesFromEstimate(estimateDraft) : defaultInvoiceLines(activeJob));
+  const [projectInvoice, setProjectInvoice] = useState<ProjectInvoice | null>(null);
+  const [projectInvoiceBusy, setProjectInvoiceBusy] = useState(false);
+  const [projectInvoiceNotice, setProjectInvoiceNotice] = useState("");
+  const [projectInvoiceError, setProjectInvoiceError] = useState("");
+  const [paymentAmount, setPaymentAmount] = useState("");
+  const [paymentMethodDraft, setPaymentMethodDraft] = useState("Direct payment");
+  const [paymentNote, setPaymentNote] = useState("");
 
   const subtotalCents = lines.reduce((sum, line) => sum + lineTotalCents(line), 0);
   const taxCents = Math.round(subtotalCents * (numericValue(taxPct) / 100));
@@ -205,6 +222,22 @@ export function InvoiceDraftTool({
   ].join("\n"), [activeJob, billTo, invoiceNumber, lines, paymentMethod, payTo, subtotal, tax, terms, total]);
   const emailHref = `mailto:${encodeURIComponent(recipientEmail)}?subject=${encodeURIComponent(`Invoice ${invoiceNumber}`)}&body=${encodeURIComponent(invoiceText)}`;
   const smsHref = `sms:${encodeURIComponent(recipientPhone)}?body=${encodeURIComponent(`RIVT invoice ${invoiceNumber}: ${currency(total)} due. ${terms}. ${paymentMethod}.`)}`;
+
+  useEffect(() => {
+    if (!activeWorkId) return;
+    let cancelled = false;
+    void getProjectForActiveWork(activeWorkId)
+      .then((project) => {
+        if (cancelled) return;
+        const existing = project.invoices.find((invoice) => invoice.invoiceNumber === initialProjectInvoiceNumber.current) ?? null;
+        setProjectInvoice(existing);
+        if (existing) setPaymentAmount((existing.balanceCents / 100).toFixed(2));
+      })
+      .catch(() => {
+        // A project is created only when the participant intentionally saves a job invoice.
+      });
+    return () => { cancelled = true; };
+  }, [activeWorkId]);
 
   useEffect(() => {
     try {
@@ -326,7 +359,7 @@ export function InvoiceDraftTool({
 
   function startBlankInvoice() {
     const latestPrefs = readInvoicePrefs();
-    setInvoiceNumber("RIVT-DRAFT");
+    setInvoiceNumber(`RIVT-${crypto.randomUUID().slice(0, 8).toUpperCase()}`);
     setBillTo("");
     setPayTo(latestPrefs.payTo);
     setTerms(latestPrefs.terms);
@@ -338,6 +371,92 @@ export function InvoiceDraftTool({
     setLines(defaultInvoiceLines(null));
     setConversionNotice("");
     setTemplateNotice("Blank invoice started.");
+    setProjectInvoice(null);
+    setProjectInvoiceNotice("");
+    setProjectInvoiceError("");
+  }
+
+  function projectInvoiceInput() {
+    return {
+      invoiceNumber: invoiceNumber.trim() || "RIVT-DRAFT",
+      billTo: billTo.trim(),
+      payTo: payTo.trim(),
+      terms: terms.trim(),
+      paymentMethod: paymentMethod.trim(),
+      recipientEmail: recipientEmail.trim(),
+      recipientPhone: recipientPhone.trim(),
+      taxCents,
+      lineItems: lines.map((line) => ({
+        description: line.description.trim() || "Line item",
+        quantity: numericValue(line.qty),
+        rateCents: toCents(numericValue(line.rate)),
+        kind: line.kind ?? "other",
+      })),
+      sourceEstimate: estimateDraft
+        ? { source: "estimate", sourceNote: estimateDraft.sourceNote, convertedAt: new Date().toISOString() }
+        : {},
+    };
+  }
+
+  async function saveToActiveWork() {
+    if (!activeWorkId) return;
+    setProjectInvoiceBusy(true);
+    setProjectInvoiceError("");
+    setProjectInvoiceNotice("");
+    try {
+      const saved = await createProjectInvoice(activeWorkId, projectInvoiceInput());
+      setProjectInvoice(saved);
+      setPaymentAmount((saved.balanceCents / 100).toFixed(2));
+      setProjectInvoiceNotice("Invoice saved to this job workspace.");
+    } catch (error) {
+      setProjectInvoiceError(error instanceof Error ? error.message : "RIVT could not save this invoice to the job.");
+    } finally {
+      setProjectInvoiceBusy(false);
+    }
+  }
+
+  async function markProjectInvoiceSent() {
+    if (!projectInvoice) return;
+    setProjectInvoiceBusy(true);
+    setProjectInvoiceError("");
+    setProjectInvoiceNotice("");
+    try {
+      const updated = await updateProjectInvoiceStatus(projectInvoice.id, "sent");
+      setProjectInvoice(updated);
+      setProjectInvoiceNotice("Marked sent in the shared job record.");
+    } catch (error) {
+      setProjectInvoiceError(error instanceof Error ? error.message : "RIVT could not update this invoice.");
+    } finally {
+      setProjectInvoiceBusy(false);
+    }
+  }
+
+  async function recordExternalPayment() {
+    if (!projectInvoice) return;
+    const amountCents = toCents(Math.max(0, Number(paymentAmount) || 0));
+    if (!amountCents) {
+      setProjectInvoiceError("Enter the amount received before recording an external payment.");
+      return;
+    }
+    setProjectInvoiceBusy(true);
+    setProjectInvoiceError("");
+    setProjectInvoiceNotice("");
+    try {
+      const updated = await recordProjectInvoicePayment(projectInvoice.id, {
+        amountCents,
+        paymentDate: new Date().toISOString().slice(0, 10),
+        method: paymentMethodDraft.trim() || "Direct payment",
+        note: paymentNote.trim(),
+      });
+      setProjectInvoice(updated);
+      setPaymentAmount((updated.balanceCents / 100).toFixed(2));
+      setPaymentNote("");
+      setProjectInvoiceNotice(updated.balanceCents === 0 ? "Invoice marked paid from the recorded external payments." : "External payment recorded in the shared job record.");
+    } catch (error) {
+      setProjectInvoiceError(error instanceof Error ? error.message : "RIVT could not record that payment.");
+    } finally {
+      setProjectInvoiceBusy(false);
+    }
   }
 
   async function copyInvoice() {
@@ -380,6 +499,33 @@ export function InvoiceDraftTool({
             <button type="button" onClick={printInvoice}><FileText size={15} />Print</button>
           </div>
         </section>
+
+        {activeWorkId ? (
+          <section className="v2-invoice-project-record" aria-label="Job invoice record">
+            <div>
+              <span>Job invoice record</span>
+              <strong>{projectInvoice ? `${projectInvoice.status} - ${currency(projectInvoice.balanceCents / 100)} remaining` : "Not saved to this job yet"}</strong>
+              <small>RIVT records external payments only. It does not collect, hold, or confirm funds.</small>
+            </div>
+            <div className="v2-tool-action-row">
+              <button type="button" className="v2-primary-button" onClick={() => void saveToActiveWork()} disabled={projectInvoiceBusy || totalCents <= 0 || Boolean(projectInvoice)}>
+                {projectInvoiceBusy ? "Saving..." : projectInvoice ? "Saved to job" : "Save to job"}
+              </button>
+              {projectInvoice ? <button type="button" onClick={startBlankInvoice} disabled={projectInvoiceBusy}>New invoice</button> : null}
+              {projectInvoice && projectInvoice.status === "draft" ? <button type="button" onClick={() => void markProjectInvoiceSent()} disabled={projectInvoiceBusy}>Mark sent</button> : null}
+            </div>
+            {projectInvoice ? (
+              <div className="v2-invoice-payment-record">
+                <label>Amount received<input inputMode="decimal" value={paymentAmount} onChange={(event) => setPaymentAmount(event.target.value)} aria-label="External payment amount" /></label>
+                <label>Method<input value={paymentMethodDraft} onChange={(event) => setPaymentMethodDraft(event.target.value)} /></label>
+                <label>Note<input value={paymentNote} onChange={(event) => setPaymentNote(event.target.value)} placeholder="Optional reference" /></label>
+                <button type="button" onClick={() => void recordExternalPayment()} disabled={projectInvoiceBusy || projectInvoice.status === "void" || projectInvoice.balanceCents <= 0}>Record external payment</button>
+              </div>
+            ) : null}
+            {projectInvoiceNotice ? <p className="v2-record-notice" role="status">{projectInvoiceNotice}</p> : null}
+            {projectInvoiceError ? <p className="v2-record-error" role="alert">{projectInvoiceError}</p> : null}
+          </section>
+        ) : null}
 
         {conversionNotice ? (
           <div className="v2-converted-estimate-note" role="status">

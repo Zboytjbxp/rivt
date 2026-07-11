@@ -30,13 +30,16 @@ import { readPrimaryHourlyRate } from "../../lib/rateCard";
 import { listActiveWork, type CanonicalActiveWork } from "../work/job-api";
 import {
   addProjectNote,
+  getActiveWorkReviewContext,
   getProjectReport,
   openProjectForActiveWork,
   ProjectApiError,
   resolveProjectCompletion,
+  submitActiveWorkReview,
   submitProjectCompletion,
   uploadProjectMedia,
   type ProjectRecord,
+  type ReviewContext,
 } from "./project-api";
 import { FieldCalculatorTool } from "./FieldCalculatorTool";
 import { EstimateTool, type EstimateInvoiceDraft } from "./EstimateTool";
@@ -2806,6 +2809,9 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
   const [completionNote, setCompletionNote] = useState("");
   const [resolutionNote, setResolutionNote] = useState("");
   const [completionChecklist, setCompletionChecklist] = useState<CompletionChecklistState>(defaultCompletionChecklist);
+  const [reviewContext, setReviewContext] = useState<ReviewContext | null>(null);
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewBody, setReviewBody] = useState("");
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const noteTextareaRef = useRef<HTMLTextAreaElement | null>(null);
   const autoOpenedRecordRef = useRef<string | null>(null);
@@ -2943,6 +2949,9 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
     setResolutionNote("");
     setReportPreview(null);
     setCompletionChecklist({ ...defaultCompletionChecklist, photosProvided: hasStoredMedia });
+    setReviewContext(null);
+    setReviewRating(5);
+    setReviewBody("");
   }
 
   async function handleOpenRecord(work: CanonicalActiveWork) {
@@ -2954,6 +2963,10 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
       const project = await openProjectForActiveWork(work.id);
       setSelectedProject(project);
       resetRecordForms(project);
+      if (project.status === "confirmed") {
+        const context = await getActiveWorkReviewContext(work.id);
+        setReviewContext(context);
+      }
     } catch (error) {
       setRecordsError(projectErrorMessage(error));
     } finally {
@@ -2979,7 +2992,7 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
       setRecordNotice(null);
       setReportPreview(null);
       openProjectForActiveWork(work.id)
-        .then((project) => {
+        .then(async (project) => {
           if (cancelled) return;
           const hasStoredMedia = project.media.some((item) => item.status === "stored");
           setSelectedProject(project);
@@ -2989,6 +3002,10 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
           setResolutionNote("");
           setReportPreview(null);
           setCompletionChecklist({ ...defaultCompletionChecklist, photosProvided: hasStoredMedia });
+          if (project.status === "confirmed") {
+            const context = await getActiveWorkReviewContext(work.id);
+            if (!cancelled) setReviewContext(context);
+          }
         })
         .catch((error) => {
           if (!cancelled) setRecordsError(projectErrorMessage(error));
@@ -3085,6 +3102,31 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
       await refreshSelectedProject();
       setResolutionNote("");
       setRecordNotice(decision === "confirm" ? "Completion confirmed and recorded." : "Completion dispute recorded.");
+      if (decision === "confirm") {
+        setReviewContext(await getActiveWorkReviewContext(selectedProject.activeWorkId));
+      }
+    } catch (error) {
+      setRecordsError(projectErrorMessage(error));
+    } finally {
+      setProjectAction(null);
+    }
+  }
+
+  async function handleSubmitReview() {
+    if (!selectedProject || !reviewContext?.eligible || reviewContext.hasSubmitted || !reviewContext.counterparty || !reviewBody.trim()) return;
+    setProjectAction("review");
+    setRecordsError(null);
+    setRecordNotice(null);
+    try {
+      await submitActiveWorkReview(selectedProject.activeWorkId, {
+        revieweeAccountId: reviewContext.counterparty.accountId,
+        rating: reviewRating,
+        body: reviewBody.trim(),
+        consentVersion: "2026-06-19",
+      });
+      setReviewContext((current) => current ? { ...current, hasSubmitted: true } : current);
+      setReviewBody("");
+      setRecordNotice("Review submitted for the other participant to approve before it is public.");
     } catch (error) {
       setRecordsError(projectErrorMessage(error));
     } finally {
@@ -3177,6 +3219,30 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
                   <MetricTile value={storedMedia.length} label="stored files" />
                   <MetricTile value={selectedCompletion?.status ?? "open"} label="completion status" />
                 </div>
+
+                {selectedProject.invoices.length ? (
+                  <section className="v2-record-card v2-record-financial-card" aria-label="Job invoices and external payment records">
+                    <header>
+                      <span><ReceiptText size={16} /> Money record</span>
+                      <small>External payments only</small>
+                    </header>
+                    <div className="v2-record-financial-list">
+                      {selectedProject.invoices.map((invoice) => (
+                        <article key={invoice.id}>
+                          <span>
+                            <strong>{invoice.invoiceNumber}</strong>
+                            <small>{invoice.status} - {invoice.payments.length} payment record{invoice.payments.length === 1 ? "" : "s"}</small>
+                          </span>
+                          <span>
+                            <strong>{currency(invoice.totalCents / 100)}</strong>
+                            <small>{invoice.balanceCents > 0 ? `${currency(invoice.balanceCents / 100)} remaining` : "Paid in record"}</small>
+                          </span>
+                        </article>
+                      ))}
+                    </div>
+                    <p className="v2-tool-note">Both participants can see the record. RIVT does not process, hold, or verify payment funds.</p>
+                  </section>
+                ) : null}
 
                 <section className="v2-record-proof-card" aria-label="Job proof packet">
                   <div className="v2-record-proof-copy">
@@ -3329,6 +3395,28 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
                       <p className="v2-tool-note">No completion has been submitted for this record yet.</p>
                     )}
                   </section>
+
+                  {reviewContext?.eligible && reviewContext.counterparty ? (
+                    <section className="v2-record-card v2-record-review-card">
+                      <header>
+                        <span><CheckCircle2 size={16} /> Close out with a review</span>
+                        <small>{reviewContext.hasSubmitted ? "Review submitted" : `For ${reviewContext.counterparty.displayName}`}</small>
+                      </header>
+                      {reviewContext.hasSubmitted ? (
+                        <p className="v2-tool-note">Your review is waiting for the other participant to approve before it appears on their profile.</p>
+                      ) : (
+                        <>
+                          <div className="v2-record-review-rating" aria-label="Review rating">
+                            {[1, 2, 3, 4, 5].map((rating) => (
+                              <button key={rating} type="button" className={reviewRating === rating ? "is-selected" : ""} onClick={() => setReviewRating(rating)} aria-label={`${rating} star${rating === 1 ? "" : "s"}`}>{rating}</button>
+                            ))}
+                          </div>
+                          <textarea value={reviewBody} onChange={(event) => setReviewBody(event.target.value)} placeholder="Describe the work relationship clearly and fairly..." rows={4} />
+                          <button type="button" className="v2-primary-button" onClick={() => void handleSubmitReview()} disabled={actionBusy || !reviewBody.trim()}>Submit review</button>
+                        </>
+                      )}
+                    </section>
+                  ) : null}
                 </div>
 
                 {latestEntry ? (
@@ -3377,7 +3465,7 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
       },
       invoice: {
         title: "Invoice draft",
-        node: <InvoiceDraftTool key={`invoice:${activeJobScopeKey}`} activeJob={activeJob} estimateDraft={convertedEstimateDraft} />,
+        node: <InvoiceDraftTool key={`invoice:${activeJobScopeKey}`} activeJob={activeJob} estimateDraft={convertedEstimateDraft} activeWorkId={focusedActiveWorkId} />,
       },
       "daily-log": {
         title: "Daily log",

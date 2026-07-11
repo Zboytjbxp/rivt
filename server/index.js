@@ -109,6 +109,13 @@ import {
   projectEntryCreateSchema,
 } from "./projects.js";
 import {
+  invoiceSubtotalCents,
+  mapProjectInvoice,
+  projectInvoiceCreateSchema,
+  projectInvoicePaymentSchema,
+  projectInvoiceStatusSchema,
+} from "./project-financials.js";
+import {
   adminAccountTypeChangeSchema,
   adminReviewResolveSchema,
   adminSupportCaseEventSchema,
@@ -1916,8 +1923,43 @@ async function ensureProjectForActiveWork(client, activeWorkId, actor) {
   return loadProjectById(client, projectId, actor);
 }
 
+async function mapProjectInvoicesWithPayments(client, invoiceRows) {
+  if (!invoiceRows.length) return [];
+  const invoiceIds = invoiceRows.map((invoice) => invoice.id);
+  const payments = await client.query(
+    `SELECT * FROM project_invoice_payments
+     WHERE invoice_id = ANY($1::uuid[])
+     ORDER BY payment_date ASC, created_at ASC, id ASC`,
+    [invoiceIds],
+  );
+  const byInvoiceId = new Map();
+  for (const payment of payments.rows) {
+    const list = byInvoiceId.get(payment.invoice_id) ?? [];
+    list.push(payment);
+    byInvoiceId.set(payment.invoice_id, list);
+  }
+  return invoiceRows.map((invoice) => mapProjectInvoice(invoice, byInvoiceId.get(invoice.id) ?? []));
+}
+
+async function loadProjectInvoiceById(client, invoiceId, actor, { forUpdate = false } = {}) {
+  const result = await client.query(
+    `SELECT pi.*, pr.organization_id, pr.contractor_account_id, pr.tradesperson_account_id,
+            pr.active_work_id, pr.job_id, j.title AS job_title, pl.city AS public_city, pl.region AS public_region
+     FROM project_invoices pi
+     INNER JOIN projects pr ON pr.id = pi.project_id
+     INNER JOIN jobs j ON j.id = pr.job_id
+     INNER JOIN job_public_locations pl ON pl.job_id = j.id
+     INNER JOIN work_participants wp ON wp.active_work_id = pr.active_work_id
+     WHERE pi.id = $1 AND wp.account_id = $2
+     ${forUpdate ? "FOR UPDATE OF pi, pr" : ""}`,
+    [invoiceId, actor.account.id],
+  );
+  if (!result.rowCount) throw new ApiError(404, "PROJECT_INVOICE_NOT_FOUND", "Project invoice not found.");
+  return result.rows[0];
+}
+
 async function loadProjectBundle(client, project, actor) {
-  const [entries, media, submissions, resolutions] = await Promise.all([
+  const [entries, media, submissions, resolutions, invoices] = await Promise.all([
     client.query(
       `SELECT * FROM project_entries
        WHERE project_id = $1
@@ -1944,6 +1986,12 @@ async function loadProjectBundle(client, project, actor) {
        ORDER BY created_at ASC, id ASC`,
       [project.id],
     ),
+    client.query(
+      `SELECT * FROM project_invoices
+       WHERE project_id = $1
+       ORDER BY created_at ASC, id ASC`,
+      [project.id],
+    ),
   ]);
   const resolutionMap = new Map();
   for (const resolution of resolutions.rows) {
@@ -1966,6 +2014,7 @@ async function loadProjectBundle(client, project, actor) {
   const mappedProject = mapProject(project, {
     entries: entries.rows,
     submissions: submissionsWithResolutions,
+    invoices: await mapProjectInvoicesWithPayments(client, invoices.rows),
     actor,
   });
   return { ...mappedProject, media: mappedMedia };
@@ -2384,6 +2433,46 @@ app.get("/api/v1/reviews", requireV1AuthenticatedUser, requireV1Actor, asyncRout
   );
   response.json({
     data: { reviews: await mapReviewRows(database, rows.rows) },
+    meta: { requestId: request.requestId },
+  });
+}));
+
+app.get("/api/v1/active-work/:id/review-context", requireV1AuthenticatedUser, requireV1Actor, asyncRoute(async (request, response) => {
+  const activeWorkId = validate(z.uuid(), request.params.id);
+  const activeWork = await loadActiveWorkById(database, activeWorkId, request.actor);
+  const counterpartyAccountId = activeWork.contractor_account_id === request.actor.account.id
+    ? activeWork.tradesperson_account_id
+    : activeWork.contractor_account_id;
+  const [profile, existingReview] = await Promise.all([
+    database.query(
+      `SELECT account_id, display_name, headline
+       FROM profiles
+       WHERE account_id = $1`,
+      [counterpartyAccountId],
+    ),
+    database.query(
+      `SELECT id
+       FROM work_reviews
+       WHERE active_work_id = $1 AND reviewer_account_id = $2 AND reviewee_account_id = $3
+       LIMIT 1`,
+      [activeWorkId, request.actor.account.id, counterpartyAccountId],
+    ),
+  ]);
+  response.json({
+    data: {
+      reviewContext: {
+        activeWorkId,
+        eligible: activeWork.status === "completed",
+        hasSubmitted: Boolean(existingReview.rowCount),
+        counterparty: profile.rows[0]
+          ? {
+              accountId: profile.rows[0].account_id,
+              displayName: profile.rows[0].display_name,
+              headline: profile.rows[0].headline || "",
+            }
+          : null,
+      },
+    },
     meta: { requestId: request.requestId },
   });
 }));
@@ -4445,7 +4534,7 @@ app.post("/api/v1/projects/:id/completion/:submissionId/dispute", requireV1Authe
 app.get("/api/v1/projects/:id/report", requireV1AuthenticatedUser, requireV1Actor, asyncRoute(async (request, response) => {
   const projectId = validate(z.uuid(), request.params.id);
   const project = await loadProjectById(database, projectId, request.actor);
-  const [entries, media, submissions, resolutions] = await Promise.all([
+  const [entries, media, submissions, resolutions, invoices] = await Promise.all([
     database.query(
       "SELECT * FROM project_entries WHERE project_id = $1 ORDER BY created_at ASC, id ASC",
       [projectId],
@@ -4462,13 +4551,169 @@ app.get("/api/v1/projects/:id/report", requireV1AuthenticatedUser, requireV1Acto
       "SELECT * FROM project_completion_resolutions WHERE project_id = $1 ORDER BY created_at ASC, id ASC",
       [projectId],
     ),
+    database.query(
+      "SELECT * FROM project_invoices WHERE project_id = $1 ORDER BY created_at ASC, id ASC",
+      [projectId],
+    ),
   ]);
   response.json({
     data: {
-      report: buildCloseoutReport(project, entries.rows, media.rows, submissions.rows, resolutions.rows),
+      report: buildCloseoutReport(
+        project,
+        entries.rows,
+        media.rows,
+        submissions.rows,
+        resolutions.rows,
+        await mapProjectInvoicesWithPayments(database, invoices.rows),
+      ),
     },
     meta: { requestId: request.requestId },
   });
+}));
+
+app.post("/api/v1/active-work/:id/invoices", requireV1AuthenticatedUser, requireV1Actor, writeRateLimit, asyncRoute(async (request, response) => {
+  const activeWorkId = validate(z.uuid(), request.params.id);
+  const input = validate(projectInvoiceCreateSchema, request.body);
+  const result = await runIdempotentMutation(request, request.actor.account.id, `projects.invoice.create:${activeWorkId}`, async (client) => {
+    const project = await ensureProjectForActiveWork(client, activeWorkId, request.actor);
+    const subtotalCents = invoiceSubtotalCents(input.lineItems);
+    const totalCents = subtotalCents + input.taxCents;
+    if (subtotalCents > 1_000_000_000 || totalCents > 1_000_000_000) {
+      throw new ApiError(422, "INVOICE_TOTAL_TOO_LARGE", "Keep an invoice total at or below $10,000,000.00.");
+    }
+    if (totalCents <= 0) throw new ApiError(422, "INVOICE_TOTAL_REQUIRED", "Add at least one invoice line with a positive amount.");
+    const inserted = await client.query(
+      `INSERT INTO project_invoices (
+         project_id, active_work_id, created_by_account_id, invoice_number, bill_to, pay_to,
+         terms, payment_method, recipient_email, recipient_phone, line_items, source_estimate,
+         subtotal_cents, tax_cents, total_cents
+       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::jsonb, $12::jsonb, $13, $14, $15)
+       RETURNING *`,
+      [
+        project.id, activeWorkId, request.actor.account.id, input.invoiceNumber, input.billTo, input.payTo,
+        input.terms, input.paymentMethod, input.recipientEmail, input.recipientPhone,
+        JSON.stringify(input.lineItems), JSON.stringify(input.sourceEstimate), subtotalCents, input.taxCents, totalCents,
+      ],
+    );
+    const invoice = inserted.rows[0];
+    await client.query(
+      `INSERT INTO project_entries (project_id, active_work_id, actor_account_id, entry_type, body, metadata)
+       VALUES ($1, $2, $3, 'system', $4, $5::jsonb)`,
+      [project.id, activeWorkId, request.actor.account.id, `Invoice draft saved: ${invoice.invoice_number}.`, JSON.stringify({ invoiceId: invoice.id, totalCents, source: "project_invoice" })],
+    );
+    await client.query("UPDATE projects SET updated_at = now() WHERE id = $1", [project.id]);
+    await client.query(
+      `INSERT INTO audit_events (request_id, actor_account_id, organization_id, action, subject_type, subject_id, metadata)
+       VALUES ($1, $2::uuid, $3::uuid, 'project.invoice.created', 'project_invoice', ($4::uuid)::text, $5::jsonb)`,
+      [request.requestId, request.actor.account.id, project.organization_id, invoice.id, JSON.stringify({ projectId: project.id, activeWorkId, totalCents })],
+    );
+    return { status: 201, body: { data: { invoice: mapProjectInvoice(invoice) }, meta: { requestId: request.requestId } } };
+  });
+  sendIdempotentResult(response, result);
+}));
+
+app.patch("/api/v1/project-invoices/:id", requireV1AuthenticatedUser, requireV1Actor, writeRateLimit, asyncRoute(async (request, response) => {
+  const invoiceId = validate(z.uuid(), request.params.id);
+  const input = validate(projectInvoiceStatusSchema, request.body);
+  const result = await runIdempotentMutation(request, request.actor.account.id, `projects.invoice.status:${invoiceId}:${input.status}`, async (client) => {
+    const invoice = await loadProjectInvoiceById(client, invoiceId, request.actor, { forUpdate: true });
+    if (invoice.created_by_account_id !== request.actor.account.id) throw new ApiError(403, "PROJECT_INVOICE_AUTHOR_REQUIRED", "Only the invoice author can change its status.");
+    if (invoice.status === "paid" && input.status !== "paid") throw new ApiError(409, "PROJECT_INVOICE_ALREADY_PAID", "A paid invoice cannot be changed here.");
+    const updated = await client.query(
+      `UPDATE project_invoices
+       SET status = $2,
+           sent_at = CASE WHEN $2 = 'sent' AND sent_at IS NULL THEN now() ELSE sent_at END,
+           voided_at = CASE WHEN $2 = 'void' THEN now() ELSE voided_at END,
+           updated_at = now()
+       WHERE id = $1
+       RETURNING *`,
+      [invoiceId, input.status],
+    );
+    await client.query(
+      `INSERT INTO project_entries (project_id, active_work_id, actor_account_id, entry_type, body, metadata)
+       VALUES ($1, $2, $3, 'system', $4, $5::jsonb)`,
+      [invoice.project_id, invoice.active_work_id, request.actor.account.id, input.status === "sent" ? `Invoice sent: ${invoice.invoice_number}.` : input.status === "void" ? `Invoice voided: ${invoice.invoice_number}.` : `Invoice saved as draft: ${invoice.invoice_number}.`, JSON.stringify({ invoiceId, status: input.status, source: "project_invoice" })],
+    );
+    await client.query("UPDATE projects SET updated_at = now() WHERE id = $1", [invoice.project_id]);
+    if (input.status === "sent") {
+      const recipientAccountId = invoice.contractor_account_id === request.actor.account.id ? invoice.tradesperson_account_id : invoice.contractor_account_id;
+      await createInAppNotification(client, {
+        accountId: recipientAccountId,
+        type: "work",
+        title: "Invoice recorded",
+        body: `${invoice.job_title} - ${invoice.public_city}, ${invoice.public_region}`,
+        actionHref: `/app/tools/records?activeWork=${invoice.active_work_id}&project=${invoice.project_id}`,
+        sourceType: "project_invoice",
+        sourceId: invoiceId,
+        priority: "normal",
+        metadata: { activeWorkId: invoice.active_work_id, projectId: invoice.project_id, invoiceId },
+      });
+    }
+    await client.query(
+      `INSERT INTO audit_events (request_id, actor_account_id, organization_id, action, subject_type, subject_id, metadata)
+       VALUES ($1, $2::uuid, $3::uuid, 'project.invoice.status_changed', 'project_invoice', ($4::uuid)::text, $5::jsonb)`,
+      [request.requestId, request.actor.account.id, invoice.organization_id, invoiceId, JSON.stringify({ status: input.status })],
+    );
+    const [mapped] = await mapProjectInvoicesWithPayments(client, updated.rows);
+    return { status: 200, body: { data: { invoice: mapped }, meta: { requestId: request.requestId } } };
+  });
+  sendIdempotentResult(response, result);
+}));
+
+app.post("/api/v1/project-invoices/:id/payments", requireV1AuthenticatedUser, requireV1Actor, writeRateLimit, asyncRoute(async (request, response) => {
+  const invoiceId = validate(z.uuid(), request.params.id);
+  const input = validate(projectInvoicePaymentSchema, request.body);
+  const result = await runIdempotentMutation(request, request.actor.account.id, `projects.invoice.payment:${invoiceId}`, async (client) => {
+    const invoice = await loadProjectInvoiceById(client, invoiceId, request.actor, { forUpdate: true });
+    if (invoice.status === "void") throw new ApiError(409, "PROJECT_INVOICE_VOID", "A void invoice cannot receive a payment record.");
+    const paymentTotal = (await client.query("SELECT COALESCE(sum(amount_cents), 0)::int AS paid_cents FROM project_invoice_payments WHERE invoice_id = $1", [invoiceId])).rows[0].paid_cents;
+    if (Number(paymentTotal) + input.amountCents > Number(invoice.total_cents)) throw new ApiError(422, "PROJECT_PAYMENT_EXCEEDS_INVOICE", "The payment record cannot exceed the invoice total.");
+    const inserted = await client.query(
+      `INSERT INTO project_invoice_payments (
+         invoice_id, project_id, active_work_id, recorded_by_account_id, amount_cents, payment_date, method, note
+       ) VALUES ($1, $2, $3, $4, $5, $6::date, $7, $8)
+       RETURNING *`,
+      [invoiceId, invoice.project_id, invoice.active_work_id, request.actor.account.id, input.amountCents, input.paymentDate, input.method, input.note],
+    );
+    const nextPaidCents = Number(paymentTotal) + input.amountCents;
+    const nextStatus = nextPaidCents === Number(invoice.total_cents) ? "paid" : (invoice.status === "draft" ? "sent" : invoice.status);
+    const updated = await client.query(
+      `UPDATE project_invoices
+       SET status = $2,
+           sent_at = CASE WHEN $2 IN ('sent', 'paid') AND sent_at IS NULL THEN now() ELSE sent_at END,
+           paid_at = CASE WHEN $2 = 'paid' THEN now() ELSE paid_at END,
+           updated_at = now()
+       WHERE id = $1
+       RETURNING *`,
+      [invoiceId, nextStatus],
+    );
+    await client.query(
+      `INSERT INTO project_entries (project_id, active_work_id, actor_account_id, entry_type, body, metadata)
+       VALUES ($1, $2, $3, 'system', $4, $5::jsonb)`,
+      [invoice.project_id, invoice.active_work_id, request.actor.account.id, `External payment recorded for ${invoice.invoice_number}: $${(input.amountCents / 100).toFixed(2)}.`, JSON.stringify({ invoiceId, paymentId: inserted.rows[0].id, amountCents: input.amountCents, source: "participant_recorded_external_payment" })],
+    );
+    await client.query("UPDATE projects SET updated_at = now() WHERE id = $1", [invoice.project_id]);
+    const recipientAccountId = invoice.contractor_account_id === request.actor.account.id ? invoice.tradesperson_account_id : invoice.contractor_account_id;
+    await createInAppNotification(client, {
+      accountId: recipientAccountId,
+      type: "work",
+      title: "Payment record added",
+      body: `${invoice.job_title} - ${invoice.public_city}, ${invoice.public_region}`,
+      actionHref: `/app/tools/records?activeWork=${invoice.active_work_id}&project=${invoice.project_id}`,
+      sourceType: "project_invoice",
+      sourceId: invoiceId,
+      priority: "normal",
+      metadata: { activeWorkId: invoice.active_work_id, projectId: invoice.project_id, invoiceId, paymentId: inserted.rows[0].id },
+    });
+    await client.query(
+      `INSERT INTO audit_events (request_id, actor_account_id, organization_id, action, subject_type, subject_id, metadata)
+       VALUES ($1, $2::uuid, $3::uuid, 'project.invoice.payment_recorded', 'project_invoice', ($4::uuid)::text, $5::jsonb)`,
+      [request.requestId, request.actor.account.id, invoice.organization_id, invoiceId, JSON.stringify({ paymentId: inserted.rows[0].id, amountCents: input.amountCents })],
+    );
+    const [mapped] = await mapProjectInvoicesWithPayments(client, updated.rows);
+    return { status: 201, body: { data: { invoice: mapped }, meta: { requestId: request.requestId } } };
+  });
+  sendIdempotentResult(response, result);
 }));
 
 // ─── Photo Albums ────────────────────────────────────────────────────────────

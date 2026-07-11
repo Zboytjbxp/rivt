@@ -358,8 +358,96 @@ if (!testDatabaseUrl) {
     assert.equal(confirmedNotification.actionHref, `/app/tools/records?activeWork=${activeWork.id}&project=${project.id}`);
     assert.equal(confirmedNotification.metadata.projectId, project.id);
 
+    const reviewContext = await requestJson(baseUrl, `/api/v1/active-work/${activeWork.id}/review-context`, { cookie: tradesperson.cookie });
+    assert.equal(reviewContext.response.status, 200);
+    assert.equal(reviewContext.payload.data.reviewContext.eligible, true);
+    assert.equal(reviewContext.payload.data.reviewContext.hasSubmitted, false);
+    assert.equal(reviewContext.payload.data.reviewContext.counterparty.accountId, contractor.id);
+
+    const outsiderInvoice = await requestJson(baseUrl, `/api/v1/active-work/${activeWork.id}/invoices`, {
+      method: "POST",
+      cookie: outsider.cookie,
+      idempotencyKey: `invoice-outsider-${randomUUID()}`,
+      body: {
+        invoiceNumber: "OUTSIDER-1",
+        lineItems: [{ description: "Not allowed", quantity: 1, rateCents: 100 }],
+      },
+    });
+    assert.equal(outsiderInvoice.response.status, 404);
+
+    const invoice = await requestJson(baseUrl, `/api/v1/active-work/${activeWork.id}/invoices`, {
+      method: "POST",
+      cookie: tradesperson.cookie,
+      idempotencyKey: `invoice-create-${randomUUID()}`,
+      body: {
+        invoiceNumber: "CLOSEOUT-001",
+        billTo: "Project Contractor LLC",
+        payTo: "Project Electrician",
+        terms: "Due on completion",
+        paymentMethod: "Direct payment",
+        taxCents: 500,
+        lineItems: [
+          { description: "Panel labor", quantity: 8, rateCents: 8500, kind: "labor" },
+          { description: "Labels", quantity: 1, rateCents: 1200, kind: "material" },
+        ],
+      },
+    });
+    assert.equal(invoice.response.status, 201);
+    assert.equal(invoice.payload.data.invoice.totalCents, 69700);
+    assert.equal(invoice.payload.data.invoice.status, "draft");
+    const invoiceId = invoice.payload.data.invoice.id;
+
+    const contractorInvoiceStatus = await requestJson(baseUrl, `/api/v1/project-invoices/${invoiceId}`, {
+      method: "PATCH",
+      cookie: contractor.cookie,
+      idempotencyKey: `invoice-contractor-status-${randomUUID()}`,
+      body: { status: "sent" },
+    });
+    assert.equal(contractorInvoiceStatus.response.status, 403);
+
+    const sentInvoice = await requestJson(baseUrl, `/api/v1/project-invoices/${invoiceId}`, {
+      method: "PATCH",
+      cookie: tradesperson.cookie,
+      idempotencyKey: `invoice-sent-${randomUUID()}`,
+      body: { status: "sent" },
+    });
+    assert.equal(sentInvoice.response.status, 200);
+    assert.equal(sentInvoice.payload.data.invoice.status, "sent");
+
+    const partialPayment = await requestJson(baseUrl, `/api/v1/project-invoices/${invoiceId}/payments`, {
+      method: "POST",
+      cookie: contractor.cookie,
+      idempotencyKey: `invoice-payment-one-${randomUUID()}`,
+      body: { amountCents: 20000, paymentDate: "2026-07-04", method: "Check", note: "Deposit handed over." },
+    });
+    assert.equal(partialPayment.response.status, 201);
+    assert.equal(partialPayment.payload.data.invoice.paidCents, 20000);
+    assert.equal(partialPayment.payload.data.invoice.balanceCents, 49700);
+
+    const excessPayment = await requestJson(baseUrl, `/api/v1/project-invoices/${invoiceId}/payments`, {
+      method: "POST",
+      cookie: contractor.cookie,
+      idempotencyKey: `invoice-payment-excess-${randomUUID()}`,
+      body: { amountCents: 50000, paymentDate: "2026-07-04", method: "Check", note: "Too much." },
+    });
+    assert.equal(excessPayment.response.status, 422);
+    assert.equal(excessPayment.payload.error.code, "PROJECT_PAYMENT_EXCEEDS_INVOICE");
+
+    const finalPayment = await requestJson(baseUrl, `/api/v1/project-invoices/${invoiceId}/payments`, {
+      method: "POST",
+      cookie: contractor.cookie,
+      idempotencyKey: `invoice-payment-two-${randomUUID()}`,
+      body: { amountCents: 49700, paymentDate: "2026-07-05", method: "Direct payment", note: "Balance paid." },
+    });
+    assert.equal(finalPayment.response.status, 201);
+    assert.equal(finalPayment.payload.data.invoice.status, "paid");
+    assert.equal(finalPayment.payload.data.invoice.balanceCents, 0);
+
     const firstReport = await requestJson(baseUrl, `/api/v1/projects/${project.id}/report`, { cookie: contractor.cookie });
     assert.equal(firstReport.response.status, 200);
+    assert.equal(firstReport.payload.data.report.financialRecords.length, 1);
+    assert.equal(firstReport.payload.data.report.financialRecords[0].status, "paid");
+    assert.equal(firstReport.payload.data.report.financialRecords[0].payments.length, 2);
     const reloginCookie = await login(baseUrl, contractor);
     const secondReport = await requestJson(baseUrl, `/api/v1/projects/${project.id}/report`, { cookie: reloginCookie });
     assert.deepEqual(secondReport.payload.data.report, firstReport.payload.data.report);

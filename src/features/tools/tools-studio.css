@@ -744,6 +744,130 @@
   background: color-mix(in srgb, var(--v2-surface-muted) 64%, transparent);
 }
 
+.v2-invoice-project-record {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid color-mix(in srgb, var(--v2-accent) 42%, var(--v2-border));
+  border-radius: var(--v2-radius-lg);
+  background: color-mix(in srgb, var(--v2-accent) 7%, var(--v2-surface-muted));
+}
+
+.v2-invoice-project-record > div:first-child {
+  display: grid;
+  gap: 4px;
+}
+
+.v2-invoice-project-record span {
+  color: var(--v2-accent);
+  font-size: 13px;
+  font-weight: var(--v2-weight-bold);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.v2-invoice-project-record strong {
+  color: var(--v2-text);
+  font-size: 16px;
+}
+
+.v2-invoice-project-record small {
+  color: var(--v2-text-muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.v2-invoice-payment-record {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.v2-invoice-payment-record label {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  color: var(--v2-text-muted);
+  font-size: 12px;
+  font-weight: var(--v2-weight-bold);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.v2-invoice-payment-record input {
+  min-width: 0;
+}
+
+.v2-invoice-payment-record button {
+  grid-column: 1 / -1;
+}
+
+.v2-record-review-card {
+  background: color-mix(in srgb, var(--v2-success) 7%, var(--v2-surface-muted));
+}
+
+.v2-record-review-rating {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.v2-record-review-rating button {
+  min-height: 42px;
+  border: 1px solid var(--v2-border);
+  border-radius: var(--v2-radius-md);
+  background: var(--v2-surface);
+  color: var(--v2-text-muted);
+  font: inherit;
+  font-weight: var(--v2-weight-bold);
+}
+
+.v2-record-review-rating button.is-selected {
+  border-color: var(--v2-success);
+  background: color-mix(in srgb, var(--v2-success) 16%, var(--v2-surface));
+  color: var(--v2-text);
+}
+
+.v2-record-financial-list {
+  display: grid;
+  gap: 8px;
+}
+
+.v2-record-financial-list article {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-top: 1px solid color-mix(in srgb, var(--v2-border) 60%, transparent);
+}
+
+.v2-record-financial-list article:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.v2-record-financial-list span {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.v2-record-financial-list span:last-child {
+  flex: 0 0 auto;
+  text-align: right;
+}
+
+.v2-record-financial-list strong {
+  color: var(--v2-text);
+  font-size: 14px;
+}
+
+.v2-record-financial-list small {
+  color: var(--v2-text-muted);
+  font-size: 13px;
+}
+
 .v2-converted-estimate-note {
   display: grid;
   gap: 10px;
@@ -7165,8 +7289,13 @@ html[data-rivt-compact-device="true"] .v2-invoice-topline-actions button {
 
 html[data-rivt-compact-device="true"] .v2-converted-estimate-note,
 html[data-rivt-compact-device="true"] .v2-invoice-template-bar,
-html[data-rivt-compact-device="true"] .v2-invoice-builder-section {
+html[data-rivt-compact-device="true"] .v2-invoice-builder-section,
+html[data-rivt-compact-device="true"] .v2-invoice-project-record {
   padding: 12px;
+}
+
+html[data-rivt-compact-device="true"] .v2-invoice-payment-record {
+  grid-template-columns: 1fr;
 }
 
 html[data-rivt-compact-device="true"] .v2-invoice-template-bar {

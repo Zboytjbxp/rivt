@@ -10,6 +10,14 @@ Status values:
 
 Evidence must eventually link to implementation, automated tests, manual acceptance proof, and deployed build.
 
+## Traceability Addendum - 2026-07-10 Active Work Continuity (Unmerged)
+
+- `GA-PRO-001` gains durable private-work evidence: job invoices, direct-payment records, project timeline entries, closeout proof, and reviews attach to the same server-owned active-work relationship. Job payments remain participant-supplied records; RIVT does not process, escrow, guarantee, or certify a payment.
+- `GA-UX-003` gains exact-workspace evidence: Work's active job actions now retain the active-work id through Records, Photos, Daily Log, Estimate, Invoice, and Messages, with `Open workspace` routing to the exact project record.
+- `GA-UX-005` gains closeout continuity evidence: a confirmed completion exposes an exact review context for the other participant and reports private invoice/payment summaries with the rest of the proof packet.
+- `GA-OPS-007` gains targeted verification: build, lint, security lint, 52/52 unit tests, E2E, Work lifecycle UI smoke, Tools UI smoke, dependency audit, `test/project-completion.integration.test.js`, and `test/migrations.integration.test.js` passed. The aggregate test wrapper exceeded its ten-minute remote-database window, so it is intentionally not recorded as a full aggregate pass.
+- `GA-OPS-008` remains pending: this branch needs code review/merge, Railway migration `0025_project_financial_records`, exact live source/health proof, production monitor evidence, and a real participant workflow check before it can be called deployed.
+
 ## Traceability Addendum - 2026-07-10 Job-Scoped Tool Context
 
 - `GA-PRO-001` gains accepted-work record coherence: active-work API data now includes the job's trade, duration, budget, and public location summary, allowing job-aware tools to initialize against the accepted job even after it leaves open-work discovery.

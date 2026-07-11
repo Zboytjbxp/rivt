@@ -53,6 +53,61 @@ export interface ProjectCompletion {
   }>;
 }
 
+export interface ProjectInvoiceLine {
+  description: string;
+  quantity: number;
+  rateCents: number;
+  kind: "labor" | "material" | "other" | "adjustment";
+}
+
+export interface ProjectInvoicePayment {
+  id: string;
+  invoiceId: string;
+  projectId: string;
+  activeWorkId: string;
+  recordedByAccountId: string;
+  amountCents: number;
+  paymentDate: string;
+  method: string;
+  note: string;
+  createdAt: string | null;
+}
+
+export interface ProjectInvoice {
+  id: string;
+  projectId: string;
+  activeWorkId: string;
+  createdByAccountId: string;
+  invoiceNumber: string;
+  billTo: string;
+  payTo: string;
+  terms: string;
+  paymentMethod: string;
+  recipientEmail: string;
+  recipientPhone: string;
+  status: "draft" | "sent" | "paid" | "void";
+  lineItems: ProjectInvoiceLine[];
+  sourceEstimate: Record<string, unknown>;
+  subtotalCents: number;
+  taxCents: number;
+  totalCents: number;
+  paidCents: number;
+  balanceCents: number;
+  sentAt: string | null;
+  paidAt: string | null;
+  voidedAt: string | null;
+  createdAt: string | null;
+  updatedAt: string | null;
+  payments: ProjectInvoicePayment[];
+}
+
+export interface ReviewContext {
+  activeWorkId: string;
+  eligible: boolean;
+  hasSubmitted: boolean;
+  counterparty: { accountId: string; displayName: string; headline: string } | null;
+}
+
 export interface ProjectRecord {
   id: string;
   activeWorkId: string;
@@ -68,6 +123,7 @@ export interface ProjectRecord {
   };
   entries: ProjectEntry[];
   media: ProjectMedia[];
+  invoices: ProjectInvoice[];
   completionSubmissions: ProjectCompletion[];
   updatedAt: string;
 }
@@ -81,6 +137,68 @@ export async function openProjectForActiveWork(activeWorkId: string) {
     body: JSON.stringify({}),
   });
   return body.data.project;
+}
+
+export async function getProjectForActiveWork(activeWorkId: string) {
+  const body = await request<{ data: { project: ProjectRecord } }>(`/api/v1/active-work/${activeWorkId}/project`);
+  return body.data.project;
+}
+
+export async function createProjectInvoice(activeWorkId: string, input: {
+  invoiceNumber: string;
+  billTo: string;
+  payTo: string;
+  terms: string;
+  paymentMethod: string;
+  recipientEmail: string;
+  recipientPhone: string;
+  taxCents: number;
+  lineItems: ProjectInvoiceLine[];
+  sourceEstimate?: Record<string, unknown>;
+}) {
+  const body = await request<{ data: { invoice: ProjectInvoice } }>(`/api/v1/active-work/${activeWorkId}/invoices`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Idempotency-Key": requestKey() },
+    body: JSON.stringify(input),
+  });
+  return body.data.invoice;
+}
+
+export async function updateProjectInvoiceStatus(invoiceId: string, status: "draft" | "sent" | "void") {
+  const body = await request<{ data: { invoice: ProjectInvoice } }>(`/api/v1/project-invoices/${invoiceId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", "Idempotency-Key": requestKey() },
+    body: JSON.stringify({ status }),
+  });
+  return body.data.invoice;
+}
+
+export async function recordProjectInvoicePayment(invoiceId: string, input: {
+  amountCents: number;
+  paymentDate: string;
+  method: string;
+  note: string;
+}) {
+  const body = await request<{ data: { invoice: ProjectInvoice } }>(`/api/v1/project-invoices/${invoiceId}/payments`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Idempotency-Key": requestKey() },
+    body: JSON.stringify(input),
+  });
+  return body.data.invoice;
+}
+
+export async function getActiveWorkReviewContext(activeWorkId: string) {
+  const body = await request<{ data: { reviewContext: ReviewContext } }>(`/api/v1/active-work/${activeWorkId}/review-context`);
+  return body.data.reviewContext;
+}
+
+export async function submitActiveWorkReview(activeWorkId: string, input: { revieweeAccountId: string; rating: number; body: string; consentVersion: string }) {
+  const body = await request<{ data: { review: unknown } }>(`/api/v1/active-work/${activeWorkId}/reviews`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Idempotency-Key": requestKey() },
+    body: JSON.stringify({ ...input, consentAccepted: true }),
+  });
+  return body.data.review;
 }
 
 export async function addProjectNote(projectId: string, body: string) {

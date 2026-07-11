@@ -288,6 +288,7 @@ function makeProject() {
     },
     entries: [],
     media: [],
+    invoices: [],
     completionSubmissions: [],
     updatedAt: "2026-06-28T15:30:00.000Z",
   };

@@ -94,8 +94,9 @@ interface WorkWorkspaceProps {
   onEditJob: (job: Job) => void;
   onTransition: (job: Job, action: JobAction) => Promise<void>;
   onJobLoaded: (job: Job) => void;
-  onOpenTool: (tool: "daily-log" | "invoice" | "job-photos", activeWorkId?: string) => void;
+  onOpenTool: (tool: "daily-log" | "estimate" | "invoice" | "job-photos", activeWorkId?: string) => void;
   onOpenActiveWorkMessages: (activeWorkId: string) => void;
+  onOpenActiveWorkRecords: (activeWorkId: string) => void;
   onRetry: () => void;
   onOfferAccepted?: (activeWork: CanonicalActiveWork) => void;
   onActiveWorkChanged?: () => void;
@@ -1235,6 +1236,7 @@ export function WorkWorkspace({
   onJobLoaded,
   onOpenTool,
   onOpenActiveWorkMessages,
+  onOpenActiveWorkRecords,
   onRetry,
   onOfferAccepted,
   onActiveWorkChanged,
@@ -1780,12 +1782,14 @@ export function WorkWorkspace({
                         The listing is closed to new applicants. Both sides now use this private workspace for coordination and proof.
                       </p>
                       <div className="v2-active-work-primary-actions" aria-label="Active job workspace actions">
+                        <button type="button" className="v2-primary-button" disabled={Boolean(activeAction)} onClick={() => onOpenActiveWorkRecords(activeWork.id)}>Open workspace</button>
                         <button type="button" disabled={Boolean(activeAction)} onClick={() => onOpenActiveWorkMessages(activeWork.id)}>Messages</button>
                         <button type="button" disabled={Boolean(activeAction)} onClick={() => onOpenTool("job-photos", activeWork.id)}>Photos</button>
                         <button type="button" disabled={Boolean(activeAction)} onClick={() => onOpenTool("daily-log", activeWork.id)}>Daily log</button>
                       </div>
                       <div className="v2-match-actions">
                         <button type="button" disabled={Boolean(activeAction)} onClick={() => onOpenTool("invoice", activeWork.id)}>Invoice</button>
+                        <button type="button" disabled={Boolean(activeAction)} onClick={() => onOpenTool("estimate", activeWork.id)}>Estimate</button>
                         {activeWork.status === "active" ? (
                           <>
                             <button type="button" disabled={Boolean(activeAction)} onClick={() => openReasonPrompt("reschedule", activeWork)}>Request reschedule</button>

@@ -67,7 +67,7 @@ export function detectUploadContent(file) {
   return { ok: true, reviewStatus: "not_scanned" };
 }
 
-export function mapProject(row, { entries = [], media = [], submissions = [] } = {}) {
+export function mapProject(row, { entries = [], media = [], submissions = [], invoices = [] } = {}) {
   return {
     id: row.id,
     activeWorkId: row.active_work_id,
@@ -93,6 +93,7 @@ export function mapProject(row, { entries = [], media = [], submissions = [] } =
     },
     entries: entries.map(mapProjectEntry),
     media: media.map(mapProjectMedia),
+    invoices,
     completionSubmissions: submissions.map((submission) => mapCompletionSubmission(submission, {
       resolutions: submission.resolutions ?? [],
     })),
@@ -160,7 +161,7 @@ export function mapCompletionResolution(row) {
   };
 }
 
-export function buildCloseoutReport(project, entries, media, submissions, resolutions) {
+export function buildCloseoutReport(project, entries, media, submissions, resolutions, invoices = []) {
   return {
     reportVersion: "gate-a-project-closeout-v1",
     projectId: project.id,
@@ -207,6 +208,27 @@ export function buildCloseoutReport(project, entries, media, submissions, resolu
       resolutions: resolutions
         .filter((resolution) => resolution.submission_id === submission.id)
         .map(mapCompletionResolution),
+    })),
+    financialRecords: invoices.map((invoice) => ({
+      id: invoice.id,
+      invoiceNumber: invoice.invoiceNumber,
+      status: invoice.status,
+      subtotalCents: invoice.subtotalCents,
+      taxCents: invoice.taxCents,
+      totalCents: invoice.totalCents,
+      paidCents: invoice.paidCents,
+      balanceCents: invoice.balanceCents,
+      createdAt: invoice.createdAt,
+      sentAt: invoice.sentAt,
+      paidAt: invoice.paidAt,
+      payments: invoice.payments.map((payment) => ({
+        id: payment.id,
+        amountCents: payment.amountCents,
+        paymentDate: payment.paymentDate,
+        method: payment.method,
+        note: payment.note,
+        createdAt: payment.createdAt,
+      })),
     })),
     updatedAt: isoDateTime(project.updated_at),
   };

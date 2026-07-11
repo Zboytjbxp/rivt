@@ -2,9 +2,9 @@
 
 Last updated: 2026-07-10 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Packet 10 Matching Job Alerts is deployed and configured in production. Exact trade + public city matching, preference/block enforcement, exact job routing, bounded bulk fan-out, and an operator kill switch are production-live; one controlled legitimate publish and physical exact-job tap remain pending.
-Active packet: `docs/delivery/packets/10_GATE_B_MATCHING_JOB_ALERTS.md`
-Repository branch: `codex/gate-b-matching-job-alerts`
+Current phase: Packet 11 Active Work Continuity. The active-work/project/review foundation is server-owned; this packet connects the private workspace, closeout/review, and job-scoped estimate/invoice/external-payment record flow without adding job-payment processing.
+Active packet: `docs/delivery/packets/11_ACTIVE_WORK_CONTINUITY.md`
+Repository branch: `codex/active-work-workspace`
 Production feature release commit: `43a1fa5eb9528a1fc06a0bea95da81122448c990` verified with live `/api/health` and `npm run monitor:production`; docs-only evidence commits may supersede the served build SHA without changing runtime behavior.
 
 ## Packet 10 - Gate B Matching Job Alerts (Production Configured)
@@ -17,6 +17,18 @@ Production feature release commit: `43a1fa5eb9528a1fc06a0bea95da81122448c990` ve
 - Local verification passes: build, lint, security lint, 50/50 unit tests, E2E, mobile-action smoke, dependency audit, diff checks, and the complete PostgreSQL aggregate (`npm run test`) with 19/19 integration assertions. Isolated and aggregate coverage prove matching delivery, wrong-trade/wrong-city/block/opt-out exclusion, idempotent dedupe, existing push durability, and session revocation.
 - Production evidence: Railway deployment `79bc9d5c-d20b-4c30-9b1a-955225d77876` serves exact source `43a1fa5eb9528a1fc06a0bea95da81122448c990`. Live health reports matching alerts enabled, a 200-recipient cap, and the exact public service-area rule. The production monitor passed with PostgreSQL, S3-compatible storage, Sentry, Web Push, controls off, and seven anonymous private-route probes.
 - Pending boundary: perform one controlled legitimate production publish and physical exact-job tap. Do not create a fake live job solely to manufacture this evidence.
+
+## Packet 11 - Active Work Continuity (Ready For Review / Merge)
+
+- Added migration `0025_project_financial_records` with server-owned private `project_invoices` and append-only `project_invoice_payments`. Records are scoped through the existing active-work participant authorization; invoice recipient contact data remains private project data.
+- Work now offers an exact `Open workspace` action alongside Messages, Photos, Daily log, Estimate, and Invoice. The action preserves the active-work id and opens that job's project record instead of a generic Records list.
+- Invoice drafts opened from active work can be saved to that same job, marked sent only after the participant uses their own delivery method, and given a participant-recorded external payment entry. The UI and report explicitly say RIVT does not collect, hold, verify, or protect job-payment funds.
+- Project Records now exposes the job's invoice/payment summary in the same private timeline/proof packet, and closeout reports include the private financial record summary without exposing jobsite data publicly.
+- Added an exact server review-context route and closeout review form: after contractor confirmation completes the work, either participant can leave one review for the other; it remains pending the reviewee's existing approval workflow.
+- Targeted PostgreSQL evidence passed using the configured test database: `test/project-completion.integration.test.js` proved outsider rejection, participant invoice creation, author-only state changes, partial/final payment records, overage rejection, closeout-report persistence, and review eligibility. `test/migrations.integration.test.js` passed migration 25 apply/rollback lifecycle.
+- Local verification passed: build, lint, security lint, 52/52 unit tests, E2E, Work lifecycle UI smoke, Tools UI smoke, dependency audit, and diff check. The aggregate `npm run test` ran for ten minutes against sequential remote PostgreSQL suites without emitting a failure but exceeded the wrapper deadline, so no aggregate completion is claimed.
+- Deployment boundary: not merged or deployed. Before release, review/merge this branch, let Railway apply migration 25, confirm `/api/health` serves the exact source and migration, run the production monitor, and perform one real participant acceptance -> workspace -> invoice -> external-payment-record -> closeout-review check.
+- Matching-alert field proof remains a separate legitimate-job operational boundary.
 
 ## Packet 09 - Gate B Web Push (Production Verified)
 
