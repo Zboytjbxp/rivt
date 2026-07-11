@@ -658,9 +658,7 @@ async function runTradespersonOfferFlow(page) {
   await homeActiveWork.getByRole("button", { name: "Open workspace" }).click();
   await page.waitForURL(/\/app\/work/, { timeout: 15_000 });
   await page.getByText("Accepted and active", { exact: true }).waitFor({ timeout: 15_000 });
-
-  await page.goto(`${baseUrl}/app/home`, { waitUntil: "networkidle" });
-  await page.getByLabel("Active work").getByRole("button", { name: "Photos" }).click();
+  await page.getByLabel("Hiring workflow").getByRole("button", { name: "Photos" }).click();
   await page.waitForURL(/\/app\/tools\?tool=job-photos/, { timeout: 15_000 });
   await page.getByText("Live project feed", { exact: true }).waitFor({ timeout: 15_000 });
   await page.getByLabel("Camera").locator(".v2-job-photos-job-name").getByText("Warehouse panel assist", { exact: true }).waitFor({ timeout: 15_000 });

@@ -3588,9 +3588,8 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
       <div className="v2-tool-section-stack">
         {recentToolLaunchers.length ? (
           <section className="v2-tool-section v2-tool-recent-section" aria-label="Recent tools">
-            <div className="v2-tool-section-header">
-              <span>Recent</span>
-              <strong>Pick up where you left off</strong>
+            <div className="v2-tool-section-header is-simple">
+              <strong>Recent</strong>
             </div>
             <div className="v2-tool-mini-grid">
               {recentToolLaunchers.map((tool) => (
@@ -3607,9 +3606,8 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
         ) : null}
 
         <section className="v2-tool-section" aria-label="Field tools">
-          <div className="v2-tool-section-header v2-tool-core-header">
-            <span>Core tools</span>
-            <strong>Run the job</strong>
+          <div className="v2-tool-section-header v2-tool-core-header is-simple">
+            <strong>Core apps</strong>
           </div>
           <div className="v2-tool-launch-grid">
             {PRIMARY_TOOL_LAUNCHERS.map((tool, index) => (

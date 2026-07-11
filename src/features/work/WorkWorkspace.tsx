@@ -1688,20 +1688,11 @@ export function WorkWorkspace({
           <div>
             <span>You're active now</span>
             <h2>{primaryActiveWorkRecord.job?.title ?? "Accepted work is ready"}</h2>
-            <p>The offer was accepted. Use this job workspace for messages, photos, daily logs, invoices, and schedule changes.</p>
+            <p>Messages, photos, logs, and money records stay together in one workspace.</p>
           </div>
           <div className="v2-active-work-strip-actions">
             <button type="button" className="v2-primary-button" onClick={() => openActiveWorkJob(primaryActiveWorkRecord)}>
               Open workspace
-            </button>
-            <button type="button" className="v2-secondary-button" onClick={() => onOpenActiveWorkMessages(primaryActiveWorkRecord.id)}>
-              Messages
-            </button>
-            <button type="button" className="v2-secondary-button" onClick={() => onOpenTool("job-photos", primaryActiveWorkRecord.id)}>
-              Photos
-            </button>
-            <button type="button" className="v2-secondary-button" onClick={() => onOpenTool("daily-log", primaryActiveWorkRecord.id)}>
-              Daily log
             </button>
           </div>
         </section>
@@ -1794,7 +1785,7 @@ export function WorkWorkspace({
                         The listing is closed to new applicants. Both sides now use this private workspace for coordination and proof.
                       </p>
                       <div className="v2-active-work-primary-actions" aria-label="Active job workspace actions">
-                        <button type="button" className="v2-primary-button" disabled={Boolean(activeAction)} onClick={() => onOpenActiveWorkRecords(activeWork.id)}>Open workspace</button>
+                        <button type="button" className="v2-primary-button" disabled={Boolean(activeAction)} onClick={() => onOpenActiveWorkRecords(activeWork.id)}>Open project records</button>
                         <button type="button" disabled={Boolean(activeAction)} onClick={() => onOpenActiveWorkMessages(activeWork.id)}>Messages</button>
                         <button type="button" disabled={Boolean(activeAction)} onClick={() => onOpenTool("job-photos", activeWork.id)}>Photos</button>
                         <button type="button" disabled={Boolean(activeAction)} onClick={() => onOpenTool("daily-log", activeWork.id)}>Daily log</button>

@@ -1,11 +1,32 @@
 # RIVT Build State
 
-Last updated: 2026-07-10 America/New_York
+Last updated: 2026-07-11 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Packet 12 Gate B Daily Use is production verified. This pass builds on the active-work foundation with an honest daily-work signal, exact workspace recovery, truthful Pro copy, and controlled-engagement operations.
-Active packet: `docs/delivery/packets/12_GATE_B_DAILY_USE.md`
+Current phase: Packet 13 Workflow Coherence is active. This pass reduces duplicate actions and explanatory chrome while preserving exact active-work destinations and controlled-engagement operations.
+Active packet: `docs/delivery/packets/13_WORKFLOW_COHERENCE.md`
 Repository branch: `codex/gate-b-daily-use`
 Production feature release commit: `4e0d079101fd065d7eb5b7bb7a7ee2d6bea8132b` verified with live `/api/health` and `npm run monitor:production`; docs-only evidence commits may supersede the served build SHA without changing runtime behavior.
+
+## Packet 13 - Workflow Coherence (Local Verified, Deployment Pending)
+
+- Reduced Home and Work accepted-work summaries to one clear `Open workspace`
+  handoff. Messages, Photos, Daily log, money, and other job actions remain
+  inside the exact job workspace rather than appearing three times before it.
+- Renamed the in-workspace record transition to `Open project records` so its
+  label matches the exact destination instead of implying a no-op workspace
+  reload.
+- Removed Tools launcher narration (`Pick up where you left off` and `Run the
+  job`) while keeping the Recent and Core apps groups.
+- Added `docs/delivery/WORKFLOW_ACTION_MATRIX.md` as the release checklist for
+  primary-action label, destination, feedback, and next-step coherence.
+- Settings notification controls remain above theme and subscription controls.
+- Local verification passed: build, lint, security lint, 53 unit tests, E2E,
+  Work lifecycle UI smoke, mobile actions UI smoke, dependency audit, and diff
+  check. This packet is client/docs only; no migration or integration suite is
+  required.
+- Deployment boundary: merge to `master`, verify the exact commit from
+  `/api/health`, run `monitor:production`, and visually check Home -> Open
+  workspace -> job-scoped Photos on a phone.
 
 ## Packet 12 - Gate B Daily Use (Production Verified)
 

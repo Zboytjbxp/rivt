@@ -252,14 +252,7 @@
 }
 
 .v2-active-work-strip-actions {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-  min-width: 268px;
-}
-
-.v2-active-work-strip-actions .v2-primary-button {
-  grid-column: 1 / -1;
+  min-width: 184px;
 }
 
 .v2-work-layout {
@@ -1149,7 +1142,6 @@
   }
 
   .v2-active-work-strip-actions {
-    grid-template-columns: 1fr;
     min-width: 0;
   }
 

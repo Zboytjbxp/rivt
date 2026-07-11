@@ -1,11 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import {
-  Camera,
   Clock3,
   ChevronRight,
   Circle,
   ClipboardList,
-  FileText,
   MessageCircle,
   SignalLow,
   Plus,
@@ -174,8 +172,6 @@ interface TradeFeedProps {
   onOpenProfile: () => void;
   onOpenTool: (tool: ToolMode) => void;
   onOpenActiveWorkWorkspace: (activeWorkId: string) => void;
-  onOpenActiveWorkMessages: (activeWorkId: string) => void;
-  onOpenActiveWorkTool: (activeWorkId: string, tool: ToolMode) => void;
 }
 
 export function TradeFeed({
@@ -205,8 +201,6 @@ export function TradeFeed({
   onOpenProfile = () => undefined,
   onOpenTool = () => undefined,
   onOpenActiveWorkWorkspace = () => undefined,
-  onOpenActiveWorkMessages,
-  onOpenActiveWorkTool,
 }: TradeFeedProps) {
   const [saved, setSaved] = useState<Set<string>>(readBookmarks);
   const [availability, setAvailability] = useState<Availability>(readAvailability);
@@ -493,9 +487,7 @@ export function TradeFeed({
           <div className="trade-feed-active-copy">
             <span>You're active now</span>
             <h2>{primaryActiveWork.job?.title ?? "Accepted work"}</h2>
-            <p>
-              Offer accepted. Messages, photos, and daily logs stay tied to this job.
-            </p>
+            <p>Everything for this job is in one workspace.</p>
             {activeWorkLocation(primaryActiveWork) ? <small>{activeWorkLocation(primaryActiveWork)}</small> : null}
             {activeWorkPulse ? (
               <div className={`trade-feed-work-pulse is-${activeWorkPulse.state}`} aria-live="polite">
@@ -507,30 +499,6 @@ export function TradeFeed({
           <div className="trade-feed-active-actions">
             <button type="button" className="v2-primary-button" onClick={() => onOpenActiveWorkWorkspace(primaryActiveWork.id)}>
               Open workspace
-            </button>
-            <button
-              type="button"
-              className="v2-secondary-button"
-              onClick={() => onOpenActiveWorkMessages(primaryActiveWork.id)}
-            >
-              <MessageCircle size={15} />
-              Messages
-            </button>
-            <button
-              type="button"
-              className="v2-secondary-button"
-              onClick={() => onOpenActiveWorkTool(primaryActiveWork.id, "job-photos")}
-            >
-              <Camera size={15} />
-              Photos
-            </button>
-            <button
-              type="button"
-              className={activeWorkPulse?.state === "due" ? "v2-secondary-button trade-feed-log-due" : "v2-secondary-button"}
-              onClick={() => onOpenActiveWorkTool(primaryActiveWork.id, "daily-log")}
-            >
-              <FileText size={15} />
-              {activeWorkPulse?.state === "due" ? "Log today" : "Daily log"}
             </button>
           </div>
         </section>

@@ -2436,8 +2436,6 @@ function App() {
             onOpenProfile={() => handleNavigate("Settings")}
             onOpenTool={handleOpenTool}
             onOpenActiveWorkWorkspace={handleOpenActiveWorkWorkspace}
-            onOpenActiveWorkMessages={(activeWorkId) => void handleOpenActiveWorkMessages(activeWorkId)}
-            onOpenActiveWorkTool={handleOpenActiveWorkTool}
           />
         ) : activeView === "Work" ? (
           <WorkWorkspace

@@ -17,6 +17,7 @@ Run packets in order. A packet is one AI session or a small number of tightly co
 | 10 | Gate B matching job alerts |
 | 11 | Active work continuity |
 | 12 | Gate B daily use |
+| 13 | Workflow coherence and subtraction |
 
 Before each packet read:
 

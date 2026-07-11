@@ -744,6 +744,12 @@
   background: color-mix(in srgb, var(--v2-surface-muted) 64%, transparent);
 }
 
+.v2-tool-section-header.is-simple {
+  display: flex;
+  align-items: center;
+  min-height: 24px;
+}
+
 .v2-invoice-project-record {
   display: grid;
   gap: 12px;

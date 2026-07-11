@@ -58,6 +58,7 @@ function assertSmokeRender(element, expectedText) {
   const html = renderToString(element);
   assert.ok(html.length > 100, "component rendered only a trivial HTML fragment");
   assert.match(html, expectedText);
+  return html;
 }
 
 function createMemoryStorage(initial = {}) {
@@ -114,7 +115,7 @@ test("Home trade feed renders without crashing", async () => {
   );
 });
 
-test("Home active-work card keeps a daily-work route available when the project pulse is unavailable", async () => {
+test("Home active-work summary hands off to one exact workspace when the project pulse is unavailable", async () => {
   const { TradeFeed } = await loadModule("/src/features/home/TradeFeed.tsx");
   const activeWork = {
     id: "c5ee1300-4a11-4e64-85c5-5f4f8f296204",
@@ -142,7 +143,7 @@ test("Home active-work card keeps a daily-work route available when the project 
     },
   };
 
-  assertSmokeRender(
+  const html = assertSmokeRender(
     React.createElement(TradeFeed, {
       posts: [],
       activeWork: [activeWork],
@@ -155,11 +156,12 @@ test("Home active-work card keeps a daily-work route available when the project 
       onOpenCommunity: noop,
       onNavigate: noop,
       onOpenActiveWorkWorkspace: noop,
-      onOpenActiveWorkMessages: noop,
-      onOpenActiveWorkTool: noop,
     }),
-    /workspace for today/,
+    /Open workspace/,
   );
+  assert.doesNotMatch(html, />Messages</, "summary card should hand off to the workspace instead of duplicating workspace actions");
+  assert.doesNotMatch(html, />Photos</, "summary card should not duplicate the job photo action");
+  assert.doesNotMatch(html, />Daily log</, "summary card should not duplicate the daily log action");
 });
 
 test("Work workspace renders without crashing", async () => {
