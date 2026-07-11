@@ -2,10 +2,33 @@
 
 Last updated: 2026-07-11 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Packet 13 Workflow Coherence is production verified. This pass reduced duplicate actions and explanatory chrome while preserving exact active-work destinations and controlled-engagement operations.
-Active packet: `docs/delivery/packets/13_WORKFLOW_COHERENCE.md`
-Repository branch: `codex/gate-b-daily-use`
+Current phase: Packet 14 Field Camera is active. This pass rebuilds the live job photo capture experience around one-handed field use while preserving the existing project-media authorization and upload path.
+Active packet: `docs/delivery/packets/14_FIELD_CAMERA.md`
+Repository branch: `codex/field-camera`
 Production feature release commit: `4e0d079101fd065d7eb5b7bb7a7ee2d6bea8132b` verified with live `/api/health` and `npm run monitor:production`; docs-only evidence commits may supersede the served build SHA without changing runtime behavior.
+
+## Packet 14 - Field Camera (Local Verification)
+
+- Rebuilt the live-job camera as a full-height, one-hand capture surface with
+  a persistent exact-job label, in-camera capture types, large center shutter,
+  recent-capture preview, and a functional front/back camera switch.
+- Moved capture type selection out of the home/gallery dashboard. Field
+  photos are now categorized at capture time; the project feed keeps only
+  filtering controls.
+- Kept the existing participant-authorized project-media upload path intact.
+  The capture surface names the destination while saving and only reports
+  success after that upload resolves. A failed capture remains retryable
+  without requiring the user to retake it.
+- Local verification passed: build, lint, `test:ui:tools` at 1440x900,
+  390x844, and 320x568, 53 unit tests, E2E, targeted
+  `project-completion.integration.test.js`, dependency audit, and diff check.
+  The rendered smoke covers exact job context, capture type, camera switch,
+  failed-upload retry, saved confirmation, feed return, and no horizontal
+  overflow. The aggregate `npm run test` exceeded its ten-minute wrapper
+  without a failure or completion, so no aggregate-pass claim is made.
+- Deployment boundary: merge, confirm the served source SHA and production
+  monitor, then take a real camera photo into a legitimate active job on iOS
+  Safari/PWA and Android Chrome.
 
 ## Packet 13 - Workflow Coherence (Production Verified)
 

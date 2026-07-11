@@ -102,10 +102,6 @@ function captureIntentLabel(intent: CaptureIntent | null) {
   return CAPTURE_INTENTS.find((option) => option.value === intent)?.label ?? "Photo";
 }
 
-function captureIntentDescription(intent: CaptureIntent | null) {
-  return CAPTURE_INTENTS.find((option) => option.value === intent)?.description ?? "Routine field capture";
-}
-
 function captureIntentNote(intent: CaptureIntent | null) {
   return CAPTURE_INTENTS.find((option) => option.value === intent)?.note ?? "";
 }
@@ -186,9 +182,18 @@ function photoFromAlbumPhoto(photo: AlbumPhoto): UnifiedPhoto {
   };
 }
 
-function CameraCapture({ onCapture, onClose }: {
+function CameraCapture({
+  onCapture,
+  onClose,
+  contextLabel,
+  captureIntent,
+  onCaptureIntentChange,
+}: {
   onCapture: (blob: Blob) => Promise<void>;
   onClose: () => void;
+  contextLabel: string;
+  captureIntent: CaptureIntent | null;
+  onCaptureIntentChange?: (intent: CaptureIntent) => void;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -200,12 +205,17 @@ function CameraCapture({ onCapture, onClose }: {
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "failed">("idle");
   const [saveMessage, setSaveMessage] = useState("");
   const [failedCapture, setFailedCapture] = useState<Blob | null>(null);
+  const [facingMode, setFacingMode] = useState<"environment" | "user">("environment");
   const lastSnapRef = useRef<string | null>(null);
+
+  useEffect(() => () => {
+    if (lastSnapRef.current) URL.revokeObjectURL(lastSnapRef.current);
+  }, []);
 
   useEffect(() => {
     let stream: MediaStream | null = null;
     void navigator.mediaDevices.getUserMedia({
-      video: { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1080 } },
+      video: { facingMode: { ideal: facingMode }, width: { ideal: 1920 }, height: { ideal: 1080 } },
       audio: false,
     }).then((nextStream) => {
       stream = nextStream;
@@ -220,19 +230,18 @@ function CameraCapture({ onCapture, onClose }: {
 
     return () => {
       stream?.getTracks().forEach((track) => track.stop());
-      if (lastSnapRef.current) URL.revokeObjectURL(lastSnapRef.current);
     };
-  }, []);
+  }, [facingMode]);
 
   async function saveCapture(blob: Blob) {
     setSaveState("saving");
-    setSaveMessage("Saving to the live job...");
+    setSaveMessage(`Saving to ${contextLabel}...`);
     try {
       await onCapture(blob);
       setFailedCapture(null);
       setCaptureCount((current) => current + 1);
       setSaveState("saved");
-      setSaveMessage("Saved to this job's project feed.");
+      setSaveMessage(`Saved to ${contextLabel}.`);
     } catch (err) {
       setFailedCapture(blob);
       setSaveState("failed");
@@ -265,7 +274,17 @@ function CameraCapture({ onCapture, onClose }: {
   return (
     <div className="v2-camera-overlay">
       {flash ? <div className="v2-camera-flash" aria-hidden="true" /> : null}
-      <button type="button" className="v2-camera-close" onClick={onClose} disabled={saveState === "saving"}>Done</button>
+      <header className="v2-camera-topbar">
+        <button type="button" className="v2-camera-close" onClick={onClose} disabled={saveState === "saving"}>
+          <ArrowLeft size={18} />
+          Back
+        </button>
+        <div className="v2-camera-context" aria-label={`Saving photos to ${contextLabel}`}>
+          <span>Saving to</span>
+          <strong>{contextLabel}</strong>
+        </div>
+        <button type="button" className="v2-camera-done" onClick={onClose} disabled={saveState === "saving"}>Done</button>
+      </header>
       {error ? (
         <div className="v2-camera-error">
           <strong>Camera unavailable</strong>
@@ -282,36 +301,58 @@ function CameraCapture({ onCapture, onClose }: {
         />
       )}
       <canvas ref={canvasRef} style={{ display: "none" }} aria-hidden="true" />
-      <div className="v2-camera-controls">
-        <button
-          type="button"
-          className="v2-camera-shutter"
-          onClick={shoot}
-          disabled={!ready || Boolean(error) || saveState === "saving"}
-          aria-label="Take photo"
-        />
+      <div className="v2-camera-bottom-controls">
+        {onCaptureIntentChange ? (
+          <div className="v2-camera-intent-strip" role="group" aria-label="Capture type">
+            {CAPTURE_INTENTS.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                className={option.value === captureIntent ? "is-active" : ""}
+                onClick={() => onCaptureIntentChange(option.value)}
+                aria-pressed={option.value === captureIntent}
+              >
+                {option.shortLabel}
+              </button>
+            ))}
+          </div>
+        ) : null}
+        {saveState !== "idle" ? (
+          <span className={`v2-camera-save-status is-${saveState}`} role={saveState === "failed" ? "alert" : "status"}>
+            {saveMessage}
+          </span>
+        ) : null}
+        {failedCapture && saveState === "failed" ? (
+          <button type="button" className="v2-camera-retry" onClick={() => void saveCapture(failedCapture)}>
+            <RefreshCw size={15} /> Retry upload
+          </button>
+        ) : null}
+        <div className="v2-camera-controls">
+          <div className="v2-camera-last-capture" aria-label={captureCount ? `${captureCount} photos saved in this camera session` : "No photo captured in this camera session"}>
+            {lastSnapUrl ? <img key={lastSnapUrl} src={lastSnapUrl} alt="Latest captured photo" /> : <span><Image size={18} /></span>}
+          </div>
+          <button
+            type="button"
+            className="v2-camera-shutter"
+            onClick={shoot}
+            disabled={!ready || Boolean(error) || saveState === "saving"}
+            aria-label="Take photo"
+          />
+          <button
+            type="button"
+            className="v2-camera-switch"
+            onClick={() => {
+              setReady(false);
+              setError("");
+              setFacingMode((current) => current === "environment" ? "user" : "environment");
+            }}
+            disabled={saveState === "saving"}
+            aria-label="Switch camera"
+          >
+            <RefreshCw size={22} />
+          </button>
+        </div>
       </div>
-      {saveState !== "idle" ? (
-        <span className={`v2-camera-save-status is-${saveState}`} role={saveState === "failed" ? "alert" : "status"}>
-          {saveMessage}
-        </span>
-      ) : null}
-      {failedCapture && saveState === "failed" ? (
-        <button type="button" className="v2-camera-retry" onClick={() => void saveCapture(failedCapture)}>
-          <RefreshCw size={15} /> Retry upload
-        </button>
-      ) : null}
-      {lastSnapUrl ? (
-        <img
-          key={lastSnapUrl}
-          src={lastSnapUrl}
-          alt="Last photo taken"
-          className="v2-camera-last-snap"
-        />
-      ) : null}
-      {captureCount > 0 ? (
-        <span className="v2-camera-badge">{captureCount} {captureCount === 1 ? "photo" : "photos"}</span>
-      ) : null}
     </div>
   );
 }
@@ -506,6 +547,9 @@ function PhotoGallery({
         <CameraCapture
           onCapture={handleCapturePhoto}
           onClose={() => setShowCamera(false)}
+          contextLabel={title}
+          captureIntent={captureIntent}
+          onCaptureIntentChange={onCaptureIntentChange}
         />
       ) : null}
 
@@ -548,22 +592,8 @@ function PhotoGallery({
       {onCaptureIntentChange ? (
         <section className="v2-camera-mode-bar" aria-label="Capture type">
           <div className="v2-camera-mode-copy">
-            <strong>{captureIntentLabel(captureIntent)}</strong>
-            <small>{captureIntentDescription(captureIntent)}</small>
-          </div>
-          <div className="v2-camera-capture-strip">
-            {CAPTURE_INTENTS.map((option) => (
-              <button
-                key={option.value}
-                type="button"
-                className={option.value === captureIntent ? "v2-camera-capture-pill is-active" : "v2-camera-capture-pill"}
-                onClick={() => onCaptureIntentChange(option.value)}
-                aria-pressed={option.value === captureIntent}
-                title={option.description}
-              >
-                {option.shortLabel}
-              </button>
-            ))}
+            <strong>Filter field photos</strong>
+            <small>New captures are labeled in the camera.</small>
           </div>
           <div className="v2-camera-filter-strip" aria-label="View filter">
             <button
@@ -976,7 +1006,7 @@ export function JobPhotosTool({ activeWork, focusedActiveWorkId = null, autoOpen
             <>
               <button type="button" className="v2-primary-button" onClick={() => void openActiveJob({ launchCamera: true })} disabled={projectLoading}>
                 <Camera size={15} />
-                {projectLoading ? "Opening..." : `Shoot ${captureIntentLabel(captureIntent).toLowerCase()}`}
+                {projectLoading ? "Opening..." : "Open camera"}
               </button>
               <button type="button" onClick={() => void openActiveJob()} disabled={projectLoading}>
                 <FolderOpen size={15} />
@@ -1036,26 +1066,16 @@ export function JobPhotosTool({ activeWork, focusedActiveWorkId = null, autoOpen
                 {recordWork.job?.publicLocation.city ?? "Project"} - {projectPhotos.length} {projectPhotos.length === 1 ? "photo" : "photos"}
               </small>
             </div>
-            <div className="v2-camera-live-intent">
-              <div className="v2-camera-live-intent-copy">
-                <strong>{captureIntentLabel(captureIntent)}</strong>
-                <small>{captureIntentDescription(captureIntent)}</small>
-              </div>
-              <div className="v2-camera-capture-strip" aria-label="Live job capture mode">
-                {CAPTURE_INTENTS.map((option) => (
-                  <button
-                    key={option.value}
-                    type="button"
-                    className={option.value === captureIntent ? "v2-camera-capture-pill is-active" : "v2-camera-capture-pill"}
-                    onClick={() => setCaptureIntent(option.value)}
-                    aria-pressed={option.value === captureIntent}
-                  >
-                    {option.shortLabel}
-                  </button>
-                ))}
-              </div>
-            </div>
             <div className="v2-tool-action-row">
+              <button
+                type="button"
+                className="v2-primary-button"
+                onClick={() => void openActiveJob({ launchCamera: true })}
+                disabled={projectLoading}
+              >
+                <Camera size={15} />
+                Open camera
+              </button>
               <button
                 type="button"
                 onClick={() => void openActiveJob()}

@@ -517,16 +517,19 @@ async function runToolsFlow(page, viewportName) {
   await page.getByText("Jobsite camera", { exact: true }).waitFor({ timeout: 15_000 });
   await page.getByText("Live jobsite", { exact: true }).waitFor({ timeout: 15_000 });
   await page.waitForFunction(() => document.body.innerText.includes("Recent live captures") || document.body.innerText.includes("No field captures yet"), null, { timeout: 15_000 });
-  await page.getByRole("button", { name: /Shoot /i }).first().waitFor({ timeout: 15_000 });
+  await page.getByRole("button", { name: "Open camera" }).first().waitFor({ timeout: 15_000 });
   await page.waitForFunction(
     () => document.body.innerText.includes("Side work albums") || document.body.innerText.includes("Keep side-work albums separate"),
     null,
     { timeout: 15_000 },
   );
-  await page.getByRole("button", { name: /Open project feed/i }).first().click();
-  await page.getByText("Live project feed", { exact: true }).waitFor({ timeout: 15_000 });
-  await page.getByRole("button", { name: "Shoot" }).click();
+  await page.getByRole("button", { name: "Open camera" }).first().click();
   await page.getByRole("button", { name: "Take photo" }).waitFor({ timeout: 15_000 });
+  await page.getByLabel("Saving photos to Tenant Build-Out").waitFor({ timeout: 15_000 });
+  const captureTypes = page.getByRole("group", { name: "Capture type" });
+  await captureTypes.getByRole("button", { name: "Issue" }).click();
+  await assert.equal(await captureTypes.getByRole("button", { name: "Issue" }).getAttribute("aria-pressed"), "true");
+  await page.getByRole("button", { name: "Switch camera" }).click();
   await page.waitForFunction(() => {
     const shutter = document.querySelector(".v2-camera-shutter");
     return shutter instanceof HTMLButtonElement && !shutter.disabled;
@@ -534,9 +537,11 @@ async function runToolsFlow(page, viewportName) {
   await page.getByRole("button", { name: "Take photo" }).click();
   await page.locator(".v2-camera-save-status", { hasText: "1 of 1 didn't upload - retry the failed photo." }).waitFor({ timeout: 15_000 });
   await page.locator(".v2-camera-retry").click();
-  await page.getByText("Saved to this job's project feed.", { exact: true }).waitFor({ timeout: 15_000 });
-  await page.locator(".v2-camera-badge").filter({ hasText: "1 photo" }).waitFor({ timeout: 15_000 });
-  await page.getByRole("button", { name: "Done" }).click();
+  await page.getByText("Saved to Tenant Build-Out.", { exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByLabel("1 photos saved in this camera session").waitFor({ timeout: 15_000 });
+  await assertNoHorizontalOverflow(page);
+  await page.screenshot({ path: path.join(screenshotDir, `${viewportName}-camera.png`) });
+  await page.getByRole("button", { name: "Back" }).click();
   await page.locator(".v2-job-photos-stats strong", { hasText: "1" }).waitFor({ timeout: 15_000 });
   await page.locator(".v2-job-photo-timeline-row").first().waitFor({ timeout: 15_000 });
   await assertNoHorizontalOverflow(page);

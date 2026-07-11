@@ -755,6 +755,13 @@ Evidence must eventually link to implementation, automated tests, manual accepta
 - `GA-OPS-007` gains local evidence on `codex/gate-b-daily-use`: build, lint, security lint, 53/53 unit tests, E2E, active-work lifecycle UI smoke, mobile-action UI smoke, Shop Talk/Trade News UI smoke, dependency audit, and diff check passed. The aggregate remote PostgreSQL runner exceeded the local wrapper window without output or a test failure; no aggregate-pass claim is made.
 - `GA-OPS-008` gains deployment evidence: `master` serves exact source `e44eb6a8e1b7d8c804880d1f956b3052f1596898`; the production monitor passed with PostgreSQL, S3-compatible storage, configured Sentry, configured Web Push, matching alerts enabled, controls off, and seven anonymous private-route checks. The genuine active-job daily-log walkthrough remains a manual field-proof boundary.
 
+## Traceability Addendum - 2026-07-11 Field Camera (Pending Deployment)
+
+- `GA-PRJ-002` gains capture-context evidence: the field camera keeps the exact accepted-job destination visible throughout capture, while retaining the existing participant-authorized project-media route and refusing to report success before that route resolves.
+- `GA-UX-006` gains field-usability evidence: capture type moves into the full-height camera, and one-hand controls include a 44px-plus intent strip, center shutter, last capture preview, and real front/back camera switch. The compact camera hides redundant chrome rather than clipping it on 320px devices.
+- `GA-OPS-007` gains rendered evidence: build, lint, 53 unit tests, E2E, `test:ui:tools` at 1440x900/390x844/320x568, the targeted `project-completion.integration.test.js`, dependency audit, and diff check pass. The aggregate `npm run test` exceeded its ten-minute wrapper without reporting a failure or completion; it is not recorded as a pass.
+- `GA-OPS-008` remains pending until Packet 14 is merged, Railway serves the exact source SHA, the production monitor passes, and a legitimate active-work photo capture is verified on physical iOS and Android devices.
+
 ## Traceability Addendum - 2026-07-09 Mature Guest Demo and Nationwide Audit
 
 - `GA-UX-005` gains a clearer anonymous first-value path: contractor and subcontractor previews now demonstrate a labeled one-year sample account with completed work, records, repeat relationships, active work, messages, and reputation rather than an empty or lightly populated shell.
