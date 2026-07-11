@@ -1373,3 +1373,21 @@ Add one entry per staging/production deployment.
 - Physical-device proof: on 2026-07-10, the founder enabled device alerts on a physical phone, received the test alert in the phone notification tray outside RIVT, and tapped it to return to RIVT. The observed white-square Android status icon is addressed by a follow-up monochrome transparent badge asset; it did not affect delivery or routing.
 - Known boundary: logout/revocation exclusion is integration-proven through session-bound deletion but was not reproduced as a second physical delivery attempt. Operator outbox metrics remain follow-up work before broad fan-out.
 - Approval: production delivery and click-through accepted for Packet 09; broad push fan-out remains gated on operator outbox monitoring.
+
+## Current Production - Packet 10 Gate B Matching Job Alerts
+
+- Environment: Production (`https://rivt.pro`)
+- Date/time/timezone: 2026-07-10 21:30 America/New_York
+- Deployer: Codex through verified branch push, fast-forward merge to `master`, Railway source deployment, and explicit non-secret rollout configuration
+- Source repository/branch: `Zboytjbxp/rivt`, `master`
+- Source commit: `43a1fa5eb9528a1fc06a0bea95da81122448c990`
+- Railway deployment ID: `79bc9d5c-d20b-4c30-9b1a-955225d77876`
+- Migration version before/after: unchanged (`0024_push_subscription_sessions`)
+- Provider/config changes: `MATCHING_JOB_ALERTS_ENABLED=true`; `MATCHING_JOB_ALERT_LIMIT=200`. No secret, Web Push key, email, SMS, auth, billing, storage, or moderation configuration changed.
+- Rollback target: source `64ac4534b41ba7a5e001ad44fdf93e724f3cfb64`; set `MATCHING_JOB_ALERTS_ENABLED=false` first to stop new fan-out without disabling Work or Web Push.
+- Automated gates: build, lint, security lint, 50/50 unit tests, E2E, mobile-action smoke, zero-vulnerability dependency audit, diff checks, focused jobs + Web Push PostgreSQL integration, and the complete aggregate `npm run test` with 19/19 integration assertions passed.
+- Performance evidence: an initial recipient-by-recipient implementation took about 64.7 seconds to publish against remote PostgreSQL and was rejected. The deployed bulk notification/outbox implementation reduced the same integration publish path to about 3.6 seconds.
+- Post-deploy proof: live `/api/health` returned exact source and reported matching alerts enabled, a 200-recipient cap, and `trade_and_exact_public_service_area`. `EXPECTED_SOURCE_COMMIT=43a1fa5eb9528a1fc06a0bea95da81122448c990 EXPECT_MATCHING_JOB_ALERTS_ENABLED=true npm run monitor:production` passed with PostgreSQL/S3-compatible dependencies healthy, Sentry and Web Push configured, controls disabled, seven anonymous private-route checks, and 541 ms duration.
+- Privacy/authorization evidence: tests prove wrong-trade, wrong-city, blocked, opted-out, and poster accounts are excluded; payloads contain public job title/trade/city only and omit private address/access data; replay does not duplicate delivery.
+- Known boundary: no fake production job was created for evidence. The next controlled legitimate Jacksonville publish must confirm receipt by one eligible physical device, exclusion behavior, and exact-job tap-through before Packet 10 is field-verified.
+- Approval: code, database behavior, rollout controls, and production configuration accepted; field verification remains pending.

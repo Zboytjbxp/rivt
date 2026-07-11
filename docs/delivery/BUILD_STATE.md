@@ -2,12 +2,12 @@
 
 Last updated: 2026-07-10 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Packet 10 Matching Job Alerts. Exact trade + public city matching, preference/block enforcement, exact job routing, bounded bulk fan-out, and an operator kill switch are implemented and locally verified; merge, production configuration, and controlled production proof remain pending.
+Current phase: Packet 10 Matching Job Alerts is deployed and configured in production. Exact trade + public city matching, preference/block enforcement, exact job routing, bounded bulk fan-out, and an operator kill switch are production-live; one controlled legitimate publish and physical exact-job tap remain pending.
 Active packet: `docs/delivery/packets/10_GATE_B_MATCHING_JOB_ALERTS.md`
 Repository branch: `codex/gate-b-matching-job-alerts`
-Production feature release commit: `535e21bf1c2b76c7547b9c5ac5dc9ef54b8d5b79` verified with live `/api/health` and `npm run monitor:production`; docs-only evidence commits may supersede the served build SHA without changing runtime behavior.
+Production feature release commit: `43a1fa5eb9528a1fc06a0bea95da81122448c990` verified with live `/api/health` and `npm run monitor:production`; docs-only evidence commits may supersede the served build SHA without changing runtime behavior.
 
-## Packet 10 - Gate B Matching Job Alerts (Locally Verified)
+## Packet 10 - Gate B Matching Job Alerts (Production Configured)
 
 - Added a fail-closed `MATCHING_JOB_ALERTS_ENABLED` control and bounded `MATCHING_JOB_ALERT_LIMIT` fan-out (200 default, 500 hard maximum).
 - Initial job publish now finds active tradespeople with the same selected trade and exact public city/region/country, excluding the poster, blocks, mismatches, and `new_jobs` opt-outs.
@@ -15,7 +15,8 @@ Production feature release commit: `535e21bf1c2b76c7547b9c5ac5dc9ef54b8d5b79` ve
 - Notifications and push outbox rows are inserted in bulk. Remote PostgreSQL publish time dropped from 64.7 seconds in the first per-recipient implementation to 3.6 seconds after the bulk correction.
 - Settings now exposes a tradesperson-only `Matching jobs` control; the dormant `new_jobs` category is now real.
 - Local verification passes: build, lint, security lint, 50/50 unit tests, E2E, mobile-action smoke, dependency audit, diff checks, and the complete PostgreSQL aggregate (`npm run test`) with 19/19 integration assertions. Isolated and aggregate coverage prove matching delivery, wrong-trade/wrong-city/block/opt-out exclusion, idempotent dedupe, existing push durability, and session revocation.
-- Pending boundary: push/merge, enable the Railway flag, verify health, then perform one controlled production publish and physical exact-job tap.
+- Production evidence: Railway deployment `79bc9d5c-d20b-4c30-9b1a-955225d77876` serves exact source `43a1fa5eb9528a1fc06a0bea95da81122448c990`. Live health reports matching alerts enabled, a 200-recipient cap, and the exact public service-area rule. The production monitor passed with PostgreSQL, S3-compatible storage, Sentry, Web Push, controls off, and seven anonymous private-route probes.
+- Pending boundary: perform one controlled legitimate production publish and physical exact-job tap. Do not create a fake live job solely to manufacture this evidence.
 
 ## Packet 09 - Gate B Web Push (Production Verified)
 
