@@ -2,10 +2,27 @@
 
 Last updated: 2026-07-11 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Packet 18 Work Mobile Priority is production verified. It makes accepted active work the first Work-screen decision and pushes browsing/administration into a clearly secondary path.
-Active packet: `docs/delivery/packets/18_WORK_MOBILE_PRIORITY.md`
-Repository branch: `master`
+Current phase: Packet 19 Job Workspace Simplification is locally verified. It groups job detail into Today, Job, Money, and More while retaining all current records.
+Active packet: `docs/delivery/packets/19_JOB_WORKSPACE_SIMPLIFICATION.md`
+Repository branch: `codex/job-workspace-simplification`
 Production feature release commit: `8e2c757d690513318daf3fe85583aa7674a7725d` verified with live `/api/health`, ready migration `0026_standalone_projects`, and `npm run monitor:production`; docs-only evidence commits may supersede the served build SHA without changing runtime behavior.
+
+## Packet 19 - Job Workspace Simplification (Local Verification)
+
+- Job detail now uses Today, Job, Money, and More as the primary workspace
+  modes. Inactive jobs use Activity instead of Today.
+- Active-work actions are ordered first within Today, followed by summary and
+  job facts. Requirements remain a Job subview; changes, checklist, notes, and
+  contacts remain in More.
+- The Work lifecycle smoke asserts that Today puts exact active-work actions
+  before the job summary, then continues to prove the scoped Camera handoff.
+- Local verification passed: build, lint, security lint, 53/53 unit tests,
+  E2E, Work lifecycle UI smoke, mobile-action UI smoke, Tools rendered QA,
+  dependency audit, and diff check. The aggregate test command was not
+  repeated because this client-only navigation packet does not touch server or
+  database code.
+- Pending: commit, deploy, live health/monitor evidence, and a physical
+  active-job pass on iOS and Android.
 
 ## Packet 18 - Work Mobile Priority (Local Verification)
 

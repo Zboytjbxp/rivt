@@ -690,6 +690,9 @@ async function runTradespersonOfferFlow(page) {
   assert.equal(await workspaceHeading.evaluate((element) => document.activeElement === element), true, "Active-work workspace heading should receive focus after opening");
   const activeWorkspace = page.getByLabel("Hiring workflow");
   await activeWorkspace.getByText("Keep this job moving", { exact: true }).waitFor({ timeout: 15_000 });
+  const activeWorkspaceBox = await activeWorkspace.boundingBox();
+  const jobSummaryBox = await page.locator(".v2-job-description").boundingBox();
+  assert.ok(activeWorkspaceBox && jobSummaryBox && activeWorkspaceBox.y < jobSummaryBox.y, "Today must put active-work actions before the job summary");
   await activeWorkspace.getByRole("button", { name: "Open project records" }).waitFor({ timeout: 15_000 });
   await activeWorkspace.getByRole("button", { name: "Messages" }).waitFor({ timeout: 15_000 });
   await activeWorkspace.getByRole("button", { name: "Camera" }).waitFor({ timeout: 15_000 });

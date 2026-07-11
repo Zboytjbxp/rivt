@@ -65,6 +65,7 @@ type TradeFilter = (typeof tradeOptions)[number];
 type DifficultyFilter = (typeof difficultyOptions)[number];
 type WorkTypeFilter = (typeof workTypeOptions)[number];
 type DetailTab = "overview" | "requirements" | "activity" | "changes" | "checklist" | "payments" | "notes" | "contacts";
+type WorkspaceTab = "today" | "job" | "activity" | "money" | "more";
 type ContractorSection = "open" | "draft" | "paused" | "closed" | "pipeline" | "calendar" | "templates";
 type JobAction = "publish" | "pause" | "resume" | "close";
 
@@ -1247,6 +1248,7 @@ export function WorkWorkspace({
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [mobileDetailOpen, setMobileDetailOpen] = useState(() => Boolean(openDetailOnMount));
   const [detailTab, setDetailTab] = useState<DetailTab>("overview");
+  const [workspaceTab, setWorkspaceTab] = useState<WorkspaceTab>(() => focusedActiveWorkId ? "today" : "job");
   const [contractorSection, setContractorSection] = useState<ContractorSection>("open");
   const [activeAction, setActiveAction] = useState("");
   const [actionError, setActionError] = useState<string | null>(null);
@@ -1308,8 +1310,13 @@ export function WorkWorkspace({
   }
 
   function selectJob(jobId: JobId, revealWorkspace = false) {
+    const selected = jobs.find((job) => job.id === jobId);
+    const active = selected
+      ? activeWorkRecords.some((work) => work.status === "active" && (work.jobId === selected.canonical?.id || work.jobId === String(selected.id)))
+      : false;
     onSelectJob(jobId);
     setDetailTab("overview");
+    setWorkspaceTab(active ? "today" : "job");
     setActionError(null);
     setMobileDetailOpen(true);
     if (revealWorkspace) revealJobWorkspace();
@@ -1395,6 +1402,7 @@ export function WorkWorkspace({
         accepted.activeWork,
         ...current.filter((candidate) => candidate.id !== accepted.activeWork.id),
       ]);
+      setWorkspaceTab("today");
       onOfferAccepted?.(accepted.activeWork);
       await refreshDetailJob();
       onActiveWorkChanged?.();
@@ -1593,6 +1601,29 @@ export function WorkWorkspace({
 
   const focusedJobTitle = detailJob?.title ?? "";
 
+  const activeWorkspace = Boolean(activeWork && activeWork.status === "active");
+  const workspaceTabs: Array<{ id: WorkspaceTab; label: string }> = activeWorkspace
+    ? [
+      { id: "today", label: "Today" },
+      { id: "job", label: "Job" },
+      { id: "money", label: "Money" },
+      { id: "more", label: "More" },
+    ]
+    : [
+      { id: "job", label: "Job" },
+      { id: "activity", label: "Activity" },
+      { id: "money", label: "Money" },
+      { id: "more", label: "More" },
+    ];
+
+  function openWorkspaceTab(tab: WorkspaceTab) {
+    setWorkspaceTab(tab);
+    if (tab === "today" || tab === "job") setDetailTab("overview");
+    if (tab === "activity") setDetailTab("activity");
+    if (tab === "money") setDetailTab("payments");
+    if (tab === "more") setDetailTab("notes");
+  }
+
   useEffect(() => {
     if (!openDetailOnMount || !focusedJobTitle) return;
     const timeout = window.setTimeout(() => revealJobWorkspace(true), 0);
@@ -1759,25 +1790,33 @@ export function WorkWorkspace({
               {role === "tradesperson" && detailJob.match > 0 ? <div className="v2-match-score"><strong>{detailJob.match}%</strong><span>match</span></div> : <StatusPill tone={statusTone(detailJob.status)} className={`v2-work-status status-${detailJob.status.toLowerCase()}`}>{detailJob.status}</StatusPill>}
             </header>
 
-            <nav className="v2-detail-tabs" aria-label="Job details">
-              {(["overview", "requirements", "activity", "changes", "checklist", "payments", "notes", "contacts"] as const).map((tab) => {
-                const labels: Record<string, string> = { overview: "Overview", requirements: "Req's", activity: "Activity", changes: "Changes", checklist: "Checklist", payments: "Payments", notes: "Notes", contacts: "Contacts" };
-                return <button key={tab} type="button" className={detailTab === tab ? "is-active" : ""} onClick={() => setDetailTab(tab)}>{labels[tab]}</button>;
-              })}
+            <nav className="v2-detail-tabs" aria-label="Job workspace">
+              {workspaceTabs.map((tab) => (
+                <button key={tab.id} type="button" className={workspaceTab === tab.id ? "is-active" : ""} onClick={() => openWorkspaceTab(tab.id)}>{tab.label}</button>
+              ))}
             </nav>
             <label className="v2-mobile-work-select v2-mobile-detail-select">
-              <span>Job section</span>
-              <select value={detailTab} onChange={(event) => setDetailTab(event.target.value as DetailTab)}>
-                <option value="overview">Overview</option>
-                <option value="requirements">Requirements</option>
-                <option value="activity">Activity</option>
-                <option value="changes">Changes</option>
-                <option value="checklist">Checklist</option>
-                <option value="payments">Payments</option>
-                <option value="notes">Notes</option>
-                <option value="contacts">Contacts</option>
+              <span>Workspace</span>
+              <select value={workspaceTab} onChange={(event) => openWorkspaceTab(event.target.value as WorkspaceTab)}>
+                {workspaceTabs.map((tab) => <option key={tab.id} value={tab.id}>{tab.label}</option>)}
               </select>
             </label>
+
+            {workspaceTab === "job" ? (
+              <nav className="v2-workspace-subnav" aria-label="Job information">
+                <button type="button" className={detailTab === "overview" ? "is-active" : ""} onClick={() => setDetailTab("overview")}>Summary</button>
+                <button type="button" className={detailTab === "requirements" ? "is-active" : ""} onClick={() => setDetailTab("requirements")}>Requirements</button>
+              </nav>
+            ) : null}
+
+            {workspaceTab === "more" ? (
+              <nav className="v2-workspace-subnav" aria-label="More job records">
+                {(["changes", "checklist", "notes", "contacts"] as const).map((tab) => {
+                  const labels: Record<typeof tab, string> = { changes: "Changes", checklist: "Checklist", notes: "Notes", contacts: "Contacts" };
+                  return <button key={tab} type="button" className={detailTab === tab ? "is-active" : ""} onClick={() => setDetailTab(tab)}>{labels[tab]}</button>;
+                })}
+              </nav>
+            ) : null}
 
             {detailTab === "overview" ? (
               <div className="v2-detail-content">
@@ -1797,7 +1836,7 @@ export function WorkWorkspace({
                 ) : null}
                 <section className="v2-privacy-note"><LockKeyhole size={17} /><div><strong>Exact address stays private</strong><span>{role === "contractor" ? "Only your organization can access the saved address in this release." : detailJob.addressPolicy}</span></div></section>
                 {role === "contractor" && detailJob.canonical?.privateLocation ? <section className="v2-detail-section"><h3>Private jobsite</h3><p>{detailJob.canonical.privateLocation.addressLine1}{detailJob.canonical.privateLocation.addressLine2 ? `, ${detailJob.canonical.privateLocation.addressLine2}` : ""}<br />{detailJob.canonical.privateLocation.city}, {detailJob.canonical.privateLocation.region} {detailJob.canonical.privateLocation.postalCode}</p></section> : null}
-                <section className="v2-match-panel" aria-label="Hiring workflow">
+                <section className={activeWork && workspaceTab === "today" ? "v2-match-panel is-today" : "v2-match-panel"} aria-label="Hiring workflow">
                   <div className="v2-match-panel-heading">
                     <div>
                       <span>{activeWork ? "Active work" : role === "contractor" ? "Applicants" : "Your hiring status"}</span>

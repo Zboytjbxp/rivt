@@ -10,6 +10,14 @@ Status values:
 
 Evidence must eventually link to implementation, automated tests, manual acceptance proof, and deployed build.
 
+## Traceability Addendum - 2026-07-11 Job Workspace Simplification (In Progress)
+
+- `GA-UX-003` gains workspace clarity evidence: eight peer job-detail tabs are
+  grouped into Today, Job, Money, and More without removing the underlying
+  records or their exact active-work context.
+- `GA-UX-006` gains rendered ordering coverage: Today puts accepted-work
+  actions before scope, facts, and other job summary content.
+
 ## Traceability Addendum - 2026-07-11 Work Mobile Priority (In Progress)
 
 - `GA-UX-003` gains mobile hierarchy evidence: the active accepted job renders
