@@ -2,10 +2,10 @@
 
 Last updated: 2026-07-11 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Packet 18 Work Mobile Priority is locally verified. It makes accepted active work the first Work-screen decision and pushes browsing/administration into a clearly secondary path.
+Current phase: Packet 18 Work Mobile Priority is production verified. It makes accepted active work the first Work-screen decision and pushes browsing/administration into a clearly secondary path.
 Active packet: `docs/delivery/packets/18_WORK_MOBILE_PRIORITY.md`
-Repository branch: `codex/work-mobile-priority`
-Production feature release commit: `596d824b34d1f6ec84e644ec2f2a20c790907279` verified with live `/api/health`, ready migration `0026_standalone_projects`, and `npm run monitor:production`; docs-only evidence commits may supersede the served build SHA without changing runtime behavior.
+Repository branch: `master`
+Production feature release commit: `8e2c757d690513318daf3fe85583aa7674a7725d` verified with live `/api/health`, ready migration `0026_standalone_projects`, and `npm run monitor:production`; docs-only evidence commits may supersede the served build SHA without changing runtime behavior.
 
 ## Packet 18 - Work Mobile Priority (Local Verification)
 
@@ -22,8 +22,14 @@ Production feature release commit: `596d824b34d1f6ec84e644ec2f2a20c790907279` ve
   dependency audit, and diff check. The aggregate test command was not
   repeated because this client-only hierarchy packet does not touch server or
   database code.
-- Pending: commit, deploy, live health/monitor evidence, and a physical phone
-  check with a contractor who has active work.
+- Production evidence: `master` serves exact source
+  `8e2c757d690513318daf3fe85583aa7674a7725d`; health reports PostgreSQL,
+  S3-compatible storage, configured Sentry, configured Web Push, and ready
+  migration `0026_standalone_projects`. The expected-source production monitor
+  passed with matching-job alerts enabled, controls off, seven anonymous
+  private-route checks, and a 553 ms duration.
+- Remaining field-proof boundary: physical-phone confirmation with a
+  contractor who has active work.
 
 ## Packet 17 - Active Work Action Simplification (Local Verification)
 

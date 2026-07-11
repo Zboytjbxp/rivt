@@ -18,6 +18,11 @@ Evidence must eventually link to implementation, automated tests, manual accepta
 - `GA-UX-006` gains rendered priority coverage: the lifecycle smoke asserts
   the active-work strip is in the viewport and precedes Work's browsing
   controls at a phone viewport.
+- `GA-OPS-008` gains production evidence: `master` serves exact source
+  `8e2c757d690513318daf3fe85583aa7674a7725d`; live health reports ready
+  migration `0026_standalone_projects`, PostgreSQL/S3-compatible storage,
+  configured Sentry, and configured Web Push. The expected-source production
+  monitor passed with seven anonymous private-route checks in 553 ms.
 
 ## Traceability Addendum - 2026-07-11 Active Work Action Simplification (In Progress)
 
