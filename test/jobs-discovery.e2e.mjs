@@ -406,15 +406,14 @@ async function assertToolsFlow(page) {
   await page.getByLabel("Invoice draft").getByRole("button", { name: "All tools" }).click();
 
   await primaryTool("Camera").click();
-  await page.getByText("Jobsite camera", { exact: true }).waitFor();
-  await page.getByText("Live jobsite", { exact: true }).waitFor();
+  await page.getByRole("heading", { name: "Camera", exact: true }).waitFor();
   await page.waitForFunction(
-    () => document.body.innerText.includes("No live job open") || document.body.innerText.includes("Active job"),
+    () => document.body.innerText.includes("Active job") || document.body.innerText.includes("Private albums"),
     null,
     { timeout: 15_000 },
   );
   await page.waitForFunction(
-    () => document.body.innerText.includes("Recent live captures") || document.body.innerText.includes("Side work albums") || document.body.innerText.includes("Keep side-work albums separate"),
+    () => document.body.innerText.includes("Recent field photos") || document.body.innerText.includes("Private albums") || document.body.innerText.includes("Keep side-work albums separate"),
     null,
     { timeout: 15_000 },
   );

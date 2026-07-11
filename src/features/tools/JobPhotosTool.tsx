@@ -986,42 +986,9 @@ export function JobPhotosTool({ activeWork, focusedActiveWorkId = null, autoOpen
   );
   const recentProjectPhotos = projectPhotos.slice(0, 4);
   const latestProjectPhoto = projectPhotos[0] ?? null;
-  const totalPhotoCount = projectPhotos.length + albums.reduce((sum, album) => sum + album.photoCount, 0);
 
   return (
     <div className="v2-job-photos-workbench v2-camera-home">
-      <section className="v2-camera-home-hero">
-        <div className="v2-camera-home-copy">
-          <span className="v2-camera-home-kicker">Camera</span>
-          <h2>Jobsite camera</h2>
-          <p>Shoot live progress fast, keep before-and-after proof tight, and keep side-work albums out of the closeout trail.</p>
-        </div>
-        <div className="v2-camera-home-summary" aria-label="Camera summary">
-          <span>{projectPhotos.length} live</span>
-          <span>{albums.length} private album{albums.length === 1 ? "" : "s"}</span>
-          <span>{totalPhotoCount} total</span>
-        </div>
-        <div className="v2-tool-action-row">
-          {recordWork ? (
-            <>
-              <button type="button" className="v2-primary-button" onClick={() => void openActiveJob({ launchCamera: true })} disabled={projectLoading}>
-                <Camera size={15} />
-                {projectLoading ? "Opening..." : "Open camera"}
-              </button>
-              <button type="button" onClick={() => void openActiveJob()} disabled={projectLoading}>
-                <FolderOpen size={15} />
-                Open project feed
-              </button>
-            </>
-          ) : (
-            <button type="button" className="v2-primary-button" onClick={() => setShowNewAlbum(true)}>
-              <Plus size={15} />
-              New album
-            </button>
-          )}
-        </div>
-      </section>
-
       {showNewAlbum ? (
         <div className="v2-job-photos-new-album v2-camera-home-panel">
           <input
@@ -1050,61 +1017,56 @@ export function JobPhotosTool({ activeWork, focusedActiveWorkId = null, autoOpen
 
       {albumsError ? <p className="v2-record-notice v2-job-photos-upload-error" role="alert">{albumsError}</p> : null}
 
-      <section className="v2-camera-home-panel v2-camera-home-live-card">
-        <div className="v2-camera-home-section-head">
-          <div>
-            <h3>Live jobsite</h3>
-            <p>Every live capture lands on the accepted-work feed so the office, closeout, and proof trail stay in one place.</p>
+      {recordWork ? (
+        <section className="v2-camera-home-panel v2-camera-live-command">
+          <div className="v2-job-photos-active-job-info">
+            <span className="v2-job-photos-active-badge">Active job</span>
+            <h2>{recordWork.job?.title ?? "Accepted work"}</h2>
+            <small>
+              {recordWork.job?.publicLocation.city ?? "Project"} - {projectPhotos.length} {projectPhotos.length === 1 ? "photo" : "photos"}
+            </small>
           </div>
-        </div>
-        {recordWork ? (
-          <div className="v2-job-photos-active-job-card">
-            <div className="v2-job-photos-active-job-info">
-              <span className="v2-job-photos-active-badge">Active job</span>
-              <strong>{recordWork.job?.title ?? "Accepted work"}</strong>
-              <small>
-                {recordWork.job?.publicLocation.city ?? "Project"} - {projectPhotos.length} {projectPhotos.length === 1 ? "photo" : "photos"}
-              </small>
-            </div>
-            <div className="v2-tool-action-row">
-              <button
-                type="button"
-                className="v2-primary-button"
-                onClick={() => void openActiveJob({ launchCamera: true })}
-                disabled={projectLoading}
-              >
-                <Camera size={15} />
-                Open camera
-              </button>
-              <button
-                type="button"
-                onClick={() => void openActiveJob()}
-                disabled={projectLoading}
-              >
-                <ArrowRight size={15} />
-                Open project feed
-              </button>
-            </div>
-            {projectError ? <p className="v2-record-notice v2-job-photos-upload-error" role="alert">{projectError}</p> : null}
+          <p className="v2-camera-live-command-copy">Photos save to this job's private project feed.</p>
+          <button
+            type="button"
+            className="v2-primary-button"
+            onClick={() => void openActiveJob({ launchCamera: true })}
+            disabled={projectLoading}
+          >
+            <Camera size={16} />
+            {projectLoading ? "Opening..." : "Open camera"}
+          </button>
+          <button
+            type="button"
+            className="v2-camera-project-link"
+            onClick={() => void openActiveJob()}
+            disabled={projectLoading}
+          >
+            <FolderOpen size={16} />
+            Open project feed
+          </button>
+          {projectError ? <p className="v2-record-notice v2-job-photos-upload-error" role="alert">{projectError}</p> : null}
+        </section>
+      ) : (
+        <section className="v2-camera-home-panel v2-camera-live-command">
+          <div className="v2-job-photos-active-job-info">
+            <span className="v2-job-photos-active-badge">Camera</span>
+            <h2>Private albums</h2>
+            <small>Side work and personal photo sets</small>
           </div>
-        ) : (
-          <div className="v2-job-photos-empty v2-camera-home-empty">
-            <Camera size={28} />
-            <strong>No live job open</strong>
-            <p>Albums are still here for side work, showroom photos, and proof that does not belong to an active RIVT record.</p>
-          </div>
-        )}
-      </section>
+          <button type="button" className="v2-primary-button" onClick={() => setShowNewAlbum(true)}>
+            <Plus size={16} />
+            New album
+          </button>
+        </section>
+      )}
 
       {recordWork ? (
         <section className="v2-camera-home-panel">
           <div className="v2-camera-home-section-head">
-            <div>
-              <h3>Recent live captures</h3>
-              <p>The newest field proof on the live project feed, ready to reopen, compare, or keep building on.</p>
-            </div>
-            <button type="button" onClick={() => void openActiveJob()} disabled={projectLoading}>
-              Open full feed
+            <h3>Recent field photos</h3>
+            <button type="button" className="v2-camera-project-link" onClick={() => void openActiveJob()} disabled={projectLoading}>
+              Project feed <ArrowRight size={15} />
             </button>
           </div>
           {projectLoading ? (
@@ -1124,8 +1086,7 @@ export function JobPhotosTool({ activeWork, focusedActiveWorkId = null, autoOpen
           ) : (
             <div className="v2-job-photos-empty v2-camera-home-empty">
               <Image size={28} />
-              <strong>No field captures yet</strong>
-              <p>Start with the live job camera so the very first photo already belongs to the closeout trail.</p>
+              <strong>No photos on this job yet</strong>
             </div>
           )}
           {recentProjectPhotos.length > 1 ? (
@@ -1152,10 +1113,7 @@ export function JobPhotosTool({ activeWork, focusedActiveWorkId = null, autoOpen
 
       <section className="v2-camera-home-panel">
         <div className="v2-camera-home-section-head">
-          <div>
-            <h3>Private albums</h3>
-            <p>Keep side work, showroom shots, and off-platform photos separate from the live project feed.</p>
-          </div>
+          <h3>Private albums</h3>
         </div>
         <details className="v2-camera-albums-fold" open={!recordWork}>
           <summary className="v2-camera-albums-summary">

@@ -12,6 +12,10 @@ Production feature release commit: `dc009c799b856b45f64fda90ee22b8ff853ef4e8` ve
 - Rebuilt the live-job camera as a full-height, one-hand capture surface with
   a persistent exact-job label, in-camera capture types, large center shutter,
   recent-capture preview, and a functional front/back camera switch.
+- Reduced the camera launcher to one active-job command surface: one primary
+  `Open camera` action, one quiet project-feed handoff, recent job photos, and
+  collapsed side-work albums. Duplicate camera/feed buttons, summary chips,
+  and the repeated explanatory hero are removed.
 - Moved capture type selection out of the home/gallery dashboard. Field
   photos are now categorized at capture time; the project feed keeps only
   filtering controls.

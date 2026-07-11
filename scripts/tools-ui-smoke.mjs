@@ -514,15 +514,16 @@ async function runToolsFlow(page, viewportName) {
   await page.getByLabel("Daily log").getByRole("button", { name: "Tools" }).click();
 
   await primaryTool("Camera").click();
-  await page.getByText("Jobsite camera", { exact: true }).waitFor({ timeout: 15_000 });
-  await page.getByText("Live jobsite", { exact: true }).waitFor({ timeout: 15_000 });
-  await page.waitForFunction(() => document.body.innerText.includes("Recent live captures") || document.body.innerText.includes("No field captures yet"), null, { timeout: 15_000 });
+  await page.getByText("Tenant Build-Out", { exact: true }).waitFor({ timeout: 15_000 });
+  await page.waitForFunction(() => document.body.innerText.includes("Recent field photos") || document.body.innerText.includes("No photos on this job yet"), null, { timeout: 15_000 });
   await page.getByRole("button", { name: "Open camera" }).first().waitFor({ timeout: 15_000 });
   await page.waitForFunction(
     () => document.body.innerText.includes("Side work albums") || document.body.innerText.includes("Keep side-work albums separate"),
     null,
     { timeout: 15_000 },
   );
+  await assertNoHorizontalOverflow(page);
+  await page.screenshot({ path: path.join(screenshotDir, `${viewportName}-camera-home.png`), fullPage: true });
   await page.getByRole("button", { name: "Open camera" }).first().click();
   await page.getByRole("button", { name: "Take photo" }).waitFor({ timeout: 15_000 });
   await page.getByLabel("Saving photos to Tenant Build-Out").waitFor({ timeout: 15_000 });

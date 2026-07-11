@@ -2360,13 +2360,12 @@
 }
 
 .v2-camera-home {
-  gap: 18px;
+  gap: 16px;
 }
 
-.v2-camera-home-hero,
 .v2-camera-home-panel {
   display: grid;
-  gap: 14px;
+  gap: 12px;
   padding: 18px;
   border: 1px solid color-mix(in srgb, var(--v2-border) 58%, transparent);
   border-radius: var(--v2-radius-lg);
@@ -2374,76 +2373,25 @@
   box-shadow: var(--v2-shadow-card);
 }
 
-.v2-camera-home-copy {
+.v2-camera-live-command {
   display: grid;
-  gap: 8px;
-}
-
-.v2-camera-home-kicker {
-  color: var(--v2-accent);
-  font-size: 13px;
-  font-weight: var(--v2-weight-bold);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.v2-camera-home-copy h2 {
-  margin: 0;
-  font-size: 24px;
-  line-height: 1.05;
-  text-wrap: balance;
-}
-
-.v2-camera-home-copy p {
-  margin: 0;
-  max-width: 56ch;
-  color: var(--v2-text-muted);
-  font-size: 14px;
-  line-height: 1.55;
-}
-
-.v2-camera-home-summary {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.v2-camera-home-summary span {
-  min-height: 34px;
-  padding: 0 12px;
-  border: 1px solid color-mix(in srgb, var(--v2-border) 58%, transparent);
-  border-radius: var(--v2-radius-pill);
-  background: color-mix(in srgb, var(--v2-surface-muted) 70%, transparent);
-  color: var(--v2-text-muted);
-  display: inline-flex;
-  align-items: center;
-  font-size: 13px;
-  font-weight: var(--v2-weight-strong);
-}
-
-.v2-camera-home-stats {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
 }
 
-.v2-camera-home-stats article {
-  display: grid;
-  gap: 2px;
-  padding: 12px 14px;
-  border-radius: var(--v2-radius-md);
-  background: color-mix(in srgb, var(--v2-surface-muted) 76%, transparent);
+.v2-camera-live-command h2 {
+  margin: 0;
+  overflow: hidden;
+  font-size: 22px;
+  line-height: 1.12;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.v2-camera-home-stats strong {
-  font-size: 20px;
-  font-weight: var(--v2-weight-display);
-  font-variant-numeric: tabular-nums;
-}
-
-.v2-camera-home-stats span {
+.v2-camera-live-command-copy {
+  margin: 0;
   color: var(--v2-text-muted);
-  font-size: 13px;
+  font-size: 15px;
+  line-height: 1.45;
 }
 
 .v2-camera-home-section-head {
@@ -2455,15 +2403,34 @@
 }
 
 .v2-camera-home-section-head h3 {
-  margin: 0 0 4px;
+  margin: 0;
   font-size: 18px;
 }
 
-.v2-camera-home-section-head p {
-  margin: 0;
-  color: var(--v2-text-muted);
-  font-size: 13px;
-  line-height: 1.5;
+.v2-camera-project-link {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: var(--v2-radius-md);
+  background: transparent;
+  color: var(--v2-text);
+  font: inherit;
+  font-size: 15px;
+  font-weight: var(--v2-weight-strong);
+  cursor: pointer;
+}
+
+.v2-camera-project-link:hover:not(:disabled) {
+  background: var(--v2-surface-muted);
+}
+
+.v2-camera-project-link:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .v2-camera-home-feature {
@@ -3408,16 +3375,6 @@
   outline-offset: 2px;
 }
 
-.v2-job-photos-active-job-card {
-  display: grid;
-  gap: 14px;
-  padding: 16px 18px;
-  border: 1px solid color-mix(in srgb, var(--v2-border) 58%, transparent);
-  border-radius: var(--v2-radius-lg);
-  background: var(--v2-surface-raised);
-  box-shadow: var(--v2-shadow-card);
-}
-
 .v2-job-photos-active-job-info {
   display: grid;
   gap: 3px;
@@ -3430,14 +3387,6 @@
   font-weight: var(--v2-weight-bold);
   text-transform: uppercase;
   letter-spacing: 0.04em;
-}
-
-.v2-job-photos-active-job-info strong {
-  overflow: hidden;
-  font-size: 14px;
-  font-weight: var(--v2-weight-bold);
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .v2-job-photos-active-job-info small {
@@ -3562,10 +3511,6 @@
 }
 
 @media (max-width: 900px) {
-  .v2-camera-home-stats {
-    grid-template-columns: 1fr;
-  }
-
   .v2-camera-home-feature,
   .v2-camera-home-recent-card,
   .v2-job-photo-timeline-row {
@@ -3610,9 +3555,6 @@
     padding: 12px 14px;
   }
 
-  .v2-job-photos-active-job-card {
-    grid-template-columns: 1fr;
-  }
 }
 
 /* ── Time Tracker ──────────────────────────────────────────────────────────── */
@@ -7185,10 +7127,8 @@ html[data-rivt-compact-device="true"] .v2-invoice-preview-panel {
 
 html[data-rivt-compact-device="true"] .v2-job-photos-workbench,
 html[data-rivt-compact-device="true"] .v2-camera-home,
-html[data-rivt-compact-device="true"] .v2-camera-home-hero,
 html[data-rivt-compact-device="true"] .v2-camera-home-panel,
 html[data-rivt-compact-device="true"] .v2-job-photos-toolbar,
-html[data-rivt-compact-device="true"] .v2-job-photos-active-job-card,
 html[data-rivt-compact-device="true"] .v2-job-photos-album-list,
 html[data-rivt-compact-device="true"] .v2-job-photo-full {
   width: 100%;
@@ -7199,15 +7139,13 @@ html[data-rivt-compact-device="true"] .v2-camera-home {
   gap: 10px;
 }
 
-html[data-rivt-compact-device="true"] .v2-camera-home-hero,
 html[data-rivt-compact-device="true"] .v2-camera-home-panel,
-html[data-rivt-compact-device="true"] .v2-job-photos-toolbar,
-html[data-rivt-compact-device="true"] .v2-job-photos-active-job-card {
+html[data-rivt-compact-device="true"] .v2-job-photos-toolbar {
   gap: 10px;
   padding: 12px;
 }
 
-html[data-rivt-compact-device="true"] .v2-camera-home-copy h2 {
+html[data-rivt-compact-device="true"] .v2-camera-live-command h2 {
   font-size: 20px;
   line-height: 1.06;
 }
@@ -7222,16 +7160,6 @@ html[data-rivt-compact-device="true"] .v2-job-photo-timeline-row {
 html[data-rivt-compact-device="true"] .v2-camera-mode-bar {
   gap: 8px;
   padding: 12px;
-}
-
-html[data-rivt-compact-device="true"] .v2-camera-home-summary {
-  gap: 6px;
-}
-
-html[data-rivt-compact-device="true"] .v2-camera-home-summary span {
-  min-height: 32px;
-  padding-inline: 10px;
-  font-size: 12px;
 }
 
 html[data-rivt-compact-device="true"] .v2-camera-filter-strip {
@@ -7262,8 +7190,6 @@ html[data-rivt-compact-device="true"] .v2-job-photo-timeline-copy strong {
   font-size: 14px;
 }
 
-html[data-rivt-compact-device="true"] .v2-camera-home-copy p,
-html[data-rivt-compact-device="true"] .v2-camera-home-section-head p,
 html[data-rivt-compact-device="true"] .v2-job-photos-active-job-info small,
 html[data-rivt-compact-device="true"] .v2-job-photos-album-copy small,
 html[data-rivt-compact-device="true"] .v2-camera-home-feature-copy small,
@@ -7272,15 +7198,6 @@ html[data-rivt-compact-device="true"] .v2-camera-home-recent-copy small,
 html[data-rivt-compact-device="true"] .v2-job-photo-timeline-copy small,
 html[data-rivt-compact-device="true"] .v2-job-photo-timeline-copy span {
   font-size: 13px;
-}
-
-html[data-rivt-compact-device="true"] .v2-camera-home-stats {
-  grid-template-columns: 1fr;
-  gap: 8px;
-}
-
-html[data-rivt-compact-device="true"] .v2-camera-home-stats article {
-  padding: 10px 12px;
 }
 
 html[data-rivt-compact-device="true"] .v2-job-photos-toolbar {
