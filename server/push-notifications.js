@@ -84,24 +84,31 @@ function expirationTimestamp(expirationTime) {
 }
 
 export async function queuePushDeliveries(client, { notificationId, accountId, notificationType }) {
+  return queuePushDeliveriesForNotifications(client, { notificationIds: [notificationId], notificationType, accountId });
+}
+
+export async function queuePushDeliveriesForNotifications(client, { notificationIds, notificationType, accountId = null }) {
   if (!pushProviderStatus().ok) return 0;
+  if (!Array.isArray(notificationIds) || notificationIds.length === 0) return 0;
   const result = await client.query(
     `INSERT INTO push_delivery_outbox (notification_id, subscription_id, account_id)
-     SELECT $1, subscription.id, $2
-     FROM push_subscriptions subscription
+     SELECT notification.id, subscription.id, notification.account_id
+     FROM in_app_notifications notification
+     INNER JOIN push_subscriptions subscription ON subscription.account_id = notification.account_id
      INNER JOIN auth_sessions session ON session.session_id = subscription.auth_session_id
-     WHERE subscription.account_id = $2
+     WHERE notification.id = ANY($1::uuid[])
+       AND ($3::uuid IS NULL OR notification.account_id = $3)
        AND session.revoked_at IS NULL
        AND session.expires_at > now()
        AND COALESCE((
          SELECT preference.enabled
          FROM notification_preferences preference
-         WHERE preference.account_id = $2
-           AND preference.notification_type = $3
+         WHERE preference.account_id = notification.account_id
+           AND preference.notification_type = $2
            AND preference.channel = 'push'
        ), true)
      ON CONFLICT (notification_id, subscription_id) DO NOTHING`,
-    [notificationId, accountId, notificationType],
+    [notificationIds, notificationType, accountId],
   );
   return result.rowCount;
 }

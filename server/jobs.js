@@ -157,6 +157,66 @@ export function calculateMatchScore(job, actor) {
   return Math.min(score, 100);
 }
 
+export function matchingJobAlertLimit(value = process.env.MATCHING_JOB_ALERT_LIMIT) {
+  if (value === undefined || value === null || String(value).trim() === "") return 200;
+  const parsed = Number.parseInt(String(value), 10);
+  if (!Number.isFinite(parsed) || parsed < 1) return 200;
+  return Math.min(parsed, 500);
+}
+
+export function matchingJobAlertsEnabled(value = process.env.MATCHING_JOB_ALERTS_ENABLED) {
+  return String(value ?? "").trim().toLowerCase() === "true";
+}
+
+export async function loadMatchingJobAlertRecipients(client, job, { limit = matchingJobAlertLimit() } = {}) {
+  const result = await client.query(
+    `SELECT account.id AS account_id
+     FROM accounts account
+     INNER JOIN profiles profile ON profile.account_id = account.id
+     INNER JOIN profile_trades profile_trade ON profile_trade.account_id = account.id
+     WHERE account.status = 'active'
+       AND account.primary_role = 'tradesperson'
+       AND profile.onboarding_status = 'complete'
+       AND account.id <> $2
+       AND profile_trade.trade_code = $3
+       AND lower(btrim(profile.service_area_city)) = lower(btrim($4))
+       AND lower(btrim(profile.service_area_region)) = lower(btrim($5))
+       AND upper(COALESCE(NULLIF(btrim(profile.country_code), ''), 'US')) = upper(COALESCE(NULLIF(btrim($6), ''), 'US'))
+       AND NOT EXISTS (
+         SELECT 1
+         FROM account_blocks block
+         WHERE (block.blocker_account_id = account.id AND block.blocked_account_id = $2)
+            OR (block.blocked_account_id = account.id AND block.blocker_account_id = $2)
+       )
+       AND COALESCE((
+         SELECT preference.enabled
+         FROM notification_preferences preference
+         WHERE preference.account_id = account.id
+           AND preference.notification_type = 'new_jobs'
+           AND preference.channel = 'in_app'
+       ), true)
+       AND NOT EXISTS (
+         SELECT 1
+         FROM in_app_notifications notification
+         WHERE notification.account_id = account.id
+           AND notification.source_type = 'job_match'
+           AND notification.source_id = $1
+       )
+     ORDER BY profile.updated_at DESC, account.id
+     LIMIT $7`,
+    [
+      job.id,
+      job.created_by_account_id,
+      job.trade_code,
+      job.public_city,
+      job.public_region,
+      job.public_country_code || "US",
+      limit,
+    ],
+  );
+  return result.rows.map((row) => row.account_id);
+}
+
 export function mapJobRecord(row, { includePrivateLocation = false, actor = null, requirements = [], events = [] } = {}) {
   const job = {
     id: row.id,

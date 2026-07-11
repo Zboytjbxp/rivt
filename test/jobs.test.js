@@ -4,6 +4,8 @@ import {
   assertPublishableJob,
   calculateMatchScore,
   mapJobRecord,
+  matchingJobAlertLimit,
+  matchingJobAlertsEnabled,
   transitionFor,
 } from "../server/jobs.js";
 
@@ -14,6 +16,17 @@ test("job status transitions fail closed", () => {
   assert.equal(transitionFor("open", "close"), "closed");
   assert.throws(() => transitionFor("closed", "resume"), /cannot be resumed/);
   assert.throws(() => transitionFor("draft", "pause"), /cannot be paused/);
+});
+
+test("matching job alert fan-out uses a bounded operator limit", () => {
+  assert.equal(matchingJobAlertsEnabled(undefined), false);
+  assert.equal(matchingJobAlertsEnabled("false"), false);
+  assert.equal(matchingJobAlertsEnabled("true"), true);
+  assert.equal(matchingJobAlertLimit(undefined), 200);
+  assert.equal(matchingJobAlertLimit("25"), 25);
+  assert.equal(matchingJobAlertLimit("5000"), 500);
+  assert.equal(matchingJobAlertLimit("0"), 200);
+  assert.equal(matchingJobAlertLimit("not-a-number"), 200);
 });
 
 test("publish readiness requires scope, pay, duration, public area, and private address", () => {

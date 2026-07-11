@@ -779,3 +779,11 @@ Evidence must eventually link to implementation, automated tests, manual accepta
 - Same-origin service-worker click handling preserves the exact message/job/project/review/Shop Talk destinations already verified in Packet 08.
 - Local evidence: 49/49 unit tests, isolated PostgreSQL migration/subscription/outbox/revocation integration, E2E, mobile Settings smoke, build/lint/security lint, and zero production dependency vulnerabilities.
 - Production source `535e21bf1c2b76c7547b9c5ac5dc9ef54b8d5b79` serves migration `0024_push_subscription_sessions`; health and the synthetic monitor report Web Push configured without exposing keys. On 2026-07-10, a physical phone received a background RIVT test alert and tapping it returned to RIVT. Maturity is `production verified`; post-logout exclusion remains integration-proven through session-bound subscription deletion.
+
+## Gate B Matching Job Alerts
+
+- Packet 10 activates the previously dormant `new_jobs` preference for tradespeople and routes matching notifications through the server-owned notification center plus durable Web Push outbox.
+- Initial publish matches only active, fully onboarded tradespeople with the selected trade and exact public city/region/country. The poster, blocks, opt-outs, wrong trades, and wrong cities are excluded.
+- Exact job routes and payload tests prove no private address/access-note data enters notifications. Replay and resume do not create duplicate publish alerts.
+- Bulk recipient/notification/outbox queries, a 200-recipient default/500 hard cap, and `MATCHING_JOB_ALERTS_ENABLED=false` by default keep the first rollout controllable.
+- Local evidence: 50/50 unit tests and isolated jobs + push PostgreSQL integration pass. Maturity remains `local/integration verified` until full gates, Railway flag configuration, health proof, and one controlled production publish/tap are recorded.

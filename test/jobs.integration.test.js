@@ -20,6 +20,7 @@ if (!testDatabaseUrl) {
   process.env.S3_BUCKET = "";
   process.env.S3_ACCESS_KEY_ID = "";
   process.env.S3_SECRET_ACCESS_KEY = "";
+  process.env.MATCHING_JOB_ALERTS_ENABLED = "true";
 
   const { Pool } = pg;
   const database = new Pool({ connectionString: testDatabaseUrl, ssl: false });
@@ -51,7 +52,11 @@ if (!testDatabaseUrl) {
     return decodeURIComponent(match[1]);
   }
 
-  async function createAccount(baseUrl, role, label) {
+  async function createAccount(baseUrl, role, label, {
+    serviceAreaCity = "Jacksonville",
+    serviceAreaRegion = "FL",
+    tradeCodes = ["electrical"],
+  } = {}) {
     const emailLabel = label.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
     const email = `${emailLabel}-${randomUUID()}@example.test`;
     const signup = await requestJson(baseUrl, "/api/v1/auth/signup", {
@@ -70,10 +75,10 @@ if (!testDatabaseUrl) {
       body: {
         role,
         displayName: label,
-        serviceAreaCity: "Jacksonville",
-        serviceAreaRegion: "FL",
+        serviceAreaCity,
+        serviceAreaRegion,
         serviceRadiusMiles: 35,
-        tradeCodes: ["electrical"],
+        tradeCodes,
         organizationName: role === "contractor" ? `${label} LLC` : undefined,
         consentAccepted: true,
         consentVersion: "2026-06-19",
@@ -101,6 +106,26 @@ if (!testDatabaseUrl) {
     const contractor = await createAccount(baseUrl, "contractor", "Job Owner");
     const otherContractor = await createAccount(baseUrl, "contractor", "Other Contractor");
     const tradesperson = await createAccount(baseUrl, "tradesperson", "Field Electrician");
+    const wrongTrade = await createAccount(baseUrl, "tradesperson", "Field Plumber", { tradeCodes: ["plumbing"] });
+    const wrongCity = await createAccount(baseUrl, "tradesperson", "Orlando Electrician", { serviceAreaCity: "Orlando" });
+    const optedOut = await createAccount(baseUrl, "tradesperson", "Quiet Electrician");
+    const blockedMatch = await createAccount(baseUrl, "tradesperson", "Blocked Electrician");
+    const optOutResponse = await requestJson(baseUrl, "/api/v1/notification-preferences", {
+      method: "PUT",
+      cookie: optedOut.cookie,
+      body: {
+        notificationType: "new_jobs",
+        channel: "in_app",
+        enabled: false,
+        quietHoursStart: null,
+        quietHoursEnd: null,
+      },
+    });
+    assert.equal(optOutResponse.response.status, 200);
+    await database.query(
+      "INSERT INTO account_blocks (blocker_account_id, blocked_account_id, reason) VALUES ($1, $2, 'integration test')",
+      [blockedMatch.id, contractor.id],
+    );
     const createBody = {
       organizationId: contractor.organizationId,
       title: "Commercial panel rough-in",
@@ -180,6 +205,28 @@ if (!testDatabaseUrl) {
     assert.equal(published.response.status, 200);
     assert.equal(published.payload.data.job.status, "open");
     const publishedVersion = published.payload.data.job.version;
+    const matchedAlert = await database.query(
+      `SELECT title, body, action_href, metadata
+       FROM in_app_notifications
+       WHERE account_id = $1 AND source_type = 'job_match' AND source_id = $2`,
+      [tradesperson.id, jobId],
+    );
+    assert.equal(matchedAlert.rowCount, 1);
+    assert.equal(matchedAlert.rows[0].title, "New Electrical job near you");
+    assert.equal(matchedAlert.rows[0].body, "Commercial panel rough-in - Jacksonville, FL");
+    assert.equal(matchedAlert.rows[0].action_href, `/app/work?job=${jobId}`);
+    assert.equal(matchedAlert.rows[0].metadata.jobId, jobId);
+    assert.equal(matchedAlert.rows[0].metadata.tradeCode, "electrical");
+    assert.equal(JSON.stringify(matchedAlert.rows[0]).includes("Private Test Street"), false);
+    for (const excludedAccount of [wrongTrade, wrongCity, optedOut, blockedMatch]) {
+      const excludedAlert = await database.query(
+        `SELECT count(*)::int AS count
+         FROM in_app_notifications
+         WHERE account_id = $1 AND source_type = 'job_match' AND source_id = $2`,
+        [excludedAccount.id, jobId],
+      );
+      assert.equal(excludedAlert.rows[0].count, 0);
+    }
     const duplicatePublish = await requestJson(baseUrl, `/api/v1/jobs/${jobId}/publish`, {
       method: "POST", cookie: contractor.cookie, idempotencyKey: publishKey,
       body: { expectedVersion: 2, consentAccepted: true, consentVersion: "2026-06-19" },
@@ -189,6 +236,12 @@ if (!testDatabaseUrl) {
     assert.equal((await database.query(
       "SELECT count(*)::int AS count FROM job_status_events WHERE job_id = $1 AND event_type = 'published'",
       [jobId],
+    )).rows[0].count, 1);
+    assert.equal((await database.query(
+      `SELECT count(*)::int AS count
+       FROM in_app_notifications
+       WHERE account_id = $1 AND source_type = 'job_match' AND source_id = $2`,
+      [tradesperson.id, jobId],
     )).rows[0].count, 1);
 
     const discovery = await requestJson(baseUrl, "/api/v1/jobs?trade=electrical&region=FL", { cookie: tradesperson.cookie });

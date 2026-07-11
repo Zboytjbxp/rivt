@@ -44,7 +44,10 @@ import {
   createJobSchema,
   jobListQuerySchema,
   jobSelectSql,
+  loadMatchingJobAlertRecipients,
   mapJobRecord,
+  matchingJobAlertLimit,
+  matchingJobAlertsEnabled,
   publishJobSchema,
   transitionFor,
   transitionJobSchema,
@@ -88,6 +91,7 @@ import { registerToolRecordRoutes } from "./tool-records.js";
 import {
   pushProviderStatus,
   queuePushDeliveries,
+  queuePushDeliveriesForNotifications,
   registerPushNotificationRoutes,
   startPushDeliveryWorker,
   stopPushDeliveryWorker,
@@ -985,6 +989,13 @@ app.get("/api/health", (_request, response) => {
         ok: webPush.ok,
         provider: webPush.provider,
         mode: webPush.mode,
+      },
+    },
+    engagement: {
+      matchingJobAlerts: {
+        enabled: matchingJobAlertsEnabled(),
+        fanoutLimit: matchingJobAlertLimit(),
+        matchRule: "trade_and_exact_public_service_area",
       },
     },
     timestamp: new Date().toISOString(),
@@ -2031,6 +2042,48 @@ async function createInAppNotification(client, {
     notificationType: preferenceType,
   });
   return inserted.rows[0];
+}
+
+async function notifyMatchingTradespeople(client, job) {
+  const limit = matchingJobAlertLimit();
+  if (!matchingJobAlertsEnabled()) return { notificationCount: 0, fanoutLimit: limit };
+  const accountIds = await loadMatchingJobAlertRecipients(client, job, { limit });
+  if (!accountIds.length) return { notificationCount: 0, fanoutLimit: limit };
+  const metadata = JSON.stringify({
+    jobId: job.id,
+    tradeCode: job.trade_code,
+    publicLocation: `${job.public_city}, ${job.public_region}`,
+    matchRule: "trade_and_exact_public_service_area",
+  });
+  const inserted = await client.query(
+    `INSERT INTO in_app_notifications (
+       account_id, type, title, body, action_href, source_type, source_id, priority, metadata
+     )
+     SELECT recipient.account_id,
+            'work',
+            $2,
+            $3,
+            $4,
+            'job_match',
+            $5,
+            'normal',
+            $6::jsonb
+     FROM unnest($1::uuid[]) AS recipient(account_id)
+     RETURNING id`,
+    [
+      accountIds,
+      `New ${job.trade_name || "trade"} job near you`,
+      `${job.title} - ${job.public_city}, ${job.public_region}`,
+      `/app/work?job=${job.id}`,
+      job.id,
+      metadata,
+    ],
+  );
+  await queuePushDeliveriesForNotifications(client, {
+    notificationIds: inserted.rows.map((row) => row.id),
+    notificationType: "new_jobs",
+  });
+  return { notificationCount: inserted.rowCount, fanoutLimit: limit };
 }
 
 async function notifyConversationParticipants(client, conversation, participants, senderAccountId, messageId, messageBody) {
@@ -3280,6 +3333,25 @@ async function transitionJob(request, response, action) {
         JSON.stringify({ fromStatus: current.status, toStatus: nextStatus })],
     );
     const row = (await client.query(`${jobSelectSql({ includePrivateLocation: true })} WHERE j.id = $1`, [jobId])).rows[0];
+    if (action === "publish") {
+      const alertSummary = await notifyMatchingTradespeople(client, row);
+      await client.query(
+        `INSERT INTO audit_events (
+           request_id, actor_account_id, organization_id, action, subject_type, subject_id, metadata
+         ) VALUES ($1, $2::uuid, $3::uuid, 'job.match_alerts_queued', 'job', ($4::uuid)::text, $5::jsonb)`,
+        [
+          request.requestId,
+          request.actor.account.id,
+          current.organization_id,
+          jobId,
+          JSON.stringify({
+            recipientCount: alertSummary.notificationCount,
+            fanoutLimit: alertSummary.fanoutLimit,
+            matchRule: "trade_and_exact_public_service_area",
+          }),
+        ],
+      );
+    }
     const job = await mapJobDetail(client, row, request.actor, true);
     return { status: 200, body: { data: { job }, meta: { requestId: request.requestId } } };
   });

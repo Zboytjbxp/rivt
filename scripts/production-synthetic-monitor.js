@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 
 const baseUrl = (process.env.RIVT_MONITOR_BASE_URL ?? "https://rivt.pro").replace(/\/+$/, "");
 const expectedCommit = process.env.EXPECTED_SOURCE_COMMIT?.trim();
+const expectedMatchingJobAlerts = process.env.EXPECT_MATCHING_JOB_ALERTS_ENABLED?.trim();
 const timeoutMs = Number.parseInt(process.env.RIVT_MONITOR_TIMEOUT_MS ?? "10000", 10);
 const allowOperationalLockout = process.env.ALLOW_OPERATIONAL_LOCKOUT === "true";
 
@@ -48,6 +49,13 @@ assert.ok(health.payload?.build?.commit, "Health must expose the deployed source
 if (expectedCommit) {
   assert.equal(health.payload.build.commit, expectedCommit, "Production source commit does not match EXPECTED_SOURCE_COMMIT.");
 }
+if (expectedMatchingJobAlerts) {
+  assert.equal(
+    health.payload?.engagement?.matchingJobAlerts?.enabled,
+    expectedMatchingJobAlerts === "true",
+    "Matching-job alert control does not match EXPECT_MATCHING_JOB_ALERTS_ENABLED.",
+  );
+}
 
 const providers = await request("/api/auth/providers");
 assert.equal(providers.payload?.inviteRequired, true, "Pilot invitation gating must remain enabled.");
@@ -71,6 +79,7 @@ console.log(JSON.stringify({
     objectStorage: dependencies.objectStorage,
   },
   observability,
+  engagement: health.payload?.engagement ?? {},
   controls: providers.payload.controls,
   anonymousPrivateChecks: privateRoutes.length,
   durationMs: Date.now() - startedAt,

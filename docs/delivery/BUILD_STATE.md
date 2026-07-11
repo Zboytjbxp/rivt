@@ -2,10 +2,20 @@
 
 Last updated: 2026-07-10 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Packet 09 Web Push delivery is production-verified. Durable subscriptions, transactional outbox queueing, bounded retry delivery, session revocation, exact-route clicks, explicit Settings consent, migrations 0023/0024, production VAPID configuration, and physical background delivery/click-through are live.
-Active packet: `docs/delivery/packets/09_GATE_B_WEB_PUSH.md`
-Repository branch: `master`
+Current phase: Packet 10 Matching Job Alerts. Exact trade + public city matching, preference/block enforcement, exact job routing, bounded bulk fan-out, and an operator kill switch are implemented and locally verified; merge, production configuration, and controlled production proof remain pending.
+Active packet: `docs/delivery/packets/10_GATE_B_MATCHING_JOB_ALERTS.md`
+Repository branch: `codex/gate-b-matching-job-alerts`
 Production feature release commit: `535e21bf1c2b76c7547b9c5ac5dc9ef54b8d5b79` verified with live `/api/health` and `npm run monitor:production`; docs-only evidence commits may supersede the served build SHA without changing runtime behavior.
+
+## Packet 10 - Gate B Matching Job Alerts (Locally Verified)
+
+- Added a fail-closed `MATCHING_JOB_ALERTS_ENABLED` control and bounded `MATCHING_JOB_ALERT_LIMIT` fan-out (200 default, 500 hard maximum).
+- Initial job publish now finds active tradespeople with the same selected trade and exact public city/region/country, excluding the poster, blocks, mismatches, and `new_jobs` opt-outs.
+- Matching notifications use public title/location only and deep-link to the exact job. Private address and access notes never enter the recipient query, notification, metadata, or audit summary.
+- Notifications and push outbox rows are inserted in bulk. Remote PostgreSQL publish time dropped from 64.7 seconds in the first per-recipient implementation to 3.6 seconds after the bulk correction.
+- Settings now exposes a tradesperson-only `Matching jobs` control; the dormant `new_jobs` category is now real.
+- Local verification passes: build, lint, security lint, 50/50 unit tests, E2E, mobile-action smoke, dependency audit, diff checks, and the complete PostgreSQL aggregate (`npm run test`) with 19/19 integration assertions. Isolated and aggregate coverage prove matching delivery, wrong-trade/wrong-city/block/opt-out exclusion, idempotent dedupe, existing push durability, and session revocation.
+- Pending boundary: push/merge, enable the Railway flag, verify health, then perform one controlled production publish and physical exact-job tap.
 
 ## Packet 09 - Gate B Web Push (Production Verified)
 

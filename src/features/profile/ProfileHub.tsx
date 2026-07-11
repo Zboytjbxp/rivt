@@ -369,7 +369,7 @@ const STORAGE_WARNING_TIER_90 = "Storage is above 90% of the plan quota currentl
 const STORAGE_WARNING_TIER_80 = "Storage is above 80% of the plan quota currently configured for this account.";
 const SUPPORT_EMAIL = (import.meta.env.VITE_SUPPORT_EMAIL as string | undefined) || "support@rivt.pro";
 
-type NotificationPrefKey = "messages" | "workUpdates" | "system";
+type NotificationPrefKey = "newJobs" | "messages" | "workUpdates" | "system";
 type NotificationPreference = {
   notificationType: "new_jobs" | "new_applicants" | "messages" | "work_updates" | "system";
   channel: "in_app" | "email" | "push";
@@ -382,13 +382,16 @@ const notificationPrefRows: Array<{
   channel: NotificationPreference["channel"];
   label: string;
   detail: string;
+  roles?: Array<"contractor" | "tradesperson">;
 }> = [
+  { key: "newJobs", notificationType: "new_jobs", channel: "in_app", label: "Matching jobs", detail: "New work matching your trade and city", roles: ["tradesperson"] },
   { key: "messages", notificationType: "messages", channel: "in_app", label: "Messages", detail: "Unread job and crew threads in RIVT" },
   { key: "workUpdates", notificationType: "work_updates", channel: "in_app", label: "Work updates", detail: "Applications, offers, schedule changes, and active work" },
   { key: "system", notificationType: "system", channel: "in_app", label: "Community and account notices", detail: "Shop Talk activity, security, billing, and platform updates" },
 ];
 
 const defaultNotificationPrefs: Record<NotificationPrefKey, boolean> = {
+  newJobs: true,
   messages: true,
   workUpdates: true,
   system: true,
@@ -1256,6 +1259,7 @@ export function ProfileHub({
   } : null);
   const currentRoleLabel = role === "contractor" ? "Contractor" : "Tradesperson";
   const requestedRoleLabel = role === "contractor" ? "Tradesperson" : "Contractor";
+  const visibleNotificationPrefRows = notificationPrefRows.filter((row) => !row.roles || row.roles.includes(role));
 
   useEffect(() => {
     let cancelled = false;
@@ -1914,7 +1918,7 @@ export function ProfileHub({
               Alert categories control the RIVT notification bell and any enabled device alerts.
             </p>
             <div className="v2-notif-pref-list">
-              {notificationPrefRows.map((row) => (
+              {visibleNotificationPrefRows.map((row) => (
                 <label key={row.key} className="v2-notif-pref-row">
                   <div>
                     <strong>{row.label}</strong>
