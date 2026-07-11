@@ -1673,6 +1673,41 @@ export function ProfileHub({
           ) : null}
         </section>
 
+        {/* Notifications are intentionally near the top of Settings: users should not have to hunt for delivery controls. */}
+        {view === "Settings" ? (
+          <section className="v2-profile-panel v2-profile-panel-wide v2-notification-prefs">
+            <header>
+              <span>Notifications</span>
+              <strong>In-app alert preferences</strong>
+            </header>
+            <PushNotificationsCard />
+            <p className="v2-notification-boundary">
+              Alert categories control the RIVT notification bell and any enabled device alerts.
+            </p>
+            <div className="v2-notif-pref-list">
+              {visibleNotificationPrefRows.map((row) => (
+                <label key={row.key} className="v2-notif-pref-row">
+                  <div>
+                    <strong>{row.label}</strong>
+                    <span>{row.detail}</span>
+                  </div>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={notificationPrefs[row.key]}
+                    className={notificationPrefs[row.key] ? "v2-notif-toggle is-on" : "v2-notif-toggle"}
+                    disabled={savingNotificationKey === row.key}
+                    onClick={() => void toggleNotificationPref(row)}
+                  >
+                    <span aria-hidden="true" />
+                  </button>
+                </label>
+              ))}
+            </div>
+            {notificationPrefStatus ? <p className="v2-profile-action-message" role="status">{notificationPrefStatus}</p> : null}
+          </section>
+        ) : null}
+
         {/* Profile editor — near top in Settings so it's immediately reachable */}
         {view === "Settings" && canonicalProfile ? (
           <section className="v2-profile-panel v2-profile-panel-wide v2-profile-editor">
@@ -1911,41 +1946,6 @@ export function ProfileHub({
             ) : null}
           </section>
         ) : null}
-        {/* Notification preferences — Settings only */}
-        {view === "Settings" ? (
-          <section className="v2-profile-panel v2-profile-panel-wide v2-notification-prefs">
-            <header>
-              <span>Notifications</span>
-              <strong>In-app alert preferences</strong>
-            </header>
-            <PushNotificationsCard />
-            <p className="v2-notification-boundary">
-              Alert categories control the RIVT notification bell and any enabled device alerts.
-            </p>
-            <div className="v2-notif-pref-list">
-              {visibleNotificationPrefRows.map((row) => (
-                <label key={row.key} className="v2-notif-pref-row">
-                  <div>
-                    <strong>{row.label}</strong>
-                    <span>{row.detail}</span>
-                  </div>
-                  <button
-                    type="button"
-                    role="switch"
-                    aria-checked={notificationPrefs[row.key]}
-                    className={notificationPrefs[row.key] ? "v2-notif-toggle is-on" : "v2-notif-toggle"}
-                    disabled={savingNotificationKey === row.key}
-                    onClick={() => void toggleNotificationPref(row)}
-                  >
-                    <span aria-hidden="true" />
-                  </button>
-                </label>
-              ))}
-            </div>
-            {notificationPrefStatus ? <p className="v2-profile-action-message" role="status">{notificationPrefStatus}</p> : null}
-          </section>
-        ) : null}
-
         {/* Business Settings — Settings only */}
         {view === "Settings" ? <BusinessSettingsSection /> : null}
 

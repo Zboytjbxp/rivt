@@ -1263,6 +1263,7 @@ export function WorkWorkspace({
   const [saveTemplateNotice, setSaveTemplateNotice] = useState("");
   const [detailJobId, setDetailJobId] = useState<string | null>(null);
   const detailHydrationRequests = useRef<Set<string>>(new Set());
+  const workLayoutRef = useRef<HTMLDivElement>(null);
 
   const visibleJobs = useMemo(() => {
     if (role !== "contractor") return jobs;
@@ -1293,11 +1294,21 @@ export function WorkWorkspace({
     verifiedOnly,
   ].filter(Boolean).length;
 
-  function selectJob(jobId: JobId) {
+  function revealJobWorkspace() {
+    window.requestAnimationFrame(() => {
+      workLayoutRef.current?.scrollIntoView({
+        behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+        block: "start",
+      });
+    });
+  }
+
+  function selectJob(jobId: JobId, revealWorkspace = false) {
     onSelectJob(jobId);
     setDetailTab("overview");
     setActionError(null);
     setMobileDetailOpen(true);
+    if (revealWorkspace) revealJobWorkspace();
   }
 
   function openActiveWorkJob(work: CanonicalActiveWork) {
@@ -1306,10 +1317,11 @@ export function WorkWorkspace({
       if (role === "contractor" && matchingJob.status === "Closed") {
         setContractorSection("closed");
       }
-      selectJob(matchingJob.id);
+      selectJob(matchingJob.id, true);
       return;
     }
     setMobileDetailOpen(true);
+    revealJobWorkspace();
   }
 
   async function runAction(job: Job, action: JobAction) {
@@ -1703,7 +1715,7 @@ export function WorkWorkspace({
         <JobTemplates onPostJob={onPostJob} />
       ) : null}
 
-      <div className={mobileDetailOpen ? "v2-work-layout show-detail" : "v2-work-layout"} style={role === "contractor" && (contractorSection === "pipeline" || contractorSection === "calendar" || contractorSection === "templates") ? { display: "none" } : undefined}>
+      <div ref={workLayoutRef} className={mobileDetailOpen ? "v2-work-layout show-detail" : "v2-work-layout"} style={role === "contractor" && (contractorSection === "pipeline" || contractorSection === "calendar" || contractorSection === "templates") ? { display: "none" } : undefined}>
         <section className="v2-work-list" aria-label={`${visibleJobs.length} jobs`}>
           <div className="v2-work-list-heading">
             <span>{visibleJobs.length} {visibleJobs.length === 1 ? "job" : "jobs"}</span>
