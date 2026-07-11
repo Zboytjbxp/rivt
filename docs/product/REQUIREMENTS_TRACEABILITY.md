@@ -22,7 +22,12 @@ Evidence must eventually link to implementation, automated tests, manual accepta
   expandable utility groups.
 - `GA-OPS-007` gains local evidence: build, lint, 53/53 unit tests, E2E,
   mobile-action UI smoke, Tools rendered UI smoke, dependency audit, and diff
-  check passed. Production evidence remains pending deployment.
+  check passed.
+- `GA-OPS-008` gains production evidence: `master` serves exact source
+  `3f4ea9585ef77d3769d8507fd1fd486b03f2634d`; live health reports ready
+  migration `0026_standalone_projects`, PostgreSQL/S3-compatible storage,
+  configured Sentry, and configured Web Push. The expected-source production
+  monitor passed with seven anonymous private-route checks in 516 ms.
 
 ## Traceability Addendum - 2026-07-11 Job Workspace Simplification (In Progress)
 

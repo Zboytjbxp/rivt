@@ -2,14 +2,14 @@
 
 Last updated: 2026-07-11 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Packet 20 Core Surface Subtraction is locally verified. It
+Current phase: Packet 20 Core Surface Subtraction is deployed. It
 removes duplicate Home launchers and keeps the Tools hub compact without
 removing reachable field utilities.
 Active packet: `docs/delivery/packets/20_CORE_SURFACE_SUBTRACTION.md`
 Repository branch: `codex/core-surface-subtraction`
-Production feature release commit: `8e2c757d690513318daf3fe85583aa7674a7725d` verified with live `/api/health`, ready migration `0026_standalone_projects`, and `npm run monitor:production`; docs-only evidence commits may supersede the served build SHA without changing runtime behavior.
+Production feature release commit: `3f4ea9585ef77d3769d8507fd1fd486b03f2634d` verified with live `/api/health`, ready migration `0026_standalone_projects`, and `npm run monitor:production`; docs-only evidence commits may supersede the served build SHA without changing runtime behavior.
 
-## Packet 20 - Core Surface Subtraction (Local Verification)
+## Packet 20 - Core Surface Subtraction (Production Verification)
 
 - Home removes duplicate recent-tool, offline/device-state, and answer-queue
   panels. The persistent shell, Tools, and Shop Talk own those destinations.
@@ -21,10 +21,16 @@ Production feature release commit: `8e2c757d690513318daf3fe85583aa7674a7725d` ve
   mobile-action UI smoke, Tools rendered UI smoke, dependency audit, and diff
   check. The packet has no server or migration change, so the PostgreSQL
   integration suite was not repeated.
-- Pending: commit, deploy, live health/monitor evidence, and one physical
-  phone scan of the reduced Home and Tools hubs.
+- Production evidence: Railway deployment `1f01e85b-6398-4bba-930c-223faf970afc`
+  succeeded. Live `/api/health` serves exact source
+  `3f4ea9585ef77d3769d8507fd1fd486b03f2634d` with PostgreSQL,
+  S3-compatible storage, configured Sentry, configured Web Push, and ready
+  migration `0026_standalone_projects`. The expected-source production monitor
+  passed with seven anonymous private-route checks in 516 ms.
+- Remaining field-proof boundary: one physical phone scan of the reduced Home
+  and Tools hubs.
 
-## Packet 19 - Job Workspace Simplification (Local Verification)
+## Packet 19 - Job Workspace Simplification (Production Verification)
 
 - Job detail now uses Today, Job, Money, and More as the primary workspace
   modes. Inactive jobs use Activity instead of Today.
@@ -38,8 +44,11 @@ Production feature release commit: `8e2c757d690513318daf3fe85583aa7674a7725d` ve
   dependency audit, and diff check. The aggregate test command was not
   repeated because this client-only navigation packet does not touch server or
   database code.
-- Pending: commit, deploy, live health/monitor evidence, and a physical
-  active-job pass on iOS and Android.
+- Production evidence: Packet 19 source is included in deployed source
+  `3f4ea9585ef77d3769d8507fd1fd486b03f2634d`, which passed exact-source
+  health and production monitoring with migration `0026_standalone_projects`.
+- Remaining field-proof boundary: a physical active-job pass on iOS and
+  Android.
 
 ## Packet 18 - Work Mobile Priority (Local Verification)
 
