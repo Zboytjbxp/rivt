@@ -35,7 +35,10 @@ Production feature release commit: `dc009c799b856b45f64fda90ee22b8ff853ef4e8` ve
   `0025_project_financial_records`, PostgreSQL, S3-compatible object storage,
   configured Sentry, and configured Web Push. The production monitor passed
   with matching alerts enabled, controls off, seven anonymous private-route
-  checks, and a 569 ms duration.
+  checks, and a 569 ms duration. The launcher-subtraction follow-up now
+  serves exact source `7b3d9be3fd25fb9dacf75baa506d09ff6e3f73a4`; its
+  production monitor passed with the same health dependencies and a 582 ms
+  duration.
 - Remaining field-proof boundary: take a real camera photo into a legitimate
   active job on iOS Safari/PWA and Android Chrome.
 
