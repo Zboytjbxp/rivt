@@ -10,6 +10,14 @@ Status values:
 
 Evidence must eventually link to implementation, automated tests, manual acceptance proof, and deployed build.
 
+## Traceability Addendum - 2026-07-12 Entry Experience (Local Verification)
+
+- `GA-UX-003` gains entry-path evidence: prospective members can explore a
+  labeled product demo without obscuring account creation or returning-member
+  login.
+- `GA-UX-006` gains mobile access evidence: both account actions remain visible
+  and reachable from every intro slide without requiring a long scroll.
+
 ## Traceability Addendum - 2026-07-12 Tool Consolidation (Local Verification)
 
 - `GA-UX-003` gains launch-surface subtraction evidence: five frequent field

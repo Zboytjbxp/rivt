@@ -11733,3 +11733,51 @@ html[data-rivt-compact-device="true"] .auth-preview-phone {
   background: #0b0b0b;
   color: #fff;
 }
+
+/* The public entry must make account access obvious before product browsing. */
+.auth-shell--intro .auth-intro-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  width: min(100%, 520px);
+  margin: 0 auto;
+}
+
+.auth-shell--intro .auth-intro-actions .primary-action,
+.auth-shell--intro .auth-intro-actions .secondary-action {
+  width: 100%;
+  min-width: 0;
+}
+
+.auth-shell--intro .auth-intro-actions .secondary-action {
+  border-color: #0b0b0b;
+  background: rgba(255, 255, 255, 0.68);
+  font-weight: var(--v2-weight-bold);
+}
+
+.auth-intro-preview-link {
+  display: inline-flex;
+  grid-column: 1 / -1;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: 0;
+  background: transparent;
+  color: #0b0b0b;
+  font: inherit;
+  font-size: 14px;
+  font-weight: var(--v2-weight-bold);
+  cursor: pointer;
+}
+
+.auth-intro-preview-link:hover,
+.auth-intro-preview-link:focus-visible {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+@media (max-width: 640px) {
+  .auth-shell--intro .auth-intro-actions {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+}

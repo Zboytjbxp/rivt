@@ -557,7 +557,7 @@ function SwipeEntryShowcase({
       }}
     >
       <button type="button" className="auth-intro-skip" onClick={onPreview}>
-        Skip
+        Preview demo
       </button>
 
       <div className="auth-intro-brand">
@@ -618,27 +618,15 @@ function SwipeEntryShowcase({
         <button
           type="button"
           className="primary-action"
-          onClick={activeSlide === entrySlides.length - 1 ? onPreview : () => moveSlide(1)}
+          onClick={onCreateAccount}
         >
-          {activeSlide === entrySlides.length - 1 ? "Preview RIVT" : "Next"}
-          <ArrowRight size={17} />
+          Create free account
         </button>
-        {activeSlide > 0 ? (
-          <button type="button" className="secondary-action" onClick={() => moveSlide(-1)}>
-            <ArrowLeft size={17} />
-            Back
-          </button>
-        ) : null}
-      </div>
-
-      <div className="auth-intro-secondary" aria-label="Account options">
-        <button type="button" className="auth-intro-account-action" onClick={onCreateAccount}>
-          <span>New to RIVT</span>
-          <strong>Create account</strong>
+        <button type="button" className="secondary-action" onClick={onLogin}>
+          Log in
         </button>
-        <button type="button" className="auth-intro-account-action is-login" onClick={onLogin}>
-          <span>Already have an account</span>
-          <strong>Log in</strong>
+        <button type="button" className="auth-intro-preview-link" onClick={onPreview}>
+          Explore a sample workspace <ArrowRight size={16} />
         </button>
       </div>
     </section>

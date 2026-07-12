@@ -2,12 +2,21 @@
 
 Last updated: 2026-07-12 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Packet 25 Tool Consolidation is deployed and verified. It keeps
-the five daily field apps prominent and removes overlapping or unfinished
-launchers from the day-one Tools hub.
-Active packet: `docs/delivery/packets/25_TOOL_CONSOLIDATION.md`
-Repository branch: `master`
+Current phase: Packet 26 Entry Experience is in local verification. It makes
+account creation and returning-member login persistent first-screen actions
+while keeping the product demo clearly optional.
+Active packet: `docs/delivery/packets/26_ENTRY_EXPERIENCE.md`
+Repository branch: `codex/entry-experience`
 Production feature release commit: `31c70a3f252f733857d822f1732c19b561c52848` verified with live `/api/health`, ready migration `0026_standalone_projects`, and `npm run monitor:production`; docs-only evidence commits may supersede the served build SHA without changing runtime behavior.
+
+## Packet 26 - Entry Experience (Local Verification)
+
+- The RIVT intro keeps its capability preview but no longer makes returning
+  members hunt through a feature tour for login.
+- Create free account and Log in are persistent peer controls; Preview demo is
+  a distinct, accurately labeled sample path.
+- Remaining boundary: a physical mobile review of intro, preview, signup, and
+  login transitions on iOS and Android.
 
 ## Packet 25 - Tool Consolidation (Production Verification)
 
