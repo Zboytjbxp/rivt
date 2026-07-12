@@ -44,3 +44,14 @@ relationship with, or reproduce the branded trade dress of, tool manufacturers.
 - The compact Account entry and the full Settings editor identify the selected
   finish by name and remain usable on a phone.
 - All appearance choices are explicitly identified as original RIVT finishes.
+
+## Production Evidence
+
+- `codex/field-finishes` was fast-forwarded into `master` at
+  `5944d6207a8961cf754282fbd667e4e52ff53bc1`.
+- Live `/api/health` returned that exact source commit with ready migration
+  `0026_standalone_projects`, PostgreSQL, S3-compatible storage, configured
+  Sentry, and configured Web Push.
+- `EXPECTED_SOURCE_COMMIT=5944d6207a8961cf754282fbd667e4e52ff53bc1 npm run
+  monitor:production` passed with controls off and seven anonymous private-route
+  checks in 569 ms.

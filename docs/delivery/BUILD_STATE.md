@@ -2,12 +2,12 @@
 
 Last updated: 2026-07-12 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Packet 28 Field Finishes is in local verification. It replaces
+Current phase: Packet 28 Field Finishes is production verified. It replaces
 the initial Theme Studio's small palette treatment with original, full-surface
 RIVT finish systems and a compact Account entry point.
 Active packet: `docs/delivery/packets/28_FIELD_FINISHES.md`
-Repository branch: `codex/field-finishes`
-Production feature release commit: `2f67ce4551b1a2bf4e53b57ed609dfcd27fb06b1` verified with live `/api/health`, ready migration `0026_standalone_projects`, and `npm run monitor:production`; docs-only evidence commits may supersede the served build SHA without changing runtime behavior.
+Repository branch: `master`
+Production feature release commit: `5944d6207a8961cf754282fbd667e4e52ff53bc1` verified with live `/api/health`, ready migration `0026_standalone_projects`, and `npm run monitor:production`; docs-only evidence commits may supersede the served build SHA without changing runtime behavior.
 
 ## Packet 28 - Field Finishes (Local Verification)
 
@@ -20,6 +20,11 @@ Production feature release commit: `2f67ce4551b1a2bf4e53b57ed609dfcd27fb06b1` ve
   UI smoke, Tools rendered UI smoke, dependency audit, and diff check. The
   aggregate test command stalled without output during its remote database
   integration half, so this frontend-only packet makes no new database claim.
+- Production evidence: `master` serves exact source
+  `5944d6207a8961cf754282fbd667e4e52ff53bc1`; PostgreSQL, S3-compatible
+  storage, Sentry, and Web Push remain configured, the ready migration is
+  `0026_standalone_projects`, and the expected-source production monitor
+  passed with seven anonymous private-route checks in 569 ms.
 - Remaining boundary: production source and physical light/dark checks on an
   iPhone and Android device before any future paid entitlement decision.
 

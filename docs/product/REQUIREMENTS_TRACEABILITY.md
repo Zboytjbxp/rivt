@@ -19,8 +19,11 @@ Evidence must eventually link to implementation, automated tests, manual accepta
   finishes update canvas, panels, chrome, navigation, active states, actions,
   and supporting information tones without reload. The mobile smoke opens the
   editor, selects Harbor Blue, and verifies the live navigation token changes.
-- `GA-OPS-008` remains unchanged until `codex/field-finishes` is merged and
-  production serves its exact source commit.
+- `GA-OPS-008` gains production evidence: `master` serves exact source
+  `5944d6207a8961cf754282fbd667e4e52ff53bc1` with ready migration
+  `0026_standalone_projects`, PostgreSQL/S3-compatible storage, configured
+  Sentry, and configured Web Push. The expected-source monitor passed with
+  seven anonymous private-route checks in 569 ms.
 
 ## Traceability Addendum - 2026-07-12 Theme Studio (Local Verification)
 
