@@ -17,14 +17,11 @@
   HardDrive,
   LogOut,
   Mail,
-  Monitor,
   MonitorSmartphone,
-  Moon,
   Plus,
   ShieldCheck,
   Sparkles,
   Star,
-  Sun,
   Tag,
   Trash2,
   UserCheck,
@@ -41,8 +38,9 @@ import { RIVT_PRO_OFFER } from "../pro/proOffer";
 import { BillingApiError, cancelSubscription, reconcileStripeCheckout, resumeSubscription, startBillingPortal } from "../../lib/billing";
 import { apiPath, fetchWithTimeout, requestKey } from "../../lib/api";
 import { usePersona } from "../persona/usePersona";
+import { ThemeStudio } from "../../components/ThemeStudio";
 import "../pro/pro.css";
-import { brandConfig, type ThemeMode, type ThemePalette } from "../../brandConfig";
+import type { ThemeMode, ThemePalette } from "../../brandConfig";
 import type { ThemeSource } from "../../app-shell/useAppTheme";
 import { tradeOptions } from "../../data";
 import type { Role, Trade } from "../../types";
@@ -119,7 +117,6 @@ interface ProfileHubProps {
   themeMode: ThemeMode;
   themeSource: ThemeSource;
   themePalette: ThemePalette;
-  onToggleTheme: () => void;
   onSetThemeSource: (source: ThemeSource) => void;
   onSelectThemePalette: (palette: ThemePalette) => void;
   onLogout: () => void;
@@ -899,8 +896,6 @@ function BusinessSettingsSection() {
   );
 }
 
-const themePaletteOrder = Object.keys(brandConfig.theme.palettes) as ThemePalette[];
-
 function PushNotificationsCard() {
   const {
     permission,
@@ -1215,10 +1210,9 @@ export function ProfileHub({
   communityBadges,
   shoutOutCount,
   feedbackCount,
-  themeMode: _themeMode,
+  themeMode,
   themeSource,
   themePalette,
-  onToggleTheme: _onToggleTheme,
   onSetThemeSource,
   onSelectThemePalette,
   onLogout,
@@ -1772,49 +1766,14 @@ export function ProfileHub({
           </section>
         ) : null}
 
-        <section className="v2-profile-panel" data-settings-section={view === "Settings" ? "appearance" : undefined}>
-          <header>
-            <span>Theme</span>
-            <strong>Colors and mode</strong>
-          </header>
-          <div className="v2-profile-theme-row">
-            <div className="v2-theme-source-group" role="group" aria-label="Theme mode">
-              {(["system", "light", "dark"] as ThemeSource[]).map((src) => {
-                const Icon = src === "system" ? Monitor : src === "light" ? Sun : Moon;
-                return (
-                  <button
-                    key={src}
-                    type="button"
-                    className={themeSource === src ? "v2-theme-source-btn is-active" : "v2-theme-source-btn"}
-                    aria-pressed={themeSource === src}
-                    onClick={() => onSetThemeSource(src)}
-                  >
-                    <Icon size={14} />
-                    {src.charAt(0).toUpperCase() + src.slice(1)}
-                  </button>
-                );
-              })}
-            </div>
-            <div className="v2-theme-palettes">
-              {themePaletteOrder.map((palette) => (
-                <button
-                  key={palette}
-                  type="button"
-                  title={brandConfig.theme.palettes[palette].label}
-                  className={palette === themePalette ? "is-selected" : ""}
-                  onClick={() => onSelectThemePalette(palette)}
-                  aria-label={`Use ${brandConfig.theme.palettes[palette].label} theme`}
-                >
-                  <span
-                    aria-hidden="true"
-                    style={{
-                      background: `conic-gradient(${brandConfig.theme.palettes[palette].swatches[0]} 0 33%, ${brandConfig.theme.palettes[palette].swatches[1]} 0 66%, ${brandConfig.theme.palettes[palette].swatches[2]} 0)`,
-                    }}
-                  />
-                </button>
-              ))}
-            </div>
-          </div>
+        <section className="v2-profile-panel v2-profile-appearance-panel" data-settings-section={view === "Settings" ? "appearance" : undefined}>
+          <ThemeStudio
+            themeMode={themeMode}
+            themeSource={themeSource}
+            themePalette={themePalette}
+            onSetThemeSource={onSetThemeSource}
+            onSelectThemePalette={onSelectThemePalette}
+          />
         </section>
 
         {/* Trust / Training / Community / Reputation — shown on their own views, not cluttering Settings */}

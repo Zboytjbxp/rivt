@@ -122,4 +122,11 @@
   --v2-accent-deep: var(--accent-deep);
   --v2-accent-hover: color-mix(in srgb, var(--accent) 88%, var(--v2-text) 12%);
   --v2-accent-soft: var(--accent-soft);
+  --v2-nav-bg: var(--nav);
+  --v2-nav-bg-strong: var(--nav-deep);
+  --v2-teal: var(--blue);
+  --v2-teal-text: var(--blue);
+  --v2-teal-soft: var(--blue-soft);
+  --v2-warning: var(--amber);
+  --v2-warning-soft: var(--amber-soft);
 }

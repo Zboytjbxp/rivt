@@ -9,9 +9,10 @@ import {
   ShieldCheck,
   X,
 } from "lucide-react";
-import { brandConfig, type ThemeMode, type ThemePalette, type TrialPlan } from "../brandConfig";
+import type { ThemeMode, ThemePalette, TrialPlan } from "../brandConfig";
+import { ThemeStudio } from "../components/ThemeStudio";
 import { ProfileShowcase } from "../features/profile/ProfileShowcase";
-import { ProgressBar, ThemeToggle, type AuthMethod } from "../features/auth/AuthScreens";
+import { ProgressBar, type AuthMethod } from "../features/auth/AuthScreens";
 import type { ThemeSource } from "./useAppTheme";
 import { useFocusTrap } from "./useFocusTrap";
 import type { Role, Trade } from "../types";
@@ -44,10 +45,6 @@ interface AccountProfileForPanel {
   plan: TrialPlan;
   authMethod: AuthMethod;
 }
-
-const themePaletteOptions = Object.entries(brandConfig.theme.palettes) as Array<
-  [ThemePalette, (typeof brandConfig.theme.palettes)[ThemePalette]]
->;
 
 function authMethodLabel(method: AuthMethod) {
   if (method === "Google") return "Google sign-in";
@@ -181,7 +178,6 @@ export function AccountPanel({
   adminRoles,
   communityBadges,
   shoutOutCount,
-  onToggleTheme,
   onSetThemeSource,
   onSelectThemePalette,
   onLogout,
@@ -201,7 +197,6 @@ export function AccountPanel({
   adminRoles: string[];
   communityBadges: string[];
   shoutOutCount: number;
-  onToggleTheme: () => void;
   onSetThemeSource: (source: ThemeSource) => void;
   onSelectThemePalette: (palette: ThemePalette) => void;
   onLogout: () => void;
@@ -267,26 +262,12 @@ export function AccountPanel({
         </section>
 
         <section className="account-section theme-settings-section">
-          <div className="settings-section-heading">
-            <span>Themes</span>
-            <strong>Tool-inspired appearance</strong>
-            <small>Choose a jobsite palette. Names are inspired, not official brand skins.</small>
-          </div>
-
-          <div className="theme-mode-row">
-            <span>Mode</span>
-            <ThemeToggle
-              themeMode={themeMode}
-              themeSource={themeSource}
-              onToggleTheme={onToggleTheme}
-              onSetThemeSource={onSetThemeSource}
-              variant="surface"
-            />
-          </div>
-
-          <ThemePalettePicker
-            selectedPalette={themePalette}
-            onSelectPalette={onSelectThemePalette}
+          <ThemeStudio
+            themeMode={themeMode}
+            themeSource={themeSource}
+            themePalette={themePalette}
+            onSetThemeSource={onSetThemeSource}
+            onSelectThemePalette={onSelectThemePalette}
           />
         </section>
 
@@ -307,39 +288,6 @@ export function AccountPanel({
           </button>
         </div>
       </aside>
-    </div>
-  );
-}
-
-function ThemePalettePicker({
-  selectedPalette,
-  onSelectPalette,
-}: {
-  selectedPalette: ThemePalette;
-  onSelectPalette: (palette: ThemePalette) => void;
-}) {
-  return (
-    <div className="theme-palette-grid" aria-label="Theme palettes">
-      {themePaletteOptions.map(([paletteId, palette]) => (
-        <button
-          key={paletteId}
-          type="button"
-          className={paletteId === selectedPalette ? "palette-option selected" : "palette-option"}
-          aria-label={`Use ${palette.label} theme`}
-          aria-pressed={paletteId === selectedPalette}
-          onClick={() => onSelectPalette(paletteId)}
-        >
-          <span className="palette-swatch-row" aria-hidden="true">
-            {palette.swatches.map((color) => (
-              <i key={color} style={{ background: color }} />
-            ))}
-          </span>
-          <span className="palette-copy">
-            <strong>{palette.label}</strong>
-            <small>{palette.inspiration}</small>
-          </span>
-        </button>
-      ))}
     </div>
   );
 }

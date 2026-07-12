@@ -64,7 +64,6 @@ interface ProfileRouteProps {
   themeMode: ThemeMode;
   themeSource: ThemeSource;
   themePalette: ThemePalette;
-  onToggleTheme: () => void;
   onSetThemeSource: (source: ThemeSource) => void;
   onSelectThemePalette: (palette: ThemePalette) => void;
   onLogout: () => void;
@@ -93,7 +92,6 @@ export function ProfileRoute({
   themeMode,
   themeSource,
   themePalette,
-  onToggleTheme,
   onSetThemeSource,
   onSelectThemePalette,
   onLogout,
@@ -190,7 +188,6 @@ export function ProfileRoute({
       themeMode={themeMode}
       themeSource={themeSource}
       themePalette={themePalette}
-      onToggleTheme={onToggleTheme}
       onSetThemeSource={onSetThemeSource}
       onSelectThemePalette={onSelectThemePalette}
       onLogout={onLogout}

@@ -10,6 +10,15 @@ Status values:
 
 Evidence must eventually link to implementation, automated tests, manual acceptance proof, and deployed build.
 
+## Traceability Addendum - 2026-07-12 Theme Studio (Local Verification)
+
+- `GA-UX-003` gains account-clarity evidence: the account drawer remains the
+  single top-bar account entry point, while appearance controls are named and
+  previewable instead of hidden in a generic menu.
+- `GA-UX-006` gains device-preference evidence: System, Light, Dark, and
+  palette choices remain clear on compact mobile screens and update the shared
+  application token layer without a reload.
+
 ## Traceability Addendum - 2026-07-12 Entry Experience (Local Verification)
 
 - `GA-UX-003` gains entry-path evidence: prospective members can explore a

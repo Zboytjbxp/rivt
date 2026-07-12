@@ -2,12 +2,24 @@
 
 Last updated: 2026-07-12 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Packet 26 Entry Experience is deployed and verified. It makes
-account creation and returning-member login persistent first-screen actions
-while keeping the product demo clearly optional.
-Active packet: `docs/delivery/packets/26_ENTRY_EXPERIENCE.md`
-Repository branch: `master`
+Current phase: Packet 27 Theme Studio is in local verification. It replaces
+decorative swatches with one shared appearance surface and broadens the real
+app impact of each selected palette.
+Active packet: `docs/delivery/packets/27_THEME_STUDIO.md`
+Repository branch: `codex/theme-studio`
 Production feature release commit: `d6c475546229ae62165b3afd4c5149540720b83e` verified with live `/api/health`, ready migration `0026_standalone_projects`, and `npm run monitor:production`; docs-only evidence commits may supersede the served build SHA without changing runtime behavior.
+
+## Packet 27 - Theme Studio (Local Verification)
+
+- Appearance is one shared Theme Studio in Account and Settings, with a current
+  style preview, explicit display-mode choices, and named palette cards.
+- Palette variables now affect application chrome, active states, information
+  accents, and warning highlights, not only primary accent buttons.
+- Local verification passed: build, lint, 53/53 unit tests, E2E, mobile-action
+  UI smoke, Tools rendered UI smoke, dependency audit, and diff check. This
+  client-only packet does not claim a new database integration pass.
+- Remaining boundary: physical light and dark checks on an iPhone and Android
+  device for every palette before any future paid entitlement decision.
 
 ## Packet 26 - Entry Experience (Production Verification)
 

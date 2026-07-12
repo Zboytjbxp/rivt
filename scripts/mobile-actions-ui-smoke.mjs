@@ -373,7 +373,7 @@ async function runMobileFlow(page) {
   await primaryInvoiceTool.waitFor({ timeout: 15_000 });
   await page.getByRole("button", { name: "Open Camera" }).waitFor({ timeout: 15_000 });
   assert.equal(await page.locator(".v2-tool-launch-card").count(), 5, "mobile Tools hub should expose exactly five primary field apps");
-  assert.ok(await page.locator(".v2-tool-mini-card").count() >= 10, "mobile Tools hub should expose compact supporting tools");
+  assert.equal(await page.locator(".v2-tool-mini-card").count(), 9, "mobile Tools hub should expose the focused supporting tool set");
   await assertNoHorizontalOverflow(page, "Tools hub");
   await primaryInvoiceTool.click();
   await page.getByRole("heading", { name: "Invoice draft" }).waitFor({ timeout: 15_000 });

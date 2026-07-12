@@ -2592,7 +2592,6 @@ function App() {
             themeMode={themeMode}
             themeSource={themeSource}
             themePalette={themePalette}
-            onToggleTheme={handleToggleTheme}
             onSetThemeSource={handleSetThemeSource}
             onSelectThemePalette={handleSelectThemePalette}
             onLogout={handleLogout}
@@ -2676,7 +2675,6 @@ function App() {
                 shoutOut.from === accountProfile.organization,
             ).length
           }
-          onToggleTheme={handleToggleTheme}
           onSetThemeSource={handleSetThemeSource}
           onSelectThemePalette={handleSelectThemePalette}
           onLogout={handleLogout}
