@@ -10,7 +10,7 @@ Status values:
 
 Evidence must eventually link to implementation, automated tests, manual acceptance proof, and deployed build.
 
-## Traceability Addendum - 2026-07-12 Active Work Camera Workflow (Local Verification)
+## Traceability Addendum - 2026-07-12 Active Work Camera Workflow (Production Verification)
 
 - `GA-UX-003` gains exact-workspace evidence: the active-job Today panel
   exposes Messages, Photos, and Daily log as one job's daily tools rather than
@@ -21,6 +21,11 @@ Evidence must eventually link to implementation, automated tests, manual accepta
 - `GA-OPS-007` gains local evidence: build, lint, 53/53 unit tests, E2E, Work
   lifecycle UI smoke, Tools rendered UI smoke, dependency audit, and diff
   check passed. This client-only packet does not claim a new DB-backed pass.
+- `GA-OPS-008` gains production evidence: `master` serves exact source
+  `bd2a531e3faa4a6d3b1fb098e353008006659442` with ready migration
+  `0026_standalone_projects`, PostgreSQL/S3-compatible storage, configured
+  Sentry, and configured Web Push. The expected-source monitor passed with
+  seven anonymous private-route checks in 611 ms.
 
 ## Traceability Addendum - 2026-07-12 Work Action Ownership (Production Verification)
 

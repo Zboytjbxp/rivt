@@ -2,14 +2,14 @@
 
 Last updated: 2026-07-12 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Packet 24 Active Work Camera Workflow is locally verified. It
-unifies the active-work daily actions and brings Camera destination, feed, and
-capture controls into one lower-screen dock.
+Current phase: Packet 24 Active Work Camera Workflow is deployed and verified.
+It unifies the active-work daily actions and brings Camera destination, feed,
+and capture controls into one lower-screen dock.
 Active packet: `docs/delivery/packets/24_ACTIVE_WORK_CAMERA_WORKFLOW.md`
-Repository branch: `codex/active-work-camera-workflow`
-Production feature release commit: `97d749e459352a40b36bb5d9b44b3e306306510e` verified with live `/api/health`, ready migration `0026_standalone_projects`, and `npm run monitor:production`; docs-only evidence commits may supersede the served build SHA without changing runtime behavior.
+Repository branch: `master`
+Production feature release commit: `bd2a531e3faa4a6d3b1fb098e353008006659442` verified with live `/api/health`, ready migration `0026_standalone_projects`, and `npm run monitor:production`; docs-only evidence commits may supersede the served build SHA without changing runtime behavior.
 
-## Packet 24 - Active Work Camera Workflow (Local Verification)
+## Packet 24 - Active Work Camera Workflow (Production Verification)
 
 - Active-work Today now treats Messages, Photos, and Daily log as the daily
   job actions. Each route retains the exact active-work context, and the
@@ -20,6 +20,11 @@ Production feature release commit: `97d749e459352a40b36bb5d9b44b3e306306510e` ve
 - Local verification passed: build, lint, 53/53 unit tests, E2E, Work lifecycle
   UI smoke, Tools rendered UI smoke, dependency audit, and diff check. This
   client-only packet does not claim a new database integration pass.
+- Production evidence: `master` serves exact source
+  `bd2a531e3faa4a6d3b1fb098e353008006659442`; PostgreSQL, S3-compatible
+  storage, Sentry, and Web Push are configured, the ready migration remains
+  `0026_standalone_projects`, and the expected-source production monitor
+  passed with seven anonymous private-route checks in 611 ms.
 - Remaining boundary: physical one-handed iOS/Android proof for the active-job
   daily-action row and Camera Destination, Feed, and Capture dock.
 

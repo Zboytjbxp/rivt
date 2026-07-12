@@ -2,6 +2,25 @@
 
 Add one entry per staging/production deployment.
 
+## Current Production - Packet 24 Active Work Camera Workflow
+
+- Environment: Production (`https://rivt.pro`)
+- Date/time/timezone: 2026-07-12 America/New_York
+- Deployer: Codex through GitHub push to Railway-linked `master`
+- Source repository/branch: `Zboytjbxp/rivt`, `master`
+- Source commit: `bd2a531e3faa4a6d3b1fb098e353008006659442`
+- Build/artifact ID: Railway-linked production deployment; live `/api/health` is the runtime proof
+- Migration version before/after: `0026_standalone_projects` / `0026_standalone_projects` (no schema migration)
+- Feature-flag/config version: no provider credentials or operational controls changed
+- Provider/config changes (no secrets): none
+- Backup/rollback target: prior production source `97d749e459352a40b36bb5d9b44b3e306306510e`; normal source rollback only
+- Automated gates: build, lint, 53 unit tests, E2E, Work lifecycle UI smoke, Tools rendered UI smoke, dependency audit, and diff check passed. The aggregate `npm run test` exceeded the local runner window during its integration phase and is not claimed as passed.
+- Post-deploy smoke tests: exact-source health passed with PostgreSQL, S3-compatible storage, configured Sentry, configured Web Push, ready migration `0026_standalone_projects`; `EXPECTED_SOURCE_COMMIT=bd2a531e3faa4a6d3b1fb098e353008006659442 npm run monitor:production` passed with matching-job alerts enabled, controls off, seven anonymous private-route checks, and 611 ms duration.
+- Health/readiness result: healthy production health and synthetic monitor; no schema or provider change
+- Known risks: physical signed-in iOS and Android confirmation remains for the exact Photos path and one-handed Camera Destination, Feed, and Capture dock.
+- Rollback performed/result: not required
+- Approval: deployed as a client-only active-work and camera-context correction with no auth, billing, storage, moderation, provider, or migration boundary change
+
 ## Current Production - Packet 23 Work Action Ownership
 
 - Environment: Production (`https://rivt.pro`)
