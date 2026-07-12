@@ -17,6 +17,11 @@ Evidence must eventually link to implementation, automated tests, manual accepta
   are grouped without exposing duplicate or unfinished workflows as peers.
 - `GA-UX-006` gains mobile hierarchy evidence: the compact Tools hub keeps
   field actions within the first scan and removes decorative tool-count copy.
+- `GA-OPS-008` gains production evidence: `master` serves exact source
+  `31c70a3f252f733857d822f1732c19b561c52848` with ready migration
+  `0026_standalone_projects`, PostgreSQL/S3-compatible storage, configured
+  Sentry, and configured Web Push. The expected-source monitor passed with
+  seven anonymous private-route checks in 599 ms.
 
 ## Traceability Addendum - 2026-07-12 Active Work Camera Workflow (Production Verification)
 

@@ -2,22 +2,30 @@
 
 Last updated: 2026-07-12 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Packet 25 Tool Consolidation is in local verification. It keeps
+Current phase: Packet 25 Tool Consolidation is deployed and verified. It keeps
 the five daily field apps prominent and removes overlapping or unfinished
 launchers from the day-one Tools hub.
 Active packet: `docs/delivery/packets/25_TOOL_CONSOLIDATION.md`
-Repository branch: `codex/tool-consolidation`
-Production feature release commit: `bd2a531e3faa4a6d3b1fb098e353008006659442` verified with live `/api/health`, ready migration `0026_standalone_projects`, and `npm run monitor:production`; docs-only evidence commits may supersede the served build SHA without changing runtime behavior.
+Repository branch: `master`
+Production feature release commit: `31c70a3f252f733857d822f1732c19b561c52848` verified with live `/api/health`, ready migration `0026_standalone_projects`, and `npm run monitor:production`; docs-only evidence commits may supersede the served build SHA without changing runtime behavior.
 
-## Packet 25 - Tool Consolidation (Local Verification)
+## Packet 25 - Tool Consolidation (Production Verification)
 
 - Tools preserves five daily field apps and reduces the supporting hub to
   Plan, Track, and Site groups.
 - Bid builder, Earnings, Tax estimator, Daily report, Job checklists, and
   Contracts are no longer presented as day-one launchers. Their code and
   existing records are retained pending a deliberate future product decision.
-- Remaining boundary: local verification and physical mobile confirmation that
-  the smaller tool inventory feels clear without hiding an expected daily tool.
+- Local verification passed: build, lint, 53/53 unit tests, E2E, Tools rendered
+  UI smoke, dependency audit, and diff check. This client-only packet does not
+  claim a new database integration pass.
+- Production evidence: `master` serves exact source
+  `31c70a3f252f733857d822f1732c19b561c52848`; PostgreSQL, S3-compatible
+  storage, Sentry, and Web Push are configured, the ready migration remains
+  `0026_standalone_projects`, and the expected-source production monitor
+  passed with seven anonymous private-route checks in 599 ms.
+- Remaining boundary: physical mobile confirmation that the smaller tool
+  inventory feels clear without hiding an expected daily tool.
 
 ## Packet 24 - Active Work Camera Workflow (Production Verification)
 
