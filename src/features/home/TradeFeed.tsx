@@ -3,7 +3,6 @@ import {
   Circle,
   ClipboardList,
   MessageCircle,
-  Plus,
   TrendingUp,
   X,
 } from "lucide-react";
@@ -512,15 +511,6 @@ export function TradeFeed({
         )}
       </div>
 
-      <button
-        type="button"
-        className="trade-feed-fab"
-        onClick={role === "contractor" ? onPostWork : onAsk}
-        aria-label={role === "contractor" ? "Post work" : "Ask"}
-      >
-        <Plus size={20} />
-        <span className="trade-feed-fab-label">{role === "contractor" ? "Post work" : "Ask"}</span>
-      </button>
     </div>
   );
 }

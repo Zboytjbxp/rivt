@@ -2,13 +2,27 @@
 
 Last updated: 2026-07-12 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Packet 22 Field Access Workbench is deployed and production
-verified. It adds thumb-reachable Field Tools shortcuts, explicit Camera
-destinations, and a roster-first Crew surface without changing the five
-primary destinations.
-Active packet: `docs/delivery/packets/22_FIELD_ACCESS_WORKBENCH.md`
-Repository branch: `master`
+Current phase: Packet 23 Work Action Ownership is locally verified. It moves
+the contractor posting action out of Home and into a thumb-reachable Work
+control without expanding the five primary destinations.
+Active packet: `docs/delivery/packets/23_WORK_ACTION_OWNERSHIP.md`
+Repository branch: `codex/work-primary-action`
 Production feature release commit: `8b634549f1e10d1761a92b9e23fb7db636c190b2` verified with live `/api/health`, ready migration `0026_standalone_projects`, and `npm run monitor:production`; docs-only evidence commits may supersede the served build SHA without changing runtime behavior.
+
+## Packet 23 - Work Action Ownership (Local Verification)
+
+- Home no longer owns a generic floating creation button. It remains a daily
+  status surface, while onboarding can still direct a new contractor to their
+  first job when appropriate.
+- Work owns the contractor posting action. Desktop uses the Work-header
+  `Post job` command; compact mobile uses a lower-screen `Post job` control
+  immediately above the persistent navigation.
+- Local verification passed: build, lint, security lint, 53/53 unit tests,
+  E2E, mobile-action UI smoke, dependency audit, and diff check. This
+  client-only packet does not claim a new database integration pass; the
+  aggregate test command exceeded the local runner window during integration.
+- Remaining boundary: physical phone confirmation that Work's posting action
+  remains clear of the bottom navigation and active-work controls.
 
 ## Packet 22 - Field Access Workbench (Production Verification)
 

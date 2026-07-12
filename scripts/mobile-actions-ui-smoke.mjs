@@ -342,7 +342,7 @@ async function runMobileFlow(page) {
   await assertNoHorizontalOverflow(page, "Home iPhone SE");
   assert.equal(await page.locator(".trade-feed-pickup").count(), 0, "Home should not repeat recovery actions already available in navigation");
   assert.equal(await page.locator(".trade-feed-nudge").count(), 0, "Home should not repeat the Shop Talk answer action above the feed");
-  await page.locator(".trade-feed-fab").waitFor({ timeout: 15_000 });
+  assert.equal(await page.locator(".trade-feed-fab").count(), 0, "Home should not own a generic creation FAB");
   assert.equal(await page.locator(".v2-sidebar").isVisible(), false, "iPhone SE should not render the desktop sidebar");
   assert.equal(await page.locator(".v2-mobile-nav").isVisible(), true, "iPhone SE should render the mobile nav");
   await page.screenshot({ path: path.join(screenshotDir, "mobile-home-iphone-se.png"), fullPage: false });
@@ -355,6 +355,8 @@ async function runMobileFlow(page) {
   await page.goto(`${baseUrl}/app/work`, { waitUntil: "networkidle" });
   await page.getByRole("heading", { name: "Work", exact: true }).waitFor({ timeout: 15_000 });
   await assertNoHorizontalOverflow(page, "Work");
+  await page.locator(".v2-work-create-fab").waitFor({ timeout: 15_000 });
+  await assertControlCenterClickable(page, ".v2-work-create-fab", "Work post-job action");
 
   await page.locator(".v2-mobile-work-select select").first().selectOption("draft");
   await page.locator(".v2-job-row-inner").filter({ hasText: "Kitchen trim-out support" }).first().click();

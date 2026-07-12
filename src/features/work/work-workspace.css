@@ -27,6 +27,10 @@
   line-height: 1.5;
 }
 
+.v2-work-create-fab {
+  display: none;
+}
+
 .v2-work-detail-actions button,
 .v2-text-button,
 .v2-filter-button {
@@ -1340,6 +1344,31 @@
 }
 
 @media (max-width: 640px) {
+  .v2-work-page.is-contractor {
+    padding-bottom: calc(78px + env(safe-area-inset-bottom));
+  }
+
+  .v2-work-create-fab {
+    position: fixed;
+    right: 14px;
+    bottom: calc(78px + env(safe-area-inset-bottom));
+    z-index: 35;
+    display: inline-flex;
+    min-height: 48px;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    padding: 0 18px;
+    border: 0;
+    border-radius: var(--v2-radius-pill);
+    background: var(--v2-accent);
+    color: var(--v2-on-accent);
+    font: inherit;
+    font-size: 15px;
+    font-weight: var(--v2-weight-bold);
+    box-shadow: 0 10px 24px -10px color-mix(in srgb, var(--v2-accent) 74%, transparent);
+  }
+
   .v2-work-page > .v2-section-tabs,
   .v2-work-detail > .v2-detail-tabs {
     display: none;

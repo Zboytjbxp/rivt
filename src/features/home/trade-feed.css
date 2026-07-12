@@ -579,42 +579,9 @@
 .trade-feed-empty b { font-size: var(--v2-text-body-lg); color: var(--v2-text); }
 .trade-feed-empty span { font-size: var(--v2-text-body); }
 /* ── FAB ─────────────────────────────────────────────────── */
-.trade-feed-fab {
-  position: fixed;
-  right: 18px;
-  bottom: calc(84px + env(safe-area-inset-bottom));
-  z-index: 40;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 0 22px;
-  height: 54px;
-  border: none;
-  border-radius: var(--v2-radius-pill);
-  background: var(--v2-accent);
-  color: var(--v2-on-accent);
-  font-size: var(--v2-text-body-lg);
-  font-weight: var(--v2-weight-bold);
-  box-shadow: 0 10px 26px -8px color-mix(in srgb, var(--v2-accent) 70%, transparent);
-  cursor: pointer;
-}
-
-.trade-feed-fab-label {
-  display: inline-flex;
-  align-items: center;
-}
-
-.trade-feed.has-start-card .trade-feed-fab {
-  bottom: calc(118px + env(safe-area-inset-bottom));
-}
-
 @media (max-width: 640px) {
   .trade-feed.is-demo {
     padding-bottom: calc(128px + env(safe-area-inset-bottom));
-  }
-
-  .trade-feed.has-start-card .trade-feed-fab {
-    display: none;
   }
 }
 
@@ -945,37 +912,6 @@
     min-height: 14px;
   }
 
-  .trade-feed-fab {
-    right: 14px;
-    bottom: calc(78px + env(safe-area-inset-bottom));
-    gap: 6px;
-    height: 48px;
-    padding: 0 16px;
-    font-size: 15px;
-    box-shadow: 0 8px 18px -8px color-mix(in srgb, var(--v2-accent) 70%, transparent);
-  }
-
-  .trade-feed-fab svg {
-    width: 18px;
-    height: 18px;
-  }
-
-  .trade-feed.has-start-card .trade-feed-fab {
-    bottom: calc(78px + env(safe-area-inset-bottom));
-  }
-}
-
-@media (max-width: 430px) {
-  .trade-feed-fab {
-    width: 48px;
-    padding: 0;
-    justify-content: center;
-    border-radius: 24px;
-  }
-
-  .trade-feed-fab-label {
-    display: none;
-  }
 }
 
 @media (max-width: 360px) {
@@ -1030,13 +966,6 @@
     white-space: normal;
   }
 
-  .trade-feed-fab {
-    position: static;
-    right: auto;
-    bottom: calc(76px + env(safe-area-inset-bottom));
-    align-self: flex-end;
-    margin-top: 0;
-  }
 }
 
 @media (min-width: 1181px) {
@@ -1115,10 +1044,6 @@
     padding-left: 18px;
   }
 
-  .trade-feed-fab {
-    right: clamp(28px, 3vw, 48px);
-    bottom: 28px;
-  }
 }
 
 .trade-feed-demo {

@@ -10,6 +10,19 @@ Status values:
 
 Evidence must eventually link to implementation, automated tests, manual acceptance proof, and deployed build.
 
+## Traceability Addendum - 2026-07-12 Work Action Ownership (Local Verification)
+
+- `GA-UX-003` gains destination-ownership evidence: contractors create jobs
+  from Work, Shop Talk owns community questions, and Home no longer repeats a
+  generic posting action that already has a primary destination.
+- `GA-UX-006` gains rendered mobile evidence: the mobile-action smoke proves
+  Home has no creation FAB and Work's contractor-only `Post job` action is
+  visible and tappable above persistent navigation at a compact viewport.
+- `GA-OPS-007` gains local evidence: build, lint, security lint, 53/53 unit
+  tests, E2E, mobile-action UI smoke, dependency audit, and diff check passed.
+  The aggregate test command exceeded the local runner window during
+  integration, so this client-only packet does not claim a new DB-backed pass.
+
 ## Traceability Addendum - 2026-07-12 Field Access Workbench (Production Verification)
 
 - `GA-UX-003` gains field-access evidence: mobile Tools uses a configurable

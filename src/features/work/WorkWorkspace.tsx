@@ -1631,7 +1631,7 @@ export function WorkWorkspace({
   }, [focusedJobTitle, openDetailOnMount]);
 
   return (
-    <section className="v2-work-page" aria-label="Work">
+    <section className={role === "contractor" ? "v2-work-page is-contractor" : "v2-work-page"} aria-label="Work">
       {reasonPrompt && (
         <div className="v2-reason-backdrop" onClick={() => setReasonPrompt(null)}>
           <div ref={reasonTrapRef} className="v2-reason-dialog" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
@@ -1662,10 +1662,23 @@ export function WorkWorkspace({
         <div><h1>Work</h1><p>{role === "contractor" ? "Post and manage jobs." : "Find open work nearby."}</p></div>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           {role === "contractor" ? (
-            <button type="button" className="v2-primary-button" onClick={onPostJob}><Plus size={17} /> Create job</button>
+            <button type="button" className="v2-primary-button" onClick={onPostJob}><Plus size={17} /> Post job</button>
           ) : null}
         </div>
       </header>
+
+      {role === "contractor" ? (
+        <button
+          type="button"
+          className="v2-work-create-fab"
+          data-action="post-job"
+          onClick={onPostJob}
+          aria-label="Post job"
+        >
+          <Plus size={20} aria-hidden="true" />
+          <span>Post job</span>
+        </button>
+      ) : null}
 
       {primaryActiveWorkRecord ? (
         <section className={detailJob?.canonical?.id === primaryActiveWorkRecord.jobId && mobileDetailOpen ? "v2-active-work-strip is-current-detail" : "v2-active-work-strip"} aria-label="Active work ready">
