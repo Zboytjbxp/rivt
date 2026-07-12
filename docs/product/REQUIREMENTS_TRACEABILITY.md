@@ -10,7 +10,7 @@ Status values:
 
 Evidence must eventually link to implementation, automated tests, manual acceptance proof, and deployed build.
 
-## Traceability Addendum - 2026-07-12 Work Action Ownership (Local Verification)
+## Traceability Addendum - 2026-07-12 Work Action Ownership (Production Verification)
 
 - `GA-UX-003` gains destination-ownership evidence: contractors create jobs
   from Work, Shop Talk owns community questions, and Home no longer repeats a
@@ -22,6 +22,11 @@ Evidence must eventually link to implementation, automated tests, manual accepta
   tests, E2E, mobile-action UI smoke, dependency audit, and diff check passed.
   The aggregate test command exceeded the local runner window during
   integration, so this client-only packet does not claim a new DB-backed pass.
+- `GA-OPS-008` gains production evidence: `master` serves exact source
+  `97d749e459352a40b36bb5d9b44b3e306306510e` with ready migration
+  `0026_standalone_projects`, PostgreSQL/S3-compatible storage, configured
+  Sentry, and configured Web Push. The expected-source monitor passed with
+  seven anonymous private-route checks in 606 ms.
 
 ## Traceability Addendum - 2026-07-12 Field Access Workbench (Production Verification)
 

@@ -2,14 +2,15 @@
 
 Last updated: 2026-07-12 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Packet 23 Work Action Ownership is locally verified. It moves
+Current phase: Packet 23 Work Action Ownership is deployed and production
+verified. It moves
 the contractor posting action out of Home and into a thumb-reachable Work
 control without expanding the five primary destinations.
 Active packet: `docs/delivery/packets/23_WORK_ACTION_OWNERSHIP.md`
-Repository branch: `codex/work-primary-action`
-Production feature release commit: `8b634549f1e10d1761a92b9e23fb7db636c190b2` verified with live `/api/health`, ready migration `0026_standalone_projects`, and `npm run monitor:production`; docs-only evidence commits may supersede the served build SHA without changing runtime behavior.
+Repository branch: `master`
+Production feature release commit: `97d749e459352a40b36bb5d9b44b3e306306510e` verified with live `/api/health`, ready migration `0026_standalone_projects`, and `npm run monitor:production`; docs-only evidence commits may supersede the served build SHA without changing runtime behavior.
 
-## Packet 23 - Work Action Ownership (Local Verification)
+## Packet 23 - Work Action Ownership (Production Verification)
 
 - Home no longer owns a generic floating creation button. It remains a daily
   status surface, while onboarding can still direct a new contractor to their
@@ -21,8 +22,14 @@ Production feature release commit: `8b634549f1e10d1761a92b9e23fb7db636c190b2` ve
   E2E, mobile-action UI smoke, dependency audit, and diff check. This
   client-only packet does not claim a new database integration pass; the
   aggregate test command exceeded the local runner window during integration.
-- Remaining boundary: physical phone confirmation that Work's posting action
-  remains clear of the bottom navigation and active-work controls.
+- Production evidence: `master` serves exact source
+  `97d749e459352a40b36bb5d9b44b3e306306510e`; PostgreSQL, S3-compatible
+  storage, Sentry, and Web Push are configured, the ready migration remains
+  `0026_standalone_projects`, and the expected-source production monitor
+  passed with seven anonymous private-route checks in 606 ms.
+- Remaining field-proof boundary: physical phone confirmation that Work's
+  posting action remains clear of the bottom navigation and active-work
+  controls.
 
 ## Packet 22 - Field Access Workbench (Production Verification)
 
