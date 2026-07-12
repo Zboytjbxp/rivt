@@ -1053,15 +1053,6 @@ export function JobPhotosTool({ activeWork, focusedActiveWorkId = null, standalo
             </small>
           </div>
           <p className="v2-camera-live-command-copy">Photos save to this job's private project feed.</p>
-          <button
-            type="button"
-            className="v2-camera-project-link"
-            onClick={() => void openActiveJob()}
-            disabled={projectLoading}
-          >
-            <FolderOpen size={16} />
-            Open project feed
-          </button>
           {projectError ? <p className="v2-record-notice v2-job-photos-upload-error" role="alert">{projectError}</p> : null}
         </section>
       ) : standaloneProject ? (
@@ -1072,9 +1063,6 @@ export function JobPhotosTool({ activeWork, focusedActiveWorkId = null, standalo
             <small>{standaloneProject.clientName || standaloneProject.locationText || "Private off-platform work"} - {standaloneProject.photoCount} {standaloneProject.photoCount === 1 ? "photo" : "photos"}</small>
           </div>
           <p className="v2-camera-live-command-copy">Photos stay private in your RIVT account and are not shared with a marketplace job.</p>
-          <button type="button" className="v2-camera-project-link" onClick={() => void openStandaloneProject()} disabled={albumLoading}>
-            <FolderOpen size={16} />Open project feed
-          </button>
         </section>
       ) : (
         <section className="v2-camera-home-panel v2-camera-live-command">
@@ -1094,9 +1082,6 @@ export function JobPhotosTool({ activeWork, focusedActiveWorkId = null, standalo
         <section className="v2-camera-home-panel">
           <div className="v2-camera-home-section-head">
             <h3>Recent field photos</h3>
-            <button type="button" className="v2-camera-project-link" onClick={() => void openActiveJob()} disabled={projectLoading}>
-              Project feed <ArrowRight size={15} />
-            </button>
           </div>
           {projectLoading ? (
             <p className="v2-job-photos-loading">Loading the latest field photo...</p>
@@ -1198,21 +1183,36 @@ export function JobPhotosTool({ activeWork, focusedActiveWorkId = null, standalo
           <strong>{contextLabel ?? "Choose destination"}</strong>
           <small>{recordWork ? "RIVT workspace" : standaloneProject ? "Standalone project" : "Never attach a photo by accident"}</small>
         </span>
-        <button type="button" onClick={onRequestContext} disabled={projectLoading || albumLoading}>
+        <button type="button" onClick={onRequestContext} disabled={projectLoading || albumLoading} aria-label="Destination">
           <FolderOpen size={17} />
-          Destination
+          <span>Destination</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            if (recordWork) void openActiveJob();
+            else if (standaloneProject) void openStandaloneProject();
+            else onRequestContext?.();
+          }}
+          disabled={projectLoading || albumLoading}
+          aria-label="Open project feed"
+          title="Open project feed"
+        >
+          <Image size={17} />
+          <span>Feed</span>
         </button>
         <button
           type="button"
           className="v2-primary-button"
           disabled={projectLoading || albumLoading}
+          aria-label="Capture"
           onClick={() => {
             if (recordWork) void openActiveJob({ launchCamera: true });
             else if (standaloneProject) void openStandaloneProject({ launchCamera: true });
             else onRequestContext?.();
           }}
         >
-          <Camera size={18} />Capture
+          <Camera size={18} /><span>Capture</span>
         </button>
       </div>
     </div>

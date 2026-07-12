@@ -3,6 +3,7 @@ import {
   ArrowLeft,
   BriefcaseBusiness,
   CalendarClock,
+  Camera,
   Check,
   ChevronRight,
   CircleDollarSign,
@@ -10,6 +11,7 @@ import {
   Filter,
   LayoutList,
   LockKeyhole,
+  MessageCircle,
   MapPin,
   Pause,
   Pencil,
@@ -98,7 +100,6 @@ interface WorkWorkspaceProps {
   onOpenTool: (tool: "daily-log" | "estimate" | "invoice" | "job-photos", activeWorkId?: string) => void;
   onOpenActiveWorkWorkspace: (activeWorkId: string, fallbackJobId?: string | null) => void;
   onOpenActiveWorkMessages: (activeWorkId: string) => void;
-  onOpenActiveWorkRecords: (activeWorkId: string) => void;
   onRetry: () => void;
   onOfferAccepted?: (activeWork: CanonicalActiveWork) => void;
   onActiveWorkChanged?: () => void;
@@ -1239,7 +1240,6 @@ export function WorkWorkspace({
   onOpenTool,
   onOpenActiveWorkWorkspace,
   onOpenActiveWorkMessages,
-  onOpenActiveWorkRecords,
   onRetry,
   onOfferAccepted,
   onActiveWorkChanged,
@@ -1868,13 +1868,10 @@ export function WorkWorkspace({
                       <p className="v2-active-work-explain">
                         The listing is closed. Keep messages, job photos, daily proof, and money records together here.
                       </p>
-                      <div className="v2-active-work-record-action" aria-label="Project record">
-                        <button type="button" className="v2-primary-button" disabled={Boolean(activeAction)} onClick={() => onOpenActiveWorkRecords(activeWork.id)}>Open project records</button>
-                      </div>
                       <div className="v2-active-work-daily-actions" aria-label="Daily job actions">
-                        <button type="button" disabled={Boolean(activeAction)} onClick={() => onOpenActiveWorkMessages(activeWork.id)}>Messages</button>
-                        <button type="button" disabled={Boolean(activeAction)} onClick={() => onOpenTool("job-photos", activeWork.id)}>Camera</button>
-                        <button type="button" disabled={Boolean(activeAction)} onClick={() => onOpenTool("daily-log", activeWork.id)}>Daily log</button>
+                        <button type="button" disabled={Boolean(activeAction)} onClick={() => onOpenActiveWorkMessages(activeWork.id)}><MessageCircle size={16} />Messages</button>
+                        <button type="button" disabled={Boolean(activeAction)} onClick={() => onOpenTool("job-photos", activeWork.id)}><Camera size={16} />Photos</button>
+                        <button type="button" disabled={Boolean(activeAction)} onClick={() => onOpenTool("daily-log", activeWork.id)}><FileText size={16} />Daily log</button>
                       </div>
                       <div className="v2-active-work-money-actions" aria-label="Job money tools">
                         <span>Money</span>

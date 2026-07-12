@@ -901,15 +901,6 @@
   line-height: 1.45;
 }
 
-.v2-active-work-record-action {
-  grid-column: 1 / -1;
-}
-
-.v2-active-work-record-action button {
-  width: 100%;
-}
-
-.v2-active-work-record-action button:disabled,
 .v2-active-work-daily-actions button:disabled,
 .v2-active-work-money-actions button:disabled,
 .v2-active-work-controls button:disabled {
@@ -941,6 +932,14 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.v2-active-work-daily-actions button {
+  gap: 6px;
+}
+
+.v2-active-work-daily-actions button svg {
+  flex: 0 0 auto;
 }
 
 .v2-active-work-money-actions {

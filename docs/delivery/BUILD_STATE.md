@@ -2,13 +2,26 @@
 
 Last updated: 2026-07-12 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Packet 23 Work Action Ownership is deployed and production
-verified. It moves
-the contractor posting action out of Home and into a thumb-reachable Work
-control without expanding the five primary destinations.
-Active packet: `docs/delivery/packets/23_WORK_ACTION_OWNERSHIP.md`
-Repository branch: `master`
+Current phase: Packet 24 Active Work Camera Workflow is locally verified. It
+unifies the active-work daily actions and brings Camera destination, feed, and
+capture controls into one lower-screen dock.
+Active packet: `docs/delivery/packets/24_ACTIVE_WORK_CAMERA_WORKFLOW.md`
+Repository branch: `codex/active-work-camera-workflow`
 Production feature release commit: `97d749e459352a40b36bb5d9b44b3e306306510e` verified with live `/api/health`, ready migration `0026_standalone_projects`, and `npm run monitor:production`; docs-only evidence commits may supersede the served build SHA without changing runtime behavior.
+
+## Packet 24 - Active Work Camera Workflow (Local Verification)
+
+- Active-work Today now treats Messages, Photos, and Daily log as the daily
+  job actions. Each route retains the exact active-work context, and the
+  former generic project-record detour is removed from this surface.
+- Camera's bottom dock now contains the selected destination, Feed, and
+  Capture. High-screen duplicate project-feed commands are removed so frequent
+  camera navigation is reachable with one hand.
+- Local verification passed: build, lint, 53/53 unit tests, E2E, Work lifecycle
+  UI smoke, Tools rendered UI smoke, dependency audit, and diff check. This
+  client-only packet does not claim a new database integration pass.
+- Remaining boundary: physical one-handed iOS/Android proof for the active-job
+  daily-action row and Camera Destination, Feed, and Capture dock.
 
 ## Packet 23 - Work Action Ownership (Production Verification)
 

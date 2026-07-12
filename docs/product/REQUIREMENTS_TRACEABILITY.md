@@ -10,6 +10,18 @@ Status values:
 
 Evidence must eventually link to implementation, automated tests, manual acceptance proof, and deployed build.
 
+## Traceability Addendum - 2026-07-12 Active Work Camera Workflow (Local Verification)
+
+- `GA-UX-003` gains exact-workspace evidence: the active-job Today panel
+  exposes Messages, Photos, and Daily log as one job's daily tools rather than
+  routing the person through generic records.
+- `GA-UX-006` gains one-hand Camera evidence: Camera keeps the chosen job or
+  standalone project visible while the lower dock exposes Destination, Feed,
+  and Capture controls.
+- `GA-OPS-007` gains local evidence: build, lint, 53/53 unit tests, E2E, Work
+  lifecycle UI smoke, Tools rendered UI smoke, dependency audit, and diff
+  check passed. This client-only packet does not claim a new DB-backed pass.
+
 ## Traceability Addendum - 2026-07-12 Work Action Ownership (Production Verification)
 
 - `GA-UX-003` gains destination-ownership evidence: contractors create jobs

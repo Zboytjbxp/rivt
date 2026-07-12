@@ -693,13 +693,12 @@ async function runTradespersonOfferFlow(page) {
   const activeWorkspaceBox = await activeWorkspace.boundingBox();
   const jobSummaryBox = await page.locator(".v2-job-description").boundingBox();
   assert.ok(activeWorkspaceBox && jobSummaryBox && activeWorkspaceBox.y < jobSummaryBox.y, "Today must put active-work actions before the job summary");
-  await activeWorkspace.getByRole("button", { name: "Open project records" }).waitFor({ timeout: 15_000 });
   await activeWorkspace.getByRole("button", { name: "Messages" }).waitFor({ timeout: 15_000 });
-  await activeWorkspace.getByRole("button", { name: "Camera" }).waitFor({ timeout: 15_000 });
+  await activeWorkspace.getByRole("button", { name: "Photos" }).waitFor({ timeout: 15_000 });
   await activeWorkspace.getByRole("button", { name: "Daily log" }).waitFor({ timeout: 15_000 });
   await activeWorkspace.getByText("Job controls", { exact: true }).waitFor({ timeout: 15_000 });
   assert.equal(await activeWorkspace.locator("details.v2-active-work-controls").evaluate((element) => !element.open), true, "Rare job controls should start collapsed");
-  await activeWorkspace.getByRole("button", { name: "Camera" }).click();
+  await activeWorkspace.getByRole("button", { name: "Photos" }).click();
   await page.waitForURL(/\/app\/tools\?tool=job-photos/, { timeout: 15_000 });
   await page.getByText("Live project feed", { exact: true }).waitFor({ timeout: 15_000 });
   await page.getByLabel("Camera").locator(".v2-job-photos-job-name").getByText("Warehouse panel assist", { exact: true }).waitFor({ timeout: 15_000 });
@@ -714,7 +713,7 @@ async function runTradespersonOfferFlow(page) {
   await page.goto(`${baseUrl}/app/work`, { waitUntil: "networkidle" });
   await clickJob(page, "Warehouse panel assist");
   await page.getByText("Accepted and active", { exact: true }).waitFor({ timeout: 15_000 });
-  await page.getByLabel("Hiring workflow").getByRole("button", { name: "Camera" }).click();
+  await page.getByLabel("Hiring workflow").getByRole("button", { name: "Photos" }).click();
   await page.waitForURL(/\/app\/tools\?tool=job-photos/, { timeout: 15_000 });
   await page.getByText("Live project feed", { exact: true }).waitFor({ timeout: 15_000 });
   await page.getByLabel("Camera").locator(".v2-job-photos-job-name").getByText("Warehouse panel assist", { exact: true }).waitFor({ timeout: 15_000 });

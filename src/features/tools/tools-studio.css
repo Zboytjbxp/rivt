@@ -2427,12 +2427,16 @@
   }
 
   .v2-camera-action-dock {
-    grid-template-columns: minmax(0, 1fr) auto minmax(104px, auto);
+    grid-template-columns: minmax(0, 1fr) 48px 48px 48px;
   }
 
   .v2-camera-action-dock > button {
     min-width: 0;
-    padding: 0 10px;
+    padding: 0;
+  }
+
+  .v2-camera-action-dock > button span {
+    display: none;
   }
 
   .v2-tools-page {
