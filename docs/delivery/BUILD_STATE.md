@@ -26,9 +26,8 @@ behavior.
   client-only packet does not claim a database integration pass; the aggregate
   test command's database-integration half exceeded the local runner window
   without output.
-- Remaining boundary: merge, live `/api/health` source confirmation, production
-  monitor, and physical light/dark checks on iPhone and Android before any
-  future paid appearance entitlement decision.
+- Remaining boundary: physical light/dark checks on iPhone and Android before
+  any future paid appearance entitlement decision.
 - Production evidence: `master` serves exact source
   `36f0735d45922e8a3cc49fb8dc9d255896aade5d`; PostgreSQL, S3-compatible
   storage, Sentry, and Web Push remain configured, ready migration is
