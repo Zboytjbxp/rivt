@@ -2,19 +2,27 @@
 
 Last updated: 2026-07-12 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Packet 26 Entry Experience is in local verification. It makes
+Current phase: Packet 26 Entry Experience is deployed and verified. It makes
 account creation and returning-member login persistent first-screen actions
 while keeping the product demo clearly optional.
 Active packet: `docs/delivery/packets/26_ENTRY_EXPERIENCE.md`
-Repository branch: `codex/entry-experience`
-Production feature release commit: `31c70a3f252f733857d822f1732c19b561c52848` verified with live `/api/health`, ready migration `0026_standalone_projects`, and `npm run monitor:production`; docs-only evidence commits may supersede the served build SHA without changing runtime behavior.
+Repository branch: `master`
+Production feature release commit: `d6c475546229ae62165b3afd4c5149540720b83e` verified with live `/api/health`, ready migration `0026_standalone_projects`, and `npm run monitor:production`; docs-only evidence commits may supersede the served build SHA without changing runtime behavior.
 
-## Packet 26 - Entry Experience (Local Verification)
+## Packet 26 - Entry Experience (Production Verification)
 
 - The RIVT intro keeps its capability preview but no longer makes returning
   members hunt through a feature tour for login.
 - Create free account and Log in are persistent peer controls; Preview demo is
   a distinct, accurately labeled sample path.
+- Local verification passed: build, lint, 53/53 unit tests, E2E, dependency
+  audit, and diff check. This client-only packet does not claim a new database
+  integration pass.
+- Production evidence: `master` serves exact source
+  `d6c475546229ae62165b3afd4c5149540720b83e`; PostgreSQL, S3-compatible
+  storage, Sentry, and Web Push are configured, the ready migration remains
+  `0026_standalone_projects`, and the expected-source production monitor
+  passed with seven anonymous private-route checks in 583 ms.
 - Remaining boundary: a physical mobile review of intro, preview, signup, and
   login transitions on iOS and Android.
 

@@ -17,6 +17,11 @@ Evidence must eventually link to implementation, automated tests, manual accepta
   login.
 - `GA-UX-006` gains mobile access evidence: both account actions remain visible
   and reachable from every intro slide without requiring a long scroll.
+- `GA-OPS-008` gains production evidence: `master` serves exact source
+  `d6c475546229ae62165b3afd4c5149540720b83e` with ready migration
+  `0026_standalone_projects`, PostgreSQL/S3-compatible storage, configured
+  Sentry, and configured Web Push. The expected-source monitor passed with
+  seven anonymous private-route checks in 583 ms.
 
 ## Traceability Addendum - 2026-07-12 Tool Consolidation (Local Verification)
 
