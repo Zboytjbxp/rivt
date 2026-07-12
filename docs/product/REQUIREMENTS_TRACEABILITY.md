@@ -10,6 +10,18 @@ Status values:
 
 Evidence must eventually link to implementation, automated tests, manual acceptance proof, and deployed build.
 
+## Traceability Addendum - 2026-07-12 Field Finishes (Local Verification)
+
+- `GA-UX-003` gains account-clarity evidence: the compact account drawer
+  summarizes the current appearance and opens one focused Field Finishes editor
+  instead of embedding a long preference surface in a profile menu.
+- `GA-UX-006` gains full-surface preference evidence: selected original RIVT
+  finishes update canvas, panels, chrome, navigation, active states, actions,
+  and supporting information tones without reload. The mobile smoke opens the
+  editor, selects Harbor Blue, and verifies the live navigation token changes.
+- `GA-OPS-008` remains unchanged until `codex/field-finishes` is merged and
+  production serves its exact source commit.
+
 ## Traceability Addendum - 2026-07-12 Theme Studio (Local Verification)
 
 - `GA-UX-003` gains account-clarity evidence: the account drawer remains the

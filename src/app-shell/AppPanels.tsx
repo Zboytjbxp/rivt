@@ -263,6 +263,7 @@ export function AccountPanel({
 
         <section className="account-section theme-settings-section">
           <ThemeStudio
+            variant="compact"
             themeMode={themeMode}
             themeSource={themeSource}
             themePalette={themePalette}

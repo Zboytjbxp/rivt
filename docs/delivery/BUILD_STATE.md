@@ -2,12 +2,26 @@
 
 Last updated: 2026-07-12 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Packet 27 Theme Studio is production verified. It replaces
-decorative swatches with one shared appearance surface and broadens the real
-app impact of each selected palette.
-Active packet: `docs/delivery/packets/27_THEME_STUDIO.md`
-Repository branch: `master`
+Current phase: Packet 28 Field Finishes is in local verification. It replaces
+the initial Theme Studio's small palette treatment with original, full-surface
+RIVT finish systems and a compact Account entry point.
+Active packet: `docs/delivery/packets/28_FIELD_FINISHES.md`
+Repository branch: `codex/field-finishes`
 Production feature release commit: `2f67ce4551b1a2bf4e53b57ed609dfcd27fb06b1` verified with live `/api/health`, ready migration `0026_standalone_projects`, and `npm run monitor:production`; docs-only evidence commits may supersede the served build SHA without changing runtime behavior.
+
+## Packet 28 - Field Finishes (Local Verification)
+
+- Appearance now uses named, original RIVT Field Finishes rather than
+  manufacturer-adjacent swatches. Each finish changes canvas, panels, borders,
+  top bar, navigation, active state, primary action, and information tones.
+- Account is compact: it shows the selected finish and opens a dedicated
+  full-screen editor. Settings retains the full Field Finishes editor.
+- Local verification passed: build, lint, 53/53 unit tests, E2E, mobile-action
+  UI smoke, Tools rendered UI smoke, dependency audit, and diff check. The
+  aggregate test command stalled without output during its remote database
+  integration half, so this frontend-only packet makes no new database claim.
+- Remaining boundary: production source and physical light/dark checks on an
+  iPhone and Android device before any future paid entitlement decision.
 
 ## Packet 27 - Theme Studio (Production Verification)
 

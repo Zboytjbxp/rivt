@@ -449,6 +449,23 @@ async function runMobileFlow(page) {
   await page.getByRole("button", { name: /Open profile menu for/i }).click();
   await page.getByRole("dialog", { name: "Settings" }).waitFor({ timeout: 15_000 });
   await assertControlCenterClickable(page, ".account-signout-btn", "account sign-out button");
+  await page.locator(".theme-studio-launcher").click();
+  const finishesDialog = page.getByRole("dialog", { name: "Field finishes" });
+  await finishesDialog.waitFor({ timeout: 15_000 });
+  assert.equal(await finishesDialog.locator(".theme-studio-palette").count(), 6, "Appearance should expose six complete field finishes, not decorative swatches");
+  await finishesDialog.getByRole("button", { name: "Use Harbor Blue field finish" }).click();
+  assert.equal(await page.evaluate(() => document.documentElement.dataset.palette), "steelBlue", "Selecting a finish should update the document palette immediately");
+  assert.equal(
+    await page.evaluate(() => {
+      const app = document.querySelector(".rivt-v2");
+      return app ? getComputedStyle(app).getPropertyValue("--v2-nav-bg").trim() : "";
+    }),
+    "#0e2938",
+    "Field finishes should update application chrome, not only buttons",
+  );
+  await assertNoHorizontalOverflow(page, "Appearance studio");
+  await page.screenshot({ path: path.join(screenshotDir, "mobile-field-finishes.png"), fullPage: false });
+  await finishesDialog.getByRole("button", { name: "Close appearance" }).click();
   await page.getByRole("button", { name: "Settings", exact: true }).click();
   await page.getByRole("heading", { name: "Settings", exact: true }).waitFor({ timeout: 15_000 });
   await page.getByRole("button", { name: "Alerts", exact: true }).click();
