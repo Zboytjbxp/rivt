@@ -1,13 +1,33 @@
 # RIVT Build State
 
-Last updated: 2026-07-11 America/New_York
+Last updated: 2026-07-12 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Packet 21 Shop Talk Command Center is deployed. It separates
-the community feed, directory, and news reader while removing stacked filter
-clutter and stale-first news ordering.
-Active packet: `docs/delivery/packets/21_SHOP_TALK_COMMAND_CENTER.md`
-Repository branch: `codex/shop-talk-rebuild`
+Current phase: Packet 22 Field Access Workbench is locally verified. It adds
+thumb-reachable Field Tools shortcuts, explicit Camera destinations, and a
+roster-first Crew surface without changing the five primary destinations.
+Active packet: `docs/delivery/packets/22_FIELD_ACCESS_WORKBENCH.md`
+Repository branch: `codex/field-access-workbench`
 Production feature release commit: `b682ac9adc2dfdd408b33f453b8a41b73b58197c` verified with live `/api/health`, ready migration `0026_standalone_projects`, and `npm run monitor:production`; docs-only evidence commits may supersede the served build SHA without changing runtime behavior.
+
+## Packet 22 - Field Access Workbench (Local Verification)
+
+- Tools now exposes a three-slot Field Tools tray above the mobile navigation.
+  Its defaults are Camera, Heavy 16th, and Daily log; it is configurable per
+  device and keeps `All tools` one tap away without adding permanent nav items.
+- Camera moves its frequent actions into the bottom action dock. Generic Camera
+  entry requires a deliberate accepted-work or standalone-project destination
+  before opening capture, while exact active-work Camera retains the job.
+- Crew is roster-first. Invite planning is collapsed until requested, and the
+  default Crew page no longer repeats Shop Talk prompts or decorative trust
+  content from other destinations.
+- Local verification passed: build, lint, security lint, 53/53 unit tests,
+  E2E, Tools rendered UI smoke, mobile-action UI smoke, dependency audit, and
+  diff check. The aggregate `npm run test` exceeded the local command window
+  before the integration half emitted output, so no new DB-suite pass is
+  claimed for this packet.
+- Remaining boundary: physical one-handed iOS/Android checks for the Tools
+  tray, Camera destination choice/capture, and collapsed Crew planner before
+  merge/deploy.
 
 ## Packet 21 - Shop Talk Command Center (Local Verification)
 

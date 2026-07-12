@@ -718,11 +718,13 @@ function PhotoGallery({
   );
 }
 
-export function JobPhotosTool({ activeWork, focusedActiveWorkId = null, standaloneProject = null, autoOpenActiveJob = false }: {
+export function JobPhotosTool({ activeWork, focusedActiveWorkId = null, standaloneProject = null, autoOpenActiveJob = false, contextLabel = null, onRequestContext }: {
   activeWork: CanonicalActiveWork[];
   focusedActiveWorkId?: string | null;
   standaloneProject?: StandaloneProject | null;
   autoOpenActiveJob?: boolean;
+  contextLabel?: string | null;
+  onRequestContext?: () => void;
 }) {
   const focusedWork = focusedActiveWorkId
     ? activeWork.find((work) => work.id === focusedActiveWorkId) ?? null
@@ -1077,13 +1079,13 @@ export function JobPhotosTool({ activeWork, focusedActiveWorkId = null, standalo
       ) : (
         <section className="v2-camera-home-panel v2-camera-live-command">
           <div className="v2-job-photos-active-job-info">
-            <span className="v2-job-photos-active-badge">Camera</span>
-            <h2>Private albums</h2>
-            <small>Side work and personal photo sets</small>
+            <span className="v2-job-photos-active-badge">Capture destination</span>
+            <h2>Choose where this proof belongs</h2>
+            <small>Use an accepted RIVT job, a standalone project, or a private album.</small>
           </div>
-          <button type="button" className="v2-primary-button" onClick={() => setShowNewAlbum(true)}>
-            <Plus size={16} />
-            New album
+          <button type="button" className="v2-secondary-button" onClick={onRequestContext}>
+            <FolderOpen size={16} />
+            Choose destination
           </button>
         </section>
       )}
@@ -1193,9 +1195,13 @@ export function JobPhotosTool({ activeWork, focusedActiveWorkId = null, standalo
       </section> : null}
       <div className="v2-tool-action-dock v2-camera-action-dock" aria-label="Camera actions">
         <span>
-          <strong>{recordWork?.job?.title ?? standaloneProject?.title ?? "Private album"}</strong>
-          <small>{recordWork ? "RIVT workspace" : standaloneProject ? "Standalone project" : "Choose a private album"}</small>
+          <strong>{contextLabel ?? "Choose destination"}</strong>
+          <small>{recordWork ? "RIVT workspace" : standaloneProject ? "Standalone project" : "Never attach a photo by accident"}</small>
         </span>
+        <button type="button" onClick={onRequestContext} disabled={projectLoading || albumLoading}>
+          <FolderOpen size={17} />
+          Destination
+        </button>
         <button
           type="button"
           className="v2-primary-button"
@@ -1203,10 +1209,10 @@ export function JobPhotosTool({ activeWork, focusedActiveWorkId = null, standalo
           onClick={() => {
             if (recordWork) void openActiveJob({ launchCamera: true });
             else if (standaloneProject) void openStandaloneProject({ launchCamera: true });
-            else setShowNewAlbum(true);
+            else onRequestContext?.();
           }}
         >
-          <Camera size={18} />{recordWork || standaloneProject ? "Open camera" : "New album"}
+          <Camera size={18} />Capture
         </button>
       </div>
     </div>

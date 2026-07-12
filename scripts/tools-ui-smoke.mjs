@@ -392,7 +392,9 @@ async function runToolsFlow(page, viewportName) {
   await page.goto(`${baseUrl}/app/tools`, { waitUntil: "networkidle" });
   await page.getByRole("heading", { name: "Tools", exact: true }).waitFor({ timeout: 15_000 });
   const primaryTool = (name) => page.locator(".v2-tool-launch-card").filter({ hasText: name }).first();
-  await page.getByRole("button", { name: /Heavy 16th/i }).waitFor({ timeout: 15_000 });
+  const fieldToolsTray = page.getByLabel("Field shortcuts", { exact: true });
+  await fieldToolsTray.waitFor({ timeout: 15_000 });
+  await fieldToolsTray.getByRole("button", { name: "Heavy 16th", exact: true }).waitFor({ timeout: 15_000 });
   await page.getByRole("button", { name: /Open Camera/i }).waitFor({ timeout: 15_000 });
   assert.equal(await page.locator(".v2-tool-launch-card").count(), 5, "Tools hub should expose exactly five primary field apps");
   assert.equal(await page.locator(".v2-tool-group").count(), 3, "Tools hub should keep supporting utilities in three grouped sections");
@@ -404,7 +406,7 @@ async function runToolsFlow(page, viewportName) {
   await assertNoHorizontalOverflow(page);
   await page.screenshot({ path: path.join(screenshotDir, `${viewportName}-tools-hub.png`), fullPage: true });
 
-  await page.getByRole("button", { name: /Heavy 16th/i }).click();
+  await fieldToolsTray.getByRole("button", { name: "Heavy 16th", exact: true }).click();
   await page.getByRole("heading", { name: "Heavy 16th field calculator" }).waitFor({ timeout: 15_000 });
   if (viewportName === "se") {
     await page.evaluate(() => {
@@ -518,14 +520,14 @@ async function runToolsFlow(page, viewportName) {
   await page.getByLabel("Daily log").getByRole("button", { name: "Tools" }).click();
 
   await primaryTool("Camera").click();
-  await page.getByRole("button", { name: "Work context: Quick use. Change context." }).click();
+  await page.getByRole("button", { name: "Choose destination" }).click();
   await page.getByRole("dialog", { name: "Choose work context" }).getByRole("button", { name: /Tenant Build-Out/i }).click();
   await page.getByRole("heading", { name: "Tenant Build-Out", exact: true }).waitFor({ timeout: 15_000 });
-  await page.getByRole("button", { name: "Open camera" }).first().waitFor({ timeout: 15_000 });
+  await page.getByRole("button", { name: "Capture", exact: true }).waitFor({ timeout: 15_000 });
   assert.equal(await page.getByText("Private albums", { exact: true }).count(), 0, "RIVT job context should not mix in private albums");
   await assertNoHorizontalOverflow(page);
   await page.screenshot({ path: path.join(screenshotDir, `${viewportName}-camera-home.png`), fullPage: true });
-  await page.getByRole("button", { name: "Open camera" }).first().click();
+  await page.getByRole("button", { name: "Capture", exact: true }).click();
   await page.getByRole("button", { name: "Take photo" }).waitFor({ timeout: 15_000 });
   await page.getByLabel("Saving photos to Tenant Build-Out").waitFor({ timeout: 15_000 });
   const captureTypes = page.getByRole("group", { name: "Capture type" });

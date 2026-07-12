@@ -10,6 +10,22 @@ Status values:
 
 Evidence must eventually link to implementation, automated tests, manual acceptance proof, and deployed build.
 
+## Traceability Addendum - 2026-07-12 Field Access Workbench (Local Verification)
+
+- `GA-UX-003` gains field-access evidence: mobile Tools uses a configurable
+  Field Tools tray for Camera, Heavy 16th, Daily log, and a compact All tools
+  route without expanding the five-destination navigation model. Camera now
+  names and asks for a capture destination instead of silently attaching a
+  generic capture to a loaded job.
+- `GA-UX-006` gains rendered one-hand evidence: Tools and mobile-action smokes
+  prove the tray is reachable above the mobile nav, Camera capture/destination
+  actions remain in the lower dock, and the Crew roster/invite flow has no
+  document-wide horizontal overflow.
+- `GA-OPS-007` gains local evidence: build, lint, security lint, 53/53 unit
+  tests, E2E, Tools rendered UI smoke, mobile-action UI smoke, dependency
+  audit, and diff check passed. The aggregate test command exceeded the local
+  runner window before integration output, so no new DB-backed pass is claimed.
+
 ## Traceability Addendum - 2026-07-11 Shop Talk Command Center (Local Verification)
 
 - `GA-UX-003` gains community-navigation evidence: Shop Talk now separates the

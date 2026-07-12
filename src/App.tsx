@@ -2529,14 +2529,12 @@ function App() {
         ) : ["Crew", "Reviews"].includes(activeView) ? (
           <NetworkHub
             view={activeView as "Crew" | "Reviews"}
-            communityPosts={communityPosts}
             shoutOuts={shoutOuts}
             displayName={accountProfile.displayName}
             profileFocus={profileSearchFocus}
             focusedReviewId={focusedReviewId}
             onClearProfileFocus={() => setProfileSearchFocus(null)}
             onOpenCrew={() => handleNavigate("Crew")}
-            onOpenShopTalk={() => handleNavigate("Shop Talk")}
             onOpenReviews={() => handleNavigate("Reviews")}
             onAddShoutOut={handleAddShoutOut}
             isDemo={isGuest}

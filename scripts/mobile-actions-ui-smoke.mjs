@@ -391,10 +391,10 @@ async function runMobileFlow(page) {
   await page.getByRole("heading", { name: "Tools", exact: true }).waitFor({ timeout: 15_000 });
   await page.getByRole("button", { name: "Open Camera" }).click();
   await page.getByRole("heading", { name: "Camera", exact: true }).waitFor({ timeout: 15_000 });
-  await page.getByRole("button", { name: "Work context: Quick use. Change context." }).click();
+  await page.getByRole("button", { name: "Choose destination" }).click();
   await page.getByRole("dialog", { name: "Choose work context" }).getByRole("button", { name: /Miller kitchen/i }).click();
-  await page.getByRole("button", { name: "Work context: Miller kitchen. Change context." }).waitFor({ timeout: 15_000 });
-  const cameraAction = page.getByLabel("Camera actions").getByRole("button", { name: "Open camera" });
+  await page.getByRole("heading", { name: "Miller kitchen", exact: true }).waitFor({ timeout: 15_000 });
+  const cameraAction = page.getByLabel("Camera actions").getByRole("button", { name: "Capture", exact: true });
   const cameraActionBox = await cameraAction.boundingBox();
   assert.ok(cameraActionBox && cameraActionBox.y + cameraActionBox.height <= 844, `Camera action should stay in the thumb-zone viewport: ${JSON.stringify(cameraActionBox)}`);
   await assertNoHorizontalOverflow(page, "Standalone camera app");
@@ -404,6 +404,7 @@ async function runMobileFlow(page) {
   await page.getByRole("button", { name: "Crew", exact: true }).click();
   await page.getByRole("heading", { name: "Crew", exact: true }).waitFor({ timeout: 15_000 });
   await assertNoHorizontalOverflow(page, "Crew");
+  await page.locator(".v2-crew-invite-fold > summary").click();
   await page.getByRole("button", { name: "Plan invite", exact: true }).click();
   const crewInviteInputs = page.locator(".v2-crew-invite-inputs input");
   await assert.equal(await crewInviteInputs.count(), 4, "Crew invite planner should render four contained inputs");
@@ -455,6 +456,7 @@ async function runMobileFlow(page) {
   await assertNoHorizontalOverflow(page, "Settings route");
   await page.getByRole("button", { name: "Crew", exact: true }).click();
   await page.getByRole("heading", { name: "Crew", exact: true }).waitFor({ timeout: 15_000 });
+  await page.locator(".v2-crew-invite-fold > summary").click();
   await page.getByRole("button", { name: "Plan invite", exact: true }).click();
   await page.getByPlaceholder("Name or company").fill("First Coast Electric");
   await assertControlCenterClickable(page, ".v2-crew-invite-form .v2-primary-button", "crew plan invite button");

@@ -576,6 +576,113 @@
   color: var(--v2-on-accent);
 }
 
+.v2-field-tools-tray {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 12px;
+  border: 1px solid color-mix(in srgb, var(--v2-border-strong) 64%, transparent);
+  border-radius: var(--v2-radius-lg);
+  background: var(--v2-surface-raised);
+  box-shadow: var(--v2-shadow-card);
+}
+
+.v2-field-tools-tray-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.v2-field-tools-tray-header > span {
+  display: grid;
+  gap: 2px;
+}
+
+.v2-field-tools-tray-header strong {
+  font-size: 15px;
+  font-weight: var(--v2-weight-bold);
+}
+
+.v2-field-tools-tray-header small {
+  color: var(--v2-text-muted);
+  font-size: 13px;
+}
+
+.v2-field-tools-tray-header > button {
+  min-height: 44px;
+  padding: 0 10px;
+  border: 0;
+  background: transparent;
+  color: var(--v2-accent);
+  font: inherit;
+  font-size: 14px;
+  font-weight: var(--v2-weight-strong);
+}
+
+.v2-field-tools-actions {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.v2-field-tools-actions > button,
+.v2-field-tools-picker > button {
+  display: grid;
+  min-width: 0;
+  min-height: 58px;
+  place-items: center;
+  gap: 5px;
+  padding: 7px 4px;
+  border: 1px solid var(--v2-border);
+  border-radius: var(--v2-radius-md);
+  background: var(--v2-surface);
+  color: var(--v2-text);
+  font: inherit;
+  font-size: 12px;
+  font-weight: var(--v2-weight-strong);
+}
+
+.v2-field-tools-actions > button svg {
+  color: var(--v2-accent);
+}
+
+.v2-field-tools-actions > button span {
+  overflow: hidden;
+  max-width: 100%;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.v2-field-tools-actions > .v2-field-tools-all {
+  background: var(--v2-surface-muted);
+}
+
+.v2-field-tools-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.v2-field-tools-picker > button {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 7px;
+  padding: 0 10px;
+}
+
+.v2-field-tools-picker > button.is-selected {
+  border-color: var(--v2-accent);
+  background: var(--v2-accent-soft);
+  color: var(--v2-accent);
+}
+
+.v2-field-tools-picker > button:disabled {
+  opacity: 0.46;
+}
+
 .v2-tool-panel {
   display: grid;
   gap: 14px;
@@ -2320,7 +2427,34 @@
   }
 
   .v2-camera-action-dock {
-    grid-template-columns: minmax(0, 1fr) minmax(140px, auto);
+    grid-template-columns: minmax(0, 1fr) auto minmax(104px, auto);
+  }
+
+  .v2-camera-action-dock > button {
+    min-width: 0;
+    padding: 0 10px;
+  }
+
+  .v2-tools-page {
+    padding-bottom: calc(146px + env(safe-area-inset-bottom));
+  }
+
+  .v2-tools-page .v2-field-tools-tray {
+    position: fixed;
+    right: 8px;
+    bottom: calc(68px + env(safe-area-inset-bottom));
+    left: 8px;
+    z-index: 18;
+    padding: 8px;
+    box-shadow: var(--v2-shadow-md);
+  }
+
+  .v2-tools-page .v2-field-tools-tray:not(.is-editing) .v2-field-tools-tray-header {
+    display: none;
+  }
+
+  .v2-tools-page .v2-field-tools-actions > button {
+    min-height: 54px;
   }
   .v2-tools-header {
     align-items: flex-start;

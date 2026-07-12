@@ -12,7 +12,6 @@ import {
   Plus,
   Send,
   ShieldCheck,
-  Sparkles,
   Star,
   Users,
   X,
@@ -28,7 +27,6 @@ import {
   upsertClientRecord,
   type ClientRecord,
 } from "../clients/client-records";
-import type { CommunityPost } from "../shop-talk/ShopTalkView";
 import {
   deleteNetworkRecordByLocalId,
   fetchNetworkRecords,
@@ -49,14 +47,12 @@ interface ShoutOut {
 
 interface NetworkHubProps {
   view: "Crew" | "Reviews";
-  communityPosts: CommunityPost[];
   shoutOuts: ShoutOut[];
   displayName: string;
   profileFocus?: ProfileSearchResult | null;
   focusedReviewId?: string | null;
   onClearProfileFocus?: () => void;
   onOpenCrew: () => void;
-  onOpenShopTalk: () => void;
   onOpenReviews: () => void;
   onAddShoutOut: (to: string, trade: string, message: string) => void;
   isDemo?: boolean;
@@ -1132,7 +1128,7 @@ function CrewInvitePlanner({ isDemo = false }: { isDemo?: boolean }) {
   );
 }
 
-function AnswerPrompt({ post, onOpenShopTalk }: { post: CommunityPost; onOpenShopTalk: () => void }) {
+export function AnswerPrompt({ post, onOpenShopTalk }: { post: { title: string; trade: string; status: string }; onOpenShopTalk: () => void }) {
   return (
     <button type="button" className="v2-network-prompt" onClick={onOpenShopTalk}>
       <span className="v2-network-prompt-icon"><MessageSquareText size={16} /></span>
@@ -1367,20 +1363,16 @@ type NetworkTab = "Crew" | "Subs" | "Reviews" | "Clients";
 
 export function NetworkHub({
   view,
-  communityPosts,
   shoutOuts,
   displayName,
   profileFocus = null,
   focusedReviewId = null,
   onClearProfileFocus = () => undefined,
   onOpenCrew,
-  onOpenShopTalk,
   onOpenReviews,
   onAddShoutOut,
   isDemo = false,
 }: NetworkHubProps) {
-  const questionPosts = communityPosts.filter((post) => post.flair === "Question" || post.status !== "Open").slice(0, 4);
-  const highlightedShoutOuts = shoutOuts.slice(0, 4);
   // Internal tab state — derive initial tab from the incoming view prop
   const [activeTab, setActiveTab] = useState<NetworkTab>(() =>
     view === "Reviews" ? "Reviews" : "Crew"
@@ -1454,83 +1446,12 @@ export function NetworkHub({
       {/* Local Crew Manager */}
       <div className="v2-crew-workbench">
         <CrewManager crewType="crew" isDemo={isDemo} />
-        <CrewInvitePlanner isDemo={isDemo} />
+        <details className="v2-crew-invite-fold">
+          <summary>Plan an invite</summary>
+          <CrewInvitePlanner isDemo={isDemo} />
+        </details>
       </div>
 
-      <div className="v2-network-grid">
-
-        <Panel
-          className="v2-network-panel"
-          eyebrow="Shout-outs"
-          title="Recent reputation signals"
-          action={<div className="v2-network-panel-actions"><button type="button" className="v2-primary-button" onClick={onOpenReviews}>Write shout-out</button><button type="button" onClick={onOpenReviews}>See all</button></div>}
-        >
-          <div className="v2-network-shoutouts">
-            {highlightedShoutOuts.length ? highlightedShoutOuts.map((item) => (
-              <article key={item.id}>
-                <div>
-                  <strong>{item.to}</strong>
-                  <span>{item.trade}</span>
-                </div>
-                <p>{item.message}</p>
-              </article>
-            )) : (
-              <EmptyState
-                className="v2-network-empty"
-                icon={<Star size={20} />}
-                title="No shout-outs yet"
-                description="Shout-outs will appear here."
-                compact
-              />
-            )}
-          </div>
-        </Panel>
-
-        <Panel
-          className="v2-network-panel v2-network-panel-wide"
-          eyebrow="Questions worth answering"
-          title="Shop Talk with field weight"
-          action={<button type="button" onClick={onOpenShopTalk}>View all</button>}
-        >
-          <div className="v2-network-prompts">
-            {questionPosts.length ? questionPosts.map((post) => <AnswerPrompt key={post.id} post={post} onOpenShopTalk={onOpenShopTalk} />) : (
-              <EmptyState
-                className="v2-network-empty"
-                icon={<Sparkles size={20} />}
-                title="Nothing posted in your trade yet"
-                description="Ask or share a field-tested fix."
-                action={<button type="button" onClick={onOpenShopTalk}>Post in Shop Talk</button>}
-                compact
-              />
-            )}
-          </div>
-        </Panel>
-
-        <Panel
-          className="v2-network-panel"
-          eyebrow="Trust signals"
-          title="Who looks ready"
-          action={<button type="button" onClick={onOpenReviews}>Open reviews</button>}
-        >
-          <div className="v2-network-trust-stack">
-            <article>
-              <ShieldCheck size={18} />
-              <strong>Evidence states</strong>
-              <span>Self-reported, uploaded, and verified stay separate.</span>
-            </article>
-            <article>
-              <Star size={18} />
-              <strong>High reputation</strong>
-              <span>Shout-outs and field answers build trust.</span>
-            </article>
-            <article>
-              <Users size={18} />
-              <strong>Active crew</strong>
-              <span>Jobs, invites, and referrals in one view.</span>
-            </article>
-          </div>
-        </Panel>
-      </div>
     </section>
   );
 }

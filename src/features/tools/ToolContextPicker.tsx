@@ -14,6 +14,9 @@ export function ToolContextPicker({
   onChooseStandalone,
   onChooseActiveWork,
   onCreateStandalone,
+  openRequestToken,
+  hideTrigger = false,
+  allowQuickUse = true,
 }: {
   context: ToolWorkContext;
   standaloneProjects: StandaloneProject[];
@@ -24,12 +27,23 @@ export function ToolContextPicker({
   onChooseStandalone: (project: StandaloneProject) => void;
   onChooseActiveWork: (work: CanonicalActiveWork) => void;
   onCreateStandalone: (input: { title: string; clientName: string; locationText: string }) => Promise<boolean>;
+  openRequestToken?: number;
+  hideTrigger?: boolean;
+  allowQuickUse?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [creating, setCreating] = useState(false);
   const [title, setTitle] = useState("");
   const [clientName, setClientName] = useState("");
   const [locationText, setLocationText] = useState("");
+  const [dismissedRequestToken, setDismissedRequestToken] = useState(0);
+  const requestedOpen = Boolean(openRequestToken && openRequestToken !== dismissedRequestToken);
+  const isOpen = open || requestedOpen;
+
+  function closePicker() {
+    setOpen(false);
+    setDismissedRequestToken(openRequestToken ?? 0);
+  }
 
   async function createProject() {
     if (!title.trim()) return;
@@ -39,26 +53,30 @@ export function ToolContextPicker({
     setClientName("");
     setLocationText("");
     setCreating(false);
-    setOpen(false);
+    closePicker();
   }
 
   return (
     <>
-      <button type="button" className="v2-tool-context-trigger" onClick={() => setOpen(true)} aria-label={`Work context: ${toolContextLabel(context)}. Change context.`}>
-        <span><small>{toolContextEyebrow(context)}</small><strong>{toolContextLabel(context)}</strong></span>
-        <ChevronDown size={18} />
-      </button>
-      {open ? (
-        <div className="v2-tool-context-backdrop" role="presentation" onMouseDown={(event) => { if (event.currentTarget === event.target) setOpen(false); }}>
+      {!hideTrigger ? (
+        <button type="button" className="v2-tool-context-trigger" onClick={() => setOpen(true)} aria-label={`Work context: ${toolContextLabel(context)}. Change context.`}>
+          <span><small>{toolContextEyebrow(context)}</small><strong>{toolContextLabel(context)}</strong></span>
+          <ChevronDown size={18} />
+        </button>
+      ) : null}
+      {isOpen ? (
+        <div className="v2-tool-context-backdrop" role="presentation" onMouseDown={(event) => { if (event.currentTarget === event.target) closePicker(); }}>
           <section className="v2-tool-context-sheet" role="dialog" aria-modal="true" aria-labelledby="tool-context-title">
             <header>
               <div><small>Save destination</small><h2 id="tool-context-title">Choose work context</h2></div>
-              <button type="button" onClick={() => setOpen(false)} aria-label="Close work context">Close</button>
+              <button type="button" onClick={closePicker} aria-label="Close work context">Close</button>
             </header>
             <p>Use the tool by itself, keep off-platform work together, or connect it to accepted RIVT work.</p>
-            <button type="button" className="v2-tool-context-option" onClick={() => { onChooseQuick(); setOpen(false); }}>
-              <Unlink size={19} /><span><strong>Quick use</strong><small>No project required</small></span>{context.kind === "quick" ? <Check size={18} /> : null}
-            </button>
+            {allowQuickUse ? (
+              <button type="button" className="v2-tool-context-option" onClick={() => { onChooseQuick(); closePicker(); }}>
+                <Unlink size={19} /><span><strong>Quick use</strong><small>No project required</small></span>{context.kind === "quick" ? <Check size={18} /> : null}
+              </button>
+            ) : null}
             <div className="v2-tool-context-group">
               <div className="v2-tool-context-group-title"><span>Standalone projects</span><button type="button" onClick={() => setCreating((current) => !current)}><Plus size={16} />New</button></div>
               {creating ? (
@@ -70,7 +88,7 @@ export function ToolContextPicker({
                 </div>
               ) : null}
               {standaloneProjects.filter((project) => project.status === "active").map((project) => (
-                <button type="button" className="v2-tool-context-option" key={project.id} onClick={() => { onChooseStandalone(project); setOpen(false); }}>
+                <button type="button" className="v2-tool-context-option" key={project.id} onClick={() => { onChooseStandalone(project); closePicker(); }}>
                   <BriefcaseBusiness size={19} /><span><strong>{project.title}</strong><small>{project.clientName || project.locationText || "Private off-platform work"}</small></span>{context.kind === "standalone" && context.project.id === project.id ? <Check size={18} /> : null}
                 </button>
               ))}
@@ -79,7 +97,7 @@ export function ToolContextPicker({
               <div className="v2-tool-context-group">
                 <div className="v2-tool-context-group-title"><span>Accepted RIVT work</span></div>
                 {activeWork.map((work) => (
-                  <button type="button" className="v2-tool-context-option" key={work.id} onClick={() => { onChooseActiveWork(work); setOpen(false); }}>
+                  <button type="button" className="v2-tool-context-option" key={work.id} onClick={() => { onChooseActiveWork(work); closePicker(); }}>
                     <BriefcaseBusiness size={19} /><span><strong>{work.job?.title ?? "Accepted work"}</strong><small>{work.job?.publicLocation.city ?? "RIVT workspace"}</small></span>{context.kind === "rivt" && context.activeWorkId === work.id ? <Check size={18} /> : null}
                   </button>
                 ))}

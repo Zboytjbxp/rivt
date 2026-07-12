@@ -371,14 +371,15 @@ async function configurePage(page, jobs, { activeWork = [], project = null } = {
 async function assertToolsFlow(page) {
   await page.getByRole("button", { name: /^Tools$/ }).click();
   const primaryTool = (name) => page.locator(".v2-tool-launch-card").filter({ hasText: name }).first();
-  await page.getByRole("button", { name: /Heavy 16th/i }).waitFor();
+  const fieldToolsTray = page.getByLabel("Field shortcuts", { exact: true });
+  await fieldToolsTray.getByRole("button", { name: "Heavy 16th", exact: true }).waitFor();
   assert.equal(await page.locator(".v2-tool-launch-card").count(), 5, "Tools hub should expose exactly five primary field apps");
   assert.equal(await page.locator(".v2-tool-group").count(), 3, "Tools hub should keep supporting utilities in three grouped sections");
   await page.locator(".v2-tool-group").filter({ hasText: "Money" }).locator("summary").click();
   await page.getByRole("button", { name: /Payment tracker/i }).waitFor();
   await page.locator(".v2-tool-group").filter({ hasText: "Site" }).locator("summary").click();
   await page.getByRole("button", { name: /Materials/i }).waitFor();
-  await page.getByRole("button", { name: /Heavy 16th/i }).click();
+  await fieldToolsTray.getByRole("button", { name: "Heavy 16th", exact: true }).click();
   await page.getByRole("heading", { name: "Heavy 16th field calculator" }).waitFor();
   await page.getByLabel("Length calculator").getByText("Decimal", { exact: true }).waitFor();
   await page.getByLabel("Input unit").getByRole("button", { name: "Switch to metric mode" }).waitFor();

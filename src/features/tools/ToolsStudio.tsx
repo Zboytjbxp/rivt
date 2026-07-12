@@ -93,6 +93,7 @@ interface ToolsStudioProps {
 type LaunchableToolMode = Exclude<ToolMode, "hub">;
 type ToolIcon = typeof Calculator;
 const recentToolsStorageKey = "rivt.recentTools.v1";
+const fieldToolsStorageKey = "rivt.fieldTools.v1";
 const toolContextStorageKey = "rivt.toolContexts.v1";
 const contextualToolModes = new Set<ToolMode>(["estimate", "invoice", "job-photos"]);
 
@@ -292,6 +293,90 @@ function persistRecentTools(tools: LaunchableToolMode[]) {
   } catch {
     // Recent tools are a convenience only.
   }
+}
+
+const defaultFieldTools: LaunchableToolMode[] = ["job-photos", "calculator", "daily-log"];
+
+function readFieldTools(): LaunchableToolMode[] {
+  try {
+    const stored = localStorage.getItem(fieldToolsStorageKey);
+    if (!stored) return defaultFieldTools;
+    const parsed = JSON.parse(stored) as unknown;
+    if (!Array.isArray(parsed)) return defaultFieldTools;
+    const allowed = new Set(allToolLaunchers().map((tool) => tool.mode));
+    const valid = parsed.filter((mode): mode is LaunchableToolMode => typeof mode === "string" && allowed.has(mode as LaunchableToolMode));
+    return valid.length ? valid.slice(0, 3) : defaultFieldTools;
+  } catch {
+    return defaultFieldTools;
+  }
+}
+
+function persistFieldTools(tools: LaunchableToolMode[]) {
+  try {
+    localStorage.setItem(fieldToolsStorageKey, JSON.stringify(tools.slice(0, 3)));
+  } catch {
+    // Field-tool shortcuts are a device preference only.
+  }
+}
+
+function FieldToolsTray({
+  tools,
+  allTools,
+  editing,
+  onOpen,
+  onToggleEditing,
+  onChange,
+}: {
+  tools: LaunchableToolMode[];
+  allTools: ToolLauncher[];
+  editing: boolean;
+  onOpen: (tool: LaunchableToolMode) => void;
+  onToggleEditing: () => void;
+  onChange: (tools: LaunchableToolMode[]) => void;
+}) {
+  const pinned = tools.map((mode) => allTools.find((tool) => tool.mode === mode)).filter((tool): tool is ToolLauncher => Boolean(tool));
+
+  function toggleTool(mode: LaunchableToolMode) {
+    if (tools.includes(mode)) {
+      if (tools.length === 1) return;
+      onChange(tools.filter((tool) => tool !== mode));
+      return;
+    }
+    if (tools.length < 3) onChange([...tools, mode]);
+  }
+
+  return (
+    <section className={editing ? "v2-field-tools-tray is-editing" : "v2-field-tools-tray"} aria-label="Field shortcuts">
+      <div className="v2-field-tools-tray-header">
+        <span><strong>Field tools</strong><small>Fast, one-hand shortcuts</small></span>
+        <button type="button" onClick={onToggleEditing}>{editing ? "Done" : "Edit"}</button>
+      </div>
+      {editing ? (
+        <div className="v2-field-tools-picker" role="group" aria-label="Choose up to three field tools">
+          {allTools.slice(0, 8).map((tool) => {
+            const Icon = tool.icon;
+            const selected = tools.includes(tool.mode);
+            return (
+              <button key={tool.mode} type="button" className={selected ? "is-selected" : ""} onClick={() => toggleTool(tool.mode)} aria-pressed={selected} disabled={!selected && tools.length >= 3}>
+                <Icon size={16} />
+                <span>{tool.title}</span>
+              </button>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="v2-field-tools-actions">
+          {pinned.map((tool) => {
+            const Icon = tool.icon;
+            return <button key={tool.mode} type="button" onClick={() => onOpen(tool.mode)}><Icon size={19} /><span>{tool.title}</span></button>;
+          })}
+          <button type="button" className="v2-field-tools-all" onClick={() => document.querySelector<HTMLElement>(".v2-tool-group-grid")?.scrollIntoView({ behavior: "smooth", block: "start" })}>
+            <Plus size={19} /><span>All tools</span>
+          </button>
+        </div>
+      )}
+    </section>
+  );
 }
 
 const MILEAGE_RATE_PER_MILE = 0.70;
@@ -2812,6 +2897,9 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
   const [localActiveTool, setLocalActiveTool] = useState<ToolMode>("hub");
   const activeTool = requestedTool ?? localActiveTool;
   const [recentTools, setRecentTools] = useState(readRecentTools);
+  const [fieldTools, setFieldTools] = useState(readFieldTools);
+  const [fieldToolsEditing, setFieldToolsEditing] = useState(false);
+  const [cameraContextRequest, setCameraContextRequest] = useState(0);
   const [standaloneProjects, setStandaloneProjects] = useState<StandaloneProject[]>([]);
   const [standaloneProjectsError, setStandaloneProjectsError] = useState("");
   const [standaloneProjectBusy, setStandaloneProjectBusy] = useState(false);
@@ -2978,6 +3066,11 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
 
   function openToolFromHub(tool: LaunchableToolMode) {
     setActiveTool(tool);
+  }
+
+  function updateFieldTools(nextTools: LaunchableToolMode[]) {
+    setFieldTools(nextTools);
+    persistFieldTools(nextTools);
   }
 
   function handleConvertEstimateToInvoice(draft: EstimateInvoiceDraft) {
@@ -3586,6 +3679,8 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
             focusedActiveWorkId={toolWorkContext.kind === "rivt" ? toolWorkContext.activeWorkId : null}
             standaloneProject={toolWorkContext.kind === "standalone" ? toolWorkContext.project : null}
             autoOpenActiveJob={requestedTool === "job-photos" && Boolean(focusedActiveWorkId) && contextChosenTool !== activeTool}
+            contextLabel={toolWorkContext.kind === "rivt" ? toolWorkContext.job?.title ?? "Accepted work" : toolWorkContext.kind === "standalone" ? toolWorkContext.project.title : null}
+            onRequestContext={() => setCameraContextRequest((current) => current + 1)}
           />
         ),
       },
@@ -3688,6 +3783,9 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
             onChooseStandalone={chooseStandaloneContext}
             onChooseActiveWork={chooseActiveWorkContext}
             onCreateStandalone={createStandaloneContext}
+            openRequestToken={activeTool === "job-photos" ? cameraContextRequest : undefined}
+            hideTrigger={activeTool === "job-photos"}
+            allowQuickUse={activeTool !== "job-photos"}
           />
         ) : null}
         {toolMeta.node}
@@ -3703,6 +3801,14 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
       />
 
       <div className="v2-tool-section-stack">
+        <FieldToolsTray
+          tools={fieldTools}
+          allTools={allToolLaunchers()}
+          editing={fieldToolsEditing}
+          onOpen={openToolFromHub}
+          onToggleEditing={() => setFieldToolsEditing((editing) => !editing)}
+          onChange={updateFieldTools}
+        />
         {recentToolLaunchers.length ? (
           <section className="v2-tool-section v2-tool-recent-section" aria-label="Recent tools">
             <div className="v2-tool-section-header is-simple">

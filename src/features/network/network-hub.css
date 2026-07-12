@@ -1511,6 +1511,34 @@
   min-width: 0;
 }
 
+.v2-crew-invite-fold {
+  overflow: hidden;
+  border: 1px solid var(--v2-border);
+  border-radius: var(--v2-radius-lg);
+  background: var(--v2-surface-raised);
+}
+
+.v2-crew-invite-fold > summary {
+  display: flex;
+  min-height: 52px;
+  align-items: center;
+  padding: 0 16px;
+  cursor: pointer;
+  color: var(--v2-text);
+  font-size: 15px;
+  font-weight: var(--v2-weight-strong);
+}
+
+.v2-crew-invite-fold[open] > summary {
+  border-bottom: 1px solid var(--v2-border);
+}
+
+.v2-crew-invite-fold .v2-network-panel {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
 @media (min-width: 1181px) {
   .v2-crew-workbench {
     grid-template-columns: minmax(0, 1.45fr) minmax(320px, 0.78fr);
