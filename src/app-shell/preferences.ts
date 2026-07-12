@@ -1,8 +1,19 @@
-import { brandConfig, type ThemeMode, type ThemePalette } from "../brandConfig";
+import {
+  brandConfig,
+  type ThemeAccent,
+  type ThemeCanvas,
+  type ThemeChrome,
+  type ThemeDensity,
+  type ThemeMode,
+} from "../brandConfig";
 
 export const THEME_STORAGE_KEY = `${brandConfig.appSlug}-theme-mode`;
 export const THEME_SOURCE_KEY = `${brandConfig.appSlug}-theme-source`;
 export const THEME_PALETTE_STORAGE_KEY = `${brandConfig.appSlug}-theme-palette`;
+export const THEME_ACCENT_STORAGE_KEY = `${brandConfig.appSlug}-theme-accent`;
+export const THEME_CHROME_STORAGE_KEY = `${brandConfig.appSlug}-theme-chrome`;
+export const THEME_CANVAS_STORAGE_KEY = `${brandConfig.appSlug}-theme-canvas`;
+export const THEME_DENSITY_STORAGE_KEY = `${brandConfig.appSlug}-theme-density`;
 export const AUTH_MODE_KEY = `${brandConfig.appSlug}-auth-mode`;
 
 export function readThemePreference(): ThemeMode {
@@ -10,44 +21,76 @@ export function readThemePreference(): ThemeMode {
 
   try {
     const storedTheme = window.localStorage.getItem(THEME_STORAGE_KEY);
-    if (storedTheme === "light" || storedTheme === "dark") {
-      return storedTheme;
-    }
-
+    if (storedTheme === "light" || storedTheme === "dark") return storedTheme;
     return window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "dark" : "light";
   } catch {
     return "light";
   }
 }
 
-export function readThemePalettePreference(): ThemePalette {
-  if (typeof window === "undefined") return "rivtOrange";
-
+function legacyAppearance() {
   try {
-    const storedPalette = window.localStorage.getItem(THEME_PALETTE_STORAGE_KEY);
-    if (storedPalette === "tradeGreen") {
-      window.localStorage.setItem(THEME_PALETTE_STORAGE_KEY, "rivtOrange");
-      return "rivtOrange";
-    }
-    if (storedPalette && storedPalette in brandConfig.theme.palettes) {
-      return storedPalette as ThemePalette;
+    const legacy = window.localStorage.getItem(THEME_PALETTE_STORAGE_KEY);
+    if (legacy && legacy in brandConfig.theme.appearance.legacyPaletteMap) {
+      return brandConfig.theme.appearance.legacyPaletteMap[
+        legacy as keyof typeof brandConfig.theme.appearance.legacyPaletteMap
+      ];
     }
   } catch {
-    return "rivtOrange";
+    // Storage may be unavailable. Defaults below keep the UI usable.
   }
+  return brandConfig.theme.appearance.legacyPaletteMap.rivtOrange;
+}
 
-  return "rivtOrange";
+function readChoice<T extends string>(key: string, options: Record<T, unknown>, fallback: T): T {
+  if (typeof window === "undefined") return fallback;
+  try {
+    const stored = window.localStorage.getItem(key);
+    if (stored && stored in options) return stored as T;
+  } catch {
+    // Use the supplied fallback when storage is not available.
+  }
+  return fallback;
+}
+
+export function readThemeAccentPreference(): ThemeAccent {
+  return readChoice(
+    THEME_ACCENT_STORAGE_KEY,
+    brandConfig.theme.appearance.accents,
+    legacyAppearance().accent,
+  );
+}
+
+export function readThemeChromePreference(): ThemeChrome {
+  return readChoice(
+    THEME_CHROME_STORAGE_KEY,
+    brandConfig.theme.appearance.chromes,
+    legacyAppearance().chrome,
+  );
+}
+
+export function readThemeCanvasPreference(): ThemeCanvas {
+  return readChoice(
+    THEME_CANVAS_STORAGE_KEY,
+    brandConfig.theme.appearance.canvases,
+    legacyAppearance().canvas,
+  );
+}
+
+export function readThemeDensityPreference(): ThemeDensity {
+  return readChoice(THEME_DENSITY_STORAGE_KEY, brandConfig.theme.appearance.densities, "field");
 }
 
 export function readThemeSourcePreference(): "system" | ThemeMode {
   if (typeof window === "undefined") return "system";
   try {
-    const src = window.localStorage.getItem(THEME_SOURCE_KEY);
-    if (src === "light" || src === "dark" || src === "system") return src;
-    // Infer from existing mode key: if a mode was explicitly saved, treat as manual
+    const source = window.localStorage.getItem(THEME_SOURCE_KEY);
+    if (source === "light" || source === "dark" || source === "system") return source;
     const mode = window.localStorage.getItem(THEME_STORAGE_KEY);
     if (mode === "light" || mode === "dark") return mode;
-  } catch { /* noop */ }
+  } catch {
+    // System is the safe device-level default.
+  }
   return "system";
 }
 

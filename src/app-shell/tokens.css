@@ -116,7 +116,7 @@
   --v2-nav-bg-strong: #080d10;
 }
 
-:root[data-palette] .rivt-v2 {
+:root[data-appearance] .rivt-v2 {
   --v2-bg: var(--bg);
   --v2-surface: var(--surface);
   --v2-surface-muted: var(--surface-soft);
@@ -143,4 +143,9 @@
   --v2-teal-soft: var(--blue-soft);
   --v2-warning: var(--amber);
   --v2-warning-soft: var(--amber-soft);
+  --v2-space-card: var(--appearance-space-card);
+  --v2-space-section: var(--appearance-space-section);
+  --v2-content-gutter: var(--appearance-content-gutter);
+  --v2-radius-md: var(--appearance-radius-md);
+  --v2-radius-lg: var(--appearance-radius-lg);
 }

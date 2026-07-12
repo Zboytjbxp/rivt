@@ -584,11 +584,17 @@ function App() {
   const shopTalkPostsRequestRef = useRef(0);
   const communitiesRequestRef = useRef(0);
   const {
-    handleSelectThemePalette,
+    handleSetThemeAccent,
+    handleSetThemeCanvas,
+    handleSetThemeChrome,
+    handleSetThemeDensity,
     handleSetThemeSource,
     handleToggleTheme,
+    themeAccent,
+    themeCanvas,
+    themeChrome,
+    themeDensity,
     themeMode,
-    themePalette,
     themeSource,
   } = useAppTheme();
   const {
@@ -2591,9 +2597,15 @@ function App() {
             feedbackCount={feedbackItems.length}
             themeMode={themeMode}
             themeSource={themeSource}
-            themePalette={themePalette}
+            themeAccent={themeAccent}
+            themeChrome={themeChrome}
+            themeCanvas={themeCanvas}
+            themeDensity={themeDensity}
             onSetThemeSource={handleSetThemeSource}
-            onSelectThemePalette={handleSelectThemePalette}
+            onSetThemeAccent={handleSetThemeAccent}
+            onSetThemeChrome={handleSetThemeChrome}
+            onSetThemeCanvas={handleSetThemeCanvas}
+            onSetThemeDensity={handleSetThemeDensity}
             onLogout={handleLogout}
             onSaveProfile={handleSaveProfile}
             onSetProfileVisibility={handleSetProfileVisibility}
@@ -2665,7 +2677,10 @@ function App() {
           safetyModuleCount={safetyQuizData.length}
           themeMode={themeMode}
           themeSource={themeSource}
-          themePalette={themePalette}
+          themeAccent={themeAccent}
+          themeChrome={themeChrome}
+          themeCanvas={themeCanvas}
+          themeDensity={themeDensity}
           adminRoles={canonicalAccount?.adminRoles ?? []}
           communityBadges={communityBadgeLabels(communityPosts, accountProfile.displayName)}
           shoutOutCount={
@@ -2676,7 +2691,10 @@ function App() {
             ).length
           }
           onSetThemeSource={handleSetThemeSource}
-          onSelectThemePalette={handleSelectThemePalette}
+          onSetThemeAccent={handleSetThemeAccent}
+          onSetThemeChrome={handleSetThemeChrome}
+          onSetThemeCanvas={handleSetThemeCanvas}
+          onSetThemeDensity={handleSetThemeDensity}
           onLogout={handleLogout}
           onClose={() => setAccountOpen(false)}
           onNavigate={handleNavigate}

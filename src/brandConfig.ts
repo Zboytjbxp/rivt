@@ -98,7 +98,7 @@ export const brandConfig = {
         },
       },
     },
-    palettes: {
+    legacyPalettes: {
       rivtOrange: {
         label: "RIVT Standard",
         description: "Safety orange, warm concrete, and graphite.",
@@ -412,6 +412,126 @@ export const brandConfig = {
         },
       },
     },
+    appearance: {
+      accents: {
+        rivtOrange: {
+          label: "RIVT orange",
+          description: "RIVT's safety-orange action color.",
+          swatch: "#ff4b00",
+          modes: {
+            light: { "--accent": "#ff4b00", "--accent-deep": "#b33400", "--accent-soft": "#fff0e8", "--amber": "#ff8a1d", "--amber-soft": "#fff2df" },
+            dark: { "--accent": "#ff6a24", "--accent-deep": "#ffb38f", "--accent-soft": "#351a0c", "--amber": "#ffae4d", "--amber-soft": "#36230d" },
+          },
+        },
+        ironRed: {
+          label: "Iron red",
+          description: "A warm, lower-glare red for action states.",
+          swatch: "#bc5145",
+          modes: {
+            light: { "--accent": "#bc5145", "--accent-deep": "#7d3029", "--accent-soft": "#fde9e6", "--amber": "#c77f42", "--amber-soft": "#fcefdc" },
+            dark: { "--accent": "#e47768", "--accent-deep": "#ffc2b9", "--accent-soft": "#3d1a16", "--amber": "#dfa45e", "--amber-soft": "#3d2915" },
+          },
+        },
+        signalBrass: {
+          label: "Signal brass",
+          description: "A high-contrast brass signal without a brand skin.",
+          swatch: "#b78411",
+          modes: {
+            light: { "--accent": "#b78411", "--accent-deep": "#6e5000", "--accent-soft": "#fff2cb", "--amber": "#b78411", "--amber-soft": "#fff2cb" },
+            dark: { "--accent": "#e2b542", "--accent-deep": "#ffe4a2", "--accent-soft": "#372b0c", "--amber": "#e2b542", "--amber-soft": "#372b0c" },
+          },
+        },
+        workshopGreen: {
+          label: "Workshop green",
+          description: "A quiet green for planning and closeout work.",
+          swatch: "#337e64",
+          modes: {
+            light: { "--accent": "#337e64", "--accent-deep": "#17503e", "--accent-soft": "#def2e9", "--amber": "#a68041", "--amber-soft": "#f7edda" },
+            dark: { "--accent": "#62bd94", "--accent-deep": "#b8f0d5", "--accent-soft": "#14382d", "--amber": "#dbb467", "--amber-soft": "#3b2c15" },
+          },
+        },
+        harborBlue: {
+          label: "Harbor blue",
+          description: "A clear blue for service and project work.",
+          swatch: "#2875a5",
+          modes: {
+            light: { "--accent": "#2875a5", "--accent-deep": "#164c72", "--accent-soft": "#e1f0f8", "--amber": "#7d9cab", "--amber-soft": "#e9f1f4" },
+            dark: { "--accent": "#67b7e5", "--accent-deep": "#bae2f8", "--accent-soft": "#14394d", "--amber": "#8db2c1", "--amber-soft": "#1b343e" },
+          },
+        },
+      },
+      chromes: {
+        graphite: {
+          label: "Graphite",
+          description: "Neutral black chrome for a familiar RIVT shell.",
+          swatch: "#101415",
+          modes: {
+            light: { "--nav": "#101415", "--nav-deep": "#060809", "--topbar": "rgba(255, 255, 255, 0.94)" },
+            dark: { "--nav": "#101415", "--nav-deep": "#060809", "--topbar": "rgba(16, 20, 21, 0.96)" },
+          },
+        },
+        slate: {
+          label: "Slate",
+          description: "Cool charcoal chrome with a softer edge.",
+          swatch: "#2d383c",
+          modes: {
+            light: { "--nav": "#2d383c", "--nav-deep": "#12191c", "--topbar": "rgba(255, 255, 255, 0.94)" },
+            dark: { "--nav": "#2d383c", "--nav-deep": "#12191c", "--topbar": "rgba(45, 56, 60, 0.96)" },
+          },
+        },
+        navy: {
+          label: "Deep navy",
+          description: "Blue-black chrome for service and field systems.",
+          swatch: "#102a38",
+          modes: {
+            light: { "--nav": "#102a38", "--nav-deep": "#06151e", "--topbar": "rgba(255, 255, 255, 0.94)" },
+            dark: { "--nav": "#102a38", "--nav-deep": "#06151e", "--topbar": "rgba(16, 42, 56, 0.96)" },
+          },
+        },
+      },
+      canvases: {
+        clean: {
+          label: "Clean white",
+          description: "Bright, neutral surfaces for reading and billing.",
+          swatch: "#ffffff",
+          modes: {
+            light: { "--bg": "#f5f7f9", "--surface": "#ffffff", "--surface-soft": "#f1f4f4", "--text": "#101415", "--muted": "#5f686e", "--faint": "#88959b", "--border": "#dce3e4", "--border-strong": "#c6ced2", "--blue": "#355b6b", "--blue-soft": "#e8f0f4", "--shadow": "0 18px 44px rgba(16, 35, 50, 0.08)", "--shadow-soft": "0 12px 30px rgba(15, 29, 35, 0.06)" },
+            dark: { "--bg": "#0d1113", "--surface": "#171d20", "--surface-soft": "#20282b", "--text": "#f3f6f7", "--muted": "#a7b2b8", "--faint": "#748993", "--border": "#2a373c", "--border-strong": "#3b4c52", "--blue": "#8db6c4", "--blue-soft": "#173039", "--shadow": "0 20px 50px rgba(0, 0, 0, 0.36)", "--shadow-soft": "0 14px 34px rgba(0, 0, 0, 0.24)" },
+          },
+        },
+        paper: {
+          label: "Project paper",
+          description: "Warm paper surfaces for estimates and daily records.",
+          swatch: "#f7f0e7",
+          modes: {
+            light: { "--bg": "#f6f1e9", "--surface": "#fffdf9", "--surface-soft": "#eee6da", "--text": "#20201e", "--muted": "#63625d", "--faint": "#89877f", "--border": "#dfd4c6", "--border-strong": "#cbbbaa", "--blue": "#426a74", "--blue-soft": "#e5f0ef", "--shadow": "0 18px 44px rgba(51, 39, 29, 0.1)", "--shadow-soft": "0 12px 30px rgba(51, 39, 29, 0.065)" },
+            dark: { "--bg": "#151310", "--surface": "#211e19", "--surface-soft": "#2a261f", "--text": "#f6f1e9", "--muted": "#b8b1a6", "--faint": "#857d72", "--border": "#3c362c", "--border-strong": "#524939", "--blue": "#a1c7ca", "--blue-soft": "#183031", "--shadow": "0 20px 50px rgba(0, 0, 0, 0.4)", "--shadow-soft": "0 14px 34px rgba(0, 0, 0, 0.27)" },
+          },
+        },
+        concrete: {
+          label: "Concrete",
+          description: "Cool gray surfaces for a restrained jobsite look.",
+          swatch: "#e5e7e6",
+          modes: {
+            light: { "--bg": "#eef0ee", "--surface": "#fbfcfa", "--surface-soft": "#e4e7e4", "--text": "#1b2222", "--muted": "#606968", "--faint": "#858e8d", "--border": "#d3d8d4", "--border-strong": "#b9c1bc", "--blue": "#426a70", "--blue-soft": "#e2efed", "--shadow": "0 18px 44px rgba(27, 35, 34, 0.1)", "--shadow-soft": "0 12px 30px rgba(27, 35, 34, 0.065)" },
+            dark: { "--bg": "#111514", "--surface": "#1b201e", "--surface-soft": "#242b28", "--text": "#f0f2ef", "--muted": "#adb5af", "--faint": "#77817b", "--border": "#333c38", "--border-strong": "#48534d", "--blue": "#9bc4c2", "--blue-soft": "#17302e", "--shadow": "0 20px 50px rgba(0, 0, 0, 0.4)", "--shadow-soft": "0 14px 34px rgba(0, 0, 0, 0.27)" },
+          },
+        },
+      },
+      densities: {
+        field: { label: "Field", description: "Roomy controls for gloves and quick taps.", cssVariables: { "--appearance-space-card": "16px", "--appearance-space-section": "24px", "--appearance-content-gutter": "28px", "--appearance-radius-md": "8px", "--appearance-radius-lg": "14px" } },
+        standard: { label: "Standard", description: "Balanced reading and working space.", cssVariables: { "--appearance-space-card": "14px", "--appearance-space-section": "20px", "--appearance-content-gutter": "24px", "--appearance-radius-md": "8px", "--appearance-radius-lg": "12px" } },
+        compact: { label: "Compact", description: "More information in a tighter workspace.", cssVariables: { "--appearance-space-card": "12px", "--appearance-space-section": "16px", "--appearance-content-gutter": "18px", "--appearance-radius-md": "6px", "--appearance-radius-lg": "10px" } },
+      },
+      legacyPaletteMap: {
+        rivtOrange: { accent: "rivtOrange", chrome: "graphite", canvas: "paper" },
+        jobsiteYellow: { accent: "signalBrass", chrome: "graphite", canvas: "clean" },
+        redline: { accent: "ironRed", chrome: "graphite", canvas: "paper" },
+        systemGreen: { accent: "workshopGreen", chrome: "navy", canvas: "concrete" },
+        orangeRidge: { accent: "rivtOrange", chrome: "slate", canvas: "paper" },
+        steelBlue: { accent: "harborBlue", chrome: "navy", canvas: "clean" },
+      },
+    },
   },
 } as const;
 
@@ -420,4 +540,7 @@ export type TrialPlan =
   | typeof brandConfig.pricing.launchPreviewPlan.label;
 
 export type ThemeMode = keyof typeof brandConfig.theme.modes;
-export type ThemePalette = keyof typeof brandConfig.theme.palettes;
+export type ThemeAccent = keyof typeof brandConfig.theme.appearance.accents;
+export type ThemeChrome = keyof typeof brandConfig.theme.appearance.chromes;
+export type ThemeCanvas = keyof typeof brandConfig.theme.appearance.canvases;
+export type ThemeDensity = keyof typeof brandConfig.theme.appearance.densities;

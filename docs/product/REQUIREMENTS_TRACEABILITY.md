@@ -10,6 +10,19 @@ Status values:
 
 Evidence must eventually link to implementation, automated tests, manual acceptance proof, and deployed build.
 
+## Traceability Addendum - 2026-07-12 Appearance Studio (Local Verification)
+
+- `GA-UX-003` gains clearer account-preference evidence: the Account drawer
+  exposes one concise Appearance entry while the complete editor is focused,
+  previewable, and independently selectable by Accent, Chrome, Canvas, Display
+  mode, and Workspace density.
+- `GA-UX-006` gains full-surface device-preference evidence: selections update
+  canvas, panels, top bar, navigation, actions, spacing, and radii through the
+  shared token layer without reload. Mobile smoke covers independent accent,
+  chrome, canvas, and density updates with no horizontal overflow.
+- `GA-OPS-008` remains production-pending for this client-only packet. No
+  production database, authentication, or billing behavior changes.
+
 ## Traceability Addendum - 2026-07-12 Field Finishes (Local Verification)
 
 - `GA-UX-003` gains account-clarity evidence: the compact account drawer

@@ -2,12 +2,31 @@
 
 Last updated: 2026-07-12 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Packet 28 Field Finishes is production verified. It replaces
-the initial Theme Studio's small palette treatment with original, full-surface
-RIVT finish systems and a compact Account entry point.
-Active packet: `docs/delivery/packets/28_FIELD_FINISHES.md`
-Repository branch: `master`
-Production feature release commit: `5944d6207a8961cf754282fbd667e4e52ff53bc1` verified with live `/api/health`, ready migration `0026_standalone_projects`, and `npm run monitor:production`; docs-only evidence commits may supersede the served build SHA without changing runtime behavior.
+Current phase: Packet 29 Appearance Studio is locally verified. It replaces
+the prior Field Finishes with original, independent Accent, Chrome, Canvas,
+and Density controls that visibly affect the RIVT workspace.
+Active packet: `docs/delivery/packets/29_APPEARANCE_STUDIO.md`
+Repository branch: `codex/appearance-studio`
+Production feature release commit: pending merge and deploy. The current live
+baseline remains `5944d6207a8961cf754282fbd667e4e52ff53bc1`.
+
+## Packet 29 - Appearance Studio (Local Verification)
+
+- Field Finishes are superseded. Appearance is now a composed RIVT setup:
+  original Accent, Chrome, Canvas, Display mode, and Workspace density
+  controls, instead of vague manufacturer-adjacent palettes.
+- Existing device-local Field Finish preferences migrate to the closest
+  composed RIVT setup, then the new preferences are stored independently.
+- Account stays compact and opens a dedicated mobile editor; Settings keeps
+  the full editor. Both update the shared token layer without reload.
+- Local verification passed: build, lint, 53/53 unit tests, E2E, mobile-action
+  UI smoke, Tools rendered UI smoke, dependency audit, and diff check. This
+  client-only packet does not claim a database integration pass; the aggregate
+  test command's database-integration half exceeded the local runner window
+  without output.
+- Remaining boundary: merge, live `/api/health` source confirmation, production
+  monitor, and physical light/dark checks on iPhone and Android before any
+  future paid appearance entitlement decision.
 
 ## Packet 28 - Field Finishes (Local Verification)
 

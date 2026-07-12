@@ -40,7 +40,7 @@ import { apiPath, fetchWithTimeout, requestKey } from "../../lib/api";
 import { usePersona } from "../persona/usePersona";
 import { ThemeStudio } from "../../components/ThemeStudio";
 import "../pro/pro.css";
-import type { ThemeMode, ThemePalette } from "../../brandConfig";
+import type { ThemeAccent, ThemeCanvas, ThemeChrome, ThemeDensity, ThemeMode } from "../../brandConfig";
 import type { ThemeSource } from "../../app-shell/useAppTheme";
 import { tradeOptions } from "../../data";
 import type { Role, Trade } from "../../types";
@@ -116,9 +116,15 @@ interface ProfileHubProps {
   feedbackCount: number;
   themeMode: ThemeMode;
   themeSource: ThemeSource;
-  themePalette: ThemePalette;
+  themeAccent: ThemeAccent;
+  themeChrome: ThemeChrome;
+  themeCanvas: ThemeCanvas;
+  themeDensity: ThemeDensity;
   onSetThemeSource: (source: ThemeSource) => void;
-  onSelectThemePalette: (palette: ThemePalette) => void;
+  onSetThemeAccent: (accent: ThemeAccent) => void;
+  onSetThemeChrome: (chrome: ThemeChrome) => void;
+  onSetThemeCanvas: (canvas: ThemeCanvas) => void;
+  onSetThemeDensity: (density: ThemeDensity) => void;
   onLogout: () => void;
   onSaveProfile: (input: ProfileUpdateInput) => Promise<void>;
   onSetProfileVisibility: (visibility: "private" | "network") => Promise<void>;
@@ -1212,9 +1218,15 @@ export function ProfileHub({
   feedbackCount,
   themeMode,
   themeSource,
-  themePalette,
+  themeAccent,
+  themeChrome,
+  themeCanvas,
+  themeDensity,
   onSetThemeSource,
-  onSelectThemePalette,
+  onSetThemeAccent,
+  onSetThemeChrome,
+  onSetThemeCanvas,
+  onSetThemeDensity,
   onLogout,
   onSaveProfile,
   onSetProfileVisibility,
@@ -1770,9 +1782,15 @@ export function ProfileHub({
           <ThemeStudio
             themeMode={themeMode}
             themeSource={themeSource}
-            themePalette={themePalette}
+            themeAccent={themeAccent}
+            themeChrome={themeChrome}
+            themeCanvas={themeCanvas}
+            themeDensity={themeDensity}
             onSetThemeSource={onSetThemeSource}
-            onSelectThemePalette={onSelectThemePalette}
+            onSetThemeAccent={onSetThemeAccent}
+            onSetThemeChrome={onSetThemeChrome}
+            onSetThemeCanvas={onSetThemeCanvas}
+            onSetThemeDensity={onSetThemeDensity}
           />
         </section>
 

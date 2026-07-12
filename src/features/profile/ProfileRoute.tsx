@@ -1,4 +1,4 @@
-import type { ThemeMode, ThemePalette, TrialPlan } from "../../brandConfig";
+import type { ThemeAccent, ThemeCanvas, ThemeChrome, ThemeDensity, ThemeMode, TrialPlan } from "../../brandConfig";
 import type { ThemeSource } from "../../app-shell/useAppTheme";
 import type { Role, Trade } from "../../types";
 import { useCallback, useEffect, useState } from "react";
@@ -63,9 +63,15 @@ interface ProfileRouteProps {
   feedbackCount: number;
   themeMode: ThemeMode;
   themeSource: ThemeSource;
-  themePalette: ThemePalette;
+  themeAccent: ThemeAccent;
+  themeChrome: ThemeChrome;
+  themeCanvas: ThemeCanvas;
+  themeDensity: ThemeDensity;
   onSetThemeSource: (source: ThemeSource) => void;
-  onSelectThemePalette: (palette: ThemePalette) => void;
+  onSetThemeAccent: (accent: ThemeAccent) => void;
+  onSetThemeChrome: (chrome: ThemeChrome) => void;
+  onSetThemeCanvas: (canvas: ThemeCanvas) => void;
+  onSetThemeDensity: (density: ThemeDensity) => void;
   onLogout: () => void;
   onSaveProfile: (input: ProfileUpdateInput) => Promise<void>;
   onSetProfileVisibility: (visibility: "private" | "network") => Promise<void>;
@@ -91,9 +97,15 @@ export function ProfileRoute({
   feedbackCount,
   themeMode,
   themeSource,
-  themePalette,
+  themeAccent,
+  themeChrome,
+  themeCanvas,
+  themeDensity,
   onSetThemeSource,
-  onSelectThemePalette,
+  onSetThemeAccent,
+  onSetThemeChrome,
+  onSetThemeCanvas,
+  onSetThemeDensity,
   onLogout,
   onSaveProfile,
   onSetProfileVisibility,
@@ -187,9 +199,15 @@ export function ProfileRoute({
       feedbackCount={feedbackCount}
       themeMode={themeMode}
       themeSource={themeSource}
-      themePalette={themePalette}
+      themeAccent={themeAccent}
+      themeChrome={themeChrome}
+      themeCanvas={themeCanvas}
+      themeDensity={themeDensity}
       onSetThemeSource={onSetThemeSource}
-      onSelectThemePalette={onSelectThemePalette}
+      onSetThemeAccent={onSetThemeAccent}
+      onSetThemeChrome={onSetThemeChrome}
+      onSetThemeCanvas={onSetThemeCanvas}
+      onSetThemeDensity={onSetThemeDensity}
       onLogout={onLogout}
       onSaveProfile={onSaveProfile}
       onSetProfileVisibility={onSetProfileVisibility}
