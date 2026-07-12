@@ -30,3 +30,14 @@ preference people can understand, preview, and use across the product.
 - System, Light, and Dark are visible choices with clear active state.
 - Selecting a palette visibly updates app navigation, accents, and supporting
   semantic colors without a reload.
+
+## Production Evidence
+
+- `codex/theme-studio` was fast-forwarded into `master` at
+  `2f67ce4551b1a2bf4e53b57ed609dfcd27fb06b1`.
+- Live `/api/health` returned that exact source commit with ready migration
+  `0026_standalone_projects`, PostgreSQL, S3-compatible storage, configured
+  Sentry, and configured Web Push.
+- `EXPECTED_SOURCE_COMMIT=2f67ce4551b1a2bf4e53b57ed609dfcd27fb06b1 npm run
+  monitor:production` passed with controls off and seven anonymous private-route
+  checks in 575 ms.

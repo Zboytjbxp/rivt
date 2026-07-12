@@ -2,14 +2,14 @@
 
 Last updated: 2026-07-12 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Packet 27 Theme Studio is in local verification. It replaces
+Current phase: Packet 27 Theme Studio is production verified. It replaces
 decorative swatches with one shared appearance surface and broadens the real
 app impact of each selected palette.
 Active packet: `docs/delivery/packets/27_THEME_STUDIO.md`
-Repository branch: `codex/theme-studio`
-Production feature release commit: `d6c475546229ae62165b3afd4c5149540720b83e` verified with live `/api/health`, ready migration `0026_standalone_projects`, and `npm run monitor:production`; docs-only evidence commits may supersede the served build SHA without changing runtime behavior.
+Repository branch: `master`
+Production feature release commit: `2f67ce4551b1a2bf4e53b57ed609dfcd27fb06b1` verified with live `/api/health`, ready migration `0026_standalone_projects`, and `npm run monitor:production`; docs-only evidence commits may supersede the served build SHA without changing runtime behavior.
 
-## Packet 27 - Theme Studio (Local Verification)
+## Packet 27 - Theme Studio (Production Verification)
 
 - Appearance is one shared Theme Studio in Account and Settings, with a current
   style preview, explicit display-mode choices, and named palette cards.
@@ -18,6 +18,11 @@ Production feature release commit: `d6c475546229ae62165b3afd4c5149540720b83e` ve
 - Local verification passed: build, lint, 53/53 unit tests, E2E, mobile-action
   UI smoke, Tools rendered UI smoke, dependency audit, and diff check. This
   client-only packet does not claim a new database integration pass.
+- Production evidence: `master` serves exact source
+  `2f67ce4551b1a2bf4e53b57ed609dfcd27fb06b1`; PostgreSQL, S3-compatible
+  storage, Sentry, and Web Push remain configured, the ready migration is
+  `0026_standalone_projects`, and the expected-source production monitor
+  passed with seven anonymous private-route checks in 575 ms.
 - Remaining boundary: physical light and dark checks on an iPhone and Android
   device for every palette before any future paid entitlement decision.
 

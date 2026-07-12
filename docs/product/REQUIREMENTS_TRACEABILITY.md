@@ -18,6 +18,11 @@ Evidence must eventually link to implementation, automated tests, manual accepta
 - `GA-UX-006` gains device-preference evidence: System, Light, Dark, and
   palette choices remain clear on compact mobile screens and update the shared
   application token layer without a reload.
+- `GA-OPS-008` gains production evidence: `master` serves exact source
+  `2f67ce4551b1a2bf4e53b57ed609dfcd27fb06b1` with ready migration
+  `0026_standalone_projects`, PostgreSQL/S3-compatible storage, configured
+  Sentry, and configured Web Push. The expected-source monitor passed with
+  seven anonymous private-route checks in 575 ms.
 
 ## Traceability Addendum - 2026-07-12 Entry Experience (Local Verification)
 
