@@ -2,6 +2,25 @@
 
 Add one entry per staging/production deployment.
 
+## Current Production - Packet 22 Field Access Workbench
+
+- Environment: Production (`https://rivt.pro`)
+- Date/time/timezone: 2026-07-12 America/New_York
+- Deployer: Codex through GitHub push to Railway-linked `master`
+- Source repository/branch: `Zboytjbxp/rivt`, `master`
+- Source commit: `8b634549f1e10d1761a92b9e23fb7db636c190b2`
+- Build/artifact ID: Railway-linked production deployment; live `/api/health` is the runtime proof
+- Migration version before/after: `0026_standalone_projects` / `0026_standalone_projects` (no schema migration)
+- Feature-flag/config version: no provider credentials or operational controls changed
+- Provider/config changes (no secrets): none
+- Backup/rollback target: prior production source `b682ac9adc2dfdd408b33f453b8a41b73b58197c`; normal source rollback only
+- Automated gates: build, lint, security lint, 53 unit tests, E2E, Tools rendered UI smoke, mobile-action UI smoke, dependency audit, and diff check passed. The aggregate `npm run test` exceeded the local command window before its integration phase reported and is not claimed as passed.
+- Post-deploy smoke tests: exact-source health passed with PostgreSQL, S3-compatible storage, configured Sentry, configured Web Push, ready migration `0026_standalone_projects`; `EXPECTED_SOURCE_COMMIT=8b634549f1e10d1761a92b9e23fb7db636c190b2 npm run monitor:production` passed with matching-job alerts enabled, controls off, seven anonymous private-route checks, and 649 ms duration.
+- Health/readiness result: healthy production health and synthetic monitor; no schema or provider change
+- Known risks: physical one-handed iOS/Android validation remains for the field tray, Camera destination choice/capture, and collapsed Crew planner.
+- Rollback performed/result: not required
+- Approval: deployed as a client-only field-access and explicit-context pass with no auth, billing, storage, moderation, provider, or migration boundary change
+
 ## Current Production - Packet 21 Shop Talk Command Center
 
 - Environment: Production (`https://rivt.pro`)

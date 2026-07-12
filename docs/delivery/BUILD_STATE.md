@@ -2,14 +2,15 @@
 
 Last updated: 2026-07-12 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Packet 22 Field Access Workbench is locally verified. It adds
-thumb-reachable Field Tools shortcuts, explicit Camera destinations, and a
-roster-first Crew surface without changing the five primary destinations.
+Current phase: Packet 22 Field Access Workbench is deployed and production
+verified. It adds thumb-reachable Field Tools shortcuts, explicit Camera
+destinations, and a roster-first Crew surface without changing the five
+primary destinations.
 Active packet: `docs/delivery/packets/22_FIELD_ACCESS_WORKBENCH.md`
-Repository branch: `codex/field-access-workbench`
-Production feature release commit: `b682ac9adc2dfdd408b33f453b8a41b73b58197c` verified with live `/api/health`, ready migration `0026_standalone_projects`, and `npm run monitor:production`; docs-only evidence commits may supersede the served build SHA without changing runtime behavior.
+Repository branch: `master`
+Production feature release commit: `8b634549f1e10d1761a92b9e23fb7db636c190b2` verified with live `/api/health`, ready migration `0026_standalone_projects`, and `npm run monitor:production`; docs-only evidence commits may supersede the served build SHA without changing runtime behavior.
 
-## Packet 22 - Field Access Workbench (Local Verification)
+## Packet 22 - Field Access Workbench (Production Verification)
 
 - Tools now exposes a three-slot Field Tools tray above the mobile navigation.
   Its defaults are Camera, Heavy 16th, and Daily log; it is configurable per
@@ -25,9 +26,14 @@ Production feature release commit: `b682ac9adc2dfdd408b33f453b8a41b73b58197c` ve
   diff check. The aggregate `npm run test` exceeded the local command window
   before the integration half emitted output, so no new DB-suite pass is
   claimed for this packet.
-- Remaining boundary: physical one-handed iOS/Android checks for the Tools
-  tray, Camera destination choice/capture, and collapsed Crew planner before
-  merge/deploy.
+- Production evidence: `master` serves exact source
+  `8b634549f1e10d1761a92b9e23fb7db636c190b2`; PostgreSQL, S3-compatible
+  storage, Sentry, and Web Push are configured, the ready migration remains
+  `0026_standalone_projects`, and the expected-source production monitor
+  passed with seven anonymous private-route checks in 649 ms.
+- Remaining field-proof boundary: physical one-handed iOS/Android checks for
+  the Tools tray, Camera destination choice/capture, and collapsed Crew
+  planner.
 
 ## Packet 21 - Shop Talk Command Center (Local Verification)
 

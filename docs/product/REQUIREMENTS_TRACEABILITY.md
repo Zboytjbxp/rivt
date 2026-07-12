@@ -10,7 +10,7 @@ Status values:
 
 Evidence must eventually link to implementation, automated tests, manual acceptance proof, and deployed build.
 
-## Traceability Addendum - 2026-07-12 Field Access Workbench (Local Verification)
+## Traceability Addendum - 2026-07-12 Field Access Workbench (Production Verification)
 
 - `GA-UX-003` gains field-access evidence: mobile Tools uses a configurable
   Field Tools tray for Camera, Heavy 16th, Daily log, and a compact All tools
@@ -25,6 +25,11 @@ Evidence must eventually link to implementation, automated tests, manual accepta
   tests, E2E, Tools rendered UI smoke, mobile-action UI smoke, dependency
   audit, and diff check passed. The aggregate test command exceeded the local
   runner window before integration output, so no new DB-backed pass is claimed.
+- `GA-OPS-008` gains production evidence: `master` serves exact source
+  `8b634549f1e10d1761a92b9e23fb7db636c190b2` with ready migration
+  `0026_standalone_projects`, PostgreSQL/S3-compatible storage, configured
+  Sentry, and configured Web Push. The expected-source monitor passed with
+  seven anonymous private-route checks in 649 ms.
 
 ## Traceability Addendum - 2026-07-11 Shop Talk Command Center (Local Verification)
 
