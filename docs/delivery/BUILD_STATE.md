@@ -2,12 +2,12 @@
 
 Last updated: 2026-07-11 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Packet 21 Shop Talk Command Center is in local verification.
-It separates the community feed, directory, and news reader while removing
-stacked filter clutter and stale-first news ordering.
+Current phase: Packet 21 Shop Talk Command Center is deployed. It separates
+the community feed, directory, and news reader while removing stacked filter
+clutter and stale-first news ordering.
 Active packet: `docs/delivery/packets/21_SHOP_TALK_COMMAND_CENTER.md`
 Repository branch: `codex/shop-talk-rebuild`
-Production feature release commit: `3f4ea9585ef77d3769d8507fd1fd486b03f2634d` verified with live `/api/health`, ready migration `0026_standalone_projects`, and `npm run monitor:production`; docs-only evidence commits may supersede the served build SHA without changing runtime behavior.
+Production feature release commit: `b682ac9adc2dfdd408b33f453b8a41b73b58197c` verified with live `/api/health`, ready migration `0026_standalone_projects`, and `npm run monitor:production`; docs-only evidence commits may supersede the served build SHA without changing runtime behavior.
 
 ## Packet 21 - Shop Talk Command Center (Local Verification)
 
@@ -19,9 +19,17 @@ Production feature release commit: `3f4ea9585ef77d3769d8507fd1fd486b03f2634d` ve
   action, search, joining, and existing public/role-limited audience choices.
 - Live RSS and Google News sources now lead the feed. Curated content is an
   outage fallback; the cache is ten minutes and a user can request refresh.
-- Local verification underway: build, lint, 53/53 unit tests, and Shop Talk
-  rendered UI smoke pass. Remaining release verification: E2E, security lint,
-  dependency audit, and a production deployment probe.
+- Local verification passed: build, lint, security lint, 53/53 unit tests,
+  E2E, Shop Talk rendered UI smoke, mobile-action UI smoke, dependency audit,
+  and diff check. The configured database integration suite was attempted
+  twice and stalled before producing a result, so no new DB-suite pass is
+  claimed for this packet.
+- Production evidence: `master` serves exact source
+  `b682ac9adc2dfdd408b33f453b8a41b73b58197c`; PostgreSQL,
+  S3-compatible storage, Sentry, and Web Push are configured, the ready
+  migration remains `0026_standalone_projects`, and the expected-source
+  production monitor passed with seven anonymous private-route checks in
+  585 ms.
 
 ## Packet 20 - Core Surface Subtraction (Production Verification)
 

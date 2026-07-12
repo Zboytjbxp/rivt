@@ -24,6 +24,11 @@ Evidence must eventually link to implementation, automated tests, manual accepta
   audit, and diff check passed. The database integration suite was attempted
   twice against the configured test database but stalled before producing a
   result; this packet does not claim a new DB-backed integration pass.
+- `GA-OPS-008` gains production evidence: `master` serves exact source
+  `b682ac9adc2dfdd408b33f453b8a41b73b58197c` with ready migration
+  `0026_standalone_projects`, PostgreSQL/S3-compatible storage, configured
+  Sentry, and configured Web Push. The expected-source monitor passed with
+  seven anonymous private-route checks in 585 ms.
 
 ## Traceability Addendum - 2026-07-11 Core Surface Subtraction (Local Verification)
 

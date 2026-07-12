@@ -2,6 +2,25 @@
 
 Add one entry per staging/production deployment.
 
+## Current Production - Packet 21 Shop Talk Command Center
+
+- Environment: Production (`https://rivt.pro`)
+- Date/time/timezone: 2026-07-11 America/New_York
+- Deployer: Codex through GitHub push to Railway-linked `master`
+- Source repository/branch: `Zboytjbxp/rivt`, `master`
+- Source commit: `b682ac9adc2dfdd408b33f453b8a41b73b58197c`
+- Build/artifact ID: Railway-linked production deployment; live `/api/health` is the runtime proof
+- Migration version before/after: `0026_standalone_projects` / `0026_standalone_projects` (no schema migration)
+- Feature-flag/config version: no provider credentials or operational controls changed
+- Provider/config changes (no secrets): none
+- Backup/rollback target: prior production source `3f4ea9585ef77d3769d8507fd1fd486b03f2634d`; normal source rollback only
+- Automated gates: build, lint, security lint, 53 unit tests, E2E, Shop Talk rendered UI smoke, mobile-action UI smoke, dependency audit, and diff check passed. The configured database integration suite stalled before reporting and is not claimed as passed.
+- Post-deploy smoke tests: exact-source health passed with PostgreSQL, S3-compatible storage, configured Sentry, configured Web Push, ready migration `0026_standalone_projects`; `EXPECTED_SOURCE_COMMIT=b682ac9adc2dfdd408b33f453b8a41b73b58197c npm run monitor:production` passed with matching-job alerts enabled, controls off, seven anonymous private-route checks, and 585 ms duration.
+- Health/readiness result: healthy production health and synthetic monitor; no schema or provider change
+- Known risks: a physical signed-in mobile scan should confirm live RSS ordering and manual refresh against production sources; the database integration harness needs separate diagnosis before the next server/data packet.
+- Rollback performed/result: not required
+- Approval: deployed as a Shop Talk hierarchy and live-news freshness pass with no auth, billing, storage, moderation, provider, or migration boundary change
+
 ## Current Production - Packet 20 Core Surface Subtraction
 
 - Environment: Production (`https://rivt.pro`)
