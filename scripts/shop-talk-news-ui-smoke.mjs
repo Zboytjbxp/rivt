@@ -69,6 +69,7 @@ const newsPhotoDataUri = (label, accent = "#ff4b00") =>
   `)}`;
 
 const newsPayload = {
+  fallback: false,
   items: [
     {
       id: "jax-permit-watch",
@@ -293,14 +294,22 @@ try {
     await configurePage(page);
 
     await page.goto(`${baseUrl}/app/network/talk`, { waitUntil: "networkidle" });
-    await page.getByLabel("Shop Talk community").getByRole("button", { name: "Shop Talk" }).waitFor({ timeout: 15_000 });
-    await page.locator('section[aria-label="Discover communities"]').waitFor({ timeout: 15_000 });
+    await page.getByLabel("Shop Talk community").getByRole("button", { name: "Feed" }).waitFor({ timeout: 15_000 });
+    await page.getByRole("button", { name: "Communities" }).click();
+    await page.getByRole("heading", { name: "Find your crew" }).waitFor({ timeout: 15_000 });
+    await page.getByRole("button", { name: "Create" }).waitFor({ timeout: 15_000 });
+    await assertNoHorizontalOverflow(page);
+    await prepareScreenshot(page);
+    await page.screenshot({ path: path.join(screenshotDir, `${viewport.name}-communities.png`), fullPage: true });
+    await page.getByRole("button", { name: "Feed" }).click();
     await page.locator(".trade-post").filter({ hasText: "mid-job scope change" }).first().waitFor({ timeout: 15_000 });
     await page.getByText(/OSHA heat rule/i).waitFor({ timeout: 15_000 });
     const talkSearch = page.locator('.shop-talk-search input[type="search"]');
     await talkSearch.fill("scope");
     await assertNoHorizontalOverflow(page);
     await talkSearch.fill("");
+    await prepareScreenshot(page);
+    await page.screenshot({ path: path.join(screenshotDir, `${viewport.name}-feed.png`), fullPage: true });
     await page.locator(".trade-post").first().click();
     await page.getByText("Good answers get specific.", { exact: true }).waitFor({ timeout: 15_000 });
     const upvoteThread = page.getByRole("button", { name: "Upvote thread" }).first();
@@ -341,7 +350,7 @@ try {
       await mobileBack.click();
     }
     await page.getByRole("button", { name: "Trade News" }).click();
-    await page.getByRole("heading", { name: /Code, safety, and permitting updates/i }).waitFor({ timeout: 15_000 });
+    await page.getByRole("heading", { name: /What's changing in the field/i }).waitFor({ timeout: 15_000 });
     await page.locator('input[placeholder="Search sources, codes, safety, local"]').fill("permit");
     await page
       .locator(".shop-news-list")

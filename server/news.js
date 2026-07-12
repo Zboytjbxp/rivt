@@ -3,7 +3,7 @@ import { Router } from "express";
 
 const router = Router();
 const newsCache = new Map(); // key → { items, fetchedAt }
-const NEWS_TTL_MS = 30 * 60 * 1000;
+const NEWS_TTL_MS = 10 * 60 * 1000;
 const NEWS_ARTICLE_IMAGE_LIMIT = 18;
 const NEWS_CACHE_MAX_ENTRIES = 48;
 const NEWS_LOCATION_MAX_LENGTH = 80;
@@ -369,9 +369,10 @@ router.get("/api/news", async (request, response) => {
 
   _pruneNewsCache();
   const { location, cacheKey } = normalized;
+  const forceRefresh = request.query.refresh === "1";
   const cached = newsCache.get(cacheKey);
-  if (cached && Date.now() - cached.fetchedAt < NEWS_TTL_MS) {
-    return response.json({ items: cached.items, cached: true });
+  if (!forceRefresh && cached && Date.now() - cached.fetchedAt < NEWS_TTL_MS) {
+    return response.json({ items: cached.items, fallback: cached.fallback === true, cached: true });
   }
 
   const [city, state] = location.split(",").map((s) => s.trim());
@@ -392,7 +393,10 @@ router.get("/api/news", async (request, response) => {
 
   const pick = (r) => r.status === "fulfilled" ? r.value : [];
   const localItems = pick(gnLocal).map((item) => ({ ...item, isLocal: true }));
-  const all = [...curatedTradeNews, ...localItems, ...pick(enr), ...pick(dive), ...pick(osha), ...pick(gnNat)];
+  // Live sources are the product. Curated articles only keep the screen useful during a source outage.
+  const liveItems = [...localItems, ...pick(enr), ...pick(dive), ...pick(osha), ...pick(gnNat)];
+  const fallback = liveItems.length === 0;
+  const all = fallback ? curatedTradeNews : liveItems;
 
   const seen = new Set();
   const deduped = all.filter((item) => {
@@ -403,8 +407,6 @@ router.get("/api/news", async (request, response) => {
   });
 
   deduped.sort((a, b) => {
-    if (a.curated && !b.curated) return -1;
-    if (!a.curated && b.curated) return 1;
     if (a.isLocal && !b.isLocal) return -1;
     if (!a.isLocal && b.isLocal) return 1;
     if (a.urgency && !b.urgency) return -1;
@@ -418,9 +420,9 @@ router.get("/api/news", async (request, response) => {
     thumbnailUrl: item.thumbnailUrl || _fallbackNewsThumbnail(item),
     thumbnailKind: item.thumbnailKind ?? "fallback",
   }));
-  newsCache.set(cacheKey, { items, fetchedAt: Date.now() });
+  newsCache.set(cacheKey, { items, fallback, fetchedAt: Date.now() });
   _pruneNewsCache();
-  response.json({ items });
+  response.json({ items, fallback });
 });
 export function createNewsRouter() {
   return router;

@@ -2499,6 +2499,7 @@ function App() {
           <ShopTalkView
             key={`shop-talk-${shopTalkGlobalQuery}-${shopTalkCommunitySlug ?? ""}-${shopTalkPostId ?? ""}-${shopTalkCompose ? "c" : ""}-${shopTalkAnswerQueue ? "answers" : ""}`}
             role={role}
+            isGuest={isGuest}
             profile={accountProfile}
             communityPosts={communityPosts}
             communities={communities}

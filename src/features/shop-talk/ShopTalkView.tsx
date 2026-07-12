@@ -12,12 +12,15 @@ import {
   MessageCircle,
   Newspaper,
   Plus,
+  RefreshCw,
   Search,
   Send,
+  SlidersHorizontal,
   Star,
   ThumbsDown,
   ThumbsUp,
   Trash2,
+  UsersRound,
   X,
   type LucideIcon,
 } from "lucide-react";
@@ -146,8 +149,6 @@ type ReportTarget =
   | { kind: "community"; community: CommunityDisplay; title: string; description: string };
 
 const specialtyOptions = tradeOptions.filter((trade): trade is Trade => trade !== "All trades");
-
-const PREDEFINED_TAGS = ["#electrical", "#plumbing", "#hvac", "#permits", "#safety", "#tools", "#osha", "#framing", "#roofing"];
 
 const communityBadgeThresholds: CommunityBadgeThresholds = {
   firstAssistVerifiedFixes: 1,
@@ -642,6 +643,7 @@ export function ShopTalkView({
   onDeletePost,
   onCommunityCreated,
   role,
+  isGuest = false,
 }: {
   profile: AccountProfile;
   communityPosts: CommunityPost[];
@@ -669,9 +671,10 @@ export function ShopTalkView({
   onDeletePost: (postId: string) => boolean | Promise<boolean>;
   onCommunityCreated: (community: ServerCommunity) => void;
   role: Role;
+  isGuest?: boolean;
 }) {
   const persona = usePersona();
-  const [activeTab, setActiveTab] = useState<"talk" | "news">("talk");
+  const [activeTab, setActiveTab] = useState<"talk" | "communities" | "news">("talk");
   const [sortMode, setSortMode] = useState<"hot" | "new" | "unanswered">(() => (
     initialAnswerQueue ? "unanswered" : readShopTalkFilterPrefs().sortMode
   ));
@@ -686,7 +689,7 @@ export function ShopTalkView({
     return readStringSet("rivt.joinedCommunities.v1", communitySlug);
   });
   const [communityQuery, setCommunityQuery] = useState("");
-  const [mobileCommunityDirectoryOpen, setMobileCommunityDirectoryOpen] = useState(false);
+  const [communityCreateOpen, setCommunityCreateOpen] = useState(false);
   const [communityCreateError, setCommunityCreateError] = useState<string | null>(null);
   const [communityCreateBusy, setCommunityCreateBusy] = useState(false);
   const [communityCreateAudience, setCommunityCreateAudience] = useState<CommunityAudience>("public");
@@ -698,6 +701,7 @@ export function ShopTalkView({
   const [liveNews, setLiveNews] = useState<NewsItem[]>([]);
   const [newsLoading, setNewsLoading] = useState(false);
   const [newsFetched, setNewsFetched] = useState(false);
+  const [newsIsFallback, setNewsIsFallback] = useState(false);
   const [flairFilter, setFlairFilter] = useState<PostFlair | "All">(() => readShopTalkFilterPrefs().flairFilter);
   const [bookmarkedIds, setBookmarkedIds] = useState<Set<string>>(() => readStringSet("rivt.shopTalkBookmarks.v1"));
   const [showBookmarked, setShowBookmarked] = useState(false);
@@ -705,7 +709,10 @@ export function ShopTalkView({
     try { return JSON.parse(localStorage.getItem("rivt.shopTalk.v1") ?? "{}") as Record<string, number>; }
     catch { return {}; }
   });
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  // Legacy tag filters are intentionally dormant while the single filter sheet is active.
   const [activeTrendingTag, setActiveTrendingTag] = useState<string | null>(null);
+  const trendingTags: string[] = [];
   const [locallyAnswered, setLocallyAnswered] = useState<Set<string>>(new Set());
   const [filterType, setFilterType] = useState<PostType | "all">(() => readShopTalkFilterPrefs().filterType);
   const displayNews = liveNews.length ? liveNews : newsItems;
@@ -748,8 +755,7 @@ export function ShopTalkView({
       [community.name, community.meta, community.slug].join(" ").toLowerCase().includes(normalized)
     ));
   }, [communities, communityQuery]);
-  const canStartCommunity = communityQuery.trim().length >= 2 &&
-    !communities.some((community) => community.slug === communitySlug(communityQuery));
+  const canCreateCommunity = !isGuest;
   const answerQueuePosts = useMemo(() => communityPosts
     .filter((post) => (
       (post.trade === primaryTrade || post.trade === "General") &&
@@ -785,7 +791,6 @@ export function ShopTalkView({
     setSelectedCommunitySlug(community.slug);
     setTalkQuery("");
     setTradeFilter("All trades");
-    setActiveTrendingTag(null);
     setAnswerQueueOnly(false);
     setShowBookmarked(false);
     setFlairFilter("All");
@@ -793,6 +798,7 @@ export function ShopTalkView({
     setSortMode("hot");
     setMobileDetail(false);
     setSelectedPostId(null);
+    setActiveTab("talk");
   }
 
   async function handleCreateCommunity(confirmDuplicate = false) {
@@ -812,6 +818,8 @@ export function ShopTalkView({
         onCommunityCreated(result.community);
         setSelectedCommunitySlug(result.community.slug);
         setCommunityQuery("");
+        setCommunityCreateOpen(false);
+        setActiveTab("talk");
         return;
       }
       if (result?.duplicateCandidates?.length) {
@@ -858,6 +866,7 @@ export function ShopTalkView({
     setSelectedCommunitySlug(null);
     setCommunityQuery("");
     setMobileDetail(false);
+    setActiveTab("communities");
   }
 
   function openReport(target: ReportTarget, defaultReason: CommunityReportReason = "Safety concern") {
@@ -898,18 +907,20 @@ export function ShopTalkView({
     });
   }
 
-  async function activateNews() {
+  async function activateNews(forceRefresh = false) {
     setActiveTab("news");
-    if (newsFetched) return;
+    if (newsFetched && !forceRefresh) return;
     setNewsLoading(true);
     try {
-      const response = await fetchWithTimeout(apiPath(`/api/news?location=${encodeURIComponent(userLocation)}`));
-      const data = await response.json() as { items?: NewsItem[] };
+      const response = await fetchWithTimeout(apiPath(`/api/news?location=${encodeURIComponent(userLocation)}${forceRefresh ? "&refresh=1" : ""}`));
+      const data = await response.json() as { items?: NewsItem[]; fallback?: boolean };
       const items = Array.isArray(data.items) && data.items.length > 0 ? data.items : newsItems;
       setLiveNews(items);
+      setNewsIsFallback(data.fallback === true || !Array.isArray(data.items) || data.items.length === 0);
       setSelectedNewsId(items[0]?.id ?? 0);
     } catch {
       setLiveNews(newsItems);
+      setNewsIsFallback(true);
       setSelectedNewsId(newsItems[0]?.id ?? 0);
     } finally {
       setNewsLoading(false);
@@ -931,12 +942,6 @@ export function ShopTalkView({
       const postEffectiveType: PostType = post.type ?? "general";
       if (postEffectiveType !== filterType) return false;
     }
-    if (activeTrendingTag) {
-      const needle = activeTrendingTag.slice(1).toLowerCase();
-      const haystack = `${post.title} ${post.body}`.toLowerCase();
-      if (!haystack.includes(needle)) return false;
-    }
-
     const searchable = [
       post.title,
       post.body,
@@ -1006,28 +1011,6 @@ export function ShopTalkView({
   }
 
   // ── Trending tags ─────────────────────────────────────────────────────────
-  const trendingTags = useMemo(() => {
-    const counts: Record<string, number> = {};
-    // Count predefined tags from post content
-    for (const post of communityPosts) {
-      const text = `${post.title} ${post.body}`.toLowerCase();
-      for (const tag of PREDEFINED_TAGS) {
-        if (text.includes(tag.slice(1))) {
-          counts[tag] = (counts[tag] ?? 0) + 1;
-        }
-      }
-      // Also extract inline #hashtags
-      const matches = text.matchAll(/#(\w+)/g);
-      for (const match of matches) {
-        const t = `#${match[1]}`;
-        counts[t] = (counts[t] ?? 0) + 1;
-      }
-    }
-    return Object.entries(counts)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 8)
-      .map(([tag]) => tag);
-  }, [communityPosts]);
   // User total helpful votes.
   const myTotalRep = useMemo(() => {
     const fromPosts = communityPosts
@@ -1090,21 +1073,29 @@ export function ShopTalkView({
             onClick={() => setActiveTab("talk")}
           >
             <MessageCircle size={14} />
-            Shop Talk
+            Feed
+          </button>
+          <button
+            type="button"
+            className={activeTab === "communities" ? "active" : ""}
+            onClick={() => setActiveTab("communities")}
+          >
+            <UsersRound size={14} />
+            Communities
           </button>
           <button
             type="button"
             className={activeTab === "news" ? "active" : ""}
-            onClick={activateNews}
+            onClick={() => void activateNews()}
           >
             <Newspaper size={14} />
             Trade News
           </button>
         </div>
         <aside className="shop-talk-sidebar">
-          {activeTab === "talk" ? (
+          {activeTab === "talk" && selectedCommunity ? (
             <>
-              {selectedCommunity && SelectedCommunityIcon ? (
+              {SelectedCommunityIcon ? (
                 <section className="community-page-card" aria-label={`${selectedCommunity.name} community`}>
                   <div className="community-page-main">
                     <span className="community-row-icon" style={{ background: selectedCommunity.tone }}>
@@ -1158,144 +1149,14 @@ export function ShopTalkView({
                 </section>
               ) : null}
 
-              {!selectedCommunity ? (
-              <section className={mobileCommunityDirectoryOpen ? "community-board is-expanded" : "community-board"} aria-label="Discover communities">
-                <div className="community-board-head">
-                  <strong>{selectedCommunity ? "Discover more" : "Discover communities"}</strong>
-                  <span>{joinedCommunities.size} joined</span>
-                </div>
-                <button
-                  type="button"
-                  className="community-directory-toggle"
-                  aria-expanded={mobileCommunityDirectoryOpen}
-                  onClick={() => setMobileCommunityDirectoryOpen((open) => !open)}
-                >
-                  {mobileCommunityDirectoryOpen ? "Show community rail" : "Search or start a community"}
-                </button>
-                <label className="community-discover-search">
-                  <Search size={14} />
-                  <span className="sr-only">Search communities</span>
-                  <input
-                    type="search"
-                    value={communityQuery}
-                    onChange={(event) => setCommunityQuery(event.target.value)}
-                    placeholder="Search communities"
-                  />
-                </label>
-                {canStartCommunity && (
-                  <div className="community-audience-picker" aria-label="Choose who can join this community">
-                    {([
-                      ["public", "Public"],
-                      ["contractors", "Contractors"],
-                      ["tradespeople", "Tradespeople"],
-                    ] as const satisfies Array<[CommunityAudience, string]>).map(([audience, label]) => (
-                      <button
-                        key={audience}
-                        type="button"
-                        className={communityCreateAudience === audience ? "is-active" : ""}
-                        onClick={() => setCommunityCreateAudience(audience)}
-                        aria-pressed={communityCreateAudience === audience}
-                      >
-                        {label}
-                      </button>
-                    ))}
-                    <span>{communityAudienceDescription(communityCreateAudience)}</span>
-                  </div>
-                )}
-                <div className="community-board-list">
-                  {filteredCommunities.length === 0 ? (
-                    <div className="community-empty">
-                      <strong>No communities found</strong>
-                      <span>Try a trade, city, or topic like tile, side work, or code.</span>
-                      {canStartCommunity && (
-                        <button type="button" className="primary-action" onClick={() => void handleCreateCommunity()} disabled={communityCreateBusy}>
-                          <Plus size={14} />
-                          Start "{communityQuery.trim()}"
-                        </button>
-                      )}
-                    </div>
-                  ) : filteredCommunities.map((community) => {
-                    const CIcon = community.icon;
-                    const joined = joinedCommunities.has(community.slug);
-                    return (
-                      <div key={community.name} className={selectedCommunitySlug === community.slug ? "community-row is-active" : "community-row"}>
-                        <button
-                          type="button"
-                          className="community-row-main"
-                          onClick={() => openCommunity(community)}
-                        >
-                          <span className="community-row-icon" style={{ background: community.tone }}>
-                            <CIcon size={20} strokeWidth={2.4} />
-                          </span>
-                          <span className="community-row-copy">
-                            <b>{community.name}</b>
-                            <small>
-                              <span>{pluralize(community.memberCount, "member")}</span>
-                              <span>{pluralize(communityPostCounts[community.slug] ?? 0, "post")}</span>
-                              <span>{community.audienceLabel}</span>
-                              <span>{community.meta}</span>
-                            </small>
-                          </span>
-                        </button>
-                        <button
-                          type="button"
-                          className={joined ? "community-join is-joined" : "community-join"}
-                          aria-pressed={joined}
-                          disabled={!joined && !roleCanAccessCommunity(community.audience, role)}
-                          onClick={() => { void toggleCommunityMembership(community); }}
-                        >
-                          {joined
-                            ? "Joined"
-                            : roleCanAccessCommunity(community.audience, role)
-                              ? "Join"
-                              : community.audienceLabel}
-                        </button>
-                      </div>
-                    );
-                  })}
-                </div>
-                {communityCreateError && (
-                  <div className="community-create-feedback" role="status">
-                    <strong>{communityCreateError}</strong>
-                    {duplicateCommunityCandidates.length > 0 && (
-                      <>
-                        <div className="community-duplicate-list">
-                          {duplicateCommunityCandidates.map((candidate) => (
-                            <button
-                              type="button"
-                              key={candidate.slug}
-                              onClick={() => {
-                                const match = communities.find((community) => community.slug === candidate.slug);
-                                if (match) openCommunity(match);
-                              }}
-                            >
-                              Join {candidate.name}
-                            </button>
-                          ))}
-                        </div>
-                        <button type="button" className="secondary-action" onClick={() => void handleCreateCommunity(true)} disabled={communityCreateBusy}>
-                          Create separate community anyway
-                        </button>
-                      </>
-                    )}
-                  </div>
-                )}
-                {filteredCommunities.length > 0 && canStartCommunity && (
-                  <button type="button" className="community-start-button" onClick={() => void handleCreateCommunity()} disabled={communityCreateBusy}>
-                    <Plus size={14} />
-                    Start "{communityQuery.trim()}"
-                  </button>
-                )}
-              </section>
-              ) : null}
             </>
           ) : null}
         </aside>
 
-        <main className="shop-talk-feed-panel" aria-label={activeTab === "talk" ? "Shop Talk feed" : "Trade News feed"}>
+        <main className="shop-talk-feed-panel" aria-label={activeTab === "talk" ? "Shop Talk feed" : activeTab === "communities" ? "Community directory" : "Trade News feed"}>
           {activeTab === "talk" ? (
             <>
-              <div className="shop-talk-fieldbar" aria-label="Shop Talk filters">
+              <div className="shop-talk-feed-toolbar" aria-label="Shop Talk feed controls">
                 <label className="shop-talk-search">
                   <Search size={15} />
                   <span className="sr-only">Search Shop Talk</span>
@@ -1306,59 +1167,65 @@ export function ShopTalkView({
                     placeholder={selectedCommunity ? `Search ${selectedCommunity.name}` : "Search Shop Talk"}
                   />
                 </label>
-                <label className="input-control">
-                  <span>Trade</span>
-                  <select value={tradeFilter} onChange={(e) => setTradeFilter(e.target.value)}>
-                    {tradeFilters.map((opt) => <option key={opt}>{opt}</option>)}
-                  </select>
-                </label>
-                <div className="shop-sort-tabs">
-                  {(["hot", "new", "unanswered"] as const).map((mode) => (
-                    <button
-                      key={mode}
-                      type="button"
-                      className={sortMode === mode ? "active" : ""}
-                      onClick={() => setSortMode(mode)}
-                    >
-                      {mode === "hot" ? "Hot" : mode === "new" ? "New" : "Unanswered"}
-                    </button>
-                  ))}
-                </div>
-                {answerQueueOnly && (
-                  <div className="shop-talk-active-filter">
-                    <span>{primaryTrade} answer queue</span>
-                    <button type="button" onClick={() => setAnswerQueueOnly(false)}>Clear</button>
-                  </div>
-                )}
-                <div className="shop-talk-flair-row">
-                  {(["All", "Question", "Discussion", "Tip", "Code Talk", "Compliance", "Humor"] as const).map(flair => (
-                    <button
-                      key={flair}
-                      type="button"
-                      className={flairFilter === flair ? "flair-chip active" : "flair-chip"}
-                      onClick={() => setFlairFilter(flair)}
-                    >
-                      {flair}
-                    </button>
-                  ))}
-                </div>
-                <div className="shop-talk-bookmark-filter">
-                  <button
-                    type="button"
-                    className={showBookmarked ? "shop-talk-saved-btn active" : "shop-talk-saved-btn"}
-                    onClick={() => setShowBookmarked(v => !v)}
-                  >
-                    {showBookmarked ? <BookmarkCheck size={13} /> : <Bookmark size={13} />}
-                    Saved ({bookmarkedIds.size})
-                  </button>
-                  {showBookmarked && (
-                    <button type="button" className="shop-talk-clear-filter-btn" onClick={() => setShowBookmarked(false)}>
-                      <X size={11} />
-                      Clear
-                    </button>
-                  )}
-                </div>
+                <button
+                  type="button"
+                  className={filtersOpen ? "shop-talk-filter-trigger is-active" : "shop-talk-filter-trigger"}
+                  aria-expanded={filtersOpen}
+                  onClick={() => setFiltersOpen((open) => !open)}
+                >
+                  <SlidersHorizontal size={16} />
+                  Filters
+                </button>
               </div>
+
+              {filtersOpen && (
+                <section className="shop-talk-filter-panel" aria-label="Shop Talk filters">
+                  <div className="shop-talk-filter-grid">
+                    <label className="input-control">
+                      <span>Trade</span>
+                      <select value={tradeFilter} onChange={(event) => setTradeFilter(event.target.value)}>
+                        {tradeFilters.map((option) => <option key={option}>{option}</option>)}
+                      </select>
+                    </label>
+                    <label className="input-control">
+                      <span>Post style</span>
+                      <select value={flairFilter} onChange={(event) => setFlairFilter(event.target.value as PostFlair | "All")}>
+                        {["All", "Question", "Discussion", "Tip", "Code Talk", "Compliance", "Humor"].map((flair) => <option key={flair}>{flair}</option>)}
+                      </select>
+                    </label>
+                  </div>
+                  <div className="shop-talk-filter-section">
+                    <span>Sort</span>
+                    <div className="shop-talk-filter-options">
+                      {(["hot", "new", "unanswered"] as const).map((mode) => (
+                        <button key={mode} type="button" className={sortMode === mode ? "is-active" : ""} onClick={() => setSortMode(mode)}>
+                          {mode === "hot" ? "Hot" : mode === "new" ? "New" : "Needs answers"}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="shop-talk-filter-section">
+                    <span>Type</span>
+                    <div className="shop-talk-filter-options">
+                      {([
+                        ["all", "All"], ["question", "Questions"], ["sub-request", "Work requests"], ["safety", "Safety"], ["general", "Discussion"],
+                      ] as const satisfies Array<[PostType | "all", string]>).map(([type, label]) => (
+                        <button key={type} type="button" className={filterType === type ? "is-active" : ""} onClick={() => setFilterType(type)}>{label}</button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="shop-talk-filter-actions">
+                    <button type="button" className={showBookmarked ? "is-active" : ""} onClick={() => setShowBookmarked((saved) => !saved)}>
+                      {showBookmarked ? <BookmarkCheck size={14} /> : <Bookmark size={14} />}
+                      Saved ({bookmarkedIds.size})
+                    </button>
+                    {answerQueueOnly && <button type="button" onClick={() => setAnswerQueueOnly(false)}>{primaryTrade} queue</button>}
+                    <button type="button" className="shop-talk-filter-reset" onClick={() => {
+                      setTradeFilter("All"); setFlairFilter("All"); setFilterType("all"); setSortMode("hot"); setShowBookmarked(false); setAnswerQueueOnly(false);
+                    }}>Reset</button>
+                  </div>
+                </section>
+              )}
 
               <div className="v2-st-filter-row" aria-label="Filter by post type">
                 {([
@@ -1435,16 +1302,112 @@ export function ShopTalkView({
                 Ask
               </button>
             </>
+          ) : activeTab === "communities" ? (
+            <section className="shop-talk-community-directory" aria-label="Communities">
+              <header className="community-directory-header">
+                <div>
+                  <span>Communities</span>
+                  <h2>Find your crew</h2>
+                  <p>Join the rooms where the work gets talked through.</p>
+                </div>
+                {canCreateCommunity && (
+                  <button type="button" className="v2-primary-button community-create-button" onClick={() => setCommunityCreateOpen((open) => !open)} aria-expanded={communityCreateOpen}>
+                    <Plus size={16} />
+                    Create
+                  </button>
+                )}
+              </header>
+              <label className="community-directory-search">
+                <Search size={16} />
+                <span className="sr-only">Search communities</span>
+                <input type="search" value={communityQuery} onChange={(event) => setCommunityQuery(event.target.value)} placeholder="Search communities" />
+              </label>
+              {communityCreateOpen && canCreateCommunity && (
+                <section className="community-create-panel" aria-label="Create a community">
+                  <div>
+                    <span>Create a community</span>
+                    <p>Name a trade, place, crew topic, or work specialty. We check for close matches first.</p>
+                  </div>
+                  <label className="input-control">
+                    <span>Community name</span>
+                    <input type="text" value={communityQuery} onChange={(event) => setCommunityQuery(event.target.value)} placeholder="Jacksonville finish carpentry" />
+                  </label>
+                  <div className="community-audience-picker" aria-label="Community audience">
+                    {([
+                      ["public", "Public"],
+                      ["contractors", "Contractors only"],
+                      ["tradespeople", "Tradespeople only"],
+                    ] as const satisfies Array<[CommunityAudience, string]>).map(([audience, label]) => (
+                      <button key={audience} type="button" className={communityCreateAudience === audience ? "is-active" : ""} onClick={() => setCommunityCreateAudience(audience)} aria-pressed={communityCreateAudience === audience}>
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="community-audience-description">{communityAudienceDescription(communityCreateAudience)}</p>
+                  <div className="community-create-actions">
+                    <button type="button" className="v2-secondary-button" onClick={() => setCommunityCreateOpen(false)}>Cancel</button>
+                    <button type="button" className="v2-primary-button" onClick={() => void handleCreateCommunity()} disabled={communityCreateBusy || !communityQuery.trim()}>
+                      {communityCreateBusy ? "Creating..." : "Create community"}
+                    </button>
+                  </div>
+                  {communityCreateError && (
+                    <div className="community-create-feedback" role="status">
+                      <strong>{communityCreateError}</strong>
+                      {duplicateCommunityCandidates.length > 0 && (
+                        <div className="community-duplicate-list">
+                          {duplicateCommunityCandidates.map((candidate) => (
+                            <button key={candidate.slug} type="button" onClick={() => {
+                              const match = communities.find((community) => community.slug === candidate.slug);
+                              if (match) openCommunity(match);
+                            }}>Open {candidate.name}</button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </section>
+              )}
+              <div className="community-directory-list">
+                {filteredCommunities.length === 0 ? (
+                  <EmptyState icon={UsersRound} title="No communities found" description="Try a trade, a city, or a work topic." />
+                ) : filteredCommunities.map((community) => {
+                  const CommunityIcon = community.icon;
+                  const joined = joinedCommunities.has(community.slug);
+                  const accessible = roleCanAccessCommunity(community.audience, role);
+                  return (
+                    <article key={community.slug} className="community-directory-row">
+                      <button type="button" className="community-directory-main" onClick={() => openCommunity(community)}>
+                        <span className="community-row-icon" style={{ background: community.tone }}><CommunityIcon size={20} strokeWidth={2.4} /></span>
+                        <span className="community-directory-copy">
+                          <strong>{community.name}</strong>
+                          <small>{pluralize(community.memberCount, "member")} · {pluralize(communityPostCounts[community.slug] ?? 0, "post")} · {community.audienceLabel}</small>
+                          {community.meta && <em>{community.meta}</em>}
+                        </span>
+                      </button>
+                      <button type="button" className={joined ? "community-join is-joined" : "community-join"} aria-pressed={joined} disabled={!joined && !accessible} onClick={() => { void toggleCommunityMembership(community); }}>
+                        {joined ? "Joined" : accessible ? "Join" : community.audienceLabel}
+                      </button>
+                    </article>
+                  );
+                })}
+              </div>
+            </section>
           ) : (
             <>
               <div className="shop-talk-command news-command">
                 <div className="shop-talk-command-head">
-                  <span>Trade news</span>
-                  <h2>Code, safety, and permitting updates</h2>
+                  <span>Trade News</span>
+                  <h2>What's changing in the field</h2>
                   <p className="news-command-meta">
                     {filteredNews.length} articles · {newsSourceCount} sources · {newsFetched ? "Live feed" : "Curated feed"}
                   </p>
+                  <p className="news-command-live-status">
+                    {newsFetched && !newsIsFallback ? "Live sources" : "Fallback sources"}
+                  </p>
                 </div>
+                <button type="button" className="v2-icon-button" onClick={() => void activateNews(true)} aria-label="Refresh trade news" title="Refresh trade news" disabled={newsLoading}>
+                  <RefreshCw size={17} className={newsLoading ? "is-spinning" : ""} />
+                </button>
               </div>
               <div className="shop-talk-fieldbar news-fieldbar" aria-label="Trade News filters">
                 <label className="shop-talk-search">

@@ -517,7 +517,7 @@ async function runMobileFlow(page) {
   await assertNoHorizontalOverflow(page, "Tools after calculator browser back");
 
   await page.getByRole("button", { name: "Shop Talk", exact: true }).click();
-  await page.getByRole("button", { name: "Shop Talk" }).waitFor({ timeout: 15_000 });
+  await page.getByRole("button", { name: "Feed" }).waitFor({ timeout: 15_000 });
   await page.getByRole("button", { name: "Trade News" }).waitFor({ timeout: 15_000 });
   await page.setViewportSize({ width: 390, height: 664 });
   await page.locator(".shop-talk-fab").click();
@@ -530,7 +530,7 @@ async function runMobileFlow(page) {
   await page.getByRole("button", { name: "Close" }).click();
   await page.setViewportSize({ width: 390, height: 844 });
   await page.getByRole("button", { name: "Trade News" }).click();
-  await page.getByRole("heading", { name: /Code, safety, and permitting updates/i }).waitFor({ timeout: 15_000 });
+  await page.getByRole("heading", { name: /What's changing in the field/i }).waitFor({ timeout: 15_000 });
   await assertNoHorizontalOverflow(page, "Shop Talk trade news");
 }
 

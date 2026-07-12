@@ -10,6 +10,21 @@ Status values:
 
 Evidence must eventually link to implementation, automated tests, manual acceptance proof, and deployed build.
 
+## Traceability Addendum - 2026-07-11 Shop Talk Command Center (Local Verification)
+
+- `GA-UX-003` gains community-navigation evidence: Shop Talk now separates the
+  discussion feed, community directory, and trade news reader. Community
+  creation is visible to signed-in users and retains the server-enforced
+  public/contractor/tradesperson audience choices.
+- `GA-UX-006` gains rendered mobile evidence: the Shop Talk smoke proves Feed,
+  Communities, and Trade News have no horizontal overflow, expose a visible
+  Create community control, and keep the Ask composer action reachable.
+- `GA-OPS-007` gains local evidence: build, lint, security lint, 53/53 unit
+  tests, E2E, Shop Talk rendered UI smoke, mobile-action UI smoke, dependency
+  audit, and diff check passed. The database integration suite was attempted
+  twice against the configured test database but stalled before producing a
+  result; this packet does not claim a new DB-backed integration pass.
+
 ## Traceability Addendum - 2026-07-11 Core Surface Subtraction (Local Verification)
 
 - `GA-UX-003` gains deliberate hierarchy evidence: Home no longer repeats
