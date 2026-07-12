@@ -208,7 +208,6 @@ function ToolLauncherSection({
       <summary className="v2-tool-group-summary">
         <span className="v2-tool-group-header">
           <strong>{group.title}</strong>
-          <small>{group.tools.length} tools</small>
         </span>
         <ArrowRight size={16} aria-hidden="true" />
       </summary>
@@ -418,36 +417,30 @@ const PRIMARY_TOOL_LAUNCHERS: ToolLauncher[] = [
 
 const TOOL_GROUPS: ToolGroup[] = [
   {
-    label: "Money",
-    title: "Money",
+    label: "Plan",
+    title: "Plan",
     tools: [
-      { mode: "bid-builder", icon: FileText, title: "Bid builder", summary: "Line-item bids." },
-      { mode: "payments", icon: ReceiptText, title: "Payment tracker", summary: "Invoices and balances." },
-      { mode: "expense-logger", icon: ReceiptText, title: "Expenses", summary: "Job costs by category." },
-      { mode: "mileage", icon: Car, title: "Mileage", summary: "Job travel log." },
-      { mode: "earnings", icon: Download, title: "Earnings", summary: "Paid work summary." },
-      { mode: "tax-summary", icon: FileUp, title: "Tax summary", summary: "Exportable estimate." },
-      { mode: "tax-estimator", icon: Scale, title: "Tax estimator", summary: "Quarterly estimate." },
+      { mode: "materials", icon: Package2, title: "Materials", summary: "Takeoff and waste." },
+      { mode: "price-book", icon: Search, title: "Price book", summary: "Common prices." },
+    ],
+  },
+  {
+    label: "Track",
+    title: "Track",
+    tools: [
+      { mode: "time-tracker", icon: RefreshCw, title: "Time", summary: "Clock jobs and tasks." },
+      { mode: "expense-logger", icon: ReceiptText, title: "Expenses", summary: "Job costs." },
+      { mode: "mileage", icon: Car, title: "Mileage", summary: "Travel log." },
+      { mode: "payments", icon: ReceiptText, title: "Receivables", summary: "Invoices and balances." },
     ],
   },
   {
     label: "Site",
     title: "Site",
     tools: [
-      { mode: "materials", icon: Package2, title: "Materials", summary: "Area, waste, rough cost." },
-      { mode: "daily-report", icon: FileText, title: "Daily report", summary: "Weather, crew, issues." },
-      { mode: "punch-list", icon: ListChecks, title: "Punch list", summary: "Open items and fixes." },
-      { mode: "safety-checklist", icon: Shield, title: "Safety checklist", summary: "Daily site check." },
-      { mode: "job-checklist", icon: CheckSquare, title: "Job checklists", summary: "Trade-specific steps." },
-      { mode: "time-tracker", icon: RefreshCw, title: "Time tracker", summary: "Clock jobs and tasks." },
-    ],
-  },
-  {
-    label: "Business",
-    title: "Business",
-    tools: [
-      { mode: "price-book", icon: Search, title: "Price book", summary: "Save common prices." },
-      { mode: "contracts", icon: FileText, title: "Contracts", summary: "Scope and terms drafts." },
+      { mode: "punch-list", icon: ListChecks, title: "Punch list", summary: "Open items." },
+      { mode: "safety-checklist", icon: Shield, title: "Safety", summary: "Daily site check." },
+      { mode: "tax-summary", icon: FileUp, title: "Tax summary", summary: "Year-end estimate." },
     ],
   },
 ];

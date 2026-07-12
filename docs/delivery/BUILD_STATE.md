@@ -2,12 +2,22 @@
 
 Last updated: 2026-07-12 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Packet 24 Active Work Camera Workflow is deployed and verified.
-It unifies the active-work daily actions and brings Camera destination, feed,
-and capture controls into one lower-screen dock.
-Active packet: `docs/delivery/packets/24_ACTIVE_WORK_CAMERA_WORKFLOW.md`
-Repository branch: `master`
+Current phase: Packet 25 Tool Consolidation is in local verification. It keeps
+the five daily field apps prominent and removes overlapping or unfinished
+launchers from the day-one Tools hub.
+Active packet: `docs/delivery/packets/25_TOOL_CONSOLIDATION.md`
+Repository branch: `codex/tool-consolidation`
 Production feature release commit: `bd2a531e3faa4a6d3b1fb098e353008006659442` verified with live `/api/health`, ready migration `0026_standalone_projects`, and `npm run monitor:production`; docs-only evidence commits may supersede the served build SHA without changing runtime behavior.
+
+## Packet 25 - Tool Consolidation (Local Verification)
+
+- Tools preserves five daily field apps and reduces the supporting hub to
+  Plan, Track, and Site groups.
+- Bid builder, Earnings, Tax estimator, Daily report, Job checklists, and
+  Contracts are no longer presented as day-one launchers. Their code and
+  existing records are retained pending a deliberate future product decision.
+- Remaining boundary: local verification and physical mobile confirmation that
+  the smaller tool inventory feels clear without hiding an expected daily tool.
 
 ## Packet 24 - Active Work Camera Workflow (Production Verification)
 

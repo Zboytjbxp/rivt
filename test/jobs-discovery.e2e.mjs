@@ -375,10 +375,12 @@ async function assertToolsFlow(page) {
   await fieldToolsTray.getByRole("button", { name: "Heavy 16th", exact: true }).waitFor();
   assert.equal(await page.locator(".v2-tool-launch-card").count(), 5, "Tools hub should expose exactly five primary field apps");
   assert.equal(await page.locator(".v2-tool-group").count(), 3, "Tools hub should keep supporting utilities in three grouped sections");
-  await page.locator(".v2-tool-group").filter({ hasText: "Money" }).locator("summary").click();
-  await page.getByRole("button", { name: /Payment tracker/i }).waitFor();
-  await page.locator(".v2-tool-group").filter({ hasText: "Site" }).locator("summary").click();
+  await page.locator(".v2-tool-group").filter({ hasText: "Plan" }).locator("summary").click();
   await page.getByRole("button", { name: /Materials/i }).waitFor();
+  await page.locator(".v2-tool-group").filter({ hasText: "Track" }).locator("summary").click();
+  await page.getByRole("button", { name: /Receivables/i }).waitFor();
+  await page.locator(".v2-tool-group").filter({ hasText: "Site" }).locator("summary").click();
+  await page.getByRole("button", { name: /Safety/i }).waitFor();
   await fieldToolsTray.getByRole("button", { name: "Heavy 16th", exact: true }).click();
   await page.getByRole("heading", { name: "Heavy 16th field calculator" }).waitFor();
   await page.getByLabel("Length calculator").getByText("Decimal", { exact: true }).waitFor();

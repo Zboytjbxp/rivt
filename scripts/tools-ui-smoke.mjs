@@ -398,11 +398,12 @@ async function runToolsFlow(page, viewportName) {
   await page.getByRole("button", { name: /Open Camera/i }).waitFor({ timeout: 15_000 });
   assert.equal(await page.locator(".v2-tool-launch-card").count(), 5, "Tools hub should expose exactly five primary field apps");
   assert.equal(await page.locator(".v2-tool-group").count(), 3, "Tools hub should keep supporting utilities in three grouped sections");
-  await page.locator(".v2-tool-group").filter({ hasText: "Money" }).locator("summary").click();
-  await page.getByRole("button", { name: /Payment tracker/i }).waitFor({ timeout: 15_000 });
-  await page.locator(".v2-tool-group").filter({ hasText: "Site" }).locator("summary").click();
+  await page.locator(".v2-tool-group").filter({ hasText: "Plan" }).locator("summary").click();
   await page.getByRole("button", { name: /Materials/i }).waitFor({ timeout: 15_000 });
-  await page.getByRole("button", { name: /Time tracker/i }).waitFor({ timeout: 15_000 });
+  await page.locator(".v2-tool-group").filter({ hasText: "Track" }).locator("summary").click();
+  await page.getByRole("button", { name: /Receivables/i }).waitFor({ timeout: 15_000 });
+  await page.locator(".v2-tool-group").filter({ hasText: "Site" }).locator("summary").click();
+  await page.getByRole("button", { name: /Safety/i }).waitFor({ timeout: 15_000 });
   await assertNoHorizontalOverflow(page);
   await page.screenshot({ path: path.join(screenshotDir, `${viewportName}-tools-hub.png`), fullPage: true });
 

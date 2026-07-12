@@ -10,6 +10,14 @@ Status values:
 
 Evidence must eventually link to implementation, automated tests, manual acceptance proof, and deployed build.
 
+## Traceability Addendum - 2026-07-12 Tool Consolidation (Local Verification)
+
+- `GA-UX-003` gains launch-surface subtraction evidence: five frequent field
+  apps remain prominent while secondary planning, tracking, and site utilities
+  are grouped without exposing duplicate or unfinished workflows as peers.
+- `GA-UX-006` gains mobile hierarchy evidence: the compact Tools hub keeps
+  field actions within the first scan and removes decorative tool-count copy.
+
 ## Traceability Addendum - 2026-07-12 Active Work Camera Workflow (Production Verification)
 
 - `GA-UX-003` gains exact-workspace evidence: the active-job Today panel
