@@ -50,4 +50,11 @@ appearance system whose choices visibly affect the whole workspace.
 
 ## Production Evidence
 
-Pending merge and deploy.
+- `codex/appearance-studio` was fast-forwarded into `master` at
+  `36f0735d45922e8a3cc49fb8dc9d255896aade5d`.
+- Live `/api/health` returned that exact source commit with ready migration
+  `0026_standalone_projects`, PostgreSQL, S3-compatible object storage,
+  configured Sentry, and configured Web Push.
+- `EXPECTED_SOURCE_COMMIT=36f0735d45922e8a3cc49fb8dc9d255896aade5d npm run
+  monitor:production` passed with controls off and seven anonymous private-route
+  checks in 569 ms.

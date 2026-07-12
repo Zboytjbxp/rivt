@@ -20,8 +20,12 @@ Evidence must eventually link to implementation, automated tests, manual accepta
   canvas, panels, top bar, navigation, actions, spacing, and radii through the
   shared token layer without reload. Mobile smoke covers independent accent,
   chrome, canvas, and density updates with no horizontal overflow.
-- `GA-OPS-008` remains production-pending for this client-only packet. No
-  production database, authentication, or billing behavior changes.
+- `GA-OPS-008` gains production evidence: `master` serves exact source
+  `36f0735d45922e8a3cc49fb8dc9d255896aade5d` with ready migration
+  `0026_standalone_projects`, PostgreSQL/S3-compatible storage, configured
+  Sentry, and configured Web Push. The expected-source monitor passed with
+  seven anonymous private-route checks in 569 ms. No production database,
+  authentication, or billing behavior changed.
 
 ## Traceability Addendum - 2026-07-12 Field Finishes (Local Verification)
 

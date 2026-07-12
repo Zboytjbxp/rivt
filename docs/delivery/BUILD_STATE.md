@@ -2,13 +2,15 @@
 
 Last updated: 2026-07-12 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Packet 29 Appearance Studio is locally verified. It replaces
+Current phase: Packet 29 Appearance Studio is production verified. It replaces
 the prior Field Finishes with original, independent Accent, Chrome, Canvas,
 and Density controls that visibly affect the RIVT workspace.
 Active packet: `docs/delivery/packets/29_APPEARANCE_STUDIO.md`
-Repository branch: `codex/appearance-studio`
-Production feature release commit: pending merge and deploy. The current live
-baseline remains `5944d6207a8961cf754282fbd667e4e52ff53bc1`.
+Repository branch: `master`
+Production feature release commit: `36f0735d45922e8a3cc49fb8dc9d255896aade5d`
+verified with live `/api/health` and `npm run monitor:production`; docs-only
+evidence commits may supersede the served build SHA without changing runtime
+behavior.
 
 ## Packet 29 - Appearance Studio (Local Verification)
 
@@ -27,6 +29,11 @@ baseline remains `5944d6207a8961cf754282fbd667e4e52ff53bc1`.
 - Remaining boundary: merge, live `/api/health` source confirmation, production
   monitor, and physical light/dark checks on iPhone and Android before any
   future paid appearance entitlement decision.
+- Production evidence: `master` serves exact source
+  `36f0735d45922e8a3cc49fb8dc9d255896aade5d`; PostgreSQL, S3-compatible
+  storage, Sentry, and Web Push remain configured, ready migration is
+  `0026_standalone_projects`, and the expected-source production monitor
+  passed with seven anonymous private-route checks in 569 ms.
 
 ## Packet 28 - Field Finishes (Local Verification)
 
