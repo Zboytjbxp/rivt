@@ -8862,6 +8862,14 @@ html[data-rivt-compact-device="true"] .v2-tools-app.is-calculator-fullscreen .fr
   background: var(--v2-surface-raised);
 }
 
+.v2-tools-page > .v2-tool-section-stack > .v2-tool-group {
+  width: 100%;
+}
+
+.v2-tools-page > .v2-tool-section-stack > .v2-tool-group .v2-tool-mini-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .v2-tool-group[open] {
   background: color-mix(in srgb, var(--v2-accent-soft) 30%, var(--v2-surface-raised));
 }
@@ -8916,6 +8924,12 @@ html[data-rivt-compact-device="true"] .v2-tools-app.is-calculator-fullscreen .fr
   color: var(--v2-text-muted);
   font-size: 13px;
   line-height: 1.2;
+}
+
+@media (max-width: 640px) {
+  .v2-tools-page > .v2-tool-section-stack > .v2-tool-group .v2-tool-mini-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .v2-tools-storage-note {

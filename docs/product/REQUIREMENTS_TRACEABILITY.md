@@ -1118,3 +1118,12 @@ Evidence must eventually link to implementation, automated tests, manual accepta
   `210f5d17581ed1c83ed2218be96d92093fe8de30` with ready migration
   `0026_standalone_projects`; the expected-source monitor passed with seven
   anonymous private-route checks in 572 ms.
+
+## Traceability Addendum - 2026-07-13 Tools Subtraction
+
+- `GA-UX-006` gains a quieter Tools hierarchy: user-selected field shortcuts
+  are not repeated in the core launcher, and secondary helpers live in one
+  expandable Utilities section.
+- No tool record, deep link, active-work context, or authorization behavior was
+  removed. This packet changes discovery hierarchy only.
+- Local evidence: build, lint, rendered Tools UI smoke, and diff check passed.

@@ -92,7 +92,6 @@ interface ToolsStudioProps {
 
 type LaunchableToolMode = Exclude<ToolMode, "hub">;
 type ToolIcon = typeof Calculator;
-const recentToolsStorageKey = "rivt.recentTools.v1";
 const fieldToolsStorageKey = "rivt.fieldTools.v1";
 const toolContextStorageKey = "rivt.toolContexts.v1";
 const contextualToolModes = new Set<ToolMode>(["estimate", "invoice", "job-photos"]);
@@ -111,12 +110,6 @@ interface ToolLauncher {
   icon: ToolIcon;
   title: string;
   summary: string;
-}
-
-interface ToolGroup {
-  label: string;
-  title: string;
-  tools: ToolLauncher[];
 }
 
 function currency(value: number) {
@@ -147,19 +140,17 @@ function ToolCard({
   icon: Icon,
   title,
   summary,
-  featured = false,
   onAction,
 }: {
   icon: typeof Calculator;
   title: string;
   summary: string;
-  featured?: boolean;
   onAction: () => void;
 }) {
   return (
     <button
       type="button"
-      className={featured ? "v2-tool-launch-card is-featured" : "v2-tool-launch-card"}
+      className="v2-tool-launch-card"
       onClick={onAction}
       aria-label={`Open ${title}`}
     >
@@ -196,23 +187,24 @@ function ToolMiniCard({
   );
 }
 
-function ToolLauncherSection({
-  group,
+function ToolUtilitiesSection({
+  tools,
   onOpen,
 }: {
-  group: ToolGroup;
+  tools: ToolLauncher[];
   onOpen: (tool: LaunchableToolMode) => void;
 }) {
   return (
-    <details className="v2-tool-group" aria-label={group.title}>
+    <details className="v2-tool-group" aria-label="Utilities">
       <summary className="v2-tool-group-summary">
         <span className="v2-tool-group-header">
-          <strong>{group.title}</strong>
+          <strong>Utilities</strong>
+          <small>{tools.length} focused helpers</small>
         </span>
         <ArrowRight size={16} aria-hidden="true" />
       </summary>
       <div className="v2-tool-mini-grid">
-        {group.tools.map((tool) => (
+        {tools.map((tool) => (
           <ToolMiniCard
             key={tool.mode}
             icon={tool.icon}
@@ -270,28 +262,7 @@ function shouldIgnoreToolSwipe(target: EventTarget | null) {
 }
 
 function allToolLaunchers(): ToolLauncher[] {
-  return [...PRIMARY_TOOL_LAUNCHERS, ...TOOL_GROUPS.flatMap((group) => group.tools)];
-}
-
-function readRecentTools(): LaunchableToolMode[] {
-  try {
-    const stored = localStorage.getItem(recentToolsStorageKey);
-    if (!stored) return [];
-    const parsed = JSON.parse(stored) as unknown;
-    if (!Array.isArray(parsed)) return [];
-    const allowed = new Set(allToolLaunchers().map((tool) => tool.mode));
-    return parsed.filter((mode): mode is LaunchableToolMode => typeof mode === "string" && allowed.has(mode as LaunchableToolMode)).slice(0, 4);
-  } catch {
-    return [];
-  }
-}
-
-function persistRecentTools(tools: LaunchableToolMode[]) {
-  try {
-    localStorage.setItem(recentToolsStorageKey, JSON.stringify(tools.slice(0, 4)));
-  } catch {
-    // Recent tools are a convenience only.
-  }
+  return [...PRIMARY_TOOL_LAUNCHERS, ...UTILITY_TOOL_LAUNCHERS];
 }
 
 const defaultFieldTools: LaunchableToolMode[] = ["job-photos", "calculator", "daily-log"];
@@ -369,8 +340,8 @@ function FieldToolsTray({
             const Icon = tool.icon;
             return <button key={tool.mode} type="button" onClick={() => onOpen(tool.mode)}><Icon size={19} /><span>{tool.title}</span></button>;
           })}
-          <button type="button" className="v2-field-tools-all" onClick={() => document.querySelector<HTMLElement>(".v2-tool-group-grid")?.scrollIntoView({ behavior: "smooth", block: "start" })}>
-            <Plus size={19} /><span>All tools</span>
+          <button type="button" className="v2-field-tools-all" onClick={() => document.querySelector<HTMLElement>(".v2-tool-group")?.scrollIntoView({ behavior: "smooth", block: "start" })}>
+            <Plus size={19} /><span>Utilities</span>
           </button>
         </div>
       )}
@@ -415,34 +386,16 @@ const PRIMARY_TOOL_LAUNCHERS: ToolLauncher[] = [
   },
 ];
 
-const TOOL_GROUPS: ToolGroup[] = [
-  {
-    label: "Plan",
-    title: "Plan",
-    tools: [
-      { mode: "materials", icon: Package2, title: "Materials", summary: "Takeoff and waste." },
-      { mode: "price-book", icon: Search, title: "Price book", summary: "Common prices." },
-    ],
-  },
-  {
-    label: "Track",
-    title: "Track",
-    tools: [
-      { mode: "time-tracker", icon: RefreshCw, title: "Time", summary: "Clock jobs and tasks." },
-      { mode: "expense-logger", icon: ReceiptText, title: "Expenses", summary: "Job costs." },
-      { mode: "mileage", icon: Car, title: "Mileage", summary: "Travel log." },
-      { mode: "payments", icon: ReceiptText, title: "Receivables", summary: "Invoices and balances." },
-    ],
-  },
-  {
-    label: "Site",
-    title: "Site",
-    tools: [
-      { mode: "punch-list", icon: ListChecks, title: "Punch list", summary: "Open items." },
-      { mode: "safety-checklist", icon: Shield, title: "Safety", summary: "Daily site check." },
-      { mode: "tax-summary", icon: FileUp, title: "Tax summary", summary: "Year-end estimate." },
-    ],
-  },
+const UTILITY_TOOL_LAUNCHERS: ToolLauncher[] = [
+  { mode: "materials", icon: Package2, title: "Materials", summary: "Takeoff and waste." },
+  { mode: "time-tracker", icon: RefreshCw, title: "Time", summary: "Clock jobs and tasks." },
+  { mode: "expense-logger", icon: ReceiptText, title: "Expenses", summary: "Job costs." },
+  { mode: "mileage", icon: Car, title: "Mileage", summary: "Travel log." },
+  { mode: "price-book", icon: Search, title: "Price book", summary: "Common prices." },
+  { mode: "punch-list", icon: ListChecks, title: "Punch list", summary: "Open items." },
+  { mode: "safety-checklist", icon: Shield, title: "Safety", summary: "Daily site check." },
+  { mode: "payments", icon: ReceiptText, title: "Receivables", summary: "Balances and status." },
+  { mode: "tax-summary", icon: FileUp, title: "Tax summary", summary: "Year-end estimate." },
 ];
 
 interface MileageEntry {
@@ -2889,7 +2842,6 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
   const requestedTool = mode === "tools" && openTool ? openTool : null;
   const [localActiveTool, setLocalActiveTool] = useState<ToolMode>("hub");
   const activeTool = requestedTool ?? localActiveTool;
-  const [recentTools, setRecentTools] = useState(readRecentTools);
   const [fieldTools, setFieldTools] = useState(readFieldTools);
   const [fieldToolsEditing, setFieldToolsEditing] = useState(false);
   const [cameraContextRequest, setCameraContextRequest] = useState(0);
@@ -2933,12 +2885,10 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
         : "Load the closeout report when you need the packet.";
   const latestEntry = selectedProject?.entries.at(-1) ?? null;
   const actionBusy = Boolean(projectAction);
-  const recentToolLaunchers = useMemo(() => {
-    const byMode = new Map(allToolLaunchers().map((tool) => [tool.mode, tool]));
-    return recentTools
-      .map((tool) => byMode.get(tool))
-      .filter((tool): tool is ToolLauncher => Boolean(tool));
-  }, [recentTools]);
+  const unpinnedPrimaryTools = useMemo(
+    () => PRIMARY_TOOL_LAUNCHERS.filter((tool) => !fieldTools.includes(tool.mode)),
+    [fieldTools],
+  );
   const activeWork = activeWorkRecords.length ? activeWorkRecords : fetchedActiveWork;
   const orderedActiveWork = useMemo(
     () => focusedActiveWorkFirst(activeWork, focusedActiveWorkId),
@@ -3042,13 +2992,6 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
     if (tool !== activeTool) setContextChosenTool(null);
     if (!onToolChange) {
       onOpenToolConsumed?.();
-    }
-    if (tool !== "hub") {
-      setRecentTools((current) => {
-        const next = [tool, ...current.filter((item) => item !== tool)].slice(0, 4);
-        persistRecentTools(next);
-        return next;
-      });
     }
     if (!options.keepConvertedInvoice) {
       setConvertedEstimateDraft(null);
@@ -3802,45 +3745,24 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
           onToggleEditing={() => setFieldToolsEditing((editing) => !editing)}
           onChange={updateFieldTools}
         />
-        {recentToolLaunchers.length ? (
-          <section className="v2-tool-section v2-tool-recent-section" aria-label="Recent tools">
-            <div className="v2-tool-section-header is-simple">
-              <strong>Recent</strong>
-            </div>
-            <div className="v2-tool-mini-grid">
-              {recentToolLaunchers.map((tool) => (
-                <ToolMiniCard
-                  key={tool.mode}
-                  icon={tool.icon}
-                  title={tool.title}
-                  summary={tool.summary}
-                  onAction={() => openToolFromHub(tool.mode)}
-                />
-              ))}
-            </div>
-          </section>
-        ) : null}
-
-        <section className="v2-tool-section" aria-label="Field tools">
+        {unpinnedPrimaryTools.length ? <section className="v2-tool-section" aria-label="Core apps">
+          <div className="v2-tool-section-header is-simple">
+            <strong>Core apps</strong>
+          </div>
           <div className="v2-tool-launch-grid">
-            {PRIMARY_TOOL_LAUNCHERS.map((tool, index) => (
+            {unpinnedPrimaryTools.map((tool) => (
               <ToolCard
                 key={tool.mode}
                 icon={tool.icon}
                 title={tool.title}
                 summary={tool.summary}
-                featured={index === 0}
                 onAction={() => openToolFromHub(tool.mode)}
               />
             ))}
           </div>
-        </section>
+        </section> : null}
 
-        <div className="v2-tool-group-grid" aria-label="More tools">
-          {TOOL_GROUPS.map((group) => (
-            <ToolLauncherSection key={group.label} group={group} onOpen={openToolFromHub} />
-          ))}
-        </div>
+        <ToolUtilitiesSection tools={UTILITY_TOOL_LAUNCHERS} onOpen={openToolFromHub} />
 
       </div>
 

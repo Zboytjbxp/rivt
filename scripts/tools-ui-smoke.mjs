@@ -395,14 +395,12 @@ async function runToolsFlow(page, viewportName) {
   const fieldToolsTray = page.getByLabel("Field shortcuts", { exact: true });
   await fieldToolsTray.waitFor({ timeout: 15_000 });
   await fieldToolsTray.getByRole("button", { name: "Heavy 16th", exact: true }).waitFor({ timeout: 15_000 });
-  await page.getByRole("button", { name: /Open Camera/i }).waitFor({ timeout: 15_000 });
-  assert.equal(await page.locator(".v2-tool-launch-card").count(), 5, "Tools hub should expose exactly five primary field apps");
-  assert.equal(await page.locator(".v2-tool-group").count(), 3, "Tools hub should keep supporting utilities in three grouped sections");
-  await page.locator(".v2-tool-group").filter({ hasText: "Plan" }).locator("summary").click();
+  await fieldToolsTray.getByRole("button", { name: "Camera", exact: true }).waitFor({ timeout: 15_000 });
+  assert.equal(await page.locator(".v2-tool-launch-card").count(), 2, "Pinned defaults should not repeat in the core-app launcher");
+  assert.equal(await page.locator(".v2-tool-group").count(), 1, "Supporting helpers should live in one utilities drawer");
+  await page.locator(".v2-tool-group").filter({ hasText: "Utilities" }).locator("summary").click();
   await page.getByRole("button", { name: /Materials/i }).waitFor({ timeout: 15_000 });
-  await page.locator(".v2-tool-group").filter({ hasText: "Track" }).locator("summary").click();
   await page.getByRole("button", { name: /Receivables/i }).waitFor({ timeout: 15_000 });
-  await page.locator(".v2-tool-group").filter({ hasText: "Site" }).locator("summary").click();
   await page.getByRole("button", { name: /Safety/i }).waitFor({ timeout: 15_000 });
   await assertNoHorizontalOverflow(page);
   await page.screenshot({ path: path.join(screenshotDir, `${viewportName}-tools-hub.png`), fullPage: true });
@@ -498,7 +496,7 @@ async function runToolsFlow(page, viewportName) {
   await page.screenshot({ path: path.join(screenshotDir, `${viewportName}-invoice.png`), fullPage: true });
   await page.getByLabel("Invoice draft").getByRole("button", { name: "Tools" }).click();
 
-  await primaryTool("Daily log").click();
+  await fieldToolsTray.getByRole("button", { name: "Daily log", exact: true }).click();
   await page.getByRole("heading", { name: "Jobsite note", exact: true }).waitFor({ timeout: 15_000 });
   await page.getByText("Records-ready", { exact: true }).waitFor({ timeout: 15_000 });
   await page.getByText("Tenant Build-Out", { exact: true }).waitFor({ timeout: 15_000 });
@@ -520,7 +518,7 @@ async function runToolsFlow(page, viewportName) {
   await page.screenshot({ path: path.join(screenshotDir, `${viewportName}-daily-log.png`), fullPage: true });
   await page.getByLabel("Daily log").getByRole("button", { name: "Tools" }).click();
 
-  await primaryTool("Camera").click();
+  await fieldToolsTray.getByRole("button", { name: "Camera", exact: true }).click();
   await page.getByRole("button", { name: "Choose destination" }).click();
   await page.getByRole("dialog", { name: "Choose work context" }).getByRole("button", { name: /Tenant Build-Out/i }).click();
   await page.getByRole("heading", { name: "Tenant Build-Out", exact: true }).waitFor({ timeout: 15_000 });

@@ -2,12 +2,24 @@
 
 Last updated: 2026-07-13 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Packet 32 Daily Workspace and Camera is locally verified. It
-makes exact accepted work read as a destination on mobile and keeps Camera's
-save destination and completion action in the lower thumb zone.
-Active packet: `docs/delivery/packets/32_DAILY_WORKSPACE_CAMERA.md`
-Repository branch: `codex/daily-workspace-camera`
+Current phase: Packet 33 Tools Subtraction is locally verified. It removes
+repeated launchers and consolidates secondary helpers into one Utilities
+drawer while preserving shortcuts, records, and deep links.
+Active packet: `docs/delivery/packets/33_TOOLS_SUBTRACTION.md`
+Repository branch: `codex/tools-subtraction`
 Production feature release commit: `210f5d17581ed1c83ed2218be96d92093fe8de30`
+
+## Packet 33 - Tools Subtraction (Local Verification)
+
+- Default pinned tools no longer repeat in the core-app grid, and the redundant
+  Recent block is removed.
+- Nine supporting helpers remain available in one compact Utilities drawer
+  instead of three competing category boxes.
+- Tool implementations, stored records, exact-job context, and deep links are
+  unchanged.
+- Local verification passed: build, lint, rendered Tools UI smoke, and diff
+  check.
+- Remaining boundary: physical one-handed validation and production deployment.
 
 ## Packet 32 - Daily Workspace and Camera (Local Verification)
 
