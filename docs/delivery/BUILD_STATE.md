@@ -2,12 +2,25 @@
 
 Last updated: 2026-07-13 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Packet 34 Shop Talk Hierarchy is locally verified. It makes
-posting, community discovery and creation, exact community pages, and Trade
-News read as one deliberate community product.
-Active packet: `docs/delivery/packets/34_SHOP_TALK_HIERARCHY.md`
-Repository branch: `codex/shop-talk-standalone`
+Current phase: Packet 35 Entry, Login, and Onboarding Return Path is locally
+verified. The initial screen now explains the complete product, keeps Preview,
+Create account, and Log in immediately visible, and removes setup narration.
+Active packet: `docs/delivery/packets/35_ENTRY_ONBOARDING_RETURN_PATH.md`
+Repository branch: `codex/onboarding-return-path`
 Production feature release commit: `210f5d17581ed1c83ed2218be96d92093fe8de30`
+
+## Packet 35 - Entry, Login, and Onboarding Return Path (Local Verification)
+
+- One decisive entry replaces the low-information feature carousel and names
+  Work, proof, trade community, and field tools together.
+- Preview, Create free account, and Log in remain in the initial 320x568
+  viewport; Login has an explicit RIVT overview return path.
+- Post-signup setup keeps its real task progression but removes instructional
+  filler and uses a stable one-handed Back/Next row.
+- Local verification passed: build, lint, rendered guest entry/login/preview
+  smoke, and diff check.
+- Remaining boundary: aggregate branch verification, physical-device review,
+  and production deployment.
 
 ## Packet 34 - Shop Talk Hierarchy (Local Verification)
 

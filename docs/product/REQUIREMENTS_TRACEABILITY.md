@@ -1137,3 +1137,16 @@ Evidence must eventually link to implementation, automated tests, manual accepta
   reports, moderation, and live-news retrieval remain server-owned.
 - Local evidence: build, lint, rendered Shop Talk/Trade News UI smoke, and diff
   check passed.
+
+## Traceability Addendum - 2026-07-13 Entry and Onboarding Return Path
+
+- `GA-UX-006` gains a compact-phone entry hierarchy in which Preview, Create
+  free account, and Log in are visible without advancing a carousel or
+  scrolling past a feature mockup.
+- `GA-AUTH-007` retains the existing fail-closed boundaries: preview activity
+  remains explicitly sample data, while account creation, role locking, email
+  verification, consent, and onboarding completion are unchanged.
+- Post-signup setup removes generic instructional narration while retaining
+  resumable state, factual validation messages, and final readiness feedback.
+- Local evidence: build, lint, rendered 320x568 entry/login/preview smoke, and
+  diff check passed.

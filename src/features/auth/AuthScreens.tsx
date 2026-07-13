@@ -534,34 +534,41 @@ function SwipeEntryShowcase({
   onCreateAccount: () => void;
 }) {
   const [activeSlide, setActiveSlide] = useState(0);
-  const touchStartX = useRef<number | null>(null);
-
-  function moveSlide(direction: -1 | 1) {
-    setActiveSlide((current) => Math.max(0, Math.min(entrySlides.length - 1, current + direction)));
-  }
 
   return (
-    <section
-      className="auth-intro"
-      aria-label="RIVT intro"
-      onTouchStart={(event) => {
-        touchStartX.current = event.touches[0]?.clientX ?? null;
-      }}
-      onTouchEnd={(event) => {
-        if (touchStartX.current === null) return;
-        const delta = (event.changedTouches[0]?.clientX ?? touchStartX.current) - touchStartX.current;
-        touchStartX.current = null;
-        if (Math.abs(delta) < 42) return;
-        if (delta < 0) moveSlide(1);
-        else moveSlide(-1);
-      }}
-    >
-      <button type="button" className="auth-intro-skip" onClick={onPreview}>
-        Preview demo
-      </button>
+    <section className="auth-intro auth-intro--decisive" aria-label="RIVT entry">
+      <header className="auth-intro-masthead">
+        <div className="auth-intro-brand">
+          <strong>{brandConfig.appName}</strong>
+          <span>Trades only</span>
+        </div>
+        <button type="button" className="auth-intro-demo" onClick={onPreview}>
+          Preview RIVT <ArrowRight size={16} />
+        </button>
+      </header>
 
-      <div className="auth-intro-brand">
-        <strong>{brandConfig.appName}</strong>
+      <div className="auth-intro-promise">
+        <span className="auth-story-eyebrow">For contractors and tradespeople</span>
+        <h1>Work, proof, and trade community in one place.</h1>
+        <p>Find the next job, run active work, document what happened, and stay connected between jobs.</p>
+      </div>
+
+      <div className="auth-intro-pillar-grid" aria-label="What RIVT includes">
+        {entryCapabilities.map(({ key, title, body, icon: Icon }) => (
+          <article key={key} className="auth-intro-pillar">
+            <div>
+              <Icon size={18} />
+              <span>{key === "talk" ? "Shop Talk" : key === "work" ? "Work" : key === "crew" ? "Network" : "Field tools"}</span>
+            </div>
+            <strong>{title}</strong>
+            <p>{body}</p>
+          </article>
+        ))}
+      </div>
+
+      <div className="auth-intro-proof" aria-label="RIVT product promise">
+        <ShieldCheck size={18} />
+        <span>Private job details stay relationship-gated. Demo content is always labeled.</span>
       </div>
 
       <div className="auth-intro-window">
@@ -626,7 +633,7 @@ function SwipeEntryShowcase({
           Log in
         </button>
         <button type="button" className="auth-intro-preview-link" onClick={onPreview}>
-          Explore a sample workspace <ArrowRight size={16} />
+          Explore a one-year sample workspace <ArrowRight size={16} />
         </button>
       </div>
     </section>
@@ -867,6 +874,12 @@ export function AuthGate({
           onSubmit({ email, password, displayName, role, inviteCode: inviteCode.trim() || undefined });
         }}
       >
+        {!error ? (
+          <button type="button" className="auth-entry-back" onClick={() => setEntryStage("intro")}>
+            <ArrowLeft size={16} />
+            RIVT overview
+          </button>
+        ) : null}
         <LogoLockup />
         <div className="auth-card-heading">
           <span className="auth-card-kicker">{mode === "signup" ? "Start free" : "Welcome back"}</span>
@@ -1597,21 +1610,23 @@ export function OnboardingFlow({
             </div>
           </section>
 
-          <div className="onboarding-actions">
-            <div>
-              <strong>{currentStepId === "trust" ? (canEnter ? `Ready to open ${brandConfig.appName}` : "Finish the basics") : "Keep moving"}</strong>
-              <span>
-                {currentStepId === "trust"
-                  ? canEnter
-                    ? "Your verified account, role, profile, and consent are ready."
-                    : "Verify your email, finish your service area, select a trade, and accept the agreement."
-                  : currentStepId === "feed"
-                    ? "Topics are optional. Choose the trades that should drive your feed."
-                    : "One question per screen. Swipe or use the buttons."}
-              </span>
-              {notice ? <span className="auth-notice" role="status">{notice}</span> : null}
-              {error ? <span className="auth-error" role="alert">{error}</span> : null}
-            </div>
+          <div className={currentStepId === "trust" ? "onboarding-actions is-final" : "onboarding-actions"}>
+            {currentStepId === "trust" || notice || error ? (
+              <div className="onboarding-action-status">
+                {currentStepId === "trust" ? (
+                  <>
+                    <strong>{canEnter ? `Ready to open ${brandConfig.appName}` : "Finish the basics"}</strong>
+                    <span>
+                      {canEnter
+                        ? "Your verified account, role, profile, and consent are ready."
+                        : "Verify your email, finish your service area, select a trade, and accept the agreement."}
+                    </span>
+                  </>
+                ) : null}
+                {notice ? <span className="auth-notice" role="status">{notice}</span> : null}
+                {error ? <span className="auth-error" role="alert">{error}</span> : null}
+              </div>
+            ) : null}
             <button
               type="button"
               className="secondary-action onboarding-back-action"

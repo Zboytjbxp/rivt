@@ -63,7 +63,7 @@ async function configurePage(page) {
 
 async function openPreview(page, roleLabel, expectedHeading) {
   await page.goto(baseUrl, { waitUntil: "networkidle" });
-  await page.getByRole("button", { name: /Skip/i }).click();
+  await page.getByRole("button", { name: /Preview RIVT/i }).click();
   await page.getByRole("button", { name: new RegExp(`^${roleLabel}\\b`, "i") }).click();
   const openDemoButton = page.getByRole("button", { name: new RegExp(`Open ${roleLabel.toLowerCase()} demo`, "i") });
   await openDemoButton.waitFor({ state: "visible" });
@@ -104,6 +104,26 @@ async function openPreview(page, roleLabel, expectedHeading) {
     path: path.join(screenshotDir, `${roleLabel.toLowerCase()}-preview-320.png`),
     fullPage: false,
   });
+}
+
+async function verifyEntryAndReturnPath(page) {
+  await page.goto(baseUrl, { waitUntil: "networkidle" });
+  await page.getByRole("heading", { name: /Work, proof, and trade community in one place/i }).waitFor();
+
+  for (const name of [/Create free account/i, /^Log in$/i, /Preview RIVT/i]) {
+    const button = page.getByRole("button", { name });
+    const box = await button.boundingBox();
+    assert.ok(box, `${name} has no layout box`);
+    assert.ok(box.y >= 0 && box.y + box.height <= 568, `${name} is outside the initial compact viewport`);
+  }
+
+  await page.screenshot({ path: path.join(screenshotDir, "entry-320.png"), fullPage: false });
+  await page.getByRole("button", { name: /^Log in$/i }).click();
+  await page.getByRole("heading", { name: /Sign in to continue/i }).waitFor();
+  await page.getByRole("button", { name: /RIVT overview/i }).waitFor();
+  await page.screenshot({ path: path.join(screenshotDir, "login-320.png"), fullPage: false });
+  await page.getByRole("button", { name: /RIVT overview/i }).click();
+  await page.getByRole("heading", { name: /Work, proof, and trade community in one place/i }).waitFor();
 }
 
 async function verifyBootRecovery(browser) {
@@ -164,7 +184,7 @@ async function verifyAuthConnectionRecovery(browser) {
   await page.screenshot({ path: path.join(screenshotDir, "auth-connection-recovery-390.png"), fullPage: false });
   sessionLookupRecovered = true;
   await page.getByRole("button", { name: "Retry" }).click();
-  await page.getByRole("button", { name: /Skip/i }).waitFor({ timeout: 10_000 });
+  await page.getByRole("button", { name: /Preview RIVT/i }).waitFor({ timeout: 10_000 });
   await context.close();
 }
 
@@ -192,6 +212,7 @@ try {
   });
   page.on("pageerror", (error) => consoleErrors.push(error.message));
 
+  await verifyEntryAndReturnPath(page);
   await openPreview(page, "Contractor", /A year of jobs, crew, and records/i);
   await page.getByRole("button", { name: /View subcontractor/i }).click();
   await page.getByRole("heading", { name: /A year of work, proof, and reputation/i }).waitFor({ timeout: 10_000 });
