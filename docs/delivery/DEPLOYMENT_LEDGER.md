@@ -1,5 +1,16 @@
 # Deployment Ledger
 
+## 2026-07-13 - Packet 37 Workflow Coherence and Field Tool Reachability
+
+- Source commit: `d9b9097f3a0e20a8ccb119b76c794c942efad7e7`
+- Branch: `master`
+- Production: `https://rivt.pro`
+- Health proof: production returned the exact source commit with ready
+  migration `0026_standalone_projects`, PostgreSQL, and S3-compatible storage.
+- Monitor: passed with configured Sentry/Web Push, matching-job alerts enabled,
+  operational controls off, and seven anonymous private-route checks in 537 ms.
+- Boundary: physical one-handed Camera gallery capture/upload checks remain.
+
 Add one entry per staging/production deployment.
 
 ## Current Production - Packet 26 Entry Experience

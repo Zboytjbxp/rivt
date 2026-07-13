@@ -1189,3 +1189,8 @@ Evidence must eventually link to implementation, automated tests, manual accepta
   production dependency audit, and diff check pass. No server contract,
   database schema, persistence, or authorization behavior changed, so this
   client-only packet does not claim database integration coverage.
+- `GA-OPS-008` gains production evidence: health serves exact feature source
+  `d9b9097f3a0e20a8ccb119b76c794c942efad7e7` with ready migration
+  `0026_standalone_projects`, PostgreSQL/S3-compatible storage, configured
+  Sentry and Web Push, matching-job alerts enabled, controls off, and a
+  passing expected-source synthetic monitor.

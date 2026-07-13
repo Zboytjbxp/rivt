@@ -2,12 +2,12 @@
 
 Last updated: 2026-07-13 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Packet 37 is locally verified and awaiting review, merge, and
-production proof. It makes the focused accepted-work handoff visible and moves
-Camera's primary field controls into the lower thumb zone.
+Current phase: Packet 37 is deployed and production verified. It makes the
+focused accepted-work handoff visible and moves Camera's primary field controls
+into the lower thumb zone.
 Active packet: `docs/delivery/packets/37_WORKFLOW_COHERENCE_FIELD_TOOLS.md`
-Repository branch: `codex/workflow-coherence-field-tools`
-Production feature release commit: `845761451038215d855cced6080f3be7e4a84394`
+Repository branch: `master`
+Production feature release commit: `d9b9097f3a0e20a8ccb119b76c794c942efad7e7`
 
 ## Packet 37 - Workflow Coherence and Field Tool Reachability (Local Verification)
 
@@ -20,8 +20,13 @@ Production feature release commit: `845761451038215d855cced6080f3be7e4a84394`
 - Build, lint, unit tests, E2E, mobile-action UI smoke, production dependency
   audit, and diff check pass locally. This worktree has no `TEST_DATABASE_URL`;
   this client-only packet makes no database-integration claim.
-- Remaining boundary: merge, deploy, production health proof, and a physical
-  one-handed gallery capture/upload check on iPhone and Android.
+- Production health serves exact source
+  `d9b9097f3a0e20a8ccb119b76c794c942efad7e7`; PostgreSQL and S3-compatible
+  storage are healthy, Sentry and Web Push are configured, matching-job alerts
+  remain enabled, controls are off, and the synthetic monitor passed seven
+  anonymous private-route checks in 537 ms.
+- Remaining boundary: physical one-handed gallery capture/upload checks on
+  iPhone and Android.
 
 ## Packet 36 - Shop Talk Reliability (Production Verified)
 
