@@ -1148,5 +1148,8 @@ Evidence must eventually link to implementation, automated tests, manual accepta
   verification, consent, and onboarding completion are unchanged.
 - Post-signup setup removes generic instructional narration while retaining
   resumable state, factual validation messages, and final readiness feedback.
-- Local evidence: build, lint, rendered 320x568 entry/login/preview smoke, and
-  diff check passed.
+- Aggregate release evidence: build, lint, security lint, 53/53 unit tests,
+  E2E, Work lifecycle UI, Tools UI, Shop Talk/Trade News UI, 320x568
+  entry/login/preview UI, mobile-actions UI, zero-vulnerability production
+  dependency audit, diff check, and all 19 freshly reset PostgreSQL integration
+  suites passed.

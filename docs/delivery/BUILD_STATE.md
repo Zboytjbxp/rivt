@@ -2,14 +2,30 @@
 
 Last updated: 2026-07-13 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Packet 35 Entry, Login, and Onboarding Return Path is locally
-verified. The initial screen now explains the complete product, keeps Preview,
-Create account, and Log in immediately visible, and removes setup narration.
+Current phase: Packets 32-35 are aggregate verified as one release candidate.
+Focused Work and Camera, Tools subtraction, Shop Talk hierarchy, and the entry
+and onboarding return path passed the complete local release gate.
 Active packet: `docs/delivery/packets/35_ENTRY_ONBOARDING_RETURN_PATH.md`
 Repository branch: `codex/onboarding-return-path`
 Production feature release commit: `210f5d17581ed1c83ed2218be96d92093fe8de30`
 
-## Packet 35 - Entry, Login, and Onboarding Return Path (Local Verification)
+## Packets 32-35 - Aggregate Release Verification
+
+- Build, lint, security lint, 53/53 unit tests, E2E, Work lifecycle UI, Tools
+  UI, Shop Talk/Trade News UI, guest-preview UI, and mobile-actions UI passed.
+- A freshly reset isolated PostgreSQL database passed all 19 integration
+  suites. The earlier community fixture failure did not reproduce after the
+  test database reset and was stale test state, not a product regression.
+- `npm audit --omit=dev` reports zero production dependency vulnerabilities;
+  `git diff --check` passes.
+- Existing E2E and mobile smoke selectors now assert the deliberate product
+  hierarchy: two core Tools cards plus one Utilities drawer, Camera and Heavy
+  16th in Field shortcuts, a labeled Shop Talk Post command, and the decisive
+  entry headline.
+- Remaining boundary: merge, production deployment/monitoring, and physical
+  one-handed review on the founder's phones.
+
+## Packet 35 - Entry, Login, and Onboarding Return Path (Aggregate Verified)
 
 - One decisive entry replaces the low-information feature carousel and names
   Work, proof, trade community, and field tools together.
@@ -17,10 +33,8 @@ Production feature release commit: `210f5d17581ed1c83ed2218be96d92093fe8de30`
   viewport; Login has an explicit RIVT overview return path.
 - Post-signup setup keeps its real task progression but removes instructional
   filler and uses a stable one-handed Back/Next row.
-- Local verification passed: build, lint, rendered guest entry/login/preview
-  smoke, and diff check.
-- Remaining boundary: aggregate branch verification, physical-device review,
-  and production deployment.
+- Verification passed individually and in the aggregate release gate.
+- Remaining boundary: physical-device review and production deployment.
 
 ## Packet 34 - Shop Talk Hierarchy (Local Verification)
 

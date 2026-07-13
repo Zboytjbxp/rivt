@@ -1,6 +1,6 @@
 # Packet 35 - Entry, Login, and Onboarding Return Path
 
-Status: locally verified
+Status: aggregate verified; awaiting production deployment
 
 ## Objective
 
@@ -28,11 +28,23 @@ remove instructional clutter from the post-signup setup flow.
 - `npm run build`
 - `npm run lint`
 - `npm run test:ui:guest-preview`
+- `npm run test:unit` (53/53)
+- `npm run test:e2e`
+- `npm run test:integration:fresh` (19/19)
+- `npm run test:ui:work-lifecycle`
+- `npm run test:ui:tools`
+- `npm run test:ui:shop-talk-news`
+- `npm run test:ui:mobile-actions`
+- `npm run lint:security`
+- `npm audit --omit=dev` (zero vulnerabilities)
 - `git diff --check`
 
 The rendered smoke checks the 320x568 entry and login states, keeps all three
 entry decisions in the initial viewport, exercises the login return path, and
 continues through both contractor and tradesperson sample workspaces.
+The complete branch gate also proves the Packet 32-34 Work, Camera, Tools, and
+Shop Talk changes remain compatible with authentication, database-backed
+records, and the established mobile flows.
 
 ## Boundary
 
