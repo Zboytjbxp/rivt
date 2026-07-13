@@ -1632,3 +1632,19 @@ Add one entry per staging/production deployment.
 - Post-deploy proof: `/api/health` returned exact source `aaf3a8701b4dceb084bdaf007a04ea2bcba74385`, ready migration `0026_standalone_projects`, PostgreSQL/S3-compatible storage, configured Sentry and Web Push, and enabled matching-job alerts. `EXPECTED_SOURCE_COMMIT=aaf3a8701b4dceb084bdaf007a04ea2bcba74385 npm run monitor:production` passed with controls off, seven anonymous private-route checks, and a 752 ms duration.
 - Known boundary: physically review Settings section navigation, Shop Talk feed/discovery order, returning-user provider labels, and Work selectors on iOS and Android.
 - Approval: Mobile Experience Train runtime and automated/rendered gates are production verified; physical field acceptance remains open.
+
+## Current Production - Packet 36 Shop Talk Reliability
+
+- Environment: Production (`https://rivt.pro`)
+- Date/time/timezone: 2026-07-13 America/New_York
+- Deployer: Codex through a fast-forward merge to `master` and Railway production auto-deploy
+- Source repository/branch: `Zboytjbxp/rivt`, `master`
+- Runtime feature source: `845761451038215d855cced6080f3be7e4a84394`
+- Migration version before/after: unchanged (`0026_standalone_projects`)
+- Provider/config changes: none; existing Sentry, Web Push, PostgreSQL, and S3-compatible storage configuration was preserved.
+- Rollback target: `9d7a6cd80c9e46405b356902c6ac610a60a9a80e`; no migration rollback is required.
+- Automated gates: build, lint, security lint, 53/53 unit tests, E2E, mobile-actions UI, dependency audit with zero production vulnerabilities, and diff checks passed. Focused PostgreSQL integration passed exact-post retrieval, community audience denial, and author-earned reputation. The full integration wrapper exceeded the local 15-minute runner limit without a failing assertion; aggregate completion is not claimed.
+- Post-deploy proof: live `/api/health` returned exact source `845761451038215d855cced6080f3be7e4a84394`; the expected-source synthetic monitor passed with PostgreSQL/S3-compatible dependencies healthy, Sentry and Web Push configured, matching job alerts enabled, operational controls disabled, seven anonymous private-route checks, and a 619 ms duration.
+- Known boundary: tap a physical notification for a Shop Talk post outside the newest feed page, then log out and back in on a subscribed browser and confirm the next push arrives without visiting Settings.
+- Rollback performed/result: not required.
+- Approval: deployed Gate B Shop Talk reliability hardening; physical notification acceptance remains open.

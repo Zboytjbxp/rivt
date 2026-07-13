@@ -1,6 +1,6 @@
 # Packet 36 - Shop Talk Reliability and Exact Destinations
 
-Status: local verification complete; deployment pending
+Status: production verified; physical notification probes pending
 
 ## Objective
 
@@ -52,3 +52,15 @@ claim until it is rerun in a longer-lived runner.
 This packet does not add scheduled digests, first-answer transactional email,
 or background daily-log reminders. It preserves existing community audience,
 reaction, moderation, authentication, and Web Push authorization boundaries.
+
+## Production Evidence
+
+- Deployed feature source: `845761451038215d855cced6080f3be7e4a84394`
+- Environment: `https://rivt.pro`
+- Runtime monitor: passed 2026-07-13 America/New_York with PostgreSQL and
+  S3-compatible storage healthy, Sentry/Web Push configured, matching job
+  alerts enabled, operational controls off, and seven anonymous private-route
+  checks in 619 ms.
+- Remaining physical probes: tap an older/filtered Shop Talk notification and
+  verify a subscribed browser receives a push after logout and sign-in without
+  opening notification Settings.

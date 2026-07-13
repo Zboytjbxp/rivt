@@ -2,13 +2,28 @@
 
 Last updated: 2026-07-13 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Packet 36 is locally verified and awaiting merge/deployment.
+Current phase: Packet 36 is deployed and production verified.
 It makes Shop Talk notification targets exact, restores existing device-push
 subscriptions after authenticated boot, and replaces device-local reputation
 matching with server-authoritative author-earned totals.
 Active packet: `docs/delivery/packets/36_SHOP_TALK_RELIABILITY.md`
-Repository branch: `codex/shop-talk-reliability`
-Production feature release commit: `b2bc306089d8320517110fc3361615c6df4a8dc8`
+Repository branch: `master`
+Production feature release commit: `845761451038215d855cced6080f3be7e4a84394`
+
+## Packet 36 - Shop Talk Reliability (Production Verified)
+
+- `master` serves exact runtime source
+  `845761451038215d855cced6080f3be7e4a84394`; the production synthetic
+  monitor passed with PostgreSQL/S3-compatible storage healthy, configured
+  Sentry and Web Push, matching job alerts enabled, controls off, and seven
+  anonymous private-route checks in 619 ms.
+- Focused PostgreSQL coverage passed for exact post retrieval, audience denial,
+  and author-earned reputation. The full integration wrapper exceeded the
+  local 15-minute runner limit without a failure, so aggregate completion is
+  intentionally not claimed.
+- Remaining physical checks: tap a notification for a post outside the newest
+  feed page, then log out and back in on a subscribed device to confirm the
+  next push arrives without opening Settings.
 
 ## Packets 32-35 - Aggregate Release Verification
 
