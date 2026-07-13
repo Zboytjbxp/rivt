@@ -587,12 +587,14 @@ function App() {
     handleSetThemeAccent,
     handleSetThemeCanvas,
     handleSetThemeChrome,
+    handleSetThemeCustomColor,
     handleSetThemeDensity,
     handleSetThemeSource,
     handleToggleTheme,
     themeAccent,
     themeCanvas,
     themeChrome,
+    themeCustomColor,
     themeDensity,
     themeMode,
     themeSource,
@@ -2599,11 +2601,13 @@ function App() {
             themeSource={themeSource}
             themeAccent={themeAccent}
             themeChrome={themeChrome}
+            themeCustomColor={themeCustomColor}
             themeCanvas={themeCanvas}
             themeDensity={themeDensity}
             onSetThemeSource={handleSetThemeSource}
             onSetThemeAccent={handleSetThemeAccent}
             onSetThemeChrome={handleSetThemeChrome}
+            onSetThemeCustomColor={handleSetThemeCustomColor}
             onSetThemeCanvas={handleSetThemeCanvas}
             onSetThemeDensity={handleSetThemeDensity}
             onLogout={handleLogout}
@@ -2679,6 +2683,7 @@ function App() {
           themeSource={themeSource}
           themeAccent={themeAccent}
           themeChrome={themeChrome}
+          themeCustomColor={themeCustomColor}
           themeCanvas={themeCanvas}
           themeDensity={themeDensity}
           adminRoles={canonicalAccount?.adminRoles ?? []}
@@ -2693,6 +2698,7 @@ function App() {
           onSetThemeSource={handleSetThemeSource}
           onSetThemeAccent={handleSetThemeAccent}
           onSetThemeChrome={handleSetThemeChrome}
+          onSetThemeCustomColor={handleSetThemeCustomColor}
           onSetThemeCanvas={handleSetThemeCanvas}
           onSetThemeDensity={handleSetThemeDensity}
           onLogout={handleLogout}

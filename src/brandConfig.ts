@@ -415,8 +415,8 @@ export const brandConfig = {
     appearance: {
       accents: {
         rivtOrange: {
-          label: "RIVT orange",
-          description: "RIVT's safety-orange action color.",
+          label: "Orange / black",
+          description: "A high-visibility orange system on a black chassis.",
           swatch: "#ff4b00",
           modes: {
             light: { "--accent": "#ff4b00", "--accent-deep": "#b33400", "--accent-soft": "#fff0e8", "--amber": "#ff8a1d", "--amber-soft": "#fff2df" },
@@ -424,39 +424,57 @@ export const brandConfig = {
           },
         },
         ironRed: {
-          label: "Iron red",
-          description: "A warm, lower-glare red for action states.",
-          swatch: "#bc5145",
+          label: "Red / black",
+          description: "A sharp red system with a hard black frame.",
+          swatch: "#e21b23",
           modes: {
-            light: { "--accent": "#bc5145", "--accent-deep": "#7d3029", "--accent-soft": "#fde9e6", "--amber": "#c77f42", "--amber-soft": "#fcefdc" },
-            dark: { "--accent": "#e47768", "--accent-deep": "#ffc2b9", "--accent-soft": "#3d1a16", "--amber": "#dfa45e", "--amber-soft": "#3d2915" },
+            light: { "--accent": "#e21b23", "--accent-deep": "#971319", "--accent-soft": "#ffe7e8", "--amber": "#d96826", "--amber-soft": "#ffeddf" },
+            dark: { "--accent": "#ff585e", "--accent-deep": "#ffc4c7", "--accent-soft": "#421416", "--amber": "#f09a5e", "--amber-soft": "#442516" },
           },
         },
         signalBrass: {
-          label: "Signal brass",
-          description: "A high-contrast brass signal without a brand skin.",
-          swatch: "#b78411",
+          label: "Yellow / black",
+          description: "A bright jobsite yellow system on black.",
+          swatch: "#ffc20e",
           modes: {
-            light: { "--accent": "#b78411", "--accent-deep": "#6e5000", "--accent-soft": "#fff2cb", "--amber": "#b78411", "--amber-soft": "#fff2cb" },
-            dark: { "--accent": "#e2b542", "--accent-deep": "#ffe4a2", "--accent-soft": "#372b0c", "--amber": "#e2b542", "--amber-soft": "#372b0c" },
+            light: { "--accent": "#d09a00", "--accent-deep": "#594100", "--accent-soft": "#fff5cc", "--amber": "#d09a00", "--amber-soft": "#fff5cc" },
+            dark: { "--accent": "#ffd34d", "--accent-deep": "#fff0b3", "--accent-soft": "#443505", "--amber": "#ffd34d", "--amber-soft": "#443505" },
+          },
+        },
+        toolTeal: {
+          label: "Teal / black",
+          description: "A clean teal system with a black tool-body frame.",
+          swatch: "#008f8f",
+          modes: {
+            light: { "--accent": "#008f8f", "--accent-deep": "#005858", "--accent-soft": "#dcf7f5", "--amber": "#008f8f", "--amber-soft": "#dcf7f5" },
+            dark: { "--accent": "#35c5c1", "--accent-deep": "#b6f4f1", "--accent-soft": "#073b3b", "--amber": "#35c5c1", "--amber-soft": "#073b3b" },
           },
         },
         workshopGreen: {
-          label: "Workshop green",
-          description: "A quiet green for planning and closeout work.",
-          swatch: "#337e64",
+          label: "Green / black",
+          description: "A bright green system with a durable dark frame.",
+          swatch: "#72b72a",
           modes: {
-            light: { "--accent": "#337e64", "--accent-deep": "#17503e", "--accent-soft": "#def2e9", "--amber": "#a68041", "--amber-soft": "#f7edda" },
-            dark: { "--accent": "#62bd94", "--accent-deep": "#b8f0d5", "--accent-soft": "#14382d", "--amber": "#dbb467", "--amber-soft": "#3b2c15" },
+            light: { "--accent": "#5c9d20", "--accent-deep": "#305711", "--accent-soft": "#edf8dc", "--amber": "#5c9d20", "--amber-soft": "#edf8dc" },
+            dark: { "--accent": "#9edb59", "--accent-deep": "#daf7b4", "--accent-soft": "#203b10", "--amber": "#9edb59", "--amber-soft": "#203b10" },
           },
         },
         harborBlue: {
-          label: "Harbor blue",
-          description: "A clear blue for service and project work.",
-          swatch: "#2875a5",
+          label: "Blue / black",
+          description: "A saturated blue system with black chrome.",
+          swatch: "#006fba",
           modes: {
-            light: { "--accent": "#2875a5", "--accent-deep": "#164c72", "--accent-soft": "#e1f0f8", "--amber": "#7d9cab", "--amber-soft": "#e9f1f4" },
-            dark: { "--accent": "#67b7e5", "--accent-deep": "#bae2f8", "--accent-soft": "#14394d", "--amber": "#8db2c1", "--amber-soft": "#1b343e" },
+            light: { "--accent": "#006fba", "--accent-deep": "#004878", "--accent-soft": "#e0f1ff", "--amber": "#006fba", "--amber-soft": "#e0f1ff" },
+            dark: { "--accent": "#4ca6e0", "--accent-deep": "#b9e4ff", "--accent-soft": "#0c3755", "--amber": "#4ca6e0", "--amber-soft": "#0c3755" },
+          },
+        },
+        custom: {
+          label: "My tool color",
+          description: "Match the color of the tools you actually carry.",
+          swatch: "#ff4b00",
+          modes: {
+            light: { "--accent": "#ff4b00", "--accent-deep": "#b33400", "--accent-soft": "#fff0e8", "--amber": "#ff8a1d", "--amber-soft": "#fff2df" },
+            dark: { "--accent": "#ff6a24", "--accent-deep": "#ffb38f", "--accent-soft": "#351a0c", "--amber": "#ffae4d", "--amber-soft": "#36230d" },
           },
         },
       },

@@ -176,6 +176,7 @@ export function AccountPanel({
   themeSource,
   themeAccent,
   themeChrome,
+  themeCustomColor,
   themeCanvas,
   themeDensity,
   adminRoles,
@@ -184,6 +185,7 @@ export function AccountPanel({
   onSetThemeSource,
   onSetThemeAccent,
   onSetThemeChrome,
+  onSetThemeCustomColor,
   onSetThemeCanvas,
   onSetThemeDensity,
   onLogout,
@@ -201,6 +203,7 @@ export function AccountPanel({
   themeSource: ThemeSource;
   themeAccent: ThemeAccent;
   themeChrome: ThemeChrome;
+  themeCustomColor: string;
   themeCanvas: ThemeCanvas;
   themeDensity: ThemeDensity;
   adminRoles: string[];
@@ -209,6 +212,7 @@ export function AccountPanel({
   onSetThemeSource: (source: ThemeSource) => void;
   onSetThemeAccent: (accent: ThemeAccent) => void;
   onSetThemeChrome: (chrome: ThemeChrome) => void;
+  onSetThemeCustomColor: (color: string) => void;
   onSetThemeCanvas: (canvas: ThemeCanvas) => void;
   onSetThemeDensity: (density: ThemeDensity) => void;
   onLogout: () => void;
@@ -280,11 +284,13 @@ export function AccountPanel({
             themeSource={themeSource}
             themeAccent={themeAccent}
             themeChrome={themeChrome}
+            themeCustomColor={themeCustomColor}
             themeCanvas={themeCanvas}
             themeDensity={themeDensity}
             onSetThemeSource={onSetThemeSource}
             onSetThemeAccent={onSetThemeAccent}
             onSetThemeChrome={onSetThemeChrome}
+            onSetThemeCustomColor={onSetThemeCustomColor}
             onSetThemeCanvas={onSetThemeCanvas}
             onSetThemeDensity={onSetThemeDensity}
           />

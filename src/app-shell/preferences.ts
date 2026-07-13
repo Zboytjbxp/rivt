@@ -14,6 +14,7 @@ export const THEME_ACCENT_STORAGE_KEY = `${brandConfig.appSlug}-theme-accent`;
 export const THEME_CHROME_STORAGE_KEY = `${brandConfig.appSlug}-theme-chrome`;
 export const THEME_CANVAS_STORAGE_KEY = `${brandConfig.appSlug}-theme-canvas`;
 export const THEME_DENSITY_STORAGE_KEY = `${brandConfig.appSlug}-theme-density`;
+export const THEME_CUSTOM_COLOR_STORAGE_KEY = `${brandConfig.appSlug}-theme-custom-color`;
 export const AUTH_MODE_KEY = `${brandConfig.appSlug}-auth-mode`;
 
 export function readThemePreference(): ThemeMode {
@@ -79,6 +80,17 @@ export function readThemeCanvasPreference(): ThemeCanvas {
 
 export function readThemeDensityPreference(): ThemeDensity {
   return readChoice(THEME_DENSITY_STORAGE_KEY, brandConfig.theme.appearance.densities, "field");
+}
+
+export function readThemeCustomColorPreference(): string {
+  if (typeof window === "undefined") return "#ff4b00";
+  try {
+    const stored = window.localStorage.getItem(THEME_CUSTOM_COLOR_STORAGE_KEY);
+    if (stored && /^#[0-9a-f]{6}$/i.test(stored)) return stored.toLowerCase();
+  } catch {
+    // Keep the default when storage is unavailable.
+  }
+  return "#ff4b00";
 }
 
 export function readThemeSourcePreference(): "system" | ThemeMode {

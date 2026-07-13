@@ -10,6 +10,18 @@ Status values:
 
 Evidence must eventually link to implementation, automated tests, manual acceptance proof, and deployed build.
 
+## Traceability Addendum - 2026-07-12 Field Kit Themes (Local Verification)
+
+- `GA-UX-003` gains a clearer personal-preference path: users select a familiar
+  Field Kit in one tap or choose their own tool color, while detailed visual
+  controls stay available without being the primary decision.
+- `GA-UX-006` gains mobile preference evidence: Field Kit selection applies the
+  shared application shell immediately, and mobile smoke verifies the selected
+  blue/black kit updates document-level accent, chrome, canvas, and density
+  without horizontal overflow.
+- `GA-OPS-008` remains production-pending for this client-only packet. No
+  production database, authentication, or billing behavior changes.
+
 ## Traceability Addendum - 2026-07-12 Appearance Studio (Local Verification)
 
 - `GA-UX-003` gains clearer account-preference evidence: the Account drawer

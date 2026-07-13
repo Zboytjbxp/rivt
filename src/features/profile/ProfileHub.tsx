@@ -118,11 +118,13 @@ interface ProfileHubProps {
   themeSource: ThemeSource;
   themeAccent: ThemeAccent;
   themeChrome: ThemeChrome;
+  themeCustomColor: string;
   themeCanvas: ThemeCanvas;
   themeDensity: ThemeDensity;
   onSetThemeSource: (source: ThemeSource) => void;
   onSetThemeAccent: (accent: ThemeAccent) => void;
   onSetThemeChrome: (chrome: ThemeChrome) => void;
+  onSetThemeCustomColor: (color: string) => void;
   onSetThemeCanvas: (canvas: ThemeCanvas) => void;
   onSetThemeDensity: (density: ThemeDensity) => void;
   onLogout: () => void;
@@ -1220,11 +1222,13 @@ export function ProfileHub({
   themeSource,
   themeAccent,
   themeChrome,
+  themeCustomColor,
   themeCanvas,
   themeDensity,
   onSetThemeSource,
   onSetThemeAccent,
   onSetThemeChrome,
+  onSetThemeCustomColor,
   onSetThemeCanvas,
   onSetThemeDensity,
   onLogout,
@@ -1784,11 +1788,13 @@ export function ProfileHub({
             themeSource={themeSource}
             themeAccent={themeAccent}
             themeChrome={themeChrome}
+            themeCustomColor={themeCustomColor}
             themeCanvas={themeCanvas}
             themeDensity={themeDensity}
             onSetThemeSource={onSetThemeSource}
             onSetThemeAccent={onSetThemeAccent}
             onSetThemeChrome={onSetThemeChrome}
+            onSetThemeCustomColor={onSetThemeCustomColor}
             onSetThemeCanvas={onSetThemeCanvas}
             onSetThemeDensity={onSetThemeDensity}
           />

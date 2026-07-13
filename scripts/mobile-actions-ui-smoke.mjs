@@ -450,21 +450,18 @@ async function runMobileFlow(page) {
   await page.getByRole("dialog", { name: "Settings" }).waitFor({ timeout: 15_000 });
   await assertControlCenterClickable(page, ".account-signout-btn", "account sign-out button");
   await page.locator(".appearance-studio-launcher").click();
-  const appearanceDialog = page.getByRole("dialog", { name: "Appearance studio" });
+  const appearanceDialog = page.getByRole("dialog", { name: "Field kit" });
   await appearanceDialog.waitFor({ timeout: 15_000 });
-  assert.equal(await appearanceDialog.getByRole("button", { name: /accent$/i }).count(), 5, "Appearance should expose five original RIVT accents, not vague swatches");
-  await appearanceDialog.getByRole("button", { name: "Use Harbor blue accent" }).click();
-  await appearanceDialog.getByRole("button", { name: "Use Deep navy chrome" }).click();
-  await appearanceDialog.getByRole("button", { name: "Use Concrete canvas" }).click();
-  await appearanceDialog.getByRole("button", { name: "Use Compact density" }).click();
-  assert.equal(await page.evaluate(() => document.documentElement.dataset.themeAccent), "harborBlue", "Selecting an accent should update the document immediately");
-  assert.equal(await page.evaluate(() => document.documentElement.dataset.themeChrome), "navy", "Chrome should be separately selectable");
-  assert.equal(await page.evaluate(() => document.documentElement.dataset.themeCanvas), "concrete", "Canvas should be separately selectable");
-  assert.equal(await page.evaluate(() => document.documentElement.dataset.themeDensity), "compact", "Density should be separately selectable");
+  assert.equal(await appearanceDialog.getByRole("button", { name: /field kit$/i }).count(), 6, "Appearance should expose six familiar tool-color field kits");
+  await appearanceDialog.getByRole("button", { name: "Use Blue / black field kit" }).click();
+  assert.equal(await page.evaluate(() => document.documentElement.dataset.themeAccent), "harborBlue", "Selecting a field kit should update the accent immediately");
+  assert.equal(await page.evaluate(() => document.documentElement.dataset.themeChrome), "navy", "A field kit should update the real application chrome");
+  assert.equal(await page.evaluate(() => document.documentElement.dataset.themeCanvas), "clean", "A field kit should update the working surface");
+  assert.equal(await page.evaluate(() => document.documentElement.dataset.themeDensity), "field", "A field kit should restore glove-friendly density");
   assert.equal(
     await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue("--nav").trim()),
     "#102a38",
-    "Appearance chrome should update the whole application frame, not only buttons",
+    "Field kit chrome should update the whole application frame, not only buttons",
   );
   await assertNoHorizontalOverflow(page, "Appearance studio");
   await page.screenshot({ path: path.join(screenshotDir, "mobile-appearance-studio.png"), fullPage: false });
