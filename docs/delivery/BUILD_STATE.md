@@ -2,12 +2,12 @@
 
 Last updated: 2026-07-13 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Packets 32-35 are aggregate verified as one release candidate.
-Focused Work and Camera, Tools subtraction, Shop Talk hierarchy, and the entry
-and onboarding return path passed the complete local release gate.
+Current phase: Packets 32-35 are deployed and production monitored. Focused
+Work and Camera, Tools subtraction, Shop Talk hierarchy, and the entry and
+onboarding return path passed the complete local and production release gates.
 Active packet: `docs/delivery/packets/35_ENTRY_ONBOARDING_RETURN_PATH.md`
 Repository branch: `codex/onboarding-return-path`
-Production feature release commit: `210f5d17581ed1c83ed2218be96d92093fe8de30`
+Production feature release commit: `b2bc306089d8320517110fc3361615c6df4a8dc8`
 
 ## Packets 32-35 - Aggregate Release Verification
 
@@ -22,10 +22,15 @@ Production feature release commit: `210f5d17581ed1c83ed2218be96d92093fe8de30`
   hierarchy: two core Tools cards plus one Utilities drawer, Camera and Heavy
   16th in Field shortcuts, a labeled Shop Talk Post command, and the decisive
   entry headline.
-- Remaining boundary: merge, production deployment/monitoring, and physical
-  one-handed review on the founder's phones.
+- Production health served exact feature source
+  `b2bc306089d8320517110fc3361615c6df4a8dc8` with ready migration
+  `0026_standalone_projects`, PostgreSQL/S3-compatible storage, configured
+  Sentry and Web Push, and matching-job alerts enabled. The expected-source
+  synthetic monitor passed with controls off, seven anonymous private-route
+  checks, and a 563 ms duration.
+- Remaining boundary: physical one-handed review on the founder's phones.
 
-## Packet 35 - Entry, Login, and Onboarding Return Path (Aggregate Verified)
+## Packet 35 - Entry, Login, and Onboarding Return Path (Production Verified)
 
 - One decisive entry replaces the low-information feature carousel and names
   Work, proof, trade community, and field tools together.
@@ -33,8 +38,9 @@ Production feature release commit: `210f5d17581ed1c83ed2218be96d92093fe8de30`
   viewport; Login has an explicit RIVT overview return path.
 - Post-signup setup keeps its real task progression but removes instructional
   filler and uses a stable one-handed Back/Next row.
-- Verification passed individually and in the aggregate release gate.
-- Remaining boundary: physical-device review and production deployment.
+- Verification passed individually, in the aggregate release gate, and in the
+  exact-source production monitor.
+- Remaining boundary: physical-device review.
 
 ## Packet 34 - Shop Talk Hierarchy (Local Verification)
 

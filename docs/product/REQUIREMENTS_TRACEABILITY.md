@@ -1153,3 +1153,9 @@ Evidence must eventually link to implementation, automated tests, manual accepta
   entry/login/preview UI, mobile-actions UI, zero-vulnerability production
   dependency audit, diff check, and all 19 freshly reset PostgreSQL integration
   suites passed.
+- `GA-OPS-008` gains production evidence: health served exact feature source
+  `b2bc306089d8320517110fc3361615c6df4a8dc8` with ready migration
+  `0026_standalone_projects`, PostgreSQL/S3-compatible storage, configured
+  Sentry and Web Push, and matching-job alerts enabled. The expected-source
+  monitor passed with controls off, seven anonymous private-route checks, and
+  a 563 ms duration.

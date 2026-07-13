@@ -1,6 +1,6 @@
 # Packet 35 - Entry, Login, and Onboarding Return Path
 
-Status: aggregate verified; awaiting production deployment
+Status: production verified
 
 ## Objective
 
@@ -45,6 +45,12 @@ continues through both contractor and tradesperson sample workspaces.
 The complete branch gate also proves the Packet 32-34 Work, Camera, Tools, and
 Shop Talk changes remain compatible with authentication, database-backed
 records, and the established mobile flows.
+
+Production health served exact feature source
+`b2bc306089d8320517110fc3361615c6df4a8dc8`; the expected-source synthetic
+monitor passed with PostgreSQL/S3-compatible storage, Sentry, Web Push,
+matching-job alerts, operational controls, and seven anonymous private-route
+checks healthy.
 
 ## Boundary
 
