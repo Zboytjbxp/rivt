@@ -51,4 +51,11 @@ window without output.
 
 ## Production Evidence
 
-Pending merge and deploy.
+- `codex/field-kit-themes` was fast-forwarded into `master` at
+  `d260da9a517f7660c26bd42a5ddb3740dbb52630`.
+- Live `/api/health` returned that exact source commit with ready migration
+  `0026_standalone_projects`, PostgreSQL, S3-compatible object storage,
+  configured Sentry, and configured Web Push.
+- `EXPECTED_SOURCE_COMMIT=d260da9a517f7660c26bd42a5ddb3740dbb52630 npm run
+  monitor:production` passed with controls off and seven anonymous private-route
+  checks in 584 ms.

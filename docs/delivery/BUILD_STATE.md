@@ -2,13 +2,15 @@
 
 Last updated: 2026-07-12 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Packet 30 Field Kit Themes is locally verified. It replaces the
+Current phase: Packet 30 Field Kit Themes is production verified. It replaces the
 Appearance Studio's generic composition-first presentation with a tool-first
 Field Kit selector and an exact custom tool-color option.
 Active packet: `docs/delivery/packets/30_FIELD_KIT_THEMES.md`
-Repository branch: `codex/field-kit-themes`
-Production feature release commit: pending merge and deploy. The current live
-baseline remains `36f0735d45922e8a3cc49fb8dc9d255896aade5d`.
+Repository branch: `master`
+Production feature release commit: `d260da9a517f7660c26bd42a5ddb3740dbb52630`
+verified with live `/api/health` and `npm run monitor:production`; docs-only
+evidence commits may supersede the served build SHA without changing runtime
+behavior.
 
 ## Packet 30 - Field Kit Themes (Local Verification)
 
@@ -22,8 +24,13 @@ baseline remains `36f0735d45922e8a3cc49fb8dc9d255896aade5d`.
 - Local verification passed: build, lint, 53/53 unit tests, E2E, mobile-action
   UI smoke, dependency audit, and diff check. This client-only packet does not
   claim a database integration pass.
-- Remaining boundary: merge, live source confirmation, production monitor, and
-  physical device checks before a future paid appearance decision.
+- Remaining boundary: physical device checks before a future paid appearance
+  decision.
+- Production evidence: `master` serves exact source
+  `d260da9a517f7660c26bd42a5ddb3740dbb52630`; PostgreSQL, S3-compatible
+  storage, Sentry, and Web Push remain configured, ready migration is
+  `0026_standalone_projects`, and the expected-source production monitor
+  passed with seven anonymous private-route checks in 584 ms.
 
 ## Packet 29 - Appearance Studio (Local Verification)
 

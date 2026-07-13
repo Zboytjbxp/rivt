@@ -19,8 +19,12 @@ Evidence must eventually link to implementation, automated tests, manual accepta
   shared application shell immediately, and mobile smoke verifies the selected
   blue/black kit updates document-level accent, chrome, canvas, and density
   without horizontal overflow.
-- `GA-OPS-008` remains production-pending for this client-only packet. No
-  production database, authentication, or billing behavior changes.
+- `GA-OPS-008` gains production evidence: `master` serves exact source
+  `d260da9a517f7660c26bd42a5ddb3740dbb52630` with ready migration
+  `0026_standalone_projects`, PostgreSQL/S3-compatible storage, configured
+  Sentry, and configured Web Push. The expected-source monitor passed with
+  seven anonymous private-route checks in 584 ms. No production database,
+  authentication, or billing behavior changed.
 
 ## Traceability Addendum - 2026-07-12 Appearance Studio (Local Verification)
 
