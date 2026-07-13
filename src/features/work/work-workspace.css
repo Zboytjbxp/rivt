@@ -1256,6 +1256,34 @@
     display: flex;
   }
 
+  .v2-work-page.is-focused-workspace > :is(
+    .v2-work-header,
+    .v2-work-create-fab,
+    .v2-active-work-strip,
+    .v2-section-tabs,
+    .v2-mobile-work-select,
+    .v2-work-toolbar,
+    .v2-saved-search-notice,
+    .v2-saved-searches,
+    .v2-filter-panel,
+    .v2-work-error
+  ) {
+    display: none;
+  }
+
+  .v2-work-page.is-focused-workspace .v2-work-layout {
+    scroll-margin-top: calc(var(--v2-topbar-height) + 10px);
+  }
+
+  .v2-detail-content.is-active-today {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .v2-detail-content.is-active-today > .v2-match-panel.is-today {
+    order: -10;
+  }
+
   .v2-detail-back {
     display: inline-flex;
     align-items: center;

@@ -303,6 +303,13 @@ function CameraCapture({
       )}
       <canvas ref={canvasRef} style={{ display: "none" }} aria-hidden="true" />
       <div className="v2-camera-bottom-controls">
+        <div className="v2-camera-bottom-context">
+          <span>
+            <small>Saving to</small>
+            <strong>{contextLabel}</strong>
+          </span>
+          <button type="button" onClick={onClose} disabled={saveState === "saving"}>Done</button>
+        </div>
         {onCaptureIntentChange ? (
           <div className="v2-camera-intent-strip" role="group" aria-label="Capture type">
             {CAPTURE_INTENTS.map((option) => (
@@ -1044,7 +1051,7 @@ export function JobPhotosTool({ activeWork, focusedActiveWorkId = null, standalo
       {albumsError ? <p className="v2-record-notice v2-job-photos-upload-error" role="alert">{albumsError}</p> : null}
 
       {recordWork ? (
-        <section className="v2-camera-home-panel v2-camera-live-command">
+        <section className="v2-camera-home-panel v2-camera-live-command v2-camera-context-card">
           <div className="v2-job-photos-active-job-info">
             <span className="v2-job-photos-active-badge">Active job</span>
             <h2>{recordWork.job?.title ?? "Accepted work"}</h2>
@@ -1052,24 +1059,24 @@ export function JobPhotosTool({ activeWork, focusedActiveWorkId = null, standalo
               {recordWork.job?.publicLocation.city ?? "Project"} - {projectPhotos.length} {projectPhotos.length === 1 ? "photo" : "photos"}
             </small>
           </div>
-          <p className="v2-camera-live-command-copy">Photos save to this job's private project feed.</p>
+          <p className="v2-camera-live-command-copy">Live job · every capture appears in this workspace.</p>
           {projectError ? <p className="v2-record-notice v2-job-photos-upload-error" role="alert">{projectError}</p> : null}
         </section>
       ) : standaloneProject ? (
-        <section className="v2-camera-home-panel v2-camera-live-command">
+        <section className="v2-camera-home-panel v2-camera-live-command v2-camera-context-card">
           <div className="v2-job-photos-active-job-info">
             <span className="v2-job-photos-active-badge">Standalone project</span>
             <h2>{standaloneProject.title}</h2>
             <small>{standaloneProject.clientName || standaloneProject.locationText || "Private off-platform work"} - {standaloneProject.photoCount} {standaloneProject.photoCount === 1 ? "photo" : "photos"}</small>
           </div>
-          <p className="v2-camera-live-command-copy">Photos stay private in your RIVT account and are not shared with a marketplace job.</p>
+          <p className="v2-camera-live-command-copy">Standalone work · private to your RIVT account.</p>
         </section>
       ) : (
-        <section className="v2-camera-home-panel v2-camera-live-command">
+        <section className="v2-camera-home-panel v2-camera-live-command v2-camera-context-card">
           <div className="v2-job-photos-active-job-info">
             <span className="v2-job-photos-active-badge">Capture destination</span>
             <h2>Choose where this proof belongs</h2>
-            <small>Use an accepted RIVT job, a standalone project, or a private album.</small>
+            <small>Accepted job, standalone project, or private album.</small>
           </div>
           <button type="button" className="v2-secondary-button" onClick={onRequestContext}>
             <FolderOpen size={16} />

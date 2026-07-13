@@ -1630,8 +1630,14 @@ export function WorkWorkspace({
     return () => window.clearTimeout(timeout);
   }, [focusedJobTitle, openDetailOnMount]);
 
+  const workPageClassName = [
+    "v2-work-page",
+    role === "contractor" ? "is-contractor" : "",
+    focusedActiveWorkId && mobileDetailOpen ? "is-focused-workspace" : "",
+  ].filter(Boolean).join(" ");
+
   return (
-    <section className={role === "contractor" ? "v2-work-page is-contractor" : "v2-work-page"} aria-label="Work">
+    <section className={workPageClassName} aria-label="Work">
       {reasonPrompt && (
         <div className="v2-reason-backdrop" onClick={() => setReasonPrompt(null)}>
           <div ref={reasonTrapRef} className="v2-reason-dialog" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
@@ -1832,7 +1838,7 @@ export function WorkWorkspace({
             ) : null}
 
             {detailTab === "overview" ? (
-              <div className="v2-detail-content">
+              <div className={activeWork && workspaceTab === "today" ? "v2-detail-content is-active-today" : "v2-detail-content"}>
                 <p className="v2-job-description">{detailJob.summary}</p>
                 <div className="v2-detail-facts">
                   <DetailFact icon={CircleDollarSign} label="Budget" value={detailJob.pay > 0 ? money(detailJob.pay) : "Not set"} />

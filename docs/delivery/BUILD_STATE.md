@@ -2,12 +2,25 @@
 
 Last updated: 2026-07-13 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Packet 31 Appearance Simplification is production verified. It
-retires the Field Kit experiment and returns RIVT to one standard visual system
-with only System, Light, and Dark device preferences.
-Active packet: `docs/delivery/packets/31_APPEARANCE_SIMPLIFICATION.md`
-Repository branch: `master`
+Current phase: Packet 32 Daily Workspace and Camera is locally verified. It
+makes exact accepted work read as a destination on mobile and keeps Camera's
+save destination and completion action in the lower thumb zone.
+Active packet: `docs/delivery/packets/32_DAILY_WORKSPACE_CAMERA.md`
+Repository branch: `codex/daily-workspace-camera`
 Production feature release commit: `210f5d17581ed1c83ed2218be96d92093fe8de30`
+
+## Packet 32 - Daily Workspace and Camera (Local Verification)
+
+- Focused accepted work now suppresses broad Work dashboard controls on mobile
+  and puts the exact job's Today actions before general job facts.
+- Camera repeats the exact save destination beside the shutter controls and
+  adds a lower-screen Done action, preserving one-handed completion on short
+  phones.
+- Accepted-job, standalone-project, and private-album destinations remain
+  explicit; no persistence or authorization boundary changed.
+- Local verification passed: build, lint, Tools rendered UI smoke, Work
+  lifecycle UI smoke, mobile-action UI smoke, and diff check.
+- Remaining boundary: physical one-handed validation and production deployment.
 
 ## Packet 31 - Appearance Simplification (Local Verification)
 

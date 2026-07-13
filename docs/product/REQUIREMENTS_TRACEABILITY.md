@@ -10,6 +10,17 @@ Status values:
 
 Evidence must eventually link to implementation, automated tests, manual acceptance proof, and deployed build.
 
+## Traceability Addendum - 2026-07-13 Daily Workspace and Camera
+
+- `GA-UX-003` gains focused-workspace evidence: an exact accepted-work route
+  suppresses broad Work browsing chrome on mobile and presents Messages,
+  Photos, Daily log, Estimate, and Invoice before general job facts.
+- `GA-UX-006` gains one-handed Camera evidence: the exact save destination and
+  a Done action are repeated in the lower capture control zone on SE-class
+  viewports, while accepted RIVT work and standalone work remain distinct.
+- Rendered verification passed through Tools, Work lifecycle, and mobile-action
+  UI smoke suites without changing server authorization or upload ownership.
+
 ## Traceability Addendum - 2026-07-12 Field Kit Themes (Local Verification)
 
 - `GA-UX-003` gains a clearer personal-preference path: users select a familiar
