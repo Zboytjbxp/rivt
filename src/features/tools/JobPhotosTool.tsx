@@ -721,6 +721,21 @@ function PhotoGallery({
           ))}
         </div>
       )}
+
+      <nav className="v2-camera-gallery-dock" aria-label="Photo actions">
+        <button type="button" onClick={onBack}>
+          <ArrowLeft size={18} />
+          <span>{backLabel}</span>
+        </button>
+        <button type="button" onClick={() => fileRef.current?.click()} disabled={uploading}>
+          <FileUp size={18} />
+          <span>Upload</span>
+        </button>
+        <button type="button" className="v2-primary-button" onClick={() => setShowCamera(true)} disabled={uploading}>
+          <Camera size={19} />
+          <span>Take photo</span>
+        </button>
+      </nav>
     </div>
   );
 }

@@ -264,6 +264,58 @@
   min-width: 184px;
 }
 
+.v2-workspace-arrival {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 18px 4px;
+  padding: 11px 12px;
+  border: 1px solid color-mix(in srgb, var(--v2-success) 34%, var(--v2-border));
+  border-radius: var(--v2-radius-md);
+  background: color-mix(in srgb, var(--v2-success-soft) 68%, var(--v2-surface-raised));
+}
+
+.v2-workspace-arrival > div {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.v2-workspace-arrival span {
+  color: var(--v2-success);
+  font-size: 11px;
+  font-weight: var(--v2-weight-bold);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.v2-workspace-arrival strong {
+  overflow: hidden;
+  color: var(--v2-text);
+  font-size: 15px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.v2-workspace-arrival small {
+  color: var(--v2-text-muted);
+  font-size: 12px;
+}
+
+.v2-workspace-arrival > button {
+  display: inline-flex;
+  width: 40px;
+  min-width: 40px;
+  min-height: 40px;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: var(--v2-radius-md);
+  background: transparent;
+  color: var(--v2-text-muted);
+}
+
 .v2-work-layout {
   display: grid;
   grid-template-columns: minmax(320px, 0.72fr) minmax(500px, 1.28fr);

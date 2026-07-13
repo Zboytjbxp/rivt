@@ -1249,6 +1249,7 @@ export function WorkWorkspace({
   const [mobileDetailOpen, setMobileDetailOpen] = useState(() => Boolean(openDetailOnMount));
   const [detailTab, setDetailTab] = useState<DetailTab>("overview");
   const [workspaceTab, setWorkspaceTab] = useState<WorkspaceTab>(() => focusedActiveWorkId ? "today" : "job");
+  const [workspaceArrivalVisible, setWorkspaceArrivalVisible] = useState(() => Boolean(openDetailOnMount && focusedActiveWorkId));
   const [contractorSection, setContractorSection] = useState<ContractorSection>("open");
   const [activeAction, setActiveAction] = useState("");
   const [actionError, setActionError] = useState<string | null>(null);
@@ -1626,7 +1627,10 @@ export function WorkWorkspace({
 
   useEffect(() => {
     if (!openDetailOnMount || !focusedJobTitle) return;
-    const timeout = window.setTimeout(() => revealJobWorkspace(true), 0);
+    const timeout = window.setTimeout(() => {
+      setWorkspaceArrivalVisible(true);
+      revealJobWorkspace(true);
+    }, 0);
     return () => window.clearTimeout(timeout);
   }, [focusedJobTitle, openDetailOnMount]);
 
@@ -1808,6 +1812,17 @@ export function WorkWorkspace({
               <div><span className="v2-detail-trade">{detailJob.trade}</span><h2 ref={detailHeadingRef} tabIndex={-1}>{detailJob.title}</h2><p><MapPin size={14} /> {detailJob.location} · {detailJob.status === "Draft" ? "Last saved" : "Posted"} {detailJob.posted}</p></div>
               {role === "tradesperson" && detailJob.match > 0 ? <div className="v2-match-score"><strong>{detailJob.match}%</strong><span>match</span></div> : <StatusPill tone={statusTone(detailJob.status)} className={`v2-work-status status-${detailJob.status.toLowerCase()}`}>{detailJob.status}</StatusPill>}
             </header>
+
+            {activeWork && workspaceTab === "today" && workspaceArrivalVisible ? (
+              <section className="v2-workspace-arrival" role="status">
+                <div>
+                  <span>Job workspace open</span>
+                  <strong>{detailJob.title}</strong>
+                  <small>Start with photos, a daily log, or the job thread.</small>
+                </div>
+                <button type="button" onClick={() => setWorkspaceArrivalVisible(false)} aria-label="Dismiss workspace message"><X size={17} /></button>
+              </section>
+            ) : null}
 
             <nav className="v2-detail-tabs" aria-label="Job workspace">
               {workspaceTabs.map((tab) => (

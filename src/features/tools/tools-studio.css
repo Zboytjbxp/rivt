@@ -2427,16 +2427,28 @@
   }
 
   .v2-camera-action-dock {
-    grid-template-columns: minmax(0, 1fr) 48px 48px 48px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+    padding: 6px;
+  }
+
+  .v2-camera-action-dock > span {
+    display: none;
   }
 
   .v2-camera-action-dock > button {
     min-width: 0;
-    padding: 0;
+    min-height: 52px;
+    padding: 0 8px;
+    font-size: 12px;
   }
 
   .v2-camera-action-dock > button span {
-    display: none;
+    display: inline;
+  }
+
+  .v2-camera-action-dock > button.v2-primary-button {
+    min-height: 56px;
   }
 
   .v2-tools-page {
@@ -4018,6 +4030,62 @@
     padding: 12px 14px;
   }
 
+  .v2-job-photos-workbench {
+    padding-bottom: calc(86px + env(safe-area-inset-bottom));
+  }
+
+  .v2-job-photos-actions-bar .v2-tool-action-row {
+    display: none;
+  }
+
+}
+
+.v2-camera-gallery-dock {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  .v2-camera-gallery-dock {
+    position: fixed;
+    right: 8px;
+    bottom: max(8px, env(safe-area-inset-bottom));
+    left: 8px;
+    z-index: 22;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+    padding: 6px;
+    border: 1px solid color-mix(in srgb, var(--v2-border-strong) 74%, transparent);
+    border-radius: var(--v2-radius-lg);
+    background: color-mix(in srgb, var(--v2-surface-raised) 97%, transparent);
+    box-shadow: var(--v2-shadow-md);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+  }
+
+  .v2-camera-gallery-dock button {
+    display: inline-flex;
+    min-width: 0;
+    min-height: 52px;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 0 8px;
+    border: 0;
+    border-radius: var(--v2-radius-md);
+    background: var(--v2-surface-muted);
+    color: var(--v2-text);
+    font: inherit;
+    font-size: 12px;
+    font-weight: var(--v2-weight-bold);
+    white-space: nowrap;
+  }
+
+  .v2-camera-gallery-dock .v2-primary-button {
+    min-height: 56px;
+    background: var(--v2-accent);
+    color: var(--v2-on-accent);
+  }
 }
 
 /* ── Time Tracker ──────────────────────────────────────────────────────────── */

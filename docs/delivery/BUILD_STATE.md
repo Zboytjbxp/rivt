@@ -2,13 +2,26 @@
 
 Last updated: 2026-07-13 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Packet 36 is deployed and production verified.
-It makes Shop Talk notification targets exact, restores existing device-push
-subscriptions after authenticated boot, and replaces device-local reputation
-matching with server-authoritative author-earned totals.
-Active packet: `docs/delivery/packets/36_SHOP_TALK_RELIABILITY.md`
-Repository branch: `master`
+Current phase: Packet 37 is locally verified and awaiting review, merge, and
+production proof. It makes the focused accepted-work handoff visible and moves
+Camera's primary field controls into the lower thumb zone.
+Active packet: `docs/delivery/packets/37_WORKFLOW_COHERENCE_FIELD_TOOLS.md`
+Repository branch: `codex/workflow-coherence-field-tools`
 Production feature release commit: `845761451038215d855cced6080f3be7e4a84394`
+
+## Packet 37 - Workflow Coherence and Field Tool Reachability (Local Verification)
+
+- Focused accepted work now gives an explicit, dismissible arrival confirmation
+  that names the selected job and points to the exact job thread, photos, and
+  daily-log next steps instead of relying on an imperceptible scroll.
+- Mobile Camera home and gallery actions are named and held in lower-screen
+  docks; the gallery removes its duplicate top control row only on mobile and
+  reserves safe-area clearance for the dock.
+- Build, lint, unit tests, E2E, mobile-action UI smoke, production dependency
+  audit, and diff check pass locally. This worktree has no `TEST_DATABASE_URL`;
+  this client-only packet makes no database-integration claim.
+- Remaining boundary: merge, deploy, production health proof, and a physical
+  one-handed gallery capture/upload check on iPhone and Android.
 
 ## Packet 36 - Shop Talk Reliability (Production Verified)
 

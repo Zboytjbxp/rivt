@@ -1175,3 +1175,17 @@ Evidence must eventually link to implementation, automated tests, manual accepta
   Shop Talk integration passed. The full integration wrapper exceeded its
   local 15-minute limit without a failing assertion, so aggregate integration
   success is intentionally not claimed for this packet.
+
+## Traceability Addendum - 2026-07-13 Workflow Coherence and Field Tools
+
+- `GA-UX-003` gains visible exact-destination feedback: focused accepted work
+  identifies the named job workspace after navigation and presents the next
+  useful actions without requiring a user to infer that a scroll occurred.
+- `GA-UX-006` gains one-handed Camera reachability: mobile Camera home and
+  gallery actions are named lower-screen controls with safe-area clearance;
+  the mobile smoke asserts the save destination, project feed, and capture
+  controls remain visible at a compact field viewport.
+- Local evidence: build, lint, unit tests, E2E, mobile-action UI smoke,
+  production dependency audit, and diff check pass. No server contract,
+  database schema, persistence, or authorization behavior changed, so this
+  client-only packet does not claim database integration coverage.

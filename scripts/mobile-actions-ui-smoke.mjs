@@ -399,6 +399,10 @@ async function runMobileFlow(page) {
   const cameraAction = page.getByLabel("Camera actions").getByRole("button", { name: "Capture", exact: true });
   const cameraActionBox = await cameraAction.boundingBox();
   assert.ok(cameraActionBox && cameraActionBox.y + cameraActionBox.height <= 844, `Camera action should stay in the thumb-zone viewport: ${JSON.stringify(cameraActionBox)}`);
+  for (const actionName of ["Destination", "Open project feed", "Capture"]) {
+    const action = page.getByLabel("Camera actions").getByRole("button", { name: actionName, exact: true });
+    assert.equal(await action.isVisible(), true, `${actionName} should remain a visible one-handed Camera control`);
+  }
   await assertNoHorizontalOverflow(page, "Standalone camera app");
   await page.screenshot({ path: path.join(screenshotDir, "mobile-camera-standalone-context.png"), fullPage: true });
   await page.getByLabel("Camera").getByRole("button", { name: "Tools" }).click();
