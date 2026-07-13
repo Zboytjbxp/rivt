@@ -51,3 +51,14 @@ without output in this environment.
 Legacy Field Kit CSS and configuration definitions are inert after this packet:
 the app no longer reads or applies them. Their deletion is a separate
 deletion-only cleanup so this product decision stays small and reversible.
+
+## Production Evidence
+
+- `codex/appearance-simplification` was fast-forwarded into `master` at
+  `210f5d17581ed1c83ed2218be96d92093fe8de30`.
+- Live `/api/health` returned that exact source commit with ready migration
+  `0026_standalone_projects`, PostgreSQL, S3-compatible object storage,
+  configured Sentry, and configured Web Push.
+- `EXPECTED_SOURCE_COMMIT=210f5d17581ed1c83ed2218be96d92093fe8de30 npm run
+  monitor:production` passed with controls off, matching-job alerts enabled,
+  seven anonymous private-route checks, and a 572 ms duration.

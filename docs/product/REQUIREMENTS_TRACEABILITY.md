@@ -1103,4 +1103,7 @@ Evidence must eventually link to implementation, automated tests, manual accepta
   custom state cannot apply after the release.
 - Local evidence: build, lint, 53/53 unit tests, E2E, mobile-action UI smoke,
   production dependency audit, and diff check passed. This client-only packet
-  makes no new database-backed claim; production evidence is pending merge.
+  makes no new database-backed claim. Production health serves exact source
+  `210f5d17581ed1c83ed2218be96d92093fe8de30` with ready migration
+  `0026_standalone_projects`; the expected-source monitor passed with seven
+  anonymous private-route checks in 572 ms.

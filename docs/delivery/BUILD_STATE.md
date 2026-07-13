@@ -2,12 +2,12 @@
 
 Last updated: 2026-07-13 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Packet 31 Appearance Simplification is locally verified. It
+Current phase: Packet 31 Appearance Simplification is production verified. It
 retires the Field Kit experiment and returns RIVT to one standard visual system
 with only System, Light, and Dark device preferences.
 Active packet: `docs/delivery/packets/31_APPEARANCE_SIMPLIFICATION.md`
-Repository branch: `codex/appearance-simplification`
-Production feature release commit: pending merge and production verification.
+Repository branch: `master`
+Production feature release commit: `210f5d17581ed1c83ed2218be96d92093fe8de30`
 
 ## Packet 31 - Appearance Simplification (Local Verification)
 
@@ -21,8 +21,12 @@ Production feature release commit: pending merge and production verification.
 - Local verification passed: build, lint, 53/53 unit tests, E2E,
   mobile-action UI smoke, dependency audit, and diff check. This client-only
   packet does not claim a database integration pass.
-- Remaining boundary: merge, live health verification, and a production monitor
-  against the served source commit.
+- Production evidence: `master` serves exact source
+  `210f5d17581ed1c83ed2218be96d92093fe8de30`; live health reports ready
+  migration `0026_standalone_projects`, PostgreSQL/S3-compatible storage,
+  configured Sentry, and configured Web Push. The expected-source production
+  monitor passed with matching alerts enabled, controls off, seven anonymous
+  private-route checks, and a 572 ms duration.
 
 ## Packet 30 - Field Kit Themes (Local Verification)
 
