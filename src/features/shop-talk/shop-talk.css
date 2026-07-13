@@ -3224,6 +3224,22 @@ html[data-rivt-compact-device="true"] .shop-talk-community-layout .shop-talk-sea
   color: var(--v2-accent);
 }
 
+.shop-talk-compose-trigger {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: var(--v2-radius-md);
+  background: var(--v2-accent);
+  color: var(--v2-on-accent);
+  font: inherit;
+  font-size: var(--v2-text-sm);
+  font-weight: var(--v2-weight-strong);
+}
+
 .shop-talk-filter-panel {
   display: grid;
   gap: 14px;
@@ -3458,27 +3474,6 @@ html[data-rivt-compact-device="true"] .shop-talk-community-layout .shop-talk-sea
   font-style: normal;
 }
 
-.shop-talk-fab {
-  position: fixed;
-  right: 16px;
-  bottom: calc(78px + env(safe-area-inset-bottom));
-  z-index: 30;
-  min-height: 48px;
-  padding: 0 18px;
-  border: 0;
-  border-radius: var(--v2-radius-pill);
-  background: var(--v2-accent);
-  color: var(--v2-on-accent);
-  box-shadow: 0 10px 24px color-mix(in srgb, var(--v2-accent) 28%, transparent);
-  font: inherit;
-  font-size: var(--v2-text-sm);
-  font-weight: var(--v2-weight-bold);
-}
-
-.shop-talk-feed-panel:has(.shop-talk-fab) {
-  padding-bottom: calc(112px + env(safe-area-inset-bottom));
-}
-
 .news-command {
   display: flex;
   align-items: start;
@@ -3516,7 +3511,6 @@ html[data-rivt-compact-device="true"] .shop-talk-community-layout .shop-talk-sea
 
   .shop-talk-feed-panel { grid-column: 1; }
   .shop-talk-sidebar { grid-column: 2; grid-row: 1; }
-  .shop-talk-fab { right: 32px; bottom: 28px; }
 }
 
 @media (max-width: 640px) {
@@ -3527,4 +3521,15 @@ html[data-rivt-compact-device="true"] .shop-talk-community-layout .shop-talk-sea
   .community-create-actions > * { flex: 1; }
   .community-directory-row { align-items: center; }
   .community-directory-copy em { display: none; }
+  .shop-talk-community-layout.community-open > .shop-talk-sidebar { order: 2; }
+  .shop-talk-community-layout.community-open > .shop-talk-feed-panel { order: 3; }
+  .shop-talk-filter-trigger {
+    width: 44px;
+    padding: 0;
+    font-size: 0;
+  }
+  .shop-talk-compose-trigger {
+    min-width: 72px;
+    padding: 0 12px;
+  }
 }

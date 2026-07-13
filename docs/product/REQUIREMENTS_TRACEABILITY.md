@@ -1127,3 +1127,13 @@ Evidence must eventually link to implementation, automated tests, manual accepta
 - No tool record, deep link, active-work context, or authorization behavior was
   removed. This packet changes discovery hierarchy only.
 - Local evidence: build, lint, rendered Tools UI smoke, and diff check passed.
+
+## Traceability Addendum - 2026-07-13 Shop Talk Hierarchy
+
+- `GA-UX-005` gains a visible feed-level Post command, actionable empty feeds,
+  direct community creation, and exact community identity before its mobile
+  feed.
+- Existing audience authorization, memberships, posts, answers, reactions,
+  reports, moderation, and live-news retrieval remain server-owned.
+- Local evidence: build, lint, rendered Shop Talk/Trade News UI smoke, and diff
+  check passed.

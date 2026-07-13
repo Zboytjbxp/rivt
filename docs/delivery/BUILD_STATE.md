@@ -2,12 +2,23 @@
 
 Last updated: 2026-07-13 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Packet 33 Tools Subtraction is locally verified. It removes
-repeated launchers and consolidates secondary helpers into one Utilities
-drawer while preserving shortcuts, records, and deep links.
-Active packet: `docs/delivery/packets/33_TOOLS_SUBTRACTION.md`
-Repository branch: `codex/tools-subtraction`
+Current phase: Packet 34 Shop Talk Hierarchy is locally verified. It makes
+posting, community discovery and creation, exact community pages, and Trade
+News read as one deliberate community product.
+Active packet: `docs/delivery/packets/34_SHOP_TALK_HIERARCHY.md`
+Repository branch: `codex/shop-talk-standalone`
 Production feature release commit: `210f5d17581ed1c83ed2218be96d92093fe8de30`
+
+## Packet 34 - Shop Talk Hierarchy (Local Verification)
+
+- A labeled Post command replaces the floating Ask control, and empty feeds
+  provide the same clear next step.
+- Community discovery and creation are explicit; selected community identity
+  precedes the scoped feed on mobile.
+- Feed, Communities, and Trade News retain their real server-owned behavior.
+- Local verification passed: build, lint, rendered Shop Talk/Trade News smoke,
+  and diff check.
+- Remaining boundary: physical-device review and production deployment.
 
 ## Packet 33 - Tools Subtraction (Local Verification)
 

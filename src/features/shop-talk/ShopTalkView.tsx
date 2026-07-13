@@ -1176,6 +1176,10 @@ export function ShopTalkView({
                   <SlidersHorizontal size={16} />
                   Filters
                 </button>
+                <button type="button" className="shop-talk-compose-trigger" onClick={() => setNewPostOpen(true)}>
+                  <Plus size={17} />
+                  <span>Post</span>
+                </button>
               </div>
 
               {filtersOpen && (
@@ -1281,9 +1285,9 @@ export function ShopTalkView({
                   <EmptyState
                     icon={MessageCircle}
                     title="No matching Shop Talk posts"
-                    description={talkQuery ? "Clear the search or broaden the trade filter." : "Use the Ask button when you're ready to start the first post in this lane."}
-                    actionLabel={talkQuery ? "Clear search" : undefined}
-                    onAction={talkQuery ? () => setTalkQuery("") : undefined}
+                    description={talkQuery ? "Clear the search or broaden the trade filter." : "Start the first useful post in this community."}
+                    actionLabel={talkQuery ? "Clear search" : "Create post"}
+                    onAction={talkQuery ? () => setTalkQuery("") : () => setNewPostOpen(true)}
                   />
                 ) : sortedPosts.map((post) => (
                   <TradePostCard
@@ -1297,18 +1301,14 @@ export function ShopTalkView({
                   />
                 ))}
               </div>
-              <button type="button" className="shop-talk-fab" onClick={() => setNewPostOpen(true)}>
-                <Plus size={18} />
-                Ask
-              </button>
             </>
           ) : activeTab === "communities" ? (
             <section className="shop-talk-community-directory" aria-label="Communities">
               <header className="community-directory-header">
                 <div>
                   <span>Communities</span>
-                  <h2>Find your crew</h2>
-                  <p>Join the rooms where the work gets talked through.</p>
+                  <h2>Discover communities</h2>
+                  <p>Follow a trade, place, specialty, or work topic.</p>
                 </div>
                 {canCreateCommunity && (
                   <button type="button" className="v2-primary-button community-create-button" onClick={() => setCommunityCreateOpen((open) => !open)} aria-expanded={communityCreateOpen}>

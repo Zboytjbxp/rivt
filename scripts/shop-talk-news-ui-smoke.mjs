@@ -296,12 +296,21 @@ try {
     await page.goto(`${baseUrl}/app/network/talk`, { waitUntil: "networkidle" });
     await page.getByLabel("Shop Talk community").getByRole("button", { name: "Feed" }).waitFor({ timeout: 15_000 });
     await page.getByRole("button", { name: "Communities" }).click();
-    await page.getByRole("heading", { name: "Find your crew" }).waitFor({ timeout: 15_000 });
+    await page.getByRole("heading", { name: "Discover communities" }).waitFor({ timeout: 15_000 });
     await page.getByRole("button", { name: "Create" }).waitFor({ timeout: 15_000 });
     await assertNoHorizontalOverflow(page);
     await prepareScreenshot(page);
     await page.screenshot({ path: path.join(screenshotDir, `${viewport.name}-communities.png`), fullPage: true });
+    await page.locator(".community-directory-main").filter({ hasText: "Carpentry Talk" }).first().click();
+    await page.getByRole("heading", { name: "Carpentry Talk", exact: true }).waitFor({ timeout: 15_000 });
+    if (viewport.name === "mobile") {
+      const communityHeaderBox = await page.locator(".community-page-card").boundingBox();
+      const scopedFeedBox = await page.locator(".shop-talk-feed-panel").boundingBox();
+      assert.ok(communityHeaderBox && scopedFeedBox && communityHeaderBox.y < scopedFeedBox.y, "selected community identity should precede its mobile feed");
+    }
+    await page.getByRole("button", { name: "All communities" }).click();
     await page.getByRole("button", { name: "Feed" }).click();
+    await page.getByRole("button", { name: "Post", exact: true }).waitFor({ timeout: 15_000 });
     await page.locator(".trade-post").filter({ hasText: "mid-job scope change" }).first().waitFor({ timeout: 15_000 });
     await page.getByText(/OSHA heat rule/i).waitFor({ timeout: 15_000 });
     const talkSearch = page.locator('.shop-talk-search input[type="search"]');
