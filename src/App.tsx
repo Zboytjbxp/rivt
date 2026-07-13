@@ -584,18 +584,8 @@ function App() {
   const shopTalkPostsRequestRef = useRef(0);
   const communitiesRequestRef = useRef(0);
   const {
-    handleSetThemeAccent,
-    handleSetThemeCanvas,
-    handleSetThemeChrome,
-    handleSetThemeCustomColor,
-    handleSetThemeDensity,
     handleSetThemeSource,
     handleToggleTheme,
-    themeAccent,
-    themeCanvas,
-    themeChrome,
-    themeCustomColor,
-    themeDensity,
     themeMode,
     themeSource,
   } = useAppTheme();
@@ -2599,17 +2589,7 @@ function App() {
             feedbackCount={feedbackItems.length}
             themeMode={themeMode}
             themeSource={themeSource}
-            themeAccent={themeAccent}
-            themeChrome={themeChrome}
-            themeCustomColor={themeCustomColor}
-            themeCanvas={themeCanvas}
-            themeDensity={themeDensity}
             onSetThemeSource={handleSetThemeSource}
-            onSetThemeAccent={handleSetThemeAccent}
-            onSetThemeChrome={handleSetThemeChrome}
-            onSetThemeCustomColor={handleSetThemeCustomColor}
-            onSetThemeCanvas={handleSetThemeCanvas}
-            onSetThemeDensity={handleSetThemeDensity}
             onLogout={handleLogout}
             onSaveProfile={handleSaveProfile}
             onSetProfileVisibility={handleSetProfileVisibility}
@@ -2681,11 +2661,6 @@ function App() {
           safetyModuleCount={safetyQuizData.length}
           themeMode={themeMode}
           themeSource={themeSource}
-          themeAccent={themeAccent}
-          themeChrome={themeChrome}
-          themeCustomColor={themeCustomColor}
-          themeCanvas={themeCanvas}
-          themeDensity={themeDensity}
           adminRoles={canonicalAccount?.adminRoles ?? []}
           communityBadges={communityBadgeLabels(communityPosts, accountProfile.displayName)}
           shoutOutCount={
@@ -2696,11 +2671,6 @@ function App() {
             ).length
           }
           onSetThemeSource={handleSetThemeSource}
-          onSetThemeAccent={handleSetThemeAccent}
-          onSetThemeChrome={handleSetThemeChrome}
-          onSetThemeCustomColor={handleSetThemeCustomColor}
-          onSetThemeCanvas={handleSetThemeCanvas}
-          onSetThemeDensity={handleSetThemeDensity}
           onLogout={handleLogout}
           onClose={() => setAccountOpen(false)}
           onNavigate={handleNavigate}

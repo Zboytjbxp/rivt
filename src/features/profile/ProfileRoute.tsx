@@ -1,4 +1,4 @@
-import type { ThemeAccent, ThemeCanvas, ThemeChrome, ThemeDensity, ThemeMode, TrialPlan } from "../../brandConfig";
+import type { ThemeMode, TrialPlan } from "../../brandConfig";
 import type { ThemeSource } from "../../app-shell/useAppTheme";
 import type { Role, Trade } from "../../types";
 import { useCallback, useEffect, useState } from "react";
@@ -63,17 +63,7 @@ interface ProfileRouteProps {
   feedbackCount: number;
   themeMode: ThemeMode;
   themeSource: ThemeSource;
-  themeAccent: ThemeAccent;
-  themeChrome: ThemeChrome;
-  themeCustomColor: string;
-  themeCanvas: ThemeCanvas;
-  themeDensity: ThemeDensity;
   onSetThemeSource: (source: ThemeSource) => void;
-  onSetThemeAccent: (accent: ThemeAccent) => void;
-  onSetThemeChrome: (chrome: ThemeChrome) => void;
-  onSetThemeCustomColor: (color: string) => void;
-  onSetThemeCanvas: (canvas: ThemeCanvas) => void;
-  onSetThemeDensity: (density: ThemeDensity) => void;
   onLogout: () => void;
   onSaveProfile: (input: ProfileUpdateInput) => Promise<void>;
   onSetProfileVisibility: (visibility: "private" | "network") => Promise<void>;
@@ -99,17 +89,7 @@ export function ProfileRoute({
   feedbackCount,
   themeMode,
   themeSource,
-  themeAccent,
-  themeChrome,
-  themeCustomColor,
-  themeCanvas,
-  themeDensity,
   onSetThemeSource,
-  onSetThemeAccent,
-  onSetThemeChrome,
-  onSetThemeCustomColor,
-  onSetThemeCanvas,
-  onSetThemeDensity,
   onLogout,
   onSaveProfile,
   onSetProfileVisibility,
@@ -203,17 +183,7 @@ export function ProfileRoute({
       feedbackCount={feedbackCount}
       themeMode={themeMode}
       themeSource={themeSource}
-      themeAccent={themeAccent}
-      themeChrome={themeChrome}
-      themeCustomColor={themeCustomColor}
-      themeCanvas={themeCanvas}
-      themeDensity={themeDensity}
       onSetThemeSource={onSetThemeSource}
-      onSetThemeAccent={onSetThemeAccent}
-      onSetThemeChrome={onSetThemeChrome}
-      onSetThemeCustomColor={onSetThemeCustomColor}
-      onSetThemeCanvas={onSetThemeCanvas}
-      onSetThemeDensity={onSetThemeDensity}
       onLogout={onLogout}
       onSaveProfile={onSaveProfile}
       onSetProfileVisibility={onSetProfileVisibility}

@@ -1092,3 +1092,15 @@ Evidence must eventually link to implementation, automated tests, manual accepta
 - `GA-AUTH-007` remains fail-closed: demo crew/profile state is supplied only under the existing isolated guest-preview flag, skips account sync, and cannot write sample records to authenticated storage.
 - `GA-OPS-007` gains complete local evidence: build/lint/security lint, 53 unit tests, E2E, five rendered UI suites, zero-vulnerability dependency audit, diff check, and all 19 PostgreSQL integration tests pass.
 - `GA-OPS-008` gains production evidence: health serves exact source `aaf3a8701b4dceb084bdaf007a04ea2bcba74385` with ready migration `0026_standalone_projects`, PostgreSQL/S3-compatible storage, Sentry, and Web Push; the synthetic monitor passed with matching alerts enabled, controls off, seven anonymous private-route checks, and a 752 ms duration.
+
+## Traceability Addendum - 2026-07-13 Appearance Simplification
+
+- `GA-UX-006` gains a reduced, mobile-readable appearance preference: System,
+  Light, and Dark are direct controls rather than a field-kit editor with
+  palette, chrome, canvas, density, and custom-color controls.
+- Appearance is device-local only and is not represented as a paid entitlement
+  or manufacturer affiliation. Retired appearance keys are cleared so older
+  custom state cannot apply after the release.
+- Local evidence: build, lint, 53/53 unit tests, E2E, mobile-action UI smoke,
+  production dependency audit, and diff check passed. This client-only packet
+  makes no new database-backed claim; production evidence is pending merge.

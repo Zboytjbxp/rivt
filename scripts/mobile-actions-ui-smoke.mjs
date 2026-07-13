@@ -449,23 +449,14 @@ async function runMobileFlow(page) {
   await page.getByRole("button", { name: /Open profile menu for/i }).click();
   await page.getByRole("dialog", { name: "Settings" }).waitFor({ timeout: 15_000 });
   await assertControlCenterClickable(page, ".account-signout-btn", "account sign-out button");
-  await page.locator(".appearance-studio-launcher").click();
-  const appearanceDialog = page.getByRole("dialog", { name: "Field kit" });
-  await appearanceDialog.waitFor({ timeout: 15_000 });
-  assert.equal(await appearanceDialog.getByRole("button", { name: /field kit$/i }).count(), 6, "Appearance should expose six familiar tool-color field kits");
-  await appearanceDialog.getByRole("button", { name: "Use Blue / black field kit" }).click();
-  assert.equal(await page.evaluate(() => document.documentElement.dataset.themeAccent), "harborBlue", "Selecting a field kit should update the accent immediately");
-  assert.equal(await page.evaluate(() => document.documentElement.dataset.themeChrome), "navy", "A field kit should update the real application chrome");
-  assert.equal(await page.evaluate(() => document.documentElement.dataset.themeCanvas), "clean", "A field kit should update the working surface");
-  assert.equal(await page.evaluate(() => document.documentElement.dataset.themeDensity), "field", "A field kit should restore glove-friendly density");
-  assert.equal(
-    await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue("--nav").trim()),
-    "#102a38",
-    "Field kit chrome should update the whole application frame, not only buttons",
-  );
-  await assertNoHorizontalOverflow(page, "Appearance studio");
+  const appearance = page.locator(".appearance-preference");
+  assert.equal(await appearance.getByRole("button").count(), 3, "Appearance should offer only System, Light, and Dark");
+  await appearance.getByRole("button", { name: /Dark/i }).click();
+  assert.equal(await page.evaluate(() => document.documentElement.dataset.theme), "dark", "Dark appearance should update the application immediately");
+  await appearance.getByRole("button", { name: /System/i }).click();
+  assert.equal(await page.evaluate(() => document.documentElement.dataset.appearance), undefined, "Retired custom appearance state must not remain on the document");
+  await assertNoHorizontalOverflow(page, "Appearance preference");
   await page.screenshot({ path: path.join(screenshotDir, "mobile-appearance-studio.png"), fullPage: false });
-  await appearanceDialog.getByRole("button", { name: "Close appearance" }).click();
   await page.getByRole("button", { name: "Settings", exact: true }).click();
   await page.getByRole("heading", { name: "Settings", exact: true }).waitFor({ timeout: 15_000 });
   await page.getByRole("button", { name: "Alerts", exact: true }).click();

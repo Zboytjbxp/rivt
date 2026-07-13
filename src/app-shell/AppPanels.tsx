@@ -9,7 +9,7 @@ import {
   ShieldCheck,
   X,
 } from "lucide-react";
-import type { ThemeAccent, ThemeCanvas, ThemeChrome, ThemeDensity, ThemeMode, TrialPlan } from "../brandConfig";
+import type { ThemeMode, TrialPlan } from "../brandConfig";
 import { ThemeStudio } from "../components/ThemeStudio";
 import { ProfileShowcase } from "../features/profile/ProfileShowcase";
 import { ProgressBar, type AuthMethod } from "../features/auth/AuthScreens";
@@ -174,20 +174,10 @@ export function AccountPanel({
   safetyModuleCount,
   themeMode,
   themeSource,
-  themeAccent,
-  themeChrome,
-  themeCustomColor,
-  themeCanvas,
-  themeDensity,
   adminRoles,
   communityBadges,
   shoutOutCount,
   onSetThemeSource,
-  onSetThemeAccent,
-  onSetThemeChrome,
-  onSetThemeCustomColor,
-  onSetThemeCanvas,
-  onSetThemeDensity,
   onLogout,
   onClose,
   onNavigate,
@@ -201,20 +191,10 @@ export function AccountPanel({
   safetyModuleCount: number;
   themeMode: ThemeMode;
   themeSource: ThemeSource;
-  themeAccent: ThemeAccent;
-  themeChrome: ThemeChrome;
-  themeCustomColor: string;
-  themeCanvas: ThemeCanvas;
-  themeDensity: ThemeDensity;
   adminRoles: string[];
   communityBadges: string[];
   shoutOutCount: number;
   onSetThemeSource: (source: ThemeSource) => void;
-  onSetThemeAccent: (accent: ThemeAccent) => void;
-  onSetThemeChrome: (chrome: ThemeChrome) => void;
-  onSetThemeCustomColor: (color: string) => void;
-  onSetThemeCanvas: (canvas: ThemeCanvas) => void;
-  onSetThemeDensity: (density: ThemeDensity) => void;
   onLogout: () => void;
   onClose: () => void;
   onNavigate: (view: NavLabel) => void;
@@ -282,17 +262,7 @@ export function AccountPanel({
             variant="compact"
             themeMode={themeMode}
             themeSource={themeSource}
-            themeAccent={themeAccent}
-            themeChrome={themeChrome}
-            themeCustomColor={themeCustomColor}
-            themeCanvas={themeCanvas}
-            themeDensity={themeDensity}
             onSetThemeSource={onSetThemeSource}
-            onSetThemeAccent={onSetThemeAccent}
-            onSetThemeChrome={onSetThemeChrome}
-            onSetThemeCustomColor={onSetThemeCustomColor}
-            onSetThemeCanvas={onSetThemeCanvas}
-            onSetThemeDensity={onSetThemeDensity}
           />
         </section>
 

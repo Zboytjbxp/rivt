@@ -40,7 +40,7 @@ import { apiPath, fetchWithTimeout, requestKey } from "../../lib/api";
 import { usePersona } from "../persona/usePersona";
 import { ThemeStudio } from "../../components/ThemeStudio";
 import "../pro/pro.css";
-import type { ThemeAccent, ThemeCanvas, ThemeChrome, ThemeDensity, ThemeMode } from "../../brandConfig";
+import type { ThemeMode } from "../../brandConfig";
 import type { ThemeSource } from "../../app-shell/useAppTheme";
 import { tradeOptions } from "../../data";
 import type { Role, Trade } from "../../types";
@@ -116,17 +116,7 @@ interface ProfileHubProps {
   feedbackCount: number;
   themeMode: ThemeMode;
   themeSource: ThemeSource;
-  themeAccent: ThemeAccent;
-  themeChrome: ThemeChrome;
-  themeCustomColor: string;
-  themeCanvas: ThemeCanvas;
-  themeDensity: ThemeDensity;
   onSetThemeSource: (source: ThemeSource) => void;
-  onSetThemeAccent: (accent: ThemeAccent) => void;
-  onSetThemeChrome: (chrome: ThemeChrome) => void;
-  onSetThemeCustomColor: (color: string) => void;
-  onSetThemeCanvas: (canvas: ThemeCanvas) => void;
-  onSetThemeDensity: (density: ThemeDensity) => void;
   onLogout: () => void;
   onSaveProfile: (input: ProfileUpdateInput) => Promise<void>;
   onSetProfileVisibility: (visibility: "private" | "network") => Promise<void>;
@@ -1220,17 +1210,7 @@ export function ProfileHub({
   feedbackCount,
   themeMode,
   themeSource,
-  themeAccent,
-  themeChrome,
-  themeCustomColor,
-  themeCanvas,
-  themeDensity,
   onSetThemeSource,
-  onSetThemeAccent,
-  onSetThemeChrome,
-  onSetThemeCustomColor,
-  onSetThemeCanvas,
-  onSetThemeDensity,
   onLogout,
   onSaveProfile,
   onSetProfileVisibility,
@@ -1786,17 +1766,7 @@ export function ProfileHub({
           <ThemeStudio
             themeMode={themeMode}
             themeSource={themeSource}
-            themeAccent={themeAccent}
-            themeChrome={themeChrome}
-            themeCustomColor={themeCustomColor}
-            themeCanvas={themeCanvas}
-            themeDensity={themeDensity}
             onSetThemeSource={onSetThemeSource}
-            onSetThemeAccent={onSetThemeAccent}
-            onSetThemeChrome={onSetThemeChrome}
-            onSetThemeCustomColor={onSetThemeCustomColor}
-            onSetThemeCanvas={onSetThemeCanvas}
-            onSetThemeDensity={onSetThemeDensity}
           />
         </section>
 

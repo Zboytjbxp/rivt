@@ -1,16 +1,28 @@
 # RIVT Build State
 
-Last updated: 2026-07-12 America/New_York
+Last updated: 2026-07-13 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Packet 30 Field Kit Themes is production verified. It replaces the
-Appearance Studio's generic composition-first presentation with a tool-first
-Field Kit selector and an exact custom tool-color option.
-Active packet: `docs/delivery/packets/30_FIELD_KIT_THEMES.md`
-Repository branch: `master`
-Production feature release commit: `d260da9a517f7660c26bd42a5ddb3740dbb52630`
-verified with live `/api/health` and `npm run monitor:production`; docs-only
-evidence commits may supersede the served build SHA without changing runtime
-behavior.
+Current phase: Packet 31 Appearance Simplification is locally verified. It
+retires the Field Kit experiment and returns RIVT to one standard visual system
+with only System, Light, and Dark device preferences.
+Active packet: `docs/delivery/packets/31_APPEARANCE_SIMPLIFICATION.md`
+Repository branch: `codex/appearance-simplification`
+Production feature release commit: pending merge and production verification.
+
+## Packet 31 - Appearance Simplification (Local Verification)
+
+- Appearance is now only System, Light, or Dark. It is no longer a tool-brand
+  palette selector, custom color editor, or paid-looking customization surface.
+- Account and Settings share the same direct three-choice preference; all users
+  keep the same RIVT visual identity.
+- Retired accent, chrome, canvas, density, palette, and custom-color device
+  keys are cleared when the new preference loads, preventing old visual state
+  from lingering after the update.
+- Local verification passed: build, lint, 53/53 unit tests, E2E,
+  mobile-action UI smoke, dependency audit, and diff check. This client-only
+  packet does not claim a database integration pass.
+- Remaining boundary: merge, live health verification, and a production monitor
+  against the served source commit.
 
 ## Packet 30 - Field Kit Themes (Local Verification)
 
