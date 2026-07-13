@@ -68,7 +68,13 @@ async function removeSubscription(endpoint: string) {
   if (!response.ok) throw await responseError(response, "This device could not be removed from alerts.");
 }
 
-export function usePushNotifications() {
+export function usePushNotifications({
+  enabled = true,
+  restoreOnMount = true,
+}: {
+  enabled?: boolean;
+  restoreOnMount?: boolean;
+} = {}) {
   const isAppleMobile = appleMobileDevice();
   const installed = installedAsApp();
   const requiresHomeScreenInstall = isAppleMobile && !installed;
@@ -86,6 +92,10 @@ export function usePushNotifications() {
   useEffect(() => {
     let cancelled = false;
     async function hydrate() {
+      if (!enabled) {
+        setLoading(false);
+        return;
+      }
       try {
         const config = await fetchPushConfig();
         if (cancelled) return;
@@ -96,7 +106,7 @@ export function usePushNotifications() {
         const current = await registration.pushManager.getSubscription();
         if (cancelled) return;
         setSubscribed(Boolean(current));
-        if (current) await registerSubscription(current);
+        if (restoreOnMount && current) await registerSubscription(current);
       } catch (caught) {
         if (!cancelled) setError(caught instanceof Error ? caught.message : "Device alerts could not be checked.");
       } finally {
@@ -105,7 +115,7 @@ export function usePushNotifications() {
     }
     void hydrate();
     return () => { cancelled = true; };
-  }, [requiresHomeScreenInstall]);
+  }, [enabled, requiresHomeScreenInstall, restoreOnMount]);
 
   async function requestAndSubscribe() {
     if (requiresHomeScreenInstall) {

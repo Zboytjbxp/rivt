@@ -162,6 +162,27 @@ if (!testDatabaseUrl) {
     assert.equal(restrictedPost.response.status, 403);
     assert.equal(restrictedPost.payload.error.code, "SHOP_TALK_COMMUNITY_RESTRICTED");
 
+    const contractorOnlyPost = await requestJson(baseUrl, "/api/v1/shop-talk/posts", {
+      method: "POST",
+      cookie: contractor.cookie,
+      idempotencyKey: randomUUID(),
+      body: {
+        title: "Contractor-only planning note",
+        body: "This is private to contractor accounts.",
+        trade: "Electrical",
+        flair: "Discussion",
+        postType: "general",
+        communitySlug: restrictedCommunity.payload.data.community.slug,
+      },
+    });
+    assert.equal(contractorOnlyPost.response.status, 201);
+    const restrictedExactPost = await requestJson(
+      baseUrl,
+      `/api/v1/shop-talk/posts/${contractorOnlyPost.payload.data.post.id}`,
+      { cookie: author.cookie },
+    );
+    assert.equal(restrictedExactPost.response.status, 404);
+
     // Create a post.
     const key = randomUUID();
     const created = await requestJson(baseUrl, "/api/v1/shop-talk/posts", {
@@ -234,6 +255,32 @@ if (!testDatabaseUrl) {
     const scopedList = await requestJson(baseUrl, "/api/v1/shop-talk/posts?community=electrical-talk", { cookie: author.cookie });
     assert.equal(scopedList.response.status, 200);
     assert.ok(scopedList.payload.data.posts.every((entry) => entry.communitySlug === "electrical-talk"));
+
+    // A notification can always load its exact post, even when it is not in the current feed page.
+    const exactPost = await requestJson(baseUrl, `/api/v1/shop-talk/posts/${post.id}`, { cookie: author.cookie });
+    assert.equal(exactPost.response.status, 200);
+    assert.equal(exactPost.payload.data.post.id, post.id);
+    assert.equal(exactPost.payload.data.post.title, post.title);
+
+    const missingExactPost = await requestJson(
+      baseUrl,
+      `/api/v1/shop-talk/posts/${randomUUID()}`,
+      { cookie: author.cookie },
+    );
+    assert.equal(missingExactPost.response.status, 404);
+
+    // Earned reputation follows account ownership, not a mutable display name.
+    const postUpvote = await requestJson(baseUrl, "/api/v1/shop-talk/reactions", {
+      method: "POST",
+      cookie: answerer.cookie,
+      idempotencyKey: randomUUID(),
+      body: { targetType: "thread", targetKey: `post:${post.id}`, reaction: "up" },
+    });
+    assert.equal(postUpvote.response.status, 200);
+    const authorReputation = await requestJson(baseUrl, "/api/v1/shop-talk/reputation/me", { cookie: author.cookie });
+    assert.equal(authorReputation.response.status, 200);
+    assert.equal(authorReputation.payload.data.reputation.upvotesEarned, 1);
+    assert.equal(authorReputation.payload.data.reputation.earnedScore, 1);
 
     const answerCreated = await requestJson(baseUrl, `/api/v1/shop-talk/posts/${post.id}/answers`, {
       method: "POST",

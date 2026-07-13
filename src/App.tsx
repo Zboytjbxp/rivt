@@ -76,12 +76,13 @@ import type {
   PostFlair,
   PostType,
 } from "./features/shop-talk/ShopTalkView";
-import { communityBadgeLabels, relativeTime } from "./features/shop-talk/community-utils";
+import { communityBadgeLabelsFromReputation, relativeTime } from "./features/shop-talk/community-utils";
 import { communityPromptPosts, fallbackNewsItems } from "./features/shop-talk/fallback-data";
 import {
   createShopTalkAnswer,
   createShopTalkPost,
   deleteShopTalkPost,
+  fetchShopTalkPost,
   fetchShopTalkPosts,
   reportShopTalkTarget,
   uploadShopTalkPostPhoto,
@@ -97,6 +98,7 @@ import {
   type CommunityDisplay,
 } from "./features/shop-talk/community-directory";
 import { useCommunityReactions } from "./features/shop-talk/useCommunityReactions";
+import { usePushNotifications } from "./features/notifications/usePushNotifications";
 import type { ProfileUpdateInput } from "./features/profile/ProfileHub";
 import type { ToolMode } from "./features/tools/ToolsStudio";
 import { recordChecklist, safetyQuizData, trainingModules, type SafetyQuizResult } from "./features/profile/training-data";
@@ -603,6 +605,10 @@ function App() {
   });
   const unreadMessages = inboxConversations.reduce((sum, conversation) => sum + Math.max(0, conversation.unreadCount || 0), 0);
   const [isGuest, setIsGuest] = useState(false);
+  // Rebind a browser's existing subscription after each authenticated boot.
+  // This never prompts for permission; it only restores a subscription the
+  // user already granted before logging out on this device.
+  usePushNotifications({ enabled: Boolean(!isGuest && authUser && canonicalAccount && onboardingComplete) });
   const [guestPreviewSummary, setGuestPreviewSummary] = useState<GuestPreviewSummary | null>(null);
   const [guestPromptOpen, setGuestPromptOpen] = useState(false);
   const [localSetupOpen, setLocalSetupOpen] = useState(false);
@@ -757,6 +763,7 @@ function App() {
   useEffect(() => {
     let cancelled = false;
     async function hydrateAuth() {
+      let sessionResolved = false;
       // Dev bypass: set localStorage key "rivt_dev_bypass=1" to skip auth
       if (import.meta.env.DEV && localStorage.getItem("rivt_dev_bypass") === "1") {
         const mockAccount: CanonicalAccount = {
@@ -800,17 +807,61 @@ function App() {
         return;
       }
       try {
-        const [meResponse, providersResponse, storageResponse] = await Promise.all([
-          fetchWithTimeout(apiPath("/api/v1/me"), { credentials: "include" }),
+        // Identity is the only boot-critical request. Provider metadata and
+        // storage usage improve the account UI, but must not strand a valid
+        // signed-in session when one of those services is briefly unavailable.
+        const meResponse = await fetchWithTimeout(apiPath("/api/v1/me"), { credentials: "include" });
+        const meBody = await meResponse.json().catch(() => ({})) as { data?: CanonicalAccount };
+        if (cancelled) return;
+        if (meResponse.ok && meBody.data) {
+          setAuthConnectionError(null);
+          applyCanonicalAccount(meBody.data);
+          sessionResolved = true;
+          setAuthLoading(false);
+        } else if (meResponse.status === 401) {
+          setAuthConnectionError(null);
+          setAuthUser(null);
+          setCanonicalAccount(null);
+          setOnboardingComplete(false);
+          resetCommunityReactions();
+          setStorageUsage(null);
+          // Provider metadata is public auth-screen configuration. It is not
+          // part of restoring a session, but the sign-up view still needs it
+          // to truthfully show whether an invitation code is required.
+          try {
+            const providersResponse = await fetchWithTimeout(apiPath("/api/auth/providers"), { credentials: "include" });
+            const providersBody = await providersResponse.json().catch(() => ({})) as {
+              providers?: Record<string, { ok: boolean; mode: string; missing: string[]; purpose: string }>;
+              inviteRequired?: boolean;
+            };
+            if (!cancelled && providersResponse.ok) {
+              setAuthProviders(providersBody.providers ?? {});
+              setPilotInviteRequired(Boolean(providersBody.inviteRequired));
+            }
+          } catch {
+            // Keep the public auth screen available even if optional provider
+            // metadata is briefly unavailable.
+          }
+          return;
+        } else {
+          throw new Error("Session lookup failed.");
+        }
+
+        const [providersResult, storageResult] = await Promise.allSettled([
           fetchWithTimeout(apiPath("/api/auth/providers"), { credentials: "include" }),
           fetchWithTimeout(apiPath("/api/storage"), { credentials: "include" }),
         ]);
-        const meBody = await meResponse.json().catch(() => ({})) as { data?: CanonicalAccount };
-        const providersBody = await providersResponse.json().catch(() => ({})) as {
+        if (cancelled) return;
+        const providersResponse = providersResult.status === "fulfilled" ? providersResult.value : null;
+        const storageResponse = storageResult.status === "fulfilled" ? storageResult.value : null;
+        const providersBody = providersResponse
+          ? await providersResponse.json().catch(() => ({})) as {
           providers?: Record<string, { ok: boolean; mode: string; missing: string[]; purpose: string }>;
           inviteRequired?: boolean;
-        };
-        const storageBody = await storageResponse.json().catch(() => ({})) as {
+          }
+          : {};
+        const storageBody = storageResponse
+          ? await storageResponse.json().catch(() => ({})) as {
           usedBytes?: number;
           objectCount?: number;
           accountStorage?: { usedBytes?: number; objectCount?: number };
@@ -822,12 +873,12 @@ function App() {
           mode?: string;
           database?: string;
           missing?: string[];
-        };
-        if (cancelled) return;
+          }
+          : {};
         setAuthProviders(providersBody.providers ?? {});
         setPilotInviteRequired(Boolean(providersBody.inviteRequired));
         const storageSnapshot = storageBody.accountStorage ?? storageBody;
-        if (storageResponse.ok && typeof storageSnapshot.usedBytes === "number") {
+        if (storageResponse?.ok && typeof storageSnapshot.usedBytes === "number") {
           setStorageUsage({
             usedBytes: Number(storageSnapshot.usedBytes),
             objectCount: Number(storageSnapshot.objectCount ?? 0),
@@ -853,25 +904,12 @@ function App() {
             objectStorage: "s3-compatible",
           });
         }
-        if (meResponse.ok && meBody.data) {
-          setAuthConnectionError(null);
-          applyCanonicalAccount(meBody.data);
-        } else if (meResponse.status === 401) {
-          setAuthConnectionError(null);
-          setAuthUser(null);
-          setCanonicalAccount(null);
-          setOnboardingComplete(false);
-          resetCommunityReactions();
-          setStorageUsage(null);
-        } else {
-          throw new Error("Session lookup failed.");
-        }
       } catch {
         if (!cancelled) {
           setAuthConnectionError("Your account is still here. Check your connection, then retry.");
         }
       } finally {
-        if (!cancelled) {
+        if (!cancelled && !sessionResolved) {
           setAuthLoading(false);
         }
       }
@@ -949,16 +987,35 @@ function App() {
   const reloadShopTalkPosts = useCallback(async () => {
     if (isGuest || !authUser || !onboardingComplete) return;
     const requestId = ++shopTalkPostsRequestRef.current;
-    const posts = await fetchShopTalkPosts();
+    let posts: ServerShopTalkPost[];
+    try {
+      posts = await fetchShopTalkPosts();
+    } catch (cause) {
+      if (shopTalkPostsRequestRef.current === requestId) {
+        addActivity("Shop Talk could not refresh", cause instanceof Error ? cause.message : "Check your connection and try again.", "error");
+      }
+      return;
+    }
     if (shopTalkPostsRequestRef.current !== requestId) return;
-    if (posts === null) return;
     setCommunityPosts(posts.map(toCommunityPostViewModel));
-  }, [authUser, isGuest, onboardingComplete]);
+  }, [addActivity, authUser, isGuest, onboardingComplete]);
+
+  const loadShopTalkPost = useCallback(async (postId: string): Promise<CommunityPost | null> => {
+    if (isGuest || !authUser || !onboardingComplete) return null;
+    try {
+      const post = await fetchShopTalkPost(postId);
+      if (!post) return null;
+      const viewModel = toCommunityPostViewModel(post);
+      setCommunityPosts((current) => [viewModel, ...current.filter((candidate) => candidate.id !== viewModel.id)]);
+      return viewModel;
+    } catch (cause) {
+      addActivity("Shop Talk post could not open", cause instanceof Error ? cause.message : "Try opening that post again.", "error");
+      return null;
+    }
+  }, [addActivity, authUser, isGuest, onboardingComplete]);
 
   useEffect(() => {
-    /* eslint-disable react-hooks/set-state-in-effect */
     void reloadShopTalkPosts();
-    /* eslint-enable react-hooks/set-state-in-effect */
   }, [reloadShopTalkPosts]);
 
   const reloadCommunities = useCallback(async () => {
@@ -1448,7 +1505,13 @@ function App() {
     };
 
     if (!isGuest && authUser && onboardingComplete && !postId.startsWith("local-") && !postId.startsWith("prompt-")) {
-      const serverAnswer = await createShopTalkAnswer(postId, body);
+      let serverAnswer: ServerShopTalkAnswer | null;
+      try {
+        serverAnswer = await createShopTalkAnswer(postId, body);
+      } catch (cause) {
+        addActivity("Shop Talk answer not saved", cause instanceof Error ? cause.message : "Your answer could not reach the server.", "error");
+        return;
+      }
       if (!serverAnswer) {
         addActivity("Shop Talk answer not saved", "Your answer could not reach the server. Try again when your connection is stable.");
         return;
@@ -1481,7 +1544,13 @@ function App() {
     }
 
     if (!isGuest && authUser && onboardingComplete && !postId.startsWith("local-") && !postId.startsWith("prompt-")) {
-      const serverAnswers = await verifyShopTalkAnswer(postId, answerId);
+      let serverAnswers: ServerShopTalkAnswer[] | null;
+      try {
+        serverAnswers = await verifyShopTalkAnswer(postId, answerId);
+      } catch (cause) {
+        addActivity("Verified Fix not saved", cause instanceof Error ? cause.message : "RIVT could not update that answer.", "error");
+        return;
+      }
       if (!serverAnswers) {
         addActivity("Verified Fix not saved", "Only the original poster can mark a server-owned verified fix.");
         return;
@@ -1528,12 +1597,21 @@ function App() {
     if (!post) {
       return;
     }
-    const persisted = await reportShopTalkTarget({
-      targetType: "post",
-      targetId: postId,
-      reasonCode: communityReportReasonCode(reason),
-      note: (note ? `${reason}: ${note}` : reason).slice(0, 1000),
-    });
+    try {
+      await reportShopTalkTarget({
+        targetType: "post",
+        targetId: postId,
+        reasonCode: communityReportReasonCode(reason),
+        note: (note ? `${reason}: ${note}` : reason).slice(0, 1000),
+      });
+    } catch (error) {
+      addActivity(
+        "Shop Talk report was not filed",
+        error instanceof Error ? error.message : "RIVT could not send that report. Try again in a minute.",
+        "error",
+      );
+      return;
+    }
 
     setCommunityReports((current) => {
       const alreadyFlagged = current.some(
@@ -1554,12 +1632,7 @@ function App() {
         ...current,
       ];
     });
-    addActivity(
-      persisted ? "Shop Talk report filed" : "Shop Talk report saved locally",
-      persisted
-        ? `"${post.title}" is in the admin moderation queue for ${reason.toLowerCase()}.`
-        : `"${post.title}" was flagged in this session, but the server report could not be filed.`,
-    );
+    addActivity("Shop Talk report filed", `"${post.title}" is in the admin moderation queue for ${reason.toLowerCase()}.`);
   }
 
   async function handleReportCommunityAnswer(postId: string, answerId: string, reason: CommunityReport["reason"], note?: string) {
@@ -1567,18 +1640,22 @@ function App() {
     const answer = post?.replies.find((candidate) => candidate.id === answerId);
     if (!post || !answer) return;
 
-    const persisted = await reportShopTalkTarget({
-      targetType: "answer",
-      targetId: answerId,
-      reasonCode: communityReportReasonCode(reason),
-      note: (note ? `${reason} on answer for "${post.title}": ${note}` : `${reason} on answer for "${post.title}"`).slice(0, 1000),
-    });
-    addActivity(
-      persisted ? "Shop Talk answer reported" : "Shop Talk answer flagged locally",
-      persisted
-        ? `An answer from ${answer.author} is in the admin moderation queue for ${reason.toLowerCase()}.`
-        : `An answer from ${answer.author} was flagged in this session, but the server report could not be filed.`,
-    );
+    try {
+      await reportShopTalkTarget({
+        targetType: "answer",
+        targetId: answerId,
+        reasonCode: communityReportReasonCode(reason),
+        note: (note ? `${reason} on answer for "${post.title}": ${note}` : `${reason} on answer for "${post.title}"`).slice(0, 1000),
+      });
+    } catch (error) {
+      addActivity(
+        "Shop Talk answer was not reported",
+        error instanceof Error ? error.message : "RIVT could not send that report. Try again in a minute.",
+        "error",
+      );
+      return;
+    }
+    addActivity("Shop Talk answer reported", `An answer from ${answer.author} is in the admin moderation queue for ${reason.toLowerCase()}.`);
   }
 
   async function handleReportCommunity(community: CommunityDisplay, reason: CommunityReport["reason"], note?: string) {
@@ -1590,18 +1667,22 @@ function App() {
       return;
     }
 
-    const persisted = await reportShopTalkTarget({
-      targetType: "community",
-      targetId: community.id,
-      reasonCode: communityReportReasonCode(reason),
-      note: (note ? `${reason} in ${community.name}: ${note}` : `${reason} in ${community.name}`).slice(0, 1000),
-    });
-    addActivity(
-      persisted ? "Community report filed" : "Community report saved locally",
-      persisted
-        ? `${community.name} is in the admin moderation queue for ${reason.toLowerCase()}.`
-        : `${community.name} was flagged in this session, but the server report could not be filed.`,
-    );
+    try {
+      await reportShopTalkTarget({
+        targetType: "community",
+        targetId: community.id,
+        reasonCode: communityReportReasonCode(reason),
+        note: (note ? `${reason} in ${community.name}: ${note}` : `${reason} in ${community.name}`).slice(0, 1000),
+      });
+    } catch (error) {
+      addActivity(
+        "Community report was not filed",
+        error instanceof Error ? error.message : "RIVT could not send that report. Try again in a minute.",
+        "error",
+      );
+      return;
+    }
+    addActivity("Community report filed", `${community.name} is in the admin moderation queue for ${reason.toLowerCase()}.`);
   }
 
   async function handleNewShopTalkPost(
@@ -1641,25 +1722,46 @@ function App() {
     let postToAdd = localPost;
     let photoUploadFailed = false;
     if (!isGuest && authUser && onboardingComplete) {
-      const serverPost = await createShopTalkPost({
-        title,
-        body,
-        trade,
-        flair,
-        postType,
-        communitySlug: communitySlugOverride ?? undefined,
-      });
-      if (!serverPost) {
+      try {
+        const serverPost = await createShopTalkPost({
+          title,
+          body,
+          trade,
+          flair,
+          postType,
+          communitySlug: communitySlugOverride ?? undefined,
+        });
+        if (!serverPost) {
+          addActivity(
+            "Shop Talk post was not saved",
+            "RIVT did not receive a post record. Nothing was published. Try again in a minute.",
+            "error",
+          );
+          return;
+        }
+        let mediaPost: ServerShopTalkPost | null = null;
+        if (photoFile) {
+          try {
+            mediaPost = await uploadShopTalkPostPhoto(serverPost.id, photoFile);
+          } catch (cause) {
+            photoUploadFailed = true;
+            addActivity(
+              "Shop Talk photo was not saved",
+              cause instanceof Error ? cause.message : "The post was saved, but its photo could not be uploaded.",
+              "error",
+            );
+          }
+        }
+        photoUploadFailed ||= Boolean(photoFile && !mediaPost);
+        postToAdd = toCommunityPostViewModel(mediaPost ?? serverPost);
+      } catch (cause) {
         addActivity(
           "Shop Talk post was not saved",
-          "RIVT could not save that post to the server. Nothing was published. Try again in a minute.",
+          cause instanceof Error ? cause.message : "RIVT could not save that post. Nothing was published.",
           "error",
         );
         return;
       }
-      const mediaPost = photoFile ? await uploadShopTalkPostPhoto(serverPost.id, photoFile) : null;
-      photoUploadFailed = Boolean(photoFile && !mediaPost);
-      postToAdd = toCommunityPostViewModel(mediaPost ?? serverPost);
     }
 
     setCommunityPosts((current) => [
@@ -1678,9 +1780,14 @@ function App() {
     const target = communityPosts.find((candidate) => candidate.id === postId);
     const serverOwned = Boolean(target && !target.badge && !postId.startsWith("local-"));
     if (serverOwned && (!isGuest && authUser && onboardingComplete)) {
-      const deleted = await deleteShopTalkPost(postId);
-      if (!deleted) {
-        addActivity("Shop Talk post was not deleted", "RIVT could not remove that post from the server. Try again in a minute.");
+      try {
+        await deleteShopTalkPost(postId);
+      } catch (error) {
+        addActivity(
+          "Shop Talk post was not deleted",
+          error instanceof Error ? error.message : "RIVT could not remove that post from the server. Try again in a minute.",
+          "error",
+        );
         return false;
       }
     } else if (serverOwned) {
@@ -2522,6 +2629,7 @@ function App() {
             onNewPost={handleNewShopTalkPost}
             onDeletePost={handleDeleteShopTalkPost}
             onCommunityCreated={handleCommunityCreated}
+            onLoadPost={loadShopTalkPost}
           />
         ) : ["Crew", "Reviews"].includes(activeView) ? (
           <NetworkHub
@@ -2578,7 +2686,7 @@ function App() {
             trainingProgress={Math.round((completedTraining.size / trainingModules.length) * 100)}
             safetyCertCount={Object.values(safetyQuizResults).filter((result) => result.passed).length}
             safetyQuizResults={safetyQuizResults}
-            communityBadges={communityBadgeLabels(communityPosts, accountProfile.displayName)}
+            communityBadges={communityBadgeLabelsFromReputation(communityReactionSummary)}
             shoutOutCount={
               shoutOuts.filter(
                 (shoutOut) =>
@@ -2662,7 +2770,7 @@ function App() {
           themeMode={themeMode}
           themeSource={themeSource}
           adminRoles={canonicalAccount?.adminRoles ?? []}
-          communityBadges={communityBadgeLabels(communityPosts, accountProfile.displayName)}
+          communityBadges={communityBadgeLabelsFromReputation(communityReactionSummary)}
           shoutOutCount={
             shoutOuts.filter(
               (shoutOut) =>

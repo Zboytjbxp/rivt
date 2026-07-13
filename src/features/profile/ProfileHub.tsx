@@ -909,7 +909,7 @@ function PushNotificationsCard() {
     requestAndSubscribe,
     sendTestNotification,
     unsubscribe,
-  } = usePushNotifications();
+  } = usePushNotifications({ restoreOnMount: false });
 
   const status = loading ? "Checking" : subscribed ? "On" : providerConfigured ? "Off" : "Unavailable";
 

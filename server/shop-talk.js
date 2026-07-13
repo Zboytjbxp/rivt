@@ -100,13 +100,71 @@ async function loadShopTalkReactionAggregates(client, accountId, targets) {
 
 async function loadShopTalkReactionSummary(client, accountId) {
   const result = await client.query(
-    `SELECT count(*)::int AS reactions_given,
-            count(*) FILTER (WHERE reaction = 'up')::int AS upvotes_given,
-            count(*) FILTER (WHERE reaction = 'down')::int AS downvotes_given,
-            count(DISTINCT target_type || ':' || target_key)::int AS targets_reacted,
-            max(updated_at) AS last_reacted_at
-     FROM shop_talk_reactions
-     WHERE actor_account_id = $1`,
+    `WITH reactions_given AS (
+       SELECT count(*)::int AS reactions_given,
+              count(*) FILTER (WHERE reaction = 'up')::int AS upvotes_given,
+              count(*) FILTER (WHERE reaction = 'down')::int AS downvotes_given,
+              count(DISTINCT target_type || ':' || target_key)::int AS targets_reacted,
+              max(updated_at) AS last_reacted_at
+       FROM shop_talk_reactions
+       WHERE actor_account_id = $1
+     ),
+     owned_targets AS (
+       SELECT 'thread'::text AS target_type, concat('post:', post.id) AS target_key
+       FROM shop_talk_posts post
+       WHERE post.author_account_id = $1
+         AND post.moderation_status <> 'hidden'
+       UNION ALL
+       SELECT 'answer'::text AS target_type, concat('answer:', answer.post_id, ':', answer.id) AS target_key
+       FROM shop_talk_answers answer
+       JOIN shop_talk_posts post ON post.id = answer.post_id
+       WHERE answer.author_account_id = $1
+         AND answer.deleted_at IS NULL
+         AND answer.moderation_status <> 'hidden'
+         AND post.moderation_status <> 'hidden'
+     ),
+     earned_reactions AS (
+       SELECT count(reactions.id) FILTER (WHERE reactions.reaction = 'up')::int AS upvotes_earned,
+              count(reactions.id) FILTER (WHERE reactions.reaction = 'down')::int AS downvotes_earned
+       FROM owned_targets target
+       LEFT JOIN shop_talk_reactions reactions
+         ON reactions.target_type = target.target_type
+        AND reactions.target_key = target.target_key
+     ),
+     answer_scores AS (
+       SELECT answer.id,
+              coalesce(sum(CASE reactions.reaction WHEN 'up' THEN 1 WHEN 'down' THEN -1 ELSE 0 END), 0)::int AS score
+       FROM shop_talk_answers answer
+       JOIN shop_talk_posts post ON post.id = answer.post_id
+       LEFT JOIN shop_talk_reactions reactions
+         ON reactions.target_type = 'answer'
+        AND reactions.target_key = concat('answer:', answer.post_id, ':', answer.id)
+       WHERE answer.author_account_id = $1
+         AND answer.deleted_at IS NULL
+         AND answer.moderation_status <> 'hidden'
+         AND post.moderation_status <> 'hidden'
+       GROUP BY answer.id
+     ),
+     answer_summary AS (
+       SELECT count(*) FILTER (WHERE answer.verified_fix)::int AS verified_fixes,
+              count(*) FILTER (WHERE answer_scores.score >= 3)::int AS quality_answers
+       FROM shop_talk_answers answer
+       JOIN shop_talk_posts post ON post.id = answer.post_id
+       LEFT JOIN answer_scores ON answer_scores.id = answer.id
+       WHERE answer.author_account_id = $1
+         AND answer.deleted_at IS NULL
+         AND answer.moderation_status <> 'hidden'
+         AND post.moderation_status <> 'hidden'
+     )
+     SELECT reactions_given.*,
+            earned_reactions.upvotes_earned,
+            earned_reactions.downvotes_earned,
+            (earned_reactions.upvotes_earned - earned_reactions.downvotes_earned)::int AS earned_score,
+            answer_summary.verified_fixes,
+            answer_summary.quality_answers
+     FROM reactions_given
+     CROSS JOIN earned_reactions
+     CROSS JOIN answer_summary`,
     [accountId],
   );
   const row = result.rows[0] ?? {};
@@ -116,6 +174,11 @@ async function loadShopTalkReactionSummary(client, accountId) {
     downvotesGiven: Number(row.downvotes_given ?? 0),
     targetsReacted: Number(row.targets_reacted ?? 0),
     lastReactedAt: row.last_reacted_at ? new Date(row.last_reacted_at).toISOString() : null,
+    upvotesEarned: Number(row.upvotes_earned ?? 0),
+    downvotesEarned: Number(row.downvotes_earned ?? 0),
+    earnedScore: Number(row.earned_score ?? 0),
+    verifiedFixes: Number(row.verified_fixes ?? 0),
+    qualityAnswers: Number(row.quality_answers ?? 0),
   };
 }
 
@@ -461,6 +524,20 @@ export function registerShopTalkRoutes({
     const rows = await fetchShopTalkPostRows(database, { actor: request.actor, communitySlug: community ?? null });
     response.json({
       data: { posts: await Promise.all(rows.map((row) => mapShopTalkPostRowWithMedia(row, signedObjectUrl))) },
+      meta: { requestId: request.requestId },
+    });
+  }));
+
+  // Notification and shared-link destinations must not depend on the newest
+  // page of the feed or its current client-side filters. The shared row loader
+  // applies the same community audience checks as the collection endpoint.
+  app.get("/api/v1/shop-talk/posts/:postId", requireV1AuthenticatedUser, requireV1Actor, asyncRoute(async (request, response) => {
+    const { postId } = validate(shopTalkPostParamsSchema, request.params);
+    const rows = await fetchShopTalkPostRows(database, { actor: request.actor, postId });
+    const row = rows[0];
+    if (!row) throw new ApiError(404, "SHOP_TALK_POST_NOT_FOUND", "That Shop Talk post is unavailable.");
+    response.json({
+      data: { post: await mapShopTalkPostRowWithMedia(row, signedObjectUrl) },
       meta: { requestId: request.requestId },
     });
   }));

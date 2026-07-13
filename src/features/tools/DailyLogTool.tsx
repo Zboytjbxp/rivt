@@ -6,6 +6,7 @@ import { fetchWithTimeout } from "../../lib/api";
 import type { CanonicalActiveWork } from "../work/job-api";
 import { addProjectNote, openProjectForActiveWork, ProjectApiError } from "./project-api";
 import { fetchToolRecords, upsertToolRecord, type ServerToolRecord } from "./tool-records-api";
+import { DAILY_LOG_PREFIX } from "./daily-log-constants";
 
 function formatNumber(value: number, digits = 1) {
   return Number.isFinite(value) ? value.toFixed(digits) : "0";
@@ -207,7 +208,7 @@ export function DailyLogTool({
   const completedChecks = dailyLogChecklist.filter((item) => draft.checklist[item]).length;
   const recordWorkLabel = recordWork?.job?.title ?? activeJob?.title ?? "Accepted work";
   const dailyLogText = useMemo(() => [
-    `RIVT daily log - ${draft.date || "undated"}`,
+    `${DAILY_LOG_PREFIX} - ${draft.date || "undated"}`,
     `Site/job: ${draft.site || "Not entered"}`,
     `Trade: ${draft.trade || "Not entered"}`,
     `Weather: ${draft.weather || "Not entered"}`,

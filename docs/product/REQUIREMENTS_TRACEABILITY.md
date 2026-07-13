@@ -1159,3 +1159,19 @@ Evidence must eventually link to implementation, automated tests, manual accepta
   Sentry and Web Push, and matching-job alerts enabled. The expected-source
   monitor passed with controls off, seven anonymous private-route checks, and
   a 563 ms duration.
+
+## Traceability Addendum - 2026-07-13 Shop Talk Reliability
+
+- `GA-UX-003` gains exact Shop Talk notification handling: a notification can
+  hydrate its named post outside the newest page or a selected feed filter,
+  while the server applies the same community-audience authorization to that
+  direct read as to the normal feed.
+- `GA-UX-005` gains error and reputation truthfulness: Shop Talk preserves
+  typed API failures for user feedback, Daily Log pulse detection has a shared
+  contract, and earned badges now use server-authoritative author IDs rather
+  than display-name matching or device-local reputation values.
+- `GA-OPS-007` gains local evidence: build, lint, 53/53 unit tests, E2E,
+  mobile-action UI smoke, dependency audit, diff check, and focused PostgreSQL
+  Shop Talk integration passed. The full integration wrapper exceeded its
+  local 15-minute limit without a failing assertion, so aggregate integration
+  success is intentionally not claimed for this packet.

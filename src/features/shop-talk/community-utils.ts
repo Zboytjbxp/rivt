@@ -14,14 +14,6 @@ export interface CommunityVerifiedAnswer extends CommunityScoreItem {
   verifiedFix: boolean;
 }
 
-export interface CommunityBadgeAnswer extends CommunityVerifiedAnswer {
-  author: string;
-}
-
-export interface CommunityBadgePost {
-  replies: CommunityBadgeAnswer[];
-}
-
 export interface CommunityBadgeThresholds {
   firstAssistVerifiedFixes: number;
   mentorQualityAnswers: number;
@@ -122,25 +114,22 @@ export function inferCommunityDefaultTrade(
   return fallbackTrade;
 }
 
-export function communityBadgeLabels(
-  posts: CommunityBadgePost[],
-  personName: string,
+export interface CommunityEarnedReputation {
+  verifiedFixes: number;
+  qualityAnswers: number;
+}
+
+/** Server-derived badges remain accurate when a member changes their name. */
+export function communityBadgeLabelsFromReputation(
+  reputation: CommunityEarnedReputation | null | undefined,
   thresholds: CommunityBadgeThresholds = defaultCommunityBadgeThresholds,
 ) {
-  const answers = posts.flatMap((post) => post.replies).filter((answer) => answer.author === personName);
-  const verifiedFixes = answers.filter((answer) => answer.verifiedFix).length;
-  const qualityAnswers = answers.filter((answer) => netScore(answer) >= 3).length;
+  if (!reputation) return [];
   const badges: string[] = [];
-
-  if (verifiedFixes >= thresholds.firstAssistVerifiedFixes) {
-    badges.push("First Assist");
-  }
-  if (qualityAnswers >= thresholds.mentorQualityAnswers) {
-    badges.push("Trade Mentor");
-  }
-  if (qualityAnswers >= thresholds.topHandQualityAnswers && verifiedFixes > 1) {
+  if (reputation.verifiedFixes >= thresholds.firstAssistVerifiedFixes) badges.push("First Assist");
+  if (reputation.qualityAnswers >= thresholds.mentorQualityAnswers) badges.push("Trade Mentor");
+  if (reputation.qualityAnswers >= thresholds.topHandQualityAnswers && reputation.verifiedFixes > 1) {
     badges.push("Top Hand");
   }
-
   return badges;
 }

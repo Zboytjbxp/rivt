@@ -2,11 +2,12 @@
 
 Last updated: 2026-07-13 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Packets 32-35 are deployed and production monitored. Focused
-Work and Camera, Tools subtraction, Shop Talk hierarchy, and the entry and
-onboarding return path passed the complete local and production release gates.
-Active packet: `docs/delivery/packets/35_ENTRY_ONBOARDING_RETURN_PATH.md`
-Repository branch: `codex/onboarding-return-path`
+Current phase: Packet 36 is locally verified and awaiting merge/deployment.
+It makes Shop Talk notification targets exact, restores existing device-push
+subscriptions after authenticated boot, and replaces device-local reputation
+matching with server-authoritative author-earned totals.
+Active packet: `docs/delivery/packets/36_SHOP_TALK_RELIABILITY.md`
+Repository branch: `codex/shop-talk-reliability`
 Production feature release commit: `b2bc306089d8320517110fc3361615c6df4a8dc8`
 
 ## Packets 32-35 - Aggregate Release Verification

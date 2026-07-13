@@ -1,4 +1,4 @@
-import { type CSSProperties, useEffect, useMemo, useState } from "react";
+import { type CSSProperties, useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowLeft,
   BadgeCheck,
@@ -41,7 +41,7 @@ import { tradeOptions } from "../../data";
 import type { Role, Trade } from "../../types";
 import { usePersona } from "../persona/usePersona";
 import {
-  communityBadgeLabels,
+  communityBadgeLabelsFromReputation,
   inferCommunityDefaultTrade,
   netScore,
   sortedAnswers,
@@ -114,6 +114,11 @@ export interface CommunityReactionSummary {
   downvotesGiven: number;
   targetsReacted: number;
   lastReactedAt: string | null;
+  upvotesEarned: number;
+  downvotesEarned: number;
+  earnedScore: number;
+  verifiedFixes: number;
+  qualityAnswers: number;
 }
 
 export interface CommunityReactionState {
@@ -642,6 +647,7 @@ export function ShopTalkView({
   onNewPost,
   onDeletePost,
   onCommunityCreated,
+  onLoadPost,
   role,
   isGuest = false,
 }: {
@@ -670,6 +676,7 @@ export function ShopTalkView({
   onNewPost: (flair: PostFlair, title: string, trade: Trade | "General", body: string, postType: PostType, subTrade?: string, subLocation?: string, subRate?: string, communitySlug?: string | null, photoFile?: File | null) => void | Promise<void>;
   onDeletePost: (postId: string) => boolean | Promise<boolean>;
   onCommunityCreated: (community: ServerCommunity) => void;
+  onLoadPost: (postId: string) => Promise<CommunityPost | null>;
   role: Role;
   isGuest?: boolean;
 }) {
@@ -683,6 +690,7 @@ export function ShopTalkView({
   // Desktop opens on the feed. A thread is a deliberate second step unless a
   // deep link or answer queue has already named the exact post to open.
   const [selectedPostId, setSelectedPostId] = useState<string | null>(initialPostId ?? null);
+  const attemptedDeepLinkPostIds = useRef(new Set<string>());
   const [answerDraft, setAnswerDraft] = useState("");
   const [newPostOpen, setNewPostOpen] = useState(Boolean(openComposer));
   const [joinedCommunities, setJoinedCommunities] = useState<Set<string>>(() => {
@@ -705,10 +713,6 @@ export function ShopTalkView({
   const [flairFilter, setFlairFilter] = useState<PostFlair | "All">(() => readShopTalkFilterPrefs().flairFilter);
   const [bookmarkedIds, setBookmarkedIds] = useState<Set<string>>(() => readStringSet("rivt.shopTalkBookmarks.v1"));
   const [showBookmarked, setShowBookmarked] = useState(false);
-  const [helpfulVotesMap, setHelpfulVotesMap] = useState<Record<string, number>>(() => {
-    try { return JSON.parse(localStorage.getItem("rivt.shopTalk.v1") ?? "{}") as Record<string, number>; }
-    catch { return {}; }
-  });
   const [filtersOpen, setFiltersOpen] = useState(false);
   // Legacy tag filters are intentionally dormant while the single filter sheet is active.
   const [activeTrendingTag, setActiveTrendingTag] = useState<string | null>(null);
@@ -893,20 +897,6 @@ export function ShopTalkView({
     }
   }
 
-  function _incrementHelpfulVote(postId: string) {
-    setHelpfulVotesMap(prev => {
-      const base = communityPosts.find(p => p.id === postId)?.helpfulVotes ?? 0;
-      const extra = prev[postId] ?? 0;
-      const next = { ...prev, [postId]: extra + 1 };
-      const totalForPost = base + extra + 1;
-      // store total delta per post
-      const persistMap = { ...next };
-      try { localStorage.setItem("rivt.shopTalk.v1", JSON.stringify(persistMap)); } catch { /* noop */ }
-      void totalForPost;
-      return next;
-    });
-  }
-
   async function activateNews(forceRefresh = false) {
     setActiveTab("news");
     if (newsFetched && !forceRefresh) return;
@@ -976,9 +966,9 @@ export function ShopTalkView({
     const bMatch = (b.trade === persona.trade || b.trade === "General") ? 0 : 1;
     return aMatch - bMatch;
   });
-  const selectedPost = filteredPosts.find((p) => p.id === selectedPostId) ?? null;
+  const selectedPost = communityPosts.find((p) => p.id === selectedPostId) ?? null;
   const selectedNews = filteredNews.find((n) => n.id === selectedNewsId) ?? filteredNews[0];
-  const profileBadges = communityBadgeLabels(communityPosts, profile.displayName, communityBadgeThresholds);
+  const profileBadges = communityBadgeLabelsFromReputation(_reactionSummary, communityBadgeThresholds);
   const newsSourceCount = new Set(filteredNews.map((item) => item.source)).size;
   const selectedPostReactionState = selectedPost
     ? getPostReactionState(selectedPost)
@@ -1011,30 +1001,14 @@ export function ShopTalkView({
   }
 
   // ── Trending tags ─────────────────────────────────────────────────────────
-  // User total helpful votes.
-  const myTotalRep = useMemo(() => {
-    const fromPosts = communityPosts
-      .filter(p => p.author === profile.displayName)
-      .reduce((sum, p) => sum + (p.helpfulVotes ?? 0) + (helpfulVotesMap[p.id] ?? 0), 0);
-    const fromAnswers = communityPosts.reduce((sum, post) => {
-      const myAnswers = post.replies.filter(r => r.author === profile.displayName);
-      return sum + myAnswers.reduce((s, a) => s + Math.max(0, a.upvotes - a.downvotes), 0);
-    }, 0);
-    return fromPosts + fromAnswers;
-  }, [communityPosts, profile.displayName, helpfulVotesMap]);
-  // Per-author reputation for badges on cards.
-  const _authorRepMap = useMemo(() => {
-    const map: Record<string, number> = {};
-    for (const post of communityPosts) {
-      const votes = (post.helpfulVotes ?? 0) + (helpfulVotesMap[post.id] ?? 0);
-      if (votes > 0) map[post.author] = (map[post.author] ?? 0) + votes;
-      for (const reply of post.replies) {
-        const score = Math.max(0, reply.upvotes - reply.downvotes);
-        if (score > 0) map[reply.author] = (map[reply.author] ?? 0) + score;
-      }
-    }
-    return map;
-  }, [communityPosts, helpfulVotesMap]);
+  const myTotalRep = _reactionSummary?.earnedScore ?? 0;
+
+  useEffect(() => {
+    if (!initialPostId || communityPosts.some((post) => post.id === initialPostId)) return;
+    if (attemptedDeepLinkPostIds.current.has(initialPostId)) return;
+    attemptedDeepLinkPostIds.current.add(initialPostId);
+    void onLoadPost(initialPostId);
+  }, [communityPosts, initialPostId, onLoadPost]);
 
   function submitAnswer() {
     const body = answerDraft.trim();

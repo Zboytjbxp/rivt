@@ -274,6 +274,11 @@ async function configurePage(page, jobs, { activeWork = [], project = null } = {
       meta: { requestId: "e2e-notification-preferences" },
     }),
   }));
+  await page.route("**/api/v1/push/config", (route) => route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: JSON.stringify({ data: { configured: false, publicKey: null }, meta: { requestId: "e2e-push-config" } }),
+  }));
   await page.route(/\/api\/v1\/tool-records(?:\?.*)?$/, (route) => route.fulfill({
     status: 200,
     contentType: "application/json",

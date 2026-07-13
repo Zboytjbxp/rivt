@@ -16,6 +16,7 @@ import type { CanonicalActiveWork } from "../work/job-api";
 import type { ToolMode } from "../tools/ToolsStudio";
 import { getProjectForActiveWork, type ProjectRecord } from "../tools/project-api";
 import type { GuestPreviewSummary } from "../../demo/guestPreview";
+import { DAILY_LOG_PREFIX } from "../tools/daily-log-constants";
 import "./trade-feed.css";
 
 const BOOKMARK_KEY = "rivt.shopTalkBookmarks.v1";
@@ -41,7 +42,7 @@ function isToday(iso: string | null | undefined) {
 }
 
 function isDailyLogEntry(body: string) {
-  return body.trimStart().toLowerCase().startsWith("rivt daily log");
+  return body.trimStart().toLowerCase().startsWith(DAILY_LOG_PREFIX.toLowerCase());
 }
 
 function formatCommunityCardCount(memberCount: number) {
