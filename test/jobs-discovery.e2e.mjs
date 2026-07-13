@@ -373,13 +373,11 @@ async function assertToolsFlow(page) {
   const primaryTool = (name) => page.locator(".v2-tool-launch-card").filter({ hasText: name }).first();
   const fieldToolsTray = page.getByLabel("Field shortcuts", { exact: true });
   await fieldToolsTray.getByRole("button", { name: "Heavy 16th", exact: true }).waitFor();
-  assert.equal(await page.locator(".v2-tool-launch-card").count(), 5, "Tools hub should expose exactly five primary field apps");
-  assert.equal(await page.locator(".v2-tool-group").count(), 3, "Tools hub should keep supporting utilities in three grouped sections");
-  await page.locator(".v2-tool-group").filter({ hasText: "Plan" }).locator("summary").click();
+  assert.equal(await page.locator(".v2-tool-launch-card").count(), 2, "Tools hub should keep only the unpinned core apps in the main grid");
+  assert.equal(await page.locator(".v2-tool-group").count(), 1, "Tools hub should consolidate supporting helpers into one Utilities drawer");
+  await page.locator(".v2-tool-group").filter({ hasText: "Utilities" }).locator("summary").click();
   await page.getByRole("button", { name: /Materials/i }).waitFor();
-  await page.locator(".v2-tool-group").filter({ hasText: "Track" }).locator("summary").click();
   await page.getByRole("button", { name: /Receivables/i }).waitFor();
-  await page.locator(".v2-tool-group").filter({ hasText: "Site" }).locator("summary").click();
   await page.getByRole("button", { name: /Safety/i }).waitFor();
   await fieldToolsTray.getByRole("button", { name: "Heavy 16th", exact: true }).click();
   await page.getByRole("heading", { name: "Heavy 16th field calculator" }).waitFor();
@@ -408,7 +406,7 @@ async function assertToolsFlow(page) {
   await page.getByText("Printable invoice", { exact: true }).waitFor();
   await page.getByLabel("Invoice draft").getByRole("button", { name: "All tools" }).click();
 
-  await primaryTool("Camera").click();
+  await fieldToolsTray.getByRole("button", { name: "Camera", exact: true }).click();
   await page.getByRole("heading", { name: "Camera", exact: true }).waitFor();
   await page.waitForFunction(
     () => document.body.innerText.includes("Active job") || document.body.innerText.includes("Private albums"),

@@ -107,7 +107,7 @@ try {
   await page.route("**/api/auth/signup", captureSignupBody);
 
   await page.goto(baseUrl, { waitUntil: "networkidle" });
-  await page.getByRole("heading", { name: /Contractors and subs in one place|One workspace for every job|Communities that know the work/i }).waitFor();
+  await page.getByRole("heading", { name: "Work, proof, and trade community in one place." }).waitFor();
   assert.equal(await page.getByText("Authentication required.").count(), 0);
   assert.equal(await page.getByText("Browse local demo").count(), 0);
   await page.getByRole("button", { name: "Log in", exact: true }).click();

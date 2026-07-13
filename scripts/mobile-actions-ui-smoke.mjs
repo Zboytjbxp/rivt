@@ -371,8 +371,8 @@ async function runMobileFlow(page) {
   await page.getByRole("heading", { name: "Tools", exact: true }).waitFor({ timeout: 15_000 });
   const primaryInvoiceTool = page.locator(".v2-tool-launch-card").filter({ hasText: "Invoice" }).first();
   await primaryInvoiceTool.waitFor({ timeout: 15_000 });
-  await page.getByRole("button", { name: "Open Camera" }).waitFor({ timeout: 15_000 });
-  assert.equal(await page.locator(".v2-tool-launch-card").count(), 5, "mobile Tools hub should expose exactly five primary field apps");
+  await page.getByLabel("Field shortcuts").getByRole("button", { name: "Camera", exact: true }).waitFor({ timeout: 15_000 });
+  assert.equal(await page.locator(".v2-tool-launch-card").count(), 2, "mobile Tools hub should keep only the unpinned core apps in the main grid");
   assert.equal(await page.locator(".v2-tool-mini-card").count(), 9, "mobile Tools hub should expose the focused supporting tool set");
   await assertNoHorizontalOverflow(page, "Tools hub");
   await primaryInvoiceTool.click();
@@ -391,7 +391,7 @@ async function runMobileFlow(page) {
 
   await page.getByLabel("Invoice draft").getByRole("button", { name: "Tools" }).click();
   await page.getByRole("heading", { name: "Tools", exact: true }).waitFor({ timeout: 15_000 });
-  await page.getByRole("button", { name: "Open Camera" }).click();
+  await page.getByLabel("Field shortcuts").getByRole("button", { name: "Camera", exact: true }).click();
   await page.getByRole("heading", { name: "Camera", exact: true }).waitFor({ timeout: 15_000 });
   await page.getByRole("button", { name: "Choose destination" }).click();
   await page.getByRole("dialog", { name: "Choose work context" }).getByRole("button", { name: /Miller kitchen/i }).click();
@@ -480,7 +480,7 @@ async function runMobileFlow(page) {
 
   await page.getByRole("button", { name: "Tools", exact: true }).click();
   await page.getByRole("heading", { name: "Tools", exact: true }).waitFor({ timeout: 15_000 });
-  await page.getByRole("button", { name: "Open Heavy 16th" }).click();
+  await page.getByLabel("Field shortcuts").getByRole("button", { name: "Heavy 16th", exact: true }).click();
   await page.getByRole("heading", { name: "Heavy 16th field calculator", exact: true }).waitFor({ timeout: 15_000 });
   await page.getByLabel("Input unit").getByRole("button", { name: "Switch to metric mode" }).waitFor({ timeout: 15_000 });
   await page.getByLabel("Heavy, light, double, and half controls").getByRole("button", { name: "Heavy plus one thirty-second" }).waitFor({ timeout: 15_000 });
@@ -532,7 +532,7 @@ async function runMobileFlow(page) {
   await page.getByRole("button", { name: "Feed" }).waitFor({ timeout: 15_000 });
   await page.getByRole("button", { name: "Trade News" }).waitFor({ timeout: 15_000 });
   await page.setViewportSize({ width: 390, height: 664 });
-  await page.locator(".shop-talk-fab").click();
+  await page.getByRole("button", { name: "Post", exact: true }).click();
   const postButton = page.locator(".new-post-modal-footer .primary-action");
   await postButton.waitFor({ timeout: 15_000 });
   const postButtonBox = await postButton.boundingBox();
