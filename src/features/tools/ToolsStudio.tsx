@@ -222,6 +222,8 @@ function ToolAppShell({
   title,
   contextLabel,
   compact = false,
+  backLabel = "All tools",
+  className = "",
   onBack,
   swipeHandlers,
   children,
@@ -229,16 +231,18 @@ function ToolAppShell({
   title: string;
   contextLabel?: string | null;
   compact?: boolean;
+  backLabel?: string;
+  className?: string;
   onBack: () => void;
   swipeHandlers?: ToolSwipeHandlers;
   children: ReactNode;
 }) {
   return (
-    <section className={compact ? "v2-tools-app is-compact is-fullscreen-tool" : "v2-tools-app"} aria-label={title} {...swipeHandlers}>
+    <section className={`${compact ? "v2-tools-app is-compact is-fullscreen-tool" : "v2-tools-app"} ${className}`.trim()} aria-label={title} {...swipeHandlers}>
       <header className={compact ? "v2-tool-app-header is-compact" : "v2-tool-app-header"}>
         <button type="button" onClick={onBack}>
           <ArrowLeft size={16} />
-          All tools
+          {backLabel}
         </button>
         <div>
           <h1>{title}</h1>
@@ -3705,6 +3709,8 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
         title={toolMeta.title}
         contextLabel={focusedActiveWorkId ? activeJob?.title ?? null : null}
         compact
+        backLabel={activeTool === "job-photos" ? "Tools" : "All tools"}
+        className={activeTool === "job-photos" ? "is-camera-app" : ""}
         onBack={() => setActiveTool("hub")}
         swipeHandlers={toolSwipeHandlers}
       >

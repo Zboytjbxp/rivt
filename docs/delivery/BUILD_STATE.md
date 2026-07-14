@@ -1,13 +1,29 @@
 # RIVT Build State
 
-Last updated: 2026-07-13 America/New_York
+Last updated: 2026-07-14 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Packet 38 is production verified. It consolidates Crew under
-Work as a visible People mode while preserving existing relationship records
-and legacy links.
-Active packet: `docs/delivery/packets/38_WORK_PEOPLE_NAVIGATION.md`
-Repository branch: `codex/work-people-navigation`
-Production feature release commit: `1e7141c13170d623e49996a48a74310ace5bfe0f`
+Current phase: Packet 39 is locally verified. It promotes Camera to a compact
+field command while retaining exact RIVT-work and standalone-work contexts.
+Active packet: `docs/delivery/packets/39_CAMERA_FIELD_ACTION.md`
+Repository branch: `codex/camera-navigation-redesign`
+Production feature release commit: pending merge and deploy
+
+## Packet 39 - Camera Field Action and One-Hand Capture (Local Verification)
+
+- Camera now occupies the compact shell's former Crew slot after People moved
+  under Work. It is a quick field command, not a new competing product area.
+- Direct Camera starts without guessing a job. Users explicitly choose accepted
+  RIVT work or a standalone project before capture. Exact job Photos handoffs
+  retain `/app/camera?activeWork=<id>` through the gallery and capture flow.
+- The lower camera control zone keeps the exact destination, photo gallery,
+  capture type, latest capture, shutter, and switch-camera controls inside the
+  one-handed thumb zone. Accessible copy also identifies the save destination.
+- Build, lint, 53/53 unit tests, E2E, mobile-action UI, work-lifecycle UI, and
+  tools UI checks pass locally. `TEST_DATABASE_URL` is not present in this
+  clean worktree, so no new database-integration result is claimed.
+- Remaining boundary: merge, deploy, confirm production serves the exact
+  commit, and physically check the Camera command on founder iPhone/Android
+  devices before treating the new navigation as field accepted.
 
 ## Packet 38 - Work and People Navigation (Production Verified)
 

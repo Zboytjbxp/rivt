@@ -213,6 +213,9 @@ async function configurePage(page) {
   await page.route("**/api/auth/providers", (route) =>
     route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ providers: {} }) }),
   );
+  await page.route("**/api/v1/push/config", (route) =>
+    route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { enabled: false } }) }),
+  );
   await page.route("**/api/v1/sessions", (route) =>
     route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { sessions: [] } }) }),
   );
@@ -527,7 +530,7 @@ async function runToolsFlow(page, viewportName) {
   await assertNoHorizontalOverflow(page);
   await page.screenshot({ path: path.join(screenshotDir, `${viewportName}-camera-home.png`), fullPage: true });
   await page.getByRole("button", { name: "Capture", exact: true }).click();
-  await page.getByRole("button", { name: "Take photo" }).waitFor({ timeout: 15_000 });
+  await page.getByLabel("Take photo").waitFor({ timeout: 15_000 });
   await page.getByLabel("Saving photos to Tenant Build-Out").waitFor({ timeout: 15_000 });
   const captureTypes = page.getByRole("group", { name: "Capture type" });
   await captureTypes.getByRole("button", { name: "Issue" }).click();
@@ -537,7 +540,7 @@ async function runToolsFlow(page, viewportName) {
     const shutter = document.querySelector(".v2-camera-shutter");
     return shutter instanceof HTMLButtonElement && !shutter.disabled;
   }, null, { timeout: 15_000 });
-  await page.getByRole("button", { name: "Take photo" }).click();
+  await page.getByLabel("Take photo").click();
   await page.locator(".v2-camera-save-status", { hasText: "1 of 1 didn't upload - retry the failed photo." }).waitFor({ timeout: 15_000 });
   await page.locator(".v2-camera-retry").click();
   await page.getByText("Saved to Tenant Build-Out.", { exact: true }).waitFor({ timeout: 15_000 });

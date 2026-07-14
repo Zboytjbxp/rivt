@@ -352,6 +352,16 @@ async function runMobileFlow(page) {
   assert.equal(await page.locator(".trade-feed-cta-row").count(), 0, "Home should not render duplicate post/crew CTA rows");
   await page.screenshot({ path: path.join(screenshotDir, "mobile-home-clean.png"), fullPage: true });
 
+  await page.getByRole("button", { name: "Camera", exact: true }).click();
+  await page.getByRole("heading", { name: "Camera", exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByText("Choose where this proof belongs", { exact: true }).waitFor({ timeout: 15_000 });
+  const cameraDestination = page.getByLabel("Camera actions").getByRole("button", { name: "Destination", exact: true });
+  const cameraDestinationBox = await cameraDestination.boundingBox();
+  assert.ok(cameraDestinationBox && cameraDestinationBox.y + cameraDestinationBox.height <= 844, `Camera tab destination should stay in the thumb-zone viewport: ${JSON.stringify(cameraDestinationBox)}`);
+  await assertNoHorizontalOverflow(page, "Camera tab");
+  await page.getByLabel("Camera").getByRole("button", { name: "Tools" }).click();
+  await page.getByRole("heading", { name: "Tools", exact: true }).waitFor({ timeout: 15_000 });
+
   await page.goto(`${baseUrl}/app/work`, { waitUntil: "networkidle" });
   await page.getByRole("heading", { name: "Work", exact: true }).waitFor({ timeout: 15_000 });
   await assertNoHorizontalOverflow(page, "Work");

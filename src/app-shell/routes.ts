@@ -4,6 +4,7 @@ export type NavLabel =
   | "Home"
   | "Work"
   | "Shop Talk"
+  | "Camera"
   | "Tools"
   | "My Jobs"
   | "Applications"
@@ -23,6 +24,7 @@ export function primaryDestinationForView(view: NavLabel): PrimaryDestination | 
   if (view === "Home") return "home";
   if (["Work", "My Jobs", "Applications", "Invites", "People", "Crew", "Reviews"].includes(view)) return "work";
   if (view === "Shop Talk") return "shop-talk";
+  if (view === "Camera") return "camera";
   if (["Tools", "Records"].includes(view)) return "tools";
   return null;
 }
@@ -32,6 +34,7 @@ export function defaultViewForDestination(destination: PrimaryDestination): NavL
   if (destination === "work") return "Work";
   if (destination === "crew") return "People";
   if (destination === "shop-talk") return "Shop Talk";
+  if (destination === "camera") return "Camera";
   if (destination === "messages") return "Messages";
   return "Tools";
 }
@@ -40,6 +43,7 @@ export const viewRoutes: Record<NavLabel, string> = {
   Home: "/app",
   Work: "/app/work",
   "Shop Talk": "/app/network/talk",
+  Camera: "/app/camera",
   Tools: "/app/tools",
   "My Jobs": "/app/work",
   Applications: "/app/work",
@@ -78,6 +82,7 @@ export function viewFromPath(pathname: string): NavLabel {
     "/app/profile/settings": "Settings",
     "/app/records": "Records",
     "/app/tools/records": "Records",
+    "/app/camera": "Camera",
     "/app/admin": "Admin",
   };
   if (aliases[normalized]) return aliases[normalized];
@@ -97,6 +102,10 @@ export const pageCopy: Record<NavLabel, { title: string; description: string }> 
   "Shop Talk": {
     title: "Shop Talk",
     description: "Ask field questions and get answers from tradespeople who've solved it.",
+  },
+  Camera: {
+    title: "Camera",
+    description: "Capture jobsite proof into the right project or private album.",
   },
   Tools: {
     title: "Tools",

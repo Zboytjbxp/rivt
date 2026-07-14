@@ -199,6 +199,13 @@ function pathForTool(tool: ToolMode | null, activeWorkId: string | null = null) 
   return `${viewRoutes.Tools}?${params.toString()}`;
 }
 
+function pathForCamera(activeWorkId: string | null = null) {
+  const params = new URLSearchParams();
+  if (activeWorkId) params.set("activeWork", activeWorkId);
+  const query = params.toString();
+  return `${viewRoutes.Camera}${query ? `?${query}` : ""}`;
+}
+
 function currentPathAndSearch() {
   return `${window.location.pathname}${window.location.search}`;
 }
@@ -707,8 +714,8 @@ function App() {
   useEffect(() => {
     function handleHistoryNavigation() {
       const nextView = viewFromPath(window.location.pathname);
-      const nextTool = nextView === "Tools" ? readToolFromUrl() : null;
-      const nextActiveWorkId = ["Work", "Tools", "Records", "Messages"].includes(nextView)
+      const nextTool = nextView === "Tools" ? readToolFromUrl() : nextView === "Camera" ? "job-photos" : null;
+      const nextActiveWorkId = ["Work", "Tools", "Camera", "Records", "Messages"].includes(nextView)
         ? readActiveWorkFromUrl()
         : null;
       setActiveView(nextView);
@@ -1371,13 +1378,15 @@ function App() {
 
   function handleNavigate(view: NavLabel) {
     const resolvedView: NavLabel = view === "Crew" ? "People" : view;
-    setRequestedTool(null);
-    setToolsImmersive(false);
+    const isCamera = resolvedView === "Camera";
+    setRequestedTool(isCamera ? "job-photos" : null);
+    setToolsImmersive(isCamera);
+    if (isCamera) setFocusedActiveWorkId(null);
     if (resolvedView !== "Reviews") setFocusedReviewId(null);
     setActiveView(resolvedView);
-    const nextPath = viewRoutes[resolvedView];
+    const nextPath = isCamera ? pathForCamera() : viewRoutes[resolvedView];
     if (currentPathAndSearch() !== nextPath) {
-      window.history.pushState({ view: resolvedView }, "", nextPath);
+      window.history.pushState({ view: resolvedView, tool: isCamera ? "job-photos" : null }, "", nextPath);
     }
     setActivityOpen(false);
     setAccountOpen(false);
@@ -1386,13 +1395,14 @@ function App() {
 
   function handleOpenTool(tool: ToolMode) {
     const nextTool = tool === "hub" ? null : tool;
+    const isCamera = nextTool === "job-photos";
     setRequestedTool(nextTool);
     setToolsImmersive(Boolean(nextTool));
     setFocusedActiveWorkId(null);
-    setActiveView("Tools");
-    const nextPath = pathForTool(nextTool);
+    setActiveView(isCamera ? "Camera" : "Tools");
+    const nextPath = isCamera ? pathForCamera() : pathForTool(nextTool);
     if (currentPathAndSearch() !== nextPath) {
-      window.history.pushState({ view: "Tools", tool: nextTool }, "", nextPath);
+      window.history.pushState({ view: isCamera ? "Camera" : "Tools", tool: nextTool }, "", nextPath);
     }
     setActivityOpen(false);
     setAccountOpen(false);
@@ -1401,13 +1411,14 @@ function App() {
 
   function handleOpenActiveWorkTool(activeWorkId: string, tool: ToolMode) {
     const nextTool = tool === "hub" ? null : tool;
+    const isCamera = nextTool === "job-photos";
     setFocusedActiveWorkId(nextTool ? activeWorkId : null);
     setRequestedTool(nextTool);
     setToolsImmersive(Boolean(nextTool));
-    setActiveView("Tools");
-    const nextPath = pathForTool(nextTool, nextTool ? activeWorkId : null);
+    setActiveView(isCamera ? "Camera" : "Tools");
+    const nextPath = isCamera ? pathForCamera(activeWorkId) : pathForTool(nextTool, nextTool ? activeWorkId : null);
     if (currentPathAndSearch() !== nextPath) {
-      window.history.pushState({ view: "Tools", tool: nextTool, activeWorkId }, "", nextPath);
+      window.history.pushState({ view: isCamera ? "Camera" : "Tools", tool: nextTool, activeWorkId }, "", nextPath);
     }
     setActivityOpen(false);
     setAccountOpen(false);
@@ -1470,13 +1481,16 @@ function App() {
   function handleToolChange(tool: ToolMode) {
     const nextTool = tool === "hub" ? null : tool;
     const nextActiveWorkId = nextTool ? focusedActiveWorkId : null;
+    const isCamera = nextTool === "job-photos";
+    const nextView: NavLabel = isCamera ? "Camera" : "Tools";
     setRequestedTool(nextTool);
     setToolsImmersive(Boolean(nextTool));
     setFocusedActiveWorkId(nextActiveWorkId);
-    const nextPath = pathForTool(nextTool, nextActiveWorkId);
+    setActiveView(nextView);
+    const nextPath = isCamera ? pathForCamera(nextActiveWorkId) : pathForTool(nextTool, nextActiveWorkId);
     if (currentPathAndSearch() === nextPath) return;
     if (nextTool) {
-      window.history.pushState({ view: "Tools", tool: nextTool, activeWorkId: nextActiveWorkId }, "", nextPath);
+      window.history.pushState({ view: nextView, tool: nextTool, activeWorkId: nextActiveWorkId }, "", nextPath);
     } else {
       window.history.replaceState({ view: "Tools" }, "", nextPath);
     }
@@ -1484,9 +1498,9 @@ function App() {
 
   function handleToolWorkContextChange(activeWorkId: string | null) {
     setFocusedActiveWorkId(activeWorkId);
-    const nextPath = pathForTool(requestedTool, activeWorkId);
+    const nextPath = activeView === "Camera" ? pathForCamera(activeWorkId) : pathForTool(requestedTool, activeWorkId);
     if (currentPathAndSearch() !== nextPath) {
-      window.history.replaceState({ view: "Tools", tool: requestedTool, activeWorkId }, "", nextPath);
+      window.history.replaceState({ view: activeView === "Camera" ? "Camera" : "Tools", tool: requestedTool, activeWorkId }, "", nextPath);
     }
   }
 
@@ -2098,7 +2112,7 @@ function App() {
       return;
     }
 
-    const wantsPhotos = routeText.includes("photo") || routeText.includes("media") || params.get("tool") === "job-photos";
+    const wantsPhotos = routeText.includes("photo") || routeText.includes("media") || routeText.includes("camera") || params.get("tool") === "job-photos";
     const wantsRecords = routeText.includes("record") || routeText.includes("project") || routeText.includes("closeout");
 
     if (notificationTool) {
@@ -2512,7 +2526,7 @@ function App() {
         }}
       >
 
-        {["Home", "Work", "People", "Crew", "Shop Talk", "Reviews", "Messages", "Tools", "Records", "Trust & Legal", "Safety & Training", "Feedback", "Settings", "Admin"].includes(activeView) ? null : (
+        {["Home", "Work", "People", "Crew", "Shop Talk", "Reviews", "Messages", "Camera", "Tools", "Records", "Trust & Legal", "Safety & Training", "Feedback", "Settings", "Admin"].includes(activeView) ? null : (
           <header className="page-heading" aria-label={`${page.title} heading`}>
             <div>
               <h1>{page.title}</h1>
@@ -2709,12 +2723,12 @@ function App() {
             onQuizComplete={handleQuizComplete}
             isDemo={isGuest}
           />
-        ) : ["Tools", "Records"].includes(activeView) ? (
+        ) : ["Camera", "Tools", "Records"].includes(activeView) ? (
           <ToolsStudio
             jobs={jobs}
             paymentRecords={paymentRecords}
             mode={activeView === "Records" ? "records" : "tools"}
-            openTool={activeView === "Tools" ? requestedTool ?? "hub" : null}
+            openTool={activeView === "Camera" ? "job-photos" : activeView === "Tools" ? requestedTool ?? "hub" : null}
             activeWorkRecords={activeWork}
             onToolChange={handleToolChange}
             onWorkContextChange={handleToolWorkContextChange}

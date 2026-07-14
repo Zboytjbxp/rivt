@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import type { Role } from "../types";
 
-export type PrimaryDestination = "home" | "work" | "crew" | "shop-talk" | "tools" | "messages";
+export type PrimaryDestination = "home" | "work" | "crew" | "shop-talk" | "camera" | "tools" | "messages";
 export type SearchTarget = "work" | "shop-talk" | "tools";
 
 export interface ProfileSearchResult {

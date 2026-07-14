@@ -10,6 +10,18 @@ Status values:
 
 Evidence must eventually link to implementation, automated tests, manual acceptance proof, and deployed build.
 
+## Traceability Addendum - 2026-07-14 Camera Field Action (Local Verification)
+
+- `GA-UX-002` gains compact-navigation evidence: Camera replaces the former
+  Crew slot after People moved under Work, acting as a field command rather
+  than adding another competing product destination.
+- `GA-UX-003` gains exact-work evidence: active-work Photos routes to the
+  selected job's Camera/gallery context, while a direct Camera launch requires
+  an explicit accepted-work or standalone-project destination.
+- `GA-UX-006` gains SE-class one-hand evidence: lower Camera controls retain
+  the visible save destination, gallery, capture type, shutter, latest capture,
+  and camera switch; rendered mobile, tool, and work-lifecycle checks pass.
+
 ## Traceability Addendum - 2026-07-13 Daily Workspace and Camera
 
 - `GA-UX-003` gains focused-workspace evidence: an exact accepted-work route

@@ -30,7 +30,12 @@ function notificationActionLabel(notification: InboxNotification) {
   ) {
     return "Open message";
   }
-  if (routeText.includes("photo") || routeText.includes("media") || routeText.includes("job-photos")) {
+  if (
+    routeText.includes("photo") ||
+    routeText.includes("media") ||
+    routeText.includes("job-photos") ||
+    routeText.includes("camera")
+  ) {
     return "Open photos";
   }
   if (notification.sourceType === "project" || href.includes("tools/records")) {

@@ -276,15 +276,11 @@ function CameraCapture({
     <div className="v2-camera-overlay">
       {flash ? <div className="v2-camera-flash" aria-hidden="true" /> : null}
       <header className="v2-camera-topbar">
-        <button type="button" className="v2-camera-close" onClick={onClose} disabled={saveState === "saving"}>
+        <button type="button" className="v2-camera-close" onClick={onClose} disabled={saveState === "saving"} aria-label="Back to camera photos">
           <ArrowLeft size={18} />
-          Back
+          <span>Back</span>
         </button>
-        <div className="v2-camera-context" aria-label={`Saving photos to ${contextLabel}`}>
-          <span>Saving to</span>
-          <strong>{contextLabel}</strong>
-        </div>
-        <button type="button" className="v2-camera-done" onClick={onClose} disabled={saveState === "saving"}>Done</button>
+        <strong className="v2-camera-topbar-title">Camera</strong>
       </header>
       {error ? (
         <div className="v2-camera-error">
@@ -303,12 +299,12 @@ function CameraCapture({
       )}
       <canvas ref={canvasRef} style={{ display: "none" }} aria-hidden="true" />
       <div className="v2-camera-bottom-controls">
-        <div className="v2-camera-bottom-context">
+        <div className="v2-camera-bottom-context" aria-label={`Saving photos to ${contextLabel}`}>
           <span>
             <small>Saving to</small>
             <strong>{contextLabel}</strong>
           </span>
-          <button type="button" onClick={onClose} disabled={saveState === "saving"}>Done</button>
+          <button type="button" onClick={onClose} disabled={saveState === "saving"}>Photos</button>
         </div>
         {onCaptureIntentChange ? (
           <div className="v2-camera-intent-strip" role="group" aria-label="Capture type">
@@ -336,9 +332,9 @@ function CameraCapture({
           </button>
         ) : null}
         <div className="v2-camera-controls">
-          <div className="v2-camera-last-capture" aria-label={captureCount ? `${captureCount} photos saved in this camera session` : "No photo captured in this camera session"}>
+          <button type="button" className="v2-camera-last-capture" onClick={onClose} disabled={saveState === "saving"} aria-label={captureCount ? `View ${captureCount} photos saved in this camera session` : "View camera photos"}>
             {lastSnapUrl ? <img key={lastSnapUrl} src={lastSnapUrl} alt="Latest captured photo" /> : <span><Image size={18} /></span>}
-          </div>
+          </button>
           <button
             type="button"
             className="v2-camera-shutter"

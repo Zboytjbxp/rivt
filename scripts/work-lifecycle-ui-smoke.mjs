@@ -344,6 +344,7 @@ async function configurePage(page, account, state) {
 
   await page.route("**/api/v1/me", (route) => route.fulfill(json({ data: account })));
   await page.route("**/api/auth/providers", (route) => route.fulfill(json({ providers: {} })));
+  await page.route("**/api/v1/push/config", (route) => route.fulfill(json({ data: { enabled: false, publicKey: null } })));
   await page.route("**/api/v1/sessions", (route) => route.fulfill(json({ data: { sessions: [] } })));
   await page.route("**/api/v1/profiles**", (route) => route.fulfill(json({ data: { profiles: [] } })));
   await page.route("**/api/v1/conversations", (route) => route.fulfill(json({ data: { conversations: state.conversations } })));
@@ -699,7 +700,7 @@ async function runTradespersonOfferFlow(page) {
   await activeWorkspace.getByText("Job controls", { exact: true }).waitFor({ timeout: 15_000 });
   assert.equal(await activeWorkspace.locator("details.v2-active-work-controls").evaluate((element) => !element.open), true, "Rare job controls should start collapsed");
   await activeWorkspace.getByRole("button", { name: "Photos" }).click();
-  await page.waitForURL(/\/app\/tools\?tool=job-photos/, { timeout: 15_000 });
+  await page.waitForURL(new RegExp(`/app/camera\\?activeWork=${activeWorkId}`), { timeout: 15_000 });
   await page.getByText("Live project feed", { exact: true }).waitFor({ timeout: 15_000 });
   await page.getByLabel("Camera").locator(".v2-job-photos-job-name").getByText("Warehouse panel assist", { exact: true }).waitFor({ timeout: 15_000 });
 
@@ -714,7 +715,7 @@ async function runTradespersonOfferFlow(page) {
   await clickJob(page, "Warehouse panel assist");
   await page.getByText("Accepted and active", { exact: true }).waitFor({ timeout: 15_000 });
   await page.getByLabel("Hiring workflow").getByRole("button", { name: "Photos" }).click();
-  await page.waitForURL(/\/app\/tools\?tool=job-photos/, { timeout: 15_000 });
+  await page.waitForURL(new RegExp(`/app/camera\\?activeWork=${activeWorkId}`), { timeout: 15_000 });
   await page.getByText("Live project feed", { exact: true }).waitFor({ timeout: 15_000 });
   await page.getByLabel("Camera").locator(".v2-job-photos-job-name").getByText("Warehouse panel assist", { exact: true }).waitFor({ timeout: 15_000 });
 
@@ -790,7 +791,7 @@ async function runNotificationProjectPhotoFlow(page) {
       id: "dd13a602-febe-421e-9b26-8da6131634f3",
       title: "Photo uploaded",
       body: "Warehouse panel assist - progress photo saved",
-      actionHref: `/app/tools?tool=job-photos&activeWorkId=${activeWorkId}`,
+      actionHref: `/app/camera?activeWork=${activeWorkId}`,
       sourceType: "project",
       sourceId: projectId,
       metadata: { activeWorkId, projectId, jobId: openJobId },
@@ -803,7 +804,7 @@ async function runNotificationProjectPhotoFlow(page) {
   const notificationsDialog = page.getByRole("dialog", { name: "Notifications" });
   await notificationsDialog.waitFor({ timeout: 15_000 });
   await notificationsDialog.getByRole("button", { name: /Open photos: Photo uploaded/i }).click();
-  await page.waitForURL(/\/app\/tools\?tool=job-photos/, { timeout: 15_000 });
+  await page.waitForURL(new RegExp(`/app/camera\\?activeWork=${activeWorkId}`), { timeout: 15_000 });
   await page.getByText("Live project feed", { exact: true }).waitFor({ timeout: 15_000 });
   await page.getByLabel("Camera").locator(".v2-job-photos-job-name").getByText("Warehouse panel assist", { exact: true }).waitFor({ timeout: 15_000 });
   await assertNoHorizontalOverflow(page, "Notification project photo route");

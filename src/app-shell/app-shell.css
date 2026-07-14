@@ -106,6 +106,14 @@
   box-shadow: inset 3px 0 0 var(--v2-accent);
 }
 
+.v2-primary-nav button.is-camera-command:not(.is-active) {
+  color: var(--v2-accent);
+}
+
+.v2-primary-nav button.is-camera-command {
+  border: 1px solid color-mix(in srgb, var(--v2-accent) 38%, var(--v2-border));
+}
+
 .v2-job-context {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
@@ -984,6 +992,32 @@ html[data-rivt-immersive-tool] .guest-banner {
 
   .v2-mobile-nav button.is-active svg {
     fill: color-mix(in srgb, var(--v2-accent) 18%, transparent);
+  }
+
+  .v2-mobile-nav button.is-camera-command {
+    position: relative;
+    min-height: 58px;
+    margin-top: -12px;
+    border: 1px solid color-mix(in srgb, var(--v2-accent) 45%, var(--v2-border));
+    border-radius: var(--v2-radius-lg);
+    background: var(--v2-surface);
+    color: var(--v2-accent);
+    box-shadow: 0 8px 18px color-mix(in srgb, var(--v2-accent) 16%, transparent);
+  }
+
+  .v2-mobile-nav button.is-camera-command svg {
+    width: 21px;
+    height: 21px;
+  }
+
+  .v2-mobile-nav button.is-camera-command.is-active {
+    background: var(--v2-accent);
+    color: var(--v2-on-accent);
+    box-shadow: 0 10px 22px color-mix(in srgb, var(--v2-accent) 34%, transparent);
+  }
+
+  .v2-mobile-nav button.is-camera-command.is-active svg {
+    fill: transparent;
   }
 
   .v2-search-panel {
