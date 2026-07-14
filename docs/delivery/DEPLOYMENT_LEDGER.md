@@ -1,5 +1,31 @@
 # Deployment Ledger
 
+## 2026-07-14 - Packet 41 Camera Home Album Previews
+
+- Source commit: `0849eaacc0b70302bf70c487c058c33b62f99c42`
+- Branch: `master`
+- Production: `https://rivt.pro`
+- Scope: Independent Camera now shows authenticated, account-owned private
+  albums with their latest stored cover photo and truthful counts. Accepted
+  RIVT work and standalone project sessions deliberately remain scoped and do
+  not mix in unrelated private albums. Camera is an equal global navigation
+  destination while the lower Destination, Feed, and Capture dock remains the
+  one-handed control zone.
+- Automated gates: build, lint, 53 unit tests, E2E, Tools rendered UI,
+  mobile-action UI, dependency audit, and diff check passed. PostgreSQL
+  integration suites were skipped locally because no disposable
+  `TEST_DATABASE_URL` was configured; no database-integration result is
+  claimed.
+- Post-deploy proof: exact-source health passed with ready migration
+  `0027_default_private_photo_album`, PostgreSQL, and S3-compatible object
+  storage. The expected-source production monitor passed with configured
+  Sentry/Web Push, matching-job alerts enabled, controls off, and seven
+  anonymous private-route checks in 632 ms.
+- Rollback target: `bc25fb3d7d13db398ace05dfe5b34c57b430690f`.
+- Remaining field acceptance: capture into the default album and a second
+  private album, then confirm previews and context separation on iOS and
+  Android.
+
 ## 2026-07-14 - Packet 39 Camera Field Action and One-Hand Capture
 
 - Source commit: `9262bb81d630d95f4b482d7d462b506099a1ae8c`

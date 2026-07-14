@@ -2,14 +2,14 @@
 
 Last updated: 2026-07-14 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Packet 41 is locally verified. It makes independent Camera
+Current phase: Packet 41 is production verified. It makes independent Camera
 useful at a glance with real private-album previews while preserving exact
 accepted-work and standalone-project context.
 Active packet: `docs/delivery/packets/41_CAMERA_HOME_ALBUM_PREVIEWS.md`
 Repository branch: `master`
-Production feature release commit: `9262bb81d630d95f4b482d7d462b506099a1ae8c`
+Production feature release commit: `0849eaacc0b70302bf70c487c058c33b62f99c42`
 
-## Packet 41 - Camera Home Album Previews (Local Verification)
+## Packet 41 - Camera Home Album Previews (Production Verified)
 
 - `GET /api/v1/albums` now returns a nullable, authenticated cover photo from
   each account-owned album's newest stored upload. The list query remains
@@ -27,10 +27,14 @@ Production feature release commit: `9262bb81d630d95f4b482d7d462b506099a1ae8c`
   audit, and diff checks pass locally. The aggregate test command skipped 16
   PostgreSQL integration suites because this worktree has no
   `TEST_DATABASE_URL`; no database-integration pass is claimed.
+- Production health serves exact source
+  `0849eaacc0b70302bf70c487c058c33b62f99c42` with ready migration
+  `0027_default_private_photo_album`; the expected-source monitor passed with
+  PostgreSQL/S3-compatible storage, configured Sentry/Web Push, matching-job
+  alerts enabled, controls off, and seven anonymous private-route checks.
 - Remaining boundary: run the affected PostgreSQL integration suite using a
   disposable test database, then physically verify two private album covers
-  and context separation on iOS and Android before deployment evidence is
-  recorded.
+  and context separation on iOS and Android.
 
 ## Packet 40 - Camera Private Album Destinations (Production Verified)
 

@@ -39,7 +39,7 @@ job or standalone project remains scoped to that exact work.
 5. Mobile smoke verifies the default private album is present and Camera does
    not use the retired elevated navigation treatment.
 
-## Local evidence
+## Verification evidence
 
 - `npm run build`
 - `npm run lint`
@@ -49,12 +49,19 @@ job or standalone project remains scoped to that exact work.
 - `npm run test:ui:mobile-actions`
 - `npm audit --omit=dev`
 - `git diff --check`
+- Production health served exact source
+  `0849eaacc0b70302bf70c487c058c33b62f99c42` with ready migration
+  `0027_default_private_photo_album`.
+- `EXPECTED_SOURCE_COMMIT=0849eaacc0b70302bf70c487c058c33b62f99c42 npm run monitor:production`
+  passed with PostgreSQL/S3-compatible storage, configured Sentry/Web Push,
+  matching-job alerts enabled, controls off, and seven anonymous private-route
+  checks.
 
 ## Boundary and risk
 
 - The aggregate test command skipped PostgreSQL integration suites because
   this clean worktree has no disposable `TEST_DATABASE_URL`. This packet must
   not claim a database-backed integration pass until that URL is configured.
-- Before production acceptance, capture a real photo into the default album,
-  create a second private album, capture into it, and confirm both covers and
-  album boundaries on iOS and Android.
+- Before field acceptance, capture a real photo into the default album, create
+  a second private album, capture into it, and confirm both covers and album
+  boundaries on iOS and Android.
