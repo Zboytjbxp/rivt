@@ -10,6 +10,21 @@ Status values:
 
 Evidence must eventually link to implementation, automated tests, manual acceptance proof, and deployed build.
 
+## Traceability Addendum - 2026-07-14 Camera Private Album Destinations (Local Verification)
+
+- `GA-UX-003` gains clear-destination evidence: Camera exposes an account-owned
+  default `Private photos` album alongside explicit standalone and accepted
+  RIVT-work destinations, so generic field captures do not inherit an
+  unrelated job.
+- `GA-UX-006` gains one-handed capture evidence: private-album selection,
+  creation, gallery access, and capture remain available through the Camera
+  destination sheet and lower action dock on compact viewports.
+- `GA-SEC-004` gains an account-bound storage migration: `0027` enforces at
+  most one default album per account, and the default-album endpoint is
+  authenticated and idempotent. Cross-account behavior remains covered by the
+  existing album authorization contract; the full PostgreSQL integration run
+  remains pending a configured disposable `TEST_DATABASE_URL`.
+
 ## Traceability Addendum - 2026-07-14 Camera Field Action (Production Verified)
 
 - `GA-UX-002` gains compact-navigation evidence: Camera replaces the former

@@ -40,6 +40,17 @@ const account = {
   capabilities: { canCompleteOnboarding: false, canPostWork: true, canApplyToWork: false, canPublishProfile: true },
 };
 
+const defaultPrivateAlbum = {
+  id: "8b5b2f91-5f90-4eae-9a66-7a6d35d8c601",
+  accountId: account.id,
+  name: "Private photos",
+  standaloneProjectId: null,
+  isDefault: true,
+  photoCount: 0,
+  createdAt: "2026-06-24T12:00:00.000Z",
+  updatedAt: "2026-06-24T12:00:00.000Z",
+};
+
 const profileResult = {
   accountId: "b2292315-f244-42d1-90fb-7a884dc9f307",
   displayName: "Riley Harper",
@@ -303,7 +314,12 @@ async function configurePage(page, jobs, { activeWork = [], project = null } = {
   await page.route("**/api/v1/albums", (route) => route.fulfill({
     status: 200,
     contentType: "application/json",
-    body: JSON.stringify({ data: { albums: [] }, meta: { requestId: "e2e-albums" } }),
+    body: JSON.stringify({ data: { albums: [defaultPrivateAlbum] }, meta: { requestId: "e2e-albums" } }),
+  }));
+  await page.route(`**/api/v1/albums/${defaultPrivateAlbum.id}`, (route) => route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: JSON.stringify({ data: { album: { ...defaultPrivateAlbum, photos: [] } }, meta: { requestId: "e2e-album" } }),
   }));
   await page.route("**/api/v1/shop-talk/reactions/batch", async (route) => {
     const body = route.request().postDataJSON();
@@ -414,16 +430,10 @@ async function assertToolsFlow(page) {
   await fieldToolsTray.getByRole("button", { name: "Camera", exact: true }).click();
   await page.getByRole("heading", { name: "Camera", exact: true }).waitFor();
   await page.waitForFunction(
-    () => document.body.innerText.includes("Active job") || document.body.innerText.includes("Private albums"),
+    () => document.body.innerText.includes("Private photos") || document.body.innerText.includes("Active job"),
     null,
     { timeout: 15_000 },
   );
-  await page.waitForFunction(
-    () => document.body.innerText.includes("Recent field photos") || document.body.innerText.includes("Private albums") || document.body.innerText.includes("Keep side-work albums separate"),
-    null,
-    { timeout: 15_000 },
-  );
-  await page.getByRole("button", { name: /New album/i }).first().waitFor();
 }
 
 async function assertRecordsFlow(page) {

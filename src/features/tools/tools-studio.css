@@ -511,6 +511,16 @@
   grid-column: 1 / -1;
 }
 
+.v2-tool-context-create.is-album-create {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.v2-tool-context-loading {
+  padding: 8px 10px;
+  color: var(--v2-text-muted);
+  font-size: 13px;
+}
+
 .v2-tool-workbench {
   display: grid;
   grid-template-columns: minmax(0, 1.1fr) minmax(310px, 0.9fr);

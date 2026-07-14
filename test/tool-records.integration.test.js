@@ -289,6 +289,29 @@ if (!testDatabaseUrl) {
     assert.equal(otherCannotCreateAlbum.response.status, 403);
     assert.equal(otherCannotCreateAlbum.payload.error.code, "STANDALONE_PROJECT_ACCESS_DENIED");
 
+    const defaultAlbum = await requestJson(baseUrl, "/api/v1/albums/default", {
+      method: "POST",
+      cookie: owner.cookie,
+    });
+    assert.equal(defaultAlbum.response.status, 200);
+    assert.equal(defaultAlbum.payload.data.album.name, "Private photos");
+    assert.equal(defaultAlbum.payload.data.album.isDefault, true);
+    assert.equal(defaultAlbum.payload.data.album.standaloneProjectId, null);
+
+    const defaultAlbumAgain = await requestJson(baseUrl, "/api/v1/albums/default", {
+      method: "POST",
+      cookie: owner.cookie,
+    });
+    assert.equal(defaultAlbumAgain.response.status, 200);
+    assert.equal(defaultAlbumAgain.payload.data.album.id, defaultAlbum.payload.data.album.id);
+
+    const otherDefaultAlbum = await requestJson(baseUrl, "/api/v1/albums/default", {
+      method: "POST",
+      cookie: other.cookie,
+    });
+    assert.equal(otherDefaultAlbum.response.status, 200);
+    assert.notEqual(otherDefaultAlbum.payload.data.album.id, defaultAlbum.payload.data.album.id);
+
     const invalidType = await requestJson(baseUrl, "/api/v1/tool-records?type=not-real", { cookie: owner.cookie });
     assert.equal(invalidType.response.status, 422);
 

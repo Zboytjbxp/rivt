@@ -2,11 +2,31 @@
 
 Last updated: 2026-07-14 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Packet 39 is production verified. It promotes Camera to a compact
-field command while retaining exact RIVT-work and standalone-work contexts.
-Active packet: `docs/delivery/packets/39_CAMERA_FIELD_ACTION.md`
+Current phase: Packet 40 is locally verified. It makes a default private album
+and user-created private albums explicit Camera destinations alongside
+standalone and accepted RIVT work.
+Active packet: `docs/delivery/packets/40_CAMERA_PRIVATE_ALBUM_DESTINATIONS.md`
 Repository branch: `master`
 Production feature release commit: `9262bb81d630d95f4b482d7d462b506099a1ae8c`
+
+## Packet 40 - Camera Private Album Destinations (Local Verification)
+
+- Every account has one server-owned default `Private photos` album, enforced
+  by a partial unique index and created idempotently through the authenticated
+  albums API for accounts created after migration backfill.
+- Camera now presents private albums first in its destination sheet, followed
+  by standalone projects and accepted RIVT work. Users can create a new
+  private album within the same flow and it becomes the selected destination.
+- Camera opens predictably on its home surface with `Private photos` selected;
+  it does not silently attach captures to a job or jump into an album gallery.
+- Build, lint, 53/53 unit tests, E2E, Tools UI, mobile-action UI, production
+  dependency audit, and diff checks pass locally. The aggregate test command
+  safely skipped 16 PostgreSQL integration suites because this isolated
+  worktree has no `TEST_DATABASE_URL`; database integration is not claimed.
+- Remaining boundary: apply migration `0027_default_private_photo_album`, run
+  the integration suite with a disposable PostgreSQL URL, then confirm that a
+  freshly created user sees `Private photos`, creates another album, captures
+  to both, and cannot see another account's albums.
 
 ## Packet 39 - Camera Field Action and One-Hand Capture (Production Verified)
 

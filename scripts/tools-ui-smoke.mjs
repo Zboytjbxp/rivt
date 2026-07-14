@@ -90,6 +90,17 @@ const projectRecord = {
   updatedAt: "2026-06-21T12:05:00.000Z",
 };
 
+const defaultPrivateAlbum = {
+  id: "dddddddd-dddd-dddd-dddd-dddddddddddd",
+  accountId: account.id,
+  name: "Private photos",
+  standaloneProjectId: null,
+  isDefault: true,
+  photoCount: 0,
+  createdAt: "2026-06-21T12:00:00.000Z",
+  updatedAt: "2026-06-21T12:00:00.000Z",
+};
+
 async function waitForServer() {
   const deadline = Date.now() + 30_000;
   while (Date.now() < deadline) {
@@ -235,7 +246,7 @@ async function configurePage(page) {
     route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { communities: [] } }) }),
   );
   await page.route("**/api/v1/albums", (route) =>
-    route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { albums: [] } }) }),
+    route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { albums: [defaultPrivateAlbum] } }) }),
   );
   await page.route("**/api/v1/standalone-projects", (route) =>
     route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { projects: [] } }) }),
@@ -522,8 +533,12 @@ async function runToolsFlow(page, viewportName) {
   await page.getByLabel("Daily log").getByRole("button", { name: "Tools" }).click();
 
   await fieldToolsTray.getByRole("button", { name: "Camera", exact: true }).click();
-  await page.getByRole("button", { name: "Choose destination" }).click();
-  await page.getByRole("dialog", { name: "Choose work context" }).getByRole("button", { name: /Tenant Build-Out/i }).click();
+  await page.getByRole("heading", { name: "Private photos", exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByLabel("Camera actions").getByRole("button", { name: "Destination", exact: true }).click();
+  const destinationDialog = page.getByRole("dialog", { name: "Choose work context" });
+  await destinationDialog.getByText("Private albums", { exact: true }).waitFor({ timeout: 15_000 });
+  await destinationDialog.getByRole("button", { name: /Private photos/i }).waitFor({ timeout: 15_000 });
+  await destinationDialog.getByRole("button", { name: /Tenant Build-Out/i }).click();
   await page.getByRole("heading", { name: "Tenant Build-Out", exact: true }).waitFor({ timeout: 15_000 });
   await page.getByRole("button", { name: "Capture", exact: true }).waitFor({ timeout: 15_000 });
   assert.equal(await page.getByText("Private albums", { exact: true }).count(), 0, "RIVT job context should not mix in private albums");

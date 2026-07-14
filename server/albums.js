@@ -13,6 +13,7 @@ async function mapAlbumRow(database, signedObjectUrl, row, { withPhotos = false 
     accountId: row.account_id,
     name: row.name,
     standaloneProjectId: row.standalone_project_id ?? null,
+    isDefault: Boolean(row.is_default),
     photoCount: Number(row.photo_count ?? 0),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -70,6 +71,25 @@ export function registerAlbumRoutes({
     );
     response.json({
       data: { albums: await Promise.all(rows.rows.map((row) => mapAlbumRow(database, signedObjectUrl, row))) },
+      meta: { requestId: request.requestId },
+    });
+  }));
+
+  app.post("/api/v1/albums/default", requireV1AuthenticatedUser, requireV1Actor, writeRateLimit, asyncRoute(async (request, response) => {
+    const row = await database.query(
+      `INSERT INTO photo_albums (id, account_id, name, is_default)
+       VALUES ($1, $2, 'Private photos', true)
+       ON CONFLICT (account_id) WHERE is_default
+       DO UPDATE SET name = photo_albums.name
+       RETURNING *`,
+      [randomUUID(), request.actor.account.id],
+    );
+    const photoCount = await database.query(
+      "SELECT COUNT(*)::int AS photo_count FROM album_photos WHERE album_id = $1",
+      [row.rows[0].id],
+    );
+    response.json({
+      data: { album: await mapAlbumRow(database, signedObjectUrl, { ...row.rows[0], photo_count: photoCount.rows[0].photo_count }) },
       meta: { requestId: request.requestId },
     });
   }));

@@ -54,6 +54,7 @@ import { EarningsDashboardTool } from "./EarningsDashboardTool";
 import { deleteToolRecordByLocalId, fetchToolRecords, upsertToolRecord, type ServerToolRecord } from "./tool-records-api";
 import { ToolContextPicker } from "./ToolContextPicker";
 import { createStandaloneProject, listStandaloneProjects, type StandaloneProject } from "./standalone-project-api";
+import { createAlbum, ensureDefaultAlbum, listAlbums, type PhotoAlbum } from "./album-api";
 import { toolContextStorageId, type ToolWorkContext } from "./tool-work-context";
 import "./tools-studio.css";
 
@@ -94,7 +95,17 @@ type LaunchableToolMode = Exclude<ToolMode, "hub">;
 type ToolIcon = typeof Calculator;
 const fieldToolsStorageKey = "rivt.fieldTools.v1";
 const toolContextStorageKey = "rivt.toolContexts.v1";
+const cameraAlbumDestinationStorageKey = "rivt.cameraAlbumDestination.v1";
 const contextualToolModes = new Set<ToolMode>(["estimate", "invoice", "job-photos"]);
+
+function readCameraAlbumDestination() {
+  try {
+    const value = localStorage.getItem(cameraAlbumDestinationStorageKey)?.trim();
+    return value || null;
+  } catch {
+    return null;
+  }
+}
 
 function readToolContextProjects(): Partial<Record<ToolMode, string>> {
   try {
@@ -2849,6 +2860,9 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
   const [fieldTools, setFieldTools] = useState(readFieldTools);
   const [fieldToolsEditing, setFieldToolsEditing] = useState(false);
   const [cameraContextRequest, setCameraContextRequest] = useState(0);
+  const [cameraAlbums, setCameraAlbums] = useState<PhotoAlbum[]>([]);
+  const [cameraAlbumsLoading, setCameraAlbumsLoading] = useState(false);
+  const [cameraAlbumId, setCameraAlbumId] = useState<string | null>(readCameraAlbumDestination);
   const [standaloneProjects, setStandaloneProjects] = useState<StandaloneProject[]>([]);
   const [standaloneProjectsError, setStandaloneProjectsError] = useState("");
   const [standaloneProjectBusy, setStandaloneProjectBusy] = useState(false);
@@ -2906,12 +2920,60 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
     ? orderedActiveWork.find((work) => work.id === focusedActiveWorkId) ?? null
     : null;
   const selectedStandaloneProject = standaloneProjects.find((project) => project.id === toolContextProjects[activeTool]) ?? null;
+  const privateCameraAlbums = useMemo(
+    () => cameraAlbums.filter((album) => !album.standaloneProjectId),
+    [cameraAlbums],
+  );
+  const selectedCameraAlbum = privateCameraAlbums.find((album) => album.id === cameraAlbumId) ?? null;
   const toolWorkContext: ToolWorkContext = focusedActiveWorkId && focusedWork
     ? { kind: "rivt", activeWorkId: focusedActiveWorkId, work: focusedWork, job: activeJob }
     : selectedStandaloneProject
       ? { kind: "standalone", project: selectedStandaloneProject }
       : { kind: "quick" };
   const activeJobScopeKey = `${toolContextStorageId(toolWorkContext)}:${activeJob?.canonical?.id ?? activeJob?.id ?? "none"}`;
+
+  useEffect(() => {
+    if (activeTool !== "job-photos") return;
+    let cancelled = false;
+    const startTimer = setTimeout(() => {
+      if (cancelled) return;
+      setCameraAlbumsLoading(true);
+      setStandaloneProjectsError("");
+    }, 0);
+    void listAlbums()
+      .then(async (albums) => {
+        if (cancelled) return null;
+        if (albums.some((album) => !album.standaloneProjectId && album.isDefault)) return albums;
+        const defaultAlbum = await ensureDefaultAlbum();
+        return [defaultAlbum, ...albums.filter((album) => album.id !== defaultAlbum.id)];
+      })
+      .then((albums) => {
+        if (cancelled || !albums) return;
+        setCameraAlbums(albums);
+        const defaultAlbum = albums.find((album) => !album.standaloneProjectId && album.isDefault) ?? null;
+        if (!defaultAlbum) return;
+        setCameraAlbumId((current) => {
+          if (current && albums.some((album) => album.id === current)) return current;
+          try {
+            localStorage.setItem(cameraAlbumDestinationStorageKey, defaultAlbum.id);
+          } catch {
+            // The default remains active for this session when device storage is unavailable.
+          }
+          return defaultAlbum.id;
+        });
+      })
+      .catch((error: unknown) => {
+        if (!cancelled) setStandaloneProjectsError(error instanceof Error ? error.message : "Private albums could not be loaded.");
+      })
+      .finally(() => {
+        clearTimeout(startTimer);
+        if (!cancelled) setCameraAlbumsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+      clearTimeout(startTimer);
+    };
+  }, [activeTool]);
 
   useEffect(() => {
     let cancelled = false;
@@ -2935,6 +2997,42 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
       }
       return next;
     });
+  }
+
+  function choosePrivateAlbumContext(album: PhotoAlbum) {
+    setContextChosenTool("job-photos");
+    persistToolContextProject("job-photos", null);
+    setCameraAlbumId(album.id);
+    try {
+      localStorage.setItem(cameraAlbumDestinationStorageKey, album.id);
+    } catch {
+      // The selected private destination remains active for this session.
+    }
+    onWorkContextChange?.(null);
+  }
+
+  async function ensureDefaultCameraAlbum() {
+    setStandaloneProjectsError("");
+    try {
+      const album = await ensureDefaultAlbum();
+      setCameraAlbums((current) => [album, ...current.filter((item) => item.id !== album.id)]);
+      return album;
+    } catch (error) {
+      setStandaloneProjectsError(error instanceof Error ? error.message : "Private photos could not be prepared.");
+      return null;
+    }
+  }
+
+  async function createPrivateCameraAlbum(name: string) {
+    setStandaloneProjectsError("");
+    try {
+      const album = await createAlbum(name);
+      setCameraAlbums((current) => [album, ...current.filter((item) => item.id !== album.id)]);
+      return album;
+    } catch (error) {
+      setStandaloneProjectsError(error instanceof Error ? error.message : "The private album could not be created.");
+      return null;
+    }
   }
 
   function carryQuickDraftIntoContext(tool: ToolMode, destinationId: string) {
@@ -3618,6 +3716,7 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
             activeWork={orderedActiveWork}
             focusedActiveWorkId={toolWorkContext.kind === "rivt" ? toolWorkContext.activeWorkId : null}
             standaloneProject={toolWorkContext.kind === "standalone" ? toolWorkContext.project : null}
+            selectedPrivateAlbum={selectedCameraAlbum}
             autoOpenActiveJob={requestedTool === "job-photos" && Boolean(focusedActiveWorkId) && contextChosenTool !== activeTool}
             contextLabel={toolWorkContext.kind === "rivt" ? toolWorkContext.job?.title ?? "Accepted work" : toolWorkContext.kind === "standalone" ? toolWorkContext.project.title : null}
             onRequestContext={() => setCameraContextRequest((current) => current + 1)}
@@ -3725,6 +3824,12 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
             onChooseStandalone={chooseStandaloneContext}
             onChooseActiveWork={chooseActiveWorkContext}
             onCreateStandalone={createStandaloneContext}
+            privateAlbums={activeTool === "job-photos" ? privateCameraAlbums : []}
+            privateAlbumsLoading={activeTool === "job-photos" && cameraAlbumsLoading}
+            selectedPrivateAlbumId={activeTool === "job-photos" ? cameraAlbumId : null}
+            onChoosePrivateAlbum={activeTool === "job-photos" ? choosePrivateAlbumContext : undefined}
+            onEnsureDefaultAlbum={activeTool === "job-photos" ? ensureDefaultCameraAlbum : undefined}
+            onCreatePrivateAlbum={activeTool === "job-photos" ? createPrivateCameraAlbum : undefined}
             openRequestToken={activeTool === "job-photos" ? cameraContextRequest : undefined}
             hideTrigger={activeTool === "job-photos"}
             allowQuickUse={activeTool !== "job-photos"}

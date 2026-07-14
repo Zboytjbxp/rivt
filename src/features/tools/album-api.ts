@@ -23,6 +23,7 @@ export interface PhotoAlbum {
   id: string;
   name: string;
   standaloneProjectId: string | null;
+  isDefault: boolean;
   photoCount: number;
   createdAt: string;
   updatedAt: string;
@@ -44,6 +45,14 @@ export async function createAlbum(name: string, standaloneProjectId: string | nu
     method: "POST",
     headers: { "Content-Type": "application/json", "Idempotency-Key": requestKey() },
     body: JSON.stringify({ name, standaloneProjectId }),
+  });
+  return body.data.album;
+}
+
+export async function ensureDefaultAlbum() {
+  const body = await request<{ data: { album: PhotoAlbum } }>("/api/v1/albums/default", {
+    method: "POST",
+    headers: { "Idempotency-Key": requestKey() },
   });
   return body.data.album;
 }
