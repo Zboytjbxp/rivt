@@ -2,14 +2,14 @@
 
 Last updated: 2026-07-13 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Packet 38 is locally verified. It consolidates Crew under Work
-as a visible People mode while preserving existing relationship records and
-legacy links.
+Current phase: Packet 38 is production verified. It consolidates Crew under
+Work as a visible People mode while preserving existing relationship records
+and legacy links.
 Active packet: `docs/delivery/packets/38_WORK_PEOPLE_NAVIGATION.md`
 Repository branch: `codex/work-people-navigation`
-Production feature release commit: `d9b9097f3a0e20a8ccb119b76c794c942efad7e7`
+Production feature release commit: `1e7141c13170d623e49996a48a74310ace5bfe0f`
 
-## Packet 38 - Work and People Navigation (Local Verification)
+## Packet 38 - Work and People Navigation (Production Verified)
 
 - Work is now the entry point for both Jobs and People. People contains the
   saved-person, subs, clients, reviews, and invite-planning surfaces that were
@@ -19,8 +19,14 @@ Production feature release commit: `d9b9097f3a0e20a8ccb119b76c794c942efad7e7`
 - Build, lint, unit tests, E2E, dependency audit, and diff check pass locally.
   `npm run test` has the normal 53 passing unit tests; database integration
   suites are skipped because this worktree has no `TEST_DATABASE_URL`.
-- Remaining boundary: deploy and physically confirm Jobs -> People switching
-  on founder devices before treating the navigation change as production proof.
+- Production health serves exact source
+  `1e7141c13170d623e49996a48a74310ace5bfe0f`; PostgreSQL and S3-compatible
+  storage are healthy, Sentry and Web Push are configured, matching-job alerts
+  remain enabled, controls are off, and the synthetic monitor passed seven
+  anonymous private-route checks in 553 ms.
+- Remaining boundary: physically confirm Jobs -> People switching on founder
+  devices, including legacy `/app/crew` links, before treating the information
+  architecture as field accepted.
 
 ## Packet 37 - Workflow Coherence and Field Tool Reachability (Local Verification)
 

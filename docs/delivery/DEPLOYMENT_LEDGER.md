@@ -1659,3 +1659,19 @@ Add one entry per staging/production deployment.
 - Known boundary: tap a physical notification for a Shop Talk post outside the newest feed page, then log out and back in on a subscribed browser and confirm the next push arrives without visiting Settings.
 - Rollback performed/result: not required.
 - Approval: deployed Gate B Shop Talk reliability hardening; physical notification acceptance remains open.
+
+## Current Production - Packet 38 Work and People Navigation
+
+- Environment: Production (`https://rivt.pro`)
+- Date/time/timezone: 2026-07-13 America/New_York
+- Deployer: Codex through a verified feature-branch push, fast-forward merge to `master`, and Railway production auto-deploy
+- Source repository/branch: `Zboytjbxp/rivt`, `master`
+- Runtime feature source: `1e7141c13170d623e49996a48a74310ace5bfe0f`
+- Migration version before/after: unchanged (`0026_standalone_projects`)
+- Provider/config changes: none; auth, billing, records, storage, Sentry, Web Push, moderation, and rollout configuration were preserved.
+- Rollback target: `aa3897076f0a19907e9d29f2496f59407df39148`; no database rollback is required.
+- Automated gates: build, lint, 53/53 unit tests, E2E, mobile-actions UI smoke, dependency audit with zero production vulnerabilities, and diff checks passed. The aggregate test command entered integration with three safe non-database assertions passing and 16 PostgreSQL suites skipped because this clean worktree did not have `TEST_DATABASE_URL`; no database integration pass is claimed for this navigation-only packet.
+- Post-deploy proof: live `/api/health` returned exact source `1e7141c13170d623e49996a48a74310ace5bfe0f`, ready migration `0026_standalone_projects`, PostgreSQL/S3-compatible storage, configured Sentry and Web Push, and enabled matching-job alerts. `EXPECTED_SOURCE_COMMIT=1e7141c13170d623e49996a48a74310ace5bfe0f npm run monitor:production` passed with controls off, seven anonymous private-route checks, and a 553 ms duration.
+- Product evidence: Work exposes an explicit Jobs/People switch; People retains people, subs, clients, reviews, and invite planning; legacy Crew/network paths resolve to People beneath Work.
+- Known boundary: physical iPhone and Android confirmation of Work -> People switching and legacy `/app/crew` route behavior is still needed.
+- Approval: runtime and automated navigation checks are production verified; field acceptance remains open.
