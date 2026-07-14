@@ -97,6 +97,7 @@ const defaultPrivateAlbum = {
   standaloneProjectId: null,
   isDefault: true,
   photoCount: 0,
+  coverPhoto: null,
   createdAt: "2026-06-21T12:00:00.000Z",
   updatedAt: "2026-06-21T12:00:00.000Z",
 };

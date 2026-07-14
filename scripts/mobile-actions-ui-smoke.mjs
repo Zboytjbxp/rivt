@@ -99,6 +99,7 @@ const defaultPrivateAlbum = {
   standaloneProjectId: null,
   isDefault: true,
   photoCount: 0,
+  coverPhoto: null,
   createdAt: "2026-07-11T10:00:00.000Z",
   updatedAt: "2026-07-11T10:00:00.000Z",
 };
@@ -366,6 +367,8 @@ async function runMobileFlow(page) {
   await page.getByRole("button", { name: "Camera", exact: true }).click();
   await page.getByRole("heading", { name: "Camera", exact: true }).waitFor({ timeout: 15_000 });
   await page.getByRole("heading", { name: "Private photos", exact: true }).waitFor({ timeout: 15_000 });
+  await page.locator(".v2-camera-album-card", { hasText: "Private photos" }).waitFor({ timeout: 15_000 });
+  assert.equal(await page.locator(".v2-mobile-nav .is-camera-command").count(), 0, "Camera should be an equal global destination, not an oversized command");
   const cameraDestination = page.getByLabel("Camera actions").getByRole("button", { name: "Destination", exact: true });
   const cameraDestinationBox = await cameraDestination.boundingBox();
   assert.ok(cameraDestinationBox && cameraDestinationBox.y + cameraDestinationBox.height <= 844, `Camera tab destination should stay in the thumb-zone viewport: ${JSON.stringify(cameraDestinationBox)}`);

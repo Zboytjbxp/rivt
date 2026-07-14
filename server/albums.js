@@ -18,7 +18,20 @@ async function mapAlbumRow(database, signedObjectUrl, row, { withPhotos = false 
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
-  if (!withPhotos) return base;
+  const coverPhoto = row.cover_photo_id
+    ? {
+        id: row.cover_photo_id,
+        albumId: row.cover_photo_album_id,
+        uploadId: row.cover_photo_upload_id,
+        caption: row.cover_photo_caption ?? "",
+        originalName: row.cover_photo_original_name,
+        mimeType: row.cover_photo_mime_type,
+        sizeBytes: Number(row.cover_photo_size_bytes ?? 0),
+        createdAt: row.cover_photo_created_at,
+        signedUrl: await signedObjectUrl(row.cover_photo_object_key),
+      }
+    : null;
+  if (!withPhotos) return { ...base, coverPhoto };
   const photoRows = await database.query(
     `SELECT ap.id, ap.album_id, ap.upload_id, ap.caption, ap.created_at,
             u.original_name, u.mime_type, u.size_bytes, u.object_key
@@ -41,7 +54,7 @@ async function mapAlbumRow(database, signedObjectUrl, row, { withPhotos = false 
       signedUrl: await signedObjectUrl(p.object_key),
     })),
   );
-  return { ...base, photos };
+  return { ...base, coverPhoto, photos };
 }
 
 export function registerAlbumRoutes({
@@ -60,11 +73,28 @@ export function registerAlbumRoutes({
 }) {
   app.get("/api/v1/albums", requireV1AuthenticatedUser, requireV1Actor, asyncRoute(async (request, response) => {
     const rows = await database.query(
-      `SELECT pa.*, COUNT(ap.id)::int AS photo_count
+      `SELECT pa.*,
+              (SELECT COUNT(*)::int FROM album_photos ap WHERE ap.album_id = pa.id) AS photo_count,
+              latest.id AS cover_photo_id,
+              latest.album_id AS cover_photo_album_id,
+              latest.upload_id AS cover_photo_upload_id,
+              latest.caption AS cover_photo_caption,
+              latest.created_at AS cover_photo_created_at,
+              latest.original_name AS cover_photo_original_name,
+              latest.mime_type AS cover_photo_mime_type,
+              latest.size_bytes AS cover_photo_size_bytes,
+              latest.object_key AS cover_photo_object_key
        FROM photo_albums pa
-       LEFT JOIN album_photos ap ON ap.album_id = pa.id
+       LEFT JOIN LATERAL (
+         SELECT ap.id, ap.album_id, ap.upload_id, ap.caption, ap.created_at,
+                u.original_name, u.mime_type, u.size_bytes, u.object_key
+         FROM album_photos ap
+         JOIN uploads u ON u.id = ap.upload_id
+         WHERE ap.album_id = pa.id AND u.upload_status = 'stored'
+         ORDER BY ap.created_at DESC, ap.id DESC
+         LIMIT 1
+       ) latest ON true
        WHERE pa.account_id = $1
-       GROUP BY pa.id
        ORDER BY pa.updated_at DESC, pa.id DESC
        LIMIT 100`,
       [request.actor.account.id],

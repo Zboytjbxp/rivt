@@ -10,6 +10,23 @@ Status values:
 
 Evidence must eventually link to implementation, automated tests, manual acceptance proof, and deployed build.
 
+## Traceability Addendum - 2026-07-14 Camera Home Album Previews (Local Verification)
+
+- `GA-UX-003` gains independent-camera clarity evidence: account-owned private
+  albums now show truthful counts and the latest stored capture directly on
+  Camera home, with each card opening its exact album.
+- `GA-UX-006` gains one-hand hierarchy evidence: Camera retains its lower
+  Destination, Feed, and Capture dock while the global Camera destination no
+  longer competes visually with the primary navigation.
+- `GA-SEC-004` gains media-list evidence: album cover data is retrieved through
+  the existing authenticated account-owned albums endpoint, and accepted or
+  standalone work contexts intentionally do not render unrelated private
+  albums.
+- Local evidence includes build, lint, unit, E2E, Tools UI, mobile-action UI,
+  dependency-audit, and diff checks. PostgreSQL integration is pending a
+  configured disposable `TEST_DATABASE_URL`; deployment and physical-device
+  evidence are not claimed.
+
 ## Traceability Addendum - 2026-07-14 Camera Private Album Destinations (Production Verified)
 
 - `GA-UX-003` gains clear-destination evidence: Camera exposes an account-owned

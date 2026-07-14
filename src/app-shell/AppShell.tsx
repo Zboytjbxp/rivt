@@ -21,11 +21,10 @@ const primaryNavigation: Array<{
   destination: PrimaryDestination;
   label: string;
   icon: typeof Home;
-  cameraCommand?: boolean;
 }> = [
   { destination: "home", label: "Home", icon: Home },
   { destination: "work", label: "Work", icon: BriefcaseBusiness },
-  { destination: "camera", label: "Camera", icon: Camera, cameraCommand: true },
+  { destination: "camera", label: "Camera", icon: Camera },
   { destination: "shop-talk", label: "Shop Talk", icon: MessageCircle },
   { destination: "tools", label: "Tools", icon: Wrench },
 ];
@@ -143,11 +142,11 @@ export function AppShell({
         </button>
 
         <nav className="v2-primary-nav">
-          {primaryNavigation.map(({ destination, label, icon: Icon, cameraCommand }) => (
+          {primaryNavigation.map(({ destination, label, icon: Icon }) => (
             <button
               key={destination}
               type="button"
-              className={[activeDestination === destination ? "is-active" : "", cameraCommand ? "is-camera-command" : ""].filter(Boolean).join(" ")}
+              className={activeDestination === destination ? "is-active" : ""}
               aria-current={activeDestination === destination ? "page" : undefined}
               onClick={() => onNavigate(destination)}
             >
@@ -333,11 +332,11 @@ export function AppShell({
       </div>
 
       <nav className={mobileNavHidden ? "v2-mobile-nav is-hidden" : "v2-mobile-nav"} aria-label="Primary navigation" aria-hidden={mobileNavHidden ? "true" : undefined}>
-          {primaryNavigation.map(({ destination, label, icon: Icon, cameraCommand }) => (
+          {primaryNavigation.map(({ destination, label, icon: Icon }) => (
           <button
             key={destination}
             type="button"
-              className={[activeDestination === destination ? "is-active" : "", cameraCommand ? "is-camera-command" : ""].filter(Boolean).join(" ")}
+              className={activeDestination === destination ? "is-active" : ""}
             aria-current={activeDestination === destination ? "page" : undefined}
             onClick={() => onNavigate(destination)}
             tabIndex={mobileNavHidden ? -1 : undefined}

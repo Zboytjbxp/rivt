@@ -2,12 +2,35 @@
 
 Last updated: 2026-07-14 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Packet 40 is production verified. It makes a default private album
-and user-created private albums explicit Camera destinations alongside
-standalone and accepted RIVT work.
-Active packet: `docs/delivery/packets/40_CAMERA_PRIVATE_ALBUM_DESTINATIONS.md`
+Current phase: Packet 41 is locally verified. It makes independent Camera
+useful at a glance with real private-album previews while preserving exact
+accepted-work and standalone-project context.
+Active packet: `docs/delivery/packets/41_CAMERA_HOME_ALBUM_PREVIEWS.md`
 Repository branch: `master`
 Production feature release commit: `9262bb81d630d95f4b482d7d462b506099a1ae8c`
+
+## Packet 41 - Camera Home Album Previews (Local Verification)
+
+- `GET /api/v1/albums` now returns a nullable, authenticated cover photo from
+  each account-owned album's newest stored upload. The list query remains
+  account scoped and does not create, fabricate, or expose media.
+- Independent Camera now renders compact private-album cards with truthful
+  counts and actual cover photos where available, plus a recent-captures row
+  when multiple albums have stored media.
+- An accepted RIVT job or standalone project keeps Camera focused on that
+  exact work. Private albums are intentionally not mixed into a scoped camera
+  session, preventing an accidental destination switch.
+- The lower Destination, Feed, and Capture dock remains the one-handed primary
+  action area. The global Camera navigation item is now equal to the other
+  primary destinations rather than elevated as a separate command.
+- Build, lint, 53/53 unit tests, E2E, Tools UI, mobile-action UI, dependency
+  audit, and diff checks pass locally. The aggregate test command skipped 16
+  PostgreSQL integration suites because this worktree has no
+  `TEST_DATABASE_URL`; no database-integration pass is claimed.
+- Remaining boundary: run the affected PostgreSQL integration suite using a
+  disposable test database, then physically verify two private album covers
+  and context separation on iOS and Android before deployment evidence is
+  recorded.
 
 ## Packet 40 - Camera Private Album Destinations (Production Verified)
 

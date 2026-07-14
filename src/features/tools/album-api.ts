@@ -25,6 +25,7 @@ export interface PhotoAlbum {
   standaloneProjectId: string | null;
   isDefault: boolean;
   photoCount: number;
+  coverPhoto: AlbumPhoto | null;
   createdAt: string;
   updatedAt: string;
 }

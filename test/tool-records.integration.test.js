@@ -312,6 +312,12 @@ if (!testDatabaseUrl) {
     assert.equal(otherDefaultAlbum.response.status, 200);
     assert.notEqual(otherDefaultAlbum.payload.data.album.id, defaultAlbum.payload.data.album.id);
 
+    const albumList = await requestJson(baseUrl, "/api/v1/albums", { cookie: owner.cookie });
+    assert.equal(albumList.response.status, 200);
+    const listedDefault = albumList.payload.data.albums.find((album) => album.id === defaultAlbum.payload.data.album.id);
+    assert.ok(listedDefault);
+    assert.equal(listedDefault.coverPhoto, null);
+
     const invalidType = await requestJson(baseUrl, "/api/v1/tool-records?type=not-real", { cookie: owner.cookie });
     assert.equal(invalidType.response.status, 422);
 
