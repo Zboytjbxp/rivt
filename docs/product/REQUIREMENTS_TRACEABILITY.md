@@ -10,7 +10,7 @@ Status values:
 
 Evidence must eventually link to implementation, automated tests, manual acceptance proof, and deployed build.
 
-## Traceability Addendum - 2026-07-14 Camera Field Action (Local Verification)
+## Traceability Addendum - 2026-07-14 Camera Field Action (Production Verified)
 
 - `GA-UX-002` gains compact-navigation evidence: Camera replaces the former
   Crew slot after People moved under Work, acting as a field command rather
@@ -21,6 +21,10 @@ Evidence must eventually link to implementation, automated tests, manual accepta
 - `GA-UX-006` gains SE-class one-hand evidence: lower Camera controls retain
   the visible save destination, gallery, capture type, shutter, latest capture,
   and camera switch; rendered mobile, tool, and work-lifecycle checks pass.
+- `GA-OPS-007` gains production evidence: exact source
+  `9262bb81d630d95f4b482d7d462b506099a1ae8c` passed the expected-source
+  monitor with configured Sentry/Web Push, healthy PostgreSQL/S3-compatible
+  storage, operational controls off, and seven anonymous private-route checks.
 
 ## Traceability Addendum - 2026-07-13 Daily Workspace and Camera
 

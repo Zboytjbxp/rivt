@@ -1,6 +1,6 @@
 # Packet 39 - Camera Field Action and One-Hand Capture
 
-Status: local verification complete
+Status: production verified
 
 ## Objective
 
@@ -44,9 +44,16 @@ failed upload, and verifies that the saved photo returns to that project feed.
 The work-lifecycle smoke also verifies that a photo notification using the new
 Camera route opens the selected job instead of generic Records.
 
+Production health served exact source
+`9262bb81d630d95f4b482d7d462b506099a1ae8c`. The expected-source monitor
+passed with PostgreSQL and S3-compatible storage healthy, Sentry and Web Push
+configured, matching-job alerts enabled, operational controls off, and seven
+anonymous private-route checks in 646 ms.
+
 ## Boundary
 
 This packet changes client navigation, camera presentation, and UI test mocks.
 It does not change media ownership, project authorization, storage providers,
 or the server upload contract. Camera remains usable for both accepted RIVT
-work and separately acquired standalone projects.
+work and separately acquired standalone projects. Physical one-handed checks
+on founder iPhone and Android devices remain the final field-acceptance step.

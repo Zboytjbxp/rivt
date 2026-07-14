@@ -1,5 +1,24 @@
 # Deployment Ledger
 
+## 2026-07-14 - Packet 39 Camera Field Action and One-Hand Capture
+
+- Source commit: `9262bb81d630d95f4b482d7d462b506099a1ae8c`
+- Branch: `master`
+- Production: `https://rivt.pro`
+- Scope: Camera replaces the former compact Crew slot after People moved under
+  Work. Direct Camera begins with an explicit RIVT-work or standalone-project
+  destination; exact job photo handoffs preserve their scoped gallery.
+- Automated gates: build, lint, 53 unit tests, E2E, mobile-action UI,
+  work-lifecycle UI, Tools rendered UI, dependency audit, and diff check
+  passed. Database integration suites skipped locally because this worktree has
+  no `TEST_DATABASE_URL`; no server/schema behavior changed in this packet.
+- Post-deploy proof: exact-source health passed with ready PostgreSQL and
+  S3-compatible storage, configured Sentry and Web Push, matching-job alerts
+  enabled, controls off, and seven anonymous private-route checks in 646 ms.
+- Rollback target: `e213cc2eaf309c560699ba6966c2531788f6fb8b`.
+- Remaining field acceptance: founder confirms the Camera command and
+  one-handed shutter/destination controls on iPhone and Android.
+
 ## 2026-07-13 - Packet 37 Workflow Coherence and Field Tool Reachability
 
 - Source commit: `d9b9097f3a0e20a8ccb119b76c794c942efad7e7`

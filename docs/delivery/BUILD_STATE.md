@@ -2,13 +2,13 @@
 
 Last updated: 2026-07-14 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Packet 39 is locally verified. It promotes Camera to a compact
+Current phase: Packet 39 is production verified. It promotes Camera to a compact
 field command while retaining exact RIVT-work and standalone-work contexts.
 Active packet: `docs/delivery/packets/39_CAMERA_FIELD_ACTION.md`
-Repository branch: `codex/camera-navigation-redesign`
-Production feature release commit: pending merge and deploy
+Repository branch: `master`
+Production feature release commit: `9262bb81d630d95f4b482d7d462b506099a1ae8c`
 
-## Packet 39 - Camera Field Action and One-Hand Capture (Local Verification)
+## Packet 39 - Camera Field Action and One-Hand Capture (Production Verified)
 
 - Camera now occupies the compact shell's former Crew slot after People moved
   under Work. It is a quick field command, not a new competing product area.
@@ -21,9 +21,13 @@ Production feature release commit: pending merge and deploy
 - Build, lint, 53/53 unit tests, E2E, mobile-action UI, work-lifecycle UI, and
   tools UI checks pass locally. `TEST_DATABASE_URL` is not present in this
   clean worktree, so no new database-integration result is claimed.
-- Remaining boundary: merge, deploy, confirm production serves the exact
-  commit, and physically check the Camera command on founder iPhone/Android
-  devices before treating the new navigation as field accepted.
+- Production health served exact source
+  `9262bb81d630d95f4b482d7d462b506099a1ae8c`. PostgreSQL and S3-compatible
+  storage, configured Sentry and Web Push, matching-job alerts, and all seven
+  anonymous private-route checks passed in the production monitor (646 ms).
+- Remaining boundary: physical one-handed Camera command/capture checks on the
+  founder's iPhone and Android devices before treating the new navigation as
+  field accepted.
 
 ## Packet 38 - Work and People Navigation (Production Verified)
 
