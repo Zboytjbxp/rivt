@@ -10,6 +10,22 @@ Status values:
 
 Evidence must eventually link to implementation, automated tests, manual acceptance proof, and deployed build.
 
+## Traceability Addendum - 2026-07-14 Estimate Email Delivery (Local Verification)
+
+- `GA-UX-003` gains estimate-delivery evidence: Estimate now gathers the
+  recipient, scope, valid-through date, note, and customer-facing itemization
+  before a clearly labeled Send action is possible.
+- `GA-UX-006` gains compact-action evidence: the Estimate dock preserves a
+  labeled Send action in the thumb zone while secondary Save, Invoice, and
+  Copy actions reduce to recognizable controls on compact devices.
+- `GA-SEC-004` gains account-owned delivery evidence: the server reads only
+  the actor's saved estimate, validates its snapshot, records delivery state,
+  and returns a cross-account lookup as not found. Customer email content
+  excludes internal pricing assumptions.
+- Local build, lint, Tools UI, and mobile-action UI checks passed. PostgreSQL
+  integration, controlled inbox delivery, and production evidence remain
+  pending a disposable `TEST_DATABASE_URL`, provider check, and deployment.
+
 ## Traceability Addendum - 2026-07-14 Camera Home Album Previews (Production Verified)
 
 - `GA-UX-003` gains independent-camera clarity evidence: account-owned private

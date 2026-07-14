@@ -533,7 +533,7 @@
   bottom: max(10px, env(safe-area-inset-bottom));
   display: grid;
   grid-column: 1 / -1;
-  grid-template-columns: minmax(0, 1fr) auto auto auto;
+  grid-template-columns: minmax(0, 1fr) auto auto auto auto;
   align-items: center;
   gap: 8px;
   padding: 8px;
@@ -1042,6 +1042,127 @@
 
 .v2-estimate-input-grid {
   grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.v2-estimate-delivery {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid color-mix(in srgb, var(--v2-border-strong) 58%, transparent);
+  border-radius: var(--v2-radius-lg);
+  background: color-mix(in srgb, var(--v2-surface-muted) 68%, transparent);
+}
+
+.v2-estimate-delivery > div:first-child {
+  display: grid;
+  gap: 3px;
+}
+
+.v2-estimate-delivery > div:first-child span {
+  color: var(--v2-accent);
+  font-size: 12px;
+  font-weight: var(--v2-weight-display);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.v2-estimate-delivery > div:first-child strong {
+  font-size: 17px;
+}
+
+.v2-estimate-delivery > div:first-child small,
+.v2-estimate-delivery-status {
+  color: var(--v2-text-muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.v2-estimate-delivery-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.v2-estimate-delivery-grid .is-wide {
+  grid-column: 1 / -1;
+}
+
+.v2-estimate-delivery-grid textarea {
+  min-height: 72px;
+  resize: vertical;
+}
+
+.v2-estimate-customer-preview {
+  display: grid;
+  gap: 7px;
+  padding: 12px;
+  border: 1px solid var(--v2-border);
+  border-radius: var(--v2-radius-md);
+  background: var(--v2-surface);
+}
+
+.v2-estimate-customer-preview > span {
+  color: var(--v2-text-muted);
+  font-size: 12px;
+  font-weight: var(--v2-weight-strong);
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.v2-estimate-customer-preview > strong {
+  font-size: 15px;
+}
+
+.v2-estimate-customer-preview > div {
+  display: grid;
+  gap: 5px;
+}
+
+.v2-estimate-customer-preview p,
+.v2-estimate-customer-preview footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0;
+  color: var(--v2-text-muted);
+  font-size: 13px;
+}
+
+.v2-estimate-customer-preview p span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.v2-estimate-customer-preview p b {
+  flex: 0 0 auto;
+  color: var(--v2-text);
+  font-weight: var(--v2-weight-semibold);
+}
+
+.v2-estimate-customer-preview footer {
+  padding-top: 9px;
+  border-top: 1px solid var(--v2-border);
+  color: var(--v2-text);
+}
+
+.v2-estimate-customer-preview footer strong {
+  font-size: 16px;
+}
+
+.v2-estimate-delivery-status {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: var(--v2-radius-md);
+}
+
+.v2-estimate-delivery-status.is-sent {
+  background: var(--v2-success-soft);
+  color: var(--v2-success);
+}
+
+.v2-estimate-delivery-status.is-failed {
+  background: var(--v2-danger-soft);
+  color: var(--v2-danger);
 }
 
 .v2-invoice-workbench {
@@ -2429,11 +2550,24 @@
     right: 8px;
     bottom: max(8px, env(safe-area-inset-bottom));
     left: 8px;
-    grid-template-columns: minmax(0, 1fr) 48px auto 48px;
+    grid-template-columns: minmax(0, 1fr) 48px auto 48px auto;
   }
 
   .v2-tool-action-dock > button {
     padding: 0 12px;
+  }
+
+  .v2-estimate-workbench .v2-tool-action-dock {
+    grid-template-columns: minmax(0, 1fr) 48px 48px 48px auto;
+  }
+
+  .v2-estimate-workbench .v2-tool-action-dock > button:not(.v2-primary-button) {
+    min-width: 48px;
+    padding: 0;
+  }
+
+  .v2-estimate-workbench .v2-tool-action-dock > button:not(.v2-primary-button) span {
+    display: none;
   }
 
   .v2-camera-action-dock {
@@ -8109,7 +8243,7 @@ html[data-rivt-compact-device="true"] .v2-invoice-print-preview td:first-child {
 }
 
 html[data-rivt-compact-device="true"] .v2-tool-action-dock {
-  grid-template-columns: minmax(0, 1fr) auto auto auto;
+  grid-template-columns: minmax(0, 1fr) auto auto auto auto;
   gap: 6px;
   padding: 6px;
 }
@@ -8126,6 +8260,19 @@ html[data-rivt-compact-device="true"] .v2-tool-action-dock > button {
   min-width: 44px;
   min-height: 44px;
   padding-inline: 10px;
+}
+
+html[data-rivt-compact-device="true"] .v2-estimate-workbench .v2-tool-action-dock {
+  grid-template-columns: minmax(0, 1fr) 44px 44px 44px auto;
+}
+
+html[data-rivt-compact-device="true"] .v2-estimate-workbench .v2-tool-action-dock > button:not(.v2-primary-button) {
+  min-width: 44px;
+  padding: 0;
+}
+
+html[data-rivt-compact-device="true"] .v2-estimate-workbench .v2-tool-action-dock > button:not(.v2-primary-button) span {
+  display: none;
 }
 
 html[data-rivt-compact-device="true"] .v2-tools-app.is-calculator-fullscreen {

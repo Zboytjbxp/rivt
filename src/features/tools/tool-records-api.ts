@@ -1,4 +1,4 @@
-import { apiPath, fetchWithTimeout, notifySessionExpired, requestKey } from "../../lib/api";
+import { apiPath, fetchWithTimeout, notifySessionExpired, requestKey, RivtApiError } from "../../lib/api";
 
 export type ToolRecordType =
   | "payment_record"
@@ -74,6 +74,23 @@ export async function upsertToolRecord(input: ToolRecordInput): Promise<ServerTo
   } catch {
     return null;
   }
+}
+
+export async function sendEstimateByLocalId(localId: string, idempotencyKey: string = requestKey()): Promise<ServerToolRecord> {
+  const response = await fetchWithTimeout(apiPath(`/api/v1/estimates/${encodeURIComponent(localId)}/send`), {
+    method: "POST",
+    credentials: "include",
+    headers: { "Idempotency-Key": idempotencyKey },
+  });
+  const body = await response.json().catch(() => null) as { data?: { record?: ServerToolRecord }; error?: { code?: string; message?: string; details?: unknown } } | null;
+  if (response.status === 401) notifySessionExpired();
+  if (!response.ok) {
+    throw new RivtApiError(response.status, body ?? {}, "RIVT could not send the estimate.");
+  }
+  if (!body?.data?.record) {
+    throw new RivtApiError(502, { error: { code: "ESTIMATE_SEND_RESPONSE_INVALID", message: "RIVT could not confirm that estimate delivery." } });
+  }
+  return body.data.record;
 }
 
 export async function deleteToolRecordByLocalId(recordType: ToolRecordType, localId: string): Promise<boolean> {

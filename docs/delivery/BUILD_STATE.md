@@ -2,12 +2,33 @@
 
 Last updated: 2026-07-14 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Packet 41 is production verified. It makes independent Camera
-useful at a glance with real private-album previews while preserving exact
-accepted-work and standalone-project context.
-Active packet: `docs/delivery/packets/41_CAMERA_HOME_ALBUM_PREVIEWS.md`
-Repository branch: `master`
+Current phase: Packet 42 is locally verified for Estimate email delivery. It
+adds server-confirmed delivery rather than a decorative Send control and is
+awaiting full verification plus review/deployment.
+Active packet: `docs/delivery/packets/42_ESTIMATE_EMAIL_DELIVERY.md`
+Repository branch: `codex/estimate-delivery`
 Production feature release commit: `0849eaacc0b70302bf70c487c058c33b62f99c42`
+
+## Packet 42 - Estimate Email Delivery (Local Verification)
+
+- Estimate now keeps customer details, scope, valid-through date, note, and a
+  customer-safe itemized preview with its saved server record.
+- An authenticated account can send only its own saved estimate through the
+  existing transactional email provider. The server validates the recipient
+  and exact customer-facing total, persists `sent` or `delivery_failed`, and
+  rejects another account as not found.
+- Email content is deliberately an estimate, not an invoice or payment link:
+  internal overhead, margin, and contingency stay in the contractor view and
+  never appear in the email snapshot.
+- Client and provider idempotency prevent a same-key retry from sending a
+  duplicate estimate; the client keeps the retry key while unchanged fields
+  are retried after a weak connection.
+- Build, lint, Tools UI, and mobile-action UI checks pass locally. The
+  required aggregate/unit/E2E/dependency checks are pending after this packet
+  documentation update. PostgreSQL integration remains unclaimed until a
+  disposable `TEST_DATABASE_URL` is configured.
+- Not deployed. Production remains on Camera Packet 41 source
+  `0849eaacc0b70302bf70c487c058c33b62f99c42`.
 
 ## Packet 41 - Camera Home Album Previews (Production Verified)
 

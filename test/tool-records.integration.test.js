@@ -273,6 +273,90 @@ if (!testDatabaseUrl) {
     });
     assert.equal(ambiguousContext.response.status, 422);
 
+    const deliveryEstimate = await requestJson(baseUrl, "/api/v1/tool-records", {
+      method: "POST",
+      cookie: owner.cookie,
+      idempotencyKey: randomUUID(),
+      body: {
+        recordType: "estimate",
+        localId: "estimate:email-one",
+        title: "Kitchen cabinet installation",
+        status: "draft",
+        recordDate: "2026-07-14",
+        amountCents: 248500,
+        payload: {
+          estimateNumber: "EST-KITCHEN-01",
+          recipientName: "Jordan Client",
+          recipientEmail: "jordan.client@example.test",
+          scope: "Kitchen cabinet installation",
+          validThrough: "2026-08-13",
+          customerNote: "Materials are included.",
+          customerLines: [
+            { description: "Cabinet installation", quantity: 24, totalCents: 158500 },
+            { description: "Materials and handling", quantity: 1, totalCents: 90000 },
+          ],
+        },
+      },
+    });
+    assert.equal(deliveryEstimate.response.status, 200);
+
+    const invalidDeliveryEstimate = await requestJson(baseUrl, "/api/v1/tool-records", {
+      method: "POST",
+      cookie: owner.cookie,
+      idempotencyKey: randomUUID(),
+      body: {
+        recordType: "estimate",
+        localId: "estimate:missing-recipient",
+        title: "Missing recipient estimate",
+        status: "draft",
+        recordDate: "2026-07-14",
+        amountCents: 10000,
+        payload: { customerLines: [{ description: "Labor", quantity: 1, totalCents: 10000 }] },
+      },
+    });
+    assert.equal(invalidDeliveryEstimate.response.status, 200);
+
+    const missingRecipient = await requestJson(baseUrl, "/api/v1/estimates/estimate%3Amissing-recipient/send", {
+      method: "POST",
+      cookie: owner.cookie,
+      idempotencyKey: randomUUID(),
+    });
+    assert.equal(missingRecipient.response.status, 422);
+    assert.equal(missingRecipient.payload.error.code, "ESTIMATE_RECIPIENT_REQUIRED");
+
+    clearCapturedEmailMessages();
+    const estimateSendKey = randomUUID();
+    const sentEstimate = await requestJson(baseUrl, "/api/v1/estimates/estimate%3Aemail-one/send", {
+      method: "POST",
+      cookie: owner.cookie,
+      idempotencyKey: estimateSendKey,
+    });
+    assert.equal(sentEstimate.response.status, 200);
+    assert.equal(sentEstimate.payload.data.record.status, "sent");
+    assert.equal(sentEstimate.payload.data.record.payload.delivery.status, "sent");
+    assert.equal(sentEstimate.payload.data.record.payload.delivery.recipientEmail, "jordan.client@example.test");
+    const deliveredEstimate = capturedEmailMessages().find((message) => message.to === "jordan.client@example.test");
+    assert.ok(deliveredEstimate);
+    assert.match(deliveredEstimate.text, /Kitchen cabinet installation/);
+    assert.match(deliveredEstimate.text, /\$2,485\.00/);
+    assert.doesNotMatch(deliveredEstimate.text, /margin|overhead|contingency/i);
+
+    const sentReplay = await requestJson(baseUrl, "/api/v1/estimates/estimate%3Aemail-one/send", {
+      method: "POST",
+      cookie: owner.cookie,
+      idempotencyKey: estimateSendKey,
+    });
+    assert.equal(sentReplay.response.status, 200);
+    assert.equal(sentReplay.response.headers.get("idempotent-replayed"), "true");
+    assert.equal(capturedEmailMessages().filter((message) => message.to === "jordan.client@example.test").length, 1);
+
+    const otherCannotSendEstimate = await requestJson(baseUrl, "/api/v1/estimates/estimate%3Aemail-one/send", {
+      method: "POST",
+      cookie: other.cookie,
+      idempotencyKey: randomUUID(),
+    });
+    assert.equal(otherCannotSendEstimate.response.status, 404);
+
     const projectAlbum = await requestJson(baseUrl, "/api/v1/albums", {
       method: "POST",
       cookie: owner.cookie,

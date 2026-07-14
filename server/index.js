@@ -5108,6 +5108,7 @@ registerToolRecordRoutes({
   writeRateLimit,
   runIdempotentMutation,
   sendIdempotentResult,
+  sendTransactionalEmail,
 });
 
 registerStandaloneProjectRoutes({

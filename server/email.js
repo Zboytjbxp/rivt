@@ -17,29 +17,32 @@ export function emailProviderStatus() {
   return {
     ok: missing.length === 0,
     provider: "email",
-    purpose: "Account verification and recovery",
+    purpose: "Account and field communications",
     mode: missing.length ? "setup_required" : mode,
     missing,
   };
 }
 
-export async function sendTransactionalEmail({ to, subject, text, html }) {
+export async function sendTransactionalEmail({ to, subject, text, html, idempotencyKey = null }) {
   const status = emailProviderStatus();
   if (!status.ok) {
     throw new ApiError(503, "EMAIL_PROVIDER_UNAVAILABLE", "Email delivery is temporarily unavailable.");
   }
 
   if (status.mode === "capture") {
-    capturedEmails.push({ to, subject, text, html, sentAt: new Date().toISOString() });
+    capturedEmails.push({ to, subject, text, html, idempotencyKey, sentAt: new Date().toISOString() });
     return { provider: "capture", id: `capture-${capturedEmails.length}` };
   }
 
+  const headers = {
+    Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+    "Content-Type": "application/json",
+  };
+  if (idempotencyKey) headers["Idempotency-Key"] = idempotencyKey;
+
   const response = await fetch("https://api.resend.com/emails", {
     method: "POST",
-    headers: {
-      Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
-      "Content-Type": "application/json",
-    },
+    headers,
     body: JSON.stringify({ from: process.env.EMAIL_FROM, to: [to], subject, text, html }),
   });
 
