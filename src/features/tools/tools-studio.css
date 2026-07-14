@@ -630,6 +630,48 @@
   font-weight: var(--v2-weight-strong);
 }
 
+.v2-camera-quiet-destination {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 56px;
+  padding: 10px 12px;
+  border: 1px solid var(--v2-border);
+  border-radius: var(--v2-radius-md);
+  background: var(--v2-surface-raised);
+  color: var(--v2-text);
+  text-align: left;
+}
+
+.v2-camera-quiet-destination > svg:first-child {
+  color: var(--v2-accent);
+}
+
+.v2-camera-quiet-destination > span {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.v2-camera-quiet-destination strong,
+.v2-camera-quiet-destination small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.v2-camera-quiet-destination small,
+.v2-camera-empty-copy {
+  color: var(--v2-text-muted);
+  font-size: 13px;
+}
+
+.v2-camera-empty-copy {
+  margin: 0;
+}
+
 .v2-field-tools-actions {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -2462,21 +2504,13 @@
   }
 
   .v2-tools-page {
-    padding-bottom: calc(146px + env(safe-area-inset-bottom));
+    padding-bottom: calc(92px + env(safe-area-inset-bottom));
   }
 
   .v2-tools-page .v2-field-tools-tray {
-    position: fixed;
-    right: 8px;
-    bottom: calc(68px + env(safe-area-inset-bottom));
-    left: 8px;
-    z-index: 18;
-    padding: 8px;
-    box-shadow: var(--v2-shadow-md);
-  }
-
-  .v2-tools-page .v2-field-tools-tray:not(.is-editing) .v2-field-tools-tray-header {
-    display: none;
+    position: static;
+    padding: 12px;
+    box-shadow: var(--v2-shadow-card);
   }
 
   .v2-tools-page .v2-field-tools-actions > button {

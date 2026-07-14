@@ -14,10 +14,12 @@ import {
   createAlbum,
   getAlbum,
   listAlbums,
+  listRecentAlbumCaptures,
   uploadAlbumPhoto,
   type AlbumDetail,
   type AlbumPhoto,
   type PhotoAlbum,
+  type RecentAlbumCapture,
 } from "./album-api";
 import type { StandaloneProject } from "./standalone-project-api";
 
@@ -757,6 +759,7 @@ export function JobPhotosTool({ activeWork, focusedActiveWorkId = null, standalo
 
   const [mode, setMode] = useState<JobPhotosMode>("home");
   const [albums, setAlbums] = useState<PhotoAlbum[]>([]);
+  const [recentAlbumCaptures, setRecentAlbumCaptures] = useState<RecentAlbumCapture[]>([]);
   const [albumsError, setAlbumsError] = useState("");
   const [openAlbum, setOpenAlbum] = useState<AlbumDetail | null>(null);
   const [albumLoading, setAlbumLoading] = useState(false);
@@ -793,6 +796,14 @@ export function JobPhotosTool({ activeWork, focusedActiveWorkId = null, standalo
         if (!cancelled) setAlbumsError(albumErrorMessage(err));
       })
       .finally(() => undefined);
+
+    void listRecentAlbumCaptures()
+      .then((items) => {
+        if (!cancelled) setRecentAlbumCaptures(items);
+      })
+      .catch((err: unknown) => {
+        if (!cancelled) setAlbumsError(albumErrorMessage(err));
+      });
 
     return () => {
       cancelled = true;
@@ -900,6 +911,11 @@ export function JobPhotosTool({ activeWork, focusedActiveWorkId = null, standalo
             coverPhoto: newestPhoto ?? album.coverPhoto,
           }
         : album));
+      const recentAlbum = { id: openAlbum.id, name: openAlbum.name, isDefault: openAlbum.isDefault };
+      setRecentAlbumCaptures((current) => [
+        ...[...newPhotos].reverse().map((photo) => ({ album: recentAlbum, photo })),
+        ...current.filter((capture) => !newPhotos.some((photo) => photo.id === capture.photo.id)),
+      ].slice(0, 6));
     }
     setAlbumUploading(false);
     if (albumFileRef.current) albumFileRef.current.value = "";
@@ -1031,13 +1047,6 @@ export function JobPhotosTool({ activeWork, focusedActiveWorkId = null, standalo
   const contextPhoto = recordWork ? latestProjectPhoto : contextAlbum ? photoFromAlbumCover(contextAlbum) : null;
   const isScopedWorkContext = Boolean(recordWork || standaloneProject);
   const photoAlbums = albums.filter((album) => !album.standaloneProjectId);
-  const recentAlbumCaptures = newestFirst(
-    albums.flatMap((album) => {
-      const photo = photoFromAlbumCover(album);
-      return photo ? [{ album, photo, createdAt: photo.createdAt }] : [];
-    }),
-  ).slice(0, 4);
-
   function openAlbumFromHome(album: PhotoAlbum) {
     void openAlbumById(album.id);
   }
@@ -1067,28 +1076,34 @@ export function JobPhotosTool({ activeWork, focusedActiveWorkId = null, standalo
           </div>
           <p className="v2-camera-live-command-copy">Standalone work · private to your RIVT account.</p>
         </section>
-      ) : selectedPrivateAlbum ? (
-        <section className="v2-camera-home-panel v2-camera-live-command v2-camera-context-card">
-          <div className="v2-job-photos-active-job-info">
-            <span className="v2-job-photos-active-badge">Private album</span>
-            <h2>{selectedPrivateAlbum.name}</h2>
-            <small>{selectedPrivateAlbum.photoCount} {selectedPrivateAlbum.photoCount === 1 ? "photo" : "photos"} - private to you</small>
+      ) : null}
+
+      {!isScopedWorkContext ? (
+        <section className="v2-camera-home-panel v2-camera-latest-panel" aria-label="Recent photos">
+          <div className="v2-camera-home-section-head">
+            <h3>Recent photos</h3>
           </div>
-          <p className="v2-camera-live-command-copy">Private capture - separate from RIVT and standalone work.</p>
+          {recentAlbumCaptures.length ? (
+            <div className="v2-camera-latest-grid">
+              {recentAlbumCaptures.map(({ album, photo }) => (
+                <button key={photo.id} type="button" className="v2-camera-latest-card" onClick={() => void openAlbumById(album.id)}>
+                  {photo.signedUrl ? <img src={photo.signedUrl} alt={photo.originalName} loading="lazy" /> : <span><Camera size={18} /></span>}
+                  <strong>{album.name}</strong>
+                  <small>{relativeTime(photo.createdAt)}</small>
+                </button>
+              ))}
+            </div>
+          ) : <p className="v2-camera-empty-copy">Your newest private captures will appear here.</p>}
         </section>
-      ) : (
-        <section className="v2-camera-home-panel v2-camera-live-command v2-camera-context-card">
-          <div className="v2-job-photos-active-job-info">
-            <span className="v2-job-photos-active-badge">Capture destination</span>
-            <h2>Choose where this proof belongs</h2>
-            <small>Accepted job, standalone project, or private album.</small>
-          </div>
-          <button type="button" className="v2-secondary-button" onClick={onRequestContext}>
-            <FolderOpen size={16} />
-            Choose destination
-          </button>
-        </section>
-      )}
+      ) : null}
+
+      {!isScopedWorkContext ? (
+        <button type="button" className="v2-camera-quiet-destination" onClick={onRequestContext}>
+          <FolderOpen size={17} />
+          <span><strong>{selectedAlbum?.name ?? "Choose destination"}</strong><small>{selectedAlbum ? "Private album" : "Pick where new photos belong"}</small></span>
+          <ArrowRight size={16} />
+        </button>
+      ) : null}
 
       {recordWork || contextAlbum ? (
         <section className="v2-camera-home-panel">
@@ -1185,23 +1200,6 @@ export function JobPhotosTool({ activeWork, focusedActiveWorkId = null, standalo
           </div>
         )}
       </section> : null}
-
-      {!isScopedWorkContext && recentAlbumCaptures.length > 1 ? (
-        <section className="v2-camera-home-panel v2-camera-latest-panel">
-          <div className="v2-camera-home-section-head">
-            <h3>Recent captures</h3>
-          </div>
-          <div className="v2-camera-latest-grid">
-            {recentAlbumCaptures.map(({ album, photo }) => (
-              <button key={photo.id} type="button" className="v2-camera-latest-card" onClick={() => openAlbumFromHome(album)}>
-                {photo.signedUrl ? <img src={photo.signedUrl} alt={photo.originalName} loading="lazy" /> : <span><Camera size={18} /></span>}
-                <strong>{album.name}</strong>
-                <small>{relativeTime(photo.createdAt)}</small>
-              </button>
-            ))}
-          </div>
-        </section>
-      ) : null}
 
       <div className="v2-tool-action-dock v2-camera-action-dock" aria-label="Camera actions">
         <span>

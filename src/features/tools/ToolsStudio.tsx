@@ -201,16 +201,20 @@ function ToolMiniCard({
 function ToolUtilitiesSection({
   tools,
   onOpen,
+  open,
+  onToggle,
 }: {
   tools: ToolLauncher[];
   onOpen: (tool: LaunchableToolMode) => void;
+  open: boolean;
+  onToggle: (open: boolean) => void;
 }) {
   return (
-    <details className="v2-tool-group" aria-label="Utilities">
+    <details id="all-tools" className="v2-tool-group" aria-label="All tools" open={open} onToggle={(event) => onToggle(event.currentTarget.open)}>
       <summary className="v2-tool-group-summary">
         <span className="v2-tool-group-header">
-          <strong>Utilities</strong>
-          <small>{tools.length} focused helpers</small>
+          <strong>All tools</strong>
+          <small>{tools.length} more tools</small>
         </span>
         <ArrowRight size={16} aria-hidden="true" />
       </summary>
@@ -309,6 +313,7 @@ function FieldToolsTray({
   allTools,
   editing,
   onOpen,
+  onShowAll,
   onToggleEditing,
   onChange,
 }: {
@@ -316,6 +321,7 @@ function FieldToolsTray({
   allTools: ToolLauncher[];
   editing: boolean;
   onOpen: (tool: LaunchableToolMode) => void;
+  onShowAll: () => void;
   onToggleEditing: () => void;
   onChange: (tools: LaunchableToolMode[]) => void;
 }) {
@@ -331,9 +337,9 @@ function FieldToolsTray({
   }
 
   return (
-    <section className={editing ? "v2-field-tools-tray is-editing" : "v2-field-tools-tray"} aria-label="Field shortcuts">
+    <section className={editing ? "v2-field-tools-tray is-editing" : "v2-field-tools-tray"} aria-label="Quick access">
       <div className="v2-field-tools-tray-header">
-        <span><strong>Field tools</strong><small>Fast, one-hand shortcuts</small></span>
+        <span><strong>Quick access</strong><small>Your three field shortcuts</small></span>
         <button type="button" onClick={onToggleEditing}>{editing ? "Done" : "Edit"}</button>
       </div>
       {editing ? (
@@ -355,8 +361,8 @@ function FieldToolsTray({
             const Icon = tool.icon;
             return <button key={tool.mode} type="button" onClick={() => onOpen(tool.mode)}><Icon size={19} /><span>{tool.title}</span></button>;
           })}
-          <button type="button" className="v2-field-tools-all" onClick={() => document.querySelector<HTMLElement>(".v2-tool-group")?.scrollIntoView({ behavior: "smooth", block: "start" })}>
-            <Plus size={19} /><span>Utilities</span>
+          <button type="button" className="v2-field-tools-all" onClick={onShowAll}>
+            <Plus size={19} /><span>All tools</span>
           </button>
         </div>
       )}
@@ -2859,6 +2865,7 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
   const activeTool = requestedTool ?? localActiveTool;
   const [fieldTools, setFieldTools] = useState(readFieldTools);
   const [fieldToolsEditing, setFieldToolsEditing] = useState(false);
+  const [allToolsOpen, setAllToolsOpen] = useState(false);
   const [cameraContextRequest, setCameraContextRequest] = useState(0);
   const [cameraAlbums, setCameraAlbums] = useState<PhotoAlbum[]>([]);
   const [cameraAlbumsLoading, setCameraAlbumsLoading] = useState(false);
@@ -2903,10 +2910,6 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
         : "Load the closeout report when you need the packet.";
   const latestEntry = selectedProject?.entries.at(-1) ?? null;
   const actionBusy = Boolean(projectAction);
-  const unpinnedPrimaryTools = useMemo(
-    () => PRIMARY_TOOL_LAUNCHERS.filter((tool) => !fieldTools.includes(tool.mode)),
-    [fieldTools],
-  );
   const activeWork = activeWorkRecords.length ? activeWorkRecords : fetchedActiveWork;
   const orderedActiveWork = useMemo(
     () => focusedActiveWorkFirst(activeWork, focusedActiveWorkId),
@@ -3853,15 +3856,19 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
           allTools={allToolLaunchers()}
           editing={fieldToolsEditing}
           onOpen={openToolFromHub}
+          onShowAll={() => {
+            setAllToolsOpen(true);
+            window.requestAnimationFrame(() => document.getElementById("all-tools")?.scrollIntoView({ behavior: "smooth", block: "start" }));
+          }}
           onToggleEditing={() => setFieldToolsEditing((editing) => !editing)}
           onChange={updateFieldTools}
         />
-        {unpinnedPrimaryTools.length ? <section className="v2-tool-section" aria-label="Core apps">
+        <section className="v2-tool-section" aria-label="Core apps">
           <div className="v2-tool-section-header is-simple">
             <strong>Core apps</strong>
           </div>
           <div className="v2-tool-launch-grid">
-            {unpinnedPrimaryTools.map((tool) => (
+            {PRIMARY_TOOL_LAUNCHERS.map((tool) => (
               <ToolCard
                 key={tool.mode}
                 icon={tool.icon}
@@ -3871,9 +3878,9 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
               />
             ))}
           </div>
-        </section> : null}
+        </section>
 
-        <ToolUtilitiesSection tools={UTILITY_TOOL_LAUNCHERS} onOpen={openToolFromHub} />
+        <ToolUtilitiesSection tools={UTILITY_TOOL_LAUNCHERS} onOpen={openToolFromHub} open={allToolsOpen} onToggle={setAllToolsOpen} />
 
       </div>
 

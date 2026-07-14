@@ -179,6 +179,7 @@ async function configurePage(page) {
   routeResponse("**/api/v1/offers", { data: { offers: [] } });
   routeResponse("**/api/v1/standalone-projects", { data: { projects: [standaloneProject] } });
   routeResponse("**/api/v1/albums", { data: { albums: [defaultPrivateAlbum] } });
+  routeResponse("**/api/v1/albums/recent", { data: { captures: [] } });
   routeResponse(`**/api/v1/jobs/${draftJob.id}`, { data: { job: draftJob } });
   routeResponse(`**/api/v1/jobs/${draftJob.id}/applications`, { data: { applications: [] } });
   routeResponse("**/api/v1/jobs?**", { data: { jobs: [draftJob] }, meta: { nextCursor: null } });
@@ -366,7 +367,7 @@ async function runMobileFlow(page) {
 
   await page.getByRole("button", { name: "Camera", exact: true }).click();
   await page.getByRole("heading", { name: "Camera", exact: true }).waitFor({ timeout: 15_000 });
-  await page.getByRole("heading", { name: "Private photos", exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByRole("heading", { name: "Recent photos", exact: true }).waitFor({ timeout: 15_000 });
   await page.locator(".v2-camera-album-card", { hasText: "Private photos" }).waitFor({ timeout: 15_000 });
   assert.equal(await page.locator(".v2-mobile-nav .is-camera-command").count(), 0, "Camera should be an equal global destination, not an oversized command");
   const cameraDestination = page.getByLabel("Camera actions").getByRole("button", { name: "Destination", exact: true });
@@ -395,8 +396,8 @@ async function runMobileFlow(page) {
   await page.getByRole("heading", { name: "Tools", exact: true }).waitFor({ timeout: 15_000 });
   const primaryInvoiceTool = page.locator(".v2-tool-launch-card").filter({ hasText: "Invoice" }).first();
   await primaryInvoiceTool.waitFor({ timeout: 15_000 });
-  await page.getByLabel("Field shortcuts").getByRole("button", { name: "Camera", exact: true }).waitFor({ timeout: 15_000 });
-  assert.equal(await page.locator(".v2-tool-launch-card").count(), 2, "mobile Tools hub should keep only the unpinned core apps in the main grid");
+  await page.getByLabel("Quick access").getByRole("button", { name: "Camera", exact: true }).waitFor({ timeout: 15_000 });
+  assert.equal(await page.locator(".v2-tool-launch-card").count(), 5, "mobile Tools hub should keep all five core apps in the main grid");
   assert.equal(await page.locator(".v2-tool-mini-card").count(), 9, "mobile Tools hub should expose the focused supporting tool set");
   await assertNoHorizontalOverflow(page, "Tools hub");
   await primaryInvoiceTool.click();
@@ -415,9 +416,9 @@ async function runMobileFlow(page) {
 
   await page.getByLabel("Invoice draft").getByRole("button", { name: "Tools" }).click();
   await page.getByRole("heading", { name: "Tools", exact: true }).waitFor({ timeout: 15_000 });
-  await page.getByLabel("Field shortcuts").getByRole("button", { name: "Camera", exact: true }).click();
+  await page.getByLabel("Quick access").getByRole("button", { name: "Camera", exact: true }).click();
   await page.getByRole("heading", { name: "Camera", exact: true }).waitFor({ timeout: 15_000 });
-  await page.getByRole("heading", { name: "Private photos", exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByRole("heading", { name: "Recent photos", exact: true }).waitFor({ timeout: 15_000 });
   await page.getByLabel("Camera actions").getByRole("button", { name: "Destination", exact: true }).click();
   await page.getByRole("dialog", { name: "Choose work context" }).getByRole("button", { name: /Miller kitchen/i }).click();
   await page.getByRole("heading", { name: "Miller kitchen", exact: true }).waitFor({ timeout: 15_000 });
@@ -511,7 +512,7 @@ async function runMobileFlow(page) {
 
   await page.getByRole("button", { name: "Tools", exact: true }).click();
   await page.getByRole("heading", { name: "Tools", exact: true }).waitFor({ timeout: 15_000 });
-  await page.getByLabel("Field shortcuts").getByRole("button", { name: "Heavy 16th", exact: true }).click();
+  await page.getByLabel("Quick access").getByRole("button", { name: "Heavy 16th", exact: true }).click();
   await page.getByRole("heading", { name: "Heavy 16th field calculator", exact: true }).waitFor({ timeout: 15_000 });
   await page.getByLabel("Input unit").getByRole("button", { name: "Switch to metric mode" }).waitFor({ timeout: 15_000 });
   await page.getByLabel("Heavy, light, double, and half controls").getByRole("button", { name: "Heavy plus one thirty-second" }).waitFor({ timeout: 15_000 });

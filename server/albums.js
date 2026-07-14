@@ -105,6 +105,38 @@ export function registerAlbumRoutes({
     });
   }));
 
+  app.get("/api/v1/albums/recent", requireV1AuthenticatedUser, requireV1Actor, asyncRoute(async (request, response) => {
+    const rows = await database.query(
+      `SELECT ap.id, ap.album_id, ap.upload_id, ap.caption, ap.created_at,
+              pa.name AS album_name, pa.is_default,
+              u.original_name, u.mime_type, u.size_bytes, u.object_key
+       FROM album_photos ap
+       JOIN photo_albums pa ON pa.id = ap.album_id
+       JOIN uploads u ON u.id = ap.upload_id
+       WHERE pa.account_id = $1
+         AND pa.standalone_project_id IS NULL
+         AND u.upload_status = 'stored'
+       ORDER BY ap.created_at DESC, ap.id DESC
+       LIMIT 6`,
+      [request.actor.account.id],
+    );
+    const captures = await Promise.all(rows.rows.map(async (row) => ({
+      album: { id: row.album_id, name: row.album_name, isDefault: Boolean(row.is_default) },
+      photo: {
+        id: row.id,
+        albumId: row.album_id,
+        uploadId: row.upload_id,
+        caption: row.caption ?? "",
+        originalName: row.original_name,
+        mimeType: row.mime_type,
+        sizeBytes: Number(row.size_bytes ?? 0),
+        createdAt: row.created_at,
+        signedUrl: await signedObjectUrl(row.object_key),
+      },
+    })));
+    response.json({ data: { captures }, meta: { requestId: request.requestId } });
+  }));
+
   app.post("/api/v1/albums/default", requireV1AuthenticatedUser, requireV1Actor, writeRateLimit, asyncRoute(async (request, response) => {
     const row = await database.query(
       `INSERT INTO photo_albums (id, account_id, name, is_default)

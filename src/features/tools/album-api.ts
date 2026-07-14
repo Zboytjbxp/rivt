@@ -34,11 +34,21 @@ export interface AlbumDetail extends PhotoAlbum {
   photos: AlbumPhoto[];
 }
 
+export interface RecentAlbumCapture {
+  album: Pick<PhotoAlbum, "id" | "name" | "isDefault">;
+  photo: AlbumPhoto;
+}
+
 const request = makeRequest((s, b) => new AlbumApiError(s, b));
 
 export async function listAlbums() {
   const body = await request<{ data: { albums: PhotoAlbum[] } }>("/api/v1/albums");
   return body.data.albums;
+}
+
+export async function listRecentAlbumCaptures() {
+  const body = await request<{ data: { captures: RecentAlbumCapture[] } }>("/api/v1/albums/recent");
+  return body.data.captures;
 }
 
 export async function createAlbum(name: string, standaloneProjectId: string | null = null) {

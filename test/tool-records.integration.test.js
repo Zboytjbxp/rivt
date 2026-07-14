@@ -318,6 +318,14 @@ if (!testDatabaseUrl) {
     assert.ok(listedDefault);
     assert.equal(listedDefault.coverPhoto, null);
 
+    const recentAlbumCaptures = await requestJson(baseUrl, "/api/v1/albums/recent", { cookie: owner.cookie });
+    assert.equal(recentAlbumCaptures.response.status, 200);
+    assert.deepEqual(recentAlbumCaptures.payload.data.captures, []);
+
+    const otherRecentAlbumCaptures = await requestJson(baseUrl, "/api/v1/albums/recent", { cookie: other.cookie });
+    assert.equal(otherRecentAlbumCaptures.response.status, 200);
+    assert.deepEqual(otherRecentAlbumCaptures.payload.data.captures, []);
+
     const invalidType = await requestJson(baseUrl, "/api/v1/tool-records?type=not-real", { cookie: owner.cookie });
     assert.equal(invalidType.response.status, 422);
 

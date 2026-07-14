@@ -10,6 +10,21 @@ Status values:
 
 Evidence must eventually link to implementation, automated tests, manual acceptance proof, and deployed build.
 
+## Traceability Addendum - 2026-07-14 Camera and Tools Landing Hierarchy (Local Verification Pending)
+
+- `GA-UX-003` gains honest independent-Camera hierarchy evidence: the landing
+  reads account-owned newest stored private captures before albums, and a
+  capture card opens its exact album rather than a generic records surface.
+- `GA-UX-006` gains focused action evidence: destination is compact context,
+  Capture remains in the lower one-handed dock, and Tools no longer pins a
+  second shortcut toolbar over its content on compact viewports.
+- `GA-SEC-004` gains a scoped recent-media read path: the authenticated API
+  returns only the account's private-album captures and excludes
+  standalone-project media.
+- Local evidence includes build, lint, unit, E2E, Tools UI, and mobile-action
+  UI checks. The PostgreSQL integration boundary and all production evidence
+  remain pending a disposable `TEST_DATABASE_URL`, review, merge, and deploy.
+
 ## Traceability Addendum - 2026-07-14 Camera Home Album Previews (Production Verified)
 
 - `GA-UX-003` gains independent-camera clarity evidence: account-owned private

@@ -249,6 +249,9 @@ async function configurePage(page) {
   await page.route("**/api/v1/albums", (route) =>
     route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { albums: [defaultPrivateAlbum] } }) }),
   );
+  await page.route("**/api/v1/albums/recent", (route) =>
+    route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { captures: [] } }) }),
+  );
   await page.route("**/api/v1/standalone-projects", (route) =>
     route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { projects: [] } }) }),
   );
@@ -407,13 +410,13 @@ async function runToolsFlow(page, viewportName) {
   await page.goto(`${baseUrl}/app/tools`, { waitUntil: "networkidle" });
   await page.getByRole("heading", { name: "Tools", exact: true }).waitFor({ timeout: 15_000 });
   const primaryTool = (name) => page.locator(".v2-tool-launch-card").filter({ hasText: name }).first();
-  const fieldToolsTray = page.getByLabel("Field shortcuts", { exact: true });
+  const fieldToolsTray = page.getByLabel("Quick access", { exact: true });
   await fieldToolsTray.waitFor({ timeout: 15_000 });
   await fieldToolsTray.getByRole("button", { name: "Heavy 16th", exact: true }).waitFor({ timeout: 15_000 });
   await fieldToolsTray.getByRole("button", { name: "Camera", exact: true }).waitFor({ timeout: 15_000 });
-  assert.equal(await page.locator(".v2-tool-launch-card").count(), 2, "Pinned defaults should not repeat in the core-app launcher");
-  assert.equal(await page.locator(".v2-tool-group").count(), 1, "Supporting helpers should live in one utilities drawer");
-  await page.locator(".v2-tool-group").filter({ hasText: "Utilities" }).locator("summary").click();
+  assert.equal(await page.locator(".v2-tool-launch-card").count(), 5, "All five core apps should stay visible in the launcher");
+  assert.equal(await page.locator(".v2-tool-group").count(), 1, "Supporting helpers should live in one all-tools drawer");
+  await page.locator(".v2-tool-group").filter({ hasText: "All tools" }).locator("summary").click();
   await page.getByRole("button", { name: /Materials/i }).waitFor({ timeout: 15_000 });
   await page.getByRole("button", { name: /Receivables/i }).waitFor({ timeout: 15_000 });
   await page.getByRole("button", { name: /Safety/i }).waitFor({ timeout: 15_000 });
@@ -534,7 +537,7 @@ async function runToolsFlow(page, viewportName) {
   await page.getByLabel("Daily log").getByRole("button", { name: "Tools" }).click();
 
   await fieldToolsTray.getByRole("button", { name: "Camera", exact: true }).click();
-  await page.getByRole("heading", { name: "Private photos", exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByRole("heading", { name: "Recent photos", exact: true }).waitFor({ timeout: 15_000 });
   await page.getByLabel("Camera actions").getByRole("button", { name: "Destination", exact: true }).click();
   const destinationDialog = page.getByRole("dialog", { name: "Choose work context" });
   await destinationDialog.getByText("Private albums", { exact: true }).waitFor({ timeout: 15_000 });

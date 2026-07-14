@@ -2,12 +2,31 @@
 
 Last updated: 2026-07-14 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Packet 41 is production verified. It makes independent Camera
-useful at a glance with real private-album previews while preserving exact
-accepted-work and standalone-project context.
-Active packet: `docs/delivery/packets/41_CAMERA_HOME_ALBUM_PREVIEWS.md`
-Repository branch: `master`
+Current phase: Packet 42 is locally implemented and awaiting disposable-DB
+integration verification, review, merge, and deploy. It refines independent
+Camera and Tools landing hierarchy without changing ownership or upload flows.
+Active packet: `docs/delivery/packets/42_CAMERA_TOOLS_LANDINGS.md`
+Repository branch: `codex/camera-tools-landing`
 Production feature release commit: `0849eaacc0b70302bf70c487c058c33b62f99c42`
+
+## Packet 42 - Camera and Tools Landing Hierarchy (Local Verification Pending)
+
+- Independent Camera now reads the six newest stored captures across the
+  account's private albums first, opens the exact album for a selected capture,
+  keeps destination quiet, and leaves Capture dominant in the lower dock.
+- The new authenticated `/api/v1/albums/recent` read path is account-scoped and
+  intentionally excludes standalone-project albums; no media ownership or
+  upload behavior changed.
+- Tools now has an in-flow Quick access row, always shows its five core apps,
+  and uses one `All tools` disclosure for supporting utilities. The retired
+  fixed shortcut tray no longer overlays page content on compact screens.
+- Local build, lint, unit suite, E2E, Tools UI, and mobile-action UI pass. The
+  aggregate test command skipped PostgreSQL suites because no
+  `TEST_DATABASE_URL` is configured in this isolated worktree. No deployment,
+  production health check, or disposable-DB integration pass is claimed.
+- Remaining boundary: run full integration with a disposable test database,
+  inspect Camera recent captures across several albums on iOS and Android,
+  review, merge, deploy, then record exact-source production evidence.
 
 ## Packet 41 - Camera Home Album Previews (Production Verified)
 
