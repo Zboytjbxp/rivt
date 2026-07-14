@@ -1679,6 +1679,41 @@ Add one entry per staging/production deployment.
 - Rollback performed/result: not required.
 - Approval: deployed Gate B Shop Talk reliability hardening; physical notification acceptance remains open.
 
+## Current Production - Packet 40 Camera Private Album Destinations
+
+- Environment: Production (`https://rivt.pro`)
+- Date/time/timezone: 2026-07-14 America/New_York
+- Deployer: Codex through a verified feature-branch push, fast-forward merge to
+  `master`, and Railway production auto-deploy.
+- Source repository/branch: `Zboytjbxp/rivt`, `master`
+- Runtime feature source: `c366a69facf764cc36f226014bd3a83da46996c8`
+- Migration version before/after: `0026_standalone_projects` ->
+  `0027_default_private_photo_album`
+- Provider/config changes: none; existing S3-compatible storage, PostgreSQL,
+  Sentry, Web Push, billing, and auth configuration were preserved.
+- Rollback target: `c65fb9cebfcc1bf2d94bc00cbdb9493209057072`; applying the
+  down migration requires confirming that removal of the default-album marker
+  is acceptable. Existing photo albums and photos are not deleted.
+- Automated gates: build, lint, security lint, 53/53 unit tests, E2E, Tools UI,
+  mobile-actions UI, Work lifecycle UI, dependency audit with zero production
+  vulnerabilities, and diff checks passed. Integration assertions for the new
+  endpoint are present but skipped here because `TEST_DATABASE_URL` was not
+  configured in the isolated worktree.
+- Post-deploy proof: live `/api/health` returned exact source and ready
+  migration `0027_default_private_photo_album`.
+  `EXPECTED_SOURCE_COMMIT=c366a69facf764cc36f226014bd3a83da46996c8 npm run
+  monitor:production` passed with PostgreSQL/S3-compatible storage healthy,
+  Sentry and Web Push configured, matching-job alerts enabled, controls off,
+  seven anonymous private-route checks, and a 611 ms duration.
+- Product evidence: Camera defaults to the account-owned `Private photos`
+  album; the same destination sheet allows selecting and creating additional
+  private albums, standalone projects, and accepted RIVT work.
+- Known boundary: execute default-album idempotency/account-isolation coverage
+  against a disposable PostgreSQL test database and perform a physical capture
+  into both the default and a newly created private album.
+- Approval: deployed with server-owned account scoping and production migration
+  readiness verified; database test-environment evidence remains pending.
+
 ## Current Production - Packet 38 Work and People Navigation
 
 - Environment: Production (`https://rivt.pro`)

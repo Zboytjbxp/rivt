@@ -1,6 +1,6 @@
 # Packet 40 - Camera Private Album Destinations
 
-Status: local verification complete
+Status: production verified
 
 ## Objective
 
@@ -39,6 +39,15 @@ albums for unrelated side work, showroom photos, or personal proof.
 The integration suite includes default-album idempotency and account isolation
 coverage. It must be run against a configured disposable PostgreSQL test
 database before the packet can claim database-integration verification.
+
+## Production Evidence
+
+- `master` source `c366a69facf764cc36f226014bd3a83da46996c8`
+- Ready migration `0027_default_private_photo_album`
+- `EXPECTED_SOURCE_COMMIT=c366a69facf764cc36f226014bd3a83da46996c8 npm run monitor:production`
+  passed with PostgreSQL and S3-compatible storage healthy, configured Sentry
+  and Web Push, matching-job alerts enabled, controls off, and seven anonymous
+  private-route checks in 611 ms.
 
 ## Boundary
 

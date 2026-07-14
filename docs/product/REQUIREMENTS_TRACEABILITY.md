@@ -10,7 +10,7 @@ Status values:
 
 Evidence must eventually link to implementation, automated tests, manual acceptance proof, and deployed build.
 
-## Traceability Addendum - 2026-07-14 Camera Private Album Destinations (Local Verification)
+## Traceability Addendum - 2026-07-14 Camera Private Album Destinations (Production Verified)
 
 - `GA-UX-003` gains clear-destination evidence: Camera exposes an account-owned
   default `Private photos` album alongside explicit standalone and accepted
@@ -24,6 +24,10 @@ Evidence must eventually link to implementation, automated tests, manual accepta
   authenticated and idempotent. Cross-account behavior remains covered by the
   existing album authorization contract; the full PostgreSQL integration run
   remains pending a configured disposable `TEST_DATABASE_URL`.
+- `GA-OPS-007` gains production evidence: exact source
+  `c366a69facf764cc36f226014bd3a83da46996c8` reports ready migration `0027`,
+  healthy PostgreSQL/S3-compatible storage, configured Sentry/Web Push, and a
+  passing expected-source production monitor.
 
 ## Traceability Addendum - 2026-07-14 Camera Field Action (Production Verified)
 

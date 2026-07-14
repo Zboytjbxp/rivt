@@ -2,14 +2,14 @@
 
 Last updated: 2026-07-14 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Packet 40 is locally verified. It makes a default private album
+Current phase: Packet 40 is production verified. It makes a default private album
 and user-created private albums explicit Camera destinations alongside
 standalone and accepted RIVT work.
 Active packet: `docs/delivery/packets/40_CAMERA_PRIVATE_ALBUM_DESTINATIONS.md`
 Repository branch: `master`
 Production feature release commit: `9262bb81d630d95f4b482d7d462b506099a1ae8c`
 
-## Packet 40 - Camera Private Album Destinations (Local Verification)
+## Packet 40 - Camera Private Album Destinations (Production Verified)
 
 - Every account has one server-owned default `Private photos` album, enforced
   by a partial unique index and created idempotently through the authenticated
@@ -23,10 +23,15 @@ Production feature release commit: `9262bb81d630d95f4b482d7d462b506099a1ae8c`
   dependency audit, and diff checks pass locally. The aggregate test command
   safely skipped 16 PostgreSQL integration suites because this isolated
   worktree has no `TEST_DATABASE_URL`; database integration is not claimed.
-- Remaining boundary: apply migration `0027_default_private_photo_album`, run
-  the integration suite with a disposable PostgreSQL URL, then confirm that a
-  freshly created user sees `Private photos`, creates another album, captures
-  to both, and cannot see another account's albums.
+- Production health serves exact source
+  `c366a69facf764cc36f226014bd3a83da46996c8` with ready migration
+  `0027_default_private_photo_album`; the expected-source monitor passed with
+  PostgreSQL/S3-compatible storage, configured Sentry/Web Push, matching-job
+  alerts enabled, controls off, and seven anonymous private-route checks.
+- Remaining boundary: run the integration suite with a disposable PostgreSQL
+  URL, then physically confirm that a freshly created user sees `Private
+  photos`, creates another album, captures to both, and cannot see another
+  account's albums.
 
 ## Packet 39 - Camera Field Action and One-Hand Capture (Production Verified)
 
