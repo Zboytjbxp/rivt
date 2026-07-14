@@ -454,7 +454,7 @@ async function assertTopBarActions(page) {
   await page.getByRole("dialog", { name: "Search RIVT" }).waitFor();
   await page.getByPlaceholder("Search jobs, questions, trades, or tools").fill("riley");
   await page.getByRole("button", { name: /Riley Harper/i }).click();
-  await page.getByRole("heading", { name: "Crew", exact: true }).waitFor();
+  await page.getByRole("heading", { name: "People", exact: true }).waitFor();
   await page.getByText("Search result", { exact: true }).waitFor();
   await page.getByRole("heading", { name: "Riley Harper", exact: true }).waitFor();
 
@@ -490,11 +490,11 @@ try {
     });
     await configurePage(page, []);
     await page.goto(`${baseUrl}/app`, { waitUntil: "networkidle" });
-    await page.getByRole("button", { name: /^Crew$/ }).waitFor();
+    await page.getByRole("button", { name: /^Work$/ }).waitFor();
     await page.getByRole("heading", { name: "Communities" }).waitFor();
     await page.getByRole("button", { name: /^Work$/ }).click();
     await page.getByText("No open jobs", { exact: true }).waitFor();
-    for (const label of ["Home", "Work", "Crew", "Shop Talk", "Tools"]) {
+    for (const label of ["Home", "Work", "Shop Talk", "Tools"]) {
       assert.equal(await page.getByRole("button", { name: new RegExp(`^${label}$`) }).count() > 0, true);
     }
     assert.equal(await page.getByRole("button", { name: "Messages" }).count(), 1);

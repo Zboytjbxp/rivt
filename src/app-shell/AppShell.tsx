@@ -7,7 +7,6 @@ import {
   Home,
   MessageCircle,
   Search,
-  Users,
   Wrench,
   X,
 } from "lucide-react";
@@ -24,7 +23,6 @@ const primaryNavigation: Array<{
 }> = [
   { destination: "home", label: "Home", icon: Home },
   { destination: "work", label: "Work", icon: BriefcaseBusiness },
-  { destination: "crew", label: "Crew", icon: Users },
   { destination: "shop-talk", label: "Shop Talk", icon: MessageCircle },
   { destination: "tools", label: "Tools", icon: Wrench },
 ];
@@ -122,7 +120,7 @@ export function AppShell({
     if (onOpenProfileResult) {
       onOpenProfileResult(person);
     } else {
-      onNavigate("crew");
+      onNavigate("work");
     }
     setSearchOpen(false);
   }
@@ -202,8 +200,8 @@ export function AppShell({
               value={searchValue}
               onChange={(event) => handleSearchValueChange(event.target.value)}
               onFocus={openSearch}
-              placeholder="Search jobs, answers, crews"
-              aria-label="Search jobs, answers, crews"
+              placeholder="Search jobs, answers, people"
+              aria-label="Search jobs, answers, people"
             />
             <kbd>Ctrl K</kbd>
           </form>

@@ -94,6 +94,7 @@ interface WorkWorkspaceProps {
   onVerifiedChange: (verified: boolean) => void;
   onSelectJob: (jobId: JobId) => void;
   onPostJob: () => void;
+  onOpenPeople: () => void;
   onEditJob: (job: Job) => void;
   onTransition: (job: Job, action: JobAction) => Promise<void>;
   onJobLoaded: (job: Job) => void;
@@ -1234,6 +1235,7 @@ export function WorkWorkspace({
   onVerifiedChange,
   onSelectJob,
   onPostJob,
+  onOpenPeople,
   onEditJob,
   onTransition,
   onJobLoaded,
@@ -1676,6 +1678,11 @@ export function WorkWorkspace({
           ) : null}
         </div>
       </header>
+
+      <nav className="v2-work-mode-switcher" aria-label="Work views">
+        <button type="button" className="is-active" aria-current="page">Jobs</button>
+        <button type="button" onClick={onOpenPeople}>People</button>
+      </nav>
 
       {role === "contractor" ? (
         <button

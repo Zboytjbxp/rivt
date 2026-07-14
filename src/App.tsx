@@ -1370,13 +1370,14 @@ function App() {
   }
 
   function handleNavigate(view: NavLabel) {
+    const resolvedView: NavLabel = view === "Crew" ? "People" : view;
     setRequestedTool(null);
     setToolsImmersive(false);
-    if (view !== "Reviews") setFocusedReviewId(null);
-    setActiveView(view);
-    const nextPath = viewRoutes[view];
+    if (resolvedView !== "Reviews") setFocusedReviewId(null);
+    setActiveView(resolvedView);
+    const nextPath = viewRoutes[resolvedView];
     if (currentPathAndSearch() !== nextPath) {
-      window.history.pushState({ view }, "", nextPath);
+      window.history.pushState({ view: resolvedView }, "", nextPath);
     }
     setActivityOpen(false);
     setAccountOpen(false);
@@ -2507,11 +2508,11 @@ function App() {
         }}
         onOpenProfileResult={(profileResult) => {
           setProfileSearchFocus(profileResult);
-          handleNavigate("Crew");
+          handleNavigate("People");
         }}
       >
 
-        {["Home", "Work", "Crew", "Shop Talk", "Reviews", "Messages", "Tools", "Records", "Trust & Legal", "Safety & Training", "Feedback", "Settings", "Admin"].includes(activeView) ? null : (
+        {["Home", "Work", "People", "Crew", "Shop Talk", "Reviews", "Messages", "Tools", "Records", "Trust & Legal", "Safety & Training", "Feedback", "Settings", "Admin"].includes(activeView) ? null : (
           <header className="page-heading" aria-label={`${page.title} heading`}>
             <div>
               <h1>{page.title}</h1>
@@ -2572,6 +2573,7 @@ function App() {
             onVerifiedChange={setVerifiedOnly}
             onSelectJob={(jobId) => { setFocusedActiveWorkId(null); setSelectedId(jobId); }}
             onPostJob={openCreateJob}
+            onOpenPeople={() => handleNavigate("People")}
             onEditJob={(job) => void handleEditJob(job)}
             onTransition={handleJobTransition}
             onJobLoaded={handleJobLoaded}
@@ -2631,15 +2633,16 @@ function App() {
             onCommunityCreated={handleCommunityCreated}
             onLoadPost={loadShopTalkPost}
           />
-        ) : ["Crew", "Reviews"].includes(activeView) ? (
+        ) : ["People", "Crew", "Reviews"].includes(activeView) ? (
           <NetworkHub
-            view={activeView as "Crew" | "Reviews"}
+            view={activeView === "Reviews" ? "Reviews" : "People"}
             shoutOuts={shoutOuts}
             displayName={accountProfile.displayName}
             profileFocus={profileSearchFocus}
             focusedReviewId={focusedReviewId}
             onClearProfileFocus={() => setProfileSearchFocus(null)}
-            onOpenCrew={() => handleNavigate("Crew")}
+            onOpenPeople={() => handleNavigate("People")}
+            onOpenWork={() => handleNavigate("Work")}
             onOpenReviews={() => handleNavigate("Reviews")}
             onAddShoutOut={handleAddShoutOut}
             isDemo={isGuest}

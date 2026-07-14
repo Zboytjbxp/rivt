@@ -229,7 +229,8 @@ async function runUi(jobTitle) {
     await page.getByRole("button", { name: "Open", exact: true }).click();
     await page.locator(".v2-job-row-inner").filter({ hasText: jobTitle }).first().waitFor({ timeout: 20_000 });
 
-    await page.getByRole("button", { name: "Crew", exact: true }).click();
+    await page.getByRole("button", { name: "Work", exact: true }).click();
+    await page.getByRole("button", { name: "People", exact: true }).click();
     await page.getByRole("heading", { name: "Network", exact: true }).waitFor({ timeout: 15_000 });
     const planInvite = page.locator(".v2-crew-invite-form .v2-primary-button");
     await page.getByPlaceholder("Name or company").fill("First Coast Electric");

@@ -8,6 +8,7 @@ export type NavLabel =
   | "My Jobs"
   | "Applications"
   | "Invites"
+  | "People"
   | "Crew"
   | "Messages"
   | "Trust & Legal"
@@ -20,8 +21,7 @@ export type NavLabel =
 
 export function primaryDestinationForView(view: NavLabel): PrimaryDestination | null {
   if (view === "Home") return "home";
-  if (["Work", "My Jobs", "Applications", "Invites"].includes(view)) return "work";
-  if (["Crew", "Reviews"].includes(view)) return "crew";
+  if (["Work", "My Jobs", "Applications", "Invites", "People", "Crew", "Reviews"].includes(view)) return "work";
   if (view === "Shop Talk") return "shop-talk";
   if (["Tools", "Records"].includes(view)) return "tools";
   return null;
@@ -30,7 +30,7 @@ export function primaryDestinationForView(view: NavLabel): PrimaryDestination | 
 export function defaultViewForDestination(destination: PrimaryDestination): NavLabel {
   if (destination === "home") return "Home";
   if (destination === "work") return "Work";
-  if (destination === "crew") return "Crew";
+  if (destination === "crew") return "People";
   if (destination === "shop-talk") return "Shop Talk";
   if (destination === "messages") return "Messages";
   return "Tools";
@@ -44,7 +44,8 @@ export const viewRoutes: Record<NavLabel, string> = {
   "My Jobs": "/app/work",
   Applications: "/app/work",
   Invites: "/app/work",
-  Crew: "/app/network",
+  People: "/app/work/people",
+  Crew: "/app/work/people",
   Messages: "/app/inbox",
   "Trust & Legal": "/app/profile/trust",
   Records: "/app/tools/records",
@@ -64,7 +65,9 @@ export function viewFromPath(pathname: string): NavLabel {
     "/app/work/invites": "Work",
     "/app/shop-talk": "Shop Talk",
     "/app/network/talk": "Shop Talk",
-    "/app/crew": "Crew",
+    "/app/crew": "People",
+    "/app/network": "People",
+    "/app/work/people": "People",
     "/app/messages": "Messages",
     "/app/network/reviews": "Reviews",
     "/app/profile": "Settings",
@@ -111,8 +114,12 @@ export const pageCopy: Record<NavLabel, { title: string; description: string }> 
     title: "Work",
     description: "Track crew follow-ups and job conversations.",
   },
+  People: {
+    title: "People",
+    description: "Saved people, subs, clients, reviews, and job contacts.",
+  },
   Crew: {
-    title: "Crew",
+    title: "People",
     description: "People, reviews, clients, and saved subs.",
   },
   Messages: {

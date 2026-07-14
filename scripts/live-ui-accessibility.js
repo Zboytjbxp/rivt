@@ -268,7 +268,7 @@ async function collectUiAudit(page, label) {
         scrollWidth: document.documentElement.scrollWidth,
         scrollHeight: document.documentElement.scrollHeight,
       },
-      requiredNav: ["Home", "Work", "Crew", "Shop Talk", "Tools"].map((name) => ({
+      requiredNav: ["Home", "Work", "Shop Talk", "Tools"].map((name) => ({
         name,
         visible: controls.some((control) => control.name === name),
       })),
@@ -458,7 +458,7 @@ async function loginAndAudit(browser, account, scenario) {
 
     const scenarioLabel = `${account.role}-${scenario.name}-${scenario.viewport.width}x${scenario.viewport.height}`;
     const audits = [await collectAndCaptureUiAudit(page, `${scenarioLabel}-home`)];
-    for (const navItem of ["Work", "Crew", "Shop Talk", "Tools", "Home"]) {
+    for (const navItem of ["Work", "Shop Talk", "Tools", "Home"]) {
       await firstVisibleClick(page, navItem);
       audits.push(await collectAndCaptureUiAudit(page, `${scenarioLabel}-${navItem.toLowerCase().replace(/\s+/g, "-")}`));
     }

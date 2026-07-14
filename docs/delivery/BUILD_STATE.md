@@ -2,12 +2,25 @@
 
 Last updated: 2026-07-13 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Packet 37 is deployed and production verified. It makes the
-focused accepted-work handoff visible and moves Camera's primary field controls
-into the lower thumb zone.
-Active packet: `docs/delivery/packets/37_WORKFLOW_COHERENCE_FIELD_TOOLS.md`
-Repository branch: `master`
+Current phase: Packet 38 is locally verified. It consolidates Crew under Work
+as a visible People mode while preserving existing relationship records and
+legacy links.
+Active packet: `docs/delivery/packets/38_WORK_PEOPLE_NAVIGATION.md`
+Repository branch: `codex/work-people-navigation`
 Production feature release commit: `d9b9097f3a0e20a8ccb119b76c794c942efad7e7`
+
+## Packet 38 - Work and People Navigation (Local Verification)
+
+- Work is now the entry point for both Jobs and People. People contains the
+  saved-person, subs, clients, reviews, and invite-planning surfaces that were
+  previously reached through Crew.
+- Home, Work, Shop Talk, and Tools are the exposed primary destinations. Old
+  Crew/network URLs resolve to Work -> People so existing links remain valid.
+- Build, lint, unit tests, E2E, dependency audit, and diff check pass locally.
+  `npm run test` has the normal 53 passing unit tests; database integration
+  suites are skipped because this worktree has no `TEST_DATABASE_URL`.
+- Remaining boundary: deploy and physically confirm Jobs -> People switching
+  on founder devices before treating the navigation change as production proof.
 
 ## Packet 37 - Workflow Coherence and Field Tool Reachability (Local Verification)
 

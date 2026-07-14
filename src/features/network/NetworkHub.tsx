@@ -46,13 +46,14 @@ interface ShoutOut {
 }
 
 interface NetworkHubProps {
-  view: "Crew" | "Reviews";
+  view: "People" | "Reviews";
   shoutOuts: ShoutOut[];
   displayName: string;
   profileFocus?: ProfileSearchResult | null;
   focusedReviewId?: string | null;
   onClearProfileFocus?: () => void;
-  onOpenCrew: () => void;
+  onOpenPeople: () => void;
+  onOpenWork: () => void;
   onOpenReviews: () => void;
   onAddShoutOut: (to: string, trade: string, message: string) => void;
   isDemo?: boolean;
@@ -618,7 +619,7 @@ function CrewCard({
 
 // ── Crew Manager (the enhanced Crew tab) ──────────────────────────────────────
 
-function CrewManager({ crewType, isDemo = false }: { crewType: CrewType; isDemo?: boolean }) {
+function CrewManager({ crewType, labelOverride, isDemo = false }: { crewType: CrewType; labelOverride?: string; isDemo?: boolean }) {
   const [crew, setCrew] = useState<CrewMember[]>(() => isDemo ? demoCrewMembers : loadCrew());
   const [showForm, setShowForm] = useState(false);
   const [editingMember, setEditingMember] = useState<CrewMember | null>(null);
@@ -693,7 +694,7 @@ function CrewManager({ crewType, isDemo = false }: { crewType: CrewType; isDemo?
     navigator.clipboard.writeText(text).catch(() => { /* noop */ });
   }
 
-  const label = crewType === "crew" ? "Crew" : "Subs";
+  const label = labelOverride ?? (crewType === "crew" ? "Crew" : "Subs");
 
   return (
     <div className="v2-crew-manager">
@@ -704,7 +705,7 @@ function CrewManager({ crewType, isDemo = false }: { crewType: CrewType; isDemo?
           className="v2-client-add-btn"
           onClick={() => { setEditingMember(null); setShowForm(true); }}
         >
-          <Plus size={14} /> Add {label === "Crew" ? "member" : "sub"}
+          <Plus size={14} /> Add {crewType === "sub" ? "sub" : "person"}
         </button>
       </div>
       <p className="v2-client-sync-note" role="status">{syncMessage}</p>
@@ -1359,7 +1360,7 @@ function ReviewsView({
   );
 }
 
-type NetworkTab = "Crew" | "Subs" | "Reviews" | "Clients";
+type NetworkTab = "People" | "Subs" | "Reviews" | "Clients";
 
 export function NetworkHub({
   view,
@@ -1368,21 +1369,22 @@ export function NetworkHub({
   profileFocus = null,
   focusedReviewId = null,
   onClearProfileFocus = () => undefined,
-  onOpenCrew,
+  onOpenPeople,
+  onOpenWork,
   onOpenReviews,
   onAddShoutOut,
   isDemo = false,
 }: NetworkHubProps) {
   // Internal tab state — derive initial tab from the incoming view prop
   const [activeTab, setActiveTab] = useState<NetworkTab>(() =>
-    view === "Reviews" ? "Reviews" : "Crew"
+    view === "Reviews" ? "Reviews" : "People"
   );
 
 
   // Tab bar shared across all views
   const tabBar = (
     <div className="v2-network-tab-bar">
-      {(["Crew", "Subs", "Reviews", "Clients"] as NetworkTab[]).map((tab) => (
+      {(["People", "Subs", "Reviews", "Clients"] as NetworkTab[]).map((tab) => (
         <button
           key={tab}
           type="button"
@@ -1390,7 +1392,7 @@ export function NetworkHub({
           onClick={() => {
             setActiveTab(tab);
             if (tab === "Reviews") onOpenReviews();
-            else if (tab === "Crew") onOpenCrew();
+            else if (tab === "People") onOpenPeople();
           }}
         >
           {tab}
@@ -1399,7 +1401,15 @@ export function NetworkHub({
     </div>
   );
 
-  const pageHeader = <PageHeader className="v2-network-header" title="Crew" />;
+  const pageHeader = (
+    <>
+      <PageHeader className="v2-network-header" title="People" />
+      <nav className="v2-people-work-switcher" aria-label="Work views">
+        <button type="button" onClick={onOpenWork}>Jobs</button>
+        <button type="button" className="is-active" aria-current="page">People</button>
+      </nav>
+    </>
+  );
 
   if (activeTab === "Clients") {
     return (
@@ -1436,16 +1446,15 @@ export function NetworkHub({
     );
   }
 
-  // Crew tab
+  // People tab
   return (
-    <section className="v2-network-page" aria-label="Crew">
+    <section className="v2-network-page" aria-label="People">
       {pageHeader}
       {tabBar}
       {profileFocus ? <ProfileSearchSpotlight profile={profileFocus} onDismiss={onClearProfileFocus} /> : null}
 
-      {/* Local Crew Manager */}
       <div className="v2-crew-workbench">
-        <CrewManager crewType="crew" isDemo={isDemo} />
+        <CrewManager crewType="crew" labelOverride="People" isDemo={isDemo} />
         <details className="v2-crew-invite-fold">
           <summary>Plan an invite</summary>
           <CrewInvitePlanner isDemo={isDemo} />

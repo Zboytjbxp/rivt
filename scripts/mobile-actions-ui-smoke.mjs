@@ -407,15 +407,16 @@ async function runMobileFlow(page) {
   await page.screenshot({ path: path.join(screenshotDir, "mobile-camera-standalone-context.png"), fullPage: true });
   await page.getByLabel("Camera").getByRole("button", { name: "Tools" }).click();
   await page.getByRole("heading", { name: "Tools", exact: true }).waitFor({ timeout: 15_000 });
-  await page.getByRole("button", { name: "Crew", exact: true }).click();
-  await page.getByRole("heading", { name: "Crew", exact: true }).waitFor({ timeout: 15_000 });
-  await assertNoHorizontalOverflow(page, "Crew");
+  await page.getByRole("button", { name: "Work", exact: true }).click();
+  await page.getByRole("button", { name: "People", exact: true }).click();
+  await page.getByRole("heading", { name: "People", exact: true }).waitFor({ timeout: 15_000 });
+  await assertNoHorizontalOverflow(page, "People");
   await page.locator(".v2-crew-invite-fold > summary").click();
   await page.getByRole("button", { name: "Plan invite", exact: true }).click();
   const crewInviteInputs = page.locator(".v2-crew-invite-inputs input");
   await assert.equal(await crewInviteInputs.count(), 4, "Crew invite planner should render four contained inputs");
   await crewInviteInputs.nth(1).fill("Electrical framing and service");
-  await assertNoHorizontalOverflow(page, "Crew invite planner");
+  await assertNoHorizontalOverflow(page, "People invite planner");
   await page.screenshot({ path: path.join(screenshotDir, "mobile-crew-contained.png"), fullPage: true });
 
   await page.getByRole("button", { name: "Search" }).click();
@@ -468,19 +469,20 @@ async function runMobileFlow(page) {
     await page.getByText("Device delivery is not configured for this environment.", { exact: true }).waitFor({ timeout: 15_000 });
     assert.equal(await page.getByRole("button", { name: "Enable device alerts", exact: true }).count(), 0);
   await assertNoHorizontalOverflow(page, "Settings route");
-  await page.getByRole("button", { name: "Crew", exact: true }).click();
-  await page.getByRole("heading", { name: "Crew", exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByRole("button", { name: "Work", exact: true }).click();
+  await page.getByRole("button", { name: "People", exact: true }).click();
+  await page.getByRole("heading", { name: "People", exact: true }).waitFor({ timeout: 15_000 });
   await page.locator(".v2-crew-invite-fold > summary").click();
   await page.getByRole("button", { name: "Plan invite", exact: true }).click();
   await page.getByPlaceholder("Name or company").fill("First Coast Electric");
   await assertControlCenterClickable(page, ".v2-crew-invite-form .v2-primary-button", "crew plan invite button");
   await page.locator(".v2-crew-invite-form .v2-primary-button").click();
   await page.getByText("First Coast Electric", { exact: true }).waitFor({ timeout: 15_000 });
-  await page.getByRole("button", { name: /Add member/i }).click();
+  await page.getByRole("button", { name: /Add person/i }).click();
   await page.getByLabel("Name").waitFor({ timeout: 15_000 });
   await page.getByLabel("Name").fill("Test Electrician");
   await page.getByRole("button", { name: "Cancel" }).click();
-  await assertNoHorizontalOverflow(page, "Crew add member form");
+  await assertNoHorizontalOverflow(page, "People add person form");
 
   await page.getByRole("button", { name: "Tools", exact: true }).click();
   await page.getByRole("heading", { name: "Tools", exact: true }).waitFor({ timeout: 15_000 });

@@ -17,6 +17,37 @@
   gap: 24px;
 }
 
+.v2-people-work-switcher {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  width: fit-content;
+  margin: 0 0 16px;
+  padding: 4px;
+  border: 1px solid var(--v2-border);
+  border-radius: var(--v2-radius-pill);
+  background: var(--v2-surface-muted);
+}
+
+.v2-people-work-switcher button {
+  min-height: 36px;
+  padding: 0 15px;
+  border: 0;
+  border-radius: var(--v2-radius-pill);
+  background: transparent;
+  color: var(--v2-text-muted);
+  font: inherit;
+  font-size: var(--v2-text-sm);
+  font-weight: var(--v2-weight-strong);
+  cursor: pointer;
+}
+
+.v2-people-work-switcher button.is-active {
+  background: var(--v2-surface);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+  color: var(--v2-text);
+}
+
 .v2-network-header h1 {
   margin: 0;
   font-size: clamp(31px, 4vw, 48px);
