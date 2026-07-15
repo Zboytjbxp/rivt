@@ -4772,6 +4772,23 @@ Completed on 2026-07-04 on branch `codex/launch-polish-phase-2` as a controllabl
 - `EXPECTED_SOURCE_COMMIT=1f9580ca388ed2c6e28864227d58f3787165f110 npm run monitor:production` passed with seven anonymous private-route checks and operational controls disabled.
 - The next focused acceptance check is a physical accepted-work route: open Invoice and Daily Log from that job's workspace and ensure the accepted job is named before data entry. Run the newly extended PostgreSQL integration assertion when `TEST_DATABASE_URL` is available.
 
+## Packet 42 - Estimate Email Delivery Verification
+
+- Branch `codex/estimate-delivery` is review-ready but not merged or deployed.
+- The isolated ignored `TEST_DATABASE_URL` points to `rivt_test`; its reset ran
+  through migration `0027_default_private_photo_album` with no pending
+  migrations.
+- Full automated evidence passed: `npm run build`, `npm run lint`,
+  `npm run lint:security`, `npm run test:unit` (53 tests), `npm run test:e2e`,
+  `npm run test:ui:tools`, `npm run test:ui:mobile-actions`,
+  `npm audit --omit=dev`, and `npm run test:integration` (19 PostgreSQL
+  suites).
+- The migration lifecycle test now includes migration `0027` in its rollback
+  contract instead of asserting an obsolete rollback version.
+- Remaining acceptance boundary: send a controlled estimate through the real
+  configured provider to a controlled inbox, verify the received itemization
+  is customer-safe, then deploy and capture exact-source health evidence.
+
 ## Next Exact Task
 
 Run `npm run smoke:billing:live` with `RIVT_SMOKE_EMAIL` and `RIVT_SMOKE_PASSWORD` set, then run it again with `RIVT_BILLING_EXERCISE_REDIRECTS=true` to verify Checkout and Customer Portal redirects without charging a card. After that, complete one real paid checkout and confirm the signed Stripe webhook updates `/api/v1/billing/status` to active Pro. In parallel, run `docs/quality/PHYSICAL_ACCESSIBILITY_CHECKLIST.md` on physical iOS Safari, Android Chrome, desktop keyboard-only, and at least one screen reader, then record the pass/fail evidence before named-cohort launch. Keep `npm run incident:readiness -- --require-ready` and `npm run launch:readiness -- --require-ready` passing as the machine-readiness gates while that manual evidence is gathered.

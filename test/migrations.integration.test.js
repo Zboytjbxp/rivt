@@ -205,6 +205,12 @@ if (!testDatabaseUrl) {
         /append-only/,
       );
 
+      const rolledBackDefaultPrivateAlbum = await rollbackLatest(database);
+      assert.equal(rolledBackDefaultPrivateAlbum.latestVersion, 26);
+      assert.equal((await database.query(
+        "SELECT count(*)::int AS count FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = 'photo_albums' AND column_name = 'is_default'",
+      )).rows[0].count, 0);
+
       const rolledBackStandaloneProjects = await rollbackLatest(database);
       assert.equal(rolledBackStandaloneProjects.latestVersion, 25);
       assert.equal((await database.query("SELECT to_regclass('standalone_projects') AS table_name")).rows[0].table_name, null);

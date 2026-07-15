@@ -57,16 +57,17 @@ overhead, margin, or contingency.
 - `npm run lint` passed.
 - `npm run test:ui:tools` passed.
 - `npm run test:ui:mobile-actions` passed.
-- `npm run test` passed with the database suites skipped before the ignored
-  local test configuration was available.
+- `npm run test:unit` passed (53 tests).
 - `npm run test:e2e` passed.
 - `npm audit --omit=dev` passed with zero production vulnerabilities.
 - `test/tool-records.integration.test.js` includes delivery validation,
   customer-safe email, idempotent replay, and cross-account authorization
-  cases. The established isolated `rivt_test` configuration was copied into
-  this worktree and `npm run test:integration:fresh` was attempted, but the
-  reset/migration process emitted no assertion output after eleven minutes and
-  was stopped. No database-backed integration result is claimed.
+  cases.
+- The isolated `rivt_test` database reset cleanly through migration `0027`.
+  `npm run test:integration` passed all 19 suites, including the delivery
+  cases. The migration lifecycle test was updated to explicitly roll back
+  `0027_default_private_photo_album` before asserting the existing `0026`
+  rollback sequence.
 
 ## Boundary and Risk
 
@@ -75,7 +76,6 @@ overhead, margin, or contingency.
   marked as failed; the UI must never call this sent.
 - This is delivery only. A customer replying, accepting, signing, paying, or
   generating an invoice remains a separate explicit workflow.
-- Before deployment, resolve the disposable-Postgres stall, run the delivery
-  integration cases, then send a controlled non-production estimate to a
-  controlled inbox and confirm itemization, sender identity, failure behavior,
-  and a same-key retry.
+- Before deployment, send a controlled non-production estimate to a controlled
+  inbox and confirm itemization, sender identity, failure behavior, and a
+  same-key retry. Then deploy and record exact-source production evidence.
