@@ -1822,3 +1822,35 @@ Add one entry per staging/production deployment.
   catalog, then consolidate Price Book into Materials in a separate packet.
 - Approval: Packet 43 runtime, rendered-device gates, data preservation, and
   production health are verified.
+
+## Current Production - Packet 47 Jobsite Tools Consolidation
+
+- Environment: Production (`https://rivt.pro`)
+- Date/time/timezone: 2026-07-15 America/New_York
+- Deployer: Codex through a verified feature-branch push and fast-forward push
+  to `master`; Railway production auto-deploy
+- Source repository/branch: `Zboytjbxp/rivt`, `master`
+- Runtime feature source: `82b243e6bdbb28ffe4ec3d28c4253c044a1d6f22`
+- Migration version before/after: unchanged
+  (`0027_default_private_photo_album`)
+- Provider/config changes: none; auth, billing, PostgreSQL, object storage,
+  Sentry, Web Push, email, moderation, and rollout configuration were preserved.
+- Rollback target: `97fe5ce9f4c07d02e169655271fcd81ce32d3e2e`; no database rollback is required.
+- Automated gates: build, lint, security lint, 55/55 unit tests, E2E,
+  desktop/mobile/compact Tools UI, mobile-action UI, accepted-work lifecycle UI,
+  dependency audit with zero production vulnerabilities, diff checks, and all
+  19 freshly reset PostgreSQL integration suites passed. The aggregate `npm
+  test` wrapper later exceeded a two-minute command window while re-running the
+  already-passed integration component; no additional failure was observed.
+- Post-deploy proof: live `/api/health` returned the exact feature source, ready
+  migration 0027, PostgreSQL/S3-compatible storage, configured Sentry and Web
+  Push, and enabled bounded matching-job alerts. The expected-source production
+  monitor passed with controls off, seven anonymous private-route checks, and a
+  593 ms duration.
+- Product evidence: one Jobsite launcher now owns Log, Punch, and Safety;
+  legacy tool URLs select the matching section while existing record stores,
+  synchronization paths, and forms remain unchanged.
+- Known boundary: physically confirm existing Daily Log, Punch, and Safety
+  records survive section changes and reopening Jobsite on iOS and Android.
+- Approval: Packet 47 runtime, automated records safeguards, rendered-device
+  gates, and production health are verified; field acceptance remains open.

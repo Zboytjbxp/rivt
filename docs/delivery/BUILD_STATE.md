@@ -2,13 +2,14 @@
 
 Last updated: 2026-07-15 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Packet 47 is locally verified. It consolidates Daily Log,
-Punch List, and Safety into one Jobsite app without moving or deleting records.
+Current phase: Packet 47 is production verified at its automated boundary. It
+consolidates Daily Log, Punch List, and Safety into one Jobsite app without
+moving or deleting records.
 Active packet: `docs/delivery/packets/47_JOBSITE_TOOLS_CONSOLIDATION.md`
-Repository branch: `codex/jobsite-tools-consolidation`
-Production feature release commit: pending verification and deployment
+Repository branch: `master`
+Production feature release commit: `82b243e6bdbb28ffe4ec3d28c4253c044a1d6f22`
 
-## Packet 47 - Jobsite Tools Consolidation (Local Verification)
+## Packet 47 - Jobsite Tools Consolidation (Production Verification)
 
 - One Jobsite launcher now contains Log, Punch, and Safety sections. Separate
   Punch List and Safety utility launchers are removed.
@@ -23,9 +24,12 @@ Production feature release commit: pending verification and deployment
 - Rendered checks cover 1440x900, 390x844, and 320x568 with no horizontal
   overflow. The three-section mobile dock remains thumb-reachable without
   preventing the underlying forms from scrolling; desktop renders it in flow.
-- Remaining boundary: deploy the exact commit, run the expected-source
-  production monitor, and physically confirm existing records remain after
-  switching sections and reopening Jobsite.
+- Production `/api/health` serves the exact feature commit with ready migration
+  `0027_default_private_photo_album`, PostgreSQL, S3-compatible storage, Sentry,
+  Web Push, and matching-job alerts healthy. The expected-source production
+  monitor passed all seven anonymous private-route checks in 593 ms.
+- Remaining boundary: physically confirm existing Daily Log, Punch, and Safety
+  records remain after switching sections and reopening Jobsite on iOS/Android.
 
 ## Packet 46 - Invoice and Receivables Consolidation (Production Verification)
 

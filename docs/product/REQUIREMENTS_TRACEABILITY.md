@@ -1358,3 +1358,7 @@ Evidence must eventually link to implementation, automated tests, manual accepta
   freshly reset PostgreSQL integration suites, E2E, rendered Tools QA at
   desktop/mobile/compact viewports, mobile-action QA, accepted-work lifecycle
   QA, a zero-vulnerability production dependency audit, and diff checks.
+- Production evidence: exact source
+  `82b243e6bdbb28ffe4ec3d28c4253c044a1d6f22` is live with migration 0027 ready;
+  the expected-source synthetic monitor passed all seven anonymous private-route
+  checks. Physical cross-device record-retention acceptance remains open.
