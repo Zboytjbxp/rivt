@@ -400,7 +400,8 @@ async function assertToolsFlow(page) {
   await page.locator(".v2-tool-group").filter({ hasText: "Utilities" }).locator("summary").click();
   await page.getByRole("button", { name: /Materials/i }).waitFor();
   assert.equal(await page.getByRole("button", { name: /Receivables/i }).count(), 0, "Receivables should be contained inside Invoice");
-  await page.getByRole("button", { name: /Safety/i }).waitFor();
+  assert.equal(await page.getByRole("button", { name: /Safety/i }).count(), 0, "Safety should live inside Jobsite");
+  await page.getByRole("button", { name: /Jobsite/i }).waitFor();
   await fieldToolsTray.getByRole("button", { name: "Heavy 16th", exact: true }).click();
   await page.getByRole("heading", { name: "Heavy 16th field calculator" }).waitFor();
   await page.getByLabel("Length calculator").getByText("Decimal", { exact: true }).waitFor();

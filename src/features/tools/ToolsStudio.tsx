@@ -106,6 +106,7 @@ const cameraAlbumDestinationStorageKey = "rivt.cameraAlbumDestination.v1";
 const contextualToolModes = new Set<PublicToolMode>(["estimate", "invoice", "job-photos"]);
 type TimeCostsView = "time" | "expenses" | "mileage" | "summary";
 type InvoiceView = "draft" | "receivables";
+type JobsiteView = "log" | "punch" | "safety";
 
 function timeCostsViewForMode(mode: ToolMode | null | undefined): TimeCostsView | null {
   if (mode === "time-tracker") return "time";
@@ -120,9 +121,17 @@ function invoiceViewForMode(mode: ToolMode | null | undefined): InvoiceView | nu
   return null;
 }
 
+function jobsiteViewForMode(mode: ToolMode | null | undefined): JobsiteView | null {
+  if (mode === "daily-log") return "log";
+  if (mode === "punch-list") return "punch";
+  if (mode === "safety-checklist") return "safety";
+  return null;
+}
+
 function normalizePublicToolMode(mode: ToolMode | null | undefined): "hub" | PublicToolMode {
   if (timeCostsViewForMode(mode)) return "time-costs";
   if (invoiceViewForMode(mode)) return "invoice";
+  if (jobsiteViewForMode(mode)) return "jobsite";
   return isPublicToolMode(mode) ? mode : "hub";
 }
 
@@ -308,7 +317,7 @@ function allToolLaunchers(): ToolLauncher[] {
   return [...PRIMARY_TOOL_LAUNCHERS, ...UTILITY_TOOL_LAUNCHERS];
 }
 
-const defaultFieldTools: LaunchableToolMode[] = ["job-photos", "calculator", "daily-log"];
+const defaultFieldTools: LaunchableToolMode[] = ["job-photos", "calculator", "jobsite"];
 
 function readFieldTools(): LaunchableToolMode[] {
   try {
@@ -321,6 +330,7 @@ function readFieldTools(): LaunchableToolMode[] {
       if (mode === "price-book") return "materials";
       if (["time-tracker", "expense-logger", "mileage", "tax-summary"].includes(String(mode))) return "time-costs";
       if (mode === "payments") return "invoice";
+      if (["daily-log", "punch-list", "safety-checklist"].includes(String(mode))) return "jobsite";
       return mode;
     });
     const valid = normalized.filter((mode): mode is LaunchableToolMode => typeof mode === "string" && allowed.has(mode as LaunchableToolMode));
@@ -421,10 +431,10 @@ const PRIMARY_TOOL_LAUNCHERS: ToolLauncher[] = [
     summary: "Draft and export.",
   },
   {
-    mode: "daily-log",
+    mode: "jobsite",
     icon: Clipboard,
-    title: "Daily log",
-    summary: "Notes, labor, blockers.",
+    title: "Jobsite",
+    summary: "Log, punch, and safety.",
   },
   {
     mode: "job-photos",
@@ -437,8 +447,6 @@ const PRIMARY_TOOL_LAUNCHERS: ToolLauncher[] = [
 const UTILITY_TOOL_LAUNCHERS: ToolLauncher[] = [
   { mode: "materials", icon: Package2, title: "Materials", summary: "Takeoff, sheets, and saved prices." },
   { mode: "time-costs", icon: RefreshCw, title: "Time & costs", summary: "Time, expenses, mileage, and summary." },
-  { mode: "punch-list", icon: ListChecks, title: "Punch list", summary: "Open items." },
-  { mode: "safety-checklist", icon: Shield, title: "Safety", summary: "Daily site check." },
 ];
 
 interface MileageEntry {
@@ -2808,6 +2816,53 @@ function InvoiceWorkspaceTool({
   );
 }
 
+function JobsiteTool({
+  activeView,
+  onViewChange,
+  activeJob,
+  activeWork,
+  focusedActiveWorkId,
+}: {
+  activeView: JobsiteView;
+  onViewChange: (view: JobsiteView) => void;
+  activeJob: Job | null;
+  activeWork: CanonicalActiveWork[];
+  focusedActiveWorkId: string | null;
+}) {
+  const views: Array<{ id: JobsiteView; label: string; icon: ToolIcon }> = [
+    { id: "log", label: "Log", icon: Clipboard },
+    { id: "punch", label: "Punch", icon: ListChecks },
+    { id: "safety", label: "Safety", icon: Shield },
+  ];
+
+  return (
+    <div className="v2-jobsite-workspace">
+      <div className="v2-jobsite-workspace-content">
+        {activeView === "log" ? <DailyLogTool key={`daily-log:${activeJob?.id ?? "quick"}`} activeJob={activeJob} activeWork={activeWork} focusedActiveWorkId={focusedActiveWorkId} /> : null}
+        {activeView === "punch" ? <PunchListTool /> : null}
+        {activeView === "safety" ? <SafetyChecklistTool key={`safety-checklist:${activeJob?.id ?? "quick"}`} activeJob={activeJob} /> : null}
+      </div>
+      <nav className="v2-jobsite-workspace-tabs" aria-label="Jobsite sections">
+        {views.map((view) => {
+          const Icon = view.icon;
+          return (
+            <button
+              key={view.id}
+              type="button"
+              className={activeView === view.id ? "is-active" : ""}
+              aria-current={activeView === view.id ? "page" : undefined}
+              onClick={() => onViewChange(view.id)}
+            >
+              <Icon size={18} aria-hidden="true" />
+              <span>{view.label}</span>
+            </button>
+          );
+        })}
+      </nav>
+    </div>
+  );
+}
+
 function projectErrorMessage(error: unknown) {
   if (error instanceof ProjectApiError) return error.message;
   return error instanceof Error ? error.message : "RIVT could not update the project record.";
@@ -2907,6 +2962,8 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
   const activeTimeCostsView = timeCostsViewForMode(openTool) ?? timeCostsView;
   const [invoiceView, setInvoiceView] = useState<InvoiceView>(() => invoiceViewForMode(openTool) ?? "draft");
   const activeInvoiceView = invoiceViewForMode(openTool) ?? invoiceView;
+  const [jobsiteView, setJobsiteView] = useState<JobsiteView>(() => jobsiteViewForMode(openTool) ?? "log");
+  const activeJobsiteView = jobsiteViewForMode(openTool) ?? jobsiteView;
   const [fieldTools, setFieldTools] = useState(readFieldTools);
   const [fieldToolsEditing, setFieldToolsEditing] = useState(false);
   const [cameraContextRequest, setCameraContextRequest] = useState(0);
@@ -3149,6 +3206,8 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
     if (requestedTimeCostsView) setTimeCostsView(requestedTimeCostsView);
     const requestedInvoiceView = invoiceViewForMode(tool);
     if (requestedInvoiceView) setInvoiceView(requestedInvoiceView);
+    const requestedJobsiteView = jobsiteViewForMode(tool);
+    if (requestedJobsiteView) setJobsiteView(requestedJobsiteView);
     const nextTool = normalizePublicToolMode(tool);
     if (nextTool !== activeTool) setContextChosenTool(null);
     if (!onToolChange) {
@@ -3169,6 +3228,11 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
   function changeInvoiceView(view: InvoiceView) {
     setInvoiceView(view);
     if (invoiceViewForMode(openTool)) onToolChange?.("invoice");
+  }
+
+  function changeJobsiteView(view: JobsiteView) {
+    setJobsiteView(view);
+    if (jobsiteViewForMode(openTool)) onToolChange?.("jobsite");
   }
 
   function openToolFromHub(tool: LaunchableToolMode) {
@@ -3776,9 +3840,21 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
           />
         ),
       },
+      jobsite: {
+        title: "Jobsite",
+        node: (
+          <JobsiteTool
+            activeView={activeJobsiteView}
+            onViewChange={changeJobsiteView}
+            activeJob={activeJob}
+            activeWork={orderedActiveWork}
+            focusedActiveWorkId={focusedActiveWorkId}
+          />
+        ),
+      },
       "daily-log": {
-        title: "Daily log",
-        node: <DailyLogTool key={`daily-log:${activeJobScopeKey}`} activeJob={activeJob} activeWork={orderedActiveWork} focusedActiveWorkId={focusedActiveWorkId} />,
+        title: "Jobsite",
+        node: <JobsiteTool activeView="log" onViewChange={changeJobsiteView} activeJob={activeJob} activeWork={orderedActiveWork} focusedActiveWorkId={focusedActiveWorkId} />,
       },
       materials: {
         title: "Materials",
@@ -3836,16 +3912,16 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
         node: <MaterialsTool key={`price-book:${activeJobScopeKey}`} activeJob={activeJob} initialView="library" priceLibrary={<PriceBookTool />} />,
       },
       "safety-checklist": {
-        title: "Field safety checklist",
-        node: <SafetyChecklistTool key={`safety-checklist:${activeJobScopeKey}`} activeJob={activeJob} />,
+        title: "Jobsite",
+        node: <JobsiteTool activeView="safety" onViewChange={changeJobsiteView} activeJob={activeJob} activeWork={orderedActiveWork} focusedActiveWorkId={focusedActiveWorkId} />,
       },
       "tax-estimator": {
         title: "Tax estimator",
         node: <TaxEstimatorTool />,
       },
       "punch-list": {
-        title: "Punch list",
-        node: <PunchListTool />,
+        title: "Jobsite",
+        node: <JobsiteTool activeView="punch" onViewChange={changeJobsiteView} activeJob={activeJob} activeWork={orderedActiveWork} focusedActiveWorkId={focusedActiveWorkId} />,
       },
       contracts: {
         title: "Contract templates",

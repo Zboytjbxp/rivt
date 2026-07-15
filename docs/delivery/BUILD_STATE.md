@@ -2,11 +2,30 @@
 
 Last updated: 2026-07-15 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Packet 46 is production verified at its focused boundary. It folds
-Receivables into Invoice without moving or deleting payment records.
-Active packet: `docs/delivery/packets/46_INVOICE_RECEIVABLES_CONSOLIDATION.md`
-Repository branch: `master`
-Production feature release commit: `ddb31bedf6235a78e152bf84b7e475413c040835`
+Current phase: Packet 47 is locally verified. It consolidates Daily Log,
+Punch List, and Safety into one Jobsite app without moving or deleting records.
+Active packet: `docs/delivery/packets/47_JOBSITE_TOOLS_CONSOLIDATION.md`
+Repository branch: `codex/jobsite-tools-consolidation`
+Production feature release commit: pending verification and deployment
+
+## Packet 47 - Jobsite Tools Consolidation (Local Verification)
+
+- One Jobsite launcher now contains Log, Punch, and Safety sections. Separate
+  Punch List and Safety utility launchers are removed.
+- Existing Daily Log project entries, Punch List records, Safety records,
+  storage keys, synchronization paths, and forms remain in place.
+- Legacy Daily Log, Punch List, and Safety URLs resolve into the matching
+  Jobsite section.
+- Build, lint, security lint, 55 unit tests, all 19 freshly reset PostgreSQL
+  integration suites, E2E, rendered Tools QA at desktop/mobile/compact widths,
+  mobile-action QA, accepted-work lifecycle QA, dependency audit, and diff
+  checks pass.
+- Rendered checks cover 1440x900, 390x844, and 320x568 with no horizontal
+  overflow. The three-section mobile dock remains thumb-reachable without
+  preventing the underlying forms from scrolling; desktop renders it in flow.
+- Remaining boundary: deploy the exact commit, run the expected-source
+  production monitor, and physically confirm existing records remain after
+  switching sections and reopening Jobsite.
 
 ## Packet 46 - Invoice and Receivables Consolidation (Production Verification)
 

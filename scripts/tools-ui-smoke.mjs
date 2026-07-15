@@ -448,7 +448,8 @@ async function runToolsFlow(page, viewportName) {
   await page.locator(".v2-tool-group").filter({ hasText: "Utilities" }).locator("summary").click();
   await page.getByRole("button", { name: /Materials/i }).waitFor({ timeout: 15_000 });
   await page.getByRole("button", { name: /Time & costs/i }).waitFor({ timeout: 15_000 });
-  await page.getByRole("button", { name: /Safety/i }).waitFor({ timeout: 15_000 });
+  assert.equal(await page.getByRole("button", { name: /Safety/i }).count(), 0, "Safety should live inside Jobsite instead of appearing as a separate launcher");
+  assert.equal(await page.getByRole("button", { name: /Punch list/i }).count(), 0, "Punch should live inside Jobsite instead of appearing as a separate launcher");
   assert.equal(
     await page.getByRole("button", { name: /Receivables/i }).count(),
     0,
@@ -634,7 +635,9 @@ async function runToolsFlow(page, viewportName) {
   );
   await page.getByLabel("Invoice", { exact: true }).getByRole("button", { name: "Tools" }).click();
 
-  await fieldToolsTray.getByRole("button", { name: "Daily log", exact: true }).click();
+  await fieldToolsTray.getByRole("button", { name: "Jobsite", exact: true }).click();
+  await page.getByRole("heading", { name: "Jobsite", exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByLabel("Jobsite sections").getByRole("button", { name: "Log", exact: true }).waitFor({ timeout: 15_000 });
   await page.getByRole("heading", { name: "Jobsite note", exact: true }).waitFor({ timeout: 15_000 });
   await page.getByText("Records-ready", { exact: true }).waitFor({ timeout: 15_000 });
   await page.getByText("Tenant Build-Out", { exact: true }).waitFor({ timeout: 15_000 });
@@ -654,7 +657,17 @@ async function runToolsFlow(page, viewportName) {
   await page.getByRole("button", { name: "Copy daily log" }).waitFor({ timeout: 15_000 });
   await assertNoHorizontalOverflow(page);
   await page.screenshot({ path: path.join(screenshotDir, `${viewportName}-daily-log.png`), fullPage: true });
-  await page.getByLabel("Daily log").getByRole("button", { name: "Tools" }).click();
+  await page.getByLabel("Jobsite").getByRole("button", { name: "Tools" }).click();
+
+  await page.goto(`${baseUrl}/app/tools?tool=punch-list`, { waitUntil: "networkidle" });
+  await page.getByRole("heading", { name: "Jobsite", exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByLabel("Jobsite sections").getByRole("button", { name: "Punch", exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByRole("heading", { name: "Punch list", exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByLabel("Jobsite sections").getByRole("button", { name: "Safety", exact: true }).click();
+  await page.getByRole("heading", { name: "Field safety checklist", exact: true }).waitFor({ timeout: 15_000 });
+  await assertNoHorizontalOverflow(page);
+  await page.screenshot({ path: path.join(screenshotDir, `${viewportName}-jobsite.png`), fullPage: true });
+  await page.getByLabel("Jobsite").getByRole("button", { name: "Tools" }).click();
 
   await fieldToolsTray.getByRole("button", { name: "Camera", exact: true }).click();
   await page.getByRole("heading", { name: "Private photos", exact: true }).waitFor({ timeout: 15_000 });

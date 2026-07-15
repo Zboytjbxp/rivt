@@ -708,7 +708,8 @@ async function runTradespersonOfferFlow(page) {
   await clickJob(page, "Warehouse panel assist");
   await page.getByText("Accepted and active", { exact: true }).waitFor({ timeout: 15_000 });
   await page.getByLabel("Hiring workflow").getByRole("button", { name: "Daily log" }).click();
-  await page.getByRole("heading", { name: "Daily log", exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByRole("heading", { name: "Jobsite", exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByLabel("Jobsite sections").getByRole("button", { name: "Log", exact: true }).waitFor({ timeout: 15_000 });
   await page.getByText("Records-ready", { exact: true }).waitFor({ timeout: 15_000 });
 
   await page.goto(`${baseUrl}/app/work`, { waitUntil: "networkidle" });
@@ -772,6 +773,8 @@ async function runScopedToolContextFlow(page) {
   await assertNoHorizontalOverflow(page, "Scoped invoice tool route");
 
   await page.goto(`${baseUrl}/app/tools?tool=daily-log&activeWork=${activeWorkId}`, { waitUntil: "networkidle" });
+  await page.getByRole("heading", { name: "Jobsite", exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByLabel("Jobsite sections").getByRole("button", { name: "Log", exact: true }).waitFor({ timeout: 15_000 });
   await page.getByLabel("Current job: Warehouse panel assist").waitFor({ timeout: 15_000 });
   await page.getByLabel("Site / job").waitFor({ timeout: 15_000 });
   const dailyLogSite = await page.getByLabel("Site / job").inputValue();

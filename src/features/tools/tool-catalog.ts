@@ -3,6 +3,7 @@ export const PUBLIC_TOOL_MODES = [
   "estimate",
   "invoice",
   "materials",
+  "jobsite",
   "daily-log",
   "job-photos",
   "time-costs",

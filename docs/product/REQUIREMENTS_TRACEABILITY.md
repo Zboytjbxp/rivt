@@ -1344,3 +1344,17 @@ Evidence must eventually link to implementation, automated tests, manual accepta
 - Local evidence includes build, lint, security lint, unit tests, E2E, rendered
   Tools QA at desktop/mobile/compact viewports, mobile-action QA, dependency
   audit, and aggregate test coverage recorded in Packet 44.
+
+## Traceability Addendum - 2026-07-15 Jobsite Tools Consolidation
+
+- `GA-UX-006` gains one coherent Jobsite app with Log, Punch, and Safety
+  sections instead of three disconnected launchers.
+- Existing Daily Log project entries, Punch List records, Safety records,
+  storage keys, and account/server ownership rules are preserved without a
+  schema or record conversion.
+- Legacy URLs select the matching Jobsite section so active-work actions and
+  saved links do not dead-end after consolidation.
+- Local evidence includes build, lint, security lint, 55 unit tests, all 19
+  freshly reset PostgreSQL integration suites, E2E, rendered Tools QA at
+  desktop/mobile/compact viewports, mobile-action QA, accepted-work lifecycle
+  QA, a zero-vulnerability production dependency audit, and diff checks.
