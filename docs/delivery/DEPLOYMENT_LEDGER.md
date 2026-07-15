@@ -1,5 +1,30 @@
 # Deployment Ledger
 
+## 2026-07-15 - Packet 44 Materials and Price Library
+
+- Source commit: `2bcc6d33d71db1c1e0102f402b885d6d80a15fc3`
+- Feature commit: `a963041d774dbf511f12c183db7f6bb6425b1814`
+- Branch: `master` (source branch: `codex/materials-price-book`)
+- Production: `https://rivt.pro`
+- Scope: Materials now owns Takeoff, Sheets, and the saved Price library. The
+  separate Price Book launcher is removed, legacy links remain compatible,
+  existing local and server-owned prices are preserved, and guessed supplier
+  catalogs are no longer seeded into accounts or used by takeoffs.
+- Automated gates: build, lint, security lint, 55 unit tests, E2E,
+  desktop/mobile/compact Tools UI, mobile-action UI, dependency audit, diff
+  checks, and the focused PostgreSQL tool-records integration suite passed.
+  The aggregate test command exceeded the 15-minute local command window while
+  running serial PostgreSQL suites without a reported assertion failure, so a
+  complete aggregate integration pass is not claimed.
+- Post-deploy proof: production served the exact source commit. The
+  expected-source monitor passed with PostgreSQL and S3-compatible storage
+  healthy, Sentry and Web Push configured, matching-job alerts enabled,
+  controls off, and seven anonymous private-route checks in 611 ms.
+- Rollback target: `4dc06f9a34b8c76c81e5c37abb6561ed6a4ff175`.
+- Remaining field acceptance: confirm one existing saved price and one newly
+  entered current supplier price remain after leaving and reopening Materials
+  on a physical phone.
+
 ## 2026-07-14 - Packet 41 Camera Home Album Previews
 
 - Source commit: `0849eaacc0b70302bf70c487c058c33b62f99c42`

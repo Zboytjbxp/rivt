@@ -2,14 +2,14 @@
 
 Last updated: 2026-07-15 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Packet 44 is locally verified at its focused boundary. It
+Current phase: Packet 44 is production verified at its focused boundary. It
 consolidates Materials and Price Book without deleting saved prices or seeding
 accounts with guessed supplier costs.
 Active packet: `docs/delivery/packets/44_MATERIALS_PRICE_LIBRARY.md`
-Repository branch: `codex/materials-price-book`
-Production feature release commit: `a068728d98d74c73e925144050e076c756ee53b2`
+Repository branch: `master` (source branch: `codex/materials-price-book`)
+Production feature release commit: `2bcc6d33d71db1c1e0102f402b885d6d80a15fc3`
 
-## Packet 44 - Materials and Price Library (Local Verification)
+## Packet 44 - Materials and Price Library (Production Verification)
 
 - One Materials launcher now contains Takeoff, Sheets, and Price library.
   The separate Price Book launcher is gone; legacy links and pinned shortcuts
@@ -27,6 +27,11 @@ Production feature release commit: `a068728d98d74c73e925144050e076c756ee53b2`
   the 15-minute local command window without a reported assertion failure, so
   a full integration pass is not claimed for this packet.
 - Feature commit: `a963041d774dbf511f12c183db7f6bb6425b1814`.
+- Railway serves exact source `2bcc6d33d71db1c1e0102f402b885d6d80a15fc3`.
+  The expected-source production monitor passed with PostgreSQL and
+  S3-compatible storage healthy, Sentry and Web Push configured, matching-job
+  alerts enabled, rollout controls off, and seven anonymous private-route
+  checks in 611 ms.
 - Remaining boundary: physical-device confirmation of one existing price and
   one newly added current supplier price after leaving and reopening Materials.
 
