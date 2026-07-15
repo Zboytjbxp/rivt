@@ -80,7 +80,7 @@ overhead, margin, or contingency.
   marked as failed; the UI must never call this sent.
 - This is delivery only. A customer replying, accepting, signing, paying, or
   generating an invoice remains a separate explicit workflow.
-- Send one controlled production estimate to an inbox the founder controls and
-  confirm its sender identity and customer-safe itemization. Do not induce a
-  provider outage in production; the captured-provider integration case proves
-  the failed state and same-key replay behavior.
+- Founder-controlled inbox acceptance completed on 2026-07-14: the real
+  estimate email arrived successfully. Do not induce a provider outage in
+  production; the captured-provider integration case proves the failed state
+  and same-key replay behavior.

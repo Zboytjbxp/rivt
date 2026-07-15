@@ -4793,10 +4793,10 @@ Completed on 2026-07-04 on branch `codex/launch-polish-phase-2` as a controllabl
   configured Sentry, and configured Web Push.
 - `EXPECTED_SOURCE_COMMIT=4793b1b3dd240fb709e88c820d649ea5f31f5031 npm run
   monitor:production` passed with seven anonymous private-route checks.
-- Remaining acceptance boundary: send a controlled estimate through the real
-  configured provider to a controlled inbox and verify the received
-  itemization is customer-safe. Do not simulate provider failure in
-  production; the failure state is covered by the isolated integration suite.
+- Founder-controlled inbox acceptance completed on 2026-07-14: the real
+  estimate email arrived successfully. Provider-failure and same-key replay
+  behavior remain covered by the isolated integration suite; no production
+  provider outage was induced for testing.
 
 ## Next Exact Task
 
