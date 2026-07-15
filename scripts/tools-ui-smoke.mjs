@@ -118,6 +118,15 @@ async function waitForServer() {
 
 async function configurePage(page) {
   await page.addInitScript(() => {
+    localStorage.setItem("rivt.priceBook.v1", JSON.stringify([{
+      id: "saved-price-1",
+      name: "3/4 plywood",
+      unit: "sheet",
+      price: 52.75,
+      supplier: "Local yard",
+      notes: "Birch",
+      updatedAt: "2026-07-14T12:00:00.000Z",
+    }]));
     Object.defineProperty(navigator, "mediaDevices", {
       configurable: true,
       value: {
@@ -425,8 +434,38 @@ async function runToolsFlow(page, viewportName) {
   await page.getByRole("button", { name: /Materials/i }).waitFor({ timeout: 15_000 });
   await page.getByRole("button", { name: /Receivables/i }).waitFor({ timeout: 15_000 });
   await page.getByRole("button", { name: /Safety/i }).waitFor({ timeout: 15_000 });
+  assert.equal(
+    await page.getByRole("button", { name: /Price book/i }).count(),
+    0,
+    "Price Book should be consolidated into Materials instead of appearing as a second launcher",
+  );
   await assertNoHorizontalOverflow(page);
   await page.screenshot({ path: path.join(screenshotDir, `${viewportName}-tools-hub.png`), fullPage: true });
+
+  await page.getByRole("button", { name: /Materials/i }).click();
+  await page.getByRole("heading", { name: "Materials", exact: true }).waitFor({ timeout: 15_000 });
+  const materialsViews = page.getByRole("navigation", { name: "Materials views" });
+  await materialsViews.getByRole("button", { name: "Takeoff", exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByText("RIVT does not guess supplier pricing.", { exact: false }).waitFor({ timeout: 15_000 });
+  await materialsViews.getByRole("button", { name: "Sheets", exact: true }).click();
+  await page.getByRole("heading", { name: "Quick sheet count", exact: true }).waitFor({ timeout: 15_000 });
+  await materialsViews.getByRole("button", { name: "Price library", exact: true }).click();
+  await page.getByRole("heading", { name: "Price library", exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByText("3/4 plywood", { exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByText("Local yard", { exact: true }).waitFor({ timeout: 15_000 });
+  await assertNoHorizontalOverflow(page);
+  await page.screenshot({ path: path.join(screenshotDir, `${viewportName}-materials.png`), fullPage: true });
+  await page.getByLabel("Materials").getByRole("button", { name: "Tools" }).click();
+
+  await page.goto(`${baseUrl}/app/tools?tool=price-book`, { waitUntil: "networkidle" });
+  await page.getByRole("heading", { name: "Materials", exact: true }).waitFor({ timeout: 15_000 });
+  assert.equal(
+    await page.getByRole("navigation", { name: "Materials views" }).getByRole("button", { name: "Price library", exact: true }).getAttribute("aria-pressed"),
+    "true",
+    "Legacy Price Book links should open the consolidated Materials library",
+  );
+  await page.getByText("3/4 plywood", { exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByLabel("Materials").getByRole("button", { name: "Tools" }).click();
 
   await fieldToolsTray.getByRole("button", { name: "Heavy 16th", exact: true }).click();
   await page.getByRole("heading", { name: "Heavy 16th field calculator" }).waitFor({ timeout: 15_000 });

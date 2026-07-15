@@ -296,8 +296,10 @@ function readFieldTools(): LaunchableToolMode[] {
     const parsed = JSON.parse(stored) as unknown;
     if (!Array.isArray(parsed)) return defaultFieldTools;
     const allowed = new Set(allToolLaunchers().map((tool) => tool.mode));
-    const valid = parsed.filter((mode): mode is LaunchableToolMode => typeof mode === "string" && allowed.has(mode as LaunchableToolMode));
-    return valid.length ? valid.slice(0, 3) : defaultFieldTools;
+    const normalized = parsed.map((mode) => mode === "price-book" ? "materials" : mode);
+    const valid = normalized.filter((mode): mode is LaunchableToolMode => typeof mode === "string" && allowed.has(mode as LaunchableToolMode));
+    const unique = [...new Set(valid)];
+    return unique.length ? unique.slice(0, 3) : defaultFieldTools;
   } catch {
     return defaultFieldTools;
   }
@@ -407,11 +409,10 @@ const PRIMARY_TOOL_LAUNCHERS: ToolLauncher[] = [
 ];
 
 const UTILITY_TOOL_LAUNCHERS: ToolLauncher[] = [
-  { mode: "materials", icon: Package2, title: "Materials", summary: "Takeoff and waste." },
+  { mode: "materials", icon: Package2, title: "Materials", summary: "Takeoff, sheets, and saved prices." },
   { mode: "time-tracker", icon: RefreshCw, title: "Time", summary: "Clock jobs and tasks." },
   { mode: "expense-logger", icon: ReceiptText, title: "Expenses", summary: "Job costs." },
   { mode: "mileage", icon: Car, title: "Mileage", summary: "Travel log." },
-  { mode: "price-book", icon: Search, title: "Price book", summary: "Common prices." },
   { mode: "punch-list", icon: ListChecks, title: "Punch list", summary: "Open items." },
   { mode: "safety-checklist", icon: Shield, title: "Safety", summary: "Daily site check." },
   { mode: "payments", icon: ReceiptText, title: "Receivables", summary: "Balances and status." },
@@ -630,89 +631,6 @@ function MileageLoggerTool({ activeJob }: { activeJob: Job | null }) {
 
 // ── Material Price Book ───────────────────────────────────────────────────────
 
-function getDefaultPriceBook(trade: string | null): Array<{ name: string; unit: string; price: number; supplier: string }> {
-  const catalog: Record<string, Array<{ name: string; unit: string; price: number; supplier: string }>> = {
-    Electrician: [
-      { name: "12/2 Romex wire", unit: "ft", price: 0.65, supplier: "" },
-      { name: "14/2 Romex wire", unit: "ft", price: 0.48, supplier: "" },
-      { name: "Single-pole breaker 15A", unit: "ea", price: 12, supplier: "" },
-      { name: "GFCI outlet", unit: "ea", price: 18, supplier: "" },
-      { name: "Junction box", unit: "ea", price: 4, supplier: "" },
-      { name: "Wire nuts (bag)", unit: "bag", price: 8, supplier: "" },
-      { name: "EMT conduit 1/2\"", unit: "ft", price: 0.90, supplier: "" },
-      { name: "Outlet / switch plate", unit: "ea", price: 2, supplier: "" },
-    ],
-    Plumber: [
-      { name: "Copper pipe 3/4\"", unit: "ft", price: 3.50, supplier: "" },
-      { name: "PVC pipe 3\"", unit: "ft", price: 1.20, supplier: "" },
-      { name: "Ball valve 1/2\"", unit: "ea", price: 12, supplier: "" },
-      { name: "P-trap", unit: "ea", price: 8, supplier: "" },
-      { name: "Wax ring", unit: "ea", price: 6, supplier: "" },
-      { name: "Sharkbite coupling 3/4\"", unit: "ea", price: 14, supplier: "" },
-      { name: "Supply line 12\"", unit: "ea", price: 5, supplier: "" },
-      { name: "Teflon tape", unit: "roll", price: 2, supplier: "" },
-    ],
-    Carpenter: [
-      { name: "2x4x8 stud", unit: "ea", price: 6.50, supplier: "" },
-      { name: "2x6x8", unit: "ea", price: 9.00, supplier: "" },
-      { name: "OSB 4x8 sheet", unit: "ea", price: 28, supplier: "" },
-      { name: "3/4\" plywood 4x8", unit: "ea", price: 55, supplier: "" },
-      { name: "16d sinker nails 5lb", unit: "box", price: 18, supplier: "" },
-      { name: "Construction adhesive", unit: "tube", price: 8, supplier: "" },
-      { name: "Door hinge (pair)", unit: "pair", price: 7, supplier: "" },
-      { name: "2.5\" deck screws 5lb", unit: "box", price: 16, supplier: "" },
-    ],
-    HVAC: [
-      { name: "R-410A refrigerant", unit: "lb", price: 45, supplier: "" },
-      { name: "Capacitor 45/5 MFD", unit: "ea", price: 25, supplier: "" },
-      { name: "Contactor 40A", unit: "ea", price: 18, supplier: "" },
-      { name: "16x25x1 air filter", unit: "ea", price: 8, supplier: "" },
-      { name: "HVAC duct tape", unit: "roll", price: 22, supplier: "" },
-      { name: "Condensate line 3/4\"", unit: "ft", price: 0.40, supplier: "" },
-      { name: "Blower motor", unit: "ea", price: 85, supplier: "" },
-    ],
-    Roofer: [
-      { name: "Architectural shingles", unit: "sq", price: 150, supplier: "" },
-      { name: "15# felt underlayment", unit: "roll", price: 45, supplier: "" },
-      { name: "Ice & water shield", unit: "sq", price: 85, supplier: "" },
-      { name: "Ridge cap bundle", unit: "bundle", price: 65, supplier: "" },
-      { name: "Roofing nails 1-3/4\" 5lb", unit: "box", price: 18, supplier: "" },
-      { name: "Step flashing", unit: "ea", price: 3, supplier: "" },
-    ],
-    Painter: [
-      { name: "Interior latex paint", unit: "gal", price: 45, supplier: "" },
-      { name: "Exterior paint", unit: "gal", price: 52, supplier: "" },
-      { name: "Primer", unit: "gal", price: 35, supplier: "" },
-      { name: "9\" roller cover", unit: "ea", price: 4, supplier: "" },
-      { name: "Painter's tape 1.5\"", unit: "roll", price: 7, supplier: "" },
-      { name: "Drop cloth 9x12", unit: "ea", price: 12, supplier: "" },
-    ],
-    Mason: [
-      { name: "CMU block 8x8x16", unit: "ea", price: 2.50, supplier: "" },
-      { name: "Mortar mix 60lb", unit: "bag", price: 12, supplier: "" },
-      { name: "Mason sand", unit: "ton", price: 80, supplier: "" },
-      { name: "Rebar #4", unit: "ft", price: 1.50, supplier: "" },
-      { name: "Brick (standard)", unit: "ea", price: 0.85, supplier: "" },
-    ],
-    Welder: [
-      { name: "ER70S-6 MIG wire 10lb", unit: "spool", price: 28, supplier: "" },
-      { name: "Argon/CO2 75/25 mix", unit: "tank", price: 60, supplier: "" },
-      { name: "4.5\" grinding disc", unit: "ea", price: 5, supplier: "" },
-      { name: "Anti-spatter spray", unit: "can", price: 12, supplier: "" },
-      { name: "Welding rod 7018 10lb", unit: "box", price: 22, supplier: "" },
-    ],
-    Landscaper: [
-      { name: "Triple-mix topsoil", unit: "cu yd", price: 65, supplier: "" },
-      { name: "Hardwood mulch", unit: "cu yd", price: 55, supplier: "" },
-      { name: "Grass seed premium", unit: "50lb", price: 45, supplier: "" },
-      { name: "Lawn fertilizer", unit: "bag", price: 38, supplier: "" },
-      { name: "Landscape fabric", unit: "sq ft", price: 0.18, supplier: "" },
-      { name: "River rock", unit: "ton", price: 120, supplier: "" },
-    ],
-  };
-  return catalog[trade ?? ""] ?? [];
-}
-
 const priceBookKey = "rivt.priceBook.v1";
 
 interface PriceEntry {
@@ -778,34 +696,6 @@ function PriceBookTool() {
   const [syncMessage, setSyncMessage] = useState("Saved on this device.");
 
   useEffect(() => {
-    const trade = (() => { try { return JSON.parse(localStorage.getItem("rivt.profile.v1") ?? "null")?.primaryTrade ?? null; } catch { return null; } })();
-    const seeded = localStorage.getItem("rivt.priceBookSeeded.v1");
-    if (!seeded && entries.length === 0 && trade) {
-      const defaults = getDefaultPriceBook(trade);
-      if (defaults.length) {
-        const seededEntries: PriceEntry[] = defaults.map(d => ({
-          id: crypto.randomUUID(),
-          name: d.name,
-          unit: d.unit,
-          price: d.price,
-          supplier: d.supplier,
-          notes: "Pre-loaded for your trade",
-          updatedAt: new Date().toISOString(),
-        }));
-        // eslint-disable-next-line react-hooks/set-state-in-effect
-        setEntries(seededEntries);
-        persistPriceBook(seededEntries);
-        void Promise.all(seededEntries.map((entry) => upsertToolRecord(priceEntryToServerInput(entry)))).then((results) => {
-          setSyncMessage(results.some(Boolean)
-            ? "Starter price book synced to your RIVT account."
-            : "Couldn't sync - starter prices saved on this device only.");
-        });
-        localStorage.setItem("rivt.priceBookSeeded.v1", "1");
-      }
-    }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  useEffect(() => {
     let cancelled = false;
     void fetchToolRecords("price_book").then((serverRecords) => {
       if (cancelled) return;
@@ -813,23 +703,30 @@ function PriceBookTool() {
         setSyncMessage("Saved on this device. Sign in with network access to sync.");
         return;
       }
-      const mapped = serverRecords.map(priceEntryFromServer).filter((entry): entry is PriceEntry => Boolean(entry));
-      if (mapped.length) {
-        setEntries(mapped);
-        persistPriceBook(mapped);
-        setSyncMessage("Synced to your RIVT account.");
-        return;
-      }
       const localSnapshot = readPriceBook();
-      if (localSnapshot.length) {
-        void Promise.all(localSnapshot.map((entry) => upsertToolRecord(priceEntryToServerInput(entry)))).then((results) => {
+      const mapped = serverRecords.map(priceEntryFromServer).filter((entry): entry is PriceEntry => Boolean(entry));
+      const mergedById = new Map(mapped.map((entry) => [entry.id, entry]));
+      localSnapshot.forEach((entry) => {
+        const serverEntry = mergedById.get(entry.id);
+        if (!serverEntry || entry.updatedAt > serverEntry.updatedAt) mergedById.set(entry.id, entry);
+      });
+      const merged = [...mergedById.values()].sort((left, right) => right.updatedAt.localeCompare(left.updatedAt));
+      setEntries(merged);
+      persistPriceBook(merged);
+      const serverById = new Map(mapped.map((entry) => [entry.id, entry]));
+      const recordsToSync = localSnapshot.filter((entry) => {
+        const serverEntry = serverById.get(entry.id);
+        return !serverEntry || entry.updatedAt > serverEntry.updatedAt;
+      });
+      if (recordsToSync.length) {
+        void Promise.all(recordsToSync.map((entry) => upsertToolRecord(priceEntryToServerInput(entry)))).then((results) => {
           setSyncMessage(results.some(Boolean)
-            ? "Local price book synced to your RIVT account."
-            : "Couldn't sync - saved on this device only.");
+            ? "Saved prices synced to your RIVT account."
+            : "Couldn't sync - saved prices remain on this device.");
         });
         return;
       }
-      setSyncMessage("New price book items sync to your RIVT account.");
+      setSyncMessage(merged.length ? "Synced to your RIVT account." : "New prices will sync to your RIVT account.");
     });
     return () => { cancelled = true; };
   }, []);
@@ -894,7 +791,7 @@ function PriceBookTool() {
 
   return (
     <div className="v2-tool-workbench v2-price-book-workbench">
-      <Panel className="v2-tool-panel" eyebrow="Add price" title="Material price book">
+      <Panel className="v2-tool-panel" eyebrow="Add price" title="Save your supplier price">
         <div className="v2-tool-input-grid two">
           <label>Material / item<input value={name} onChange={(e) => setName(e.target.value)} placeholder="2x6x8 lumber, 12/2 Romex, conduit…" /></label>
           <label>Unit<input value={unit} onChange={(e) => setUnit(e.target.value)} placeholder="ea, ft, sq ft, sheet, lb…" /></label>
@@ -907,7 +804,7 @@ function PriceBookTool() {
         <button type="button" className="v2-primary-button" disabled={!name.trim() || !price} onClick={addEntry}><Package2 size={14} />Save price</button>
       </Panel>
 
-      <Panel className="v2-tool-panel v2-price-book-list-panel" eyebrow={`${entries.length} items`} title="Saved prices">
+      <Panel className="v2-tool-panel v2-price-book-list-panel" eyebrow={`${entries.length} items`} title="Price library">
         <label className="v2-list-search"><Search size={15} /><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search materials…" /></label>
         {filtered.length ? (
           <div className="v2-price-book-list">
@@ -3749,8 +3646,8 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
         node: <DailyLogTool key={`daily-log:${activeJobScopeKey}`} activeJob={activeJob} activeWork={orderedActiveWork} focusedActiveWorkId={focusedActiveWorkId} />,
       },
       materials: {
-        title: "Material takeoff",
-        node: <MaterialsTool key={`materials:${activeJobScopeKey}`} activeJob={activeJob} />,
+        title: "Materials",
+        node: <MaterialsTool key={`materials:${activeJobScopeKey}`} activeJob={activeJob} priceLibrary={<PriceBookTool />} />,
       },
       "job-photos": {
         title: "Camera",
@@ -3788,8 +3685,8 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
         node: <MileageLoggerTool key={`mileage:${activeJobScopeKey}`} activeJob={activeJob} />,
       },
       "price-book": {
-        title: "Material price book",
-        node: <PriceBookTool />,
+        title: "Materials",
+        node: <MaterialsTool key={`price-book:${activeJobScopeKey}`} activeJob={activeJob} initialView="library" priceLibrary={<PriceBookTool />} />,
       },
       "safety-checklist": {
         title: "Field safety checklist",

@@ -1293,3 +1293,16 @@ Evidence must eventually link to implementation, automated tests, manual accepta
   `0026_standalone_projects`, PostgreSQL/S3-compatible storage, configured
   Sentry and Web Push, matching-job alerts enabled, controls off, and a
   passing expected-source synthetic monitor.
+
+## Traceability Addendum - 2026-07-15 Materials and Price Library
+
+- `GA-UX-006` gains one coherent Materials app with Takeoff, Sheets, and Price
+  library views instead of separate overlapping launchers.
+- Materials presets no longer include guessed supplier costs. Users enter
+  current costs and retain their existing device and server-backed price-book
+  records without a schema or ownership change.
+- Legacy Price Book URLs and pinned shortcuts resolve into Materials so saved
+  workflows do not dead-end after consolidation.
+- Local evidence includes build, lint, security lint, unit tests, E2E, rendered
+  Tools QA at desktop/mobile/compact viewports, mobile-action QA, dependency
+  audit, and aggregate test coverage recorded in Packet 44.
