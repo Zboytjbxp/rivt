@@ -104,6 +104,20 @@ const fieldToolsStorageKey = "rivt.fieldTools.v1";
 const toolContextStorageKey = "rivt.toolContexts.v1";
 const cameraAlbumDestinationStorageKey = "rivt.cameraAlbumDestination.v1";
 const contextualToolModes = new Set<PublicToolMode>(["estimate", "invoice", "job-photos"]);
+type TimeCostsView = "time" | "expenses" | "mileage" | "summary";
+
+function timeCostsViewForMode(mode: ToolMode | null | undefined): TimeCostsView | null {
+  if (mode === "time-tracker") return "time";
+  if (mode === "expense-logger") return "expenses";
+  if (mode === "mileage") return "mileage";
+  if (mode === "tax-summary") return "summary";
+  return null;
+}
+
+function normalizePublicToolMode(mode: ToolMode | null | undefined): "hub" | PublicToolMode {
+  if (timeCostsViewForMode(mode)) return "time-costs";
+  return isPublicToolMode(mode) ? mode : "hub";
+}
 
 function readCameraAlbumDestination() {
   try {
@@ -296,7 +310,11 @@ function readFieldTools(): LaunchableToolMode[] {
     const parsed = JSON.parse(stored) as unknown;
     if (!Array.isArray(parsed)) return defaultFieldTools;
     const allowed = new Set(allToolLaunchers().map((tool) => tool.mode));
-    const normalized = parsed.map((mode) => mode === "price-book" ? "materials" : mode);
+    const normalized = parsed.map((mode) => {
+      if (mode === "price-book") return "materials";
+      if (["time-tracker", "expense-logger", "mileage", "tax-summary"].includes(String(mode))) return "time-costs";
+      return mode;
+    });
     const valid = normalized.filter((mode): mode is LaunchableToolMode => typeof mode === "string" && allowed.has(mode as LaunchableToolMode));
     const unique = [...new Set(valid)];
     return unique.length ? unique.slice(0, 3) : defaultFieldTools;
@@ -410,13 +428,10 @@ const PRIMARY_TOOL_LAUNCHERS: ToolLauncher[] = [
 
 const UTILITY_TOOL_LAUNCHERS: ToolLauncher[] = [
   { mode: "materials", icon: Package2, title: "Materials", summary: "Takeoff, sheets, and saved prices." },
-  { mode: "time-tracker", icon: RefreshCw, title: "Time", summary: "Clock jobs and tasks." },
-  { mode: "expense-logger", icon: ReceiptText, title: "Expenses", summary: "Job costs." },
-  { mode: "mileage", icon: Car, title: "Mileage", summary: "Travel log." },
+  { mode: "time-costs", icon: RefreshCw, title: "Time & costs", summary: "Time, expenses, mileage, and summary." },
   { mode: "punch-list", icon: ListChecks, title: "Punch list", summary: "Open items." },
   { mode: "safety-checklist", icon: Shield, title: "Safety", summary: "Daily site check." },
   { mode: "payments", icon: ReceiptText, title: "Receivables", summary: "Balances and status." },
-  { mode: "tax-summary", icon: FileUp, title: "Tax summary", summary: "Year-end estimate." },
 ];
 
 interface MileageEntry {
@@ -2698,6 +2713,53 @@ function TaxSummaryTool() {
   );
 }
 
+function TimeCostsTool({
+  activeJob,
+  jobs,
+  activeView,
+  onViewChange,
+}: {
+  activeJob: Job | null;
+  jobs: Job[];
+  activeView: TimeCostsView;
+  onViewChange: (view: TimeCostsView) => void;
+}) {
+  const views: Array<{ id: TimeCostsView; label: string; icon: ToolIcon }> = [
+    { id: "time", label: "Time", icon: RefreshCw },
+    { id: "expenses", label: "Expenses", icon: ReceiptText },
+    { id: "mileage", label: "Mileage", icon: Car },
+    { id: "summary", label: "Summary", icon: FileUp },
+  ];
+
+  return (
+    <div className="v2-time-costs-app">
+      <div className="v2-time-costs-content">
+        {activeView === "time" ? <TimeTrackerTool activeJob={activeJob} jobs={jobs} /> : null}
+        {activeView === "expenses" ? <ExpenseLoggerTool activeJob={activeJob} jobs={jobs} /> : null}
+        {activeView === "mileage" ? <MileageLoggerTool activeJob={activeJob} /> : null}
+        {activeView === "summary" ? <TaxSummaryTool /> : null}
+      </div>
+      <nav className="v2-time-costs-tabs" aria-label="Time and costs sections">
+        {views.map((view) => {
+          const Icon = view.icon;
+          return (
+            <button
+              key={view.id}
+              type="button"
+              className={activeView === view.id ? "is-active" : ""}
+              aria-current={activeView === view.id ? "page" : undefined}
+              onClick={() => onViewChange(view.id)}
+            >
+              <Icon size={18} aria-hidden="true" />
+              <span>{view.label}</span>
+            </button>
+          );
+        })}
+      </nav>
+    </div>
+  );
+}
+
 function projectErrorMessage(error: unknown) {
   if (error instanceof ProjectApiError) return error.message;
   return error instanceof Error ? error.message : "RIVT could not update the project record.";
@@ -2788,11 +2850,13 @@ function resolveActiveToolJob(jobs: Job[], orderedActiveWork: CanonicalActiveWor
 
 export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = null, focusedActiveWorkId = null, activeWorkRecords = [], onOpenToolConsumed, onToolChange, onWorkContextChange, onImmersiveChange, onNavigate }: ToolsStudioProps) {
   const controlledTool: "hub" | PublicToolMode | null = mode === "tools" && openTool !== null
-    ? isPublicToolMode(openTool) ? openTool : "hub"
+    ? normalizePublicToolMode(openTool)
     : null;
-  const requestedTool = controlledTool === "hub" ? null : controlledTool;
+  const requestedTool = openTool === "hub" ? null : openTool;
   const [localActiveTool, setLocalActiveTool] = useState<"hub" | PublicToolMode>("hub");
   const activeTool = controlledTool ?? localActiveTool;
+  const [timeCostsView, setTimeCostsView] = useState<TimeCostsView>(() => timeCostsViewForMode(openTool) ?? "time");
+  const activeTimeCostsView = timeCostsViewForMode(openTool) ?? timeCostsView;
   const [fieldTools, setFieldTools] = useState(readFieldTools);
   const [fieldToolsEditing, setFieldToolsEditing] = useState(false);
   const [cameraContextRequest, setCameraContextRequest] = useState(0);
@@ -3031,7 +3095,9 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
   }
 
   function setActiveTool(tool: ToolMode, options: { keepConvertedInvoice?: boolean } = {}) {
-    const nextTool: "hub" | PublicToolMode = isPublicToolMode(tool) ? tool : "hub";
+    const requestedTimeCostsView = timeCostsViewForMode(tool);
+    if (requestedTimeCostsView) setTimeCostsView(requestedTimeCostsView);
+    const nextTool = normalizePublicToolMode(tool);
     if (nextTool !== activeTool) setContextChosenTool(null);
     if (!onToolChange) {
       onOpenToolConsumed?.();
@@ -3041,6 +3107,11 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
     }
     setLocalActiveTool(nextTool);
     onToolChange?.(nextTool);
+  }
+
+  function changeTimeCostsView(view: TimeCostsView) {
+    setTimeCostsView(view);
+    if (timeCostsViewForMode(openTool)) onToolChange?.("time-costs");
   }
 
   function openToolFromHub(tool: LaunchableToolMode) {
@@ -3661,6 +3732,18 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
             autoOpenActiveJob={requestedTool === "job-photos" && Boolean(focusedActiveWorkId) && contextChosenTool !== activeTool}
             contextLabel={toolWorkContext.kind === "rivt" ? toolWorkContext.job?.title ?? "Accepted work" : toolWorkContext.kind === "standalone" ? toolWorkContext.project.title : null}
             onRequestContext={() => setCameraContextRequest((current) => current + 1)}
+          />
+        ),
+      },
+      "time-costs": {
+        title: "Time & costs",
+        node: (
+          <TimeCostsTool
+            key={`time-costs:${activeJobScopeKey}`}
+            activeJob={activeJob}
+            jobs={jobs}
+            activeView={activeTimeCostsView}
+            onViewChange={changeTimeCostsView}
           />
         ),
       },

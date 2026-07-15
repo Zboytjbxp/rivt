@@ -10,6 +10,22 @@ Status values:
 
 Evidence must eventually link to implementation, automated tests, manual acceptance proof, and deployed build.
 
+## Traceability Addendum - 2026-07-15 Time and Costs Consolidation (Local Verification)
+
+- `GA-UX-003` gains tool-IA evidence: Time, Expenses, Mileage, and Summary now
+  live in one supporting app rather than competing as four unrelated launchers.
+- `GA-UX-006` gains compact interaction evidence: a four-section lower dock
+  keeps all controls reachable at 390x844 and 320x568 while preserving full
+  desktop use.
+- Existing server and device records are read in place; this packet performs no
+  data migration, deletion, auth, billing, storage, or provider change.
+- Legacy deep links and stored shortcuts resolve to the corresponding section
+  so consolidation does not strand prior navigation.
+- Build, lint, security lint, 55 unit tests, E2E, desktop/mobile/compact Tools
+  UI, mobile-action UI, dependency audit, diff checks, and the focused
+  PostgreSQL tool-records integration suite pass. Deployment evidence remains
+  pending in `docs/delivery/BUILD_STATE.md`.
+
 ## Traceability Addendum - 2026-07-14 Tools Truth and Containment (Production Verification)
 
 - `GA-UX-003` gains product-boundary evidence: a single public catalog now

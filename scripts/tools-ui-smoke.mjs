@@ -249,6 +249,21 @@ async function configurePage(page) {
   await page.route("**/api/v1/notification-preferences", (route) =>
     route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { preferences: [] } }) }),
   );
+  await page.route("**/api/v1/billing/status", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        data: {
+          plan: "free",
+          active: false,
+          status: "inactive",
+          cancelAtPeriodEnd: false,
+          provider: { checkoutConfigured: false, webhookConfigured: false, portalConfigured: false },
+        },
+      }),
+    }),
+  );
   await page.route("**/api/v1/shop-talk/posts", (route) =>
     route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { posts: [] } }) }),
   );
@@ -432,6 +447,7 @@ async function runToolsFlow(page, viewportName) {
   assert.equal(await page.locator(".v2-tool-group").count(), 1, "Supporting helpers should live in one utilities drawer");
   await page.locator(".v2-tool-group").filter({ hasText: "Utilities" }).locator("summary").click();
   await page.getByRole("button", { name: /Materials/i }).waitFor({ timeout: 15_000 });
+  await page.getByRole("button", { name: /Time & costs/i }).waitFor({ timeout: 15_000 });
   await page.getByRole("button", { name: /Receivables/i }).waitFor({ timeout: 15_000 });
   await page.getByRole("button", { name: /Safety/i }).waitFor({ timeout: 15_000 });
   assert.equal(
@@ -439,8 +455,42 @@ async function runToolsFlow(page, viewportName) {
     0,
     "Price Book should be consolidated into Materials instead of appearing as a second launcher",
   );
+  for (const oldLauncher of ["Time", "Expenses", "Mileage", "Tax summary"]) {
+    assert.equal(
+      await page.getByRole("button", { name: oldLauncher, exact: true }).count(),
+      0,
+      `${oldLauncher} should live inside Time & costs instead of appearing as a separate launcher`,
+    );
+  }
   await assertNoHorizontalOverflow(page);
   await page.screenshot({ path: path.join(screenshotDir, `${viewportName}-tools-hub.png`), fullPage: true });
+
+  await page.getByRole("button", { name: /Time & costs/i }).click();
+  await page.getByRole("heading", { name: "Time & costs", exact: true }).waitFor({ timeout: 15_000 });
+  const timeCostsTabs = page.getByRole("navigation", { name: "Time and costs sections" });
+  for (const tab of ["Time", "Expenses", "Mileage", "Summary"]) {
+    await timeCostsTabs.getByRole("button", { name: tab, exact: true }).click();
+    assert.equal(
+      await timeCostsTabs.getByRole("button", { name: tab, exact: true }).getAttribute("aria-current"),
+      "page",
+      `${tab} should be selected inside Time & costs`,
+    );
+  }
+  await assertNoHorizontalOverflow(page);
+  await page.screenshot({ path: path.join(screenshotDir, `${viewportName}-time-costs.png`), fullPage: true });
+  await page.getByLabel("Time & costs").getByRole("button", { name: "All tools" }).click();
+
+  for (const [legacyMode, expectedTab] of [["time-tracker", "Time"], ["expense-logger", "Expenses"], ["mileage", "Mileage"], ["tax-summary", "Summary"]]) {
+    await page.goto(`${baseUrl}/app/tools?tool=${legacyMode}`, { waitUntil: "networkidle" });
+    await page.getByRole("heading", { name: "Time & costs", exact: true }).waitFor({ timeout: 15_000 });
+    assert.equal(
+      await page.getByRole("navigation", { name: "Time and costs sections" }).getByRole("button", { name: expectedTab, exact: true }).getAttribute("aria-current"),
+      "page",
+      `Legacy ${legacyMode} links should open the ${expectedTab} tab`,
+    );
+  }
+  await page.getByLabel("Time & costs").getByRole("button", { name: "All tools" }).click();
+  await page.locator(".v2-tool-group").filter({ hasText: "Utilities" }).locator("summary").click();
 
   await page.getByRole("button", { name: /Materials/i }).click();
   await page.getByRole("heading", { name: "Materials", exact: true }).waitFor({ timeout: 15_000 });

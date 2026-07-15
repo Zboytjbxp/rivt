@@ -284,6 +284,76 @@
   backdrop-filter: blur(14px);
 }
 
+/* Time, costs, and year-end estimates share one supporting field app. */
+.v2-time-costs-app {
+  position: relative;
+  min-width: 0;
+  padding-bottom: calc(76px + env(safe-area-inset-bottom));
+}
+
+.v2-time-costs-content {
+  min-width: 0;
+}
+
+.v2-time-costs-tabs {
+  position: fixed;
+  z-index: 45;
+  right: 12px;
+  bottom: max(8px, env(safe-area-inset-bottom));
+  left: 12px;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 4px;
+  max-width: 720px;
+  margin-inline: auto;
+  padding: 6px;
+  border: 1px solid var(--v2-border);
+  border-radius: var(--v2-radius-lg);
+  background: var(--v2-surface);
+  box-shadow: var(--v2-shadow-card);
+}
+
+.v2-time-costs-tabs button {
+  display: inline-flex;
+  min-width: 0;
+  min-height: 52px;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 6px 4px;
+  border: 0;
+  border-radius: var(--v2-radius-md);
+  background: transparent;
+  color: var(--v2-text-muted);
+  font: inherit;
+  font-size: var(--v2-text-xs);
+  font-weight: var(--v2-weight-strong);
+  cursor: pointer;
+}
+
+.v2-time-costs-tabs button.is-active {
+  background: var(--v2-accent-soft);
+  color: var(--v2-accent);
+}
+
+.v2-time-costs-tabs button:focus-visible {
+  outline: 2px solid var(--v2-accent);
+  outline-offset: 2px;
+}
+
+@media (max-width: 360px) {
+  .v2-time-costs-tabs {
+    right: 6px;
+    left: 6px;
+  }
+
+  .v2-time-costs-tabs button {
+    flex-direction: column;
+    gap: 2px;
+    font-size: 11px;
+  }
+}
+
 .v2-tool-app-header > button,
 .v2-tool-app-header aside {
   display: inline-flex;

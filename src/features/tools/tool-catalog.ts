@@ -5,6 +5,7 @@ export const PUBLIC_TOOL_MODES = [
   "materials",
   "daily-log",
   "job-photos",
+  "time-costs",
   "time-tracker",
   "expense-logger",
   "mileage",

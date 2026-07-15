@@ -2,12 +2,29 @@
 
 Last updated: 2026-07-15 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Packet 44 is production verified at its focused boundary. It
-consolidates Materials and Price Book without deleting saved prices or seeding
-accounts with guessed supplier costs.
-Active packet: `docs/delivery/packets/44_MATERIALS_PRICE_LIBRARY.md`
-Repository branch: `master` (source branch: `codex/materials-price-book`)
-Production feature release commit: `2bcc6d33d71db1c1e0102f402b885d6d80a15fc3`
+Current phase: Packet 45 is locally verified at its focused boundary. It
+consolidates Time, Expenses, Mileage, and Tax Summary into one supporting app
+without moving or deleting records.
+Active packet: `docs/delivery/packets/45_TIME_COSTS_CONSOLIDATION.md`
+Repository branch: `codex/time-costs-consolidation`
+Production feature release commit: pending
+
+## Packet 45 - Time and Costs Consolidation (Local Verification)
+
+- Tools now has one `Time & costs` launcher with Time, Expenses, Mileage, and
+  Summary sections in a persistent lower dock. Four duplicate launchers were
+  removed from the hub.
+- Existing server-owned and device records remain in place and are read by the
+  original tools. No database migration, record rewrite, or tax-math change is
+  part of this packet.
+- Legacy URLs and stored shortcuts for Time Tracker, Expense Logger, Mileage,
+  and Tax Summary resolve into the matching consolidated section.
+- Build, lint, security lint, 55 unit tests, E2E, desktop/mobile/compact Tools
+  UI, mobile-action UI, dependency audit, diff checks, and the focused
+  PostgreSQL tool-records integration suite pass.
+- Rendered checks cover 1440x900, 390x844, and 320x568 with no horizontal
+  overflow and a visible four-section dock. Production deployment and
+  expected-source monitoring remain pending.
 
 ## Packet 44 - Materials and Price Library (Production Verification)
 
