@@ -196,6 +196,68 @@ async function configurePage(page) {
       body: JSON.stringify({ data: { notifications: [], unreadCount: 0 } }),
     }),
   );
+  await page.route(/\/api\/v1\/shop-talk\/posts(?:\?.*)?$/, (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        data: {
+          posts: [
+            {
+              id: "shop-talk-ui-scope-change",
+              author: "RIVT",
+              trade: "General",
+              flair: "Question",
+              type: "question",
+              title: "What's the best way to handle a mid-job scope change without losing margin?",
+              body: "Share the field process that keeps the change documented and priced.",
+              status: "Needs a pro answer",
+              createdAt: "2026-07-15T12:00:00.000Z",
+              communitySlug: "jacksonville-trades",
+              communityName: "Jacksonville Trades",
+              communityAudience: "public",
+              answers: [],
+              media: [],
+            },
+            {
+              id: "shop-talk-ui-heat-safety",
+              author: "RIVT",
+              trade: "General",
+              flair: "Discussion",
+              type: "general",
+              title: "How are you handling the new OSHA heat rule on outdoor jobs this summer?",
+              body: "Compare practical heat plans, scheduling changes, and field routines.",
+              status: "Open",
+              createdAt: "2026-07-15T11:00:00.000Z",
+              communitySlug: "jacksonville-trades",
+              communityName: "Jacksonville Trades",
+              communityAudience: "public",
+              answers: [],
+              media: [],
+            },
+          ],
+        },
+      }),
+    }),
+  );
+  await page.route(/\/api\/v1\/shop-talk\/posts\/[^/]+\/answers$/, async (route) => {
+    const requestBody = route.request().postDataJSON();
+    await route.fulfill({
+      status: 201,
+      contentType: "application/json",
+      body: JSON.stringify({
+        data: {
+          answer: {
+            id: "shop-talk-ui-answer",
+            author: account.profile.displayName,
+            body: String(requestBody?.body ?? ""),
+            verifiedFix: false,
+            createdAt: "2026-07-15T12:30:00.000Z",
+          },
+        },
+      }),
+    });
+  });
   await page.route(/\/api\/v1\/active-work\/?(?:\?.*)?$/, (route) =>
     route.fulfill({
       status: 200,
@@ -311,8 +373,8 @@ try {
     await page.getByRole("button", { name: "All communities" }).click();
     await page.getByRole("button", { name: "Feed" }).click();
     await page.getByRole("button", { name: "Post", exact: true }).waitFor({ timeout: 15_000 });
-    await page.locator(".trade-post").filter({ hasText: "mid-job scope change" }).first().waitFor({ timeout: 15_000 });
-    await page.getByText(/OSHA heat rule/i).waitFor({ timeout: 15_000 });
+    await page.locator(".trade-post").filter({ hasText: "mid-job scope change without losing margin" }).first().waitFor({ timeout: 15_000 });
+    await page.getByText(/new OSHA heat rule/i).waitFor({ timeout: 15_000 });
     const talkSearch = page.locator('.shop-talk-search input[type="search"]');
     await talkSearch.fill("scope");
     await assertNoHorizontalOverflow(page);

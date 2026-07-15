@@ -1362,3 +1362,22 @@ Evidence must eventually link to implementation, automated tests, manual accepta
   `82b243e6bdbb28ffe4ec3d28c4253c044a1d6f22` is live with migration 0027 ready;
   the expected-source synthetic monitor passed all seven anonymous private-route
   checks. Physical cross-device record-retention acceptance remains open.
+
+## Traceability Addendum - 2026-07-15 Final Tools and Launch QA
+
+- `GA-UX-006` gains a final subtraction boundary: five distinct core field apps
+  and two grouped utilities remain visible, while consolidated legacy modes
+  continue to resolve to their owning app without duplicate launchers.
+- `GA-UX-006` gains rendered evidence across every final Tool destination at
+  1440x900, 390x844, and 320x568, including one-hand docks, legacy routes, back
+  navigation, and document-level overflow assertions.
+- `GA-OPS-007` gains a launch-wide browser workflow matrix spanning mobile
+  actions, contractor/tradesperson work lifecycle, exact active-work and photo
+  notification destinations, Shop Talk/Trade News, and guest preview.
+- Local evidence also includes production build, lint, security lint, 55 unit
+  tests, E2E, a zero-vulnerability production dependency audit, and all 19
+  integration suites against a freshly reset PostgreSQL database at migration
+  27 with zero pending migrations.
+- Physical camera capture, cross-device server-record retention, installed-iOS
+  push, and a two-account production closeout remain explicit human acceptance
+  boundaries; mocked browser evidence is not represented as live proof.

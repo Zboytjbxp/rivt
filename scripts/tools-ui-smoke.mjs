@@ -443,11 +443,22 @@ async function runToolsFlow(page, viewportName) {
   await fieldToolsTray.waitFor({ timeout: 15_000 });
   await fieldToolsTray.getByRole("button", { name: "Heavy 16th", exact: true }).waitFor({ timeout: 15_000 });
   await fieldToolsTray.getByRole("button", { name: "Camera", exact: true }).waitFor({ timeout: 15_000 });
+  await fieldToolsTray.getByRole("button", { name: "Jobsite", exact: true }).waitFor({ timeout: 15_000 });
+  assert.equal(
+    await fieldToolsTray.locator(".v2-field-tools-actions > button").count(),
+    4,
+    "Field shortcuts should contain three user tools and one Utilities jump",
+  );
   assert.equal(await page.locator(".v2-tool-launch-card").count(), 2, "Pinned defaults should not repeat in the core-app launcher");
   assert.equal(await page.locator(".v2-tool-group").count(), 1, "Supporting helpers should live in one utilities drawer");
   await page.locator(".v2-tool-group").filter({ hasText: "Utilities" }).locator("summary").click();
   await page.getByRole("button", { name: /Materials/i }).waitFor({ timeout: 15_000 });
   await page.getByRole("button", { name: /Time & costs/i }).waitFor({ timeout: 15_000 });
+  assert.equal(
+    await page.locator(".v2-tool-mini-card").count(),
+    2,
+    "The final utilities group should expose exactly Materials and Time & costs",
+  );
   assert.equal(await page.getByRole("button", { name: /Safety/i }).count(), 0, "Safety should live inside Jobsite instead of appearing as a separate launcher");
   assert.equal(await page.getByRole("button", { name: /Punch list/i }).count(), 0, "Punch should live inside Jobsite instead of appearing as a separate launcher");
   assert.equal(

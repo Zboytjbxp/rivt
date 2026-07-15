@@ -2,12 +2,31 @@
 
 Last updated: 2026-07-15 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Packet 47 is production verified at its automated boundary. It
-consolidates Daily Log, Punch List, and Safety into one Jobsite app without
-moving or deleting records.
-Active packet: `docs/delivery/packets/47_JOBSITE_TOOLS_CONSOLIDATION.md`
-Repository branch: `master`
+Current phase: Packet 48 final Tools subtraction and launch-wide workflow QA is
+locally verified. The visible catalog is at a seven-destination floor; no
+additional launchers should be removed without workflow evidence.
+Active packet: `docs/delivery/packets/48_FINAL_TOOLS_LAUNCH_QA.md`
+Repository branch: `codex/final-tools-launch-qa`
 Production feature release commit: `82b243e6bdbb28ffe4ec3d28c4253c044a1d6f22`
+
+## Packet 48 - Final Tools Subtraction and Launch QA (Locally Verified)
+
+- The final visible catalog is five core apps plus two grouped utilities.
+  Compatibility aliases preserve legacy URLs and stored shortcuts without
+  returning duplicate launchers to the hub.
+- Rendered Tools QA passes at 1440x900, 390x844, and 320x568, including every
+  final app, consolidated section docks, legacy routes, back navigation,
+  launcher-count assertions, and horizontal-overflow checks.
+- Mobile-action, accepted-work lifecycle, Shop Talk/Trade News, and guest
+  preview suites pass. The Shop Talk harness now mocks the current server-owned
+  post and answer APIs rather than depending on removed fallback data.
+- Production build, lint, security lint, 55 unit tests, E2E, dependency audit,
+  diff checks, and all 19 freshly reset PostgreSQL integration suites pass.
+  Migration 27 is applied with zero pending migrations.
+- No production behavior, schema, authorization, or stored record changed in
+  this packet; it is a QA assertion and delivery-evidence release.
+- Remaining boundary: physical iOS/Android camera capture, cross-device record
+  retention, installed-iOS push, and one two-account production closeout chain.
 
 ## Packet 47 - Jobsite Tools Consolidation (Production Verification)
 
