@@ -68,6 +68,10 @@ overhead, margin, or contingency.
   cases. The migration lifecycle test was updated to explicitly roll back
   `0027_default_private_photo_album` before asserting the existing `0026`
   rollback sequence.
+- The reviewed branch was fast-forward merged to `master` and Railway deployed
+  production deployment `8b04379c-b828-430b-9a54-55aad5608048`. Live health
+  and `npm run monitor:production` both confirmed exact source
+  `4793b1b3dd240fb709e88c820d649ea5f31f5031`.
 
 ## Boundary and Risk
 
@@ -76,6 +80,7 @@ overhead, margin, or contingency.
   marked as failed; the UI must never call this sent.
 - This is delivery only. A customer replying, accepting, signing, paying, or
   generating an invoice remains a separate explicit workflow.
-- Before deployment, send a controlled non-production estimate to a controlled
-  inbox and confirm itemization, sender identity, failure behavior, and a
-  same-key retry. Then deploy and record exact-source production evidence.
+- Send one controlled production estimate to an inbox the founder controls and
+  confirm its sender identity and customer-safe itemization. Do not induce a
+  provider outage in production; the captured-provider integration case proves
+  the failed state and same-key replay behavior.

@@ -24,8 +24,9 @@ Evidence must eventually link to implementation, automated tests, manual accepta
   excludes internal pricing assumptions.
 - Local build, lint, security lint, unit/E2E/UI gates, dependency audit, and
   the full 19-suite PostgreSQL integration run passed against isolated
-  `rivt_test`. Controlled-inbox delivery and production evidence remain
-  pending.
+  `rivt_test`. Railway deployed source
+  `4793b1b3dd240fb709e88c820d649ea5f31f5031`; live health and the production
+  monitor passed. Controlled-inbox delivery remains the final manual proof.
 
 ## Traceability Addendum - 2026-07-14 Camera Home Album Previews (Production Verified)
 

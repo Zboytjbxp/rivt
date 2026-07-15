@@ -4774,7 +4774,9 @@ Completed on 2026-07-04 on branch `codex/launch-polish-phase-2` as a controllabl
 
 ## Packet 42 - Estimate Email Delivery Verification
 
-- Branch `codex/estimate-delivery` is review-ready but not merged or deployed.
+- Branch `codex/estimate-delivery` was reviewed, fast-forward merged to
+  `master`, and deployed by Railway as production deployment
+  `8b04379c-b828-430b-9a54-55aad5608048`.
 - The isolated ignored `TEST_DATABASE_URL` points to `rivt_test`; its reset ran
   through migration `0027_default_private_photo_album` with no pending
   migrations.
@@ -4785,9 +4787,16 @@ Completed on 2026-07-04 on branch `codex/launch-polish-phase-2` as a controllabl
   suites).
 - The migration lifecycle test now includes migration `0027` in its rollback
   contract instead of asserting an obsolete rollback version.
+- Live `https://rivt.pro/api/health` reports exact source
+  `4793b1b3dd240fb709e88c820d649ea5f31f5031`, migration
+  `0027_default_private_photo_album`, PostgreSQL and S3-compatible storage,
+  configured Sentry, and configured Web Push.
+- `EXPECTED_SOURCE_COMMIT=4793b1b3dd240fb709e88c820d649ea5f31f5031 npm run
+  monitor:production` passed with seven anonymous private-route checks.
 - Remaining acceptance boundary: send a controlled estimate through the real
-  configured provider to a controlled inbox, verify the received itemization
-  is customer-safe, then deploy and capture exact-source health evidence.
+  configured provider to a controlled inbox and verify the received
+  itemization is customer-safe. Do not simulate provider failure in
+  production; the failure state is covered by the isolated integration suite.
 
 ## Next Exact Task
 
