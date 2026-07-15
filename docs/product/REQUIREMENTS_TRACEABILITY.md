@@ -10,7 +10,7 @@ Status values:
 
 Evidence must eventually link to implementation, automated tests, manual acceptance proof, and deployed build.
 
-## Traceability Addendum - 2026-07-15 Invoice and Receivables Consolidation (Local Verification)
+## Traceability Addendum - 2026-07-15 Invoice and Receivables Consolidation (Production Verification)
 
 - `GA-UX-003` gains billing-workflow evidence: invoice drafting and receivable
   tracking now live in one customer-billing app rather than competing as two
@@ -25,7 +25,10 @@ Evidence must eventually link to implementation, automated tests, manual accepta
   section, and Estimate continues to convert into Invoice Draft.
 - Build, lint, security lint, 55 unit tests, all 19 PostgreSQL integration
   suites, E2E, desktop/mobile/compact Tools UI, mobile-action UI, dependency
-  audit, and diff checks pass. Production evidence remains pending.
+  audit, and diff checks pass. Railway serves exact feature source
+  `ddb31bedf6235a78e152bf84b7e475413c040835`; expected-source monitoring
+  passed with PostgreSQL, private object storage, Sentry, Web Push, matching
+  alerts, rollout controls, and anonymous private-route checks healthy.
 
 ## Traceability Addendum - 2026-07-15 Time and Costs Consolidation (Production Verification)
 

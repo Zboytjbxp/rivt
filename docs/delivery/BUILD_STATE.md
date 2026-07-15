@@ -2,13 +2,13 @@
 
 Last updated: 2026-07-15 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Packet 46 is locally verified at its focused boundary. It folds
+Current phase: Packet 46 is production verified at its focused boundary. It folds
 Receivables into Invoice without moving or deleting payment records.
 Active packet: `docs/delivery/packets/46_INVOICE_RECEIVABLES_CONSOLIDATION.md`
-Repository branch: `codex/invoice-receivables-consolidation`
-Production feature release commit: pending
+Repository branch: `master`
+Production feature release commit: `ddb31bedf6235a78e152bf84b7e475413c040835`
 
-## Packet 46 - Invoice and Receivables Consolidation (Local Verification)
+## Packet 46 - Invoice and Receivables Consolidation (Production Verification)
 
 - Tools now has one Invoice launcher with Draft and Receivables sections. The
   duplicate Receivables launcher is removed.
@@ -23,7 +23,12 @@ Production feature release commit: pending
   overflow. The lower mobile dock remains reachable without obscuring the
   working surface; desktop sections render in flow above it.
 - Server-owned tool-record persistence and account isolation pass in the full
-  PostgreSQL integration run. Production deployment remains pending.
+  PostgreSQL integration run.
+- Railway serves exact feature source
+  `ddb31bedf6235a78e152bf84b7e475413c040835`. The expected-source production
+  monitor passed with PostgreSQL and S3-compatible storage healthy, Sentry and
+  Web Push configured, matching-job alerts enabled, rollout controls off, and
+  seven anonymous private-route checks in 569 ms.
 - Remaining boundary: physical-device confirmation that an existing invoice
   and receivable remain present after switching sections, leaving Invoice, and
   reopening it.
