@@ -1755,3 +1755,45 @@ Add one entry per staging/production deployment.
 - Product evidence: Work exposes an explicit Jobs/People switch; People retains people, subs, clients, reviews, and invite planning; legacy Crew/network paths resolve to People beneath Work.
 - Known boundary: physical iPhone and Android confirmation of Work -> People switching and legacy `/app/crew` route behavior is still needed.
 - Approval: runtime and automated navigation checks are production verified; field acceptance remains open.
+
+## Current Production - Packet 43 Tools Truth and Containment
+
+- Environment: Production (`https://rivt.pro`)
+- Date/time/timezone: 2026-07-15 00:34 America/New_York
+- Deployer: Codex through a verified feature-branch push, fast-forward merge
+  to `master`, and Railway production auto-deploy
+- Source repository/branch: `Zboytjbxp/rivt`, `master`
+- Runtime feature source: `a068728d98d74c73e925144050e076c756ee53b2`
+- Railway deployment ID: `f343cb7b-ac98-4403-a348-5a1d7bf4feb5`
+- Migration version before/after: unchanged
+  (`0027_default_private_photo_album`)
+- Provider/config changes: none; auth, billing, PostgreSQL, object storage,
+  Sentry, Web Push, email, moderation, and rollout configuration were
+  preserved.
+- Rollback target: `edcc98e623d01c0fb9d841d18cd754b4b4cd763a`; no database rollback
+  is required.
+- Automated gates: build, lint, security lint, 55/55 unit tests, E2E,
+  desktop/mobile/compact Tools UI, mobile-action UI, dependency audit with
+  zero vulnerabilities, diff checks, and the complete PostgreSQL run with
+  19/19 integration suites passed.
+- Rendered evidence: Tools screenshots under
+  `C:\Users\zboyt\AppData\Local\Temp\rivt-tools-pass` cover desktop, 390px
+  mobile, and 320px compact-phone layouts. A first action run exposed a
+  Calculator browser-Back route/UI mismatch; the corrected rerun passed.
+- Post-deploy proof: live `/api/health` returned exact feature source, ready
+  migration `0027_default_private_photo_album`, PostgreSQL/S3-compatible
+  storage, configured Sentry and Web Push, and enabled bounded matching-job
+  alerts. `EXPECTED_SOURCE_COMMIT=a068728d98d74c73e925144050e076c756ee53b2 npm run
+  monitor:production` passed with controls off and seven anonymous
+  private-route checks.
+- Product boundary: Earnings, Bid Builder, Tax Estimator, Contracts, Job
+  Checklist, and Daily Report now fail safely to the Tools hub from stale URLs,
+  notifications, and internal transitions. Their records and implementation
+  remain intact for reviewed consolidation.
+- Accuracy evidence: Mileage and Tax Summary use date-aware published business
+  rates for 2024, 2025, and both 2026 periods; unsupported dates are excluded
+  and disclosed instead of guessed.
+- Known boundary: complete physical iOS/Android acceptance of the reduced
+  catalog, then consolidate Price Book into Materials in a separate packet.
+- Approval: Packet 43 runtime, rendered-device gates, data preservation, and
+  production health are verified.

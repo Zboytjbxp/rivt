@@ -1,15 +1,15 @@
 # RIVT Build State
 
-Last updated: 2026-07-14 America/New_York
+Last updated: 2026-07-15 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Packet 43 is locally verified at its focused boundary. It
+Current phase: Packet 43 is production verified at its focused boundary. It
 contains six unfinished or overlapping tool modes without deleting records and
 replaces the stale global mileage assumption with date-aware published rates.
 Active packet: `docs/delivery/packets/43_TOOLS_TRUTH_AND_CONTAINMENT.md`
 Repository branch: `codex/tools-truth-containment`
-Production feature release commit: `edcc98e623d01c0fb9d841d18cd754b4b4cd763a`
+Production feature release commit: `a068728d98d74c73e925144050e076c756ee53b2`
 
-## Packet 43 - Tools Truth and Containment (Local Verification)
+## Packet 43 - Tools Truth and Containment (Production Verification)
 
 - One shared public-tool catalog now governs URL parsing, notification deep
   links, internal tool transitions, and the Tools container. Earnings, Bid
@@ -26,8 +26,12 @@ Production feature release commit: `edcc98e623d01c0fb9d841d18cd754b4b4cd763a`
   against isolated `rivt_test`.
 - The rendered action gate caught and drove a browser-Back correction: leaving
   Calculator now returns to the Tools hub in both URL and mounted UI.
-- Not deployed. Production remains on Packet 42 source
-  `edcc98e623d01c0fb9d841d18cd754b4b4cd763a`.
+- Railway deployment `f343cb7b-ac98-4403-a348-5a1d7bf4feb5` serves exact
+  feature source `a068728d98d74c73e925144050e076c756ee53b2` with ready migration
+  `0027_default_private_photo_album`.
+- The expected-source production monitor passed with PostgreSQL and
+  S3-compatible storage healthy, Sentry and Web Push configured, rollout
+  controls off, and seven anonymous private-route checks.
 
 ## Packet 42 - Estimate Email Delivery (Production Verification)
 

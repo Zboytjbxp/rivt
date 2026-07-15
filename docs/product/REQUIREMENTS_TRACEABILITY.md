@@ -10,7 +10,7 @@ Status values:
 
 Evidence must eventually link to implementation, automated tests, manual acceptance proof, and deployed build.
 
-## Traceability Addendum - 2026-07-14 Tools Truth and Containment (Local Verification)
+## Traceability Addendum - 2026-07-14 Tools Truth and Containment (Production Verification)
 
 - `GA-UX-003` gains product-boundary evidence: a single public catalog now
   prevents unfinished or overlapping tool modes from leaking through stale
@@ -31,9 +31,10 @@ Evidence must eventually link to implementation, automated tests, manual accepta
   the controlled Tools route was corrected and the full rendered action rerun
   passed.
 - This packet deletes no records and changes no database, auth, billing,
-  storage, moderation, or provider boundary. Production remains on source
-  `edcc98e623d01c0fb9d841d18cd754b4b4cd763a` until review and deployment
-  complete.
+  storage, moderation, or provider boundary. Railway deployment
+  `f343cb7b-ac98-4403-a348-5a1d7bf4feb5` serves exact feature source
+  `a068728d98d74c73e925144050e076c756ee53b2`; live health and the
+  expected-source production monitor passed.
 
 ## Traceability Addendum - 2026-07-14 Estimate Email Delivery (Local Verification)
 

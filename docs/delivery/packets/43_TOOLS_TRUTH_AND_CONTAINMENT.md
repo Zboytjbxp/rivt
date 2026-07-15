@@ -80,3 +80,13 @@ rate that applies on each trip date rather than one stale global value.
 - The next train should consolidate Price Book into Materials first, then
   combine Time, Expenses, Mileage, and Tax Summary into Time & Costs. Those
   changes require their own record-compatibility review.
+
+## Production Evidence
+
+- Feature commit: `a068728d98d74c73e925144050e076c756ee53b2`.
+- Railway deployment: `f343cb7b-ac98-4403-a348-5a1d7bf4feb5`.
+- Production health returned the exact feature source, PostgreSQL,
+  S3-compatible object storage, configured Sentry, configured Web Push, and
+  ready migration `0027_default_private_photo_album`.
+- The expected-source synthetic monitor passed all seven anonymous
+  private-route checks with rollout controls disabled.
