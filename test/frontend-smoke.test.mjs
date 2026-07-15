@@ -71,6 +71,53 @@ function createMemoryStorage(initial = {}) {
   };
 }
 
+test("public tool catalog contains launch tools and rejects contained legacy routes", async () => {
+  const { isPublicToolMode, PUBLIC_TOOL_MODES, CONTAINED_TOOL_MODES } = await loadModule("/src/features/tools/tool-catalog.ts");
+
+  assert.equal(PUBLIC_TOOL_MODES.includes("invoice"), true);
+  assert.equal(PUBLIC_TOOL_MODES.includes("job-photos"), true);
+  assert.equal(isPublicToolMode("invoice"), true);
+  assert.equal(isPublicToolMode("contracts"), false);
+  assert.equal(isPublicToolMode("daily-report"), false);
+  assert.equal(isPublicToolMode("not-a-tool"), false);
+  assert.deepEqual(CONTAINED_TOOL_MODES, [
+    "earnings",
+    "bid-builder",
+    "tax-estimator",
+    "contracts",
+    "job-checklist",
+    "daily-report",
+  ]);
+});
+
+test("mileage deductions use the IRS business rate for each trip date", async () => {
+  const {
+    mileageDeductionForEntries,
+    mileageDeductionForEntry,
+    mileageRateForDate,
+    mileageRateSummaryForYear,
+  } = await loadModule("/src/features/tools/mileage-rates.ts");
+
+  assert.equal(mileageRateForDate("2024-01-01"), 0.67);
+  assert.equal(mileageRateForDate("2025-12-31"), 0.70);
+  assert.equal(mileageRateForDate("2026-06-30"), 0.725);
+  assert.equal(mileageRateForDate("2026-07-01"), 0.76);
+  assert.equal(mileageRateForDate("2027-01-01"), null);
+  assert.equal(mileageDeductionForEntry({ date: "2026-07-01", miles: 10 }), 7.60);
+
+  assert.deepEqual(mileageDeductionForEntries([
+    { date: "2026-06-30", miles: 10 },
+    { date: "2026-07-01", miles: 10 },
+    { date: "2027-01-01", miles: 5 },
+  ]), {
+    deduction: 14.85,
+    ratedMiles: 20,
+    unratedMiles: 5,
+  });
+  assert.match(mileageRateSummaryForYear(2026), /\$0\.725\/mi through Jun 30; \$0\.76\/mi from Jul 1/);
+  assert.equal(mileageRateSummaryForYear(2027), "No built-in IRS rate for this year");
+});
+
 test("rate card helper migrates legacy object data and reads array data", async () => {
   const previousWindow = globalThis.window;
   const localStorage = createMemoryStorage({

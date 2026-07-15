@@ -56,9 +56,16 @@ import { ToolContextPicker } from "./ToolContextPicker";
 import { createStandaloneProject, listStandaloneProjects, type StandaloneProject } from "./standalone-project-api";
 import { createAlbum, ensureDefaultAlbum, listAlbums, type PhotoAlbum } from "./album-api";
 import { toolContextStorageId, type ToolWorkContext } from "./tool-work-context";
+import { isPublicToolMode, type PublicToolMode, type ToolMode } from "./tool-catalog";
+import {
+  mileageDeductionForEntries,
+  mileageDeductionForEntry,
+  mileageRateLabelForDate,
+  mileageRateSummaryForYear,
+} from "./mileage-rates";
 import "./tools-studio.css";
 
-export type ToolMode = "hub" | "calculator" | "estimate" | "invoice" | "materials" | "daily-log" | "job-photos" | "time-tracker" | "expense-logger" | "earnings" | "bid-builder" | "mileage" | "price-book" | "safety-checklist" | "tax-estimator" | "punch-list" | "contracts" | "job-checklist" | "payments" | "daily-report" | "tax-summary";
+export type { ToolMode } from "./tool-catalog";
 
 interface PaymentRecord {
   id: number;
@@ -91,12 +98,12 @@ interface ToolsStudioProps {
   onNavigate: (destination: PrimaryDestination) => void;
 }
 
-type LaunchableToolMode = Exclude<ToolMode, "hub">;
+type LaunchableToolMode = PublicToolMode;
 type ToolIcon = typeof Calculator;
 const fieldToolsStorageKey = "rivt.fieldTools.v1";
 const toolContextStorageKey = "rivt.toolContexts.v1";
 const cameraAlbumDestinationStorageKey = "rivt.cameraAlbumDestination.v1";
-const contextualToolModes = new Set<ToolMode>(["estimate", "invoice", "job-photos"]);
+const contextualToolModes = new Set<PublicToolMode>(["estimate", "invoice", "job-photos"]);
 
 function readCameraAlbumDestination() {
   try {
@@ -107,10 +114,10 @@ function readCameraAlbumDestination() {
   }
 }
 
-function readToolContextProjects(): Partial<Record<ToolMode, string>> {
+function readToolContextProjects(): Partial<Record<PublicToolMode, string>> {
   try {
     const parsed = JSON.parse(localStorage.getItem(toolContextStorageKey) || "{}") as Record<string, unknown>;
-    return Object.fromEntries(Object.entries(parsed).filter(([, value]) => typeof value === "string"));
+    return Object.fromEntries(Object.entries(parsed).filter(([key, value]) => isPublicToolMode(key) && typeof value === "string"));
   } catch {
     return {};
   }
@@ -364,8 +371,6 @@ function FieldToolsTray({
   );
 }
 
-const MILEAGE_RATE_PER_MILE = 0.70;
-const MILEAGE_RATE_LABEL = "$0.70/mi";
 const mileageKey = "rivt.mileage.v1";
 
 const PRIMARY_TOOL_LAUNCHERS: ToolLauncher[] = [
@@ -547,11 +552,13 @@ function MileageLoggerTool({ activeJob }: { activeJob: Job | null }) {
     });
   }
 
-  const thisYear = new Date().getFullYear().toString();
+  const thisYearNumber = new Date().getFullYear();
+  const thisYear = thisYearNumber.toString();
   const yearEntries = entries.filter((e) => e.date.startsWith(thisYear));
   const yearMiles = yearEntries.reduce((sum, e) => sum + e.miles, 0);
-  const yearDeduction = yearMiles * MILEAGE_RATE_PER_MILE;
+  const yearCalculation = mileageDeductionForEntries(yearEntries);
   const totalMiles = entries.reduce((sum, e) => sum + e.miles, 0);
+  const allTimeCalculation = mileageDeductionForEntries(entries);
 
   return (
     <div className="v2-tool-workbench v2-mileage-workbench">
@@ -574,7 +581,9 @@ function MileageLoggerTool({ activeJob }: { activeJob: Job | null }) {
                 <div className="v2-mileage-entry-head">
                   <strong>{e.miles.toFixed(1)} mi</strong>
                   <span>{e.date}</span>
-                  <span className="v2-mileage-deduction">{currency(e.miles * MILEAGE_RATE_PER_MILE)} deduction</span>
+                  <span className="v2-mileage-deduction">
+                    {currency(mileageDeductionForEntry(e))} deduction · {mileageRateLabelForDate(e.date)}
+                  </span>
                   <button type="button" aria-label="Delete trip" onClick={() => removeEntry(e.id)}><Trash2 size={13} /></button>
                 </div>
                 <div className="v2-mileage-entry-meta">
@@ -590,18 +599,29 @@ function MileageLoggerTool({ activeJob }: { activeJob: Job | null }) {
       </Panel>
 
       <aside className="v2-mileage-summary">
-        <Panel className="v2-tool-panel v2-tool-summary-panel" eyebrow={`${new Date().getFullYear()} deduction`} title={currency(yearDeduction)}>
+        <Panel className="v2-tool-panel v2-tool-summary-panel" eyebrow={`${thisYearNumber} deduction`} title={currency(yearCalculation.deduction)}>
           <div className="v2-tool-breakdown">
             <div><span>Miles this year</span><strong>{yearMiles.toFixed(1)} mi</strong></div>
-            <div><span>IRS rate (2025)</span><strong>$0.70/mi</strong></div>
-            <div><span>Deductible</span><strong>{currency(yearDeduction)}</strong></div>
+            <div><span>IRS business rate</span><strong>{mileageRateSummaryForYear(thisYearNumber)}</strong></div>
+            <div><span>Estimated deduction</span><strong>{currency(yearCalculation.deduction)}</strong></div>
           </div>
+          {yearCalculation.unratedMiles > 0 ? (
+            <p className="v2-tax-disclaimer">
+              {yearCalculation.unratedMiles.toFixed(1)} mi need a rate review and are not included.
+            </p>
+          ) : null}
+          <p className="v2-tax-disclaimer">Estimate only. Confirm eligibility and current IRS guidance.</p>
         </Panel>
         <Panel className="v2-tool-panel" eyebrow="All time" title={`${totalMiles.toFixed(1)} mi`}>
           <div className="v2-tool-breakdown">
             <div><span>Total trips</span><strong>{entries.length}</strong></div>
-            <div><span>Total deductible</span><strong>{currency(totalMiles * MILEAGE_RATE_PER_MILE)}</strong></div>
+            <div><span>Estimated deduction</span><strong>{currency(allTimeCalculation.deduction)}</strong></div>
           </div>
+          {allTimeCalculation.unratedMiles > 0 ? (
+            <p className="v2-tax-disclaimer">
+              {allTimeCalculation.unratedMiles.toFixed(1)} mi are not included because no built-in rate is available.
+            </p>
+          ) : null}
         </Panel>
       </aside>
     </div>
@@ -2647,17 +2667,27 @@ function TaxSummaryTool() {
       .filter((e) => e.date && e.date.startsWith(yearStr))
       .reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
 
-    // Estimated mileage deduction using the shared mileage-tool rate.
-    const totalMiles = mileageEntries
-      .filter((m) => m.date && m.date.startsWith(yearStr))
-      .reduce((sum, m) => sum + (Number(m.miles) || 0), 0);
-    const mileageDeduction = totalMiles * MILEAGE_RATE_PER_MILE;
+    // Mileage is calculated by trip date because the IRS rate can change midyear.
+    const yearMileageEntries = mileageEntries.filter((m) => m.date && m.date.startsWith(yearStr));
+    const totalMiles = yearMileageEntries.reduce((sum, m) => sum + (Number(m.miles) || 0), 0);
+    const mileageCalculation = mileageDeductionForEntries(yearMileageEntries);
+    const mileageDeduction = mileageCalculation.deduction;
 
     const netProfit = Math.max(0, grossIncome - totalExpenses - mileageDeduction);
     const seTax = netProfit * 0.9235 * 0.153;
     const quarterlyPayment = seTax / 4;
 
-    return { grossIncome, totalExpenses, mileageDeduction, totalMiles, netProfit, seTax, quarterlyPayment };
+    return {
+      grossIncome,
+      totalExpenses,
+      mileageDeduction,
+      totalMiles,
+      mileageRateLabel: mileageRateSummaryForYear(selectedYear),
+      unratedMiles: mileageCalculation.unratedMiles,
+      netProfit,
+      seTax,
+      quarterlyPayment,
+    };
   }, [expenses, mileageEntries, selectedYear, timeSessions]);
 
   const fmt = (n: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(n);
@@ -2668,7 +2698,8 @@ function TaxSummaryTool() {
       ``,
       `Gross Revenue:        ${fmt(summary.grossIncome)}`,
       `Business Expenses:    ${fmt(summary.totalExpenses)}`,
-      `Mileage Deduction:    ${fmt(summary.mileageDeduction)} (${summary.totalMiles.toFixed(1)} mi @ ${MILEAGE_RATE_LABEL})`,
+      `Mileage Deduction:    ${fmt(summary.mileageDeduction)} (${summary.totalMiles.toFixed(1)} mi; ${summary.mileageRateLabel})`,
+      ...(summary.unratedMiles > 0 ? [`Mileage rate review:  ${summary.unratedMiles.toFixed(1)} mi not included`] : []),
       `Net Profit:           ${fmt(summary.netProfit)}`,
       ``,
       `SE Tax Estimate:      ${fmt(summary.seTax)}`,
@@ -2731,7 +2762,7 @@ function TaxSummaryTool() {
           <div className="v2-tax-summary-card">
             <small>Mileage Deduction</small>
             <strong>{fmt(summary.mileageDeduction)}</strong>
-            <span className="v2-tax-summary-sub">{summary.totalMiles.toFixed(1)} mi @ {MILEAGE_RATE_LABEL}</span>
+            <span className="v2-tax-summary-sub">{summary.totalMiles.toFixed(1)} mi · {summary.mileageRateLabel}</span>
           </div>
           <div className="v2-tax-summary-card v2-tax-summary-card--highlight">
             <small>Net Profit</small>
@@ -2750,6 +2781,11 @@ function TaxSummaryTool() {
         </div>
 
         <p className="v2-record-notice" role="status">{recordSource}</p>
+        {summary.unratedMiles > 0 ? (
+          <p className="v2-tax-disclaimer">
+            {summary.unratedMiles.toFixed(1)} mi are excluded because no built-in rate is available for their dates.
+          </p>
+        ) : null}
         <p className="v2-tax-disclaimer">This is an estimate only. Consult a tax professional.</p>
 
         <div className="v2-tax-summary-actions">
@@ -2854,9 +2890,12 @@ function resolveActiveToolJob(jobs: Job[], orderedActiveWork: CanonicalActiveWor
 }
 
 export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = null, focusedActiveWorkId = null, activeWorkRecords = [], onOpenToolConsumed, onToolChange, onWorkContextChange, onImmersiveChange, onNavigate }: ToolsStudioProps) {
-  const requestedTool = mode === "tools" && openTool ? openTool : null;
-  const [localActiveTool, setLocalActiveTool] = useState<ToolMode>("hub");
-  const activeTool = requestedTool ?? localActiveTool;
+  const controlledTool: "hub" | PublicToolMode | null = mode === "tools" && openTool !== null
+    ? isPublicToolMode(openTool) ? openTool : "hub"
+    : null;
+  const requestedTool = controlledTool === "hub" ? null : controlledTool;
+  const [localActiveTool, setLocalActiveTool] = useState<"hub" | PublicToolMode>("hub");
+  const activeTool = controlledTool ?? localActiveTool;
   const [fieldTools, setFieldTools] = useState(readFieldTools);
   const [fieldToolsEditing, setFieldToolsEditing] = useState(false);
   const [cameraContextRequest, setCameraContextRequest] = useState(0);
@@ -2867,7 +2906,7 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
   const [standaloneProjectsError, setStandaloneProjectsError] = useState("");
   const [standaloneProjectBusy, setStandaloneProjectBusy] = useState(false);
   const [toolContextProjects, setToolContextProjects] = useState(readToolContextProjects);
-  const [contextChosenTool, setContextChosenTool] = useState<ToolMode | null>(null);
+  const [contextChosenTool, setContextChosenTool] = useState<PublicToolMode | null>(null);
   const [fetchedActiveWork, setFetchedActiveWork] = useState<CanonicalActiveWork[]>([]);
   const [recordsLoading, setRecordsLoading] = useState(true);
   const [recordsError, setRecordsError] = useState<string | null>(null);
@@ -2919,7 +2958,8 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
   const focusedWork = focusedActiveWorkId
     ? orderedActiveWork.find((work) => work.id === focusedActiveWorkId) ?? null
     : null;
-  const selectedStandaloneProject = standaloneProjects.find((project) => project.id === toolContextProjects[activeTool]) ?? null;
+  const selectedToolProjectId = activeTool === "hub" ? null : toolContextProjects[activeTool] ?? null;
+  const selectedStandaloneProject = standaloneProjects.find((project) => project.id === selectedToolProjectId) ?? null;
   const privateCameraAlbums = useMemo(
     () => cameraAlbums.filter((album) => !album.standaloneProjectId),
     [cameraAlbums],
@@ -2985,7 +3025,7 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
     return () => { cancelled = true; };
   }, []);
 
-  function persistToolContextProject(tool: ToolMode, projectId: string | null) {
+  function persistToolContextProject(tool: PublicToolMode, projectId: string | null) {
     setToolContextProjects((current) => {
       const next = { ...current };
       if (projectId) next[tool] = projectId;
@@ -3035,7 +3075,7 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
     }
   }
 
-  function carryQuickDraftIntoContext(tool: ToolMode, destinationId: string) {
+  function carryQuickDraftIntoContext(tool: PublicToolMode, destinationId: string) {
     if (toolWorkContext.kind !== "quick") return;
     const prefix = tool === "estimate"
       ? "rivt.estimateDraft.v2:"
@@ -3055,12 +3095,14 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
   }
 
   function chooseQuickContext() {
+    if (activeTool === "hub") return;
     setContextChosenTool(activeTool);
     persistToolContextProject(activeTool, null);
     onWorkContextChange?.(null);
   }
 
   function chooseStandaloneContext(project: StandaloneProject) {
+    if (activeTool === "hub") return;
     setContextChosenTool(activeTool);
     carryQuickDraftIntoContext(activeTool, `standalone:${project.id}`);
     persistToolContextProject(activeTool, project.id);
@@ -3068,6 +3110,7 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
   }
 
   function chooseActiveWorkContext(work: CanonicalActiveWork) {
+    if (activeTool === "hub") return;
     setContextChosenTool(activeTool);
     carryQuickDraftIntoContext(activeTool, `rivt:${work.id}`);
     persistToolContextProject(activeTool, null);
@@ -3091,15 +3134,16 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
   }
 
   function setActiveTool(tool: ToolMode, options: { keepConvertedInvoice?: boolean } = {}) {
-    if (tool !== activeTool) setContextChosenTool(null);
+    const nextTool: "hub" | PublicToolMode = isPublicToolMode(tool) ? tool : "hub";
+    if (nextTool !== activeTool) setContextChosenTool(null);
     if (!onToolChange) {
       onOpenToolConsumed?.();
     }
     if (!options.keepConvertedInvoice) {
       setConvertedEstimateDraft(null);
     }
-    setLocalActiveTool(tool);
-    onToolChange?.(tool);
+    setLocalActiveTool(nextTool);
+    onToolChange?.(nextTool);
   }
 
   function openToolFromHub(tool: LaunchableToolMode) {

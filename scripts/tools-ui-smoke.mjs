@@ -404,6 +404,14 @@ async function clickVisibleFraction(page, label, viewportName) {
 
 async function runToolsFlow(page, viewportName) {
   const isHandsetViewport = viewportName !== "desktop";
+  await page.goto(`${baseUrl}/app/tools?tool=contracts`, { waitUntil: "networkidle" });
+  await page.getByRole("heading", { name: "Tools", exact: true }).waitFor({ timeout: 15_000 });
+  assert.equal(
+    await page.getByRole("heading", { name: "Contract templates", exact: true }).count(),
+    0,
+    "contained tool URLs should fall back to the public Tools hub",
+  );
+
   await page.goto(`${baseUrl}/app/tools`, { waitUntil: "networkidle" });
   await page.getByRole("heading", { name: "Tools", exact: true }).waitFor({ timeout: 15_000 });
   const primaryTool = (name) => page.locator(".v2-tool-launch-card").filter({ hasText: name }).first();

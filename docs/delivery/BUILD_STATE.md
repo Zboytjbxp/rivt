@@ -2,14 +2,34 @@
 
 Last updated: 2026-07-14 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Packet 42 is locally verified for Estimate email delivery. It
-adds server-confirmed delivery rather than a decorative Send control and is
-awaiting database completion, controlled inbox proof, review, and deployment.
-Active packet: `docs/delivery/packets/42_ESTIMATE_EMAIL_DELIVERY.md`
-Repository branch: `codex/estimate-delivery`
-Production feature release commit: `0849eaacc0b70302bf70c487c058c33b62f99c42`
+Current phase: Packet 43 is locally verified at its focused boundary. It
+contains six unfinished or overlapping tool modes without deleting records and
+replaces the stale global mileage assumption with date-aware published rates.
+Active packet: `docs/delivery/packets/43_TOOLS_TRUTH_AND_CONTAINMENT.md`
+Repository branch: `codex/tools-truth-containment`
+Production feature release commit: `edcc98e623d01c0fb9d841d18cd754b4b4cd763a`
 
-## Packet 42 - Estimate Email Delivery (Local Verification)
+## Packet 43 - Tools Truth and Containment (Local Verification)
+
+- One shared public-tool catalog now governs URL parsing, notification deep
+  links, internal tool transitions, and the Tools container. Earnings, Bid
+  Builder, Tax Estimator, Contracts, Job Checklist, and Daily Report resolve
+  to the Tools hub instead of leaking unfinished surfaces.
+- No stored tool records or contained component implementations were deleted.
+  This is a reversible product boundary before capability consolidation.
+- Mileage and Tax Summary now rate each trip by date: 2024 at $0.67/mile, 2025
+  at $0.70/mile, 2026 H1 at $0.725/mile, and 2026 H2 at $0.76/mile. Unknown
+  periods are excluded and visibly require review rather than being guessed.
+- Local evidence passes: build, lint, security lint, 55 unit tests, E2E,
+  desktop/mobile/compact Tools UI, mobile-action UI, dependency audit with zero
+  vulnerabilities, diff checks, and all 19 PostgreSQL integration suites
+  against isolated `rivt_test`.
+- The rendered action gate caught and drove a browser-Back correction: leaving
+  Calculator now returns to the Tools hub in both URL and mounted UI.
+- Not deployed. Production remains on Packet 42 source
+  `edcc98e623d01c0fb9d841d18cd754b4b4cd763a`.
+
+## Packet 42 - Estimate Email Delivery (Production Verification)
 
 - Estimate now keeps customer details, scope, valid-through date, note, and a
   customer-safe itemized preview with its saved server record.
@@ -23,16 +43,11 @@ Production feature release commit: `0849eaacc0b70302bf70c487c058c33b62f99c42`
 - Client and provider idempotency prevent a same-key retry from sending a
   duplicate estimate; the client keeps the retry key while unchanged fields
   are retried after a weak connection.
-- Build, lint, security lint, unit/integration-safe aggregate checks, E2E,
-  Tools UI, mobile-action UI, dependency audit, and diff checks pass locally.
-  The local aggregate integration phase initially skipped database suites in
-  this clean worktree. An ignored `.env` with the established isolated
-  `rivt_test` URL was then copied in and `npm run test:integration:fresh` was
-  attempted; its reset/migration process produced no assertion output after
-  eleven minutes and was stopped. No PostgreSQL integration pass is claimed
-  until that database connection/stall is resolved.
-- Not deployed. Production remains on Camera Packet 41 source
-  `0849eaacc0b70302bf70c487c058c33b62f99c42`.
+- Build, lint, security lint, 53 unit tests, E2E, Tools UI, mobile-action UI,
+  dependency audit, and all 19 isolated PostgreSQL integration suites passed.
+- Railway serves source `edcc98e623d01c0fb9d841d18cd754b4b4cd763a`;
+  founder-controlled inbox delivery and the production monitor passed. Full
+  evidence remains in the Packet 42 verification section below.
 
 ## Packet 41 - Camera Home Album Previews (Production Verified)
 
@@ -4800,7 +4815,14 @@ Completed on 2026-07-04 on branch `codex/launch-polish-phase-2` as a controllabl
 
 ## Next Exact Task
 
-Run `npm run smoke:billing:live` with `RIVT_SMOKE_EMAIL` and `RIVT_SMOKE_PASSWORD` set, then run it again with `RIVT_BILLING_EXERCISE_REDIRECTS=true` to verify Checkout and Customer Portal redirects without charging a card. After that, complete one real paid checkout and confirm the signed Stripe webhook updates `/api/v1/billing/status` to active Pro. In parallel, run `docs/quality/PHYSICAL_ACCESSIBILITY_CHECKLIST.md` on physical iOS Safari, Android Chrome, desktop keyboard-only, and at least one screen reader, then record the pass/fail evidence before named-cohort launch. Keep `npm run incident:readiness -- --require-ready` and `npm run launch:readiness -- --require-ready` passing as the machine-readiness gates while that manual evidence is gathered.
+After Packet 43 is production verified, begin a separate consolidation packet:
+merge Price Book into Materials while preserving all saved price-book records
+and keeping Materials useful without a RIVT job. Follow with a separately
+reviewed Time & Costs packet for Time, Expenses, Mileage, and Tax Summary. Do
+not delete stored records or expose the six contained tools until their useful
+capabilities have an explicit destination. In parallel, complete the physical
+accessibility checklist on iOS, Android, desktop keyboard-only, and a screen
+reader before nationwide launch.
 
 ## Blocking Founder Decisions
 

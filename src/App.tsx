@@ -100,7 +100,7 @@ import {
 import { useCommunityReactions } from "./features/shop-talk/useCommunityReactions";
 import { usePushNotifications } from "./features/notifications/usePushNotifications";
 import type { ProfileUpdateInput } from "./features/profile/ProfileHub";
-import type { ToolMode } from "./features/tools/ToolsStudio";
+import { isPublicToolMode, type ToolMode } from "./features/tools/tool-catalog";
 import { recordChecklist, safetyQuizData, trainingModules, type SafetyQuizResult } from "./features/profile/training-data";
 import { apiPath, fetchWithTimeout, RIVT_SESSION_EXPIRED_EVENT } from "./lib/api";
 import {
@@ -129,33 +129,10 @@ const ToolsStudio = lazy(() => import("./features/tools/ToolsStudio").then((m) =
 const ModerationConsole = lazy(() => import("./features/admin/ModerationConsole").then((m) => ({ default: m.ModerationConsole })));
 const LegacyBridge = lazy(() => import("./features/legacy/LegacyBridge").then((m) => ({ default: m.LegacyBridge })));
 
-const toolModes = new Set<ToolMode>([
-  "calculator",
-  "estimate",
-  "invoice",
-  "materials",
-  "daily-log",
-  "job-photos",
-  "time-tracker",
-  "expense-logger",
-  "earnings",
-  "bid-builder",
-  "mileage",
-  "price-book",
-  "safety-checklist",
-  "tax-estimator",
-  "punch-list",
-  "contracts",
-  "job-checklist",
-  "payments",
-  "daily-report",
-  "tax-summary",
-]);
-
 function readToolFromUrl() {
   if (typeof window === "undefined") return null;
   const tool = new URLSearchParams(window.location.search).get("tool");
-  return tool && toolModes.has(tool as ToolMode) ? tool as ToolMode : null;
+  return isPublicToolMode(tool) ? tool : null;
 }
 
 function readRouteParam(...keys: string[]) {
@@ -193,7 +170,7 @@ function readReviewFromUrl() {
 }
 
 function pathForTool(tool: ToolMode | null, activeWorkId: string | null = null) {
-  if (!tool || tool === "hub") return viewRoutes.Tools;
+  if (!isPublicToolMode(tool)) return viewRoutes.Tools;
   const params = new URLSearchParams({ tool });
   if (activeWorkId) params.set("activeWork", activeWorkId);
   return `${viewRoutes.Tools}?${params.toString()}`;
@@ -1394,7 +1371,7 @@ function App() {
   }
 
   function handleOpenTool(tool: ToolMode) {
-    const nextTool = tool === "hub" ? null : tool;
+    const nextTool = isPublicToolMode(tool) ? tool : null;
     const isCamera = nextTool === "job-photos";
     setRequestedTool(nextTool);
     setToolsImmersive(Boolean(nextTool));
@@ -1410,7 +1387,7 @@ function App() {
   }
 
   function handleOpenActiveWorkTool(activeWorkId: string, tool: ToolMode) {
-    const nextTool = tool === "hub" ? null : tool;
+    const nextTool = isPublicToolMode(tool) ? tool : null;
     const isCamera = nextTool === "job-photos";
     setFocusedActiveWorkId(nextTool ? activeWorkId : null);
     setRequestedTool(nextTool);
@@ -1479,7 +1456,7 @@ function App() {
   }
 
   function handleToolChange(tool: ToolMode) {
-    const nextTool = tool === "hub" ? null : tool;
+    const nextTool = isPublicToolMode(tool) ? tool : null;
     const nextActiveWorkId = nextTool ? focusedActiveWorkId : null;
     const isCamera = nextTool === "job-photos";
     const nextView: NavLabel = isCamera ? "Camera" : "Tools";
@@ -2099,9 +2076,7 @@ function App() {
       params.get("reviewId") ??
       (notification.sourceType === "review" ? sourceId : null);
     const toolParam = params.get("tool");
-    const notificationTool = toolParam && toolModes.has(toolParam as ToolMode)
-      ? toolParam as ToolMode
-      : null;
+    const notificationTool = isPublicToolMode(toolParam) ? toolParam : null;
 
     setActivityOpen(false);
     setAccountOpen(false);

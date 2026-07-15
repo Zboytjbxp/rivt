@@ -10,6 +10,31 @@ Status values:
 
 Evidence must eventually link to implementation, automated tests, manual acceptance proof, and deployed build.
 
+## Traceability Addendum - 2026-07-14 Tools Truth and Containment (Local Verification)
+
+- `GA-UX-003` gains product-boundary evidence: a single public catalog now
+  prevents unfinished or overlapping tool modes from leaking through stale
+  URLs, notifications, or internal transitions while keeping fourteen
+  supported tools reachable.
+- `GA-UX-005` gains money-truth evidence: mileage deductions are calculated
+  from each trip date using published 2024, 2025, and split-2026 IRS business
+  rates. Dates outside known periods are excluded and disclosed instead of
+  inheriting a guessed value.
+- `GA-UX-006` gains rendered containment evidence: Tools UI smoke covers
+  desktop, mobile, and compact-phone surfaces and asserts that a contained
+  Contracts deep link returns to the public hub.
+- Local gates passed: build, lint, security lint, 55 unit tests, E2E,
+  desktop/mobile/compact Tools UI, mobile-action UI, dependency audit with zero
+  vulnerabilities, and all 19 PostgreSQL integration suites against isolated
+  `rivt_test`.
+- The mobile-action gate found a route/UI mismatch on Calculator browser Back;
+  the controlled Tools route was corrected and the full rendered action rerun
+  passed.
+- This packet deletes no records and changes no database, auth, billing,
+  storage, moderation, or provider boundary. Production remains on source
+  `edcc98e623d01c0fb9d841d18cd754b4b4cd763a` until review and deployment
+  complete.
+
 ## Traceability Addendum - 2026-07-14 Estimate Email Delivery (Local Verification)
 
 - `GA-UX-003` gains estimate-delivery evidence: Estimate now gathers the
