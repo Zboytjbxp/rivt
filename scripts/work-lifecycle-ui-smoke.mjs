@@ -722,7 +722,7 @@ async function runTradespersonOfferFlow(page) {
   await page.goto(`${baseUrl}/app/work`, { waitUntil: "networkidle" });
   await clickJob(page, "Warehouse panel assist");
   await page.getByRole("button", { name: "Invoice" }).click();
-  await page.getByRole("heading", { name: "Invoice draft", exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByRole("heading", { name: "Invoice", exact: true }).first().waitFor({ timeout: 15_000 });
   await assertNoHorizontalOverflow(page, "Active work tool bridge");
   await page.screenshot({ path: path.join(screenshotDir, "active-work-tool-bridge.png"), fullPage: true });
 }
@@ -768,7 +768,7 @@ async function runScopedToolContextFlow(page) {
 
   await page.goto(`${baseUrl}/app/tools?tool=invoice&activeWork=${activeWorkId}`, { waitUntil: "networkidle" });
   await page.getByLabel("Current job: Warehouse panel assist").waitFor({ timeout: 15_000 });
-  await page.getByRole("heading", { name: "Invoice draft", exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByRole("heading", { name: "Invoice", exact: true }).first().waitFor({ timeout: 15_000 });
   await assertNoHorizontalOverflow(page, "Scoped invoice tool route");
 
   await page.goto(`${baseUrl}/app/tools?tool=daily-log&activeWork=${activeWorkId}`, { waitUntil: "networkidle" });

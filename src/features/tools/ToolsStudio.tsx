@@ -105,6 +105,7 @@ const toolContextStorageKey = "rivt.toolContexts.v1";
 const cameraAlbumDestinationStorageKey = "rivt.cameraAlbumDestination.v1";
 const contextualToolModes = new Set<PublicToolMode>(["estimate", "invoice", "job-photos"]);
 type TimeCostsView = "time" | "expenses" | "mileage" | "summary";
+type InvoiceView = "draft" | "receivables";
 
 function timeCostsViewForMode(mode: ToolMode | null | undefined): TimeCostsView | null {
   if (mode === "time-tracker") return "time";
@@ -114,8 +115,14 @@ function timeCostsViewForMode(mode: ToolMode | null | undefined): TimeCostsView 
   return null;
 }
 
+function invoiceViewForMode(mode: ToolMode | null | undefined): InvoiceView | null {
+  if (mode === "payments") return "receivables";
+  return null;
+}
+
 function normalizePublicToolMode(mode: ToolMode | null | undefined): "hub" | PublicToolMode {
   if (timeCostsViewForMode(mode)) return "time-costs";
+  if (invoiceViewForMode(mode)) return "invoice";
   return isPublicToolMode(mode) ? mode : "hub";
 }
 
@@ -313,6 +320,7 @@ function readFieldTools(): LaunchableToolMode[] {
     const normalized = parsed.map((mode) => {
       if (mode === "price-book") return "materials";
       if (["time-tracker", "expense-logger", "mileage", "tax-summary"].includes(String(mode))) return "time-costs";
+      if (mode === "payments") return "invoice";
       return mode;
     });
     const valid = normalized.filter((mode): mode is LaunchableToolMode => typeof mode === "string" && allowed.has(mode as LaunchableToolMode));
@@ -431,7 +439,6 @@ const UTILITY_TOOL_LAUNCHERS: ToolLauncher[] = [
   { mode: "time-costs", icon: RefreshCw, title: "Time & costs", summary: "Time, expenses, mileage, and summary." },
   { mode: "punch-list", icon: ListChecks, title: "Punch list", summary: "Open items." },
   { mode: "safety-checklist", icon: Shield, title: "Safety", summary: "Daily site check." },
-  { mode: "payments", icon: ReceiptText, title: "Receivables", summary: "Balances and status." },
 ];
 
 interface MileageEntry {
@@ -2760,6 +2767,47 @@ function TimeCostsTool({
   );
 }
 
+function InvoiceWorkspaceTool({
+  activeView,
+  onViewChange,
+  draft,
+}: {
+  activeView: InvoiceView;
+  onViewChange: (view: InvoiceView) => void;
+  draft: ReactNode;
+}) {
+  const views: Array<{ id: InvoiceView; label: string; icon: ToolIcon }> = [
+    { id: "draft", label: "Draft", icon: FileText },
+    { id: "receivables", label: "Receivables", icon: ReceiptText },
+  ];
+
+  return (
+    <div className="v2-invoice-workspace">
+      <div className="v2-invoice-workspace-content">
+        {activeView === "draft" ? draft : null}
+        {activeView === "receivables" ? <PaymentTrackerTool /> : null}
+      </div>
+      <nav className="v2-invoice-workspace-tabs" aria-label="Invoice sections">
+        {views.map((view) => {
+          const Icon = view.icon;
+          return (
+            <button
+              key={view.id}
+              type="button"
+              className={activeView === view.id ? "is-active" : ""}
+              aria-current={activeView === view.id ? "page" : undefined}
+              onClick={() => onViewChange(view.id)}
+            >
+              <Icon size={18} aria-hidden="true" />
+              <span>{view.label}</span>
+            </button>
+          );
+        })}
+      </nav>
+    </div>
+  );
+}
+
 function projectErrorMessage(error: unknown) {
   if (error instanceof ProjectApiError) return error.message;
   return error instanceof Error ? error.message : "RIVT could not update the project record.";
@@ -2857,6 +2905,8 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
   const activeTool = controlledTool ?? localActiveTool;
   const [timeCostsView, setTimeCostsView] = useState<TimeCostsView>(() => timeCostsViewForMode(openTool) ?? "time");
   const activeTimeCostsView = timeCostsViewForMode(openTool) ?? timeCostsView;
+  const [invoiceView, setInvoiceView] = useState<InvoiceView>(() => invoiceViewForMode(openTool) ?? "draft");
+  const activeInvoiceView = invoiceViewForMode(openTool) ?? invoiceView;
   const [fieldTools, setFieldTools] = useState(readFieldTools);
   const [fieldToolsEditing, setFieldToolsEditing] = useState(false);
   const [cameraContextRequest, setCameraContextRequest] = useState(0);
@@ -3097,6 +3147,8 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
   function setActiveTool(tool: ToolMode, options: { keepConvertedInvoice?: boolean } = {}) {
     const requestedTimeCostsView = timeCostsViewForMode(tool);
     if (requestedTimeCostsView) setTimeCostsView(requestedTimeCostsView);
+    const requestedInvoiceView = invoiceViewForMode(tool);
+    if (requestedInvoiceView) setInvoiceView(requestedInvoiceView);
     const nextTool = normalizePublicToolMode(tool);
     if (nextTool !== activeTool) setContextChosenTool(null);
     if (!onToolChange) {
@@ -3114,6 +3166,11 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
     if (timeCostsViewForMode(openTool)) onToolChange?.("time-costs");
   }
 
+  function changeInvoiceView(view: InvoiceView) {
+    setInvoiceView(view);
+    if (invoiceViewForMode(openTool)) onToolChange?.("invoice");
+  }
+
   function openToolFromHub(tool: LaunchableToolMode) {
     setActiveTool(tool);
   }
@@ -3125,6 +3182,7 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
 
   function handleConvertEstimateToInvoice(draft: EstimateInvoiceDraft) {
     setConvertedEstimateDraft(draft);
+    setInvoiceView("draft");
     setActiveTool("invoice", { keepConvertedInvoice: true });
   }
 
@@ -3709,8 +3767,14 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
         node: <EstimateTool key={`estimate:${activeJobScopeKey}`} activeJob={activeJob} workContext={toolWorkContext} onConvertToInvoice={handleConvertEstimateToInvoice} />,
       },
       invoice: {
-        title: "Invoice draft",
-        node: <InvoiceDraftTool key={`invoice:${activeJobScopeKey}`} activeJob={activeJob} workContext={toolWorkContext} estimateDraft={convertedEstimateDraft} activeWorkId={toolWorkContext.kind === "rivt" ? toolWorkContext.activeWorkId : null} />,
+        title: "Invoice",
+        node: (
+          <InvoiceWorkspaceTool
+            activeView={activeInvoiceView}
+            onViewChange={changeInvoiceView}
+            draft={<InvoiceDraftTool key={`invoice:${activeJobScopeKey}`} activeJob={activeJob} workContext={toolWorkContext} estimateDraft={convertedEstimateDraft} activeWorkId={toolWorkContext.kind === "rivt" ? toolWorkContext.activeWorkId : null} />}
+          />
+        ),
       },
       "daily-log": {
         title: "Daily log",
@@ -3792,8 +3856,14 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
         node: <JobChecklistTool />,
       },
       payments: {
-        title: "Payment tracker",
-        node: <PaymentTrackerTool />,
+        title: "Invoice",
+        node: (
+          <InvoiceWorkspaceTool
+            activeView="receivables"
+            onViewChange={changeInvoiceView}
+            draft={<InvoiceDraftTool key={`invoice-legacy:${activeJobScopeKey}`} activeJob={activeJob} workContext={toolWorkContext} estimateDraft={convertedEstimateDraft} activeWorkId={toolWorkContext.kind === "rivt" ? toolWorkContext.activeWorkId : null} />}
+          />
+        ),
       },
       "daily-report": {
         title: "Daily site report",

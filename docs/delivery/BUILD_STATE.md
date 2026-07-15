@@ -2,12 +2,31 @@
 
 Last updated: 2026-07-15 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Packet 45 is production verified at its focused boundary. It
-consolidates Time, Expenses, Mileage, and Tax Summary into one supporting app
-without moving or deleting records.
-Active packet: `docs/delivery/packets/45_TIME_COSTS_CONSOLIDATION.md`
-Repository branch: `master`
-Production feature release commit: `dcd8a8f191dad2a9ee76d6c21dc069e4b909ca79`
+Current phase: Packet 46 is locally verified at its focused boundary. It folds
+Receivables into Invoice without moving or deleting payment records.
+Active packet: `docs/delivery/packets/46_INVOICE_RECEIVABLES_CONSOLIDATION.md`
+Repository branch: `codex/invoice-receivables-consolidation`
+Production feature release commit: pending
+
+## Packet 46 - Invoice and Receivables Consolidation (Local Verification)
+
+- Tools now has one Invoice launcher with Draft and Receivables sections. The
+  duplicate Receivables launcher is removed.
+- Existing invoice and payment-tracker implementations, records, storage keys,
+  totals, email, print, templates, and estimate conversion remain in place.
+- Legacy `?tool=payments` links and stored shortcuts resolve to Invoice with
+  Receivables selected.
+- Build, lint, security lint, 55 unit tests, all 19 PostgreSQL integration
+  suites, E2E, desktop/mobile/compact Tools UI, mobile-action UI, dependency
+  audit, and diff checks pass.
+- Rendered checks cover 1440x900, 390x844, and 320x568 with no horizontal
+  overflow. The lower mobile dock remains reachable without obscuring the
+  working surface; desktop sections render in flow above it.
+- Server-owned tool-record persistence and account isolation pass in the full
+  PostgreSQL integration run. Production deployment remains pending.
+- Remaining boundary: physical-device confirmation that an existing invoice
+  and receivable remain present after switching sections, leaving Invoice, and
+  reopening it.
 
 ## Packet 45 - Time and Costs Consolidation (Production Verification)
 

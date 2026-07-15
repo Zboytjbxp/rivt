@@ -397,11 +397,11 @@ async function runMobileFlow(page) {
   await primaryInvoiceTool.waitFor({ timeout: 15_000 });
   await page.getByLabel("Field shortcuts").getByRole("button", { name: "Camera", exact: true }).waitFor({ timeout: 15_000 });
   assert.equal(await page.locator(".v2-tool-launch-card").count(), 2, "mobile Tools hub should keep only the unpinned core apps in the main grid");
-  assert.equal(await page.locator(".v2-tool-mini-card").count(), 5, "mobile Tools hub should expose the consolidated supporting tool set");
+  assert.equal(await page.locator(".v2-tool-mini-card").count(), 4, "mobile Tools hub should expose the consolidated supporting tool set");
   assert.equal(await page.locator(".v2-tool-mini-card").filter({ hasText: "Time & costs" }).count(), 1, "Time & costs should replace the separate record helpers");
   await assertNoHorizontalOverflow(page, "Tools hub");
   await primaryInvoiceTool.click();
-  await page.getByRole("heading", { name: "Invoice draft" }).waitFor({ timeout: 15_000 });
+  await page.getByRole("heading", { name: "Invoice", exact: true }).first().waitFor({ timeout: 15_000 });
   await page.getByRole("button", { name: "Work context: Quick use. Change context." }).waitFor({ timeout: 15_000 });
   assert.equal(await page.getByLabel("Bill to").inputValue(), "", "Quick-use invoice must not prefill an unrelated job or client");
   const invoiceSaveButton = page.getByLabel("Invoice actions").getByRole("button", { name: /Save/i });
@@ -414,7 +414,7 @@ async function runMobileFlow(page) {
   await assertNoHorizontalOverflow(page, "Invoice app");
   await page.screenshot({ path: path.join(screenshotDir, "mobile-invoice-standalone-context.png"), fullPage: true });
 
-  await page.getByLabel("Invoice draft").getByRole("button", { name: "Tools" }).click();
+  await page.getByLabel("Invoice", { exact: true }).getByRole("button", { name: "Tools" }).click();
   await page.getByRole("heading", { name: "Tools", exact: true }).waitFor({ timeout: 15_000 });
   await page.getByLabel("Field shortcuts").getByRole("button", { name: "Camera", exact: true }).click();
   await page.getByRole("heading", { name: "Camera", exact: true }).waitFor({ timeout: 15_000 });

@@ -10,6 +10,23 @@ Status values:
 
 Evidence must eventually link to implementation, automated tests, manual acceptance proof, and deployed build.
 
+## Traceability Addendum - 2026-07-15 Invoice and Receivables Consolidation (Local Verification)
+
+- `GA-UX-003` gains billing-workflow evidence: invoice drafting and receivable
+  tracking now live in one customer-billing app rather than competing as two
+  unrelated launchers.
+- `GA-UX-006` gains compact interaction evidence: Draft and Receivables remain
+  reachable through a lower mobile dock at 390x844 and 320x568, while desktop
+  keeps the controls in flow above the workspace.
+- Existing invoice and payment records are read in place. This packet performs
+  no data migration, deletion, calculation, auth, billing-provider, storage,
+  or delivery change.
+- Legacy Receivables deep links and stored shortcuts resolve to the matching
+  section, and Estimate continues to convert into Invoice Draft.
+- Build, lint, security lint, 55 unit tests, all 19 PostgreSQL integration
+  suites, E2E, desktop/mobile/compact Tools UI, mobile-action UI, dependency
+  audit, and diff checks pass. Production evidence remains pending.
+
 ## Traceability Addendum - 2026-07-15 Time and Costs Consolidation (Production Verification)
 
 - `GA-UX-003` gains tool-IA evidence: Time, Expenses, Mileage, and Summary now

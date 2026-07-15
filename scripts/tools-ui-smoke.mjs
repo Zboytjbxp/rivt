@@ -448,8 +448,12 @@ async function runToolsFlow(page, viewportName) {
   await page.locator(".v2-tool-group").filter({ hasText: "Utilities" }).locator("summary").click();
   await page.getByRole("button", { name: /Materials/i }).waitFor({ timeout: 15_000 });
   await page.getByRole("button", { name: /Time & costs/i }).waitFor({ timeout: 15_000 });
-  await page.getByRole("button", { name: /Receivables/i }).waitFor({ timeout: 15_000 });
   await page.getByRole("button", { name: /Safety/i }).waitFor({ timeout: 15_000 });
+  assert.equal(
+    await page.getByRole("button", { name: /Receivables/i }).count(),
+    0,
+    "Receivables should live inside Invoice instead of appearing as a separate launcher",
+  );
   assert.equal(
     await page.getByRole("button", { name: /Price book/i }).count(),
     0,
@@ -587,7 +591,13 @@ async function runToolsFlow(page, viewportName) {
   await page.getByLabel("Estimate builder").getByRole("button", { name: "Tools" }).click();
 
   await primaryTool("Invoice").click();
-  await page.getByRole("heading", { name: "Invoice draft" }).waitFor({ timeout: 15_000 });
+  await page.getByRole("heading", { name: "Invoice", exact: true }).first().waitFor({ timeout: 15_000 });
+  const invoiceTabs = page.getByRole("navigation", { name: "Invoice sections" });
+  assert.equal(
+    await invoiceTabs.getByRole("button", { name: "Draft", exact: true }).getAttribute("aria-current"),
+    "page",
+    "Invoice should open on the Draft section",
+  );
   await page.getByLabel("Invoice templates").getByText("Templates", { exact: true }).click();
   await page.getByLabel("Template name").fill(`${viewportName} invoice template`);
   await page.getByRole("button", { name: "Save template" }).click();
@@ -606,7 +616,23 @@ async function runToolsFlow(page, viewportName) {
   }
   await assertNoHorizontalOverflow(page);
   await page.screenshot({ path: path.join(screenshotDir, `${viewportName}-invoice.png`), fullPage: true });
-  await page.getByLabel("Invoice draft").getByRole("button", { name: "Tools" }).click();
+  await invoiceTabs.getByRole("button", { name: "Receivables", exact: true }).click();
+  assert.equal(
+    await invoiceTabs.getByRole("button", { name: "Receivables", exact: true }).getAttribute("aria-current"),
+    "page",
+    "Receivables should be reachable inside Invoice",
+  );
+  await page.screenshot({ path: path.join(screenshotDir, `${viewportName}-invoice-receivables.png`), fullPage: true });
+  await page.getByLabel("Invoice", { exact: true }).getByRole("button", { name: "Tools" }).click();
+
+  await page.goto(`${baseUrl}/app/tools?tool=payments`, { waitUntil: "networkidle" });
+  await page.getByRole("heading", { name: "Invoice", exact: true }).first().waitFor({ timeout: 15_000 });
+  assert.equal(
+    await page.getByRole("navigation", { name: "Invoice sections" }).getByRole("button", { name: "Receivables", exact: true }).getAttribute("aria-current"),
+    "page",
+    "Legacy payments links should open Invoice on the Receivables section",
+  );
+  await page.getByLabel("Invoice", { exact: true }).getByRole("button", { name: "Tools" }).click();
 
   await fieldToolsTray.getByRole("button", { name: "Daily log", exact: true }).click();
   await page.getByRole("heading", { name: "Jobsite note", exact: true }).waitFor({ timeout: 15_000 });
