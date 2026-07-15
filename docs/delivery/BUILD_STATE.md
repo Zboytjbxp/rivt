@@ -2,12 +2,33 @@
 
 Last updated: 2026-07-15 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Packet 43 is production verified at its focused boundary. It
-contains six unfinished or overlapping tool modes without deleting records and
-replaces the stale global mileage assumption with date-aware published rates.
-Active packet: `docs/delivery/packets/43_TOOLS_TRUTH_AND_CONTAINMENT.md`
-Repository branch: `codex/tools-truth-containment`
+Current phase: Packet 44 is locally verified at its focused boundary. It
+consolidates Materials and Price Book without deleting saved prices or seeding
+accounts with guessed supplier costs.
+Active packet: `docs/delivery/packets/44_MATERIALS_PRICE_LIBRARY.md`
+Repository branch: `codex/materials-price-book`
 Production feature release commit: `a068728d98d74c73e925144050e076c756ee53b2`
+
+## Packet 44 - Materials and Price Library (Local Verification)
+
+- One Materials launcher now contains Takeoff, Sheets, and Price library.
+  The separate Price Book launcher is gone; legacy links and pinned shortcuts
+  resolve into the consolidated app.
+- Existing device and server-owned `price_book` records are merged by record
+  ID and update time. No records or schema were removed.
+- The old trade-based starter catalog and automatic price seeding are removed.
+  Takeoff presets now carry geometry and waste assumptions only, and the UI
+  asks for a current supplier cost instead of pretending one is known.
+- Build, lint, security lint, 55 unit tests, E2E, desktop/mobile/compact Tools
+  UI, mobile-action UI, dependency audit, and diff checks pass. The directly
+  affected PostgreSQL tool-records integration suite passes against the
+  configured isolated test database.
+- The aggregate test command entered the serial PostgreSQL suite and exceeded
+  the 15-minute local command window without a reported assertion failure, so
+  a full integration pass is not claimed for this packet.
+- Feature commit: `a963041d774dbf511f12c183db7f6bb6425b1814`.
+- Remaining boundary: physical-device confirmation of one existing price and
+  one newly added current supplier price after leaving and reopening Materials.
 
 ## Packet 43 - Tools Truth and Containment (Production Verification)
 
