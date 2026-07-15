@@ -2,14 +2,14 @@
 
 Last updated: 2026-07-15 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Packet 45 is locally verified at its focused boundary. It
+Current phase: Packet 45 is production verified at its focused boundary. It
 consolidates Time, Expenses, Mileage, and Tax Summary into one supporting app
 without moving or deleting records.
 Active packet: `docs/delivery/packets/45_TIME_COSTS_CONSOLIDATION.md`
-Repository branch: `codex/time-costs-consolidation`
-Production feature release commit: pending
+Repository branch: `master`
+Production feature release commit: `dcd8a8f191dad2a9ee76d6c21dc069e4b909ca79`
 
-## Packet 45 - Time and Costs Consolidation (Local Verification)
+## Packet 45 - Time and Costs Consolidation (Production Verification)
 
 - Tools now has one `Time & costs` launcher with Time, Expenses, Mileage, and
   Summary sections in a persistent lower dock. Four duplicate launchers were
@@ -23,8 +23,15 @@ Production feature release commit: pending
   UI, mobile-action UI, dependency audit, diff checks, and the focused
   PostgreSQL tool-records integration suite pass.
 - Rendered checks cover 1440x900, 390x844, and 320x568 with no horizontal
-  overflow and a visible four-section dock. Production deployment and
-  expected-source monitoring remain pending.
+  overflow and a visible four-section dock.
+- Railway serves exact source `dcd8a8f191dad2a9ee76d6c21dc069e4b909ca79`.
+  The expected-source production monitor passed with PostgreSQL and
+  S3-compatible storage healthy, Sentry and Web Push configured, matching-job
+  alerts enabled, rollout controls off, and seven anonymous private-route
+  checks in 545 ms.
+- Remaining boundary: physical-device confirmation that all four sections
+  remain reachable and preserve existing records after leaving and reopening
+  Time & costs.
 
 ## Packet 44 - Materials and Price Library (Production Verification)
 

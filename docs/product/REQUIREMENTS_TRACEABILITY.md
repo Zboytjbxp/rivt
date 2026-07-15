@@ -10,7 +10,7 @@ Status values:
 
 Evidence must eventually link to implementation, automated tests, manual acceptance proof, and deployed build.
 
-## Traceability Addendum - 2026-07-15 Time and Costs Consolidation (Local Verification)
+## Traceability Addendum - 2026-07-15 Time and Costs Consolidation (Production Verification)
 
 - `GA-UX-003` gains tool-IA evidence: Time, Expenses, Mileage, and Summary now
   live in one supporting app rather than competing as four unrelated launchers.
@@ -23,8 +23,10 @@ Evidence must eventually link to implementation, automated tests, manual accepta
   so consolidation does not strand prior navigation.
 - Build, lint, security lint, 55 unit tests, E2E, desktop/mobile/compact Tools
   UI, mobile-action UI, dependency audit, diff checks, and the focused
-  PostgreSQL tool-records integration suite pass. Deployment evidence remains
-  pending in `docs/delivery/BUILD_STATE.md`.
+  PostgreSQL tool-records integration suite pass. Railway serves exact source
+  `dcd8a8f191dad2a9ee76d6c21dc069e4b909ca79`; expected-source monitoring
+  passed with PostgreSQL, private object storage, Sentry, Web Push, matching
+  alerts, rollout controls, and anonymous private-route checks healthy.
 
 ## Traceability Addendum - 2026-07-14 Tools Truth and Containment (Production Verification)
 
