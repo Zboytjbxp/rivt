@@ -4,7 +4,7 @@ Last updated: 2026-07-14 America/New_York
 Current gate: Gate B controlled engagement
 Current phase: Packet 42 is locally verified for Estimate email delivery. It
 adds server-confirmed delivery rather than a decorative Send control and is
-awaiting full verification plus review/deployment.
+awaiting database completion, controlled inbox proof, review, and deployment.
 Active packet: `docs/delivery/packets/42_ESTIMATE_EMAIL_DELIVERY.md`
 Repository branch: `codex/estimate-delivery`
 Production feature release commit: `0849eaacc0b70302bf70c487c058c33b62f99c42`
@@ -23,10 +23,14 @@ Production feature release commit: `0849eaacc0b70302bf70c487c058c33b62f99c42`
 - Client and provider idempotency prevent a same-key retry from sending a
   duplicate estimate; the client keeps the retry key while unchanged fields
   are retried after a weak connection.
-- Build, lint, Tools UI, and mobile-action UI checks pass locally. The
-  required aggregate/unit/E2E/dependency checks are pending after this packet
-  documentation update. PostgreSQL integration remains unclaimed until a
-  disposable `TEST_DATABASE_URL` is configured.
+- Build, lint, security lint, unit/integration-safe aggregate checks, E2E,
+  Tools UI, mobile-action UI, dependency audit, and diff checks pass locally.
+  The local aggregate integration phase initially skipped database suites in
+  this clean worktree. An ignored `.env` with the established isolated
+  `rivt_test` URL was then copied in and `npm run test:integration:fresh` was
+  attempted; its reset/migration process produced no assertion output after
+  eleven minutes and was stopped. No PostgreSQL integration pass is claimed
+  until that database connection/stall is resolved.
 - Not deployed. Production remains on Camera Packet 41 source
   `0849eaacc0b70302bf70c487c058c33b62f99c42`.
 

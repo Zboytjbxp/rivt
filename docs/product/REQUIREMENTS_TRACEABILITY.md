@@ -22,9 +22,11 @@ Evidence must eventually link to implementation, automated tests, manual accepta
   the actor's saved estimate, validates its snapshot, records delivery state,
   and returns a cross-account lookup as not found. Customer email content
   excludes internal pricing assumptions.
-- Local build, lint, Tools UI, and mobile-action UI checks passed. PostgreSQL
-  integration, controlled inbox delivery, and production evidence remain
-  pending a disposable `TEST_DATABASE_URL`, provider check, and deployment.
+- Local build, lint, security lint, unit/E2E/UI gates, and dependency audit
+  passed. The established isolated `rivt_test` configuration was added to this
+  worktree, but the fresh reset/migration attempt stalled before assertions;
+  PostgreSQL integration, controlled inbox delivery, and production evidence
+  remain pending.
 
 ## Traceability Addendum - 2026-07-14 Camera Home Album Previews (Production Verified)
 

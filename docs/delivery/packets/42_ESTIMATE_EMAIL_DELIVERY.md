@@ -57,12 +57,16 @@ overhead, margin, or contingency.
 - `npm run lint` passed.
 - `npm run test:ui:tools` passed.
 - `npm run test:ui:mobile-actions` passed.
-- Pending after documentation update: `npm run test`, `npm run test:e2e`, and
-  `npm audit --omit=dev`.
+- `npm run test` passed with the database suites skipped before the ignored
+  local test configuration was available.
+- `npm run test:e2e` passed.
+- `npm audit --omit=dev` passed with zero production vulnerabilities.
 - `test/tool-records.integration.test.js` includes delivery validation,
   customer-safe email, idempotent replay, and cross-account authorization
-  cases. This worktree has no disposable `TEST_DATABASE_URL`, so no
-  database-backed integration result is claimed until that suite is run.
+  cases. The established isolated `rivt_test` configuration was copied into
+  this worktree and `npm run test:integration:fresh` was attempted, but the
+  reset/migration process emitted no assertion output after eleven minutes and
+  was stopped. No database-backed integration result is claimed.
 
 ## Boundary and Risk
 
@@ -71,6 +75,7 @@ overhead, margin, or contingency.
   marked as failed; the UI must never call this sent.
 - This is delivery only. A customer replying, accepting, signing, paying, or
   generating an invoice remains a separate explicit workflow.
-- Before deployment, send a non-production estimate to a controlled inbox and
-  confirm itemization, sender identity, failure behavior, and a same-key retry
-  against a disposable PostgreSQL database.
+- Before deployment, resolve the disposable-Postgres stall, run the delivery
+  integration cases, then send a controlled non-production estimate to a
+  controlled inbox and confirm itemization, sender identity, failure behavior,
+  and a same-key retry.
