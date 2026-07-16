@@ -1,5 +1,27 @@
 # Deployment Ledger
 
+## 2026-07-15 - Packet 53 Progressive Jobsite Flows
+
+- Source commit: `af13e52232ec0199a35d11f7f059942fed25b7a5`
+- Feature commit: `fa3063a14a94d3bc1c256c0dafd94b59db82306a`
+- Branch: `master` (source branch: `codex/progressive-jobsite-flows`)
+- Production: `https://rivt.pro`
+- Scope: Daily Log now follows Today, Work, and Review; Punch List separates
+  Open, Add item, and Resolved; Safety separates Check, Details, and Sign off
+  and presents one checklist category at a time. Existing records, work
+  context, exports, history, signoffs, and legacy links are unchanged.
+- Automated gates: typecheck, build, lint, security lint, 55 unit tests, E2E,
+  desktop/mobile/compact Tools UI, mobile-action UI, dependency audit, diff
+  checks, and all 19 serial isolated PostgreSQL integration suites passed with
+  zero failures or skips.
+- Post-deploy proof: production served the exact merge commit. The
+  expected-source monitor passed with PostgreSQL and S3-compatible storage
+  healthy, Sentry and Web Push configured, matching-job alerts enabled,
+  controls off, and seven anonymous private-route checks in 574 ms.
+- Rollback target: `82dcc44`.
+- Remaining field acceptance: complete one Daily Log, Punch item, and Safety
+  signoff from a physical phone and confirm the records remain after reopening.
+
 ## 2026-07-15 - Packet 44 Materials and Price Library
 
 - Source commit: `2bcc6d33d71db1c1e0102f402b885d6d80a15fc3`

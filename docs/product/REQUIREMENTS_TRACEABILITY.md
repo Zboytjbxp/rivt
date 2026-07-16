@@ -1451,3 +1451,24 @@ Evidence must eventually link to implementation, automated tests, manual accepta
   that direct payment occurs outside RIVT.
 - No requirement maturity changes. No server contract, authorization,
   authentication, billing, storage, or data model changed.
+
+# Traceability Addendum - 2026-07-15 Progressive Jobsite Flows
+
+- `GA-UX-003` gains progressive field-task evidence: Daily Log separates Today,
+  Work, and Review; Punch List separates Open, Add item, and Resolved; Safety
+  separates Check, Details, and Sign off.
+- `GA-UX-006` gains one-handed mobile evidence: Daily Log keeps Save and the
+  current next step in a lower action dock, optional details remain collapsed,
+  and rendered QA passes at 390x844 and 320x568 without horizontal overflow.
+- Existing Daily Log, Punch List, and Safety record ownership, exports,
+  history, signoffs, legacy links, and exact work context remain authoritative.
+- No requirement maturity changes. No server contract, authorization,
+  authentication, billing, storage, moderation, or data model changed.
+- Local evidence includes typecheck, production build, lint, security lint, 55
+  unit tests, E2E, rendered Tools QA, mobile-action QA, a zero-vulnerability
+  production dependency audit, diff checks, and all 19 serial PostgreSQL
+  integration suites with zero failures or skips.
+- Production evidence: Railway served exact merge source
+  `af13e52232ec0199a35d11f7f059942fed25b7a5`; the expected-source monitor
+  passed in 574 ms with migration 27 and all managed dependencies, alerts,
+  controls, and anonymous private-route checks healthy.
