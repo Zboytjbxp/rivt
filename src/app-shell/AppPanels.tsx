@@ -6,14 +6,12 @@ import {
   FolderOpen,
   LogOut,
   MessageSquareText,
+  Settings,
   ShieldCheck,
+  UserRound,
   X,
 } from "lucide-react";
-import type { ThemeMode, TrialPlan } from "../brandConfig";
-import { ThemeStudio } from "../components/ThemeStudio";
-import { ProfileShowcase } from "../features/profile/ProfileShowcase";
-import { ProgressBar, type AuthMethod } from "../features/auth/AuthScreens";
-import type { ThemeSource } from "./useAppTheme";
+import type { AuthMethod } from "../features/auth/AuthScreens";
 import { useFocusTrap } from "./useFocusTrap";
 import type { Role, Trade } from "../types";
 import type { NavLabel } from "./routes";
@@ -42,7 +40,6 @@ interface AccountProfileForPanel {
   organization: string;
   location: string;
   specialties: Trade[];
-  plan: TrialPlan;
   authMethod: AuthMethod;
 }
 
@@ -167,121 +164,71 @@ export function ActivityPanel({
 export function AccountPanel({
   role,
   profile,
-  recordCount,
-  recordGoal,
-  trainingProgress,
-  safetyCertCount,
-  safetyModuleCount,
-  themeMode,
-  themeSource,
   adminRoles,
-  communityBadges,
-  shoutOutCount,
-  onSetThemeSource,
+  onOpenProfile,
   onLogout,
   onClose,
   onNavigate,
 }: {
   role: Role;
   profile: AccountProfileForPanel;
-  recordCount: number;
-  recordGoal: number;
-  trainingProgress: number;
-  safetyCertCount: number;
-  safetyModuleCount: number;
-  themeMode: ThemeMode;
-  themeSource: ThemeSource;
   adminRoles: string[];
-  communityBadges: string[];
-  shoutOutCount: number;
-  onSetThemeSource: (source: ThemeSource) => void;
+  onOpenProfile: () => void;
   onLogout: () => void;
   onClose: () => void;
   onNavigate: (view: NavLabel) => void;
 }) {
   const trapRef = useFocusTrap<HTMLElement>(onClose);
+  const displayName = profile.displayName || profile.organization || "RIVT member";
+  const accountType = role === "contractor" ? "Contractor" : "Tradesperson";
+  const accountDetail = [profile.specialties[0] ?? accountType, profile.location].filter(Boolean).join(" / ");
   return (
     <div className="panel-backdrop rivt-v2" onClick={(event) => { if (event.target === event.currentTarget) onClose(); }}>
-      <aside ref={trapRef} className="side-panel" role="dialog" aria-modal="true" aria-label="Settings">
+      <aside ref={trapRef} className="side-panel account-menu-panel" role="dialog" aria-modal="true" aria-label="Account menu">
         <div className="side-panel-header">
           <div>
-            <span>{role === "contractor" ? "Contractor account" : "Tradesperson account"}</span>
-            <h2>Profile</h2>
+            <span>{accountType} account</span>
+            <h2>Account</h2>
           </div>
-          <button type="button" className="icon-button" onClick={onClose} aria-label="Close profile">
+          <button type="button" className="icon-button" onClick={onClose} aria-label="Close account menu">
             <X size={18} />
           </button>
         </div>
 
-        <ProfileShowcase
-          name={profile.displayName || profile.organization || "RIVT member"}
-          trade={profile.specialties[0] ?? (role === "contractor" ? "Contractor" : "Tradesperson")}
-          location={profile.location}
-          shoutOutCount={shoutOutCount}
-          safetyCertCount={safetyCertCount}
-          onEditProfile={() => onNavigate("Settings")}
-          onNavigate={onNavigate}
-        />
+        <button type="button" className="account-menu-identity" onClick={onOpenProfile}>
+          <span className="account-menu-avatar" aria-hidden="true">{displayName.slice(0, 1).toUpperCase()}</span>
+          <span className="account-menu-identity-copy">
+            <strong>{displayName}</strong>
+            <span>{accountDetail}</span>
+            <small>{profile.email} / {authMethodLabel(profile.authMethod)}</small>
+          </span>
+          <ChevronRight size={20} aria-hidden="true" />
+        </button>
 
-        <section className="account-standing">
-          <div className="account-standing-row">
-            <span>Records</span>
-            <strong>{recordCount}/{recordGoal}</strong>
-          </div>
-          <div className="account-standing-row">
-            <span>Safety certs</span>
-            <strong>{safetyCertCount}/{safetyModuleCount}</strong>
-          </div>
-          <div className="account-standing-row">
-            <span>Training</span>
-            <ProgressBar value={trainingProgress} />
-          </div>
-          <div className="account-standing-row">
-            <span>Community</span>
-            <div className="account-chip-row">
-              {communityBadges.length
-                ? communityBadges.map((badge) => <strong key={badge}>{badge}</strong>)
-                : <strong>New contributor</strong>}
-            </div>
-          </div>
-        </section>
-
-        <section className="account-section">
-          <div className="settings-section-heading">
-            <span>This device</span>
-            <strong>Signed in here as {profile.displayName || profile.organization || "RIVT member"}</strong>
-            <small>{profile.email} • {authMethodLabel(profile.authMethod)}</small>
-          </div>
-          <p className="account-note">
-            Sign out before handing this phone or browser to someone else.
-          </p>
-        </section>
-
-        <section className="account-section theme-settings-section">
-          <ThemeStudio
-            variant="compact"
-            themeMode={themeMode}
-            themeSource={themeSource}
-            onSetThemeSource={onSetThemeSource}
-          />
-        </section>
-
-        <div className="quick-actions">
+        <nav className="account-menu-actions" aria-label="Account destinations">
+          <button type="button" onClick={onOpenProfile}>
+            <UserRound size={19} />
+            <span><strong>Profile</strong><small>Edit your public trade profile</small></span>
+            <ChevronRight size={18} aria-hidden="true" />
+          </button>
+          <button type="button" onClick={() => onNavigate("Settings")}>
+            <Settings size={19} />
+            <span><strong>Settings</strong><small>Alerts, plan, theme, and security</small></span>
+            <ChevronRight size={18} aria-hidden="true" />
+          </button>
           {adminRoles.length ? (
             <button type="button" onClick={() => onNavigate("Admin")}>
-              <Flag size={15} />
-              Admin
+              <Flag size={19} />
+              <span><strong>Admin</strong><small>Moderation and support operations</small></span>
+              <ChevronRight size={18} aria-hidden="true" />
             </button>
           ) : null}
-          <button type="button" onClick={() => onNavigate("Settings")}>
-            <ShieldCheck size={15} />
-            Settings
-          </button>
-          <button type="button" className="account-signout-btn" onClick={onLogout}>
-            <LogOut size={15} />
-            Sign out
-          </button>
-        </div>
+        </nav>
+
+        <button type="button" className="account-menu-signout" onClick={onLogout}>
+          <LogOut size={18} />
+          <span><strong>Sign out</strong><small>Remove this account from this device</small></span>
+        </button>
       </aside>
     </div>
   );

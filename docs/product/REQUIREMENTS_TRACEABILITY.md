@@ -10,6 +10,22 @@ Status values:
 
 Evidence must eventually link to implementation, automated tests, manual acceptance proof, and deployed build.
 
+## Traceability Addendum - 2026-07-16 Account Drawer Subtraction (Local Verification)
+
+- `GA-UX-003` gains navigation-ownership evidence: the top-bar account drawer
+  contains only identity, Profile, Settings, conditional Admin, and Sign out.
+  Professional metrics remain in Profile; appearance, alerts, subscription,
+  storage, sessions, legal, support, and account controls remain in Settings.
+- `GA-UX-006` gains compact-mobile evidence: rendered smoke verifies the
+  reduced drawer, exact Settings theme and Alerts handoffs, conditional staff
+  behavior, and no horizontal overflow.
+- Existing session, billing, storage, moderation, notification, profile, and
+  account records are read in place. No API, schema, migration, authentication,
+  authorization, or server-owned record boundary changes in this packet.
+- Local evidence includes typecheck, build, lint, security lint, 55 unit tests,
+  E2E, mobile-action UI, zero production dependency vulnerabilities, diff
+  checks, and all 19 serial PostgreSQL integration suites.
+
 ## Traceability Addendum - 2026-07-15 Work State Architecture (Local Verification)
 
 - `GA-UX-003` gains lifecycle-destination evidence: Browse, Hiring or

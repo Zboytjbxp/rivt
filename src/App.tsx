@@ -101,7 +101,7 @@ import { useCommunityReactions } from "./features/shop-talk/useCommunityReaction
 import { usePushNotifications } from "./features/notifications/usePushNotifications";
 import type { ProfileUpdateInput } from "./features/profile/ProfileHub";
 import { isPublicToolMode, type ToolMode } from "./features/tools/tool-catalog";
-import { recordChecklist, safetyQuizData, trainingModules, type SafetyQuizResult } from "./features/profile/training-data";
+import { safetyQuizData, trainingModules, type SafetyQuizResult } from "./features/profile/training-data";
 import { apiPath, fetchWithTimeout, RIVT_SESSION_EXPIRED_EVENT } from "./lib/api";
 import {
   AuthGate,
@@ -2669,6 +2669,7 @@ function App() {
         ) : ["Trust & Legal", "Safety & Training", "Reviews", "Feedback", "Settings"].includes(activeView) ? (
           <ProfileRoute
             view={activeView as ProfileRouteView}
+            initialSettingsSection={new URLSearchParams(window.location.search).get("section") === "profile" ? "profile" : undefined}
             role={role}
             accountProfile={accountProfile}
             canonicalAccount={canonicalAccount}
@@ -2754,23 +2755,11 @@ function App() {
         <AccountPanel
           role={role}
           profile={accountProfile}
-          recordCount={uploadedRecords.size}
-          recordGoal={recordChecklist.length}
-          trainingProgress={Math.round((completedTraining.size / trainingModules.length) * 100)}
-          safetyCertCount={Object.values(safetyQuizResults).filter((r) => r.passed).length}
-          safetyModuleCount={safetyQuizData.length}
-          themeMode={themeMode}
-          themeSource={themeSource}
           adminRoles={canonicalAccount?.adminRoles ?? []}
-          communityBadges={communityBadgeLabelsFromReputation(communityReactionSummary)}
-          shoutOutCount={
-            shoutOuts.filter(
-              (shoutOut) =>
-                shoutOut.to === accountProfile.displayName ||
-                shoutOut.from === accountProfile.organization,
-            ).length
-          }
-          onSetThemeSource={handleSetThemeSource}
+          onOpenProfile={() => {
+            handleNavigate("Settings");
+            window.history.replaceState({ view: "Settings", section: "profile" }, "", "/app/profile/settings?section=profile");
+          }}
           onLogout={handleLogout}
           onClose={() => setAccountOpen(false)}
           onNavigate={handleNavigate}

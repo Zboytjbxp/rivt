@@ -2977,10 +2977,114 @@ textarea:focus-visible {
   color: var(--accent-deep);
 }
 
-.account-signout-btn {
-  flex: 0 0 auto !important;
-  color: var(--muted) !important;
-  font-size: 13px !important;
+.account-menu-panel {
+  gap: 12px;
+}
+
+.account-menu-identity,
+.account-menu-actions button,
+.account-menu-signout {
+  display: grid;
+  width: 100%;
+  align-items: center;
+  border: 1px solid var(--border);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.account-menu-identity {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 12px;
+  min-height: 82px;
+  padding: 13px;
+  border-radius: var(--v2-radius-lg);
+  background: var(--surface-soft);
+}
+
+.account-menu-avatar {
+  display: inline-flex;
+  width: 48px;
+  height: 48px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--nav);
+  color: var(--v2-on-accent);
+  font-size: 19px;
+  font-weight: var(--v2-weight-bold);
+}
+
+.account-menu-identity-copy,
+.account-menu-actions button > span,
+.account-menu-signout > span {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.account-menu-identity-copy strong,
+.account-menu-actions strong,
+.account-menu-signout strong {
+  font-size: 15px;
+  line-height: 1.25;
+}
+
+.account-menu-identity-copy > span,
+.account-menu-identity-copy small,
+.account-menu-actions small,
+.account-menu-signout small {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: var(--v2-weight-semibold);
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.account-menu-actions {
+  display: grid;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--v2-radius-lg);
+  background: var(--surface);
+}
+
+.account-menu-actions button {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 12px;
+  min-height: 64px;
+  padding: 11px 13px;
+  border: 0;
+  background: transparent;
+}
+
+.account-menu-actions button + button {
+  border-top: 1px solid var(--border);
+}
+
+.account-menu-identity:hover,
+.account-menu-identity:focus-visible,
+.account-menu-actions button:hover,
+.account-menu-actions button:focus-visible {
+  background: color-mix(in srgb, var(--accent) 7%, var(--surface));
+  outline: none;
+}
+
+.account-menu-signout {
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 12px;
+  min-height: 58px;
+  padding: 11px 13px;
+  border-radius: var(--v2-radius-lg);
+  background: transparent;
+  color: var(--v2-danger);
+}
+
+.account-menu-signout small {
+  color: var(--muted);
 }
 
 .activity-list {
@@ -3070,110 +3174,6 @@ button.activity-item {
 
 .empty-panel-state svg {
   color: var(--blue);
-}
-
-.account-profile-card {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: 10px;
-  align-items: center;
-  padding: 12px;
-}
-
-.account-profile-card strong,
-.account-profile-card span {
-  display: block;
-}
-
-.account-profile-card strong {
-  font-size: 14px;
-}
-
-.account-profile-card span {
-  margin-top: 2px;
-  color: var(--muted);
-  font-size: 13px;
-  font-weight: var(--v2-weight-strong);
-}
-
-.account-org-name {
-  font-size: 13px !important;
-  margin-top: 1px !important;
-  margin-bottom: -1px;
-}
-
-.account-stat-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-}
-
-.account-stat-grid .info-item {
-  min-width: 0;
-  min-height: 60px;
-  border: 1px solid var(--border);
-  border-radius: var(--v2-radius-lg);
-  background: var(--surface);
-}
-
-.account-specialty-chips {
-  margin-top: 8px;
-}
-
-.account-standing {
-  border: 1px solid var(--border);
-  border-radius: var(--v2-radius-lg);
-  background: var(--surface-soft);
-  overflow: hidden;
-}
-
-.account-standing-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 14px;
-}
-
-.account-standing-row + .account-standing-row {
-  border-top: 1px solid var(--border);
-}
-
-.account-standing-row > span {
-  flex-shrink: 0;
-  width: 68px;
-  color: var(--muted);
-  font-size: 13px;
-  font-weight: var(--v2-weight-bold);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.account-chip-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 7px;
-}
-
-.account-chip-row strong {
-  display: inline-flex;
-  min-height: 30px;
-  align-items: center;
-  padding: 0 10px;
-  border-radius: var(--v2-radius-pill);
-  background: var(--accent-soft);
-  color: var(--accent-deep);
-  font-size: 13px;
-}
-
-.account-note {
-  color: var(--muted);
-  font-size: 13px;
-  font-weight: var(--v2-weight-strong);
-  line-height: 1.4;
-}
-
-.theme-settings-section {
-  gap: 12px;
 }
 
 .settings-section-heading {

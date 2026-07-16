@@ -2,7 +2,7 @@ import type { ThemeMode, TrialPlan } from "../../brandConfig";
 import type { ThemeSource } from "../../app-shell/useAppTheme";
 import type { Role, Trade } from "../../types";
 import { useCallback, useEffect, useState } from "react";
-import { ProfileHub, type AccountSessionSummary, type ProfileUpdateInput } from "./ProfileHub";
+import { ProfileHub, type AccountSessionSummary, type ProfileUpdateInput, type SettingsSection } from "./ProfileHub";
 import type { SafetyQuizResult } from "./training-data";
 import { apiPath, fetchWithTimeout } from "../../lib/api";
 
@@ -40,6 +40,7 @@ interface CanonicalAccountForProfileRoute {
 
 interface ProfileRouteProps {
   view: ProfileRouteView;
+  initialSettingsSection?: SettingsSection;
   role: Role;
   accountProfile: AccountProfileForProfileRoute;
   canonicalAccount: CanonicalAccountForProfileRoute | null;
@@ -75,6 +76,7 @@ interface ProfileRouteProps {
 
 export function ProfileRoute({
   view,
+  initialSettingsSection,
   role,
   accountProfile,
   canonicalAccount,
@@ -147,7 +149,9 @@ export function ProfileRoute({
 
   return (
     <ProfileHub
+      key={`${view}:${initialSettingsSection ?? "account"}`}
       view={view}
+      initialSettingsSection={initialSettingsSection}
       role={role}
       profile={{
         email: accountProfile.email,

@@ -97,6 +97,7 @@ interface CanonicalProfileDetails extends Omit<ProfileUpdateInput, "displayName"
 
 interface ProfileHubProps {
   view: "Trust & Legal" | "Safety & Training" | "Reviews" | "Feedback" | "Settings";
+  initialSettingsSection?: SettingsSection;
   role: Role;
   profile: AccountProfile;
   storageUsage?: {
@@ -125,6 +126,8 @@ interface ProfileHubProps {
   onQuizComplete: (result: SafetyQuizResult) => void;
   isDemo?: boolean;
 }
+
+export type SettingsSection = "account" | "alerts" | "profile" | "appearance" | "billing" | "business" | "security";
 
 function formatBytes(bytes: number): string {
   if (!Number.isFinite(bytes) || bytes <= 0) {
@@ -1196,6 +1199,7 @@ function PlanCard() {
 
 export function ProfileHub({
   view,
+  initialSettingsSection,
   role,
   profile,
   canonicalProfile,
@@ -1222,7 +1226,14 @@ export function ProfileHub({
 }: ProfileHubProps) {
   const persona = usePersona();
   const [notificationPrefs, setNotificationPrefs] = useState<Record<NotificationPrefKey, boolean>>(defaultNotificationPrefs);
-  const [settingsSection, setSettingsSection] = useState<"account" | "alerts" | "profile" | "appearance" | "billing" | "business" | "security">("account");
+  const [settingsSection, setSettingsSection] = useState<SettingsSection>(() => {
+    if (initialSettingsSection) return initialSettingsSection;
+    if (typeof window === "undefined") return "account";
+    const section = new URLSearchParams(window.location.search).get("section");
+    return section === "alerts" || section === "profile" || section === "appearance" || section === "billing" || section === "business" || section === "security"
+      ? section
+      : "account";
+  });
   const [notificationPrefStatus, setNotificationPrefStatus] = useState("");
   const [savingNotificationKey, setSavingNotificationKey] = useState<NotificationPrefKey | null>(null);
   const [showPreview, setShowPreview] = useState(false);
