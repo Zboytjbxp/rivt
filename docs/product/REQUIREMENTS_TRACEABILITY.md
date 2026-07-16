@@ -1437,3 +1437,17 @@ Evidence must eventually link to implementation, automated tests, manual accepta
   `25ca2de639a40c6d7956de467a33decc99c520fa`; the expected-source monitor
   passed in 612 ms with migration 27, managed dependencies, observability,
   engagement controls, and all anonymous private-route checks healthy.
+# Traceability Addendum - 2026-07-15 Progressive Money Flows (Local Verification)
+
+- `GA-UX-003` gains progressive-task evidence: Estimate separates Price,
+  Customer, and Review; Invoice separates Items, Customer, and Review while
+  preserving conversion, draft records, delivery handoff, and receivables.
+- `GA-UX-006` gains one-handed mobile evidence: both money tools keep Save and
+  the current next action in a thumb-reachable dock at 390x844 and 320x568,
+  with no horizontal overflow. Invoice section navigation no longer competes
+  with that action zone.
+- `GA-TRUST-004` retains truthful money boundaries: internal estimate guidance
+  is review-only, customer copy remains separate, and Invoice continues to say
+  that direct payment occurs outside RIVT.
+- No requirement maturity changes. No server contract, authorization,
+  authentication, billing, storage, or data model changed.

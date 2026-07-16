@@ -1,4 +1,4 @@
-import { Copy, FileText, Mail, Save } from "lucide-react";
+import { ChevronLeft, ChevronRight, Copy, FileText, Mail, Save } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Panel } from "../../components/ui";
 import { requestKey } from "../../lib/api";
@@ -156,6 +156,7 @@ export function EstimateTool({
   const [saveMessage, setSaveMessage] = useState("Autosaved on this device.");
   const [delivery, setDelivery] = useState<EstimateDelivery | null>(null);
   const [sending, setSending] = useState(false);
+  const [step, setStep] = useState<"price" | "customer" | "review">("price");
   const sendIdempotencyKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -364,59 +365,73 @@ export function EstimateTool({
   }
 
   return (
-    <div className="v2-tool-workbench v2-estimate-workbench">
-      <Panel className="v2-tool-panel v2-estimate-builder-panel" eyebrow="Estimate" title="Build an estimate you can send">
-        <section className="v2-estimate-hero" aria-label="Estimate target">
-          <span>Recommended target</span>
-          <strong>{currency(target)}</strong>
-          <small>{currency(low)} - {currency(high)} / {formatNumber(days, 1)} working days</small>
-        </section>
+    <div className={`v2-tool-workbench v2-estimate-workbench is-${step}`}>
+      <nav className="v2-tool-flow-nav" aria-label="Estimate steps">
+        {(["price", "customer", "review"] as const).map((item, index) => (
+          <button key={item} type="button" aria-current={step === item ? "step" : undefined} onClick={() => setStep(item)}>
+            <span>{index + 1}</span>{item === "price" ? "Price" : item === "customer" ? "Customer" : "Review"}
+          </button>
+        ))}
+      </nav>
 
-        <div className="v2-estimate-quick-stats" aria-label="Estimate quick stats">
-          <article><span>Labor</span><strong>{currency(labor)}</strong></article>
-          <article><span>Material</span><strong>{currency(materials)}</strong></article>
-          <article><span>Cushion</span><strong>{marginShare}%</strong></article>
-        </div>
+      <Panel className="v2-tool-panel v2-estimate-builder-panel" eyebrow={`Step ${step === "price" ? 1 : step === "customer" ? 2 : 3} of 3`} title={step === "price" ? "Price the work" : step === "customer" ? "Add the customer" : "Review and send"}>
+        {step === "price" ? <>
+          <section className="v2-estimate-hero" aria-label="Estimate target">
+            <span>Recommended target</span>
+            <strong>{currency(target)}</strong>
+            <small>{currency(low)} - {currency(high)} / {formatNumber(days, 1)} working days</small>
+          </section>
+          <div className="v2-estimate-quick-stats" aria-label="Estimate quick stats">
+            <article><span>Labor</span><strong>{currency(labor)}</strong></article>
+            <article><span>Material</span><strong>{currency(materials)}</strong></article>
+            <article><span>Cushion</span><strong>{marginShare}%</strong></article>
+          </div>
+          <div className="v2-tool-input-grid v2-estimate-input-grid">
+            <label>Labor hours<input type="number" min="0" step="0.5" value={laborHours} onChange={(event) => setLaborHours(Math.max(0, Number(event.target.value) || 0))} /></label>
+            <label>Hourly rate<input type="number" min="0" value={hourlyRate} onChange={(event) => setHourlyRate(Math.max(0, Number(event.target.value) || 0))} /></label>
+            <label>Crew size<input type="number" min="1" value={crewSize} onChange={(event) => setCrewSize(Math.max(1, Number(event.target.value) || 1))} /></label>
+            <label>Materials<input type="number" min="0" value={materials} onChange={(event) => setMaterials(Math.max(0, Number(event.target.value) || 0))} /></label>
+            <label>Sub costs<input type="number" min="0" value={subCosts} onChange={(event) => setSubCosts(Math.max(0, Number(event.target.value) || 0))} /></label>
+            <label>Overhead %<input type="number" min="0" value={overheadPct} onChange={(event) => setOverheadPct(Math.max(0, Number(event.target.value) || 0))} /></label>
+            <label>Margin %<input type="number" min="0" value={marginPct} onChange={(event) => setMarginPct(Math.max(0, Number(event.target.value) || 0))} /></label>
+            <label>Contingency %<input type="number" min="0" value={contingencyPct} onChange={(event) => setContingencyPct(Math.max(0, Number(event.target.value) || 0))} /></label>
+          </div>
+        </> : null}
 
-        <section className="v2-estimate-delivery" aria-labelledby="estimate-delivery-title">
+        {step === "customer" ? <section className="v2-estimate-delivery" aria-labelledby="estimate-delivery-title">
           <div>
             <span>Customer copy</span>
-            <strong id="estimate-delivery-title">{recipientEmail.trim() ? "Ready to send when you are" : "Add customer details to send"}</strong>
-            <small>RIVT emails this estimate. It does not request payment or claim online approval.</small>
+            <strong id="estimate-delivery-title">{recipientEmail.trim() ? "Customer details ready" : "Who should receive this?"}</strong>
           </div>
           <div className="v2-tool-input-grid v2-estimate-delivery-grid">
             <label>Customer name<input value={recipientName} onChange={(event) => setRecipientName(event.target.value)} placeholder="Customer or company" /></label>
             <label>Customer email<input type="email" inputMode="email" value={recipientEmail} onChange={(event) => setRecipientEmail(event.target.value)} placeholder="name@example.com" /></label>
             <label>Estimate number<input value={estimateNumber} readOnly aria-label="Estimate number" /></label>
             <label>Valid through<input type="date" value={validThrough} onChange={(event) => setValidThrough(event.target.value)} /></label>
-            <label className="is-wide">Scope<textarea value={scope} onChange={(event) => setScope(event.target.value)} placeholder="Describe the work covered by this estimate." rows={2} /></label>
-            <label className="is-wide">Customer note<textarea value={customerNote} onChange={(event) => setCustomerNote(event.target.value)} placeholder="Optional note, exclusions, or next steps." rows={2} /></label>
+            <label className="is-wide">Scope<textarea value={scope} onChange={(event) => setScope(event.target.value)} placeholder="Describe the work covered by this estimate." rows={3} /></label>
+            <label className="is-wide">Customer note<textarea value={customerNote} onChange={(event) => setCustomerNote(event.target.value)} placeholder="Optional note, exclusions, or next steps." rows={3} /></label>
+          </div>
+        </section> : null}
+
+        {step === "review" ? <section className="v2-estimate-delivery" aria-labelledby="estimate-review-title">
+          <div>
+            <span>Customer copy</span>
+            <strong id="estimate-review-title">{recipientEmail.trim() ? `Ready for ${recipientEmail}` : "Add an email before sending"}</strong>
+            <small>RIVT emails this estimate. It does not request payment or claim online approval.</small>
           </div>
           <article className="v2-estimate-customer-preview" aria-label="Customer estimate preview">
             <span>Customer receives</span>
             <strong>{scope.trim() || "Estimate scope"}</strong>
-            <div>
-              {customerLines.map((line) => <p key={line.description}><span>{line.description}</span><b>{currency(centsToDollars(line.totalCents))}</b></p>)}
-            </div>
+            <div>{customerLines.map((line) => <p key={line.description}><span>{line.description}</span><b>{currency(centsToDollars(line.totalCents))}</b></p>)}</div>
             <footer><span>Estimated total</span><strong>{currency(target)}</strong></footer>
           </article>
-          {delivery?.status === "sent" ? <p className="v2-estimate-delivery-status is-sent">Sent to {delivery.recipientEmail} {delivery.sentAt ? `on ${new Date(delivery.sentAt).toLocaleString()}` : ""}. Confirm acceptance with the customer, then convert it to an invoice when the work is ready.</p> : null}
+          <button type="button" className="v2-secondary-button v2-tool-inline-action" onClick={() => void copySummary()}><Copy size={18} />Copy estimate</button>
+          {delivery?.status === "sent" ? <p className="v2-estimate-delivery-status is-sent">Sent to {delivery.recipientEmail} {delivery.sentAt ? `on ${new Date(delivery.sentAt).toLocaleString()}` : ""}. Confirm acceptance, then convert it to an invoice when the work is ready.</p> : null}
           {delivery?.status === "failed" ? <p className="v2-estimate-delivery-status is-failed">The last delivery did not complete. Check the recipient email and try again.</p> : null}
-        </section>
-
-        <div className="v2-tool-input-grid v2-estimate-input-grid">
-          <label>Labor hours<input type="number" min="0" step="0.5" value={laborHours} onChange={(event) => setLaborHours(Math.max(0, Number(event.target.value) || 0))} /></label>
-          <label>Hourly rate<input type="number" min="0" value={hourlyRate} onChange={(event) => setHourlyRate(Math.max(0, Number(event.target.value) || 0))} /></label>
-          <label>Crew size<input type="number" min="1" value={crewSize} onChange={(event) => setCrewSize(Math.max(1, Number(event.target.value) || 1))} /></label>
-          <label>Materials<input type="number" min="0" value={materials} onChange={(event) => setMaterials(Math.max(0, Number(event.target.value) || 0))} /></label>
-          <label>Sub costs<input type="number" min="0" value={subCosts} onChange={(event) => setSubCosts(Math.max(0, Number(event.target.value) || 0))} /></label>
-          <label>Overhead %<input type="number" min="0" value={overheadPct} onChange={(event) => setOverheadPct(Math.max(0, Number(event.target.value) || 0))} /></label>
-          <label>Margin %<input type="number" min="0" value={marginPct} onChange={(event) => setMarginPct(Math.max(0, Number(event.target.value) || 0))} /></label>
-          <label>Contingency %<input type="number" min="0" value={contingencyPct} onChange={(event) => setContingencyPct(Math.max(0, Number(event.target.value) || 0))} /></label>
-        </div>
+        </section> : null}
       </Panel>
 
-      <Panel as="aside" className="v2-tool-panel v2-tool-summary-panel" eyebrow="Target" title={`${currency(low)} - ${currency(high)}`}>
+      {step === "review" ? <Panel as="aside" className="v2-tool-panel v2-tool-summary-panel" eyebrow="Internal check" title={`${currency(low)} - ${currency(high)}`}>
         <section className={`v2-price-signal is-${priceSignal.tone}`} aria-label="Pricing signal">
           <div>
             <span>Pricing signal</span>
@@ -437,13 +452,15 @@ export function EstimateTool({
           <div><span>Margin</span><strong>{currency(margin)}</strong></div>
           <div><span>Contingency</span><strong>{currency(contingency)}</strong></div>
         </div>
-      </Panel>
+      </Panel> : null}
       <div className="v2-tool-action-dock" aria-label="Estimate actions">
         <span><strong>{currency(target)}</strong><small>{saveMessage}</small></span>
-        <button type="button" onClick={copySummary} aria-label="Copy estimate" title="Copy estimate"><Copy size={18} /></button>
+        {step !== "price" ? <button type="button" onClick={() => setStep(step === "review" ? "customer" : "price")} aria-label="Previous estimate step"><ChevronLeft size={18} /></button> : null}
         <button type="button" onClick={() => void saveDraft()} aria-label="Save estimate" title="Save estimate"><Save size={18} /><span>Save</span></button>
-        {onConvertToInvoice ? <button type="button" onClick={convertToInvoice} disabled={target <= 0} aria-label="Convert to invoice" title="Convert to invoice"><FileText size={18} /><span>Invoice</span></button> : null}
-        <button type="button" className="v2-primary-button" onClick={() => void sendEstimateEmail()} disabled={sending || target <= 0 || !recipientEmail.trim()}><Mail size={18} /><span>{sending ? "Sending" : delivery?.status === "sent" ? "Send again" : "Send"}</span></button>
+        {step === "price" ? <button type="button" className="v2-primary-button" onClick={() => setStep("customer")}><span>Customer</span><ChevronRight size={18} /></button> : null}
+        {step === "customer" ? <button type="button" className="v2-primary-button" onClick={() => setStep("review")}><span>Review</span><ChevronRight size={18} /></button> : null}
+        {step === "review" && onConvertToInvoice ? <button type="button" onClick={convertToInvoice} disabled={target <= 0} aria-label="Convert to invoice" title="Convert to invoice"><FileText size={18} /><span>Invoice</span></button> : null}
+        {step === "review" ? <button type="button" className="v2-primary-button" onClick={() => void sendEstimateEmail()} disabled={sending || target <= 0 || !recipientEmail.trim()}><Mail size={18} /><span>{sending ? "Sending" : delivery?.status === "sent" ? "Send again" : "Send"}</span></button> : null}
       </div>
     </div>
   );

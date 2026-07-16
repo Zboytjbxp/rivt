@@ -405,6 +405,7 @@ async function runMobileFlow(page) {
   await primaryInvoiceTool.click();
   await page.getByRole("heading", { name: "Invoice", exact: true }).first().waitFor({ timeout: 15_000 });
   await page.getByRole("button", { name: "Work context: Quick use. Change context." }).waitFor({ timeout: 15_000 });
+  await page.getByRole("navigation", { name: "Invoice draft steps" }).getByRole("button", { name: /Customer/ }).click();
   assert.equal(await page.getByLabel("Bill to").inputValue(), "", "Quick-use invoice must not prefill an unrelated job or client");
   const invoiceSaveButton = page.getByLabel("Invoice actions").getByRole("button", { name: /Save/i });
   const invoiceSaveBox = await invoiceSaveButton.boundingBox();
@@ -412,6 +413,7 @@ async function runMobileFlow(page) {
   await page.getByRole("button", { name: "Work context: Quick use. Change context." }).click();
   await page.getByRole("dialog", { name: "Choose work context" }).getByRole("button", { name: /Miller kitchen/i }).click();
   await page.getByRole("button", { name: "Work context: Miller kitchen. Change context." }).waitFor({ timeout: 15_000 });
+  await page.getByRole("navigation", { name: "Invoice draft steps" }).getByRole("button", { name: /Customer/ }).click();
   assert.equal(await page.getByLabel("Bill to").inputValue(), "Miller family", "Standalone context should prefill its own client");
   await assertNoHorizontalOverflow(page, "Invoice app");
   await page.screenshot({ path: path.join(screenshotDir, "mobile-invoice-standalone-context.png"), fullPage: true });
