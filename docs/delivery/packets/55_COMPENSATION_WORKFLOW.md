@@ -82,9 +82,18 @@ profile rate as a binding bid.
 
 ## Deployment evidence
 
-Not deployed. This packet is locally verified and requires review, merge,
-Railway migration evidence, exact-source health, production monitoring, and a
-two-account fixed/hourly/negotiable acceptance check before production status.
+Deployed through Railway production deployment
+`748dcef5-42a9-4e63-af86-c51a56ebdb96`. Live `/api/health` served exact source
+`b9f7458978db70cd9c7d21d950376eaaa1a04d16` with migration
+`0028_compensation_workflow` ready, PostgreSQL and S3-compatible storage
+healthy, and Sentry and Web Push configured. The expected-source production
+monitor passed in 612 ms with rollout controls off and seven anonymous
+private-route checks.
+
+The remaining acceptance boundary is a physical two-account pass through
+fixed, hourly, open-to-offers, and request-quotes work. The automated
+two-account PostgreSQL lifecycle already proves listing target, applicant
+proposal, final offer, and accepted agreed compensation remain distinct.
 
 ## Next packet
 

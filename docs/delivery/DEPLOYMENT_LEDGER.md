@@ -1900,3 +1900,39 @@ Add one entry per staging/production deployment.
   records survive section changes and reopening Jobsite on iOS and Android.
 - Approval: Packet 47 runtime, automated records safeguards, rendered-device
   gates, and production health are verified; field acceptance remains open.
+
+## Current Production - Packet 55 Compensation Workflow
+
+- Environment: Production (`https://rivt.pro`)
+- Date/time/timezone: 2026-07-16 America/New_York
+- Deployer: Codex through a verified feature-branch push, fast-forward merge
+  to `master`, and Railway production auto-deploy
+- Source repository/branch: `Zboytjbxp/rivt`, `master`
+- Runtime feature source: `b9f7458978db70cd9c7d21d950376eaaa1a04d16`
+- Railway deployment ID: `748dcef5-42a9-4e63-af86-c51a56ebdb96`
+- Migration version before/after: `0027_default_private_photo_album` to
+  `0028_compensation_workflow`
+- Provider/config changes: none; auth, billing, PostgreSQL, object storage,
+  Sentry, Web Push, email, moderation, and rollout configuration were preserved.
+- Rollback target: `28728bb937b202fa8cd5671059739182052ad572` plus the reviewed,
+  deliberately destructive Packet 55 down migration if new compensation data
+  can be discarded.
+- Automated gates: build, lint, security lint, 57 unit tests, E2E,
+  mobile-action UI, accepted-work lifecycle UI, zero-vulnerability production
+  dependency audit, diff checks, migration apply/rollback/reapply, and focused
+  jobs and match-acceptance PostgreSQL suites passed. Additional affected
+  messaging, projects, reviews, and safety suites passed before merge. The
+  aggregate integration wrapper hung during its serial database run, so a
+  completed aggregate rerun is not claimed.
+- Post-deploy proof: live `/api/health` returned exact feature source and ready
+  migration 0028 with managed dependencies and observability healthy. The
+  expected-source production monitor passed in 612 ms with rollout controls
+  off and seven anonymous private-route checks.
+- Product evidence: contractors can choose fixed, hourly, open-to-offers, or
+  request-quotes terms; applicant proposals, final offers, accepted agreed pay,
+  and visibility-scoped profile reference rates remain separate server-owned
+  concepts.
+- Known boundary: physically complete the four listing modes using one real
+  contractor account and one real tradesperson account.
+- Approval: runtime, migration, automated compensation lifecycle, and
+  production health are verified; physical field acceptance remains open.

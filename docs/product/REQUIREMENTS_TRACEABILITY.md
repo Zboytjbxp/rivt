@@ -10,7 +10,7 @@ Status values:
 
 Evidence must eventually link to implementation, automated tests, manual acceptance proof, and deployed build.
 
-## Traceability Addendum - 2026-07-16 Compensation Workflow (Local Verification)
+## Traceability Addendum - 2026-07-16 Compensation Workflow (Production Verification)
 
 - `GA-FND-002` gains migration evidence: `0028_compensation_workflow` owns job
   compensation modes, application proposals, final offer compensation, and
@@ -26,9 +26,11 @@ Evidence must eventually link to implementation, automated tests, manual accepta
 - `GA-UX-003` gains lifecycle clarity evidence: listing pay, target budget,
   applicant proposal, final offer, and accepted agreed pay are distinct states
   in Work rather than one overloaded number.
-- Local gates and affected PostgreSQL suites pass. `GA-OPS-008` remains pending
-  review, merge, migration 0028 production evidence, exact-source health,
-  monitoring, and a real two-account acceptance check.
+- Local gates and affected PostgreSQL suites pass. `GA-OPS-008` gains Railway
+  deployment `748dcef5-42a9-4e63-af86-c51a56ebdb96`, exact-source commit
+  `b9f7458978db70cd9c7d21d950376eaaa1a04d16`, ready migration 0028, and a
+  passing expected-source production monitor. Physical two-account acceptance
+  of all four listing modes remains open.
 
 ## Traceability Addendum - 2026-07-16 Account Drawer Subtraction (Production Verification)
 
