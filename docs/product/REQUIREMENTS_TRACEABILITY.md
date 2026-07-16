@@ -10,6 +10,26 @@ Status values:
 
 Evidence must eventually link to implementation, automated tests, manual acceptance proof, and deployed build.
 
+## Traceability Addendum - 2026-07-16 Compensation Workflow (Local Verification)
+
+- `GA-FND-002` gains migration evidence: `0028_compensation_workflow` owns job
+  compensation modes, application proposals, final offer compensation, and
+  per-trade profile rate cards with apply/rollback/reapply coverage.
+- `GA-FND-004` gains authorization evidence: rate visibility is enforced by
+  server query context, job writes remain organization-authorized,
+  applications remain applicant-owned, and offers remain contractor-owned.
+- `GA-FND-005` gains typed validation evidence: realistic hourly listings are
+  accepted; partial, zero, or contradictory proposal/offer terms fail closed.
+- `GA-PRO-002` gains server-owned professional-rate evidence. Rates are labeled
+  as references and visibility is controlled; they are not represented as a
+  bid, contract, verified market rate, or promise of payment.
+- `GA-UX-003` gains lifecycle clarity evidence: listing pay, target budget,
+  applicant proposal, final offer, and accepted agreed pay are distinct states
+  in Work rather than one overloaded number.
+- Local gates and affected PostgreSQL suites pass. `GA-OPS-008` remains pending
+  review, merge, migration 0028 production evidence, exact-source health,
+  monitoring, and a real two-account acceptance check.
+
 ## Traceability Addendum - 2026-07-16 Account Drawer Subtraction (Production Verification)
 
 - `GA-UX-003` gains navigation-ownership evidence: the top-bar account drawer

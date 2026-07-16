@@ -44,10 +44,12 @@ export function LocalSetupPrompt({ onDone }: LocalSetupPromptProps) {
       persistRateCardEntries([{
         id: "standard",
         trade: primaryTrade || "Standard",
+        tradeCode: (primaryTrade || "general_labor").toLowerCase().replace(/[^a-z0-9]+/g, "_"),
         hourlyRate,
         dayRate: 0,
         minimumCharge: 0,
         notes: "",
+        visibility: "applications",
         updatedAt: new Date().toISOString(),
       }]);
     } catch {

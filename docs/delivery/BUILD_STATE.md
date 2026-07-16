@@ -2,10 +2,28 @@
 
 Last updated: 2026-07-16 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Packet 54 Account Drawer Subtraction is production verified.
-Active packet: `docs/delivery/packets/54_ACCOUNT_DRAWER_SUBTRACTION.md`
-Repository branch: `master`
+Current phase: Packet 55 Compensation Workflow is locally verified and ready for review.
+Active packet: `docs/delivery/packets/55_COMPENSATION_WORKFLOW.md`
+Repository branch: `codex/compensation-workflow`
 Production feature release commit: `657aa80eda8c1ea1de0771dc5918d2fcd0511193`
+
+## Packet 55 - Compensation Workflow (Local Verification)
+
+- Contractors can list fixed, hourly, open-to-offers, or request-quotes work.
+  Open-to-offers uses an optional target; request-quotes requires no invented
+  budget.
+- Tradespeople can submit explicit proposals where required. Contractors must
+  enter the final amount/unit before sending an offer, and accepted work keeps
+  those agreed terms instead of inheriting a listing estimate.
+- Server-owned per-trade rate cards support hourly, day, and minimum-charge
+  reference rates with network, applications-only, and private visibility.
+- Migration `0028_compensation_workflow` adds the normalized fields and rate
+  cards with rollback coverage. Affected PostgreSQL suites and rendered Work
+  lifecycle QA pass against the configured isolated test database.
+- This packet does not process payments, escrow funds, create payroll, or make
+  profile rates binding offers.
+- Production remains on Packet 54 source until Packet 55 is reviewed, merged,
+  migrated, and live-verified.
 
 ## Packet 54 - Account Drawer Subtraction (Production Verified)
 

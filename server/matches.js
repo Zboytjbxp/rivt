@@ -3,15 +3,27 @@ import { ApiError, z } from "./api.js";
 const note = z.string().trim().max(1200).default("");
 const consentVersion = z.string().trim().min(1).max(80);
 
-export const applicationDraftSchema = z.object({
+const applicationFields = {
   message: note,
   proposedStartDate: z.iso.date().nullable().default(null),
-});
+  proposedAmountCents: z.number().int().positive().max(100000000).nullable().default(null),
+  proposedUnit: z.enum(["fixed", "hourly"]).nullable().default(null),
+};
 
-export const applicationSubmitSchema = applicationDraftSchema.extend({
+function requireCompleteProposal(schema) {
+  return schema.refine(
+    (value) => (value.proposedAmountCents === null) === (value.proposedUnit === null),
+    { message: "Enter both a proposed amount and pay unit, or leave both blank.", path: ["proposedAmountCents"] },
+  );
+}
+
+export const applicationDraftSchema = requireCompleteProposal(z.object(applicationFields));
+
+export const applicationSubmitSchema = requireCompleteProposal(z.object({
+  ...applicationFields,
   consentAccepted: z.literal(true),
   consentVersion,
-});
+}));
 
 export const applicationDecisionSchema = z.object({
   reason: z.string().trim().max(500).default(""),
@@ -22,6 +34,8 @@ export const offerCreateSchema = z.object({
   scopeSummary: z.string().trim().max(2000).default(""),
   message: note,
   expiresAt: z.iso.datetime({ offset: true }).nullable().default(null),
+  agreedAmountCents: z.number().int().min(1).max(100000000),
+  agreedUnit: z.enum(["fixed", "hourly"]),
 });
 
 export const offerDecisionSchema = z.object({
@@ -71,6 +85,7 @@ function profileFromRow(row, prefix) {
       city: row[`${prefix}_service_area_city`] || "",
       region: row[`${prefix}_service_area_region`] || "",
     },
+    rates: Array.isArray(row[`${prefix}_rates`]) ? row[`${prefix}_rates`] : [],
   };
 }
 
@@ -82,6 +97,10 @@ export function mapApplication(row, { events = [] } = {}) {
     status: row.status,
     message: row.message || "",
     proposedStartDate: isoDate(row.proposed_start_date),
+    proposal: row.proposed_amount_cents === null || row.proposed_amount_cents === undefined ? null : {
+      amountCents: Number(row.proposed_amount_cents),
+      unit: row.proposed_unit || "fixed",
+    },
     submittedAt: isoDateTime(row.submitted_at),
     withdrawnAt: isoDateTime(row.withdrawn_at),
     decidedAt: isoDateTime(row.decided_at),
@@ -106,6 +125,7 @@ export function mapApplication(row, { events = [] } = {}) {
             currency: "USD",
             unit: row.job_budget_unit || "fixed",
           },
+      compensationType: row.job_compensation_type || (row.job_budget_unit === "hourly" ? "hourly" : "fixed"),
       publicLocation: {
         city: row.public_city,
         region: row.public_region,
@@ -128,6 +148,10 @@ export function mapOffer(row, { events = [] } = {}) {
     startDate: isoDate(row.start_date),
     scopeSummary: row.scope_summary || "",
     message: row.message || "",
+    agreedCompensation: row.agreed_amount_cents === null || row.agreed_amount_cents === undefined ? null : {
+      amountCents: Number(row.agreed_amount_cents),
+      unit: row.agreed_unit || "fixed",
+    },
     expiresAt: isoDateTime(row.expires_at),
     acceptedAt: isoDateTime(row.accepted_at),
     declinedAt: isoDateTime(row.declined_at),
@@ -174,8 +198,11 @@ export function mapActiveWork(row, { events = [] } = {}) {
         name: row.job_trade_name || row.job_trade_code,
       } : undefined,
       durationHours: row.job_duration_hours == null ? null : Number(row.job_duration_hours),
-      budget: {
-        amountCents: Number(row.job_budget_cents ?? 0),
+      budget: row.agreed_amount_cents !== null && row.agreed_amount_cents !== undefined ? {
+        amountCents: Number(row.agreed_amount_cents),
+        unit: row.agreed_unit || "fixed",
+      } : row.job_budget_cents == null ? null : {
+        amountCents: Number(row.job_budget_cents),
         unit: row.job_budget_unit || "fixed",
       },
       publicLocation: {

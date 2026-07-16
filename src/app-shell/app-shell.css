@@ -526,6 +526,11 @@
   white-space: nowrap;
 }
 
+.v2-search-person-result .v2-search-person-rate {
+  color: var(--v2-accent);
+  font-weight: var(--v2-weight-semibold);
+}
+
 .v2-search-person-result small {
   overflow: hidden;
   color: var(--v2-text-muted);

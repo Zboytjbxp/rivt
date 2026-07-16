@@ -114,3 +114,42 @@
   .job-editor-footer .secondary-action { padding-inline: 12px; }
   .three-columns { grid-template-columns: 1fr; }
 }
+.job-compensation-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.job-compensation-options legend {
+  grid-column: 1 / -1;
+  margin-bottom: 2px;
+  font-weight: var(--v2-weight-strong);
+}
+
+.job-compensation-options label {
+  display: flex;
+  min-height: 76px;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--v2-border);
+  border-radius: var(--v2-radius-md);
+  background: var(--v2-surface);
+  cursor: pointer;
+}
+
+.job-compensation-options label.is-selected {
+  border-color: var(--v2-accent);
+  box-shadow: 0 0 0 1px var(--v2-accent);
+}
+
+.job-compensation-options input { margin-top: 3px; }
+.job-compensation-options span { display: grid; gap: 4px; }
+.job-compensation-options small { color: var(--v2-text-muted); font-weight: var(--v2-weight-body); }
+
+@media (max-width: 640px) {
+  .job-compensation-options { grid-template-columns: 1fr; }
+}

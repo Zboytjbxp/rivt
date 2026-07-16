@@ -1157,6 +1157,8 @@ function ProfileSearchSpotlight({
       : profile.availabilityStatus === "limited"
         ? "Limited availability"
         : "Unavailable";
+  const visibleRates = profile.rateCards ?? [];
+  const formatMoney = (cents: number | null) => cents ? `$${(cents / 100).toLocaleString()}` : null;
 
   return (
     <Panel className="v2-network-spotlight">
@@ -1167,6 +1169,22 @@ function ProfileSearchSpotlight({
           <h2>{profile.displayName}</h2>
           <p>{profile.headline || roleLabel}</p>
           <small>{[tradeLine, profile.locationText].filter(Boolean).join(" · ") || roleLabel}</small>
+          {visibleRates.length ? (
+            <div className="v2-network-spotlight-rates" aria-label="Published reference rates">
+              {visibleRates.map((rate) => (
+                <div key={rate.tradeCode}>
+                  <strong>{rate.tradeName}</strong>
+                  <span>{[
+                    rate.hourlyRateCents ? `${formatMoney(rate.hourlyRateCents)}/hr` : null,
+                    rate.dayRateCents ? `${formatMoney(rate.dayRateCents)}/day` : null,
+                    rate.minimumChargeCents ? `${formatMoney(rate.minimumChargeCents)} minimum` : null,
+                  ].filter(Boolean).join(" · ")}</span>
+                  {rate.notes ? <small>{rate.notes}</small> : null}
+                </div>
+              ))}
+              <p>Reference rates only. Final pay is agreed in the offer before work starts.</p>
+            </div>
+          ) : null}
         </div>
       </div>
       <div className="v2-network-spotlight-actions">

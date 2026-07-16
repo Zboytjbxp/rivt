@@ -41,6 +41,17 @@ export async function loadActorContext(database, accountId) {
     [accountId],
   );
 
+  const rateCards = await database.query(
+    `SELECT rate.id, rate.trade_code, trade.name AS trade_name,
+            rate.hourly_rate_cents, rate.day_rate_cents, rate.minimum_charge_cents,
+            rate.visibility, rate.notes, rate.updated_at
+     FROM profile_rate_cards rate
+     INNER JOIN trades trade ON trade.code = rate.trade_code
+     WHERE rate.account_id = $1
+     ORDER BY rate.updated_at DESC, rate.id`,
+    [accountId],
+  );
+
   const row = accountResult.rows[0];
   return {
     account: {
@@ -70,6 +81,17 @@ export async function loadActorContext(database, accountId) {
       phoneVisibility: row.phone_visibility,
       avatarUploadId: row.avatar_upload_id,
       trades: trades.rows.map((trade) => ({ code: trade.code, name: trade.name, primary: trade.is_primary })),
+      rateCards: rateCards.rows.map((rate) => ({
+        id: rate.id,
+        tradeCode: rate.trade_code,
+        tradeName: rate.trade_name,
+        hourlyRateCents: rate.hourly_rate_cents,
+        dayRateCents: rate.day_rate_cents,
+        minimumChargeCents: rate.minimum_charge_cents,
+        visibility: rate.visibility,
+        notes: rate.notes,
+        updatedAt: new Date(rate.updated_at).toISOString(),
+      })),
     },
     memberships: memberships.rows.map((membership) => ({
       organizationId: membership.organization_id,

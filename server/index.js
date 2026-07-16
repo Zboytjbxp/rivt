@@ -45,6 +45,7 @@ import {
   jobListQuerySchema,
   jobSelectSql,
   loadMatchingJobAlertRecipients,
+  normalizeJobCompensation,
   mapJobRecord,
   matchingJobAlertLimit,
   matchingJobAlertsEnabled,
@@ -1093,6 +1094,17 @@ const canonicalAccountSchema = z.object({
     phoneVisibility: z.enum(["private", "connections"]),
     avatarUploadId: z.uuid().nullable(),
     trades: z.array(z.object({ code: z.string(), name: z.string(), primary: z.boolean() })),
+    rateCards: z.array(z.object({
+      id: z.uuid(),
+      tradeCode: z.string(),
+      tradeName: z.string(),
+      hourlyRateCents: z.number().int().nullable(),
+      dayRateCents: z.number().int().nullable(),
+      minimumChargeCents: z.number().int().nullable(),
+      visibility: z.enum(["network", "applications", "private"]),
+      notes: z.string(),
+      updatedAt: z.iso.datetime({ offset: true }),
+    })),
   }),
   organizations: z.array(z.object({
     id: z.uuid(),
@@ -1154,6 +1166,22 @@ const profileFieldsSchema = z.object({
   phoneVisibility: z.enum(["private", "connections"]).optional(),
   tradeCodes: z.array(z.string().trim().min(1).max(80)).min(1).max(12).optional(),
 });
+
+const rateCardEntrySchema = z.object({
+  tradeCode: z.string().trim().min(1).max(80),
+  hourlyRateCents: z.number().int().positive().max(10000000).nullable().default(null),
+  dayRateCents: z.number().int().positive().max(100000000).nullable().default(null),
+  minimumChargeCents: z.number().int().min(0).max(100000000).nullable().default(null),
+  visibility: z.enum(["network", "applications", "private"]).default("applications"),
+  notes: z.string().trim().max(240).default(""),
+}).refine((entry) => entry.hourlyRateCents !== null || entry.dayRateCents !== null || entry.minimumChargeCents !== null, {
+  message: "Add at least one rate.",
+});
+
+const rateCardReplaceSchema = z.object({ entries: z.array(rateCardEntrySchema).max(12) }).refine(
+  ({ entries }) => new Set(entries.map((entry) => entry.tradeCode)).size === entries.length,
+  { message: "Add only one rate card per trade.", path: ["entries"] },
+);
 
 const profileSearchQuerySchema = z.object({
   q: z.string().trim().min(2).max(80),
@@ -1239,6 +1267,38 @@ app.patch("/api/v1/profile", requireV1AuthenticatedUser, requireV1Actor, writeRa
   });
   const actor = await loadActorContext(database, request.actor.account.id);
   response.json({ data: { account: actor }, meta: { requestId: request.requestId } });
+}));
+
+app.get("/api/v1/profile/rates", requireV1AuthenticatedUser, requireV1Actor, asyncRoute(async (request, response) => {
+  response.json({ data: { rates: request.actor.profile.rateCards }, meta: { requestId: request.requestId } });
+}));
+
+app.put("/api/v1/profile/rates", requireV1AuthenticatedUser, requireV1Actor, writeRateLimit, asyncRoute(async (request, response) => {
+  const input = validate(rateCardReplaceSchema, request.body);
+  await withTransaction(async (client) => {
+    const tradeCodes = [...new Set(input.entries.map((entry) => entry.tradeCode))];
+    if (tradeCodes.length) {
+      const validTrades = await client.query("SELECT code FROM trades WHERE code = ANY($1::text[]) AND active = true", [tradeCodes]);
+      if (validTrades.rowCount !== tradeCodes.length) throw new ApiError(422, "TRADE_INVALID", "One of the selected trades is unavailable.");
+    }
+    await client.query("DELETE FROM profile_rate_cards WHERE account_id = $1", [request.actor.account.id]);
+    for (const entry of input.entries) {
+      await client.query(
+        `INSERT INTO profile_rate_cards (
+           account_id, trade_code, hourly_rate_cents, day_rate_cents, minimum_charge_cents, visibility, notes
+         ) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+        [request.actor.account.id, entry.tradeCode, entry.hourlyRateCents, entry.dayRateCents,
+          entry.minimumChargeCents, entry.visibility, entry.notes],
+      );
+    }
+    await client.query(
+      `INSERT INTO audit_events (request_id, actor_account_id, action, subject_type, subject_id, metadata)
+       VALUES ($1, $2::uuid, 'profile.rates_updated', 'profile', ($2::uuid)::text, $3::jsonb)`,
+      [request.requestId, request.actor.account.id, JSON.stringify({ count: input.entries.length })],
+    );
+  });
+  const actor = await loadActorContext(database, request.actor.account.id);
+  response.json({ data: { rates: actor.profile.rateCards }, meta: { requestId: request.requestId } });
 }));
 
 app.post("/api/v1/onboarding/complete", requireV1AuthenticatedUser, requireV1Actor, writeRateLimit, asyncRoute(async (request, response) => {
@@ -1356,11 +1416,26 @@ app.get("/api/v1/profiles", requireV1AuthenticatedUser, requireV1Actor, asyncRou
            ORDER BY pt.is_primary DESC, t.sort_order, t.code
          ) FILTER (WHERE t.code IS NOT NULL),
          '[]'::jsonb
-       ) AS trades
+       ) AS trades,
+       COALESCE(network_rates.rates, '[]'::jsonb) AS rate_cards
      FROM profiles p
      INNER JOIN accounts a ON a.id = p.account_id
      LEFT JOIN profile_trades pt ON pt.account_id = p.account_id
      LEFT JOIN trades t ON t.code = pt.trade_code AND t.active = true
+     LEFT JOIN LATERAL (
+       SELECT jsonb_agg(jsonb_build_object(
+         'tradeCode', rate.trade_code,
+         'tradeName', rate_trade.name,
+         'hourlyRateCents', rate.hourly_rate_cents,
+         'dayRateCents', rate.day_rate_cents,
+         'minimumChargeCents', rate.minimum_charge_cents,
+         'notes', rate.notes
+       ) ORDER BY rate_trade.sort_order, rate.trade_code) AS rates
+       FROM profile_rate_cards rate
+       INNER JOIN trades rate_trade ON rate_trade.code = rate.trade_code AND rate_trade.active = true
+       WHERE rate.account_id = p.account_id
+         AND rate.visibility = 'network'
+     ) network_rates ON true
      WHERE p.visibility = 'network'
        AND p.onboarding_status = 'complete'
        AND a.status = 'active'
@@ -1383,7 +1458,7 @@ app.get("/api/v1/profiles", requireV1AuthenticatedUser, requireV1Actor, asyncRou
              AND (search_t.name ILIKE $2 ESCAPE '\\' OR search_t.code ILIKE $2 ESCAPE '\\')
          )
        )
-     GROUP BY p.account_id, a.primary_role, p.display_name, p.headline, p.location_text, p.availability_status, p.updated_at
+     GROUP BY p.account_id, a.primary_role, p.display_name, p.headline, p.location_text, p.availability_status, p.updated_at, network_rates.rates
      ORDER BY
        CASE WHEN p.display_name ILIKE $3 ESCAPE '\\' THEN 0 ELSE 1 END,
        p.updated_at DESC,
@@ -1400,6 +1475,7 @@ app.get("/api/v1/profiles", requireV1AuthenticatedUser, requireV1Actor, asyncRou
     primaryRole: row.primary_role,
     availabilityStatus: row.availability_status,
     trades: Array.isArray(row.trades) ? row.trades : [],
+    rateCards: Array.isArray(row.rate_cards) ? row.rate_cards : [],
   }));
 
   response.json({ data: { profiles }, meta: { requestId: request.requestId, count: profiles.length } });
@@ -1570,16 +1646,35 @@ async function mapJobDetail(client, row, actor, includePrivateLocation) {
 
 const applicationSelectBase = `
   SELECT ja.*, j.title AS job_title, j.status AS job_status, j.organization_id,
+         j.trade_code AS job_trade_code, trade.name AS job_trade_name,
+         j.duration_hours AS job_duration_hours, j.budget_cents AS job_budget_cents,
+         j.budget_unit AS job_budget_unit, j.compensation_type AS job_compensation_type,
          o.name AS organization_name, pl.city AS public_city, pl.region AS public_region,
          pl.country_code AS public_country_code,
          p.account_id AS applicant_account_id, p.display_name AS applicant_display_name,
          p.headline AS applicant_headline, p.service_area_city AS applicant_service_area_city,
-         p.service_area_region AS applicant_service_area_region
+         p.service_area_region AS applicant_service_area_region,
+         COALESCE(applicant_rates.rates, '[]'::jsonb) AS applicant_rates
   FROM job_applications ja
   INNER JOIN jobs j ON j.id = ja.job_id
   INNER JOIN organizations o ON o.id = j.organization_id
   INNER JOIN job_public_locations pl ON pl.job_id = j.id
-  INNER JOIN profiles p ON p.account_id = ja.applicant_account_id`;
+  INNER JOIN profiles p ON p.account_id = ja.applicant_account_id
+  LEFT JOIN trades trade ON trade.code = j.trade_code
+  LEFT JOIN LATERAL (
+    SELECT jsonb_agg(jsonb_build_object(
+      'tradeCode', rate.trade_code,
+      'tradeName', rate_trade.name,
+      'hourlyRateCents', rate.hourly_rate_cents,
+      'dayRateCents', rate.day_rate_cents,
+      'minimumChargeCents', rate.minimum_charge_cents,
+      'visibility', rate.visibility
+    ) ORDER BY rate.updated_at DESC) AS rates
+    FROM profile_rate_cards rate
+    INNER JOIN trades rate_trade ON rate_trade.code = rate.trade_code
+    WHERE rate.account_id = ja.applicant_account_id
+      AND rate.visibility IN ('network', 'applications')
+  ) applicant_rates ON true`;
 
 const offerSelectBase = `
   SELECT jo.*, j.title AS job_title, j.status AS job_status, j.organization_id,
@@ -1598,11 +1693,12 @@ const activeWorkSelectBase = `
   SELECT aw.*, j.title AS job_title, j.status AS job_status,
          j.trade_code AS job_trade_code, t.name AS job_trade_name,
          j.duration_hours AS job_duration_hours, j.budget_cents AS job_budget_cents,
-         j.budget_unit AS job_budget_unit,
+         j.budget_unit AS job_budget_unit, jo.agreed_amount_cents, jo.agreed_unit,
          o.name AS organization_name, pl.city AS public_city, pl.region AS public_region,
          pl.country_code AS public_country_code
   FROM active_work aw
   INNER JOIN jobs j ON j.id = aw.job_id
+  INNER JOIN job_offers jo ON jo.id = aw.offer_id
   INNER JOIN organizations o ON o.id = aw.organization_id
   INNER JOIN job_public_locations pl ON pl.job_id = j.id
   LEFT JOIN trades t ON t.code = j.trade_code`;
@@ -3152,16 +3248,17 @@ app.post("/api/v1/jobs", requireV1AuthenticatedUser, requireV1Actor, writeRateLi
 
     const trade = await client.query("SELECT code FROM trades WHERE code = $1 AND active = true", [input.tradeCode]);
     if (!trade.rowCount) throw new ApiError(422, "TRADE_INVALID", "The selected trade is unavailable.");
+    const compensation = normalizeJobCompensation(input);
 
     const inserted = await client.query(
       `INSERT INTO jobs (
          organization_id, created_by_account_id, title, trade_code, summary,
-         scope_description, difficulty, work_type, budget_cents, budget_unit,
+         scope_description, difficulty, work_type, budget_cents, budget_unit, compensation_type,
          duration_hours, preferred_start_date, application_deadline, insurance_required
-       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
        RETURNING id`,
       [input.organizationId, request.actor.account.id, input.title, input.tradeCode, input.summary,
-        input.scopeDescription, input.difficulty, input.workType, input.budgetCents, input.budgetUnit,
+        input.scopeDescription, input.difficulty, input.workType, compensation.budgetCents, compensation.budgetUnit, compensation.compensationType,
         input.durationHours, input.preferredStartDate, input.applicationDeadline, input.insuranceRequired],
     );
     const jobId = inserted.rows[0].id;
@@ -3306,18 +3403,24 @@ app.patch("/api/v1/jobs/:id", requireV1AuthenticatedUser, requireV1Actor, writeR
       if (!trade.rowCount) throw new ApiError(422, "TRADE_INVALID", "The selected trade is unavailable.");
     }
     const has = (key) => Object.prototype.hasOwnProperty.call(input, key);
+    const compensation = normalizeJobCompensation({
+      compensationType: input.compensationType ?? current.compensation_type,
+      budgetCents: has("budgetCents") ? input.budgetCents : current.budget_cents,
+      budgetUnit: input.budgetUnit ?? current.budget_unit,
+    });
     const updated = await client.query(
       `UPDATE jobs SET
          title = $2, trade_code = $3, summary = $4, scope_description = $5,
          difficulty = $6, work_type = $7, budget_cents = $8, budget_unit = $9,
-         duration_hours = $10, preferred_start_date = $11, application_deadline = $12,
-         insurance_required = $13, version = version + 1, updated_at = now()
+         compensation_type = $10, duration_hours = $11, preferred_start_date = $12, application_deadline = $13,
+         insurance_required = $14, version = version + 1, updated_at = now()
        WHERE id = $1 RETURNING version`,
       [jobId, input.title ?? current.title, input.tradeCode ?? current.trade_code,
         input.summary ?? current.summary, input.scopeDescription ?? current.scope_description,
         input.difficulty ?? current.difficulty, input.workType ?? current.work_type,
-        has("budgetCents") ? input.budgetCents : current.budget_cents,
-        input.budgetUnit ?? current.budget_unit,
+        compensation.budgetCents,
+        compensation.budgetUnit,
+        compensation.compensationType,
         has("durationHours") ? input.durationHours : current.duration_hours,
         has("preferredStartDate") ? input.preferredStartDate : current.preferred_start_date,
         has("applicationDeadline") ? input.applicationDeadline : current.application_deadline,
@@ -3472,16 +3575,19 @@ app.put("/api/v1/jobs/:id/application-draft", requireV1AuthenticatedUser, requir
     if (applicationId) {
       await client.query(
         `UPDATE job_applications
-         SET message = $3, proposed_start_date = $4, updated_at = now()
+         SET message = $3, proposed_start_date = $4, proposed_amount_cents = $5, proposed_unit = $6, updated_at = now()
          WHERE id = $1 AND applicant_account_id = $2`,
-        [applicationId, request.actor.account.id, input.message, input.proposedStartDate],
+        [applicationId, request.actor.account.id, input.message, input.proposedStartDate,
+          input.proposedAmountCents, input.proposedUnit],
       );
     } else {
       applicationId = (await client.query(
-        `INSERT INTO job_applications (job_id, applicant_account_id, status, message, proposed_start_date)
-         VALUES ($1, $2, 'draft', $3, $4)
+        `INSERT INTO job_applications (
+           job_id, applicant_account_id, status, message, proposed_start_date, proposed_amount_cents, proposed_unit
+         ) VALUES ($1, $2, 'draft', $3, $4, $5, $6)
          RETURNING id`,
-        [jobId, request.actor.account.id, input.message, input.proposedStartDate],
+        [jobId, request.actor.account.id, input.message, input.proposedStartDate,
+          input.proposedAmountCents, input.proposedUnit],
       )).rows[0].id;
     }
     await client.query(
@@ -3536,17 +3642,21 @@ app.post("/api/v1/jobs/:id/applications", requireV1AuthenticatedUser, requireV1A
       await client.query(
         `UPDATE job_applications
          SET status = 'submitted', message = $3, proposed_start_date = $4,
+             proposed_amount_cents = $5, proposed_unit = $6,
              submitted_at = now(), withdrawn_at = NULL, decided_at = NULL, updated_at = now()
          WHERE id = $1 AND applicant_account_id = $2`,
-        [applicationId, request.actor.account.id, input.message, input.proposedStartDate],
+        [applicationId, request.actor.account.id, input.message, input.proposedStartDate,
+          input.proposedAmountCents, input.proposedUnit],
       );
     } else {
       applicationId = (await client.query(
         `INSERT INTO job_applications (
-           job_id, applicant_account_id, status, message, proposed_start_date, submitted_at
-         ) VALUES ($1, $2, 'submitted', $3, $4, now())
+           job_id, applicant_account_id, status, message, proposed_start_date,
+           proposed_amount_cents, proposed_unit, submitted_at
+         ) VALUES ($1, $2, 'submitted', $3, $4, $5, $6, now())
          RETURNING id`,
-        [jobId, request.actor.account.id, input.message, input.proposedStartDate],
+        [jobId, request.actor.account.id, input.message, input.proposedStartDate,
+          input.proposedAmountCents, input.proposedUnit],
       )).rows[0].id;
     }
     await client.query(
@@ -3714,11 +3824,12 @@ app.post("/api/v1/applications/:id/offer", requireV1AuthenticatedUser, requireV1
     const offerId = (await client.query(
       `INSERT INTO job_offers (
          job_id, application_id, contractor_account_id, recipient_account_id,
-         start_date, scope_summary, message, expires_at
-       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+         start_date, scope_summary, message, expires_at, agreed_amount_cents, agreed_unit
+       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
        RETURNING id`,
       [application.job_id, applicationId, request.actor.account.id, application.applicant_account_id,
-        input.startDate, input.scopeSummary, input.message, input.expiresAt],
+        input.startDate, input.scopeSummary, input.message, input.expiresAt,
+        input.agreedAmountCents, input.agreedUnit],
     )).rows[0].id;
     await client.query(
       "UPDATE job_applications SET status = 'offered', decided_at = now(), updated_at = now() WHERE id = $1",

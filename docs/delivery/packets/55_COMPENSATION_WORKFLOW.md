@@ -1,0 +1,93 @@
+# Packet 55 - Compensation Workflow
+
+## Objective
+
+Let a contractor publish fixed-price, hourly, open-to-offers, or
+request-quotes work while keeping the final accepted pay explicit. Let a
+tradesperson maintain reference rates and propose terms without treating a
+profile rate as a binding bid.
+
+## Source boundary
+
+- Base source: Packet 54 production release
+  `657aa80eda8c1ea1de0771dc5918d2fcd0511193`.
+- Implementation branch: `codex/compensation-workflow`.
+- Jobs, applications, offers, active work, and profile authorization remain
+  server-owned. This packet does not add payment processing, escrow, payroll,
+  tax handling, or a guarantee that either party will pay or perform.
+- Migration `0028_compensation_workflow` owns all new persistence and has a
+  reviewed rollback migration.
+
+## Changes
+
+- Job compensation now has four explicit modes: fixed price, hourly, open to
+  offers, and request quotes. Only fixed and hourly listings require a posted
+  amount; open-to-offers may show an optional target; request-quotes carries no
+  listing amount.
+- Applications can include one complete proposed amount/unit pair. The
+  contractor must review and enter the final agreed amount and unit before an
+  offer can be sent. Accepted work preserves those final terms independently
+  from the original listing and application proposal.
+- Tradespeople can maintain per-trade hourly, day, and minimum-charge reference
+  rates with network, applications-only, or private visibility. Search and
+  application responses expose only the visibility allowed for that context.
+- Work labels distinguish posted pay, targets, quote requests, proposals, and
+  agreed pay. Rate cards are explicitly described as reference information,
+  not an automatic bid or contract.
+- Rendered Work lifecycle coverage now exercises a proposal, edited final
+  offer, and accepted agreed compensation on mobile.
+
+## Acceptance
+
+- A contractor can publish a realistic hourly rate below the former fixed-job
+  minimum, publish open-to-offers with or without a target, or request quotes
+  without inventing a budget.
+- A tradesperson must provide a positive amount and unit together when a quote
+  is required; partial and zero-dollar proposals fail validation.
+- A contractor cannot send an offer without positive final compensation.
+- The accepted-work record returns the exact final agreed amount/unit even when
+  the listing and applicant proposal differed.
+- Private rates never appear in search or applications; applications-only
+  rates appear only with an application; network rates may appear in people
+  discovery.
+
+## Verification
+
+- `npm run build` - passed after the final implementation changes.
+- `npm run lint` - passed after the final implementation changes.
+- `npm run lint:security` - passed after the final implementation changes.
+- `npm run test:unit` - 57 passed, including hourly-rate and positive-proposal
+  regression coverage.
+- `npm run test:e2e` - passed.
+- `npm run test:ui:mobile-actions` - passed.
+- `npm run test:ui:work-lifecycle` - passed with proposal and final-offer UI.
+- `npm audit --omit=dev` - zero vulnerabilities.
+- Migration apply/rollback/reapply and the compensation match-acceptance,
+  jobs, messaging-notifications, project-completion, and
+  reviews-admin-safety PostgreSQL suites passed against the configured
+  isolated `TEST_DATABASE_URL`.
+- The aggregate integration wrapper exceeded the remote ten-minute command
+  window; this packet claims the affected serial suites, not a completed
+  aggregate wrapper run.
+
+## Rollback
+
+1. Stop writes using the new compensation fields.
+2. Confirm that discarding new compensation modes, proposals, agreed terms,
+   and rate cards is acceptable, then run
+   `migrations/0028_compensation_workflow.down.sql` before reverting the
+   implementation commit. The down migration is intentionally destructive to
+   Packet 55-only data and must not be run casually.
+3. Revert the Packet 55 implementation commit and redeploy the previous source.
+
+## Deployment evidence
+
+Not deployed. This packet is locally verified and requires review, merge,
+Railway migration evidence, exact-source health, production monitoring, and a
+two-account fixed/hourly/negotiable acceptance check before production status.
+
+## Next packet
+
+After production verification, audit the compensation language and mobile
+editing flow with one real contractor and one tradesperson. Do not add payment
+processing as part of that review.

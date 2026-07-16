@@ -131,6 +131,15 @@ export function AppShell({
   const canSubmitSearch = normalizedSearch.length > 0;
   const canSearchPeople = normalizedSearch.length >= 2 && !isGuest;
 
+  function profileRateSummary(person: ProfileSearchResult) {
+    const rate = person.rateCards?.[0];
+    if (!rate) return "";
+    if (rate.hourlyRateCents) return `${rate.tradeName}: $${(rate.hourlyRateCents / 100).toLocaleString()}/hr`;
+    if (rate.dayRateCents) return `${rate.tradeName}: $${(rate.dayRateCents / 100).toLocaleString()}/day`;
+    if (rate.minimumChargeCents) return `${rate.tradeName}: $${(rate.minimumChargeCents / 100).toLocaleString()} minimum`;
+    return "";
+  }
+
   return (
     <div className={mobileNavHidden ? "rivt-v2 is-mobile-nav-hidden" : "rivt-v2"}>
       <a className="v2-skip-link" href="#main-content">Skip to main content</a>
@@ -279,6 +288,7 @@ export function AppShell({
                             <strong>{person.displayName}</strong>
                             <small>{person.headline || (person.primaryRole === "contractor" ? "Contractor" : "Tradesperson")}</small>
                             <small>{[person.trades.map((trade) => trade.name).join(", "), person.locationText].filter(Boolean).join(" · ")}</small>
+                            {profileRateSummary(person) ? <small className="v2-search-person-rate">{profileRateSummary(person)}</small> : null}
                           </span>
                           <em>{person.availabilityStatus === "available" ? "Available" : person.availabilityStatus === "limited" ? "Limited" : "Unavailable"}</em>
                         </button>

@@ -59,6 +59,7 @@ import {
   type CanonicalActiveWork,
   type CanonicalApplication,
   type CanonicalOffer,
+  type CompensationUnit,
 } from "./job-api";
 import "./work-workspace.css";
 import { JobDetailHub } from "../jobs/JobDetailHub";
@@ -146,7 +147,7 @@ function getPublishBlockers(job: Job) {
   if (!hasText(canonical?.tradeCode)) blockers.push("trade");
   if (!hasText(job.summary, 20)) blockers.push("short summary (20+ characters)");
   if (!hasText(canonical?.scopeDescription, 20)) blockers.push("detailed scope (20+ characters)");
-  if (!Number.isFinite(job.pay) || job.pay <= 0) blockers.push("pay");
+  if (["fixed", "hourly"].includes(canonical?.compensationType ?? "fixed") && (!Number.isFinite(job.pay) || job.pay <= 0)) blockers.push("pay");
   if (!Number.isFinite(job.durationHours) || job.durationHours <= 0) blockers.push("duration");
   if (!hasText(canonical?.publicLocation?.city) || !hasText(canonical?.publicLocation?.region)) {
     blockers.push("public city and state");
@@ -190,6 +191,20 @@ function formatOfferStartDate(value: string | null) {
     day: "numeric",
     year: "numeric",
   });
+}
+
+function compensationLabel(job: Job) {
+  const type = job.canonical?.compensationType ?? "fixed";
+  if (type === "request_quotes") return "Request quotes";
+  if (type === "open_to_offers") return job.pay > 0 ? `${money(job.pay)} target · open to offers` : "Open to offers";
+  if (type === "hourly") return job.pay > 0 ? `${money(job.pay)}/hr` : "Hourly rate not set";
+  return job.pay > 0 ? money(job.pay) : "Price not set";
+}
+
+function compensationAmount(offer: CanonicalOffer) {
+  if (!offer.agreedCompensation) return "Terms not set";
+  const amount = money(offer.agreedCompensation.amountCents / 100);
+  return offer.agreedCompensation.unit === "hourly" ? `${amount}/hr` : amount;
 }
 
 // ── Change Order Tracker ──────────────────────────────────────────────────────
@@ -1074,7 +1089,7 @@ function JobRow({ job, selected, role, onSelect }: { job: Job; selected: boolean
             <strong>{job.title}</strong>
             <span className="v2-job-row-summary">{job.summary}</span>
             <span className="v2-job-row-facts">
-              <span>{job.pay > 0 ? money(job.pay) : "Budget not set"}</span>
+              <span>{compensationLabel(job)}</span>
               <span>{job.durationHours > 0 ? `${job.durationHours}h` : "Duration not set"}</span>
               <span>{job.difficulty}</span>
             </span>
@@ -1231,6 +1246,8 @@ export function WorkWorkspace({
   const [stageHiringLoading, setStageHiringLoading] = useState(false);
   const [stageHiringError, setStageHiringError] = useState<string | null>(null);
   const [applicationMessage, setApplicationMessage] = useState("I am interested in this work and can confirm tools, timing, and site requirements.");
+  const [applicationProposal, setApplicationProposal] = useState<{ jobId: string; amount: string; unit: CompensationUnit } | null>(null);
+  const [offerDraft, setOfferDraft] = useState<{ applicationId: string; amount: string; unit: CompensationUnit } | null>(null);
   const [savedSearches, setSavedSearches] = useState<SavedSearch[]>(readSavedSearches);
   const [savedSearchNotice, setSavedSearchNotice] = useState("");
   const [saveTemplateNotice, setSaveTemplateNotice] = useState("");
@@ -1362,16 +1379,26 @@ export function WorkWorkspace({
   async function handleSaveDraft(job: Job) {
     const jobId = job.canonical?.id;
     if (!jobId) return;
+    const proposal = applicationProposal?.jobId === jobId ? applicationProposal : null;
     await runMatchAction(`draft:${jobId}`, async () => {
-      await saveApplicationDraft(jobId, { message: applicationMessage });
+      await saveApplicationDraft(jobId, {
+        message: applicationMessage,
+        proposedAmountCents: proposal?.amount ? Math.round(Number(proposal.amount) * 100) : null,
+        proposedUnit: proposal?.amount ? proposal.unit : null,
+      });
     });
   }
 
   async function handleSubmitApplication(job: Job) {
     const jobId = job.canonical?.id;
     if (!jobId) return;
+    const proposal = applicationProposal?.jobId === jobId ? applicationProposal : null;
     await runMatchAction(`apply:${jobId}`, async () => {
-      await submitApplication(jobId, { message: applicationMessage });
+      await submitApplication(jobId, {
+        message: applicationMessage,
+        proposedAmountCents: proposal?.amount ? Math.round(Number(proposal.amount) * 100) : null,
+        proposedUnit: proposal?.amount ? proposal.unit : null,
+      });
     });
   }
 
@@ -1394,14 +1421,30 @@ export function WorkWorkspace({
   }
 
   async function handleSendOffer(job: Job, application: CanonicalApplication) {
+    if (!offerDraft || offerDraft.applicationId !== application.id || !Number.isFinite(Number(offerDraft.amount)) || Number(offerDraft.amount) <= 0) {
+      setMatchError("Enter the final agreed pay before sending this offer.");
+      return;
+    }
     const startDate = offerStartDateFor(job, application);
     await runMatchAction(`offer:${application.id}`, async () => {
       await sendOffer(application.id, {
         startDate,
         scopeSummary: job.canonical?.scopeDescription || job.summary,
         message: `Offer for ${job.title}. Accept to unlock the exact jobsite and active work record.`,
+        agreedAmountCents: Math.round(Number(offerDraft.amount) * 100),
+        agreedUnit: offerDraft.unit,
       });
+      setOfferDraft(null);
     });
+  }
+
+  function prepareOffer(job: Job, application: CanonicalApplication) {
+    const matchingRate = application.applicant?.rates.find((rate) => rate.tradeCode === job.canonical?.tradeCode)?.hourlyRateCents;
+    const proposal = application.proposal;
+    const unit = proposal?.unit ?? (job.canonical?.compensationType === "hourly" ? "hourly" : matchingRate ? "hourly" : "fixed");
+    const cents = proposal?.amountCents ?? (job.pay > 0 ? job.pay * 100 : matchingRate ?? 0);
+    setOfferDraft({ applicationId: application.id, amount: cents ? String(cents / 100) : "", unit });
+    setMatchError(null);
   }
 
   async function handleAcceptOffer(offer: CanonicalOffer) {
@@ -1489,6 +1532,10 @@ export function WorkWorkspace({
     ? (focusedActiveJob ?? activeStageJob)
     : (selectedIsVisible ? selectedJob : visibleJobs[0] ?? null);
   const canonicalJobId = detailJob?.canonical?.id ?? null;
+  const applicationAmount = applicationProposal?.jobId === canonicalJobId ? applicationProposal.amount : "";
+  const applicationUnit = applicationProposal?.jobId === canonicalJobId
+    ? applicationProposal.unit
+    : detailJob?.canonical?.compensationType === "hourly" ? "hourly" : "fixed";
   const needsPrivateDetailHydration = role === "contractor"
     && Boolean(canonicalJobId)
     && Boolean(detailJob?.canonical)
@@ -1989,7 +2036,7 @@ export function WorkWorkspace({
               <div className={activeWork && workspaceTab === "today" ? "v2-detail-content is-active-today" : "v2-detail-content"}>
                 <p className="v2-job-description">{detailJob.summary}</p>
                 <div className="v2-detail-facts">
-                  <DetailFact icon={CircleDollarSign} label="Budget" value={detailJob.pay > 0 ? money(detailJob.pay) : "Not set"} />
+                  <DetailFact icon={CircleDollarSign} label="Pay" value={compensationLabel(detailJob)} />
                   <DetailFact icon={CalendarClock} label="Estimate" value={detailJob.durationHours > 0 ? `${detailJob.durationHours} hours` : "Not set"} />
                   <DetailFact icon={ShieldCheck} label="Insurance" value={detailJob.insuranceRequired ? "Required" : "Not required"} />
                   <DetailFact icon={BriefcaseBusiness} label="Work type" value={detailJob.workType} />
@@ -2061,13 +2108,27 @@ export function WorkWorkspace({
                                 <strong>{application.applicant?.displayName || "Tradesperson"}</strong>
                                 <small>{application.applicant?.headline || `${application.applicant?.serviceArea.city ?? ""}, ${application.applicant?.serviceArea.region ?? ""}`}</small>
                                 <small className="v2-offer-start-note">Offer start: {formatOfferStartDate(offerStartDate)}</small>
+                                {application.proposal ? <small className="v2-offer-start-note">Proposed pay: {application.proposal.unit === "hourly" ? `${money(application.proposal.amountCents / 100)}/hr` : money(application.proposal.amountCents / 100)}</small> : null}
+                                {application.applicant?.rates.filter((rate) => rate.tradeCode === detailJob.canonical?.tradeCode).map((rate) => (
+                                  <small className="v2-offer-start-note" key={rate.tradeCode}>Shared rate: {rate.hourlyRateCents ? `${money(rate.hourlyRateCents / 100)}/hr` : "See rate card"}{rate.minimumChargeCents ? ` · ${money(rate.minimumChargeCents / 100)} minimum` : ""}</small>
+                                ))}
                                 {application.message ? <p>{application.message}</p> : null}
                               </div>
                               <div className="v2-match-actions">
                                 {application.status === "submitted" ? <button type="button" disabled={Boolean(activeAction)} onClick={() => void handleShortlist(application)}>Shortlist</button> : null}
                                 {["submitted", "shortlisted"].includes(application.status) ? (
                                   <>
-                                    <button type="button" className="v2-primary-button" disabled={Boolean(activeAction)} onClick={() => void handleSendOffer(detailJob, application)}>Send offer</button>
+                                    {offerDraft?.applicationId === application.id ? (
+                                      <div className="v2-offer-terms">
+                                        <strong>Final offer</strong>
+                                        <div>
+                                          <label><span>Amount</span><input type="number" min="1" inputMode="decimal" value={offerDraft.amount} onChange={(event) => setOfferDraft({ ...offerDraft, amount: event.target.value })} /></label>
+                                          <label><span>Paid</span><select value={offerDraft.unit} onChange={(event) => setOfferDraft({ ...offerDraft, unit: event.target.value as CompensationUnit })}><option value="fixed">Fixed total</option><option value="hourly">Per hour</option></select></label>
+                                        </div>
+                                        <small>This is the amount the tradesperson will accept.</small>
+                                        <div><button type="button" onClick={() => setOfferDraft(null)}>Cancel</button><button type="button" className="v2-primary-button" disabled={Boolean(activeAction)} onClick={() => void handleSendOffer(detailJob, application)}>Send offer</button></div>
+                                      </div>
+                                    ) : <button type="button" className="v2-primary-button" disabled={Boolean(activeAction)} onClick={() => prepareOffer(detailJob, application)}>Prepare offer</button>}
                                     <button type="button" disabled={Boolean(activeAction)} onClick={() => void handleDeclineApplication(application)}>Decline</button>
                                   </>
                                 ) : <small>{application.status === "offered" ? "Offer sent" : "No action needed"}</small>}
@@ -2084,6 +2145,7 @@ export function WorkWorkspace({
                       <div>
                         <span>You have an offer</span>
                         <strong>{pendingOffer.startDate ? `Proposed start: ${pendingOffer.startDate}` : "No start date set yet"}</strong>
+                        <strong>{compensationAmount(pendingOffer)}</strong>
                         <p>{pendingOffer.message || pendingOffer.scopeSummary}</p>
                       </div>
                       <div className="v2-match-actions">
@@ -2119,6 +2181,16 @@ export function WorkWorkspace({
                         <span>Message to contractor</span>
                         <textarea value={applicationMessage} onChange={(event) => setApplicationMessage(event.target.value)} rows={4} disabled={detailJob.status !== "Open" || !detailJob.canonical} />
                       </label>
+                      {["open_to_offers", "request_quotes"].includes(detailJob.canonical?.compensationType ?? "fixed") ? (
+                        <div className="v2-application-proposal">
+                          <strong>Your proposed pay</strong>
+                          <div>
+                  <label><span>Amount</span><input type="number" min="1" inputMode="decimal" value={applicationAmount} onChange={(event) => canonicalJobId && setApplicationProposal({ jobId: canonicalJobId, amount: event.target.value, unit: applicationUnit })} placeholder="Enter your price" /></label>
+                  <label><span>Paid</span><select value={applicationUnit} onChange={(event) => canonicalJobId && setApplicationProposal({ jobId: canonicalJobId, amount: applicationAmount, unit: event.target.value as CompensationUnit })}><option value="fixed">Fixed total</option><option value="hourly">Per hour</option></select></label>
+                          </div>
+                          <small>This is a proposal. Work starts only after both sides accept the final offer.</small>
+                        </div>
+                      ) : null}
                       <div className="v2-match-actions">
                         {detailJob.canonical ? (
                           <button type="button" disabled={Boolean(activeAction) || detailJob.status !== "Open"} onClick={() => void handleSaveDraft(detailJob)}>Save draft</button>
@@ -2126,7 +2198,7 @@ export function WorkWorkspace({
                         <button
                           type="button"
                           className="v2-primary-button"
-                          disabled={Boolean(activeAction) || detailJob.status !== "Open" || !detailJob.canonical}
+                          disabled={Boolean(activeAction) || detailJob.status !== "Open" || !detailJob.canonical || (["open_to_offers", "request_quotes"].includes(detailJob.canonical?.compensationType ?? "fixed") && (!Number.isFinite(Number(applicationAmount)) || Number(applicationAmount) <= 0))}
                           onClick={() => void handleSubmitApplication(detailJob)}
                         >
                           Apply
@@ -2212,7 +2284,7 @@ export function WorkWorkspace({
                         <div className="v2-similar-job-info">
                           <strong>{j.title}</strong>
                           <span><MapPin size={12} />{j.location}</span>
-                          <span>{j.pay > 0 ? money(j.pay) : "Budget not set"}</span>
+                          <span>{compensationLabel(j)}</span>
                         </div>
                         <button
                           type="button"

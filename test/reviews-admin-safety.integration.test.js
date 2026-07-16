@@ -148,6 +148,8 @@ if (!testDatabaseUrl) {
         startDate: "2026-07-02",
         scopeSummary: "Electrical support scope from the accepted job.",
         message: "Approved. Confirm and start the work record.",
+        agreedAmountCents: 95000,
+        agreedUnit: "fixed",
       },
     });
     assert.equal(offer.response.status, 201);

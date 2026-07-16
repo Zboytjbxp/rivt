@@ -102,6 +102,7 @@ export interface Job {
     preferredStartDate: string | null;
     applicationDeadline: string | null;
     budgetUnit: "fixed" | "hourly";
+    compensationType: "fixed" | "hourly" | "open_to_offers" | "request_quotes";
     createdAt: string;
     updatedAt: string;
     events: Array<{

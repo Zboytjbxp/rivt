@@ -166,6 +166,7 @@ function demoJob(input: GuestPreviewInput, overrides: Partial<Job> = {}): Job {
       preferredStartDate: "2026-07-13",
       applicationDeadline: "2026-07-10",
       budgetUnit: "fixed",
+      compensationType: "fixed",
       createdAt,
       updatedAt: createdAt,
       events: [

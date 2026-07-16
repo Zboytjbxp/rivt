@@ -46,10 +46,13 @@ import { tradeOptions } from "../../data";
 import type { Role, Trade } from "../../types";
 import { Avatar, MetricTile, PageHeader } from "../../components/ui";
 import {
-  persistRateCardEntries,
+  fetchRateCardEntries,
   readRateCardEntries,
+  saveRateCardEntries,
   type RateCardEntry,
+  type RateCardVisibility,
 } from "../../lib/rateCard";
+import { tradeCodeByName } from "../work/work-mappings";
 import { safetyQuizData, type SafetyQuiz, type SafetyQuizResult } from "./training-data";
 import "./profile-hub.css";
 
@@ -558,40 +561,85 @@ function CertTrackerSection() {
 
 function RateCardSection() {
   const [rates, setRates] = useState<RateCardEntry[]>(readRateCardEntries);
-  const [trade, setTrade] = useState("");
+  const [trade, setTrade] = useState<Trade | "">("");
   const [hourly, setHourly] = useState("");
   const [day, setDay] = useState("");
   const [minimum, setMinimum] = useState("");
   const [notes, setNotes] = useState("");
+  const [visibility, setVisibility] = useState<RateCardVisibility>("applications");
   const [notice, setNotice] = useState("");
+  const [saving, setSaving] = useState(false);
 
-  function addRate() {
-    if (!trade.trim()) return;
+  useEffect(() => {
+    let active = true;
+    void fetchRateCardEntries()
+      .then((next) => {
+        if (active) setRates(next);
+      })
+      .catch(() => {
+        if (active) setNotice("Your saved rates could not be refreshed. Showing this device's last copy.");
+      });
+    return () => { active = false; };
+  }, []);
+
+  async function addRate() {
+    if (!trade || saving) return;
+    const hourlyRate = parseFloat(hourly) || 0;
+    const dayRate = parseFloat(day) || 0;
+    const minimumCharge = parseFloat(minimum) || 0;
+    if (hourlyRate <= 0 && dayRate <= 0 && minimumCharge <= 0) {
+      setNotice("Add an hourly rate, day rate, or minimum charge.");
+      return;
+    }
     const entry: RateCardEntry = {
-      id: crypto.randomUUID(),
-      trade: trade.trim(),
-      hourlyRate: parseFloat(hourly) || 0,
-      dayRate: parseFloat(day) || 0,
-      minimumCharge: parseFloat(minimum) || 0,
+      id: rates.find((rate) => rate.tradeCode === tradeCodeByName[trade])?.id ?? crypto.randomUUID(),
+      trade,
+      tradeCode: tradeCodeByName[trade],
+      hourlyRate,
+      dayRate,
+      minimumCharge,
       notes: notes.trim(),
+      visibility,
       updatedAt: new Date().toISOString(),
     };
-    const next = [entry, ...rates.filter((r) => r.trade.toLowerCase() !== trade.trim().toLowerCase())];
+    const previous = rates;
+    const next = [entry, ...rates.filter((rate) => rate.tradeCode !== entry.tradeCode)];
     setRates(next);
-    persistRateCardEntries(next);
-    setTrade("");
-    setHourly("");
-    setDay("");
-    setMinimum("");
-    setNotes("");
-    setNotice("Rate saved.");
-    setTimeout(() => setNotice(""), 3000);
+    setSaving(true);
+    try {
+      const saved = await saveRateCardEntries(next);
+      setRates(saved);
+      setTrade("");
+      setHourly("");
+      setDay("");
+      setMinimum("");
+      setNotes("");
+      setVisibility("applications");
+      setNotice("Rate saved across your RIVT account.");
+    } catch (error) {
+      setRates(previous);
+      setNotice(error instanceof Error ? error.message : "Rate could not be saved.");
+    } finally {
+      setSaving(false);
+    }
   }
 
-  function deleteRate(id: string) {
+  async function deleteRate(id: string) {
+    if (saving) return;
+    const previous = rates;
     const next = rates.filter((r) => r.id !== id);
     setRates(next);
-    persistRateCardEntries(next);
+    setSaving(true);
+    try {
+      const saved = await saveRateCardEntries(next);
+      setRates(saved);
+      setNotice("Rate removed.");
+    } catch (error) {
+      setRates(previous);
+      setNotice(error instanceof Error ? error.message : "Rate could not be removed.");
+    } finally {
+      setSaving(false);
+    }
   }
 
   function fmt(n: number) {
@@ -602,18 +650,20 @@ function RateCardSection() {
     <section className="v2-profile-panel v2-profile-panel-wide v2-rate-card-section">
       <header>
         <span>Rate card</span>
-        <strong>Your standard rates by trade</strong>
+        <strong>Set expectations before you quote</strong>
       </header>
+      <p className="v2-profile-note">These are reference rates, not automatic job prices. You still approve a final amount before work starts.</p>
       <div className="v2-rate-card-form">
         <div className="v2-rate-card-inputs">
-          <label>Trade<input value={trade} onChange={(e) => setTrade(e.target.value)} placeholder="Electrical, framing…" /></label>
-          <label>Hourly ($)<input type="number" min="0" value={hourly} onChange={(e) => setHourly(e.target.value)} placeholder="75" /></label>
-          <label>Day rate ($)<input type="number" min="0" value={day} onChange={(e) => setDay(e.target.value)} placeholder="600" /></label>
-          <label>Minimum ($)<input type="number" min="0" value={minimum} onChange={(e) => setMinimum(e.target.value)} placeholder="250" /></label>
+          <label>Trade<select value={trade} onChange={(event) => setTrade(event.target.value as Trade | "")}><option value="">Choose trade</option>{tradeOptions.filter((option): option is Trade => option !== "All trades").map((option) => <option key={option} value={option}>{option}</option>)}</select></label>
+          <label>Hourly ($)<input type="number" inputMode="decimal" min="0" value={hourly} onChange={(e) => setHourly(e.target.value)} placeholder="75" /></label>
+          <label>Day rate ($)<input type="number" inputMode="decimal" min="0" value={day} onChange={(e) => setDay(e.target.value)} placeholder="600" /></label>
+          <label>Minimum ($)<input type="number" inputMode="decimal" min="0" value={minimum} onChange={(e) => setMinimum(e.target.value)} placeholder="250" /></label>
+          <label>Share when<select value={visibility} onChange={(event) => setVisibility(event.target.value as RateCardVisibility)}><option value="applications">I apply to work</option><option value="network">My profile is viewed</option><option value="private">Only in my tools</option></select></label>
           <label className="is-wide">Notes<input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Includes basic materials, travel within 30 mi…" /></label>
         </div>
         {notice ? <p className="v2-rate-card-notice" role="status">{notice}</p> : null}
-        <button type="button" className="v2-primary-button" disabled={!trade.trim()} onClick={addRate}><Plus size={14} />Save rate</button>
+        <button type="button" className="v2-primary-button" disabled={!trade || saving} onClick={() => void addRate()}><Plus size={14} />{saving ? "Saving..." : "Save rate"}</button>
       </div>
       {rates.length ? (
         <div className="v2-rate-card-list">
@@ -622,19 +672,20 @@ function RateCardSection() {
               <div className="v2-rate-card-item-head">
                 <Tag size={15} />
                 <strong>{r.trade}</strong>
-                <button type="button" aria-label={`Delete ${r.trade} rate`} onClick={() => deleteRate(r.id)}><Trash2 size={13} /></button>
+                <button type="button" aria-label={`Delete ${r.trade} rate`} disabled={saving} onClick={() => void deleteRate(r.id)}><Trash2 size={13} /></button>
               </div>
               <div className="v2-rate-card-item-rates">
                 <div><span>Hourly</span><strong>{fmt(r.hourlyRate)}</strong></div>
                 <div><span>Day rate</span><strong>{fmt(r.dayRate)}</strong></div>
                 <div><span>Minimum</span><strong>{fmt(r.minimumCharge)}</strong></div>
               </div>
+              <span className="v2-rate-card-visibility">{r.visibility === "network" ? "Shown on profile" : r.visibility === "applications" ? "Shared with applications" : "Private"}</span>
               {r.notes ? <p className="v2-rate-card-item-notes">{r.notes}</p> : null}
             </article>
           ))}
         </div>
       ) : (
-        <p className="v2-profile-note">No rates saved yet. Add your standard rates so contractors know what to expect when they view your profile.</p>
+        <p className="v2-profile-note">No rates saved yet. Add a reference rate to make applications and quotes faster.</p>
       )}
     </section>
   );

@@ -56,6 +56,7 @@ const contractorAccount = {
     phoneVisibility: "private",
     avatarUploadId: null,
     trades: [{ code: "electrical", name: "Electrical", primary: true }],
+    rateCards: [],
   },
   organizations: [{ id: orgId, name: "RIVT Test Electric", role: "owner" }],
   capabilities: { canCompleteOnboarding: false, canPostWork: true, canApplyToWork: false, canPublishProfile: true },
@@ -82,6 +83,14 @@ const tradespersonAccount = {
     phoneVisibility: "private",
     avatarUploadId: null,
     trades: [{ code: "electrical", name: "Electrical", primary: true }],
+    rateCards: [{
+      tradeCode: "electrical",
+      tradeName: "Electrical",
+      hourlyRateCents: 6500,
+      dayRateCents: null,
+      minimumChargeCents: 15000,
+      visibility: "applications",
+    }],
   },
   organizations: [],
   capabilities: { canCompleteOnboarding: false, canPostWork: false, canApplyToWork: true, canPublishProfile: true },
@@ -101,6 +110,7 @@ function makeJob(overrides = {}) {
     status,
     difficulty: "moderate",
     workType: "side_work",
+    compensationType: "fixed",
     budget: { amountCents: 85000, currency: "USD", unit: "fixed" },
     durationHours: 8,
     preferredStartDate: overrides.preferredStartDate ?? futureDate(7),
@@ -142,6 +152,7 @@ function makeApplication(status = "submitted", message = "I can bring tester, ha
     status,
     message,
     proposedStartDate: null,
+    proposal: null,
     submittedAt: status === "draft" ? null : "2026-06-28T15:00:00.000Z",
     withdrawnAt: null,
     decidedAt: ["shortlisted", "declined", "offered"].includes(status) ? "2026-06-28T15:10:00.000Z" : null,
@@ -152,6 +163,14 @@ function makeApplication(status = "submitted", message = "I can bring tester, ha
       displayName: "Riley Harper",
       headline: "Commercial electrician",
       serviceArea: { city: "Jacksonville", region: "FL" },
+      rates: [{
+        tradeCode: "electrical",
+        tradeName: "Electrical",
+        hourlyRateCents: 6500,
+        dayRateCents: null,
+        minimumChargeCents: 15000,
+        visibility: "applications",
+      }],
     },
     events: [],
   };
@@ -168,6 +187,7 @@ function makeOffer(status = "pending") {
     startDate: "2026-07-01",
     scopeSummary: "Panel trim, labeling, and punch list support.",
     message: "Offer for Warehouse panel assist. Accept to unlock the jobsite and active work record.",
+    agreedCompensation: { amountCents: 82500, unit: "fixed" },
     expiresAt: null,
     acceptedAt: status === "accepted" ? "2026-06-28T15:30:00.000Z" : null,
     declinedAt: null,
@@ -205,6 +225,7 @@ function makeActiveWork(events = []) {
       organization: { id: orgId, name: "RIVT Test Electric" },
       trade: { code: "electrical", name: "Electrical" },
       durationHours: 8,
+      compensationType: "fixed",
       budget: { amountCents: 85000, currency: "USD", unit: "fixed" },
       publicLocation: { city: "Jacksonville", region: "FL", countryCode: "US" },
     },
@@ -402,6 +423,9 @@ async function configurePage(page, account, state) {
     const next = existing ?? makeApplication("draft", body.message);
     next.status = "draft";
     next.message = body.message;
+    next.proposal = body.proposedAmountCents && body.proposedUnit
+      ? { amountCents: body.proposedAmountCents, unit: body.proposedUnit }
+      : null;
     next.jobId = jobId;
     next.applicantAccountId = account.id;
     if (!existing) state.applications.unshift(next);
@@ -418,6 +442,9 @@ async function configurePage(page, account, state) {
     const next = existing ?? makeApplication("submitted", body.message);
     next.status = "submitted";
     next.message = body.message;
+    next.proposal = body.proposedAmountCents && body.proposedUnit
+      ? { amountCents: body.proposedAmountCents, unit: body.proposedUnit }
+      : null;
     next.jobId = jobId;
     next.applicantAccountId = account.id;
     next.submittedAt = new Date().toISOString();
@@ -492,7 +519,9 @@ async function configurePage(page, account, state) {
     const application = state.applications.find((item) => item.id === id);
     assert.ok(application, `Missing application ${id}`);
     application.status = "offered";
+    const body = route.request().postDataJSON();
     const offer = makeOffer("pending");
+    offer.agreedCompensation = { amountCents: body.agreedAmountCents, unit: body.agreedUnit };
     state.offers = [offer];
     return route.fulfill(json({ data: { offer, application } }));
   });
@@ -655,6 +684,8 @@ async function runContractorFlow(page) {
   await page.getByText("Riley Harper", { exact: true }).waitFor({ timeout: 15_000 });
   await page.getByRole("button", { name: "Shortlist" }).click();
   await page.getByText("shortlisted", { exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByRole("button", { name: "Prepare offer" }).click();
+  await page.getByLabel("Amount").fill("825");
   await page.getByRole("button", { name: "Send offer" }).click();
   await page.getByText("Offer sent", { exact: true }).waitFor({ timeout: 15_000 });
   await assertNoHorizontalOverflow(page, "Contractor applicant workflow");
@@ -730,7 +761,7 @@ async function runTradespersonOfferFlow(page) {
   await page.getByLabel("Hiring workflow").getByRole("button", { name: "Daily log" }).click();
   await page.getByRole("heading", { name: "Jobsite", exact: true }).waitFor({ timeout: 15_000 });
   await page.getByLabel("Jobsite sections").getByRole("button", { name: "Log", exact: true }).waitFor({ timeout: 15_000 });
-  await page.getByText("Records-ready", { exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByLabel("Site / job").waitFor({ timeout: 15_000 });
 
   await page.goto(`${baseUrl}/app/work`, { waitUntil: "networkidle" });
   await clickWorkStage(page, "Active");
@@ -889,7 +920,15 @@ try {
     });
     page.on("pageerror", (error) => errors.push(error.message));
     page.on("requestfailed", (request) => failedRequests.push(`${request.failure()?.errorText ?? "request failed"}: ${request.url()}`));
-    await flow(page);
+    try {
+      await flow(page);
+    } catch (error) {
+      const failurePath = path.join(screenshotDir, `${name}-failure.png`);
+      await page.screenshot({ path: failurePath, fullPage: true }).catch(() => undefined);
+      const bodyText = await page.locator("body").innerText().catch(() => "<body unavailable>");
+      console.error(`${name} failed at ${page.url()}\n${bodyText.slice(0, 2_000)}\nScreenshot: ${failurePath}`);
+      throw error;
+    }
     assert.deepEqual(errors, [], `${name} console/page errors\n${failedRequests.join("\n")}`);
     await context.close();
   }

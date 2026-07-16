@@ -4,6 +4,17 @@ import { type ApiErrorBody, RivtApiError, requestKey, makeRequest } from "../../
 export type CanonicalJobStatus = "draft" | "open" | "paused" | "closed";
 export type CanonicalDifficulty = "easy" | "moderate" | "challenging" | "advanced" | "expert";
 export type CanonicalWorkType = "side_work" | "emergency" | "multi_day" | "inspection_prep";
+export type CanonicalCompensationType = "fixed" | "hourly" | "open_to_offers" | "request_quotes";
+export type CompensationUnit = "fixed" | "hourly";
+
+export interface CanonicalRateCardEntry {
+  tradeCode: string;
+  tradeName: string;
+  hourlyRateCents: number | null;
+  dayRateCents: number | null;
+  minimumChargeCents: number | null;
+  visibility: "network" | "applications" | "private";
+}
 
 export interface CanonicalJob {
   id: string;
@@ -16,7 +27,8 @@ export interface CanonicalJob {
   status: CanonicalJobStatus;
   difficulty: CanonicalDifficulty;
   workType: CanonicalWorkType;
-  budget: { amountCents: number; currency: "USD"; unit: "fixed" | "hourly" } | null;
+  compensationType: CanonicalCompensationType;
+  budget: { amountCents: number; currency: "USD"; unit: CompensationUnit } | null;
   durationHours: number | null;
   preferredStartDate: string | null;
   applicationDeadline: string | null;
@@ -64,7 +76,8 @@ export interface JobEditorInput {
   difficulty: CanonicalDifficulty;
   workType: CanonicalWorkType;
   budgetCents: number | null;
-  budgetUnit: "fixed" | "hourly";
+  budgetUnit: CompensationUnit;
+  compensationType: CanonicalCompensationType;
   durationHours: number | null;
   preferredStartDate: string | null;
   applicationDeadline: string | null;
@@ -105,6 +118,7 @@ export interface CanonicalApplication {
   status: CanonicalApplicationStatus;
   message: string;
   proposedStartDate: string | null;
+  proposal: { amountCents: number; unit: CompensationUnit } | null;
   submittedAt: string | null;
   withdrawnAt: string | null;
   decidedAt: string | null;
@@ -115,6 +129,7 @@ export interface CanonicalApplication {
     displayName: string;
     headline: string;
     serviceArea: { city: string; region: string };
+    rates: CanonicalRateCardEntry[];
   };
   events: CanonicalTimelineEvent[];
 }
@@ -129,6 +144,7 @@ export interface CanonicalOffer {
   startDate: string | null;
   scopeSummary: string;
   message: string;
+  agreedCompensation: { amountCents: number; unit: CompensationUnit } | null;
   expiresAt: string | null;
   acceptedAt: string | null;
   declinedAt: string | null;
@@ -293,22 +309,24 @@ export async function transitionJob(jobId: string, action: "publish" | "pause" |
   return body.data.job;
 }
 
-export async function saveApplicationDraft(jobId: string, input: { message: string; proposedStartDate?: string | null }) {
+export async function saveApplicationDraft(jobId: string, input: { message: string; proposedStartDate?: string | null; proposedAmountCents?: number | null; proposedUnit?: CompensationUnit | null }) {
   const body = await request<{ data: { application: CanonicalApplication } }>(`/api/v1/jobs/${jobId}/application-draft`, {
     method: "PUT",
     headers: { "Content-Type": "application/json", "Idempotency-Key": requestKey() },
-    body: JSON.stringify({ message: input.message, proposedStartDate: input.proposedStartDate ?? null }),
+    body: JSON.stringify({ message: input.message, proposedStartDate: input.proposedStartDate ?? null, proposedAmountCents: input.proposedAmountCents ?? null, proposedUnit: input.proposedUnit ?? null }),
   });
   return body.data.application;
 }
 
-export async function submitApplication(jobId: string, input: { message: string; proposedStartDate?: string | null }) {
+export async function submitApplication(jobId: string, input: { message: string; proposedStartDate?: string | null; proposedAmountCents?: number | null; proposedUnit?: CompensationUnit | null }) {
   const body = await request<{ data: { application: CanonicalApplication } }>(`/api/v1/jobs/${jobId}/applications`, {
     method: "POST",
     headers: { "Content-Type": "application/json", "Idempotency-Key": requestKey() },
     body: JSON.stringify({
       message: input.message,
       proposedStartDate: input.proposedStartDate ?? null,
+      proposedAmountCents: input.proposedAmountCents ?? null,
+      proposedUnit: input.proposedUnit ?? null,
       consentAccepted: true,
       consentVersion: "2026-06-19",
     }),
@@ -353,7 +371,7 @@ export async function declineApplication(applicationId: string) {
   return body.data.application;
 }
 
-export async function sendOffer(applicationId: string, input: { startDate?: string | null; scopeSummary: string; message: string }) {
+export async function sendOffer(applicationId: string, input: { startDate?: string | null; scopeSummary: string; message: string; agreedAmountCents: number; agreedUnit: CompensationUnit }) {
   const body = await request<{ data: { offer: CanonicalOffer; application: CanonicalApplication } }>(`/api/v1/applications/${applicationId}/offer`, {
     method: "POST",
     headers: { "Content-Type": "application/json", "Idempotency-Key": requestKey() },
@@ -482,6 +500,7 @@ export function toJobViewModel(job: CanonicalJob): Job {
       preferredStartDate: job.preferredStartDate,
       applicationDeadline: job.applicationDeadline,
       budgetUnit: job.budget?.unit ?? "fixed",
+      compensationType: job.compensationType,
       createdAt: job.createdAt,
       updatedAt: job.updatedAt,
       events: job.events,

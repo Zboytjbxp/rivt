@@ -259,6 +259,49 @@ if (!testDatabaseUrl) {
     assert.equal(ownerDetail.payload.data.job.privateLocation.addressLine1, "100 Private Test Street");
     assert.ok(ownerDetail.payload.data.job.events.length >= 3);
 
+    const quoteJob = await requestJson(baseUrl, "/api/v1/jobs", {
+      method: "POST",
+      cookie: contractor.cookie,
+      idempotencyKey: `create-quote-${randomUUID()}`,
+      body: {
+        organizationId: contractor.organizationId,
+        title: "Quote custom reception desk",
+        tradeCode: "electrical",
+        summary: "Price a complete custom reception-desk power and data installation.",
+        scopeDescription: "Review the drawings, propose labor and material terms, and leave the installation inspection ready.",
+        difficulty: "advanced",
+        workType: "multi_day",
+        compensationType: "request_quotes",
+        budgetCents: null,
+        budgetUnit: "fixed",
+        durationHours: 16,
+        insuranceRequired: true,
+        publicLocation: { city: "Jacksonville", region: "FL", countryCode: "US", postalPrefix: "322" },
+        privateLocation: {
+          addressLine1: "200 Quote Test Street",
+          addressLine2: "",
+          city: "Jacksonville",
+          region: "FL",
+          postalCode: "32202",
+          countryCode: "US",
+          accessNotes: "",
+        },
+      },
+    });
+    assert.equal(quoteJob.response.status, 201);
+    assert.equal(quoteJob.payload.data.job.compensationType, "request_quotes");
+    assert.equal(quoteJob.payload.data.job.budget, null);
+    const quotePublished = await requestJson(baseUrl, `/api/v1/jobs/${quoteJob.payload.data.job.id}/publish`, {
+      method: "POST",
+      cookie: contractor.cookie,
+      idempotencyKey: `publish-quote-${randomUUID()}`,
+      body: { expectedVersion: 1, consentAccepted: true, consentVersion: "2026-06-19" },
+    });
+    assert.equal(quotePublished.response.status, 200);
+    assert.equal(quotePublished.payload.data.job.status, "open");
+    assert.equal(quotePublished.payload.data.job.compensationType, "request_quotes");
+    assert.equal(quotePublished.payload.data.job.budget, null);
+
     const paused = await requestJson(baseUrl, `/api/v1/jobs/${jobId}/pause`, {
       method: "POST", cookie: contractor.cookie, idempotencyKey: `pause-${randomUUID()}`,
       body: { expectedVersion: publishedVersion, reason: "Schedule changed" },

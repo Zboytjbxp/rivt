@@ -3,6 +3,7 @@ import { ApiError, paginationQuerySchema, z } from "./api.js";
 const difficultyValues = ["easy", "moderate", "challenging", "advanced", "expert"];
 const workTypeValues = ["side_work", "emergency", "multi_day", "inspection_prep"];
 const statusValues = ["draft", "open", "paused", "closed"];
+const compensationTypeValues = ["fixed", "hourly", "open_to_offers", "request_quotes"];
 
 const textList = z.array(z.string().trim().min(1).max(160)).max(30).default([])
   .transform((items) => [...new Set(items)]);
@@ -31,8 +32,9 @@ const editableJobFields = {
   scopeDescription: z.string().trim().max(5000).default(""),
   difficulty: z.enum(difficultyValues).default("moderate"),
   workType: z.enum(workTypeValues).default("side_work"),
-  budgetCents: z.number().int().min(5000).max(100000000).nullable().default(null),
+  budgetCents: z.number().int().min(100).max(100000000).nullable().default(null),
   budgetUnit: z.enum(["fixed", "hourly"]).default("fixed"),
+  compensationType: z.enum(compensationTypeValues).default("fixed"),
   durationHours: z.number().positive().max(10000).nullable().default(null),
   preferredStartDate: z.iso.date().nullable().default(null),
   applicationDeadline: z.iso.datetime({ offset: true }).nullable().default(null),
@@ -60,6 +62,7 @@ export const updateJobSchema = z.object({
   workType: editableJobFields.workType.optional(),
   budgetCents: editableJobFields.budgetCents.optional(),
   budgetUnit: editableJobFields.budgetUnit.optional(),
+  compensationType: editableJobFields.compensationType.optional(),
   durationHours: editableJobFields.durationHours.optional(),
   preferredStartDate: editableJobFields.preferredStartDate.optional(),
   applicationDeadline: editableJobFields.applicationDeadline.optional(),
@@ -83,6 +86,17 @@ export const transitionJobSchema = z.object({
   reason: z.string().trim().max(500).default(""),
 });
 
+export function normalizeJobCompensation({ compensationType, budgetCents, budgetUnit }) {
+  const type = compensationType || (budgetUnit === "hourly" ? "hourly" : "fixed");
+  if (type === "hourly") {
+    return { compensationType: type, budgetCents, budgetUnit: "hourly" };
+  }
+  if (type === "request_quotes") {
+    return { compensationType: type, budgetCents: null, budgetUnit: "fixed" };
+  }
+  return { compensationType: type, budgetCents, budgetUnit: "fixed" };
+}
+
 export const jobListQuerySchema = paginationQuerySchema.extend({
   q: z.string().trim().max(120).optional(),
   trade: z.string().trim().max(80).optional(),
@@ -100,7 +114,11 @@ export function assertPublishableJob(job) {
   if (!job.trade_code) missing.push("tradeCode");
   if ((job.summary?.trim().length ?? 0) < 20) missing.push("summary");
   if ((job.scope_description?.trim().length ?? 0) < 20) missing.push("scopeDescription");
-  if (!job.budget_cents) missing.push("budgetCents");
+  const compensationType = job.compensation_type || (job.budget_unit === "hourly" ? "hourly" : "fixed");
+  if (["fixed", "hourly"].includes(compensationType) && !job.budget_cents) missing.push("budgetCents");
+  if (compensationType === "fixed" && job.budget_unit !== "fixed") missing.push("compensationType");
+  if (compensationType === "hourly" && job.budget_unit !== "hourly") missing.push("compensationType");
+  if (compensationType === "request_quotes" && job.budget_cents !== null) missing.push("compensationType");
   if (!job.duration_hours) missing.push("durationHours");
   if (!job.public_city || !job.public_region) missing.push("publicLocation");
   if (!job.address_line1 || !job.private_city || !job.private_region || !job.postal_code) missing.push("privateLocation");
@@ -234,6 +252,7 @@ export function mapJobRecord(row, { includePrivateLocation = false, actor = null
       currency: "USD",
       unit: row.budget_unit,
     },
+    compensationType: row.compensation_type || (row.budget_unit === "hourly" ? "hourly" : "fixed"),
     durationHours: row.duration_hours === null ? null : Number(row.duration_hours),
     preferredStartDate: isoDate(row.preferred_start_date),
     applicationDeadline: isoDateTime(row.application_deadline),

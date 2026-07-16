@@ -167,6 +167,8 @@ if (!testDatabaseUrl) {
         startDate: "2026-07-02",
         scopeSummary: "Panel termination and labeling scope from the accepted job.",
         message: "Approved. Confirm and the address unlocks.",
+        agreedAmountCents: 95000,
+        agreedUnit: "fixed",
       },
     });
     assert.equal(offer.response.status, 201);

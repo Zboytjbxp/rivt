@@ -5,6 +5,7 @@ import { tradeOptions } from "../../data";
 import type { Job } from "../../types";
 import {
   createJob,
+  type CanonicalCompensationType,
   type JobEditorInput,
   toJobViewModel,
   transitionJob,
@@ -54,6 +55,12 @@ const tradeCodes: Record<string, string> = {
 const difficultyValues = ["easy", "moderate", "challenging", "advanced", "expert"] as const;
 const workTypeValues = ["side_work", "emergency", "multi_day", "inspection_prep"] as const;
 const stepLabels = ["Basics", "Scope", "Location"];
+const compensationOptions: Array<{ value: CanonicalCompensationType; label: string; help: string }> = [
+  { value: "fixed", label: "Fixed price", help: "One total amount for the scope." },
+  { value: "hourly", label: "Hourly", help: "A set hourly rate for the work." },
+  { value: "open_to_offers", label: "Open to offers", help: "Show an optional target and let applicants propose terms." },
+  { value: "request_quotes", label: "Request quotes", help: "Applicants price the scope before you send an offer." },
+];
 
 function splitList(value: string) {
   return value.split(/[,\n]/).map((item) => item.trim()).filter(Boolean);
@@ -96,6 +103,7 @@ export function JobEditorModal({ organizationId, job, defaultLocation, onClose, 
   const [scopeDescription, setScopeDescription] = useState(job?.canonical?.scopeDescription ?? "");
   const [difficulty, setDifficulty] = useState<(typeof difficultyValues)[number]>(job?.difficulty.toLowerCase() as (typeof difficultyValues)[number] ?? "moderate");
   const [workType, setWorkType] = useState<(typeof workTypeValues)[number]>(job?.workType.toLowerCase().replaceAll("-", "_").replaceAll(" ", "_") as (typeof workTypeValues)[number] ?? "side_work");
+  const [compensationType, setCompensationType] = useState<CanonicalCompensationType>(job?.canonical?.compensationType ?? "fixed");
   const [budget, setBudget] = useState(job?.pay ? String(job.pay) : "");
   const [duration, setDuration] = useState(job?.durationHours ? String(job.durationHours) : "");
   const [insuranceRequired, setInsuranceRequired] = useState(job?.insuranceRequired ?? false);
@@ -123,13 +131,15 @@ export function JobEditorModal({ organizationId, job, defaultLocation, onClose, 
     if (city.trim().length < 2 || region.trim().length < 2) blockers.push("city and state");
     if (summary.trim().length < 20) blockers.push("20-character summary");
     if (scopeDescription.trim().length < 20) blockers.push("20-character detailed scope");
-    if (!Number.isFinite(Number(budget)) || Number(budget) < 50) blockers.push("budget of at least $50");
+    if (["fixed", "hourly"].includes(compensationType) && (!Number.isFinite(Number(budget)) || Number(budget) <= 0)) {
+      blockers.push(compensationType === "hourly" ? "hourly rate" : "fixed price");
+    }
     if (!Number.isFinite(Number(duration)) || Number(duration) <= 0) blockers.push("estimated hours");
     if (!addressLine1.trim()) blockers.push("private street address");
     if (!postalCode.trim()) blockers.push("postal code");
     if (applicationDeadlineIsPast) blockers.push("a future application deadline");
     return blockers;
-  }, [addressLine1, applicationDeadlineIsPast, budget, city, duration, postalCode, region, scopeDescription, summary, title]);
+  }, [addressLine1, applicationDeadlineIsPast, budget, city, compensationType, duration, postalCode, region, scopeDescription, summary, title]);
   const canPublish = publishBlockers.length === 0;
 
   const input = useMemo<JobEditorInput>(() => ({
@@ -140,8 +150,9 @@ export function JobEditorModal({ organizationId, job, defaultLocation, onClose, 
     scopeDescription: scopeDescription.trim(),
     difficulty,
     workType,
-    budgetCents: budget ? Math.round(Number(budget) * 100) : null,
-    budgetUnit: "fixed",
+    budgetCents: compensationType === "request_quotes" || !budget ? null : Math.round(Number(budget) * 100),
+    budgetUnit: compensationType === "hourly" ? "hourly" : "fixed",
+    compensationType,
     durationHours: duration ? Number(duration) : null,
     preferredStartDate: optionalDate(preferredStartDate),
     applicationDeadline: optionalDateTime(applicationDeadline),
@@ -160,7 +171,7 @@ export function JobEditorModal({ organizationId, job, defaultLocation, onClose, 
       countryCode: "US",
       accessNotes: accessNotes.trim(),
     } : null,
-  }), [accessNotes, addressLine1, addressLine2, applicationDeadline, budget, city, deliverables, difficulty, duration, insuranceRequired, materials, organizationId, postalCode, postalPrefix, preferredStartDate, region, scopeDescription, summary, title, tools, tradeName, workType]);
+  }), [accessNotes, addressLine1, addressLine2, applicationDeadline, budget, city, compensationType, deliverables, difficulty, duration, insuranceRequired, materials, organizationId, postalCode, postalPrefix, preferredStartDate, region, scopeDescription, summary, title, tools, tradeName, workType]);
 
   async function persistDraft() {
     if (!canSaveBasics) throw new Error("Add a job title and public city/state before saving.");
@@ -253,9 +264,18 @@ export function JobEditorModal({ organizationId, job, defaultLocation, onClose, 
               <div className="job-editor-intro"><h3>Define the scope</h3><p>Clear expectations produce better-fit responses and fewer jobsite surprises.</p></div>
               <label>Short summary<span className="required-mark" aria-hidden="true">*</span><textarea value={summary} onChange={(event) => setSummary(event.target.value)} placeholder="One or two sentences tradespeople can scan quickly." rows={2} /></label>
               <label>Detailed scope<span className="required-mark" aria-hidden="true">*</span><textarea value={scopeDescription} onChange={(event) => setScopeDescription(event.target.value)} placeholder="Describe the work, existing conditions, and what completion looks like." rows={5} /></label>
+              <fieldset className="job-compensation-options">
+                <legend>How will this work be priced?</legend>
+                {compensationOptions.map((option) => (
+                  <label key={option.value} className={compensationType === option.value ? "is-selected" : ""}>
+                    <input type="radio" name="compensation-type" value={option.value} checked={compensationType === option.value} onChange={() => setCompensationType(option.value)} />
+                    <span><strong>{option.label}</strong><small>{option.help}</small></span>
+                  </label>
+                ))}
+              </fieldset>
               <div className="form-grid three-columns">
                 <label>Work type<select value={workType} onChange={(event) => setWorkType(event.target.value as typeof workType)}>{workTypeValues.map((value) => <option key={value} value={value}>{value.replaceAll("_", " ")}</option>)}</select></label>
-                <label>Budget ($)<span className="required-mark" aria-hidden="true">*</span><input type="number" min="50" step="1" value={budget} onChange={(event) => setBudget(event.target.value)} /></label>
+          {compensationType !== "request_quotes" ? <label>{compensationType === "hourly" ? "Hourly rate ($)" : compensationType === "open_to_offers" ? "Target budget ($)" : "Fixed price ($)"}{["fixed", "hourly"].includes(compensationType) ? <span className="required-mark" aria-hidden="true">*</span> : <span className="optional-label"> Optional</span>}<input type="number" min="1" step="1" inputMode="decimal" value={budget} onChange={(event) => setBudget(event.target.value)} /></label> : null}
                 <label>Hours<span className="required-mark" aria-hidden="true">*</span><input type="number" min="0.5" step="0.5" value={duration} onChange={(event) => setDuration(event.target.value)} /></label>
               </div>
               <label>Tools needed<input value={tools} onChange={(event) => setTools(event.target.value)} placeholder="Multimeter, conduit bender" /></label>

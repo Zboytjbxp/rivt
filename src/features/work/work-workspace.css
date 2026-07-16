@@ -3191,3 +3191,30 @@
   outline: 3px solid color-mix(in srgb, var(--v2-accent) 38%, transparent);
   outline-offset: 2px;
 }
+.v2-offer-terms,
+.v2-application-proposal {
+  display: grid;
+  gap: 10px;
+  width: 100%;
+  padding: 12px;
+  border: 1px solid var(--v2-border);
+  border-radius: var(--v2-radius-md);
+  background: var(--v2-surface-muted);
+}
+
+.v2-offer-terms > div,
+.v2-application-proposal > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(120px, .7fr);
+  gap: 8px;
+}
+
+.v2-offer-terms label,
+.v2-application-proposal label { display: grid; gap: 5px; min-width: 0; }
+.v2-offer-terms small,
+.v2-application-proposal small { color: var(--v2-text-muted); }
+
+@media (max-width: 430px) {
+  .v2-offer-terms > div,
+  .v2-application-proposal > div { grid-template-columns: 1fr; }
+}

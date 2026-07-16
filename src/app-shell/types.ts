@@ -12,6 +12,14 @@ export interface ProfileSearchResult {
   primaryRole: "contractor" | "tradesperson";
   availabilityStatus: "available" | "limited" | "unavailable";
   trades: Array<{ code: string; name: string; primary: boolean }>;
+  rateCards: Array<{
+    tradeCode: string;
+    tradeName: string;
+    hourlyRateCents: number | null;
+    dayRateCents: number | null;
+    minimumChargeCents: number | null;
+    notes: string;
+  }>;
 }
 
 export interface ShellProfile {

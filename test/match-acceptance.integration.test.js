@@ -144,6 +144,36 @@ if (!testDatabaseUrl) {
     const otherTradesperson = await createAccount(baseUrl, "tradesperson", "Wrong Recipient");
     const job = await createPublishedJob(baseUrl, contractor);
 
+    const savedRates = await requestJson(baseUrl, "/api/v1/profile/rates", {
+      method: "PUT",
+      cookie: tradesperson.cookie,
+      body: {
+        entries: [{
+          tradeCode: "electrical",
+          hourlyRateCents: 8500,
+          dayRateCents: 65000,
+          minimumChargeCents: 25000,
+          visibility: "network",
+          notes: "Standard Jacksonville rate.",
+        }],
+      },
+    });
+    assert.equal(savedRates.response.status, 200);
+    assert.equal(savedRates.payload.data.rates[0].hourlyRateCents, 8500);
+
+    const publishedProfile = await requestJson(baseUrl, "/api/v1/profile/publish", {
+      method: "POST",
+      cookie: tradesperson.cookie,
+    });
+    assert.equal(publishedProfile.response.status, 200);
+
+    const profileSearch = await requestJson(baseUrl, "/api/v1/profiles?q=Acceptance%20Electrician", {
+      cookie: contractor.cookie,
+    });
+    assert.equal(profileSearch.response.status, 200);
+    const searchedProfile = profileSearch.payload.data.profiles.find((profile) => profile.accountId === tradesperson.id);
+    assert.equal(searchedProfile.rateCards[0].hourlyRateCents, 8500);
+
     const beforeAcceptance = await requestJson(baseUrl, `/api/v1/jobs/${job.id}`, { cookie: tradesperson.cookie });
     assert.equal(beforeAcceptance.response.status, 200);
     assert.equal("privateLocation" in beforeAcceptance.payload.data.job, false);
@@ -165,6 +195,20 @@ if (!testDatabaseUrl) {
     assert.equal(blockedApply.response.status, 403);
     assert.equal(blockedApply.payload.error.code, "ACCOUNT_BLOCKED");
 
+    const incompleteProposal = await requestJson(baseUrl, `/api/v1/jobs/${job.id}/applications`, {
+      method: "POST",
+      cookie: tradesperson.cookie,
+      idempotencyKey: `incomplete-proposal-${randomUUID()}`,
+      body: {
+        message: "This proposal is intentionally missing its pay unit.",
+        proposedAmountCents: 82500,
+        consentAccepted: true,
+        consentVersion: "2026-06-19",
+      },
+    });
+    assert.equal(incompleteProposal.response.status, 422);
+    assert.equal(incompleteProposal.payload.error.code, "VALIDATION_FAILED");
+
     const submitted = await requestJson(baseUrl, `/api/v1/jobs/${job.id}/applications`, {
       method: "POST",
       cookie: tradesperson.cookie,
@@ -172,6 +216,8 @@ if (!testDatabaseUrl) {
       body: {
         message: "I can handle this panel scope tomorrow morning.",
         proposedStartDate: "2026-07-01",
+        proposedAmountCents: 82500,
+        proposedUnit: "fixed",
         consentAccepted: true,
         consentVersion: "2026-06-19",
       },
@@ -207,6 +253,8 @@ if (!testDatabaseUrl) {
     assert.equal(applicants.response.status, 200);
     assert.equal(applicants.payload.data.applications.length, 1);
     assert.equal(applicants.payload.data.applications[0].applicant.accountId, tradesperson.id);
+    assert.equal(applicants.payload.data.applications[0].proposal.amountCents, 82500);
+    assert.equal(applicants.payload.data.applications[0].applicant.rates[0].hourlyRateCents, 8500);
 
     const shortlisted = await requestJson(baseUrl, `/api/v1/applications/${applicationId}/shortlist`, {
       method: "POST",
@@ -231,10 +279,13 @@ if (!testDatabaseUrl) {
         startDate: "2026-07-02",
         scopeSummary: "Panel termination and labeling scope from the accepted job.",
         message: "You are approved for this one. Confirm and the full address unlocks.",
+        agreedAmountCents: 90000,
+        agreedUnit: "fixed",
       },
     });
     assert.equal(offer.response.status, 201);
     assert.equal(offer.payload.data.offer.status, "pending");
+    assert.equal(offer.payload.data.offer.agreedCompensation.amountCents, 90000);
     const offerId = offer.payload.data.offer.id;
 
     const wrongRecipientAccept = await requestJson(baseUrl, `/api/v1/offers/${offerId}/accept`, {
@@ -258,7 +309,7 @@ if (!testDatabaseUrl) {
     assert.equal(accepted.payload.data.activeWork.job.trade.code, "electrical");
     assert.equal(accepted.payload.data.activeWork.job.trade.name, "Electrical");
     assert.equal(accepted.payload.data.activeWork.job.durationHours, 8);
-    assert.equal(accepted.payload.data.activeWork.job.budget.amountCents, 95000);
+    assert.equal(accepted.payload.data.activeWork.job.budget.amountCents, 90000);
     const activeWorkId = accepted.payload.data.activeWork.id;
 
     const contractorAcceptedNotifications = await requestJson(baseUrl, "/api/v1/notifications", { cookie: contractor.cookie });
