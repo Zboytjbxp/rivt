@@ -77,6 +77,17 @@ Revert the Packet 52 implementation commit. No data or schema rollback is
 required because the packet changes presentation and client task sequencing
 only.
 
+## Deployment evidence
+
+- Implementation commit: `f02817c2d04fdca2d2383959f3b6cbc3511f3705`.
+- Merge commit: `d39dc391cf7f5d88a3ed592f3dc3eccfc44da2dd`.
+- Railway served the exact merge commit at `https://rivt.pro/api/health` with
+  migration 27 ready.
+- The expected-source production monitor passed in 548 ms with PostgreSQL,
+  S3-compatible object storage, Sentry, Web Push, matching-job alerts,
+  operational controls, and all seven anonymous private-route checks healthy.
+- No migration or production data change was required.
+
 ## Next packet
 
 Packet 53 should simplify Daily Log and Safety into progressive field tasks,

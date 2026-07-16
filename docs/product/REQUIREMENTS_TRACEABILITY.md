@@ -1437,7 +1437,7 @@ Evidence must eventually link to implementation, automated tests, manual accepta
   `25ca2de639a40c6d7956de467a33decc99c520fa`; the expected-source monitor
   passed in 612 ms with migration 27, managed dependencies, observability,
   engagement controls, and all anonymous private-route checks healthy.
-# Traceability Addendum - 2026-07-15 Progressive Money Flows (Local Verification)
+# Traceability Addendum - 2026-07-15 Progressive Money Flows (Production Verification)
 
 - `GA-UX-003` gains progressive-task evidence: Estimate separates Price,
   Customer, and Review; Invoice separates Items, Customer, and Review while
