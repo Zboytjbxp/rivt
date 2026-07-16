@@ -3,10 +3,10 @@
 Last updated: 2026-07-15 America/New_York
 Current gate: Gate B controlled engagement
 Current phase: Packet 48 final Tools subtraction and launch-wide workflow QA is
-locally verified. The visible catalog is at a seven-destination floor; no
+merged and verified. The visible catalog is at a seven-destination floor; no
 additional launchers should be removed without workflow evidence.
 Active packet: `docs/delivery/packets/48_FINAL_TOOLS_LAUNCH_QA.md`
-Repository branch: `codex/final-tools-launch-qa`
+Repository branch: `master`
 Production feature release commit: `82b243e6bdbb28ffe4ec3d28c4253c044a1d6f22`
 
 ## Packet 48 - Final Tools Subtraction and Launch QA (Locally Verified)
@@ -25,6 +25,9 @@ Production feature release commit: `82b243e6bdbb28ffe4ec3d28c4253c044a1d6f22`
   Migration 27 is applied with zero pending migrations.
 - No production behavior, schema, authorization, or stored record changed in
   this packet; it is a QA assertion and delivery-evidence release.
+- Merge evidence: Packet 48 commit `e274dbced3dbcbac00942c6fb5f6302ca343655f`
+  is on `master`. The user-facing production feature source remains Packet 47
+  because Packet 48 changes only tests and delivery documentation.
 - Remaining boundary: physical iOS/Android camera capture, cross-device record
   retention, installed-iOS push, and one two-account production closeout chain.
 
