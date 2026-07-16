@@ -68,6 +68,7 @@ type DifficultyFilter = (typeof difficultyOptions)[number];
 type WorkTypeFilter = (typeof workTypeOptions)[number];
 type DetailTab = "overview" | "requirements" | "activity" | "changes" | "checklist" | "payments" | "notes" | "contacts";
 type WorkspaceTab = "today" | "job" | "activity" | "money" | "more";
+type WorkStage = "browse" | "hiring" | "active" | "archive";
 type ContractorSection = "open" | "draft" | "paused" | "closed" | "pipeline" | "calendar" | "templates";
 type JobAction = "publish" | "pause" | "resume" | "close";
 
@@ -365,7 +366,7 @@ interface PipelineEntry {
   app: CanonicalApplication;
 }
 
-function PipelineBoard({ openJobs }: { openJobs: Job[] }) {
+function PipelineBoard({ openJobs, onOpenJob }: { openJobs: Job[]; onOpenJob: (jobId: JobId) => void }) {
   const [entries, setEntries] = useState<PipelineEntry[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -414,15 +415,15 @@ function PipelineBoard({ openJobs }: { openJobs: Job[] }) {
                   <span className="v2-pipeline-count">{stageEntries.length}</span>
                 </div>
                 <div className="v2-pipeline-col-body">
-                  {stageEntries.map(({ app, jobTitle }) => (
-                    <article key={app.id} className="v2-pipeline-card">
+                  {stageEntries.map(({ app, jobId, jobTitle }) => (
+                    <button type="button" key={app.id} className="v2-pipeline-card" onClick={() => onOpenJob(jobId)}>
                       <div className="v2-pipeline-card-avatar">{(app.applicant?.displayName || "?")[0].toUpperCase()}</div>
                       <div>
                         <strong>{app.applicant?.displayName || "Tradesperson"}</strong>
                         <small>{jobTitle}</small>
                         {app.applicant?.headline ? <span>{app.applicant.headline}</span> : null}
                       </div>
-                    </article>
+                    </button>
                   ))}
                   {stageEntries.length === 0 ? <p className="v2-pipeline-empty">None yet</p> : null}
                 </div>
@@ -498,46 +499,6 @@ function WorkCalendar({ jobs }: { jobs: Job[] }) {
 }
 
 // ── Contractor Stats Bar ──────────────────────────────────────────────────────
-
-function ContractorStatsBar({ jobs }: { jobs: Job[] }) {
-  const openJobs = jobs.filter((j) => j.status === "Open").length;
-  const draftJobs = jobs.filter((j) => j.status === "Draft").length;
-
-  const weekHours = useMemo(() => {
-    try {
-      const stored = localStorage.getItem("rivt.sessions.v1");
-      if (!stored) return 0;
-      const sessions = JSON.parse(stored) as Array<{ durationMs: number; startedAt: string }>;
-      if (!Array.isArray(sessions)) return 0;
-      // eslint-disable-next-line react-hooks/purity
-      const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
-      return sessions
-        .filter((s) => new Date(s.startedAt).getTime() > weekAgo)
-        .reduce((sum, s) => sum + s.durationMs / 3_600_000, 0);
-    } catch { return 0; }
-  }, []);
-
-  const weekCosts = useMemo(() => {
-    try {
-      const stored = localStorage.getItem("rivt.expenses.v1");
-      if (!stored) return 0;
-      const expenses = JSON.parse(stored) as Array<{ amount: number; date: string }>;
-      if (!Array.isArray(expenses)) return 0;
-      // eslint-disable-next-line react-hooks/purity
-      const weekAgoStr = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-      return expenses.filter((e) => e.date >= weekAgoStr).reduce((sum, e) => sum + e.amount, 0);
-    } catch { return 0; }
-  }, []);
-
-  return (
-    <div className="v2-contractor-stats-bar">
-      <div className="v2-stat-chip"><strong>{openJobs}</strong><span>open</span></div>
-      <div className="v2-stat-chip"><strong>{draftJobs}</strong><span>drafts</span></div>
-      <div className="v2-stat-chip"><strong>{weekHours.toFixed(1)}h</strong><span>this week</span></div>
-      <div className="v2-stat-chip v2-stat-chip-costs"><strong>${Math.round(weekCosts).toLocaleString()}</strong><span>costs logged</span></div>
-    </div>
-  );
-}
 
 const savedSearchKey = "rivt.savedSearches.v1";
 
@@ -1252,6 +1213,7 @@ export function WorkWorkspace({
   const [detailTab, setDetailTab] = useState<DetailTab>("overview");
   const [workspaceTab, setWorkspaceTab] = useState<WorkspaceTab>(() => focusedActiveWorkId ? "today" : "job");
   const [workspaceArrivalVisible, setWorkspaceArrivalVisible] = useState(() => Boolean(openDetailOnMount && focusedActiveWorkId));
+  const [workStage, setWorkStage] = useState<WorkStage>(() => focusedActiveWorkId ? "active" : "browse");
   const [contractorSection, setContractorSection] = useState<ContractorSection>("open");
   const [activeAction, setActiveAction] = useState("");
   const [actionError, setActionError] = useState<string | null>(null);
@@ -1264,6 +1226,10 @@ export function WorkWorkspace({
   const [matchApplications, setMatchApplications] = useState<CanonicalApplication[]>([]);
   const [matchOffers, setMatchOffers] = useState<CanonicalOffer[]>([]);
   const [matchActiveWork, setMatchActiveWork] = useState<CanonicalActiveWork[]>([]);
+  const [stageApplications, setStageApplications] = useState<CanonicalApplication[]>([]);
+  const [stageOffers, setStageOffers] = useState<CanonicalOffer[]>([]);
+  const [stageHiringLoading, setStageHiringLoading] = useState(false);
+  const [stageHiringError, setStageHiringError] = useState<string | null>(null);
   const [applicationMessage, setApplicationMessage] = useState("I am interested in this work and can confirm tools, timing, and site requirements.");
   const [savedSearches, setSavedSearches] = useState<SavedSearch[]>(readSavedSearches);
   const [savedSearchNotice, setSavedSearchNotice] = useState("");
@@ -1274,10 +1240,12 @@ export function WorkWorkspace({
   const detailHeadingRef = useRef<HTMLHeadingElement>(null);
 
   const visibleJobs = useMemo(() => {
-    if (role !== "contractor") return jobs;
+    if (role !== "contractor") return workStage === "browse" ? jobs : [];
+    if (workStage === "active") return [];
+    if (workStage === "browse") return jobs.filter((job) => job.status === "Open");
     const status = statusForSection[contractorSection];
     return status ? jobs.filter((job) => job.status === status) : jobs;
-  }, [contractorSection, jobs, role]);
+  }, [contractorSection, jobs, role, workStage]);
   const activeWorkReady = useMemo(
     () => activeWorkRecords.filter((work) => work.status === "active"),
     [activeWorkRecords],
@@ -1286,13 +1254,23 @@ export function WorkWorkspace({
     () => (focusedActiveWorkId ? activeWorkRecords.find((work) => work.id === focusedActiveWorkId) ?? null : null),
     [activeWorkRecords, focusedActiveWorkId],
   );
-  const primaryActiveWorkRecord = focusedActiveWorkRecord ?? activeWorkReady[0] ?? activeWorkRecords[0] ?? null;
+  const primaryActiveWorkRecord = focusedActiveWorkRecord?.status === "active"
+    ? focusedActiveWorkRecord
+    : activeWorkReady[0] ?? null;
+  const activeStageWorkRecord = focusedActiveWorkRecord?.status === "active"
+    ? focusedActiveWorkRecord
+    : activeWorkReady[0] ?? null;
   const focusedActiveJob = useMemo(() => {
     if (!focusedActiveWorkRecord) return null;
     const jobId = focusedActiveWorkRecord.jobId;
     return jobs.find((job) => job.canonical?.id === jobId || String(job.id) === jobId)
       ?? activeWorkSummaryJob(focusedActiveWorkRecord);
   }, [focusedActiveWorkRecord, jobs]);
+  const activeStageJob = useMemo(() => {
+    if (!activeStageWorkRecord) return null;
+    return jobs.find((job) => job.canonical?.id === activeStageWorkRecord.jobId || String(job.id) === activeStageWorkRecord.jobId)
+      ?? activeWorkSummaryJob(activeStageWorkRecord);
+  }, [activeStageWorkRecord, jobs]);
 
   const activeFilterCount = [
     trade !== "All trades",
@@ -1301,6 +1279,17 @@ export function WorkWorkspace({
     locationQuery.trim().length > 0,
     verifiedOnly,
   ].filter(Boolean).length;
+
+  function selectWorkStage(stage: WorkStage) {
+    setWorkStage(stage);
+    setFiltersOpen(false);
+    setMobileDetailOpen(stage === "active" && Boolean(activeStageWorkRecord));
+    setWorkspaceTab(stage === "active" ? "today" : "job");
+    setActionError(null);
+    if (stage === "browse") setContractorSection("open");
+    if (stage === "hiring" && !["draft", "pipeline", "calendar", "templates"].includes(contractorSection)) setContractorSection("draft");
+    if (stage === "archive" && !["paused", "closed"].includes(contractorSection)) setContractorSection("closed");
+  }
 
   function revealJobWorkspace(moveFocus = false) {
     window.requestAnimationFrame(() => {
@@ -1329,6 +1318,26 @@ export function WorkWorkspace({
     // Use the route-level handoff so URL, hydration, selected job, and the
     // visible workspace agree even after the original job is closed to browsing.
     onOpenActiveWorkWorkspace(work.id, work.jobId);
+  }
+
+  async function openCanonicalJob(jobId: string) {
+    const existing = jobs.find((job) => job.canonical?.id === jobId);
+    setWorkStage("browse");
+    if (existing) {
+      selectJob(existing.id, true);
+      return;
+    }
+    try {
+      const loaded = toJobViewModel(await getJob(jobId));
+      onJobLoaded(loaded);
+      onSelectJob(loaded.id);
+      setDetailTab("overview");
+      setWorkspaceTab("job");
+      setMobileDetailOpen(true);
+      revealJobWorkspace();
+    } catch (cause) {
+      setStageHiringError(cause instanceof Error ? cause.message : "That job could not be opened.");
+    }
   }
 
   async function runAction(job: Job, action: JobAction) {
@@ -1476,7 +1485,9 @@ export function WorkWorkspace({
   }
 
   const selectedIsVisible = selectedJob ? visibleJobs.some((job) => job.id === selectedJob.id) : false;
-  const detailJob = focusedActiveJob ?? (selectedIsVisible ? selectedJob : visibleJobs[0] ?? null);
+  const detailJob = workStage === "active" || focusedActiveJob
+    ? (focusedActiveJob ?? activeStageJob)
+    : (selectedIsVisible ? selectedJob : visibleJobs[0] ?? null);
   const canonicalJobId = detailJob?.canonical?.id ?? null;
   const needsPrivateDetailHydration = role === "contractor"
     && Boolean(canonicalJobId)
@@ -1636,11 +1647,53 @@ export function WorkWorkspace({
     return () => window.clearTimeout(timeout);
   }, [focusedJobTitle, openDetailOnMount]);
 
+  useEffect(() => {
+    if (!focusedActiveWorkId) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setWorkStage(focusedActiveWorkRecord && focusedActiveWorkRecord.status !== "active" ? "archive" : "active");
+    setMobileDetailOpen(true);
+    setWorkspaceTab(focusedActiveWorkRecord?.status === "active" ? "today" : "job");
+  }, [focusedActiveWorkId, focusedActiveWorkRecord]);
+
+  useEffect(() => {
+    if (role !== "tradesperson" || workStage !== "hiring") return;
+    let cancelled = false;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setStageHiringLoading(true);
+    setStageHiringError(null);
+    Promise.all([listMyApplications(), listOffers()])
+      .then(([applications, offers]) => {
+        if (cancelled) return;
+        setStageApplications(applications.filter((application) => application.status !== "withdrawn"));
+        setStageOffers(offers);
+      })
+      .catch((cause) => {
+        if (!cancelled) setStageHiringError(cause instanceof Error ? cause.message : "Applications could not be loaded.");
+      })
+      .finally(() => {
+        if (!cancelled) setStageHiringLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [matchRefreshKey, role, workStage]);
+
   const workPageClassName = [
     "v2-work-page",
     role === "contractor" ? "is-contractor" : "",
+    `is-${workStage}`,
     focusedActiveWorkId && mobileDetailOpen ? "is-focused-workspace" : "",
   ].filter(Boolean).join(" ");
+  const workStages: Array<{ id: WorkStage; label: string; count?: number }> = [
+    { id: "browse", label: "Browse" },
+    { id: "hiring", label: role === "contractor" ? "Hiring" : "Applications" },
+    { id: "active", label: "Active", count: activeWorkReady.length },
+    { id: "archive", label: "Archive" },
+  ];
+  const showBrowseControls = workStage === "browse";
+  const showContractorHiringJobs = role === "contractor" && workStage === "hiring" && contractorSection === "draft";
+  const showArchiveJobs = role === "contractor" && workStage === "archive";
+  const showJobLayout = showBrowseControls || showContractorHiringJobs || showArchiveJobs || workStage === "active" || Boolean(focusedActiveJob);
 
   return (
     <section className={workPageClassName} aria-label="Work">
@@ -1671,20 +1724,30 @@ export function WorkWorkspace({
         </div>
       )}
       <header className="v2-work-header">
-        <div><h1>Work</h1><p>{role === "contractor" ? "Post and manage jobs." : "Find open work nearby."}</p></div>
+        <div><h1>Work</h1><p>{role === "contractor" ? "Find people, hire, and run accepted work." : "Find work, track applications, and run accepted jobs."}</p></div>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          {role === "contractor" ? (
+          {role === "contractor" && (workStage === "browse" || workStage === "hiring") ? (
             <button type="button" className="v2-primary-button" onClick={onPostJob}><Plus size={17} /> Post job</button>
           ) : null}
         </div>
       </header>
 
-      <nav className="v2-work-mode-switcher" aria-label="Work views">
-        <button type="button" className="is-active" aria-current="page">Jobs</button>
-        <button type="button" onClick={onOpenPeople}>People</button>
+      <nav className="v2-work-stage-switcher" aria-label="Work stages">
+        {workStages.map((stage) => (
+          <button
+            key={stage.id}
+            type="button"
+            className={workStage === stage.id ? "is-active" : ""}
+            aria-current={workStage === stage.id ? "page" : undefined}
+            onClick={() => selectWorkStage(stage.id)}
+          >
+            <span>{stage.label}</span>
+            {stage.count ? <small>{stage.count}</small> : null}
+          </button>
+        ))}
       </nav>
 
-      {role === "contractor" ? (
+      {role === "contractor" && (workStage === "browse" || workStage === "hiring") ? (
         <button
           type="button"
           className="v2-work-create-fab"
@@ -1697,47 +1760,50 @@ export function WorkWorkspace({
         </button>
       ) : null}
 
-      {primaryActiveWorkRecord ? (
-        <section className={detailJob?.canonical?.id === primaryActiveWorkRecord.jobId && mobileDetailOpen ? "v2-active-work-strip is-current-detail" : "v2-active-work-strip"} aria-label="Active work ready">
-          <div>
-            <span>You're active now</span>
-            <h2>{primaryActiveWorkRecord.job?.title ?? "Accepted work is ready"}</h2>
-            <p>Open this job to keep messages, photos, logs, and money records together.</p>
-          </div>
-          <div className="v2-active-work-strip-actions">
-            <button type="button" className="v2-primary-button" onClick={() => openActiveWorkJob(primaryActiveWorkRecord)}>
-              Open workspace
+      {workStage === "browse" ? (
+        <div className="v2-work-browse-actions">
+          <button type="button" className="v2-secondary-button" onClick={onOpenPeople}><Users size={17} /> Find people</button>
+          {primaryActiveWorkRecord ? (
+            <button type="button" className="v2-active-work-shortcut" onClick={() => selectWorkStage("active")}>
+              <span>Active now</span>
+              <strong>{primaryActiveWorkRecord.job?.title ?? "Accepted work"}</strong>
+              <ChevronRight size={17} />
             </button>
-          </div>
-        </section>
+          ) : null}
+        </div>
       ) : null}
 
-      {role === "contractor" ? (
+      {role === "contractor" && workStage === "hiring" ? (
         <>
-          <nav className="v2-section-tabs" aria-label="Job status">
-            {(["open", "draft", "paused", "closed", "pipeline", "calendar", "templates"] as ContractorSection[]).map((section) => {
-              const sectionLabel: Record<ContractorSection, string> = { open: "Open", draft: "Drafts", paused: "Paused", closed: "Closed", pipeline: "Pipeline", calendar: "Calendar", templates: "Templates" };
+          <nav className="v2-section-tabs" aria-label="Hiring views">
+            {(["draft", "pipeline", "templates", "calendar"] as ContractorSection[]).map((section) => {
+              const sectionLabel: Partial<Record<ContractorSection, string>> = { draft: "Drafts", pipeline: "Applicants", calendar: "Schedule", templates: "Templates" };
               return <button key={section} type="button" className={contractorSection === section ? "is-active" : ""} onClick={() => { setContractorSection(section); setMobileDetailOpen(false); }}>{sectionLabel[section]}</button>;
             })}
           </nav>
           <label className="v2-mobile-work-select">
-            <span>{primaryActiveWorkRecord ? "Other work" : "View"}</span>
+            <span>Hiring</span>
             <select value={contractorSection} onChange={(event) => { setContractorSection(event.target.value as ContractorSection); setMobileDetailOpen(false); }}>
-              <option value="open">Open jobs</option>
               <option value="draft">Drafts</option>
-              <option value="paused">Paused</option>
-              <option value="closed">Closed</option>
               <option value="pipeline">Applicant pipeline</option>
-              <option value="calendar">Calendar</option>
               <option value="templates">Templates</option>
+              <option value="calendar">Schedule</option>
             </select>
           </label>
         </>
       ) : null}
 
-      {role === "contractor" && !primaryActiveWorkRecord ? <ContractorStatsBar jobs={jobs} /> : null}
+      {role === "contractor" && workStage === "archive" ? (
+        <nav className="v2-section-tabs" aria-label="Archive views">
+          {(["closed", "paused"] as ContractorSection[]).map((section) => (
+            <button key={section} type="button" className={contractorSection === section ? "is-active" : ""} onClick={() => { setContractorSection(section); setMobileDetailOpen(false); }}>
+              {section === "closed" ? "Closed" : "Paused"}
+            </button>
+          ))}
+        </nav>
+      ) : null}
 
-      <div className="v2-work-toolbar">
+      {showBrowseControls ? <div className="v2-work-toolbar">
         <label className="v2-list-search"><Search size={16} /><input value={query} onChange={(event) => onQueryChange(event.target.value)} placeholder="Search work" /></label>
         <button type="button" className={filtersOpen ? "v2-filter-button is-active" : "v2-filter-button"} onClick={() => setFiltersOpen((open) => !open)}>
           <Filter size={16} /> Filters {activeFilterCount ? <span>{activeFilterCount}</span> : null}
@@ -1747,11 +1813,11 @@ export function WorkWorkspace({
             <BookmarkPlus size={16} />
           </button>
         ) : null}
-      </div>
+      </div> : null}
 
-      {savedSearchNotice ? <p className="v2-saved-search-notice" role="status">{savedSearchNotice}</p> : null}
+      {showBrowseControls && savedSearchNotice ? <p className="v2-saved-search-notice" role="status">{savedSearchNotice}</p> : null}
 
-      {role === "tradesperson" && savedSearches.length > 0 ? (
+      {showBrowseControls && role === "tradesperson" && savedSearches.length > 0 ? (
         <div className="v2-saved-searches">
           <span className="v2-saved-searches-label"><Bookmark size={13} />Saved searches</span>
           <div className="v2-saved-search-chips">
@@ -1765,7 +1831,7 @@ export function WorkWorkspace({
         </div>
       ) : null}
 
-      {filtersOpen ? (
+      {showBrowseControls && filtersOpen ? (
         <section className="v2-filter-panel" aria-label="Work filters">
           <div className="v2-filter-panel-heading"><strong>Filter work</strong><button type="button" onClick={() => setFiltersOpen(false)} aria-label="Close filters"><X size={18} /></button></div>
           <label><span>Trade</span><select value={trade} onChange={(event) => onTradeChange(event.target.value as TradeFilter)}>{tradeOptions.map((option) => <option key={option}>{option}</option>)}</select></label>
@@ -1778,23 +1844,83 @@ export function WorkWorkspace({
 
       {error ? <div className="v2-work-error" role="alert"><div><strong>Jobs could not be loaded</strong><span>{error}</span></div><button type="button" onClick={onRetry}><RefreshCw size={16} /> Retry</button></div> : null}
 
-      {role === "contractor" && contractorSection === "pipeline" ? (
-        <PipelineBoard openJobs={jobs.filter((j) => j.status === "Open")} />
-      ) : role === "contractor" && contractorSection === "calendar" ? (
+      {role === "contractor" && workStage === "hiring" && contractorSection === "pipeline" ? (
+        <PipelineBoard openJobs={jobs.filter((j) => j.status === "Open")} onOpenJob={(jobId) => { setWorkStage("browse"); selectJob(jobId, true); }} />
+      ) : role === "contractor" && workStage === "hiring" && contractorSection === "calendar" ? (
         <WorkCalendar jobs={jobs} />
-      ) : role === "contractor" && contractorSection === "templates" ? (
+      ) : role === "contractor" && workStage === "hiring" && contractorSection === "templates" ? (
         <JobTemplates onPostJob={onPostJob} />
       ) : null}
 
-      <div ref={workLayoutRef} className={mobileDetailOpen ? "v2-work-layout show-detail" : "v2-work-layout"} style={role === "contractor" && (contractorSection === "pipeline" || contractorSection === "calendar" || contractorSection === "templates") ? { display: "none" } : undefined}>
-        <section className="v2-work-list" aria-label={`${visibleJobs.length} jobs`}>
+      {role === "tradesperson" && workStage === "hiring" ? (
+        <section className="v2-stage-panel" aria-label="Applications and offers">
+          <header><div><span>Hiring</span><h2>Applications and offers</h2></div>{stageHiringLoading ? <small>Loading...</small> : null}</header>
+          {stageHiringError ? <p className="v2-match-error" role="alert">{stageHiringError}</p> : null}
+          {!stageHiringLoading && !stageApplications.length && !stageOffers.length ? (
+            <EmptyState icon={<BriefcaseBusiness size={24} />} title="No applications yet" description="Jobs you apply to and offers you receive will stay here." />
+          ) : (
+            <div className="v2-stage-record-list">
+              {stageOffers.map((offer) => (
+                <button type="button" key={offer.id} onClick={() => void openCanonicalJob(offer.jobId)}>
+                  <span>{offer.status === "pending" ? "Offer needs you" : "Offer"}</span>
+                  <strong>{jobs.find((job) => job.canonical?.id === offer.jobId)?.title ?? "Open job"}</strong>
+                  <small>{offer.status}{offer.startDate ? ` - starts ${offer.startDate}` : ""}</small>
+                  <ChevronRight size={18} />
+                </button>
+              ))}
+              {stageApplications.map((application) => (
+                <button type="button" key={application.id} onClick={() => void openCanonicalJob(application.jobId)}>
+                  <span>Application</span>
+                  <strong>{jobs.find((job) => job.canonical?.id === application.jobId)?.title ?? "Open job"}</strong>
+                  <small>{application.status}</small>
+                  <ChevronRight size={18} />
+                </button>
+              ))}
+            </div>
+          )}
+        </section>
+      ) : null}
+
+      {role === "tradesperson" && workStage === "archive" ? (
+        <section className="v2-stage-panel" aria-label="Work archive">
+          <header><div><span>Archive</span><h2>Past work</h2></div></header>
+          {activeWorkRecords.filter((work) => work.status !== "active").length ? (
+            <div className="v2-stage-record-list">
+              {activeWorkRecords.filter((work) => work.status !== "active").map((work) => (
+                <button type="button" key={work.id} onClick={() => openActiveWorkJob(work)}>
+                  <span>{work.status}</span>
+                  <strong>{work.job?.title ?? "Accepted work"}</strong>
+                  <small>{[work.job?.publicLocation.city, work.job?.publicLocation.region].filter(Boolean).join(", ") || "Work record"}</small>
+                  <ChevronRight size={18} />
+                </button>
+              ))}
+            </div>
+          ) : <EmptyState icon={<BriefcaseBusiness size={24} />} title="No past work yet" description="Completed and cancelled work will stay here." />}
+        </section>
+      ) : null}
+
+      <div ref={workLayoutRef} className={mobileDetailOpen ? "v2-work-layout show-detail" : "v2-work-layout"} style={showJobLayout ? undefined : { display: "none" }}>
+        <section className="v2-work-list" aria-label={workStage === "active" ? `${activeWorkReady.length} active jobs` : `${visibleJobs.length} jobs`}>
           <div className="v2-work-list-heading">
-            <span>{visibleJobs.length} {visibleJobs.length === 1 ? "job" : "jobs"}</span>
+            <span>{workStage === "active" ? `${activeWorkReady.length} active` : `${visibleJobs.length} ${visibleJobs.length === 1 ? "job" : "jobs"}`}</span>
             <div className="v2-work-list-heading-actions">
-              <small>{role === "contractor" ? `${contractorSection} postings` : (persona?.jobSectionLabel ?? "Open work")}</small>
+              <small>{workStage === "active" ? "Accepted work" : role === "contractor" ? `${contractorSection} postings` : (persona?.jobSectionLabel ?? "Open work")}</small>
             </div>
           </div>
-          {loading ? <JobListSkeleton /> : visibleJobs.length ? (
+          {workStage === "active" ? (
+            activeWorkReady.length ? (
+              <div className="v2-active-work-index">
+                {activeWorkReady.map((work) => (
+                  <button type="button" key={work.id} className={activeStageWorkRecord?.id === work.id ? "is-selected" : ""} onClick={() => openActiveWorkJob(work)}>
+                    <span>Active work</span>
+                    <strong>{work.job?.title ?? "Accepted work"}</strong>
+                    <small>{[work.job?.publicLocation.city, work.job?.publicLocation.region].filter(Boolean).join(", ") || "Workspace ready"}</small>
+                    <ChevronRight size={18} />
+                  </button>
+                ))}
+              </div>
+            ) : <EmptyState icon={<BriefcaseBusiness size={24} />} title="No active work" description="Accepted offers become job workspaces here." />
+          ) : loading ? <JobListSkeleton /> : visibleJobs.length ? (
             <>
               {visibleJobs.map((job) => (
                 <JobRow
@@ -1814,7 +1940,7 @@ export function WorkWorkspace({
 
         {detailJob ? (
           <article className="v2-work-detail" aria-label={detailJob.title}>
-            <button type="button" className="v2-detail-back" onClick={() => setMobileDetailOpen(false)}><ArrowLeft size={16} /> All work</button>
+            <button type="button" className="v2-detail-back" onClick={() => setMobileDetailOpen(false)}><ArrowLeft size={16} /> {workStage === "active" ? "Active work" : workStage === "archive" ? "Archive" : "All work"}</button>
             <header className="v2-work-detail-header">
               <div><span className="v2-detail-trade">{detailJob.trade}</span><h2 ref={detailHeadingRef} tabIndex={-1}>{detailJob.title}</h2><p><MapPin size={14} /> {detailJob.location} · {detailJob.status === "Draft" ? "Last saved" : "Posted"} {detailJob.posted}</p></div>
               {role === "tradesperson" && detailJob.match > 0 ? <div className="v2-match-score"><strong>{detailJob.match}%</strong><span>match</span></div> : <StatusPill tone={statusTone(detailJob.status)} className={`v2-work-status status-${detailJob.status.toLowerCase()}`}>{detailJob.status}</StatusPill>}

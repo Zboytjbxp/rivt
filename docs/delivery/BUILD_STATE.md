@@ -2,13 +2,33 @@
 
 Last updated: 2026-07-15 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Packet 50 interface foundation and subtraction is production
-verified. Verified orphan style families are removed, named overlay tokens are
-in place, and the remaining custom Shop Talk and tool-context sheets share one
-accessible dialog behavior without changing product workflows.
-Active packet: `docs/delivery/packets/50_INTERFACE_FOUNDATION_SUBTRACTION.md`
-Repository branch: `codex/interface-foundation-subtraction`
-Production feature release commit: `0b3fb5d43f91bc4720b7e74add546a642db31f9d`
+Current phase: Packet 51 Work State Architecture passed the complete local
+release gate and is ready to merge. Work now separates Browse, Hiring or
+Applications, Active, and Archive without changing server-owned lifecycle
+records.
+Active packet: `docs/delivery/packets/51_WORK_STATE_ARCHITECTURE.md`
+Repository branch: `codex/work-state-architecture`
+Production feature release commit: pending Packet 51 merge and deployment
+
+## Packet 51 - Work State Architecture (Release Ready)
+
+- Work now exposes four explicit states instead of stacking open work, drafts,
+  applicants, active work, archive controls, templates, calendar, and local
+  vanity metrics in one long surface.
+- Browse owns open work and People discovery; contractor Hiring owns drafts,
+  applicant pipeline, templates, and schedule; tradesperson Applications owns
+  applications and offers; Active owns accepted-work workspaces; Archive owns
+  past or paused records.
+- Applicant, application, offer, and active-work actions preserve exact job and
+  work-record routing, including records outside the current open-work list.
+- The device-local contractor metric bar is removed from Work. No server data,
+  schema, API, authorization, authentication, billing, storage, or moderation
+  behavior changed.
+- Build, lint, security lint, 55 unit tests, E2E, rendered Work lifecycle QA,
+  mobile-action QA, dependency audit, diff checks, and all 19 serial
+  PostgreSQL integration suites pass with zero failures or skips.
+- Next boundary: merge/deploy and record production evidence, then begin
+  Packet 52 progressive Estimate and Invoice task flows.
 
 ## Packet 50 - Interface Foundation and Subtraction (Production Verified)
 

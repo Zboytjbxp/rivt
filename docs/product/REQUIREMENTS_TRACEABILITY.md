@@ -10,6 +10,22 @@ Status values:
 
 Evidence must eventually link to implementation, automated tests, manual acceptance proof, and deployed build.
 
+## Traceability Addendum - 2026-07-15 Work State Architecture (Local Verification)
+
+- `GA-UX-003` gains lifecycle-destination evidence: Browse, Hiring or
+  Applications, Active, and Archive each expose the exact records and actions
+  appropriate to that state rather than stacking the whole lifecycle.
+- `GA-UX-006` gains rendered mobile evidence: an accepted offer moves into an
+  Active workspace that replaces the browse list and retains exact Messages,
+  Photos, Daily log, Estimate, and Invoice handoffs without horizontal
+  overflow.
+- Contractor applicant cards and tradesperson application/offer records now
+  open their exact job, including jobs outside the current open-work list.
+- Existing server-owned jobs, applications, offers, active-work records, and
+  exact deep links are read in place. No migration, record rewrite, API,
+  authorization, authentication, billing, storage, or moderation boundary
+  changes in this packet.
+
 ## Traceability Addendum - 2026-07-15 Interface Foundation and Subtraction (Local Verification)
 
 - `GA-UX-006` gains shared-dialog evidence: Shop Talk reporting and the Tools
@@ -1398,3 +1414,22 @@ Evidence must eventually link to implementation, automated tests, manual accepta
   `b0fe53b22af2e75f81a765d11030b0eaecac00af`; the expected-source synthetic
   monitor passed all seven anonymous private-route checks with migration 27,
   storage, Sentry, Web Push, matching alerts, and rollout controls healthy.
+
+## Traceability Addendum - 2026-07-15 Work State Architecture
+
+- `GA-UX-003` gains four explicit Work lifecycle states: Browse, Hiring or
+  Applications, Active, and Archive. Each state owns one class of task instead
+  of stacking discovery, administration, accepted work, and history in one
+  mobile surface.
+- `GA-UX-003` preserves exact job and work-record destinations for applicants,
+  applications, offers, active work, and archived work, including records that
+  no longer appear in open-work discovery.
+- `GA-UX-006` gains rendered mobile evidence that accepted work replaces broad
+  Work chrome, draft readiness remains reachable through Hiring, and the Work
+  surface has no horizontal overflow.
+- Local evidence includes production build, lint, security lint, 55 unit
+  tests, E2E, Work lifecycle and mobile-action browser suites, a zero-
+  vulnerability production dependency audit, diff checks, and all 19 serial
+  PostgreSQL integration suites with zero failures or skips.
+- No API, database, authorization, authentication, billing, storage,
+  moderation, or server-owned lifecycle contract changed in this packet.

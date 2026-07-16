@@ -382,6 +382,7 @@ async function runMobileFlow(page) {
   await page.locator(".v2-work-create-fab").waitFor({ timeout: 15_000 });
   await assertControlCenterClickable(page, ".v2-work-create-fab", "Work post-job action");
 
+  await page.getByRole("navigation", { name: "Work stages" }).getByRole("button", { name: "Hiring", exact: true }).click();
   await page.locator(".v2-mobile-work-select select").first().selectOption("draft");
   await page.locator(".v2-job-row-inner").filter({ hasText: "Kitchen trim-out support" }).first().click();
   await page.getByText("Draft is not publish-ready", { exact: true }).waitFor({ timeout: 15_000 });
@@ -435,7 +436,7 @@ async function runMobileFlow(page) {
   await page.getByLabel("Camera").getByRole("button", { name: "Tools" }).click();
   await page.getByRole("heading", { name: "Tools", exact: true }).waitFor({ timeout: 15_000 });
   await page.getByRole("button", { name: "Work", exact: true }).click();
-  await page.getByRole("button", { name: "People", exact: true }).click();
+  await page.getByRole("button", { name: "Find people", exact: true }).click();
   await page.getByRole("heading", { name: "People", exact: true }).waitFor({ timeout: 15_000 });
   await assertNoHorizontalOverflow(page, "People");
   await page.locator(".v2-crew-invite-fold > summary").click();
@@ -497,7 +498,7 @@ async function runMobileFlow(page) {
     assert.equal(await page.getByRole("button", { name: "Enable device alerts", exact: true }).count(), 0);
   await assertNoHorizontalOverflow(page, "Settings route");
   await page.getByRole("button", { name: "Work", exact: true }).click();
-  await page.getByRole("button", { name: "People", exact: true }).click();
+  await page.getByRole("button", { name: "Find people", exact: true }).click();
   await page.getByRole("heading", { name: "People", exact: true }).waitFor({ timeout: 15_000 });
   await page.locator(".v2-crew-invite-fold > summary").click();
   await page.getByRole("button", { name: "Plan invite", exact: true }).click();
