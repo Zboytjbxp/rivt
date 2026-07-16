@@ -2,10 +2,10 @@
 
 Last updated: 2026-07-16 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Packet 55 active-work acceptance repair is verified locally; merge, deployment, and physical two-account closeout remain.
+Current phase: Packet 55 active-work acceptance repair is production verified; physical two-account closeout remains.
 Active packet: `docs/delivery/packets/55_COMPENSATION_WORKFLOW.md`
-Repository branch: `codex/active-work-workflow`
-Production feature release commit: `b9f7458978db70cd9c7d21d950376eaaa1a04d16`
+Repository branch: `master`
+Production feature release commit: `650e50dbc20b1992fd8d3c8e0a4f0065aacead1a`
 
 ## Packet 55 - Compensation Workflow (Production Verification)
 
@@ -29,6 +29,11 @@ Production feature release commit: `b9f7458978db70cd9c7d21d950376eaaa1a04d16`
   handoff.
 - The complete fresh-database integration gate passed all 19 serial PostgreSQL
   suites with zero failures or skips through migration 0028.
+- Railway deployment `65be4acd-34a1-40f2-b459-b9a0cae05308` serves exact
+  source `650e50dbc20b1992fd8d3c8e0a4f0065aacead1a`. The expected-source
+  production monitor passed in 581 ms with migration 0028 ready, PostgreSQL,
+  S3-compatible storage, Sentry, Web Push, matching-job alerts, operational
+  controls, and all seven anonymous private-route checks healthy.
 
 - Contractors can list fixed, hourly, open-to-offers, or request-quotes work.
   Open-to-offers uses an optional target; request-quotes requires no invented

@@ -110,6 +110,12 @@ proposal, final offer, and accepted agreed compensation remain distinct.
 That physical pass should also submit completion as the tradesperson and
 confirm or request changes as the contractor.
 
+The active-work acceptance repair is deployed through Railway deployment
+`65be4acd-34a1-40f2-b459-b9a0cae05308` on exact source
+`650e50dbc20b1992fd8d3c8e0a4f0065aacead1a`. The expected-source production
+monitor passed in 581 ms with migration 0028 ready and all seven anonymous
+private-route checks healthy.
+
 ## Next packet
 
 After production verification, audit the compensation language and mobile
