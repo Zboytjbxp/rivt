@@ -2,12 +2,57 @@
 
 Last updated: 2026-07-15 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Packet 48 final Tools subtraction and launch-wide workflow QA is
-production verified. The visible catalog is at a seven-destination floor; no
-additional launchers should be removed without workflow evidence.
-Active packet: `docs/delivery/packets/48_FINAL_TOOLS_LAUNCH_QA.md`
-Repository branch: `master`
+Current phase: Packet 50 interface foundation and subtraction is locally
+complete. Verified orphan style families are removed, named overlay tokens are
+in place, and the remaining custom Shop Talk and tool-context sheets share one
+accessible dialog behavior without changing product workflows.
+Active packet: `docs/delivery/packets/50_INTERFACE_FOUNDATION_SUBTRACTION.md`
+Repository branch: `codex/interface-foundation-subtraction`
 Production feature release commit: `82b243e6bdbb28ffe4ec3d28c4253c044a1d6f22`
+
+## Packet 50 - Interface Foundation and Subtraction (Local Verification)
+
+- Removed 600+ lines of verified-orphaned theme, appearance, field-kit, and
+  Shop Talk FAB styling before another visible redesign adds override debt.
+- Added a named overlay scale and shared accessible dialog surface with focus
+  trapping, Escape/backdrop dismissal, focus restoration, and ARIA semantics.
+- Shop Talk reporting and the Tools work-context picker now share that behavior
+  while preserving their existing content, actions, and class names.
+- Shared page/panel/avatar primitives no longer use negative letter spacing.
+- Build, lint, security lint, 55 unit tests, E2E, Tools UI, Shop Talk/Trade
+  News UI, mobile-action UI, dependency audit, diff checks, and all 19 serial
+  PostgreSQL integration suites against the configured isolated test database
+  pass with zero skips or failures.
+- Rendered evidence covers desktop, normal mobile, and compact-phone Tools and
+  Camera plus desktop/mobile Shop Talk. Camera's lower one-handed controls and
+  the seven-destination Tools floor remain intact.
+- No route, record, schema, authorization, authentication, billing, storage,
+  moderation, or lifecycle workflow changed.
+- Next boundary: Packet 51 Work State Architecture, separating Browse, Hiring,
+  Active, and Archive without changing server-owned job/application truth.
+
+## Packet 49 - Full Interface Audit (Audit Complete)
+
+- Every reachable customer and staff surface was inventoried across shell,
+  entry/auth, Home, Work/People, Camera, Shop Talk/Trade News, Tools, Inbox,
+  Profile, Settings, and moderation.
+- The audit applies one workflow standard to every primary action: clear
+  feedback, exact destination, and a visible next step.
+- RIVT's product core is coherent and should not be rewritten. The principal
+  interface issue is simultaneous exposure of too much capability, especially
+  in Work, Estimate, Invoice, Daily Log, Safety, the account drawer, and desktop
+  compositions.
+- The seven-destination Tools floor remains correct. Heavy 16th and Camera's
+  lower capture dock are preservation references; further simplification
+  should happen inside destinations rather than by hiding useful capability.
+- No new P0 authorization, billing, or data-integrity issue was established and
+  no Gate B requirement changes maturity. Runtime code, schema, records,
+  dependencies, deployment, and production evidence are unchanged.
+- The recommended next packet is Foundation and Subtraction: verified orphan
+  CSS deletion, semantic type/breakpoint/z-index/status tokens, shared dialog
+  and drawer primitives, and stronger rendered overlap/overflow gates.
+- Full findings and implementation trains are in
+  `docs/product/FULL_INTERFACE_AUDIT_2026-07-15.md`.
 
 ## Packet 48 - Final Tools Subtraction and Launch QA (Production Verified)
 

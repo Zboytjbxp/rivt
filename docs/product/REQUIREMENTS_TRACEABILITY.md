@@ -10,6 +10,19 @@ Status values:
 
 Evidence must eventually link to implementation, automated tests, manual acceptance proof, and deployed build.
 
+## Traceability Addendum - 2026-07-15 Interface Foundation and Subtraction (Local Verification)
+
+- `GA-UX-006` gains shared-dialog evidence: Shop Talk reporting and the Tools
+  work-context picker now use one focus-trapped, Escape-dismissible,
+  focus-restoring dialog behavior with accessible semantics.
+- Rendered regression evidence covers desktop, mobile, and compact-phone Tools,
+  Camera, Shop Talk, and Trade News without changing their records or actions.
+- More than 600 lines of verified-unreferenced visual experiment CSS were
+  removed, reducing specificity and bundle debt before Work and field-tool
+  task-flow redesign.
+- This packet changes no API, record, authorization, authentication, billing,
+  storage, moderation, migration, or route boundary.
+
 ## Traceability Addendum - 2026-07-15 Invoice and Receivables Consolidation (Production Verification)
 
 - `GA-UX-003` gains billing-workflow evidence: invoice drafting and receivable

@@ -64,6 +64,14 @@
   --v2-topbar-height: 58px;
   --v2-content-max: 1360px;
   --v2-content-gutter: 34px;
+  /* One shared stacking scale. Feature CSS should not invent new overlay depths. */
+  --v2-z-content: 1;
+  --v2-z-sticky: 20;
+  --v2-z-shell: 40;
+  --v2-z-scrim: 60;
+  --v2-z-toast: 70;
+  --v2-z-dialog: 160;
+  --v2-z-recovery: 1000;
   --v2-nav-bg: #0c1110;
   --v2-nav-bg-strong: #080d10;
   color: var(--v2-text);
