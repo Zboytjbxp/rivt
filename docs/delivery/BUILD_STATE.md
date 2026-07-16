@@ -1,13 +1,28 @@
 # RIVT Build State
 
-Last updated: 2026-07-15 America/New_York
+Last updated: 2026-07-16 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Packet 53 Progressive Jobsite Flows is production verified.
-Daily Log, Punch List, and Safety expose one field task at a time without
-changing their saved records or work context.
-Active packet: `docs/delivery/packets/53_PROGRESSIVE_JOBSITE_FLOWS.md`
+Current phase: Packet 54 Account Drawer Subtraction is locally verified and
+ready for merge and production verification.
+Active packet: `docs/delivery/packets/54_ACCOUNT_DRAWER_SUBTRACTION.md`
 Repository branch: `master`
 Production feature release commit: `af13e52232ec0199a35d11f7f059942fed25b7a5`
+
+## Packet 54 - Account Drawer Subtraction (Ready To Deploy)
+
+- The account drawer is now a compact navigation menu containing identity,
+  Profile, Settings, staff-only Admin, and Sign out.
+- Duplicate profile metrics, standing, device, appearance, and setup content
+  was removed from the drawer. Profile and Settings remain the authoritative
+  destinations for those controls and records.
+- Exact Settings-section routing preserves theme and alert access without
+  carrying preference controls in the account menu.
+- Typecheck, build, lint, security lint, 55 unit tests, E2E, mobile-action UI,
+  dependency audit, diff checks, and all 19 serial PostgreSQL integration
+  suites passed with zero failures or skips.
+- No API, schema, migration, authentication, authorization, billing, storage,
+  moderation, or server-owned record behavior changed.
+- Next boundary: merge, deploy, and verify the exact production source.
 
 ## Packet 53 - Progressive Jobsite Flows (Production Verified)
 

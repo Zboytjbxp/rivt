@@ -482,8 +482,13 @@ async function runMobileFlow(page) {
 
   await safeCloseOpenPanels(page);
   await page.getByRole("button", { name: /Open profile menu for/i }).click();
-  await page.getByRole("dialog", { name: "Settings" }).waitFor({ timeout: 15_000 });
-  await assertControlCenterClickable(page, ".account-signout-btn", "account sign-out button");
+  const accountDialog = page.getByRole("dialog", { name: "Account menu" });
+  await accountDialog.waitFor({ timeout: 15_000 });
+  await assertControlCenterClickable(page, ".account-menu-signout", "account sign-out button");
+  assert.equal(await accountDialog.locator(".appearance-preference").count(), 0, "Theme controls belong in Settings, not the account menu");
+  await accountDialog.getByRole("button", { name: /^Settings\b/i }).click();
+  await page.getByRole("heading", { name: "Settings", exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByRole("button", { name: "Theme", exact: true }).click();
   const appearance = page.locator(".appearance-preference");
   assert.equal(await appearance.getByRole("button").count(), 3, "Appearance should offer only System, Light, and Dark");
   await appearance.getByRole("button", { name: /Dark/i }).click();
@@ -492,8 +497,6 @@ async function runMobileFlow(page) {
   assert.equal(await page.evaluate(() => document.documentElement.dataset.appearance), undefined, "Retired custom appearance state must not remain on the document");
   await assertNoHorizontalOverflow(page, "Appearance preference");
   await page.screenshot({ path: path.join(screenshotDir, "mobile-appearance-studio.png"), fullPage: false });
-  await page.getByRole("button", { name: "Settings", exact: true }).click();
-  await page.getByRole("heading", { name: "Settings", exact: true }).waitFor({ timeout: 15_000 });
   await page.getByRole("button", { name: "Alerts", exact: true }).click();
   await page.getByText("In-app alert preferences", { exact: true }).waitFor({ timeout: 15_000 });
     await page.getByText("Device delivery is not configured for this environment.", { exact: true }).waitFor({ timeout: 15_000 });

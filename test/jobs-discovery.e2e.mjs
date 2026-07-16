@@ -481,9 +481,11 @@ async function assertTopBarActions(page) {
   await page.getByRole("button", { name: "Close notifications" }).click();
 
   await page.getByRole("button", { name: /Open profile menu for/i }).last().click();
-  await page.getByRole("dialog", { name: "Settings" }).waitFor();
+  await page.getByRole("dialog", { name: "Account menu" }).waitFor();
+  await page.getByRole("button", { name: /^Profile\b/i }).last().waitFor();
+  await page.getByRole("button", { name: /^Settings\b/i }).waitFor();
   await page.getByRole("button", { name: "Sign out" }).waitFor();
-  await page.getByRole("button", { name: "Close profile" }).click();
+  await page.getByRole("button", { name: "Close account menu" }).click();
 
   await page.getByRole("button", { name: "Messages" }).click();
   await page.getByRole("heading", { name: "Inbox", exact: true }).waitFor();
