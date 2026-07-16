@@ -310,7 +310,14 @@ if (!testDatabaseUrl) {
     assert.equal(accepted.payload.data.activeWork.job.trade.name, "Electrical");
     assert.equal(accepted.payload.data.activeWork.job.durationHours, 8);
     assert.equal(accepted.payload.data.activeWork.job.budget.amountCents, 90000);
+    assert.equal(accepted.payload.data.activeWork.job.privateLocation.addressLine1, "404 Acceptance Way");
+    assert.equal(accepted.payload.data.activeWork.job.privateLocation.accessNotes, "Meet at the loading dock.");
     const activeWorkId = accepted.payload.data.activeWork.id;
+
+    const tradespersonActiveWork = await requestJson(baseUrl, "/api/v1/active-work", { cookie: tradesperson.cookie });
+    assert.equal(tradespersonActiveWork.response.status, 200);
+    assert.equal(tradespersonActiveWork.payload.data.activeWork[0].job.privateLocation.addressLine1, "404 Acceptance Way");
+    assert.equal(tradespersonActiveWork.payload.data.activeWork[0].job.privateLocation.postalCode, "32202");
 
     const contractorAcceptedNotifications = await requestJson(baseUrl, "/api/v1/notifications", { cookie: contractor.cookie });
     const acceptedNotification = contractorAcceptedNotifications.payload.data.notifications.find((item) => (

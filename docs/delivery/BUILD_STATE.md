@@ -2,12 +2,33 @@
 
 Last updated: 2026-07-16 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Packet 55 Compensation Workflow is production verified; physical two-account acceptance remains.
+Current phase: Packet 55 active-work acceptance repair is verified locally; merge, deployment, and physical two-account closeout remain.
 Active packet: `docs/delivery/packets/55_COMPENSATION_WORKFLOW.md`
-Repository branch: `codex/compensation-workflow`
+Repository branch: `codex/active-work-workflow`
 Production feature release commit: `b9f7458978db70cd9c7d21d950376eaaa1a04d16`
 
 ## Packet 55 - Compensation Workflow (Production Verification)
+
+### Active-work acceptance repair
+
+- Work now distinguishes the public listing state from the private accepted-work
+  lifecycle. Accepting an offer can close the listing to new applicants without
+  labeling the participant workspace `Closed`.
+- Contractor and tradesperson workspaces have role-specific guidance and
+  actions. Contractors track progress and approve closeout; tradespeople perform
+  the work, document it, invoice it, and submit completion.
+- Accepted participants receive the exact private jobsite address and access
+  notes through the participant-authorized active-work response. Work provides
+  copy and directions actions without exposing that location to outsiders.
+- Closeout is now a visible part of Work. The action follows the server-owned
+  project state from completion submission through contractor review,
+  confirmation, or requested changes, and opens the exact accepted-work record.
+- Focused PostgreSQL coverage proves private-address release to the accepted
+  tradesperson while preserving outsider denial, reschedule, and cancellation.
+  Rendered mobile lifecycle coverage proves both role views and the closeout
+  handoff.
+- The complete fresh-database integration gate passed all 19 serial PostgreSQL
+  suites with zero failures or skips through migration 0028.
 
 - Contractors can list fixed, hourly, open-to-offers, or request-quotes work.
   Open-to-offers uses an optional target; request-quotes requires no invented

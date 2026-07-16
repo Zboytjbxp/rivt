@@ -36,6 +36,10 @@ profile rate as a binding bid.
   not an automatic bid or contract.
 - Rendered Work lifecycle coverage now exercises a proposal, edited final
   offer, and accepted agreed compensation on mobile.
+- The private accepted-work workspace now distinguishes contractor and
+  tradesperson responsibilities, renders the active-work lifecycle instead of
+  the closed public-listing status, releases the participant-authorized jobsite
+  address to both sides, and exposes the existing project closeout workflow.
 
 ## Acceptance
 
@@ -50,6 +54,9 @@ profile rate as a binding bid.
 - Private rates never appear in search or applications; applications-only
   rates appear only with an application; network rates may appear in people
   discovery.
+- Closing a listing after acceptance does not label active work as closed.
+  Accepted participants can open the exact jobsite, daily records, money tools,
+  and role-appropriate completion or review action from Work.
 
 ## Verification
 
@@ -61,14 +68,20 @@ profile rate as a binding bid.
 - `npm run test:e2e` - passed.
 - `npm run test:ui:mobile-actions` - passed.
 - `npm run test:ui:work-lifecycle` - passed with proposal and final-offer UI.
+- The active-work lifecycle extension passed with separate contractor and
+  tradesperson workspace assertions, exact private address, daily actions, and
+  closeout routing at mobile width.
 - `npm audit --omit=dev` - zero vulnerabilities.
 - Migration apply/rollback/reapply and the compensation match-acceptance,
   jobs, messaging-notifications, project-completion, and
   reviews-admin-safety PostgreSQL suites passed against the configured
   isolated `TEST_DATABASE_URL`.
-- The aggregate integration wrapper exceeded the remote ten-minute command
-  window; this packet claims the affected serial suites, not a completed
-  aggregate wrapper run.
+- `npm run test:integration:fresh` - all 19 serial PostgreSQL suites passed
+  with zero failures or skips after resetting the isolated test database
+  through migration `0028_compensation_workflow`.
+- The focused match-acceptance PostgreSQL suite additionally proves the exact
+  private address is returned to the accepted tradesperson and remains covered
+  by participant authorization.
 
 ## Rollback
 
@@ -94,6 +107,8 @@ The remaining acceptance boundary is a physical two-account pass through
 fixed, hourly, open-to-offers, and request-quotes work. The automated
 two-account PostgreSQL lifecycle already proves listing target, applicant
 proposal, final offer, and accepted agreed compensation remain distinct.
+That physical pass should also submit completion as the tradesperson and
+confirm or request changes as the contractor.
 
 ## Next packet
 

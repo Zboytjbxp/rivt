@@ -210,6 +210,15 @@ export function mapActiveWork(row, { events = [] } = {}) {
         region: row.public_region,
         countryCode: row.public_country_code,
       },
+      privateLocation: row.private_address_line_1 ? {
+        addressLine1: row.private_address_line_1,
+        addressLine2: row.private_address_line_2 || "",
+        city: row.private_city,
+        region: row.private_region,
+        postalCode: row.private_postal_code,
+        countryCode: row.private_country_code,
+        accessNotes: row.private_access_notes || "",
+      } : undefined,
     } : undefined,
     events: events.map(mapTimelineEvent),
   };

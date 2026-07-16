@@ -1159,6 +1159,68 @@
   line-height: 1.45;
 }
 
+.v2-active-jobsite {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid color-mix(in srgb, var(--v2-info) 38%, var(--v2-border));
+  border-radius: var(--v2-radius-md);
+  background: var(--v2-info-soft);
+}
+
+.v2-active-jobsite > div:first-child {
+  display: grid;
+  gap: 4px;
+}
+
+.v2-active-jobsite span,
+.v2-active-work-closeout span {
+  color: var(--v2-accent);
+  font-size: var(--v2-text-label);
+  font-weight: var(--v2-weight-bold);
+  text-transform: uppercase;
+}
+
+.v2-active-jobsite h3,
+.v2-active-jobsite p {
+  margin: 0;
+}
+
+.v2-active-jobsite h3 {
+  font-size: 16px;
+  line-height: 1.35;
+}
+
+.v2-active-jobsite p {
+  color: var(--v2-text-muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.v2-active-jobsite-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.v2-active-jobsite-actions button,
+.v2-active-jobsite-actions a {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: 1px solid var(--v2-border-strong);
+  border-radius: var(--v2-radius-sm);
+  background: var(--v2-surface);
+  color: var(--v2-text);
+  font: inherit;
+  font-size: 13px;
+  font-weight: var(--v2-weight-strong);
+  text-decoration: none;
+  cursor: pointer;
+}
+
 .v2-active-work-daily-actions button:disabled,
 .v2-active-work-money-actions button:disabled,
 .v2-active-work-controls button:disabled {
@@ -1219,8 +1281,56 @@
 .v2-active-work-money-actions > div {
   display: grid;
   flex: 1;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr);
   gap: 8px;
+}
+
+.v2-active-work-closeout {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 12px;
+  padding: 13px;
+  border: 1px solid color-mix(in srgb, var(--v2-accent) 34%, var(--v2-border));
+  border-radius: var(--v2-radius-sm);
+  background: color-mix(in srgb, var(--v2-accent-soft) 54%, var(--v2-surface));
+}
+
+.v2-active-work-closeout > div:first-child {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.v2-active-work-closeout > div:first-child > svg {
+  margin-top: 2px;
+  color: var(--v2-accent);
+}
+
+.v2-active-work-closeout > div:first-child > div {
+  display: grid;
+  gap: 3px;
+}
+
+.v2-active-work-closeout strong,
+.v2-active-work-closeout small {
+  display: block;
+}
+
+.v2-active-work-closeout strong {
+  font-size: 14px;
+  line-height: 1.35;
+}
+
+.v2-active-work-closeout small {
+  color: var(--v2-text-muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.v2-active-work-closeout > button {
+  width: 100%;
+  min-height: 48px;
 }
 
 .v2-active-work-controls {
