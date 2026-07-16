@@ -1381,3 +1381,7 @@ Evidence must eventually link to implementation, automated tests, manual accepta
 - Physical camera capture, cross-device server-record retention, installed-iOS
   push, and a two-account production closeout remain explicit human acceptance
   boundaries; mocked browser evidence is not represented as live proof.
+- Production evidence: Railway served exact merged source
+  `b0fe53b22af2e75f81a765d11030b0eaecac00af`; the expected-source synthetic
+  monitor passed all seven anonymous private-route checks with migration 27,
+  storage, Sentry, Web Push, matching alerts, and rollout controls healthy.

@@ -3,13 +3,13 @@
 Last updated: 2026-07-15 America/New_York
 Current gate: Gate B controlled engagement
 Current phase: Packet 48 final Tools subtraction and launch-wide workflow QA is
-merged and verified. The visible catalog is at a seven-destination floor; no
+production verified. The visible catalog is at a seven-destination floor; no
 additional launchers should be removed without workflow evidence.
 Active packet: `docs/delivery/packets/48_FINAL_TOOLS_LAUNCH_QA.md`
 Repository branch: `master`
 Production feature release commit: `82b243e6bdbb28ffe4ec3d28c4253c044a1d6f22`
 
-## Packet 48 - Final Tools Subtraction and Launch QA (Locally Verified)
+## Packet 48 - Final Tools Subtraction and Launch QA (Production Verified)
 
 - The final visible catalog is five core apps plus two grouped utilities.
   Compatibility aliases preserve legacy URLs and stored shortcuts without
@@ -28,6 +28,11 @@ Production feature release commit: `82b243e6bdbb28ffe4ec3d28c4253c044a1d6f22`
 - Merge evidence: Packet 48 commit `e274dbced3dbcbac00942c6fb5f6302ca343655f`
   is on `master`. The user-facing production feature source remains Packet 47
   because Packet 48 changes only tests and delivery documentation.
+- Railway served exact source `b0fe53b22af2e75f81a765d11030b0eaecac00af`.
+  The expected-source production monitor passed with migration 27 ready,
+  PostgreSQL and S3-compatible storage healthy, Sentry and Web Push configured,
+  matching-job alerts enabled, operational controls open, and seven anonymous
+  private-route checks in 622 ms.
 - Remaining boundary: physical iOS/Android camera capture, cross-device record
   retention, installed-iOS push, and one two-account production closeout chain.
 
