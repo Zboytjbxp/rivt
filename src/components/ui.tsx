@@ -1,4 +1,5 @@
 import type { CSSProperties, ReactNode } from "react";
+import { useFocusTrap } from "../app-shell/useFocusTrap";
 import "./ui.css";
 
 type SurfaceElement = "article" | "aside" | "section";
@@ -6,6 +7,58 @@ type Tone = "neutral" | "success" | "warning" | "danger" | "info";
 
 function cx(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
+}
+
+export function DialogBackdrop({
+  className,
+  onClose,
+  children,
+}: {
+  className?: string;
+  onClose: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <div
+      className={className}
+      role="presentation"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+export function DialogSurface({
+  className,
+  labelledBy,
+  label,
+  onClose,
+  children,
+}: {
+  className?: string;
+  labelledBy?: string;
+  label?: string;
+  onClose: () => void;
+  children: ReactNode;
+}) {
+  const dialogRef = useFocusTrap<HTMLElement>(onClose);
+
+  return (
+    <section
+      ref={dialogRef}
+      className={className}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby={labelledBy}
+      aria-label={label}
+      tabIndex={-1}
+    >
+      {children}
+    </section>
+  );
 }
 
 export function PageHeader({

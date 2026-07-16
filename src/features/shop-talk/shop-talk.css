@@ -2082,26 +2082,6 @@
   border-top-color: var(--v2-surface-muted);
 }
 
-.shop-talk-fab {
-  position: sticky;
-  z-index: 2;
-  bottom: calc(78px + env(safe-area-inset-bottom));
-  justify-self: end;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 52px;
-  margin-top: -4px;
-  padding: 0 18px;
-  border: 0;
-  border-radius: var(--v2-radius-pill);
-  background: var(--trade-orange);
-  color: #ffffff;
-  font-size: 14px;
-  font-weight: var(--v2-weight-display);
-  box-shadow: 0 16px 32px rgba(255, 75, 0, 0.28);
-}
-
 @media (max-width: 640px) {
   .shop-talk-community-layout .shop-talk-sidebar {
     margin: -6px -4px 0;
@@ -2737,7 +2717,7 @@ html[data-rivt-compact-device="true"] .shop-talk-community-layout .shop-talk-sea
 .shop-report-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 140;
+  z-index: var(--v2-z-dialog);
   display: flex;
   align-items: flex-end;
   justify-content: center;

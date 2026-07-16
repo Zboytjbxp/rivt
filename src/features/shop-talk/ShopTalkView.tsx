@@ -48,6 +48,7 @@ import {
   type CommunityBadgeThresholds,
 } from "./community-utils";
 import { apiPath, fetchWithTimeout } from "../../lib/api";
+import { DialogBackdrop, DialogSurface } from "../../components/ui";
 import "./shop-talk.css";
 
 interface AccountProfile {
@@ -228,8 +229,8 @@ function ReportSheet({
   onClose: () => void;
 }) {
   return (
-    <div className="shop-report-backdrop" role="presentation" onClick={(event) => { if (event.target === event.currentTarget) onClose(); }}>
-      <aside className="shop-report-sheet" role="dialog" aria-modal="true" aria-labelledby="shop-report-title">
+    <DialogBackdrop className="shop-report-backdrop" onClose={onClose}>
+      <DialogSurface className="shop-report-sheet" onClose={onClose} labelledBy="shop-report-title">
         <div className="shop-report-header">
           <div>
             <span>Report {target.kind}</span>
@@ -276,8 +277,8 @@ function ReportSheet({
             {busy ? "Sending..." : "Send report"}
           </button>
         </div>
-      </aside>
-    </div>
+      </DialogSurface>
+    </DialogBackdrop>
   );
 }
 

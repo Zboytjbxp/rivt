@@ -1,5 +1,6 @@
 import { BriefcaseBusiness, Camera, Check, ChevronDown, FolderLock, Plus, Unlink } from "lucide-react";
 import { useState } from "react";
+import { DialogBackdrop, DialogSurface } from "../../components/ui";
 import type { CanonicalActiveWork } from "../work/job-api";
 import type { PhotoAlbum } from "./album-api";
 import type { StandaloneProject } from "./standalone-project-api";
@@ -103,8 +104,8 @@ export function ToolContextPicker({
         </button>
       ) : null}
       {isOpen ? (
-        <div className="v2-tool-context-backdrop" role="presentation" onMouseDown={(event) => { if (event.currentTarget === event.target) closePicker(); }}>
-          <section className="v2-tool-context-sheet" role="dialog" aria-modal="true" aria-labelledby="tool-context-title">
+        <DialogBackdrop className="v2-tool-context-backdrop" onClose={closePicker}>
+          <DialogSurface className="v2-tool-context-sheet" onClose={closePicker} labelledBy="tool-context-title">
             <header>
               <div><small>Save destination</small><h2 id="tool-context-title">Choose work context</h2></div>
               <button type="button" onClick={closePicker} aria-label="Close work context">Close</button>
@@ -164,8 +165,8 @@ export function ToolContextPicker({
               </div>
             ) : null}
             {error ? <p className="v2-record-error" role="alert">{error}</p> : null}
-          </section>
-        </div>
+          </DialogSurface>
+        </DialogBackdrop>
       ) : null}
     </>
   );
