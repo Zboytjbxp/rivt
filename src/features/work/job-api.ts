@@ -186,6 +186,15 @@ export interface CanonicalActiveWork {
       unit: "fixed" | "hourly";
     } | null;
     publicLocation: { city: string; region: string; countryCode: string };
+    privateLocation?: {
+      addressLine1: string;
+      addressLine2: string;
+      city: string;
+      region: string;
+      postalCode: string;
+      countryCode: string;
+      accessNotes: string;
+    };
   };
   events: CanonicalTimelineEvent[];
 }

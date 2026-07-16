@@ -2575,6 +2575,7 @@ function App() {
             }}
             onOpenActiveWorkWorkspace={handleOpenActiveWorkWorkspace}
             onOpenActiveWorkMessages={(activeWorkId) => void handleOpenActiveWorkMessages(activeWorkId)}
+            onOpenActiveWorkRecords={handleOpenActiveWorkRecords}
             onRetry={() => void reloadJobs()}
             onOfferAccepted={(nextWork) => {
               mergeActiveWorkRecord(nextWork);

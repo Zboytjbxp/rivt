@@ -228,6 +228,15 @@ function makeActiveWork(events = []) {
       compensationType: "fixed",
       budget: { amountCents: 85000, currency: "USD", unit: "fixed" },
       publicLocation: { city: "Jacksonville", region: "FL", countryCode: "US" },
+      privateLocation: {
+        addressLine1: "404 Acceptance Way",
+        addressLine2: "Suite 16",
+        city: "Jacksonville",
+        region: "FL",
+        postalCode: "32202",
+        countryCode: "US",
+        accessNotes: "Use the east service entrance.",
+      },
     },
     events,
   };
@@ -718,7 +727,7 @@ async function runTradespersonOfferFlow(page) {
   await clickJob(page, "Warehouse panel assist");
   await page.getByText("You have an offer", { exact: true }).waitFor({ timeout: 15_000 });
   await page.getByRole("button", { name: "Accept work" }).click();
-  await page.getByText("Accepted and active", { exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByLabel("Active work workflow").getByText("Tradesperson workspace", { exact: true }).waitFor({ timeout: 15_000 });
 
   await page.goto(`${baseUrl}/app/work`, { waitUntil: "networkidle" });
   const activeShortcut = page.locator(".v2-active-work-shortcut");
@@ -728,7 +737,7 @@ async function runTradespersonOfferFlow(page) {
   assert.ok(activeStripBox && workToolbarBox && activeStripBox.y < workToolbarBox.y, "Active work must appear before work browsing controls");
   await assertInViewport(activeShortcut, "Active-work shortcut");
   await clickWorkStage(page, "Active");
-  await page.getByText("Accepted and active", { exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByLabel("Active work workflow").getByText("Active", { exact: true }).waitFor({ timeout: 15_000 });
   await page.screenshot({ path: path.join(screenshotDir, "active-work-priority.png"), fullPage: true });
 
   await page.goto(`${baseUrl}/app/home`, { waitUntil: "networkidle" });
@@ -736,44 +745,47 @@ async function runTradespersonOfferFlow(page) {
   await homeActiveWork.getByText("You're active now", { exact: true }).waitFor({ timeout: 15_000 });
   await homeActiveWork.getByRole("button", { name: "Open workspace" }).click();
   await page.waitForURL(new RegExp(`/app/work\\?activeWork=${activeWorkId}`), { timeout: 15_000 });
-  await page.getByText("Accepted and active", { exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByLabel("Active work workflow").getByText("Active", { exact: true }).waitFor({ timeout: 15_000 });
   const workspaceHeading = page.getByRole("heading", { name: "Warehouse panel assist", exact: true });
   await assertInViewport(workspaceHeading, "Active-work workspace heading");
   assert.equal(await workspaceHeading.evaluate((element) => document.activeElement === element), true, "Active-work workspace heading should receive focus after opening");
-  const activeWorkspace = page.getByLabel("Hiring workflow");
-  await activeWorkspace.getByText("Keep this job moving", { exact: true }).waitFor({ timeout: 15_000 });
+  const activeWorkspace = page.getByLabel("Active work workflow");
+  await activeWorkspace.getByText("Document the job and submit closeout", { exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByLabel("Exact jobsite").getByText("404 Acceptance Way, Suite 16, Jacksonville, FL 32202", { exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByLabel("Exact jobsite").getByText("Use the east service entrance.", { exact: true }).waitFor({ timeout: 15_000 });
   const activeWorkspaceBox = await activeWorkspace.boundingBox();
   const jobSummaryBox = await page.locator(".v2-job-description").boundingBox();
   assert.ok(activeWorkspaceBox && jobSummaryBox && activeWorkspaceBox.y < jobSummaryBox.y, "Today must put active-work actions before the job summary");
   await activeWorkspace.getByRole("button", { name: "Messages" }).waitFor({ timeout: 15_000 });
-  await activeWorkspace.getByRole("button", { name: "Photos" }).waitFor({ timeout: 15_000 });
+  await activeWorkspace.getByRole("button", { name: "Add photos" }).waitFor({ timeout: 15_000 });
   await activeWorkspace.getByRole("button", { name: "Daily log" }).waitFor({ timeout: 15_000 });
+  await activeWorkspace.getByRole("button", { name: "Submit completion" }).waitFor({ timeout: 15_000 });
   await activeWorkspace.getByText("Job controls", { exact: true }).waitFor({ timeout: 15_000 });
   assert.equal(await activeWorkspace.locator("details.v2-active-work-controls").evaluate((element) => !element.open), true, "Rare job controls should start collapsed");
-  await activeWorkspace.getByRole("button", { name: "Photos" }).click();
+  await activeWorkspace.getByRole("button", { name: "Add photos" }).click();
   await page.waitForURL(new RegExp(`/app/camera\\?activeWork=${activeWorkId}`), { timeout: 15_000 });
   await page.getByText("Live project feed", { exact: true }).waitFor({ timeout: 15_000 });
   await page.getByLabel("Camera").locator(".v2-job-photos-job-name").getByText("Warehouse panel assist", { exact: true }).waitFor({ timeout: 15_000 });
 
   await page.goto(`${baseUrl}/app/work`, { waitUntil: "networkidle" });
   await clickWorkStage(page, "Active");
-  await page.getByText("Accepted and active", { exact: true }).waitFor({ timeout: 15_000 });
-  await page.getByLabel("Hiring workflow").getByRole("button", { name: "Daily log" }).click();
+  await page.getByLabel("Active work workflow").getByText("Active", { exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByLabel("Active work workflow").getByRole("button", { name: "Daily log" }).click();
   await page.getByRole("heading", { name: "Jobsite", exact: true }).waitFor({ timeout: 15_000 });
   await page.getByLabel("Jobsite sections").getByRole("button", { name: "Log", exact: true }).waitFor({ timeout: 15_000 });
   await page.getByLabel("Site / job").waitFor({ timeout: 15_000 });
 
   await page.goto(`${baseUrl}/app/work`, { waitUntil: "networkidle" });
   await clickWorkStage(page, "Active");
-  await page.getByText("Accepted and active", { exact: true }).waitFor({ timeout: 15_000 });
-  await page.getByLabel("Hiring workflow").getByRole("button", { name: "Photos" }).click();
+  await page.getByLabel("Active work workflow").getByText("Active", { exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByLabel("Active work workflow").getByRole("button", { name: "Add photos" }).click();
   await page.waitForURL(new RegExp(`/app/camera\\?activeWork=${activeWorkId}`), { timeout: 15_000 });
   await page.getByText("Live project feed", { exact: true }).waitFor({ timeout: 15_000 });
   await page.getByLabel("Camera").locator(".v2-job-photos-job-name").getByText("Warehouse panel assist", { exact: true }).waitFor({ timeout: 15_000 });
 
   await page.goto(`${baseUrl}/app/work`, { waitUntil: "networkidle" });
   await clickWorkStage(page, "Active");
-  await page.getByRole("button", { name: "Invoice" }).click();
+  await page.getByRole("button", { name: "Create invoice" }).click();
   await page.getByRole("heading", { name: "Invoice", exact: true }).first().waitFor({ timeout: 15_000 });
   await assertNoHorizontalOverflow(page, "Active work tool bridge");
   await page.screenshot({ path: path.join(screenshotDir, "active-work-tool-bridge.png"), fullPage: true });
@@ -795,7 +807,10 @@ async function runNotificationActiveWorkFlow(page) {
   const notificationsDialog = page.getByRole("dialog", { name: "Notifications" });
   await notificationsDialog.waitFor({ timeout: 15_000 });
   await notificationsDialog.getByRole("button", { name: /Open work: Offer accepted/i }).click();
-  await page.getByLabel("Hiring workflow").getByText("Accepted and active", { exact: true }).waitFor({ timeout: 15_000 });
+  const contractorWorkflow = page.getByLabel("Active work workflow");
+  await contractorWorkflow.getByText("Contractor workspace", { exact: true }).waitFor({ timeout: 15_000 });
+  await contractorWorkflow.getByText("Track progress and approve closeout", { exact: true }).waitFor({ timeout: 15_000 });
+  await contractorWorkflow.getByRole("button", { name: "Open closeout record" }).waitFor({ timeout: 15_000 });
   await assertNoHorizontalOverflow(page, "Notification active work route");
   await page.screenshot({ path: path.join(screenshotDir, "notification-active-work-route.png"), fullPage: true });
 }
@@ -807,7 +822,7 @@ async function runColdStartActiveWorkLink(page) {
   await configurePage(page, contractorAccount, state);
 
   await page.goto(`${baseUrl}/app/work?activeWork=${activeWorkId}&job=${openJobId}`, { waitUntil: "networkidle" });
-  await page.getByLabel("Hiring workflow").getByText("Accepted and active", { exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByLabel("Active work workflow").getByText("Contractor workspace", { exact: true }).waitFor({ timeout: 15_000 });
   await assertNoHorizontalOverflow(page, "Cold-start active work deep link");
 }
 

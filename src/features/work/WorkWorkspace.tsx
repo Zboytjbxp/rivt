@@ -33,6 +33,8 @@ import {
   Phone,
   StickyNote,
   Zap,
+  ClipboardCheck,
+  Navigation,
 } from "lucide-react";
 import type { Job, JobId, Role } from "../../types";
 import { difficultyOptions, tradeOptions, workTypeOptions } from "../../data";
@@ -63,6 +65,7 @@ import {
 } from "./job-api";
 import "./work-workspace.css";
 import { JobDetailHub } from "../jobs/JobDetailHub";
+import { getProjectForActiveWork, type ProjectRecord } from "../tools/project-api";
 
 type TradeFilter = (typeof tradeOptions)[number];
 type DifficultyFilter = (typeof difficultyOptions)[number];
@@ -103,6 +106,7 @@ interface WorkWorkspaceProps {
   onOpenTool: (tool: "daily-log" | "estimate" | "invoice" | "job-photos", activeWorkId?: string) => void;
   onOpenActiveWorkWorkspace: (activeWorkId: string, fallbackJobId?: string | null) => void;
   onOpenActiveWorkMessages: (activeWorkId: string) => void;
+  onOpenActiveWorkRecords: (activeWorkId: string, projectId?: string | null) => void;
   onRetry: () => void;
   onOfferAccepted?: (activeWork: CanonicalActiveWork) => void;
   onActiveWorkChanged?: () => void;
@@ -1218,6 +1222,7 @@ export function WorkWorkspace({
   onOpenTool,
   onOpenActiveWorkWorkspace,
   onOpenActiveWorkMessages,
+  onOpenActiveWorkRecords,
   onRetry,
   onOfferAccepted,
   onActiveWorkChanged,
@@ -1252,6 +1257,8 @@ export function WorkWorkspace({
   const [savedSearchNotice, setSavedSearchNotice] = useState("");
   const [saveTemplateNotice, setSaveTemplateNotice] = useState("");
   const [detailJobId, setDetailJobId] = useState<string | null>(null);
+  const [activeProject, setActiveProject] = useState<ProjectRecord | null>(null);
+  const [addressCopied, setAddressCopied] = useState(false);
   const detailHydrationRequests = useRef<Set<string>>(new Set());
   const workLayoutRef = useRef<HTMLDivElement>(null);
   const detailHeadingRef = useRef<HTMLHeadingElement>(null);
@@ -1536,7 +1543,7 @@ export function WorkWorkspace({
   const applicationUnit = applicationProposal?.jobId === canonicalJobId
     ? applicationProposal.unit
     : detailJob?.canonical?.compensationType === "hourly" ? "hourly" : "fixed";
-  const needsPrivateDetailHydration = role === "contractor"
+  const needsPrivateDetailHydration = Boolean(focusedActiveWorkRecord)
     && Boolean(canonicalJobId)
     && Boolean(detailJob?.canonical)
     && !detailJob?.canonical?.privateLocation;
@@ -1663,6 +1670,23 @@ export function WorkWorkspace({
   const focusedJobTitle = detailJob?.title ?? "";
 
   const activeWorkspace = Boolean(activeWork && activeWork.status === "active");
+  const activePrivateLocation = activeWork?.job?.privateLocation ?? detailJob?.canonical?.privateLocation;
+  const activeAddress = activePrivateLocation
+    ? [activePrivateLocation.addressLine1, activePrivateLocation.addressLine2, `${activePrivateLocation.city}, ${activePrivateLocation.region} ${activePrivateLocation.postalCode}`]
+      .filter(Boolean)
+      .join(", ")
+    : "";
+  const currentActiveProject = activeProject?.activeWorkId === activeWork?.id ? activeProject : null;
+  const completionStatus = currentActiveProject?.status ?? (activeWork?.status === "completed" ? "confirmed" : "open");
+  const lifecycleLabel = completionStatus === "completion_submitted"
+    ? "Completion review"
+    : completionStatus === "confirmed"
+      ? "Completed"
+      : completionStatus === "disputed"
+        ? "Closeout changes"
+        : activeWork?.status === "cancelled"
+          ? "Cancelled"
+          : "Active";
   const workspaceTabs: Array<{ id: WorkspaceTab; label: string }> = activeWorkspace
     ? [
       { id: "today", label: "Today" },
@@ -1684,6 +1708,32 @@ export function WorkWorkspace({
     if (tab === "money") setDetailTab("payments");
     if (tab === "more") setDetailTab("notes");
   }
+
+  async function copyActiveAddress() {
+    if (!activeAddress) return;
+    try {
+      await navigator.clipboard.writeText(activeAddress);
+      setAddressCopied(true);
+      window.setTimeout(() => setAddressCopied(false), 1800);
+    } catch {
+      setAddressCopied(false);
+    }
+  }
+
+  useEffect(() => {
+    if (!activeWork?.id) return;
+    let cancelled = false;
+    getProjectForActiveWork(activeWork.id)
+      .then((project) => {
+        if (!cancelled) setActiveProject(project);
+      })
+      .catch(() => {
+        if (!cancelled) setActiveProject(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [activeWork?.id]);
 
   useEffect(() => {
     if (!openDetailOnMount || !focusedJobTitle) return;
@@ -1989,8 +2039,8 @@ export function WorkWorkspace({
           <article className="v2-work-detail" aria-label={detailJob.title}>
             <button type="button" className="v2-detail-back" onClick={() => setMobileDetailOpen(false)}><ArrowLeft size={16} /> {workStage === "active" ? "Active work" : workStage === "archive" ? "Archive" : "All work"}</button>
             <header className="v2-work-detail-header">
-              <div><span className="v2-detail-trade">{detailJob.trade}</span><h2 ref={detailHeadingRef} tabIndex={-1}>{detailJob.title}</h2><p><MapPin size={14} /> {detailJob.location} · {detailJob.status === "Draft" ? "Last saved" : "Posted"} {detailJob.posted}</p></div>
-              {role === "tradesperson" && detailJob.match > 0 ? <div className="v2-match-score"><strong>{detailJob.match}%</strong><span>match</span></div> : <StatusPill tone={statusTone(detailJob.status)} className={`v2-work-status status-${detailJob.status.toLowerCase()}`}>{detailJob.status}</StatusPill>}
+              <div><span className="v2-detail-trade">{detailJob.trade}</span><h2 ref={detailHeadingRef} tabIndex={-1}>{detailJob.title}</h2><p><MapPin size={14} /> {detailJob.location} · {activeWork ? `${role === "contractor" ? "Contractor" : "Tradesperson"} workspace` : `${detailJob.status === "Draft" ? "Last saved" : "Posted"} ${detailJob.posted}`}</p></div>
+              {activeWork ? <StatusPill tone={completionStatus === "confirmed" ? "success" : completionStatus === "disputed" ? "danger" : "warning"} className="v2-work-status">{lifecycleLabel}</StatusPill> : role === "tradesperson" && detailJob.match > 0 ? <div className="v2-match-score"><strong>{detailJob.match}%</strong><span>match</span></div> : <StatusPill tone={statusTone(detailJob.status)} className={`v2-work-status status-${detailJob.status.toLowerCase()}`}>{detailJob.status}</StatusPill>}
             </header>
 
             {activeWork && workspaceTab === "today" && workspaceArrivalVisible ? (
@@ -2048,13 +2098,12 @@ export function WorkWorkspace({
                     <BudgetTracker jobId={detailJob.id} budget={detailJob.pay} />
                   </section>
                 ) : null}
-                <section className="v2-privacy-note"><LockKeyhole size={17} /><div><strong>Exact address stays private</strong><span>{role === "contractor" ? "Only your organization can access the saved address in this release." : detailJob.addressPolicy}</span></div></section>
-                {role === "contractor" && detailJob.canonical?.privateLocation ? <section className="v2-detail-section"><h3>Private jobsite</h3><p>{detailJob.canonical.privateLocation.addressLine1}{detailJob.canonical.privateLocation.addressLine2 ? `, ${detailJob.canonical.privateLocation.addressLine2}` : ""}<br />{detailJob.canonical.privateLocation.city}, {detailJob.canonical.privateLocation.region} {detailJob.canonical.privateLocation.postalCode}</p></section> : null}
-                <section className={activeWork && workspaceTab === "today" ? "v2-match-panel is-today" : "v2-match-panel"} aria-label="Hiring workflow">
+                {!activeWork ? <section className="v2-privacy-note"><LockKeyhole size={17} /><div><strong>Exact address stays private</strong><span>{role === "contractor" ? "Only your organization can access the saved address until work is accepted." : detailJob.addressPolicy}</span></div></section> : null}
+                <section className={activeWork && workspaceTab === "today" ? "v2-match-panel is-today" : "v2-match-panel"} aria-label={activeWork ? "Active work workflow" : "Hiring workflow"}>
                   <div className="v2-match-panel-heading">
                     <div>
-                      <span>{activeWork ? "Active work" : role === "contractor" ? "Applicants" : "Your hiring status"}</span>
-                      <h3>{activeWork ? "Keep this job moving" : role === "contractor" ? "Move one real applicant to active work" : "Apply, accept, and unlock the jobsite"}</h3>
+                      <span>{activeWork ? role === "contractor" ? "Manage work" : "Do the work" : role === "contractor" ? "Applicants" : "Your hiring status"}</span>
+                      <h3>{activeWork ? role === "contractor" ? "Track progress and approve closeout" : "Document the job and submit closeout" : role === "contractor" ? "Move one real applicant to active work" : "Apply, accept, and unlock the jobsite"}</h3>
                     </div>
                     {matchLoading ? <small>Loading...</small> : null}
                   </div>
@@ -2062,25 +2111,36 @@ export function WorkWorkspace({
                   {activeWork ? (
                     <div className="v2-active-work-card">
                       <div>
-                        <span>Job workspace</span>
-                        <strong>{activeWork.status === "active" ? "Accepted and active" : activeWork.status}</strong>
+                        <span>{role === "contractor" ? "Contractor workspace" : "Tradesperson workspace"}</span>
+                        <strong>{lifecycleLabel}</strong>
                         <small>Started {new Date(activeWork.startedAt).toLocaleString()}</small>
                       </div>
                       <p className="v2-active-work-explain">
-                        The listing is closed. Keep messages, job photos, daily proof, and money records together here.
+                        The public listing stopped accepting applicants when the offer was accepted. This private job workspace remains {activeWork.status}.
                       </p>
+                      <section className="v2-active-jobsite" aria-label="Exact jobsite">
+                        <div>
+                          <span>Jobsite</span>
+                          <h3>{activeAddress || "Address unavailable"}</h3>
+                          <p>{activePrivateLocation?.accessNotes || (activeAddress ? "The exact address is visible only to this job's participants." : "Ask the contractor to add the exact address before arriving.")}</p>
+                        </div>
+                        {activeAddress ? <div className="v2-active-jobsite-actions"><button type="button" onClick={() => void copyActiveAddress()}><Copy size={16} />{addressCopied ? "Copied" : "Copy"}</button><a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(activeAddress)}`} target="_blank" rel="noreferrer"><Navigation size={16} />Directions</a></div> : null}
+                      </section>
                       <div className="v2-active-work-daily-actions" aria-label="Daily job actions">
-                        <button type="button" disabled={Boolean(activeAction)} onClick={() => onOpenActiveWorkMessages(activeWork.id)}><MessageCircle size={16} />Messages</button>
-                        <button type="button" disabled={Boolean(activeAction)} onClick={() => onOpenTool("job-photos", activeWork.id)}><Camera size={16} />Photos</button>
-                        <button type="button" disabled={Boolean(activeAction)} onClick={() => onOpenTool("daily-log", activeWork.id)}><FileText size={16} />Daily log</button>
+                        <button type="button" disabled={Boolean(activeAction)} onClick={() => onOpenActiveWorkMessages(activeWork.id)}><MessageCircle size={16} />{role === "contractor" ? "Job thread" : "Messages"}</button>
+                        <button type="button" disabled={Boolean(activeAction)} onClick={() => onOpenTool("job-photos", activeWork.id)}><Camera size={16} />{role === "contractor" ? "Photos" : "Add photos"}</button>
+                        <button type="button" disabled={Boolean(activeAction)} onClick={() => onOpenTool("daily-log", activeWork.id)}><FileText size={16} />{role === "contractor" ? "Logs" : "Daily log"}</button>
                       </div>
                       <div className="v2-active-work-money-actions" aria-label="Job money tools">
                         <span>Money</span>
                         <div>
-                          <button type="button" disabled={Boolean(activeAction)} onClick={() => onOpenTool("estimate", activeWork.id)}>Estimate</button>
-                          <button type="button" disabled={Boolean(activeAction)} onClick={() => onOpenTool("invoice", activeWork.id)}>Invoice</button>
+                          <button type="button" disabled={Boolean(activeAction)} onClick={() => onOpenTool("invoice", activeWork.id)}>{role === "contractor" ? "Invoices & payments" : "Create invoice"}</button>
                         </div>
                       </div>
+                      <section className={`v2-active-work-closeout is-${role}`}>
+                        <div><ClipboardCheck size={19} /><div><span>Closeout</span><strong>{role === "contractor" ? completionStatus === "completion_submitted" ? "Completion is ready for review" : completionStatus === "confirmed" ? "Completion confirmed" : completionStatus === "disputed" ? "Changes were requested" : "Waiting for the tradesperson" : completionStatus === "completion_submitted" ? "Completion sent to contractor" : completionStatus === "confirmed" ? "Work confirmed" : completionStatus === "disputed" ? "Closeout needs an update" : "Submit when the job is complete"}</strong><small>{role === "contractor" ? completionStatus === "completion_submitted" ? "Review the proof packet, then confirm or request changes." : completionStatus === "open" ? "The tradesperson submits the completion proof; you approve the final closeout." : "The complete proof record stays attached to this job." : completionStatus === "completion_submitted" ? "You can review the submitted proof while you wait." : completionStatus === "open" ? "Add final proof and send the completion request to the contractor." : "Open the record to review the closeout history."}</small></div></div>
+                        <button type="button" className={(completionStatus === "completion_submitted" && role === "contractor") || (completionStatus === "open" && role === "tradesperson") ? "v2-primary-button" : "v2-secondary-button"} onClick={() => onOpenActiveWorkRecords(activeWork.id, currentActiveProject?.id)}>{role === "contractor" ? completionStatus === "completion_submitted" ? "Review completion" : "Open closeout record" : completionStatus === "open" ? "Submit completion" : completionStatus === "disputed" ? "Update closeout" : "View closeout"}</button>
+                      </section>
                       {activeWork.status === "active" ? (
                         <details className="v2-active-work-controls">
                           <summary>Job controls</summary>

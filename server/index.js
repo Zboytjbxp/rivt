@@ -1695,12 +1695,19 @@ const activeWorkSelectBase = `
          j.duration_hours AS job_duration_hours, j.budget_cents AS job_budget_cents,
          j.budget_unit AS job_budget_unit, jo.agreed_amount_cents, jo.agreed_unit,
          o.name AS organization_name, pl.city AS public_city, pl.region AS public_region,
-         pl.country_code AS public_country_code
+         pl.country_code AS public_country_code,
+         jl.address_line1 AS private_address_line_1,
+         jl.address_line2 AS private_address_line_2,
+         jl.city AS private_city, jl.region AS private_region,
+         jl.postal_code AS private_postal_code,
+         jl.country_code AS private_country_code,
+         jl.access_notes AS private_access_notes
   FROM active_work aw
   INNER JOIN jobs j ON j.id = aw.job_id
   INNER JOIN job_offers jo ON jo.id = aw.offer_id
   INNER JOIN organizations o ON o.id = aw.organization_id
   INNER JOIN job_public_locations pl ON pl.job_id = j.id
+  LEFT JOIN job_private_locations jl ON jl.job_id = j.id
   LEFT JOIN trades t ON t.code = j.trade_code`;
 
 async function loadApplicationEvents(client, applicationId) {
