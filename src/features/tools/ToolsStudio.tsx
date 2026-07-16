@@ -1081,6 +1081,7 @@ function readSavedJobsV1(): Array<{ id: number; title: string }> {
 }
 
 function PunchListTool() {
+  const [activePunchView, setActivePunchView] = useState<"open" | "add" | "resolved">("open");
   const [items, setItems] = useState<PunchV2Item[]>(readPunchV2);
   const [selectedJobId, setSelectedJobId] = useState<string>("");
   const [desc, setDesc] = useState("");
@@ -1151,6 +1152,7 @@ function PunchListTool() {
     setPhotoUrl(undefined);
     if (fileInputRef.current) fileInputRef.current.value = "";
     setNotice("Item added.");
+    setActivePunchView("open");
     setTimeout(() => setNotice(""), 2000);
   }
 
@@ -1239,8 +1241,22 @@ function PunchListTool() {
   }
 
   return (
-    <div className="v2-tool-workbench v2-punchv2-workbench">
-      <Panel className="v2-tool-panel" eyebrow="Add deficiency" title="New punch list item">
+    <div className="v2-punchv2-workbench">
+      <nav className="v2-jobsite-flow-nav" aria-label="Punch list sections">
+        <button type="button" className={activePunchView === "open" ? "is-active" : ""} aria-current={activePunchView === "open" ? "page" : undefined} onClick={() => setActivePunchView("open")}>
+          <span>{openItems.length}</span> Open
+        </button>
+        <button type="button" className={activePunchView === "add" ? "is-active" : ""} aria-current={activePunchView === "add" ? "page" : undefined} onClick={() => setActivePunchView("add")}>
+          <Plus size={15} /> Add item
+        </button>
+        <button type="button" className={activePunchView === "resolved" ? "is-active" : ""} aria-current={activePunchView === "resolved" ? "page" : undefined} onClick={() => setActivePunchView("resolved")}>
+          <span>{resolvedItems.length}</span> Resolved
+        </button>
+      </nav>
+
+      {activePunchView === "add" ? (
+      <Panel className="v2-tool-panel" eyebrow="New item" title="What needs fixing?">
+        <p className="v2-jobsite-section-copy">Capture one clear deficiency. A job and photo are optional.</p>
         <div className="v2-tool-input-grid">
           <label>Job
             <select value={selectedJobId} onChange={(e) => setSelectedJobId(e.target.value)}>
@@ -1275,24 +1291,29 @@ function PunchListTool() {
           <Plus size={14} /> Add item
         </button>
       </Panel>
+      ) : null}
 
-      <Panel className="v2-tool-panel" eyebrow={`${openItems.length} open · ${resolvedItems.length} resolved`} title="Punch list"
+      {activePunchView !== "add" ? (
+      <Panel className="v2-tool-panel" eyebrow={activePunchView === "open" ? `${openItems.length} open` : `${resolvedItems.length} resolved`} title="Punch list"
         action={<button type="button" onClick={exportReport}><Download size={14} /> Export</button>}
       >
-        <section className="v2-punchv2-section">
+        {activePunchView === "open" ? <section className="v2-punchv2-section">
           <h3 className="v2-punchv2-section-title">Open items ({openItems.length})</h3>
           {openItems.length ? openItems.map((i) => renderItem(i, false)) : <p className="v2-muted-copy">No open items.</p>}
-        </section>
-        <section className="v2-punchv2-section">
+        </section> : null}
+        {activePunchView === "resolved" ? <section className="v2-punchv2-section">
           <h3 className="v2-punchv2-section-title">Resolved ({resolvedItems.length})</h3>
           {resolvedItems.length ? resolvedItems.map((i) => renderItem(i, true)) : <p className="v2-muted-copy">No resolved items yet.</p>}
-        </section>
+        </section> : null}
       </Panel>
+      ) : null}
     </div>
   );
 }
 
 function SafetyChecklistTool({ activeJob }: { activeJob: Job | null }) {
+  const [activeSafetyStep, setActiveSafetyStep] = useState<"check" | "details" | "signoff">("check");
+  const [activeCategoryIndex, setActiveCategoryIndex] = useState(0);
   const [checks, setChecks] = useState<Record<string, boolean>>(() =>
     Object.fromEntries(ALL_SAFETY_ITEMS.map((item) => [item, false]))
   );
@@ -1369,24 +1390,42 @@ function SafetyChecklistTool({ activeJob }: { activeJob: Job | null }) {
   const checkedCount = Object.values(checks).filter(Boolean).length;
   const totalItems = ALL_SAFETY_ITEMS.length;
   const pct = Math.round((checkedCount / totalItems) * 100);
+  const safetyCategories = Object.entries(SAFETY_CATEGORIES);
+  const [activeCategory, activeCategoryItems] = safetyCategories[activeCategoryIndex];
+  const safetySteps = [
+    { id: "check" as const, label: "Check" },
+    { id: "details" as const, label: "Details" },
+    { id: "signoff" as const, label: "Sign off" },
+  ];
+  const safetyStepIndex = safetySteps.findIndex((step) => step.id === activeSafetyStep);
 
   return (
-    <div className="v2-tool-workbench v2-safety-workbench">
-      <Panel className="v2-tool-panel v2-safety-checklist-panel" eyebrow="Daily site check" title="Field safety checklist">
-        <div className="v2-safety-meta-inputs">
-          <label>Job / site<input value={jobRef} onChange={(e) => setJobRef(e.target.value)} placeholder="Job name or site address" /></label>
-          <label>Completed by<input value={completedBy} onChange={(e) => setCompletedBy(e.target.value)} placeholder="Your name" /></label>
-        </div>
-        <div className="v2-safety-check-controls">
-          <span>{checkedCount}/{totalItems} checked</span>
-          <button type="button" onClick={checkAll}>Check all</button>
-          <button type="button" onClick={clearAll}>Clear all</button>
-        </div>
-        {Object.entries(SAFETY_CATEGORIES).map(([category, items]) => (
-          <div key={category} className="v2-safety-category">
-            <h3>{category}</h3>
+    <div className="v2-safety-flow">
+      <nav className="v2-jobsite-flow-nav" aria-label="Safety check steps">
+        {safetySteps.map((step, index) => (
+          <button
+            key={step.id}
+            type="button"
+            className={activeSafetyStep === step.id ? "is-active" : index < safetyStepIndex ? "is-complete" : ""}
+            aria-current={activeSafetyStep === step.id ? "step" : undefined}
+            onClick={() => setActiveSafetyStep(step.id)}
+          >
+            <span>{index + 1}</span>
+            {step.label}
+          </button>
+        ))}
+      </nav>
+
+      {activeSafetyStep === "check" ? (
+        <Panel className="v2-tool-panel v2-safety-checklist-panel" eyebrow={`Category ${activeCategoryIndex + 1} of ${safetyCategories.length}`} title={activeCategory}>
+          <div className="v2-safety-check-controls">
+            <span>{checkedCount}/{totalItems} checked</span>
+            <button type="button" onClick={checkAll}>Check all</button>
+            <button type="button" onClick={clearAll}>Clear all</button>
+          </div>
+          <div className="v2-safety-category">
             <div className="v2-safety-items">
-              {items.map((item) => (
+              {activeCategoryItems.map((item) => (
                 <label key={item} className={`v2-safety-item${checks[item] ? " is-checked" : ""}`}>
                   <input type="checkbox" checked={checks[item]} onChange={() => toggleCheck(item)} />
                   {item}
@@ -1394,42 +1433,63 @@ function SafetyChecklistTool({ activeJob }: { activeJob: Job | null }) {
               ))}
             </div>
           </div>
-        ))}
-        <label>Notes / hazards<textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} placeholder="Site-specific hazards, exceptions, or additional notes…" /></label>
-        {notice ? <p className="v2-record-notice" role="status">{notice}</p> : null}
-        <p className="v2-record-notice" role="status">{syncMessage}</p>
-        <button type="button" className="v2-primary-button" onClick={signOff}><Shield size={14} />Sign off site check</button>
-      </Panel>
+          <div className="v2-safety-category-nav">
+            <button type="button" disabled={activeCategoryIndex === 0} onClick={() => setActiveCategoryIndex((index) => Math.max(0, index - 1))}><ArrowLeft size={15} /> Previous</button>
+            <span>{activeCategoryItems.filter((item) => checks[item]).length}/{activeCategoryItems.length}</span>
+            <button type="button" disabled={activeCategoryIndex === safetyCategories.length - 1} onClick={() => setActiveCategoryIndex((index) => Math.min(safetyCategories.length - 1, index + 1))}>Next <ArrowRight size={15} /></button>
+          </div>
+        </Panel>
+      ) : null}
 
-      <aside className="v2-safety-summary">
-        <Panel className="v2-tool-panel v2-tool-summary-panel" eyebrow="Today's check" title={`${checkedCount}/${totalItems}`}>
+      {activeSafetyStep === "details" ? (
+        <Panel className="v2-tool-panel v2-safety-checklist-panel" eyebrow="Step 2" title="Site details">
+          <p className="v2-jobsite-section-copy">Identify this check and note only the hazards or exceptions that matter today.</p>
+          <div className="v2-safety-meta-inputs">
+            <label>Job / site<input value={jobRef} onChange={(e) => setJobRef(e.target.value)} placeholder="Job name or site address" /></label>
+            <label>Completed by<input value={completedBy} onChange={(e) => setCompletedBy(e.target.value)} placeholder="Your name" /></label>
+          </div>
+          <label>Notes / hazards<textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={4} placeholder="Site-specific hazards, exceptions, or additional notes…" /></label>
+        </Panel>
+      ) : null}
+
+      {activeSafetyStep === "signoff" ? (
+        <Panel className="v2-tool-panel v2-tool-summary-panel" eyebrow="Step 3" title="Review and sign off">
           <div className="v2-safety-progress-bar">
             <div className="v2-safety-bar-fill" style={{ width: `${pct}%` }} />
           </div>
-          <div className="v2-tool-breakdown">
-            {Object.entries(SAFETY_CATEGORIES).map(([cat, items]) => {
-              const catChecked = items.filter((i) => checks[i]).length;
-              return <div key={cat}><span>{cat}</span><strong>{catChecked}/{items.length}</strong></div>;
-            })}
+          <div className="v2-tool-result-grid compact">
+            <article><span>Checked</span><strong>{checkedCount}/{totalItems}</strong></article>
+            <article><span>Site</span><strong>{jobRef.trim() || "Not entered"}</strong></article>
+            <article><span>By</span><strong>{completedBy.trim() || "On-site crew"}</strong></article>
           </div>
+          <div className="v2-tool-breakdown">
+            {safetyCategories.map(([category, items]) => (
+              <div key={category}><span>{category}</span><strong>{items.filter((item) => checks[item]).length}/{items.length}</strong></div>
+            ))}
+          </div>
+          {notice ? <p className="v2-record-notice" role="status">{notice}</p> : null}
+          <p className="v2-record-notice" role="status">{syncMessage}</p>
+          <button type="button" className="v2-primary-button" onClick={signOff}><Shield size={14} />Sign off site check</button>
+          {logs.length ? (
+            <details className="v2-tool-collapsible" aria-label="Safety sign-off history">
+              <summary><span>Previous sign-offs</span><small>{logs.length}</small></summary>
+              <div className="v2-safety-log-list">
+                {logs.slice(0, 6).map((log) => {
+                  const done = Object.values(log.checks).filter(Boolean).length;
+                  const total = Object.values(log.checks).length;
+                  return <article key={log.id} className="v2-safety-log-item"><strong>{log.date} · {log.jobRef || "No job ref"}</strong><small>{done}/{total} · {log.completedBy}</small></article>;
+                })}
+              </div>
+            </details>
+          ) : null}
         </Panel>
-        {logs.length ? (
-          <Panel className="v2-tool-panel" eyebrow={`${logs.length} sign-offs`} title="Sign-off history">
-            <div className="v2-safety-log-list">
-              {logs.slice(0, 6).map((log) => {
-                const done = Object.values(log.checks).filter(Boolean).length;
-                const total = Object.values(log.checks).length;
-                return (
-                  <article key={log.id} className="v2-safety-log-item">
-                    <strong>{log.date} · {log.jobRef || "No job ref"}</strong>
-                    <small>{done}/{total} · {log.completedBy}</small>
-                  </article>
-                );
-              })}
-            </div>
-          </Panel>
-        ) : null}
-      </aside>
+      ) : null}
+
+      <div className="v2-jobsite-task-dock" aria-label="Safety check actions">
+        <div><span>Safety</span><strong>{activeSafetyStep === "check" ? activeCategory : activeSafetyStep === "details" ? "Site details" : `${pct}% complete`}</strong></div>
+        {safetyStepIndex > 0 ? <button type="button" className="v2-secondary-button" onClick={() => setActiveSafetyStep(safetySteps[safetyStepIndex - 1].id)} aria-label="Previous safety step"><ArrowLeft size={16} /></button> : null}
+        {activeSafetyStep !== "signoff" ? <button type="button" className="v2-primary-button" onClick={() => setActiveSafetyStep(safetySteps[safetyStepIndex + 1].id)}>Next <ArrowRight size={16} /></button> : null}
+      </div>
     </div>
   );
 }

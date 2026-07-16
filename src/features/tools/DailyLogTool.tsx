@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { CheckCircle2, CloudSun, Copy, Download, FileText, FolderOpen, RefreshCw } from "lucide-react";
+import { ArrowLeft, ArrowRight, CheckCircle2, CloudSun, Copy, Download, FileText, FolderOpen, RefreshCw } from "lucide-react";
 import type { Job } from "../../types";
 import { Panel } from "../../components/ui";
 import { fetchWithTimeout } from "../../lib/api";
@@ -125,6 +125,7 @@ export function DailyLogTool({
   activeWork: CanonicalActiveWork[];
   focusedActiveWorkId?: string | null;
 }) {
+  const [activeStep, setActiveStep] = useState<"today" | "work" | "review">("today");
   const focusedWork = focusedActiveWorkId
     ? activeWork.find((work) => work.id === focusedActiveWorkId) ?? null
     : null;
@@ -321,10 +322,34 @@ export function DailyLogTool({
     }
   }
 
+  const steps = [
+    { id: "today" as const, label: "Today" },
+    { id: "work" as const, label: "Work" },
+    { id: "review" as const, label: "Review" },
+  ];
+  const stepIndex = steps.findIndex((step) => step.id === activeStep);
+
   return (
-    <div className="v2-tool-workbench v2-daily-log-workbench">
-      <Panel className="v2-tool-panel" eyebrow="Daily log" title="Jobsite note">
-        <div className="v2-tool-input-grid three">
+    <div className="v2-daily-log-flow">
+      <nav className="v2-jobsite-flow-nav" aria-label="Daily log steps">
+        {steps.map((step, index) => (
+          <button
+            key={step.id}
+            type="button"
+            className={activeStep === step.id ? "is-active" : index < stepIndex ? "is-complete" : ""}
+            aria-current={activeStep === step.id ? "step" : undefined}
+            onClick={() => setActiveStep(step.id)}
+          >
+            <span>{index + 1}</span>
+            {step.label}
+          </button>
+        ))}
+      </nav>
+
+      {activeStep === "today" ? (
+        <Panel className="v2-tool-panel" eyebrow="Step 1" title="Today's jobsite">
+          <p className="v2-jobsite-section-copy">Confirm the day, site, and crew before recording progress.</p>
+          <div className="v2-tool-input-grid three">
           <label>Date<input type="date" value={draft.date} onChange={(event) => updateDraft("date", event.target.value)} /></label>
           <label>Trade<input value={draft.trade} onChange={(event) => updateDraft("trade", event.target.value)} placeholder="Electrical, HVAC, Carpentry..." /></label>
           <label>Weather
@@ -348,18 +373,33 @@ export function DailyLogTool({
           <label>Site / job<input value={draft.site} onChange={(event) => updateDraft("site", event.target.value)} placeholder="Job name or address nickname" /></label>
           <label>Crew count<input type="number" min="0" value={draft.crewCount} onChange={(event) => updateDraft("crewCount", Math.max(0, Number(event.target.value) || 0))} /></label>
           <label>Hours<input type="number" min="0" step="0.5" value={draft.hours} onChange={(event) => updateDraft("hours", Math.max(0, Number(event.target.value) || 0))} /></label>
-        </div>
-        <div className="v2-daily-log-notes">
-          <label>Work completed<textarea value={draft.completed} onChange={(event) => updateDraft("completed", event.target.value)} placeholder="What got done today? Include rough quantities, rooms, panels, fixtures, walls, or areas." rows={4} /></label>
-          <label>Blockers / changes<textarea value={draft.blockers} onChange={(event) => updateDraft("blockers", event.target.value)} placeholder="Delays, missing material, access issues, scope changes, inspection items..." rows={3} /></label>
-          <label>Materials / equipment<textarea value={draft.materials} onChange={(event) => updateDraft("materials", event.target.value)} placeholder="Material staged, returns needed, tools left on site, rental equipment..." rows={3} /></label>
-          <label>Safety note<textarea value={draft.safety} onChange={(event) => updateDraft("safety", event.target.value)} placeholder="Hazards, PPE, lockout/tagout, ladder/scaffold note, heat plan..." rows={3} /></label>
-          <label>Next step<textarea value={draft.nextStep} onChange={(event) => updateDraft("nextStep", event.target.value)} placeholder="What should happen next and who owns it?" rows={3} /></label>
-        </div>
-      </Panel>
+          </div>
+        </Panel>
+      ) : null}
 
-      <aside className="v2-daily-log-side">
-        <Panel className="v2-tool-panel v2-tool-summary-panel" eyebrow="Daily log" title="Summary">
+      {activeStep === "work" ? (
+        <Panel className="v2-tool-panel" eyebrow="Step 2" title="Progress and next step">
+          <p className="v2-jobsite-section-copy">Lead with what changed today. Add supporting detail only when it matters.</p>
+          <div className="v2-daily-log-notes">
+          <label>Work completed<textarea value={draft.completed} onChange={(event) => updateDraft("completed", event.target.value)} placeholder="What got done today? Include rough quantities, rooms, panels, fixtures, walls, or areas." rows={4} /></label>
+          <label>Next step<textarea value={draft.nextStep} onChange={(event) => updateDraft("nextStep", event.target.value)} placeholder="What should happen next and who owns it?" rows={3} /></label>
+          <details className="v2-tool-collapsible v2-jobsite-secondary-details" open={Boolean(draft.blockers || draft.materials || draft.safety)}>
+            <summary>
+              <span>Blockers, materials, and safety</span>
+              <small>Optional detail</small>
+            </summary>
+            <div className="v2-daily-log-notes">
+              <label>Blockers / changes<textarea value={draft.blockers} onChange={(event) => updateDraft("blockers", event.target.value)} placeholder="Delays, missing material, access issues, scope changes, inspection items..." rows={3} /></label>
+              <label>Materials / equipment<textarea value={draft.materials} onChange={(event) => updateDraft("materials", event.target.value)} placeholder="Material staged, returns needed, tools left on site, rental equipment..." rows={3} /></label>
+              <label>Safety note<textarea value={draft.safety} onChange={(event) => updateDraft("safety", event.target.value)} placeholder="Hazards, PPE, lockout/tagout, ladder/scaffold note, heat plan..." rows={3} /></label>
+            </div>
+          </details>
+          </div>
+        </Panel>
+      ) : null}
+
+      {activeStep === "review" ? (
+        <Panel className="v2-tool-panel v2-tool-summary-panel" eyebrow="Step 3" title="Review and save">
           <div className="v2-tool-result-grid compact">
             <article><span>Crew hours</span><strong>{formatNumber(draft.crewCount * draft.hours)}h</strong></article>
             <article><span>Checklist</span><strong>{completedChecks}/{dailyLogChecklist.length}</strong></article>
@@ -400,7 +440,6 @@ export function DailyLogTool({
             </button>
             <button type="button" className="v2-primary-button" onClick={copyDailyLog}><Copy size={15} />{copied ? "Copied" : "Copy daily log"}</button>
             <button type="button" onClick={downloadDailyLog}><Download size={15} />{downloaded ? "Downloaded" : "Download TXT"}</button>
-            <button type="button" onClick={saveLocalDraft}><FileText size={15} />Save draft</button>
             <button type="button" onClick={loadLocalDraft}><RefreshCw size={15} />Load last draft</button>
           </div>
           <p className="v2-tool-note">
@@ -409,7 +448,28 @@ export function DailyLogTool({
               : "Draft sync keeps this field note available through your RIVT account when signed in. Accepted-work closeouts, uploads, and official records stay in server-backed Records."}
           </p>
         </Panel>
-      </aside>
+      ) : null}
+
+      <div className="v2-jobsite-task-dock" aria-label="Daily log actions">
+        <div>
+          <span>Daily log</span>
+          <strong>{activeStep === "today" ? "Jobsite" : activeStep === "work" ? "Progress" : recordWork ? "Ready for Records" : "Ready to save"}</strong>
+        </div>
+        {stepIndex > 0 ? (
+          <button type="button" className="v2-secondary-button" onClick={() => setActiveStep(steps[stepIndex - 1].id)} aria-label="Previous daily log step">
+            <ArrowLeft size={16} />
+          </button>
+        ) : null}
+        {activeStep !== "review" ? (
+          <button type="button" className="v2-primary-button" onClick={() => setActiveStep(steps[stepIndex + 1].id)}>
+            Next <ArrowRight size={16} />
+          </button>
+        ) : (
+          <button type="button" className="v2-primary-button" onClick={saveLocalDraft}>
+            <FileText size={15} /> Save draft
+          </button>
+        )}
+      </div>
     </div>
   );
 }
