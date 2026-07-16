@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Copy, FileText, Mail, MessageSquare, Plus, Save, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Copy, FileText, Mail, MessageSquare, Plus, Save, Trash2 } from "lucide-react";
 import type { Job } from "../../types";
 import { Panel } from "../../components/ui";
 import { readPrimaryHourlyRate } from "../../lib/rateCard";
@@ -220,6 +220,7 @@ export function InvoiceDraftTool({
   const [paymentAmount, setPaymentAmount] = useState("");
   const [paymentMethodDraft, setPaymentMethodDraft] = useState("Direct payment");
   const [paymentNote, setPaymentNote] = useState("");
+  const [step, setStep] = useState<"items" | "customer" | "review">("items");
 
   const subtotalCents = lines.reduce((sum, line) => sum + lineTotalCents(line), 0);
   const taxCents = Math.round(subtotalCents * (numericValue(taxPct) / 100));
@@ -546,8 +547,15 @@ export function InvoiceDraftTool({
   }
 
   return (
-    <div className="v2-tool-workbench v2-invoice-workbench">
-      <Panel className="v2-tool-panel v2-invoice-builder-panel" eyebrow="Invoice draft" title="Invoice">
+    <div className={`v2-tool-workbench v2-invoice-workbench is-${step}`}>
+      <nav className="v2-tool-flow-nav" aria-label="Invoice draft steps">
+        {(["items", "customer", "review"] as const).map((item, index) => (
+          <button key={item} type="button" aria-current={step === item ? "step" : undefined} onClick={() => setStep(item)}>
+            <span>{index + 1}</span>{item === "items" ? "Items" : item === "customer" ? "Customer" : "Review"}
+          </button>
+        ))}
+      </nav>
+      <Panel className="v2-tool-panel v2-invoice-builder-panel" eyebrow={`Step ${step === "items" ? 1 : step === "customer" ? 2 : 3} of 3`} title={step === "items" ? "Build the invoice" : step === "customer" ? "Add the customer" : "Review and deliver"}>
         <section className="v2-invoice-topline" aria-label="Invoice summary">
           <div>
             <span>Total due</span>
@@ -556,7 +564,7 @@ export function InvoiceDraftTool({
           </div>
         </section>
 
-        {activeWorkId ? (
+        {step === "review" && activeWorkId ? (
           <section className="v2-invoice-project-record" aria-label="Job invoice record">
             <div>
               <span>Job invoice record</span>
@@ -583,7 +591,7 @@ export function InvoiceDraftTool({
           </section>
         ) : null}
 
-        {conversionNotice ? (
+        {step === "items" && conversionNotice ? (
           <div className="v2-converted-estimate-note" role="status">
             <p>{conversionNotice}</p>
             <span>
@@ -592,7 +600,7 @@ export function InvoiceDraftTool({
             </span>
           </div>
         ) : null}
-        <details className="v2-tool-collapsible v2-invoice-template-tools" aria-label="Invoice templates">
+        {step === "items" ? <details className="v2-tool-collapsible v2-invoice-template-tools" aria-label="Invoice templates">
           <summary>
             <span>Templates</span>
             <small>{templates.length ? `${templates.length} saved` : "Optional"}</small>
@@ -617,8 +625,8 @@ export function InvoiceDraftTool({
               ))}
             </div>
         ) : null}
-        </details>
-        <section className="v2-invoice-builder-section" aria-label="Invoice details">
+        </details> : null}
+        {step === "customer" ? <section className="v2-invoice-builder-section" aria-label="Invoice details">
           <header className="v2-invoice-section-title">
             <h3>Details</h3>
             <span>{toolContextLabel(workContext)}</span>
@@ -633,8 +641,8 @@ export function InvoiceDraftTool({
             <label>Recipient email<input type="email" value={recipientEmail} onChange={(event) => setRecipientEmail(event.target.value)} placeholder="name@company.com" /></label>
             <label>Recipient phone<input type="tel" value={recipientPhone} onChange={(event) => setRecipientPhone(event.target.value)} placeholder="+1 904 555 0123" /></label>
           </div>
-        </section>
-        <div className="v2-invoice-lines" aria-label="Invoice line items">
+        </section> : null}
+        {step === "items" ? <div className="v2-invoice-lines" aria-label="Invoice line items">
           <div className="v2-invoice-lines-header">
             <span>Line items</span>
             <button type="button" onClick={addLine}><Plus size={14} />Add item</button>
@@ -659,10 +667,10 @@ export function InvoiceDraftTool({
             </div>
             );
           })}
-        </div>
+        </div> : null}
       </Panel>
 
-      <aside className="v2-invoice-side-stack">
+      {step === "review" ? <aside className="v2-invoice-side-stack">
         <Panel className="v2-tool-panel v2-tool-summary-panel v2-invoice-summary-panel" eyebrow="Total due" title={currency(total)}>
           {primarySignal ? (
             <section className={`v2-price-signal is-${primarySignal.tone}`} aria-label="Invoice pricing signal">
@@ -744,12 +752,15 @@ export function InvoiceDraftTool({
             </article>
           </details>
         </Panel>
-      </aside>
+      </aside> : null}
       <div className="v2-tool-action-dock" aria-label="Invoice actions">
         <span><strong>{currency(total)}</strong><small>{draftSaveMessage}</small></span>
-        <button type="button" onClick={copyInvoice} aria-label="Copy invoice"><Copy size={18} /></button>
+        {step !== "items" ? <button type="button" onClick={() => setStep(step === "review" ? "customer" : "items")} aria-label="Previous invoice step"><ChevronLeft size={18} /></button> : null}
         <button type="button" className="v2-primary-button" onClick={() => void saveInvoiceDraft()} disabled={projectInvoiceBusy || totalCents <= 0}><Save size={18} />Save</button>
-        <button type="button" onClick={printInvoice} aria-label="Print invoice"><FileText size={18} /></button>
+        {step === "items" ? <button type="button" className="v2-primary-button" onClick={() => setStep("customer")} disabled={totalCents <= 0}><span>Customer</span><ChevronRight size={18} /></button> : null}
+        {step === "customer" ? <button type="button" className="v2-primary-button" onClick={() => setStep("review")}><span>Review</span><ChevronRight size={18} /></button> : null}
+        {step === "review" ? <button type="button" onClick={copyInvoice} aria-label="Copy invoice"><Copy size={18} /></button> : null}
+        {step === "review" ? <button type="button" onClick={printInvoice} aria-label="Print invoice"><FileText size={18} /></button> : null}
       </div>
     </div>
   );

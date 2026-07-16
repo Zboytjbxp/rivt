@@ -344,8 +344,9 @@
 /* Invoice drafting and payment follow-up are one money workflow. */
 .v2-invoice-workspace {
   position: relative;
+  display: grid;
   min-width: 0;
-  padding-bottom: calc(76px + env(safe-area-inset-bottom));
+  gap: 12px;
 }
 
 .v2-invoice-workspace-content {
@@ -353,16 +354,13 @@
 }
 
 .v2-invoice-workspace-tabs {
-  position: fixed;
-  z-index: 45;
-  right: 12px;
-  bottom: max(8px, env(safe-area-inset-bottom));
-  left: 12px;
+  position: relative;
+  z-index: 4;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 4px;
-  max-width: 720px;
-  margin-inline: auto;
+  width: min(100%, 520px);
+  margin: 0;
   padding: 6px;
   border: 1px solid var(--v2-border);
   border-radius: var(--v2-radius-lg);
@@ -400,26 +398,13 @@
 
 @media (min-width: 901px) {
   .v2-invoice-workspace {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    padding-bottom: 0;
-  }
-
-  .v2-invoice-workspace-content {
-    order: 2;
+    display: grid;
   }
 
   .v2-invoice-workspace-tabs {
     position: sticky;
     top: 58px;
-    order: 1;
-    right: auto;
-    bottom: auto;
-    left: auto;
     z-index: 4;
-    width: min(100%, 520px);
-    margin-inline: 0;
   }
 }
 
@@ -759,6 +744,67 @@
   display: grid;
   grid-template-columns: minmax(0, 1.1fr) minmax(310px, 0.9fr);
   gap: 18px;
+}
+
+.v2-tool-flow-nav {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--v2-border);
+  border-radius: var(--v2-radius-lg);
+  background: var(--v2-surface-muted);
+}
+
+.v2-tool-flow-nav button {
+  display: inline-flex;
+  min-width: 0;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: 0;
+  border-radius: var(--v2-radius-md);
+  background: transparent;
+  color: var(--v2-text-muted);
+  font: inherit;
+  font-size: 13px;
+  font-weight: var(--v2-weight-strong);
+  cursor: pointer;
+}
+
+.v2-tool-flow-nav button span {
+  display: inline-grid;
+  width: 22px;
+  height: 22px;
+  place-items: center;
+  border: 1px solid var(--v2-border-strong);
+  border-radius: var(--v2-radius-pill);
+  font-size: 12px;
+}
+
+.v2-tool-flow-nav button[aria-current="step"] {
+  background: var(--v2-surface);
+  color: var(--v2-text);
+  box-shadow: var(--v2-shadow-sm);
+}
+
+.v2-tool-flow-nav button[aria-current="step"] span {
+  border-color: var(--v2-accent);
+  background: var(--v2-accent);
+  color: var(--v2-on-accent);
+}
+
+.v2-estimate-workbench.is-price .v2-estimate-builder-panel,
+.v2-estimate-workbench.is-customer .v2-estimate-builder-panel,
+.v2-invoice-workbench.is-items .v2-invoice-builder-panel,
+.v2-invoice-workbench.is-customer .v2-invoice-builder-panel {
+  grid-column: 1 / -1;
+}
+
+.v2-tool-inline-action {
+  width: fit-content;
 }
 
 .v2-tool-action-dock {

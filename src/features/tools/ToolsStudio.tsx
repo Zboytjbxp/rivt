@@ -2791,10 +2791,6 @@ function InvoiceWorkspaceTool({
 
   return (
     <div className="v2-invoice-workspace">
-      <div className="v2-invoice-workspace-content">
-        {activeView === "draft" ? draft : null}
-        {activeView === "receivables" ? <PaymentTrackerTool /> : null}
-      </div>
       <nav className="v2-invoice-workspace-tabs" aria-label="Invoice sections">
         {views.map((view) => {
           const Icon = view.icon;
@@ -2812,6 +2808,10 @@ function InvoiceWorkspaceTool({
           );
         })}
       </nav>
+      <div className="v2-invoice-workspace-content">
+        {activeView === "draft" ? draft : null}
+        {activeView === "receivables" ? <PaymentTrackerTool /> : null}
+      </div>
     </div>
   );
 }

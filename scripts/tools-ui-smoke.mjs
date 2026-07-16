@@ -596,8 +596,15 @@ async function runToolsFlow(page, viewportName) {
 
   await primaryTool("Estimate").click();
   await page.getByRole("heading", { name: "Estimate builder" }).waitFor({ timeout: 15_000 });
+  const estimateSteps = page.getByRole("navigation", { name: "Estimate steps" });
+  assert.equal(await estimateSteps.getByRole("button", { name: "1 Price" }).getAttribute("aria-current"), "step");
   await page.getByText("Recommended target", { exact: true }).waitFor({ timeout: 15_000 });
+  assert.equal(await page.getByLabel("Customer email").count(), 0, "Customer fields should stay out of the pricing step");
+  await estimateSteps.getByRole("button", { name: "2 Customer" }).click();
+  await page.getByLabel("Customer email").fill("estimate@example.com");
+  await estimateSteps.getByRole("button", { name: "3 Review" }).click();
   await page.getByText(/labor load/i).waitFor({ timeout: 15_000 });
+  await page.getByRole("button", { name: "Send" }).waitFor({ timeout: 15_000 });
   await assertNoHorizontalOverflow(page);
   await page.screenshot({ path: path.join(screenshotDir, `${viewportName}-estimate.png`), fullPage: true });
   await page.getByLabel("Estimate builder").getByRole("button", { name: "Tools" }).click();
@@ -615,8 +622,12 @@ async function runToolsFlow(page, viewportName) {
   await page.getByRole("button", { name: "Save template" }).click();
   await page.getByText("Template saved.", { exact: true }).waitFor({ timeout: 15_000 });
   await page.getByRole("button", { name: "Load" }).first().waitFor({ timeout: 15_000 });
+  const invoiceDraftSteps = page.getByRole("navigation", { name: "Invoice draft steps" });
+  assert.equal(await invoiceDraftSteps.getByRole("button", { name: "1 Items" }).getAttribute("aria-current"), "step");
+  await invoiceDraftSteps.getByRole("button", { name: "2 Customer" }).click();
   await page.getByLabel("Recipient email").fill("billing@example.com");
   await page.getByLabel("Recipient phone").fill("+19045550123");
+  await invoiceDraftSteps.getByRole("button", { name: "3 Review" }).click();
   await page.getByRole("link", { name: "Email draft" }).waitFor({ timeout: 15_000 });
   await page.getByRole("link", { name: "Text draft" }).waitFor({ timeout: 15_000 });
   await page.getByRole("heading", { name: "Printable invoice" }).waitFor({ timeout: 15_000 });

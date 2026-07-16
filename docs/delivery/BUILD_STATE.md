@@ -2,12 +2,29 @@
 
 Last updated: 2026-07-15 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Packet 51 Work State Architecture is production verified. Work
-now separates Browse, Hiring or Applications, Active, and Archive without
-changing server-owned lifecycle records.
-Active packet: `docs/delivery/packets/51_WORK_STATE_ARCHITECTURE.md`
-Repository branch: `master`
+Current phase: Packet 52 Progressive Money Flows is locally verified pending
+production release. Estimate and Invoice now expose one task at a time without
+changing financial truth.
+Active packet: `docs/delivery/packets/52_PROGRESSIVE_MONEY_FLOWS.md`
+Repository branch: `codex/progressive-money-flows`
 Production feature release commit: `25ca2de639a40c6d7956de467a33decc99c520fa`
+
+## Packet 52 - Progressive Money Flows (Local Verification)
+
+- Estimate is organized into Price, Customer, and Review. Invoice is organized
+  into Items, Customer, and Review.
+- Existing calculations, draft persistence, delivery handoff, conversion,
+  project invoices, external-payment records, and explicit work context are
+  unchanged.
+- A thumb-reachable dock owns Save and the visible next step. Invoice's older
+  Draft/Receivables control moved above the task flow and no longer covers the
+  current actions.
+- Build, lint, security lint, 55 unit tests, E2E, rendered Tools QA at desktop,
+  mobile, and compact-phone sizes, mobile-action QA, dependency audit, diff
+  checks, and all 19 serial isolated PostgreSQL integration suites pass with
+  zero failures or skips.
+- Next boundary: merge and production-verify Packet 52, then begin Packet 53
+  progressive Daily Log and Safety field flows.
 
 ## Packet 51 - Work State Architecture (Production Verified)
 
