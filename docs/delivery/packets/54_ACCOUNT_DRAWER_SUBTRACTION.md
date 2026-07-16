@@ -66,7 +66,15 @@ required because this packet changes client navigation and presentation only.
 
 ## Deployment evidence
 
-Pending merge and production verification.
+- Implementation commit: `3c1f30d`.
+- Merge commit: `657aa80eda8c1ea1de0771dc5918d2fcd0511193`.
+- Railway deployment `236c22b5-99ce-48b9-bfe8-74c3ec4534b8` succeeded and
+  `https://rivt.pro/api/health` served the exact merge commit with migration 27
+  ready.
+- The expected-source production monitor passed in 594 ms with PostgreSQL,
+  S3-compatible object storage, Sentry, Web Push, matching-job alerts,
+  operational controls, and all seven anonymous private-route checks healthy.
+- No migration or production data change was required.
 
 ## Next packet
 

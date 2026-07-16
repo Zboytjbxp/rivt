@@ -10,7 +10,7 @@ Status values:
 
 Evidence must eventually link to implementation, automated tests, manual acceptance proof, and deployed build.
 
-## Traceability Addendum - 2026-07-16 Account Drawer Subtraction (Local Verification)
+## Traceability Addendum - 2026-07-16 Account Drawer Subtraction (Production Verification)
 
 - `GA-UX-003` gains navigation-ownership evidence: the top-bar account drawer
   contains only identity, Profile, Settings, conditional Admin, and Sign out.
@@ -25,6 +25,11 @@ Evidence must eventually link to implementation, automated tests, manual accepta
 - Local evidence includes typecheck, build, lint, security lint, 55 unit tests,
   E2E, mobile-action UI, zero production dependency vulnerabilities, diff
   checks, and all 19 serial PostgreSQL integration suites.
+- `GA-OPS-008` gains production evidence: Railway served exact merge source
+  `657aa80eda8c1ea1de0771dc5918d2fcd0511193` with migration 27 ready. The
+  expected-source monitor passed in 594 ms with PostgreSQL, S3-compatible
+  storage, Sentry, Web Push, matching-job alerts, operational controls, and
+  seven anonymous private-route checks healthy.
 
 ## Traceability Addendum - 2026-07-15 Work State Architecture (Local Verification)
 

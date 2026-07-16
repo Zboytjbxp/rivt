@@ -2,13 +2,12 @@
 
 Last updated: 2026-07-16 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Packet 54 Account Drawer Subtraction is locally verified and
-ready for merge and production verification.
+Current phase: Packet 54 Account Drawer Subtraction is production verified.
 Active packet: `docs/delivery/packets/54_ACCOUNT_DRAWER_SUBTRACTION.md`
 Repository branch: `master`
-Production feature release commit: `af13e52232ec0199a35d11f7f059942fed25b7a5`
+Production feature release commit: `657aa80eda8c1ea1de0771dc5918d2fcd0511193`
 
-## Packet 54 - Account Drawer Subtraction (Ready To Deploy)
+## Packet 54 - Account Drawer Subtraction (Production Verified)
 
 - The account drawer is now a compact navigation menu containing identity,
   Profile, Settings, staff-only Admin, and Sign out.
@@ -22,7 +21,13 @@ Production feature release commit: `af13e52232ec0199a35d11f7f059942fed25b7a5`
   suites passed with zero failures or skips.
 - No API, schema, migration, authentication, authorization, billing, storage,
   moderation, or server-owned record behavior changed.
-- Next boundary: merge, deploy, and verify the exact production source.
+- Railway deployment `236c22b5-99ce-48b9-bfe8-74c3ec4534b8` served exact merge
+  commit `657aa80eda8c1ea1de0771dc5918d2fcd0511193`. The expected-source
+  production monitor passed in 594 ms with migration 27 ready,
+  PostgreSQL/S3-compatible storage, Sentry, Web Push, matching-job alerts,
+  operational controls, and all seven anonymous private-route checks healthy.
+- Next boundary: begin Packet 55 on the next interface-audit subtraction
+  target without adding a new product concept.
 
 ## Packet 53 - Progressive Jobsite Flows (Production Verified)
 

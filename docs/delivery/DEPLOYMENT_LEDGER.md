@@ -1,5 +1,29 @@
 # Deployment Ledger
 
+## 2026-07-16 - Packet 54 Account Drawer Subtraction
+
+- Source commit: `657aa80eda8c1ea1de0771dc5918d2fcd0511193`
+- Feature commit: `3c1f30d`
+- Branch: `master` (source branch: `codex/account-drawer-subtraction`)
+- Railway deployment: `236c22b5-99ce-48b9-bfe8-74c3ec4534b8`
+- Production: `https://rivt.pro`
+- Scope: the account drawer now contains only identity, Profile, Settings,
+  conditional Admin, and Sign out. Duplicate metrics, standing, device,
+  appearance, and setup panels were removed; their authoritative controls and
+  records remain in Profile and Settings.
+- Automated gates: typecheck, build, lint, security lint, 55 unit tests, E2E,
+  mobile-action UI, dependency audit, diff checks, and all 19 serial isolated
+  PostgreSQL integration suites passed with zero failures or skips.
+- Post-deploy proof: production health served the exact merge source with
+  migration 27 ready. The expected-source monitor passed in 594 ms with
+  PostgreSQL and S3-compatible storage healthy, Sentry and Web Push configured,
+  matching-job alerts enabled, operational controls open, and seven anonymous
+  private-route checks healthy.
+- Rollback target: `dd6c57b`.
+- Remaining field acceptance: confirm the compact drawer, Profile, Settings,
+  staff-only Admin visibility, and Sign out on one staff and one ordinary
+  physical-phone account.
+
 ## 2026-07-15 - Packet 53 Progressive Jobsite Flows
 
 - Source commit: `af13e52232ec0199a35d11f7f059942fed25b7a5`
