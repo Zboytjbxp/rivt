@@ -2,15 +2,15 @@
 
 Last updated: 2026-07-15 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Packet 50 interface foundation and subtraction is locally
-complete. Verified orphan style families are removed, named overlay tokens are
+Current phase: Packet 50 interface foundation and subtraction is production
+verified. Verified orphan style families are removed, named overlay tokens are
 in place, and the remaining custom Shop Talk and tool-context sheets share one
 accessible dialog behavior without changing product workflows.
 Active packet: `docs/delivery/packets/50_INTERFACE_FOUNDATION_SUBTRACTION.md`
 Repository branch: `codex/interface-foundation-subtraction`
-Production feature release commit: `82b243e6bdbb28ffe4ec3d28c4253c044a1d6f22`
+Production feature release commit: `0b3fb5d43f91bc4720b7e74add546a642db31f9d`
 
-## Packet 50 - Interface Foundation and Subtraction (Local Verification)
+## Packet 50 - Interface Foundation and Subtraction (Production Verified)
 
 - Removed 600+ lines of verified-orphaned theme, appearance, field-kit, and
   Shop Talk FAB styling before another visible redesign adds override debt.
@@ -28,6 +28,10 @@ Production feature release commit: `82b243e6bdbb28ffe4ec3d28c4253c044a1d6f22`
   the seven-destination Tools floor remain intact.
 - No route, record, schema, authorization, authentication, billing, storage,
   moderation, or lifecycle workflow changed.
+- Merge commit `5b69d4bebd764271033cd461786a677cc0b98fa1` was served by Railway with
+  migration 27 ready. The expected-source production monitor passed with
+  PostgreSQL, S3-compatible storage, Sentry, Web Push, matching-job alerts,
+  rollout controls, and seven anonymous private-route checks healthy in 586 ms.
 - Next boundary: Packet 51 Work State Architecture, separating Browse, Hiring,
   Active, and Archive without changing server-owned job/application truth.
 

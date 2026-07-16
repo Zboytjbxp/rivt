@@ -56,13 +56,23 @@ custom Shop Talk and tool-context sheets through one accessible dialog behavior.
 - `git diff --check`
 
 Rendered evidence covers Tools and Camera at 1440x900, 390x844, and 375x553,
-plus Shop Talk at desktop and mobile widths. Production verification is added
-only after Railway serves the merged commit.
+plus Shop Talk at desktop and mobile widths.
 
 The isolated PostgreSQL run completed 19/19 integration suites with zero
 failures or skips. The duplicate runner created by an initial command-runner
 timeout was stopped before the definitive clean serial run; no Railway service
 or production data was touched.
+
+## Deployment evidence
+
+- Feature commit: `0b3fb5d43f91bc4720b7e74add546a642db31f9d`.
+- Merge commit: `5b69d4bebd764271033cd461786a677cc0b98fa1`.
+- Railway `/api/health` served the exact merge commit with migration
+  `0027_default_private_photo_album` ready.
+- The expected-source production monitor passed with PostgreSQL and private
+  S3-compatible storage healthy, Sentry and Web Push configured, matching-job
+  alerts enabled, rollout controls open, and all seven anonymous private-route
+  probes passing in 586 ms.
 
 ## Rollback
 
