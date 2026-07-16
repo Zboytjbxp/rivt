@@ -1433,3 +1433,7 @@ Evidence must eventually link to implementation, automated tests, manual accepta
   PostgreSQL integration suites with zero failures or skips.
 - No API, database, authorization, authentication, billing, storage,
   moderation, or server-owned lifecycle contract changed in this packet.
+- Production evidence: Railway served exact merge source
+  `25ca2de639a40c6d7956de467a33decc99c520fa`; the expected-source monitor
+  passed in 612 ms with migration 27, managed dependencies, observability,
+  engagement controls, and all anonymous private-route checks healthy.

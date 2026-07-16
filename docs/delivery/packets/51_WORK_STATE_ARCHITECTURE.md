@@ -73,8 +73,13 @@ overflow assertions.
 
 ## Deployment evidence
 
-Pending merge and production verification. Local release verification is
-complete with no failed or skipped checks.
+- Implementation commit: `f5c8838d6e189d744e230e7e4c2d9c54be8d3887`.
+- Merge commit: `25ca2de639a40c6d7956de467a33decc99c520fa`.
+- Railway served the exact merge commit at `https://rivt.pro/api/health`.
+- The expected-source production monitor passed in 612 ms with PostgreSQL,
+  S3-compatible object storage, Sentry, Web Push, matching-job alerts,
+  operational controls, and all seven anonymous private-route checks healthy.
+- No migration or production data change was required.
 
 ## Rollback
 
