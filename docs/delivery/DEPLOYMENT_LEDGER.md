@@ -1958,3 +1958,38 @@ Add one entry per staging/production deployment.
   contractor account and one real tradesperson account.
 - Approval: runtime, migration, automated compensation lifecycle, and
   production health are verified; physical field acceptance remains open.
+
+## Current Production - Packet 56 Heavy 16th Standalone App
+
+- Environment: Production (`https://rivt.pro`)
+- Date/time/timezone: 2026-07-17 America/New_York
+- Deployer: Codex through a verified feature branch, fast-forward push to
+  `master`, and Railway production auto-deploy
+- Source repository/branch: `Zboytjbxp/rivt`, `master`
+- Runtime feature source: `38edcd371f3c99ae0d9d2da1e4375b73cd8a0b43`
+- Migration version before/after: unchanged (`0028_compensation_workflow`)
+- Provider/config changes: none; auth, billing, PostgreSQL, object storage,
+  Sentry, Web Push, email, moderation, and rollout configuration were
+  preserved.
+- Rollback target: `130da14d94268b4caa0760d7aa090e603a60c144`; no database rollback is
+  required.
+- Automated gates: build, lint, security lint, 58 unit/frontend tests, E2E,
+  desktop/mobile/compact Tools UI, compact mobile-action UI, zero-vulnerability
+  production dependency audit, and diff checks passed. A configured remote
+  PostgreSQL run exercised real account, job, messaging, migration, and project
+  lifecycles without a reported failure before the ten-minute command limit
+  stopped the still-running aggregate; Packet 56 has no server or database
+  changes.
+- Product evidence: Heavy 16th now has a live equation tape, an eight-entry
+  device-local reusable calculation history, explicit imperial/metric mode
+  labels, and assistive copy feedback while preserving all fifteen fraction
+  keys and the complete keypad on compact phones.
+- Post-deploy proof: live `/api/health` returned exact feature source,
+  migration 0028 ready, PostgreSQL/S3-compatible storage, configured Sentry
+  and Web Push, and enabled bounded matching-job alerts. The expected-source
+  production monitor passed in 588 ms with controls off and seven anonymous
+  private-route checks.
+- Known boundary: physically confirm history reuse, copy feedback, and
+  imperial/metric restoration on the field devices used for launch.
+- Approval: Packet 56 runtime, rendered-device gates, calculator behavior, and
+  production health are verified; physical field acceptance remains open.

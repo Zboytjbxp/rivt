@@ -5,7 +5,7 @@ Current gate: Gate B controlled engagement
 Current phase: Packet 56 Heavy 16th standalone calculator completion is locally verified.
 Active packet: `docs/delivery/packets/56_CALCULATOR_STANDALONE_APP.md`
 Repository branch: `codex/calculator-standalone-app`
-Production feature release commit: `97a9e0fc14dba95bffe2a9297c517ba80be6b03a`
+Production feature release commit: `38edcd371f3c99ae0d9d2da1e4375b73cd8a0b43`
 
 ## Packet 56 - Heavy 16th Standalone App
 
@@ -22,8 +22,12 @@ Production feature release commit: `97a9e0fc14dba95bffe2a9297c517ba80be6b03a`
   audit, and diff checks pass. A configured PostgreSQL integration run exercised
   real account, job, messaging, migration, and project lifecycles without a
   failure before the ten-minute command limit stopped the still-running suite;
-  Packet 56 does not change server or database code. Production is unchanged
-  until this packet is merged and deployed.
+  Packet 56 does not change server or database code.
+- Production `/api/health` serves exact source
+  `38edcd371f3c99ae0d9d2da1e4375b73cd8a0b43` with migration 0028 ready,
+  PostgreSQL and S3-compatible storage healthy, and Sentry and Web Push
+  configured. The expected-source production monitor passed in 588 ms with
+  rollout controls off and all seven anonymous private-route checks healthy.
 
 ## Home completion-state correction
 

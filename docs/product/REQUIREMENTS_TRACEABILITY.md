@@ -1568,3 +1568,8 @@ Evidence must eventually link to implementation, automated tests, manual accepta
   customer, invoice, or project records.
 - No requirement maturity changes and no server contract, schema,
   authorization, authentication, billing, storage, or moderation changes.
+- Production evidence: Railway served exact source
+  `38edcd371f3c99ae0d9d2da1e4375b73cd8a0b43`; migration 0028 was ready and
+  the expected-source monitor passed in 588 ms with managed dependencies,
+  observability, engagement controls, and all anonymous private-route checks
+  healthy.
