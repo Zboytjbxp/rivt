@@ -1595,3 +1595,21 @@ Evidence must eventually link to implementation, automated tests, manual accepta
   the expected-source monitor passed in 619 ms with managed dependencies,
   observability, engagement controls, and all anonymous private-route checks
   healthy.
+
+# Traceability Addendum - 2026-07-17 Calculator Tape Preferences
+
+- `GA-UX-003` gains tape-notation evidence: Heavy and Light retain their
+  visible qualifier when a single tape mark is entered, while paired marks
+  resolve to a measurable sixteenth. Thirty-second precision remains an
+  explicit calculator preference rather than an implied result.
+- `GA-UX-006` gains preference and compact-device coverage: metric mode,
+  inches-only notation, fraction order, and Heavy / Light behavior are
+  persistent device preferences; rendered tools QA exercises the compact
+  fraction strip and the visible `5/8` tap target.
+- No requirement maturity changes and no server contract, schema,
+  authorization, authentication, billing, storage, or moderation changes.
+- Local evidence: build, lint, 58 unit/frontend tests, E2E, rendered
+  desktop/mobile/SE Tools QA, mobile-action QA, and dependency audit pass.
+  Three non-database integration checks pass; sixteen PostgreSQL suites are
+  skipped because this worktree does not contain `TEST_DATABASE_URL`.
+- Production evidence is pending on `codex/calculator-tape-preferences`.

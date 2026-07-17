@@ -521,8 +521,10 @@ async function runMobileFlow(page) {
   await page.getByRole("heading", { name: "Tools", exact: true }).waitFor({ timeout: 15_000 });
   await page.getByLabel("Field shortcuts").getByRole("button", { name: "Heavy 16th", exact: true }).click();
   await page.getByRole("heading", { name: "Heavy 16th field calculator", exact: true }).waitFor({ timeout: 15_000 });
-  await page.getByLabel("Input unit").getByRole("button", { name: "Switch to metric mode" }).waitFor({ timeout: 15_000 });
-  await page.getByLabel("Heavy, light, double, and half controls").getByRole("button", { name: "Heavy plus one thirty-second" }).waitFor({ timeout: 15_000 });
+  await page.getByRole("button", { name: "Calculator settings", exact: true }).click();
+  await page.getByRole("dialog", { name: "Calculator settings" }).getByRole("button", { name: "Metric" }).waitFor({ timeout: 15_000 });
+  await page.getByRole("button", { name: "Close calculator settings" }).click();
+  await page.getByLabel("Heavy, light, double, and half controls").getByRole("button", { name: "Mark measurement heavy" }).waitFor({ timeout: 15_000 });
   await page.getByLabel("Heavy, light, double, and half controls").getByRole("button", { name: "Multiply measurement by two" }).waitFor({ timeout: 15_000 });
   await page.setViewportSize({ width: 375, height: 553 });
   await page.evaluate(() => {

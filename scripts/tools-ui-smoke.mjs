@@ -562,7 +562,10 @@ async function runToolsFlow(page, viewportName) {
   }
   await page.getByLabel("Length calculator").getByText("Decimal", { exact: true }).waitFor({ timeout: 15_000 });
   await page.getByRole("button", { name: "Copy" }).waitFor({ timeout: 15_000 });
-  await page.getByLabel("Input unit").getByRole("button", { name: "Switch to metric mode" }).click();
+  await page.getByRole("button", { name: "Calculator settings", exact: true }).click();
+  const calculatorSettings = page.getByRole("dialog", { name: "Calculator settings" });
+  await calculatorSettings.getByRole("button", { name: "Metric" }).click();
+  await calculatorSettings.getByRole("button", { name: "Close calculator settings" }).click();
   await page.getByLabel("Length calculator").getByText("Metres", { exact: true }).waitFor({ timeout: 15_000 });
   await page.getByLabel("Heavy, light, double, and half controls").getByRole("button", { name: "Heavy plus half millimetre" }).waitFor({ timeout: 15_000 });
   await page.getByLabel("Heavy, light, double, and half controls").getByRole("button", { name: "Light minus half millimetre" }).waitFor({ timeout: 15_000 });
@@ -584,7 +587,10 @@ async function runToolsFlow(page, viewportName) {
   await page.locator(".calc-primary-value", { hasText: "240.5 mm" }).waitFor({ timeout: 15_000 });
   await page.getByLabel("Metric calculator keypad").getByRole("button", { name: "Backspace" }).click();
   await page.locator(".calc-primary-value", { hasText: "240 mm" }).waitFor({ timeout: 15_000 });
-  await page.getByLabel("Metric input and conversions").getByRole("button", { name: "Switch to imperial mode" }).click();
+  await page.getByRole("button", { name: "Calculator settings", exact: true }).click();
+  await calculatorSettings.getByRole("button", { name: "Imperial" }).click();
+  await calculatorSettings.getByRole("button", { name: "Feet + inches" }).click();
+  await calculatorSettings.getByRole("button", { name: "Close calculator settings" }).click();
   await page.getByLabel("Length calculator").getByText("Decimal", { exact: true }).waitFor({ timeout: 15_000 });
   await page.getByRole("button", { name: "Clear calculator" }).click();
   await page.locator(".calc-primary-value", { hasText: '0"' }).waitFor({ timeout: 15_000 });
@@ -597,10 +603,20 @@ async function runToolsFlow(page, viewportName) {
     '27 5/16"',
     "inches mode should keep measurements above 12 inches instead of normalizing to feet",
   );
-  await page.getByLabel("Input unit").getByRole("button", { name: "FT" }).click();
+  await page.getByLabel("Input unit").getByRole("button", { name: "Feet input" }).click();
   await page.locator(".calc-primary-value", { hasText: `2' 3 5/16"` }).waitFor({ timeout: 15_000 });
-  await page.getByLabel("Input unit").getByRole("button", { name: "IN" }).click();
+  await page.getByLabel("Input unit").getByRole("button", { name: "Inches input" }).click();
   await page.locator(".calc-primary-value", { hasText: '27 5/16"' }).waitFor({ timeout: 15_000 });
+  await page.getByRole("button", { name: "Clear calculator" }).click();
+  await page.getByLabel("Fraction calculator keypad").getByRole("button", { name: "9" }).click();
+  await clickVisibleFraction(page, "5/16", viewportName);
+  await page.getByLabel("Heavy, light, double, and half controls").getByRole("button", { name: "Mark measurement heavy" }).click();
+  await page.locator(".calc-primary-value", { hasText: '9 5/16" H' }).waitFor({ timeout: 15_000 });
+  await page.getByLabel("Fraction calculator keypad").getByRole("button", { name: "+" }).click();
+  await clickVisibleFraction(page, "1/4", viewportName);
+  await page.getByLabel("Heavy, light, double, and half controls").getByRole("button", { name: "Mark measurement heavy" }).click();
+  await page.getByLabel("Fraction calculator keypad").getByRole("button", { name: "=" }).click();
+  await page.locator(".calc-primary-value", { hasText: '9 5/8"' }).waitFor({ timeout: 15_000 });
   await page.getByRole("button", { name: "Clear calculator" }).click();
   await clickVisibleFraction(page, "1/2", viewportName);
   await page.getByLabel("Fraction calculator keypad").getByRole("button", { name: "+" }).click();

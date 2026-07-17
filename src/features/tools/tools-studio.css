@@ -7984,6 +7984,10 @@
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--calc-on-accent) 24%, transparent);
 }
 
+.fraction-unit-row .unit-inches-only {
+  grid-column: span 2;
+}
+
 .fraction-unit-row span {
   display: block;
   color: currentColor;
@@ -8028,6 +8032,16 @@
   text-transform: uppercase;
 }
 
+.fraction-action-row button[aria-pressed="true"] {
+  border-color: color-mix(in srgb, var(--calc-lime) 72%, var(--v2-border));
+  background: color-mix(in srgb, var(--calc-lime) 16%, var(--v2-surface-muted));
+}
+
+.fraction-action-row button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
 .fraction-strip {
   display: grid;
   grid-template-columns: repeat(8, minmax(0, 1fr));
@@ -8053,6 +8067,22 @@
   background: color-mix(in srgb, var(--v2-accent) 18%, transparent);
   color: var(--calc-lime);
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--v2-accent) 32%, transparent);
+}
+
+.fraction-strip button[data-fraction-family="quarter"] {
+  box-shadow: inset 0 3px 0 color-mix(in srgb, var(--v2-accent) 86%, transparent);
+}
+
+.fraction-strip button[data-fraction-family="eighth"] {
+  box-shadow: inset 0 2px 0 color-mix(in srgb, var(--calc-lime) 62%, transparent);
+}
+
+.fraction-strip button[data-fraction-family="sixteenth"] {
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--v2-text-muted) 42%, transparent);
+}
+
+.fraction-strip button.active[data-fraction-family] {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--v2-accent) 44%, transparent), inset 0 3px 0 var(--v2-accent);
 }
 
 .unit-metric-readout {
@@ -8265,6 +8295,60 @@
 .calc-history-clear:hover {
   border-color: var(--v2-danger);
   color: var(--v2-danger);
+}
+
+.calc-settings-list {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+}
+
+.calc-settings-list > section {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--v2-border);
+  border-radius: var(--v2-radius-md);
+  background: var(--v2-surface-muted);
+}
+
+.calc-settings-list > section > div:first-child {
+  display: grid;
+  gap: 4px;
+}
+
+.calc-settings-list strong {
+  color: var(--v2-text);
+  font-size: 15px;
+}
+
+.calc-settings-list span {
+  color: var(--v2-text-muted);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.calc-settings-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.calc-settings-options button {
+  min-height: 44px;
+  border: 1px solid var(--v2-border-strong);
+  border-radius: var(--v2-radius-md);
+  background: var(--v2-surface);
+  color: var(--v2-text-muted);
+  font: inherit;
+  font-size: 13px;
+  font-weight: var(--v2-weight-bold);
+}
+
+.calc-settings-options button.active {
+  border-color: var(--v2-accent);
+  background: color-mix(in srgb, var(--v2-accent) 14%, var(--v2-surface));
+  color: var(--v2-text);
 }
 
 @media (max-width: 640px) {

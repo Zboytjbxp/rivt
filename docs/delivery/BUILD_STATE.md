@@ -2,10 +2,29 @@
 
 Last updated: 2026-07-17 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Packet 58 calculator key balance is production verified.
-Active packet: `docs/delivery/packets/58_CALCULATOR_KEY_BALANCE.md`
-Repository branch: `codex/calculator-standalone-app`
+Current phase: Packet 59 calculator tape preferences is locally verified and awaiting review, merge, and deployment.
+Active packet: `docs/delivery/packets/59_CALCULATOR_TAPE_PREFERENCES.md`
+Repository branch: `codex/calculator-tape-preferences`
 Production feature release commit: `fe393887abe17a2e5c162769a62851897feb81bb`
+
+## Packet 59 - Calculator Tape Preferences
+
+- Heavy 16th now keeps metric, notation, fraction ordering, and Heavy / Light
+  behavior as device-local calculator preferences instead of treating every
+  option as a top-of-keypad command.
+- Inches-only entry stays unbounded by the twelve-inch display convention;
+  feet-and-inches remains an explicit optional notation.
+- Heavy and Light are truthful tape qualifiers by default. One mark remains
+  visible, matching marks resolve to one sixteenth, and thirty-second behavior
+  is opt-in rather than silently fabricated.
+- Fraction-key hierarchy now makes quarter, eighth, and sixteenth marks easier
+  to identify while preserving balanced tap targets on compact phones.
+- Build, lint, 58 unit/frontend tests, E2E, rendered desktop/mobile/SE Tools
+  QA, mobile-action QA, and dependency audit pass. Three non-database
+  integration checks pass; sixteen PostgreSQL suites are skipped because this
+  worktree does not contain `TEST_DATABASE_URL`.
+- Production evidence is pending; this packet is not deployed from the
+  feature branch.
 
 ## Packet 58 - Calculator Key Balance
 

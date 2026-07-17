@@ -405,8 +405,10 @@ async function assertToolsFlow(page) {
   await fieldToolsTray.getByRole("button", { name: "Heavy 16th", exact: true }).click();
   await page.getByRole("heading", { name: "Heavy 16th field calculator" }).waitFor();
   await page.getByLabel("Length calculator").getByText("Decimal", { exact: true }).waitFor();
-  await page.getByLabel("Input unit").getByRole("button", { name: "Switch to metric mode" }).waitFor();
-  await page.getByLabel("Heavy, light, double, and half controls").getByRole("button", { name: "Heavy plus one thirty-second" }).waitFor();
+  await page.getByRole("button", { name: "Calculator settings", exact: true }).click();
+  await page.getByRole("dialog", { name: "Calculator settings" }).getByRole("button", { name: "Metric" }).waitFor();
+  await page.getByRole("button", { name: "Close calculator settings" }).click();
+  await page.getByLabel("Heavy, light, double, and half controls").getByRole("button", { name: "Mark measurement heavy" }).waitFor();
   await page.getByLabel("Heavy, light, double, and half controls").getByRole("button", { name: "Divide measurement by two" }).waitFor();
   await page.getByLabel("Heavy 16th field calculator").getByRole("button", { name: "Back to tools" }).click();
 
