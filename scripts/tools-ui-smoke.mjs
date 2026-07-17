@@ -387,6 +387,26 @@ async function assertCalculatorOwnsHandsetWidth(page) {
   );
 }
 
+async function assertCalculatorKeyRowsBalanced(page, viewportName) {
+  const metrics = await page.evaluate(() => {
+    const fractionKey = Array.from(document.querySelectorAll(".fraction-strip button"))
+      .find((element) => element.textContent?.trim() === "1/2");
+    const wholeNumberKey = Array.from(document.querySelectorAll(".fraction-pad button"))
+      .find((element) => element.textContent?.trim() === "8");
+    if (!(fractionKey instanceof HTMLElement) || !(wholeNumberKey instanceof HTMLElement)) return null;
+    return {
+      fractionHeight: fractionKey.getBoundingClientRect().height,
+      wholeNumberHeight: wholeNumberKey.getBoundingClientRect().height,
+    };
+  });
+  assert.ok(metrics, `calculator keys should render in the ${viewportName} viewport`);
+  const ratio = metrics.fractionHeight / metrics.wholeNumberHeight;
+  assert.ok(
+    ratio >= 0.82 && ratio <= 1.18,
+    `fraction and whole-number keys should have a balanced height in ${viewportName}; got ${JSON.stringify(metrics)}`,
+  );
+}
+
 async function assertImmersiveToolChromeHidden(page, toolName) {
   assert.equal(
     await page.locator(".v2-mobile-nav").isVisible(),
@@ -599,6 +619,7 @@ async function runToolsFlow(page, viewportName) {
   if (isHandsetViewport) {
     await assertCalculatorNoVerticalOverflow(page);
     await assertCalculatorOwnsHandsetWidth(page);
+    await assertCalculatorKeyRowsBalanced(page, viewportName);
     assert.equal(
       await page.locator(".heavy-calc-ruler").isVisible(),
       false,

@@ -1582,3 +1582,11 @@ Evidence must eventually link to implementation, automated tests, manual accepta
   restore, while feet notation remains an explicit user choice.
 - `GA-UX-006` gains rendered desktop, mobile, and SE regression coverage for
   the exact `27 5/16"` -> `2' 3 5/16"` -> `27 5/16"` unit-switch round trip.
+
+# Traceability Addendum - 2026-07-17 Calculator Key Balance
+
+- `GA-UX-006` gains rendered key-proportion evidence: at mobile and compact-SE
+  heights, fraction presets and whole-number keys remain within eighteen
+  percent of one another while every input stays visible without scrolling.
+- No requirement maturity changes and no calculator-math, server, schema,
+  authorization, authentication, billing, storage, or moderation changes.

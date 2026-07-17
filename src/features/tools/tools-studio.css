@@ -9044,7 +9044,7 @@ html[data-rivt-compact-device="true"] .v2-tools-app.is-calculator-fullscreen .fr
 
 html[data-rivt-compact-device="true"] .v2-tools-app.is-calculator-fullscreen .heavy-calc-main.length-mode .fraction-calc-left {
   height: 100%;
-  grid-template-rows: minmax(108px, 0.78fr) auto auto minmax(212px, 1.22fr);
+  grid-template-rows: minmax(108px, auto) auto auto minmax(120px, 3fr) minmax(176px, 4fr);
 }
 
 html[data-rivt-compact-device="true"] .v2-tools-app.is-calculator-fullscreen .fraction-display {
@@ -9078,6 +9078,7 @@ html[data-rivt-compact-device="true"] .v2-tools-app.is-calculator-fullscreen .fr
 html[data-rivt-compact-device="true"] .v2-tools-app.is-calculator-fullscreen .fraction-strip {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-rows: repeat(3, minmax(40px, 1fr));
   gap: 4px;
 }
 
@@ -9085,7 +9086,7 @@ html[data-rivt-compact-device="true"] .v2-tools-app.is-calculator-fullscreen .fr
   min-height: 40px;
   padding: 0 4px;
   border-radius: var(--v2-radius-md);
-  font-size: 13px;
+  font-size: clamp(14px, 3.6vw, 17px);
 }
 
 html[data-rivt-compact-device="true"] .v2-tools-app.is-calculator-fullscreen .fraction-unit-row,
@@ -9125,6 +9126,7 @@ html[data-rivt-compact-device="true"] .v2-tools-app.is-calculator-fullscreen .fr
 }
 
 html[data-rivt-compact-device="true"] .v2-tools-app.is-calculator-fullscreen .fraction-pad {
+  grid-template-rows: repeat(4, minmax(44px, 1fr));
   gap: 4px;
 }
 
@@ -10603,7 +10605,7 @@ html[data-rivt-compact-device="true"] .v2-tools-app.is-calculator-fullscreen .fr
   .v2-tools-app.is-calculator-fullscreen .fraction-calc-left {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: minmax(94px, auto) auto auto minmax(208px, 1fr);
+    grid-template-rows: minmax(94px, auto) auto auto minmax(120px, 3fr) minmax(160px, 4fr);
     gap: 6px;
   }
 
@@ -10641,13 +10643,14 @@ html[data-rivt-compact-device="true"] .v2-tools-app.is-calculator-fullscreen .fr
   .v2-tools-app.is-calculator-fullscreen .fraction-strip {
     display: grid;
     grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-rows: repeat(3, minmax(40px, 1fr));
     gap: 4px;
   }
 
   .v2-tools-app.is-calculator-fullscreen .fraction-strip button {
     min-height: 40px;
     padding: 0 4px;
-    font-size: 12px;
+    font-size: clamp(14px, 3.8vw, 16px);
   }
 
   .v2-tools-app.is-calculator-fullscreen .fraction-unit-row,
@@ -10680,6 +10683,7 @@ html[data-rivt-compact-device="true"] .v2-tools-app.is-calculator-fullscreen .fr
   }
 
   .v2-tools-app.is-calculator-fullscreen .fraction-pad {
+    grid-template-rows: repeat(4, minmax(40px, 1fr));
     gap: 4px;
   }
 

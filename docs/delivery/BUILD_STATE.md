@@ -2,10 +2,27 @@
 
 Last updated: 2026-07-17 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Packet 57 unlimited-inches calculator correction is locally verified.
-Active packet: `docs/delivery/packets/57_UNLIMITED_INCHES_CALCULATOR.md`
+Current phase: Packet 58 calculator key balance is locally verified.
+Active packet: `docs/delivery/packets/58_CALCULATOR_KEY_BALANCE.md`
 Repository branch: `codex/calculator-standalone-app`
 Production feature release commit: `cfe99f6bb0ea95e87506e2e7b33eeaec100ef0a9`
+
+## Packet 58 - Calculator Key Balance
+
+- Heavy 16th now gives its three fraction rows and four keypad rows
+  proportional space instead of letting an implicit grid row compress the
+  whole-number pad.
+- Fraction labels are more legible and both key families share one visual
+  rhythm at mobile and compact-phone heights.
+- Rendered desktop/mobile/SE Tools QA passes, including a new regression check
+  that constrains representative fraction and number key heights to within
+  eighteen percent of one another.
+- Build, lint, security lint, 58 unit/frontend tests, E2E, rendered
+  desktop/mobile/SE Tools QA, mobile-action QA, the production dependency
+  audit, and diff checks pass. Three non-database integration checks passed;
+  sixteen PostgreSQL suites skipped because this CSS-only worktree does not
+  contain `TEST_DATABASE_URL`.
+- Production evidence is pending merge and deployment.
 
 ## Packet 57 - Unlimited Inches Calculator
 
