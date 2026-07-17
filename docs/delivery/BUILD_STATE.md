@@ -2,10 +2,29 @@
 
 Last updated: 2026-07-17 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Packet 61 calculator fraction hierarchy is complete and deployed.
-Active packet: `docs/delivery/packets/61_CALCULATOR_FRACTION_HIERARCHY.md`
-Repository branch: `codex/calculator-fraction-hierarchy` (base: `origin/master` at `3d39902`)
-Production feature release commit: `3d399023c8d866f112403549776a056a22a28f74`
+Current phase: Packet 62 tool context and Estimate dock usability is complete and deployed.
+Active packet: `docs/delivery/packets/62_TOOL_CONTEXT_AND_ESTIMATE_DOCK_USABILITY.md`
+Repository branch: `codex/context-dock-fix` (base: `origin/master` at `8f5c494`)
+Production feature release commit: `279a21bdd58091d0147d7dda9242a19ee210e54b`
+
+## Packet 62 - Tool Context and Estimate Dock Usability
+
+- Tool context pickers now distinguish current work from history: only
+  canonical `active` RIVT work is selectable for new tool artifacts;
+  completed and cancelled work remains in its records/history surface.
+- Estimate's mobile dock now presents one forward action for the current
+  progressive step, while conversion to Invoice stays readable in Review.
+  Workbench bottom clearance prevents the fixed dock from hiding fields or
+  customer-facing review content.
+- Build, lint, 58 unit/frontend tests, E2E, rendered Tools UI, mobile-action
+  UI, and dependency audit pass. Three non-database integration checks pass;
+  sixteen PostgreSQL suites are skipped because this clean release worktree
+  does not contain `TEST_DATABASE_URL`.
+- Railway served exact source `279a21bdd58091d0147d7dda9242a19ee210e54b`.
+  The production monitor passed with PostgreSQL, S3-compatible storage,
+  Sentry, Web Push, matching-job alerts, and all seven anonymous private-route
+  checks healthy. No server, schema, authorization, billing, storage, or
+  dependency change is included.
 
 ## Packet 61 - Calculator Fraction Hierarchy
 

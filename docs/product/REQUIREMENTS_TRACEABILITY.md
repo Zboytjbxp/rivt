@@ -1660,3 +1660,22 @@ Evidence must eventually link to implementation, automated tests, manual accepta
   `ff64a11f023803adb3cc150b056adaf5818222e0`. The production monitor passed
   in 591 ms with PostgreSQL, S3-compatible storage, Sentry, Web Push,
   matching-job alerts, and all seven anonymous private-route checks healthy.
+
+# Traceability Addendum - 2026-07-17 Tool Context and Estimate Dock Usability
+
+- `GA-UX-003` gains exact-context evidence: the tool destination picker
+  exposes only canonical active RIVT work for new artifacts. Completed and
+  cancelled work is preserved as history rather than represented as live work.
+- `GA-UX-006` gains compact workflow evidence: Estimate's fixed action dock is
+  step-specific and workbench content reserves enough bottom clearance to
+  remain fully reachable above the mobile safe area.
+- No requirement maturity change and no server, schema, authorization,
+  authentication, billing, storage, or moderation change.
+- Local evidence: build, lint, 58 unit/frontend tests, E2E, rendered Tools UI,
+  mobile-action UI, and dependency audit pass. Three non-database integration
+  checks pass; sixteen PostgreSQL suites are skipped because this clean
+  worktree does not contain `TEST_DATABASE_URL`.
+- Production evidence: Railway served exact source
+  `279a21bdd58091d0147d7dda9242a19ee210e54b`; the production monitor passed
+  with PostgreSQL, S3-compatible storage, Sentry, Web Push, matching-job
+  alerts, and all seven anonymous private-route checks healthy.
