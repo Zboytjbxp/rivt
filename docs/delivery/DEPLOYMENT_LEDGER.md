@@ -1,5 +1,30 @@
 # Deployment Ledger
 
+## 2026-07-17 - Packet 59 Calculator Tape Preferences
+
+- Source commit: `6765dd2196221816ea9149916f295ea58112d210`
+- Feature commit: `6765dd2`
+- Branch: `master` (source branch: `codex/calculator-tape-preferences`)
+- Production: `https://rivt.pro`
+- Scope: Heavy 16th now keeps metric/imperial mode, inches-only versus
+  feet-and-inches notation, fraction-key ordering, and Heavy/Light behavior
+  as device-local preferences. A single Heavy or Light mark remains a visible
+  tape qualifier; matching marks resolve to one sixteenth, while 32nd
+  precision is an explicit option.
+- Automated gates: build, lint, security lint, 58 unit/frontend tests, E2E,
+  rendered desktop/mobile/SE Tools QA, mobile-action QA, dependency audit, and
+  diff checks passed. Three non-database integration checks passed; sixteen
+  PostgreSQL suites skipped because the worktree had no `TEST_DATABASE_URL`.
+- Post-deploy proof: production health served the exact source with migration
+  0028 ready. The production monitor passed in 582 ms with PostgreSQL and
+  S3-compatible storage healthy, Sentry and Web Push configured,
+  matching-job alerts enabled, operational controls open, and seven anonymous
+  private-route checks healthy.
+- Rollback target: `d5f3c54a0f79f1a8a5cb846e52a09803aa7ea21a`.
+- Remaining field acceptance: on a physical phone, switch between inches-only
+  and feet/inches, mark one measurement Heavy or Light, then confirm paired
+  matching marks resolve to a displayed sixteenth.
+
 ## 2026-07-17 - Home Completion-State Correction
 
 - Source commit: `97a9e0fc14dba95bffe2a9297c517ba80be6b03a`

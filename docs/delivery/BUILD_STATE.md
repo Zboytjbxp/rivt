@@ -2,10 +2,10 @@
 
 Last updated: 2026-07-17 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Packet 59 calculator tape preferences is locally verified and awaiting review, merge, and deployment.
+Current phase: Packet 59 calculator tape preferences is deployed and verified in production.
 Active packet: `docs/delivery/packets/59_CALCULATOR_TAPE_PREFERENCES.md`
-Repository branch: `codex/calculator-tape-preferences`
-Production feature release commit: `fe393887abe17a2e5c162769a62851897feb81bb`
+Repository branch: `master` (source branch: `codex/calculator-tape-preferences`)
+Production feature release commit: `6765dd2196221816ea9149916f295ea58112d210`
 
 ## Packet 59 - Calculator Tape Preferences
 
@@ -23,8 +23,12 @@ Production feature release commit: `fe393887abe17a2e5c162769a62851897feb81bb`
   QA, mobile-action QA, and dependency audit pass. Three non-database
   integration checks pass; sixteen PostgreSQL suites are skipped because this
   worktree does not contain `TEST_DATABASE_URL`.
-- Production evidence is pending; this packet is not deployed from the
-  feature branch.
+- Production `/api/health` served exact source
+  `6765dd2196221816ea9149916f295ea58112d210` with migration 0028 ready.
+  The production monitor passed in 582 ms with PostgreSQL and S3-compatible
+  storage healthy, Sentry and Web Push configured, matching-job alerts
+  enabled, operational controls open, and all seven anonymous private-route
+  checks healthy.
 
 ## Packet 58 - Calculator Key Balance
 

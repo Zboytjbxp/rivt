@@ -1612,4 +1612,8 @@ Evidence must eventually link to implementation, automated tests, manual accepta
   desktop/mobile/SE Tools QA, mobile-action QA, and dependency audit pass.
   Three non-database integration checks pass; sixteen PostgreSQL suites are
   skipped because this worktree does not contain `TEST_DATABASE_URL`.
-- Production evidence is pending on `codex/calculator-tape-preferences`.
+- Production evidence: Railway served exact source
+  `6765dd2196221816ea9149916f295ea58112d210`; migration 0028 was ready and
+  the production monitor passed in 582 ms with managed dependencies,
+  observability, engagement controls, and all anonymous private-route checks
+  healthy.
