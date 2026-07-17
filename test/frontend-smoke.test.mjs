@@ -211,6 +211,56 @@ test("Home active-work summary hands off to one exact workspace when the project
   assert.doesNotMatch(html, />Daily log</, "summary card should not duplicate the daily log action");
 });
 
+test("Home does not present completed or cancelled work as active", async () => {
+  const { TradeFeed } = await loadModule("/src/features/home/TradeFeed.tsx");
+  const historicalWork = ["completed", "cancelled"].map((status, index) => ({
+    id: `historical-work-${index}`,
+    jobId: `historical-job-${index}`,
+    offerId: `historical-offer-${index}`,
+    organizationId: "historical-organization",
+    contractorAccountId: "historical-contractor",
+    tradespersonAccountId: "historical-tradesperson",
+    status,
+    startedAt: new Date().toISOString(),
+    completedAt: status === "completed" ? new Date().toISOString() : null,
+    cancelledAt: status === "cancelled" ? new Date().toISOString() : null,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    events: [],
+    job: {
+      id: `historical-job-${index}`,
+      title: status === "completed" ? "Completed trim job" : "Cancelled service call",
+      status: "closed",
+      organization: { id: "historical-organization", name: "RIVT Test Co." },
+      trade: { code: "carpentry", name: "Carpentry" },
+      durationHours: 8,
+      budget: { amountCents: 85000, currency: "USD", unit: "fixed" },
+      publicLocation: { city: "Jacksonville", region: "FL", countryCode: "US" },
+    },
+  }));
+
+  const html = assertSmokeRender(
+    React.createElement(TradeFeed, {
+      posts: [],
+      activeWork: historicalWork,
+      name: "RIVT Tester",
+      location: "Jacksonville, FL",
+      primaryTrade: "Carpentry",
+      onOpenPost: noop,
+      onAsk: noop,
+      onPostWork: noop,
+      onOpenCommunity: noop,
+      onNavigate: noop,
+      onOpenActiveWorkWorkspace: noop,
+    }),
+    /Communities/,
+  );
+
+  assert.doesNotMatch(html, /You're active now/i);
+  assert.doesNotMatch(html, /Completed trim job/i);
+  assert.doesNotMatch(html, /Cancelled service call/i);
+});
+
 test("Work workspace renders without crashing", async () => {
   const { WorkWorkspace } = await loadModule("/src/features/work/WorkWorkspace.tsx");
 

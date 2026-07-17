@@ -49,6 +49,9 @@ profile rate as a binding bid.
 - Review notifications resolve to the submitted review, not a blank form.
   Generic Records no longer duplicates completion/review actions or invents a
   mandatory proof packet.
+- Home selects current work by canonical accepted-work status only. Completed
+  and cancelled records stay in history and cannot reappear under `You're
+  active now` when no active job exists.
 
 ## Acceptance
 
@@ -72,6 +75,8 @@ profile rate as a binding bid.
   notification and sees the submitted summary before acting.
 - A participant can open an exact review by id; an unrelated account receives
   not found rather than review data.
+- When every accepted-work record is completed or cancelled, Home shows no
+  active-work card while Work and Records continue to expose the history.
 
 ## Verification
 
@@ -105,6 +110,9 @@ profile rate as a binding bid.
   with exact Work closeout notification URLs, exact review lookup, and outsider
   denial. The final fresh-database run passed all 19 serial suites with zero
   failures or skips after rebuilding through migration 0028.
+- The Home regression renders completed and cancelled accepted-work records
+  together and proves the active label and historical titles are absent. The
+  final unit suite passes 58 tests.
 
 ## Rollback
 

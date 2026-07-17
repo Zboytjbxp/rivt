@@ -10,6 +10,19 @@ Status values:
 
 Evidence must eventually link to implementation, automated tests, manual acceptance proof, and deployed build.
 
+## Traceability Addendum - 2026-07-17 Home Completion-State Correction
+
+- `GA-UX-003` gains lifecycle-label evidence: Home derives its current-work
+  card only from an accepted-work record whose canonical status is `active`.
+  Completed and cancelled work remains historical and is not relabeled as
+  active when no current job exists.
+- `GA-UX-005` gains regression evidence: a frontend test renders completed and
+  cancelled records together and proves Home exposes neither the active label
+  nor either historical job title.
+- Local evidence includes build, lint, security lint, 58 unit tests, E2E,
+  mobile-actions, rendered Work lifecycle, and a zero-vulnerability production
+  dependency audit. Production exact-source evidence remains pending release.
+
 ## Traceability Addendum - 2026-07-17 Exact Closeout and Review Workflow (Production Verification)
 
 - `GA-UX-003` gains exact-destination evidence: fixed-price applicants can be

@@ -2,10 +2,22 @@
 
 Last updated: 2026-07-17 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Packet 55 exact closeout and review workflow repair is production verified.
+Current phase: Packet 55 exact closeout and review workflow repair is production verified; Home completion-state correction is release-ready.
 Active packet: `docs/delivery/packets/55_COMPENSATION_WORKFLOW.md`
 Repository branch: `master`
 Production feature release commit: `2d0692c8bfffed11f427902090252acbc9b402bf`
+
+## Home completion-state correction
+
+- Home now presents `You're active now` only for an accepted-work record whose
+  canonical status is `active`. Completed and cancelled records remain in Work
+  and Records history but no longer fall back into the current-work slot.
+- A frontend regression test renders completed and cancelled records together
+  and proves that neither the active label nor either historical job title is
+  shown on Home.
+- Build, lint, security lint, 58 unit tests, E2E, mobile-actions, rendered Work
+  lifecycle, and the production dependency audit pass locally. Deployment
+  evidence will be recorded after the release reaches production.
 
 ## Packet 55 - Compensation Workflow (Production Verification)
 
