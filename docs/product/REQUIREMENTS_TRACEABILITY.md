@@ -10,6 +10,28 @@ Status values:
 
 Evidence must eventually link to implementation, automated tests, manual acceptance proof, and deployed build.
 
+## Traceability Addendum - 2026-07-17 Exact Closeout and Review Workflow (Local Verification)
+
+- `GA-UX-003` gains exact-destination evidence: fixed-price applicants can be
+  hired at the listed amount without re-entering compensation; completion
+  actions remain inside the selected Work workspace; and completion and review
+  notifications open the exact server-owned record instead of generic Records
+  or a blank review form.
+- `GA-UX-005` gains role-specific lifecycle evidence: the tradesperson sees one
+  required completion summary with optional photos, notes, and checks, while
+  the contractor sees that exact submission before confirming completion or
+  requesting changes. Disabled submission states explain what is missing.
+- `GA-FND-004` gains participant-authorization evidence: exact review lookup is
+  restricted to the review participants and returns not found to unrelated
+  accounts.
+- `GA-OPS-007` gains local verification evidence: build, lint, security lint,
+  57 unit tests, E2E, mobile actions, rendered two-role Work lifecycle, zero
+  production dependency vulnerabilities, focused completion/review PostgreSQL
+  suites, and all 19 fresh-database integration suites passed.
+- `GA-OPS-008` remains pending for this addendum until the implementation is
+  merged, production health serves the exact released source, and the
+  expected-source monitor passes.
+
 ## Traceability Addendum - 2026-07-16 Compensation Workflow (Production Verification)
 
 - `GA-FND-002` gains migration evidence: `0028_compensation_workflow` owns job

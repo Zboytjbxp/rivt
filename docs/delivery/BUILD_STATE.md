@@ -1,13 +1,36 @@
 # RIVT Build State
 
-Last updated: 2026-07-16 America/New_York
+Last updated: 2026-07-17 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Packet 55 active-work acceptance repair is production verified; physical two-account closeout remains.
+Current phase: Packet 55 closeout workflow repair is locally verified and awaiting production deployment.
 Active packet: `docs/delivery/packets/55_COMPENSATION_WORKFLOW.md`
 Repository branch: `master`
 Production feature release commit: `650e50dbc20b1992fd8d3c8e0a4f0065aacead1a`
 
 ## Packet 55 - Compensation Workflow (Production Verification)
+
+### Exact closeout and review workflow repair
+
+- Fixed-price applicants now move to a one-tap hire at the posted amount. The
+  contractor only edits compensation for negotiable, hourly, or quote-based
+  work, so a fixed listing no longer asks for the same price twice.
+- Completion now stays inside the exact accepted-work workspace in Work. A
+  tradesperson submits one short completion summary; photos, field notes, and
+  checks remain useful evidence but are not invented closeout requirements.
+- Disabled completion actions explain the one missing requirement in place.
+  Submitting completion keeps the user on the same job and shows the next
+  server-owned lifecycle state instead of opening the generic Records app.
+- Contractors open the exact submitted completion from Work or its
+  notification, see the tradesperson's summary and attachment count, and can
+  confirm completion or request changes without searching another screen.
+- Review notifications preserve the exact review id. The review destination
+  renders the submitted author, rating, body, and approval state instead of an
+  empty review form; participant-only review lookup is enforced server-side.
+- Generic Records is once again an evidence archive. It no longer duplicates
+  completion/review controls or claims a field note is required to close work.
+- Rendered two-role lifecycle QA at mobile width and the fresh 19-suite
+  PostgreSQL gate pass with zero failures or skips. Focused completion and
+  review suites also prove exact notification destinations and outsider denial.
 
 ### Active-work acceptance repair
 

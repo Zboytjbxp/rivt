@@ -30,16 +30,11 @@ import { readPrimaryHourlyRate } from "../../lib/rateCard";
 import { listActiveWork, type CanonicalActiveWork } from "../work/job-api";
 import {
   addProjectNote,
-  getActiveWorkReviewContext,
   getProjectReport,
   openProjectForActiveWork,
   ProjectApiError,
-  resolveProjectCompletion,
-  submitActiveWorkReview,
-  submitProjectCompletion,
   uploadProjectMedia,
   type ProjectRecord,
-  type ReviewContext,
 } from "./project-api";
 import { FieldCalculatorTool } from "./FieldCalculatorTool";
 import { EstimateTool, type EstimateInvoiceDraft } from "./EstimateTool";
@@ -78,12 +73,6 @@ interface PaymentRecord {
   date: string;
 }
 
-interface CompletionChecklistState {
-  completedOnTime: boolean;
-  clientApproved: boolean;
-  photosProvided: boolean;
-}
-
 interface ToolsStudioProps {
   jobs: Job[];
   paymentRecords: PaymentRecord[];
@@ -94,6 +83,7 @@ interface ToolsStudioProps {
   onOpenToolConsumed?: () => void;
   onToolChange?: (tool: ToolMode) => void;
   onWorkContextChange?: (activeWorkId: string | null) => void;
+  onOpenActiveWorkWorkspace?: (activeWorkId: string) => void;
   onImmersiveChange?: (immersive: boolean) => void;
   onNavigate: (destination: PrimaryDestination) => void;
 }
@@ -177,12 +167,6 @@ function fileSize(sizeBytes: number) {
 function recordStatusLabel(status: ProjectRecord["status"]) {
   return status.replaceAll("_", " ");
 }
-
-const defaultCompletionChecklist: CompletionChecklistState = {
-  completedOnTime: true,
-  clientApproved: false,
-  photosProvided: false,
-};
 
 function ToolCard({
   icon: Icon,
@@ -3012,7 +2996,7 @@ function resolveActiveToolJob(jobs: Job[], orderedActiveWork: CanonicalActiveWor
   return null;
 }
 
-export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = null, focusedActiveWorkId = null, activeWorkRecords = [], onOpenToolConsumed, onToolChange, onWorkContextChange, onImmersiveChange, onNavigate }: ToolsStudioProps) {
+export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = null, focusedActiveWorkId = null, activeWorkRecords = [], onOpenToolConsumed, onToolChange, onWorkContextChange, onOpenActiveWorkWorkspace, onImmersiveChange, onNavigate }: ToolsStudioProps) {
   const controlledTool: "hub" | PublicToolMode | null = mode === "tools" && openTool !== null
     ? normalizePublicToolMode(openTool)
     : null;
@@ -3046,12 +3030,6 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
   const [convertedEstimateDraft, setConvertedEstimateDraft] = useState<EstimateInvoiceDraft | null>(null);
   const [noteDraft, setNoteDraft] = useState("");
   const [uploadNotes, setUploadNotes] = useState("");
-  const [completionNote, setCompletionNote] = useState("");
-  const [resolutionNote, setResolutionNote] = useState("");
-  const [completionChecklist, setCompletionChecklist] = useState<CompletionChecklistState>(defaultCompletionChecklist);
-  const [reviewContext, setReviewContext] = useState<ReviewContext | null>(null);
-  const [reviewRating, setReviewRating] = useState(5);
-  const [reviewBody, setReviewBody] = useState("");
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const noteTextareaRef = useRef<HTMLTextAreaElement | null>(null);
   const autoOpenedRecordRef = useRef<string | null>(null);
@@ -3061,14 +3039,6 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
     ?? null;
   const storedMedia = selectedProject?.media.filter((item) => item.status === "stored") ?? [];
   const fieldNoteCount = selectedProject?.entries.filter((entry) => entry.entryType === "note").length ?? 0;
-  const proofReadyCount = [storedMedia.length > 0, fieldNoteCount > 0, Boolean(selectedCompletion)].filter(Boolean).length;
-  const proofNextStep = storedMedia.length === 0
-    ? "Add a jobsite photo or closeout file."
-    : fieldNoteCount === 0
-      ? "Add one field note for context."
-      : !selectedCompletion
-        ? "Submit completion when the work is ready."
-        : "Load the closeout report when you need the packet.";
   const latestEntry = selectedProject?.entries.at(-1) ?? null;
   const actionBusy = Boolean(projectAction);
   const unpinnedPrimaryTools = useMemo(
@@ -3369,17 +3339,10 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
     };
   }, []);
 
-  function resetRecordForms(project: ProjectRecord | null = selectedProject) {
-    const hasStoredMedia = Boolean(project?.media.some((item) => item.status === "stored"));
+  function resetRecordForms() {
     setNoteDraft("");
     setUploadNotes("");
-    setCompletionNote("");
-    setResolutionNote("");
     setReportPreview(null);
-    setCompletionChecklist({ ...defaultCompletionChecklist, photosProvided: hasStoredMedia });
-    setReviewContext(null);
-    setReviewRating(5);
-    setReviewBody("");
   }
 
   async function handleOpenRecord(work: CanonicalActiveWork) {
@@ -3390,11 +3353,7 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
     try {
       const project = await openProjectForActiveWork(work.id);
       setSelectedProject(project);
-      resetRecordForms(project);
-      if (project.status === "confirmed") {
-        const context = await getActiveWorkReviewContext(work.id);
-        setReviewContext(context);
-      }
+      resetRecordForms();
     } catch (error) {
       setRecordsError(projectErrorMessage(error));
     } finally {
@@ -3422,18 +3381,10 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
       openProjectForActiveWork(work.id)
         .then(async (project) => {
           if (cancelled) return;
-          const hasStoredMedia = project.media.some((item) => item.status === "stored");
           setSelectedProject(project);
           setNoteDraft("");
           setUploadNotes("");
-          setCompletionNote("");
-          setResolutionNote("");
           setReportPreview(null);
-          setCompletionChecklist({ ...defaultCompletionChecklist, photosProvided: hasStoredMedia });
-          if (project.status === "confirmed") {
-            const context = await getActiveWorkReviewContext(work.id);
-            if (!cancelled) setReviewContext(context);
-          }
         })
         .catch((error) => {
           if (!cancelled) setRecordsError(projectErrorMessage(error));
@@ -3481,84 +3432,12 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
       await uploadProjectMedia(selectedProject.id, file, uploadNotes.trim() || "Uploaded from RIVT Records.");
       await refreshSelectedProject();
       setUploadNotes("");
-      setCompletionChecklist((current) => ({ ...current, photosProvided: true }));
       setRecordNotice(`${file.name} was added to the project record.`);
     } catch (error) {
       setRecordsError(projectErrorMessage(error));
     } finally {
       setProjectAction(null);
       if (fileInputRef.current) fileInputRef.current.value = "";
-    }
-  }
-
-  async function handleSubmitCompletion() {
-    if (!selectedProject) return;
-    const note = completionNote.trim();
-    if (!note) return;
-    setProjectAction("submit");
-    setRecordsError(null);
-    setRecordNotice(null);
-    try {
-      await submitProjectCompletion(
-        selectedProject.id,
-        note,
-        storedMedia.map((item) => item.id),
-        {
-          ...completionChecklist,
-          photosProvided: completionChecklist.photosProvided || storedMedia.length > 0,
-        },
-      );
-      await refreshSelectedProject();
-      setCompletionNote("");
-      setRecordNotice("Completion submitted. The other party can now confirm or dispute it.");
-    } catch (error) {
-      setRecordsError(projectErrorMessage(error));
-    } finally {
-      setProjectAction(null);
-    }
-  }
-
-  async function handleResolveCompletion(decision: "confirm" | "dispute") {
-    if (!selectedProject || !selectedCompletion) return;
-    const reason = resolutionNote.trim();
-    if (decision === "dispute" && !reason.trim()) return;
-    setProjectAction(decision);
-    setRecordsError(null);
-    setRecordNotice(null);
-    try {
-      await resolveProjectCompletion(selectedProject.id, selectedCompletion.id, decision, reason);
-      await refreshSelectedProject();
-      setResolutionNote("");
-      setRecordNotice(decision === "confirm" ? "Completion confirmed and recorded." : "Completion dispute recorded.");
-      if (decision === "confirm") {
-        setReviewContext(await getActiveWorkReviewContext(selectedProject.activeWorkId));
-      }
-    } catch (error) {
-      setRecordsError(projectErrorMessage(error));
-    } finally {
-      setProjectAction(null);
-    }
-  }
-
-  async function handleSubmitReview() {
-    if (!selectedProject || !reviewContext?.eligible || reviewContext.hasSubmitted || !reviewContext.counterparty || !reviewBody.trim()) return;
-    setProjectAction("review");
-    setRecordsError(null);
-    setRecordNotice(null);
-    try {
-      await submitActiveWorkReview(selectedProject.activeWorkId, {
-        revieweeAccountId: reviewContext.counterparty.accountId,
-        rating: reviewRating,
-        body: reviewBody.trim(),
-        consentVersion: "2026-06-19",
-      });
-      setReviewContext((current) => current ? { ...current, hasSubmitted: true } : current);
-      setReviewBody("");
-      setRecordNotice("Review submitted for the other participant to approve before it is public.");
-    } catch (error) {
-      setRecordsError(projectErrorMessage(error));
-    } finally {
-      setProjectAction(null);
     }
   }
 
@@ -3672,18 +3551,24 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
                   </section>
                 ) : null}
 
-                <section className="v2-record-proof-card" aria-label="Job proof packet">
+                <section className="v2-record-proof-card" aria-label="Job record summary">
                   <div className="v2-record-proof-copy">
-                    <span>Job proof packet</span>
-                    <strong>{proofReadyCount}/3 ready for closeout</strong>
-                    <p>{proofNextStep}</p>
+                    <span>Job record</span>
+                    <strong>{storedMedia.length} file{storedMedia.length === 1 ? "" : "s"} · {fieldNoteCount} note{fieldNoteCount === 1 ? "" : "s"}</strong>
+                    <p>Keep documentation here. Submit or review completion from the exact job workspace in Work.</p>
                   </div>
-                  <div className="v2-record-proof-checks" aria-label="Proof packet status">
+                  <div className="v2-record-proof-checks" aria-label="Job record status">
                     <span className={storedMedia.length ? "is-ready" : ""}><CheckCircle2 size={14} />{storedMedia.length} photo/file{storedMedia.length === 1 ? "" : "s"}</span>
                     <span className={fieldNoteCount ? "is-ready" : ""}><FileText size={14} />{fieldNoteCount} field note{fieldNoteCount === 1 ? "" : "s"}</span>
                     <span className={selectedCompletion ? "is-ready" : ""}><Clipboard size={14} />{selectedCompletion?.status ?? "not submitted"}</span>
                   </div>
                   <div className="v2-record-proof-actions">
+                    {onOpenActiveWorkWorkspace ? (
+                      <button type="button" onClick={() => onOpenActiveWorkWorkspace(selectedProject.activeWorkId)} disabled={actionBusy}>
+                        <ArrowRight size={14} />
+                        Open workspace
+                      </button>
+                    ) : null}
                     <button type="button" onClick={() => fileInputRef.current?.click()} disabled={actionBusy}>
                       <FileUp size={14} />
                       Add photo
@@ -3692,7 +3577,7 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
                       <FileText size={14} />
                       Add note
                     </button>
-                    <button type="button" onClick={() => void handleLoadReport()} disabled={actionBusy || proofReadyCount < 2}>
+                    <button type="button" onClick={() => void handleLoadReport()} disabled={actionBusy || !selectedProject}>
                       <Clipboard size={14} />
                       Report
                     </button>
@@ -3752,99 +3637,6 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
                     )}
                   </section>
 
-                  <section className="v2-record-card">
-                    <header>
-                      <span><ListChecks size={16} /> Submit completion</span>
-                      <small>Creates the reviewable closeout step</small>
-                    </header>
-                    <textarea
-                      value={completionNote}
-                      onChange={(event) => setCompletionNote(event.target.value)}
-                      placeholder="Summarize what was completed and anything the other party should review..."
-                      rows={4}
-                    />
-                    <div className="v2-record-checklist">
-                      <label>
-                        <input
-                          type="checkbox"
-                          checked={completionChecklist.completedOnTime}
-                          onChange={(event) => setCompletionChecklist((current) => ({ ...current, completedOnTime: event.target.checked }))}
-                        />
-                        Completed on time
-                      </label>
-                      <label>
-                        <input
-                          type="checkbox"
-                          checked={completionChecklist.clientApproved}
-                          onChange={(event) => setCompletionChecklist((current) => ({ ...current, clientApproved: event.target.checked }))}
-                        />
-                        Client/contractor approved
-                      </label>
-                      <label>
-                        <input
-                          type="checkbox"
-                          checked={completionChecklist.photosProvided}
-                          onChange={(event) => setCompletionChecklist((current) => ({ ...current, photosProvided: event.target.checked }))}
-                        />
-                        Photos or proof provided
-                      </label>
-                    </div>
-                    <button type="button" className="v2-primary-button" onClick={() => void handleSubmitCompletion()} disabled={actionBusy || !completionNote.trim()}>
-                      Submit completion
-                    </button>
-                  </section>
-
-                  <section className="v2-record-card">
-                    <header>
-                      <span><CheckCircle2 size={16} /> Review completion</span>
-                      <small>{selectedCompletion ? `Latest: ${selectedCompletion.status}` : "Waiting on a submission"}</small>
-                    </header>
-                    {selectedCompletion ? (
-                      <>
-                        <p className="v2-tool-note">{selectedCompletion.note}</p>
-                        {selectedCompletion.status === "submitted" ? (
-                          <>
-                            <textarea
-                              value={resolutionNote}
-                              onChange={(event) => setResolutionNote(event.target.value)}
-                              placeholder="Optional confirmation note, or required dispute reason..."
-                              rows={3}
-                            />
-                            <div className="v2-record-resolution-actions">
-                              <button type="button" className="v2-primary-button" onClick={() => void handleResolveCompletion("confirm")} disabled={actionBusy}>Confirm</button>
-                              <button type="button" className="v2-destructive-button" onClick={() => void handleResolveCompletion("dispute")} disabled={actionBusy || !resolutionNote.trim()}>Dispute</button>
-                            </div>
-                          </>
-                        ) : (
-                          <p className="v2-tool-note">Resolved {selectedCompletion.resolvedAt ? new Date(selectedCompletion.resolvedAt).toLocaleString() : "in timeline"}.</p>
-                        )}
-                      </>
-                    ) : (
-                      <p className="v2-tool-note">No completion has been submitted for this record yet.</p>
-                    )}
-                  </section>
-
-                  {reviewContext?.eligible && reviewContext.counterparty ? (
-                    <section className="v2-record-card v2-record-review-card">
-                      <header>
-                        <span><CheckCircle2 size={16} /> Close out with a review</span>
-                        <small>{reviewContext.hasSubmitted ? "Review submitted" : `For ${reviewContext.counterparty.displayName}`}</small>
-                      </header>
-                      {reviewContext.hasSubmitted ? (
-                        <p className="v2-tool-note">Your review is waiting for the other participant to approve before it appears on their profile.</p>
-                      ) : (
-                        <>
-                          <div className="v2-record-review-rating" aria-label="Review rating">
-                            {[1, 2, 3, 4, 5].map((rating) => (
-                              <button key={rating} type="button" className={reviewRating === rating ? "is-selected" : ""} onClick={() => setReviewRating(rating)} aria-label={`${rating} star${rating === 1 ? "" : "s"}`}>{rating}</button>
-                            ))}
-                          </div>
-                          <textarea value={reviewBody} onChange={(event) => setReviewBody(event.target.value)} placeholder="Describe the work relationship clearly and fairly..." rows={4} />
-                          <button type="button" className="v2-primary-button" onClick={() => void handleSubmitReview()} disabled={actionBusy || !reviewBody.trim()}>Submit review</button>
-                        </>
-                      )}
-                    </section>
-                  ) : null}
                 </div>
 
                 {latestEntry ? (
@@ -3867,7 +3659,7 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
                 {reportPreview ? <pre className="v2-record-report">{reportPreview}</pre> : null}
               </>
             ) : (
-              <EmptyState className="v2-tools-empty" icon={<FileText size={20} />} title="Select an accepted job" description="Open a record to add closeout evidence, submit completion, or generate the closeout report." />
+              <EmptyState className="v2-tools-empty" icon={<FileText size={20} />} title="Select an accepted job" description="Open a record to add notes or files and review its timeline." />
             )}
           </Panel>
         </div>

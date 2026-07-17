@@ -2541,6 +2541,16 @@ app.get("/api/v1/reviews", requireV1AuthenticatedUser, requireV1Actor, asyncRout
   });
 }));
 
+app.get("/api/v1/reviews/:id", requireV1AuthenticatedUser, requireV1Actor, asyncRoute(async (request, response) => {
+  const reviewId = validate(z.uuid(), request.params.id);
+  const review = await loadReviewById(database, reviewId);
+  if (![review.reviewer_account_id, review.reviewee_account_id].includes(request.actor.account.id)) {
+    throw new ApiError(404, "REVIEW_NOT_FOUND", "Review not found.");
+  }
+  const [mapped] = await mapReviewRows(database, [review]);
+  response.json({ data: { review: mapped }, meta: { requestId: request.requestId } });
+}));
+
 app.get("/api/v1/active-work/:id/review-context", requireV1AuthenticatedUser, requireV1Actor, asyncRoute(async (request, response) => {
   const activeWorkId = validate(z.uuid(), request.params.id);
   const activeWork = await loadActiveWorkById(database, activeWorkId, request.actor);
@@ -4502,7 +4512,7 @@ app.post("/api/v1/projects/:id/completion", requireV1AuthenticatedUser, requireV
       type: "work",
       title: "Completion submitted",
       body: `${project.job_title} - ${project.public_city}, ${project.public_region}`,
-      actionHref: `/app/tools/records?activeWork=${project.active_work_id}&project=${projectId}`,
+      actionHref: `/app/work?activeWork=${project.active_work_id}&job=${project.job_id}&project=${projectId}&closeout=1`,
       sourceType: "project",
       sourceId: projectId,
       priority: "high",
@@ -4609,7 +4619,7 @@ async function resolveCompletion(request, projectId, submissionId, decision) {
       type: "work",
       title: decision === "confirmed" ? "Completion confirmed" : "Completion disputed",
       body: `${project.job_title} - ${project.public_city}, ${project.public_region}`,
-      actionHref: `/app/tools/records?activeWork=${project.active_work_id}&project=${projectId}`,
+      actionHref: `/app/work?activeWork=${project.active_work_id}&job=${project.job_id}&project=${projectId}&closeout=1`,
       sourceType: "project",
       sourceId: projectId,
       priority: "high",
