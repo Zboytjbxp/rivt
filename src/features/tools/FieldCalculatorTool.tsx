@@ -91,6 +91,12 @@ function fractionLabelFromSixteenth(value: number) {
   return reduceFraction(value * 2);
 }
 
+function fractionFamilyFromSixteenth(value: number) {
+  if (value % 4 === 0) return "quarter";
+  if (value % 2 === 0) return "eighth";
+  return "sixteenth";
+}
+
 function formatMillimeters(units: number) {
   const millimeters = units / UNITS_PER_MM;
   return `${formatNumber(millimeters, 1)} mm`;
@@ -783,17 +789,22 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
                 </div>
               ) : (
                 <div className="fraction-strip" aria-label="Sixteenth fractions">
-                  {fractionButtons.map((value) => (
-                    <button
-                      key={value}
-                      type="button"
-                      data-fraction-family={value % 4 === 0 ? "quarter" : value % 2 === 0 ? "eighth" : "sixteenth"}
-                      className={`${fraction32 === value * 2 ? "active " : ""}fraction-${value % 4 === 0 ? "quarter" : value % 2 === 0 ? "eighth" : "sixteenth"}`}
-                      onClick={() => chooseFraction(value)}
-                    >
-                      {fractionLabelFromSixteenth(value)}
-                    </button>
-                  ))}
+                  {fractionButtons.map((value) => {
+                    const family = fractionFamilyFromSixteenth(value);
+                    const label = fractionLabelFromSixteenth(value);
+                    return (
+                      <button
+                        key={value}
+                        type="button"
+                        data-fraction-family={family}
+                        className={`${fraction32 === value * 2 ? "active " : ""}fraction-${family}`}
+                        aria-label={`Enter ${label} ${family} tape mark`}
+                        onClick={() => chooseFraction(value)}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
                 </div>
               )}
 

@@ -8081,36 +8081,67 @@
 }
 
 .fraction-strip button {
+  --fraction-fill: transparent;
+  --fraction-tick-color: color-mix(in srgb, var(--v2-text-muted) 58%, transparent);
+  --fraction-tick-height: 2px;
+  --fraction-tick-width: 18%;
+  position: relative;
+  overflow: hidden;
   min-height: 42px;
-  border: 0;
+  border: 1px solid transparent;
   border-radius: var(--v2-radius-md);
-  background: var(--v2-surface-muted);
+  background: color-mix(in srgb, var(--v2-surface-muted) 94%, var(--fraction-fill));
   color: var(--v2-text-muted);
   font-size: 13px;
   font-weight: var(--v2-weight-bold);
   font-variant-numeric: tabular-nums;
 }
 
+.fraction-strip button::before {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: var(--fraction-tick-width);
+  height: var(--fraction-tick-height);
+  border-radius: 0 0 var(--v2-radius-pill) var(--v2-radius-pill);
+  background: var(--fraction-tick-color);
+  content: "";
+  pointer-events: none;
+  transform: translateX(-50%);
+}
+
 .fraction-strip button.active {
-  background: color-mix(in srgb, var(--v2-accent) 18%, transparent);
-  color: var(--calc-lime);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--v2-accent) 32%, transparent);
+  border-color: var(--v2-accent);
+  background: color-mix(in srgb, var(--v2-accent) 20%, var(--v2-surface-muted));
+  color: var(--v2-text);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--v2-accent) 24%, transparent);
 }
 
 .fraction-strip button[data-fraction-family="quarter"] {
-  box-shadow: inset 0 3px 0 color-mix(in srgb, var(--v2-accent) 86%, transparent);
+  --fraction-fill: color-mix(in srgb, var(--v2-accent) 15%, transparent);
+  --fraction-tick-color: var(--v2-accent);
+  --fraction-tick-height: 6px;
+  --fraction-tick-width: 78%;
+  border-color: color-mix(in srgb, var(--v2-accent) 48%, var(--v2-border));
+  color: var(--v2-text);
 }
 
 .fraction-strip button[data-fraction-family="eighth"] {
-  box-shadow: inset 0 2px 0 color-mix(in srgb, var(--calc-lime) 62%, transparent);
+  --fraction-fill: color-mix(in srgb, var(--v2-accent) 8%, transparent);
+  --fraction-tick-color: color-mix(in srgb, var(--v2-accent) 76%, var(--v2-text-muted));
+  --fraction-tick-height: 4px;
+  --fraction-tick-width: 50%;
+  border-color: color-mix(in srgb, var(--v2-accent) 25%, var(--v2-border));
+  color: var(--v2-text);
 }
 
 .fraction-strip button[data-fraction-family="sixteenth"] {
-  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--v2-text-muted) 42%, transparent);
+  --fraction-tick-height: 2px;
+  --fraction-tick-width: 22%;
 }
 
 .fraction-strip button.active[data-fraction-family] {
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--v2-accent) 44%, transparent), inset 0 3px 0 var(--v2-accent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--v2-accent) 24%, transparent);
 }
 
 .unit-metric-readout {

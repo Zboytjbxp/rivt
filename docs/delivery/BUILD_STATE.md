@@ -2,10 +2,26 @@
 
 Last updated: 2026-07-17 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Packet 60 money document flow is in local implementation and verification.
-Active packet: `docs/delivery/packets/60_MONEY_DOCUMENT_FLOW.md`
-Repository branch: `codex/money-document-flow` (base: `origin/master` at `f1c3bee`)
-Production feature release commit: `6765dd2196221816ea9149916f295ea58112d210`
+Current phase: Packet 61 calculator fraction hierarchy is verified locally and ready for release.
+Active packet: `docs/delivery/packets/61_CALCULATOR_FRACTION_HIERARCHY.md`
+Repository branch: `codex/calculator-fraction-hierarchy` (base: `origin/master` at `3d39902`)
+Production feature release commit: `3d399023c8d866f112403549776a056a22a28f74`
+
+## Packet 61 - Calculator Fraction Hierarchy
+
+- Heavy 16th now gives quarter, eighth, and sixteenth presets an unmistakable
+  tape-mark hierarchy: a long strong quarter mark, a medium eighth mark, and
+  a short sixteenth mark. Equal-size keys remain equally reachable.
+- Semantic fraction-family data and accessible labels identify each tape mark;
+  the selected outline does not hide the hierarchy.
+- Build, lint, 58 unit/frontend tests, E2E, rendered Tools UI, mobile-action
+  UI, and dependency audit pass. The rendered SE calculator confirms the
+  three tape-mark sizes at handset scale.
+- Three non-database integration checks pass; sixteen PostgreSQL suites are
+  skipped because this worktree does not have `TEST_DATABASE_URL` configured.
+  Deployment evidence is pending.
+  No server, schema, authorization, billing, storage, or dependency change is
+  included.
 
 ## Packet 60 - Money Document Flow
 
@@ -22,7 +38,10 @@ Production feature release commit: `6765dd2196221816ea9149916f295ea58112d210`
   UI, and the production dependency audit pass. Three non-database integration
   checks pass; sixteen PostgreSQL suites are skipped because this clean
   worktree does not have `TEST_DATABASE_URL` configured. Deployment evidence
-  is pending review and merge. Requirement maturity is unchanged; the active
+  is complete. Railway served exact source
+  `3d399023c8d866f112403549776a056a22a28f74` and the production monitor
+  passed with PostgreSQL, S3-compatible storage, Sentry, Web Push, and
+  matching-job alerts healthy. Requirement maturity is unchanged; the active
   risk boundary remains R-023 until a reviewed payment or server delivery
   contract exists.
 

@@ -1639,3 +1639,21 @@ Evidence must eventually link to implementation, automated tests, manual accepta
   the production monitor passed in 582 ms with managed dependencies,
   observability, engagement controls, and all anonymous private-route checks
   healthy.
+
+# Traceability Addendum - 2026-07-17 Calculator Fraction Hierarchy
+
+- `GA-UX-003` gains field-legibility evidence: quarter, eighth, and sixteenth
+  fraction presets carry a long, medium, and short tape mark respectively,
+  rather than relying on faint accent color alone.
+- `GA-UX-006` gains rendered mobile hierarchy coverage: equal-sized fraction
+  targets expose a semantic family and quarter > eighth > sixteenth tick
+  dimensions at handset viewports.
+- No requirement maturity change and no calculator arithmetic, server,
+  schema, authorization, authentication, billing, storage, or moderation
+  change.
+- Local evidence: build, lint, 58 unit/frontend tests, E2E, rendered Tools UI,
+  mobile-action UI, and dependency audit pass. Three non-database integration
+  checks pass; sixteen PostgreSQL suites are skipped because this worktree does
+  not contain `TEST_DATABASE_URL`. The rendered SE calculator confirms the
+  tape-mark hierarchy at handset scale.
+- Production evidence is pending.

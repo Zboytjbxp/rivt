@@ -407,6 +407,43 @@ async function assertCalculatorKeyRowsBalanced(page, viewportName) {
   );
 }
 
+async function assertFractionTapeHierarchy(page, viewportName) {
+  const hierarchy = await page.evaluate(() => {
+    const findFraction = (label) => Array.from(document.querySelectorAll(".fraction-strip button"))
+      .find((element) => element.textContent?.trim() === label);
+    const describe = (label) => {
+      const element = findFraction(label);
+      if (!(element instanceof HTMLButtonElement)) return null;
+      const styles = window.getComputedStyle(element, "::before");
+      return {
+        family: element.dataset.fractionFamily,
+        tickHeight: Number.parseFloat(styles.height),
+        tickWidth: Number.parseFloat(styles.width),
+      };
+    };
+    return {
+      quarter: describe("1/4"),
+      eighth: describe("1/8"),
+      sixteenth: describe("1/16"),
+    };
+  });
+  assert.deepEqual(
+    [hierarchy.quarter?.family, hierarchy.eighth?.family, hierarchy.sixteenth?.family],
+    ["quarter", "eighth", "sixteenth"],
+    `fraction keys should expose their tape families in ${viewportName}; got ${JSON.stringify(hierarchy)}`,
+  );
+  assert.ok(
+    hierarchy.quarter.tickHeight > hierarchy.eighth.tickHeight
+      && hierarchy.eighth.tickHeight > hierarchy.sixteenth.tickHeight,
+    `quarter, eighth, and sixteenth marks should have distinct tick heights in ${viewportName}; got ${JSON.stringify(hierarchy)}`,
+  );
+  assert.ok(
+    hierarchy.quarter.tickWidth > hierarchy.eighth.tickWidth
+      && hierarchy.eighth.tickWidth > hierarchy.sixteenth.tickWidth,
+    `quarter, eighth, and sixteenth marks should have distinct tick widths in ${viewportName}; got ${JSON.stringify(hierarchy)}`,
+  );
+}
+
 async function assertImmersiveToolChromeHidden(page, toolName) {
   assert.equal(
     await page.locator(".v2-mobile-nav").isVisible(),
@@ -636,6 +673,7 @@ async function runToolsFlow(page, viewportName) {
     await assertCalculatorNoVerticalOverflow(page);
     await assertCalculatorOwnsHandsetWidth(page);
     await assertCalculatorKeyRowsBalanced(page, viewportName);
+    await assertFractionTapeHierarchy(page, viewportName);
     assert.equal(
       await page.locator(".heavy-calc-ruler").isVisible(),
       false,

@@ -66,5 +66,6 @@ product RIVT does not operate.
   rendered iPhone SE invoice review shows the full customer document, copy,
   and print/save-PDF actions without a hidden preview disclosure.
 - `npm audit --omit=dev` reported zero vulnerabilities.
-- Deployment is intentionally outside this packet until the branch completes
-  review and merge under the collaboration workflow.
+- Railway served the feature source commit
+  `3d399023c8d866f112403549776a056a22a28f74`; production monitoring passed
+  with the configured service dependencies healthy.
