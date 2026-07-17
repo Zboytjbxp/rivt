@@ -426,6 +426,7 @@ export function EstimateTool({
             <footer><span>Estimated total</span><strong>{currency(target)}</strong></footer>
           </article>
           <button type="button" className="v2-secondary-button v2-tool-inline-action" onClick={() => void copySummary()}><Copy size={18} />Copy estimate</button>
+          {onConvertToInvoice ? <button type="button" className="v2-secondary-button v2-tool-inline-action" onClick={convertToInvoice} disabled={target <= 0}><FileText size={18} />Convert to invoice</button> : null}
           {delivery?.status === "sent" ? <p className="v2-estimate-delivery-status is-sent">Sent to {delivery.recipientEmail} {delivery.sentAt ? `on ${new Date(delivery.sentAt).toLocaleString()}` : ""}. Confirm acceptance, then convert it to an invoice when the work is ready.</p> : null}
           {delivery?.status === "failed" ? <p className="v2-estimate-delivery-status is-failed">The last delivery did not complete. Check the recipient email and try again.</p> : null}
         </section> : null}
@@ -453,13 +454,12 @@ export function EstimateTool({
           <div><span>Contingency</span><strong>{currency(contingency)}</strong></div>
         </div>
       </Panel> : null}
-      <div className="v2-tool-action-dock" aria-label="Estimate actions">
+      <div className={`v2-tool-action-dock is-estimate is-${step}`} aria-label="Estimate actions">
         <span><strong>{currency(target)}</strong><small>{saveMessage}</small></span>
         {step !== "price" ? <button type="button" onClick={() => setStep(step === "review" ? "customer" : "price")} aria-label="Previous estimate step"><ChevronLeft size={18} /></button> : null}
         <button type="button" onClick={() => void saveDraft()} aria-label="Save estimate" title="Save estimate"><Save size={18} /><span>Save</span></button>
         {step === "price" ? <button type="button" className="v2-primary-button" onClick={() => setStep("customer")}><span>Customer</span><ChevronRight size={18} /></button> : null}
         {step === "customer" ? <button type="button" className="v2-primary-button" onClick={() => setStep("review")}><span>Review</span><ChevronRight size={18} /></button> : null}
-        {step === "review" && onConvertToInvoice ? <button type="button" onClick={convertToInvoice} disabled={target <= 0} aria-label="Convert to invoice" title="Convert estimate to invoice"><FileText size={18} /><span>Make invoice</span></button> : null}
         {step === "review" ? <button type="button" className="v2-primary-button" onClick={() => void sendEstimateEmail()} disabled={sending || target <= 0 || !recipientEmail.trim()}><Mail size={18} /><span>{sending ? "Sending" : delivery?.status === "sent" ? "Send again" : "Send email"}</span></button> : null}
       </div>
     </div>
