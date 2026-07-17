@@ -2,10 +2,10 @@
 
 Last updated: 2026-07-17 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Packet 58 calculator key balance is locally verified.
+Current phase: Packet 58 calculator key balance is production verified.
 Active packet: `docs/delivery/packets/58_CALCULATOR_KEY_BALANCE.md`
 Repository branch: `codex/calculator-standalone-app`
-Production feature release commit: `cfe99f6bb0ea95e87506e2e7b33eeaec100ef0a9`
+Production feature release commit: `fe393887abe17a2e5c162769a62851897feb81bb`
 
 ## Packet 58 - Calculator Key Balance
 
@@ -22,7 +22,11 @@ Production feature release commit: `cfe99f6bb0ea95e87506e2e7b33eeaec100ef0a9`
   audit, and diff checks pass. Three non-database integration checks passed;
   sixteen PostgreSQL suites skipped because this CSS-only worktree does not
   contain `TEST_DATABASE_URL`.
-- Production evidence is pending merge and deployment.
+- Production `/api/health` served exact source
+  `fe393887abe17a2e5c162769a62851897feb81bb`. The expected-source monitor
+  passed in 619 ms with PostgreSQL, S3-compatible storage, Sentry, Web Push,
+  matching-job alerts, operational controls, and all seven anonymous
+  private-route checks healthy.
 
 ## Packet 57 - Unlimited Inches Calculator
 

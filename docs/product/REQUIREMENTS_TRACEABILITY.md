@@ -1590,3 +1590,8 @@ Evidence must eventually link to implementation, automated tests, manual accepta
   percent of one another while every input stays visible without scrolling.
 - No requirement maturity changes and no calculator-math, server, schema,
   authorization, authentication, billing, storage, or moderation changes.
+- `GA-OPS-008` gains production evidence: Railway served exact source
+  `fe393887abe17a2e5c162769a62851897feb81bb`; migration 0028 was ready and
+  the expected-source monitor passed in 619 ms with managed dependencies,
+  observability, engagement controls, and all anonymous private-route checks
+  healthy.

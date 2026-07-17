@@ -1993,3 +1993,32 @@ Add one entry per staging/production deployment.
   imperial/metric restoration on the field devices used for launch.
 - Approval: Packet 56 runtime, rendered-device gates, calculator behavior, and
   production health are verified; physical field acceptance remains open.
+
+## Current Production - Packet 58 Calculator Key Balance
+
+- Environment: Production (`https://rivt.pro`)
+- Date/time/timezone: 2026-07-17 America/New_York
+- Deployer: Codex through a verified feature branch, fast-forward merge to
+  `master`, and Railway production auto-deploy
+- Source repository/branch: `Zboytjbxp/rivt`, `master`
+- Runtime feature source: `fe393887abe17a2e5c162769a62851897feb81bb`
+- Migration version before/after: unchanged (`0028_compensation_workflow`)
+- Provider/config changes: none; auth, billing, PostgreSQL, object storage,
+  Sentry, Web Push, email, moderation, and rollout configuration were
+  preserved.
+- Rollback target: `14dc2b2`; no database rollback is required.
+- Automated gates: build, lint, security lint, 58 unit/frontend tests, E2E,
+  desktop/mobile/SE Tools UI, compact mobile-action UI, zero-vulnerability
+  production dependency audit, and diff checks passed. Three non-database
+  integration checks passed; sixteen PostgreSQL suites skipped because this
+  CSS-only worktree did not contain `TEST_DATABASE_URL`.
+- Product evidence: Heavy 16th now allocates proportional space to its three
+  fraction rows and four keypad rows, with an automated height-ratio guard so
+  neither input family overwhelms the other on phone-sized viewports.
+- Post-deploy proof: live `/api/health` returned exact feature source with
+  migration 0028 ready. The expected-source production monitor passed in 619
+  ms with controls off and seven anonymous private-route checks.
+- Known boundary: physically confirm the balanced key rhythm on the launch
+  Android and iPhone devices.
+- Approval: Packet 58 runtime, rendered-device gates, and production health
+  are verified; physical field acceptance remains open.

@@ -46,4 +46,8 @@ large fraction panel stacked above a compressed keypad.
 - `npm run test:ui:mobile-actions` - passed.
 - `npm audit --omit=dev` - passed with zero vulnerabilities.
 - `git diff --check` - passed.
-- Production verification is pending merge and deployment.
+- Production `/api/health` served exact source
+  `fe393887abe17a2e5c162769a62851897feb81bb` with migration 0028 ready.
+- `EXPECTED_SOURCE_COMMIT=fe393887abe17a2e5c162769a62851897feb81bb npm run monitor:production`
+  passed in 619 ms with managed dependencies, observability, engagement
+  controls, and all seven anonymous private-route checks healthy.
