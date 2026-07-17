@@ -1,5 +1,27 @@
 # Deployment Ledger
 
+## 2026-07-17 - Home Completion-State Correction
+
+- Source commit: `97a9e0fc14dba95bffe2a9297c517ba80be6b03a`
+- Feature commit: `7825b31`
+- Branch: `master` (source branch: `codex/completion-state-fix`)
+- Production: `https://rivt.pro`
+- Scope: Home now presents `You're active now` only for canonical active work.
+  Completed and cancelled accepted-work records remain available in Work and
+  Records history but cannot fall back into the current-work card.
+- Automated gates: build, lint, security lint, 58 unit tests, E2E,
+  mobile-action UI, rendered Work lifecycle, dependency audit, and diff checks
+  passed. The focused regression renders completed and cancelled records
+  together and proves no active label or historical title appears on Home.
+- Post-deploy proof: production health served the exact merge source with
+  migration 0028 ready. The expected-source monitor passed in 594 ms with
+  PostgreSQL and S3-compatible storage healthy, Sentry and Web Push configured,
+  matching-job alerts enabled, operational controls open, and seven anonymous
+  private-route checks healthy.
+- Rollback target: `6570ea578414d13759ad1eda5cf14ff74e378c91`.
+- Remaining field acceptance: reload Home on the completing account and confirm
+  the completed job remains in history without an active-work card.
+
 ## 2026-07-16 - Packet 54 Account Drawer Subtraction
 
 - Source commit: `657aa80eda8c1ea1de0771dc5918d2fcd0511193`

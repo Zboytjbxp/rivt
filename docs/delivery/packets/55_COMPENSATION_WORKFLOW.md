@@ -113,6 +113,9 @@ profile rate as a binding bid.
 - The Home regression renders completed and cancelled accepted-work records
   together and proves the active label and historical titles are absent. The
   final unit suite passes 58 tests.
+- Production health served exact merge source
+  `97a9e0fc14dba95bffe2a9297c517ba80be6b03a`; the expected-source monitor
+  passed in 594 ms with all seven anonymous private-route checks healthy.
 
 ## Rollback
 

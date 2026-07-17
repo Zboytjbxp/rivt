@@ -21,7 +21,10 @@ Evidence must eventually link to implementation, automated tests, manual accepta
   nor either historical job title.
 - Local evidence includes build, lint, security lint, 58 unit tests, E2E,
   mobile-actions, rendered Work lifecycle, and a zero-vulnerability production
-  dependency audit. Production exact-source evidence remains pending release.
+  dependency audit. `GA-OPS-008` gains production evidence: `/api/health`
+  served exact source `97a9e0fc14dba95bffe2a9297c517ba80be6b03a`, and
+  the expected-source monitor passed in 594 ms with all seven anonymous
+  private-route checks healthy.
 
 ## Traceability Addendum - 2026-07-17 Exact Closeout and Review Workflow (Production Verification)
 
