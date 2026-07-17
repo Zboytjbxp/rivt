@@ -148,7 +148,7 @@ export function TradeFeed({
   const [getStartedDismissed, setGetStartedDismissed] = useState(readGetStartedDismissed);
   const [activeProject, setActiveProject] = useState<ProjectRecord | null>(null);
   const [activeProjectLoading, setActiveProjectLoading] = useState(false);
-  const primaryActiveWork = activeWork.find((work) => work.status === "active") ?? activeWork[0] ?? null;
+  const primaryActiveWork = activeWork.find((work) => work.status === "active") ?? null;
 
   useEffect(() => {
     let cancelled = false;
