@@ -1534,6 +1534,28 @@ Evidence must eventually link to implementation, automated tests, manual accepta
 - No requirement maturity changes. No server contract, authorization,
   authentication, billing, storage, or data model changed.
 
+# Traceability Addendum - 2026-07-17 Money Document Flow (Local Verification)
+
+- `GA-UX-003` gains customer-document handoff evidence: Estimate exposes a
+  distinct preview-and-send stage, and Invoice exposes a distinct
+  preview-and-deliver stage with visible customer copy, copy, and print/save
+  actions.
+- `GA-UX-006` gains small-screen document-review evidence: the printable
+  Invoice document is visible only in its dedicated final stage, avoiding both
+  an extra disclosure and edit-stage crowding on phones.
+- `GA-TRUST-004` retains truthful money boundaries: device email/text actions
+  report that they open local drafts, accepted-work copy directs the user to
+  mark delivery in the private record, and RIVT does not claim to process or
+  confirm job payments.
+- No requirement maturity changes. No server contract, authorization,
+  authentication, billing, storage, moderation, or data model changed.
+- Local evidence includes build, lint, 58 unit/frontend tests, E2E, Tools UI,
+  mobile-action UI, and a zero-vulnerability production dependency audit.
+  Three non-database integration checks pass; sixteen PostgreSQL suites are
+  skipped because `TEST_DATABASE_URL` is not configured in this worktree.
+  Deployment evidence is pending review and merge of
+  `codex/money-document-flow`.
+
 # Traceability Addendum - 2026-07-15 Progressive Jobsite Flows
 
 - `GA-UX-003` gains progressive field-task evidence: Daily Log separates Today,

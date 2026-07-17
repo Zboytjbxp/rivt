@@ -374,7 +374,7 @@ export function EstimateTool({
         ))}
       </nav>
 
-      <Panel className="v2-tool-panel v2-estimate-builder-panel" eyebrow={`Step ${step === "price" ? 1 : step === "customer" ? 2 : 3} of 3`} title={step === "price" ? "Price the work" : step === "customer" ? "Add the customer" : "Review and send"}>
+      <Panel className="v2-tool-panel v2-estimate-builder-panel" eyebrow={`Step ${step === "price" ? 1 : step === "customer" ? 2 : 3} of 3`} title={step === "price" ? "Price the work" : step === "customer" ? "Add the customer" : "Preview and send"}>
         {step === "price" ? <>
           <section className="v2-estimate-hero" aria-label="Estimate target">
             <span>Recommended target</span>
@@ -459,8 +459,8 @@ export function EstimateTool({
         <button type="button" onClick={() => void saveDraft()} aria-label="Save estimate" title="Save estimate"><Save size={18} /><span>Save</span></button>
         {step === "price" ? <button type="button" className="v2-primary-button" onClick={() => setStep("customer")}><span>Customer</span><ChevronRight size={18} /></button> : null}
         {step === "customer" ? <button type="button" className="v2-primary-button" onClick={() => setStep("review")}><span>Review</span><ChevronRight size={18} /></button> : null}
-        {step === "review" && onConvertToInvoice ? <button type="button" onClick={convertToInvoice} disabled={target <= 0} aria-label="Convert to invoice" title="Convert to invoice"><FileText size={18} /><span>Invoice</span></button> : null}
-        {step === "review" ? <button type="button" className="v2-primary-button" onClick={() => void sendEstimateEmail()} disabled={sending || target <= 0 || !recipientEmail.trim()}><Mail size={18} /><span>{sending ? "Sending" : delivery?.status === "sent" ? "Send again" : "Send"}</span></button> : null}
+        {step === "review" && onConvertToInvoice ? <button type="button" onClick={convertToInvoice} disabled={target <= 0} aria-label="Convert to invoice" title="Convert estimate to invoice"><FileText size={18} /><span>Make invoice</span></button> : null}
+        {step === "review" ? <button type="button" className="v2-primary-button" onClick={() => void sendEstimateEmail()} disabled={sending || target <= 0 || !recipientEmail.trim()}><Mail size={18} /><span>{sending ? "Sending" : delivery?.status === "sent" ? "Send again" : "Send email"}</span></button> : null}
       </div>
     </div>
   );

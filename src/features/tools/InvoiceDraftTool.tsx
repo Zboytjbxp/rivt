@@ -538,12 +538,21 @@ export function InvoiceDraftTool({
       await navigator.clipboard.writeText(invoiceText);
       setDraftSaveMessage("Invoice copied.");
     } catch {
-      setDraftSaveMessage("Copy failed. Open the preview and try again.");
+      setDraftSaveMessage("Copy failed. Select the invoice text and try again.");
     }
   }
 
   function printInvoice() {
     window.print();
+  }
+
+  function noteDeliveryDraft(channel: "email" | "text") {
+    const label = channel === "email" ? "Email" : "Text";
+    setDraftSaveMessage(
+      activeWorkId
+        ? `${label} draft opened. Send it from your device, then mark the job invoice sent.`
+        : `${label} draft opened. Send it from your device; this invoice stays saved in RIVT.`,
+    );
   }
 
   return (
@@ -555,7 +564,7 @@ export function InvoiceDraftTool({
           </button>
         ))}
       </nav>
-      <Panel className="v2-tool-panel v2-invoice-builder-panel" eyebrow={`Step ${step === "items" ? 1 : step === "customer" ? 2 : 3} of 3`} title={step === "items" ? "Build the invoice" : step === "customer" ? "Add the customer" : "Review and deliver"}>
+      <Panel className="v2-tool-panel v2-invoice-builder-panel" eyebrow={`Step ${step === "items" ? 1 : step === "customer" ? 2 : 3} of 3`} title={step === "items" ? "Build the invoice" : step === "customer" ? "Add the customer" : "Preview and deliver"}>
         <section className="v2-invoice-topline" aria-label="Invoice summary">
           <div>
             <span>Total due</span>
@@ -689,26 +698,39 @@ export function InvoiceDraftTool({
             <div><span>Terms</span><strong>{terms}</strong></div>
             <div><span>Method</span><strong>{paymentMethod}</strong></div>
           </div>
-          <p className="v2-tool-note">Email and text open drafts from your own apps. RIVT does not send on your behalf.</p>
+          <p className="v2-tool-note">
+            {activeWorkId
+              ? "Email and text open on your device. After delivery, mark the job invoice sent in its private work record."
+              : "Email and text open on your device. RIVT keeps this invoice saved, but does not send it for you."}
+          </p>
           <div className="v2-invoice-delivery" aria-label="Invoice draft delivery">
-            <a href={recipientEmail ? emailHref : undefined} aria-disabled={!recipientEmail} onClick={(event) => { if (!recipientEmail) event.preventDefault(); }}>
+            <a href={recipientEmail ? emailHref : undefined} aria-disabled={!recipientEmail} onClick={(event) => {
+              if (!recipientEmail) {
+                event.preventDefault();
+                setDraftSaveMessage("Add a recipient email before opening an email draft.");
+                return;
+              }
+              noteDeliveryDraft("email");
+            }}>
               <Mail size={15} />
               Email draft
             </a>
-            <a href={recipientPhone ? smsHref : undefined} aria-disabled={!recipientPhone} onClick={(event) => { if (!recipientPhone) event.preventDefault(); }}>
+            <a href={recipientPhone ? smsHref : undefined} aria-disabled={!recipientPhone} onClick={(event) => {
+              if (!recipientPhone) {
+                event.preventDefault();
+                setDraftSaveMessage("Add a recipient phone number before opening a text draft.");
+                return;
+              }
+              noteDeliveryDraft("text");
+            }}>
               <MessageSquare size={15} />
               Text draft
             </a>
           </div>
         </Panel>
 
-        <Panel className="v2-tool-panel v2-invoice-preview-panel" eyebrow="Preview" title="Printable invoice">
-          <details className="v2-tool-collapsible" aria-label="Printable invoice preview">
-            <summary>
-              <span>Open preview</span>
-              <small>{invoiceNumber || "RIVT-DRAFT"}</small>
-            </summary>
-            <article className="v2-invoice-print-preview" aria-label="Printable invoice preview">
+        <Panel className="v2-tool-panel v2-invoice-preview-panel" eyebrow="Customer document" title="Preview before delivery">
+          <article className="v2-invoice-print-preview" aria-label="Printable invoice preview">
               <header>
                 <div>
                   <strong>RIVT</strong>
@@ -749,8 +771,11 @@ export function InvoiceDraftTool({
                 <span>{paymentMethod}</span>
                 <p>RIVT generates this invoice for your records. Payments are collected directly between you and the client - not through RIVT.</p>
               </footer>
-            </article>
-          </details>
+          </article>
+          <div className="v2-invoice-preview-actions" aria-label="Invoice preview actions">
+            <button type="button" className="v2-secondary-button" onClick={() => void copyInvoice()}><Copy size={16} />Copy invoice</button>
+            <button type="button" className="v2-secondary-button" onClick={printInvoice}><FileText size={16} />Print / save PDF</button>
+          </div>
         </Panel>
       </aside> : null}
       <div className="v2-tool-action-dock" aria-label="Invoice actions">

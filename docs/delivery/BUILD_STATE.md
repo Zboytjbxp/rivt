@@ -2,10 +2,29 @@
 
 Last updated: 2026-07-17 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Packet 59 calculator tape preferences is deployed and verified in production.
-Active packet: `docs/delivery/packets/59_CALCULATOR_TAPE_PREFERENCES.md`
-Repository branch: `master` (source branch: `codex/calculator-tape-preferences`)
+Current phase: Packet 60 money document flow is in local implementation and verification.
+Active packet: `docs/delivery/packets/60_MONEY_DOCUMENT_FLOW.md`
+Repository branch: `codex/money-document-flow` (base: `origin/master` at `f1c3bee`)
 Production feature release commit: `6765dd2196221816ea9149916f295ea58112d210`
+
+## Packet 60 - Money Document Flow
+
+- Estimate and Invoice now reserve their final progressive stage for the
+  customer-facing document and its next action instead of mixing editing,
+  hidden preview, and delivery choices together.
+- Invoice review exposes the document directly with copy and print/save-PDF
+  handoffs; device email/text drafts explain their exact local handoff and the
+  accepted-work follow-up.
+- No payment processing, payment verification, provider setup, external send
+  confirmation, or server contract is added. The existing server-backed
+  Estimate email route remains authoritative.
+- Build, lint, 58 unit/frontend tests, E2E, rendered Tools UI, mobile-action
+  UI, and the production dependency audit pass. Three non-database integration
+  checks pass; sixteen PostgreSQL suites are skipped because this clean
+  worktree does not have `TEST_DATABASE_URL` configured. Deployment evidence
+  is pending review and merge. Requirement maturity is unchanged; the active
+  risk boundary remains R-023 until a reviewed payment or server delivery
+  contract exists.
 
 ## Packet 59 - Calculator Tape Preferences
 

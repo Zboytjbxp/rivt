@@ -689,10 +689,10 @@ async function runToolsFlow(page, viewportName) {
   await invoiceDraftSteps.getByRole("button", { name: "3 Review" }).click();
   await page.getByRole("link", { name: "Email draft" }).waitFor({ timeout: 15_000 });
   await page.getByRole("link", { name: "Text draft" }).waitFor({ timeout: 15_000 });
-  await page.getByRole("heading", { name: "Printable invoice" }).waitFor({ timeout: 15_000 });
-  await page.getByLabel("Printable invoice preview").getByText("Open preview", { exact: true }).click();
+  await page.getByRole("heading", { name: "Preview before delivery" }).waitFor({ timeout: 15_000 });
   await page.getByLabel("Printable invoice preview").getByText("Total due", { exact: true }).waitFor({ timeout: 15_000 });
-  await page.getByText("RIVT does not send on your behalf.", { exact: false }).waitFor({ timeout: 15_000 });
+  await page.getByText("Email and text open on your device.", { exact: false }).waitFor({ timeout: 15_000 });
+  await page.getByRole("button", { name: "Print / save PDF" }).waitFor({ timeout: 15_000 });
   if (isHandsetViewport) {
     await assertImmersiveToolChromeHidden(page, "invoice draft");
   }
