@@ -48,3 +48,7 @@ inches and sixteenths. Inches mode must never force a measurement into feet.
 - `npm run test:ui:mobile-actions` - passed.
 - `npm audit --omit=dev` - passed with zero vulnerabilities.
 - `git diff --check` - passed.
+- Production `/api/health` served exact feature source
+  `cfe99f6bb0ea95e87506e2e7b33eeaec100ef0a9`; the expected-source monitor
+  passed in 576 ms with all managed dependencies and private-route checks
+  healthy.

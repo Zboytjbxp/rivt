@@ -5,7 +5,7 @@ Current gate: Gate B controlled engagement
 Current phase: Packet 57 unlimited-inches calculator correction is locally verified.
 Active packet: `docs/delivery/packets/57_UNLIMITED_INCHES_CALCULATOR.md`
 Repository branch: `codex/calculator-standalone-app`
-Production feature release commit: `38edcd371f3c99ae0d9d2da1e4375b73cd8a0b43`
+Production feature release commit: `cfe99f6bb0ea95e87506e2e7b33eeaec100ef0a9`
 
 ## Packet 57 - Unlimited Inches Calculator
 
@@ -21,6 +21,11 @@ Production feature release commit: `38edcd371f3c99ae0d9d2da1e4375b73cd8a0b43`
   audit, and diff checks pass. The integration command passed its three
   non-database checks and skipped sixteen PostgreSQL suites because this
   worktree does not contain `TEST_DATABASE_URL`; there are no server changes.
+- Production `/api/health` served exact feature source
+  `cfe99f6bb0ea95e87506e2e7b33eeaec100ef0a9`. The expected-source monitor
+  passed in 576 ms with PostgreSQL, S3-compatible storage, Sentry, Web Push,
+  matching-job alerts, operational controls, and all seven anonymous
+  private-route checks healthy.
 
 ## Packet 56 - Heavy 16th Standalone App
 
