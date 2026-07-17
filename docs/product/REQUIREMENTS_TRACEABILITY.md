@@ -10,7 +10,7 @@ Status values:
 
 Evidence must eventually link to implementation, automated tests, manual acceptance proof, and deployed build.
 
-## Traceability Addendum - 2026-07-17 Exact Closeout and Review Workflow (Local Verification)
+## Traceability Addendum - 2026-07-17 Exact Closeout and Review Workflow (Production Verification)
 
 - `GA-UX-003` gains exact-destination evidence: fixed-price applicants can be
   hired at the listed amount without re-entering compensation; completion
@@ -28,9 +28,10 @@ Evidence must eventually link to implementation, automated tests, manual accepta
   57 unit tests, E2E, mobile actions, rendered two-role Work lifecycle, zero
   production dependency vulnerabilities, focused completion/review PostgreSQL
   suites, and all 19 fresh-database integration suites passed.
-- `GA-OPS-008` remains pending for this addendum until the implementation is
-  merged, production health serves the exact released source, and the
-  expected-source monitor passes.
+- `GA-OPS-008` gains production evidence: `/api/health` served exact merge
+  source `2d0692c8bfffed11f427902090252acbc9b402bf` with migration 0028 ready,
+  and the expected-source monitor passed in 583 ms with all seven anonymous
+  private-route checks healthy.
 
 ## Traceability Addendum - 2026-07-16 Compensation Workflow (Production Verification)
 

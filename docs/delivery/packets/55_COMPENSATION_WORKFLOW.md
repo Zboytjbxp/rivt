@@ -139,15 +139,17 @@ The active-work acceptance repair is deployed through Railway deployment
 monitor passed in 581 ms with migration 0028 ready and all seven anonymous
 private-route checks healthy.
 
-The exact closeout/review workflow repair is locally verified but not yet
-recorded as deployed. It changes no schema, requirement status, or risk
-severity. It adds UX and participant-authorization evidence to `GA-UX-003`,
-`GA-UX-005`, `GA-FND-004`, `GA-OPS-007`, and `R-039`; production evidence will
-be appended only after health and the expected-source monitor match the merged
-commit.
+The exact closeout/review workflow repair is deployed on merge source
+`2d0692c8bfffed11f427902090252acbc9b402bf`. Production health reported
+migration 0028 ready with PostgreSQL and S3-compatible storage healthy. The
+expected-source monitor passed in 583 ms with Sentry, Web Push, matching-job
+alerts, operational controls, and all seven anonymous private-route checks
+healthy. The repair changes no schema or risk severity; it adds production UX
+and participant-authorization evidence to `GA-UX-003`, `GA-UX-005`,
+`GA-FND-004`, `GA-OPS-007`, `GA-OPS-008`, and `R-039`.
 
 ## Next packet
 
-After production verification, audit the compensation language and mobile
-editing flow with one real contractor and one tradesperson. Do not add payment
-processing as part of that review.
+Physically repeat the repaired fixed-price completion/review path once on the
+two participant accounts, then audit hourly, open-to-offers, and request-quotes
+language. Do not add payment processing as part of that review.
