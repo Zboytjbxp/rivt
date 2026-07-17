@@ -1554,3 +1554,17 @@ Evidence must eventually link to implementation, automated tests, manual accepta
   `af13e52232ec0199a35d11f7f059942fed25b7a5`; the expected-source monitor
   passed in 574 ms with migration 27 and all managed dependencies, alerts,
   controls, and anonymous private-route checks healthy.
+
+# Traceability Addendum - 2026-07-17 Heavy 16th Standalone App
+
+- `GA-UX-003` gains calculator-continuity evidence: completed equations remain
+  available in a short device-local tape and can restore their exact result
+  and imperial/metric mode without introducing another calculator mode.
+- `GA-UX-006` gains compact-device evidence: the History action and accessible
+  history sheet remain fully in viewport at 375x553 while all fifteen fraction
+  buttons and the complete keypad remain available without scrolling.
+- Calculator history contains measurement expressions only and remains a
+  device preference/history surface, not a substitute for server-owned job,
+  customer, invoice, or project records.
+- No requirement maturity changes and no server contract, schema,
+  authorization, authentication, billing, storage, or moderation changes.

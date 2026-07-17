@@ -2,10 +2,28 @@
 
 Last updated: 2026-07-17 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Packet 55 exact closeout and review workflow repair and Home completion-state correction are production verified.
-Active packet: `docs/delivery/packets/55_COMPENSATION_WORKFLOW.md`
-Repository branch: `master`
+Current phase: Packet 56 Heavy 16th standalone calculator completion is locally verified.
+Active packet: `docs/delivery/packets/56_CALCULATOR_STANDALONE_APP.md`
+Repository branch: `codex/calculator-standalone-app`
 Production feature release commit: `97a9e0fc14dba95bffe2a9297c517ba80be6b03a`
+
+## Packet 56 - Heavy 16th Standalone App
+
+- Heavy 16th now keeps a live equation tape and a short, device-local history
+  of completed equations and double/half operations.
+- History opens in an accessible, one-handed bottom sheet on phones. A prior
+  result restores its original imperial or metric mode in one tap.
+- Metric/imperial mode controls use explicit `MODE MM` / `MODE IN` labels, and
+  copied-result feedback is announced without covering the keypad.
+- The calculator remains fraction-only. Spacing, cuts, hardware, estimator,
+  and unrelated field modes are intentionally outside this packet.
+- Build, lint, security lint, E2E, 58 unit/frontend tests, rendered
+  multi-viewport Tools QA, compact mobile-action QA, the production dependency
+  audit, and diff checks pass. A configured PostgreSQL integration run exercised
+  real account, job, messaging, migration, and project lifecycles without a
+  failure before the ten-minute command limit stopped the still-running suite;
+  Packet 56 does not change server or database code. Production is unchanged
+  until this packet is merged and deployed.
 
 ## Home completion-state correction
 

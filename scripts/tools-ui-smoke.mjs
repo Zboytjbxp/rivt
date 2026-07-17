@@ -574,6 +574,14 @@ async function runToolsFlow(page, viewportName) {
   await clickVisibleFraction(page, "1/4", viewportName);
   await page.getByLabel("Fraction calculator keypad").getByRole("button", { name: "=" }).click();
   await page.locator(".calc-primary-value", { hasText: '2 3/4"' }).waitFor({ timeout: 15_000 });
+  await page.getByRole("button", { name: "Calculation history" }).click();
+  const calculationHistory = page.getByRole("dialog", { name: "Recent calculations" });
+  await calculationHistory.waitFor({ timeout: 15_000 });
+  const completedEquation = calculationHistory.getByRole("button").filter({ hasText: '1/2" + 2 1/4"' }).first();
+  await completedEquation.getByText('2 3/4"', { exact: true }).waitFor({ timeout: 15_000 });
+  await completedEquation.click();
+  await calculationHistory.waitFor({ state: "hidden", timeout: 15_000 });
+  await page.locator(".calc-primary-value", { hasText: '2 3/4"' }).waitFor({ timeout: 15_000 });
   if (isHandsetViewport) {
     await assertCalculatorNoVerticalOverflow(page);
     await assertCalculatorOwnsHandsetWidth(page);

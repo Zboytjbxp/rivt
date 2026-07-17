@@ -556,6 +556,26 @@ async function runMobileFlow(page) {
     compactFractionBox.x + compactFractionBox.width <= 375 && compactFractionBox.y + compactFractionBox.height <= 553,
     `compact 5/8 button should be fully visible at 375x553: ${JSON.stringify(compactFractionBox)}`,
   );
+  const compactHistoryButton = page.getByRole("button", { name: "Calculation history" });
+  const compactHistoryButtonBox = await compactHistoryButton.boundingBox();
+  assert.ok(compactHistoryButtonBox, "compact calculator history button should have a bounding box");
+  assert.ok(
+    compactHistoryButtonBox.x >= 0
+      && compactHistoryButtonBox.y >= 0
+      && compactHistoryButtonBox.x + compactHistoryButtonBox.width <= 375
+      && compactHistoryButtonBox.y + compactHistoryButtonBox.height <= 553,
+    `compact calculator history button should stay in viewport: ${JSON.stringify(compactHistoryButtonBox)}`,
+  );
+  await compactHistoryButton.click();
+  const compactHistoryDialog = page.getByRole("dialog", { name: "Recent calculations" });
+  await compactHistoryDialog.waitFor({ timeout: 15_000 });
+  const compactHistoryBox = await compactHistoryDialog.boundingBox();
+  assert.ok(compactHistoryBox, "compact calculator history should have a bounding box");
+  assert.ok(
+    compactHistoryBox.y >= 0 && compactHistoryBox.y + compactHistoryBox.height <= 553,
+    `compact calculation history should stay in viewport: ${JSON.stringify(compactHistoryBox)}`,
+  );
+  await compactHistoryDialog.getByRole("button", { name: "Close calculation history" }).click();
   await page.evaluate(() => {
     document.documentElement.removeAttribute("data-rivt-compact-device");
   });

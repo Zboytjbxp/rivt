@@ -1,11 +1,15 @@
-import { ArrowLeft, Clipboard, Copy, RotateCcw, Ruler } from "lucide-react";
+import { ArrowLeft, Clipboard, Clock3, Copy, RotateCcw, Ruler, Trash2, X } from "lucide-react";
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
+import { DialogBackdrop, DialogSurface } from "../../components/ui";
 
 type ActiveUnit = "feet" | "inches";
 type InputMode = "imperial" | "metric";
 type Operator = "+" | "-" | "x" | "/";
 
 const CALCULATOR_PREFS_KEY = "rivt.calculatorPrefs.v1";
+const CALCULATOR_HISTORY_KEY = "rivt.calculatorHistory.v1";
+const CALCULATOR_HISTORY_LIMIT = 8;
 const UNITS_PER_MM = 160;
 const UNITS_PER_INCH = 4064;
 const UNITS_PER_FOOT = UNITS_PER_INCH * 12;
@@ -31,6 +35,13 @@ const RULER_TICKS = [
   { label: "7/8", value: 28 },
   { label: "15/16", value: 30 },
 ];
+
+type CalculationHistoryEntry = {
+  id: string;
+  expression: string;
+  resultUnits: number;
+  inputMode: InputMode;
+};
 
 function formatNumber(value: number, digits = 2) {
   if (Number.isInteger(value)) return new Intl.NumberFormat().format(value);
@@ -136,12 +147,42 @@ function computeOperation(leftUnits: number, operator: Operator, rightUnits: num
   return Math.round(leftUnits / scalar);
 }
 
+function formatOperator(operator: Operator) {
+  if (operator === "x") return "×";
+  if (operator === "/") return "÷";
+  return operator;
+}
+
+function formatForMode(units: number, mode: InputMode) {
+  return mode === "metric" ? formatMillimeters(units) : formatMeasurement(units);
+}
+
 function readCalculatorInputMode(): InputMode {
   try {
     const parsed = JSON.parse(localStorage.getItem(CALCULATOR_PREFS_KEY) ?? "null") as { inputMode?: InputMode } | null;
     return parsed?.inputMode === "metric" ? "metric" : "imperial";
   } catch {
     return "imperial";
+  }
+}
+
+function readCalculatorHistory(): CalculationHistoryEntry[] {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(CALCULATOR_HISTORY_KEY) ?? "[]") as unknown;
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .filter((entry): entry is CalculationHistoryEntry => {
+        if (!entry || typeof entry !== "object") return false;
+        const candidate = entry as Partial<CalculationHistoryEntry>;
+        return typeof candidate.id === "string"
+          && typeof candidate.expression === "string"
+          && typeof candidate.resultUnits === "number"
+          && Number.isFinite(candidate.resultUnits)
+          && (candidate.inputMode === "imperial" || candidate.inputMode === "metric");
+      })
+      .slice(0, CALCULATOR_HISTORY_LIMIT);
+  } catch {
+    return [];
   }
 }
 
@@ -157,6 +198,8 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
   const [pendingOperator, setPendingOperator] = useState<Operator | null>(null);
   const [resultUnits, setResultUnits] = useState<number | null>(null);
   const [historyLabel, setHistoryLabel] = useState("Ready");
+  const [calculationHistory, setCalculationHistory] = useState<CalculationHistoryEntry[]>(() => readCalculatorHistory());
+  const [historyOpen, setHistoryOpen] = useState(false);
   const [copied, setCopied] = useState(false);
 
   const entryValueUnits = inputMode === "metric"
@@ -167,6 +210,23 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
   useEffect(() => {
     try { localStorage.setItem(CALCULATOR_PREFS_KEY, JSON.stringify({ inputMode })); } catch { /* harmless preference */ }
   }, [inputMode]);
+
+  useEffect(() => {
+    try { localStorage.setItem(CALCULATOR_HISTORY_KEY, JSON.stringify(calculationHistory)); } catch { /* harmless device history */ }
+  }, [calculationHistory]);
+
+  function recordCalculation(expression: string, nextResultUnits: number, mode = inputMode) {
+    const nextEntry: CalculationHistoryEntry = {
+      id: `${mode}:${expression}:${Math.round(nextResultUnits)}`,
+      expression,
+      resultUnits: nextResultUnits,
+      inputMode: mode,
+    };
+    setCalculationHistory((current) => [
+      nextEntry,
+      ...current.filter((entry) => entry.expression !== expression || entry.resultUnits !== nextResultUnits),
+    ].slice(0, CALCULATOR_HISTORY_LIMIT));
+  }
 
   function setImperialEntryFromValue(nextUnits: number) {
     const fields = fieldsFromImperialValue(nextUnits);
@@ -273,8 +333,10 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
   function scaleEntry(multiplier: number) {
     const base = resultUnits ?? entryValueUnits;
     const next = Math.max(0, Math.round(base * multiplier));
+    const expression = `${formatForMode(base, inputMode)} ${multiplier === 2 ? "× 2" : "÷ 2"}`;
     setEntryFromValue(next);
-    setHistoryLabel(`${inputMode === "metric" ? formatMillimeters(base) : formatMeasurement(base)} ${multiplier === 2 ? "x2" : "/2"}`);
+    setHistoryLabel(expression);
+    recordCalculation(expression, next);
     setAccumulatorUnits(null);
     setPendingOperator(null);
     setCopied(false);
@@ -300,7 +362,7 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
 
     setAccumulatorUnits(nextAccumulator);
     setPendingOperator(operator);
-    setHistoryLabel(`${inputMode === "metric" ? formatMillimeters(nextAccumulator) : formatMeasurement(nextAccumulator)} ${operator}`);
+    setHistoryLabel(`${formatForMode(nextAccumulator, inputMode)} ${formatOperator(operator)}`);
     setEntryFromValue(0);
     if (inputMode === "imperial") {
       setActiveUnit("inches");
@@ -316,10 +378,10 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
     }
 
     const nextResult = computeOperation(accumulatorUnits, pendingOperator, current, inputMode);
+    const expression = `${formatForMode(accumulatorUnits, inputMode)} ${formatOperator(pendingOperator)} ${formatForMode(current, inputMode)}`;
     setResultUnits(nextResult);
-    setHistoryLabel(
-      `${inputMode === "metric" ? formatMillimeters(accumulatorUnits) : formatMeasurement(accumulatorUnits)} ${pendingOperator} ${inputMode === "metric" ? formatMillimeters(current) : formatMeasurement(current)}`,
-    );
+    setHistoryLabel(expression);
+    recordCalculation(expression, nextResult);
     setAccumulatorUnits(null);
     setPendingOperator(null);
     setCopied(false);
@@ -336,6 +398,22 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
     } catch {
       setCopied(false);
     }
+  }
+
+  function reuseHistoryEntry(entry: CalculationHistoryEntry) {
+    setInputMode(entry.inputMode);
+    if (entry.inputMode === "metric") {
+      setMetricEntryFromValue(entry.resultUnits);
+    } else {
+      setImperialEntryFromValue(entry.resultUnits);
+      setActiveUnit("inches");
+    }
+    setAccumulatorUnits(null);
+    setPendingOperator(null);
+    setResultUnits(entry.resultUnits);
+    setHistoryLabel(entry.expression);
+    setCopied(false);
+    setHistoryOpen(false);
   }
 
   const primaryValue = inputMode === "metric" ? formatMillimeters(displayValueUnits) : formatMeasurement(displayValueUnits);
@@ -356,6 +434,9 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
   const resultCardSecondaryValue = inputMode === "metric"
     ? formatMeasurement(displayValueUnits)
     : formatMillimeters(displayValueUnits);
+  const equationLabel = accumulatorUnits !== null && pendingOperator
+    ? `${formatForMode(accumulatorUnits, inputMode)} ${formatOperator(pendingOperator)} ${formatForMode(entryValueUnits, inputMode)}`
+    : historyLabel;
 
   return (
     <section className="heavy-calc-workbench fraction-calc-workbench" aria-label="Heavy 16th field calculator">
@@ -383,6 +464,10 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
           </div>
         </div>
         <div className="heavy-calc-actions">
+          <button type="button" className="calc-action-button" aria-label="Calculation history" onClick={() => setHistoryOpen(true)}>
+            <Clock3 size={15} />
+            <span className="calc-topbar-label">History</span>
+          </button>
           <button type="button" className="calc-action-button" aria-label="Clear calculator" onClick={clearAll}>
             <RotateCcw size={15} />
             <span className="calc-topbar-label">Clear</span>
@@ -399,7 +484,7 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
           <section className="fraction-calc-grid" aria-label="Length calculator">
             <div className="fraction-calc-left">
               <div className="calc-display-stack fraction-display">
-                <span className="fraction-history">{historyLabel}</span>
+                <span className="fraction-history">{equationLabel}</span>
                 <strong className="calc-primary-value">{primaryValue}</strong>
                 <div className="calc-secondary-row">
                   <span>{secondaryLabel}</span>
@@ -431,8 +516,8 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
                       aria-label="Switch to imperial mode"
                       onClick={() => switchMode("imperial")}
                     >
-                      <span>IMP</span>
-                      <strong>ON</strong>
+                      <span>MODE</span>
+                      <strong>IN</strong>
                     </button>
                   </>
                 ) : (
@@ -455,8 +540,8 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
                       aria-label="Switch to metric mode"
                       onClick={() => switchMode("metric")}
                     >
-                      <span>MET</span>
-                      <strong>ON</strong>
+                      <span>MODE</span>
+                      <strong>MM</strong>
                     </button>
                   </>
                 )}
@@ -558,6 +643,46 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
           ))}
         </aside>
       </div>
+      <span className="sr-only" aria-live="polite">{copied ? `${primaryValue} copied` : ""}</span>
+      {historyOpen ? createPortal(
+        <DialogBackdrop className="calc-history-backdrop" onClose={() => setHistoryOpen(false)}>
+          <DialogSurface className="calc-history-sheet" labelledBy="calc-history-title" onClose={() => setHistoryOpen(false)}>
+            <header>
+              <div>
+                <span>Calculator tape</span>
+                <h2 id="calc-history-title">Recent calculations</h2>
+              </div>
+              <button type="button" className="v2-icon-button" aria-label="Close calculation history" onClick={() => setHistoryOpen(false)}>
+                <X size={20} />
+              </button>
+            </header>
+            {calculationHistory.length ? (
+              <div className="calc-history-list">
+                {calculationHistory.map((entry) => (
+                  <button key={entry.id} type="button" onClick={() => reuseHistoryEntry(entry)}>
+                    <span>{entry.expression}</span>
+                    <strong>{formatForMode(entry.resultUnits, entry.inputMode)}</strong>
+                    <small>Use result</small>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div className="calc-history-empty">
+                <Clock3 size={22} />
+                <strong>No calculations yet</strong>
+                <span>Completed equations will stay on this device.</span>
+              </div>
+            )}
+            {calculationHistory.length ? (
+              <button type="button" className="calc-history-clear" onClick={() => setCalculationHistory([])}>
+                <Trash2 size={17} />
+                Clear history
+              </button>
+            ) : null}
+          </DialogSurface>
+        </DialogBackdrop>,
+        document.body,
+      ) : null}
     </section>
   );
 }
