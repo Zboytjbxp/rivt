@@ -2,7 +2,7 @@
 
 Last updated: 2026-07-17 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Packet 61 calculator fraction hierarchy is verified locally and ready for release.
+Current phase: Packet 61 calculator fraction hierarchy is complete and deployed.
 Active packet: `docs/delivery/packets/61_CALCULATOR_FRACTION_HIERARCHY.md`
 Repository branch: `codex/calculator-fraction-hierarchy` (base: `origin/master` at `3d39902`)
 Production feature release commit: `3d399023c8d866f112403549776a056a22a28f74`
@@ -19,7 +19,10 @@ Production feature release commit: `3d399023c8d866f112403549776a056a22a28f74`
   three tape-mark sizes at handset scale.
 - Three non-database integration checks pass; sixteen PostgreSQL suites are
   skipped because this worktree does not have `TEST_DATABASE_URL` configured.
-  Deployment evidence is pending.
+- Railway served exact source `ff64a11f023803adb3cc150b056adaf5818222e0`.
+  The production monitor passed in 591 ms with PostgreSQL, S3-compatible
+  storage, Sentry, Web Push, matching-job alerts, and all seven anonymous
+  private-route checks healthy.
   No server, schema, authorization, billing, storage, or dependency change is
   included.
 

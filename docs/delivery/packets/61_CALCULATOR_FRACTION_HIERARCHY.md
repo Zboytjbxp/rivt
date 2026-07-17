@@ -45,4 +45,7 @@ marks. Keep every key equally reachable and balanced on compact phones.
 - `npm audit --omit=dev` reported zero known vulnerabilities.
 - The rendered SE calculator confirms the long quarter, medium eighth, and
   short sixteenth tape marks at equal tap-target sizes.
-- Deployment evidence is pending.
+- Railway served exact source `ff64a11f023803adb3cc150b056adaf5818222e0`.
+  `npm run monitor:production` passed in 591 ms with PostgreSQL,
+  S3-compatible storage, Sentry, Web Push, matching-job alerts, and all seven
+  anonymous private-route checks healthy.

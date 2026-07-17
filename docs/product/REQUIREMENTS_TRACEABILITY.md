@@ -1656,4 +1656,7 @@ Evidence must eventually link to implementation, automated tests, manual accepta
   checks pass; sixteen PostgreSQL suites are skipped because this worktree does
   not contain `TEST_DATABASE_URL`. The rendered SE calculator confirms the
   tape-mark hierarchy at handset scale.
-- Production evidence is pending.
+- Production evidence: Railway served exact source
+  `ff64a11f023803adb3cc150b056adaf5818222e0`. The production monitor passed
+  in 591 ms with PostgreSQL, S3-compatible storage, Sentry, Web Push,
+  matching-job alerts, and all seven anonymous private-route checks healthy.
