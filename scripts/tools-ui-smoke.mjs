@@ -568,6 +568,20 @@ async function runToolsFlow(page, viewportName) {
   await page.getByLabel("Length calculator").getByText("Decimal", { exact: true }).waitFor({ timeout: 15_000 });
   await page.getByRole("button", { name: "Clear calculator" }).click();
   await page.locator(".calc-primary-value", { hasText: '0"' }).waitFor({ timeout: 15_000 });
+  await page.getByLabel("Fraction calculator keypad").getByRole("button", { name: "2" }).click();
+  await page.getByLabel("Fraction calculator keypad").getByRole("button", { name: "7" }).click();
+  await clickVisibleFraction(page, "5/16", viewportName);
+  await page.locator(".calc-primary-value", { hasText: '27 5/16"' }).waitFor({ timeout: 15_000 });
+  assert.equal(
+    await page.locator(".calc-primary-value").textContent(),
+    '27 5/16"',
+    "inches mode should keep measurements above 12 inches instead of normalizing to feet",
+  );
+  await page.getByLabel("Input unit").getByRole("button", { name: "FT" }).click();
+  await page.locator(".calc-primary-value", { hasText: `2' 3 5/16"` }).waitFor({ timeout: 15_000 });
+  await page.getByLabel("Input unit").getByRole("button", { name: "IN" }).click();
+  await page.locator(".calc-primary-value", { hasText: '27 5/16"' }).waitFor({ timeout: 15_000 });
+  await page.getByRole("button", { name: "Clear calculator" }).click();
   await clickVisibleFraction(page, "1/2", viewportName);
   await page.getByLabel("Fraction calculator keypad").getByRole("button", { name: "+" }).click();
   await page.getByLabel("Fraction calculator keypad").getByRole("button", { name: "2" }).click();

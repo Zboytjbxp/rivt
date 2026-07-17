@@ -2,10 +2,25 @@
 
 Last updated: 2026-07-17 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Packet 56 Heavy 16th standalone calculator completion is locally verified.
-Active packet: `docs/delivery/packets/56_CALCULATOR_STANDALONE_APP.md`
+Current phase: Packet 57 unlimited-inches calculator correction is locally verified.
+Active packet: `docs/delivery/packets/57_UNLIMITED_INCHES_CALCULATOR.md`
 Repository branch: `codex/calculator-standalone-app`
 Production feature release commit: `38edcd371f3c99ae0d9d2da1e4375b73cd8a0b43`
+
+## Packet 57 - Unlimited Inches Calculator
+
+- Heavy 16th inches mode now accepts long whole-inch measurements and keeps
+  them in inches-and-fractions notation instead of rolling over at twelve.
+- Feet remains an explicit optional notation. Switching `IN` -> `FT` -> `IN`
+  preserves the exact measurement.
+- Equation labels, copied output, result cards, and new/restored history use
+  the selected notation consistently; older device history restores safely in
+  inches mode.
+- Build, lint, security lint, 58 unit/frontend tests, E2E, rendered
+  desktop/mobile/SE Tools QA, mobile-action QA, the production dependency
+  audit, and diff checks pass. The integration command passed its three
+  non-database checks and skipped sixteen PostgreSQL suites because this
+  worktree does not contain `TEST_DATABASE_URL`; there are no server changes.
 
 ## Packet 56 - Heavy 16th Standalone App
 

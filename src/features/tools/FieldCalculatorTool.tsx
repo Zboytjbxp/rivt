@@ -41,6 +41,7 @@ type CalculationHistoryEntry = {
   expression: string;
   resultUnits: number;
   inputMode: InputMode;
+  activeUnit?: ActiveUnit;
 };
 
 function formatNumber(value: number, digits = 2) {
@@ -99,16 +100,36 @@ function formatMeasurement(units: number) {
   return `${sign}${inches}${fraction ? ` ${fraction}` : ""}"`;
 }
 
+function formatInchesMeasurement(units: number) {
+  const sign = units < 0 ? "-" : "";
+  const safeValue = Math.abs(Math.round(units));
+  const totalThirtySeconds = Math.round(safeValue / UNITS_PER_THIRTY_SECOND);
+  const totalInches = Math.floor(totalThirtySeconds / 32);
+  const fraction = reduceFraction(totalThirtySeconds % 32);
+  return `${sign}${totalInches}${fraction ? ` ${fraction}` : ""}"`;
+}
+
+function formatImperialMeasurement(units: number, activeUnit: ActiveUnit) {
+  return activeUnit === "feet" ? formatMeasurement(units) : formatInchesMeasurement(units);
+}
+
 function valueFromImperialEntry(feetText: string, inchesText: string, fraction32: number) {
   const feet = Math.max(0, Number(feetText) || 0);
   const inches = Math.max(0, Number(inchesText) || 0);
   return feet * UNITS_PER_FOOT + inches * UNITS_PER_INCH + fraction32 * UNITS_PER_THIRTY_SECOND;
 }
 
-function fieldsFromImperialValue(units: number) {
+function fieldsFromImperialValue(units: number, activeUnit: ActiveUnit) {
   const safeValue = Math.max(0, Math.round(units));
   const totalThirtySeconds = Math.round(safeValue / UNITS_PER_THIRTY_SECOND);
   const totalInches = Math.floor(totalThirtySeconds / 32);
+  if (activeUnit === "inches") {
+    return {
+      feet: "0",
+      inches: String(totalInches),
+      fraction32: totalThirtySeconds % 32,
+    };
+  }
   return {
     feet: String(Math.floor(totalInches / 12)),
     inches: String(totalInches % 12),
@@ -153,8 +174,8 @@ function formatOperator(operator: Operator) {
   return operator;
 }
 
-function formatForMode(units: number, mode: InputMode) {
-  return mode === "metric" ? formatMillimeters(units) : formatMeasurement(units);
+function formatForMode(units: number, mode: InputMode, activeUnit: ActiveUnit = "inches") {
+  return mode === "metric" ? formatMillimeters(units) : formatImperialMeasurement(units, activeUnit);
 }
 
 function readCalculatorInputMode(): InputMode {
@@ -217,10 +238,11 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
 
   function recordCalculation(expression: string, nextResultUnits: number, mode = inputMode) {
     const nextEntry: CalculationHistoryEntry = {
-      id: `${mode}:${expression}:${Math.round(nextResultUnits)}`,
+      id: `${mode}:${activeUnit}:${expression}:${Math.round(nextResultUnits)}`,
       expression,
       resultUnits: nextResultUnits,
       inputMode: mode,
+      activeUnit: mode === "imperial" ? activeUnit : undefined,
     };
     setCalculationHistory((current) => [
       nextEntry,
@@ -228,8 +250,8 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
     ].slice(0, CALCULATOR_HISTORY_LIMIT));
   }
 
-  function setImperialEntryFromValue(nextUnits: number) {
-    const fields = fieldsFromImperialValue(nextUnits);
+  function setImperialEntryFromValue(nextUnits: number, unit = activeUnit) {
+    const fields = fieldsFromImperialValue(nextUnits, unit);
     setFeetText(fields.feet);
     setInchesText(fields.inches);
     setFraction32(fields.fraction32);
@@ -257,9 +279,16 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
     if (nextMode === "metric") {
       setMetricEntryFromValue(base);
     } else {
-      setImperialEntryFromValue(base);
       setActiveUnit("inches");
+      setImperialEntryFromValue(base, "inches");
     }
+    setCopied(false);
+  }
+
+  function switchActiveUnit(nextUnit: ActiveUnit) {
+    if (nextUnit === activeUnit) return;
+    setActiveUnit(nextUnit);
+    setImperialEntryFromValue(displayValueUnits, nextUnit);
     setCopied(false);
   }
 
@@ -282,7 +311,7 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
     const setter = activeUnit === "feet" ? setFeetText : setInchesText;
     setter((current) => {
       const clean = current === "0" ? "" : current;
-      const next = `${clean}${digit}`.slice(0, activeUnit === "feet" ? 3 : 2);
+      const next = `${clean}${digit}`.slice(0, activeUnit === "feet" ? 3 : 5);
       return next || "0";
     });
     setResultUnits(null);
@@ -333,7 +362,7 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
   function scaleEntry(multiplier: number) {
     const base = resultUnits ?? entryValueUnits;
     const next = Math.max(0, Math.round(base * multiplier));
-    const expression = `${formatForMode(base, inputMode)} ${multiplier === 2 ? "× 2" : "÷ 2"}`;
+    const expression = `${formatForMode(base, inputMode, activeUnit)} ${multiplier === 2 ? "× 2" : "÷ 2"}`;
     setEntryFromValue(next);
     setHistoryLabel(expression);
     recordCalculation(expression, next);
@@ -362,23 +391,20 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
 
     setAccumulatorUnits(nextAccumulator);
     setPendingOperator(operator);
-    setHistoryLabel(`${formatForMode(nextAccumulator, inputMode)} ${formatOperator(operator)}`);
+    setHistoryLabel(`${formatForMode(nextAccumulator, inputMode, activeUnit)} ${formatOperator(operator)}`);
     setEntryFromValue(0);
-    if (inputMode === "imperial") {
-      setActiveUnit("inches");
-    }
   }
 
   function evaluate() {
     const current = resultUnits ?? entryValueUnits;
     if (accumulatorUnits === null || !pendingOperator) {
       setResultUnits(current);
-      setHistoryLabel(inputMode === "metric" ? formatMillimeters(current) : formatMeasurement(current));
+      setHistoryLabel(formatForMode(current, inputMode, activeUnit));
       return;
     }
 
     const nextResult = computeOperation(accumulatorUnits, pendingOperator, current, inputMode);
-    const expression = `${formatForMode(accumulatorUnits, inputMode)} ${formatOperator(pendingOperator)} ${formatForMode(current, inputMode)}`;
+    const expression = `${formatForMode(accumulatorUnits, inputMode, activeUnit)} ${formatOperator(pendingOperator)} ${formatForMode(current, inputMode, activeUnit)}`;
     setResultUnits(nextResult);
     setHistoryLabel(expression);
     recordCalculation(expression, nextResult);
@@ -390,7 +416,7 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
   async function copyCalculatorResult() {
     const text = inputMode === "metric"
       ? formatMillimeters(displayValueUnits)
-      : formatMeasurement(displayValueUnits);
+      : formatImperialMeasurement(displayValueUnits, activeUnit);
 
     try {
       await navigator.clipboard.writeText(text);
@@ -405,8 +431,9 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
     if (entry.inputMode === "metric") {
       setMetricEntryFromValue(entry.resultUnits);
     } else {
-      setImperialEntryFromValue(entry.resultUnits);
-      setActiveUnit("inches");
+      const restoredUnit = entry.activeUnit ?? "inches";
+      setActiveUnit(restoredUnit);
+      setImperialEntryFromValue(entry.resultUnits, restoredUnit);
     }
     setAccumulatorUnits(null);
     setPendingOperator(null);
@@ -416,7 +443,7 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
     setHistoryOpen(false);
   }
 
-  const primaryValue = inputMode === "metric" ? formatMillimeters(displayValueUnits) : formatMeasurement(displayValueUnits);
+  const primaryValue = inputMode === "metric" ? formatMillimeters(displayValueUnits) : formatImperialMeasurement(displayValueUnits, activeUnit);
   const secondaryLabel = inputMode === "metric" ? "Metres" : "Decimal";
   const secondaryValue = inputMode === "metric"
     ? formatMeters(displayValueUnits)
@@ -429,13 +456,13 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
         formatMillimeters(displayValueUnits),
         pendingOperator ? `${pendingOperator} pending` : activeUnit === "feet" ? "Entering feet" : "Entering inches",
       ];
-  const resultCardPrimary = inputMode === "metric" ? formatMillimeters(displayValueUnits) : formatMeasurement(displayValueUnits);
+  const resultCardPrimary = inputMode === "metric" ? formatMillimeters(displayValueUnits) : formatImperialMeasurement(displayValueUnits, activeUnit);
   const resultCardSecondaryLabel = inputMode === "metric" ? "Imperial" : "Metric";
   const resultCardSecondaryValue = inputMode === "metric"
-    ? formatMeasurement(displayValueUnits)
+    ? formatInchesMeasurement(displayValueUnits)
     : formatMillimeters(displayValueUnits);
   const equationLabel = accumulatorUnits !== null && pendingOperator
-    ? `${formatForMode(accumulatorUnits, inputMode)} ${formatOperator(pendingOperator)} ${formatForMode(entryValueUnits, inputMode)}`
+    ? `${formatForMode(accumulatorUnits, inputMode, activeUnit)} ${formatOperator(pendingOperator)} ${formatForMode(entryValueUnits, inputMode, activeUnit)}`
     : historyLabel;
 
   return (
@@ -522,11 +549,11 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
                   </>
                 ) : (
                   <>
-                    <button type="button" className={activeUnit === "feet" ? "active unit-feet" : "unit-feet"} onClick={() => setActiveUnit("feet")}>
+                    <button type="button" className={activeUnit === "feet" ? "active unit-feet" : "unit-feet"} onClick={() => switchActiveUnit("feet")}>
                       <span>FT</span>
                       <strong>{feetText}</strong>
                     </button>
-                    <button type="button" className={activeUnit === "inches" ? "active unit-inches" : "unit-inches"} onClick={() => setActiveUnit("inches")}>
+                    <button type="button" className={activeUnit === "inches" ? "active unit-inches" : "unit-inches"} onClick={() => switchActiveUnit("inches")}>
                       <span>IN</span>
                       <strong>{inchesText}</strong>
                     </button>
@@ -661,7 +688,7 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
                 {calculationHistory.map((entry) => (
                   <button key={entry.id} type="button" onClick={() => reuseHistoryEntry(entry)}>
                     <span>{entry.expression}</span>
-                    <strong>{formatForMode(entry.resultUnits, entry.inputMode)}</strong>
+                    <strong>{formatForMode(entry.resultUnits, entry.inputMode, entry.activeUnit ?? "inches")}</strong>
                     <small>Use result</small>
                   </button>
                 ))}

@@ -1560,6 +1560,7 @@ Evidence must eventually link to implementation, automated tests, manual accepta
 - `GA-UX-003` gains calculator-continuity evidence: completed equations remain
   available in a short device-local tape and can restore their exact result
   and imperial/metric mode without introducing another calculator mode.
+
 - `GA-UX-006` gains compact-device evidence: the History action and accessible
   history sheet remain fully in viewport at 375x553 while all fifteen fraction
   buttons and the complete keypad remain available without scrolling.
@@ -1573,3 +1574,11 @@ Evidence must eventually link to implementation, automated tests, manual accepta
   the expected-source monitor passed in 588 ms with managed dependencies,
   observability, engagement controls, and all anonymous private-route checks
   healthy.
+
+# Traceability Addendum - 2026-07-17 Unlimited Inches Calculator
+
+- `GA-UX-003` gains field-notation evidence: inches mode accepts and preserves
+  measurements above twelve inches through entry, math, copy, history, and
+  restore, while feet notation remains an explicit user choice.
+- `GA-UX-006` gains rendered desktop, mobile, and SE regression coverage for
+  the exact `27 5/16"` -> `2' 3 5/16"` -> `27 5/16"` unit-switch round trip.
