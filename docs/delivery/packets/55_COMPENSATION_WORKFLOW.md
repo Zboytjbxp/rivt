@@ -40,6 +40,15 @@ profile rate as a binding bid.
   tradesperson responsibilities, renders the active-work lifecycle instead of
   the closed public-listing status, releases the participant-authorized jobsite
   address to both sides, and exposes the existing project closeout workflow.
+- Fixed-price hiring now uses the posted amount directly. Contractors only
+  enter or edit final terms for negotiable, hourly, open-to-offers, or
+  request-quotes work.
+- Closeout now lives in one exact Work workspace. Tradespeople submit a short
+  completion summary while photos, notes, and checks remain optional evidence;
+  contractors review that exact submission and confirm it or request changes.
+- Review notifications resolve to the submitted review, not a blank form.
+  Generic Records no longer duplicates completion/review actions or invents a
+  mandatory proof packet.
 
 ## Acceptance
 
@@ -57,6 +66,12 @@ profile rate as a binding bid.
 - Closing a listing after acceptance does not label active work as closed.
   Accepted participants can open the exact jobsite, daily records, money tools,
   and role-appropriate completion or review action from Work.
+- A disabled completion button states exactly what is missing. A tradesperson
+  can submit completion with a summary alone, remains on the same accepted job,
+  and sees the visible next state. The contractor opens that same job from the
+  notification and sees the submitted summary before acting.
+- A participant can open an exact review by id; an unrelated account receives
+  not found rather than review data.
 
 ## Verification
 
@@ -82,6 +97,14 @@ profile rate as a binding bid.
 - The focused match-acceptance PostgreSQL suite additionally proves the exact
   private address is returned to the accepted tradesperson and remains covered
   by participant authorization.
+- The rendered two-role workflow additionally proves one-tap fixed-price hire,
+  explained completion readiness, summary-only submission, exact completion
+  notification routing, and contractor confirm/request-changes actions at
+  mobile width.
+- Focused project-completion and reviews-admin-safety PostgreSQL suites pass
+  with exact Work closeout notification URLs, exact review lookup, and outsider
+  denial. The final fresh-database run passed all 19 serial suites with zero
+  failures or skips after rebuilding through migration 0028.
 
 ## Rollback
 
@@ -115,6 +138,13 @@ The active-work acceptance repair is deployed through Railway deployment
 `650e50dbc20b1992fd8d3c8e0a4f0065aacead1a`. The expected-source production
 monitor passed in 581 ms with migration 0028 ready and all seven anonymous
 private-route checks healthy.
+
+The exact closeout/review workflow repair is locally verified but not yet
+recorded as deployed. It changes no schema, requirement status, or risk
+severity. It adds UX and participant-authorization evidence to `GA-UX-003`,
+`GA-UX-005`, `GA-FND-004`, `GA-OPS-007`, and `R-039`; production evidence will
+be appended only after health and the expected-source monitor match the merged
+commit.
 
 ## Next packet
 

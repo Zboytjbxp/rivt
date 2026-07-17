@@ -34,6 +34,14 @@ import {
   type NetworkRecordInput,
   type ServerNetworkRecord,
 } from "./network-records-api";
+import {
+  approveWorkReview,
+  disputeWorkReview,
+  fetchWorkReview,
+  fetchWorkReviews,
+  reviewErrorMessage,
+  type WorkReview,
+} from "./reviews-api";
 import "./network-hub.css";
 
 interface ShoutOut {
@@ -49,6 +57,7 @@ interface NetworkHubProps {
   view: "People" | "Reviews";
   shoutOuts: ShoutOut[];
   displayName: string;
+  accountId?: string | null;
   profileFocus?: ProfileSearchResult | null;
   focusedReviewId?: string | null;
   onClearProfileFocus?: () => void;
@@ -1201,11 +1210,13 @@ function ProfileSearchSpotlight({
 function ReviewsView({
   shoutOuts,
   displayName,
+  accountId,
   focusedReviewId,
   onAddShoutOut,
 }: {
   shoutOuts: ShoutOut[];
   displayName: string;
+  accountId?: string | null;
   focusedReviewId?: string | null;
   onAddShoutOut: (to: string, trade: string, message: string) => void;
 }) {
@@ -1216,12 +1227,41 @@ function ReviewsView({
   const [submitted, setSubmitted] = useState(false);
   const [storedReviews, setStoredReviews] = useState<StoredReview[]>(readStoredReviews);
   const [syncMessage, setSyncMessage] = useState("Saved on this device.");
+  const [workReviews, setWorkReviews] = useState<WorkReview[]>([]);
+  const [workReviewsLoading, setWorkReviewsLoading] = useState(true);
+  const [workReviewError, setWorkReviewError] = useState("");
+  const [reviewAction, setReviewAction] = useState("");
+  const [disputeReason, setDisputeReason] = useState("");
   const focusedReviewRef = useRef<HTMLElement | null>(null);
 
   const given = shoutOuts.filter((s) => s.from === displayName);
   const storedGivenKeys = new Set(storedReviews.map((review) => `${review.reviewer}|${review.trade ?? ""}|${review.reviewText}`));
   const transientGiven = given.filter((item) => !storedGivenKeys.has(`${item.to}|${item.trade ?? ""}|${item.message}`));
   const normalizedFocusedReviewId = focusedReviewId ? String(focusedReviewId) : null;
+  const focusedWorkReview = normalizedFocusedReviewId
+    ? workReviews.find((review) => review.id === normalizedFocusedReviewId) ?? null
+    : null;
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchWorkReviews()
+      .then(async (reviews) => {
+        const exactReview = normalizedFocusedReviewId && !reviews.some((review) => review.id === normalizedFocusedReviewId)
+          ? await fetchWorkReview(normalizedFocusedReviewId)
+          : null;
+        if (!cancelled) {
+          setWorkReviews(exactReview ? [exactReview, ...reviews] : reviews);
+          setWorkReviewError("");
+        }
+      })
+      .catch((error) => {
+        if (!cancelled) setWorkReviewError(reviewErrorMessage(error));
+      })
+      .finally(() => {
+        if (!cancelled) setWorkReviewsLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [normalizedFocusedReviewId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -1232,6 +1272,27 @@ function ReviewsView({
     });
     return () => { cancelled = true; };
   }, []);
+
+  async function updateWorkReview(kind: "approve" | "dispute") {
+    if (!focusedWorkReview) return;
+    if (kind === "dispute" && !disputeReason.trim()) {
+      setWorkReviewError("Describe what is inaccurate before disputing the review.");
+      return;
+    }
+    setReviewAction(kind);
+    setWorkReviewError("");
+    try {
+      const updated = kind === "approve"
+        ? await approveWorkReview(focusedWorkReview.id)
+        : await disputeWorkReview(focusedWorkReview.id, disputeReason.trim());
+      setWorkReviews((current) => current.map((review) => review.id === updated.id ? updated : review));
+      setDisputeReason("");
+    } catch (error) {
+      setWorkReviewError(reviewErrorMessage(error));
+    } finally {
+      setReviewAction("");
+    }
+  }
 
   useEffect(() => {
     if (!normalizedFocusedReviewId) return;
@@ -1265,7 +1326,34 @@ function ReviewsView({
 
   return (
     <div className="v2-reviews-page">
-      <div className="v2-reviews-grid">
+      {normalizedFocusedReviewId ? (
+        <Panel className="v2-canonical-review-panel" eyebrow="Work review" title={focusedWorkReview?.status === "pending_approval" ? "Review pending your approval" : "Review details"}>
+          {workReviewsLoading ? <p>Loading the submitted review...</p> : focusedWorkReview ? (
+            <article className="v2-canonical-review">
+              <header>
+                <Avatar name={focusedWorkReview.reviewer?.displayName || "RIVT member"} size="sm" />
+                <div><strong>{focusedWorkReview.reviewer?.displayName || "RIVT member"}</strong><span>{focusedWorkReview.job?.title || "Completed work"}</span></div>
+                <span className="v2-review-status">{focusedWorkReview.status.replaceAll("_", " ")}</span>
+              </header>
+              <div className="v2-review-stars-display" aria-label={`${focusedWorkReview.rating} out of 5 stars`}>{focusedWorkReview.rating}/5</div>
+              <blockquote>{focusedWorkReview.body}</blockquote>
+              <small>{focusedWorkReview.job ? `${focusedWorkReview.job.publicLocation.city}, ${focusedWorkReview.job.publicLocation.region}` : "Submitted through completed RIVT work"}</small>
+              {focusedWorkReview.revieweeAccountId === accountId && focusedWorkReview.status === "pending_approval" ? (
+                <div className="v2-review-approval-actions">
+                  <p>Approve to publish this review on your profile. Dispute only if the review is inaccurate or violates policy.</p>
+                  <textarea value={disputeReason} onChange={(event) => setDisputeReason(event.target.value)} rows={3} placeholder="Why is this review inaccurate?" />
+                  <div>
+                    <button type="button" className="v2-secondary-button" disabled={Boolean(reviewAction) || !disputeReason.trim()} onClick={() => void updateWorkReview("dispute")}>Dispute review</button>
+                    <button type="button" className="v2-primary-button" disabled={Boolean(reviewAction)} onClick={() => void updateWorkReview("approve")}><CheckCircle2 size={16} />Approve review</button>
+                  </div>
+                </div>
+              ) : null}
+            </article>
+          ) : <p>This review could not be found. It may have been withdrawn or already resolved.</p>}
+          {workReviewError ? <p className="v2-review-api-error" role="alert">{workReviewError}</p> : null}
+        </Panel>
+      ) : null}
+      {!normalizedFocusedReviewId ? <div className="v2-reviews-grid">
         <Panel
           className="v2-reviews-panel v2-reviews-panel-wide"
           eyebrow="Write a review"
@@ -1373,7 +1461,7 @@ function ReviewsView({
             />
           )}
         </Panel>
-      </div>
+      </div> : null}
     </div>
   );
 }
@@ -1384,6 +1472,7 @@ export function NetworkHub({
   view,
   shoutOuts,
   displayName,
+  accountId = null,
   profileFocus = null,
   focusedReviewId = null,
   onClearProfileFocus = () => undefined,
@@ -1398,6 +1487,10 @@ export function NetworkHub({
     view === "Reviews" ? "Reviews" : "People"
   );
 
+  const visibleTab: NetworkTab = view === "Reviews"
+    ? "Reviews"
+    : activeTab === "Reviews" ? "People" : activeTab;
+
 
   // Tab bar shared across all views
   const tabBar = (
@@ -1406,7 +1499,7 @@ export function NetworkHub({
         <button
           key={tab}
           type="button"
-          className={`v2-network-tab-btn${activeTab === tab ? " active" : ""}`}
+          className={`v2-network-tab-btn${visibleTab === tab ? " active" : ""}`}
           onClick={() => {
             setActiveTab(tab);
             if (tab === "Reviews") onOpenReviews();
@@ -1429,7 +1522,7 @@ export function NetworkHub({
     </>
   );
 
-  if (activeTab === "Clients") {
+  if (visibleTab === "Clients") {
     return (
       <section className="v2-network-page" aria-label="Clients">
         {pageHeader}
@@ -1439,7 +1532,7 @@ export function NetworkHub({
     );
   }
 
-  if (activeTab === "Reviews") {
+  if (visibleTab === "Reviews") {
     return (
       <section className="v2-network-page" aria-label="Reviews">
         {pageHeader}
@@ -1447,6 +1540,7 @@ export function NetworkHub({
         <ReviewsView
           shoutOuts={shoutOuts}
           displayName={displayName}
+          accountId={accountId}
           focusedReviewId={focusedReviewId}
           onAddShoutOut={onAddShoutOut}
         />
@@ -1454,7 +1548,7 @@ export function NetworkHub({
     );
   }
 
-  if (activeTab === "Subs") {
+  if (visibleTab === "Subs") {
     return (
       <section className="v2-network-page" aria-label="Subs">
         {pageHeader}

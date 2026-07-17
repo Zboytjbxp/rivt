@@ -3324,7 +3324,100 @@
 .v2-offer-terms small,
 .v2-application-proposal small { color: var(--v2-text-muted); }
 
+.v2-fixed-offer-confirmation {
+  display: flex !important;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--v2-border-strong);
+  border-radius: var(--v2-radius-md);
+  background: var(--v2-surface);
+}
+
+.v2-fixed-offer-confirmation strong { font-size: var(--v2-text-lg); }
+
+.v2-fixed-hire-action {
+  display: grid;
+  gap: 10px;
+}
+
+.v2-fixed-hire-action small {
+  color: var(--v2-text-muted);
+  line-height: 1.45;
+}
+
+.v2-closeout-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 140;
+  display: grid;
+  align-items: end;
+  background: rgb(0 0 0 / 58%);
+}
+
+.v2-closeout-sheet {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  width: min(100%, 680px);
+  max-height: min(90dvh, 820px);
+  margin: 0 auto;
+  overflow: hidden;
+  border: 1px solid var(--v2-border-strong);
+  border-radius: var(--v2-radius-xl) var(--v2-radius-xl) 0 0;
+  background: var(--v2-surface);
+  box-shadow: var(--v2-shadow-md);
+}
+
+.v2-closeout-sheet > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid var(--v2-border);
+}
+
+.v2-closeout-sheet > header span,
+.v2-closeout-section-heading span {
+  color: var(--v2-text-muted);
+  font-size: var(--v2-text-sm);
+}
+
+.v2-closeout-sheet > header h2 { margin: 3px 0 0; font-size: var(--v2-text-xl); }
+.v2-closeout-body { display: grid; gap: 14px; padding: 18px 20px 24px; overflow-y: auto; }
+.v2-closeout-section,
+.v2-closeout-review,
+.v2-closeout-request { display: grid; gap: 12px; padding: 16px; border: 1px solid var(--v2-border); border-radius: var(--v2-radius-lg); background: var(--v2-surface-muted); }
+.v2-closeout-section.is-optional { background: var(--v2-surface); }
+.v2-closeout-section-heading { display: flex; align-items: flex-start; gap: 10px; }
+.v2-closeout-section-heading > div { display: grid; gap: 3px; }
+.v2-closeout-section textarea,
+.v2-closeout-resolution textarea { width: 100%; resize: vertical; }
+.v2-closeout-helper { color: var(--v2-warning); }
+.v2-closeout-checks { padding: 14px 16px; border: 1px solid var(--v2-border); border-radius: var(--v2-radius-lg); }
+.v2-closeout-checks summary { cursor: pointer; font-weight: var(--v2-weight-strong); }
+.v2-closeout-checks label { display: flex; align-items: center; gap: 9px; min-height: 44px; }
+.v2-closeout-checks label:first-of-type { margin-top: 10px; }
+.v2-closeout-review blockquote { margin: 0; padding: 14px; border-left: 3px solid var(--v2-accent); background: var(--v2-surface); }
+.v2-closeout-review > p { display: flex; align-items: center; gap: 7px; margin: 0; color: var(--v2-text-muted); }
+.v2-closeout-resolution { display: grid; gap: 7px; }
+.v2-closeout-review-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.v2-closeout-notice,
+.v2-closeout-error { margin: 0; padding: 12px 14px; border-radius: var(--v2-radius-md); }
+.v2-closeout-notice { color: var(--v2-success); background: var(--v2-success-soft); }
+.v2-closeout-error { color: var(--v2-danger); background: var(--v2-danger-soft); }
+.v2-closeout-empty { margin: 0; color: var(--v2-text-muted); }
+.v2-closeout-sheet > footer { display: grid; gap: 7px; padding: 12px 20px max(12px, env(safe-area-inset-bottom)); border-top: 1px solid var(--v2-border); background: var(--v2-surface); }
+.v2-closeout-sheet > footer .v2-primary-button { width: 100%; }
+.v2-closeout-sheet > footer small { color: var(--v2-text-muted); text-align: center; }
+
 @media (max-width: 430px) {
   .v2-offer-terms > div,
   .v2-application-proposal > div { grid-template-columns: 1fr; }
+  .v2-closeout-sheet { max-height: 94dvh; }
+  .v2-closeout-body { padding-inline: 14px; }
+  .v2-closeout-sheet > header,
+  .v2-closeout-sheet > footer { padding-inline: 14px; }
+  .v2-closeout-review-actions { grid-template-columns: 1fr; }
 }

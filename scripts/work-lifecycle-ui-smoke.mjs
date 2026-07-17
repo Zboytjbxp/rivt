@@ -693,9 +693,8 @@ async function runContractorFlow(page) {
   await page.getByText("Riley Harper", { exact: true }).waitFor({ timeout: 15_000 });
   await page.getByRole("button", { name: "Shortlist" }).click();
   await page.getByText("shortlisted", { exact: true }).waitFor({ timeout: 15_000 });
-  await page.getByRole("button", { name: "Prepare offer" }).click();
-  await page.getByLabel("Amount").fill("825");
-  await page.getByRole("button", { name: "Send offer" }).click();
+  await page.getByText("The applicant chose this listed price.", { exact: false }).waitFor({ timeout: 15_000 });
+  await page.getByRole("button", { name: "Hire at $850" }).click();
   await page.getByText("Offer sent", { exact: true }).waitFor({ timeout: 15_000 });
   await assertNoHorizontalOverflow(page, "Contractor applicant workflow");
   await page.screenshot({ path: path.join(screenshotDir, "contractor-work-lifecycle.png"), fullPage: true });
@@ -760,6 +759,16 @@ async function runTradespersonOfferFlow(page) {
   await activeWorkspace.getByRole("button", { name: "Add photos" }).waitFor({ timeout: 15_000 });
   await activeWorkspace.getByRole("button", { name: "Daily log" }).waitFor({ timeout: 15_000 });
   await activeWorkspace.getByRole("button", { name: "Submit completion" }).waitFor({ timeout: 15_000 });
+  await activeWorkspace.getByRole("button", { name: "Submit completion" }).click();
+  const closeoutDialog = page.locator(".v2-closeout-sheet");
+  await closeoutDialog.waitFor({ timeout: 15_000 });
+  const submitCompletion = closeoutDialog.getByRole("button", { name: "Submit completion" });
+  assert.equal(await submitCompletion.isDisabled(), true, "Completion should explain its one required field before submission");
+  await closeoutDialog.getByText("Add the completion summary above to continue.", { exact: true }).waitFor({ timeout: 15_000 });
+  await closeoutDialog.getByPlaceholder(/Replaced the GFCI/).fill("Finished the panel labeling and verified each circuit.");
+  assert.equal(await submitCompletion.isEnabled(), true, "Completion should enable after a short summary without requiring photos or field notes");
+  await page.screenshot({ path: path.join(screenshotDir, "tradesperson-closeout.png"), fullPage: true });
+  await closeoutDialog.getByRole("button", { name: "Close job closeout" }).click();
   await activeWorkspace.getByText("Job controls", { exact: true }).waitFor({ timeout: 15_000 });
   assert.equal(await activeWorkspace.locator("details.v2-active-work-controls").evaluate((element) => !element.open), true, "Rare job controls should start collapsed");
   await activeWorkspace.getByRole("button", { name: "Add photos" }).click();
@@ -810,7 +819,7 @@ async function runNotificationActiveWorkFlow(page) {
   const contractorWorkflow = page.getByLabel("Active work workflow");
   await contractorWorkflow.getByText("Contractor workspace", { exact: true }).waitFor({ timeout: 15_000 });
   await contractorWorkflow.getByText("Track progress and approve closeout", { exact: true }).waitFor({ timeout: 15_000 });
-  await contractorWorkflow.getByRole("button", { name: "Open closeout record" }).waitFor({ timeout: 15_000 });
+  await contractorWorkflow.getByRole("button", { name: "View closeout" }).waitFor({ timeout: 15_000 });
   await assertNoHorizontalOverflow(page, "Notification active work route");
   await page.screenshot({ path: path.join(screenshotDir, "notification-active-work-route.png"), fullPage: true });
 }
@@ -890,12 +899,25 @@ async function runNotificationProjectRecordFlow(page) {
       id: "a953efc2-f1c8-4a63-918b-8be0b3ebcb54",
       title: "Completion submitted",
       body: "Warehouse panel assist - review the closeout record",
-      actionHref: `/app/tools/records?activeWork=${activeWorkId}&project=${projectId}`,
+      actionHref: `/app/work?activeWork=${activeWorkId}&job=${openJobId}&project=${projectId}&closeout=1`,
       sourceType: "project",
       sourceId: projectId,
       metadata: { activeWorkId, projectId, jobId: openJobId },
     })],
   });
+  state.project.status = "completion_submitted";
+  state.project.completionSubmissions = [{
+    id: "f713c904-6b32-47f3-9317-c24ff8604be2",
+    projectId,
+    submittedByAccountId: tradespersonId,
+    note: "Finished the panel labeling and verified each circuit.",
+    checklist: { completedOnTime: true, clientApproved: false, photosProvided: false },
+    evidenceMediaIds: [],
+    status: "submitted",
+    submittedAt: "2026-06-28T18:00:00.000Z",
+    resolvedAt: null,
+    resolutions: [],
+  }];
   await configurePage(page, contractorAccount, state);
 
   await page.goto(`${baseUrl}/app/home`, { waitUntil: "networkidle" });
@@ -903,9 +925,10 @@ async function runNotificationProjectRecordFlow(page) {
   const notificationsDialog = page.getByRole("dialog", { name: "Notifications" });
   await notificationsDialog.waitFor({ timeout: 15_000 });
   await notificationsDialog.getByRole("button", { name: /Open closeout: Completion submitted/i }).click();
-  await page.waitForURL(/\/app\/tools\/records\?/, { timeout: 15_000 });
-  await page.getByLabel("Job proof packet").waitFor({ timeout: 15_000 });
+  await page.waitForURL(/\/app\/work\?/, { timeout: 15_000 });
+  await page.locator(".v2-closeout-sheet").waitFor({ timeout: 15_000 });
   await assertNoHorizontalOverflow(page, "Notification project record route");
+  await page.screenshot({ path: path.join(screenshotDir, "contractor-closeout-notification.png"), fullPage: true });
 }
 
 let browser;

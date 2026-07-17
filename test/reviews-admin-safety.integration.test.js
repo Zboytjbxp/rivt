@@ -255,6 +255,14 @@ if (!testDatabaseUrl) {
     assert.equal(review.payload.data.review.status, "pending_approval");
     const reviewId = review.payload.data.review.id;
 
+    const exactReview = await requestJson(baseUrl, `/api/v1/reviews/${reviewId}`, { cookie: tradesperson.cookie });
+    assert.equal(exactReview.response.status, 200);
+    assert.equal(exactReview.payload.data.review.id, reviewId);
+    assert.equal(exactReview.payload.data.review.rating, 5);
+    assert.match(exactReview.payload.data.review.body, /prepared, communicated clearly/);
+    const unrelatedReviewRead = await requestJson(baseUrl, `/api/v1/reviews/${reviewId}`, { cookie: admin.cookie });
+    assert.equal(unrelatedReviewRead.response.status, 404);
+
     const tradespersonNotifications = await requestJson(baseUrl, "/api/v1/notifications", { cookie: tradesperson.cookie });
     const reviewNotification = tradespersonNotifications.payload.data.notifications.find((item) => (
       item.sourceType === "review" && item.sourceId === reviewId

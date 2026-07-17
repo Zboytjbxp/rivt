@@ -331,7 +331,7 @@ if (!testDatabaseUrl) {
     const completionNotification = contractorNotifications.payload.data.notifications.find((item) => (
       item.sourceType === "project" && item.sourceId === project.id && item.title === "Completion submitted"
     ));
-    assert.equal(completionNotification.actionHref, `/app/tools/records?activeWork=${activeWork.id}&project=${project.id}`);
+    assert.equal(completionNotification.actionHref, `/app/work?activeWork=${activeWork.id}&job=${job.id}&project=${project.id}&closeout=1`);
     assert.equal(completionNotification.metadata.projectId, project.id);
 
     const outsiderConfirm = await requestJson(baseUrl, `/api/v1/projects/${project.id}/completion/${completionId}/confirm`, {
@@ -357,7 +357,7 @@ if (!testDatabaseUrl) {
     const confirmedNotification = tradespersonNotifications.payload.data.notifications.find((item) => (
       item.sourceType === "project" && item.sourceId === project.id && item.title === "Completion confirmed"
     ));
-    assert.equal(confirmedNotification.actionHref, `/app/tools/records?activeWork=${activeWork.id}&project=${project.id}`);
+    assert.equal(confirmedNotification.actionHref, `/app/work?activeWork=${activeWork.id}&job=${job.id}&project=${project.id}&closeout=1`);
     assert.equal(confirmedNotification.metadata.projectId, project.id);
 
     const reviewContext = await requestJson(baseUrl, `/api/v1/active-work/${activeWork.id}/review-context`, { cookie: tradesperson.cookie });

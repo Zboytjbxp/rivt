@@ -66,6 +66,7 @@ import {
 import "./work-workspace.css";
 import { JobDetailHub } from "../jobs/JobDetailHub";
 import { getProjectForActiveWork, type ProjectRecord } from "../tools/project-api";
+import { JobCloseoutPanel } from "./JobCloseoutPanel";
 
 type TradeFilter = (typeof tradeOptions)[number];
 type DifficultyFilter = (typeof difficultyOptions)[number];
@@ -82,6 +83,7 @@ interface WorkWorkspaceProps {
   activeWorkRecords?: CanonicalActiveWork[];
   focusedActiveWorkId?: string | null;
   openDetailOnMount?: boolean;
+  openCloseoutOnMount?: boolean;
   selectedJob: Job | null;
   loading: boolean;
   error: string | null;
@@ -106,7 +108,6 @@ interface WorkWorkspaceProps {
   onOpenTool: (tool: "daily-log" | "estimate" | "invoice" | "job-photos", activeWorkId?: string) => void;
   onOpenActiveWorkWorkspace: (activeWorkId: string, fallbackJobId?: string | null) => void;
   onOpenActiveWorkMessages: (activeWorkId: string) => void;
-  onOpenActiveWorkRecords: (activeWorkId: string, projectId?: string | null) => void;
   onRetry: () => void;
   onOfferAccepted?: (activeWork: CanonicalActiveWork) => void;
   onActiveWorkChanged?: () => void;
@@ -1198,6 +1199,7 @@ export function WorkWorkspace({
   activeWorkRecords = [],
   focusedActiveWorkId = null,
   openDetailOnMount = false,
+  openCloseoutOnMount = false,
   selectedJob,
   loading,
   error,
@@ -1222,7 +1224,6 @@ export function WorkWorkspace({
   onOpenTool,
   onOpenActiveWorkWorkspace,
   onOpenActiveWorkMessages,
-  onOpenActiveWorkRecords,
   onRetry,
   onOfferAccepted,
   onActiveWorkChanged,
@@ -1258,6 +1259,7 @@ export function WorkWorkspace({
   const [saveTemplateNotice, setSaveTemplateNotice] = useState("");
   const [detailJobId, setDetailJobId] = useState<string | null>(null);
   const [activeProject, setActiveProject] = useState<ProjectRecord | null>(null);
+  const [closeoutOpen, setCloseoutOpen] = useState(() => Boolean(openCloseoutOnMount));
   const [addressCopied, setAddressCopied] = useState(false);
   const detailHydrationRequests = useRef<Set<string>>(new Set());
   const workLayoutRef = useRef<HTMLDivElement>(null);
@@ -1427,8 +1429,8 @@ export function WorkWorkspace({
     });
   }
 
-  async function handleSendOffer(job: Job, application: CanonicalApplication) {
-    if (!offerDraft || offerDraft.applicationId !== application.id || !Number.isFinite(Number(offerDraft.amount)) || Number(offerDraft.amount) <= 0) {
+  async function sendFinalOffer(job: Job, application: CanonicalApplication, amount: number, unit: CompensationUnit) {
+    if (!Number.isFinite(amount) || amount <= 0) {
       setMatchError("Enter the final agreed pay before sending this offer.");
       return;
     }
@@ -1438,11 +1440,23 @@ export function WorkWorkspace({
         startDate,
         scopeSummary: job.canonical?.scopeDescription || job.summary,
         message: `Offer for ${job.title}. Accept to unlock the exact jobsite and active work record.`,
-        agreedAmountCents: Math.round(Number(offerDraft.amount) * 100),
-        agreedUnit: offerDraft.unit,
+        agreedAmountCents: Math.round(amount * 100),
+        agreedUnit: unit,
       });
       setOfferDraft(null);
     });
+  }
+
+  async function handleSendOffer(job: Job, application: CanonicalApplication) {
+    if (!offerDraft || offerDraft.applicationId !== application.id) {
+      setMatchError("Set the final agreed pay before sending this offer.");
+      return;
+    }
+    await sendFinalOffer(job, application, Number(offerDraft.amount), offerDraft.unit);
+  }
+
+  async function handleHireAtListedPrice(job: Job, application: CanonicalApplication) {
+    await sendFinalOffer(job, application, job.pay, "fixed");
   }
 
   function prepareOffer(job: Job, application: CanonicalApplication) {
@@ -2138,8 +2152,8 @@ export function WorkWorkspace({
                         </div>
                       </div>
                       <section className={`v2-active-work-closeout is-${role}`}>
-                        <div><ClipboardCheck size={19} /><div><span>Closeout</span><strong>{role === "contractor" ? completionStatus === "completion_submitted" ? "Completion is ready for review" : completionStatus === "confirmed" ? "Completion confirmed" : completionStatus === "disputed" ? "Changes were requested" : "Waiting for the tradesperson" : completionStatus === "completion_submitted" ? "Completion sent to contractor" : completionStatus === "confirmed" ? "Work confirmed" : completionStatus === "disputed" ? "Closeout needs an update" : "Submit when the job is complete"}</strong><small>{role === "contractor" ? completionStatus === "completion_submitted" ? "Review the proof packet, then confirm or request changes." : completionStatus === "open" ? "The tradesperson submits the completion proof; you approve the final closeout." : "The complete proof record stays attached to this job." : completionStatus === "completion_submitted" ? "You can review the submitted proof while you wait." : completionStatus === "open" ? "Add final proof and send the completion request to the contractor." : "Open the record to review the closeout history."}</small></div></div>
-                        <button type="button" className={(completionStatus === "completion_submitted" && role === "contractor") || (completionStatus === "open" && role === "tradesperson") ? "v2-primary-button" : "v2-secondary-button"} onClick={() => onOpenActiveWorkRecords(activeWork.id, currentActiveProject?.id)}>{role === "contractor" ? completionStatus === "completion_submitted" ? "Review completion" : "Open closeout record" : completionStatus === "open" ? "Submit completion" : completionStatus === "disputed" ? "Update closeout" : "View closeout"}</button>
+                        <div><ClipboardCheck size={19} /><div><span>Closeout</span><strong>{role === "contractor" ? completionStatus === "completion_submitted" ? "Completion is ready for review" : completionStatus === "confirmed" ? "Completion confirmed" : completionStatus === "disputed" ? "Changes were requested" : "Waiting for the tradesperson" : completionStatus === "completion_submitted" ? "Completion sent to contractor" : completionStatus === "confirmed" ? "Work confirmed" : completionStatus === "disputed" ? "Closeout needs an update" : "Submit when the job is complete"}</strong><small>{role === "contractor" ? completionStatus === "completion_submitted" ? "Review the completion summary, then confirm or request changes." : completionStatus === "open" ? "The tradesperson sends a completion summary; photos are optional." : "The closeout history stays attached to this job." : completionStatus === "completion_submitted" ? "You can review what you sent while you wait." : completionStatus === "open" ? "Describe what you completed. Photos are optional." : "Open closeout to review its status and history."}</small></div></div>
+                        <button type="button" className={(completionStatus === "completion_submitted" && role === "contractor") || (["open", "disputed"].includes(completionStatus) && role === "tradesperson") ? "v2-primary-button" : "v2-secondary-button"} disabled={!currentActiveProject} onClick={() => setCloseoutOpen(true)}>{role === "contractor" ? completionStatus === "completion_submitted" ? "Review completion" : "View closeout" : completionStatus === "open" ? "Submit completion" : completionStatus === "disputed" ? "Update closeout" : "View closeout"}</button>
                       </section>
                       {activeWork.status === "active" ? (
                         <details className="v2-active-work-controls">
@@ -2161,6 +2175,7 @@ export function WorkWorkspace({
                       <div className="v2-applicant-list">
                         {matchApplications.map((application) => {
                           const offerStartDate = offerStartDateFor(detailJob, application);
+                          const confirmsListedFixedPrice = detailJob.canonical?.compensationType === "fixed" && !application.proposal;
                           return (
                             <article className="v2-applicant-card" key={application.id}>
                               <div>
@@ -2178,17 +2193,22 @@ export function WorkWorkspace({
                                 {application.status === "submitted" ? <button type="button" disabled={Boolean(activeAction)} onClick={() => void handleShortlist(application)}>Shortlist</button> : null}
                                 {["submitted", "shortlisted"].includes(application.status) ? (
                                   <>
-                                    {offerDraft?.applicationId === application.id ? (
+                                    {confirmsListedFixedPrice ? (
+                                      <div className="v2-fixed-hire-action">
+                                        <small>The applicant chose this listed price. They will confirm once more before the private job workspace opens.</small>
+                                        <button type="button" className="v2-primary-button" disabled={Boolean(activeAction) || detailJob.pay <= 0} onClick={() => void handleHireAtListedPrice(detailJob, application)}>Hire at {money(detailJob.pay)}</button>
+                                      </div>
+                                    ) : offerDraft?.applicationId === application.id ? (
                                       <div className="v2-offer-terms">
                                         <strong>Final offer</strong>
                                         <div>
                                           <label><span>Amount</span><input type="number" min="1" inputMode="decimal" value={offerDraft.amount} onChange={(event) => setOfferDraft({ ...offerDraft, amount: event.target.value })} /></label>
                                           <label><span>Paid</span><select value={offerDraft.unit} onChange={(event) => setOfferDraft({ ...offerDraft, unit: event.target.value as CompensationUnit })}><option value="fixed">Fixed total</option><option value="hourly">Per hour</option></select></label>
                                         </div>
-                                        <small>This is the amount the tradesperson will accept.</small>
+                                        <small>This is the final amount the tradesperson will accept before work becomes active.</small>
                                         <div><button type="button" onClick={() => setOfferDraft(null)}>Cancel</button><button type="button" className="v2-primary-button" disabled={Boolean(activeAction)} onClick={() => void handleSendOffer(detailJob, application)}>Send offer</button></div>
                                       </div>
-                                    ) : <button type="button" className="v2-primary-button" disabled={Boolean(activeAction)} onClick={() => prepareOffer(detailJob, application)}>Prepare offer</button>}
+                                    ) : <button type="button" className="v2-primary-button" disabled={Boolean(activeAction)} onClick={() => prepareOffer(detailJob, application)}>Set final offer</button>}
                                     <button type="button" disabled={Boolean(activeAction)} onClick={() => void handleDeclineApplication(application)}>Decline</button>
                                   </>
                                 ) : <small>{application.status === "offered" ? "Offer sent" : "No action needed"}</small>}
@@ -2425,6 +2445,19 @@ export function WorkWorkspace({
       {detailJobId && (
         <JobDetailHub jobId={detailJobId} onClose={() => setDetailJobId(null)} />
       )}
+
+      {currentActiveProject && closeoutOpen ? (
+        <JobCloseoutPanel
+          key={`${currentActiveProject.id}:${currentActiveProject.status}`}
+          open
+          role={role}
+          project={currentActiveProject}
+          onClose={() => setCloseoutOpen(false)}
+          onOpenPhotos={() => activeWork && onOpenTool("job-photos", activeWork.id)}
+          onProjectChange={setActiveProject}
+          onLifecycleChange={onActiveWorkChanged}
+        />
+      ) : null}
 
 
     </section>

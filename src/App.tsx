@@ -169,6 +169,10 @@ function readReviewFromUrl() {
   return readRouteParam("review", "reviewId");
 }
 
+function readCloseoutFromUrl() {
+  return readRouteParam("closeout") === "1";
+}
+
 function pathForTool(tool: ToolMode | null, activeWorkId: string | null = null) {
   if (!isPublicToolMode(tool)) return viewRoutes.Tools;
   const params = new URLSearchParams({ tool });
@@ -548,6 +552,7 @@ function App() {
   const [inboxNotifications, setInboxNotifications] = useState<InboxNotification[]>([]);
   const [activeWork, setActiveWork] = useState<CanonicalActiveWork[]>([]);
   const [focusedActiveWorkId, setFocusedActiveWorkId] = useState<string | null>(() => readActiveWorkFromUrl());
+  const [focusedCloseout, setFocusedCloseout] = useState(() => readCloseoutFromUrl());
   const [focusedReviewId, setFocusedReviewId] = useState<string | null>(() => readReviewFromUrl());
   const [workWorkspaceOpenKey, setWorkWorkspaceOpenKey] = useState(0);
   const [inboxLoading, setInboxLoading] = useState(false);
@@ -699,6 +704,7 @@ function App() {
       setRequestedTool(nextTool);
       setToolsImmersive(Boolean(nextTool));
       setFocusedActiveWorkId(nextActiveWorkId);
+      setFocusedCloseout(nextView === "Work" && readCloseoutFromUrl());
       setSelectedConversationId(nextView === "Messages" ? readConversationFromUrl() : null);
       setShopTalkPostId(nextView === "Shop Talk" ? readShopTalkPostFromUrl() : null);
       setShopTalkCommunitySlug(nextView === "Shop Talk" ? readShopTalkCommunityFromUrl() : null);
@@ -1291,6 +1297,7 @@ function App() {
     setInboxNotifications([]);
     setActiveWork([]);
     setFocusedActiveWorkId(null);
+    setFocusedCloseout(false);
     setInboxError(null);
     setJobsError(null);
     setUploadedRecords(() => new Set());
@@ -1333,6 +1340,7 @@ function App() {
       setInboxNotifications([]);
       setActiveWork([]);
       setFocusedActiveWorkId(null);
+      setFocusedCloseout(false);
       setInboxError(null);
       setJobsError(null);
       setUploadedRecords(() => new Set());
@@ -1359,6 +1367,7 @@ function App() {
     setRequestedTool(isCamera ? "job-photos" : null);
     setToolsImmersive(isCamera);
     if (isCamera) setFocusedActiveWorkId(null);
+    setFocusedCloseout(false);
     if (resolvedView !== "Reviews") setFocusedReviewId(null);
     setActiveView(resolvedView);
     const nextPath = isCamera ? pathForCamera() : viewRoutes[resolvedView];
@@ -1376,6 +1385,7 @@ function App() {
     setRequestedTool(nextTool);
     setToolsImmersive(Boolean(nextTool));
     setFocusedActiveWorkId(null);
+    setFocusedCloseout(false);
     setActiveView(isCamera ? "Camera" : "Tools");
     const nextPath = isCamera ? pathForCamera() : pathForTool(nextTool);
     if (currentPathAndSearch() !== nextPath) {
@@ -1390,6 +1400,7 @@ function App() {
     const nextTool = isPublicToolMode(tool) ? tool : null;
     const isCamera = nextTool === "job-photos";
     setFocusedActiveWorkId(nextTool ? activeWorkId : null);
+    setFocusedCloseout(false);
     setRequestedTool(nextTool);
     setToolsImmersive(Boolean(nextTool));
     setActiveView(isCamera ? "Camera" : "Tools");
@@ -1411,6 +1422,7 @@ function App() {
 
   function handleOpenActiveWorkWorkspace(activeWorkId: string, fallbackJobId: string | null = null) {
     setFocusedActiveWorkId(activeWorkId);
+    setFocusedCloseout(false);
     setWorkWorkspaceOpenKey((current) => current + 1);
     const match = findJobForActiveWork(activeWorkId, fallbackJobId);
     if (match) setSelectedId(match.id);
@@ -1429,12 +1441,34 @@ function App() {
     void reloadJobs();
   }
 
+  function handleOpenActiveWorkCloseout(activeWorkId: string, fallbackJobId: string | null = null) {
+    setFocusedActiveWorkId(activeWorkId);
+    setFocusedCloseout(true);
+    setWorkWorkspaceOpenKey((current) => current + 1);
+    const match = findJobForActiveWork(activeWorkId, fallbackJobId);
+    if (match) setSelectedId(match.id);
+    setActiveView("Work");
+    const params = new URLSearchParams({ activeWork: activeWorkId, closeout: "1" });
+    const jobId = fallbackJobId ?? match?.canonical?.id ?? null;
+    if (jobId) params.set("job", jobId);
+    const nextPath = `${viewRoutes.Work}?${params.toString()}`;
+    if (currentPathAndSearch() !== nextPath) {
+      window.history.pushState({ view: "Work", activeWorkId, jobId, closeout: true }, "", nextPath);
+    }
+    setActivityOpen(false);
+    setAccountOpen(false);
+    setPostOpen(false);
+    void reloadActiveWork();
+    void reloadJobs();
+  }
+
   function handleOpenActiveWorkPhotos(activeWorkId: string) {
     handleOpenActiveWorkTool(activeWorkId, "job-photos");
   }
 
   function handleOpenActiveWorkRecords(activeWorkId: string, projectId: string | null = null) {
     setFocusedActiveWorkId(activeWorkId);
+    setFocusedCloseout(false);
     setActiveView("Records");
     const params = new URLSearchParams({ activeWork: activeWorkId });
     if (projectId) params.set("project", projectId);
@@ -1463,6 +1497,7 @@ function App() {
     setRequestedTool(nextTool);
     setToolsImmersive(Boolean(nextTool));
     setFocusedActiveWorkId(nextActiveWorkId);
+    setFocusedCloseout(false);
     setActiveView(nextView);
     const nextPath = isCamera ? pathForCamera(nextActiveWorkId) : pathForTool(nextTool, nextActiveWorkId);
     if (currentPathAndSearch() === nextPath) return;
@@ -2089,6 +2124,7 @@ function App() {
 
     const wantsPhotos = routeText.includes("photo") || routeText.includes("media") || routeText.includes("camera") || params.get("tool") === "job-photos";
     const wantsRecords = routeText.includes("record") || routeText.includes("project") || routeText.includes("closeout");
+    const wantsCloseout = routeText.includes("closeout") || params.get("closeout") === "1";
 
     if (notificationTool) {
       if (activeWorkId) {
@@ -2134,6 +2170,11 @@ function App() {
       return;
     }
 
+    if (wantsCloseout && activeWorkId) {
+      handleOpenActiveWorkCloseout(activeWorkId, jobId);
+      return;
+    }
+
     if (wantsRecords || routeText.includes("tool")) {
       if (activeWorkId) {
         handleOpenActiveWorkRecords(activeWorkId, projectId);
@@ -2150,7 +2191,13 @@ function App() {
 
     if (routeText.includes("review") || notification.sourceType === "review") {
       setFocusedReviewId(reviewId);
-      handleNavigate("Reviews");
+      setActiveView("Reviews");
+      const nextPath = reviewId
+        ? `${viewRoutes.Reviews}?${new URLSearchParams({ review: reviewId }).toString()}`
+        : viewRoutes.Reviews;
+      if (currentPathAndSearch() !== nextPath) {
+        window.history.pushState({ view: "Reviews", reviewId }, "", nextPath);
+      }
       return;
     }
 
@@ -2545,6 +2592,7 @@ function App() {
             activeWorkRecords={activeWork}
             focusedActiveWorkId={focusedActiveWorkId}
             openDetailOnMount={Boolean(focusedActiveWorkId)}
+            openCloseoutOnMount={focusedCloseout}
             selectedJob={selectedJob.id ? selectedJob : null}
             loading={jobsLoading}
             error={jobsError}
@@ -2575,7 +2623,6 @@ function App() {
             }}
             onOpenActiveWorkWorkspace={handleOpenActiveWorkWorkspace}
             onOpenActiveWorkMessages={(activeWorkId) => void handleOpenActiveWorkMessages(activeWorkId)}
-            onOpenActiveWorkRecords={handleOpenActiveWorkRecords}
             onRetry={() => void reloadJobs()}
             onOfferAccepted={(nextWork) => {
               mergeActiveWorkRecord(nextWork);
@@ -2628,6 +2675,7 @@ function App() {
             view={activeView === "Reviews" ? "Reviews" : "People"}
             shoutOuts={shoutOuts}
             displayName={accountProfile.displayName}
+            accountId={canonicalAccount?.id ?? authUser.id}
             profileFocus={profileSearchFocus}
             focusedReviewId={focusedReviewId}
             onClearProfileFocus={() => setProfileSearchFocus(null)}
@@ -2709,6 +2757,7 @@ function App() {
             activeWorkRecords={activeWork}
             onToolChange={handleToolChange}
             onWorkContextChange={handleToolWorkContextChange}
+            onOpenActiveWorkWorkspace={handleOpenActiveWorkWorkspace}
             onImmersiveChange={setToolsImmersive}
             onNavigate={(destination) => handleNavigate(defaultViewForDestination(destination))}
             focusedActiveWorkId={focusedActiveWorkId}
