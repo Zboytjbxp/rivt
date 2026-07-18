@@ -56,6 +56,7 @@ export function ToolContextPicker({
   const [dismissedRequestToken, setDismissedRequestToken] = useState(0);
   const requestedOpen = Boolean(openRequestToken && openRequestToken !== dismissedRequestToken);
   const isOpen = open || requestedOpen;
+  const liveRivtWork = activeWork.filter((work) => work.status === "active");
 
   function closePicker() {
     setOpen(false);
@@ -154,10 +155,10 @@ export function ToolContextPicker({
                 </button>
               ))}
             </div>
-            {activeWork.length ? (
+            {liveRivtWork.length ? (
               <div className="v2-tool-context-group">
-                <div className="v2-tool-context-group-title"><span>Accepted RIVT work</span></div>
-                {activeWork.map((work) => (
+                <div className="v2-tool-context-group-title"><span>Active RIVT work</span></div>
+                {liveRivtWork.map((work) => (
                   <button type="button" className="v2-tool-context-option" key={work.id} onClick={() => { onChooseActiveWork(work); closePicker(); }}>
                     <BriefcaseBusiness size={19} /><span><strong>{work.job?.title ?? "Accepted work"}</strong><small>{work.job?.publicLocation.city ?? "RIVT workspace"}</small></span>{context.kind === "rivt" && context.activeWorkId === work.id ? <Check size={18} /> : null}
                   </button>

@@ -420,7 +420,8 @@ async function assertToolsFlow(page) {
   await page.getByRole("heading", { name: "Invoice", exact: true }).first().waitFor();
   await page.getByText(/Converted from estimate total/i).waitFor();
   await page.getByRole("navigation", { name: "Invoice draft steps" }).getByRole("button", { name: "3 Review" }).click();
-  await page.getByText("Printable invoice", { exact: true }).waitFor();
+  await page.getByRole("heading", { name: "Preview before delivery" }).waitFor();
+  await page.getByLabel("Printable invoice preview").waitFor();
   await page.getByLabel("Invoice", { exact: true }).getByRole("button", { name: "All tools" }).click();
 
   await primaryTool("Estimate").click();
@@ -432,7 +433,8 @@ async function assertToolsFlow(page) {
   await page.getByRole("navigation", { name: "Invoice sections" }).getByRole("button", { name: "Draft", exact: true }).waitFor();
   assert.equal(await page.getByText(/Converted from estimate total/i).count(), 0, "Opening Invoice directly should not reuse a converted estimate draft");
   await page.getByRole("navigation", { name: "Invoice draft steps" }).getByRole("button", { name: "3 Review" }).click();
-  await page.getByText("Printable invoice", { exact: true }).waitFor();
+  await page.getByRole("heading", { name: "Preview before delivery" }).waitFor();
+  await page.getByLabel("Printable invoice preview").waitFor();
   await page.getByLabel("Invoice", { exact: true }).getByRole("button", { name: "All tools" }).click();
 
   await fieldToolsTray.getByRole("button", { name: "Camera", exact: true }).click();

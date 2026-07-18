@@ -2047,3 +2047,35 @@ Add one entry per staging/production deployment.
   Android and iPhone devices.
 - Approval: Packet 58 runtime, rendered-device gates, and production health
   are verified; physical field acceptance remains open.
+
+## Current Production - Packet 62 Tool Context and Estimate Dock Usability
+
+- Environment: Production (`https://rivt.pro`)
+- Date/time/timezone: 2026-07-17 America/New_York
+- Deployer: Codex through a verified feature branch, fast-forward push to
+  `master`, and Railway production auto-deploy
+- Source repository/branch: `Zboytjbxp/rivt`, `master`
+- Runtime feature source: `279a21bdd58091d0147d7dda9242a19ee210e54b`
+- Migration version before/after: unchanged (`0028_compensation_workflow`)
+- Provider/config changes: none; auth, billing, PostgreSQL, object storage,
+  Sentry, Web Push, email, moderation, and rollout configuration were
+  preserved.
+- Rollback target: `8f5c494`; no database rollback is required.
+- Automated gates: build, lint, 58 unit/frontend tests, E2E, rendered Tools
+  UI, compact mobile-action UI, and zero-vulnerability production dependency
+  audit passed. Three non-database integration checks passed; sixteen
+  PostgreSQL suites skipped because this clean release worktree did not contain
+  `TEST_DATABASE_URL`.
+- Product evidence: completed and cancelled work no longer appears as an
+  active new-artifact destination. Estimate's mobile dock is step-specific,
+  retains a visible Review conversion path, and reserves scroll clearance so
+  it no longer covers the final content.
+- Post-deploy proof: live `/api/health` returned the exact runtime feature
+  source. The expected-source production monitor passed with PostgreSQL,
+  S3-compatible storage, configured Sentry and Web Push, matching-job alerts,
+  and all seven anonymous private-route checks healthy.
+- Known boundary: physically confirm a completed job is absent from the
+  destination picker and walk the three Estimate steps on the launch Android
+  and iPhone devices.
+- Approval: Packet 62 runtime and automated compact-device gates are verified;
+  physical field acceptance remains open.

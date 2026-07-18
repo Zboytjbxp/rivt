@@ -32,6 +32,10 @@ const estimateSendParamsSchema = z.object({
   localId: localIdSchema,
 });
 
+const invoiceSendParamsSchema = z.object({
+  localId: localIdSchema,
+});
+
 const toolRecordUpsertSchema = z.object({
   recordType: toolRecordTypeSchema,
   localId: localIdSchema,
@@ -150,6 +154,71 @@ function estimateEmailContent(snapshot) {
     `<tr><td style="padding:8px 0;border-bottom:1px solid #e7e7e7">${escapeHtml(line.description)}</td><td style="padding:8px 0;border-bottom:1px solid #e7e7e7;text-align:right;font-weight:700">${formatCurrency(line.totalCents)}</td></tr>`
   )).join("");
   const html = `<!doctype html><html><body style="margin:0;background:#f5f5f2;color:#151515;font-family:Arial,sans-serif"><main style="max-width:640px;margin:0 auto;padding:28px"><section style="background:#ffffff;border:1px solid #deded8;border-radius:12px;overflow:hidden"><header style="padding:22px 24px;background:#ff4b00;color:#111111"><strong style="font-size:20px;letter-spacing:0.04em">RIVT ESTIMATE</strong><div style="margin-top:6px;font-size:14px">${escapeHtml(snapshot.estimateNumber)}</div></header><div style="padding:24px"><p style="margin:0 0 16px">Hi ${escapeHtml(snapshot.recipientName)},</p><p style="margin:0 0 16px"><strong>${escapeHtml(snapshot.senderName)}</strong> sent you an estimate for ${escapeHtml(snapshot.title)}.</p><table role="presentation" width="100%" style="border-collapse:collapse;margin:18px 0">${lineRows}<tr><td style="padding-top:16px;font-size:17px;font-weight:700">Estimated total</td><td style="padding-top:16px;text-align:right;font-size:20px;font-weight:800">${formatCurrency(snapshot.totalCents)}</td></tr></table><p style="margin:18px 0 0;color:#5f5f5a">${escapeHtml(validThrough)}</p>${snapshot.note ? `<p style="margin:12px 0 0"><strong>Note:</strong> ${escapeHtml(snapshot.note)}</p>` : ""}<p style="margin:24px 0 0;color:#5f5f5a;font-size:13px">This is an estimate, not a payment request. Contact the sender to discuss changes or confirm acceptance.</p></div></section></main></body></html>`;
+  return { text, html };
+}
+
+function invoiceDeliverySnapshot(record, actor) {
+  const payload = objectValue(record.payload);
+  const recipientEmail = textValue(payload.recipientEmail, "", 320).toLowerCase();
+  if (!z.email().safeParse(recipientEmail).success) {
+    throw new ApiError(422, "INVOICE_RECIPIENT_REQUIRED", "Add a valid customer email before sending this invoice.");
+  }
+
+  const totalCents = integerValue(record.amount_cents);
+  if (totalCents <= 0) {
+    throw new ApiError(422, "INVOICE_TOTAL_REQUIRED", "Add an amount before sending this invoice.");
+  }
+
+  const lines = Array.isArray(payload.customerLines)
+    ? payload.customerLines.map((line) => objectValue(line)).map((line) => ({
+      description: textValue(line.description, "Line item", 160),
+      quantity: Math.max(0.01, Number(line.quantity) || 1),
+      totalCents: integerValue(line.totalCents),
+    })).filter((line) => line.totalCents > 0)
+    : [];
+  const safeLines = lines.length ? lines : [{ description: record.title, quantity: 1, totalCents }];
+  const subtotalCents = safeLines.reduce((sum, line) => sum + line.totalCents, 0);
+  if (subtotalCents > totalCents) {
+    throw new ApiError(409, "INVOICE_SNAPSHOT_OUT_OF_DATE", "Save the invoice again before sending it.");
+  }
+
+  return {
+    recipientEmail,
+    recipientName: textValue(payload.recipientName, "there", 160),
+    invoiceNumber: textValue(payload.invoiceNumber, `RIVT-${record.id.slice(0, 8).toUpperCase()}`, 80),
+    workLabel: textValue(payload.workLabel, record.title, 320),
+    terms: textValue(payload.terms, "Due on receipt", 160),
+    senderName: textValue(payload.payTo, textValue(actor.profile.displayName, "RIVT member", 160), 160),
+    paymentMethod: textValue(payload.paymentMethod, "Direct payment", 160),
+    totalCents,
+    subtotalCents,
+    taxCents: Math.max(0, totalCents - subtotalCents),
+    lines: safeLines,
+  };
+}
+
+function invoiceEmailContent(snapshot) {
+  const lineText = snapshot.lines.map((line) => `- ${line.description}: ${formatCurrency(line.totalCents)}`).join("\n");
+  const text = [
+    `Hi ${snapshot.recipientName},`,
+    "",
+    `${snapshot.senderName} sent you invoice ${snapshot.invoiceNumber}.`,
+    `Work: ${snapshot.workLabel}`,
+    "",
+    lineText,
+    "",
+    `Subtotal: ${formatCurrency(snapshot.subtotalCents)}`,
+    `Tax: ${formatCurrency(snapshot.taxCents)}`,
+    `Total due: ${formatCurrency(snapshot.totalCents)}`,
+    `Terms: ${snapshot.terms}`,
+    `Payment method: ${snapshot.paymentMethod}`,
+    "",
+    "Payment is arranged directly with the sender. Reply to this email with any questions.",
+  ].join("\n");
+  const lineRows = snapshot.lines.map((line) => (
+    `<tr><td style="padding:9px 0;border-bottom:1px solid #e7e7e7">${escapeHtml(line.description)}</td><td style="padding:9px 0;border-bottom:1px solid #e7e7e7;text-align:right;font-weight:700">${formatCurrency(line.totalCents)}</td></tr>`
+  )).join("");
+  const html = `<!doctype html><html><body style="margin:0;background:#f5f5f2;color:#151515;font-family:Arial,sans-serif"><main style="max-width:640px;margin:0 auto;padding:28px"><section style="background:#ffffff;border:1px solid #deded8;border-radius:12px;overflow:hidden"><header style="padding:22px 24px;background:#ff4b00;color:#111111"><strong style="font-size:20px;letter-spacing:0.04em">RIVT INVOICE</strong><div style="margin-top:6px;font-size:14px">${escapeHtml(snapshot.invoiceNumber)}</div></header><div style="padding:24px"><p style="margin:0 0 16px">Hi ${escapeHtml(snapshot.recipientName)},</p><p style="margin:0 0 16px"><strong>${escapeHtml(snapshot.senderName)}</strong> sent you an invoice for ${escapeHtml(snapshot.workLabel)}.</p><table role="presentation" width="100%" style="border-collapse:collapse;margin:18px 0">${lineRows}<tr><td style="padding-top:12px">Subtotal</td><td style="padding-top:12px;text-align:right">${formatCurrency(snapshot.subtotalCents)}</td></tr><tr><td style="padding-top:8px">Tax</td><td style="padding-top:8px;text-align:right">${formatCurrency(snapshot.taxCents)}</td></tr><tr><td style="padding-top:16px;font-size:17px;font-weight:700">Total due</td><td style="padding-top:16px;text-align:right;font-size:20px;font-weight:800">${formatCurrency(snapshot.totalCents)}</td></tr></table><p style="margin:18px 0 0"><strong>Terms:</strong> ${escapeHtml(snapshot.terms)}</p><p style="margin:8px 0 0"><strong>Payment method:</strong> ${escapeHtml(snapshot.paymentMethod)}</p><p style="margin:24px 0 0;color:#5f5f5a;font-size:13px">Payment is arranged directly with the sender. Reply to this email with any questions.</p></div></section></main></body></html>`;
   return { text, html };
 }
 
@@ -342,6 +411,56 @@ export function registerToolRecordRoutes({
       data: { record: mapToolRecord(updated.rows[0]), replayed: false },
       meta: { requestId: request.requestId },
     });
+  }));
+
+  app.post("/api/v1/invoices/:localId/send", requireV1AuthenticatedUser, requireV1Actor, writeRateLimit, asyncRoute(async (request, response) => {
+    const params = validate(invoiceSendParamsSchema, request.params);
+    const idempotencyKey = String(request.headers["idempotency-key"] ?? "").trim();
+    if (idempotencyKey.length < 8 || idempotencyKey.length > 200) {
+      throw new ApiError(400, "IDEMPOTENCY_KEY_REQUIRED", "Use a valid Idempotency-Key for this request.");
+    }
+    const existing = await database.query(
+      `SELECT * FROM tool_records
+       WHERE account_id = $1 AND record_type = 'invoice_draft' AND local_id = $2 AND deleted_at IS NULL
+       LIMIT 1`,
+      [request.actor.account.id, params.localId],
+    );
+    if (!existing.rowCount) {
+      throw new ApiError(404, "INVOICE_NOT_FOUND", "Save this invoice to your RIVT account before sending it.");
+    }
+    const record = existing.rows[0];
+    const payload = objectValue(record.payload);
+    const previousDelivery = objectValue(payload.delivery);
+    if (previousDelivery.idempotencyKey === idempotencyKey && previousDelivery.status === "sent") {
+      response.setHeader("Idempotent-Replayed", "true");
+      response.json({ data: { record: mapToolRecord(record), replayed: true }, meta: { requestId: request.requestId } });
+      return;
+    }
+    const snapshot = invoiceDeliverySnapshot(record, request.actor);
+    const attemptedAt = new Date().toISOString();
+    const attemptCount = integerValue(previousDelivery.attemptCount) + 1;
+    let delivery;
+    try {
+      delivery = await sendTransactionalEmail({
+        to: snapshot.recipientEmail,
+        subject: `${snapshot.senderName} sent invoice ${snapshot.invoiceNumber}`,
+        ...invoiceEmailContent(snapshot),
+        idempotencyKey: `invoice-${record.id}-${idempotencyKey}`.slice(0, 255),
+      });
+    } catch (error) {
+      await database.query(
+        `UPDATE tool_records SET status = 'delivery_failed', payload = $3::jsonb, updated_at = now()
+         WHERE account_id = $1 AND id = $2 AND deleted_at IS NULL`,
+        [request.actor.account.id, record.id, JSON.stringify({ ...payload, delivery: { ...previousDelivery, status: "failed", recipientEmail: snapshot.recipientEmail, attemptedAt, attemptCount, lastErrorCode: error instanceof ApiError ? error.code : "EMAIL_DELIVERY_FAILED" } })],
+      );
+      throw error;
+    }
+    const updated = await database.query(
+      `UPDATE tool_records SET status = 'sent', payload = $3::jsonb, updated_at = now()
+       WHERE account_id = $1 AND id = $2 AND deleted_at IS NULL RETURNING *`,
+      [request.actor.account.id, record.id, JSON.stringify({ ...payload, delivery: { status: "sent", recipientEmail: snapshot.recipientEmail, attemptedAt, sentAt: attemptedAt, attemptCount, provider: delivery.provider, providerMessageId: delivery.id, idempotencyKey } })],
+    );
+    response.json({ data: { record: mapToolRecord(updated.rows[0]), replayed: false }, meta: { requestId: request.requestId } });
   }));
 
   app.delete("/api/v1/tool-records/:recordType/:localId", requireV1AuthenticatedUser, requireV1Actor, writeRateLimit, asyncRoute(async (request, response) => {

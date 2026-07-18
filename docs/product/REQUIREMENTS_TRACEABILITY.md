@@ -1534,6 +1534,28 @@ Evidence must eventually link to implementation, automated tests, manual accepta
 - No requirement maturity changes. No server contract, authorization,
   authentication, billing, storage, or data model changed.
 
+# Traceability Addendum - 2026-07-17 Money Document Flow (Local Verification)
+
+- `GA-UX-003` gains customer-document handoff evidence: Estimate exposes a
+  distinct preview-and-send stage, and Invoice exposes a distinct
+  preview-and-deliver stage with visible customer copy, copy, and print/save
+  actions.
+- `GA-UX-006` gains small-screen document-review evidence: the printable
+  Invoice document is visible only in its dedicated final stage, avoiding both
+  an extra disclosure and edit-stage crowding on phones.
+- `GA-TRUST-004` retains truthful money boundaries: device email/text actions
+  report that they open local drafts, accepted-work copy directs the user to
+  mark delivery in the private record, and RIVT does not claim to process or
+  confirm job payments.
+- No requirement maturity changes. No server contract, authorization,
+  authentication, billing, storage, moderation, or data model changed.
+- Local evidence includes build, lint, 58 unit/frontend tests, E2E, Tools UI,
+  mobile-action UI, and a zero-vulnerability production dependency audit.
+  Three non-database integration checks pass; sixteen PostgreSQL suites are
+  skipped because `TEST_DATABASE_URL` is not configured in this worktree.
+  Deployment evidence is pending review and merge of
+  `codex/money-document-flow`.
+
 # Traceability Addendum - 2026-07-15 Progressive Jobsite Flows
 
 - `GA-UX-003` gains progressive field-task evidence: Daily Log separates Today,
@@ -1617,3 +1639,58 @@ Evidence must eventually link to implementation, automated tests, manual accepta
   the production monitor passed in 582 ms with managed dependencies,
   observability, engagement controls, and all anonymous private-route checks
   healthy.
+
+# Traceability Addendum - 2026-07-17 Calculator Fraction Hierarchy
+
+- `GA-UX-003` gains field-legibility evidence: quarter, eighth, and sixteenth
+  fraction presets carry a long, medium, and short tape mark respectively,
+  rather than relying on faint accent color alone.
+- `GA-UX-006` gains rendered mobile hierarchy coverage: equal-sized fraction
+  targets expose a semantic family and quarter > eighth > sixteenth tick
+  dimensions at handset viewports.
+- No requirement maturity change and no calculator arithmetic, server,
+  schema, authorization, authentication, billing, storage, or moderation
+  change.
+- Local evidence: build, lint, 58 unit/frontend tests, E2E, rendered Tools UI,
+  mobile-action UI, and dependency audit pass. Three non-database integration
+  checks pass; sixteen PostgreSQL suites are skipped because this worktree does
+  not contain `TEST_DATABASE_URL`. The rendered SE calculator confirms the
+  tape-mark hierarchy at handset scale.
+- Production evidence: Railway served exact source
+  `ff64a11f023803adb3cc150b056adaf5818222e0`. The production monitor passed
+  in 591 ms with PostgreSQL, S3-compatible storage, Sentry, Web Push,
+  matching-job alerts, and all seven anonymous private-route checks healthy.
+
+# Traceability Addendum - 2026-07-17 Invoice Delivery and Records
+
+- `GA-UX-003` gains invoice-delivery evidence: a reviewed invoice is saved as
+  an account-owned record before delivery, and the UI separately names
+  `Save draft`, `Email invoice`, and `Print or Save PDF`.
+- `GA-OPS-007` gains provider-confirmed delivery evidence: recipient,
+  provider message id, attempt count, and delivery failure state are retained
+  only after the transactional provider responds.
+- No payment processing, escrow, tax automation, or client-payment claim is
+  introduced. The invoice continues to state the direct-payment boundary.
+- Local evidence: build, scoped lint, 58 unit/frontend tests, E2E,
+  mobile-action UI, targeted PostgreSQL invoice integration, and dependency
+  audit pass. The full integration aggregate exceeded the local ten-minute
+  command window without reporting a failure.
+
+# Traceability Addendum - 2026-07-17 Tool Context and Estimate Dock Usability
+
+- `GA-UX-003` gains exact-context evidence: the tool destination picker
+  exposes only canonical active RIVT work for new artifacts. Completed and
+  cancelled work is preserved as history rather than represented as live work.
+- `GA-UX-006` gains compact workflow evidence: Estimate's fixed action dock is
+  step-specific and workbench content reserves enough bottom clearance to
+  remain fully reachable above the mobile safe area.
+- No requirement maturity change and no server, schema, authorization,
+  authentication, billing, storage, or moderation change.
+- Local evidence: build, lint, 58 unit/frontend tests, E2E, rendered Tools UI,
+  mobile-action UI, and dependency audit pass. Three non-database integration
+  checks pass; sixteen PostgreSQL suites are skipped because this clean
+  worktree does not contain `TEST_DATABASE_URL`.
+- Production evidence: Railway served exact source
+  `279a21bdd58091d0147d7dda9242a19ee210e54b`; the production monitor passed
+  with PostgreSQL, S3-compatible storage, Sentry, Web Push, matching-job
+  alerts, and all seven anonymous private-route checks healthy.

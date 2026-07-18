@@ -2,10 +2,89 @@
 
 Last updated: 2026-07-17 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Packet 59 calculator tape preferences is deployed and verified in production.
-Active packet: `docs/delivery/packets/59_CALCULATOR_TAPE_PREFERENCES.md`
-Repository branch: `master` (source branch: `codex/calculator-tape-preferences`)
-Production feature release commit: `6765dd2196221816ea9149916f295ea58112d210`
+Current phase: Packet 63 invoice delivery and records is ready for release verification.
+Active packet: `docs/delivery/packets/63_INVOICE_DELIVERY_AND_RECORDS.md`
+Repository branch: `codex/invoice-delivery-release` (base: `origin/master`)
+Production feature release commit: pending Packet 63 deployment
+
+## Packet 63 - Invoice Delivery and Records
+
+- Invoice now saves a server-owned customer-facing snapshot before email is
+  attempted. The review flow distinguishes `Save draft`, `Email invoice`, and
+  `Print or Save PDF` so printing is no longer misrepresented as delivery.
+- Email is accepted only after the configured transactional provider responds;
+  recipient, provider message id, attempt count, success, and failure state
+  are persisted on the account-owned invoice record.
+- Delivery is idempotent and account-scoped. Customer email includes the
+  invoice lines, total, terms, and direct-payment boundary, while internal
+  pricing mechanics remain private.
+- Local verification: build, scoped lint, 58 unit/frontend tests, E2E,
+  mobile-action UI, targeted PostgreSQL invoice integration, and dependency
+  audit pass. The full integration aggregate exceeded the local ten-minute
+  command window without reporting a failure; deployment and production
+  monitoring remain pending.
+- No payment processing, escrow, payment verification, or tax automation is
+  introduced. R-023 remains unchanged.
+
+## Packet 62 - Tool Context and Estimate Dock Usability
+
+- Tool context pickers now distinguish current work from history: only
+  canonical `active` RIVT work is selectable for new tool artifacts;
+  completed and cancelled work remains in its records/history surface.
+- Estimate's mobile dock now presents one forward action for the current
+  progressive step, while conversion to Invoice stays readable in Review.
+  Workbench bottom clearance prevents the fixed dock from hiding fields or
+  customer-facing review content.
+- Build, lint, 58 unit/frontend tests, E2E, rendered Tools UI, mobile-action
+  UI, and dependency audit pass. Three non-database integration checks pass;
+  sixteen PostgreSQL suites are skipped because this clean release worktree
+  does not contain `TEST_DATABASE_URL`.
+- Railway served exact source `279a21bdd58091d0147d7dda9242a19ee210e54b`.
+  The production monitor passed with PostgreSQL, S3-compatible storage,
+  Sentry, Web Push, matching-job alerts, and all seven anonymous private-route
+  checks healthy. No server, schema, authorization, billing, storage, or
+  dependency change is included.
+
+## Packet 61 - Calculator Fraction Hierarchy
+
+- Heavy 16th now gives quarter, eighth, and sixteenth presets an unmistakable
+  tape-mark hierarchy: a long strong quarter mark, a medium eighth mark, and
+  a short sixteenth mark. Equal-size keys remain equally reachable.
+- Semantic fraction-family data and accessible labels identify each tape mark;
+  the selected outline does not hide the hierarchy.
+- Build, lint, 58 unit/frontend tests, E2E, rendered Tools UI, mobile-action
+  UI, and dependency audit pass. The rendered SE calculator confirms the
+  three tape-mark sizes at handset scale.
+- Three non-database integration checks pass; sixteen PostgreSQL suites are
+  skipped because this worktree does not have `TEST_DATABASE_URL` configured.
+- Railway served exact source `ff64a11f023803adb3cc150b056adaf5818222e0`.
+  The production monitor passed in 591 ms with PostgreSQL, S3-compatible
+  storage, Sentry, Web Push, matching-job alerts, and all seven anonymous
+  private-route checks healthy.
+  No server, schema, authorization, billing, storage, or dependency change is
+  included.
+
+## Packet 60 - Money Document Flow
+
+- Estimate and Invoice now reserve their final progressive stage for the
+  customer-facing document and its next action instead of mixing editing,
+  hidden preview, and delivery choices together.
+- Invoice review exposes the document directly with copy and print/save-PDF
+  handoffs; device email/text drafts explain their exact local handoff and the
+  accepted-work follow-up.
+- No payment processing, payment verification, provider setup, external send
+  confirmation, or server contract is added. The existing server-backed
+  Estimate email route remains authoritative.
+- Build, lint, 58 unit/frontend tests, E2E, rendered Tools UI, mobile-action
+  UI, and the production dependency audit pass. Three non-database integration
+  checks pass; sixteen PostgreSQL suites are skipped because this clean
+  worktree does not have `TEST_DATABASE_URL` configured. Deployment evidence
+  is complete. Railway served exact source
+  `3d399023c8d866f112403549776a056a22a28f74` and the production monitor
+  passed with PostgreSQL, S3-compatible storage, Sentry, Web Push, and
+  matching-job alerts healthy. Requirement maturity is unchanged; the active
+  risk boundary remains R-023 until a reviewed payment or server delivery
+  contract exists.
 
 ## Packet 59 - Calculator Tape Preferences
 

@@ -3,6 +3,34 @@
   gap: 12px;
 }
 
+/* Packet 60: a customer document should be visible before delivery, not hidden in a disclosure. */
+.v2-invoice-preview-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.v2-invoice-preview-actions .v2-secondary-button {
+  width: 100%;
+  min-height: 44px;
+  padding-inline: 10px;
+}
+
+@media (max-width: 640px) {
+  .v2-invoice-preview-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .v2-invoice-preview-panel .v2-invoice-print-preview {
+    gap: 14px;
+  }
+
+  .v2-invoice-preview-panel .v2-invoice-print-preview table {
+    font-size: 12px;
+  }
+}
+
 .v2-tools-header {
   display: flex;
   align-items: flex-end;
@@ -2147,7 +2175,8 @@
   gap: 8px;
 }
 
-.v2-invoice-delivery a {
+.v2-invoice-delivery a,
+.v2-invoice-delivery button {
   display: inline-flex;
   min-height: 44px;
   align-items: center;
@@ -2158,12 +2187,15 @@
   border-radius: var(--v2-radius-md);
   background: color-mix(in srgb, var(--v2-surface-muted) 76%, transparent);
   color: var(--v2-text);
+  font-family: inherit;
   font-size: 13px;
   font-weight: var(--v2-weight-bold);
   text-decoration: none;
+  cursor: pointer;
 }
 
-.v2-invoice-delivery a[aria-disabled="true"] {
+.v2-invoice-delivery a[aria-disabled="true"],
+.v2-invoice-delivery button:disabled {
   cursor: not-allowed;
   opacity: 0.52;
 }
@@ -2988,7 +3020,7 @@
   .v2-estimate-workbench,
   .v2-invoice-workbench,
   .v2-camera-home {
-    padding-bottom: calc(82px + env(safe-area-inset-bottom));
+    padding-bottom: calc(132px + env(safe-area-inset-bottom));
   }
 
   .v2-tool-action-dock {
@@ -3003,8 +3035,13 @@
     padding: 0 12px;
   }
 
-  .v2-estimate-workbench .v2-tool-action-dock {
-    grid-template-columns: minmax(0, 1fr) 48px 48px 48px auto;
+  .v2-estimate-workbench .v2-tool-action-dock.is-price {
+    grid-template-columns: minmax(0, 1fr) 48px minmax(122px, auto);
+  }
+
+  .v2-estimate-workbench .v2-tool-action-dock.is-customer,
+  .v2-estimate-workbench .v2-tool-action-dock.is-review {
+    grid-template-columns: minmax(0, 1fr) 48px 48px minmax(122px, auto);
   }
 
   .v2-estimate-workbench .v2-tool-action-dock > button:not(.v2-primary-button) {
@@ -8053,36 +8090,67 @@
 }
 
 .fraction-strip button {
+  --fraction-fill: transparent;
+  --fraction-tick-color: color-mix(in srgb, var(--v2-text-muted) 58%, transparent);
+  --fraction-tick-height: 2px;
+  --fraction-tick-width: 18%;
+  position: relative;
+  overflow: hidden;
   min-height: 42px;
-  border: 0;
+  border: 1px solid transparent;
   border-radius: var(--v2-radius-md);
-  background: var(--v2-surface-muted);
+  background: color-mix(in srgb, var(--v2-surface-muted) 94%, var(--fraction-fill));
   color: var(--v2-text-muted);
   font-size: 13px;
   font-weight: var(--v2-weight-bold);
   font-variant-numeric: tabular-nums;
 }
 
+.fraction-strip button::before {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: var(--fraction-tick-width);
+  height: var(--fraction-tick-height);
+  border-radius: 0 0 var(--v2-radius-pill) var(--v2-radius-pill);
+  background: var(--fraction-tick-color);
+  content: "";
+  pointer-events: none;
+  transform: translateX(-50%);
+}
+
 .fraction-strip button.active {
-  background: color-mix(in srgb, var(--v2-accent) 18%, transparent);
-  color: var(--calc-lime);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--v2-accent) 32%, transparent);
+  border-color: var(--v2-accent);
+  background: color-mix(in srgb, var(--v2-accent) 20%, var(--v2-surface-muted));
+  color: var(--v2-text);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--v2-accent) 24%, transparent);
 }
 
 .fraction-strip button[data-fraction-family="quarter"] {
-  box-shadow: inset 0 3px 0 color-mix(in srgb, var(--v2-accent) 86%, transparent);
+  --fraction-fill: color-mix(in srgb, var(--v2-accent) 15%, transparent);
+  --fraction-tick-color: var(--v2-accent);
+  --fraction-tick-height: 6px;
+  --fraction-tick-width: 78%;
+  border-color: color-mix(in srgb, var(--v2-accent) 48%, var(--v2-border));
+  color: var(--v2-text);
 }
 
 .fraction-strip button[data-fraction-family="eighth"] {
-  box-shadow: inset 0 2px 0 color-mix(in srgb, var(--calc-lime) 62%, transparent);
+  --fraction-fill: color-mix(in srgb, var(--v2-accent) 8%, transparent);
+  --fraction-tick-color: color-mix(in srgb, var(--v2-accent) 76%, var(--v2-text-muted));
+  --fraction-tick-height: 4px;
+  --fraction-tick-width: 50%;
+  border-color: color-mix(in srgb, var(--v2-accent) 25%, var(--v2-border));
+  color: var(--v2-text);
 }
 
 .fraction-strip button[data-fraction-family="sixteenth"] {
-  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--v2-text-muted) 42%, transparent);
+  --fraction-tick-height: 2px;
+  --fraction-tick-width: 22%;
 }
 
 .fraction-strip button.active[data-fraction-family] {
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--v2-accent) 44%, transparent), inset 0 3px 0 var(--v2-accent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--v2-accent) 24%, transparent);
 }
 
 .unit-metric-readout {
@@ -9008,8 +9076,13 @@ html[data-rivt-compact-device="true"] .v2-tool-action-dock > button {
   padding-inline: 10px;
 }
 
-html[data-rivt-compact-device="true"] .v2-estimate-workbench .v2-tool-action-dock {
-  grid-template-columns: minmax(0, 1fr) 44px 44px 44px auto;
+html[data-rivt-compact-device="true"] .v2-estimate-workbench .v2-tool-action-dock.is-price {
+  grid-template-columns: minmax(0, 1fr) 44px minmax(112px, auto);
+}
+
+html[data-rivt-compact-device="true"] .v2-estimate-workbench .v2-tool-action-dock.is-customer,
+html[data-rivt-compact-device="true"] .v2-estimate-workbench .v2-tool-action-dock.is-review {
+  grid-template-columns: minmax(0, 1fr) 44px 44px minmax(112px, auto);
 }
 
 html[data-rivt-compact-device="true"] .v2-estimate-workbench .v2-tool-action-dock > button:not(.v2-primary-button) {

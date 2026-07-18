@@ -357,6 +357,91 @@ if (!testDatabaseUrl) {
     });
     assert.equal(otherCannotSendEstimate.response.status, 404);
 
+    const deliveryInvoice = await requestJson(baseUrl, "/api/v1/tool-records", {
+      method: "POST",
+      cookie: owner.cookie,
+      idempotencyKey: randomUUID(),
+      body: {
+        recordType: "invoice_draft",
+        localId: "invoice:email-one",
+        title: "Kitchen cabinet invoice",
+        status: "draft",
+        recordDate: "2026-07-14",
+        amountCents: 248500,
+        payload: {
+          invoiceNumber: "INV-KITCHEN-01",
+          recipientName: "Jordan Client",
+          recipientEmail: "jordan.client@example.test",
+          workLabel: "Kitchen cabinet installation",
+          terms: "Due on completion",
+          paymentMethod: "Direct payment",
+          payTo: "RIVT Cabinet Co.",
+          customerLines: [
+            { description: "Cabinet installation", quantity: 24, totalCents: 158500 },
+            { description: "Materials and handling", quantity: 1, totalCents: 90000 },
+          ],
+        },
+      },
+    });
+    assert.equal(deliveryInvoice.response.status, 200);
+
+    const invalidDeliveryInvoice = await requestJson(baseUrl, "/api/v1/tool-records", {
+      method: "POST",
+      cookie: owner.cookie,
+      idempotencyKey: randomUUID(),
+      body: {
+        recordType: "invoice_draft",
+        localId: "invoice:missing-recipient",
+        title: "Missing recipient invoice",
+        status: "draft",
+        recordDate: "2026-07-14",
+        amountCents: 10000,
+        payload: { customerLines: [{ description: "Labor", quantity: 1, totalCents: 10000 }] },
+      },
+    });
+    assert.equal(invalidDeliveryInvoice.response.status, 200);
+
+    const missingInvoiceRecipient = await requestJson(baseUrl, "/api/v1/invoices/invoice%3Amissing-recipient/send", {
+      method: "POST",
+      cookie: owner.cookie,
+      idempotencyKey: randomUUID(),
+    });
+    assert.equal(missingInvoiceRecipient.response.status, 422);
+    assert.equal(missingInvoiceRecipient.payload.error.code, "INVOICE_RECIPIENT_REQUIRED");
+
+    clearCapturedEmailMessages();
+    const invoiceSendKey = randomUUID();
+    const sentInvoice = await requestJson(baseUrl, "/api/v1/invoices/invoice%3Aemail-one/send", {
+      method: "POST",
+      cookie: owner.cookie,
+      idempotencyKey: invoiceSendKey,
+    });
+    assert.equal(sentInvoice.response.status, 200);
+    assert.equal(sentInvoice.payload.data.record.status, "sent");
+    assert.equal(sentInvoice.payload.data.record.payload.delivery.status, "sent");
+    assert.equal(sentInvoice.payload.data.record.payload.delivery.recipientEmail, "jordan.client@example.test");
+    const deliveredInvoice = capturedEmailMessages().find((message) => message.to === "jordan.client@example.test");
+    assert.ok(deliveredInvoice);
+    assert.match(deliveredInvoice.text, /Kitchen cabinet installation/);
+    assert.match(deliveredInvoice.text, /\$2,485\.00/);
+    assert.doesNotMatch(deliveredInvoice.text, /margin|overhead|contingency/i);
+
+    const invoiceReplay = await requestJson(baseUrl, "/api/v1/invoices/invoice%3Aemail-one/send", {
+      method: "POST",
+      cookie: owner.cookie,
+      idempotencyKey: invoiceSendKey,
+    });
+    assert.equal(invoiceReplay.response.status, 200);
+    assert.equal(invoiceReplay.response.headers.get("idempotent-replayed"), "true");
+    assert.equal(capturedEmailMessages().filter((message) => message.to === "jordan.client@example.test").length, 1);
+
+    const otherCannotSendInvoice = await requestJson(baseUrl, "/api/v1/invoices/invoice%3Aemail-one/send", {
+      method: "POST",
+      cookie: other.cookie,
+      idempotencyKey: randomUUID(),
+    });
+    assert.equal(otherCannotSendInvoice.response.status, 404);
+
     const projectAlbum = await requestJson(baseUrl, "/api/v1/albums", {
       method: "POST",
       cookie: owner.cookie,
