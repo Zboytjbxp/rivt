@@ -1671,10 +1671,15 @@ Evidence must eventually link to implementation, automated tests, manual accepta
   only after the transactional provider responds.
 - No payment processing, escrow, tax automation, or client-payment claim is
   introduced. The invoice continues to state the direct-payment boundary.
-- Local evidence: build, scoped lint, 58 unit/frontend tests, E2E,
+- Local evidence: build, full lint, 58 unit/frontend tests, E2E,
   mobile-action UI, targeted PostgreSQL invoice integration, and dependency
   audit pass. The full integration aggregate exceeded the local ten-minute
   command window without reporting a failure.
+- Production evidence: Railway served exact source
+  `64b48833aa1498e3dc9438ea9989790580a31bbd` on 2026-07-17. The production
+  monitor passed in 569 ms with PostgreSQL, S3-compatible storage, Sentry,
+  Web Push, matching-job alerts, operational controls, and all seven
+  anonymous private-route checks healthy.
 
 # Traceability Addendum - 2026-07-17 Tool Context and Estimate Dock Usability
 

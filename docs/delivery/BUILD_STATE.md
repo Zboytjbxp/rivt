@@ -2,10 +2,10 @@
 
 Last updated: 2026-07-17 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Packet 63 invoice delivery and records is ready for release verification.
+Current phase: Packet 63 invoice delivery and records is deployed.
 Active packet: `docs/delivery/packets/63_INVOICE_DELIVERY_AND_RECORDS.md`
-Repository branch: `codex/invoice-delivery-release` (base: `origin/master`)
-Production feature release commit: pending Packet 63 deployment
+Repository branch: `master` (merged from `codex/invoice-delivery-release`)
+Production feature release commit: `64b48833aa1498e3dc9438ea9989790580a31bbd`
 
 ## Packet 63 - Invoice Delivery and Records
 
@@ -18,11 +18,15 @@ Production feature release commit: pending Packet 63 deployment
 - Delivery is idempotent and account-scoped. Customer email includes the
   invoice lines, total, terms, and direct-payment boundary, while internal
   pricing mechanics remain private.
-- Local verification: build, scoped lint, 58 unit/frontend tests, E2E,
+- Local verification: build, full lint, 58 unit/frontend tests, E2E,
   mobile-action UI, targeted PostgreSQL invoice integration, and dependency
   audit pass. The full integration aggregate exceeded the local ten-minute
-  command window without reporting a failure; deployment and production
-  monitoring remain pending.
+  command window without reporting a failure.
+- Production evidence: Railway served exact source
+  `64b48833aa1498e3dc9438ea9989790580a31bbd` on 2026-07-17. The production
+  monitor passed in 569 ms with PostgreSQL, S3-compatible storage, Sentry,
+  Web Push, matching-job alerts, operational controls, and all seven
+  anonymous private-route checks healthy.
 - No payment processing, escrow, payment verification, or tax automation is
   introduced. R-023 remains unchanged.
 
