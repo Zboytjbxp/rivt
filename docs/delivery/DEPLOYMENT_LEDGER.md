@@ -1,5 +1,27 @@
 # Deployment Ledger
 
+## 2026-07-17 - Packet 64 Tools Mobile Landing
+
+- Source commit: `c2f02632285735f7d0a19b2979370ae55d239dca`
+- Feature commit: `c2f0263`
+- Branch: `master` (source branch: `codex/tools-field-tray`)
+- Production: `https://rivt.pro`
+- Scope: the Tools hub keeps Camera, Heavy 16th, Jobsite, Estimate, and
+  Invoice visible in flow; the field tray remains a configurable one-hand
+  shortcut set with a reachable mobile Edit control and an honest More action.
+- Automated gates: build, lint, 58 unit/frontend tests, E2E, rendered Tools
+  UI, mobile-action UI, security lint, dependency audit, and diff checks
+  passed. The aggregate `npm run test` exceeded the local ten-minute command
+  limit without printing a failure; its direct unit and E2E components passed.
+- Post-deploy proof: production health served the exact source with migration
+  `0028_compensation_workflow` ready. The production monitor passed in 617 ms
+  with PostgreSQL and S3-compatible storage healthy, Sentry and Web Push
+  configured, matching-job alerts enabled, operational controls open, and
+  seven anonymous private-route checks healthy.
+- Rollback target: `1aafee1a1261af2483d34fe79effd83d7bc9c042`.
+- Remaining field acceptance: on a physical phone, open Tools, use Edit to
+  change a pinned field tool, then use More to open the remaining utilities.
+
 ## 2026-07-17 - Packet 59 Calculator Tape Preferences
 
 - Source commit: `6765dd2196221816ea9149916f295ea58112d210`

@@ -2,10 +2,10 @@
 
 Last updated: 2026-07-17 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Packet 64 tools mobile landing is verified locally and awaiting review.
+Current phase: Packet 64 tools mobile landing is deployed and production-verified.
 Active packet: `docs/delivery/packets/64_TOOLS_MOBILE_LANDING.md`
-Repository branch: `codex/tools-field-tray` (off `master` at `1aafee1`)
-Production feature release commit: `64b48833aa1498e3dc9438ea9989790580a31bbd`
+Repository branch: `master` (fast-forwarded from `codex/tools-field-tray`)
+Production feature release commit: `c2f02632285735f7d0a19b2979370ae55d239dca`
 
 ## Packet 64 - Tools Mobile Landing
 
@@ -24,8 +24,13 @@ Production feature release commit: `64b48833aa1498e3dc9438ea9989790580a31bbd`
   aggregate exceeded the local ten-minute command limit without printing a
   failure; its direct unit and E2E components pass.
 - No server, schema, authentication, authorization, storage, billing,
-  moderation, or production data behavior changes are included. Deployment is
-  intentionally pending review of this branch.
+  moderation, or production data behavior changes are included.
+- Deployment evidence: `codex/tools-field-tray` fast-forwarded into `master`;
+  live `https://rivt.pro/api/health` served exact source
+  `c2f02632285735f7d0a19b2979370ae55d239dca` with ready migration
+  `0028_compensation_workflow`, PostgreSQL, S3-compatible storage, configured
+  Sentry, and configured Web Push. `npm run monitor:production` passed with
+  operational controls open and seven anonymous private-route checks in 617 ms.
 
 ## Packet 63 - Invoice Delivery and Records
 

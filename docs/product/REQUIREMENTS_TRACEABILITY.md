@@ -1714,5 +1714,9 @@ Evidence must eventually link to implementation, automated tests, manual accepta
 - Local evidence: build, lint, all 58 unit/frontend tests, E2E, rendered
   Tools UI, mobile-action UI, and dependency audit pass. The aggregate
   `npm run test` command exceeded the local ten-minute limit without printing
-  a failure; no full PostgreSQL integration pass is claimed. Deployment
-  evidence is intentionally absent until merge.
+  a failure; no full PostgreSQL integration pass is claimed.
+- `GA-OPS-008` gains production evidence: `master` serves exact source
+  `c2f02632285735f7d0a19b2979370ae55d239dca`; live health reports ready
+  migration `0028_compensation_workflow`, PostgreSQL, S3-compatible storage,
+  configured Sentry, and configured Web Push. The production monitor passed
+  with operational controls open and seven anonymous private-route checks.
