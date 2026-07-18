@@ -395,13 +395,13 @@ async function assertToolsFlow(page) {
   const primaryTool = (name) => page.locator(".v2-tool-launch-card").filter({ hasText: name }).first();
   const fieldToolsTray = page.getByLabel("Field shortcuts", { exact: true });
   await fieldToolsTray.getByRole("button", { name: "Heavy 16th", exact: true }).waitFor();
-  assert.equal(await page.locator(".v2-tool-launch-card").count(), 2, "Tools hub should keep only the unpinned core apps in the main grid");
-  assert.equal(await page.locator(".v2-tool-group").count(), 1, "Tools hub should consolidate supporting helpers into one Utilities drawer");
-  await page.locator(".v2-tool-group").filter({ hasText: "Utilities" }).locator("summary").click();
+  assert.equal(await page.locator(".v2-tool-launch-card").count(), 5, "Tools hub should make all five core apps visible in the main launcher");
+  assert.equal(await page.locator(".v2-tool-group").count(), 1, "Tools hub should consolidate supporting helpers into one More tools drawer");
+  await page.locator(".v2-tool-group").filter({ hasText: "More tools" }).locator("summary").click();
   await page.getByRole("button", { name: /Materials/i }).waitFor();
   assert.equal(await page.getByRole("button", { name: /Receivables/i }).count(), 0, "Receivables should be contained inside Invoice");
   assert.equal(await page.getByRole("button", { name: /Safety/i }).count(), 0, "Safety should live inside Jobsite");
-  await page.getByRole("button", { name: /Jobsite/i }).waitFor();
+  await primaryTool("Jobsite").waitFor();
   await fieldToolsTray.getByRole("button", { name: "Heavy 16th", exact: true }).click();
   await page.getByRole("heading", { name: "Heavy 16th field calculator" }).waitFor();
   await page.getByLabel("Length calculator").getByText("Decimal", { exact: true }).waitFor();

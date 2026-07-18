@@ -2,10 +2,30 @@
 
 Last updated: 2026-07-17 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Packet 63 invoice delivery and records is deployed.
-Active packet: `docs/delivery/packets/63_INVOICE_DELIVERY_AND_RECORDS.md`
-Repository branch: `master` (merged from `codex/invoice-delivery-release`)
+Current phase: Packet 64 tools mobile landing is verified locally and awaiting review.
+Active packet: `docs/delivery/packets/64_TOOLS_MOBILE_LANDING.md`
+Repository branch: `codex/tools-field-tray` (off `master` at `1aafee1`)
 Production feature release commit: `64b48833aa1498e3dc9438ea9989790580a31bbd`
+
+## Packet 64 - Tools Mobile Landing
+
+- The Tools hub now keeps all five core apps in the scrollable page: Camera,
+  Heavy 16th, Jobsite, Estimate, and Invoice. The page no longer relies on a
+  fixed tray to make field tools discoverable or leaves a tall empty handset
+  viewport below two cards.
+- The fixed bottom tray remains a fast, one-hand shortcut set. Its compact
+  `Edit` affordance stays visible on phones, so a field user can choose their
+  three pinned tools without switching to desktop.
+- The fourth tray action is now `More`, not a misleading plus-labeled
+  `Utilities` button. It opens the real More tools section and moves focus to
+  it; the controlled section state keeps that result visible after scrolling.
+- Build, lint, all 58 unit/frontend tests, E2E, rendered Tools UI,
+  mobile-action UI, and dependency audit pass locally. The full `npm run test`
+  aggregate exceeded the local ten-minute command limit without printing a
+  failure; its direct unit and E2E components pass.
+- No server, schema, authentication, authorization, storage, billing,
+  moderation, or production data behavior changes are included. Deployment is
+  intentionally pending review of this branch.
 
 ## Packet 63 - Invoice Delivery and Records
 

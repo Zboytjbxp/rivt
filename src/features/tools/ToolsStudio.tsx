@@ -3,6 +3,7 @@ import {
   ArrowRight,
   Calculator,
   Car,
+  ChevronDown,
   CheckCircle2,
   CheckSquare,
   Clipboard,
@@ -222,15 +223,25 @@ function ToolMiniCard({
 function ToolUtilitiesSection({
   tools,
   onOpen,
+  open,
+  onOpenChange,
 }: {
   tools: ToolLauncher[];
   onOpen: (tool: LaunchableToolMode) => void;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }) {
   return (
-    <details className="v2-tool-group" aria-label="Utilities">
+    <details
+      id="tools-more-tools"
+      className="v2-tool-group"
+      aria-label="More tools"
+      open={open}
+      onToggle={(event) => onOpenChange(event.currentTarget.open)}
+    >
       <summary className="v2-tool-group-summary">
         <span className="v2-tool-group-header">
-          <strong>Utilities</strong>
+          <strong>More tools</strong>
           <small>{tools.length} focused helpers</small>
         </span>
         <ArrowRight size={16} aria-hidden="true" />
@@ -340,6 +351,7 @@ function FieldToolsTray({
   onOpen,
   onToggleEditing,
   onChange,
+  onOpenMoreTools,
 }: {
   tools: LaunchableToolMode[];
   allTools: ToolLauncher[];
@@ -347,6 +359,7 @@ function FieldToolsTray({
   onOpen: (tool: LaunchableToolMode) => void;
   onToggleEditing: () => void;
   onChange: (tools: LaunchableToolMode[]) => void;
+  onOpenMoreTools: () => void;
 }) {
   const pinned = tools.map((mode) => allTools.find((tool) => tool.mode === mode)).filter((tool): tool is ToolLauncher => Boolean(tool));
 
@@ -384,8 +397,8 @@ function FieldToolsTray({
             const Icon = tool.icon;
             return <button key={tool.mode} type="button" onClick={() => onOpen(tool.mode)}><Icon size={19} /><span>{tool.title}</span></button>;
           })}
-          <button type="button" className="v2-field-tools-all" onClick={() => document.querySelector<HTMLElement>(".v2-tool-group")?.scrollIntoView({ behavior: "smooth", block: "start" })}>
-            <Plus size={19} /><span>Utilities</span>
+          <button type="button" className="v2-field-tools-all" onClick={onOpenMoreTools}>
+            <ChevronDown size={19} /><span>More</span>
           </button>
         </div>
       )}
@@ -432,6 +445,20 @@ const UTILITY_TOOL_LAUNCHERS: ToolLauncher[] = [
   { mode: "materials", icon: Package2, title: "Materials", summary: "Takeoff, sheets, and saved prices." },
   { mode: "time-costs", icon: RefreshCw, title: "Time & costs", summary: "Time, expenses, mileage, and summary." },
 ];
+
+const FIELD_TOOL_MODES = new Set<LaunchableToolMode>([
+  "job-photos",
+  "calculator",
+  "jobsite",
+]);
+
+const FIELD_TOOL_LAUNCHERS = PRIMARY_TOOL_LAUNCHERS.filter((tool) =>
+  FIELD_TOOL_MODES.has(tool.mode),
+);
+
+const MONEY_TOOL_LAUNCHERS = PRIMARY_TOOL_LAUNCHERS.filter(
+  (tool) => !FIELD_TOOL_MODES.has(tool.mode),
+);
 
 interface MileageEntry {
   id: string;
@@ -3011,6 +3038,7 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
   const activeJobsiteView = jobsiteViewForMode(openTool) ?? jobsiteView;
   const [fieldTools, setFieldTools] = useState(readFieldTools);
   const [fieldToolsEditing, setFieldToolsEditing] = useState(false);
+  const [moreToolsOpen, setMoreToolsOpen] = useState(false);
   const [cameraContextRequest, setCameraContextRequest] = useState(0);
   const [cameraAlbums, setCameraAlbums] = useState<PhotoAlbum[]>([]);
   const [cameraAlbumsLoading, setCameraAlbumsLoading] = useState(false);
@@ -3041,10 +3069,6 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
   const fieldNoteCount = selectedProject?.entries.filter((entry) => entry.entryType === "note").length ?? 0;
   const latestEntry = selectedProject?.entries.at(-1) ?? null;
   const actionBusy = Boolean(projectAction);
-  const unpinnedPrimaryTools = useMemo(
-    () => PRIMARY_TOOL_LAUNCHERS.filter((tool) => !fieldTools.includes(tool.mode)),
-    [fieldTools],
-  );
   const activeWork = activeWorkRecords.length ? activeWorkRecords : fetchedActiveWork;
   const orderedActiveWork = useMemo(
     () => focusedActiveWorkFirst(activeWork, focusedActiveWorkId),
@@ -3268,6 +3292,13 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
 
   function openToolFromHub(tool: LaunchableToolMode) {
     setActiveTool(tool);
+  }
+
+  function openMoreTools() {
+    setMoreToolsOpen(true);
+    requestAnimationFrame(() => {
+      document.getElementById("tools-more-tools")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
   }
 
   function updateFieldTools(nextTools: LaunchableToolMode[]) {
@@ -3870,7 +3901,7 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
         title="Tools"
       />
 
-      <div className="v2-tool-section-stack">
+      <div className={moreToolsOpen ? "v2-tool-section-stack is-more-open" : "v2-tool-section-stack"}>
         <FieldToolsTray
           tools={fieldTools}
           allTools={allToolLaunchers()}
@@ -3878,13 +3909,15 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
           onOpen={openToolFromHub}
           onToggleEditing={() => setFieldToolsEditing((editing) => !editing)}
           onChange={updateFieldTools}
+          onOpenMoreTools={openMoreTools}
         />
-        {unpinnedPrimaryTools.length ? <section className="v2-tool-section" aria-label="Core apps">
+        <section className="v2-tool-section" aria-label="Field tools">
           <div className="v2-tool-section-header is-simple">
-            <strong>Core apps</strong>
+            <strong>Field tools</strong>
+            <small>Camera, Heavy 16th, and Jobsite</small>
           </div>
           <div className="v2-tool-launch-grid">
-            {unpinnedPrimaryTools.map((tool) => (
+            {FIELD_TOOL_LAUNCHERS.map((tool) => (
               <ToolCard
                 key={tool.mode}
                 icon={tool.icon}
@@ -3894,9 +3927,32 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
               />
             ))}
           </div>
-        </section> : null}
+        </section>
 
-        <ToolUtilitiesSection tools={UTILITY_TOOL_LAUNCHERS} onOpen={openToolFromHub} />
+        <section className="v2-tool-section" aria-label="Money tools">
+          <div className="v2-tool-section-header is-simple">
+            <strong>Money</strong>
+            <small>Estimate and invoice</small>
+          </div>
+          <div className="v2-tool-launch-grid">
+            {MONEY_TOOL_LAUNCHERS.map((tool) => (
+              <ToolCard
+                key={tool.mode}
+                icon={tool.icon}
+                title={tool.title}
+                summary={tool.summary}
+                onAction={() => openToolFromHub(tool.mode)}
+              />
+            ))}
+          </div>
+        </section>
+
+        <ToolUtilitiesSection
+          tools={UTILITY_TOOL_LAUNCHERS}
+          onOpen={openToolFromHub}
+          open={moreToolsOpen}
+          onOpenChange={setMoreToolsOpen}
+        />
 
       </div>
 

@@ -504,11 +504,16 @@ async function runToolsFlow(page, viewportName) {
   assert.equal(
     await fieldToolsTray.locator(".v2-field-tools-actions > button").count(),
     4,
-    "Field shortcuts should contain three user tools and one Utilities jump",
+    "Field shortcuts should contain three user tools and one More tools control",
   );
-  assert.equal(await page.locator(".v2-tool-launch-card").count(), 2, "Pinned defaults should not repeat in the core-app launcher");
-  assert.equal(await page.locator(".v2-tool-group").count(), 1, "Supporting helpers should live in one utilities drawer");
-  await page.locator(".v2-tool-group").filter({ hasText: "Utilities" }).locator("summary").click();
+  assert.equal(await page.locator(".v2-tool-launch-card").count(), 5, "Tools hub should show all five core apps instead of leaving the page mostly empty");
+  assert.equal(await page.locator(".v2-tool-group").count(), 1, "Supporting helpers should live in one More tools drawer");
+  if (isHandsetViewport) {
+    await fieldToolsTray.getByRole("button", { name: "Edit" }).click();
+    await page.getByLabel("Choose up to three field tools").waitFor({ timeout: 15_000 });
+    await fieldToolsTray.getByRole("button", { name: "Done" }).click();
+  }
+  await page.locator(".v2-tool-group").filter({ hasText: "More tools" }).locator("summary").click();
   await page.getByRole("button", { name: /Materials/i }).waitFor({ timeout: 15_000 });
   await page.getByRole("button", { name: /Time & costs/i }).waitFor({ timeout: 15_000 });
   assert.equal(
@@ -563,7 +568,7 @@ async function runToolsFlow(page, viewportName) {
     );
   }
   await page.getByLabel("Time & costs").getByRole("button", { name: "All tools" }).click();
-  await page.locator(".v2-tool-group").filter({ hasText: "Utilities" }).locator("summary").click();
+  await page.locator(".v2-tool-group").filter({ hasText: "More tools" }).locator("summary").click();
 
   await page.getByRole("button", { name: /Materials/i }).click();
   await page.getByRole("heading", { name: "Materials", exact: true }).waitFor({ timeout: 15_000 });
@@ -725,12 +730,12 @@ async function runToolsFlow(page, viewportName) {
   await page.getByLabel("Recipient email").fill("billing@example.com");
   await page.getByLabel("Recipient phone").fill("+19045550123");
   await invoiceDraftSteps.getByRole("button", { name: "3 Review" }).click();
-  await page.getByRole("link", { name: "Email draft" }).waitFor({ timeout: 15_000 });
-  await page.getByRole("link", { name: "Text draft" }).waitFor({ timeout: 15_000 });
+  await page.getByRole("button", { name: "Email invoice" }).waitFor({ timeout: 15_000 });
+  await page.getByRole("link", { name: "Text summary" }).waitFor({ timeout: 15_000 });
   await page.getByRole("heading", { name: "Preview before delivery" }).waitFor({ timeout: 15_000 });
   await page.getByLabel("Printable invoice preview").getByText("Total due", { exact: true }).waitFor({ timeout: 15_000 });
-  await page.getByText("Email and text open on your device.", { exact: false }).waitFor({ timeout: 15_000 });
-  await page.getByRole("button", { name: "Print / save PDF" }).waitFor({ timeout: 15_000 });
+  await page.getByText("Email sends a finished invoice from RIVT", { exact: false }).waitFor({ timeout: 15_000 });
+  await page.getByRole("button", { name: "Print or Save PDF" }).waitFor({ timeout: 15_000 });
   if (isHandsetViewport) {
     await assertImmersiveToolChromeHidden(page, "invoice draft");
   }

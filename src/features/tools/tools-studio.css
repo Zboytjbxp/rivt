@@ -10849,3 +10849,63 @@ html[data-rivt-compact-device="true"] .v2-tools-app.is-calculator-fullscreen .fr
     font-size: 18px;
   }
 }
+
+/* Keep the mobile field tray understandable and configurable without turning
+   the landing into a second toolbar. */
+@media (max-width: 900px) {
+  .v2-tools-page {
+    padding-bottom: calc(190px + env(safe-area-inset-bottom));
+  }
+
+  .v2-tools-page .v2-field-tools-tray:not(.is-editing) .v2-field-tools-tray-header {
+    display: flex;
+  }
+
+  .v2-tools-page .v2-field-tools-tray-header {
+    min-height: 32px;
+    padding-inline: 4px;
+  }
+
+  .v2-tools-page .v2-field-tools-tray-header > span {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+  }
+
+  .v2-tools-page .v2-field-tools-tray-header small {
+    display: none;
+  }
+
+  .v2-tools-page .v2-field-tools-tray-header strong {
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .v2-tools-page .v2-field-tools-tray-header > button {
+    min-height: 36px;
+    padding-inline: 8px;
+    border: 1px solid var(--v2-border);
+    border-radius: var(--v2-radius-sm);
+    background: var(--v2-surface-muted);
+  }
+
+  .v2-tools-page .v2-field-tools-tray.is-editing {
+    max-height: calc(100dvh - 146px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+}
+
+/* A tall phone should still read as a complete launcher, not a short list
+   stranded above the fixed one-hand shortcut tray. */
+@media (max-width: 900px) and (min-height: 760px) {
+  .v2-tools-page .v2-tool-section-stack:not(.is-more-open) {
+    min-height: calc(100dvh - 226px);
+    align-content: space-between;
+  }
+
+  .v2-tools-page .v2-tool-section-stack.is-more-open {
+    align-content: start;
+  }
+}

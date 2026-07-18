@@ -397,7 +397,7 @@ async function runMobileFlow(page) {
   const primaryInvoiceTool = page.locator(".v2-tool-launch-card").filter({ hasText: "Invoice" }).first();
   await primaryInvoiceTool.waitFor({ timeout: 15_000 });
   await page.getByLabel("Field shortcuts").getByRole("button", { name: "Camera", exact: true }).waitFor({ timeout: 15_000 });
-  assert.equal(await page.locator(".v2-tool-launch-card").count(), 2, "mobile Tools hub should keep only the unpinned core apps in the main grid");
+  assert.equal(await page.locator(".v2-tool-launch-card").count(), 5, "mobile Tools hub should keep all five core apps visible without relying on the shortcut tray");
   assert.equal(await page.locator(".v2-tool-mini-card").count(), 2, "mobile Tools hub should expose only the remaining supporting tool set");
   assert.equal(await page.locator(".v2-tool-mini-card").filter({ hasText: "Time & costs" }).count(), 1, "Time & costs should replace the separate record helpers");
   assert.equal(await page.getByLabel("Field shortcuts").getByRole("button", { name: "Jobsite", exact: true }).count(), 1, "Jobsite should replace separate daily log, punch, and safety launchers in the field tray");

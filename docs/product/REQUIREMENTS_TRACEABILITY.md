@@ -1699,3 +1699,20 @@ Evidence must eventually link to implementation, automated tests, manual accepta
   `279a21bdd58091d0147d7dda9242a19ee210e54b`; the production monitor passed
   with PostgreSQL, S3-compatible storage, Sentry, Web Push, matching-job
   alerts, and all seven anonymous private-route checks healthy.
+
+# Traceability Addendum - 2026-07-17 Tools Mobile Landing
+
+- `GA-UX-003` gains mobile tool-discovery evidence: Camera, Heavy 16th,
+  Jobsite, Estimate, and Invoice remain visible as in-flow core apps, while
+  the field tray acts as a configurable shortcut rather than hidden primary
+  navigation.
+- `GA-UX-006` gains handset customization coverage: the field-tools Edit
+  control and picker remain reachable at mobile widths; More opens the real
+  utility surface with an unambiguous action label.
+- No requirement maturity change and no server, schema, authorization,
+  authentication, billing, storage, or moderation change.
+- Local evidence: build, lint, all 58 unit/frontend tests, E2E, rendered
+  Tools UI, mobile-action UI, and dependency audit pass. The aggregate
+  `npm run test` command exceeded the local ten-minute limit without printing
+  a failure; no full PostgreSQL integration pass is claimed. Deployment
+  evidence is intentionally absent until merge.
