@@ -1661,6 +1661,21 @@ Evidence must eventually link to implementation, automated tests, manual accepta
   in 591 ms with PostgreSQL, S3-compatible storage, Sentry, Web Push,
   matching-job alerts, and all seven anonymous private-route checks healthy.
 
+# Traceability Addendum - 2026-07-17 Invoice Delivery and Records
+
+- `GA-UX-003` gains invoice-delivery evidence: a reviewed invoice is saved as
+  an account-owned record before delivery, and the UI separately names
+  `Save draft`, `Email invoice`, and `Print or Save PDF`.
+- `GA-OPS-007` gains provider-confirmed delivery evidence: recipient,
+  provider message id, attempt count, and delivery failure state are retained
+  only after the transactional provider responds.
+- No payment processing, escrow, tax automation, or client-payment claim is
+  introduced. The invoice continues to state the direct-payment boundary.
+- Local evidence: build, scoped lint, 58 unit/frontend tests, E2E,
+  mobile-action UI, targeted PostgreSQL invoice integration, and dependency
+  audit pass. The full integration aggregate exceeded the local ten-minute
+  command window without reporting a failure.
+
 # Traceability Addendum - 2026-07-17 Tool Context and Estimate Dock Usability
 
 - `GA-UX-003` gains exact-context evidence: the tool destination picker

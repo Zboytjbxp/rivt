@@ -2,10 +2,29 @@
 
 Last updated: 2026-07-17 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Packet 62 tool context and Estimate dock usability is complete and deployed.
-Active packet: `docs/delivery/packets/62_TOOL_CONTEXT_AND_ESTIMATE_DOCK_USABILITY.md`
-Repository branch: `codex/context-dock-fix` (base: `origin/master` at `8f5c494`)
-Production feature release commit: `279a21bdd58091d0147d7dda9242a19ee210e54b`
+Current phase: Packet 63 invoice delivery and records is ready for release verification.
+Active packet: `docs/delivery/packets/63_INVOICE_DELIVERY_AND_RECORDS.md`
+Repository branch: `codex/invoice-delivery-release` (base: `origin/master`)
+Production feature release commit: pending Packet 63 deployment
+
+## Packet 63 - Invoice Delivery and Records
+
+- Invoice now saves a server-owned customer-facing snapshot before email is
+  attempted. The review flow distinguishes `Save draft`, `Email invoice`, and
+  `Print or Save PDF` so printing is no longer misrepresented as delivery.
+- Email is accepted only after the configured transactional provider responds;
+  recipient, provider message id, attempt count, success, and failure state
+  are persisted on the account-owned invoice record.
+- Delivery is idempotent and account-scoped. Customer email includes the
+  invoice lines, total, terms, and direct-payment boundary, while internal
+  pricing mechanics remain private.
+- Local verification: build, scoped lint, 58 unit/frontend tests, E2E,
+  mobile-action UI, targeted PostgreSQL invoice integration, and dependency
+  audit pass. The full integration aggregate exceeded the local ten-minute
+  command window without reporting a failure; deployment and production
+  monitoring remain pending.
+- No payment processing, escrow, payment verification, or tax automation is
+  introduced. R-023 remains unchanged.
 
 ## Packet 62 - Tool Context and Estimate Dock Usability
 

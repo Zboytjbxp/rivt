@@ -6,7 +6,7 @@ import { readPrimaryHourlyRate } from "../../lib/rateCard";
 import type { EstimateInvoiceDraft } from "./EstimateTool";
 import { clampNumber, currency, formatQuantity, toCents, centsToDollars } from "./money";
 import { getInvoiceLinePriceSignal } from "./priceGuidance";
-import { deleteToolRecordByLocalId, fetchToolRecords, upsertToolRecord, type ServerToolRecord } from "./tool-records-api";
+import { deleteToolRecordByLocalId, fetchToolRecords, sendInvoiceByLocalId, upsertToolRecord, type ServerToolRecord, type ToolRecordInput } from "./tool-records-api";
 import {
   createProjectInvoice,
   getProjectForActiveWork,
@@ -217,6 +217,7 @@ export function InvoiceDraftTool({
   const [projectInvoiceBusy, setProjectInvoiceBusy] = useState(false);
   const [projectInvoiceNotice, setProjectInvoiceNotice] = useState("");
   const [projectInvoiceError, setProjectInvoiceError] = useState("");
+  const [invoiceEmailBusy, setInvoiceEmailBusy] = useState(false);
   const [paymentAmount, setPaymentAmount] = useState("");
   const [paymentMethodDraft, setPaymentMethodDraft] = useState("Direct payment");
   const [paymentNote, setPaymentNote] = useState("");
@@ -259,7 +260,6 @@ export function InvoiceDraftTool({
     `Payment method: ${paymentMethod}`,
     "RIVT records direct-payment details only. RIVT does not process, escrow, or hold job payments.",
   ].join("\n"), [billTo, invoiceNumber, lines, paymentMethod, payTo, subtotal, tax, terms, total, workContext]);
-  const emailHref = `mailto:${encodeURIComponent(recipientEmail)}?subject=${encodeURIComponent(`Invoice ${invoiceNumber}`)}&body=${encodeURIComponent(invoiceText)}`;
   const smsHref = `sms:${encodeURIComponent(recipientPhone)}?body=${encodeURIComponent(`RIVT invoice ${invoiceNumber}: ${currency(total)} due. ${terms}. ${paymentMethod}.`)}`;
 
   useEffect(() => {
@@ -446,28 +446,42 @@ export function InvoiceDraftTool({
     };
   }
 
-  async function saveInvoiceDraft() {
-    if (activeWorkId) {
-      if (projectInvoice) {
-        setDraftSaveMessage("Already saved to this RIVT workspace.");
-        return;
-      }
-      const saved = await saveToActiveWork();
-      setDraftSaveMessage(saved ? "Saved to this RIVT workspace." : "The invoice could not be saved to this workspace.");
-      return;
-    }
+  function invoiceToolRecordInput(): ToolRecordInput {
     const snapshot: InvoiceDraftSnapshot = { invoiceNumber, billTo, payTo, terms, paymentMethod, recipientEmail, recipientPhone, taxPct, templateName, lines };
-    const record = await upsertToolRecord({
+    return {
       recordType: "invoice_draft",
       localId: `invoice:${toolContextStorageId(workContext)}`,
-      title: `${toolContextLabel(workContext)} invoice`,
+      title: `${invoiceNumber || "RIVT-DRAFT"} - ${toolContextLabel(workContext)}`,
       status: "draft",
       recordDate: new Date().toISOString().slice(0, 10),
       amountCents: totalCents,
-      payload: { ...snapshot },
+      payload: {
+        ...snapshot,
+        recipientName: billTo.trim(),
+        workLabel: toolContextLabel(workContext),
+        customerLines: lines.map((line) => ({
+          description: line.description.trim() || "Line item",
+          quantity: numericValue(line.qty),
+          totalCents: lineTotalCents(line),
+        })),
+      },
       ...toolContextRecordFields(workContext),
-    });
-    setDraftSaveMessage(record ? "Draft saved to your RIVT account." : "Saved on this device only. Account sync failed.");
+    };
+  }
+
+  async function saveInvoiceDraft(): Promise<ServerToolRecord | null> {
+    const record = await upsertToolRecord(invoiceToolRecordInput());
+    if (!record) {
+      setDraftSaveMessage("Draft kept on this device. RIVT account sync failed.");
+      return null;
+    }
+    if (activeWorkId && !projectInvoice) {
+      const savedToWork = await saveToActiveWork();
+      setDraftSaveMessage(savedToWork ? "Draft saved to this job and your RIVT account." : "Draft saved to your RIVT account. It could not be added to the job workspace.");
+      return record;
+    }
+    setDraftSaveMessage(activeWorkId ? "Draft saved to this job and your RIVT account." : "Draft saved to your RIVT account.");
+    return record;
   }
 
   async function saveToActiveWork() {
@@ -546,13 +560,38 @@ export function InvoiceDraftTool({
     window.print();
   }
 
-  function noteDeliveryDraft(channel: "email" | "text") {
-    const label = channel === "email" ? "Email" : "Text";
-    setDraftSaveMessage(
-      activeWorkId
-        ? `${label} draft opened. Send it from your device, then mark the job invoice sent.`
-        : `${label} draft opened. Send it from your device; this invoice stays saved in RIVT.`,
-    );
+  async function emailInvoice() {
+    if (!recipientEmail.trim()) {
+      setStep("customer");
+      setDraftSaveMessage("Add a customer email before sending.");
+      return;
+    }
+    if (!totalCents) {
+      setStep("items");
+      setDraftSaveMessage("Add at least one priced line before sending.");
+      return;
+    }
+    setInvoiceEmailBusy(true);
+    const record = await saveInvoiceDraft();
+    if (!record) {
+      setInvoiceEmailBusy(false);
+      return;
+    }
+    try {
+      const sent = await sendInvoiceByLocalId(record.localId);
+      const delivery = sent.payload.delivery;
+      const recipient = delivery
+        && typeof delivery === "object"
+        && "recipientEmail" in delivery
+        && typeof delivery.recipientEmail === "string"
+        ? delivery.recipientEmail
+        : recipientEmail.trim();
+      setDraftSaveMessage(`Invoice emailed to ${recipient}.`);
+    } catch (error) {
+      setDraftSaveMessage(error instanceof Error ? error.message : "RIVT could not send the invoice.");
+    } finally {
+      setInvoiceEmailBusy(false);
+    }
   }
 
   return (
@@ -699,32 +738,23 @@ export function InvoiceDraftTool({
             <div><span>Method</span><strong>{paymentMethod}</strong></div>
           </div>
           <p className="v2-tool-note">
-            {activeWorkId
-              ? "Email and text open on your device. After delivery, mark the job invoice sent in its private work record."
-              : "Email and text open on your device. RIVT keeps this invoice saved, but does not send it for you."}
+            Email sends a finished invoice from RIVT and records delivery here. Text opens your device's message draft.
           </p>
           <div className="v2-invoice-delivery" aria-label="Invoice draft delivery">
-            <a href={recipientEmail ? emailHref : undefined} aria-disabled={!recipientEmail} onClick={(event) => {
-              if (!recipientEmail) {
-                event.preventDefault();
-                setDraftSaveMessage("Add a recipient email before opening an email draft.");
-                return;
-              }
-              noteDeliveryDraft("email");
-            }}>
+            <button type="button" onClick={() => void emailInvoice()} disabled={invoiceEmailBusy || totalCents <= 0}>
               <Mail size={15} />
-              Email draft
-            </a>
+              {invoiceEmailBusy ? "Sending invoice..." : "Email invoice"}
+            </button>
             <a href={recipientPhone ? smsHref : undefined} aria-disabled={!recipientPhone} onClick={(event) => {
               if (!recipientPhone) {
                 event.preventDefault();
                 setDraftSaveMessage("Add a recipient phone number before opening a text draft.");
                 return;
               }
-              noteDeliveryDraft("text");
+              setDraftSaveMessage("Text draft opened on this device.");
             }}>
               <MessageSquare size={15} />
-              Text draft
+              Text summary
             </a>
           </div>
         </Panel>
@@ -774,14 +804,14 @@ export function InvoiceDraftTool({
           </article>
           <div className="v2-invoice-preview-actions" aria-label="Invoice preview actions">
             <button type="button" className="v2-secondary-button" onClick={() => void copyInvoice()}><Copy size={16} />Copy invoice</button>
-            <button type="button" className="v2-secondary-button" onClick={printInvoice}><FileText size={16} />Print / save PDF</button>
+            <button type="button" className="v2-secondary-button" onClick={printInvoice}><FileText size={16} />Print or Save PDF</button>
           </div>
         </Panel>
       </aside> : null}
       <div className="v2-tool-action-dock" aria-label="Invoice actions">
         <span><strong>{currency(total)}</strong><small>{draftSaveMessage}</small></span>
         {step !== "items" ? <button type="button" onClick={() => setStep(step === "review" ? "customer" : "items")} aria-label="Previous invoice step"><ChevronLeft size={18} /></button> : null}
-        <button type="button" className="v2-primary-button" onClick={() => void saveInvoiceDraft()} disabled={projectInvoiceBusy || totalCents <= 0}><Save size={18} />Save</button>
+        <button type="button" className="v2-primary-button" onClick={() => void saveInvoiceDraft()} disabled={projectInvoiceBusy || totalCents <= 0 || invoiceEmailBusy}><Save size={18} />Save draft</button>
         {step === "items" ? <button type="button" className="v2-primary-button" onClick={() => setStep("customer")} disabled={totalCents <= 0}><span>Customer</span><ChevronRight size={18} /></button> : null}
         {step === "customer" ? <button type="button" className="v2-primary-button" onClick={() => setStep("review")}><span>Review</span><ChevronRight size={18} /></button> : null}
         {step === "review" ? <button type="button" onClick={copyInvoice} aria-label="Copy invoice"><Copy size={18} /></button> : null}

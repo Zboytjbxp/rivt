@@ -2175,7 +2175,8 @@
   gap: 8px;
 }
 
-.v2-invoice-delivery a {
+.v2-invoice-delivery a,
+.v2-invoice-delivery button {
   display: inline-flex;
   min-height: 44px;
   align-items: center;
@@ -2186,12 +2187,15 @@
   border-radius: var(--v2-radius-md);
   background: color-mix(in srgb, var(--v2-surface-muted) 76%, transparent);
   color: var(--v2-text);
+  font-family: inherit;
   font-size: 13px;
   font-weight: var(--v2-weight-bold);
   text-decoration: none;
+  cursor: pointer;
 }
 
-.v2-invoice-delivery a[aria-disabled="true"] {
+.v2-invoice-delivery a[aria-disabled="true"],
+.v2-invoice-delivery button:disabled {
   cursor: not-allowed;
   opacity: 0.52;
 }
