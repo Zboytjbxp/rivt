@@ -49,6 +49,7 @@ import {
 } from "./community-utils";
 import { apiPath, fetchWithTimeout } from "../../lib/api";
 import { DialogBackdrop, DialogSurface } from "../../components/ui";
+import { ZoomableImage } from "../../components/ZoomableImage";
 import "./shop-talk.css";
 
 interface AccountProfile {
@@ -557,7 +558,11 @@ function ShopTalkNewPostModal({
           {photoError && <p className="shop-post-media-error">{photoError}</p>}
           {photoPreviewUrl && (
             <figure className="shop-post-photo-preview">
-              <img src={photoPreviewUrl} alt={photoFile?.name ?? "Selected Shop Talk post"} />
+              <ZoomableImage
+                src={photoPreviewUrl}
+                alt={photoFile?.name ?? "Selected Shop Talk post"}
+                viewerLabel="Preview post photo"
+              />
               <figcaption>{photoFile?.name}</figcaption>
             </figure>
           )}
@@ -1488,10 +1493,11 @@ export function ShopTalkView({
                   {selectedPost.body && <p>{selectedPost.body}</p>}
                   {selectedPost.thumbnailUrl && (
                     <figure className="shop-question-media">
-                      <img
+                      <ZoomableImage
                         src={selectedPost.thumbnailUrl}
                         alt={selectedPost.thumbnailAlt ?? ""}
                         loading="lazy"
+                        viewerLabel="Open post photo"
                       />
                     </figure>
                   )}
@@ -1708,7 +1714,12 @@ export function ShopTalkView({
                       <span>{newsSourceInitials(selectedNews.source)}</span>
                     </div>
                   ) : (
-                    <img src={selectedNews.thumbnailUrl} alt={`${selectedNews.source} article image`} loading="lazy" />
+                    <ZoomableImage
+                      src={selectedNews.thumbnailUrl}
+                      alt={`${selectedNews.source} article image`}
+                      loading="lazy"
+                      viewerLabel="Open article image"
+                    />
                   )}
                   <div className="news-detail-hero-copy">
                     <span className="news-detail-source">{selectedNews.source}</span>

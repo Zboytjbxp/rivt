@@ -2,10 +2,22 @@
 
 Last updated: 2026-07-19 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Packet 66 accessible display modes is deployed and verified.
-Active packet: `docs/delivery/packets/66_ACCESSIBLE_DISPLAY_MODES.md`
-Repository branch: `master`
+Current phase: Packet 67 saved-media pinch zoom is implemented and pending review.
+Active packet: `docs/delivery/packets/67_SAVED_MEDIA_PINCH_ZOOM.md`
+Repository branch: `codex/photo-pinch-zoom`
 Production feature release commit: `955d43cfcadbb47f613fc941245d446d6c46fffe`
+
+## Packet 67 - Saved Media Pinch Zoom (Pending Review)
+
+- Saved photos now open in a full-screen inspector from Shop Talk post detail,
+  Trade News detail, job-photo detail, and punch-list proof instead of relying
+  on browser page zoom for inspection.
+- The viewer supports 1x-4x pinch zoom, drag while enlarged, double-tap zoom,
+  Escape to close, and reachable bottom zoom controls for one-handed use.
+- Feed and gallery thumbnails keep their established navigation behavior; a
+  deliberate media tap opens the viewer only where an image is already the
+  primary subject of the detail surface.
+- No server, data-model, authorization, or account-state behavior changes.
 
 ## Packet 66 - Accessible Display Modes
 

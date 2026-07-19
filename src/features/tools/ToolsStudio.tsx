@@ -27,6 +27,7 @@ import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointer
 import type { Job } from "../../types";
 import type { PrimaryDestination } from "../../app-shell/types";
 import { EmptyState, MetricTile, PageHeader, Panel } from "../../components/ui";
+import { ZoomableImage } from "../../components/ZoomableImage";
 import { readPrimaryHourlyRate } from "../../lib/rateCard";
 import { listActiveWork, type CanonicalActiveWork } from "../work/job-api";
 import {
@@ -1235,7 +1236,12 @@ function PunchListTool() {
           {resolved && item.resolvedAt && <small className="v2-punchv2-resolved-date">Resolved {new Date(item.resolvedAt).toLocaleDateString()}</small>}
         </div>
         {item.photoUrl && (
-          <img src={item.photoUrl} alt="Deficiency photo" className="v2-punchv2-photo" />
+          <ZoomableImage
+            src={item.photoUrl}
+            alt="Deficiency photo"
+            className="v2-punchv2-photo"
+            viewerLabel="Open punch-list photo"
+          />
         )}
         <div className="v2-punchv2-item-actions">
           {!resolved && (
@@ -1294,7 +1300,14 @@ function PunchListTool() {
               reader.readAsDataURL(file);
             }} />
           </label>
-          {photoUrl && <img src={photoUrl} alt="Preview" className="v2-punchv2-preview" />}
+          {photoUrl && (
+            <ZoomableImage
+              src={photoUrl}
+              alt="Preview of the punch-list photo"
+              className="v2-punchv2-preview"
+              viewerLabel="Preview punch-list photo"
+            />
+          )}
         </div>
         {notice && <p className="v2-record-notice" role="status">{notice}</p>}
         <p className="v2-record-notice" role="status">{syncMessage}</p>
