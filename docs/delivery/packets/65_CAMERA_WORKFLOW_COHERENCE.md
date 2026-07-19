@@ -53,4 +53,12 @@ moderation, storage contracts, schemas, or production data.
 
 ## Deployment evidence
 
-Pending merge and production verification.
+- Feature commit `ce13fdccc9e0683b905cb550f7d961e0f0186ab8` was
+  fast-forwarded into `master` and pushed to `origin/master`.
+- Railway deployed that exact runtime source. The live
+  `https://rivt.pro/api/health` response reported ready migrations,
+  PostgreSQL, S3-compatible object storage, configured Sentry, and configured
+  Web Push.
+- `npm run monitor:production` passed against the deployed commit in 601 ms,
+  with signup and mutation controls open, matching-job alerts enabled, and all
+  seven anonymous private-route checks healthy.
