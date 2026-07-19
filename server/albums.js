@@ -7,6 +7,40 @@ const albumCreateSchema = z.object({
   standaloneProjectId: z.uuid().nullable().optional().default(null),
 });
 
+const workSampleCreateSchema = z.object({
+  albumPhotoId: z.uuid(),
+  title: z.string().trim().max(120).optional().default(""),
+  caption: z.string().trim().max(500).optional().default(""),
+});
+
+async function loadWorkSamples(database, signedObjectUrl, accountId) {
+  const rows = await database.query(
+    `SELECT pws.id, pws.album_photo_id, pws.title, pws.caption, pws.sort_order,
+            pws.created_at, pws.updated_at, u.original_name, u.mime_type,
+            u.size_bytes, u.object_key
+     FROM profile_work_samples pws
+     JOIN album_photos ap ON ap.id = pws.album_photo_id
+     JOIN photo_albums pa ON pa.id = ap.album_id AND pa.account_id = pws.account_id
+     JOIN uploads u ON u.id = ap.upload_id AND u.upload_status = 'stored'
+     WHERE pws.account_id = $1
+     ORDER BY pws.sort_order ASC, pws.created_at ASC`,
+    [accountId],
+  );
+  return Promise.all(rows.rows.map(async (row) => ({
+    id: row.id,
+    albumPhotoId: row.album_photo_id,
+    title: row.title,
+    caption: row.caption,
+    sortOrder: Number(row.sort_order),
+    originalName: row.original_name,
+    mimeType: row.mime_type,
+    sizeBytes: Number(row.size_bytes ?? 0),
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    signedUrl: await signedObjectUrl(row.object_key),
+  })));
+}
+
 async function mapAlbumRow(database, signedObjectUrl, row, { withPhotos = false } = {}) {
   const base = {
     id: row.id,
@@ -71,6 +105,82 @@ export function registerAlbumRoutes({
   s3Client,
   s3Bucket,
 }) {
+  app.get("/api/v1/profile/work-samples", requireV1AuthenticatedUser, requireV1Actor, asyncRoute(async (request, response) => {
+    response.json({
+      data: { samples: await loadWorkSamples(database, signedObjectUrl, request.actor.account.id) },
+      meta: { requestId: request.requestId },
+    });
+  }));
+
+  app.get("/api/v1/profiles/:accountId/work-samples", requireV1AuthenticatedUser, requireV1Actor, asyncRoute(async (request, response) => {
+    const accountId = validate(z.uuid(), request.params.accountId);
+    const account = await database.query("SELECT id FROM accounts WHERE id = $1", [accountId]);
+    if (!account.rowCount) throw new ApiError(404, "PROFILE_NOT_FOUND", "Profile not found.");
+    response.json({
+      data: { samples: await loadWorkSamples(database, signedObjectUrl, accountId) },
+      meta: { requestId: request.requestId },
+    });
+  }));
+
+  app.post("/api/v1/profile/work-samples", requireV1AuthenticatedUser, requireV1Actor, writeRateLimit, asyncRoute(async (request, response) => {
+    const input = validate(workSampleCreateSchema, request.body);
+    const ownedPhoto = await database.query(
+      `SELECT ap.id
+       FROM album_photos ap
+       JOIN photo_albums pa ON pa.id = ap.album_id
+       JOIN uploads u ON u.id = ap.upload_id AND u.upload_status = 'stored'
+       WHERE ap.id = $1 AND pa.account_id = $2`,
+      [input.albumPhotoId, request.actor.account.id],
+    );
+    if (!ownedPhoto.rowCount) throw new ApiError(404, "PHOTO_NOT_FOUND", "That photo is not available to feature.");
+
+    const count = await database.query(
+      "SELECT COUNT(*)::int AS count FROM profile_work_samples WHERE account_id = $1",
+      [request.actor.account.id],
+    );
+    const existing = await database.query(
+      "SELECT id FROM profile_work_samples WHERE account_id = $1 AND album_photo_id = $2",
+      [request.actor.account.id, input.albumPhotoId],
+    );
+    if (existing.rowCount) throw new ApiError(409, "WORK_SAMPLE_EXISTS", "That photo is already featured.");
+    if (Number(count.rows[0]?.count ?? 0) >= 6) {
+      throw new ApiError(409, "WORK_SAMPLE_LIMIT", "You can feature up to six photos.");
+    }
+
+    const position = Number(count.rows[0]?.count ?? 0);
+    await database.query(
+      `INSERT INTO profile_work_samples (id, account_id, album_photo_id, title, caption, sort_order)
+       VALUES ($1, $2, $3, $4, $5, $6)`,
+      [randomUUID(), request.actor.account.id, input.albumPhotoId, input.title, input.caption, position],
+    );
+    response.status(201).json({
+      data: { samples: await loadWorkSamples(database, signedObjectUrl, request.actor.account.id) },
+      meta: { requestId: request.requestId },
+    });
+  }));
+
+  app.delete("/api/v1/profile/work-samples/:id", requireV1AuthenticatedUser, requireV1Actor, writeRateLimit, asyncRoute(async (request, response) => {
+    const sampleId = validate(z.uuid(), request.params.id);
+    const removed = await database.query(
+      "DELETE FROM profile_work_samples WHERE id = $1 AND account_id = $2 RETURNING id",
+      [sampleId, request.actor.account.id],
+    );
+    if (!removed.rowCount) throw new ApiError(404, "WORK_SAMPLE_NOT_FOUND", "Featured photo not found.");
+    await database.query(
+      `WITH ranked AS (
+         SELECT id, row_number() OVER (ORDER BY sort_order, created_at) - 1 AS next_order
+         FROM profile_work_samples WHERE account_id = $1
+       )
+       UPDATE profile_work_samples pws SET sort_order = ranked.next_order, updated_at = now()
+       FROM ranked WHERE pws.id = ranked.id`,
+      [request.actor.account.id],
+    );
+    response.json({
+      data: { samples: await loadWorkSamples(database, signedObjectUrl, request.actor.account.id) },
+      meta: { requestId: request.requestId },
+    });
+  }));
+
   app.get("/api/v1/albums", requireV1AuthenticatedUser, requireV1Actor, asyncRoute(async (request, response) => {
     const rows = await database.query(
       `SELECT pa.*,

@@ -438,7 +438,7 @@
   }
 
   .moderation-page-header .rivt-page-header-copy > span {
-    font-size: 13px;
+    font-size: calc(13px * var(--v2-text-scale, 1));
     letter-spacing: 0.1em;
   }
 
@@ -488,7 +488,7 @@
   .moderation-filter-row button {
     min-height: 44px;
     padding-inline: 13px;
-    font-size: 13px;
+    font-size: calc(13px * var(--v2-text-scale, 1));
   }
 
   .admin-section-tabs {
@@ -499,12 +499,12 @@
   .admin-section-tabs button {
     min-height: 44px;
     padding-inline: 12px;
-    font-size: 13px;
+    font-size: calc(13px * var(--v2-text-scale, 1));
   }
 
   .moderation-summary-line {
     gap: 7px;
-    font-size: 13px;
+    font-size: calc(13px * var(--v2-text-scale, 1));
   }
 
   .moderation-layout {
@@ -553,7 +553,7 @@
   .moderation-report-row .rivt-status-pill {
     min-height: 21px;
     padding: 3px 6px;
-    font-size: 13px;
+    font-size: calc(13px * var(--v2-text-scale, 1));
   }
 
   .moderation-review-heading {
@@ -575,11 +575,11 @@
   }
 
   .moderation-context-grid dt {
-    font-size: 13px;
+    font-size: calc(13px * var(--v2-text-scale, 1));
   }
 
   .moderation-context-grid dd {
-    font-size: 13px;
+    font-size: calc(13px * var(--v2-text-scale, 1));
   }
 
   .moderation-snapshot {
@@ -590,7 +590,7 @@
 
   .moderation-snapshot p,
   .moderation-snapshot blockquote {
-    font-size: 13px;
+    font-size: calc(13px * var(--v2-text-scale, 1));
     line-height: 1.42;
   }
 
@@ -611,7 +611,7 @@
   }
 
   .moderation-action-grid strong {
-    font-size: 13px;
+    font-size: calc(13px * var(--v2-text-scale, 1));
     line-height: 1.15;
   }
 
@@ -630,7 +630,7 @@
   }
 
   .moderation-error {
-    font-size: 13px;
+    font-size: calc(13px * var(--v2-text-scale, 1));
   }
 
   .moderation-submit {

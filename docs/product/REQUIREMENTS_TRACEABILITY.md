@@ -1035,11 +1035,11 @@ Evidence must eventually link to implementation, automated tests, manual accepta
 | ID | Requirement | Current | Evidence / gap |
 |---|---|---:|---|
 | GA-PRO-001 | Resumable contractor/tradesperson onboarding | Partial | Canonical onboarding APIs persist selected role, organization/profile basics, and resume state; richer checklist/profile-strength guidance remains outside Gate A. |
-| GA-PRO-002 | Role-correct professional profile persists independently | Partial | Canonical account/profile records persist independently of legacy app-state and Packet 02 live smoke verified profile update/publish; portfolio/contact/availability completeness remains launch follow-up. |
+| GA-PRO-002 | Role-correct professional profile persists independently | Partial | Canonical account/profile records persist independently of legacy app-state and Packet 02 live smoke verified profile update/publish. Packet 67 adds server-owned, owner-curated Featured Work selections for both tradesperson and contractor profiles; production/database verification remains open. |
 | GA-PRO-003 | Trade specialties use canonical taxonomy | Partial | Versioned 25-trade taxonomy, profile relationship tables, and profile/onboarding APIs exist; broader profile-search and trade-management UX still need polish. |
 | GA-PRO-004 | Service area and location privacy | Partial | Public-area/private-address protection is verified for jobs and accepted work; profile-level service-area normalization/geospatial privacy remains incomplete. |
 | GA-PRO-005 | Availability and controlled contact visibility | Partial | Contact visibility is constrained through accepted-work messaging and server-owned profiles; source `436b83f` adds Home `Availability radar` that writes `available` / `limited` / `unavailable` to the authenticated server-owned profile through `PATCH /api/v1/profile`. A full availability calendar, schedule windows, and contractor-facing availability search remain open. |
-| GA-PRO-006 | Profile photos/portfolio use authorized private media | Partial | Private project evidence media is participant-authorized and signed; profile photo/portfolio ownership and moderation remain unresolved before broad launch. |
+| GA-PRO-006 | Profile photos/portfolio use authorized private media | Partial | Private project evidence media remains participant-authorized and signed. Packet 67 adds server-side ownership checks and signed URLs for up to six explicitly selected Featured Work photos without auto-exposing albums or job evidence; moderation and production/database verification remain open. |
 
 ## Application Shell and UX
 

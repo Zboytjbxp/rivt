@@ -42,6 +42,7 @@ import {
   reviewErrorMessage,
   type WorkReview,
 } from "./reviews-api";
+import { fetchProfileWorkSamples, type ProfileWorkSample } from "../profile/profile-work-api";
 import "./network-hub.css";
 
 interface ShoutOut {
@@ -1158,6 +1159,19 @@ function ProfileSearchSpotlight({
   profile: ProfileSearchResult;
   onDismiss: () => void;
 }) {
+  const [workSamples, setWorkSamples] = useState<ProfileWorkSample[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    fetchProfileWorkSamples(profile.accountId)
+      .then((samples) => {
+        if (!cancelled) setWorkSamples(samples);
+      })
+      .catch(() => {
+        if (!cancelled) setWorkSamples([]);
+      });
+    return () => { cancelled = true; };
+  }, [profile.accountId]);
+
   const tradeLine = profile.trades.map((trade) => trade.name).filter(Boolean).join(", ");
   const roleLabel = profile.primaryRole === "contractor" ? "Contractor" : "Tradesperson";
   const availability =
@@ -1196,6 +1210,22 @@ function ProfileSearchSpotlight({
           ) : null}
         </div>
       </div>
+      {workSamples.length ? (
+        <section className="v2-network-featured-work" aria-label={`${profile.displayName}'s featured work`}>
+          <div>
+            <span>Featured Work</span>
+            <strong>{workSamples.length} selected project {workSamples.length === 1 ? "photo" : "photos"}</strong>
+          </div>
+          <div className="v2-network-featured-work-grid">
+            {workSamples.map((sample) => (
+              <figure key={sample.id}>
+                {sample.signedUrl ? <img src={sample.signedUrl} alt={sample.title || `${profile.displayName}'s featured work`} /> : <div aria-hidden="true" />}
+                {sample.title ? <figcaption>{sample.title}</figcaption> : null}
+              </figure>
+            ))}
+          </div>
+        </section>
+      ) : null}
       <div className="v2-network-spotlight-actions">
         <span>{availability}</span>
         <button type="button" onClick={onDismiss} aria-label="Dismiss selected profile">

@@ -1,5 +1,5 @@
 import type { ThemeMode, TrialPlan } from "../../brandConfig";
-import type { AccessibilityPreferenceKey, AccessibilityPreferences } from "../../app-shell/preferences";
+import type { AccessibilityPreferenceKey, AccessibilityPreferences, TextScale } from "../../app-shell/preferences";
 import type { ThemeSource } from "../../app-shell/useAppTheme";
 import type { Role, Trade } from "../../types";
 import { useCallback, useEffect, useState } from "react";
@@ -41,7 +41,8 @@ interface CanonicalAccountForProfileRoute {
 
 interface ProfileRouteProps {
   view: ProfileRouteView;
-  initialSettingsSection?: SettingsSection;
+  settingsSection?: SettingsSection;
+  onSettingsSectionChange?: (section: SettingsSection) => void;
   role: Role;
   accountProfile: AccountProfileForProfileRoute;
   canonicalAccount: CanonicalAccountForProfileRoute | null;
@@ -68,6 +69,7 @@ interface ProfileRouteProps {
   onSetThemeSource: (source: ThemeSource) => void;
   accessibilityPreferences: AccessibilityPreferences;
   onToggleAccessibility: (key: AccessibilityPreferenceKey) => void;
+  onSetTextScale: (scale: TextScale) => void;
   onLogout: () => void;
   onSaveProfile: (input: ProfileUpdateInput) => Promise<void>;
   onSetProfileVisibility: (visibility: "private" | "network") => Promise<void>;
@@ -79,7 +81,8 @@ interface ProfileRouteProps {
 
 export function ProfileRoute({
   view,
-  initialSettingsSection,
+  settingsSection,
+  onSettingsSectionChange,
   role,
   accountProfile,
   canonicalAccount,
@@ -97,6 +100,7 @@ export function ProfileRoute({
   onSetThemeSource,
   accessibilityPreferences,
   onToggleAccessibility,
+  onSetTextScale,
   onLogout,
   onSaveProfile,
   onSetProfileVisibility,
@@ -154,9 +158,9 @@ export function ProfileRoute({
 
   return (
     <ProfileHub
-      key={`${view}:${initialSettingsSection ?? "account"}`}
       view={view}
-      initialSettingsSection={initialSettingsSection}
+      settingsSection={settingsSection}
+      onSettingsSectionChange={onSettingsSectionChange}
       role={role}
       profile={{
         email: accountProfile.email,
@@ -195,6 +199,7 @@ export function ProfileRoute({
       onSetThemeSource={onSetThemeSource}
       accessibilityPreferences={accessibilityPreferences}
       onToggleAccessibility={onToggleAccessibility}
+      onSetTextScale={onSetTextScale}
       onLogout={onLogout}
       onSaveProfile={onSaveProfile}
       onSetProfileVisibility={onSetProfileVisibility}

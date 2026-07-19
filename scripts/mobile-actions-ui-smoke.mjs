@@ -490,7 +490,8 @@ async function runMobileFlow(page) {
   await page.getByRole("heading", { name: "Settings", exact: true }).waitFor({ timeout: 15_000 });
   await page.getByRole("button", { name: "Theme", exact: true }).click();
   const appearance = page.locator(".appearance-preference");
-  assert.equal(await appearance.getByRole("button").count(), 3, "Appearance should offer only System, Light, and Dark");
+  assert.equal(await appearance.getByRole("group", { name: "Color mode" }).getByRole("button").count(), 3, "Color mode should offer only System, Light, and Dark");
+  assert.equal(await appearance.getByRole("group", { name: "Text size" }).getByRole("button").count(), 3, "Text size should offer Standard, Large, and Extra large");
   await appearance.getByRole("button", { name: /Dark/i }).click();
   assert.equal(await page.evaluate(() => document.documentElement.dataset.theme), "dark", "Dark appearance should update the application immediately");
   await appearance.getByRole("button", { name: /System/i }).click();

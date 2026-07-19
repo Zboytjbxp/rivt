@@ -177,6 +177,7 @@ if (!testDatabaseUrl) {
       assert.notEqual((await database.query("SELECT to_regclass('project_invoice_payments') AS table_name")).rows[0].table_name, null);
       assert.notEqual((await database.query("SELECT to_regclass('standalone_projects') AS table_name")).rows[0].table_name, null);
       assert.notEqual((await database.query("SELECT to_regclass('profile_rate_cards') AS table_name")).rows[0].table_name, null);
+      assert.notEqual((await database.query("SELECT to_regclass('profile_work_samples') AS table_name")).rows[0].table_name, null);
       assert.equal((await database.query(
         "SELECT count(*)::int AS count FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = 'jobs' AND column_name = 'compensation_type'",
       )).rows[0].count, 1);
@@ -214,6 +215,10 @@ if (!testDatabaseUrl) {
         database.query("UPDATE shop_talk_reaction_events SET next_reaction = 'down' WHERE target_key = 'post:migration_smoke'"),
         /append-only/,
       );
+
+      const rolledBackProfileWorkSamples = await rollbackLatest(database);
+      assert.equal(rolledBackProfileWorkSamples.latestVersion, 28);
+      assert.equal((await database.query("SELECT to_regclass('profile_work_samples') AS table_name")).rows[0].table_name, null);
 
       const rolledBackCompensationWorkflow = await rollbackLatest(database);
       assert.equal(rolledBackCompensationWorkflow.latestVersion, 27);

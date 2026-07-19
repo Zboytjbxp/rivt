@@ -41,7 +41,7 @@ import { usePersona } from "../persona/usePersona";
 import { ThemeStudio } from "../../components/ThemeStudio";
 import "../pro/pro.css";
 import type { ThemeMode } from "../../brandConfig";
-import type { AccessibilityPreferenceKey, AccessibilityPreferences } from "../../app-shell/preferences";
+import type { AccessibilityPreferenceKey, AccessibilityPreferences, TextScale } from "../../app-shell/preferences";
 import type { ThemeSource } from "../../app-shell/useAppTheme";
 import { tradeOptions } from "../../data";
 import type { Role, Trade } from "../../types";
@@ -54,6 +54,13 @@ import {
   type RateCardVisibility,
 } from "../../lib/rateCard";
 import { tradeCodeByName } from "../work/work-mappings";
+import { getAlbum, listAlbums, type AlbumPhoto, type PhotoAlbum } from "../tools/album-api";
+import {
+  featureWorkSample,
+  fetchOwnWorkSamples,
+  removeWorkSample,
+  type ProfileWorkSample,
+} from "./profile-work-api";
 import { safetyQuizData, type SafetyQuiz, type SafetyQuizResult } from "./training-data";
 import "./profile-hub.css";
 
@@ -101,7 +108,8 @@ interface CanonicalProfileDetails extends Omit<ProfileUpdateInput, "displayName"
 
 interface ProfileHubProps {
   view: "Trust & Legal" | "Safety & Training" | "Reviews" | "Feedback" | "Settings";
-  initialSettingsSection?: SettingsSection;
+  settingsSection?: SettingsSection;
+  onSettingsSectionChange?: (section: SettingsSection) => void;
   role: Role;
   profile: AccountProfile;
   storageUsage?: {
@@ -124,6 +132,7 @@ interface ProfileHubProps {
   onSetThemeSource: (source: ThemeSource) => void;
   accessibilityPreferences: AccessibilityPreferences;
   onToggleAccessibility: (key: AccessibilityPreferenceKey) => void;
+  onSetTextScale: (scale: TextScale) => void;
   onLogout: () => void;
   onSaveProfile: (input: ProfileUpdateInput) => Promise<void>;
   onSetProfileVisibility: (visibility: "private" | "network") => Promise<void>;
@@ -727,17 +736,148 @@ function ProfileCompletionCard({ profile, isDemo = false }: { profile: AccountPr
 
 // ── Portfolio Section ─────────────────────────────────────────────────────────
 
-function PortfolioSection({ onNavigate }: { onNavigate?: (dest: string) => void }) {
+function PortfolioSection() {
+  const [samples, setSamples] = useState<ProfileWorkSample[]>([]);
+  const [albums, setAlbums] = useState<PhotoAlbum[]>([]);
+  const [albumPhotos, setAlbumPhotos] = useState<AlbumPhoto[]>([]);
+  const [selectedAlbumId, setSelectedAlbumId] = useState("");
+  const [managing, setManaging] = useState(false);
+  const [busyPhotoId, setBusyPhotoId] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    Promise.allSettled([fetchOwnWorkSamples(), listAlbums()])
+      .then(([samplesResult, albumsResult]) => {
+        if (cancelled) return;
+        if (samplesResult.status === "fulfilled") {
+          setSamples(Array.isArray(samplesResult.value) ? samplesResult.value : []);
+        }
+        if (albumsResult.status === "fulfilled") {
+          const loadedAlbums = Array.isArray(albumsResult.value) ? albumsResult.value : [];
+          setAlbums(loadedAlbums);
+          setSelectedAlbumId(loadedAlbums[0]?.id ?? "");
+        }
+        const failedRequest = samplesResult.status === "rejected"
+          ? samplesResult.reason
+          : albumsResult.status === "rejected"
+            ? albumsResult.reason
+            : null;
+        if (failedRequest) {
+          setError(failedRequest instanceof Error ? failedRequest.message : "Featured work could not be fully loaded.");
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    if (!managing || !selectedAlbumId) return;
+    let cancelled = false;
+    getAlbum(selectedAlbumId)
+      .then((album) => {
+        if (!cancelled) setAlbumPhotos(album.photos);
+      })
+      .catch((requestError: unknown) => {
+        if (!cancelled) setError(requestError instanceof Error ? requestError.message : "Album photos could not be loaded.");
+      });
+    return () => { cancelled = true; };
+  }, [managing, selectedAlbumId]);
+
+  const featuredPhotoIds = new Set(samples.map((sample) => sample.albumPhotoId));
+
+  async function toggleFeatured(photo: AlbumPhoto) {
+    const existing = samples.find((sample) => sample.albumPhotoId === photo.id);
+    setBusyPhotoId(photo.id);
+    setError("");
+    try {
+      setSamples(existing ? await removeWorkSample(existing.id) : await featureWorkSample(photo.id));
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : "Featured work could not be updated.");
+    } finally {
+      setBusyPhotoId("");
+    }
+  }
+
   return (
     <div className="v2-portfolio-section">
       <header>
         <Camera size={16} />
-        <span>Portfolio &amp; Work Samples</span>
+        <span>Featured Work</span>
       </header>
-      <p>Private until shared.</p>
-      <button type="button" className="v2-primary-button" onClick={() => onNavigate?.("tools")}>
-        View job photos
+      <p>Choose up to six photos for your public profile. Your albums and job records stay private.</p>
+      {loading ? <p className="v2-profile-work-status">Loading featured work...</p> : null}
+      {!loading && samples.length === 0 ? (
+        <div className="v2-profile-work-empty">
+          <strong>Show the work you want to be hired for</strong>
+          <span>Feature finished projects, clean details, or before-and-after proof.</span>
+        </div>
+      ) : null}
+      {samples.length ? (
+        <div className="v2-profile-work-gallery" aria-label="Featured work on your public profile">
+          {samples.map((sample) => (
+            <figure key={sample.id}>
+              {sample.signedUrl ? <img src={sample.signedUrl} alt={sample.title || "Featured work"} /> : <div aria-hidden="true" />}
+              <figcaption>{sample.title || "Featured work"}</figcaption>
+            </figure>
+          ))}
+        </div>
+      ) : null}
+      {error ? <p className="v2-profile-work-error" role="alert">{error}</p> : null}
+      <button type="button" className="v2-secondary-button" onClick={() => setManaging((current) => !current)}>
+        {managing ? "Done" : "Manage featured work"}
       </button>
+      {managing ? (
+        <section className="v2-profile-work-manager" aria-label="Choose featured work">
+          <div className="v2-profile-work-manager-heading">
+            <div>
+              <strong>{samples.length} of 6 featured</strong>
+              <span>Publishing a photo here does not publish the rest of its album.</span>
+            </div>
+          </div>
+          {albums.length ? (
+            <>
+              <div className="v2-profile-work-albums" role="tablist" aria-label="Private photo albums">
+                {albums.map((album) => (
+                  <button
+                    key={album.id}
+                    type="button"
+                    role="tab"
+                    aria-selected={album.id === selectedAlbumId}
+                    onClick={() => setSelectedAlbumId(album.id)}
+                  >
+                    {album.name} <span>{album.photoCount}</span>
+                  </button>
+                ))}
+              </div>
+              <div className="v2-profile-work-picker">
+                {albumPhotos.map((photo) => {
+                  const featured = featuredPhotoIds.has(photo.id);
+                  return (
+                    <button
+                      key={photo.id}
+                      type="button"
+                      className={featured ? "is-featured" : ""}
+                      disabled={busyPhotoId === photo.id || (!featured && samples.length >= 6)}
+                      onClick={() => void toggleFeatured(photo)}
+                      aria-label={`${featured ? "Remove" : "Feature"} ${photo.originalName}`}
+                    >
+                      {photo.signedUrl ? <img src={photo.signedUrl} alt="" /> : <span>No preview</span>}
+                      <small>{busyPhotoId === photo.id ? "Saving..." : featured ? "Featured" : "Feature"}</small>
+                    </button>
+                  );
+                })}
+              </div>
+              {!albumPhotos.length ? <p className="v2-profile-work-status">This album has no photos yet.</p> : null}
+            </>
+          ) : (
+            <p className="v2-profile-work-status">Add photos in Camera first, then return here to feature them.</p>
+          )}
+        </section>
+      ) : null}
     </div>
   );
 }
@@ -1253,7 +1393,8 @@ function PlanCard() {
 
 export function ProfileHub({
   view,
-  initialSettingsSection,
+  settingsSection: controlledSettingsSection,
+  onSettingsSectionChange,
   role,
   profile,
   canonicalProfile,
@@ -1271,6 +1412,7 @@ export function ProfileHub({
   onSetThemeSource,
   accessibilityPreferences,
   onToggleAccessibility,
+  onSetTextScale,
   onLogout,
   onSaveProfile,
   onSetProfileVisibility,
@@ -1282,14 +1424,16 @@ export function ProfileHub({
 }: ProfileHubProps) {
   const persona = usePersona();
   const [notificationPrefs, setNotificationPrefs] = useState<Record<NotificationPrefKey, boolean>>(defaultNotificationPrefs);
-  const [settingsSection, setSettingsSection] = useState<SettingsSection>(() => {
-    if (initialSettingsSection) return initialSettingsSection;
-    if (typeof window === "undefined") return "account";
-    const section = new URLSearchParams(window.location.search).get("section");
-    return section === "alerts" || section === "profile" || section === "appearance" || section === "billing" || section === "business" || section === "security"
-      ? section
-      : "account";
-  });
+  const [localSettingsSection, setLocalSettingsSection] = useState<SettingsSection>("account");
+  const settingsSection = controlledSettingsSection ?? localSettingsSection;
+
+  function selectSettingsSection(section: SettingsSection) {
+    if (onSettingsSectionChange) {
+      onSettingsSectionChange(section);
+      return;
+    }
+    setLocalSettingsSection(section);
+  }
   const [notificationPrefStatus, setNotificationPrefStatus] = useState("");
   const [savingNotificationKey, setSavingNotificationKey] = useState<NotificationPrefKey | null>(null);
   const [showPreview, setShowPreview] = useState(false);
@@ -1685,7 +1829,7 @@ export function ProfileHub({
             ["business", "Business"],
             ["security", "Security"],
           ] as const).map(([section, label]) => (
-            <button key={section} type="button" className={settingsSection === section ? "is-active" : ""} onClick={() => setSettingsSection(section)}>
+            <button key={section} type="button" className={settingsSection === section ? "is-active" : ""} onClick={() => selectSettingsSection(section)}>
               {label}
             </button>
           ))}
@@ -1836,6 +1980,7 @@ export function ProfileHub({
             onSetThemeSource={onSetThemeSource}
             accessibilityPreferences={accessibilityPreferences}
             onToggleAccessibility={onToggleAccessibility}
+            onSetTextScale={onSetTextScale}
           />
         </section>
 

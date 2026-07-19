@@ -99,7 +99,7 @@ import {
 } from "./features/shop-talk/community-directory";
 import { useCommunityReactions } from "./features/shop-talk/useCommunityReactions";
 import { usePushNotifications } from "./features/notifications/usePushNotifications";
-import type { ProfileUpdateInput } from "./features/profile/ProfileHub";
+import type { ProfileUpdateInput, SettingsSection } from "./features/profile/ProfileHub";
 import { isPublicToolMode, type ToolMode } from "./features/tools/tool-catalog";
 import { safetyQuizData, trainingModules, type SafetyQuizResult } from "./features/profile/training-data";
 import { apiPath, fetchWithTimeout, RIVT_SESSION_EXPIRED_EVENT } from "./lib/api";
@@ -133,6 +133,22 @@ function readToolFromUrl() {
   if (typeof window === "undefined") return null;
   const tool = new URLSearchParams(window.location.search).get("tool");
   return isPublicToolMode(tool) ? tool : null;
+}
+
+const SETTINGS_SECTIONS: SettingsSection[] = [
+  "account",
+  "alerts",
+  "profile",
+  "appearance",
+  "billing",
+  "business",
+  "security",
+];
+
+function readSettingsSectionFromUrl(): SettingsSection {
+  if (typeof window === "undefined") return "account";
+  const section = new URLSearchParams(window.location.search).get("section");
+  return SETTINGS_SECTIONS.includes(section as SettingsSection) ? (section as SettingsSection) : "account";
 }
 
 function readRouteParam(...keys: string[]) {
@@ -463,6 +479,9 @@ function toCommunityPostViewModel(post: ServerShopTalkPost): CommunityPost {
 
 function App() {
   const [activeView, setActiveView] = useState<NavLabel>(() => viewFromPath(window.location.pathname));
+  const [profileSettingsSection, setProfileSettingsSection] = useState<SettingsSection>(() =>
+    readSettingsSectionFromUrl(),
+  );
   const [requestedTool, setRequestedTool] = useState<ToolMode | null>(() => readToolFromUrl());
   const [toolsImmersive, setToolsImmersive] = useState(false);
   const [role, setRole] = useState<Role>("contractor");
@@ -576,6 +595,7 @@ function App() {
   const communitiesRequestRef = useRef(0);
   const {
     accessibilityPreferences,
+    handleSetTextScale,
     handleSetThemeSource,
     handleToggleAccessibility,
     handleToggleTheme,
@@ -711,6 +731,7 @@ function App() {
       setShopTalkPostId(nextView === "Shop Talk" ? readShopTalkPostFromUrl() : null);
       setShopTalkCommunitySlug(nextView === "Shop Talk" ? readShopTalkCommunityFromUrl() : null);
       setFocusedReviewId(nextView === "Reviews" ? readReviewFromUrl() : null);
+      setProfileSettingsSection(nextView === "Settings" ? readSettingsSectionFromUrl() : "account");
       setActivityOpen(false);
       setAccountOpen(false);
       setPostOpen(false);
@@ -1371,10 +1392,41 @@ function App() {
     if (isCamera) setFocusedActiveWorkId(null);
     setFocusedCloseout(false);
     if (resolvedView !== "Reviews") setFocusedReviewId(null);
+    if (resolvedView === "Settings") setProfileSettingsSection("account");
     setActiveView(resolvedView);
     const nextPath = isCamera ? pathForCamera() : viewRoutes[resolvedView];
     if (currentPathAndSearch() !== nextPath) {
       window.history.pushState({ view: resolvedView, tool: isCamera ? "job-photos" : null }, "", nextPath);
+    }
+    setActivityOpen(false);
+    setAccountOpen(false);
+    setPostOpen(false);
+  }
+
+  function replaceSettingsSection(section: SettingsSection) {
+    setProfileSettingsSection(section);
+    const url = new URL(window.location.href);
+    if (section === "account") url.searchParams.delete("section");
+    else url.searchParams.set("section", section);
+    window.history.replaceState(
+      { view: "Settings", section },
+      "",
+      `${url.pathname}${url.search}${url.hash}`,
+    );
+  }
+
+  function handleOpenSettingsSection(section: SettingsSection) {
+    setProfileSettingsSection(section);
+    setRequestedTool(null);
+    setToolsImmersive(false);
+    setFocusedCloseout(false);
+    setActiveView("Settings");
+    const nextPath =
+      section === "account"
+        ? viewRoutes.Settings
+        : `${viewRoutes.Settings}?section=${encodeURIComponent(section)}`;
+    if (currentPathAndSearch() !== nextPath) {
+      window.history.pushState({ view: "Settings", section }, "", nextPath);
     }
     setActivityOpen(false);
     setAccountOpen(false);
@@ -2720,7 +2772,8 @@ function App() {
         ) : ["Trust & Legal", "Safety & Training", "Reviews", "Feedback", "Settings"].includes(activeView) ? (
           <ProfileRoute
             view={activeView as ProfileRouteView}
-            initialSettingsSection={new URLSearchParams(window.location.search).get("section") === "profile" ? "profile" : undefined}
+            settingsSection={profileSettingsSection}
+            onSettingsSectionChange={replaceSettingsSection}
             role={role}
             accountProfile={accountProfile}
             canonicalAccount={canonicalAccount}
@@ -2744,6 +2797,7 @@ function App() {
             onSetThemeSource={handleSetThemeSource}
             accessibilityPreferences={accessibilityPreferences}
             onToggleAccessibility={handleToggleAccessibility}
+            onSetTextScale={handleSetTextScale}
             onLogout={handleLogout}
             onSaveProfile={handleSaveProfile}
             onSetProfileVisibility={handleSetProfileVisibility}
@@ -2810,10 +2864,7 @@ function App() {
           role={role}
           profile={accountProfile}
           adminRoles={canonicalAccount?.adminRoles ?? []}
-          onOpenProfile={() => {
-            handleNavigate("Settings");
-            window.history.replaceState({ view: "Settings", section: "profile" }, "", "/app/profile/settings?section=profile");
-          }}
+          onOpenProfile={() => handleOpenSettingsSection("profile")}
           onLogout={handleLogout}
           onClose={() => setAccountOpen(false)}
           onNavigate={handleNavigate}

@@ -481,6 +481,98 @@ if (!testDatabaseUrl) {
     assert.equal(otherDefaultAlbum.response.status, 200);
     assert.notEqual(otherDefaultAlbum.payload.data.album.id, defaultAlbum.payload.data.album.id);
 
+    const accountRows = await database.query(
+      "SELECT id, email FROM accounts WHERE email = ANY($1::text[])",
+      [[owner.email, other.email]],
+    );
+    const ownerAccountId = accountRows.rows.find((row) => row.email === owner.email)?.id;
+    const otherAccountId = accountRows.rows.find((row) => row.email === other.email)?.id;
+    assert.ok(ownerAccountId);
+    assert.ok(otherAccountId);
+
+    const ownerUploadId = randomUUID();
+    const ownerPhotoId = randomUUID();
+    const otherUploadId = randomUUID();
+    const otherPhotoId = randomUUID();
+    await database.query(
+      `INSERT INTO uploads
+         (id, account_id, kind, name, object_key, original_name, mime_type, size_bytes,
+          upload_status, storage_scope, verified_at)
+       VALUES
+         ($1, $2, 'album_photo', 'featured-cabinet.jpg', $3, 'featured-cabinet.jpg', 'image/jpeg', 1024,
+          'stored', 'album', now()),
+         ($4, $5, 'album_photo', 'other-private.jpg', $6, 'other-private.jpg', 'image/jpeg', 2048,
+          'stored', 'album', now())`,
+      [
+        ownerUploadId,
+        ownerAccountId,
+        `tests/${ownerUploadId}.jpg`,
+        otherUploadId,
+        otherAccountId,
+        `tests/${otherUploadId}.jpg`,
+      ],
+    );
+    await database.query(
+      `INSERT INTO album_photos (id, album_id, upload_id, caption)
+       VALUES ($1, $2, $3, 'Finished cabinet install'),
+              ($4, $5, $6, 'Private competitor photo')`,
+      [
+        ownerPhotoId,
+        defaultAlbum.payload.data.album.id,
+        ownerUploadId,
+        otherPhotoId,
+        otherDefaultAlbum.payload.data.album.id,
+        otherUploadId,
+      ],
+    );
+
+    const cannotFeatureAnotherAccountPhoto = await requestJson(baseUrl, "/api/v1/profile/work-samples", {
+      method: "POST",
+      cookie: owner.cookie,
+      body: { albumPhotoId: otherPhotoId, title: "Not mine" },
+    });
+    assert.equal(cannotFeatureAnotherAccountPhoto.response.status, 404);
+    assert.equal(cannotFeatureAnotherAccountPhoto.payload.error.code, "PHOTO_NOT_FOUND");
+
+    const featuredWork = await requestJson(baseUrl, "/api/v1/profile/work-samples", {
+      method: "POST",
+      cookie: owner.cookie,
+      body: {
+        albumPhotoId: ownerPhotoId,
+        title: "Custom cabinet install",
+        caption: "Inset cabinets fitted and finished in Jacksonville.",
+      },
+    });
+    assert.equal(featuredWork.response.status, 201);
+    assert.equal(featuredWork.payload.data.samples.length, 1);
+    assert.equal(featuredWork.payload.data.samples[0].albumPhotoId, ownerPhotoId);
+
+    const visibleToAnotherSignedInAccount = await requestJson(
+      baseUrl,
+      `/api/v1/profiles/${ownerAccountId}/work-samples`,
+      { cookie: other.cookie },
+    );
+    assert.equal(visibleToAnotherSignedInAccount.response.status, 200);
+    assert.equal(visibleToAnotherSignedInAccount.payload.data.samples.length, 1);
+    assert.equal(visibleToAnotherSignedInAccount.payload.data.samples[0].title, "Custom cabinet install");
+    assert.ok(!visibleToAnotherSignedInAccount.payload.data.samples.some((sample) => sample.albumPhotoId === otherPhotoId));
+
+    const removedFeaturedWork = await requestJson(
+      baseUrl,
+      `/api/v1/profile/work-samples/${featuredWork.payload.data.samples[0].id}`,
+      { method: "DELETE", cookie: owner.cookie },
+    );
+    assert.equal(removedFeaturedWork.response.status, 200);
+    assert.deepEqual(removedFeaturedWork.payload.data.samples, []);
+
+    const noLongerVisible = await requestJson(
+      baseUrl,
+      `/api/v1/profiles/${ownerAccountId}/work-samples`,
+      { cookie: other.cookie },
+    );
+    assert.equal(noLongerVisible.response.status, 200);
+    assert.deepEqual(noLongerVisible.payload.data.samples, []);
+
     const albumList = await requestJson(baseUrl, "/api/v1/albums", { cookie: owner.cookie });
     assert.equal(albumList.response.status, 200);
     const listedDefault = albumList.payload.data.albums.find((album) => album.id === defaultAlbum.payload.data.album.id);

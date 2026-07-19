@@ -9,14 +9,14 @@
 }
 .v2-pipeline-back {
   background: none; border: none; color: var(--v2-accent); cursor: pointer;
-  display: flex; align-items: center; gap: 4px; font-size: 14px;
+  display: flex; align-items: center; gap: 4px; font-size: calc(14px * var(--v2-text-scale, 1));
   font-weight: var(--v2-weight-bold); padding: 4px 0;
 }
 .v2-pipeline-heading {
-  font-size: 17px; font-weight: var(--v2-weight-display); color: var(--v2-text);
+  font-size: calc(17px * var(--v2-text-scale, 1)); font-weight: var(--v2-weight-display); color: var(--v2-text);
 }
 .v2-pipeline-subtitle {
-  font-size: 13px; color: var(--v2-text-muted); margin-left: auto;
+  font-size: calc(13px * var(--v2-text-scale, 1)); color: var(--v2-text-muted); margin-left: auto;
 }
 .v2-pipeline-body {
   flex: 1; overflow-x: auto; overflow-y: hidden;
@@ -36,14 +36,14 @@
 .v2-pipeline-col-header.stage-invoiced { background: #ede9fe; }
 .v2-pipeline-col-header.stage-paid { background: #dcfce7; }
 .v2-pipeline-stage-name {
-  font-size: 13px; font-weight: var(--v2-weight-bold); color: var(--v2-text);
+  font-size: calc(13px * var(--v2-text-scale, 1)); font-weight: var(--v2-weight-bold); color: var(--v2-text);
 }
 .v2-pipeline-stage-count {
-  font-size: 13px; font-weight: var(--v2-weight-bold); padding: 2px 7px;
+  font-size: calc(13px * var(--v2-text-scale, 1)); font-weight: var(--v2-weight-bold); padding: 2px 7px;
   border-radius: 10px; background: rgba(0,0,0,0.08); color: var(--v2-text);
 }
 .v2-pipeline-stage-value {
-  font-size: 13px; color: var(--v2-text-muted); padding: 0 12px 6px;
+  font-size: calc(13px * var(--v2-text-scale, 1)); color: var(--v2-text-muted); padding: 0 12px 6px;
   width: 100%;
 }
 .v2-pipeline-card {
@@ -54,11 +54,11 @@
 }
 .v2-pipeline-card.is-active { border-color: var(--v2-accent); }
 .v2-pipeline-card-title {
-  font-size: 13px; font-weight: var(--v2-weight-bold); color: var(--v2-text);
+  font-size: calc(13px * var(--v2-text-scale, 1)); font-weight: var(--v2-weight-bold); color: var(--v2-text);
   margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .v2-pipeline-card-meta {
-  font-size: 13px; color: var(--v2-text-muted);
+  font-size: calc(13px * var(--v2-text-scale, 1)); color: var(--v2-text-muted);
   display: flex; flex-direction: column; gap: 2px;
 }
 .v2-pipeline-card-actions {
@@ -66,7 +66,7 @@
   border-top: 1px solid var(--v2-border);
 }
 .v2-pipeline-move-btn {
-  flex: 1; padding: 6px 4px; font-size: 13px;
+  flex: 1; padding: 6px 4px; font-size: calc(13px * var(--v2-text-scale, 1));
   font-weight: var(--v2-weight-bold); border-radius: var(--v2-radius-sm);
   cursor: pointer; border: 1px solid var(--v2-border);
   background: var(--v2-surface-muted); color: var(--v2-text);
@@ -77,5 +77,5 @@
 }
 .v2-pipeline-empty {
   padding: 20px 12px; text-align: center; color: var(--v2-text-muted);
-  font-size: 13px; font-style: italic;
+  font-size: calc(13px * var(--v2-text-scale, 1)); font-style: italic;
 }

@@ -331,7 +331,7 @@ export function JobDetailHub({ jobId, onClose }: JobDetailHubProps) {
               <div key={s.id} className="v2-job-detail-row">
                 <div className="v2-job-detail-row-left">
                   <div>{dateStr}</div>
-                  {s.note ? <div style={{ color: "var(--v2-text-muted)", fontSize: 12, marginTop: 2 }}>{s.note}</div> : null}
+                  {s.note ? <div style={{ color: "var(--v2-text-muted)", fontSize: "calc(12px * var(--v2-text-scale, 1))", marginTop: 2 }}>{s.note}</div> : null}
                 </div>
                 <div className="v2-job-detail-row-right">
                   {hours !== null ? formatDuration(hours) : "In progress"}
@@ -351,7 +351,7 @@ export function JobDetailHub({ jobId, onClose }: JobDetailHubProps) {
             <div key={e.id} className="v2-job-detail-row">
               <div className="v2-job-detail-row-left">
                 <div>{e.category}</div>
-                {e.description ? <div style={{ color: "var(--v2-text-muted)", fontSize: 12, marginTop: 2 }}>{e.description}</div> : null}
+                {e.description ? <div style={{ color: "var(--v2-text-muted)", fontSize: "calc(12px * var(--v2-text-scale, 1))", marginTop: 2 }}>{e.description}</div> : null}
               </div>
               <div className="v2-job-detail-row-right">{money(e.amount)}</div>
             </div>
@@ -413,7 +413,7 @@ export function JobDetailHub({ jobId, onClose }: JobDetailHubProps) {
                 <div key={m.id} className="v2-job-detail-row">
                   <div className="v2-job-detail-row-left">
                     <div>{m.name}</div>
-                    <div style={{ color: "var(--v2-text-muted)", fontSize: 12, marginTop: 2 }}>
+                    <div style={{ color: "var(--v2-text-muted)", fontSize: "calc(12px * var(--v2-text-scale, 1))", marginTop: 2 }}>
                       {m.qty} {m.unit} × {money(m.unitCost)}{m.markup > 0 ? ` +${m.markup}%` : ""}
                     </div>
                   </div>

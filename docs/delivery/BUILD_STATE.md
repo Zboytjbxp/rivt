@@ -2,10 +2,27 @@
 
 Last updated: 2026-07-19 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Packet 66 accessible display modes is deployed and verified.
-Active packet: `docs/delivery/packets/66_ACCESSIBLE_DISPLAY_MODES.md`
-Repository branch: `master`
+Current phase: Packet 67 implementation is verified; PostgreSQL gate pending.
+Active packet: `docs/delivery/packets/67_TEXT_SCALE_FEATURED_WORK.md`
+Repository branch: `codex/text-scale-profile`
 Production feature release commit: `955d43cfcadbb47f613fc941245d446d6c46fffe`
+
+## Packet 67 - Text Scale and Featured Work
+
+- Display accessibility now offers Standard, Large, and Extra large text and
+  applies the scale across shared tokens, feature CSS, and fixed inline text.
+- Professional profiles now support an owner-curated Featured Work gallery of
+  up to six photos, visible to authenticated users inspecting that profile.
+- Private albums and accepted-job evidence remain private by default. The
+  server verifies photo ownership before featuring and exposes only explicitly
+  selected work samples through signed media URLs.
+- Migration 0029 adds the account-owned work-sample selection table with a
+  rollback. Build, lint, 59 unit/frontend tests, E2E, rendered mobile-action
+  QA, and the dependency audit pass.
+- The aggregate local test run reported 3 non-database integration checks
+  passed and 16 database-dependent checks skipped. `TEST_DATABASE_URL` is
+  unavailable in this worktree, so no PostgreSQL integration pass, merge, or
+  deployment is claimed yet.
 
 ## Packet 66 - Accessible Display Modes
 

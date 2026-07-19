@@ -258,8 +258,8 @@ export function TimeTrackerTool({ activeJob, jobs }: { activeJob: Job | null; jo
           </svg>
         </div>
         {!isPro && sessions.length > visibleSessions.length && (
-          <p className="v2-tool-note" style={{ fontSize: 12 }}>
-            Showing 90-day history. <button type="button" style={{ background: "none", border: "none", color: "var(--v2-accent)", cursor: "pointer", padding: 0, fontSize: 12, textDecoration: "underline" }} onClick={() => setUpgradeOpen(true)}>Upgrade for full history</button>
+          <p className="v2-tool-note" style={{ fontSize: "calc(12px * var(--v2-text-scale, 1))" }}>
+            Showing 90-day history. <button type="button" style={{ background: "none", border: "none", color: "var(--v2-accent)", cursor: "pointer", padding: 0, fontSize: "calc(12px * var(--v2-text-scale, 1))", textDecoration: "underline" }} onClick={() => setUpgradeOpen(true)}>Upgrade for full history</button>
           </p>
         )}
         {completed.length ? (

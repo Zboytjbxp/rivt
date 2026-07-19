@@ -422,7 +422,7 @@ function PipelineBoard({ openJobs, onOpenJob }: { openJobs: Job[]; onOpenJob: (j
         <div className="v2-work-empty" style={{ textAlign: "center", padding: "48px 24px" }}>
           <Users size={32} style={{ opacity: 0.3, marginBottom: 12 }} />
           <strong>No applicants across open jobs yet</strong>
-          <span style={{ display: "block", marginTop: 8, color: "var(--v2-text-muted)", fontSize: 13 }}>Tradespeople who apply to your published jobs will appear here by stage.</span>
+          <span style={{ display: "block", marginTop: 8, color: "var(--v2-text-muted)", fontSize: "calc(13px * var(--v2-text-scale, 1))" }}>Tradespeople who apply to your published jobs will appear here by stage.</span>
         </div>
       ) : (
         <div className="v2-pipeline-columns">

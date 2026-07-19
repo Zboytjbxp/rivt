@@ -8,27 +8,27 @@
   background: var(--v2-surface); border-bottom: 1px solid var(--v2-border);
   padding: 12px 16px; display: flex; align-items: center; gap: 10px;
 }
-.v2-job-detail-back { background: none; border: none; color: var(--v2-accent); cursor: pointer; display: flex; align-items: center; gap: 4px; font-size: 14px; font-weight: var(--v2-weight-bold); padding: 4px 0; }
-.v2-job-detail-title { flex: 1; font-size: 16px; font-weight: var(--v2-weight-display); color: var(--v2-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.v2-job-detail-badge { font-size: 13px; padding: 3px 8px; border-radius: 20px; background: var(--v2-accent-soft); color: var(--v2-accent); white-space: nowrap; }
-.v2-job-detail-meta { padding: 10px 16px 0; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; font-size: 13px; color: var(--v2-text-muted); }
+.v2-job-detail-back { background: none; border: none; color: var(--v2-accent); cursor: pointer; display: flex; align-items: center; gap: 4px; font-size: calc(14px * var(--v2-text-scale, 1)); font-weight: var(--v2-weight-bold); padding: 4px 0; }
+.v2-job-detail-title { flex: 1; font-size: calc(16px * var(--v2-text-scale, 1)); font-weight: var(--v2-weight-display); color: var(--v2-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.v2-job-detail-badge { font-size: calc(13px * var(--v2-text-scale, 1)); padding: 3px 8px; border-radius: 20px; background: var(--v2-accent-soft); color: var(--v2-accent); white-space: nowrap; }
+.v2-job-detail-meta { padding: 10px 16px 0; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; font-size: calc(13px * var(--v2-text-scale, 1)); color: var(--v2-text-muted); }
 .v2-job-detail-stat-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 12px 16px; }
 .v2-job-detail-stat { background: var(--v2-surface-muted); border: 1px solid var(--v2-border); border-radius: var(--v2-radius-md); padding: 12px; text-align: center; }
-.v2-job-detail-stat-value { font-size: 18px; font-weight: var(--v2-weight-display); color: var(--v2-text); font-family: 'IBM Plex Mono', monospace; }
+.v2-job-detail-stat-value { font-size: calc(18px * var(--v2-text-scale, 1)); font-weight: var(--v2-weight-display); color: var(--v2-text); font-family: 'IBM Plex Mono', monospace; }
 .v2-job-detail-stat-value.is-positive { color: var(--v2-success); }
 .v2-job-detail-stat-value.is-negative { color: #ef4444; }
-.v2-job-detail-stat-label { font-size: 13px; color: var(--v2-text-muted); margin-top: 2px; }
+.v2-job-detail-stat-label { font-size: calc(13px * var(--v2-text-scale, 1)); color: var(--v2-text-muted); margin-top: 2px; }
 .v2-job-detail-section { border-top: 1px solid var(--v2-border); }
 .v2-job-detail-section-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; cursor: pointer; }
-.v2-job-detail-section-title { font-size: 13px; font-weight: var(--v2-weight-bold); color: var(--v2-text); text-transform: uppercase; letter-spacing: 0.04em; }
-.v2-job-detail-section-count { font-size: 13px; color: var(--v2-text-muted); }
+.v2-job-detail-section-title { font-size: calc(13px * var(--v2-text-scale, 1)); font-weight: var(--v2-weight-bold); color: var(--v2-text); text-transform: uppercase; letter-spacing: 0.04em; }
+.v2-job-detail-section-count { font-size: calc(13px * var(--v2-text-scale, 1)); color: var(--v2-text-muted); }
 .v2-job-detail-section-body { padding: 0 16px 16px; }
-.v2-job-detail-row { display: flex; justify-content: space-between; align-items: flex-start; padding: 8px 0; border-bottom: 1px solid var(--v2-border); font-size: 13px; }
+.v2-job-detail-row { display: flex; justify-content: space-between; align-items: flex-start; padding: 8px 0; border-bottom: 1px solid var(--v2-border); font-size: calc(13px * var(--v2-text-scale, 1)); }
 .v2-job-detail-row:last-child { border-bottom: none; }
 .v2-job-detail-row-left { color: var(--v2-text); flex: 1; }
-.v2-job-detail-row-right { color: var(--v2-text-muted); text-align: right; font-family: 'IBM Plex Mono', monospace; font-size: 13px; }
+.v2-job-detail-row-right { color: var(--v2-text-muted); text-align: right; font-family: 'IBM Plex Mono', monospace; font-size: calc(13px * var(--v2-text-scale, 1)); }
 .v2-job-detail-photos-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
 .v2-job-detail-photo-thumb { aspect-ratio: 1; object-fit: cover; border-radius: var(--v2-radius-sm); width: 100%; }
-.v2-job-detail-empty { padding: 12px 0; color: var(--v2-text-muted); font-size: 13px; font-style: italic; }
-.v2-job-detail-client-row { display: flex; align-items: center; gap: 8px; padding: 6px 0; font-size: 14px; color: var(--v2-text); }
+.v2-job-detail-empty { padding: 12px 0; color: var(--v2-text-muted); font-size: calc(13px * var(--v2-text-scale, 1)); font-style: italic; }
+.v2-job-detail-client-row { display: flex; align-items: center; gap: 8px; padding: 6px 0; font-size: calc(14px * var(--v2-text-scale, 1)); color: var(--v2-text); }
 .v2-job-detail-client-row a { color: var(--v2-accent); text-decoration: none; }

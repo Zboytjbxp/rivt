@@ -3,6 +3,7 @@ import type { ThemeMode } from "../brandConfig";
 import type {
   AccessibilityPreferenceKey,
   AccessibilityPreferences,
+  TextScale,
 } from "../app-shell/preferences";
 import type { ThemeSource } from "../app-shell/useAppTheme";
 
@@ -12,6 +13,7 @@ interface ThemeStudioProps {
   onSetThemeSource: (source: ThemeSource) => void;
   accessibilityPreferences?: AccessibilityPreferences;
   onToggleAccessibility?: (key: AccessibilityPreferenceKey) => void;
+  onSetTextScale?: (scale: TextScale) => void;
   variant?: "full" | "compact";
 }
 
@@ -32,7 +34,6 @@ const accessibilityChoices: Array<{
   description: string;
   Icon: typeof Eye;
 }> = [
-  { id: "largeText", label: "Larger text", description: "Raises small text and control sizes", Icon: Eye },
   { id: "enhancedContrast", label: "Higher contrast", description: "Strengthens borders, labels, and focus", Icon: Contrast },
   { id: "colorSafe", label: "Color-safe status", description: "Adds distinct blue, amber, and magenta cues", Icon: Palette },
 ];
@@ -40,7 +41,7 @@ const accessibilityChoices: Array<{
 const defaultAccessibilityPreferences: AccessibilityPreferences = {
   colorSafe: false,
   enhancedContrast: false,
-  largeText: false,
+  textScale: "standard",
 };
 
 export function ThemeStudio({
@@ -49,6 +50,7 @@ export function ThemeStudio({
   onSetThemeSource,
   accessibilityPreferences = defaultAccessibilityPreferences,
   onToggleAccessibility = () => undefined,
+  onSetTextScale = () => undefined,
   variant = "full",
 }: ThemeStudioProps) {
   const isCompact = variant === "compact";
@@ -82,6 +84,20 @@ export function ThemeStudio({
           <span>Accessibility</span>
           <strong id="accessibility-preferences-title">Make RIVT easier to read</strong>
         </header>
+        <div className="text-scale-control" role="group" aria-label="Text size">
+          <span><Eye size={20} aria-hidden="true" /><strong>Text size</strong></span>
+          {(["standard", "large", "extra-large"] as const).map((scale) => (
+            <button
+              key={scale}
+              type="button"
+              className={accessibilityPreferences.textScale === scale ? "is-selected" : ""}
+              aria-pressed={accessibilityPreferences.textScale === scale}
+              onClick={() => onSetTextScale(scale)}
+            >
+              {scale === "standard" ? "Standard" : scale === "large" ? "Large" : "Extra large"}
+            </button>
+          ))}
+        </div>
         <div className="accessibility-options">
           {accessibilityChoices.map(({ id, label, description, Icon }) => {
             const enabled = accessibilityPreferences[id];
