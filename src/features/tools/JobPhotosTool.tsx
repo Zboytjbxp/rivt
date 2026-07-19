@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, ArrowRight, Camera, Download, FileUp, FolderOpen, Image, Loader2, RefreshCw } from "lucide-react";
+import { ZoomableImage } from "../../components/ZoomableImage";
 import type { CanonicalActiveWork } from "../work/job-api";
 import {
   getProject,
@@ -571,7 +572,11 @@ function PhotoGallery({
         {selectedPhoto.note ? <p className="v2-job-photo-detail-note">{selectedPhoto.note}</p> : null}
         {selectedPhoto.signedUrl ? (
           <figure className="v2-job-photo-full">
-            <img src={selectedPhoto.signedUrl} alt={selectedPhoto.originalName} />
+            <ZoomableImage
+              src={selectedPhoto.signedUrl}
+              alt={selectedPhoto.originalName}
+              viewerLabel="Open job photo"
+            />
           </figure>
         ) : null}
       </div>
