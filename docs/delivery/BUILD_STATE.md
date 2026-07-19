@@ -5420,6 +5420,24 @@ Completed on 2026-07-04 on branch `codex/launch-polish-phase-2` as a controllabl
 
 ## Next Exact Task
 
+## Packet 43 - Camera Before / After Proof Images
+
+- Camera now lets a user select two saved photos from the exact current
+  destination and save a labeled comparison image without modifying either
+  original. Side-by-side is the default; stacked comparison and editable
+  Before/After labels are available when the proof needs more context.
+- The generated JPEG returns through the existing authenticated upload path,
+  so it remains in the same private album, standalone project, or accepted
+  work feed that supplied the source images. Failed saves retain the normal
+  retry behavior rather than presenting a local-only success.
+- Local verification: build, lint, unit, E2E, and mobile-action checks passed.
+  The combined `npm run test` gate could not complete its integration segment
+  because `TEST_DATABASE_URL` is not configured in this workspace.
+- Production boundary: not deployed. A physical live check must confirm that
+  signed S3-compatible image URLs allow the browser to read source pixels for
+  the canvas composition. A failed read presents an error and does not claim
+  that the comparison was saved.
+
 After Packet 43 is production verified, begin a separate consolidation packet:
 merge Price Book into Materials while preserving all saved price-book records
 and keeping Materials useful without a RIVT job. Follow with a separately

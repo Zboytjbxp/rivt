@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, ArrowRight, Camera, Download, FileUp, FolderOpen, Image, Loader2, RefreshCw } from "lucide-react";
 import { ZoomableImage } from "../../components/ZoomableImage";
+import { createPhotoComparison, type PhotoComparisonLayout } from "./photo-comparison";
 import type { CanonicalActiveWork } from "../work/job-api";
 import {
   getProject,
@@ -462,6 +463,12 @@ function PhotoGallery({
   const [selectedPhoto, setSelectedPhoto] = useState<UnifiedPhoto | null>(null);
   const [compareA, setCompareA] = useState<UnifiedPhoto | null>(null);
   const [compareB, setCompareB] = useState<UnifiedPhoto | null>(null);
+  const [comparisonLayout, setComparisonLayout] = useState<PhotoComparisonLayout>("side-by-side");
+  const [beforeLabel, setBeforeLabel] = useState("Before");
+  const [afterLabel, setAfterLabel] = useState("After");
+  const [comparisonSaving, setComparisonSaving] = useState(false);
+  const [comparisonError, setComparisonError] = useState("");
+  const [comparisonNotice, setComparisonNotice] = useState("");
   const [pendingCount, setPendingCount] = useState(0);
   const [showCamera, setShowCamera] = useState(initialShowCameraToken > 0);
   const [photoFilter, setPhotoFilter] = useState<PhotoFilter>("all");
@@ -539,6 +546,11 @@ function PhotoGallery({
   function startCompare() {
     setCompareA(null);
     setCompareB(null);
+    setComparisonLayout("side-by-side");
+    setBeforeLabel("Before");
+    setAfterLabel("After");
+    setComparisonError("");
+    setComparisonNotice("");
     setPhotoView("compare-a");
   }
 
@@ -550,6 +562,39 @@ function PhotoGallery({
     }
     setCompareB(photo);
     setPhotoView("compare-view");
+  }
+
+  async function saveComparison() {
+    if (!compareA?.signedUrl || !compareB?.signedUrl) {
+      setComparisonError("Choose two saved photos first.");
+      return;
+    }
+    const before = beforeLabel.trim() || "Before";
+    const after = afterLabel.trim() || "After";
+    const note = `Before / after comparison: ${before} and ${after}`;
+    setComparisonSaving(true);
+    setComparisonError("");
+    try {
+      const comparison = await createPhotoComparison({
+        before: { url: compareA.signedUrl, label: before },
+        after: { url: compareB.signedUrl, label: after },
+        layout: comparisonLayout,
+      });
+      const result = await runUpload([comparison], note);
+      if (!result || result.failedFiles.length) {
+        const message = result?.message ?? "The comparison could not be saved.";
+        setComparisonError(message);
+        if (result?.failedFiles.length) setRetryBatch({ files: result.failedFiles, note, message });
+        return;
+      }
+      setRetryBatch(null);
+      setComparisonNotice("Comparison saved.");
+      setPhotoView("gallery");
+    } catch (error) {
+      setComparisonError(error instanceof Error ? error.message : "The comparison could not be created.");
+    } finally {
+      setComparisonSaving(false);
+    }
   }
 
   if (photoView === "detail" && selectedPhoto) {
@@ -609,18 +654,36 @@ function PhotoGallery({
       <div className="v2-job-photos-workbench">
         <div className="v2-job-photos-toolbar">
           <button type="button" onClick={() => setPhotoView("gallery")}><ArrowLeft size={15} />All photos</button>
-          <span>Before / after</span>
+          <span>Create comparison</span>
           <button type="button" onClick={startCompare}><RefreshCw size={14} />New compare</button>
         </div>
-        <div className="v2-job-photos-compare-grid">
-          {([["Before", compareA], ["After", compareB]] as const).map(([label, photo]) => (
-            <figure key={label} className="v2-job-photo-compare-frame">
+        <div className={comparisonLayout === "stacked" ? "v2-job-photos-compare-grid is-stacked" : "v2-job-photos-compare-grid"}>
+          {([[beforeLabel || "Before", compareA], [afterLabel || "After", compareB]] as const).map(([label, photo]) => (
+            <figure key={photo.id} className="v2-job-photo-compare-frame">
               <span className="v2-job-photo-compare-label">{label}</span>
               {photo.signedUrl ? <img src={photo.signedUrl} alt={photo.originalName} /> : null}
               <figcaption>{new Date(photo.createdAt).toLocaleDateString()}</figcaption>
             </figure>
           ))}
         </div>
+        <section className="v2-photo-comparison-editor" aria-label="Comparison settings">
+          <div>
+            <strong>Make a proof image</strong>
+            <small>Original photos stay unchanged. This saves one labeled comparison to the current destination.</small>
+          </div>
+          <div className="v2-photo-comparison-layouts" aria-label="Comparison layout">
+            <button type="button" className={comparisonLayout === "side-by-side" ? "is-active" : ""} onClick={() => setComparisonLayout("side-by-side")} aria-pressed={comparisonLayout === "side-by-side"}>Side by side</button>
+            <button type="button" className={comparisonLayout === "stacked" ? "is-active" : ""} onClick={() => setComparisonLayout("stacked")} aria-pressed={comparisonLayout === "stacked"}>Stacked</button>
+          </div>
+          <div className="v2-photo-comparison-labels">
+            <label>First label<input value={beforeLabel} maxLength={28} onChange={(event) => setBeforeLabel(event.target.value)} /></label>
+            <label>Second label<input value={afterLabel} maxLength={28} onChange={(event) => setAfterLabel(event.target.value)} /></label>
+          </div>
+          {comparisonError ? <p className="v2-record-notice v2-job-photos-upload-error" role="alert">{comparisonError}</p> : null}
+          <button type="button" className="v2-primary-button" onClick={() => void saveComparison()} disabled={comparisonSaving}>
+            {comparisonSaving ? <Loader2 className="v2-spin" size={16} /> : <Image size={16} />}Save comparison
+          </button>
+        </section>
       </div>
     );
   }
@@ -706,6 +769,7 @@ function PhotoGallery({
       ) : null}
 
       {subtitle ? <p className="v2-job-photos-subtitle">{subtitle}</p> : null}
+      {comparisonNotice ? <p className="v2-job-photos-notice" role="status">{comparisonNotice}</p> : null}
       {retryBatch ? (
         <div className="v2-record-notice v2-job-photos-upload-error" role="alert">
           <span>{retryBatch.message}</span>

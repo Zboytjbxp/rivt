@@ -4187,6 +4187,86 @@
   gap: 12px;
 }
 
+.v2-job-photos-compare-grid.is-stacked {
+  grid-template-columns: 1fr;
+}
+
+.v2-photo-comparison-editor {
+  display: grid;
+  gap: 14px;
+  margin-top: 16px;
+  padding: 16px;
+  border: 1px solid var(--v2-border);
+  border-radius: var(--v2-radius-lg);
+  background: var(--v2-surface);
+}
+
+.v2-photo-comparison-editor strong {
+  display: block;
+  color: var(--v2-text);
+  font-size: 17px;
+}
+
+.v2-photo-comparison-editor small {
+  display: block;
+  margin-top: 4px;
+  color: var(--v2-text-muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.v2-photo-comparison-layouts,
+.v2-photo-comparison-labels {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.v2-photo-comparison-layouts button {
+  min-height: 44px;
+  border: 1px solid var(--v2-border);
+  border-radius: var(--v2-radius-md);
+  background: var(--v2-surface-muted);
+  color: var(--v2-text);
+  font: inherit;
+  font-size: 15px;
+  font-weight: var(--v2-weight-strong);
+}
+
+.v2-photo-comparison-layouts button.is-active {
+  border-color: var(--v2-accent);
+  background: var(--v2-accent-soft);
+  color: var(--v2-accent);
+}
+
+.v2-photo-comparison-labels label {
+  display: grid;
+  min-width: 0;
+  gap: 6px;
+  color: var(--v2-text-muted);
+  font-size: 13px;
+  font-weight: var(--v2-weight-strong);
+}
+
+.v2-photo-comparison-labels input {
+  min-width: 0;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--v2-border);
+  border-radius: var(--v2-radius-md);
+  background: var(--v2-surface-muted);
+  color: var(--v2-text);
+  font: inherit;
+  font-size: 15px;
+}
+
+.v2-job-photos-notice {
+  margin: 0;
+  color: var(--v2-success);
+  font-size: 13px;
+  font-weight: var(--v2-weight-strong);
+}
+
 .v2-job-photo-compare-frame {
   position: relative;
   display: grid;
@@ -4916,10 +4996,6 @@
   .v2-job-photo-kind-pill {
     margin: 0 12px 0;
     width: fit-content;
-  }
-
-  .v2-job-photos-compare-grid {
-    grid-template-columns: 1fr;
   }
 
   .v2-job-photos-grid {
@@ -8161,6 +8237,12 @@
     border-color 120ms ease,
     color 120ms ease,
     transform 80ms ease;
+}
+
+@media (max-width: 480px) {
+  .v2-photo-comparison-labels {
+    grid-template-columns: 1fr;
+  }
 }
 
 .fraction-strip button[data-fraction-family="quarter"] {

@@ -242,6 +242,22 @@ Evidence must eventually link to implementation, automated tests, manual accepta
   healthy PostgreSQL/S3-compatible storage, configured Sentry/Web Push, and a
   passing expected-source production monitor.
 
+## Traceability Addendum - Camera Before / After Proof Images (Local Verification)
+
+- `GA-UX-003` gains field-proof composition coverage: users can select two
+  already-saved captures from their current Camera destination, label them,
+  and generate a side-by-side or stacked JPEG comparison while preserving the
+  originals.
+- `GA-UX-006` gains compact comparison controls: layout and labels stay
+  reachable on phones, and a side-by-side proof remains side-by-side instead
+  of being silently converted to a vertical stack at the compact breakpoint.
+- `GA-SEC-004` remains unchanged: the comparison is uploaded through the
+  existing authenticated, destination-scoped media path; no client-only media
+  record or cross-destination copy is introduced.
+- Production evidence remains pending. The deployment check must confirm
+  canvas-safe reads from the configured signed object-storage URLs before this
+  behavior is marked production verified.
+
 ## Traceability Addendum - 2026-07-14 Camera Field Action (Production Verified)
 
 - `GA-UX-002` gains compact-navigation evidence: Camera replaces the former
