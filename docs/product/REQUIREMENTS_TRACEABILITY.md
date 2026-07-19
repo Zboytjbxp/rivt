@@ -1720,3 +1720,21 @@ Evidence must eventually link to implementation, automated tests, manual accepta
   migration `0028_compensation_workflow`, PostgreSQL, S3-compatible storage,
   configured Sentry, and configured Web Push. The production monitor passed
   with operational controls open and seven anonymous private-route checks.
+
+# Traceability Addendum - 2026-07-19 Accessible Display Modes
+
+- `GA-UX-006` gains persistent display-accessibility evidence: users can
+  enable larger text, stronger contrast, and color-safe semantic status cues
+  from Settings without losing their light, dark, or system theme preference.
+- The controls expose switch state to assistive technology, the larger-text
+  mode raises the small-copy floor, and the contrast mode adds a visible
+  three-pixel keyboard focus treatment.
+- Requirement maturity remains Partial until physical-device validation with
+  system text enlargement, keyboard and screen-reader review, and feedback
+  from people with low vision or color-vision deficiencies is recorded.
+- No server, schema, authorization, authentication, billing, storage, or
+  moderation change.
+- Local evidence: build, lint, 59 unit/frontend tests, E2E, rendered
+  mobile-action UI, and dependency audit pass. The PostgreSQL integration
+  aggregate produced no output during a bounded run, so no integration pass
+  is claimed.

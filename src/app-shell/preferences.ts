@@ -16,6 +16,34 @@ export const THEME_CANVAS_STORAGE_KEY = `${brandConfig.appSlug}-theme-canvas`;
 export const THEME_DENSITY_STORAGE_KEY = `${brandConfig.appSlug}-theme-density`;
 export const THEME_CUSTOM_COLOR_STORAGE_KEY = `${brandConfig.appSlug}-theme-custom-color`;
 export const AUTH_MODE_KEY = `${brandConfig.appSlug}-auth-mode`;
+export const COLOR_VISION_STORAGE_KEY = `${brandConfig.appSlug}-color-safe-status`;
+export const ENHANCED_CONTRAST_STORAGE_KEY = `${brandConfig.appSlug}-enhanced-contrast`;
+export const LARGE_TEXT_STORAGE_KEY = `${brandConfig.appSlug}-large-text`;
+
+export type AccessibilityPreferenceKey = "colorSafe" | "enhancedContrast" | "largeText";
+
+export interface AccessibilityPreferences {
+  colorSafe: boolean;
+  enhancedContrast: boolean;
+  largeText: boolean;
+}
+
+function readBooleanPreference(key: string): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    return window.localStorage.getItem(key) === "on";
+  } catch {
+    return false;
+  }
+}
+
+export function readAccessibilityPreferences(): AccessibilityPreferences {
+  return {
+    colorSafe: readBooleanPreference(COLOR_VISION_STORAGE_KEY),
+    enhancedContrast: readBooleanPreference(ENHANCED_CONTRAST_STORAGE_KEY),
+    largeText: readBooleanPreference(LARGE_TEXT_STORAGE_KEY),
+  };
+}
 
 export function readThemePreference(): ThemeMode {
   if (typeof window === "undefined") return "light";

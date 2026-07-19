@@ -4,6 +4,12 @@ import {
   type ThemeMode,
 } from "../brandConfig";
 import {
+  type AccessibilityPreferenceKey,
+  type AccessibilityPreferences,
+  COLOR_VISION_STORAGE_KEY,
+  ENHANCED_CONTRAST_STORAGE_KEY,
+  LARGE_TEXT_STORAGE_KEY,
+  readAccessibilityPreferences,
   readThemeSourcePreference,
   THEME_SOURCE_KEY,
   THEME_STORAGE_KEY,
@@ -13,6 +19,9 @@ export type ThemeSource = "system" | ThemeMode;
 
 export function useAppTheme() {
   const [themeSource, setThemeSource] = useState<ThemeSource>(readThemeSourcePreference);
+  const [accessibilityPreferences, setAccessibilityPreferences] = useState<AccessibilityPreferences>(
+    readAccessibilityPreferences,
+  );
   const [systemDark, setSystemDark] = useState<boolean>(
     () => typeof window !== "undefined" && Boolean(window.matchMedia?.("(prefers-color-scheme: dark)").matches),
   );
@@ -62,10 +71,36 @@ export function useAppTheme() {
     }
   }, [themeMode, themeSource]);
 
+  useEffect(() => {
+    const root = document.documentElement;
+    root.dataset.colorVision = accessibilityPreferences.colorSafe ? "safe" : "standard";
+    root.dataset.contrast = accessibilityPreferences.enhancedContrast ? "high" : "standard";
+    root.dataset.legibility = accessibilityPreferences.largeText ? "large" : "standard";
+
+    try {
+      const preferences: Array<[string, boolean]> = [
+        [COLOR_VISION_STORAGE_KEY, accessibilityPreferences.colorSafe],
+        [ENHANCED_CONTRAST_STORAGE_KEY, accessibilityPreferences.enhancedContrast],
+        [LARGE_TEXT_STORAGE_KEY, accessibilityPreferences.largeText],
+      ];
+      preferences.forEach(([key, enabled]) => {
+        if (enabled) window.localStorage.setItem(key, "on");
+        else window.localStorage.removeItem(key);
+      });
+    } catch {
+      // Storage unavailable - the selected display settings remain active for this session.
+    }
+  }, [accessibilityPreferences]);
+
   const handleSetThemeSource = useCallback((source: ThemeSource) => setThemeSource(source), []);
   const handleToggleTheme = useCallback(() => setThemeSource((current) => (current === "dark" ? "light" : "dark")), []);
+  const handleToggleAccessibility = useCallback((key: AccessibilityPreferenceKey) => {
+    setAccessibilityPreferences((current) => ({ ...current, [key]: !current[key] }));
+  }, []);
   return {
+    accessibilityPreferences,
     handleSetThemeSource,
+    handleToggleAccessibility,
     handleToggleTheme,
     themeMode,
     themeSource,
