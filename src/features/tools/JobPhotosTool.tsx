@@ -379,6 +379,7 @@ function PhotoGallery({
   layout = "grid",
   captureIntent = null,
   onCaptureIntentChange,
+  onCaptureOpenChange,
 }: {
   title: string;
   subtitle: string;
@@ -393,6 +394,7 @@ function PhotoGallery({
   layout?: PhotoGalleryLayout;
   captureIntent?: CaptureIntent | null;
   onCaptureIntentChange?: (intent: CaptureIntent) => void;
+  onCaptureOpenChange?: (open: boolean) => void;
 }) {
   const [photoView, setPhotoView] = useState<PhotoView>("gallery");
   const [selectedPhoto, setSelectedPhoto] = useState<UnifiedPhoto | null>(null);
@@ -420,6 +422,14 @@ function PhotoGallery({
   useEffect(() => {
     onFileRef(fileRef.current);
   }, [onFileRef]);
+
+  useEffect(() => {
+    onCaptureOpenChange?.(showCamera);
+  }, [onCaptureOpenChange, showCamera]);
+
+  useEffect(() => () => {
+    onCaptureOpenChange?.(false);
+  }, [onCaptureOpenChange]);
 
   async function runUpload(files: File[], note = captureIntentNote(captureIntent)) {
     if (!files.length) return;
@@ -740,7 +750,7 @@ function PhotoGallery({
   );
 }
 
-export function JobPhotosTool({ activeWork, focusedActiveWorkId = null, standaloneProject = null, selectedPrivateAlbum = null, autoOpenActiveJob = false, contextLabel = null, onRequestContext }: {
+export function JobPhotosTool({ activeWork, focusedActiveWorkId = null, standaloneProject = null, selectedPrivateAlbum = null, autoOpenActiveJob = false, contextLabel = null, onRequestContext, onCaptureOpenChange }: {
   activeWork: CanonicalActiveWork[];
   focusedActiveWorkId?: string | null;
   standaloneProject?: StandaloneProject | null;
@@ -748,6 +758,7 @@ export function JobPhotosTool({ activeWork, focusedActiveWorkId = null, standalo
   autoOpenActiveJob?: boolean;
   contextLabel?: string | null;
   onRequestContext?: () => void;
+  onCaptureOpenChange?: (open: boolean) => void;
 }) {
   const focusedWork = focusedActiveWorkId
     ? activeWork.find((work) => work.id === focusedActiveWorkId) ?? null
@@ -992,6 +1003,7 @@ export function JobPhotosTool({ activeWork, focusedActiveWorkId = null, standalo
         layout="timeline"
         captureIntent={captureIntent}
         onCaptureIntentChange={setCaptureIntent}
+        onCaptureOpenChange={onCaptureOpenChange}
       />
     );
   }
@@ -1010,6 +1022,7 @@ export function JobPhotosTool({ activeWork, focusedActiveWorkId = null, standalo
         onUploadFiles={handleAlbumFiles}
         onFileRef={(ref) => { albumFileRef.current = ref; }}
         initialShowCameraToken={cameraLaunchToken}
+        onCaptureOpenChange={onCaptureOpenChange}
       />
     );
   }

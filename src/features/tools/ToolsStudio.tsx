@@ -3040,6 +3040,7 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
   const [fieldToolsEditing, setFieldToolsEditing] = useState(false);
   const [moreToolsOpen, setMoreToolsOpen] = useState(false);
   const [cameraContextRequest, setCameraContextRequest] = useState(0);
+  const [cameraCaptureOpen, setCameraCaptureOpen] = useState(false);
   const [cameraAlbums, setCameraAlbums] = useState<PhotoAlbum[]>([]);
   const [cameraAlbumsLoading, setCameraAlbumsLoading] = useState(false);
   const [cameraAlbumId, setCameraAlbumId] = useState<string | null>(readCameraAlbumDestination);
@@ -3312,16 +3313,18 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
     setActiveTool("invoice", { keepConvertedInvoice: true });
   }
 
+  const immersiveToolOpen = mode === "tools"
+    && activeTool !== "hub"
+    && (activeTool !== "job-photos" || cameraCaptureOpen);
+
   useEffect(() => {
-    const immersive = mode === "tools" && activeTool !== "hub";
-    onImmersiveChange?.(immersive);
+    onImmersiveChange?.(immersiveToolOpen);
     return () => onImmersiveChange?.(false);
-  }, [activeTool, mode, onImmersiveChange]);
+  }, [immersiveToolOpen, onImmersiveChange]);
 
   useEffect(() => {
     const root = document.documentElement;
-    const immersive = mode === "tools" && activeTool !== "hub";
-    if (immersive) {
+    if (immersiveToolOpen) {
       root.setAttribute("data-rivt-immersive-tool", activeTool);
     } else {
       root.removeAttribute("data-rivt-immersive-tool");
@@ -3329,7 +3332,7 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
     return () => {
       root.removeAttribute("data-rivt-immersive-tool");
     };
-  }, [activeTool, mode]);
+  }, [activeTool, immersiveToolOpen]);
 
   const toolSwipeHandlers: ToolSwipeHandlers = {
     onPointerDown(event) {
@@ -3756,6 +3759,7 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
             autoOpenActiveJob={requestedTool === "job-photos" && Boolean(focusedActiveWorkId) && contextChosenTool !== activeTool}
             contextLabel={toolWorkContext.kind === "rivt" ? toolWorkContext.job?.title ?? "Accepted work" : toolWorkContext.kind === "standalone" ? toolWorkContext.project.title : null}
             onRequestContext={() => setCameraContextRequest((current) => current + 1)}
+            onCaptureOpenChange={setCameraCaptureOpen}
           />
         ),
       },

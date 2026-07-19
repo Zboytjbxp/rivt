@@ -2433,7 +2433,7 @@ export function WorkWorkspace({
             )}
             {saveTemplateNotice ? <p className="v2-saved-search-notice" role="status" style={{ padding: "8px 16px" }}>{saveTemplateNotice}</p> : null}
           </article>
-        ) : (
+        ) : role === "tradesperson" && workStage !== "active" && visibleJobs.length === 0 ? null : (
           <article className="v2-work-detail-placeholder">
             <BriefcaseBusiness size={32} />
             <strong>{role === "tradesperson" ? "Select a job to see details" : "Select a posting to review it"}</strong>

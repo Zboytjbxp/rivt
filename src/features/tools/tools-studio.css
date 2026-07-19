@@ -3054,6 +3054,7 @@
   }
 
   .v2-camera-action-dock {
+    bottom: calc(78px + env(safe-area-inset-bottom));
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 6px;
     padding: 6px;
@@ -4876,7 +4877,7 @@
   }
 
   .v2-job-photos-workbench {
-    padding-bottom: calc(86px + env(safe-area-inset-bottom));
+    padding-bottom: calc(180px + env(safe-area-inset-bottom));
   }
 
   .v2-job-photos-actions-bar .v2-tool-action-row {
@@ -4893,7 +4894,7 @@
   .v2-camera-gallery-dock {
     position: fixed;
     right: 8px;
-    bottom: max(8px, env(safe-area-inset-bottom));
+    bottom: calc(92px + env(safe-area-inset-bottom));
     left: 8px;
     z-index: 22;
     display: grid;

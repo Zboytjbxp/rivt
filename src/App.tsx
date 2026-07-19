@@ -702,7 +702,7 @@ function App() {
         : null;
       setActiveView(nextView);
       setRequestedTool(nextTool);
-      setToolsImmersive(Boolean(nextTool));
+      setToolsImmersive(Boolean(nextTool) && nextTool !== "job-photos");
       setFocusedActiveWorkId(nextActiveWorkId);
       setFocusedCloseout(nextView === "Work" && readCloseoutFromUrl());
       setSelectedConversationId(nextView === "Messages" ? readConversationFromUrl() : null);
@@ -1365,7 +1365,7 @@ function App() {
     const resolvedView: NavLabel = view === "Crew" ? "People" : view;
     const isCamera = resolvedView === "Camera";
     setRequestedTool(isCamera ? "job-photos" : null);
-    setToolsImmersive(isCamera);
+    setToolsImmersive(false);
     if (isCamera) setFocusedActiveWorkId(null);
     setFocusedCloseout(false);
     if (resolvedView !== "Reviews") setFocusedReviewId(null);
@@ -1383,7 +1383,7 @@ function App() {
     const nextTool = isPublicToolMode(tool) ? tool : null;
     const isCamera = nextTool === "job-photos";
     setRequestedTool(nextTool);
-    setToolsImmersive(Boolean(nextTool));
+    setToolsImmersive(Boolean(nextTool) && nextTool !== "job-photos");
     setFocusedActiveWorkId(null);
     setFocusedCloseout(false);
     setActiveView(isCamera ? "Camera" : "Tools");
@@ -1402,7 +1402,7 @@ function App() {
     setFocusedActiveWorkId(nextTool ? activeWorkId : null);
     setFocusedCloseout(false);
     setRequestedTool(nextTool);
-    setToolsImmersive(Boolean(nextTool));
+    setToolsImmersive(Boolean(nextTool) && nextTool !== "job-photos");
     setActiveView(isCamera ? "Camera" : "Tools");
     const nextPath = isCamera ? pathForCamera(activeWorkId) : pathForTool(nextTool, nextTool ? activeWorkId : null);
     if (currentPathAndSearch() !== nextPath) {
@@ -1495,7 +1495,7 @@ function App() {
     const isCamera = nextTool === "job-photos";
     const nextView: NavLabel = isCamera ? "Camera" : "Tools";
     setRequestedTool(nextTool);
-    setToolsImmersive(Boolean(nextTool));
+    setToolsImmersive(Boolean(nextTool) && nextTool !== "job-photos");
     setFocusedActiveWorkId(nextActiveWorkId);
     setFocusedCloseout(false);
     setActiveView(nextView);

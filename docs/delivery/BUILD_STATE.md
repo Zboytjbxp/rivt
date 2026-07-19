@@ -1,11 +1,25 @@
 # RIVT Build State
 
-Last updated: 2026-07-17 America/New_York
+Last updated: 2026-07-18 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Packet 64 tools mobile landing is deployed and production-verified.
-Active packet: `docs/delivery/packets/64_TOOLS_MOBILE_LANDING.md`
-Repository branch: `master` (fast-forwarded from `codex/tools-field-tray`)
-Production feature release commit: `c2f02632285735f7d0a19b2979370ae55d239dca`
+Current phase: Packet 65 camera workflow coherence is release-ready.
+Active packet: `docs/delivery/packets/65_CAMERA_WORKFLOW_COHERENCE.md`
+Repository branch: `codex/camera-workflow-coherence`
+Production feature release commit: pending merge and deployment
+
+## Packet 65 - Camera Workflow Coherence
+
+- Camera landing and gallery surfaces now retain the familiar RIVT top and
+  bottom navigation. Only the actual shutter enters immersive capture mode.
+- The one-handed Destination, Feed, and Capture controls clear the global
+  mobile navigation, with enough workbench padding to keep content visible.
+- Work no longer shows a redundant select-a-job placeholder under the honest
+  zero-results state for tradespeople.
+- Build, lint, 58 unit/frontend tests, E2E, rendered mobile-action QA, and the
+  dependency audit pass. The configured PostgreSQL integration aggregate
+  produced no output and exceeded a bounded 304-second run, so it is recorded
+  as incomplete rather than passing. No server or schema behavior changed.
+- Deployment evidence is pending merge and production verification.
 
 ## Packet 64 - Tools Mobile Landing
 
