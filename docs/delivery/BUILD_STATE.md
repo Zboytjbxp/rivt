@@ -5,7 +5,7 @@ Current gate: Gate B controlled engagement
 Current phase: Packet 65 camera workflow coherence is deployed and verified.
 Active packet: `docs/delivery/packets/65_CAMERA_WORKFLOW_COHERENCE.md`
 Repository branch: `master`
-Production feature release commit: `ce13fdccc9e0683b905cb550f7d961e0f0186ab8`
+Production feature release commit: `9c66537f282c18fdce2fec9909d0672747cd6a19`
 
 ## Packet 65 - Camera Workflow Coherence
 
@@ -24,12 +24,13 @@ Production feature release commit: `ce13fdccc9e0683b905cb550f7d961e0f0186ab8`
   dependency audit pass. The configured PostgreSQL integration aggregate
   produced no output and exceeded a bounded 304-second run, so it is recorded
   as incomplete rather than passing. No server or schema behavior changed.
-- Deployment evidence: `codex/camera-workflow-coherence` fast-forwarded into
+- Deployment evidence: `codex/camera-workflow-coherence` merged into
   `master`; live `https://rivt.pro/api/health` served exact source
-  `ce13fdccc9e0683b905cb550f7d961e0f0186ab8` with ready migrations,
+  `9c66537f282c18fdce2fec9909d0672747cd6a19` with ready migrations,
   PostgreSQL, S3-compatible storage, configured Sentry, and configured Web
-  Push. `npm run monitor:production` passed with operational controls open and
-  all seven anonymous private-route checks healthy.
+  Push. `npm run monitor:production` passed in 581 ms with operational
+  controls open, matching-job alerts enabled, and all seven anonymous
+  private-route checks healthy.
 
 ## Packet 64 - Tools Mobile Landing
 

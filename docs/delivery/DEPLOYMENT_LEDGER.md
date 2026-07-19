@@ -2101,3 +2101,31 @@ Add one entry per staging/production deployment.
   and iPhone devices.
 - Approval: Packet 62 runtime and automated compact-device gates are verified;
   physical field acceptance remains open.
+
+## Current Production - Packet 65 Camera and Calculator Visual Refinement
+
+- Environment: Production (`https://rivt.pro`)
+- Date/time/timezone: 2026-07-19 America/New_York
+- Deployer: Codex through a verified feature branch, merge into `master`, and
+  Railway production auto-deploy
+- Source repository/branch: `Zboytjbxp/rivt`, `master`
+- Runtime feature source: `9c66537f282c18fdce2fec9909d0672747cd6a19`
+- Migration version before/after: unchanged (`0028_compensation_workflow`)
+- Provider/config changes: none; auth, billing, PostgreSQL, object storage,
+  Sentry, Web Push, email, moderation, and rollout configuration were
+  preserved.
+- Rollback target: `d03e5b2`; no database rollback is required.
+- Automated gates: build, lint, 58 unit/frontend tests, E2E, compact
+  mobile-action UI, and the zero-vulnerability production dependency audit
+  passed.
+- Product evidence: immersive Camera controls use solid translucent chrome
+  without decorative gradients. Heavy 16th fraction keys use a calm hierarchy
+  for quarters, eighths, and sixteenths without the previous cap decorations.
+- Post-deploy proof: live `/api/health` returned the exact runtime feature
+  source. The expected-source production monitor passed in 581 ms with
+  PostgreSQL, S3-compatible storage, configured Sentry and Web Push,
+  matching-job alerts, and all seven anonymous private-route checks healthy.
+- Known boundary: physically confirm Camera contrast and fraction-key scanning
+  on the launch Android and iPhone devices after refreshing the installed PWA.
+- Approval: Packet 65 runtime and automated gates are verified; physical field
+  acceptance remains open.

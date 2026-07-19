@@ -68,3 +68,11 @@ moderation, storage contracts, schemas, or production data.
 - `npm run monitor:production` passed against the deployed commit in 601 ms,
   with signup and mutation controls open, matching-job alerts enabled, and all
   seven anonymous private-route checks healthy.
+- Follow-up visual-refinement commit
+  `e86767c350e2defa15dd2a1c18ea8fbf960dbc5d` was merged into `master` as
+  `9c66537f282c18fdce2fec9909d0672747cd6a19` and pushed on 2026-07-19.
+- Production served that exact merge source. Build, lint, 58/58 unit/frontend
+  tests, E2E, rendered mobile-action QA, and the zero-vulnerability dependency
+  audit passed on the merged tree. The production monitor passed in 581 ms
+  with PostgreSQL, object storage, Sentry, Web Push, matching-job alerts, and
+  all seven anonymous private-route checks healthy.
