@@ -2129,3 +2129,35 @@ Add one entry per staging/production deployment.
   on the launch Android and iPhone devices after refreshing the installed PWA.
 - Approval: Packet 65 runtime and automated gates are verified; physical field
   acceptance remains open.
+
+## Current Production - Packet 66 Accessible Display Modes
+
+- Environment: Production (`https://rivt.pro`)
+- Date/time/timezone: 2026-07-19 America/New_York
+- Deployer: Codex through a verified feature branch, merge into `master`, and
+  Railway production auto-deploy
+- Source repository/branch: `Zboytjbxp/rivt`, `master`
+- Runtime feature source: `955d43cfcadbb47f613fc941245d446d6c46fffe`
+- Migration version before/after: unchanged (`0028_compensation_workflow`)
+- Provider/config changes: none; auth, billing, PostgreSQL, object storage,
+  Sentry, Web Push, email, moderation, and rollout configuration were
+  preserved.
+- Rollback target: `a1f4d13`; no database rollback is required.
+- Automated gates: build, lint, 59 unit/frontend tests, E2E, compact
+  mobile-action UI, and the zero-vulnerability production dependency audit
+  passed. The bounded PostgreSQL integration aggregate produced no output and
+  remains recorded as incomplete rather than passing.
+- Product evidence: Settings > Theme now offers persistent Larger text,
+  Higher contrast, and Color-safe status controls. Preferences apply at the
+  document root, preserve text/icon status cues, and do not alter account or
+  server state.
+- Post-deploy proof: live `/api/health` returned the exact runtime feature
+  source with migration 0028 ready. The expected-source production monitor
+  passed in 588 ms with PostgreSQL, S3-compatible storage, configured Sentry
+  and Web Push, matching-job alerts, and all seven anonymous private-route
+  checks healthy.
+- Known boundary: physically validate low-vision text scaling, color-safe
+  status recognition, high-contrast focus treatment, and screen-reader switch
+  announcements on the launch Android and iPhone devices.
+- Approval: Packet 66 runtime and automated gates are verified; physical
+  accessibility acceptance remains open.

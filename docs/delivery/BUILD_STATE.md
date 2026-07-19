@@ -2,10 +2,10 @@
 
 Last updated: 2026-07-19 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Packet 66 accessible display modes is release-ready.
+Current phase: Packet 66 accessible display modes is deployed and verified.
 Active packet: `docs/delivery/packets/66_ACCESSIBLE_DISPLAY_MODES.md`
-Repository branch: `codex/accessibility-display-deploy`
-Production feature release commit: pending merge and deployment
+Repository branch: `master`
+Production feature release commit: `955d43cfcadbb47f613fc941245d446d6c46fffe`
 
 ## Packet 66 - Accessible Display Modes
 
@@ -21,7 +21,12 @@ Production feature release commit: pending merge and deployment
   output during a bounded run and is recorded as incomplete. Physical-device
   low-vision, color-vision, and screen-reader validation remains a
   launch-readiness boundary.
-- Deployment evidence is pending merge and production verification.
+- Deployment evidence: merged and pushed to `master`; live
+  `https://rivt.pro/api/health` served exact source
+  `955d43cfcadbb47f613fc941245d446d6c46fffe` with migration 0028 ready,
+  PostgreSQL, S3-compatible storage, configured Sentry, and configured Web
+  Push. The expected-source production monitor passed in 588 ms with matching
+  job alerts enabled and all seven anonymous private-route checks healthy.
 
 ## Packet 65 - Camera Workflow Coherence
 
