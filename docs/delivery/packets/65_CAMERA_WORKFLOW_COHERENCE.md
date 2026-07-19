@@ -18,6 +18,10 @@ user had already completed.
   layers.
 - Remove the duplicate Work detail placeholder when a tradesperson already
   sees the honest zero-results state.
+- Remove decorative gradients from immersive Camera chrome and its context
+  card so the live preview remains visually dominant.
+- Replace the Heavy 16th fraction-key cap and outline treatment with a calmer
+  hierarchy based on fixed position, type size, and neutral surface contrast.
 
 ## Acceptance boundary
 
@@ -39,6 +43,8 @@ user had already completed.
 - `npm run test:ui:mobile-actions` - passed with rendered Camera action and
   viewport assertions.
 - `npm audit --omit=dev` - passed with zero vulnerabilities.
+- Follow-up visual refinement re-ran build, lint, 58/58 unit/frontend tests,
+  E2E, mobile-action UI, and dependency audit successfully on 2026-07-19.
 - `npm run test:integration` - attempted with `TEST_DATABASE_URL` configured;
   the runner produced no output and exceeded the 304-second command limit.
   This is recorded as an incomplete aggregate run, not a pass. This packet has

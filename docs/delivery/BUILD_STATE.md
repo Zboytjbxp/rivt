@@ -1,6 +1,6 @@
 # RIVT Build State
 
-Last updated: 2026-07-18 America/New_York
+Last updated: 2026-07-19 America/New_York
 Current gate: Gate B controlled engagement
 Current phase: Packet 65 camera workflow coherence is release-ready.
 Active packet: `docs/delivery/packets/65_CAMERA_WORKFLOW_COHERENCE.md`
@@ -11,6 +11,11 @@ Production feature release commit: pending merge and deployment
 
 - Camera landing and gallery surfaces now retain the familiar RIVT top and
   bottom navigation. Only the actual shutter enters immersive capture mode.
+- Immersive capture now uses calm solid translucent chrome instead of top,
+  bottom, or context-card gradients.
+- Heavy 16th fraction keys use a restrained three-level visual hierarchy:
+  quarters are strongest, eighths are medium, and sixteenths are quiet.
+  Orange is reserved for the selected fraction and real actions.
 - The one-handed Destination, Feed, and Capture controls clear the global
   mobile navigation, with enough workbench padding to keep content visible.
 - Work no longer shows a redundant select-a-job placeholder under the honest
