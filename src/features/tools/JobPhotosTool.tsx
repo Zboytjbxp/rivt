@@ -211,7 +211,21 @@ function CameraCapture({
   const [saveMessage, setSaveMessage] = useState("");
   const [failedCapture, setFailedCapture] = useState<Blob | null>(null);
   const [facingMode, setFacingMode] = useState<"environment" | "user">("environment");
+  const [zoom, setZoom] = useState(1);
   const lastSnapRef = useRef<string | null>(null);
+  const pinchStartDistanceRef = useRef(0);
+  const pinchStartZoomRef = useRef(1);
+
+  function clampZoom(value: number) {
+    return Math.min(3, Math.max(1, Math.round(value * 10) / 10));
+  }
+
+  function touchDistance(touches: React.TouchList) {
+    const first = touches.item(0);
+    const second = touches.item(1);
+    if (!first || !second) return 0;
+    return Math.hypot(second.clientX - first.clientX, second.clientY - first.clientY);
+  }
 
   useEffect(() => () => {
     if (lastSnapRef.current) URL.revokeObjectURL(lastSnapRef.current);
@@ -258,11 +272,25 @@ function CameraCapture({
     const video = videoRef.current;
     const canvas = canvasRef.current;
     if (!video || !canvas || !ready) return;
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
+    const sourceWidth = video.videoWidth / zoom;
+    const sourceHeight = video.videoHeight / zoom;
+    const sourceX = (video.videoWidth - sourceWidth) / 2;
+    const sourceY = (video.videoHeight - sourceHeight) / 2;
+    canvas.width = Math.round(sourceWidth);
+    canvas.height = Math.round(sourceHeight);
     const context = canvas.getContext("2d");
     if (!context) return;
-    context.drawImage(video, 0, 0);
+    context.drawImage(
+      video,
+      sourceX,
+      sourceY,
+      sourceWidth,
+      sourceHeight,
+      0,
+      0,
+      canvas.width,
+      canvas.height,
+    );
     canvas.toBlob((blob) => {
       if (!blob) return;
       if (lastSnapRef.current) URL.revokeObjectURL(lastSnapRef.current);
@@ -292,14 +320,32 @@ function CameraCapture({
           <p>{error}</p>
         </div>
       ) : (
-        <video
-          ref={videoRef}
-          className="v2-camera-feed"
-          playsInline
-          muted
-          autoPlay
-          onLoadedMetadata={() => setReady(true)}
-        />
+        <div
+          className="v2-camera-feed-stage"
+          onTouchStart={(event) => {
+            if (event.touches.length !== 2) return;
+            pinchStartDistanceRef.current = touchDistance(event.touches);
+            pinchStartZoomRef.current = zoom;
+          }}
+          onTouchMove={(event) => {
+            if (event.touches.length !== 2 || !pinchStartDistanceRef.current) return;
+            event.preventDefault();
+            setZoom(clampZoom(pinchStartZoomRef.current * (touchDistance(event.touches) / pinchStartDistanceRef.current)));
+          }}
+          onTouchEnd={(event) => {
+            if (event.touches.length < 2) pinchStartDistanceRef.current = 0;
+          }}
+        >
+          <video
+            ref={videoRef}
+            className="v2-camera-feed"
+            style={{ transform: `scale(${zoom})` }}
+            playsInline
+            muted
+            autoPlay
+            onLoadedMetadata={() => setReady(true)}
+          />
+        </div>
       )}
       <canvas ref={canvasRef} style={{ display: "none" }} aria-hidden="true" />
       <div className="v2-camera-bottom-controls">
@@ -325,6 +371,20 @@ function CameraCapture({
             ))}
           </div>
         ) : null}
+        <div className="v2-camera-zoom-control" aria-label="Camera zoom">
+          <button type="button" onClick={() => setZoom((current) => clampZoom(current - 0.2))} disabled={zoom <= 1} aria-label="Zoom out">−</button>
+          <input
+            type="range"
+            min="1"
+            max="3"
+            step="0.1"
+            value={zoom}
+            onChange={(event) => setZoom(clampZoom(Number(event.target.value)))}
+            aria-label="Camera zoom level"
+          />
+          <button type="button" onClick={() => setZoom((current) => clampZoom(current + 0.2))} disabled={zoom >= 3} aria-label="Zoom in">+</button>
+          <output>{zoom.toFixed(1)}×</output>
+        </div>
         {saveState !== "idle" ? (
           <span className={`v2-camera-save-status is-${saveState}`} role={saveState === "failed" ? "alert" : "status"}>
             {saveMessage}
@@ -352,6 +412,7 @@ function CameraCapture({
             onClick={() => {
               setReady(false);
               setError("");
+              setZoom(1);
               setFacingMode((current) => current === "environment" ? "user" : "environment");
             }}
             disabled={saveState === "saving"}

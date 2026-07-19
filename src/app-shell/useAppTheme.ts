@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   brandConfig,
   type ThemeMode,
@@ -25,6 +25,7 @@ export function useAppTheme() {
   const [systemDark, setSystemDark] = useState<boolean>(
     () => typeof window !== "undefined" && Boolean(window.matchMedia?.("(prefers-color-scheme: dark)").matches),
   );
+  const largeTextRef = useRef(accessibilityPreferences.largeText);
   const themeMode: ThemeMode = themeSource === "system" ? (systemDark ? "dark" : "light") : themeSource;
 
   useEffect(() => {
@@ -91,6 +92,63 @@ export function useAppTheme() {
       // Storage unavailable - the selected display settings remain active for this session.
     }
   }, [accessibilityPreferences]);
+
+  useEffect(() => {
+    largeTextRef.current = accessibilityPreferences.largeText;
+  }, [accessibilityPreferences.largeText]);
+
+  useEffect(() => {
+    let startDistance = 0;
+    let startLargeText = false;
+
+    function distance(touches: TouchList) {
+      const [first, second] = [touches.item(0), touches.item(1)];
+      if (!first || !second) return 0;
+      return Math.hypot(second.clientX - first.clientX, second.clientY - first.clientY);
+    }
+
+    function isCameraGesture(target: EventTarget | null) {
+      return target instanceof Element && Boolean(target.closest(".v2-camera-overlay"));
+    }
+
+    function handleTouchStart(event: TouchEvent) {
+      if (event.touches.length !== 2 || isCameraGesture(event.target)) return;
+      startDistance = distance(event.touches);
+      startLargeText = largeTextRef.current;
+    }
+
+    function handleTouchMove(event: TouchEvent) {
+      if (event.touches.length !== 2 || !startDistance || isCameraGesture(event.target)) return;
+      event.preventDefault();
+      const ratio = distance(event.touches) / startDistance;
+      if (ratio > 1.12 && !startLargeText) {
+        setAccessibilityPreferences((current) => ({ ...current, largeText: true }));
+      } else if (ratio < 0.9 && startLargeText) {
+        setAccessibilityPreferences((current) => ({ ...current, largeText: false }));
+      }
+    }
+
+    function handleTouchEnd(event: TouchEvent) {
+      if (event.touches.length < 2) startDistance = 0;
+    }
+
+    function preventSafariPageZoom(event: Event) {
+      if (!isCameraGesture(event.target)) event.preventDefault();
+    }
+
+    document.addEventListener("touchstart", handleTouchStart, { passive: true });
+    document.addEventListener("touchmove", handleTouchMove, { passive: false });
+    document.addEventListener("touchend", handleTouchEnd, { passive: true });
+    document.addEventListener("gesturestart", preventSafariPageZoom, { passive: false });
+    document.addEventListener("gesturechange", preventSafariPageZoom, { passive: false });
+    return () => {
+      document.removeEventListener("touchstart", handleTouchStart);
+      document.removeEventListener("touchmove", handleTouchMove);
+      document.removeEventListener("touchend", handleTouchEnd);
+      document.removeEventListener("gesturestart", preventSafariPageZoom);
+      document.removeEventListener("gesturechange", preventSafariPageZoom);
+    };
+  }, []);
 
   const handleSetThemeSource = useCallback((source: ThemeSource) => setThemeSource(source), []);
   const handleToggleTheme = useCallback(() => setThemeSource((current) => (current === "dark" ? "light" : "dark")), []);
