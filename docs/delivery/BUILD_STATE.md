@@ -11,6 +11,11 @@ Production feature release commit: `ce13fdccc9e0683b905cb550f7d961e0f0186ab8`
 
 - Camera landing and gallery surfaces now retain the familiar RIVT top and
   bottom navigation. Only the actual shutter enters immersive capture mode.
+- Immersive capture now uses calm solid translucent chrome instead of top,
+  bottom, or context-card gradients.
+- Heavy 16th fraction keys use a restrained three-level visual hierarchy:
+  quarters are strongest, eighths are medium, and sixteenths are quiet.
+  Orange is reserved for the selected fraction and real actions.
 - The one-handed Destination, Feed, and Capture controls clear the global
   mobile navigation, with enough workbench padding to keep content visible.
 - Work no longer shows a redundant select-a-job placeholder under the honest
