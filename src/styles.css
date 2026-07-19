@@ -1687,6 +1687,33 @@ textarea:focus-visible {
   box-shadow: inset 0 0 0 1px var(--accent);
 }
 
+.accessibility-preferences { display: grid; gap: 12px; padding-top: 16px; border-top: 1px solid var(--v2-border); }
+.accessibility-preferences > header { display: grid; gap: 3px; }
+.accessibility-preferences > header span { color: var(--v2-accent-text); font-size: 12px; font-weight: 800; text-transform: uppercase; }
+.accessibility-preferences > header strong { font-size: 17px; }
+.accessibility-options { display: grid; gap: 8px; }
+.accessibility-option {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 68px;
+  padding: 10px 12px;
+  color: var(--v2-text);
+  text-align: left;
+  border: 1px solid var(--v2-border-strong);
+  border-radius: var(--v2-radius-md);
+  background: var(--v2-surface-raised);
+}
+.accessibility-option.is-enabled { border-color: var(--v2-accent); background: var(--v2-accent-soft); }
+.accessibility-option-icon { display: grid; place-items: center; width: 42px; height: 42px; color: var(--v2-accent-text); border-radius: var(--v2-radius-sm); background: var(--v2-surface-muted); }
+.accessibility-option-copy { display: grid; gap: 2px; min-width: 0; }
+.accessibility-option-copy strong { font-size: 15px; }
+.accessibility-option-copy small { color: var(--v2-text-muted); font-size: 13px; }
+.accessibility-option-state { min-width: 38px; color: var(--v2-text-muted); font-size: 13px; font-weight: 800; text-align: right; }
+.accessibility-option.is-enabled .accessibility-option-state { color: var(--v2-accent-text); }
+
 .appearance-preference.is-compact .appearance-mode-control button {
   min-height: 64px;
 }

@@ -143,6 +143,40 @@ test("rate card helper migrates legacy object data and reads array data", async 
   }
 });
 
+test("accessibility display preferences read persisted device choices", async () => {
+  const previousWindow = globalThis.window;
+  const localStorage = createMemoryStorage({
+    "rivt-color-safe-status": "on",
+    "rivt-enhanced-contrast": "on",
+    "rivt-large-text": "off",
+  });
+  globalThis.window = { localStorage };
+
+  try {
+    const {
+      COLOR_VISION_STORAGE_KEY,
+      ENHANCED_CONTRAST_STORAGE_KEY,
+      LARGE_TEXT_STORAGE_KEY,
+      readAccessibilityPreferences,
+    } = await loadModule("/src/app-shell/preferences.ts");
+
+    assert.equal(COLOR_VISION_STORAGE_KEY, "rivt-color-safe-status");
+    assert.equal(ENHANCED_CONTRAST_STORAGE_KEY, "rivt-enhanced-contrast");
+    assert.equal(LARGE_TEXT_STORAGE_KEY, "rivt-large-text");
+    assert.deepEqual(readAccessibilityPreferences(), {
+      colorSafe: true,
+      enhancedContrast: true,
+      largeText: false,
+    });
+  } finally {
+    if (previousWindow === undefined) {
+      delete globalThis.window;
+    } else {
+      globalThis.window = previousWindow;
+    }
+  }
+});
+
 test("Home trade feed renders without crashing", async () => {
   const { TradeFeed } = await loadModule("/src/features/home/TradeFeed.tsx");
 

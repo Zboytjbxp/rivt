@@ -1,11 +1,17 @@
-import { Monitor, Moon, Sun } from "lucide-react";
+import { Contrast, Eye, Monitor, Moon, Palette, Sun } from "lucide-react";
 import type { ThemeMode } from "../brandConfig";
+import type {
+  AccessibilityPreferenceKey,
+  AccessibilityPreferences,
+} from "../app-shell/preferences";
 import type { ThemeSource } from "../app-shell/useAppTheme";
 
 interface ThemeStudioProps {
   themeMode: ThemeMode;
   themeSource: ThemeSource;
   onSetThemeSource: (source: ThemeSource) => void;
+  accessibilityPreferences?: AccessibilityPreferences;
+  onToggleAccessibility?: (key: AccessibilityPreferenceKey) => void;
   variant?: "full" | "compact";
 }
 
@@ -20,7 +26,31 @@ const choices: Array<{
   { id: "dark", label: "Dark", description: "Low-light workspace", Icon: Moon },
 ];
 
-export function ThemeStudio({ themeMode, themeSource, onSetThemeSource, variant = "full" }: ThemeStudioProps) {
+const accessibilityChoices: Array<{
+  id: AccessibilityPreferenceKey;
+  label: string;
+  description: string;
+  Icon: typeof Eye;
+}> = [
+  { id: "largeText", label: "Larger text", description: "Raises small text and control sizes", Icon: Eye },
+  { id: "enhancedContrast", label: "Higher contrast", description: "Strengthens borders, labels, and focus", Icon: Contrast },
+  { id: "colorSafe", label: "Color-safe status", description: "Adds distinct blue, amber, and magenta cues", Icon: Palette },
+];
+
+const defaultAccessibilityPreferences: AccessibilityPreferences = {
+  colorSafe: false,
+  enhancedContrast: false,
+  largeText: false,
+};
+
+export function ThemeStudio({
+  themeMode,
+  themeSource,
+  onSetThemeSource,
+  accessibilityPreferences = defaultAccessibilityPreferences,
+  onToggleAccessibility = () => undefined,
+  variant = "full",
+}: ThemeStudioProps) {
   const isCompact = variant === "compact";
 
   return (
@@ -47,6 +77,31 @@ export function ThemeStudio({ themeMode, themeSource, onSetThemeSource, variant 
           </button>
         ))}
       </div>
+      <section className="accessibility-preferences" aria-labelledby="accessibility-preferences-title">
+        <header>
+          <span>Accessibility</span>
+          <strong id="accessibility-preferences-title">Make RIVT easier to read</strong>
+        </header>
+        <div className="accessibility-options">
+          {accessibilityChoices.map(({ id, label, description, Icon }) => {
+            const enabled = accessibilityPreferences[id];
+            return (
+              <button
+                key={id}
+                type="button"
+                className={`accessibility-option${enabled ? " is-enabled" : ""}`}
+                role="switch"
+                aria-checked={enabled}
+                onClick={() => onToggleAccessibility(id)}
+              >
+                <span className="accessibility-option-icon"><Icon size={20} aria-hidden="true" /></span>
+                <span className="accessibility-option-copy"><strong>{label}</strong><small>{description}</small></span>
+                <span className="accessibility-option-state" aria-hidden="true">{enabled ? "On" : "Off"}</span>
+              </button>
+            );
+          })}
+        </div>
+      </section>
     </section>
   );
 }

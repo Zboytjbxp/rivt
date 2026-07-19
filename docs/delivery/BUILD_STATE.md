@@ -2,10 +2,26 @@
 
 Last updated: 2026-07-19 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Packet 65 camera workflow coherence is release-ready.
-Active packet: `docs/delivery/packets/65_CAMERA_WORKFLOW_COHERENCE.md`
-Repository branch: `codex/camera-workflow-coherence`
+Current phase: Packet 66 accessible display modes is release-ready.
+Active packet: `docs/delivery/packets/66_ACCESSIBLE_DISPLAY_MODES.md`
+Repository branch: `codex/accessibility-display-modes`
 Production feature release commit: pending merge and deployment
+
+## Packet 66 - Accessible Display Modes
+
+- Settings > Theme now includes persistent Larger text, Higher contrast, and
+  Color-safe status controls with accessible switch semantics.
+- Larger text raises small copy and control legibility; higher contrast
+  strengthens muted text, borders, and keyboard focus; color-safe status uses
+  blue, amber, and magenta semantic cues while retaining text and icon labels.
+- Preferences apply at the document root and persist on the device without
+  changing account or server state.
+- Build, lint, 59 unit/frontend tests, E2E, rendered mobile-action QA, and the
+  dependency audit pass. The PostgreSQL integration aggregate produced no
+  output during a bounded run and is recorded as incomplete. Physical-device
+  low-vision, color-vision, and screen-reader validation remains a
+  launch-readiness boundary.
+- Deployment evidence is pending merge and production verification.
 
 ## Packet 65 - Camera Workflow Coherence
 

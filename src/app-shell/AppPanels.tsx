@@ -213,7 +213,7 @@ export function AccountPanel({
           </button>
           <button type="button" onClick={() => onNavigate("Settings")}>
             <Settings size={19} />
-            <span><strong>Settings</strong><small>Alerts, plan, theme, and security</small></span>
+            <span><strong>Settings</strong><small>Alerts, accessibility, plan, and security</small></span>
             <ChevronRight size={18} aria-hidden="true" />
           </button>
           {adminRoles.length ? (

@@ -575,7 +575,9 @@ function App() {
   const shopTalkPostsRequestRef = useRef(0);
   const communitiesRequestRef = useRef(0);
   const {
+    accessibilityPreferences,
     handleSetThemeSource,
+    handleToggleAccessibility,
     handleToggleTheme,
     themeMode,
     themeSource,
@@ -2740,6 +2742,8 @@ function App() {
             themeMode={themeMode}
             themeSource={themeSource}
             onSetThemeSource={handleSetThemeSource}
+            accessibilityPreferences={accessibilityPreferences}
+            onToggleAccessibility={handleToggleAccessibility}
             onLogout={handleLogout}
             onSaveProfile={handleSaveProfile}
             onSetProfileVisibility={handleSetProfileVisibility}

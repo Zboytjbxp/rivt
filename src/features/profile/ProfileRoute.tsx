@@ -1,4 +1,5 @@
 import type { ThemeMode, TrialPlan } from "../../brandConfig";
+import type { AccessibilityPreferenceKey, AccessibilityPreferences } from "../../app-shell/preferences";
 import type { ThemeSource } from "../../app-shell/useAppTheme";
 import type { Role, Trade } from "../../types";
 import { useCallback, useEffect, useState } from "react";
@@ -65,6 +66,8 @@ interface ProfileRouteProps {
   themeMode: ThemeMode;
   themeSource: ThemeSource;
   onSetThemeSource: (source: ThemeSource) => void;
+  accessibilityPreferences: AccessibilityPreferences;
+  onToggleAccessibility: (key: AccessibilityPreferenceKey) => void;
   onLogout: () => void;
   onSaveProfile: (input: ProfileUpdateInput) => Promise<void>;
   onSetProfileVisibility: (visibility: "private" | "network") => Promise<void>;
@@ -92,6 +95,8 @@ export function ProfileRoute({
   themeMode,
   themeSource,
   onSetThemeSource,
+  accessibilityPreferences,
+  onToggleAccessibility,
   onLogout,
   onSaveProfile,
   onSetProfileVisibility,
@@ -188,6 +193,8 @@ export function ProfileRoute({
       themeMode={themeMode}
       themeSource={themeSource}
       onSetThemeSource={onSetThemeSource}
+      accessibilityPreferences={accessibilityPreferences}
+      onToggleAccessibility={onToggleAccessibility}
       onLogout={onLogout}
       onSaveProfile={onSaveProfile}
       onSetProfileVisibility={onSetProfileVisibility}
