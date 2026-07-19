@@ -4378,6 +4378,57 @@
   z-index: 10;
 }
 
+.v2-camera-feed-stage {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  touch-action: none;
+}
+
+.v2-camera-feed-stage .v2-camera-feed {
+  transition: transform 80ms linear;
+  transform-origin: center;
+}
+
+.v2-camera-zoom-control {
+  display: grid;
+  grid-template-columns: 44px minmax(96px, 1fr) 44px 48px;
+  align-items: center;
+  gap: 8px;
+  width: min(100%, 420px);
+  margin-inline: auto;
+  padding: 6px;
+  border: 1px solid rgb(255 255 255 / 18%);
+  border-radius: var(--v2-radius-pill);
+  background: rgb(8 13 16 / 92%);
+}
+
+.v2-camera-zoom-control button {
+  min-width: 44px;
+  min-height: 44px;
+  border: 0;
+  border-radius: 50%;
+  color: var(--v2-on-accent);
+  background: rgb(255 255 255 / 12%);
+  font-size: 24px;
+  font-weight: 800;
+}
+
+.v2-camera-zoom-control button:disabled {
+  opacity: 0.35;
+}
+
+.v2-camera-zoom-control input {
+  width: 100%;
+  accent-color: var(--v2-accent);
+}
+
+.v2-camera-zoom-control output {
+  color: var(--v2-on-accent);
+  font-weight: 800;
+  text-align: center;
+}
+
 .v2-camera-bottom-context {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
