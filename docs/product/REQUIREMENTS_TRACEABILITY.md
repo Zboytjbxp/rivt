@@ -1754,3 +1754,18 @@ Evidence must eventually link to implementation, automated tests, manual accepta
   mobile-action UI, and dependency audit pass. The PostgreSQL integration
   aggregate produced no output during a bounded run, so no integration pass
   is claimed.
+
+## Packet 69 - Paperwork Queue Exact Resume
+
+- `GA-UX-003` gains truthful Home assistance for unfinished paperwork: only
+  real saved estimate and invoice drafts appear, and empty accounts remain
+  empty rather than receiving demo records.
+- `GA-UX-005` gains exact destination continuity: selecting a Home paperwork
+  item opens that saved record with its accepted-work or standalone-project
+  context and preserves the same record id on subsequent saves.
+- No server, schema, authorization, authentication, billing, storage,
+  moderation, or delivery-provider change.
+- Local evidence: build, lint, 59 unit/frontend tests, E2E, rendered
+  mobile-action and Tools UI QA, and the zero-vulnerability production
+  dependency audit pass. Three non-database integration checks pass; sixteen
+  PostgreSQL suites are skipped because `TEST_DATABASE_URL` is unavailable.

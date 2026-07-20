@@ -101,6 +101,7 @@ import { useCommunityReactions } from "./features/shop-talk/useCommunityReaction
 import { usePushNotifications } from "./features/notifications/usePushNotifications";
 import type { ProfileUpdateInput } from "./features/profile/ProfileHub";
 import { isPublicToolMode, type ToolMode } from "./features/tools/tool-catalog";
+import type { ServerToolRecord } from "./features/tools/tool-records-api";
 import { safetyQuizData, trainingModules, type SafetyQuizResult } from "./features/profile/training-data";
 import { apiPath, fetchWithTimeout, RIVT_SESSION_EXPIRED_EVENT } from "./lib/api";
 import {
@@ -552,6 +553,7 @@ function App() {
   const [inboxNotifications, setInboxNotifications] = useState<InboxNotification[]>([]);
   const [activeWork, setActiveWork] = useState<CanonicalActiveWork[]>([]);
   const [focusedActiveWorkId, setFocusedActiveWorkId] = useState<string | null>(() => readActiveWorkFromUrl());
+  const [focusedToolRecord, setFocusedToolRecord] = useState<ServerToolRecord | null>(null);
   const [focusedCloseout, setFocusedCloseout] = useState(() => readCloseoutFromUrl());
   const [focusedReviewId, setFocusedReviewId] = useState<string | null>(() => readReviewFromUrl());
   const [workWorkspaceOpenKey, setWorkWorkspaceOpenKey] = useState(0);
@@ -1381,15 +1383,17 @@ function App() {
     setPostOpen(false);
   }
 
-  function handleOpenTool(tool: ToolMode) {
+  function handleOpenTool(tool: ToolMode, record: ServerToolRecord | null = null) {
     const nextTool = isPublicToolMode(tool) ? tool : null;
     const isCamera = nextTool === "job-photos";
+    const recordActiveWorkId = nextTool ? record?.activeWorkId ?? null : null;
     setRequestedTool(nextTool);
+    setFocusedToolRecord(nextTool ? record : null);
     setToolsImmersive(Boolean(nextTool) && nextTool !== "job-photos");
-    setFocusedActiveWorkId(null);
+    setFocusedActiveWorkId(recordActiveWorkId);
     setFocusedCloseout(false);
     setActiveView(isCamera ? "Camera" : "Tools");
-    const nextPath = isCamera ? pathForCamera() : pathForTool(nextTool);
+    const nextPath = isCamera ? pathForCamera(recordActiveWorkId) : pathForTool(nextTool, recordActiveWorkId);
     if (currentPathAndSearch() !== nextPath) {
       window.history.pushState({ view: isCamera ? "Camera" : "Tools", tool: nextTool }, "", nextPath);
     }
@@ -1398,12 +1402,13 @@ function App() {
     setPostOpen(false);
   }
 
-  function handleOpenActiveWorkTool(activeWorkId: string, tool: ToolMode) {
+  function handleOpenActiveWorkTool(activeWorkId: string, tool: ToolMode, record: ServerToolRecord | null = null) {
     const nextTool = isPublicToolMode(tool) ? tool : null;
     const isCamera = nextTool === "job-photos";
     setFocusedActiveWorkId(nextTool ? activeWorkId : null);
     setFocusedCloseout(false);
     setRequestedTool(nextTool);
+    setFocusedToolRecord(nextTool ? record : null);
     setToolsImmersive(Boolean(nextTool) && nextTool !== "job-photos");
     setActiveView(isCamera ? "Camera" : "Tools");
     const nextPath = isCamera ? pathForCamera(activeWorkId) : pathForTool(nextTool, nextTool ? activeWorkId : null);
@@ -1497,6 +1502,7 @@ function App() {
     const isCamera = nextTool === "job-photos";
     const nextView: NavLabel = isCamera ? "Camera" : "Tools";
     setRequestedTool(nextTool);
+    setFocusedToolRecord(null);
     setToolsImmersive(Boolean(nextTool) && nextTool !== "job-photos");
     setFocusedActiveWorkId(nextActiveWorkId);
     setFocusedCloseout(false);
@@ -2583,7 +2589,10 @@ function App() {
             onOpenCommunity={(name) => { setShopTalkPostId(null); setShopTalkCompose(false); setShopTalkAnswerQueue(false); setShopTalkGlobalQuery(""); setShopTalkCommunitySlug(communitySlug(name)); handleNavigate(defaultViewForDestination("shop-talk")); }}
             onNavigate={(destination) => handleNavigate(defaultViewForDestination(destination))}
             onOpenProfile={() => handleNavigate("Settings")}
-            onOpenTool={handleOpenTool}
+            onOpenTool={(tool, activeWorkId, record) => {
+              if (activeWorkId) handleOpenActiveWorkTool(activeWorkId, tool, record);
+              else handleOpenTool(tool, record);
+            }}
             onOpenActiveWorkWorkspace={handleOpenActiveWorkWorkspace}
           />
         ) : activeView === "Work" ? (
@@ -2763,6 +2772,7 @@ function App() {
             onImmersiveChange={setToolsImmersive}
             onNavigate={(destination) => handleNavigate(defaultViewForDestination(destination))}
             focusedActiveWorkId={focusedActiveWorkId}
+            focusedToolRecord={focusedToolRecord}
           />
         ) : activeView === "Admin" ? (
           <ModerationConsole

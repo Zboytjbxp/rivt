@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, Copy, FileText, Mail, MessageSquare, Plus, Save, Trash2 } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, Copy, FileText, LoaderCircle, Mail, MessageSquare, Plus, Save, Trash2 } from "lucide-react";
 import type { Job } from "../../types";
 import { Panel } from "../../components/ui";
 import { readPrimaryHourlyRate } from "../../lib/rateCard";
@@ -74,6 +74,14 @@ function readInvoiceDraft(context: ToolWorkContext): Partial<InvoiceDraftSnapsho
   } catch {
     return {};
   }
+}
+
+function invoiceDraftFromRecord(record: ServerToolRecord | null | undefined): Partial<InvoiceDraftSnapshot> {
+  if (!record || record.recordType !== "invoice_draft") return {};
+  const payload = record.payload;
+  return payload && typeof payload === "object" && !Array.isArray(payload)
+    ? payload as Partial<InvoiceDraftSnapshot>
+    : {};
 }
 
 interface InvoicePrefs {
@@ -180,14 +188,20 @@ export function InvoiceDraftTool({
   workContext,
   estimateDraft = null,
   activeWorkId = null,
+  initialRecord = null,
 }: {
   activeJob: Job | null;
   workContext: ToolWorkContext;
   estimateDraft?: EstimateInvoiceDraft | null;
   activeWorkId?: string | null;
+  initialRecord?: ServerToolRecord | null;
 }) {
+  const recordLocalId = initialRecord?.localId ?? `invoice:${toolContextStorageId(workContext)}`;
   const [invoicePrefs] = useState(readInvoicePrefs);
-  const [initialDraft] = useState(() => readInvoiceDraft(workContext));
+  const [initialDraft] = useState(() => ({
+    ...readInvoiceDraft(workContext),
+    ...invoiceDraftFromRecord(initialRecord),
+  }));
   const [invoiceNumber, setInvoiceNumber] = useState(estimateDraft?.invoiceNumber ?? initialDraft.invoiceNumber ?? (activeJob ? `RIVT-${activeJob.id}` : `RIVT-${crypto.randomUUID().slice(0, 8).toUpperCase()}`));
   const initialProjectInvoiceNumber = useRef(estimateDraft?.invoiceNumber ?? (activeJob ? `RIVT-${activeJob.id}` : "RIVT-DRAFT"));
   const [billTo, setBillTo] = useState(
@@ -213,6 +227,7 @@ export function InvoiceDraftTool({
       ? initialDraft.lines.map((line) => ({ ...line, id: crypto.randomUUID() }))
       : defaultInvoiceLines(activeJob));
   const [draftSaveMessage, setDraftSaveMessage] = useState("Autosaved on this device.");
+  const [draftSaveState, setDraftSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [projectInvoice, setProjectInvoice] = useState<ProjectInvoice | null>(null);
   const [projectInvoiceBusy, setProjectInvoiceBusy] = useState(false);
   const [projectInvoiceNotice, setProjectInvoiceNotice] = useState("");
@@ -450,7 +465,7 @@ export function InvoiceDraftTool({
     const snapshot: InvoiceDraftSnapshot = { invoiceNumber, billTo, payTo, terms, paymentMethod, recipientEmail, recipientPhone, taxPct, templateName, lines };
     return {
       recordType: "invoice_draft",
-      localId: `invoice:${toolContextStorageId(workContext)}`,
+      localId: recordLocalId,
       title: `${invoiceNumber || "RIVT-DRAFT"} - ${toolContextLabel(workContext)}`,
       status: "draft",
       recordDate: new Date().toISOString().slice(0, 10),
@@ -470,17 +485,22 @@ export function InvoiceDraftTool({
   }
 
   async function saveInvoiceDraft(): Promise<ServerToolRecord | null> {
+    setDraftSaveState("saving");
+    setDraftSaveMessage("Saving draft...");
     const record = await upsertToolRecord(invoiceToolRecordInput());
     if (!record) {
       setDraftSaveMessage("Draft kept on this device. RIVT account sync failed.");
+      setDraftSaveState("error");
       return null;
     }
     if (activeWorkId && !projectInvoice) {
       const savedToWork = await saveToActiveWork();
       setDraftSaveMessage(savedToWork ? "Draft saved to this job and your RIVT account." : "Draft saved to your RIVT account. It could not be added to the job workspace.");
+      setDraftSaveState(savedToWork ? "saved" : "error");
       return record;
     }
     setDraftSaveMessage(activeWorkId ? "Draft saved to this job and your RIVT account." : "Draft saved to your RIVT account.");
+    setDraftSaveState("saved");
     return record;
   }
 
@@ -557,6 +577,7 @@ export function InvoiceDraftTool({
   }
 
   function printInvoice() {
+    setDraftSaveMessage("Print dialog opened. Choose Save as PDF to download a copy.");
     window.print();
   }
 
@@ -587,8 +608,10 @@ export function InvoiceDraftTool({
         ? delivery.recipientEmail
         : recipientEmail.trim();
       setDraftSaveMessage(`Invoice emailed to ${recipient}.`);
+      setDraftSaveState("saved");
     } catch (error) {
       setDraftSaveMessage(error instanceof Error ? error.message : "RIVT could not send the invoice.");
+      setDraftSaveState("error");
     } finally {
       setInvoiceEmailBusy(false);
     }
@@ -804,18 +827,20 @@ export function InvoiceDraftTool({
           </article>
           <div className="v2-invoice-preview-actions" aria-label="Invoice preview actions">
             <button type="button" className="v2-secondary-button" onClick={() => void copyInvoice()}><Copy size={16} />Copy invoice</button>
-            <button type="button" className="v2-secondary-button" onClick={printInvoice}><FileText size={16} />Print or Save PDF</button>
+            <button type="button" className="v2-secondary-button" onClick={printInvoice}><FileText size={16} />Print / save as PDF</button>
           </div>
         </Panel>
       </aside> : null}
       <div className="v2-tool-action-dock" aria-label="Invoice actions">
-        <span><strong>{currency(total)}</strong><small>{draftSaveMessage}</small></span>
+        <span aria-live="polite" data-save-state={draftSaveState}><strong>{currency(total)}</strong><small>{draftSaveMessage}</small></span>
         {step !== "items" ? <button type="button" onClick={() => setStep(step === "review" ? "customer" : "items")} aria-label="Previous invoice step"><ChevronLeft size={18} /></button> : null}
-        <button type="button" className="v2-primary-button" onClick={() => void saveInvoiceDraft()} disabled={projectInvoiceBusy || totalCents <= 0 || invoiceEmailBusy}><Save size={18} />Save draft</button>
+        <button type="button" className="v2-primary-button" onClick={() => void saveInvoiceDraft()} disabled={projectInvoiceBusy || totalCents <= 0 || invoiceEmailBusy || draftSaveState === "saving"}>
+          {draftSaveState === "saving" ? <LoaderCircle className="v2-spin" size={18} /> : draftSaveState === "saved" ? <Check size={18} /> : <Save size={18} />}
+          {draftSaveState === "saving" ? "Saving" : draftSaveState === "saved" ? "Saved" : draftSaveState === "error" ? "Try again" : "Save draft"}
+        </button>
         {step === "items" ? <button type="button" className="v2-primary-button" onClick={() => setStep("customer")} disabled={totalCents <= 0}><span>Customer</span><ChevronRight size={18} /></button> : null}
         {step === "customer" ? <button type="button" className="v2-primary-button" onClick={() => setStep("review")}><span>Review</span><ChevronRight size={18} /></button> : null}
-        {step === "review" ? <button type="button" onClick={copyInvoice} aria-label="Copy invoice"><Copy size={18} /></button> : null}
-        {step === "review" ? <button type="button" onClick={printInvoice} aria-label="Print invoice"><FileText size={18} /></button> : null}
+        {step === "review" ? <button type="button" className="v2-primary-button" onClick={() => void emailInvoice()} disabled={invoiceEmailBusy || totalCents <= 0 || !recipientEmail.trim()}><Mail size={18} />{invoiceEmailBusy ? "Sending" : "Email"}</button> : null}
       </div>
     </div>
   );

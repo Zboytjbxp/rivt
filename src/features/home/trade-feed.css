@@ -124,6 +124,95 @@
   color: var(--v2-warning);
 }
 
+.trade-feed-paperwork {
+  display: grid;
+  gap: 8px;
+  padding: var(--v2-space-card);
+  border: 1px solid var(--v2-border);
+  border-radius: var(--v2-radius-lg);
+  background: var(--v2-surface);
+}
+
+.trade-feed-paperwork-head {
+  display: grid;
+  gap: 2px;
+}
+
+.trade-feed-paperwork-head > span {
+  color: var(--v2-accent-text);
+  font-size: var(--v2-text-label);
+  font-weight: var(--v2-weight-bold);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.trade-feed-paperwork-head h2 {
+  margin: 0;
+  color: var(--v2-text);
+  font-size: var(--v2-text-title);
+  line-height: 1.2;
+}
+
+.trade-feed-paperwork-list {
+  display: grid;
+}
+
+.trade-feed-paperwork-row {
+  width: 100%;
+  min-height: 64px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border: 0;
+  border-top: 1px solid var(--v2-border);
+  background: transparent;
+  color: var(--v2-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.trade-feed-paperwork-row:first-child {
+  border-top: 0;
+}
+
+.trade-feed-paperwork-icon {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--v2-radius-sm);
+  background: var(--v2-accent-soft);
+  color: var(--v2-accent-text);
+}
+
+.trade-feed-paperwork-copy {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.trade-feed-paperwork-copy strong {
+  overflow: hidden;
+  color: var(--v2-text);
+  font-size: var(--v2-text-body);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.trade-feed-paperwork-copy small {
+  color: var(--v2-text-muted);
+  font-size: var(--v2-text-caption);
+}
+
+.trade-feed-paperwork-action {
+  color: var(--v2-accent-text);
+  font-size: var(--v2-text-label);
+  font-weight: var(--v2-weight-bold);
+}
+
 .trade-feed-work-pulse.is-completion {
   color: var(--v2-accent-text);
 }
@@ -991,6 +1080,7 @@
   .trade-feed-start-card,
   .trade-feed-nudge,
   .trade-feed-active-work,
+  .trade-feed-paperwork,
   .trade-feed-communities {
     grid-column: 2;
   }
@@ -1220,6 +1310,10 @@
   .trade-feed-active-work {
     grid-column: 1;
     grid-row: 2;
+  }
+
+  .trade-feed-paperwork {
+    grid-column: 1;
   }
 
   .trade-feed-pickup {

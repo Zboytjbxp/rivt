@@ -81,6 +81,7 @@ interface ToolsStudioProps {
   mode?: "tools" | "records";
   openTool?: ToolMode | null;
   focusedActiveWorkId?: string | null;
+  focusedToolRecord?: ServerToolRecord | null;
   activeWorkRecords?: CanonicalActiveWork[];
   onOpenToolConsumed?: () => void;
   onToolChange?: (tool: ToolMode) => void;
@@ -3036,7 +3037,7 @@ function resolveActiveToolJob(jobs: Job[], orderedActiveWork: CanonicalActiveWor
   return null;
 }
 
-export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = null, focusedActiveWorkId = null, activeWorkRecords = [], onOpenToolConsumed, onToolChange, onWorkContextChange, onOpenActiveWorkWorkspace, onImmersiveChange, onNavigate }: ToolsStudioProps) {
+export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = null, focusedActiveWorkId = null, focusedToolRecord = null, activeWorkRecords = [], onOpenToolConsumed, onToolChange, onWorkContextChange, onOpenActiveWorkWorkspace, onImmersiveChange, onNavigate }: ToolsStudioProps) {
   const controlledTool: "hub" | PublicToolMode | null = mode === "tools" && openTool !== null
     ? normalizePublicToolMode(openTool)
     : null;
@@ -3096,7 +3097,12 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
     ? orderedActiveWork.find((work) => work.id === focusedActiveWorkId) ?? null
     : null;
   const selectedToolProjectId = activeTool === "hub" ? null : toolContextProjects[activeTool] ?? null;
-  const selectedStandaloneProject = standaloneProjects.find((project) => project.id === selectedToolProjectId) ?? null;
+  const focusedStandaloneProject = focusedToolRecord?.standaloneProjectId
+    ? standaloneProjects.find((project) => project.id === focusedToolRecord.standaloneProjectId) ?? null
+    : null;
+  const selectedStandaloneProject = focusedStandaloneProject
+    ?? standaloneProjects.find((project) => project.id === selectedToolProjectId)
+    ?? null;
   const privateCameraAlbums = useMemo(
     () => cameraAlbums.filter((album) => !album.standaloneProjectId),
     [cameraAlbums],
@@ -3728,7 +3734,7 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
     const toolMeta = {
       estimate: {
         title: "Estimate builder",
-        node: <EstimateTool key={`estimate:${activeJobScopeKey}`} activeJob={activeJob} workContext={toolWorkContext} onConvertToInvoice={handleConvertEstimateToInvoice} />,
+        node: <EstimateTool key={`estimate:${activeJobScopeKey}:${focusedToolRecord?.recordType === "estimate" ? focusedToolRecord.id : "default"}`} activeJob={activeJob} workContext={toolWorkContext} initialRecord={focusedToolRecord?.recordType === "estimate" ? focusedToolRecord : null} onConvertToInvoice={handleConvertEstimateToInvoice} />,
       },
       invoice: {
         title: "Invoice",
@@ -3736,7 +3742,7 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
           <InvoiceWorkspaceTool
             activeView={activeInvoiceView}
             onViewChange={changeInvoiceView}
-            draft={<InvoiceDraftTool key={`invoice:${activeJobScopeKey}`} activeJob={activeJob} workContext={toolWorkContext} estimateDraft={convertedEstimateDraft} activeWorkId={toolWorkContext.kind === "rivt" ? toolWorkContext.activeWorkId : null} />}
+            draft={<InvoiceDraftTool key={`invoice:${activeJobScopeKey}:${focusedToolRecord?.recordType === "invoice_draft" ? focusedToolRecord.id : "default"}`} activeJob={activeJob} workContext={toolWorkContext} initialRecord={focusedToolRecord?.recordType === "invoice_draft" ? focusedToolRecord : null} estimateDraft={convertedEstimateDraft} activeWorkId={toolWorkContext.kind === "rivt" ? toolWorkContext.activeWorkId : null} />}
           />
         ),
       },
