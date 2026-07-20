@@ -1,11 +1,27 @@
 # RIVT Build State
 
-Last updated: 2026-07-19 America/New_York
+Last updated: 2026-07-20 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Packet 67 saved-media pinch zoom is implemented and pending review.
-Active packet: `docs/delivery/packets/67_SAVED_MEDIA_PINCH_ZOOM.md`
-Repository branch: `codex/photo-pinch-zoom`
+Current phase: Packet 68 job lifecycle coherence is implemented and pending review.
+Active packet: `docs/delivery/packets/68_JOB_LIFECYCLE_COHERENCE.md`
+Repository branch: `codex/job-lifecycle-coherence`
 Production feature release commit: `955d43cfcadbb47f613fc941245d446d6c46fffe`
+
+## Packet 68 - Job Lifecycle Coherence (Pending Review)
+
+- Application drafts, submissions, withdrawals, shortlists, declines, offers,
+  confirmations, reschedule requests, and cancellations now leave specific
+  success feedback that names the next actor or destination.
+- Listed fixed-price hiring now reads as choosing an applicant and confirming
+  the already-listed price instead of implying a second negotiation.
+- Offer acceptance and closeout lifecycle changes await refreshed active-work,
+  job-list, and inbox state, preventing completed work from lingering as active
+  on Home after the server has closed it.
+- Build, lint, 59 unit/frontend tests, E2E, rendered mobile-action QA, and the
+  dependency audit pass. Three non-database integration checks pass; sixteen
+  PostgreSQL suites are skipped because this clean worktree does not contain
+  `TEST_DATABASE_URL`.
+- No schema, migration, billing, payment-processing, or authorization change.
 
 ## Packet 67 - Saved Media Pinch Zoom (Pending Review)
 

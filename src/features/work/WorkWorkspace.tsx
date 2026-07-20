@@ -110,7 +110,7 @@ interface WorkWorkspaceProps {
   onOpenActiveWorkMessages: (activeWorkId: string) => void;
   onRetry: () => void;
   onOfferAccepted?: (activeWork: CanonicalActiveWork) => void;
-  onActiveWorkChanged?: () => void;
+  onActiveWorkChanged?: () => void | Promise<void>;
 }
 
 const statusForSection: Partial<Record<ContractorSection, Job["status"]>> = {
@@ -1241,6 +1241,7 @@ export function WorkWorkspace({
   const [matchRefreshKey, setMatchRefreshKey] = useState(0);
   const [matchLoading, setMatchLoading] = useState(false);
   const [matchError, setMatchError] = useState<string | null>(null);
+  const [matchNotice, setMatchNotice] = useState<string | null>(null);
   const [reasonPrompt, setReasonPrompt] = useState<{ kind: "reschedule" | "cancel"; target: CanonicalActiveWork } | null>(null);
   const reasonTrapRef = useFocusTrap<HTMLDivElement>(() => setReasonPrompt(null), reasonPrompt != null);
   const [reasonText, setReasonText] = useState("");
@@ -1389,53 +1390,58 @@ export function WorkWorkspace({
     const jobId = job.canonical?.id;
     if (!jobId) return;
     const proposal = applicationProposal?.jobId === jobId ? applicationProposal : null;
-    await runMatchAction(`draft:${jobId}`, async () => {
+    const completed = await runMatchAction(`draft:${jobId}`, async () => {
       await saveApplicationDraft(jobId, {
         message: applicationMessage,
         proposedAmountCents: proposal?.amount ? Math.round(Number(proposal.amount) * 100) : null,
         proposedUnit: proposal?.amount ? proposal.unit : null,
       });
     });
+    if (completed) setMatchNotice("Application draft saved. You can return and submit it when ready.");
   }
 
   async function handleSubmitApplication(job: Job) {
     const jobId = job.canonical?.id;
     if (!jobId) return;
     const proposal = applicationProposal?.jobId === jobId ? applicationProposal : null;
-    await runMatchAction(`apply:${jobId}`, async () => {
+    const completed = await runMatchAction(`apply:${jobId}`, async () => {
       await submitApplication(jobId, {
         message: applicationMessage,
         proposedAmountCents: proposal?.amount ? Math.round(Number(proposal.amount) * 100) : null,
         proposedUnit: proposal?.amount ? proposal.unit : null,
       });
     });
+    if (completed) setMatchNotice("Application sent. The contractor can review it next.");
   }
 
   async function handleWithdraw(application: CanonicalApplication) {
-    await runMatchAction(`withdraw:${application.id}`, async () => {
+    const completed = await runMatchAction(`withdraw:${application.id}`, async () => {
       await withdrawApplication(application.id);
     });
+    if (completed) setMatchNotice("Application withdrawn. You can apply again while this job remains open.");
   }
 
   async function handleShortlist(application: CanonicalApplication) {
-    await runMatchAction(`shortlist:${application.id}`, async () => {
+    const completed = await runMatchAction(`shortlist:${application.id}`, async () => {
       await shortlistApplication(application.id);
     });
+    if (completed) setMatchNotice("Applicant shortlisted. Confirm the terms and send the offer when ready.");
   }
 
   async function handleDeclineApplication(application: CanonicalApplication) {
-    await runMatchAction(`decline:${application.id}`, async () => {
+    const completed = await runMatchAction(`decline:${application.id}`, async () => {
       await declineApplication(application.id);
     });
+    if (completed) setMatchNotice("Application declined. The applicant has been notified.");
   }
 
-  async function sendFinalOffer(job: Job, application: CanonicalApplication, amount: number, unit: CompensationUnit) {
+  async function sendFinalOffer(job: Job, application: CanonicalApplication, amount: number, unit: CompensationUnit, listedPriceConfirmation = false) {
     if (!Number.isFinite(amount) || amount <= 0) {
       setMatchError("Enter the final agreed pay before sending this offer.");
       return;
     }
     const startDate = offerStartDateFor(job, application);
-    await runMatchAction(`offer:${application.id}`, async () => {
+    const completed = await runMatchAction(`offer:${application.id}`, async () => {
       await sendOffer(application.id, {
         startDate,
         scopeSummary: job.canonical?.scopeDescription || job.summary,
@@ -1445,6 +1451,11 @@ export function WorkWorkspace({
       });
       setOfferDraft(null);
     });
+    if (completed) {
+      setMatchNotice(listedPriceConfirmation
+        ? "Applicant chosen. They can now confirm the listed price and open the private job workspace."
+        : "Offer sent. The applicant can review and accept it next.");
+    }
   }
 
   async function handleSendOffer(job: Job, application: CanonicalApplication) {
@@ -1456,7 +1467,7 @@ export function WorkWorkspace({
   }
 
   async function handleHireAtListedPrice(job: Job, application: CanonicalApplication) {
-    await sendFinalOffer(job, application, job.pay, "fixed");
+    await sendFinalOffer(job, application, job.pay, "fixed", true);
   }
 
   function prepareOffer(job: Job, application: CanonicalApplication) {
@@ -1469,7 +1480,7 @@ export function WorkWorkspace({
   }
 
   async function handleAcceptOffer(offer: CanonicalOffer) {
-    await runMatchAction(`accept:${offer.id}`, async () => {
+    const completed = await runMatchAction(`accept:${offer.id}`, async () => {
       const accepted = await acceptOffer(offer.id, "Confirmed in RIVT.");
       setMatchOffers((current) => current.map((candidate) => (
         candidate.id === offer.id ? accepted.offer : candidate
@@ -1481,14 +1492,16 @@ export function WorkWorkspace({
       setWorkspaceTab("today");
       onOfferAccepted?.(accepted.activeWork);
       await refreshDetailJob();
-      onActiveWorkChanged?.();
+      await onActiveWorkChanged?.();
     });
+    if (completed) setMatchNotice("Job confirmed. Your private workspace is active and ready below.");
   }
 
   async function handleDeclineOffer(offer: CanonicalOffer) {
-    await runMatchAction(`decline-offer:${offer.id}`, async () => {
+    const completed = await runMatchAction(`decline-offer:${offer.id}`, async () => {
       await declineOffer(offer.id);
     });
+    if (completed) setMatchNotice("Offer declined. The contractor has been notified.");
   }
 
   function openReasonPrompt(kind: "reschedule" | "cancel", target: CanonicalActiveWork) {
@@ -1502,15 +1515,17 @@ export function WorkWorkspace({
     const reason = reasonText.trim();
     setReasonPrompt(null);
     if (kind === "reschedule") {
-      await runMatchAction(`reschedule:${target.id}`, async () => {
+      const completed = await runMatchAction(`reschedule:${target.id}`, async () => {
         await requestWorkReschedule(target.id, reason);
-        onActiveWorkChanged?.();
+        await onActiveWorkChanged?.();
       });
+      if (completed) setMatchNotice("Schedule change requested. The other person has been notified.");
     } else {
-      await runMatchAction(`cancel:${target.id}`, async () => {
+      const completed = await runMatchAction(`cancel:${target.id}`, async () => {
         await cancelActiveWork(target.id, reason);
-        onActiveWorkChanged?.();
+        await onActiveWorkChanged?.();
       });
+      if (completed) setMatchNotice("Work cancelled. This workspace is now read-only.");
     }
   }
 
@@ -1655,12 +1670,14 @@ export function WorkWorkspace({
   async function runMatchAction(key: string, action: () => Promise<void>) {
     setActiveAction(key);
     setMatchError(null);
+    setMatchNotice(null);
     try {
       await action();
       setMatchRefreshKey((current) => current + 1);
+      return true;
     } catch (cause) {
       setMatchError(cause instanceof Error ? cause.message : "That hiring action could not be completed.");
-      throw cause;
+      return false;
     } finally {
       setActiveAction("");
     }
@@ -2122,6 +2139,7 @@ export function WorkWorkspace({
                     {matchLoading ? <small>Loading...</small> : null}
                   </div>
                   {matchError ? <p className="v2-match-error" role="alert">{matchError}</p> : null}
+                  {matchNotice ? <p className="v2-match-notice" role="status">{matchNotice}</p> : null}
                   {activeWork ? (
                     <div className="v2-active-work-card">
                       <div>
@@ -2195,8 +2213,8 @@ export function WorkWorkspace({
                                   <>
                                     {confirmsListedFixedPrice ? (
                                       <div className="v2-fixed-hire-action">
-                                        <small>The applicant chose this listed price. They will confirm once more before the private job workspace opens.</small>
-                                        <button type="button" className="v2-primary-button" disabled={Boolean(activeAction) || detailJob.pay <= 0} onClick={() => void handleHireAtListedPrice(detailJob, application)}>Hire at {money(detailJob.pay)}</button>
+                                        <small>The applicant accepted the listed {money(detailJob.pay)} price when applying. Choose them to send the job details for confirmation.</small>
+                                        <button type="button" className="v2-primary-button" disabled={Boolean(activeAction) || detailJob.pay <= 0} onClick={() => void handleHireAtListedPrice(detailJob, application)}>Choose applicant</button>
                                       </div>
                                     ) : offerDraft?.applicationId === application.id ? (
                                       <div className="v2-offer-terms">
@@ -2223,13 +2241,13 @@ export function WorkWorkspace({
                   ) : pendingOffer ? (
                     <div className="v2-offer-card">
                       <div>
-                        <span>You have an offer</span>
+                        <span>{detailJob.canonical?.compensationType === "fixed" && pendingOffer.agreedCompensation?.unit === "fixed" ? "Job confirmation" : "You have an offer"}</span>
                         <strong>{pendingOffer.startDate ? `Proposed start: ${pendingOffer.startDate}` : "No start date set yet"}</strong>
                         <strong>{compensationAmount(pendingOffer)}</strong>
                         <p>{pendingOffer.message || pendingOffer.scopeSummary}</p>
                       </div>
                       <div className="v2-match-actions">
-                        <button type="button" className="v2-primary-button" disabled={Boolean(activeAction)} onClick={() => void handleAcceptOffer(pendingOffer)}>Accept work</button>
+                        <button type="button" className="v2-primary-button" disabled={Boolean(activeAction)} onClick={() => void handleAcceptOffer(pendingOffer)}>{detailJob.canonical?.compensationType === "fixed" && pendingOffer.agreedCompensation?.unit === "fixed" ? "Confirm job" : "Accept work"}</button>
                         <button type="button" disabled={Boolean(activeAction)} onClick={() => void handleDeclineOffer(pendingOffer)}>Decline</button>
                       </div>
                     </div>

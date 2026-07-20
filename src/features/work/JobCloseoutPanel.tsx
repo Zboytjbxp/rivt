@@ -16,7 +16,7 @@ interface JobCloseoutPanelProps {
   onClose: () => void;
   onOpenPhotos: () => void;
   onProjectChange: (project: ProjectRecord) => void;
-  onLifecycleChange?: () => void;
+  onLifecycleChange?: () => void | Promise<void>;
 }
 
 function latestCompletion(project: ProjectRecord) {
@@ -54,7 +54,7 @@ export function JobCloseoutPanel({
   async function refreshProject(message: string) {
     const refreshed = await getProjectForActiveWork(project.activeWorkId);
     onProjectChange(refreshed);
-    onLifecycleChange?.();
+    await onLifecycleChange?.();
     setNotice(message);
   }
 

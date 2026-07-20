@@ -2634,10 +2634,8 @@ function App() {
                 "success",
               );
             }}
-            onActiveWorkChanged={() => {
-              void reloadActiveWork();
-              void reloadJobs();
-              void reloadInbox();
+            onActiveWorkChanged={async () => {
+              await Promise.all([reloadActiveWork(), reloadJobs(), reloadInbox()]);
             }}
           />
         ) : activeView === "Shop Talk" ? (

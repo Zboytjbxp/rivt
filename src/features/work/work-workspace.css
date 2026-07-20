@@ -1102,6 +1102,16 @@
   font-size: 13px;
 }
 
+.v2-match-notice {
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px solid color-mix(in srgb, var(--v2-success) 42%, transparent);
+  border-radius: var(--v2-radius-sm);
+  background: var(--v2-success-soft);
+  color: var(--v2-success);
+  font-weight: 700;
+}
+
 .v2-applicant-list {
   display: grid;
   gap: 10px;
