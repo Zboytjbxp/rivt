@@ -2,10 +2,26 @@
 
 Last updated: 2026-07-20 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Packet 68 job lifecycle coherence is complete and deployed.
-Active packet: `docs/delivery/packets/68_JOB_LIFECYCLE_COHERENCE.md`
-Repository branch: `master`
+Current phase: Packet 69 paperwork queue exact resume is locally complete and awaiting release.
+Active packet: `docs/delivery/packets/69_PAPERWORK_QUEUE_EXACT_RESUME.md`
+Repository branch: `codex/invoice-estimate-professional`
 Production feature release commit: `2422266832eeebdfdd52d0f63e464d6216ca64a1`
+
+## Packet 69 - Paperwork Queue Exact Resume (Locally Complete; Release Pending)
+
+- Home now surfaces real saved estimate and invoice drafts as a compact
+  paperwork queue without inventing sample documents or urgency.
+- Each queue row reopens the exact saved record and restores its accepted-work
+  or standalone-project context without overwriting the normal preferred tool
+  destination.
+- Estimate and Invoice preserve the selected local record id on save, avoiding
+  duplicate drafts after resume.
+- Build, lint, 59 unit/frontend tests, E2E, rendered mobile-action and Tools UI
+  QA, and the production dependency audit pass.
+- Three non-database integration checks pass; sixteen PostgreSQL suites are
+  skipped because this clean worktree does not contain `TEST_DATABASE_URL`.
+- Deployment and production-health evidence remain pending.
+- No schema, migration, billing, payment-processing, or authorization change.
 
 ## Packet 68 - Job Lifecycle Coherence (Complete and Deployed)
 
