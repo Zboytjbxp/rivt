@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   Circle,
   ClipboardList,
+  FileText,
   MessageCircle,
   TrendingUp,
   X,
@@ -17,6 +18,7 @@ import type { ToolMode } from "../tools/ToolsStudio";
 import { getProjectForActiveWork, type ProjectRecord } from "../tools/project-api";
 import type { GuestPreviewSummary } from "../../demo/guestPreview";
 import { DAILY_LOG_PREFIX } from "../tools/daily-log-constants";
+import { fetchToolRecords, type ServerToolRecord } from "../tools/tool-records-api";
 import "./trade-feed.css";
 
 const BOOKMARK_KEY = "rivt.shopTalkBookmarks.v1";
@@ -30,6 +32,13 @@ const AVAIL_LABEL: Record<Availability, string> = {
 };
 const AVAIL_ORDER: Availability[] = ["available", "limited", "booked"];
 const SETUP_RECORD_BASELINE = 0;
+const moneyFormatter = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
+
+type PaperworkDraft = ServerToolRecord & { recordType: "estimate" | "invoice_draft" };
+
+function formatPaperworkAmount(amountCents: number | null) {
+  return amountCents === null ? "" : moneyFormatter.format(amountCents / 100);
+}
 
 function isToday(iso: string | null | undefined) {
   if (!iso) return false;
@@ -114,7 +123,7 @@ interface TradeFeedProps {
   onOpenCommunity: (name: string) => void;
   onNavigate: (destination: PrimaryDestination) => void;
   onOpenProfile: () => void;
-  onOpenTool: (tool: ToolMode) => void;
+  onOpenTool: (tool: ToolMode, activeWorkId?: string | null, record?: ServerToolRecord | null) => void;
   onOpenActiveWorkWorkspace: (activeWorkId: string) => void;
 }
 
@@ -148,7 +157,32 @@ export function TradeFeed({
   const [getStartedDismissed, setGetStartedDismissed] = useState(readGetStartedDismissed);
   const [activeProject, setActiveProject] = useState<ProjectRecord | null>(null);
   const [activeProjectLoading, setActiveProjectLoading] = useState(false);
+  const [paperworkDrafts, setPaperworkDrafts] = useState<PaperworkDraft[]>([]);
   const primaryActiveWork = activeWork.find((work) => work.status === "active") ?? null;
+
+  useEffect(() => {
+    let cancelled = false;
+    if (demoSummary) return () => { cancelled = true; };
+
+    void Promise.all([fetchToolRecords("invoice_draft"), fetchToolRecords("estimate")])
+      .then(([invoiceRecords, estimateRecords]) => {
+        if (cancelled) return;
+        const records = [...(invoiceRecords ?? []), ...(estimateRecords ?? [])]
+          .filter((record): record is PaperworkDraft => (
+            (record.recordType === "invoice_draft" || record.recordType === "estimate")
+            && record.status === "draft"
+            && !record.standaloneProjectId
+          ))
+          .sort((a, b) => Date.parse(b.updatedAt ?? b.createdAt ?? "") - Date.parse(a.updatedAt ?? a.createdAt ?? ""))
+          .slice(0, 2);
+        setPaperworkDrafts(records);
+      })
+      .catch(() => {
+        if (!cancelled) setPaperworkDrafts([]);
+      });
+
+    return () => { cancelled = true; };
+  }, [demoSummary]);
 
   useEffect(() => {
     let cancelled = false;
@@ -403,6 +437,37 @@ export function TradeFeed({
             <button type="button" className="v2-primary-button" onClick={() => onOpenActiveWorkWorkspace(primaryActiveWork.id)}>
               Open workspace
             </button>
+          </div>
+        </section>
+      ) : null}
+
+      {paperworkDrafts.length > 0 ? (
+        <section className="trade-feed-paperwork" aria-labelledby="trade-feed-paperwork-title">
+          <div className="trade-feed-paperwork-head">
+            <span>Paperwork</span>
+            <h2 id="trade-feed-paperwork-title">Finish your paperwork</h2>
+          </div>
+          <div className="trade-feed-paperwork-list">
+            {paperworkDrafts.map((record) => {
+              const tool: ToolMode = record.recordType === "invoice_draft" ? "invoice" : "estimate";
+              const label = record.recordType === "invoice_draft" ? "Invoice" : "Estimate";
+              const amount = formatPaperworkAmount(record.amountCents);
+              return (
+                <button
+                  key={record.id}
+                  type="button"
+                  className="trade-feed-paperwork-row"
+                  onClick={() => onOpenTool(tool, record.activeWorkId, record)}
+                >
+                  <span className="trade-feed-paperwork-icon" aria-hidden="true"><FileText size={18} /></span>
+                  <span className="trade-feed-paperwork-copy">
+                    <strong>{record.title || `${label} draft`}</strong>
+                    <small>{label} draft{amount ? ` - ${amount}` : ""}</small>
+                  </span>
+                  <span className="trade-feed-paperwork-action">Continue</span>
+                </button>
+              );
+            })}
           </div>
         </section>
       ) : null}

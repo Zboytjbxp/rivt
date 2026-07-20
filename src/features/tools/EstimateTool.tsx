@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, Copy, FileText, Mail, Save } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, Copy, FileText, LoaderCircle, Mail, Save } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Panel } from "../../components/ui";
 import { requestKey } from "../../lib/api";
@@ -78,6 +78,14 @@ function readEstimateDraft(context: ToolWorkContext): Partial<EstimateDraftState
   }
 }
 
+function estimateDraftFromRecord(record: ServerToolRecord | null | undefined): Partial<EstimateDraftState> {
+  if (!record || record.recordType !== "estimate") return {};
+  const payload = record.payload;
+  return payload && typeof payload === "object" && !Array.isArray(payload)
+    ? payload as Partial<EstimateDraftState>
+    : {};
+}
+
 function clampEstimateNumber(value: unknown, fallback: number, min = 0) {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? Math.max(min, parsed) : fallback;
@@ -132,13 +140,19 @@ export function EstimateTool({
   activeJob,
   workContext,
   onConvertToInvoice,
+  initialRecord = null,
 }: {
   activeJob: Job | null;
   workContext: ToolWorkContext;
   onConvertToInvoice?: (draft: EstimateInvoiceDraft) => void;
+  initialRecord?: ServerToolRecord | null;
 }) {
+  const recordLocalId = initialRecord?.localId ?? `estimate:${toolContextStorageId(workContext)}`;
   const [estimatePrefs] = useState(readEstimatePrefs);
-  const [initialDraft] = useState(() => readEstimateDraft(workContext));
+  const [initialDraft] = useState(() => ({
+    ...readEstimateDraft(workContext),
+    ...estimateDraftFromRecord(initialRecord),
+  }));
   const [laborHours, setLaborHours] = useState(initialDraft.laborHours ?? activeJob?.durationHours ?? 8);
   const [hourlyRate, setHourlyRate] = useState(initialDraft.hourlyRate ?? estimatePrefs.hourlyRate);
   const [crewSize, setCrewSize] = useState(initialDraft.crewSize ?? estimatePrefs.crewSize);
@@ -154,6 +168,7 @@ export function EstimateTool({
   const [validThrough, setValidThrough] = useState(initialDraft.validThrough ?? futureDate(30));
   const [customerNote, setCustomerNote] = useState(initialDraft.customerNote ?? "");
   const [saveMessage, setSaveMessage] = useState("Autosaved on this device.");
+  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [delivery, setDelivery] = useState<EstimateDelivery | null>(null);
   const [sending, setSending] = useState(false);
   const [step, setStep] = useState<"price" | "customer" | "review">("price");
@@ -188,11 +203,11 @@ export function EstimateTool({
   useEffect(() => {
     let active = true;
     void fetchToolRecords("estimate").then((records) => {
-      const record = records?.find((candidate) => candidate.localId === `estimate:${toolContextStorageId(workContext)}`) ?? null;
+      const record = records?.find((candidate) => candidate.localId === recordLocalId) ?? null;
       if (active) setDelivery(deliveryFromRecord(record));
     });
     return () => { active = false; };
-  }, [workContext]);
+  }, [recordLocalId]);
 
   const labor = laborHours * hourlyRate;
   const base = labor + materials + subCosts;
@@ -255,13 +270,15 @@ export function EstimateTool({
   }
 
   async function saveDraft(showSuccess = true) {
+    setSaveState("saving");
+    if (showSuccess) setSaveMessage("Saving draft...");
     const draft: EstimateDraftState = {
       laborHours, hourlyRate, crewSize, materials, subCosts, overheadPct, marginPct, contingencyPct,
       estimateNumber, recipientName, recipientEmail, scope, validThrough, customerNote,
     };
     const record = await upsertToolRecord({
       recordType: "estimate",
-      localId: `estimate:${toolContextStorageId(workContext)}`,
+      localId: recordLocalId,
       title: (scope.trim() || `${toolContextLabel(workContext)} estimate`).slice(0, 160),
       status: delivery?.status === "sent" ? "sent" : "draft",
       recordDate: new Date().toISOString().slice(0, 10),
@@ -271,9 +288,13 @@ export function EstimateTool({
     });
     if (record) {
       setDelivery(deliveryFromRecord(record));
+      setSaveState("saved");
       if (showSuccess) setSaveMessage("Draft saved to your RIVT account.");
     } else if (showSuccess) {
+      setSaveState("error");
       setSaveMessage("Saved on this device only. Account sync failed.");
+    } else {
+      setSaveState("error");
     }
     return record;
   }
@@ -302,8 +323,10 @@ export function EstimateTool({
       setDelivery(sentDelivery);
       sendIdempotencyKeyRef.current = null;
       setSaveMessage(sentDelivery?.sentAt ? `Sent to ${sentDelivery.recipientEmail}.` : "Estimate sent.");
+      setSaveState("saved");
     } catch (error) {
       setSaveMessage(error instanceof Error ? error.message : "RIVT could not send the estimate.");
+      setSaveState("error");
     } finally {
       setSending(false);
     }
@@ -455,9 +478,12 @@ export function EstimateTool({
         </div>
       </Panel> : null}
       <div className={`v2-tool-action-dock is-estimate is-${step}`} aria-label="Estimate actions">
-        <span><strong>{currency(target)}</strong><small>{saveMessage}</small></span>
+        <span aria-live="polite" data-save-state={saveState}><strong>{currency(target)}</strong><small>{saveMessage}</small></span>
         {step !== "price" ? <button type="button" onClick={() => setStep(step === "review" ? "customer" : "price")} aria-label="Previous estimate step"><ChevronLeft size={18} /></button> : null}
-        <button type="button" onClick={() => void saveDraft()} aria-label="Save estimate" title="Save estimate"><Save size={18} /><span>Save</span></button>
+        <button type="button" onClick={() => void saveDraft()} aria-label="Save estimate" title="Save estimate" disabled={saveState === "saving"}>
+          {saveState === "saving" ? <LoaderCircle className="v2-spin" size={18} /> : saveState === "saved" ? <Check size={18} /> : <Save size={18} />}
+          <span>{saveState === "saving" ? "Saving" : saveState === "saved" ? "Saved" : saveState === "error" ? "Try again" : "Save"}</span>
+        </button>
         {step === "price" ? <button type="button" className="v2-primary-button" onClick={() => setStep("customer")}><span>Customer</span><ChevronRight size={18} /></button> : null}
         {step === "customer" ? <button type="button" className="v2-primary-button" onClick={() => setStep("review")}><span>Review</span><ChevronRight size={18} /></button> : null}
         {step === "review" ? <button type="button" className="v2-primary-button" onClick={() => void sendEstimateEmail()} disabled={sending || target <= 0 || !recipientEmail.trim()}><Mail size={18} /><span>{sending ? "Sending" : delivery?.status === "sent" ? "Send again" : "Send email"}</span></button> : null}
