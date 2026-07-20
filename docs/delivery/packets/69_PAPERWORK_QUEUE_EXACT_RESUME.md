@@ -44,3 +44,14 @@ saved record instead of starting a new document or selecting unrelated work.
 - No schema, migration, billing, payment-processing, authorization, or email
   provider change.
 - No new draft type or fabricated Home assistant state.
+
+## Deployment
+
+- Merged to `master` as `ce1340bf2c20198f5283c628ddc7030a14f3b25d`.
+- Railway production serves that exact commit at `https://rivt.pro`.
+- `/api/health` reports migration `0028_compensation_workflow` ready with
+  PostgreSQL, S3-compatible object storage, Sentry, and Web Push healthy.
+- `npm run monitor:production` passed in 644 ms with signups and mutations
+  enabled and all seven anonymous private-route checks healthy.
+- Known boundary: the full PostgreSQL integration suite was not run locally
+  because `TEST_DATABASE_URL` was unavailable in the clean feature worktree.

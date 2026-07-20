@@ -2,12 +2,12 @@
 
 Last updated: 2026-07-20 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Packet 69 paperwork queue exact resume is locally complete and awaiting release.
+Current phase: Packet 69 paperwork queue exact resume is complete and deployed.
 Active packet: `docs/delivery/packets/69_PAPERWORK_QUEUE_EXACT_RESUME.md`
-Repository branch: `codex/invoice-estimate-professional`
-Production feature release commit: `2422266832eeebdfdd52d0f63e464d6216ca64a1`
+Repository branch: `master`
+Production feature release commit: `ce1340bf2c20198f5283c628ddc7030a14f3b25d`
 
-## Packet 69 - Paperwork Queue Exact Resume (Locally Complete; Release Pending)
+## Packet 69 - Paperwork Queue Exact Resume (Complete and Deployed)
 
 - Home now surfaces real saved estimate and invoice drafts as a compact
   paperwork queue without inventing sample documents or urgency.
@@ -20,7 +20,11 @@ Production feature release commit: `2422266832eeebdfdd52d0f63e464d6216ca64a1`
   QA, and the production dependency audit pass.
 - Three non-database integration checks pass; sixteen PostgreSQL suites are
   skipped because this clean worktree does not contain `TEST_DATABASE_URL`.
-- Deployment and production-health evidence remain pending.
+- Production `/api/health` reports exact commit
+  `ce1340bf2c20198f5283c628ddc7030a14f3b25d`, PostgreSQL through migration
+  `0028`, S3-compatible storage, Sentry, web push, and job alerts configured.
+- `npm run monitor:production` passes with seven anonymous-private-route
+  checks, signups and mutations enabled, and the exact deployed commit.
 - No schema, migration, billing, payment-processing, or authorization change.
 
 ## Packet 68 - Job Lifecycle Coherence (Complete and Deployed)

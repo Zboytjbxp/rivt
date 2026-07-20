@@ -2161,3 +2161,27 @@ Add one entry per staging/production deployment.
   announcements on the launch Android and iPhone devices.
 - Approval: Packet 66 runtime and automated gates are verified; physical
   accessibility acceptance remains open.
+# Current Production - Packet 69 Paperwork Queue Exact Resume
+
+- Environment: Production (`https://rivt.pro`)
+- Date/time/timezone: 2026-07-20 America/New_York
+- Deployer: Codex through a verified feature branch, merge into `master`, and
+  Railway production auto-deploy
+- Source repository/branch: `Zboytjbxp/rivt`, `master`
+- Runtime feature source: `ce1340bf2c20198f5283c628ddc7030a14f3b25d`
+- Migration version before/after: unchanged (`0028_compensation_workflow`)
+- Provider/config changes: none; auth, billing, PostgreSQL, object storage,
+  Sentry, Web Push, email, moderation, and rollout configuration were
+  preserved.
+- Rollback target: `72bcadc`; no database rollback is required.
+- Automated gates: build, lint, 59 unit/frontend tests, E2E, compact
+  mobile-action UI, Tools UI, and the zero-vulnerability production dependency
+  audit passed. Three non-database integration checks passed; sixteen
+  PostgreSQL suites were skipped without `TEST_DATABASE_URL`.
+- Product evidence: Home surfaces real estimate/invoice drafts and each row
+  resumes the exact saved record and work context without fabricating urgency.
+- Post-deploy proof: live `/api/health` returned the exact runtime feature
+  source. The production monitor passed in 644 ms with PostgreSQL,
+  S3-compatible storage, configured Sentry and Web Push, matching-job alerts,
+  and all seven anonymous private-route checks healthy.
+- Approval: Packet 69 runtime and automated non-database gates are verified.
