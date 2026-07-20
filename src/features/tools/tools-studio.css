@@ -8245,11 +8245,33 @@
   }
 }
 
+.fraction-strip button[data-fraction-family] {
+  position: relative;
+  padding-top: 14px;
+}
+
+.fraction-strip button[data-fraction-family]::before {
+  position: absolute;
+  top: 6px;
+  left: 50%;
+  display: block;
+  content: "";
+  background: currentColor;
+  border-radius: 1px;
+  opacity: 0.9;
+  transform: translateX(-50%);
+}
+
 .fraction-strip button[data-fraction-family="quarter"] {
   border-color: color-mix(in srgb, var(--v2-text-muted) 48%, var(--v2-border));
   background: color-mix(in srgb, var(--v2-surface) 82%, var(--v2-text) 8%);
   color: var(--v2-text);
   font-size: 17px;
+}
+
+.fraction-strip button[data-fraction-family="quarter"]::before {
+  width: 3px;
+  height: 10px;
 }
 
 .fraction-strip button[data-fraction-family="eighth"] {
@@ -8258,8 +8280,18 @@
   font-size: 15px;
 }
 
+.fraction-strip button[data-fraction-family="eighth"]::before {
+  width: 2px;
+  height: 7px;
+}
+
 .fraction-strip button[data-fraction-family="sixteenth"] {
   color: var(--v2-text-muted);
+}
+
+.fraction-strip button[data-fraction-family="sixteenth"]::before {
+  width: 1px;
+  height: 4px;
 }
 
 .fraction-strip button.active {
