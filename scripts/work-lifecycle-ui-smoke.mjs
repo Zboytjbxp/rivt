@@ -693,8 +693,8 @@ async function runContractorFlow(page) {
   await page.getByText("Riley Harper", { exact: true }).waitFor({ timeout: 15_000 });
   await page.getByRole("button", { name: "Shortlist" }).click();
   await page.getByText("shortlisted", { exact: true }).waitFor({ timeout: 15_000 });
-  await page.getByText("The applicant chose this listed price.", { exact: false }).waitFor({ timeout: 15_000 });
-  await page.getByRole("button", { name: "Hire at $850" }).click();
+  await page.getByText("The applicant accepted the listed", { exact: false }).waitFor({ timeout: 15_000 });
+  await page.getByRole("button", { name: "Choose applicant" }).click();
   await page.getByText("Offer sent", { exact: true }).waitFor({ timeout: 15_000 });
   await assertNoHorizontalOverflow(page, "Contractor applicant workflow");
   await page.screenshot({ path: path.join(screenshotDir, "contractor-work-lifecycle.png"), fullPage: true });
@@ -724,8 +724,8 @@ async function runTradespersonOfferFlow(page) {
   await page.goto(`${baseUrl}/app/work`, { waitUntil: "networkidle" });
   await page.getByRole("heading", { name: "Work", exact: true }).waitFor({ timeout: 15_000 });
   await clickJob(page, "Warehouse panel assist");
-  await page.getByText("You have an offer", { exact: true }).waitFor({ timeout: 15_000 });
-  await page.getByRole("button", { name: "Accept work" }).click();
+  await page.getByText("Job confirmation", { exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByRole("button", { name: "Confirm job" }).click();
   await page.getByLabel("Active work workflow").getByText("Tradesperson workspace", { exact: true }).waitFor({ timeout: 15_000 });
 
   await page.goto(`${baseUrl}/app/work`, { waitUntil: "networkidle" });

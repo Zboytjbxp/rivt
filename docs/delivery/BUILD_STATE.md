@@ -1,11 +1,42 @@
 # RIVT Build State
 
-Last updated: 2026-07-20 America/New_York
+Last updated: 2026-07-21 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Packet 69 paperwork queue exact resume is complete and deployed.
-Active packet: `docs/delivery/packets/69_PAPERWORK_QUEUE_EXACT_RESUME.md`
-Repository branch: `master`
-Production feature release commit: `ce1340bf2c20198f5283c628ddc7030a14f3b25d`
+Current phase: Launch verification reconciliation is in progress.
+Active packet: Launch verification sweep on `codex/launch-verification`
+Repository branch: `codex/launch-verification`
+Production feature release commit: `15fa019153e2cc364f39231d55aaec1ca5626caa`
+
+## Launch Verification Sweep - Current Master Baseline
+
+- Verification branch `codex/launch-verification` is based directly on current
+  `origin/master` at `15fa019153e2cc364f39231d55aaec1ca5626caa`.
+- Local temp noise is ignored via `.gitignore` entries for `.codex-logs/`,
+  `.codex-temp/`, and `.worktrees/`.
+- The Work lifecycle UI smoke now matches the current live workflow language:
+  listed-price applicants are chosen with `Choose applicant`, and tradespeople
+  confirm work from the `Job confirmation` state.
+- Production dependency audit passes after refreshing `body-parser` in the
+  lockfile to `2.3.0`.
+- Passed locally: `npm run build`, `npm run lint`, `npm run lint:security`,
+  `npm run test:unit`, `npm run test:e2e`, `npm run test:ui:mobile-actions`,
+  `npm run test:ui:tools`, `npm run test:ui:shop-talk-news`,
+  `npm run test:ui:guest-preview`, `npm run test:ui:work-lifecycle`, and
+  `npm audit --omit=dev`.
+- The two-account Work lifecycle smoke passed through job creation,
+  application, shortlist/offer, tradesperson confirmation, active-work
+  workspace, photos/logs/messages/tool entry points, completion/closeout, and
+  review coverage as represented by `scripts/work-lifecycle-ui-smoke.mjs`.
+- `npm run monitor:production` passes. Live `https://rivt.pro/api/health`
+  serves exact source `15fa019153e2cc364f39231d55aaec1ca5626caa`, PostgreSQL,
+  S3-compatible object storage, Sentry, Web Push, matching-job alerts, open
+  signups/mutations, and seven anonymous private-route checks.
+- Not yet launch-clear: the aggregate `npm run test` command exceeded bounded
+  local runs without producing a failing assertion, and the full PostgreSQL
+  integration suite cannot be completed in this shell because
+  `TEST_DATABASE_URL` is not configured. Jacksonville soft launch readiness
+  remains blocked until those are resolved or explicitly accepted as launch
+  risk.
 
 ## Packet 69 - Paperwork Queue Exact Resume (Complete and Deployed)
 
