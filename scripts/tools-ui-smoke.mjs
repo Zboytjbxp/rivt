@@ -10,6 +10,7 @@ const baseUrl = `http://127.0.0.1:${port}`;
 const projectRoot = process.cwd();
 const viteBin = path.join(projectRoot, "node_modules", "vite", "bin", "vite.js");
 const screenshotDir = path.join(os.tmpdir(), "rivt-tools-pass");
+const quickEntryHoldMs = 380;
 
 const vite = spawn(process.execPath, [viteBin, "--host", "127.0.0.1", "--port", String(port)], {
   cwd: projectRoot,
@@ -483,6 +484,24 @@ async function clickVisibleFraction(page, label, viewportName) {
   );
 }
 
+async function chooseQuickEntry(page, digit, optionLabel, viewportName) {
+  const key = page.getByLabel("Fraction calculator keypad").getByRole("button", {
+    name: `${digit}. Hold for quick entry.`,
+  });
+  const box = await key.boundingBox();
+  assert.ok(box, `expected quick-entry key ${digit} to be visible in ${viewportName}`);
+
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.waitForTimeout(quickEntryHoldMs + 80);
+  await page.mouse.up();
+
+  const menu = page.getByRole("menu", { name: `Quick fractions for ${digit}` });
+  await menu.waitFor({ state: "visible", timeout: 5_000 });
+  await menu.getByRole("menuitem", { name: `Enter ${optionLabel}` }).click();
+  await menu.waitFor({ state: "hidden", timeout: 5_000 });
+}
+
 async function runToolsFlow(page, viewportName) {
   const isHandsetViewport = viewportName !== "desktop";
   await page.goto(`${baseUrl}/app/tools?tool=contracts`, { waitUntil: "networkidle" });
@@ -636,6 +655,15 @@ async function runToolsFlow(page, viewportName) {
   await page.getByLabel("Length calculator").getByText("Decimal", { exact: true }).waitFor({ timeout: 15_000 });
   await page.getByRole("button", { name: "Clear calculator" }).click();
   await page.locator(".calc-primary-value", { hasText: '0"' }).waitFor({ timeout: 15_000 });
+  await page.getByLabel("Fraction calculator keypad").getByRole("button", { name: "6" }).click();
+  await chooseQuickEntry(page, "7", "7/8", viewportName);
+  await page.locator(".calc-primary-value", { hasText: '6 7/8"' }).waitFor({ timeout: 15_000 });
+  assert.equal(
+    await page.locator(".calc-primary-value").textContent(),
+    '6 7/8"',
+    "holding 7 should offer the fast 7/8 entry without changing ordinary digit taps",
+  );
+  await page.getByRole("button", { name: "Clear calculator" }).click();
   await page.getByLabel("Fraction calculator keypad").getByRole("button", { name: "2" }).click();
   await page.getByLabel("Fraction calculator keypad").getByRole("button", { name: "7" }).click();
   await clickVisibleFraction(page, "5/16", viewportName);

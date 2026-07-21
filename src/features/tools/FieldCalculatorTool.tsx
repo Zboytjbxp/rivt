@@ -1,5 +1,5 @@
 import { ArrowLeft, Clipboard, Clock3, Copy, RotateCcw, Ruler, Settings2, Trash2, X } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { DialogBackdrop, DialogSurface } from "../../components/ui";
 
@@ -24,6 +24,14 @@ const METRIC_TRIM_UNITS = UNITS_PER_MM / 2;
 const FRACTION_BUTTONS = Array.from({ length: 15 }, (_, index) => index + 1);
 const GROUPED_FRACTION_BUTTONS = [4, 8, 12, 2, 6, 10, 14, 1, 3, 5, 7, 9, 11, 13, 15];
 const METRIC_TENTH_BUTTONS = Array.from({ length: 9 }, (_, index) => index + 1);
+const QUICK_ENTRY_HOLD_MS = 380;
+const IMPERIAL_DIGIT_FRACTIONS: Record<string, number[]> = {
+  "1": [1, 2, 4, 8],
+  "3": [3, 6, 12],
+  "5": [5, 10],
+  "7": [7, 14],
+  "9": [9],
+};
 const RULER_TICKS = [
   { label: "1/16", value: 2 },
   { label: "1/8", value: 4 },
@@ -57,6 +65,142 @@ type CalculatorPreferences = {
   fractionLayout: FractionLayout;
   heavyLightMode: HeavyLightMode;
 };
+
+type QuickEntryOption = {
+  label: string;
+  ariaLabel: string;
+  value: number;
+};
+
+function QuickEntryDigitKey({
+  digit,
+  options,
+  menuLabel,
+  onTap,
+  onQuickEntry,
+}: {
+  digit: string;
+  options: QuickEntryOption[];
+  menuLabel: string;
+  onTap: () => void;
+  onQuickEntry: (value: number) => void;
+}) {
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const holdTimerRef = useRef<number | null>(null);
+  const pointerOriginRef = useRef<{ x: number; y: number } | null>(null);
+  const suppressClickRef = useRef(false);
+  const suppressResetTimerRef = useRef<number | null>(null);
+  const [open, setOpen] = useState(false);
+
+  function cancelHold() {
+    if (holdTimerRef.current !== null) window.clearTimeout(holdTimerRef.current);
+    holdTimerRef.current = null;
+    pointerOriginRef.current = null;
+  }
+
+  function clearClickSuppression() {
+    suppressClickRef.current = false;
+    if (suppressResetTimerRef.current !== null) {
+      window.clearTimeout(suppressResetTimerRef.current);
+      suppressResetTimerRef.current = null;
+    }
+  }
+
+  useEffect(() => () => {
+    if (holdTimerRef.current !== null) window.clearTimeout(holdTimerRef.current);
+    if (suppressResetTimerRef.current !== null) window.clearTimeout(suppressResetTimerRef.current);
+  }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") setOpen(false);
+    }
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [open]);
+
+  return (
+    <>
+      <button
+        ref={buttonRef}
+        type="button"
+        aria-haspopup={options.length ? "menu" : undefined}
+        aria-expanded={options.length ? open : undefined}
+        aria-label={options.length ? `${digit}. Hold for quick entry.` : digit}
+        onPointerDown={(event) => {
+          if (!options.length || event.button !== 0) return;
+          pointerOriginRef.current = { x: event.clientX, y: event.clientY };
+          holdTimerRef.current = window.setTimeout(() => {
+            suppressClickRef.current = true;
+            setOpen(true);
+            navigator.vibrate?.(12);
+          }, QUICK_ENTRY_HOLD_MS);
+        }}
+        onPointerMove={(event) => {
+          const origin = pointerOriginRef.current;
+          if (!origin || Math.hypot(event.clientX - origin.x, event.clientY - origin.y) < 10) return;
+          cancelHold();
+        }}
+        onPointerUp={() => {
+          cancelHold();
+          if (!suppressClickRef.current) return;
+          suppressResetTimerRef.current = window.setTimeout(() => {
+            suppressClickRef.current = false;
+            suppressResetTimerRef.current = null;
+          }, 0);
+        }}
+        onPointerCancel={cancelHold}
+        onPointerLeave={cancelHold}
+        onContextMenu={(event) => {
+          if (options.length) event.preventDefault();
+        }}
+        onClick={() => {
+          if (suppressClickRef.current) {
+            clearClickSuppression();
+            return;
+          }
+          onTap();
+        }}
+      >
+        {digit}
+        {options.length ? <span className="calc-hold-cue" aria-hidden="true" /> : null}
+      </button>
+      {open ? createPortal(
+        <div className="calc-quick-entry-layer" role="presentation" onPointerDown={() => setOpen(false)}>
+          <div
+            className="calc-quick-entry-menu"
+            role="menu"
+            aria-label={menuLabel}
+            onPointerDown={(event) => event.stopPropagation()}
+          >
+            <span>{menuLabel}</span>
+            <div>
+              {options.map((option) => (
+                <button
+                  key={`${digit}-${option.label}`}
+                  type="button"
+                  role="menuitem"
+                  aria-label={option.ariaLabel}
+                  onClick={() => {
+                    clearClickSuppression();
+                    onQuickEntry(option.value);
+                    setOpen(false);
+                    buttonRef.current?.focus();
+                  }}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+            <small>Tap the value you want</small>
+          </div>
+        </div>,
+        document.body,
+      ) : null}
+    </>
+  );
+}
 
 const DEFAULT_CALCULATOR_PREFERENCES: CalculatorPreferences = {
   inputMode: "imperial",
@@ -536,6 +680,18 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
     setCopied(false);
   }
 
+  function quickEntryOptions(digit: string): QuickEntryOption[] {
+    if (inputMode === "metric") {
+      if (digit === "0") return [];
+      return [{ label: `.${digit} mm`, ariaLabel: `Enter point ${digit} millimeters`, value: Number(digit) }];
+    }
+
+    return (IMPERIAL_DIGIT_FRACTIONS[digit] ?? []).map((value) => {
+      const label = fractionLabelFromSixteenth(value);
+      return { label, ariaLabel: `Enter ${label}`, value };
+    });
+  }
+
   function applyOperator(operator: Operator) {
     const current = resultUnits ?? entryValueUnits;
     const currentQualifier = displayQualifier;
@@ -809,11 +965,11 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
               )}
 
               <div className="calc-pad-grid fraction-pad" aria-label={inputMode === "metric" ? "Metric calculator keypad" : "Fraction calculator keypad"}>
-                {["7", "8", "9"].map((digit) => <button key={digit} type="button" onClick={() => handleDigit(digit)}>{digit}</button>)}
+                {["7", "8", "9"].map((digit) => <QuickEntryDigitKey key={digit} digit={digit} options={quickEntryOptions(digit)} menuLabel={inputMode === "metric" ? `Quick decimal for ${digit}` : `Quick fractions for ${digit}`} onTap={() => handleDigit(digit)} onQuickEntry={inputMode === "metric" ? chooseMetricTenth : chooseFraction} />)}
                 <button type="button" className="op" onClick={() => applyOperator("/")}>/</button>
-                {["4", "5", "6"].map((digit) => <button key={digit} type="button" onClick={() => handleDigit(digit)}>{digit}</button>)}
+                {["4", "5", "6"].map((digit) => <QuickEntryDigitKey key={digit} digit={digit} options={quickEntryOptions(digit)} menuLabel={inputMode === "metric" ? `Quick decimal for ${digit}` : `Quick fractions for ${digit}`} onTap={() => handleDigit(digit)} onQuickEntry={inputMode === "metric" ? chooseMetricTenth : chooseFraction} />)}
                 <button type="button" className="op" onClick={() => applyOperator("x")}>x</button>
-                {["1", "2", "3"].map((digit) => <button key={digit} type="button" onClick={() => handleDigit(digit)}>{digit}</button>)}
+                {["1", "2", "3"].map((digit) => <QuickEntryDigitKey key={digit} digit={digit} options={quickEntryOptions(digit)} menuLabel={inputMode === "metric" ? `Quick decimal for ${digit}` : `Quick fractions for ${digit}`} onTap={() => handleDigit(digit)} onQuickEntry={inputMode === "metric" ? chooseMetricTenth : chooseFraction} />)}
                 <button type="button" className="op" onClick={() => applyOperator("-")}>-</button>
                 <button type="button" className="wide" onClick={() => handleDigit("0")}>0</button>
                 <button type="button" className="op ghost" onClick={handleBackspace} aria-label="Backspace">DEL</button>

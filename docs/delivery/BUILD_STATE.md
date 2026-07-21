@@ -7,6 +7,28 @@ Active packet: Launch verification sweep on `codex/launch-verification`
 Repository branch: `codex/launch-verification`
 Production feature release commit: `15fa019153e2cc364f39231d55aaec1ca5626caa`
 
+## Calculator Long-Press Quick Entry (Complete, Pending Review)
+
+- Normal digit taps are unchanged; holding a supported imperial digit opens a
+  compact, one-handed fraction tray at the bottom of the screen.
+- Quick choices follow tape-measure fractions: holding `7`, for example,
+  offers `7/16` and `7/8`; metric mode offers the supported tenth-millimeter
+  shortcut instead of inventing unsupported precision.
+- The tray supports pointer movement cancellation, outside-tap and Escape
+  dismissal, accessible menu labels, and long-press vibration where the
+  device allows it.
+- Tools UI smoke coverage proves `6` plus hold `7` plus `7/8` produces
+  `6 7/8\"`, then continues through the existing calculator scenarios.
+- Passed locally: `npm run build`, `npm run lint`, `npm run test:unit` (59),
+  `npm run test:e2e`, and `npm audit --omit=dev`.
+- The calculator portion of `npm run test:ui:tools` passes; the broader Tools
+  smoke later stops on an unrelated current Camera assertion about private
+  albums appearing in RIVT job context.
+- The aggregate `npm run test` again exceeded a four-minute bounded run without
+  emitting a failing assertion, matching the existing launch-verification
+  limitation above.
+- No schema, migration, billing, authorization, or dependency change.
+
 ## Launch Verification Sweep - Current Master Baseline
 
 - Verification branch `codex/launch-verification` is based directly on current
