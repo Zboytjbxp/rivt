@@ -4,7 +4,7 @@ import { DialogBackdrop, DialogSurface } from "../../components/ui";
 import type { CanonicalActiveWork } from "../work/job-api";
 import type { PhotoAlbum } from "./album-api";
 import type { StandaloneProject } from "./standalone-project-api";
-import { toolContextEyebrow, toolContextLabel, type ToolWorkContext } from "./tool-work-context";
+import { isSelectableActiveWork, toolContextEyebrow, toolContextLabel, type ToolWorkContext } from "./tool-work-context";
 
 export function ToolContextPicker({
   context,
@@ -56,7 +56,7 @@ export function ToolContextPicker({
   const [dismissedRequestToken, setDismissedRequestToken] = useState(0);
   const requestedOpen = Boolean(openRequestToken && openRequestToken !== dismissedRequestToken);
   const isOpen = open || requestedOpen;
-  const liveRivtWork = activeWork.filter((work) => work.status === "active");
+  const liveRivtWork = activeWork.filter(isSelectableActiveWork);
 
   function closePicker() {
     setOpen(false);

@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, ArrowRight, Camera, Download, FileUp, FolderOpen, Image, Loader2, RefreshCw } from "lucide-react";
+import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { ArrowLeft, ArrowRight, Camera, Download, FileUp, FolderOpen, Image, Loader2, Plus, RefreshCw } from "lucide-react";
 import { ZoomableImage } from "../../components/ZoomableImage";
 import { createPhotoComparison, type PhotoComparisonLayout } from "./photo-comparison";
 import type { CanonicalActiveWork } from "../work/job-api";
@@ -22,6 +22,7 @@ import {
   type PhotoAlbum,
 } from "./album-api";
 import type { StandaloneProject } from "./standalone-project-api";
+import { isSelectableActiveWork } from "./tool-work-context";
 
 type PhotoView = "gallery" | "detail" | "compare-a" | "compare-b" | "compare-view";
 type JobPhotosMode = "home" | "album-detail" | "active-job";
@@ -880,7 +881,7 @@ function PhotoGallery({
   );
 }
 
-export function JobPhotosTool({ activeWork, focusedActiveWorkId = null, standaloneProject = null, selectedPrivateAlbum = null, autoOpenActiveJob = false, contextLabel = null, onRequestContext, onCaptureOpenChange }: {
+export function JobPhotosTool({ activeWork, focusedActiveWorkId = null, standaloneProject = null, selectedPrivateAlbum = null, autoOpenActiveJob = false, contextLabel = null, onRequestContext, onChooseActiveWork, onCaptureOpenChange }: {
   activeWork: CanonicalActiveWork[];
   focusedActiveWorkId?: string | null;
   standaloneProject?: StandaloneProject | null;
@@ -888,10 +889,12 @@ export function JobPhotosTool({ activeWork, focusedActiveWorkId = null, standalo
   autoOpenActiveJob?: boolean;
   contextLabel?: string | null;
   onRequestContext?: () => void;
+  onChooseActiveWork?: (work: CanonicalActiveWork) => void;
   onCaptureOpenChange?: (open: boolean) => void;
 }) {
+  const selectableActiveWork = activeWork.filter(isSelectableActiveWork);
   const focusedWork = focusedActiveWorkId
-    ? activeWork.find((work) => work.id === focusedActiveWorkId) ?? null
+    ? selectableActiveWork.find((work) => work.id === focusedActiveWorkId) ?? null
     : null;
   const recordWork = focusedWork;
   const recordWorkId = recordWork?.id ?? null;
@@ -903,6 +906,9 @@ export function JobPhotosTool({ activeWork, focusedActiveWorkId = null, standalo
   const [albumLoading, setAlbumLoading] = useState(false);
   const [albumUploading, setAlbumUploading] = useState(false);
   const [albumUploadError, setAlbumUploadError] = useState("");
+  const [creatingPrivateAlbum, setCreatingPrivateAlbum] = useState(false);
+  const [privateAlbumName, setPrivateAlbumName] = useState("");
+  const [privateAlbumBusy, setPrivateAlbumBusy] = useState(false);
   const albumFileRef = useRef<HTMLInputElement | null>(null);
 
   const [project, setProject] = useState<ProjectRecord | null>(null);
@@ -1008,6 +1014,26 @@ export function JobPhotosTool({ activeWork, focusedActiveWorkId = null, standalo
       setAlbumsError(albumErrorMessage(error));
     } finally {
       setAlbumLoading(false);
+    }
+  }
+
+  async function createPrivateAlbumFromHome(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const name = privateAlbumName.trim();
+    if (!name || privateAlbumBusy) return;
+
+    setPrivateAlbumBusy(true);
+    setAlbumsError("");
+    try {
+      const album = await createAlbum(name);
+      setAlbums((current) => [album, ...current.filter((item) => item.id !== album.id)]);
+      setPrivateAlbumName("");
+      setCreatingPrivateAlbum(false);
+      await openAlbumById(album.id);
+    } catch (error) {
+      setAlbumsError(albumErrorMessage(error));
+    } finally {
+      setPrivateAlbumBusy(false);
     }
   }
 
@@ -1171,8 +1197,7 @@ export function JobPhotosTool({ activeWork, focusedActiveWorkId = null, standalo
     ? albums.find((album) => album.standaloneProjectId === standaloneProject.id) ?? null
     : null;
   const contextAlbum = selectedAlbum ?? standaloneAlbum;
-  const contextPhoto = recordWork ? latestProjectPhoto : contextAlbum ? photoFromAlbumCover(contextAlbum) : null;
-  const isScopedWorkContext = Boolean(recordWork || standaloneProject);
+  const selectedContextPhoto = recordWork ? latestProjectPhoto : contextAlbum ? photoFromAlbumCover(contextAlbum) : null;
   const photoAlbums = albums.filter((album) => !album.standaloneProjectId);
   const recentAlbumCaptures = newestFirst(
     albums.flatMap((album) => {
@@ -1180,63 +1205,62 @@ export function JobPhotosTool({ activeWork, focusedActiveWorkId = null, standalo
       return photo ? [{ album, photo, createdAt: photo.createdAt }] : [];
     }),
   ).slice(0, 4);
+  const latestAlbumCapture = recentAlbumCaptures[0] ?? null;
+  const contextPhoto = selectedContextPhoto ?? latestAlbumCapture?.photo ?? null;
+  const contextPhotoAlbum = selectedContextPhoto ? contextAlbum : latestAlbumCapture?.album ?? null;
+  const activeJobAlbums = selectableActiveWork.slice(0, 6);
+  const additionalRecentAlbumCaptures = recentAlbumCaptures.filter(({ photo }) => photo.id !== contextPhoto?.id);
 
   function openAlbumFromHome(album: PhotoAlbum) {
     void openAlbumById(album.id);
   }
 
+  const destinationEyebrow = recordWork
+    ? "Saving to active job"
+    : standaloneProject
+      ? "Saving to project"
+      : selectedPrivateAlbum
+        ? "Saving to album"
+        : "Capture destination";
+  const destinationTitle =
+    recordWork?.job?.title ?? standaloneProject?.title ?? selectedPrivateAlbum?.name ?? "Choose where this proof belongs";
+  const destinationMeta = recordWork
+    ? `${recordWork.job?.publicLocation.city ?? "Project"} - ${projectPhotos.length} ${
+        projectPhotos.length === 1 ? "photo" : "photos"
+      }`
+    : standaloneProject
+      ? `${standaloneProject.clientName || standaloneProject.locationText || "Private off-platform work"} - ${
+          standaloneProject.photoCount
+        } ${standaloneProject.photoCount === 1 ? "photo" : "photos"}`
+      : selectedPrivateAlbum
+        ? `${selectedPrivateAlbum.photoCount} ${selectedPrivateAlbum.photoCount === 1 ? "photo" : "photos"} - private to you`
+        : "Accepted job, standalone project, or private album.";
+
   return (
     <div className="v2-job-photos-workbench v2-camera-home">
       {albumsError ? <p className="v2-record-notice v2-job-photos-upload-error" role="alert">{albumsError}</p> : null}
 
-      {recordWork ? (
-        <section className="v2-camera-home-panel v2-camera-live-command v2-camera-context-card">
-          <div className="v2-job-photos-active-job-info">
-            <span className="v2-job-photos-active-badge">Active job</span>
-            <h2>{recordWork.job?.title ?? "Accepted work"}</h2>
-            <small>
-              {recordWork.job?.publicLocation.city ?? "Project"} - {projectPhotos.length} {projectPhotos.length === 1 ? "photo" : "photos"}
-            </small>
-          </div>
-          <p className="v2-camera-live-command-copy">Live job · every capture appears in this workspace.</p>
-          {projectError ? <p className="v2-record-notice v2-job-photos-upload-error" role="alert">{projectError}</p> : null}
-        </section>
-      ) : standaloneProject ? (
-        <section className="v2-camera-home-panel v2-camera-live-command v2-camera-context-card">
-          <div className="v2-job-photos-active-job-info">
-            <span className="v2-job-photos-active-badge">Standalone project</span>
-            <h2>{standaloneProject.title}</h2>
-            <small>{standaloneProject.clientName || standaloneProject.locationText || "Private off-platform work"} - {standaloneProject.photoCount} {standaloneProject.photoCount === 1 ? "photo" : "photos"}</small>
-          </div>
-          <p className="v2-camera-live-command-copy">Standalone work · private to your RIVT account.</p>
-        </section>
-      ) : selectedPrivateAlbum ? (
-        <section className="v2-camera-home-panel v2-camera-live-command v2-camera-context-card">
-          <div className="v2-job-photos-active-job-info">
-            <span className="v2-job-photos-active-badge">Private album</span>
-            <h2>{selectedPrivateAlbum.name}</h2>
-            <small>{selectedPrivateAlbum.photoCount} {selectedPrivateAlbum.photoCount === 1 ? "photo" : "photos"} - private to you</small>
-          </div>
-          <p className="v2-camera-live-command-copy">Private capture - separate from RIVT and standalone work.</p>
-        </section>
-      ) : (
-        <section className="v2-camera-home-panel v2-camera-live-command v2-camera-context-card">
-          <div className="v2-job-photos-active-job-info">
-            <span className="v2-job-photos-active-badge">Capture destination</span>
-            <h2>Choose where this proof belongs</h2>
-            <small>Accepted job, standalone project, or private album.</small>
-          </div>
-          <button type="button" className="v2-secondary-button" onClick={onRequestContext}>
-            <FolderOpen size={16} />
-            Choose destination
-          </button>
-        </section>
-      )}
+      <section className="v2-camera-home-panel v2-camera-destination-strip">
+        <div className="v2-job-photos-active-job-info">
+          <span className="v2-job-photos-active-badge">{destinationEyebrow}</span>
+          <h2>{destinationTitle}</h2>
+          <small>{destinationMeta}</small>
+        </div>
+        <button type="button" className="v2-secondary-button" onClick={() => onRequestContext?.()}>
+          <FolderOpen size={16} />
+          Change
+        </button>
+        {projectError ? (
+          <p className="v2-record-notice v2-job-photos-upload-error" role="alert">
+            {projectError}
+          </p>
+        ) : null}
+      </section>
 
-      {recordWork || contextAlbum ? (
+      {contextPhoto ? (
         <section className="v2-camera-home-panel">
           <div className="v2-camera-home-section-head">
-            <h3>{recordWork ? "Latest from this job" : "Latest capture"}</h3>
+            <h3>{recordWork && selectedContextPhoto ? "Latest from this job" : "Latest capture"}</h3>
           </div>
           {projectLoading ? (
             <p className="v2-job-photos-loading">Loading the latest field photo...</p>
@@ -1245,8 +1269,8 @@ export function JobPhotosTool({ activeWork, focusedActiveWorkId = null, standalo
               type="button"
               className="v2-camera-home-feature"
               onClick={() => {
-                if (recordWork) void openActiveJob();
-                else if (contextAlbum) openAlbumFromHome(contextAlbum);
+                if (recordWork && selectedContextPhoto) void openActiveJob();
+                else if (contextPhotoAlbum) openAlbumFromHome(contextPhotoAlbum);
               }}
             >
               <span className="v2-camera-home-feature-image">
@@ -1255,7 +1279,7 @@ export function JobPhotosTool({ activeWork, focusedActiveWorkId = null, standalo
               <span className="v2-camera-home-feature-copy">
                 <strong>{captureLabel(contextPhoto)}</strong>
                 <small>{relativeTime(contextPhoto.createdAt)} - {new Date(contextPhoto.createdAt).toLocaleString()}</small>
-                <span>{fileSize(contextPhoto.sizeBytes)} saved to {recordWork ? "the live record" : "this album"}</span>
+                <span>{fileSize(contextPhoto.sizeBytes)} saved to {recordWork && selectedContextPhoto ? "the live record" : contextPhotoAlbum?.name ?? "this album"}</span>
               </span>
               <ArrowRight size={16} />
             </button>
@@ -1287,14 +1311,86 @@ export function JobPhotosTool({ activeWork, focusedActiveWorkId = null, standalo
         </section>
       ) : null}
 
-      {!isScopedWorkContext ? <section className="v2-camera-home-panel v2-camera-albums-panel">
+      {activeJobAlbums.length ? (
+        <section className="v2-camera-home-panel v2-camera-albums-panel">
+          <div className="v2-camera-home-section-head">
+            <div>
+              <h3>Active job albums</h3>
+              <p>Photos tied to accepted work stay with the job.</p>
+            </div>
+            <span className="v2-camera-album-count">{activeJobAlbums.length}</span>
+          </div>
+          <div className="v2-camera-album-grid">
+            {activeJobAlbums.map((work) => {
+              const selected = recordWork?.id === work.id;
+              const city = work.job?.publicLocation?.city ?? "RIVT workspace";
+              return (
+                <button
+                  key={work.id}
+                  type="button"
+                  className={`v2-camera-album-card${selected ? " is-selected" : ""}`}
+                  onClick={() => onChooseActiveWork?.(work)}
+                >
+                  <span className="v2-camera-album-cover is-empty">
+                    <Camera size={23} aria-hidden="true" />
+                  </span>
+                  <span className="v2-camera-album-copy">
+                    <strong>{work.job?.title ?? "Accepted work"}</strong>
+                    <small>{city}{selected ? " - selected" : ""}</small>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </section>
+      ) : null}
+
+      <section className="v2-camera-home-panel v2-camera-albums-panel">
         <div className="v2-camera-home-section-head">
           <div>
             <h3>Private albums</h3>
             <p>Personal captures stay separate from RIVT work.</p>
           </div>
-          <span className="v2-camera-album-count">{photoAlbums.length}</span>
+          <div className="v2-camera-section-actions">
+            <span className="v2-camera-album-count">{photoAlbums.length}</span>
+            <button
+              type="button"
+              className="v2-camera-inline-action"
+              onClick={() => setCreatingPrivateAlbum((current) => !current)}
+              aria-expanded={creatingPrivateAlbum}
+            >
+              <Plus size={15} />
+              New
+            </button>
+          </div>
         </div>
+        {creatingPrivateAlbum ? (
+          <form className="v2-camera-new-album-card" onSubmit={(event) => void createPrivateAlbumFromHome(event)}>
+            <label htmlFor="camera-private-album-name">Album name</label>
+            <input
+              id="camera-private-album-name"
+              value={privateAlbumName}
+              onChange={(event) => setPrivateAlbumName(event.target.value)}
+              placeholder="Cabinet install photos"
+              autoFocus
+            />
+            <div className="v2-camera-new-album-actions">
+              <button
+                type="button"
+                className="v2-secondary-button"
+                onClick={() => {
+                  setCreatingPrivateAlbum(false);
+                  setPrivateAlbumName("");
+                }}
+              >
+                Cancel
+              </button>
+              <button type="submit" className="v2-primary-button" disabled={!privateAlbumName.trim() || privateAlbumBusy}>
+                {privateAlbumBusy ? "Creating..." : "Create album"}
+              </button>
+            </div>
+          </form>
+        ) : null}
         {photoAlbums.length ? (
           <div className="v2-camera-album-grid">
             {photoAlbums.map((album) => {
@@ -1324,18 +1420,18 @@ export function JobPhotosTool({ activeWork, focusedActiveWorkId = null, standalo
           <div className="v2-job-photos-empty v2-camera-albums-empty">
             <FolderOpen size={26} />
             <strong>No private albums yet</strong>
-            <span>Choose Destination to create one before you capture.</span>
+            <span>Tap New to start a private album before you capture.</span>
           </div>
         )}
-      </section> : null}
+      </section>
 
-      {!isScopedWorkContext && recentAlbumCaptures.length > 1 ? (
+      {additionalRecentAlbumCaptures.length ? (
         <section className="v2-camera-home-panel v2-camera-latest-panel">
           <div className="v2-camera-home-section-head">
             <h3>Recent captures</h3>
           </div>
           <div className="v2-camera-latest-grid">
-            {recentAlbumCaptures.map(({ album, photo }) => (
+            {additionalRecentAlbumCaptures.map(({ album, photo }) => (
               <button key={photo.id} type="button" className="v2-camera-latest-card" onClick={() => openAlbumFromHome(album)}>
                 {photo.signedUrl ? <img src={photo.signedUrl} alt={photo.originalName} loading="lazy" /> : <span><Camera size={18} /></span>}
                 <strong>{album.name}</strong>

@@ -3444,6 +3444,112 @@
   line-height: 1.45;
 }
 
+.v2-camera-destination-strip {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+}
+
+.v2-camera-destination-strip .v2-job-photos-active-job-info {
+  min-width: 0;
+}
+
+.v2-camera-destination-strip h2 {
+  margin: 4px 0 2px;
+  overflow: hidden;
+  font-size: 22px;
+  line-height: 1.12;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.v2-camera-destination-strip small {
+  display: block;
+  overflow: hidden;
+  color: var(--v2-text-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.v2-camera-destination-strip .v2-secondary-button {
+  flex: 0 0 auto;
+  min-height: 44px;
+}
+
+.v2-camera-destination-strip .v2-record-notice {
+  grid-column: 1 / -1;
+}
+
+.v2-camera-section-actions {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.v2-camera-inline-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--v2-border);
+  border-radius: var(--v2-radius-pill);
+  background: var(--v2-surface);
+  color: var(--v2-text);
+  font-weight: 800;
+}
+
+.v2-camera-new-album-card {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--v2-border);
+  border-radius: var(--v2-radius-lg);
+  background: var(--v2-surface);
+}
+
+.v2-camera-new-album-card label {
+  color: var(--v2-text-muted);
+  font-size: 0.78rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.v2-camera-new-album-card input {
+  width: 100%;
+  min-height: 48px;
+  padding: 0 14px;
+  border: 1px solid var(--v2-border);
+  border-radius: var(--v2-radius-md);
+  background: var(--v2-surface-muted);
+  color: var(--v2-text);
+  font: inherit;
+  font-weight: 800;
+}
+
+.v2-camera-new-album-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.v2-camera-new-album-actions button {
+  min-height: 46px;
+}
+
+@media (max-width: 560px) {
+  .v2-camera-destination-strip {
+    align-items: flex-start;
+  }
+
+  .v2-camera-destination-strip .v2-secondary-button {
+    padding-inline: 14px;
+  }
+}
+
 .v2-camera-app .v2-tool-app-header {
   position: sticky;
   top: 0;
