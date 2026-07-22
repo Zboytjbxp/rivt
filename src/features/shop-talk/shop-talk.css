@@ -3513,3 +3513,296 @@ html[data-rivt-compact-device="true"] .shop-talk-community-layout .shop-talk-sea
     padding: 0 12px;
   }
 }
+/* Card-subtraction pass: directories and news read as dense lists. */
+.community-directory-header,
+.shop-news-header {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.community-directory-header > div > span,
+.shop-news-header > div > span {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+.community-directory-header h2,
+.shop-news-header h2 {
+  font-size: 22px;
+  line-height: 1.15;
+  letter-spacing: 0;
+}
+
+.community-directory-header p,
+.shop-news-header p {
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+.community-directory-list,
+.community-list,
+.shop-news-list {
+  gap: 0;
+  border-top: 1px solid var(--v2-border);
+}
+
+.community-directory-card,
+.community-directory-item,
+.community-card,
+.news-card,
+.shop-news-card {
+  border: 0;
+  border-bottom: 1px solid var(--v2-border);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.community-directory-card:hover,
+.community-directory-item:hover,
+.community-card:hover,
+.news-card:hover,
+.shop-news-card:hover {
+  background: var(--v2-surface-muted);
+}
+
+.community-directory-card h3,
+.community-directory-item h3,
+.community-card h3,
+.news-card h3,
+.shop-news-card h3 {
+  font-size: 17px;
+  line-height: 1.25;
+  letter-spacing: 0;
+}
+
+.community-directory-card p,
+.community-directory-item p,
+.community-card p,
+.news-card p,
+.shop-news-card p {
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+@media (max-width: 640px) {
+  .shop-talk-community-directory,
+  .shop-news-section {
+    padding-inline: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .community-directory-header,
+  .shop-news-header,
+  .community-directory-search,
+  .shop-news-search {
+    margin-inline: 0;
+  }
+
+  .community-directory-card,
+  .community-directory-item,
+  .community-card,
+  .news-card,
+  .shop-news-card {
+    min-height: 76px;
+    padding: 14px 2px;
+  }
+}
+/* Exact mobile list treatment for the community directory. */
+@media (max-width: 640px) {
+  .community-directory-list {
+    gap: 0;
+    border-top: 1px solid var(--v2-border);
+  }
+
+  .community-directory-row {
+    min-height: 76px;
+    padding: 14px 0;
+    border: 0;
+    border-bottom: 1px solid var(--v2-border);
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .community-directory-row:hover {
+    background: var(--v2-surface-muted);
+  }
+
+  .community-directory-copy strong {
+    font-size: 17px;
+    line-height: 1.25;
+    letter-spacing: 0;
+  }
+
+  .community-directory-copy span {
+    font-size: 14px;
+    line-height: 1.4;
+  }
+}
+/* Mobile directory hierarchy: rows, not stacked dashboard cards. */
+@media (max-width: 640px) {
+  .community-directory-list {
+    gap: 0;
+    border-top: 1px solid var(--v2-border);
+  }
+
+  .community-directory-row {
+    min-height: 76px;
+    padding: 14px 0;
+    border: 0;
+    border-bottom: 1px solid var(--v2-border);
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .community-directory-row:hover {
+    background: var(--v2-surface-muted);
+  }
+
+  .community-directory-copy strong {
+    font-size: 17px;
+    line-height: 1.25;
+    letter-spacing: 0;
+  }
+
+  .community-directory-copy span {
+    font-size: 14px;
+    line-height: 1.4;
+  }
+}
+/* Mobile directory rows use list rhythm instead of nested cards. */
+@media (max-width: 640px) {
+  .community-directory-list {
+    gap: 0;
+    border-top: 1px solid var(--v2-border);
+  }
+
+  .community-directory-row {
+    min-height: 76px;
+    padding: 14px 0;
+    border: 0;
+    border-bottom: 1px solid var(--v2-border);
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .community-directory-row:hover {
+    background: var(--v2-surface-muted);
+  }
+
+  .community-directory-copy strong {
+    font-size: 17px;
+    line-height: 1.25;
+    letter-spacing: 0;
+  }
+
+  .community-directory-copy span {
+    font-size: 14px;
+    line-height: 1.4;
+  }
+}
+/* Mobile community directory: dense, scannable rows instead of stacked cards. */
+@media (max-width: 640px) {
+  .community-directory-list {
+    gap: 0;
+    border-top: 1px solid var(--v2-border);
+  }
+
+  .community-directory-row {
+    min-height: 76px;
+    padding: 14px 0;
+    border: 0;
+    border-bottom: 1px solid var(--v2-border);
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .community-directory-row:hover {
+    background: var(--v2-surface-muted);
+  }
+
+  .community-directory-copy strong {
+    font-size: 17px;
+    line-height: 1.25;
+    letter-spacing: 0;
+  }
+
+  .community-directory-copy span {
+    font-size: 14px;
+    line-height: 1.4;
+  }
+}
+@media (max-width: 640px) {
+  .shop-news-list {
+    display: block;
+    border-top: 1px solid var(--v2-border);
+  }
+
+  .shop-news-list .shop-news-card,
+  .shop-news-list .shop-news-card.selected {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-bottom: 1px solid var(--v2-border);
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .shop-news-card-main {
+    width: 100%;
+    padding: 14px 0 8px;
+  }
+
+  .shop-news-card-body-wrap {
+    display: grid;
+    grid-template-columns: 48px minmax(0, 1fr);
+    gap: 12px;
+    align-items: start;
+  }
+
+  .shop-news-card .news-card-thumb {
+    width: 48px;
+    height: 48px;
+    min-width: 48px;
+    border-radius: 6px;
+  }
+
+  .shop-news-card .news-card-body strong {
+    display: block;
+    font-size: 16px;
+    line-height: 1.32;
+    letter-spacing: 0;
+  }
+
+  .shop-news-card .news-card-body p {
+    display: none;
+  }
+
+  .shop-news-card .news-card-kicker,
+  .shop-news-card .news-card-body small {
+    font-size: 13px;
+    line-height: 1.35;
+  }
+
+  .shop-news-card .shop-news-source-link {
+    justify-content: flex-start;
+    min-height: 0;
+    margin: 0 0 12px 60px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    font-size: 13px;
+  }
+}

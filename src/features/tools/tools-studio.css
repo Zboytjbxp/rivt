@@ -11315,3 +11315,136 @@ html[data-rivt-compact-device="true"] .v2-tools-app.is-calculator-fullscreen .fr
     align-content: start;
   }
 }
+/* Camera landing: albums and captures are content; their sections do not need cards too. */
+.job-photos-private-albums,
+.job-photos-recent-captures,
+.job-photos-album-section,
+.job-photos-recent-section,
+.camera-private-albums,
+.camera-recent-captures {
+  padding-inline: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.job-photos-private-albums > h2,
+.job-photos-recent-captures > h2,
+.job-photos-album-section > h2,
+.job-photos-recent-section > h2,
+.camera-private-albums > h2,
+.camera-recent-captures > h2 {
+  font-size: 21px;
+  line-height: 1.2;
+  letter-spacing: 0;
+}
+
+.job-photos-private-albums > p,
+.job-photos-recent-captures > p,
+.job-photos-album-section > p,
+.job-photos-recent-section > p,
+.camera-private-albums > p,
+.camera-recent-captures > p {
+  font-size: 15px;
+  line-height: 1.4;
+}
+
+@media (max-width: 640px) {
+  .job-photos-private-albums,
+  .job-photos-recent-captures,
+  .job-photos-album-section,
+  .job-photos-recent-section,
+  .camera-private-albums,
+  .camera-recent-captures {
+    margin-inline: 0;
+  }
+}
+/* Camera home sections are page bands; the album/photo tiles provide framing. */
+.v2-camera-albums-panel,
+.v2-camera-latest-panel {
+  padding-inline: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.v2-camera-albums-panel h2,
+.v2-camera-latest-panel h2 {
+  font-size: 21px;
+  line-height: 1.2;
+  letter-spacing: 0;
+}
+
+.v2-camera-albums-panel > p,
+.v2-camera-latest-panel > p {
+  font-size: 15px;
+  line-height: 1.4;
+}
+/* Camera home uses unframed sections around the actual album/photo items. */
+.v2-camera-albums-panel,
+.v2-camera-latest-panel {
+  padding-inline: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.v2-camera-albums-panel h2,
+.v2-camera-latest-panel h2 {
+  font-size: 21px;
+  line-height: 1.2;
+  letter-spacing: 0;
+}
+
+.v2-camera-albums-panel > p,
+.v2-camera-latest-panel > p {
+  font-size: 15px;
+  line-height: 1.4;
+}
+/* Camera home groups are page sections; only albums and captures are cards. */
+.v2-camera-albums-panel,
+.v2-camera-latest-panel {
+  padding-inline: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.v2-camera-albums-panel h2,
+.v2-camera-latest-panel h2 {
+  font-size: 21px;
+  line-height: 1.2;
+  letter-spacing: 0;
+}
+
+.v2-camera-albums-panel > p,
+.v2-camera-latest-panel > p {
+  font-size: 15px;
+  line-height: 1.4;
+}
+/* Camera landing sections sit directly on the page; albums and photos are the content. */
+.v2-camera-albums-panel,
+.v2-camera-latest-panel {
+  padding-inline: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.v2-camera-albums-panel h2,
+.v2-camera-latest-panel h2 {
+  font-size: 21px;
+  line-height: 1.2;
+  letter-spacing: 0;
+}
+
+.v2-camera-albums-panel > p,
+.v2-camera-latest-panel > p {
+  font-size: 15px;
+  line-height: 1.4;
+}
