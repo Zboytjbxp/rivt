@@ -419,7 +419,7 @@ function PipelineBoard({ openJobs, onOpenJob }: { openJobs: Job[]; onOpenJob: (j
         {loading ? <small>Loading applicants…</small> : <small>{entries.length} total applicant{entries.length !== 1 ? "s" : ""}</small>}
       </div>
       {!loading && entries.length === 0 ? (
-        <div className="v2-work-empty" style={{ textAlign: "center", padding: "48px 24px" }}>
+            <div className="v2-work-empty" style={{ textAlign: "center" }}>
           <Users size={32} style={{ opacity: 0.3, marginBottom: 12 }} />
           <strong>No applicants across open jobs yet</strong>
           <span style={{ display: "block", marginTop: 8, color: "var(--v2-text-muted)", fontSize: 13 }}>Tradespeople who apply to your published jobs will appear here by stage.</span>
