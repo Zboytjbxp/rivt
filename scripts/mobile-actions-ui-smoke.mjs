@@ -402,6 +402,11 @@ async function runMobileFlow(page) {
   assert.equal(await page.locator(".v2-tool-mini-card").filter({ hasText: "Time & costs" }).count(), 1, "Time & costs should replace the separate record helpers");
   assert.equal(await page.getByLabel("Field shortcuts").getByRole("button", { name: "Jobsite", exact: true }).count(), 1, "Jobsite should replace separate daily log, punch, and safety launchers in the field tray");
   await assertNoHorizontalOverflow(page, "Tools hub");
+  await page.screenshot({ path: path.join(screenshotDir, "mobile-tools-card-subtraction.png"), fullPage: true });
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await assertNoHorizontalOverflow(page, "Tools desktop hub");
+  await page.screenshot({ path: path.join(screenshotDir, "desktop-tools-card-subtraction.png"), fullPage: true });
+  await page.setViewportSize({ width: 390, height: 844 });
   await primaryInvoiceTool.click();
   await page.getByRole("heading", { name: "Invoice", exact: true }).first().waitFor({ timeout: 15_000 });
   await page.getByRole("button", { name: "Work context: Quick use. Change context." }).waitFor({ timeout: 15_000 });

@@ -11264,3 +11264,54 @@ html[data-rivt-compact-device="true"] .v2-tools-app.is-calculator-fullscreen .fr
     align-content: start;
   }
 }
+
+/* Reserve card treatment for records and working surfaces, not page structure. */
+.v2-tools-page .v2-tool-section {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.v2-tools-page .v2-tool-launch-grid {
+  grid-template-columns: 1fr;
+  gap: 0;
+}
+
+.v2-tools-page .v2-tool-launch-card,
+.v2-tools-page .v2-tool-launch-card.is-featured {
+  min-height: 72px;
+  padding: 12px 4px;
+  border: 0;
+  border-bottom: 1px solid var(--v2-border);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.v2-tools-page .v2-tool-launch-card:last-child {
+  border-bottom: 0;
+}
+
+.v2-tools-page .v2-tool-card-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--v2-radius-sm);
+  background: var(--v2-accent-soft);
+}
+
+.v2-tools-page > .v2-tool-section-stack > .v2-tool-group {
+  border: 0;
+  border-top: 1px solid var(--v2-border);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+@media (max-width: 900px) {
+  .v2-tools-page .v2-tool-section-stack:not(.is-more-open) {
+    min-height: auto;
+    align-content: start;
+  }
+}
