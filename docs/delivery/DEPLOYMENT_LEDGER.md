@@ -2185,3 +2185,35 @@ Add one entry per staging/production deployment.
   S3-compatible storage, configured Sentry and Web Push, matching-job alerts,
   and all seven anonymous private-route checks healthy.
 - Approval: Packet 69 runtime and automated non-database gates are verified.
+
+# Current Production - Accessibility Text Scale and Live Trade News
+
+- Environment: Production (`https://rivt.pro`)
+- Date/time/timezone: 2026-07-22 America/New_York
+- Deployer: Codex through `codex/accessibility-trade-news`, fast-forward merge
+  to `master`, and Railway production auto-deploy
+- Runtime feature source: `36e413df7dc2a17502bd5aad0813e17e414e892f`
+- Railway deployment: `9fd6f8a6-add5-47d8-acd4-1bac9cc1c925`
+- Migration version before/after: unchanged (`0028_compensation_workflow`)
+- Provider/config changes: none; auth, billing, PostgreSQL, object storage,
+  Sentry, Web Push, email, moderation, and rollout configuration were preserved.
+- Rollback target: `fc9e19f28fceccc0288689163871d4aaaf7f2446`; no
+  database rollback is required.
+- Automated gates: build, lint, security lint, 61 unit/frontend tests, E2E,
+  twelve-scenario mobile text-scale QA, Shop Talk/Trade News rendered QA,
+  zero-vulnerability dependency audit, and diff check passed. Aggregate
+  `npm run test` exceeded a bounded 244-second PostgreSQL phase without a
+  failing assertion, so no aggregate integration pass is claimed.
+- Product evidence: persistent Standard/Large/Extra Large text sizes; icon-only
+  Shop Talk Filters; no-overflow mobile coverage at 375x553 and 390x664; live
+  news-only ingestion with canonical dedupe, freshness/local/trade ranking,
+  source/category balancing, legitimate RSS/OG imagery, and honest missing
+  image/source-outage states.
+- Post-deploy proof: live health returned exact runtime source. The production
+  monitor passed in 599 ms. Forced Jacksonville/Florida Trade News refresh
+  returned 30 articles, 20 sources, all seven requested categories, 18 real
+  images, 12 honest no-image items, zero internal fallback images, and zero
+  missing source URLs.
+- Known boundary: physical iOS/Android dynamic-type, desktop keyboard-only, and
+  screen-reader acceptance remain required before accessibility maturity can
+  move beyond Partial.

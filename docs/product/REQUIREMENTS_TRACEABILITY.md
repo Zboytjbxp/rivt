@@ -1796,3 +1796,10 @@ Evidence must eventually link to implementation, automated tests, manual accepta
   Shop Talk/Trade News rendered QA, zero-vulnerability dependency audit, and
   diff check pass. Aggregate `npm run test` exceeded a bounded 244-second
   integration run without a failing assertion; no aggregate pass is claimed.
+- `GA-OPS-008` gains production evidence: Railway deployment
+  `9fd6f8a6-add5-47d8-acd4-1bac9cc1c925` serves runtime source
+  `36e413df7dc2a17502bd5aad0813e17e414e892f`; the expected-source production
+  monitor passed in 599 ms. A forced Jacksonville/Florida news refresh returned
+  30 articles from 20 sources across all seven requested categories, 18
+  legitimate feed/article images, 12 explicit no-image items, zero internal
+  fallback artwork, and zero missing source URLs.

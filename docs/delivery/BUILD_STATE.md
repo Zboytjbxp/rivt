@@ -5,9 +5,9 @@ Current gate: Gate B controlled engagement
 Current phase: Launch verification reconciliation is in progress.
 Active packet: Accessibility text-scale and Trade News live-source pass on `codex/accessibility-trade-news`
 Repository branch: `codex/accessibility-trade-news`
-Production feature release commit: `15fa019153e2cc364f39231d55aaec1ca5626caa`
+Production feature release commit: `36e413df7dc2a17502bd5aad0813e17e414e892f`
 
-## Accessibility Text Scale and Trade News Live Sources (Locally Verified, Deployment Pending)
+## Accessibility Text Scale and Trade News Live Sources (Complete and Deployed)
 
 - Settings now offers persisted Standard, Large, and Extra Large text sizes.
   The root scale drives semantic tokens plus fixed legacy CSS font declarations,
@@ -31,7 +31,15 @@ Production feature release commit: `15fa019153e2cc364f39231d55aaec1ca5626caa`
   the PostgreSQL integration phase and exceeded a bounded 244-second run
   without a failing assertion, so no aggregate integration pass is claimed.
 - No schema, migration, authorization, billing, production-data, or dependency
-  change. Deployment and live `/api/health`/`/api/news` evidence remain pending.
+  change. Railway deployment `9fd6f8a6-add5-47d8-acd4-1bac9cc1c925`
+  serves exact runtime source `36e413df7dc2a17502bd5aad0813e17e414e892f`.
+  The production monitor passed in 599 ms with PostgreSQL, S3-compatible
+  storage, Sentry, Web Push, matching-job alerts, open operational controls,
+  and seven anonymous private-route checks.
+- A forced live Jacksonville/Florida refresh returned 30 articles from 20
+  sources across Business, Codes, Construction, Labor, Projects, Safety, and
+  Tools. Eighteen carried legitimate feed/article images; twelve honestly had
+  no image; zero used internal fallback artwork and zero lacked source URLs.
 
 ## Calculator Long-Press Quick Entry (Complete, Pending Review)
 
