@@ -183,6 +183,7 @@ test("trade news canonicalizes URLs, deduplicates titles, and diversifies source
       url: "https://source-b.example/local",
       publishedAt,
       isLocal: true,
+      category: "Construction",
     },
     {
       headline: "Florida contractor permit project update",
@@ -190,12 +191,21 @@ test("trade news canonicalizes URLs, deduplicates titles, and diversifies source
       source: "Source C",
       url: "https://source-c.example/duplicate",
       publishedAt,
+      category: "Construction",
+    },
+    {
+      headline: "New apprenticeship and workforce wage report",
+      summary: "Construction labor and skilled trades apprenticeship report.",
+      source: "Source D",
+      url: "https://source-d.example/labor",
+      publishedAt,
+      category: "Labor",
     },
   ];
-  const ranked = newsInternals._dedupeAndDiversify(items, 5);
-  assert.equal(ranked.length, 5);
-  assert.equal(ranked[0].source, "Source B");
+  const ranked = newsInternals._dedupeAndDiversify(items, 6);
+  assert.equal(ranked.length, 6);
   assert.ok(ranked.some((item) => item.source === "Source A"));
+  assert.ok(ranked.some((item) => item.category === "Labor"));
   assert.equal(ranked.filter((item) => item.headline === "Florida contractor permit project update").length, 1);
   assert.ok(ranked.every((item) => item.canonicalUrl && !item.canonicalUrl.includes("utm_source")));
 });

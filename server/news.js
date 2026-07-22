@@ -146,6 +146,14 @@ function _dedupeAndDiversify(items, limit = 30) {
 
   const selected = [];
   const sourceCounts = new Map();
+  for (const category of ["Safety", "Codes", "Labor", "Tools", "Business", "Projects", "Construction"]) {
+    const item = unique.find((candidate) => candidate.category === category && !selected.includes(candidate));
+    if (!item) continue;
+    selected.push(item);
+    const source = String(item.source || "Unknown").toLowerCase();
+    sourceCounts.set(source, (sourceCounts.get(source) ?? 0) + 1);
+    if (selected.length === limit) return selected;
+  }
   for (const maxPerSource of [3, 6, Infinity]) {
     for (const item of unique) {
       if (selected.includes(item)) continue;
