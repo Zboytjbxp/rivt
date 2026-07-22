@@ -5566,3 +5566,21 @@ At the end of each packet record:
 6. Screenshots/manual acceptance evidence.
 7. New risks or decisions.
 8. Exact next packet/task.
+
+## Current Launch Train - Card Subtraction and Visual Hierarchy (2026-07-21)
+
+- Branch: `codex/card-subtraction-pass`
+- Base commit: `edc56e8`
+- Status: locally verified; production merge and deploy pending.
+- Scope: reduce decorative structural cards on Tools, Home, Profile, and Work while preserving cards for actual records, active tasks, and framed controls. Add mobile and desktop Tools screenshots to the UI smoke suite.
+- Runtime boundary: presentation-only CSS and UI-smoke coverage. No API, schema, authorization, billing, or stored-data behavior changed.
+- Verification:
+  - `npm run build` - passed.
+  - `npm run lint` - passed.
+  - `npm run test:unit` - passed, 59/59.
+  - `npm run test:e2e` - passed.
+  - `npm run test:ui:mobile-actions` - passed with mobile and desktop Tools screenshots.
+  - `npm audit --omit=dev` - passed, 0 vulnerabilities.
+  - Full `npm run test` integration phase - not run because `TEST_DATABASE_URL` is not available in this workspace.
+- Acceptance evidence: `mobile-tools-card-subtraction.png` and `desktop-tools-card-subtraction.png` in the mobile-actions smoke artifact directory.
+- Next: merge to current `master`, deploy, confirm `/api/health` reports the merge commit, and run the production synthetic monitor.

@@ -458,6 +458,39 @@
   grid-column: 1 / -1;
 }
 
+@media (max-width: 900px) {
+  .v2-profile-grid {
+    gap: 18px;
+  }
+
+  .v2-profile-panel:not(.v2-profile-summary) {
+    overflow: visible;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .v2-profile-panel:not(.v2-profile-summary) > header {
+    padding: 0 0 10px;
+    border-bottom: 1px solid var(--v2-border);
+    background: transparent;
+  }
+
+  .v2-profile-panel:not(.v2-profile-summary) .v2-profile-facts {
+    gap: 0;
+    padding: 0;
+  }
+
+  .v2-profile-panel:not(.v2-profile-summary) .rivt-metric-tile {
+    border: 0;
+    border-bottom: 1px solid var(--v2-border);
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+}
+
 .v2-profile-editor {
   padding-bottom: 18px;
 }

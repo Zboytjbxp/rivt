@@ -133,6 +133,20 @@
   background: var(--v2-surface);
 }
 
+/* Paperwork is a task list; the individual records provide the hierarchy. */
+.trade-feed-paperwork {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.trade-feed-paperwork-head {
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--v2-border);
+}
+
 .trade-feed-paperwork-head {
   display: grid;
   gap: 2px;
