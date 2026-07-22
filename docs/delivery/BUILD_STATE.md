@@ -19,13 +19,14 @@ Production feature release commit: `c80444ccf72a3a381121c08abf70fac5c3798d8b`
 - Trade News now gives each user persisted controls for local-versus-all-region
   coverage, topic, and source. Changing location scope refetches the feed; topic
   and source filters operate only on real returned articles.
-- The primary navigation again follows the approved Home, Work, Crew, Shop
-  Talk, Tools contract. Camera remains reachable through Tools field shortcuts
-  and exact Work/project handoffs.
+- The current product navigation remains Home, Work, Camera, Shop Talk, and
+  Tools. People and relationship work remain under Work -> People; existing
+  Crew/network links continue to resolve there. Camera also remains reachable
+  through Tools field shortcuts and exact Work/project handoffs.
 - Rendered Shop Talk/Trade News QA passes at desktop and mobile widths with the
   new controls and no horizontal overflow. Mobile action QA passes, including
   the 375x553 and 390x664 Standard/Large/Extra Large matrix and the restored
-  Crew primary destination.
+  Camera primary destination.
 - Passed locally: build, lint, 61 unit/frontend tests, E2E, Shop Talk/Trade News
   rendered QA, mobile action QA, dependency audit (zero vulnerabilities), and
   diff check. The aggregate `npm run test` entered the PostgreSQL-backed phase

@@ -1815,9 +1815,10 @@ Evidence must eventually link to implementation, automated tests, manual accepta
 - `GA-UX-003` gains user-control evidence: Trade News persists location scope,
   topic, and source choices, refetches local versus all-region coverage, and
   filters only returned source articles.
-- `GA-UX-003` gains navigation-contract evidence: the five primary
-  destinations are Home, Work, Crew, Shop Talk, and Tools; Camera remains
-  reachable through contextual Work handoffs and Tools field shortcuts.
+- `GA-UX-003` preserves the current navigation contract: People and former
+  Crew relationship workflows remain under Work -> People, while Camera keeps
+  the primary field-action slot and remains reachable from contextual Work
+  handoffs and Tools field shortcuts.
 - `GA-UX-006` and `GA-OPS-007` gain repeatable rendered evidence from Shop
   Talk/Trade News desktop/mobile QA and the 375x553 plus 390x664 three-text-size
   mobile matrix, alongside build, lint, unit, E2E, and dependency audit gates.
