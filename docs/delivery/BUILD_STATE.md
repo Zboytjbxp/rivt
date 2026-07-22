@@ -5,7 +5,7 @@ Current gate: Gate B controlled engagement
 Current phase: Shop Talk and Communities release hardening is in progress.
 Active packet: Shop Talk and Communities release packet on `codex/shop-talk-communities-release`
 Repository branch: `codex/shop-talk-communities-release`
-Production feature release commit: pending
+Production feature release commit: `c80444ccf72a3a381121c08abf70fac5c3798d8b`
 
 ## Shop Talk and Communities Release Hardening (Local Verification)
 
@@ -32,7 +32,14 @@ Production feature release commit: pending
   and exceeded a bounded 124-second run without emitting a failing assertion;
   no aggregate integration pass is claimed.
 - No schema, migration, dependency, billing, production-data, or server
-  authorization change. Deployment evidence is pending.
+  authorization change. Railway deployment
+  `d750deb8-fa8f-432b-8407-123a7cc4592b` served exact runtime source
+  `c80444ccf72a3a381121c08abf70fac5c3798d8b`; the production monitor passed
+  in 568 ms with PostgreSQL, S3-compatible storage, configured Sentry/Web Push,
+  open operational controls, and all seven anonymous private-route checks.
+- Deployment verification also corrected a provenance issue in CLI/archive
+  releases: explicit `SOURCE_COMMIT` now takes precedence over stale inherited
+  Railway Git metadata, while Git deployments retain the Railway SHA fallback.
 
 ## Accessibility Text Scale and Trade News Live Sources (Complete and Deployed)
 
