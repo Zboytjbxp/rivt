@@ -12155,3 +12155,53 @@ html[data-rivt-compact-device="true"] .auth-preview-phone {
     display: none;
   }
 }
+
+/* Account menu: compact identity and list-style navigation. */
+.account-menu-panel {
+  gap: 8px;
+}
+
+.account-menu-panel .panel-header {
+  margin-bottom: 2px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.account-menu-identity {
+  min-height: 68px;
+  padding: 10px 4px 12px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.account-menu-avatar {
+  width: 42px;
+  height: 42px;
+  font-size: 17px;
+}
+
+.account-menu-actions {
+  border-inline: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.account-menu-actions button {
+  min-height: 58px;
+  padding: 9px 4px;
+}
+
+.account-menu-identity:hover,
+.account-menu-actions button:hover {
+  background: var(--surface-soft);
+}
+
+.account-menu-signout {
+  min-height: 54px;
+  margin-top: 4px;
+  padding: 9px 4px;
+  border: 0;
+  border-top: 1px solid var(--border);
+  border-radius: 0;
+}
