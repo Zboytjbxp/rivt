@@ -19,13 +19,15 @@ export const AUTH_MODE_KEY = `${brandConfig.appSlug}-auth-mode`;
 export const COLOR_VISION_STORAGE_KEY = `${brandConfig.appSlug}-color-safe-status`;
 export const ENHANCED_CONTRAST_STORAGE_KEY = `${brandConfig.appSlug}-enhanced-contrast`;
 export const LARGE_TEXT_STORAGE_KEY = `${brandConfig.appSlug}-large-text`;
+export const TEXT_SCALE_STORAGE_KEY = `${brandConfig.appSlug}-text-scale`;
 
-export type AccessibilityPreferenceKey = "colorSafe" | "enhancedContrast" | "largeText";
+export type AccessibilityPreferenceKey = "colorSafe" | "enhancedContrast";
+export type TextScale = "standard" | "large" | "extra-large";
 
 export interface AccessibilityPreferences {
   colorSafe: boolean;
   enhancedContrast: boolean;
-  largeText: boolean;
+  textScale: TextScale;
 }
 
 function readBooleanPreference(key: string): boolean {
@@ -38,10 +40,20 @@ function readBooleanPreference(key: string): boolean {
 }
 
 export function readAccessibilityPreferences(): AccessibilityPreferences {
+  let textScale: TextScale = "standard";
+  if (typeof window !== "undefined") {
+    try {
+      const stored = window.localStorage.getItem(TEXT_SCALE_STORAGE_KEY);
+      if (stored === "large" || stored === "extra-large") textScale = stored;
+      else if (window.localStorage.getItem(LARGE_TEXT_STORAGE_KEY) === "on") textScale = "large";
+    } catch {
+      // Standard is the safe device default.
+    }
+  }
   return {
     colorSafe: readBooleanPreference(COLOR_VISION_STORAGE_KEY),
     enhancedContrast: readBooleanPreference(ENHANCED_CONTRAST_STORAGE_KEY),
-    largeText: readBooleanPreference(LARGE_TEXT_STORAGE_KEY),
+    textScale,
   };
 }
 

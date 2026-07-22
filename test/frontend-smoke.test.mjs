@@ -148,7 +148,7 @@ test("accessibility display preferences read persisted device choices", async ()
   const localStorage = createMemoryStorage({
     "rivt-color-safe-status": "on",
     "rivt-enhanced-contrast": "on",
-    "rivt-large-text": "off",
+    "rivt-text-scale": "extra-large",
   });
   globalThis.window = { localStorage };
 
@@ -157,16 +157,18 @@ test("accessibility display preferences read persisted device choices", async ()
       COLOR_VISION_STORAGE_KEY,
       ENHANCED_CONTRAST_STORAGE_KEY,
       LARGE_TEXT_STORAGE_KEY,
+      TEXT_SCALE_STORAGE_KEY,
       readAccessibilityPreferences,
     } = await loadModule("/src/app-shell/preferences.ts");
 
     assert.equal(COLOR_VISION_STORAGE_KEY, "rivt-color-safe-status");
     assert.equal(ENHANCED_CONTRAST_STORAGE_KEY, "rivt-enhanced-contrast");
     assert.equal(LARGE_TEXT_STORAGE_KEY, "rivt-large-text");
+    assert.equal(TEXT_SCALE_STORAGE_KEY, "rivt-text-scale");
     assert.deepEqual(readAccessibilityPreferences(), {
       colorSafe: true,
       enhancedContrast: true,
-      largeText: false,
+      textScale: "extra-large",
     });
   } finally {
     if (previousWindow === undefined) {

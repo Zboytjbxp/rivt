@@ -77,7 +77,7 @@ import type {
   PostType,
 } from "./features/shop-talk/ShopTalkView";
 import { communityBadgeLabelsFromReputation, relativeTime } from "./features/shop-talk/community-utils";
-import { communityPromptPosts, fallbackNewsItems } from "./features/shop-talk/fallback-data";
+import { communityPromptPosts } from "./features/shop-talk/fallback-data";
 import {
   createShopTalkAnswer,
   createShopTalkPost,
@@ -579,6 +579,7 @@ function App() {
   const {
     accessibilityPreferences,
     handleSetThemeSource,
+    handleSetTextScale,
     handleToggleAccessibility,
     handleToggleTheme,
     themeMode,
@@ -2655,7 +2656,7 @@ function App() {
             profile={accountProfile}
             communityPosts={communityPosts}
             communities={communities}
-            newsItems={fallbackNewsItems}
+            newsItems={[]}
             initialQuery={shopTalkGlobalQuery}
             initialPostId={shopTalkPostId}
             initialCommunitySlug={shopTalkCommunitySlug}
@@ -2749,6 +2750,7 @@ function App() {
             themeMode={themeMode}
             themeSource={themeSource}
             onSetThemeSource={handleSetThemeSource}
+            onSetTextScale={handleSetTextScale}
             accessibilityPreferences={accessibilityPreferences}
             onToggleAccessibility={handleToggleAccessibility}
             onLogout={handleLogout}

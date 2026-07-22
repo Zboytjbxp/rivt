@@ -161,6 +161,54 @@ test("news query validation and cache pruning bound anonymous amplification", ()
   newsInternals.newsCache.clear();
 });
 
+test("trade news canonicalizes URLs, deduplicates titles, and diversifies sources", () => {
+  assert.equal(
+    newsInternals._canonicalArticleUrl("https://www.example.com/story/?utm_source=rivt&fbclid=123#details"),
+    "https://example.com/story",
+  );
+
+  const publishedAt = new Date().toISOString();
+  const items = [
+    ...Array.from({ length: 5 }, (_, index) => ({
+      headline: `Construction safety update number ${index}`,
+      summary: "Contractor construction safety and jobsite work.",
+      source: "Source A",
+      url: `https://source-a.example/story-${index}?utm_source=test`,
+      publishedAt,
+    })),
+    {
+      headline: "Florida contractor permit project update",
+      summary: "Jacksonville construction permit and contractor project.",
+      source: "Source B",
+      url: "https://source-b.example/local",
+      publishedAt,
+      isLocal: true,
+    },
+    {
+      headline: "Florida contractor permit project update",
+      summary: "Duplicate title from another syndication URL.",
+      source: "Source C",
+      url: "https://source-c.example/duplicate",
+      publishedAt,
+    },
+  ];
+  const ranked = newsInternals._dedupeAndDiversify(items, 5);
+  assert.equal(ranked.length, 5);
+  assert.equal(ranked[0].source, "Source B");
+  assert.ok(ranked.some((item) => item.source === "Source A"));
+  assert.equal(ranked.filter((item) => item.headline === "Florida contractor permit project update").length, 1);
+  assert.ok(ranked.every((item) => item.canonicalUrl && !item.canonicalUrl.includes("utm_source")));
+});
+
+test("trade news images accept public RSS media and reject local or decorative URLs", () => {
+  assert.equal(
+    newsInternals._rssThumbnailUrl({ "media:content": { "@_url": "https://cdn.example.com/jobsite.jpg" } }, "https://example.com/story"),
+    "https://cdn.example.com/jobsite.jpg",
+  );
+  assert.equal(newsInternals._resolvePublicImageUrl("http://127.0.0.1/private.jpg"), null);
+  assert.equal(newsInternals._resolvePublicImageUrl("https://example.com/favicon.ico"), null);
+});
+
 test("invoice send validation rejects bad recipients and throttles repeated sends", () => {
   const normalizePhoneNumber = (value) => String(value ?? "").replace(/[^\d+]/g, "");
   const base = {

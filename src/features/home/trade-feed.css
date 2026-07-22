@@ -930,13 +930,13 @@
   }
 
   .trade-feed-welcome-text span {
-    font-size: 14px;
+    font-size: calc(14px * var(--v2-text-scale));
   }
 
   .trade-feed-avail {
     min-height: 44px;
     padding: 6px 10px;
-    font-size: 12px;
+    font-size: calc(12px * var(--v2-text-scale));
   }
 
   .trade-feed-active-work {
@@ -977,18 +977,18 @@
   }
 
   .trade-feed-nudge-copy b {
-    font-size: 16px;
+    font-size: calc(16px * var(--v2-text-scale));
     line-height: 1.2;
   }
 
   .trade-feed-section-head h2 {
-    font-size: 18px;
+    font-size: calc(18px * var(--v2-text-scale));
   }
 
   .trade-feed-seeall {
     min-height: 44px;
     padding: 0 4px;
-    font-size: 14px;
+    font-size: calc(14px * var(--v2-text-scale));
   }
 
   .trade-feed-community-row {
@@ -1007,11 +1007,11 @@
   }
 
   .trade-feed-community-name {
-    font-size: 13px;
+    font-size: calc(13px * var(--v2-text-scale));
   }
 
   .trade-feed-community-count {
-    font-size: 11px;
+    font-size: calc(11px * var(--v2-text-scale));
     min-height: 14px;
   }
 
@@ -1251,11 +1251,11 @@
   }
 
   .trade-feed-demo-copy h1 {
-    font-size: 30px;
+    font-size: calc(30px * var(--v2-text-scale));
   }
 
   .trade-feed-demo-copy p {
-    font-size: 15px;
+    font-size: calc(15px * var(--v2-text-scale));
   }
 
   .trade-feed-demo-metrics {
@@ -1288,14 +1288,14 @@
 
   .trade-feed-demo-copy h1 {
     max-width: none;
-    font-size: 27px;
+    font-size: calc(27px * var(--v2-text-scale));
     line-height: 1.04;
   }
 
   .trade-feed-demo-copy p {
     display: -webkit-box;
     overflow: hidden;
-    font-size: 14px;
+    font-size: calc(14px * var(--v2-text-scale));
     line-height: 1.4;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 3;
@@ -1306,11 +1306,11 @@
   }
 
   .trade-feed-demo-metrics strong {
-    font-size: 19px;
+    font-size: calc(19px * var(--v2-text-scale));
   }
 
   .trade-feed-demo-metrics span {
-    font-size: 12px;
+    font-size: calc(12px * var(--v2-text-scale));
   }
 }
 

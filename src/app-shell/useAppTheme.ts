@@ -13,6 +13,8 @@ import {
   readThemeSourcePreference,
   THEME_SOURCE_KEY,
   THEME_STORAGE_KEY,
+  TEXT_SCALE_STORAGE_KEY,
+  type TextScale,
 } from "./preferences";
 
 export type ThemeSource = "system" | ThemeMode;
@@ -25,7 +27,7 @@ export function useAppTheme() {
   const [systemDark, setSystemDark] = useState<boolean>(
     () => typeof window !== "undefined" && Boolean(window.matchMedia?.("(prefers-color-scheme: dark)").matches),
   );
-  const largeTextRef = useRef(accessibilityPreferences.largeText);
+  const textScaleRef = useRef(accessibilityPreferences.textScale);
   const themeMode: ThemeMode = themeSource === "system" ? (systemDark ? "dark" : "light") : themeSource;
 
   useEffect(() => {
@@ -76,30 +78,32 @@ export function useAppTheme() {
     const root = document.documentElement;
     root.dataset.colorVision = accessibilityPreferences.colorSafe ? "safe" : "standard";
     root.dataset.contrast = accessibilityPreferences.enhancedContrast ? "high" : "standard";
-    root.dataset.legibility = accessibilityPreferences.largeText ? "large" : "standard";
+    root.dataset.legibility = accessibilityPreferences.textScale;
+    root.dataset.textScale = accessibilityPreferences.textScale;
 
     try {
       const preferences: Array<[string, boolean]> = [
         [COLOR_VISION_STORAGE_KEY, accessibilityPreferences.colorSafe],
         [ENHANCED_CONTRAST_STORAGE_KEY, accessibilityPreferences.enhancedContrast],
-        [LARGE_TEXT_STORAGE_KEY, accessibilityPreferences.largeText],
       ];
       preferences.forEach(([key, enabled]) => {
         if (enabled) window.localStorage.setItem(key, "on");
         else window.localStorage.removeItem(key);
       });
+      window.localStorage.setItem(TEXT_SCALE_STORAGE_KEY, accessibilityPreferences.textScale);
+      window.localStorage.removeItem(LARGE_TEXT_STORAGE_KEY);
     } catch {
       // Storage unavailable - the selected display settings remain active for this session.
     }
   }, [accessibilityPreferences]);
 
   useEffect(() => {
-    largeTextRef.current = accessibilityPreferences.largeText;
-  }, [accessibilityPreferences.largeText]);
+    textScaleRef.current = accessibilityPreferences.textScale;
+  }, [accessibilityPreferences.textScale]);
 
   useEffect(() => {
     let startDistance = 0;
-    let startLargeText = false;
+    let startTextScale: TextScale = "standard";
 
     function distance(touches: TouchList) {
       const [first, second] = [touches.item(0), touches.item(1)];
@@ -114,17 +118,19 @@ export function useAppTheme() {
     function handleTouchStart(event: TouchEvent) {
       if (event.touches.length !== 2 || isCameraGesture(event.target)) return;
       startDistance = distance(event.touches);
-      startLargeText = largeTextRef.current;
+      startTextScale = textScaleRef.current;
     }
 
     function handleTouchMove(event: TouchEvent) {
       if (event.touches.length !== 2 || !startDistance || isCameraGesture(event.target)) return;
       event.preventDefault();
       const ratio = distance(event.touches) / startDistance;
-      if (ratio > 1.12 && !startLargeText) {
-        setAccessibilityPreferences((current) => ({ ...current, largeText: true }));
-      } else if (ratio < 0.9 && startLargeText) {
-        setAccessibilityPreferences((current) => ({ ...current, largeText: false }));
+      if (ratio > 1.12) {
+        const textScale: TextScale = startTextScale === "standard" ? "large" : "extra-large";
+        setAccessibilityPreferences((current) => ({ ...current, textScale }));
+      } else if (ratio < 0.9) {
+        const textScale: TextScale = startTextScale === "extra-large" ? "large" : "standard";
+        setAccessibilityPreferences((current) => ({ ...current, textScale }));
       }
     }
 
@@ -155,9 +161,13 @@ export function useAppTheme() {
   const handleToggleAccessibility = useCallback((key: AccessibilityPreferenceKey) => {
     setAccessibilityPreferences((current) => ({ ...current, [key]: !current[key] }));
   }, []);
+  const handleSetTextScale = useCallback((textScale: TextScale) => {
+    setAccessibilityPreferences((current) => ({ ...current, textScale }));
+  }, []);
   return {
     accessibilityPreferences,
     handleSetThemeSource,
+    handleSetTextScale,
     handleToggleAccessibility,
     handleToggleTheme,
     themeMode,

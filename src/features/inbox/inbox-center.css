@@ -21,7 +21,7 @@
 .v2-inbox-header p {
   margin: 7px 0 0;
   color: var(--v2-text-muted);
-  font-size: 14px;
+  font-size: calc(14px * var(--v2-text-scale));
 }
 
 .v2-inbox-panel {
@@ -57,7 +57,7 @@
 
 .v2-inbox-panel > header span {
   color: var(--v2-text-muted);
-  font-size: 13px;
+  font-size: calc(13px * var(--v2-text-scale));
   font-weight: var(--v2-weight-bold);
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -65,7 +65,7 @@
 
 .v2-inbox-panel > header h2 {
   margin: 3px 0 0;
-  font-size: 16px;
+  font-size: calc(16px * var(--v2-text-scale));
 }
 
 .v2-inbox-panel > header button,
@@ -80,7 +80,7 @@
   background: transparent;
   color: var(--v2-accent-text);
   font: inherit;
-  font-size: 13px;
+  font-size: calc(13px * var(--v2-text-scale));
   font-weight: var(--v2-weight-strong);
 }
 
@@ -105,7 +105,7 @@
 .v2-inbox-alert span {
   flex: 1;
   color: var(--v2-text);
-  font-size: 13px;
+  font-size: calc(13px * var(--v2-text-scale));
 }
 
 .v2-inbox-alert button {
@@ -150,7 +150,7 @@
 .v2-inbox-message p {
   display: block;
   margin: 0;
-  font-size: 13px;
+  font-size: calc(13px * var(--v2-text-scale));
 }
 
 .v2-inbox-thread small,
@@ -160,7 +160,7 @@
 .v2-inbox-message small,
 .v2-inbox-message span {
   color: var(--v2-text-muted);
-  font-size: 13px;
+  font-size: calc(13px * var(--v2-text-scale));
   font-style: normal;
 }
 
@@ -172,7 +172,7 @@
   border-radius: var(--v2-radius-pill);
   background: var(--v2-accent);
   color: #fff;
-  font-size: 13px;
+  font-size: calc(13px * var(--v2-text-scale));
 }
 
 .v2-inbox-header-actions {
@@ -191,7 +191,7 @@
 }
 
 .v2-inbox-context strong {
-  font-size: 13px;
+  font-size: calc(13px * var(--v2-text-scale));
 }
 
 .v2-inbox-message-list {
@@ -264,7 +264,7 @@
 
 .v2-inbox-composer span {
   color: var(--v2-text-muted);
-  font-size: 13px;
+  font-size: calc(13px * var(--v2-text-scale));
   font-weight: var(--v2-weight-strong);
   text-transform: uppercase;
 }
@@ -351,19 +351,19 @@
 .v2-inbox-job-row strong,
 .v2-inbox-sent article span {
   display: block;
-  font-size: 13px;
+  font-size: calc(13px * var(--v2-text-scale));
 }
 
 .v2-inbox-item span,
 .v2-inbox-job-row small,
 .v2-inbox-sent article small {
   color: var(--v2-text-muted);
-  font-size: 13px;
+  font-size: calc(13px * var(--v2-text-scale));
 }
 
 .v2-inbox-item small {
   color: var(--v2-text-subtle);
-  font-size: 13px;
+  font-size: calc(13px * var(--v2-text-scale));
   white-space: nowrap;
 }
 
@@ -457,7 +457,7 @@
   background: transparent;
   color: var(--v2-text-muted);
   font: inherit;
-  font-size: 13px;
+  font-size: calc(13px * var(--v2-text-scale));
   font-weight: var(--v2-weight-bold);
   cursor: pointer;
   transition: background 0.12s, color 0.12s;
@@ -478,7 +478,7 @@
 .v2-conv-section-label {
   padding: 6px 20px 4px;
   color: var(--v2-text-muted);
-  font-size: 13px;
+  font-size: calc(13px * var(--v2-text-scale));
   font-weight: var(--v2-weight-bold);
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -566,7 +566,7 @@
   background: transparent;
   color: var(--v2-text-muted);
   font: inherit;
-  font-size: 13px;
+  font-size: calc(13px * var(--v2-text-scale));
   font-weight: var(--v2-weight-bold);
   cursor: pointer;
   transition: color 0.12s, background 0.12s;
@@ -603,7 +603,7 @@
   background: transparent;
   color: var(--v2-text);
   font: inherit;
-  font-size: 13px;
+  font-size: calc(13px * var(--v2-text-scale));
   cursor: pointer;
   white-space: nowrap;
   transition: background 0.1s;
@@ -670,7 +670,7 @@
   background: transparent;
   color: var(--v2-text);
   font: inherit;
-  font-size: 13px;
+  font-size: calc(13px * var(--v2-text-scale));
   outline: none;
 }
 
@@ -681,7 +681,7 @@
   background: transparent;
   color: var(--v2-text-muted);
   font: inherit;
-  font-size: 13px;
+  font-size: calc(13px * var(--v2-text-scale));
   font-weight: var(--v2-weight-bold);
   cursor: pointer;
 }
@@ -708,7 +708,7 @@
   border-radius: var(--v2-radius-pill);
   background: color-mix(in srgb, var(--v2-accent-soft) 40%, var(--v2-surface-raised));
   color: var(--v2-text);
-  font-size: 14px;
+  font-size: calc(14px * var(--v2-text-scale));
   cursor: pointer;
   transition: transform 0.1s;
 }
@@ -726,7 +726,7 @@
   border-radius: var(--v2-radius-pill);
   background: transparent;
   color: var(--v2-text-muted);
-  font-size: 13px;
+  font-size: calc(13px * var(--v2-text-scale));
   cursor: pointer;
   opacity: 0;
   transition: opacity 0.12s, background 0.12s;
@@ -770,7 +770,7 @@
   border: 1px solid transparent;
   border-radius: var(--v2-radius-pill);
   background: transparent;
-  font-size: 16px;
+  font-size: calc(16px * var(--v2-text-scale));
   cursor: pointer;
   transition: background 0.1s, transform 0.1s;
 }
@@ -866,7 +866,7 @@
   background: transparent;
   color: var(--v2-text-muted);
   font: inherit;
-  font-size: 14px;
+  font-size: calc(14px * var(--v2-text-scale));
   font-weight: var(--v2-weight-bold);
   cursor: pointer;
   transition: color 0.12s, border-color 0.12s;
@@ -896,19 +896,19 @@
 /* ─── Job Notes component styles ─────────────────────────────────────────── */
 .v2-jobnotes-container { display: flex; flex-direction: column; height: 100%; min-height: 480px; }
 .v2-jobnotes-job-select { padding: 10px 16px; border-bottom: 1px solid var(--v2-border); }
-.v2-jobnotes-job-select select { width: 100%; padding: 8px 12px; border: 1px solid var(--v2-border); border-radius: var(--v2-radius-sm); background: var(--v2-surface); color: var(--v2-text); font-size: 14px; }
+.v2-jobnotes-job-select select { width: 100%; padding: 8px 12px; border: 1px solid var(--v2-border); border-radius: var(--v2-radius-sm); background: var(--v2-surface); color: var(--v2-text); font-size: calc(14px * var(--v2-text-scale)); }
 .v2-jobnotes-feed { flex: 1; overflow-y: auto; padding: 12px 16px; display: flex; flex-direction: column; gap: 10px; }
 .v2-jobnotes-bubble { background: var(--v2-surface-muted); border: 1px solid var(--v2-border); border-radius: var(--v2-radius-md); border-bottom-left-radius: 4px; padding: 10px 12px; max-width: 90%; align-self: flex-start; }
-.v2-jobnotes-bubble-text { font-size: 14px; color: var(--v2-text); line-height: 1.4; }
-.v2-jobnotes-bubble-time { font-size: 13px; color: var(--v2-text-muted); margin-top: 4px; }
-.v2-jobnotes-empty { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; color: var(--v2-text-muted); font-size: 14px; padding: 40px; text-align: center; }
+.v2-jobnotes-bubble-text { font-size: calc(14px * var(--v2-text-scale)); color: var(--v2-text); line-height: 1.4; }
+.v2-jobnotes-bubble-time { font-size: calc(13px * var(--v2-text-scale)); color: var(--v2-text-muted); margin-top: 4px; }
+.v2-jobnotes-empty { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; color: var(--v2-text-muted); font-size: calc(14px * var(--v2-text-scale)); padding: 40px; text-align: center; }
 .v2-jobnotes-chips { padding: 8px 16px; display: flex; gap: 6px; overflow-x: auto; border-top: 1px solid var(--v2-border); }
-.v2-jobnotes-chip { padding: 6px 12px; background: var(--v2-surface-muted); border: 1px solid var(--v2-border); border-radius: 20px; font-size: 13px; color: var(--v2-text-muted); cursor: pointer; white-space: nowrap; flex-shrink: 0; }
+.v2-jobnotes-chip { padding: 6px 12px; background: var(--v2-surface-muted); border: 1px solid var(--v2-border); border-radius: 20px; font-size: calc(13px * var(--v2-text-scale)); color: var(--v2-text-muted); cursor: pointer; white-space: nowrap; flex-shrink: 0; }
 .v2-jobnotes-chip:active { background: var(--v2-accent-soft); color: var(--v2-accent); border-color: var(--v2-accent); }
 .v2-jobnotes-input-row { display: flex; gap: 8px; padding: 10px 16px; border-top: 1px solid var(--v2-border); background: var(--v2-surface); }
-.v2-jobnotes-input { flex: 1; padding: 10px 12px; border: 1px solid var(--v2-border); border-radius: var(--v2-radius-sm); background: var(--v2-surface-muted); color: var(--v2-text); font-size: 14px; }
+.v2-jobnotes-input { flex: 1; padding: 10px 12px; border: 1px solid var(--v2-border); border-radius: var(--v2-radius-sm); background: var(--v2-surface-muted); color: var(--v2-text); font-size: calc(14px * var(--v2-text-scale)); }
 .v2-jobnotes-send-btn { padding: 10px 16px; background: var(--v2-accent); color: white; border: none; border-radius: var(--v2-radius-sm); font-weight: var(--v2-weight-bold); cursor: pointer; display: flex; align-items: center; gap: 4px; white-space: nowrap; }
-.v2-jobnotes-no-jobs { padding: 40px 20px; text-align: center; color: var(--v2-text-muted); font-size: 14px; }
+.v2-jobnotes-no-jobs { padding: 40px 20px; text-align: center; color: var(--v2-text-muted); font-size: calc(14px * var(--v2-text-scale)); }
 
 /* ─── Inbox tab bar (Messages / Clients) ─────────────────────────────────── */
 
@@ -939,7 +939,7 @@
 
 .v2-client-sync-note {
   margin: 8px 16px 10px;
-  font-size: 13px;
+  font-size: calc(13px * var(--v2-text-scale));
   color: var(--v2-text-muted);
 }
 
@@ -956,7 +956,7 @@
   background: var(--v2-surface);
   color: var(--v2-text);
   font: inherit;
-  font-size: 13px;
+  font-size: calc(13px * var(--v2-text-scale));
   width: 140px;
 }
 
@@ -999,7 +999,7 @@
 }
 
 .v2-client-conv-info strong {
-  font-size: 14px;
+  font-size: calc(14px * var(--v2-text-scale));
   font-weight: var(--v2-weight-bold);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1007,7 +1007,7 @@
 }
 
 .v2-client-conv-preview {
-  font-size: 13px;
+  font-size: calc(13px * var(--v2-text-scale));
   color: var(--v2-text-muted);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1015,7 +1015,7 @@
 }
 
 .v2-client-conv-time {
-  font-size: 13px;
+  font-size: calc(13px * var(--v2-text-scale));
   color: var(--v2-text-muted);
   white-space: nowrap;
   flex-shrink: 0;
@@ -1040,7 +1040,7 @@
 }
 
 .v2-client-thread-header strong {
-  font-size: 15px;
+  font-size: calc(15px * var(--v2-text-scale));
   font-weight: var(--v2-weight-bold);
   flex: 1;
 }
@@ -1050,7 +1050,7 @@
   background: transparent;
   color: var(--v2-accent);
   font: inherit;
-  font-size: 13px;
+  font-size: calc(13px * var(--v2-text-scale));
   font-weight: var(--v2-weight-bold);
   cursor: pointer;
   padding: 4px 8px;
@@ -1080,7 +1080,7 @@
   align-items: center;
   justify-content: center;
   color: var(--v2-text-muted);
-  font-size: 14px;
+  font-size: calc(14px * var(--v2-text-scale));
   padding: 40px;
   text-align: center;
 }
@@ -1107,7 +1107,7 @@
   display: block;
   padding: 10px 13px;
   border-radius: 14px;
-  font-size: 14px;
+  font-size: calc(14px * var(--v2-text-scale));
   line-height: 1.4;
   word-break: break-word;
 }
@@ -1134,7 +1134,7 @@
 }
 
 .v2-ct-time {
-  font-size: 13px;
+  font-size: calc(13px * var(--v2-text-scale));
   color: var(--v2-text-muted);
   padding: 0 4px;
 }
@@ -1182,7 +1182,7 @@
   background: var(--v2-surface-muted);
   color: var(--v2-text);
   font: inherit;
-  font-size: 14px;
+  font-size: calc(14px * var(--v2-text-scale));
 }
 
 .v2-ct-text-input:focus {
@@ -1231,7 +1231,7 @@
   background: transparent;
   color: var(--v2-text-muted);
   font: inherit;
-  font-size: 13px;
+  font-size: calc(13px * var(--v2-text-scale));
   cursor: pointer;
   transition: color 0.12s, border-color 0.12s;
 }

@@ -41,7 +41,7 @@ import { usePersona } from "../persona/usePersona";
 import { ThemeStudio } from "../../components/ThemeStudio";
 import "../pro/pro.css";
 import type { ThemeMode } from "../../brandConfig";
-import type { AccessibilityPreferenceKey, AccessibilityPreferences } from "../../app-shell/preferences";
+import type { AccessibilityPreferenceKey, AccessibilityPreferences, TextScale } from "../../app-shell/preferences";
 import type { ThemeSource } from "../../app-shell/useAppTheme";
 import { tradeOptions } from "../../data";
 import type { Role, Trade } from "../../types";
@@ -122,6 +122,7 @@ interface ProfileHubProps {
   themeMode: ThemeMode;
   themeSource: ThemeSource;
   onSetThemeSource: (source: ThemeSource) => void;
+  onSetTextScale: (scale: TextScale) => void;
   accessibilityPreferences: AccessibilityPreferences;
   onToggleAccessibility: (key: AccessibilityPreferenceKey) => void;
   onLogout: () => void;
@@ -1269,6 +1270,7 @@ export function ProfileHub({
   themeMode,
   themeSource,
   onSetThemeSource,
+  onSetTextScale,
   accessibilityPreferences,
   onToggleAccessibility,
   onLogout,
@@ -1834,6 +1836,7 @@ export function ProfileHub({
             themeMode={themeMode}
             themeSource={themeSource}
             onSetThemeSource={onSetThemeSource}
+            onSetTextScale={onSetTextScale}
             accessibilityPreferences={accessibilityPreferences}
             onToggleAccessibility={onToggleAccessibility}
           />

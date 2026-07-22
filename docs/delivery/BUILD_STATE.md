@@ -3,9 +3,35 @@
 Last updated: 2026-07-21 America/New_York
 Current gate: Gate B controlled engagement
 Current phase: Launch verification reconciliation is in progress.
-Active packet: Launch verification sweep on `codex/launch-verification`
-Repository branch: `codex/launch-verification`
+Active packet: Accessibility text-scale and Trade News live-source pass on `codex/accessibility-trade-news`
+Repository branch: `codex/accessibility-trade-news`
 Production feature release commit: `15fa019153e2cc364f39231d55aaec1ca5626caa`
+
+## Accessibility Text Scale and Trade News Live Sources (Locally Verified, Deployment Pending)
+
+- Settings now offers persisted Standard, Large, and Extra Large text sizes.
+  The root scale drives semantic tokens plus fixed legacy CSS font declarations,
+  and migrates the former boolean Larger text preference to Large.
+- Shop Talk Filters remains an icon-only control at every scale with an
+  accessible name and tooltip. Mobile geometry checks cover Tools title/field
+  shortcuts, Shop Talk tabs/actions, primary bottom navigation, and horizontal
+  overflow at all three sizes on 375x553 and 390x664.
+- Trade News no longer serves hard-coded article or topic-art fallbacks. It
+  aggregates live construction, safety, codes, labor, tools, business,
+  projects, and Jacksonville/Florida feeds; parses RSS media/enclosures and
+  bounded public Open Graph metadata; canonicalizes and deduplicates URLs and
+  titles; ranks freshness/local/trade relevance; and caps repeated sources.
+- Cards are compact and image-led when verified article media exists. Missing
+  media is labeled `No image`, and a source outage produces an explicit empty
+  state without inventing an article or image. Refresh status names cached,
+  loaded, refreshed, empty, and failed states.
+- Passed locally: build, lint, 61 unit/frontend tests, E2E, the 12-scenario
+  mobile text-size matrix, Shop Talk/Trade News rendered QA, dependency audit
+  (zero vulnerabilities), and diff check. The aggregate `npm run test` entered
+  the PostgreSQL integration phase and exceeded a bounded 244-second run
+  without a failing assertion, so no aggregate integration pass is claimed.
+- No schema, migration, authorization, billing, production-data, or dependency
+  change. Deployment and live `/api/health`/`/api/news` evidence remain pending.
 
 ## Calculator Long-Press Quick Entry (Complete, Pending Review)
 

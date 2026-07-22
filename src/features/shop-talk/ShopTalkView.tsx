@@ -65,6 +65,7 @@ export interface NewsItem {
   summary: string;
   url: string;
   urgency?: string;
+  category?: string;
   thumbnailUrl?: string;
   thumbnailKind?: "article" | "feed" | "fallback";
 }
@@ -164,17 +165,7 @@ const communityBadgeThresholds: CommunityBadgeThresholds = {
 };
 
 function isFallbackNewsThumbnail(item: Pick<NewsItem, "thumbnailUrl" | "thumbnailKind">) {
-  return item.thumbnailKind === "fallback" || !item.thumbnailUrl || item.thumbnailUrl.startsWith("/news/");
-}
-
-function newsSourceInitials(source: string) {
-  const words = source
-    .replace(/[^a-zA-Z0-9\s]/g, " ")
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 3);
-  const initials = words.map((word) => word[0]).join("").toUpperCase();
-  return initials || "R";
+  return !item.thumbnailUrl;
 }
 
 function pluralize(count: number, noun: string) {
@@ -715,7 +706,7 @@ export function ShopTalkView({
   const [liveNews, setLiveNews] = useState<NewsItem[]>([]);
   const [newsLoading, setNewsLoading] = useState(false);
   const [newsFetched, setNewsFetched] = useState(false);
-  const [newsIsFallback, setNewsIsFallback] = useState(false);
+  const [newsRefreshMessage, setNewsRefreshMessage] = useState("Open Trade News to load current sources.");
   const [flairFilter, setFlairFilter] = useState<PostFlair | "All">(() => readShopTalkFilterPrefs().flairFilter);
   const [bookmarkedIds, setBookmarkedIds] = useState<Set<string>>(() => readStringSet("rivt.shopTalkBookmarks.v1"));
   const [showBookmarked, setShowBookmarked] = useState(false);
@@ -909,15 +900,18 @@ export function ShopTalkView({
     setNewsLoading(true);
     try {
       const response = await fetchWithTimeout(apiPath(`/api/news?location=${encodeURIComponent(userLocation)}${forceRefresh ? "&refresh=1" : ""}`));
-      const data = await response.json() as { items?: NewsItem[]; fallback?: boolean };
-      const items = Array.isArray(data.items) && data.items.length > 0 ? data.items : newsItems;
+      if (!response.ok) throw new Error("Trade News request failed");
+      const data = await response.json() as { items?: NewsItem[]; fallback?: boolean; cached?: boolean };
+      const items = Array.isArray(data.items) ? data.items : [];
       setLiveNews(items);
-      setNewsIsFallback(data.fallback === true || !Array.isArray(data.items) || data.items.length === 0);
+      setNewsRefreshMessage(items.length
+        ? `${data.cached ? "Current cached feed" : forceRefresh ? "Feed refreshed" : "Live feed loaded"} · ${items.length} articles`
+        : "No current articles were returned by the live sources.");
       setSelectedNewsId(items[0]?.id ?? 0);
     } catch {
-      setLiveNews(newsItems);
-      setNewsIsFallback(true);
-      setSelectedNewsId(newsItems[0]?.id ?? 0);
+      setLiveNews([]);
+      setNewsRefreshMessage("Trade News could not reach its sources. Try refreshing shortly.");
+      setSelectedNewsId(0);
     } finally {
       setNewsLoading(false);
       setNewsFetched(true);
@@ -1151,10 +1145,12 @@ export function ShopTalkView({
                   type="button"
                   className={filtersOpen ? "shop-talk-filter-trigger is-active" : "shop-talk-filter-trigger"}
                   aria-expanded={filtersOpen}
+                  aria-label="Filters"
+                  title="Filters"
                   onClick={() => setFiltersOpen((open) => !open)}
                 >
-                  <SlidersHorizontal size={16} />
-                  Filters
+                  <SlidersHorizontal size={18} aria-hidden="true" />
+                  <span className="sr-only">Filters</span>
                 </button>
                 <button type="button" className="shop-talk-compose-trigger" onClick={() => setNewPostOpen(true)}>
                   <Plus size={17} />
@@ -1379,10 +1375,10 @@ export function ShopTalkView({
                   <span>Trade News</span>
                   <h2>What's changing in the field</h2>
                   <p className="news-command-meta">
-                    {filteredNews.length} articles · {newsSourceCount} sources · {newsFetched ? "Live feed" : "Curated feed"}
+                    {filteredNews.length} articles · {newsSourceCount} sources
                   </p>
                   <p className="news-command-live-status">
-                    {newsFetched && !newsIsFallback ? "Live sources" : "Fallback sources"}
+                    {newsLoading ? "Refreshing live sources…" : newsRefreshMessage}
                   </p>
                 </div>
                 <button type="button" className="v2-icon-button" onClick={() => void activateNews(true)} aria-label="Refresh trade news" title="Refresh trade news" disabled={newsLoading}>
@@ -1415,10 +1411,10 @@ export function ShopTalkView({
                 ) : filteredNews.length === 0 ? (
                   <EmptyState
                     icon={Newspaper}
-                    title="No matching trade news"
-                    description="Clear the search to see the current trade feed."
-                    actionLabel="Clear search"
-                    onAction={() => setNewsQuery("")}
+                    title={normalizedNewsQuery ? "No matching trade news" : "No current trade news"}
+                    description={normalizedNewsQuery ? "Clear the search to see the current trade feed." : "RIVT could not confirm any current articles from its live sources. No articles or images have been invented."}
+                    actionLabel={normalizedNewsQuery ? "Clear search" : "Refresh sources"}
+                    onAction={() => normalizedNewsQuery ? setNewsQuery("") : void activateNews(true)}
                   />
                 ) : filteredNews.map((item) => (
                   <article
@@ -1433,8 +1429,8 @@ export function ShopTalkView({
                       <div className="shop-news-card-body-wrap">
                         {isFallbackNewsThumbnail(item) ? (
                           <div className="news-card-thumb is-source-tile" aria-hidden="true">
-                            <span>{newsSourceInitials(item.source)}</span>
-                            <small>{item.urgency ?? "Trade"}</small>
+                            <Newspaper size={20} />
+                            <small>No image</small>
                           </div>
                         ) : (
                           <div className="news-card-thumb is-real">
@@ -1443,7 +1439,7 @@ export function ShopTalkView({
                         )}
                         <div className="news-card-body">
                           <div className="news-card-kicker">
-                            {item.urgency && <span className="news-urgency-pill">{item.urgency}</span>}
+                            <span className="news-urgency-pill">{item.category ?? item.urgency ?? "Construction"}</span>
                             <small>{item.date}</small>
                           </div>
                           <strong>{item.headline}</strong>
@@ -1711,7 +1707,8 @@ export function ShopTalkView({
                 <div className={isFallbackNewsThumbnail(selectedNews) ? "news-detail-hero is-source-tile" : "news-detail-hero is-real"} data-urgency={selectedNews.urgency ?? "default"}>
                   {isFallbackNewsThumbnail(selectedNews) ? (
                     <div className="news-detail-source-mark" aria-hidden="true">
-                      <span>{newsSourceInitials(selectedNews.source)}</span>
+                      <Newspaper size={28} />
+                      <small>No article image</small>
                     </div>
                   ) : (
                     <ZoomableImage
@@ -1723,7 +1720,7 @@ export function ShopTalkView({
                   )}
                   <div className="news-detail-hero-copy">
                     <span className="news-detail-source">{selectedNews.source}</span>
-                    {selectedNews.urgency && <span className="news-urgency-pill">{selectedNews.urgency}</span>}
+                    <span className="news-urgency-pill">{selectedNews.category ?? selectedNews.urgency ?? "Construction"}</span>
                   </div>
                 </div>
                 <div className="shop-news-detail-header">

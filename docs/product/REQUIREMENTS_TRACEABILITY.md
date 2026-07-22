@@ -1769,3 +1769,30 @@ Evidence must eventually link to implementation, automated tests, manual accepta
   mobile-action and Tools UI QA, and the zero-vulnerability production
   dependency audit pass. Three non-database integration checks pass; sixteen
   PostgreSQL suites are skipped because `TEST_DATABASE_URL` is unavailable.
+
+# Traceability Addendum - 2026-07-22 Text Scale and Live Trade News
+
+- `GA-UX-006` gains persisted Standard, Large, and Extra Large device text
+  sizes. Root scaling covers semantic typography tokens and legacy fixed-size
+  declarations; the previous boolean Larger text preference migrates to Large.
+  Shop Talk Filters retains an icon-only visual treatment with an accessible
+  name and tooltip at every scale.
+- `GA-UX-003` and `GA-UX-006` gain a twelve-scenario rendered mobile matrix:
+  all three sizes at 375x553 and 390x664 cover Tools title/top-bar clearance,
+  field shortcut names, Shop Talk tabs/actions, bottom navigation, and
+  document-wide horizontal overflow.
+- `GA-UX-005` gains an honest Trade News source boundary: live feeds cover
+  construction, skilled trades, safety, codes, labor, tools, business,
+  projects, and Jacksonville/Florida contractor news. RSS media/enclosures and
+  bounded public Open Graph images are accepted; missing media is labeled and
+  an outage stays empty rather than receiving invented articles or artwork.
+- Trade News canonicalizes URLs, deduplicates canonical URL/title pairs,
+  favors current/local/trade-relevant items, and caps source repetition. Cards
+  expose category, source, date, original link, and explicit refresh state.
+- Requirement maturity remains Partial pending physical iOS/Android dynamic
+  type, desktop keyboard, and screen-reader acceptance. No schema, migration,
+  authorization, billing, production-data, or dependency change is included.
+- Local evidence: build, lint, 61/61 unit/frontend tests, E2E, mobile-action UI,
+  Shop Talk/Trade News rendered QA, zero-vulnerability dependency audit, and
+  diff check pass. Aggregate `npm run test` exceeded a bounded 244-second
+  integration run without a failing assertion; no aggregate pass is claimed.

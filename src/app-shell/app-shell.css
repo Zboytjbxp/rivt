@@ -85,7 +85,7 @@
   padding: 0 12px;
   border-radius: var(--v2-radius-md);
   color: var(--v2-text-muted);
-  font-size: 14px;
+  font-size: calc(14px * var(--v2-text-scale));
   font-weight: var(--v2-weight-strong);
   text-align: left;
   transition: background 160ms ease, color 160ms ease, transform 160ms ease;
@@ -143,12 +143,12 @@
 .v2-job-context-copy small,
 .v2-job-context-copy span {
   color: #93a0a5;
-  font-size: 13px;
+  font-size: calc(13px * var(--v2-text-scale));
 }
 
 .v2-job-context-copy strong {
   overflow: hidden;
-  font-size: 13px;
+  font-size: calc(13px * var(--v2-text-scale));
   line-height: 1.25;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -157,7 +157,7 @@
 .v2-job-status {
   grid-column: 2;
   color: #8ad2a6;
-  font-size: 13px;
+  font-size: calc(13px * var(--v2-text-scale));
   font-weight: var(--v2-weight-strong);
 }
 
@@ -188,7 +188,7 @@
 .v2-sidebar-profile strong,
 .v2-account-copy strong {
   overflow: hidden;
-  font-size: 13px;
+  font-size: calc(13px * var(--v2-text-scale));
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -196,7 +196,7 @@
 .v2-sidebar-profile small,
 .v2-account-copy small {
   color: var(--v2-text-muted);
-  font-size: 13px;
+  font-size: calc(13px * var(--v2-text-scale));
 }
 
 .v2-workspace {
@@ -255,7 +255,7 @@
   border-radius: var(--v2-radius-sm);
   background: var(--v2-surface-raised);
   color: var(--v2-text-subtle);
-  font-size: 13px;
+  font-size: calc(13px * var(--v2-text-scale));
 }
 
 .v2-topbar-actions {
@@ -293,7 +293,7 @@
   border-radius: var(--v2-radius-md);
   background: var(--v2-accent);
   color: var(--v2-on-accent);
-  font-size: 13px;
+  font-size: calc(13px * var(--v2-text-scale));
   font-weight: var(--v2-weight-bold);
 }
 
@@ -546,7 +546,7 @@
   border-radius: var(--v2-radius-pill);
   background: var(--v2-surface-muted);
   color: var(--v2-text-muted);
-  font-size: 13px;
+  font-size: calc(13px * var(--v2-text-scale));
   font-style: normal;
   font-weight: var(--v2-weight-semibold);
   text-transform: capitalize;
@@ -979,7 +979,7 @@ html[data-rivt-immersive-tool] .guest-banner {
     gap: 3px;
     padding: 0 2px;
     color: inherit;
-    font-size: 13px;
+    font-size: calc(13px * var(--v2-text-scale));
     font-weight: var(--v2-weight-strong);
   }
 
@@ -1007,7 +1007,7 @@ html[data-rivt-immersive-tool] .guest-banner {
   .rivt-v2 .guest-banner > span {
     display: -webkit-box;
     overflow: hidden;
-    font-size: 13px;
+    font-size: calc(13px * var(--v2-text-scale));
     line-height: 1.3;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 2;

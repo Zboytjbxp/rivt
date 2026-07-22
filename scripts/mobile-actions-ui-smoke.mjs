@@ -495,7 +495,14 @@ async function runMobileFlow(page) {
   await page.getByRole("heading", { name: "Settings", exact: true }).waitFor({ timeout: 15_000 });
   await page.getByRole("button", { name: "Theme", exact: true }).click();
   const appearance = page.locator(".appearance-preference");
-  assert.equal(await appearance.getByRole("button").count(), 3, "Appearance should offer only System, Light, and Dark");
+  assert.equal(await appearance.getByRole("group", { name: "Color mode" }).getByRole("button").count(), 3, "Color mode should offer System, Light, and Dark");
+  const textSizeGroup = appearance.getByRole("group", { name: "Text size" });
+  assert.equal(await textSizeGroup.getByRole("button").count(), 3, "Text size should offer Standard, Large, and Extra Large");
+  for (const [label, stored] of [["Standard", "standard"], ["Large", "large"], ["Extra Large", "extra-large"]]) {
+    await textSizeGroup.getByRole("button", { name: label, exact: true }).click();
+    assert.equal(await page.evaluate(() => localStorage.getItem("rivt-text-scale")), stored, `${label} text size should persist on this device`);
+    assert.equal(await page.evaluate(() => document.documentElement.dataset.textScale), stored, `${label} text size should update the document root`);
+  }
   await appearance.getByRole("button", { name: /Dark/i }).click();
   assert.equal(await page.evaluate(() => document.documentElement.dataset.theme), "dark", "Dark appearance should update the application immediately");
   await appearance.getByRole("button", { name: /System/i }).click();
@@ -610,6 +617,43 @@ async function runMobileFlow(page) {
   await page.getByRole("button", { name: "Trade News" }).click();
   await page.getByRole("heading", { name: /What's changing in the field/i }).waitFor({ timeout: 15_000 });
   await assertNoHorizontalOverflow(page, "Shop Talk trade news");
+
+  for (const viewport of [{ width: 375, height: 553 }, { width: 390, height: 664 }]) {
+    await page.setViewportSize(viewport);
+    for (const scale of ["standard", "large", "extra-large"]) {
+      await page.evaluate((textScale) => {
+        localStorage.setItem("rivt-text-scale", textScale);
+        document.documentElement.dataset.textScale = textScale;
+        document.documentElement.dataset.legibility = textScale;
+      }, scale);
+
+      await page.goto(`${baseUrl}/app/tools`, { waitUntil: "networkidle" });
+      await page.getByRole("heading", { name: "Tools", exact: true }).waitFor({ timeout: 15_000 });
+      await assertNoHorizontalOverflow(page, `Tools ${viewport.width}x${viewport.height} ${scale}`);
+      const titleBox = await page.getByRole("heading", { name: "Tools", exact: true }).boundingBox();
+      const topbarBox = await page.locator(".v2-topbar").boundingBox();
+      assert.ok(titleBox && topbarBox && titleBox.y >= topbarBox.y + topbarBox.height, `Tools title should clear the top bar at ${viewport.width}x${viewport.height} ${scale}`);
+      for (const shortcut of ["Camera", "Heavy 16th", "Jobsite"]) {
+        const button = page.getByLabel("Field shortcuts").getByRole("button", { name: shortcut, exact: true });
+        const box = await button.boundingBox();
+        assert.ok(box && box.x >= 0 && box.x + box.width <= viewport.width, `${shortcut} shortcut should reflow at ${viewport.width}x${viewport.height} ${scale}`);
+      }
+      for (const navName of ["Home", "Work", "Camera", "Shop Talk", "Tools"]) {
+        const box = await page.getByRole("navigation", { name: "Primary navigation" }).getByRole("button", { name: navName, exact: true }).boundingBox();
+        assert.ok(box && box.x >= 0 && box.x + box.width <= viewport.width, `${navName} bottom navigation should fit at ${viewport.width}x${viewport.height} ${scale}`);
+      }
+
+      await page.getByRole("button", { name: "Shop Talk", exact: true }).click();
+      await page.getByRole("button", { name: "Feed", exact: true }).waitFor({ timeout: 15_000 });
+      await assertNoHorizontalOverflow(page, `Shop Talk ${viewport.width}x${viewport.height} ${scale}`);
+      const filterButton = page.getByRole("button", { name: "Filters", exact: true });
+      const filterBox = await filterButton.boundingBox();
+      assert.ok(filterBox && filterBox.width <= 48, `Filters should remain icon-only at ${viewport.width}x${viewport.height} ${scale}`);
+      for (const tab of ["Feed", "Communities", "Trade News"]) {
+        assert.equal(await page.getByRole("button", { name: tab, exact: true }).isVisible(), true, `${tab} should remain visible at ${viewport.width}x${viewport.height} ${scale}`);
+      }
+    }
+  }
 }
 
 let browser;

@@ -1,3 +1,7 @@
+:root { --v2-text-scale: 1; }
+:root[data-text-scale="large"] { --v2-text-scale: 1.125; }
+:root[data-text-scale="extra-large"] { --v2-text-scale: 1.25; }
+
 .rivt-v2 {
   --v2-bg: #f7f7f4;
   --v2-surface: #ffffff;
@@ -29,17 +33,17 @@
   --v2-teal-soft: #e0f2f0;
   --v2-surface-soft: var(--v2-surface-muted);
   --v2-muted: var(--v2-text-muted);
-  --v2-text-xs: 13px;
-  --v2-text-sm: 15px;
-  --v2-text-base: 17px;
-  --v2-text-lg: 21px;
-  --v2-text-xl: 26px;
+  --v2-text-xs: calc(13px * var(--v2-text-scale));
+  --v2-text-sm: calc(15px * var(--v2-text-scale));
+  --v2-text-base: calc(17px * var(--v2-text-scale));
+  --v2-text-lg: calc(21px * var(--v2-text-scale));
+  --v2-text-xl: calc(26px * var(--v2-text-scale));
   --v2-text-caption: var(--v2-text-xs);
   --v2-text-label: var(--v2-text-xs);
   --v2-text-body: var(--v2-text-sm);
   --v2-text-body-lg: var(--v2-text-base);
   --v2-text-title: var(--v2-text-lg);
-  --v2-text-display: clamp(30px, 4vw, 42px);
+  --v2-text-display: clamp(calc(30px * var(--v2-text-scale)), 4vw, calc(42px * var(--v2-text-scale)));
   --v2-space-tight: 8px;
   --v2-space-card: 16px;
   --v2-space-section: 24px;
@@ -159,17 +163,7 @@
 }
 
 /* Accessibility preferences intentionally override theme remaps. */
-:root[data-legibility="large"] .rivt-v2 {
-  --v2-text-xs: 14px;
-  --v2-text-sm: 16px;
-  --v2-text-md: 18px;
-  --v2-text-lg: 22px;
-  --v2-text-xl: 28px;
-}
-
-:root[data-legibility="large"] .rivt-v2 :where(small, label, input, select, textarea, button) {
-  font-size: max(16px, 1em);
-}
+:root[data-text-scale] { font-size: calc(16px * var(--v2-text-scale)); }
 
 :root[data-contrast="high"] .rivt-v2 {
   --v2-text-muted: var(--v2-text);

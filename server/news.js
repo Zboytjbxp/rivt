@@ -87,19 +87,76 @@ function _urgency(title) {
   return undefined;
 }
 
-function _topicThumbnail({ title = "", source = "", urgency = "" } = {}) {
-  const haystack = `${urgency} ${source} ${title}`.toLowerCase();
-  if (/osha|heat|safety/.test(haystack)) return "/news/heat-safety.svg";
-  if (/\bnec\b|code|electrical/.test(haystack)) return "/news/code-update.svg";
-  if (/hvac|refrigerant|r-410a|epa/.test(haystack)) return "/news/hvac-refrigerant.svg";
-  if (/permit|jacksonville|inspection|ordinance/.test(haystack)) return "/news/permit-watch.svg";
-  if (/license|renewal|dbpr|certification/.test(haystack)) return "/news/license-renewal.svg";
-  if (/labor|workforce|shortage|hiring|wage/.test(haystack)) return "/news/workforce-market.svg";
-  return "/news/rivt-trade-brief.svg";
+function _category(item, hint = "") {
+  if (hint) return hint;
+  const text = `${item?.headline ?? ""} ${item?.summary ?? ""}`.toLowerCase();
+  if (/osha|safety|injury|fatal|heat|ppe|hazard/.test(text)) return "Safety";
+  if (/code|permit|inspection|ordinance|regulation|licens|nec|nfpa/.test(text)) return "Codes";
+  if (/labor|workforce|apprentice|union|wage|hiring/.test(text)) return "Labor";
+  if (/tool|equipment|product|material/.test(text)) return "Tools";
+  if (/project|development|infrastructure|contract award|groundbreak/.test(text)) return "Projects";
+  if (/business|econom|market|finance|insurance|merger|company/.test(text)) return "Business";
+  return "Construction";
 }
 
-function _fallbackNewsThumbnail(item) {
-  return _topicThumbnail({ title: item.headline ?? item.title, source: item.source, urgency: item.urgency });
+function _canonicalArticleUrl(value) {
+  try {
+    const url = new URL(String(value ?? ""));
+    if (!/^https?:$/.test(url.protocol)) return "";
+    url.hash = "";
+    for (const key of [...url.searchParams.keys()]) {
+      if (/^(utm_|fbclid$|gclid$|mc_|ref$|source$)/i.test(key)) url.searchParams.delete(key);
+    }
+    url.hostname = url.hostname.toLowerCase().replace(/^www\./, "");
+    url.pathname = url.pathname.replace(/\/+$/, "") || "/";
+    return url.href;
+  } catch {
+    return "";
+  }
+}
+
+function _normalizedTitle(value) {
+  return _stripHtml(value).toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+}
+
+function _publishedTime(item) {
+  const time = Date.parse(item?.publishedAt ?? item?.date ?? "");
+  return Number.isFinite(time) ? time : 0;
+}
+
+function _relevanceScore(item, now = Date.now()) {
+  const ageDays = Math.max(0, (now - _publishedTime(item)) / 86_400_000);
+  const freshness = _publishedTime(item) ? Math.max(0, 42 - ageDays) : 0;
+  const tradeHits = (`${item.headline} ${item.summary}`.match(/contractor|construction|trade|jobsite|permit|code|safety|labor|tool|project|jacksonville|florida/gi) ?? []).length;
+  return freshness + Math.min(tradeHits, 8) * 3 + (item.isLocal ? 30 : 0) + (item.urgency ? 6 : 0);
+}
+
+function _dedupeAndDiversify(items, limit = 30) {
+  const seenUrls = new Set();
+  const seenTitles = new Set();
+  const unique = items.filter((item) => {
+    const canonicalUrl = _canonicalArticleUrl(item.url);
+    const titleKey = _normalizedTitle(item.headline);
+    if (!canonicalUrl || titleKey.length < 12 || seenUrls.has(canonicalUrl) || seenTitles.has(titleKey)) return false;
+    seenUrls.add(canonicalUrl);
+    seenTitles.add(titleKey);
+    item.canonicalUrl = canonicalUrl;
+    return true;
+  }).sort((a, b) => _relevanceScore(b) - _relevanceScore(a));
+
+  const selected = [];
+  const sourceCounts = new Map();
+  for (const maxPerSource of [3, 6, Infinity]) {
+    for (const item of unique) {
+      if (selected.includes(item)) continue;
+      const source = String(item.source || "Unknown").toLowerCase();
+      if ((sourceCounts.get(source) ?? 0) >= maxPerSource) continue;
+      selected.push(item);
+      sourceCounts.set(source, (sourceCounts.get(source) ?? 0) + 1);
+      if (selected.length === limit) return selected;
+    }
+  }
+  return selected;
 }
 
 function _isTradeNewsCandidate(item) {
@@ -107,70 +164,6 @@ function _isTradeNewsCandidate(item) {
   if (/\bhomeowners?\b|\bhome owner\b/.test(text)) return false;
   return /contractor|construction|subcontractor|trade|jobsite|osha|safety|permit|inspection|code|nec|nfpa|hvac|refrigerant|roof|electrical|plumbing|carpentry|concrete|masonry|framing|drywall|demolition|development|infrastructure|renovation|mechanical|lien|licens|labor|workforce|apprentice|skilled/.test(text);
 }
-
-const curatedTradeNews = [
-  {
-    headline: "OSHA expands heat inspections for high-risk outdoor work",
-    source: "OSHA",
-    date: "Apr 10, 2026",
-    summary: "OSHA updated its National Emphasis Program on heat exposure. For contractors, the practical takeaway is simple: document water, rest, shade, acclimatization, and heat-response plans before the first hot-weather site visit.",
-    url: "https://www.osha.gov/news/newsreleases/osha-national-news-release/20260410",
-    urgency: "Safety",
-    thumbnailUrl: "/news/heat-safety.svg",
-    curated: true,
-  },
-  {
-    headline: "NFPA previews the biggest changes in the 2026 NEC",
-    source: "NFPA",
-    date: "Jan 29, 2026",
-    summary: "The 2026 National Electrical Code cycle is moving, with changes that can affect planning, estimates, and inspection conversations. Electrical contractors should review updates early instead of waiting until a failed rough-in.",
-    url: "https://www.nfpa.org/news-blogs-and-articles/blogs/2026/01/29/2026-nec-key-changes",
-    urgency: "Code Update",
-    thumbnailUrl: "/news/code-update.svg",
-    curated: true,
-  },
-  {
-    headline: "EPA removes the R-410A installation deadline",
-    source: "ACHR News",
-    date: "May 21, 2026",
-    summary: "ACHR News reports that EPA removed the R-410A installation deadline. HVAC contractors still need to watch refrigerant rules closely, but this update changes how some pending equipment installs get scheduled.",
-    url: "https://www.achrnews.com/articles/166226-epa-removes-r-410a-installation-deadline",
-    urgency: "HVAC",
-    thumbnailUrl: "/news/hvac-refrigerant.svg",
-    curated: true,
-  },
-  {
-    headline: "ABC says construction must attract 349,000 workers in 2026",
-    source: "Associated Builders and Contractors",
-    date: "Jan 15, 2026",
-    summary: "ABC estimates the industry needs hundreds of thousands of additional workers in 2026. For RIVT users, that is the market signal behind faster crew-building, better profiles, and keeping reliable subs close.",
-    url: "https://www.abc.org/News-Media/News-Releases/abc-construction-industry-must-attract-349000-workers-in-2026-despite-macroeconomic-headwinds",
-    urgency: "Labor",
-    thumbnailUrl: "/news/workforce-market.svg",
-    curated: true,
-  },
-  {
-    headline: "Florida electrical contractor renewals and CE reminders",
-    source: "DBPR",
-    date: "2026",
-    summary: "Florida DBPR keeps contractor renewal, continuing education, and board information in one place. Keep this bookmarked before hiring, accepting specialty work, or updating compliance records.",
-    url: "https://www2.myfloridalicense.com/electrical-contractors/",
-    urgency: "License",
-    thumbnailUrl: "/news/license-renewal.svg",
-    curated: true,
-  },
-  {
-    headline: "Jacksonville permitting guide for contractors",
-    source: "PermitFlow",
-    date: "Mar 13, 2026",
-    summary: "A contractor-focused look at Jacksonville permitting, review steps, and local process expectations. Useful context before posting work that depends on inspection timing or access to permit records.",
-    url: "https://www.permitflow.com/blog/jacksonville-building-permit",
-    urgency: "Local",
-    thumbnailUrl: "/news/permit-watch.svg",
-    curated: true,
-    isLocal: true,
-  },
-];
 
 function _resolvePublicImageUrl(value, baseUrl) {
   const raw = String(value ?? "").trim();
@@ -264,23 +257,58 @@ function _metaContent(html, regexes) {
   return null;
 }
 
+async function _readBoundedText(response, maxBytes = 600_000) {
+  const declaredLength = Number(response.headers.get("content-length") ?? 0);
+  if (declaredLength > maxBytes) return null;
+  if (!response.body?.getReader) {
+    const text = await response.text();
+    return Buffer.byteLength(text) <= maxBytes ? text : null;
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let bytesRead = 0;
+  let text = "";
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    bytesRead += value.byteLength;
+    if (bytesRead > maxBytes) {
+      await reader.cancel();
+      return null;
+    }
+    text += decoder.decode(value, { stream: true });
+  }
+  return text + decoder.decode();
+}
+
 async function _fetchArticleImage(url) {
   const safeUrl = _resolvePublicImageUrl(url);
   if (!safeUrl) return null;
 
   try {
-    const res = await fetch(safeUrl, {
-      signal: AbortSignal.timeout(3500),
-      headers: {
-        Accept: "text/html,application/xhtml+xml",
-        "User-Agent": "Mozilla/5.0 (compatible; RIVTNewsImageBot/1.0; +https://rivt.pro)",
-      },
-      redirect: "follow",
-    });
+    let requestUrl = safeUrl;
+    let res;
+    for (let redirects = 0; redirects <= 3; redirects += 1) {
+      res = await fetch(requestUrl, {
+        signal: AbortSignal.timeout(3500),
+        headers: {
+          Accept: "text/html,application/xhtml+xml",
+          "User-Agent": "Mozilla/5.0 (compatible; RIVTNewsImageBot/1.0; +https://rivt.pro)",
+        },
+        redirect: "manual",
+      });
+      if (![301, 302, 303, 307, 308].includes(res.status)) break;
+      const redirected = _resolvePublicImageUrl(res.headers.get("location"), requestUrl);
+      if (!redirected || redirects === 3) return null;
+      requestUrl = redirected;
+    }
+    if (!res) return null;
     if (!res.ok) return null;
     const contentType = res.headers.get("content-type") ?? "";
     if (!/text\/html|application\/xhtml\+xml/i.test(contentType)) return null;
-    const html = (await res.text()).slice(0, 600_000);
+    const html = await _readBoundedText(res);
+    if (!html) return null;
     const candidate = _metaContent(html, [
       /<meta[^>]+property=["']og:image:secure_url["'][^>]+content=["']([^"']+)["'][^>]*>/i,
       /<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image:secure_url["'][^>]*>/i,
@@ -291,7 +319,7 @@ async function _fetchArticleImage(url) {
       /<link[^>]+rel=["']image_src["'][^>]+href=["']([^"']+)["'][^>]*>/i,
       /<link[^>]+href=["']([^"']+)["'][^>]+rel=["']image_src["'][^>]*>/i,
     ]);
-    return _resolvePublicImageUrl(candidate, res.url);
+    return _resolvePublicImageUrl(candidate, requestUrl);
   } catch {
     return null;
   }
@@ -300,32 +328,23 @@ async function _fetchArticleImage(url) {
 async function _enrichNewsImages(items) {
   const candidates = items.slice(0, NEWS_ARTICLE_IMAGE_LIMIT);
   const enriched = await Promise.all(candidates.map(async (item) => {
-    const currentIsFallback = !item.thumbnailUrl || item.thumbnailKind === "fallback" || String(item.thumbnailUrl).startsWith("/news/");
-    if (!currentIsFallback) return item;
+    if (item.thumbnailUrl) return item;
 
     const articleImage = await _fetchArticleImage(item.url);
     if (articleImage) {
       return { ...item, thumbnailUrl: articleImage, thumbnailKind: "article" };
     }
 
-    return {
-      ...item,
-      thumbnailUrl: item.thumbnailUrl || _fallbackNewsThumbnail(item),
-      thumbnailKind: "fallback",
-    };
+    return { ...item, thumbnailUrl: undefined, thumbnailKind: undefined };
   }));
 
   return [
     ...enriched,
-    ...items.slice(NEWS_ARTICLE_IMAGE_LIMIT).map((item) => ({
-      ...item,
-      thumbnailUrl: item.thumbnailUrl || _fallbackNewsThumbnail(item),
-      thumbnailKind: item.thumbnailKind ?? "fallback",
-    })),
+    ...items.slice(NEWS_ARTICLE_IMAGE_LIMIT),
   ];
 }
 
-async function _fetchFeed(url, fallbackSource) {
+async function _fetchFeed(url, fallbackSource, categoryHint = "", isLocal = false) {
   try {
     const res = await fetch(url, {
       signal: AbortSignal.timeout(8000),
@@ -342,18 +361,25 @@ async function _fetchFeed(url, fallbackSource) {
         ? item.link
         : item.link?.["@_href"] ?? item.guid ?? "#";
       const headline = _stripHtml(item.title ?? "");
-      const source = fallbackSource ?? _stripHtml(channel.title ?? "");
+      const itemSource = typeof item.source === "string" ? item.source : item.source?.["#text"];
+      const source = _stripHtml(itemSource ?? fallbackSource ?? channel.title ?? "Unknown source");
       const thumbnailUrl = _rssThumbnailUrl(item, link);
+      const publishedAt = item.pubDate ?? item.published ?? item.updated ?? "";
+      const summary = _stripHtml(item.description ?? item.summary ?? item["content:encoded"] ?? "").slice(0, 350);
+      const urgency = _urgency(headline);
       return {
         id: Date.now() + i,
         headline,
         source,
-        date: _fmtDate(item.pubDate ?? item.published ?? item.updated ?? ""),
-        summary: _stripHtml(item.description ?? item.summary ?? item["content:encoded"] ?? "").slice(0, 350),
+        date: _fmtDate(publishedAt),
+        publishedAt,
+        summary,
         url: link,
-        urgency: _urgency(headline),
-        thumbnailUrl: thumbnailUrl ?? _topicThumbnail({ title: headline, source, urgency: _urgency(headline) }),
-        thumbnailKind: thumbnailUrl ? "feed" : "fallback",
+        urgency,
+        category: _category({ headline, summary }, categoryHint),
+        isLocal,
+        thumbnailUrl: thumbnailUrl ?? undefined,
+        thumbnailKind: thumbnailUrl ? "feed" : undefined,
       };
     }).filter((item) => item.headline.length > 10 && _isTradeNewsCandidate(item));
   } catch {
@@ -381,44 +407,37 @@ router.get("/api/news", async (request, response) => {
     ? `construction+contractor+${encodeURIComponent(city)}+${encodeURIComponent(state)}`
     : null;
 
-  const [enr, dive, osha, gnNat, gnLocal] = await Promise.allSettled([
-    _fetchFeed("https://www.enr.com/rss/news",                                                         "ENR"),
-    _fetchFeed("https://www.constructiondive.com/feeds/news/",                                         "Construction Dive"),
-    _fetchFeed("https://www.osha.gov/news/newsreleases/trade/rss",                                    "OSHA"),
-    _fetchFeed(`https://news.google.com/rss/search?q=${natQ}&hl=en-US&gl=US&ceid=US:en`,             "Google News"),
-    localQ
-      ? _fetchFeed(`https://news.google.com/rss/search?q=${localQ}&hl=en-US&gl=US&ceid=US:en`, city ? `${city} News` : "Local News")
-      : Promise.resolve([]),
-  ]);
+  const topicalFeeds = [
+    ["construction contractor skilled trades", "Construction"],
+    ["construction OSHA jobsite safety", "Safety"],
+    ["building code permits contractor", "Codes"],
+    ["construction labor workforce apprenticeship", "Labor"],
+    ["construction tools equipment", "Tools"],
+    ["construction business contractors", "Business"],
+    ["construction projects infrastructure", "Projects"],
+  ];
+  const feedRequests = [
+    _fetchFeed("https://www.enr.com/rss/news", "ENR"),
+    _fetchFeed("https://www.constructiondive.com/feeds/news/", "Construction Dive"),
+    _fetchFeed("https://www.osha.gov/news/newsreleases.xml", "OSHA", "Safety"),
+    ...topicalFeeds.map(([query, category]) => _fetchFeed(`https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=en-US&gl=US&ceid=US:en`, "Google News", category)),
+    _fetchFeed(`https://news.google.com/rss/search?q=${natQ}&hl=en-US&gl=US&ceid=US:en`, "Google News"),
+    ...(localQ ? [
+      _fetchFeed(`https://news.google.com/rss/search?q=${localQ}&hl=en-US&gl=US&ceid=US:en`, `${city} News`, "Construction", true),
+      _fetchFeed(`https://news.google.com/rss/search?q=${encodeURIComponent("Jacksonville Florida contractor construction permits projects")}&hl=en-US&gl=US&ceid=US:en`, "Jacksonville / Florida", "Construction", true),
+    ] : []),
+  ];
+  const settledFeeds = await Promise.allSettled(feedRequests);
 
   const pick = (r) => r.status === "fulfilled" ? r.value : [];
-  const localItems = pick(gnLocal).map((item) => ({ ...item, isLocal: true }));
-  // Live sources are the product. Curated articles only keep the screen useful during a source outage.
-  const liveItems = [...localItems, ...pick(enr), ...pick(dive), ...pick(osha), ...pick(gnNat)];
+  const liveItems = settledFeeds.flatMap(pick);
   const fallback = liveItems.length === 0;
-  const all = fallback ? curatedTradeNews : liveItems;
-
-  const seen = new Set();
-  const deduped = all.filter((item) => {
-    const key = item.headline.toLowerCase().slice(0, 55);
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
-
-  deduped.sort((a, b) => {
-    if (a.isLocal && !b.isLocal) return -1;
-    if (!a.isLocal && b.isLocal) return 1;
-    if (a.urgency && !b.urgency) return -1;
-    if (!a.urgency && b.urgency) return 1;
-    return 0;
-  });
-
-  const items = (await _enrichNewsImages(deduped.slice(0, 30))).map((item, i) => ({
+  const ranked = _dedupeAndDiversify(liveItems, 30);
+  const items = (await _enrichNewsImages(ranked)).map((item, i) => ({
     ...item,
     id: i + 1,
-    thumbnailUrl: item.thumbnailUrl || _fallbackNewsThumbnail(item),
-    thumbnailKind: item.thumbnailKind ?? "fallback",
+    thumbnailUrl: item.thumbnailUrl || undefined,
+    thumbnailKind: item.thumbnailKind,
   }));
   newsCache.set(cacheKey, { items, fallback, fetchedAt: Date.now() });
   _pruneNewsCache();
@@ -431,7 +450,11 @@ export function createNewsRouter() {
 export const newsInternals = {
   NEWS_CACHE_MAX_ENTRIES,
   NEWS_LOCATION_MAX_LENGTH,
+  _canonicalArticleUrl,
+  _dedupeAndDiversify,
   _normalizeNewsLocation,
   _pruneNewsCache,
+  _resolvePublicImageUrl,
+  _rssThumbnailUrl,
   newsCache,
 };

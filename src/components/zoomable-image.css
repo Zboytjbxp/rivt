@@ -75,7 +75,7 @@
 .v2-image-viewer-controls output {
   min-width: 48px;
   color: #fff;
-  font-size: 14px;
+  font-size: calc(14px * var(--v2-text-scale));
   font-weight: 750;
   text-align: center;
 }

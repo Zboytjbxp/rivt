@@ -102,10 +102,9 @@ const newsPayload = {
         "Contractors are watching equipment labels, recovery practices, and compatible tooling as newer refrigerants hit more field installs.",
       source: "EPA SNAP",
       url: "https://www.epa.gov/snap",
-      thumbnailUrl: "/news/hvac-refrigerant.svg",
-      thumbnailKind: "fallback",
       date: "Jun 19, 2026",
       urgency: "Code watch",
+      category: "Codes",
     },
   ],
 };
@@ -154,6 +153,7 @@ async function waitForServer() {
 }
 
 async function configurePage(page) {
+  await page.route("https://fonts.googleapis.com/**", (route) => route.fulfill({ status: 200, contentType: "text/css", body: "" }));
   await page.addInitScript((storageKey) => {
     window.localStorage.removeItem(storageKey);
   }, reactionStorageKey);
@@ -352,6 +352,10 @@ try {
       if (message.type() === "error") errors.push(message.text());
     });
     page.on("pageerror", (error) => errors.push(error.message));
+    page.on("requestfailed", (request) => {
+      const failure = request.failure()?.errorText ?? "request failed";
+      if (failure.includes("ERR_NETWORK_ACCESS_DENIED")) errors.push(`${failure}: ${request.url()}`);
+    });
 
     await configurePage(page);
 

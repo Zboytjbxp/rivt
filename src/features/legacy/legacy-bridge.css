@@ -11,7 +11,7 @@
 }
 
 .v2-legacy-eyebrow {
-  font-size: 13px;
+  font-size: calc(13px * var(--v2-text-scale));
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--v2-accent);
