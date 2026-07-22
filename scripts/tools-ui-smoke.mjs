@@ -490,6 +490,11 @@ async function chooseQuickEntry(page, digit, optionLabel, viewportName) {
   });
   const box = await key.boundingBox();
   assert.ok(box, `expected quick-entry key ${digit} to be visible in ${viewportName}`);
+  assert.equal(
+    await key.evaluate((element) => getComputedStyle(element).userSelect),
+    "none",
+    `quick-entry key ${digit} must not trigger browser text selection in ${viewportName}`,
+  );
 
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
   await page.mouse.down();
@@ -498,6 +503,12 @@ async function chooseQuickEntry(page, digit, optionLabel, viewportName) {
 
   const menu = page.getByRole("menu", { name: `Quick fractions for ${digit}` });
   await menu.waitFor({ state: "visible", timeout: 5_000 });
+  const menuBox = await menu.boundingBox();
+  assert.ok(menuBox, `expected quick-entry menu ${digit} to have a layout box in ${viewportName}`);
+  assert.ok(
+    menuBox.y + menuBox.height <= box.y + 4,
+    `quick-entry menu ${digit} should open above the held key in ${viewportName}`,
+  );
   await menu.getByRole("menuitem", { name: `Enter ${optionLabel}` }).click();
   await menu.waitFor({ state: "hidden", timeout: 5_000 });
 }
@@ -662,6 +673,15 @@ async function runToolsFlow(page, viewportName) {
     await page.locator(".calc-primary-value").textContent(),
     '6 7/8"',
     "holding 7 should offer the fast 7/8 entry without changing ordinary digit taps",
+  );
+  await page.getByRole("button", { name: "Clear calculator" }).click();
+  await page.getByLabel("Fraction calculator keypad").getByRole("button", { name: "6" }).click();
+  await chooseQuickEntry(page, "8", "1/8", viewportName);
+  await page.locator(".calc-primary-value", { hasText: '6 1/8"' }).waitFor({ timeout: 15_000 });
+  assert.equal(
+    await page.locator(".calc-primary-value").textContent(),
+    '6 1/8"',
+    "holding 8 should expose the eighths family and enter 1/8",
   );
   await page.getByRole("button", { name: "Clear calculator" }).click();
   await page.getByLabel("Fraction calculator keypad").getByRole("button", { name: "2" }).click();

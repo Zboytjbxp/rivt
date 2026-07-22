@@ -1,5 +1,5 @@
 import { ArrowLeft, Clipboard, Clock3, Copy, RotateCcw, Ruler, Settings2, Trash2, X } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { type CSSProperties, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { DialogBackdrop, DialogSurface } from "../../components/ui";
 
@@ -27,9 +27,12 @@ const METRIC_TENTH_BUTTONS = Array.from({ length: 9 }, (_, index) => index + 1);
 const QUICK_ENTRY_HOLD_MS = 380;
 const IMPERIAL_DIGIT_FRACTIONS: Record<string, number[]> = {
   "1": [1, 2, 4, 8],
+  "2": [8],
   "3": [3, 6, 12],
+  "4": [4, 8, 12],
   "5": [5, 10],
   "7": [7, 14],
+  "8": [2, 6, 10, 14],
   "9": [9],
 };
 const RULER_TICKS = [
@@ -72,6 +75,13 @@ type QuickEntryOption = {
   value: number;
 };
 
+type QuickEntryMenuPosition = {
+  left: number;
+  bottom: number;
+  width: number;
+  arrowLeft: number;
+};
+
 function QuickEntryDigitKey({
   digit,
   options,
@@ -91,6 +101,26 @@ function QuickEntryDigitKey({
   const suppressClickRef = useRef(false);
   const suppressResetTimerRef = useRef<number | null>(null);
   const [open, setOpen] = useState(false);
+  const [menuPosition, setMenuPosition] = useState<QuickEntryMenuPosition | null>(null);
+
+  function openQuickEntry() {
+    const rect = buttonRef.current?.getBoundingClientRect();
+    if (!rect) return;
+
+    const viewportWidth = window.innerWidth;
+    const width = Math.min(320, viewportWidth - 24);
+    const keyCenter = rect.left + rect.width / 2;
+    const left = Math.min(Math.max(12, keyCenter - width / 2), viewportWidth - width - 12);
+    const arrowLeft = Math.min(Math.max(18, keyCenter - left), width - 18);
+
+    setMenuPosition({
+      left,
+      bottom: Math.max(12, window.innerHeight - rect.top + 10),
+      width,
+      arrowLeft,
+    });
+    setOpen(true);
+  }
 
   function cancelHold() {
     if (holdTimerRef.current !== null) window.clearTimeout(holdTimerRef.current);
@@ -116,8 +146,15 @@ function QuickEntryDigitKey({
     function closeOnEscape(event: KeyboardEvent) {
       if (event.key === "Escape") setOpen(false);
     }
+    function closeOnViewportChange() {
+      setOpen(false);
+    }
     window.addEventListener("keydown", closeOnEscape);
-    return () => window.removeEventListener("keydown", closeOnEscape);
+    window.addEventListener("resize", closeOnViewportChange);
+    return () => {
+      window.removeEventListener("keydown", closeOnEscape);
+      window.removeEventListener("resize", closeOnViewportChange);
+    };
   }, [open]);
 
   return (
@@ -125,6 +162,7 @@ function QuickEntryDigitKey({
       <button
         ref={buttonRef}
         type="button"
+        className={options.length ? "has-quick-entry" : undefined}
         aria-haspopup={options.length ? "menu" : undefined}
         aria-expanded={options.length ? open : undefined}
         aria-label={options.length ? `${digit}. Hold for quick entry.` : digit}
@@ -133,7 +171,7 @@ function QuickEntryDigitKey({
           pointerOriginRef.current = { x: event.clientX, y: event.clientY };
           holdTimerRef.current = window.setTimeout(() => {
             suppressClickRef.current = true;
-            setOpen(true);
+            openQuickEntry();
             navigator.vibrate?.(12);
           }, QUICK_ENTRY_HOLD_MS);
         }}
@@ -153,8 +191,9 @@ function QuickEntryDigitKey({
         onPointerCancel={cancelHold}
         onPointerLeave={cancelHold}
         onContextMenu={(event) => {
-          if (options.length) event.preventDefault();
+          event.preventDefault();
         }}
+        onDragStart={(event) => event.preventDefault()}
         onClick={() => {
           if (suppressClickRef.current) {
             clearClickSuppression();
@@ -166,13 +205,19 @@ function QuickEntryDigitKey({
         {digit}
         {options.length ? <span className="calc-hold-cue" aria-hidden="true" /> : null}
       </button>
-      {open ? createPortal(
+      {open && menuPosition ? createPortal(
         <div className="calc-quick-entry-layer" role="presentation" onPointerDown={() => setOpen(false)}>
           <div
             className="calc-quick-entry-menu"
             role="menu"
             aria-label={menuLabel}
             onPointerDown={(event) => event.stopPropagation()}
+            style={{
+              left: menuPosition.left,
+              bottom: menuPosition.bottom,
+              width: menuPosition.width,
+              "--calc-quick-arrow-left": `${menuPosition.arrowLeft}px`,
+            } as CSSProperties}
           >
             <span>{menuLabel}</span>
             <div>
