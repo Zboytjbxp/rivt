@@ -1,11 +1,38 @@
 # RIVT Build State
 
-Last updated: 2026-07-21 America/New_York
+Last updated: 2026-07-22 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Launch verification reconciliation is in progress.
-Active packet: Accessibility text-scale and Trade News live-source pass on `codex/accessibility-trade-news`
-Repository branch: `codex/accessibility-trade-news`
-Production feature release commit: `36e413df7dc2a17502bd5aad0813e17e414e892f`
+Current phase: Shop Talk and Communities release hardening is in progress.
+Active packet: Shop Talk and Communities release packet on `codex/shop-talk-communities-release`
+Repository branch: `codex/shop-talk-communities-release`
+Production feature release commit: pending
+
+## Shop Talk and Communities Release Hardening (Local Verification)
+
+- Authenticated Shop Talk and Communities now cold-start from empty server-owned
+  state. The prior RIVT starter-post module and device-local joined-community
+  cache were removed so latency or an unavailable API cannot look like organic
+  activity or durable account membership. Guest preview remains an explicit,
+  labeled preview workspace.
+- Join/leave remains an optimistic interaction, but it rolls back on API
+  failure and always reconciles from the server's membership response.
+- Trade News now gives each user persisted controls for local-versus-all-region
+  coverage, topic, and source. Changing location scope refetches the feed; topic
+  and source filters operate only on real returned articles.
+- The primary navigation again follows the approved Home, Work, Crew, Shop
+  Talk, Tools contract. Camera remains reachable through Tools field shortcuts
+  and exact Work/project handoffs.
+- Rendered Shop Talk/Trade News QA passes at desktop and mobile widths with the
+  new controls and no horizontal overflow. Mobile action QA passes, including
+  the 375x553 and 390x664 Standard/Large/Extra Large matrix and the restored
+  Crew primary destination.
+- Passed locally: build, lint, 61 unit/frontend tests, E2E, Shop Talk/Trade News
+  rendered QA, mobile action QA, dependency audit (zero vulnerabilities), and
+  diff check. The aggregate `npm run test` entered the PostgreSQL-backed phase
+  and exceeded a bounded 124-second run without emitting a failing assertion;
+  no aggregate integration pass is claimed.
+- No schema, migration, dependency, billing, production-data, or server
+  authorization change. Deployment evidence is pending.
 
 ## Accessibility Text Scale and Trade News Live Sources (Complete and Deployed)
 

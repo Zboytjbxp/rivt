@@ -1803,3 +1803,21 @@ Evidence must eventually link to implementation, automated tests, manual accepta
   30 articles from 20 sources across all seven requested categories, 18
   legitimate feed/article images, 12 explicit no-image items, zero internal
   fallback artwork, and zero missing source URLs.
+## Traceability Addendum - 2026-07-22 Shop Talk and Communities Release Hardening
+
+- `GA-UX-005` gains cold-start honesty evidence: authenticated Shop Talk posts,
+  communities, and joined state now begin empty and hydrate only from the
+  authenticated APIs; RIVT starter prompts and device-local membership state no
+  longer appear while server truth is pending or unavailable.
+- `GA-COM-001` and `GA-COM-002` gain membership-integrity evidence: community
+  join/leave UI reconciles from server-owned membership and rolls optimistic
+  changes back when persistence fails.
+- `GA-UX-003` gains user-control evidence: Trade News persists location scope,
+  topic, and source choices, refetches local versus all-region coverage, and
+  filters only returned source articles.
+- `GA-UX-003` gains navigation-contract evidence: the five primary
+  destinations are Home, Work, Crew, Shop Talk, and Tools; Camera remains
+  reachable through contextual Work handoffs and Tools field shortcuts.
+- `GA-UX-006` and `GA-OPS-007` gain repeatable rendered evidence from Shop
+  Talk/Trade News desktop/mobile QA and the 375x553 plus 390x664 three-text-size
+  mobile matrix, alongside build, lint, unit, E2E, and dependency audit gates.

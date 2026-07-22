@@ -364,11 +364,12 @@ async function runMobileFlow(page) {
   assert.equal(await page.locator(".trade-feed-cta-row").count(), 0, "Home should not render duplicate post/crew CTA rows");
   await page.screenshot({ path: path.join(screenshotDir, "mobile-home-clean.png"), fullPage: true });
 
-  await page.getByRole("button", { name: "Camera", exact: true }).click();
+  await page.getByRole("button", { name: "Tools", exact: true }).click();
+  await page.getByLabel("Field shortcuts").getByRole("button", { name: "Camera", exact: true }).click();
   await page.getByRole("heading", { name: "Camera", exact: true }).waitFor({ timeout: 15_000 });
   await page.getByRole("heading", { name: "Private photos", exact: true }).waitFor({ timeout: 15_000 });
   await page.locator(".v2-camera-album-card", { hasText: "Private photos" }).waitFor({ timeout: 15_000 });
-  assert.equal(await page.locator(".v2-mobile-nav .is-camera-command").count(), 0, "Camera should be an equal global destination, not an oversized command");
+  assert.equal(await page.locator(".v2-mobile-nav").getByRole("button", { name: "Crew", exact: true }).count(), 1, "Crew should remain a primary destination");
   const cameraDestination = page.getByLabel("Camera actions").getByRole("button", { name: "Destination", exact: true });
   const cameraDestinationBox = await cameraDestination.boundingBox();
   assert.ok(cameraDestinationBox && cameraDestinationBox.y + cameraDestinationBox.height <= 844, `Camera tab destination should stay in the thumb-zone viewport: ${JSON.stringify(cameraDestinationBox)}`);
@@ -638,7 +639,7 @@ async function runMobileFlow(page) {
         const box = await button.boundingBox();
         assert.ok(box && box.x >= 0 && box.x + box.width <= viewport.width, `${shortcut} shortcut should reflow at ${viewport.width}x${viewport.height} ${scale}`);
       }
-      for (const navName of ["Home", "Work", "Camera", "Shop Talk", "Tools"]) {
+      for (const navName of ["Home", "Work", "Crew", "Shop Talk", "Tools"]) {
         const box = await page.getByRole("navigation", { name: "Primary navigation" }).getByRole("button", { name: navName, exact: true }).boundingBox();
         assert.ok(box && box.x >= 0 && box.x + box.width <= viewport.width, `${navName} bottom navigation should fit at ${viewport.width}x${viewport.height} ${scale}`);
       }

@@ -77,7 +77,6 @@ import type {
   PostType,
 } from "./features/shop-talk/ShopTalkView";
 import { communityBadgeLabelsFromReputation, relativeTime } from "./features/shop-talk/community-utils";
-import { communityPromptPosts } from "./features/shop-talk/fallback-data";
 import {
   createShopTalkAnswer,
   createShopTalkPost,
@@ -93,7 +92,6 @@ import {
 } from "./features/shop-talk/shop-talk-api";
 import { communitySlug, fetchCommunities, type ServerCommunity } from "./features/shop-talk/communities-api";
 import {
-  fallbackCommunities,
   mapServerCommunity,
   type CommunityDisplay,
 } from "./features/shop-talk/community-directory";
@@ -570,8 +568,10 @@ function App() {
   const [safetyQuizResults, setSafetyQuizResults] = useState<Record<string, SafetyQuizResult>>(readSafetyQuizResults);
   const [feedbackItems] = useState<FeedbackItem[]>([]);
   const [paymentRecords] = useState<PaymentRecord[]>([]);
-  const [communityPosts, setCommunityPosts] = useState<CommunityPost[]>(communityPromptPosts);
-  const [communities, setCommunities] = useState<CommunityDisplay[]>(fallbackCommunities);
+  // Authenticated community state starts empty and is populated only by the
+  // server. Guest preview data is installed explicitly by handleBrowseAsGuest.
+  const [communityPosts, setCommunityPosts] = useState<CommunityPost[]>([]);
+  const [communities, setCommunities] = useState<CommunityDisplay[]>([]);
   const [, setCommunityReports] = useState<CommunityReport[]>([]);
   const [shoutOuts, setShoutOuts] = useState<ShoutOut[]>([]);
   const shopTalkPostsRequestRef = useRef(0);
@@ -2302,8 +2302,8 @@ function App() {
     setInboxMessages([]);
     setInboxNotifications([]);
     setUploadedRecords(new Set());
-    setCommunityPosts(communityPromptPosts);
-    setCommunities(fallbackCommunities);
+    setCommunityPosts([]);
+    setCommunities([]);
     setShoutOuts([]);
     setAccountProfile((current) => ({ ...current, displayName: "" }));
   }
@@ -2324,8 +2324,8 @@ function App() {
     setInboxMessages([]);
     setInboxNotifications([]);
     setUploadedRecords(new Set());
-    setCommunityPosts(communityPromptPosts);
-    setCommunities(fallbackCommunities);
+    setCommunityPosts([]);
+    setCommunities([]);
     setShoutOuts([]);
     setAccountProfile((current) => ({ ...current, displayName: "" }));
   }

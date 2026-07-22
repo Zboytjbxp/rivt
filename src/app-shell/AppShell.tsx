@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from "react";
 import {
   Bell,
   BriefcaseBusiness,
-  Camera,
   ChevronDown,
   HardHat,
   Home,
@@ -24,7 +23,7 @@ const primaryNavigation: Array<{
 }> = [
   { destination: "home", label: "Home", icon: Home },
   { destination: "work", label: "Work", icon: BriefcaseBusiness },
-  { destination: "camera", label: "Camera", icon: Camera },
+  { destination: "crew", label: "Crew", icon: HardHat },
   { destination: "shop-talk", label: "Shop Talk", icon: MessageCircle },
   { destination: "tools", label: "Tools", icon: Wrench },
 ];

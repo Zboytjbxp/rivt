@@ -196,6 +196,20 @@ async function configurePage(page) {
       body: JSON.stringify({ data: { notifications: [], unreadCount: 0 } }),
     }),
   );
+  await page.route(/\/api\/v1\/communities(?:\?.*)?$/, (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        data: {
+          communities: [
+            { id: "community-carpentry", slug: "carpentry-talk", name: "Carpentry Talk", description: "Trim, framing, punch-out", audience: "public", memberCount: 2, joined: false, role: null },
+            { id: "community-jax", slug: "jacksonville-trades", name: "Jacksonville Trades", description: "Local work and referrals", audience: "public", memberCount: 3, joined: true, role: "member" },
+          ],
+        },
+      }),
+    }),
+  );
   await page.route(/\/api\/v1\/shop-talk\/posts(?:\?.*)?$/, (route) =>
     route.fulfill({
       status: 200,
@@ -425,6 +439,12 @@ try {
       await mobileBack.click();
     }
     await page.getByRole("button", { name: "Trade News" }).click();
+    await page.getByLabel("Trade News filters").getByLabel("Location").waitFor({ timeout: 15_000 });
+    await page.getByLabel("Trade News filters").getByLabel("Topic").selectOption("Codes");
+    await page.getByLabel("Trade News filters").getByLabel("Source").selectOption({ index: 1 });
+    await assertNoHorizontalOverflow(page);
+    await page.getByLabel("Trade News filters").getByLabel("Topic").selectOption("All topics");
+    await page.getByLabel("Trade News filters").getByLabel("Source").selectOption("All sources");
     await page.getByRole("heading", { name: /What's changing in the field/i }).waitFor({ timeout: 15_000 });
     await page.locator('input[placeholder="Search sources, codes, safety, local"]').fill("permit");
     await page

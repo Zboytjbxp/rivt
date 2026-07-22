@@ -3802,3 +3802,37 @@ html[data-rivt-compact-device="true"] .shop-talk-community-layout .shop-talk-sea
     font-size: calc(13px * var(--v2-text-scale));
   }
 }
+.news-filter-control {
+  display: grid;
+  gap: 3px;
+  min-width: min(160px, 100%);
+  color: var(--v2-text-muted);
+  font-size: calc(11px * var(--v2-text-scale));
+  font-weight: var(--v2-weight-bold);
+}
+
+.news-filter-control select {
+  max-width: 100%;
+  min-height: 40px;
+  border: 1px solid var(--v2-border);
+  border-radius: var(--v2-radius-sm);
+  background: var(--v2-surface);
+  color: var(--v2-text);
+  padding: 0 30px 0 10px;
+  font: inherit;
+}
+
+@media (max-width: 720px) {
+  .news-fieldbar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .news-fieldbar .shop-talk-search {
+    grid-column: 1 / -1;
+  }
+
+  .news-filter-control:first-of-type {
+    grid-column: 1 / -1;
+  }
+}

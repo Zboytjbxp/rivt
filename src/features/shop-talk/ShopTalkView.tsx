@@ -690,9 +690,9 @@ export function ShopTalkView({
   const attemptedDeepLinkPostIds = useRef(new Set<string>());
   const [answerDraft, setAnswerDraft] = useState("");
   const [newPostOpen, setNewPostOpen] = useState(Boolean(openComposer));
-  const [joinedCommunities, setJoinedCommunities] = useState<Set<string>>(() => {
-    return readStringSet("rivt.joinedCommunities.v1", communitySlug);
-  });
+  const [joinedCommunities, setJoinedCommunities] = useState<Set<string>>(
+    () => new Set(communities.filter((community) => community.joined).map((community) => community.slug)),
+  );
   const [communityQuery, setCommunityQuery] = useState("");
   const [communityCreateOpen, setCommunityCreateOpen] = useState(false);
   const [communityCreateError, setCommunityCreateError] = useState<string | null>(null);
@@ -703,6 +703,9 @@ export function ShopTalkView({
   const [selectedCommunitySlug, setSelectedCommunitySlug] = useState<string | null>(initialCommunitySlug ?? null);
   const [talkQuery, setTalkQuery] = useState(() => initialQuery.trim());
   const [newsQuery, setNewsQuery] = useState("");
+  const [newsCategory, setNewsCategory] = useState(() => localStorage.getItem("rivt.news.category.v1") || "All topics");
+  const [newsSource, setNewsSource] = useState(() => localStorage.getItem("rivt.news.source.v1") || "All sources");
+  const [newsScope, setNewsScope] = useState<"local" | "all">(() => localStorage.getItem("rivt.news.scope.v1") === "all" ? "all" : "local");
   const [liveNews, setLiveNews] = useState<NewsItem[]>([]);
   const [newsLoading, setNewsLoading] = useState(false);
   const [newsFetched, setNewsFetched] = useState(false);
@@ -728,16 +731,18 @@ export function ShopTalkView({
     if (answerQueueOnly) return;
     writeShopTalkFilterPrefs({ sortMode, tradeFilter, flairFilter, filterType });
   }, [answerQueueOnly, flairFilter, filterType, sortMode, tradeFilter]);
-  const serverCommunitiesLoaded = communities.some((community) => community.serverOwned);
-
   useEffect(() => {
-    if (!serverCommunitiesLoaded) return;
     const next = new Set(communities.filter((community) => community.joined).map((community) => community.slug));
     /* eslint-disable react-hooks/set-state-in-effect */
     setJoinedCommunities(next);
     /* eslint-enable react-hooks/set-state-in-effect */
-    try { localStorage.setItem("rivt.joinedCommunities.v1", JSON.stringify([...next])); } catch { /* ignore */ }
-  }, [communities, serverCommunitiesLoaded]);
+  }, [communities]);
+
+  useEffect(() => {
+    localStorage.setItem("rivt.news.category.v1", newsCategory);
+    localStorage.setItem("rivt.news.source.v1", newsSource);
+    localStorage.setItem("rivt.news.scope.v1", newsScope);
+  }, [newsCategory, newsScope, newsSource]);
 
   const tradeFilters = ["All trades", "General", ...specialtyOptions];
   const primaryTrade = profile.specialties[0] ?? selectedJobTrade;
@@ -846,7 +851,6 @@ export function ShopTalkView({
       const next = new Set(prev);
       if (willJoin) next.add(community.slug);
       else next.delete(community.slug);
-      try { localStorage.setItem("rivt.joinedCommunities.v1", JSON.stringify([...next])); } catch { /* ignore */ }
       return next;
     });
     const saved = await setCommunityMembership(community.slug, willJoin);
@@ -855,7 +859,6 @@ export function ShopTalkView({
       const next = new Set(prev);
       if (willJoin) next.delete(community.slug);
       else next.add(community.slug);
-      try { localStorage.setItem("rivt.joinedCommunities.v1", JSON.stringify([...next])); } catch { /* ignore */ }
       return next;
     });
     setCommunityCreateError(willJoin
@@ -894,12 +897,15 @@ export function ShopTalkView({
     }
   }
 
-  async function activateNews(forceRefresh = false) {
+  async function activateNews(forceRefresh = false, scopeOverride: "local" | "all" = newsScope) {
     setActiveTab("news");
     if (newsFetched && !forceRefresh) return;
     setNewsLoading(true);
     try {
-      const response = await fetchWithTimeout(apiPath(`/api/news?location=${encodeURIComponent(userLocation)}${forceRefresh ? "&refresh=1" : ""}`));
+      const params = new URLSearchParams();
+      if (scopeOverride === "local" && userLocation.trim()) params.set("location", userLocation.trim());
+      if (forceRefresh) params.set("refresh", "1");
+      const response = await fetchWithTimeout(apiPath(`/api/news?${params.toString()}`));
       if (!response.ok) throw new Error("Trade News request failed");
       const data = await response.json() as { items?: NewsItem[]; fallback?: boolean; cached?: boolean };
       const items = Array.isArray(data.items) ? data.items : [];
@@ -945,9 +951,13 @@ export function ShopTalkView({
     if (normalizedTalkQuery && !searchable.includes(normalizedTalkQuery)) return false;
     return true;
   });
+  const newsCategories = ["All topics", ...new Set(displayNews.map((item) => item.category || "General"))];
+  const newsSources = ["All sources", ...new Set(displayNews.map((item) => item.source).filter(Boolean))];
   const filteredNews = displayNews.filter((item) => {
+    if (newsCategory !== "All topics" && (item.category || "General") !== newsCategory) return false;
+    if (newsSource !== "All sources" && item.source !== newsSource) return false;
     if (!normalizedNewsQuery) return true;
-    return [item.headline, item.summary, item.source, item.urgency ?? "", item.date].join(" ").toLowerCase().includes(normalizedNewsQuery);
+    return [item.headline, item.summary, item.source, item.category ?? "", item.urgency ?? "", item.date].join(" ").toLowerCase().includes(normalizedNewsQuery);
   });
   const sortedPosts = [...filteredPosts].sort((a, b) => {
     if (sortMode === "new") return postSortValue(b) - postSortValue(a);
@@ -1395,6 +1405,29 @@ export function ShopTalkView({
                     onChange={(event) => setNewsQuery(event.target.value)}
                     placeholder="Search sources, codes, safety, local"
                   />
+                </label>
+                <label className="news-filter-control">
+                  <span>Location</span>
+                  <select value={newsScope} onChange={(event) => {
+                    const nextScope = event.target.value === "all" ? "all" : "local";
+                    setNewsScope(nextScope);
+                    void activateNews(true, nextScope);
+                  }}>
+                    <option value="local">Near {userLocation || "me"}</option>
+                    <option value="all">All regions</option>
+                  </select>
+                </label>
+                <label className="news-filter-control">
+                  <span>Topic</span>
+                  <select value={newsCategories.includes(newsCategory) ? newsCategory : "All topics"} onChange={(event) => setNewsCategory(event.target.value)}>
+                    {newsCategories.map((category) => <option key={category}>{category}</option>)}
+                  </select>
+                </label>
+                <label className="news-filter-control">
+                  <span>Source</span>
+                  <select value={newsSources.includes(newsSource) ? newsSource : "All sources"} onChange={(event) => setNewsSource(event.target.value)}>
+                    {newsSources.map((source) => <option key={source}>{source}</option>)}
+                  </select>
                 </label>
               </div>
               <div className="shop-news-list">
