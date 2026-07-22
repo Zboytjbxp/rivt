@@ -162,7 +162,10 @@ const appSlug = envValue("APP_SLUG", "rivt");
 const sessionCookieName = `${appSlug}_session`;
 const sessionMaxAgeMs = Number(process.env.SESSION_MAX_AGE_MS ?? 1000 * 60 * 60 * 24 * 30);
 const appVersion = envValue("APP_VERSION", "0.1.0");
-const sourceCommit = envValue("RAILWAY_GIT_COMMIT_SHA", envValue("SOURCE_COMMIT", "unknown"));
+// CLI/archive deployments can inherit stale Railway Git metadata. Operators
+// set SOURCE_COMMIT to the immutable commit being uploaded; prefer that
+// explicit provenance value while retaining Railway's SHA for Git deploys.
+const sourceCommit = envValue("SOURCE_COMMIT", envValue("RAILWAY_GIT_COMMIT_SHA", "unknown"));
 let migrationVersion = envValue("MIGRATION_VERSION", "uninitialized");
 let migrationState = "pending"; // "pending" | "running" | "ready" | "failed"
 let migrationErrorDetail = null;
