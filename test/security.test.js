@@ -236,6 +236,26 @@ test("trade news assigns useful trade filters without inventing a specialty", ()
   );
 });
 
+test("trade news exposes transparent topics, impact, and related-source clusters", () => {
+  assert.deepEqual(
+    newsInternals._topics({
+      headline: "OSHA updates electrical inspection rule",
+      summary: "Contractors face a new permit inspection requirement.",
+    }),
+    ["Safety & OSHA", "Permits & inspections", "Licensing & regulation"],
+  );
+  assert.equal(newsInternals._impact({
+    headline: "Equipment recall requires immediate stop work",
+    summary: "A safety recall affects jobsites.",
+  }).level, "critical");
+  const clustered = newsInternals._clusterStories([
+    { headline: "OSHA heat enforcement changes afternoon jobsite planning", summary: "", source: "OSHA", url: "https://osha.gov/a" },
+    { headline: "OSHA heat enforcement changes jobsite planning nationwide", summary: "", source: "Trade Desk", url: "https://example.com/b" },
+  ]);
+  assert.equal(clustered.length, 1);
+  assert.equal(clustered[0].relatedSourceCount, 2);
+});
+
 test("invoice send validation rejects bad recipients and throttles repeated sends", () => {
   const normalizePhoneNumber = (value) => String(value ?? "").replace(/[^\d+]/g, "");
   const base = {

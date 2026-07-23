@@ -7,6 +7,39 @@ Active packet: Shop Talk and Communities release packet on `codex/shop-talk-comm
 Repository branch: `codex/shop-talk-communities-release`
 Production feature release commit: `c80444ccf72a3a381121c08abf70fac5c3798d8b`
 
+## Dedicated-Grade Trade Intelligence Redesign (Local Verification)
+
+- Trade News now behaves as a briefing product rather than a flat RSS list.
+  Channels include For you, Local, Critical, Following, Latest, Projects,
+  Global, and Saved. Users can persist followed trades/topics, a coverage
+  location, and saved articles on the device without hiding source attribution.
+- The server now assigns multiple trade and topic labels, geography, official
+  versus publisher provenance, and a transparent impact level/reason. Impact
+  copy describes the source signals used by RIVT; it does not invent deadlines,
+  requirements, article facts, or images.
+- Related headlines are clustered by bounded title-token similarity and expose
+  their real source count. Canonical URL/title deduplication, freshness,
+  locality, source diversification, bounded Open Graph imagery, and honest
+  no-image fallbacks remain in force.
+- Coverage now includes additional searches for recalls, inspections,
+  licensing, materials/supply chain, construction technology, specialty
+  trades, global construction, and official-domain discovery for Jacksonville,
+  the Florida Building Commission, and Florida contractor licensing.
+- The mobile information architecture now provides a daily briefing strip,
+  horizontally scrollable channels, a deliberate lead story, compact impact
+  and trade/topic tags, source/official markers, saved-story controls, a
+  customizable follow panel, and a detailed `Why RIVT flagged it` explanation.
+- Critical is an in-app briefing channel, not a claim of push/email delivery.
+  Durable notification delivery remains governed by the existing server-owned
+  Web Push controls; no frontend-only preference is presented as a delivered
+  production alert.
+- Passed locally: build, lint, 63 unit/frontend tests, E2E, rendered Shop
+  Talk/Trade News QA, the 375x553/390x664 Standard/Large/Extra Large mobile
+  action matrix, dependency audit (zero vulnerabilities), and diff check. The
+  aggregate test command entered the database-backed integration phase and
+  exceeded a bounded four-minute run without returning a failing assertion; no
+  aggregate integration pass is claimed.
+
 ## Trade News Location and Trade Filters (Local Verification)
 
 - `Near [profile location]` now returns only location-scoped RSS candidates.

@@ -83,7 +83,13 @@ const newsPayload = {
       date: "Jun 21, 2026",
       urgency: "Local update",
       category: "Codes",
+      topics: ["Permits & inspections", "Codes & standards"],
       trades: ["Electrical", "Plumbing", "HVAC"],
+      impactLevel: "high",
+      impactReason: "The source describes a permit or inspection change.",
+      sourceKind: "official",
+      geography: "local",
+      isLocal: true,
     },
     {
       id: "osha-heat-safety",
@@ -97,7 +103,13 @@ const newsPayload = {
       date: "Jun 20, 2026",
       urgency: "Safety",
       category: "Safety",
+      topics: ["Safety & OSHA", "Weather & jobsite"],
       trades: ["General construction"],
+      impactLevel: "critical",
+      impactReason: "The source describes an urgent jobsite safety issue.",
+      sourceKind: "official",
+      geography: "local",
+      isLocal: true,
     },
     {
       id: "refrigerant-transition",
@@ -107,10 +119,15 @@ const newsPayload = {
       source: "EPA SNAP",
       url: "https://www.epa.gov/snap",
       date: "Jun 19, 2026",
-      category: "Tools",
       trades: ["HVAC"],
       urgency: "Code watch",
       category: "Codes",
+      topics: ["Codes & standards", "Tools & equipment"],
+      impactLevel: "high",
+      impactReason: "The source describes a compliance or equipment change.",
+      sourceKind: "official",
+      geography: "local",
+      isLocal: true,
     },
   ],
 };
@@ -126,7 +143,11 @@ const nationalNewsPayload = {
     thumbnailKind: "article",
     date: "Jun 22, 2026",
     category: "Codes",
+    topics: ["Codes & standards"],
     trades: ["Electrical"],
+    impactLevel: "high",
+    impactReason: "The source describes a national code change.",
+    geography: "national",
   }],
 };
 
@@ -472,12 +493,21 @@ try {
     await locationFilter.selectOption("local");
     await newsList.getByText("Jacksonville permit desk", { exact: false }).first().waitFor({ timeout: 15_000 });
     assert.equal(await newsList.getByText("National electrical code update", { exact: false }).count(), 0, "local refresh should replace the national result set");
-    await newsFilters.getByLabel("Topic").selectOption("Codes");
+    await newsFilters.getByLabel("Topic").selectOption("Codes & standards");
     await newsFilters.getByLabel("Trade", { exact: true }).selectOption("Electrical");
     await assertNoHorizontalOverflow(page);
     await newsFilters.getByLabel("Topic").selectOption("All topics");
     await newsFilters.getByLabel("Trade", { exact: true }).selectOption("All trades");
-    await page.getByRole("heading", { name: /What's changing in the field/i }).waitFor({ timeout: 15_000 });
+    await page.getByRole("heading", { name: /Know what changes the work/i }).waitFor({ timeout: 15_000 });
+    await page.getByRole("button", { name: /Customize/i }).click();
+    const customize = page.getByLabel("Customize Trade News");
+    await customize.getByRole("button", { name: "Follow Electrical", exact: true }).click();
+    await customize.getByRole("button", { name: "Close Trade News customization" }).click();
+    await page.getByRole("button", { name: "Following", exact: true }).click();
+    await newsList.getByText("Jacksonville permit desk", { exact: false }).first().waitFor();
+    await page.getByRole("button", { name: "Critical", exact: true }).click();
+    await newsList.getByText("OSHA heat safety", { exact: false }).first().waitFor();
+    await page.getByRole("button", { name: "For you", exact: true }).click();
     await page.locator('input[placeholder="Search trades, codes, safety, local"]').fill("permit");
     await page
       .locator(".shop-news-list")

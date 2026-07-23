@@ -1,6 +1,7 @@
 import { type CSSProperties, useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowLeft,
+  AlertTriangle,
   BadgeCheck,
   Bookmark,
   BookmarkCheck,
@@ -66,7 +67,15 @@ export interface NewsItem {
   url: string;
   urgency?: string;
   category?: string;
+  topics?: string[];
   trades?: string[];
+  impactLevel?: "critical" | "high" | "medium" | "routine";
+  impactReason?: string;
+  sourceKind?: "official" | "publisher";
+  geography?: "local" | "national" | "global";
+  isLocal?: boolean;
+  relatedSourceCount?: number;
+  relatedSources?: string[];
   thumbnailUrl?: string;
   thumbnailKind?: "article" | "feed" | "fallback";
 }
@@ -168,6 +177,8 @@ const communityBadgeThresholds: CommunityBadgeThresholds = {
 function isFallbackNewsThumbnail(item: Pick<NewsItem, "thumbnailUrl" | "thumbnailKind">) {
   return !item.thumbnailUrl;
 }
+
+type NewsChannel = "for-you" | "local" | "critical" | "following" | "latest" | "projects" | "global" | "saved";
 
 function newsItemTrades(item: NewsItem) {
   if (item.trades?.length) return item.trades;
@@ -726,6 +737,12 @@ export function ShopTalkView({
   const [newsCategory, setNewsCategory] = useState(() => localStorage.getItem("rivt.news.category.v1") || "All topics");
   const [newsTrade, setNewsTrade] = useState(() => localStorage.getItem("rivt.news.trade.v1") || "All trades");
   const [newsScope, setNewsScope] = useState<"local" | "all">(() => localStorage.getItem("rivt.news.scope.v1") === "all" ? "all" : "local");
+  const [newsLocation, setNewsLocation] = useState(() => localStorage.getItem("rivt.news.location.v1") || userLocation);
+  const [newsChannel, setNewsChannel] = useState<NewsChannel>("for-you");
+  const [newsCustomizeOpen, setNewsCustomizeOpen] = useState(false);
+  const [followedNewsTrades, setFollowedNewsTrades] = useState<Set<string>>(() => readStringSet("rivt.news.followedTrades.v1"));
+  const [followedNewsTopics, setFollowedNewsTopics] = useState<Set<string>>(() => readStringSet("rivt.news.followedTopics.v1"));
+  const [savedNewsUrls, setSavedNewsUrls] = useState<Set<string>>(() => readStringSet("rivt.news.savedUrls.v1"));
   const [liveNews, setLiveNews] = useState<NewsItem[]>([]);
   const [newsLoading, setNewsLoading] = useState(false);
   const [newsFetched, setNewsFetched] = useState(false);
@@ -762,7 +779,13 @@ export function ShopTalkView({
     localStorage.setItem("rivt.news.category.v1", newsCategory);
     localStorage.setItem("rivt.news.trade.v1", newsTrade);
     localStorage.setItem("rivt.news.scope.v1", newsScope);
-  }, [newsCategory, newsScope, newsTrade]);
+    localStorage.setItem("rivt.news.location.v1", newsLocation);
+  }, [newsCategory, newsLocation, newsScope, newsTrade]);
+  useEffect(() => {
+    localStorage.setItem("rivt.news.followedTrades.v1", JSON.stringify([...followedNewsTrades]));
+    localStorage.setItem("rivt.news.followedTopics.v1", JSON.stringify([...followedNewsTopics]));
+    localStorage.setItem("rivt.news.savedUrls.v1", JSON.stringify([...savedNewsUrls]));
+  }, [followedNewsTopics, followedNewsTrades, savedNewsUrls]);
 
   const tradeFilters = ["All trades", "General", ...specialtyOptions];
   const primaryTrade = profile.specialties[0] ?? selectedJobTrade;
@@ -923,7 +946,7 @@ export function ShopTalkView({
     setNewsLoading(true);
     try {
       const params = new URLSearchParams();
-      if (scopeOverride === "local" && userLocation.trim()) params.set("location", userLocation.trim());
+      if (scopeOverride === "local" && newsLocation.trim()) params.set("location", newsLocation.trim());
       if (forceRefresh) params.set("refresh", "1");
       const response = await fetchWithTimeout(apiPath(`/api/news?${params.toString()}`));
       if (!response.ok) throw new Error("Trade News request failed");
@@ -941,6 +964,26 @@ export function ShopTalkView({
     } finally {
       setNewsLoading(false);
       setNewsFetched(true);
+    }
+  }
+
+  function toggleNewsPreference(setter: typeof setFollowedNewsTrades, value: string) {
+    setter((current) => {
+      const next = new Set(current);
+      if (next.has(value)) next.delete(value);
+      else next.add(value);
+      return next;
+    });
+  }
+
+  function selectNewsChannel(channel: NewsChannel) {
+    setNewsChannel(channel);
+    if (channel === "local" && newsScope !== "local") {
+      setNewsScope("local");
+      void activateNews(true, "local");
+    } else if (channel === "latest" && newsScope !== "all") {
+      setNewsScope("all");
+      void activateNews(true, "all");
     }
   }
 
@@ -971,11 +1014,26 @@ export function ShopTalkView({
     if (normalizedTalkQuery && !searchable.includes(normalizedTalkQuery)) return false;
     return true;
   });
-  const newsCategories = ["All topics", ...new Set(displayNews.map((item) => item.category || "General"))];
+  const newsCategories = ["All topics", ...new Set(displayNews.flatMap((item) => item.topics?.length ? item.topics : [item.category || "Industry news"]))];
   const newsTrades = ["All trades", ...new Set(displayNews.flatMap(newsItemTrades))];
   const filteredNews = displayNews.filter((item) => {
-    if (newsCategory !== "All topics" && (item.category || "General") !== newsCategory) return false;
+    const itemTopics = item.topics?.length ? item.topics : [item.category || "Industry news"];
+    const itemTrades = newsItemTrades(item);
+    if (newsCategory !== "All topics" && !itemTopics.includes(newsCategory)) return false;
     if (newsTrade !== "All trades" && !newsItemTrades(item).includes(newsTrade)) return false;
+    if (newsChannel === "local" && !item.isLocal && item.geography !== "local") return false;
+    if (newsChannel === "critical" && !["critical", "high"].includes(item.impactLevel ?? "routine")) return false;
+    if (newsChannel === "following" && !(
+      itemTrades.some((trade) => followedNewsTrades.has(trade)) ||
+      itemTopics.some((topic) => followedNewsTopics.has(topic))
+    )) return false;
+    if (newsChannel === "projects" && !itemTopics.includes("Projects & development")) return false;
+    if (newsChannel === "global" && item.geography !== "global") return false;
+    if (newsChannel === "saved" && !savedNewsUrls.has(item.url)) return false;
+    if (newsChannel === "for-you" && (followedNewsTrades.size || followedNewsTopics.size) && !(
+      itemTrades.some((trade) => followedNewsTrades.has(trade)) ||
+      itemTopics.some((topic) => followedNewsTopics.has(topic))
+    )) return false;
     if (!normalizedNewsQuery) return true;
     return [item.headline, item.summary, item.source, item.category ?? "", item.urgency ?? "", item.date].join(" ").toLowerCase().includes(normalizedNewsQuery);
   });
@@ -1000,6 +1058,7 @@ export function ShopTalkView({
   const selectedNews = filteredNews.find((n) => n.id === selectedNewsId) ?? filteredNews[0];
   const profileBadges = communityBadgeLabelsFromReputation(_reactionSummary, communityBadgeThresholds);
   const newsSourceCount = new Set(filteredNews.map((item) => item.source)).size;
+  const criticalNewsCount = displayNews.filter((item) => ["critical", "high"].includes(item.impactLevel ?? "")).length;
   const selectedPostReactionState = selectedPost
     ? getPostReactionState(selectedPost)
     : { upvotes: 0, downvotes: 0, reaction: null, serverOwned: reactionStatus === "ready", pending: false };
@@ -1402,8 +1461,8 @@ export function ShopTalkView({
             <>
               <div className="shop-talk-command news-command">
                 <div className="shop-talk-command-head">
-                  <span>Trade News</span>
-                  <h2>What's changing in the field</h2>
+                  <span>RIVT Trade Intelligence</span>
+                  <h2>Know what changes the work</h2>
                   <p className="news-command-meta">
                     {filteredNews.length} articles · {newsSourceCount} sources
                   </p>
@@ -1415,6 +1474,63 @@ export function ShopTalkView({
                   <RefreshCw size={17} className={newsLoading ? "is-spinning" : ""} />
                 </button>
               </div>
+              <section className="news-briefing-strip" aria-label="Trade News briefing">
+                <div><strong>{criticalNewsCount}</strong><span>critical updates</span></div>
+                <div><strong>{newsScope === "local" ? newsLocation || "Near you" : "All regions"}</strong><span>coverage</span></div>
+                <button type="button" onClick={() => setNewsCustomizeOpen((open) => !open)} aria-expanded={newsCustomizeOpen}>
+                  <SlidersHorizontal size={15} />Customize
+                </button>
+              </section>
+              <nav className="news-channel-nav" aria-label="Trade News channels">
+                {([
+                  ["for-you", "For you"], ["local", "Local"], ["critical", "Critical"],
+                  ["following", "Following"], ["latest", "Latest"], ["projects", "Projects"],
+                  ["global", "Global"], ["saved", "Saved"],
+                ] as Array<[NewsChannel, string]>).map(([channel, label]) => (
+                  <button key={channel} type="button" className={newsChannel === channel ? "is-active" : ""} aria-pressed={newsChannel === channel} onClick={() => selectNewsChannel(channel)}>
+                    {label}
+                  </button>
+                ))}
+              </nav>
+              {newsCustomizeOpen ? (
+                <section className="news-customize-panel" aria-label="Customize Trade News">
+                  <div className="news-customize-heading">
+                    <div><strong>Build your briefing</strong><small>Follow any combination. Recommendations stay on this device.</small></div>
+                    <button type="button" className="v2-icon-button" onClick={() => setNewsCustomizeOpen(false)} aria-label="Close Trade News customization"><X size={16} /></button>
+                  </div>
+                  <fieldset>
+                    <legend>Coverage location</legend>
+                    <div className="news-location-editor">
+                      <input aria-label="Trade News coverage location" value={newsLocation} maxLength={80} placeholder="City, ST" onChange={(event) => setNewsLocation(event.target.value)} />
+                      <button type="button" onClick={() => {
+                        setNewsScope("local");
+                        setNewsChannel("local");
+                        void activateNews(true, "local");
+                      }}>Load local briefing</button>
+                    </div>
+                  </fieldset>
+                  <fieldset>
+                    <legend>Follow trades</legend>
+                    <div className="news-follow-grid">
+                      {newsTrades.filter((trade) => trade !== "All trades").map((trade) => (
+                        <button key={trade} type="button" aria-pressed={followedNewsTrades.has(trade)} className={followedNewsTrades.has(trade) ? "is-followed" : ""} onClick={() => toggleNewsPreference(setFollowedNewsTrades, trade)}>
+                          {followedNewsTrades.has(trade) ? "Following" : "Follow"} {trade}
+                        </button>
+                      ))}
+                    </div>
+                  </fieldset>
+                  <fieldset>
+                    <legend>Follow topics</legend>
+                    <div className="news-follow-grid">
+                      {newsCategories.filter((topic) => topic !== "All topics").map((topic) => (
+                        <button key={topic} type="button" aria-pressed={followedNewsTopics.has(topic)} className={followedNewsTopics.has(topic) ? "is-followed" : ""} onClick={() => toggleNewsPreference(setFollowedNewsTopics, topic)}>
+                          {followedNewsTopics.has(topic) ? "Following" : "Follow"} {topic}
+                        </button>
+                      ))}
+                    </div>
+                  </fieldset>
+                </section>
+              ) : null}
               <div className="shop-talk-fieldbar news-fieldbar" aria-label="Trade News filters">
                 <label className="shop-talk-search">
                   <Search size={15} />
@@ -1433,7 +1549,7 @@ export function ShopTalkView({
                     setNewsScope(nextScope);
                     void activateNews(true, nextScope);
                   }}>
-                    <option value="local">Near {userLocation || "me"}</option>
+                    <option value="local">Near {newsLocation || "me"}</option>
                     <option value="all">All regions</option>
                   </select>
                 </label>
@@ -1469,10 +1585,10 @@ export function ShopTalkView({
                     actionLabel={normalizedNewsQuery ? "Clear search" : "Refresh sources"}
                     onAction={() => normalizedNewsQuery ? setNewsQuery("") : void activateNews(true)}
                   />
-                ) : filteredNews.map((item) => (
+                ) : filteredNews.map((item, index) => (
                   <article
                     key={item.id}
-                    className={item.id === selectedNewsId ? "shop-news-card selected" : "shop-news-card"}
+                    className={`${item.id === selectedNewsId ? "shop-news-card selected" : "shop-news-card"}${index === 0 ? " is-lead" : ""}`}
                   >
                     <button
                       type="button"
@@ -1492,26 +1608,27 @@ export function ShopTalkView({
                         )}
                         <div className="news-card-body">
                           <div className="news-card-kicker">
-                            <span className="news-urgency-pill">{item.category ?? item.urgency ?? "Construction"}</span>
+                            <span className={`news-impact-badge is-${item.impactLevel ?? "routine"}`}>{item.impactLevel ?? "briefing"}</span>
                             <small>{item.date}</small>
                           </div>
                           <strong>{item.headline}</strong>
                           <p>{item.summary}</p>
-                          <small>{item.source}</small>
+                          <div className="news-card-tags">
+                            {newsItemTrades(item).slice(0, 2).map((trade) => <span key={trade}>{trade}</span>)}
+                            {(item.topics?.slice(0, 1) ?? []).map((topic) => <span key={topic}>{topic}</span>)}
+                          </div>
+                          <small>{item.source}{item.sourceKind === "official" ? " · Official" : ""}{(item.relatedSourceCount ?? 1) > 1 ? ` · ${item.relatedSourceCount} sources` : ""}</small>
                         </div>
                       </div>
                     </button>
-                    {item.url && item.url !== "#" && (
-                      <a
-                        className="shop-news-source-link"
-                        href={item.url}
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        <ExternalLink size={12} />
-                        Read original
-                      </a>
-                    )}
+                    <div className="news-card-actions">
+                      {item.url && item.url !== "#" && (
+                        <a className="shop-news-source-link" href={item.url} target="_blank" rel="noreferrer"><ExternalLink size={12} />Read original</a>
+                      )}
+                      <button type="button" aria-label={savedNewsUrls.has(item.url) ? "Remove saved article" : "Save article"} aria-pressed={savedNewsUrls.has(item.url)} onClick={() => toggleNewsPreference(setSavedNewsUrls, item.url)}>
+                        {savedNewsUrls.has(item.url) ? <BookmarkCheck size={14} /> : <Bookmark size={14} />}
+                      </button>
+                    </div>
                   </article>
                 ))}
               </div>
@@ -1777,16 +1894,31 @@ export function ShopTalkView({
                   </div>
                 </div>
                 <div className="shop-news-detail-header">
+                  <div className="news-detail-intelligence">
+                    <span className={`news-impact-badge is-${selectedNews.impactLevel ?? "routine"}`}>{selectedNews.impactLevel ?? "briefing"} impact</span>
+                    {newsItemTrades(selectedNews).map((trade) => <span key={trade}>{trade}</span>)}
+                    {(selectedNews.topics ?? []).map((topic) => <span key={topic}>{topic}</span>)}
+                  </div>
                   <h2>{selectedNews.headline}</h2>
-                  <small>{selectedNews.source} - {selectedNews.date}</small>
+                  <small>{selectedNews.source}{selectedNews.sourceKind === "official" ? " · Official source" : ""} · {selectedNews.date}{(selectedNews.relatedSourceCount ?? 1) > 1 ? ` · ${selectedNews.relatedSourceCount} related sources` : ""}</small>
                 </div>
                 <p className="shop-news-detail-body">{selectedNews.summary}</p>
+                {selectedNews.impactReason ? (
+                  <section className="news-why-it-matters">
+                    <AlertTriangle size={18} />
+                    <div><strong>Why RIVT flagged it</strong><p>{selectedNews.impactReason}</p></div>
+                  </section>
+                ) : null}
                 {selectedNews.url && selectedNews.url !== "#" && (
                   <a href={selectedNews.url} target="_blank" rel="noreferrer" className="primary-action news-read-btn">
                     Read original article
                     <ExternalLink size={15} />
                   </a>
                 )}
+                <button type="button" className="news-save-detail" aria-pressed={savedNewsUrls.has(selectedNews.url)} onClick={() => toggleNewsPreference(setSavedNewsUrls, selectedNews.url)}>
+                  {savedNewsUrls.has(selectedNews.url) ? <BookmarkCheck size={15} /> : <Bookmark size={15} />}
+                  {savedNewsUrls.has(selectedNews.url) ? "Saved" : "Save for later"}
+                </button>
                 <div className="shop-news-discuss">
                   <strong>Discuss this in Shop Talk</strong>
                   <p>Have a take on how this affects your work? Start a conversation.</p>

@@ -616,7 +616,7 @@ async function runMobileFlow(page) {
   await page.getByRole("button", { name: "Close" }).click();
   await page.setViewportSize({ width: 390, height: 844 });
   await page.getByRole("button", { name: "Trade News" }).click();
-  await page.getByRole("heading", { name: /What's changing in the field/i }).waitFor({ timeout: 15_000 });
+  await page.getByRole("heading", { name: /Know what changes the work/i }).waitFor({ timeout: 15_000 });
   await assertNoHorizontalOverflow(page, "Shop Talk trade news");
 
   for (const viewport of [{ width: 375, height: 553 }, { width: 390, height: 664 }]) {

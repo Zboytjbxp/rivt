@@ -99,6 +99,55 @@ function _category(item, hint = "") {
   return "Construction";
 }
 
+function _topics(item, hint = "") {
+  const text = `${item?.headline ?? ""} ${item?.summary ?? ""}`.toLowerCase();
+  const topics = [
+    ["Safety & OSHA", /osha|safety|injury|fatal|fall protection|heat illness|ppe|hazard|recall/],
+    ["Codes & standards", /building code|electrical code|\bnec\b|\bnfpa\b|standard|code update/],
+    ["Permits & inspections", /permit|inspection|building official/],
+    ["Licensing & regulation", /licens|regulation|rulemaking|\brule\b|ordinance|legislation|statute/],
+    ["Labor & workforce", /labor|workforce|apprentice|union|wage|hiring|employment|benefit/],
+    ["Tools & equipment", /tool|equipment|machinery|product launch/],
+    ["Materials & supply chain", /material|supply chain|shortage|tariff|lumber|steel price/],
+    ["Business & finance", /business|econom|market|finance|insurance|merger|acquisition|bankrupt/],
+    ["Legal & contracts", /lawsuit|court|legal|lien|contract award|settlement/],
+    ["Projects & development", /project|development|infrastructure|groundbreak|construction start|bid opportunity/],
+    ["Technology", /software|technology|artificial intelligence|\bai\b|robot|drone|bim/],
+    ["Weather & jobsite", /hurricane|storm|flood|weather|heat wave|wildfire/],
+    ["Company & people", /appoint|promotion|company news|leadership|executive/],
+  ].filter(([, pattern]) => pattern.test(text)).map(([topic]) => topic);
+  if (hint === "Safety" && !topics.includes("Safety & OSHA")) topics.unshift("Safety & OSHA");
+  if (hint === "Codes" && !topics.includes("Codes & standards")) topics.unshift("Codes & standards");
+  if (hint === "Projects" && !topics.includes("Projects & development")) topics.unshift("Projects & development");
+  return topics.length ? topics : ["Industry news"];
+}
+
+function _impact(item) {
+  const text = `${item?.headline ?? ""} ${item?.summary ?? ""}`.toLowerCase();
+  if (/recall|fatal|emergency|effective immediately|stop work|evacuat|hurricane warning/.test(text)) {
+    return { level: "critical", reason: "Urgent safety, recall, or jobsite disruption language appears in the source." };
+  }
+  if (/osha|fine|penalt|deadline|effective date|code update|rule|licens|permit change|shortage/.test(text)) {
+    return { level: "high", reason: "The source describes enforcement, compliance, deadline, or supply impact." };
+  }
+  if (/project|contract award|wage|labor|market|equipment|material/.test(text)) {
+    return { level: "medium", reason: "The source may affect project, workforce, purchasing, or business decisions." };
+  }
+  return { level: "routine", reason: "Industry awareness; review the original source before changing field or business practices." };
+}
+
+function _sourceKind(item) {
+  try {
+    const host = new URL(item?.url ?? "").hostname.toLowerCase();
+    if (host.endsWith(".gov") || host === "osha.gov" || host.endsWith(".osha.gov")) return "official";
+  } catch {
+    // Source URL is validated elsewhere.
+  }
+  return /OSHA|building commission|department|city of|county|state of/i.test(item?.source ?? "")
+    ? "official"
+    : "publisher";
+}
+
 function _trades(item) {
   const text = `${item?.headline ?? ""} ${item?.summary ?? ""}`.toLowerCase();
   const matches = [
@@ -198,6 +247,34 @@ function _dedupeAndDiversify(items, limit = 30) {
     }
   }
   return selected;
+}
+
+function _clusterKeyTokens(item) {
+  const stop = new Set(["after", "from", "into", "with", "that", "this", "will", "construction", "contractor", "update", "news"]);
+  return new Set(_normalizedTitle(item?.headline).split(" ").filter((token) => token.length > 3 && !stop.has(token)));
+}
+
+function _clusterStories(items) {
+  const clusters = [];
+  for (const item of items) {
+    const tokens = _clusterKeyTokens(item);
+    const match = clusters.find((cluster) => {
+      const overlap = [...tokens].filter((token) => cluster.tokens.has(token)).length;
+      const denominator = Math.max(tokens.size, cluster.tokens.size, 1);
+      return overlap >= 3 && overlap / denominator >= 0.48;
+    });
+    if (!match) {
+      clusters.push({ primary: item, tokens, sources: new Set([item.source]) });
+      continue;
+    }
+    match.sources.add(item.source);
+    if (_relevanceScore(item) > _relevanceScore(match.primary)) match.primary = item;
+  }
+  return clusters.map(({ primary, sources }) => ({
+    ...primary,
+    relatedSourceCount: sources.size,
+    relatedSources: [...sources],
+  }));
 }
 
 function _isTradeNewsCandidate(item) {
@@ -385,7 +462,7 @@ async function _enrichNewsImages(items) {
   ];
 }
 
-async function _fetchFeed(url, fallbackSource, categoryHint = "", isLocal = false) {
+async function _fetchFeed(url, fallbackSource, categoryHint = "", isLocal = false, geography = isLocal ? "local" : "national") {
   try {
     const res = await fetch(url, {
       signal: AbortSignal.timeout(8000),
@@ -408,6 +485,8 @@ async function _fetchFeed(url, fallbackSource, categoryHint = "", isLocal = fals
       const publishedAt = item.pubDate ?? item.published ?? item.updated ?? "";
       const summary = _stripHtml(item.description ?? item.summary ?? item["content:encoded"] ?? "").slice(0, 350);
       const urgency = _urgency(headline);
+      const topics = _topics({ headline, summary }, categoryHint);
+      const impact = _impact({ headline, summary });
       return {
         id: Date.now() + i,
         headline,
@@ -418,7 +497,12 @@ async function _fetchFeed(url, fallbackSource, categoryHint = "", isLocal = fals
         url: link,
         urgency,
         category: _category({ headline, summary }, categoryHint),
+        topics,
         trades: _trades({ headline, summary }),
+        impactLevel: impact.level,
+        impactReason: impact.reason,
+        sourceKind: _sourceKind({ source, url: link }),
+        geography,
         isLocal,
         thumbnailUrl: thumbnailUrl ?? undefined,
         thumbnailKind: thumbnailUrl ? "feed" : undefined,
@@ -457,6 +541,11 @@ router.get("/api/news", async (request, response) => {
     ["construction tools equipment", "Tools"],
     ["construction business contractors", "Business"],
     ["construction projects infrastructure", "Projects"],
+    ["construction product recalls contractors", "Safety"],
+    ["construction permits inspections licensing", "Codes"],
+    ["construction materials supply chain tariffs", "Business"],
+    ["construction technology software BIM equipment", "Tools"],
+    ["roofing electrical plumbing HVAC trade news", "Construction"],
   ];
   const feedRequests = [
     _fetchFeed("https://www.enr.com/rss/news", "ENR"),
@@ -464,9 +553,13 @@ router.get("/api/news", async (request, response) => {
     _fetchFeed("https://www.osha.gov/news/newsreleases.xml", "OSHA", "Safety"),
     ...topicalFeeds.map(([query, category]) => _fetchFeed(`https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=en-US&gl=US&ceid=US:en`, "Google News", category)),
     _fetchFeed(`https://news.google.com/rss/search?q=${natQ}&hl=en-US&gl=US&ceid=US:en`, "Google News"),
+    _fetchFeed(`https://news.google.com/rss/search?q=${encodeURIComponent("global construction infrastructure skilled trades")}&hl=en-US&gl=US&ceid=US:en`, "Global construction", "Projects", false, "global"),
     ...(localQ ? [
       _fetchFeed(`https://news.google.com/rss/search?q=${encodeURIComponent(localQ)}&hl=en-US&gl=US&ceid=US:en`, `${city} / ${state}`, "", true),
       _fetchFeed(`https://news.google.com/rss/search?q=${encodeURIComponent(`contractor construction permits projects ${state}`)}&hl=en-US&gl=US&ceid=US:en`, `${state} trades`, "", true),
+      _fetchFeed(`https://news.google.com/rss/search?q=${encodeURIComponent(`site:jacksonville.gov construction permits contractors ${city}`)}&hl=en-US&gl=US&ceid=US:en`, "Jacksonville official notices", "", true),
+      _fetchFeed(`https://news.google.com/rss/search?q=${encodeURIComponent(`site:floridabuilding.org building code contractors ${state}`)}&hl=en-US&gl=US&ceid=US:en`, "Florida Building Commission", "Codes", true),
+      _fetchFeed(`https://news.google.com/rss/search?q=${encodeURIComponent(`site:myfloridalicense.com contractor licensing ${state}`)}&hl=en-US&gl=US&ceid=US:en`, "Florida licensing", "Codes", true),
     ] : []),
   ];
   const settledFeeds = await Promise.allSettled(feedRequests);
@@ -475,7 +568,7 @@ router.get("/api/news", async (request, response) => {
   const liveItems = settledFeeds.flatMap(pick);
   const scopedItems = location ? liveItems.filter((item) => item.isLocal) : liveItems;
   const fallback = scopedItems.length === 0;
-  const ranked = _dedupeAndDiversify(scopedItems, 30);
+  const ranked = _clusterStories(_dedupeAndDiversify(scopedItems, 45)).slice(0, 30);
   const items = (await _enrichNewsImages(ranked)).map((item, i) => ({
     ...item,
     id: i + 1,
@@ -496,6 +589,9 @@ export const newsInternals = {
   _canonicalArticleUrl,
   _dedupeAndDiversify,
   _normalizeNewsLocation,
+  _impact,
+  _topics,
+  _clusterStories,
   _pruneNewsCache,
   _resolvePublicImageUrl,
   _rssThumbnailUrl,
