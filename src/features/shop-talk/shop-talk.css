@@ -4135,6 +4135,13 @@ html[data-rivt-compact-device="true"] .shop-talk-community-layout .shop-talk-sea
   background: var(--v2-surface-muted);
   color: var(--v2-text);
 }
+.shop-talk-community-layout:has(.shop-talk-feed-panel[aria-label="Trade News feed"]) .shop-talk-tabs button {
+  color: var(--v2-text-muted);
+}
+.shop-talk-community-layout:has(.shop-talk-feed-panel[aria-label="Trade News feed"]) .shop-talk-tabs button.active {
+  background: var(--v2-surface);
+  color: var(--v2-text);
+}
 .news-obsolete-strip.is-obsolete,
 .news-intel-copy > p { display: none; }
 
@@ -4169,6 +4176,10 @@ html[data-rivt-compact-device="true"] .shop-talk-community-layout .shop-talk-sea
 }
 
 .shop-news-card.is-featured .shop-news-card-main { display: block; padding: 0; }
+.shop-news-card.is-featured {
+  border-top: 4px solid var(--v2-accent);
+  box-shadow: var(--v2-shadow-md);
+}
 .news-featured-image,
 .news-featured-fallback { width: 100%; height: 168px; }
 .news-featured-image { display: block; object-fit: cover; }
@@ -4180,6 +4191,15 @@ html[data-rivt-compact-device="true"] .shop-talk-community-layout .shop-talk-sea
   background: var(--v2-surface-muted);
 }
 .news-featured-copy { padding: var(--v2-space-card); text-align: left; }
+.news-featured-label {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--v2-accent-text);
+  font-size: var(--v2-text-xs);
+  font-weight: var(--v2-weight-bold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
 .news-featured-copy > strong { display: block; margin: 8px 0 5px; color: var(--v2-text); font-size: calc(19px * var(--v2-text-scale)); line-height: 1.2; font-weight: var(--v2-weight-bold); }
 
 .shop-news-card.is-compact .shop-news-card-main { padding: 14px 16px 8px; }
@@ -4194,7 +4214,9 @@ html[data-rivt-compact-device="true"] .shop-talk-community-layout .shop-talk-sea
   font-size: calc(15.5px * var(--v2-text-scale));
   line-height: 1.28;
   font-weight: var(--v2-weight-bold);
+  color: var(--v2-text);
 }
+.shop-news-card.is-compact .news-card-body > small { color: var(--v2-text-muted); }
 
 .news-card-kicker { display: flex; gap: 7px; align-items: center; flex-wrap: wrap; }
 .news-type-tag {
@@ -4220,7 +4242,6 @@ html[data-rivt-compact-device="true"] .shop-talk-community-layout .shop-talk-sea
   white-space: nowrap;
 }
 .news-card-actions { justify-content: flex-end; gap: 6px; padding: 5px 12px 10px; }
-.news-card-actions.is-legacy-actions { display: none; }
 .news-card-actions > button,
 .news-card-actions > a { min-height: 44px; }
 .news-discuss-action { color: var(--v2-accent-text); font-weight: var(--v2-weight-bold); }

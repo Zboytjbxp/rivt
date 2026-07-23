@@ -257,6 +257,77 @@ test("trade news exposes transparent topics, impact, and related-source clusters
   assert.equal(clustered[0].relatedSourceCount, 2);
 });
 
+test("trade news cleans Google publisher suffixes and collapses the HB 803 story family", () => {
+  assert.equal(
+    newsInternals._cleanHeadline(
+      "Florida Law Removes Permits for Small Home Construction Projects - Construction Owners",
+      "Construction Owners",
+    ),
+    "Florida Law Removes Permits for Small Home Construction Projects",
+  );
+  assert.equal(
+    newsInternals._cleanHeadline("Contractor costs rise - What builders need to know", "Trade Desk"),
+    "Contractor costs rise - What builders need to know",
+  );
+
+  const publishedAt = "2026-05-10T12:00:00.000Z";
+  const base = {
+    summary: "Florida HB 803 changes permit requirements for small construction projects.",
+    publishedAt,
+    category: "Codes",
+    geography: "local",
+    isLocal: true,
+    sourceKind: "publisher",
+  };
+  const rawItems = [
+    ["Florida Law Removes Permits for Small Home Construction Projects - Construction Owners", "Construction Owners", "https://constructionowners.com/hb-803"],
+    ["Florida Law Removes Permits for Small Home Construction Projects - constructionowners.com", "constructionowners.com", "https://constructionowners.com/news/hb-803-copy"],
+    ["Florida HB 803 drops permitting for small residential projects - ENR", "ENR", "https://enr.com/florida-hb-803"],
+    ["New Florida law cuts permit fees for minor home construction - NBC 6 South Florida", "NBC 6 South Florida", "https://nbcmiami.com/news/hb803"],
+    ["Florida contractors can drop building permits under HB 803 - Insurance Journal", "Insurance Journal", "https://insurancejournal.com/hb-803"],
+    ["Goodbye to these Florida permits as HB 803 takes effect - Florida Politics", "Florida Politics", "https://floridapolitics.com/hb803"],
+    ["CS/HB 803 removes select building permits across Florida - Florida House", "Florida House", "https://myfloridahouse.gov/hb803"],
+  ].map(([rawHeadline, source, url]) => ({
+    ...base,
+    headline: newsInternals._cleanHeadline(rawHeadline, source),
+    source,
+    url,
+    sourceKind: source === "Florida House" ? "official" : "publisher",
+  }));
+
+  const deduped = newsInternals._dedupeAndDiversify(rawItems, 30);
+  assert.equal(new Set(deduped.map((item) => newsInternals._normalizedTitle(item.headline))).size, deduped.length);
+  const clustered = newsInternals._clusterStories(deduped);
+  assert.equal(clustered.length, 1);
+  assert.ok(clustered[0].relatedSourceCount >= 5);
+  assert.equal(clustered[0].source, "Florida House");
+});
+
+test("trade news category fill caps one category while alternatives remain", () => {
+  const publishedAt = new Date().toISOString();
+  const items = [
+    ...Array.from({ length: 8 }, (_, index) => ({
+      headline: `Florida permit rule item ${index} has distinct details`,
+      summary: "Construction permits and inspections.",
+      source: `Codes Source ${index}`,
+      url: `https://codes-${index}.example/story`,
+      category: "Codes",
+      publishedAt,
+    })),
+    ...["Safety", "Labor", "Projects", "Business"].map((category, index) => ({
+      headline: `${category} construction briefing has distinct field signal`,
+      summary: "Current skilled trade coverage.",
+      source: `${category} Source`,
+      url: `https://${category.toLowerCase()}.example/story-${index}`,
+      category,
+      publishedAt,
+    })),
+  ];
+  const selected = newsInternals._dedupeAndDiversify(items, 10);
+  assert.ok(selected.filter((item) => item.category === "Codes").length <= 4);
+  assert.ok(new Set(selected.map((item) => item.category)).size >= 4);
+});
+
 test("trade news priority requires current dated action signals and stays scarce", () => {
   const now = Date.parse("2026-07-23T12:00:00.000Z");
   assert.deepEqual(newsInternals._impact({

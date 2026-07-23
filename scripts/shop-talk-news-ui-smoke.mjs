@@ -4,6 +4,7 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { chromium } from "playwright";
+import { newsInternals } from "../server/news.js";
 
 const port = 5194;
 const baseUrl = `http://127.0.0.1:${port}`;
@@ -68,6 +69,35 @@ const newsPhotoDataUri = (label, accent = "#ff4b00") =>
     </svg>
   `)}`;
 
+const hb803FailureSet = [
+  ["Florida Law Removes Permits for Small Home Construction Projects - Construction Owners", "Construction Owners", "https://constructionowners.com/hb-803"],
+  ["Florida Law Removes Permits for Small Home Construction Projects - constructionowners.com", "constructionowners.com", "https://constructionowners.com/news/hb-803-copy"],
+  ["Florida HB 803 drops permitting for small residential projects - ENR", "ENR", "https://enr.com/florida-hb-803"],
+  ["New Florida law cuts permit fees for minor home construction - NBC 6 South Florida", "NBC 6 South Florida", "https://nbcmiami.com/news/hb803"],
+  ["Florida contractors can drop building permits under HB 803 - Insurance Journal", "Insurance Journal", "https://insurancejournal.com/hb-803"],
+  ["Goodbye to these Florida permits as HB 803 takes effect - Florida Politics", "Florida Politics", "https://floridapolitics.com/hb803"],
+  ["CS/HB 803 removes select building permits across Florida - Florida House", "Florida House", "https://myfloridahouse.gov/hb803"],
+].map(([rawHeadline, source, url]) => ({
+  headline: newsInternals._cleanHeadline(rawHeadline, source),
+  summary: "Florida HB 803 changes permit requirements for small construction projects.",
+  source,
+  url,
+  date: "May 10, 2026",
+  publishedAt: "2026-05-10T12:00:00.000Z",
+  category: "Codes",
+  topics: ["Permits & inspections", "Codes & standards"],
+  trades: ["Electrical", "General construction"],
+  impactLevel: "routine",
+  impactReason: "Current Florida permit-law coverage; confirm applicability with the official source.",
+  sourceKind: source === "Florida House" ? "official" : "publisher",
+  geography: "local",
+  isLocal: true,
+}));
+const hb803Story = {
+  ...newsInternals._clusterStories(newsInternals._dedupeAndDiversify(hb803FailureSet, 30))[0],
+  id: "florida-hb-803",
+};
+
 const newsPayload = {
   fallback: false,
   resources: [
@@ -75,27 +105,6 @@ const newsPayload = {
     { title: "Jacksonville permit references", source: "City of Jacksonville", url: "https://www.jacksonville.gov/permits" },
   ],
   items: [
-    {
-      id: "jax-permit-watch",
-      headline: "Jacksonville permit desk adds same-day trade inspection slots",
-      summary:
-        "City update: contractors can request select same-day inspection windows for electrical, plumbing, HVAC, and closeout work in active neighborhoods.",
-      source: "Jacksonville Building Inspection Division",
-      url: "https://www.jacksonville.gov/departments/planning-and-development/building-inspection-division",
-      thumbnailUrl: newsPhotoDataUri("JAX PERMIT WATCH"),
-      thumbnailKind: "article",
-      date: "Jun 21, 2026",
-      publishedAt: "2026-07-22T14:00:00.000Z",
-      urgency: "Local update",
-      category: "Codes",
-      topics: ["Permits & inspections", "Codes & standards"],
-      trades: ["Electrical", "Plumbing", "HVAC"],
-      impactLevel: "high",
-      impactReason: "The source describes a permit or inspection change.",
-      sourceKind: "official",
-      geography: "local",
-      isLocal: true,
-    },
     {
       id: "osha-heat-safety",
       headline: "OSHA heat safety push changes how crews plan afternoon work",
@@ -117,6 +126,7 @@ const newsPayload = {
       geography: "local",
       isLocal: true,
     },
+    hb803Story,
     {
       id: "refrigerant-transition",
       headline: "HVAC refrigerant transition keeps callback risk high",
@@ -510,13 +520,33 @@ try {
     }
     await page.getByRole("button", { name: "Trade News" }).click();
     const newsList = page.locator(".shop-news-list");
-    await newsList.getByText("Jacksonville permit desk", { exact: false }).first().waitFor({ timeout: 15_000 });
+    await newsList.getByText("CS/HB 803 removes select building permits across Florida", { exact: false }).first().waitFor({ timeout: 15_000 });
     assert.equal(await page.locator(".news-channel-nav").count(), 1, "Trade News should have exactly one channel row");
     assert.equal(await page.locator(".news-command").count(), 0, "legacy news hero should be removed");
     assert.equal(await page.locator(".news-briefing-strip").count(), 0, "legacy briefing strip should be removed");
     assert.equal(await page.locator(".shop-news-list select").count(), 0, "feed should not contain select filters");
     assert.ok(await page.getByText("Local references · official portals", { exact: true }).isVisible(), "official references should be separated from news");
     assert.equal(await newsList.getByText(/2014/).count(), 0, "stale dates should never appear as feed news");
+    assert.equal(await newsList.getByText(/Florida Law Removes Permits for Small Home Construction Projects/i).count(), 0, "duplicate HB 803 cards should collapse into the official primary");
+    assert.equal(await newsList.getByText(/[5-9] sources/i).count(), 1, "the collapsed HB 803 story should expose its real related-source count");
+    const renderedHeadlines = await newsList.locator(".news-card-body > strong, .news-featured-copy > strong").allTextContents();
+    const normalizedHeadlines = renderedHeadlines.map((headline) => headline.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim());
+    assert.equal(new Set(normalizedHeadlines).size, normalizedHeadlines.length, "rendered news titles should be unique");
+    assert.ok(renderedHeadlines.every((headline) => !/\s-\s(?:Construction Owners|constructionowners\.com|ENR|NBC|Insurance Journal|Florida Politics|Florida House)$/i.test(headline)), "publisher suffixes should not render in headlines");
+    const visibleTagKinds = await newsList.locator(".news-type-tag").evaluateAll((nodes) => [...new Set(nodes.filter((node) => {
+      const style = getComputedStyle(node);
+      return style.display !== "none" && style.visibility !== "hidden";
+    }).map((node) => [...node.classList].find((name) => name.startsWith("is-"))))]);
+    assert.ok(visibleTagKinds.length >= 2, "mixed-category news should render at least two distinct tag kinds");
+    assert.equal(await page.getByText(/0 new this week/i).count(), 0, "the intel strip must never headline zero new stories");
+    await page.getByText("Featured briefing", { exact: true }).waitFor({ timeout: 15_000 });
+    await page.evaluate(() => document.documentElement.setAttribute("data-theme", "dark"));
+    const darkNewsSurface = await page.locator('[aria-label="Trade News feed"]').evaluate((node) => getComputedStyle(node).backgroundColor);
+    await page.screenshot({ path: path.join(screenshotDir, `${viewport.name}-news-featured-dark.png`), fullPage: true });
+    await page.evaluate(() => document.documentElement.setAttribute("data-theme", "light"));
+    const lightNewsSurface = await page.locator('[aria-label="Trade News feed"]').evaluate((node) => getComputedStyle(node).backgroundColor);
+    await page.screenshot({ path: path.join(screenshotDir, `${viewport.name}-news-featured-light.png`), fullPage: true });
+    assert.notEqual(darkNewsSurface, lightNewsSurface, "Trade News should inherit distinct dark and light token surfaces");
     const renderedCards = await newsList.locator(".shop-news-card").count();
     const criticalMarkers = await newsList.locator(".news-critical-marker").count();
     assert.ok(criticalMarkers <= Math.floor(renderedCards * 0.25), "critical markers must remain scarce");
@@ -528,7 +558,7 @@ try {
     await customize.getByRole("button", { name: "Follow HVAC", exact: true }).click();
     await customize.getByRole("button", { name: "Close Trade News customization" }).click();
     await page.getByRole("button", { name: "Following", exact: true }).click();
-    await newsList.getByText("Jacksonville permit desk", { exact: false }).first().waitFor();
+    await newsList.getByText("HVAC refrigerant transition", { exact: false }).first().waitFor();
     await page.getByRole("button", { name: "Critical", exact: true }).click();
     await newsList.getByText("OSHA heat safety", { exact: false }).first().waitFor();
     await page.getByRole("button", { name: "For you", exact: true }).click();
@@ -536,7 +566,7 @@ try {
     await page.locator('input[placeholder="Search trades, codes, safety, local"]').fill("permit");
     await page
       .locator(".shop-news-list")
-      .getByText("Jacksonville permit desk", { exact: false })
+      .getByText("CS/HB 803 removes select building permits across Florida", { exact: false })
       .first()
       .waitFor({ timeout: 15_000 });
     await page.getByRole("link", { name: /Read original/i }).first().waitFor({ timeout: 15_000 });

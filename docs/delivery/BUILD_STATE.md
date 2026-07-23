@@ -2,10 +2,44 @@
 
 Last updated: 2026-07-23 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Trade News intelligence v2 is production verified.
-Active packet: Trade News intelligence v2 production verification
-Repository branch: `master`
+Current phase: Trade News intelligence v2.1 clustering is locally verified.
+Active packet: Trade News intelligence v2.1 on `codex/trade-news-v2-1-clustering`
+Repository branch: `codex/trade-news-v2-1-clustering`
 Production feature release commit: `7642132cdd991da666d39cb847688885a61c081f`
+
+## Trade News Intelligence V2.1 Clustering (Local Verification)
+
+- Added `_cleanHeadline(rawTitle, source)` at RSS ingestion so Google News
+  publisher/domain suffixes are removed once while source attribution remains
+  intact. Normalized-title dedup and story clustering now operate on the clean
+  headline.
+- Story tokens now stem common suffixes so permit/permits/permitting and
+  remove/removes/removed converge. Bill-number and named-act entities cluster
+  paraphrases that share identifiers such as HB 803 even when title-token
+  overlap is weak.
+- Same-category and same-geography clustering uses a tunable 0.40 overlap
+  ratio with at least three shared tokens; unrelated stories retain the 0.48
+  ratio. Official sources win cluster primary selection before relevance
+  score. Related source counts remain derived from the merged source set.
+- Significant-title prefix dedup prevents cleaned exact/superset duplicates
+  with different URLs. Category fill caps one category at 40% while unused
+  alternatives remain, exceeding the cap only when no other category can fill
+  the feed.
+- The intel strip says `N stories · freshest …` when nothing is new this week
+  and never headlines `0 new`. Discussion always has visible text, original
+  links remain quiet, featured briefings have explicit accent/surface
+  hierarchy, and the hidden duplicate legacy action block was removed.
+- Theme investigation found a real inheritance bug: older Shop Talk
+  `--trade-*`/legacy text colors overrode dark-mode news titles and the active
+  Trade News tab. The news state now inherits `--v2-*` surfaces and text in
+  both themes; the rendered smoke compares computed dark/light surfaces and
+  captures both themes.
+- The real Google News Jacksonville/Florida HB 803 query returned four raw
+  matches; the branch pipeline reduced them to one rendered story cluster
+  with three distinct related sources.
+- Verified locally: build, lint, 67 unit/frontend tests, E2E, the rendered HB
+  803 mixed-category Trade News smoke at desktop and mobile in dark/light
+  themes, dependency audit with zero vulnerabilities, and diff check.
 
 ## Trade News Intelligence V2 (Production Verification)
 
