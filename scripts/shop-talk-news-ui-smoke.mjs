@@ -92,6 +92,7 @@ const hb803FailureSet = [
   sourceKind: source === "Florida House" ? "official" : "publisher",
   geography: "local",
   isLocal: true,
+  tier: "local",
 }));
 const hb803Story = {
   ...newsInternals._clusterStories(newsInternals._dedupeAndDiversify(hb803FailureSet, 30))[0],
@@ -101,8 +102,8 @@ const hb803Story = {
 const newsPayload = {
   fallback: false,
   resources: [
-    { title: "Florida licensing portal", source: "DBPR", url: "https://www.myfloridalicense.com/" },
-    { title: "Jacksonville permit references", source: "City of Jacksonville", url: "https://www.jacksonville.gov/permits" },
+    { title: newsInternals._tidyResourceTitle("Product_Approval"), source: "DBPR", url: "https://www.myfloridalicense.com/" },
+    { title: newsInternals._tidyResourceTitle("FLORIDA BUILDING CONSTRUCTION STANDARDS"), source: "City of Jacksonville", url: "https://www.jacksonville.gov/permits" },
   ],
   items: [
     {
@@ -125,6 +126,7 @@ const newsPayload = {
       sourceKind: "official",
       geography: "local",
       isLocal: true,
+      tier: "local",
     },
     hb803Story,
     {
@@ -145,6 +147,7 @@ const newsPayload = {
       sourceKind: "official",
       geography: "local",
       isLocal: true,
+      tier: "local",
     },
     {
       id: "florida-labor-market",
@@ -162,6 +165,7 @@ const newsPayload = {
       sourceKind: "publisher",
       geography: "local",
       isLocal: true,
+      tier: "local",
     },
   ],
 };
@@ -183,6 +187,44 @@ newsPayload.items = newsInternals._partitionNewsAndResources([
     isLocal: true,
   },
 ], Date.parse("2026-07-23T12:00:00.000Z")).news;
+newsPayload.items.push(
+  {
+    id: "national-materials-market",
+    headline: "National materials outlook shifts contractor purchasing plans",
+    summary: "Trade contractors are adjusting purchasing plans as national material markets change.",
+    source: "Construction materials desk",
+    url: "https://example.com/national-materials-market",
+    date: "Jul 18, 2026",
+    publishedAt: "2026-07-18T14:00:00.000Z",
+    trades: ["General construction"],
+    category: "Business",
+    topics: ["Business & markets"],
+    impactLevel: "routine",
+    impactReason: "Current national purchasing and business signal.",
+    sourceKind: "publisher",
+    geography: "national",
+    isLocal: false,
+    tier: "national",
+  },
+  {
+    id: "national-infrastructure-awards",
+    headline: "Infrastructure awards expand the national construction pipeline",
+    summary: "New project awards add work to the national construction pipeline.",
+    source: "National projects desk",
+    url: "https://example.com/national-infrastructure-awards",
+    date: "Jul 17, 2026",
+    publishedAt: "2026-07-17T14:00:00.000Z",
+    trades: ["General construction", "Electrical"],
+    category: "Projects",
+    topics: ["Projects & development"],
+    impactLevel: "routine",
+    impactReason: "Current national project and contract-award signal.",
+    sourceKind: "publisher",
+    geography: "national",
+    isLocal: false,
+    tier: "national",
+  },
+);
 const nationalNewsPayload = {
   fallback: false,
   resources: [],
@@ -202,6 +244,8 @@ const nationalNewsPayload = {
     impactLevel: "high",
     impactReason: "The source describes a national code change.",
     geography: "national",
+    isLocal: false,
+    tier: "national",
   }],
 };
 
@@ -544,6 +588,20 @@ try {
     assert.equal(await page.locator(".news-briefing-strip").count(), 0, "legacy briefing strip should be removed");
     assert.equal(await page.locator(".shop-news-list select").count(), 0, "feed should not contain select filters");
     assert.ok(await page.getByText("Local references · official portals", { exact: true }).isVisible(), "official references should be separated from news");
+    const nationalDivider = newsList.getByText("Beyond Jacksonville · national trade news", { exact: true });
+    await nationalDivider.waitFor({ timeout: 15_000 });
+    const nationalRow = newsList.getByText("National materials outlook shifts contractor purchasing plans", { exact: true });
+    await nationalRow.waitFor({ timeout: 15_000 });
+    const [dividerBox, nationalRowBox] = await Promise.all([nationalDivider.boundingBox(), nationalRow.boundingBox()]);
+    assert.ok(dividerBox && nationalRowBox && nationalRowBox.y > dividerBox.y, "national rows should render below the Beyond-area divider");
+    const referenceTitles = await newsList.locator(".news-local-references a").allTextContents();
+    assert.ok(referenceTitles.every((title) => !title.includes("_")), "official reference titles should not contain underscores");
+    assert.ok(referenceTitles.every((title) => title !== title.toUpperCase()), "official reference titles should not be fully uppercase");
+    await page.getByRole("button", { name: "Local", exact: true }).click();
+    assert.equal(await newsList.getByText(/national trade news/i).count(), 0, "Local channel should hide the national divider");
+    assert.equal(await newsList.getByText("National materials outlook shifts contractor purchasing plans", { exact: true }).count(), 0, "Local channel should hide national rows");
+    await page.getByRole("button", { name: "For you", exact: true }).click();
+    await nationalDivider.waitFor({ timeout: 15_000 });
     assert.equal(await newsList.getByText(/2014/).count(), 0, "stale dates should never appear as feed news");
     assert.equal(await newsList.getByText("Stale civic center construction milestone", { exact: false }).count(), 0, "stories older than 90 days should not render");
     assert.equal(await newsList.getByText(/Florida Law Removes Permits for Small Home Construction Projects/i).count(), 0, "duplicate HB 803 cards should collapse into the official primary");

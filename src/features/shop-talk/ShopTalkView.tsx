@@ -1,4 +1,4 @@
-import { type CSSProperties, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, type CSSProperties, useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowLeft,
   AlertTriangle,
@@ -77,6 +77,7 @@ export interface NewsItem {
   sourceKind?: "official" | "publisher";
   geography?: "local" | "national" | "global";
   isLocal?: boolean;
+  tier?: "local" | "national";
   relatedSourceCount?: number;
   relatedSources?: string[];
   thumbnailUrl?: string;
@@ -1141,13 +1142,31 @@ export function ShopTalkView({
   const newsIntelSummary = newThisWeek > 0
     ? `${newThisWeek} new this week · ${filteredNews.length} stories`
     : `${filteredNews.length} stories${freshestNews ? ` · freshest ${relativeNewsTime(freshestNews)}` : ""}`;
-  const featuredNews = filteredNews.find((item) => {
+  const groupNewsByTier = newsChannel === "for-you"
+    && newsScope === "local"
+    && filteredNews.some((item) => item.tier === "local")
+    && filteredNews.some((item) => item.tier === "national");
+  const orderedNews = groupNewsByTier
+    ? [
+        ...filteredNews.filter((item) => item.tier === "local"),
+        ...filteredNews.filter((item) => item.tier === "national"),
+        ...filteredNews.filter((item) => !item.tier),
+      ]
+    : filteredNews;
+  const featuredPool = groupNewsByTier
+    ? orderedNews.filter((item) => item.tier === "local")
+    : orderedNews;
+  const featuredNews = featuredPool.find((item) => {
     const publishedAt = Date.parse(item.publishedAt ?? "");
     return ["critical", "high"].includes(item.impactLevel ?? "")
       && Number.isFinite(publishedAt)
       && NEWS_RENDER_NOW - publishedAt <= 7 * 86_400_000;
   }) ?? null;
-  const newsRows = featuredNews ? filteredNews.filter((item) => item.id !== featuredNews.id) : filteredNews;
+  const newsRows = featuredNews ? orderedNews.filter((item) => item.id !== featuredNews.id) : orderedNews;
+  const firstNationalRowId = groupNewsByTier
+    ? newsRows.find((item) => item.tier === "national")?.id
+    : undefined;
+  const newsAreaName = newsLocation.split(",")[0]?.trim() || "your area";
   const briefingTrade = followedNewsTrades.size ? [...followedNewsTrades].slice(0, 2).join(" + ") : primaryTrade;
   const strictNewsView = newsChannel !== "for-you";
   const newsEmptyTitle = normalizedNewsQuery
@@ -1742,10 +1761,15 @@ export function ShopTalkView({
                       </article>
                     ) : null}
                     {newsRows.map((item) => (
-                  <article
-                    key={item.id}
-                    className={item.id === selectedNewsId ? "shop-news-card is-compact selected" : "shop-news-card is-compact"}
-                  >
+                  <Fragment key={item.id}>
+                    {item.id === firstNationalRowId ? (
+                      <div className="news-local-references news-tier-divider" role="separator">
+                        <strong>Beyond {newsAreaName} · national trade news</strong>
+                      </div>
+                    ) : null}
+                    <article
+                      className={item.id === selectedNewsId ? "shop-news-card is-compact selected" : "shop-news-card is-compact"}
+                    >
                     <button
                       type="button"
                       className="shop-news-card-main"
@@ -1779,7 +1803,8 @@ export function ShopTalkView({
                       </div>
                     </button>
                     {renderNewsActions(item)}
-                  </article>
+                    </article>
+                  </Fragment>
                     ))}
                     {newsResources.length ? (
                       <aside className="news-local-references" aria-label="Local references">
