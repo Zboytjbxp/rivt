@@ -2276,3 +2276,31 @@ Add one entry per staging/production deployment.
 - Post-deploy proof: `/api/health` returned the exact hotfix source with
   PostgreSQL and S3-compatible storage healthy. The production monitor passed
   in 590 ms with all seven anonymous private-route checks healthy.
+# Current Production - Trade News V2.2 Classification and Freshness
+
+- Environment: Production (`https://rivt.pro`)
+- Date/time/timezone: 2026-07-23 America/New_York
+- Deployer: Codex through `codex/trade-news-v2-2-nits`, merge to `master`,
+  live acceptance correction, and Railway production auto-deploy
+- Runtime feature source: `a76d7b30896af3f98a25c4fc4079a1ef408eec41`
+- Railway deployments: initial merge
+  `3afb39bf-b2f6-40b4-9c6e-e187261946f3`; policy-morphology hotfix
+  `f9f58138-32a4-4310-a079-025ddd29b095`
+- Migration version before/after: unchanged (`0028_compensation_workflow`)
+- Provider/config changes: only `SOURCE_COMMIT` release metadata was updated;
+  all application providers and rollout controls were preserved.
+- Rollback target: `da8553afd8ab388c6424d5184b2dbb405b30e4d2`; no
+  database rollback is required.
+- Automated gates: build, lint, 68 unit/frontend tests, E2E, mixed-category
+  rendered Trade News smoke at desktop/mobile in dark/light themes,
+  zero-vulnerability dependency audit, and diff check passed.
+- Product evidence: specific builds with project/value signals classify as
+  Projects unless permit-policy language is primary; project topics lead and
+  omit permit topics; the feed age floor is 90 days while the separate
+  official-resource path remains unchanged.
+- Live acceptance: the Miami $193M civic-center story rendered as Projects,
+  the Florida dropping-building-permits law rendered as Codes, and the forced
+  Jacksonville feed returned zero stories older than 90 days with a 76.6-day
+  oldest story.
+- Post-deploy proof: exact-source health was healthy and the production
+  monitor passed in 551 ms with seven anonymous private-route checks.

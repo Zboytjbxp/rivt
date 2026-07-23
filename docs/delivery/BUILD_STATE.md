@@ -2,12 +2,12 @@
 
 Last updated: 2026-07-23 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Trade News intelligence v2.2 content nits are locally verified.
-Active packet: Trade News v2.2 on `codex/trade-news-v2-2-nits`
-Repository branch: `codex/trade-news-v2-2-nits`
-Production feature release commit: `9901d1f5a9d8df996505eaa70d792f726f225e2c`
+Current phase: Trade News intelligence v2.2 content nits are production verified.
+Active packet: Trade News v2.2 production verification
+Repository branch: `master`
+Production feature release commit: `a76d7b30896af3f98a25c4fc4079a1ef408eec41`
 
-## Trade News V2.2 Classification and Freshness (Local Verification)
+## Trade News V2.2 Classification and Freshness (Production Verification)
 
 - `_category` now distinguishes a concrete permitted build from a story about
   permitting policy. A build/development signal plus a project noun or dollar
@@ -30,6 +30,19 @@ Production feature release commit: `9901d1f5a9d8df996505eaa70d792f726f225e2c`
   News smoke at desktop/mobile in dark and light themes, dependency audit with
   zero vulnerabilities, and diff check. No client, dependency, token, or theme
   changes were made.
+- The first live probe of merge `886a39d` confirmed the 90-day floor and the
+  Miami civic-center classification, but exposed the uncovered policy
+  morphology `dropping`. A forward hotfix added that exact permit-policy form
+  and locked the live headline in unit coverage.
+- Production hotfix `a76d7b30896af3f98a25c4fc4079a1ef408eec41`
+  deployed as Railway deployment `f9f58138-32a4-4310-a079-025ddd29b095`.
+  The forced Jacksonville feed returned the Miami $193M civic-center story as
+  Projects/Projects & development, the dropping-building-permits law as
+  Codes/Permits & inspections, and zero stories older than 90 days; the oldest
+  returned story was 76.6 days.
+- Live health reports the exact hotfix source with PostgreSQL and S3-compatible
+  storage healthy. The expected-source production monitor passed in 551 ms
+  with all seven anonymous private-route checks healthy.
 
 ## Trade News Intelligence V2.1 Clustering (Production Verification)
 

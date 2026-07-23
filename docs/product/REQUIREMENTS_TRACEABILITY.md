@@ -1861,3 +1861,17 @@ Evidence must eventually link to implementation, automated tests, manual accepta
   tests, E2E, rendered HB 803/theme smoke, and zero-vulnerability audit passed;
   exact-source health and the production monitor passed after Railway
   deployment `61dece4b-2e7f-4638-81ab-b486298c3ede`.
+## Traceability Addendum - 2026-07-23 Trade News V2.2 Content Quality
+
+- `GA-UX-003` gains production classification evidence: a permitted concrete
+  build with project/value signals is Projects, while permit reform,
+  requirements, waivers, elimination, rules, thresholds, streamlining, and
+  drop/drops/dropped/dropping policy language remain Codes.
+- `GA-UX-005` gains freshness evidence: feed inclusion now stops at 90 days;
+  a forced Jacksonville response contained zero older items while preserving
+  the separate official-reference path.
+- `GA-OPS-007` gains production evidence at
+  `a76d7b30896af3f98a25c4fc4079a1ef408eec41`: build, lint, 68 unit/frontend
+  tests, E2E, rendered mixed-category/age smoke, and zero-vulnerability audit
+  passed; exact-source health and the production monitor passed after Railway
+  deployment `f9f58138-32a4-4310-a079-025ddd29b095`.
