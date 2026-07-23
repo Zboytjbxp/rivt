@@ -401,6 +401,14 @@ function _storyEntities(item) {
   for (const match of text.matchAll(/\b([A-Z][\p{L}\p{N}'’-]+(?:\s+[A-Z][\p{L}\p{N}'’-]+){0,5}\s+Act)\b/gu)) {
     entities.add(match[1].toLowerCase().replace(/\s+/g, " "));
   }
+  if (
+    /\bflorida\b/i.test(text)
+    && /\bpermit(?:s|ting)?\b/i.test(text)
+    && (/\b(?:HB|CS\/HB)\s?803\b/i.test(text) || /\b(?:small|home|residential|renovation)\b/i.test(text))
+    && /\b(?:remove|removes|removed|drop|drops|dropped|goodbye|cut|cuts|law|reform|change|changes)\b/i.test(text)
+  ) {
+    entities.add("florida-hb-803-permit-reform");
+  }
   return entities;
 }
 

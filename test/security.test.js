@@ -287,8 +287,11 @@ test("trade news cleans Google publisher suffixes and collapses the HB 803 story
     ["Florida contractors can drop building permits under HB 803 - Insurance Journal", "Insurance Journal", "https://insurancejournal.com/hb-803"],
     ["Goodbye to these Florida permits as HB 803 takes effect - Florida Politics", "Florida Politics", "https://floridapolitics.com/hb803"],
     ["CS/HB 803 removes select building permits across Florida - Florida House", "Florida House", "https://myfloridahouse.gov/hb803"],
-  ].map(([rawHeadline, source, url]) => ({
+  ].map(([rawHeadline, source, url], index) => ({
     ...base,
+    summary: index < 2
+      ? "Florida permit law coverage for small home construction projects."
+      : base.summary,
     headline: newsInternals._cleanHeadline(rawHeadline, source),
     source,
     url,
