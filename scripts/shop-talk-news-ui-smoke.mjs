@@ -189,6 +189,23 @@ newsPayload.items = newsInternals._partitionNewsAndResources([
 ], Date.parse("2026-07-23T12:00:00.000Z")).news;
 newsPayload.items.push(
   {
+    id: "duval-kitchen-code",
+    headline: "Jax Inspector General finds Duval Schools' kitchen construction violates code",
+    summary: "The inspector reviewed construction work at district kitchens.",
+    source: "Florida Politics",
+    url: "https://example.com/duval-schools-kitchen-code",
+    date: "Jul 23, 2026",
+    publishedAt: "2026-07-23T02:00:00.000Z",
+    trades: ["General construction"],
+    category: "Codes",
+    topics: ["Codes & standards"],
+    impactLevel: "routine",
+    impactReason: "Current Florida construction-code oversight.",
+    sourceKind: "publisher",
+    geography: "national",
+    isLocal: false,
+  },
+  {
     id: "national-materials-market",
     headline: "National materials outlook shifts contractor purchasing plans",
     summary: "Trade contractors are adjusting purchasing plans as national material markets change.",
@@ -225,6 +242,19 @@ newsPayload.items.push(
     tier: "national",
   },
 );
+const contentMatchedFixtureIds = new Set([
+  "duval-kitchen-code",
+  "national-materials-market",
+  "national-infrastructure-awards",
+]);
+const contentMatchedFixtures = newsPayload.items.filter((item) => contentMatchedFixtureIds.has(item.id));
+newsPayload.items = [
+  ...newsPayload.items.filter((item) => !contentMatchedFixtureIds.has(item.id)),
+  ...newsInternals._composeTieredNews(contentMatchedFixtures, {
+    location: "Jacksonville, FL",
+    now: Date.parse("2026-07-23T12:00:00.000Z"),
+  }).items,
+];
 const nationalNewsPayload = {
   fallback: false,
   resources: [],
@@ -588,11 +618,18 @@ try {
     assert.equal(await page.locator(".news-briefing-strip").count(), 0, "legacy briefing strip should be removed");
     assert.equal(await page.locator(".shop-news-list select").count(), 0, "feed should not contain select filters");
     assert.ok(await page.getByText("Local references · official portals", { exact: true }).isVisible(), "official references should be separated from news");
-    const nationalDivider = newsList.getByText("Beyond Jacksonville · national trade news", { exact: true });
+    const nationalDivider = newsList.getByText("Beyond your area · national trade news", { exact: true });
     await nationalDivider.waitFor({ timeout: 15_000 });
+    const promotedLocalRow = newsList.getByText("Jax Inspector General finds Duval Schools' kitchen construction violates code", { exact: true });
+    await promotedLocalRow.waitFor({ timeout: 15_000 });
     const nationalRow = newsList.getByText("National materials outlook shifts contractor purchasing plans", { exact: true });
     await nationalRow.waitFor({ timeout: 15_000 });
-    const [dividerBox, nationalRowBox] = await Promise.all([nationalDivider.boundingBox(), nationalRow.boundingBox()]);
+    const [promotedLocalBox, dividerBox, nationalRowBox] = await Promise.all([
+      promotedLocalRow.boundingBox(),
+      nationalDivider.boundingBox(),
+      nationalRow.boundingBox(),
+    ]);
+    assert.ok(promotedLocalBox && dividerBox && promotedLocalBox.y < dividerBox.y, "content-matched local stories should render above the national divider");
     assert.ok(dividerBox && nationalRowBox && nationalRowBox.y > dividerBox.y, "national rows should render below the Beyond-area divider");
     const referenceTitles = await newsList.locator(".news-local-references a").allTextContents();
     assert.ok(referenceTitles.every((title) => !title.includes("_")), "official reference titles should not contain underscores");
@@ -600,6 +637,7 @@ try {
     await page.getByRole("button", { name: "Local", exact: true }).click();
     assert.equal(await newsList.getByText(/national trade news/i).count(), 0, "Local channel should hide the national divider");
     assert.equal(await newsList.getByText("National materials outlook shifts contractor purchasing plans", { exact: true }).count(), 0, "Local channel should hide national rows");
+    assert.equal(await newsList.getByText("Jax Inspector General finds Duval Schools' kitchen construction violates code", { exact: true }).count(), 1, "content-matched local stories should remain in the Local channel");
     await page.getByRole("button", { name: "For you", exact: true }).click();
     await nationalDivider.waitFor({ timeout: 15_000 });
     assert.equal(await newsList.getByText(/2014/).count(), 0, "stale dates should never appear as feed news");

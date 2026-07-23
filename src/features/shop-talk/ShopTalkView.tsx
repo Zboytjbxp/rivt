@@ -1166,7 +1166,6 @@ export function ShopTalkView({
   const firstNationalRowId = groupNewsByTier
     ? newsRows.find((item) => item.tier === "national")?.id
     : undefined;
-  const newsAreaName = newsLocation.split(",")[0]?.trim() || "your area";
   const briefingTrade = followedNewsTrades.size ? [...followedNewsTrades].slice(0, 2).join(" + ") : primaryTrade;
   const strictNewsView = newsChannel !== "for-you";
   const newsEmptyTitle = normalizedNewsQuery
@@ -1764,7 +1763,7 @@ export function ShopTalkView({
                   <Fragment key={item.id}>
                     {item.id === firstNationalRowId ? (
                       <div className="news-local-references news-tier-divider" role="separator">
-                        <strong>Beyond {newsAreaName} · national trade news</strong>
+                        <strong>Beyond your area · national trade news</strong>
                       </div>
                     ) : null}
                     <article
