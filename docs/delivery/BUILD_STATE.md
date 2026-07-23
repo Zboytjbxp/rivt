@@ -23,6 +23,10 @@ Production feature release commit: `c80444ccf72a3a381121c08abf70fac5c3798d8b`
 - Passed locally: build, lint, 62 unit/frontend tests, rendered Shop Talk/Trade
   News QA with distinct local/all-region payload assertions, and the full
   mobile action/text-size matrix.
+- Railway deployment `327ac5d3-10a0-4eab-87ba-027b59b8f366` served exact source
+  `098f615db9c8fcae464ca284eca8056bab5c0f82`. The production synthetic monitor
+  passed in 589 ms with healthy dependencies, open operational controls, and
+  all seven anonymous private-route checks healthy.
 
 ## Camera Location Stamp Readability (Local Verification)
 
