@@ -3643,102 +3643,6 @@ html[data-rivt-compact-device="true"] .shop-talk-community-layout .shop-talk-sea
     line-height: 1.4;
   }
 }
-/* Mobile directory hierarchy: rows, not stacked dashboard cards. */
-@media (max-width: 640px) {
-  .community-directory-list {
-    gap: 0;
-    border-top: 1px solid var(--v2-border);
-  }
-
-  .community-directory-row {
-    min-height: 76px;
-    padding: 14px 0;
-    border: 0;
-    border-bottom: 1px solid var(--v2-border);
-    border-radius: 0;
-    background: transparent;
-    box-shadow: none;
-  }
-
-  .community-directory-row:hover {
-    background: var(--v2-surface-muted);
-  }
-
-  .community-directory-copy strong {
-    font-size: calc(17px * var(--v2-text-scale));
-    line-height: 1.25;
-    letter-spacing: 0;
-  }
-
-  .community-directory-copy span {
-    font-size: calc(14px * var(--v2-text-scale));
-    line-height: 1.4;
-  }
-}
-/* Mobile directory rows use list rhythm instead of nested cards. */
-@media (max-width: 640px) {
-  .community-directory-list {
-    gap: 0;
-    border-top: 1px solid var(--v2-border);
-  }
-
-  .community-directory-row {
-    min-height: 76px;
-    padding: 14px 0;
-    border: 0;
-    border-bottom: 1px solid var(--v2-border);
-    border-radius: 0;
-    background: transparent;
-    box-shadow: none;
-  }
-
-  .community-directory-row:hover {
-    background: var(--v2-surface-muted);
-  }
-
-  .community-directory-copy strong {
-    font-size: calc(17px * var(--v2-text-scale));
-    line-height: 1.25;
-    letter-spacing: 0;
-  }
-
-  .community-directory-copy span {
-    font-size: calc(14px * var(--v2-text-scale));
-    line-height: 1.4;
-  }
-}
-/* Mobile community directory: dense, scannable rows instead of stacked cards. */
-@media (max-width: 640px) {
-  .community-directory-list {
-    gap: 0;
-    border-top: 1px solid var(--v2-border);
-  }
-
-  .community-directory-row {
-    min-height: 76px;
-    padding: 14px 0;
-    border: 0;
-    border-bottom: 1px solid var(--v2-border);
-    border-radius: 0;
-    background: transparent;
-    box-shadow: none;
-  }
-
-  .community-directory-row:hover {
-    background: var(--v2-surface-muted);
-  }
-
-  .community-directory-copy strong {
-    font-size: calc(17px * var(--v2-text-scale));
-    line-height: 1.25;
-    letter-spacing: 0;
-  }
-
-  .community-directory-copy span {
-    font-size: calc(14px * var(--v2-text-scale));
-    line-height: 1.4;
-  }
-}
 @media (max-width: 640px) {
   .shop-news-list {
     display: block;
@@ -4267,5 +4171,105 @@ html[data-rivt-compact-device="true"] .shop-talk-community-layout .shop-talk-sea
     overflow-y: auto;
     border-radius: var(--v2-radius-xl) var(--v2-radius-xl) 0 0;
     box-shadow: var(--v2-shadow-md);
+  }
+}
+
+/* Final Shop Talk editorial rhythm: navigation and utilities may use contained
+   surfaces, while Feed, Communities, and Trade News content reads as one
+   continuous list. Elevation is reserved for sheets and selected detail. */
+.shop-talk-feed-panel[aria-label="Shop Talk feed"] .shop-post-list,
+.shop-talk-feed-panel[aria-label="Community directory"] .community-directory-list,
+.shop-talk-feed-panel[aria-label="Trade News feed"] .shop-news-list {
+  gap: 0;
+  border-top: 1px solid var(--v2-border);
+}
+
+.shop-talk-feed-panel[aria-label="Shop Talk feed"] .trade-post,
+.shop-talk-feed-panel[aria-label="Community directory"] .community-directory-row,
+.shop-talk-feed-panel[aria-label="Trade News feed"] .shop-news-card {
+  margin: 0;
+  border: 0;
+  border-bottom: 1px solid var(--v2-border);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  transition: background-color 160ms ease, box-shadow 160ms ease;
+}
+
+.shop-talk-feed-panel[aria-label="Shop Talk feed"] .trade-post:hover,
+.shop-talk-feed-panel[aria-label="Shop Talk feed"] .trade-post:focus-within,
+.shop-talk-feed-panel[aria-label="Community directory"] .community-directory-row:hover,
+.shop-talk-feed-panel[aria-label="Community directory"] .community-directory-row:focus-within,
+.shop-talk-feed-panel[aria-label="Trade News feed"] .shop-news-card:hover,
+.shop-talk-feed-panel[aria-label="Trade News feed"] .shop-news-card:focus-within {
+  background: var(--v2-surface-muted);
+}
+
+.shop-talk-feed-panel[aria-label="Community directory"] .community-directory-row {
+  min-height: 76px;
+  padding: 14px 0;
+}
+
+.shop-talk-feed-panel[aria-label="Trade News feed"] .shop-news-card.selected {
+  border-color: var(--v2-border);
+  background: color-mix(in srgb, var(--v2-accent) 7%, var(--v2-surface-muted));
+  box-shadow: none;
+}
+
+.shop-talk-feed-panel[aria-label="Trade News feed"] .shop-news-card.is-featured {
+  overflow: visible;
+  padding-top: 16px;
+  border-top: 0;
+}
+
+.shop-talk-feed-panel[aria-label="Trade News feed"] .shop-news-card.is-featured .shop-news-card-main {
+  padding: 0;
+}
+
+.shop-talk-feed-panel[aria-label="Trade News feed"] :is(.news-featured-image, .news-featured-fallback) {
+  height: clamp(150px, 42vw, 220px);
+  border-radius: var(--v2-radius-md);
+}
+
+.shop-talk-feed-panel[aria-label="Trade News feed"] .news-featured-copy {
+  padding: 14px 0 6px;
+}
+
+.shop-talk-feed-panel[aria-label="Trade News feed"] .shop-news-card.is-compact .shop-news-card-main {
+  padding: 15px 0 7px;
+}
+
+.shop-talk-feed-panel[aria-label="Trade News feed"] .news-card-actions {
+  justify-content: flex-start;
+  gap: 8px;
+  padding: 4px 0 12px;
+}
+
+.shop-talk-feed-panel[aria-label="Trade News feed"] .news-card-actions > button:last-child {
+  margin-left: auto;
+  border-color: transparent;
+  background: transparent;
+}
+
+.shop-talk-feed-panel[aria-label="Trade News feed"] .shop-news-source-link {
+  border: 0;
+  background: transparent;
+}
+
+.shop-talk-feed-panel[aria-label="Trade News feed"] :is(
+  .news-featured-copy > strong,
+  .shop-news-card.is-compact .news-card-body > strong,
+  .news-why-line
+) {
+  text-wrap: pretty;
+}
+
+@media (max-width: 640px) {
+  .shop-talk-feed-panel[aria-label="Trade News feed"] .shop-news-card.is-featured {
+    padding-top: 14px;
+  }
+
+  .shop-talk-feed-panel[aria-label="Trade News feed"] .news-featured-copy {
+    padding-top: 12px;
   }
 }

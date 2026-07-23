@@ -511,6 +511,19 @@ async function assertNoHorizontalOverflow(page) {
   assert.equal(hasOverflow, false, "page has horizontal overflow");
 }
 
+async function assertEditorialRows(locator, label) {
+  const styles = await locator.evaluateAll((nodes) => nodes.map((node) => {
+    const style = getComputedStyle(node);
+    return {
+      borderRadius: Number.parseFloat(style.borderRadius),
+      boxShadow: style.boxShadow,
+    };
+  }));
+  assert.ok(styles.length > 0, `${label} should render at least one content row`);
+  assert.ok(styles.every((style) => style.borderRadius === 0), `${label} should not use card radii`);
+  assert.ok(styles.every((style) => style.boxShadow === "none"), `${label} should not use card shadows`);
+}
+
 async function prepareScreenshot(page) {
   await page.evaluate(() => {
     if (document.activeElement instanceof HTMLElement) {
@@ -550,6 +563,7 @@ try {
     await page.getByRole("button", { name: "Communities" }).click();
     await page.getByRole("heading", { name: "Discover communities" }).waitFor({ timeout: 15_000 });
     await page.getByRole("button", { name: "Create" }).waitFor({ timeout: 15_000 });
+    await assertEditorialRows(page.locator(".community-directory-row"), "community directory");
     await assertNoHorizontalOverflow(page);
     await prepareScreenshot(page);
     await page.screenshot({ path: path.join(screenshotDir, `${viewport.name}-communities.png`), fullPage: true });
@@ -565,6 +579,7 @@ try {
     await page.getByRole("button", { name: "Post", exact: true }).waitFor({ timeout: 15_000 });
     await page.locator(".trade-post").filter({ hasText: "mid-job scope change without losing margin" }).first().waitFor({ timeout: 15_000 });
     await page.getByText(/new OSHA heat rule/i).waitFor({ timeout: 15_000 });
+    await assertEditorialRows(page.locator(".trade-post"), "Shop Talk feed");
     const talkSearch = page.locator('.shop-talk-search input[type="search"]');
     await talkSearch.fill("scope");
     await assertNoHorizontalOverflow(page);
@@ -655,6 +670,7 @@ try {
     assert.ok(visibleTagKinds.length >= 2, "mixed-category news should render at least two distinct tag kinds");
     assert.equal(await page.getByText(/0 new this week/i).count(), 0, "the intel strip must never headline zero new stories");
     await page.getByText("Featured briefing", { exact: true }).waitFor({ timeout: 15_000 });
+    await assertEditorialRows(newsList.locator(".shop-news-card"), "Trade News feed");
     await page.evaluate(() => document.documentElement.setAttribute("data-theme", "dark"));
     const darkNewsSurface = await page.locator('[aria-label="Trade News feed"]').evaluate((node) => getComputedStyle(node).backgroundColor);
     await page.screenshot({ path: path.join(screenshotDir, `${viewport.name}-news-featured-dark.png`), fullPage: true });
