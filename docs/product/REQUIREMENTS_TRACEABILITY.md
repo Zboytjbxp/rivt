@@ -1822,3 +1822,23 @@ Evidence must eventually link to implementation, automated tests, manual accepta
 - `GA-UX-006` and `GA-OPS-007` gain repeatable rendered evidence from Shop
   Talk/Trade News desktop/mobile QA and the 375x553 plus 390x664 three-text-size
   mobile matrix, alongside build, lint, unit, E2E, and dependency audit gates.
+## Traceability Addendum - 2026-07-23 Trade News Intelligence V2
+
+- `GA-UX-003` gains production information-hierarchy evidence: Trade News uses
+  one compact status strip, five channels, expandable search, a mobile
+  customization sheet, a conditional fresh-priority feature, and compact
+  category-led rows instead of a uniform RSS-card dump.
+- `GA-UX-005` gains production honesty evidence: undated stories are routine,
+  30/90/180-day age gates prevent stale urgency, high/critical treatment is
+  capped at 25%, evergreen official pages are separated as references, and
+  reply counts are derived only from real Shop Talk posts containing the
+  canonical article URL.
+- `GA-UX-006` gains rendered desktop/mobile evidence in dark and light themes:
+  the smoke locks one channel row, no legacy hero or select fieldbar, no
+  horizontal overflow, quiet source links, separated references, and
+  real-only discussion counts.
+- `GA-OPS-007` gains production evidence at merge commit
+  `7642132cdd991da666d39cb847688885a61c081f`: build, lint, 65 unit/frontend
+  tests, E2E, rendered Trade News smoke, and zero-vulnerability audit passed;
+  live health and the expected-source synthetic monitor passed after Railway
+  deployment `1bfa0b03-4090-4558-9308-eda5edce15d8`.

@@ -2,12 +2,12 @@
 
 Last updated: 2026-07-23 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Trade News intelligence v2 release hardening is in progress.
-Active packet: Trade News intelligence v2 on `codex/trade-news-intelligence-v2`
-Repository branch: `codex/trade-news-intelligence-v2`
-Production feature release commit: `c80444ccf72a3a381121c08abf70fac5c3798d8b`
+Current phase: Trade News intelligence v2 is production verified.
+Active packet: Trade News intelligence v2 production verification
+Repository branch: `master`
+Production feature release commit: `7642132cdd991da666d39cb847688885a61c081f`
 
-## Trade News Intelligence V2 (Local Verification)
+## Trade News Intelligence V2 (Production Verification)
 
 - Server honesty now requires a dated action signal before a story can be high
   or critical. Undated stories are routine, stories over 30 days are demoted,
@@ -33,6 +33,16 @@ Production feature release commit: `c80444ccf72a3a381121c08abf70fac5c3798d8b`
 - Verified locally: build, lint, 65 unit/frontend tests, rendered Trade News UI
   smoke at desktop and 390px mobile in both themes, full E2E, and dependency
   audit with zero vulnerabilities.
+- Merged to `master` as `7642132cdd991da666d39cb847688885a61c081f`.
+  Railway deployment `1bfa0b03-4090-4558-9308-eda5edce15d8` completed after
+  the production source metadata was synchronized to the merge commit.
+- Live health reports the exact merge commit with migration
+  `0028_compensation_workflow`, PostgreSQL, and S3-compatible storage healthy.
+  The expected-source production monitor passed in 737 ms with all seven
+  anonymous private-route checks healthy.
+- A forced Jacksonville feed check returned 10 current stories from eight
+  sources, four official references, zero stories older than 180 days, and no
+  falsely urgent items.
 
 ## Trade Intelligence For You Recovery (Local Verification)
 

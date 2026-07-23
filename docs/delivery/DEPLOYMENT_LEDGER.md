@@ -2217,3 +2217,32 @@ Add one entry per staging/production deployment.
 - Known boundary: physical iOS/Android dynamic-type, desktop keyboard-only, and
   screen-reader acceptance remain required before accessibility maturity can
   move beyond Partial.
+
+# Current Production - Trade News Intelligence V2
+
+- Environment: Production (`https://rivt.pro`)
+- Date/time/timezone: 2026-07-23 America/New_York
+- Deployer: Codex through `codex/trade-news-intelligence-v2`, merge commit on
+  `master`, and Railway production auto-deploy
+- Runtime feature source: `7642132cdd991da666d39cb847688885a61c081f`
+- Railway deployment: `1bfa0b03-4090-4558-9308-eda5edce15d8`
+- Migration version before/after: unchanged (`0028_compensation_workflow`)
+- Provider/config changes: only `SOURCE_COMMIT` release metadata was updated;
+  auth, billing, PostgreSQL, object storage, Sentry, Web Push, email,
+  moderation, and rollout configuration were preserved.
+- Rollback target: `2801cf029789c1f5b4a098476992d67837b7c45b`; no
+  database rollback is required.
+- Automated gates: build, lint, 65 unit/frontend tests, E2E, desktop/mobile
+  rendered Trade News smoke in both themes, dependency audit with zero
+  vulnerabilities, and diff check passed. Aggregate `npm run test` exceeded a
+  bounded two-minute integration phase without returning a failing assertion,
+  so no aggregate integration pass is claimed.
+- Product evidence: dated action-signal priority rules, 30/90/180-day age
+  gates, a 25% urgent-story cap, separated official references, featured and
+  compact feed hierarchy, and canonical-URL Shop Talk discussion matching with
+  real reply counts only.
+- Post-deploy proof: live `/api/health` returned the exact merge commit with
+  PostgreSQL and S3-compatible storage healthy. The production monitor passed
+  in 737 ms with all seven anonymous private-route checks healthy. A forced
+  Jacksonville refresh returned 10 current stories from eight sources, four
+  official references, zero stale feed items, and zero high/critical items.
