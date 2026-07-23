@@ -66,6 +66,7 @@ export interface NewsItem {
   url: string;
   urgency?: string;
   category?: string;
+  trades?: string[];
   thumbnailUrl?: string;
   thumbnailKind?: "article" | "feed" | "fallback";
 }
@@ -166,6 +167,25 @@ const communityBadgeThresholds: CommunityBadgeThresholds = {
 
 function isFallbackNewsThumbnail(item: Pick<NewsItem, "thumbnailUrl" | "thumbnailKind">) {
   return !item.thumbnailUrl;
+}
+
+function newsItemTrades(item: NewsItem) {
+  if (item.trades?.length) return item.trades;
+  const text = `${item.headline} ${item.summary}`.toLowerCase();
+  const patterns: Array<[string, RegExp]> = [
+    ["Electrical", /\belectric(?:al|ian|ians)?\b|\bnec\b|low voltage/],
+    ["Plumbing", /\bplumb(?:ing|er|ers)?\b|pipefitt|water heater/],
+    ["HVAC", /\bhvac\b|refrigerant|air condition|heat pump/],
+    ["Carpentry", /carpentr|woodwork|millwork/],
+    ["Roofing", /roof|shingle/],
+    ["Drywall", /drywall|gypsum/],
+    ["Concrete/Masonry", /concrete|masonry|brick|block wall/],
+    ["Framing", /\bframing\b|\bframer/],
+    ["Excavation", /excavat|trench/],
+    ["Solar", /\bsolar\b|photovoltaic/],
+  ];
+  const matches = patterns.filter(([, pattern]) => pattern.test(text)).map(([trade]) => trade);
+  return matches.length ? matches : ["General construction"];
 }
 
 function pluralize(count: number, noun: string) {
@@ -704,7 +724,7 @@ export function ShopTalkView({
   const [talkQuery, setTalkQuery] = useState(() => initialQuery.trim());
   const [newsQuery, setNewsQuery] = useState("");
   const [newsCategory, setNewsCategory] = useState(() => localStorage.getItem("rivt.news.category.v1") || "All topics");
-  const [newsSource, setNewsSource] = useState(() => localStorage.getItem("rivt.news.source.v1") || "All sources");
+  const [newsTrade, setNewsTrade] = useState(() => localStorage.getItem("rivt.news.trade.v1") || "All trades");
   const [newsScope, setNewsScope] = useState<"local" | "all">(() => localStorage.getItem("rivt.news.scope.v1") === "all" ? "all" : "local");
   const [liveNews, setLiveNews] = useState<NewsItem[]>([]);
   const [newsLoading, setNewsLoading] = useState(false);
@@ -740,9 +760,9 @@ export function ShopTalkView({
 
   useEffect(() => {
     localStorage.setItem("rivt.news.category.v1", newsCategory);
-    localStorage.setItem("rivt.news.source.v1", newsSource);
+    localStorage.setItem("rivt.news.trade.v1", newsTrade);
     localStorage.setItem("rivt.news.scope.v1", newsScope);
-  }, [newsCategory, newsScope, newsSource]);
+  }, [newsCategory, newsScope, newsTrade]);
 
   const tradeFilters = ["All trades", "General", ...specialtyOptions];
   const primaryTrade = profile.specialties[0] ?? selectedJobTrade;
@@ -952,10 +972,10 @@ export function ShopTalkView({
     return true;
   });
   const newsCategories = ["All topics", ...new Set(displayNews.map((item) => item.category || "General"))];
-  const newsSources = ["All sources", ...new Set(displayNews.map((item) => item.source).filter(Boolean))];
+  const newsTrades = ["All trades", ...new Set(displayNews.flatMap(newsItemTrades))];
   const filteredNews = displayNews.filter((item) => {
     if (newsCategory !== "All topics" && (item.category || "General") !== newsCategory) return false;
-    if (newsSource !== "All sources" && item.source !== newsSource) return false;
+    if (newsTrade !== "All trades" && !newsItemTrades(item).includes(newsTrade)) return false;
     if (!normalizedNewsQuery) return true;
     return [item.headline, item.summary, item.source, item.category ?? "", item.urgency ?? "", item.date].join(" ").toLowerCase().includes(normalizedNewsQuery);
   });
@@ -1403,10 +1423,10 @@ export function ShopTalkView({
                     type="search"
                     value={newsQuery}
                     onChange={(event) => setNewsQuery(event.target.value)}
-                    placeholder="Search sources, codes, safety, local"
+                    placeholder="Search trades, codes, safety, local"
                   />
                 </label>
-                <label className="news-filter-control">
+                <label className="news-filter-control news-location-control">
                   <span>Location</span>
                   <select value={newsScope} onChange={(event) => {
                     const nextScope = event.target.value === "all" ? "all" : "local";
@@ -1424,9 +1444,9 @@ export function ShopTalkView({
                   </select>
                 </label>
                 <label className="news-filter-control">
-                  <span>Source</span>
-                  <select value={newsSources.includes(newsSource) ? newsSource : "All sources"} onChange={(event) => setNewsSource(event.target.value)}>
-                    {newsSources.map((source) => <option key={source}>{source}</option>)}
+                  <span>Trade</span>
+                  <select aria-label="Trade" value={newsTrades.includes(newsTrade) ? newsTrade : "All trades"} onChange={(event) => setNewsTrade(event.target.value)}>
+                    {newsTrades.map((trade) => <option key={trade}>{trade}</option>)}
                   </select>
                 </label>
               </div>

@@ -99,6 +99,39 @@ function _category(item, hint = "") {
   return "Construction";
 }
 
+function _trades(item) {
+  const text = `${item?.headline ?? ""} ${item?.summary ?? ""}`.toLowerCase();
+  const matches = [
+    ["Electrical", /\belectric(?:al|ian|ians)?\b|\bnec\b|low voltage/],
+    ["Plumbing", /\bplumb(?:ing|er|ers)?\b|pipefitt|water heater/],
+    ["HVAC", /\bhvac\b|refrigerant|air condition|heat pump/],
+    ["Carpentry", /carpentr|woodwork|millwork/],
+    ["Cabinetry", /cabinet|casework/],
+    ["Painting/Finishing", /paint|coating|finishing/],
+    ["Welding", /weld|metal fabrication/],
+    ["Roofing", /roof|shingle/],
+    ["Flooring", /flooring|floor cover/],
+    ["Drywall", /drywall|gypsum/],
+    ["Concrete/Masonry", /concrete|masonry|brick|block wall/],
+    ["Landscaping", /landscap|irrigation/],
+    ["Tile", /\btile\b/],
+    ["Insulation", /insulat/],
+    ["Framing", /\bframing\b|\bframer/],
+    ["Demolition", /demolition|\bdemo\b/],
+    ["Excavation", /excavat|trench/],
+    ["Fencing", /\bfenc(?:e|ing)\b/],
+    ["Gutters", /\bgutter/],
+    ["Windows/Doors", /\bwindow|\bdoor/],
+    ["Siding", /\bsiding\b/],
+    ["Driveways/Pavers", /driveway|paver/],
+    ["Pool/Spa", /\bpool\b|\bspa\b/],
+    ["Fire Suppression", /fire suppression|sprinkler system/],
+    ["Solar", /\bsolar\b|photovoltaic/],
+    ["Security Systems", /security system|access control/],
+  ].filter(([, pattern]) => pattern.test(text)).map(([trade]) => trade);
+  return matches.length ? matches : ["General construction"];
+}
+
 function _canonicalArticleUrl(value) {
   try {
     const url = new URL(String(value ?? ""));
@@ -385,6 +418,7 @@ async function _fetchFeed(url, fallbackSource, categoryHint = "", isLocal = fals
         url: link,
         urgency,
         category: _category({ headline, summary }, categoryHint),
+        trades: _trades({ headline, summary }),
         isLocal,
         thumbnailUrl: thumbnailUrl ?? undefined,
         thumbnailKind: thumbnailUrl ? "feed" : undefined,
@@ -412,7 +446,7 @@ router.get("/api/news", async (request, response) => {
   const [city, state] = location.split(",").map((s) => s.trim());
   const natQ  = "construction+contractor+subcontractor+building+permit+code+OSHA";
   const localQ = city && state
-    ? `construction+contractor+${encodeURIComponent(city)}+${encodeURIComponent(state)}`
+    ? `construction contractor skilled trades permits projects ${city} ${state}`
     : null;
 
   const topicalFeeds = [
@@ -431,16 +465,17 @@ router.get("/api/news", async (request, response) => {
     ...topicalFeeds.map(([query, category]) => _fetchFeed(`https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=en-US&gl=US&ceid=US:en`, "Google News", category)),
     _fetchFeed(`https://news.google.com/rss/search?q=${natQ}&hl=en-US&gl=US&ceid=US:en`, "Google News"),
     ...(localQ ? [
-      _fetchFeed(`https://news.google.com/rss/search?q=${localQ}&hl=en-US&gl=US&ceid=US:en`, `${city} News`, "Construction", true),
-      _fetchFeed(`https://news.google.com/rss/search?q=${encodeURIComponent("Jacksonville Florida contractor construction permits projects")}&hl=en-US&gl=US&ceid=US:en`, "Jacksonville / Florida", "Construction", true),
+      _fetchFeed(`https://news.google.com/rss/search?q=${encodeURIComponent(localQ)}&hl=en-US&gl=US&ceid=US:en`, `${city} / ${state}`, "", true),
+      _fetchFeed(`https://news.google.com/rss/search?q=${encodeURIComponent(`contractor construction permits projects ${state}`)}&hl=en-US&gl=US&ceid=US:en`, `${state} trades`, "", true),
     ] : []),
   ];
   const settledFeeds = await Promise.allSettled(feedRequests);
 
   const pick = (r) => r.status === "fulfilled" ? r.value : [];
   const liveItems = settledFeeds.flatMap(pick);
-  const fallback = liveItems.length === 0;
-  const ranked = _dedupeAndDiversify(liveItems, 30);
+  const scopedItems = location ? liveItems.filter((item) => item.isLocal) : liveItems;
+  const fallback = scopedItems.length === 0;
+  const ranked = _dedupeAndDiversify(scopedItems, 30);
   const items = (await _enrichNewsImages(ranked)).map((item, i) => ({
     ...item,
     id: i + 1,
@@ -464,5 +499,6 @@ export const newsInternals = {
   _pruneNewsCache,
   _resolvePublicImageUrl,
   _rssThumbnailUrl,
+  _trades,
   newsCache,
 };

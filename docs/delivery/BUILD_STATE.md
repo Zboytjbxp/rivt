@@ -7,6 +7,23 @@ Active packet: Shop Talk and Communities release packet on `codex/shop-talk-comm
 Repository branch: `codex/shop-talk-communities-release`
 Production feature release commit: `c80444ccf72a3a381121c08abf70fac5c3798d8b`
 
+## Trade News Location and Trade Filters (Local Verification)
+
+- `Near [profile location]` now returns only location-scoped RSS candidates.
+  National stories no longer remain mixed into a local result set; when local
+  sources return nothing, the UI presents its honest no-current-news state.
+  `All regions` continues to load the diversified national feed.
+- The Source dropdown was replaced with Trade. Articles carry deterministic
+  keyword-derived trade labels such as Electrical, Plumbing, HVAC, Roofing,
+  and Concrete/Masonry; unmatched construction coverage remains labeled
+  General construction rather than receiving an invented specialty.
+- On narrow screens Location now occupies a full row, with Topic and Trade in
+  two bounded columns below. Selects use `width: 100%` and `min-width: 0`, so
+  long location text cannot clip into Topic at any supported text scale.
+- Passed locally: build, lint, 62 unit/frontend tests, rendered Shop Talk/Trade
+  News QA with distinct local/all-region payload assertions, and the full
+  mobile action/text-size matrix.
+
 ## Camera Location Stamp Readability (Local Verification)
 
 - The opt-in capture-location stamp now leads with the selected job/project name

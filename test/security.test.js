@@ -219,6 +219,23 @@ test("trade news images accept public RSS media and reject local or decorative U
   assert.equal(newsInternals._resolvePublicImageUrl("https://example.com/favicon.ico"), null);
 });
 
+test("trade news assigns useful trade filters without inventing a specialty", () => {
+  assert.deepEqual(
+    newsInternals._trades({
+      headline: "Electrical and HVAC contractors prepare for code changes",
+      summary: "New NEC and refrigerant requirements affect field work.",
+    }),
+    ["Electrical", "HVAC"],
+  );
+  assert.deepEqual(
+    newsInternals._trades({
+      headline: "Construction employment report",
+      summary: "Skilled trade businesses added jobs this month.",
+    }),
+    ["General construction"],
+  );
+});
+
 test("invoice send validation rejects bad recipients and throttles repeated sends", () => {
   const normalizePhoneNumber = (value) => String(value ?? "").replace(/[^\d+]/g, "");
   const base = {

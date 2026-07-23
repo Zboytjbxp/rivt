@@ -82,6 +82,8 @@ const newsPayload = {
       thumbnailKind: "article",
       date: "Jun 21, 2026",
       urgency: "Local update",
+      category: "Codes",
+      trades: ["Electrical", "Plumbing", "HVAC"],
     },
     {
       id: "osha-heat-safety",
@@ -94,6 +96,8 @@ const newsPayload = {
       thumbnailKind: "article",
       date: "Jun 20, 2026",
       urgency: "Safety",
+      category: "Safety",
+      trades: ["General construction"],
     },
     {
       id: "refrigerant-transition",
@@ -103,10 +107,27 @@ const newsPayload = {
       source: "EPA SNAP",
       url: "https://www.epa.gov/snap",
       date: "Jun 19, 2026",
+      category: "Tools",
+      trades: ["HVAC"],
       urgency: "Code watch",
       category: "Codes",
     },
   ],
+};
+const nationalNewsPayload = {
+  fallback: false,
+  items: [{
+    id: "national-electrical-code",
+    headline: "National electrical code update changes service planning",
+    summary: "Electrical contractors review updated service and equipment requirements.",
+    source: "National trade desk",
+    url: "https://example.com/national-electrical-code",
+    thumbnailUrl: newsPhotoDataUri("NATIONAL CODE"),
+    thumbnailKind: "article",
+    date: "Jun 22, 2026",
+    category: "Codes",
+    trades: ["Electrical"],
+  }],
 };
 
 function reactionLedgerKey(targetType, targetKey) {
@@ -327,9 +348,11 @@ async function configurePage(page) {
       body: JSON.stringify({ usedBytes: 0, objectCount: 0, plan: {} }),
     }),
   );
-  await page.route("**/api/news**", (route) =>
-    route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(newsPayload) }),
-  );
+  await page.route("**/api/news**", (route) => {
+    const requestUrl = new URL(route.request().url());
+    const payload = requestUrl.searchParams.has("location") ? newsPayload : nationalNewsPayload;
+    return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(payload) });
+  });
 }
 
 async function assertNoHorizontalOverflow(page) {
@@ -439,14 +462,23 @@ try {
       await mobileBack.click();
     }
     await page.getByRole("button", { name: "Trade News" }).click();
-    await page.getByLabel("Trade News filters").getByLabel("Location").waitFor({ timeout: 15_000 });
-    await page.getByLabel("Trade News filters").getByLabel("Topic").selectOption("Codes");
-    await page.getByLabel("Trade News filters").getByLabel("Source").selectOption({ index: 1 });
+    const newsFilters = page.getByLabel("Trade News filters");
+    const locationFilter = newsFilters.getByLabel("Location");
+    const newsList = page.locator(".shop-news-list");
+    await locationFilter.waitFor({ timeout: 15_000 });
+    await locationFilter.selectOption("all");
+    await newsList.getByText("National electrical code update", { exact: false }).first().waitFor({ timeout: 15_000 });
+    assert.equal(await newsList.getByText("Jacksonville permit desk", { exact: false }).count(), 0, "all-region refresh should replace the local result set");
+    await locationFilter.selectOption("local");
+    await newsList.getByText("Jacksonville permit desk", { exact: false }).first().waitFor({ timeout: 15_000 });
+    assert.equal(await newsList.getByText("National electrical code update", { exact: false }).count(), 0, "local refresh should replace the national result set");
+    await newsFilters.getByLabel("Topic").selectOption("Codes");
+    await newsFilters.getByLabel("Trade", { exact: true }).selectOption("Electrical");
     await assertNoHorizontalOverflow(page);
-    await page.getByLabel("Trade News filters").getByLabel("Topic").selectOption("All topics");
-    await page.getByLabel("Trade News filters").getByLabel("Source").selectOption("All sources");
+    await newsFilters.getByLabel("Topic").selectOption("All topics");
+    await newsFilters.getByLabel("Trade", { exact: true }).selectOption("All trades");
     await page.getByRole("heading", { name: /What's changing in the field/i }).waitFor({ timeout: 15_000 });
-    await page.locator('input[placeholder="Search sources, codes, safety, local"]').fill("permit");
+    await page.locator('input[placeholder="Search trades, codes, safety, local"]').fill("permit");
     await page
       .locator(".shop-news-list")
       .getByText("Jacksonville permit desk", { exact: false })
