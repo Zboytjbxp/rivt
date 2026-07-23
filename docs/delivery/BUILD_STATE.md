@@ -2,10 +2,37 @@
 
 Last updated: 2026-07-23 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Shop Talk and Communities release hardening is in progress.
-Active packet: Shop Talk and Communities release packet on `codex/shop-talk-communities-release`
-Repository branch: `codex/shop-talk-communities-release`
+Current phase: Trade News intelligence v2 release hardening is in progress.
+Active packet: Trade News intelligence v2 on `codex/trade-news-intelligence-v2`
+Repository branch: `codex/trade-news-intelligence-v2`
 Production feature release commit: `c80444ccf72a3a381121c08abf70fac5c3798d8b`
+
+## Trade News Intelligence V2 (Local Verification)
+
+- Server honesty now requires a dated action signal before a story can be high
+  or critical. Undated stories are routine, stories over 30 days are demoted,
+  stories over 90 days cannot be urgent, and feed stories over 180 days are
+  excluded.
+- High and critical stories are capped at 25% of the returned feed. Excess
+  priority items are demoted in relevance order so urgent treatment remains
+  scarce and useful.
+- Undated or 18-month-old official portal pages are separated into a bounded
+  `resources` collection and rendered as `Local references · official portals`
+  below the feed. They never receive dates or impact labels.
+- The client replaces the large hero, briefing strip, and select fieldbar with
+  a compact status line, five channels, expandable search, and a mobile
+  Customize sheet. Fresh priority stories may lead visually; remaining stories
+  use compact rows with semantic category tags and relative time.
+- Article discussion is now the primary action. Reply counts only appear when
+  an actual Shop Talk post body contains the canonical article URL; otherwise
+  the composer starts a discussion and includes the article URL.
+- The rendered smoke locks one channel row, no legacy hero/select fieldbar,
+  priority scarcity, separated stale references, real-only discussion counts,
+  quiet `Read original` treatment, no horizontal overflow, and desktop/mobile
+  screenshots in dark and light themes.
+- Verified locally: build, lint, 65 unit/frontend tests, rendered Trade News UI
+  smoke at desktop and 390px mobile in both themes, full E2E, and dependency
+  audit with zero vulnerabilities.
 
 ## Trade Intelligence For You Recovery (Local Verification)
 
