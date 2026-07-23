@@ -772,6 +772,7 @@ export const newsInternals = {
   _clusterKeyTokens,
   _storyEntities,
   _normalizedTitle,
+  _fetchFeed,
   _pruneNewsCache,
   _resolvePublicImageUrl,
   _rssThumbnailUrl,
