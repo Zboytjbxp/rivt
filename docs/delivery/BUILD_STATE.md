@@ -7,6 +7,31 @@ Active packet: Shop Talk and Communities release packet on `codex/shop-talk-comm
 Repository branch: `codex/shop-talk-communities-release`
 Production feature release commit: `c80444ccf72a3a381121c08abf70fac5c3798d8b`
 
+## Camera Live-View Density Redesign (Local Verification)
+
+- The capture overlay now keeps the live camera view dominant. Persistent
+  bottom controls occupy about 142px rather than stacking destination, capture
+  type, zoom, status, and shutter bands into roughly half the phone viewport.
+- Destination, current capture type, and zoom share one compact floating row.
+  Pinch zoom remains available; the compact zoom control cycles useful levels.
+  Capture types open in a six-choice progressive menu only when requested.
+- The top bar is a translucent back control plus the exact save destination,
+  avoiding a second oversized Camera title bar. Save/retry feedback floats
+  temporarily above the dock instead of reserving permanent space.
+- A compact settings sheet now persists High/Standard JPEG quality, 4:3/16:9
+  capture crop, and a viewfinder-only composition grid. Date/time stamps are
+  opt-in. GPS coordinate stamps remain off unless the user explicitly enables
+  them and the browser returns real permitted coordinates; denial is surfaced
+  honestly and no location is invented.
+- Active RIVT job camera context no longer mixes in private albums or their
+  recent captures. Private albums remain available from the standalone Camera
+  home and destination chooser.
+- Passed locally: build, lint, rendered Tools/Camera QA, and mobile action QA.
+  The rendered Camera path covers context selection, capture-menu selection,
+  settings persistence, aspect/quality/grid selection, switching cameras,
+  capture, failed-upload retry, saved feedback, a <=170px control-dock
+  assertion, and no horizontal overflow. Deployment is pending.
+
 ## Shop Talk and Communities Release Hardening (Local Verification)
 
 - Authenticated Shop Talk and Communities now cold-start from empty server-owned

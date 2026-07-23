@@ -1,5 +1,5 @@
 import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, ArrowRight, Camera, Download, FileUp, FolderOpen, Image, Loader2, Plus, RefreshCw } from "lucide-react";
+import { ArrowLeft, ArrowRight, Camera, Download, FileUp, FolderOpen, Grid3X3, Image, Loader2, Plus, RefreshCw, Settings2, X } from "lucide-react";
 import { ZoomableImage } from "../../components/ZoomableImage";
 import { createPhotoComparison, type PhotoComparisonLayout } from "./photo-comparison";
 import type { CanonicalActiveWork } from "../work/job-api";
@@ -40,6 +40,42 @@ interface UnifiedPhoto {
 }
 
 type PhotoGalleryLayout = "grid" | "timeline";
+type CameraImageQuality = "standard" | "high";
+type CameraAspectRatio = "4:3" | "16:9";
+
+interface CameraPreferences {
+  quality: CameraImageQuality;
+  aspectRatio: CameraAspectRatio;
+  grid: boolean;
+  dateStamp: boolean;
+  locationStamp: boolean;
+}
+
+const cameraPreferencesStorageKey = "rivt.cameraPreferences.v1";
+const defaultCameraPreferences: CameraPreferences = {
+  quality: "high",
+  aspectRatio: "4:3",
+  grid: false,
+  dateStamp: false,
+  locationStamp: false,
+};
+
+function readCameraPreferences(): CameraPreferences {
+  try {
+    const saved = JSON.parse(localStorage.getItem(cameraPreferencesStorageKey) || "null") as Partial<CameraPreferences> | null;
+    return {
+      quality: saved?.quality === "standard" ? "standard" : "high",
+      aspectRatio: saved?.aspectRatio === "16:9" ? "16:9" : "4:3",
+      grid: Boolean(saved?.grid),
+      dateStamp: Boolean(saved?.dateStamp),
+      // Location stamping is intentionally session-only so a previous grant
+      // never silently adds coordinates to a later job or private capture.
+      locationStamp: false,
+    };
+  } catch {
+    return defaultCameraPreferences;
+  }
+}
 
 interface UploadBatchResult {
   failedFiles: File[];
@@ -215,6 +251,11 @@ function CameraCapture({
   const [failedCapture, setFailedCapture] = useState<Blob | null>(null);
   const [facingMode, setFacingMode] = useState<"environment" | "user">("environment");
   const [zoom, setZoom] = useState(1);
+  const [captureTypesOpen, setCaptureTypesOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [preferences, setPreferences] = useState<CameraPreferences>(readCameraPreferences);
+  const [stampCoordinates, setStampCoordinates] = useState<GeolocationCoordinates | null>(null);
+  const [locationMessage, setLocationMessage] = useState("");
   const lastSnapRef = useRef<string | null>(null);
   const pinchStartDistanceRef = useRef(0);
   const pinchStartZoomRef = useRef(1);
@@ -233,6 +274,40 @@ function CameraCapture({
   useEffect(() => () => {
     if (lastSnapRef.current) URL.revokeObjectURL(lastSnapRef.current);
   }, []);
+
+  useEffect(() => {
+    localStorage.setItem(cameraPreferencesStorageKey, JSON.stringify(preferences));
+  }, [preferences]);
+
+  function setCameraPreference<K extends keyof CameraPreferences>(key: K, value: CameraPreferences[K]) {
+    setPreferences((current) => ({ ...current, [key]: value }));
+  }
+
+  function requestLocationStamp(enabled: boolean) {
+    if (!enabled) {
+      setCameraPreference("locationStamp", false);
+      setStampCoordinates(null);
+      setLocationMessage("");
+      return;
+    }
+    if (!navigator.geolocation) {
+      setLocationMessage("Location is not available on this device.");
+      return;
+    }
+    setLocationMessage("Requesting location permission...");
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setStampCoordinates(position.coords);
+        setCameraPreference("locationStamp", true);
+        setLocationMessage("Coordinates will be stamped on new photos.");
+      },
+      () => {
+        setCameraPreference("locationStamp", false);
+        setLocationMessage("Location permission was not granted.");
+      },
+      { enableHighAccuracy: true, timeout: 10_000, maximumAge: 60_000 },
+    );
+  }
 
   useEffect(() => {
     let stream: MediaStream | null = null;
@@ -275,8 +350,12 @@ function CameraCapture({
     const video = videoRef.current;
     const canvas = canvasRef.current;
     if (!video || !canvas || !ready) return;
-    const sourceWidth = video.videoWidth / zoom;
-    const sourceHeight = video.videoHeight / zoom;
+    const targetAspect = preferences.aspectRatio === "16:9" ? 16 / 9 : 4 / 3;
+    const videoAspect = video.videoWidth / video.videoHeight;
+    const uncroppedWidth = videoAspect > targetAspect ? video.videoHeight * targetAspect : video.videoWidth;
+    const uncroppedHeight = videoAspect > targetAspect ? video.videoHeight : video.videoWidth / targetAspect;
+    const sourceWidth = uncroppedWidth / zoom;
+    const sourceHeight = uncroppedHeight / zoom;
     const sourceX = (video.videoWidth - sourceWidth) / 2;
     const sourceY = (video.videoHeight - sourceHeight) / 2;
     canvas.width = Math.round(sourceWidth);
@@ -294,6 +373,25 @@ function CameraCapture({
       canvas.width,
       canvas.height,
     );
+    const stamps = [
+      preferences.dateStamp ? new Date().toLocaleString() : "",
+      preferences.locationStamp && stampCoordinates
+        ? `${stampCoordinates.latitude.toFixed(5)}, ${stampCoordinates.longitude.toFixed(5)}`
+        : "",
+    ].filter(Boolean);
+    if (stamps.length) {
+      const fontSize = Math.max(16, Math.round(canvas.width * 0.022));
+      const padding = Math.round(fontSize * 0.65);
+      context.font = `600 ${fontSize}px sans-serif`;
+      context.textBaseline = "bottom";
+      const blockHeight = stamps.length * fontSize * 1.35 + padding * 2;
+      context.fillStyle = "rgba(0, 0, 0, 0.62)";
+      context.fillRect(0, canvas.height - blockHeight, canvas.width, blockHeight);
+      context.fillStyle = "#fff";
+      stamps.forEach((stamp, index) => {
+        context.fillText(stamp, padding, canvas.height - padding - (stamps.length - index - 1) * fontSize * 1.35);
+      });
+    }
     canvas.toBlob((blob) => {
       if (!blob) return;
       if (lastSnapRef.current) URL.revokeObjectURL(lastSnapRef.current);
@@ -304,7 +402,7 @@ function CameraCapture({
       setFlash(true);
       setTimeout(() => setFlash(false), 200);
       void saveCapture(blob);
-    }, "image/jpeg", 0.92);
+    }, "image/jpeg", preferences.quality === "high" ? 0.92 : 0.78);
   }
 
   return (
@@ -315,7 +413,13 @@ function CameraCapture({
           <ArrowLeft size={18} />
           <span>Back</span>
         </button>
-        <strong className="v2-camera-topbar-title">Camera</strong>
+        <span className="v2-camera-topbar-copy">
+          <small>Camera</small>
+          <strong className="v2-camera-topbar-title">{contextLabel}</strong>
+        </span>
+        <button type="button" className="v2-camera-settings-button" onClick={() => setSettingsOpen(true)} aria-label="Camera settings">
+          <Settings2 size={19} />
+        </button>
       </header>
       {error ? (
         <div className="v2-camera-error">
@@ -348,25 +452,50 @@ function CameraCapture({
             autoPlay
             onLoadedMetadata={() => setReady(true)}
           />
+          {preferences.grid ? <span className="v2-camera-composition-grid" aria-hidden="true" /> : null}
         </div>
       )}
       <canvas ref={canvasRef} style={{ display: "none" }} aria-hidden="true" />
+      {settingsOpen ? (
+        <section className="v2-camera-settings-sheet" role="dialog" aria-modal="true" aria-label="Camera settings">
+          <header>
+            <div><small>Capture preferences</small><h2>Camera settings</h2></div>
+            <button type="button" onClick={() => setSettingsOpen(false)} aria-label="Close camera settings"><X size={19} /></button>
+          </header>
+          <div className="v2-camera-settings-body">
+            <fieldset>
+              <legend>Image quality</legend>
+              <label><input type="radio" name="camera-quality" checked={preferences.quality === "standard"} onChange={() => setCameraPreference("quality", "standard")} /><span><strong>Standard</strong><small>Smaller upload for limited data.</small></span></label>
+              <label><input type="radio" name="camera-quality" checked={preferences.quality === "high"} onChange={() => setCameraPreference("quality", "high")} /><span><strong>High</strong><small>Better detail for field documentation.</small></span></label>
+            </fieldset>
+            <fieldset>
+              <legend>Aspect ratio</legend>
+              <div className="v2-camera-setting-segments">
+                {(["4:3", "16:9"] as CameraAspectRatio[]).map((ratio) => <button key={ratio} type="button" className={preferences.aspectRatio === ratio ? "is-active" : ""} onClick={() => setCameraPreference("aspectRatio", ratio)} aria-pressed={preferences.aspectRatio === ratio}>{ratio}</button>)}
+              </div>
+            </fieldset>
+            <fieldset>
+              <legend>Overlays and stamps</legend>
+              <label><input type="checkbox" checked={preferences.grid} onChange={(event) => setCameraPreference("grid", event.target.checked)} /><Grid3X3 size={18} /><span><strong>Composition grid</strong><small>Visible in the viewfinder only.</small></span></label>
+              <label><input type="checkbox" checked={preferences.dateStamp} onChange={(event) => setCameraPreference("dateStamp", event.target.checked)} /><span><strong>Stamp date and time</strong><small>Permanently added to new photos.</small></span></label>
+              <label><input type="checkbox" checked={preferences.locationStamp} onChange={(event) => requestLocationStamp(event.target.checked)} /><span><strong>Stamp GPS coordinates</strong><small>Requires device location permission.</small></span></label>
+              {locationMessage ? <p role="status">{locationMessage}</p> : null}
+            </fieldset>
+          </div>
+        </section>
+      ) : null}
       <div className="v2-camera-bottom-controls">
-        <div className="v2-camera-bottom-context" aria-label={`Saving photos to ${contextLabel}`}>
-          <span>
-            <small>Saving to</small>
-            <strong>{contextLabel}</strong>
-          </span>
-          <button type="button" onClick={onClose} disabled={saveState === "saving"}>Photos</button>
-        </div>
-        {onCaptureIntentChange ? (
-          <div className="v2-camera-intent-strip" role="group" aria-label="Capture type">
+        {onCaptureIntentChange && captureTypesOpen ? (
+          <div className="v2-camera-intent-menu" role="group" aria-label="Choose capture type">
             {CAPTURE_INTENTS.map((option) => (
               <button
                 key={option.value}
                 type="button"
                 className={option.value === captureIntent ? "is-active" : ""}
-                onClick={() => onCaptureIntentChange(option.value)}
+                onClick={() => {
+                  onCaptureIntentChange(option.value);
+                  setCaptureTypesOpen(false);
+                }}
                 aria-pressed={option.value === captureIntent}
               >
                 {option.shortLabel}
@@ -374,19 +503,24 @@ function CameraCapture({
             ))}
           </div>
         ) : null}
-        <div className="v2-camera-zoom-control" aria-label="Camera zoom">
-          <button type="button" onClick={() => setZoom((current) => clampZoom(current - 0.2))} disabled={zoom <= 1} aria-label="Zoom out">−</button>
-          <input
-            type="range"
-            min="1"
-            max="3"
-            step="0.1"
-            value={zoom}
-            onChange={(event) => setZoom(clampZoom(Number(event.target.value)))}
-            aria-label="Camera zoom level"
-          />
-          <button type="button" onClick={() => setZoom((current) => clampZoom(current + 0.2))} disabled={zoom >= 3} aria-label="Zoom in">+</button>
-          <output>{zoom.toFixed(1)}×</output>
+        <div className="v2-camera-utility-row">
+          <button type="button" className="v2-camera-destination-chip" onClick={onClose} disabled={saveState === "saving"} aria-label={`Photos saving to ${contextLabel}`}>
+            <Image size={16} />
+            <span><small>Saving to</small><strong>{contextLabel}</strong></span>
+          </button>
+          {onCaptureIntentChange ? (
+            <button type="button" className="v2-camera-type-chip" onClick={() => setCaptureTypesOpen((current) => !current)} aria-expanded={captureTypesOpen}>
+              {captureIntentLabel(captureIntent)}
+            </button>
+          ) : null}
+          <button
+            type="button"
+            className="v2-camera-zoom-chip"
+            onClick={() => setZoom((current) => current < 1.5 ? 1.5 : current < 2 ? 2 : current < 3 ? 3 : 1)}
+            aria-label={`Camera zoom ${zoom.toFixed(1)} times. Tap to change; pinch for precise zoom.`}
+          >
+            {zoom.toFixed(1)}×
+          </button>
         </div>
         {saveState !== "idle" ? (
           <span className={`v2-camera-save-status is-${saveState}`} role={saveState === "failed" ? "alert" : "status"}>
@@ -1345,7 +1479,7 @@ export function JobPhotosTool({ activeWork, focusedActiveWorkId = null, standalo
         </section>
       ) : null}
 
-      <section className="v2-camera-home-panel v2-camera-albums-panel">
+      {!recordWork && !standaloneProject ? <section className="v2-camera-home-panel v2-camera-albums-panel">
         <div className="v2-camera-home-section-head">
           <div>
             <h3>Private albums</h3>
@@ -1423,9 +1557,9 @@ export function JobPhotosTool({ activeWork, focusedActiveWorkId = null, standalo
             <span>Tap New to start a private album before you capture.</span>
           </div>
         )}
-      </section>
+      </section> : null}
 
-      {additionalRecentAlbumCaptures.length ? (
+      {!recordWork && !standaloneProject && additionalRecentAlbumCaptures.length ? (
         <section className="v2-camera-home-panel v2-camera-latest-panel">
           <div className="v2-camera-home-section-head">
             <h3>Recent captures</h3>
