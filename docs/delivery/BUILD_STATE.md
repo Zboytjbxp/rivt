@@ -25,6 +25,11 @@ Production feature release commit: `c80444ccf72a3a381121c08abf70fac5c3798d8b`
   The aggregate test command entered the database-backed integration phase and
   exceeded a bounded four-minute run without returning a failing assertion; no
   aggregate integration pass is claimed.
+- Railway deployment `34175a4c-6c1b-4b3f-bbdd-91185991521a` served exact source
+  `4a93a665ac218c258e665b5931b07df0e1ce5cf9`. The production synthetic monitor
+  passed in 586 ms with healthy PostgreSQL and S3-compatible storage, configured
+  Sentry and Web Push, open operational controls, and all seven anonymous
+  private-route checks healthy.
 
 ## Camera Live-View Density Redesign (Local Verification)
 
