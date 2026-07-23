@@ -2,10 +2,34 @@
 
 Last updated: 2026-07-23 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Trade News intelligence v2.1 clustering is production verified.
-Active packet: Trade News intelligence v2.1 production verification
-Repository branch: `master`
+Current phase: Trade News intelligence v2.2 content nits are locally verified.
+Active packet: Trade News v2.2 on `codex/trade-news-v2-2-nits`
+Repository branch: `codex/trade-news-v2-2-nits`
 Production feature release commit: `9901d1f5a9d8df996505eaa70d792f726f225e2c`
+
+## Trade News V2.2 Classification and Freshness (Local Verification)
+
+- `_category` now distinguishes a concrete permitted build from a story about
+  permitting policy. A build/development signal plus a project noun or dollar
+  value classifies as Projects unless permit reform, requirements, waivers,
+  elimination, rules, thresholds, or streamlining are the subject.
+- `_topics` mirrors that precedence: concrete builds lead with
+  `Projects & development` and do not also receive `Permits & inspections`.
+  Permit-policy and contractor-license stories retain their existing
+  Codes/licensing treatment.
+- The live feed freshness floor changed from 180 to 90 days. The separate
+  548-day official-resource threshold and evergreen `resources` path are
+  unchanged.
+- Unit coverage locks the Miami $193M civic-center story as Projects, HB 803
+  permitting reform as Codes, DBPR license renewal as Codes/licensing, and
+  exclusion of a 120-day publisher story.
+- The rendered mixed-category smoke still requires at least two semantic tag
+  kinds and now passes a 120-day candidate through the server partition seam,
+  proving it never reaches the rendered feed.
+- Verified locally: build, lint, 68 unit/frontend tests, E2E, rendered Trade
+  News smoke at desktop/mobile in dark and light themes, dependency audit with
+  zero vulnerabilities, and diff check. No client, dependency, token, or theme
+  changes were made.
 
 ## Trade News Intelligence V2.1 Clustering (Production Verification)
 
