@@ -123,7 +123,7 @@ function _category(item, hint = "") {
   const concreteBuildSignal = /\b(build|building|construct|constructs|develop|development|redevelop|groundbreak|civic center|complex|campus|expansion|mixed-use|secures?\b.*\bto build)\b/.test(text);
   const projectNounOrValue = /\b(project|center|complex|campus|tower|facility|development|redevelopment|expansion|park|housing|hotel|hospital|school|stadium)\b|\$\s?\d/.test(text);
   const permitPolicySignal = /\bpermit(?:s|ting)?\b/.test(text)
-    && /\b(reform|requirement|waive|waiver|drop|drops|dropped|eliminat\w*|ordinance|rule|code|threshold|streamlin\w*)\b/.test(text);
+    && /\b(reform|requirement|waive|waiver|drop|drops|dropped|dropping|eliminat\w*|ordinance|rule|code|threshold|streamlin\w*)\b/.test(text);
   if (concreteBuildSignal && projectNounOrValue && !permitPolicySignal) return "Projects";
   if (/code|permit|inspection|ordinance|regulation|licens|nec|nfpa/.test(text)) return "Codes";
   if (/labor|workforce|apprentice|union|wage|hiring/.test(text)) return "Labor";
@@ -138,7 +138,7 @@ function _topics(item, hint = "") {
   const concreteBuildSignal = /\b(build|building|construct|constructs|develop|development|redevelop|groundbreak|civic center|complex|campus|expansion|mixed-use|secures?\b.*\bto build)\b/.test(text);
   const projectNounOrValue = /\b(project|center|complex|campus|tower|facility|development|redevelopment|expansion|park|housing|hotel|hospital|school|stadium)\b|\$\s?\d/.test(text);
   const permitPolicySignal = /\bpermit(?:s|ting)?\b/.test(text)
-    && /\b(reform|requirement|waive|waiver|drop|drops|dropped|eliminat\w*|ordinance|rule|code|threshold|streamlin\w*)\b/.test(text);
+    && /\b(reform|requirement|waive|waiver|drop|drops|dropped|dropping|eliminat\w*|ordinance|rule|code|threshold|streamlin\w*)\b/.test(text);
   const concreteProject = concreteBuildSignal && projectNounOrValue && !permitPolicySignal;
   const topics = [
     ...(concreteProject ? [["Projects & development", /[\s\S]/]] : []),

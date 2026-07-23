@@ -249,9 +249,14 @@ test("trade news distinguishes concrete permitted projects from permit policy", 
     headline: "DBPR opens contractor license renewal window",
     summary: "Licensed contractors can submit renewal forms.",
   };
+  const droppingPermitPolicy = {
+    headline: "Florida Governor Signs Bill Dropping Building Permits for Work Valued at $7,500 or Less",
+    summary: "The law changes when a permit is required.",
+  };
   assert.equal(newsInternals._category(civicCenter), "Projects");
   assert.equal(newsInternals._category(permitPolicy), "Codes");
   assert.equal(newsInternals._category(licensing), "Codes");
+  assert.equal(newsInternals._category(droppingPermitPolicy), "Codes");
   assert.equal(newsInternals._topics(civicCenter)[0], "Projects & development");
   assert.equal(newsInternals._topics(civicCenter).includes("Permits & inspections"), false);
   assert.ok(newsInternals._topics(permitPolicy).includes("Permits & inspections"));
