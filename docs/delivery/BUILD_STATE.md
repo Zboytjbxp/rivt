@@ -7,6 +7,24 @@ Active packet: Shop Talk and Communities release packet on `codex/shop-talk-comm
 Repository branch: `codex/shop-talk-communities-release`
 Production feature release commit: `c80444ccf72a3a381121c08abf70fac5c3798d8b`
 
+## Trade Intelligence For You Recovery (Local Verification)
+
+- Production API verification showed that All regions was healthy with 30
+  verified stories across seven trades and ten topics, while Jacksonville
+  returned 23 local stories. The reported empty screen was therefore isolated
+  to client recommendation behavior rather than missing live sources.
+- For You now treats followed trades/topics, the profile trade, locality, and
+  impact as ranking signals. It no longer hard-excludes every current story
+  when a followed preference has no match. Following remains the strict
+  followed-only channel.
+- Empty states now identify search/filter/channel mismatches accurately and
+  offer `Show all current news`; only a genuinely empty API response claims
+  that no current trade news was confirmed.
+- Regression coverage follows HVAC, loads an All-regions payload containing
+  only Electrical coverage, and proves For You still shows the verified
+  national story. Build, lint, 63 unit/frontend tests, rendered Trade News QA,
+  and the complete mobile text-scale/action matrix pass locally.
+
 ## Dedicated-Grade Trade Intelligence Redesign (Local Verification)
 
 - Trade News now behaves as a briefing product rather than a flat RSS list.

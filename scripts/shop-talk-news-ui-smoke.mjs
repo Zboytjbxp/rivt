@@ -501,13 +501,17 @@ try {
     await page.getByRole("heading", { name: /Know what changes the work/i }).waitFor({ timeout: 15_000 });
     await page.getByRole("button", { name: /Customize/i }).click();
     const customize = page.getByLabel("Customize Trade News");
-    await customize.getByRole("button", { name: "Follow Electrical", exact: true }).click();
+    await customize.getByRole("button", { name: "Follow HVAC", exact: true }).click();
     await customize.getByRole("button", { name: "Close Trade News customization" }).click();
     await page.getByRole("button", { name: "Following", exact: true }).click();
     await newsList.getByText("Jacksonville permit desk", { exact: false }).first().waitFor();
     await page.getByRole("button", { name: "Critical", exact: true }).click();
     await newsList.getByText("OSHA heat safety", { exact: false }).first().waitFor();
     await page.getByRole("button", { name: "For you", exact: true }).click();
+    await locationFilter.selectOption("all");
+    await newsList.getByText("National electrical code update", { exact: false }).first().waitFor();
+    await locationFilter.selectOption("local");
+    await newsList.getByText("Jacksonville permit desk", { exact: false }).first().waitFor();
     await page.locator('input[placeholder="Search trades, codes, safety, local"]').fill("permit");
     await page
       .locator(".shop-news-list")

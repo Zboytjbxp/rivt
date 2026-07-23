@@ -1030,12 +1030,22 @@ export function ShopTalkView({
     if (newsChannel === "projects" && !itemTopics.includes("Projects & development")) return false;
     if (newsChannel === "global" && item.geography !== "global") return false;
     if (newsChannel === "saved" && !savedNewsUrls.has(item.url)) return false;
-    if (newsChannel === "for-you" && (followedNewsTrades.size || followedNewsTopics.size) && !(
-      itemTrades.some((trade) => followedNewsTrades.has(trade)) ||
-      itemTopics.some((topic) => followedNewsTopics.has(topic))
-    )) return false;
     if (!normalizedNewsQuery) return true;
     return [item.headline, item.summary, item.source, item.category ?? "", item.urgency ?? "", item.date].join(" ").toLowerCase().includes(normalizedNewsQuery);
+  }).sort((a, b) => {
+    if (newsChannel !== "for-you") return 0;
+    const recommendationScore = (item: NewsItem) => {
+      const trades = newsItemTrades(item);
+      const topics = item.topics?.length ? item.topics : [item.category || "Industry news"];
+      return (
+        trades.filter((trade) => followedNewsTrades.has(trade)).length * 6 +
+        topics.filter((topic) => followedNewsTopics.has(topic)).length * 4 +
+        (trades.includes(primaryTrade) ? 3 : 0) +
+        (item.isLocal || item.geography === "local" ? 2 : 0) +
+        (item.impactLevel === "critical" ? 2 : item.impactLevel === "high" ? 1 : 0)
+      );
+    };
+    return recommendationScore(b) - recommendationScore(a);
   });
   const sortedPosts = [...filteredPosts].sort((a, b) => {
     if (sortMode === "new") return postSortValue(b) - postSortValue(a);
@@ -1059,6 +1069,21 @@ export function ShopTalkView({
   const profileBadges = communityBadgeLabelsFromReputation(_reactionSummary, communityBadgeThresholds);
   const newsSourceCount = new Set(filteredNews.map((item) => item.source)).size;
   const criticalNewsCount = displayNews.filter((item) => ["critical", "high"].includes(item.impactLevel ?? "")).length;
+  const strictNewsView = newsChannel !== "for-you" && newsChannel !== "latest";
+  const newsEmptyTitle = normalizedNewsQuery
+    ? "No stories match this search"
+    : strictNewsView || newsCategory !== "All topics" || newsTrade !== "All trades"
+      ? `No stories in ${newsChannel === "following" ? "Following" : newsChannel === "saved" ? "Saved" : "this briefing"}`
+      : "No current trade news";
+  const newsEmptyDescription = normalizedNewsQuery
+    ? "Clear the search or broaden the trade and topic filters."
+    : newsChannel === "following" && !followedNewsTrades.size && !followedNewsTopics.size
+      ? "Choose Customize and follow at least one trade or topic."
+      : newsChannel === "saved"
+        ? "Save an article from any briefing and it will appear here."
+        : strictNewsView || newsCategory !== "All topics" || newsTrade !== "All trades"
+          ? "No verified stories match this channel and the current filters. Broaden the briefing to see more."
+          : "RIVT could not confirm any current articles from its live sources. No articles or images have been invented.";
   const selectedPostReactionState = selectedPost
     ? getPostReactionState(selectedPost)
     : { upvotes: 0, downvotes: 0, reaction: null, serverOwned: reactionStatus === "ready", pending: false };
@@ -1580,10 +1605,23 @@ export function ShopTalkView({
                 ) : filteredNews.length === 0 ? (
                   <EmptyState
                     icon={Newspaper}
-                    title={normalizedNewsQuery ? "No matching trade news" : "No current trade news"}
-                    description={normalizedNewsQuery ? "Clear the search to see the current trade feed." : "RIVT could not confirm any current articles from its live sources. No articles or images have been invented."}
-                    actionLabel={normalizedNewsQuery ? "Clear search" : "Refresh sources"}
-                    onAction={() => normalizedNewsQuery ? setNewsQuery("") : void activateNews(true)}
+                    title={newsEmptyTitle}
+                    description={newsEmptyDescription}
+                    actionLabel={normalizedNewsQuery || strictNewsView || newsCategory !== "All topics" || newsTrade !== "All trades" ? "Show all current news" : "Refresh sources"}
+                    onAction={() => {
+                      if (normalizedNewsQuery || strictNewsView || newsCategory !== "All topics" || newsTrade !== "All trades") {
+                        setNewsQuery("");
+                        setNewsCategory("All topics");
+                        setNewsTrade("All trades");
+                        setNewsChannel("latest");
+                        if (newsScope !== "all") {
+                          setNewsScope("all");
+                          void activateNews(true, "all");
+                        }
+                        return;
+                      }
+                      void activateNews(true);
+                    }}
                   />
                 ) : filteredNews.map((item, index) => (
                   <article
