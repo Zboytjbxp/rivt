@@ -39,6 +39,11 @@ Production feature release commit: `c80444ccf72a3a381121c08abf70fac5c3798d8b`
   aggregate test command entered the database-backed integration phase and
   exceeded a bounded four-minute run without returning a failing assertion; no
   aggregate integration pass is claimed.
+- Railway deployment `8e7ca554-2695-4881-a4cc-e322f3cef1e3` served exact source
+  `9653eac5542b5fe94b68b57f7f38b519a252b8b4`; the production monitor passed in
+  571 ms with all seven anonymous private-route checks healthy. A fresh live
+  Jacksonville probe returned 23 real location-scoped items, all with topic
+  metadata and seven marked high/critical by the transparent impact rules.
 
 ## Trade News Location and Trade Filters (Local Verification)
 

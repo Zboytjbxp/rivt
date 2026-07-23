@@ -143,7 +143,7 @@ function _sourceKind(item) {
   } catch {
     // Source URL is validated elsewhere.
   }
-  return /OSHA|building commission|department|city of|county|state of/i.test(item?.source ?? "")
+  return /\.gov\b|OSHA|building commission|department|city of|county|state of|licensing board/i.test(item?.source ?? "")
     ? "official"
     : "publisher";
 }
