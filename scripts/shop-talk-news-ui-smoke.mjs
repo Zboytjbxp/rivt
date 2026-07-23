@@ -165,6 +165,24 @@ const newsPayload = {
     },
   ],
 };
+newsPayload.items = newsInternals._partitionNewsAndResources([
+  ...newsPayload.items,
+  {
+    id: "stale-project-story",
+    headline: "Stale civic center construction milestone",
+    summary: "A four-month-old project update should not appear in the live feed.",
+    source: "Old project desk",
+    url: "https://example.com/stale-civic-center",
+    date: "Mar 15, 2026",
+    publishedAt: "2026-03-15T12:00:00.000Z",
+    category: "Projects",
+    topics: ["Projects & development"],
+    trades: ["General construction"],
+    impactLevel: "routine",
+    geography: "local",
+    isLocal: true,
+  },
+], Date.parse("2026-07-23T12:00:00.000Z")).news;
 const nationalNewsPayload = {
   fallback: false,
   resources: [],
@@ -527,6 +545,7 @@ try {
     assert.equal(await page.locator(".shop-news-list select").count(), 0, "feed should not contain select filters");
     assert.ok(await page.getByText("Local references · official portals", { exact: true }).isVisible(), "official references should be separated from news");
     assert.equal(await newsList.getByText(/2014/).count(), 0, "stale dates should never appear as feed news");
+    assert.equal(await newsList.getByText("Stale civic center construction milestone", { exact: false }).count(), 0, "stories older than 90 days should not render");
     assert.equal(await newsList.getByText(/Florida Law Removes Permits for Small Home Construction Projects/i).count(), 0, "duplicate HB 803 cards should collapse into the official primary");
     assert.equal(await newsList.getByText(/[5-9] sources/i).count(), 1, "the collapsed HB 803 story should expose its real related-source count");
     const renderedHeadlines = await newsList.locator(".news-card-body > strong, .news-featured-copy > strong").allTextContents();
