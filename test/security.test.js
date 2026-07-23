@@ -236,6 +236,28 @@ test("trade news assigns useful trade filters without inventing a specialty", ()
   );
 });
 
+test("trade news distinguishes concrete permitted projects from permit policy", () => {
+  const civicCenter = {
+    headline: "Miami secures $193M permit to build civic center at Freedom Park",
+    summary: "The project will construct a new public complex.",
+  };
+  const permitPolicy = {
+    headline: "Florida HB 803 drops permitting for small building projects",
+    summary: "The reform eliminates a permit requirement below the new threshold.",
+  };
+  const licensing = {
+    headline: "DBPR opens contractor license renewal window",
+    summary: "Licensed contractors can submit renewal forms.",
+  };
+  assert.equal(newsInternals._category(civicCenter), "Projects");
+  assert.equal(newsInternals._category(permitPolicy), "Codes");
+  assert.equal(newsInternals._category(licensing), "Codes");
+  assert.equal(newsInternals._topics(civicCenter)[0], "Projects & development");
+  assert.equal(newsInternals._topics(civicCenter).includes("Permits & inspections"), false);
+  assert.ok(newsInternals._topics(permitPolicy).includes("Permits & inspections"));
+  assert.ok(newsInternals._topics(licensing).includes("Licensing & regulation"));
+});
+
 test("trade news exposes transparent topics, impact, and related-source clusters", () => {
   assert.deepEqual(
     newsInternals._topics({
@@ -399,9 +421,16 @@ test("trade news separates stale official resources and drops stale publisher ne
       url: "https://example.com/current",
       publishedAt: "2026-07-20T12:00:00.000Z",
     },
+    {
+      headline: "Four-month-old construction project story",
+      source: "Publisher",
+      url: "https://example.com/120-days-old",
+      publishedAt: "2026-03-25T12:00:00.000Z",
+    },
   ], now);
   assert.equal(partitioned.news.length, 1);
   assert.equal(partitioned.news[0].headline, "Current construction story");
+  assert.equal(partitioned.news.some((item) => item.url.includes("120-days-old")), false);
   assert.equal(partitioned.resources.length, 2);
   assert.ok(partitioned.resources.every((resource) => !("impactLevel" in resource) && !("date" in resource)));
 });

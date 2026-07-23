@@ -7,7 +7,7 @@ const NEWS_TTL_MS = 10 * 60 * 1000;
 const NEWS_ARTICLE_IMAGE_LIMIT = 18;
 const NEWS_CACHE_MAX_ENTRIES = 48;
 const NEWS_LOCATION_MAX_LENGTH = 80;
-const NEWS_MAX_AGE_DAYS = 180;
+const NEWS_MAX_AGE_DAYS = 90;
 const NEWS_RESOURCE_AGE_DAYS = 548;
 const NEWS_PRIORITY_MAX_SHARE = 0.25;
 const NEWS_CATEGORY_MAX_SHARE = 0.4;
@@ -120,6 +120,11 @@ function _category(item, hint = "") {
   if (hint) return hint;
   const text = `${item?.headline ?? ""} ${item?.summary ?? ""}`.toLowerCase();
   if (/osha|safety|injury|fatal|heat|ppe|hazard/.test(text)) return "Safety";
+  const concreteBuildSignal = /\b(build|building|construct|constructs|develop|development|redevelop|groundbreak|civic center|complex|campus|expansion|mixed-use|secures?\b.*\bto build)\b/.test(text);
+  const projectNounOrValue = /\b(project|center|complex|campus|tower|facility|development|redevelopment|expansion|park|housing|hotel|hospital|school|stadium)\b|\$\s?\d/.test(text);
+  const permitPolicySignal = /\bpermit(?:s|ting)?\b/.test(text)
+    && /\b(reform|requirement|waive|waiver|drop|drops|dropped|eliminat\w*|ordinance|rule|code|threshold|streamlin\w*)\b/.test(text);
+  if (concreteBuildSignal && projectNounOrValue && !permitPolicySignal) return "Projects";
   if (/code|permit|inspection|ordinance|regulation|licens|nec|nfpa/.test(text)) return "Codes";
   if (/labor|workforce|apprentice|union|wage|hiring/.test(text)) return "Labor";
   if (/tool|equipment|product|material/.test(text)) return "Tools";
@@ -130,17 +135,23 @@ function _category(item, hint = "") {
 
 function _topics(item, hint = "") {
   const text = `${item?.headline ?? ""} ${item?.summary ?? ""}`.toLowerCase();
+  const concreteBuildSignal = /\b(build|building|construct|constructs|develop|development|redevelop|groundbreak|civic center|complex|campus|expansion|mixed-use|secures?\b.*\bto build)\b/.test(text);
+  const projectNounOrValue = /\b(project|center|complex|campus|tower|facility|development|redevelopment|expansion|park|housing|hotel|hospital|school|stadium)\b|\$\s?\d/.test(text);
+  const permitPolicySignal = /\bpermit(?:s|ting)?\b/.test(text)
+    && /\b(reform|requirement|waive|waiver|drop|drops|dropped|eliminat\w*|ordinance|rule|code|threshold|streamlin\w*)\b/.test(text);
+  const concreteProject = concreteBuildSignal && projectNounOrValue && !permitPolicySignal;
   const topics = [
+    ...(concreteProject ? [["Projects & development", /[\s\S]/]] : []),
     ["Safety & OSHA", /osha|safety|injury|fatal|fall protection|heat illness|ppe|hazard|recall/],
     ["Codes & standards", /building code|electrical code|\bnec\b|\bnfpa\b|standard|code update/],
-    ["Permits & inspections", /permit|inspection|building official/],
+    ...(!concreteProject ? [["Permits & inspections", /permit|inspection|building official/]] : []),
     ["Licensing & regulation", /licens|regulation|rulemaking|\brule\b|ordinance|legislation|statute/],
     ["Labor & workforce", /labor|workforce|apprentice|union|wage|hiring|employment|benefit/],
     ["Tools & equipment", /tool|equipment|machinery|product launch/],
     ["Materials & supply chain", /material|supply chain|shortage|tariff|lumber|steel price/],
     ["Business & finance", /business|econom|market|finance|insurance|merger|acquisition|bankrupt/],
     ["Legal & contracts", /lawsuit|court|legal|lien|contract award|settlement/],
-    ["Projects & development", /project|development|infrastructure|groundbreak|construction start|bid opportunity/],
+    ...(!concreteProject ? [["Projects & development", /project|development|infrastructure|groundbreak|construction start|bid opportunity/]] : []),
     ["Technology", /software|technology|artificial intelligence|\bai\b|robot|drone|bim/],
     ["Weather & jobsite", /hurricane|storm|flood|weather|heat wave|wildfire/],
     ["Company & people", /appoint|promotion|company news|leadership|executive/],
@@ -768,6 +779,7 @@ export const newsInternals = {
   NEWS_CACHE_MAX_ENTRIES,
   NEWS_LOCATION_MAX_LENGTH,
   _canonicalArticleUrl,
+  _category,
   _cleanHeadline,
   _dedupeAndDiversify,
   _normalizeNewsLocation,
