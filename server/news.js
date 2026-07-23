@@ -13,6 +13,8 @@ const NEWS_PRIORITY_MAX_SHARE = 0.25;
 const NEWS_CATEGORY_MAX_SHARE = 0.4;
 const NEWS_CLUSTER_CATEGORY_RATIO = 0.4;
 const NEWS_CLUSTER_DEFAULT_RATIO = 0.48;
+const NEWS_DEPTH_TARGET = 12;
+const NEWS_FEED_HARD_CAP = 30;
 const DAY_MS = 86_400_000;
 const _xmlParser = new XMLParser({ ignoreAttributes: false, ignoreDeclaration: true });
 
@@ -92,6 +94,31 @@ function _cleanHeadline(rawTitle, source = "") {
   const looksLikeDomain = /^[\w.-]+\.(?:com|org|net|gov|news|co)$/i.test(tail);
   const looksLikeSourceName = /^[A-Z0-9][\p{L}\p{N}&.'’/-]*(?:\s+[A-Z0-9][\p{L}\p{N}&.'’/-]*){0,9}$/u.test(tail);
   return matchesSource || looksLikeDomain || looksLikeSourceName ? head : title;
+}
+
+const RESOURCE_TITLE_ACRONYMS = new Set([
+  "NEC", "NFPA", "OSHA", "HVAC", "DBPR", "GFCI", "AFCI", "HB", "SB",
+  "FL", "US", "USA", "AC", "DC",
+]);
+
+function _tidyResourceTitle(rawTitle) {
+  const cleaned = _cleanHeadline(rawTitle)
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  const titled = cleaned.split(" ").map((word) => {
+    const bare = word.replace(/[^\p{L}\p{N}]/gu, "");
+    const upper = bare.toUpperCase();
+    if (RESOURCE_TITLE_ACRONYMS.has(upper) || /^(?:HB|SB)\d{1,4}$/.test(upper)) {
+      return word.replace(bare, upper);
+    }
+    if (bare.length > 1 && bare === bare.toUpperCase() && /\p{L}/u.test(bare)) {
+      const titleCase = `${bare[0].toUpperCase()}${bare.slice(1).toLowerCase()}`;
+      return word.replace(bare, titleCase);
+    }
+    return word;
+  }).join(" ");
+  return titled.length > 80 ? `${titled.slice(0, 77).trimEnd()}...` : titled;
 }
 
 function _fmtDate(raw) {
@@ -239,7 +266,7 @@ function _partitionNewsAndResources(items, now = Date.now()) {
       const url = _canonicalArticleUrl(item.url);
       if (url && !seenResources.has(url) && resources.length < 4) {
         seenResources.add(url);
-        resources.push({ title: item.headline, source: item.source, url });
+        resources.push({ title: _tidyResourceTitle(item.headline), source: item.source, url });
       }
       continue;
     }
@@ -455,6 +482,50 @@ function _clusterStories(items) {
     relatedSourceCount: sources.size,
     relatedSources: [...sources],
   }));
+}
+
+function _rankNewsTier(items, limit = 45) {
+  return _applyPriorityScarcity(
+    _clusterStories(_dedupeAndDiversify(items, limit))
+      .sort((a, b) => _relevanceScore(b) - _relevanceScore(a)),
+  );
+}
+
+function _composeTieredNews(
+  liveItems,
+  { location = "", now = Date.now(), depthTarget = NEWS_DEPTH_TARGET, hardCap = NEWS_FEED_HARD_CAP } = {},
+) {
+  if (!location) {
+    const { news } = _partitionNewsAndResources(liveItems, now);
+    return {
+      items: _rankNewsTier(news).slice(0, hardCap).map((item) => ({ ...item, tier: "national" })),
+      resources: [],
+    };
+  }
+
+  const localRaw = liveItems.filter((item) => item.isLocal);
+  const nationalRaw = liveItems.filter((item) => !item.isLocal);
+  const { news: localPart, resources } = _partitionNewsAndResources(localRaw, now);
+  const { news: nationalPart } = _partitionNewsAndResources(nationalRaw, now);
+  const localNews = _rankNewsTier(localPart)
+    .slice(0, hardCap)
+    .map((item) => ({ ...item, tier: "local" }));
+
+  const localUrls = new Set(localNews.map((item) => _canonicalArticleUrl(item.url)).filter(Boolean));
+  const localTitles = new Set(localNews.map((item) => _normalizedTitle(item.headline)).filter(Boolean));
+  const nationalNews = _rankNewsTier(nationalPart.filter((item) => {
+    const canonicalUrl = _canonicalArticleUrl(item.url);
+    const title = _normalizedTitle(item.headline);
+    return !localUrls.has(canonicalUrl) && !localTitles.has(title);
+  })).map((item) => ({ ...item, tier: "national" }));
+
+  const nationalLimit = localNews.length >= depthTarget
+    ? Math.max(0, hardCap - localNews.length)
+    : Math.max(0, Math.min(depthTarget - localNews.length, hardCap - localNews.length));
+  return {
+    items: [...localNews, ...nationalNews.slice(0, nationalLimit)].slice(0, hardCap),
+    resources,
+  };
 }
 
 function _isTradeNewsCandidate(item) {
@@ -754,19 +825,15 @@ router.get("/api/news", async (request, response) => {
 
   const pick = (r) => r.status === "fulfilled" ? r.value : [];
   const liveItems = settledFeeds.flatMap(pick);
-  const scopedItems = location ? liveItems.filter((item) => item.isLocal) : liveItems;
-  const { news, resources } = _partitionNewsAndResources(scopedItems);
-  const fallback = news.length === 0;
-  const ranked = _clusterStories(_dedupeAndDiversify(news, 45))
-    .sort((a, b) => _relevanceScore(b) - _relevanceScore(a))
-    .slice(0, 30);
-  const honestPriority = _applyPriorityScarcity(ranked);
-  const items = (await _enrichNewsImages(honestPriority)).map((item, i) => ({
+  const composed = _composeTieredNews(liveItems, { location });
+  const fallback = composed.items.length === 0;
+  const items = (await _enrichNewsImages(composed.items)).map((item, i) => ({
     ...item,
     id: i + 1,
     thumbnailUrl: item.thumbnailUrl || undefined,
     thumbnailKind: item.thumbnailKind,
   }));
+  const { resources } = composed;
   newsCache.set(cacheKey, { items, resources, fallback, fetchedAt: Date.now() });
   _pruneNewsCache();
   response.json({ items, resources, fallback });
@@ -781,6 +848,8 @@ export const newsInternals = {
   _canonicalArticleUrl,
   _category,
   _cleanHeadline,
+  _tidyResourceTitle,
+  _composeTieredNews,
   _dedupeAndDiversify,
   _normalizeNewsLocation,
   _impact,

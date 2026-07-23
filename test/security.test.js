@@ -440,6 +440,76 @@ test("trade news separates stale official resources and drops stale publisher ne
   assert.ok(partitioned.resources.every((resource) => !("impactLevel" in resource) && !("date" in resource)));
 });
 
+test("trade news composes local-first depth with national backfill and no cross-tier duplicates", () => {
+  const now = Date.parse("2026-07-23T12:00:00.000Z");
+  const makeItem = (id, overrides = {}) => ({
+    headline: `Current construction update ${id}`,
+    summary: "Current contractor and construction field news.",
+    source: `Source ${id}`,
+    url: `https://example.com/news/${id}`,
+    publishedAt: new Date(now - id * 60_000).toISOString(),
+    category: ["Safety", "Codes", "Labor", "Tools", "Business", "Projects"][id % 6],
+    impactLevel: "routine",
+    sourceKind: "publisher",
+    geography: "national",
+    isLocal: false,
+    ...overrides,
+  });
+  const local = [
+    makeItem(1, { headline: "Jacksonville bridge construction milestone", isLocal: true, geography: "local" }),
+    makeItem(2, { headline: "Duval electrical apprenticeship expansion", isLocal: true, geography: "local" }),
+    makeItem(3, { headline: "Jacksonville jobsite safety briefing", isLocal: true, geography: "local" }),
+  ];
+  const national = [
+    makeItem(4),
+    makeItem(5),
+    makeItem(6),
+    makeItem(7),
+    makeItem(8, {
+      headline: local[0].headline,
+      url: "https://another.example.com/duplicate-local-story",
+    }),
+  ];
+
+  const composed = newsInternals._composeTieredNews([...local, ...national], {
+    location: "Jacksonville, FL",
+    now,
+  });
+
+  assert.deepEqual(composed.items.slice(0, 3).map((item) => item.tier), ["local", "local", "local"]);
+  assert.ok(composed.items.slice(3).every((item) => item.tier === "national"));
+  assert.equal(composed.items.length, 7);
+  assert.equal(composed.items.filter((item) => item.headline === local[0].headline).length, 1);
+});
+
+test("trade news assigns the national tier when no location is requested", () => {
+  const now = Date.parse("2026-07-23T12:00:00.000Z");
+  const composed = newsInternals._composeTieredNews([{
+    headline: "National construction workforce outlook",
+    summary: "Current national skilled trades workforce news.",
+    source: "National trade desk",
+    url: "https://example.com/national-workforce",
+    publishedAt: "2026-07-22T12:00:00.000Z",
+    category: "Labor",
+    impactLevel: "routine",
+  }], { now });
+  assert.equal(composed.items.length, 1);
+  assert.equal(composed.items[0].tier, "national");
+});
+
+test("trade news tidies official resource titles", () => {
+  assert.equal(newsInternals._tidyResourceTitle("Product_Approval"), "Product Approval");
+  assert.equal(
+    newsInternals._tidyResourceTitle("FLORIDA BUILDING CONSTRUCTION STANDARDS"),
+    "Florida Building Construction Standards",
+  );
+  assert.equal(
+    newsInternals._tidyResourceTitle("Florida Building Code Residential Advanced Course"),
+    "Florida Building Code Residential Advanced Course",
+  );
+  assert.equal(newsInternals._tidyResourceTitle("OSHA HVAC AND GFCI REQUIREMENTS"), "OSHA HVAC And GFCI Requirements");
+});
+
 test("invoice send validation rejects bad recipients and throttles repeated sends", () => {
   const normalizePhoneNumber = (value) => String(value ?? "").replace(/[^\d+]/g, "");
   const base = {
