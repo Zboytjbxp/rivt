@@ -1130,18 +1130,24 @@ export function ShopTalkView({
     }
     return matches;
   }, [communityPosts, displayNews]);
-  const newThisWeek = displayNews.filter((item) => {
+  const newThisWeek = filteredNews.filter((item) => {
     const published = Date.parse(item.publishedAt ?? "");
     return Number.isFinite(published) && NEWS_RENDER_NOW - published <= 7 * 86_400_000;
   }).length;
-  const leadPublishedAt = Date.parse(filteredNews[0]?.publishedAt ?? "");
-  const featuredNews = filteredNews[0]
-    && ["critical", "high"].includes(filteredNews[0].impactLevel ?? "")
-    && Number.isFinite(leadPublishedAt)
-    && NEWS_RENDER_NOW - leadPublishedAt <= 7 * 86_400_000
-      ? filteredNews[0]
-      : null;
-  const newsRows = featuredNews ? filteredNews.slice(1) : filteredNews;
+  const freshestNews = filteredNews.reduce<NewsItem | null>((freshest, item) => {
+    if (!freshest) return item;
+    return Date.parse(item.publishedAt ?? "") > Date.parse(freshest.publishedAt ?? "") ? item : freshest;
+  }, null);
+  const newsIntelSummary = newThisWeek > 0
+    ? `${newThisWeek} new this week · ${filteredNews.length} stories`
+    : `${filteredNews.length} stories${freshestNews ? ` · freshest ${relativeNewsTime(freshestNews)}` : ""}`;
+  const featuredNews = filteredNews.find((item) => {
+    const publishedAt = Date.parse(item.publishedAt ?? "");
+    return ["critical", "high"].includes(item.impactLevel ?? "")
+      && Number.isFinite(publishedAt)
+      && NEWS_RENDER_NOW - publishedAt <= 7 * 86_400_000;
+  }) ?? null;
+  const newsRows = featuredNews ? filteredNews.filter((item) => item.id !== featuredNews.id) : filteredNews;
   const briefingTrade = followedNewsTrades.size ? [...followedNewsTrades].slice(0, 2).join(" + ") : primaryTrade;
   const strictNewsView = newsChannel !== "for-you";
   const newsEmptyTitle = normalizedNewsQuery
@@ -1226,7 +1232,7 @@ export function ShopTalkView({
           }
         }}>
           <MessageCircle size={14} />
-          {thread ? `${thread.replies} replies` : <span className="sr-only">Start discussion</span>}
+          {thread ? `${thread.replies} replies` : "Discuss"}
         </button>
         {item.url && item.url !== "#" ? (
           <a className="shop-news-source-link" href={item.url} target="_blank" rel="noreferrer"><ExternalLink size={12} />Read original</a>
@@ -1594,7 +1600,7 @@ export function ShopTalkView({
               <div className="news-intel-strip" aria-label="Trade News status">
                 <div className="news-intel-copy">
                   <strong>{newsScope === "local" ? newsLocation || "Near you" : "All regions"} · {briefingTrade || "All trades"}</strong>
-                  <span>{newThisWeek} new this week · {newsFetchedAt ? "updated now" : "not updated yet"}</span>
+                  <span>{newsIntelSummary} · {newsFetchedAt ? "updated now" : "not updated yet"}</span>
                   <p className="news-command-meta">
                     {filteredNews.length} articles · {newsSourceCount} sources
                   </p>
@@ -1721,6 +1727,7 @@ export function ShopTalkView({
                             ? <div className="news-featured-fallback" aria-hidden="true"><Newspaper size={24} /><small>No article image</small></div>
                             : <img className="news-featured-image" src={featuredNews.thumbnailUrl} alt="" loading="lazy" />}
                           <div className="news-featured-copy">
+                            <span className="news-featured-label">Featured briefing</span>
                             <div className="news-card-kicker">
                               <span className={`news-type-tag is-${newsTagKind(featuredNews).kind}`}>{newsTagKind(featuredNews).label}</span>
                               {featuredNews.impactLevel === "critical" ? <span className="news-critical-marker"><i />Critical</span> : null}
@@ -1772,14 +1779,6 @@ export function ShopTalkView({
                       </div>
                     </button>
                     {renderNewsActions(item)}
-                    <div className="news-card-actions is-legacy-actions">
-                      {item.url && item.url !== "#" && (
-                        <a className="shop-news-source-link" href={item.url} target="_blank" rel="noreferrer"><ExternalLink size={12} />Read original</a>
-                      )}
-                      <button type="button" aria-label={savedNewsUrls.has(item.url) ? "Remove saved article" : "Save article"} aria-pressed={savedNewsUrls.has(item.url)} onClick={() => toggleNewsPreference(setSavedNewsUrls, item.url)}>
-                        {savedNewsUrls.has(item.url) ? <BookmarkCheck size={14} /> : <Bookmark size={14} />}
-                      </button>
-                    </div>
                   </article>
                     ))}
                     {newsResources.length ? (
