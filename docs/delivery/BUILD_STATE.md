@@ -2,10 +2,43 @@
 
 Last updated: 2026-07-23 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Trade News intelligence v2.2 content nits are production verified.
-Active packet: Trade News v2.2 production verification
-Repository branch: `master`
+Current phase: Trade News intelligence v2.3 feed depth is locally verified.
+Active packet: Trade News v2.3 branch review
+Repository branch: `codex/trade-news-v2-3-depth`
 Production feature release commit: `a76d7b30896af3f98a25c4fc4079a1ef408eec41`
+
+## Trade News V2.3 Feed Depth (Local Verification)
+
+- Location requests now process local and national stories through the existing
+  freshness, deduplication, clustering, relevance, category-diversity, and
+  priority-scarcity pipeline as separate tiers. Local stories remain first;
+  national stories cannot be presented as local.
+- Thin local feeds backfill with verified national trade coverage to a tunable
+  depth target of 12 stories. The hard feed cap remains 30. When local coverage
+  already reaches the target, national coverage may still follow up to the cap;
+  when both tiers are thin, the API returns only what it verified.
+- Cross-tier canonical-URL and normalized-title checks prevent a local story
+  from appearing again in national backfill. National views assign every item
+  to the national tier and do not render a local divider.
+- For You preserves recommendation order inside each tier and renders a
+  `Beyond {city} · national trade news` divider before backfill. The Local
+  channel still shows local stories only, with no divider or national rows.
+  Featured treatment cannot pull national coverage above available local news.
+- Official reference titles now remove source suffixes and separator artifacts,
+  title-case all-caps text, preserve trade/government acronyms, and ellipsize
+  beyond 80 characters.
+- Unit coverage locks local-first composition, cross-tier deduplication,
+  national-only tiering, and title cleanup. The rendered desktop/mobile smoke
+  locks the divider order, Local-channel isolation, clean reference titles,
+  and dark/light theme behavior.
+- Locally verified: build, lint, 71 unit/frontend tests, E2E at desktop/mobile,
+  the rendered Trade News smoke in desktop/mobile dark and light themes, and a
+  production dependency audit with zero vulnerabilities. The existing
+  database integration suite produced no result before both a two-minute
+  aggregate run and a five-minute isolated run timed out; its orphaned child
+  processes were stopped and this is not recorded as a pass.
+- Deployment status: branch verification only. This packet has not been merged
+  to `master` or deployed, and no production-health claim is made.
 
 ## Trade News V2.2 Classification and Freshness (Production Verification)
 
