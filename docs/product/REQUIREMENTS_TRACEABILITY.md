@@ -10,6 +10,29 @@ Status values:
 
 Evidence must eventually link to implementation, automated tests, manual acceptance proof, and deployed build.
 
+## Traceability Addendum - 2026-07-23 Trade News V2.4 Local Matching
+
+- `GA-UX-003` gains locality-hierarchy evidence: national-origin articles with
+  conservative state/city content signals are promoted above the neutral
+  `Beyond your area · national trade news` divider and remain available in the
+  strict Local channel.
+- `GA-UX-005` gains honesty evidence: a bounded built-in US state table expands
+  `City, ST` preferences without external lookup; bare abbreviations and bare
+  city words cannot trigger promotion. Promoted records carry aligned
+  `tier: local`, `isLocal: true`, and `geography: local` fields.
+- `GA-UX-006` gains desktop/mobile dark/light evidence that a national-origin
+  Duval fixture renders above the divider and in Local while unrelated
+  national stories remain below it.
+- `GA-OPS-007` gains local evidence from build, lint, 73 unit/frontend tests,
+  and the rendered Trade News smoke. The packet changes no schema,
+  dependencies, clustering/freshness/resource rules, or feed-depth thresholds.
+- `GA-OPS-008` gains production evidence: Railway deployment
+  `47b4421d-beec-4809-a5c4-a4d2d2ab97af` served exact feature source
+  `a703c15c7f3a792f8cc35eb327d8dc913a946723`; the expected-source monitor
+  passed in 628 ms with healthy PostgreSQL/S3-compatible storage and all seven
+  anonymous private-route checks. A forced Jacksonville response returned the
+  real Duval Schools story exactly once as local.
+
 ## Traceability Addendum - 2026-07-23 Trade News V2.3 Feed Depth
 
 - `GA-UX-003` gains information-hierarchy evidence: location briefings keep

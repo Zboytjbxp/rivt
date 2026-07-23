@@ -2,12 +2,12 @@
 
 Last updated: 2026-07-23 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Trade News intelligence v2.4 local matching is locally verified.
-Active packet: Trade News v2.4 branch review
-Repository branch: `codex/trade-news-v2-4-local-match`
-Production feature release commit: `617d4f2fceee4a078a62c031df5dcf32ed6cb53e`
+Current phase: Trade News intelligence v2.4 local matching is production verified.
+Active packet: Trade News v2.4 production verification
+Repository branch: `master`
+Production feature release commit: `a703c15c7f3a792f8cc35eb327d8dc913a946723`
 
-## Trade News V2.4 Content-Based Local Matching (Local Verification)
+## Trade News V2.4 Content-Based Local Matching (Production Verification)
 
 - Location tiering now treats RSS query origin as one signal rather than the
   only signal. A national-origin item is promoted when its headline, summary,
@@ -37,8 +37,19 @@ Production feature release commit: `617d4f2fceee4a078a62c031df5dcf32ed6cb53e`
   Trade News desktop/mobile smoke. This packet changes no schema,
   dependencies, external providers, clustering thresholds, freshness rules,
   resource rules, or feed-depth thresholds.
-- Deployment status: branch verification only. This packet has not been
-  merged or deployed.
+- `codex/trade-news-v2-4-local-match` was fast-forwarded into `master` at
+  `a703c15c7f3a792f8cc35eb327d8dc913a946723`. Railway deployment
+  `47b4421d-beec-4809-a5c4-a4d2d2ab97af` succeeded after synchronizing
+  `SOURCE_COMMIT`; no operational-control variables changed.
+- Live health served the exact feature commit with migration
+  `0028_compensation_workflow` ready and PostgreSQL/S3-compatible storage
+  healthy. The expected-source production monitor passed in 628 ms with
+  configured Sentry/Web Push, enabled matching-job alerts, open operational
+  controls, and all seven anonymous private-route checks healthy.
+- A forced live Jacksonville feed returned 12 verified stories: seven local,
+  five national, and zero untiered. The real Duval Schools Inspector General
+  story appeared exactly once with `tier: local`, `isLocal: true`, and
+  `geography: local`.
 
 ## Trade News V2.3 Feed Depth (Production Verification)
 

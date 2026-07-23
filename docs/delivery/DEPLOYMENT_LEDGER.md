@@ -1,5 +1,31 @@
 # Deployment Ledger
 
+## 2026-07-23 - Trade News V2.4 Local Matching
+
+- Source commit: `a703c15c7f3a792f8cc35eb327d8dc913a946723`
+- Feature commits: `f63e701`, `d1bd8ca`
+- Branch: `master` (source branch: `codex/trade-news-v2-4-local-match`)
+- Railway deployment: `47b4421d-beec-4809-a5c4-a4d2d2ab97af`
+- Production: `https://rivt.pro`
+- Scope: conservatively promote national-origin trade stories when their
+  headline, summary, or source confirms the requested state or a city/state
+  pair. Promoted items become local across server tiering and the Local
+  channel. The national divider now truthfully reads `Beyond your area`.
+- Automated gates: build, lint, 73 unit/frontend tests, rendered Trade News
+  desktop/mobile dark/light smoke, and diff checks passed.
+- Provider/config changes: `SOURCE_COMMIT` was synchronized to the deployed
+  feature SHA; no operational controls or other provider settings changed.
+- Post-deploy proof: live health returned exact feature source with ready
+  migration `0028_compensation_workflow`, healthy PostgreSQL/S3-compatible
+  storage, configured Sentry/Web Push, and enabled matching-job alerts. The
+  expected-source monitor passed in 628 ms with all seven anonymous private
+  route checks healthy. A forced Jacksonville feed returned 12 stories—seven
+  local, five national, zero untiered—and the live Duval Schools Inspector
+  General story exactly once as local.
+- Rollback target: `e87235f2c4429213987764994e42d8270ac414ae`
+- Remaining field acceptance: on a signed-in physical phone, confirm the Duval
+  story appears above the boundary in For You and remains visible in Local.
+
 ## 2026-07-23 - Trade News V2.3 Feed Depth
 
 - Source commit: `617d4f2fceee4a078a62c031df5dcf32ed6cb53e`
