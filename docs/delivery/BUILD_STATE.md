@@ -24,6 +24,9 @@ Production feature release commit: `c80444ccf72a3a381121c08abf70fac5c3798d8b`
   only Electrical coverage, and proves For You still shows the verified
   national story. Build, lint, 63 unit/frontend tests, rendered Trade News QA,
   and the complete mobile text-scale/action matrix pass locally.
+- Railway deployment `40903840-cc83-4c43-b774-4c6058e3127f` served exact source
+  `bdd2e5912c9cc66f7c72a06036eab546958610cd`; the production monitor passed in
+  630 ms with all seven anonymous private-route checks healthy.
 
 ## Dedicated-Grade Trade Intelligence Redesign (Local Verification)
 
