@@ -2,12 +2,12 @@
 
 Last updated: 2026-07-23 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Trade News intelligence v2.3 feed depth is locally verified.
-Active packet: Trade News v2.3 branch review
-Repository branch: `codex/trade-news-v2-3-depth`
-Production feature release commit: `a76d7b30896af3f98a25c4fc4079a1ef408eec41`
+Current phase: Trade News intelligence v2.3 feed depth is production verified.
+Active packet: Trade News v2.3 production verification
+Repository branch: `master`
+Production feature release commit: `617d4f2fceee4a078a62c031df5dcf32ed6cb53e`
 
-## Trade News V2.3 Feed Depth (Local Verification)
+## Trade News V2.3 Feed Depth (Production Verification)
 
 - Location requests now process local and national stories through the existing
   freshness, deduplication, clustering, relevance, category-diversity, and
@@ -37,8 +37,21 @@ Production feature release commit: `a76d7b30896af3f98a25c4fc4079a1ef408eec41`
   database integration suite produced no result before both a two-minute
   aggregate run and a five-minute isolated run timed out; its orphaned child
   processes were stopped and this is not recorded as a pass.
-- Deployment status: branch verification only. This packet has not been merged
-  to `master` or deployed, and no production-health claim is made.
+- `codex/trade-news-v2-3-depth` was fast-forwarded into `master` at
+  `617d4f2fceee4a078a62c031df5dcf32ed6cb53e`. Railway application deployment
+  `c184b6a4-8f59-4b05-87ac-34d34fddc1f5` succeeded, followed by metadata
+  deployment `9505cdd8-8755-454e-8c75-de9a57b6e896` after synchronizing
+  `SOURCE_COMMIT`; no operational-control variables changed.
+- Live health served the exact feature commit with migration
+  `0028_compensation_workflow` ready and PostgreSQL/S3-compatible storage
+  healthy. The expected-source production monitor passed in 657 ms with
+  configured Sentry/Web Push, matching-job alerts enabled, operational
+  controls open, and all seven anonymous private-route checks healthy.
+- A forced live Jacksonville feed returned 12 verified stories: three local
+  first, followed by nine national stories, with no local story after the tier
+  boundary and no untiered items. Four official references rendered cleaned
+  titles including `Product Approval` and
+  `Florida Building Construction Standards`.
 
 ## Trade News V2.2 Classification and Freshness (Production Verification)
 

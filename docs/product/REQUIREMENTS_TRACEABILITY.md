@@ -10,6 +10,33 @@ Status values:
 
 Evidence must eventually link to implementation, automated tests, manual acceptance proof, and deployed build.
 
+## Traceability Addendum - 2026-07-23 Trade News V2.3 Feed Depth
+
+- `GA-UX-003` gains information-hierarchy evidence: location briefings keep
+  verified local stories first and place national backfill beneath an explicit
+  `Beyond {city} · national trade news` boundary. Local remains a strict
+  local-only channel, and a national story cannot become featured above
+  available local coverage.
+- `GA-UX-005` gains honesty evidence: each API item carries a server-assigned
+  local or national tier, canonical URL/title checks prevent cross-tier
+  duplicates, and thin feeds stop at the verified available count instead of
+  fabricating depth. Official reference titles are cleaned without inventing
+  resources or changing source attribution.
+- `GA-UX-006` gains rendered desktop/mobile evidence in dark and light themes
+  for tier order, Local-channel isolation, reference-title cleanup, and
+  horizontal containment.
+- `GA-OPS-007` gains local evidence from build, lint, 71 unit/frontend tests,
+  E2E at desktop/mobile, rendered Trade News smoke, and a zero-vulnerability
+  production dependency audit. The existing database integration suite timed
+  out without a result and is not claimed as passed.
+- `GA-OPS-008` gains production evidence: Railway deployment
+  `9505cdd8-8755-454e-8c75-de9a57b6e896` served exact feature source
+  `617d4f2fceee4a078a62c031df5dcf32ed6cb53e`; the expected-source monitor
+  passed in 657 ms with healthy PostgreSQL/S3-compatible storage and seven
+  anonymous private-route checks. A forced Jacksonville response proved three
+  local stories followed by nine national stories, zero untiered items, and
+  cleaned official-reference titles.
+
 ## Traceability Addendum - 2026-07-17 Home Completion-State Correction
 
 - `GA-UX-003` gains lifecycle-label evidence: Home derives its current-work

@@ -1,5 +1,37 @@
 # Deployment Ledger
 
+## 2026-07-23 - Trade News V2.3 Feed Depth
+
+- Source commit: `617d4f2fceee4a078a62c031df5dcf32ed6cb53e`
+- Feature commits: `b60fa28`, `a1a6c40`
+- Branch: `master` (source branch: `codex/trade-news-v2-3-depth`)
+- Railway application deployment: `c184b6a4-8f59-4b05-87ac-34d34fddc1f5`
+- Railway metadata deployment: `9505cdd8-8755-454e-8c75-de9a57b6e896`
+- Production: `https://rivt.pro`
+- Scope: location briefings preserve verified local coverage first and backfill
+  thin feeds with national trade news under an explicit area boundary. The
+  target depth is 12 and hard cap is 30; cross-tier canonical URL/title dedup
+  remains mandatory. Official reference titles are normalized while known
+  trade and government acronyms are preserved.
+- Automated gates: build, lint, 71 unit/frontend tests, E2E at desktop/mobile,
+  rendered Trade News smoke in desktop/mobile dark and light themes, and
+  production dependency audit passed. The existing database integration suite
+  timed out twice without a result and is not claimed as passed.
+- Provider/config changes: `SOURCE_COMMIT` was synchronized to the deployed
+  feature SHA after the application rollout; no operational controls or other
+  provider settings changed.
+- Post-deploy proof: live health returned the exact source with ready migration
+  `0028_compensation_workflow`, PostgreSQL, S3-compatible storage, configured
+  Sentry/Web Push, and enabled matching-job alerts. The expected-source monitor
+  passed in 657 ms with all seven anonymous private-route checks healthy. A
+  forced Jacksonville feed returned 12 items—three local followed by nine
+  national—with zero untiered items, no local item after national backfill, and
+  four cleanly titled official references.
+- Rollback target: `c9408eeb589aff8d27f15230f24104aeee5a3e7f`
+- Remaining field acceptance: on a signed-in physical phone, open the For You
+  and Local channels and confirm the national boundary is visible only in For
+  You while local items remain first.
+
 ## 2026-07-17 - Packet 64 Tools Mobile Landing
 
 - Source commit: `c2f02632285735f7d0a19b2979370ae55d239dca`
