@@ -17,6 +17,58 @@ const NEWS_DEPTH_TARGET = 12;
 const NEWS_FEED_HARD_CAP = 30;
 const DAY_MS = 86_400_000;
 const _xmlParser = new XMLParser({ ignoreAttributes: false, ignoreDeclaration: true });
+const US_STATE_NAMES = Object.freeze({
+  AL: "alabama", AK: "alaska", AZ: "arizona", AR: "arkansas", CA: "california",
+  CO: "colorado", CT: "connecticut", DE: "delaware", FL: "florida", GA: "georgia",
+  HI: "hawaii", ID: "idaho", IL: "illinois", IN: "indiana", IA: "iowa",
+  KS: "kansas", KY: "kentucky", LA: "louisiana", ME: "maine", MD: "maryland",
+  MA: "massachusetts", MI: "michigan", MN: "minnesota", MS: "mississippi",
+  MO: "missouri", MT: "montana", NE: "nebraska", NV: "nevada",
+  NH: "new hampshire", NJ: "new jersey", NM: "new mexico", NY: "new york",
+  NC: "north carolina", ND: "north dakota", OH: "ohio", OK: "oklahoma",
+  OR: "oregon", PA: "pennsylvania", RI: "rhode island", SC: "south carolina",
+  SD: "south dakota", TN: "tennessee", TX: "texas", UT: "utah",
+  VT: "vermont", VA: "virginia", WA: "washington", WV: "west virginia",
+  WI: "wisconsin", WY: "wyoming", DC: "district of columbia",
+});
+
+function _locationSignals(location) {
+  const [rawCity = "", rawState = ""] = String(location ?? "").split(",", 2);
+  const city = rawCity.trim().toLowerCase().replace(/\s+/g, " ");
+  const stateInput = rawState.trim().toLowerCase().replace(/\s+/g, " ");
+  const stateEntry = Object.entries(US_STATE_NAMES).find(([abbr, full]) => (
+    abbr.toLowerCase() === stateInput || full === stateInput
+  ));
+  return {
+    city,
+    stateFull: stateEntry?.[1] ?? "",
+    stateAbbr: stateEntry?.[0].toLowerCase() ?? "",
+  };
+}
+
+function _escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function _matchesLocation(item, signals) {
+  const text = `${item?.headline ?? ""} ${item?.summary ?? ""} ${item?.source ?? ""}`.toLowerCase();
+  const { city = "", stateFull = "", stateAbbr = "" } = signals ?? {};
+  if (!text || !stateFull || !stateAbbr) return false;
+
+  const stateFullPattern = new RegExp(`\\b${_escapeRegExp(stateFull)}\\b`, "i");
+  if (stateFullPattern.test(text)) return true;
+  if (city.length < 4) return false;
+
+  const cityPattern = new RegExp(`\\b${_escapeRegExp(city)}\\b`, "i");
+  if (!cityPattern.test(text)) return false;
+  const explicitCityState = new RegExp(
+    `\\b${_escapeRegExp(city)}\\s*,\\s*${_escapeRegExp(stateAbbr)}\\b`,
+    "i",
+  );
+  if (explicitCityState.test(text)) return true;
+  const stateAbbrPattern = new RegExp(`\\b${_escapeRegExp(stateAbbr)}\\b`, "i");
+  return stateAbbrPattern.test(text);
+}
 
 function _normalizeNewsLocation(value) {
   const location = String(value ?? "")
@@ -503,8 +555,18 @@ function _composeTieredNews(
     };
   }
 
-  const localRaw = liveItems.filter((item) => item.isLocal);
-  const nationalRaw = liveItems.filter((item) => !item.isLocal);
+  const signals = _locationSignals(location);
+  const localRaw = [];
+  const nationalRaw = [];
+  for (const item of liveItems) {
+    if (item.isLocal) {
+      localRaw.push(item);
+    } else if (_matchesLocation(item, signals)) {
+      localRaw.push({ ...item, isLocal: true, geography: "local" });
+    } else {
+      nationalRaw.push(item);
+    }
+  }
   const { news: localPart, resources } = _partitionNewsAndResources(localRaw, now);
   const { news: nationalPart } = _partitionNewsAndResources(nationalRaw, now);
   const localNews = _rankNewsTier(localPart)
@@ -850,6 +912,8 @@ export const newsInternals = {
   _cleanHeadline,
   _tidyResourceTitle,
   _composeTieredNews,
+  _locationSignals,
+  _matchesLocation,
   _dedupeAndDiversify,
   _normalizeNewsLocation,
   _impact,

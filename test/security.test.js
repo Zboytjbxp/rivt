@@ -497,6 +497,73 @@ test("trade news assigns the national tier when no location is requested", () =>
   assert.equal(composed.items[0].tier, "national");
 });
 
+test("trade news promotes content-confirmed location matches into the local tier", () => {
+  const now = Date.parse("2026-07-23T12:00:00.000Z");
+  const signals = newsInternals._locationSignals("Jacksonville, FL");
+  assert.deepEqual(signals, {
+    city: "jacksonville",
+    stateFull: "florida",
+    stateAbbr: "fl",
+  });
+  assert.deepEqual(newsInternals._locationSignals("Jacksonville, Florida"), signals);
+
+  const duvalStory = {
+    headline: "Jax Inspector General finds Duval Schools' kitchen construction violates code",
+    summary: "The inspector reviewed construction work at district kitchens.",
+    source: "Florida Politics",
+    url: "https://example.com/duval-schools-kitchen-code",
+    publishedAt: "2026-07-23T02:00:00.000Z",
+    category: "Codes",
+    impactLevel: "routine",
+    sourceKind: "publisher",
+    geography: "national",
+    isLocal: false,
+  };
+  const unrelatedStory = {
+    headline: "BlackRock, Carhartt launch national Skilled-Trades Alliance",
+    summary: "The national program supports construction workforce development.",
+    source: "National workforce desk",
+    url: "https://example.com/national-skilled-trades-alliance",
+    publishedAt: "2026-07-22T12:00:00.000Z",
+    category: "Labor",
+    impactLevel: "routine",
+    sourceKind: "publisher",
+    geography: "national",
+    isLocal: false,
+  };
+
+  assert.equal(newsInternals._matchesLocation(duvalStory, signals), true);
+  assert.equal(newsInternals._matchesLocation(unrelatedStory, signals), false);
+  const composed = newsInternals._composeTieredNews([duvalStory, unrelatedStory], {
+    location: "Jacksonville, FL",
+    now,
+  });
+  const promoted = composed.items.find((item) => item.url === duvalStory.url);
+  assert.equal(promoted?.tier, "local");
+  assert.equal(promoted?.isLocal, true);
+  assert.equal(promoted?.geography, "local");
+  assert.equal(composed.items.find((item) => item.url === unrelatedStory.url)?.tier, "national");
+});
+
+test("trade news does not treat common city words as location matches without their state", () => {
+  const signals = newsInternals._locationSignals("Reading, PA");
+  const unrelatedReadingStory = {
+    headline: "Reading the skilled-trades labor market",
+    summary: "A national workforce analysis for construction employers.",
+    source: "National trade desk",
+  };
+  assert.deepEqual(signals, {
+    city: "reading",
+    stateFull: "pennsylvania",
+    stateAbbr: "pa",
+  });
+  assert.equal(newsInternals._matchesLocation(unrelatedReadingStory, signals), false);
+  assert.equal(newsInternals._matchesLocation({
+    ...unrelatedReadingStory,
+    headline: "Reading, PA contractors prepare for code adoption",
+  }, signals), true);
+});
+
 test("trade news tidies official resource titles", () => {
   assert.equal(newsInternals._tidyResourceTitle("Product_Approval"), "Product Approval");
   assert.equal(
