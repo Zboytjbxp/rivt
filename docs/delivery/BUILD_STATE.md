@@ -30,7 +30,10 @@ Production feature release commit: `c80444ccf72a3a381121c08abf70fac5c3798d8b`
   The rendered Camera path covers context selection, capture-menu selection,
   settings persistence, aspect/quality/grid selection, switching cameras,
   capture, failed-upload retry, saved feedback, a <=170px control-dock
-  assertion, and no horizontal overflow. Deployment is pending.
+  assertion, and no horizontal overflow. Railway deployment
+  `0537f8a7-ab53-45d4-88d1-2f3430bb8f24` served exact source
+  `11e5981541470dbee31866de49019e2d29e34246`; the production monitor passed
+  in 553 ms with all seven anonymous private-route checks healthy.
 
 ## Shop Talk and Communities Release Hardening (Local Verification)
 
