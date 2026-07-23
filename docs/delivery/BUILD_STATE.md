@@ -2,12 +2,12 @@
 
 Last updated: 2026-07-23 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Shop Talk final editorial polish is locally verified.
-Active packet: Feed, Communities, and Trade News visual consistency review
-Repository branch: `codex/shop-talk-final-polish`
-Production feature release commit: `a703c15c7f3a792f8cc35eb327d8dc913a946723`
+Current phase: Shop Talk final editorial polish is production verified.
+Active packet: Feed, Communities, and Trade News production verification
+Repository branch: `master`
+Production feature release commit: `c1155514e25b4b5d90fcd92d687752bcac59539c`
 
-## Shop Talk Final Editorial Polish (Local Verification)
+## Shop Talk Final Editorial Polish (Production Verification)
 
 - The design audit found that the earlier card-subtraction pass was being
   reversed by a later Trade News cascade block that restored card borders,
@@ -37,8 +37,18 @@ Production feature release commit: `a703c15c7f3a792f8cc35eb327d8dc913a946723`
   PostgreSQL phase but produced no result before the five-minute command
   window; its orphaned child processes were stopped and no integration pass is
   claimed.
-- Deployment status: branch verification only. This packet has not been
-  merged or deployed.
+- `codex/shop-talk-final-polish` was fast-forwarded into `master` at
+  `c1155514e25b4b5d90fcd92d687752bcac59539c`. Railway deployment
+  `0249394d-0d8e-4d1b-8863-f85a1e6a9875` succeeded after synchronizing
+  `SOURCE_COMMIT`; no operational-control variables changed.
+- Live health served the exact feature commit with migration
+  `0028_compensation_workflow` ready and PostgreSQL/S3-compatible storage
+  healthy. The expected-source production monitor passed in 544 ms with
+  configured Sentry/Web Push, enabled matching-job alerts, open operational
+  controls, and all seven anonymous private-route checks healthy.
+- Remaining field acceptance: on a signed-in physical phone, scan Feed,
+  Communities, and Trade News in both themes and confirm the editorial rows
+  remain visually continuous through real-world content lengths.
 
 ## Trade News V2.4 Content-Based Local Matching (Production Verification)
 

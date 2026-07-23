@@ -25,6 +25,11 @@ Evidence must eventually link to implementation, automated tests, manual accepta
   E2E at desktop/mobile, rendered Shop Talk/Trade News smoke, and a
   zero-vulnerability production dependency audit. The aggregate serial
   PostgreSQL phase timed out without a result and is not claimed as passed.
+- `GA-OPS-008` gains production evidence: Railway deployment
+  `0249394d-0d8e-4d1b-8863-f85a1e6a9875` serves runtime source
+  `c1155514e25b4b5d90fcd92d687752bcac59539c`; exact-source health and the
+  production monitor passed in 544 ms with ready migrations and healthy
+  production dependencies.
 
 ## Traceability Addendum - 2026-07-23 Trade News V2.4 Local Matching
 

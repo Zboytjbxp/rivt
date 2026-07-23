@@ -1,5 +1,34 @@
 # Deployment Ledger
 
+## 2026-07-23 - Shop Talk Final Editorial Polish
+
+- Source commit: `c1155514e25b4b5d90fcd92d687752bcac59539c`
+- Feature commit: `1436109`
+- Branch: `master` (source branch: `codex/shop-talk-final-polish`)
+- Railway deployment: `0249394d-0d8e-4d1b-8863-f85a1e6a9875`
+- Production: `https://rivt.pro`
+- Scope: Feed posts, Community directory entries, featured news, and compact
+  news now share one continuous editorial-list system. Outer content-card
+  radii and shadows are removed while images, typography, labels, semantic
+  priority, and selected-detail containment preserve hierarchy. Discussion is
+  first in the news action order and source links remain quiet.
+- Automated gates: build, lint, 73 unit/frontend tests, E2E at desktop/mobile,
+  rendered Shop Talk/Trade News smoke in desktop/mobile dark and light themes,
+  production dependency audit, and diff checks passed. The aggregate command
+  reached the existing serial PostgreSQL phase but returned no result within
+  five minutes; no aggregate integration pass is claimed.
+- Provider/config changes: `SOURCE_COMMIT` was synchronized to the deployed
+  feature SHA; no operational controls or other provider settings changed.
+- Post-deploy proof: live health returned the exact feature source with ready
+  migration `0028_compensation_workflow`, healthy PostgreSQL/S3-compatible
+  storage, configured Sentry/Web Push, and enabled matching-job alerts. The
+  expected-source monitor passed in 544 ms with open operational controls and
+  all seven anonymous private-route checks healthy.
+- Rollback target: `b3c40d9a6b1e7b9800d4ba25c891bcaa08a7c62e`
+- Remaining field acceptance: on a signed-in physical phone, scan Feed,
+  Communities, and Trade News in both themes and confirm the continuous-list
+  rhythm holds with live content.
+
 ## 2026-07-23 - Trade News V2.4 Local Matching
 
 - Source commit: `a703c15c7f3a792f8cc35eb327d8dc913a946723`
