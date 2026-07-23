@@ -10,6 +10,22 @@ Status values:
 
 Evidence must eventually link to implementation, automated tests, manual acceptance proof, and deployed build.
 
+## Traceability Addendum - 2026-07-23 Shop Talk Final Editorial Polish
+
+- `GA-UX-003` gains cross-surface hierarchy evidence: Feed posts, Community
+  directory entries, featured news, and compact news use one editorial-list
+  model. Elevation remains reserved for navigation, controls, sheets, and
+  selected detail instead of wrapping every content object in a card.
+- `GA-UX-006` gains rendered desktop/mobile and dark/light evidence: the Shop
+  Talk smoke requires zero outer card radius and zero shadow across Feed,
+  Communities, and every Trade News item while retaining focus states, 44px
+  actions, content ordering, Local-channel isolation, and horizontal
+  containment.
+- `GA-OPS-007` gains local evidence from build, lint, 73 unit/frontend tests,
+  E2E at desktop/mobile, rendered Shop Talk/Trade News smoke, and a
+  zero-vulnerability production dependency audit. The aggregate serial
+  PostgreSQL phase timed out without a result and is not claimed as passed.
+
 ## Traceability Addendum - 2026-07-23 Trade News V2.4 Local Matching
 
 - `GA-UX-003` gains locality-hierarchy evidence: national-origin articles with

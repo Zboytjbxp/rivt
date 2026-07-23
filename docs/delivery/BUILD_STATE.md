@@ -2,10 +2,43 @@
 
 Last updated: 2026-07-23 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Trade News intelligence v2.4 local matching is production verified.
-Active packet: Trade News v2.4 production verification
-Repository branch: `master`
+Current phase: Shop Talk final editorial polish is locally verified.
+Active packet: Feed, Communities, and Trade News visual consistency review
+Repository branch: `codex/shop-talk-final-polish`
 Production feature release commit: `a703c15c7f3a792f8cc35eb327d8dc913a946723`
+
+## Shop Talk Final Editorial Polish (Local Verification)
+
+- The design audit found that the earlier card-subtraction pass was being
+  reversed by a later Trade News cascade block that restored card borders,
+  radii, shadows, and filled surfaces. Feed already used editorial rows;
+  Communities used them only on mobile; Trade News was the inconsistent
+  surface.
+- Feed posts, Community directory entries, featured news, and compact news now
+  share one continuous-list rule: a single top boundary, row separators, zero
+  outer card radius, zero card shadow, and a quiet hover/focus surface.
+  Navigation, controls, sheets, and the selected detail pane retain deliberate
+  containment.
+- Featured news remains visually identifiable through its image, label,
+  typography, and semantic priority—not through a conflicting outer card.
+  Compact stories use the same row rhythm. News actions now align like Feed
+  actions, with discussion first, the original link quiet, and save at the
+  trailing edge.
+- Community rows now use the same list treatment at desktop and mobile sizes.
+  Three duplicate mobile directory blocks were removed, leaving one source of
+  truth and reducing future cascade regressions.
+- Rendered assertions now require Feed, Communities, and every Trade News item
+  to have zero outer card radius and no card shadow at 1440x900 and 390x844.
+  Dark/light Trade News captures, content ordering, Local-channel behavior,
+  discussion counts, and horizontal-overflow checks remain intact.
+- Locally verified: build, lint, 73 unit/frontend tests, E2E at desktop/mobile,
+  rendered Shop Talk/Trade News smoke, and a production dependency audit with
+  zero vulnerabilities. The aggregate command reached the existing serial
+  PostgreSQL phase but produced no result before the five-minute command
+  window; its orphaned child processes were stopped and no integration pass is
+  claimed.
+- Deployment status: branch verification only. This packet has not been
+  merged or deployed.
 
 ## Trade News V2.4 Content-Based Local Matching (Production Verification)
 
