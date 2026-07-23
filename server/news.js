@@ -10,6 +10,9 @@ const NEWS_LOCATION_MAX_LENGTH = 80;
 const NEWS_MAX_AGE_DAYS = 180;
 const NEWS_RESOURCE_AGE_DAYS = 548;
 const NEWS_PRIORITY_MAX_SHARE = 0.25;
+const NEWS_CATEGORY_MAX_SHARE = 0.4;
+const NEWS_CLUSTER_CATEGORY_RATIO = 0.4;
+const NEWS_CLUSTER_DEFAULT_RATIO = 0.48;
 const DAY_MS = 86_400_000;
 const _xmlParser = new XMLParser({ ignoreAttributes: false, ignoreDeclaration: true });
 
@@ -67,6 +70,28 @@ function _stripHtml(str) {
     .replace(/<[^>]*>/g, " ")
     .replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">")
     .replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/\s+/g, " ").trim();
+}
+
+function _cleanHeadline(rawTitle, source = "") {
+  const title = _stripHtml(rawTitle);
+  const separators = [...title.matchAll(/\s(?:-|—|\|)\s/g)];
+  const last = separators.at(-1);
+  if (!last) return title;
+
+  const head = title.slice(0, last.index).trim();
+  const tail = title.slice((last.index ?? 0) + last[0].length).trim();
+  if (!head || !tail || tail.length > 80 || tail.split(/\s+/).length > 10) return title;
+
+  const normalizedTail = tail.toLowerCase().replace(/^www\./, "").replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+  const normalizedSource = _stripHtml(source).toLowerCase().replace(/^www\./, "").replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+  const matchesSource = normalizedSource && (
+    normalizedTail === normalizedSource
+    || normalizedSource.includes(normalizedTail)
+    || normalizedTail.includes(normalizedSource)
+  );
+  const looksLikeDomain = /^[\w.-]+\.(?:com|org|net|gov|news|co)$/i.test(tail);
+  const looksLikeSourceName = /^[A-Z0-9][\p{L}\p{N}&.'’/-]*(?:\s+[A-Z0-9][\p{L}\p{N}&.'’/-]*){0,9}$/u.test(tail);
+  return matchesSource || looksLikeDomain || looksLikeSourceName ? head : title;
 }
 
 function _fmtDate(raw) {
@@ -277,6 +302,11 @@ function _normalizedTitle(value) {
   return _stripHtml(value).toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
 }
 
+function _significantTitleTokens(value) {
+  const stop = new Set(["after", "from", "into", "with", "that", "this", "will", "construction", "contractor", "update", "news"]);
+  return _normalizedTitle(value).split(" ").filter((token) => token.length > 3 && !stop.has(token));
+}
+
 function _publishedTime(item) {
   const time = Date.parse(item?.publishedAt ?? "");
   return Number.isFinite(time) ? time : 0;
@@ -292,24 +322,40 @@ function _relevanceScore(item, now = Date.now()) {
 function _dedupeAndDiversify(items, limit = 30) {
   const seenUrls = new Set();
   const seenTitles = new Set();
+  const seenTitlePrefixes = new Set();
   const unique = items.filter((item) => {
     const canonicalUrl = _canonicalArticleUrl(item.url);
     const titleKey = _normalizedTitle(item.headline);
-    if (!canonicalUrl || titleKey.length < 12 || seenUrls.has(canonicalUrl) || seenTitles.has(titleKey)) return false;
+    const significant = _significantTitleTokens(item.headline);
+    const prefixKey = significant.slice(0, 8).join(" ");
+    if (
+      !canonicalUrl
+      || titleKey.length < 12
+      || seenUrls.has(canonicalUrl)
+      || seenTitles.has(titleKey)
+      || (significant.length >= 5 && seenTitlePrefixes.has(prefixKey))
+    ) return false;
     seenUrls.add(canonicalUrl);
     seenTitles.add(titleKey);
+    if (significant.length >= 5) seenTitlePrefixes.add(prefixKey);
     item.canonicalUrl = canonicalUrl;
     return true;
   }).sort((a, b) => _relevanceScore(b) - _relevanceScore(a));
 
   const selected = [];
   const sourceCounts = new Map();
-  for (const category of ["Safety", "Codes", "Labor", "Tools", "Business", "Projects", "Construction"]) {
-    const item = unique.find((candidate) => candidate.category === category && !selected.includes(candidate));
-    if (!item) continue;
+  const categoryCounts = new Map();
+  const categoryCap = Math.max(1, Math.ceil(Math.min(limit, unique.length) * NEWS_CATEGORY_MAX_SHARE));
+  const selectItem = (item) => {
     selected.push(item);
     const source = String(item.source || "Unknown").toLowerCase();
     sourceCounts.set(source, (sourceCounts.get(source) ?? 0) + 1);
+    categoryCounts.set(item.category, (categoryCounts.get(item.category) ?? 0) + 1);
+  };
+  for (const category of ["Safety", "Codes", "Labor", "Tools", "Business", "Projects", "Construction"]) {
+    const item = unique.find((candidate) => candidate.category === category && !selected.includes(candidate));
+    if (!item) continue;
+    selectItem(item);
     if (selected.length === limit) return selected;
   }
   for (const maxPerSource of [3, 6, Infinity]) {
@@ -317,34 +363,73 @@ function _dedupeAndDiversify(items, limit = 30) {
       if (selected.includes(item)) continue;
       const source = String(item.source || "Unknown").toLowerCase();
       if ((sourceCounts.get(source) ?? 0) >= maxPerSource) continue;
-      selected.push(item);
-      sourceCounts.set(source, (sourceCounts.get(source) ?? 0) + 1);
+      const categoryAtCap = (categoryCounts.get(item.category) ?? 0) >= categoryCap;
+      const hasUnusedOtherCategory = unique.some((candidate) => (
+        !selected.includes(candidate)
+        && candidate.category !== item.category
+        && (sourceCounts.get(String(candidate.source || "Unknown").toLowerCase()) ?? 0) < maxPerSource
+      ));
+      if (categoryAtCap && hasUnusedOtherCategory) continue;
+      selectItem(item);
       if (selected.length === limit) return selected;
     }
   }
   return selected;
 }
 
+function _stemClusterToken(token) {
+  let stem = token;
+  if (stem.length > 6 && stem.endsWith("ing")) stem = stem.slice(0, -3);
+  else if (stem.length > 5 && stem.endsWith("ed")) stem = stem.slice(0, -2);
+  else if (stem.length > 5 && stem.endsWith("es")) stem = stem.slice(0, -1);
+  else if (stem.length > 4 && stem.endsWith("s")) stem = stem.slice(0, -1);
+  stem = stem.replace(/([b-df-hj-np-tv-z])\1$/i, "$1");
+  if (stem.length > 4 && stem.endsWith("e")) stem = stem.slice(0, -1);
+  return stem;
+}
+
 function _clusterKeyTokens(item) {
-  const stop = new Set(["after", "from", "into", "with", "that", "this", "will", "construction", "contractor", "update", "news"]);
-  return new Set(_normalizedTitle(item?.headline).split(" ").filter((token) => token.length > 3 && !stop.has(token)));
+  return new Set(_significantTitleTokens(item?.headline).map(_stemClusterToken).filter((token) => token.length > 3));
+}
+
+function _storyEntities(item) {
+  const text = `${item?.headline ?? ""} ${item?.summary ?? ""}`;
+  const entities = new Set();
+  for (const match of text.matchAll(/\b(?:(CS)\/)?(HB|SB)\s?(\d{1,4})\b/gi)) {
+    entities.add(`${match[1] ? "CS/" : ""}${match[2].toUpperCase()} ${match[3]}`);
+  }
+  for (const match of text.matchAll(/\b([A-Z][\p{L}\p{N}'’-]+(?:\s+[A-Z][\p{L}\p{N}'’-]+){0,5}\s+Act)\b/gu)) {
+    entities.add(match[1].toLowerCase().replace(/\s+/g, " "));
+  }
+  return entities;
 }
 
 function _clusterStories(items) {
   const clusters = [];
   for (const item of items) {
     const tokens = _clusterKeyTokens(item);
+    const entities = _storyEntities(item);
     const match = clusters.find((cluster) => {
+      if ([...entities].some((entity) => cluster.entities.has(entity))) return true;
       const overlap = [...tokens].filter((token) => cluster.tokens.has(token)).length;
       const denominator = Math.max(tokens.size, cluster.tokens.size, 1);
-      return overlap >= 3 && overlap / denominator >= 0.48;
+      const sameCategoryAndGeography = item.category === cluster.primary.category
+        && item.geography === cluster.primary.geography;
+      const threshold = sameCategoryAndGeography ? NEWS_CLUSTER_CATEGORY_RATIO : NEWS_CLUSTER_DEFAULT_RATIO;
+      return overlap >= 3 && overlap / denominator >= threshold;
     });
     if (!match) {
-      clusters.push({ primary: item, tokens, sources: new Set([item.source]) });
+      clusters.push({ primary: item, tokens, entities, sources: new Set([item.source]) });
       continue;
     }
     match.sources.add(item.source);
-    if (_relevanceScore(item) > _relevanceScore(match.primary)) match.primary = item;
+    for (const token of tokens) match.tokens.add(token);
+    for (const entity of entities) match.entities.add(entity);
+    const itemOfficial = item.sourceKind === "official";
+    const primaryOfficial = match.primary.sourceKind === "official";
+    if ((itemOfficial && !primaryOfficial) || (itemOfficial === primaryOfficial && _relevanceScore(item) > _relevanceScore(match.primary))) {
+      match.primary = item;
+    }
   }
   return clusters.map(({ primary, sources }) => ({
     ...primary,
@@ -561,9 +646,9 @@ async function _fetchFeed(
       const link = typeof item.link === "string"
         ? item.link
         : item.link?.["@_href"] ?? item.guid ?? "#";
-      const headline = _stripHtml(item.title ?? "");
       const itemSource = typeof item.source === "string" ? item.source : item.source?.["#text"];
       const source = _stripHtml(itemSource ?? fallbackSource ?? channel.title ?? "Unknown source");
+      const headline = _cleanHeadline(item.title ?? "", source);
       const thumbnailUrl = _rssThumbnailUrl(item, link);
       const publishedAt = item.pubDate ?? item.published ?? item.updated ?? "";
       const summary = _stripHtml(item.description ?? item.summary ?? item["content:encoded"] ?? "").slice(0, 350);
@@ -675,6 +760,7 @@ export const newsInternals = {
   NEWS_CACHE_MAX_ENTRIES,
   NEWS_LOCATION_MAX_LENGTH,
   _canonicalArticleUrl,
+  _cleanHeadline,
   _dedupeAndDiversify,
   _normalizeNewsLocation,
   _impact,
@@ -683,6 +769,9 @@ export const newsInternals = {
   _partitionNewsAndResources,
   _topics,
   _clusterStories,
+  _clusterKeyTokens,
+  _storyEntities,
+  _normalizedTitle,
   _pruneNewsCache,
   _resolvePublicImageUrl,
   _rssThumbnailUrl,
