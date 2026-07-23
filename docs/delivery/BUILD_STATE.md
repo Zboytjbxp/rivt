@@ -2,10 +2,43 @@
 
 Last updated: 2026-07-23 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Trade News intelligence v2.3 feed depth is production verified.
-Active packet: Trade News v2.3 production verification
-Repository branch: `master`
+Current phase: Trade News intelligence v2.4 local matching is locally verified.
+Active packet: Trade News v2.4 branch review
+Repository branch: `codex/trade-news-v2-4-local-match`
 Production feature release commit: `617d4f2fceee4a078a62c031df5dcf32ed6cb53e`
+
+## Trade News V2.4 Content-Based Local Matching (Local Verification)
+
+- Location tiering now treats RSS query origin as one signal rather than the
+  only signal. A national-origin item is promoted when its headline, summary,
+  or source contains the requested full state name, or when a valid city match
+  co-occurs with the state name/abbreviation.
+- A fixed built-in US state abbreviation/name table expands normalized
+  `City, ST` preferences without external geocoding, APIs, dependencies, or
+  guessed locations. Bare two-letter abbreviations and bare city tokens never
+  promote an item.
+- Promoted items are marked `isLocal: true`, `geography: local`, and
+  `tier: local`, keeping the server grouping and client Local channel aligned.
+  Freshness, clustering, resource handling, the 12-story target, and the
+  30-story hard cap are unchanged.
+- The divider now reads
+  `Beyond your area · national trade news`. This stays truthful because the
+  local tier intentionally includes relevant in-state coverage, not only
+  city-limits reporting.
+- Unit coverage locks the real Duval Schools/Florida Politics regression,
+  preserves an unrelated national Skilled-Trades Alliance story as national,
+  and proves a Reading, Pennsylvania preference does not match an unrelated
+  use of the word `reading` without a state signal.
+- The rendered desktop/mobile smoke passes a national-origin Duval fixture
+  through the server classifier, proves it renders above the divider and in
+  the Local channel, and keeps national rows below the divider in dark and
+  light themes.
+- Locally verified: build, lint, 73 unit/frontend tests, and the rendered
+  Trade News desktop/mobile smoke. This packet changes no schema,
+  dependencies, external providers, clustering thresholds, freshness rules,
+  resource rules, or feed-depth thresholds.
+- Deployment status: branch verification only. This packet has not been
+  merged or deployed.
 
 ## Trade News V2.3 Feed Depth (Production Verification)
 
