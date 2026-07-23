@@ -70,6 +70,10 @@ const newsPhotoDataUri = (label, accent = "#ff4b00") =>
 
 const newsPayload = {
   fallback: false,
+  resources: [
+    { title: "Florida licensing portal", source: "DBPR", url: "https://www.myfloridalicense.com/" },
+    { title: "Jacksonville permit references", source: "City of Jacksonville", url: "https://www.jacksonville.gov/permits" },
+  ],
   items: [
     {
       id: "jax-permit-watch",
@@ -81,6 +85,7 @@ const newsPayload = {
       thumbnailUrl: newsPhotoDataUri("JAX PERMIT WATCH"),
       thumbnailKind: "article",
       date: "Jun 21, 2026",
+      publishedAt: "2026-07-22T14:00:00.000Z",
       urgency: "Local update",
       category: "Codes",
       topics: ["Permits & inspections", "Codes & standards"],
@@ -101,6 +106,7 @@ const newsPayload = {
       thumbnailUrl: newsPhotoDataUri("HEAT SAFETY", "#f97316"),
       thumbnailKind: "article",
       date: "Jun 20, 2026",
+      publishedAt: "2026-07-21T14:00:00.000Z",
       urgency: "Safety",
       category: "Safety",
       topics: ["Safety & OSHA", "Weather & jobsite"],
@@ -119,6 +125,7 @@ const newsPayload = {
       source: "EPA SNAP",
       url: "https://www.epa.gov/snap",
       date: "Jun 19, 2026",
+      publishedAt: "2026-07-20T14:00:00.000Z",
       trades: ["HVAC"],
       urgency: "Code watch",
       category: "Codes",
@@ -129,10 +136,28 @@ const newsPayload = {
       geography: "local",
       isLocal: true,
     },
+    {
+      id: "florida-labor-market",
+      headline: "Florida contractors watch apprenticeship enrollment gains",
+      summary: "New enrollment data shows where skilled-trade training capacity is growing.",
+      source: "Florida workforce update",
+      url: "https://example.com/florida-apprenticeships",
+      date: "Jul 19, 2026",
+      publishedAt: "2026-07-19T14:00:00.000Z",
+      trades: ["General construction"],
+      category: "Labor",
+      topics: ["Labor & workforce"],
+      impactLevel: "routine",
+      impactReason: "New workforce data for Florida contractors.",
+      sourceKind: "publisher",
+      geography: "local",
+      isLocal: true,
+    },
   ],
 };
 const nationalNewsPayload = {
   fallback: false,
+  resources: [],
   items: [{
     id: "national-electrical-code",
     headline: "National electrical code update changes service planning",
@@ -142,6 +167,7 @@ const nationalNewsPayload = {
     thumbnailUrl: newsPhotoDataUri("NATIONAL CODE"),
     thumbnailKind: "article",
     date: "Jun 22, 2026",
+    publishedAt: "2026-07-22T14:00:00.000Z",
     category: "Codes",
     topics: ["Codes & standards"],
     trades: ["Electrical"],
@@ -282,13 +308,13 @@ async function configurePage(page) {
               flair: "Discussion",
               type: "general",
               title: "How are you handling the new OSHA heat rule on outdoor jobs this summer?",
-              body: "Compare practical heat plans, scheduling changes, and field routines.",
+              body: "Compare practical heat plans, scheduling changes, and field routines.\n\nhttps://www.osha.gov/heat-exposure?ref=shop-talk",
               status: "Open",
               createdAt: "2026-07-15T11:00:00.000Z",
               communitySlug: "jacksonville-trades",
               communityName: "Jacksonville Trades",
               communityAudience: "public",
-              answers: [],
+              answers: [{ id: "heat-reply-1", author: "Field Pro", body: "We moved heavy work earlier.", createdAt: "2026-07-15T11:30:00.000Z" }],
               media: [],
             },
           ],
@@ -483,22 +509,20 @@ try {
       await mobileBack.click();
     }
     await page.getByRole("button", { name: "Trade News" }).click();
-    const newsFilters = page.getByLabel("Trade News filters");
-    const locationFilter = newsFilters.getByLabel("Location");
     const newsList = page.locator(".shop-news-list");
-    await locationFilter.waitFor({ timeout: 15_000 });
-    await locationFilter.selectOption("all");
-    await newsList.getByText("National electrical code update", { exact: false }).first().waitFor({ timeout: 15_000 });
-    assert.equal(await newsList.getByText("Jacksonville permit desk", { exact: false }).count(), 0, "all-region refresh should replace the local result set");
-    await locationFilter.selectOption("local");
     await newsList.getByText("Jacksonville permit desk", { exact: false }).first().waitFor({ timeout: 15_000 });
-    assert.equal(await newsList.getByText("National electrical code update", { exact: false }).count(), 0, "local refresh should replace the national result set");
-    await newsFilters.getByLabel("Topic").selectOption("Codes & standards");
-    await newsFilters.getByLabel("Trade", { exact: true }).selectOption("Electrical");
+    assert.equal(await page.locator(".news-channel-nav").count(), 1, "Trade News should have exactly one channel row");
+    assert.equal(await page.locator(".news-command").count(), 0, "legacy news hero should be removed");
+    assert.equal(await page.locator(".news-briefing-strip").count(), 0, "legacy briefing strip should be removed");
+    assert.equal(await page.locator(".shop-news-list select").count(), 0, "feed should not contain select filters");
+    assert.ok(await page.getByText("Local references · official portals", { exact: true }).isVisible(), "official references should be separated from news");
+    assert.equal(await newsList.getByText(/2014/).count(), 0, "stale dates should never appear as feed news");
+    const renderedCards = await newsList.locator(".shop-news-card").count();
+    const criticalMarkers = await newsList.locator(".news-critical-marker").count();
+    assert.ok(criticalMarkers <= Math.floor(renderedCards * 0.25), "critical markers must remain scarce");
+    assert.equal(await newsList.getByText("1 replies", { exact: true }).count(), 1, "only the real linked thread should show a reply count");
+    assert.equal(await newsList.getByRole("link", { name: "Read original", exact: true }).first().evaluate((node) => getComputedStyle(node).textTransform), "none");
     await assertNoHorizontalOverflow(page);
-    await newsFilters.getByLabel("Topic").selectOption("All topics");
-    await newsFilters.getByLabel("Trade", { exact: true }).selectOption("All trades");
-    await page.getByRole("heading", { name: /Know what changes the work/i }).waitFor({ timeout: 15_000 });
     await page.getByRole("button", { name: /Customize/i }).click();
     const customize = page.getByLabel("Customize Trade News");
     await customize.getByRole("button", { name: "Follow HVAC", exact: true }).click();
@@ -508,21 +532,20 @@ try {
     await page.getByRole("button", { name: "Critical", exact: true }).click();
     await newsList.getByText("OSHA heat safety", { exact: false }).first().waitFor();
     await page.getByRole("button", { name: "For you", exact: true }).click();
-    await locationFilter.selectOption("all");
-    await newsList.getByText("National electrical code update", { exact: false }).first().waitFor();
-    await locationFilter.selectOption("local");
-    await newsList.getByText("Jacksonville permit desk", { exact: false }).first().waitFor();
+    await page.getByRole("button", { name: "Search Trade News" }).click();
     await page.locator('input[placeholder="Search trades, codes, safety, local"]').fill("permit");
     await page
       .locator(".shop-news-list")
       .getByText("Jacksonville permit desk", { exact: false })
       .first()
       .waitFor({ timeout: 15_000 });
-    await page.locator(".shop-news-list .news-card-thumb.is-real img").first().waitFor({ timeout: 15_000 });
     await page.getByRole("link", { name: /Read original/i }).first().waitFor({ timeout: 15_000 });
     await assertNoHorizontalOverflow(page);
     await prepareScreenshot(page);
-    await page.screenshot({ path: path.join(screenshotDir, `${viewport.name}-news.png`), fullPage: true });
+    await page.evaluate(() => document.documentElement.setAttribute("data-theme", "dark"));
+    await page.screenshot({ path: path.join(screenshotDir, `${viewport.name}-news-dark.png`), fullPage: true });
+    await page.evaluate(() => document.documentElement.setAttribute("data-theme", "light"));
+    await page.screenshot({ path: path.join(screenshotDir, `${viewport.name}-news-light.png`), fullPage: true });
 
     assert.equal(errors.length, 0, `${viewport.name} console errors: ${errors.join("\n")}`);
     await context.close();

@@ -7,6 +7,10 @@ const NEWS_TTL_MS = 10 * 60 * 1000;
 const NEWS_ARTICLE_IMAGE_LIMIT = 18;
 const NEWS_CACHE_MAX_ENTRIES = 48;
 const NEWS_LOCATION_MAX_LENGTH = 80;
+const NEWS_MAX_AGE_DAYS = 180;
+const NEWS_RESOURCE_AGE_DAYS = 548;
+const NEWS_PRIORITY_MAX_SHARE = 0.25;
+const DAY_MS = 86_400_000;
 const _xmlParser = new XMLParser({ ignoreAttributes: false, ignoreDeclaration: true });
 
 function _normalizeNewsLocation(value) {
@@ -122,18 +126,90 @@ function _topics(item, hint = "") {
   return topics.length ? topics : ["Industry news"];
 }
 
-function _impact(item) {
+function _publishedAtTime(item) {
+  const time = Date.parse(item?.publishedAt ?? "");
+  return Number.isFinite(time) ? time : 0;
+}
+
+function _ageDays(item, now = Date.now()) {
+  const published = _publishedAtTime(item);
+  return published ? Math.max(0, (now - published) / DAY_MS) : Infinity;
+}
+
+function _impact(item, now = Date.now()) {
   const text = `${item?.headline ?? ""} ${item?.summary ?? ""}`.toLowerCase();
-  if (/recall|fatal|emergency|effective immediately|stop work|evacuat|hurricane warning/.test(text)) {
-    return { level: "critical", reason: "Urgent safety, recall, or jobsite disruption language appears in the source." };
+  const ageDays = _ageDays(item, now);
+  if (!Number.isFinite(ageDays)) {
+    return { level: "routine", reason: "No confirmed publication date; RIVT does not rank it as urgent." };
   }
-  if (/osha|fine|penalt|deadline|effective date|code update|rule|licens|permit change|shortage/.test(text)) {
-    return { level: "high", reason: "The source describes enforcement, compliance, deadline, or supply impact." };
+
+  let level = "routine";
+  let reason = "Current industry coverage; check the original source before changing work.";
+  const effective = text.match(/\beffective(?:\s+date)?\s+(?:on\s+)?([a-z]{3,9}\.?\s+\d{1,2}(?:,\s*\d{4})?|\d{1,2}\/\d{1,2}(?:\/\d{2,4})?)/i);
+  const deadline = text.match(/\bdeadline(?:\s+is|\s+of|\s+on)?\s+([a-z]{3,9}\.?\s+\d{1,2}(?:,\s*\d{4})?|\d{1,2}\/\d{1,2}(?:\/\d{2,4})?)/i);
+  const fine = text.match(/(?:fine[sd]?|penalt(?:y|ies)|cited|citation)[^$.]{0,32}(\$[\d,.]+\s*(?:k|m|million|billion)?)/i);
+  const recall = /\b(?:product|equipment|material|tool)?\s*recall(?:ed|s|ing)?\b/i.test(text);
+  const enforcement = /\b(?:osha|department of labor|regulator)[^.!?]{0,80}\b(?:cites?|fines?|penalt|enforcement|settlement)\b/i.test(text);
+  const adoptedRule = /\b(?:adopts?|adopted|finalizes?|approved|new)\b[^.!?]{0,70}\b(?:rule|code|standard|requirement)\b/i.test(text);
+  const licensingChange = /\blicens(?:e|ing|ure)\b[^.!?]{0,70}\b(?:renewal|deadline|change|requirement|effective)\b/i.test(text);
+
+  if (recall || /effective immediately|stop[- ]work order|emergency order|mandatory evacuation/i.test(text)) {
+    level = "critical";
+    reason = recall ? "Product or equipment recall affecting trade work." : "Names an immediate jobsite or compliance action.";
+  } else if (effective || deadline || fine || enforcement || adoptedRule || licensingChange) {
+    level = "high";
+    if (effective) reason = `Names an effective date: ${effective[1]}.`;
+    else if (deadline) reason = `Names a deadline: ${deadline[1]}.`;
+    else if (fine) reason = `Reports an enforcement amount: ${fine[1]}.`;
+    else if (licensingChange) reason = "Names a licensing renewal, deadline, or requirement change.";
+    else if (enforcement) reason = "Reports a regulator citation, fine, enforcement action, or settlement.";
+    else reason = "Reports an adopted or finalized rule, code, standard, or requirement.";
+  } else if (/project|contract award|wage|labor|market|equipment|material/.test(text)) {
+    level = "medium";
+    reason = "Current project, workforce, purchasing, or business signal.";
   }
-  if (/project|contract award|wage|labor|market|equipment|material/.test(text)) {
-    return { level: "medium", reason: "The source may affect project, workforce, purchasing, or business decisions." };
+
+  if (ageDays > 90 && (level === "critical" || level === "high")) level = "medium";
+  else if (ageDays > 30 && level === "critical") level = "high";
+  else if (ageDays > 30 && level === "high") level = "medium";
+  return { level, reason: reason.slice(0, 120) };
+}
+
+function _applyPriorityScarcity(items, maxShare = NEWS_PRIORITY_MAX_SHARE) {
+  const prioritized = items
+    .filter((item) => item.impactLevel === "critical" || item.impactLevel === "high")
+    .sort((a, b) => _relevanceScore(b) - _relevanceScore(a));
+  const cap = Math.floor(items.length * maxShare);
+  const keep = new Set(prioritized.slice(0, cap));
+  return items.map((item) => (
+    (item.impactLevel === "critical" || item.impactLevel === "high") && !keep.has(item)
+      ? { ...item, impactLevel: "medium" }
+      : item
+  ));
+}
+
+function _isOfficialResource(item, now = Date.now()) {
+  return Boolean(item?.resourceCandidate) && (
+    !_publishedAtTime(item) || _ageDays(item, now) > NEWS_RESOURCE_AGE_DAYS
+  );
+}
+
+function _partitionNewsAndResources(items, now = Date.now()) {
+  const resources = [];
+  const news = [];
+  const seenResources = new Set();
+  for (const item of items) {
+    if (_isOfficialResource(item, now)) {
+      const url = _canonicalArticleUrl(item.url);
+      if (url && !seenResources.has(url) && resources.length < 4) {
+        seenResources.add(url);
+        resources.push({ title: item.headline, source: item.source, url });
+      }
+      continue;
+    }
+    if (_publishedAtTime(item) && _ageDays(item, now) <= NEWS_MAX_AGE_DAYS) news.push(item);
   }
-  return { level: "routine", reason: "Industry awareness; review the original source before changing field or business practices." };
+  return { news, resources };
 }
 
 function _sourceKind(item) {
@@ -202,12 +278,12 @@ function _normalizedTitle(value) {
 }
 
 function _publishedTime(item) {
-  const time = Date.parse(item?.publishedAt ?? item?.date ?? "");
+  const time = Date.parse(item?.publishedAt ?? "");
   return Number.isFinite(time) ? time : 0;
 }
 
 function _relevanceScore(item, now = Date.now()) {
-  const ageDays = Math.max(0, (now - _publishedTime(item)) / 86_400_000);
+  const ageDays = Math.max(0, (now - _publishedTime(item)) / DAY_MS);
   const freshness = _publishedTime(item) ? Math.max(0, 42 - ageDays) : 0;
   const tradeHits = (`${item.headline} ${item.summary}`.match(/contractor|construction|trade|jobsite|permit|code|safety|labor|tool|project|jacksonville|florida/gi) ?? []).length;
   return freshness + Math.min(tradeHits, 8) * 3 + (item.isLocal ? 30 : 0) + (item.urgency ? 6 : 0);
@@ -462,7 +538,14 @@ async function _enrichNewsImages(items) {
   ];
 }
 
-async function _fetchFeed(url, fallbackSource, categoryHint = "", isLocal = false, geography = isLocal ? "local" : "national") {
+async function _fetchFeed(
+  url,
+  fallbackSource,
+  categoryHint = "",
+  isLocal = false,
+  geography = isLocal ? "local" : "national",
+  resourceCandidate = false,
+) {
   try {
     const res = await fetch(url, {
       signal: AbortSignal.timeout(8000),
@@ -486,7 +569,7 @@ async function _fetchFeed(url, fallbackSource, categoryHint = "", isLocal = fals
       const summary = _stripHtml(item.description ?? item.summary ?? item["content:encoded"] ?? "").slice(0, 350);
       const urgency = _urgency(headline);
       const topics = _topics({ headline, summary }, categoryHint);
-      const impact = _impact({ headline, summary });
+      const impact = _impact({ headline, summary, publishedAt });
       return {
         id: Date.now() + i,
         headline,
@@ -504,6 +587,7 @@ async function _fetchFeed(url, fallbackSource, categoryHint = "", isLocal = fals
         sourceKind: _sourceKind({ source, url: link }),
         geography,
         isLocal,
+        resourceCandidate,
         thumbnailUrl: thumbnailUrl ?? undefined,
         thumbnailKind: thumbnailUrl ? "feed" : undefined,
       };
@@ -524,7 +608,7 @@ router.get("/api/news", async (request, response) => {
   const forceRefresh = request.query.refresh === "1";
   const cached = newsCache.get(cacheKey);
   if (!forceRefresh && cached && Date.now() - cached.fetchedAt < NEWS_TTL_MS) {
-    return response.json({ items: cached.items, fallback: cached.fallback === true, cached: true });
+    return response.json({ items: cached.items, resources: cached.resources ?? [], fallback: cached.fallback === true, cached: true });
   }
 
   const [city, state] = location.split(",").map((s) => s.trim());
@@ -557,9 +641,9 @@ router.get("/api/news", async (request, response) => {
     ...(localQ ? [
       _fetchFeed(`https://news.google.com/rss/search?q=${encodeURIComponent(localQ)}&hl=en-US&gl=US&ceid=US:en`, `${city} / ${state}`, "", true),
       _fetchFeed(`https://news.google.com/rss/search?q=${encodeURIComponent(`contractor construction permits projects ${state}`)}&hl=en-US&gl=US&ceid=US:en`, `${state} trades`, "", true),
-      _fetchFeed(`https://news.google.com/rss/search?q=${encodeURIComponent(`site:jacksonville.gov construction permits contractors ${city}`)}&hl=en-US&gl=US&ceid=US:en`, "Jacksonville official notices", "", true),
-      _fetchFeed(`https://news.google.com/rss/search?q=${encodeURIComponent(`site:floridabuilding.org building code contractors ${state}`)}&hl=en-US&gl=US&ceid=US:en`, "Florida Building Commission", "Codes", true),
-      _fetchFeed(`https://news.google.com/rss/search?q=${encodeURIComponent(`site:myfloridalicense.com contractor licensing ${state}`)}&hl=en-US&gl=US&ceid=US:en`, "Florida licensing", "Codes", true),
+      _fetchFeed(`https://news.google.com/rss/search?q=${encodeURIComponent(`site:jacksonville.gov construction permits contractors ${city}`)}&hl=en-US&gl=US&ceid=US:en`, "Jacksonville official notices", "", true, "local", true),
+      _fetchFeed(`https://news.google.com/rss/search?q=${encodeURIComponent(`site:floridabuilding.org building code contractors ${state}`)}&hl=en-US&gl=US&ceid=US:en`, "Florida Building Commission", "Codes", true, "local", true),
+      _fetchFeed(`https://news.google.com/rss/search?q=${encodeURIComponent(`site:myfloridalicense.com contractor licensing ${state}`)}&hl=en-US&gl=US&ceid=US:en`, "Florida licensing", "Codes", true, "local", true),
     ] : []),
   ];
   const settledFeeds = await Promise.allSettled(feedRequests);
@@ -567,17 +651,21 @@ router.get("/api/news", async (request, response) => {
   const pick = (r) => r.status === "fulfilled" ? r.value : [];
   const liveItems = settledFeeds.flatMap(pick);
   const scopedItems = location ? liveItems.filter((item) => item.isLocal) : liveItems;
-  const fallback = scopedItems.length === 0;
-  const ranked = _clusterStories(_dedupeAndDiversify(scopedItems, 45)).slice(0, 30);
-  const items = (await _enrichNewsImages(ranked)).map((item, i) => ({
+  const { news, resources } = _partitionNewsAndResources(scopedItems);
+  const fallback = news.length === 0;
+  const ranked = _clusterStories(_dedupeAndDiversify(news, 45))
+    .sort((a, b) => _relevanceScore(b) - _relevanceScore(a))
+    .slice(0, 30);
+  const honestPriority = _applyPriorityScarcity(ranked);
+  const items = (await _enrichNewsImages(honestPriority)).map((item, i) => ({
     ...item,
     id: i + 1,
     thumbnailUrl: item.thumbnailUrl || undefined,
     thumbnailKind: item.thumbnailKind,
   }));
-  newsCache.set(cacheKey, { items, fallback, fetchedAt: Date.now() });
+  newsCache.set(cacheKey, { items, resources, fallback, fetchedAt: Date.now() });
   _pruneNewsCache();
-  response.json({ items, fallback });
+  response.json({ items, resources, fallback });
 });
 export function createNewsRouter() {
   return router;
@@ -590,6 +678,9 @@ export const newsInternals = {
   _dedupeAndDiversify,
   _normalizeNewsLocation,
   _impact,
+  _applyPriorityScarcity,
+  _isOfficialResource,
+  _partitionNewsAndResources,
   _topics,
   _clusterStories,
   _pruneNewsCache,

@@ -247,6 +247,7 @@ test("trade news exposes transparent topics, impact, and related-source clusters
   assert.equal(newsInternals._impact({
     headline: "Equipment recall requires immediate stop work",
     summary: "A safety recall affects jobsites.",
+    publishedAt: new Date().toISOString(),
   }).level, "critical");
   const clustered = newsInternals._clusterStories([
     { headline: "OSHA heat enforcement changes afternoon jobsite planning", summary: "", source: "OSHA", url: "https://osha.gov/a" },
@@ -254,6 +255,81 @@ test("trade news exposes transparent topics, impact, and related-source clusters
   ]);
   assert.equal(clustered.length, 1);
   assert.equal(clustered[0].relatedSourceCount, 2);
+});
+
+test("trade news priority requires current dated action signals and stays scarce", () => {
+  const now = Date.parse("2026-07-23T12:00:00.000Z");
+  assert.deepEqual(newsInternals._impact({
+    headline: "Florida contractor license search",
+    summary: "Find a license or review general permit information.",
+    publishedAt: "",
+  }, now), {
+    level: "routine",
+    reason: "No confirmed publication date; RIVT does not rank it as urgent.",
+  });
+  assert.equal(newsInternals._impact({
+    headline: "Board adopts new electrical rule effective March 1",
+    summary: "The requirement applies to permit applications.",
+    publishedAt: "2026-07-20T12:00:00.000Z",
+  }, now).level, "high");
+  assert.equal(newsInternals._impact({
+    headline: "Board adopts new electrical rule effective March 1",
+    summary: "The requirement applies to permit applications.",
+    publishedAt: "2026-03-01T12:00:00.000Z",
+  }, now).level, "medium");
+  assert.equal(newsInternals._impact({
+    headline: "Equipment recall requires immediate stop work",
+    summary: "A safety recall affects jobsites.",
+    publishedAt: "2026-06-10T12:00:00.000Z",
+  }, now).level, "high");
+
+  const capped = newsInternals._applyPriorityScarcity(
+    Array.from({ length: 8 }, (_, index) => ({
+      headline: `Current enforcement action ${index}`,
+      summary: "Construction safety enforcement.",
+      url: `https://example.com/${index}`,
+      source: `Source ${index}`,
+      publishedAt: new Date(now - index * 60_000).toISOString(),
+      impactLevel: index % 2 ? "high" : "critical",
+    })),
+  );
+  assert.equal(capped.filter((item) => item.impactLevel === "critical" || item.impactLevel === "high").length, 2);
+});
+
+test("trade news separates stale official resources and drops stale publisher news", () => {
+  const now = Date.parse("2026-07-23T12:00:00.000Z");
+  const partitioned = newsInternals._partitionNewsAndResources([
+    {
+      headline: "Florida contractor license search",
+      source: "myfloridalicense.com",
+      url: "https://myfloridalicense.com/license-search",
+      publishedAt: "2014-10-08T12:00:00.000Z",
+      resourceCandidate: true,
+    },
+    {
+      headline: "Undated Florida building code portal",
+      source: "Florida Building Commission",
+      url: "https://floridabuilding.org/code",
+      publishedAt: "",
+      resourceCandidate: true,
+    },
+    {
+      headline: "Old publisher construction story",
+      source: "Publisher",
+      url: "https://example.com/old",
+      publishedAt: "2025-01-01T12:00:00.000Z",
+    },
+    {
+      headline: "Current construction story",
+      source: "Publisher",
+      url: "https://example.com/current",
+      publishedAt: "2026-07-20T12:00:00.000Z",
+    },
+  ], now);
+  assert.equal(partitioned.news.length, 1);
+  assert.equal(partitioned.news[0].headline, "Current construction story");
+  assert.equal(partitioned.resources.length, 2);
+  assert.ok(partitioned.resources.every((resource) => !("impactLevel" in resource) && !("date" in resource)));
 });
 
 test("invoice send validation rejects bad recipients and throttles repeated sends", () => {

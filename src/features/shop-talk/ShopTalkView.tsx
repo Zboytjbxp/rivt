@@ -53,6 +53,8 @@ import { DialogBackdrop, DialogSurface } from "../../components/ui";
 import { ZoomableImage } from "../../components/ZoomableImage";
 import "./shop-talk.css";
 
+const NEWS_RENDER_NOW = Date.now();
+
 interface AccountProfile {
   displayName: string;
   specialties: Trade[];
@@ -63,6 +65,7 @@ export interface NewsItem {
   headline: string;
   source: string;
   date: string;
+  publishedAt?: string;
   summary: string;
   url: string;
   urgency?: string;
@@ -178,7 +181,13 @@ function isFallbackNewsThumbnail(item: Pick<NewsItem, "thumbnailUrl" | "thumbnai
   return !item.thumbnailUrl;
 }
 
-type NewsChannel = "for-you" | "local" | "critical" | "following" | "latest" | "projects" | "global" | "saved";
+interface NewsResource {
+  title: string;
+  source: string;
+  url: string;
+}
+
+type NewsChannel = "for-you" | "local" | "critical" | "following" | "saved";
 
 function newsItemTrades(item: NewsItem) {
   if (item.trades?.length) return item.trades;
@@ -197,6 +206,40 @@ function newsItemTrades(item: NewsItem) {
   ];
   const matches = patterns.filter(([, pattern]) => pattern.test(text)).map(([trade]) => trade);
   return matches.length ? matches : ["General construction"];
+}
+
+function canonicalNewsUrl(value: string) {
+  try {
+    const url = new URL(value);
+    url.hash = "";
+    for (const key of [...url.searchParams.keys()]) {
+      if (/^(utm_|fbclid$|gclid$|mc_|ref$|source$)/i.test(key)) url.searchParams.delete(key);
+    }
+    url.hostname = url.hostname.toLowerCase().replace(/^www\./, "");
+    url.pathname = url.pathname.replace(/\/+$/, "") || "/";
+    return url.href;
+  } catch {
+    return "";
+  }
+}
+
+function relativeNewsTime(item: NewsItem, now = Date.now()) {
+  const published = Date.parse(item.publishedAt ?? "");
+  if (!Number.isFinite(published)) return item.date;
+  const hours = Math.max(0, Math.floor((now - published) / 3_600_000));
+  if (hours < 1) return "now";
+  if (hours < 24) return `${hours}h`;
+  return `${Math.floor(hours / 24)}d`;
+}
+
+function newsTagKind(item: NewsItem) {
+  const label = item.category ?? item.topics?.[0] ?? "Construction";
+  if (/licens/i.test(item.topics?.join(" ") ?? "")) return { label: "Licensing", kind: "licensing" };
+  if (/safety|osha/i.test(label)) return { label: "Safety", kind: "safety" };
+  if (/code/i.test(label)) return { label: "Codes", kind: "codes" };
+  if (/project/i.test(label)) return { label: "Projects", kind: "projects" };
+  if (/labor|business/i.test(label)) return { label, kind: "neutral" };
+  return { label, kind: "neutral" };
 }
 
 function pluralize(count: number, noun: string) {
@@ -740,10 +783,13 @@ export function ShopTalkView({
   const [newsLocation, setNewsLocation] = useState(() => localStorage.getItem("rivt.news.location.v1") || userLocation);
   const [newsChannel, setNewsChannel] = useState<NewsChannel>("for-you");
   const [newsCustomizeOpen, setNewsCustomizeOpen] = useState(false);
+  const [newsSearchOpen, setNewsSearchOpen] = useState(false);
   const [followedNewsTrades, setFollowedNewsTrades] = useState<Set<string>>(() => readStringSet("rivt.news.followedTrades.v1"));
   const [followedNewsTopics, setFollowedNewsTopics] = useState<Set<string>>(() => readStringSet("rivt.news.followedTopics.v1"));
   const [savedNewsUrls, setSavedNewsUrls] = useState<Set<string>>(() => readStringSet("rivt.news.savedUrls.v1"));
   const [liveNews, setLiveNews] = useState<NewsItem[]>([]);
+  const [newsResources, setNewsResources] = useState<NewsResource[]>([]);
+  const [newsFetchedAt, setNewsFetchedAt] = useState<number | null>(null);
   const [newsLoading, setNewsLoading] = useState(false);
   const [newsFetched, setNewsFetched] = useState(false);
   const [newsRefreshMessage, setNewsRefreshMessage] = useState("Open Trade News to load current sources.");
@@ -950,15 +996,18 @@ export function ShopTalkView({
       if (forceRefresh) params.set("refresh", "1");
       const response = await fetchWithTimeout(apiPath(`/api/news?${params.toString()}`));
       if (!response.ok) throw new Error("Trade News request failed");
-      const data = await response.json() as { items?: NewsItem[]; fallback?: boolean; cached?: boolean };
+      const data = await response.json() as { items?: NewsItem[]; resources?: NewsResource[]; fallback?: boolean; cached?: boolean };
       const items = Array.isArray(data.items) ? data.items : [];
       setLiveNews(items);
+      setNewsResources(Array.isArray(data.resources) ? data.resources : []);
+      setNewsFetchedAt(NEWS_RENDER_NOW);
       setNewsRefreshMessage(items.length
         ? `${data.cached ? "Current cached feed" : forceRefresh ? "Feed refreshed" : "Live feed loaded"} · ${items.length} articles`
         : "No current articles were returned by the live sources.");
       setSelectedNewsId(items[0]?.id ?? 0);
     } catch {
       setLiveNews([]);
+      setNewsResources([]);
       setNewsRefreshMessage("Trade News could not reach its sources. Try refreshing shortly.");
       setSelectedNewsId(0);
     } finally {
@@ -981,9 +1030,6 @@ export function ShopTalkView({
     if (channel === "local" && newsScope !== "local") {
       setNewsScope("local");
       void activateNews(true, "local");
-    } else if (channel === "latest" && newsScope !== "all") {
-      setNewsScope("all");
-      void activateNews(true, "all");
     }
   }
 
@@ -1027,8 +1073,6 @@ export function ShopTalkView({
       itemTrades.some((trade) => followedNewsTrades.has(trade)) ||
       itemTopics.some((topic) => followedNewsTopics.has(topic))
     )) return false;
-    if (newsChannel === "projects" && !itemTopics.includes("Projects & development")) return false;
-    if (newsChannel === "global" && item.geography !== "global") return false;
     if (newsChannel === "saved" && !savedNewsUrls.has(item.url)) return false;
     if (!normalizedNewsQuery) return true;
     return [item.headline, item.summary, item.source, item.category ?? "", item.urgency ?? "", item.date].join(" ").toLowerCase().includes(normalizedNewsQuery);
@@ -1069,7 +1113,37 @@ export function ShopTalkView({
   const profileBadges = communityBadgeLabelsFromReputation(_reactionSummary, communityBadgeThresholds);
   const newsSourceCount = new Set(filteredNews.map((item) => item.source)).size;
   const criticalNewsCount = displayNews.filter((item) => ["critical", "high"].includes(item.impactLevel ?? "")).length;
-  const strictNewsView = newsChannel !== "for-you" && newsChannel !== "latest";
+  const newsThreadMatches = useMemo(() => {
+    const matches = new Map<string, { postId: string; replies: number }>();
+    for (const item of displayNews) {
+      const articleUrl = canonicalNewsUrl(item.url);
+      if (!articleUrl) continue;
+      const related = communityPosts.filter((post) => (
+        (post.body.match(/https?:\/\/[^\s)]+/g) ?? []).some((url) => canonicalNewsUrl(url) === articleUrl)
+      ));
+      if (related.length) {
+        matches.set(articleUrl, {
+          postId: related[0].id,
+          replies: related.reduce((sum, post) => sum + post.replies.length, 0),
+        });
+      }
+    }
+    return matches;
+  }, [communityPosts, displayNews]);
+  const newThisWeek = displayNews.filter((item) => {
+    const published = Date.parse(item.publishedAt ?? "");
+    return Number.isFinite(published) && NEWS_RENDER_NOW - published <= 7 * 86_400_000;
+  }).length;
+  const leadPublishedAt = Date.parse(filteredNews[0]?.publishedAt ?? "");
+  const featuredNews = filteredNews[0]
+    && ["critical", "high"].includes(filteredNews[0].impactLevel ?? "")
+    && Number.isFinite(leadPublishedAt)
+    && NEWS_RENDER_NOW - leadPublishedAt <= 7 * 86_400_000
+      ? filteredNews[0]
+      : null;
+  const newsRows = featuredNews ? filteredNews.slice(1) : filteredNews;
+  const briefingTrade = followedNewsTrades.size ? [...followedNewsTrades].slice(0, 2).join(" + ") : primaryTrade;
+  const strictNewsView = newsChannel !== "for-you";
   const newsEmptyTitle = normalizedNewsQuery
     ? "No stories match this search"
     : strictNewsView || newsCategory !== "All topics" || newsTrade !== "All trades"
@@ -1084,6 +1158,14 @@ export function ShopTalkView({
         : strictNewsView || newsCategory !== "All topics" || newsTrade !== "All trades"
           ? "No verified stories match this channel and the current filters. Broaden the briefing to see more."
           : "RIVT could not confirm any current articles from its live sources. No articles or images have been invented.";
+
+  function openNewsThread(item: NewsItem) {
+    const match = newsThreadMatches.get(canonicalNewsUrl(item.url));
+    if (!match) return;
+    setSelectedPostId(match.postId);
+    setActiveTab("talk");
+    setMobileDetail(true);
+  }
   const selectedPostReactionState = selectedPost
     ? getPostReactionState(selectedPost)
     : { upvotes: 0, downvotes: 0, reaction: null, serverOwned: reactionStatus === "ready", pending: false };
@@ -1131,6 +1213,31 @@ export function ShopTalkView({
     setAnswerDraft("");
   }
 
+  function renderNewsActions(item: NewsItem) {
+    const thread = newsThreadMatches.get(canonicalNewsUrl(item.url));
+    return (
+      <div className="news-card-actions">
+        <button type="button" className="news-discuss-action" aria-label={thread ? "Open article discussion" : "Start article discussion"} onClick={() => {
+          if (thread) openNewsThread(item);
+          else {
+            setNewsDiscussContext(item);
+            setActiveTab("talk");
+            setNewPostOpen(true);
+          }
+        }}>
+          <MessageCircle size={14} />
+          {thread ? `${thread.replies} replies` : <span className="sr-only">Start discussion</span>}
+        </button>
+        {item.url && item.url !== "#" ? (
+          <a className="shop-news-source-link" href={item.url} target="_blank" rel="noreferrer"><ExternalLink size={12} />Read original</a>
+        ) : null}
+        <button type="button" aria-label={savedNewsUrls.has(item.url) ? "Remove saved article" : "Save article"} aria-pressed={savedNewsUrls.has(item.url)} onClick={() => toggleNewsPreference(setSavedNewsUrls, item.url)}>
+          {savedNewsUrls.has(item.url) ? <BookmarkCheck size={14} /> : <Bookmark size={14} />}
+        </button>
+      </div>
+    );
+  }
+
   return (
     <>
       {newPostOpen && (
@@ -1141,7 +1248,7 @@ export function ShopTalkView({
           initialCommunitySlug={selectedCommunitySlug}
           initialFlair={newsDiscussContext ? "Discussion" : "Question"}
           initialTitle={newsDiscussContext ? newsDiscussContext.headline.slice(0, 120) : ""}
-          initialBody={newsDiscussContext ? `Via ${newsDiscussContext.source} · ${newsDiscussContext.date}\n\n` : ""}
+          initialBody={newsDiscussContext ? `Via ${newsDiscussContext.source} · ${newsDiscussContext.date}\n\n${newsDiscussContext.url}` : ""}
           onClose={() => { setNewPostOpen(false); setNewsDiscussContext(null); }}
           onSubmit={(flair, title, trade, body, postType, subTrade, subLocation, subRate, communitySlug, photoFile) => {
             void onNewPost(flair, title, trade, body, postType, subTrade, subLocation, subRate, communitySlug, photoFile);
@@ -1484,10 +1591,10 @@ export function ShopTalkView({
             </section>
           ) : (
             <>
-              <div className="shop-talk-command news-command">
-                <div className="shop-talk-command-head">
-                  <span>RIVT Trade Intelligence</span>
-                  <h2>Know what changes the work</h2>
+              <div className="news-intel-strip" aria-label="Trade News status">
+                <div className="news-intel-copy">
+                  <strong>{newsScope === "local" ? newsLocation || "Near you" : "All regions"} · {briefingTrade || "All trades"}</strong>
+                  <span>{newThisWeek} new this week · {newsFetchedAt ? "updated now" : "not updated yet"}</span>
                   <p className="news-command-meta">
                     {filteredNews.length} articles · {newsSourceCount} sources
                   </p>
@@ -1498,8 +1605,11 @@ export function ShopTalkView({
                 <button type="button" className="v2-icon-button" onClick={() => void activateNews(true)} aria-label="Refresh trade news" title="Refresh trade news" disabled={newsLoading}>
                   <RefreshCw size={17} className={newsLoading ? "is-spinning" : ""} />
                 </button>
+                <button type="button" className="v2-icon-button" onClick={() => setNewsCustomizeOpen((open) => !open)} aria-label="Customize Trade News" aria-expanded={newsCustomizeOpen}>
+                  <SlidersHorizontal size={17} />
+                </button>
               </div>
-              <section className="news-briefing-strip" aria-label="Trade News briefing">
+              <section className="news-obsolete-strip is-obsolete" aria-hidden="true">
                 <div><strong>{criticalNewsCount}</strong><span>critical updates</span></div>
                 <div><strong>{newsScope === "local" ? newsLocation || "Near you" : "All regions"}</strong><span>coverage</span></div>
                 <button type="button" onClick={() => setNewsCustomizeOpen((open) => !open)} aria-expanded={newsCustomizeOpen}>
@@ -1509,14 +1619,23 @@ export function ShopTalkView({
               <nav className="news-channel-nav" aria-label="Trade News channels">
                 {([
                   ["for-you", "For you"], ["local", "Local"], ["critical", "Critical"],
-                  ["following", "Following"], ["latest", "Latest"], ["projects", "Projects"],
-                  ["global", "Global"], ["saved", "Saved"],
+                  ["following", "Following"], ["saved", "Saved"],
                 ] as Array<[NewsChannel, string]>).map(([channel, label]) => (
                   <button key={channel} type="button" className={newsChannel === channel ? "is-active" : ""} aria-pressed={newsChannel === channel} onClick={() => selectNewsChannel(channel)}>
                     {label}
                   </button>
                 ))}
+                <button type="button" className={newsSearchOpen ? "news-search-chip is-active" : "news-search-chip"} aria-label="Search Trade News" aria-expanded={newsSearchOpen} onClick={() => setNewsSearchOpen((open) => !open)}>
+                  <Search size={16} />
+                </button>
               </nav>
+              {newsSearchOpen ? (
+                <label className="shop-talk-search news-inline-search">
+                  <Search size={15} />
+                  <span className="sr-only">Search Trade News</span>
+                  <input autoFocus type="search" value={newsQuery} onChange={(event) => setNewsQuery(event.target.value)} placeholder="Search trades, codes, safety, local" />
+                </label>
+              ) : null}
               {newsCustomizeOpen ? (
                 <section className="news-customize-panel" aria-label="Customize Trade News">
                   <div className="news-customize-heading">
@@ -1532,6 +1651,11 @@ export function ShopTalkView({
                         setNewsChannel("local");
                         void activateNews(true, "local");
                       }}>Load local briefing</button>
+                      <button type="button" onClick={() => {
+                        setNewsScope("all");
+                        setNewsChannel("for-you");
+                        void activateNews(true, "all");
+                      }}>All regions</button>
                     </div>
                   </fieldset>
                   <fieldset>
@@ -1556,41 +1680,6 @@ export function ShopTalkView({
                   </fieldset>
                 </section>
               ) : null}
-              <div className="shop-talk-fieldbar news-fieldbar" aria-label="Trade News filters">
-                <label className="shop-talk-search">
-                  <Search size={15} />
-                  <span className="sr-only">Search Trade News</span>
-                  <input
-                    type="search"
-                    value={newsQuery}
-                    onChange={(event) => setNewsQuery(event.target.value)}
-                    placeholder="Search trades, codes, safety, local"
-                  />
-                </label>
-                <label className="news-filter-control news-location-control">
-                  <span>Location</span>
-                  <select value={newsScope} onChange={(event) => {
-                    const nextScope = event.target.value === "all" ? "all" : "local";
-                    setNewsScope(nextScope);
-                    void activateNews(true, nextScope);
-                  }}>
-                    <option value="local">Near {newsLocation || "me"}</option>
-                    <option value="all">All regions</option>
-                  </select>
-                </label>
-                <label className="news-filter-control">
-                  <span>Topic</span>
-                  <select value={newsCategories.includes(newsCategory) ? newsCategory : "All topics"} onChange={(event) => setNewsCategory(event.target.value)}>
-                    {newsCategories.map((category) => <option key={category}>{category}</option>)}
-                  </select>
-                </label>
-                <label className="news-filter-control">
-                  <span>Trade</span>
-                  <select aria-label="Trade" value={newsTrades.includes(newsTrade) ? newsTrade : "All trades"} onChange={(event) => setNewsTrade(event.target.value)}>
-                    {newsTrades.map((trade) => <option key={trade}>{trade}</option>)}
-                  </select>
-                </label>
-              </div>
               <div className="shop-news-list">
                 {newsLoading ? (
                   <div className="news-loading">
@@ -1613,7 +1702,7 @@ export function ShopTalkView({
                         setNewsQuery("");
                         setNewsCategory("All topics");
                         setNewsTrade("All trades");
-                        setNewsChannel("latest");
+                        setNewsChannel("for-you");
                         if (newsScope !== "all") {
                           setNewsScope("all");
                           void activateNews(true, "all");
@@ -1623,10 +1712,32 @@ export function ShopTalkView({
                       void activateNews(true);
                     }}
                   />
-                ) : filteredNews.map((item, index) => (
+                ) : (
+                  <>
+                    {featuredNews ? (
+                      <article className="shop-news-card is-featured">
+                        <button type="button" className="shop-news-card-main" onClick={() => { setSelectedNewsId(featuredNews.id); setMobileDetail(true); }}>
+                          {isFallbackNewsThumbnail(featuredNews)
+                            ? <div className="news-featured-fallback" aria-hidden="true"><Newspaper size={24} /><small>No article image</small></div>
+                            : <img className="news-featured-image" src={featuredNews.thumbnailUrl} alt="" loading="lazy" />}
+                          <div className="news-featured-copy">
+                            <div className="news-card-kicker">
+                              <span className={`news-type-tag is-${newsTagKind(featuredNews).kind}`}>{newsTagKind(featuredNews).label}</span>
+                              {featuredNews.impactLevel === "critical" ? <span className="news-critical-marker"><i />Critical</span> : null}
+                              <small>{relativeNewsTime(featuredNews)}</small>
+                            </div>
+                            <strong>{featuredNews.headline}</strong>
+                            <p className="news-why-line">{featuredNews.impactReason}</p>
+                            <small>{featuredNews.source}{featuredNews.sourceKind === "official" ? " · Official" : ""}</small>
+                          </div>
+                        </button>
+                        {renderNewsActions(featuredNews)}
+                      </article>
+                    ) : null}
+                    {newsRows.map((item) => (
                   <article
                     key={item.id}
-                    className={`${item.id === selectedNewsId ? "shop-news-card selected" : "shop-news-card"}${index === 0 ? " is-lead" : ""}`}
+                    className={item.id === selectedNewsId ? "shop-news-card is-compact selected" : "shop-news-card is-compact"}
                   >
                     <button
                       type="button"
@@ -1646,11 +1757,12 @@ export function ShopTalkView({
                         )}
                         <div className="news-card-body">
                           <div className="news-card-kicker">
-                            <span className={`news-impact-badge is-${item.impactLevel ?? "routine"}`}>{item.impactLevel ?? "briefing"}</span>
-                            <small>{item.date}</small>
+                            <span className={`news-type-tag is-${newsTagKind(item).kind}`}>{newsTagKind(item).label}</span>
+                            {item.impactLevel === "critical" ? <span className="news-critical-marker"><i />Critical</span> : null}
+                            <small>{relativeNewsTime(item)}</small>
                           </div>
                           <strong>{item.headline}</strong>
-                          <p>{item.summary}</p>
+                          <p className="news-why-line">{item.impactReason}</p>
                           <div className="news-card-tags">
                             {newsItemTrades(item).slice(0, 2).map((trade) => <span key={trade}>{trade}</span>)}
                             {(item.topics?.slice(0, 1) ?? []).map((topic) => <span key={topic}>{topic}</span>)}
@@ -1659,7 +1771,8 @@ export function ShopTalkView({
                         </div>
                       </div>
                     </button>
-                    <div className="news-card-actions">
+                    {renderNewsActions(item)}
+                    <div className="news-card-actions is-legacy-actions">
                       {item.url && item.url !== "#" && (
                         <a className="shop-news-source-link" href={item.url} target="_blank" rel="noreferrer"><ExternalLink size={12} />Read original</a>
                       )}
@@ -1668,7 +1781,16 @@ export function ShopTalkView({
                       </button>
                     </div>
                   </article>
-                ))}
+                    ))}
+                    {newsResources.length ? (
+                      <aside className="news-local-references" aria-label="Local references">
+                        <strong>Local references · official portals</strong>
+                        <div>{newsResources.map((resource) => <a key={resource.url} href={resource.url} target="_blank" rel="noreferrer">{resource.title}<ExternalLink size={11} /></a>)}</div>
+                      </aside>
+                    ) : null}
+                    <p className="news-feed-floor">Older stories are archived — nothing stale is ranked as urgent.</p>
+                  </>
+                )}
               </div>
             </>
           )}
@@ -1959,18 +2081,23 @@ export function ShopTalkView({
                 </button>
                 <div className="shop-news-discuss">
                   <strong>Discuss this in Shop Talk</strong>
-                  <p>Have a take on how this affects your work? Start a conversation.</p>
+                  <p>{newsThreadMatches.has(canonicalNewsUrl(selectedNews.url)) ? "Continue the field conversation about this story." : "Have a take on how this affects your work? Start a conversation."}</p>
                   <button
                     type="button"
                     className="primary-action"
                     onClick={() => {
-                      setNewsDiscussContext(selectedNews);
-                      setActiveTab("talk");
-                      setNewPostOpen(true);
+                      if (newsThreadMatches.has(canonicalNewsUrl(selectedNews.url))) openNewsThread(selectedNews);
+                      else {
+                        setNewsDiscussContext(selectedNews);
+                        setActiveTab("talk");
+                        setNewPostOpen(true);
+                      }
                     }}
                   >
                     <MessageCircle size={15} />
-                    Discuss
+                    {newsThreadMatches.has(canonicalNewsUrl(selectedNews.url))
+                      ? `${newsThreadMatches.get(canonicalNewsUrl(selectedNews.url))?.replies ?? 0} replies`
+                      : "Start the discussion"}
                   </button>
                 </div>
               </div>
