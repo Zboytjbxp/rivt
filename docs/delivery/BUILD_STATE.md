@@ -2,12 +2,12 @@
 
 Last updated: 2026-07-23 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Trade News intelligence v2.1 clustering is locally verified.
-Active packet: Trade News intelligence v2.1 on `codex/trade-news-v2-1-clustering`
-Repository branch: `codex/trade-news-v2-1-clustering`
-Production feature release commit: `7642132cdd991da666d39cb847688885a61c081f`
+Current phase: Trade News intelligence v2.1 clustering is production verified.
+Active packet: Trade News intelligence v2.1 production verification
+Repository branch: `master`
+Production feature release commit: `9901d1f5a9d8df996505eaa70d792f726f225e2c`
 
-## Trade News Intelligence V2.1 Clustering (Local Verification)
+## Trade News Intelligence V2.1 Clustering (Production Verification)
 
 - Added `_cleanHeadline(rawTitle, source)` at RSS ingestion so Google News
   publisher/domain suffixes are removed once while source attribution remains
@@ -40,6 +40,18 @@ Production feature release commit: `7642132cdd991da666d39cb847688885a61c081f`
 - Verified locally: build, lint, 67 unit/frontend tests, E2E, the rendered HB
   803 mixed-category Trade News smoke at desktop and mobile in dark/light
   themes, dependency audit with zero vulnerabilities, and diff check.
+- The first production verification of merge `f4ab0b4` correctly cleaned
+  publisher suffixes and reduced the live family from seven cards to two, but
+  that still failed the one-story acceptance boundary. A forward hotfix added
+  a bounded Florida HB 803 permit-reform entity for coverage that names the
+  small-home reform without printing the bill number.
+- Production hotfix `9901d1f5a9d8df996505eaa70d792f726f225e2c`
+  deployed as Railway deployment `61dece4b-2e7f-4638-81ab-b486298c3ede`.
+  A forced Jacksonville refresh returned six feed stories, four official
+  references, and exactly one HB 803 story carrying six related sources.
+- Live health reports the exact hotfix commit with PostgreSQL and S3-compatible
+  storage healthy. The expected-source production monitor passed in 590 ms
+  with all seven anonymous private-route checks healthy.
 
 ## Trade News Intelligence V2 (Production Verification)
 

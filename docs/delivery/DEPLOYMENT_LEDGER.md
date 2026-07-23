@@ -2246,3 +2246,33 @@ Add one entry per staging/production deployment.
   in 737 ms with all seven anonymous private-route checks healthy. A forced
   Jacksonville refresh returned 10 current stories from eight sources, four
   official references, zero stale feed items, and zero high/critical items.
+# Current Production - Trade News Intelligence V2.1 Clustering
+
+- Environment: Production (`https://rivt.pro`)
+- Date/time/timezone: 2026-07-23 America/New_York
+- Deployer: Codex through `codex/trade-news-v2-1-clustering`, merge to
+  `master`, live acceptance correction, and Railway production auto-deploy
+- Runtime feature source: `9901d1f5a9d8df996505eaa70d792f726f225e2c`
+- Railway deployments: initial merge
+  `5ecd64d2-21e7-4f80-ab2d-1ff03f9ea38a`; acceptance hotfix
+  `61dece4b-2e7f-4638-81ab-b486298c3ede`
+- Migration version before/after: unchanged (`0028_compensation_workflow`)
+- Provider/config changes: only `SOURCE_COMMIT` release metadata was updated;
+  auth, billing, PostgreSQL, object storage, Sentry, Web Push, email,
+  moderation, and rollout configuration were preserved.
+- Rollback target: `34432eefc5671d2a1f017ad1a7ab11bf939a8f2f`; no
+  database rollback is required.
+- Automated gates: build, lint, 67 unit/frontend tests, E2E, HB 803
+  mixed-category rendered smoke at desktop/mobile in dark and light themes,
+  zero-vulnerability dependency audit, and diff check passed.
+- Product evidence: publisher-suffix cleaning; stemmed token, bill/entity, and
+  bounded Florida permit-reform clustering; official-primary selection; 0.40
+  same-category/geography clustering; 0.48 default clustering; 40% category
+  cap; truthful freshness copy; visible discussion action; and token-inherited
+  dark/light news surfaces.
+- Live acceptance: the first merge reduced the observed seven-card HB 803
+  family to two, which was rejected. The forward hotfix reduced a forced live
+  Jacksonville refresh to exactly one HB 803 card with six related sources.
+- Post-deploy proof: `/api/health` returned the exact hotfix source with
+  PostgreSQL and S3-compatible storage healthy. The production monitor passed
+  in 590 ms with all seven anonymous private-route checks healthy.

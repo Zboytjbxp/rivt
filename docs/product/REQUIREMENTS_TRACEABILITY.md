@@ -1842,3 +1842,22 @@ Evidence must eventually link to implementation, automated tests, manual accepta
   tests, E2E, rendered Trade News smoke, and zero-vulnerability audit passed;
   live health and the expected-source synthetic monitor passed after Railway
   deployment `1bfa0b03-4090-4558-9308-eda5edce15d8`.
+## Traceability Addendum - 2026-07-23 Trade News V2.1 Clustering
+
+- `GA-UX-005` gains production data-honesty evidence: Google publisher suffixes
+  are removed before deduplication, significant-title duplicates cannot render
+  under different URLs, and bill/entity plus stemmed-token clustering reduces
+  the observed Jacksonville HB 803 family to one card with six real related
+  sources.
+- `GA-UX-003` gains production information-quality evidence: category fill is
+  capped at 40% while alternatives remain, zero-new copy is replaced by
+  truthful story/freshness context, discussion is visibly primary, and source
+  links remain secondary.
+- `GA-UX-006` gains computed-theme evidence: Trade News now inherits distinct
+  shared dark/light token surfaces instead of legacy Shop Talk colors pinning
+  dark-mode titles and the active tab to light values.
+- `GA-OPS-007` gains production evidence at
+  `9901d1f5a9d8df996505eaa70d792f726f225e2c`: build, lint, 67 unit/frontend
+  tests, E2E, rendered HB 803/theme smoke, and zero-vulnerability audit passed;
+  exact-source health and the production monitor passed after Railway
+  deployment `61dece4b-2e7f-4638-81ab-b486298c3ede`.
