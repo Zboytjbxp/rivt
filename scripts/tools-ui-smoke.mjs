@@ -149,7 +149,36 @@ async function configurePage(page) {
         },
       },
     });
+    Object.defineProperty(navigator, "geolocation", {
+      configurable: true,
+      value: {
+        getCurrentPosition: (success) => success({
+          coords: {
+            latitude: 30.36078,
+            longitude: -81.5697,
+            accuracy: 8,
+            altitude: null,
+            altitudeAccuracy: null,
+            heading: null,
+            speed: null,
+            toJSON: () => ({}),
+          },
+          timestamp: Date.now(),
+        }),
+      },
+    });
   });
+  await page.route("https://api.open-meteo.com/**", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        latitude: 30.36078,
+        longitude: -81.5697,
+        current_weather: { temperature: 82, weathercode: 0, windspeed: 4 },
+      }),
+    }),
+  );
   let mediaCounter = 0;
   let rejectNextMediaUpload = true;
   const pageProjectRecord = {
@@ -877,6 +906,8 @@ async function runToolsFlow(page, viewportName) {
   await settings.getByRole("radio", { name: /Standard/ }).check();
   await settings.getByRole("button", { name: "16:9", exact: true }).click();
   await settings.getByRole("checkbox", { name: /Composition grid/ }).check();
+  await settings.getByRole("checkbox", { name: /Stamp capture location/ }).check();
+  await settings.getByText("Jacksonville, FL and capture GPS will be stamped on new photos.", { exact: true }).waitFor();
   await page.screenshot({ path: path.join(screenshotDir, `${viewportName}-camera-settings.png`) });
   await settings.getByRole("button", { name: "Close camera settings" }).click();
   await page.locator(".v2-camera-composition-grid").waitFor({ timeout: 15_000 });

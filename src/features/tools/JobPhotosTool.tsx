@@ -119,6 +119,15 @@ function relativeTime(iso: string) {
   return new Date(iso).toLocaleDateString();
 }
 
+function cameraLocationLabel(
+  publicLocation?: { city?: string; region?: string } | null,
+  fallback = "",
+) {
+  const city = publicLocation?.city?.trim() ?? "";
+  const region = publicLocation?.region?.trim() ?? "";
+  return [city, region].filter(Boolean).join(", ") || fallback.trim();
+}
+
 function photoDayLabel(iso: string) {
   const timestamp = new Date(iso).getTime();
   if (!Number.isFinite(timestamp)) return "Earlier";
@@ -230,12 +239,14 @@ function CameraCapture({
   onCapture,
   onClose,
   contextLabel,
+  locationLabel,
   captureIntent,
   onCaptureIntentChange,
 }: {
   onCapture: (blob: Blob) => Promise<void>;
   onClose: () => void;
   contextLabel: string;
+  locationLabel?: string;
   captureIntent: CaptureIntent | null;
   onCaptureIntentChange?: (intent: CaptureIntent) => void;
 }) {
@@ -299,7 +310,11 @@ function CameraCapture({
       (position) => {
         setStampCoordinates(position.coords);
         setCameraPreference("locationStamp", true);
-        setLocationMessage("Coordinates will be stamped on new photos.");
+        setLocationMessage(
+          locationLabel
+            ? `${locationLabel} and capture GPS will be stamped on new photos.`
+            : "Capture GPS will be stamped on new photos.",
+        );
       },
       () => {
         setCameraPreference("locationStamp", false);
@@ -374,9 +389,11 @@ function CameraCapture({
       canvas.height,
     );
     const stamps = [
+      preferences.locationStamp ? contextLabel.trim() : "",
+      preferences.locationStamp && locationLabel ? locationLabel.trim() : "",
       preferences.dateStamp ? new Date().toLocaleString() : "",
       preferences.locationStamp && stampCoordinates
-        ? `${stampCoordinates.latitude.toFixed(5)}, ${stampCoordinates.longitude.toFixed(5)}`
+        ? `Capture GPS ${stampCoordinates.latitude.toFixed(5)}, ${stampCoordinates.longitude.toFixed(5)}`
         : "",
     ].filter(Boolean);
     if (stamps.length) {
@@ -389,7 +406,17 @@ function CameraCapture({
       context.fillRect(0, canvas.height - blockHeight, canvas.width, blockHeight);
       context.fillStyle = "#fff";
       stamps.forEach((stamp, index) => {
-        context.fillText(stamp, padding, canvas.height - padding - (stamps.length - index - 1) * fontSize * 1.35);
+        const maxWidth = canvas.width - padding * 2;
+        let displayStamp = stamp;
+        while (displayStamp.length > 1 && context.measureText(displayStamp).width > maxWidth) {
+          displayStamp = displayStamp.slice(0, -1);
+        }
+        if (displayStamp !== stamp) displayStamp = `${displayStamp.trimEnd()}…`;
+        context.fillText(
+          displayStamp,
+          padding,
+          canvas.height - padding - (stamps.length - index - 1) * fontSize * 1.35,
+        );
       });
     }
     canvas.toBlob((blob) => {
@@ -478,7 +505,7 @@ function CameraCapture({
               <legend>Overlays and stamps</legend>
               <label><input type="checkbox" checked={preferences.grid} onChange={(event) => setCameraPreference("grid", event.target.checked)} /><Grid3X3 size={18} /><span><strong>Composition grid</strong><small>Visible in the viewfinder only.</small></span></label>
               <label><input type="checkbox" checked={preferences.dateStamp} onChange={(event) => setCameraPreference("dateStamp", event.target.checked)} /><span><strong>Stamp date and time</strong><small>Permanently added to new photos.</small></span></label>
-              <label><input type="checkbox" checked={preferences.locationStamp} onChange={(event) => requestLocationStamp(event.target.checked)} /><span><strong>Stamp GPS coordinates</strong><small>Requires device location permission.</small></span></label>
+              <label><input type="checkbox" checked={preferences.locationStamp} onChange={(event) => requestLocationStamp(event.target.checked)} /><span><strong>Stamp capture location</strong><small>{locationLabel ? `Adds ${locationLabel} and verified GPS.` : "Adds verified GPS coordinates."} Requires device location permission.</small></span></label>
               {locationMessage ? <p role="status">{locationMessage}</p> : null}
             </fieldset>
           </div>
@@ -566,6 +593,7 @@ function CameraCapture({
 function PhotoGallery({
   title,
   subtitle,
+  locationLabel,
   photos,
   uploading,
   uploadError,
@@ -581,6 +609,7 @@ function PhotoGallery({
 }: {
   title: string;
   subtitle: string;
+  locationLabel?: string;
   photos: UnifiedPhoto[];
   uploading: boolean;
   uploadError: string;
@@ -830,6 +859,7 @@ function PhotoGallery({
           onCapture={handleCapturePhoto}
           onClose={() => setShowCamera(false)}
           contextLabel={title}
+          locationLabel={locationLabel}
           captureIntent={captureIntent}
           onCaptureIntentChange={onCaptureIntentChange}
         />
@@ -1282,6 +1312,7 @@ export function JobPhotosTool({ activeWork, focusedActiveWorkId = null, standalo
       <PhotoGallery
         title={recordWork?.job?.title ?? "Active job"}
         subtitle="Live project feed"
+        locationLabel={cameraLocationLabel(recordWork?.job?.publicLocation)}
         photos={jobPhotos}
         uploading={jobUploading}
         uploadError={jobUploadError}
@@ -1304,6 +1335,7 @@ export function JobPhotosTool({ activeWork, focusedActiveWorkId = null, standalo
       <PhotoGallery
         title={openAlbum.name}
         subtitle={openAlbum.standaloneProjectId ? "Standalone project" : "Private album"}
+        locationLabel={openAlbum.standaloneProjectId ? standaloneProject?.locationText : undefined}
         photos={albumPhotos}
         uploading={albumUploading}
         uploadError={albumUploadError}

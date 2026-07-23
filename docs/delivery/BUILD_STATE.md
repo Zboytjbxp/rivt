@@ -1,11 +1,30 @@
 # RIVT Build State
 
-Last updated: 2026-07-22 America/New_York
+Last updated: 2026-07-23 America/New_York
 Current gate: Gate B controlled engagement
 Current phase: Shop Talk and Communities release hardening is in progress.
 Active packet: Shop Talk and Communities release packet on `codex/shop-talk-communities-release`
 Repository branch: `codex/shop-talk-communities-release`
 Production feature release commit: `c80444ccf72a3a381121c08abf70fac5c3798d8b`
+
+## Camera Location Stamp Readability (Local Verification)
+
+- The opt-in capture-location stamp now leads with the selected job/project name
+  and its readable location. Active RIVT work uses the authorized public
+  city/region; standalone projects use their user-entered location.
+- Device coordinates remain on the proof as a clearly labeled `Capture GPS`
+  line for verification and as the honest fallback when a private album has no
+  project location. RIVT does not infer an address or silently stamp a private
+  jobsite street address.
+- Stamp text is bounded to the image width and truncates safely instead of
+  clipping. Location permission remains session-only and explicit.
+- Passed locally: build, lint, 61 unit/frontend tests, E2E, rendered
+  Tools/Camera QA, the mobile action/text-size matrix, dependency audit (zero
+  vulnerabilities), and diff check. Rendered Camera QA includes a mocked
+  permitted capture location and the readable `Jacksonville, FL` confirmation.
+  The aggregate test command entered the database-backed integration phase and
+  exceeded a bounded four-minute run without returning a failing assertion; no
+  aggregate integration pass is claimed.
 
 ## Camera Live-View Density Redesign (Local Verification)
 
