@@ -1,5 +1,38 @@
 # Deployment Ledger
 
+## 2026-07-23 - Final Pre-Release Five-Surface Polish
+
+- Source commit: `86bd14942723e759680b4614c2e67cebda84ae33`
+- Feature commits: `184e7f0`, `b4bc9e7`, `d4af000`, `86bd149`
+- Branch: `master` (source branch: `codex/final-release-polish`)
+- Railway application deployment: `d894a4b4-d36a-4e49-8eae-8e59dbd2ee60`
+- Railway metadata deployment: `9ed7b494-6a77-45c2-9912-aaac667b49be`
+- Production: `https://rivt.pro`
+- Scope: final Home, Work, Camera, Shop Talk, and Tools polish. The release
+  removes invented Work financials and fabricated reply counts, preserves
+  cents in expense/bid money displays, labels availability as device-private,
+  describes GPS as device-reported, repairs Reset and active-work Camera
+  context, removes no-op/duplicate actions, and completes tokenized responsive
+  polish across light/dark mobile surfaces.
+- Automated gates: build, lint, 73 unit/frontend tests, desktop/mobile E2E,
+  Tools, Shop Talk/Trade News, mobile-actions, and Work-lifecycle rendered
+  smokes, 390x844 light/dark capture across all five surfaces, three text sizes
+  at 375x553 and 390x664, production dependency audit, and diff checks passed.
+  The aggregate serial database integration phase returned no result within
+  five minutes; no integration pass is claimed.
+- Provider/config changes: `SOURCE_COMMIT` was synchronized to the deployed
+  feature SHA. No operational controls or other provider settings changed.
+- Post-deploy proof: exact-source health passed with ready migration
+  `0028_compensation_workflow`, healthy PostgreSQL/S3-compatible storage,
+  configured Sentry/Web Push, and enabled matching-job alerts. The production
+  monitor passed in 567 ms with open controls and all seven anonymous private
+  routes healthy. Direct bundle inspection confirmed the private-availability,
+  device-GPS, and Shop Talk loading changes and confirmed `verified GPS` is
+  absent from the production frontend.
+- Rollback target: `91450c305d3f7dc1c7522cc3e293cdba69100142`
+- Remaining field acceptance: signed-in physical-device review of the edited
+  Work, Camera, Shop Talk, and money-tool flows in both themes.
+
 ## 2026-07-23 - Shop Talk Final Editorial Polish
 
 - Source commit: `c1155514e25b4b5d90fcd92d687752bcac59539c`

@@ -34,9 +34,16 @@ Evidence must eventually link to implementation, automated tests, manual accepta
   zero-vulnerability production dependency audit. The aggregate serial
   database integration phase timed out without a result and is not claimed as
   passed.
-- Remaining risk is deployment acceptance only: this branch has not been
-  merged or deployed, and signed-in physical-device review remains appropriate
-  before the full release.
+- `GA-OPS-008` gains production evidence: Railway deployment
+  `9ed7b494-6a77-45c2-9912-aaac667b49be` serves exact source
+  `86bd14942723e759680b4614c2e67cebda84ae33`; health reports ready migration
+  `0028_compensation_workflow` and healthy PostgreSQL/S3-compatible storage.
+  The expected-source monitor passed in 567 ms with configured Sentry/Web Push,
+  enabled matching-job alerts, open controls, and seven healthy anonymous
+  private-route checks. Production bundle inspection found the new private
+  availability, device-GPS, and Shop Talk loading copy and no `verified GPS`.
+- Remaining risk is signed-in physical-device acceptance for the edited Work,
+  Camera, Shop Talk, and money-tool flows in both themes.
 
 ## Traceability Addendum - 2026-07-23 Shop Talk Final Editorial Polish
 

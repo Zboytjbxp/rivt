@@ -2,12 +2,12 @@
 
 Last updated: 2026-07-23 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Final pre-release five-surface polish is locally verified.
-Active packet: Final pre-release polish (Home, Work, Camera, Shop Talk, Tools)
-Repository branch: `codex/final-release-polish`
-Production feature release commit: `c1155514e25b4b5d90fcd92d687752bcac59539c`
+Current phase: Final pre-release five-surface polish is production verified.
+Active packet: Final pre-release polish production verification
+Repository branch: `master`
+Production feature release commit: `86bd14942723e759680b4614c2e67cebda84ae33`
 
-## Final Pre-Release Five-Surface Polish (Local Verification)
+## Final Pre-Release Five-Surface Polish (Production Verification)
 
 - **Home:** availability is now explicitly a private, device-only note instead
   of implying that RIVT broadcasts it. The control reflows below the greeting
@@ -61,8 +61,23 @@ Production feature release commit: `c1155514e25b4b5d90fcd92d687752bcac59539c`
 - Theme finding: confirmed as audited. All five surfaces inherit
   `.rivt-v2` theme tokens; the prior light Shop Talk capture was light mode,
   not a pinned-light defect.
-- This branch is not merged or deployed. Production remains on the previously
-  recorded release commit until review and merge.
+- `codex/final-release-polish` was fast-forwarded into `master` at
+  `86bd14942723e759680b4614c2e67cebda84ae33`. Railway application deployment
+  `d894a4b4-d36a-4e49-8eae-8e59dbd2ee60` succeeded, then metadata deployment
+  `9ed7b494-6a77-45c2-9912-aaac667b49be` synchronized `SOURCE_COMMIT`; no
+  operational-control variables changed.
+- Live health serves the exact release commit with migration
+  `0028_compensation_workflow` ready and PostgreSQL/S3-compatible storage
+  healthy. The expected-source monitor passed in 567 ms with configured
+  Sentry/Web Push, enabled matching-job alerts, open operational controls, and
+  all seven anonymous private-route checks healthy.
+- Production bundle inspection confirms the shipped frontend contains the
+  device-private availability label, device-GPS copy, and Shop Talk loading
+  state, and contains no `verified GPS` text. This proves the frontend bundle,
+  not only the backend metadata, advanced to the release.
+- Remaining field acceptance: use a signed-in physical phone to exercise the
+  edited Work, Camera, Shop Talk, and money-tool flows with real account data
+  in both themes before declaring the broader full-release acceptance complete.
 
 ## Shop Talk Final Editorial Polish (Production Verification)
 
