@@ -349,6 +349,9 @@ async function safeCloseOpenPanels(page) {
 async function runMobileFlow(page) {
   await page.goto(`${baseUrl}/app/home`, { waitUntil: "networkidle" });
   await assertNoHorizontalOverflow(page, "Home");
+  const privateAvailability = page.getByRole("button", { name: /Private note: Available.*Stored only on this device/i });
+  await privateAvailability.waitFor({ timeout: 15_000 });
+  assert.match(await privateAvailability.innerText(), /Private note: Available/i, "Home availability must identify itself as a private device-only note");
   await page.setViewportSize({ width: 320, height: 568 });
   await page.locator(".trade-feed").waitFor({ timeout: 15_000 });
   await assertNoHorizontalOverflow(page, "Home iPhone SE");
@@ -616,7 +619,7 @@ async function runMobileFlow(page) {
   await page.getByRole("button", { name: "Close" }).click();
   await page.setViewportSize({ width: 390, height: 844 });
   await page.getByRole("button", { name: "Trade News" }).click();
-  await page.getByRole("heading", { name: /Know what changes the work/i }).waitFor({ timeout: 15_000 });
+  await page.getByLabel("Trade News status").waitFor({ timeout: 15_000 });
   await assertNoHorizontalOverflow(page, "Shop Talk trade news");
 
   for (const viewport of [{ width: 375, height: 553 }, { width: 390, height: 664 }]) {
@@ -627,6 +630,15 @@ async function runMobileFlow(page) {
         document.documentElement.dataset.textScale = textScale;
         document.documentElement.dataset.legibility = textScale;
       }, scale);
+
+      await page.goto(`${baseUrl}/app/home`, { waitUntil: "networkidle" });
+      await page.locator(".trade-feed").waitFor({ timeout: 15_000 });
+      await assertNoHorizontalOverflow(page, `Home ${viewport.width}x${viewport.height} ${scale}`);
+      const availabilityBox = await page.locator(".trade-feed-avail").boundingBox();
+      assert.ok(
+        availabilityBox && availabilityBox.x >= 0 && availabilityBox.x + availabilityBox.width <= viewport.width,
+        `Private availability note should reflow at ${viewport.width}x${viewport.height} ${scale}`,
+      );
 
       await page.goto(`${baseUrl}/app/tools`, { waitUntil: "networkidle" });
       await page.getByRole("heading", { name: "Tools", exact: true }).waitFor({ timeout: 15_000 });
@@ -653,6 +665,40 @@ async function runMobileFlow(page) {
       for (const tab of ["Feed", "Communities", "Trade News"]) {
         assert.equal(await page.getByRole("button", { name: tab, exact: true }).isVisible(), true, `${tab} should remain visible at ${viewport.width}x${viewport.height} ${scale}`);
       }
+    }
+  }
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.evaluate(() => {
+    localStorage.setItem("rivt-text-scale", "standard");
+    document.documentElement.dataset.textScale = "standard";
+    document.documentElement.dataset.legibility = "standard";
+  });
+  const themeSurfaces = [
+    { name: "home", path: "/app/home", ready: ".trade-feed" },
+    { name: "work", path: "/app/work", ready: ".v2-workspace" },
+    { name: "camera", path: "/app/camera", ready: ".v2-job-photos-workbench" },
+    { name: "shop-talk", path: "/app/shop-talk", ready: ".shop-talk-layout" },
+    { name: "tools", path: "/app/tools", ready: ".v2-tools-page" },
+  ];
+  for (const theme of ["light", "dark"]) {
+    await page.evaluate((selectedTheme) => {
+      localStorage.setItem("rivt-theme-source", selectedTheme);
+      localStorage.setItem("rivt-theme-mode", selectedTheme);
+    }, theme);
+    for (const surface of themeSurfaces) {
+      await page.goto(`${baseUrl}${surface.path}`, { waitUntil: "networkidle" });
+      await page.locator(surface.ready).waitFor({ timeout: 15_000 });
+      assert.equal(
+        await page.evaluate((expectedTheme) => document.documentElement.dataset.theme === expectedTheme, theme),
+        true,
+        `${surface.name} should render in ${theme} mode`,
+      );
+      await assertNoHorizontalOverflow(page, `${surface.name} ${theme} theme`);
+      await page.screenshot({
+        path: path.join(screenshotDir, `final-${theme}-${surface.name}.png`),
+        fullPage: true,
+      });
     }
   }
 }

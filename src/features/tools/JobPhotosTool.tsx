@@ -505,7 +505,7 @@ function CameraCapture({
               <legend>Overlays and stamps</legend>
               <label><input type="checkbox" checked={preferences.grid} onChange={(event) => setCameraPreference("grid", event.target.checked)} /><Grid3X3 size={18} /><span><strong>Composition grid</strong><small>Visible in the viewfinder only.</small></span></label>
               <label><input type="checkbox" checked={preferences.dateStamp} onChange={(event) => setCameraPreference("dateStamp", event.target.checked)} /><span><strong>Stamp date and time</strong><small>Permanently added to new photos.</small></span></label>
-              <label><input type="checkbox" checked={preferences.locationStamp} onChange={(event) => requestLocationStamp(event.target.checked)} /><span><strong>Stamp capture location</strong><small>{locationLabel ? `Adds ${locationLabel} and verified GPS.` : "Adds verified GPS coordinates."} Requires device location permission.</small></span></label>
+              <label><input type="checkbox" checked={preferences.locationStamp} onChange={(event) => requestLocationStamp(event.target.checked)} /><span><strong>Stamp capture location</strong><small>{locationLabel ? `Adds ${locationLabel} and device GPS coordinates.` : "Adds device GPS coordinates."} Requires device location permission.</small></span></label>
               {locationMessage ? <p role="status">{locationMessage}</p> : null}
             </fieldset>
           </div>
@@ -531,10 +531,10 @@ function CameraCapture({
           </div>
         ) : null}
         <div className="v2-camera-utility-row">
-          <button type="button" className="v2-camera-destination-chip" onClick={onClose} disabled={saveState === "saving"} aria-label={`Photos saving to ${contextLabel}`}>
+          <div className="v2-camera-destination-chip" aria-label={`Photos saving to ${contextLabel}`}>
             <Image size={16} />
             <span><small>Saving to</small><strong>{contextLabel}</strong></span>
-          </button>
+          </div>
           {onCaptureIntentChange ? (
             <button type="button" className="v2-camera-type-chip" onClick={() => setCaptureTypesOpen((current) => !current)} aria-expanded={captureTypesOpen}>
               {captureIntentLabel(captureIntent)}
@@ -1002,7 +1002,7 @@ function PhotoGallery({
         </div>
       ) : (
         <div className="v2-job-photos-grid">
-          {photos.map((photo) => (
+          {visiblePhotos.map((photo) => (
             <button
               key={photo.id}
               type="button"
@@ -1376,6 +1376,7 @@ export function JobPhotosTool({ activeWork, focusedActiveWorkId = null, standalo
   const contextPhotoAlbum = selectedContextPhoto ? contextAlbum : latestAlbumCapture?.album ?? null;
   const activeJobAlbums = selectableActiveWork.slice(0, 6);
   const additionalRecentAlbumCaptures = recentAlbumCaptures.filter(({ photo }) => photo.id !== contextPhoto?.id);
+  const isPrivateAlbumContext = !recordWork && !standaloneProject && Boolean(selectedPrivateAlbum);
 
   function openAlbumFromHome(album: PhotoAlbum) {
     void openAlbumById(album.id);
@@ -1391,7 +1392,9 @@ export function JobPhotosTool({ activeWork, focusedActiveWorkId = null, standalo
   const destinationTitle =
     recordWork?.job?.title ?? standaloneProject?.title ?? selectedPrivateAlbum?.name ?? "Choose where this proof belongs";
   const destinationMeta = recordWork
-    ? `${recordWork.job?.publicLocation.city ?? "Project"} - ${projectPhotos.length} ${
+    ? projectLoading
+      ? "Loading photos..."
+      : `${recordWork.job?.publicLocation.city ?? "Project"} - ${projectPhotos.length} ${
         projectPhotos.length === 1 ? "photo" : "photos"
       }`
     : standaloneProject
@@ -1412,10 +1415,6 @@ export function JobPhotosTool({ activeWork, focusedActiveWorkId = null, standalo
           <h2>{destinationTitle}</h2>
           <small>{destinationMeta}</small>
         </div>
-        <button type="button" className="v2-secondary-button" onClick={() => onRequestContext?.()}>
-          <FolderOpen size={16} />
-          Change
-        </button>
         {projectError ? (
           <p className="v2-record-notice v2-job-photos-upload-error" role="alert">
             {projectError}
@@ -1481,8 +1480,8 @@ export function JobPhotosTool({ activeWork, focusedActiveWorkId = null, standalo
         <section className="v2-camera-home-panel v2-camera-albums-panel">
           <div className="v2-camera-home-section-head">
             <div>
-              <h3>Active job albums</h3>
-              <p>Photos tied to accepted work stay with the job.</p>
+              <h3>Active job destinations</h3>
+              <p>Choose which accepted job receives new photos.</p>
             </div>
             <span className="v2-camera-album-count">{activeJobAlbums.length}</span>
           </div>
@@ -1498,7 +1497,7 @@ export function JobPhotosTool({ activeWork, focusedActiveWorkId = null, standalo
                   onClick={() => onChooseActiveWork?.(work)}
                 >
                   <span className="v2-camera-album-cover is-empty">
-                    <Camera size={23} aria-hidden="true" />
+                    <FolderOpen size={23} aria-hidden="true" />
                   </span>
                   <span className="v2-camera-album-copy">
                     <strong>{work.job?.title ?? "Accepted work"}</strong>
@@ -1626,11 +1625,11 @@ export function JobPhotosTool({ activeWork, focusedActiveWorkId = null, standalo
             else onRequestContext?.();
           }}
           disabled={projectLoading || albumLoading}
-          aria-label="Open project feed"
-          title="Open project feed"
+          aria-label={isPrivateAlbumContext ? "Open album" : "Open project feed"}
+          title={isPrivateAlbumContext ? "Open album" : "Open project feed"}
         >
           <Image size={17} />
-          <span>Feed</span>
+          <span>{isPrivateAlbumContext ? "Album" : "Feed"}</span>
         </button>
         <button
           type="button"

@@ -810,7 +810,7 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
   }
 
   const primaryValue = inputMode === "metric" ? formatMillimeters(displayValueUnits) : formatImperialMeasurement(displayValueUnits, activeUnit, displayQualifier);
-  const secondaryLabel = inputMode === "metric" ? "Metres" : "Decimal";
+  const secondaryLabel = inputMode === "metric" ? "Meters" : "Decimal";
   const secondaryValue = inputMode === "metric"
     ? formatMeters(displayValueUnits)
     : `${formatNumber(displayValueUnits / UNITS_PER_INCH, 3)} in`;
@@ -895,15 +895,15 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
               <div className="fraction-unit-row" aria-label={inputMode === "metric" ? "Metric input and conversions" : "Input unit"}>
                 {inputMode === "metric" ? (
                   <>
-                    <button type="button" className="active unit-metric" aria-label="Millimetres input" aria-pressed="true">
+                    <button type="button" className="active unit-metric" aria-label="Millimeters input" aria-pressed="true">
                       <span>MM</span>
                       <strong>{formatMetricEntry(metricText, metricTenths).replace(" mm", "")}</strong>
                     </button>
-                    <button type="button" className="unit-metric-readout" aria-label="Centimetres readout" tabIndex={-1}>
+                    <button type="button" className="unit-metric-readout" aria-label="Centimeters readout" tabIndex={-1}>
                       <span>CM</span>
                       <strong>{formatNumber(displayValueUnits / (UNITS_PER_MM * 10), 2)}</strong>
                     </button>
-                    <button type="button" className="unit-metric-readout" aria-label="Metres readout" tabIndex={-1}>
+                    <button type="button" className="unit-metric-readout" aria-label="Meters readout" tabIndex={-1}>
                       <span>M</span>
                       <strong>{formatNumber(displayValueUnits / (UNITS_PER_MM * 1000), 3)}</strong>
                     </button>

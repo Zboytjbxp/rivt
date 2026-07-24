@@ -764,10 +764,6 @@ export function InvoiceDraftTool({
             Email sends a finished invoice from RIVT and records delivery here. Text opens your device's message draft.
           </p>
           <div className="v2-invoice-delivery" aria-label="Invoice draft delivery">
-            <button type="button" onClick={() => void emailInvoice()} disabled={invoiceEmailBusy || totalCents <= 0}>
-              <Mail size={15} />
-              {invoiceEmailBusy ? "Sending invoice..." : "Email invoice"}
-            </button>
             <a href={recipientPhone ? smsHref : undefined} aria-disabled={!recipientPhone} onClick={(event) => {
               if (!recipientPhone) {
                 event.preventDefault();
@@ -834,7 +830,7 @@ export function InvoiceDraftTool({
       <div className="v2-tool-action-dock" aria-label="Invoice actions">
         <span aria-live="polite" data-save-state={draftSaveState}><strong>{currency(total)}</strong><small>{draftSaveMessage}</small></span>
         {step !== "items" ? <button type="button" onClick={() => setStep(step === "review" ? "customer" : "items")} aria-label="Previous invoice step"><ChevronLeft size={18} /></button> : null}
-        <button type="button" className="v2-primary-button" onClick={() => void saveInvoiceDraft()} disabled={projectInvoiceBusy || totalCents <= 0 || invoiceEmailBusy || draftSaveState === "saving"}>
+        <button type="button" className="v2-secondary-button" onClick={() => void saveInvoiceDraft()} disabled={projectInvoiceBusy || totalCents <= 0 || invoiceEmailBusy || draftSaveState === "saving"}>
           {draftSaveState === "saving" ? <LoaderCircle className="v2-spin" size={18} /> : draftSaveState === "saved" ? <Check size={18} /> : <Save size={18} />}
           {draftSaveState === "saving" ? "Saving" : draftSaveState === "saved" ? "Saved" : draftSaveState === "error" ? "Try again" : "Save draft"}
         </button>

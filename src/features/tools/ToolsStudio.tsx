@@ -1218,9 +1218,9 @@ function PunchListTool() {
   const resolvedItems = items.filter((i) => !!i.resolvedAt);
 
   const CATEGORY_COLORS: Record<PunchCategory, string> = {
-    Electrical: "var(--v2-warning, #f59e0b)",
-    Plumbing: "#3b82f6",
-    Framing: "#8b5cf6",
+    Electrical: "var(--v2-warning)",
+    Plumbing: "var(--v2-info)",
+    Framing: "var(--v2-accent)",
     Finish: "var(--v2-success)",
     Other: "var(--v2-text-muted)",
   };
@@ -2015,7 +2015,7 @@ function JobChecklistTool() {
             onKeyDown={(e) => { if (e.key === " " || e.key === "Enter") toggleItem(item); }}
           >
             <div className="v2-checklist-item-check">
-              {checks[item] && <CheckSquare size={14} color="#fff" />}
+              {checks[item] && <CheckSquare size={14} color="var(--v2-on-accent)" />}
             </div>
             <span className="v2-checklist-item-text">{item}</span>
           </div>

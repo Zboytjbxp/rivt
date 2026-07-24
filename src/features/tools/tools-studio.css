@@ -2344,7 +2344,7 @@
 .v2-tool-action-row .v2-primary-button {
   border-color: var(--v2-accent);
   background: var(--v2-accent);
-  color: #fff;
+  color: var(--v2-on-accent);
 }
 
 .v2-tools-panel {
@@ -3020,7 +3020,7 @@
   .v2-estimate-workbench,
   .v2-invoice-workbench,
   .v2-camera-home {
-    padding-bottom: calc(132px + env(safe-area-inset-bottom));
+    padding-bottom: calc(156px + env(safe-area-inset-bottom));
   }
 
   .v2-tool-action-dock {
@@ -3091,10 +3091,6 @@
     z-index: 18;
     padding: 8px;
     box-shadow: var(--v2-shadow-md);
-  }
-
-  .v2-tools-page .v2-field-tools-tray:not(.is-editing) .v2-field-tools-tray-header {
-    display: none;
   }
 
   .v2-tools-page .v2-field-tools-actions > button {
@@ -9590,7 +9586,7 @@ html[data-rivt-compact-device="true"] .v2-tools-app.is-calculator-fullscreen .fr
 html[data-rivt-compact-device="true"] .v2-tools-app.is-calculator-fullscreen .fraction-strip {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
-  grid-template-rows: repeat(3, minmax(40px, 1fr));
+  grid-template-rows: repeat(3, 40px);
   gap: 4px;
 }
 
@@ -11155,7 +11151,7 @@ html[data-rivt-compact-device="true"] .v2-tools-app.is-calculator-fullscreen .fr
   .v2-tools-app.is-calculator-fullscreen .fraction-strip {
     display: grid;
     grid-template-columns: repeat(5, minmax(0, 1fr));
-    grid-template-rows: repeat(3, minmax(40px, 1fr));
+    grid-template-rows: repeat(3, 40px);
     gap: 4px;
   }
 
@@ -11309,12 +11305,6 @@ html[data-rivt-compact-device="true"] .v2-tools-app.is-calculator-fullscreen .fr
   box-shadow: none;
 }
 
-@media (max-width: 900px) {
-  .v2-tools-page .v2-tool-section-stack:not(.is-more-open) {
-    min-height: auto;
-    align-content: start;
-  }
-}
 /* Camera landing: albums and captures are content; their sections do not need cards too. */
 .job-photos-private-albums,
 .job-photos-recent-captures,

@@ -567,6 +567,14 @@ async function runToolsFlow(page, viewportName) {
   );
   assert.equal(await page.locator(".v2-tool-launch-card").count(), 5, "Tools hub should show all five core apps instead of leaving the page mostly empty");
   assert.equal(await page.locator(".v2-tool-group").count(), 1, "Supporting helpers should live in one More tools drawer");
+  if (viewportName === "mobile") {
+    const launcherLayout = await page.locator(".v2-tool-section-stack:not(.is-more-open)").evaluate((element) => {
+      const style = getComputedStyle(element);
+      return { minHeight: Number.parseFloat(style.minHeight), alignContent: style.alignContent };
+    });
+    assert.ok(launcherLayout.minHeight >= 600, `tall-phone launcher should reserve space above the field tray: ${JSON.stringify(launcherLayout)}`);
+    assert.equal(launcherLayout.alignContent, "space-between", "tall-phone launcher should distribute its short content instead of stranding it above the tray");
+  }
   if (isHandsetViewport) {
     await fieldToolsTray.getByRole("button", { name: "Edit" }).click();
     await page.getByLabel("Choose up to three field tools").waitFor({ timeout: 15_000 });
@@ -613,6 +621,12 @@ async function runToolsFlow(page, viewportName) {
       `${tab} should be selected inside Time & costs`,
     );
   }
+  await timeCostsTabs.getByRole("button", { name: "Expenses", exact: true }).click();
+  const expenseAmount = page.locator(".v2-expense-amount-input");
+  await expenseAmount.fill("12.49");
+  await page.getByRole("button", { name: "Log Materials — $12.49", exact: true }).click();
+  await page.getByText("$12.49", { exact: true }).first().waitFor({ timeout: 15_000 });
+  assert.equal(await page.getByText("$12", { exact: true }).count(), 0, "expense displays must not round cents to whole dollars");
   await assertNoHorizontalOverflow(page);
   await page.screenshot({ path: path.join(screenshotDir, `${viewportName}-time-costs.png`), fullPage: true });
   await page.getByLabel("Time & costs").getByRole("button", { name: "All tools" }).click();
@@ -667,7 +681,7 @@ async function runToolsFlow(page, viewportName) {
   const calculatorSettings = page.getByRole("dialog", { name: "Calculator settings" });
   await calculatorSettings.getByRole("button", { name: "Metric" }).click();
   await calculatorSettings.getByRole("button", { name: "Close calculator settings" }).click();
-  await page.getByLabel("Length calculator").getByText("Metres", { exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByLabel("Length calculator").getByText("Meters", { exact: true }).waitFor({ timeout: 15_000 });
   await page.getByLabel("Heavy, light, double, and half controls").getByRole("button", { name: "Heavy plus half millimetre" }).waitFor({ timeout: 15_000 });
   await page.getByLabel("Heavy, light, double, and half controls").getByRole("button", { name: "Light minus half millimetre" }).waitFor({ timeout: 15_000 });
   await page.getByLabel("Heavy, light, double, and half controls").getByRole("button", { name: "Multiply measurement by two" }).waitFor({ timeout: 15_000 });
@@ -807,7 +821,9 @@ async function runToolsFlow(page, viewportName) {
   await page.getByLabel("Recipient email").fill("billing@example.com");
   await page.getByLabel("Recipient phone").fill("+19045550123");
   await invoiceDraftSteps.getByRole("button", { name: "3 Review" }).click();
-  await page.getByRole("button", { name: "Email invoice" }).waitFor({ timeout: 15_000 });
+  await page.getByRole("button", { name: "Email", exact: true }).waitFor({ timeout: 15_000 });
+  assert.equal(await page.getByRole("button", { name: /Email/i }).count(), 1, "invoice review should expose one email action");
+  assert.equal(await page.getByRole("button", { name: "Save draft", exact: true }).getAttribute("class"), "v2-secondary-button", "Save draft should remain secondary to delivery");
   await page.getByRole("link", { name: "Text summary" }).waitFor({ timeout: 15_000 });
   await page.getByRole("heading", { name: "Preview before delivery" }).waitFor({ timeout: 15_000 });
   await page.getByLabel("Printable invoice preview").getByText("Total due", { exact: true }).waitFor({ timeout: 15_000 });
@@ -907,6 +923,8 @@ async function runToolsFlow(page, viewportName) {
   await settings.getByRole("button", { name: "16:9", exact: true }).click();
   await settings.getByRole("checkbox", { name: /Composition grid/ }).check();
   await settings.getByRole("checkbox", { name: /Stamp capture location/ }).check();
+  await settings.getByText(/device GPS coordinates/i).waitFor({ timeout: 15_000 });
+  assert.equal(await settings.getByText(/verified GPS/i).count(), 0, "camera copy must not claim device GPS is verified");
   await settings.getByText("Jacksonville, FL and capture GPS will be stamped on new photos.", { exact: true }).waitFor();
   await page.screenshot({ path: path.join(screenshotDir, `${viewportName}-camera-settings.png`) });
   await settings.getByRole("button", { name: "Close camera settings" }).click();

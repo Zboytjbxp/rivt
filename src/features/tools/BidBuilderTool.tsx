@@ -5,7 +5,12 @@ import { Panel } from "../../components/ui";
 import { deleteToolRecordByLocalId, fetchToolRecords, upsertToolRecord, type ServerToolRecord } from "./tool-records-api";
 
 function currency(value: number) {
-  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(value);
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(value);
 }
 
 interface DefaultBidLine { description: string; qty: number; unit: string; unitPrice: number; }
@@ -262,10 +267,6 @@ function BidBuilderTool({ activeJob }: { activeJob: Job | null }) {
     });
   }
 
-  function acceptBid() {
-    saveBid();
-  }
-
   return (
     <div className="v2-tool-workbench v2-bid-workbench">
       <Panel className="v2-tool-panel v2-bid-builder-panel" eyebrow="Bid / quote" title="Build a bid">
@@ -312,14 +313,13 @@ function BidBuilderTool({ activeJob }: { activeJob: Job | null }) {
           </label>
         </div>
         <label>Notes for client<textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} placeholder="Payment terms, exclusions, validity period…" /></label>
-        <button type="button" className="v2-primary-button" onClick={saveBid}><FileText size={14} />Save bid to device</button>
       </Panel>
 
       <aside className="v2-bid-summary-stack">
         <Panel className="v2-tool-panel v2-tool-summary-panel" eyebrow="Bid total" title={currency(total)}>
           <div className="v2-tool-breakdown">
             <div><span>Subtotal</span><strong>{currency(subtotal)}</strong></div>
-            <div><span>Markup ({markupPct}%)</span><strong>{currency(markup)}</strong></div>
+            <div><span>Markup / overhead ({markupPct}%)</span><strong>{currency(markup)}</strong></div>
             <div><span>Total</span><strong>{currency(total)}</strong></div>
           </div>
           <div className="v2-bid-line-summary-list">
@@ -331,7 +331,7 @@ function BidBuilderTool({ activeJob }: { activeJob: Job | null }) {
             ) : null)}
           </div>
           {lines.some((l) => l.qty * l.unitPrice > 0) && total > 0 ? (
-            <button type="button" className="v2-bid-accept-btn" onClick={acceptBid}>
+            <button type="button" className="v2-bid-accept-btn" onClick={saveBid}>
               <FileText size={16} />
               Save bid
             </button>
