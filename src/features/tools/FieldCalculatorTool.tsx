@@ -7,7 +7,6 @@ type ActiveUnit = "feet" | "inches";
 type InputMode = "imperial" | "metric";
 type Operator = "+" | "-" | "x" | "/";
 type TapeQualifier = "light" | "exact" | "heavy";
-type HeavyLightMode = "tape" | "thirty-seconds";
 type ImperialNotation = "inches" | "feet-inches";
 type FractionLayout = "tape" | "grouped";
 
@@ -19,7 +18,6 @@ const UNITS_PER_INCH = 4064;
 const UNITS_PER_FOOT = UNITS_PER_INCH * 12;
 const UNITS_PER_THIRTY_SECOND = 127;
 const UNITS_PER_SIXTEENTH = UNITS_PER_THIRTY_SECOND * 2;
-const IMPERIAL_TRIM_UNITS = UNITS_PER_THIRTY_SECOND;
 const METRIC_TRIM_UNITS = UNITS_PER_MM / 2;
 const FRACTION_BUTTONS = Array.from({ length: 15 }, (_, index) => index + 1);
 const GROUPED_FRACTION_BUTTONS = [4, 8, 12, 2, 6, 10, 14, 1, 3, 5, 7, 9, 11, 13, 15];
@@ -66,7 +64,6 @@ type CalculatorPreferences = {
   inputMode: InputMode;
   imperialNotation: ImperialNotation;
   fractionLayout: FractionLayout;
-  heavyLightMode: HeavyLightMode;
 };
 
 type QuickEntryOption = {
@@ -251,7 +248,6 @@ const DEFAULT_CALCULATOR_PREFERENCES: CalculatorPreferences = {
   inputMode: "imperial",
   imperialNotation: "inches",
   fractionLayout: "tape",
-  heavyLightMode: "tape",
 };
 
 function formatNumber(value: number, digits = 2) {
@@ -274,6 +270,10 @@ function reduceFraction(thirtySeconds: number) {
   if (!thirtySeconds) return "";
   const divisor = gcd(thirtySeconds, 32);
   return `${thirtySeconds / divisor}/${32 / divisor}`;
+}
+
+function roundToSixteenth(units: number) {
+  return Math.round(units / UNITS_PER_SIXTEENTH) * UNITS_PER_SIXTEENTH;
 }
 
 function fractionLabelFromSixteenth(value: number) {
@@ -301,10 +301,10 @@ function formatMeters(units: number) {
 
 function formatMeasurement(units: number) {
   const sign = units < 0 ? "-" : "";
-  const safeValue = Math.abs(Math.round(units));
-  const totalThirtySeconds = Math.round(safeValue / UNITS_PER_THIRTY_SECOND);
-  const totalInches = Math.floor(totalThirtySeconds / 32);
-  const fraction32 = totalThirtySeconds % 32;
+  const safeValue = Math.abs(roundToSixteenth(units));
+  const totalSixteenths = Math.round(safeValue / UNITS_PER_SIXTEENTH);
+  const totalInches = Math.floor(totalSixteenths / 16);
+  const fraction32 = (totalSixteenths % 16) * 2;
   const feet = Math.floor(totalInches / 12);
   const inches = totalInches % 12;
   const fraction = reduceFraction(fraction32);
@@ -318,10 +318,10 @@ function formatMeasurement(units: number) {
 
 function formatInchesMeasurement(units: number) {
   const sign = units < 0 ? "-" : "";
-  const safeValue = Math.abs(Math.round(units));
-  const totalThirtySeconds = Math.round(safeValue / UNITS_PER_THIRTY_SECOND);
-  const totalInches = Math.floor(totalThirtySeconds / 32);
-  const fraction = reduceFraction(totalThirtySeconds % 32);
+  const safeValue = Math.abs(roundToSixteenth(units));
+  const totalSixteenths = Math.round(safeValue / UNITS_PER_SIXTEENTH);
+  const totalInches = Math.floor(totalSixteenths / 16);
+  const fraction = reduceFraction((totalSixteenths % 16) * 2);
   return `${sign}${totalInches}${fraction ? ` ${fraction}` : ""}"`;
 }
 
@@ -338,20 +338,21 @@ function valueFromImperialEntry(feetText: string, inchesText: string, fraction32
 }
 
 function fieldsFromImperialValue(units: number, activeUnit: ActiveUnit) {
-  const safeValue = Math.max(0, Math.round(units));
-  const totalThirtySeconds = Math.round(safeValue / UNITS_PER_THIRTY_SECOND);
-  const totalInches = Math.floor(totalThirtySeconds / 32);
+  const safeValue = Math.max(0, roundToSixteenth(units));
+  const totalSixteenths = Math.round(safeValue / UNITS_PER_SIXTEENTH);
+  const totalInches = Math.floor(totalSixteenths / 16);
+  const fraction32 = (totalSixteenths % 16) * 2;
   if (activeUnit === "inches") {
     return {
       feet: "0",
       inches: String(totalInches),
-      fraction32: totalThirtySeconds % 32,
+      fraction32,
     };
   }
   return {
     feet: String(Math.floor(totalInches / 12)),
     inches: String(totalInches % 12),
-    fraction32: totalThirtySeconds % 32,
+    fraction32,
   };
 }
 
@@ -381,9 +382,13 @@ function computeOperation(leftUnits: number, operator: Operator, rightUnits: num
     ? rightUnits / UNITS_PER_MM
     : rightUnits / UNITS_PER_INCH;
 
-  if (operator === "x") return Math.round(leftUnits * scalar);
+  if (operator === "x") {
+    const result = leftUnits * scalar;
+    return inputMode === "imperial" ? roundToSixteenth(result) : Math.round(result);
+  }
   if (!scalar) return leftUnits;
-  return Math.round(leftUnits / scalar);
+  const result = leftUnits / scalar;
+  return inputMode === "imperial" ? roundToSixteenth(result) : Math.round(result);
 }
 
 function qualifierValue(qualifier: TapeQualifier) {
@@ -413,7 +418,7 @@ function computeImperialTapeOperation(
   const qualifierTotal = qualifierValue(leftQualifier) + direction * qualifierValue(rightQualifier);
   const carry = qualifierTotal >= 2 ? 1 : qualifierTotal <= -2 ? -1 : 0;
   return {
-    units: leftUnits + direction * rightUnits + carry * UNITS_PER_SIXTEENTH,
+    units: roundToSixteenth(leftUnits + direction * rightUnits + carry * UNITS_PER_SIXTEENTH),
     qualifier: qualifierFromValue(qualifierTotal - carry * 2),
   };
 }
@@ -440,7 +445,6 @@ function readCalculatorPreferences(): CalculatorPreferences {
       inputMode: parsed?.inputMode === "metric" ? "metric" : "imperial",
       imperialNotation: parsed?.imperialNotation === "feet-inches" ? "feet-inches" : "inches",
       fractionLayout: parsed?.fractionLayout === "grouped" ? "grouped" : "tape",
-      heavyLightMode: parsed?.heavyLightMode === "thirty-seconds" ? "thirty-seconds" : "tape",
     };
   } catch {
     return DEFAULT_CALCULATOR_PREFERENCES;
@@ -472,7 +476,6 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
   const [inputMode, setInputMode] = useState<InputMode>(initialPreferences.inputMode);
   const [imperialNotation, setImperialNotation] = useState<ImperialNotation>(initialPreferences.imperialNotation);
   const [fractionLayout, setFractionLayout] = useState<FractionLayout>(initialPreferences.fractionLayout);
-  const [heavyLightMode, setHeavyLightMode] = useState<HeavyLightMode>(initialPreferences.heavyLightMode);
   const [activeUnit, setActiveUnit] = useState<ActiveUnit>(initialPreferences.imperialNotation === "feet-inches" ? "feet" : "inches");
   const [feetText, setFeetText] = useState("0");
   const [inchesText, setInchesText] = useState("0");
@@ -504,10 +507,9 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
         inputMode,
         imperialNotation,
         fractionLayout,
-        heavyLightMode,
       } satisfies CalculatorPreferences));
     } catch { /* harmless preference */ }
-  }, [fractionLayout, heavyLightMode, imperialNotation, inputMode]);
+  }, [fractionLayout, imperialNotation, inputMode]);
 
   useEffect(() => {
     try { localStorage.setItem(CALCULATOR_HISTORY_KEY, JSON.stringify(calculationHistory)); } catch { /* harmless device history */ }
@@ -674,15 +676,6 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
       return;
     }
 
-    if (heavyLightMode === "thirty-seconds") {
-      const delta = nextQualifier === "heavy" ? IMPERIAL_TRIM_UNITS : -IMPERIAL_TRIM_UNITS;
-      const base = resultUnits ?? entryValueUnits;
-      setEntryFromValue(Math.max(0, base + delta));
-      setHistoryLabel(nextQualifier === "heavy" ? "Heavy +1/32" : "Light -1/32");
-      setCopied(false);
-      return;
-    }
-
     const qualifier = displayQualifier === nextQualifier ? "exact" : nextQualifier;
     setEntryFromValue(displayValueUnits, "imperial", qualifier);
     setHistoryLabel(qualifier === "exact" ? "Exact sixteenth" : `${qualifier === "heavy" ? "Heavy" : "Light"} tape mark`);
@@ -692,13 +685,11 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
   function scaleEntry(multiplier: number) {
     const base = resultUnits ?? entryValueUnits;
     const qualifier = displayQualifier;
-    if (inputMode === "imperial" && heavyLightMode === "tape" && qualifier !== "exact" && multiplier === 0.5) {
-      setHistoryLabel("Switch to 32nd precision to halve an H/L mark.");
-      return;
-    }
-    const next = inputMode === "imperial" && heavyLightMode === "tape" && qualifier !== "exact" && multiplier === 2
-      ? Math.max(0, Math.round(base * multiplier + qualifierValue(qualifier) * UNITS_PER_SIXTEENTH))
-      : Math.max(0, Math.round(base * multiplier));
+    const next = inputMode === "imperial" && qualifier !== "exact" && multiplier === 2
+      ? Math.max(0, roundToSixteenth(base * multiplier + qualifierValue(qualifier) * UNITS_PER_SIXTEENTH))
+      : inputMode === "imperial"
+        ? Math.max(0, roundToSixteenth(base * multiplier))
+        : Math.max(0, Math.round(base * multiplier));
     const expression = `${formatForMode(base, inputMode, activeUnit, qualifier)} ${multiplier === 2 ? "× 2" : "÷ 2"}`;
     setEntryFromValue(next);
     setHistoryLabel(expression);
@@ -741,7 +732,7 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
     const current = resultUnits ?? entryValueUnits;
     const currentQualifier = displayQualifier;
     const nextAccumulator = accumulatorUnits !== null && pendingOperator
-      ? inputMode === "imperial" && heavyLightMode === "tape"
+      ? inputMode === "imperial"
         ? computeImperialTapeOperation(accumulatorUnits, accumulatorQualifier, pendingOperator, current, currentQualifier)
         : { units: computeOperation(accumulatorUnits, pendingOperator, current, inputMode), qualifier: "exact" as const }
       : { units: current, qualifier: currentQualifier };
@@ -763,7 +754,7 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
       return;
     }
 
-    const nextResult = inputMode === "imperial" && heavyLightMode === "tape"
+    const nextResult = inputMode === "imperial"
       ? computeImperialTapeOperation(accumulatorUnits, accumulatorQualifier, pendingOperator, current, currentQualifier)
       : { units: computeOperation(accumulatorUnits, pendingOperator, current, inputMode), qualifier: "exact" as const };
     const expression = `${formatForMode(accumulatorUnits, inputMode, activeUnit, accumulatorQualifier)} ${formatOperator(pendingOperator)} ${formatForMode(current, inputMode, activeUnit, currentQualifier)}`;
@@ -949,8 +940,8 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
               <div className="fraction-action-row" aria-label="Heavy, light, double, and half controls">
                 <button
                   type="button"
-                  aria-label={inputMode === "metric" ? "Light minus half millimetre" : heavyLightMode === "tape" ? "Mark measurement light" : "Light minus one thirty-second"}
-                  aria-pressed={inputMode === "imperial" && heavyLightMode === "tape" && displayQualifier === "light"}
+                  aria-label={inputMode === "metric" ? "Light minus half millimetre" : "Mark measurement light"}
+                  aria-pressed={inputMode === "imperial" && displayQualifier === "light"}
                   onClick={() => applyHeavyLight("light")}
                 >
                   <strong>L</strong>
@@ -958,14 +949,14 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
                 </button>
                 <button
                   type="button"
-                  aria-label={inputMode === "metric" ? "Heavy plus half millimetre" : heavyLightMode === "tape" ? "Mark measurement heavy" : "Heavy plus one thirty-second"}
-                  aria-pressed={inputMode === "imperial" && heavyLightMode === "tape" && displayQualifier === "heavy"}
+                  aria-label={inputMode === "metric" ? "Heavy plus half millimetre" : "Mark measurement heavy"}
+                  aria-pressed={inputMode === "imperial" && displayQualifier === "heavy"}
                   onClick={() => applyHeavyLight("heavy")}
                 >
                   <strong>H</strong>
                   <small>{inputMode === "metric" ? "+0.5 mm" : "Heavy"}</small>
                 </button>
-                <button type="button" aria-label="Divide measurement by two" onClick={() => scaleEntry(0.5)} disabled={inputMode === "imperial" && heavyLightMode === "tape" && displayQualifier !== "exact"}>
+                <button type="button" aria-label="Divide measurement by two" onClick={() => scaleEntry(0.5)}>
                   <strong>&divide;2</strong>
                   <small>Half</small>
                 </button>
@@ -1096,12 +1087,8 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
               </section>
               <section>
                 <div>
-                  <strong>Heavy / Light</strong>
-                  <span>{heavyLightMode === "tape" ? "One mark stays visible. Two matching marks resolve to a sixteenth." : "Each mark adjusts the result by one thirty-second."}</span>
-                </div>
-                <div className="calc-settings-options" role="group" aria-label="Heavy and light behavior">
-                  <button type="button" className={heavyLightMode === "tape" ? "active" : ""} onClick={() => setHeavyLightMode("tape")}>Tape qualifier</button>
-                  <button type="button" className={heavyLightMode === "thirty-seconds" ? "active" : ""} onClick={() => setHeavyLightMode("thirty-seconds")}>32nd precision</button>
+                  <strong>Tape precision</strong>
+                  <span>Imperial entries, conversions, and results round to the nearest 1/16 inch. Heavy and Light stay as tape-mark notes.</span>
                 </div>
               </section>
             </div>

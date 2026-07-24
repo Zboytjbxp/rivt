@@ -2,10 +2,32 @@
 
 Last updated: 2026-07-24 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Pre-launch hardening is production verified; operational launch evidence remains human-owned.
-Active packet: Jacksonville pre-launch honesty, billing, security, and resilience hardening
-Repository branch: `master` (source branch: `codex/pre-launch-hardening`)
+Current phase: Tape-measure calculator precision is locally verified.
+Active packet: Heavy 16th calculator tape-increment enforcement
+Repository branch: `codex/tape-measure-sixteenths`
 Production feature release commit: `b46ef953d91496f9d31c3781a8bca2b3e42e1c52`
+
+## Heavy 16th Tape-Measure Precision (Local Verification)
+
+- Imperial entries, restored values, metric conversions, multiplication,
+  division, addition, and subtraction now resolve to the nearest 1/16 inch.
+  Internal arithmetic can retain enough precision for conversion, but the
+  field result cannot expose a 1/32-inch value.
+- Removed the old `32nd precision` preference and migration path. Existing
+  devices carrying that preference automatically return to tape behavior.
+  The settings sheet now states the real rule: imperial work rounds to the
+  nearest 1/16 inch.
+- Heavy and Light remain qualitative tape-mark notes. They no longer switch
+  into hidden +/-1/32 arithmetic; two matching notes still resolve honestly
+  to one sixteenth when measurements are combined.
+- Rendered Tools QA now proves the 32nd mode is absent, `1/8 ÷ 2` resolves to
+  `1/16`, no `1/32` result appears, and the full calculator remains contained
+  at desktop, 390px mobile, and compact-phone viewports.
+- Verified locally: lint, production build, 75 unit/frontend tests, Tools
+  rendered QA, desktop/mobile E2E, and a production dependency audit with zero
+  vulnerabilities.
+- Deployment: not deployed. Production remains on feature source
+  `b46ef953d91496f9d31c3781a8bca2b3e42e1c52`.
 
 ## Jacksonville Pre-Launch Hardening (Production Verification)
 

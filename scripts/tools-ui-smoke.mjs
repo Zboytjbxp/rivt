@@ -679,6 +679,13 @@ async function runToolsFlow(page, viewportName) {
   await page.getByRole("button", { name: "Copy" }).waitFor({ timeout: 15_000 });
   await page.getByRole("button", { name: "Calculator settings", exact: true }).click();
   const calculatorSettings = page.getByRole("dialog", { name: "Calculator settings" });
+  await calculatorSettings.getByText("Tape precision", { exact: true }).waitFor({ timeout: 15_000 });
+  await calculatorSettings.getByText(/nearest 1\/16 inch/i).waitFor({ timeout: 15_000 });
+  assert.equal(
+    await calculatorSettings.getByRole("button", { name: "32nd precision", exact: true }).count(),
+    0,
+    "imperial calculator should not expose a 32nd-precision mode",
+  );
   await calculatorSettings.getByRole("button", { name: "Metric" }).click();
   await calculatorSettings.getByRole("button", { name: "Close calculator settings" }).click();
   await page.getByLabel("Length calculator").getByText("Meters", { exact: true }).waitFor({ timeout: 15_000 });
@@ -716,6 +723,20 @@ async function runToolsFlow(page, viewportName) {
     await page.locator(".calc-primary-value").textContent(),
     '6 7/8"',
     "holding 7 should offer the fast 7/8 entry without changing ordinary digit taps",
+  );
+  await page.getByRole("button", { name: "Clear calculator" }).click();
+  await clickVisibleFraction(page, "1/8", viewportName);
+  await page.getByLabel("Heavy, light, double, and half controls").getByRole("button", { name: "Divide measurement by two" }).click();
+  await page.locator(".calc-primary-value", { hasText: '1/16"' }).waitFor({ timeout: 15_000 });
+  assert.equal(
+    await page.locator(".calc-primary-value").textContent(),
+    '0 1/16"',
+    "imperial division should stay on tape-measure sixteenth increments",
+  );
+  assert.equal(
+    (await page.locator(".fraction-calc-workbench").textContent())?.includes("1/32"),
+    false,
+    "imperial calculator should never render a 1/32 result",
   );
   await page.getByRole("button", { name: "Clear calculator" }).click();
   await page.getByLabel("Fraction calculator keypad").getByRole("button", { name: "6" }).click();

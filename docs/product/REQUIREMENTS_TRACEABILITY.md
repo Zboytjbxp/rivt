@@ -10,6 +10,25 @@ Status values:
 
 Evidence must eventually link to implementation, automated tests, manual acceptance proof, and deployed build.
 
+## Traceability Addendum - 2026-07-24 Heavy 16th Tape Precision
+
+- `GA-UX-003` gains a single field-readable imperial precision model:
+  sixteenth keys, calculations, restored history, and conversions all resolve
+  on the same tape-measure increment instead of exposing an optional 1/32
+  mode.
+- `GA-UX-005` gains measurement honesty evidence: settings disclose nearest-
+  1/16 rounding, Heavy/Light remain qualitative notes, and no hidden
+  thirty-second adjustment is presented as an exact tape result.
+- `GA-UX-006` gains rendered desktop, 390px mobile, and compact-phone
+  assertions proving the 32nd control is absent, `1/8 ÷ 2` yields `1/16`, no
+  `1/32` result renders, and the calculator remains horizontally and
+  vertically contained.
+- `GA-OPS-007` gains local evidence from lint, production build, 75
+  unit/frontend tests, Tools rendered QA, desktop/mobile E2E, and a
+  zero-vulnerability production dependency audit.
+- `GA-OPS-008` is unchanged: this calculator precision branch is not deployed
+  and no production evidence is claimed.
+
 ## Traceability Addendum - 2026-07-24 Jacksonville Pre-Launch Hardening
 
 - `GA-SEC-004` gains server evidence that the legacy free-form invoice relay
