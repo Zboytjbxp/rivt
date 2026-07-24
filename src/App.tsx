@@ -571,6 +571,7 @@ function App() {
   // Authenticated community state starts empty and is populated only by the
   // server. Guest preview data is installed explicitly by handleBrowseAsGuest.
   const [communityPosts, setCommunityPosts] = useState<CommunityPost[]>([]);
+  const [communityPostsLoaded, setCommunityPostsLoaded] = useState(false);
   const [communities, setCommunities] = useState<CommunityDisplay[]>([]);
   const [, setCommunityReports] = useState<CommunityReport[]>([]);
   const [shoutOuts, setShoutOuts] = useState<ShoutOut[]>([]);
@@ -988,11 +989,13 @@ function App() {
     } catch (cause) {
       if (shopTalkPostsRequestRef.current === requestId) {
         addActivity("Shop Talk could not refresh", cause instanceof Error ? cause.message : "Check your connection and try again.", "error");
+        setCommunityPostsLoaded(true);
       }
       return;
     }
     if (shopTalkPostsRequestRef.current !== requestId) return;
     setCommunityPosts(posts.map(toCommunityPostViewModel));
+    setCommunityPostsLoaded(true);
   }, [addActivity, authUser, isGuest, onboardingComplete]);
 
   const loadShopTalkPost = useCallback(async (postId: string): Promise<CommunityPost | null> => {
@@ -2655,6 +2658,7 @@ function App() {
             isGuest={isGuest}
             profile={accountProfile}
             communityPosts={communityPosts}
+            communityPostsLoaded={isGuest || !authUser || !onboardingComplete || communityPostsLoaded}
             communities={communities}
             newsItems={[]}
             initialQuery={shopTalkGlobalQuery}

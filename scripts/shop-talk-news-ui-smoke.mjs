@@ -412,6 +412,7 @@ async function configurePage(page) {
               title: "How are you handling the new OSHA heat rule on outdoor jobs this summer?",
               body: "Compare practical heat plans, scheduling changes, and field routines.\n\nhttps://www.osha.gov/heat-exposure?ref=shop-talk",
               status: "Open",
+              commentCount: 8,
               createdAt: "2026-07-15T11:00:00.000Z",
               communitySlug: "jacksonville-trades",
               communityName: "Jacksonville Trades",
@@ -580,6 +581,13 @@ try {
     await page.locator(".trade-post").filter({ hasText: "mid-job scope change without losing margin" }).first().waitFor({ timeout: 15_000 });
     await page.getByText(/new OSHA heat rule/i).waitFor({ timeout: 15_000 });
     await assertEditorialRows(page.locator(".trade-post"), "Shop Talk feed");
+    const heatPost = page.locator(".trade-post").filter({ hasText: "new OSHA heat rule" });
+    assert.equal((await heatPost.locator(".trade-post-comment").textContent())?.trim(), "1", "feed reply count must equal the real thread length, not seeded metadata");
+    await page.getByRole("button", { name: "Filters", exact: true }).click();
+    await page.locator(".shop-talk-filter-panel select").first().selectOption("Electrical");
+    assert.equal(await page.locator(".trade-post").count(), 0, "a nonmatching trade filter should narrow the feed");
+    await page.getByRole("button", { name: "Reset", exact: true }).click();
+    assert.equal(await page.locator(".trade-post").count(), 2, "Reset must restore the full feed using the valid All trades sentinel");
     const talkSearch = page.locator('.shop-talk-search input[type="search"]');
     await talkSearch.fill("scope");
     await assertNoHorizontalOverflow(page);

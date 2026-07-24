@@ -1067,56 +1067,6 @@
   opacity: 0.55;
 }
 
-/* ─── Shop Talk: Answered Banner + Badge ─────────────────────────────────────── */
-.shop-talk-answered-banner {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  padding: 9px 14px;
-  border-radius: var(--v2-radius-md, 6px);
-  background: color-mix(in srgb, var(--v2-success, #3a9e5f) 12%, transparent);
-  border: 1px solid color-mix(in srgb, var(--v2-success, #3a9e5f) 35%, transparent);
-  color: var(--v2-success, #3a9e5f);
-  font-size: calc(13px * var(--v2-text-scale));
-  font-weight: 600;
-}
-
-.shop-talk-answered-badge {
-  color: var(--v2-success, #3a9e5f);
-  font-size: calc(13px * var(--v2-text-scale));
-  font-weight: bold;
-}
-
-/* ─── Shop Talk: Mark as Answered Button ─────────────────────────────────────── */
-.shop-talk-mark-answered-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  border: 1px solid color-mix(in srgb, var(--v2-success, #3a9e5f) 50%, transparent);
-  border-radius: var(--v2-radius-md, 6px);
-  background: color-mix(in srgb, var(--v2-success, #3a9e5f) 10%, transparent);
-  color: var(--v2-success, #3a9e5f);
-  font: inherit;
-  font-size: calc(13px * var(--v2-text-scale));
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.15s;
-}
-
-.shop-talk-mark-answered-btn:hover {
-  background: color-mix(in srgb, var(--v2-success, #3a9e5f) 20%, transparent);
-}
-
-.shop-talk-persona-header {
-  padding: 8px 16px 0;
-  font-size: calc(13px * var(--v2-text-scale));
-  font-weight: 600;
-  color: var(--v2-text-muted);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
 /* Post type chips */
 .v2-st-type-selector { display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }
 .v2-st-type-chip { padding: 6px 12px; border: 1px solid var(--v2-border); border-radius: 20px; font-size: calc(13px * var(--v2-text-scale)); cursor: pointer; background: var(--v2-surface-muted); color: var(--v2-text-muted); white-space: nowrap; }
@@ -1136,11 +1086,6 @@
 }
 .v2-st-sub-fields { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
 .v2-st-sub-input { padding: 8px 10px; border: 1px solid var(--v2-border); border-radius: var(--v2-radius-sm); background: var(--v2-surface); color: var(--v2-text); font-size: calc(13px * var(--v2-text-scale)); width: 100%; box-sizing: border-box; }
-
-/* Filter pills */
-.v2-st-filter-row { display: flex; gap: 6px; overflow-x: auto; padding: 10px 16px; border-bottom: 1px solid var(--v2-border); }
-.v2-st-filter-pill { padding: 5px 12px; border: 1px solid var(--v2-border); border-radius: 20px; font-size: calc(13px * var(--v2-text-scale)); cursor: pointer; background: var(--v2-surface-muted); color: var(--v2-text-muted); white-space: nowrap; flex-shrink: 0; }
-.v2-st-filter-pill.is-active { background: var(--v2-accent-soft); color: var(--v2-accent-text); border-color: var(--v2-accent); }
 
 /* Post type badge */
 .v2-st-type-badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 20px; font-size: calc(13px * var(--v2-text-scale)); font-weight: var(--v2-weight-bold); margin-bottom: 4px; }
@@ -1166,17 +1111,9 @@
 .v2-st-reply-input { flex: 1; padding: 8px 10px; border: 1px solid var(--v2-border); border-radius: var(--v2-radius-sm); background: var(--v2-surface-muted); color: var(--v2-text); font-size: calc(13px * var(--v2-text-scale)); }
 .v2-st-reply-send-btn { padding: 8px 14px; background: var(--v2-accent); color: white; border: none; border-radius: var(--v2-radius-sm); font-size: calc(13px * var(--v2-text-scale)); font-weight: var(--v2-weight-bold); cursor: pointer; }
 
-/* Trending tags */
-.v2-st-trending-row { display: flex; align-items: center; gap: 6px; overflow-x: auto; padding: 8px 16px; border-bottom: 1px solid var(--v2-border); scrollbar-width: none; -webkit-mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 28px), transparent 100%); mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 28px), transparent 100%); }
-.v2-st-trending-row::-webkit-scrollbar { display: none; }
-.v2-st-trending-label { display: inline-flex; align-items: center; gap: 3px; font-size: calc(13px * var(--v2-text-scale)); font-weight: var(--v2-weight-bold); letter-spacing: 0.07em; text-transform: uppercase; color: var(--v2-text-muted); white-space: nowrap; flex-shrink: 0; }
-.v2-st-trending-pill { padding: 4px 11px; border: 1px solid color-mix(in srgb, var(--v2-border) 70%, transparent); border-radius: var(--v2-radius-pill); background: var(--v2-surface-muted); color: var(--v2-text-muted); font-size: calc(13px * var(--v2-text-scale)); font-weight: var(--v2-weight-strong); cursor: pointer; white-space: nowrap; flex-shrink: 0; transition: border-color 0.12s, background 0.12s, color 0.12s; }
-.v2-st-trending-pill:hover { border-color: var(--v2-accent); color: var(--v2-text); }
-.v2-st-trending-pill.is-active { border-color: var(--v2-accent); background: var(--v2-accent-soft); color: var(--v2-accent-text); }
-
 /* Rep badges */
-.v2-st-rep-badge { display: inline-flex; align-items: center; gap: 3px; padding: 2px 7px; background: color-mix(in srgb, #f59e0b 12%, transparent); color: var(--v2-warning); border-radius: var(--v2-radius-pill); font-size: calc(13px * var(--v2-text-scale)); font-weight: var(--v2-weight-bold); }
-.v2-st-my-rep-badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; background: color-mix(in srgb, #f59e0b 14%, transparent); color: var(--v2-warning); border-radius: var(--v2-radius-pill); font-size: calc(13px * var(--v2-text-scale)); font-weight: var(--v2-weight-bold); white-space: nowrap; }
+.v2-st-rep-badge { display: inline-flex; align-items: center; gap: 3px; padding: 2px 7px; background: var(--v2-warning-soft); color: var(--v2-warning); border-radius: var(--v2-radius-pill); font-size: calc(13px * var(--v2-text-scale)); font-weight: var(--v2-weight-bold); }
+.v2-st-my-rep-badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; background: var(--v2-warning-soft); color: var(--v2-warning); border-radius: var(--v2-radius-pill); font-size: calc(13px * var(--v2-text-scale)); font-weight: var(--v2-weight-bold); white-space: nowrap; }
 
 /* Helpful vote button */
 .v2-st-helpful-btn { display: inline-flex; align-items: center; gap: 4px; background: none; border: none; color: var(--v2-text-muted); font-size: calc(13px * var(--v2-text-scale)); cursor: pointer; padding: 4px 0; transition: color 0.12s; }
@@ -1246,12 +1183,12 @@
   letter-spacing: 0.03em;
   text-transform: uppercase;
 }
-.flair-question   { background: rgba(232,168,87,0.18); color: #c47a1a; }
-.flair-discussion { background: rgba(107,159,212,0.18); color: #4a7fad; }
-.flair-code-talk  { background: rgba(122,194,122,0.18); color: #3a8a3a; }
-.flair-compliance { background: rgba(212,122,122,0.18); color: #b03a3a; }
-.flair-tip        { background: rgba(168,122,194,0.18); color: #7a3aad; }
-.flair-humor      { background: rgba(136,136,136,0.15); color: #666; }
+.flair-question   { background: var(--v2-warning-soft); color: var(--v2-warning); }
+.flair-discussion { background: var(--v2-info-soft); color: var(--v2-info); }
+.flair-code-talk  { background: var(--v2-success-soft); color: var(--v2-success); }
+.flair-compliance { background: var(--v2-danger-soft); color: var(--v2-danger); }
+.flair-tip        { background: var(--v2-accent-soft); color: var(--v2-accent-text); }
+.flair-humor      { background: var(--v2-surface-muted); color: var(--v2-text-muted); }
 
 .shop-post-card-meta {
   display: flex;
@@ -1345,8 +1282,8 @@
   font-weight: var(--v2-weight-strong);
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  background: rgba(212,122,122,0.18);
-  color: #b03a3a;
+  background: var(--v2-danger-soft);
+  color: var(--v2-danger);
   margin-bottom: 2px;
 }
 
@@ -1445,6 +1382,13 @@
   color: var(--flair-color, var(--accent));
   background: color-mix(in srgb, var(--flair-color, var(--accent)) 12%, transparent);
 }
+
+.flair-option.is-warning { --flair-color: var(--v2-warning); }
+.flair-option.is-info { --flair-color: var(--v2-info); }
+.flair-option.is-success { --flair-color: var(--v2-success); }
+.flair-option.is-danger { --flair-color: var(--v2-danger); }
+.flair-option.is-accent { --flair-color: var(--v2-accent-text); }
+.flair-option.is-neutral { --flair-color: var(--v2-text-muted); }
 
 .new-post-modal-footer {
   position: sticky;
@@ -1795,9 +1739,7 @@
 }
 
 @media (max-width: 640px) {
-  .shop-talk-flair-row,
-  .v2-st-filter-row,
-  .v2-st-trending-row {
+  .shop-talk-flair-row {
     padding-right: 24px;
     -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 24px), transparent);
     mask-image: linear-gradient(90deg, #000 calc(100% - 24px), transparent);
@@ -2105,17 +2047,6 @@
 
   .trade-community-card {
     flex: 0 0 138px;
-    scroll-snap-align: start;
-  }
-
-  .shop-talk-community-layout .v2-st-filter-row {
-    scroll-padding-inline: 16px;
-    scroll-snap-type: x proximity;
-    -webkit-mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 26px), transparent 100%);
-    mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 26px), transparent 100%);
-  }
-
-  .shop-talk-community-layout .v2-st-filter-pill {
     scroll-snap-align: start;
   }
 
@@ -2573,13 +2504,6 @@
   padding-top: 0;
 }
 
-@media (max-width: 640px) {
-  .shop-talk-community-layout.community-open .v2-st-filter-row,
-  .shop-talk-community-layout.community-open .v2-st-trending-row {
-    display: none;
-  }
-}
-
 html[data-rivt-compact-device="true"] .shop-talk-community-layout .shop-talk-sidebar {
   gap: 10px;
   padding-bottom: calc(96px + env(safe-area-inset-bottom));
@@ -2973,13 +2897,11 @@ html[data-rivt-compact-device="true"] .shop-talk-community-layout .shop-talk-sea
 }
 
 .shop-talk-community-layout :is(.shop-post-bookmark, .v2-st-reply-btn, .v2-st-helpful-btn),
-.v2-st-filter-pill,
-.v2-st-trending-pill,
 .v2-st-reply-send-btn {
   min-height: 44px;
 }
 
-.shop-talk-layout :is(.flair-chip, .shop-talk-saved-btn, .v2-st-filter-pill) {
+.shop-talk-layout :is(.flair-chip, .shop-talk-saved-btn) {
   display: inline-flex;
   min-width: 44px;
   min-height: 44px;
@@ -3052,6 +2974,18 @@ html[data-rivt-compact-device="true"] .shop-talk-community-layout .shop-talk-sea
 
   .shop-talk-community-layout > .shop-talk-detail {
     order: 4;
+  }
+
+  .shop-talk-community-layout.community-open > .shop-talk-primary-tabs {
+    order: 0;
+  }
+
+  .shop-talk-community-layout.community-open > .shop-talk-sidebar {
+    order: 1;
+  }
+
+  .shop-talk-community-layout.community-open > .shop-talk-feed-panel {
+    order: 2;
   }
 
   .shop-talk-community-layout.mobile-detail-open > .shop-talk-sidebar,
@@ -3282,11 +3216,35 @@ html[data-rivt-compact-device="true"] .shop-talk-community-layout .shop-talk-sea
   margin-left: auto;
 }
 
-/* Old multi-row controls remain in source only while we preserve filter compatibility. */
-.shop-talk-layout .v2-st-filter-row,
-.shop-talk-layout .v2-st-trending-row,
-.shop-talk-layout .shop-talk-persona-header {
-  display: none;
+.shop-talk-active-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-color: var(--v2-accent);
+  background: var(--v2-accent-soft);
+  color: var(--v2-accent-text);
+}
+
+.shop-talk-feed-loading {
+  display: grid;
+}
+
+.shop-talk-post-skeleton {
+  min-height: 152px;
+  border-bottom: 1px solid var(--v2-border);
+  background:
+    linear-gradient(90deg, transparent, color-mix(in srgb, var(--v2-surface-raised) 78%, transparent), transparent),
+    linear-gradient(var(--v2-surface-muted), var(--v2-surface-muted)) 16px 22px / 42px 42px no-repeat,
+    linear-gradient(var(--v2-surface-muted), var(--v2-surface-muted)) 70px 26px / 34% 12px no-repeat,
+    linear-gradient(var(--v2-surface-muted), var(--v2-surface-muted)) 16px 82px / 72% 16px no-repeat,
+    linear-gradient(var(--v2-surface-muted), var(--v2-surface-muted)) 16px 112px / 54% 12px no-repeat;
+  background-size: 220px 100%, 42px 42px, 34% 12px, 72% 16px, 54% 12px;
+  animation: shop-talk-skeleton 1.4s ease-in-out infinite;
+}
+
+@keyframes shop-talk-skeleton {
+  0% { background-position: -220px 0, 16px 22px, 70px 26px, 16px 82px, 16px 112px; }
+  100% { background-position: calc(100% + 220px) 0, 16px 22px, 70px 26px, 16px 82px, 16px 112px; }
 }
 
 .shop-talk-community-directory {

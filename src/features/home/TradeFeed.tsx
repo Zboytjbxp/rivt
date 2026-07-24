@@ -26,9 +26,9 @@ const AVAIL_KEY = "rivt.availability.v1";
 const GET_STARTED_DISMISS_KEY = "rivt.homeGetStarted.dismissed.v1";
 type Availability = "available" | "limited" | "booked";
 const AVAIL_LABEL: Record<Availability, string> = {
-  available: "Available this week",
-  limited: "Limited availability",
-  booked: "Booked up",
+  available: "Private note: Available",
+  limited: "Private note: Limited",
+  booked: "Private note: Booked",
 };
 const AVAIL_ORDER: Availability[] = ["available", "limited", "booked"];
 const SETUP_RECORD_BASELINE = 0;
@@ -411,7 +411,8 @@ export function TradeFeed({
             type="button"
             className={`trade-feed-avail is-${availability}`}
             onClick={cycleAvailability}
-            aria-label={`Availability: ${AVAIL_LABEL[availability]}. Tap to change.`}
+            aria-label={`${AVAIL_LABEL[availability]}. Stored only on this device. Tap to change.`}
+            title="Private availability note stored only on this device"
           >
             <span className="trade-feed-avail-dot" />
             {AVAIL_LABEL[availability]}
@@ -462,7 +463,7 @@ export function TradeFeed({
                   <span className="trade-feed-paperwork-icon" aria-hidden="true"><FileText size={18} /></span>
                   <span className="trade-feed-paperwork-copy">
                     <strong>{record.title || `${label} draft`}</strong>
-                    <small>{label} draft{amount ? ` - ${amount}` : ""}</small>
+                    <small>{amount || "Untitled"}</small>
                   </span>
                   <span className="trade-feed-paperwork-action">Continue</span>
                 </button>
@@ -560,7 +561,7 @@ export function TradeFeed({
           <div className="trade-feed-empty">
             <MessageCircle size={26} />
             <b>No posts yet</b>
-            <span>Use Ask to start one.</span>
+            <button type="button" className="v2-secondary-button" onClick={onAsk}>Ask the trades</button>
           </div>
         ) : (
           trendingPosts.map((post) => (

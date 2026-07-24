@@ -1,4 +1,4 @@
-import { Fragment, type CSSProperties, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowLeft,
   AlertTriangle,
@@ -8,7 +8,6 @@ import {
   CheckCircle2,
   ExternalLink,
   Flag,
-  Hash,
   ImagePlus,
   MessageCircle,
   Newspaper,
@@ -349,13 +348,13 @@ function ReportSheet({
   );
 }
 
-const FLAIR_CONFIG: Record<PostFlair, { color: string; description: string }> = {
-  "Question": { color: "#e8a857", description: "Looking for a specific answer" },
-  "Discussion": { color: "#6b9fd4", description: "Open conversation, multiple perspectives" },
-  "Code Talk": { color: "#7ac27a", description: "Building codes, inspections, compliance details" },
-  "Compliance": { color: "#d47a7a", description: "Licensing, permits, legal requirements" },
-  "Tip": { color: "#a87ac2", description: "Share a field technique or shortcut" },
-  "Humor": { color: "#888", description: "Keep it trade-relevant" },
+const FLAIR_CONFIG: Record<PostFlair, { tone: string; description: string }> = {
+  "Question": { tone: "warning", description: "Looking for a specific answer" },
+  "Discussion": { tone: "info", description: "Open conversation, multiple perspectives" },
+  "Code Talk": { tone: "success", description: "Building codes, inspections, compliance details" },
+  "Compliance": { tone: "danger", description: "Licensing, permits, legal requirements" },
+  "Tip": { tone: "accent", description: "Share a field technique or shortcut" },
+  "Humor": { tone: "neutral", description: "Keep it trade-relevant" },
 };
 
 const POST_TYPE_CHIPS: { type: PostType; emoji: string; label: string }[] = [
@@ -539,8 +538,7 @@ function ShopTalkNewPostModal({
                 <button
                   key={f}
                   type="button"
-                  className={`flair-option${flair === f ? " selected" : ""}`}
-                  style={{ "--flair-color": FLAIR_CONFIG[f].color } as CSSProperties}
+                  className={`flair-option is-${FLAIR_CONFIG[f].tone}${flair === f ? " selected" : ""}`}
                   onClick={() => setFlair(f)}
                 >
                   {f}
@@ -696,6 +694,7 @@ function ShopTalkNewPostModal({
 export function ShopTalkView({
   profile,
   communityPosts,
+  communityPostsLoaded,
   communities,
   newsItems,
   initialQuery,
@@ -725,6 +724,7 @@ export function ShopTalkView({
 }: {
   profile: AccountProfile;
   communityPosts: CommunityPost[];
+  communityPostsLoaded: boolean;
   communities: CommunityDisplay[];
   newsItems: NewsItem[];
   initialQuery: string;
@@ -769,6 +769,7 @@ export function ShopTalkView({
     () => new Set(communities.filter((community) => community.joined).map((community) => community.slug)),
   );
   const [communityQuery, setCommunityQuery] = useState("");
+  const [communityName, setCommunityName] = useState("");
   const [communityCreateOpen, setCommunityCreateOpen] = useState(false);
   const [communityCreateError, setCommunityCreateError] = useState<string | null>(null);
   const [communityCreateBusy, setCommunityCreateBusy] = useState(false);
@@ -798,10 +799,6 @@ export function ShopTalkView({
   const [bookmarkedIds, setBookmarkedIds] = useState<Set<string>>(() => readStringSet("rivt.shopTalkBookmarks.v1"));
   const [showBookmarked, setShowBookmarked] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
-  // Legacy tag filters are intentionally dormant while the single filter sheet is active.
-  const [activeTrendingTag, setActiveTrendingTag] = useState<string | null>(null);
-  const trendingTags: string[] = [];
-  const [locallyAnswered, setLocallyAnswered] = useState<Set<string>>(new Set());
   const [filterType, setFilterType] = useState<PostType | "all">(() => readShopTalkFilterPrefs().filterType);
   const displayNews = liveNews.length ? liveNews : newsItems;
   const [selectedNewsId, setSelectedNewsId] = useState(displayNews[0]?.id ?? 0);
@@ -898,7 +895,7 @@ export function ShopTalkView({
   }
 
   async function handleCreateCommunity(confirmDuplicate = false) {
-    const name = communityQuery.trim();
+    const name = communityName.trim();
     if (name.length < 2) return;
     setCommunityCreateBusy(true);
     setCommunityCreateError(null);
@@ -913,7 +910,7 @@ export function ShopTalkView({
       if (result?.community) {
         onCommunityCreated(result.community);
         setSelectedCommunitySlug(result.community.slug);
-        setCommunityQuery("");
+        setCommunityName("");
         setCommunityCreateOpen(false);
         setActiveTab("talk");
         return;
@@ -1195,8 +1192,7 @@ export function ShopTalkView({
     : { upvotes: 0, downvotes: 0, reaction: null, serverOwned: reactionStatus === "ready", pending: false };
   const canDeleteSelectedPost = Boolean(selectedPost && selectedPost.author === profile.displayName && !selectedPost.badge);
   const SelectedCommunityIcon = selectedCommunity?.icon;
-  const _selectedTradeThreads = filteredPosts.filter((post) => post.trade === selectedJobTrade || post.trade === "General");
-  const _reactionLedgerLabel = reactionStatus === "ready"
+  const reactionLedgerLabel = reactionStatus === "ready"
     ? "Server-backed"
     : reactionStatus === "loading"
       ? "Syncing"
@@ -1444,69 +1440,28 @@ export function ShopTalkView({
                       {showBookmarked ? <BookmarkCheck size={14} /> : <Bookmark size={14} />}
                       Saved ({bookmarkedIds.size})
                     </button>
-                    {answerQueueOnly && <button type="button" onClick={() => setAnswerQueueOnly(false)}>{primaryTrade} queue</button>}
+                    {answerQueueOnly && <button type="button" className="shop-talk-active-filter" onClick={() => setAnswerQueueOnly(false)} aria-label={`Clear ${primaryTrade} answer queue filter`}>{primaryTrade} queue <X size={14} aria-hidden="true" /></button>}
                     <button type="button" className="shop-talk-filter-reset" onClick={() => {
-                      setTradeFilter("All"); setFlairFilter("All"); setFilterType("all"); setSortMode("hot"); setShowBookmarked(false); setAnswerQueueOnly(false);
+                      setTradeFilter("All trades"); setFlairFilter("All"); setFilterType("all"); setSortMode("hot"); setShowBookmarked(false); setAnswerQueueOnly(false);
                     }}>Reset</button>
                   </div>
                 </section>
               )}
 
-              <div className="v2-st-filter-row" aria-label="Filter by post type">
-                {([
-                  { type: "all" as const, emoji: "", label: "All" },
-                  { type: "question" as const, emoji: "❓", label: "Questions" },
-                  { type: "sub-request" as const, emoji: "🔧", label: "Sub Requests" },
-                  { type: "safety" as const, emoji: "⚠️", label: "Safety" },
-                  { type: "general" as const, emoji: "💬", label: "General" },
-                ] satisfies { type: PostType | "all"; emoji: string; label: string }[]).map((f) => (
-                  <button
-                    key={f.type}
-                    type="button"
-                    className={`v2-st-filter-pill${filterType === f.type ? " is-active" : ""}`}
-                    onClick={() => setFilterType(f.type)}
-                  >
-                    {f.label}
-                  </button>
-                ))}
-              </div>
-
-              {/* Trending tags */}
-              {trendingTags.length > 0 && (
-                <div className="v2-st-trending-row" aria-label="Trending tags">
-                  <span className="v2-st-trending-label"><Hash size={11} /> Trending</span>
-                  <button
-                    key="all"
-                    type="button"
-                    className={`v2-st-trending-pill${activeTrendingTag === null ? " is-active" : ""}`}
-                    onClick={() => setActiveTrendingTag(null)}
-                  >
-                    All
-                  </button>
-                  {trendingTags.map((tag) => (
-                    <button
-                      key={tag}
-                      type="button"
-                      className={`v2-st-trending-pill${activeTrendingTag === tag ? " is-active" : ""}`}
-                      onClick={() => setActiveTrendingTag(prev => prev === tag ? null : tag)}
-                    >
-                      {tag}
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              {persona && (
-                <div className="shop-talk-persona-header">
-                  <span>{persona.shopTalkLabel}</span>
-                </div>
-              )}
               <div className="shop-post-list">
-                {sortedPosts.length === 0 ? (
+                {!communityPostsLoaded ? (
+                  <div className="shop-talk-feed-loading" aria-label="Loading Shop Talk posts">
+                    {[1, 2, 3].map((item) => <div key={item} className="shop-talk-post-skeleton" />)}
+                  </div>
+                ) : sortedPosts.length === 0 ? (
                   <EmptyState
                     icon={MessageCircle}
                     title="No matching Shop Talk posts"
-                    description={talkQuery ? "Clear the search or broaden the trade filter." : "Start the first useful post in this community."}
+                    description={talkQuery
+                      ? "Clear the search or broaden the trade filter."
+                      : selectedCommunity
+                        ? "Start the first useful post in this community."
+                        : "Start the first useful Shop Talk post."}
                     actionLabel={talkQuery ? "Clear search" : "Create post"}
                     onAction={talkQuery ? () => setTalkQuery("") : () => setNewPostOpen(true)}
                   />
@@ -1551,7 +1506,7 @@ export function ShopTalkView({
                   </div>
                   <label className="input-control">
                     <span>Community name</span>
-                    <input type="text" value={communityQuery} onChange={(event) => setCommunityQuery(event.target.value)} placeholder="Jacksonville finish carpentry" />
+                    <input type="text" value={communityName} onChange={(event) => setCommunityName(event.target.value)} placeholder="Jacksonville finish carpentry" />
                   </label>
                   <div className="community-audience-picker" aria-label="Community audience">
                     {([
@@ -1566,8 +1521,8 @@ export function ShopTalkView({
                   </div>
                   <p className="community-audience-description">{communityAudienceDescription(communityCreateAudience)}</p>
                   <div className="community-create-actions">
-                    <button type="button" className="v2-secondary-button" onClick={() => setCommunityCreateOpen(false)}>Cancel</button>
-                    <button type="button" className="v2-primary-button" onClick={() => void handleCreateCommunity()} disabled={communityCreateBusy || !communityQuery.trim()}>
+                    <button type="button" className="v2-secondary-button" onClick={() => { setCommunityCreateOpen(false); setCommunityName(""); }}>Cancel</button>
+                    <button type="button" className="v2-primary-button" onClick={() => void handleCreateCommunity()} disabled={communityCreateBusy || !communityName.trim()}>
                       {communityCreateBusy ? "Creating..." : "Create community"}
                     </button>
                   </div>
@@ -1876,13 +1831,6 @@ export function ShopTalkView({
                   )}
                 </div>
               </div>
-              {locallyAnswered.has(selectedPost.id) && (
-                <div className="shop-talk-answered-banner">
-                  <CheckCircle2 size={15} />
-                  You marked this as answered
-                </div>
-              )}
-
               <div className="shop-question-actions">
                 <button
                   type="button"
@@ -1918,27 +1866,17 @@ export function ShopTalkView({
                   <Flag size={15} />
                   Report
                 </button>
-                {selectedPost.author === profile.displayName &&
-                  selectedPost.status !== "Verified Fix" &&
-                  !locallyAnswered.has(selectedPost.id) && (
-                  <button
-                    type="button"
-                    className="shop-talk-mark-answered-btn"
-                    onClick={() => setLocallyAnswered(prev => new Set([...prev, selectedPost.id]))}
-                  >
-                    <CheckCircle2 size={15} />
-                    Mark as answered
-                  </button>
-                )}
               </div>
 
               <section className="answer-composer">
                 <div className="answer-composer-byline">
                   <div>
                     <span>Answer as {profile.displayName}</span>
-                    <strong>{profileBadges.length ? profileBadges.join(", ") : "New contributor"}</strong>
+                    <strong>{reactionStatus === "ready"
+                      ? profileBadges.length ? profileBadges.join(", ") : "New contributor"
+                      : `Reputation: ${reactionLedgerLabel.toLowerCase()}`}</strong>
                   </div>
-                  <span className="v2-st-my-rep-badge"><Star size={12} /> {myTotalRep} rep</span>
+                  {reactionStatus === "ready" ? <span className="v2-st-my-rep-badge"><Star size={12} /> {myTotalRep} rep</span> : null}
                   <span className="answer-trade-tag">{selectedPost.trade}</span>
                 </div>
                 <div className="answer-guidance-card">

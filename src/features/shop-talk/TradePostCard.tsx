@@ -17,25 +17,24 @@ import type { CommunityReactionState } from "./ShopTalkView";
 import "../home/trade-feed.css";
 
 // Map a post's trade to its community label + icon so cards read like the references.
-const TRADE_COMMUNITY: Record<string, { label: string; icon: typeof Hammer; tone: string }> = {
-  Carpentry: { label: "Carpentry Talk", icon: Hammer, tone: "#7a4a24" },
-  Electrical: { label: "Electrical Talk", icon: Wrench, tone: "#1c1c1c" },
-  Plumbing: { label: "Plumbing Talk", icon: Wrench, tone: "#0f5f6b" },
-  Tile: { label: "Tile Talk", icon: Wrench, tone: "#3b2a6b" },
-  Cabinetry: { label: "Cabinetry Talk", icon: Hammer, tone: "#6b4a1c" },
-  Jacksonville: { label: "Jacksonville Trades", icon: Building2, tone: "#0f6b7a" },
-  General: { label: "General Talk", icon: Users, tone: "#444" },
+const TRADE_COMMUNITY: Record<string, { label: string; icon: typeof Hammer }> = {
+  Carpentry: { label: "Carpentry Talk", icon: Hammer },
+  Electrical: { label: "Electrical Talk", icon: Wrench },
+  Plumbing: { label: "Plumbing Talk", icon: Wrench },
+  Tile: { label: "Tile Talk", icon: Wrench },
+  Cabinetry: { label: "Cabinetry Talk", icon: Hammer },
+  Jacksonville: { label: "Jacksonville Trades", icon: Building2 },
+  General: { label: "General Talk", icon: Users },
 };
 
 function communityFor(trade: string) {
-  return TRADE_COMMUNITY[trade] ?? { label: `${trade} Talk`, icon: Users, tone: "#444" };
+  return TRADE_COMMUNITY[trade] ?? { label: `${trade} Talk`, icon: Users };
 }
 
-const AVATAR_TONES = ["#c2410c", "#0f766e", "#7c3aed", "#b45309", "#1d4ed8", "#be123c"];
-function avatarTone(name: string) {
+function avatarToneIndex(name: string) {
   let hash = 0;
   for (let i = 0; i < name.length; i += 1) hash = (hash * 31 + name.charCodeAt(i)) >>> 0;
-  return AVATAR_TONES[hash % AVATAR_TONES.length];
+  return hash % 6;
 }
 
 interface TradePostCardProps {
@@ -54,27 +53,28 @@ export function TradePostCard({ post, reactionState, saved, onToggleSave, onVote
     : communityFor(post.trade);
   const CIcon = community.icon;
   const score = reactionState.upvotes - reactionState.downvotes;
-  const comments = post.commentCount ?? post.replies.length;
+  const comments = post.replies.length;
   const hasThumbnail = Boolean(post.thumbnailUrl && failedThumbnailUrl !== post.thumbnailUrl);
 
-  const [shared, setShared] = useState(false);
+  const [shareResult, setShareResult] = useState<"copied" | "shared" | null>(null);
 
   function handleShare() {
     const url = `${window.location.origin}/app?post=${post.id}`;
-    const done = () => { setShared(true); window.setTimeout(() => setShared(false), 1600); };
+    const showResult = (result: "copied" | "shared") => {
+      setShareResult(result);
+      window.setTimeout(() => setShareResult(null), 1600);
+    };
     if (navigator.share) {
-      navigator.share({ title: post.title, url }).then(done).catch(() => {});
+      navigator.share({ title: post.title, url }).then(() => showResult("shared")).catch(() => {});
     } else if (navigator.clipboard) {
-      navigator.clipboard.writeText(url).then(done).catch(() => {});
-    } else {
-      done();
+      navigator.clipboard.writeText(url).then(() => showResult("copied")).catch(() => {});
     }
   }
 
   return (
     <article className="trade-post">
       <header className="trade-post-head">
-        <span className="trade-post-avatar" style={{ background: avatarTone(post.author) }}>
+        <span className={`trade-post-avatar is-tone-${avatarToneIndex(post.author)}`}>
           {post.author.slice(0, 1).toUpperCase()}
         </span>
         <div className="trade-post-byline">
@@ -139,11 +139,11 @@ export function TradePostCard({ post, reactionState, saved, onToggleSave, onVote
         </button>
         <button
           type="button"
-          className={shared ? "trade-post-icon is-saved" : "trade-post-icon"}
-          aria-label={shared ? "Link copied" : "Share"}
+          className={shareResult ? "trade-post-icon is-saved" : "trade-post-icon"}
+          aria-label={shareResult === "copied" ? "Link copied" : shareResult === "shared" ? "Shared" : "Share"}
           onClick={handleShare}
         >
-          {shared ? <Check size={18} /> : <Share2 size={18} />}
+          {shareResult ? <Check size={18} /> : <Share2 size={18} />}
         </button>
       </footer>
     </article>
