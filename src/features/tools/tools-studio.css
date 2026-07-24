@@ -8504,6 +8504,209 @@
   transform: scale(0.98);
 }
 
+@media (max-width: 360px) {
+  .v2-tools-app.is-calculator-fullscreen .heavy-calc-main.length-mode .fraction-calc-left.fractions-hidden {
+    grid-template-rows: 100px 36px 34px 145px minmax(172px, 1fr);
+  }
+
+  .v2-tools-app.is-calculator-fullscreen .fraction-calc-left.fractions-hidden .fraction-display {
+    min-height: 100px;
+    padding-block: 12px 6px;
+  }
+
+  .v2-tools-app.is-calculator-fullscreen .fraction-calc-left.fractions-hidden .fraction-unit-row button,
+  .v2-tools-app.is-calculator-fullscreen .fraction-calc-left.fractions-hidden .fraction-action-row button {
+    min-height: 0;
+    height: 100%;
+  }
+
+  .v2-tools-app.is-calculator-fullscreen .fraction-calc-left.fractions-hidden .calc-tape-queue {
+    min-height: 145px;
+    gap: 4px;
+    padding: 4px 6px 6px;
+  }
+
+  .v2-tools-app.is-calculator-fullscreen .fraction-calc-left.fractions-hidden .calc-tape-rows {
+    gap: 4px;
+  }
+
+  .v2-tools-app.is-calculator-fullscreen .fraction-calc-left.fractions-hidden .calc-tape-check {
+    min-height: 36px;
+  }
+
+  .v2-tools-app.is-calculator-fullscreen .fraction-calc-left.fractions-hidden .calc-tape-value {
+    padding-block: 2px;
+  }
+
+  .v2-tools-app.is-calculator-fullscreen .fraction-calc-left.fractions-hidden .calc-tape-value strong {
+    font-size: calc(14px * var(--v2-text-scale));
+  }
+}
+
+.calc-tape-queue {
+  min-height: 144px;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 8px;
+  overflow: hidden;
+  border: 1px solid var(--v2-border);
+  border-radius: var(--v2-radius-lg);
+  padding: 10px;
+  background: var(--v2-surface-muted);
+}
+
+.calc-tape-queue > header,
+.calc-history-section > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.calc-tape-queue > header > div {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.calc-tape-queue > header svg {
+  color: var(--v2-accent);
+}
+
+.calc-tape-queue > header strong,
+.calc-history-section > header h3 {
+  margin: 0;
+  color: var(--v2-text);
+  font-size: calc(14px * var(--v2-text-scale));
+}
+
+.calc-tape-queue > header > span,
+.calc-history-section > header span,
+.calc-history-section > header > strong {
+  color: var(--v2-text-muted);
+  font-size: calc(12px * var(--v2-text-scale));
+  font-weight: var(--v2-weight-bold);
+}
+
+.calc-tape-rows {
+  min-height: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-content: start;
+  gap: 6px;
+  overflow-y: auto;
+}
+
+.calc-tape-rows.is-history {
+  grid-template-columns: 1fr;
+  overflow: visible;
+}
+
+.calc-tape-row {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr);
+  align-items: stretch;
+  overflow: hidden;
+  border: 1px solid var(--v2-border);
+  border-radius: var(--v2-radius-md);
+  background: var(--v2-surface);
+}
+
+.calc-tape-row button {
+  border: 0;
+  background: transparent;
+  color: var(--v2-text);
+}
+
+.calc-tape-check {
+  min-height: 46px;
+  display: grid;
+  place-items: center;
+  border-right: 1px solid var(--v2-border) !important;
+  color: var(--v2-text-muted) !important;
+}
+
+.calc-tape-check[aria-pressed="true"] {
+  background: var(--v2-success-soft);
+  color: var(--v2-success) !important;
+}
+
+.calc-tape-value {
+  min-width: 0;
+  display: grid;
+  align-content: center;
+  gap: 2px;
+  padding: 5px 8px;
+  text-align: left;
+}
+
+.calc-tape-value span {
+  overflow: hidden;
+  color: var(--v2-text-muted);
+  font-size: calc(10px * var(--v2-text-scale));
+  font-weight: var(--v2-weight-bold);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.calc-tape-value strong {
+  overflow: hidden;
+  color: var(--v2-text);
+  font-size: calc(16px * var(--v2-text-scale));
+  font-variant-numeric: tabular-nums;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.calc-tape-row.is-used {
+  opacity: 0.56;
+}
+
+.calc-tape-row.is-used .calc-tape-value strong {
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+}
+
+.calc-tape-empty {
+  grid-column: 1 / -1;
+  display: grid;
+  place-content: center;
+  gap: 3px;
+  min-height: 88px;
+  color: var(--v2-text-muted);
+  text-align: center;
+}
+
+.calc-tape-empty strong {
+  color: var(--v2-text);
+  font-size: calc(14px * var(--v2-text-scale));
+}
+
+.calc-tape-empty span {
+  font-size: calc(12px * var(--v2-text-scale));
+}
+
+.calc-enter-key {
+  display: grid !important;
+  place-content: center;
+  gap: 0;
+}
+
+.calc-enter-key strong {
+  font-size: calc(20px * var(--v2-text-scale));
+  line-height: 0.9;
+}
+
+.calc-enter-key small {
+  color: currentColor;
+  font-size: calc(9px * var(--v2-text-scale));
+  font-weight: var(--v2-weight-bold);
+  letter-spacing: 0.08em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
 .unit-metric-readout {
   cursor: default;
   pointer-events: none;
@@ -8714,6 +8917,38 @@
 .calc-history-clear:hover {
   border-color: var(--v2-danger);
   color: var(--v2-danger);
+}
+
+.calc-history-section {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border-bottom: 1px solid var(--v2-border);
+}
+
+.calc-history-section > header {
+  padding: 2px;
+}
+
+.calc-history-section > header > div {
+  display: grid;
+  gap: 2px;
+}
+
+.calc-history-section .calc-history-list,
+.calc-history-section .calc-history-clear {
+  width: 100%;
+  margin: 0;
+  padding-right: 0;
+  padding-left: 0;
+}
+
+.calc-history-section .calc-history-list {
+  padding: 0;
+}
+
+.calc-history-section .calc-history-empty.is-compact {
+  padding: 24px 16px;
 }
 
 .calc-settings-list {
@@ -9553,6 +9788,43 @@ html[data-rivt-compact-device="true"] .v2-tools-app.is-calculator-fullscreen .fr
 html[data-rivt-compact-device="true"] .v2-tools-app.is-calculator-fullscreen .heavy-calc-main.length-mode .fraction-calc-left {
   height: 100%;
   grid-template-rows: minmax(108px, auto) auto auto minmax(120px, 3fr) minmax(176px, 4fr);
+}
+
+html[data-rivt-compact-device="true"] .v2-tools-app.is-calculator-fullscreen .heavy-calc-main.length-mode .fraction-calc-left.fractions-hidden {
+  grid-template-rows: 100px 36px 34px 145px minmax(172px, 1fr);
+}
+
+html[data-rivt-compact-device="true"] .v2-tools-app.is-calculator-fullscreen .fraction-calc-left.fractions-hidden .fraction-display {
+  min-height: 100px;
+  padding-block: 12px 6px;
+}
+
+html[data-rivt-compact-device="true"] .v2-tools-app.is-calculator-fullscreen .fraction-calc-left.fractions-hidden .fraction-unit-row button,
+html[data-rivt-compact-device="true"] .v2-tools-app.is-calculator-fullscreen .fraction-calc-left.fractions-hidden .fraction-action-row button {
+  min-height: 0;
+  height: 100%;
+}
+
+html[data-rivt-compact-device="true"] .v2-tools-app.is-calculator-fullscreen .fraction-calc-left.fractions-hidden .calc-tape-queue {
+  min-height: 145px;
+  gap: 4px;
+  padding: 4px 6px 6px;
+}
+
+html[data-rivt-compact-device="true"] .v2-tools-app.is-calculator-fullscreen .fraction-calc-left.fractions-hidden .calc-tape-rows {
+  gap: 4px;
+}
+
+html[data-rivt-compact-device="true"] .v2-tools-app.is-calculator-fullscreen .fraction-calc-left.fractions-hidden .calc-tape-check {
+  min-height: 36px;
+}
+
+html[data-rivt-compact-device="true"] .v2-tools-app.is-calculator-fullscreen .fraction-calc-left.fractions-hidden .calc-tape-value {
+  padding-block: 2px;
+}
+
+html[data-rivt-compact-device="true"] .v2-tools-app.is-calculator-fullscreen .fraction-calc-left.fractions-hidden .calc-tape-value strong {
+  font-size: calc(14px * var(--v2-text-scale));
 }
 
 html[data-rivt-compact-device="true"] .v2-tools-app.is-calculator-fullscreen .fraction-display {

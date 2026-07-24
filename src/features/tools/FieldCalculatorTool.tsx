@@ -1,4 +1,4 @@
-import { ArrowLeft, Clipboard, Clock3, Copy, RotateCcw, Ruler, Settings2, Trash2, X } from "lucide-react";
+import { ArrowLeft, Check, Clipboard, Clock3, Copy, ListChecks, RotateCcw, Ruler, Settings2, Trash2, X } from "lucide-react";
 import { type CSSProperties, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { DialogBackdrop, DialogSurface } from "../../components/ui";
@@ -12,7 +12,9 @@ type FractionLayout = "tape" | "grouped";
 
 const CALCULATOR_PREFS_KEY = "rivt.calculatorPrefs.v1";
 const CALCULATOR_HISTORY_KEY = "rivt.calculatorHistory.v1";
+const CALCULATOR_TAPE_LIST_KEY = "rivt.calculatorTapeList.v1";
 const CALCULATOR_HISTORY_LIMIT = 8;
+const CALCULATOR_TAPE_LIST_LIMIT = 60;
 const UNITS_PER_MM = 160;
 const UNITS_PER_INCH = 4064;
 const UNITS_PER_FOOT = UNITS_PER_INCH * 12;
@@ -58,12 +60,30 @@ type CalculationHistoryEntry = {
   inputMode: InputMode;
   activeUnit?: ActiveUnit;
   qualifier?: TapeQualifier;
+  approximate?: boolean;
+};
+
+type TapeMeasurementEntry = {
+  id: string;
+  resultUnits: number;
+  inputMode: InputMode;
+  activeUnit?: ActiveUnit;
+  qualifier?: TapeQualifier;
+  approximate?: boolean;
+  used: boolean;
+};
+
+type TapePresentation = {
+  units: number;
+  qualifier: TapeQualifier;
+  approximate: boolean;
 };
 
 type CalculatorPreferences = {
   inputMode: InputMode;
   imperialNotation: ImperialNotation;
   fractionLayout: FractionLayout;
+  fractionKeysVisible: boolean;
 };
 
 type QuickEntryOption = {
@@ -248,6 +268,7 @@ const DEFAULT_CALCULATOR_PREFERENCES: CalculatorPreferences = {
   inputMode: "imperial",
   imperialNotation: "inches",
   fractionLayout: "tape",
+  fractionKeysVisible: true,
 };
 
 function formatNumber(value: number, digits = 2) {
@@ -274,6 +295,48 @@ function reduceFraction(thirtySeconds: number) {
 
 function roundToSixteenth(units: number) {
   return Math.round(units / UNITS_PER_SIXTEENTH) * UNITS_PER_SIXTEENTH;
+}
+
+function qualifierValue(qualifier: TapeQualifier) {
+  if (qualifier === "heavy") return 1;
+  if (qualifier === "light") return -1;
+  return 0;
+}
+
+function exactTapeUnits(units: number, qualifier: TapeQualifier) {
+  return units + qualifierValue(qualifier) * UNITS_PER_THIRTY_SECOND;
+}
+
+function presentationFromExactUnits(exactUnits: number, preferredAnchorUnits?: number): TapePresentation {
+  const safeUnits = Math.max(0, exactUnits);
+  const roundedThirtySecond = Math.round(safeUnits / UNITS_PER_THIRTY_SECOND);
+  const roundedUnits = roundedThirtySecond * UNITS_PER_THIRTY_SECOND;
+  const approximate = Math.abs(safeUnits - roundedUnits) > 0.5;
+
+  if (roundedThirtySecond % 2 === 0) {
+    return {
+      units: roundedUnits,
+      qualifier: "exact",
+      approximate,
+    };
+  }
+
+  if (preferredAnchorUnits !== undefined) {
+    const preferredMark = Math.round(preferredAnchorUnits / UNITS_PER_THIRTY_SECOND);
+    if (preferredMark % 2 === 0 && Math.abs(preferredMark - roundedThirtySecond) === 1) {
+      return {
+        units: preferredMark * UNITS_PER_THIRTY_SECOND,
+        qualifier: roundedThirtySecond > preferredMark ? "heavy" : "light",
+        approximate,
+      };
+    }
+  }
+
+  return {
+    units: (roundedThirtySecond - 1) * UNITS_PER_THIRTY_SECOND,
+    qualifier: "heavy",
+    approximate,
+  };
 }
 
 function fractionLabelFromSixteenth(value: number) {
@@ -325,10 +388,15 @@ function formatInchesMeasurement(units: number) {
   return `${sign}${totalInches}${fraction ? ` ${fraction}` : ""}"`;
 }
 
-function formatImperialMeasurement(units: number, activeUnit: ActiveUnit, qualifier: TapeQualifier = "exact") {
+function formatImperialMeasurement(
+  units: number,
+  activeUnit: ActiveUnit,
+  qualifier: TapeQualifier = "exact",
+  approximate = false,
+) {
   const measurement = activeUnit === "feet" ? formatMeasurement(units) : formatInchesMeasurement(units);
-  if (qualifier === "exact") return measurement;
-  return `${measurement} ${qualifier === "heavy" ? "H" : "L"}`;
+  const tapeMeasurement = qualifier === "exact" ? measurement : `${measurement} ${qualifier === "heavy" ? "H" : "L"}`;
+  return approximate ? `≈ ${tapeMeasurement}` : tapeMeasurement;
 }
 
 function valueFromImperialEntry(feetText: string, inchesText: string, fraction32: number) {
@@ -382,25 +450,9 @@ function computeOperation(leftUnits: number, operator: Operator, rightUnits: num
     ? rightUnits / UNITS_PER_MM
     : rightUnits / UNITS_PER_INCH;
 
-  if (operator === "x") {
-    const result = leftUnits * scalar;
-    return inputMode === "imperial" ? roundToSixteenth(result) : Math.round(result);
-  }
+  if (operator === "x") return Math.round(leftUnits * scalar);
   if (!scalar) return leftUnits;
-  const result = leftUnits / scalar;
-  return inputMode === "imperial" ? roundToSixteenth(result) : Math.round(result);
-}
-
-function qualifierValue(qualifier: TapeQualifier) {
-  if (qualifier === "heavy") return 1;
-  if (qualifier === "light") return -1;
-  return 0;
-}
-
-function qualifierFromValue(value: number): TapeQualifier {
-  if (value > 0) return "heavy";
-  if (value < 0) return "light";
-  return "exact";
+  return Math.round(leftUnits / scalar);
 }
 
 function computeImperialTapeOperation(
@@ -409,18 +461,23 @@ function computeImperialTapeOperation(
   operator: Operator,
   rightUnits: number,
   rightQualifier: TapeQualifier,
+  inputApproximate = false,
 ) {
   if (operator === "x" || operator === "/") {
-    return { units: computeOperation(leftUnits, operator, rightUnits, "imperial"), qualifier: "exact" as const };
+    const leftExact = exactTapeUnits(leftUnits, leftQualifier);
+    const rightExact = exactTapeUnits(rightUnits, rightQualifier);
+    const scalar = rightExact / UNITS_PER_INCH;
+    if (!scalar) return { units: leftUnits, qualifier: leftQualifier, approximate: inputApproximate };
+    const exactResult = operator === "x" ? leftExact * scalar : leftExact / scalar;
+    const presentation = presentationFromExactUnits(exactResult);
+    return { ...presentation, approximate: inputApproximate || presentation.approximate };
   }
 
   const direction = operator === "+" ? 1 : -1;
-  const qualifierTotal = qualifierValue(leftQualifier) + direction * qualifierValue(rightQualifier);
-  const carry = qualifierTotal >= 2 ? 1 : qualifierTotal <= -2 ? -1 : 0;
-  return {
-    units: roundToSixteenth(leftUnits + direction * rightUnits + carry * UNITS_PER_SIXTEENTH),
-    qualifier: qualifierFromValue(qualifierTotal - carry * 2),
-  };
+  const preferredAnchor = leftUnits + direction * rightUnits;
+  const exactResult = exactTapeUnits(leftUnits, leftQualifier) + direction * exactTapeUnits(rightUnits, rightQualifier);
+  const presentation = presentationFromExactUnits(exactResult, preferredAnchor);
+  return { ...presentation, approximate: inputApproximate || presentation.approximate };
 }
 
 function formatOperator(operator: Operator) {
@@ -434,8 +491,9 @@ function formatForMode(
   mode: InputMode,
   activeUnit: ActiveUnit = "inches",
   qualifier: TapeQualifier = "exact",
+  approximate = false,
 ) {
-  return mode === "metric" ? formatMillimeters(units) : formatImperialMeasurement(units, activeUnit, qualifier);
+  return mode === "metric" ? formatMillimeters(units) : formatImperialMeasurement(units, activeUnit, qualifier, approximate);
 }
 
 function readCalculatorPreferences(): CalculatorPreferences {
@@ -445,6 +503,7 @@ function readCalculatorPreferences(): CalculatorPreferences {
       inputMode: parsed?.inputMode === "metric" ? "metric" : "imperial",
       imperialNotation: parsed?.imperialNotation === "feet-inches" ? "feet-inches" : "inches",
       fractionLayout: parsed?.fractionLayout === "grouped" ? "grouped" : "tape",
+      fractionKeysVisible: parsed?.fractionKeysVisible !== false,
     };
   } catch {
     return DEFAULT_CALCULATOR_PREFERENCES;
@@ -471,11 +530,32 @@ function readCalculatorHistory(): CalculationHistoryEntry[] {
   }
 }
 
+function readTapeMeasurements(): TapeMeasurementEntry[] {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(CALCULATOR_TAPE_LIST_KEY) ?? "[]") as unknown;
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .filter((entry): entry is TapeMeasurementEntry => {
+        if (!entry || typeof entry !== "object") return false;
+        const candidate = entry as Partial<TapeMeasurementEntry>;
+        return typeof candidate.id === "string"
+          && typeof candidate.resultUnits === "number"
+          && Number.isFinite(candidate.resultUnits)
+          && (candidate.inputMode === "imperial" || candidate.inputMode === "metric")
+          && typeof candidate.used === "boolean";
+      })
+      .slice(-CALCULATOR_TAPE_LIST_LIMIT);
+  } catch {
+    return [];
+  }
+}
+
 export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
   const [initialPreferences] = useState<CalculatorPreferences>(() => readCalculatorPreferences());
   const [inputMode, setInputMode] = useState<InputMode>(initialPreferences.inputMode);
   const [imperialNotation, setImperialNotation] = useState<ImperialNotation>(initialPreferences.imperialNotation);
   const [fractionLayout, setFractionLayout] = useState<FractionLayout>(initialPreferences.fractionLayout);
+  const [fractionKeysVisible, setFractionKeysVisible] = useState(initialPreferences.fractionKeysVisible);
   const [activeUnit, setActiveUnit] = useState<ActiveUnit>(initialPreferences.imperialNotation === "feet-inches" ? "feet" : "inches");
   const [feetText, setFeetText] = useState("0");
   const [inchesText, setInchesText] = useState("0");
@@ -484,12 +564,16 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
   const [metricTenths, setMetricTenths] = useState(0);
   const [accumulatorUnits, setAccumulatorUnits] = useState<number | null>(null);
   const [accumulatorQualifier, setAccumulatorQualifier] = useState<TapeQualifier>("exact");
+  const [accumulatorApproximate, setAccumulatorApproximate] = useState(false);
   const [pendingOperator, setPendingOperator] = useState<Operator | null>(null);
   const [resultUnits, setResultUnits] = useState<number | null>(null);
   const [entryQualifier, setEntryQualifier] = useState<TapeQualifier>("exact");
   const [resultQualifier, setResultQualifier] = useState<TapeQualifier>("exact");
+  const [entryApproximate, setEntryApproximate] = useState(false);
+  const [resultApproximate, setResultApproximate] = useState(false);
   const [historyLabel, setHistoryLabel] = useState("Ready");
   const [calculationHistory, setCalculationHistory] = useState<CalculationHistoryEntry[]>(() => readCalculatorHistory());
+  const [tapeMeasurements, setTapeMeasurements] = useState<TapeMeasurementEntry[]>(() => readTapeMeasurements());
   const [historyOpen, setHistoryOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -499,6 +583,10 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
     : valueFromImperialEntry(feetText, inchesText, fraction32);
   const displayValueUnits = resultUnits ?? entryValueUnits;
   const displayQualifier = resultUnits === null ? entryQualifier : resultQualifier;
+  const displayApproximate = resultUnits === null ? entryApproximate : resultApproximate;
+  const displayExactUnits = inputMode === "imperial"
+    ? exactTapeUnits(displayValueUnits, displayQualifier)
+    : displayValueUnits;
   const fractionButtons = fractionLayout === "grouped" ? GROUPED_FRACTION_BUTTONS : FRACTION_BUTTONS;
 
   useEffect(() => {
@@ -507,19 +595,25 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
         inputMode,
         imperialNotation,
         fractionLayout,
+        fractionKeysVisible,
       } satisfies CalculatorPreferences));
     } catch { /* harmless preference */ }
-  }, [fractionLayout, imperialNotation, inputMode]);
+  }, [fractionKeysVisible, fractionLayout, imperialNotation, inputMode]);
 
   useEffect(() => {
     try { localStorage.setItem(CALCULATOR_HISTORY_KEY, JSON.stringify(calculationHistory)); } catch { /* harmless device history */ }
   }, [calculationHistory]);
+
+  useEffect(() => {
+    try { localStorage.setItem(CALCULATOR_TAPE_LIST_KEY, JSON.stringify(tapeMeasurements)); } catch { /* harmless device tape list */ }
+  }, [tapeMeasurements]);
 
   function recordCalculation(
     expression: string,
     nextResultUnits: number,
     qualifier: TapeQualifier = "exact",
     mode = inputMode,
+    approximate = false,
   ) {
     const nextEntry: CalculationHistoryEntry = {
       id: `${mode}:${activeUnit}:${expression}:${Math.round(nextResultUnits)}`,
@@ -528,6 +622,7 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
       inputMode: mode,
       activeUnit: mode === "imperial" ? activeUnit : undefined,
       qualifier: mode === "imperial" ? qualifier : undefined,
+      approximate: mode === "imperial" ? approximate : undefined,
     };
     setCalculationHistory((current) => [
       nextEntry,
@@ -548,7 +643,12 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
     setMetricTenths(fields.metricTenths);
   }
 
-  function setEntryFromValue(nextUnits: number, mode = inputMode, qualifier: TapeQualifier = "exact") {
+  function setEntryFromValue(
+    nextUnits: number,
+    mode = inputMode,
+    qualifier: TapeQualifier = "exact",
+    approximate = false,
+  ) {
     if (mode === "metric") {
       setMetricEntryFromValue(nextUnits);
     } else {
@@ -557,21 +657,29 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
     setResultUnits(null);
     setEntryQualifier(mode === "imperial" ? qualifier : "exact");
     setResultQualifier("exact");
+    setEntryApproximate(mode === "imperial" ? approximate : false);
+    setResultApproximate(false);
   }
 
   function switchMode(nextMode: InputMode) {
     if (nextMode === inputMode) return;
-    const base = displayValueUnits;
+    const base = displayExactUnits;
     setInputMode(nextMode);
     if (nextMode === "metric") {
       setMetricEntryFromValue(base);
+      setEntryQualifier("exact");
+      setEntryApproximate(false);
     } else {
       const nextUnit = imperialNotation === "feet-inches" ? activeUnit : "inches";
+      const presentation = presentationFromExactUnits(base);
       setActiveUnit(nextUnit);
-      setImperialEntryFromValue(base, nextUnit);
+      setImperialEntryFromValue(presentation.units, nextUnit);
+      setEntryQualifier(presentation.qualifier);
+      setEntryApproximate(presentation.approximate);
     }
-    setEntryQualifier("exact");
+    setResultUnits(null);
     setResultQualifier("exact");
+    setResultApproximate(false);
     setCopied(false);
   }
 
@@ -606,6 +714,8 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
       setResultUnits(null);
       setEntryQualifier("exact");
       setResultQualifier("exact");
+      setEntryApproximate(false);
+      setResultApproximate(false);
       setCopied(false);
       return;
     }
@@ -619,6 +729,8 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
     setResultUnits(null);
     setEntryQualifier("exact");
     setResultQualifier("exact");
+    setEntryApproximate(false);
+    setResultApproximate(false);
     setCopied(false);
   }
 
@@ -632,6 +744,8 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
       setResultUnits(null);
       setEntryQualifier("exact");
       setResultQualifier("exact");
+      setEntryApproximate(false);
+      setResultApproximate(false);
       return;
     }
 
@@ -640,6 +754,8 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
       setResultUnits(null);
       setEntryQualifier("exact");
       setResultQualifier("exact");
+      setEntryApproximate(false);
+      setResultApproximate(false);
       return;
     }
 
@@ -648,6 +764,8 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
     setResultUnits(null);
     setEntryQualifier("exact");
     setResultQualifier("exact");
+    setEntryApproximate(false);
+    setResultApproximate(false);
   }
 
   function clearAll() {
@@ -658,10 +776,13 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
     setMetricTenths(0);
     setAccumulatorUnits(null);
     setAccumulatorQualifier("exact");
+    setAccumulatorApproximate(false);
     setPendingOperator(null);
     setResultUnits(null);
     setEntryQualifier("exact");
     setResultQualifier("exact");
+    setEntryApproximate(false);
+    setResultApproximate(false);
     setHistoryLabel("Ready");
     setCopied(false);
   }
@@ -685,17 +806,21 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
   function scaleEntry(multiplier: number) {
     const base = resultUnits ?? entryValueUnits;
     const qualifier = displayQualifier;
-    const next = inputMode === "imperial" && qualifier !== "exact" && multiplier === 2
-      ? Math.max(0, roundToSixteenth(base * multiplier + qualifierValue(qualifier) * UNITS_PER_SIXTEENTH))
-      : inputMode === "imperial"
-        ? Math.max(0, roundToSixteenth(base * multiplier))
-        : Math.max(0, Math.round(base * multiplier));
-    const expression = `${formatForMode(base, inputMode, activeUnit, qualifier)} ${multiplier === 2 ? "× 2" : "÷ 2"}`;
-    setEntryFromValue(next);
+    const expression = `${formatForMode(base, inputMode, activeUnit, qualifier, displayApproximate)} ${multiplier === 2 ? "× 2" : "÷ 2"}`;
+    if (inputMode === "imperial") {
+      const presentation = presentationFromExactUnits(exactTapeUnits(base, qualifier) * multiplier);
+      const approximate = displayApproximate || presentation.approximate;
+      setEntryFromValue(presentation.units, "imperial", presentation.qualifier, approximate);
+      recordCalculation(expression, presentation.units, presentation.qualifier, "imperial", approximate);
+    } else {
+      const next = Math.max(0, Math.round(base * multiplier));
+      setEntryFromValue(next);
+      recordCalculation(expression, next);
+    }
     setHistoryLabel(expression);
-    recordCalculation(expression, next);
     setAccumulatorUnits(null);
     setAccumulatorQualifier("exact");
+    setAccumulatorApproximate(false);
     setPendingOperator(null);
     setCopied(false);
   }
@@ -705,6 +830,8 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
     setResultUnits(null);
     setEntryQualifier("exact");
     setResultQualifier("exact");
+    setEntryApproximate(false);
+    setResultApproximate(false);
     setCopied(false);
   }
 
@@ -713,6 +840,8 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
     setResultUnits(null);
     setEntryQualifier("exact");
     setResultQualifier("exact");
+    setEntryApproximate(false);
+    setResultApproximate(false);
     setCopied(false);
   }
 
@@ -722,7 +851,8 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
       return [{ label: `.${digit} mm`, ariaLabel: `Enter point ${digit} millimeters`, value: Number(digit) }];
     }
 
-    return (IMPERIAL_DIGIT_FRACTIONS[digit] ?? []).map((value) => {
+    const values = fractionKeysVisible ? (IMPERIAL_DIGIT_FRACTIONS[digit] ?? []) : FRACTION_BUTTONS;
+    return values.map((value) => {
       const label = fractionLabelFromSixteenth(value);
       return { label, ariaLabel: `Enter ${label}`, value };
     });
@@ -731,39 +861,83 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
   function applyOperator(operator: Operator) {
     const current = resultUnits ?? entryValueUnits;
     const currentQualifier = displayQualifier;
+    const currentApproximate = displayApproximate;
     const nextAccumulator = accumulatorUnits !== null && pendingOperator
       ? inputMode === "imperial"
-        ? computeImperialTapeOperation(accumulatorUnits, accumulatorQualifier, pendingOperator, current, currentQualifier)
-        : { units: computeOperation(accumulatorUnits, pendingOperator, current, inputMode), qualifier: "exact" as const }
-      : { units: current, qualifier: currentQualifier };
+        ? computeImperialTapeOperation(
+            accumulatorUnits,
+            accumulatorQualifier,
+            pendingOperator,
+            current,
+            currentQualifier,
+            accumulatorApproximate || currentApproximate,
+          )
+        : {
+            units: computeOperation(accumulatorUnits, pendingOperator, current, inputMode),
+            qualifier: "exact" as const,
+            approximate: false,
+          }
+      : { units: current, qualifier: currentQualifier, approximate: currentApproximate };
 
     setAccumulatorUnits(nextAccumulator.units);
     setAccumulatorQualifier(nextAccumulator.qualifier);
+    setAccumulatorApproximate(nextAccumulator.approximate);
     setPendingOperator(operator);
-    setHistoryLabel(`${formatForMode(nextAccumulator.units, inputMode, activeUnit, nextAccumulator.qualifier)} ${formatOperator(operator)}`);
+    setHistoryLabel(`${formatForMode(nextAccumulator.units, inputMode, activeUnit, nextAccumulator.qualifier, nextAccumulator.approximate)} ${formatOperator(operator)}`);
     setEntryFromValue(0);
   }
 
   function evaluate() {
     const current = resultUnits ?? entryValueUnits;
     const currentQualifier = displayQualifier;
+    const currentApproximate = displayApproximate;
     if (accumulatorUnits === null || !pendingOperator) {
+      const currentExactUnits = inputMode === "imperial"
+        ? exactTapeUnits(current, currentQualifier)
+        : current;
+      if (currentExactUnits <= 0) {
+        setHistoryLabel("Enter a measurement before adding it");
+        return;
+      }
+      setTapeMeasurements((entries) => [...entries, {
+        id: crypto.randomUUID(),
+        resultUnits: current,
+        inputMode,
+        activeUnit: inputMode === "imperial" ? activeUnit : undefined,
+        qualifier: inputMode === "imperial" ? currentQualifier : undefined,
+        approximate: inputMode === "imperial" ? currentApproximate : undefined,
+        used: false,
+      }].slice(-CALCULATOR_TAPE_LIST_LIMIT));
       setResultUnits(current);
       setResultQualifier(currentQualifier);
-      setHistoryLabel(formatForMode(current, inputMode, activeUnit, currentQualifier));
+      setResultApproximate(currentApproximate);
+      setHistoryLabel(`Added ${formatForMode(current, inputMode, activeUnit, currentQualifier, currentApproximate)} to Tape List`);
       return;
     }
 
     const nextResult = inputMode === "imperial"
-      ? computeImperialTapeOperation(accumulatorUnits, accumulatorQualifier, pendingOperator, current, currentQualifier)
-      : { units: computeOperation(accumulatorUnits, pendingOperator, current, inputMode), qualifier: "exact" as const };
-    const expression = `${formatForMode(accumulatorUnits, inputMode, activeUnit, accumulatorQualifier)} ${formatOperator(pendingOperator)} ${formatForMode(current, inputMode, activeUnit, currentQualifier)}`;
+      ? computeImperialTapeOperation(
+          accumulatorUnits,
+          accumulatorQualifier,
+          pendingOperator,
+          current,
+          currentQualifier,
+          accumulatorApproximate || currentApproximate,
+        )
+      : {
+          units: computeOperation(accumulatorUnits, pendingOperator, current, inputMode),
+          qualifier: "exact" as const,
+          approximate: false,
+        };
+    const expression = `${formatForMode(accumulatorUnits, inputMode, activeUnit, accumulatorQualifier, accumulatorApproximate)} ${formatOperator(pendingOperator)} ${formatForMode(current, inputMode, activeUnit, currentQualifier, currentApproximate)}`;
     setResultUnits(nextResult.units);
     setResultQualifier(nextResult.qualifier);
+    setResultApproximate(nextResult.approximate);
     setHistoryLabel(expression);
-    recordCalculation(expression, nextResult.units, nextResult.qualifier);
+    recordCalculation(expression, nextResult.units, nextResult.qualifier, inputMode, nextResult.approximate);
     setAccumulatorUnits(null);
     setAccumulatorQualifier("exact");
+    setAccumulatorApproximate(false);
     setPendingOperator(null);
     setCopied(false);
   }
@@ -771,7 +945,7 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
   async function copyCalculatorResult() {
     const text = inputMode === "metric"
       ? formatMillimeters(displayValueUnits)
-      : formatImperialMeasurement(displayValueUnits, activeUnit, displayQualifier);
+      : formatImperialMeasurement(displayValueUnits, activeUnit, displayQualifier, displayApproximate);
 
     try {
       await navigator.clipboard.writeText(text);
@@ -781,6 +955,46 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
     }
   }
 
+  function formatTapeMeasurement(entry: TapeMeasurementEntry) {
+    return formatForMode(
+      entry.resultUnits,
+      entry.inputMode,
+      entry.activeUnit ?? "inches",
+      entry.qualifier ?? "exact",
+      entry.approximate ?? false,
+    );
+  }
+
+  function toggleTapeMeasurement(entryId: string) {
+    setTapeMeasurements((entries) => entries.map((entry) => (
+      entry.id === entryId ? { ...entry, used: !entry.used } : entry
+    )));
+  }
+
+  function reuseTapeMeasurement(entry: TapeMeasurementEntry, closeHistory = false) {
+    setInputMode(entry.inputMode);
+    if (entry.inputMode === "metric") {
+      setMetricEntryFromValue(entry.resultUnits);
+    } else {
+      const restoredUnit = entry.activeUnit ?? "inches";
+      setActiveUnit(restoredUnit);
+      setImperialNotation(restoredUnit === "feet" ? "feet-inches" : imperialNotation);
+      setImperialEntryFromValue(entry.resultUnits, restoredUnit);
+    }
+    setAccumulatorUnits(null);
+    setAccumulatorQualifier("exact");
+    setAccumulatorApproximate(false);
+    setPendingOperator(null);
+    setResultUnits(entry.resultUnits);
+    setEntryQualifier(entry.qualifier ?? "exact");
+    setResultQualifier(entry.qualifier ?? "exact");
+    setEntryApproximate(entry.approximate ?? false);
+    setResultApproximate(entry.approximate ?? false);
+    setHistoryLabel("Loaded from Tape List");
+    setCopied(false);
+    if (closeHistory) setHistoryOpen(false);
+  }
+
   function reuseHistoryEntry(entry: CalculationHistoryEntry) {
     setInputMode(entry.inputMode);
     if (entry.inputMode === "metric") {
@@ -788,39 +1002,92 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
     } else {
       const restoredUnit = entry.activeUnit ?? "inches";
       setActiveUnit(restoredUnit);
+      setImperialNotation(restoredUnit === "feet" ? "feet-inches" : imperialNotation);
       setImperialEntryFromValue(entry.resultUnits, restoredUnit);
     }
     setAccumulatorUnits(null);
+    setAccumulatorQualifier("exact");
+    setAccumulatorApproximate(false);
     setPendingOperator(null);
     setResultUnits(entry.resultUnits);
     setEntryQualifier(entry.qualifier ?? "exact");
     setResultQualifier(entry.qualifier ?? "exact");
+    setEntryApproximate(entry.approximate ?? false);
+    setResultApproximate(entry.approximate ?? false);
     setHistoryLabel(entry.expression);
     setCopied(false);
     setHistoryOpen(false);
   }
 
-  const primaryValue = inputMode === "metric" ? formatMillimeters(displayValueUnits) : formatImperialMeasurement(displayValueUnits, activeUnit, displayQualifier);
+  function renderTapeMeasurementRow(entry: TapeMeasurementEntry, closeHistory = false) {
+    const measurementNumber = tapeMeasurements.findIndex((candidate) => candidate.id === entry.id) + 1;
+    const measurement = formatTapeMeasurement(entry);
+    return (
+      <div key={entry.id} className={`calc-tape-row${entry.used ? " is-used" : ""}`}>
+        <button
+          type="button"
+          className="calc-tape-check"
+          aria-label={`Mark ${measurement} ${entry.used ? "unused" : "used"}`}
+          aria-pressed={entry.used}
+          onClick={() => toggleTapeMeasurement(entry.id)}
+        >
+          {entry.used ? <Check size={16} /> : null}
+        </button>
+        <button
+          type="button"
+          className="calc-tape-value"
+          aria-label={`Load measurement ${measurement}`}
+          onClick={() => reuseTapeMeasurement(entry, closeHistory)}
+        >
+          <span>Measurement {measurementNumber}</span>
+          <strong>{measurement}</strong>
+        </button>
+      </div>
+    );
+  }
+
+  const metricImperialPresentation = presentationFromExactUnits(displayValueUnits);
+  const primaryValue = inputMode === "metric"
+    ? formatMillimeters(displayValueUnits)
+    : formatImperialMeasurement(displayValueUnits, activeUnit, displayQualifier, displayApproximate);
   const secondaryLabel = inputMode === "metric" ? "Meters" : "Decimal";
   const secondaryValue = inputMode === "metric"
     ? formatMeters(displayValueUnits)
-    : `${formatNumber(displayValueUnits / UNITS_PER_INCH, 3)} in`;
+    : `${formatNumber(displayExactUnits / UNITS_PER_INCH, 4)} in`;
   const metaValues = inputMode === "metric"
-    ? [formatMillimeters(displayValueUnits), formatCentimeters(displayValueUnits), formatMeters(displayValueUnits), formatMeasurement(displayValueUnits)]
-    : [
-        `${formatNumber(displayValueUnits / UNITS_PER_INCH, 3)} in`,
-        `${formatNumber(displayValueUnits / UNITS_PER_FOOT, 3)} ft`,
+    ? [
         formatMillimeters(displayValueUnits),
+        formatCentimeters(displayValueUnits),
+        formatMeters(displayValueUnits),
+        formatImperialMeasurement(
+          metricImperialPresentation.units,
+          "inches",
+          metricImperialPresentation.qualifier,
+          metricImperialPresentation.approximate,
+        ),
+      ]
+    : [
+        `${formatNumber(displayExactUnits / UNITS_PER_INCH, 4)} in`,
+        `${formatNumber(displayExactUnits / UNITS_PER_FOOT, 4)} ft`,
+        formatMillimeters(displayExactUnits),
         pendingOperator ? `${pendingOperator} pending` : displayQualifier === "exact" ? activeUnit === "feet" ? "Entering feet" : "Entering inches" : `${displayQualifier === "heavy" ? "Heavy" : "Light"} tape mark`,
       ];
-  const resultCardPrimary = inputMode === "metric" ? formatMillimeters(displayValueUnits) : formatImperialMeasurement(displayValueUnits, activeUnit, displayQualifier);
+  const resultCardPrimary = inputMode === "metric"
+    ? formatMillimeters(displayValueUnits)
+    : formatImperialMeasurement(displayValueUnits, activeUnit, displayQualifier, displayApproximate);
   const resultCardSecondaryLabel = inputMode === "metric" ? "Imperial" : "Metric";
   const resultCardSecondaryValue = inputMode === "metric"
-    ? formatInchesMeasurement(displayValueUnits)
-    : formatMillimeters(displayValueUnits);
+    ? formatImperialMeasurement(
+        metricImperialPresentation.units,
+        "inches",
+        metricImperialPresentation.qualifier,
+        metricImperialPresentation.approximate,
+      )
+    : formatMillimeters(displayExactUnits);
   const equationLabel = accumulatorUnits !== null && pendingOperator
-    ? `${formatForMode(accumulatorUnits, inputMode, activeUnit, accumulatorQualifier)} ${formatOperator(pendingOperator)} ${formatForMode(entryValueUnits, inputMode, activeUnit, entryQualifier)}`
+    ? `${formatForMode(accumulatorUnits, inputMode, activeUnit, accumulatorQualifier, accumulatorApproximate)} ${formatOperator(pendingOperator)} ${formatForMode(entryValueUnits, inputMode, activeUnit, entryQualifier, entryApproximate)}`
     : historyLabel;
+  const visibleTapeMeasurements = tapeMeasurements.slice(-5);
 
   return (
     <section className="heavy-calc-workbench fraction-calc-workbench" aria-label="Heavy 16th field calculator">
@@ -852,7 +1119,7 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
             <Settings2 size={15} />
             <span className="calc-topbar-label">Settings</span>
           </button>
-          <button type="button" className="calc-action-button" aria-label="Calculation history" onClick={() => setHistoryOpen(true)}>
+          <button type="button" className="calc-action-button" aria-label="Tape history" onClick={() => setHistoryOpen(true)}>
             <Clock3 size={15} />
             <span className="calc-topbar-label">History</span>
           </button>
@@ -870,7 +1137,7 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
       <div className="heavy-calc-shell fraction-calc-shell fraction-only-shell">
         <main className="heavy-calc-main fraction-calc-main length-mode">
           <section className="fraction-calc-grid" aria-label="Length calculator">
-            <div className="fraction-calc-left">
+            <div className={`fraction-calc-left${inputMode === "imperial" && !fractionKeysVisible ? " fractions-hidden" : ""}`}>
               <div className="calc-display-stack fraction-display">
                 <span className="fraction-history">{equationLabel}</span>
                 <strong className="calc-primary-value">{primaryValue}</strong>
@@ -920,7 +1187,7 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
                       <span>IN</span>
                       <strong>{inchesText}</strong>
                     </button>
-                    <button type="button" className={fraction32 ? "active unit-fraction" : "unit-fraction"} aria-label="Fraction input" onClick={() => { setFraction32(0); setEntryQualifier("exact"); setResultQualifier("exact"); }}>
+                    <button type="button" className={fraction32 ? "active unit-fraction" : "unit-fraction"} aria-label="Fraction input" onClick={() => { setFraction32(0); setEntryQualifier("exact"); setResultQualifier("exact"); setEntryApproximate(false); setResultApproximate(false); }}>
                       <span>FRAC</span>
                       <strong>{reduceFraction(fraction32) || "--"}</strong>
                     </button>
@@ -979,7 +1246,7 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
                     </button>
                   ))}
                 </div>
-              ) : (
+              ) : fractionKeysVisible ? (
                 <div className="fraction-strip" aria-label="Sixteenth fractions">
                   {fractionButtons.map((value) => {
                     const family = fractionFamilyFromSixteenth(value);
@@ -998,18 +1265,46 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
                     );
                   })}
                 </div>
+              ) : (
+                <section className="calc-tape-queue" aria-label="Tape List">
+                  <header>
+                    <div>
+                      <ListChecks size={17} />
+                      <strong>Tape List</strong>
+                    </div>
+                    <span>{tapeMeasurements.filter((entry) => !entry.used).length} ready</span>
+                  </header>
+                  <div className="calc-tape-rows">
+                    {visibleTapeMeasurements.length
+                      ? visibleTapeMeasurements.map((entry) => renderTapeMeasurementRow(entry))
+                      : (
+                          <div className="calc-tape-empty">
+                            <strong>No measurements yet</strong>
+                            <span>Enter a measurement, then tap Add.</span>
+                          </div>
+                        )}
+                  </div>
+                </section>
               )}
 
               <div className="calc-pad-grid fraction-pad" aria-label={inputMode === "metric" ? "Metric calculator keypad" : "Fraction calculator keypad"}>
-                {["7", "8", "9"].map((digit) => <QuickEntryDigitKey key={digit} digit={digit} options={quickEntryOptions(digit)} menuLabel={inputMode === "metric" ? `Quick decimal for ${digit}` : `Quick fractions for ${digit}`} onTap={() => handleDigit(digit)} onQuickEntry={inputMode === "metric" ? chooseMetricTenth : chooseFraction} />)}
+                {["7", "8", "9"].map((digit) => <QuickEntryDigitKey key={digit} digit={digit} options={quickEntryOptions(digit)} menuLabel={inputMode === "metric" ? `Quick decimal for ${digit}` : fractionKeysVisible ? `Quick fractions for ${digit}` : "Tape fractions"} onTap={() => handleDigit(digit)} onQuickEntry={inputMode === "metric" ? chooseMetricTenth : chooseFraction} />)}
                 <button type="button" className="op" onClick={() => applyOperator("/")}>/</button>
-                {["4", "5", "6"].map((digit) => <QuickEntryDigitKey key={digit} digit={digit} options={quickEntryOptions(digit)} menuLabel={inputMode === "metric" ? `Quick decimal for ${digit}` : `Quick fractions for ${digit}`} onTap={() => handleDigit(digit)} onQuickEntry={inputMode === "metric" ? chooseMetricTenth : chooseFraction} />)}
+                {["4", "5", "6"].map((digit) => <QuickEntryDigitKey key={digit} digit={digit} options={quickEntryOptions(digit)} menuLabel={inputMode === "metric" ? `Quick decimal for ${digit}` : fractionKeysVisible ? `Quick fractions for ${digit}` : "Tape fractions"} onTap={() => handleDigit(digit)} onQuickEntry={inputMode === "metric" ? chooseMetricTenth : chooseFraction} />)}
                 <button type="button" className="op" onClick={() => applyOperator("x")}>x</button>
-                {["1", "2", "3"].map((digit) => <QuickEntryDigitKey key={digit} digit={digit} options={quickEntryOptions(digit)} menuLabel={inputMode === "metric" ? `Quick decimal for ${digit}` : `Quick fractions for ${digit}`} onTap={() => handleDigit(digit)} onQuickEntry={inputMode === "metric" ? chooseMetricTenth : chooseFraction} />)}
+                {["1", "2", "3"].map((digit) => <QuickEntryDigitKey key={digit} digit={digit} options={quickEntryOptions(digit)} menuLabel={inputMode === "metric" ? `Quick decimal for ${digit}` : fractionKeysVisible ? `Quick fractions for ${digit}` : "Tape fractions"} onTap={() => handleDigit(digit)} onQuickEntry={inputMode === "metric" ? chooseMetricTenth : chooseFraction} />)}
                 <button type="button" className="op" onClick={() => applyOperator("-")}>-</button>
                 <button type="button" className="wide" onClick={() => handleDigit("0")}>0</button>
                 <button type="button" className="op ghost" onClick={handleBackspace} aria-label="Backspace">DEL</button>
-                <button type="button" className="eq" onClick={evaluate}>=</button>
+                <button
+                  type="button"
+                  className="eq calc-enter-key"
+                  aria-label={pendingOperator ? "Calculate result" : "Add measurement to Tape List"}
+                  onClick={evaluate}
+                >
+                  <strong>=</strong>
+                  <small>{pendingOperator ? "Solve" : "Add"}</small>
+                </button>
                 <button type="button" className="op plus" onClick={() => applyOperator("+")}>+</button>
               </div>
             </div>
@@ -1018,7 +1313,7 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
               <Clipboard size={18} />
               <span>Result</span>
               <strong>{resultCardPrimary}</strong>
-              <small>{inputMode === "metric" ? formatCentimeters(displayValueUnits) : `${formatNumber(displayValueUnits / UNITS_PER_INCH, 3)} in`}</small>
+              <small>{inputMode === "metric" ? formatCentimeters(displayValueUnits) : `${formatNumber(displayExactUnits / UNITS_PER_INCH, 4)} in`}</small>
               <div>
                 <span>{resultCardSecondaryLabel}</span>
                 <b>{resultCardSecondaryValue}</b>
@@ -1034,7 +1329,7 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
               type="button"
               tabIndex={-1}
               className={fraction32 === tick.value ? "ruler-tick major active" : tick.value % 8 === 0 ? "ruler-tick major" : "ruler-tick"}
-              onClick={() => { setFraction32(tick.value); setEntryQualifier("exact"); setResultQualifier("exact"); }}
+              onClick={() => { setFraction32(tick.value); setEntryQualifier("exact"); setResultQualifier("exact"); setEntryApproximate(false); setResultApproximate(false); }}
             >
               {tick.label}
             </button>
@@ -1087,8 +1382,18 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
               </section>
               <section>
                 <div>
+                  <strong>Fraction key visibility</strong>
+                  <span>Hide the fraction strip to expand the Tape List. Hold any number key to reach every sixteenth.</span>
+                </div>
+                <div className="calc-settings-options" role="group" aria-label="Fraction key visibility">
+                  <button type="button" className={fractionKeysVisible ? "active" : ""} onClick={() => setFractionKeysVisible(true)}>Shown</button>
+                  <button type="button" className={!fractionKeysVisible ? "active" : ""} onClick={() => setFractionKeysVisible(false)}>Hidden</button>
+                </div>
+              </section>
+              <section>
+                <div>
                   <strong>Tape precision</strong>
-                  <span>Imperial entries, conversions, and results round to the nearest 1/16 inch. Heavy and Light stay as tape-mark notes.</span>
+                  <span>Calculations resolve to 1/32 inch. Odd marks display as Heavy or Light against a 1/16 tape mark; finer results show ≈ after rounding.</span>
                 </div>
               </section>
             </div>
@@ -1102,18 +1407,55 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
             <header>
               <div>
                 <span>Calculator tape</span>
-                <h2 id="calc-history-title">Recent calculations</h2>
+                <h2 id="calc-history-title">Tape history</h2>
               </div>
-              <button type="button" className="v2-icon-button" aria-label="Close calculation history" onClick={() => setHistoryOpen(false)}>
+              <button type="button" className="v2-icon-button" aria-label="Close Tape history" onClick={() => setHistoryOpen(false)}>
                 <X size={20} />
               </button>
             </header>
+            <section className="calc-history-section" aria-labelledby="calc-tape-list-title">
+              <header>
+                <div>
+                  <h3 id="calc-tape-list-title">Tape List</h3>
+                  <span>Saved on this device</span>
+                </div>
+                <strong>{tapeMeasurements.filter((entry) => !entry.used).length} ready</strong>
+              </header>
+              {tapeMeasurements.length ? (
+                <div className="calc-tape-rows is-history">
+                  {tapeMeasurements.map((entry) => renderTapeMeasurementRow(entry, true))}
+                </div>
+              ) : (
+                <div className="calc-history-empty is-compact">
+                  <ListChecks size={22} />
+                  <strong>No measurements yet</strong>
+                  <span>Enter a measurement and tap Add.</span>
+                </div>
+              )}
+              {tapeMeasurements.some((entry) => entry.used) ? (
+                <button
+                  type="button"
+                  className="calc-history-clear"
+                  onClick={() => setTapeMeasurements((entries) => entries.filter((entry) => !entry.used))}
+                >
+                  <Trash2 size={17} />
+                  Clear used measurements
+                </button>
+              ) : null}
+            </section>
+            <section className="calc-history-section" aria-labelledby="calc-equation-history-title">
+              <header>
+                <div>
+                  <h3 id="calc-equation-history-title">Calculations</h3>
+                  <span>Most recent equations</span>
+                </div>
+              </header>
             {calculationHistory.length ? (
               <div className="calc-history-list">
                 {calculationHistory.map((entry) => (
                   <button key={entry.id} type="button" onClick={() => reuseHistoryEntry(entry)}>
                     <span>{entry.expression}</span>
-                    <strong>{formatForMode(entry.resultUnits, entry.inputMode, entry.activeUnit ?? "inches", entry.qualifier ?? "exact")}</strong>
+                    <strong>{formatForMode(entry.resultUnits, entry.inputMode, entry.activeUnit ?? "inches", entry.qualifier ?? "exact", entry.approximate ?? false)}</strong>
                     <small>Use result</small>
                   </button>
                 ))}
@@ -1131,6 +1473,7 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
                 Clear history
               </button>
             ) : null}
+            </section>
           </DialogSurface>
         </DialogBackdrop>,
         document.body,

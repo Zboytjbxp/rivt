@@ -513,7 +513,7 @@ async function clickVisibleFraction(page, label, viewportName) {
   );
 }
 
-async function chooseQuickEntry(page, digit, optionLabel, viewportName) {
+async function chooseQuickEntry(page, digit, optionLabel, viewportName, menuName = `Quick fractions for ${digit}`) {
   const key = page.getByLabel("Fraction calculator keypad").getByRole("button", {
     name: `${digit}. Hold for quick entry.`,
   });
@@ -530,7 +530,7 @@ async function chooseQuickEntry(page, digit, optionLabel, viewportName) {
   await page.waitForTimeout(quickEntryHoldMs + 80);
   await page.mouse.up();
 
-  const menu = page.getByRole("menu", { name: `Quick fractions for ${digit}` });
+  const menu = page.getByRole("menu", { name: menuName });
   await menu.waitFor({ state: "visible", timeout: 5_000 });
   const menuBox = await menu.boundingBox();
   assert.ok(menuBox, `expected quick-entry menu ${digit} to have a layout box in ${viewportName}`);
@@ -680,7 +680,7 @@ async function runToolsFlow(page, viewportName) {
   await page.getByRole("button", { name: "Calculator settings", exact: true }).click();
   const calculatorSettings = page.getByRole("dialog", { name: "Calculator settings" });
   await calculatorSettings.getByText("Tape precision", { exact: true }).waitFor({ timeout: 15_000 });
-  await calculatorSettings.getByText(/nearest 1\/16 inch/i).waitFor({ timeout: 15_000 });
+  await calculatorSettings.getByText(/resolve to 1\/32 inch/i).waitFor({ timeout: 15_000 });
   assert.equal(
     await calculatorSettings.getByRole("button", { name: "32nd precision", exact: true }).count(),
     0,
@@ -725,19 +725,40 @@ async function runToolsFlow(page, viewportName) {
     "holding 7 should offer the fast 7/8 entry without changing ordinary digit taps",
   );
   await page.getByRole("button", { name: "Clear calculator" }).click();
-  await clickVisibleFraction(page, "1/8", viewportName);
-  await page.getByLabel("Heavy, light, double, and half controls").getByRole("button", { name: "Divide measurement by two" }).click();
-  await page.locator(".calc-primary-value", { hasText: '1/16"' }).waitFor({ timeout: 15_000 });
+  await page.getByLabel("Fraction calculator keypad").getByRole("button", { name: "5" }).click();
+  await clickVisibleFraction(page, "5/8", viewportName);
+  await page.getByLabel("Fraction calculator keypad").getByRole("button", { name: "+" }).click();
+  await page.getByLabel("Heavy, light, double, and half controls").getByRole("button", { name: "Mark measurement heavy" }).click();
+  await page.getByLabel("Fraction calculator keypad").getByRole("button", { name: "Calculate result" }).click();
+  await page.locator(".calc-primary-value", { hasText: '5 5/8" H' }).waitFor({ timeout: 15_000 });
   assert.equal(
     await page.locator(".calc-primary-value").textContent(),
-    '0 1/16"',
-    "imperial division should stay on tape-measure sixteenth increments",
+    '5 5/8" H',
+    "one thirty-second above a sixteenth mark should render as Heavy",
   );
+  await page.getByRole("button", { name: "Clear calculator" }).click();
+  await page.getByLabel("Fraction calculator keypad").getByRole("button", { name: "5" }).click();
+  await clickVisibleFraction(page, "5/8", viewportName);
+  await page.getByLabel("Fraction calculator keypad").getByRole("button", { name: "-" }).click();
+  await page.getByLabel("Heavy, light, double, and half controls").getByRole("button", { name: "Mark measurement heavy" }).click();
+  await page.getByLabel("Fraction calculator keypad").getByRole("button", { name: "Calculate result" }).click();
+  await page.locator(".calc-primary-value", { hasText: '5 5/8" L' }).waitFor({ timeout: 15_000 });
   assert.equal(
-    (await page.locator(".fraction-calc-workbench").textContent())?.includes("1/32"),
-    false,
-    "imperial calculator should never render a 1/32 result",
+    await page.locator(".calc-primary-value").textContent(),
+    '5 5/8" L',
+    "one thirty-second below an intentional mark should preserve the Light reference",
   );
+  await page.getByRole("button", { name: "Clear calculator" }).click();
+  await clickVisibleFraction(page, "1/16", viewportName);
+  await page.getByLabel("Heavy, light, double, and half controls").getByRole("button", { name: "Divide measurement by two" }).click();
+  await page.locator(".calc-primary-value", { hasText: '0" H' }).waitFor({ timeout: 15_000 });
+  assert.equal(
+    await page.locator(".calc-primary-value").textContent(),
+    '0" H',
+    "an otherwise ambiguous thirty-second should default to the lower mark Heavy",
+  );
+  await page.getByLabel("Heavy, light, double, and half controls").getByRole("button", { name: "Divide measurement by two" }).click();
+  await page.locator(".calc-primary-value", { hasText: '≈ 0" H' }).waitFor({ timeout: 15_000 });
   await page.getByRole("button", { name: "Clear calculator" }).click();
   await page.getByLabel("Fraction calculator keypad").getByRole("button", { name: "6" }).click();
   await chooseQuickEntry(page, "8", "1/8", viewportName);
@@ -769,18 +790,89 @@ async function runToolsFlow(page, viewportName) {
   await page.getByLabel("Fraction calculator keypad").getByRole("button", { name: "+" }).click();
   await clickVisibleFraction(page, "1/4", viewportName);
   await page.getByLabel("Heavy, light, double, and half controls").getByRole("button", { name: "Mark measurement heavy" }).click();
-  await page.getByLabel("Fraction calculator keypad").getByRole("button", { name: "=" }).click();
+  await page.getByLabel("Fraction calculator keypad").getByRole("button", { name: "Calculate result" }).click();
   await page.locator(".calc-primary-value", { hasText: '9 5/8"' }).waitFor({ timeout: 15_000 });
   await page.getByRole("button", { name: "Clear calculator" }).click();
   await clickVisibleFraction(page, "1/2", viewportName);
   await page.getByLabel("Fraction calculator keypad").getByRole("button", { name: "+" }).click();
   await page.getByLabel("Fraction calculator keypad").getByRole("button", { name: "2" }).click();
   await clickVisibleFraction(page, "1/4", viewportName);
-  await page.getByLabel("Fraction calculator keypad").getByRole("button", { name: "=" }).click();
+  await page.getByLabel("Fraction calculator keypad").getByRole("button", { name: "Calculate result" }).click();
   await page.locator(".calc-primary-value", { hasText: '2 3/4"' }).waitFor({ timeout: 15_000 });
-  await page.getByRole("button", { name: "Calculation history" }).click();
-  const calculationHistory = page.getByRole("dialog", { name: "Recent calculations" });
+
+  for (const measurement of [
+    { whole: "1", fraction: "1/2", expected: '1 1/2"' },
+    { whole: "1", fraction: "5/16", expected: '1 5/16"' },
+    { whole: "1", fraction: "5/8", expected: '1 5/8"' },
+  ]) {
+    await page.getByRole("button", { name: "Clear calculator" }).click();
+    await page.getByLabel("Fraction calculator keypad").getByRole("button", { name: measurement.whole }).click();
+    await clickVisibleFraction(page, measurement.fraction, viewportName);
+    await page.getByLabel("Fraction calculator keypad").getByRole("button", { name: "Add measurement to Tape List" }).click();
+    await page.locator(".fraction-history", { hasText: `Added ${measurement.expected} to Tape List` }).waitFor({ timeout: 15_000 });
+  }
+
+  await page.getByRole("button", { name: "Calculator settings", exact: true }).click();
+  await calculatorSettings.getByRole("button", { name: "Hidden", exact: true }).click();
+  await calculatorSettings.getByRole("button", { name: "Close calculator settings" }).click();
+  const tapeListRegion = page.getByRole("region", { name: "Tape List" });
+  await tapeListRegion.waitFor({ timeout: 15_000 });
+  assert.equal(await page.getByLabel("Sixteenth fractions").count(), 0, "hidden fraction keys should release their workspace");
+  assert.equal(await tapeListRegion.locator(".calc-tape-row").count(), 3, "direct Enter measurements should populate the Tape List");
+
+  await page.getByRole("button", { name: "Clear calculator" }).click();
+  await page.getByLabel("Fraction calculator keypad").getByRole("button", { name: "1" }).click();
+  await chooseQuickEntry(page, "7", "15/16", viewportName, "Tape fractions");
+  assert.equal(
+    await page.getByRole("menu", { name: "Tape fractions" }).count(),
+    0,
+    "the complete hidden-key fraction menu should close after selection",
+  );
+  await page.getByLabel("Fraction calculator keypad").getByRole("button", { name: "Add measurement to Tape List" }).click();
+  await page.getByRole("button", { name: "Clear calculator" }).click();
+  await page.getByLabel("Fraction calculator keypad").getByRole("button", { name: "2" }).click();
+  await chooseQuickEntry(page, "1", "13/16", viewportName, "Tape fractions");
+  await page.getByLabel("Fraction calculator keypad").getByRole("button", { name: "Add measurement to Tape List" }).click();
+  assert.equal(
+    await tapeListRegion.locator(".calc-tape-row").count(),
+    5,
+    "hidden fraction keys should expose five recent measurements in the reclaimed workspace",
+  );
+  if (isHandsetViewport) {
+    const keypadBox = await page.getByLabel("Fraction calculator keypad").boundingBox();
+    const viewport = page.viewportSize();
+    assert.ok(keypadBox && viewport, "hidden-key calculator keypad should remain measurable");
+    assert.ok(
+      keypadBox.y + keypadBox.height <= viewport.height + 1,
+      `hidden-key calculator keypad should remain fully reachable; bottom ${keypadBox.y + keypadBox.height}px in ${viewport.height}px viewport`,
+    );
+  }
+  await page.screenshot({ path: path.join(screenshotDir, `${viewportName}-calculator-tape-list.png`), fullPage: true });
+  await page.getByRole("button", { name: 'Mark 1 1/2" used' }).click();
+  await page.reload({ waitUntil: "networkidle" });
+  await page.getByRole("heading", { name: "Heavy 16th field calculator" }).waitFor({ timeout: 15_000 });
+  await page.getByRole("region", { name: "Tape List" }).waitFor({ timeout: 15_000 });
+  assert.equal(
+    await page.getByRole("button", { name: 'Mark 1 1/2" unused' }).count(),
+    1,
+    "used Tape List state should persist after refresh",
+  );
+  await page.getByRole("button", { name: 'Load measurement 1 5/8"' }).click();
+  await page.locator(".calc-primary-value", { hasText: '1 5/8"' }).waitFor({ timeout: 15_000 });
+  await page.getByRole("button", { name: "Calculator settings", exact: true }).click();
+  await calculatorSettings.getByRole("button", { name: "Shown", exact: true }).click();
+  await calculatorSettings.getByRole("button", { name: "Close calculator settings" }).click();
+  await page.getByLabel("Sixteenth fractions").waitFor({ timeout: 15_000 });
+
+  await page.getByRole("button", { name: "Tape history" }).click();
+  const calculationHistory = page.getByRole("dialog", { name: "Tape history" });
   await calculationHistory.waitFor({ timeout: 15_000 });
+  await calculationHistory.getByRole("heading", { name: "Tape List", exact: true }).waitFor({ timeout: 15_000 });
+  assert.equal(
+    await calculationHistory.getByRole("button", { name: 'Mark 1 1/2" unused' }).count(),
+    1,
+    "Tape history should expose the persisted used state",
+  );
   const completedEquation = calculationHistory.getByRole("button").filter({ hasText: '1/2" + 2 1/4"' }).first();
   await completedEquation.getByText('2 3/4"', { exact: true }).waitFor({ timeout: 15_000 });
   await completedEquation.click();

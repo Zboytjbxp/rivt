@@ -2,30 +2,40 @@
 
 Last updated: 2026-07-24 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Tape-measure calculator precision is locally verified.
-Active packet: Heavy 16th calculator tape-increment enforcement
+Current phase: Intelligent tape-measure calculator is in final local verification.
+Active packet: Heavy 16th intelligent measurement workflow
 Repository branch: `codex/tape-measure-sixteenths`
 Production feature release commit: `b46ef953d91496f9d31c3781a8bca2b3e42e1c52`
 
-## Heavy 16th Tape-Measure Precision (Local Verification)
+## Heavy 16th Intelligent Tape Workflow (Local Verification)
 
-- Imperial entries, restored values, metric conversions, multiplication,
-  division, addition, and subtraction now resolve to the nearest 1/16 inch.
-  Internal arithmetic can retain enough precision for conversion, but the
-  field result cannot expose a 1/32-inch value.
-- Removed the old `32nd precision` preference and migration path. Existing
-  devices carrying that preference automatically return to tape behavior.
-  The settings sheet now states the real rule: imperial work rounds to the
-  nearest 1/16 inch.
-- Heavy and Light remain qualitative tape-mark notes. They no longer switch
-  into hidden +/-1/32 arithmetic; two matching notes still resolve honestly
-  to one sixteenth when measurements are combined.
-- Rendered Tools QA now proves the 32nd mode is absent, `1/8 ÷ 2` resolves to
-  `1/16`, no `1/32` result appears, and the full calculator remains contained
-  at desktop, 390px mobile, and compact-phone viewports.
-- Verified locally: lint, production build, 75 unit/frontend tests, Tools
-  rendered QA, desktop/mobile E2E, and a production dependency audit with zero
-  vulnerabilities.
+- Imperial math retains 1/32-inch working precision while speaking in
+  tape-measure language. Exact sixteenths stay exact; an odd thirty-second is
+  presented relative to a nearby sixteenth as Heavy or Light. When either
+  adjacent mark is equally valid, RIVT defaults to the lower mark Heavy.
+- Intentional references survive arithmetic: `5 5/8 + 0 H` reads
+  `5 5/8 H`, while `5 5/8 - 0 H` reads `5 5/8 L`. Results finer than 1/32
+  round to the nearest thirty-second and carry an approximation mark instead
+  of claiming false precision.
+- Pressing Enter without an operator records the displayed measurement in a
+  device-local Tape List. Duplicate cuts are preserved, each row has a
+  separate used/unused control, used rows dim and strike through, and tapping
+  a measurement reloads it without changing its completion state.
+- Fraction keys can be hidden to give their space to a compact five-item Tape
+  List. Holding any number still exposes all fifteen sixteenth fractions.
+- Rendered Tools QA locks Heavy/Light arithmetic, default-heavy behavior,
+  approximation disclosure, direct measurement entry, used-state persistence,
+  measurement reload, all-fraction access with hidden keys, and the reclaimed
+  five-measurement workspace at desktop, 390px mobile, and compact-phone
+  viewports.
+- The Tape List is explicitly device-local. No sync or crew-sharing claim is
+  made.
+- Local verification passed: `npm run lint`, `npm run build`,
+  `npm run test:unit` (75/75), `npm run test:e2e`,
+  `npm run test:ui:tools`, and `npm audit --omit=dev` (0 vulnerabilities).
+  The aggregate `npm run test` reached its database-backed integration phase
+  but timed out because `TEST_DATABASE_URL` is not configured in this
+  workspace; no integration pass is claimed.
 - Deployment: not deployed. Production remains on feature source
   `b46ef953d91496f9d31c3781a8bca2b3e42e1c52`.
 

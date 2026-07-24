@@ -10,22 +10,26 @@ Status values:
 
 Evidence must eventually link to implementation, automated tests, manual acceptance proof, and deployed build.
 
-## Traceability Addendum - 2026-07-24 Heavy 16th Tape Precision
+## Traceability Addendum - 2026-07-24 Heavy 16th Intelligent Tape Workflow
 
-- `GA-UX-003` gains a single field-readable imperial precision model:
-  sixteenth keys, calculations, restored history, and conversions all resolve
-  on the same tape-measure increment instead of exposing an optional 1/32
-  mode.
-- `GA-UX-005` gains measurement honesty evidence: settings disclose nearest-
-  1/16 rounding, Heavy/Light remain qualitative notes, and no hidden
-  thirty-second adjustment is presented as an exact tape result.
+- `GA-UX-003` gains field-notation evidence: imperial arithmetic retains
+  1/32-inch working precision, exact sixteenths stay exact, odd
+  thirty-seconds become Heavy/Light relative to a tape mark, ambiguous cases
+  default Heavy, and finer results visibly disclose approximation.
+- `GA-UX-003` also gains a device-local measurement workflow: plain Enter
+  adds the displayed value to a duplicate-safe Tape List; independent
+  used/unused controls preserve the value for later reuse; tapping a row
+  reloads the measurement.
+- `GA-UX-005` gains honesty evidence: the Tape List is labeled as device-local,
+  approximate results carry `≈`, and the feature makes no sync, sharing, or
+  false-precision claim.
 - `GA-UX-006` gains rendered desktop, 390px mobile, and compact-phone
-  assertions proving the 32nd control is absent, `1/8 ÷ 2` yields `1/16`, no
-  `1/32` result renders, and the calculator remains horizontally and
-  vertically contained.
-- `GA-OPS-007` gains local evidence from lint, production build, 75
-  unit/frontend tests, Tools rendered QA, desktop/mobile E2E, and a
-  zero-vulnerability production dependency audit.
+  assertions for persistent completion state, five visible measurements when
+  fraction keys are hidden, full sixteenth access through number-key hold,
+  and restored normal fraction-key layout.
+- `GA-OPS-007` gains repeatable Tools-smoke coverage for the Heavy/Light
+  arithmetic and Tape List journey in addition to the standard build, lint,
+  unit, E2E, and dependency gates.
 - `GA-OPS-008` is unchanged: this calculator precision branch is not deployed
   and no production evidence is claimed.
 
