@@ -2525,3 +2525,36 @@ Add one entry per staging/production deployment.
   oldest story.
 - Post-deploy proof: exact-source health was healthy and the production
   monitor passed in 551 ms with seven anonymous private-route checks.
+
+# Current Production - Heavy 16th Intelligent Tape Workflow
+
+- Environment: Production (`https://rivt.pro`)
+- Date/time/timezone: 2026-07-24 America/New_York
+- Deployer: Codex through `codex/tape-measure-sixteenths`, fast-forward merge
+  to `master`, and Railway production auto-deploy
+- Runtime feature source:
+  `077d3b5e19ffddcfd5df265e3b4483e42d9fe948`
+- Railway deployments: initial source build
+  `6109234a-31cb-4ff7-9288-62151e318cc4`; exact-source release
+  `9554c380-d331-4ed0-82ea-3bf8acfc108c`
+- Migration version before/after: unchanged (`0028_compensation_workflow`)
+- Provider/config changes: only `SOURCE_COMMIT` release metadata advanced;
+  auth, billing, PostgreSQL, object storage, Sentry, Web Push, email,
+  moderation, and rollout controls were preserved.
+- Rollback target:
+  `b46ef953d91496f9d31c3781a8bca2b3e42e1c52`; no database rollback is
+  required.
+- Automated gates: build, lint, 75 unit/frontend tests, E2E, rendered Tools
+  smoke at desktop, 390x844 mobile, and 320x568 compact-phone viewports, and
+  dependency audit with zero vulnerabilities passed. Aggregate `npm run test`
+  reached the database-backed integration phase but timed out because
+  `TEST_DATABASE_URL` is not configured; no integration pass is claimed.
+- Product evidence: exact sixteenths, Heavy/Light 1/32 notation,
+  default-Heavy ambiguity handling, visible approximation for finer results,
+  direct measurement entry, persistent used-state Tape List, complete
+  long-press fraction access, and a five-measurement hidden-key workspace.
+- Post-deploy proof: live `/api/health` returned the exact feature source with
+  PostgreSQL and S3-compatible storage healthy. The production monitor passed
+  in 545 ms with all seven anonymous private-route checks healthy, and the
+  live Tools bundle contained the Tape List, direct-add, 1/32 disclosure, and
+  fraction-key visibility strings.

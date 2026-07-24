@@ -2,12 +2,12 @@
 
 Last updated: 2026-07-24 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Intelligent tape-measure calculator is in final local verification.
+Current phase: Intelligent tape-measure calculator is production verified.
 Active packet: Heavy 16th intelligent measurement workflow
 Repository branch: `codex/tape-measure-sixteenths`
-Production feature release commit: `b46ef953d91496f9d31c3781a8bca2b3e42e1c52`
+Production feature release commit: `077d3b5e19ffddcfd5df265e3b4483e42d9fe948`
 
-## Heavy 16th Intelligent Tape Workflow (Local Verification)
+## Heavy 16th Intelligent Tape Workflow (Production Verification)
 
 - Imperial math retains 1/32-inch working precision while speaking in
   tape-measure language. Exact sixteenths stay exact; an odd thirty-second is
@@ -36,8 +36,17 @@ Production feature release commit: `b46ef953d91496f9d31c3781a8bca2b3e42e1c52`
   The aggregate `npm run test` reached its database-backed integration phase
   but timed out because `TEST_DATABASE_URL` is not configured in this
   workspace; no integration pass is claimed.
-- Deployment: not deployed. Production remains on feature source
-  `b46ef953d91496f9d31c3781a8bca2b3e42e1c52`.
+- Production deployment `9554c380-d331-4ed0-82ea-3bf8acfc108c`
+  succeeded after `SOURCE_COMMIT` was advanced to the exact feature source.
+  Live `/api/health` reports
+  `077d3b5e19ffddcfd5df265e3b4483e42d9fe948`, PostgreSQL,
+  S3-compatible object storage, migration `0028_compensation_workflow`,
+  configured Sentry, and configured Web Push.
+- `EXPECTED_SOURCE_COMMIT=077d3b5e19ffddcfd5df265e3b4483e42d9fe948
+  npm run monitor:production` passed in 545 ms with all seven anonymous
+  private-route checks healthy. The live Tools bundle contains the new Tape
+  List, direct-add action, 1/32 Heavy/Light disclosure, and fraction-key
+  visibility setting.
 
 ## Jacksonville Pre-Launch Hardening (Production Verification)
 

@@ -30,8 +30,11 @@ Evidence must eventually link to implementation, automated tests, manual accepta
 - `GA-OPS-007` gains repeatable Tools-smoke coverage for the Heavy/Light
   arithmetic and Tape List journey in addition to the standard build, lint,
   unit, E2E, and dependency gates.
-- `GA-OPS-008` is unchanged: this calculator precision branch is not deployed
-  and no production evidence is claimed.
+- `GA-OPS-008` gains production evidence: Railway deployment
+  `9554c380-d331-4ed0-82ea-3bf8acfc108c` serves feature source
+  `077d3b5e19ffddcfd5df265e3b4483e42d9fe948`; exact-source health,
+  the seven-check production monitor, and live frontend-bundle inspection all
+  passed.
 
 ## Traceability Addendum - 2026-07-24 Jacksonville Pre-Launch Hardening
 
