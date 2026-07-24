@@ -2,12 +2,12 @@
 
 Last updated: 2026-07-24 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Pre-launch hardening is locally verified; operational launch evidence remains human-owned.
+Current phase: Pre-launch hardening is production verified; operational launch evidence remains human-owned.
 Active packet: Jacksonville pre-launch honesty, billing, security, and resilience hardening
-Repository branch: `codex/pre-launch-hardening`
-Production feature release commit: `d07f32a71824bf78280740d9e8e13eb362ec2fbb`
+Repository branch: `master` (source branch: `codex/pre-launch-hardening`)
+Production feature release commit: `b46ef953d91496f9d31c3781a8bca2b3e42e1c52`
 
-## Jacksonville Pre-Launch Hardening (Local Verification)
+## Jacksonville Pre-Launch Hardening (Production Verification)
 
 - **Tier 1 — release blockers:** removed Inbox's persisted canned-reply
   simulator and its UI; retired the legacy free-form invoice email/SMS relay
@@ -58,17 +58,36 @@ Production feature release commit: `d07f32a71824bf78280740d9e8e13eb362ec2fbb`
   the production document still contains inline boot/recovery code. It blocks
   framing and limits origins today; nonce/hash conversion remains a
   defense-in-depth fast-follow, not a claim made by this packet.
-- **Deployment:** not deployed by this packet. Production remains on
-  `d07f32a71824bf78280740d9e8e13eb362ec2fbb` until the branch is reviewed,
-  the operational launch gate is genuinely green, and the standard
-  fast-forward/deploy workflow is run.
+- **Deployment:** `codex/pre-launch-hardening` was fast-forwarded into
+  `master` at `b46ef953d91496f9d31c3781a8bca2b3e42e1c52`. Railway application
+  deployment `707bdb00-693d-4b78-93e3-3b97c0f88210` succeeded, followed by
+  metadata deployment `a4e6b2e2-43f8-424b-a78b-d5415c2461ab` after
+  synchronizing `SOURCE_COMMIT`; no operational controls changed.
+- **Production proof:** live health serves exact feature source
+  `b46ef953d91496f9d31c3781a8bca2b3e42e1c52`, ready migration
+  `0028_compensation_workflow`, PostgreSQL/S3-compatible storage, configured
+  Sentry/Web Push, and the new CSP, HSTS, frame-denial, and `nosniff` headers.
+  The production monitor passed in 539 ms with open controls and all seven
+  anonymous private-route checks healthy. The immutable live main bundle
+  `/assets/index-9uanziJU.js` matches the locally verified production build;
+  `/api/client-errors` accepted a bounded deployment probe with HTTP 202, and
+  anonymous access to the retired invoice relay failed closed with HTTP 401.
+- **Authenticated-smoke boundary:** the Gate A production smoke stopped
+  before its authenticated workflow phase because it found 17 pre-existing
+  Packet03–Packet07 demo organizations in production. The billing smoke could
+  not run because the Railway service has no `RIVT_SMOKE_EMAIL` or
+  `RIVT_SMOKE_PASSWORD`. Neither result is claimed as a pass, and no production
+  data was deleted.
 - **Human-owned launch blockers — do not infer from code:** rerun and record
   the restore drill and incident rehearsal; verify backup automation satisfies
   the 24-hour RPO; run `npm run launch:readiness -- --require-ready` against
   the refreshed evidence and require exit 0; verify the live Stripe Price
-  referenced by `STRIPE_PRO_PRICE_ID` is exactly $9/month. Physical-phone
-  acceptance and a real test checkout should also be completed before the
-  Jacksonville cohort is opened.
+  referenced by `STRIPE_PRO_PRICE_ID` is exactly $9/month. Review and clean the
+  17 stale demo organizations through an approved, rollback-safe production
+  data procedure, provision dedicated smoke credentials, and rerun the
+  authenticated Gate A and billing smokes. Physical-phone acceptance and a
+  real test checkout should also be completed before the Jacksonville cohort
+  is opened.
 
 ## Shop Talk Thread Detail Redesign (Production Verification)
 

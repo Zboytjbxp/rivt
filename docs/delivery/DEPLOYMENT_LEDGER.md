@@ -1,5 +1,43 @@
 # Deployment Ledger
 
+## 2026-07-24 - Jacksonville Pre-Launch Hardening
+
+- Source commit: `b46ef953d91496f9d31c3781a8bca2b3e42e1c52`
+- Feature commits: `f6f933d`, `c6eee29`, `b46ef95`
+- Branch: `master` (source branch: `codex/pre-launch-hardening`)
+- Railway application deployment: `707bdb00-693d-4b78-93e3-3b97c0f88210`
+- Railway metadata deployment: `a4e6b2e2-43f8-424b-a78b-d5415c2461ab`
+- Production: `https://rivt.pro`
+- Scope: removed fabricated Inbox replies, retired the legacy arbitrary
+  invoice relay, corrected private-note/review/invite language, made the Pro
+  offer match enforced benefits, added server-owned Pro export/history gates,
+  returned mobile checkout to Billing, added browser crash intake and
+  production security headers, and added strict readiness to pre-deploy CI.
+- Automated gates: lint, production build, 75 unit/frontend tests,
+  desktop/mobile E2E, Tools, Shop Talk/Trade News, mobile-actions, and Work
+  lifecycle rendered smokes, targeted database integrations, production
+  dependency audit, and diff checks passed. The full serial remote-database
+  suite exceeded its 15-minute command limit without an emitted assertion
+  failure; no complete integration pass is claimed.
+- Provider/config changes: only `SOURCE_COMMIT` was synchronized to the
+  feature SHA. No operational controls or other provider settings changed.
+- Post-deploy proof: exact-source health reports ready migration
+  `0028_compensation_workflow`, healthy PostgreSQL/S3-compatible storage,
+  configured Sentry/Web Push, and live CSP/HSTS/frame-denial/`nosniff`
+  headers. The production monitor passed in 539 ms with open controls and all
+  seven anonymous private routes healthy. The live main bundle matches the
+  verified local build, client-error intake returned 202, and the retired
+  relay rejected anonymous access with 401.
+- Authenticated-smoke result: the Gate A smoke stopped on 17 pre-existing
+  Packet03–Packet07 demo organizations; billing smoke credentials were not
+  configured. No production records were changed or deleted.
+- Rollback target: `dd469acfd3d92702224669923b9e09a10937449d`
+- Remaining launch blockers: refreshed restore/incident/backup evidence and a
+  strict readiness exit of 0; approved rollback-safe cleanup of stale demo
+  organizations; dedicated production smoke credentials and passing
+  authenticated Gate A/billing smokes; verification that the live Stripe
+  Price is $9/month; physical-phone and real checkout acceptance.
+
 ## 2026-07-23 - Shop Talk Thread Detail Redesign
 
 - Source commit: `d07f32a71824bf78280740d9e8e13eb362ec2fbb`

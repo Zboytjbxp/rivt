@@ -40,11 +40,23 @@ Evidence must eventually link to implementation, automated tests, manual accepta
   audit. The full serial remote-database suite progressed without an emitted
   assertion failure but exceeded the 15-minute command limit before
   completion; no full integration pass is claimed.
-- `GA-OPS-008` remains unchanged: this branch has not been deployed and no
-  production verification is claimed. Launch remains blocked on human-owned
-  restore-drill, incident-rehearsal and verified-backup evidence producing a
-  strict readiness exit of 0, plus confirmation that the live Stripe Price is
-  $9/month.
+- `GA-OPS-008` gains production evidence: Railway deployments
+  `707bdb00-693d-4b78-93e3-3b97c0f88210` and
+  `a4e6b2e2-43f8-424b-a78b-d5415c2461ab` serve exact feature source
+  `b46ef953d91496f9d31c3781a8bca2b3e42e1c52`; health reports ready migration
+  `0028_compensation_workflow`, healthy PostgreSQL/S3-compatible storage,
+  configured Sentry/Web Push, and the new security headers. The production
+  monitor passed in 539 ms with open controls and seven healthy anonymous
+  private routes. The live main bundle matches the locally verified build,
+  client-error intake returned 202, and the retired relay failed closed for
+  anonymous access. Authenticated production acceptance remains incomplete:
+  the Gate A smoke detected 17 pre-existing demo organizations, billing smoke
+  credentials are not configured, and no production data was deleted.
+- Launch remains blocked on human-owned restore-drill, incident-rehearsal and
+  verified-backup evidence producing a strict readiness exit of 0, review and
+  rollback-safe cleanup of the stale demo organizations, provisioned smoke
+  credentials and passing authenticated smokes, plus confirmation that the
+  live Stripe Price is $9/month.
 
 ## Traceability Addendum - 2026-07-23 Shop Talk Thread Detail Redesign
 
