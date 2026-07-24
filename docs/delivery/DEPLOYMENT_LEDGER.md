@@ -1,5 +1,34 @@
 # Deployment Ledger
 
+## 2026-07-23 - Shop Talk Thread Detail Redesign
+
+- Source commit: `d07f32a71824bf78280740d9e8e13eb362ec2fbb`
+- Branch: `master` (source branch: `codex/shop-talk-thread-redesign`)
+- Railway application deployment: `46a80948-4d02-4c2c-8d39-da11b16d627e`
+- Railway metadata deployment: `f564f94f-e471-4ea2-a0fd-5c28a58cb79e`
+- Production: `https://rivt.pro`
+- Scope: selected Shop Talk threads now lead with the post, place real answers
+  before answer creation, flatten article/reaction/answer hierarchy, demote
+  delete and report to quiet icon actions, and end with an accessible answer
+  composer that is collapsed by default and sticky above mobile navigation.
+- Automated gates: build, lint, 73 unit/frontend tests, rendered Shop
+  Talk/Trade News desktop/mobile light/dark QA, desktop/mobile E2E, production
+  dependency audit, and diff checks passed. The aggregate serial database
+  phase returned no result within five minutes; no aggregate integration pass
+  is claimed.
+- Provider/config changes: only `SOURCE_COMMIT` was synchronized to the
+  feature SHA. No operational controls or other provider settings changed.
+- Post-deploy proof: exact-source health reported ready migration
+  `0028_compensation_workflow`, healthy PostgreSQL/S3-compatible storage,
+  configured Sentry/Web Push, and enabled matching-job alerts. The production
+  monitor passed in 562 ms with open controls and seven healthy anonymous
+  private routes. The immutable lazy Shop Talk bundle contains the deployed
+  collapsed-composer copy and new detail hierarchy class.
+- Rollback target: `13f8055822962af635a7624456f1c31ba6e30c62`; no
+  database rollback is required.
+- Remaining acceptance: signed-in physical-phone keyboard behavior and a long
+  real answer thread in both themes.
+
 ## 2026-07-23 - Shop Talk Linked-Article Discussion Finish
 
 - Source commit: `474babff7cffc1fee61ad06544347564d8ad9038`

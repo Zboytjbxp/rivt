@@ -31,9 +31,17 @@ Evidence must eventually link to implementation, automated tests, manual accepta
   and a zero-vulnerability production dependency audit. The aggregate serial
   database phase timed out after five minutes without a result and is not
   claimed as passed.
-- Remaining risk: the redesign is not merged or deployed; signed-in
-  physical-device acceptance should verify sticky-composer behavior with the
-  software keyboard and a long real answer thread.
+- `GA-OPS-008` gains production evidence: Railway deployments
+  `46a80948-4d02-4c2c-8d39-da11b16d627e` and
+  `f564f94f-e471-4ea2-a0fd-5c28a58cb79e` serve exact feature source
+  `d07f32a71824bf78280740d9e8e13eb362ec2fbb`; health reports ready migration
+  `0028_compensation_workflow` with healthy PostgreSQL/S3-compatible storage,
+  Sentry, Web Push, and matching-job alerts. The expected-source monitor
+  passed in 562 ms with open controls and seven healthy anonymous private
+  routes. Production bundle inspection found the collapsed-composer copy and
+  new detail hierarchy class in the lazy Shop Talk chunk.
+- Remaining risk: signed-in physical-device acceptance should verify sticky-
+  composer behavior with the software keyboard and a long real answer thread.
 
 ## Traceability Addendum - 2026-07-23 Shop Talk Linked-Article Discussion Finish
 

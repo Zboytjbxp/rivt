@@ -2,12 +2,12 @@
 
 Last updated: 2026-07-23 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Shop Talk thread-detail redesign is verified locally and awaiting review/merge.
+Current phase: Shop Talk thread-detail redesign is production verified.
 Active packet: Shop Talk selected-post hierarchy and collapsed answer composer
-Repository branch: `codex/shop-talk-thread-redesign`
-Production feature release commit: `474babff7cffc1fee61ad06544347564d8ad9038`
+Repository branch: `master` (source branch: `codex/shop-talk-thread-redesign`)
+Production feature release commit: `d07f32a71824bf78280740d9e8e13eb362ec2fbb`
 
-## Shop Talk Thread Detail Redesign (Local Verification)
+## Shop Talk Thread Detail Redesign (Production Verification)
 
 - The selected post is now the clear reading lead: one flair eyebrow, one
   sentence-case author/trade/time line, a focused title and body, and an
@@ -50,8 +50,22 @@ Production feature release commit: `474babff7cffc1fee61ad06544347564d8ad9038`
   completed its unit phase and then produced no result from the existing
   serial database integration phase before the five-minute limit; orphaned
   test processes were stopped, so no aggregate integration pass is claimed.
-- This branch is not merged or deployed. Production remains on the release
-  commit recorded above.
+- `codex/shop-talk-thread-redesign` was fast-forwarded into `master` at
+  `d07f32a71824bf78280740d9e8e13eb362ec2fbb`. Railway application deployment
+  `46a80948-4d02-4c2c-8d39-da11b16d627e` succeeded, followed by metadata
+  deployment `f564f94f-e471-4ea2-a0fd-5c28a58cb79e` after synchronizing
+  `SOURCE_COMMIT`; no operational controls or other provider settings changed.
+- Live health serves the exact feature commit with migration
+  `0028_compensation_workflow` ready and PostgreSQL/S3-compatible storage,
+  Sentry, Web Push, and matching-job alerts healthy. The expected-source
+  production monitor passed in 562 ms with open controls and all seven
+  anonymous private-route checks healthy.
+- Production bundle inspection confirmed the lazy Shop Talk chunk contains
+  the shipped collapsed-composer strings (`Write an answer`, `Answering as`,
+  and `Share field-tested advice`) and the new detail hierarchy class.
+- Remaining field acceptance: on a signed-in physical phone, verify the sticky
+  collapsed composer with the software keyboard and a long real answer thread
+  in both light and dark themes.
 
 ## Shop Talk Linked-Article Discussion Finish (Production Verification)
 
