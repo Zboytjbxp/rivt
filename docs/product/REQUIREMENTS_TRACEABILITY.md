@@ -10,6 +10,22 @@ Status values:
 
 Evidence must eventually link to implementation, automated tests, manual acceptance proof, and deployed build.
 
+## Traceability Addendum - 2026-07-24 Shop Talk Answer Composer Copy
+
+- `GA-UX-003` gains a neutral answer-entry prompt that works across questions,
+  discussions, news, hiring, humor, and general trade posts instead of
+  imposing a callback-troubleshooting structure on every response.
+- `GA-UX-005` is unchanged: the edit affects only visible coaching. Persisted
+  answers, real counts, reaction provenance, reporting, Verified Fix,
+  ownership, character limits, and submission authorization retain their
+  existing behavior.
+- `GA-UX-006` gains a rendered assertion for the neutral placeholder and a
+  regression check that the removed troubleshooting-only coaching is absent.
+- `GA-OPS-007` gains local evidence from production build, lint, 73
+  unit/frontend tests, Shop Talk/Trade News rendered QA, desktop/mobile E2E,
+  and a zero-vulnerability production dependency audit.
+- Remaining risk: the copy refinement is not merged or deployed.
+
 ## Traceability Addendum - 2026-07-23 Shop Talk Thread Detail Redesign
 
 - `GA-UX-003` gains selected-thread hierarchy evidence: the post leads, voting

@@ -4684,7 +4684,6 @@ html[data-rivt-compact-device="true"] .shop-talk-community-layout .shop-talk-sea
 }
 
 .answer-composer-trigger small,
-.answer-composer-helper,
 .shop-talk-community-layout .answer-composer-byline > span,
 .shop-talk-community-layout .answer-char-count {
   color: var(--v2-text-muted);

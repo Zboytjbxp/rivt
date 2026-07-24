@@ -2018,9 +2018,6 @@ export function ShopTalkView({
                         <X size={16} />
                       </button>
                     </div>
-                    <small className="answer-composer-helper">
-                      Name the condition, the check, and the proof that prevents a callback.
-                    </small>
                     <textarea
                       ref={answerComposerInputRef}
                       value={answerDraft}
@@ -2036,7 +2033,7 @@ export function ShopTalkView({
                         }
                       }}
                       rows={4}
-                      placeholder="Share the condition, tool or code check, order of operations, and proof that prevents a callback."
+                      placeholder="Share your answer, experience, or perspective…"
                     />
                     <div className="answer-composer-footer">
                       <span className={answerDraft.length > 900 ? "answer-char-count is-near-limit" : "answer-char-count"}>

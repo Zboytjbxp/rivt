@@ -650,10 +650,14 @@ try {
 
     await answerTrigger.focus();
     await answerTrigger.press("Enter");
-    const answerTextarea = page.locator('textarea[placeholder^="Share the condition"]');
+    const answerTextarea = page.locator('textarea[placeholder="Share your answer, experience, or perspective…"]');
     await answerTextarea.waitFor({ timeout: 15_000 });
     assert.equal(await answerTextarea.evaluate((node) => node === document.activeElement), true, "keyboard expansion should focus the answer field");
-    await page.getByText("Name the condition, the check, and the proof that prevents a callback.", { exact: true }).waitFor({ timeout: 15_000 });
+    assert.equal(
+      await page.getByText("Name the condition, the check, and the proof that prevents a callback.", { exact: true }).count(),
+      0,
+      "answer composer should not impose troubleshooting-only coaching",
+    );
     await answerTextarea.fill("Document the condition, price the change order, and get written approval before the crew keeps going.");
     await page.getByRole("button", { name: /Post answer/i }).click();
     await page.getByText("Document the condition", { exact: false }).waitFor({ timeout: 15_000 });

@@ -1,11 +1,28 @@
 # RIVT Build State
 
-Last updated: 2026-07-23 America/New_York
+Last updated: 2026-07-24 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Shop Talk thread-detail redesign is production verified.
-Active packet: Shop Talk selected-post hierarchy and collapsed answer composer
-Repository branch: `master` (source branch: `codex/shop-talk-thread-redesign`)
+Current phase: Shop Talk answer-composer copy is verified locally and awaiting review/merge.
+Active packet: Neutral answer guidance for every Shop Talk post type
+Repository branch: `codex/shop-talk-answer-copy`
 Production feature release commit: `d07f32a71824bf78280740d9e8e13eb362ec2fbb`
+
+## Shop Talk Answer Composer Copy (Local Verification)
+
+- Removed the expanded composer's troubleshooting-only coaching about naming a
+  condition, check, and proof that prevents a callback. That instruction did
+  not fit discussions, news, hiring, humor, or every valid reply.
+- Replaced the narrow textarea prompt with the neutral
+  `Share your answer, experience, or perspective…` placeholder. Answer
+  submission, the 1,000-character limit, keyboard shortcut, focus transfer,
+  ownership, voting, reporting, and Verified Fix behavior are unchanged.
+- Rendered Shop Talk QA now requires the neutral placeholder and asserts that
+  the removed callback coaching is absent.
+- Verified locally: production build, lint, 73 unit/frontend tests, Shop
+  Talk/Trade News rendered QA, desktop/mobile E2E, and a production dependency
+  audit with zero vulnerabilities.
+- This branch is not merged or deployed. Production remains on the feature
+  commit recorded above.
 
 ## Shop Talk Thread Detail Redesign (Production Verification)
 
