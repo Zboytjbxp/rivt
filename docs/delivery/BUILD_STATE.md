@@ -2,10 +2,67 @@
 
 Last updated: 2026-07-23 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Shop Talk final editorial polish is production verified.
-Active packet: Feed, Communities, and Trade News production verification
-Repository branch: `master`
+Current phase: Final pre-release five-surface polish is locally verified.
+Active packet: Final pre-release polish (Home, Work, Camera, Shop Talk, Tools)
+Repository branch: `codex/final-release-polish`
 Production feature release commit: `c1155514e25b4b5d90fcd92d687752bcac59539c`
+
+## Final Pre-Release Five-Surface Polish (Local Verification)
+
+- **Home:** availability is now explicitly a private, device-only note instead
+  of implying that RIVT broadcasts it. The control reflows below the greeting
+  at mobile and large text sizes. Share feedback distinguishes native sharing
+  from a clipboard copy and never confirms a no-op. Paperwork no longer
+  duplicates `Invoice draft`, the empty state opens Ask directly, avatar
+  colors use theme tokens, and dead recovery/nudge/footer CSS was removed.
+- **Work:** removed the broken `Full Detail` handoff that could open an
+  unrelated string-keyed record and invent `$0 Earned / $0 Expenses / $0 Net`.
+  Milestone status, calendar, checklist, paid-summary, required-field, and
+  error colors now use semantic light/dark tokens. The address uses the
+  standard map-pin icon and dead mobile header rules were removed.
+- **Camera:** GPS copy says device GPS instead of `verified GPS`. Loading no
+  longer flashes `0 photos`; filtered grids render the filtered collection;
+  the duplicate destination strip is informational; destination cards are
+  honestly labeled selectors; album/feed actions are context-aware; and the
+  viewfinder destination label no longer closes capture. Dock clearance and
+  on-accent button contrast were corrected. A related lifecycle defect found
+  during QA was also fixed: canonical active Work remains selectable as Camera
+  context even after its hiring listing closes.
+- **Shop Talk:** feed reply counts come only from real reply arrays, filter
+  Reset restores `All trades`, post loading has its own state, create-community
+  naming no longer mutates directory search, and the device-local
+  `Mark as answered` no-op was removed. Reputation is shown only with a ready
+  reaction ledger (otherwise its provenance is stated), flair/rep styling uses
+  semantic tokens, open-community controls move above the feed on mobile, and
+  dormant filter/trending/persona markup and styles were removed. Trade News
+  behavior and its honesty rules remain intact.
+- **Tools:** Expense Logger and Bid Builder now display cents exactly
+  (`$12.49`, never rounded to `$12`); CSV precision remains unchanged.
+  Duplicate Bid/Invoice actions were removed or demoted, markup terminology
+  was unified, measurement labels use US spelling, semantic tokens replace the
+  audited hardcoded badge/check colors, short-viewport dock clearance was
+  increased, and the tall-phone launcher distribution rule can no longer be
+  canceled by a later mobile override. Rendered QA also found and fixed
+  oversized fraction keys on compact phones.
+- Automated release assertions now lock the seven launch honesty/money fixes:
+  no broken Full Detail overlay, exact expense cents, reply count equals real
+  replies, Reset restores the feed, availability identifies device-only
+  behavior, GPS never says verified, and the tall-phone launcher reaches its
+  field tray. The mobile smoke also captures Home, Work, Camera, Shop Talk,
+  and Tools at 390x844 in both light and dark themes and checks horizontal
+  containment; it retains 375x553 and 390x664 coverage at all three text
+  sizes.
+- Verified locally: lint, production build, 73 unit/frontend tests, Tools,
+  Shop Talk/Trade News, mobile-actions, and Work-lifecycle rendered smokes,
+  desktop/mobile E2E, diff check, and a production dependency audit with zero
+  vulnerabilities. The aggregate `npm run test` reached the existing serial
+  database integration phase but returned no result before the five-minute
+  limit, so no integration pass is claimed.
+- Theme finding: confirmed as audited. All five surfaces inherit
+  `.rivt-v2` theme tokens; the prior light Shop Talk capture was light mode,
+  not a pinned-light defect.
+- This branch is not merged or deployed. Production remains on the previously
+  recorded release commit until review and merge.
 
 ## Shop Talk Final Editorial Polish (Production Verification)
 

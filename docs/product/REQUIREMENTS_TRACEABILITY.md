@@ -10,6 +10,34 @@ Status values:
 
 Evidence must eventually link to implementation, automated tests, manual acceptance proof, and deployed build.
 
+## Traceability Addendum - 2026-07-23 Final Pre-Release Five-Surface Polish
+
+- `GA-UX-003` gains final cross-surface hierarchy and mobile evidence across
+  Home, Work, Camera, Shop Talk, and Tools: device-private availability
+  reflows, open-community controls precede the feed, Camera destination/actions
+  are no longer duplicated, and fixed trays remain reachable on short and tall
+  mobile viewports.
+- `GA-UX-005` gains honesty and money evidence: Work cannot open an unmatched
+  job detail that invents zero-dollar financials; Expense Logger and Bid
+  Builder preserve cents; Shop Talk counts only persisted replies; Reset uses
+  the valid all-trades sentinel; availability states its device-only scope;
+  GPS is described as device-reported rather than verified; share feedback
+  distinguishes native sharing, clipboard copy, and no-op behavior; and
+  unsupported answered-state mutation was removed.
+- `GA-UX-006` gains repeatable 390x844 light/dark captures for all five primary
+  surfaces, plus existing 375x553 and 390x664 checks at Standard, Large, and
+  Extra Large text. Semantic token checks cover Work milestones/errors,
+  Shop Talk flair/reputation, Camera/Tools action contrast, and horizontal
+  containment.
+- `GA-OPS-007` gains local evidence from lint, build, 73 unit/frontend tests,
+  four targeted rendered smoke suites, desktop/mobile E2E, diff check, and a
+  zero-vulnerability production dependency audit. The aggregate serial
+  database integration phase timed out without a result and is not claimed as
+  passed.
+- Remaining risk is deployment acceptance only: this branch has not been
+  merged or deployed, and signed-in physical-device review remains appropriate
+  before the full release.
+
 ## Traceability Addendum - 2026-07-23 Shop Talk Final Editorial Polish
 
 - `GA-UX-003` gains cross-surface hierarchy evidence: Feed posts, Community
