@@ -31,9 +31,19 @@ Evidence must eventually link to implementation, automated tests, manual accepta
   zero-vulnerability production dependency audit. The aggregate serial
   database phase timed out after five minutes without a result and is not
   claimed as passed.
-- Remaining risk: the branch is not merged or deployed, and signed-in
-  physical-device acceptance should confirm article creation and deletion
-  against the production account/database after deployment.
+- `GA-OPS-008` gains production evidence: Railway deployments
+  `8093c375-537f-4916-9b66-fceaae24f64e` and
+  `4936432d-820b-4ea7-a993-3d17686999a3` serve exact feature source
+  `474babff7cffc1fee61ad06544347564d8ad9038`; health reports ready migration
+  `0028_compensation_workflow` with healthy PostgreSQL/S3-compatible storage,
+  Sentry, Web Push, and matching-job alerts. The expected-source monitor
+  passed in 526 ms with open controls and seven healthy anonymous private
+  routes. Authenticated production Shop Talk smoke
+  `shop-talk-react-20260724023711-b61eea` passed and cleaned up both disposable
+  accounts. Production bundle inspection found all four new linked-article
+  discussion/delete strings in the lazy Shop Talk chunk.
+- Remaining risk is signed-in physical-device acceptance for Trade News
+  discussion creation and owned-post deletion in both themes.
 
 ## Traceability Addendum - 2026-07-23 Final Pre-Release Five-Surface Polish
 

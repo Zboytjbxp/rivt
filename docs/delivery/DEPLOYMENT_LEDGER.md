@@ -1,5 +1,39 @@
 # Deployment Ledger
 
+## 2026-07-23 - Shop Talk Linked-Article Discussion Finish
+
+- Source commit: `474babff7cffc1fee61ad06544347564d8ad9038`
+- Feature commit: `474babf`
+- Branch: `master` (source branch: `codex/shop-talk-discussion-finish`)
+- Railway application deployment: `8093c375-537f-4916-9b66-fceaae24f64e`
+- Railway metadata deployment: `4936432d-820b-4ea7-a993-3d17686999a3`
+- Production: `https://rivt.pro`
+- Scope: Trade News discussions retain canonical URLs for honest thread
+  matching while presenting compact article attachments instead of raw
+  redirect URLs. The composer starts with a clean `Your take` field, selected
+  discussions use a tightened mobile read/comment hierarchy, and post authors
+  receive a visible delete action backed by immutable server account
+  ownership and the existing author-authorized mutation.
+- Automated gates: build, lint, 73 unit/frontend tests, targeted server-owned
+  Shop Talk integration, rendered Shop Talk/Trade News desktop/mobile
+  light/dark QA, desktop/mobile E2E, production dependency audit, and diff
+  checks passed. The aggregate serial database phase returned no result within
+  five minutes; no aggregate integration pass is claimed.
+- Provider/config changes: `SOURCE_COMMIT` was synchronized to the deployed
+  feature SHA. No operational controls or other provider settings changed.
+- Post-deploy proof: exact-source health passed with ready migration
+  `0028_compensation_workflow`, healthy PostgreSQL/S3-compatible storage,
+  configured Sentry/Web Push, and enabled matching-job alerts. The production
+  monitor passed in 526 ms with open controls and seven healthy anonymous
+  private routes. Authenticated smoke
+  `shop-talk-react-20260724023711-b61eea` passed with idempotency, persistence,
+  audit-event, and cleanup evidence. Production bundle inspection confirmed
+  the new article attachment, clean composer, and delete-confirmation paths in
+  the lazy Shop Talk chunk.
+- Rollback target: `5714c5cd13389188329252a7108bbde402876677`
+- Remaining field acceptance: create and delete a real Trade News discussion
+  from a signed-in physical phone in light and dark themes.
+
 ## 2026-07-23 - Final Pre-Release Five-Surface Polish
 
 - Source commit: `86bd14942723e759680b4614c2e67cebda84ae33`

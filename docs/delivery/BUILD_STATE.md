@@ -2,12 +2,12 @@
 
 Last updated: 2026-07-23 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Shop Talk article discussion finish is verified locally and awaiting review/merge.
-Active packet: Shop Talk linked-article discussion and owned-post deletion
-Repository branch: `codex/shop-talk-discussion-finish`
-Production feature release commit: `86bd14942723e759680b4614c2e67cebda84ae33`
+Current phase: Shop Talk article discussion finish is production verified.
+Active packet: Shop Talk linked-article discussion production verification
+Repository branch: `master`
+Production feature release commit: `474babff7cffc1fee61ad06544347564d8ad9038`
 
-## Shop Talk Linked-Article Discussion Finish (Local Verification)
+## Shop Talk Linked-Article Discussion Finish (Production Verification)
 
 - Trade News discussions still persist the canonical article URL so thread
   matching remains real, but Feed cards and the selected thread now parse that
@@ -44,8 +44,27 @@ Production feature release commit: `86bd14942723e759680b4614c2e67cebda84ae33`
   existing serial database integration phase before the five-minute limit;
   orphaned test processes were stopped, so no aggregate integration pass is
   claimed.
-- This branch has not been merged or deployed. Production remains on the
-  release commit recorded above.
+- `codex/shop-talk-discussion-finish` was fast-forwarded into `master` at
+  `474babff7cffc1fee61ad06544347564d8ad9038`. Railway application deployment
+  `8093c375-537f-4916-9b66-fceaae24f64e` succeeded, followed by metadata
+  deployment `4936432d-820b-4ea7-a993-3d17686999a3` after synchronizing
+  `SOURCE_COMMIT`; no operational controls or other provider settings changed.
+- Live health serves the exact feature commit with migration
+  `0028_compensation_workflow` ready and PostgreSQL/S3-compatible storage,
+  Sentry, Web Push, and matching-job alerts healthy. The expected-source
+  production monitor passed in 526 ms with open controls and all seven
+  anonymous private-route checks healthy.
+- Authenticated production Shop Talk smoke
+  `shop-talk-react-20260724023711-b61eea` passed against the exact source:
+  idempotent reaction replay, switch/clear persistence, five append-only
+  reaction events, five audit events, zero active reactions after clear, and
+  cleanup of both disposable accounts.
+- Production bundle inspection checked 22 lazy JavaScript chunks and confirmed
+  `ShopTalkView-B31mQeFz.js` contains the shipped `Article attached`,
+  `Start a discussion`, `Your take`, and `Delete this discussion?` paths.
+- Remaining field acceptance: on a signed-in physical phone, create a Trade
+  News discussion, confirm the attachment stays compact, then delete the owned
+  post in both light and dark themes.
 
 ## Final Pre-Release Five-Surface Polish (Production Verification)
 
