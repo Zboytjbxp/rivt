@@ -10,7 +10,7 @@ import {
   MessageSquareText,
   Phone,
   Plus,
-  Send,
+  Save,
   ShieldCheck,
   Star,
   Users,
@@ -635,6 +635,7 @@ function CrewManager({ crewType, labelOverride, isDemo = false }: { crewType: Cr
   const [assigningMember, setAssigningMember] = useState<CrewMember | null>(null);
   const [tradeFilter, setTradeFilter] = useState<string>("All");
   const [syncMessage, setSyncMessage] = useState(isDemo ? "Sample one-year crew history." : "Saved on this device.");
+  const [inviteCopyMessage, setInviteCopyMessage] = useState("");
 
   useEffect(() => {
     if (isDemo) {
@@ -698,9 +699,14 @@ function CrewManager({ crewType, labelOverride, isDemo = false }: { crewType: Cr
     setAssigningMember(null);
   }
 
-  function copyInviteTemplate(member: CrewMember) {
+  async function copyInviteTemplate(member: CrewMember) {
     const text = `Hey ${member.name}, I have a ${member.trade || "trade"} job coming up. Interested?`;
-    navigator.clipboard.writeText(text).catch(() => { /* noop */ });
+    try {
+      await navigator.clipboard.writeText(text);
+      setInviteCopyMessage(`Invite text for ${member.name} copied.`);
+    } catch {
+      setInviteCopyMessage("Couldn't copy the invite text.");
+    }
   }
 
   const label = labelOverride ?? (crewType === "crew" ? "Crew" : "Subs");
@@ -718,6 +724,7 @@ function CrewManager({ crewType, labelOverride, isDemo = false }: { crewType: Cr
         </button>
       </div>
       <p className="v2-client-sync-note" role="status">{syncMessage}</p>
+      {inviteCopyMessage ? <p className="v2-network-copy-notice" role="status">{inviteCopyMessage}</p> : null}
 
       {/* Trade filter pills (subs tab) */}
       {crewType === "sub" && trades.length > 1 && (
@@ -777,11 +784,11 @@ function CrewManager({ crewType, labelOverride, isDemo = false }: { crewType: Cr
                 <button
                   type="button"
                   className="v2-crew-invite-copy-btn"
-                  onClick={() => copyInviteTemplate(member)}
+                  onClick={() => void copyInviteTemplate(member)}
                   title="Copy invite text"
                 >
                   <Copy size={13} />
-                  Invite to Job
+                  Copy invite text
                 </button>
               )}
             </div>
@@ -1356,13 +1363,13 @@ function ReviewsView({
       {!normalizedFocusedReviewId ? <div className="v2-reviews-grid">
         <Panel
           className="v2-reviews-panel v2-reviews-panel-wide"
-          eyebrow="Write a review"
-          title="Shout out someone you worked with"
+          eyebrow="Private review note"
+          title="Save a note about someone you worked with"
         >
           <p className="v2-client-sync-note" role="status">{syncMessage}</p>
           <div className="v2-review-form">
             <label>
-              <span>Who are you reviewing?</span>
+              <span>Who is this note about?</span>
               <input
                 value={to}
                 onChange={(e) => setTo(e.target.value)}
@@ -1392,19 +1399,19 @@ function ReviewsView({
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
                 rows={3}
-                placeholder="What made them worth working with?"
+                placeholder="What made them worth working with? This stays in your RIVT notes."
               />
             </label>
             <div className="v2-review-form-actions">
-              {submitted && <span className="v2-review-sent">Review posted!</span>}
+              {submitted && <span className="v2-review-sent">Saved to your notes.</span>}
               <button
                 type="button"
                 className="v2-primary-button"
                 disabled={!to.trim() || !message.trim()}
                 onClick={submit}
               >
-                <Send size={15} />
-                Post review
+                <Save size={15} />
+                Save review to your notes
               </button>
             </div>
           </div>
@@ -1412,8 +1419,8 @@ function ReviewsView({
 
         <Panel
           className="v2-reviews-panel"
-          eyebrow={`${storedReviews.length + transientGiven.length} written`}
-          title="Reviews you've written"
+          eyebrow={`${storedReviews.length + transientGiven.length} saved`}
+          title="Review notes you've saved"
         >
           {(storedReviews.length > 0 || transientGiven.length > 0) ? (
             <div className="v2-reviews-list">

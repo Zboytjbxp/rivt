@@ -54,3 +54,14 @@ test("subscription period end supports current Stripe item-level payloads", () =
     items: { data: [{ id: "si_1" }, { current_period_end: 789 }] },
   }), 789);
 });
+
+test("checkout success URLs always reopen the mobile billing section", () => {
+  assert.equal(
+    billingInternals.withBillingSection("https://rivt.example/app/profile/settings?billing=success&session_id={CHECKOUT_SESSION_ID}"),
+    "https://rivt.example/app/profile/settings?billing=success&session_id={CHECKOUT_SESSION_ID}&section=billing",
+  );
+  assert.equal(
+    billingInternals.withBillingSection("https://rivt.example/return?section=account&billing=success"),
+    "https://rivt.example/return?section=billing&billing=success",
+  );
+});

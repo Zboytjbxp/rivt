@@ -28,11 +28,23 @@ function subscriptionPeriodEnd(subscription) {
     ?? null;
 }
 
+function withBillingSection(rawUrl) {
+  const [urlWithoutHash, ...hashParts] = String(rawUrl).split("#");
+  const hash = hashParts.length ? `#${hashParts.join("#")}` : "";
+  if (/[?&]section=/.test(urlWithoutHash)) {
+    return `${urlWithoutHash.replace(/([?&])section=[^&]*/i, "$1section=billing")}${hash}`;
+  }
+  return `${urlWithoutHash}${urlWithoutHash.includes("?") ? "&" : "?"}section=billing${hash}`;
+}
+
 function billingConfig(appOrigin) {
   const secretKey = envValue("STRIPE_SECRET_KEY");
   const priceId = envValue("STRIPE_PRO_PRICE_ID", envValue("STRIPE_PRICE_ID"));
   const webhookSecret = envValue("STRIPE_WEBHOOK_SECRET");
-  const successUrl = envValue("STRIPE_SUCCESS_URL", `${appOrigin}/app/profile/settings?billing=success&session_id={CHECKOUT_SESSION_ID}`);
+  const successUrl = withBillingSection(envValue(
+    "STRIPE_SUCCESS_URL",
+    `${appOrigin}/app/profile/settings?billing=success&session_id={CHECKOUT_SESSION_ID}`,
+  ));
   const cancelUrl = envValue("STRIPE_CANCEL_URL", `${appOrigin}/app/profile/settings?billing=cancelled`);
   const portalReturnUrl = envValue("STRIPE_PORTAL_RETURN_URL", `${appOrigin}/app/profile/settings`);
   const missing = [];
@@ -622,4 +634,5 @@ export const billingInternals = {
   reconcileCheckoutSession,
   subscriptionPeriodEnd,
   verifyStripeSignature,
+  withBillingSection,
 };

@@ -1148,6 +1148,13 @@
 .v2-client-title { font-size: calc(15px * var(--v2-text-scale)); font-weight: var(--v2-weight-bold); color: var(--v2-text); }
 .v2-client-add-btn { display: flex; align-items: center; gap: 4px; font-size: calc(13px * var(--v2-text-scale)); color: var(--v2-accent); font-weight: var(--v2-weight-bold); background: none; border: none; cursor: pointer; padding: 4px 8px; border-radius: var(--v2-radius-sm); }
 .v2-client-sync-note { margin: -4px 16px 12px; font-size: calc(13px * var(--v2-text-scale)); color: var(--v2-text-muted); }
+
+.v2-network-copy-notice {
+  margin: -4px 16px 12px;
+  color: var(--v2-success);
+  font-size: calc(13px * var(--v2-text-scale));
+  font-weight: var(--v2-weight-semibold);
+}
 .v2-client-form { padding: 0 16px 16px; display: flex; flex-direction: column; gap: 10px; }
 .v2-client-form input, .v2-client-form textarea { width: 100%; padding: 10px 12px; border: 1px solid var(--v2-border); border-radius: var(--v2-radius-sm); background: var(--v2-surface); color: var(--v2-text); font-size: calc(14px * var(--v2-text-scale)); font-family: inherit; box-sizing: border-box; }
 .v2-client-form input:focus, .v2-client-form textarea:focus { outline: none; border-color: var(--v2-accent); }

@@ -1,12 +1,12 @@
 import { useState } from "react";
 import {
   ArrowRight,
-  BriefcaseBusiness,
   Check,
-  ClipboardCheck,
   Cloud,
   CreditCard,
-  FileText,
+  Clock3,
+  FileDown,
+  Settings2,
   ShieldCheck,
   X,
   type LucideIcon,
@@ -23,26 +23,24 @@ interface UpgradeModalProps {
 
 const OUTCOMES: Array<{ icon: LucideIcon; title: string; copy: string }> = [
   {
-    icon: ClipboardCheck,
-    title: "Build a proof packet",
-    copy: "Photos, field notes, completion status, and closeout records stay tied to the job.",
+    icon: Clock3,
+    title: "Keep your full time history",
+    copy: "Review time entries beyond the free plan's 90-day history window.",
   },
   {
-    icon: FileText,
-    title: "Send cleaner paperwork",
-    copy: "Turn job details into estimates, invoices, and exports without rebuilding forms by hand.",
+    icon: FileDown,
+    title: "Export expense records",
+    copy: "Download your expense history as a CSV for bookkeeping and tax prep.",
   },
   {
-    icon: BriefcaseBusiness,
-    title: "Protect repeat work",
-    copy: "Time, mileage, expenses, and work history stay attached to the account.",
+    icon: Settings2,
+    title: "Manage Pro yourself",
+    copy: "Open billing settings and cancel the subscription without contacting support.",
   },
 ];
 
 const INCLUDED = [
-  "Job proof packets for accepted work",
-  "Closeout records and reports",
-  "Estimate and invoice workflow",
+  "Time history beyond 90 days",
   "CSV expense export",
   "Self-serve cancellation from Settings",
 ];
@@ -79,7 +77,7 @@ export function UpgradeModal({ reason, onClose }: UpgradeModalProps) {
             <header className="v2-upgrade-hero">
               <span className="v2-upgrade-kicker">RIVT Pro</span>
               <div>
-                <strong>Prove the work. Send the paperwork.</strong>
+                <strong>Keep more history. Export your records.</strong>
                 <p>{reason ? `${reason} is included with Pro.` : RIVT_PRO_OFFER.summary}</p>
               </div>
             </header>

@@ -475,6 +475,10 @@ async function runMobileFlow(page) {
   await assertControlCenterClickable(page, '.side-panel[aria-label="Notifications"] .quick-actions button:nth-of-type(2)', "notifications messages action");
   await notificationsDialog.getByRole("button", { name: "Messages" }).click();
   await page.getByRole("heading", { name: "Inbox", exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByRole("button", { name: "Client notes", exact: true }).click();
+  await page.getByText("Client notes", { exact: false }).first().waitFor({ timeout: 15_000 });
+  assert.equal(await page.getByRole("button", { name: /Simulate reply/i }).count(), 0, "Client notes must never fabricate an inbound reply");
+  await page.getByText("private job and follow-up notes", { exact: false }).waitFor({ timeout: 15_000 });
   await assertNoHorizontalOverflow(page, "Messages route");
   await page.getByRole("button", { name: "Home", exact: true }).click();
   await assertNoHorizontalOverflow(page, "Home after messages");

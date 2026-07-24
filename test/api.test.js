@@ -9,6 +9,8 @@ import {
   validate,
   z,
 } from "../server/api.js";
+import express from "express";
+import { createSecurityHeadersMiddleware } from "../server/security-headers.js";
 
 test("request context preserves valid request IDs and replaces invalid values", () => {
   for (const [incoming, expected] of [
@@ -43,4 +45,24 @@ test("pagination cursors round trip and fail closed", () => {
     () => decodeCursor("invalid"),
     (error) => error instanceof ApiError && error.code === "INVALID_CURSOR",
   );
+});
+
+test("security middleware denies framing and sends a restrictive CSP", async (t) => {
+  const app = express();
+  app.use(createSecurityHeadersMiddleware());
+  app.get("/health", (_request, response) => response.json({ ok: true }));
+  const server = app.listen(0, "127.0.0.1");
+  await new Promise((resolve, reject) => {
+    server.once("listening", resolve);
+    server.once("error", reject);
+  });
+  t.after(() => new Promise((resolve) => server.close(resolve)));
+
+  const address = server.address();
+  assert.ok(address && typeof address === "object");
+  const response = await fetch(`http://127.0.0.1:${address.port}/health`);
+  assert.equal(response.headers.get("x-frame-options"), "DENY");
+  assert.equal(response.headers.get("x-content-type-options"), "nosniff");
+  assert.match(response.headers.get("strict-transport-security") ?? "", /max-age=31536000/i);
+  assert.match(response.headers.get("content-security-policy") ?? "", /frame-ancestors 'none'/);
 });

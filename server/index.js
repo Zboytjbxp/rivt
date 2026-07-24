@@ -24,6 +24,7 @@ import {
 } from "./api.js";
 import { registerAlbumRoutes } from "./albums.js";
 import { registerBillingRoutes, registerStripeWebhookRoute } from "./billing.js";
+import { createSecurityHeadersMiddleware } from "./security-headers.js";
 import {
   assertStrongPassword,
   buildAppleAuthorizationUrl,
@@ -304,6 +305,7 @@ const s3Client = s3Configured
   : null;
 
 const app = express();
+app.use(createSecurityHeadersMiddleware());
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: {

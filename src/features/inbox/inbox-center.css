@@ -943,6 +943,13 @@
   color: var(--v2-text-muted);
 }
 
+.v2-client-thread-purpose {
+  margin: 10px 16px 0;
+  color: var(--v2-text-muted);
+  font-size: calc(13px * var(--v2-text-scale));
+  line-height: 1.4;
+}
+
 .v2-ct-add-form {
   display: flex;
   align-items: center;

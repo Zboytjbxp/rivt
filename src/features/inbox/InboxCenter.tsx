@@ -67,7 +67,12 @@ function loadClientContacts(): ClientContact[] {
 function loadClientThreads(): ClientThreads {
   try {
     const raw = localStorage.getItem(CLIENT_THREADS_KEY);
-    if (raw) return JSON.parse(raw) as ClientThreads;
+    if (raw) {
+      const parsed = JSON.parse(raw) as ClientThreads;
+      return Object.fromEntries(
+        Object.entries(parsed).map(([clientId, messages]) => [clientId, privateClientNotes(messages)]),
+      );
+    }
   } catch { /* noop */ }
   return {};
 }
@@ -76,9 +81,13 @@ function saveClientThreads(threads: ClientThreads) {
   try { localStorage.setItem(CLIENT_THREADS_KEY, JSON.stringify(threads)); } catch { /* noop */ }
 }
 
+function privateClientNotes(messages: ClientMessage[] = []): ClientMessage[] {
+  return messages.filter((message) => message.from === "me");
+}
+
 function sanitizeClientThreadMessages(messages: ClientMessage[] = []): ClientRecordMessage[] {
   return messages
-    .filter((message) => !message.attachmentUrl)
+    .filter((message) => message.from === "me" && !message.attachmentUrl)
     .map(({ id, text, sentAt, from }) => ({ id, text, sentAt, from }))
     .slice(-100);
 }
@@ -93,6 +102,7 @@ function mergeClientThreads(...sources: ClientThreads[]): ClientThreads {
     for (const [clientId, messages] of Object.entries(source)) {
       const byId = new Map<string, ClientMessage>();
       for (const message of [...(merged[clientId] ?? []), ...messages]) {
+        if (message.from !== "me") continue;
         byId.set(message.id, message);
       }
       merged[clientId] = sortMessages([...byId.values()]);
@@ -105,7 +115,7 @@ function clientThreadsFromContacts(contacts: ClientContact[]): ClientThreads {
   const threads: ClientThreads = {};
   for (const contact of contacts) {
     if (contact.threadMessages?.length) {
-      threads[contact.id] = contact.threadMessages.map((message) => ({ ...message }));
+      threads[contact.id] = privateClientNotes(contact.threadMessages.map((message) => ({ ...message })));
     }
   }
   return threads;
@@ -132,21 +142,21 @@ function ClientThread({
   const [threads, setThreads] = useState<ClientThreads>(loadClientThreads);
   const [text, setText] = useState("");
   const [syncMessage, setSyncMessage] = useState(
-    (contact.threadMessages?.length ?? 0) > 0 ? "Synced to your RIVT account." : "Saved on this device."
+    (contact.threadMessages?.length ?? 0) > 0 ? "Notes synced to your RIVT account." : "Notes saved on this device."
   );
   const fileRef = useRef<HTMLInputElement>(null);
   const messagesRef = useRef<HTMLDivElement>(null);
 
-  const messages: ClientMessage[] = threads[contact.id] ?? [];
+  const messages: ClientMessage[] = privateClientNotes(threads[contact.id] ?? []);
 
-  function addMessage(msg: ClientMessage) {
+  function addNote(msg: ClientMessage) {
     setThreads((prev) => {
       const next: ClientThreads = { ...prev, [contact.id]: [...(prev[contact.id] ?? []), msg] };
       saveClientThreads(next);
       const updatedContact = contactWithThreadMessages(contact, next[contact.id] ?? []);
       onThreadSync(updatedContact);
       void upsertClientRecord(updatedContact).then((ok) => {
-        setSyncMessage(ok ? "Synced to your RIVT account." : "Couldn't sync - saved on this device only.");
+        setSyncMessage(ok ? "Notes synced to your RIVT account." : "Couldn't sync - notes are saved on this device only.");
       });
       return next;
     });
@@ -158,10 +168,10 @@ function ClientThread({
     }, 30);
   }
 
-  function handleSend() {
+  function handleSaveNote() {
     const trimmed = text.trim();
     if (!trimmed) return;
-    addMessage({
+    addNote({
       id: crypto.randomUUID(),
       text: trimmed,
       sentAt: new Date().toISOString(),
@@ -175,7 +185,7 @@ function ClientThread({
     if (!file) return;
     const reader = new FileReader();
     reader.onload = () => {
-      addMessage({
+      addNote({
         id: crypto.randomUUID(),
         text: file.name,
         sentAt: new Date().toISOString(),
@@ -208,11 +218,12 @@ function ClientThread({
         <Avatar name={contact.name} size="sm" />
         <strong>{contact.name}</strong>
       </div>
+      <p className="v2-client-thread-purpose">Private client log. These notes are not sent to the client.</p>
       <p className="v2-client-sync-note" role="status">{syncMessage}</p>
 
       <div className="v2-client-thread-messages" ref={messagesRef}>
         {messages.length === 0 ? (
-          <div className="v2-client-thread-empty">No messages yet — say hello!</div>
+          <div className="v2-client-thread-empty">No notes yet. Add job details or a follow-up reminder.</div>
         ) : (
           messages.map((msg) => (
             <div key={msg.id} className={`v2-ct-bubble ${msg.from === "me" ? "is-mine" : "is-theirs"}`}>
@@ -238,32 +249,32 @@ function ClientThread({
           ref={fileRef}
           className="v2-ct-file-input"
           onChange={handlePhotoAttach}
-          aria-label="Attach photo"
+          aria-label="Attach reference photo"
         />
         <button
           type="button"
           className="v2-ct-photo-btn"
           onClick={() => fileRef.current?.click()}
-          title="Attach photo"
-          aria-label="Attach photo"
+          title="Attach reference photo"
+          aria-label="Attach reference photo"
         >
           <Camera size={18} />
         </button>
         <input
           className="v2-ct-text-input"
-          placeholder="Type a message…"
+          placeholder="Add a private note…"
           value={text}
           onChange={(e) => setText(e.target.value)}
-          onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
+          onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSaveNote(); } }}
         />
         <button
           type="button"
           className="v2-ct-send-btn"
           disabled={!text.trim()}
-          onClick={handleSend}
-          aria-label="Send"
+          onClick={handleSaveNote}
+          aria-label="Save note"
         >
-          <Send size={16} />
+          <Plus size={16} />
         </button>
       </div>
 
@@ -296,7 +307,7 @@ function ClientsTab() {
             .map((contact) => upsertClientRecord(contact))
         ).then((results) => {
           if (!cancelled && results.some(Boolean)) {
-            setSyncMessage("Client records and text threads synced to your RIVT account.");
+            setSyncMessage("Client records and private notes synced to your RIVT account.");
           }
         });
       }
@@ -359,7 +370,7 @@ function ClientsTab() {
   return (
     <div className="v2-clients-tab">
       <div className="v2-clients-tab-header">
-        <span className="v2-client-title">Client Messages ({contacts.length})</span>
+        <span className="v2-client-title">Client notes ({contacts.length})</span>
         {addingName ? (
           <div className="v2-ct-add-form">
             <input
@@ -384,8 +395,8 @@ function ClientsTab() {
         <EmptyState
           className="v2-inbox-empty"
           icon={<Users size={20} />}
-          title="No client conversations yet"
-          description="Tap + New to start a conversation with a client."
+          title="No client notes yet"
+          description="Add a client to keep private job and follow-up notes."
           compact
         />
       ) : (
@@ -404,10 +415,10 @@ function ClientsTab() {
                   <strong>{c.name}</strong>
                   {last ? (
                     <span className="v2-client-conv-preview">
-                      {last.from === "me" ? "You: " : ""}{last.text.length > 40 ? last.text.slice(0, 40) + "…" : last.text}
+                      Note: {last.text.length > 40 ? last.text.slice(0, 40) + "…" : last.text}
                     </span>
                   ) : (
-                    <span className="v2-client-conv-preview">No messages yet</span>
+                    <span className="v2-client-conv-preview">No notes yet</span>
                   )}
                 </div>
                 {last && (
@@ -475,7 +486,7 @@ function messageState(message: InboxMessage, accountId: string) {
 }
 
 // ─── Inbox tab types ──────────────────────────────────────────────────────────
-type InboxTab = "Messages" | "Clients";
+type InboxTab = "Messages" | "Client notes";
 
 // ─── Component ────────────────────────────────────────────────────────────────
 export function InboxCenter({
@@ -611,7 +622,7 @@ export function InboxCenter({
   // ─── Tab bar ──────────────────────────────────────────────────────────────
   const tabBar = (
     <div className="v2-inbox-tabs">
-      {(["Messages", "Clients"] as InboxTab[]).map((tab) => (
+      {(["Messages", "Client notes"] as InboxTab[]).map((tab) => (
         <button
           key={tab}
           type="button"
@@ -646,7 +657,7 @@ export function InboxCenter({
       {tabBar}
 
       {/* Clients tab */}
-      {activeTab === "Clients" ? (
+      {activeTab === "Client notes" ? (
         <div className="v2-inbox-clients-wrapper">
           <ClientsTab />
         </div>
