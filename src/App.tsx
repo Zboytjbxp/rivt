@@ -455,6 +455,7 @@ function toCommunityPostViewModel(post: ServerShopTalkPost): CommunityPost {
     communitySlug: post.communitySlug,
     communityName: post.communityName,
     communityAudience: post.communityAudience,
+    viewerCanDelete: post.viewerCanDelete,
     ...(thumbnailUrl ? { thumbnailUrl } : {}),
     ...(thumbnailUrl ? { thumbnailAlt: post.thumbnailAlt ?? firstMedia?.altText ?? firstMedia?.originalName ?? post.title } : {}),
   };

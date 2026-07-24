@@ -2,10 +2,50 @@
 
 Last updated: 2026-07-23 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Final pre-release five-surface polish is production verified.
-Active packet: Final pre-release polish production verification
-Repository branch: `master`
+Current phase: Shop Talk article discussion finish is verified locally and awaiting review/merge.
+Active packet: Shop Talk linked-article discussion and owned-post deletion
+Repository branch: `codex/shop-talk-discussion-finish`
 Production feature release commit: `86bd14942723e759680b4614c2e67cebda84ae33`
+
+## Shop Talk Linked-Article Discussion Finish (Local Verification)
+
+- Trade News discussions still persist the canonical article URL so thread
+  matching remains real, but Feed cards and the selected thread now parse that
+  URL into a compact linked-article attachment. Existing posts using the
+  legacy `Via source · date` body format are cleaned at render time, so long
+  Google News redirect URLs no longer become visible body copy.
+- The Trade News composer opens with the article attached and a focused
+  `Your take` field instead of pre-filling the textarea with attribution and a
+  raw URL. The stored post retains source/date/URL metadata after submission.
+- Delete affordance is now visible in the selected thread only when the API
+  confirms the signed-in account owns the post. The existing server-side,
+  author-authorized delete mutation remains the source of truth; the new
+  confirmation sheet accurately describes the hidden post, replies, and
+  removed active media state. No device-only success path is presented for a
+  server post.
+- The selected discussion now uses a readable article attachment, compact
+  horizontal reaction/report controls, a less card-heavy empty thread state,
+  and a tightened answer composer. Mobile tap targets and wrapping are
+  preserved, and explicit semantic token colors keep the read/comment path
+  legible in both light and dark themes.
+- Rendered QA now covers a legacy long-link article post in Feed and detail,
+  verifies the URL never renders as prose, proves the article attachment and
+  ownership-gated delete affordance exist, executes the delete mutation, and
+  verifies the post leaves the feed. It also confirms the Trade News composer
+  starts with an empty visible comment field while showing the attached
+  article. Desktop/mobile light/dark discussion and delete-confirmation
+  screenshots are captured.
+- Verified locally: lint, production build, 73 unit/frontend tests, the
+  targeted server-owned Shop Talk post integration test, Shop Talk/Trade News
+  rendered QA, desktop/mobile E2E, and a production dependency audit with
+  zero vulnerabilities. The targeted integration test proves owner/non-owner
+  delete visibility and the author-authorized deletion path. The aggregate
+  `npm run test` completed its unit phase and then produced no result from the
+  existing serial database integration phase before the five-minute limit;
+  orphaned test processes were stopped, so no aggregate integration pass is
+  claimed.
+- This branch has not been merged or deployed. Production remains on the
+  release commit recorded above.
 
 ## Final Pre-Release Five-Surface Polish (Production Verification)
 

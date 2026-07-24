@@ -261,6 +261,15 @@ if (!testDatabaseUrl) {
     assert.equal(exactPost.response.status, 200);
     assert.equal(exactPost.payload.data.post.id, post.id);
     assert.equal(exactPost.payload.data.post.title, post.title);
+    assert.equal(exactPost.payload.data.post.viewerCanDelete, true);
+
+    const exactPostForAnswerer = await requestJson(
+      baseUrl,
+      `/api/v1/shop-talk/posts/${post.id}`,
+      { cookie: answerer.cookie },
+    );
+    assert.equal(exactPostForAnswerer.response.status, 200);
+    assert.equal(exactPostForAnswerer.payload.data.post.viewerCanDelete, false);
 
     const missingExactPost = await requestJson(
       baseUrl,

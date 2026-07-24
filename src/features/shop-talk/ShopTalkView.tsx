@@ -50,6 +50,10 @@ import {
 import { apiPath, fetchWithTimeout } from "../../lib/api";
 import { DialogBackdrop, DialogSurface } from "../../components/ui";
 import { ZoomableImage } from "../../components/ZoomableImage";
+import {
+  buildArticleDiscussionBody,
+  parseShopTalkPostBody,
+} from "./shop-talk-post-content";
 import "./shop-talk.css";
 
 const NEWS_RENDER_NOW = Date.now();
@@ -119,6 +123,7 @@ export interface CommunityPost {
   communitySlug?: string;
   communityName?: string;
   communityAudience?: CommunityAudience;
+  viewerCanDelete?: boolean;
 }
 
 export type PostFlair = "Question" | "Discussion" | "Code Talk" | "Compliance" | "Tip" | "Humor";
@@ -456,6 +461,7 @@ function ShopTalkNewPostModal({
   initialFlair = "Question",
   initialTitle = "",
   initialBody = "",
+  articleContext,
   communities,
   initialCommunitySlug,
   onClose,
@@ -466,6 +472,7 @@ function ShopTalkNewPostModal({
   initialFlair?: PostFlair;
   initialTitle?: string;
   initialBody?: string;
+  articleContext?: Pick<NewsItem, "headline" | "source" | "date" | "url"> | null;
   communities: CommunityDisplay[];
   initialCommunitySlug?: string | null;
   onClose: () => void;
@@ -485,7 +492,11 @@ function ShopTalkNewPostModal({
   const [subRate, setSubRate] = useState("");
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoError, setPhotoError] = useState("");
-  const canSubmit = title.trim().length > 0 && (body.trim().length > 0 || Boolean(photoFile));
+  const canSubmit = title.trim().length > 0 && (
+    body.trim().length > 0
+    || Boolean(photoFile)
+    || Boolean(articleContext?.url)
+  );
   const tradeOptions: (Trade | "General")[] = ["General", ...specialtyOptions];
   const photoPreviewUrl = useMemo(() => photoFile ? URL.createObjectURL(photoFile) : null, [photoFile]);
 
@@ -513,7 +524,10 @@ function ShopTalkNewPostModal({
     <div className="modal-backdrop" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="new-post-modal">
         <div className="new-post-modal-header">
-          <h2>Create a post</h2>
+          <div>
+            <span className="new-post-modal-eyebrow">{articleContext ? "Trade News discussion" : "Shop Talk"}</span>
+            <h2>{articleContext ? "Start a discussion" : "Create a post"}</h2>
+          </div>
           <button type="button" className="icon-button" onClick={onClose} aria-label="Close"><X size={18} /></button>
         </div>
 
@@ -584,13 +598,29 @@ function ShopTalkNewPostModal({
             <small>{title.length}/120</small>
           </label>
 
+          {articleContext ? (
+            <aside className="new-post-article-attachment" aria-label="Attached article">
+              <Newspaper size={18} aria-hidden="true" />
+              <div>
+                <span>Article attached</span>
+                <strong>{articleContext.headline}</strong>
+                <small>{articleContext.source} · {articleContext.date}</small>
+              </div>
+              <a href={articleContext.url} target="_blank" rel="noreferrer" aria-label="Preview attached article">
+                <ExternalLink size={16} />
+              </a>
+            </aside>
+          ) : null}
+
           <label className="input-control">
-            <span>Body</span>
+            <span>{articleContext ? "Your take" : "Body"}</span>
             <textarea
               value={body}
               onChange={(e) => setBody(e.target.value)}
               rows={5}
-              placeholder="Add context, photos, site conditions, tools on hand..."
+              placeholder={articleContext
+                ? "What changes for crews, bids, schedules, safety, or code compliance?"
+                : "Add context, photos, site conditions, tools on hand..."}
             />
           </label>
 
@@ -669,7 +699,9 @@ function ShopTalkNewPostModal({
                   flair,
                   title.trim(),
                   trade,
-                  body.trim(),
+                  articleContext
+                    ? buildArticleDiscussionBody(body, articleContext)
+                    : body.trim(),
                   postType,
                   postType === "sub-request" ? subTrade : undefined,
                   postType === "sub-request" ? subLocation : undefined,
@@ -776,6 +808,7 @@ export function ShopTalkView({
   const [communityCreateAudience, setCommunityCreateAudience] = useState<CommunityAudience>("public");
   const [duplicateCommunityCandidates, setDuplicateCommunityCandidates] = useState<ServerCommunity[]>([]);
   const [deletingPostId, setDeletingPostId] = useState<string | null>(null);
+  const [deleteConfirmPostId, setDeleteConfirmPostId] = useState<string | null>(null);
   const [selectedCommunitySlug, setSelectedCommunitySlug] = useState<string | null>(initialCommunitySlug ?? null);
   const [talkQuery, setTalkQuery] = useState(() => initialQuery.trim());
   const [newsQuery, setNewsQuery] = useState("");
@@ -1190,7 +1223,11 @@ export function ShopTalkView({
   const selectedPostReactionState = selectedPost
     ? getPostReactionState(selectedPost)
     : { upvotes: 0, downvotes: 0, reaction: null, serverOwned: reactionStatus === "ready", pending: false };
-  const canDeleteSelectedPost = Boolean(selectedPost && selectedPost.author === profile.displayName && !selectedPost.badge);
+  const selectedPostContent = selectedPost ? parseShopTalkPostBody(selectedPost.body) : null;
+  const canDeleteSelectedPost = Boolean(selectedPost && !selectedPost.badge && (
+    selectedPost.viewerCanDelete === true
+    || (selectedPost.viewerCanDelete == null && selectedPost.author === profile.displayName)
+  ));
   const SelectedCommunityIcon = selectedCommunity?.icon;
   const reactionLedgerLabel = reactionStatus === "ready"
     ? "Server-backed"
@@ -1202,12 +1239,11 @@ export function ShopTalkView({
 
   async function handleDeleteSelectedPost() {
     if (!selectedPost) return;
-    const confirmed = window.confirm("Delete this Shop Talk post? It will be removed from the feed and any attached photo will be removed from active records.");
-    if (!confirmed) return;
     setDeletingPostId(selectedPost.id);
     try {
       const deleted = await onDeletePost(selectedPost.id);
       if (deleted) {
+        setDeleteConfirmPostId(null);
         setSelectedPostId(null);
         setMobileDetail(false);
       }
@@ -1241,7 +1277,6 @@ export function ShopTalkView({
           if (thread) openNewsThread(item);
           else {
             setNewsDiscussContext(item);
-            setActiveTab("talk");
             setNewPostOpen(true);
           }
         }}>
@@ -1268,7 +1303,8 @@ export function ShopTalkView({
           initialCommunitySlug={selectedCommunitySlug}
           initialFlair={newsDiscussContext ? "Discussion" : "Question"}
           initialTitle={newsDiscussContext ? newsDiscussContext.headline.slice(0, 120) : ""}
-          initialBody={newsDiscussContext ? `Via ${newsDiscussContext.source} · ${newsDiscussContext.date}\n\n${newsDiscussContext.url}` : ""}
+          initialBody=""
+          articleContext={newsDiscussContext}
           onClose={() => { setNewPostOpen(false); setNewsDiscussContext(null); }}
           onSubmit={(flair, title, trade, body, postType, subTrade, subLocation, subRate, communitySlug, photoFile) => {
             void onNewPost(flair, title, trade, body, postType, subTrade, subLocation, subRate, communitySlug, photoFile);
@@ -1783,7 +1819,7 @@ export function ShopTalkView({
                 Back
               </button>
               <div className="shop-question-header">
-                <div>
+                <div className="shop-question-copy">
                   <div className="shop-question-meta">
                     {selectedPost.flair && (
                       <span className={`flair-pill flair-${selectedPost.flair.toLowerCase().replace(/\s/g, "-")}`}>
@@ -1794,7 +1830,23 @@ export function ShopTalkView({
                     <span>{selectedPost.trade} - {selectedPost.createdAt}</span>
                   </div>
                   <h2>{selectedPost.title}</h2>
-                  {selectedPost.body && <p>{selectedPost.body}</p>}
+                  {selectedPostContent?.content ? <p className="shop-question-body">{selectedPostContent.content}</p> : null}
+                  {selectedPostContent?.article ? (
+                    <aside className="shop-question-article" aria-label="Linked article">
+                      <span className="shop-question-article-icon"><Newspaper size={18} aria-hidden="true" /></span>
+                      <div>
+                        <span>Linked article</span>
+                        <strong>{selectedPostContent.article.source}</strong>
+                        <small>{selectedPostContent.article.date
+                          ? `${selectedPostContent.article.date} · ${selectedPostContent.article.domain}`
+                          : selectedPostContent.article.domain}</small>
+                      </div>
+                      <a href={selectedPostContent.article.url} target="_blank" rel="noreferrer">
+                        Read article
+                        <ExternalLink size={14} />
+                      </a>
+                    </aside>
+                  ) : null}
                   {selectedPost.thumbnailUrl && (
                     <figure className="shop-question-media">
                       <ZoomableImage
@@ -1824,9 +1876,10 @@ export function ShopTalkView({
                       className="shop-detail-delete"
                       aria-label="Delete this post"
                       disabled={deletingPostId === selectedPost.id}
-                      onClick={() => void handleDeleteSelectedPost()}
+                      onClick={() => setDeleteConfirmPostId(selectedPost.id)}
                     >
                       <Trash2 size={16} />
+                      <span>Delete</span>
                     </button>
                   )}
                 </div>
@@ -2050,7 +2103,6 @@ export function ShopTalkView({
                       if (newsThreadMatches.has(canonicalNewsUrl(selectedNews.url))) openNewsThread(selectedNews);
                       else {
                         setNewsDiscussContext(selectedNews);
-                        setActiveTab("talk");
                         setNewPostOpen(true);
                       }
                     }}
@@ -2068,6 +2120,45 @@ export function ShopTalkView({
           </article>
         )}
       </section>
+      {deleteConfirmPostId && selectedPost?.id === deleteConfirmPostId ? (
+        <DialogBackdrop className="shop-delete-backdrop" onClose={() => {
+          if (deletingPostId !== deleteConfirmPostId) setDeleteConfirmPostId(null);
+        }}>
+          <DialogSurface
+            className="shop-delete-dialog"
+            labelledBy="shop-delete-title"
+            onClose={() => {
+              if (deletingPostId !== deleteConfirmPostId) setDeleteConfirmPostId(null);
+            }}
+          >
+            <span className="shop-delete-icon"><Trash2 size={20} aria-hidden="true" /></span>
+            <div>
+              <span>Your post</span>
+              <h2 id="shop-delete-title">Delete this discussion?</h2>
+              <p>It will leave the feed, its replies will no longer be visible, and any attached photo will be removed from active records.</p>
+            </div>
+            <div className="shop-delete-actions">
+              <button
+                type="button"
+                className="secondary-action"
+                disabled={deletingPostId === deleteConfirmPostId}
+                onClick={() => setDeleteConfirmPostId(null)}
+              >
+                Keep post
+              </button>
+              <button
+                type="button"
+                className="shop-delete-confirm"
+                disabled={deletingPostId === deleteConfirmPostId}
+                onClick={() => void handleDeleteSelectedPost()}
+              >
+                <Trash2 size={15} />
+                {deletingPostId === deleteConfirmPostId ? "Deleting..." : "Delete post"}
+              </button>
+            </div>
+          </DialogSurface>
+        </DialogBackdrop>
+      ) : null}
       {reportTarget ? (
         <ReportSheet
           target={reportTarget}

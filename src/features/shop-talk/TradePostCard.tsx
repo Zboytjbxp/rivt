@@ -8,12 +8,14 @@ import {
   Check,
   Hammer,
   MessageCircle,
+  Newspaper,
   Share2,
   Users,
   Wrench,
 } from "lucide-react";
 import type { CommunityPost } from "./ShopTalkView";
 import type { CommunityReactionState } from "./ShopTalkView";
+import { parseShopTalkPostBody } from "./shop-talk-post-content";
 import "../home/trade-feed.css";
 
 // Map a post's trade to its community label + icon so cards read like the references.
@@ -55,6 +57,7 @@ export function TradePostCard({ post, reactionState, saved, onToggleSave, onVote
   const score = reactionState.upvotes - reactionState.downvotes;
   const comments = post.replies.length;
   const hasThumbnail = Boolean(post.thumbnailUrl && failedThumbnailUrl !== post.thumbnailUrl);
+  const postContent = parseShopTalkPostBody(post.body);
 
   const [shareResult, setShareResult] = useState<"copied" | "shared" | null>(null);
 
@@ -91,7 +94,16 @@ export function TradePostCard({ post, reactionState, saved, onToggleSave, onVote
       <button type="button" className={hasThumbnail ? "trade-post-body-btn has-thumbnail" : "trade-post-body-btn"} onClick={onOpen}>
         <span className="trade-post-copy">
           <h3 className="trade-post-title">{post.title}</h3>
-          <p className="trade-post-excerpt">{post.body}</p>
+          {postContent.content ? <p className="trade-post-excerpt">{postContent.content}</p> : null}
+          {postContent.article ? (
+            <span className="trade-post-article-link">
+              <Newspaper size={15} aria-hidden="true" />
+              <span>
+                <small>Linked article</small>
+                <strong>{postContent.article.source}</strong>
+              </span>
+            </span>
+          ) : null}
         </span>
         {hasThumbnail ? (
           <span className="trade-post-thumbnail">

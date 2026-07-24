@@ -270,7 +270,7 @@ function mapShopTalkPostMediaRow(row) {
   };
 }
 
-function mapShopTalkPostRow(row) {
+function mapShopTalkPostRow(row, viewerAccountId = null) {
   const media = Array.isArray(row.media) ? row.media.map(mapShopTalkPostMediaRow) : [];
   return {
     id: row.id,
@@ -291,6 +291,7 @@ function mapShopTalkPostRow(row) {
     media,
     thumbnailUrl: media[0]?.signedUrl ?? null,
     thumbnailAlt: media[0]?.altText || media[0]?.originalName || row.title,
+    viewerCanDelete: Boolean(viewerAccountId && row.author_account_id === viewerAccountId),
   };
 }
 
@@ -372,13 +373,13 @@ async function loadShopTalkReactionNotificationTarget(client, target) {
   };
 }
 
-async function mapShopTalkPostRowWithMedia(row, signedObjectUrl) {
+async function mapShopTalkPostRowWithMedia(row, signedObjectUrl, viewerAccountId = null) {
   const rawMedia = Array.isArray(row.media) ? row.media : [];
   const media = await Promise.all(rawMedia.map(async (item) => ({
     ...item,
     signed_url: await signedObjectUrl(item.object_key),
   })));
-  return mapShopTalkPostRow({ ...row, media });
+  return mapShopTalkPostRow({ ...row, media }, viewerAccountId);
 }
 
 async function requireCommunityForPost(client, slug, actor) {
@@ -420,6 +421,7 @@ async function fetchShopTalkPostRows(client, { actor, communitySlug = null, post
   }
   const result = await client.query(
     `SELECT post.id,
+            post.author_account_id,
             post.author_name,
             post.trade,
             post.flair,
@@ -523,7 +525,7 @@ export function registerShopTalkRoutes({
     const { community } = validate(shopTalkPostsQuerySchema, request.query);
     const rows = await fetchShopTalkPostRows(database, { actor: request.actor, communitySlug: community ?? null });
     response.json({
-      data: { posts: await Promise.all(rows.map((row) => mapShopTalkPostRowWithMedia(row, signedObjectUrl))) },
+      data: { posts: await Promise.all(rows.map((row) => mapShopTalkPostRowWithMedia(row, signedObjectUrl, request.actor.account.id))) },
       meta: { requestId: request.requestId },
     });
   }));
@@ -537,7 +539,7 @@ export function registerShopTalkRoutes({
     const row = rows[0];
     if (!row) throw new ApiError(404, "SHOP_TALK_POST_NOT_FOUND", "That Shop Talk post is unavailable.");
     response.json({
-      data: { post: await mapShopTalkPostRowWithMedia(row, signedObjectUrl) },
+      data: { post: await mapShopTalkPostRowWithMedia(row, signedObjectUrl, request.actor.account.id) },
       meta: { requestId: request.requestId },
     });
   }));
@@ -563,7 +565,7 @@ export function registerShopTalkRoutes({
           `INSERT INTO shop_talk_posts (
              author_account_id, author_name, community_id, trade, flair, post_type, title, body
            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-           RETURNING id, author_name, community_id, trade, flair, post_type, title, body, status, created_at, moderation_status`,
+           RETURNING id, author_account_id, author_name, community_id, trade, flair, post_type, title, body, status, created_at, moderation_status`,
           [
             request.actor.account.id,
             authorName,
@@ -582,7 +584,7 @@ export function registerShopTalkRoutes({
         return {
           status: 201,
           body: {
-            data: { post: mapShopTalkPostRow(inserted.rows[0]) },
+            data: { post: mapShopTalkPostRow(inserted.rows[0], request.actor.account.id) },
             meta: { requestId: request.requestId },
           },
         };
@@ -702,7 +704,7 @@ export function registerShopTalkRoutes({
                   ...mediaRow.rows[0],
                   signed_url: await signedObjectUrl(objectKey),
                 }),
-                post: updatedPostRow ? await mapShopTalkPostRowWithMedia(updatedPostRow, signedObjectUrl) : null,
+                post: updatedPostRow ? await mapShopTalkPostRowWithMedia(updatedPostRow, signedObjectUrl, request.actor.account.id) : null,
               },
               meta: { requestId: request.requestId },
             },

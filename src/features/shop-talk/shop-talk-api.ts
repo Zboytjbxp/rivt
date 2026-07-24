@@ -57,6 +57,7 @@ export interface ServerShopTalkPost {
   media?: ServerShopTalkMedia[];
   thumbnailUrl?: string | null;
   thumbnailAlt?: string | null;
+  viewerCanDelete?: boolean;
 }
 
 export type ShopTalkReportReason = "spam" | "harassment" | "unsafe_advice" | "misinformation" | "privacy" | "duplicate" | "other";

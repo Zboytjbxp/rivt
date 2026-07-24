@@ -10,6 +10,31 @@ Status values:
 
 Evidence must eventually link to implementation, automated tests, manual acceptance proof, and deployed build.
 
+## Traceability Addendum - 2026-07-23 Shop Talk Linked-Article Discussion Finish
+
+- `GA-UX-003` gains a finished Trade News-to-Shop Talk discussion path:
+  article context is rendered as compact metadata in the composer, Feed, and
+  selected thread; the visible comment field starts empty; selected-thread
+  actions and the answer composer reflow cleanly on mobile.
+- `GA-UX-005` gains honesty and ownership evidence: canonical article URLs
+  remain persisted for real thread matching but are not exposed as body copy;
+  delete visibility comes from immutable server account ownership; deletion
+  uses the existing author-authorized server mutation and does not claim a
+  frontend-only result.
+- `GA-UX-006` gains desktop/mobile light/dark rendered captures for the linked
+  article thread and delete confirmation, plus assertions that long redirect
+  URLs do not render, the article attachment remains available, and the
+  visible answer/read surfaces retain semantic-token contrast.
+- `GA-OPS-007` gains local evidence from lint, production build, 73
+  unit/frontend tests, the targeted server-owned Shop Talk post integration
+  test, Shop Talk/Trade News rendered QA, desktop/mobile E2E, and a
+  zero-vulnerability production dependency audit. The aggregate serial
+  database phase timed out after five minutes without a result and is not
+  claimed as passed.
+- Remaining risk: the branch is not merged or deployed, and signed-in
+  physical-device acceptance should confirm article creation and deletion
+  against the production account/database after deployment.
+
 ## Traceability Addendum - 2026-07-23 Final Pre-Release Five-Surface Polish
 
 - `GA-UX-003` gains final cross-surface hierarchy and mobile evidence across

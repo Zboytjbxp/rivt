@@ -420,11 +420,42 @@ async function configurePage(page) {
               answers: [{ id: "heat-reply-1", author: "Field Pro", body: "We moved heavy work earlier.", createdAt: "2026-07-15T11:30:00.000Z" }],
               media: [],
             },
+            {
+              id: "shop-talk-ui-owned-article",
+              author: account.profile.displayName,
+              trade: "General",
+              flair: "Discussion",
+              type: "general",
+              title: "Jax Inspector General finds Duval Schools' kitchen construction violated code",
+              body: "Via Florida Politics · Jul 23, 2026\n\nhttps://news.google.com/rss/articles/CBMivgFBVV95cUxOdTh1Q1VHODZCQXU3ZFNFR3BaMUF5a2tEODVlaVFOS3RBRVZnVG1Tdm0zeGpGOThOVUtnOEwwajBRYnNvaXVvbW1oWXRtTHdlVGlyYnJqaERINTRWWGlVYWk?oc=5",
+              status: "Open",
+              createdAt: "2026-07-23T13:00:00.000Z",
+              communitySlug: "jacksonville-trades",
+              communityName: "Jacksonville Trades",
+              communityAudience: "public",
+              viewerCanDelete: true,
+              answers: [],
+              media: [],
+            },
           ],
         },
       }),
     }),
   );
+  await page.route(/\/api\/v1\/shop-talk\/posts\/shop-talk-ui-owned-article$/, async (route) => {
+    if (route.request().method() !== "DELETE") return route.fallback();
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        data: {
+          deleted: true,
+          postId: "shop-talk-ui-owned-article",
+          removedUploadCount: 0,
+        },
+      }),
+    });
+  });
   await page.route(/\/api\/v1\/shop-talk\/posts\/[^/]+\/answers$/, async (route) => {
     const requestBody = route.request().postDataJSON();
     await route.fulfill({
@@ -587,7 +618,7 @@ try {
     await page.locator(".shop-talk-filter-panel select").first().selectOption("Electrical");
     assert.equal(await page.locator(".trade-post").count(), 0, "a nonmatching trade filter should narrow the feed");
     await page.getByRole("button", { name: "Reset", exact: true }).click();
-    assert.equal(await page.locator(".trade-post").count(), 2, "Reset must restore the full feed using the valid All trades sentinel");
+    assert.equal(await page.locator(".trade-post").count(), 3, "Reset must restore the full feed using the valid All trades sentinel");
     const talkSearch = page.locator('.shop-talk-search input[type="search"]');
     await talkSearch.fill("scope");
     await assertNoHorizontalOverflow(page);
@@ -633,6 +664,34 @@ try {
     if ((await mobileBack.count()) > 0 && (await mobileBack.isVisible())) {
       await mobileBack.click();
     }
+    const ownedArticlePost = page.locator(".trade-post").filter({ hasText: "Jax Inspector General finds Duval Schools" });
+    await ownedArticlePost.waitFor({ timeout: 15_000 });
+    assert.equal(await ownedArticlePost.getByText(/https:\/\/news\.google\.com/i).count(), 0, "article URLs must not render as feed body copy");
+    await ownedArticlePost.locator(".trade-post-body-btn").click();
+    await page.getByLabel("Linked article").waitFor({ timeout: 15_000 });
+    assert.equal(await page.getByText(/CBMivgFBVV95cUx/i).count(), 0, "long article URLs must not render in the selected thread");
+    await page.getByRole("button", { name: "Delete this post" }).waitFor({ timeout: 15_000 });
+    await prepareScreenshot(page);
+    await page.screenshot({ path: path.join(screenshotDir, `${viewport.name}-article-thread-light.png`), fullPage: true });
+    await page.evaluate(() => {
+      window.localStorage.setItem("rivt-theme-source", "dark");
+      window.localStorage.setItem("rivt-theme-mode", "dark");
+    });
+    await page.reload({ waitUntil: "networkidle" });
+    await page.getByLabel("Shop Talk community").getByRole("button", { name: "Feed" }).waitFor({ timeout: 15_000 });
+    await ownedArticlePost.waitFor({ timeout: 15_000 });
+    await ownedArticlePost.locator(".trade-post-body-btn").click();
+    await page.getByLabel("Linked article").waitFor({ timeout: 15_000 });
+    await page.getByRole("button", { name: "Delete this post" }).waitFor({ timeout: 15_000 });
+    await prepareScreenshot(page);
+    await page.screenshot({ path: path.join(screenshotDir, `${viewport.name}-article-thread-dark.png`), fullPage: true });
+    await page.getByRole("button", { name: "Delete this post" }).click();
+    const deleteDialog = page.getByRole("dialog", { name: "Delete this discussion?" });
+    await deleteDialog.waitFor({ timeout: 15_000 });
+    await page.screenshot({ path: path.join(screenshotDir, `${viewport.name}-delete-confirm-dark.png`), fullPage: true });
+    await deleteDialog.getByRole("button", { name: "Delete post" }).click();
+    await ownedArticlePost.waitFor({ state: "detached", timeout: 15_000 });
+
     await page.getByRole("button", { name: "Trade News" }).click();
     const newsList = page.locator(".shop-news-list");
     await newsList.getByText("CS/HB 803 removes select building permits across Florida", { exact: false }).first().waitFor({ timeout: 15_000 });
@@ -691,6 +750,14 @@ try {
     assert.ok(criticalMarkers <= Math.floor(renderedCards * 0.25), "critical markers must remain scarce");
     assert.equal(await newsList.getByText("1 replies", { exact: true }).count(), 1, "only the real linked thread should show a reply count");
     assert.equal(await newsList.getByRole("link", { name: "Read original", exact: true }).first().evaluate((node) => getComputedStyle(node).textTransform), "none");
+    const apprenticeshipStory = newsList.locator(".shop-news-card").filter({ hasText: "apprenticeship enrollment gains" });
+    await apprenticeshipStory.getByRole("button", { name: "Start article discussion" }).click();
+    const articleComposer = page.getByRole("heading", { name: "Start a discussion" });
+    await articleComposer.waitFor({ timeout: 15_000 });
+    const discussionBody = page.getByLabel("Your take");
+    assert.equal(await discussionBody.inputValue(), "", "Trade News discussion body must not be prefilled with an article URL");
+    assert.equal(await page.getByLabel("Attached article").getByText("Florida contractors watch apprenticeship enrollment gains", { exact: true }).count(), 1, "the article should render as a compact composer attachment");
+    await page.getByRole("button", { name: "Close" }).click();
     await assertNoHorizontalOverflow(page);
     await page.getByRole("button", { name: /Customize/i }).click();
     const customize = page.getByLabel("Customize Trade News");

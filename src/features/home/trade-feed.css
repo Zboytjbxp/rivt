@@ -666,6 +666,44 @@
   color: var(--v2-text-muted);
 }
 
+.trade-post-article-link {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: fit-content;
+  max-width: 100%;
+  margin-top: 10px;
+  padding: 8px 10px;
+  border-radius: var(--v2-radius-md);
+  background: var(--v2-surface-muted);
+  color: var(--v2-text-muted);
+}
+
+.trade-post-article-link > svg {
+  flex: 0 0 auto;
+  color: var(--v2-accent-text);
+}
+
+.trade-post-article-link > span {
+  display: grid;
+  min-width: 0;
+}
+
+.trade-post-article-link small {
+  color: var(--v2-text-muted);
+  font-size: var(--v2-text-caption);
+  line-height: 1.15;
+}
+
+.trade-post-article-link strong {
+  overflow: hidden;
+  color: var(--v2-text);
+  font-size: var(--v2-text-label);
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .trade-post-actions {
   display: flex;
   align-items: center;
