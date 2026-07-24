@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ArrowLeft, ChevronDown, ChevronUp } from "lucide-react";
+import { ArrowLeft, ChevronDown, ChevronUp, MapPin } from "lucide-react";
 import { readPrimaryHourlyRate } from "../../lib/rateCard";
 import "./job-detail-hub.css";
 
@@ -287,7 +287,7 @@ export function JobDetailHub({ jobId, onClose }: JobDetailHubProps) {
       {/* Meta row */}
       {job ? (
         <div className="v2-job-detail-meta">
-          {job.location ? <span>📍 {job.location}</span> : null}
+          {job.location ? <span><MapPin size={13} aria-hidden="true" /> {job.location}</span> : null}
           {job.trade ? <><span>·</span><span>{job.trade}</span></> : null}
           {job.startDate ? <><span>·</span><span>{job.startDate}</span></> : null}
         </div>

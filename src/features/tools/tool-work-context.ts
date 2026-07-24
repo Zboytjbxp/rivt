@@ -7,16 +7,12 @@ export type ToolWorkContext =
   | { kind: "standalone"; project: StandaloneProject }
   | { kind: "rivt"; activeWorkId: string; work: CanonicalActiveWork; job: Job | null };
 
-const CLOSED_WORK_STATUSES = new Set(["archived", "canceled", "cancelled", "closed", "complete", "completed"]);
-
 function normalizedStatus(value: unknown) {
   return String(value ?? "").trim().toLowerCase();
 }
 
 export function isSelectableActiveWork(work: CanonicalActiveWork) {
-  const activeWorkStatus = normalizedStatus(work.status);
-  const jobStatus = normalizedStatus(work.job?.status);
-  return activeWorkStatus === "active" && !CLOSED_WORK_STATUSES.has(jobStatus);
+  return normalizedStatus(work.status) === "active";
 }
 
 export function toolContextLabel(context: ToolWorkContext) {

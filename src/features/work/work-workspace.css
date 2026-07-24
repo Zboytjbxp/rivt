@@ -1887,18 +1887,6 @@
     padding: 0 8px;
   }
 
-  .v2-work-header .v2-primary-button {
-    width: 44px;
-    padding: 0;
-    overflow: hidden;
-    color: transparent;
-    font-size: 0;
-  }
-
-  .v2-work-header .v2-primary-button svg {
-    color: #ffffff;
-  }
-
   .v2-job-row {
     padding: 14px 12px;
   }
@@ -2389,13 +2377,13 @@
   flex-shrink: 0;
 }
 
-.v2-work-cal-job-row.cal-status-open .v2-work-cal-dot { background: #22c55e; }
-.v2-work-cal-job-row.cal-status-draft .v2-work-cal-dot { background: #f59e0b; }
-.v2-work-cal-job-row.cal-status-paused .v2-work-cal-dot { background: #94a3b8; }
-.v2-work-cal-job-row.cal-status-closed .v2-work-cal-dot { background: #64748b; }
+.v2-work-cal-job-row.cal-status-open .v2-work-cal-dot { background: var(--v2-success); }
+.v2-work-cal-job-row.cal-status-draft .v2-work-cal-dot { background: var(--v2-warning); }
+.v2-work-cal-job-row.cal-status-paused .v2-work-cal-dot { background: var(--v2-text-subtle); }
+.v2-work-cal-job-row.cal-status-closed .v2-work-cal-dot { background: var(--v2-text-muted); }
 
-.v2-work-cal-job-row.cal-status-open { background: color-mix(in srgb, #22c55e 8%, var(--v2-surface-muted)); }
-.v2-work-cal-job-row.cal-status-draft { background: color-mix(in srgb, #f59e0b 8%, var(--v2-surface-muted)); }
+.v2-work-cal-job-row.cal-status-open { background: color-mix(in srgb, var(--v2-success) 8%, var(--v2-surface-muted)); }
+.v2-work-cal-job-row.cal-status-draft { background: color-mix(in srgb, var(--v2-warning) 8%, var(--v2-surface-muted)); }
 .v2-work-cal-job-row.cal-status-paused,
 .v2-work-cal-job-row.cal-status-closed { background: var(--v2-surface-muted); }
 
@@ -2588,7 +2576,7 @@
 .v2-checklist-check[aria-pressed="true"] {
   border-color: var(--v2-accent);
   background: var(--v2-accent);
-  color: #fff;
+  color: var(--v2-on-accent);
 }
 
 .v2-checklist-item span { flex: 1; font-size: calc(14px * var(--v2-text-scale)); }
@@ -2630,7 +2618,7 @@
 
 .v2-milestone-summary span { font-size: calc(13px * var(--v2-text-scale)); color: var(--v2-text-muted); text-transform: uppercase; letter-spacing: 0.04em; }
 .v2-milestone-summary strong { font-size: calc(15px * var(--v2-text-scale)); font-weight: var(--v2-weight-strong); }
-.v2-milestone-summary strong.is-paid { color: #22c55e; }
+.v2-milestone-summary strong.is-paid { color: var(--v2-success); }
 
 .v2-milestone-form h3 { font-size: calc(13px * var(--v2-text-scale)); font-weight: var(--v2-weight-strong); margin: 0 0 10px; }
 
@@ -2693,9 +2681,9 @@
   border-radius: var(--v2-radius-pill);
 }
 
-.v2-ms-pill.ms-status-pending { background: color-mix(in srgb, #f59e0b 15%, transparent); color: #b45309; }
-.v2-ms-pill.ms-status-paid { background: color-mix(in srgb, #22c55e 15%, transparent); color: #15803d; }
-.v2-ms-pill.ms-status-overdue { background: color-mix(in srgb, #ef4444 15%, transparent); color: #b91c1c; }
+.v2-ms-pill.ms-status-pending { background: var(--v2-warning-soft); color: var(--v2-warning); }
+.v2-ms-pill.ms-status-paid { background: var(--v2-success-soft); color: var(--v2-success); }
+.v2-ms-pill.ms-status-overdue { background: var(--v2-danger-soft); color: var(--v2-danger); }
 
 .v2-milestone-actions {
   display: flex;

@@ -9,7 +9,6 @@ import {
   CircleDollarSign,
   FileText,
   Filter,
-  LayoutList,
   LockKeyhole,
   MessageCircle,
   MapPin,
@@ -64,7 +63,6 @@ import {
   type CompensationUnit,
 } from "./job-api";
 import "./work-workspace.css";
-import { JobDetailHub } from "../jobs/JobDetailHub";
 import { getProjectForActiveWork, type ProjectRecord } from "../tools/project-api";
 import { JobCloseoutPanel } from "./JobCloseoutPanel";
 
@@ -1258,7 +1256,6 @@ export function WorkWorkspace({
   const [savedSearches, setSavedSearches] = useState<SavedSearch[]>(readSavedSearches);
   const [savedSearchNotice, setSavedSearchNotice] = useState("");
   const [saveTemplateNotice, setSaveTemplateNotice] = useState("");
-  const [detailJobId, setDetailJobId] = useState<string | null>(null);
   const [activeProject, setActiveProject] = useState<ProjectRecord | null>(null);
   const [closeoutOpen, setCloseoutOpen] = useState(() => Boolean(openCloseoutOnMount));
   const [addressCopied, setAddressCopied] = useState(false);
@@ -2426,7 +2423,6 @@ export function WorkWorkspace({
                       setSaveTemplateNotice(`Saved as "${templateName}"`);
                       setTimeout(() => setSaveTemplateNotice(""), 3000);
                     }}><FileText size={17} /> Template</button>
-                    <button type="button" style={{ color: "var(--v2-accent)" }} onClick={() => setDetailJobId(String(detailJob.id))}><LayoutList size={17} /> Full Detail</button>
                     {detailJob.status === "Draft" ? (
                       <button
                         type="button"
@@ -2444,11 +2440,7 @@ export function WorkWorkspace({
                   </footer>
                 </>
               );
-            })() : (
-              <footer className="v2-work-detail-actions">
-                <button type="button" style={{ color: "var(--v2-accent)" }} onClick={() => setDetailJobId(String(detailJob.id))}><LayoutList size={17} /> Full Detail</button>
-              </footer>
-            )}
+            })() : null}
             {saveTemplateNotice ? <p className="v2-saved-search-notice" role="status" style={{ padding: "8px 16px" }}>{saveTemplateNotice}</p> : null}
           </article>
         ) : role === "tradesperson" && workStage !== "active" && visibleJobs.length === 0 ? null : (
@@ -2459,10 +2451,6 @@ export function WorkWorkspace({
           </article>
         )}
       </div>
-
-      {detailJobId && (
-        <JobDetailHub jobId={detailJobId} onClose={() => setDetailJobId(null)} />
-      )}
 
       {currentActiveProject && closeoutOpen ? (
         <JobCloseoutPanel

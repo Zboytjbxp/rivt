@@ -677,6 +677,8 @@ async function runContractorFlow(page) {
 
   await clickStatusTab(page, "Drafts");
   await clickJob(page, "Electrical service punch list");
+  assert.equal(await page.getByRole("button", { name: /Full Detail/i }).count(), 0, "Work must not expose the incompatible legacy job-detail bridge");
+  assert.equal(await page.getByRole("heading", { name: "Job Detail", exact: true }).count(), 0, "Work must not open invented zero-dollar legacy financials");
   await page.getByRole("button", { name: "Edit" }).first().click();
   await page.getByRole("dialog", { name: "Edit job" }).waitFor({ timeout: 15_000 });
   await page.getByRole("button", { name: "Save draft" }).click();
