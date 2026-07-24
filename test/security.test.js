@@ -1,6 +1,5 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { legacyIntegrationInternals } from "../server/legacy-integrations.js";
 import { newsInternals } from "../server/news.js";
 import {
   createDurableRateLimiter,
@@ -575,44 +574,4 @@ test("trade news tidies official resource titles", () => {
     "Florida Building Code Residential Advanced Course",
   );
   assert.equal(newsInternals._tidyResourceTitle("OSHA HVAC AND GFCI REQUIREMENTS"), "OSHA HVAC And GFCI Requirements");
-});
-
-test("invoice send validation rejects bad recipients and throttles repeated sends", () => {
-  const normalizePhoneNumber = (value) => String(value ?? "").replace(/[^\d+]/g, "");
-  const base = {
-    appName: "RIVT",
-    channel: "email",
-    recipient: "customer@example.com",
-    subject: "Invoice",
-    text: "Please see attached invoice.",
-    normalizePhoneNumber,
-  };
-
-  assert.equal(legacyIntegrationInternals.validateInvoiceSendPayload(base).ok, true);
-  assert.equal(legacyIntegrationInternals.validateInvoiceSendPayload({ ...base, recipient: "bad" }).ok, false);
-  assert.equal(legacyIntegrationInternals.validateInvoiceSendPayload({ ...base, subject: "x".repeat(121) }).ok, false);
-  assert.equal(legacyIntegrationInternals.validateInvoiceSendPayload({ ...base, text: "x".repeat(4001) }).ok, false);
-  assert.equal(legacyIntegrationInternals.validateInvoiceSendPayload({
-    ...base,
-    channel: "sms",
-    recipient: "(904) 555-0199",
-  }).ok, true);
-
-  legacyIntegrationInternals.invoiceSendWindows.clear();
-  const now = Date.now();
-  for (let i = 0; i < legacyIntegrationInternals.INVOICE_SEND_MAX_PER_RECIPIENT; i += 1) {
-    assert.equal(legacyIntegrationInternals.recordInvoiceRecipientSend({
-      accountId: "acct-1",
-      channel: "email",
-      recipient: "customer@example.com",
-      now,
-    }).ok, true);
-  }
-  assert.equal(legacyIntegrationInternals.recordInvoiceRecipientSend({
-    accountId: "acct-1",
-    channel: "email",
-    recipient: "customer@example.com",
-    now,
-  }).ok, false);
-  legacyIntegrationInternals.invoiceSendWindows.clear();
 });

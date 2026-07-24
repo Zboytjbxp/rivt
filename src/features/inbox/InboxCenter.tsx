@@ -46,15 +46,6 @@ const DEFAULT_TEMPLATES = [
 
 const EMOJI_OPTIONS = ["👍", "👎", "🔥", "✅", "❓", "😂"];
 
-const SIMULATE_REPLIES = [
-  "Thanks, I'll be there.",
-  "Can we push to next week?",
-  "Sounds good, see you then.",
-  "What time works for you?",
-  "Got it, I'll check my schedule.",
-  "Perfect, send me the address.",
-];
-
 // ─── Client thread types ──────────────────────────────────────────────────────
 
 type ClientContact = ClientRecord;
@@ -179,16 +170,6 @@ function ClientThread({
     setText("");
   }
 
-  function handleSimulateReply() {
-    const reply = SIMULATE_REPLIES[Math.floor(Math.random() * SIMULATE_REPLIES.length)];
-    addMessage({
-      id: crypto.randomUUID(),
-      text: reply,
-      sentAt: new Date().toISOString(),
-      from: "client",
-    });
-  }
-
   function handlePhotoAttach(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -286,11 +267,6 @@ function ClientThread({
         </button>
       </div>
 
-      <div className="v2-client-thread-toolbar">
-        <button type="button" className="v2-ct-sim-btn" onClick={handleSimulateReply}>
-          Simulate reply
-        </button>
-      </div>
     </div>
   );
 }

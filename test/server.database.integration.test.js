@@ -109,6 +109,19 @@ if (!testDatabaseUrl) {
     assert.equal(contractorLegacyRead.response.status, 410);
     assert.equal(contractorLegacyRead.payload.code, "LEGACY_APP_STATE_RETIRED");
 
+    const legacyInvoiceSend = await requestJson(baseUrl, "/api/invoices/send", {
+      method: "POST",
+      cookie: contractor.cookie,
+      body: {
+        channel: "email",
+        recipient: "attacker-controlled@example.com",
+        subject: "Untrusted subject",
+        message: "Untrusted body",
+      },
+    });
+    assert.equal(legacyInvoiceSend.response.status, 410);
+    assert.equal(legacyInvoiceSend.payload.code, "LEGACY_INVOICE_SEND_RETIRED");
+
     const contractorWrite = await requestJson(baseUrl, "/api/app-state", {
       method: "PUT",
       cookie: contractor.cookie,

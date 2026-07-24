@@ -1214,33 +1214,6 @@
   opacity: 0.88;
 }
 
-/* Simulate reply toolbar */
-.v2-client-thread-toolbar {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 14px 10px;
-  background: var(--v2-surface);
-  border-top: 1px solid color-mix(in srgb, var(--v2-border) 40%, transparent);
-}
-
-.v2-ct-sim-btn {
-  padding: 4px 12px;
-  border: 1px dashed color-mix(in srgb, var(--v2-border) 70%, transparent);
-  border-radius: var(--v2-radius-pill);
-  background: transparent;
-  color: var(--v2-text-muted);
-  font: inherit;
-  font-size: calc(13px * var(--v2-text-scale));
-  cursor: pointer;
-  transition: color 0.12s, border-color 0.12s;
-}
-
-.v2-ct-sim-btn:hover {
-  border-color: var(--v2-accent);
-  color: var(--v2-accent);
-}
-
 .v2-inbox-page :is(button, input, textarea, select, a, [role="button"], [role="switch"]):focus-visible {
   outline: 3px solid color-mix(in srgb, var(--v2-accent) 38%, transparent);
   outline-offset: 2px;
