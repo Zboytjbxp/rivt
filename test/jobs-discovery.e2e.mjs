@@ -493,7 +493,7 @@ async function assertTopBarActions(page) {
 
   await page.getByRole("button", { name: "Messages" }).click();
   await page.getByRole("heading", { name: "Inbox", exact: true }).waitFor();
-  await page.getByRole("button", { name: "Clients" }).waitFor();
+  await page.getByRole("button", { name: "Client notes" }).waitFor();
 }
 
 let browser;

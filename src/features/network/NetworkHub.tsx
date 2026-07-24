@@ -531,7 +531,7 @@ function JobAssignModal({
 // ── Availability dot ──────────────────────────────────────────────────────────
 
 function AvailDot({ status }: { status: CrewAvailability }) {
-  const color = status === "available" ? "var(--v2-success)" : status === "busy" ? "var(--v2-warning, #f59e0b)" : "#94a3b8";
+  const color = status === "available" ? "var(--v2-success)" : status === "busy" ? "var(--v2-warning)" : "var(--v2-text-muted)";
   const label = status === "available" ? "Available" : status === "busy" ? "Busy" : "Unavailable";
   return (
     <span

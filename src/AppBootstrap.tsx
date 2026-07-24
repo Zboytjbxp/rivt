@@ -1,4 +1,5 @@
-import { Component, useEffect, type ReactNode } from "react";
+import { Component, useEffect, type ErrorInfo, type ReactNode } from "react";
+import { installClientErrorReporting, reportClientError } from "./lib/client-error-reporting";
 
 async function refreshClientShell() {
   try {
@@ -18,6 +19,7 @@ async function refreshClientShell() {
 function AppReadySignal({ children }: { children: ReactNode }) {
   useEffect(() => {
     document.documentElement.classList.add("rivt-app-ready");
+    return installClientErrorReporting();
   }, []);
 
   return children;
@@ -38,7 +40,11 @@ class AppBootstrapBoundary extends Component<{ children: ReactNode }, { failed: 
     return { failed: true };
   }
 
-  componentDidCatch() {
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    reportClientError(error, {
+      boundary: "app-bootstrap",
+      componentStack: errorInfo.componentStack,
+    });
     // Hide the static boot layer once React can present a useful recovery action.
     document.documentElement.classList.add("rivt-app-ready");
   }

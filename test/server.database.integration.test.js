@@ -122,6 +122,20 @@ if (!testDatabaseUrl) {
     assert.equal(legacyInvoiceSend.response.status, 410);
     assert.equal(legacyInvoiceSend.payload.code, "LEGACY_INVOICE_SEND_RETIRED");
 
+    const clientError = await requestJson(baseUrl, "/api/client-errors", {
+      method: "POST",
+      body: {
+        name: "TypeError",
+        message: "Rendered route failed",
+        stack: "TypeError: Rendered route failed",
+        componentStack: "at Route",
+        boundary: "route",
+        path: "/app/tools",
+      },
+    });
+    assert.equal(clientError.response.status, 202);
+    assert.equal(clientError.payload.ok, true);
+
     const contractorWrite = await requestJson(baseUrl, "/api/app-state", {
       method: "PUT",
       cookie: contractor.cookie,

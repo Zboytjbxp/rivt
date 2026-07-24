@@ -17,7 +17,7 @@ import { RIVT_PRO_OFFER } from "./proOffer";
 import "./pro.css";
 
 interface UpgradeModalProps {
-  reason?: string;   // e.g. "Export CSV", "Multiple punch lists", "90-day history"
+  reason?: string;
   onClose: () => void;
 }
 

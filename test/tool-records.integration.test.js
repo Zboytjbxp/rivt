@@ -192,6 +192,71 @@ if (!testDatabaseUrl) {
     assert.equal(isolated.response.status, 200);
     assert.equal(isolated.payload.data.records.length, 0);
 
+    const oldSessionDate = new Date(Date.now() - 120 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    const recentSessionDate = new Date().toISOString().slice(0, 10);
+    for (const [localId, recordDate] of [["old-session", oldSessionDate], ["recent-session", recentSessionDate]]) {
+      const session = await requestJson(baseUrl, "/api/v1/tool-records", {
+        method: "POST",
+        cookie: owner.cookie,
+        idempotencyKey: randomUUID(),
+        body: {
+          recordType: "time_session",
+          localId,
+          title: localId,
+          status: "complete",
+          recordDate,
+          payload: { id: localId, startedAt: `${recordDate}T12:00:00.000Z`, endedAt: `${recordDate}T13:00:00.000Z` },
+        },
+      });
+      assert.equal(session.response.status, 200);
+    }
+    const freeHistory = await requestJson(baseUrl, "/api/v1/tool-records?type=time_session", { cookie: owner.cookie });
+    assert.equal(freeHistory.response.status, 200);
+    assert.deepEqual(freeHistory.payload.data.records.map((record) => record.localId), ["recent-session"]);
+    assert.equal(freeHistory.payload.meta.historyDays, 90);
+
+    const expense = await requestJson(baseUrl, "/api/v1/tool-records", {
+      method: "POST",
+      cookie: owner.cookie,
+      idempotencyKey: randomUUID(),
+      body: {
+        recordType: "expense",
+        localId: "receipt-cents",
+        title: "Wire receipt",
+        status: "active",
+        recordDate: recentSessionDate,
+        amountCents: 1249,
+        payload: { category: "Materials", description: "Wire receipt" },
+      },
+    });
+    assert.equal(expense.response.status, 200);
+    const freeExport = await fetch(`${baseUrl}/api/v1/tool-records/expenses/export.csv`, {
+      headers: { Origin: "https://rivt.pro", Cookie: owner.cookie },
+    });
+    assert.equal(freeExport.status, 403);
+
+    const ownerAccount = await database.query(
+      "SELECT account_id AS id FROM auth_identities WHERE lower(email) = lower($1) LIMIT 1",
+      [owner.email],
+    );
+    assert.equal(ownerAccount.rowCount, 1);
+    await database.query(
+      `INSERT INTO billing_entitlements (account_id, plan, status, source, active_until)
+       VALUES ($1, 'pro', 'active', 'stripe', now() + interval '30 days')
+       ON CONFLICT (account_id) DO UPDATE
+       SET plan = 'pro', status = 'active', source = 'stripe', active_until = now() + interval '30 days'`,
+      [ownerAccount.rows[0].id],
+    );
+    const proExport = await fetch(`${baseUrl}/api/v1/tool-records/expenses/export.csv`, {
+      headers: { Origin: "https://rivt.pro", Cookie: owner.cookie },
+    });
+    assert.equal(proExport.status, 200);
+    assert.match(await proExport.text(), /"12\.49"/);
+    const proHistory = await requestJson(baseUrl, "/api/v1/tool-records?type=time_session", { cookie: owner.cookie });
+    assert.equal(proHistory.response.status, 200);
+    assert.equal(proHistory.payload.data.records.some((record) => record.localId === "old-session"), true);
+    assert.equal(proHistory.payload.meta.historyDays, null);
+
     const projectCreated = await requestJson(baseUrl, "/api/v1/standalone-projects", {
       method: "POST",
       cookie: owner.cookie,

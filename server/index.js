@@ -698,6 +698,23 @@ const baseNewsRateLimit = createDurableRateLimiter({
   namespace: "news",
 });
 
+const baseClientErrorRateLimit = createDurableRateLimiter({
+  database,
+  databaseAvailable: () => Boolean(database),
+  windowMs: 60 * 1000,
+  max: Number(process.env.CLIENT_ERROR_RATE_LIMIT ?? 20),
+  namespace: "client-error",
+});
+
+const clientErrorSchema = z.object({
+  name: z.string().trim().min(1).max(120),
+  message: z.string().trim().min(1).max(500),
+  stack: z.string().max(8_000).optional().default(""),
+  componentStack: z.string().max(8_000).optional().default(""),
+  boundary: z.string().trim().min(1).max(80).optional().default("window"),
+  path: z.string().trim().min(1).max(500),
+});
+
 function allowsPendingOnboardingMutation(request) {
   const path = String(request.path ?? request.originalUrl ?? "").split("?", 1)[0];
   return (request.method === "POST" && path === "/api/v1/onboarding/complete")
@@ -970,6 +987,21 @@ async function resolveAppleAccount(identity) {
 
 app.use("/api/news", baseNewsRateLimit);
 app.use(createNewsRouter());
+
+app.post("/api/client-errors", baseClientErrorRateLimit, asyncRoute(async (request, response) => {
+  const input = validate(clientErrorSchema, request.body);
+  const error = new Error(input.message);
+  error.name = input.name;
+  if (input.stack) error.stack = input.stack;
+  await captureOperationalError(error, {
+    requestId: request.requestId,
+    path: input.path,
+    source: "browser",
+    boundary: input.boundary,
+    componentStack: input.componentStack || undefined,
+  });
+  response.status(202).json({ ok: true });
+}));
 
 app.get("/api/health", (_request, response) => {
   const storage = storageConfiguration();

@@ -13,6 +13,7 @@ import "./components/OfflineBanner.css";
 import "./components/LocalSetupPrompt.css";
 import { tradeOptions } from "./data";
 import { brandConfig } from "./brandConfig";
+import { reportClientError } from "./lib/client-error-reporting";
 import type { ApplicationRecord, Job, JobId, Role, Trade } from "./types";
 import { AppShell } from "./app-shell/AppShell";
 import type { ProfileSearchResult } from "./app-shell/types";
@@ -325,6 +326,12 @@ function RouteFallback() {
 class RouteErrorBoundary extends Component<{ children: React.ReactNode }, { failed: boolean }> {
   state = { failed: false };
   static getDerivedStateFromError() { return { failed: true }; }
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    reportClientError(error, {
+      boundary: "route",
+      componentStack: errorInfo.componentStack,
+    });
+  }
   render() {
     if (this.state.failed) {
       return (

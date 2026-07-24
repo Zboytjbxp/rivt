@@ -76,6 +76,18 @@ export async function upsertToolRecord(input: ToolRecordInput): Promise<ServerTo
   }
 }
 
+export async function exportExpenseRecordsCsv(): Promise<Blob> {
+  const response = await fetchWithTimeout(apiPath("/api/v1/tool-records/expenses/export.csv"), {
+    credentials: "include",
+  });
+  if (response.status === 401) notifySessionExpired();
+  if (!response.ok) {
+    const body = await response.json().catch(() => null);
+    throw new RivtApiError(response.status, body ?? {}, "RIVT could not export expense records.");
+  }
+  return response.blob();
+}
+
 export async function sendEstimateByLocalId(localId: string, idempotencyKey: string = requestKey()): Promise<ServerToolRecord> {
   const response = await fetchWithTimeout(apiPath(`/api/v1/estimates/${encodeURIComponent(localId)}/send`), {
     method: "POST",

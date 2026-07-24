@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { logWarn } from "./logger.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const defaultDirectory = path.resolve(__dirname, "..", "migrations");
@@ -78,6 +79,10 @@ async function repairKnownChecksums(client, files) {
     const migration = filesByVersion.get(row.version);
     if (!migration || migration.name !== row.name) continue;
     if (row.checksum !== migration.up.checksum) {
+      logWarn("migration.checksum_repair", {
+        version: row.version,
+        name: row.name,
+      });
       await client.query(
         "UPDATE schema_migrations SET checksum = $1 WHERE version = $2 AND checksum = $3",
         [migration.up.checksum, row.version, row.checksum],

@@ -1,11 +1,74 @@
 # RIVT Build State
 
-Last updated: 2026-07-23 America/New_York
+Last updated: 2026-07-24 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Shop Talk thread-detail redesign is production verified.
-Active packet: Shop Talk selected-post hierarchy and collapsed answer composer
-Repository branch: `master` (source branch: `codex/shop-talk-thread-redesign`)
+Current phase: Pre-launch hardening is locally verified; operational launch evidence remains human-owned.
+Active packet: Jacksonville pre-launch honesty, billing, security, and resilience hardening
+Repository branch: `codex/pre-launch-hardening`
 Production feature release commit: `d07f32a71824bf78280740d9e8e13eb362ec2fbb`
+
+## Jacksonville Pre-Launch Hardening (Local Verification)
+
+- **Tier 1 — release blockers:** removed Inbox's persisted canned-reply
+  simulator and its UI; retired the legacy free-form invoice email/SMS relay
+  with an authenticated `410 Gone` response and an integration assertion. The
+  audited Work build already had no `Full Detail` entry point, and the existing
+  Work smoke continues to assert that it cannot open the unmatched
+  zero-financial overlay.
+- **Tier 2 — money, billing, and security:** the Pro offer now names only
+  benefits the product actually gates: extended time history, expense CSV
+  export, and self-serve cancellation. Stripe checkout success returns buyers
+  directly to the mobile-visible Billing section. Helmet now applies CSP with
+  `frame-ancestors 'none'`, HSTS, `X-Frame-Options: DENY`, and
+  `X-Content-Type-Options: nosniff`; the policy is covered by a server test.
+  Network job invites report success only after invite text is copied, private
+  review notes no longer claim to be posted, and Inbox contact activity is
+  explicitly a private client-notes log rather than undelivered two-way chat.
+- **Tier 2 audit confirmations:** availability was already labeled as a
+  private device note; Camera already used `device GPS`; Expense Logger
+  already rendered two decimal places; Shop Talk already counted persisted
+  replies and reset to `All trades`. Those implementations were preserved and
+  remain covered by the focused UI smokes.
+- **Tier 3 — resilience and enforcement:** client boundaries plus global
+  browser error handlers now send bounded, sanitized same-origin reports to a
+  rate-limited `/api/client-errors` endpoint and the existing operational
+  monitor. Expense CSV export is now generated server-side and requires an
+  active Pro entitlement; free accounts receive only the last 90 days of time
+  history from the server. Migration checksum repairs emit an operational
+  warning, private Inbox reactions identify their scope, Gate A CI runs the
+  strict launch-readiness command before deployment, dead contradictory
+  pricing configuration was removed, and remaining hardcoded Network
+  availability colors use semantic tokens.
+- **Shop Talk answer copy:** removed the narrow callback/condition coaching
+  that did not fit every discussion. Expanded answer composition now uses the
+  neutral prompt `Share your answer, experience, or perspective…` while
+  retaining the collapsed, accessible thread layout and all persistence.
+- **Local evidence:** lint, production build, 75 unit/frontend tests, the
+  database-backed legacy-relay/client-error integration checks, server-owned
+  Pro entitlement/history/export integration checks, desktop/mobile E2E, all
+  four requested rendered UI smokes, and a production dependency audit with
+  zero vulnerabilities are green. Mobile light/dark captures across Home,
+  Work, Camera, Shop Talk, and Tools were visually reviewed for theme
+  contrast, horizontal containment, and fixed-dock clearance. The complete
+  serial remote-database suite progressed through multiple integration files
+  without emitting an assertion failure but exceeded the 15-minute command
+  limit before completion; its orphaned processes were stopped, so no full
+  integration pass is claimed.
+- **Security tradeoff:** the current CSP permits inline script/style because
+  the production document still contains inline boot/recovery code. It blocks
+  framing and limits origins today; nonce/hash conversion remains a
+  defense-in-depth fast-follow, not a claim made by this packet.
+- **Deployment:** not deployed by this packet. Production remains on
+  `d07f32a71824bf78280740d9e8e13eb362ec2fbb` until the branch is reviewed,
+  the operational launch gate is genuinely green, and the standard
+  fast-forward/deploy workflow is run.
+- **Human-owned launch blockers — do not infer from code:** rerun and record
+  the restore drill and incident rehearsal; verify backup automation satisfies
+  the 24-hour RPO; run `npm run launch:readiness -- --require-ready` against
+  the refreshed evidence and require exit 0; verify the live Stripe Price
+  referenced by `STRIPE_PRO_PRICE_ID` is exactly $9/month. Physical-phone
+  acceptance and a real test checkout should also be completed before the
+  Jacksonville cohort is opened.
 
 ## Shop Talk Thread Detail Redesign (Production Verification)
 

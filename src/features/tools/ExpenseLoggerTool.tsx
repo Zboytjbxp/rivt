@@ -4,7 +4,7 @@ import type { Job } from "../../types";
 import { EmptyState, Panel } from "../../components/ui";
 import { usePro } from "../pro/usePro";
 import { UpgradeModal } from "../pro/UpgradeModal";
-import { deleteToolRecordByLocalId, fetchToolRecords, upsertToolRecord, type ServerToolRecord } from "./tool-records-api";
+import { deleteToolRecordByLocalId, exportExpenseRecordsCsv, fetchToolRecords, upsertToolRecord, type ServerToolRecord } from "./tool-records-api";
 
 function currency(value: number) {
   return new Intl.NumberFormat("en-US", {
@@ -78,13 +78,7 @@ function expenseToServerInput(entry: ExpenseEntry) {
   };
 }
 
-function exportExpensesCSV(expenses: ExpenseEntry[]) {
-  const header = "Date,Category,Amount,Description";
-  const rows = expenses.map((e) =>
-    [e.date, e.category, e.amount, (e.description ?? "").replace(/,/g, ";")].join(",")
-  );
-  const csv = [header, ...rows].join("\n");
-  const blob = new Blob([csv], { type: "text/csv" });
+function downloadExpenseCsv(blob: Blob) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
@@ -174,6 +168,24 @@ function ExpenseLoggerTool({ activeJob, jobs }: { activeJob: Job | null; jobs: J
     void deleteToolRecordByLocalId("expense", expenseId).then((ok) => {
       setSyncMessage(ok ? "Deleted from this device and your RIVT account." : "Deleted on this device only. Could not sync deletion.");
     });
+  }
+
+  async function handleExport() {
+    if (!isPro) {
+      setUpgradeOpen(true);
+      return;
+    }
+    const synced = await Promise.all(expenses.map((entry) => upsertToolRecord(expenseToServerInput(entry))));
+    if (synced.some((record) => !record)) {
+      setNotice("Sync expenses before exporting. No partial file was created.");
+      return;
+    }
+    try {
+      downloadExpenseCsv(await exportExpenseRecordsCsv());
+      setNotice("Expense CSV downloaded.");
+    } catch {
+      setNotice("Expense export is unavailable right now.");
+    }
   }
 
   const total = expenses.reduce((sum, e) => sum + e.amount, 0);
@@ -278,7 +290,7 @@ function ExpenseLoggerTool({ activeJob, jobs }: { activeJob: Job | null; jobs: J
             {notice ? <p className="v2-record-notice" role="status">{notice}</p> : null}
             <div className="v2-tool-action-row">
               <button type="button" className="v2-primary-button" disabled={!(parseFloat(amount) > 0) || !description.trim()} onClick={addExpense}><Plus size={15} />Log expense</button>
-              <button type="button" disabled={expenses.length === 0} onClick={() => isPro ? exportExpensesCSV(expenses) : setUpgradeOpen(true)}>
+              <button type="button" disabled={expenses.length === 0} onClick={() => void handleExport()}>
                 <Download size={15} />Export CSV{!isPro && <Lock size={11} style={{marginLeft: 4}} />}
               </button>
             </div>

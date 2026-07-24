@@ -93,6 +93,38 @@ function escapeHtml(value) {
     .replaceAll("'", "&#39;");
 }
 
+function escapeCsv(value) {
+  return `"${String(value ?? "").replaceAll('"', '""')}"`;
+}
+
+function expenseCsv(records) {
+  const rows = records.map((record) => {
+    const payload = objectValue(record.payload);
+    return [
+      record.record_date ? new Date(record.record_date).toISOString().slice(0, 10) : "",
+      textValue(payload.category, "Other", 80),
+      (integerValue(record.amount_cents) / 100).toFixed(2),
+      textValue(payload.description, record.title, 400),
+    ].map(escapeCsv).join(",");
+  });
+  return [["Date", "Category", "Amount", "Description"].map(escapeCsv).join(","), ...rows].join("\n");
+}
+
+async function hasActiveProEntitlement(database, accountId) {
+  const result = await database.query(
+    `SELECT EXISTS (
+       SELECT 1
+       FROM billing_entitlements
+       WHERE account_id = $1
+         AND plan = 'pro'
+         AND status IN ('active', 'trialing')
+         AND (active_until IS NULL OR active_until > now())
+     ) AS active`,
+    [accountId],
+  );
+  return Boolean(result.rows[0]?.active);
+}
+
 function estimateDeliverySnapshot(record, actor) {
   const payload = objectValue(record.payload);
   const recipientEmail = textValue(payload.recipientEmail, "", 320).toLowerCase();
@@ -232,13 +264,38 @@ export function registerToolRecordRoutes({
   sendIdempotentResult,
   sendTransactionalEmail,
 }) {
+  app.get("/api/v1/tool-records/expenses/export.csv", requireV1AuthenticatedUser, requireV1Actor, asyncRoute(async (request, response) => {
+    if (!await hasActiveProEntitlement(database, request.actor.account.id)) {
+      throw new ApiError(403, "PRO_REQUIRED", "Expense CSV export requires an active RIVT Pro subscription.");
+    }
+    const result = await database.query(
+      `SELECT title, record_date, amount_cents, payload
+       FROM tool_records
+       WHERE account_id = $1
+         AND record_type = 'expense'
+         AND deleted_at IS NULL
+       ORDER BY record_date DESC NULLS LAST, updated_at DESC, id DESC
+       LIMIT 500`,
+      [request.actor.account.id],
+    );
+    response.setHeader("Content-Type", "text/csv; charset=utf-8");
+    response.setHeader("Content-Disposition", `attachment; filename="rivt-expenses-${new Date().toISOString().slice(0, 10)}.csv"`);
+    response.send(expenseCsv(result.rows));
+  }));
+
   app.get("/api/v1/tool-records", requireV1AuthenticatedUser, requireV1Actor, asyncRoute(async (request, response) => {
     const input = validate(toolRecordQuerySchema, request.query);
     const params = [request.actor.account.id];
     let typeClause = "";
+    let historyClause = "";
+    let historyDays = null;
     if (input.type) {
       params.push(input.type);
       typeClause = `AND record_type = $${params.length}`;
+    }
+    if (input.type === "time_session" && !await hasActiveProEntitlement(database, request.actor.account.id)) {
+      historyDays = 90;
+      historyClause = "AND COALESCE(record_date, created_at::date) >= current_date - 90";
     }
     const result = await database.query(
       `SELECT *
@@ -246,13 +303,14 @@ export function registerToolRecordRoutes({
        WHERE account_id = $1
          AND deleted_at IS NULL
          ${typeClause}
+         ${historyClause}
        ORDER BY updated_at DESC, id DESC
        LIMIT 500`,
       params,
     );
     response.json({
       data: { records: result.rows.map(mapToolRecord) },
-      meta: { requestId: request.requestId },
+      meta: { requestId: request.requestId, historyDays },
     });
   }));
 
@@ -495,3 +553,8 @@ export function registerToolRecordRoutes({
     sendIdempotentResult(response, result);
   }));
 }
+
+export const toolRecordInternals = {
+  expenseCsv,
+  hasActiveProEntitlement,
+};

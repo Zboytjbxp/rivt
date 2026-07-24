@@ -10,6 +10,42 @@ Status values:
 
 Evidence must eventually link to implementation, automated tests, manual acceptance proof, and deployed build.
 
+## Traceability Addendum - 2026-07-24 Jacksonville Pre-Launch Hardening
+
+- `GA-SEC-004` gains server evidence that the legacy free-form invoice relay
+  is retired with authenticated `410 Gone`, browser faults enter a
+  same-origin, schema-bounded, durable-rate-limited operational path, expense
+  CSV export requires a server-confirmed active Pro entitlement, and the
+  server—not a hidden browser control—limits free time history to 90 days.
+- `GA-UX-005` gains launch honesty and money evidence: canned inbound replies
+  can no longer be injected; private client activity, review notes,
+  availability, and reactions state their scope; copy feedback follows the
+  clipboard result; the Pro offer names only enforced benefits; Expense
+  Logger preserves cents; Shop Talk uses persisted reply counts and its valid
+  reset sentinel; GPS is described as device-reported rather than verified.
+- `GA-UX-003` gains mobile purchase-path evidence because successful checkout
+  returns directly to the Billing section. Network and Inbox action language
+  now matches the actual copy/save behavior, and Shop Talk answer coaching is
+  neutral enough for questions, news discussions, and field advice.
+- `GA-UX-006` gains 390px light/dark rendered evidence across all five
+  primary surfaces plus the requested Tools, Shop Talk/Trade News,
+  mobile-actions, and Work lifecycle smokes. Assertions cover the removed
+  reply simulator, private client-notes framing, valid Shop Talk reset,
+  two-decimal expense display, and absence of the Work fake-financial entry
+  point.
+- `GA-OPS-007` gains local evidence from lint, production build, 75
+  unit/frontend tests, targeted database integrations for retired relay,
+  client errors, Pro expense export and 90-day history, desktop/mobile E2E,
+  the four rendered UI smokes, and a zero-vulnerability production dependency
+  audit. The full serial remote-database suite progressed without an emitted
+  assertion failure but exceeded the 15-minute command limit before
+  completion; no full integration pass is claimed.
+- `GA-OPS-008` remains unchanged: this branch has not been deployed and no
+  production verification is claimed. Launch remains blocked on human-owned
+  restore-drill, incident-rehearsal and verified-backup evidence producing a
+  strict readiness exit of 0, plus confirmation that the live Stripe Price is
+  $9/month.
+
 ## Traceability Addendum - 2026-07-23 Shop Talk Thread Detail Redesign
 
 - `GA-UX-003` gains selected-thread hierarchy evidence: the post leads, voting

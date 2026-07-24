@@ -717,6 +717,12 @@
   transform: scale(1.1);
 }
 
+.v2-msg-reaction-private {
+  color: var(--v2-text-muted);
+  font-size: calc(11px * var(--v2-text-scale));
+  line-height: 1;
+}
+
 .v2-msg-reaction-trigger {
   display: grid;
   place-items: center;

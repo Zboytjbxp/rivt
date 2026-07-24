@@ -11,6 +11,7 @@ import {
 } from "../server/api.js";
 import express from "express";
 import { createSecurityHeadersMiddleware } from "../server/security-headers.js";
+import { toolRecordInternals } from "../server/tool-records.js";
 
 test("request context preserves valid request IDs and replaces invalid values", () => {
   for (const [incoming, expected] of [
@@ -65,4 +66,15 @@ test("security middleware denies framing and sends a restrictive CSP", async (t)
   assert.equal(response.headers.get("x-content-type-options"), "nosniff");
   assert.match(response.headers.get("strict-transport-security") ?? "", /max-age=31536000/i);
   assert.match(response.headers.get("content-security-policy") ?? "", /frame-ancestors 'none'/);
+});
+
+test("server-owned expense export preserves cents and escapes CSV fields", () => {
+  const csv = toolRecordInternals.expenseCsv([{
+    title: "Receipt",
+    record_date: new Date("2026-07-24T00:00:00.000Z"),
+    amount_cents: 1249,
+    payload: { category: "Materials", description: 'Wire, "red"' },
+  }]);
+  assert.match(csv, /"12\.49"/);
+  assert.match(csv, /"Wire, ""red"""/);
 });

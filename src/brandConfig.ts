@@ -21,18 +21,6 @@ export const brandConfig = {
       monthlyUsd: null,
       dailyFrame: "$1/day contractor, about $0.50/day tradesperson",
     },
-    contractorBase: {
-      monthlyUsd: 30,
-      dailyFrame: "about $1/day",
-    },
-    tradespersonBase: {
-      monthlyUsd: 15,
-      dailyFrame: "about $0.50/day",
-    },
-    premiumAddon: {
-      monthlyUsd: 15,
-      dailyFrame: "real-time alerts and priority visibility",
-    },
   },
   legal: {
     consentLabel:

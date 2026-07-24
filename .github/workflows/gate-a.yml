@@ -61,6 +61,9 @@ jobs:
       - name: Run unit and integration tests
         run: npm run test
 
+      - name: Require current launch-readiness evidence
+        run: npm run launch:readiness -- --require-ready
+
       - name: Run fail-closed browser test
         run: npm run test:e2e
 

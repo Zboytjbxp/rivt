@@ -805,14 +805,18 @@ export function InboxCenter({
                         {/* Emoji picker + reaction pill */}
                         <div className="v2-msg-reaction-row">
                           {existingReaction && (
-                            <button
-                              type="button"
-                              className="v2-msg-reaction-pill"
-                              onClick={(e) => { e.stopPropagation(); setReaction(message.id, existingReaction); }}
-                              title="Remove reaction"
-                            >
-                              {existingReaction}
-                            </button>
+                            <>
+                              <button
+                                type="button"
+                                className="v2-msg-reaction-pill"
+                                onClick={(e) => { e.stopPropagation(); setReaction(message.id, existingReaction); }}
+                                title="Remove private reaction"
+                                aria-label="Remove private reaction"
+                              >
+                                {existingReaction}
+                              </button>
+                              <span className="v2-msg-reaction-private">Private to you</span>
+                            </>
                           )}
                           <button
                             type="button"
@@ -821,7 +825,8 @@ export function InboxCenter({
                               e.stopPropagation();
                               setReactionPickerFor(pickerOpen ? null : message.id);
                             }}
-                            title="React"
+                            title="Add a private reaction"
+                            aria-label="Add a private reaction"
                           >
                             {existingReaction ? "…" : "☺"}
                           </button>
