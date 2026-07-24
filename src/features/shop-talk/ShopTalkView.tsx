@@ -16,7 +16,6 @@ import {
   Search,
   Send,
   SlidersHorizontal,
-  Star,
   ThumbsDown,
   ThumbsUp,
   Trash2,
@@ -41,11 +40,9 @@ import { tradeOptions } from "../../data";
 import type { Role, Trade } from "../../types";
 import { usePersona } from "../persona/usePersona";
 import {
-  communityBadgeLabelsFromReputation,
   inferCommunityDefaultTrade,
   netScore,
   sortedAnswers,
-  type CommunityBadgeThresholds,
 } from "./community-utils";
 import { apiPath, fetchWithTimeout } from "../../lib/api";
 import { DialogBackdrop, DialogSurface } from "../../components/ui";
@@ -175,12 +172,6 @@ type ReportTarget =
   | { kind: "community"; community: CommunityDisplay; title: string; description: string };
 
 const specialtyOptions = tradeOptions.filter((trade): trade is Trade => trade !== "All trades");
-
-const communityBadgeThresholds: CommunityBadgeThresholds = {
-  firstAssistVerifiedFixes: 1,
-  mentorQualityAnswers: 3,
-  topHandQualityAnswers: 8,
-};
 
 function isFallbackNewsThumbnail(item: Pick<NewsItem, "thumbnailUrl" | "thumbnailKind">) {
   return !item.thumbnailUrl;
@@ -796,6 +787,8 @@ export function ShopTalkView({
   const [selectedPostId, setSelectedPostId] = useState<string | null>(initialPostId ?? null);
   const attemptedDeepLinkPostIds = useRef(new Set<string>());
   const [answerDraft, setAnswerDraft] = useState("");
+  const [answerComposerOpen, setAnswerComposerOpen] = useState(false);
+  const answerComposerInputRef = useRef<HTMLTextAreaElement>(null);
   const [newPostOpen, setNewPostOpen] = useState(Boolean(openComposer));
   const [joinedCommunities, setJoinedCommunities] = useState<Set<string>>(
     () => new Set(communities.filter((community) => community.joined).map((community) => community.slug)),
@@ -845,6 +838,14 @@ export function ShopTalkView({
     if (answerQueueOnly) return;
     writeShopTalkFilterPrefs({ sortMode, tradeFilter, flairFilter, filterType });
   }, [answerQueueOnly, flairFilter, filterType, sortMode, tradeFilter]);
+  useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect */
+    setAnswerComposerOpen(false);
+    /* eslint-enable react-hooks/set-state-in-effect */
+  }, [selectedPostId]);
+  useEffect(() => {
+    if (answerComposerOpen) answerComposerInputRef.current?.focus();
+  }, [answerComposerOpen]);
   useEffect(() => {
     const next = new Set(communities.filter((community) => community.joined).map((community) => community.slug));
     /* eslint-disable react-hooks/set-state-in-effect */
@@ -1141,7 +1142,6 @@ export function ShopTalkView({
   });
   const selectedPost = communityPosts.find((p) => p.id === selectedPostId) ?? null;
   const selectedNews = filteredNews.find((n) => n.id === selectedNewsId) ?? filteredNews[0];
-  const profileBadges = communityBadgeLabelsFromReputation(_reactionSummary, communityBadgeThresholds);
   const newsSourceCount = new Set(filteredNews.map((item) => item.source)).size;
   const criticalNewsCount = displayNews.filter((item) => ["critical", "high"].includes(item.impactLevel ?? "")).length;
   const newsThreadMatches = useMemo(() => {
@@ -1820,22 +1820,48 @@ export function ShopTalkView({
               </button>
               <div className="shop-question-header">
                 <div className="shop-question-copy">
-                  <div className="shop-question-meta">
+                  <div className="shop-question-topline">
                     {selectedPost.flair && (
                       <span className={`flair-pill flair-${selectedPost.flair.toLowerCase().replace(/\s/g, "-")}`}>
                         {selectedPost.flair}
                       </span>
                     )}
-                    <span>{selectedPost.badge ? `${selectedPost.badge} - ${selectedPost.author}` : selectedPost.author}</span>
-                    <span>{selectedPost.trade} - {selectedPost.createdAt}</span>
+                    <div className="shop-question-header-actions">
+                      <span className={selectedPost.status === "Verified Fix" ? "state-pill verified" : "state-pill"}>
+                        {selectedPost.status}
+                      </span>
+                      <button
+                        type="button"
+                        className={bookmarkedIds.has(selectedPost.id) ? "shop-detail-bookmark active" : "shop-detail-bookmark"}
+                        aria-label={bookmarkedIds.has(selectedPost.id) ? "Remove bookmark" : "Bookmark this post"}
+                        onClick={() => toggleBookmark(selectedPost.id)}
+                      >
+                        {bookmarkedIds.has(selectedPost.id) ? <BookmarkCheck size={17} /> : <Bookmark size={17} />}
+                      </button>
+                      {canDeleteSelectedPost && (
+                        <button
+                          type="button"
+                          className="shop-detail-delete"
+                          aria-label="Delete this post"
+                          disabled={deletingPostId === selectedPost.id}
+                          onClick={() => setDeleteConfirmPostId(selectedPost.id)}
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      )}
+                    </div>
                   </div>
+                  <p className="shop-question-byline">
+                    {selectedPost.author}
+                    {selectedPost.badge ? ` · ${selectedPost.badge}` : ""}
+                    {` · ${selectedPost.trade} · ${selectedPost.createdAt}`}
+                  </p>
                   <h2>{selectedPost.title}</h2>
                   {selectedPostContent?.content ? <p className="shop-question-body">{selectedPostContent.content}</p> : null}
                   {selectedPostContent?.article ? (
                     <aside className="shop-question-article" aria-label="Linked article">
-                      <span className="shop-question-article-icon"><Newspaper size={18} aria-hidden="true" /></span>
+                      <span className="shop-question-article-icon"><Newspaper size={17} aria-hidden="true" /></span>
                       <div>
-                        <span>Linked article</span>
                         <strong>{selectedPostContent.article.source}</strong>
                         <small>{selectedPostContent.article.date
                           ? `${selectedPostContent.article.date} · ${selectedPostContent.article.domain}`
@@ -1858,57 +1884,36 @@ export function ShopTalkView({
                     </figure>
                   )}
                 </div>
-                <div className="shop-question-header-actions">
-                  <span className={selectedPost.status === "Verified Fix" ? "state-pill verified" : "state-pill"}>
-                    {selectedPost.status}
-                  </span>
-                  <button
-                    type="button"
-                    className={bookmarkedIds.has(selectedPost.id) ? "shop-detail-bookmark active" : "shop-detail-bookmark"}
-                    aria-label={bookmarkedIds.has(selectedPost.id) ? "Remove bookmark" : "Bookmark this post"}
-                    onClick={() => toggleBookmark(selectedPost.id)}
-                  >
-                    {bookmarkedIds.has(selectedPost.id) ? <BookmarkCheck size={16} /> : <Bookmark size={16} />}
-                  </button>
-                  {canDeleteSelectedPost && (
-                    <button
-                      type="button"
-                      className="shop-detail-delete"
-                      aria-label="Delete this post"
-                      disabled={deletingPostId === selectedPost.id}
-                      onClick={() => setDeleteConfirmPostId(selectedPost.id)}
-                    >
-                      <Trash2 size={16} />
-                      <span>Delete</span>
-                    </button>
-                  )}
-                </div>
               </div>
               <div className="shop-question-actions">
+                <div className="thread-vote-group" role="group" aria-label="Thread voting">
+                  <button
+                    type="button"
+                    className={selectedPostReactionState.reaction === "up" ? "reaction-button active" : "reaction-button"}
+                    aria-pressed={selectedPostReactionState.reaction === "up"}
+                    aria-label={selectedPostReactionState.reaction === "up" ? "Remove upvote from thread" : "Upvote thread"}
+                    disabled={selectedPostReactionState.pending}
+                    onClick={() => onVotePost(selectedPost.id, "up")}
+                  >
+                    <ThumbsUp size={15} />
+                    {selectedPostReactionState.upvotes}
+                  </button>
+                  <button
+                    type="button"
+                    className={selectedPostReactionState.reaction === "down" ? "reaction-button active negative" : "reaction-button"}
+                    aria-pressed={selectedPostReactionState.reaction === "down"}
+                    aria-label={selectedPostReactionState.reaction === "down" ? "Remove downvote from thread" : "Downvote thread"}
+                    disabled={selectedPostReactionState.pending}
+                    onClick={() => onVotePost(selectedPost.id, "down")}
+                  >
+                    <ThumbsDown size={15} />
+                    {selectedPostReactionState.downvotes}
+                  </button>
+                </div>
                 <button
                   type="button"
-                  className={selectedPostReactionState.reaction === "up" ? "reaction-button active" : "reaction-button"}
-                  aria-pressed={selectedPostReactionState.reaction === "up"}
-                  aria-label={selectedPostReactionState.reaction === "up" ? "Remove upvote from thread" : "Upvote thread"}
-                  disabled={selectedPostReactionState.pending}
-                  onClick={() => onVotePost(selectedPost.id, "up")}
-                >
-                  <ThumbsUp size={15} />
-                  {selectedPostReactionState.upvotes}
-                </button>
-                <button
-                  type="button"
-                  className={selectedPostReactionState.reaction === "down" ? "reaction-button active negative" : "reaction-button"}
-                  aria-pressed={selectedPostReactionState.reaction === "down"}
-                  aria-label={selectedPostReactionState.reaction === "down" ? "Remove downvote from thread" : "Downvote thread"}
-                  disabled={selectedPostReactionState.pending}
-                  onClick={() => onVotePost(selectedPost.id, "down")}
-                >
-                  <ThumbsDown size={15} />
-                  {selectedPostReactionState.downvotes}
-                </button>
-                <button
-                  type="button"
+                  className="shop-question-report"
+                  aria-label="Report this post"
                   onClick={() => openReport({
                     kind: "post",
                     postId: selectedPost.id,
@@ -1917,49 +1922,13 @@ export function ShopTalkView({
                   })}
                 >
                   <Flag size={15} />
-                  Report
                 </button>
               </div>
 
-              <section className="answer-composer">
-                <div className="answer-composer-byline">
-                  <div>
-                    <span>Answer as {profile.displayName}</span>
-                    <strong>{reactionStatus === "ready"
-                      ? profileBadges.length ? profileBadges.join(", ") : "New contributor"
-                      : `Reputation: ${reactionLedgerLabel.toLowerCase()}`}</strong>
-                  </div>
-                  {reactionStatus === "ready" ? <span className="v2-st-my-rep-badge"><Star size={12} /> {myTotalRep} rep</span> : null}
-                  <span className="answer-trade-tag">{selectedPost.trade}</span>
-                </div>
-                <div className="answer-guidance-card">
-                  <strong>Good answers get specific.</strong>
-                  <span>Name the condition, the tool or code check, the order of operations, and what proof prevents a callback.</span>
-                </div>
-                <textarea
-                  value={answerDraft}
-                  onChange={(e) => setAnswerDraft(e.target.value.slice(0, 1000))}
-                  onKeyDown={(event) => {
-                    if ((event.metaKey || event.ctrlKey) && event.key === "Enter" && answerDraft.trim()) {
-                      event.preventDefault();
-                      submitAnswer();
-                    }
-                  }}
-                  rows={4}
-                  placeholder="Share the field habit, safety check, tool setup, or closeout proof that would prevent a callback."
-                />
-                <div className="answer-composer-footer">
-                  <span className={answerDraft.length > 900 ? "answer-char-count is-near-limit" : "answer-char-count"}>
-                    {1000 - answerDraft.length}
-                  </span>
-                  <button type="button" className="primary-action" onClick={submitAnswer} disabled={!answerDraft.trim()}>
-                    <Send size={17} />
-                    Post answer
-                  </button>
-                </div>
-              </section>
-
               <section className="answer-list" aria-label="Community answers">
+                <header className="answer-list-heading">
+                  <h3>Answers <span>({selectedPost.replies.length})</span></h3>
+                </header>
                 {selectedPost.replies.length === 0 ? (
                   <article className="empty-ledger">
                     <MessageCircle size={18} />
@@ -2025,6 +1994,74 @@ export function ShopTalkView({
                     </article>
                   );
                 })}
+              </section>
+
+              <section
+                className={answerComposerOpen ? "answer-composer is-expanded" : "answer-composer is-collapsed"}
+                aria-label="Write an answer"
+              >
+                {answerComposerOpen ? (
+                  <>
+                    <div className="answer-composer-byline">
+                      <span>
+                        Answering as {profile.displayName}
+                        {reactionStatus === "ready"
+                          ? ` · ${myTotalRep} rep`
+                          : ` · ${reactionLedgerLabel}`}
+                      </span>
+                      <button
+                        type="button"
+                        className="answer-composer-collapse"
+                        aria-label="Collapse answer composer"
+                        onClick={() => setAnswerComposerOpen(false)}
+                      >
+                        <X size={16} />
+                      </button>
+                    </div>
+                    <small className="answer-composer-helper">
+                      Name the condition, the check, and the proof that prevents a callback.
+                    </small>
+                    <textarea
+                      ref={answerComposerInputRef}
+                      value={answerDraft}
+                      onChange={(e) => setAnswerDraft(e.target.value.slice(0, 1000))}
+                      onKeyDown={(event) => {
+                        if (event.key === "Escape") {
+                          setAnswerComposerOpen(false);
+                          return;
+                        }
+                        if ((event.metaKey || event.ctrlKey) && event.key === "Enter" && answerDraft.trim()) {
+                          event.preventDefault();
+                          submitAnswer();
+                        }
+                      }}
+                      rows={4}
+                      placeholder="Share the condition, tool or code check, order of operations, and proof that prevents a callback."
+                    />
+                    <div className="answer-composer-footer">
+                      <span className={answerDraft.length > 900 ? "answer-char-count is-near-limit" : "answer-char-count"}>
+                        {1000 - answerDraft.length}
+                      </span>
+                      <button type="button" className="primary-action" onClick={submitAnswer} disabled={!answerDraft.trim()}>
+                        <Send size={17} />
+                        Post answer
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <button
+                    type="button"
+                    className="answer-composer-trigger"
+                    aria-expanded="false"
+                    onClick={() => setAnswerComposerOpen(true)}
+                  >
+                    <MessageCircle size={18} aria-hidden="true" />
+                    <span>
+                      <strong>Write an answer…</strong>
+                      <small>Share field-tested advice</small>
+                    </span>
+                  </button>
+                )}
               </section>
             </article>
           ) : (

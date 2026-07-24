@@ -626,7 +626,16 @@ try {
     await prepareScreenshot(page);
     await page.screenshot({ path: path.join(screenshotDir, `${viewport.name}-feed.png`), fullPage: true });
     await page.locator(".trade-post").first().click();
-    await page.getByText("Good answers get specific.", { exact: true }).waitFor({ timeout: 15_000 });
+    const firstThreadAnswers = page.locator(".answer-list");
+    const firstThreadComposer = page.locator(".answer-composer");
+    const answerTrigger = page.getByRole("button", { name: /Write an answer/i });
+    await answerTrigger.waitFor({ timeout: 15_000 });
+    assert.equal(await firstThreadComposer.locator("textarea").count(), 0, "answer composer should start collapsed");
+    const [answersBox, collapsedComposerBox] = await Promise.all([
+      firstThreadAnswers.boundingBox(),
+      firstThreadComposer.boundingBox(),
+    ]);
+    assert.ok(answersBox && collapsedComposerBox && answersBox.y < collapsedComposerBox.y, "answers must render before the composer");
     const upvoteThread = page.getByRole("button", { name: "Upvote thread" }).first();
     const threadInitial = (await upvoteThread.textContent())?.trim() ?? "";
     await upvoteThread.click();
@@ -639,9 +648,13 @@ try {
     const threadCleared = (await page.getByRole("button", { name: "Upvote thread" }).first().textContent())?.trim() ?? "";
     assert.equal(threadCleared, threadInitial, "clicking the same thread reaction again should clear it");
 
-    await page
-      .locator('textarea[placeholder^="Share the field habit"]')
-      .fill("Document the condition, price the change order, and get written approval before the crew keeps going.");
+    await answerTrigger.focus();
+    await answerTrigger.press("Enter");
+    const answerTextarea = page.locator('textarea[placeholder^="Share the condition"]');
+    await answerTextarea.waitFor({ timeout: 15_000 });
+    assert.equal(await answerTextarea.evaluate((node) => node === document.activeElement), true, "keyboard expansion should focus the answer field");
+    await page.getByText("Name the condition, the check, and the proof that prevents a callback.", { exact: true }).waitFor({ timeout: 15_000 });
+    await answerTextarea.fill("Document the condition, price the change order, and get written approval before the crew keeps going.");
     await page.getByRole("button", { name: /Post answer/i }).click();
     await page.getByText("Document the condition", { exact: false }).waitFor({ timeout: 15_000 });
     const upvoteAnswer = page.getByRole("button", { name: "Upvote answer" }).first();
@@ -671,8 +684,44 @@ try {
     await page.getByLabel("Linked article").waitFor({ timeout: 15_000 });
     assert.equal(await page.getByText(/CBMivgFBVV95cUx/i).count(), 0, "long article URLs must not render in the selected thread");
     await page.getByRole("button", { name: "Delete this post" }).waitFor({ timeout: 15_000 });
+    await page.getByRole("heading", { name: "Answers (0)" }).waitFor({ timeout: 15_000 });
+    const emptyAnswerState = page.getByText("This needs a real trade answer.", { exact: true });
+    const collapsedArticleComposer = page.getByRole("button", { name: /Write an answer/i });
+    await emptyAnswerState.waitFor({ timeout: 15_000 });
+    await collapsedArticleComposer.waitFor({ timeout: 15_000 });
+    const [emptyStateBox, articleComposerBox] = await Promise.all([
+      emptyAnswerState.boundingBox(),
+      collapsedArticleComposer.boundingBox(),
+    ]);
+    assert.ok(emptyStateBox && articleComposerBox && emptyStateBox.y < articleComposerBox.y, "the empty-answer state should lead the composer");
+    assert.equal(await page.locator(".shop-detail-delete").getByText(/delete/i).count(), 0, "delete should remain an icon-only header action");
+    assert.equal(await page.locator(".answer-guidance-card").count(), 0, "legacy boxed answer guidance should be removed");
+    const threadDetailStyles = await page.evaluate(() => {
+      const detail = document.querySelector(".shop-talk-detail");
+      const article = document.querySelector(".shop-question-article");
+      const status = document.querySelector(".shop-question-header .state-pill");
+      const byline = document.querySelector(".shop-question-byline");
+      const composer = document.querySelector(".answer-composer.is-collapsed");
+      return {
+        detailRadius: detail ? Number.parseFloat(getComputedStyle(detail).borderRadius) : -1,
+        detailShadow: detail ? getComputedStyle(detail).boxShadow : "missing",
+        articleRadius: article ? Number.parseFloat(getComputedStyle(article).borderRadius) : -1,
+        statusTransform: status ? getComputedStyle(status).textTransform : "missing",
+        bylineTransform: byline ? getComputedStyle(byline).textTransform : "missing",
+        composerPosition: composer ? getComputedStyle(composer).position : "missing",
+      };
+    });
+    assert.equal(threadDetailStyles.detailRadius, 0, "thread detail should not be an outer card");
+    assert.equal(threadDetailStyles.detailShadow, "none", "thread detail should not carry card elevation");
+    assert.equal(threadDetailStyles.articleRadius, 0, "linked article should render as an inline row");
+    assert.equal(threadDetailStyles.statusTransform, "none", "thread status should use sentence case");
+    assert.equal(threadDetailStyles.bylineTransform, "none", "thread byline should use sentence case");
+    if (viewport.name === "mobile") {
+      assert.equal(threadDetailStyles.composerPosition, "sticky", "collapsed mobile composer should stay above navigation");
+    }
     await prepareScreenshot(page);
     await page.screenshot({ path: path.join(screenshotDir, `${viewport.name}-article-thread-light.png`), fullPage: true });
+    await page.locator(".shop-talk-detail").screenshot({ path: path.join(screenshotDir, `${viewport.name}-thread-redesign-light.png`) });
     await page.evaluate(() => {
       window.localStorage.setItem("rivt-theme-source", "dark");
       window.localStorage.setItem("rivt-theme-mode", "dark");
@@ -683,8 +732,10 @@ try {
     await ownedArticlePost.locator(".trade-post-body-btn").click();
     await page.getByLabel("Linked article").waitFor({ timeout: 15_000 });
     await page.getByRole("button", { name: "Delete this post" }).waitFor({ timeout: 15_000 });
+    await page.getByRole("button", { name: /Write an answer/i }).waitFor({ timeout: 15_000 });
     await prepareScreenshot(page);
     await page.screenshot({ path: path.join(screenshotDir, `${viewport.name}-article-thread-dark.png`), fullPage: true });
+    await page.locator(".shop-talk-detail").screenshot({ path: path.join(screenshotDir, `${viewport.name}-thread-redesign-dark.png`) });
     await page.getByRole("button", { name: "Delete this post" }).click();
     const deleteDialog = page.getByRole("dialog", { name: "Delete this discussion?" });
     await deleteDialog.waitFor({ timeout: 15_000 });

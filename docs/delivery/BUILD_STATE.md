@@ -2,10 +2,56 @@
 
 Last updated: 2026-07-23 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Shop Talk article discussion finish is production verified.
-Active packet: Shop Talk linked-article discussion production verification
-Repository branch: `master`
+Current phase: Shop Talk thread-detail redesign is verified locally and awaiting review/merge.
+Active packet: Shop Talk selected-post hierarchy and collapsed answer composer
+Repository branch: `codex/shop-talk-thread-redesign`
 Production feature release commit: `474babff7cffc1fee61ad06544347564d8ad9038`
+
+## Shop Talk Thread Detail Redesign (Local Verification)
+
+- The selected post is now the clear reading lead: one flair eyebrow, one
+  sentence-case author/trade/time line, a focused title and body, and an
+  inline article-source row. Status, bookmark, and author-only delete remain
+  available as quiet controls; delete is an icon instead of a competing red
+  text button.
+- Thread voting is one segmented up/down control and reporting is a separated
+  icon action. No reaction, reporting, bookmarking, verified-fix, or
+  ownership behavior changed.
+- Answers now precede the composer and carry an honest `Answers (N)` heading.
+  Empty threads lead with the existing real-answer prompt. Answer rows are
+  flattened to hairline-separated editorial blocks; Verified Fix keeps a
+  tokenized success treatment without restoring a nested card stack.
+- The answer composer is last and collapsed by default. Its compact
+  `Write an answer…` control expands by pointer or keyboard, focuses the
+  textarea, supports Escape to collapse and Ctrl/Cmd+Enter to submit, retains
+  the 1,000-character counter, and uses one sentence-case byline with real
+  reputation state. Redundant trade/rep badges and the boxed guidance block
+  were removed; coaching is now a muted helper and specific placeholder shown
+  only while expanded.
+- On mobile the collapsed composer sticks above the primary navigation and the
+  detail column fills the available viewport. Nested borders, radii,
+  backgrounds, uppercase metadata, and the short-thread dead gap were removed
+  while 44px controls, visible focus behavior, safe-area clearance, and both
+  light/dark token themes remain intact.
+- Rendered Shop Talk QA now asserts answer-before-composer order, default
+  collapse, keyboard expansion and textarea focus, empty-answer precedence,
+  icon-only delete, article-link containment, and horizontal containment at
+  desktop and 390x844 mobile. Dedicated mobile light/dark detail captures are
+  stored with the smoke output.
+- Audit correction: the brief's hardcoded flair-color finding was already
+  fixed on audited `origin/master`; `FLAIR_CONFIG` uses semantic tone names
+  and every flair class already resolves through `--v2-*` tokens. This pass
+  preserved that system and added detail-specific token colors so the single
+  eyebrow survives the older global muted-text cascade.
+- Verified locally: lint, production build, 73 unit/frontend tests, Shop
+  Talk/Trade News rendered QA, desktop/mobile E2E, visual review of
+  populated/empty threads in mobile light and dark, and a production
+  dependency audit with zero vulnerabilities. The aggregate `npm run test`
+  completed its unit phase and then produced no result from the existing
+  serial database integration phase before the five-minute limit; orphaned
+  test processes were stopped, so no aggregate integration pass is claimed.
+- This branch is not merged or deployed. Production remains on the release
+  commit recorded above.
 
 ## Shop Talk Linked-Article Discussion Finish (Production Verification)
 

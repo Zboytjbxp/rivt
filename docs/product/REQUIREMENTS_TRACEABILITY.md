@@ -10,6 +10,31 @@ Status values:
 
 Evidence must eventually link to implementation, automated tests, manual acceptance proof, and deployed build.
 
+## Traceability Addendum - 2026-07-23 Shop Talk Thread Detail Redesign
+
+- `GA-UX-003` gains selected-thread hierarchy evidence: the post leads, voting
+  is grouped, answers precede answer creation, article context is inline, and
+  the collapsed composer anchors the end of the reading flow instead of
+  blocking it.
+- `GA-UX-005` retains honesty and provenance: answer counts still come from
+  persisted replies; reputation copy reflects the reaction ledger state;
+  Verified Fix, reporting, bookmarking, ownership-gated deletion, char limits,
+  and answer submission keep their existing data and authorization paths.
+- `GA-UX-006` gains repeatable desktop/mobile rendered assertions for default
+  composer collapse, keyboard expansion and focus transfer, answer-before-
+  composer order, leading empty-answer state, icon-only delete, and horizontal
+  containment. Mobile light/dark captures verify semantic-token contrast,
+  sentence-case metadata, safe-area navigation clearance, and the flattened
+  editorial layout.
+- `GA-OPS-007` gains local evidence from lint, production build, 73
+  unit/frontend tests, rendered Shop Talk/Trade News QA, desktop/mobile E2E,
+  and a zero-vulnerability production dependency audit. The aggregate serial
+  database phase timed out after five minutes without a result and is not
+  claimed as passed.
+- Remaining risk: the redesign is not merged or deployed; signed-in
+  physical-device acceptance should verify sticky-composer behavior with the
+  software keyboard and a long real answer thread.
+
 ## Traceability Addendum - 2026-07-23 Shop Talk Linked-Article Discussion Finish
 
 - `GA-UX-003` gains a finished Trade News-to-Shop Talk discussion path:
