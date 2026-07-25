@@ -2,12 +2,12 @@
 
 Last updated: 2026-07-25 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Calculator quick-wheel header separation is locally verified.
+Current phase: Calculator quick-wheel header separation is production verified.
 Active packet: Non-overlapping quick-wheel hierarchy
-Repository branch: `codex/calculator-wheel-header-band`
-Production feature release commit: `3f2557ab1f329583119c7916f7050e38c2d5237f`
+Repository branch: `master`
+Production feature release commit: `3b827444137356f367a97cc941d7a25f6d7f51d5`
 
-## Calculator Quick-Wheel Header Band (Local Verification)
+## Calculator Quick-Wheel Header Band (Production Verification)
 
 - Quick wheels now reserve a dedicated header band above the choice arc.
   Result or family title appears first, context appears second, and an
@@ -23,9 +23,19 @@ Production feature release commit: `3f2557ab1f329583119c7916f7050e38c2d5237f`
   production dependency audit pass.
 - Rendered evidence:
   `C:\Users\zboyt\AppData\Local\Temp\rivt-tools-pass\mobile-calculator-quick-wheel-dark.png`.
-- Production remains on feature source
-  `3f2557ab1f329583119c7916f7050e38c2d5237f`; this correction is not yet
-  deployed.
+- The correction was fast-forwarded into `master` at
+  `3b827444137356f367a97cc941d7a25f6d7f51d5`. Railway application deployment
+  `baae3625-bd28-4123-a5c2-c12516180d6c` succeeded, followed by exact-source
+  metadata deployment `6c8b6eb6-ffd9-481b-8c82-8db17da12706`; only
+  `SOURCE_COMMIT` release metadata changed.
+- Live `/api/health` reports the exact feature commit, ready migration
+  `0028_compensation_workflow`, PostgreSQL, S3-compatible object storage,
+  configured Sentry, and configured Web Push. The exact-source production
+  monitor passed in 475 ms with all seven anonymous private-route checks
+  healthy and operational controls disabled.
+- Rollback target:
+  `2291ad03b56ef09ce04e25c6cc060a8a42b00852`. No schema, stored-data,
+  authorization, billing, or provider configuration changed.
 
 ## Calculator Clear Recovery and Enter Key (Production Verification)
 
