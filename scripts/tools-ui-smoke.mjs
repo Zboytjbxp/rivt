@@ -528,6 +528,16 @@ async function swipeQuickWheel(page, trigger, optionName, viewportName, menuName
 
   const menu = page.getByRole("menu", { name: menuName });
   await menu.waitFor({ state: "visible", timeout: 5_000 });
+  const viewport = page.viewportSize();
+  const choiceBoxes = await menu.getByRole("menuitem").evaluateAll((elements) => elements.map((element) => {
+    const rect = element.getBoundingClientRect();
+    return { left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom };
+  }));
+  assert.ok(choiceBoxes.length >= 2 && choiceBoxes.length <= 6, `quick wheel ${menuName} should expose 2-6 useful choices`);
+  assert.ok(
+    viewport && choiceBoxes.every((choice) => choice.left >= 8 && choice.right <= viewport.width - 8 && choice.top >= 8),
+    `quick wheel ${menuName} choices must remain within the visible phone width`,
+  );
   const option = menu.getByRole("menuitem", { name: optionName });
   const optionBox = await option.boundingBox();
   assert.ok(optionBox, `expected quick-wheel option ${optionName} to have a layout box in ${viewportName}`);
@@ -802,7 +812,7 @@ async function runToolsFlow(page, viewportName) {
     "holding 7 should offer the fast 7/8 entry without changing ordinary digit taps",
   );
   await page.getByRole("button", { name: "Clear calculator" }).click();
-  await page.getByLabel("Fraction calculator keypad").getByRole("button", { name: "2. Hold and slide for quick choices." }).click();
+  await page.getByLabel("Fraction calculator keypad").getByRole("button", { name: "2", exact: true }).click();
   await swipeQuickWheel(
     page,
     page.getByLabel("Fraction calculator keypad").getByRole("button", { name: "Multiply. Hold and slide for quick choices." }),
@@ -812,7 +822,7 @@ async function runToolsFlow(page, viewportName) {
     "multiply",
   );
   await page.locator(".calc-primary-value", { hasText: '6"' }).waitFor({ timeout: 15_000 });
-  await page.getByLabel("Fraction calculator keypad").getByRole("button", { name: "9. Hold and slide for quick choices." }).click();
+  await page.getByLabel("Fraction calculator keypad").getByRole("button", { name: "9", exact: true }).click();
   const deleteKey = page.getByLabel("Fraction calculator keypad").getByRole("button", { name: "Delete last digit. Hold to clear current problem." });
   const deleteBox = await deleteKey.boundingBox();
   assert.ok(deleteBox, `delete key should be visible in ${viewportName}`);
@@ -865,6 +875,10 @@ async function runToolsFlow(page, viewportName) {
     15,
     "imperial mark picker should expose every sixteenth-inch tape mark",
   );
+  const imperialMarkRows = await imperialMarkPicker.getByRole("group", { name: "All tape fractions" }).getByRole("button").evaluateAll(
+    (buttons) => [...new Set(buttons.map((button) => Math.round(button.getBoundingClientRect().top)))],
+  );
+  assert.equal(imperialMarkRows.length, 2, "ALL should present the fifteen imperial marks in a compact two-row palette");
   if (viewportName === "mobile") {
     await page.screenshot({ path: path.join(screenshotDir, "mobile-calculator-all-fractions.png") });
   }
@@ -954,24 +968,44 @@ async function runToolsFlow(page, viewportName) {
   await tapeListRegion.waitFor({ timeout: 15_000 });
   assert.equal(await page.getByLabel("Sixteenth fractions").count(), 0, "hidden fraction keys should release their workspace");
   assert.equal(await tapeListRegion.locator(".calc-tape-row").count(), 3, "direct Enter measurements should populate the Tape List");
+  for (const digit of ["2", "6", "9"]) {
+    const key = page.getByLabel("Fraction calculator keypad").getByRole("button", { name: digit, exact: true });
+    assert.equal(await key.getAttribute("aria-haspopup"), null, `digit ${digit} should not advertise a useless or oversized hold menu`);
+  }
 
   await page.getByRole("button", { name: "Clear calculator" }).click();
   await page.getByLabel("Fraction calculator keypad").getByRole("button", { name: "1" }).click();
-  await chooseQuickEntry(page, "6", "15/16", viewportName, "Sixteenths");
+  await page.getByRole("button", { name: "Open all tape fractions" }).click();
+  await page.getByRole("dialog", { name: "Choose a fraction" }).getByRole("button", { name: "Enter 15/16" }).click();
   assert.equal(
     await page.getByRole("menu", { name: "Tape fractions" }).count(),
     0,
-    "the complete hidden-key fraction menu should close after selection",
+    "the complete hidden-key fraction palette should close after selection",
   );
   await page.getByLabel("Fraction calculator keypad").getByRole("button", { name: "Add measurement to Tape List" }).click();
   await page.getByRole("button", { name: "Clear calculator" }).click();
   await page.getByLabel("Fraction calculator keypad").getByRole("button", { name: "2" }).click();
-  await chooseQuickEntry(page, "6", "13/16", viewportName, "Sixteenths");
+  await page.getByRole("button", { name: "Open all tape fractions" }).click();
+  await page.getByRole("dialog", { name: "Choose a fraction" }).getByRole("button", { name: "Enter 13/16" }).click();
   await page.getByLabel("Fraction calculator keypad").getByRole("button", { name: "Add measurement to Tape List" }).click();
   assert.equal(
     await tapeListRegion.locator(".calc-tape-row").count(),
     5,
     "hidden fraction keys should expose five recent measurements in the reclaimed workspace",
+  );
+  const compactTapeRows = await tapeListRegion.locator(".calc-tape-row").evaluateAll((rows) => rows.map((row) => {
+    const value = row.querySelector(".calc-tape-value");
+    const strong = row.querySelector("strong");
+    return {
+      rowHeight: row.getBoundingClientRect().height,
+      valueClientHeight: value?.clientHeight ?? 0,
+      valueScrollHeight: value?.scrollHeight ?? 0,
+      strongHeight: strong?.getBoundingClientRect().height ?? 0,
+    };
+  }));
+  assert.ok(
+    compactTapeRows.every((row) => row.rowHeight >= 40 && row.valueScrollHeight <= row.valueClientHeight + 1 && row.strongHeight > 14),
+    `Tape List values should remain fully visible instead of clipping: ${JSON.stringify(compactTapeRows)}`,
   );
   if (isHandsetViewport) {
     const keypadBox = await page.getByLabel("Fraction calculator keypad").boundingBox();

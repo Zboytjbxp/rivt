@@ -2,10 +2,40 @@
 
 Last updated: 2026-07-24 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Calculator quick-wheel interaction is production verified.
-Active packet: Logical fraction families and one-motion quick wheels
-Repository branch: `master`
+Current phase: Calculator quick-wheel containment correction is locally verified.
+Active packet: Contained fraction gestures and readable Tape List
+Repository branch: `codex/calculator-wheel-containment`
 Production feature release commit: `a810a80bbb680cf5bc1a4a5f072dc238cddb7ab1`
+
+## Calculator Wheel Containment Follow-up (Local Verification)
+
+- Number-key holds now appear only when the key has a useful family of two to
+  five choices. `2`, `6`, and `9` no longer advertise or open one-choice or
+  oversized menus; complete sixteenth access remains available through the
+  explicit `ALL` control.
+- The remaining unit, thirds, quarters, fifths, sevenths, and eighths wheels
+  use a smaller radius and a stronger viewport clamp. Every choice stays
+  above or beside the blocked thumb and at least 8 px inside the visible
+  phone width.
+- `ALL` now presents all fifteen imperial tape marks in two compact rows.
+  Metric presents `.1` through `.9` in two rows of its own; neither mode
+  overloads a number key or opens a giant radial menu.
+- The hidden-fraction Tape List gives its three compact rows enough height for
+  both the label and measurement. Rendered QA checks actual client/scroll
+  heights so five visible measurements cannot pass while their values clip.
+- Local evidence: lint, production build, 75 unit/frontend tests, desktop and
+  mobile E2E, rendered Tools QA, mobile-action QA, and the production
+  dependency audit pass. The first broad E2E/mobile runs encountered
+  unrelated transient connection/route timeouts while run concurrently;
+  both passed when rerun independently. No full database integration pass is
+  claimed.
+- Rendered evidence:
+  `C:\Users\zboyt\AppData\Local\Temp\rivt-tools-pass\mobile-calculator-quick-wheel-light.png`,
+  `mobile-calculator-all-fractions.png`, and
+  `mobile-calculator-tape-list.png`.
+- Production remains on feature source
+  `a810a80bbb680cf5bc1a4a5f072dc238cddb7ab1`; this correction is not yet
+  deployed.
 
 ## Calculator Logical Quick Wheels (Production Verification)
 

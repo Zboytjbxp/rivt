@@ -10,6 +10,22 @@ Status values:
 
 Evidence must eventually link to implementation, automated tests, manual acceptance proof, and deployed build.
 
+## Traceability Addendum - 2026-07-24 Calculator Wheel Containment
+
+- `GA-UX-003` gains interaction-discipline evidence: digit holds exist only
+  for learnable families with two to five choices. Complete imperial and
+  metric mark access moves through the explicit `ALL` palette instead of
+  overloading `6` or opening single-choice holds on `2` and `9`.
+- `GA-UX-006` gains rendered mobile evidence that every quick-wheel choice
+  stays inside the viewport, the complete imperial palette uses two rows, and
+  all five compact Tape List values retain their full label/value height.
+- `GA-OPS-007` gains assertions for the 2-6 useful-choice limit, an 8 px
+  viewport inset, absence of useless hold affordances, two-row palette
+  geometry, and client-height versus scroll-height clipping detection. Lint,
+  build, 75 unit/frontend tests, E2E, rendered Tools QA, mobile-action QA, and
+  the zero-vulnerability dependency audit pass.
+- No new `GA-OPS-008` production evidence is claimed for this follow-up yet.
+
 ## Traceability Addendum - 2026-07-24 Calculator Logical Quick Wheels
 
 - `GA-UX-003` gains field-speed evidence: number holds expose stable,

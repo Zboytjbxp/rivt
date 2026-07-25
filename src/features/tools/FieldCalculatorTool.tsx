@@ -28,25 +28,19 @@ const METRIC_TENTH_BUTTONS = Array.from({ length: 9 }, (_, index) => index + 1);
 const QUICK_ENTRY_HOLD_MS = 380;
 const IMPERIAL_DIGIT_FRACTIONS: Record<string, number[]> = {
   "1": [1, 2, 4, 8],
-  "2": [8],
   "3": [3, 6, 12],
   "4": [4, 8, 12],
   "5": [5, 10],
-  "6": [1, 3, 5, 7, 9, 11, 13, 15],
   "7": [7, 14],
   "8": [2, 6, 10, 14],
-  "9": [9],
 };
 const IMPERIAL_DIGIT_FAMILY_LABELS: Record<string, string> = {
   "1": "Unit fractions",
-  "2": "Halves",
   "3": "Fractions built from 3",
   "4": "Quarters",
   "5": "Fractions built from 5",
-  "6": "Sixteenths",
   "7": "Fractions built from 7",
   "8": "Eighths",
-  "9": "Nine sixteenths",
 };
 const RULER_TICKS = [
   { label: "1/16", value: 2 },
@@ -202,11 +196,11 @@ function QuickWheelButton({
     const rect = buttonRef.current?.getBoundingClientRect();
     if (!rect) return;
 
-    const radius = options.length >= 7 ? 136 : options.length >= 5 ? 104 : options.length >= 4 ? 96 : 86;
+    const radius = options.length >= 5 ? 92 : options.length >= 4 ? 88 : 82;
     setWheelFan(wheelHand === "auto"
       ? rect.left + rect.width / 2 < window.innerWidth / 2 ? "left" : "right"
       : wheelHand);
-    const outerPadding = radius + 34;
+    const outerPadding = radius + 44;
     const anchorX = Math.min(
       Math.max(rect.left + rect.width / 2, outerPadding),
       window.innerWidth - outerPadding,
@@ -388,7 +382,7 @@ function QuickWheelButton({
         <div className="calc-quick-entry-layer" role="presentation" onPointerDown={closeQuickWheel}>
           <div
             ref={wheelRef}
-            className={`calc-quick-wheel${options.length >= 7 ? " is-dense" : ""}`}
+            className="calc-quick-wheel"
             role="menu"
             aria-label={menuLabel}
             onPointerDown={(event) => event.stopPropagation()}
@@ -1184,10 +1178,7 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
   }
 
   function quickEntryOptions(digit: string): QuickEntryOption[] {
-    if (inputMode === "metric") {
-      if (digit === "0") return [];
-      return [{ label: `.${digit} mm`, ariaLabel: `Enter point ${digit} millimeters`, value: Number(digit) }];
-    }
+    if (inputMode === "metric") return [];
 
     const values = IMPERIAL_DIGIT_FRACTIONS[digit] ?? [];
     return values.map((value) => {
