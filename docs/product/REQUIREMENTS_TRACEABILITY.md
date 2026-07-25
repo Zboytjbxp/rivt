@@ -15,7 +15,8 @@ Evidence must eventually link to implementation, automated tests, manual accepta
 - `GA-UX-003` gains field-speed evidence: number holds expose stable,
   learnable fraction families; multiplication and division holds expose
   common jobsite factors; and `L`, `H`, `÷2`, and `×2` remain directly above
-  the keypad.
+  the keypad. A centered `ALL` shortcut exposes every imperial sixteenth or
+  every metric decimal tenth without crowding the number keys.
 - `GA-UX-003` also gains one-motion gesture evidence. The quick wheel is
   biased above and beside the blocked thumb, highlights the current choice
   during the drag, and commits on release while preserving a keyboard path.
@@ -24,7 +25,9 @@ Evidence must eventually link to implementation, automated tests, manual accepta
   retains its narrower behavior.
 - `GA-UX-006` gains mobile light/dark rendered evidence for the unified
   display/Tape List workspace, the hidden-fraction five-measurement view,
-  logical eighth and sixteenth wheels, and avoidance of Tools swipe-back.
+  logical eighth and sixteenth wheels, complete imperial/metric palettes,
+  metric-specific settings and independent decimal-strip visibility, and
+  avoidance of Tools swipe-back.
 - `GA-OPS-007` gains a real pointer-gesture Tools smoke for hold, slide,
   highlight, release, operator scaling, and hold-to-clear behavior, plus a
   keyboard-open/focus/commit assertion. Lint, build, 75 unit/frontend tests,

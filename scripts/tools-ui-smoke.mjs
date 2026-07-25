@@ -721,23 +721,55 @@ async function runToolsFlow(page, viewportName) {
     "imperial calculator should not expose a 32nd-precision mode",
   );
   await calculatorSettings.getByRole("button", { name: "Metric" }).click();
+  await calculatorSettings.getByText("Metric entry", { exact: true }).waitFor({ timeout: 15_000 });
+  await calculatorSettings.getByText("Metric precision", { exact: true }).waitFor({ timeout: 15_000 });
+  await calculatorSettings.getByText("Decimal shortcut visibility", { exact: true }).waitFor({ timeout: 15_000 });
+  assert.equal(
+    await calculatorSettings.getByText("Imperial notation", { exact: true }).count(),
+    0,
+    "metric settings should not expose imperial notation",
+  );
   await calculatorSettings.getByRole("button", { name: "Close calculator settings" }).click();
   await page.getByLabel("Length calculator").getByText("Meters", { exact: true }).waitFor({ timeout: 15_000 });
-  await page.getByLabel("Heavy, light, double, and half controls").getByRole("button", { name: "Heavy plus half millimetre" }).waitFor({ timeout: 15_000 });
-  await page.getByLabel("Heavy, light, double, and half controls").getByRole("button", { name: "Light minus half millimetre" }).waitFor({ timeout: 15_000 });
-  await page.getByLabel("Heavy, light, double, and half controls").getByRole("button", { name: "Multiply measurement by two. Hold and slide for quick choices." }).waitFor({ timeout: 15_000 });
-  await page.getByLabel("Heavy, light, double, and half controls").getByRole("button", { name: "Divide measurement by two. Hold and slide for quick choices." }).waitFor({ timeout: 15_000 });
+  await page.getByLabel("Measurement shortcuts").getByRole("button", { name: "Heavy plus half millimetre" }).waitFor({ timeout: 15_000 });
+  await page.getByLabel("Measurement shortcuts").getByRole("button", { name: "Light minus half millimetre" }).waitFor({ timeout: 15_000 });
+  await page.getByLabel("Measurement shortcuts").getByRole("button", { name: "Multiply measurement by two. Hold and slide for quick choices." }).waitFor({ timeout: 15_000 });
+  await page.getByLabel("Measurement shortcuts").getByRole("button", { name: "Divide measurement by two. Hold and slide for quick choices." }).waitFor({ timeout: 15_000 });
+  const allMetricDecimals = page.getByRole("button", { name: "Open all metric decimals" });
+  await allMetricDecimals.click();
+  const metricMarkPicker = page.getByRole("dialog", { name: "Choose a decimal" });
+  await metricMarkPicker.waitFor({ state: "visible", timeout: 5_000 });
+  assert.equal(
+    await metricMarkPicker.getByRole("group", { name: "All metric decimals" }).getByRole("button").count(),
+    9,
+    "metric mark picker should expose all nine decimal tenths",
+  );
+  if (viewportName === "mobile") {
+    await page.screenshot({ path: path.join(screenshotDir, "mobile-calculator-all-decimals.png") });
+  }
+  await metricMarkPicker.getByRole("button", { name: "Enter point 7 millimeters" }).click();
+  await page.locator(".calc-primary-value", { hasText: "0.7 mm" }).waitFor({ timeout: 15_000 });
+  await page.getByRole("button", { name: "Clear calculator" }).click();
+  await page.getByRole("button", { name: "Calculator settings", exact: true }).click();
+  await calculatorSettings.getByRole("group", { name: "Decimal shortcut visibility" }).getByRole("button", { name: "Hidden" }).click();
+  await calculatorSettings.getByRole("button", { name: "Close calculator settings" }).click();
+  assert.equal(await page.getByLabel("Metric decimal tenths").count(), 0, "hidden metric shortcuts should reclaim the decimal strip");
+  await page.getByRole("region", { name: "Tape List" }).waitFor({ state: "visible", timeout: 5_000 });
+  await allMetricDecimals.waitFor({ state: "visible", timeout: 5_000 });
+  await page.getByRole("button", { name: "Calculator settings", exact: true }).click();
+  await calculatorSettings.getByRole("group", { name: "Decimal shortcut visibility" }).getByRole("button", { name: "Shown" }).click();
+  await calculatorSettings.getByRole("button", { name: "Close calculator settings" }).click();
   await page.getByLabel("Metric calculator keypad").getByRole("button", { name: "2" }).click();
   await page.getByLabel("Metric calculator keypad").getByRole("button", { name: "4" }).click();
   await page.getByLabel("Metric calculator keypad").getByRole("button", { name: "0" }).click();
   await page.locator(".calc-primary-value", { hasText: "240 mm" }).waitFor({ timeout: 15_000 });
-  await page.getByLabel("Heavy, light, double, and half controls").getByRole("button", { name: "Heavy plus half millimetre" }).click();
+  await page.getByLabel("Measurement shortcuts").getByRole("button", { name: "Heavy plus half millimetre" }).click();
   await page.locator(".calc-primary-value", { hasText: "240.5 mm" }).waitFor({ timeout: 15_000 });
-  await page.getByLabel("Heavy, light, double, and half controls").getByRole("button", { name: "Light minus half millimetre" }).click();
+  await page.getByLabel("Measurement shortcuts").getByRole("button", { name: "Light minus half millimetre" }).click();
   await page.locator(".calc-primary-value", { hasText: "240 mm" }).waitFor({ timeout: 15_000 });
-  await page.getByLabel("Heavy, light, double, and half controls").getByRole("button", { name: "Divide measurement by two. Hold and slide for quick choices." }).click();
+  await page.getByLabel("Measurement shortcuts").getByRole("button", { name: "Divide measurement by two. Hold and slide for quick choices." }).click();
   await page.locator(".calc-primary-value", { hasText: "120 mm" }).waitFor({ timeout: 15_000 });
-  await page.getByLabel("Heavy, light, double, and half controls").getByRole("button", { name: "Multiply measurement by two. Hold and slide for quick choices." }).click();
+  await page.getByLabel("Measurement shortcuts").getByRole("button", { name: "Multiply measurement by two. Hold and slide for quick choices." }).click();
   await page.locator(".calc-primary-value", { hasText: "240 mm" }).waitFor({ timeout: 15_000 });
   await page.getByLabel("Metric decimal tenths").getByRole("button", { name: ".5" }).click();
   await page.locator(".calc-primary-value", { hasText: "240.5 mm" }).waitFor({ timeout: 15_000 });
@@ -787,7 +819,7 @@ async function runToolsFlow(page, viewportName) {
   await page.getByLabel("Fraction calculator keypad").getByRole("button", { name: "5" }).click();
   await clickVisibleFraction(page, "5/8", viewportName);
   await page.getByLabel("Fraction calculator keypad").getByRole("button", { name: "+" }).click();
-  await page.getByLabel("Heavy, light, double, and half controls").getByRole("button", { name: "Mark measurement heavy" }).click();
+  await page.getByLabel("Measurement shortcuts").getByRole("button", { name: "Mark measurement heavy" }).click();
   await page.getByLabel("Fraction calculator keypad").getByRole("button", { name: "Calculate result" }).click();
   await page.locator(".calc-primary-value", { hasText: '5 5/8" H' }).waitFor({ timeout: 15_000 });
   assert.equal(
@@ -799,7 +831,7 @@ async function runToolsFlow(page, viewportName) {
   await page.getByLabel("Fraction calculator keypad").getByRole("button", { name: "5" }).click();
   await clickVisibleFraction(page, "5/8", viewportName);
   await page.getByLabel("Fraction calculator keypad").getByRole("button", { name: "-" }).click();
-  await page.getByLabel("Heavy, light, double, and half controls").getByRole("button", { name: "Mark measurement heavy" }).click();
+  await page.getByLabel("Measurement shortcuts").getByRole("button", { name: "Mark measurement heavy" }).click();
   await page.getByLabel("Fraction calculator keypad").getByRole("button", { name: "Calculate result" }).click();
   await page.locator(".calc-primary-value", { hasText: '5 5/8" L' }).waitFor({ timeout: 15_000 });
   assert.equal(
@@ -809,15 +841,29 @@ async function runToolsFlow(page, viewportName) {
   );
   await page.getByRole("button", { name: "Clear calculator" }).click();
   await clickVisibleFraction(page, "1/16", viewportName);
-  await page.getByLabel("Heavy, light, double, and half controls").getByRole("button", { name: "Divide measurement by two. Hold and slide for quick choices." }).click();
+  await page.getByLabel("Measurement shortcuts").getByRole("button", { name: "Divide measurement by two. Hold and slide for quick choices." }).click();
   await page.locator(".calc-primary-value", { hasText: '0" H' }).waitFor({ timeout: 15_000 });
   assert.equal(
     await page.locator(".calc-primary-value").textContent(),
     '0" H',
     "an otherwise ambiguous thirty-second should default to the lower mark Heavy",
   );
-  await page.getByLabel("Heavy, light, double, and half controls").getByRole("button", { name: "Divide measurement by two. Hold and slide for quick choices." }).click();
+  await page.getByLabel("Measurement shortcuts").getByRole("button", { name: "Divide measurement by two. Hold and slide for quick choices." }).click();
   await page.locator(".calc-primary-value", { hasText: '≈ 0" H' }).waitFor({ timeout: 15_000 });
+  await page.getByRole("button", { name: "Clear calculator" }).click();
+  await page.getByRole("button", { name: "Open all tape fractions" }).click();
+  const imperialMarkPicker = page.getByRole("dialog", { name: "Choose a fraction" });
+  await imperialMarkPicker.waitFor({ state: "visible", timeout: 5_000 });
+  assert.equal(
+    await imperialMarkPicker.getByRole("group", { name: "All tape fractions" }).getByRole("button").count(),
+    15,
+    "imperial mark picker should expose every sixteenth-inch tape mark",
+  );
+  if (viewportName === "mobile") {
+    await page.screenshot({ path: path.join(screenshotDir, "mobile-calculator-all-fractions.png") });
+  }
+  await imperialMarkPicker.getByRole("button", { name: "Enter 11/16" }).click();
+  await page.locator(".calc-primary-value", { hasText: '11/16"' }).waitFor({ timeout: 15_000 });
   await page.getByRole("button", { name: "Clear calculator" }).click();
   await page.getByLabel("Fraction calculator keypad").getByRole("button", { name: "6" }).click();
   await chooseQuickEntry(page, "8", "1/8", viewportName, "Eighths");
@@ -857,11 +903,11 @@ async function runToolsFlow(page, viewportName) {
   await page.getByRole("button", { name: "Clear calculator" }).click();
   await page.getByLabel("Fraction calculator keypad").getByRole("button", { name: "9" }).click();
   await clickVisibleFraction(page, "5/16", viewportName);
-  await page.getByLabel("Heavy, light, double, and half controls").getByRole("button", { name: "Mark measurement heavy" }).click();
+  await page.getByLabel("Measurement shortcuts").getByRole("button", { name: "Mark measurement heavy" }).click();
   await page.locator(".calc-primary-value", { hasText: '9 5/16" H' }).waitFor({ timeout: 15_000 });
   await page.getByLabel("Fraction calculator keypad").getByRole("button", { name: "+" }).click();
   await clickVisibleFraction(page, "1/4", viewportName);
-  await page.getByLabel("Heavy, light, double, and half controls").getByRole("button", { name: "Mark measurement heavy" }).click();
+  await page.getByLabel("Measurement shortcuts").getByRole("button", { name: "Mark measurement heavy" }).click();
   await page.getByLabel("Fraction calculator keypad").getByRole("button", { name: "Calculate result" }).click();
   await page.locator(".calc-primary-value", { hasText: '9 5/8"' }).waitFor({ timeout: 15_000 });
   await page.getByRole("button", { name: "Clear calculator" }).click();

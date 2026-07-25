@@ -544,8 +544,8 @@ async function runMobileFlow(page) {
   await page.getByRole("button", { name: "Calculator settings", exact: true }).click();
   await page.getByRole("dialog", { name: "Calculator settings" }).getByRole("button", { name: "Metric" }).waitFor({ timeout: 15_000 });
   await page.getByRole("button", { name: "Close calculator settings" }).click();
-  await page.getByLabel("Heavy, light, double, and half controls").getByRole("button", { name: "Mark measurement heavy" }).waitFor({ timeout: 15_000 });
-  await page.getByLabel("Heavy, light, double, and half controls").getByRole("button", { name: "Multiply measurement by two" }).waitFor({ timeout: 15_000 });
+  await page.getByLabel("Measurement shortcuts").getByRole("button", { name: "Mark measurement heavy" }).waitFor({ timeout: 15_000 });
+  await page.getByLabel("Measurement shortcuts").getByRole("button", { name: "Multiply measurement by two" }).waitFor({ timeout: 15_000 });
   await page.setViewportSize({ width: 375, height: 553 });
   await page.evaluate(() => {
     document.documentElement.setAttribute("data-rivt-compact-device", "true");
@@ -578,7 +578,7 @@ async function runMobileFlow(page) {
     compactFractionBox.x + compactFractionBox.width <= 375 && compactFractionBox.y + compactFractionBox.height <= 553,
     `compact 5/8 button should be fully visible at 375x553: ${JSON.stringify(compactFractionBox)}`,
   );
-  const compactHistoryButton = page.getByRole("button", { name: "Calculation history" });
+  const compactHistoryButton = page.getByRole("button", { name: "Tape history" });
   const compactHistoryButtonBox = await compactHistoryButton.boundingBox();
   assert.ok(compactHistoryButtonBox, "compact calculator history button should have a bounding box");
   assert.ok(
@@ -589,7 +589,7 @@ async function runMobileFlow(page) {
     `compact calculator history button should stay in viewport: ${JSON.stringify(compactHistoryButtonBox)}`,
   );
   await compactHistoryButton.click();
-  const compactHistoryDialog = page.getByRole("dialog", { name: "Recent calculations" });
+  const compactHistoryDialog = page.getByRole("dialog", { name: "Tape history" });
   await compactHistoryDialog.waitFor({ timeout: 15_000 });
   const compactHistoryBox = await compactHistoryDialog.boundingBox();
   assert.ok(compactHistoryBox, "compact calculator history should have a bounding box");
@@ -597,7 +597,7 @@ async function runMobileFlow(page) {
     compactHistoryBox.y >= 0 && compactHistoryBox.y + compactHistoryBox.height <= 553,
     `compact calculation history should stay in viewport: ${JSON.stringify(compactHistoryBox)}`,
   );
-  await compactHistoryDialog.getByRole("button", { name: "Close calculation history" }).click();
+  await compactHistoryDialog.getByRole("button", { name: "Close Tape history" }).click();
   await page.evaluate(() => {
     document.documentElement.removeAttribute("data-rivt-compact-device");
   });

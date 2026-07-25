@@ -408,8 +408,8 @@ async function assertToolsFlow(page) {
   await page.getByRole("button", { name: "Calculator settings", exact: true }).click();
   await page.getByRole("dialog", { name: "Calculator settings" }).getByRole("button", { name: "Metric" }).waitFor();
   await page.getByRole("button", { name: "Close calculator settings" }).click();
-  await page.getByLabel("Heavy, light, double, and half controls").getByRole("button", { name: "Mark measurement heavy" }).waitFor();
-  await page.getByLabel("Heavy, light, double, and half controls").getByRole("button", { name: "Divide measurement by two" }).waitFor();
+  await page.getByLabel("Measurement shortcuts").getByRole("button", { name: "Mark measurement heavy" }).waitFor();
+  await page.getByLabel("Measurement shortcuts").getByRole("button", { name: "Divide measurement by two" }).waitFor();
   await page.getByLabel("Heavy 16th field calculator").getByRole("button", { name: "Back to tools" }).click();
 
   await primaryTool("Estimate").click();

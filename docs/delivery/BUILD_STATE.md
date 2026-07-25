@@ -21,6 +21,15 @@ Production feature release commit: `077d3b5e19ffddcfd5df265e3b4483e42d9fe948`
 - Multiplication and division keys now have parallel hold wheels for
   `2`, `3`, `4`, `6`, and `12`. The common `L`, `H`, `÷2`, and `×2`
   actions sit in one thumb-reachable rail directly above the keypad.
+- The center of that rail now carries one explicit `ALL` shortcut. Imperial
+  opens every sixteenth-inch tape mark in tape order; metric opens every
+  decimal tenth from `.1` through `.9`. Both palettes are keyboard trapped,
+  screen-reader labeled, and return focus to the center control.
+- Metric now has its own independent decimal-strip preference and honest
+  settings language: millimeter entry, decimal visibility, 0.1 mm precision,
+  and the existing ±0.5 mm Light/Heavy trim. Hiding metric decimals expands
+  the same five-measurement Tape List without changing the user's imperial
+  fraction-strip preference.
 - Holding `DEL` clears only the current equation and measurement entry.
   Recorded Tape List measurements remain intact; a normal tap still deletes
   one input step.
@@ -29,8 +38,10 @@ Production feature release commit: `077d3b5e19ffddcfd5df265e3b4483e42d9fe948`
   workspace instead of leaving separate stacked cards or unused space.
 - Rendered Tools QA performs real pointer hold/slide/release gestures for
   eighths, sixteenths, multiplication, and deletion. It also locks the
-  logical family membership, retained Tape List behavior, no swipe-back
-  regression, and light/dark wheel surfaces at the mobile viewport.
+  logical family membership, complete 15-fraction and nine-decimal palettes,
+  independent metric shortcut visibility, retained Tape List behavior, no
+  swipe-back regression, and light/dark wheel surfaces at the mobile
+  viewport.
 - Current evidence: lint, production build, 75 unit/frontend tests,
   desktop/mobile E2E, rendered Tools QA, and the production dependency audit
   pass. The Tools smoke covers both pointer and keyboard wheel entry. The

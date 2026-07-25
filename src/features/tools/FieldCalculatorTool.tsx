@@ -96,6 +96,7 @@ type CalculatorPreferences = {
   imperialNotation: ImperialNotation;
   fractionLayout: FractionLayout;
   fractionKeysVisible: boolean;
+  metricDecimalKeysVisible: boolean;
 };
 
 type QuickEntryOption = {
@@ -488,6 +489,7 @@ const DEFAULT_CALCULATOR_PREFERENCES: CalculatorPreferences = {
   imperialNotation: "inches",
   fractionLayout: "tape",
   fractionKeysVisible: true,
+  metricDecimalKeysVisible: true,
 };
 
 function formatNumber(value: number, digits = 2) {
@@ -723,6 +725,7 @@ function readCalculatorPreferences(): CalculatorPreferences {
       imperialNotation: parsed?.imperialNotation === "feet-inches" ? "feet-inches" : "inches",
       fractionLayout: parsed?.fractionLayout === "grouped" ? "grouped" : "tape",
       fractionKeysVisible: parsed?.fractionKeysVisible !== false,
+      metricDecimalKeysVisible: parsed?.metricDecimalKeysVisible !== false,
     };
   } catch {
     return DEFAULT_CALCULATOR_PREFERENCES;
@@ -775,6 +778,7 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
   const [imperialNotation, setImperialNotation] = useState<ImperialNotation>(initialPreferences.imperialNotation);
   const [fractionLayout, setFractionLayout] = useState<FractionLayout>(initialPreferences.fractionLayout);
   const [fractionKeysVisible, setFractionKeysVisible] = useState(initialPreferences.fractionKeysVisible);
+  const [metricDecimalKeysVisible, setMetricDecimalKeysVisible] = useState(initialPreferences.metricDecimalKeysVisible);
   const [activeUnit, setActiveUnit] = useState<ActiveUnit>(initialPreferences.imperialNotation === "feet-inches" ? "feet" : "inches");
   const [feetText, setFeetText] = useState("0");
   const [inchesText, setInchesText] = useState("0");
@@ -795,7 +799,9 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
   const [tapeMeasurements, setTapeMeasurements] = useState<TapeMeasurementEntry[]>(() => readTapeMeasurements());
   const [historyOpen, setHistoryOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [markPickerOpen, setMarkPickerOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const markPickerButtonRef = useRef<HTMLButtonElement>(null);
 
   const entryValueUnits = inputMode === "metric"
     ? valueFromMetricEntry(metricText, metricTenths)
@@ -807,6 +813,7 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
     ? exactTapeUnits(displayValueUnits, displayQualifier)
     : displayValueUnits;
   const fractionButtons = fractionLayout === "grouped" ? GROUPED_FRACTION_BUTTONS : FRACTION_BUTTONS;
+  const shortcutKeysVisible = inputMode === "metric" ? metricDecimalKeysVisible : fractionKeysVisible;
 
   useEffect(() => {
     try {
@@ -815,9 +822,10 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
         imperialNotation,
         fractionLayout,
         fractionKeysVisible,
+        metricDecimalKeysVisible,
       } satisfies CalculatorPreferences));
     } catch { /* harmless preference */ }
-  }, [fractionKeysVisible, fractionLayout, imperialNotation, inputMode]);
+  }, [fractionKeysVisible, fractionLayout, imperialNotation, inputMode, metricDecimalKeysVisible]);
 
   useEffect(() => {
     try { localStorage.setItem(CALCULATOR_HISTORY_KEY, JSON.stringify(calculationHistory)); } catch { /* harmless device history */ }
@@ -883,6 +891,7 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
   function switchMode(nextMode: InputMode) {
     if (nextMode === inputMode) return;
     const base = displayExactUnits;
+    setMarkPickerOpen(false);
     setInputMode(nextMode);
     if (nextMode === "metric") {
       setMetricEntryFromValue(base);
@@ -1364,8 +1373,8 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
       <div className="heavy-calc-shell fraction-calc-shell fraction-only-shell">
         <main className="heavy-calc-main fraction-calc-main length-mode">
           <section className="fraction-calc-grid" aria-label="Length calculator">
-            <div className={`fraction-calc-left${inputMode === "imperial" && !fractionKeysVisible ? " fractions-hidden" : ""}`}>
-              <section className={`calc-measurement-workspace${inputMode === "imperial" && !fractionKeysVisible ? " has-tape-list" : ""}`}>
+            <div className={`fraction-calc-left${!shortcutKeysVisible ? " fractions-hidden" : ""}`}>
+              <section className={`calc-measurement-workspace${!shortcutKeysVisible ? " has-tape-list" : ""}`}>
                 <div className="calc-display-stack fraction-display">
                   <span className="fraction-history">{equationLabel}</span>
                   <strong className="calc-primary-value">{primaryValue}</strong>
@@ -1377,7 +1386,7 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
                     {metaValues.map((value, index) => <span key={`${index}-${value}`}>{value}</span>)}
                   </div>
                 </div>
-                {inputMode === "imperial" && !fractionKeysVisible ? (
+                {!shortcutKeysVisible ? (
                   <section className="calc-tape-queue" aria-label="Tape List">
                     <header>
                       <div>
@@ -1454,7 +1463,7 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
                 )}
               </div>
 
-              {inputMode === "metric" ? (
+              {inputMode === "metric" && shortcutKeysVisible ? (
                 <div className="fraction-strip metric-strip" aria-label="Metric decimal tenths">
                   {METRIC_TENTH_BUTTONS.map((value) => (
                     <button
@@ -1467,7 +1476,7 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
                     </button>
                   ))}
                 </div>
-              ) : fractionKeysVisible ? (
+              ) : inputMode === "imperial" && shortcutKeysVisible ? (
                 <div className="fraction-strip" aria-label="Sixteenth fractions">
                   {fractionButtons.map((value) => {
                     const family = fractionFamilyFromSixteenth(value);
@@ -1488,7 +1497,7 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
                 </div>
               ) : null}
 
-              <div className="fraction-action-row" aria-label="Heavy, light, double, and half controls">
+              <div className="fraction-action-row" aria-label="Measurement shortcuts">
                 <button
                   type="button"
                   aria-label={inputMode === "metric" ? "Light minus half millimetre" : "Mark measurement light"}
@@ -1506,6 +1515,18 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
                 >
                   <strong>H</strong>
                   <small>{inputMode === "metric" ? "+0.5 mm" : "Heavy"}</small>
+                </button>
+                <button
+                  ref={markPickerButtonRef}
+                  type="button"
+                  className="calc-all-marks-control"
+                  aria-haspopup="dialog"
+                  aria-expanded={markPickerOpen}
+                  aria-label={inputMode === "metric" ? "Open all metric decimals" : "Open all tape fractions"}
+                  onClick={() => setMarkPickerOpen(true)}
+                >
+                  <strong>{inputMode === "metric" ? ".1–.9" : "ALL"}</strong>
+                  <small>{inputMode === "metric" ? "Decimals" : "Fractions"}</small>
                 </button>
                 <QuickWheelButton
                   label="Divide measurement by two"
@@ -1597,6 +1618,75 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
         </aside>
       </div>
       <span className="sr-only" aria-live="polite">{copied ? `${primaryValue} copied` : ""}</span>
+      {markPickerOpen ? createPortal(
+        <DialogBackdrop
+          className="calc-history-backdrop calc-mark-picker-backdrop"
+          onClose={() => {
+            setMarkPickerOpen(false);
+            markPickerButtonRef.current?.focus();
+          }}
+        >
+          <DialogSurface
+            className={`calc-history-sheet calc-mark-picker-sheet${inputMode === "metric" ? " is-metric" : ""}`}
+            labelledBy="calc-mark-picker-title"
+            onClose={() => {
+              setMarkPickerOpen(false);
+              markPickerButtonRef.current?.focus();
+            }}
+          >
+            <header>
+              <div>
+                <span>{inputMode === "metric" ? "Metric entry" : "Tape marks"}</span>
+                <h2 id="calc-mark-picker-title">{inputMode === "metric" ? "Choose a decimal" : "Choose a fraction"}</h2>
+              </div>
+              <button
+                type="button"
+                className="v2-icon-button"
+                aria-label="Close mark picker"
+                onClick={() => {
+                  setMarkPickerOpen(false);
+                  markPickerButtonRef.current?.focus();
+                }}
+              >
+                <X size={20} />
+              </button>
+            </header>
+            <p className="calc-mark-picker-help">
+              {inputMode === "metric"
+                ? "Add a tenth of a millimeter to the current whole-millimeter entry."
+                : "All marks are shown in the same order as a sixteenth-inch tape."}
+            </p>
+            <div
+              className="calc-mark-picker-grid"
+              role="group"
+              aria-label={inputMode === "metric" ? "All metric decimals" : "All tape fractions"}
+            >
+              {(inputMode === "metric" ? METRIC_TENTH_BUTTONS : FRACTION_BUTTONS).map((value) => {
+                const label = inputMode === "metric" ? `.${value}` : fractionLabelFromSixteenth(value);
+                const active = inputMode === "metric" ? metricTenths === value : fraction32 === value * 2;
+                return (
+                  <button
+                    key={`${inputMode}-${value}`}
+                    type="button"
+                    className={active ? "active" : ""}
+                    aria-pressed={active}
+                    aria-label={inputMode === "metric" ? `Enter point ${value} millimeters` : `Enter ${label}`}
+                    onClick={() => {
+                      if (inputMode === "metric") chooseMetricTenth(value);
+                      else chooseFraction(value);
+                      setMarkPickerOpen(false);
+                      markPickerButtonRef.current?.focus();
+                    }}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+          </DialogSurface>
+        </DialogBackdrop>,
+        document.querySelector(".rivt-v2") ?? document.body,
+      ) : null}
       {settingsOpen ? createPortal(
         <DialogBackdrop className="calc-history-backdrop" onClose={() => setSettingsOpen(false)}>
           <DialogSurface className="calc-history-sheet calc-settings-sheet" labelledBy="calc-settings-title" onClose={() => setSettingsOpen(false)}>
@@ -1620,40 +1710,67 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
                   <button type="button" className={inputMode === "metric" ? "active" : ""} onClick={() => switchMode("metric")}>Metric</button>
                 </div>
               </section>
+              {inputMode === "imperial" ? (
+                <>
+                  <section>
+                    <div>
+                      <strong>Imperial notation</strong>
+                      <span>Choose whether long measurements stay in inches.</span>
+                    </div>
+                    <div className="calc-settings-options" role="group" aria-label="Imperial notation">
+                      <button type="button" className={imperialNotation === "inches" ? "active" : ""} onClick={() => setNotation("inches")}>Inches only</button>
+                      <button type="button" className={imperialNotation === "feet-inches" ? "active" : ""} onClick={() => setNotation("feet-inches")}>Feet + inches</button>
+                    </div>
+                  </section>
+                  <section>
+                    <div>
+                      <strong>Fraction key layout</strong>
+                      <span>Keep tape order or bring larger tape marks forward.</span>
+                    </div>
+                    <div className="calc-settings-options" role="group" aria-label="Fraction key layout">
+                      <button type="button" className={fractionLayout === "tape" ? "active" : ""} onClick={() => setFractionLayout("tape")}>Tape order</button>
+                      <button type="button" className={fractionLayout === "grouped" ? "active" : ""} onClick={() => setFractionLayout("grouped")}>Grouped marks</button>
+                    </div>
+                  </section>
+                </>
+              ) : (
+                <section>
+                  <div>
+                    <strong>Metric entry</strong>
+                    <span>Whole-number keys enter millimeters. Decimal shortcuts add tenths from .1 through .9.</span>
+                  </div>
+                </section>
+              )}
               <section>
                 <div>
-                  <strong>Imperial notation</strong>
-                  <span>Choose whether long measurements stay in inches.</span>
+                  <strong>{inputMode === "metric" ? "Decimal shortcut visibility" : "Fraction key visibility"}</strong>
+                  <span>{inputMode === "metric"
+                    ? "Hide the decimal strip to expand the Tape List. The center Decimals button still opens all tenths."
+                    : "Hide the fraction strip to expand the Tape List. The center All marks button still opens every sixteenth."}</span>
                 </div>
-                <div className="calc-settings-options" role="group" aria-label="Imperial notation">
-                  <button type="button" className={imperialNotation === "inches" ? "active" : ""} onClick={() => setNotation("inches")}>Inches only</button>
-                  <button type="button" className={imperialNotation === "feet-inches" ? "active" : ""} onClick={() => setNotation("feet-inches")}>Feet + inches</button>
+                <div className="calc-settings-options" role="group" aria-label={inputMode === "metric" ? "Decimal shortcut visibility" : "Fraction key visibility"}>
+                  <button
+                    type="button"
+                    className={shortcutKeysVisible ? "active" : ""}
+                    onClick={() => inputMode === "metric" ? setMetricDecimalKeysVisible(true) : setFractionKeysVisible(true)}
+                  >
+                    Shown
+                  </button>
+                  <button
+                    type="button"
+                    className={!shortcutKeysVisible ? "active" : ""}
+                    onClick={() => inputMode === "metric" ? setMetricDecimalKeysVisible(false) : setFractionKeysVisible(false)}
+                  >
+                    Hidden
+                  </button>
                 </div>
               </section>
               <section>
                 <div>
-                  <strong>Fraction keys</strong>
-                  <span>Keep tape order or bring larger tape marks forward.</span>
-                </div>
-                <div className="calc-settings-options" role="group" aria-label="Fraction key layout">
-                  <button type="button" className={fractionLayout === "tape" ? "active" : ""} onClick={() => setFractionLayout("tape")}>Tape order</button>
-                  <button type="button" className={fractionLayout === "grouped" ? "active" : ""} onClick={() => setFractionLayout("grouped")}>Grouped marks</button>
-                </div>
-              </section>
-              <section>
-                <div>
-                  <strong>Fraction key visibility</strong>
-                  <span>Hide the fraction strip to expand the Tape List. Hold 8 for eighths, 4 for quarters, or 6 for sixteenths; slide and lift to choose.</span>
-                </div>
-                <div className="calc-settings-options" role="group" aria-label="Fraction key visibility">
-                  <button type="button" className={fractionKeysVisible ? "active" : ""} onClick={() => setFractionKeysVisible(true)}>Shown</button>
-                  <button type="button" className={!fractionKeysVisible ? "active" : ""} onClick={() => setFractionKeysVisible(false)}>Hidden</button>
-                </div>
-              </section>
-              <section>
-                <div>
-                  <strong>Tape precision</strong>
-                  <span>Calculations resolve to 1/32 inch. Odd marks display as Heavy or Light against a 1/16 tape mark; finer results show ≈ after rounding.</span>
+                  <strong>{inputMode === "metric" ? "Metric precision" : "Tape precision"}</strong>
+                  <span>{inputMode === "metric"
+                    ? "Entries resolve to 0.1 mm. Light and Heavy trim the current measurement by 0.5 mm."
+                    : "Calculations resolve to 1/32 inch. Odd marks display as Heavy or Light against a 1/16 tape mark; finer results show ≈ after rounding."}</span>
                 </div>
               </section>
             </div>
