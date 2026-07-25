@@ -1,5 +1,49 @@
 # Deployment Ledger
 
+## 2026-07-25 - Jacksonville Launch-Readiness Closure
+
+- Feature source commit:
+  `21213427ef9ed857fd34eada12a4630df9484923`
+- Branch: `master` (source branch: `codex/launch-readiness-closure`)
+- Railway application deployment:
+  `fe6880e7-3789-4151-a800-157f205d5d47`
+- Railway exact release-marker deployment:
+  `ee7276e7-bd66-4ca1-94de-81160bc6cdc0`
+- Production: `https://rivt.pro`
+- Scope: canonical Work -> People assignment, coherent session-scoped guest
+  preview, Trade News entity/summary/story-family cleanup, compact Camera
+  destination hierarchy, grouped global search with private browser recents,
+  and product-contract alignment for Home / Work / Camera / Shop Talk / Tools
+  with People/Crew under Work.
+- Operational evidence: encrypted 82-table/7,028-row backup restored to an
+  isolated Railway PostgreSQL service through migration
+  `0028_compensation_workflow` with zero row-count differences; temporary
+  service deleted; incident rehearsal accepted by Sentry; guarded cleanup
+  closed 17 stale smoke organizations with zero profile/job/review changes;
+  strict launch readiness exits zero.
+- Automated gates: lint, production build, 75 unit/frontend tests,
+  desktop/mobile E2E, Tools, Shop Talk/Trade News, mobile-actions, Work
+  lifecycle, guest-preview rendered smokes, security lint, launch readiness,
+  zero-vulnerability production dependency audit, and diff checks passed.
+  The aggregate database integration runner produced no result within 15
+  minutes, so no full integration pass is claimed.
+- Post-deploy proof: exact-source health reports ready migration
+  `0028_compensation_workflow`, PostgreSQL/S3-compatible dependencies,
+  configured Sentry/Web Push, and open controls. The production monitor passed
+  in 461 ms with seven anonymous private-route checks. Railway-hosted Gate A
+  hardening passed with zero seed findings, zero open jobs, zero active
+  restrictions, and seven anonymous private checks. Forced Jacksonville news
+  returned 12 current items from nine sources, one HB 803 cluster with eight
+  related sources, and zero encoded-entity items.
+- Authenticated billing smoke: not run; its fail-closed guard reported missing
+  dedicated `RIVT_SMOKE_EMAIL` / `RIVT_SMOKE_PASSWORD`. No customer account
+  was borrowed.
+- Human acceptance still required before charging: verify the live Stripe
+  Price is exactly $9/month, complete one real checkout/return on a physical
+  phone, and observe downstream incident notification delivery.
+- Rollback target:
+  `f4acee02757db6d76c6017ebb9277882be4a9355`
+
 ## 2026-07-25 - Launch Readiness Restore and Incident Rehearsal
 
 - Production logical-backup source:

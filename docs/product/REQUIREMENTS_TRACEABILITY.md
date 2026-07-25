@@ -39,8 +39,21 @@ Evidence must eventually link to implementation, automated tests, manual accepta
   zero-vulnerability production dependency audit. The aggregate database
   integration runner produced no result within 15 minutes, so no full
   integration pass is claimed.
-- `GA-OPS-008` production evidence remains pending until the launch branch is
-  merged, deployed, and exact-source health/monitoring pass.
+- `GA-OPS-008` gains production evidence: Railway application deployment
+  `fe6880e7-3789-4151-a800-157f205d5d47` and exact release-marker deployment
+  `ee7276e7-bd66-4ca1-94de-81160bc6cdc0` succeeded for feature source
+  `21213427ef9ed857fd34eada12a4630df9484923`. Exact-source health reports
+  migration `0028_compensation_workflow` ready with PostgreSQL/S3-compatible
+  dependencies and configured Sentry/Web Push; the production monitor passed
+  in 461 ms with all seven anonymous private routes healthy.
+- `GA-OPS-007` gains post-deploy proof from the Railway-hosted Gate A
+  hardening smoke: zero public seed/demo findings, zero open jobs, zero active
+  restrictions, and seven anonymous private checks. A forced Jacksonville
+  news refresh produced one HB 803 cluster with eight related sources and
+  zero leaked HTML entities.
+- Authenticated billing-smoke proof remains open because dedicated smoke
+  credentials are not configured. The guard refused to run, and no customer
+  account or fabricated success was substituted.
 - Commercial/physical acceptance remains human-owned: verify the configured
   Stripe Price is $9/month, complete a real mobile checkout return, and
   observe downstream incident delivery. No automated success is claimed for

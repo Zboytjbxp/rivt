@@ -2,12 +2,12 @@
 
 Last updated: 2026-07-25 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Launch-readiness closure is locally verified; production deployment is pending.
+Current phase: Launch-readiness closure is deployed and exact-source verified.
 Active packet: Jacksonville launch-readiness closure
-Repository branch: `codex/launch-readiness-closure`
-Production feature release commit: `3b827444137356f367a97cc941d7a25f6d7f51d5`
+Repository branch: `master` (source branch: `codex/launch-readiness-closure`)
+Production feature release commit: `21213427ef9ed857fd34eada12a4630df9484923`
 
-## Jacksonville Launch-Readiness Closure (Local Verification)
+## Jacksonville Launch-Readiness Closure (Complete and Deployed)
 
 - Work -> People now loads canonical Work jobs independently from the current
   Work filters and assigns real people to canonical work IDs. The retired
@@ -48,8 +48,23 @@ Production feature release commit: `3b827444137356f367a97cc941d7a25f6d7f51d5`
   $9/month, complete one real checkout/return on a physical phone, and observe
   the downstream Sentry notification with a human recipient. These are final
   commercial/physical acceptance checks, not automated code claims.
-- Production deployment is pending. Current live health still reports
-  `3b827444137356f367a97cc941d7a25f6d7f51d5`.
+- The source branch was fast-forwarded into `master`. Railway application
+  deployment `fe6880e7-3789-4151-a800-157f205d5d47` and exact release-marker
+  deployment `ee7276e7-bd66-4ca1-94de-81160bc6cdc0` succeeded.
+- Live health reports exact feature source
+  `21213427ef9ed857fd34eada12a4630df9484923`, ready migration
+  `0028_compensation_workflow`, PostgreSQL, S3-compatible storage, configured
+  Sentry/Web Push, and open operational controls. The expected-source monitor
+  passed in 461 ms with all seven anonymous private routes healthy.
+- The production Gate A hardening smoke passed inside Railway: 14 active
+  accounts, two public network profiles, zero open jobs, zero active
+  restrictions, zero seed findings, and seven anonymous private checks.
+  Forced Jacksonville news returned 12 current items from nine sources across
+  five categories, one HB 803 cluster with eight related sources, and zero
+  leaked HTML entities.
+- The authenticated billing smoke correctly refused to run because dedicated
+  `RIVT_SMOKE_EMAIL` / `RIVT_SMOKE_PASSWORD` credentials are not configured.
+  No customer account was borrowed and no billing action is claimed.
 
 ## Calculator Two-Choice Wheel Spacing (Local Verification)
 
