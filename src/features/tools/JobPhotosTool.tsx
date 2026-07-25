@@ -207,6 +207,29 @@ function projectPhotoNotes(project: ProjectRecord | null) {
   return notesByUploadId;
 }
 
+function demoProjectForActiveWork(work: CanonicalActiveWork): ProjectRecord {
+  const publicLocation = work.job?.publicLocation ?? { city: "", region: "", countryCode: "US" };
+  return {
+    id: `demo-project-${work.id}`,
+    activeWorkId: work.id,
+    jobId: work.jobId,
+    organizationId: work.organizationId,
+    status: "open",
+    contractorAccountId: work.contractorAccountId,
+    tradespersonAccountId: work.tradespersonAccountId,
+    job: {
+      title: work.job?.title ?? "Accepted work",
+      status: work.job?.status ?? "active",
+      publicLocation,
+    },
+    entries: [],
+    media: [],
+    invoices: [],
+    completionSubmissions: [],
+    updatedAt: work.updatedAt,
+  };
+}
+
 function photoFromProjectMedia(media: ProjectMedia, note = ""): UnifiedPhoto {
   return {
     id: media.id,
@@ -1045,8 +1068,9 @@ function PhotoGallery({
   );
 }
 
-export function JobPhotosTool({ activeWork, focusedActiveWorkId = null, standaloneProject = null, selectedPrivateAlbum = null, autoOpenActiveJob = false, contextLabel = null, onRequestContext, onChooseActiveWork, onCaptureOpenChange }: {
+export function JobPhotosTool({ activeWork, isDemo = false, focusedActiveWorkId = null, standaloneProject = null, selectedPrivateAlbum = null, autoOpenActiveJob = false, contextLabel = null, onRequestContext, onChooseActiveWork, onCaptureOpenChange, onDemoAction }: {
   activeWork: CanonicalActiveWork[];
+  isDemo?: boolean;
   focusedActiveWorkId?: string | null;
   standaloneProject?: StandaloneProject | null;
   selectedPrivateAlbum?: PhotoAlbum | null;
@@ -1055,6 +1079,7 @@ export function JobPhotosTool({ activeWork, focusedActiveWorkId = null, standalo
   onRequestContext?: () => void;
   onChooseActiveWork?: (work: CanonicalActiveWork) => void;
   onCaptureOpenChange?: (open: boolean) => void;
+  onDemoAction?: () => void;
 }) {
   const selectableActiveWork = activeWork.filter(isSelectableActiveWork);
   const focusedWork = focusedActiveWorkId
@@ -1095,6 +1120,7 @@ export function JobPhotosTool({ activeWork, focusedActiveWorkId = null, standalo
   }, [autoOpenActiveJob, recordWorkId]);
 
   useEffect(() => {
+    if (isDemo) return;
     let cancelled = false;
     void listAlbums()
       .then((items) => {
@@ -1108,9 +1134,17 @@ export function JobPhotosTool({ activeWork, focusedActiveWorkId = null, standalo
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [isDemo]);
 
   useEffect(() => {
+    if (isDemo) {
+      const resetTimer = setTimeout(() => {
+        setProject(recordWork ? demoProjectForActiveWork(recordWork) : null);
+        setProjectError("");
+        setProjectLoading(false);
+      }, 0);
+      return () => clearTimeout(resetTimer);
+    }
     if (!recordWorkId) {
       const resetTimer = setTimeout(() => {
         setProject(null);
@@ -1145,7 +1179,7 @@ export function JobPhotosTool({ activeWork, focusedActiveWorkId = null, standalo
       cancelled = true;
       clearTimeout(startTimer);
     };
-  }, [recordWorkId]);
+  }, [isDemo, recordWork, recordWorkId]);
 
   async function openAlbumById(albumId: string) {
     setAlbumLoading(true);
@@ -1243,6 +1277,15 @@ export function JobPhotosTool({ activeWork, focusedActiveWorkId = null, standalo
 
   async function openActiveJob(options?: { launchCamera?: boolean }) {
     if (!recordWork) return;
+    if (isDemo) {
+      if (options?.launchCamera) {
+        onDemoAction?.();
+        return;
+      }
+      setProject(demoProjectForActiveWork(recordWork));
+      setMode("active-job");
+      return;
+    }
     if (options?.launchCamera) setCameraLaunchToken((current) => current + 1);
     if (currentProject && currentProject.activeWorkId === recordWork.id) {
       setMode("active-job");

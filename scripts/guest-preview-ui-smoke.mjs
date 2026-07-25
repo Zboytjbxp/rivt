@@ -97,6 +97,28 @@ async function openPreview(page, roleLabel, expectedHeading) {
 
   if (roleLabel === "Contractor") {
     await page.getByRole("button", { name: "Work", exact: true }).click();
+    await page.locator(".v2-work-page").waitFor({ state: "visible", timeout: 10_000 });
+    assert.doesNotMatch(await page.locator("body").innerText(), /Authentication required|Sign in required/i, "Guest Work made an authenticated request");
+
+    await page.getByRole("button", { name: "Camera", exact: true }).click();
+    await page.locator(".v2-job-photos-workbench").waitFor({ state: "visible", timeout: 10_000 });
+    assert.doesNotMatch(await page.locator("body").innerText(), /Authentication required|Sign in required/i, "Guest Camera made an authenticated request");
+    assert.equal(
+      await page.evaluate(() => sessionStorage.getItem("rivt.guestPreview.session.v1")),
+      "active",
+      "Guest preview did not mark its device session for update continuity",
+    );
+    await page.reload({ waitUntil: "networkidle" });
+    await page.locator(".v2-job-photos-workbench").waitFor({ state: "visible", timeout: 10_000 });
+    const refreshedPreviewText = await page.locator("body").innerText();
+    assert.match(refreshedPreviewText, /Switch role[\s\S]*Sign up[\s\S]*Exit/i, "Shell refresh lost the guest preview controls");
+    assert.equal(
+      await page.evaluate(() => sessionStorage.getItem("rivt.guestPreview.session.v1")),
+      "active",
+      "Shell refresh cleared the guest preview session",
+    );
+    assert.doesNotMatch(refreshedPreviewText, /Authentication required|Sign in required/i, "Refreshed guest Camera made an authenticated request");
+
     await page.evaluate(() => {
       window.history.pushState({}, "", "/app/work/people");
       window.dispatchEvent(new PopStateEvent("popstate"));

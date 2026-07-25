@@ -216,6 +216,24 @@ function communityReportReasonCode(reason: CommunityReport["reason"]): ShopTalkR
 const validGuestPreviewTrades = new Set<Trade>(
   tradeOptions.filter((option): option is Trade => option !== "All trades"),
 );
+const GUEST_PREVIEW_SESSION_KEY = "rivt.guestPreview.session.v1";
+
+function guestPreviewSessionActive() {
+  try {
+    return window.sessionStorage.getItem(GUEST_PREVIEW_SESSION_KEY) === "active";
+  } catch {
+    return false;
+  }
+}
+
+function setGuestPreviewSession(active: boolean) {
+  try {
+    if (active) window.sessionStorage.setItem(GUEST_PREVIEW_SESSION_KEY, "active");
+    else window.sessionStorage.removeItem(GUEST_PREVIEW_SESSION_KEY);
+  } catch {
+    // Preview continuity is a device-session convenience only.
+  }
+}
 
 function readGuestPreviewPreferences(): GuestPreviewPreferences | null {
   try {
@@ -263,6 +281,7 @@ function clearRivtLocalState() {
   keysToRemove.forEach((key) => window.localStorage.removeItem(key));
   try {
     window.sessionStorage.removeItem(AUTH_MODE_KEY);
+    window.sessionStorage.removeItem(GUEST_PREVIEW_SESSION_KEY);
   } catch {
     // Session storage is a convenience only.
   }
@@ -772,6 +791,10 @@ function App() {
     let cancelled = false;
     async function hydrateAuth() {
       let sessionResolved = false;
+      if (guestPreviewSessionActive()) {
+        setAuthLoading(false);
+        return;
+      }
       // Dev bypass: set localStorage key "rivt_dev_bypass=1" to skip auth
       if (import.meta.env.DEV && localStorage.getItem("rivt_dev_bypass") === "1") {
         const mockAccount: CanonicalAccount = {
@@ -2354,6 +2377,7 @@ function App() {
   }
 
   function handleExitGuest() {
+    setGuestPreviewSession(false);
     setIsGuest(false);
     setGuestPreviewSummary(null);
     setAuthUser(null);
@@ -2375,6 +2399,7 @@ function App() {
   }
 
   function handleSignUpFromGuest() {
+    setGuestPreviewSession(false);
     setAuthMode("signup");
     setIsGuest(false);
     setGuestPreviewSummary(null);
@@ -2396,7 +2421,7 @@ function App() {
     setAccountProfile((current) => ({ ...current, displayName: "" }));
   }
 
-  function handleBrowseAsGuest() {
+  function handleBrowseAsGuest(options?: { resumeCurrentRoute?: boolean }) {
     try {
       const previewPreferences = readGuestPreviewPreferences();
       const previewTrade = previewPreferences?.trade ?? "Carpentry";
@@ -2409,6 +2434,7 @@ function App() {
       });
       setAuthError(null);
       setAuthNotice(null);
+      setGuestPreviewSession(true);
       setIsGuest(true);
       setCanonicalAccount(previewWorkspace.canonicalAccount);
       setGuestPreviewSummary(previewWorkspace.summary);
@@ -2441,10 +2467,12 @@ function App() {
       setTrade(previewTrade);
       setLocationQuery(previewLocation);
       setOnboardingComplete(true);
-      setActiveView("Home");
-      const nextPath = viewRoutes.Home;
-      if (window.location.pathname !== nextPath) {
-        window.history.pushState({}, "", nextPath);
+      if (!options?.resumeCurrentRoute) {
+        setActiveView("Home");
+        const nextPath = viewRoutes.Home;
+        if (window.location.pathname !== nextPath) {
+          window.history.pushState({}, "", nextPath);
+        }
       }
     } catch {
       handleExitGuest();
@@ -2456,6 +2484,16 @@ function App() {
       }
     }
   }
+
+  useEffect(() => {
+    if (!guestPreviewSessionActive()) return;
+    const resumeTimer = window.setTimeout(() => {
+      handleBrowseAsGuest({ resumeCurrentRoute: true });
+    }, 0);
+    // Resume the labeled preview after a shell refresh without turning it
+    // into a persistent account or server session.
+    return () => window.clearTimeout(resumeTimer);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   function handleSwitchGuestRole() {
     const current = readGuestPreviewPreferences();
@@ -2665,6 +2703,7 @@ function App() {
         ) : activeView === "Work" ? (
           <WorkWorkspace
             key={`work-${focusedActiveWorkId ?? "list"}-${workWorkspaceOpenKey}`}
+            isDemo={isGuest}
             role={role}
             jobs={filteredJobs}
             activeWorkRecords={activeWork}
@@ -2833,6 +2872,7 @@ function App() {
           />
         ) : ["Camera", "Tools", "Records"].includes(activeView) ? (
           <ToolsStudio
+            isDemo={isGuest}
             jobs={jobs}
             paymentRecords={paymentRecords}
             mode={activeView === "Records" ? "records" : "tools"}
@@ -2842,6 +2882,7 @@ function App() {
             onWorkContextChange={handleToolWorkContextChange}
             onOpenActiveWorkWorkspace={handleOpenActiveWorkWorkspace}
             onImmersiveChange={setToolsImmersive}
+            onDemoAction={() => setGuestPromptOpen(true)}
             onNavigate={(destination) => handleNavigate(defaultViewForDestination(destination))}
             focusedActiveWorkId={focusedActiveWorkId}
             focusedToolRecord={focusedToolRecord}

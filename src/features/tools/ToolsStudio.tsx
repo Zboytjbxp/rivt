@@ -76,6 +76,7 @@ interface PaymentRecord {
 }
 
 interface ToolsStudioProps {
+  isDemo?: boolean;
   jobs: Job[];
   paymentRecords: PaymentRecord[];
   mode?: "tools" | "records";
@@ -88,6 +89,7 @@ interface ToolsStudioProps {
   onWorkContextChange?: (activeWorkId: string | null) => void;
   onOpenActiveWorkWorkspace?: (activeWorkId: string) => void;
   onImmersiveChange?: (immersive: boolean) => void;
+  onDemoAction?: () => void;
   onNavigate: (destination: PrimaryDestination) => void;
 }
 
@@ -3037,7 +3039,7 @@ function resolveActiveToolJob(jobs: Job[], orderedActiveWork: CanonicalActiveWor
   return null;
 }
 
-export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = null, focusedActiveWorkId = null, focusedToolRecord = null, activeWorkRecords = [], onOpenToolConsumed, onToolChange, onWorkContextChange, onOpenActiveWorkWorkspace, onImmersiveChange, onNavigate }: ToolsStudioProps) {
+export function ToolsStudio({ isDemo = false, jobs, paymentRecords, mode = "tools", openTool = null, focusedActiveWorkId = null, focusedToolRecord = null, activeWorkRecords = [], onOpenToolConsumed, onToolChange, onWorkContextChange, onOpenActiveWorkWorkspace, onImmersiveChange, onDemoAction, onNavigate }: ToolsStudioProps) {
   const controlledTool: "hub" | PublicToolMode | null = mode === "tools" && openTool !== null
     ? normalizePublicToolMode(openTool)
     : null;
@@ -3064,7 +3066,7 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
   const [toolContextProjects, setToolContextProjects] = useState(readToolContextProjects);
   const [contextChosenTool, setContextChosenTool] = useState<PublicToolMode | null>(null);
   const [fetchedActiveWork, setFetchedActiveWork] = useState<CanonicalActiveWork[]>([]);
-  const [recordsLoading, setRecordsLoading] = useState(true);
+  const [recordsLoading, setRecordsLoading] = useState(() => !isDemo);
   const [recordsError, setRecordsError] = useState<string | null>(null);
   const [selectedProject, setSelectedProject] = useState<ProjectRecord | null>(null);
   const [projectAction, setProjectAction] = useState<string | null>(null);
@@ -3116,6 +3118,7 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
   const activeJobScopeKey = `${toolContextStorageId(toolWorkContext)}:${activeJob?.canonical?.id ?? activeJob?.id ?? "none"}`;
 
   useEffect(() => {
+    if (isDemo) return;
     if (activeTool !== "job-photos") return;
     let cancelled = false;
     const startTimer = setTimeout(() => {
@@ -3156,9 +3159,10 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
       cancelled = true;
       clearTimeout(startTimer);
     };
-  }, [activeTool]);
+  }, [activeTool, isDemo]);
 
   useEffect(() => {
+    if (isDemo) return;
     let cancelled = false;
     void listStandaloneProjects()
       .then((projects) => { if (!cancelled) setStandaloneProjects(projects); })
@@ -3166,7 +3170,7 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
         if (!cancelled) setStandaloneProjectsError(error instanceof Error ? error.message : "Standalone projects could not be loaded.");
       });
     return () => { cancelled = true; };
-  }, []);
+  }, [isDemo]);
 
   function persistToolContextProject(tool: PublicToolMode, projectId: string | null) {
     setToolContextProjects((current) => {
@@ -3375,6 +3379,7 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
   };
 
   useEffect(() => {
+    if (isDemo) return;
     let cancelled = false;
     listActiveWork()
       .then((items) => {
@@ -3390,7 +3395,7 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [isDemo]);
 
   function resetRecordForms() {
     setNoteDraft("");
@@ -3772,6 +3777,7 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
           <JobPhotosTool
             key={`camera:${activeJobScopeKey}`}
             activeWork={orderedActiveWork}
+            isDemo={isDemo}
             focusedActiveWorkId={toolWorkContext.kind === "rivt" ? toolWorkContext.activeWorkId : null}
             standaloneProject={toolWorkContext.kind === "standalone" ? toolWorkContext.project : null}
             selectedPrivateAlbum={selectedCameraAlbum}
@@ -3779,6 +3785,7 @@ export function ToolsStudio({ jobs, paymentRecords, mode = "tools", openTool = n
             contextLabel={toolWorkContext.kind === "rivt" ? toolWorkContext.job?.title ?? "Accepted work" : toolWorkContext.kind === "standalone" ? toolWorkContext.project.title : null}
             onRequestContext={() => setCameraContextRequest((current) => current + 1)}
             onCaptureOpenChange={setCameraCaptureOpen}
+            onDemoAction={onDemoAction}
           />
         ),
       },

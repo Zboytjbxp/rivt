@@ -76,6 +76,7 @@ type ContractorSection = "open" | "draft" | "paused" | "closed" | "pipeline" | "
 type JobAction = "publish" | "pause" | "resume" | "close";
 
 interface WorkWorkspaceProps {
+  isDemo?: boolean;
   role: Role;
   jobs: Job[];
   activeWorkRecords?: CanonicalActiveWork[];
@@ -1192,6 +1193,7 @@ function activeWorkSummaryJob(work: CanonicalActiveWork): Job | null {
 }
 
 export function WorkWorkspace({
+  isDemo = false,
   role,
   jobs,
   activeWorkRecords = [],
@@ -1575,6 +1577,7 @@ export function WorkWorkspace({
     && !detailJob?.canonical?.privateLocation;
 
   useEffect(() => {
+    if (isDemo) return;
     const focusedJobId = focusedActiveWorkRecord?.jobId ?? null;
     if (!focusedJobId || jobs.some((job) => job.canonical?.id === focusedJobId)) return;
     let cancelled = false;
@@ -1588,9 +1591,10 @@ export function WorkWorkspace({
     return () => {
       cancelled = true;
     };
-  }, [focusedActiveWorkRecord, jobs, onJobLoaded]);
+  }, [focusedActiveWorkRecord, isDemo, jobs, onJobLoaded]);
 
   useEffect(() => {
+    if (isDemo) return;
     if (!canonicalJobId || !needsPrivateDetailHydration || detailHydrationRequests.current.has(canonicalJobId)) return;
     let cancelled = false;
     detailHydrationRequests.current.add(canonicalJobId);
@@ -1604,11 +1608,23 @@ export function WorkWorkspace({
     return () => {
       cancelled = true;
     };
-  }, [canonicalJobId, needsPrivateDetailHydration, onJobLoaded]);
+  }, [canonicalJobId, isDemo, needsPrivateDetailHydration, onJobLoaded]);
 
   useEffect(() => {
     let cancelled = false;
     async function loadMatchState() {
+      if (isDemo) {
+        setMatchApplications([]);
+        setMatchOffers([]);
+        setMatchActiveWork(
+          canonicalJobId
+            ? activeWorkRecords.filter((item) => item.jobId === canonicalJobId)
+            : activeWorkRecords,
+        );
+        setMatchError(null);
+        setMatchLoading(false);
+        return;
+      }
       if (!canonicalJobId) {
         setMatchApplications([]);
         setMatchOffers([]);
@@ -1653,7 +1669,7 @@ export function WorkWorkspace({
     return () => {
       cancelled = true;
     };
-  }, [canonicalJobId, matchRefreshKey, role]);
+  }, [activeWorkRecords, canonicalJobId, isDemo, matchRefreshKey, role]);
 
   async function refreshDetailJob() {
     if (!canonicalJobId) return;
@@ -1749,6 +1765,7 @@ export function WorkWorkspace({
   }
 
   useEffect(() => {
+    if (isDemo) return;
     if (!activeWork?.id) return;
     let cancelled = false;
     getProjectForActiveWork(activeWork.id)
@@ -1761,7 +1778,7 @@ export function WorkWorkspace({
     return () => {
       cancelled = true;
     };
-  }, [activeWork?.id]);
+  }, [activeWork?.id, isDemo]);
 
   useEffect(() => {
     if (!openDetailOnMount || !focusedJobTitle) return;
@@ -1781,6 +1798,7 @@ export function WorkWorkspace({
   }, [focusedActiveWorkId, focusedActiveWorkRecord]);
 
   useEffect(() => {
+    if (isDemo) return;
     if (role !== "tradesperson" || workStage !== "hiring") return;
     let cancelled = false;
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -1801,7 +1819,7 @@ export function WorkWorkspace({
     return () => {
       cancelled = true;
     };
-  }, [matchRefreshKey, role, workStage]);
+  }, [isDemo, matchRefreshKey, role, workStage]);
 
   const workPageClassName = [
     "v2-work-page",
