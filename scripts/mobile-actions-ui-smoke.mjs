@@ -78,6 +78,25 @@ const draftJob = {
   events: [],
 };
 
+const crewMemberRecord = {
+  id: "eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee",
+  recordType: "crew_member",
+  localId: "crew-elena",
+  title: "Elena Torres",
+  status: "available",
+  recordDate: "2026-07-01",
+  payload: {
+    id: "crew-elena",
+    type: "crew",
+    name: "Elena Torres",
+    trade: "Electrical",
+    availability: "available",
+    addedAt: "2026-07-01T10:00:00.000Z",
+  },
+  createdAt: "2026-07-01T10:00:00.000Z",
+  updatedAt: "2026-07-01T10:00:00.000Z",
+};
+
 const standaloneProject = {
   id: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
   accountId: account.id,
@@ -182,6 +201,10 @@ async function configurePage(page) {
   routeResponse(`**/api/v1/jobs/${draftJob.id}`, { data: { job: draftJob } });
   routeResponse(`**/api/v1/jobs/${draftJob.id}/applications`, { data: { applications: [] } });
   routeResponse("**/api/v1/jobs?**", { data: { jobs: [draftJob] }, meta: { nextCursor: null } });
+  routeResponse("**/api/v1/network-records?type=crew_member", {
+    data: { records: [crewMemberRecord] },
+    meta: { requestId: "mobile-actions-network-records" },
+  });
 }
 
 async function assertNoHorizontalOverflow(page, label) {
@@ -450,6 +473,16 @@ async function runMobileFlow(page) {
   await page.getByRole("button", { name: "Find people", exact: true }).click();
   await page.getByRole("heading", { name: "People", exact: true }).waitFor({ timeout: 15_000 });
   await assertNoHorizontalOverflow(page, "People");
+  assert.equal(
+    await page.evaluate(() => localStorage.getItem("rivt.jobs.v1")),
+    null,
+    "People assignments must not depend on the retired browser job store",
+  );
+  const elenaCard = page.locator(".v2-crew-card-wrapper").filter({ hasText: "Elena Torres" });
+  await elenaCard.getByRole("button", { name: "Assign to Job", exact: true }).click();
+  const assignmentDialog = page.getByRole("dialog", { name: "Assign Elena Torres to work" });
+  await assignmentDialog.getByRole("button", { name: /Kitchen trim-out support/ }).click();
+  await elenaCard.getByText("Kitchen trim-out support", { exact: true }).waitFor({ timeout: 15_000 });
   await page.locator(".v2-crew-invite-fold > summary").click();
   await page.getByRole("button", { name: "Plan invite", exact: true }).click();
   const crewInviteInputs = page.locator(".v2-crew-invite-inputs input");

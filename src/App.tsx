@@ -4,6 +4,7 @@ import {
   Suspense,
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState } from "react";
 import { OfflineBanner } from "./components/OfflineBanner";
@@ -527,6 +528,9 @@ function App() {
   const [locationQuery, setLocationQuery] = useState(() => readWorkFilterPrefs().locationQuery);
   const [verifiedOnly, setVerifiedOnly] = useState(() => readWorkFilterPrefs().verifiedOnly);
   const [jobs, setJobs] = useState<Job[]>([]);
+  const [networkJobs, setNetworkJobs] = useState<Job[]>([]);
+  const [networkJobsLoading, setNetworkJobsLoading] = useState(false);
+  const [networkJobsError, setNetworkJobsError] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<JobId>(0);
   const [jobsLoading, setJobsLoading] = useState(false);
   const [jobsError, setJobsError] = useState<string | null>(null);
@@ -966,6 +970,34 @@ function App() {
   }, [authUser, difficulty, isGuest, locationQuery, onboardingComplete, query, trade, verifiedOnly, workType]);
 
   useEffect(() => {
+    if (!["People", "Crew"].includes(activeView) || isGuest) return;
+    if (!authUser || !onboardingComplete || role !== "contractor") return;
+
+    let cancelled = false;
+    const timeout = window.setTimeout(() => {
+      setNetworkJobsLoading(true);
+      setNetworkJobsError(null);
+      void listJobs()
+        .then((canonicalJobs) => {
+          if (cancelled) return;
+          setNetworkJobs(canonicalJobs.map(toJobViewModel));
+        })
+        .catch((cause) => {
+          if (cancelled) return;
+          setNetworkJobs([]);
+          setNetworkJobsError(cause instanceof Error ? cause.message : "Work could not be loaded for assignments.");
+        })
+        .finally(() => {
+          if (!cancelled) setNetworkJobsLoading(false);
+        });
+    }, 0);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timeout);
+    };
+  }, [activeView, authUser, isGuest, onboardingComplete, role]);
+
+  useEffect(() => {
     const timeout = window.setTimeout(() => { void reloadJobs(); }, 250);
     return () => window.clearTimeout(timeout);
   }, [reloadJobs]);
@@ -982,6 +1014,29 @@ function App() {
       setActiveWork([]);
     }
   }, [authUser, isGuest, onboardingComplete]);
+
+  const networkWorkOptions = useMemo(() => {
+    const options = new Map<string, { id: string; title: string; status: string }>();
+    for (const work of activeWork) {
+      if (work.status !== "active" || !work.job?.id) continue;
+      options.set(work.job.id, {
+        id: work.job.id,
+        title: work.job.title || "Active work",
+        status: "Active work",
+      });
+    }
+    const sourceJobs = isGuest ? jobs : role === "contractor" ? networkJobs : [];
+    for (const job of sourceJobs) {
+      if (!job.canonical?.id || !["Draft", "Open", "Shortlisting", "Scheduled"].includes(job.status)) continue;
+      if (options.has(job.canonical.id)) continue;
+      options.set(job.canonical.id, {
+        id: job.canonical.id,
+        title: job.title,
+        status: job.status === "Draft" ? "Draft plan" : job.status === "Shortlisting" ? "Hiring" : job.status,
+      });
+    }
+    return [...options.values()];
+  }, [activeWork, isGuest, jobs, networkJobs, role]);
 
   useEffect(() => {
     const timeout = window.setTimeout(() => { void reloadActiveWork(); }, 0);
@@ -2698,6 +2753,9 @@ function App() {
             shoutOuts={shoutOuts}
             displayName={accountProfile.displayName}
             accountId={canonicalAccount?.id ?? authUser.id}
+            workOptions={networkWorkOptions}
+            workOptionsLoading={networkJobsLoading}
+            workOptionsError={networkJobsError}
             profileFocus={profileSearchFocus}
             focusedReviewId={focusedReviewId}
             onClearProfileFocus={() => setProfileSearchFocus(null)}

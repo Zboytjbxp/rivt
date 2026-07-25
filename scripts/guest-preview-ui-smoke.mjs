@@ -95,6 +95,22 @@ async function openPreview(page, roleLabel, expectedHeading) {
   await page.locator(".trade-feed-demo-metrics").waitFor({ state: "visible", timeout: 10_000 });
   await page.waitForTimeout(800);
 
+  if (roleLabel === "Contractor") {
+    await page.getByRole("button", { name: "Work", exact: true }).click();
+    await page.evaluate(() => {
+      window.history.pushState({}, "", "/app/work/people");
+      window.dispatchEvent(new PopStateEvent("popstate"));
+    });
+    await page.getByRole("heading", { name: "People", exact: true }).waitFor({ timeout: 10_000 });
+    const elenaCard = page.locator(".v2-crew-card-wrapper").filter({ hasText: "Elena Torres" });
+    await elenaCard.getByRole("button", { name: "Assign to Job", exact: true }).click();
+    const assignmentDialog = page.getByRole("dialog", { name: "Assign Elena Torres to work" });
+    await assignmentDialog.getByRole("button", { name: /Built-in cabinet install/ }).click();
+    await elenaCard.getByText("Built-in cabinet install", { exact: true }).waitFor({ timeout: 10_000 });
+    await page.getByRole("button", { name: "Home", exact: true }).click();
+    await page.getByRole("heading", { name: expectedHeading }).waitFor({ timeout: 10_000 });
+  }
+
   const hasOverflow = await page.evaluate(
     () => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1,
   );

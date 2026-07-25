@@ -53,11 +53,20 @@ interface ShoutOut {
   createdAt: string;
 }
 
+interface NetworkWorkOption {
+  id: string;
+  title: string;
+  status: string;
+}
+
 interface NetworkHubProps {
   view: "People" | "Reviews";
   shoutOuts: ShoutOut[];
   displayName: string;
   accountId?: string | null;
+  workOptions: NetworkWorkOption[];
+  workOptionsLoading?: boolean;
+  workOptionsError?: string | null;
   profileFocus?: ProfileSearchResult | null;
   focusedReviewId?: string | null;
   onClearProfileFocus?: () => void;
@@ -71,14 +80,6 @@ interface NetworkHubProps {
 // ── Clients ───────────────────────────────────────────────────────────────────
 
 type Client = ClientRecord;
-
-interface StoredJobEntry {
-  id: string | number;
-  title?: string;
-  notes?: string;
-  status?: string;
-  [key: string]: unknown;
-}
 
 const emptyClientForm = { name: "", company: "", phone: "", email: "", notes: "" };
 
@@ -149,17 +150,6 @@ function ClientBookView() {
     if (expandedId === id) setExpandedId(null);
   }
 
-  function jobsForClient(clientName: string): number {
-    try {
-      const jobs: StoredJobEntry[] = JSON.parse(localStorage.getItem("rivt.jobs.v1") || "[]");
-      const lower = clientName.toLowerCase();
-      return jobs.filter((j) =>
-        (typeof j.title === "string" && j.title.toLowerCase().includes(lower)) ||
-        (typeof j.notes === "string" && j.notes.toLowerCase().includes(lower))
-      ).length;
-    } catch { return 0; }
-  }
-
   return (
     <div className="v2-client-book">
       <div className="v2-client-header">
@@ -215,7 +205,6 @@ function ClientBookView() {
           ) : (
             clients.map((client) => {
               const isExpanded = expandedId === client.id;
-              const jobCount = jobsForClient(client.name);
               return (
                 <div key={client.id} className="v2-client-card">
                   <div
@@ -236,9 +225,6 @@ function ClientBookView() {
                         >
                           <Phone size={14} />
                         </a>
-                      )}
-                      {jobCount > 0 && (
-                        <span className="v2-client-jobs-badge">{jobCount} job{jobCount !== 1 ? "s" : ""}</span>
                       )}
                       {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
                     </div>
@@ -349,15 +335,6 @@ function loadCrew(): CrewMember[] {
 
 function saveCrew(list: CrewMember[]) {
   try { localStorage.setItem("rivt.crew.v1", JSON.stringify(list)); } catch { /* noop */ }
-}
-
-function loadStoredJobs(): StoredJobEntry[] {
-  try {
-    const stored = localStorage.getItem("rivt.jobs.v1");
-    if (!stored) return [];
-    const parsed = JSON.parse(stored) as StoredJobEntry[];
-    return Array.isArray(parsed) ? parsed : [];
-  } catch { return []; }
 }
 
 // ── License expiry helper ─────────────────────────────────────────────────────
@@ -477,48 +454,62 @@ function CrewMemberForm({ initial, onSave, onCancel }: CrewMemberFormProps) {
 
 function JobAssignModal({
   member,
+  workOptions,
+  workOptionsLoading,
+  workOptionsError,
   onAssign,
   onUnassign,
   onClose,
 }: {
   member: CrewMember;
+  workOptions: NetworkWorkOption[];
+  workOptionsLoading: boolean;
+  workOptionsError: string | null;
   onAssign: (jobId: string) => void;
   onUnassign: () => void;
   onClose: () => void;
 }) {
-  const jobs = loadStoredJobs().filter(
-    (j) => j.status === "Active" || j.status === "Quoted" || j.status === "Open" || j.status === "Scheduled"
-  );
-
+  const currentWork = member.currentJobId
+    ? workOptions.find((job) => job.id === member.currentJobId)
+    : null;
   return (
     <div className="v2-modal-backdrop" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="v2-crew-assign-modal">
+      <div
+        className="v2-crew-assign-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-label={`Assign ${member.name} to work`}
+      >
         <header>
           <strong>Assign {member.name} to job</strong>
           <button type="button" onClick={onClose} aria-label="Close"><X size={16} /></button>
         </header>
         {member.currentJobId && (
           <div className="v2-crew-assign-current">
-            <span>Currently assigned to job #{member.currentJobId}</span>
+            <span>{currentWork ? `Currently assigned to ${currentWork.title}` : "Currently assigned to work not loaded here"}</span>
             <button type="button" className="v2-crew-unassign-btn" onClick={onUnassign}>
               Unassign
             </button>
           </div>
         )}
-        {jobs.length === 0 ? (
-          <p className="v2-crew-assign-empty">No active, quoted, open, or scheduled jobs are available to assign yet.</p>
+        {workOptionsLoading ? (
+          <p className="v2-crew-assign-empty">Loading available work…</p>
+        ) : workOptionsError ? (
+          <p className="v2-crew-assign-empty">{workOptionsError}</p>
+        ) : workOptions.length === 0 ? (
+          <p className="v2-crew-assign-empty">No draft, active, open, hiring, or scheduled work is available to assign yet.</p>
         ) : (
           <div className="v2-crew-assign-list">
-            {jobs.map((j) => (
+            {workOptions.map((job) => (
               <button
-                key={String(j.id)}
+                key={job.id}
                 type="button"
-                className={`v2-crew-assign-job-btn${member.currentJobId === String(j.id) ? " is-current" : ""}`}
-                onClick={() => onAssign(String(j.id))}
+                className={`v2-crew-assign-job-btn${member.currentJobId === job.id ? " is-current" : ""}`}
+                onClick={() => onAssign(job.id)}
               >
                 <Briefcase size={14} />
-                <span>{typeof j.title === "string" ? j.title : `Job #${j.id}`}</span>
-                <span className="v2-crew-assign-status">{String(j.status ?? "")}</span>
+                <span>{job.title}</span>
+                <span className="v2-crew-assign-status">{job.status}</span>
               </button>
             ))}
           </div>
@@ -547,18 +538,19 @@ function AvailDot({ status }: { status: CrewAvailability }) {
 
 function CrewCard({
   member,
+  workOptions,
   onEdit,
   onDelete,
   onAssign,
 }: {
   member: CrewMember;
+  workOptions: NetworkWorkOption[];
   onEdit: () => void;
   onDelete: () => void;
   onAssign: () => void;
 }) {
-  const jobs = loadStoredJobs();
   const assignedJob = member.currentJobId
-    ? jobs.find((j) => String(j.id) === member.currentJobId)
+    ? workOptions.find((job) => job.id === member.currentJobId)
     : null;
   const licenseStatus = licenseExpiryStatus(member.licenseExpiry);
 
@@ -608,7 +600,7 @@ function CrewCard({
       {assignedJob && (
         <div className="v2-crew-assigned-job">
           <Briefcase size={12} />
-          <span>{typeof assignedJob.title === "string" ? assignedJob.title : `Job #${assignedJob.id}`}</span>
+          <span>{assignedJob.title}</span>
         </div>
       )}
 
@@ -628,7 +620,21 @@ function CrewCard({
 
 // ── Crew Manager (the enhanced Crew tab) ──────────────────────────────────────
 
-function CrewManager({ crewType, labelOverride, isDemo = false }: { crewType: CrewType; labelOverride?: string; isDemo?: boolean }) {
+function CrewManager({
+  crewType,
+  labelOverride,
+  isDemo = false,
+  workOptions,
+  workOptionsLoading,
+  workOptionsError,
+}: {
+  crewType: CrewType;
+  labelOverride?: string;
+  isDemo?: boolean;
+  workOptions: NetworkWorkOption[];
+  workOptionsLoading: boolean;
+  workOptionsError: string | null;
+}) {
   const [crew, setCrew] = useState<CrewMember[]>(() => isDemo ? demoCrewMembers : loadCrew());
   const [showForm, setShowForm] = useState(false);
   const [editingMember, setEditingMember] = useState<CrewMember | null>(null);
@@ -776,6 +782,7 @@ function CrewManager({ crewType, labelOverride, isDemo = false }: { crewType: Cr
             <div key={member.id} className="v2-crew-card-wrapper">
               <CrewCard
                 member={member}
+                workOptions={workOptions}
                 onEdit={() => { setEditingMember(member); setShowForm(true); }}
                 onDelete={() => handleDelete(member.id)}
                 onAssign={() => setAssigningMember(member)}
@@ -799,6 +806,9 @@ function CrewManager({ crewType, labelOverride, isDemo = false }: { crewType: Cr
       {assigningMember && (
         <JobAssignModal
           member={assigningMember}
+          workOptions={workOptions}
+          workOptionsLoading={workOptionsLoading}
+          workOptionsError={workOptionsError}
           onAssign={(jobId) => handleAssign(assigningMember.id, jobId)}
           onUnassign={() => handleUnassign(assigningMember.id)}
           onClose={() => setAssigningMember(null)}
@@ -1480,6 +1490,9 @@ export function NetworkHub({
   shoutOuts,
   displayName,
   accountId = null,
+  workOptions,
+  workOptionsLoading = false,
+  workOptionsError = null,
   profileFocus = null,
   focusedReviewId = null,
   onClearProfileFocus = () => undefined,
@@ -1560,7 +1573,13 @@ export function NetworkHub({
       <section className="v2-network-page" aria-label="Subs">
         {pageHeader}
         {tabBar}
-        <CrewManager crewType="sub" isDemo={isDemo} />
+        <CrewManager
+          crewType="sub"
+          isDemo={isDemo}
+          workOptions={workOptions}
+          workOptionsLoading={workOptionsLoading}
+          workOptionsError={workOptionsError}
+        />
       </section>
     );
   }
@@ -1573,7 +1592,14 @@ export function NetworkHub({
       {profileFocus ? <ProfileSearchSpotlight profile={profileFocus} onDismiss={onClearProfileFocus} /> : null}
 
       <div className="v2-crew-workbench">
-        <CrewManager crewType="crew" labelOverride="People" isDemo={isDemo} />
+        <CrewManager
+          crewType="crew"
+          labelOverride="People"
+          isDemo={isDemo}
+          workOptions={workOptions}
+          workOptionsLoading={workOptionsLoading}
+          workOptionsError={workOptionsError}
+        />
         <details className="v2-crew-invite-fold">
           <summary>Plan an invite</summary>
           <CrewInvitePlanner isDemo={isDemo} />
