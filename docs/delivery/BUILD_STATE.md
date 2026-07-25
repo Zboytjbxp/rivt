@@ -1,23 +1,28 @@
 # RIVT Build State
 
-Last updated: 2026-07-24 America/New_York
+Last updated: 2026-07-25 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Calculator Undo readout correction is locally verified.
-Active packet: Non-overlapping calculator readout controls
+Current phase: Calculator clear recovery and Enter-key simplification are locally verified.
+Active packet: Contextual recovery and a single-purpose key face
 Repository branch: `codex/calculator-undo-layout`
 Production feature release commit: `ebf18f6ef0f03c59db7c6ea4b59302d865bed65e`
 
-## Calculator Undo Readout Correction (Local Verification)
+## Calculator Clear Recovery and Enter Key (Local Verification)
 
-- Undo no longer occupies the display's top-right measurement area. It now
-  sits in the lower utility row between the Decimal label and converted
-  value, leaving the primary number unobstructed at every supported text
-  scale.
-- The control keeps its visible label, 34 px minimum height, keyboard focus,
-  and one-step device-local behavior. No calculator state or persistence
-  semantics changed.
-- Rendered Tools QA now measures both elements and fails unless Undo is fully
-  below the primary readout and parented by the utility row.
+- Undo is no longer a persistent calculator control. Clear temporarily offers
+  `Cleared · Undo` in the lower utility row for five seconds, restoring the
+  exact pre-clear device snapshot when used; starting a new entry dismisses
+  the recovery so it cannot undo an unrelated action.
+- The orange Enter key now displays only `=`. Its accessible name remains
+  contextual: it calculates when an operator is pending and records a plain
+  measurement in the device-local Tape List otherwise. Visible confirmation
+  reports `Added … to Tape List` after a direct record.
+- Empty Tape List guidance now says to tap `=` instead of referring to a
+  visible Add label that no longer exists.
+- Rendered Tools QA proves ordinary entry has no Undo control, Clear exposes
+  the temporary recovery below the primary value, Undo restores the cleared
+  measurement, the next digit dismisses recovery, and the key face contains
+  no Add/Solve subtitle.
 - Local evidence: lint, production build, 75 unit/frontend tests, desktop and
   mobile E2E, rendered Tools QA, mobile-action QA, and the production
   dependency audit pass.

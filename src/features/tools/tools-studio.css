@@ -8879,17 +8879,8 @@
 }
 
 .calc-enter-key strong {
-  font-size: calc(20px * var(--v2-text-scale));
-  line-height: 0.9;
-}
-
-.calc-enter-key small {
-  color: currentColor;
-  font-size: calc(9px * var(--v2-text-scale));
-  font-weight: var(--v2-weight-bold);
-  letter-spacing: 0.08em;
+  font-size: calc(26px * var(--v2-text-scale));
   line-height: 1;
-  text-transform: uppercase;
 }
 
 .unit-metric-readout {

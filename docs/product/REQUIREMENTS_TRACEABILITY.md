@@ -10,13 +10,19 @@ Status values:
 
 Evidence must eventually link to implementation, automated tests, manual acceptance proof, and deployed build.
 
-## Traceability Addendum - 2026-07-25 Calculator Undo Readout
+## Traceability Addendum - 2026-07-25 Calculator Clear Recovery
 
-- `GA-UX-003` gains control-hierarchy evidence: one-step Undo remains
-  immediately available but lives in the display utility row rather than
-  competing with the primary measurement.
-- `GA-UX-006` gains a rendered mobile geometry assertion that Undo is fully
-  below the primary value and remains inside the utility row.
+- `GA-UX-003` gains control-hierarchy evidence: persistent Undo is removed,
+  Clear alone offers a five-second recovery, and the orange Enter key displays
+  only `=` while retaining honest context-aware behavior and accessible
+  naming.
+- `GA-UX-005` gains state-scope evidence: temporary clear recovery restores
+  the exact device snapshot and is invalidated by the next entry so it cannot
+  claim broader history.
+- `GA-UX-006` gains rendered mobile assertions that normal entry has no Undo,
+  clear recovery stays below the primary value, the equals key has no
+  Add/Solve subtitle, and Tape List guidance points to the actual `=` entry
+  point.
 - `GA-OPS-007` gains passing lint, build, 75 unit/frontend tests, E2E,
   rendered Tools QA, mobile-action QA, and zero-vulnerability dependency
   evidence.

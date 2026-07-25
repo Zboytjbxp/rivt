@@ -884,7 +884,18 @@ async function runToolsFlow(page, viewportName) {
   }
   await imperialMarkPicker.getByRole("button", { name: "Enter 11/16" }).click();
   await page.locator(".calc-primary-value", { hasText: '11/16"' }).waitFor({ timeout: 15_000 });
-  const undoButton = page.getByRole("button", { name: "Undo last calculator change" });
+  assert.equal(
+    await page.getByRole("button", { name: "Undo calculator clear" }).count(),
+    0,
+    "ordinary calculator entry should not keep a redundant persistent Undo control",
+  );
+  const enterKey = page.locator(".calc-enter-key");
+  assert.equal((await enterKey.textContent())?.trim(), "=", "the primary Enter key should display only the equals symbol");
+  assert.equal(await enterKey.locator("small").count(), 0, "the equals key should not include Add or Solve helper copy");
+  await page.getByRole("button", { name: "Clear calculator" }).click();
+  await page.locator(".calc-primary-value", { hasText: '0"' }).waitFor({ timeout: 15_000 });
+  const undoButton = page.getByRole("button", { name: "Undo calculator clear" });
+  await undoButton.waitFor({ state: "visible", timeout: 5_000 });
   const [undoBox, primaryValueBox] = await Promise.all([
     undoButton.boundingBox(),
     page.locator(".calc-primary-value").boundingBox(),
@@ -897,11 +908,18 @@ async function runToolsFlow(page, viewportName) {
   assert.match(
     await undoButton.locator("xpath=..").getAttribute("class") ?? "",
     /\bcalc-secondary-row\b/,
-    "Undo should live in the display utility row",
+    "temporary clear recovery should live in the display utility row",
   );
   await undoButton.click();
+  await page.locator(".calc-primary-value", { hasText: '11/16"' }).waitFor({ timeout: 15_000 });
+  await page.getByRole("button", { name: "Clear calculator" }).click();
   await page.locator(".calc-primary-value", { hasText: '0"' }).waitFor({ timeout: 15_000 });
   await page.getByLabel("Fraction calculator keypad").getByRole("button", { name: "6" }).click();
+  assert.equal(
+    await page.getByRole("button", { name: "Undo calculator clear" }).count(),
+    0,
+    "starting a new entry should dismiss the temporary clear recovery",
+  );
   const cancelWheelTrigger = page.getByLabel("Fraction calculator keypad").getByRole("button", { name: "8. Hold and slide for quick choices." });
   const cancelWheelBox = await cancelWheelTrigger.boundingBox();
   assert.ok(cancelWheelBox, `cancel-wheel trigger should have a layout box in ${viewportName}`);

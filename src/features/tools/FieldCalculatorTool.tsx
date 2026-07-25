@@ -846,6 +846,7 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
   const [tapeLabelDraft, setTapeLabelDraft] = useState("");
   const [copied, setCopied] = useState(false);
   const markPickerButtonRef = useRef<HTMLButtonElement>(null);
+  const clearUndoTimerRef = useRef<number | null>(null);
 
   const entryValueUnits = inputMode === "metric"
     ? valueFromMetricEntry(metricText, metricTenths)
@@ -880,7 +881,14 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
     try { localStorage.setItem(CALCULATOR_TAPE_LIST_KEY, JSON.stringify(tapeMeasurements)); } catch { /* harmless device tape list */ }
   }, [tapeMeasurements]);
 
-  function rememberUndo() {
+  function dismissClearUndo() {
+    if (clearUndoTimerRef.current !== null) window.clearTimeout(clearUndoTimerRef.current);
+    clearUndoTimerRef.current = null;
+    setUndoSnapshot(null);
+  }
+
+  function rememberClearUndo() {
+    if (clearUndoTimerRef.current !== null) window.clearTimeout(clearUndoTimerRef.current);
     setUndoSnapshot({
       inputMode,
       activeUnit,
@@ -902,10 +910,16 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
       tapeMeasurements,
       calculationHistory,
     });
+    clearUndoTimerRef.current = window.setTimeout(() => {
+      setUndoSnapshot(null);
+      clearUndoTimerRef.current = null;
+    }, 5_000);
   }
 
   function undoLastChange() {
     if (!undoSnapshot) return;
+    if (clearUndoTimerRef.current !== null) window.clearTimeout(clearUndoTimerRef.current);
+    clearUndoTimerRef.current = null;
     setInputMode(undoSnapshot.inputMode);
     setActiveUnit(undoSnapshot.activeUnit);
     setFeetText(undoSnapshot.feetText);
@@ -928,6 +942,10 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
     setCopied(false);
     setUndoSnapshot(null);
   }
+
+  useEffect(() => () => {
+    if (clearUndoTimerRef.current !== null) window.clearTimeout(clearUndoTimerRef.current);
+  }, []);
 
   function recordCalculation(
     expression: string,
@@ -1023,7 +1041,7 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
   }
 
   function handleDigit(digit: string) {
-    rememberUndo();
+    dismissClearUndo();
     if (resultUnits !== null && pendingOperator === null) {
       setEntryFromValue(0);
     }
@@ -1058,7 +1076,7 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
   }
 
   function handleBackspace() {
-    rememberUndo();
+    dismissClearUndo();
     if (inputMode === "metric") {
       if (metricTenths) {
         setMetricTenths(0);
@@ -1093,7 +1111,7 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
   }
 
   function clearAll() {
-    rememberUndo();
+    rememberClearUndo();
     setFeetText("0");
     setInchesText("0");
     setFraction32(0);
@@ -1113,7 +1131,7 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
   }
 
   function applyHeavyLight(nextQualifier: TapeQualifier) {
-    rememberUndo();
+    dismissClearUndo();
     if (inputMode === "metric") {
       const delta = nextQualifier === "heavy" ? METRIC_TRIM_UNITS : -METRIC_TRIM_UNITS;
       const base = resultUnits ?? entryValueUnits;
@@ -1130,7 +1148,7 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
   }
 
   function scaleEntry(multiplier: number) {
-    rememberUndo();
+    dismissClearUndo();
     const base = resultUnits ?? entryValueUnits;
     const qualifier = displayQualifier;
     const scaleLabel = multiplier >= 1
@@ -1156,7 +1174,7 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
   }
 
   function chooseFraction(sixteenth: number) {
-    rememberUndo();
+    dismissClearUndo();
     setFraction32(sixteenth * 2);
     setResultUnits(null);
     setEntryQualifier("exact");
@@ -1167,7 +1185,7 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
   }
 
   function chooseMetricTenth(tenth: number) {
-    rememberUndo();
+    dismissClearUndo();
     setMetricTenths(tenth);
     setResultUnits(null);
     setEntryQualifier("exact");
@@ -1215,7 +1233,7 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
   }
 
   function applyOperator(operator: Operator) {
-    rememberUndo();
+    dismissClearUndo();
     const current = resultUnits ?? entryValueUnits;
     const currentQualifier = displayQualifier;
     const currentApproximate = displayApproximate;
@@ -1245,7 +1263,7 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
   }
 
   function evaluate() {
-    rememberUndo();
+    dismissClearUndo();
     const current = resultUnits ?? entryValueUnits;
     const currentQualifier = displayQualifier;
     const currentApproximate = displayApproximate;
@@ -1549,9 +1567,9 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
                   <div className="calc-secondary-row">
                     <span>{secondaryLabel}</span>
                     {undoSnapshot ? (
-                      <button type="button" className="calc-display-undo" aria-label="Undo last calculator change" onClick={undoLastChange}>
+                      <button type="button" className="calc-display-undo" aria-label="Undo calculator clear" onClick={undoLastChange}>
                         <RotateCcw size={14} />
-                        Undo
+                        Cleared <span aria-hidden="true">·</span> Undo
                       </button>
                     ) : null}
                     <strong>{secondaryValue}</strong>
@@ -1575,7 +1593,7 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
                         : (
                             <div className="calc-tape-empty">
                               <strong>No measurements yet</strong>
-                              <span>Enter a measurement, then tap Add.</span>
+                              <span>Enter a measurement, then tap =.</span>
                             </div>
                           )}
                     </div>
@@ -1766,7 +1784,6 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
                   onClick={evaluate}
                 >
                   <strong>=</strong>
-                  <small>{pendingOperator ? "Solve" : "Add"}</small>
                 </button>
                 <button type="button" className="op plus" onClick={() => applyOperator("+")}>+</button>
               </div>
@@ -1999,7 +2016,7 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
                 <div className="calc-history-empty is-compact">
                   <ListChecks size={22} />
                   <strong>No measurements yet</strong>
-                  <span>Enter a measurement and tap Add.</span>
+                  <span>Enter a measurement and tap =.</span>
                 </div>
               )}
               {tapeMeasurements.some((entry) => entry.used) ? (
