@@ -44,6 +44,89 @@ test("connected account is ready only with ACH, charges, payouts, and submitted 
   }), "pending");
 });
 
+test("Accounts v2 requests ACH direct debit with Stripe-owned fee and loss responsibility", () => {
+  const payload = stripeConnectInternals.createV2ConnectedAccountPayload({
+    account: {
+      id: "00000000-0000-4000-8000-000000000001",
+      email: "contractor@example.com",
+    },
+    profile: { displayName: "Contractor Test" },
+  });
+  assert.equal(payload.dashboard, "full");
+  assert.equal(payload.configuration.merchant.capabilities.ach_debit_payments.requested, true);
+  assert.equal(payload.configuration.merchant.capabilities.card_payments.requested, true);
+  assert.equal(payload.defaults.responsibilities.fees_collector, "stripe");
+  assert.equal(payload.defaults.responsibilities.losses_collector, "stripe");
+  assert.equal(payload.identity.country, "us");
+  assert.equal("entity_type" in payload.identity, false);
+});
+
+test("Accounts v2 onboarding links target only the merchant configuration", () => {
+  const onboarding = stripeConnectInternals.createV2AccountLinkPayload(
+    "acct_test",
+    "https://rivt.example/app/tools?connect=return",
+    "https://rivt.example/app/tools?connect=refresh",
+    true,
+  );
+  assert.equal(onboarding.use_case.type, "account_onboarding");
+  assert.deepEqual(onboarding.use_case.account_onboarding.configurations, ["merchant"]);
+  assert.equal(onboarding.use_case.account_onboarding.collection_options.fields, "eventually_due");
+  assert.equal(onboarding.use_case.account_onboarding.collection_options.future_requirements, "include");
+
+  const update = stripeConnectInternals.createV2AccountLinkPayload(
+    "acct_test",
+    "https://rivt.example/return",
+    "https://rivt.example/refresh",
+    false,
+  );
+  assert.equal(update.use_case.type, "account_update");
+  assert.deepEqual(update.use_case.account_update.configurations, ["merchant"]);
+});
+
+test("Accounts v2 readiness maps restricted onboarding and active ACH honestly", () => {
+  const restricted = stripeConnectInternals.normalizeConnectAccount({
+    dashboard: "full",
+    identity: { country: "US" },
+    defaults: { currency: "usd" },
+    configuration: {
+      merchant: {
+        capabilities: {
+          ach_debit_payments: { status: "restricted" },
+          stripe_balance: { payouts: { status: "restricted" } },
+        },
+      },
+    },
+    requirements: {
+      entries: [{
+        awaiting_action_from: "user",
+        minimum_deadline: { status: "past_due" },
+      }],
+    },
+  }, "v2");
+  assert.equal(restricted.achStatus, "restricted");
+  assert.equal(restricted.detailsSubmitted, false);
+  assert.equal(restricted.onboardingStatus, "not_started");
+
+  const ready = stripeConnectInternals.normalizeConnectAccount({
+    dashboard: "full",
+    identity: { country: "US" },
+    defaults: { currency: "usd" },
+    configuration: {
+      merchant: {
+        capabilities: {
+          ach_debit_payments: { status: "active" },
+          stripe_balance: { payouts: { status: "active" } },
+        },
+      },
+    },
+    requirements: { entries: [] },
+  }, "v2");
+  assert.equal(ready.chargesEnabled, true);
+  assert.equal(ready.payoutsEnabled, true);
+  assert.equal(ready.detailsSubmitted, true);
+  assert.equal(ready.onboardingStatus, "ready");
+});
+
 test("ACH checkout completion remains processing until asynchronous success", () => {
   const completed = stripeConnectInternals.eventPaymentUpdate({
     type: "checkout.session.completed",

@@ -133,12 +133,14 @@ export interface ProjectInvoice {
 
 export interface StripeConnectStatus {
   provider: "stripe_connect";
+  accountApiVersion: "v1" | "v2" | null;
+  dashboardType: "express" | "full" | "none" | null;
   providerConfigured: boolean;
   webhookConfigured: boolean;
   missing: string[];
   connected: boolean;
   onboardingStatus: "not_started" | "pending" | "ready" | "restricted";
-  achPaymentsStatus: "unrequested" | "pending" | "active" | "inactive";
+  achPaymentsStatus: "unrequested" | "pending" | "active" | "inactive" | "restricted" | "unsupported";
   chargesEnabled: boolean;
   payoutsEnabled: boolean;
   detailsSubmitted: boolean;

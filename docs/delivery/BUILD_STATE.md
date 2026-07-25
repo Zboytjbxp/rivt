@@ -2,10 +2,49 @@
 
 Last updated: 2026-07-25 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Stripe Connect ACH invoice payments are deployed fail-closed; provider activation is pending.
+Current phase: Stripe Connect ACH invoice payments are deployed fail-closed; Accounts v2 correction is sandbox-verified and awaiting release.
 Active packet: `docs/delivery/packets/70_STRIPE_CONNECT_ACH_INVOICES.md`
-Repository branch: `master` (source branch: `codex/stripe-connect-ach-invoices`)
+Repository branch: `codex/stripe-connect-accounts-v2-sandbox-fix`
 Production feature release commit: `75caa9d867c9a9c813bb3d381af17a397088ba63`
+
+## Stripe Connect Accounts v2 Sandbox Correction (Verified, Not Deployed)
+
+- A real RIVT Stripe sandbox call proved the original Accounts v1 creation
+  request is rejected for this new Connect platform. The integration now
+  creates merchant-configured Accounts v2 records and requests the v2
+  `ach_debit_payments` plus required `card_payments` capabilities.
+- Connected contractors receive the full Stripe Dashboard. Stripe is
+  explicitly assigned as both fee collector and negative-balance loss
+  collector. This preserves the launch contract: RIVT takes no application
+  fee and does not assume payment loss liability merely to offer Express
+  dashboard access.
+- Migration `0030_stripe_connect_accounts_v2` records each connected
+  account's API generation and dashboard type, preserves v1 retrieval for any
+  legacy row, and stores the v2 `restricted`/`unsupported` capability states
+  without inventing readiness.
+- The hosted Accounts v2 onboarding-link API was exercised successfully.
+  Stripe's hosted form then presented an anti-bot challenge, so automated KYC
+  completion is not claimed. A human must still complete the hosted
+  onboarding before production activation.
+- The same sandbox Accounts v2 merchant successfully created ACH-only direct
+  Checkout Sessions. Hosted Checkout was driven with Stripe's success and
+  failure bank fixtures. The success path moved from `processing` to
+  `succeeded` and emitted `checkout.session.async_payment_succeeded`; the
+  failure path moved from `processing` to `requires_payment_method` with
+  `no_account` and emitted `checkout.session.async_payment_failed`.
+- RIVT's existing event mapper was run against those real provider event
+  payloads and mapped them to `paid` and `failed` respectively, with the
+  correct Checkout session IDs. The application still requires signed,
+  replay-safe webhook delivery before changing invoice balances.
+- Verification passes with 85 unit/frontend tests, all 19 serial database
+  integration suites, the isolated `0030` migration lifecycle, fail-closed
+  authentication and jobs/discovery E2E, lint, security lint, the production
+  build, and `npm audit --omit=dev` with zero known vulnerabilities.
+- Production remains intentionally unchanged and fail-closed. The feature
+  flag is off, the connected webhook secret is absent, and no live ACH
+  capability is claimed. Remaining activation gates are human hosted
+  onboarding, a connected-account event destination/signing secret, and an
+  exact-source release plus production monitor.
 
 ## Stripe Connect ACH Invoice Payments (Deployed, Activation Gated)
 
@@ -16,7 +55,7 @@ Production feature release commit: `75caa9d867c9a9c813bb3d381af17a397088ba63`
 - Migration `0029_stripe_connect_invoice_payments` adds connected-account
   readiness, provider payment-request state, and immutable connected-webhook
   event IDs with a reviewed down migration.
-- The server adds author-owned Express onboarding/dashboard access, ACH-only
+- The deployed server adds author-owned Express onboarding/dashboard access, ACH-only
   Checkout link creation, unused-link cancellation, signed connected webhook
   handling, durable replay protection, and a rate-limited minimal public
   status response.

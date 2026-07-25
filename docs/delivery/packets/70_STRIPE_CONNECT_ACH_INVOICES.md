@@ -6,7 +6,8 @@ Let an invoice author offer a Stripe-hosted US bank-account payment option witho
 
 ## Product boundary
 
-- The contractor or tradesperson who authored the invoice owns an Express connected account and is the merchant for the direct charge.
+- The contractor or tradesperson who authored the invoice owns an Accounts v2 merchant account with full Stripe Dashboard access and is the merchant for the direct charge.
+- Stripe collects its processing fees from the connected merchant and owns negative-balance loss responsibility; RIVT does not take on either role.
 - RIVT takes no application fee at launch.
 - RIVT does not hold, escrow, guarantee, insure, or protect job funds.
 - Invoice recipients use a minimal public payment-return surface; they do not become homeowner RIVT users.
@@ -16,7 +17,7 @@ Let an invoice author offer a Stripe-hosted US bank-account payment option witho
 ## Server work
 
 1. Add versioned, reversible tables for connected-account status, invoice payment requests, and immutable connected webhook event IDs.
-2. Add authenticated, author-owned Express onboarding, dashboard, ACH-link creation, and unused-link cancellation routes.
+2. Add authenticated, author-owned Accounts v2 onboarding, full Stripe Dashboard access, ACH-link creation, and unused-link cancellation routes.
 3. Create ACH-only Checkout Sessions as direct charges on the connected account.
 4. Require active account/email verification, connected-account ownership, active ACH capability, USD amount limits, active-work participation, and invoice authorship.
 5. Verify connected webhooks with a dedicated signing secret and apply events transactionally/idempotently.
@@ -38,18 +39,18 @@ Let an invoice author offer a Stripe-hosted US bank-account payment option witho
 - A separate `STRIPE_CONNECT_WEBHOOK_SECRET` is required.
 - New links fail closed unless both are present with the Stripe secret key.
 - Signed webhooks continue to process existing payments when new-link creation is disabled.
-- Before production activation, exercise onboarding plus asynchronous ACH success and failure in Stripe test mode, confirm Connect support/merchant responsibilities, and create the connected-account webhook.
+- Before production activation, exercise hosted onboarding plus asynchronous ACH success and failure in Stripe test mode, confirm Connect support/merchant responsibilities, and create the connected-account webhook.
 
 ## Acceptance
 
 - Lint, build, unit, E2E, security lint, migration lifecycle, project financial integration, and rendered Tools checks pass.
 - Tests prove no paid balance while ACH is processing, replay safety, out-of-order event protection, amount bounds, refund/dispute reopening, cross-tier payment conflict prevention, and minimal public response data.
-- Production health reports the Connect provider mode and migration `0029_stripe_connect_invoice_payments`.
+- Production health reports the Connect provider mode and migrations `0029_stripe_connect_invoice_payments` and `0030_stripe_connect_accounts_v2`.
 - Exact-source production monitor passes after deployment.
 
 ## Rollback
 
 - Set `STRIPE_CONNECT_ACH_ENABLED=false` first to stop new onboarding/link creation.
 - Keep the connected webhook route and secret active while any payment remains open or processing.
-- Do not roll migration 0029 down after real payment records exist without an approved export/retention plan.
+- Do not roll migrations 0030 or 0029 down after real connected accounts or payment records exist without an approved export/retention plan.
 - Application rollback must retain public status lookup and webhook processing until all outstanding ACH states are terminal.

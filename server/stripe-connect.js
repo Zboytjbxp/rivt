@@ -3,6 +3,14 @@ import { verifyStripeSignature } from "./billing.js";
 import { logInfo } from "./logger.js";
 
 const STRIPE_API_VERSION = "2026-02-25.clover";
+const STRIPE_ACCOUNTS_V2_API_VERSION = "2026-06-24.preview";
+const STRIPE_FULL_DASHBOARD_URL = "https://dashboard.stripe.com";
+const STRIPE_ACCOUNT_V2_INCLUDE = [
+  "configuration.merchant",
+  "defaults",
+  "identity",
+  "requirements",
+];
 const SETTLED_PAYMENT_STATUSES = new Set(["paid", "partially_refunded"]);
 const ACTIVE_PAYMENT_STATUSES = new Set(["created", "open", "processing"]);
 const ACH_MIN_AMOUNT_CENTS = 50;
@@ -39,6 +47,7 @@ export function stripeConnectProviderStatus(appOrigin) {
   const config = connectConfig(appOrigin);
   return {
     provider: "stripe_connect",
+    accountsApi: "v2",
     enabled: config.enabled,
     configured: config.configured,
     webhookConfigured: Boolean(config.webhookSecret),
@@ -86,6 +95,52 @@ async function stripeConnectRequest(config, path, params = {}, options = {}) {
   return payload;
 }
 
+function encodeV2Query(params) {
+  const query = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value === undefined || value === null || value === "") continue;
+    if (Array.isArray(value)) {
+      value.forEach((entry, index) => query.set(`${key}[${index}]`, String(entry)));
+      continue;
+    }
+    query.set(key, String(value));
+  }
+  return query;
+}
+
+async function stripeConnectV2Request(config, path, params = {}, options = {}) {
+  if (!config.secretKey) {
+    throw new ApiError(424, "STRIPE_CONNECT_NOT_CONFIGURED", "Stripe Connect is not configured.", {
+      missing: ["STRIPE_SECRET_KEY"],
+    });
+  }
+  const method = options.method ?? "POST";
+  const query = method === "GET" ? encodeV2Query(params) : null;
+  const url = new URL(`https://api.stripe.com/v2${path}`);
+  if (query) url.search = query.toString();
+  const body = method === "GET" ? undefined : JSON.stringify(params);
+  const response = await fetch(url, {
+    method,
+    headers: {
+      Authorization: `Bearer ${config.secretKey}`,
+      "Stripe-Version": STRIPE_ACCOUNTS_V2_API_VERSION,
+      ...(options.idempotencyKey ? { "Idempotency-Key": options.idempotencyKey } : {}),
+      ...(body ? { "Content-Type": "application/json" } : {}),
+    },
+    body,
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new ApiError(502, "STRIPE_CONNECT_REQUEST_FAILED", "Stripe could not complete the bank-payment request.", {
+      providerStatus: response.status,
+      type: payload?.error?.type,
+      code: payload?.error?.code,
+      message: payload?.error?.message,
+    });
+  }
+  return payload;
+}
+
 function requireVerifiedActor(actor) {
   if (actor.account.status !== "active") {
     throw new ApiError(403, "ACCOUNT_NOT_ACTIVE", "Complete account setup before enabling bank payments.");
@@ -110,16 +165,115 @@ function onboardingStatus(account, achStatus = capabilityStatus(account, "us_ban
   return account?.details_submitted ? "pending" : "not_started";
 }
 
-async function persistConnectAccount(client, accountId, account) {
-  const achStatus = capabilityStatus(account, "us_bank_account_ach_payments");
-  const status = onboardingStatus(account, achStatus);
+function createV2ConnectedAccountPayload(actor) {
+  return {
+    contact_email: actor.account.email,
+    display_name: actor.profile?.displayName || actor.account.email,
+    dashboard: "full",
+    identity: {
+      country: "us",
+    },
+    configuration: {
+      merchant: {
+        capabilities: {
+          card_payments: { requested: true },
+          ach_debit_payments: { requested: true },
+        },
+      },
+    },
+    defaults: {
+      currency: "usd",
+      responsibilities: {
+        fees_collector: "stripe",
+        losses_collector: "stripe",
+      },
+      locales: ["en-US"],
+    },
+    metadata: {
+      rivt_account_id: actor.account.id,
+    },
+    include: STRIPE_ACCOUNT_V2_INCLUDE,
+  };
+}
+
+function createV2AccountLinkPayload(accountId, returnUrl, refreshUrl, onboarding = true) {
+  const type = onboarding ? "account_onboarding" : "account_update";
+  return {
+    account: accountId,
+    use_case: {
+      type,
+      [type]: {
+        configurations: ["merchant"],
+        refresh_url: refreshUrl,
+        return_url: returnUrl,
+        collection_options: {
+          fields: "eventually_due",
+          future_requirements: "include",
+        },
+      },
+    },
+  };
+}
+
+function v2CapabilityStatus(account, path) {
+  let value = account?.configuration?.merchant?.capabilities;
+  for (const key of path.split(".")) value = value?.[key];
+  const status = value?.status;
+  return ["active", "pending", "restricted", "unsupported"].includes(status) ? status : "unrequested";
+}
+
+function v2DetailsSubmitted(account) {
+  const entries = Array.isArray(account?.requirements?.entries) ? account.requirements.entries : [];
+  return !entries.some((entry) => (
+    entry?.awaiting_action_from === "user"
+    && ["currently_due", "past_due"].includes(entry?.minimum_deadline?.status)
+  ));
+}
+
+function normalizeConnectAccount(account, apiVersion = "v2") {
+  if (apiVersion !== "v2") {
+    const achStatus = capabilityStatus(account, "us_bank_account_ach_payments");
+    return {
+      achStatus,
+      chargesEnabled: Boolean(account.charges_enabled),
+      country: String(account.country ?? "US").toUpperCase(),
+      currency: String(account.default_currency ?? "usd").toLowerCase(),
+      dashboard: "express",
+      detailsSubmitted: Boolean(account.details_submitted),
+      onboardingStatus: onboardingStatus(account, achStatus),
+      payoutsEnabled: Boolean(account.payouts_enabled),
+    };
+  }
+  const achStatus = v2CapabilityStatus(account, "ach_debit_payments");
+  const payoutsStatus = v2CapabilityStatus(account, "stripe_balance.payouts");
+  const detailsSubmitted = v2DetailsSubmitted(account);
+  const chargesEnabled = achStatus === "active";
+  const payoutsEnabled = payoutsStatus === "active";
+  let status = "not_started";
+  if (chargesEnabled && payoutsEnabled && detailsSubmitted) status = "ready";
+  else if ([achStatus, payoutsStatus].includes("unsupported")) status = "restricted";
+  else if ([achStatus, payoutsStatus].includes("pending") || detailsSubmitted) status = "pending";
+  return {
+    achStatus,
+    chargesEnabled,
+    country: String(account?.identity?.country ?? "US").toUpperCase(),
+    currency: String(account?.defaults?.currency ?? "usd").toLowerCase(),
+    dashboard: account?.dashboard ?? "full",
+    detailsSubmitted,
+    onboardingStatus: status,
+    payoutsEnabled,
+  };
+}
+
+async function persistConnectAccount(client, accountId, account, apiVersion = "v2") {
+  const normalized = normalizeConnectAccount(account, apiVersion);
   const result = await client.query(
     `INSERT INTO stripe_connect_accounts (
        account_id, stripe_account_id, country, currency, charges_enabled,
        payouts_enabled, details_submitted, ach_payments_status, onboarding_status,
-       last_synced_at, updated_at
+       stripe_account_api_version, stripe_dashboard, last_synced_at, updated_at
      )
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, now(), now())
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, now(), now())
      ON CONFLICT (account_id) DO UPDATE
        SET stripe_account_id = EXCLUDED.stripe_account_id,
            country = EXCLUDED.country,
@@ -129,19 +283,23 @@ async function persistConnectAccount(client, accountId, account) {
            details_submitted = EXCLUDED.details_submitted,
            ach_payments_status = EXCLUDED.ach_payments_status,
            onboarding_status = EXCLUDED.onboarding_status,
+           stripe_account_api_version = EXCLUDED.stripe_account_api_version,
+           stripe_dashboard = EXCLUDED.stripe_dashboard,
            last_synced_at = now(),
            updated_at = now()
      RETURNING *`,
     [
       accountId,
       account.id,
-      String(account.country ?? "US").toUpperCase(),
-      String(account.default_currency ?? "usd").toLowerCase(),
-      Boolean(account.charges_enabled),
-      Boolean(account.payouts_enabled),
-      Boolean(account.details_submitted),
-      achStatus,
-      status,
+      normalized.country,
+      normalized.currency,
+      normalized.chargesEnabled,
+      normalized.payoutsEnabled,
+      normalized.detailsSubmitted,
+      normalized.achStatus,
+      normalized.onboardingStatus,
+      apiVersion,
+      normalized.dashboard,
     ],
   );
   return result.rows[0];
@@ -149,13 +307,21 @@ async function persistConnectAccount(client, accountId, account) {
 
 async function syncConnectAccount(database, config, row) {
   if (!row || !config.secretKey) return row ?? null;
-  const account = await stripeConnectRequest(
-    config,
-    `/accounts/${encodeURIComponent(row.stripe_account_id)}`,
-    {},
-    { method: "GET" },
-  );
-  return persistConnectAccount(database, row.account_id, account);
+  const apiVersion = row.stripe_account_api_version ?? "v1";
+  const account = apiVersion === "v2"
+    ? await stripeConnectV2Request(
+      config,
+      `/core/accounts/${encodeURIComponent(row.stripe_account_id)}`,
+      { include: STRIPE_ACCOUNT_V2_INCLUDE },
+      { method: "GET" },
+    )
+    : await stripeConnectRequest(
+      config,
+      `/accounts/${encodeURIComponent(row.stripe_account_id)}`,
+      {},
+      { method: "GET" },
+    );
+  return persistConnectAccount(database, row.account_id, account, apiVersion);
 }
 
 function mapConnectStatus(row, config) {
@@ -163,6 +329,8 @@ function mapConnectStatus(row, config) {
   const achStatus = row?.ach_payments_status ?? "unrequested";
   return {
     provider: "stripe_connect",
+    accountApiVersion: row?.stripe_account_api_version ?? null,
+    dashboardType: row?.stripe_dashboard ?? null,
     providerConfigured: config.configured,
     webhookConfigured: Boolean(config.webhookSecret),
     missing: config.missing,
@@ -347,12 +515,21 @@ async function processConnectEvent(database, event, requestId, createInAppNotifi
 
     if (event.type === "account.updated" && object.id) {
       const accountRow = await client.query(
-        "SELECT account_id FROM stripe_connect_accounts WHERE stripe_account_id = $1 LIMIT 1",
+        `SELECT account_id, stripe_account_api_version
+         FROM stripe_connect_accounts
+         WHERE stripe_account_id = $1
+         LIMIT 1`,
         [object.id],
       );
-      if (accountRow.rowCount) await persistConnectAccount(client, accountRow.rows[0].account_id, object);
+      if (accountRow.rowCount && accountRow.rows[0].stripe_account_api_version === "v1") {
+        await persistConnectAccount(client, accountRow.rows[0].account_id, object, "v1");
+      }
       await client.query("COMMIT");
-      return { processed: true, duplicate: false, accountUpdated: Boolean(accountRow.rowCount) };
+      return {
+        processed: true,
+        duplicate: false,
+        accountUpdated: Boolean(accountRow.rowCount && accountRow.rows[0].stripe_account_api_version === "v1"),
+      };
     }
 
     const update = eventPaymentUpdate(event);
@@ -578,15 +755,13 @@ export function registerStripeConnectRoutes({
           [request.actor.account.id],
         )).rows[0] ?? null;
         if (!row) {
-          const account = await stripeConnectRequest(config, "/accounts", {
-            type: "express",
-            country: "US",
-            email: request.actor.account.email,
-            "capabilities[transfers][requested]": "true",
-            "capabilities[us_bank_account_ach_payments][requested]": "true",
-            "metadata[rivt_account_id]": request.actor.account.id,
-          }, { idempotencyKey: `rivt-connect-account-${request.actor.account.id}` });
-          row = await persistConnectAccount(client, request.actor.account.id, account);
+          const account = await stripeConnectV2Request(
+            config,
+            "/core/accounts",
+            createV2ConnectedAccountPayload(request.actor),
+            { idempotencyKey: `rivt-connect-account-v2-${request.actor.account.id}` },
+          );
+          row = await persistConnectAccount(client, request.actor.account.id, account, "v2");
         } else {
           row = await syncConnectAccount(client, config, row);
         }
@@ -598,13 +773,17 @@ export function registerStripeConnectRoutes({
         }
         const returnUrl = `${config.appOrigin}/app/tools?${returnParams}`;
         const refreshUrl = `${config.appOrigin}/app/tools?${refreshParams}`;
-        const link = await stripeConnectRequest(config, "/account_links", {
-          account: row.stripe_account_id,
-          refresh_url: refreshUrl,
-          return_url: returnUrl,
-          type: "account_onboarding",
-          "collection_options[fields]": "eventually_due",
-        });
+        const link = await stripeConnectV2Request(
+          config,
+          "/core/account_links",
+          createV2AccountLinkPayload(
+            row.stripe_account_id,
+            returnUrl,
+            refreshUrl,
+            row.onboarding_status === "not_started",
+          ),
+          { idempotencyKey: `rivt-connect-onboarding-v2-${request.actor.account.id}-${request.requestId}` },
+        );
         await client.query(
           `INSERT INTO audit_events (request_id, actor_account_id, action, subject_type, subject_id, metadata)
            VALUES ($1, $2, 'stripe_connect.onboarding_opened', 'stripe_connected_account', $3, $4::jsonb)`,
@@ -620,7 +799,7 @@ export function registerStripeConnectRoutes({
           body: {
             data: {
               url: link.url,
-              expiresAt: toIso(Number(link.expires_at) * 1000),
+              expiresAt: toIso(link.expires_at),
               connect: mapConnectStatus(row, config),
             },
             meta: { requestId: request.requestId },
@@ -648,17 +827,19 @@ export function registerStripeConnectRoutes({
     if (!row) {
       throw new ApiError(409, "STRIPE_CONNECT_ONBOARDING_REQUIRED", "Set up bank payments before opening the Stripe account.");
     }
-    const link = await stripeConnectRequest(
-      config,
-      `/accounts/${encodeURIComponent(row.stripe_account_id)}/login_links`,
-    );
+    const dashboardUrl = row.stripe_account_api_version === "v2"
+      ? STRIPE_FULL_DASHBOARD_URL
+      : (await stripeConnectRequest(
+        config,
+        `/accounts/${encodeURIComponent(row.stripe_account_id)}/login_links`,
+      )).url;
     await database.query(
       `INSERT INTO audit_events (request_id, actor_account_id, action, subject_type, subject_id, metadata)
        VALUES ($1, $2, 'stripe_connect.dashboard_opened', 'stripe_connected_account', $3, '{}'::jsonb)`,
       [request.requestId, request.actor.account.id, row.stripe_account_id],
     );
     response.status(201).json({
-      data: { url: link.url },
+      data: { url: dashboardUrl },
       meta: { requestId: request.requestId },
     });
   }));
@@ -946,5 +1127,9 @@ export const stripeConnectInternals = {
   mapPaymentRequest,
   nextPaymentStatus,
   onboardingStatus,
+  createV2AccountLinkPayload,
+  createV2ConnectedAccountPayload,
+  normalizeConnectAccount,
   providerContributionCents,
+  v2DetailsSubmitted,
 };

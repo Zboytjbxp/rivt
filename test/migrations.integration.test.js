@@ -218,6 +218,15 @@ if (!testDatabaseUrl) {
       assert.equal((await database.query("SELECT to_regclass('stripe_connect_accounts') AS table_name")).rows[0].table_name, "stripe_connect_accounts");
       assert.equal((await database.query("SELECT to_regclass('project_invoice_payment_requests') AS table_name")).rows[0].table_name, "project_invoice_payment_requests");
       assert.equal((await database.query("SELECT to_regclass('stripe_connect_events') AS table_name")).rows[0].table_name, "stripe_connect_events");
+      assert.equal((await database.query(
+        "SELECT count(*)::int AS count FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = 'stripe_connect_accounts' AND column_name IN ('stripe_account_api_version', 'stripe_dashboard')",
+      )).rows[0].count, 2);
+
+      const rolledBackStripeConnectV2 = await rollbackLatest(database);
+      assert.equal(rolledBackStripeConnectV2.latestVersion, 29);
+      assert.equal((await database.query(
+        "SELECT count(*)::int AS count FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = 'stripe_connect_accounts' AND column_name IN ('stripe_account_api_version', 'stripe_dashboard')",
+      )).rows[0].count, 0);
 
       const rolledBackStripeConnectPayments = await rollbackLatest(database);
       assert.equal(rolledBackStripeConnectPayments.latestVersion, 28);

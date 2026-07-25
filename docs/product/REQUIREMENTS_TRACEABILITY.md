@@ -10,6 +10,30 @@ Status values:
 
 Evidence must eventually link to implementation, automated tests, manual acceptance proof, and deployed build.
 
+## Traceability Addendum - 2026-07-25 Stripe Connect Accounts v2 Correction
+
+- A real Stripe sandbox request invalidated the original Accounts v1
+  onboarding assumption: Stripe rejects new v1 connected-account creation for
+  this platform. `GA-FND-004` now uses Accounts v2 merchant configuration and
+  requests `ach_debit_payments` plus the required `card_payments` capability.
+- `GA-OPS-004` gains an explicit responsibility proof: the connected account
+  uses the full Stripe Dashboard with Stripe as both fee collector and
+  negative-balance loss collector. RIVT does not take an application fee or
+  silently assume merchant losses.
+- `GA-FND-003` gains migration `0030_stripe_connect_accounts_v2`, preserving
+  API-generation/dashboard provenance and the honest v2 capability states
+  `restricted` and `unsupported`.
+- Provider evidence includes successful Accounts v2 creation, a successful
+  hosted onboarding-link request, ACH-only direct Checkout compatibility, a
+  real successful delayed payment, and a real `no_account` failure. Stripe
+  emitted `checkout.session.async_payment_succeeded` and
+  `checkout.session.async_payment_failed`; RIVT mapped the real payloads to
+  `paid` and `failed` without treating Checkout completion as settlement.
+- This correction is not yet production evidence. Hosted onboarding reached
+  Stripe's anti-bot challenge and therefore still requires human completion;
+  the sandbox connected-event destination/signing secret is also outstanding.
+  Production remains fail-closed and no live ACH readiness is claimed.
+
 ## Traceability Addendum - 2026-07-25 Stripe Connect ACH Invoices
 
 - Product-owner direction adds a bounded exception to the former no-job-

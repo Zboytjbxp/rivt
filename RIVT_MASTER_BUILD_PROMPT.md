@@ -1714,7 +1714,11 @@ RIVT subscription billing and contractor invoice payments are separate financial
 - Protect refund, credit, plan override, and complimentary access with permissions, reason codes, limits, and audit.
 - Monitor MRR/ARR only after definitions are fixed; also monitor gross margin, provider cost, support cost, fraud/chargeback cost, churn, and cohort retention.
 - Keep job-payment records visibly separate from RIVT subscription billing.
-- Require contractor identity/onboarding and the `us_bank_account_ach_payments` capability before a bank-payment link can be created.
+- Require contractor identity/onboarding and the Accounts v2 merchant
+  `ach_debit_payments` capability before a bank-payment link can be created.
+- Use full Stripe Dashboard accounts with Stripe as fee collector and
+  negative-balance loss collector unless a separately reviewed financial-risk
+  model explicitly authorizes RIVT to assume those responsibilities.
 - Treat Checkout completion as processing for delayed ACH. Only signed, replay-safe connected-account webhook events can mark an invoice paid.
 - Reopen balances after a late ACH failure, refund, or dispute. Block manual payment logging and invoice voiding while an online payment is open or processing.
 - Keep the public payer surface minimal and tokenized. Do not turn invoice recipients into homeowner RIVT accounts or expose private job, address, participant, or bank details.
