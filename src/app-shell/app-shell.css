@@ -431,6 +431,7 @@
   display: block;
   box-sizing: border-box;
   width: min(620px, calc(100vw - 32px));
+  max-height: min(80vh, 720px);
   padding: 16px;
   border: 1px solid var(--v2-border-strong);
   border-radius: var(--v2-radius-lg);
@@ -442,6 +443,9 @@
 .v2-search-panel-inner {
   display: grid;
   gap: 12px;
+  max-height: calc(min(80vh, 720px) - 32px);
+  overflow-y: auto;
+  scrollbar-gutter: stable;
 }
 
 .v2-search-panel-input {
@@ -472,12 +476,14 @@
   gap: 8px;
 }
 
-.v2-search-people-results {
+.v2-search-people-results,
+.v2-search-result-group {
   display: grid;
   gap: 8px;
 }
 
-.v2-search-people-results header {
+.v2-search-people-results header,
+.v2-search-result-group header {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
@@ -488,9 +494,51 @@
   letter-spacing: 0;
 }
 
-.v2-search-people-results header span {
+.v2-search-people-results header span,
+.v2-search-result-group header span {
   color: var(--v2-text);
   font-weight: var(--v2-weight-strong);
+}
+
+.v2-search-local-result {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  min-height: 56px;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  border: 1px solid transparent;
+  border-radius: var(--v2-radius-md);
+  background: var(--v2-surface);
+  color: var(--v2-text);
+  text-align: left;
+}
+
+.v2-search-local-result:hover {
+  border-color: color-mix(in srgb, var(--v2-accent) 36%, var(--v2-border));
+  background: var(--v2-accent-soft);
+}
+
+.v2-search-local-result > svg {
+  color: var(--v2-accent);
+}
+
+.v2-search-local-result strong,
+.v2-search-local-result small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.v2-search-local-result strong {
+  font-size: var(--v2-text-sm);
+  font-weight: var(--v2-weight-strong);
+}
+
+.v2-search-local-result small {
+  color: var(--v2-text-muted);
+  font-size: var(--v2-text-xs);
 }
 
 .v2-search-person-result {

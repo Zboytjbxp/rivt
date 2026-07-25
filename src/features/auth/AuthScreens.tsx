@@ -142,7 +142,7 @@ const entryCapabilities = [
   {
     key: "crew",
     title: "Build your crew",
-    body: "Follow contractors, subs, and specialty crews you would call again.",
+    body: "Keep contractors, subs, and specialty crews organized around real work.",
     icon: Users,
   },
   {

@@ -35,11 +35,19 @@ export interface ShellJobContext {
   status: string;
 }
 
+export interface ShellSearchItem {
+  id: string;
+  title: string;
+  subtitle: string;
+}
+
 export interface AppShellProps {
   activeDestination: PrimaryDestination | null;
   role: Role;
   profile: ShellProfile;
   activeJob: ShellJobContext | null;
+  searchJobs?: ShellSearchItem[];
+  searchPosts?: ShellSearchItem[];
   notificationCount: number;
   messageCount?: number;
   isGuest: boolean;

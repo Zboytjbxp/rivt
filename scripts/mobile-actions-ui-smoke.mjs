@@ -494,12 +494,22 @@ async function runMobileFlow(page) {
   await page.getByRole("button", { name: "Search" }).click();
   await page.getByRole("dialog", { name: "Search RIVT" }).waitFor({ timeout: 15_000 });
   await page.getByLabel("Search jobs, questions, trades, or tools").fill("invoice");
-  await page.getByRole("button", { name: /Open Tools/i }).waitFor({ timeout: 15_000 });
+  const toolResults = page.getByRole("region", { name: "Tool results" });
+  await toolResults.getByRole("button", { name: /Invoice/i }).waitFor({ timeout: 15_000 });
   await assertNoHorizontalOverflow(page, "Search panel");
   await page.screenshot({ path: path.join(screenshotDir, "mobile-search-panel.png"), fullPage: true });
-  await page.getByRole("button", { name: /Open Tools/i }).click();
+  await toolResults.getByRole("button", { name: /Invoice/i }).click();
+  await page.getByRole("navigation", { name: "Invoice draft steps" }).waitFor({ timeout: 15_000 });
+  await assertNoHorizontalOverflow(page, "Search directly to Invoice");
+  await page.keyboard.press("Control+K");
+  const reopenedSearch = page.getByRole("dialog", { name: "Search RIVT" });
+  await reopenedSearch.getByLabel("Search jobs, questions, trades, or tools").fill("");
+  const recentSearches = reopenedSearch.getByRole("region", { name: "Recent searches" });
+  await recentSearches.getByText("Private to this browser", { exact: true }).waitFor({ timeout: 15_000 });
+  await recentSearches.getByRole("button", { name: /invoice/i }).waitFor({ timeout: 15_000 });
+  await reopenedSearch.getByRole("button", { name: "Close search" }).click();
+  await page.getByRole("button", { name: "All tools", exact: true }).click();
   await page.getByRole("heading", { name: "Tools", exact: true }).waitFor({ timeout: 15_000 });
-  await assertNoHorizontalOverflow(page, "Search to Tools route");
 
   await page.getByRole("button", { name: "Notifications" }).click();
   const notificationsDialog = page.getByRole("dialog", { name: "Notifications" });

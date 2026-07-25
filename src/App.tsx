@@ -2619,6 +2619,16 @@ function App() {
               }
             : null
         }
+        searchJobs={jobs.map((job) => ({
+          id: String(job.canonical?.id ?? job.id),
+          title: job.title,
+          subtitle: [job.trade, [job.location, job.state].filter(Boolean).join(", "), job.status].filter(Boolean).join(" · "),
+        }))}
+        searchPosts={communityPosts.map((post) => ({
+          id: post.id,
+          title: post.title,
+          subtitle: [post.communityName ?? post.trade, post.author, `${post.replies.length} ${post.replies.length === 1 ? "reply" : "replies"}`].filter(Boolean).join(" · "),
+        }))}
         notificationCount={unreadActivities}
         messageCount={unreadMessages}
         isGuest={isGuest}
@@ -2649,7 +2659,8 @@ function App() {
             return;
           }
           if (target === "tools") {
-            handleNavigate("Tools");
+            if (isPublicToolMode(nextQuery)) handleOpenTool(nextQuery);
+            else handleNavigate("Tools");
             return;
           }
           setQuery(nextQuery);

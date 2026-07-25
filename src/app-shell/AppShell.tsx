@@ -11,7 +11,7 @@ import {
   Wrench,
   X,
 } from "lucide-react";
-import type { AppShellProps, PrimaryDestination, ProfileSearchResult, SearchTarget } from "./types";
+import type { AppShellProps, PrimaryDestination, ProfileSearchResult, SearchTarget, ShellSearchItem } from "./types";
 import { Avatar } from "../components/ui";
 import { apiPath, fetchWithTimeout } from "../lib/api";
 import "./tokens.css";
@@ -28,12 +28,39 @@ const primaryNavigation: Array<{
   { destination: "shop-talk", label: "Shop Talk", icon: MessageCircle },
   { destination: "tools", label: "Tools", icon: Wrench },
 ];
+const SEARCH_RECENTS_KEY = "rivt.search.recent.v1";
+const searchableTools: Array<ShellSearchItem & { keywords: string }> = [
+  { id: "calculator", title: "Field calculator", subtitle: "Tape fractions, metric, and saved measurements", keywords: "calculator tape measure fractions math metric" },
+  { id: "job-photos", title: "Camera", subtitle: "Job photos, private albums, and field proof", keywords: "camera photos album proof" },
+  { id: "estimate", title: "Estimate builder", subtitle: "Scope, labor, materials, and customer review", keywords: "estimate bid quote pricing" },
+  { id: "invoice", title: "Invoice", subtitle: "Drafts, receivables, and payment records", keywords: "invoice billing receivables payment" },
+  { id: "expense-logger", title: "Expense logger", subtitle: "Costs, receipt records, and CSV export", keywords: "expense receipt cost csv" },
+  { id: "daily-log", title: "Daily log", subtitle: "Progress, blockers, safety, and crew notes", keywords: "daily log report jobsite notes" },
+];
+
+type RecentSearch = { query: string; target: SearchTarget };
+
+function readRecentSearches(): RecentSearch[] {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(SEARCH_RECENTS_KEY) ?? "[]") as unknown;
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((item): item is RecentSearch => (
+      Boolean(item)
+      && typeof item.query === "string"
+      && ["work", "shop-talk", "tools"].includes(String(item.target))
+    )).slice(0, 5);
+  } catch {
+    return [];
+  }
+}
 
 export function AppShell({
   activeDestination,
   role,
   profile,
   activeJob,
+  searchJobs = [],
+  searchPosts = [],
   notificationCount,
   messageCount = 0,
   isGuest,
@@ -53,6 +80,7 @@ export function AppShell({
   const [peopleResults, setPeopleResults] = useState<ProfileSearchResult[]>([]);
   const [peopleStatus, setPeopleStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
   const [peopleError, setPeopleError] = useState("");
+  const [recentSearches, setRecentSearches] = useState<RecentSearch[]>(readRecentSearches);
   const peopleSearchRequestRef = useRef(0);
 
   useEffect(() => {
@@ -114,7 +142,28 @@ export function AppShell({
   function submitSearch(target: SearchTarget = "work") {
     const normalized = searchValue.trim();
     if (!normalized) return;
+    rememberSearch(normalized, target);
     onSearch(normalized, target);
+    setSearchOpen(false);
+  }
+
+  function rememberSearch(query: string, target: SearchTarget) {
+    const next = [
+      { query, target },
+      ...recentSearches.filter((item) => item.query.toLowerCase() !== query.toLowerCase() || item.target !== target),
+    ].slice(0, 5);
+    setRecentSearches(next);
+    try {
+      localStorage.setItem(SEARCH_RECENTS_KEY, JSON.stringify(next));
+    } catch {
+      // Recent searches stay in memory when device storage is unavailable.
+    }
+  }
+
+  function openLocalResult(item: ShellSearchItem, target: SearchTarget) {
+    const query = target === "tools" ? item.id : item.title;
+    rememberSearch(query, target);
+    onSearch(query, target);
     setSearchOpen(false);
   }
 
@@ -130,6 +179,16 @@ export function AppShell({
   const normalizedSearch = searchValue.trim();
   const canSubmitSearch = normalizedSearch.length > 0;
   const canSearchPeople = normalizedSearch.length >= 2 && !isGuest;
+  const normalizedSearchLower = normalizedSearch.toLowerCase();
+  const localJobResults = normalizedSearch.length >= 2
+    ? searchJobs.filter((item) => `${item.title} ${item.subtitle}`.toLowerCase().includes(normalizedSearchLower)).slice(0, 3)
+    : [];
+  const localPostResults = normalizedSearch.length >= 2
+    ? searchPosts.filter((item) => `${item.title} ${item.subtitle}`.toLowerCase().includes(normalizedSearchLower)).slice(0, 3)
+    : [];
+  const localToolResults = normalizedSearch.length >= 2
+    ? searchableTools.filter((item) => `${item.title} ${item.subtitle} ${item.keywords}`.toLowerCase().includes(normalizedSearchLower)).slice(0, 3)
+    : [];
 
   function profileRateSummary(person: ProfileSearchResult) {
     const rate = person.rateCards?.[0];
@@ -270,6 +329,28 @@ export function AppShell({
                 {normalizedSearch.length === 1 ? (
                   <p className="v2-search-note">Keep typing to search…</p>
                 ) : null}
+                {!normalizedSearch && recentSearches.length ? (
+                  <section className="v2-search-result-group" aria-label="Recent searches">
+                    <header><span>Recent on this device</span><small>Private to this browser</small></header>
+                    {recentSearches.map((item) => (
+                      <button
+                        key={`${item.target}-${item.query}`}
+                        type="button"
+                        className="v2-search-local-result"
+                        onClick={() => {
+                          onSearch(item.query, item.target);
+                          setSearchOpen(false);
+                        }}
+                      >
+                        <Search size={17} />
+                        <span>
+                          <strong>{item.query}</strong>
+                          <small>{item.target === "shop-talk" ? "Shop Talk" : item.target === "tools" ? "Tools" : "Work"}</small>
+                        </span>
+                      </button>
+                    ))}
+                  </section>
+                ) : null}
                 {canSearchPeople ? (
                   <section className="v2-search-people-results" aria-label="People results">
                     <header>
@@ -299,6 +380,40 @@ export function AppShell({
                   </section>
                 ) : null}
 
+                {localJobResults.length ? (
+                  <section className="v2-search-result-group" aria-label="Work results">
+                    <header><span>Work</span><small>Jobs in your current work list</small></header>
+                    {localJobResults.map((item) => (
+                      <button key={item.id} type="button" className="v2-search-local-result" onClick={() => openLocalResult(item, "work")}>
+                        <BriefcaseBusiness size={18} />
+                        <span><strong>{item.title}</strong><small>{item.subtitle}</small></span>
+                      </button>
+                    ))}
+                  </section>
+                ) : null}
+                {localPostResults.length ? (
+                  <section className="v2-search-result-group" aria-label="Shop Talk results">
+                    <header><span>Shop Talk</span><small>Questions and discussions</small></header>
+                    {localPostResults.map((item) => (
+                      <button key={item.id} type="button" className="v2-search-local-result" onClick={() => openLocalResult(item, "shop-talk")}>
+                        <MessageCircle size={18} />
+                        <span><strong>{item.title}</strong><small>{item.subtitle}</small></span>
+                      </button>
+                    ))}
+                  </section>
+                ) : null}
+                {localToolResults.length ? (
+                  <section className="v2-search-result-group" aria-label="Tool results">
+                    <header><span>Tools</span><small>Open the tool directly</small></header>
+                    {localToolResults.map((item) => (
+                      <button key={item.id} type="button" className="v2-search-local-result" onClick={() => openLocalResult(item, "tools")}>
+                        <Wrench size={18} />
+                        <span><strong>{item.title}</strong><small>{item.subtitle}</small></span>
+                      </button>
+                    ))}
+                  </section>
+                ) : null}
+
                 <div className="v2-search-command-list" aria-label="Search destinations">
                   <button type="button" onClick={() => submitSearch("work")} disabled={!canSubmitSearch}>
                     <BriefcaseBusiness size={18} />
@@ -315,7 +430,9 @@ export function AppShell({
                     </span>
                   </button>
                   <button type="button" onClick={() => {
-                    onSearch(normalizedSearch || "tools", "tools");
+                    const query = normalizedSearch || "tools";
+                    rememberSearch(query, "tools");
+                    onSearch(query, "tools");
                     setSearchOpen(false);
                   }}>
                     <Wrench size={18} />
