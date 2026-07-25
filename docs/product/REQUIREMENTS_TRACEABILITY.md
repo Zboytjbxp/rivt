@@ -34,10 +34,12 @@ Evidence must eventually link to implementation, automated tests, manual accepta
   `STRIPE_CONNECT_ACH_ENABLED` kill switch, provider health state, and a
   rollback rule that preserves webhook/status handling for outstanding
   payments.
-- Local evidence currently includes lint, build, unit/frontend tests,
-  migration lifecycle, and project-financial integration. Production
-  activation remains blocked on Stripe test-mode onboarding and async
-  success/failure proof plus connected-webhook configuration.
+- Local evidence includes lint, build, security lint, 82 unit/frontend tests,
+  all 19 serial PostgreSQL integration suites, E2E, dependency audit with zero
+  vulnerabilities, strict launch readiness, migration lifecycle, and rendered
+  desktop/mobile invoice plus payer-return proof. Production activation remains
+  blocked on Stripe test-mode onboarding and async success/failure proof plus
+  connected-webhook configuration.
 
 ## Traceability Addendum - 2026-07-25 Jacksonville Launch-Readiness Closure
 

@@ -40,11 +40,11 @@ Production feature release commit: `21213427ef9ed857fd34eada12a4630df9484923`
   webhook processing for outstanding payments. When disabled with no existing
   payment records, the unfinished control is not advertised in the invoice UI.
 - Local verification passed: lint, production build, security lint, 82
-  unit/frontend tests, E2E, dependency audit with zero vulnerabilities, strict
-  launch readiness, migration 0029 apply/rollback lifecycle, and the
-  PostgreSQL project closeout/financial integration. The database proof covers
-  minimal public data, active-link conflict protection, processing without
-  paid credit, signed asynchronous settlement, replay rejection, and refund
+  unit/frontend tests, all 19 serial PostgreSQL integration suites, E2E,
+  dependency audit with zero vulnerabilities, strict launch readiness, and
+  migration 0029 apply/rollback lifecycle. The database proof covers minimal
+  public data, active-link conflict protection, processing without paid
+  credit, signed asynchronous settlement, replay rejection, and refund
   reopening.
 - Rendered Tools QA passes at desktop, 390x844, and 320x568. The ACH invoice
   controls and public processing return are captured at desktop and 390x844,
