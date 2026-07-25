@@ -41,3 +41,41 @@ test("project invoice mapping exposes external-payment balance without claiming 
   assert.equal(invoice.balanceCents, 6_500);
   assert.equal(invoice.payments[0].paymentDate, "2026-07-10");
 });
+
+test("project invoice mapping counts only settled Stripe bank payments", () => {
+  const invoice = mapProjectInvoice({
+    id: "invoice-2",
+    project_id: "project-1",
+    active_work_id: "work-1",
+    created_by_account_id: "account-1",
+    invoice_number: "RIVT-2",
+    status: "sent",
+    line_items: [],
+    source_estimate: {},
+    subtotal_cents: 20_000,
+    tax_cents: 0,
+    total_cents: 20_000,
+  }, [], [
+    {
+      id: "online-processing",
+      invoice_id: "invoice-2",
+      amount_cents: 8_000,
+      refunded_cents: 0,
+      status: "processing",
+      currency: "usd",
+    },
+    {
+      id: "online-settled",
+      invoice_id: "invoice-2",
+      amount_cents: 12_000,
+      refunded_cents: 2_000,
+      status: "partially_refunded",
+      currency: "usd",
+    },
+  ]);
+
+  assert.equal(invoice.paidCents, 10_000);
+  assert.equal(invoice.balanceCents, 10_000);
+  assert.equal(invoice.onlinePayments[0].status, "processing");
+  assert.equal(invoice.onlinePayments[1].refundedCents, 2_000);
+});

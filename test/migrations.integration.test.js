@@ -215,6 +215,16 @@ if (!testDatabaseUrl) {
         /append-only/,
       );
 
+      assert.equal((await database.query("SELECT to_regclass('stripe_connect_accounts') AS table_name")).rows[0].table_name, "stripe_connect_accounts");
+      assert.equal((await database.query("SELECT to_regclass('project_invoice_payment_requests') AS table_name")).rows[0].table_name, "project_invoice_payment_requests");
+      assert.equal((await database.query("SELECT to_regclass('stripe_connect_events') AS table_name")).rows[0].table_name, "stripe_connect_events");
+
+      const rolledBackStripeConnectPayments = await rollbackLatest(database);
+      assert.equal(rolledBackStripeConnectPayments.latestVersion, 28);
+      assert.equal((await database.query("SELECT to_regclass('stripe_connect_accounts') AS table_name")).rows[0].table_name, null);
+      assert.equal((await database.query("SELECT to_regclass('project_invoice_payment_requests') AS table_name")).rows[0].table_name, null);
+      assert.equal((await database.query("SELECT to_regclass('stripe_connect_events') AS table_name")).rows[0].table_name, null);
+
       const rolledBackCompensationWorkflow = await rollbackLatest(database);
       assert.equal(rolledBackCompensationWorkflow.latestVersion, 27);
       assert.equal((await database.query("SELECT to_regclass('profile_rate_cards') AS table_name")).rows[0].table_name, null);

@@ -35,8 +35,17 @@ export function invoiceSubtotalCents(lineItems) {
   return lineItems.reduce((total, line) => total + Math.round(line.quantity * line.rateCents), 0);
 }
 
-export function mapProjectInvoice(row, payments = []) {
-  const paidCents = payments.reduce((total, payment) => total + Number(payment.amount_cents ?? payment.amountCents ?? 0), 0);
+export function mapProjectInvoice(row, payments = [], onlinePayments = []) {
+  const externalPaidCents = payments.reduce((total, payment) => total + Number(payment.amount_cents ?? payment.amountCents ?? 0), 0);
+  const onlinePaidCents = onlinePayments.reduce((total, payment) => {
+    if (!["paid", "partially_refunded"].includes(payment.status)) return total;
+    return total + Math.max(
+      0,
+      Number(payment.amount_cents ?? payment.amountCents ?? 0)
+        - Number(payment.refunded_cents ?? payment.refundedCents ?? 0),
+    );
+  }, 0);
+  const paidCents = externalPaidCents + onlinePaidCents;
   const totalCents = Number(row.total_cents ?? row.totalCents ?? 0);
   return {
     id: row.id,
@@ -64,6 +73,7 @@ export function mapProjectInvoice(row, payments = []) {
     createdAt: toIso(row.created_at ?? row.createdAt),
     updatedAt: toIso(row.updated_at ?? row.updatedAt),
     payments: payments.map(mapProjectInvoicePayment),
+    onlinePayments: onlinePayments.map(mapProjectInvoiceOnlinePayment),
   };
 }
 
@@ -79,6 +89,26 @@ export function mapProjectInvoicePayment(row) {
     method: row.method ?? "",
     note: row.note ?? "",
     createdAt: toIso(row.created_at ?? row.createdAt),
+  };
+}
+
+export function mapProjectInvoiceOnlinePayment(row) {
+  return {
+    id: row.id,
+    invoiceId: row.invoice_id ?? row.invoiceId,
+    amountCents: Number(row.amount_cents ?? row.amountCents ?? 0),
+    refundedCents: Number(row.refunded_cents ?? row.refundedCents ?? 0),
+    currency: row.currency ?? "usd",
+    status: row.status,
+    paymentMethodType: row.payment_method_type ?? row.paymentMethodType ?? null,
+    checkoutUrl: row.checkout_url ?? row.checkoutUrl ?? null,
+    expiresAt: toIso(row.expires_at ?? row.expiresAt),
+    paidAt: toIso(row.paid_at ?? row.paidAt),
+    failedAt: toIso(row.failed_at ?? row.failedAt),
+    disputedAt: toIso(row.disputed_at ?? row.disputedAt),
+    refundedAt: toIso(row.refunded_at ?? row.refundedAt),
+    createdAt: toIso(row.created_at ?? row.createdAt),
+    updatedAt: toIso(row.updated_at ?? row.updatedAt),
   };
 }
 

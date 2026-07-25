@@ -189,7 +189,7 @@ function estimateEmailContent(snapshot) {
   return { text, html };
 }
 
-function invoiceDeliverySnapshot(record, actor) {
+function invoiceDeliverySnapshot(record, actor, bankPaymentUrl = null) {
   const payload = objectValue(record.payload);
   const recipientEmail = textValue(payload.recipientEmail, "", 320).toLowerCase();
   if (!z.email().safeParse(recipientEmail).success) {
@@ -222,6 +222,7 @@ function invoiceDeliverySnapshot(record, actor) {
     terms: textValue(payload.terms, "Due on receipt", 160),
     senderName: textValue(payload.payTo, textValue(actor.profile.displayName, "RIVT member", 160), 160),
     paymentMethod: textValue(payload.paymentMethod, "Direct payment", 160),
+    bankPaymentUrl,
     totalCents,
     subtotalCents,
     taxCents: Math.max(0, totalCents - subtotalCents),
@@ -244,13 +245,22 @@ function invoiceEmailContent(snapshot) {
     `Total due: ${formatCurrency(snapshot.totalCents)}`,
     `Terms: ${snapshot.terms}`,
     `Payment method: ${snapshot.paymentMethod}`,
+    snapshot.bankPaymentUrl ? `Pay securely from a US bank account: ${snapshot.bankPaymentUrl}` : "",
     "",
-    "Payment is arranged directly with the sender. Reply to this email with any questions.",
-  ].join("\n");
+    snapshot.bankPaymentUrl
+      ? "Bank payment is handled by Stripe for the sender. RIVT does not hold or protect job funds."
+      : "Payment is arranged directly with the sender. Reply to this email with any questions.",
+  ].filter(Boolean).join("\n");
   const lineRows = snapshot.lines.map((line) => (
     `<tr><td style="padding:9px 0;border-bottom:1px solid #e7e7e7">${escapeHtml(line.description)}</td><td style="padding:9px 0;border-bottom:1px solid #e7e7e7;text-align:right;font-weight:700">${formatCurrency(line.totalCents)}</td></tr>`
   )).join("");
-  const html = `<!doctype html><html><body style="margin:0;background:#f5f5f2;color:#151515;font-family:Arial,sans-serif"><main style="max-width:640px;margin:0 auto;padding:28px"><section style="background:#ffffff;border:1px solid #deded8;border-radius:12px;overflow:hidden"><header style="padding:22px 24px;background:#ff4b00;color:#111111"><strong style="font-size:20px;letter-spacing:0.04em">RIVT INVOICE</strong><div style="margin-top:6px;font-size:14px">${escapeHtml(snapshot.invoiceNumber)}</div></header><div style="padding:24px"><p style="margin:0 0 16px">Hi ${escapeHtml(snapshot.recipientName)},</p><p style="margin:0 0 16px"><strong>${escapeHtml(snapshot.senderName)}</strong> sent you an invoice for ${escapeHtml(snapshot.workLabel)}.</p><table role="presentation" width="100%" style="border-collapse:collapse;margin:18px 0">${lineRows}<tr><td style="padding-top:12px">Subtotal</td><td style="padding-top:12px;text-align:right">${formatCurrency(snapshot.subtotalCents)}</td></tr><tr><td style="padding-top:8px">Tax</td><td style="padding-top:8px;text-align:right">${formatCurrency(snapshot.taxCents)}</td></tr><tr><td style="padding-top:16px;font-size:17px;font-weight:700">Total due</td><td style="padding-top:16px;text-align:right;font-size:20px;font-weight:800">${formatCurrency(snapshot.totalCents)}</td></tr></table><p style="margin:18px 0 0"><strong>Terms:</strong> ${escapeHtml(snapshot.terms)}</p><p style="margin:8px 0 0"><strong>Payment method:</strong> ${escapeHtml(snapshot.paymentMethod)}</p><p style="margin:24px 0 0;color:#5f5f5a;font-size:13px">Payment is arranged directly with the sender. Reply to this email with any questions.</p></div></section></main></body></html>`;
+  const bankPaymentHtml = snapshot.bankPaymentUrl
+    ? `<p style="margin:24px 0"><a href="${escapeHtml(snapshot.bankPaymentUrl)}" style="display:inline-block;padding:13px 18px;border-radius:8px;background:#ff4b00;color:#111111;font-weight:700;text-decoration:none">Pay from a US bank account</a></p>`
+    : "";
+  const boundaryCopy = snapshot.bankPaymentUrl
+    ? "Bank payment is handled by Stripe for the sender. RIVT does not hold or protect job funds."
+    : "Payment is arranged directly with the sender. Reply to this email with any questions.";
+  const html = `<!doctype html><html><body style="margin:0;background:#f5f5f2;color:#151515;font-family:Arial,sans-serif"><main style="max-width:640px;margin:0 auto;padding:28px"><section style="background:#ffffff;border:1px solid #deded8;border-radius:12px;overflow:hidden"><header style="padding:22px 24px;background:#ff4b00;color:#111111"><strong style="font-size:20px;letter-spacing:0.04em">RIVT INVOICE</strong><div style="margin-top:6px;font-size:14px">${escapeHtml(snapshot.invoiceNumber)}</div></header><div style="padding:24px"><p style="margin:0 0 16px">Hi ${escapeHtml(snapshot.recipientName)},</p><p style="margin:0 0 16px"><strong>${escapeHtml(snapshot.senderName)}</strong> sent you an invoice for ${escapeHtml(snapshot.workLabel)}.</p><table role="presentation" width="100%" style="border-collapse:collapse;margin:18px 0">${lineRows}<tr><td style="padding-top:12px">Subtotal</td><td style="padding-top:12px;text-align:right">${formatCurrency(snapshot.subtotalCents)}</td></tr><tr><td style="padding-top:8px">Tax</td><td style="padding-top:8px;text-align:right">${formatCurrency(snapshot.taxCents)}</td></tr><tr><td style="padding-top:16px;font-size:17px;font-weight:700">Total due</td><td style="padding-top:16px;text-align:right;font-size:20px;font-weight:800">${formatCurrency(snapshot.totalCents)}</td></tr></table><p style="margin:18px 0 0"><strong>Terms:</strong> ${escapeHtml(snapshot.terms)}</p><p style="margin:8px 0 0"><strong>Payment method:</strong> ${escapeHtml(snapshot.paymentMethod)}</p>${bankPaymentHtml}<p style="margin:24px 0 0;color:#5f5f5a;font-size:13px">${escapeHtml(boundaryCopy)}</p></div></section></main></body></html>`;
   return { text, html };
 }
 
@@ -494,7 +504,25 @@ export function registerToolRecordRoutes({
       response.json({ data: { record: mapToolRecord(record), replayed: true }, meta: { requestId: request.requestId } });
       return;
     }
-    const snapshot = invoiceDeliverySnapshot(record, request.actor);
+    const projectInvoiceId = textValue(payload.projectInvoiceId, "", 80);
+    let bankPaymentUrl = null;
+    if (record.active_work_id && z.uuid().safeParse(projectInvoiceId).success) {
+      const paymentLink = await database.query(
+        `SELECT pir.checkout_url
+         FROM project_invoice_payment_requests pir
+         INNER JOIN project_invoices pi ON pi.id = pir.invoice_id
+         WHERE pi.id = $1
+           AND pi.active_work_id = $2
+           AND pi.created_by_account_id = $3
+           AND pir.status = 'open'
+           AND pir.checkout_url LIKE 'https://checkout.stripe.com/%'
+         ORDER BY pir.created_at DESC
+         LIMIT 1`,
+        [projectInvoiceId, record.active_work_id, request.actor.account.id],
+      );
+      bankPaymentUrl = paymentLink.rows[0]?.checkout_url ?? null;
+    }
+    const snapshot = invoiceDeliverySnapshot(record, request.actor, bankPaymentUrl);
     const attemptedAt = new Date().toISOString();
     const attemptCount = integerValue(previousDelivery.attemptCount) + 1;
     let delivery;

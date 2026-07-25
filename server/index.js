@@ -24,6 +24,7 @@ import {
 } from "./api.js";
 import { registerAlbumRoutes } from "./albums.js";
 import { registerBillingRoutes, registerStripeWebhookRoute } from "./billing.js";
+import { registerStripeConnectRoutes, registerStripeConnectWebhookRoute, stripeConnectProviderStatus } from "./stripe-connect.js";
 import { createSecurityHeadersMiddleware } from "./security-headers.js";
 import {
   assertStrongPassword,
@@ -372,6 +373,15 @@ registerStripeWebhookRoute({
   createRequestContext,
   createRequestLogger,
 });
+registerStripeConnectWebhookRoute({
+  app,
+  express,
+  database,
+  appOrigin: productionOrigin,
+  createRequestContext,
+  createRequestLogger,
+  createInAppNotification,
+});
 app.use(express.json({ limit: "1mb" }));
 app.use(express.urlencoded({ extended: false, limit: "64kb" }));
 
@@ -706,6 +716,14 @@ const baseClientErrorRateLimit = createDurableRateLimiter({
   namespace: "client-error",
 });
 
+const publicPaymentRateLimit = createDurableRateLimiter({
+  database,
+  databaseAvailable: () => Boolean(database),
+  windowMs: 60 * 1000,
+  max: Number(process.env.PUBLIC_PAYMENT_RATE_LIMIT ?? 30),
+  namespace: "invoice-payment-public",
+});
+
 const clientErrorSchema = z.object({
   name: z.string().trim().min(1).max(120),
   message: z.string().trim().min(1).max(500),
@@ -1007,6 +1025,7 @@ app.get("/api/health", (_request, response) => {
   const storage = storageConfiguration();
   const monitoring = errorMonitoringStatus();
   const webPush = pushProviderStatus();
+  const invoiceBankPayments = stripeConnectProviderStatus(productionOrigin);
   const ok = storage.ok && migrationState !== "failed";
 
   response.status(ok ? 200 : 503).json({
@@ -1036,6 +1055,7 @@ app.get("/api/health", (_request, response) => {
         provider: webPush.provider,
         mode: webPush.mode,
       },
+      invoiceBankPayments,
     },
     engagement: {
       matchingJobAlerts: {
@@ -2073,13 +2093,29 @@ async function mapProjectInvoicesWithPayments(client, invoiceRows) {
      ORDER BY payment_date ASC, created_at ASC, id ASC`,
     [invoiceIds],
   );
+  const onlinePayments = await client.query(
+    `SELECT * FROM project_invoice_payment_requests
+     WHERE invoice_id = ANY($1::uuid[])
+     ORDER BY created_at ASC, id ASC`,
+    [invoiceIds],
+  );
   const byInvoiceId = new Map();
   for (const payment of payments.rows) {
     const list = byInvoiceId.get(payment.invoice_id) ?? [];
     list.push(payment);
     byInvoiceId.set(payment.invoice_id, list);
   }
-  return invoiceRows.map((invoice) => mapProjectInvoice(invoice, byInvoiceId.get(invoice.id) ?? []));
+  const onlineByInvoiceId = new Map();
+  for (const payment of onlinePayments.rows) {
+    const list = onlineByInvoiceId.get(payment.invoice_id) ?? [];
+    list.push(payment);
+    onlineByInvoiceId.set(payment.invoice_id, list);
+  }
+  return invoiceRows.map((invoice) => mapProjectInvoice(
+    invoice,
+    byInvoiceId.get(invoice.id) ?? [],
+    onlineByInvoiceId.get(invoice.id) ?? [],
+  ));
 }
 
 async function loadProjectInvoiceById(client, invoiceId, actor, { forUpdate = false } = {}) {
@@ -4785,6 +4821,23 @@ app.patch("/api/v1/project-invoices/:id", requireV1AuthenticatedUser, requireV1A
     const invoice = await loadProjectInvoiceById(client, invoiceId, request.actor, { forUpdate: true });
     if (invoice.created_by_account_id !== request.actor.account.id) throw new ApiError(403, "PROJECT_INVOICE_AUTHOR_REQUIRED", "Only the invoice author can change its status.");
     if (invoice.status === "paid" && input.status !== "paid") throw new ApiError(409, "PROJECT_INVOICE_ALREADY_PAID", "A paid invoice cannot be changed here.");
+    if (input.status === "void") {
+      const activeOnlinePayment = await client.query(
+        `SELECT status FROM project_invoice_payment_requests
+         WHERE invoice_id = $1 AND status IN ('created', 'open', 'processing')
+         LIMIT 1`,
+        [invoiceId],
+      );
+      if (activeOnlinePayment.rowCount) {
+        throw new ApiError(
+          409,
+          activeOnlinePayment.rows[0].status === "processing" ? "BANK_PAYMENT_PROCESSING" : "BANK_PAYMENT_LINK_ACTIVE",
+          activeOnlinePayment.rows[0].status === "processing"
+            ? "This invoice has an ACH payment processing and cannot be voided."
+            : "Cancel the active bank-payment link before voiding this invoice.",
+        );
+      }
+    }
     const updated = await client.query(
       `UPDATE project_invoices
        SET status = $2,
@@ -4832,7 +4885,31 @@ app.post("/api/v1/project-invoices/:id/payments", requireV1AuthenticatedUser, re
   const result = await runIdempotentMutation(request, request.actor.account.id, `projects.invoice.payment:${invoiceId}`, async (client) => {
     const invoice = await loadProjectInvoiceById(client, invoiceId, request.actor, { forUpdate: true });
     if (invoice.status === "void") throw new ApiError(409, "PROJECT_INVOICE_VOID", "A void invoice cannot receive a payment record.");
-    const paymentTotal = (await client.query("SELECT COALESCE(sum(amount_cents), 0)::int AS paid_cents FROM project_invoice_payments WHERE invoice_id = $1", [invoiceId])).rows[0].paid_cents;
+    const activeOnlinePayment = await client.query(
+      `SELECT status FROM project_invoice_payment_requests
+       WHERE invoice_id = $1 AND status IN ('created', 'open', 'processing')
+       LIMIT 1`,
+      [invoiceId],
+    );
+    if (activeOnlinePayment.rowCount) {
+      throw new ApiError(
+        409,
+        activeOnlinePayment.rows[0].status === "processing" ? "BANK_PAYMENT_PROCESSING" : "BANK_PAYMENT_LINK_ACTIVE",
+        activeOnlinePayment.rows[0].status === "processing"
+          ? "A bank payment is processing. Wait for Stripe to confirm it before recording another payment."
+          : "Cancel the active bank-payment link before recording an external payment.",
+      );
+    }
+    const paymentTotal = (await client.query(
+      `SELECT (
+         (SELECT COALESCE(sum(amount_cents), 0) FROM project_invoice_payments WHERE invoice_id = $1)
+         +
+         (SELECT COALESCE(sum(amount_cents - refunded_cents), 0)
+          FROM project_invoice_payment_requests
+          WHERE invoice_id = $1 AND status IN ('paid', 'partially_refunded'))
+       )::int AS paid_cents`,
+      [invoiceId],
+    )).rows[0].paid_cents;
     if (Number(paymentTotal) + input.amountCents > Number(invoice.total_cents)) throw new ApiError(422, "PROJECT_PAYMENT_EXCEEDS_INVOICE", "The payment record cannot exceed the invoice total.");
     const inserted = await client.query(
       `INSERT INTO project_invoice_payments (
@@ -5864,6 +5941,18 @@ registerBillingRoutes({
   requireAuthenticatedUser,
   requireV1Actor,
   writeRateLimit,
+});
+
+registerStripeConnectRoutes({
+  app,
+  database,
+  appOrigin: productionOrigin,
+  requireAuthenticatedUser,
+  requireV1Actor,
+  writeRateLimit,
+  publicPaymentRateLimit,
+  runIdempotentMutation,
+  sendIdempotentResult,
 });
 
 if (existsSync(distDir)) {

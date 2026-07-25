@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { createHash, randomUUID } from "node:crypto";
+import { createHash, createHmac, randomUUID } from "node:crypto";
 import test from "node:test";
 import pg from "pg";
 
@@ -20,6 +20,7 @@ if (!testDatabaseUrl) {
   process.env.S3_BUCKET = "";
   process.env.S3_ACCESS_KEY_ID = "";
   process.env.S3_SECRET_ACCESS_KEY = "";
+  process.env.STRIPE_CONNECT_WEBHOOK_SECRET = "whsec_project_ach_test";
 
   const { Pool } = pg;
   const database = new Pool({ connectionString: testDatabaseUrl, ssl: false });
@@ -42,6 +43,24 @@ if (!testDatabaseUrl) {
     });
     const payload = await response.json();
     return { response, payload };
+  }
+
+  async function sendStripeConnectEvent(baseUrl, event) {
+    const body = JSON.stringify(event);
+    const timestamp = Math.floor(Date.now() / 1000);
+    const digest = createHmac("sha256", process.env.STRIPE_CONNECT_WEBHOOK_SECRET)
+      .update(`${timestamp}.${body}`)
+      .digest("hex");
+    const response = await fetch(`${baseUrl}/api/stripe/connect/webhook`, {
+      method: "POST",
+      headers: {
+        Origin: "https://rivt.pro",
+        "Content-Type": "application/json",
+        "Stripe-Signature": `t=${timestamp},v1=${digest}`,
+      },
+      body,
+    });
+    return { response, payload: await response.json() };
   }
 
   async function requestForm(baseUrl, path, { form, cookie, idempotencyKey, method = "POST" } = {}) {
@@ -415,6 +434,106 @@ if (!testDatabaseUrl) {
     });
     assert.equal(sentInvoice.response.status, 200);
     assert.equal(sentInvoice.payload.data.invoice.status, "sent");
+
+    const connectStatus = await requestJson(baseUrl, "/api/v1/payments/connect/status", {
+      cookie: tradesperson.cookie,
+    });
+    assert.equal(connectStatus.response.status, 200);
+    assert.equal(connectStatus.payload.data.connect.providerConfigured, false);
+    assert.equal(connectStatus.payload.data.connect.ready, false);
+
+    const paymentSessionId = `cs_test_${randomUUID().replaceAll("-", "")}`;
+    const paymentIntentId = `pi_test_${randomUUID().replaceAll("-", "")}`;
+    const onlinePaymentRequest = (await database.query(
+      `INSERT INTO project_invoice_payment_requests (
+         invoice_id, project_id, active_work_id, merchant_account_id,
+         stripe_connected_account_id, stripe_checkout_session_id,
+         amount_cents, status, checkout_url
+       )
+       VALUES ($1, $2, $3, $4, 'acct_test_rivt', $5, $6, 'open', 'https://checkout.stripe.test/session')
+       RETURNING id`,
+      [invoiceId, project.id, activeWork.id, tradesperson.id, paymentSessionId, 69700],
+    )).rows[0];
+
+    const publicPaymentStatus = await requestJson(baseUrl, `/api/v1/invoice-payments/${paymentSessionId}`);
+    assert.equal(publicPaymentStatus.response.status, 200);
+    assert.equal(publicPaymentStatus.payload.data.payment.invoiceNumber, "CLOSEOUT-001");
+    assert.equal(publicPaymentStatus.payload.data.payment.payTo, "Project Electrician");
+    assert.equal(publicPaymentStatus.payload.data.payment.status, "open");
+    assert.equal(JSON.stringify(publicPaymentStatus.payload).includes("Project Contractor LLC"), false);
+    assert.equal("id" in publicPaymentStatus.payload.data.payment, false);
+    assert.equal("invoiceId" in publicPaymentStatus.payload.data.payment, false);
+    assert.equal("checkoutUrl" in publicPaymentStatus.payload.data.payment, false);
+
+    const paymentWhileLinkActive = await requestJson(baseUrl, `/api/v1/project-invoices/${invoiceId}/payments`, {
+      method: "POST",
+      cookie: contractor.cookie,
+      idempotencyKey: `invoice-payment-active-link-${randomUUID()}`,
+      body: { amountCents: 20000, paymentDate: "2026-07-04", method: "Check", note: "Should be blocked." },
+    });
+    assert.equal(paymentWhileLinkActive.response.status, 409);
+    assert.equal(paymentWhileLinkActive.payload.error.code, "BANK_PAYMENT_LINK_ACTIVE");
+    const checkoutCompleted = await sendStripeConnectEvent(baseUrl, {
+      id: `evt_${randomUUID().replaceAll("-", "")}`,
+      type: "checkout.session.completed",
+      account: "acct_test_rivt",
+      livemode: false,
+      data: {
+        object: {
+          id: paymentSessionId,
+          payment_status: "unpaid",
+          payment_intent: paymentIntentId,
+          metadata: { payment_request_id: onlinePaymentRequest.id },
+        },
+      },
+    });
+    assert.equal(checkoutCompleted.response.status, 200);
+    assert.equal((await database.query(
+      "SELECT status FROM project_invoice_payment_requests WHERE id = $1",
+      [onlinePaymentRequest.id],
+    )).rows[0].status, "processing");
+    assert.equal((await database.query("SELECT status FROM project_invoices WHERE id = $1", [invoiceId])).rows[0].status, "sent");
+
+    const succeededEvent = {
+      id: `evt_${randomUUID().replaceAll("-", "")}`,
+      type: "checkout.session.async_payment_succeeded",
+      account: "acct_test_rivt",
+      livemode: false,
+      data: {
+        object: {
+          id: paymentSessionId,
+          payment_intent: paymentIntentId,
+          metadata: { payment_request_id: onlinePaymentRequest.id },
+        },
+      },
+    };
+    const achSucceeded = await sendStripeConnectEvent(baseUrl, succeededEvent);
+    assert.equal(achSucceeded.response.status, 200);
+    assert.equal((await database.query("SELECT status FROM project_invoices WHERE id = $1", [invoiceId])).rows[0].status, "paid");
+    const succeededReplay = await sendStripeConnectEvent(baseUrl, succeededEvent);
+    assert.equal(succeededReplay.response.status, 200);
+    assert.equal(succeededReplay.payload.duplicate, true);
+
+    const achRefunded = await sendStripeConnectEvent(baseUrl, {
+      id: `evt_${randomUUID().replaceAll("-", "")}`,
+      type: "charge.refunded",
+      account: "acct_test_rivt",
+      livemode: false,
+      data: {
+        object: {
+          id: "ch_test_rivt_ach",
+          payment_intent: paymentIntentId,
+          amount: 69700,
+          amount_refunded: 69700,
+        },
+      },
+    });
+    assert.equal(achRefunded.response.status, 200);
+    assert.equal((await database.query(
+      "SELECT status FROM project_invoice_payment_requests WHERE id = $1",
+      [onlinePaymentRequest.id],
+    )).rows[0].status, "refunded");
+    assert.equal((await database.query("SELECT status FROM project_invoices WHERE id = $1", [invoiceId])).rows[0].status, "sent");
 
     const partialPayment = await requestJson(baseUrl, `/api/v1/project-invoices/${invoiceId}/payments`, {
       method: "POST",
