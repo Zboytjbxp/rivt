@@ -10,6 +10,42 @@ Status values:
 
 Evidence must eventually link to implementation, automated tests, manual acceptance proof, and deployed build.
 
+## Traceability Addendum - 2026-07-25 Jacksonville Launch-Readiness Closure
+
+- `GA-UX-001` and `GA-UX-003` gain a contract-aligned shell: persistent
+  destinations are Home, Work, Camera, Shop Talk, and Tools; People/Crew
+  relationships and canonical assignments live under Work -> People.
+- `GA-UX-003` gains grouped global search across current Work jobs, public
+  People profiles, current Shop Talk posts, and directly openable Tools.
+  Recent destinations are bounded to five and labeled private to the current
+  browser.
+- `GA-UX-005` gains honesty evidence from session-scoped guest preview,
+  canonical People assignments, real Shop Talk reply totals in search,
+  cleaned source-derived Trade News summaries, and removal of a redundant
+  Camera destination card that looked like an empty/dead album.
+- `GA-UX-006` gains rendered mobile evidence for Work -> People assignment,
+  direct search-to-Invoice navigation and private recent search, coherent
+  guest Work/Camera preview across refresh, compact Camera destinations,
+  calculator gesture geometry, Shop Talk/Trade News, and Work lifecycle.
+- `GA-OPS-002`, `GA-OPS-004`, and `GA-OPS-007` gain fresh operational
+  evidence: an encrypted 82-table/7,028-row production logical artifact
+  restored to isolated PostgreSQL with zero count differences; all 28
+  migrations applied; stale smoke organizations were closed through the
+  guarded cleanup with zero profile/job/review changes; the live hardening
+  rerun found zero public seed/demo artifacts; Sentry accepted the rehearsal
+  event; and strict launch readiness exits zero.
+- `GA-OPS-007` also gains passing lint, build, 75 unit/frontend tests,
+  desktop/mobile E2E, five targeted rendered UI smokes, security lint, and a
+  zero-vulnerability production dependency audit. The aggregate database
+  integration runner produced no result within 15 minutes, so no full
+  integration pass is claimed.
+- `GA-OPS-008` production evidence remains pending until the launch branch is
+  merged, deployed, and exact-source health/monitoring pass.
+- Commercial/physical acceptance remains human-owned: verify the configured
+  Stripe Price is $9/month, complete a real mobile checkout return, and
+  observe downstream incident delivery. No automated success is claimed for
+  those steps.
+
 ## Traceability Addendum - 2026-07-25 Calculator Two-Choice Wheel Spacing
 
 - `GA-UX-003` gains one-motion fraction-entry evidence: a two-choice family

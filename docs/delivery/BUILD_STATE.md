@@ -2,10 +2,54 @@
 
 Last updated: 2026-07-25 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Calculator two-choice quick-wheel spacing is locally verified.
-Active packet: Compact two-choice fraction wheel
-Repository branch: `codex/calculator-wheel-two-choice-spacing`
+Current phase: Launch-readiness closure is locally verified; production deployment is pending.
+Active packet: Jacksonville launch-readiness closure
+Repository branch: `codex/launch-readiness-closure`
 Production feature release commit: `3b827444137356f367a97cc941d7a25f6d7f51d5`
+
+## Jacksonville Launch-Readiness Closure (Local Verification)
+
+- Work -> People now loads canonical Work jobs independently from the current
+  Work filters and assigns real people to canonical work IDs. The retired
+  browser job store is not used.
+- Guest preview remains an explicitly labeled, session-scoped preview across
+  shell refreshes. Work and Camera do not make authenticated calls or show
+  misleading authentication failures in preview, and capture routes to the
+  real signup boundary rather than claiming persistence.
+- Trade News decodes feed entities, removes Google pseudo-summaries, and
+  clusters the remaining HB 803 wording variants without inventing content.
+  The feed/detail UI no longer displays literal unavailable-reputation copy.
+- Camera no longer repeats the currently selected destination as a large,
+  empty active-album card below its compact destination controls. Other real
+  active jobs remain available without blocking the capture dock.
+- Global search now groups real current Work jobs, server-returned public
+  People profiles, current Shop Talk posts with real reply totals, and
+  directly openable Tools. Its five recent destinations are explicitly
+  private to the current browser.
+- The founder-approved navigation contract is now unambiguous in the source
+  product documents: Home, Work, Camera, Shop Talk, Tools are the five
+  persistent destinations; People, crews, collaborators, and assignments
+  live under Work -> People. Historical evidence was not rewritten.
+- Operational launch evidence is current. A new encrypted logical backup of
+  82 tables / 7,028 rows restored into isolated Railway PostgreSQL with zero
+  count differences through migration `0028_compensation_workflow`; the
+  temporary service was deleted. The incident rehearsal reached Sentry, 17
+  stale smoke organizations were closed through the guarded transactional
+  cleanup with zero profile/job/review changes, and the hardening rerun found
+  zero public seed/demo artifacts.
+- Passed locally: lint, production build, 75 unit/frontend tests,
+  desktop/mobile E2E, Tools, Shop Talk/Trade News, mobile-actions, Work
+  lifecycle, guest-preview rendered smokes, security lint, strict launch
+  readiness, and a production dependency audit with zero vulnerabilities.
+  The full database integration command emitted no result for 15 minutes and
+  hit its bound, so no aggregate integration pass is claimed.
+- Human go/no-go boundaries remain explicit and are not faked in code:
+  confirm the live Stripe Price behind `STRIPE_PRO_PRICE_ID` is exactly
+  $9/month, complete one real checkout/return on a physical phone, and observe
+  the downstream Sentry notification with a human recipient. These are final
+  commercial/physical acceptance checks, not automated code claims.
+- Production deployment is pending. Current live health still reports
+  `3b827444137356f367a97cc941d7a25f6d7f51d5`.
 
 ## Calculator Two-Choice Wheel Spacing (Local Verification)
 

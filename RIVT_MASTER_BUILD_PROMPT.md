@@ -135,11 +135,13 @@ Exactly five persistent destinations:
 
 1. Home
 2. Work
-3. Crew
+3. Camera
 4. Shop Talk
 5. Tools
 
 Messages, notifications, global search, and profile are compact top-bar actions. Settings, legal, support, feedback, billing, notification preferences, account security, and sign out live under the profile menu. Do not use a catch-all More drawer for primary workflows.
+
+People, crews, collaborators, and assignment relationships live under Work -> People. Crew remains a core domain concept, not a separate primary destination. Camera owns the persistent field-action slot so capture is one tap away, while Work and Tools may open it with exact job context.
 
 ### Desktop navigation
 
@@ -148,7 +150,8 @@ Use a restrained left sidebar with the same conceptual destinations. Secondary d
 ### Contextual creation
 
 - Work: Post job for contractors; saved/search actions for tradespeople.
-- Crew: Invite or share profile based on role and relationship state.
+- Work -> People: Invite, assign, or share a profile based on role and relationship state.
+- Camera: Capture to a selected active-work record or an explicitly private album.
 - Shop Talk: Ask a question.
 - Tools: Create the selected artifact, never a generic global plus button.
 
@@ -1549,7 +1552,8 @@ Do not render the same dashboard with labels swapped.
 
 - Compact top bar: approved RIVT wordmark, global search, messages with unread state, notification bell with unread state, and profile avatar/menu.
 - No Contractor/Tradesperson toggle.
-- Mobile bottom navigation contains exactly Home, Work, Crew, Shop Talk, and Tools.
+- Mobile bottom navigation contains exactly Home, Work, Camera, Shop Talk, and Tools.
+- People and Crew relationship workflows live under Work -> People; do not replace people with a generic crew abstraction or add a sixth primary destination.
 - Desktop sidebar uses the same concepts and naming.
 - No duplicate Post action in both header and bottom navigation. Use one contextual action.
 - Dashboard statistics appear only where they help Home; do not repeat them atop every tab.

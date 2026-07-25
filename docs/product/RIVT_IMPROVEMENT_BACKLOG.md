@@ -67,11 +67,11 @@ Scope rule: RIVT remains trades-only. Do not add homeowner accounts, homeowner l
 42. Remove unnecessary card nesting from mobile screens.
 43. Tighten page headers so mobile content starts higher.
 44. Audit every screen at 390 px, 430 px, 768 px, 1024 px, and 1440 px.
-45. Add screenshot diff evidence for Home, Work, Crew, Shop Talk, Tools, Messages, Profile, Records.
+45. Add screenshot diff evidence for Home, Work, Camera, Shop Talk, Tools, Work -> People, Messages, Profile, Records.
 
 ## Phase 3 - Navigation And Information Architecture
 
-46. Preserve the five primary concepts: Home, Work, Crew, Shop Talk, Tools.
+46. Preserve the five primary destinations: Home, Work, Camera, Shop Talk, Tools; keep People/Crew relationships under Work.
 47. Keep Messages, notifications, search, and profile in the top bar.
 48. Make every hidden secondary view reachable from a predictable parent.
 49. Add a complete route-to-entry-point inventory.

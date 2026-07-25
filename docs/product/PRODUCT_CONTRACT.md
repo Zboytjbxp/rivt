@@ -52,7 +52,9 @@ Primary role is selected during onboarding and is not switched from the applicat
 
 ## Navigation
 
-Mobile destinations: Home, Work, Crew, Shop Talk, Tools.
+Mobile destinations: Home, Work, Camera, Shop Talk, Tools.
+
+People, crews, collaborators, and work assignments live under Work -> People. Crew remains a domain concept rather than a separate bottom-navigation destination. Camera keeps the primary field-action slot and must preserve exact Work context when opened from a job.
 
 Messages, notifications, search, and profile are top-bar actions. Shop Talk and Tools may remain feature-flagged during Gate A, but the pilot must not expose dead destinations. Do not use a More drawer or Contractor/Tradesperson toggle.
 
