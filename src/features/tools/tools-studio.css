@@ -1757,6 +1757,107 @@
   grid-column: 1 / -1;
 }
 
+.v2-invoice-bank-payment {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--v2-border);
+  border-radius: var(--v2-radius-md);
+  background: var(--v2-surface);
+}
+
+.v2-invoice-bank-payment > div:first-child,
+.v2-invoice-online-payment {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.v2-invoice-bank-payment > div:first-child > svg {
+  flex: 0 0 auto;
+  color: var(--v2-accent);
+}
+
+.v2-invoice-bank-payment span {
+  min-width: 0;
+  color: inherit;
+  font-size: inherit;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.v2-invoice-bank-payment span > strong,
+.v2-invoice-bank-payment span > small {
+  display: block;
+}
+
+.v2-invoice-bank-payment > button {
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--v2-border);
+  border-radius: var(--v2-radius-md);
+  background: var(--v2-surface-muted);
+  color: var(--v2-text);
+  font: inherit;
+  font-weight: var(--v2-weight-bold);
+}
+
+.v2-invoice-bank-payment > button.v2-primary-button {
+  border-color: var(--v2-accent);
+  background: var(--v2-accent);
+  color: var(--v2-on-accent);
+}
+
+.v2-invoice-online-payment {
+  justify-content: space-between;
+  padding-top: 10px;
+  border-top: 1px solid var(--v2-border);
+}
+
+.v2-invoice-online-payment.is-paid > span > strong { color: var(--v2-success); }
+.v2-invoice-online-payment.is-processing > span > strong { color: var(--v2-info); }
+.v2-invoice-online-payment.is-failed > span > strong,
+.v2-invoice-online-payment.is-disputed > span > strong { color: var(--v2-danger); }
+.v2-invoice-online-payment.is-refunded > span > strong,
+.v2-invoice-online-payment.is-partially_refunded > span > strong { color: var(--v2-warning); }
+
+.v2-invoice-online-payment .v2-tool-action-row {
+  display: inline-flex;
+  flex: 0 0 auto;
+}
+
+.v2-invoice-online-payment .v2-tool-action-row button {
+  min-width: 44px;
+  min-height: 44px;
+}
+
+.v2-invoice-online-payment a {
+  min-width: 44px;
+  min-height: 44px;
+  border: 1px solid var(--v2-border);
+  border-radius: var(--v2-radius-md);
+  color: var(--v2-text);
+  display: inline-grid;
+  place-items: center;
+}
+
+.v2-invoice-external-payment {
+  border-top: 1px solid var(--v2-border);
+  padding-top: 10px;
+}
+
+.v2-invoice-external-payment summary {
+  min-height: 44px;
+  color: var(--v2-text-muted);
+  font-size: calc(13px * var(--v2-text-scale));
+  font-weight: var(--v2-weight-bold);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+}
+
+.v2-invoice-external-payment[open] summary { margin-bottom: 10px; }
+
 .v2-record-review-card {
   background: color-mix(in srgb, var(--v2-success) 7%, var(--v2-surface-muted));
 }

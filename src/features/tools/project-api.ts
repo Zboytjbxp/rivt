@@ -73,6 +73,35 @@ export interface ProjectInvoicePayment {
   createdAt: string | null;
 }
 
+export type ProjectInvoiceOnlinePaymentStatus =
+  | "created"
+  | "open"
+  | "processing"
+  | "paid"
+  | "failed"
+  | "expired"
+  | "disputed"
+  | "partially_refunded"
+  | "refunded";
+
+export interface ProjectInvoiceOnlinePayment {
+  id: string;
+  invoiceId: string;
+  amountCents: number;
+  refundedCents: number;
+  currency: "usd";
+  status: ProjectInvoiceOnlinePaymentStatus;
+  paymentMethodType: "us_bank_account" | "card" | "unknown" | null;
+  checkoutUrl: string | null;
+  expiresAt: string | null;
+  paidAt: string | null;
+  failedAt: string | null;
+  disputedAt: string | null;
+  refundedAt: string | null;
+  createdAt: string | null;
+  updatedAt: string | null;
+}
+
 export interface ProjectInvoice {
   id: string;
   projectId: string;
@@ -99,6 +128,22 @@ export interface ProjectInvoice {
   createdAt: string | null;
   updatedAt: string | null;
   payments: ProjectInvoicePayment[];
+  onlinePayments: ProjectInvoiceOnlinePayment[];
+}
+
+export interface StripeConnectStatus {
+  provider: "stripe_connect";
+  providerConfigured: boolean;
+  webhookConfigured: boolean;
+  missing: string[];
+  connected: boolean;
+  onboardingStatus: "not_started" | "pending" | "ready" | "restricted";
+  achPaymentsStatus: "unrequested" | "pending" | "active" | "inactive";
+  chargesEnabled: boolean;
+  payoutsEnabled: boolean;
+  detailsSubmitted: boolean;
+  ready: boolean;
+  lastSyncedAt: string | null;
 }
 
 export interface ReviewContext {
@@ -185,6 +230,47 @@ export async function recordProjectInvoicePayment(invoiceId: string, input: {
     body: JSON.stringify(input),
   });
   return body.data.invoice;
+}
+
+export async function getStripeConnectStatus() {
+  const body = await request<{ data: { connect: StripeConnectStatus } }>("/api/v1/payments/connect/status");
+  return body.data.connect;
+}
+
+export async function startStripeConnectOnboarding(activeWorkId?: string | null) {
+  const body = await request<{ data: { url: string; expiresAt: string | null; connect: StripeConnectStatus } }>("/api/v1/payments/connect/onboarding", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Idempotency-Key": requestKey() },
+    body: JSON.stringify(activeWorkId ? { activeWorkId } : {}),
+  });
+  return body.data;
+}
+
+export async function openStripeConnectDashboard() {
+  const body = await request<{ data: { url: string } }>("/api/v1/payments/connect/dashboard", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({}),
+  });
+  return body.data;
+}
+
+export async function createInvoiceBankPaymentLink(invoiceId: string) {
+  const body = await request<{ data: { paymentRequest: ProjectInvoiceOnlinePayment } }>(`/api/v1/project-invoices/${invoiceId}/bank-payment-link`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Idempotency-Key": requestKey() },
+    body: JSON.stringify({}),
+  });
+  return body.data.paymentRequest;
+}
+
+export async function cancelInvoiceBankPaymentLink(invoiceId: string) {
+  const body = await request<{ data: { paymentRequest: ProjectInvoiceOnlinePayment } }>(`/api/v1/project-invoices/${invoiceId}/bank-payment-link/cancel`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Idempotency-Key": requestKey() },
+    body: JSON.stringify({}),
+  });
+  return body.data.paymentRequest;
 }
 
 export async function getActiveWorkReviewContext(activeWorkId: string) {

@@ -1,0 +1,129 @@
+.payment-complete-page {
+  min-height: 100dvh;
+  padding: 24px;
+  background: var(--v2-bg);
+  color: var(--v2-text);
+}
+
+.payment-complete-brand {
+  width: min(100%, 520px);
+  margin: 0 auto 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.payment-complete-brand a {
+  color: var(--v2-text);
+  font-size: calc(22px * var(--v2-text-scale));
+  font-weight: var(--v2-weight-display);
+  letter-spacing: -0.04em;
+  text-decoration: none;
+}
+
+.payment-complete-brand span,
+.payment-complete-eyebrow {
+  color: var(--v2-text-muted);
+  font-size: var(--v2-text-xs);
+  font-weight: var(--v2-weight-bold);
+}
+
+.payment-complete-card {
+  width: min(100%, 520px);
+  margin: 10vh auto 0;
+  padding: clamp(24px, 6vw, 42px);
+  border: 1px solid var(--v2-border);
+  border-radius: var(--v2-radius-xl);
+  background: var(--v2-surface);
+  box-shadow: var(--v2-shadow-md);
+  text-align: center;
+}
+
+.payment-complete-card > svg {
+  width: 46px;
+  height: 46px;
+  margin-bottom: 14px;
+  color: var(--v2-text-muted);
+}
+
+.payment-complete-card.is-success > svg { color: var(--v2-success); }
+.payment-complete-card.is-processing > svg { color: var(--v2-info); }
+.payment-complete-card.is-warning > svg { color: var(--v2-warning); }
+.payment-complete-card.is-danger > svg { color: var(--v2-danger); }
+
+.payment-complete-card h1 {
+  margin: 6px 0 12px;
+  color: var(--v2-text);
+  font-size: var(--v2-text-xl);
+  line-height: 1.1;
+}
+
+.payment-complete-card p {
+  margin: 10px 0;
+  color: var(--v2-text-muted);
+  font-size: var(--v2-text-sm);
+  line-height: 1.5;
+}
+
+.payment-complete-amount {
+  display: block;
+  color: var(--v2-text);
+  font-family: var(--v2-font-mono);
+  font-size: clamp(30px, 9vw, 44px);
+}
+
+.payment-complete-card dl {
+  margin: 24px 0;
+  padding-top: 16px;
+  border-top: 1px solid var(--v2-border);
+}
+
+.payment-complete-card dl div {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 6px 0;
+  text-align: left;
+}
+
+.payment-complete-card dt { color: var(--v2-text-muted); }
+.payment-complete-card dd {
+  margin: 0;
+  color: var(--v2-text);
+  font-weight: var(--v2-weight-bold);
+  text-transform: capitalize;
+}
+
+.payment-complete-card button {
+  min-height: 44px;
+  padding: 0 18px;
+  border: 1px solid var(--v2-border-strong);
+  border-radius: var(--v2-radius-md);
+  background: var(--v2-surface-raised);
+  color: var(--v2-text);
+  font: inherit;
+  font-weight: var(--v2-weight-bold);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.payment-complete-page footer {
+  width: min(100%, 520px);
+  margin: 24px auto 0;
+  color: var(--v2-text-muted);
+  font-size: var(--v2-text-xs);
+  text-align: center;
+}
+
+.payment-complete-card .is-spinning { animation: payment-spin 1s linear infinite; }
+
+@keyframes payment-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (max-width: 540px) {
+  .payment-complete-page { padding: 18px; }
+  .payment-complete-card { margin-top: 6vh; }
+}

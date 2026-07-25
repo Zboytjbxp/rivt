@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Check, ChevronLeft, ChevronRight, Copy, FileText, LoaderCircle, Mail, MessageSquare, Plus, Save, Trash2 } from "lucide-react";
+import { Banknote, Check, ChevronLeft, ChevronRight, Copy, ExternalLink, FileText, LoaderCircle, Mail, MessageSquare, Plus, Save, Trash2 } from "lucide-react";
 import type { Job } from "../../types";
 import { Panel } from "../../components/ui";
 import { readPrimaryHourlyRate } from "../../lib/rateCard";
@@ -8,11 +8,18 @@ import { clampNumber, currency, formatQuantity, toCents, centsToDollars } from "
 import { getInvoiceLinePriceSignal } from "./priceGuidance";
 import { deleteToolRecordByLocalId, fetchToolRecords, sendInvoiceByLocalId, upsertToolRecord, type ServerToolRecord, type ToolRecordInput } from "./tool-records-api";
 import {
+  cancelInvoiceBankPaymentLink,
   createProjectInvoice,
+  createInvoiceBankPaymentLink,
   getProjectForActiveWork,
+  getStripeConnectStatus,
+  openStripeConnectDashboard,
   recordProjectInvoicePayment,
+  startStripeConnectOnboarding,
   updateProjectInvoiceStatus,
   type ProjectInvoice,
+  type ProjectInvoiceOnlinePayment,
+  type StripeConnectStatus,
 } from "./project-api";
 import { toolContextLabel, toolContextRecordFields, toolContextStorageId, type ToolWorkContext } from "./tool-work-context";
 
@@ -232,6 +239,8 @@ export function InvoiceDraftTool({
   const [projectInvoiceBusy, setProjectInvoiceBusy] = useState(false);
   const [projectInvoiceNotice, setProjectInvoiceNotice] = useState("");
   const [projectInvoiceError, setProjectInvoiceError] = useState("");
+  const [connectStatus, setConnectStatus] = useState<StripeConnectStatus | null>(null);
+  const [connectBusy, setConnectBusy] = useState(false);
   const [invoiceEmailBusy, setInvoiceEmailBusy] = useState(false);
   const [paymentAmount, setPaymentAmount] = useState("");
   const [paymentMethodDraft, setPaymentMethodDraft] = useState("Direct payment");
@@ -289,6 +298,13 @@ export function InvoiceDraftTool({
       })
       .catch(() => {
         // A project is created only when the participant intentionally saves a job invoice.
+      });
+    void getStripeConnectStatus()
+      .then((status) => {
+        if (!cancelled) setConnectStatus(status);
+      })
+      .catch(() => {
+        if (!cancelled) setConnectStatus(null);
       });
     return () => { cancelled = true; };
   }, [activeWorkId]);
@@ -472,6 +488,7 @@ export function InvoiceDraftTool({
       amountCents: totalCents,
       payload: {
         ...snapshot,
+        projectInvoiceId: projectInvoice?.id ?? null,
         recipientName: billTo.trim(),
         workLabel: toolContextLabel(workContext),
         customerLines: lines.map((line) => ({
@@ -567,6 +584,93 @@ export function InvoiceDraftTool({
     }
   }
 
+  async function openBankPaymentSetup() {
+    setConnectBusy(true);
+    setProjectInvoiceError("");
+    setProjectInvoiceNotice("");
+    try {
+      const onboarding = await startStripeConnectOnboarding(activeWorkId);
+      window.location.assign(onboarding.url);
+    } catch (error) {
+      setProjectInvoiceError(error instanceof Error ? error.message : "RIVT could not open Stripe bank-payment setup.");
+      setConnectBusy(false);
+    }
+  }
+
+  async function manageBankPaymentAccount() {
+    setConnectBusy(true);
+    setProjectInvoiceError("");
+    try {
+      const dashboard = await openStripeConnectDashboard();
+      window.location.assign(dashboard.url);
+    } catch (error) {
+      setProjectInvoiceError(error instanceof Error ? error.message : "RIVT could not open the Stripe account.");
+      setConnectBusy(false);
+    }
+  }
+
+  async function createBankPaymentLink() {
+    if (!projectInvoice) return;
+    setConnectBusy(true);
+    setProjectInvoiceError("");
+    setProjectInvoiceNotice("");
+    try {
+      const paymentRequest = await createInvoiceBankPaymentLink(projectInvoice.id);
+      setProjectInvoice((current) => current ? {
+        ...current,
+        onlinePayments: [
+          ...(current.onlinePayments ?? []).filter((payment) => payment.id !== paymentRequest.id),
+          paymentRequest,
+        ],
+      } : current);
+      if (paymentRequest.checkoutUrl) {
+        try {
+          await navigator.clipboard.writeText(paymentRequest.checkoutUrl);
+          setProjectInvoiceNotice("Customer bank-payment link copied.");
+        } catch {
+          setProjectInvoiceNotice("Bank-payment link created. Open the payment page to copy its address.");
+        }
+      } else {
+        setProjectInvoiceNotice("Bank payment is already processing. RIVT will update the invoice after Stripe confirms it.");
+      }
+    } catch (error) {
+      setProjectInvoiceError(error instanceof Error ? error.message : "RIVT could not create the bank-payment link.");
+    } finally {
+      setConnectBusy(false);
+    }
+  }
+
+  async function copyBankPaymentLink(payment: ProjectInvoiceOnlinePayment) {
+    if (!payment.checkoutUrl) return;
+    try {
+      await navigator.clipboard.writeText(payment.checkoutUrl);
+      setProjectInvoiceNotice("Customer bank-payment link copied.");
+    } catch {
+      setProjectInvoiceError("Copy failed. Open the payment page and copy its address.");
+    }
+  }
+
+  async function cancelBankPaymentLink() {
+    if (!projectInvoice) return;
+    setConnectBusy(true);
+    setProjectInvoiceError("");
+    setProjectInvoiceNotice("");
+    try {
+      const paymentRequest = await cancelInvoiceBankPaymentLink(projectInvoice.id);
+      setProjectInvoice((current) => current ? {
+        ...current,
+        onlinePayments: (current.onlinePayments ?? []).map((payment) => (
+          payment.id === paymentRequest.id ? paymentRequest : payment
+        )),
+      } : current);
+      setProjectInvoiceNotice("Bank-payment link cancelled. No payment was submitted through that link.");
+    } catch (error) {
+      setProjectInvoiceError(error instanceof Error ? error.message : "RIVT could not cancel the bank-payment link.");
+    } finally {
+      setConnectBusy(false);
+    }
+  }
+
   async function copyInvoice() {
     try {
       await navigator.clipboard.writeText(invoiceText);
@@ -640,7 +744,7 @@ export function InvoiceDraftTool({
             <div>
               <span>Job invoice record</span>
               <strong>{projectInvoice ? `${projectInvoice.status} - ${currency(projectInvoice.balanceCents / 100)} remaining` : "Not saved to this job yet"}</strong>
-              <small>RIVT records external payments only. It does not collect, hold, or confirm funds.</small>
+              <small>External payments are recorded by you. Stripe bank payments remain processing until Stripe confirms settlement.</small>
             </div>
             <div className="v2-tool-action-row">
               <button type="button" className="v2-primary-button" onClick={() => void saveToActiveWork()} disabled={projectInvoiceBusy || totalCents <= 0 || Boolean(projectInvoice)}>
@@ -650,12 +754,83 @@ export function InvoiceDraftTool({
               {projectInvoice && projectInvoice.status === "draft" ? <button type="button" onClick={() => void markProjectInvoiceSent()} disabled={projectInvoiceBusy}>Mark sent</button> : null}
             </div>
             {projectInvoice ? (
-              <div className="v2-invoice-payment-record">
-                <label>Amount received<input inputMode="decimal" value={paymentAmount} onChange={(event) => setPaymentAmount(event.target.value)} aria-label="External payment amount" /></label>
-                <label>Method<input value={paymentMethodDraft} onChange={(event) => setPaymentMethodDraft(event.target.value)} /></label>
-                <label>Note<input value={paymentNote} onChange={(event) => setPaymentNote(event.target.value)} placeholder="Optional reference" /></label>
-                <button type="button" onClick={() => void recordExternalPayment()} disabled={projectInvoiceBusy || projectInvoice.status === "void" || projectInvoice.balanceCents <= 0}>Record external payment</button>
-              </div>
+              <>
+                {connectStatus?.providerConfigured
+                  || connectStatus?.connected
+                  || (projectInvoice.onlinePayments ?? []).length > 0 ? (
+                  <div className="v2-invoice-bank-payment">
+                  <div>
+                    <Banknote size={18} aria-hidden="true" />
+                    <span>
+                      <strong>Customer bank payment</strong>
+                      <small>
+                        {!connectStatus?.providerConfigured
+                          ? "New bank-payment links are paused. Existing Stripe payment status remains visible."
+                          : connectStatus.ready
+                            ? "ACH is ready. Funds go to your connected Stripe account."
+                            : connectStatus.connected
+                              ? "Continue Stripe setup before accepting bank payments."
+                            : "Connect Stripe to accept ACH payments directly from customers."}
+                      </small>
+                      {connectStatus?.providerConfigured ? <small>Stripe fees and ACH timing apply. Review payout details in Stripe.</small> : null}
+                    </span>
+                  </div>
+                  {connectStatus?.providerConfigured && !connectStatus.ready ? (
+                    <button type="button" onClick={() => void openBankPaymentSetup()} disabled={connectBusy || projectInvoice.status === "void"}>
+                      {connectBusy ? "Opening Stripe..." : connectStatus.connected ? "Continue setup" : "Set up bank payments"}
+                    </button>
+                  ) : null}
+                  {connectStatus?.ready && projectInvoice.balanceCents > 0 && projectInvoice.status !== "void" ? (
+                    <button type="button" className="v2-primary-button" onClick={() => void createBankPaymentLink()} disabled={connectBusy}>
+                      {connectBusy ? "Creating..." : "Copy bank-payment link"}
+                    </button>
+                  ) : null}
+                  {connectStatus?.ready ? (
+                    <button type="button" onClick={() => void manageBankPaymentAccount()} disabled={connectBusy}>Manage Stripe account</button>
+                  ) : null}
+                  {(projectInvoice.onlinePayments ?? []).map((payment) => (
+                    <div className={`v2-invoice-online-payment is-${payment.status}`} key={payment.id}>
+                      <span>
+                        <strong>{payment.status === "open" || payment.status === "created"
+                          ? "Link ready"
+                          : payment.status === "processing"
+                            ? "Bank payment processing"
+                            : payment.status === "paid"
+                              ? "Bank payment settled"
+                              : payment.status === "partially_refunded"
+                                ? "Bank payment partially refunded"
+                                : payment.status === "refunded"
+                                  ? "Bank payment refunded"
+                                  : payment.status === "disputed"
+                                    ? "Bank payment disputed"
+                                    : payment.status === "expired"
+                                      ? "Payment link expired"
+                                      : "Bank payment failed"}</strong>
+                        <small>{currency((payment.amountCents - payment.refundedCents) / 100)}
+                          {payment.status === "processing" ? " · not marked paid yet" : ""}
+                        </small>
+                      </span>
+                      {payment.checkoutUrl && ["created", "open"].includes(payment.status) ? (
+                        <span className="v2-tool-action-row">
+                          <button type="button" aria-label="Copy customer bank-payment link" onClick={() => void copyBankPaymentLink(payment)}><Copy size={15} /></button>
+                          <a href={payment.checkoutUrl} target="_blank" rel="noreferrer" aria-label="Open customer bank-payment page"><ExternalLink size={15} /></a>
+                          <button type="button" onClick={() => void cancelBankPaymentLink()} disabled={connectBusy}>Cancel link</button>
+                        </span>
+                      ) : null}
+                    </div>
+                  ))}
+                  </div>
+                ) : null}
+                <details className="v2-invoice-external-payment">
+                  <summary>Record payment received outside RIVT</summary>
+                  <div className="v2-invoice-payment-record">
+                    <label>Amount received<input inputMode="decimal" value={paymentAmount} onChange={(event) => setPaymentAmount(event.target.value)} aria-label="External payment amount" /></label>
+                    <label>Method<input value={paymentMethodDraft} onChange={(event) => setPaymentMethodDraft(event.target.value)} /></label>
+                    <label>Note<input value={paymentNote} onChange={(event) => setPaymentNote(event.target.value)} placeholder="Optional reference" /></label>
+                    <button type="button" onClick={() => void recordExternalPayment()} disabled={projectInvoiceBusy || projectInvoice.status === "void" || projectInvoice.balanceCents <= 0}>Record external payment</button>
+                  </div>
+                </details>
+              </>
             ) : null}
             {projectInvoiceNotice ? <p className="v2-record-notice" role="status">{projectInvoiceNotice}</p> : null}
             {projectInvoiceError ? <p className="v2-record-error" role="alert">{projectInvoiceError}</p> : null}

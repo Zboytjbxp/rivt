@@ -87,6 +87,7 @@ const projectRecord = {
   },
   entries: [],
   media: [],
+  invoices: [],
   completionSubmissions: [],
   updatedAt: "2026-06-21T12:05:00.000Z",
 };
@@ -185,10 +186,116 @@ async function configurePage(page) {
     ...projectRecord,
     entries: [...projectRecord.entries],
     media: [],
+    invoices: [],
     completionSubmissions: [...projectRecord.completionSubmissions],
   };
+  let savedProjectInvoice = null;
   await page.route(`**/api/v1/active-work/${activeWorkItem.id}/project`, (route) =>
     route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { project: pageProjectRecord } }) }),
+  );
+  await page.route(`**/api/v1/active-work/${activeWorkItem.id}/invoices`, (route) => {
+    const input = route.request().postDataJSON();
+    savedProjectInvoice = {
+      id: "eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee",
+      projectId: projectRecord.id,
+      activeWorkId: activeWorkItem.id,
+      createdByAccountId: account.id,
+      invoiceNumber: input.invoiceNumber,
+      billTo: input.billTo,
+      payTo: input.payTo,
+      terms: input.terms,
+      paymentMethod: input.paymentMethod,
+      recipientEmail: input.recipientEmail,
+      recipientPhone: input.recipientPhone,
+      status: "draft",
+      lineItems: input.lineItems,
+      sourceEstimate: input.sourceEstimate,
+      subtotalCents: input.lineItems.reduce((sum, line) => sum + Math.round(line.quantity * line.rateCents), 0),
+      taxCents: input.taxCents,
+      totalCents: input.lineItems.reduce((sum, line) => sum + Math.round(line.quantity * line.rateCents), 0) + input.taxCents,
+      paidCents: 0,
+      balanceCents: input.lineItems.reduce((sum, line) => sum + Math.round(line.quantity * line.rateCents), 0) + input.taxCents,
+      sentAt: null,
+      paidAt: null,
+      voidedAt: null,
+      createdAt: "2026-07-25T12:00:00.000Z",
+      updatedAt: "2026-07-25T12:00:00.000Z",
+      payments: [],
+      onlinePayments: [],
+    };
+    pageProjectRecord.invoices = [savedProjectInvoice];
+    return route.fulfill({
+      status: 201,
+      contentType: "application/json",
+      body: JSON.stringify({ data: { invoice: savedProjectInvoice } }),
+    });
+  });
+  await page.route("**/api/v1/payments/connect/status", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        data: {
+          connect: {
+            provider: "stripe_connect",
+            providerConfigured: true,
+            webhookConfigured: true,
+            missing: [],
+            connected: true,
+            onboardingStatus: "ready",
+            achPaymentsStatus: "active",
+            chargesEnabled: true,
+            payoutsEnabled: true,
+            detailsSubmitted: true,
+            ready: true,
+            lastSyncedAt: "2026-07-25T12:00:00.000Z",
+          },
+        },
+      }),
+    }),
+  );
+  await page.route("**/api/v1/project-invoices/*/bank-payment-link", (route) => {
+    const paymentRequest = {
+      id: "ffffffff-ffff-ffff-ffff-ffffffffffff",
+      invoiceId: savedProjectInvoice?.id ?? "eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee",
+      amountCents: savedProjectInvoice?.balanceCents ?? 10000,
+      refundedCents: 0,
+      currency: "usd",
+      status: "open",
+      paymentMethodType: null,
+      checkoutUrl: "https://checkout.stripe.test/rivt-ach",
+      expiresAt: "2026-07-26T12:00:00.000Z",
+      paidAt: null,
+      failedAt: null,
+      disputedAt: null,
+      refundedAt: null,
+      createdAt: "2026-07-25T12:00:00.000Z",
+      updatedAt: "2026-07-25T12:00:00.000Z",
+    };
+    return route.fulfill({
+      status: 201,
+      contentType: "application/json",
+      body: JSON.stringify({ data: { paymentRequest } }),
+    });
+  });
+  await page.route("**/api/v1/invoice-payments/cs_test_rivt_ach_status", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        data: {
+          payment: {
+            invoiceNumber: "CLOSEOUT-001",
+            payTo: "Project Electrician",
+            amountCents: 69700,
+            refundedCents: 0,
+            currency: "usd",
+            status: "processing",
+            updatedAt: "2026-07-25T12:00:00.000Z",
+          },
+        },
+      }),
+    }),
   );
   await page.route(`**/api/v1/projects/${projectRecord.id}`, (route) =>
     route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { project: pageProjectRecord } }) }),
@@ -1172,6 +1279,20 @@ async function runToolsFlow(page, viewportName) {
   }
   await assertNoHorizontalOverflow(page);
   await page.screenshot({ path: path.join(screenshotDir, `${viewportName}-invoice.png`), fullPage: true });
+  if (viewportName !== "se") {
+    await page.goto(`${baseUrl}/app/tools?tool=invoice&activeWork=${activeWorkItem.id}`, { waitUntil: "networkidle" });
+    await page.getByRole("heading", { name: "Invoice", exact: true }).first().waitFor({ timeout: 15_000 });
+    const focusedInvoiceSteps = page.getByRole("navigation", { name: "Invoice draft steps" });
+    await focusedInvoiceSteps.getByRole("button", { name: "3 Review" }).click();
+    await page.getByRole("button", { name: "Save to job", exact: true }).click();
+    await page.getByText("Customer bank payment", { exact: true }).waitFor({ timeout: 15_000 });
+    await page.getByRole("button", { name: "Copy bank-payment link", exact: true }).click();
+    await page.getByText("Link ready", { exact: true }).waitFor({ timeout: 15_000 });
+    await page.getByText("Record payment received outside RIVT", { exact: true }).waitFor({ timeout: 15_000 });
+    await assertNoHorizontalOverflow(page);
+    await page.screenshot({ path: path.join(screenshotDir, `${viewportName}-invoice-ach.png`), fullPage: true });
+    await page.goto(`${baseUrl}/app/tools?tool=invoice`, { waitUntil: "networkidle" });
+  }
   await invoiceTabs.getByRole("button", { name: "Receivables", exact: true }).click();
   assert.equal(
     await invoiceTabs.getByRole("button", { name: "Receivables", exact: true }).getAttribute("aria-current"),
@@ -1289,6 +1410,14 @@ async function runToolsFlow(page, viewportName) {
   await page.locator(".v2-job-photo-timeline-row").first().waitFor({ timeout: 15_000 });
   await assertNoHorizontalOverflow(page);
   await page.screenshot({ path: path.join(screenshotDir, `${viewportName}-job-photos.png`), fullPage: true });
+  if (viewportName !== "se") {
+    await page.goto(`${baseUrl}/payment/complete?session_id=cs_test_rivt_ach_status`, { waitUntil: "networkidle" });
+    await page.getByRole("heading", { name: "Bank payment processing" }).waitFor({ timeout: 15_000 });
+    await page.getByText("This invoice is not marked paid until Stripe confirms settlement.", { exact: false }).waitFor({ timeout: 15_000 });
+    await page.getByText("RIVT does not hold job funds.", { exact: false }).waitFor({ timeout: 15_000 });
+    await assertNoHorizontalOverflow(page);
+    await page.screenshot({ path: path.join(screenshotDir, `${viewportName}-invoice-ach-return.png`), fullPage: true });
+  }
 }
 
 let browser;

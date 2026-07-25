@@ -2,6 +2,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App";
 import { AppBootstrap } from "./AppBootstrap";
+import { PaymentCompleteView } from "./features/payments/PaymentCompleteView";
 import "./styles.css";
 
 // Handle return from checkout without granting frontend-only entitlements.
@@ -20,7 +21,7 @@ import "./styles.css";
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <AppBootstrap>
-      <App />
+      {window.location.pathname === "/payment/complete" ? <PaymentCompleteView /> : <App />}
     </AppBootstrap>
   </StrictMode>,
 );
