@@ -538,6 +538,18 @@ async function swipeQuickWheel(page, trigger, optionName, viewportName, menuName
     viewport && choiceBoxes.every((choice) => choice.left >= 8 && choice.right <= viewport.width - 8 && choice.top >= 8),
     `quick wheel ${menuName} choices must remain within the visible phone width`,
   );
+  const [titleBox, contextBox] = await Promise.all([
+    menu.locator(".calc-quick-wheel-title").boundingBox(),
+    menu.locator(".calc-quick-wheel-context").boundingBox(),
+  ]);
+  const highestChoiceTop = Math.min(...choiceBoxes.map((choice) => choice.top));
+  assert.ok(titleBox && contextBox, `quick wheel ${menuName} should reserve a measurable header band`);
+  assert.ok(
+    titleBox.y >= 8
+      && titleBox.y + titleBox.height <= contextBox.y - 2
+      && contextBox.y + contextBox.height <= highestChoiceTop - 8,
+    `quick wheel ${menuName} heading, context, and choices must not overlap: ${JSON.stringify({ titleBox, contextBox, highestChoiceTop })}`,
+  );
   const option = menu.getByRole("menuitem", { name: optionName });
   const optionBox = await option.boundingBox();
   assert.ok(optionBox, `expected quick-wheel option ${optionName} to have a layout box in ${viewportName}`);

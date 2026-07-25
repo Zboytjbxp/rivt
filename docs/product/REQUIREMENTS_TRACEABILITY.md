@@ -10,6 +10,19 @@ Status values:
 
 Evidence must eventually link to implementation, automated tests, manual acceptance proof, and deployed build.
 
+## Traceability Addendum - 2026-07-25 Calculator Wheel Header Band
+
+- `GA-UX-003` gains quick-entry hierarchy evidence: each wheel reserves a
+  title/result row and context row before its choice arc without moving the
+  choices out of thumb reach.
+- `GA-UX-006` gains rendered geometry assertions requiring an eight-pixel
+  title/context-to-choice gap and an on-screen header across fraction,
+  multiply, and divide wheels in the mobile light/dark surfaces.
+- `GA-OPS-007` gains passing lint, build, 75 unit/frontend tests, E2E,
+  rendered Tools QA, mobile-action QA, and zero-vulnerability dependency
+  evidence.
+- No new `GA-OPS-008` production evidence is claimed for this correction yet.
+
 ## Traceability Addendum - 2026-07-25 Calculator Clear Recovery
 
 - `GA-UX-003` gains control-hierarchy evidence: persistent Undo is removed,

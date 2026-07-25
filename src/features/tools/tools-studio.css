@@ -7989,7 +7989,7 @@
   left: 50%;
   top: 50%;
   width: min(calc(var(--calc-wheel-radius) * 2 + 62px), calc(100vw - 20px));
-  height: calc(var(--calc-wheel-radius) + 82px);
+  height: calc(var(--calc-wheel-radius) + 126px);
   border: 1px solid color-mix(in srgb, var(--v2-accent) 30%, var(--v2-border));
   border-radius: calc(var(--calc-wheel-radius) + 40px) calc(var(--calc-wheel-radius) + 40px) var(--v2-radius-lg) var(--v2-radius-lg);
   background:
@@ -8027,11 +8027,12 @@
 .calc-quick-wheel-title {
   position: absolute;
   left: 0;
-  top: calc((var(--calc-wheel-radius) + 49px) * -1);
+  top: calc((var(--calc-wheel-radius) + 84px) * -1);
   min-width: min(250px, 72vw);
   color: var(--v2-text);
   font-size: calc(15px * var(--v2-text-scale));
   font-weight: var(--v2-weight-display);
+  line-height: 1.1;
   text-align: center;
   transform: translateX(-50%);
 }
@@ -8039,12 +8040,13 @@
 .calc-quick-wheel-context {
   position: absolute;
   left: 0;
-  top: calc((var(--calc-wheel-radius) + 27px) * -1);
+  top: calc((var(--calc-wheel-radius) + 58px) * -1);
   min-width: min(220px, 66vw);
   color: var(--v2-text-muted);
   font-size: calc(11px * var(--v2-text-scale));
   font-weight: var(--v2-weight-bold);
   letter-spacing: 0.06em;
+  line-height: 1.2;
   text-align: center;
   text-transform: uppercase;
   transform: translateX(-50%);

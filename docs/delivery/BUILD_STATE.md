@@ -2,10 +2,30 @@
 
 Last updated: 2026-07-25 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Calculator clear recovery and Enter-key simplification are production verified.
-Active packet: Contextual recovery and a single-purpose key face
-Repository branch: `master`
+Current phase: Calculator quick-wheel header separation is locally verified.
+Active packet: Non-overlapping quick-wheel hierarchy
+Repository branch: `codex/calculator-wheel-header-band`
 Production feature release commit: `3f2557ab1f329583119c7916f7050e38c2d5237f`
+
+## Calculator Quick-Wheel Header Band (Local Verification)
+
+- Quick wheels now reserve a dedicated header band above the choice arc.
+  Result or family title appears first, context appears second, and an
+  eight-pixel minimum gap separates that text from the nearest choice tile.
+- The wheel surface gained only the vertical room required for this header;
+  choice radius, one-motion slide/release behavior, thumb dead zone, viewport
+  containment, and left/right reach preferences remain unchanged.
+- Rendered Tools QA measures title, context, and every choice for every
+  exercised fraction, multiply, and divide wheel. It fails if those boxes
+  overlap or if the header reaches outside the visible phone.
+- Local evidence: lint, production build, 75 unit/frontend tests, desktop and
+  mobile E2E, rendered Tools QA in light/dark mode, mobile-action QA, and the
+  production dependency audit pass.
+- Rendered evidence:
+  `C:\Users\zboyt\AppData\Local\Temp\rivt-tools-pass\mobile-calculator-quick-wheel-dark.png`.
+- Production remains on feature source
+  `3f2557ab1f329583119c7916f7050e38c2d5237f`; this correction is not yet
+  deployed.
 
 ## Calculator Clear Recovery and Enter Key (Production Verification)
 
