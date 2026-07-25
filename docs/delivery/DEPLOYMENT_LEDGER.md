@@ -2591,3 +2591,33 @@ Add one entry per staging/production deployment.
   PostgreSQL and S3-compatible storage healthy. The production monitor passed
   in 502 ms with all seven anonymous private-route checks healthy and
   operational controls disabled.
+
+# Current Production - Calculator Wheel Containment
+
+- Environment: Production (`https://rivt.pro`)
+- Date/time/timezone: 2026-07-24 America/New_York
+- Deployer: Codex through `codex/calculator-wheel-containment`, fast-forward
+  merge to `master`, and Railway production auto-deploy
+- Runtime feature source:
+  `ebf18f6ef0f03c59db7c6ea4b59302d865bed65e`
+- Railway deployments: application source build
+  `4881c7ac-fa8f-4a84-9d7f-fa9b96252d63`; exact-source release
+  `7f7b1b43-d948-418a-b7b6-253bf9f9180a`
+- Migration version before/after: unchanged (`0028_compensation_workflow`)
+- Provider/config changes: only `SOURCE_COMMIT` release metadata advanced;
+  auth, billing, PostgreSQL, object storage, Sentry, Web Push, email,
+  moderation, and rollout controls were preserved.
+- Rollback target:
+  `066ce881c197b7e2b9873fc8adf2f3ec26e8e045`; no database rollback is
+  required.
+- Automated gates: build, lint, 75 unit/frontend tests, desktop/mobile E2E,
+  rendered Tools smoke, mobile-action smoke, and dependency audit with zero
+  vulnerabilities passed. The first concurrent E2E/mobile attempts met
+  transient connection/route timeouts; both passed when rerun independently.
+- Product evidence: digit holds limited to useful two-to-five-choice
+  families, viewport-contained wheel geometry, compact two-row imperial and
+  metric `ALL` palettes, and unclipped five-item Tape List rows.
+- Post-deploy proof: live `/api/health` returned the exact feature source with
+  PostgreSQL and S3-compatible storage healthy. The production monitor passed
+  in 499 ms with all seven anonymous private-route checks healthy and
+  operational controls disabled.

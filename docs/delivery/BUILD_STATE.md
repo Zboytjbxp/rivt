@@ -2,12 +2,12 @@
 
 Last updated: 2026-07-24 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Calculator quick-wheel containment correction is locally verified.
+Current phase: Calculator quick-wheel containment correction is production verified.
 Active packet: Contained fraction gestures and readable Tape List
-Repository branch: `codex/calculator-wheel-containment`
-Production feature release commit: `a810a80bbb680cf5bc1a4a5f072dc238cddb7ab1`
+Repository branch: `master`
+Production feature release commit: `ebf18f6ef0f03c59db7c6ea4b59302d865bed65e`
 
-## Calculator Wheel Containment Follow-up (Local Verification)
+## Calculator Wheel Containment Follow-up (Production Verification)
 
 - Number-key holds now appear only when the key has a useful family of two to
   five choices. `2`, `6`, and `9` no longer advertise or open one-choice or
@@ -33,9 +33,16 @@ Production feature release commit: `a810a80bbb680cf5bc1a4a5f072dc238cddb7ab1`
   `C:\Users\zboyt\AppData\Local\Temp\rivt-tools-pass\mobile-calculator-quick-wheel-light.png`,
   `mobile-calculator-all-fractions.png`, and
   `mobile-calculator-tape-list.png`.
-- Production remains on feature source
-  `a810a80bbb680cf5bc1a4a5f072dc238cddb7ab1`; this correction is not yet
-  deployed.
+- The correction was fast-forwarded into `master` at
+  `ebf18f6ef0f03c59db7c6ea4b59302d865bed65e`. Railway application deployment
+  `4881c7ac-fa8f-4a84-9d7f-fa9b96252d63` succeeded, followed by exact-source
+  metadata deployment `7f7b1b43-d948-418a-b7b6-253bf9f9180a`; only
+  `SOURCE_COMMIT` release metadata changed.
+- Live `/api/health` reports the exact feature commit, migration
+  `0028_compensation_workflow`, PostgreSQL, S3-compatible object storage,
+  configured Sentry, and configured Web Push. The exact-source production
+  monitor passed in 499 ms with all seven anonymous private-route checks
+  healthy and operational controls disabled.
 
 ## Calculator Logical Quick Wheels (Production Verification)
 

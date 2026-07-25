@@ -24,7 +24,11 @@ Evidence must eventually link to implementation, automated tests, manual accepta
   geometry, and client-height versus scroll-height clipping detection. Lint,
   build, 75 unit/frontend tests, E2E, rendered Tools QA, mobile-action QA, and
   the zero-vulnerability dependency audit pass.
-- No new `GA-OPS-008` production evidence is claimed for this follow-up yet.
+- `GA-OPS-008` gains production evidence: Railway application deployment
+  `4881c7ac-fa8f-4a84-9d7f-fa9b96252d63` and exact-source metadata deployment
+  `7f7b1b43-d948-418a-b7b6-253bf9f9180a` serve commit
+  `ebf18f6ef0f03c59db7c6ea4b59302d865bed65e`. Exact-source health and the
+  seven-check production monitor passed.
 
 ## Traceability Addendum - 2026-07-24 Calculator Logical Quick Wheels
 
