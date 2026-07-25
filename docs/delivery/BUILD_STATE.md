@@ -2,10 +2,30 @@
 
 Last updated: 2026-07-24 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Calculator quick-wheel containment correction is production verified.
-Active packet: Contained fraction gestures and readable Tape List
-Repository branch: `master`
+Current phase: Calculator Undo readout correction is locally verified.
+Active packet: Non-overlapping calculator readout controls
+Repository branch: `codex/calculator-undo-layout`
 Production feature release commit: `ebf18f6ef0f03c59db7c6ea4b59302d865bed65e`
+
+## Calculator Undo Readout Correction (Local Verification)
+
+- Undo no longer occupies the display's top-right measurement area. It now
+  sits in the lower utility row between the Decimal label and converted
+  value, leaving the primary number unobstructed at every supported text
+  scale.
+- The control keeps its visible label, 34 px minimum height, keyboard focus,
+  and one-step device-local behavior. No calculator state or persistence
+  semantics changed.
+- Rendered Tools QA now measures both elements and fails unless Undo is fully
+  below the primary readout and parented by the utility row.
+- Local evidence: lint, production build, 75 unit/frontend tests, desktop and
+  mobile E2E, rendered Tools QA, mobile-action QA, and the production
+  dependency audit pass.
+- Rendered evidence:
+  `C:\Users\zboyt\AppData\Local\Temp\rivt-tools-pass\mobile-calculator-tape-list.png`.
+- Production remains on feature source
+  `ebf18f6ef0f03c59db7c6ea4b59302d865bed65e`; this correction is not yet
+  deployed.
 
 ## Calculator Wheel Containment Follow-up (Production Verification)
 

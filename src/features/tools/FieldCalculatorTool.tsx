@@ -1545,15 +1545,15 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
               <section className={`calc-measurement-workspace${!shortcutKeysVisible ? " has-tape-list" : ""}`}>
                 <div className="calc-display-stack fraction-display">
                   <span className="fraction-history">{equationLabel}</span>
-                  {undoSnapshot ? (
-                    <button type="button" className="calc-display-undo" aria-label="Undo last calculator change" onClick={undoLastChange}>
-                      <RotateCcw size={14} />
-                      Undo
-                    </button>
-                  ) : null}
                   <strong className="calc-primary-value">{primaryValue}</strong>
                   <div className="calc-secondary-row">
                     <span>{secondaryLabel}</span>
+                    {undoSnapshot ? (
+                      <button type="button" className="calc-display-undo" aria-label="Undo last calculator change" onClick={undoLastChange}>
+                        <RotateCcw size={14} />
+                        Undo
+                      </button>
+                    ) : null}
                     <strong>{secondaryValue}</strong>
                   </div>
                   <div className="fraction-display-meta">

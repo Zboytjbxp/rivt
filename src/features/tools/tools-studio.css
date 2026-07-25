@@ -8382,22 +8382,20 @@
 }
 
 .calc-display-undo {
-  position: absolute;
-  top: 8px;
-  right: 10px;
-  z-index: 2;
-  min-height: 40px;
+  min-height: 34px;
   display: inline-flex;
   align-items: center;
   gap: 5px;
   border: 1px solid var(--v2-border);
   border-radius: var(--v2-radius-pill);
-  padding: 0 11px;
+  padding: 0 10px;
   background: color-mix(in srgb, var(--v2-surface-raised) 92%, transparent);
   color: var(--v2-text-muted);
   font-size: calc(12px * var(--v2-text-scale));
   font-weight: var(--v2-weight-bold);
-  box-shadow: var(--v2-shadow-sm);
+  letter-spacing: 0;
+  text-transform: none;
+  white-space: nowrap;
 }
 
 .calc-display-undo:hover {
@@ -8407,10 +8405,6 @@
 
 .calc-display-undo:active {
   transform: translateY(1px);
-}
-
-.fraction-display:has(.calc-display-undo) .fraction-history {
-  right: 92px;
 }
 
 .fraction-display .calc-primary-value {

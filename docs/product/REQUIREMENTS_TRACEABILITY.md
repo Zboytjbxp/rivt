@@ -10,6 +10,18 @@ Status values:
 
 Evidence must eventually link to implementation, automated tests, manual acceptance proof, and deployed build.
 
+## Traceability Addendum - 2026-07-25 Calculator Undo Readout
+
+- `GA-UX-003` gains control-hierarchy evidence: one-step Undo remains
+  immediately available but lives in the display utility row rather than
+  competing with the primary measurement.
+- `GA-UX-006` gains a rendered mobile geometry assertion that Undo is fully
+  below the primary value and remains inside the utility row.
+- `GA-OPS-007` gains passing lint, build, 75 unit/frontend tests, E2E,
+  rendered Tools QA, mobile-action QA, and zero-vulnerability dependency
+  evidence.
+- No new `GA-OPS-008` production evidence is claimed for this correction yet.
+
 ## Traceability Addendum - 2026-07-24 Calculator Wheel Containment
 
 - `GA-UX-003` gains interaction-discipline evidence: digit holds exist only

@@ -884,7 +884,22 @@ async function runToolsFlow(page, viewportName) {
   }
   await imperialMarkPicker.getByRole("button", { name: "Enter 11/16" }).click();
   await page.locator(".calc-primary-value", { hasText: '11/16"' }).waitFor({ timeout: 15_000 });
-  await page.getByRole("button", { name: "Undo last calculator change" }).click();
+  const undoButton = page.getByRole("button", { name: "Undo last calculator change" });
+  const [undoBox, primaryValueBox] = await Promise.all([
+    undoButton.boundingBox(),
+    page.locator(".calc-primary-value").boundingBox(),
+  ]);
+  assert.ok(undoBox && primaryValueBox, "Undo and primary measurement should both have layout boxes");
+  assert.ok(
+    undoBox.y >= primaryValueBox.y + primaryValueBox.height,
+    `Undo must sit below the primary measurement instead of covering it: ${JSON.stringify({ undoBox, primaryValueBox })}`,
+  );
+  assert.match(
+    await undoButton.locator("xpath=..").getAttribute("class") ?? "",
+    /\bcalc-secondary-row\b/,
+    "Undo should live in the display utility row",
+  );
+  await undoButton.click();
   await page.locator(".calc-primary-value", { hasText: '0"' }).waitFor({ timeout: 15_000 });
   await page.getByLabel("Fraction calculator keypad").getByRole("button", { name: "6" }).click();
   const cancelWheelTrigger = page.getByLabel("Fraction calculator keypad").getByRole("button", { name: "8. Hold and slide for quick choices." });
