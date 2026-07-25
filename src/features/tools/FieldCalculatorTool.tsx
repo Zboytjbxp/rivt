@@ -9,6 +9,7 @@ type Operator = "+" | "-" | "x" | "/";
 type TapeQualifier = "light" | "exact" | "heavy";
 type ImperialNotation = "inches" | "feet-inches";
 type FractionLayout = "tape" | "grouped";
+type WheelHand = "auto" | "left" | "right";
 
 const CALCULATOR_PREFS_KEY = "rivt.calculatorPrefs.v1";
 const CALCULATOR_HISTORY_KEY = "rivt.calculatorHistory.v1";
@@ -82,6 +83,7 @@ type TapeMeasurementEntry = {
   activeUnit?: ActiveUnit;
   qualifier?: TapeQualifier;
   approximate?: boolean;
+  label?: string;
   used: boolean;
 };
 
@@ -91,12 +93,35 @@ type TapePresentation = {
   approximate: boolean;
 };
 
+type CalculatorUndoSnapshot = {
+  inputMode: InputMode;
+  activeUnit: ActiveUnit;
+  feetText: string;
+  inchesText: string;
+  fraction32: number;
+  metricText: string;
+  metricTenths: number;
+  accumulatorUnits: number | null;
+  accumulatorQualifier: TapeQualifier;
+  accumulatorApproximate: boolean;
+  pendingOperator: Operator | null;
+  resultUnits: number | null;
+  entryQualifier: TapeQualifier;
+  resultQualifier: TapeQualifier;
+  entryApproximate: boolean;
+  resultApproximate: boolean;
+  historyLabel: string;
+  tapeMeasurements: TapeMeasurementEntry[];
+  calculationHistory: CalculationHistoryEntry[];
+};
+
 type CalculatorPreferences = {
   inputMode: InputMode;
   imperialNotation: ImperialNotation;
   fractionLayout: FractionLayout;
   fractionKeysVisible: boolean;
   metricDecimalKeysVisible: boolean;
+  wheelHand: WheelHand;
 };
 
 type QuickEntryOption = {
@@ -129,6 +154,8 @@ function QuickWheelButton({
   menuLabel,
   onTap,
   onQuickSelect,
+  getPreviewLabel,
+  wheelHand = "auto",
   className,
   children,
 }: {
@@ -137,6 +164,8 @@ function QuickWheelButton({
   menuLabel: string;
   onTap: () => void;
   onQuickSelect: (value: number) => void;
+  getPreviewLabel?: (value: number) => string;
+  wheelHand?: WheelHand;
   className?: string;
   children: ReactNode;
 }) {
@@ -153,11 +182,13 @@ function QuickWheelButton({
   const [open, setOpen] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [wheelPosition, setWheelPosition] = useState<QuickWheelPosition | null>(null);
+  const [wheelFan, setWheelFan] = useState<Exclude<WheelHand, "auto">>("right");
 
   const optionAngle = useCallback((index: number) => {
     if (options.length === 1) return -90;
-    return -165 + (150 / (options.length - 1)) * index;
-  }, [options.length]);
+    const startAngle = wheelFan === "right" ? -175 : -155;
+    return startAngle + (150 / (options.length - 1)) * index;
+  }, [options.length, wheelFan]);
 
   const optionOffset = useCallback((index: number, radius: number) => {
     const angle = optionAngle(index) * (Math.PI / 180);
@@ -172,6 +203,9 @@ function QuickWheelButton({
     if (!rect) return;
 
     const radius = options.length >= 7 ? 136 : options.length >= 5 ? 104 : options.length >= 4 ? 96 : 86;
+    setWheelFan(wheelHand === "auto"
+      ? rect.left + rect.width / 2 < window.innerWidth / 2 ? "left" : "right"
+      : wheelHand);
     const outerPadding = radius + 34;
     const anchorX = Math.min(
       Math.max(rect.left + rect.width / 2, outerPadding),
@@ -207,7 +241,7 @@ function QuickWheelButton({
     const position = wheelPositionRef.current;
     if (!position) return;
     let closestIndex: number | null = null;
-    let closestDistance = 50;
+    let closestDistance = 62;
     options.forEach((_, index) => {
       const offset = optionOffset(index, position.radius);
       const distance = Math.hypot(
@@ -367,7 +401,12 @@ function QuickWheelButton({
             <div className="calc-quick-wheel-origin" aria-hidden="true">
               <span>Slide</span>
             </div>
-            <span className="calc-quick-wheel-title">{menuLabel}</span>
+            <span className="calc-quick-wheel-title">
+              {selectedIndex !== null && getPreviewLabel ? getPreviewLabel(options[selectedIndex].value) : menuLabel}
+            </span>
+            <span className="calc-quick-wheel-context">
+              {selectedIndex !== null ? menuLabel : "Move to a choice"}
+            </span>
             <div className="calc-quick-wheel-options">
               {options.map((option) => (
                 <button
@@ -402,7 +441,7 @@ function QuickWheelButton({
                 </button>
               ))}
             </div>
-            <small className="calc-quick-wheel-hint">Slide, then lift</small>
+            <small className="calc-quick-wheel-hint">{selectedIndex !== null ? "Lift to use" : "Release to cancel"}</small>
           </div>
         </div>,
         document.querySelector(".rivt-v2") ?? document.body,
@@ -417,6 +456,8 @@ function QuickEntryDigitKey(props: {
   menuLabel: string;
   onTap: () => void;
   onQuickEntry: (value: number) => void;
+  getPreviewLabel?: (value: number) => string;
+  wheelHand?: WheelHand;
 }) {
   return (
     <QuickWheelButton
@@ -425,6 +466,8 @@ function QuickEntryDigitKey(props: {
       menuLabel={props.menuLabel}
       onTap={props.onTap}
       onQuickSelect={props.onQuickEntry}
+      getPreviewLabel={props.getPreviewLabel}
+      wheelHand={props.wheelHand}
     >
       {props.digit}
     </QuickWheelButton>
@@ -490,6 +533,7 @@ const DEFAULT_CALCULATOR_PREFERENCES: CalculatorPreferences = {
   fractionLayout: "tape",
   fractionKeysVisible: true,
   metricDecimalKeysVisible: true,
+  wheelHand: "auto",
 };
 
 function formatNumber(value: number, digits = 2) {
@@ -726,6 +770,7 @@ function readCalculatorPreferences(): CalculatorPreferences {
       fractionLayout: parsed?.fractionLayout === "grouped" ? "grouped" : "tape",
       fractionKeysVisible: parsed?.fractionKeysVisible !== false,
       metricDecimalKeysVisible: parsed?.metricDecimalKeysVisible !== false,
+      wheelHand: parsed?.wheelHand === "left" || parsed?.wheelHand === "right" ? parsed.wheelHand : "auto",
     };
   } catch {
     return DEFAULT_CALCULATOR_PREFERENCES;
@@ -764,6 +809,7 @@ function readTapeMeasurements(): TapeMeasurementEntry[] {
           && typeof candidate.resultUnits === "number"
           && Number.isFinite(candidate.resultUnits)
           && (candidate.inputMode === "imperial" || candidate.inputMode === "metric")
+          && (candidate.label === undefined || typeof candidate.label === "string")
           && typeof candidate.used === "boolean";
       })
       .slice(-CALCULATOR_TAPE_LIST_LIMIT);
@@ -779,6 +825,7 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
   const [fractionLayout, setFractionLayout] = useState<FractionLayout>(initialPreferences.fractionLayout);
   const [fractionKeysVisible, setFractionKeysVisible] = useState(initialPreferences.fractionKeysVisible);
   const [metricDecimalKeysVisible, setMetricDecimalKeysVisible] = useState(initialPreferences.metricDecimalKeysVisible);
+  const [wheelHand, setWheelHand] = useState<WheelHand>(initialPreferences.wheelHand);
   const [activeUnit, setActiveUnit] = useState<ActiveUnit>(initialPreferences.imperialNotation === "feet-inches" ? "feet" : "inches");
   const [feetText, setFeetText] = useState("0");
   const [inchesText, setInchesText] = useState("0");
@@ -800,6 +847,9 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
   const [historyOpen, setHistoryOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [markPickerOpen, setMarkPickerOpen] = useState(false);
+  const [undoSnapshot, setUndoSnapshot] = useState<CalculatorUndoSnapshot | null>(null);
+  const [editingTapeLabelId, setEditingTapeLabelId] = useState<string | null>(null);
+  const [tapeLabelDraft, setTapeLabelDraft] = useState("");
   const [copied, setCopied] = useState(false);
   const markPickerButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -823,9 +873,10 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
         fractionLayout,
         fractionKeysVisible,
         metricDecimalKeysVisible,
+        wheelHand,
       } satisfies CalculatorPreferences));
     } catch { /* harmless preference */ }
-  }, [fractionKeysVisible, fractionLayout, imperialNotation, inputMode, metricDecimalKeysVisible]);
+  }, [fractionKeysVisible, fractionLayout, imperialNotation, inputMode, metricDecimalKeysVisible, wheelHand]);
 
   useEffect(() => {
     try { localStorage.setItem(CALCULATOR_HISTORY_KEY, JSON.stringify(calculationHistory)); } catch { /* harmless device history */ }
@@ -834,6 +885,55 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
   useEffect(() => {
     try { localStorage.setItem(CALCULATOR_TAPE_LIST_KEY, JSON.stringify(tapeMeasurements)); } catch { /* harmless device tape list */ }
   }, [tapeMeasurements]);
+
+  function rememberUndo() {
+    setUndoSnapshot({
+      inputMode,
+      activeUnit,
+      feetText,
+      inchesText,
+      fraction32,
+      metricText,
+      metricTenths,
+      accumulatorUnits,
+      accumulatorQualifier,
+      accumulatorApproximate,
+      pendingOperator,
+      resultUnits,
+      entryQualifier,
+      resultQualifier,
+      entryApproximate,
+      resultApproximate,
+      historyLabel,
+      tapeMeasurements,
+      calculationHistory,
+    });
+  }
+
+  function undoLastChange() {
+    if (!undoSnapshot) return;
+    setInputMode(undoSnapshot.inputMode);
+    setActiveUnit(undoSnapshot.activeUnit);
+    setFeetText(undoSnapshot.feetText);
+    setInchesText(undoSnapshot.inchesText);
+    setFraction32(undoSnapshot.fraction32);
+    setMetricText(undoSnapshot.metricText);
+    setMetricTenths(undoSnapshot.metricTenths);
+    setAccumulatorUnits(undoSnapshot.accumulatorUnits);
+    setAccumulatorQualifier(undoSnapshot.accumulatorQualifier);
+    setAccumulatorApproximate(undoSnapshot.accumulatorApproximate);
+    setPendingOperator(undoSnapshot.pendingOperator);
+    setResultUnits(undoSnapshot.resultUnits);
+    setEntryQualifier(undoSnapshot.entryQualifier);
+    setResultQualifier(undoSnapshot.resultQualifier);
+    setEntryApproximate(undoSnapshot.entryApproximate);
+    setResultApproximate(undoSnapshot.resultApproximate);
+    setHistoryLabel(undoSnapshot.historyLabel);
+    setTapeMeasurements(undoSnapshot.tapeMeasurements);
+    setCalculationHistory(undoSnapshot.calculationHistory);
+    setCopied(false);
+    setUndoSnapshot(null);
+  }
 
   function recordCalculation(
     expression: string,
@@ -929,6 +1029,7 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
   }
 
   function handleDigit(digit: string) {
+    rememberUndo();
     if (resultUnits !== null && pendingOperator === null) {
       setEntryFromValue(0);
     }
@@ -963,6 +1064,7 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
   }
 
   function handleBackspace() {
+    rememberUndo();
     if (inputMode === "metric") {
       if (metricTenths) {
         setMetricTenths(0);
@@ -997,6 +1099,7 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
   }
 
   function clearAll() {
+    rememberUndo();
     setFeetText("0");
     setInchesText("0");
     setFraction32(0);
@@ -1016,6 +1119,7 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
   }
 
   function applyHeavyLight(nextQualifier: TapeQualifier) {
+    rememberUndo();
     if (inputMode === "metric") {
       const delta = nextQualifier === "heavy" ? METRIC_TRIM_UNITS : -METRIC_TRIM_UNITS;
       const base = resultUnits ?? entryValueUnits;
@@ -1032,6 +1136,7 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
   }
 
   function scaleEntry(multiplier: number) {
+    rememberUndo();
     const base = resultUnits ?? entryValueUnits;
     const qualifier = displayQualifier;
     const scaleLabel = multiplier >= 1
@@ -1057,6 +1162,7 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
   }
 
   function chooseFraction(sixteenth: number) {
+    rememberUndo();
     setFraction32(sixteenth * 2);
     setResultUnits(null);
     setEntryQualifier("exact");
@@ -1067,6 +1173,7 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
   }
 
   function chooseMetricTenth(tenth: number) {
+    rememberUndo();
     setMetricTenths(tenth);
     setResultUnits(null);
     setEntryQualifier("exact");
@@ -1094,7 +1201,30 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
     return IMPERIAL_DIGIT_FAMILY_LABELS[digit] ?? `Quick fractions for ${digit}`;
   }
 
+  function quickEntryPreview(value: number) {
+    if (inputMode === "metric") return formatMetricEntry(metricText, value);
+    return formatImperialMeasurement(
+      valueFromImperialEntry(feetText, inchesText, value * 2),
+      activeUnit,
+      "exact",
+      false,
+    );
+  }
+
+  function scalePreview(multiplier: number) {
+    const base = resultUnits ?? entryValueUnits;
+    if (inputMode === "metric") return formatMillimeters(Math.max(0, Math.round(base * multiplier)));
+    const presentation = presentationFromExactUnits(exactTapeUnits(base, displayQualifier) * multiplier);
+    return formatImperialMeasurement(
+      presentation.units,
+      activeUnit,
+      presentation.qualifier,
+      displayApproximate || presentation.approximate,
+    );
+  }
+
   function applyOperator(operator: Operator) {
+    rememberUndo();
     const current = resultUnits ?? entryValueUnits;
     const currentQualifier = displayQualifier;
     const currentApproximate = displayApproximate;
@@ -1124,6 +1254,7 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
   }
 
   function evaluate() {
+    rememberUndo();
     const current = resultUnits ?? entryValueUnits;
     const currentQualifier = displayQualifier;
     const currentApproximate = displayApproximate;
@@ -1255,29 +1386,75 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
     setHistoryOpen(false);
   }
 
+  function startTapeLabel(entry: TapeMeasurementEntry) {
+    setEditingTapeLabelId(entry.id);
+    setTapeLabelDraft(entry.label ?? "");
+  }
+
+  function saveTapeLabel(entryId: string) {
+    const label = tapeLabelDraft.trim().slice(0, 32);
+    setTapeMeasurements((entries) => entries.map((entry) => (
+      entry.id === entryId ? { ...entry, label: label || undefined } : entry
+    )));
+    setEditingTapeLabelId(null);
+    setTapeLabelDraft("");
+  }
+
+  function cancelTapeLabel() {
+    setEditingTapeLabelId(null);
+    setTapeLabelDraft("");
+  }
+
   function renderTapeMeasurementRow(entry: TapeMeasurementEntry, closeHistory = false) {
     const measurementNumber = tapeMeasurements.findIndex((candidate) => candidate.id === entry.id) + 1;
     const measurement = formatTapeMeasurement(entry);
     return (
-      <div key={entry.id} className={`calc-tape-row${entry.used ? " is-used" : ""}`}>
-        <button
-          type="button"
-          className="calc-tape-check"
-          aria-label={`Mark ${measurement} ${entry.used ? "unused" : "used"}`}
-          aria-pressed={entry.used}
-          onClick={() => toggleTapeMeasurement(entry.id)}
-        >
-          {entry.used ? <Check size={16} /> : null}
-        </button>
-        <button
-          type="button"
-          className="calc-tape-value"
-          aria-label={`Load measurement ${measurement}`}
-          onClick={() => reuseTapeMeasurement(entry, closeHistory)}
-        >
-          <span>Measurement {measurementNumber}</span>
-          <strong>{measurement}</strong>
-        </button>
+      <div key={entry.id} className="calc-tape-entry">
+        <div className={`calc-tape-row${entry.used ? " is-used" : ""}`}>
+          <button
+            type="button"
+            className="calc-tape-check"
+            aria-label={`Mark ${measurement} ${entry.used ? "unused" : "used"}`}
+            aria-pressed={entry.used}
+            onClick={() => toggleTapeMeasurement(entry.id)}
+          >
+            {entry.used ? <Check size={16} /> : null}
+          </button>
+          <button
+            type="button"
+            className="calc-tape-value"
+            aria-label={`Load ${entry.label ? `${entry.label}, ` : ""}measurement ${measurement}`}
+            onClick={() => reuseTapeMeasurement(entry, closeHistory)}
+          >
+            <span>{entry.label || `Measurement ${measurementNumber}`}</span>
+            <strong>{measurement}</strong>
+          </button>
+        </div>
+        {closeHistory ? (
+          editingTapeLabelId === entry.id ? (
+            <div className="calc-tape-label-editor">
+              <input
+                type="text"
+                value={tapeLabelDraft}
+                maxLength={32}
+                aria-label={`Label for measurement ${measurement}`}
+                placeholder="Door RO, left stile, top cut…"
+                autoFocus
+                onChange={(event) => setTapeLabelDraft(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") saveTapeLabel(entry.id);
+                  if (event.key === "Escape") cancelTapeLabel();
+                }}
+              />
+              <button type="button" onClick={() => saveTapeLabel(entry.id)}>Save</button>
+              <button type="button" onClick={cancelTapeLabel}>Cancel</button>
+            </div>
+          ) : (
+            <button type="button" className="calc-tape-label-action" onClick={() => startTapeLabel(entry)}>
+              {entry.label ? `Edit label · ${entry.label}` : "Add a short label"}
+            </button>
+          )
+        ) : null}
       </div>
     );
   }
@@ -1377,6 +1554,12 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
               <section className={`calc-measurement-workspace${!shortcutKeysVisible ? " has-tape-list" : ""}`}>
                 <div className="calc-display-stack fraction-display">
                   <span className="fraction-history">{equationLabel}</span>
+                  {undoSnapshot ? (
+                    <button type="button" className="calc-display-undo" aria-label="Undo last calculator change" onClick={undoLastChange}>
+                      <RotateCcw size={14} />
+                      Undo
+                    </button>
+                  ) : null}
                   <strong className="calc-primary-value">{primaryValue}</strong>
                   <div className="calc-secondary-row">
                     <span>{secondaryLabel}</span>
@@ -1534,6 +1717,8 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
                   menuLabel="Quick divide"
                   onTap={() => scaleEntry(0.5)}
                   onQuickSelect={scaleEntry}
+                  getPreviewLabel={scalePreview}
+                  wheelHand={wheelHand}
                 >
                   <strong>&divide;2</strong>
                   <small>Hold for more</small>
@@ -1544,6 +1729,8 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
                   menuLabel="Quick multiply"
                   onTap={() => scaleEntry(2)}
                   onQuickSelect={scaleEntry}
+                  getPreviewLabel={scalePreview}
+                  wheelHand={wheelHand}
                 >
                   <strong>&times;2</strong>
                   <small>Hold for more</small>
@@ -1551,7 +1738,7 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
               </div>
 
               <div className="calc-pad-grid fraction-pad" aria-label={inputMode === "metric" ? "Metric calculator keypad" : "Fraction calculator keypad"}>
-                {["7", "8", "9"].map((digit) => <QuickEntryDigitKey key={digit} digit={digit} options={quickEntryOptions(digit)} menuLabel={quickEntryMenuLabel(digit)} onTap={() => handleDigit(digit)} onQuickEntry={inputMode === "metric" ? chooseMetricTenth : chooseFraction} />)}
+                {["7", "8", "9"].map((digit) => <QuickEntryDigitKey key={digit} digit={digit} options={quickEntryOptions(digit)} menuLabel={quickEntryMenuLabel(digit)} onTap={() => handleDigit(digit)} onQuickEntry={inputMode === "metric" ? chooseMetricTenth : chooseFraction} getPreviewLabel={quickEntryPreview} wheelHand={wheelHand} />)}
                 <QuickWheelButton
                   label="Divide"
                   className="op"
@@ -1559,10 +1746,12 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
                   menuLabel="Quick divide"
                   onTap={() => applyOperator("/")}
                   onQuickSelect={scaleEntry}
+                  getPreviewLabel={scalePreview}
+                  wheelHand={wheelHand}
                 >
                   /
                 </QuickWheelButton>
-                {["4", "5", "6"].map((digit) => <QuickEntryDigitKey key={digit} digit={digit} options={quickEntryOptions(digit)} menuLabel={quickEntryMenuLabel(digit)} onTap={() => handleDigit(digit)} onQuickEntry={inputMode === "metric" ? chooseMetricTenth : chooseFraction} />)}
+                {["4", "5", "6"].map((digit) => <QuickEntryDigitKey key={digit} digit={digit} options={quickEntryOptions(digit)} menuLabel={quickEntryMenuLabel(digit)} onTap={() => handleDigit(digit)} onQuickEntry={inputMode === "metric" ? chooseMetricTenth : chooseFraction} getPreviewLabel={quickEntryPreview} wheelHand={wheelHand} />)}
                 <QuickWheelButton
                   label="Multiply"
                   className="op"
@@ -1570,10 +1759,12 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
                   menuLabel="Quick multiply"
                   onTap={() => applyOperator("x")}
                   onQuickSelect={scaleEntry}
+                  getPreviewLabel={scalePreview}
+                  wheelHand={wheelHand}
                 >
                   x
                 </QuickWheelButton>
-                {["1", "2", "3"].map((digit) => <QuickEntryDigitKey key={digit} digit={digit} options={quickEntryOptions(digit)} menuLabel={quickEntryMenuLabel(digit)} onTap={() => handleDigit(digit)} onQuickEntry={inputMode === "metric" ? chooseMetricTenth : chooseFraction} />)}
+                {["1", "2", "3"].map((digit) => <QuickEntryDigitKey key={digit} digit={digit} options={quickEntryOptions(digit)} menuLabel={quickEntryMenuLabel(digit)} onTap={() => handleDigit(digit)} onQuickEntry={inputMode === "metric" ? chooseMetricTenth : chooseFraction} getPreviewLabel={quickEntryPreview} wheelHand={wheelHand} />)}
                 <button type="button" className="op" onClick={() => applyOperator("-")}>-</button>
                 <button type="button" className="wide" onClick={() => handleDigit("0")}>0</button>
                 <HoldClearButton onDelete={handleBackspace} onClear={clearAll} />
@@ -1708,6 +1899,17 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
                 <div className="calc-settings-options" role="group" aria-label="Measurement mode">
                   <button type="button" className={inputMode === "imperial" ? "active" : ""} onClick={() => switchMode("imperial")}>Imperial</button>
                   <button type="button" className={inputMode === "metric" ? "active" : ""} onClick={() => switchMode("metric")}>Metric</button>
+                </div>
+              </section>
+              <section>
+                <div>
+                  <strong>Quick-wheel reach</strong>
+                  <span>Auto opens away from the nearest screen edge. Choose a hand to keep every wheel biased the same way.</span>
+                </div>
+                <div className="calc-settings-options has-three" role="group" aria-label="Quick-wheel reach">
+                  <button type="button" className={wheelHand === "auto" ? "active" : ""} onClick={() => setWheelHand("auto")}>Auto</button>
+                  <button type="button" className={wheelHand === "left" ? "active" : ""} onClick={() => setWheelHand("left")}>Left hand</button>
+                  <button type="button" className={wheelHand === "right" ? "active" : ""} onClick={() => setWheelHand("right")}>Right hand</button>
                 </div>
               </section>
               {inputMode === "imperial" ? (

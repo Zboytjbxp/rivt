@@ -19,10 +19,14 @@ Evidence must eventually link to implementation, automated tests, manual accepta
   every metric decimal tenth without crowding the number keys.
 - `GA-UX-003` also gains one-motion gesture evidence. The quick wheel is
   biased above and beside the blocked thumb, highlights the current choice
-  during the drag, and commits on release while preserving a keyboard path.
+  during the drag, previews the full resulting measurement, and commits on
+  release while preserving a keyboard path. Auto edge avoidance and
+  persistent left/right reach preferences cover either hand.
 - `GA-UX-005` gains state-scope evidence: holding `DEL` clears the current
   problem without deleting the device-local Tape List, while tap-to-delete
-  retains its narrower behavior.
+  retains its narrower behavior. Dead-zone release makes no change, one-step
+  Undo restores only the current device snapshot, and optional measurement
+  labels are explicitly part of the device-local Tape List.
 - `GA-UX-006` gains mobile light/dark rendered evidence for the unified
   display/Tape List workspace, the hidden-fraction five-measurement view,
   logical eighth and sixteenth wheels, complete imperial/metric palettes,
@@ -30,10 +34,12 @@ Evidence must eventually link to implementation, automated tests, manual accepta
   avoidance of Tools swipe-back.
 - `GA-OPS-007` gains a real pointer-gesture Tools smoke for hold, slide,
   highlight, release, operator scaling, and hold-to-clear behavior, plus a
-  keyboard-open/focus/commit assertion. Lint, build, 75 unit/frontend tests,
-  desktop/mobile E2E, and a zero-vulnerability production dependency audit
-  pass. The aggregate serial database test exceeded the local command limit,
-  so no full integration pass is claimed.
+  keyboard-open/focus/commit assertion. It now also locks wheel preview,
+  center-release cancellation, reach preference, one-step Undo, and Tape List
+  labeling. Lint, build, 75 unit/frontend tests, desktop/mobile E2E, and a
+  zero-vulnerability production dependency audit pass. The aggregate serial
+  database test exceeded the local command limit, so no full integration pass
+  is claimed.
 - No `GA-OPS-008` production evidence is claimed for this packet yet.
 
 ## Traceability Addendum - 2026-07-24 Heavy 16th Intelligent Tape Workflow

@@ -565,6 +565,8 @@ async function swipeQuickWheel(page, trigger, optionName, viewportName, menuName
     /\bis-selected\b/,
     `quick wheel ${triggerName} should highlight ${optionName} before release in ${viewportName}`,
   );
+  const preview = (await menu.locator(".calc-quick-wheel-title").textContent())?.trim() ?? "";
+  assert.notEqual(preview, menuName, `quick wheel ${triggerName} should preview the resulting measurement before release`);
   await page.mouse.up();
   await menu.waitFor({ state: "hidden", timeout: 5_000 });
 }
@@ -715,6 +717,10 @@ async function runToolsFlow(page, viewportName) {
   const calculatorSettings = page.getByRole("dialog", { name: "Calculator settings" });
   await calculatorSettings.getByText("Tape precision", { exact: true }).waitFor({ timeout: 15_000 });
   await calculatorSettings.getByText(/resolve to 1\/32 inch/i).waitFor({ timeout: 15_000 });
+  const wheelReach = calculatorSettings.getByRole("group", { name: "Quick-wheel reach" });
+  await wheelReach.getByRole("button", { name: "Left hand" }).click();
+  assert.equal(await wheelReach.getByRole("button", { name: "Left hand" }).getAttribute("class"), "active");
+  await wheelReach.getByRole("button", { name: "Auto" }).click();
   assert.equal(
     await calculatorSettings.getByRole("button", { name: "32nd precision", exact: true }).count(),
     0,
@@ -864,8 +870,19 @@ async function runToolsFlow(page, viewportName) {
   }
   await imperialMarkPicker.getByRole("button", { name: "Enter 11/16" }).click();
   await page.locator(".calc-primary-value", { hasText: '11/16"' }).waitFor({ timeout: 15_000 });
-  await page.getByRole("button", { name: "Clear calculator" }).click();
+  await page.getByRole("button", { name: "Undo last calculator change" }).click();
+  await page.locator(".calc-primary-value", { hasText: '0"' }).waitFor({ timeout: 15_000 });
   await page.getByLabel("Fraction calculator keypad").getByRole("button", { name: "6" }).click();
+  const cancelWheelTrigger = page.getByLabel("Fraction calculator keypad").getByRole("button", { name: "8. Hold and slide for quick choices." });
+  const cancelWheelBox = await cancelWheelTrigger.boundingBox();
+  assert.ok(cancelWheelBox, `cancel-wheel trigger should have a layout box in ${viewportName}`);
+  await page.mouse.move(cancelWheelBox.x + cancelWheelBox.width / 2, cancelWheelBox.y + cancelWheelBox.height / 2);
+  await page.mouse.down();
+  await page.waitForTimeout(quickEntryHoldMs + 80);
+  await page.getByRole("menu", { name: "Eighths" }).waitFor({ state: "visible", timeout: 5_000 });
+  await page.mouse.up();
+  await page.getByRole("menu", { name: "Eighths" }).waitFor({ state: "hidden", timeout: 5_000 });
+  assert.equal(await page.locator(".calc-primary-value").textContent(), '6"', "releasing in the wheel dead zone should cancel without changing the measurement");
   await chooseQuickEntry(page, "8", "1/8", viewportName, "Eighths");
   await page.locator(".calc-primary-value", { hasText: '6 1/8"' }).waitFor({ timeout: 15_000 });
   assert.equal(
@@ -991,6 +1008,10 @@ async function runToolsFlow(page, viewportName) {
     1,
     "Tape history should expose the persisted used state",
   );
+  await calculationHistory.getByRole("button", { name: "Add a short label" }).first().click();
+  await calculationHistory.getByRole("textbox", { name: 'Label for measurement 1 1/2"' }).fill("Door RO");
+  await calculationHistory.getByRole("button", { name: "Save", exact: true }).click();
+  await calculationHistory.getByText("Edit label · Door RO", { exact: true }).waitFor({ timeout: 5_000 });
   const completedEquation = calculationHistory.getByRole("button").filter({ hasText: '1/2" + 2 1/4"' }).first();
   await completedEquation.getByText('2 3/4"', { exact: true }).waitFor({ timeout: 15_000 });
   await completedEquation.click();

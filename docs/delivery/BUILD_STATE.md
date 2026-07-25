@@ -18,6 +18,14 @@ Production feature release commit: `077d3b5e19ffddcfd5df265e3b4483e42d9fe948`
   Users can hold, slide to a highlighted fraction, and lift to commit in one
   motion. The interaction has an accessible keyboard fallback and stays
   within the calculator instead of triggering the Tools swipe-back gesture.
+- Quick wheels now adapt to the trigger's screen edge in Auto mode, with
+  persistent Left hand and Right hand reach preferences for users who want
+  every fan biased consistently. Choice zones are larger for gloves and
+  movement; returning to the center or releasing between choices cancels
+  without changing the measurement.
+- While a wheel choice is highlighted, its complete resulting measurement is
+  previewed above the thumb before release. Haptic selection changes remain
+  bounded and no vibration is required for the gesture to work.
 - Multiplication and division keys now have parallel hold wheels for
   `2`, `3`, `4`, `6`, and `12`. The common `L`, `H`, `÷2`, and `×2`
   actions sit in one thumb-reachable rail directly above the keypad.
@@ -33,15 +41,23 @@ Production feature release commit: `077d3b5e19ffddcfd5df265e3b4483e42d9fe948`
 - Holding `DEL` clears only the current equation and measurement entry.
   Recorded Tape List measurements remain intact; a normal tap still deletes
   one input step.
+- A contextual one-step Undo appears inside the measurement display after an
+  entry, operator, scale, mark, clear, or Tape List add. It restores the
+  calculator and device-local Tape List snapshot without pretending to offer
+  server history.
+- Tape History rows can carry an optional 32-character jobsite label such as
+  `Door RO` or `left stile`. Labels persist with the device-local Tape List
+  and replace ambiguous `Measurement N` copy in the compact five-item view.
 - The primary measurement display and the five-item Tape List now share one
   visually divided workspace. Hiding the fraction strip expands that
   workspace instead of leaving separate stacked cards or unused space.
 - Rendered Tools QA performs real pointer hold/slide/release gestures for
   eighths, sixteenths, multiplication, and deletion. It also locks the
   logical family membership, complete 15-fraction and nine-decimal palettes,
-  independent metric shortcut visibility, retained Tape List behavior, no
-  swipe-back regression, and light/dark wheel surfaces at the mobile
-  viewport.
+  adaptive reach controls, result previews, dead-zone cancellation, one-step
+  Undo, optional Tape List labels, independent metric shortcut visibility,
+  retained Tape List behavior, no swipe-back regression, and light/dark wheel
+  surfaces at the mobile viewport.
 - Current evidence: lint, production build, 75 unit/frontend tests,
   desktop/mobile E2E, rendered Tools QA, and the production dependency audit
   pass. The Tools smoke covers both pointer and keyboard wheel entry. The
