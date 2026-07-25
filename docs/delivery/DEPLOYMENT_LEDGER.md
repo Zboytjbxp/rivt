@@ -2558,3 +2558,36 @@ Add one entry per staging/production deployment.
   in 545 ms with all seven anonymous private-route checks healthy, and the
   live Tools bundle contained the Tape List, direct-add, 1/32 disclosure, and
   fraction-key visibility strings.
+
+# Current Production - Calculator Logical Quick Wheels
+
+- Environment: Production (`https://rivt.pro`)
+- Date/time/timezone: 2026-07-24 America/New_York
+- Deployer: Codex through `codex/calculator-quick-wheels`, fast-forward merge
+  to `master`, and Railway production auto-deploy
+- Runtime feature source:
+  `a810a80bbb680cf5bc1a4a5f072dc238cddb7ab1`
+- Railway deployments: application source build
+  `a7caecc9-4045-4665-b3e0-b607b3525432`; exact-source release
+  `33b71edc-c396-4efd-aed0-1f8d00189128`
+- Migration version before/after: unchanged (`0028_compensation_workflow`)
+- Provider/config changes: only `SOURCE_COMMIT` release metadata advanced;
+  auth, billing, PostgreSQL, object storage, Sentry, Web Push, email,
+  moderation, and rollout controls were preserved.
+- Rollback target:
+  `266d204666619df40cfd22c73586579290976411`; no database rollback is
+  required.
+- Automated gates: build, lint, 75 unit/frontend tests, desktop/mobile E2E,
+  rendered Tools smoke, mobile-action smoke, and dependency audit with zero
+  vulnerabilities passed. Aggregate `npm run test` reached the
+  database-backed integration phase but exceeded the local command limit; no
+  full integration pass is claimed.
+- Product evidence: logical fraction families, one-motion thumb-aware quick
+  wheels, complete imperial and metric mark palettes, multiplication/division
+  factor wheels, adaptive handed reach, full-result previews, safe cancel
+  zones, hold-to-clear, one-step device-local Undo, and persistent optional
+  Tape List labels.
+- Post-deploy proof: live `/api/health` returned the exact feature source with
+  PostgreSQL and S3-compatible storage healthy. The production monitor passed
+  in 502 ms with all seven anonymous private-route checks healthy and
+  operational controls disabled.

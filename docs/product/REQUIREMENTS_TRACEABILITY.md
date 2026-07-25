@@ -40,7 +40,11 @@ Evidence must eventually link to implementation, automated tests, manual accepta
   zero-vulnerability production dependency audit pass. The aggregate serial
   database test exceeded the local command limit, so no full integration pass
   is claimed.
-- No `GA-OPS-008` production evidence is claimed for this packet yet.
+- `GA-OPS-008` gains production evidence: Railway application deployment
+  `a7caecc9-4045-4665-b3e0-b607b3525432` and exact-source metadata deployment
+  `33b71edc-c396-4efd-aed0-1f8d00189128` serve commit
+  `a810a80bbb680cf5bc1a4a5f072dc238cddb7ab1`. Exact-source health and the
+  seven-check production monitor passed.
 
 ## Traceability Addendum - 2026-07-24 Heavy 16th Intelligent Tape Workflow
 

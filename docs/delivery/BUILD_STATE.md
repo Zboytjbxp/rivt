@@ -2,12 +2,12 @@
 
 Last updated: 2026-07-24 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Calculator quick-wheel interaction is locally verified.
+Current phase: Calculator quick-wheel interaction is production verified.
 Active packet: Logical fraction families and one-motion quick wheels
-Repository branch: `codex/calculator-quick-wheels`
-Production feature release commit: `077d3b5e19ffddcfd5df265e3b4483e42d9fe948`
+Repository branch: `master`
+Production feature release commit: `a810a80bbb680cf5bc1a4a5f072dc238cddb7ab1`
 
-## Calculator Logical Quick Wheels (Local Verification)
+## Calculator Logical Quick Wheels (Production Verification)
 
 - Number-key holds now expose predictable measurement families instead of
   repeating all fractions on every key. In particular, holding `8` exposes
@@ -63,12 +63,20 @@ Production feature release commit: `077d3b5e19ffddcfd5df265e3b4483e42d9fe948`
   pass. The Tools smoke covers both pointer and keyboard wheel entry. The
   aggregate `npm run test` reached its serial database-backed integration
   phase without an emitted failure but exceeded the three-minute local
-  command limit; no full integration pass is claimed. Production is still on
-  `077d3b5e19ffddcfd5df265e3b4483e42d9fe948`; this packet is not yet
-  deployed.
+  command limit; no full integration pass is claimed.
 - The verification audit surfaced newly published PostCSS and transitive
   expansion advisories. The lockfile now resolves the available patched
   versions, and `npm audit --omit=dev` reports zero vulnerabilities.
+- The branch was fast-forwarded into `master` at
+  `a810a80bbb680cf5bc1a4a5f072dc238cddb7ab1`. Railway application deployment
+  `a7caecc9-4045-4665-b3e0-b607b3525432` succeeded, followed by exact-source
+  metadata deployment `33b71edc-c396-4efd-aed0-1f8d00189128`; only
+  `SOURCE_COMMIT` release metadata changed.
+- Live `/api/health` reports the exact feature commit, migration
+  `0028_compensation_workflow`, PostgreSQL, S3-compatible object storage,
+  configured Sentry, and configured Web Push. The exact-source production
+  monitor passed in 502 ms with all seven anonymous private-route checks
+  healthy and operational controls disabled.
 
 ## Heavy 16th Intelligent Tape Workflow (Production Verification)
 
