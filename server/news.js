@@ -119,11 +119,62 @@ function _pruneNewsCache(now = Date.now()) {
   }
 }
 
+const HTML_ENTITY_NAMES = Object.freeze({
+  amp: "&",
+  apos: "'",
+  gt: ">",
+  hellip: "…",
+  ldquo: "“",
+  lsquo: "‘",
+  lt: "<",
+  mdash: "—",
+  nbsp: " ",
+  ndash: "–",
+  quot: '"',
+  rdquo: "”",
+  rsquo: "’",
+});
+
+function _decodeHtmlEntities(value) {
+  let decoded = String(value ?? "");
+  for (let pass = 0; pass < 2; pass += 1) {
+    decoded = decoded.replace(/&(#x[\da-f]+|#\d+|[a-z]+);/gi, (entity, token) => {
+      if (token[0] !== "#") return HTML_ENTITY_NAMES[token.toLowerCase()] ?? entity;
+      const numeric = token[1].toLowerCase() === "x"
+        ? Number.parseInt(token.slice(2), 16)
+        : Number.parseInt(token.slice(1), 10);
+      return Number.isFinite(numeric) && numeric > 0 && numeric <= 0x10ffff
+        ? String.fromCodePoint(numeric)
+        : entity;
+    });
+  }
+  return decoded;
+}
+
 function _stripHtml(str) {
-  return (str ?? "")
+  return _decodeHtmlEntities(str)
     .replace(/<[^>]*>/g, " ")
-    .replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/\s+/g, " ").trim();
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function _cleanSummary(rawSummary, headline = "", source = "") {
+  const summary = _stripHtml(rawSummary).slice(0, 350);
+  if (!summary) return "";
+  const normalizedSummary = _normalizedTitle(summary);
+  const normalizedHeadline = _normalizedTitle(headline);
+  const normalizedSource = _normalizedTitle(source);
+  const repeatedFeedLabel = [normalizedHeadline, normalizedSource].filter(Boolean).join(" ");
+  if (
+    normalizedSummary === normalizedHeadline
+    || normalizedSummary === repeatedFeedLabel
+    || (normalizedHeadline && normalizedSource
+      && normalizedSummary.startsWith(normalizedHeadline)
+      && normalizedSummary.slice(normalizedHeadline.length).trim() === normalizedSource)
+  ) {
+    return "";
+  }
+  return summary;
 }
 
 function _cleanHeadline(rawTitle, source = "") {
@@ -494,8 +545,13 @@ function _storyEntities(item) {
   if (
     /\bflorida\b/i.test(text)
     && /\bpermit(?:s|ting)?\b/i.test(text)
-    && (/\b(?:HB|CS\/HB)\s?803\b/i.test(text) || /\b(?:small|home|residential|renovation)\b/i.test(text))
-    && /\b(?:remove|removes|removed|drop|drops|dropped|goodbye|cut|cuts|law|reform|change|changes)\b/i.test(text)
+    && (
+      /\b(?:HB|CS\/HB)\s?803\b/i.test(text)
+      || /\$\s?7,?500\b/i.test(text)
+      || /\b(?:small|home|residential|renovation)\b/i.test(text)
+      || /\bnew law affecting building permits and inspections\b/i.test(text)
+    )
+    && /\b(?:remove|removes|removed|drop|drops|dropped|dropping|goodbye|cut|cuts|law|reform|change|changes|affecting|enacts?|signs?|signed)\b/i.test(text)
   ) {
     entities.add("florida-hb-803-permit-reform");
   }
@@ -803,7 +859,11 @@ async function _fetchFeed(
       const headline = _cleanHeadline(item.title ?? "", source);
       const thumbnailUrl = _rssThumbnailUrl(item, link);
       const publishedAt = item.pubDate ?? item.published ?? item.updated ?? "";
-      const summary = _stripHtml(item.description ?? item.summary ?? item["content:encoded"] ?? "").slice(0, 350);
+      const summary = _cleanSummary(
+        item.description ?? item.summary ?? item["content:encoded"] ?? "",
+        headline,
+        source,
+      );
       const urgency = _urgency(headline);
       const topics = _topics({ headline, summary }, categoryHint);
       const impact = _impact({ headline, summary, publishedAt });
@@ -910,6 +970,8 @@ export const newsInternals = {
   _canonicalArticleUrl,
   _category,
   _cleanHeadline,
+  _cleanSummary,
+  _decodeHtmlEntities,
   _tidyResourceTitle,
   _composeTieredNews,
   _locationSignals,

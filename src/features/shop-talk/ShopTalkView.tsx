@@ -1229,14 +1229,6 @@ export function ShopTalkView({
     || (selectedPost.viewerCanDelete == null && selectedPost.author === profile.displayName)
   ));
   const SelectedCommunityIcon = selectedCommunity?.icon;
-  const reactionLedgerLabel = reactionStatus === "ready"
-    ? "Server-backed"
-    : reactionStatus === "loading"
-      ? "Syncing"
-      : reactionStatus === "error"
-        ? "Offline"
-        : "Not loaded";
-
   async function handleDeleteSelectedPost() {
     if (!selectedPost) return;
     setDeletingPostId(selectedPost.id);
@@ -2005,9 +1997,7 @@ export function ShopTalkView({
                     <div className="answer-composer-byline">
                       <span>
                         Answering as {profile.displayName}
-                        {reactionStatus === "ready"
-                          ? ` · ${myTotalRep} rep`
-                          : ` · ${reactionLedgerLabel}`}
+                        {reactionStatus === "ready" ? ` · ${myTotalRep} rep` : ""}
                       </span>
                       <button
                         type="button"
@@ -2110,7 +2100,7 @@ export function ShopTalkView({
                   <h2>{selectedNews.headline}</h2>
                   <small>{selectedNews.source}{selectedNews.sourceKind === "official" ? " · Official source" : ""} · {selectedNews.date}{(selectedNews.relatedSourceCount ?? 1) > 1 ? ` · ${selectedNews.relatedSourceCount} related sources` : ""}</small>
                 </div>
-                <p className="shop-news-detail-body">{selectedNews.summary}</p>
+                {selectedNews.summary ? <p className="shop-news-detail-body">{selectedNews.summary}</p> : null}
                 {selectedNews.impactReason ? (
                   <section className="news-why-it-matters">
                     <AlertTriangle size={18} />

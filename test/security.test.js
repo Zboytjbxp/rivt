@@ -295,6 +295,18 @@ test("trade news cleans Google publisher suffixes and collapses the HB 803 story
     newsInternals._cleanHeadline("Contractor costs rise - What builders need to know", "Trade Desk"),
     "Contractor costs rise - What builders need to know",
   );
+  assert.equal(
+    newsInternals._cleanSummary(
+      "Jax Inspector General finds Duval Schools&#8217; kitchen construction violated code &nbsp;&nbsp; Florida Politics",
+      "Jax Inspector General finds Duval Schools’ kitchen construction violated code",
+      "Florida Politics",
+    ),
+    "",
+  );
+  assert.equal(
+    newsInternals._decodeHtmlEntities("&ldquo;Safer jobsites&rdquo; &amp; better records"),
+    "“Safer jobsites” & better records",
+  );
 
   const publishedAt = "2026-05-10T12:00:00.000Z";
   const base = {
@@ -323,6 +335,22 @@ test("trade news cleans Google publisher suffixes and collapses the HB 803 story
     url,
     sourceKind: source === "Florida House" ? "official" : "publisher",
   }));
+  rawItems.push(
+    {
+      ...base,
+      summary: "",
+      headline: "Florida Governor Signs Bill Dropping Building Permit Requirements for Work Valued at $7,500 or Less",
+      source: "Insurance Journal",
+      url: "https://insurancejournal.com/florida-permit-threshold",
+    },
+    {
+      ...base,
+      summary: "",
+      headline: "Florida Enacts New Law Affecting Building Permits and Inspections",
+      source: "Program Business",
+      url: "https://programbusiness.com/florida-permit-law",
+    },
+  );
 
   const deduped = newsInternals._dedupeAndDiversify(rawItems, 30);
   assert.equal(new Set(deduped.map((item) => newsInternals._normalizedTitle(item.headline))).size, deduped.length);
