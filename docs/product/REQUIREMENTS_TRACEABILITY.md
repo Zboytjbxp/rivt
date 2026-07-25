@@ -10,6 +10,29 @@ Status values:
 
 Evidence must eventually link to implementation, automated tests, manual acceptance proof, and deployed build.
 
+## Traceability Addendum - 2026-07-24 Calculator Logical Quick Wheels
+
+- `GA-UX-003` gains field-speed evidence: number holds expose stable,
+  learnable fraction families; multiplication and division holds expose
+  common jobsite factors; and `L`, `H`, `÷2`, and `×2` remain directly above
+  the keypad.
+- `GA-UX-003` also gains one-motion gesture evidence. The quick wheel is
+  biased above and beside the blocked thumb, highlights the current choice
+  during the drag, and commits on release while preserving a keyboard path.
+- `GA-UX-005` gains state-scope evidence: holding `DEL` clears the current
+  problem without deleting the device-local Tape List, while tap-to-delete
+  retains its narrower behavior.
+- `GA-UX-006` gains mobile light/dark rendered evidence for the unified
+  display/Tape List workspace, the hidden-fraction five-measurement view,
+  logical eighth and sixteenth wheels, and avoidance of Tools swipe-back.
+- `GA-OPS-007` gains a real pointer-gesture Tools smoke for hold, slide,
+  highlight, release, operator scaling, and hold-to-clear behavior, plus a
+  keyboard-open/focus/commit assertion. Lint, build, 75 unit/frontend tests,
+  desktop/mobile E2E, and a zero-vulnerability production dependency audit
+  pass. The aggregate serial database test exceeded the local command limit,
+  so no full integration pass is claimed.
+- No `GA-OPS-008` production evidence is claimed for this packet yet.
+
 ## Traceability Addendum - 2026-07-24 Heavy 16th Intelligent Tape Workflow
 
 - `GA-UX-003` gains field-notation evidence: imperial arithmetic retains

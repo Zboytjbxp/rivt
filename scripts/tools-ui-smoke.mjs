@@ -513,33 +513,67 @@ async function clickVisibleFraction(page, label, viewportName) {
   );
 }
 
-async function chooseQuickEntry(page, digit, optionLabel, viewportName, menuName = `Quick fractions for ${digit}`) {
-  const key = page.getByLabel("Fraction calculator keypad").getByRole("button", {
-    name: `${digit}. Hold for quick entry.`,
-  });
-  const box = await key.boundingBox();
-  assert.ok(box, `expected quick-entry key ${digit} to be visible in ${viewportName}`);
+async function swipeQuickWheel(page, trigger, optionName, viewportName, menuName, triggerName) {
+  const box = await trigger.boundingBox();
+  assert.ok(box, `expected quick-wheel trigger ${triggerName} to be visible in ${viewportName}`);
   assert.equal(
-    await key.evaluate((element) => getComputedStyle(element).userSelect),
+    await trigger.evaluate((element) => getComputedStyle(element).userSelect),
     "none",
-    `quick-entry key ${digit} must not trigger browser text selection in ${viewportName}`,
+    `quick-wheel trigger ${triggerName} must not trigger browser text selection in ${viewportName}`,
   );
 
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
   await page.mouse.down();
   await page.waitForTimeout(quickEntryHoldMs + 80);
-  await page.mouse.up();
 
   const menu = page.getByRole("menu", { name: menuName });
   await menu.waitFor({ state: "visible", timeout: 5_000 });
-  const menuBox = await menu.boundingBox();
-  assert.ok(menuBox, `expected quick-entry menu ${digit} to have a layout box in ${viewportName}`);
+  const option = menu.getByRole("menuitem", { name: optionName });
+  const optionBox = await option.boundingBox();
+  assert.ok(optionBox, `expected quick-wheel option ${optionName} to have a layout box in ${viewportName}`);
+  if (viewportName === "mobile" && menuName === "Eighths") {
+    await page.screenshot({ path: path.join(screenshotDir, "mobile-calculator-quick-wheel-light.png") });
+    const previousTheme = await page.evaluate(() => document.documentElement.getAttribute("data-theme"));
+    await page.evaluate(() => document.documentElement.setAttribute("data-theme", "dark"));
+    await page.waitForTimeout(150);
+    const darkWheelColors = await option.evaluate((element) => {
+      const styles = getComputedStyle(element);
+      return {
+        background: styles.backgroundColor,
+        color: styles.color,
+        theme: document.documentElement.dataset.theme,
+      };
+    });
+    assert.notEqual(
+      darkWheelColors.background,
+      "rgb(255, 255, 255)",
+      `dark quick-wheel choices should inherit dark surfaces; got ${JSON.stringify(darkWheelColors)}`,
+    );
+    await page.screenshot({ path: path.join(screenshotDir, "mobile-calculator-quick-wheel-dark.png") });
+    await page.evaluate((theme) => {
+      if (theme) document.documentElement.setAttribute("data-theme", theme);
+      else document.documentElement.removeAttribute("data-theme");
+    }, previousTheme);
+  }
   assert.ok(
-    menuBox.y + menuBox.height <= box.y + 4,
-    `quick-entry menu ${digit} should open above the held key in ${viewportName}`,
+    optionBox.y + optionBox.height / 2 <= box.y + box.height / 2 + 1,
+    `quick wheel ${triggerName} should keep ${optionName} above or beside the blocked thumb area in ${viewportName}`,
   );
-  await menu.getByRole("menuitem", { name: `Enter ${optionLabel}` }).click();
+  await page.mouse.move(optionBox.x + optionBox.width / 2, optionBox.y + optionBox.height / 2, { steps: 8 });
+  assert.match(
+    await option.getAttribute("class") ?? "",
+    /\bis-selected\b/,
+    `quick wheel ${triggerName} should highlight ${optionName} before release in ${viewportName}`,
+  );
+  await page.mouse.up();
   await menu.waitFor({ state: "hidden", timeout: 5_000 });
+}
+
+async function chooseQuickEntry(page, digit, optionLabel, viewportName, menuName = `Quick fractions for ${digit}`) {
+  const key = page.getByLabel("Fraction calculator keypad").getByRole("button", {
+    name: `${digit}. Hold and slide for quick choices.`,
+  });
+  await swipeQuickWheel(page, key, `Enter ${optionLabel}`, viewportName, menuName, digit);
 }
 
 async function runToolsFlow(page, viewportName) {
@@ -691,8 +725,8 @@ async function runToolsFlow(page, viewportName) {
   await page.getByLabel("Length calculator").getByText("Meters", { exact: true }).waitFor({ timeout: 15_000 });
   await page.getByLabel("Heavy, light, double, and half controls").getByRole("button", { name: "Heavy plus half millimetre" }).waitFor({ timeout: 15_000 });
   await page.getByLabel("Heavy, light, double, and half controls").getByRole("button", { name: "Light minus half millimetre" }).waitFor({ timeout: 15_000 });
-  await page.getByLabel("Heavy, light, double, and half controls").getByRole("button", { name: "Multiply measurement by two" }).waitFor({ timeout: 15_000 });
-  await page.getByLabel("Heavy, light, double, and half controls").getByRole("button", { name: "Divide measurement by two" }).waitFor({ timeout: 15_000 });
+  await page.getByLabel("Heavy, light, double, and half controls").getByRole("button", { name: "Multiply measurement by two. Hold and slide for quick choices." }).waitFor({ timeout: 15_000 });
+  await page.getByLabel("Heavy, light, double, and half controls").getByRole("button", { name: "Divide measurement by two. Hold and slide for quick choices." }).waitFor({ timeout: 15_000 });
   await page.getByLabel("Metric calculator keypad").getByRole("button", { name: "2" }).click();
   await page.getByLabel("Metric calculator keypad").getByRole("button", { name: "4" }).click();
   await page.getByLabel("Metric calculator keypad").getByRole("button", { name: "0" }).click();
@@ -701,13 +735,13 @@ async function runToolsFlow(page, viewportName) {
   await page.locator(".calc-primary-value", { hasText: "240.5 mm" }).waitFor({ timeout: 15_000 });
   await page.getByLabel("Heavy, light, double, and half controls").getByRole("button", { name: "Light minus half millimetre" }).click();
   await page.locator(".calc-primary-value", { hasText: "240 mm" }).waitFor({ timeout: 15_000 });
-  await page.getByLabel("Heavy, light, double, and half controls").getByRole("button", { name: "Divide measurement by two" }).click();
+  await page.getByLabel("Heavy, light, double, and half controls").getByRole("button", { name: "Divide measurement by two. Hold and slide for quick choices." }).click();
   await page.locator(".calc-primary-value", { hasText: "120 mm" }).waitFor({ timeout: 15_000 });
-  await page.getByLabel("Heavy, light, double, and half controls").getByRole("button", { name: "Multiply measurement by two" }).click();
+  await page.getByLabel("Heavy, light, double, and half controls").getByRole("button", { name: "Multiply measurement by two. Hold and slide for quick choices." }).click();
   await page.locator(".calc-primary-value", { hasText: "240 mm" }).waitFor({ timeout: 15_000 });
   await page.getByLabel("Metric decimal tenths").getByRole("button", { name: ".5" }).click();
   await page.locator(".calc-primary-value", { hasText: "240.5 mm" }).waitFor({ timeout: 15_000 });
-  await page.getByLabel("Metric calculator keypad").getByRole("button", { name: "Backspace" }).click();
+  await page.getByLabel("Metric calculator keypad").getByRole("button", { name: "Delete last digit. Hold to clear current problem." }).click();
   await page.locator(".calc-primary-value", { hasText: "240 mm" }).waitFor({ timeout: 15_000 });
   await page.getByRole("button", { name: "Calculator settings", exact: true }).click();
   await calculatorSettings.getByRole("button", { name: "Imperial" }).click();
@@ -717,13 +751,38 @@ async function runToolsFlow(page, viewportName) {
   await page.getByRole("button", { name: "Clear calculator" }).click();
   await page.locator(".calc-primary-value", { hasText: '0"' }).waitFor({ timeout: 15_000 });
   await page.getByLabel("Fraction calculator keypad").getByRole("button", { name: "6" }).click();
-  await chooseQuickEntry(page, "7", "7/8", viewportName);
-  await page.locator(".calc-primary-value", { hasText: '6 7/8"' }).waitFor({ timeout: 15_000 });
+  await chooseQuickEntry(page, "7", "7/8", viewportName, "Fractions built from 7");
+  await page.waitForTimeout(350);
+  assert.equal(
+    await page.locator(".calc-primary-value").count(),
+    1,
+    `calculator display should remain mounted after the quick-wheel gesture in ${viewportName}; URL ${page.url()}`,
+  );
   assert.equal(
     await page.locator(".calc-primary-value").textContent(),
     '6 7/8"',
     "holding 7 should offer the fast 7/8 entry without changing ordinary digit taps",
   );
+  await page.getByRole("button", { name: "Clear calculator" }).click();
+  await page.getByLabel("Fraction calculator keypad").getByRole("button", { name: "2. Hold and slide for quick choices." }).click();
+  await swipeQuickWheel(
+    page,
+    page.getByLabel("Fraction calculator keypad").getByRole("button", { name: "Multiply. Hold and slide for quick choices." }),
+    "Multiply measurement by 3",
+    viewportName,
+    "Quick multiply",
+    "multiply",
+  );
+  await page.locator(".calc-primary-value", { hasText: '6"' }).waitFor({ timeout: 15_000 });
+  await page.getByLabel("Fraction calculator keypad").getByRole("button", { name: "9. Hold and slide for quick choices." }).click();
+  const deleteKey = page.getByLabel("Fraction calculator keypad").getByRole("button", { name: "Delete last digit. Hold to clear current problem." });
+  const deleteBox = await deleteKey.boundingBox();
+  assert.ok(deleteBox, `delete key should be visible in ${viewportName}`);
+  await page.mouse.move(deleteBox.x + deleteBox.width / 2, deleteBox.y + deleteBox.height / 2);
+  await page.mouse.down();
+  await page.waitForTimeout(quickEntryHoldMs + 180);
+  await page.mouse.up();
+  await page.locator(".calc-primary-value", { hasText: '0"' }).waitFor({ timeout: 15_000 });
   await page.getByRole("button", { name: "Clear calculator" }).click();
   await page.getByLabel("Fraction calculator keypad").getByRole("button", { name: "5" }).click();
   await clickVisibleFraction(page, "5/8", viewportName);
@@ -750,24 +809,37 @@ async function runToolsFlow(page, viewportName) {
   );
   await page.getByRole("button", { name: "Clear calculator" }).click();
   await clickVisibleFraction(page, "1/16", viewportName);
-  await page.getByLabel("Heavy, light, double, and half controls").getByRole("button", { name: "Divide measurement by two" }).click();
+  await page.getByLabel("Heavy, light, double, and half controls").getByRole("button", { name: "Divide measurement by two. Hold and slide for quick choices." }).click();
   await page.locator(".calc-primary-value", { hasText: '0" H' }).waitFor({ timeout: 15_000 });
   assert.equal(
     await page.locator(".calc-primary-value").textContent(),
     '0" H',
     "an otherwise ambiguous thirty-second should default to the lower mark Heavy",
   );
-  await page.getByLabel("Heavy, light, double, and half controls").getByRole("button", { name: "Divide measurement by two" }).click();
+  await page.getByLabel("Heavy, light, double, and half controls").getByRole("button", { name: "Divide measurement by two. Hold and slide for quick choices." }).click();
   await page.locator(".calc-primary-value", { hasText: '≈ 0" H' }).waitFor({ timeout: 15_000 });
   await page.getByRole("button", { name: "Clear calculator" }).click();
   await page.getByLabel("Fraction calculator keypad").getByRole("button", { name: "6" }).click();
-  await chooseQuickEntry(page, "8", "1/8", viewportName);
+  await chooseQuickEntry(page, "8", "1/8", viewportName, "Eighths");
   await page.locator(".calc-primary-value", { hasText: '6 1/8"' }).waitFor({ timeout: 15_000 });
   assert.equal(
     await page.locator(".calc-primary-value").textContent(),
     '6 1/8"',
     "holding 8 should expose the eighths family and enter 1/8",
   );
+  await page.getByRole("button", { name: "Clear calculator" }).click();
+  const keyboardEighthsTrigger = page.getByLabel("Fraction calculator keypad").getByRole("button", { name: "8. Hold and slide for quick choices." });
+  await keyboardEighthsTrigger.focus();
+  await keyboardEighthsTrigger.press("ArrowUp");
+  const keyboardEighthsMenu = page.getByRole("menu", { name: "Eighths" });
+  await keyboardEighthsMenu.waitFor({ state: "visible", timeout: 5_000 });
+  assert.equal(
+    await page.locator(":focus").getAttribute("aria-label"),
+    "Enter 1/8",
+    `keyboard quick-wheel entry should focus its first choice in ${viewportName}`,
+  );
+  await page.keyboard.press("Enter");
+  await page.locator(".calc-primary-value", { hasText: '1/8"' }).waitFor({ timeout: 15_000 });
   await page.getByRole("button", { name: "Clear calculator" }).click();
   await page.getByLabel("Fraction calculator keypad").getByRole("button", { name: "2" }).click();
   await page.getByLabel("Fraction calculator keypad").getByRole("button", { name: "7" }).click();
@@ -822,7 +894,7 @@ async function runToolsFlow(page, viewportName) {
 
   await page.getByRole("button", { name: "Clear calculator" }).click();
   await page.getByLabel("Fraction calculator keypad").getByRole("button", { name: "1" }).click();
-  await chooseQuickEntry(page, "7", "15/16", viewportName, "Tape fractions");
+  await chooseQuickEntry(page, "6", "15/16", viewportName, "Sixteenths");
   assert.equal(
     await page.getByRole("menu", { name: "Tape fractions" }).count(),
     0,
@@ -831,7 +903,7 @@ async function runToolsFlow(page, viewportName) {
   await page.getByLabel("Fraction calculator keypad").getByRole("button", { name: "Add measurement to Tape List" }).click();
   await page.getByRole("button", { name: "Clear calculator" }).click();
   await page.getByLabel("Fraction calculator keypad").getByRole("button", { name: "2" }).click();
-  await chooseQuickEntry(page, "1", "13/16", viewportName, "Tape fractions");
+  await chooseQuickEntry(page, "6", "13/16", viewportName, "Sixteenths");
   await page.getByLabel("Fraction calculator keypad").getByRole("button", { name: "Add measurement to Tape List" }).click();
   assert.equal(
     await tapeListRegion.locator(".calc-tape-row").count(),

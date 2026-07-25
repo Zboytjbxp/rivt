@@ -1,5 +1,5 @@
 import { ArrowLeft, Check, Clipboard, Clock3, Copy, ListChecks, RotateCcw, Ruler, Settings2, Trash2, X } from "lucide-react";
-import { type CSSProperties, useEffect, useRef, useState } from "react";
+import { type CSSProperties, type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { DialogBackdrop, DialogSurface } from "../../components/ui";
 
@@ -31,9 +31,21 @@ const IMPERIAL_DIGIT_FRACTIONS: Record<string, number[]> = {
   "3": [3, 6, 12],
   "4": [4, 8, 12],
   "5": [5, 10],
+  "6": [1, 3, 5, 7, 9, 11, 13, 15],
   "7": [7, 14],
   "8": [2, 6, 10, 14],
   "9": [9],
+};
+const IMPERIAL_DIGIT_FAMILY_LABELS: Record<string, string> = {
+  "1": "Unit fractions",
+  "2": "Halves",
+  "3": "Fractions built from 3",
+  "4": "Quarters",
+  "5": "Fractions built from 5",
+  "6": "Sixteenths",
+  "7": "Fractions built from 7",
+  "8": "Eighths",
+  "9": "Nine sixteenths",
 };
 const RULER_TICKS = [
   { label: "1/16", value: 2 },
@@ -92,58 +104,126 @@ type QuickEntryOption = {
   value: number;
 };
 
-type QuickEntryMenuPosition = {
-  left: number;
-  bottom: number;
-  width: number;
-  arrowLeft: number;
+const MULTIPLY_QUICK_OPTIONS: QuickEntryOption[] = [2, 3, 4, 6, 12].map((value) => ({
+  label: `×${value}`,
+  ariaLabel: `Multiply measurement by ${value}`,
+  value,
+}));
+
+const DIVIDE_QUICK_OPTIONS: QuickEntryOption[] = [2, 3, 4, 6, 12].map((value) => ({
+  label: `÷${value}`,
+  ariaLabel: `Divide measurement by ${value}`,
+  value: 1 / value,
+}));
+
+type QuickWheelPosition = {
+  anchorX: number;
+  anchorY: number;
+  radius: number;
 };
 
-function QuickEntryDigitKey({
-  digit,
+function QuickWheelButton({
+  label,
   options,
   menuLabel,
   onTap,
-  onQuickEntry,
+  onQuickSelect,
+  className,
+  children,
 }: {
-  digit: string;
+  label: string;
   options: QuickEntryOption[];
   menuLabel: string;
   onTap: () => void;
-  onQuickEntry: (value: number) => void;
+  onQuickSelect: (value: number) => void;
+  className?: string;
+  children: ReactNode;
 }) {
   const buttonRef = useRef<HTMLButtonElement>(null);
+  const wheelRef = useRef<HTMLDivElement>(null);
   const holdTimerRef = useRef<number | null>(null);
   const pointerOriginRef = useRef<{ x: number; y: number } | null>(null);
+  const openRef = useRef(false);
+  const keyboardOpenRef = useRef(false);
+  const selectedIndexRef = useRef<number | null>(null);
+  const wheelPositionRef = useRef<QuickWheelPosition | null>(null);
   const suppressClickRef = useRef(false);
   const suppressResetTimerRef = useRef<number | null>(null);
   const [open, setOpen] = useState(false);
-  const [menuPosition, setMenuPosition] = useState<QuickEntryMenuPosition | null>(null);
+  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+  const [wheelPosition, setWheelPosition] = useState<QuickWheelPosition | null>(null);
 
-  function openQuickEntry() {
+  const optionAngle = useCallback((index: number) => {
+    if (options.length === 1) return -90;
+    return -165 + (150 / (options.length - 1)) * index;
+  }, [options.length]);
+
+  const optionOffset = useCallback((index: number, radius: number) => {
+    const angle = optionAngle(index) * (Math.PI / 180);
+    return {
+      x: Math.cos(angle) * radius,
+      y: Math.sin(angle) * radius,
+    };
+  }, [optionAngle]);
+
+  function openQuickWheel() {
     const rect = buttonRef.current?.getBoundingClientRect();
     if (!rect) return;
 
-    const viewportWidth = window.innerWidth;
-    const width = Math.min(320, viewportWidth - 24);
-    const keyCenter = rect.left + rect.width / 2;
-    const left = Math.min(Math.max(12, keyCenter - width / 2), viewportWidth - width - 12);
-    const arrowLeft = Math.min(Math.max(18, keyCenter - left), width - 18);
-
-    setMenuPosition({
-      left,
-      bottom: Math.max(12, window.innerHeight - rect.top + 10),
-      width,
-      arrowLeft,
-    });
+    const radius = options.length >= 7 ? 136 : options.length >= 5 ? 104 : options.length >= 4 ? 96 : 86;
+    const outerPadding = radius + 34;
+    const anchorX = Math.min(
+      Math.max(rect.left + rect.width / 2, outerPadding),
+      window.innerWidth - outerPadding,
+    );
+    const anchorY = Math.max(rect.top + rect.height / 2, radius + 50);
+    const nextPosition = { anchorX, anchorY, radius };
+    wheelPositionRef.current = nextPosition;
+    setWheelPosition(nextPosition);
+    openRef.current = true;
     setOpen(true);
+    setSelectedIndex(null);
+    selectedIndexRef.current = null;
   }
 
-  function cancelHold() {
+  function closeQuickWheel() {
+    openRef.current = false;
+    keyboardOpenRef.current = false;
+    wheelPositionRef.current = null;
+    selectedIndexRef.current = null;
+    setSelectedIndex(null);
+    setOpen(false);
+  }
+
+  function cancelHold(closeWheel = false) {
     if (holdTimerRef.current !== null) window.clearTimeout(holdTimerRef.current);
     holdTimerRef.current = null;
     pointerOriginRef.current = null;
+    if (closeWheel) closeQuickWheel();
   }
+
+  const updateWheelSelection = useCallback((clientX: number, clientY: number) => {
+    const position = wheelPositionRef.current;
+    if (!position) return;
+    let closestIndex: number | null = null;
+    let closestDistance = 50;
+    options.forEach((_, index) => {
+      const offset = optionOffset(index, position.radius);
+      const distance = Math.hypot(
+        clientX - (position.anchorX + offset.x),
+        clientY - (position.anchorY + offset.y),
+      );
+      if (distance < closestDistance) {
+        closestDistance = distance;
+        closestIndex = index;
+      }
+    });
+    if (closestIndex !== selectedIndexRef.current) {
+      selectedIndexRef.current = closestIndex;
+      setSelectedIndex(closestIndex);
+      if (closestIndex !== null) navigator.vibrate?.(7);
+    }
+  }, [optionOffset, options]);
 
   function clearClickSuppression() {
     suppressClickRef.current = false;
@@ -160,53 +240,93 @@ function QuickEntryDigitKey({
 
   useEffect(() => {
     if (!open) return;
+    if (keyboardOpenRef.current) {
+      wheelRef.current?.querySelector<HTMLButtonElement>('[role="menuitem"]')?.focus();
+      keyboardOpenRef.current = false;
+    }
     function closeOnEscape(event: KeyboardEvent) {
-      if (event.key === "Escape") setOpen(false);
+      if (event.key !== "Escape") return;
+      closeQuickWheel();
+      buttonRef.current?.focus();
     }
     function closeOnViewportChange() {
-      setOpen(false);
+      closeQuickWheel();
+    }
+    function trackPointer(event: PointerEvent) {
+      updateWheelSelection(event.clientX, event.clientY);
+    }
+    function commitPointerSelection() {
+      if (!openRef.current) return;
+      const selected = selectedIndexRef.current;
+      if (selected !== null) onQuickSelect(options[selected].value);
+      window.setTimeout(() => {
+        closeQuickWheel();
+        buttonRef.current?.focus();
+      }, 60);
     }
     window.addEventListener("keydown", closeOnEscape);
     window.addEventListener("resize", closeOnViewportChange);
+    window.addEventListener("pointermove", trackPointer, true);
+    window.addEventListener("pointerup", commitPointerSelection, true);
+    window.addEventListener("pointercancel", closeOnViewportChange, true);
     return () => {
       window.removeEventListener("keydown", closeOnEscape);
       window.removeEventListener("resize", closeOnViewportChange);
+      window.removeEventListener("pointermove", trackPointer, true);
+      window.removeEventListener("pointerup", commitPointerSelection, true);
+      window.removeEventListener("pointercancel", closeOnViewportChange, true);
     };
-  }, [open]);
+  }, [onQuickSelect, open, options, updateWheelSelection]);
 
   return (
     <>
       <button
         ref={buttonRef}
         type="button"
-        className={options.length ? "has-quick-entry" : undefined}
+        className={`${className ?? ""}${options.length ? " has-quick-entry" : ""}`.trim() || undefined}
         aria-haspopup={options.length ? "menu" : undefined}
         aria-expanded={options.length ? open : undefined}
-        aria-label={options.length ? `${digit}. Hold for quick entry.` : digit}
+        aria-label={options.length ? `${label}. Hold and slide for quick choices.` : label}
         onPointerDown={(event) => {
+          event.stopPropagation();
           if (!options.length || event.button !== 0) return;
+          event.currentTarget.setPointerCapture(event.pointerId);
           pointerOriginRef.current = { x: event.clientX, y: event.clientY };
           holdTimerRef.current = window.setTimeout(() => {
             suppressClickRef.current = true;
-            openQuickEntry();
+            keyboardOpenRef.current = false;
+            openQuickWheel();
             navigator.vibrate?.(12);
           }, QUICK_ENTRY_HOLD_MS);
         }}
         onPointerMove={(event) => {
+          event.stopPropagation();
+          if (openRef.current) {
+            updateWheelSelection(event.clientX, event.clientY);
+            return;
+          }
           const origin = pointerOriginRef.current;
           if (!origin || Math.hypot(event.clientX - origin.x, event.clientY - origin.y) < 10) return;
           cancelHold();
         }}
-        onPointerUp={() => {
+        onPointerUp={(event) => {
+          event.stopPropagation();
+          const wasOpen = openRef.current;
           cancelHold();
+          if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+            event.currentTarget.releasePointerCapture(event.pointerId);
+          }
+          if (wasOpen) return;
           if (!suppressClickRef.current) return;
           suppressResetTimerRef.current = window.setTimeout(() => {
             suppressClickRef.current = false;
             suppressResetTimerRef.current = null;
-          }, 0);
+          }, 300);
         }}
-        onPointerCancel={cancelHold}
-        onPointerLeave={cancelHold}
+        onPointerCancel={(event) => {
+          event.stopPropagation();
+          cancelHold(true);
+        }}
         onContextMenu={(event) => {
           event.preventDefault();
         }}
@@ -218,36 +338,62 @@ function QuickEntryDigitKey({
           }
           onTap();
         }}
+        onKeyDown={(event) => {
+          if (!options.length || event.key !== "ArrowUp") return;
+          event.preventDefault();
+          suppressClickRef.current = false;
+          keyboardOpenRef.current = true;
+          openQuickWheel();
+        }}
       >
-        {digit}
+        {children}
         {options.length ? <span className="calc-hold-cue" aria-hidden="true" /> : null}
       </button>
-      {open && menuPosition ? createPortal(
-        <div className="calc-quick-entry-layer" role="presentation" onPointerDown={() => setOpen(false)}>
+      {open && wheelPosition ? createPortal(
+        <div className="calc-quick-entry-layer" role="presentation" onPointerDown={closeQuickWheel}>
           <div
-            className="calc-quick-entry-menu"
+            ref={wheelRef}
+            className={`calc-quick-wheel${options.length >= 7 ? " is-dense" : ""}`}
             role="menu"
             aria-label={menuLabel}
             onPointerDown={(event) => event.stopPropagation()}
             style={{
-              left: menuPosition.left,
-              bottom: menuPosition.bottom,
-              width: menuPosition.width,
-              "--calc-quick-arrow-left": `${menuPosition.arrowLeft}px`,
+              left: wheelPosition.anchorX,
+              top: wheelPosition.anchorY,
+              "--calc-wheel-radius": `${wheelPosition.radius}px`,
             } as CSSProperties}
           >
-            <span>{menuLabel}</span>
-            <div>
+            <div className="calc-quick-wheel-origin" aria-hidden="true">
+              <span>Slide</span>
+            </div>
+            <span className="calc-quick-wheel-title">{menuLabel}</span>
+            <div className="calc-quick-wheel-options">
               {options.map((option) => (
                 <button
-                  key={`${digit}-${option.label}`}
+                  key={`${label}-${option.label}`}
                   type="button"
                   role="menuitem"
+                  className={selectedIndex === options.indexOf(option) ? "is-selected" : ""}
                   aria-label={option.ariaLabel}
+                  style={{
+                    "--calc-wheel-angle": `${optionAngle(options.indexOf(option))}deg`,
+                    "--calc-wheel-x": `${optionOffset(options.indexOf(option), wheelPosition.radius).x}px`,
+                    "--calc-wheel-y": `${optionOffset(options.indexOf(option), wheelPosition.radius).y}px`,
+                  } as CSSProperties}
+                  onPointerEnter={() => {
+                    selectedIndexRef.current = options.indexOf(option);
+                    setSelectedIndex(options.indexOf(option));
+                  }}
                   onClick={() => {
+                    if (suppressClickRef.current) {
+                      clearClickSuppression();
+                      closeQuickWheel();
+                      buttonRef.current?.focus();
+                      return;
+                    }
                     clearClickSuppression();
-                    onQuickEntry(option.value);
-                    setOpen(false);
+                    onQuickSelect(option.value);
+                    closeQuickWheel();
                     buttonRef.current?.focus();
                   }}
                 >
@@ -255,12 +401,85 @@ function QuickEntryDigitKey({
                 </button>
               ))}
             </div>
-            <small>Tap the value you want</small>
+            <small className="calc-quick-wheel-hint">Slide, then lift</small>
           </div>
         </div>,
-        document.body,
+        document.querySelector(".rivt-v2") ?? document.body,
       ) : null}
     </>
+  );
+}
+
+function QuickEntryDigitKey(props: {
+  digit: string;
+  options: QuickEntryOption[];
+  menuLabel: string;
+  onTap: () => void;
+  onQuickEntry: (value: number) => void;
+}) {
+  return (
+    <QuickWheelButton
+      label={props.digit}
+      options={props.options}
+      menuLabel={props.menuLabel}
+      onTap={props.onTap}
+      onQuickSelect={props.onQuickEntry}
+    >
+      {props.digit}
+    </QuickWheelButton>
+  );
+}
+
+function HoldClearButton({ onDelete, onClear }: { onDelete: () => void; onClear: () => void }) {
+  const holdTimerRef = useRef<number | null>(null);
+  const didClearRef = useRef(false);
+
+  function cancelTimer() {
+    if (holdTimerRef.current !== null) window.clearTimeout(holdTimerRef.current);
+    holdTimerRef.current = null;
+  }
+
+  useEffect(() => cancelTimer, []);
+
+  return (
+    <button
+      type="button"
+      className="op ghost calc-delete-key has-quick-entry"
+      aria-label="Delete last digit. Hold to clear current problem."
+      onPointerDown={(event) => {
+        event.stopPropagation();
+        if (event.button !== 0) return;
+        didClearRef.current = false;
+        event.currentTarget.setPointerCapture(event.pointerId);
+        holdTimerRef.current = window.setTimeout(() => {
+          didClearRef.current = true;
+          onClear();
+          navigator.vibrate?.([12, 30, 12]);
+        }, QUICK_ENTRY_HOLD_MS + 120);
+      }}
+      onPointerUp={(event) => {
+        event.stopPropagation();
+        cancelTimer();
+        if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+          event.currentTarget.releasePointerCapture(event.pointerId);
+        }
+      }}
+      onPointerCancel={(event) => {
+        event.stopPropagation();
+        cancelTimer();
+      }}
+      onContextMenu={(event) => event.preventDefault()}
+      onClick={() => {
+        if (didClearRef.current) {
+          didClearRef.current = false;
+          return;
+        }
+        onDelete();
+      }}
+    >
+      DEL
+      <span className="calc-hold-cue" aria-hidden="true" />
+    </button>
   );
 }
 
@@ -806,7 +1025,10 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
   function scaleEntry(multiplier: number) {
     const base = resultUnits ?? entryValueUnits;
     const qualifier = displayQualifier;
-    const expression = `${formatForMode(base, inputMode, activeUnit, qualifier, displayApproximate)} ${multiplier === 2 ? "× 2" : "÷ 2"}`;
+    const scaleLabel = multiplier >= 1
+      ? `× ${formatNumber(multiplier, 3)}`
+      : `÷ ${formatNumber(1 / multiplier, 3)}`;
+    const expression = `${formatForMode(base, inputMode, activeUnit, qualifier, displayApproximate)} ${scaleLabel}`;
     if (inputMode === "imperial") {
       const presentation = presentationFromExactUnits(exactTapeUnits(base, qualifier) * multiplier);
       const approximate = displayApproximate || presentation.approximate;
@@ -851,11 +1073,16 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
       return [{ label: `.${digit} mm`, ariaLabel: `Enter point ${digit} millimeters`, value: Number(digit) }];
     }
 
-    const values = fractionKeysVisible ? (IMPERIAL_DIGIT_FRACTIONS[digit] ?? []) : FRACTION_BUTTONS;
+    const values = IMPERIAL_DIGIT_FRACTIONS[digit] ?? [];
     return values.map((value) => {
       const label = fractionLabelFromSixteenth(value);
       return { label, ariaLabel: `Enter ${label}`, value };
     });
+  }
+
+  function quickEntryMenuLabel(digit: string) {
+    if (inputMode === "metric") return `Quick decimal for ${digit}`;
+    return IMPERIAL_DIGIT_FAMILY_LABELS[digit] ?? `Quick fractions for ${digit}`;
   }
 
   function applyOperator(operator: Operator) {
@@ -1138,17 +1365,40 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
         <main className="heavy-calc-main fraction-calc-main length-mode">
           <section className="fraction-calc-grid" aria-label="Length calculator">
             <div className={`fraction-calc-left${inputMode === "imperial" && !fractionKeysVisible ? " fractions-hidden" : ""}`}>
-              <div className="calc-display-stack fraction-display">
-                <span className="fraction-history">{equationLabel}</span>
-                <strong className="calc-primary-value">{primaryValue}</strong>
-                <div className="calc-secondary-row">
-                  <span>{secondaryLabel}</span>
-                  <strong>{secondaryValue}</strong>
+              <section className={`calc-measurement-workspace${inputMode === "imperial" && !fractionKeysVisible ? " has-tape-list" : ""}`}>
+                <div className="calc-display-stack fraction-display">
+                  <span className="fraction-history">{equationLabel}</span>
+                  <strong className="calc-primary-value">{primaryValue}</strong>
+                  <div className="calc-secondary-row">
+                    <span>{secondaryLabel}</span>
+                    <strong>{secondaryValue}</strong>
+                  </div>
+                  <div className="fraction-display-meta">
+                    {metaValues.map((value, index) => <span key={`${index}-${value}`}>{value}</span>)}
+                  </div>
                 </div>
-                <div className="fraction-display-meta">
-                  {metaValues.map((value, index) => <span key={`${index}-${value}`}>{value}</span>)}
-                </div>
-              </div>
+                {inputMode === "imperial" && !fractionKeysVisible ? (
+                  <section className="calc-tape-queue" aria-label="Tape List">
+                    <header>
+                      <div>
+                        <ListChecks size={17} />
+                        <strong>Tape List</strong>
+                      </div>
+                      <span>{tapeMeasurements.filter((entry) => !entry.used).length} ready</span>
+                    </header>
+                    <div className="calc-tape-rows">
+                      {visibleTapeMeasurements.length
+                        ? visibleTapeMeasurements.map((entry) => renderTapeMeasurementRow(entry))
+                        : (
+                            <div className="calc-tape-empty">
+                              <strong>No measurements yet</strong>
+                              <span>Enter a measurement, then tap Add.</span>
+                            </div>
+                          )}
+                    </div>
+                  </section>
+                ) : null}
+              </section>
 
               <div className="fraction-unit-row" aria-label={inputMode === "metric" ? "Metric input and conversions" : "Input unit"}>
                 {inputMode === "metric" ? (
@@ -1204,35 +1454,6 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
                 )}
               </div>
 
-              <div className="fraction-action-row" aria-label="Heavy, light, double, and half controls">
-                <button
-                  type="button"
-                  aria-label={inputMode === "metric" ? "Light minus half millimetre" : "Mark measurement light"}
-                  aria-pressed={inputMode === "imperial" && displayQualifier === "light"}
-                  onClick={() => applyHeavyLight("light")}
-                >
-                  <strong>L</strong>
-                  <small>{inputMode === "metric" ? "-0.5 mm" : "Light"}</small>
-                </button>
-                <button
-                  type="button"
-                  aria-label={inputMode === "metric" ? "Heavy plus half millimetre" : "Mark measurement heavy"}
-                  aria-pressed={inputMode === "imperial" && displayQualifier === "heavy"}
-                  onClick={() => applyHeavyLight("heavy")}
-                >
-                  <strong>H</strong>
-                  <small>{inputMode === "metric" ? "+0.5 mm" : "Heavy"}</small>
-                </button>
-                <button type="button" aria-label="Divide measurement by two" onClick={() => scaleEntry(0.5)}>
-                  <strong>&divide;2</strong>
-                  <small>Half</small>
-                </button>
-                <button type="button" aria-label="Multiply measurement by two" onClick={() => scaleEntry(2)}>
-                  <strong>&times;2</strong>
-                  <small>Double</small>
-                </button>
-              </div>
-
               {inputMode === "metric" ? (
                 <div className="fraction-strip metric-strip" aria-label="Metric decimal tenths">
                   {METRIC_TENTH_BUTTONS.map((value) => (
@@ -1265,37 +1486,76 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
                     );
                   })}
                 </div>
-              ) : (
-                <section className="calc-tape-queue" aria-label="Tape List">
-                  <header>
-                    <div>
-                      <ListChecks size={17} />
-                      <strong>Tape List</strong>
-                    </div>
-                    <span>{tapeMeasurements.filter((entry) => !entry.used).length} ready</span>
-                  </header>
-                  <div className="calc-tape-rows">
-                    {visibleTapeMeasurements.length
-                      ? visibleTapeMeasurements.map((entry) => renderTapeMeasurementRow(entry))
-                      : (
-                          <div className="calc-tape-empty">
-                            <strong>No measurements yet</strong>
-                            <span>Enter a measurement, then tap Add.</span>
-                          </div>
-                        )}
-                  </div>
-                </section>
-              )}
+              ) : null}
+
+              <div className="fraction-action-row" aria-label="Heavy, light, double, and half controls">
+                <button
+                  type="button"
+                  aria-label={inputMode === "metric" ? "Light minus half millimetre" : "Mark measurement light"}
+                  aria-pressed={inputMode === "imperial" && displayQualifier === "light"}
+                  onClick={() => applyHeavyLight("light")}
+                >
+                  <strong>L</strong>
+                  <small>{inputMode === "metric" ? "-0.5 mm" : "Light"}</small>
+                </button>
+                <button
+                  type="button"
+                  aria-label={inputMode === "metric" ? "Heavy plus half millimetre" : "Mark measurement heavy"}
+                  aria-pressed={inputMode === "imperial" && displayQualifier === "heavy"}
+                  onClick={() => applyHeavyLight("heavy")}
+                >
+                  <strong>H</strong>
+                  <small>{inputMode === "metric" ? "+0.5 mm" : "Heavy"}</small>
+                </button>
+                <QuickWheelButton
+                  label="Divide measurement by two"
+                  options={DIVIDE_QUICK_OPTIONS}
+                  menuLabel="Quick divide"
+                  onTap={() => scaleEntry(0.5)}
+                  onQuickSelect={scaleEntry}
+                >
+                  <strong>&divide;2</strong>
+                  <small>Hold for more</small>
+                </QuickWheelButton>
+                <QuickWheelButton
+                  label="Multiply measurement by two"
+                  options={MULTIPLY_QUICK_OPTIONS}
+                  menuLabel="Quick multiply"
+                  onTap={() => scaleEntry(2)}
+                  onQuickSelect={scaleEntry}
+                >
+                  <strong>&times;2</strong>
+                  <small>Hold for more</small>
+                </QuickWheelButton>
+              </div>
 
               <div className="calc-pad-grid fraction-pad" aria-label={inputMode === "metric" ? "Metric calculator keypad" : "Fraction calculator keypad"}>
-                {["7", "8", "9"].map((digit) => <QuickEntryDigitKey key={digit} digit={digit} options={quickEntryOptions(digit)} menuLabel={inputMode === "metric" ? `Quick decimal for ${digit}` : fractionKeysVisible ? `Quick fractions for ${digit}` : "Tape fractions"} onTap={() => handleDigit(digit)} onQuickEntry={inputMode === "metric" ? chooseMetricTenth : chooseFraction} />)}
-                <button type="button" className="op" onClick={() => applyOperator("/")}>/</button>
-                {["4", "5", "6"].map((digit) => <QuickEntryDigitKey key={digit} digit={digit} options={quickEntryOptions(digit)} menuLabel={inputMode === "metric" ? `Quick decimal for ${digit}` : fractionKeysVisible ? `Quick fractions for ${digit}` : "Tape fractions"} onTap={() => handleDigit(digit)} onQuickEntry={inputMode === "metric" ? chooseMetricTenth : chooseFraction} />)}
-                <button type="button" className="op" onClick={() => applyOperator("x")}>x</button>
-                {["1", "2", "3"].map((digit) => <QuickEntryDigitKey key={digit} digit={digit} options={quickEntryOptions(digit)} menuLabel={inputMode === "metric" ? `Quick decimal for ${digit}` : fractionKeysVisible ? `Quick fractions for ${digit}` : "Tape fractions"} onTap={() => handleDigit(digit)} onQuickEntry={inputMode === "metric" ? chooseMetricTenth : chooseFraction} />)}
+                {["7", "8", "9"].map((digit) => <QuickEntryDigitKey key={digit} digit={digit} options={quickEntryOptions(digit)} menuLabel={quickEntryMenuLabel(digit)} onTap={() => handleDigit(digit)} onQuickEntry={inputMode === "metric" ? chooseMetricTenth : chooseFraction} />)}
+                <QuickWheelButton
+                  label="Divide"
+                  className="op"
+                  options={DIVIDE_QUICK_OPTIONS}
+                  menuLabel="Quick divide"
+                  onTap={() => applyOperator("/")}
+                  onQuickSelect={scaleEntry}
+                >
+                  /
+                </QuickWheelButton>
+                {["4", "5", "6"].map((digit) => <QuickEntryDigitKey key={digit} digit={digit} options={quickEntryOptions(digit)} menuLabel={quickEntryMenuLabel(digit)} onTap={() => handleDigit(digit)} onQuickEntry={inputMode === "metric" ? chooseMetricTenth : chooseFraction} />)}
+                <QuickWheelButton
+                  label="Multiply"
+                  className="op"
+                  options={MULTIPLY_QUICK_OPTIONS}
+                  menuLabel="Quick multiply"
+                  onTap={() => applyOperator("x")}
+                  onQuickSelect={scaleEntry}
+                >
+                  x
+                </QuickWheelButton>
+                {["1", "2", "3"].map((digit) => <QuickEntryDigitKey key={digit} digit={digit} options={quickEntryOptions(digit)} menuLabel={quickEntryMenuLabel(digit)} onTap={() => handleDigit(digit)} onQuickEntry={inputMode === "metric" ? chooseMetricTenth : chooseFraction} />)}
                 <button type="button" className="op" onClick={() => applyOperator("-")}>-</button>
                 <button type="button" className="wide" onClick={() => handleDigit("0")}>0</button>
-                <button type="button" className="op ghost" onClick={handleBackspace} aria-label="Backspace">DEL</button>
+                <HoldClearButton onDelete={handleBackspace} onClear={clearAll} />
                 <button
                   type="button"
                   className="eq calc-enter-key"
@@ -1383,7 +1643,7 @@ export function FieldCalculatorTool({ onBack }: { onBack?: () => void }) {
               <section>
                 <div>
                   <strong>Fraction key visibility</strong>
-                  <span>Hide the fraction strip to expand the Tape List. Hold any number key to reach every sixteenth.</span>
+                  <span>Hide the fraction strip to expand the Tape List. Hold 8 for eighths, 4 for quarters, or 6 for sixteenths; slide and lift to choose.</span>
                 </div>
                 <div className="calc-settings-options" role="group" aria-label="Fraction key visibility">
                   <button type="button" className={fractionKeysVisible ? "active" : ""} onClick={() => setFractionKeysVisible(true)}>Shown</button>

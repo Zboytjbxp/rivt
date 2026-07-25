@@ -2,10 +2,46 @@
 
 Last updated: 2026-07-24 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Intelligent tape-measure calculator is production verified.
-Active packet: Heavy 16th intelligent measurement workflow
-Repository branch: `codex/tape-measure-sixteenths`
+Current phase: Calculator quick-wheel interaction is locally verified.
+Active packet: Logical fraction families and one-motion quick wheels
+Repository branch: `codex/calculator-quick-wheels`
 Production feature release commit: `077d3b5e19ffddcfd5df265e3b4483e42d9fe948`
+
+## Calculator Logical Quick Wheels (Local Verification)
+
+- Number-key holds now expose predictable measurement families instead of
+  repeating all fractions on every key. In particular, holding `8` exposes
+  `1/8`, `3/8`, `5/8`, and `7/8`; holding `4` exposes quarter-family marks;
+  and holding `6` provides complete sixteenth access when the visible
+  fraction strip is hidden.
+- Long-press choices use a thumb-aware fan above and beside the held key.
+  Users can hold, slide to a highlighted fraction, and lift to commit in one
+  motion. The interaction has an accessible keyboard fallback and stays
+  within the calculator instead of triggering the Tools swipe-back gesture.
+- Multiplication and division keys now have parallel hold wheels for
+  `2`, `3`, `4`, `6`, and `12`. The common `L`, `H`, `÷2`, and `×2`
+  actions sit in one thumb-reachable rail directly above the keypad.
+- Holding `DEL` clears only the current equation and measurement entry.
+  Recorded Tape List measurements remain intact; a normal tap still deletes
+  one input step.
+- The primary measurement display and the five-item Tape List now share one
+  visually divided workspace. Hiding the fraction strip expands that
+  workspace instead of leaving separate stacked cards or unused space.
+- Rendered Tools QA performs real pointer hold/slide/release gestures for
+  eighths, sixteenths, multiplication, and deletion. It also locks the
+  logical family membership, retained Tape List behavior, no swipe-back
+  regression, and light/dark wheel surfaces at the mobile viewport.
+- Current evidence: lint, production build, 75 unit/frontend tests,
+  desktop/mobile E2E, rendered Tools QA, and the production dependency audit
+  pass. The Tools smoke covers both pointer and keyboard wheel entry. The
+  aggregate `npm run test` reached its serial database-backed integration
+  phase without an emitted failure but exceeded the three-minute local
+  command limit; no full integration pass is claimed. Production is still on
+  `077d3b5e19ffddcfd5df265e3b4483e42d9fe948`; this packet is not yet
+  deployed.
+- The verification audit surfaced newly published PostCSS and transitive
+  expansion advisories. The lockfile now resolves the available patched
+  versions, and `npm audit --omit=dev` reports zero vulnerabilities.
 
 ## Heavy 16th Intelligent Tape Workflow (Production Verification)
 
