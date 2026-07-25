@@ -766,16 +766,18 @@ export function InvoiceDraftTool({
                       <small>
                         {!connectStatus?.providerConfigured
                           ? "New bank-payment links are paused. Existing Stripe payment status remains visible."
+                          : !connectStatus.pilotEligible
+                            ? "Bank payments are in a controlled pilot. This account has not been added yet."
                           : connectStatus.ready
                             ? "ACH is ready. Funds go to your connected Stripe account."
                             : connectStatus.connected
                               ? "Continue Stripe setup before accepting bank payments."
                             : "Connect Stripe to accept ACH payments directly from customers."}
                       </small>
-                      {connectStatus?.providerConfigured ? <small>Stripe fees and ACH timing apply. Review payout details in Stripe.</small> : null}
+                      {connectStatus?.providerConfigured && connectStatus.pilotEligible ? <small>Stripe fees and ACH timing apply. Review payout details in Stripe.</small> : null}
                     </span>
                   </div>
-                  {connectStatus?.providerConfigured && !connectStatus.ready ? (
+                  {connectStatus?.providerConfigured && connectStatus.pilotEligible && !connectStatus.ready ? (
                     <button type="button" onClick={() => void openBankPaymentSetup()} disabled={connectBusy || projectInvoice.status === "void"}>
                       {connectBusy ? "Opening Stripe..." : connectStatus.connected ? "Continue setup" : "Set up bank payments"}
                     </button>

@@ -440,6 +440,8 @@ if (!testDatabaseUrl) {
     });
     assert.equal(connectStatus.response.status, 200);
     assert.equal(connectStatus.payload.data.connect.providerConfigured, false);
+    assert.equal(connectStatus.payload.data.connect.rolloutMode, "disabled");
+    assert.equal(connectStatus.payload.data.connect.pilotEligible, false);
     assert.equal(connectStatus.payload.data.connect.ready, false);
 
     const paymentSessionId = `cs_test_${randomUUID().replaceAll("-", "")}`;

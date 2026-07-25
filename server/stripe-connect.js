@@ -25,22 +25,52 @@ function envValue(name, fallback = undefined) {
   return value || fallback;
 }
 
+function parsePilotAccountIds(value = envValue("STRIPE_CONNECT_ACH_PILOT_ACCOUNT_IDS", "")) {
+  return new Set(
+    String(value)
+      .split(",")
+      .map((entry) => entry.trim().toLowerCase())
+      .filter((entry) => z.uuid().safeParse(entry).success),
+  );
+}
+
 function connectConfig(appOrigin) {
   const secretKey = envValue("STRIPE_SECRET_KEY");
   const webhookSecret = envValue("STRIPE_CONNECT_WEBHOOK_SECRET");
   const enabled = envValue("STRIPE_CONNECT_ACH_ENABLED") === "true";
+  const openEnrollment = envValue("STRIPE_CONNECT_ACH_ALLOW_ALL") === "true";
+  const pilotAccountIds = parsePilotAccountIds();
   const missing = [];
   if (!enabled) missing.push("STRIPE_CONNECT_ACH_ENABLED");
   if (!secretKey) missing.push("STRIPE_SECRET_KEY");
   if (!webhookSecret) missing.push("STRIPE_CONNECT_WEBHOOK_SECRET");
+  if (enabled && !openEnrollment && pilotAccountIds.size === 0) {
+    missing.push("STRIPE_CONNECT_ACH_PILOT_ACCOUNT_IDS");
+  }
   return {
     secretKey,
     webhookSecret,
     enabled,
+    openEnrollment,
+    pilotAccountIds,
+    rolloutMode: !enabled ? "disabled" : openEnrollment ? "open" : "pilot",
     appOrigin,
     configured: missing.length === 0,
     missing,
   };
+}
+
+function accountCanUseConnect(config, accountId) {
+  if (!config.enabled || !accountId) return false;
+  return config.openEnrollment || config.pilotAccountIds.has(String(accountId).toLowerCase());
+}
+
+function requireConnectPilot(config, accountId) {
+  if (accountCanUseConnect(config, accountId)) return;
+  throw new ApiError(403, "STRIPE_CONNECT_PILOT_REQUIRED", "Bank payments are currently available only to approved pilot accounts.", {
+    provider: "stripe_connect",
+    rolloutMode: config.rolloutMode,
+  });
 }
 
 export function stripeConnectProviderStatus(appOrigin) {
@@ -51,6 +81,9 @@ export function stripeConnectProviderStatus(appOrigin) {
     enabled: config.enabled,
     configured: config.configured,
     webhookConfigured: Boolean(config.webhookSecret),
+    rolloutMode: config.rolloutMode,
+    pilotAccountCount: config.pilotAccountIds.size,
+    openEnrollment: config.openEnrollment,
     mode: config.configured ? "configured" : "setup_required",
   };
 }
@@ -324,15 +357,18 @@ async function syncConnectAccount(database, config, row) {
   return persistConnectAccount(database, row.account_id, account, apiVersion);
 }
 
-function mapConnectStatus(row, config) {
+function mapConnectStatus(row, config, accountId) {
   const onboarding = row?.onboarding_status ?? "not_started";
   const achStatus = row?.ach_payments_status ?? "unrequested";
+  const pilotEligible = accountCanUseConnect(config, accountId);
   return {
     provider: "stripe_connect",
     accountApiVersion: row?.stripe_account_api_version ?? null,
     dashboardType: row?.stripe_dashboard ?? null,
     providerConfigured: config.configured,
     webhookConfigured: Boolean(config.webhookSecret),
+    rolloutMode: config.rolloutMode,
+    pilotEligible,
     missing: config.missing,
     connected: Boolean(row),
     onboardingStatus: onboarding,
@@ -340,7 +376,7 @@ function mapConnectStatus(row, config) {
     chargesEnabled: Boolean(row?.charges_enabled),
     payoutsEnabled: Boolean(row?.payouts_enabled),
     detailsSubmitted: Boolean(row?.details_submitted),
-    ready: config.configured && onboarding === "ready" && achStatus === "active",
+    ready: config.configured && pilotEligible && onboarding === "ready" && achStatus === "active",
     lastSyncedAt: row?.last_synced_at ? new Date(row.last_synced_at).toISOString() : null,
   };
 }
@@ -731,7 +767,10 @@ export function registerStripeConnectRoutes({
       [request.actor.account.id],
     )).rows[0] ?? null;
     if (row && config.secretKey) row = await syncConnectAccount(database, config, row);
-    response.json({ data: { connect: mapConnectStatus(row, config) }, meta: { requestId: request.requestId } });
+    response.json({
+      data: { connect: mapConnectStatus(row, config, request.actor.account.id) },
+      meta: { requestId: request.requestId },
+    });
   }));
 
   app.post("/api/v1/payments/connect/onboarding", requireAuthenticatedUser, requireV1Actor, writeRateLimit, asyncRoute(async (request, response) => {
@@ -745,6 +784,7 @@ export function registerStripeConnectRoutes({
         missing: config.missing,
       });
     }
+    requireConnectPilot(config, request.actor.account.id);
     const result = await runIdempotentMutation(
       request,
       request.actor.account.id,
@@ -800,7 +840,7 @@ export function registerStripeConnectRoutes({
             data: {
               url: link.url,
               expiresAt: toIso(link.expires_at),
-              connect: mapConnectStatus(row, config),
+              connect: mapConnectStatus(row, config, request.actor.account.id),
             },
             meta: { requestId: request.requestId },
           },
@@ -820,6 +860,7 @@ export function registerStripeConnectRoutes({
         missing: config.missing,
       });
     }
+    requireConnectPilot(config, request.actor.account.id);
     const row = (await database.query(
       "SELECT * FROM stripe_connect_accounts WHERE account_id = $1 LIMIT 1",
       [request.actor.account.id],
@@ -854,6 +895,7 @@ export function registerStripeConnectRoutes({
         missing: config.missing,
       });
     }
+    requireConnectPilot(config, request.actor.account.id);
     const invoiceId = validate(invoiceIdSchema, request.params.id);
     const result = await runIdempotentMutation(
       request,
@@ -905,7 +947,7 @@ export function registerStripeConnectRoutes({
           throw new ApiError(409, "STRIPE_CONNECT_ONBOARDING_REQUIRED", "Finish bank-payment setup before creating a payment link.");
         }
         connectRow = await syncConnectAccount(client, config, connectRow);
-        const connectStatus = mapConnectStatus(connectRow, config);
+        const connectStatus = mapConnectStatus(connectRow, config, request.actor.account.id);
         if (!connectStatus.ready) {
           throw new ApiError(409, "STRIPE_CONNECT_NOT_READY", "Stripe is still reviewing this bank-payment account.", {
             connect: connectStatus,
@@ -1120,6 +1162,7 @@ export const stripeConnectInternals = {
   ACH_MAX_AMOUNT_CENTS,
   ACH_MIN_AMOUNT_CENTS,
   SETTLED_PAYMENT_STATUSES,
+  accountCanUseConnect,
   assertAchAmount,
   connectConfig,
   eventPaymentUpdate,
@@ -1130,6 +1173,7 @@ export const stripeConnectInternals = {
   createV2AccountLinkPayload,
   createV2ConnectedAccountPayload,
   normalizeConnectAccount,
+  parsePilotAccountIds,
   providerContributionCents,
   v2DetailsSubmitted,
 };

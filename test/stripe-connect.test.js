@@ -1,22 +1,51 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { stripeConnectInternals } from "../server/stripe-connect.js";
+import { evaluatePilotConfiguration } from "../scripts/stripe-connect-pilot-status.js";
 
 test("Stripe Connect ACH stays fail-closed until explicitly enabled and signed", () => {
   const previous = {
     key: process.env.STRIPE_SECRET_KEY,
     webhook: process.env.STRIPE_CONNECT_WEBHOOK_SECRET,
     enabled: process.env.STRIPE_CONNECT_ACH_ENABLED,
+    pilots: process.env.STRIPE_CONNECT_ACH_PILOT_ACCOUNT_IDS,
+    allowAll: process.env.STRIPE_CONNECT_ACH_ALLOW_ALL,
   };
   process.env.STRIPE_SECRET_KEY = "sk_test_placeholder";
   process.env.STRIPE_CONNECT_WEBHOOK_SECRET = "whsec_placeholder";
   delete process.env.STRIPE_CONNECT_ACH_ENABLED;
+  delete process.env.STRIPE_CONNECT_ACH_PILOT_ACCOUNT_IDS;
+  delete process.env.STRIPE_CONNECT_ACH_ALLOW_ALL;
   try {
     const disabled = stripeConnectInternals.connectConfig("https://rivt.example");
     assert.equal(disabled.configured, false);
     assert.ok(disabled.missing.includes("STRIPE_CONNECT_ACH_ENABLED"));
     process.env.STRIPE_CONNECT_ACH_ENABLED = "true";
-    assert.equal(stripeConnectInternals.connectConfig("https://rivt.example").configured, true);
+    const missingPilot = stripeConnectInternals.connectConfig("https://rivt.example");
+    assert.equal(missingPilot.configured, false);
+    assert.ok(missingPilot.missing.includes("STRIPE_CONNECT_ACH_PILOT_ACCOUNT_IDS"));
+
+    const pilotId = "00000000-0000-4000-8000-000000000001";
+    process.env.STRIPE_CONNECT_ACH_PILOT_ACCOUNT_IDS = `bad-id, ${pilotId.toUpperCase()}`;
+    const pilot = stripeConnectInternals.connectConfig("https://rivt.example");
+    assert.equal(pilot.configured, true);
+    assert.equal(pilot.rolloutMode, "pilot");
+    assert.equal(pilot.pilotAccountIds.size, 1);
+    assert.equal(stripeConnectInternals.accountCanUseConnect(pilot, pilotId), true);
+    assert.equal(stripeConnectInternals.accountCanUseConnect(
+      pilot,
+      "00000000-0000-4000-8000-000000000002",
+    ), false);
+
+    delete process.env.STRIPE_CONNECT_ACH_PILOT_ACCOUNT_IDS;
+    process.env.STRIPE_CONNECT_ACH_ALLOW_ALL = "true";
+    const open = stripeConnectInternals.connectConfig("https://rivt.example");
+    assert.equal(open.configured, true);
+    assert.equal(open.rolloutMode, "open");
+    assert.equal(stripeConnectInternals.accountCanUseConnect(
+      open,
+      "00000000-0000-4000-8000-000000000002",
+    ), true);
   } finally {
     if (previous.key === undefined) delete process.env.STRIPE_SECRET_KEY;
     else process.env.STRIPE_SECRET_KEY = previous.key;
@@ -24,6 +53,47 @@ test("Stripe Connect ACH stays fail-closed until explicitly enabled and signed",
     else process.env.STRIPE_CONNECT_WEBHOOK_SECRET = previous.webhook;
     if (previous.enabled === undefined) delete process.env.STRIPE_CONNECT_ACH_ENABLED;
     else process.env.STRIPE_CONNECT_ACH_ENABLED = previous.enabled;
+    if (previous.pilots === undefined) delete process.env.STRIPE_CONNECT_ACH_PILOT_ACCOUNT_IDS;
+    else process.env.STRIPE_CONNECT_ACH_PILOT_ACCOUNT_IDS = previous.pilots;
+    if (previous.allowAll === undefined) delete process.env.STRIPE_CONNECT_ACH_ALLOW_ALL;
+    else process.env.STRIPE_CONNECT_ACH_ALLOW_ALL = previous.allowAll;
+  }
+});
+
+test("operator readiness requires a controlled allowlisted pilot", () => {
+  const previous = {
+    key: process.env.STRIPE_SECRET_KEY,
+    webhook: process.env.STRIPE_CONNECT_WEBHOOK_SECRET,
+    enabled: process.env.STRIPE_CONNECT_ACH_ENABLED,
+    pilots: process.env.STRIPE_CONNECT_ACH_PILOT_ACCOUNT_IDS,
+    allowAll: process.env.STRIPE_CONNECT_ACH_ALLOW_ALL,
+  };
+  process.env.STRIPE_SECRET_KEY = "sk_test_placeholder";
+  process.env.STRIPE_CONNECT_WEBHOOK_SECRET = "whsec_placeholder";
+  process.env.STRIPE_CONNECT_ACH_ENABLED = "true";
+  process.env.STRIPE_CONNECT_ACH_PILOT_ACCOUNT_IDS = "00000000-0000-4000-8000-000000000001";
+  delete process.env.STRIPE_CONNECT_ACH_ALLOW_ALL;
+  try {
+    const pilot = evaluatePilotConfiguration();
+    assert.equal(pilot.readyForControlledPilot, true);
+    assert.equal(pilot.rolloutMode, "pilot");
+    assert.equal(pilot.pilotAccountCount, 1);
+
+    process.env.STRIPE_CONNECT_ACH_ALLOW_ALL = "true";
+    const open = evaluatePilotConfiguration();
+    assert.equal(open.readyForControlledPilot, false);
+    assert.equal(open.checks.controlledRollout, false);
+  } finally {
+    if (previous.key === undefined) delete process.env.STRIPE_SECRET_KEY;
+    else process.env.STRIPE_SECRET_KEY = previous.key;
+    if (previous.webhook === undefined) delete process.env.STRIPE_CONNECT_WEBHOOK_SECRET;
+    else process.env.STRIPE_CONNECT_WEBHOOK_SECRET = previous.webhook;
+    if (previous.enabled === undefined) delete process.env.STRIPE_CONNECT_ACH_ENABLED;
+    else process.env.STRIPE_CONNECT_ACH_ENABLED = previous.enabled;
+    if (previous.pilots === undefined) delete process.env.STRIPE_CONNECT_ACH_PILOT_ACCOUNT_IDS;
+    else process.env.STRIPE_CONNECT_ACH_PILOT_ACCOUNT_IDS = previous.pilots;
+    if (previous.allowAll === undefined) delete process.env.STRIPE_CONNECT_ACH_ALLOW_ALL;
+    else process.env.STRIPE_CONNECT_ACH_ALLOW_ALL = previous.allowAll;
   }
 });
 

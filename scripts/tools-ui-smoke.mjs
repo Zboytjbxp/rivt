@@ -238,8 +238,12 @@ async function configurePage(page) {
         data: {
           connect: {
             provider: "stripe_connect",
+            accountApiVersion: "v2",
+            dashboardType: "full",
             providerConfigured: true,
             webhookConfigured: true,
+            rolloutMode: "pilot",
+            pilotEligible: true,
             missing: [],
             connected: true,
             onboardingStatus: "ready",

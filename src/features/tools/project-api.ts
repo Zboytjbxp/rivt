@@ -137,6 +137,8 @@ export interface StripeConnectStatus {
   dashboardType: "express" | "full" | "none" | null;
   providerConfigured: boolean;
   webhookConfigured: boolean;
+  rolloutMode: "disabled" | "pilot" | "open";
+  pilotEligible: boolean;
   missing: string[];
   connected: boolean;
   onboardingStatus: "not_started" | "pending" | "ready" | "restricted";
