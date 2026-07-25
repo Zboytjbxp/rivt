@@ -1246,6 +1246,7 @@ async function runToolsFlow(page, viewportName) {
   await page.getByRole("heading", { name: "Tenant Build-Out", exact: true }).waitFor({ timeout: 15_000 });
   await page.getByRole("button", { name: "Capture", exact: true }).waitFor({ timeout: 15_000 });
   assert.equal(await page.locator(".v2-camera-home").getByText("Private albums", { exact: true }).count(), 0, "RIVT job context should not mix in private albums");
+  assert.equal(await page.locator(".v2-camera-home .v2-camera-album-card").count(), 0, "The selected job should not repeat as a destination card");
   await assertNoHorizontalOverflow(page);
   await page.screenshot({ path: path.join(screenshotDir, `${viewportName}-camera-home.png`), fullPage: true });
   await page.getByRole("button", { name: "Capture", exact: true }).click();

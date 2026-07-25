@@ -1417,7 +1417,9 @@ export function JobPhotosTool({ activeWork, isDemo = false, focusedActiveWorkId 
   const latestAlbumCapture = recentAlbumCaptures[0] ?? null;
   const contextPhoto = selectedContextPhoto ?? latestAlbumCapture?.photo ?? null;
   const contextPhotoAlbum = selectedContextPhoto ? contextAlbum : latestAlbumCapture?.album ?? null;
-  const activeJobAlbums = selectableActiveWork.slice(0, 6);
+  const activeJobAlbums = selectableActiveWork
+    .filter((work) => work.id !== recordWork?.id)
+    .slice(0, 6);
   const additionalRecentAlbumCaptures = recentAlbumCaptures.filter(({ photo }) => photo.id !== contextPhoto?.id);
   const isPrivateAlbumContext = !recordWork && !standaloneProject && Boolean(selectedPrivateAlbum);
 
@@ -1523,20 +1525,19 @@ export function JobPhotosTool({ activeWork, isDemo = false, focusedActiveWorkId 
         <section className="v2-camera-home-panel v2-camera-albums-panel">
           <div className="v2-camera-home-section-head">
             <div>
-              <h3>Active job destinations</h3>
-              <p>Choose which accepted job receives new photos.</p>
+              <h3>{recordWork ? "Other active jobs" : "Active job destinations"}</h3>
+              <p>{recordWork ? "Switch where new photos will be saved." : "Choose which accepted job receives new photos."}</p>
             </div>
             <span className="v2-camera-album-count">{activeJobAlbums.length}</span>
           </div>
           <div className="v2-camera-album-grid">
             {activeJobAlbums.map((work) => {
-              const selected = recordWork?.id === work.id;
               const city = work.job?.publicLocation?.city ?? "RIVT workspace";
               return (
                 <button
                   key={work.id}
                   type="button"
-                  className={`v2-camera-album-card${selected ? " is-selected" : ""}`}
+                  className="v2-camera-album-card"
                   onClick={() => onChooseActiveWork?.(work)}
                 >
                   <span className="v2-camera-album-cover is-empty">
@@ -1544,7 +1545,7 @@ export function JobPhotosTool({ activeWork, isDemo = false, focusedActiveWorkId 
                   </span>
                   <span className="v2-camera-album-copy">
                     <strong>{work.job?.title ?? "Accepted work"}</strong>
-                    <small>{city}{selected ? " - selected" : ""}</small>
+                    <small>{city}</small>
                   </span>
                 </button>
               );
