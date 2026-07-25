@@ -37,9 +37,18 @@ Evidence must eventually link to implementation, automated tests, manual accepta
 - Local evidence includes lint, build, security lint, 82 unit/frontend tests,
   all 19 serial PostgreSQL integration suites, E2E, dependency audit with zero
   vulnerabilities, strict launch readiness, migration lifecycle, and rendered
-  desktop/mobile invoice plus payer-return proof. Production activation remains
-  blocked on Stripe test-mode onboarding and async success/failure proof plus
-  connected-webhook configuration.
+  desktop/mobile invoice plus payer-return proof.
+- `GA-OPS-008` gains fail-closed production evidence: Railway deployments
+  `042ed135-454b-4c2b-be5b-cdce069390f9` and
+  `6832307b-0792-4251-8825-8269350f1b2a` serve exact source
+  `75caa9d867c9a9c813bb3d381af17a397088ba63` through migration
+  `0029_stripe_connect_invoice_payments`. The production monitor passed in
+  607 ms; provider health truthfully reports disabled/unconfigured/
+  `setup_required`; the public return shell loads; and an unsigned Connect
+  webhook fails closed.
+- Customer activation remains blocked on Stripe test-mode connected-account
+  onboarding, asynchronous success/failure proof, and connected-webhook
+  configuration. No live ACH capability is claimed.
 
 ## Traceability Addendum - 2026-07-25 Jacksonville Launch-Readiness Closure
 

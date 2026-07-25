@@ -1,5 +1,53 @@
 # Deployment Ledger
 
+## 2026-07-25 - Stripe Connect ACH Invoice Payments (Fail-Closed)
+
+- Feature source commit:
+  `75caa9d867c9a9c813bb3d381af17a397088ba63`
+- Branch: `master` (source branch: `codex/stripe-connect-ach-invoices`)
+- Railway application deployment:
+  `042ed135-454b-4c2b-be5b-cdce069390f9`
+- Railway exact-source metadata deployment:
+  `6832307b-0792-4251-8825-8269350f1b2a`
+- Production: `https://rivt.pro`
+- Scope: server-owned Stripe Connect Express onboarding, ACH-only direct
+  Checkout charges to an invoice author's connected merchant account,
+  delayed-settlement webhook state, durable replay protection, refund/dispute
+  reopening, conflicting-payment protection, minimal public payer status,
+  tokenized invoice controls, and a public processing return.
+- Money/honesty boundary: RIVT takes no application fee, never treats Checkout
+  completion as settlement, does not hold/escrow/guarantee/insure/protect job
+  funds, and does not expose the unfinished payment control while the provider
+  is disabled.
+- Migration before/after: `0028_compensation_workflow` /
+  `0029_stripe_connect_invoice_payments`.
+- Provider/config changes: `SOURCE_COMMIT` advanced to the feature source.
+  `STRIPE_CONNECT_ACH_ENABLED` remains off and the dedicated
+  `STRIPE_CONNECT_WEBHOOK_SECRET` remains unconfigured. Subscription billing,
+  auth, PostgreSQL, object storage, Sentry, Web Push, email, moderation, and
+  operational controls were preserved.
+- Rollback target:
+  `92262205986394fd82a6a28974141d76cb588289`. Application rollback keeps
+  migration 0029 in place; the reviewed down migration may be used only after
+  confirming there are no connected payment records or outstanding events.
+- Automated gates: production build, lint, security lint, 82 unit/frontend
+  tests, all 19 serial PostgreSQL integration suites, desktop/mobile E2E,
+  rendered Tools ACH invoice and public-return coverage, migration
+  apply/rollback, project-financial settlement coverage, strict launch
+  readiness, zero-vulnerability production dependency audit, and diff checks
+  passed.
+- Post-deploy proof: live health returned exact feature source, ready migration
+  0029, healthy PostgreSQL/S3-compatible storage, configured Sentry/Web Push,
+  and bank-payment mode `setup_required`. The production monitor passed in
+  607 ms with all seven anonymous private-route checks and open operational
+  controls. `/payment/complete` returned HTTP 200; an unsigned Connect webhook
+  returned HTTP 503.
+- Activation gate: before setting the flag, complete a real Stripe test-mode
+  connected-account onboarding, prove asynchronous ACH success and failure,
+  configure the dedicated connected webhook, confirm merchant/fee/refund/
+  dispute responsibilities, and rerun exact-source health plus the production
+  monitor. No customer ACH link creation is currently enabled.
+
 ## 2026-07-25 - Jacksonville Launch-Readiness Closure
 
 - Feature source commit:

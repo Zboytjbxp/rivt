@@ -2,12 +2,12 @@
 
 Last updated: 2026-07-25 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Stripe Connect ACH invoice payments are in local verification.
+Current phase: Stripe Connect ACH invoice payments are deployed fail-closed; provider activation is pending.
 Active packet: `docs/delivery/packets/70_STRIPE_CONNECT_ACH_INVOICES.md`
-Repository branch: `codex/stripe-connect-ach-invoices`
-Production feature release commit: `21213427ef9ed857fd34eada12a4630df9484923`
+Repository branch: `master` (source branch: `codex/stripe-connect-ach-invoices`)
+Production feature release commit: `75caa9d867c9a9c813bb3d381af17a397088ba63`
 
-## Stripe Connect ACH Invoice Payments (Local Verification)
+## Stripe Connect ACH Invoice Payments (Deployed, Activation Gated)
 
 - Product-owner direction expands the launch contract narrowly: RIVT may
   facilitate Stripe-hosted ACH direct charges to an invoice author's own
@@ -50,9 +50,21 @@ Production feature release commit: `21213427ef9ed857fd34eada12a4630df9484923`
   controls and public processing return are captured at desktop and 390x844,
   enforce no horizontal overflow, keep controls at least 44px, and preserve
   the honest "not marked paid" boundary.
-- Production is unchanged. Stripe test-mode onboarding plus asynchronous
-  success/failure proof and connected-webhook setup remain activation gates;
-  no live payment capability is claimed.
+- Railway application deployment `042ed135-454b-4c2b-be5b-cdce069390f9`
+  and exact-source metadata deployment
+  `6832307b-0792-4251-8825-8269350f1b2a` succeeded. Live health serves
+  migration `0029_stripe_connect_invoice_payments` and reports the provider
+  honestly as disabled, unconfigured, and `setup_required`.
+- The exact-source production monitor passed in 607 ms with healthy
+  PostgreSQL/S3-compatible storage, configured Sentry/Web Push, open
+  operational controls, and all seven anonymous private-route checks.
+  `/payment/complete` returns the public app shell, while an unsigned Connect
+  webhook fails closed with HTTP 503 because the dedicated webhook secret is
+  intentionally absent.
+- Stripe test-mode connected-account onboarding plus asynchronous
+  success/failure proof and connected-webhook setup remain activation gates.
+  New ACH links are not available to customers and no live payment capability
+  is claimed.
 
 ## Jacksonville Launch-Readiness Closure (Complete and Deployed)
 
