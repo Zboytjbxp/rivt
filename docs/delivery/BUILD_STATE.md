@@ -2,10 +2,58 @@
 
 Last updated: 2026-07-25 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Stripe Connect Accounts v2 is deployed fail-closed; sandbox ACH and connected-event coverage are verified, with human onboarding and live webhook activation still gated.
+Current phase: Stripe Connect ACH has a server-enforced one-account pilot and isolated signed-webhook staging proof; production remains disabled, with human onboarding and live webhook activation still gated.
 Active packet: `docs/delivery/packets/70_STRIPE_CONNECT_ACH_INVOICES.md`
-Repository branch: `master` (source branch: `codex/stripe-connect-accounts-v2-sandbox-fix`)
+Repository branch: `codex/stripe-ach-pilot-staging`
 Production feature release commit: `548ce531fe850679b47386e30287b990bd02b37b`
+
+## Stripe Connect ACH Controlled Pilot and Isolated Staging (Ready, Human Onboarding Gated)
+
+- Branch `codex/stripe-ach-pilot-staging` adds server-side pilot authorization.
+  `STRIPE_CONNECT_ACH_PILOT_ACCOUNT_IDS` is checked before onboarding,
+  account management, and bank-payment link creation. Open enrollment requires
+  the separate explicit `STRIPE_CONNECT_ACH_ALLOW_ALL=true` override.
+- A non-pilot staging account with the same verified/active contractor state
+  received HTTP 403 with `STRIPE_CONNECT_PILOT_REQUIRED`. The single
+  allowlisted pilot created a Stripe Accounts v2 onboarding link successfully.
+- Railway environment `staging` was created blank rather than copied from
+  production. It has a separate PostgreSQL service, a staging-only domain,
+  independent security peppers, Stripe sandbox credentials, and exactly one
+  pilot UUID. Production configuration and data were not copied or changed.
+- Staging deployment `349a01f6-fe9e-4171-97ef-65166b5d05d1` serves source
+  `57fe99c0fc109891cf5630682ad3635286a308d9` with migration
+  `0030_stripe_connect_accounts_v2`.
+- A replacement sandbox connected-account webhook endpoint listens to the nine
+  payment lifecycle events handled by RIVT. Its fresh signing secret was
+  installed without printing it; the setup endpoint whose secret had been
+  revealed was deleted.
+- `npm run payments:pilot:test:staging` passed against the isolated database and
+  public staging webhook. It proved invalid-signature rejection, signed success
+  to payment/invoice `paid`, signed failure to payment `failed` while leaving
+  the invoice `sent`, and one immutable ledger row after duplicate replay.
+- `npm run payments:pilot:status -- --require-ready` reports rollout mode
+  `pilot`, one configured/connected pilot, no open payments before the test,
+  and controlled-pilot configuration readiness `true`. The merchant remains
+  honestly `restricted`/`not_started` until Stripe-hosted onboarding is
+  completed by a human.
+- Staging global `/api/health` remains HTTP 503 because staging intentionally
+  has no object-storage/Sentry/Web Push clone. Its database, migration, source,
+  and Stripe Connect configuration are observable; production health remains
+  unchanged.
+- No production activation is claimed. Live onboarding/KYC, a live
+  connected-account endpoint/signing secret, a named pilot UUID, and a
+  low-value live settlement remain human-controlled gates.
+- Verification: lint, production build, 86 unit tests, the Tools UI smoke,
+  fail-closed/jobs-discovery E2E, security lint, and the production dependency
+  audit all pass. Every integration test file passes in bounded groups on Node
+  22, matching the production runtime. The combined local `npm run test`
+  command was not used as success evidence because the desktop's Node 24
+  runner hung and its forced-exit path hit a Windows libuv assertion.
+- Final boundary check: `https://rivt.pro/api/health` remains HTTP 200 on
+  source `8814917ada72b93130bad739ddd6b30574011582` with invoice bank payments
+  disabled and unconfigured. Staging reports migration `0030`, pilot mode, one
+  allowlisted account, and a configured webhook. Its global health stays
+  intentionally degraded only for the staging services that were not cloned.
 
 ## Stripe Connect Accounts v2 Correction (Deployed, Activation Gated)
 

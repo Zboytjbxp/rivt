@@ -66,9 +66,9 @@ async function main() {
          ORDER BY status`,
       ),
       pool.query(
-        `SELECT count(*) FILTER (WHERE received_at >= now() - interval '24 hours')::int AS last_24_hours,
-                count(*) FILTER (WHERE received_at >= now() - interval '7 days')::int AS last_7_days,
-                max(received_at) AS last_received_at
+        `SELECT count(*) FILTER (WHERE created_at >= now() - interval '24 hours')::int AS last_24_hours,
+                count(*) FILTER (WHERE created_at >= now() - interval '7 days')::int AS last_7_days,
+                max(created_at) AS last_received_at
          FROM stripe_connect_events`,
       ),
       pool.query(

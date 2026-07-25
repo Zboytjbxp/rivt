@@ -42,6 +42,7 @@
     "smoke:contractor-click-path:live": "node scripts/live-ui-contractor-click-path.js",
     "monitor:production": "node scripts/production-synthetic-monitor.js",
     "payments:pilot:status": "node scripts/stripe-connect-pilot-status.js",
+    "payments:pilot:test:staging": "node scripts/stripe-connect-staging-e2e.js",
     "incident:readiness": "node scripts/incident-readiness-check.js",
     "launch:readiness": "node scripts/launch-readiness-check.js",
     "backup:logical-artifact": "node scripts/create-logical-backup-artifact.js",

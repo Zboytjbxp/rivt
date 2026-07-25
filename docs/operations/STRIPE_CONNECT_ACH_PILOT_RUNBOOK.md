@@ -53,13 +53,33 @@ Before inviting a pilot, require:
 3. Use Stripe sandbox keys and the sandbox connected-account destination.
 4. Use a staging-only application origin and signing secret.
 5. Create a staging trades account and add only its UUID to the pilot list.
-6. Complete Stripe-hosted sandbox onboarding manually when Stripe requires
+6. Confirm a verified non-pilot receives HTTP 403
+   `STRIPE_CONNECT_PILOT_REQUIRED` from onboarding.
+7. Run the staging-only signed lifecycle harness with all required environment
+   values supplied at runtime:
+
+```text
+RIVT_STAGING_ACK=isolated-stripe-connect
+RAILWAY_ENVIRONMENT_NAME=staging
+STAGING_BASE_URL=https://<staging-host>
+DATABASE_URL=<isolated-staging-database>
+STRIPE_CONNECT_WEBHOOK_SECRET=<staging-only-secret>
+PILOT_ACCOUNT_ID=<staging-pilot-uuid>
+npm run payments:pilot:test:staging
+```
+
+The harness refuses non-staging hosts/environments. It creates synthetic
+staging records and proves invalid-signature rejection, paid and failed
+lifecycle reconciliation, and immutable duplicate-event handling. It must
+never receive production variables.
+
+8. Complete Stripe-hosted sandbox onboarding manually when Stripe requires
    CAPTCHA, identity, business, or bank input.
-7. Create and pay one invoice with Stripe's successful ACH fixture.
-8. Confirm RIVT remains `processing` until the signed asynchronous success,
-   then becomes `paid`.
-9. Repeat with Stripe's failing ACH fixture and confirm the invoice reopens.
-10. Verify replayed and out-of-order events do not duplicate or regress state.
+9. Create and pay one invoice with Stripe's successful ACH fixture.
+10. Confirm RIVT remains `processing` until the Stripe-origin signed
+    asynchronous success, then becomes `paid`.
+11. Repeat with Stripe's failing ACH fixture and confirm the invoice reopens.
+12. Verify replayed and out-of-order events do not duplicate or regress state.
 
 ## Live pilot activation
 
