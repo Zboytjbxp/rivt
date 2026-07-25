@@ -1,5 +1,49 @@
 # Deployment Ledger
 
+## 2026-07-25 - Stripe Connect Accounts v2 Correction (Fail-Closed)
+
+- Feature source commit:
+  `548ce531fe850679b47386e30287b990bd02b37b`
+- Branch: `master` (source branch:
+  `codex/stripe-connect-accounts-v2-sandbox-fix`)
+- Railway application deployment:
+  `69c46b9d-33e7-4450-b737-84eafe174a07`
+- Railway exact-source metadata deployment:
+  `afac9014-c51d-4298-8516-44496366f654`
+- Production: `https://rivt.pro`
+- Scope: replace rejected Accounts v1 connected-account creation with
+  Accounts v2 merchant configuration, full Stripe Dashboard access, v2 ACH
+  and card capability requests, Stripe-owned fee/loss responsibility,
+  version-aware account sync, and honest restricted capability states.
+- Migration before/after: `0029_stripe_connect_invoice_payments` /
+  `0030_stripe_connect_accounts_v2`.
+- Provider evidence: a real Stripe sandbox account and hosted onboarding link
+  were created; ACH-only Checkout success and `no_account` failure reached
+  their asynchronous terminal events; RIVT mapped those provider payloads to
+  paid/failed. An active sandbox connected-account destination now listens to
+  the nine settlement events handled by RIVT.
+- Provider/config boundary: production uses a live Stripe key. The sandbox
+  signing secret was not installed into production, the live
+  `STRIPE_CONNECT_WEBHOOK_SECRET` remains absent, and
+  `STRIPE_CONNECT_ACH_ENABLED` remains off. The unsigned live webhook returns
+  HTTP 503 and no customer ACH link creation is enabled.
+- Automated gates: production build, lint, security lint, 85 unit/frontend
+  tests, all 19 serial PostgreSQL integration suites, migration lifecycle,
+  fail-closed authentication and jobs/discovery E2E, and the production
+  dependency audit with zero known vulnerabilities passed.
+- Post-deploy proof: live health returned the exact feature source, ready
+  migration 0030, Accounts v2 provider mode, healthy PostgreSQL/S3-compatible
+  storage, and disabled/unconfigured bank payments. The exact-source
+  production monitor passed with all seven anonymous private-route checks.
+- Rollback target:
+  `4637b9a9a79e40d30febad95789f9917ffd0c054`. Keep migrations 0030 and 0029
+  after any real account/payment data exists unless an approved export and
+  retention plan permits rollback.
+- Activation gate: Michael must complete Stripe-hosted identity/business
+  onboarding. Then create the live connected-account destination, install its
+  dedicated signing secret, verify signed delivery, and enable only a
+  controlled pilot account before broader release.
+
 ## 2026-07-25 - Stripe Connect ACH Invoice Payments (Fail-Closed)
 
 - Feature source commit:

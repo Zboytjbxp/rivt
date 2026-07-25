@@ -2,12 +2,12 @@
 
 Last updated: 2026-07-25 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Stripe Connect ACH invoice payments are deployed fail-closed; Accounts v2 correction is sandbox-verified and awaiting release.
+Current phase: Stripe Connect Accounts v2 is deployed fail-closed; sandbox ACH and connected-event coverage are verified, with human onboarding and live webhook activation still gated.
 Active packet: `docs/delivery/packets/70_STRIPE_CONNECT_ACH_INVOICES.md`
-Repository branch: `codex/stripe-connect-accounts-v2-sandbox-fix`
-Production feature release commit: `75caa9d867c9a9c813bb3d381af17a397088ba63`
+Repository branch: `master` (source branch: `codex/stripe-connect-accounts-v2-sandbox-fix`)
+Production feature release commit: `548ce531fe850679b47386e30287b990bd02b37b`
 
-## Stripe Connect Accounts v2 Sandbox Correction (Verified, Not Deployed)
+## Stripe Connect Accounts v2 Correction (Deployed, Activation Gated)
 
 - A real RIVT Stripe sandbox call proved the original Accounts v1 creation
   request is rejected for this new Connect platform. The integration now
@@ -40,11 +40,21 @@ Production feature release commit: `75caa9d867c9a9c813bb3d381af17a397088ba63`
   integration suites, the isolated `0030` migration lifecycle, fail-closed
   authentication and jobs/discovery E2E, lint, security lint, the production
   build, and `npm audit --omit=dev` with zero known vulnerabilities.
-- Production remains intentionally unchanged and fail-closed. The feature
-  flag is off, the connected webhook secret is absent, and no live ACH
-  capability is claimed. Remaining activation gates are human hosted
-  onboarding, a connected-account event destination/signing secret, and an
-  exact-source release plus production monitor.
+- Railway deployments `69c46b9d-33e7-4450-b737-84eafe174a07` and
+  `afac9014-c51d-4298-8516-44496366f654` serve the exact feature source
+  through ready migration `0030_stripe_connect_accounts_v2`. Production
+  health reports `accountsApi: v2`; the exact-source monitor passed with all
+  seven anonymous private-route checks.
+- The Stripe sandbox now has an active connected-account destination for the
+  nine settlement events RIVT maps. Its signing secret was intentionally not
+  installed into production because Railway uses a live Stripe key and there
+  is no isolated staging environment. The production route still fails
+  closed with HTTP 503.
+- Production remains disabled: `STRIPE_CONNECT_ACH_ENABLED` is off, the live
+  connected webhook secret is absent, and no live ACH capability is claimed.
+  Remaining activation gates are human hosted onboarding and a live
+  connected-account destination/signing secret followed by a controlled
+  pilot.
 
 ## Stripe Connect ACH Invoice Payments (Deployed, Activation Gated)
 

@@ -29,10 +29,18 @@ Evidence must eventually link to implementation, automated tests, manual accepta
   emitted `checkout.session.async_payment_succeeded` and
   `checkout.session.async_payment_failed`; RIVT mapped the real payloads to
   `paid` and `failed` without treating Checkout completion as settlement.
-- This correction is not yet production evidence. Hosted onboarding reached
-  Stripe's anti-bot challenge and therefore still requires human completion;
-  the sandbox connected-event destination/signing secret is also outstanding.
-  Production remains fail-closed and no live ACH readiness is claimed.
+- `GA-OPS-008` gains fail-closed production evidence: Railway deployments
+  `69c46b9d-33e7-4450-b737-84eafe174a07` and
+  `afac9014-c51d-4298-8516-44496366f654` serve exact source
+  `548ce531fe850679b47386e30287b990bd02b37b` through ready migration
+  `0030_stripe_connect_accounts_v2`; health reports Accounts v2 and the
+  exact-source production monitor passes.
+- The Stripe sandbox has an active connected-account destination for the nine
+  mapped settlement events. Its test signing secret is not mixed into the
+  live-key production environment. Hosted onboarding reached Stripe's
+  anti-bot challenge and still requires human completion; a live connected
+  destination/signing secret remains outstanding. Production stays disabled
+  and no live ACH readiness is claimed.
 
 ## Traceability Addendum - 2026-07-25 Stripe Connect ACH Invoices
 

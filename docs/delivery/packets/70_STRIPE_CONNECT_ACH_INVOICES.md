@@ -40,6 +40,11 @@ Let an invoice author offer a Stripe-hosted US bank-account payment option witho
 - New links fail closed unless both are present with the Stripe secret key.
 - Signed webhooks continue to process existing payments when new-link creation is disabled.
 - Before production activation, exercise hosted onboarding plus asynchronous ACH success and failure in Stripe test mode, confirm Connect support/merchant responsibilities, and create the connected-account webhook.
+- Sandbox provider proof and a nine-event connected-account destination are
+  complete. Do not reuse its test signing secret in production: the live
+  Stripe environment still requires its own connected-account destination,
+  signing secret, human identity/business onboarding, and a controlled pilot
+  before enabling the flag.
 
 ## Acceptance
 
