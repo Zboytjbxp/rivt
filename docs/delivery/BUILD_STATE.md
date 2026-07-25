@@ -2,10 +2,57 @@
 
 Last updated: 2026-07-25 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Launch-readiness closure is deployed and exact-source verified.
-Active packet: Jacksonville launch-readiness closure
-Repository branch: `master` (source branch: `codex/launch-readiness-closure`)
+Current phase: Stripe Connect ACH invoice payments are in local verification.
+Active packet: `docs/delivery/packets/70_STRIPE_CONNECT_ACH_INVOICES.md`
+Repository branch: `codex/stripe-connect-ach-invoices`
 Production feature release commit: `21213427ef9ed857fd34eada12a4630df9484923`
+
+## Stripe Connect ACH Invoice Payments (Local Verification)
+
+- Product-owner direction expands the launch contract narrowly: RIVT may
+  facilitate Stripe-hosted ACH direct charges to an invoice author's own
+  connected merchant account. RIVT takes no application fee at launch and
+  does not hold, escrow, guarantee, insure, or protect job funds.
+- Migration `0029_stripe_connect_invoice_payments` adds connected-account
+  readiness, provider payment-request state, and immutable connected-webhook
+  event IDs with a reviewed down migration.
+- The server adds author-owned Express onboarding/dashboard access, ACH-only
+  Checkout link creation, unused-link cancellation, signed connected webhook
+  handling, durable replay protection, and a rate-limited minimal public
+  status response.
+- ACH Checkout completion remains `processing`; only a signed asynchronous
+  Stripe success contributes to invoice paid balance. Late failure, refund,
+  or dispute removes provider credit and reopens the invoice. Out-of-order
+  events cannot regress a terminal state incorrectly.
+- Active ACH links block manual external-payment logging and invoice voiding,
+  preventing double collection. Provider limits are enforced at $0.50
+  minimum and $999,999.99 maximum.
+- Invoice UI separates Stripe ACH from participant-recorded external
+  payments, keeps fee/timing language honest, and exposes setup, manage,
+  create/copy, open, and cancel controls. Invoice email includes a server-
+  owned open Checkout URL only after matching invoice ownership and active
+  work context.
+- The public return page is available without RIVT authentication and shows
+  only invoice number, payee, amount, and provider state. It never marks a
+  processing ACH payment paid and states that RIVT does not hold job funds.
+- The feature is fail-closed behind `STRIPE_CONNECT_ACH_ENABLED` plus a
+  separate `STRIPE_CONNECT_WEBHOOK_SECRET`; disabling new links does not stop
+  webhook processing for outstanding payments. When disabled with no existing
+  payment records, the unfinished control is not advertised in the invoice UI.
+- Local verification passed: lint, production build, security lint, 82
+  unit/frontend tests, E2E, dependency audit with zero vulnerabilities, strict
+  launch readiness, migration 0029 apply/rollback lifecycle, and the
+  PostgreSQL project closeout/financial integration. The database proof covers
+  minimal public data, active-link conflict protection, processing without
+  paid credit, signed asynchronous settlement, replay rejection, and refund
+  reopening.
+- Rendered Tools QA passes at desktop, 390x844, and 320x568. The ACH invoice
+  controls and public processing return are captured at desktop and 390x844,
+  enforce no horizontal overflow, keep controls at least 44px, and preserve
+  the honest "not marked paid" boundary.
+- Production is unchanged. Stripe test-mode onboarding plus asynchronous
+  success/failure proof and connected-webhook setup remain activation gates;
+  no live payment capability is claimed.
 
 ## Jacksonville Launch-Readiness Closure (Complete and Deployed)
 

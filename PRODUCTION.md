@@ -134,6 +134,26 @@ The first command verifies authenticated billing status and that unsigned Stripe
 
 `VITE_ALLOW_LOCAL_PRO=true` is local-development only and must not be set on the production Railway service. If Stripe keys, the Pro price, or webhook signing are missing, paid tools must fail closed with truthful setup copy rather than simulated success.
 
+## Contractor Invoice Bank Payments
+
+Stripe Connect ACH invoice payments are separate from RIVT Pro billing. Each contractor completes Stripe-hosted Express onboarding and becomes the merchant for direct charges on that connected account. RIVT does not take an application fee at launch and does not receive, escrow, guarantee, or protect job funds.
+
+```bash
+STRIPE_CONNECT_ACH_ENABLED=false
+STRIPE_CONNECT_WEBHOOK_SECRET=
+```
+
+Production activation requires:
+
+1. Confirm the platform and every connected merchant can request the `us_bank_account_ach_payments` capability.
+2. Create a Connect webhook endpoint at `https://rivt.pro/api/stripe/connect/webhook` with events from connected accounts enabled.
+3. Subscribe to `account.updated`, `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed`, `checkout.session.expired`, `payment_intent.processing`, `payment_intent.succeeded`, `payment_intent.payment_failed`, `charge.dispute.created`, and `charge.refunded`.
+4. Store that endpoint's signing secret in `STRIPE_CONNECT_WEBHOOK_SECRET`. Do not reuse `STRIPE_WEBHOOK_SECRET`.
+5. Exercise onboarding and one ACH lifecycle in Stripe test mode, including asynchronous success and failure, before setting `STRIPE_CONNECT_ACH_ENABLED=true` in production.
+6. After activation, verify the public payment return page discloses processing honestly and that signed events—not the browser redirect—change invoice paid state.
+
+Keep the feature disabled if the Connect webhook, support ownership, or merchant onboarding review is incomplete. Disabling new links must not hide existing payment status records or stop signed webhook processing for already-submitted payments.
+
 Uploads use private S3-compatible object storage and signed download URLs. RIVT production currently targets Railway Object Storage, which exposes an S3-compatible endpoint (`https://t3.storageapi.dev` in Railway's current storage service). Cloudflare R2, AWS S3, Backblaze B2, Supabase Storage S3 compatibility, or another managed S3-compatible provider can be used only if the same private-bucket and signed-URL behavior is preserved.
 
 ```bash

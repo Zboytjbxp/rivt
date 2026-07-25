@@ -121,7 +121,7 @@ All later sections describe the complete target platform unless they explicitly 
 ### Explicitly deferred unless already reliable
 
 - Homeowner access.
-- On-platform job payment processing, escrow, payroll, employer-of-record, tax filing, or automatic 1099 issuance.
+- Platform-held job funds, escrow, payroll, employer-of-record, tax filing, or automatic 1099 issuance. Stripe-hosted ACH direct charges to a contractor-owned connected account are allowed only under the connected-payment boundary below.
 - Automated legal, licensing, insurance, tax, safety, or code-compliance conclusions.
 - Public follower-count social mechanics, entertainment feed, stories, or engagement bait.
 - Fully automated bans or verification approvals without appeal.
@@ -205,9 +205,9 @@ Also support Rejected and Revoked. Show what was checked, by whom/provider, when
 
 ### Invoice delivery
 
-Draft -> Finalized -> Queued -> Sent -> Delivered or Failed -> Viewed -> Paid externally or Disputed -> Closed
+Draft -> Finalized -> Queued -> Sent -> Delivered or Failed -> Viewed -> ACH processing, Paid externally, Paid by provider confirmation, Failed, Refunded, or Disputed -> Closed
 
-Delivery failure must be visible, retryable, and logged. Logging payment is recordkeeping, not proof that RIVT processed funds.
+Delivery failure must be visible, retryable, and logged. A participant-recorded external payment is recordkeeping, not proof that funds cleared. A Stripe ACH payment stays processing until a signed provider event confirms settlement, and later failures, refunds, or disputes must reopen the invoice honestly.
 
 ## 8. Experience Requirements
 
@@ -512,7 +512,7 @@ If subscriptions launch:
 - Webhooks are signed, replay-safe, idempotent, and reconciled.
 - Pricing, tax, invoices, refunds, and support ownership are documented.
 
-RIVT does not take a percentage of job payments at launch and does not imply escrow or payment protection.
+RIVT does not take a percentage of job payments at launch and does not imply escrow or payment protection. For approved Stripe Connect ACH, the contractor is the connected merchant, the charge is created directly on that connected account, and RIVT does not receive or hold the job funds.
 
 ## 25. Testing Contract
 
@@ -540,7 +540,7 @@ Critical end-to-end journeys:
 4. User asks Shop Talk question, receives answer, marks Verified Fix, and reports unsafe content.
 5. User opens Trade News, sees valid image/source metadata, and reaches the canonical article.
 6. User captures project photos offline, reconnects, syncs once, annotates, shares an expiring report, and revokes it.
-7. User creates an invoice, delivery fails, sees failure, retries, recipient views, and payment is recorded externally.
+7. User creates an invoice, delivery fails, sees failure, retries, recipient views, and either records an external payment or shares a Stripe-hosted ACH link whose processing/settled/failed/refunded/disputed state is webhook-confirmed.
 8. User blocks another user; all discovery, messaging, and invite pathways enforce the block.
 9. Support resolves a recoverable account issue without accessing prohibited private data.
 10. Deployment rolls back while existing sessions, drafts, and records remain coherent.
@@ -1700,9 +1700,9 @@ Do not expose a public developer platform until core contracts and authorization
 - Integration failure must not corrupt the canonical RIVT record or prevent users from accessing/exporting it.
 - Maintain an integration certification and periodic reauthorization/review process for third parties when a public platform exists.
 
-## 71. Subscription Financial Operations
+## 71. Subscription and Connected-Payment Financial Operations
 
-RIVT does not process job payments at launch, but subscription billing still creates financial obligations.
+RIVT subscription billing and contractor invoice payments are separate financial systems. Approved job-payment support is limited to Stripe-hosted ACH direct charges on contractor-owned connected accounts. RIVT does not hold job funds, take an application fee at launch, guarantee settlement, or provide payment protection.
 
 - Maintain an internal subscription/entitlement ledger reconciled against the billing provider.
 - Define plan, price, currency, billing interval, trial, coupon, tax treatment, effective date, and grandfathering as versioned products.
@@ -1714,6 +1714,11 @@ RIVT does not process job payments at launch, but subscription billing still cre
 - Protect refund, credit, plan override, and complimentary access with permissions, reason codes, limits, and audit.
 - Monitor MRR/ARR only after definitions are fixed; also monitor gross margin, provider cost, support cost, fraud/chargeback cost, churn, and cohort retention.
 - Keep job-payment records visibly separate from RIVT subscription billing.
+- Require contractor identity/onboarding and the `us_bank_account_ach_payments` capability before a bank-payment link can be created.
+- Treat Checkout completion as processing for delayed ACH. Only signed, replay-safe connected-account webhook events can mark an invoice paid.
+- Reopen balances after a late ACH failure, refund, or dispute. Block manual payment logging and invoice voiding while an online payment is open or processing.
+- Keep the public payer surface minimal and tokenized. Do not turn invoice recipients into homeowner RIVT accounts or expose private job, address, participant, or bank details.
+- Provide a provider kill switch, separate Connect webhook secret, durable event ledger, connected-account ownership checks, cancellation for unused links, and an explicit operational activation gate.
 
 ## 72. Product Experiments, Rollouts, and Deprecation
 

@@ -10,6 +10,35 @@ Status values:
 
 Evidence must eventually link to implementation, automated tests, manual acceptance proof, and deployed build.
 
+## Traceability Addendum - 2026-07-25 Stripe Connect ACH Invoices
+
+- Product-owner direction adds a bounded exception to the former no-job-
+  payment launch rule: Stripe-hosted ACH direct charges may pay the invoice
+  author's own connected merchant account. RIVT receives no application fee
+  at launch and provides no escrow, custody, guarantee, insurance, or payment
+  protection.
+- `GA-FND-003` gains normalized connected-account, invoice-provider-payment,
+  and immutable connected-event storage through migration
+  `0029_stripe_connect_invoice_payments`.
+- `GA-FND-004` gains server-side authorship, active-work participation,
+  verified-account, connected-account, capability, amount, origin, webhook-
+  signature, replay, and public-data-minimization boundaries.
+- `GA-UX-005` gains truthful delayed-payment state: Checkout completion is
+  processing rather than paid; external participant records stay separate;
+  failure, refund, and dispute reopen the balance; and open ACH states block
+  conflicting manual payment/void actions.
+- `GA-UX-006` gains a tokenized public payer-return surface plus Invoice
+  setup/manage/link/cancel controls. The payer surface is a payment utility,
+  not a homeowner account or marketplace flow.
+- `GA-OPS-004` gains a dedicated Connect webhook secret, explicit
+  `STRIPE_CONNECT_ACH_ENABLED` kill switch, provider health state, and a
+  rollback rule that preserves webhook/status handling for outstanding
+  payments.
+- Local evidence currently includes lint, build, unit/frontend tests,
+  migration lifecycle, and project-financial integration. Production
+  activation remains blocked on Stripe test-mode onboarding and async
+  success/failure proof plus connected-webhook configuration.
+
 ## Traceability Addendum - 2026-07-25 Jacksonville Launch-Readiness Closure
 
 - `GA-UX-001` and `GA-UX-003` gain a contract-aligned shell: persistent
