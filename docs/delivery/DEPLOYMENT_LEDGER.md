@@ -1,5 +1,38 @@
 # Deployment Ledger
 
+## 2026-07-25 - Launch Readiness Restore and Incident Rehearsal
+
+- Production logical-backup source:
+  `3b827444137356f367a97cc941d7a25f6d7f51d5`.
+- A new AES-256-GCM logical artifact was written to the private managed
+  object store as
+  `backups/postgres/2026-07-25T15-38-43.889Z-3b82744.json.gz.aes256gcm`.
+  The artifact contains 82 tables and 7,028 rows.
+- The named artifact was restored into isolated Railway PostgreSQL service
+  `Postgres-r_TW`. Restore validation passed strict row-count comparison with
+  zero count differences after applying all 28 migrations through
+  `0028_compensation_workflow`. Restore took 84,798 ms; the independent
+  restore drill took 10,618 ms. The isolated service was deleted after
+  verification.
+- The production synthetic monitor passed before the incident exercise. The
+  first live Gate A hardening run then failed honestly on 17 active
+  Packet03–Packet07 smoke organizations left by older smoke scripts.
+- The repository's guarded transactional cleanup
+  (`CONFIRM_GATE_A_DEMO_CLEANUP=true npm run cleanup:gate-a:demo`) closed
+  exactly those 17 matched organizations. It changed zero profiles, jobs, or
+  reviews. The fresh encrypted artifact above is the rollback point.
+- The live Gate A hardening rerun passed with zero public seed/demo findings,
+  seven anonymous private routes failing closed, zero pending migrations, and
+  rollout controls open. Sentry accepted incident-rehearsal event
+  `97f435d5952c4d8885a0fc6c63e64500` with HTTP 200.
+- The smoke cleanup defect was traced to Packet03–Packet07 scripts closing
+  accounts and jobs but leaving their organizations active. The current
+  launch-readiness branch closes organizations created by the same smoke
+  accounts in every cleanup path, including Packet03 failures.
+- Human boundary: provider ingestion is verified for this rehearsal; a
+  person receiving the downstream Sentry notification was not independently
+  observed during the automated run.
+
 ## 2026-07-24 - Jacksonville Pre-Launch Hardening
 
 - Source commit: `b46ef953d91496f9d31c3781a8bca2b3e42e1c52`

@@ -113,17 +113,26 @@ async function signupAndOnboard(role, label) {
 }
 
 async function closeSmokeAccounts(accounts) {
-  const accountIds = accounts.map((account) => account.accountId);
+  const accountIds = accounts.map((account) => account.accountId).filter(Boolean);
+  if (accountIds.length === 0) return;
   await pool.query("UPDATE profiles SET visibility = 'private', updated_at = now() WHERE account_id = ANY($1::uuid[])", [accountIds]);
   await pool.query("UPDATE auth_sessions SET revoked_at = now() WHERE user_id = ANY($1::uuid[]) AND revoked_at IS NULL", [accountIds]);
   await pool.query("UPDATE accounts SET status = 'closed', updated_at = now() WHERE id = ANY($1::uuid[])", [accountIds]);
+  await pool.query(
+    "UPDATE organizations SET status = 'closed', updated_at = now() WHERE created_by_account_id = ANY($1::uuid[]) AND status <> 'closed'",
+    [accountIds],
+  );
 }
+
+const accounts = [];
 
 try {
   const contractor = await signupAndOnboard("contractor", "Packet03 Owner");
+  accounts.push(contractor);
   const otherContractor = await signupAndOnboard("contractor", "Packet03 Other");
+  accounts.push(otherContractor);
   const tradesperson = await signupAndOnboard("tradesperson", "Packet03 Trade");
-  const accounts = [contractor, otherContractor, tradesperson];
+  accounts.push(tradesperson);
 
   const readiness = await requestJson("/api/readiness", { cookie: contractor.cookie, expected: 200 });
   assert.equal(readiness.payload.migrations.pending.length, 0);
@@ -270,8 +279,6 @@ try {
     expected: 404,
   });
 
-  await closeSmokeAccounts(accounts);
-
   console.log(JSON.stringify({
     ok: true,
     run: smokeRun,
@@ -284,5 +291,8 @@ try {
     smokeAccountsClosed: accounts.length,
   }, null, 2));
 } finally {
+  await closeSmokeAccounts(accounts).catch((error) => {
+    console.error("cleanup failed", error);
+  });
   await pool.end();
 }

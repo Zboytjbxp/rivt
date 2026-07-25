@@ -54,6 +54,14 @@
   "rehearsals": [
     {
       "status": "passed",
+      "completedAt": "2026-07-25T15:46:39.951Z",
+      "scenario": "public-health-provider-failure-with-stale-smoke-residue",
+      "commander": "Michael",
+      "evidence": "docs/delivery/DEPLOYMENT_LEDGER.md#2026-07-25---launch-readiness-restore-and-incident-rehearsal",
+      "summary": "Production monitoring passed. The first live Gate A hardening attempt correctly stopped on 17 stale smoke organizations; the guarded transactional cleanup closed only those matched records, the rerun passed with zero public demo findings, and Sentry accepted rehearsal event 97f435d5952c4d8885a0fc6c63e64500 with HTTP 200."
+    },
+    {
+      "status": "passed",
       "completedAt": "2026-06-22T03:31:05.8720277Z",
       "scenario": "public-health-provider-failure",
       "commander": "Michael",
