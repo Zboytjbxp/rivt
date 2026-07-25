@@ -7989,7 +7989,7 @@
   left: 50%;
   top: 50%;
   width: min(calc(var(--calc-wheel-radius) * 2 + 62px), calc(100vw - 20px));
-  height: calc(var(--calc-wheel-radius) + 126px);
+  height: calc(var(--calc-wheel-radius) + 150px);
   border: 1px solid color-mix(in srgb, var(--v2-accent) 30%, var(--v2-border));
   border-radius: calc(var(--calc-wheel-radius) + 40px) calc(var(--calc-wheel-radius) + 40px) var(--v2-radius-lg) var(--v2-radius-lg);
   background:
@@ -7998,7 +7998,7 @@
   box-shadow: var(--v2-shadow-lg);
   content: "";
   pointer-events: none;
-  transform: translate(-50%, calc(-100% + 30px));
+  transform: translate(-50%, calc(-100% + 54px));
 }
 
 .calc-quick-wheel-origin {

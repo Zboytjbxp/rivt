@@ -2,10 +2,36 @@
 
 Last updated: 2026-07-25 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Calculator quick-wheel header separation is production verified.
-Active packet: Non-overlapping quick-wheel hierarchy
-Repository branch: `master`
+Current phase: Calculator two-choice quick-wheel spacing is locally verified.
+Active packet: Compact two-choice fraction wheel
+Repository branch: `codex/calculator-wheel-two-choice-spacing`
 Production feature release commit: `3b827444137356f367a97cc941d7a25f6d7f51d5`
+
+## Calculator Two-Choice Wheel Spacing (Local Verification)
+
+- Two-choice number families now use a compact upper arc instead of stretching
+  two options across the five-choice fan. `7/16` and `7/8` stay visually
+  connected to the heading with a predictable gap while remaining above and
+  beside the blocked thumb area.
+- The wheel surface now contains the `Release to cancel` / `Lift to use`
+  instruction instead of letting it float over the keypad outside the panel.
+  Three-to-five-choice wheel geometry, selection values, hold timing,
+  one-motion release, hand preference, and calculator math are unchanged.
+- Rendered Tools QA now rejects both overlap and excessive dead space between
+  a wheel context line and its nearest choice. It captures the two-choice
+  family in light and dark mode as dedicated regression evidence.
+- Verification passed: lint, production build, 75 unit/frontend tests, E2E,
+  rendered Tools QA, mobile-action QA, dependency audit with zero
+  vulnerabilities, and diff checks. The aggregate `npm run test` repeated the
+  configured database integration stall and reached its ten-minute command
+  limit without an assertion failure or completion; no aggregate integration
+  pass is claimed.
+- Rendered evidence:
+  `C:\Users\zboyt\AppData\Local\Temp\rivt-tools-pass\mobile-calculator-two-choice-wheel-light.png`
+  and
+  `C:\Users\zboyt\AppData\Local\Temp\rivt-tools-pass\mobile-calculator-two-choice-wheel-dark.png`.
+- Production remains on exact feature source
+  `3b827444137356f367a97cc941d7a25f6d7f51d5`; this follow-up is not deployed.
 
 ## Calculator Quick-Wheel Header Band (Production Verification)
 

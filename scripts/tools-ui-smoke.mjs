@@ -543,18 +543,25 @@ async function swipeQuickWheel(page, trigger, optionName, viewportName, menuName
     menu.locator(".calc-quick-wheel-context").boundingBox(),
   ]);
   const highestChoiceTop = Math.min(...choiceBoxes.map((choice) => choice.top));
+  const headerToChoiceGap = contextBox
+    ? highestChoiceTop - (contextBox.y + contextBox.height)
+    : Number.POSITIVE_INFINITY;
   assert.ok(titleBox && contextBox, `quick wheel ${menuName} should reserve a measurable header band`);
   assert.ok(
     titleBox.y >= 8
       && titleBox.y + titleBox.height <= contextBox.y - 2
-      && contextBox.y + contextBox.height <= highestChoiceTop - 8,
+      && headerToChoiceGap >= 8
+      && headerToChoiceGap <= 60,
     `quick wheel ${menuName} heading, context, and choices must not overlap: ${JSON.stringify({ titleBox, contextBox, highestChoiceTop })}`,
   );
   const option = menu.getByRole("menuitem", { name: optionName });
   const optionBox = await option.boundingBox();
   assert.ok(optionBox, `expected quick-wheel option ${optionName} to have a layout box in ${viewportName}`);
-  if (viewportName === "mobile" && menuName === "Eighths") {
-    await page.screenshot({ path: path.join(screenshotDir, "mobile-calculator-quick-wheel-light.png") });
+  if (viewportName === "mobile" && (menuName === "Eighths" || menuName === "Fractions built from 7")) {
+    const screenshotStem = menuName === "Fractions built from 7"
+      ? "mobile-calculator-two-choice-wheel"
+      : "mobile-calculator-quick-wheel";
+    await page.screenshot({ path: path.join(screenshotDir, `${screenshotStem}-light.png`) });
     const previousTheme = await page.evaluate(() => document.documentElement.getAttribute("data-theme"));
     await page.evaluate(() => document.documentElement.setAttribute("data-theme", "dark"));
     await page.waitForTimeout(150);
@@ -571,7 +578,7 @@ async function swipeQuickWheel(page, trigger, optionName, viewportName, menuName
       "rgb(255, 255, 255)",
       `dark quick-wheel choices should inherit dark surfaces; got ${JSON.stringify(darkWheelColors)}`,
     );
-    await page.screenshot({ path: path.join(screenshotDir, "mobile-calculator-quick-wheel-dark.png") });
+    await page.screenshot({ path: path.join(screenshotDir, `${screenshotStem}-dark.png`) });
     await page.evaluate((theme) => {
       if (theme) document.documentElement.setAttribute("data-theme", theme);
       else document.documentElement.removeAttribute("data-theme");

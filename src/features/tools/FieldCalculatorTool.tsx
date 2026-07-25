@@ -180,6 +180,10 @@ function QuickWheelButton({
 
   const optionAngle = useCallback((index: number) => {
     if (options.length === 1) return -90;
+    // A two-choice family needs a tighter, higher arc. Spreading two choices
+    // across the full multi-choice fan leaves an empty hole between the
+    // heading and the controls, making the wheel look detached from its key.
+    if (options.length === 2) return -140 + (100 * index);
     const startAngle = wheelFan === "right" ? -175 : -155;
     return startAngle + (150 / (options.length - 1)) * index;
   }, [options.length, wheelFan]);

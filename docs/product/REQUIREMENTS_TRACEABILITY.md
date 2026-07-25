@@ -10,6 +10,22 @@ Status values:
 
 Evidence must eventually link to implementation, automated tests, manual acceptance proof, and deployed build.
 
+## Traceability Addendum - 2026-07-25 Calculator Two-Choice Wheel Spacing
+
+- `GA-UX-003` gains one-motion fraction-entry evidence: a two-choice family
+  uses a compact upper arc rather than leaving a large dead zone between its
+  heading and controls, and its cancel/use instruction stays inside the same
+  interaction surface.
+- `GA-UX-006` gains rendered light/dark assertions that bound the header-to-
+  choice gap between 8 and 60 pixels while preserving viewport containment
+  and the blocked-thumb safety check.
+- `GA-OPS-007` gains passing lint, build, 75 unit/frontend tests, E2E,
+  rendered Tools QA, mobile-action QA, and zero-vulnerability dependency
+  evidence. The aggregate database-backed command reached its ten-minute
+  limit without a result, so no integration pass is claimed.
+- No new `GA-OPS-008` production evidence is claimed until this follow-up is
+  deployed and exact-source health is confirmed.
+
 ## Traceability Addendum - 2026-07-25 Calculator Wheel Header Band
 
 - `GA-UX-003` gains quick-entry hierarchy evidence: each wheel reserves a
