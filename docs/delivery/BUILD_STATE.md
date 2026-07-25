@@ -2,12 +2,12 @@
 
 Last updated: 2026-07-25 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Calculator clear recovery and Enter-key simplification are locally verified.
+Current phase: Calculator clear recovery and Enter-key simplification are production verified.
 Active packet: Contextual recovery and a single-purpose key face
-Repository branch: `codex/calculator-undo-layout`
-Production feature release commit: `ebf18f6ef0f03c59db7c6ea4b59302d865bed65e`
+Repository branch: `master`
+Production feature release commit: `3f2557ab1f329583119c7916f7050e38c2d5237f`
 
-## Calculator Clear Recovery and Enter Key (Local Verification)
+## Calculator Clear Recovery and Enter Key (Production Verification)
 
 - Undo is no longer a persistent calculator control. Clear temporarily offers
   `Cleared · Undo` in the lower utility row for five seconds, restoring the
@@ -28,9 +28,16 @@ Production feature release commit: `ebf18f6ef0f03c59db7c6ea4b59302d865bed65e`
   dependency audit pass.
 - Rendered evidence:
   `C:\Users\zboyt\AppData\Local\Temp\rivt-tools-pass\mobile-calculator-tape-list.png`.
-- Production remains on feature source
-  `ebf18f6ef0f03c59db7c6ea4b59302d865bed65e`; this correction is not yet
-  deployed.
+- The two calculator corrections were fast-forwarded into `master` at
+  `3f2557ab1f329583119c7916f7050e38c2d5237f`. Railway application deployment
+  `2d400787-3a84-4e52-95d7-dea896f97d03` succeeded, followed by exact-source
+  metadata deployment `427d474f-b76e-4a09-93a5-adb61493b52e`; only
+  `SOURCE_COMMIT` release metadata changed.
+- Live `/api/health` reports the exact feature commit, migration
+  `0028_compensation_workflow`, PostgreSQL, S3-compatible object storage,
+  configured Sentry, and configured Web Push. The exact-source production
+  monitor passed in 535 ms with all seven anonymous private-route checks
+  healthy and operational controls disabled.
 
 ## Calculator Wheel Containment Follow-up (Production Verification)
 

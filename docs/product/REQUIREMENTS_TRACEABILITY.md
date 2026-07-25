@@ -26,7 +26,11 @@ Evidence must eventually link to implementation, automated tests, manual accepta
 - `GA-OPS-007` gains passing lint, build, 75 unit/frontend tests, E2E,
   rendered Tools QA, mobile-action QA, and zero-vulnerability dependency
   evidence.
-- No new `GA-OPS-008` production evidence is claimed for this correction yet.
+- `GA-OPS-008` gains production evidence: Railway application deployment
+  `2d400787-3a84-4e52-95d7-dea896f97d03` and exact-source metadata deployment
+  `427d474f-b76e-4a09-93a5-adb61493b52e` serve commit
+  `3f2557ab1f329583119c7916f7050e38c2d5237f`. Exact-source health and the
+  seven-check production monitor passed.
 
 ## Traceability Addendum - 2026-07-24 Calculator Wheel Containment
 

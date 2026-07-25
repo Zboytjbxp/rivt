@@ -2621,3 +2621,33 @@ Add one entry per staging/production deployment.
   PostgreSQL and S3-compatible storage healthy. The production monitor passed
   in 499 ms with all seven anonymous private-route checks healthy and
   operational controls disabled.
+
+# Current Production - Calculator Clear Recovery and Enter Key
+
+- Environment: Production (`https://rivt.pro`)
+- Date/time/timezone: 2026-07-25 America/New_York
+- Deployer: Codex through `codex/calculator-undo-layout`, fast-forward merge
+  to `master`, and Railway production auto-deploy
+- Runtime feature source:
+  `3f2557ab1f329583119c7916f7050e38c2d5237f`
+- Railway deployments: application source build
+  `2d400787-3a84-4e52-95d7-dea896f97d03`; exact-source release
+  `427d474f-b76e-4a09-93a5-adb61493b52e`
+- Migration version before/after: unchanged (`0028_compensation_workflow`)
+- Provider/config changes: only `SOURCE_COMMIT` release metadata advanced;
+  auth, billing, PostgreSQL, object storage, Sentry, Web Push, email,
+  moderation, and rollout controls were preserved.
+- Rollback target:
+  `579cd9e2324e57b0f28b08c9e434e32d87b4ab39`; no database rollback is
+  required.
+- Automated gates: build, lint, 75 unit/frontend tests, desktop/mobile E2E,
+  rendered Tools smoke, mobile-action smoke, and dependency audit with zero
+  vulnerabilities passed.
+- Product evidence: no persistent Undo during normal entry; five-second
+  pre-clear snapshot recovery; next-entry invalidation; a non-overlapping
+  utility-row recovery control; an equals-only key face; contextual
+  accessible naming; and honest Tape List confirmation.
+- Post-deploy proof: live `/api/health` returned the exact feature source with
+  PostgreSQL and S3-compatible storage healthy. The production monitor passed
+  in 535 ms with all seven anonymous private-route checks healthy and
+  operational controls disabled.
