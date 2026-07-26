@@ -224,6 +224,7 @@ if (!testDatabaseUrl) {
       )).rows[0].count, 2);
 
       assert.equal((await database.query("SELECT to_regclass('document_brand_profiles') AS table_name")).rows[0].table_name, "document_brand_profiles");
+      assert.equal((await database.query("SELECT to_regclass('customers') AS table_name")).rows[0].table_name, "customers");
       await database.query(
         `INSERT INTO document_brand_profiles (account_id, business_name, estimate_style, invoice_style)
          VALUES ($1, 'Migration Brand', 'compact', 'field')`,
@@ -234,6 +235,38 @@ if (!testDatabaseUrl) {
          VALUES ($1, 'estimate_template', 'migration-template', 'Migration template', 'active', '{}'::jsonb)`,
         [newUserId],
       );
+      await database.query(
+        `INSERT INTO customers (
+           account_id, legacy_local_id, name, company, email, billing_address,
+           service_address, preferred_contact_method, default_terms, favorite
+         )
+         VALUES (
+           $1, 'migration-customer', 'Jordan Client', 'Jordan Property Group',
+           'jordan@example.test', '100 Billing Lane', '200 Kitchen Way',
+           'email', 'Net 15', true
+         )`,
+        [newUserId],
+      );
+
+      const rolledBackCustomerBook = await rollbackLatest(database);
+      assert.equal(rolledBackCustomerBook.latestVersion, 32);
+      assert.equal((await database.query("SELECT to_regclass('customers') AS table_name")).rows[0].table_name, null);
+      assert.equal((await database.query(
+        "SELECT count(*)::int AS count FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = 'tool_records' AND column_name = 'customer_id'",
+      )).rows[0].count, 0);
+      assert.equal((await database.query(
+        "SELECT count(*)::int AS count FROM tool_records WHERE account_id = $1 AND record_type = 'client' AND local_id = 'migration-customer'",
+        [newUserId],
+      )).rows[0].count, 1);
+      const preservedCustomerPayload = (await database.query(
+        "SELECT payload FROM tool_records WHERE account_id = $1 AND record_type = 'client' AND local_id = 'migration-customer'",
+        [newUserId],
+      )).rows[0].payload;
+      assert.equal(preservedCustomerPayload.billingAddress, "100 Billing Lane");
+      assert.equal(preservedCustomerPayload.serviceAddress, "200 Kitchen Way");
+      assert.equal(preservedCustomerPayload.preferredContactMethod, "email");
+      assert.equal(preservedCustomerPayload.defaultTerms, "Net 15");
+      assert.equal(preservedCustomerPayload.favorite, true);
 
       const rolledBackDocumentBranding = await rollbackLatest(database);
       assert.equal(rolledBackDocumentBranding.latestVersion, 31);

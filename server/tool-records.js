@@ -47,6 +47,7 @@ const toolRecordUpsertSchema = z.object({
   payload: z.object({}).passthrough().default({}),
   standaloneProjectId: z.uuid().nullable().optional().default(null),
   activeWorkId: z.uuid().nullable().optional().default(null),
+  customerId: z.uuid().nullable().optional().default(null),
 }).refine((value) => !(value.standaloneProjectId && value.activeWorkId), {
   message: "Choose either standalone work or RIVT work, not both.",
 });
@@ -62,6 +63,7 @@ function mapToolRecord(row) {
     amountCents: row.amount_cents === null ? null : Number(row.amount_cents),
     standaloneProjectId: row.standalone_project_id ?? null,
     activeWorkId: row.active_work_id ?? null,
+    customerId: row.customer_id ?? null,
     payload: row.payload ?? {},
     createdAt: row.created_at ? new Date(row.created_at).toISOString() : null,
     updatedAt: row.updated_at ? new Date(row.updated_at).toISOString() : null,
@@ -435,20 +437,30 @@ export function registerToolRecordRoutes({
             throw new ApiError(403, "ACTIVE_WORK_ACCESS_DENIED", "You cannot save records to that RIVT workspace.");
           }
         }
+        if (input.customerId) {
+          const ownedCustomer = await client.query(
+            "SELECT id FROM customers WHERE id = $1 AND account_id = $2 AND status = 'active'",
+            [input.customerId, request.actor.account.id],
+          );
+          if (!ownedCustomer.rowCount) {
+            throw new ApiError(403, "CUSTOMER_ACCESS_DENIED", "You cannot save records to that customer.");
+          }
+        }
         const upserted = await client.query(
           `INSERT INTO tool_records (
              account_id, record_type, local_id, title, status, record_date, amount_cents, payload,
-             standalone_project_id, active_work_id
-           ) VALUES ($1, $2, $3, $4, $5, $6::date, $7, $8::jsonb, $9, $10)
+             standalone_project_id, active_work_id, customer_id
+           ) VALUES ($1, $2, $3, $4, $5, $6::date, $7, $8::jsonb, $9, $10, $11)
            ON CONFLICT (account_id, record_type, local_id) WHERE deleted_at IS NULL
            DO UPDATE SET title = EXCLUDED.title,
                          status = EXCLUDED.status,
                          record_date = EXCLUDED.record_date,
                          amount_cents = EXCLUDED.amount_cents,
-                         payload = EXCLUDED.payload,
-                         standalone_project_id = EXCLUDED.standalone_project_id,
-                         active_work_id = EXCLUDED.active_work_id,
-                         updated_at = now()
+                          payload = EXCLUDED.payload,
+                          standalone_project_id = EXCLUDED.standalone_project_id,
+                          active_work_id = EXCLUDED.active_work_id,
+                          customer_id = EXCLUDED.customer_id,
+                          updated_at = now()
            RETURNING *`,
           [
             request.actor.account.id,
@@ -461,6 +473,7 @@ export function registerToolRecordRoutes({
             JSON.stringify(input.payload),
             input.standaloneProjectId,
             input.activeWorkId,
+            input.customerId,
           ],
         );
         return {

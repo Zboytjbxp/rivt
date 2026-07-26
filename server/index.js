@@ -96,6 +96,7 @@ import {
   registerDocumentBrandRoutes,
 } from "./document-brand.js";
 import { registerStandaloneProjectRoutes } from "./standalone-projects.js";
+import { registerCustomerRoutes } from "./customers.js";
 import {
   pushProviderStatus,
   queuePushDeliveries,
@@ -5379,6 +5380,16 @@ registerDocumentBrandRoutes({
 });
 
 registerStandaloneProjectRoutes({
+  app,
+  database,
+  requireV1AuthenticatedUser,
+  requireV1Actor,
+  writeRateLimit,
+  runIdempotentMutation,
+  sendIdempotentResult,
+});
+
+registerCustomerRoutes({
   app,
   database,
   requireV1AuthenticatedUser,

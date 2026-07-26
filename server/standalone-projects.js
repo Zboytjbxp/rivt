@@ -3,11 +3,17 @@ import { ApiError, asyncRoute, validate, z } from "./api.js";
 const projectCreateSchema = z.object({
   title: z.string().trim().min(1).max(160),
   clientName: z.string().trim().max(160).default(""),
+  customerId: z.uuid().nullable().default(null),
   locationText: z.string().trim().max(240).default(""),
   tradeCode: z.string().trim().max(80).default(""),
 });
 
-const projectUpdateSchema = projectCreateSchema.partial().extend({
+const projectUpdateSchema = z.object({
+  title: z.string().trim().min(1).max(160).optional(),
+  clientName: z.string().trim().max(160).optional(),
+  customerId: z.uuid().nullable().optional(),
+  locationText: z.string().trim().max(240).optional(),
+  tradeCode: z.string().trim().max(80).optional(),
   status: z.enum(["active", "archived"]).optional(),
 });
 
@@ -17,6 +23,7 @@ function mapStandaloneProject(row) {
     accountId: row.account_id,
     title: row.title,
     clientName: row.client_name || "",
+    customerId: row.customer_id ?? null,
     locationText: row.location_text || "",
     tradeCode: row.trade_code || "",
     status: row.status,
@@ -65,11 +72,20 @@ export function registerStandaloneProjectRoutes({
       request.actor.account.id,
       "standalone-projects.create",
       async (client) => {
+        if (input.customerId) {
+          const ownedCustomer = await client.query(
+            "SELECT id FROM customers WHERE id = $1 AND account_id = $2 AND status = 'active'",
+            [input.customerId, request.actor.account.id],
+          );
+          if (!ownedCustomer.rowCount) {
+            throw new ApiError(403, "CUSTOMER_ACCESS_DENIED", "You cannot create work for that customer.");
+          }
+        }
         const created = await client.query(
-          `INSERT INTO standalone_projects (account_id, title, client_name, location_text, trade_code)
-           VALUES ($1, $2, $3, $4, $5)
+          `INSERT INTO standalone_projects (account_id, title, client_name, customer_id, location_text, trade_code)
+           VALUES ($1, $2, $3, $4, $5, $6)
            RETURNING *`,
-          [request.actor.account.id, input.title, input.clientName, input.locationText, input.tradeCode],
+          [request.actor.account.id, input.title, input.clientName, input.customerId, input.locationText, input.tradeCode],
         );
         return {
           status: 201,
@@ -92,6 +108,16 @@ export function registerStandaloneProjectRoutes({
       request.actor.account.id,
       `standalone-projects.update:${projectId}`,
       async (client) => {
+        if (input.customerId) {
+          const ownedCustomer = await client.query(
+            "SELECT id FROM customers WHERE id = $1 AND account_id = $2 AND status = 'active'",
+            [input.customerId, request.actor.account.id],
+          );
+          if (!ownedCustomer.rowCount) {
+            throw new ApiError(403, "CUSTOMER_ACCESS_DENIED", "You cannot attach that customer.");
+          }
+        }
+        const updatesCustomer = Object.prototype.hasOwnProperty.call(input, "customerId");
         const updated = await client.query(
           `UPDATE standalone_projects
            SET title = COALESCE($3, title),
@@ -99,10 +125,21 @@ export function registerStandaloneProjectRoutes({
                location_text = COALESCE($5, location_text),
                trade_code = COALESCE($6, trade_code),
                status = COALESCE($7, status),
+               customer_id = CASE WHEN $8 THEN $9 ELSE customer_id END,
                updated_at = now()
            WHERE id = $1 AND account_id = $2
            RETURNING *`,
-          [projectId, request.actor.account.id, input.title ?? null, input.clientName ?? null, input.locationText ?? null, input.tradeCode ?? null, input.status ?? null],
+          [
+            projectId,
+            request.actor.account.id,
+            input.title ?? null,
+            input.clientName ?? null,
+            input.locationText ?? null,
+            input.tradeCode ?? null,
+            input.status ?? null,
+            updatesCustomer,
+            input.customerId ?? null,
+          ],
         );
         if (!updated.rowCount) throw new ApiError(404, "STANDALONE_PROJECT_NOT_FOUND", "That standalone project does not exist.");
         return {

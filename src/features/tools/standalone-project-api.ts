@@ -5,6 +5,7 @@ export interface StandaloneProject {
   accountId: string;
   title: string;
   clientName: string;
+  customerId: string | null;
   locationText: string;
   tradeCode: string;
   status: "active" | "archived";
@@ -31,6 +32,7 @@ export async function listStandaloneProjects() {
 export async function createStandaloneProject(input: {
   title: string;
   clientName?: string;
+  customerId?: string | null;
   locationText?: string;
   tradeCode?: string;
 }) {

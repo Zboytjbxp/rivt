@@ -326,13 +326,77 @@ if (!testDatabaseUrl) {
     assert.equal(proHistory.payload.data.records.some((record) => record.localId === "old-session"), true);
     assert.equal(proHistory.payload.meta.historyDays, null);
 
+    const customerLocalId = `customer-${randomUUID()}`;
+    const customerCreated = await requestJson(baseUrl, "/api/v1/customers", {
+      method: "POST",
+      cookie: owner.cookie,
+      idempotencyKey: randomUUID(),
+      body: {
+        localId: customerLocalId,
+        name: "Jordan Client",
+        company: "Jordan Property Group",
+        email: "jordan.client@example.test",
+        phone: "(904) 555-0188",
+        billingAddress: "100 Billing Lane, Jacksonville, FL",
+        serviceAddress: "200 Kitchen Way, Jacksonville, FL",
+        preferredContactMethod: "email",
+        defaultTerms: "Due on completion",
+        favorite: true,
+      },
+    });
+    assert.equal(customerCreated.response.status, 200);
+    const customerId = customerCreated.payload.data.customer.id;
+    assert.equal(customerCreated.payload.data.customer.legacyLocalId, customerLocalId);
+    assert.equal(customerCreated.payload.data.customer.favorite, true);
+
+    const customerUpserted = await requestJson(baseUrl, "/api/v1/customers", {
+      method: "POST",
+      cookie: owner.cookie,
+      idempotencyKey: randomUUID(),
+      body: {
+        localId: customerLocalId,
+        name: "Jordan Client",
+        company: "Jordan Property Group",
+        email: "jordan.updated@example.test",
+        serviceAddress: "200 Kitchen Way, Jacksonville, FL",
+      },
+    });
+    assert.equal(customerUpserted.response.status, 200);
+    assert.equal(customerUpserted.payload.data.customer.id, customerId);
+    assert.equal(customerUpserted.payload.data.customer.email, "jordan.updated@example.test");
+
+    const ownerCustomers = await requestJson(baseUrl, "/api/v1/customers?status=all", { cookie: owner.cookie });
+    assert.equal(ownerCustomers.response.status, 200);
+    assert.equal(ownerCustomers.payload.data.customers.some((customer) => customer.id === customerId), true);
+    const isolatedCustomers = await requestJson(baseUrl, "/api/v1/customers?status=all", { cookie: other.cookie });
+    assert.equal(isolatedCustomers.response.status, 200);
+    assert.equal(isolatedCustomers.payload.data.customers.some((customer) => customer.id === customerId), false);
+
+    const otherCannotUseCustomer = await requestJson(baseUrl, "/api/v1/tool-records", {
+      method: "POST",
+      cookie: other.cookie,
+      idempotencyKey: randomUUID(),
+      body: {
+        recordType: "estimate",
+        localId: "estimate:foreign-customer",
+        title: "Unauthorized customer estimate",
+        status: "draft",
+        amountCents: 100,
+        payload: {},
+        customerId,
+      },
+    });
+    assert.equal(otherCannotUseCustomer.response.status, 403);
+    assert.equal(otherCannotUseCustomer.payload.error.code, "CUSTOMER_ACCESS_DENIED");
+
     const projectCreated = await requestJson(baseUrl, "/api/v1/standalone-projects", {
       method: "POST",
       cookie: owner.cookie,
       idempotencyKey: randomUUID(),
       body: {
         title: "Kitchen refresh",
-        clientName: "Jordan Client",
+        clientName: "Jordan Property Group",
+        customerId,
         locationText: "Jacksonville, FL",
         tradeCode: "carpentry",
       },
@@ -340,6 +404,7 @@ if (!testDatabaseUrl) {
     assert.equal(projectCreated.response.status, 201);
     const standaloneProjectId = projectCreated.payload.data.project.id;
     assert.equal(projectCreated.payload.data.project.title, "Kitchen refresh");
+    assert.equal(projectCreated.payload.data.project.customerId, customerId);
 
     const ownerProjects = await requestJson(baseUrl, "/api/v1/standalone-projects", { cookie: owner.cookie });
     assert.equal(ownerProjects.response.status, 200);
@@ -369,10 +434,39 @@ if (!testDatabaseUrl) {
         amountCents: 248500,
         payload: { laborHours: 24, materialCost: 900 },
         standaloneProjectId,
+        customerId,
       },
     });
     assert.equal(estimateCreated.response.status, 200);
     assert.equal(estimateCreated.payload.data.record.standaloneProjectId, standaloneProjectId);
+    assert.equal(estimateCreated.payload.data.record.customerId, customerId);
+
+    const customerActivity = await requestJson(baseUrl, `/api/v1/customers/${customerId}/activity`, { cookie: owner.cookie });
+    assert.equal(customerActivity.response.status, 200);
+    assert.equal(customerActivity.payload.data.activity.some((item) => item.kind === "project" && item.id === standaloneProjectId), true);
+    assert.equal(customerActivity.payload.data.activity.some((item) => item.kind === "document" && item.localId === `estimate:standalone:${standaloneProjectId}`), true);
+
+    const otherCannotReadActivity = await requestJson(baseUrl, `/api/v1/customers/${customerId}/activity`, { cookie: other.cookie });
+    assert.equal(otherCannotReadActivity.response.status, 404);
+
+    const archivedCustomer = await requestJson(baseUrl, `/api/v1/customers/${customerId}`, {
+      method: "PUT",
+      cookie: owner.cookie,
+      idempotencyKey: randomUUID(),
+      body: { status: "archived" },
+    });
+    assert.equal(archivedCustomer.response.status, 200);
+    assert.equal(archivedCustomer.payload.data.customer.status, "archived");
+    const activeCustomers = await requestJson(baseUrl, "/api/v1/customers?status=active", { cookie: owner.cookie });
+    assert.equal(activeCustomers.payload.data.customers.some((customer) => customer.id === customerId), false);
+    const restoredCustomer = await requestJson(baseUrl, `/api/v1/customers/${customerId}`, {
+      method: "PUT",
+      cookie: owner.cookie,
+      idempotencyKey: randomUUID(),
+      body: { status: "active" },
+    });
+    assert.equal(restoredCustomer.response.status, 200);
+    assert.equal(restoredCustomer.payload.data.customer.status, "active");
 
     const otherCannotAttach = await requestJson(baseUrl, "/api/v1/tool-records", {
       method: "POST",

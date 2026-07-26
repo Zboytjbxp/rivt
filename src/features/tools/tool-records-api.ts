@@ -27,6 +27,7 @@ export interface ServerToolRecord {
   amountCents: number | null;
   standaloneProjectId: string | null;
   activeWorkId: string | null;
+  customerId: string | null;
   payload: Record<string, unknown>;
   createdAt: string | null;
   updatedAt: string | null;
@@ -41,6 +42,7 @@ export interface ToolRecordInput {
   amountCents?: number | null;
   standaloneProjectId?: string | null;
   activeWorkId?: string | null;
+  customerId?: string | null;
   payload?: Record<string, unknown>;
 }
 
