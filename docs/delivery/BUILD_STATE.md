@@ -2,10 +2,69 @@
 
 Last updated: 2026-07-26 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Account-owned document continuity and honest offline/save recovery are deployed and exact-source verified in production.
-Active packet: `docs/delivery/packets/70_STRIPE_CONNECT_ACH_INVOICES.md` (document-continuity hardening extension)
-Repository branch: `master` (source branch: `codex/trust-speed-document-continuity`)
-Production feature release commit: `fac181b52a0498a21748d032e2b79d4861f216fa`
+Current phase: Pre-launch activation, accessibility, performance, and install hardening is implemented locally and awaiting review/deployment.
+Active packet: `docs/delivery/packets/71_PRE_LAUNCH_PERFECT_PASS.md`
+Repository branch: `codex/pre-launch-perfect-pass`
+Production feature release commit: `fac181b52a0498a21748d032e2b79d4861f216fa` (production remains on the prior verified release)
+
+## Pre-launch activation, accessibility, measurement, performance, and PWA
+
+- Revived the role-specific Home activation checklist by correcting its
+  post-onboarding gate. Its completion checks use canonical jobs, profile
+  basics/bio, real community membership, authored posts, and saved records;
+  dismissal remains an honest device preference.
+- Added `--v2-accent-fill: #d63f00` for text-bearing primary actions while
+  retaining bright orange for decorative accents. White text measures above
+  4.5:1, and rendered QA asserts the computed light/dark token contrast.
+- Replaced the unreachable device-only trade persona source with a
+  `PersonaProvider` fed by `account.profile.trades`; the old device profile is
+  now only an offline cache.
+- Empty server community results use the existing zero-count directory
+  definitions so navigation remains available without fabricated people or
+  posts. Empty tradesperson Work now offers a real `Complete profile` action
+  instead of impossible filter advice.
+- Added signed, 30-day referral URLs tied to the inviter and recorded the valid
+  referrer in the signup audit event. The Jacksonville pilot code remains
+  required whenever the existing gate is enabled.
+- Added a vendor-neutral analytics wrapper and server emitter for the agreed
+  funnel events. Direct PII keys are removed, first-post measurement is based
+  on the first server-owned post, checkout events are idempotency-aware, and
+  analytics failure cannot block product actions. Delivery is intentionally
+  disabled until a provider and public ingestion credentials are chosen.
+- Self-hosted Instrument Sans and IBM Plex Mono, removed Google Fonts from the
+  critical path, prevented both theme lockups downloading together, extended
+  shell caching to approved brand assets, supplied intrinsic image dimensions,
+  memoized shell search data, and deferred storage/conversation/feature reads
+  until their owning surface needs them.
+- Added a generated-shell service-worker fallback and first-visit Android/iOS
+  install discovery. API responses remain uncached; the app does not claim a
+  local-auth fallback or full authenticated offline operation.
+- Expanded reduced-motion suppression to animations, removed the camera flash
+  in reduced motion, repaired focus trapping for global search, camera
+  settings, and the zoom viewer, added missing checkbox/44px focus targets,
+  raised the 10–11px type floor, strengthened subtle text contrast, added
+  keyboard radio navigation, and announced share completion to assistive
+  technology.
+- Added generic report-link and landing-page social metadata without exposing
+  private report data or making jobs/posts public. `Report a problem` is now
+  available from the account menu and route recovery.
+- Evidence retained at
+  `docs/delivery/evidence/pre-launch-perfect-pass/`: audited baseline and
+  updated Home/primary-action screenshots in both themes.
+- Local gates are green: build, lint, 99 unit/frontend tests, fail-closed
+  authentication and jobs/discovery E2E, Tools UI, Shop Talk/Trade News UI,
+  mobile-actions UI (including computed contrast and reduced motion), Work
+  lifecycle UI, and `npm audit --omit=dev` with zero known vulnerabilities.
+  Focused account-lifecycle and server-owned Shop Talk integration suites also
+  passed. The aggregate `npm run test` wrapper was bounded at five minutes
+  after its serial integration runner stalled at the pre-existing
+  messaging/notifications boundary; it is not represented as a full pass.
+- No requirement maturity changes in this packet. No schema or production data
+  migration is introduced.
+- Founder decisions still required before enabling adjacent work:
+  analytics vendor/configuration; whether to seed genuine curated
+  Jacksonville communities/posts; and whether any job or Shop Talk content may
+  become public/indexable.
 
 ## Estimate + Invoice Trust/Speed Continuity (Deployed and Exact-Source Verified)
 

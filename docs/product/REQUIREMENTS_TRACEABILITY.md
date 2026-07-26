@@ -1,5 +1,25 @@
 # Gate A Requirements Traceability
 
+## Packet 71 — Pre-launch activation and accessibility evidence
+
+- `GA-UX-001`, `GA-UX-002`, and `GA-OPS-007` gain local evidence for a
+  reachable post-onboarding role checklist, canonical server-trade persona,
+  actionable empty Work state, AA primary-action tokens in both themes,
+  reduced-motion suppression, dialog focus containment, self-hosted fonts,
+  intrinsic image sizing, deferred feature reads, and install discovery.
+- `GA-OPS-007` adds 99 passing deterministic unit/frontend checks,
+  fail-closed authentication and jobs/discovery E2E, focused account and
+  server-owned Shop Talk integration passes, rendered Tools, Shop Talk/Trade
+  News, mobile-actions, and Work lifecycle coverage, and a zero-vulnerability
+  production dependency audit. Baseline and updated light/dark mobile
+  screenshots are retained in the repository. The bounded aggregate wrapper
+  stall is recorded without being represented as a pass.
+- Requirement maturity does not change until review and deployment evidence
+  are recorded. Analytics delivery, real Jacksonville launch content, and
+  public/indexable content remain founder decisions; no fabricated activity,
+  public content exposure, schema migration, or production data change is
+  claimed.
+
 Status values:
 
 - **Verified:** persisted and tested against the live/production-like service.
