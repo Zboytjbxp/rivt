@@ -16,6 +16,7 @@ const ACTIVE_PAYMENT_STATUSES = new Set(["created", "open", "processing"]);
 const ACH_MIN_AMOUNT_CENTS = 50;
 const ACH_MAX_AMOUNT_CENTS = 99_999_999;
 const invoiceIdSchema = z.uuid();
+const toolInvoiceLocalIdSchema = z.string().trim().min(1).max(120).regex(/^[A-Za-z0-9:_-]+$/);
 const onboardingInputSchema = z.object({
   activeWorkId: z.uuid().optional(),
 });
@@ -345,16 +346,20 @@ function mapConnectStatus(row, config) {
   };
 }
 
-function mapPaymentRequest(row, { includeCheckoutUrl = true } = {}) {
+function mapPaymentRequest(row, { includeCheckoutUrl = true, appOrigin = null } = {}) {
   return {
     id: row.id,
-    invoiceId: row.invoice_id ?? row.invoiceId,
+    invoiceId: row.invoice_id ?? row.invoiceId ?? null,
+    toolRecordId: row.tool_record_id ?? row.toolRecordId ?? null,
     amountCents: Number(row.amount_cents ?? row.amountCents ?? 0),
     refundedCents: Number(row.refunded_cents ?? row.refundedCents ?? 0),
     currency: row.currency ?? "usd",
     status: row.status,
     paymentMethodType: row.payment_method_type ?? row.paymentMethodType ?? null,
     checkoutUrl: includeCheckoutUrl ? (row.checkout_url ?? row.checkoutUrl ?? null) : undefined,
+    paymentUrl: appOrigin && ["created", "open"].includes(row.status)
+      ? `${appOrigin}/pay/${row.id}`
+      : null,
     expiresAt: toIso(row.expires_at ?? row.expiresAt),
     paidAt: toIso(row.paid_at ?? row.paidAt),
     failedAt: toIso(row.failed_at ?? row.failedAt),
@@ -541,7 +546,10 @@ async function processConnectEvent(database, event, requestId, createInAppNotifi
     const metadataRequestId = typeof object.metadata?.payment_request_id === "string"
       ? object.metadata.payment_request_id
       : null;
-    const requestResult = metadataRequestId
+    const metadataToolRequestId = typeof object.metadata?.tool_payment_request_id === "string"
+      ? object.metadata.tool_payment_request_id
+      : null;
+    const projectRequestResult = metadataRequestId
       ? await client.query(
         `SELECT * FROM project_invoice_payment_requests
          WHERE id::text = $1
@@ -566,7 +574,35 @@ async function processConnectEvent(database, event, requestId, createInAppNotifi
             [update.lookup.paymentIntentId, event.account ?? null],
           )
           : { rows: [] };
-    const paymentRequest = requestResult.rows[0];
+    const toolRequestResult = projectRequestResult.rows[0]
+      ? { rows: [] }
+      : metadataToolRequestId
+        ? await client.query(
+          `SELECT * FROM tool_invoice_payment_requests
+           WHERE id::text = $1
+             AND ($2::text IS NULL OR stripe_connected_account_id = $2)
+           FOR UPDATE`,
+          [metadataToolRequestId, event.account ?? null],
+        )
+        : update.lookup.sessionId
+          ? await client.query(
+            `SELECT * FROM tool_invoice_payment_requests
+             WHERE stripe_checkout_session_id = $1
+               AND ($2::text IS NULL OR stripe_connected_account_id = $2)
+             FOR UPDATE`,
+            [update.lookup.sessionId, event.account ?? null],
+          )
+          : update.lookup.paymentIntentId
+            ? await client.query(
+              `SELECT * FROM tool_invoice_payment_requests
+               WHERE stripe_payment_intent_id = $1
+                 AND ($2::text IS NULL OR stripe_connected_account_id = $2)
+               FOR UPDATE`,
+              [update.lookup.paymentIntentId, event.account ?? null],
+            )
+            : { rows: [] };
+    const paymentKind = projectRequestResult.rows[0] ? "project" : toolRequestResult.rows[0] ? "tool" : null;
+    const paymentRequest = projectRequestResult.rows[0] ?? toolRequestResult.rows[0];
     if (!paymentRequest) {
       await client.query("COMMIT");
       return { processed: true, duplicate: false, matched: false };
@@ -575,8 +611,11 @@ async function processConnectEvent(database, event, requestId, createInAppNotifi
     const acceptedStatus = nextPaymentStatus(paymentRequest.status, update.status);
     const stateChanged = acceptedStatus !== paymentRequest.status
       || Number(update.refundedCents ?? 0) > Number(paymentRequest.refunded_cents ?? 0);
+    const paymentTable = paymentKind === "project"
+      ? "project_invoice_payment_requests"
+      : "tool_invoice_payment_requests";
     const updatedRequest = await client.query(
-      `UPDATE project_invoice_payment_requests
+      `UPDATE ${paymentTable}
        SET status = $2,
            stripe_payment_intent_id = COALESCE($3, stripe_payment_intent_id),
            payment_method_type = COALESCE(payment_method_type, 'us_bank_account'),
@@ -598,7 +637,38 @@ async function processConnectEvent(database, event, requestId, createInAppNotifi
       ],
     );
     const nextRequest = updatedRequest.rows[0];
-    const invoice = await syncInvoiceStatus(client, nextRequest);
+    const invoice = paymentKind === "project"
+      ? await syncInvoiceStatus(client, nextRequest)
+      : (await client.query(
+        `UPDATE tool_records
+         SET status = CASE
+               WHEN $2 = 'paid' THEN 'paid'
+               WHEN status = 'paid' THEN 'sent'
+               ELSE status
+             END,
+             payload = jsonb_set(
+               payload,
+               '{bankPayment}',
+               jsonb_build_object(
+                 'paymentRequestId', $3::text,
+                 'status', $2::text,
+                 'amountCents', $4::int,
+                 'refundedCents', $5::int,
+                 'updatedAt', now()
+               ),
+               true
+             ),
+             updated_at = now()
+         WHERE id = $1
+         RETURNING *`,
+        [
+          nextRequest.tool_record_id,
+          nextRequest.status,
+          nextRequest.id,
+          Number(nextRequest.amount_cents),
+          Number(nextRequest.refunded_cents),
+        ],
+      )).rows[0] ?? null;
     const statusCopy = stateChanged ? {
       paid: "Bank payment settled",
       failed: "Bank payment failed",
@@ -606,7 +676,7 @@ async function processConnectEvent(database, event, requestId, createInAppNotifi
       refunded: "Bank payment refunded",
       partially_refunded: "Bank payment partially refunded",
     }[nextRequest.status] : undefined;
-    if (statusCopy) {
+    if (statusCopy && paymentKind === "project") {
       const eventAmountCents = ["refunded", "partially_refunded"].includes(nextRequest.status)
         ? Number(nextRequest.refunded_cents)
         : Number(nextRequest.amount_cents);
@@ -629,13 +699,20 @@ async function processConnectEvent(database, event, requestId, createInAppNotifi
     }
     await client.query(
       `INSERT INTO audit_events (request_id, actor_account_id, action, subject_type, subject_id, metadata)
-       VALUES ($1, $2, 'project.invoice.bank_payment_updated', 'project_invoice_payment_request', $3, $4::jsonb)`,
+       VALUES ($1, $2, $3, $4, $5, $6::jsonb)`,
       [
         requestId,
         nextRequest.merchant_account_id,
+        paymentKind === "project"
+          ? "project.invoice.bank_payment_updated"
+          : "tool.invoice.bank_payment_updated",
+        paymentKind === "project"
+          ? "project_invoice_payment_request"
+          : "tool_invoice_payment_request",
         nextRequest.id,
         JSON.stringify({
           invoiceId: nextRequest.invoice_id,
+          toolRecordId: nextRequest.tool_record_id,
           stripeEventId: event.id,
           eventType: event.type,
           status: nextRequest.status,
@@ -649,14 +726,19 @@ async function processConnectEvent(database, event, requestId, createInAppNotifi
         type: "work",
         title: statusCopy,
         body: `Invoice payment status: ${nextRequest.status.replaceAll("_", " ")}.`,
-        actionHref: `/app/tools?tool=invoice&activeWork=${nextRequest.active_work_id}`,
-        sourceType: "project_invoice_payment_request",
+        actionHref: paymentKind === "project" && nextRequest.active_work_id
+          ? `/app/tools?tool=invoice&activeWork=${nextRequest.active_work_id}`
+          : "/app/tools?tool=invoice",
+        sourceType: paymentKind === "project"
+          ? "project_invoice_payment_request"
+          : "tool_invoice_payment_request",
         sourceId: nextRequest.id,
         priority: nextRequest.status === "paid" ? "normal" : "high",
         metadata: {
-          activeWorkId: nextRequest.active_work_id,
-          projectId: nextRequest.project_id,
-          invoiceId: nextRequest.invoice_id,
+          activeWorkId: nextRequest.active_work_id ?? null,
+          projectId: nextRequest.project_id ?? null,
+          invoiceId: nextRequest.invoice_id ?? null,
+          toolRecordId: nextRequest.tool_record_id ?? null,
           paymentRequestId: nextRequest.id,
         },
       });
@@ -844,6 +926,276 @@ export function registerStripeConnectRoutes({
     });
   }));
 
+  app.get("/api/v1/tool-invoices/:localId/bank-payment", requireAuthenticatedUser, requireV1Actor, asyncRoute(async (request, response) => {
+    const localId = validate(toolInvoiceLocalIdSchema, request.params.localId);
+    const result = await database.query(
+      `SELECT tipr.*
+       FROM tool_invoice_payment_requests tipr
+       INNER JOIN tool_records tr ON tr.id = tipr.tool_record_id
+       WHERE tr.account_id = $1
+         AND tr.record_type = 'invoice_draft'
+         AND tr.local_id = $2
+         AND tr.deleted_at IS NULL
+       ORDER BY tipr.created_at DESC, tipr.id DESC
+       LIMIT 1`,
+      [request.actor.account.id, localId],
+    );
+    response.json({
+      data: {
+        paymentRequest: result.rowCount
+          ? mapPaymentRequest(result.rows[0], { appOrigin })
+          : null,
+      },
+      meta: { requestId: request.requestId },
+    });
+  }));
+
+  app.post("/api/v1/tool-invoices/:localId/bank-payment-link", requireAuthenticatedUser, requireV1Actor, writeRateLimit, asyncRoute(async (request, response) => {
+    const config = connectConfig(appOrigin);
+    requireVerifiedActor(request.actor);
+    if (!config.configured) {
+      throw new ApiError(424, "STRIPE_CONNECT_PROVIDER_UNAVAILABLE", "Bank payments are not configured yet.", {
+        provider: "stripe_connect",
+        mode: "setup_required",
+        missing: config.missing,
+      });
+    }
+    const localId = validate(toolInvoiceLocalIdSchema, request.params.localId);
+    const result = await runIdempotentMutation(
+      request,
+      request.actor.account.id,
+      `stripe_connect.tool_invoice_link:${localId}`,
+      async (client) => {
+        const record = (await client.query(
+          `SELECT *
+           FROM tool_records
+           WHERE account_id = $1
+             AND record_type = 'invoice_draft'
+             AND local_id = $2
+             AND deleted_at IS NULL
+           FOR UPDATE`,
+          [request.actor.account.id, localId],
+        )).rows[0];
+        if (!record) {
+          throw new ApiError(404, "TOOL_INVOICE_NOT_FOUND", "Save this invoice before creating its payment link.");
+        }
+        const amountCents = Number(record.amount_cents ?? 0);
+        assertAchAmount(amountCents);
+        if (record.status === "paid") {
+          throw new ApiError(409, "TOOL_INVOICE_ALREADY_PAID", "This invoice is already marked paid.");
+        }
+        const activeRequest = await client.query(
+          `SELECT *
+           FROM tool_invoice_payment_requests
+           WHERE tool_record_id = $1 AND status = ANY($2::text[])
+           ORDER BY created_at DESC LIMIT 1`,
+          [record.id, [...ACTIVE_PAYMENT_STATUSES]],
+        );
+        if (activeRequest.rowCount) {
+          const existing = activeRequest.rows[0];
+          if (Number(existing.amount_cents) !== amountCents) {
+            throw new ApiError(
+              409,
+              "BANK_PAYMENT_AMOUNT_CHANGED",
+              "Cancel the existing bank-payment link before changing the invoice total.",
+            );
+          }
+          return {
+            status: 200,
+            body: {
+              data: { paymentRequest: mapPaymentRequest(existing, { appOrigin }) },
+              meta: { requestId: request.requestId, existing: true },
+            },
+          };
+        }
+        let connectRow = (await client.query(
+          "SELECT * FROM stripe_connect_accounts WHERE account_id = $1 FOR UPDATE",
+          [request.actor.account.id],
+        )).rows[0] ?? null;
+        if (!connectRow) {
+          throw new ApiError(409, "STRIPE_CONNECT_ONBOARDING_REQUIRED", "Finish bank-payment setup before creating a payment link.");
+        }
+        connectRow = await syncConnectAccount(client, config, connectRow);
+        const connectStatus = mapConnectStatus(connectRow, config);
+        if (!connectStatus.ready) {
+          throw new ApiError(409, "STRIPE_CONNECT_NOT_READY", "Stripe is still reviewing this bank-payment account.", {
+            connect: connectStatus,
+          });
+        }
+        const paymentRequest = (await client.query(
+          `INSERT INTO tool_invoice_payment_requests (
+             tool_record_id, merchant_account_id, stripe_connected_account_id,
+             amount_cents, status
+           )
+           VALUES ($1, $2, $3, $4, 'created')
+           RETURNING *`,
+          [record.id, request.actor.account.id, connectRow.stripe_account_id, amountCents],
+        )).rows[0];
+        const payload = record.payload && typeof record.payload === "object" ? record.payload : {};
+        const invoiceNumber = String(payload.invoiceNumber || record.title || "RIVT invoice").slice(0, 80);
+        const payTo = String(payload.payTo || "").slice(0, 160);
+        const recipientEmail = String(payload.recipientEmail || "").trim().toLowerCase();
+        let session;
+        try {
+          session = await stripeConnectRequest(config, "/checkout/sessions", {
+            mode: "payment",
+            customer_creation: "always",
+            success_url: `${config.appOrigin}/payment/complete?session_id={CHECKOUT_SESSION_ID}`,
+            cancel_url: `${config.appOrigin}/payment/complete?cancelled=1`,
+            customer_email: z.email().safeParse(recipientEmail).success ? recipientEmail : undefined,
+            client_reference_id: paymentRequest.id,
+            "payment_method_types[0]": "us_bank_account",
+            "line_items[0][price_data][currency]": "usd",
+            "line_items[0][price_data][unit_amount]": amountCents,
+            "line_items[0][price_data][product_data][name]": `Invoice ${invoiceNumber}`,
+            "line_items[0][price_data][product_data][description]": payTo
+              ? `Payment to ${payTo}`
+              : "Invoice bank payment",
+            "line_items[0][quantity]": "1",
+            "metadata[tool_payment_request_id]": paymentRequest.id,
+            "metadata[tool_record_id]": record.id,
+            "metadata[merchant_account_id]": request.actor.account.id,
+            "payment_intent_data[metadata][tool_payment_request_id]": paymentRequest.id,
+            "payment_intent_data[metadata][tool_record_id]": record.id,
+            "payment_intent_data[metadata][merchant_account_id]": request.actor.account.id,
+          }, {
+            connectedAccountId: connectRow.stripe_account_id,
+            idempotencyKey: `rivt-tool-invoice-payment-${paymentRequest.id}`,
+          });
+        } catch (error) {
+          await client.query(
+            `UPDATE tool_invoice_payment_requests
+             SET status = 'failed', failure_code = 'checkout_create_failed',
+                 failed_at = now(), updated_at = now()
+             WHERE id = $1`,
+            [paymentRequest.id],
+          );
+          throw error;
+        }
+        const saved = (await client.query(
+          `UPDATE tool_invoice_payment_requests
+           SET stripe_checkout_session_id = $2,
+               checkout_url = $3,
+               expires_at = to_timestamp($4),
+               status = 'open',
+               updated_at = now()
+           WHERE id = $1
+           RETURNING *`,
+          [paymentRequest.id, session.id, session.url, Number(session.expires_at)],
+        )).rows[0];
+        await client.query(
+          `UPDATE tool_records
+           SET payload = jsonb_set(
+                 payload,
+                 '{bankPayment}',
+                 jsonb_build_object(
+                   'paymentRequestId', $2::text,
+                   'status', 'open',
+                   'amountCents', $3::int,
+                   'updatedAt', now()
+                 ),
+                 true
+               ),
+               updated_at = now()
+           WHERE id = $1`,
+          [record.id, saved.id, amountCents],
+        );
+        await client.query(
+          `INSERT INTO audit_events (
+             request_id, actor_account_id, action, subject_type, subject_id, metadata
+           )
+           VALUES ($1, $2, 'tool.invoice.bank_payment_link_created',
+             'tool_invoice_payment_request', $3, $4::jsonb)`,
+          [
+            request.requestId,
+            request.actor.account.id,
+            saved.id,
+            JSON.stringify({ toolRecordId: record.id, amountCents, currency: "usd" }),
+          ],
+        );
+        return {
+          status: 201,
+          body: {
+            data: { paymentRequest: mapPaymentRequest(saved, { appOrigin }) },
+            meta: { requestId: request.requestId },
+          },
+        };
+      },
+    );
+    sendIdempotentResult(response, result);
+  }));
+
+  app.post("/api/v1/tool-invoices/:localId/bank-payment-link/cancel", requireAuthenticatedUser, requireV1Actor, writeRateLimit, asyncRoute(async (request, response) => {
+    const config = connectConfig(appOrigin);
+    requireVerifiedActor(request.actor);
+    const localId = validate(toolInvoiceLocalIdSchema, request.params.localId);
+    const result = await runIdempotentMutation(
+      request,
+      request.actor.account.id,
+      `stripe_connect.tool_invoice_link.cancel:${localId}`,
+      async (client) => {
+        const paymentRequest = (await client.query(
+          `SELECT tipr.*
+           FROM tool_invoice_payment_requests tipr
+           INNER JOIN tool_records tr ON tr.id = tipr.tool_record_id
+           WHERE tr.account_id = $1
+             AND tr.record_type = 'invoice_draft'
+             AND tr.local_id = $2
+             AND tr.deleted_at IS NULL
+             AND tipr.status = ANY($3::text[])
+           ORDER BY tipr.created_at DESC LIMIT 1
+           FOR UPDATE OF tipr`,
+          [request.actor.account.id, localId, [...ACTIVE_PAYMENT_STATUSES]],
+        )).rows[0];
+        if (!paymentRequest) {
+          throw new ApiError(409, "BANK_PAYMENT_LINK_NOT_ACTIVE", "This invoice has no active bank-payment link.");
+        }
+        if (paymentRequest.status === "processing") {
+          throw new ApiError(409, "BANK_PAYMENT_PROCESSING", "This ACH payment is already processing and cannot be cancelled in RIVT.");
+        }
+        if (paymentRequest.stripe_checkout_session_id) {
+          await stripeConnectRequest(
+            config,
+            `/checkout/sessions/${encodeURIComponent(paymentRequest.stripe_checkout_session_id)}/expire`,
+            {},
+            {
+              connectedAccountId: paymentRequest.stripe_connected_account_id,
+              idempotencyKey: `rivt-expire-tool-payment-${paymentRequest.id}`,
+            },
+          );
+        }
+        const expired = (await client.query(
+          `UPDATE tool_invoice_payment_requests
+           SET status = 'expired', updated_at = now()
+           WHERE id = $1
+           RETURNING *`,
+          [paymentRequest.id],
+        )).rows[0];
+        await client.query(
+          `INSERT INTO audit_events (
+             request_id, actor_account_id, action, subject_type, subject_id, metadata
+           )
+           VALUES ($1, $2, 'tool.invoice.bank_payment_link_cancelled',
+             'tool_invoice_payment_request', $3, $4::jsonb)`,
+          [
+            request.requestId,
+            request.actor.account.id,
+            expired.id,
+            JSON.stringify({ toolRecordId: expired.tool_record_id }),
+          ],
+        );
+        return {
+          status: 200,
+          body: {
+            data: { paymentRequest: mapPaymentRequest(expired, { appOrigin }) },
+            meta: { requestId: request.requestId },
+          },
+        };
+      },
+    );
+    sendIdempotentResult(response, result);
+  }));
+
   app.post("/api/v1/project-invoices/:id/bank-payment-link", requireAuthenticatedUser, requireV1Actor, writeRateLimit, asyncRoute(async (request, response) => {
     const config = connectConfig(appOrigin);
     requireVerifiedActor(request.actor);
@@ -892,7 +1244,7 @@ export function registerStripeConnectRoutes({
           return {
             status: 200,
             body: {
-              data: { paymentRequest: mapPaymentRequest(existing) },
+              data: { paymentRequest: mapPaymentRequest(existing, { appOrigin }) },
               meta: { requestId: request.requestId, existing: true },
             },
           };
@@ -996,7 +1348,7 @@ export function registerStripeConnectRoutes({
         return {
           status: 201,
           body: {
-            data: { paymentRequest: mapPaymentRequest(saved) },
+            data: { paymentRequest: mapPaymentRequest(saved, { appOrigin }) },
             meta: { requestId: request.requestId },
           },
         };
@@ -1070,7 +1422,7 @@ export function registerStripeConnectRoutes({
         return {
           status: 200,
           body: {
-            data: { paymentRequest: mapPaymentRequest(expired) },
+            data: { paymentRequest: mapPaymentRequest(expired, { appOrigin }) },
             meta: { requestId: request.requestId },
           },
         };
@@ -1079,16 +1431,58 @@ export function registerStripeConnectRoutes({
     sendIdempotentResult(response, result);
   }));
 
+  app.get("/pay/:requestId", publicPaymentRateLimit, asyncRoute(async (request, response) => {
+    const requestId = validate(z.uuid(), request.params.requestId);
+    const result = await database.query(
+      `SELECT status, checkout_url, stripe_checkout_session_id
+       FROM project_invoice_payment_requests
+       WHERE id = $1
+       UNION ALL
+       SELECT status, checkout_url, stripe_checkout_session_id
+       FROM tool_invoice_payment_requests
+       WHERE id = $1
+       LIMIT 1`,
+      [requestId],
+    );
+    const payment = result.rows[0];
+    if (!payment) throw new ApiError(404, "INVOICE_PAYMENT_NOT_FOUND", "Invoice payment not found.");
+    if (["created", "open"].includes(payment.status)
+      && typeof payment.checkout_url === "string"
+      && payment.checkout_url.startsWith("https://checkout.stripe.com/")) {
+      response.setHeader("Cache-Control", "no-store");
+      response.redirect(303, payment.checkout_url);
+      return;
+    }
+    const completion = new URL("/payment/complete", appOrigin);
+    if (payment.stripe_checkout_session_id) {
+      completion.searchParams.set("session_id", payment.stripe_checkout_session_id);
+    } else {
+      completion.searchParams.set("cancelled", "1");
+    }
+    response.redirect(303, completion.toString());
+  }));
+
   app.get("/api/v1/invoice-payments/:sessionId", publicPaymentRateLimit, asyncRoute(async (request, response) => {
     const sessionId = String(request.params.sessionId ?? "").trim();
     if (!/^cs_(?:test_|live_)?[A-Za-z0-9_]{12,200}$/.test(sessionId)) {
       throw new ApiError(404, "INVOICE_PAYMENT_NOT_FOUND", "Invoice payment not found.");
     }
     const result = await database.query(
-      `SELECT pir.*, pi.invoice_number, pi.pay_to
+      `SELECT pir.amount_cents, pir.refunded_cents, pir.currency, pir.status,
+              pir.paid_at, pir.failed_at, pir.disputed_at, pir.refunded_at,
+              pir.updated_at, pi.invoice_number, pi.pay_to
        FROM project_invoice_payment_requests pir
        INNER JOIN project_invoices pi ON pi.id = pir.invoice_id
        WHERE pir.stripe_checkout_session_id = $1
+       UNION ALL
+       SELECT tipr.amount_cents, tipr.refunded_cents, tipr.currency, tipr.status,
+              tipr.paid_at, tipr.failed_at, tipr.disputed_at, tipr.refunded_at,
+              tipr.updated_at,
+              COALESCE(tr.payload->>'invoiceNumber', tr.title) AS invoice_number,
+              COALESCE(tr.payload->>'payTo', '') AS pay_to
+       FROM tool_invoice_payment_requests tipr
+       INNER JOIN tool_records tr ON tr.id = tipr.tool_record_id
+       WHERE tipr.stripe_checkout_session_id = $1
        LIMIT 1`,
       [sessionId],
     );

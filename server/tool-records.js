@@ -221,7 +221,9 @@ function invoiceDeliverySnapshot(record, actor, bankPaymentUrl = null) {
     workLabel: textValue(payload.workLabel, record.title, 320),
     terms: textValue(payload.terms, "Due on receipt", 160),
     senderName: textValue(payload.payTo, textValue(actor.profile.displayName, "RIVT member", 160), 160),
-    paymentMethod: textValue(payload.paymentMethod, "Direct payment", 160),
+    paymentMethod: bankPaymentUrl
+      ? "Secure bank payment"
+      : textValue(payload.paymentMethod, "Contact the sender for payment instructions", 160),
     bankPaymentUrl,
     totalCents,
     subtotalCents,
@@ -267,6 +269,7 @@ function invoiceEmailContent(snapshot) {
 export function registerToolRecordRoutes({
   app,
   database,
+  appOrigin = "http://localhost",
   requireV1AuthenticatedUser,
   requireV1Actor,
   writeRateLimit,
@@ -508,7 +511,7 @@ export function registerToolRecordRoutes({
     let bankPaymentUrl = null;
     if (record.active_work_id && z.uuid().safeParse(projectInvoiceId).success) {
       const paymentLink = await database.query(
-        `SELECT pir.checkout_url
+        `SELECT pir.id
          FROM project_invoice_payment_requests pir
          INNER JOIN project_invoices pi ON pi.id = pir.invoice_id
          WHERE pi.id = $1
@@ -520,7 +523,24 @@ export function registerToolRecordRoutes({
          LIMIT 1`,
         [projectInvoiceId, record.active_work_id, request.actor.account.id],
       );
-      bankPaymentUrl = paymentLink.rows[0]?.checkout_url ?? null;
+      if (paymentLink.rowCount) {
+        bankPaymentUrl = `${appOrigin}/pay/${paymentLink.rows[0].id}`;
+      }
+    }
+    if (!bankPaymentUrl) {
+      const paymentLink = await database.query(
+        `SELECT tipr.id
+         FROM tool_invoice_payment_requests tipr
+         WHERE tipr.tool_record_id = $1
+           AND tipr.status = 'open'
+           AND tipr.checkout_url LIKE 'https://checkout.stripe.com/%'
+         ORDER BY tipr.created_at DESC
+         LIMIT 1`,
+        [record.id],
+      );
+      if (paymentLink.rowCount) {
+        bankPaymentUrl = `${appOrigin}/pay/${paymentLink.rows[0].id}`;
+      }
     }
     const snapshot = invoiceDeliverySnapshot(record, request.actor, bankPaymentUrl);
     const attemptedAt = new Date().toISOString();

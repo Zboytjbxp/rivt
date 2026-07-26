@@ -1,11 +1,48 @@
 # RIVT Build State
 
-Last updated: 2026-07-25 America/New_York
+Last updated: 2026-07-26 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Desktop release polish is deployed and live-verified; Stripe Connect Accounts v2 remains deployed fail-closed with human onboarding and live webhook activation gated.
-Active packet: `docs/delivery/packets/71_DESKTOP_RELEASE_POLISH.md`
-Repository branch: `master` (source branch: `codex/desktop-release-polish`)
-Production feature release commit: `a2095df7eef356942b66bba0759694a714ce7921`
+Current phase: Invoice payment clarity and Quick use ACH support are locally verified and awaiting production deployment.
+Active packet: `docs/delivery/packets/70_STRIPE_CONNECT_ACH_INVOICES.md` (payment-clarity extension)
+Repository branch: `codex/invoice-payment-clarity`
+Production feature release commit: pending deployment
+
+## Invoice Payment Clarity + Quick Use ACH (Locally Verified)
+
+- Invoice Review now asks one explicit question before delivery: how the
+  customer should pay. The sender chooses either a Stripe-hosted US bank
+  payment or another method with exact written instructions.
+- The primary delivery action is truthful to the choice: `Send link` for a
+  ready bank-payment invoice and `Email` for sender-provided instructions.
+  Emailing a bank-payment invoice creates the link first when needed; it
+  cannot send a supposed pay button before Stripe setup and a live link are
+  ready.
+- Quick use and standalone-project invoice drafts now have server-owned bank
+  payment requests through migration `0031_tool_invoice_payment_requests`.
+  This closes the former accepted-Work-only gap without creating a fake Work
+  job or treating browser state as a receivable.
+- Customer-facing invoice preview, printable output, text summary, and email
+  now carry the actual payment path. Bank-payment invoices use a short
+  RIVT-owned `/pay/{requestId}` redirect instead of exposing Stripe's long
+  Checkout URL; outside-payment invoices require the sender's explicit
+  instructions instead of the ambiguous legacy `Direct payment` label.
+- Signed Stripe events update Quick use payment state transactionally and
+  replay-safely. Only asynchronous settlement marks the record paid; refund
+  or dispute removes that paid state. Stripe remains the processor for the
+  invoice author, and RIVT does not hold job funds.
+- Production activation prerequisites were completed by the product owner:
+  the live Accounts v2 event destination is active, its signing secret is in
+  Railway, `STRIPE_CONNECT_ACH_ENABLED=true`, unsigned webhook delivery fails
+  closed, health reports Connect enabled/configured/webhook-configured, and
+  the exact-source production monitor passed before this UI extension.
+- Local proof passed: build, lint, security lint, 86 unit/frontend tests, all
+  19 serial database integration suites, fail-closed authentication and
+  jobs/discovery E2E, migration `0031` apply/rollback, the server-owned
+  tool-record/email integration (including the short public redirect and no
+  leaked Stripe URL), rendered Tools QA across desktop, 390px, and compact
+  phone layouts, and `npm audit --omit=dev` with zero known vulnerabilities.
+- Deployment, exact-source health, migration readiness, and a controlled
+  live Quick use payment-link smoke remain pending for this extension.
 
 ## Desktop Release Polish (Deployed and Live-Verified)
 

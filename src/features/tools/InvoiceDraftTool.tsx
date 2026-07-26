@@ -9,10 +9,13 @@ import { getInvoiceLinePriceSignal } from "./priceGuidance";
 import { deleteToolRecordByLocalId, fetchToolRecords, sendInvoiceByLocalId, upsertToolRecord, type ServerToolRecord, type ToolRecordInput } from "./tool-records-api";
 import {
   cancelInvoiceBankPaymentLink,
+  cancelToolInvoiceBankPaymentLink,
   createProjectInvoice,
   createInvoiceBankPaymentLink,
+  createToolInvoiceBankPaymentLink,
   getProjectForActiveWork,
   getStripeConnectStatus,
+  getToolInvoiceBankPayment,
   openStripeConnectDashboard,
   recordProjectInvoicePayment,
   startStripeConnectOnboarding,
@@ -56,6 +59,16 @@ interface InvoiceTemplate {
 
 const invoiceTemplateStorageKey = "rivt.invoiceTemplates.v1";
 const invoicePrefsStorageKey = "rivt.invoicePrefs.v1";
+const bankPaymentMethod = "Secure bank payment";
+
+function normalizePaymentMethod(value: string | undefined) {
+  const method = value?.trim() ?? "";
+  return /^direct payment$/i.test(method) ? "" : method;
+}
+
+function paymentChoiceFromMethod(value: string | undefined): "bank" | "outside" {
+  return /bank payment|ach/i.test(value ?? "") ? "bank" : "outside";
+}
 
 interface InvoiceDraftSnapshot {
   invoiceNumber: string;
@@ -219,7 +232,13 @@ export function InvoiceDraftTool({
   );
   const [payTo, setPayTo] = useState(initialDraft.payTo ?? invoicePrefs.payTo);
   const [terms, setTerms] = useState(estimateDraft?.terms ?? initialDraft.terms ?? invoicePrefs.terms);
-  const [paymentMethod, setPaymentMethod] = useState(estimateDraft?.paymentMethod ?? initialDraft.paymentMethod ?? invoicePrefs.paymentMethod);
+  const initialPaymentMethod = normalizePaymentMethod(
+    estimateDraft?.paymentMethod ?? initialDraft.paymentMethod ?? invoicePrefs.paymentMethod,
+  );
+  const [paymentMethod, setPaymentMethod] = useState(initialPaymentMethod);
+  const [paymentChoice, setPaymentChoice] = useState<"bank" | "outside">(
+    paymentChoiceFromMethod(initialPaymentMethod),
+  );
   const [recipientEmail, setRecipientEmail] = useState(initialDraft.recipientEmail ?? invoicePrefs.recipientEmail);
   const [recipientPhone, setRecipientPhone] = useState(initialDraft.recipientPhone ?? invoicePrefs.recipientPhone);
   const [taxPct, setTaxPct] = useState(initialDraft.taxPct ?? invoicePrefs.taxPct);
@@ -240,6 +259,7 @@ export function InvoiceDraftTool({
   const [projectInvoiceNotice, setProjectInvoiceNotice] = useState("");
   const [projectInvoiceError, setProjectInvoiceError] = useState("");
   const [connectStatus, setConnectStatus] = useState<StripeConnectStatus | null>(null);
+  const [toolPaymentRequest, setToolPaymentRequest] = useState<ProjectInvoiceOnlinePayment | null>(null);
   const [connectBusy, setConnectBusy] = useState(false);
   const [invoiceEmailBusy, setInvoiceEmailBusy] = useState(false);
   const [paymentAmount, setPaymentAmount] = useState("");
@@ -253,6 +273,17 @@ export function InvoiceDraftTool({
   const subtotal = centsToDollars(subtotalCents);
   const tax = centsToDollars(taxCents);
   const total = centsToDollars(totalCents);
+  const projectPaymentRequest = projectInvoice?.onlinePayments
+    ?.filter((payment) => ["created", "open", "processing"].includes(payment.status))
+    .at(-1) ?? null;
+  const activeBankPayment = projectPaymentRequest
+    ?? (toolPaymentRequest && ["created", "open", "processing"].includes(toolPaymentRequest.status)
+      ? toolPaymentRequest
+      : null);
+  const bankPaymentUrl = activeBankPayment?.paymentUrl ?? activeBankPayment?.checkoutUrl ?? null;
+  const customerPaymentMethod = paymentChoice === "bank"
+    ? bankPaymentMethod
+    : paymentMethod.trim();
   const lineSignals = lines.map((line) => {
     const isHourlyLabor = line.kind === "labor";
     return {
@@ -281,24 +312,30 @@ export function InvoiceDraftTool({
     `Tax: ${currency(tax)}`,
     `Total due: ${currency(total)}`,
     `Terms: ${terms}`,
-    `Payment method: ${paymentMethod}`,
-    "RIVT records direct-payment details only. RIVT does not process, escrow, or hold job payments.",
-  ].join("\n"), [billTo, invoiceNumber, lines, paymentMethod, payTo, subtotal, tax, terms, total, workContext]);
-  const smsHref = `sms:${encodeURIComponent(recipientPhone)}?body=${encodeURIComponent(`RIVT invoice ${invoiceNumber}: ${currency(total)} due. ${terms}. ${paymentMethod}.`)}`;
+    `Payment method: ${customerPaymentMethod || "Not entered"}`,
+    bankPaymentUrl ? `Pay securely from a US bank account: ${bankPaymentUrl}` : "",
+    paymentChoice === "bank"
+      ? "Bank payment is handled by Stripe for the sender. RIVT does not hold job funds."
+      : "Payment is arranged directly with the sender using the instructions above.",
+  ].filter(Boolean).join("\n"), [bankPaymentUrl, billTo, customerPaymentMethod, invoiceNumber, lines, payTo, paymentChoice, subtotal, tax, terms, total, workContext]);
+  const smsHref = `sms:${encodeURIComponent(recipientPhone)}?body=${encodeURIComponent(
+    `RIVT invoice ${invoiceNumber}: ${currency(total)} due. ${terms}. ${customerPaymentMethod || "Contact the sender for payment instructions"}.${bankPaymentUrl ? ` Pay: ${bankPaymentUrl}` : ""}`,
+  )}`;
 
   useEffect(() => {
-    if (!activeWorkId) return;
     let cancelled = false;
-    void getProjectForActiveWork(activeWorkId)
-      .then((project) => {
-        if (cancelled) return;
-        const existing = project.invoices.find((invoice) => invoice.invoiceNumber === initialProjectInvoiceNumber.current) ?? null;
-        setProjectInvoice(existing);
-        if (existing) setPaymentAmount((existing.balanceCents / 100).toFixed(2));
-      })
-      .catch(() => {
-        // A project is created only when the participant intentionally saves a job invoice.
-      });
+    if (activeWorkId) {
+      void getProjectForActiveWork(activeWorkId)
+        .then((project) => {
+          if (cancelled) return;
+          const existing = project.invoices.find((invoice) => invoice.invoiceNumber === initialProjectInvoiceNumber.current) ?? null;
+          setProjectInvoice(existing);
+          if (existing) setPaymentAmount((existing.balanceCents / 100).toFixed(2));
+        })
+        .catch(() => {
+          // A project is created only when the participant intentionally saves a job invoice.
+        });
+    }
     void getStripeConnectStatus()
       .then((status) => {
         if (!cancelled) setConnectStatus(status);
@@ -306,8 +343,21 @@ export function InvoiceDraftTool({
       .catch(() => {
         if (!cancelled) setConnectStatus(null);
       });
+    void getToolInvoiceBankPayment(recordLocalId)
+      .then((payment) => {
+        if (!cancelled) {
+          setToolPaymentRequest(payment);
+          if (payment && ["created", "open", "processing"].includes(payment.status)) {
+            setPaymentChoice("bank");
+            setPaymentMethod(bankPaymentMethod);
+          }
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setToolPaymentRequest(null);
+      });
     return () => { cancelled = true; };
-  }, [activeWorkId]);
+  }, [activeWorkId, recordLocalId]);
 
   useEffect(() => {
     try {
@@ -421,7 +471,9 @@ export function InvoiceDraftTool({
     setBillTo(template.billTo);
     setPayTo(template.payTo);
     setTerms(template.terms);
-    setPaymentMethod(template.paymentMethod);
+    const nextPaymentMethod = normalizePaymentMethod(template.paymentMethod);
+    setPaymentMethod(nextPaymentMethod);
+    setPaymentChoice(paymentChoiceFromMethod(nextPaymentMethod));
     setRecipientEmail(template.recipientEmail);
     setRecipientPhone(template.recipientPhone);
     setTaxPct(template.taxPct);
@@ -442,7 +494,9 @@ export function InvoiceDraftTool({
     setBillTo("");
     setPayTo(latestPrefs.payTo);
     setTerms(latestPrefs.terms);
-    setPaymentMethod(latestPrefs.paymentMethod);
+    const nextPaymentMethod = normalizePaymentMethod(latestPrefs.paymentMethod);
+    setPaymentMethod(nextPaymentMethod);
+    setPaymentChoice(paymentChoiceFromMethod(nextPaymentMethod));
     setRecipientEmail(latestPrefs.recipientEmail);
     setRecipientPhone(latestPrefs.recipientPhone);
     setTaxPct(latestPrefs.taxPct);
@@ -451,17 +505,18 @@ export function InvoiceDraftTool({
     setConversionNotice("");
     setTemplateNotice("Blank invoice started.");
     setProjectInvoice(null);
+    setToolPaymentRequest(null);
     setProjectInvoiceNotice("");
     setProjectInvoiceError("");
   }
 
-  function projectInvoiceInput() {
+  function projectInvoiceInput(methodOverride = customerPaymentMethod) {
     return {
       invoiceNumber: invoiceNumber.trim() || "RIVT-DRAFT",
       billTo: billTo.trim(),
       payTo: payTo.trim(),
       terms: terms.trim(),
-      paymentMethod: paymentMethod.trim(),
+      paymentMethod: methodOverride.trim(),
       recipientEmail: recipientEmail.trim(),
       recipientPhone: recipientPhone.trim(),
       taxCents,
@@ -477,8 +532,19 @@ export function InvoiceDraftTool({
     };
   }
 
-  function invoiceToolRecordInput(): ToolRecordInput {
-    const snapshot: InvoiceDraftSnapshot = { invoiceNumber, billTo, payTo, terms, paymentMethod, recipientEmail, recipientPhone, taxPct, templateName, lines };
+  function invoiceToolRecordInput(methodOverride = customerPaymentMethod): ToolRecordInput {
+    const snapshot: InvoiceDraftSnapshot = {
+      invoiceNumber,
+      billTo,
+      payTo,
+      terms,
+      paymentMethod: methodOverride,
+      recipientEmail,
+      recipientPhone,
+      taxPct,
+      templateName,
+      lines,
+    };
     return {
       recordType: "invoice_draft",
       localId: recordLocalId,
@@ -501,17 +567,17 @@ export function InvoiceDraftTool({
     };
   }
 
-  async function saveInvoiceDraft(): Promise<ServerToolRecord | null> {
+  async function saveInvoiceDraft(methodOverride = customerPaymentMethod): Promise<ServerToolRecord | null> {
     setDraftSaveState("saving");
     setDraftSaveMessage("Saving draft...");
-    const record = await upsertToolRecord(invoiceToolRecordInput());
+    const record = await upsertToolRecord(invoiceToolRecordInput(methodOverride));
     if (!record) {
       setDraftSaveMessage("Draft kept on this device. RIVT account sync failed.");
       setDraftSaveState("error");
       return null;
     }
     if (activeWorkId && !projectInvoice) {
-      const savedToWork = await saveToActiveWork();
+      const savedToWork = await saveToActiveWork(methodOverride);
       setDraftSaveMessage(savedToWork ? "Draft saved to this job and your RIVT account." : "Draft saved to your RIVT account. It could not be added to the job workspace.");
       setDraftSaveState(savedToWork ? "saved" : "error");
       return record;
@@ -521,13 +587,13 @@ export function InvoiceDraftTool({
     return record;
   }
 
-  async function saveToActiveWork() {
+  async function saveToActiveWork(methodOverride = customerPaymentMethod) {
     if (!activeWorkId) return false;
     setProjectInvoiceBusy(true);
     setProjectInvoiceError("");
     setProjectInvoiceNotice("");
     try {
-      const saved = await createProjectInvoice(activeWorkId, projectInvoiceInput());
+      const saved = await createProjectInvoice(activeWorkId, projectInvoiceInput(methodOverride));
       setProjectInvoice(saved);
       setPaymentAmount((saved.balanceCents / 100).toFixed(2));
       setProjectInvoiceNotice("Invoice saved to this job workspace.");
@@ -610,59 +676,85 @@ export function InvoiceDraftTool({
   }
 
   async function createBankPaymentLink() {
-    if (!projectInvoice) return;
     setConnectBusy(true);
     setProjectInvoiceError("");
     setProjectInvoiceNotice("");
     try {
-      const paymentRequest = await createInvoiceBankPaymentLink(projectInvoice.id);
-      setProjectInvoice((current) => current ? {
-        ...current,
-        onlinePayments: [
-          ...(current.onlinePayments ?? []).filter((payment) => payment.id !== paymentRequest.id),
-          paymentRequest,
-        ],
-      } : current);
-      if (paymentRequest.checkoutUrl) {
+      setPaymentChoice("bank");
+      setPaymentMethod(bankPaymentMethod);
+      let savedProjectInvoice = projectInvoice;
+      if (activeWorkId && !savedProjectInvoice) {
+        const saved = await createProjectInvoice(activeWorkId, projectInvoiceInput(bankPaymentMethod));
+        setProjectInvoice(saved);
+        setPaymentAmount((saved.balanceCents / 100).toFixed(2));
+        savedProjectInvoice = saved;
+      }
+      let paymentRequest: ProjectInvoiceOnlinePayment;
+      if (savedProjectInvoice) {
+        paymentRequest = await createInvoiceBankPaymentLink(savedProjectInvoice.id);
+        setProjectInvoice((current) => current ? {
+          ...current,
+          onlinePayments: [
+            ...(current.onlinePayments ?? []).filter((payment) => payment.id !== paymentRequest.id),
+            paymentRequest,
+          ],
+        } : current);
+      } else {
+        const record = await upsertToolRecord(invoiceToolRecordInput(bankPaymentMethod));
+        if (!record) {
+          throw new Error("Save this invoice to your RIVT account before creating its payment link.");
+        }
+        paymentRequest = await createToolInvoiceBankPaymentLink(record.localId);
+        setToolPaymentRequest(paymentRequest);
+      }
+      const shareUrl = paymentRequest.paymentUrl ?? paymentRequest.checkoutUrl;
+      if (shareUrl) {
         try {
-          await navigator.clipboard.writeText(paymentRequest.checkoutUrl);
-          setProjectInvoiceNotice("Customer bank-payment link copied.");
+          await navigator.clipboard.writeText(shareUrl);
+          setProjectInvoiceNotice("Secure customer payment link created and copied.");
         } catch {
-          setProjectInvoiceNotice("Bank-payment link created. Open the payment page to copy its address.");
+          setProjectInvoiceNotice("Secure customer payment link created. It will be included when you email the invoice.");
         }
       } else {
         setProjectInvoiceNotice("Bank payment is already processing. RIVT will update the invoice after Stripe confirms it.");
       }
+      return paymentRequest;
     } catch (error) {
       setProjectInvoiceError(error instanceof Error ? error.message : "RIVT could not create the bank-payment link.");
+      return null;
     } finally {
       setConnectBusy(false);
     }
   }
 
   async function copyBankPaymentLink(payment: ProjectInvoiceOnlinePayment) {
-    if (!payment.checkoutUrl) return;
+    const shareUrl = payment.paymentUrl ?? payment.checkoutUrl;
+    if (!shareUrl) return;
     try {
-      await navigator.clipboard.writeText(payment.checkoutUrl);
-      setProjectInvoiceNotice("Customer bank-payment link copied.");
+      await navigator.clipboard.writeText(shareUrl);
+      setProjectInvoiceNotice("Secure customer payment link copied.");
     } catch {
       setProjectInvoiceError("Copy failed. Open the payment page and copy its address.");
     }
   }
 
   async function cancelBankPaymentLink() {
-    if (!projectInvoice) return;
     setConnectBusy(true);
     setProjectInvoiceError("");
     setProjectInvoiceNotice("");
     try {
-      const paymentRequest = await cancelInvoiceBankPaymentLink(projectInvoice.id);
-      setProjectInvoice((current) => current ? {
-        ...current,
-        onlinePayments: (current.onlinePayments ?? []).map((payment) => (
-          payment.id === paymentRequest.id ? paymentRequest : payment
-        )),
-      } : current);
+      if (projectInvoice) {
+        const paymentRequest = await cancelInvoiceBankPaymentLink(projectInvoice.id);
+        setProjectInvoice((current) => current ? {
+          ...current,
+          onlinePayments: (current.onlinePayments ?? []).map((payment) => (
+            payment.id === paymentRequest.id ? paymentRequest : payment
+          )),
+        } : current);
+      } else {
+        const paymentRequest = await cancelToolInvoiceBankPaymentLink(recordLocalId);
+        setToolPaymentRequest(paymentRequest);
+      }
       setProjectInvoiceNotice("Bank-payment link cancelled. No payment was submitted through that link.");
     } catch (error) {
       setProjectInvoiceError(error instanceof Error ? error.message : "RIVT could not cancel the bank-payment link.");
@@ -696,8 +788,33 @@ export function InvoiceDraftTool({
       setDraftSaveMessage("Add at least one priced line before sending.");
       return;
     }
+    if (paymentChoice === "outside" && !paymentMethod.trim()) {
+      setStep("customer");
+      setDraftSaveMessage("Add clear payment instructions so the customer knows how and where to pay.");
+      setDraftSaveState("error");
+      return;
+    }
+    if (paymentChoice === "bank" && !connectStatus?.ready) {
+      setProjectInvoiceError("Finish Stripe bank-payment setup before emailing this invoice with a pay button.");
+      return;
+    }
     setInvoiceEmailBusy(true);
-    const record = await saveInvoiceDraft();
+    let preparedBankPayment = activeBankPayment;
+    if (paymentChoice === "bank" && !bankPaymentUrl) {
+      preparedBankPayment = await createBankPaymentLink();
+      if (!preparedBankPayment?.paymentUrl && !preparedBankPayment?.checkoutUrl) {
+        setInvoiceEmailBusy(false);
+        return;
+      }
+    }
+    if (paymentChoice === "bank" && preparedBankPayment?.status === "processing") {
+      setProjectInvoiceError("This bank payment is already processing. Do not send a second payment request.");
+      setInvoiceEmailBusy(false);
+      return;
+    }
+    const record = await saveInvoiceDraft(
+      paymentChoice === "bank" ? bankPaymentMethod : paymentMethod.trim(),
+    );
     if (!record) {
       setInvoiceEmailBusy(false);
       return;
@@ -739,6 +856,109 @@ export function InvoiceDraftTool({
           </div>
         </section>
 
+        {step === "review" ? (
+          <section className="v2-invoice-payment-path" aria-labelledby="invoice-payment-path-title">
+            <header>
+              <div>
+                <span>Customer action</span>
+                <h3 id="invoice-payment-path-title">How should the customer pay?</h3>
+              </div>
+              {bankPaymentUrl ? <strong><Check size={16} />Pay link ready</strong> : null}
+            </header>
+            <div className="v2-invoice-payment-options" role="radiogroup" aria-label="Invoice payment method">
+              <button
+                type="button"
+                role="radio"
+                aria-checked={paymentChoice === "bank"}
+                className={paymentChoice === "bank" ? "is-selected" : ""}
+                onClick={() => {
+                  setPaymentChoice("bank");
+                  setPaymentMethod(bankPaymentMethod);
+                }}
+              >
+                <Banknote size={20} aria-hidden="true" />
+                <span>
+                  <strong>Pay securely by bank</strong>
+                  <small>A pay button is included in the email and invoice.</small>
+                </span>
+              </button>
+              <button
+                type="button"
+                role="radio"
+                aria-checked={paymentChoice === "outside"}
+                className={paymentChoice === "outside" ? "is-selected" : ""}
+                onClick={() => {
+                  setPaymentChoice("outside");
+                  if (paymentChoice === "bank" || paymentMethod === bankPaymentMethod) setPaymentMethod("");
+                }}
+              >
+                <MessageSquare size={20} aria-hidden="true" />
+                <span>
+                  <strong>Pay another way</strong>
+                  <small>You provide the exact cash, check, card, or transfer instructions.</small>
+                </span>
+              </button>
+            </div>
+            {paymentChoice === "bank" ? (
+              <div className="v2-invoice-bank-payment is-primary">
+                <div>
+                  <Banknote size={18} aria-hidden="true" />
+                  <span>
+                    <strong>{bankPaymentUrl
+                      ? "Customer payment page is ready"
+                      : connectStatus?.ready
+                        ? "Create the secure payment page"
+                        : connectStatus?.connected
+                          ? "Finish Stripe setup"
+                          : "Set up bank payments"}</strong>
+                    <small>{bankPaymentUrl
+                      ? "Email will include a clear Pay securely by bank button."
+                      : connectStatus?.ready
+                        ? "RIVT will create a short customer link and include it when you email."
+                        : "Stripe must verify your payout account before RIVT can add a pay button."}</small>
+                    <small>Stripe fees and ACH timing apply. RIVT does not hold job funds.</small>
+                  </span>
+                </div>
+                {!connectStatus?.ready ? (
+                  <button type="button" className="v2-primary-button" onClick={() => void openBankPaymentSetup()} disabled={connectBusy || !connectStatus?.providerConfigured}>
+                    {connectBusy ? "Opening Stripe..." : connectStatus?.connected ? "Continue Stripe setup" : "Set up bank payments"}
+                  </button>
+                ) : !bankPaymentUrl ? (
+                  <button type="button" className="v2-primary-button" onClick={() => void createBankPaymentLink()} disabled={connectBusy || totalCents <= 0}>
+                    {connectBusy ? "Creating pay link..." : "Create secure pay link"}
+                  </button>
+                ) : (
+                  <div className="v2-tool-action-row">
+                    <button type="button" className="v2-primary-button" onClick={() => void copyBankPaymentLink(activeBankPayment!)}><Copy size={15} />Copy pay link</button>
+                    <a href={bankPaymentUrl} target="_blank" rel="noreferrer"><ExternalLink size={15} />Open customer page</a>
+                    {activeBankPayment?.status !== "processing" ? (
+                      <button type="button" onClick={() => void cancelBankPaymentLink()} disabled={connectBusy}>Cancel link</button>
+                    ) : null}
+                  </div>
+                )}
+                {connectStatus?.ready ? (
+                  <button type="button" className="v2-invoice-manage-stripe" onClick={() => void manageBankPaymentAccount()} disabled={connectBusy}>
+                    Manage payout account
+                  </button>
+                ) : null}
+              </div>
+            ) : (
+              <label className="v2-invoice-payment-instructions">
+                Payment instructions
+                <textarea
+                  value={paymentMethod}
+                  onChange={(event) => setPaymentMethod(event.target.value)}
+                  placeholder="Example: Pay by check to Punchlist People, 6563 Ector Place, Jacksonville, FL 32211."
+                  rows={3}
+                />
+                <small>This exact instruction appears on the invoice and in the email. Do not include private account credentials.</small>
+              </label>
+            )}
+            {projectInvoiceNotice ? <p className="v2-record-notice" role="status">{projectInvoiceNotice}</p> : null}
+            {projectInvoiceError ? <p className="v2-record-error" role="alert">{projectInvoiceError}</p> : null}
+          </section>
+        ) : null}
+
         {step === "review" && activeWorkId ? (
           <section className="v2-invoice-project-record" aria-label="Job invoice record">
             <div>
@@ -753,6 +973,7 @@ export function InvoiceDraftTool({
               {projectInvoice ? <button type="button" onClick={startBlankInvoice} disabled={projectInvoiceBusy}>New invoice</button> : null}
               {projectInvoice && projectInvoice.status === "draft" ? <button type="button" onClick={() => void markProjectInvoiceSent()} disabled={projectInvoiceBusy}>Mark sent</button> : null}
             </div>
+            {/* Bank-payment setup and link actions now live in the primary payment path above.
             {projectInvoice ? (
               <>
                 {connectStatus?.providerConfigured
@@ -831,9 +1052,18 @@ export function InvoiceDraftTool({
                   </div>
                 </details>
               </>
+            ) : null} */}
+            {projectInvoice ? (
+              <details className="v2-invoice-external-payment">
+                <summary>Record payment received outside RIVT</summary>
+                <div className="v2-invoice-payment-record">
+                  <label>Amount received<input inputMode="decimal" value={paymentAmount} onChange={(event) => setPaymentAmount(event.target.value)} aria-label="External payment amount" /></label>
+                  <label>Method<input value={paymentMethodDraft} onChange={(event) => setPaymentMethodDraft(event.target.value)} /></label>
+                  <label>Note<input value={paymentNote} onChange={(event) => setPaymentNote(event.target.value)} placeholder="Optional reference" /></label>
+                  <button type="button" onClick={() => void recordExternalPayment()} disabled={projectInvoiceBusy || projectInvoice.status === "void" || projectInvoice.balanceCents <= 0}>Record external payment</button>
+                </div>
+              </details>
             ) : null}
-            {projectInvoiceNotice ? <p className="v2-record-notice" role="status">{projectInvoiceNotice}</p> : null}
-            {projectInvoiceError ? <p className="v2-record-error" role="alert">{projectInvoiceError}</p> : null}
           </section>
         ) : null}
 
@@ -882,7 +1112,17 @@ export function InvoiceDraftTool({
             <label>Terms<input value={terms} onChange={(event) => setTerms(event.target.value)} /></label>
             <label>Bill to<input value={billTo} onChange={(event) => setBillTo(event.target.value)} placeholder="Contractor or company" /></label>
             <label>Pay to<input value={payTo} onChange={(event) => setPayTo(event.target.value)} placeholder="Your company or name" /></label>
-            <label>Payment method<input value={paymentMethod} onChange={(event) => setPaymentMethod(event.target.value)} /></label>
+            <label>
+              Payment instructions
+              <input
+                value={paymentChoice === "bank" ? bankPaymentMethod : paymentMethod}
+                onChange={(event) => {
+                  setPaymentChoice("outside");
+                  setPaymentMethod(event.target.value);
+                }}
+                placeholder="Check payable to…, cash on completion, or transfer instructions"
+              />
+            </label>
             <label>Tax %<input type="number" min="0" value={taxPct} onChange={(event) => setTaxPct(Math.max(0, Number(event.target.value) || 0))} /></label>
             <label>Recipient email<input type="email" value={recipientEmail} onChange={(event) => setRecipientEmail(event.target.value)} placeholder="name@company.com" /></label>
             <label>Recipient phone<input type="tel" value={recipientPhone} onChange={(event) => setRecipientPhone(event.target.value)} placeholder="+1 904 555 0123" /></label>
@@ -933,10 +1173,12 @@ export function InvoiceDraftTool({
             <div><span>Subtotal</span><strong>{currency(subtotal)}</strong></div>
             <div><span>Tax</span><strong>{currency(tax)}</strong></div>
             <div><span>Terms</span><strong>{terms}</strong></div>
-            <div><span>Method</span><strong>{paymentMethod}</strong></div>
+            <div><span>Method</span><strong>{customerPaymentMethod || "Not selected"}</strong></div>
           </div>
           <p className="v2-tool-note">
-            Email sends a finished invoice from RIVT and records delivery here. Text opens your device's message draft.
+            {paymentChoice === "bank"
+              ? "Email includes the secure customer pay button and records delivery."
+              : "Email includes the payment instructions you entered and records delivery."}
           </p>
           <div className="v2-invoice-delivery" aria-label="Invoice draft delivery">
             <a href={recipientPhone ? smsHref : undefined} aria-disabled={!recipientPhone} onClick={(event) => {
@@ -992,8 +1234,23 @@ export function InvoiceDraftTool({
                 <div><span>Total due</span><strong>{currency(total)}</strong></div>
               </section>
               <footer>
-                <span>{paymentMethod}</span>
-                <p>RIVT generates this invoice for your records. Payments are collected directly between you and the client - not through RIVT.</p>
+                {paymentChoice === "bank" ? (
+                  <>
+                    <span>Secure bank payment</span>
+                    {bankPaymentUrl ? (
+                      <a href={bankPaymentUrl} target="_blank" rel="noreferrer">Pay securely by bank</a>
+                    ) : (
+                      <strong>Pay link will be created before email delivery.</strong>
+                    )}
+                    <p>Payment is processed by Stripe for {payTo || "the sender"}. RIVT does not hold job funds.</p>
+                  </>
+                ) : (
+                  <>
+                    <span>Payment instructions</span>
+                    <strong>{paymentMethod.trim() || "Not entered"}</strong>
+                    <p>Use the sender's instructions above. RIVT records the invoice but does not collect this payment.</p>
+                  </>
+                )}
               </footer>
           </article>
           <div className="v2-invoice-preview-actions" aria-label="Invoice preview actions">
@@ -1011,7 +1268,7 @@ export function InvoiceDraftTool({
         </button>
         {step === "items" ? <button type="button" className="v2-primary-button" onClick={() => setStep("customer")} disabled={totalCents <= 0}><span>Customer</span><ChevronRight size={18} /></button> : null}
         {step === "customer" ? <button type="button" className="v2-primary-button" onClick={() => setStep("review")}><span>Review</span><ChevronRight size={18} /></button> : null}
-        {step === "review" ? <button type="button" className="v2-primary-button" onClick={() => void emailInvoice()} disabled={invoiceEmailBusy || totalCents <= 0 || !recipientEmail.trim()}><Mail size={18} />{invoiceEmailBusy ? "Sending" : "Email"}</button> : null}
+        {step === "review" ? <button type="button" className="v2-primary-button" onClick={() => void emailInvoice()} disabled={invoiceEmailBusy || totalCents <= 0 || !recipientEmail.trim()}><Mail size={18} />{invoiceEmailBusy ? "Sending" : paymentChoice === "bank" ? "Send link" : "Email"}</button> : null}
       </div>
     </div>
   );

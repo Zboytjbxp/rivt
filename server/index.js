@@ -5345,6 +5345,7 @@ registerShopTalkModerationRoutes({
 registerToolRecordRoutes({
   app,
   database,
+  appOrigin: productionOrigin,
   requireV1AuthenticatedUser,
   requireV1Actor,
   writeRateLimit,

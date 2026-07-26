@@ -264,6 +264,7 @@ async function configurePage(page) {
       status: "open",
       paymentMethodType: null,
       checkoutUrl: "https://checkout.stripe.test/rivt-ach",
+      paymentUrl: "https://rivt.example/pay/ffffffff-ffff-ffff-ffff-ffffffffffff",
       expiresAt: "2026-07-26T12:00:00.000Z",
       paidAt: null,
       failedAt: null,
@@ -278,6 +279,40 @@ async function configurePage(page) {
       body: JSON.stringify({ data: { paymentRequest } }),
     });
   });
+  let toolInvoicePaymentRequest = null;
+  await page.route("**/api/v1/tool-invoices/*/bank-payment-link", (route) => {
+    toolInvoicePaymentRequest = {
+      id: "abababab-abab-4bab-8bab-abababababab",
+      invoiceId: null,
+      toolRecordId: "cdcdcdcd-cdcd-4dcd-8dcd-cdcdcdcdcdcd",
+      amountCents: 277000,
+      refundedCents: 0,
+      currency: "usd",
+      status: "open",
+      paymentMethodType: null,
+      checkoutUrl: "https://checkout.stripe.test/rivt-quick-use-ach",
+      paymentUrl: "https://rivt.example/pay/abababab-abab-4bab-8bab-abababababab",
+      expiresAt: "2026-07-26T12:00:00.000Z",
+      paidAt: null,
+      failedAt: null,
+      disputedAt: null,
+      refundedAt: null,
+      createdAt: "2026-07-25T12:00:00.000Z",
+      updatedAt: "2026-07-25T12:00:00.000Z",
+    };
+    return route.fulfill({
+      status: 201,
+      contentType: "application/json",
+      body: JSON.stringify({ data: { paymentRequest: toolInvoicePaymentRequest } }),
+    });
+  });
+  await page.route("**/api/v1/tool-invoices/*/bank-payment", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ data: { paymentRequest: toolInvoicePaymentRequest } }),
+    }),
+  );
   await page.route("**/api/v1/invoice-payments/cs_test_rivt_ach_status", (route) =>
     route.fulfill({
       status: 200,
@@ -1272,7 +1307,12 @@ async function runToolsFlow(page, viewportName) {
   await page.getByRole("link", { name: "Text summary" }).waitFor({ timeout: 15_000 });
   await page.getByRole("heading", { name: "Preview before delivery" }).waitFor({ timeout: 15_000 });
   await page.getByLabel("Printable invoice preview").getByText("Total due", { exact: true }).waitFor({ timeout: 15_000 });
-  await page.getByText("Email sends a finished invoice from RIVT", { exact: false }).waitFor({ timeout: 15_000 });
+  await page.getByRole("heading", { name: "How should the customer pay?" }).waitFor({ timeout: 15_000 });
+  await page.getByRole("radio", { name: /Pay securely by bank/ }).click();
+  await page.getByRole("button", { name: "Create secure pay link" }).click();
+  await page.getByText("Pay link ready", { exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByLabel("Printable invoice preview").getByRole("link", { name: "Pay securely by bank" }).waitFor({ timeout: 15_000 });
+  await page.getByRole("button", { name: "Send link", exact: true }).waitFor({ timeout: 15_000 });
   await page.getByRole("button", { name: "Print / save as PDF" }).waitFor({ timeout: 15_000 });
   if (isHandsetViewport) {
     await assertImmersiveToolChromeHidden(page, "invoice draft");
@@ -1285,9 +1325,11 @@ async function runToolsFlow(page, viewportName) {
     const focusedInvoiceSteps = page.getByRole("navigation", { name: "Invoice draft steps" });
     await focusedInvoiceSteps.getByRole("button", { name: "3 Review" }).click();
     await page.getByRole("button", { name: "Save to job", exact: true }).click();
-    await page.getByText("Customer bank payment", { exact: true }).waitFor({ timeout: 15_000 });
-    await page.getByRole("button", { name: "Copy bank-payment link", exact: true }).click();
-    await page.getByText("Link ready", { exact: true }).waitFor({ timeout: 15_000 });
+    await page.getByRole("heading", { name: "How should the customer pay?" }).waitFor({ timeout: 15_000 });
+    await page.getByRole("radio", { name: /Pay securely by bank/ }).click();
+    const createPayLink = page.getByRole("button", { name: "Create secure pay link" });
+    if (await createPayLink.count()) await createPayLink.click();
+    await page.getByText("Pay link ready", { exact: true }).waitFor({ timeout: 15_000 });
     await page.getByText("Record payment received outside RIVT", { exact: true }).waitFor({ timeout: 15_000 });
     await assertNoHorizontalOverflow(page);
     await page.screenshot({ path: path.join(screenshotDir, `${viewportName}-invoice-ach.png`), fullPage: true });

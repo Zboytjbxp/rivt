@@ -32,6 +32,11 @@ Let an invoice author offer a Stripe-hosted US bank-account payment option witho
 3. Keep manually recorded external payments in a collapsed, clearly separate control.
 4. Include a live server-owned ACH link in invoice email only when the invoice author owns the matching active job invoice and the link is still open.
 5. Add a public light/dark payment-return page that distinguishes not submitted, processing, settled, failed, expired, refunded, and disputed states.
+6. Ask the invoice author how the customer should pay before delivery; require
+   exact instructions for payments outside Stripe.
+7. Support Quick use and standalone-project invoice drafts without fabricating
+   an accepted-work record, and use a short RIVT redirect in customer-facing
+   email/print surfaces rather than the raw Stripe Checkout URL.
 
 ## Activation gate
 
@@ -51,6 +56,9 @@ Let an invoice author offer a Stripe-hosted US bank-account payment option witho
 - Lint, build, unit, E2E, security lint, migration lifecycle, project financial integration, and rendered Tools checks pass.
 - Tests prove no paid balance while ACH is processing, replay safety, out-of-order event protection, amount bounds, refund/dispute reopening, cross-tier payment conflict prevention, and minimal public response data.
 - Production health reports the Connect provider mode and migrations `0029_stripe_connect_invoice_payments` and `0030_stripe_connect_accounts_v2`.
+- Quick use acceptance additionally requires migration
+  `0031_tool_invoice_payment_requests`, a server-owned email containing the
+  short `/pay/{requestId}` URL, and refund/dispute-safe status updates.
 - Exact-source production monitor passes after deployment.
 
 ## Rollback

@@ -449,6 +449,33 @@ if (!testDatabaseUrl) {
       },
     });
     assert.equal(deliveryInvoice.response.status, 200);
+    const invoiceRecord = await database.query(
+      `SELECT id
+       FROM tool_records
+       WHERE account_id = $1 AND record_type = 'invoice_draft' AND local_id = 'invoice:email-one'
+       LIMIT 1`,
+      [ownerAccount.rows[0].id],
+    );
+    const toolPaymentRequestId = randomUUID();
+    const stripeSessionId = `cs_live_tool_invoice_${randomUUID().replaceAll("-", "")}`;
+    await database.query(
+      `INSERT INTO tool_invoice_payment_requests (
+         id, tool_record_id, merchant_account_id, stripe_connected_account_id,
+         stripe_checkout_session_id, amount_cents, status, checkout_url
+       )
+       VALUES ($1, $2, $3, 'acct_live_tool_invoice_test',
+         $4, 248500, 'open', $5)`,
+      [
+        toolPaymentRequestId,
+        invoiceRecord.rows[0].id,
+        ownerAccount.rows[0].id,
+        stripeSessionId,
+        `https://checkout.stripe.com/c/pay/${stripeSessionId}`,
+      ],
+    );
+    const publicPayRedirect = await fetch(`${baseUrl}/pay/${toolPaymentRequestId}`, { redirect: "manual" });
+    assert.equal(publicPayRedirect.status, 303);
+    assert.match(publicPayRedirect.headers.get("location") ?? "", /^https:\/\/checkout\.stripe\.com\//);
 
     const invalidDeliveryInvoice = await requestJson(baseUrl, "/api/v1/tool-records", {
       method: "POST",
@@ -489,6 +516,10 @@ if (!testDatabaseUrl) {
     assert.ok(deliveredInvoice);
     assert.match(deliveredInvoice.text, /Kitchen cabinet installation/);
     assert.match(deliveredInvoice.text, /\$2,485\.00/);
+    assert.match(deliveredInvoice.text, /Payment method: Secure bank payment/);
+    assert.match(deliveredInvoice.text, new RegExp(`https://rivt\\.pro/pay/${toolPaymentRequestId}`));
+    assert.match(deliveredInvoice.html, />Pay from a US bank account</);
+    assert.doesNotMatch(deliveredInvoice.html, /checkout\.stripe\.com/);
     assert.doesNotMatch(deliveredInvoice.text, /margin|overhead|contingency/i);
 
     const invoiceReplay = await requestJson(baseUrl, "/api/v1/invoices/invoice%3Aemail-one/send", {

@@ -86,13 +86,15 @@ export type ProjectInvoiceOnlinePaymentStatus =
 
 export interface ProjectInvoiceOnlinePayment {
   id: string;
-  invoiceId: string;
+  invoiceId: string | null;
+  toolRecordId?: string | null;
   amountCents: number;
   refundedCents: number;
   currency: "usd";
   status: ProjectInvoiceOnlinePaymentStatus;
   paymentMethodType: "us_bank_account" | "card" | "unknown" | null;
   checkoutUrl: string | null;
+  paymentUrl?: string | null;
   expiresAt: string | null;
   paidAt: string | null;
   failedAt: string | null;
@@ -272,6 +274,37 @@ export async function cancelInvoiceBankPaymentLink(invoiceId: string) {
     headers: { "Content-Type": "application/json", "Idempotency-Key": requestKey() },
     body: JSON.stringify({}),
   });
+  return body.data.paymentRequest;
+}
+
+export async function getToolInvoiceBankPayment(localId: string) {
+  const body = await request<{ data: { paymentRequest: ProjectInvoiceOnlinePayment | null } }>(
+    `/api/v1/tool-invoices/${encodeURIComponent(localId)}/bank-payment`,
+  );
+  return body.data.paymentRequest;
+}
+
+export async function createToolInvoiceBankPaymentLink(localId: string) {
+  const body = await request<{ data: { paymentRequest: ProjectInvoiceOnlinePayment } }>(
+    `/api/v1/tool-invoices/${encodeURIComponent(localId)}/bank-payment-link`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Idempotency-Key": requestKey() },
+      body: JSON.stringify({}),
+    },
+  );
+  return body.data.paymentRequest;
+}
+
+export async function cancelToolInvoiceBankPaymentLink(localId: string) {
+  const body = await request<{ data: { paymentRequest: ProjectInvoiceOnlinePayment } }>(
+    `/api/v1/tool-invoices/${encodeURIComponent(localId)}/bank-payment-link/cancel`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Idempotency-Key": requestKey() },
+      body: JSON.stringify({}),
+    },
+  );
   return body.data.paymentRequest;
 }
 

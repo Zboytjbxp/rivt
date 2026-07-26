@@ -180,3 +180,20 @@ test("Stripe ACH payment links enforce provider amount limits", () => {
   assert.throws(() => stripeConnectInternals.assertAchAmount(49), /at least \$0\.50/);
   assert.throws(() => stripeConnectInternals.assertAchAmount(100_000_000), /cannot exceed \$999,999\.99/);
 });
+
+test("tool invoices receive a short RIVT payment URL without exposing Stripe checkout", () => {
+  const payment = stripeConnectInternals.mapPaymentRequest({
+    id: "2c209df4-c27c-4d5d-a38a-140e57c8be94",
+    tool_record_id: "6d317040-ffb5-426c-b125-1999753a2763",
+    amount_cents: 1249,
+    refunded_cents: 0,
+    currency: "usd",
+    status: "open",
+    checkout_url: "https://checkout.stripe.com/c/pay/cs_live_example",
+  }, { appOrigin: "https://rivt.pro" });
+
+  assert.equal(payment.invoiceId, null);
+  assert.equal(payment.toolRecordId, "6d317040-ffb5-426c-b125-1999753a2763");
+  assert.equal(payment.paymentUrl, "https://rivt.pro/pay/2c209df4-c27c-4d5d-a38a-140e57c8be94");
+  assert.match(payment.checkoutUrl, /^https:\/\/checkout\.stripe\.com\//);
+});

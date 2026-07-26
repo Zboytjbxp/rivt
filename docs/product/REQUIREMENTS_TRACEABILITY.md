@@ -113,6 +113,26 @@ Evidence must eventually link to implementation, automated tests, manual accepta
   onboarding, asynchronous success/failure proof, and connected-webhook
   configuration. No live ACH capability is claimed.
 
+## Traceability Addendum - 2026-07-26 Invoice Payment Clarity
+
+- Product-owner activation completed the live Accounts v2 event destination,
+  dedicated signing secret, and `STRIPE_CONNECT_ACH_ENABLED=true` gate. Health
+  reports the provider enabled/configured/webhook-configured, unsigned events
+  fail closed, and production monitoring passed before this extension.
+- `GA-FND-003` gains durable Quick use and standalone-project invoice payment
+  requests through migration `0031_tool_invoice_payment_requests`; no fake
+  active-work record is created to obtain a payment link.
+- `GA-FND-004` gains account-owned tool-invoice link create/read/cancel
+  boundaries, a bounded public short-link redirect, signed settlement updates,
+  and refund/dispute reopening for non-Work invoices.
+- `GA-UX-005` and `GA-UX-006` gain an explicit payment-method decision before
+  delivery. Stripe invoices show and email a real pay action; other methods
+  require exact sender instructions. The legacy ambiguous `Direct payment`
+  fallback is not accepted as sufficient customer direction.
+- Local evidence includes build, lint, security lint, 86 unit/frontend tests,
+  migration apply/rollback, server-owned invoice email/redirect integration,
+  and rendered desktop/390px/compact Tools proof.
+
 ## Traceability Addendum - 2026-07-25 Jacksonville Launch-Readiness Closure
 
 - `GA-UX-001` and `GA-UX-003` gain a contract-aligned shell: persistent
