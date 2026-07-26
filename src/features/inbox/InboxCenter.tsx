@@ -20,6 +20,7 @@ import type { PrimaryDestination } from "../../app-shell/types";
 import type { InboxConversation, InboxMessage, InboxNotification } from "./inbox-api";
 import { Avatar, EmptyState, PageHeader, Panel, SkeletonCard } from "../../components/ui";
 import {
+  emptyClientRecord,
   readClientRecordsLocal,
   saveClientRecordsLocal,
   syncClientRecords,
@@ -88,7 +89,7 @@ function privateClientNotes(messages: ClientMessage[] = []): ClientMessage[] {
 function sanitizeClientThreadMessages(messages: ClientMessage[] = []): ClientRecordMessage[] {
   return messages
     .filter((message) => message.from === "me" && !message.attachmentUrl)
-    .map(({ id, text, sentAt, from }) => ({ id, text, sentAt, from }))
+    .map(({ id, text, sentAt }) => ({ id, text, sentAt, from: "me" as const }))
     .slice(-100);
 }
 
@@ -218,7 +219,7 @@ function ClientThread({
         <Avatar name={contact.name} size="sm" />
         <strong>{contact.name}</strong>
       </div>
-      <p className="v2-client-thread-purpose">Private client log. These notes are not sent to the client.</p>
+      <p className="v2-client-thread-purpose">Private customer log. These notes are not sent to the customer.</p>
       <p className="v2-client-sync-note" role="status">{syncMessage}</p>
 
       <div className="v2-client-thread-messages" ref={messagesRef}>
@@ -282,7 +283,7 @@ function ClientThread({
   );
 }
 
-function ClientsTab() {
+function CustomerNotesTab() {
   const [contacts, setContacts] = useState<ClientContact[]>(loadClientContacts);
   const [selectedContact, setSelectedContact] = useState<ClientContact | null>(null);
   const [addingName, setAddingName] = useState(false);
@@ -307,7 +308,7 @@ function ClientsTab() {
             .map((contact) => upsertClientRecord(contact))
         ).then((results) => {
           if (!cancelled && results.some(Boolean)) {
-            setSyncMessage("Client records and private notes synced to your RIVT account.");
+            setSyncMessage("Customer records and private notes synced to your RIVT account.");
           }
         });
       }
@@ -318,16 +319,7 @@ function ClientsTab() {
   function addContact() {
     const trimmed = newName.trim();
     if (!trimmed) return;
-    const c: ClientContact = {
-      id: crypto.randomUUID(),
-      name: trimmed,
-      company: "",
-      phone: "",
-      email: "",
-      notes: "",
-      createdAt: new Date().toISOString(),
-      threadMessages: [],
-    };
+    const c: ClientContact = emptyClientRecord(trimmed);
     const next = [c, ...contacts];
     setContacts(next);
     saveClientRecordsLocal(next);
@@ -370,7 +362,7 @@ function ClientsTab() {
   return (
     <div className="v2-clients-tab">
       <div className="v2-clients-tab-header">
-        <span className="v2-client-title">Client notes ({contacts.length})</span>
+        <span className="v2-client-title">Customer notes ({contacts.length})</span>
         {addingName ? (
           <div className="v2-ct-add-form">
             <input
@@ -378,7 +370,7 @@ function ClientsTab() {
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter") addContact(); if (e.key === "Escape") { setAddingName(false); setNewName(""); } }}
-              placeholder="Client name"
+              placeholder="Customer name"
             />
             <button type="button" className="v2-client-save-btn" disabled={!newName.trim()} onClick={addContact}>Add</button>
             <button type="button" className="v2-client-cancel-btn" onClick={() => { setAddingName(false); setNewName(""); }}><X size={14} /></button>
@@ -395,8 +387,8 @@ function ClientsTab() {
         <EmptyState
           className="v2-inbox-empty"
           icon={<Users size={20} />}
-          title="No client notes yet"
-          description="Add a client to keep private job and follow-up notes."
+          title="No customer notes yet"
+          description="Add a customer to keep private job and follow-up notes."
           compact
         />
       ) : (
@@ -486,7 +478,7 @@ function messageState(message: InboxMessage, accountId: string) {
 }
 
 // ─── Inbox tab types ──────────────────────────────────────────────────────────
-type InboxTab = "Messages" | "Client notes";
+type InboxTab = "Messages" | "Customer notes";
 
 // ─── Component ────────────────────────────────────────────────────────────────
 export function InboxCenter({
@@ -622,7 +614,7 @@ export function InboxCenter({
   // ─── Tab bar ──────────────────────────────────────────────────────────────
   const tabBar = (
     <div className="v2-inbox-tabs">
-      {(["Messages", "Client notes"] as InboxTab[]).map((tab) => (
+      {(["Messages", "Customer notes"] as InboxTab[]).map((tab) => (
         <button
           key={tab}
           type="button"
@@ -656,10 +648,10 @@ export function InboxCenter({
       {/* Tab bar */}
       {tabBar}
 
-      {/* Clients tab */}
-      {activeTab === "Client notes" ? (
+      {/* Customer notes tab */}
+      {activeTab === "Customer notes" ? (
         <div className="v2-inbox-clients-wrapper">
-          <ClientsTab />
+          <CustomerNotesTab />
         </div>
       ) : (
         <div className="v2-inbox-grid">

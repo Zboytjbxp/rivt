@@ -102,6 +102,7 @@ const standaloneProject = {
   accountId: account.id,
   title: "Miller kitchen",
   clientName: "Miller family",
+  customerId: "dddddddd-dddd-dddd-dddd-dddddddddddd",
   locationText: "Jacksonville, FL",
   tradeCode: "carpentry",
   status: "active",
@@ -109,6 +110,26 @@ const standaloneProject = {
   albumId: null,
   createdAt: "2026-07-11T10:00:00.000Z",
   updatedAt: "2026-07-11T10:00:00.000Z",
+};
+
+const savedCustomer = {
+  id: "dddddddd-dddd-dddd-dddd-dddddddddddd",
+  legacyLocalId: "customer-miller",
+  name: "Jordan Miller",
+  company: "Miller Property Group",
+  phone: "+19045550188",
+  email: "jordan@miller.example",
+  billingAddress: "100 Billing Lane, Jacksonville, FL",
+  serviceAddress: "200 Kitchen Way, Jacksonville, FL",
+  notes: "Prefers email.",
+  preferredContactMethod: "email",
+  defaultTerms: "Due on completion",
+  favorite: true,
+  status: "active",
+  threadMessages: [],
+  lastUsedAt: "2026-07-25T12:00:00.000Z",
+  createdAt: "2026-07-20T12:00:00.000Z",
+  updatedAt: "2026-07-25T12:00:00.000Z",
 };
 
 const defaultPrivateAlbum = {
@@ -197,6 +218,21 @@ async function configurePage(page) {
   routeResponse("**/api/v1/applications", { data: { applications: [] } });
   routeResponse("**/api/v1/offers", { data: { offers: [] } });
   routeResponse("**/api/v1/standalone-projects", { data: { projects: [standaloneProject] } });
+  routeResponse("**/api/v1/customers?**", { data: { customers: [savedCustomer] } });
+  routeResponse("**/api/v1/customers/*/activity", {
+    data: {
+      activity: [{
+        id: standaloneProject.id,
+        kind: "project",
+        title: standaloneProject.title,
+        status: "active",
+        date: standaloneProject.updatedAt,
+        amountCents: null,
+        recordType: null,
+        localId: null,
+      }],
+    },
+  });
   routeResponse("**/api/v1/albums", { data: { albums: [defaultPrivateAlbum] } });
   routeResponse(`**/api/v1/jobs/${draftJob.id}`, { data: { job: draftJob } });
   routeResponse(`**/api/v1/jobs/${draftJob.id}/applications`, { data: { applications: [] } });
@@ -478,6 +514,15 @@ async function runMobileFlow(page) {
     null,
     "People assignments must not depend on the retired browser job store",
   );
+  await page.getByRole("button", { name: "Customers", exact: true }).click();
+  await page.getByText("Customers (1)", { exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByPlaceholder("Search customers").fill("Miller");
+  await page.getByRole("button", { name: /Miller Property Group/ }).click();
+  await page.getByText("Recent activity", { exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByText("Miller kitchen", { exact: true }).waitFor({ timeout: 15_000 });
+  await assertNoHorizontalOverflow(page, "Customer book");
+  await page.screenshot({ path: path.join(screenshotDir, "mobile-customer-book.png"), fullPage: true });
+  await page.locator(".v2-network-tab-bar").getByRole("button", { name: "People", exact: true }).click();
   const elenaCard = page.locator(".v2-crew-card-wrapper").filter({ hasText: "Elena Torres" });
   await elenaCard.getByRole("button", { name: "Assign to Job", exact: true }).click();
   const assignmentDialog = page.getByRole("dialog", { name: "Assign Elena Torres to work" });
@@ -518,10 +563,16 @@ async function runMobileFlow(page) {
   await assertControlCenterClickable(page, '.side-panel[aria-label="Notifications"] .quick-actions button:nth-of-type(2)', "notifications messages action");
   await notificationsDialog.getByRole("button", { name: "Messages" }).click();
   await page.getByRole("heading", { name: "Inbox", exact: true }).waitFor({ timeout: 15_000 });
-  await page.getByRole("button", { name: "Client notes", exact: true }).click();
-  await page.getByText("Client notes", { exact: false }).first().waitFor({ timeout: 15_000 });
-  assert.equal(await page.getByRole("button", { name: /Simulate reply/i }).count(), 0, "Client notes must never fabricate an inbound reply");
-  await page.getByText("private job and follow-up notes", { exact: false }).waitFor({ timeout: 15_000 });
+  await page.getByRole("button", { name: "Customer notes", exact: true }).click();
+  await page.getByText("Customer notes", { exact: false }).first().waitFor({ timeout: 15_000 });
+  assert.equal(await page.getByRole("button", { name: /Simulate reply/i }).count(), 0, "Customer notes must never fabricate an inbound reply");
+  const customerNoteRows = page.locator(".v2-client-conv-row");
+  if (await customerNoteRows.count()) {
+    await customerNoteRows.first().click();
+    await page.getByText("Private customer log. These notes are not sent to the customer.", { exact: true }).waitFor({ timeout: 15_000 });
+  } else {
+    await page.getByText("private job and follow-up notes", { exact: false }).waitFor({ timeout: 15_000 });
+  }
   await assertNoHorizontalOverflow(page, "Messages route");
   await page.getByRole("button", { name: "Home", exact: true }).click();
   await assertNoHorizontalOverflow(page, "Home after messages");

@@ -448,6 +448,68 @@ async function configurePage(page) {
   await page.route("**/api/v1/standalone-projects", (route) =>
     route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { projects: [] } }) }),
   );
+  let customers = [{
+    id: "abababab-abab-abab-abab-abababababab",
+    legacyLocalId: "customer-miller",
+    name: "Jamie Miller",
+    company: "Miller Property Group",
+    email: "jamie@miller.example",
+    phone: "+19045550188",
+    billingAddress: "100 Billing Lane, Jacksonville, FL",
+    serviceAddress: "200 Kitchen Way, Jacksonville, FL",
+    notes: "Prefers email.",
+    preferredContactMethod: "email",
+    defaultTerms: "Due on completion",
+    favorite: true,
+    status: "active",
+    threadMessages: [],
+    lastUsedAt: "2026-07-25T12:00:00.000Z",
+    createdAt: "2026-07-20T12:00:00.000Z",
+    updatedAt: "2026-07-25T12:00:00.000Z",
+  }];
+  await page.route(/\/api\/v1\/customers(?:\/[^/?]+(?:\/activity|\/used)?|\?.*)?$/, (route) => {
+    const url = new URL(route.request().url());
+    const method = route.request().method();
+    const activityMatch = url.pathname.match(/\/api\/v1\/customers\/([^/]+)\/activity$/);
+    if (method === "GET" && activityMatch) {
+      return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { activity: [] } }) });
+    }
+    if (method === "GET") {
+      const status = url.searchParams.get("status") ?? "active";
+      const listed = status === "all" ? customers : customers.filter((customer) => customer.status === status);
+      return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { customers: listed } }) });
+    }
+    const idMatch = url.pathname.match(/\/api\/v1\/customers\/([^/]+)(?:\/used)?$/);
+    if (method === "POST" && url.pathname.endsWith("/used") && idMatch) {
+      let customer = customers.find((candidate) => candidate.id === idMatch[1]);
+      if (customer) customer = { ...customer, lastUsedAt: new Date().toISOString() };
+      return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { customer } }) });
+    }
+    if (method === "POST") {
+      const input = route.request().postDataJSON();
+      const customer = {
+        ...customers[0],
+        ...input,
+        id: "cdcdcdcd-cdcd-cdcd-cdcd-cdcdcdcdcdcd",
+        legacyLocalId: input.localId,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      customers = [customer, ...customers];
+      return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { customer } }) });
+    }
+    if (method === "PUT" && idMatch) {
+      const input = route.request().postDataJSON();
+      let updated = null;
+      customers = customers.map((customer) => {
+        if (customer.id !== idMatch[1]) return customer;
+        updated = { ...customer, ...input, updatedAt: new Date().toISOString() };
+        return updated;
+      });
+      return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { customer: updated } }) });
+    }
+    return route.fulfill({ status: 404, contentType: "application/json", body: JSON.stringify({ error: { code: "NOT_FOUND" } }) });
+  });
   let documentBrand = {
     businessName: "RIVT Test Crew",
     businessEmail: "office@rivttest.example",
@@ -1313,8 +1375,11 @@ async function runToolsFlow(page, viewportName) {
   await page.getByText("Template saved without customer identity or estimate number.", { exact: true }).waitFor({ timeout: 15_000 });
   assert.equal(await page.getByLabel("Customer email").count(), 0, "Customer fields should stay out of the pricing step");
   await estimateSteps.getByRole("button", { name: "2 Customer" }).click();
-  await page.getByLabel("Customer name").fill("Estimate Customer");
-  await page.getByLabel("Customer email").fill("estimate@example.com");
+  const estimateCustomerPicker = page.getByLabel("Customer selection");
+  await estimateCustomerPicker.getByRole("button", { name: /Select a saved customer/ }).click();
+  await estimateCustomerPicker.getByRole("button", { name: /Miller Property Group/ }).click();
+  assert.equal(await page.getByLabel("Customer name").inputValue(), "Miller Property Group", "saved customer should fill the estimate recipient");
+  assert.equal(await page.getByLabel("Customer email").inputValue(), "jamie@miller.example", "saved customer email should fill the estimate");
   await page.getByLabel("Scope").fill("Install and test the agreed field work.");
   await page.getByRole("radio", { name: /Compact/ }).first().click();
   await page.getByText("Compact style saved for future estimates.", { exact: false }).waitFor({ timeout: 15_000 });
@@ -1349,9 +1414,13 @@ async function runToolsFlow(page, viewportName) {
   await page.getByText("Template saved.", { exact: true }).waitFor({ timeout: 15_000 });
   await page.getByRole("button", { name: "Load" }).first().waitFor({ timeout: 15_000 });
   await invoiceDraftSteps.getByRole("button", { name: "2 Customer" }).click();
-  await page.getByLabel("Bill to").fill("Invoice Customer");
+  const invoiceCustomerPicker = page.getByLabel("Customer selection");
+  await invoiceCustomerPicker.getByRole("button", { name: /Select a saved customer/ }).click();
+  await invoiceCustomerPicker.getByRole("button", { name: /Miller Property Group/ }).click();
+  assert.equal(await page.getByLabel("Bill to").inputValue(), "Miller Property Group", "saved customer should fill the invoice recipient");
+  assert.equal(await page.getByLabel("Recipient email").inputValue(), "jamie@miller.example", "saved customer email should fill the invoice");
+  assert.equal(await page.getByLabel("Terms").inputValue(), "Due on completion", "saved customer defaults should fill invoice terms");
   await page.getByLabel("Pay to").fill("RIVT Test Contractor");
-  await page.getByLabel("Recipient email").fill("billing@example.com");
   await page.getByLabel("Recipient phone").fill("+19045550123");
   await page.getByRole("radio", { name: /Field/ }).last().click();
   await page.getByText("Field style saved for future invoices.", { exact: false }).waitFor({ timeout: 15_000 });
@@ -1359,9 +1428,9 @@ async function runToolsFlow(page, viewportName) {
   await page.getByLabel("Invoice templates").getByText("Templates", { exact: true }).click();
   await page.getByRole("button", { name: "Load" }).first().click();
   await invoiceDraftSteps.getByRole("button", { name: "2 Customer" }).click();
-  assert.equal(await page.getByLabel("Bill to").inputValue(), "Invoice Customer", "templates must not replace the current customer");
+  assert.equal(await page.getByLabel("Bill to").inputValue(), "Miller Property Group", "templates must not replace the current customer");
   assert.equal(await page.getByLabel("Pay to").inputValue(), "RIVT Test Contractor", "a blank template field must not erase the current payee");
-  assert.equal(await page.getByLabel("Recipient email").inputValue(), "billing@example.com", "templates must not carry a stale recipient");
+  assert.equal(await page.getByLabel("Recipient email").inputValue(), "jamie@miller.example", "templates must not carry a stale recipient");
   await page.getByRole("button", { name: "Review", exact: true }).click();
   await page.getByRole("button", { name: "Email invoice", exact: true }).waitFor({ timeout: 15_000 });
   await page.getByRole("button", { name: "Email invoice", exact: true }).click();

@@ -2,6 +2,12 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Banknote, Check, ChevronLeft, ChevronRight, Copy, ExternalLink, FileText, LoaderCircle, Mail, MessageSquare, Plus, Save, Trash2 } from "lucide-react";
 import type { Job } from "../../types";
 import { Panel } from "../../components/ui";
+import { CustomerPicker } from "../clients/CustomerPicker";
+import {
+  customerSnapshot as snapshotCustomer,
+  type ClientRecord,
+  type CustomerSnapshot,
+} from "../clients/client-records";
 import type { EstimateInvoiceDraft } from "./EstimateTool";
 import { clampNumber, currency, formatQuantity, toCents, centsToDollars } from "./money";
 import { getInvoiceLinePriceSignal } from "./priceGuidance";
@@ -92,6 +98,8 @@ interface InvoiceDraftSnapshot {
   taxPct: number;
   templateName: string;
   lines: InvoiceLine[];
+  customerId: string | null;
+  customerSnapshot: CustomerSnapshot | null;
 }
 
 interface DocumentDelivery {
@@ -296,6 +304,13 @@ export function InvoiceDraftTool({
   );
   const [recipientEmail, setRecipientEmail] = useState(estimateDraft?.recipientEmail ?? initialDraft.recipientEmail ?? "");
   const [recipientPhone, setRecipientPhone] = useState(initialDraft.recipientPhone ?? "");
+  const [customerId, setCustomerId] = useState<string | null>(
+    estimateDraft?.customerId
+      ?? initialDraft.customerId
+      ?? initialRecord?.customerId
+      ?? (workContext.kind === "standalone" ? workContext.project.customerId : null),
+  );
+  const [selectedCustomerSnapshot, setSelectedCustomerSnapshot] = useState<CustomerSnapshot | null>(estimateDraft?.customerSnapshot ?? initialDraft.customerSnapshot ?? null);
   const [taxPct, setTaxPct] = useState(initialDraft.taxPct ?? invoicePrefs.taxPct);
   const [templates, setTemplates] = useState<InvoiceTemplate[]>(readInvoiceTemplates);
   const [syncMessage, setSyncMessage] = useState("Saved on this device.");
@@ -362,6 +377,15 @@ export function InvoiceDraftTool({
   const customerPaymentMethod = paymentChoice === "bank"
     ? bankPaymentMethod
     : paymentMethod.trim();
+  const documentCustomerSnapshot = customerId && selectedCustomerSnapshot
+    ? {
+        ...selectedCustomerSnapshot,
+        customerId,
+        displayName: billTo.trim() || selectedCustomerSnapshot.displayName,
+        email: recipientEmail.trim().toLowerCase(),
+        phone: recipientPhone.trim(),
+      }
+    : null;
   const documentFingerprint = JSON.stringify({
     invoiceNumber: invoiceNumber.trim(),
     issueDate,
@@ -371,6 +395,9 @@ export function InvoiceDraftTool({
     terms: terms.trim(),
     paymentMethod: customerPaymentMethod,
     recipientEmail: recipientEmail.trim().toLowerCase(),
+    recipientPhone: recipientPhone.trim(),
+    customerId,
+    customerSnapshot: documentCustomerSnapshot,
     taxPct,
     customerNote: customerNote.trim(),
     lines: lines.map((line) => ({
@@ -512,13 +539,15 @@ export function InvoiceDraftTool({
       taxPct,
       templateName,
       lines,
+      customerId,
+      customerSnapshot: selectedCustomerSnapshot,
     };
     try {
       localStorage.setItem(invoiceDraftStorageKey(workContext), JSON.stringify(snapshot));
     } catch {
       // The in-memory invoice remains usable when device storage is unavailable.
     }
-  }, [billTo, customerNote, dueDate, invoiceNumber, issueDate, lines, paymentMethod, payTo, recipientEmail, recipientPhone, recordLocalId, taxPct, templateName, terms, workContext]);
+  }, [billTo, customerId, customerNote, dueDate, invoiceNumber, issueDate, lines, paymentMethod, payTo, recipientEmail, recipientPhone, recordLocalId, selectedCustomerSnapshot, taxPct, templateName, terms, workContext]);
 
   useEffect(() => {
     let cancelled = false;
@@ -651,6 +680,8 @@ export function InvoiceDraftTool({
     setPaymentChoice(paymentChoiceFromMethod(nextPaymentMethod));
     setRecipientEmail("");
     setRecipientPhone("");
+    setCustomerId(null);
+    setSelectedCustomerSnapshot(null);
     setTaxPct(latestPrefs.taxPct);
     setTemplateName("Standard invoice");
     setLines(defaultInvoiceLines(activeJob));
@@ -706,6 +737,8 @@ export function InvoiceDraftTool({
       taxPct,
       templateName,
       lines,
+      customerId,
+      customerSnapshot: documentCustomerSnapshot,
     };
     return {
       recordType: "invoice_draft",
@@ -714,6 +747,7 @@ export function InvoiceDraftTool({
       status: delivery?.status === "sent" && !hasUnsentChanges ? "sent" : "draft",
       recordDate: issueDate,
       amountCents: totalCents,
+      customerId,
       payload: {
         ...snapshot,
         documentFingerprint,
@@ -943,6 +977,21 @@ export function InvoiceDraftTool({
   function printInvoice() {
     setDraftSaveMessage("Print dialog opened. Choose Save as PDF to download a copy.");
     window.print();
+  }
+
+  function chooseCustomer(customer: ClientRecord | null) {
+    if (!customer) {
+      setCustomerId(null);
+      setSelectedCustomerSnapshot(null);
+      return;
+    }
+    const snapshot = snapshotCustomer(customer);
+    setCustomerId(customer.id);
+    setSelectedCustomerSnapshot(snapshot);
+    setBillTo(snapshot.displayName);
+    setRecipientEmail(snapshot.email);
+    setRecipientPhone(snapshot.phone);
+    if (customer.defaultTerms.trim()) setTerms(customer.defaultTerms);
   }
 
   function validateCustomerStep(requireEmail = false) {
@@ -1307,6 +1356,7 @@ export function InvoiceDraftTool({
             <h3>Details</h3>
             <span>{toolContextLabel(workContext)}</span>
           </header>
+          <CustomerPicker selectedCustomerId={customerId} onSelect={chooseCustomer} />
           <div className="v2-tool-input-grid two v2-invoice-detail-grid">
             <label>Invoice #<input value={invoiceNumber} onChange={(event) => setInvoiceNumber(event.target.value)} /></label>
             <label>Invoice date<input type="date" value={issueDate} onChange={(event) => setIssueDate(event.target.value)} /></label>
@@ -1429,6 +1479,7 @@ export function InvoiceDraftTool({
               />
               <section className="v2-invoice-preview-meta">
                 <div><span>Bill to</span><strong>{billTo || "Contractor / company"}</strong></div>
+                {documentCustomerSnapshot?.billingAddress ? <div><span>Billing address</span><strong>{documentCustomerSnapshot.billingAddress}</strong></div> : null}
                 <div><span>Pay to</span><strong>{payTo || "Your company / name"}</strong></div>
                 <div><span>Invoice date</span><strong>{issueDate}</strong></div>
                 {dueDate ? <div><span>Due date</span><strong>{dueDate}</strong></div> : null}

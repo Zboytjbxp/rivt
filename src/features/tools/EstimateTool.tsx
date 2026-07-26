@@ -4,6 +4,12 @@ import { Panel } from "../../components/ui";
 import { requestKey } from "../../lib/api";
 import type { Job } from "../../types";
 import { readPrimaryHourlyRate } from "../../lib/rateCard";
+import { CustomerPicker } from "../clients/CustomerPicker";
+import {
+  customerSnapshot,
+  type ClientRecord,
+  type CustomerSnapshot,
+} from "../clients/client-records";
 import { getEstimatePriceSignal } from "./priceGuidance";
 import { centsToDollars, currency, toCents } from "./money";
 import { deleteToolRecordByLocalId, fetchToolRecords, sendEstimateByLocalId, upsertToolRecord, type ServerToolRecord } from "./tool-records-api";
@@ -37,6 +43,8 @@ export interface EstimateInvoiceDraft {
   paymentMethod: string;
   lines: EstimateInvoiceDraftLine[];
   sourceNote: string;
+  customerId: string | null;
+  customerSnapshot: CustomerSnapshot | null;
 }
 
 interface EstimatePrefs {
@@ -83,6 +91,8 @@ interface EstimateDraftState {
   scope: string;
   validThrough: string;
   customerNote: string;
+  customerId: string | null;
+  customerSnapshot: CustomerSnapshot | null;
 }
 
 interface EstimateDelivery {
@@ -264,6 +274,12 @@ export function EstimateTool({
   const [scope, setScope] = useState(initialDraft.scope ?? activeJob?.title ?? (workContext.kind === "standalone" ? workContext.project.title : ""));
   const [validThrough, setValidThrough] = useState(initialDraft.validThrough ?? futureDate(30));
   const [customerNote, setCustomerNote] = useState(initialDraft.customerNote ?? "");
+  const [customerId, setCustomerId] = useState<string | null>(
+    initialDraft.customerId
+      ?? initialRecord?.customerId
+      ?? (workContext.kind === "standalone" ? workContext.project.customerId : null),
+  );
+  const [selectedCustomerSnapshot, setSelectedCustomerSnapshot] = useState<CustomerSnapshot | null>(initialDraft.customerSnapshot ?? null);
   const [saveMessage, setSaveMessage] = useState("Autosaved on this device.");
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [delivery, setDelivery] = useState<EstimateDelivery | null>(null);
@@ -343,13 +359,14 @@ export function EstimateTool({
       localId: recordLocalId,
       laborHours, hourlyRate, crewSize, materials, subCosts, overheadPct, marginPct, contingencyPct,
       estimateNumber, estimateDate, recipientName, recipientEmail, scope, validThrough, customerNote,
+      customerId, customerSnapshot: selectedCustomerSnapshot,
     };
     try {
       localStorage.setItem(estimateDraftStorageKey(workContext), JSON.stringify(draft));
     } catch {
       // The in-memory draft remains usable when device storage is unavailable.
     }
-  }, [contingencyPct, crewSize, customerNote, estimateDate, estimateNumber, hourlyRate, laborHours, marginPct, materials, overheadPct, recipientEmail, recipientName, recordLocalId, scope, subCosts, validThrough, workContext]);
+  }, [contingencyPct, crewSize, customerId, customerNote, estimateDate, estimateNumber, hourlyRate, laborHours, marginPct, materials, overheadPct, recipientEmail, recipientName, recordLocalId, scope, selectedCustomerSnapshot, subCosts, validThrough, workContext]);
 
   useEffect(() => {
     let active = true;
@@ -407,6 +424,14 @@ export function EstimateTool({
       return { description: line.description, quantity: line.quantity, totalCents };
     });
   })();
+  const documentCustomerSnapshot = customerId && selectedCustomerSnapshot
+    ? {
+        ...selectedCustomerSnapshot,
+        customerId,
+        displayName: recipientName.trim() || selectedCustomerSnapshot.displayName,
+        email: recipientEmail.trim().toLowerCase(),
+      }
+    : null;
   const documentFingerprint = JSON.stringify({
     estimateNumber,
     estimateDate,
@@ -415,6 +440,8 @@ export function EstimateTool({
     scope: scope.trim(),
     validThrough,
     customerNote: customerNote.trim(),
+    customerId,
+    customerSnapshot: documentCustomerSnapshot,
     targetCents: toCents(target),
     customerLines,
     documentBrand: {
@@ -430,7 +457,7 @@ export function EstimateTool({
 
   useEffect(() => {
     sendIdempotencyKeyRef.current = null;
-  }, [customerNote, documentBrand.updatedAt, estimateDate, estimateNumber, recipientEmail, recipientName, scope, validThrough, target]);
+  }, [customerId, customerNote, documentBrand.updatedAt, estimateDate, estimateNumber, recipientEmail, recipientName, scope, selectedCustomerSnapshot, validThrough, target]);
 
   async function copyCustomerEstimate() {
     const summary = [
@@ -574,6 +601,8 @@ export function EstimateTool({
     setScope(activeJob?.title ?? (workContext.kind === "standalone" ? workContext.project.title : ""));
     setValidThrough(futureDate(30));
     setCustomerNote("");
+    setCustomerId(null);
+    setSelectedCustomerSnapshot(null);
     setDelivery(null);
     setLastSentFingerprint("");
     setValidationMessage("");
@@ -589,6 +618,7 @@ export function EstimateTool({
       localId: recordLocalId,
       laborHours, hourlyRate, crewSize, materials, subCosts, overheadPct, marginPct, contingencyPct,
       estimateNumber, estimateDate, recipientName, recipientEmail, scope, validThrough, customerNote,
+      customerId, customerSnapshot: documentCustomerSnapshot,
     };
     const record = await upsertToolRecord({
       recordType: "estimate",
@@ -598,6 +628,7 @@ export function EstimateTool({
       recordDate: estimateDate,
       amountCents: toCents(target),
       payload: { ...draft, target, low, high, customerLines, documentFingerprint, delivery: delivery ?? undefined },
+      customerId,
       ...toolContextRecordFields(workContext),
     });
     if (record) {
@@ -651,6 +682,19 @@ export function EstimateTool({
     }
   }
 
+  function chooseCustomer(customer: ClientRecord | null) {
+    if (!customer) {
+      setCustomerId(null);
+      setSelectedCustomerSnapshot(null);
+      return;
+    }
+    const snapshot = customerSnapshot(customer);
+    setCustomerId(customer.id);
+    setSelectedCustomerSnapshot(snapshot);
+    setRecipientName(snapshot.displayName);
+    setRecipientEmail(snapshot.email);
+  }
+
   function convertToInvoice() {
     const title = activeJob?.title?.trim() || (workContext.kind === "standalone" ? workContext.project.title : "Estimate");
     const targetCents = Math.max(0, toCents(target));
@@ -696,14 +740,16 @@ export function EstimateTool({
     });
 
     onConvertToInvoice?.({
-      invoiceNumber: `RIVT-${Date.now().toString(36).toUpperCase()}`,
+      invoiceNumber: `RIVT-${crypto.randomUUID().slice(0, 8).toUpperCase()}`,
       templateName: `${title} invoice`,
       billTo: recipientName.trim() || activeJob?.contractor || (workContext.kind === "standalone" ? workContext.project.clientName : ""),
       recipientEmail: recipientEmail.trim(),
-      terms: "Due on completion",
+      terms: documentCustomerSnapshot?.defaultTerms?.trim() || "Due on completion",
       paymentMethod: "",
       lines: draftLines,
       sourceNote: `Converted from estimate total ${currency(target)} (${currency(low)} - ${currency(high)}). Overhead, profit markup, and contingency are included in the line rates. Review scope, tax, and payment terms before sending.`,
+      customerId,
+      customerSnapshot: documentCustomerSnapshot,
     });
   }
 
@@ -777,6 +823,7 @@ export function EstimateTool({
             <span>Customer copy</span>
             <strong id="estimate-delivery-title">{recipientEmail.trim() ? "Customer details ready" : "Who should receive this?"}</strong>
           </div>
+          <CustomerPicker selectedCustomerId={customerId} onSelect={chooseCustomer} />
           <div className="v2-tool-input-grid v2-estimate-delivery-grid">
             <label>Customer name<input value={recipientName} onChange={(event) => setRecipientName(event.target.value)} placeholder="Customer or company" /></label>
             <label>Customer email<input type="email" inputMode="email" value={recipientEmail} onChange={(event) => setRecipientEmail(event.target.value)} placeholder="name@example.com" /></label>
@@ -810,6 +857,7 @@ export function EstimateTool({
             />
             <section className="v2-invoice-preview-meta">
               <div><span>Prepared for</span><strong>{recipientName || "Customer"}</strong></div>
+              {documentCustomerSnapshot?.billingAddress ? <div><span>Billing address</span><strong>{documentCustomerSnapshot.billingAddress}</strong></div> : null}
               <div><span>Estimate date</span><strong>{estimateDate}</strong></div>
               <div><span>Scope</span><strong>{scope.trim() || "Estimate scope"}</strong></div>
               <div><span>Valid through</span><strong>{validThrough}</strong></div>

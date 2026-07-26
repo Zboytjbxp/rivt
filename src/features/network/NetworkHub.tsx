@@ -1,4 +1,5 @@
 import {
+  Archive,
   AlertTriangle,
   ArrowRight,
   Briefcase,
@@ -6,11 +7,14 @@ import {
   ChevronDown,
   ChevronRight,
   Copy,
+  FileText,
   Mail,
+  MapPin,
   MessageSquareText,
   Phone,
   Plus,
   Save,
+  Search,
   ShieldCheck,
   Star,
   Users,
@@ -20,11 +24,15 @@ import { useEffect, useRef, useState } from "react";
 import type { ProfileSearchResult } from "../../app-shell/types";
 import { Avatar, EmptyState, PageHeader, Panel } from "../../components/ui";
 import {
-  deleteClientRecord,
+  customerDisplayName,
+  emptyClientRecord,
+  fetchAllClientRecords,
+  fetchCustomerActivity,
   readClientRecordsLocal,
+  saveClientRecord,
   saveClientRecordsLocal,
   syncClientRecords,
-  upsertClientRecord,
+  type CustomerActivity,
   type ClientRecord,
 } from "../clients/client-records";
 import {
@@ -81,7 +89,53 @@ interface NetworkHubProps {
 
 type Client = ClientRecord;
 
-const emptyClientForm = { name: "", company: "", phone: "", email: "", notes: "" };
+const emptyClientForm = {
+  name: "",
+  company: "",
+  phone: "",
+  email: "",
+  billingAddress: "",
+  serviceAddress: "",
+  notes: "",
+  preferredContactMethod: "none" as Client["preferredContactMethod"],
+  defaultTerms: "",
+  favorite: false,
+};
+
+function customerForm(client?: Client | null) {
+  if (!client) return { ...emptyClientForm };
+  return {
+    name: client.name,
+    company: client.company,
+    phone: client.phone,
+    email: client.email,
+    billingAddress: client.billingAddress,
+    serviceAddress: client.serviceAddress,
+    notes: client.notes,
+    preferredContactMethod: client.preferredContactMethod,
+    defaultTerms: client.defaultTerms,
+    favorite: client.favorite,
+  };
+}
+
+function customerActivityLabel(activity: CustomerActivity) {
+  if (activity.kind === "project") return "Project";
+  if (activity.recordType === "estimate") return "Estimate";
+  if (activity.recordType === "invoice") return "Invoice";
+  return "Document";
+}
+
+function customerActivityAmount(activity: CustomerActivity) {
+  if (activity.amountCents === null) return null;
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+  }).format(activity.amountCents / 100);
+}
+
+function normalizedCustomerPhone(value: string) {
+  return value.replace(/\D/g, "");
+}
 
 function ClientBookView() {
   const [clients, setClients] = useState<Client[]>(readClientRecordsLocal);
@@ -90,106 +144,171 @@ function ClientBookView() {
   const [form, setForm] = useState(emptyClientForm);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [syncMessage, setSyncMessage] = useState("Saved on this device.");
+  const [query, setQuery] = useState("");
+  const [showArchived, setShowArchived] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [confirmArchiveId, setConfirmArchiveId] = useState<string | null>(null);
+  const [activityByCustomer, setActivityByCustomer] = useState<Record<string, CustomerActivity[] | null | undefined>>({});
 
   useEffect(() => {
     let cancelled = false;
-    void syncClientRecords().then((result) => {
+    void syncClientRecords().then(async (result) => {
+      const allCustomers = await fetchAllClientRecords();
       if (cancelled) return;
-      setClients(result.clients);
+      const canonicalIds = new Set((allCustomers ?? []).flatMap((customer) =>
+        [customer.id, customer.legacyLocalId].filter(Boolean) as string[]));
+      const unsynced = result.clients.filter((customer) =>
+        !canonicalIds.has(customer.id)
+        && !(customer.legacyLocalId && canonicalIds.has(customer.legacyLocalId)));
+      const merged = allCustomers ? [...allCustomers, ...unsynced] : result.clients;
+      saveClientRecordsLocal(merged);
+      setClients(merged);
       setSyncMessage(result.message);
     });
     return () => { cancelled = true; };
   }, []);
 
-  function save(list: Client[], changedClient?: Client) {
+  function cache(list: Client[]) {
     saveClientRecordsLocal(list);
     setClients(list);
-    if (changedClient) {
-      void upsertClientRecord(changedClient).then((ok) => {
-        setSyncMessage(ok ? "Synced to your RIVT account." : "Couldn't sync - saved on this device only.");
-      });
-    }
   }
 
   function openAdd() {
     setEditingClient(null);
-    setForm(emptyClientForm);
+    setForm(customerForm());
     setShowForm(true);
   }
 
   function openEdit(client: Client) {
     setEditingClient(client);
-    setForm({ name: client.name, company: client.company, phone: client.phone, email: client.email, notes: client.notes });
+    setForm(customerForm(client));
     setShowForm(true);
   }
 
   function cancel() {
     setShowForm(false);
     setEditingClient(null);
-    setForm(emptyClientForm);
+    setForm(customerForm());
   }
 
-  function handleSave() {
+  async function handleSave() {
     if (!form.name.trim()) return;
-    if (editingClient) {
-      const updated = { ...editingClient, ...form };
-      save(clients.map((c) => c.id === editingClient.id ? updated : c), updated);
+    setSaving(true);
+    const draft = editingClient
+      ? { ...editingClient, ...form, updatedAt: new Date().toISOString() }
+      : { ...emptyClientRecord(), ...form };
+    const optimistic = editingClient
+      ? clients.map((client) => client.id === editingClient.id ? draft : client)
+      : [draft, ...clients];
+    cache(optimistic);
+    const saved = await saveClientRecord(draft);
+    setSaving(false);
+    if (!saved) {
+      setSyncMessage("Could not sync this customer. The changes remain saved on this device.");
     } else {
-      const next: Client = { id: crypto.randomUUID(), ...form, createdAt: new Date().toISOString(), threadMessages: [] };
-      save([next, ...clients], next);
+      cache(optimistic.map((client) => client.id === draft.id ? saved : client));
+      setSyncMessage("Customer synced to your RIVT account.");
     }
     cancel();
   }
 
-  function handleDelete(id: string) {
-    if (!window.confirm("Delete this client?")) return;
-    save(clients.filter((c) => c.id !== id));
-    void deleteClientRecord(id).then((ok) => {
-      setSyncMessage(ok ? "Client record removed from your RIVT account." : "Removed on this device only. Could not sync removal.");
-    });
-    if (expandedId === id) setExpandedId(null);
+  async function setCustomerStatus(client: Client, status: Client["status"]) {
+    const updated = { ...client, status, updatedAt: new Date().toISOString() };
+    cache(clients.map((candidate) => candidate.id === client.id ? updated : candidate));
+    setConfirmArchiveId(null);
+    const saved = await saveClientRecord(updated);
+    if (!saved) {
+      setSyncMessage(`Could not sync this change. The customer is ${status} on this device only.`);
+      return;
+    }
+    cache(clients.map((candidate) => candidate.id === client.id ? saved : candidate));
+    setSyncMessage(status === "archived" ? "Customer archived." : "Customer restored.");
+    if (status === "archived" && expandedId === client.id) setExpandedId(null);
   }
+
+  async function toggleFavorite(client: Client) {
+    const updated = { ...client, favorite: !client.favorite, updatedAt: new Date().toISOString() };
+    cache(clients.map((candidate) => candidate.id === client.id ? updated : candidate));
+    const saved = await saveClientRecord(updated);
+    if (saved) cache(clients.map((candidate) => candidate.id === client.id ? saved : candidate));
+    else setSyncMessage("Favorite changed on this device, but could not sync.");
+  }
+
+  function toggleExpanded(client: Client) {
+    const nextId = expandedId === client.id ? null : client.id;
+    setExpandedId(nextId);
+    setConfirmArchiveId(null);
+    if (!nextId || activityByCustomer[client.id] !== undefined) return;
+    void fetchCustomerActivity(client.id).then((activity) => {
+      setActivityByCustomer((current) => ({ ...current, [client.id]: activity }));
+    });
+  }
+
+  const normalizedQuery = query.trim().toLowerCase();
+  const visibleClients = clients
+    .filter((client) => client.status === (showArchived ? "archived" : "active"))
+    .filter((client) => !normalizedQuery || `${client.name} ${client.company} ${client.email} ${client.phone} ${client.serviceAddress}`
+      .toLowerCase()
+      .includes(normalizedQuery))
+    .sort((left, right) => {
+      if (left.favorite !== right.favorite) return left.favorite ? -1 : 1;
+      return new Date(right.lastUsedAt ?? right.updatedAt).getTime()
+        - new Date(left.lastUsedAt ?? left.updatedAt).getTime();
+    });
+  const activeCount = clients.filter((client) => client.status === "active").length;
+  const archivedCount = clients.filter((client) => client.status === "archived").length;
+  const formEmail = form.email.trim().toLowerCase();
+  const formPhone = normalizedCustomerPhone(form.phone);
+  const duplicateCustomer = clients.find((client) =>
+    client.id !== editingClient?.id
+    && (Boolean(formEmail && client.email.trim().toLowerCase() === formEmail)
+      || Boolean(formPhone.length >= 7 && normalizedCustomerPhone(client.phone) === formPhone))
+  ) ?? null;
 
   return (
     <div className="v2-client-book">
       <div className="v2-client-header">
-        <span className="v2-client-title">Clients ({clients.length})</span>
+        <span className="v2-client-title">Customers ({activeCount})</span>
         <button type="button" className="v2-client-add-btn" onClick={openAdd}>
-          <Plus size={14} /> Add
+          <Plus size={16} /> New customer
         </button>
       </div>
       <p className="v2-client-sync-note" role="status">{syncMessage}</p>
 
       {showForm && (
         <div className="v2-client-form">
-          <input
-            placeholder="Name *"
-            value={form.name}
-            onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-          />
-          <input
-            placeholder="Company"
-            value={form.company}
-            onChange={(e) => setForm((f) => ({ ...f, company: e.target.value }))}
-          />
-          <input
-            placeholder="Phone"
-            value={form.phone}
-            onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
-          />
-          <input
-            placeholder="Email"
-            value={form.email}
-            onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-          />
-          <textarea
-            placeholder="Notes"
-            value={form.notes}
-            onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
-          />
+          <header>
+            <div><strong>{editingClient ? "Edit customer" : "New customer"}</strong><small>Only the contact name is required.</small></div>
+            <button type="button" aria-pressed={form.favorite} onClick={() => setForm((current) => ({ ...current, favorite: !current.favorite }))}>
+              <Star size={17} fill={form.favorite ? "currentColor" : "none"} /> Favorite
+            </button>
+          </header>
+          <div className="v2-client-form-grid">
+            <label>Contact name *<input value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} autoFocus /></label>
+            <label>Company<input value={form.company} onChange={(e) => setForm((f) => ({ ...f, company: e.target.value }))} /></label>
+            <label>Phone<input type="tel" value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} /></label>
+            <label>Email<input type="email" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} /></label>
+            <label>Preferred contact
+              <select value={form.preferredContactMethod} onChange={(e) => setForm((f) => ({ ...f, preferredContactMethod: e.target.value as Client["preferredContactMethod"] }))}>
+                <option value="none">No preference</option>
+                <option value="email">Email</option>
+                <option value="phone">Phone call</option>
+                <option value="sms">Text message</option>
+              </select>
+            </label>
+            <label>Default payment terms<input value={form.defaultTerms} onChange={(e) => setForm((f) => ({ ...f, defaultTerms: e.target.value }))} placeholder="Due on completion" /></label>
+            <label className="is-wide">Billing address<textarea value={form.billingAddress} onChange={(e) => setForm((f) => ({ ...f, billingAddress: e.target.value }))} rows={2} /></label>
+            <label className="is-wide">Service address<textarea value={form.serviceAddress} onChange={(e) => setForm((f) => ({ ...f, serviceAddress: e.target.value }))} rows={2} /></label>
+            <label className="is-wide">Private notes<textarea value={form.notes} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} /></label>
+          </div>
+          {duplicateCustomer ? (
+            <p className="v2-client-duplicate" role="status">
+              That email or phone is already saved for {customerDisplayName(duplicateCustomer)}. Edit the existing customer instead of creating a duplicate.
+            </p>
+          ) : null}
           <div className="v2-client-form-btns">
-            <button type="button" className="v2-client-save-btn" disabled={!form.name.trim()} onClick={handleSave}>
-              Save
+            <button type="button" className="v2-client-save-btn" disabled={saving || !form.name.trim() || Boolean(duplicateCustomer)} onClick={() => void handleSave()}>
+              {saving ? "Saving…" : "Save customer"}
             </button>
             <button type="button" className="v2-client-cancel-btn" onClick={cancel}>
               Cancel
@@ -199,36 +318,45 @@ function ClientBookView() {
       )}
 
       {!showForm && (
-        <div className="v2-client-list">
-          {clients.length === 0 ? (
-            <div className="v2-client-empty">No clients yet — tap + to add your first</div>
+        <>
+          <div className="v2-client-toolbar">
+            <label>
+              <Search size={17} />
+              <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search customers" />
+            </label>
+            <button type="button" className={showArchived ? "is-active" : ""} onClick={() => setShowArchived((current) => !current)}>
+              <Archive size={16} /> Archived ({archivedCount})
+            </button>
+          </div>
+          <div className="v2-client-list">
+          {visibleClients.length === 0 ? (
+            <div className="v2-client-empty">
+              <strong>{query.trim() ? "No customers match that search." : showArchived ? "No archived customers." : "No customers yet."}</strong>
+              {!query.trim() && !showArchived ? <button type="button" onClick={openAdd}>Add your first customer</button> : null}
+            </div>
           ) : (
-            clients.map((client) => {
+            visibleClients.map((client) => {
               const isExpanded = expandedId === client.id;
+              const activity = activityByCustomer[client.id];
               return (
                 <div key={client.id} className="v2-client-card">
-                  <div
+                  <button
+                    type="button"
                     className="v2-client-card-top"
-                    onClick={() => setExpandedId(isExpanded ? null : client.id)}
+                    onClick={() => toggleExpanded(client)}
+                    aria-expanded={isExpanded}
                   >
                     <div>
-                      <div className="v2-client-name">{client.name}</div>
-                      {client.company && <div className="v2-client-company">{client.company}</div>}
+                      <div className="v2-client-name">{customerDisplayName(client)}</div>
+                      <div className="v2-client-company">
+                        {client.company ? client.name : [client.email, client.phone].filter(Boolean).join(" · ") || "No contact details saved"}
+                      </div>
                     </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                      {client.phone && (
-                        <a
-                          href={`tel:${client.phone}`}
-                          className="v2-client-phone-link"
-                          onClick={(e) => e.stopPropagation()}
-                          aria-label={`Call ${client.name}`}
-                        >
-                          <Phone size={14} />
-                        </a>
-                      )}
+                    <div className="v2-client-card-controls">
+                      {client.favorite ? <Star size={16} fill="currentColor" aria-label="Favorite customer" /> : null}
                       {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
                     </div>
-                  </div>
+                  </button>
 
                   {isExpanded && (
                     <div className="v2-client-detail">
@@ -244,19 +372,58 @@ function ClientBookView() {
                           <a href={`mailto:${client.email}`}>{client.email}</a>
                         </div>
                       )}
-                      {client.notes && (
-                        <div className="v2-client-detail-row" style={{ alignItems: "flex-start" }}>
-                          <MessageSquareText size={13} style={{ flexShrink: 0, marginTop: 2 }} />
-                          <span style={{ color: "var(--v2-text)", whiteSpace: "pre-wrap" }}>{client.notes}</span>
+                      {client.serviceAddress && (
+                        <div className="v2-client-detail-row">
+                          <MapPin size={13} />
+                          <span>{client.serviceAddress}</span>
                         </div>
                       )}
+                      {client.defaultTerms && (
+                        <div className="v2-client-detail-row">
+                          <FileText size={13} />
+                          <span>{client.defaultTerms}</span>
+                        </div>
+                      )}
+                      {client.notes && (
+                        <div className="v2-client-detail-row is-note">
+                          <MessageSquareText size={13} />
+                          <span>{client.notes}</span>
+                        </div>
+                      )}
+                      <section className="v2-customer-activity" aria-label={`${client.name} activity`}>
+                        <header><strong>Recent activity</strong><small>Linked projects and documents</small></header>
+                        {activity === undefined ? (
+                          <p>Loading activity…</p>
+                        ) : activity === null ? (
+                          <p>Activity could not be loaded.</p>
+                        ) : activity.length ? (
+                          <ol>
+                            {activity.slice(0, 8).map((item) => (
+                              <li key={`${item.kind}:${item.id}`}>
+                                <span><strong>{item.title}</strong><small>{customerActivityLabel(item)} · {item.status}</small></span>
+                                {customerActivityAmount(item) ? <strong>{customerActivityAmount(item)}</strong> : null}
+                              </li>
+                            ))}
+                          </ol>
+                        ) : <p>No linked estimates, invoices, or projects yet.</p>}
+                      </section>
                       <div className="v2-client-actions">
                         <button type="button" className="v2-client-edit-btn" onClick={() => openEdit(client)}>
                           Edit
                         </button>
-                        <button type="button" className="v2-client-delete-btn" onClick={() => handleDelete(client.id)}>
-                          Delete
+                        <button type="button" className="v2-client-edit-btn" aria-pressed={client.favorite} onClick={() => void toggleFavorite(client)}>
+                          {client.favorite ? "Unfavorite" : "Favorite"}
                         </button>
+                        {client.status === "archived" ? (
+                          <button type="button" className="v2-client-archive-btn" onClick={() => void setCustomerStatus(client, "active")}>Restore</button>
+                        ) : confirmArchiveId === client.id ? (
+                          <span className="v2-client-archive-confirm">
+                            <button type="button" onClick={() => void setCustomerStatus(client, "archived")}>Confirm archive</button>
+                            <button type="button" onClick={() => setConfirmArchiveId(null)}>Cancel</button>
+                          </span>
+                        ) : (
+                          <button type="button" className="v2-client-archive-btn" onClick={() => setConfirmArchiveId(client.id)}>Archive</button>
+                        )}
                       </div>
                     </div>
                   )}
@@ -264,7 +431,8 @@ function ClientBookView() {
               );
             })
           )}
-        </div>
+          </div>
+        </>
       )}
     </div>
   );
@@ -1483,7 +1651,7 @@ function ReviewsView({
   );
 }
 
-type NetworkTab = "People" | "Subs" | "Reviews" | "Clients";
+type NetworkTab = "People" | "Subs" | "Reviews" | "Customers";
 
 export function NetworkHub({
   view,
@@ -1515,7 +1683,7 @@ export function NetworkHub({
   // Tab bar shared across all views
   const tabBar = (
     <div className="v2-network-tab-bar">
-      {(["People", "Subs", "Reviews", "Clients"] as NetworkTab[]).map((tab) => (
+      {(["People", "Subs", "Reviews", "Customers"] as NetworkTab[]).map((tab) => (
         <button
           key={tab}
           type="button"
@@ -1542,9 +1710,9 @@ export function NetworkHub({
     </>
   );
 
-  if (visibleTab === "Clients") {
+  if (visibleTab === "Customers") {
     return (
-      <section className="v2-network-page" aria-label="Clients">
+      <section className="v2-network-page" aria-label="Customers">
         {pageHeader}
         {tabBar}
         <ClientBookView />

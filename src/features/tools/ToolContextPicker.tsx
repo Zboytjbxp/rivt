@@ -1,6 +1,8 @@
 import { BriefcaseBusiness, Camera, Check, ChevronDown, FolderLock, Plus, Unlink } from "lucide-react";
 import { useState } from "react";
 import { DialogBackdrop, DialogSurface } from "../../components/ui";
+import { CustomerPicker } from "../clients/CustomerPicker";
+import { customerDisplayName, type ClientRecord } from "../clients/client-records";
 import type { CanonicalActiveWork } from "../work/job-api";
 import type { PhotoAlbum } from "./album-api";
 import type { StandaloneProject } from "./standalone-project-api";
@@ -34,7 +36,7 @@ export function ToolContextPicker({
   onChooseQuick: () => void;
   onChooseStandalone: (project: StandaloneProject) => void;
   onChooseActiveWork: (work: CanonicalActiveWork) => void;
-  onCreateStandalone: (input: { title: string; clientName: string; locationText: string }) => Promise<boolean>;
+  onCreateStandalone: (input: { title: string; clientName: string; customerId: string | null; locationText: string }) => Promise<boolean>;
   privateAlbums?: PhotoAlbum[];
   privateAlbumsLoading?: boolean;
   selectedPrivateAlbumId?: string | null;
@@ -49,6 +51,7 @@ export function ToolContextPicker({
   const [creating, setCreating] = useState(false);
   const [title, setTitle] = useState("");
   const [clientName, setClientName] = useState("");
+  const [customerId, setCustomerId] = useState<string | null>(null);
   const [locationText, setLocationText] = useState("");
   const [creatingAlbum, setCreatingAlbum] = useState(false);
   const [albumName, setAlbumName] = useState("");
@@ -65,13 +68,26 @@ export function ToolContextPicker({
 
   async function createProject() {
     if (!title.trim()) return;
-    const created = await onCreateStandalone({ title: title.trim(), clientName: clientName.trim(), locationText: locationText.trim() });
+    const created = await onCreateStandalone({ title: title.trim(), clientName: clientName.trim(), customerId, locationText: locationText.trim() });
     if (!created) return;
     setTitle("");
     setClientName("");
+    setCustomerId(null);
     setLocationText("");
     setCreating(false);
     closePicker();
+  }
+
+  function chooseCustomer(customer: ClientRecord | null) {
+    if (!customer) {
+      setCustomerId(null);
+      return;
+    }
+    setCustomerId(customer.id);
+    setClientName(customerDisplayName(customer));
+    if (!locationText.trim() && customer.serviceAddress.trim()) {
+      setLocationText(customer.serviceAddress);
+    }
   }
 
   async function chooseDefaultAlbum() {
@@ -144,6 +160,7 @@ export function ToolContextPicker({
               {creating ? (
                 <div className="v2-tool-context-create">
                   <label>Project name<input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Miller kitchen" autoFocus /></label>
+                  <CustomerPicker selectedCustomerId={customerId} onSelect={chooseCustomer} />
                   <label>Client <input value={clientName} onChange={(event) => setClientName(event.target.value)} placeholder="Optional" /></label>
                   <label>Location <input value={locationText} onChange={(event) => setLocationText(event.target.value)} placeholder="Optional" /></label>
                   <button type="button" className="v2-primary-button" disabled={busy || !title.trim()} onClick={() => void createProject()}>{busy ? "Creating..." : "Create project"}</button>

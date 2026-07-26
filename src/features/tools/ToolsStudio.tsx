@@ -3264,7 +3264,12 @@ export function ToolsStudio({ isDemo = false, jobs, paymentRecords, mode = "tool
     onWorkContextChange?.(work.id);
   }
 
-  async function createStandaloneContext(input: { title: string; clientName: string; locationText: string }) {
+  async function createStandaloneContext(input: {
+    title: string;
+    clientName: string;
+    customerId: string | null;
+    locationText: string;
+  }) {
     setStandaloneProjectBusy(true);
     setStandaloneProjectsError("");
     try {
