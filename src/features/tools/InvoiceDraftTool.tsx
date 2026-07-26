@@ -322,8 +322,9 @@ export function InvoiceDraftTool({
     : initialDraft.lines?.length
       ? initialDraft.lines.map((line) => ({ ...line, id: crypto.randomUUID() }))
       : defaultInvoiceLines(activeJob));
-  const [draftSaveMessage, setDraftSaveMessage] = useState("Autosaved on this device.");
-  const [draftSaveState, setDraftSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [draftSaveMessage, setDraftSaveMessage] = useState(initialRecord ? "Loaded from your RIVT account." : "Autosaved on this device.");
+  const [draftSaveState, setDraftSaveState] = useState<"idle" | "saving" | "saved" | "error">(initialRecord ? "saved" : "idle");
+  const [removedLine, setRemovedLine] = useState<{ line: InvoiceLine; index: number } | null>(null);
   const [projectInvoice, setProjectInvoice] = useState<ProjectInvoice | null>(null);
   const [projectInvoiceBusy, setProjectInvoiceBusy] = useState(false);
   const [projectInvoiceNotice, setProjectInvoiceNotice] = useState("");
@@ -345,6 +346,7 @@ export function InvoiceDraftTool({
   const [step, setStep] = useState<"items" | "customer" | "review">("items");
   const [documentBrand, setDocumentBrand] = useState<DocumentBrand>(() => defaultDocumentBrand());
   const [brandMessage, setBrandMessage] = useState("Document style syncs to your RIVT account.");
+  const localDraftStorageKey = invoiceDraftStorageKey(workContext);
 
   useEffect(() => {
     let cancelled = false;
@@ -543,11 +545,14 @@ export function InvoiceDraftTool({
       customerSnapshot: selectedCustomerSnapshot,
     };
     try {
-      localStorage.setItem(invoiceDraftStorageKey(workContext), JSON.stringify(snapshot));
+      localStorage.setItem(localDraftStorageKey, JSON.stringify(snapshot));
     } catch {
-      // The in-memory invoice remains usable when device storage is unavailable.
+      queueMicrotask(() => {
+        setDraftSaveState("error");
+        setDraftSaveMessage("This draft could not be saved on this device. Keep this page open and copy your work.");
+      });
     }
-  }, [billTo, customerId, customerNote, dueDate, invoiceNumber, issueDate, lines, paymentMethod, payTo, recipientEmail, recipientPhone, recordLocalId, selectedCustomerSnapshot, taxPct, templateName, terms, workContext]);
+  }, [billTo, customerId, customerNote, dueDate, invoiceNumber, issueDate, lines, localDraftStorageKey, paymentMethod, payTo, recipientEmail, recipientPhone, recordLocalId, selectedCustomerSnapshot, taxPct, templateName, terms]);
 
   useEffect(() => {
     let cancelled = false;
@@ -605,11 +610,29 @@ export function InvoiceDraftTool({
   }
 
   function addLine() {
+    markDraftChanged();
+    setRemovedLine(null);
     setLines((current) => [...current, { id: crypto.randomUUID(), description: "", qty: 1, rate: 0, kind: "other" }]);
   }
 
   function removeLine(id: string) {
-    setLines((current) => current.length > 1 ? current.filter((line) => line.id !== id) : current);
+    if (lines.length <= 1) return;
+    const index = lines.findIndex((line) => line.id === id);
+    if (index < 0) return;
+    markDraftChanged();
+    setRemovedLine({ line: lines[index], index });
+    setLines((current) => current.filter((line) => line.id !== id));
+  }
+
+  function undoRemoveLine() {
+    if (!removedLine) return;
+    markDraftChanged();
+    setLines((current) => {
+      const next = [...current];
+      next.splice(Math.min(removedLine.index, next.length), 0, removedLine.line);
+      return next;
+    });
+    setRemovedLine(null);
   }
 
   function persistTemplates(nextTemplates: InvoiceTemplate[], notice: string, changedTemplate?: InvoiceTemplate) {
@@ -647,6 +670,7 @@ export function InvoiceDraftTool({
   }
 
   function loadTemplate(template: InvoiceTemplate) {
+    markDraftChanged();
     setTemplateName(template.name);
     if (template.payTo.trim()) setPayTo(template.payTo);
     if (template.terms.trim()) setTerms(template.terms);
@@ -979,7 +1003,13 @@ export function InvoiceDraftTool({
     window.print();
   }
 
+  function markDraftChanged() {
+    setDraftSaveState("idle");
+    setDraftSaveMessage("Saved on this device. Save to sync these changes to your RIVT account.");
+  }
+
   function chooseCustomer(customer: ClientRecord | null) {
+    markDraftChanged();
     if (!customer) {
       setCustomerId(null);
       setSelectedCustomerSnapshot(null);
@@ -1076,7 +1106,7 @@ export function InvoiceDraftTool({
   }
 
   return (
-    <div className={`v2-tool-workbench v2-invoice-workbench is-${step}`}>
+    <div className={`v2-tool-workbench v2-invoice-workbench is-${step}`} onChangeCapture={markDraftChanged}>
       <nav className="v2-tool-flow-nav" aria-label="Invoice draft steps">
         {(["items", "customer", "review"] as const).map((item, index) => (
           <button key={item} type="button" aria-current={step === item ? "step" : undefined} onClick={() => setStep(item)}>
@@ -1383,6 +1413,12 @@ export function InvoiceDraftTool({
             <span>Line items</span>
             <button type="button" onClick={addLine}><Plus size={14} />Add item</button>
           </div>
+          {removedLine ? (
+            <div className="v2-inline-undo" role="status">
+              <span>{removedLine.line.description.trim() || "Line item"} removed.</span>
+              <button type="button" onClick={undoRemoveLine}>Undo</button>
+            </div>
+          ) : null}
           {lines.map((line) => {
             const signal = lineSignals.find((item) => item.lineId === line.id)?.signal;
             return (
@@ -1538,7 +1574,7 @@ export function InvoiceDraftTool({
       <div className="v2-tool-action-dock" aria-label="Invoice actions">
         <span aria-live="polite" data-save-state={draftSaveState}><strong>{currency(total)}</strong><small>{draftSaveMessage}</small></span>
         {step !== "items" ? <button type="button" onClick={() => setStep(step === "review" ? "customer" : "items")} aria-label="Previous invoice step"><ChevronLeft size={18} /></button> : null}
-        <button type="button" className="v2-secondary-button" onClick={() => void saveInvoiceDraft()} disabled={projectInvoiceBusy || totalCents <= 0 || invoiceEmailBusy || draftSaveState === "saving"}>
+        <button type="button" className="v2-secondary-button" onClick={() => void saveInvoiceDraft()} disabled={projectInvoiceBusy || invoiceEmailBusy || draftSaveState === "saving"}>
           {draftSaveState === "saving" ? <LoaderCircle className="v2-spin" size={18} /> : draftSaveState === "saved" ? <Check size={18} /> : <Save size={18} />}
           {draftSaveState === "saving" ? "Saving" : draftSaveState === "saved" ? "Saved" : draftSaveState === "error" ? "Try again" : "Save draft"}
         </button>

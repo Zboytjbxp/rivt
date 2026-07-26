@@ -2,10 +2,47 @@
 
 Last updated: 2026-07-26 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Account-owned customer continuity, document branding, and estimate/invoice integrity are deployed and exact-source verified in production.
-Active packet: `docs/delivery/packets/70_STRIPE_CONNECT_ACH_INVOICES.md` (customer-book continuity extension)
-Repository branch: `master` (source branch: `codex/customer-book-continuity`)
-Production feature release commit: `3cab1f3eb475dae8078ada2b0fd5ebe81656f90b`
+Current phase: Account-owned document continuity and honest offline/save recovery are locally verified; production deployment is pending.
+Active packet: `docs/delivery/packets/70_STRIPE_CONNECT_ACH_INVOICES.md` (document-continuity hardening extension)
+Repository branch: `codex/trust-speed-document-continuity`
+Production feature release commit: `ed8a99a5277d16f8cb14eea5944e58cfa3d6442c`
+
+## Estimate + Invoice Trust/Speed Continuity (Locally Verified)
+
+- Saved Estimate and Invoice destinations now include the account-owned
+  document local id in the URL. A refresh, copied link, browser back/forward,
+  or installed-PWA restart can resolve that same authenticated record instead
+  of opening a blank tool shell. Missing/archived records fail honestly and
+  direct the user back to Records.
+- Account-loaded documents begin in a confirmed account state. The first real
+  edit immediately changes the dock copy to `Saved on this device. Save to
+  sync these changes to your RIVT account.` Successful explicit save restores
+  the account-saved state; local-storage failure tells the user to keep the
+  page open and copy the work.
+- The shared offline banner now matches actual behavior: device drafts remain
+  available while account sync and delivery are paused. Its longer status
+  wraps on narrow screens and uses theme tokens in light and dark mode.
+- Invoice drafts can be saved at $0 while work is still being assembled;
+  sending and online-payment actions continue to require a real positive
+  amount. Removing a line item now exposes an inline Undo action rather than
+  making the deletion immediately irreversible.
+- Saved-customer selection remains effective even when recent-use ordering
+  cannot sync, and the picker reports that partial outcome instead of failing
+  silently.
+- Rendered Tools regression now proves zero-value draft save, line-item undo,
+  exact URL record restoration, post-edit device/account distinction, and
+  successful account resave across desktop, 390px mobile, and compact-phone
+  viewports. Mobile-action QA also passes with no horizontal overflow.
+- Local verification passed: `npm run build`; `npm run lint`; 90
+  unit/frontend tests; fail-closed authentication and jobs/discovery E2E;
+  rendered Tools and mobile-action QA; diff check; and
+  `npm audit --omit=dev` with zero known vulnerabilities.
+- The aggregate `npm run test` wrapper and a direct tool-record integration
+  attempt were bounded and stopped after producing no test event in this
+  shell. No database integration pass is claimed. This slice changes no
+  server route, schema, migration, authorization rule, provider setting, or
+  stored production data; the existing authenticated tool-record API remains
+  the account source of truth.
 
 ## Customer Book Continuity (Deployed and Exact-Source Verified)
 

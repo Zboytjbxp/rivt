@@ -90,6 +90,16 @@ test("public tool catalog contains launch tools and rejects contained legacy rou
   ]);
 });
 
+test("only account-owned estimate and invoice records receive document deep links", async () => {
+  const { linkedRecordTypeForTool } = await loadModule("/src/features/tools/tool-record-links.ts");
+
+  assert.equal(linkedRecordTypeForTool("estimate"), "estimate");
+  assert.equal(linkedRecordTypeForTool("invoice"), "invoice_draft");
+  assert.equal(linkedRecordTypeForTool("calculator"), null);
+  assert.equal(linkedRecordTypeForTool("job-photos"), null);
+  assert.equal(linkedRecordTypeForTool(null), null);
+});
+
 test("mileage deductions use the IRS business rate for each trip date", async () => {
   const {
     mileageDeductionForEntries,

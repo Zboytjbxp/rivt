@@ -101,7 +101,8 @@ import { useCommunityReactions } from "./features/shop-talk/useCommunityReaction
 import { usePushNotifications } from "./features/notifications/usePushNotifications";
 import type { ProfileUpdateInput } from "./features/profile/ProfileHub";
 import { isPublicToolMode, type ToolMode } from "./features/tools/tool-catalog";
-import type { ServerToolRecord } from "./features/tools/tool-records-api";
+import { linkedRecordTypeForTool } from "./features/tools/tool-record-links";
+import { fetchToolRecords, type ServerToolRecord } from "./features/tools/tool-records-api";
 import { safetyQuizData, trainingModules, type SafetyQuizResult } from "./features/profile/training-data";
 import { apiPath, fetchWithTimeout, RIVT_SESSION_EXPIRED_EVENT } from "./lib/api";
 import {
@@ -134,6 +135,10 @@ function readToolFromUrl() {
   if (typeof window === "undefined") return null;
   const tool = new URLSearchParams(window.location.search).get("tool");
   return isPublicToolMode(tool) ? tool : null;
+}
+
+function readToolRecordFromUrl() {
+  return readRouteParam("record", "recordId");
 }
 
 function readRouteParam(...keys: string[]) {
@@ -174,10 +179,15 @@ function readCloseoutFromUrl() {
   return readRouteParam("closeout") === "1";
 }
 
-function pathForTool(tool: ToolMode | null, activeWorkId: string | null = null) {
+function pathForTool(
+  tool: ToolMode | null,
+  activeWorkId: string | null = null,
+  recordLocalId: string | null = null,
+) {
   if (!isPublicToolMode(tool)) return viewRoutes.Tools;
   const params = new URLSearchParams({ tool });
   if (activeWorkId) params.set("activeWork", activeWorkId);
+  if (recordLocalId && linkedRecordTypeForTool(tool)) params.set("record", recordLocalId);
   return `${viewRoutes.Tools}?${params.toString()}`;
 }
 
@@ -491,6 +501,7 @@ function toCommunityPostViewModel(post: ServerShopTalkPost): CommunityPost {
 function App() {
   const [activeView, setActiveView] = useState<NavLabel>(() => viewFromPath(window.location.pathname));
   const [requestedTool, setRequestedTool] = useState<ToolMode | null>(() => readToolFromUrl());
+  const [requestedToolRecordLocalId, setRequestedToolRecordLocalId] = useState<string | null>(() => readToolRecordFromUrl());
   const [toolsImmersive, setToolsImmersive] = useState(false);
   const [role, setRole] = useState<Role>("contractor");
   const [onboardingComplete, setOnboardingComplete] = useState(false);
@@ -583,6 +594,7 @@ function App() {
   const [activeWork, setActiveWork] = useState<CanonicalActiveWork[]>([]);
   const [focusedActiveWorkId, setFocusedActiveWorkId] = useState<string | null>(() => readActiveWorkFromUrl());
   const [focusedToolRecord, setFocusedToolRecord] = useState<ServerToolRecord | null>(null);
+  const toolRecordLoadAttemptRef = useRef<string | null>(null);
   const [focusedCloseout, setFocusedCloseout] = useState(() => readCloseoutFromUrl());
   const [focusedReviewId, setFocusedReviewId] = useState<string | null>(() => readReviewFromUrl());
   const [workWorkspaceOpenKey, setWorkWorkspaceOpenKey] = useState(0);
@@ -651,6 +663,54 @@ function App() {
     communityPosts,
     onReactionError: (message) => addActivity("Reaction not saved", message, "error"),
   });
+
+  useEffect(() => {
+    const recordType = linkedRecordTypeForTool(requestedTool);
+    const loadKey = recordType && requestedToolRecordLocalId
+      ? `${recordType}:${requestedToolRecordLocalId}`
+      : null;
+    if (
+      activeView !== "Tools"
+      || !recordType
+      || !requestedToolRecordLocalId
+      || !authUser
+      || !onboardingComplete
+      || isGuest
+      || focusedToolRecord?.localId === requestedToolRecordLocalId
+      || toolRecordLoadAttemptRef.current === loadKey
+    ) return;
+
+    toolRecordLoadAttemptRef.current = loadKey;
+    void fetchToolRecords(recordType).then((records) => {
+      if (toolRecordLoadAttemptRef.current !== loadKey) return;
+      if (records === null) {
+        addActivity(
+          "Saved document could not load",
+          "RIVT could not reach your account records. Check your connection, then reopen this link.",
+          "error",
+        );
+        return;
+      }
+      const record = records?.find((candidate) => candidate.localId === requestedToolRecordLocalId) ?? null;
+      setFocusedToolRecord(record);
+      if (!record) {
+        addActivity(
+          "Saved document could not open",
+          "It may have been archived or removed. Open Records to choose another document.",
+          "error",
+        );
+      }
+    });
+  }, [
+    activeView,
+    addActivity,
+    authUser,
+    focusedToolRecord,
+    isGuest,
+    onboardingComplete,
+    requestedTool,
+    requestedToolRecordLocalId,
+  ]);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -739,6 +799,9 @@ function App() {
         : null;
       setActiveView(nextView);
       setRequestedTool(nextTool);
+      toolRecordLoadAttemptRef.current = null;
+      setRequestedToolRecordLocalId(nextView === "Tools" ? readToolRecordFromUrl() : null);
+      setFocusedToolRecord(null);
       setToolsImmersive(Boolean(nextTool) && nextTool !== "job-photos");
       setFocusedActiveWorkId(nextActiveWorkId);
       setFocusedCloseout(nextView === "Work" && readCloseoutFromUrl());
@@ -1459,6 +1522,9 @@ function App() {
     const resolvedView: NavLabel = view === "Crew" ? "People" : view;
     const isCamera = resolvedView === "Camera";
     setRequestedTool(isCamera ? "job-photos" : null);
+    toolRecordLoadAttemptRef.current = null;
+    setRequestedToolRecordLocalId(null);
+    setFocusedToolRecord(null);
     setToolsImmersive(false);
     if (isCamera) setFocusedActiveWorkId(null);
     setFocusedCloseout(false);
@@ -1478,14 +1544,22 @@ function App() {
     const isCamera = nextTool === "job-photos";
     const recordActiveWorkId = nextTool ? record?.activeWorkId ?? null : null;
     setRequestedTool(nextTool);
+    toolRecordLoadAttemptRef.current = null;
     setFocusedToolRecord(nextTool ? record : null);
+    setRequestedToolRecordLocalId(nextTool && record ? record.localId : null);
     setToolsImmersive(Boolean(nextTool) && nextTool !== "job-photos");
     setFocusedActiveWorkId(recordActiveWorkId);
     setFocusedCloseout(false);
     setActiveView(isCamera ? "Camera" : "Tools");
-    const nextPath = isCamera ? pathForCamera(recordActiveWorkId) : pathForTool(nextTool, recordActiveWorkId);
+    const nextPath = isCamera
+      ? pathForCamera(recordActiveWorkId)
+      : pathForTool(nextTool, recordActiveWorkId, record?.localId ?? null);
     if (currentPathAndSearch() !== nextPath) {
-      window.history.pushState({ view: isCamera ? "Camera" : "Tools", tool: nextTool }, "", nextPath);
+      window.history.pushState({
+        view: isCamera ? "Camera" : "Tools",
+        tool: nextTool,
+        record: record?.localId ?? null,
+      }, "", nextPath);
     }
     setActivityOpen(false);
     setAccountOpen(false);
@@ -1498,12 +1572,21 @@ function App() {
     setFocusedActiveWorkId(nextTool ? activeWorkId : null);
     setFocusedCloseout(false);
     setRequestedTool(nextTool);
+    toolRecordLoadAttemptRef.current = null;
     setFocusedToolRecord(nextTool ? record : null);
+    setRequestedToolRecordLocalId(nextTool && record ? record.localId : null);
     setToolsImmersive(Boolean(nextTool) && nextTool !== "job-photos");
     setActiveView(isCamera ? "Camera" : "Tools");
-    const nextPath = isCamera ? pathForCamera(activeWorkId) : pathForTool(nextTool, nextTool ? activeWorkId : null);
+    const nextPath = isCamera
+      ? pathForCamera(activeWorkId)
+      : pathForTool(nextTool, nextTool ? activeWorkId : null, record?.localId ?? null);
     if (currentPathAndSearch() !== nextPath) {
-      window.history.pushState({ view: isCamera ? "Camera" : "Tools", tool: nextTool, activeWorkId }, "", nextPath);
+      window.history.pushState({
+        view: isCamera ? "Camera" : "Tools",
+        tool: nextTool,
+        activeWorkId,
+        record: record?.localId ?? null,
+      }, "", nextPath);
     }
     setActivityOpen(false);
     setAccountOpen(false);
@@ -1592,7 +1675,9 @@ function App() {
     const isCamera = nextTool === "job-photos";
     const nextView: NavLabel = isCamera ? "Camera" : "Tools";
     setRequestedTool(nextTool);
+    toolRecordLoadAttemptRef.current = null;
     setFocusedToolRecord(null);
+    setRequestedToolRecordLocalId(null);
     setToolsImmersive(Boolean(nextTool) && nextTool !== "job-photos");
     setFocusedActiveWorkId(nextActiveWorkId);
     setFocusedCloseout(false);
@@ -1608,6 +1693,9 @@ function App() {
 
   function handleToolWorkContextChange(activeWorkId: string | null) {
     setFocusedActiveWorkId(activeWorkId);
+    toolRecordLoadAttemptRef.current = null;
+    setFocusedToolRecord(null);
+    setRequestedToolRecordLocalId(null);
     const nextPath = activeView === "Camera" ? pathForCamera(activeWorkId) : pathForTool(requestedTool, activeWorkId);
     if (currentPathAndSearch() !== nextPath) {
       window.history.replaceState({ view: activeView === "Camera" ? "Camera" : "Tools", tool: requestedTool, activeWorkId }, "", nextPath);

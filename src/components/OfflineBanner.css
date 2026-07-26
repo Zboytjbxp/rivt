@@ -13,17 +13,18 @@
   gap: 8px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
   transition: opacity 0.3s, transform 0.3s;
-  white-space: nowrap;
+  max-width: min(560px, calc(100vw - 24px));
+  text-align: center;
 }
 
 .rivt-offline-banner.is-offline {
-  background: var(--v2-warning, #f59e0b);
-  color: #fff;
+  background: var(--v2-warning-soft);
+  color: var(--v2-warning);
 }
 
 .rivt-offline-banner.is-online {
-  background: var(--v2-success, #22c55e);
-  color: #fff;
+  background: var(--v2-success-soft);
+  color: var(--v2-success);
 }
 
 .rivt-offline-banner.is-hidden {

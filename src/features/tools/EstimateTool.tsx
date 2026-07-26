@@ -280,8 +280,8 @@ export function EstimateTool({
       ?? (workContext.kind === "standalone" ? workContext.project.customerId : null),
   );
   const [selectedCustomerSnapshot, setSelectedCustomerSnapshot] = useState<CustomerSnapshot | null>(initialDraft.customerSnapshot ?? null);
-  const [saveMessage, setSaveMessage] = useState("Autosaved on this device.");
-  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [saveMessage, setSaveMessage] = useState(initialRecord ? "Loaded from your RIVT account." : "Autosaved on this device.");
+  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">(initialRecord ? "saved" : "idle");
   const [delivery, setDelivery] = useState<EstimateDelivery | null>(null);
   const [lastSentFingerprint, setLastSentFingerprint] = useState("");
   const [validationMessage, setValidationMessage] = useState("");
@@ -294,6 +294,7 @@ export function EstimateTool({
   const [templateNotice, setTemplateNotice] = useState("");
   const [templateSyncMessage, setTemplateSyncMessage] = useState("Templates sync to your RIVT account.");
   const sendIdempotencyKeyRef = useRef<string | null>(null);
+  const localDraftStorageKey = estimateDraftStorageKey(workContext);
 
   useEffect(() => {
     let cancelled = false;
@@ -362,11 +363,14 @@ export function EstimateTool({
       customerId, customerSnapshot: selectedCustomerSnapshot,
     };
     try {
-      localStorage.setItem(estimateDraftStorageKey(workContext), JSON.stringify(draft));
+      localStorage.setItem(localDraftStorageKey, JSON.stringify(draft));
     } catch {
-      // The in-memory draft remains usable when device storage is unavailable.
+      queueMicrotask(() => {
+        setSaveState("error");
+        setSaveMessage("This draft could not be saved on this device. Keep this page open and copy your work.");
+      });
     }
-  }, [contingencyPct, crewSize, customerId, customerNote, estimateDate, estimateNumber, hourlyRate, laborHours, marginPct, materials, overheadPct, recipientEmail, recipientName, recordLocalId, scope, selectedCustomerSnapshot, subCosts, validThrough, workContext]);
+  }, [contingencyPct, crewSize, customerId, customerNote, estimateDate, estimateNumber, hourlyRate, laborHours, localDraftStorageKey, marginPct, materials, overheadPct, recipientEmail, recipientName, recordLocalId, scope, selectedCustomerSnapshot, subCosts, validThrough]);
 
   useEffect(() => {
     let active = true;
@@ -539,6 +543,7 @@ export function EstimateTool({
   }
 
   function loadEstimateTemplate(template: EstimateTemplate) {
+    markDraftChanged();
     setTemplateName(template.name);
     setLaborHours(template.laborHours);
     setHourlyRate(template.hourlyRate);
@@ -565,6 +570,11 @@ export function EstimateTool({
   function printEstimate() {
     setSaveMessage("Print dialog opened. Choose Save as PDF to download a copy.");
     window.print();
+  }
+
+  function markDraftChanged() {
+    setSaveState("idle");
+    setSaveMessage("Saved on this device. Save to sync these changes to your RIVT account.");
   }
 
   function validateCustomerStep(requireEmail = false) {
@@ -683,6 +693,7 @@ export function EstimateTool({
   }
 
   function chooseCustomer(customer: ClientRecord | null) {
+    markDraftChanged();
     if (!customer) {
       setCustomerId(null);
       setSelectedCustomerSnapshot(null);
@@ -754,7 +765,7 @@ export function EstimateTool({
   }
 
   return (
-    <div className={`v2-tool-workbench v2-estimate-workbench is-${step}`}>
+    <div className={`v2-tool-workbench v2-estimate-workbench is-${step}`} onChangeCapture={markDraftChanged}>
       <nav className="v2-tool-flow-nav" aria-label="Estimate steps">
         {(["price", "customer", "review"] as const).map((item, index) => (
           <button key={item} type="button" aria-current={step === item ? "step" : undefined} onClick={() => setStep(item)}>

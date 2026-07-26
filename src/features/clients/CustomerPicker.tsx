@@ -94,7 +94,11 @@ export function CustomerPicker({
     setCreating(false);
     setQuery("");
     const updated = await markClientRecordUsed(customer);
-    if (!updated) return;
+    if (!updated) {
+      setStatus("Customer selected. Recent-use order could not sync.");
+      return;
+    }
+    setStatus("Customer selected and recent-use order synced.");
     setCustomers((current) => {
       const next = current
         .map((candidate) => candidate.id === updated.id ? updated : candidate)

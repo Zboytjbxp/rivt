@@ -1183,6 +1183,29 @@
   color: var(--v2-on-accent);
 }
 
+.v2-inline-undo {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px;
+  border-block: 1px solid var(--v2-border);
+  color: var(--v2-text-muted);
+  font-size: calc(13px * var(--v2-text-scale));
+}
+
+.v2-inline-undo button {
+  min-width: 64px;
+  min-height: 36px;
+  border: 0;
+  border-radius: var(--v2-radius-sm);
+  background: var(--v2-accent-soft);
+  color: var(--v2-accent-text);
+  font: inherit;
+  font-weight: var(--v2-weight-bold);
+}
+
 .v2-field-tools-tray {
   display: grid;
   gap: 10px;

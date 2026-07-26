@@ -2523,3 +2523,22 @@ Evidence must eventually link to implementation, automated tests, manual accepta
   buffered/non-diagnostic during a bounded four-minute attempt, so only the
   directly passing affected suites are claimed. No deployment evidence is
   claimed.
+
+## Traceability Addendum - 2026-07-26 Document Trust and Resume
+
+- `GA-UX-003` gains reload-safe document continuity: account-owned Estimate
+  and Invoice handoffs retain the selected record id in the URL and resolve it
+  through the authenticated tool-record API after refresh/history navigation.
+- `GA-UX-005` gains save and recovery honesty: account-loaded records no
+  longer continue saying `Saved` after a device-only edit; offline copy states
+  that local drafts still work while account sync/delivery are paused; failed
+  recent-use ordering does not silently erase a selected customer.
+- `GA-UX-006` gains rendered desktop, 390px, and compact-phone evidence for a
+  savable zero-value invoice draft, recoverable line removal, exact linked
+  record restore, device/account save-state transitions, and account resave.
+- Requirement maturity does not change. No API, schema, migration,
+  authorization, provider, or production-data change is introduced. Local
+  evidence includes build, lint, 90 unit/frontend tests, E2E, rendered Tools
+  and mobile-action QA, diff check, and a zero-vulnerability dependency audit.
+  The aggregate and direct database runners produced no test event during
+  bounded attempts, so no database integration pass is claimed.

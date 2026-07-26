@@ -167,3 +167,34 @@ Let an invoice author offer a Stripe-hosted US bank-account payment option witho
 - Roll application code back before migration `0033`. Run the reviewed down
   migration only after confirming any post-upgrade customer fields have been
   mirrored into the retained legacy client records.
+
+## Document-continuity hardening extension
+
+### Product boundary
+
+- Saved Estimate and Invoice URLs may identify an account-owned tool record,
+  but the identifier never bypasses authenticated account scoping.
+- Device autosave is recovery, not account synchronization. The UI must state
+  which one has happened and must not call a device-only edit synced.
+- A zero-value invoice may be saved as an incomplete draft. It cannot be sent
+  or offered for online payment until it contains a real positive amount.
+
+### Client workflow
+
+- Home paperwork and other saved-record handoffs retain the selected document
+  id in the URL, including refresh and browser history.
+- Editing an account-loaded document changes the save state to device-only
+  until explicit account save succeeds.
+- Invoice line removal has a reachable Undo action, and offline copy preserves
+  truthful device-draft versus paused-sync/delivery behavior.
+- Customer selection reports a recent-use sync failure without undoing the
+  selected customer.
+
+### Acceptance and rollback
+
+- Rendered desktop, 390px, and compact-phone QA covers exact record restore,
+  zero-value draft save, line-item undo, device-only edit status, and account
+  resave.
+- No server, schema, migration, provider, or production-data change is part
+  of this extension. Rollback is source-only and leaves migrations `0032` and
+  `0033` in place.

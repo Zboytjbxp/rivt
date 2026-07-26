@@ -104,6 +104,36 @@ const defaultPrivateAlbum = {
   updatedAt: "2026-06-21T12:00:00.000Z",
 };
 
+const continuityInvoiceRecord = {
+  id: "tool-record-continuity-invoice",
+  recordType: "invoice_draft",
+  localId: "invoice:quick:continuity",
+  title: "Continuity invoice",
+  status: "draft",
+  recordDate: "2026-07-26",
+  amountCents: 18750,
+  standaloneProjectId: null,
+  activeWorkId: null,
+  customerId: null,
+  payload: {
+    invoiceNumber: "RIVT-CONTINUE",
+    issueDate: "2026-07-26",
+    dueDate: "2026-08-02",
+    billTo: "Continuity Customer",
+    payTo: "RIVT Test Contractor",
+    terms: "Net 7",
+    paymentMethod: "Pay by check.",
+    taxPct: 0,
+    recipientEmail: "continuity@example.com",
+    recipientPhone: "",
+    customerNote: "",
+    templateName: "Standard",
+    lines: [{ description: "Continuity work", qty: 1.5, rate: 125, kind: "labor" }],
+  },
+  createdAt: "2026-07-26T12:00:00.000Z",
+  updatedAt: "2026-07-26T12:00:00.000Z",
+};
+
 async function waitForServer() {
   const deadline = Date.now() + 30_000;
   while (Date.now() < deadline) {
@@ -543,7 +573,11 @@ async function configurePage(page) {
   await page.route(/\/api\/v1\/tool-records(?:\/.*|\?.*)?$/, (route) => {
     const method = route.request().method();
     if (method === "GET") {
-      return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { records: [] } }) });
+      const requestUrl = new URL(route.request().url());
+      const records = requestUrl.searchParams.get("type") === "invoice_draft"
+        ? [continuityInvoiceRecord]
+        : [];
+      return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { records } }) });
     }
     if (method === "POST") {
       const input = route.request().postDataJSON();
@@ -1407,6 +1441,16 @@ async function runToolsFlow(page, viewportName) {
   const invoiceDraftSteps = page.getByRole("navigation", { name: "Invoice draft steps" });
   assert.equal(await invoiceDraftSteps.getByRole("button", { name: "1 Items" }).getAttribute("aria-current"), "step");
   assert.equal(await page.getByLabel(/rate$/i).first().inputValue(), "0", "a new invoice must not invent a billable amount");
+  assert.equal(
+    await page.getByLabel("Invoice actions").getByRole("button", { name: "Save draft", exact: true }).isEnabled(),
+    true,
+    "a zero-value invoice must still be savable as a draft",
+  );
+  await page.getByRole("button", { name: "Add item", exact: true }).click();
+  await page.getByRole("button", { name: "Remove line item", exact: true }).last().click();
+  await page.getByText("Line item removed.", { exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByRole("button", { name: "Undo", exact: true }).click();
+  assert.equal(await page.getByLabel("Line description").count(), 2, "removed invoice lines should be recoverable");
   await page.getByLabel(/rate$/i).first().fill("125.75");
   await page.getByLabel("Invoice templates").getByText("Templates", { exact: true }).click();
   await page.getByLabel("Template name").fill(`${viewportName} invoice template`);
@@ -1461,6 +1505,18 @@ async function runToolsFlow(page, viewportName) {
   assert.equal(await page.getByLabel("Bill to").inputValue(), "", "a new invoice must not retain the prior customer");
   assert.equal(await page.getByLabel("Recipient email").inputValue(), "", "a new invoice must not retain the prior recipient email");
   assert.equal(await page.getByLabel("Recipient phone").inputValue(), "", "a new invoice must not retain the prior recipient phone");
+  await page.goto(`${baseUrl}/app/tools?tool=invoice&record=${encodeURIComponent(continuityInvoiceRecord.localId)}`, { waitUntil: "networkidle" });
+  await page.getByRole("heading", { name: "Invoice", exact: true }).first().waitFor({ timeout: 15_000 });
+  await page.getByText("Loaded from your RIVT account.", { exact: true }).waitFor({ timeout: 15_000 });
+  const linkedInvoiceSteps = page.getByRole("navigation", { name: "Invoice draft steps" });
+  await linkedInvoiceSteps.getByRole("button", { name: "2 Customer" }).click();
+  assert.equal(await page.getByLabel("Bill to").inputValue(), "Continuity Customer", "a linked invoice URL should restore the selected account record");
+  assert.equal(new URL(page.url()).searchParams.get("record"), continuityInvoiceRecord.localId, "the invoice URL should retain its document identity");
+  await page.getByLabel("Bill to").fill("Continuity Customer Updated");
+  await page.getByText("Saved on this device. Save to sync these changes to your RIVT account.", { exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByLabel("Invoice actions").getByRole("button", { name: "Save draft", exact: true }).click();
+  await page.getByText("Draft saved to your RIVT account.", { exact: true }).waitFor({ timeout: 15_000 });
+  await page.waitForLoadState("networkidle");
   if (viewportName !== "se") {
     await page.goto(`${baseUrl}/app/tools?tool=invoice&activeWork=${activeWorkItem.id}`, { waitUntil: "networkidle" });
     await page.getByRole("heading", { name: "Invoice", exact: true }).first().waitFor({ timeout: 15_000 });
@@ -1631,7 +1687,9 @@ try {
       }
     });
     page.on("requestfailed", (request) => {
-      errors.push(`${request.url()} :: ${request.failure()?.errorText ?? "request failed"}`);
+      const errorText = request.failure()?.errorText ?? "request failed";
+      if (errorText === "net::ERR_ABORTED" && request.frame() === page.mainFrame()) return;
+      errors.push(`${request.url()} :: ${errorText}`);
     });
     page.on("pageerror", (error) => errors.push(error.message));
 

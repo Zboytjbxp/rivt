@@ -48,7 +48,9 @@ export function OfflineBanner() {
       aria-live="polite"
     >
       {!online && <WifiOff size={14} aria-hidden="true" />}
-      {showOnline ? "Back online" : "You're offline - changes can't be saved right now."}
+      {showOnline
+        ? "Back online - account sync and delivery are available."
+        : "You're offline - device drafts still work, but account sync and delivery are paused."}
     </div>
   );
 }
