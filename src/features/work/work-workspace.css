@@ -526,6 +526,7 @@
   display: grid;
   grid-template-columns: minmax(320px, 0.72fr) minmax(500px, 1.28fr);
   min-height: 580px;
+  scroll-margin-top: calc(var(--v2-topbar-height) + 16px);
   overflow: hidden;
   border: 1px solid var(--v2-border);
   border-radius: var(--v2-radius-lg);

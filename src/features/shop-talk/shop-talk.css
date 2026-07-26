@@ -2148,7 +2148,7 @@
   width: 46px;
   height: 46px;
   border-radius: 50%;
-  color: #fff;
+  color: var(--v2-on-accent);
   flex: 0 0 auto;
 }
 
@@ -4851,5 +4851,158 @@ html[data-rivt-compact-device="true"] .shop-talk-community-layout .shop-talk-sea
   .shop-delete-actions {
     display: grid;
     grid-template-columns: 1fr 1fr;
+  }
+}
+
+.shop-talk-desktop-rail {
+  display: none;
+}
+
+@media (min-width: 1181px) {
+  .shop-talk-community-layout {
+    grid-template-areas:
+      "tabs tabs"
+      "feed sidebar";
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 330px);
+    gap: 18px 22px;
+  }
+
+  .shop-talk-community-layout > .shop-talk-primary-tabs {
+    grid-area: tabs;
+  }
+
+  .shop-talk-community-layout > .shop-talk-sidebar {
+    grid-area: sidebar;
+  }
+
+  .shop-talk-community-layout > .shop-talk-feed-panel {
+    grid-area: feed;
+  }
+
+  .shop-talk-community-layout > .shop-talk-detail {
+    grid-area: detail;
+  }
+
+  .shop-talk-community-layout.tab-talk.thread-selected {
+    grid-template-areas:
+      "tabs tabs"
+      "feed detail";
+    grid-template-columns: minmax(380px, 0.88fr) minmax(430px, 1.12fr);
+  }
+
+  .shop-talk-community-layout.tab-talk.thread-selected > .shop-talk-sidebar {
+    display: none;
+  }
+
+  .shop-talk-community-layout.tab-communities {
+    grid-template-areas:
+      "tabs"
+      "feed";
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .shop-talk-community-layout.tab-communities > .shop-talk-sidebar,
+  .shop-talk-community-layout.tab-communities > .shop-talk-detail {
+    display: none;
+  }
+
+  .shop-talk-community-layout.tab-news {
+    grid-template-areas:
+      "tabs tabs"
+      "feed detail";
+    grid-template-columns: minmax(500px, 0.94fr) minmax(430px, 1.06fr);
+  }
+
+  .shop-talk-community-layout.tab-news > .shop-talk-sidebar {
+    display: none;
+  }
+
+  .shop-talk-desktop-rail {
+    display: grid;
+    align-content: start;
+    gap: 16px;
+    padding: 20px;
+    border: 1px solid var(--v2-border);
+    border-radius: var(--v2-radius-lg);
+    background: var(--v2-surface-raised);
+  }
+
+  .shop-talk-desktop-rail header {
+    display: grid;
+    gap: 5px;
+  }
+
+  .shop-talk-desktop-rail header > span {
+    color: var(--v2-accent-text);
+    font-size: var(--v2-text-xs);
+    font-weight: var(--v2-weight-bold);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .shop-talk-desktop-rail h2,
+  .shop-talk-desktop-rail p {
+    margin: 0;
+  }
+
+  .shop-talk-desktop-rail h2 {
+    font-size: calc(20px * var(--v2-text-scale));
+  }
+
+  .shop-talk-desktop-rail p {
+    color: var(--v2-text-muted);
+    font-size: var(--v2-text-sm);
+    line-height: 1.5;
+  }
+
+  .shop-talk-desktop-community-list {
+    display: grid;
+    gap: 4px;
+  }
+
+  .shop-talk-desktop-community-list > button,
+  .shop-talk-desktop-browse {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 10px;
+    min-height: 52px;
+    padding: 8px;
+    border: 0;
+    border-radius: var(--v2-radius-md);
+    background: transparent;
+    color: var(--v2-text);
+    font: inherit;
+    text-align: left;
+  }
+
+  .shop-talk-desktop-community-list > button:hover,
+  .shop-talk-desktop-browse:hover {
+    background: var(--v2-surface-muted);
+  }
+
+  .shop-talk-desktop-community-list > button > span:nth-child(2) {
+    display: grid;
+    min-width: 0;
+    gap: 2px;
+  }
+
+  .shop-talk-desktop-community-list strong,
+  .shop-talk-desktop-community-list small {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .shop-talk-desktop-community-list small {
+    color: var(--v2-text-muted);
+  }
+
+  .shop-talk-desktop-browse {
+    grid-template-columns: minmax(0, 1fr) auto;
+    border-top: 1px solid var(--v2-border);
+    border-radius: 0;
+    color: var(--v2-accent-text);
+    font-weight: var(--v2-weight-bold);
   }
 }

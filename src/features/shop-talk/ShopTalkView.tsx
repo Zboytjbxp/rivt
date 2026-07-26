@@ -1,6 +1,7 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowLeft,
+  ArrowRight,
   AlertTriangle,
   BadgeCheck,
   Bookmark,
@@ -875,6 +876,15 @@ export function ShopTalkView({
     }
     return counts;
   }, [communities, communityPosts]);
+  const desktopCommunities = useMemo(() => [...communities]
+    .sort((left, right) => {
+      const joinedDifference = Number(joinedCommunities.has(right.slug)) - Number(joinedCommunities.has(left.slug));
+      if (joinedDifference) return joinedDifference;
+      const postDifference = (communityPostCounts[right.slug] ?? 0) - (communityPostCounts[left.slug] ?? 0);
+      if (postDifference) return postDifference;
+      return right.memberCount - left.memberCount;
+    })
+    .slice(0, 5), [communities, communityPostCounts, joinedCommunities]);
   const filteredCommunities = useMemo(() => {
     const normalized = communityQuery.trim().toLowerCase();
     if (!normalized) return communities;
@@ -1306,7 +1316,7 @@ export function ShopTalkView({
         />
       )}
       <section
-        className={`${mobileDetail ? "shop-talk-layout shop-talk-community-layout mobile-detail-open" : "shop-talk-layout shop-talk-community-layout"}${selectedCommunity ? " community-open" : ""}${selectedPost ? " thread-selected" : ""}`}
+        className={`${mobileDetail ? "shop-talk-layout shop-talk-community-layout mobile-detail-open" : "shop-talk-layout shop-talk-community-layout"} tab-${activeTab}${selectedCommunity ? " community-open" : ""}${selectedPost ? " thread-selected" : ""}`}
         aria-label="Shop Talk community"
       >
         <div className="shop-talk-tabs shop-talk-primary-tabs">
@@ -1393,6 +1403,39 @@ export function ShopTalkView({
               ) : null}
 
             </>
+          ) : activeTab === "talk" ? (
+            <section className="shop-talk-desktop-rail" aria-label="Community shortcuts">
+              <header>
+                <span>Community pulse</span>
+                <h2>Trade circles</h2>
+                <p>Move from the global feed into the people and specialties most useful to your work.</p>
+              </header>
+              <div className="shop-talk-desktop-community-list">
+                {desktopCommunities.map((community) => {
+                  const CommunityIcon = community.icon;
+                  return (
+                    <button key={community.slug} type="button" onClick={() => openCommunity(community)}>
+                      <span className="community-row-icon" style={{ background: community.tone }}>
+                        <CommunityIcon size={18} strokeWidth={2.3} />
+                      </span>
+                      <span>
+                        <strong>{community.name}</strong>
+                        <small>
+                          {pluralize(communityPostCounts[community.slug] ?? 0, "post")}
+                          {" · "}
+                          {joinedCommunities.has(community.slug) ? "Joined" : pluralize(community.memberCount, "member")}
+                        </small>
+                      </span>
+                      <ArrowRight size={15} aria-hidden="true" />
+                    </button>
+                  );
+                })}
+              </div>
+              <button type="button" className="shop-talk-desktop-browse" onClick={() => setActiveTab("communities")}>
+                Browse directory
+                <ArrowRight size={15} aria-hidden="true" />
+              </button>
+            </section>
           ) : null}
         </aside>
 
@@ -2064,7 +2107,7 @@ export function ShopTalkView({
               />
             </article>
           )
-        ) : (
+        ) : activeTab === "news" ? (
           <article className="shop-talk-detail">
             <button type="button" className="mobile-back-btn" onClick={() => setMobileDetail(false)}>
               <ArrowLeft size={15} />
@@ -2142,7 +2185,7 @@ export function ShopTalkView({
               <EmptyState icon={Newspaper} title="Select a news item" description="Choose a headline from the left to read the full summary." />
             )}
           </article>
-        )}
+        ) : null}
       </section>
       {deleteConfirmPostId && selectedPost?.id === deleteConfirmPostId ? (
         <DialogBackdrop className="shop-delete-backdrop" onClose={() => {

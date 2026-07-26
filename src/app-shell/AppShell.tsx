@@ -84,6 +84,10 @@ export function AppShell({
   const peopleSearchRequestRef = useRef(0);
 
   useEffect(() => {
+    window.scrollTo({ top: 0, left: 0 });
+  }, [activeDestination]);
+
+  useEffect(() => {
     function handleCommandSearch(event: KeyboardEvent) {
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
         event.preventDefault();
