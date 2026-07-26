@@ -2,12 +2,12 @@
 
 Last updated: 2026-07-26 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Account-owned customer continuity across projects, estimates, invoices, and private notes is locally verified and awaiting review; production remains on the prior invoice-payment release.
+Current phase: Account-owned customer continuity, document branding, and estimate/invoice integrity are deployed and exact-source verified in production.
 Active packet: `docs/delivery/packets/70_STRIPE_CONNECT_ACH_INVOICES.md` (customer-book continuity extension)
-Repository branch: `codex/customer-book-continuity`
-Production feature release commit: `03c4336142bab09e12d649ffdf0bc0364716edb6`
+Repository branch: `master` (source branch: `codex/customer-book-continuity`)
+Production feature release commit: `3cab1f3eb475dae8078ada2b0fd5ebe81656f90b`
 
-## Customer Book Continuity (Locally Verified; Review Pending)
+## Customer Book Continuity (Deployed and Exact-Source Verified)
 
 - Migration `0033_customer_book` adds a canonical account-owned customer
   record and optional customer links on standalone projects and tool records.
@@ -38,9 +38,18 @@ Production feature release commit: `03c4336142bab09e12d649ffdf0bc0364716edb6`
 - The repository-wide `npm run test` wrapper was attempted for four minutes
   and is not claimed green because the serial integration runner remained
   buffered/non-diagnostic. The two PostgreSQL suites changed by this extension
-  passed directly with no skips. No production deployment is claimed.
+  passed directly with no skips.
+- Railway deployment `00e22345-10ba-497f-a7bb-ad3663c0dfc2` serves the exact
+  feature source. Live health reports ready migration `0033_customer_book`,
+  PostgreSQL/S3-compatible storage, configured Sentry/Web Push, and configured
+  Stripe Connect Accounts v2. The exact-source production monitor passed with
+  all seven anonymous private-route checks.
+- Authenticated production proof created, searched, updated, marked used, and
+  read activity for a temporary customer. Anonymous customer access returned
+  401, the exact source and migration were rechecked during the run, and the
+  temporary customer records, invite, sessions, and account were cleaned up.
 
-## Estimate + Invoice Branding and Templates (Locally Verified; Review Pending)
+## Estimate + Invoice Branding and Templates (Deployed with Customer Continuity)
 
 - Migration `0032_document_branding` adds one account-owned document identity
   for business name, contact details, license display, logo reference, and
@@ -80,9 +89,10 @@ Production feature release commit: `03c4336142bab09e12d649ffdf0bc0364716edb6`
   claimed green: it hit the repository's pre-existing silent
   `push-notifications.integration.test.js` stall before reaching this packet.
   The two database suites changed by this extension passed directly with no
-  skips. No production deployment is claimed for this branch.
+  skips. Migration `0032_document_branding` is applied beneath the ready
+  `0033_customer_book` production head.
 
-## Estimate + Invoice Document Integrity (Locally Verified; Review Pending)
+## Estimate + Invoice Document Integrity (Deployed with Customer Continuity)
 
 - New estimates and invoices now begin with zero-valued costs. RIVT no
   longer derives a billable amount from job pay, assumed labor hours,
@@ -125,11 +135,11 @@ Production feature release commit: `03c4336142bab09e12d649ffdf0bc0364716edb6`
   authentication and jobs/discovery E2E at desktop and mobile, rendered
   Tools QA, diff check, and `npm audit --omit=dev` with zero known
   vulnerabilities.
-- The earlier integrity slice introduced no schema, dependency,
-  authorization, Stripe configuration, or production-data change. The active
-  branding extension above adds reviewed migration `0032`. This branch is
-  not merged or deployed; production remains on
-  `03c4336142bab09e12d649ffdf0bc0364716edb6`.
+- The integrity slice introduced no separate schema, dependency,
+  authorization, Stripe configuration, or production-data change. It is now
+  included in exact production source
+  `3cab1f3eb475dae8078ada2b0fd5ebe81656f90b`; the branding and customer
+  extensions add reviewed migrations `0032` and `0033`.
 
 ## Invoice Payment Clarity + Quick Use ACH (Deployed and Exact-Source Verified)
 

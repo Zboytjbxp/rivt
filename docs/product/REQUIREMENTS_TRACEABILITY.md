@@ -10,6 +10,40 @@ Status values:
 
 Evidence must eventually link to implementation, automated tests, manual acceptance proof, and deployed build.
 
+## Traceability Addendum - 2026-07-26 Customer Book Continuity
+
+- `GA-FND-003` gains migration `0033_customer_book`: canonical account-owned
+  customers, optional links from standalone projects and tool records, and a
+  reversible migration that preserves richer customer fields through rollback.
+- `GA-FND-004` gains server-side ownership on customer create, search, update,
+  recent-use, and activity reads. Cross-account customer links and reads are
+  denied; hiding a control is not treated as authorization.
+- `GA-UX-003` gains one reusable customer picker across Estimate, Invoice, and
+  standalone-project creation plus a Work -> People -> Customers book with
+  favorites, archive/restore, duplicate warnings, and real related activity.
+- `GA-UX-005` gains immutable customer snapshots on reviewed documents.
+  Updating the canonical customer changes future reuse without silently
+  rewriting an earlier estimate or invoice. Inbox customer notes remain
+  explicitly private and do not imply message delivery.
+- `GA-UX-006` gains rendered 390px customer-book and document-flow evidence
+  with no horizontal overflow. Document branding through migration `0032`
+  supplies account-owned business identity, verified managed logo uploads,
+  guided layouts, and reusable estimate templates without fabricating sync,
+  delivery, or public visibility.
+- Local evidence includes build, application/security lint, 89 unit/frontend
+  tests, direct customer/tool-record ownership and migration lifecycle
+  integrations, fail-closed authentication and jobs/discovery E2E, rendered
+  Tools/mobile QA, diff checks, and zero known production dependency
+  vulnerabilities. The buffered aggregate serial wrapper is recorded as
+  unclaimed; both affected PostgreSQL suites passed directly.
+- `GA-OPS-008` gains Railway deployment
+  `00e22345-10ba-497f-a7bb-ad3663c0dfc2` serving exact source
+  `3cab1f3eb475dae8078ada2b0fd5ebe81656f90b` through ready migration
+  `0033_customer_book`. Health and the exact-source production monitor passed.
+  An authenticated disposable account then created, searched, updated, marked
+  used, and read activity for a live customer; anonymous access returned 401
+  and all temporary records were cleaned up.
+
 ## Traceability Addendum - 2026-07-25 Desktop Release Polish
 
 - `GA-UX-001` and `GA-UX-003` gain a wide-screen shell that preserves the

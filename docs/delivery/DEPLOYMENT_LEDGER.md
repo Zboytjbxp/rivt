@@ -1,5 +1,46 @@
 # Deployment Ledger
 
+## 2026-07-26 - Customer Book Continuity + Document Finish
+
+- Production source commit:
+  `3cab1f3eb475dae8078ada2b0fd5ebe81656f90b`
+- Branch: `master` (source branch: `codex/customer-book-continuity`)
+- Railway application deployment:
+  `00e22345-10ba-497f-a7bb-ad3663c0dfc2`
+- Superseded GitHub-triggered deployment:
+  `be90021b-b3cb-4138-bfb8-c16684cf2cc0`
+- Production: `https://rivt.pro`
+- Scope: add an account-owned customer book shared by Work, standalone
+  projects, estimates, invoices, and private customer notes; preserve immutable
+  document customer snapshots; add account-owned document identity, verified
+  logo handling, layout choices, and reusable estimate templates; and ship the
+  completed estimate/invoice document-integrity pass.
+- Migration before/after: `0031_tool_invoice_payment_requests` /
+  `0033_customer_book`, including `0032_document_branding`.
+- Automated gates: build, application/security lint, 89 unit/frontend tests,
+  fail-closed authentication and jobs/discovery E2E, rendered Tools and
+  mobile-action/customer-book QA, direct customer/tool-record ownership
+  integration, full migration apply/rollback with rich-customer preservation,
+  diff checks, and the zero-vulnerability production dependency audit passed.
+  The aggregate serial wrapper was attempted but is not claimed green because
+  it remained buffered; both affected PostgreSQL suites passed directly.
+- Post-deploy proof: `/api/health` returned the exact source, ready migration
+  `0033_customer_book`, PostgreSQL/S3-compatible storage, configured
+  Sentry/Web Push, and configured Stripe Connect Accounts v2. The exact-source
+  production monitor passed with seven anonymous private-route checks.
+- Authenticated live proof: a disposable contractor created, searched,
+  updated, and marked a customer recently used, then loaded that customer's
+  activity. Anonymous access returned 401. The run rechecked the exact commit
+  and migration and removed its temporary customer/tool records, invite,
+  sessions, and account.
+- Provider/config change: only the source marker was synchronized; no payment,
+  email, storage, or identity-provider credential changed.
+- Rollback target:
+  `ec32c379739a4061940d037dc1185b8f49e05936`. Prefer a source-only rollback
+  that leaves migrations `0032` and `0033` in place. Do not roll either schema
+  down after real document-brand or customer data exists without a reviewed
+  export/preservation plan.
+
 ## 2026-07-26 - Invoice Payment Clarity + Quick Use ACH
 
 - Production source commit:
