@@ -63,6 +63,12 @@
   --v2-radius-pill: 999px;
   --v2-destructive: var(--v2-danger);
   --v2-on-accent: #fff;
+  /* Customer-facing estimate/invoice paper stays printable in either app theme. */
+  --v2-document-bg: #ffffff;
+  --v2-document-text: #121212;
+  --v2-document-muted: #5f6668;
+  --v2-document-border: #e5e7eb;
+  --v2-document-rule: #151515;
   --v2-font-mono: "IBM Plex Mono", "SFMono-Regular", "Cascadia Code", "Roboto Mono", Consolas, monospace;
   --v2-sidebar-width: 220px;
   --v2-topbar-height: 58px;

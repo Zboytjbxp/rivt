@@ -414,11 +414,21 @@ async function assertToolsFlow(page) {
 
   await primaryTool("Estimate").click();
   await page.getByRole("heading", { name: "Estimate builder" }).waitFor();
-  await page.getByText("Recommended target", { exact: true }).waitFor();
-  await page.getByRole("navigation", { name: "Estimate steps" }).getByRole("button", { name: "3 Review" }).click();
+  await page.getByText("Enter real job costs", { exact: true }).waitFor();
+  assert.equal(await page.getByLabel("Materials").inputValue(), "0", "Estimate must not invent material costs");
+  await page.getByLabel("Labor hours").fill("4");
+  await page.getByLabel("Hourly rate").fill("90");
+  await page.getByRole("navigation", { name: "Estimate steps" }).getByRole("button", { name: "2 Customer" }).click();
+  await page.getByLabel("Customer name").fill("Converted Estimate Customer");
+  await page.getByLabel("Customer email").fill("converted@example.com");
+  await page.getByLabel("Scope").fill("Converted estimate scope");
+  await page.getByRole("button", { name: "Review", exact: true }).click();
   await page.getByRole("button", { name: /Convert to invoice/i }).click();
   await page.getByRole("heading", { name: "Invoice", exact: true }).first().waitFor();
   await page.getByText(/Converted from estimate total/i).waitFor();
+  await page.getByRole("navigation", { name: "Invoice draft steps" }).getByRole("button", { name: "2 Customer" }).click();
+  assert.equal(await page.getByLabel("Bill to").inputValue(), "Converted Estimate Customer", "estimate conversion should preserve the selected customer");
+  assert.equal(await page.getByLabel("Recipient email").inputValue(), "converted@example.com", "estimate conversion should preserve the customer email");
   await page.getByRole("navigation", { name: "Invoice draft steps" }).getByRole("button", { name: "3 Review" }).click();
   await page.getByRole("heading", { name: "Preview before delivery" }).waitFor();
   await page.getByLabel("Printable invoice preview").waitFor();
@@ -432,6 +442,9 @@ async function assertToolsFlow(page) {
   await page.getByRole("heading", { name: "Invoice", exact: true }).first().waitFor();
   await page.getByRole("navigation", { name: "Invoice sections" }).getByRole("button", { name: "Draft", exact: true }).waitFor();
   assert.equal(await page.getByText(/Converted from estimate total/i).count(), 0, "Opening Invoice directly should not reuse a converted estimate draft");
+  await page.getByRole("navigation", { name: "Invoice draft steps" }).getByRole("button", { name: "3 Review" }).click();
+  await page.getByRole("button", { name: "New invoice", exact: true }).click();
+  assert.equal(await page.getByLabel(/rate$/i).first().inputValue(), "0", "Invoice must not invent a billable amount");
   await page.getByRole("navigation", { name: "Invoice draft steps" }).getByRole("button", { name: "3 Review" }).click();
   await page.getByRole("heading", { name: "Preview before delivery" }).waitFor();
   await page.getByLabel("Printable invoice preview").waitFor();

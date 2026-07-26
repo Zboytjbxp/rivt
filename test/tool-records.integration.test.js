@@ -354,8 +354,10 @@ if (!testDatabaseUrl) {
           recipientName: "Jordan Client",
           recipientEmail: "jordan.client@example.test",
           scope: "Kitchen cabinet installation",
+          estimateDate: "2026-07-14",
           validThrough: "2026-08-13",
           customerNote: "Materials are included.",
+          documentFingerprint: "estimate-fingerprint-one",
           customerLines: [
             { description: "Cabinet installation", quantity: 24, totalCents: 158500 },
             { description: "Materials and handling", quantity: 1, totalCents: 90000 },
@@ -400,10 +402,13 @@ if (!testDatabaseUrl) {
     assert.equal(sentEstimate.payload.data.record.status, "sent");
     assert.equal(sentEstimate.payload.data.record.payload.delivery.status, "sent");
     assert.equal(sentEstimate.payload.data.record.payload.delivery.recipientEmail, "jordan.client@example.test");
+    assert.equal(sentEstimate.payload.data.record.payload.delivery.documentFingerprint, "estimate-fingerprint-one");
     const deliveredEstimate = capturedEmailMessages().find((message) => message.to === "jordan.client@example.test");
     assert.ok(deliveredEstimate);
     assert.match(deliveredEstimate.text, /Kitchen cabinet installation/);
     assert.match(deliveredEstimate.text, /\$2,485\.00/);
+    assert.match(deliveredEstimate.text, /Estimate date: 2026-07-14/);
+    assert.match(deliveredEstimate.text, /Materials are included/);
     assert.doesNotMatch(deliveredEstimate.text, /margin|overhead|contingency/i);
 
     const sentReplay = await requestJson(baseUrl, "/api/v1/estimates/estimate%3Aemail-one/send", {
@@ -438,9 +443,13 @@ if (!testDatabaseUrl) {
           recipientName: "Jordan Client",
           recipientEmail: "jordan.client@example.test",
           workLabel: "Kitchen cabinet installation",
+          issueDate: "2026-07-14",
+          dueDate: "2026-07-31",
+          customerNote: "Thank you for your business.",
           terms: "Due on completion",
           paymentMethod: "Direct payment",
           payTo: "RIVT Cabinet Co.",
+          documentFingerprint: "invoice-fingerprint-one",
           customerLines: [
             { description: "Cabinet installation", quantity: 24, totalCents: 158500 },
             { description: "Materials and handling", quantity: 1, totalCents: 90000 },
@@ -512,10 +521,14 @@ if (!testDatabaseUrl) {
     assert.equal(sentInvoice.payload.data.record.status, "sent");
     assert.equal(sentInvoice.payload.data.record.payload.delivery.status, "sent");
     assert.equal(sentInvoice.payload.data.record.payload.delivery.recipientEmail, "jordan.client@example.test");
+    assert.equal(sentInvoice.payload.data.record.payload.delivery.documentFingerprint, "invoice-fingerprint-one");
     const deliveredInvoice = capturedEmailMessages().find((message) => message.to === "jordan.client@example.test");
     assert.ok(deliveredInvoice);
     assert.match(deliveredInvoice.text, /Kitchen cabinet installation/);
     assert.match(deliveredInvoice.text, /\$2,485\.00/);
+    assert.match(deliveredInvoice.text, /Invoice date: 2026-07-14/);
+    assert.match(deliveredInvoice.text, /Due date: 2026-07-31/);
+    assert.match(deliveredInvoice.text, /Thank you for your business/);
     assert.match(deliveredInvoice.text, /Payment method: Secure bank payment/);
     assert.match(deliveredInvoice.text, new RegExp(`https://rivt\\.pro/pay/${toolPaymentRequestId}`));
     assert.match(deliveredInvoice.html, />Pay from a US bank account</);

@@ -2413,3 +2413,24 @@ Evidence must eventually link to implementation, automated tests, manual accepta
   tests, E2E, rendered mixed-category/age smoke, and zero-vulnerability audit
   passed; exact-source health and the production monitor passed after Railway
   deployment `f9f58138-32a4-4310-a079-025ddd29b095`.
+
+## Traceability Addendum - 2026-07-26 Estimate and Invoice Document Integrity
+
+- `GA-UX-003` gains end-to-end document-workflow evidence: Estimate and
+  Invoice each support a distinct new-document action, validated customer
+  details, consistent preview/copy/print/email content, and an explicit
+  payment-method decision before invoice delivery.
+- `GA-UX-005` gains money and delivery-honesty evidence: new documents start
+  at zero instead of assumed prices, estimate markup is named correctly,
+  templates cannot leak a prior customer's identity, and sent state is bound
+  to the exact document fingerprint so later edits are labeled unsent.
+- `GA-UX-006` gains rendered desktop, 390px mobile, and compact-phone
+  evidence for the complete Estimate and Invoice flows, including
+  customer-paper theme tokens, printable documents, mobile action access,
+  and horizontal-overflow checks.
+- `GA-OPS-007` gains local branch evidence from production build, application
+  and security lint, 86 unit/frontend tests, all 19 serial database
+  integration tests, fail-closed authentication and jobs/discovery E2E,
+  rendered Tools QA, diff check, and a zero-vulnerability production
+  dependency audit. The branch remains review-only and no deployment
+  evidence is claimed.

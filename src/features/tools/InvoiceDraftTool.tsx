@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Banknote, Check, ChevronLeft, ChevronRight, Copy, ExternalLink, FileText, LoaderCircle, Mail, MessageSquare, Plus, Save, Trash2 } from "lucide-react";
 import type { Job } from "../../types";
 import { Panel } from "../../components/ui";
-import { readPrimaryHourlyRate } from "../../lib/rateCard";
 import type { EstimateInvoiceDraft } from "./EstimateTool";
 import { clampNumber, currency, formatQuantity, toCents, centsToDollars } from "./money";
 import { getInvoiceLinePriceSignal } from "./priceGuidance";
@@ -71,7 +70,11 @@ function paymentChoiceFromMethod(value: string | undefined): "bank" | "outside" 
 }
 
 interface InvoiceDraftSnapshot {
+  localId?: string;
   invoiceNumber: string;
+  issueDate: string;
+  dueDate: string;
+  customerNote: string;
   billTo: string;
   payTo: string;
   terms: string;
@@ -81,6 +84,49 @@ interface InvoiceDraftSnapshot {
   taxPct: number;
   templateName: string;
   lines: InvoiceLine[];
+}
+
+interface DocumentDelivery {
+  status: "sent" | "failed";
+  recipientEmail: string;
+  attemptedAt: string;
+  sentAt?: string;
+  attemptCount: number;
+  documentFingerprint?: string;
+}
+
+function deliveryFromRecord(record: ServerToolRecord | null | undefined): DocumentDelivery | null {
+  const delivery = record?.payload?.delivery;
+  if (!delivery || typeof delivery !== "object" || Array.isArray(delivery)) return null;
+  const candidate = delivery as Partial<DocumentDelivery>;
+  if (candidate.status !== "sent" && candidate.status !== "failed") return null;
+  if (typeof candidate.recipientEmail !== "string" || typeof candidate.attemptedAt !== "string") return null;
+  return {
+    status: candidate.status,
+    recipientEmail: candidate.recipientEmail,
+    attemptedAt: candidate.attemptedAt,
+    sentAt: typeof candidate.sentAt === "string" ? candidate.sentAt : undefined,
+    attemptCount: typeof candidate.attemptCount === "number" ? candidate.attemptCount : 1,
+    documentFingerprint: typeof candidate.documentFingerprint === "string" ? candidate.documentFingerprint : undefined,
+  };
+}
+
+function today() {
+  const value = new Date();
+  const localValue = new Date(value.getTime() - value.getTimezoneOffset() * 60_000);
+  return localValue.toISOString().slice(0, 10);
+}
+
+function newInvoiceNumber() {
+  return `RIVT-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
+}
+
+function newInvoiceLocalId(context: ToolWorkContext) {
+  return `invoice:${toolContextStorageId(context)}:${crypto.randomUUID()}`;
+}
+
+function isValidEmail(value: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
 }
 
 function invoiceDraftStorageKey(context: ToolWorkContext) {
@@ -108,8 +154,6 @@ interface InvoicePrefs {
   payTo: string;
   terms: string;
   paymentMethod: string;
-  recipientEmail: string;
-  recipientPhone: string;
   taxPct: number;
 }
 
@@ -117,9 +161,7 @@ function readInvoicePrefs(): InvoicePrefs {
   const fallback: InvoicePrefs = {
     payTo: "",
     terms: "Due on completion",
-    paymentMethod: "Direct payment",
-    recipientEmail: "",
-    recipientPhone: "",
+    paymentMethod: "",
     taxPct: 0,
   };
   try {
@@ -130,8 +172,6 @@ function readInvoicePrefs(): InvoicePrefs {
       payTo: typeof parsed.payTo === "string" ? parsed.payTo : fallback.payTo,
       terms: typeof parsed.terms === "string" && parsed.terms.trim() ? parsed.terms : fallback.terms,
       paymentMethod: typeof parsed.paymentMethod === "string" && parsed.paymentMethod.trim() ? parsed.paymentMethod : fallback.paymentMethod,
-      recipientEmail: typeof parsed.recipientEmail === "string" ? parsed.recipientEmail : fallback.recipientEmail,
-      recipientPhone: typeof parsed.recipientPhone === "string" ? parsed.recipientPhone : fallback.recipientPhone,
       taxPct: clampNumber(Number(parsed.taxPct), fallback.taxPct),
     };
   } catch {
@@ -190,10 +230,14 @@ function invoiceTemplateToServerInput(template: InvoiceTemplate) {
 }
 
 function defaultInvoiceLines(activeJob: Job | null): InvoiceLine[] {
-  const savedHourlyRate = readPrimaryHourlyRate(65);
   return [
-    { id: "labor", description: "Labor", qty: activeJob?.durationHours ?? 8, rate: activeJob ? Math.max(savedHourlyRate, Math.round(activeJob.pay / Math.max(1, activeJob.durationHours) * 0.78)) : savedHourlyRate, kind: "labor" },
-    { id: "materials", description: "Materials", qty: 1, rate: activeJob ? Math.max(50, Math.round(activeJob.pay * 0.2)) : 250, kind: "material" },
+    {
+      id: crypto.randomUUID(),
+      description: activeJob?.title?.trim() || "Work completed",
+      qty: 1,
+      rate: 0,
+      kind: "other",
+    },
   ];
 }
 
@@ -216,13 +260,16 @@ export function InvoiceDraftTool({
   activeWorkId?: string | null;
   initialRecord?: ServerToolRecord | null;
 }) {
-  const recordLocalId = initialRecord?.localId ?? `invoice:${toolContextStorageId(workContext)}`;
   const [invoicePrefs] = useState(readInvoicePrefs);
   const [initialDraft] = useState(() => ({
     ...readInvoiceDraft(workContext),
     ...invoiceDraftFromRecord(initialRecord),
   }));
-  const [invoiceNumber, setInvoiceNumber] = useState(estimateDraft?.invoiceNumber ?? initialDraft.invoiceNumber ?? (activeJob ? `RIVT-${activeJob.id}` : `RIVT-${crypto.randomUUID().slice(0, 8).toUpperCase()}`));
+  const [recordLocalId, setRecordLocalId] = useState(initialRecord?.localId ?? initialDraft.localId ?? `invoice:${toolContextStorageId(workContext)}`);
+  const [invoiceNumber, setInvoiceNumber] = useState(estimateDraft?.invoiceNumber ?? initialDraft.invoiceNumber ?? newInvoiceNumber());
+  const [issueDate, setIssueDate] = useState(initialDraft.issueDate ?? today());
+  const [dueDate, setDueDate] = useState(initialDraft.dueDate ?? "");
+  const [customerNote, setCustomerNote] = useState(initialDraft.customerNote ?? "");
   const initialProjectInvoiceNumber = useRef(estimateDraft?.invoiceNumber ?? (activeJob ? `RIVT-${activeJob.id}` : "RIVT-DRAFT"));
   const [billTo, setBillTo] = useState(
     estimateDraft?.billTo
@@ -239,8 +286,8 @@ export function InvoiceDraftTool({
   const [paymentChoice, setPaymentChoice] = useState<"bank" | "outside">(
     paymentChoiceFromMethod(initialPaymentMethod),
   );
-  const [recipientEmail, setRecipientEmail] = useState(initialDraft.recipientEmail ?? invoicePrefs.recipientEmail);
-  const [recipientPhone, setRecipientPhone] = useState(initialDraft.recipientPhone ?? invoicePrefs.recipientPhone);
+  const [recipientEmail, setRecipientEmail] = useState(estimateDraft?.recipientEmail ?? initialDraft.recipientEmail ?? "");
+  const [recipientPhone, setRecipientPhone] = useState(initialDraft.recipientPhone ?? "");
   const [taxPct, setTaxPct] = useState(initialDraft.taxPct ?? invoicePrefs.taxPct);
   const [templates, setTemplates] = useState<InvoiceTemplate[]>(readInvoiceTemplates);
   const [syncMessage, setSyncMessage] = useState("Saved on this device.");
@@ -263,8 +310,15 @@ export function InvoiceDraftTool({
   const [connectBusy, setConnectBusy] = useState(false);
   const [invoiceEmailBusy, setInvoiceEmailBusy] = useState(false);
   const [paymentAmount, setPaymentAmount] = useState("");
-  const [paymentMethodDraft, setPaymentMethodDraft] = useState("Direct payment");
+  const [paymentMethodDraft, setPaymentMethodDraft] = useState("");
   const [paymentNote, setPaymentNote] = useState("");
+  const [delivery, setDelivery] = useState<DocumentDelivery | null>(deliveryFromRecord(initialRecord));
+  const [lastSentFingerprint, setLastSentFingerprint] = useState(() => {
+    const value = deliveryFromRecord(initialRecord)?.documentFingerprint
+      ?? (initialRecord?.status === "sent" ? initialRecord?.payload?.documentFingerprint : "");
+    return typeof value === "string" ? value : "";
+  });
+  const [validationMessage, setValidationMessage] = useState("");
   const [step, setStep] = useState<"items" | "customer" | "review">("items");
 
   const subtotalCents = lines.reduce((sum, line) => sum + lineTotalCents(line), 0);
@@ -284,6 +338,27 @@ export function InvoiceDraftTool({
   const customerPaymentMethod = paymentChoice === "bank"
     ? bankPaymentMethod
     : paymentMethod.trim();
+  const documentFingerprint = JSON.stringify({
+    invoiceNumber: invoiceNumber.trim(),
+    issueDate,
+    dueDate,
+    billTo: billTo.trim(),
+    payTo: payTo.trim(),
+    terms: terms.trim(),
+    paymentMethod: customerPaymentMethod,
+    recipientEmail: recipientEmail.trim().toLowerCase(),
+    taxPct,
+    customerNote: customerNote.trim(),
+    lines: lines.map((line) => ({
+      description: line.description.trim(),
+      qty: numericValue(line.qty),
+      rateCents: toCents(numericValue(line.rate)),
+      kind: line.kind ?? "other",
+    })),
+  });
+  const hasUnsentChanges = delivery?.status === "sent"
+    && Boolean(lastSentFingerprint)
+    && lastSentFingerprint !== documentFingerprint;
   const lineSignals = lines.map((line) => {
     const isHourlyLabor = line.kind === "labor";
     return {
@@ -301,7 +376,9 @@ export function InvoiceDraftTool({
     lineSignals.find(({ signal }) => signal)?.signal;
 
   const invoiceText = useMemo(() => [
-    `RIVT invoice draft ${invoiceNumber}`,
+    `RIVT invoice ${invoiceNumber}`,
+    `Invoice date: ${issueDate}`,
+    dueDate ? `Due date: ${dueDate}` : "",
     `Work: ${toolContextLabel(workContext)}`,
     `Bill to: ${billTo || "Not entered"}`,
     `Pay to: ${payTo || "Not entered"}`,
@@ -313,11 +390,12 @@ export function InvoiceDraftTool({
     `Total due: ${currency(total)}`,
     `Terms: ${terms}`,
     `Payment method: ${customerPaymentMethod || "Not entered"}`,
+    customerNote.trim() ? `Note: ${customerNote.trim()}` : "",
     bankPaymentUrl ? `Pay securely from a US bank account: ${bankPaymentUrl}` : "",
     paymentChoice === "bank"
       ? "Bank payment is handled by Stripe for the sender. RIVT does not hold job funds."
       : "Payment is arranged directly with the sender using the instructions above.",
-  ].filter(Boolean).join("\n"), [bankPaymentUrl, billTo, customerPaymentMethod, invoiceNumber, lines, payTo, paymentChoice, subtotal, tax, terms, total, workContext]);
+  ].filter(Boolean).join("\n"), [bankPaymentUrl, billTo, customerNote, customerPaymentMethod, dueDate, invoiceNumber, issueDate, lines, payTo, paymentChoice, subtotal, tax, terms, total, workContext]);
   const smsHref = `sms:${encodeURIComponent(recipientPhone)}?body=${encodeURIComponent(
     `RIVT invoice ${invoiceNumber}: ${currency(total)} due. ${terms}. ${customerPaymentMethod || "Contact the sender for payment instructions"}.${bankPaymentUrl ? ` Pay: ${bankPaymentUrl}` : ""}`,
   )}`;
@@ -360,28 +438,57 @@ export function InvoiceDraftTool({
   }, [activeWorkId, recordLocalId]);
 
   useEffect(() => {
+    let cancelled = false;
+    void fetchToolRecords("invoice_draft").then((records) => {
+      if (cancelled) return;
+      const record = records?.find((candidate) => candidate.localId === recordLocalId) ?? null;
+      const recordDelivery = deliveryFromRecord(record);
+      setDelivery(recordDelivery);
+      const fingerprint = recordDelivery?.documentFingerprint
+        ?? (record?.status === "sent" && typeof record?.payload?.documentFingerprint === "string"
+          ? record.payload.documentFingerprint
+          : "");
+      setLastSentFingerprint(fingerprint);
+    });
+    return () => { cancelled = true; };
+  }, [recordLocalId]);
+
+  useEffect(() => {
     try {
       localStorage.setItem(invoicePrefsStorageKey, JSON.stringify({
         payTo,
         terms,
         paymentMethod,
-        recipientEmail,
-        recipientPhone,
         taxPct,
       }));
     } catch {
       // Invoice defaults are a convenience only; templates and manual entry still work.
     }
-  }, [paymentMethod, payTo, recipientEmail, recipientPhone, taxPct, terms]);
+  }, [paymentMethod, payTo, taxPct, terms]);
 
   useEffect(() => {
-    const snapshot: InvoiceDraftSnapshot = { invoiceNumber, billTo, payTo, terms, paymentMethod, recipientEmail, recipientPhone, taxPct, templateName, lines };
+    const snapshot: InvoiceDraftSnapshot = {
+      localId: recordLocalId,
+      invoiceNumber,
+      issueDate,
+      dueDate,
+      customerNote,
+      billTo,
+      payTo,
+      terms,
+      paymentMethod,
+      recipientEmail,
+      recipientPhone,
+      taxPct,
+      templateName,
+      lines,
+    };
     try {
       localStorage.setItem(invoiceDraftStorageKey(workContext), JSON.stringify(snapshot));
     } catch {
       // The in-memory invoice remains usable when device storage is unavailable.
     }
-  }, [billTo, invoiceNumber, lines, paymentMethod, payTo, recipientEmail, recipientPhone, taxPct, templateName, terms, workContext]);
+  }, [billTo, customerNote, dueDate, invoiceNumber, issueDate, lines, paymentMethod, payTo, recipientEmail, recipientPhone, recordLocalId, taxPct, templateName, terms, workContext]);
 
   useEffect(() => {
     let cancelled = false;
@@ -452,13 +559,13 @@ export function InvoiceDraftTool({
       id: crypto.randomUUID(),
       name: cleanName,
       savedAt: new Date().toISOString(),
-      invoiceNumber,
-      billTo,
+      invoiceNumber: "",
+      billTo: "",
       payTo,
       terms,
       paymentMethod,
-      recipientEmail,
-      recipientPhone,
+      recipientEmail: "",
+      recipientPhone: "",
       taxPct,
       lines: lines.map((line) => ({ ...line, id: crypto.randomUUID() })),
     };
@@ -467,18 +574,14 @@ export function InvoiceDraftTool({
 
   function loadTemplate(template: InvoiceTemplate) {
     setTemplateName(template.name);
-    setInvoiceNumber(template.invoiceNumber);
-    setBillTo(template.billTo);
-    setPayTo(template.payTo);
-    setTerms(template.terms);
+    if (template.payTo.trim()) setPayTo(template.payTo);
+    if (template.terms.trim()) setTerms(template.terms);
     const nextPaymentMethod = normalizePaymentMethod(template.paymentMethod);
     setPaymentMethod(nextPaymentMethod);
     setPaymentChoice(paymentChoiceFromMethod(nextPaymentMethod));
-    setRecipientEmail(template.recipientEmail);
-    setRecipientPhone(template.recipientPhone);
     setTaxPct(template.taxPct);
     setLines(template.lines.length ? template.lines.map((line) => ({ ...line, id: crypto.randomUUID() })) : [{ id: crypto.randomUUID(), description: "", qty: 1, rate: 0, kind: "other" }]);
-    setTemplateNotice(`Loaded ${template.name}.`);
+    setTemplateNotice(`Loaded ${template.name}. Customer and invoice identity were kept separate.`);
   }
 
   function deleteTemplate(templateId: string) {
@@ -490,24 +593,34 @@ export function InvoiceDraftTool({
 
   function startBlankInvoice() {
     const latestPrefs = readInvoicePrefs();
-    setInvoiceNumber(`RIVT-${crypto.randomUUID().slice(0, 8).toUpperCase()}`);
+    setRecordLocalId(newInvoiceLocalId(workContext));
+    setInvoiceNumber(newInvoiceNumber());
+    setIssueDate(today());
+    setDueDate("");
+    setCustomerNote("");
     setBillTo("");
     setPayTo(latestPrefs.payTo);
     setTerms(latestPrefs.terms);
     const nextPaymentMethod = normalizePaymentMethod(latestPrefs.paymentMethod);
     setPaymentMethod(nextPaymentMethod);
     setPaymentChoice(paymentChoiceFromMethod(nextPaymentMethod));
-    setRecipientEmail(latestPrefs.recipientEmail);
-    setRecipientPhone(latestPrefs.recipientPhone);
+    setRecipientEmail("");
+    setRecipientPhone("");
     setTaxPct(latestPrefs.taxPct);
     setTemplateName("Standard invoice");
-    setLines(defaultInvoiceLines(null));
+    setLines(defaultInvoiceLines(activeJob));
     setConversionNotice("");
     setTemplateNotice("Blank invoice started.");
     setProjectInvoice(null);
     setToolPaymentRequest(null);
     setProjectInvoiceNotice("");
     setProjectInvoiceError("");
+    setDelivery(null);
+    setLastSentFingerprint("");
+    setValidationMessage("");
+    setDraftSaveState("idle");
+    setDraftSaveMessage("New invoice started. Enter the real amount to bill.");
+    setStep("items");
   }
 
   function projectInvoiceInput(methodOverride = customerPaymentMethod) {
@@ -534,7 +647,11 @@ export function InvoiceDraftTool({
 
   function invoiceToolRecordInput(methodOverride = customerPaymentMethod): ToolRecordInput {
     const snapshot: InvoiceDraftSnapshot = {
+      localId: recordLocalId,
       invoiceNumber,
+      issueDate,
+      dueDate,
+      customerNote,
       billTo,
       payTo,
       terms,
@@ -549,11 +666,13 @@ export function InvoiceDraftTool({
       recordType: "invoice_draft",
       localId: recordLocalId,
       title: `${invoiceNumber || "RIVT-DRAFT"} - ${toolContextLabel(workContext)}`,
-      status: "draft",
-      recordDate: new Date().toISOString().slice(0, 10),
+      status: delivery?.status === "sent" && !hasUnsentChanges ? "sent" : "draft",
+      recordDate: issueDate,
       amountCents: totalCents,
       payload: {
         ...snapshot,
+        documentFingerprint,
+        delivery: delivery ?? undefined,
         projectInvoiceId: projectInvoice?.id ?? null,
         recipientName: billTo.trim(),
         workLabel: toolContextLabel(workContext),
@@ -629,6 +748,10 @@ export function InvoiceDraftTool({
       setProjectInvoiceError("Enter the amount received before recording an external payment.");
       return;
     }
+    if (!paymentMethodDraft.trim()) {
+      setProjectInvoiceError("Enter how the external payment was received.");
+      return;
+    }
     setProjectInvoiceBusy(true);
     setProjectInvoiceError("");
     setProjectInvoiceNotice("");
@@ -636,7 +759,7 @@ export function InvoiceDraftTool({
       const updated = await recordProjectInvoicePayment(projectInvoice.id, {
         amountCents,
         paymentDate: new Date().toISOString().slice(0, 10),
-        method: paymentMethodDraft.trim() || "Direct payment",
+        method: paymentMethodDraft.trim(),
         note: paymentNote.trim(),
       });
       setProjectInvoice(updated);
@@ -777,10 +900,32 @@ export function InvoiceDraftTool({
     window.print();
   }
 
+  function validateCustomerStep(requireEmail = false) {
+    if (!invoiceNumber.trim()) return "Add an invoice number.";
+    if (!issueDate) return "Choose the invoice date.";
+    if (dueDate && dueDate < issueDate) return "Due date cannot be before the invoice date.";
+    if (!billTo.trim()) return "Add the customer or company being billed.";
+    if (!payTo.trim()) return "Add the person or company receiving payment.";
+    if (!terms.trim()) return "Add payment terms.";
+    if (requireEmail && !isValidEmail(recipientEmail)) return "Add a valid recipient email.";
+    if (recipientEmail.trim() && !isValidEmail(recipientEmail)) return "Check the recipient email or leave it blank for print-only review.";
+    return "";
+  }
+
+  function openInvoiceReview() {
+    const message = validateCustomerStep();
+    setValidationMessage(message);
+    if (message) return;
+    setStep("review");
+  }
+
   async function emailInvoice() {
-    if (!recipientEmail.trim()) {
+    const customerError = validateCustomerStep(true);
+    if (customerError) {
       setStep("customer");
-      setDraftSaveMessage("Add a customer email before sending.");
+      setValidationMessage(customerError);
+      setDraftSaveMessage(customerError);
+      setDraftSaveState("error");
       return;
     }
     if (!totalCents) {
@@ -789,8 +934,9 @@ export function InvoiceDraftTool({
       return;
     }
     if (paymentChoice === "outside" && !paymentMethod.trim()) {
-      setStep("customer");
-      setDraftSaveMessage("Add clear payment instructions so the customer knows how and where to pay.");
+      setStep("review");
+      setProjectInvoiceError("Add clear payment instructions so the customer knows how and where to pay.");
+      setDraftSaveMessage("Payment instructions are still required.");
       setDraftSaveState("error");
       return;
     }
@@ -821,13 +967,10 @@ export function InvoiceDraftTool({
     }
     try {
       const sent = await sendInvoiceByLocalId(record.localId);
-      const delivery = sent.payload.delivery;
-      const recipient = delivery
-        && typeof delivery === "object"
-        && "recipientEmail" in delivery
-        && typeof delivery.recipientEmail === "string"
-        ? delivery.recipientEmail
-        : recipientEmail.trim();
+      const sentDelivery = deliveryFromRecord(sent);
+      const recipient = sentDelivery?.recipientEmail ?? recipientEmail.trim();
+      setDelivery(sentDelivery);
+      setLastSentFingerprint(documentFingerprint);
       setDraftSaveMessage(`Invoice emailed to ${recipient}.`);
       setDraftSaveState("saved");
     } catch (error) {
@@ -874,6 +1017,7 @@ export function InvoiceDraftTool({
                 onClick={() => {
                   setPaymentChoice("bank");
                   setPaymentMethod(bankPaymentMethod);
+                  setProjectInvoiceError("");
                 }}
               >
                 <Banknote size={20} aria-hidden="true" />
@@ -890,6 +1034,7 @@ export function InvoiceDraftTool({
                 onClick={() => {
                   setPaymentChoice("outside");
                   if (paymentChoice === "bank" || paymentMethod === bankPaymentMethod) setPaymentMethod("");
+                  setProjectInvoiceError("");
                 }}
               >
                 <MessageSquare size={20} aria-hidden="true" />
@@ -947,7 +1092,14 @@ export function InvoiceDraftTool({
                 Payment instructions
                 <textarea
                   value={paymentMethod}
-                  onChange={(event) => setPaymentMethod(event.target.value)}
+                  onChange={(event) => {
+                    setPaymentMethod(event.target.value);
+                    setProjectInvoiceError("");
+                    if (draftSaveState === "error") {
+                      setDraftSaveState("idle");
+                      setDraftSaveMessage("Payment instructions updated. Review before sending.");
+                    }
+                  }}
                   placeholder="Example: Pay by check to Punchlist People, 6563 Ector Place, Jacksonville, FL 32211."
                   rows={3}
                 />
@@ -1046,7 +1198,7 @@ export function InvoiceDraftTool({
                   <summary>Record payment received outside RIVT</summary>
                   <div className="v2-invoice-payment-record">
                     <label>Amount received<input inputMode="decimal" value={paymentAmount} onChange={(event) => setPaymentAmount(event.target.value)} aria-label="External payment amount" /></label>
-                    <label>Method<input value={paymentMethodDraft} onChange={(event) => setPaymentMethodDraft(event.target.value)} /></label>
+                    <label>Method<input value={paymentMethodDraft} onChange={(event) => setPaymentMethodDraft(event.target.value)} placeholder="Check, cash, bank transfer…" /></label>
                     <label>Note<input value={paymentNote} onChange={(event) => setPaymentNote(event.target.value)} placeholder="Optional reference" /></label>
                     <button type="button" onClick={() => void recordExternalPayment()} disabled={projectInvoiceBusy || projectInvoice.status === "void" || projectInvoice.balanceCents <= 0}>Record external payment</button>
                   </div>
@@ -1058,7 +1210,7 @@ export function InvoiceDraftTool({
                 <summary>Record payment received outside RIVT</summary>
                 <div className="v2-invoice-payment-record">
                   <label>Amount received<input inputMode="decimal" value={paymentAmount} onChange={(event) => setPaymentAmount(event.target.value)} aria-label="External payment amount" /></label>
-                  <label>Method<input value={paymentMethodDraft} onChange={(event) => setPaymentMethodDraft(event.target.value)} /></label>
+                  <label>Method<input value={paymentMethodDraft} onChange={(event) => setPaymentMethodDraft(event.target.value)} placeholder="Check, cash, bank transfer…" /></label>
                   <label>Note<input value={paymentNote} onChange={(event) => setPaymentNote(event.target.value)} placeholder="Optional reference" /></label>
                   <button type="button" onClick={() => void recordExternalPayment()} disabled={projectInvoiceBusy || projectInvoice.status === "void" || projectInvoice.balanceCents <= 0}>Record external payment</button>
                 </div>
@@ -1086,6 +1238,9 @@ export function InvoiceDraftTool({
           <button type="button" className="v2-primary-button" onClick={saveTemplate}><FileText size={14} />Save template</button>
           <small>{syncMessage}</small>
         </section>
+        <small className="v2-invoice-template-boundary">
+          Templates save line items, terms, tax, and payment setup—not customer identity or invoice numbers.
+        </small>
         {templateNotice ? <p className="v2-record-notice" role="status">{templateNotice}</p> : null}
         {templates.length ? (
             <div className="v2-invoice-template-list">
@@ -1109,24 +1264,18 @@ export function InvoiceDraftTool({
           </header>
           <div className="v2-tool-input-grid two v2-invoice-detail-grid">
             <label>Invoice #<input value={invoiceNumber} onChange={(event) => setInvoiceNumber(event.target.value)} /></label>
+            <label>Invoice date<input type="date" value={issueDate} onChange={(event) => setIssueDate(event.target.value)} /></label>
+            <label>Due date<input type="date" value={dueDate} onChange={(event) => setDueDate(event.target.value)} /></label>
             <label>Terms<input value={terms} onChange={(event) => setTerms(event.target.value)} /></label>
             <label>Bill to<input value={billTo} onChange={(event) => setBillTo(event.target.value)} placeholder="Contractor or company" /></label>
             <label>Pay to<input value={payTo} onChange={(event) => setPayTo(event.target.value)} placeholder="Your company or name" /></label>
-            <label>
-              Payment instructions
-              <input
-                value={paymentChoice === "bank" ? bankPaymentMethod : paymentMethod}
-                onChange={(event) => {
-                  setPaymentChoice("outside");
-                  setPaymentMethod(event.target.value);
-                }}
-                placeholder="Check payable to…, cash on completion, or transfer instructions"
-              />
-            </label>
             <label>Tax %<input type="number" min="0" value={taxPct} onChange={(event) => setTaxPct(Math.max(0, Number(event.target.value) || 0))} /></label>
             <label>Recipient email<input type="email" value={recipientEmail} onChange={(event) => setRecipientEmail(event.target.value)} placeholder="name@company.com" /></label>
             <label>Recipient phone<input type="tel" value={recipientPhone} onChange={(event) => setRecipientPhone(event.target.value)} placeholder="+1 904 555 0123" /></label>
+            <label className="is-wide">Customer note<textarea value={customerNote} onChange={(event) => setCustomerNote(event.target.value)} placeholder="Optional note, reference, or thank-you." rows={3} /></label>
           </div>
+          <p className="v2-tool-note">Choose bank payment or enter other payment instructions on the final review.</p>
+          {validationMessage ? <p className="v2-record-error" role="alert">{validationMessage}</p> : null}
         </section> : null}
         {step === "items" ? <div className="v2-invoice-lines" aria-label="Invoice line items">
           <div className="v2-invoice-lines-header">
@@ -1138,10 +1287,22 @@ export function InvoiceDraftTool({
             return (
               <div className="v2-invoice-line-group" key={line.id}>
                 <div className="v2-invoice-line">
-                  <input aria-label="Line description" value={line.description} placeholder="Description" onChange={(event) => updateLine(line.id, "description", event.target.value)} />
-                  <input type="number" min="0" step="0.5" value={line.qty} aria-label={`${line.description || "Line"} quantity`} onChange={(event) => updateLine(line.id, "qty", Number(event.target.value) || 0)} />
-                  <input type="number" min="0" value={line.rate} aria-label={`${line.description || "Line"} rate`} onChange={(event) => updateLine(line.id, "rate", Number(event.target.value) || 0)} />
-                  <strong>{currency(centsToDollars(lineTotalCents(line)))}</strong>
+                  <label>
+                    <span>Description</span>
+                    <input aria-label="Line description" value={line.description} placeholder="Work or material" onChange={(event) => updateLine(line.id, "description", event.target.value)} />
+                  </label>
+                  <label>
+                    <span>Quantity</span>
+                    <input type="number" min="0" step="0.5" value={line.qty} aria-label={`${line.description || "Line"} quantity`} onChange={(event) => updateLine(line.id, "qty", Number(event.target.value) || 0)} />
+                  </label>
+                  <label>
+                    <span>Rate</span>
+                    <input type="number" min="0" step="0.01" value={line.rate} aria-label={`${line.description || "Line"} rate`} onChange={(event) => updateLine(line.id, "rate", Number(event.target.value) || 0)} />
+                  </label>
+                  <div className="v2-invoice-line-total">
+                    <span>Total</span>
+                    <strong>{currency(centsToDollars(lineTotalCents(line)))}</strong>
+                  </div>
                   <button type="button" aria-label={`Remove ${line.description || "line item"}`} onClick={() => removeLine(line.id)}><Trash2 size={14} /></button>
                 </div>
                 {signal ? (
@@ -1158,6 +1319,15 @@ export function InvoiceDraftTool({
 
       {step === "review" ? <aside className="v2-invoice-side-stack">
         <Panel className="v2-tool-panel v2-tool-summary-panel v2-invoice-summary-panel" eyebrow="Total due" title={currency(total)}>
+          {delivery?.status === "sent" && hasUnsentChanges ? (
+            <p className="v2-estimate-delivery-status is-changed">Changes made after the last email have not been sent.</p>
+          ) : null}
+          {delivery?.status === "sent" && !hasUnsentChanges ? (
+            <p className="v2-estimate-delivery-status is-sent">Emailed to {delivery.recipientEmail}{delivery.sentAt ? ` on ${new Date(delivery.sentAt).toLocaleString()}` : ""}.</p>
+          ) : null}
+          {delivery?.status === "failed" ? (
+            <p className="v2-estimate-delivery-status is-failed">The last email did not complete. Check the customer email and try again.</p>
+          ) : null}
           {primarySignal ? (
             <section className={`v2-price-signal is-${primarySignal.tone}`} aria-label="Invoice pricing signal">
               <div>
@@ -1180,6 +1350,9 @@ export function InvoiceDraftTool({
               ? "Email includes the secure customer pay button and records delivery."
               : "Email includes the payment instructions you entered and records delivery."}
           </p>
+          {!isValidEmail(recipientEmail) ? (
+            <p className="v2-tool-note">Add a valid recipient email in Customer before delivery. Copy and print remain available.</p>
+          ) : null}
           <div className="v2-invoice-delivery" aria-label="Invoice draft delivery">
             <a href={recipientPhone ? smsHref : undefined} aria-disabled={!recipientPhone} onClick={(event) => {
               if (!recipientPhone) {
@@ -1200,7 +1373,7 @@ export function InvoiceDraftTool({
               <header>
                 <div>
                   <strong>RIVT</strong>
-                  <span>Invoice draft</span>
+                  <span>{delivery?.status === "sent" && !hasUnsentChanges ? "Invoice sent" : hasUnsentChanges ? "Invoice update draft" : "Invoice draft"}</span>
                 </div>
                 <aside>
                   <span>Invoice</span>
@@ -1210,6 +1383,8 @@ export function InvoiceDraftTool({
               <section className="v2-invoice-preview-meta">
                 <div><span>Bill to</span><strong>{billTo || "Contractor / company"}</strong></div>
                 <div><span>Pay to</span><strong>{payTo || "Your company / name"}</strong></div>
+                <div><span>Invoice date</span><strong>{issueDate}</strong></div>
+                {dueDate ? <div><span>Due date</span><strong>{dueDate}</strong></div> : null}
                 <div><span>Work</span><strong>{toolContextLabel(workContext)}</strong></div>
                 <div><span>Terms</span><strong>{terms}</strong></div>
               </section>
@@ -1234,6 +1409,7 @@ export function InvoiceDraftTool({
                 <div><span>Total due</span><strong>{currency(total)}</strong></div>
               </section>
               <footer>
+                {customerNote.trim() ? <p>{customerNote.trim()}</p> : null}
                 {paymentChoice === "bank" ? (
                   <>
                     <span>Secure bank payment</span>
@@ -1256,6 +1432,7 @@ export function InvoiceDraftTool({
           <div className="v2-invoice-preview-actions" aria-label="Invoice preview actions">
             <button type="button" className="v2-secondary-button" onClick={() => void copyInvoice()}><Copy size={16} />Copy invoice</button>
             <button type="button" className="v2-secondary-button" onClick={printInvoice}><FileText size={16} />Print / save as PDF</button>
+            <button type="button" className="v2-secondary-button" onClick={startBlankInvoice}><Plus size={16} />New invoice</button>
           </div>
         </Panel>
       </aside> : null}
@@ -1267,8 +1444,8 @@ export function InvoiceDraftTool({
           {draftSaveState === "saving" ? "Saving" : draftSaveState === "saved" ? "Saved" : draftSaveState === "error" ? "Try again" : "Save draft"}
         </button>
         {step === "items" ? <button type="button" className="v2-primary-button" onClick={() => setStep("customer")} disabled={totalCents <= 0}><span>Customer</span><ChevronRight size={18} /></button> : null}
-        {step === "customer" ? <button type="button" className="v2-primary-button" onClick={() => setStep("review")}><span>Review</span><ChevronRight size={18} /></button> : null}
-        {step === "review" ? <button type="button" className="v2-primary-button" onClick={() => void emailInvoice()} disabled={invoiceEmailBusy || totalCents <= 0 || !recipientEmail.trim()}><Mail size={18} />{invoiceEmailBusy ? "Sending" : paymentChoice === "bank" ? "Send link" : "Email"}</button> : null}
+        {step === "customer" ? <button type="button" className="v2-primary-button" onClick={openInvoiceReview}><span>Review</span><ChevronRight size={18} /></button> : null}
+        {step === "review" ? <button type="button" className="v2-primary-button" onClick={() => void emailInvoice()} disabled={invoiceEmailBusy || totalCents <= 0 || !isValidEmail(recipientEmail)}><Mail size={18} />{invoiceEmailBusy ? "Sending" : delivery?.status === "sent" ? "Send update" : paymentChoice === "bank" ? "Send link" : "Email invoice"}</button> : null}
       </div>
     </div>
   );

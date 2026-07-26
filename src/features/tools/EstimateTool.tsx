@@ -1,11 +1,11 @@
-import { Check, ChevronLeft, ChevronRight, Copy, FileText, LoaderCircle, Mail, Save } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, Copy, FileText, LoaderCircle, Mail, Plus, Save } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Panel } from "../../components/ui";
 import { requestKey } from "../../lib/api";
 import type { Job } from "../../types";
 import { readPrimaryHourlyRate } from "../../lib/rateCard";
 import { getEstimatePriceSignal } from "./priceGuidance";
-import { centsToDollars, currency, formatQuantity, toCents } from "./money";
+import { centsToDollars, currency, toCents } from "./money";
 import { fetchToolRecords, sendEstimateByLocalId, upsertToolRecord, type ServerToolRecord } from "./tool-records-api";
 import { toolContextLabel, toolContextRecordFields, toolContextStorageId, type ToolWorkContext } from "./tool-work-context";
 
@@ -24,6 +24,7 @@ export interface EstimateInvoiceDraft {
   invoiceNumber: string;
   templateName: string;
   billTo: string;
+  recipientEmail: string;
   terms: string;
   paymentMethod: string;
   lines: EstimateInvoiceDraftLine[];
@@ -41,6 +42,7 @@ interface EstimatePrefs {
 const estimatePrefsStorageKey = "rivt.estimatePrefs.v1";
 
 interface EstimateDraftState {
+  localId?: string;
   laborHours: number;
   hourlyRate: number;
   crewSize: number;
@@ -50,6 +52,7 @@ interface EstimateDraftState {
   marginPct: number;
   contingencyPct: number;
   estimateNumber: string;
+  estimateDate: string;
   recipientName: string;
   recipientEmail: string;
   scope: string;
@@ -63,6 +66,7 @@ interface EstimateDelivery {
   attemptedAt: string;
   sentAt?: string;
   attemptCount: number;
+  documentFingerprint?: string;
 }
 
 function estimateDraftStorageKey(context: ToolWorkContext) {
@@ -94,7 +98,24 @@ function clampEstimateNumber(value: unknown, fallback: number, min = 0) {
 function futureDate(days: number) {
   const value = new Date();
   value.setDate(value.getDate() + days);
-  return value.toISOString().slice(0, 10);
+  return localDate(value);
+}
+
+function localDate(value = new Date()) {
+  const localValue = new Date(value.getTime() - value.getTimezoneOffset() * 60_000);
+  return localValue.toISOString().slice(0, 10);
+}
+
+function today() {
+  return localDate();
+}
+
+function newEstimateNumber() {
+  return `EST-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
+}
+
+function isValidEmail(value: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
 }
 
 function deliveryFromRecord(record: ServerToolRecord | null): EstimateDelivery | null {
@@ -109,12 +130,13 @@ function deliveryFromRecord(record: ServerToolRecord | null): EstimateDelivery |
     attemptedAt: candidate.attemptedAt,
     sentAt: typeof candidate.sentAt === "string" ? candidate.sentAt : undefined,
     attemptCount: typeof candidate.attemptCount === "number" && Number.isInteger(candidate.attemptCount) ? candidate.attemptCount : 1,
+    documentFingerprint: typeof candidate.documentFingerprint === "string" ? candidate.documentFingerprint : undefined,
   };
 }
 
 function readEstimatePrefs(): EstimatePrefs {
   const fallback: EstimatePrefs = {
-    hourlyRate: readPrimaryHourlyRate(65),
+    hourlyRate: readPrimaryHourlyRate(0),
     crewSize: 1,
     overheadPct: 12,
     marginPct: 18,
@@ -147,21 +169,22 @@ export function EstimateTool({
   onConvertToInvoice?: (draft: EstimateInvoiceDraft) => void;
   initialRecord?: ServerToolRecord | null;
 }) {
-  const recordLocalId = initialRecord?.localId ?? `estimate:${toolContextStorageId(workContext)}`;
   const [estimatePrefs] = useState(readEstimatePrefs);
   const [initialDraft] = useState(() => ({
     ...readEstimateDraft(workContext),
     ...estimateDraftFromRecord(initialRecord),
   }));
-  const [laborHours, setLaborHours] = useState(initialDraft.laborHours ?? activeJob?.durationHours ?? 8);
+  const [recordLocalId, setRecordLocalId] = useState(initialRecord?.localId ?? initialDraft.localId ?? `estimate:${toolContextStorageId(workContext)}`);
+  const [laborHours, setLaborHours] = useState(initialDraft.laborHours ?? activeJob?.durationHours ?? 0);
   const [hourlyRate, setHourlyRate] = useState(initialDraft.hourlyRate ?? estimatePrefs.hourlyRate);
   const [crewSize, setCrewSize] = useState(initialDraft.crewSize ?? estimatePrefs.crewSize);
-  const [materials, setMaterials] = useState(initialDraft.materials ?? (activeJob ? Math.round(activeJob.pay * 0.22) : 250));
+  const [materials, setMaterials] = useState(initialDraft.materials ?? 0);
   const [subCosts, setSubCosts] = useState(initialDraft.subCosts ?? 0);
   const [overheadPct, setOverheadPct] = useState(initialDraft.overheadPct ?? estimatePrefs.overheadPct);
   const [marginPct, setMarginPct] = useState(initialDraft.marginPct ?? estimatePrefs.marginPct);
   const [contingencyPct, setContingencyPct] = useState(initialDraft.contingencyPct ?? estimatePrefs.contingencyPct);
-  const [estimateNumber] = useState(initialDraft.estimateNumber ?? `EST-${crypto.randomUUID().slice(0, 8).toUpperCase()}`);
+  const [estimateNumber, setEstimateNumber] = useState(initialDraft.estimateNumber ?? newEstimateNumber());
+  const [estimateDate, setEstimateDate] = useState(initialDraft.estimateDate ?? today());
   const [recipientName, setRecipientName] = useState(initialDraft.recipientName ?? (workContext.kind === "standalone" ? workContext.project.clientName : activeJob?.contractor ?? ""));
   const [recipientEmail, setRecipientEmail] = useState(initialDraft.recipientEmail ?? "");
   const [scope, setScope] = useState(initialDraft.scope ?? activeJob?.title ?? (workContext.kind === "standalone" ? workContext.project.title : ""));
@@ -170,6 +193,8 @@ export function EstimateTool({
   const [saveMessage, setSaveMessage] = useState("Autosaved on this device.");
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [delivery, setDelivery] = useState<EstimateDelivery | null>(null);
+  const [lastSentFingerprint, setLastSentFingerprint] = useState("");
+  const [validationMessage, setValidationMessage] = useState("");
   const [sending, setSending] = useState(false);
   const [step, setStep] = useState<"price" | "customer" | "review">("price");
   const sendIdempotencyKeyRef = useRef<string | null>(null);
@@ -190,21 +215,30 @@ export function EstimateTool({
 
   useEffect(() => {
     const draft: EstimateDraftState = {
+      localId: recordLocalId,
       laborHours, hourlyRate, crewSize, materials, subCosts, overheadPct, marginPct, contingencyPct,
-      estimateNumber, recipientName, recipientEmail, scope, validThrough, customerNote,
+      estimateNumber, estimateDate, recipientName, recipientEmail, scope, validThrough, customerNote,
     };
     try {
       localStorage.setItem(estimateDraftStorageKey(workContext), JSON.stringify(draft));
     } catch {
       // The in-memory draft remains usable when device storage is unavailable.
     }
-  }, [contingencyPct, crewSize, customerNote, estimateNumber, hourlyRate, laborHours, marginPct, materials, overheadPct, recipientEmail, recipientName, scope, subCosts, validThrough, workContext]);
+  }, [contingencyPct, crewSize, customerNote, estimateDate, estimateNumber, hourlyRate, laborHours, marginPct, materials, overheadPct, recipientEmail, recipientName, recordLocalId, scope, subCosts, validThrough, workContext]);
 
   useEffect(() => {
     let active = true;
     void fetchToolRecords("estimate").then((records) => {
       const record = records?.find((candidate) => candidate.localId === recordLocalId) ?? null;
-      if (active) setDelivery(deliveryFromRecord(record));
+      if (active) {
+        setDelivery(deliveryFromRecord(record));
+        const recordDelivery = deliveryFromRecord(record);
+        const fingerprint = recordDelivery?.documentFingerprint
+          ?? (record?.status === "sent" && typeof record?.payload?.documentFingerprint === "string"
+            ? record.payload.documentFingerprint
+            : "");
+        setLastSentFingerprint(fingerprint);
+      }
     });
     return () => { active = false; };
   }, [recordLocalId]);
@@ -214,10 +248,12 @@ export function EstimateTool({
   const overhead = base * (overheadPct / 100);
   const margin = (base + overhead) * (marginPct / 100);
   const contingency = (base + overhead + margin) * (contingencyPct / 100);
-  const target = Math.ceil((base + overhead + margin + contingency) / 25) * 25;
+  const calculatedTotal = base + overhead + margin + contingency;
+  const target = Math.ceil(calculatedTotal / 25) * 25;
+  const roundingAdjustment = Math.max(0, target - calculatedTotal);
   const low = Math.floor((target * 0.92) / 25) * 25;
   const high = Math.ceil((target * 1.12) / 25) * 25;
-  const days = Math.max(0.5, laborHours / Math.max(1, crewSize) / 7);
+  const days = laborHours > 0 ? Math.max(0.5, laborHours / Math.max(1, crewSize) / 7) : 0;
   const marginShare = target > 0 ? Math.min(100, Math.round(((margin + contingency) / target) * 100)) : 0;
   const laborShare = target > 0 ? Math.min(100, Math.round((labor / target) * 100)) : 0;
   const priceSignal = getEstimatePriceSignal({
@@ -246,21 +282,40 @@ export function EstimateTool({
       return { description: line.description, quantity: line.quantity, totalCents };
     });
   })();
+  const documentFingerprint = JSON.stringify({
+    estimateNumber,
+    estimateDate,
+    recipientName: recipientName.trim(),
+    recipientEmail: recipientEmail.trim().toLowerCase(),
+    scope: scope.trim(),
+    validThrough,
+    customerNote: customerNote.trim(),
+    targetCents: toCents(target),
+    customerLines,
+  });
+  const hasUnsentChanges = delivery?.status === "sent"
+    && Boolean(lastSentFingerprint)
+    && lastSentFingerprint !== documentFingerprint;
 
   useEffect(() => {
     sendIdempotencyKeyRef.current = null;
-  }, [customerNote, recipientEmail, recipientName, scope, validThrough, target]);
+  }, [customerNote, estimateDate, estimateNumber, recipientEmail, recipientName, scope, validThrough, target]);
 
-  async function copySummary() {
+  async function copyCustomerEstimate() {
     const summary = [
-      `RIVT estimate - ${toolContextLabel(workContext)}`,
-      `Target range: ${currency(low)} - ${currency(high)}`,
-      `Target price: ${currency(target)}`,
-      `Labor: ${formatQuantity(laborHours)} hrs at ${currency(hourlyRate)}/hr`,
-      `Materials: ${currency(materials)}`,
-      `Sub costs: ${currency(subCosts)}`,
-      `Timeline: ${formatNumber(days, 1)} working days with ${crewSize} person${crewSize === 1 ? "" : "s"}`,
-    ].join("\n");
+      `RIVT estimate ${estimateNumber}`,
+      `Date: ${estimateDate}`,
+      `Prepared for: ${recipientName.trim() || "Customer"}`,
+      `Scope: ${scope.trim() || "Estimate scope"}`,
+      "",
+      ...customerLines.map((line) => `${line.description}: ${currency(centsToDollars(line.totalCents))}`),
+      "",
+      `Estimated total: ${currency(target)}`,
+      `Valid through: ${validThrough}`,
+      customerNote.trim() ? `Note: ${customerNote.trim()}` : "",
+      "",
+      "This is an estimate, not a payment request.",
+    ].filter(Boolean).join("\n");
     try {
       await navigator.clipboard.writeText(summary);
       setSaveMessage("Estimate copied.");
@@ -269,21 +324,69 @@ export function EstimateTool({
     }
   }
 
+  function printEstimate() {
+    setSaveMessage("Print dialog opened. Choose Save as PDF to download a copy.");
+    window.print();
+  }
+
+  function validateCustomerStep(requireEmail = false) {
+    if (!estimateNumber.trim()) return "Add an estimate number.";
+    if (!estimateDate) return "Choose the estimate date.";
+    if (!recipientName.trim()) return "Add the customer or company name.";
+    if (requireEmail && !isValidEmail(recipientEmail)) return "Add a valid customer email.";
+    if (recipientEmail.trim() && !isValidEmail(recipientEmail)) return "Check the customer email or leave it blank for print-only review.";
+    if (!scope.trim()) return "Describe the work covered by this estimate.";
+    if (!validThrough) return "Choose how long this estimate is valid.";
+    if (estimateDate && validThrough < estimateDate) return "Valid through cannot be before the estimate date.";
+    return "";
+  }
+
+  function openReview() {
+    const message = validateCustomerStep();
+    setValidationMessage(message);
+    if (message) return;
+    setStep("review");
+  }
+
+  function startNewEstimate() {
+    const nextId = `estimate:${toolContextStorageId(workContext)}:${crypto.randomUUID()}`;
+    setRecordLocalId(nextId);
+    setEstimateNumber(newEstimateNumber());
+    setEstimateDate(today());
+    setLaborHours(activeJob?.durationHours ?? 0);
+    setHourlyRate(readEstimatePrefs().hourlyRate);
+    setCrewSize(readEstimatePrefs().crewSize);
+    setMaterials(0);
+    setSubCosts(0);
+    setRecipientName(workContext.kind === "standalone" ? workContext.project.clientName : activeJob?.contractor ?? "");
+    setRecipientEmail("");
+    setScope(activeJob?.title ?? (workContext.kind === "standalone" ? workContext.project.title : ""));
+    setValidThrough(futureDate(30));
+    setCustomerNote("");
+    setDelivery(null);
+    setLastSentFingerprint("");
+    setValidationMessage("");
+    setSaveState("idle");
+    setSaveMessage("New estimate started. No price has been assumed.");
+    setStep("price");
+  }
+
   async function saveDraft(showSuccess = true) {
     setSaveState("saving");
     if (showSuccess) setSaveMessage("Saving draft...");
     const draft: EstimateDraftState = {
+      localId: recordLocalId,
       laborHours, hourlyRate, crewSize, materials, subCosts, overheadPct, marginPct, contingencyPct,
-      estimateNumber, recipientName, recipientEmail, scope, validThrough, customerNote,
+      estimateNumber, estimateDate, recipientName, recipientEmail, scope, validThrough, customerNote,
     };
     const record = await upsertToolRecord({
       recordType: "estimate",
       localId: recordLocalId,
       title: (scope.trim() || `${toolContextLabel(workContext)} estimate`).slice(0, 160),
-      status: delivery?.status === "sent" ? "sent" : "draft",
-      recordDate: new Date().toISOString().slice(0, 10),
+      status: delivery?.status === "sent" && !hasUnsentChanges ? "sent" : "draft",
+      recordDate: estimateDate,
       amountCents: toCents(target),
-      payload: { ...draft, target, low, high, customerLines, delivery: delivery ?? undefined },
+      payload: { ...draft, target, low, high, customerLines, documentFingerprint, delivery: delivery ?? undefined },
       ...toolContextRecordFields(workContext),
     });
     if (record) {
@@ -300,8 +403,12 @@ export function EstimateTool({
   }
 
   async function sendEstimateEmail() {
-    if (!recipientEmail.trim()) {
-      setSaveMessage("Add the customer email before sending.");
+    const customerError = validateCustomerStep(true);
+    if (customerError) {
+      setStep("customer");
+      setValidationMessage(customerError);
+      setSaveMessage(customerError);
+      setSaveState("error");
       return;
     }
     if (target <= 0) {
@@ -321,6 +428,7 @@ export function EstimateTool({
       const sent = await sendEstimateByLocalId(saved.localId, idempotencyKey);
       const sentDelivery = deliveryFromRecord(sent);
       setDelivery(sentDelivery);
+      setLastSentFingerprint(documentFingerprint);
       sendIdempotencyKeyRef.current = null;
       setSaveMessage(sentDelivery?.sentAt ? `Sent to ${sentDelivery.recipientEmail}.` : "Estimate sent.");
       setSaveState("saved");
@@ -379,11 +487,12 @@ export function EstimateTool({
     onConvertToInvoice?.({
       invoiceNumber: `RIVT-${Date.now().toString(36).toUpperCase()}`,
       templateName: `${title} invoice`,
-      billTo: activeJob?.contractor ?? (workContext.kind === "standalone" ? workContext.project.clientName : ""),
+      billTo: recipientName.trim() || activeJob?.contractor || (workContext.kind === "standalone" ? workContext.project.clientName : ""),
+      recipientEmail: recipientEmail.trim(),
       terms: "Due on completion",
-      paymentMethod: "Direct payment",
+      paymentMethod: "",
       lines: draftLines,
-      sourceNote: `Converted from estimate total ${currency(target)} (${currency(low)} - ${currency(high)}). Overhead, margin, and contingency are included in the line rates. Review scope, tax, and payment terms before sending.`,
+      sourceNote: `Converted from estimate total ${currency(target)} (${currency(low)} - ${currency(high)}). Overhead, profit markup, and contingency are included in the line rates. Review scope, tax, and payment terms before sending.`,
     });
   }
 
@@ -400,23 +509,25 @@ export function EstimateTool({
       <Panel className="v2-tool-panel v2-estimate-builder-panel" eyebrow={`Step ${step === "price" ? 1 : step === "customer" ? 2 : 3} of 3`} title={step === "price" ? "Price the work" : step === "customer" ? "Add the customer" : "Preview and send"}>
         {step === "price" ? <>
           <section className="v2-estimate-hero" aria-label="Estimate target">
-            <span>Recommended target</span>
+            <span>{target > 0 ? "Calculated estimate" : "Enter real job costs"}</span>
             <strong>{currency(target)}</strong>
-            <small>{currency(low)} - {currency(high)} / {formatNumber(days, 1)} working days</small>
+            <small>{target > 0
+              ? `${currency(low)} - ${currency(high)} planning range${days > 0 ? ` / ${formatNumber(days, 1)} working days` : " / add labor hours for a timeline"}`
+              : "RIVT will not assume labor or material prices."}</small>
           </section>
           <div className="v2-estimate-quick-stats" aria-label="Estimate quick stats">
             <article><span>Labor</span><strong>{currency(labor)}</strong></article>
             <article><span>Material</span><strong>{currency(materials)}</strong></article>
-            <article><span>Cushion</span><strong>{marginShare}%</strong></article>
+            <article><span>Profit + reserve</span><strong>{marginShare}%</strong></article>
           </div>
           <div className="v2-tool-input-grid v2-estimate-input-grid">
             <label>Labor hours<input type="number" min="0" step="0.5" value={laborHours} onChange={(event) => setLaborHours(Math.max(0, Number(event.target.value) || 0))} /></label>
-            <label>Hourly rate<input type="number" min="0" value={hourlyRate} onChange={(event) => setHourlyRate(Math.max(0, Number(event.target.value) || 0))} /></label>
+            <label>Hourly rate<input type="number" min="0" step="0.01" value={hourlyRate} onChange={(event) => setHourlyRate(Math.max(0, Number(event.target.value) || 0))} /></label>
             <label>Crew size<input type="number" min="1" value={crewSize} onChange={(event) => setCrewSize(Math.max(1, Number(event.target.value) || 1))} /></label>
             <label>Materials<input type="number" min="0" value={materials} onChange={(event) => setMaterials(Math.max(0, Number(event.target.value) || 0))} /></label>
             <label>Sub costs<input type="number" min="0" value={subCosts} onChange={(event) => setSubCosts(Math.max(0, Number(event.target.value) || 0))} /></label>
             <label>Overhead %<input type="number" min="0" value={overheadPct} onChange={(event) => setOverheadPct(Math.max(0, Number(event.target.value) || 0))} /></label>
-            <label>Margin %<input type="number" min="0" value={marginPct} onChange={(event) => setMarginPct(Math.max(0, Number(event.target.value) || 0))} /></label>
+            <label>Profit markup %<input type="number" min="0" value={marginPct} onChange={(event) => setMarginPct(Math.max(0, Number(event.target.value) || 0))} /></label>
             <label>Contingency %<input type="number" min="0" value={contingencyPct} onChange={(event) => setContingencyPct(Math.max(0, Number(event.target.value) || 0))} /></label>
           </div>
         </> : null}
@@ -429,11 +540,13 @@ export function EstimateTool({
           <div className="v2-tool-input-grid v2-estimate-delivery-grid">
             <label>Customer name<input value={recipientName} onChange={(event) => setRecipientName(event.target.value)} placeholder="Customer or company" /></label>
             <label>Customer email<input type="email" inputMode="email" value={recipientEmail} onChange={(event) => setRecipientEmail(event.target.value)} placeholder="name@example.com" /></label>
-            <label>Estimate number<input value={estimateNumber} readOnly aria-label="Estimate number" /></label>
+            <label>Estimate number<input value={estimateNumber} onChange={(event) => setEstimateNumber(event.target.value)} aria-label="Estimate number" /></label>
+            <label>Estimate date<input type="date" value={estimateDate} onChange={(event) => setEstimateDate(event.target.value)} /></label>
             <label>Valid through<input type="date" value={validThrough} onChange={(event) => setValidThrough(event.target.value)} /></label>
             <label className="is-wide">Scope<textarea value={scope} onChange={(event) => setScope(event.target.value)} placeholder="Describe the work covered by this estimate." rows={3} /></label>
             <label className="is-wide">Customer note<textarea value={customerNote} onChange={(event) => setCustomerNote(event.target.value)} placeholder="Optional note, exclusions, or next steps." rows={3} /></label>
           </div>
+          {validationMessage ? <p className="v2-record-error" role="alert">{validationMessage}</p> : null}
         </section> : null}
 
         {step === "review" ? <section className="v2-estimate-delivery" aria-labelledby="estimate-review-title">
@@ -442,16 +555,37 @@ export function EstimateTool({
             <strong id="estimate-review-title">{recipientEmail.trim() ? `Ready for ${recipientEmail}` : "Add an email before sending"}</strong>
             <small>RIVT emails this estimate. It does not request payment or claim online approval.</small>
           </div>
-          <article className="v2-estimate-customer-preview" aria-label="Customer estimate preview">
-            <span>Customer receives</span>
-            <strong>{scope.trim() || "Estimate scope"}</strong>
-            <div>{customerLines.map((line) => <p key={line.description}><span>{line.description}</span><b>{currency(centsToDollars(line.totalCents))}</b></p>)}</div>
-            <footer><span>Estimated total</span><strong>{currency(target)}</strong></footer>
+          <article className="v2-invoice-print-preview v2-estimate-print-preview" aria-label="Printable estimate preview">
+            <header>
+              <div><strong>RIVT</strong><span>Estimate</span></div>
+              <aside><span>Estimate</span><strong>{estimateNumber}</strong></aside>
+            </header>
+            <section className="v2-invoice-preview-meta">
+              <div><span>Prepared for</span><strong>{recipientName || "Customer"}</strong></div>
+              <div><span>Estimate date</span><strong>{estimateDate}</strong></div>
+              <div><span>Scope</span><strong>{scope.trim() || "Estimate scope"}</strong></div>
+              <div><span>Valid through</span><strong>{validThrough}</strong></div>
+            </section>
+            <table>
+              <thead><tr><th>Description</th><th>Total</th></tr></thead>
+              <tbody>{customerLines.map((line) => <tr key={line.description}><td>{line.description}</td><td>{currency(centsToDollars(line.totalCents))}</td></tr>)}</tbody>
+            </table>
+            <section className="v2-invoice-preview-totals"><div><span>Estimated total</span><strong>{currency(target)}</strong></div></section>
+            <footer>
+              {customerNote.trim() ? <p>{customerNote.trim()}</p> : null}
+              <span>Estimate only</span>
+              <p>This is not a payment request. Contact the sender to discuss changes or confirm acceptance.</p>
+            </footer>
           </article>
-          <button type="button" className="v2-secondary-button v2-tool-inline-action" onClick={() => void copySummary()}><Copy size={18} />Copy estimate</button>
-          {onConvertToInvoice ? <button type="button" className="v2-secondary-button v2-tool-inline-action" onClick={convertToInvoice} disabled={target <= 0}><FileText size={18} />Convert to invoice</button> : null}
-          {delivery?.status === "sent" ? <p className="v2-estimate-delivery-status is-sent">Sent to {delivery.recipientEmail} {delivery.sentAt ? `on ${new Date(delivery.sentAt).toLocaleString()}` : ""}. Confirm acceptance, then convert it to an invoice when the work is ready.</p> : null}
+          <div className="v2-invoice-preview-actions" aria-label="Estimate preview actions">
+            <button type="button" className="v2-secondary-button" onClick={() => void copyCustomerEstimate()}><Copy size={18} />Copy customer estimate</button>
+            <button type="button" className="v2-secondary-button" onClick={printEstimate}><FileText size={18} />Print / save as PDF</button>
+            {onConvertToInvoice ? <button type="button" className="v2-secondary-button" onClick={convertToInvoice} disabled={target <= 0}><FileText size={18} />Convert to invoice</button> : null}
+          </div>
+          {delivery?.status === "sent" && hasUnsentChanges ? <p className="v2-estimate-delivery-status is-changed">Changes made after the last email have not been sent.</p> : null}
+          {delivery?.status === "sent" && !hasUnsentChanges ? <p className="v2-estimate-delivery-status is-sent">Sent to {delivery.recipientEmail} {delivery.sentAt ? `on ${new Date(delivery.sentAt).toLocaleString()}` : ""}. Confirm acceptance, then convert it to an invoice when the work is ready.</p> : null}
           {delivery?.status === "failed" ? <p className="v2-estimate-delivery-status is-failed">The last delivery did not complete. Check the recipient email and try again.</p> : null}
+          <button type="button" className="v2-secondary-button v2-tool-inline-action" onClick={startNewEstimate}><Plus size={18} />New estimate</button>
         </section> : null}
       </Panel>
 
@@ -467,14 +601,15 @@ export function EstimateTool({
         </section>
         <div className="v2-estimate-meter" aria-label="Estimate composition">
           <div><span style={{ width: `${laborShare}%` }} /></div>
-          <small>{laborShare}% labor load - {marginShare}% margin/contingency cushion</small>
+          <small>{laborShare}% labor load - {marginShare}% profit/contingency cushion</small>
         </div>
         <div className="v2-tool-breakdown">
           <div><span>Labor</span><strong>{currency(labor)}</strong></div>
           <div><span>Materials</span><strong>{currency(materials)}</strong></div>
           <div><span>Overhead</span><strong>{currency(overhead)}</strong></div>
-          <div><span>Margin</span><strong>{currency(margin)}</strong></div>
+          <div><span>Profit markup</span><strong>{currency(margin)}</strong></div>
           <div><span>Contingency</span><strong>{currency(contingency)}</strong></div>
+          {roundingAdjustment > 0 ? <div><span>Price rounding</span><strong>{currency(roundingAdjustment)}</strong></div> : null}
         </div>
       </Panel> : null}
       <div className={`v2-tool-action-dock is-estimate is-${step}`} aria-label="Estimate actions">
@@ -485,8 +620,8 @@ export function EstimateTool({
           <span>{saveState === "saving" ? "Saving" : saveState === "saved" ? "Saved" : saveState === "error" ? "Try again" : "Save"}</span>
         </button>
         {step === "price" ? <button type="button" className="v2-primary-button" onClick={() => setStep("customer")}><span>Customer</span><ChevronRight size={18} /></button> : null}
-        {step === "customer" ? <button type="button" className="v2-primary-button" onClick={() => setStep("review")}><span>Review</span><ChevronRight size={18} /></button> : null}
-        {step === "review" ? <button type="button" className="v2-primary-button" onClick={() => void sendEstimateEmail()} disabled={sending || target <= 0 || !recipientEmail.trim()}><Mail size={18} /><span>{sending ? "Sending" : delivery?.status === "sent" ? "Send again" : "Send email"}</span></button> : null}
+        {step === "customer" ? <button type="button" className="v2-primary-button" onClick={openReview}><span>Review</span><ChevronRight size={18} /></button> : null}
+        {step === "review" ? <button type="button" className="v2-primary-button" onClick={() => void sendEstimateEmail()} disabled={sending || target <= 0 || !isValidEmail(recipientEmail)}><Mail size={18} /><span>{sending ? "Sending" : delivery?.status === "sent" ? "Send update" : "Send email"}</span></button> : null}
       </div>
     </div>
   );

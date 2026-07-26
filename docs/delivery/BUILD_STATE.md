@@ -2,10 +2,57 @@
 
 Last updated: 2026-07-26 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Invoice payment clarity and Quick use ACH support are deployed and exact-source verified.
-Active packet: `docs/delivery/packets/70_STRIPE_CONNECT_ACH_INVOICES.md` (payment-clarity extension)
-Repository branch: `master` (source branch `codex/invoice-payment-clarity`)
+Current phase: Estimate and Invoice document-integrity polish is locally verified and awaiting review; production remains on the prior invoice-payment release.
+Active packet: `docs/delivery/packets/70_STRIPE_CONNECT_ACH_INVOICES.md` (estimate/invoice document-integrity extension)
+Repository branch: `codex/estimate-invoice-final-polish`
 Production feature release commit: `03c4336142bab09e12d649ffdf0bc0364716edb6`
+
+## Estimate + Invoice Document Integrity (Locally Verified; Review Pending)
+
+- New estimates and invoices now begin with zero-valued costs. RIVT no
+  longer derives a billable amount from job pay, assumed labor hours,
+  presumed materials, or a fallback hourly rate. Users must enter the real
+  costs or prices before the documents show money due.
+- Estimate math now says `Profit markup` rather than calling markup a
+  margin, labels its heuristic range as a planning range, and discloses the
+  final price-rounding adjustment in the internal breakdown. Estimate date,
+  validity, scope, customer identity, and all line totals are validated and
+  carried consistently through the editor, customer-facing preview, copied
+  summary, print/PDF output, conversion, and email.
+- Estimate review is now a complete customer document instead of an internal
+  calculation recap. Internal cost and markup inputs remain out of the
+  customer copy. The print surface uses shared document tokens and remains a
+  readable paper document in both app themes.
+- Invoice review now carries explicit invoice and due dates, customer note,
+  exact payee and recipient identity, visibly labeled description/quantity/
+  rate/total fields, decimal currency, and one deliberate payment path. The
+  default outside-payment method is blank and must be stated by the sender
+  rather than silently falling back to `Direct payment`.
+- Invoice templates retain reusable business content only. Loading a
+  template cannot replace the current customer, recipient email, payee, or
+  invoice number with identity from an older document. Customer email and
+  phone are no longer stored as global invoice preferences, and `New
+  invoice` clears the prior customer identity.
+- `New estimate` and `New invoice` create distinct persisted document IDs,
+  so starting another document no longer overwrites the previous local
+  draft. Existing legacy draft IDs remain readable.
+- Sent delivery state is bound to a document fingerprint on both client and
+  server. Editing a sent estimate or invoice now presents an unsent-change
+  warning and returns the saved record to draft instead of implying that the
+  customer received the edit.
+- Rendered Tools QA passed at desktop, 390px mobile, and compact-phone
+  layouts. The customer documents have no horizontal overflow, preserve
+  usable mobile actions, and use accessible real text for the template data
+  boundary rather than generated CSS copy.
+- Verification passed: production build, application lint, security lint,
+  all 86 unit/frontend tests, all 19 serial database integration tests
+  (including customer email/fingerprint assertions), fail-closed
+  authentication and jobs/discovery E2E at desktop and mobile, rendered
+  Tools QA, diff check, and `npm audit --omit=dev` with zero known
+  vulnerabilities.
+- No schema, migration, dependency, authorization, Stripe configuration, or
+  production-data change is included. This branch is not merged or deployed;
+  production remains on `03c4336142bab09e12d649ffdf0bc0364716edb6`.
 
 ## Invoice Payment Clarity + Quick Use ACH (Deployed and Exact-Source Verified)
 

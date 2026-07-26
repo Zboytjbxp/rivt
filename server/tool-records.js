@@ -158,6 +158,7 @@ function estimateDeliverySnapshot(record, actor) {
     estimateNumber: textValue(payload.estimateNumber, `EST-${record.id.slice(0, 8).toUpperCase()}`, 80),
     title: textValue(payload.scope, record.title, 320),
     note: textValue(payload.customerNote, "", 1_200),
+    estimateDate: textValue(payload.estimateDate, record.record_date ? new Date(record.record_date).toISOString().slice(0, 10) : "", 20),
     validThrough: textValue(payload.validThrough, "", 20),
     senderName: textValue(actor.profile.displayName, "RIVT member", 160),
     totalCents,
@@ -172,6 +173,7 @@ function estimateEmailContent(snapshot) {
     `Hi ${snapshot.recipientName},`,
     "",
     `${snapshot.senderName} sent you estimate ${snapshot.estimateNumber}.`,
+    snapshot.estimateDate ? `Estimate date: ${snapshot.estimateDate}` : "",
     `Scope: ${snapshot.title}`,
     "",
     lineText,
@@ -185,7 +187,7 @@ function estimateEmailContent(snapshot) {
   const lineRows = snapshot.lines.map((line) => (
     `<tr><td style="padding:8px 0;border-bottom:1px solid #e7e7e7">${escapeHtml(line.description)}</td><td style="padding:8px 0;border-bottom:1px solid #e7e7e7;text-align:right;font-weight:700">${formatCurrency(line.totalCents)}</td></tr>`
   )).join("");
-  const html = `<!doctype html><html><body style="margin:0;background:#f5f5f2;color:#151515;font-family:Arial,sans-serif"><main style="max-width:640px;margin:0 auto;padding:28px"><section style="background:#ffffff;border:1px solid #deded8;border-radius:12px;overflow:hidden"><header style="padding:22px 24px;background:#ff4b00;color:#111111"><strong style="font-size:20px;letter-spacing:0.04em">RIVT ESTIMATE</strong><div style="margin-top:6px;font-size:14px">${escapeHtml(snapshot.estimateNumber)}</div></header><div style="padding:24px"><p style="margin:0 0 16px">Hi ${escapeHtml(snapshot.recipientName)},</p><p style="margin:0 0 16px"><strong>${escapeHtml(snapshot.senderName)}</strong> sent you an estimate for ${escapeHtml(snapshot.title)}.</p><table role="presentation" width="100%" style="border-collapse:collapse;margin:18px 0">${lineRows}<tr><td style="padding-top:16px;font-size:17px;font-weight:700">Estimated total</td><td style="padding-top:16px;text-align:right;font-size:20px;font-weight:800">${formatCurrency(snapshot.totalCents)}</td></tr></table><p style="margin:18px 0 0;color:#5f5f5a">${escapeHtml(validThrough)}</p>${snapshot.note ? `<p style="margin:12px 0 0"><strong>Note:</strong> ${escapeHtml(snapshot.note)}</p>` : ""}<p style="margin:24px 0 0;color:#5f5f5a;font-size:13px">This is an estimate, not a payment request. Contact the sender to discuss changes or confirm acceptance.</p></div></section></main></body></html>`;
+  const html = `<!doctype html><html><body style="margin:0;background:#f5f5f2;color:#151515;font-family:Arial,sans-serif"><main style="max-width:640px;margin:0 auto;padding:28px"><section style="background:#ffffff;border:1px solid #deded8;border-radius:12px;overflow:hidden"><header style="padding:22px 24px;background:#ff4b00;color:#111111"><strong style="font-size:20px;letter-spacing:0.04em">RIVT ESTIMATE</strong><div style="margin-top:6px;font-size:14px">${escapeHtml(snapshot.estimateNumber)}</div></header><div style="padding:24px"><p style="margin:0 0 16px">Hi ${escapeHtml(snapshot.recipientName)},</p><p style="margin:0 0 6px"><strong>${escapeHtml(snapshot.senderName)}</strong> sent you an estimate for ${escapeHtml(snapshot.title)}.</p>${snapshot.estimateDate ? `<p style="margin:0 0 16px;color:#5f5f5a">Estimate date: ${escapeHtml(snapshot.estimateDate)}</p>` : ""}<table role="presentation" width="100%" style="border-collapse:collapse;margin:18px 0">${lineRows}<tr><td style="padding-top:16px;font-size:17px;font-weight:700">Estimated total</td><td style="padding-top:16px;text-align:right;font-size:20px;font-weight:800">${formatCurrency(snapshot.totalCents)}</td></tr></table><p style="margin:18px 0 0;color:#5f5f5a">${escapeHtml(validThrough)}</p>${snapshot.note ? `<p style="margin:12px 0 0"><strong>Note:</strong> ${escapeHtml(snapshot.note)}</p>` : ""}<p style="margin:24px 0 0;color:#5f5f5a;font-size:13px">This is an estimate, not a payment request. Contact the sender to discuss changes or confirm acceptance.</p></div></section></main></body></html>`;
   return { text, html };
 }
 
@@ -218,6 +220,9 @@ function invoiceDeliverySnapshot(record, actor, bankPaymentUrl = null) {
     recipientEmail,
     recipientName: textValue(payload.recipientName, "there", 160),
     invoiceNumber: textValue(payload.invoiceNumber, `RIVT-${record.id.slice(0, 8).toUpperCase()}`, 80),
+    issueDate: textValue(payload.issueDate, record.record_date ? new Date(record.record_date).toISOString().slice(0, 10) : "", 20),
+    dueDate: textValue(payload.dueDate, "", 20),
+    note: textValue(payload.customerNote, "", 1_200),
     workLabel: textValue(payload.workLabel, record.title, 320),
     terms: textValue(payload.terms, "Due on receipt", 160),
     senderName: textValue(payload.payTo, textValue(actor.profile.displayName, "RIVT member", 160), 160),
@@ -238,6 +243,8 @@ function invoiceEmailContent(snapshot) {
     `Hi ${snapshot.recipientName},`,
     "",
     `${snapshot.senderName} sent you invoice ${snapshot.invoiceNumber}.`,
+    snapshot.issueDate ? `Invoice date: ${snapshot.issueDate}` : "",
+    snapshot.dueDate ? `Due date: ${snapshot.dueDate}` : "",
     `Work: ${snapshot.workLabel}`,
     "",
     lineText,
@@ -247,6 +254,7 @@ function invoiceEmailContent(snapshot) {
     `Total due: ${formatCurrency(snapshot.totalCents)}`,
     `Terms: ${snapshot.terms}`,
     `Payment method: ${snapshot.paymentMethod}`,
+    snapshot.note ? `Note: ${snapshot.note}` : "",
     snapshot.bankPaymentUrl ? `Pay securely from a US bank account: ${snapshot.bankPaymentUrl}` : "",
     "",
     snapshot.bankPaymentUrl
@@ -262,7 +270,7 @@ function invoiceEmailContent(snapshot) {
   const boundaryCopy = snapshot.bankPaymentUrl
     ? "Bank payment is handled by Stripe for the sender. RIVT does not hold or protect job funds."
     : "Payment is arranged directly with the sender. Reply to this email with any questions.";
-  const html = `<!doctype html><html><body style="margin:0;background:#f5f5f2;color:#151515;font-family:Arial,sans-serif"><main style="max-width:640px;margin:0 auto;padding:28px"><section style="background:#ffffff;border:1px solid #deded8;border-radius:12px;overflow:hidden"><header style="padding:22px 24px;background:#ff4b00;color:#111111"><strong style="font-size:20px;letter-spacing:0.04em">RIVT INVOICE</strong><div style="margin-top:6px;font-size:14px">${escapeHtml(snapshot.invoiceNumber)}</div></header><div style="padding:24px"><p style="margin:0 0 16px">Hi ${escapeHtml(snapshot.recipientName)},</p><p style="margin:0 0 16px"><strong>${escapeHtml(snapshot.senderName)}</strong> sent you an invoice for ${escapeHtml(snapshot.workLabel)}.</p><table role="presentation" width="100%" style="border-collapse:collapse;margin:18px 0">${lineRows}<tr><td style="padding-top:12px">Subtotal</td><td style="padding-top:12px;text-align:right">${formatCurrency(snapshot.subtotalCents)}</td></tr><tr><td style="padding-top:8px">Tax</td><td style="padding-top:8px;text-align:right">${formatCurrency(snapshot.taxCents)}</td></tr><tr><td style="padding-top:16px;font-size:17px;font-weight:700">Total due</td><td style="padding-top:16px;text-align:right;font-size:20px;font-weight:800">${formatCurrency(snapshot.totalCents)}</td></tr></table><p style="margin:18px 0 0"><strong>Terms:</strong> ${escapeHtml(snapshot.terms)}</p><p style="margin:8px 0 0"><strong>Payment method:</strong> ${escapeHtml(snapshot.paymentMethod)}</p>${bankPaymentHtml}<p style="margin:24px 0 0;color:#5f5f5a;font-size:13px">${escapeHtml(boundaryCopy)}</p></div></section></main></body></html>`;
+  const html = `<!doctype html><html><body style="margin:0;background:#f5f5f2;color:#151515;font-family:Arial,sans-serif"><main style="max-width:640px;margin:0 auto;padding:28px"><section style="background:#ffffff;border:1px solid #deded8;border-radius:12px;overflow:hidden"><header style="padding:22px 24px;background:#ff4b00;color:#111111"><strong style="font-size:20px;letter-spacing:0.04em">RIVT INVOICE</strong><div style="margin-top:6px;font-size:14px">${escapeHtml(snapshot.invoiceNumber)}</div></header><div style="padding:24px"><p style="margin:0 0 16px">Hi ${escapeHtml(snapshot.recipientName)},</p><p style="margin:0 0 6px"><strong>${escapeHtml(snapshot.senderName)}</strong> sent you an invoice for ${escapeHtml(snapshot.workLabel)}.</p>${snapshot.issueDate ? `<p style="margin:0;color:#5f5f5a">Invoice date: ${escapeHtml(snapshot.issueDate)}</p>` : ""}${snapshot.dueDate ? `<p style="margin:4px 0 16px;color:#5f5f5a">Due date: ${escapeHtml(snapshot.dueDate)}</p>` : ""}<table role="presentation" width="100%" style="border-collapse:collapse;margin:18px 0">${lineRows}<tr><td style="padding-top:12px">Subtotal</td><td style="padding-top:12px;text-align:right">${formatCurrency(snapshot.subtotalCents)}</td></tr><tr><td style="padding-top:8px">Tax</td><td style="padding-top:8px;text-align:right">${formatCurrency(snapshot.taxCents)}</td></tr><tr><td style="padding-top:16px;font-size:17px;font-weight:700">Total due</td><td style="padding-top:16px;text-align:right;font-size:20px;font-weight:800">${formatCurrency(snapshot.totalCents)}</td></tr></table><p style="margin:18px 0 0"><strong>Terms:</strong> ${escapeHtml(snapshot.terms)}</p><p style="margin:8px 0 0"><strong>Payment method:</strong> ${escapeHtml(snapshot.paymentMethod)}</p>${snapshot.note ? `<p style="margin:12px 0 0"><strong>Note:</strong> ${escapeHtml(snapshot.note)}</p>` : ""}${bankPaymentHtml}<p style="margin:24px 0 0;color:#5f5f5a;font-size:13px">${escapeHtml(boundaryCopy)}</p></div></section></main></body></html>`;
   return { text, html };
 }
 
@@ -469,6 +477,7 @@ export function registerToolRecordRoutes({
         provider: delivery.provider,
         providerMessageId: delivery.id,
         idempotencyKey,
+        documentFingerprint: textValue(existingPayload.documentFingerprint, "", 20_000),
       },
     };
     const updated = await database.query(
@@ -564,7 +573,7 @@ export function registerToolRecordRoutes({
     const updated = await database.query(
       `UPDATE tool_records SET status = 'sent', payload = $3::jsonb, updated_at = now()
        WHERE account_id = $1 AND id = $2 AND deleted_at IS NULL RETURNING *`,
-      [request.actor.account.id, record.id, JSON.stringify({ ...payload, delivery: { status: "sent", recipientEmail: snapshot.recipientEmail, attemptedAt, sentAt: attemptedAt, attemptCount, provider: delivery.provider, providerMessageId: delivery.id, idempotencyKey } })],
+      [request.actor.account.id, record.id, JSON.stringify({ ...payload, delivery: { status: "sent", recipientEmail: snapshot.recipientEmail, attemptedAt, sentAt: attemptedAt, attemptCount, provider: delivery.provider, providerMessageId: delivery.id, idempotencyKey, documentFingerprint: textValue(payload.documentFingerprint, "", 20_000) } })],
     );
     response.json({ data: { record: mapToolRecord(updated.rows[0]), replayed: false }, meta: { requestId: request.requestId } });
   }));
