@@ -1493,19 +1493,19 @@ textarea:focus-visible {
 
 .auth-shell .primary-action {
   min-height: 46px;
-  border: 1px solid var(--v2-accent);
-  background: linear-gradient(180deg, var(--v2-accent), var(--v2-accent-hover));
+  border: 1px solid var(--v2-accent-fill);
+  background: linear-gradient(180deg, var(--v2-accent-fill), var(--v2-accent-fill-hover));
   color: var(--v2-on-accent);
   box-shadow: 0 14px 28px rgba(255, 75, 0, 0.24);
   font-weight: var(--weight-label);
 }
 
 .auth-shell .primary-action:hover {
-  border-color: color-mix(in srgb, var(--v2-accent) 72%, var(--v2-surface) 28%);
+  border-color: color-mix(in srgb, var(--v2-accent-fill) 72%, var(--v2-surface) 28%);
   background: linear-gradient(
     180deg,
-    color-mix(in srgb, var(--v2-accent) 84%, var(--v2-surface) 16%),
-    var(--v2-accent)
+    color-mix(in srgb, var(--v2-accent-fill) 84%, var(--v2-surface) 16%),
+    var(--v2-accent-fill)
   );
 }
 
@@ -2730,15 +2730,15 @@ textarea:focus-visible {
 .primary-action {
   border: 0;
   padding: 0 18px;
-  background: var(--v2-accent);
+  background: var(--v2-accent-fill);
   color: var(--v2-on-accent);
-  box-shadow: 0 10px 24px color-mix(in srgb, var(--v2-accent) 24%, transparent);
+  box-shadow: 0 10px 24px color-mix(in srgb, var(--v2-accent-fill) 24%, transparent);
   white-space: nowrap;
 }
 
 .primary-action:hover:not(:disabled) {
-  background: var(--v2-accent-hover);
-  box-shadow: 0 12px 28px color-mix(in srgb, var(--v2-accent) 26%, transparent);
+  background: var(--v2-accent-fill-hover);
+  box-shadow: 0 12px 28px color-mix(in srgb, var(--v2-accent-fill) 26%, transparent);
 }
 
 .primary-action:active:not(:disabled),

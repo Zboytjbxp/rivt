@@ -352,7 +352,7 @@ export function TradeFeed({
 
   const completedGetStartedSteps = getStartedSteps.filter((step) => step.done).length;
   const nextGetStartedStep = getStartedSteps.find((step) => !step.done) ?? null;
-  const showGetStarted = !onboardingComplete && !getStartedDismissed && Boolean(nextGetStartedStep);
+  const showGetStarted = onboardingComplete && !getStartedDismissed && Boolean(nextGetStartedStep);
   function toggleSave(id: string) {
     setSaved((prev) => {
       const next = new Set(prev);

@@ -7,7 +7,7 @@
   padding: 0 18px;
   border: 0;
   border-radius: var(--v2-radius-md);
-  background: var(--v2-accent);
+  background: var(--v2-accent-fill);
   color: var(--v2-on-accent);
   font-family: inherit;
   font-size: var(--v2-text-sm);
@@ -20,8 +20,8 @@
 }
 
 .v2-primary-button:hover:not(:disabled) {
-  background: var(--v2-accent-hover);
-  box-shadow: 0 10px 24px color-mix(in srgb, var(--v2-accent) 20%, transparent);
+  background: var(--v2-accent-fill-hover);
+  box-shadow: 0 10px 24px color-mix(in srgb, var(--v2-accent-fill) 20%, transparent);
 }
 
 .v2-primary-button:active:not(:disabled) {
