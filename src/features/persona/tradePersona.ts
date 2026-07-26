@@ -94,5 +94,27 @@ export const TRADE_PERSONAS: Record<TradeKey, TradePersona> = {
 
 export function getPersona(trade: string | null | undefined): TradePersona | null {
   if (!trade) return null;
-  return TRADE_PERSONAS[trade as TradeKey] ?? null;
+  const normalized = trade.trim().toLowerCase();
+  const aliases: Record<string, TradeKey> = {
+    electrical: "Electrician",
+    electrician: "Electrician",
+    plumbing: "Plumber",
+    plumber: "Plumber",
+    carpentry: "Carpenter",
+    carpenter: "Carpenter",
+    hvac: "HVAC",
+    "general contractor": "General Contractor",
+    "general contracting": "General Contractor",
+    painting: "Painter",
+    painter: "Painter",
+    masonry: "Mason",
+    mason: "Mason",
+    welding: "Welder",
+    welder: "Welder",
+    roofing: "Roofer",
+    roofer: "Roofer",
+    landscaping: "Landscaper",
+    landscaper: "Landscaper",
+  };
+  return TRADE_PERSONAS[aliases[normalized] ?? trade as TradeKey] ?? null;
 }

@@ -7,7 +7,7 @@ import cors from "cors";
 import express from "express";
 import multer from "multer";
 import { createHash, randomBytes, randomUUID, scrypt as scryptCb, timingSafeEqual } from "node:crypto";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
@@ -85,6 +85,8 @@ import {
 import { createRequestLogger, logError, logInfo, logWarn } from "./logger.js";
 import { registerLegacyIntegrationRoutes } from "./legacy-integrations.js";
 import { captureException, errorMonitoringStatus } from "./monitoring.js";
+import { emitProductEvent } from "./product-analytics.js";
+import { createReferralToken, referralLinksConfigured, verifyReferralToken } from "./referrals.js";
 import { createNewsRouter } from "./news.js";
 import { registerShopTalkRoutes } from "./shop-talk.js";
 import { registerShopTalkModerationRoutes } from "./shop-talk-moderation.js";
@@ -5650,6 +5652,7 @@ const signupSchema = z.object({
   role: z.enum(["contractor", "tradesperson"]),
   displayName: z.string().trim().min(2).max(100),
   inviteCode: z.string().trim().min(5).max(256).optional(),
+  referralToken: z.string().trim().min(32).max(2048).optional(),
 });
 
 const loginSchema = z.object({
@@ -5677,6 +5680,11 @@ async function handleSignup(request, response) {
       throw new ApiError(409, "SIGNUP_NOT_AVAILABLE", "An account could not be created with those details.");
     }
     const inviteId = await consumePilotInvite(client, input);
+    const referral = input.referralToken ? verifyReferralToken(input.referralToken) : null;
+    const validReferrer = referral
+      ? await client.query("SELECT id FROM accounts WHERE id = $1 AND status = 'active' LIMIT 1", [referral.accountId])
+      : { rows: [] };
+    const referrerAccountId = validReferrer.rows[0]?.id ?? null;
     const credentials = await hashPassword(input.password);
     const userId = randomUUID();
     const result = await client.query(
@@ -5691,7 +5699,7 @@ async function handleSignup(request, response) {
     await client.query(
       `INSERT INTO audit_events (request_id, actor_account_id, action, subject_type, subject_id, metadata)
        VALUES ($1, $2::uuid, 'account.signup', 'account', ($2::uuid)::text, $3::jsonb)`,
-      [request.requestId ?? null, userId, JSON.stringify({ provider: "email", inviteId })],
+      [request.requestId ?? null, userId, JSON.stringify({ provider: "email", inviteId, referrerAccountId })],
     );
     return { user: result.rows[0], verificationToken };
   });
@@ -5750,6 +5758,22 @@ app.post("/api/auth/signup", authRateLimit, asyncRoute(handleSignup));
 app.post("/api/v1/auth/login", authRateLimit, asyncRoute(handleLogin));
 app.post("/api/auth/login", authRateLimit, asyncRoute(handleLogin));
 
+app.post("/api/v1/referrals/link", requireV1AuthenticatedUser, requireV1Actor, writeRateLimit, asyncRoute(async (request, response) => {
+  if (!referralLinksConfigured()) {
+    throw new ApiError(503, "REFERRAL_LINKS_UNAVAILABLE", "Invite links are temporarily unavailable.");
+  }
+  const token = createReferralToken(request.actor.account.id);
+  const url = `${productionOrigin}/signup?ref=${encodeURIComponent(token)}`;
+  response.status(201).json({
+    data: {
+      url,
+      expiresInDays: 30,
+      pilotInviteStillRequired: process.env.REQUIRE_PILOT_INVITE === "true",
+    },
+    meta: { requestId: request.requestId },
+  });
+}));
+
 const tokenSchema = z.object({ token: z.string().min(32).max(512) });
 const forgotPasswordSchema = z.object({
   email: z.email().max(320).transform((value) => normalizeEmail(value)),
@@ -5795,6 +5819,11 @@ app.post("/api/v1/auth/email/verify", authRateLimit, asyncRoute(async (request, 
       [request.requestId, record.account_id],
     );
     return record.account_id;
+  });
+  const verifiedRole = await database.query("SELECT primary_role FROM accounts WHERE id = $1 LIMIT 1", [accountId]);
+  void emitProductEvent("email_verified", {
+    accountId,
+    role: verifiedRole.rows[0]?.primary_role,
   });
   response.json({ data: { verified: true, accountId }, meta: { requestId: request.requestId } });
 }));
@@ -6009,6 +6038,27 @@ if (existsSync(distDir)) {
     }
 
     response.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0");
+    if (request.path === "/report") {
+      const appHtml = readFileSync(path.join(distDir, "index.html"), "utf8")
+        .replace(
+          '<meta property="og:title" content="RIVT | Where skilled trades connect" />',
+          '<meta property="og:title" content="RIVT field report" />',
+        )
+        .replace(
+          '<meta property="og:description" content="RIVT is the professional network for skilled trades." />',
+          '<meta property="og:description" content="Open a field report shared through RIVT." />',
+        )
+        .replace(
+          '<meta name="twitter:title" content="RIVT | Where skilled trades connect" />',
+          '<meta name="twitter:title" content="RIVT field report" />',
+        )
+        .replace(
+          '<meta name="twitter:description" content="RIVT is the professional network for skilled trades." />',
+          '<meta name="twitter:description" content="Open a field report shared through RIVT." />',
+        );
+      response.type("html").send(appHtml);
+      return;
+    }
     response.sendFile(path.join(distDir, "index.html"));
   });
 }

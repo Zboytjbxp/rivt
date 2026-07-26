@@ -941,7 +941,7 @@ export function AuthGate({
                 <button type="button" className={role === "contractor" ? "selected" : ""} aria-pressed={role === "contractor"} onClick={() => setRole("contractor")}>Contractor</button>
                 <button type="button" className={role === "tradesperson" ? "selected" : ""} aria-pressed={role === "tradesperson"} onClick={() => setRole("tradesperson")}>Tradesperson</button>
               </div>
-              <small>This choice is permanent after signup.</small>
+              <small>Your role controls who can post work or apply. Both roles can browse RIVT; support can help if your business changes.</small>
             </fieldset>
           ) : null}
           <label>
@@ -1069,7 +1069,7 @@ function LogoLockup() {
     <div className="rivt-lockup" aria-label="RIVT">
       <picture className="rivt-wordmark" aria-hidden="true">
         <source srcSet="/brand/rivt-lockup-light-transparent.png" media="(prefers-color-scheme: light)" />
-        <img src="/brand/rivt-lockup-dark-transparent.png" alt="" />
+        <img src="/brand/rivt-lockup-dark-transparent.png" alt="" width="1200" height="340" />
       </picture>
       <div className="rivt-copy">
         <span>{brandConfig.tagline}</span>
@@ -1080,7 +1080,7 @@ function LogoLockup() {
 
 function RivtMark() {
   return (
-    <img src="/brand/rivt-mark-mobile.png" alt="" aria-hidden="true" />
+    <img src="/brand/rivt-mark-mobile.png" alt="" width="742" height="171" aria-hidden="true" />
   );
 }
 

@@ -107,7 +107,7 @@ export function TradePostCard({ post, reactionState, saved, onToggleSave, onVote
         </span>
         {hasThumbnail ? (
           <span className="trade-post-thumbnail">
-            <img src={post.thumbnailUrl} alt={post.thumbnailAlt ?? ""} loading="lazy" onError={() => setFailedThumbnailUrl(post.thumbnailUrl ?? null)} />
+            <img src={post.thumbnailUrl} alt={post.thumbnailAlt ?? ""} width="320" height="180" loading="lazy" onError={() => setFailedThumbnailUrl(post.thumbnailUrl ?? null)} />
           </span>
         ) : null}
       </button>
@@ -157,6 +157,9 @@ export function TradePostCard({ post, reactionState, saved, onToggleSave, onVote
         >
           {shareResult ? <Check size={18} /> : <Share2 size={18} />}
         </button>
+        <span className="sr-only" role="status" aria-live="polite">
+          {shareResult === "copied" ? "Link copied" : shareResult === "shared" ? "Shared" : ""}
+        </span>
       </footer>
     </article>
   );

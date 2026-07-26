@@ -216,6 +216,11 @@ export function AccountPanel({
             <span><strong>Settings</strong><small>Alerts, accessibility, plan, and security</small></span>
             <ChevronRight size={18} aria-hidden="true" />
           </button>
+          <button type="button" onClick={() => onNavigate("Feedback")}>
+            <MessageSquareText size={19} />
+            <span><strong>Report a problem</strong><small>Send a support case to RIVT</small></span>
+            <ChevronRight size={18} aria-hidden="true" />
+          </button>
           {adminRoles.length ? (
             <button type="button" onClick={() => onNavigate("Admin")}>
               <Flag size={19} />

@@ -32,7 +32,7 @@ export function decodeReport(encoded: string): ReportData | null {
 
 export function getReportUrl(data: ReportData): string {
   const encoded = encodeReport(data);
-  return `${window.location.origin}/?report=${encoded}`;
+  return `${window.location.origin}/report?report=${encoded}`;
 }
 
 export function buildReportFromStorage(jobTitle: string): ReportData {

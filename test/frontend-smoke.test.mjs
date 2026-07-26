@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { after, before, test } from "node:test";
 import React from "react";
 import { renderToString } from "react-dom/server";
@@ -208,6 +209,106 @@ test("Home trade feed renders without crashing", async () => {
   );
 });
 
+test("fresh onboarded accounts see role-specific activation steps", async () => {
+  const { TradeFeed } = await loadModule("/src/features/home/TradeFeed.tsx");
+  const commonProps = {
+    posts: [],
+    jobs: [],
+    communities: [],
+    name: "RIVT Tester",
+    location: "Jacksonville, FL",
+    onboardingComplete: true,
+    profileHasBasics: false,
+    profileHasBio: false,
+    recordCount: 0,
+    safetyCertCount: 0,
+    getPostReactionState: () => ({ userReaction: null, upvotes: 0, downvotes: 0, status: "ready" }),
+    onVotePost: noop,
+    onOpenPost: noop,
+    onAsk: noop,
+    onPostWork: noop,
+    onOpenCommunity: noop,
+    onNavigate: noop,
+    onOpenProfile: noop,
+    onOpenTool: noop,
+    onOpenActiveWorkWorkspace: noop,
+  };
+
+  const contractorHtml = renderToString(React.createElement(TradeFeed, {
+    ...commonProps,
+    role: "contractor",
+  }));
+  assert.match(contractorHtml, /Contractor setup/);
+  assert.match(contractorHtml, /Post or draft your first job/);
+
+  const tradespersonHtml = renderToString(React.createElement(TradeFeed, {
+    ...commonProps,
+    role: "tradesperson",
+  }));
+  assert.match(tradespersonHtml, /Tradesperson setup/);
+  assert.match(tradespersonHtml, /Confirm your trade and location/);
+});
+
+test("canonical server trade drives persona without local storage", async () => {
+  const { getPersona } = await loadModule("/src/features/persona/tradePersona.ts");
+  const { PersonaProvider, usePersona } = await loadModule("/src/features/persona/usePersona.ts");
+
+  const persona = getPersona("Electrical");
+  assert.equal(persona?.trade, "Electrician");
+  assert.equal(persona?.jobSectionLabel, "Electrical jobs near you");
+  assert.equal(getPersona(""), null);
+
+  function PersonaProbe() {
+    const resolved = usePersona();
+    return React.createElement("span", null, resolved?.jobSectionLabel ?? "No persona");
+  }
+  const html = renderToString(React.createElement(
+    PersonaProvider,
+    { trade: "Electrical" },
+    React.createElement(PersonaProbe),
+  ));
+  assert.match(html, /Electrical jobs near you/);
+});
+
+test("primary action token meets AA contrast in both themes", () => {
+  const tokenSource = readFileSync(new URL("../src/app-shell/tokens.css", import.meta.url), "utf8");
+  const fills = [...tokenSource.matchAll(/--v2-accent-fill:\s*(#[0-9a-f]{6})/gi)].map((match) => match[1]);
+  assert.ok(fills.length >= 2, "light and dark accent-fill tokens should both be declared");
+
+  const luminance = (hex) => {
+    const channels = [1, 3, 5].map((offset) => Number.parseInt(hex.slice(offset, offset + 2), 16) / 255)
+      .map((value) => value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4);
+    return 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2];
+  };
+  const white = luminance("#ffffff");
+  for (const fill of fills) {
+    const ratio = (white + 0.05) / (luminance(fill) + 0.05);
+    assert.ok(ratio >= 4.5, `${fill} against white should be at least 4.5:1, received ${ratio.toFixed(2)}:1`);
+  }
+});
+
+test("browser analytics strips direct PII and stays disabled without launch configuration", async () => {
+  const { analyticsConfigured, sanitizedAnalyticsProperties } = await loadModule("/src/lib/analytics.ts");
+  assert.equal(analyticsConfigured(), false);
+  assert.deepEqual(sanitizedAnalyticsProperties({
+    account_id: "account-123",
+    role: "contractor",
+    email: "not-allowed@example.com",
+    customer_phone: "555-0100",
+    tool: "invoice",
+  }), {
+    account_id: "account-123",
+    role: "contractor",
+    tool: "invoice",
+  });
+});
+
+test("production entry point self-hosts fonts", () => {
+  const entry = readFileSync(new URL("../index.html", import.meta.url), "utf8");
+  assert.doesNotMatch(entry, /fonts\.googleapis\.com|fonts\.gstatic\.com/);
+  assert.match(entry, /\/assets\/fonts\/instrument-sans-latin\.woff2/);
+});
+
 test("Home active-work summary hands off to one exact workspace when the project pulse is unavailable", async () => {
   const { TradeFeed } = await loadModule("/src/features/home/TradeFeed.tsx");
   const activeWork = {
@@ -338,6 +439,38 @@ test("Work workspace renders without crashing", async () => {
     }),
     /Panel upgrade support/,
   );
+});
+
+test("tradesperson Work empty state offers a real next action", async () => {
+  const { WorkWorkspace } = await loadModule("/src/features/work/WorkWorkspace.tsx");
+  const html = renderToString(React.createElement(WorkWorkspace, {
+    role: "tradesperson",
+    jobs: [],
+    selectedJob: null,
+    loading: false,
+    error: null,
+    query: "",
+    trade: "All trades",
+    difficulty: "Any difficulty",
+    workType: "All work types",
+    locationQuery: "",
+    verifiedOnly: false,
+    onQueryChange: noop,
+    onTradeChange: noop,
+    onDifficultyChange: noop,
+    onWorkTypeChange: noop,
+    onLocationChange: noop,
+    onVerifiedChange: noop,
+    onSelectJob: noop,
+    onPostJob: noop,
+    onCompleteProfile: noop,
+    onEditJob: noop,
+    onTransition: asyncNoop,
+    onJobLoaded: noop,
+    onRetry: noop,
+  }));
+  assert.match(html, /No matching work nearby yet/);
+  assert.match(html, /Complete profile/);
 });
 
 test("Profile hub renders without crashing", async () => {

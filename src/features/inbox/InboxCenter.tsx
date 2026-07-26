@@ -232,6 +232,8 @@ function ClientThread({
                 <img
                   src={msg.attachmentUrl}
                   alt={msg.text}
+                  width="800"
+                  height="600"
                   className="v2-ct-attachment"
                 />
               ) : (

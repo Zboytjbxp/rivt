@@ -370,6 +370,8 @@ export function JobDetailHub({ jobId, onClose }: JobDetailHubProps) {
                 key={p.id}
                 src={p.url}
                 alt={p.caption ?? "Job photo"}
+                width="800"
+                height="600"
                 className="v2-job-detail-photo-thumb"
               />
             ))}

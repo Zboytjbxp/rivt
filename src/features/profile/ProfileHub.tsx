@@ -1001,7 +1001,7 @@ function BusinessSettingsSection({ fallbackName, fallbackEmail }: { fallbackName
       <div className="v2-document-logo-editor">
         <div className="v2-document-logo-preview">
           {info.logoUrl
-            ? <img src={info.logoUrl} alt={`${info.businessName || "Business"} logo`} />
+            ? <img src={info.logoUrl} alt={`${info.businessName || "Business"} logo`} width="640" height="240" />
             : <span aria-hidden="true">{(info.businessName || "R").slice(0, 2).toUpperCase()}</span>}
         </div>
         <div>
@@ -1085,7 +1085,7 @@ function BusinessSettingsSection({ fallbackName, fallbackEmail }: { fallbackName
       <div className={`v2-business-card-preview is-${info.invoiceStyle}`}>
         <div className="v2-biz-card">
           <div className="v2-biz-card-logo">
-            {info.logoUrl ? <img src={info.logoUrl} alt="" /> : (info.businessName || "RIVT").slice(0, 2).toUpperCase()}
+            {info.logoUrl ? <img src={info.logoUrl} alt="" width="640" height="240" /> : (info.businessName || "RIVT").slice(0, 2).toUpperCase()}
           </div>
           <div className="v2-biz-card-body">
             <strong>{info.businessName || "Your business"}</strong>

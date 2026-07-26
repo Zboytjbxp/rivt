@@ -415,7 +415,41 @@ async function configurePage(page, account, state) {
   await page.route("**/api/v1/standalone-projects**", (route) => route.fulfill(json({ data: { projects: [] } })));
   await page.route("**/api/storage", (route) => route.fulfill(json({ usedBytes: 0, objectCount: 0, plan: {} })));
   await page.route("**/api/v1/albums", (route) => route.fulfill(json({ data: { albums: [] } })));
+  await page.route("**/api/v1/albums/default", (route) => route.fulfill(json({
+    data: {
+      album: {
+        id: "album-default",
+        name: "All photos",
+        photoCount: 0,
+        createdAt: "2026-07-25T12:00:00.000Z",
+        updatedAt: "2026-07-25T12:00:00.000Z",
+        photos: [],
+      },
+    },
+  })));
   await page.route(/\/api\/v1\/albums\/[0-9a-f-]+$/, (route) => route.fulfill(json({ data: { album: { id: "album-empty", name: "Smoke album", photoCount: 0, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), photos: [] } } })));
+  await page.route("**/api/v1/document-brand", (route) => route.fulfill(json({ data: { brand: null } })));
+  await page.route("**/api/v1/payments/connect/status", (route) => route.fulfill(json({
+    data: {
+      connect: {
+        provider: "stripe_connect",
+        providerConfigured: false,
+        webhookConfigured: false,
+        missing: ["STRIPE_CONNECT"],
+        connected: false,
+        onboardingStatus: "not_started",
+        achPaymentsStatus: "inactive",
+        chargesEnabled: false,
+        payoutsEnabled: false,
+        detailsSubmitted: false,
+        ready: false,
+        lastSyncedAt: null,
+      },
+    },
+  })));
+  await page.route("**/api/v1/tool-invoices/*/bank-payment", (route) => route.fulfill(json({
+    data: { paymentRequest: null },
+  })));
   await page.route("**/api/v1/shop-talk/posts**", (route) => route.fulfill(json({ data: { posts: [] } })));
   await page.route("**/api/v1/communities**", (route) => route.fulfill(json({ data: { communities: [] } })));
   await page.route("**/api/v1/shop-talk/reactions/batch", (route) => route.fulfill(json({

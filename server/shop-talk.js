@@ -2,6 +2,7 @@ import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { createHash, randomUUID } from "node:crypto";
 import { ApiError, asyncRoute, validate, z } from "./api.js";
 import { detectUploadContent, mediaKindForMime } from "./projects.js";
+import { emitProductEvent } from "./product-analytics.js";
 
 const shopTalkTargetSchema = z.object({
   targetType: z.enum(["thread", "answer"]),
@@ -590,6 +591,19 @@ export function registerShopTalkRoutes({
         };
       },
     );
+    if (!result.duplicate) {
+      const postCount = await database.query(
+        "SELECT COUNT(*)::int AS count FROM shop_talk_posts WHERE author_account_id = $1",
+        [request.actor.account.id],
+      );
+      if (Number(postCount.rows[0]?.count ?? 0) === 1) {
+        void emitProductEvent("first_post_created", {
+          accountId: request.actor.account.id,
+          role: request.actor.account.primaryRole,
+          properties: { post_type: input.postType },
+        });
+      }
+    }
     sendIdempotentResult(response, result);
   }));
 

@@ -1,5 +1,6 @@
 import { type CSSProperties, type ImgHTMLAttributes, type Touch as ReactTouch, type TouchEvent, useEffect, useRef, useState } from "react";
 import { Minus, Plus, RotateCcw, X } from "lucide-react";
+import { useFocusTrap } from "../app-shell/useFocusTrap";
 import "./zoomable-image.css";
 
 const MIN_ZOOM = 1;
@@ -51,6 +52,8 @@ export function ZoomableImage({ className, alt = "", src, viewerLabel, ...imageP
         {...imageProps}
         src={src}
         alt={alt}
+        width={imageProps.width ?? 800}
+        height={imageProps.height ?? 600}
         className={["v2-zoomable-image-trigger", className].filter(Boolean).join(" ")}
         role="button"
         tabIndex={0}
@@ -72,6 +75,7 @@ function ImageViewer({ src, alt, label, onClose }: { src: string; alt: string; l
   const [zoom, setZoom] = useState(MIN_ZOOM);
   const [pan, setPan] = useState<Point>({ x: 0, y: 0 });
   const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const viewerRef = useFocusTrap<HTMLDivElement>(onClose);
   const pinchRef = useRef<PinchGesture | null>(null);
   const dragRef = useRef<DragGesture | null>(null);
   const lastTapRef = useRef(0);
@@ -90,10 +94,6 @@ function ImageViewer({ src, alt, label, onClose }: { src: string; alt: string; l
     };
 
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        onClose();
-        return;
-      }
       if (event.key === "+" || event.key === "=") updateZoom(ZOOM_STEP);
       if (event.key === "-") updateZoom(-ZOOM_STEP);
     };
@@ -161,7 +161,7 @@ function ImageViewer({ src, alt, label, onClose }: { src: string; alt: string; l
   } as CSSProperties;
 
   return (
-    <div className="v2-image-viewer" role="dialog" aria-modal="true" aria-label={label} onClick={onClose}>
+    <div ref={viewerRef} className="v2-image-viewer" role="dialog" aria-modal="true" aria-label={label} tabIndex={-1} onClick={onClose}>
       <button ref={closeButtonRef} type="button" className="v2-image-viewer-close" onClick={onClose} aria-label="Close photo viewer">
         <X size={22} />
       </button>
@@ -176,7 +176,7 @@ function ImageViewer({ src, alt, label, onClose }: { src: string; alt: string; l
         onTouchEnd={onTouchEnd}
         onTouchCancel={onTouchEnd}
       >
-        <img className="v2-image-viewer-image" src={src} alt={alt} draggable={false} style={transformStyle} />
+        <img className="v2-image-viewer-image" src={src} alt={alt} width="800" height="600" draggable={false} style={transformStyle} />
       </div>
       <div className="v2-image-viewer-controls" onClick={(event) => event.stopPropagation()} aria-label="Photo zoom controls">
         <button type="button" onClick={() => setZoomValue(zoom - ZOOM_STEP)} disabled={zoom <= MIN_ZOOM} aria-label="Zoom out"><Minus size={20} /></button>

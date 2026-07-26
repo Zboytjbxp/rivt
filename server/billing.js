@@ -1,6 +1,7 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { ApiError, asyncRoute } from "./api.js";
 import { logInfo, logWarn } from "./logger.js";
+import { emitProductEvent } from "./product-analytics.js";
 
 const STRIPE_API_VERSION = "2026-02-25.clover";
 const ACTIVE_SUBSCRIPTION_STATUSES = new Set(["active", "trialing"]);
@@ -536,6 +537,13 @@ export function registerStripeWebhookRoute({
       }
       const event = JSON.parse(request.body.toString("utf8"));
       const result = await processStripeEvent(database, event);
+      if (!result.duplicate && event.type === "checkout.session.completed" && result.accountId) {
+        const roleResult = await database.query("SELECT primary_role FROM accounts WHERE id = $1 LIMIT 1", [result.accountId]);
+        void emitProductEvent("checkout_completed", {
+          accountId: result.accountId,
+          role: roleResult.rows[0]?.primary_role,
+        });
+      }
       logInfo("billing.webhook_processed", {
         requestId: request.requestId,
         stripeEventId: event.id,
@@ -586,6 +594,10 @@ export function registerBillingRoutes({
        VALUES ($1, $2, 'billing.checkout_created', 'stripe_checkout_session', $3, $4)`,
       [request.requestId, request.actor.account.id, session.id, JSON.stringify({ mode: "subscription", priceId: config.priceId })],
     );
+    void emitProductEvent("checkout_started", {
+      accountId: request.actor.account.id,
+      role: request.actor.account.primaryRole,
+    });
     response.status(201).json({ data: { url: session.url, sessionId: session.id }, meta: { requestId: request.requestId } });
   }));
 

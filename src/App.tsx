@@ -9,6 +9,8 @@ import {
   useState } from "react";
 import { OfflineBanner } from "./components/OfflineBanner";
 import { LocalSetupPrompt } from "./components/LocalSetupPrompt";
+import { InstallAppPrompt } from "./components/InstallAppPrompt";
+import { PersonaProvider } from "./features/persona/usePersona";
 import { ReportViewer } from "./features/report/ReportViewer";
 import "./components/OfflineBanner.css";
 import "./components/LocalSetupPrompt.css";
@@ -94,6 +96,7 @@ import {
 } from "./features/shop-talk/shop-talk-api";
 import { communitySlug, fetchCommunities, type ServerCommunity } from "./features/shop-talk/communities-api";
 import {
+  fallbackCommunities,
   mapServerCommunity,
   type CommunityDisplay,
 } from "./features/shop-talk/community-directory";
@@ -105,6 +108,7 @@ import { linkedRecordTypeForTool } from "./features/tools/tool-record-links";
 import { fetchToolRecords, type ServerToolRecord } from "./features/tools/tool-records-api";
 import { safetyQuizData, trainingModules, type SafetyQuizResult } from "./features/profile/training-data";
 import { apiPath, fetchWithTimeout, RIVT_SESSION_EXPIRED_EVENT } from "./lib/api";
+import { getAnonymousAnalyticsId, setAnalyticsIdentity, trackProductEvent } from "./lib/analytics";
 import {
   AuthGate,
   AuthLinkFlow,
@@ -372,6 +376,7 @@ class RouteErrorBoundary extends Component<{ children: React.ReactNode }, { fail
             <div className="route-error-actions">
               <button type="button" onClick={() => window.location.reload()}>Reload RIVT</button>
               <button type="button" onClick={() => window.location.assign("/")}>Back to sign in</button>
+              <button type="button" onClick={() => window.location.assign(viewRoutes.Feedback)}>Report a problem</button>
             </div>
           </div>
         </div>
@@ -823,6 +828,16 @@ function App() {
     const accountRole = account.primaryRole === "tradesperson" ? "tradesperson" : "contractor";
     const authMethod: AuthMethod = account.provider === "google" ? "Google" : account.provider === "facebook" ? "Facebook" : account.provider === "apple" ? "Apple" : "Email";
     setCanonicalAccount(normalizedAccount);
+    setAnalyticsIdentity({ account_id: account.id, role: account.primaryRole });
+    try {
+      const sessionKey = `rivt.analytics.session-start.v1:${account.id}`;
+      if (!window.sessionStorage.getItem(sessionKey)) {
+        window.sessionStorage.setItem(sessionKey, "1");
+        trackProductEvent("session_start");
+      }
+    } catch {
+      trackProductEvent("session_start");
+    }
     setAuthUser({
       id: account.id,
       email: account.email,
@@ -941,63 +956,6 @@ function App() {
           throw new Error("Session lookup failed.");
         }
 
-        const [providersResult, storageResult] = await Promise.allSettled([
-          fetchWithTimeout(apiPath("/api/auth/providers"), { credentials: "include" }),
-          fetchWithTimeout(apiPath("/api/storage"), { credentials: "include" }),
-        ]);
-        if (cancelled) return;
-        const providersResponse = providersResult.status === "fulfilled" ? providersResult.value : null;
-        const storageResponse = storageResult.status === "fulfilled" ? storageResult.value : null;
-        const providersBody = providersResponse
-          ? await providersResponse.json().catch(() => ({})) as {
-          providers?: Record<string, { ok: boolean; mode: string; missing: string[]; purpose: string }>;
-          inviteRequired?: boolean;
-          }
-          : {};
-        const storageBody = storageResponse
-          ? await storageResponse.json().catch(() => ({})) as {
-          usedBytes?: number;
-          objectCount?: number;
-          accountStorage?: { usedBytes?: number; objectCount?: number };
-          plan?: { storageLimitBytes?: number | null; storageScope?: string };
-          bucket?: string | null;
-          region?: string | null;
-          endpoint?: string | null;
-          objectStorage?: string;
-          mode?: string;
-          database?: string;
-          missing?: string[];
-          }
-          : {};
-        setAuthProviders(providersBody.providers ?? {});
-        setPilotInviteRequired(Boolean(providersBody.inviteRequired));
-        const storageSnapshot = storageBody.accountStorage ?? storageBody;
-        if (storageResponse?.ok && typeof storageSnapshot.usedBytes === "number") {
-          setStorageUsage({
-            usedBytes: Number(storageSnapshot.usedBytes),
-            objectCount: Number(storageSnapshot.objectCount ?? 0),
-            storageLimitBytes: storageBody.plan?.storageLimitBytes ?? null,
-            storageScope: storageBody.plan?.storageScope ?? "account",
-            bucket: storageBody.bucket ?? null,
-            region: storageBody.region ?? null,
-            endpoint: storageBody.endpoint ?? null,
-            objectStorage: storageBody.objectStorage,
-            mode: storageBody.mode,
-            database: storageBody.database,
-            missing: storageBody.missing ?? [],
-          });
-        } else {
-          setStorageUsage({
-            usedBytes: 0,
-            objectCount: 0,
-            storageLimitBytes: null,
-            storageScope: "account",
-            bucket: null,
-            region: null,
-            endpoint: null,
-            objectStorage: "s3-compatible",
-          });
-        }
       } catch {
         if (!cancelled) {
           setAuthConnectionError("Your account is still here. Check your connection, then retry.");
@@ -1015,6 +973,46 @@ function App() {
     };
   }, [applyCanonicalAccount, authRetryKey, resetCommunityReactions]);
 
+  useEffect(() => {
+    if (!authUser || isGuest || !["Trust & Legal", "Safety & Training", "Reviews", "Feedback", "Settings"].includes(activeView)) return;
+    let cancelled = false;
+    void fetchWithTimeout(apiPath("/api/storage"), { credentials: "include" })
+      .then(async (response) => {
+        const body = await response.json().catch(() => ({})) as {
+          usedBytes?: number;
+          objectCount?: number;
+          accountStorage?: { usedBytes?: number; objectCount?: number };
+          plan?: { storageLimitBytes?: number | null; storageScope?: string };
+          bucket?: string | null;
+          region?: string | null;
+          endpoint?: string | null;
+          objectStorage?: string;
+          mode?: string;
+          database?: string;
+          missing?: string[];
+        };
+        if (cancelled) return;
+        const snapshot = body.accountStorage ?? body;
+        setStorageUsage(response.ok && typeof snapshot.usedBytes === "number" ? {
+          usedBytes: Number(snapshot.usedBytes),
+          objectCount: Number(snapshot.objectCount ?? 0),
+          storageLimitBytes: body.plan?.storageLimitBytes ?? null,
+          storageScope: body.plan?.storageScope ?? "account",
+          bucket: body.bucket ?? null,
+          region: body.region ?? null,
+          endpoint: body.endpoint ?? null,
+          objectStorage: body.objectStorage,
+          mode: body.mode,
+          database: body.database,
+          missing: body.missing ?? [],
+        } : null);
+      })
+      .catch(() => {
+        if (!cancelled) setStorageUsage(null);
+      });
+    return () => { cancelled = true; };
+  }, [activeView, authUser, isGuest]);
+
   async function refreshCanonicalAccount() {
     const response = await fetchWithTimeout(apiPath("/api/v1/me"), { credentials: "include" });
     const body = await response.json().catch(() => ({})) as { data?: CanonicalAccount; error?: { message?: string } };
@@ -1025,6 +1023,7 @@ function App() {
 
   const reloadJobs = useCallback(async () => {
     if (isGuest || !authUser || !onboardingComplete) return [];
+    if (!["Home", "Work", "People", "Crew"].includes(activeView)) return [];
     const requestId = ++jobsRequestRef.current;
     setJobsLoading(true);
     setJobsError(null);
@@ -1053,7 +1052,7 @@ function App() {
     } finally {
       if (jobsRequestRef.current === requestId) setJobsLoading(false);
     }
-  }, [authUser, difficulty, isGuest, locationQuery, onboardingComplete, query, trade, verifiedOnly, workType]);
+  }, [activeView, authUser, difficulty, isGuest, locationQuery, onboardingComplete, query, trade, verifiedOnly, workType]);
 
   useEffect(() => {
     if (!["People", "Crew"].includes(activeView) || isGuest) return;
@@ -1094,12 +1093,13 @@ function App() {
       setActiveWork([]);
       return;
     }
+    if (!["Home", "Work", "People", "Crew", "Camera", "Tools", "Records"].includes(activeView)) return;
     try {
       setActiveWork(await listActiveWork());
     } catch {
       setActiveWork([]);
     }
-  }, [authUser, isGuest, onboardingComplete]);
+  }, [activeView, authUser, isGuest, onboardingComplete]);
 
   const networkWorkOptions = useMemo(() => {
     const options = new Map<string, { id: string; title: string; status: string }>();
@@ -1131,6 +1131,7 @@ function App() {
 
   const reloadShopTalkPosts = useCallback(async () => {
     if (isGuest || !authUser || !onboardingComplete) return;
+    if (!["Home", "Shop Talk"].includes(activeView)) return;
     const requestId = ++shopTalkPostsRequestRef.current;
     let posts: ServerShopTalkPost[];
     try {
@@ -1145,7 +1146,7 @@ function App() {
     if (shopTalkPostsRequestRef.current !== requestId) return;
     setCommunityPosts(posts.map(toCommunityPostViewModel));
     setCommunityPostsLoaded(true);
-  }, [addActivity, authUser, isGuest, onboardingComplete]);
+  }, [activeView, addActivity, authUser, isGuest, onboardingComplete]);
 
   const loadShopTalkPost = useCallback(async (postId: string): Promise<CommunityPost | null> => {
     if (isGuest || !authUser || !onboardingComplete) return null;
@@ -1167,12 +1168,13 @@ function App() {
 
   const reloadCommunities = useCallback(async () => {
     if (isGuest || !authUser || !onboardingComplete) return;
+    if (!["Home", "Shop Talk"].includes(activeView)) return;
     const requestId = ++communitiesRequestRef.current;
     const rows = await fetchCommunities();
     if (communitiesRequestRef.current !== requestId) return;
     if (rows === null) return;
-    setCommunities(rows.map(mapServerCommunity));
-  }, [authUser, isGuest, onboardingComplete]);
+    setCommunities(rows.length > 0 ? rows.map(mapServerCommunity) : fallbackCommunities);
+  }, [activeView, authUser, isGuest, onboardingComplete]);
 
   useEffect(() => {
     /* eslint-disable react-hooks/set-state-in-effect */
@@ -1185,25 +1187,25 @@ function App() {
     setInboxLoading(true);
     setInboxError(null);
     try {
-      const [conversationRows, notificationRows] = await Promise.all([
-        listConversations(),
-        listNotifications(),
-      ]);
-      const safeConversations = Array.isArray(conversationRows) ? conversationRows : [];
+      const notificationRows = await listNotifications();
       const safeNotifications = Array.isArray(notificationRows?.notifications) ? notificationRows.notifications : [];
-      setInboxConversations(safeConversations);
       setInboxNotifications(safeNotifications);
-      setSelectedConversationId((current) => (
-        current && safeConversations.some((conversation) => conversation.id === current)
-          ? current
-          : safeConversations[0]?.id ?? null
-      ));
+      if (activeView === "Messages") {
+        const conversationRows = await listConversations();
+        const safeConversations = Array.isArray(conversationRows) ? conversationRows : [];
+        setInboxConversations(safeConversations);
+        setSelectedConversationId((current) => (
+          current && safeConversations.some((conversation) => conversation.id === current)
+            ? current
+            : safeConversations[0]?.id ?? null
+        ));
+      }
     } catch (error) {
       setInboxError(error instanceof Error ? error.message : "Inbox could not be loaded.");
     } finally {
       setInboxLoading(false);
     }
-  }, [authUser, isGuest, onboardingComplete]);
+  }, [activeView, authUser, isGuest, onboardingComplete]);
 
   const loadConversationMessages = useCallback(async (conversationId: string | null) => {
     if (isGuest) return;
@@ -1223,11 +1225,12 @@ function App() {
 
   useEffect(() => {
     if (isGuest || !authUser || !onboardingComplete) return;
+    if (activeView === "Messages") return;
     const timeout = window.setTimeout(() => {
       void reloadInbox();
     }, 0);
     return () => window.clearTimeout(timeout);
-  }, [authUser, isGuest, onboardingComplete, reloadInbox]);
+  }, [activeView, authUser, isGuest, onboardingComplete, reloadInbox]);
 
   useEffect(() => {
     if (activeView !== "Messages") return;
@@ -1266,6 +1269,16 @@ function App() {
     (post.trade === primaryProfileTrade || post.trade === "General") &&
     post.status !== "Verified Fix"
   )).length;
+  const shellSearchJobs = useMemo(() => jobs.map((job) => ({
+    id: String(job.canonical?.id ?? job.id),
+    title: job.title,
+    subtitle: [job.trade, [job.location, job.state].filter(Boolean).join(", "), job.status].filter(Boolean).join(" · "),
+  })), [jobs]);
+  const shellSearchPosts = useMemo(() => communityPosts.map((post) => ({
+    id: post.id,
+    title: post.title,
+    subtitle: [post.communityName ?? post.trade, post.author, `${post.replies.length} ${post.replies.length === 1 ? "reply" : "replies"}`].filter(Boolean).join(" · "),
+  })), [communityPosts]);
 
   const filteredJobs = jobs;
 
@@ -1316,12 +1329,19 @@ function App() {
     setAuthNotice(null);
     try {
       const requestMode = authMode;
+      if (requestMode === "signup") {
+        setAnalyticsIdentity({ account_id: getAnonymousAnalyticsId(), role: form.role ?? "pending" });
+        trackProductEvent("signup_started");
+      }
       const path = requestMode === "signup" ? "/api/v1/auth/signup" : "/api/v1/auth/login";
+      const referralToken = requestMode === "signup"
+        ? new URLSearchParams(window.location.search).get("ref")
+        : null;
       const response = await fetchWithTimeout(apiPath(path), {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ ...form, ...(referralToken ? { referralToken } : {}) }),
       });
       const body = await response.json().catch(() => ({})) as {
         data?: { user?: AuthUser; verificationRequired?: boolean; verificationDelivered?: boolean };
@@ -1331,6 +1351,7 @@ function App() {
         throw new Error(formatAuthFailure(requestMode, body));
       }
       const account = await refreshCanonicalAccount();
+      if (requestMode === "signup") trackProductEvent("signup_completed");
       if (body.data.verificationRequired || !account.emailVerified) {
         setAuthNotice(body.data.verificationDelivered === false
           ? `Your account was created, but the verification email could not be delivered. Use Resend on the next screen.`
@@ -1539,8 +1560,18 @@ function App() {
     setPostOpen(false);
   }
 
+  function handleOpenProfileSettings() {
+    handleNavigate("Settings");
+    window.history.replaceState(
+      { view: "Settings", section: "profile" },
+      "",
+      "/app/profile/settings?section=profile",
+    );
+  }
+
   function handleOpenTool(tool: ToolMode, record: ServerToolRecord | null = null) {
     const nextTool = isPublicToolMode(tool) ? tool : null;
+    if (nextTool) trackProductEvent("tool_used", { tool: nextTool });
     const isCamera = nextTool === "job-photos";
     const recordActiveWorkId = nextTool ? record?.activeWorkId ?? null : null;
     setRequestedTool(nextTool);
@@ -2032,6 +2063,7 @@ function App() {
     setEditingJob(job);
     if (published) {
       addActivity("Job published", `${job.title} is now visible to tradespeople in ${job.location}.`);
+      trackProductEvent("job_posted");
     }
   }
 
@@ -2133,7 +2165,15 @@ function App() {
       profile: "Settings",
     } as const satisfies Record<OnboardingResult["preferredStartView"], typeof activeView>)[result.preferredStartView];
     setActiveView(postOnboardingView);
+    if (result.preferredStartView === "profile") {
+      window.history.replaceState(
+        { view: "Settings", section: "profile" },
+        "",
+        "/app/profile/settings?section=profile",
+      );
+    }
     setOnboardingComplete(true);
+    trackProductEvent("onboarding_completed", { onboarding_goal: result.goal });
     addActivity(
       "Account setup complete",
       `${result.role === "contractor" ? "Contractor" : "Tradesperson"} setup is ready. Opening ${postOnboardingView}.`,
@@ -2688,7 +2728,11 @@ function App() {
   }
 
   return (
-    <>
+    <PersonaProvider
+      trade={canonicalAccount?.profile.trades.find((tradeItem) => tradeItem.primary)?.name
+        ?? canonicalAccount?.profile.trades[0]?.name
+        ?? null}
+    >
       <AppShell
         activeDestination={primaryDestinationForView(activeView)}
         role={role}
@@ -2707,16 +2751,8 @@ function App() {
               }
             : null
         }
-        searchJobs={jobs.map((job) => ({
-          id: String(job.canonical?.id ?? job.id),
-          title: job.title,
-          subtitle: [job.trade, [job.location, job.state].filter(Boolean).join(", "), job.status].filter(Boolean).join(" · "),
-        }))}
-        searchPosts={communityPosts.map((post) => ({
-          id: post.id,
-          title: post.title,
-          subtitle: [post.communityName ?? post.trade, post.author, `${post.replies.length} ${post.replies.length === 1 ? "reply" : "replies"}`].filter(Boolean).join(" · "),
-        }))}
+        searchJobs={shellSearchJobs}
+        searchPosts={shellSearchPosts}
         notificationCount={unreadActivities}
         messageCount={unreadMessages}
         isGuest={isGuest}
@@ -2792,7 +2828,7 @@ function App() {
             onPostWork={openCreateJob}
             onOpenCommunity={(name) => { setShopTalkPostId(null); setShopTalkCompose(false); setShopTalkAnswerQueue(false); setShopTalkGlobalQuery(""); setShopTalkCommunitySlug(communitySlug(name)); handleNavigate(defaultViewForDestination("shop-talk")); }}
             onNavigate={(destination) => handleNavigate(defaultViewForDestination(destination))}
-            onOpenProfile={() => handleNavigate("Settings")}
+            onOpenProfile={handleOpenProfileSettings}
             onOpenTool={(tool, activeWorkId, record) => {
               if (activeWorkId) handleOpenActiveWorkTool(activeWorkId, tool, record);
               else handleOpenTool(tool, record);
@@ -2826,6 +2862,7 @@ function App() {
             onVerifiedChange={setVerifiedOnly}
             onSelectJob={(jobId) => { setFocusedActiveWorkId(null); setSelectedId(jobId); }}
             onPostJob={openCreateJob}
+            onCompleteProfile={handleOpenProfileSettings}
             onOpenPeople={() => handleNavigate("People")}
             onEditJob={(job) => void handleEditJob(job)}
             onTransition={handleJobTransition}
@@ -3030,10 +3067,7 @@ function App() {
           role={role}
           profile={accountProfile}
           adminRoles={canonicalAccount?.adminRoles ?? []}
-          onOpenProfile={() => {
-            handleNavigate("Settings");
-            window.history.replaceState({ view: "Settings", section: "profile" }, "", "/app/profile/settings?section=profile");
-          }}
+          onOpenProfile={handleOpenProfileSettings}
           onLogout={handleLogout}
           onClose={() => setAccountOpen(false)}
           onNavigate={handleNavigate}
@@ -3062,10 +3096,11 @@ function App() {
       )}
 
       <OfflineBanner />
+      {!isGuest ? <InstallAppPrompt /> : null}
       {isGuest && localSetupOpen && (
         <LocalSetupPrompt onDone={() => setLocalSetupOpen(false)} />
       )}
-    </>
+    </PersonaProvider>
   );
 }
 

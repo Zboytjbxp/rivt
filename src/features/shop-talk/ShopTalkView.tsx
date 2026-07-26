@@ -1769,7 +1769,7 @@ export function ShopTalkView({
                         <button type="button" className="shop-news-card-main" onClick={() => { setSelectedNewsId(featuredNews.id); setMobileDetail(true); }}>
                           {isFallbackNewsThumbnail(featuredNews)
                             ? <div className="news-featured-fallback" aria-hidden="true"><Newspaper size={24} /><small>No article image</small></div>
-                            : <img className="news-featured-image" src={featuredNews.thumbnailUrl} alt="" loading="lazy" />}
+                            : <img className="news-featured-image" src={featuredNews.thumbnailUrl} alt="" width="1200" height="675" loading="lazy" />}
                           <div className="news-featured-copy">
                             <span className="news-featured-label">Featured briefing</span>
                             <div className="news-card-kicker">
@@ -1808,7 +1808,7 @@ export function ShopTalkView({
                           </div>
                         ) : (
                           <div className="news-card-thumb is-real">
-                            <img src={item.thumbnailUrl} alt={`${item.source} article image`} loading="lazy" />
+                            <img src={item.thumbnailUrl} alt={`${item.source} article image`} width="320" height="180" loading="lazy" />
                           </div>
                         )}
                         <div className="news-card-body">

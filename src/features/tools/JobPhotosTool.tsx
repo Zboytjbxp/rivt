@@ -1,6 +1,7 @@
 import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, ArrowRight, Camera, Download, FileUp, FolderOpen, Grid3X3, Image, Loader2, Plus, RefreshCw, Settings2, X } from "lucide-react";
 import { ZoomableImage } from "../../components/ZoomableImage";
+import { DialogSurface } from "../../components/ui";
 import { createPhotoComparison, type PhotoComparisonLayout } from "./photo-comparison";
 import type { CanonicalActiveWork } from "../work/job-api";
 import {
@@ -507,7 +508,7 @@ function CameraCapture({
       )}
       <canvas ref={canvasRef} style={{ display: "none" }} aria-hidden="true" />
       {settingsOpen ? (
-        <section className="v2-camera-settings-sheet" role="dialog" aria-modal="true" aria-label="Camera settings">
+        <DialogSurface className="v2-camera-settings-sheet" label="Camera settings" onClose={() => setSettingsOpen(false)}>
           <header>
             <div><small>Capture preferences</small><h2>Camera settings</h2></div>
             <button type="button" onClick={() => setSettingsOpen(false)} aria-label="Close camera settings"><X size={19} /></button>
@@ -532,7 +533,7 @@ function CameraCapture({
               {locationMessage ? <p role="status">{locationMessage}</p> : null}
             </fieldset>
           </div>
-        </section>
+        </DialogSurface>
       ) : null}
       <div className="v2-camera-bottom-controls">
         {onCaptureIntentChange && captureTypesOpen ? (
@@ -584,7 +585,7 @@ function CameraCapture({
         ) : null}
         <div className="v2-camera-controls">
           <button type="button" className="v2-camera-last-capture" onClick={onClose} disabled={saveState === "saving"} aria-label={captureCount ? `View ${captureCount} photos saved in this camera session` : "View camera photos"}>
-            {lastSnapUrl ? <img key={lastSnapUrl} src={lastSnapUrl} alt="Latest captured photo" /> : <span><Image size={18} /></span>}
+            {lastSnapUrl ? <img key={lastSnapUrl} src={lastSnapUrl} alt="Latest captured photo" width="800" height="600" /> : <span><Image size={18} /></span>}
           </button>
           <button
             type="button"
@@ -827,7 +828,7 @@ function PhotoGallery({
         <div className="v2-job-photos-grid">
           {photos.filter((photo) => photo.id !== excludeId).map((photo) => (
             <button key={photo.id} type="button" className="v2-job-photo-thumb" onClick={() => pickForCompare(photo)}>
-              {photo.signedUrl ? <img src={photo.signedUrl} alt={photo.originalName} loading="lazy" /> : <span className="v2-job-photo-placeholder"><Camera size={18} /></span>}
+              {photo.signedUrl ? <img src={photo.signedUrl} alt={photo.originalName} width="800" height="600" loading="lazy" /> : <span className="v2-job-photo-placeholder"><Camera size={18} /></span>}
               <span className="v2-job-photo-meta"><small>{new Date(photo.createdAt).toLocaleDateString()}</small></span>
             </button>
           ))}
@@ -848,7 +849,7 @@ function PhotoGallery({
           {([[beforeLabel || "Before", compareA], [afterLabel || "After", compareB]] as const).map(([label, photo]) => (
             <figure key={photo.id} className="v2-job-photo-compare-frame">
               <span className="v2-job-photo-compare-label">{label}</span>
-              {photo.signedUrl ? <img src={photo.signedUrl} alt={photo.originalName} /> : null}
+              {photo.signedUrl ? <img src={photo.signedUrl} alt={photo.originalName} width="800" height="600" /> : null}
               <figcaption>{new Date(photo.createdAt).toLocaleDateString()}</figcaption>
             </figure>
           ))}
@@ -998,7 +999,7 @@ function PhotoGallery({
                 >
                   <span className="v2-job-photo-timeline-index">{index + 1}</span>
                   <span className="v2-job-photo-timeline-thumb">
-                    {photo.signedUrl ? <img src={photo.signedUrl} alt={photo.originalName} loading="lazy" /> : <span className="v2-job-photo-placeholder"><Camera size={18} /></span>}
+                    {photo.signedUrl ? <img src={photo.signedUrl} alt={photo.originalName} width="800" height="600" loading="lazy" /> : <span className="v2-job-photo-placeholder"><Camera size={18} /></span>}
                   </span>
                   <span className="v2-job-photo-timeline-copy">
                     <strong>{captureLabel(photo)}</strong>
@@ -1035,7 +1036,7 @@ function PhotoGallery({
                 setPhotoView("detail");
               }}
             >
-              {photo.signedUrl ? <img src={photo.signedUrl} alt={photo.originalName} loading="lazy" /> : <span className="v2-job-photo-placeholder"><Camera size={18} /></span>}
+              {photo.signedUrl ? <img src={photo.signedUrl} alt={photo.originalName} width="800" height="600" loading="lazy" /> : <span className="v2-job-photo-placeholder"><Camera size={18} /></span>}
               <span className="v2-job-photo-meta">
                 <small>{new Date(photo.createdAt).toLocaleDateString()}</small>
               </span>
@@ -1484,7 +1485,7 @@ export function JobPhotosTool({ activeWork, isDemo = false, focusedActiveWorkId 
               }}
             >
               <span className="v2-camera-home-feature-image">
-                <img src={contextPhoto.signedUrl} alt={contextPhoto.originalName} loading="lazy" />
+                <img src={contextPhoto.signedUrl} alt={contextPhoto.originalName} width="800" height="600" loading="lazy" />
               </span>
               <span className="v2-camera-home-feature-copy">
                 <strong>{captureLabel(contextPhoto)}</strong>
@@ -1508,7 +1509,7 @@ export function JobPhotosTool({ activeWork, isDemo = false, focusedActiveWorkId 
                   className="v2-camera-home-recent-card"
                   onClick={() => void openActiveJob()}
                 >
-                  {photo.signedUrl ? <img src={photo.signedUrl} alt={photo.originalName} loading="lazy" /> : <span className="v2-job-photo-placeholder"><Camera size={18} /></span>}
+                  {photo.signedUrl ? <img src={photo.signedUrl} alt={photo.originalName} width="800" height="600" loading="lazy" /> : <span className="v2-job-photo-placeholder"><Camera size={18} /></span>}
                   <span className="v2-camera-home-recent-copy">
                     <strong>{captureLabel(photo)}</strong>
                     <small>{relativeTime(photo.createdAt)}</small>
@@ -1613,7 +1614,7 @@ export function JobPhotosTool({ activeWork, isDemo = false, focusedActiveWorkId 
                 >
                   <span className="v2-camera-album-cover">
                     {cover?.signedUrl
-                      ? <img src={cover.signedUrl} alt={`Latest photo in ${album.name}`} loading="lazy" />
+                      ? <img src={cover.signedUrl} alt={`Latest photo in ${album.name}`} width="800" height="600" loading="lazy" />
                       : <Camera size={23} aria-hidden="true" />}
                     <span className="v2-camera-album-photo-count">{album.photoCount}</span>
                   </span>
@@ -1642,7 +1643,7 @@ export function JobPhotosTool({ activeWork, isDemo = false, focusedActiveWorkId 
           <div className="v2-camera-latest-grid">
             {additionalRecentAlbumCaptures.map(({ album, photo }) => (
               <button key={photo.id} type="button" className="v2-camera-latest-card" onClick={() => openAlbumFromHome(album)}>
-                {photo.signedUrl ? <img src={photo.signedUrl} alt={photo.originalName} loading="lazy" /> : <span><Camera size={18} /></span>}
+                {photo.signedUrl ? <img src={photo.signedUrl} alt={photo.originalName} width="800" height="600" loading="lazy" /> : <span><Camera size={18} /></span>}
                 <strong>{album.name}</strong>
                 <small>{relativeTime(photo.createdAt)}</small>
               </button>

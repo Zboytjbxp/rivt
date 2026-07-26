@@ -793,12 +793,58 @@ async function runMobileFlow(page) {
         `${surface.name} should render in ${theme} mode`,
       );
       await assertNoHorizontalOverflow(page, `${surface.name} ${theme} theme`);
+      if (surface.name === "home") {
+        const contrast = await page.evaluate(() => {
+          const host = document.querySelector(".rivt-v2");
+          if (!host) return 0;
+          const parse = (value) => {
+            const canvas = document.createElement("canvas");
+            const context = canvas.getContext("2d");
+            if (!context) return [0, 0, 0];
+            context.fillStyle = value;
+            const normalized = context.fillStyle;
+            if (normalized.startsWith("#")) {
+              return [1, 3, 5].map((offset) => Number.parseInt(normalized.slice(offset, offset + 2), 16));
+            }
+            return normalized.match(/\d+/g)?.slice(0, 3).map(Number) ?? [0, 0, 0];
+          };
+          const luminance = (color) => {
+            const channels = parse(color).map((channel) => channel / 255)
+              .map((channel) => channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4);
+            return 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2];
+          };
+          const styles = getComputedStyle(host);
+          const fill = styles.getPropertyValue("--v2-accent-fill").trim();
+          const text = styles.getPropertyValue("--v2-on-accent").trim();
+          const first = luminance(fill);
+          const second = luminance(text);
+          return (Math.max(first, second) + 0.05) / (Math.min(first, second) + 0.05);
+        });
+        assert.ok(contrast >= 4.5, `${theme} primary action contrast should meet AA; received ${contrast.toFixed(2)}:1`);
+      }
       await page.screenshot({
         path: path.join(screenshotDir, `final-${theme}-${surface.name}.png`),
         fullPage: true,
       });
     }
   }
+
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto(`${baseUrl}/app/camera`, { waitUntil: "networkidle" });
+  await page.locator(".v2-job-photos-workbench").waitFor({ timeout: 15_000 });
+  const animated = await page.locator("body *").evaluateAll((elements) => elements.flatMap((element) => {
+    const styles = getComputedStyle(element);
+    if (styles.animationName === "none") return [];
+    const durations = styles.animationDuration.split(",").map((value) => {
+      const trimmed = value.trim();
+      return trimmed.endsWith("ms") ? Number.parseFloat(trimmed) : Number.parseFloat(trimmed) * 1000;
+    });
+    return durations.some((duration) => duration > 0.02)
+      ? [{ tag: element.tagName, className: element.className, animationName: styles.animationName, animationDuration: styles.animationDuration }]
+      : [];
+  }));
+  assert.deepEqual(animated, [], `reduced motion should suppress non-trivial animations: ${JSON.stringify(animated.slice(0, 5))}`);
+  await page.emulateMedia({ reducedMotion: "no-preference" });
 }
 
 let browser;

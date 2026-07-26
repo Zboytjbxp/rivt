@@ -12,7 +12,7 @@ import {
   X,
 } from "lucide-react";
 import type { AppShellProps, PrimaryDestination, ProfileSearchResult, SearchTarget, ShellSearchItem } from "./types";
-import { Avatar } from "../components/ui";
+import { Avatar, DialogBackdrop, DialogSurface } from "../components/ui";
 import { apiPath, fetchWithTimeout } from "../lib/api";
 import "./tokens.css";
 import "./app-shell.css";
@@ -209,8 +209,7 @@ export function AppShell({
 
       <aside className="v2-sidebar" aria-label="Primary navigation">
         <button className="v2-brand" type="button" onClick={() => onNavigate("home")} aria-label="RIVT home">
-          <img className="v2-brand-light" src="/brand/rivt-lockup-light-transparent.png" alt="RIVT" />
-          <img className="v2-brand-dark" src="/brand/rivt-lockup-dark-transparent.png" alt="" aria-hidden="true" />
+          <span className="v2-brand-mark" aria-hidden="true" />
         </button>
 
         <nav className="v2-primary-nav">
@@ -258,8 +257,7 @@ export function AppShell({
       <div className="v2-workspace">
         <header className="v2-topbar">
           <button className="v2-mobile-brand" type="button" onClick={() => onNavigate("home")} aria-label="RIVT home">
-            <img className="v2-brand-light" src="/brand/rivt-lockup-light-transparent.png" alt="RIVT" />
-            <img className="v2-brand-dark" src="/brand/rivt-lockup-dark-transparent.png" alt="" aria-hidden="true" />
+            <span className="v2-mobile-brand-mark" aria-hidden="true" />
           </button>
 
           <form
@@ -309,8 +307,8 @@ export function AppShell({
         </header>
 
         {searchOpen ? (
-          <div className="v2-search-scrim" role="presentation" onClick={() => setSearchOpen(false)}>
-            <div className="v2-search-panel" role="dialog" aria-label="Search RIVT" onClick={(event) => event.stopPropagation()}>
+          <DialogBackdrop className="v2-search-scrim" onClose={() => setSearchOpen(false)}>
+            <DialogSurface className="v2-search-panel" label="Search RIVT" onClose={() => setSearchOpen(false)}>
               <button type="button" className="v2-modal-close v2-icon-button" onClick={() => setSearchOpen(false)} aria-label="Close search">
                 <X size={18} />
               </button>
@@ -451,8 +449,8 @@ export function AppShell({
                   Only public profiles are shown. Contact details are shared only when both parties are on an active job.
                 </p>
               </div>
-            </div>
-          </div>
+            </DialogSurface>
+          </DialogBackdrop>
         ) : null}
 
         {isGuest ? guestBanner : null}

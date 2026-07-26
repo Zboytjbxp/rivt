@@ -65,6 +65,7 @@ import {
 import "./work-workspace.css";
 import { getProjectForActiveWork, type ProjectRecord } from "../tools/project-api";
 import { JobCloseoutPanel } from "./JobCloseoutPanel";
+import { trackProductEvent } from "../../lib/analytics";
 
 type TradeFilter = (typeof tradeOptions)[number];
 type DifficultyFilter = (typeof difficultyOptions)[number];
@@ -100,6 +101,7 @@ interface WorkWorkspaceProps {
   onVerifiedChange: (verified: boolean) => void;
   onSelectJob: (jobId: JobId) => void;
   onPostJob: () => void;
+  onCompleteProfile: () => void;
   onOpenPeople: () => void;
   onEditJob: (job: Job) => void;
   onTransition: (job: Job, action: JobAction) => Promise<void>;
@@ -1132,7 +1134,17 @@ function DetailFact({ icon: Icon, label, value }: { icon: typeof MapPin; label: 
   return <div className="v2-detail-fact"><Icon size={17} /><span><small>{label}</small><strong>{value}</strong></span></div>;
 }
 
-function WorkEmptyState({ role, section, onPostJob }: { role: Role; section: ContractorSection; onPostJob: () => void }) {
+function WorkEmptyState({
+  role,
+  section,
+  onPostJob,
+  onCompleteProfile,
+}: {
+  role: Role;
+  section: ContractorSection;
+  onPostJob: () => void;
+  onCompleteProfile: () => void;
+}) {
   const contractorCopy: Record<ContractorSection, { title: string; body: string }> = {
     open: { title: "No open jobs", body: "Publish a job when you are ready to receive interest from tradespeople." },
     draft: { title: "No drafts", body: "Start a job now and return to finish the scope whenever you are ready." },
@@ -1142,14 +1154,21 @@ function WorkEmptyState({ role, section, onPostJob }: { role: Role; section: Con
     calendar: { title: "No jobs yet", body: "Create and publish jobs to see them on the calendar." },
     templates: { title: "No templates yet", body: "Save a job as a template to quickly re-post similar work." },
   };
-  const copy = role === "contractor" ? contractorCopy[section] : { title: "No matching work nearby", body: "Try changing the trade, location, or job requirements." };
+  const copy = role === "contractor"
+    ? contractorCopy[section]
+    : {
+        title: "No matching work nearby yet",
+        body: "Complete your trade profile so contractors can find you while new local work is added.",
+      };
   return (
     <EmptyState
       className="v2-work-empty"
       icon={<BriefcaseBusiness size={24} />}
       title={copy.title}
       description={copy.body}
-      action={role === "contractor" ? <button type="button" className="v2-primary-button" onClick={onPostJob}><Plus size={17} /> Create job</button> : null}
+      action={role === "contractor"
+        ? <button type="button" className="v2-primary-button" onClick={onPostJob}><Plus size={17} /> Create job</button>
+        : <button type="button" className="v2-primary-button" onClick={onCompleteProfile}>Complete profile</button>}
     />
   );
 }
@@ -1217,6 +1236,7 @@ export function WorkWorkspace({
   onVerifiedChange,
   onSelectJob,
   onPostJob,
+  onCompleteProfile,
   onOpenPeople,
   onEditJob,
   onTransition,
@@ -1410,7 +1430,10 @@ export function WorkWorkspace({
         proposedUnit: proposal?.amount ? proposal.unit : null,
       });
     });
-    if (completed) setMatchNotice("Application sent. The contractor can review it next.");
+    if (completed) {
+      setMatchNotice("Application sent. The contractor can review it next.");
+      trackProductEvent("job_applied");
+    }
   }
 
   async function handleWithdraw(application: CanonicalApplication) {
@@ -2078,7 +2101,14 @@ export function WorkWorkspace({
                 {role === "tradesperson" ? "That's all open work in your area" : `All ${contractorSection.toLowerCase()} postings shown`}
               </div>
             </>
-          ) : <WorkEmptyState role={role} section={contractorSection} onPostJob={onPostJob} />}
+          ) : (
+            <WorkEmptyState
+              role={role}
+              section={contractorSection}
+              onPostJob={onPostJob}
+              onCompleteProfile={onCompleteProfile}
+            />
+          )}
         </section>
 
         {detailJob ? (

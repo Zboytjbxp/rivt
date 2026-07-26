@@ -874,12 +874,24 @@ function CrewManager({
   }
 
   async function copyInviteTemplate(member: CrewMember) {
-    const text = `Hey ${member.name}, I have a ${member.trade || "trade"} job coming up. Interested?`;
     try {
+      const response = await fetch("/api/v1/referrals/link", {
+        method: "POST",
+        credentials: "include",
+      });
+      const body = await response.json().catch(() => ({})) as {
+        data?: { url?: string; pilotInviteStillRequired?: boolean };
+        error?: { message?: string };
+      };
+      if (!response.ok || !body.data?.url) {
+        throw new Error(body.error?.message || "RIVT could not create an invite link.");
+      }
+      const pilotNote = body.data.pilotInviteStillRequired ? "\nYou’ll still need your Jacksonville pilot code." : "";
+      const text = `Hey ${member.name}, join me on RIVT for skilled-trade work and crew coordination:\n${body.data.url}${pilotNote}`;
       await navigator.clipboard.writeText(text);
-      setInviteCopyMessage(`Invite text for ${member.name} copied.`);
+      setInviteCopyMessage(`Tracked RIVT invite for ${member.name} copied. The link expires in 30 days.`);
     } catch {
-      setInviteCopyMessage("Couldn't copy the invite text.");
+      setInviteCopyMessage("Couldn't create or copy the RIVT invite.");
     }
   }
 
@@ -960,10 +972,10 @@ function CrewManager({
                   type="button"
                   className="v2-crew-invite-copy-btn"
                   onClick={() => void copyInviteTemplate(member)}
-                  title="Copy invite text"
+                  title="Copy tracked RIVT invite"
                 >
                   <Copy size={13} />
-                  Copy invite text
+                  Copy RIVT invite
                 </button>
               )}
             </div>

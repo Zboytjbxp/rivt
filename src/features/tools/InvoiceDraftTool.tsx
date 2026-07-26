@@ -1105,6 +1105,16 @@ export function InvoiceDraftTool({
     }
   }
 
+  function choosePaymentPath(next: "bank" | "outside") {
+    setPaymentChoice(next);
+    if (next === "bank") {
+      setPaymentMethod(bankPaymentMethod);
+    } else if (paymentChoice === "bank" || paymentMethod === bankPaymentMethod) {
+      setPaymentMethod("");
+    }
+    setProjectInvoiceError("");
+  }
+
   return (
     <div className={`v2-tool-workbench v2-invoice-workbench is-${step}`} onChangeCapture={markDraftChanged}>
       <nav className="v2-tool-flow-nav" aria-label="Invoice draft steps">
@@ -1132,17 +1142,30 @@ export function InvoiceDraftTool({
               </div>
               {bankPaymentUrl ? <strong><Check size={16} />Pay link ready</strong> : null}
             </header>
-            <div className="v2-invoice-payment-options" role="radiogroup" aria-label="Invoice payment method">
+            <div
+              className="v2-invoice-payment-options"
+              role="radiogroup"
+              aria-label="Invoice payment method"
+              onKeyDown={(event) => {
+                const next = event.key === "ArrowRight" || event.key === "ArrowDown" || event.key === "End"
+                  ? "outside"
+                  : event.key === "ArrowLeft" || event.key === "ArrowUp" || event.key === "Home"
+                    ? "bank"
+                    : null;
+                if (!next) return;
+                event.preventDefault();
+                choosePaymentPath(next);
+                event.currentTarget.querySelector<HTMLElement>(`[data-payment-choice="${next}"]`)?.focus();
+              }}
+            >
               <button
                 type="button"
                 role="radio"
+                data-payment-choice="bank"
                 aria-checked={paymentChoice === "bank"}
+                tabIndex={paymentChoice === "bank" ? 0 : -1}
                 className={paymentChoice === "bank" ? "is-selected" : ""}
-                onClick={() => {
-                  setPaymentChoice("bank");
-                  setPaymentMethod(bankPaymentMethod);
-                  setProjectInvoiceError("");
-                }}
+                onClick={() => choosePaymentPath("bank")}
               >
                 <Banknote size={20} aria-hidden="true" />
                 <span>
@@ -1153,13 +1176,11 @@ export function InvoiceDraftTool({
               <button
                 type="button"
                 role="radio"
+                data-payment-choice="outside"
                 aria-checked={paymentChoice === "outside"}
+                tabIndex={paymentChoice === "outside" ? 0 : -1}
                 className={paymentChoice === "outside" ? "is-selected" : ""}
-                onClick={() => {
-                  setPaymentChoice("outside");
-                  if (paymentChoice === "bank" || paymentMethod === bankPaymentMethod) setPaymentMethod("");
-                  setProjectInvoiceError("");
-                }}
+                onClick={() => choosePaymentPath("outside")}
               >
                 <MessageSquare size={20} aria-hidden="true" />
                 <span>

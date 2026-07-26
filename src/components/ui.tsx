@@ -242,7 +242,7 @@ export function Avatar({
 
   return (
     <span className={cx("rivt-avatar", `size-${size}`, className)} style={style}>
-      {src ? <img src={src} alt={`${name} profile`} /> : <span aria-hidden="true">{initial}</span>}
+      {src ? <img src={src} alt={`${name} profile`} width="48" height="48" /> : <span aria-hidden="true">{initial}</span>}
     </span>
   );
 }
