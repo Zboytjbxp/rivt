@@ -2,7 +2,7 @@
 
 Last updated: 2026-07-25 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Stripe Connect ACH has a server-enforced one-account pilot and isolated signed-webhook staging proof; production remains disabled, with human onboarding and live webhook activation still gated.
+Current phase: Stripe Connect ACH has a server-enforced one-account pilot, completed sandbox merchant onboarding, and Stripe-origin ACH lifecycle proof; production remains disabled pending live configuration and a low-value pilot.
 Active packet: `docs/delivery/packets/70_STRIPE_CONNECT_ACH_INVOICES.md`
 Repository branch: `codex/stripe-ach-pilot-staging`
 Production feature release commit: `548ce531fe850679b47386e30287b990bd02b37b`
@@ -31,11 +31,18 @@ Production feature release commit: `548ce531fe850679b47386e30287b990bd02b37b`
   public staging webhook. It proved invalid-signature rejection, signed success
   to payment/invoice `paid`, signed failure to payment `failed` while leaving
   the invoice `sent`, and one immutable ledger row after duplicate replay.
+- Stripe-hosted sandbox onboarding is complete. A direct Accounts v2 status
+  sync reports the merchant `ready`, ACH payments `active`, payouts enabled,
+  details submitted, and no currently-due or eventually-due requirements.
+- A Stripe-origin test created two isolated $12.34 ACH PaymentIntents using
+  Stripe's documented success and account-closed test methods. Both began in
+  `processing`; Stripe then delivered signed connected-account webhooks. RIVT
+  reconciled the success to payment/invoice `paid` and the account-closed case
+  to payment `failed` while leaving its invoice `sent`. Both provider objects
+  are present in the immutable webhook ledger.
 - `npm run payments:pilot:status -- --require-ready` reports rollout mode
-  `pilot`, one configured/connected pilot, no open payments before the test,
-  and controlled-pilot configuration readiness `true`. The merchant remains
-  honestly `restricted`/`not_started` until Stripe-hosted onboarding is
-  completed by a human.
+  `pilot`, one ready/active connected pilot, zero open payments, recent webhook
+  activity, and controlled-pilot configuration readiness `true`.
 - Staging global `/api/health` remains HTTP 503 because staging intentionally
   has no object-storage/Sentry/Web Push clone. Its database, migration, source,
   and Stripe Connect configuration are observable; production health remains

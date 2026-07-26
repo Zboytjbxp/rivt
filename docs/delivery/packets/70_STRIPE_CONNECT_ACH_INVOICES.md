@@ -46,6 +46,13 @@ Let an invoice author offer a Stripe-hosted US bank-account payment option witho
   Signed staging success, failure, invalid-signature, and duplicate-replay
   paths are verified against PostgreSQL with
   `npm run payments:pilot:test:staging`.
+- Stripe-hosted sandbox merchant onboarding is complete: the Accounts v2
+  merchant is ready, ACH is active, payouts are enabled, and no requirements
+  remain due. Stripe-origin $12.34 success and account-closed test payments
+  both entered processing before signed connected-account webhooks reconciled
+  them to paid and failed respectively; the successful invoice became paid,
+  the failed invoice remained sent, and both provider objects reached the
+  immutable event ledger.
 - Do not reuse the test signing secret in production. The live Stripe
   environment still requires its own connected-account destination, signing
   secret, human identity/business onboarding, named pilot UUID, and low-value
