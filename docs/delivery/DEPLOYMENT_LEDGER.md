@@ -1,5 +1,44 @@
 # Deployment Ledger
 
+## 2026-07-25 - Desktop Release Polish
+
+- Production source commit:
+  `a2095df7eef356942b66bba0759694a714ce7921`
+- Branch: `master` (source branch: `codex/desktop-release-polish`)
+- Railway application deployment:
+  `e0c5b4a4-4d82-4f1d-adc5-5eb17b7222fd`
+- Railway exact-source metadata deployment:
+  `7aa5f117-c026-4f8f-8b0a-6f7d4efad003`
+- Production: `https://rivt.pro`
+- Scope: wide-screen shell polish for Home, Work, Camera, Shop Talk, and
+  Tools; scroll reset and sticky-header clearance; bounded Camera albums;
+  useful Shop Talk community discovery; restored Tools launcher density;
+  tokenized light/dark desktop surfaces; and repeatable 1440x900 light/dark
+  guest-preview coverage.
+- Post-deploy corrections: authenticated production QA found and fixed a
+  42px Work Find people target and a 36px Tools Field tools Edit target. The
+  live smoke was aligned with the current Account menu and authenticated
+  route titles, and its More assertion now examines only primary navigation.
+- Automated gates: build, lint, 85 unit/frontend tests, fail-closed
+  authentication and jobs/discovery E2E, guest-preview, Tools, Shop
+  Talk/Trade News, mobile-action rendered QA, and the zero-vulnerability
+  production dependency audit passed. Serial database integration and the
+  locally fail-closed Stripe Connect Work-lifecycle smoke are not claimed.
+- Post-deploy proof: `/api/health` returned the exact source, ready migration
+  `0030_stripe_connect_accounts_v2`, PostgreSQL/S3-compatible storage, and
+  configured Sentry/Web Push. Production monitor passed with seven anonymous
+  private-route checks. Authenticated run
+  `ui-a11y-20260726031210-b81689` passed eight phone/tablet/laptop/desktop/
+  200%-text scenarios with two disposable accounts closed and zero small
+  targets, missing image alternatives, unlabeled fields, horizontal
+  overflow, or console warnings/errors.
+- Rollback target:
+  `8814917ada72b93130bad739ddd6b30574011582`. No migration or production data
+  rollback is required for this UI-only release.
+- Activation boundary: Stripe Connect Accounts v2 remains fail-closed until
+  human hosted onboarding and the live connected webhook activation gates
+  are completed.
+
 ## 2026-07-25 - Stripe Connect Accounts v2 Correction (Fail-Closed)
 
 - Feature source commit:

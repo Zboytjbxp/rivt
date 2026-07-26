@@ -30,6 +30,16 @@ Evidence must eventually link to implementation, automated tests, manual accepta
   guest-preview/Tools/Shop Talk/mobile rendered QA, and the production
   dependency audit. The database integration stall and local Connect-status
   503 boundary are recorded in Packet 71 and are not represented as passes.
+- `GA-UX-006` and `GA-OPS-007` gain live production evidence from
+  `ui-a11y-20260726031210-b81689` on exact source
+  `a2095df7eef356942b66bba0759694a714ce7921`: eight role/viewport scenarios
+  cover 360x800 and 390x844 phones, 768x1024 tablet, 1366x768 laptop,
+  1440x900 desktop, and 390x844 at 200% text. Every scenario reports zero
+  small targets, missing image alternatives, unlabeled fields, horizontal
+  overflow, and console warnings/errors; both disposable accounts were
+  closed. Railway deployments `e0c5b4a4-4d82-4f1d-adc5-5eb17b7222fd` and
+  `7aa5f117-c026-4f8f-8b0a-6f7d4efad003` serve the exact source, and the
+  exact-source production monitor passes.
 
 ## Traceability Addendum - 2026-07-25 Stripe Connect Accounts v2 Correction
 

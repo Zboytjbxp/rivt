@@ -36,6 +36,19 @@ Make the five-destination RIVT shell feel deliberate on wide screens without cha
 - The serial database integration command was attempted from a clean process state but did not return output or complete within the available run window. No pass is claimed.
 - Work lifecycle rendered QA currently receives expected fail-closed HTTP 503 responses from the locally disabled Stripe Connect status route and treats those console responses as errors. No lifecycle assertion failed, but that smoke is not claimed green.
 
+## Deployment evidence
+
+- Merged to `master` and released as exact production source
+  `a2095df7eef356942b66bba0759694a714ce7921`.
+- Railway application deployment:
+  `e0c5b4a4-4d82-4f1d-adc5-5eb17b7222fd`.
+- Railway exact-source metadata deployment:
+  `7aa5f117-c026-4f8f-8b0a-6f7d4efad003`.
+- Production monitor passed against `https://rivt.pro` with ready migration
+  `0030_stripe_connect_accounts_v2` and seven anonymous private-route checks.
+- Authenticated production run `ui-a11y-20260726031210-b81689` passed all
+  eight role/viewport scenarios and closed both disposable accounts.
+
 ## Rollback
 
 - Revert the packet commit. No migrations, server contracts, storage keys, or production data are changed.

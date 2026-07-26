@@ -127,6 +127,26 @@ Disposable production smoke accounts from this run were closed after verificatio
 
 Expanded scripted authenticated shell coverage now exists through disposable production accounts and includes opened top-bar interaction surfaces. Full manual route and physical-device coverage remains incomplete.
 
+## 2026-07-25 Desktop Release Production Regression
+
+Run `ui-a11y-20260726031210-b81689` passed against `https://rivt.pro` on
+exact source `a2095df7eef356942b66bba0759694a714ce7921`.
+
+- Covered contractor and tradesperson at 360x800 and 390x844, contractor at
+  768x1024, 1366x768, and 1440x900, plus contractor 390x844 at 200% text.
+- Audited Home, Work, Shop Talk, Tools, global search, notifications,
+  Account menu, Messages, keyboard focus, reduced motion, landmarks, labels,
+  image alternatives, tap targets, and horizontal overflow.
+- Every scenario reported zero small targets, missing image alternatives,
+  unlabeled fields, console warnings/errors, and horizontal overflow.
+- Both disposable production accounts were closed (`accountsClosed: 2`).
+- The run found and closed two real regressions before passing: the mobile
+  Work Find people target increased from 42px to 44px, and the mobile Tools
+  Field tools Edit target increased from 36px to 44px.
+- The smoke now matches the shipped Account menu and dynamic authenticated
+  route titles and scopes the removed More-navigation check to the primary
+  navigation, avoiding collisions with the legitimate Tools More action.
+
 Remaining manual Gate A coverage:
 
 - Physical or emulated iOS Safari and Android Chrome.

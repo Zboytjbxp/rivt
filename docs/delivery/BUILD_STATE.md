@@ -2,12 +2,12 @@
 
 Last updated: 2026-07-25 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Desktop release polish is locally complete; Stripe Connect Accounts v2 remains deployed fail-closed with human onboarding and live webhook activation gated.
+Current phase: Desktop release polish is deployed and live-verified; Stripe Connect Accounts v2 remains deployed fail-closed with human onboarding and live webhook activation gated.
 Active packet: `docs/delivery/packets/71_DESKTOP_RELEASE_POLISH.md`
-Repository branch: `codex/desktop-release-polish`
-Production feature release commit: `548ce531fe850679b47386e30287b990bd02b37b`
+Repository branch: `master` (source branch: `codex/desktop-release-polish`)
+Production feature release commit: `a2095df7eef356942b66bba0759694a714ce7921`
 
-## Desktop Release Polish (Complete Locally, Not Deployed)
+## Desktop Release Polish (Deployed and Live-Verified)
 
 - The five-destination desktop shell keeps Home, Work, Camera, Shop Talk, and
   Tools intact, with People remaining under Work.
@@ -34,12 +34,29 @@ Production feature release commit: `548ce531fe850679b47386e30287b990bd02b37b`
   fail-closed authentication and jobs/discovery E2E, guest-preview rendered
   QA, Tools rendered QA, Shop Talk/Trade News rendered QA, mobile-action QA,
   and `npm audit --omit=dev` with zero known vulnerabilities.
+- Post-deploy accessibility run `ui-a11y-20260726031210-b81689` passed against
+  `https://rivt.pro` on exact source
+  `a2095df7eef356942b66bba0759694a714ce7921`. It covered contractor and
+  tradesperson phones, tablet, laptop, 1440x900 desktop, and 200% mobile text,
+  closed both disposable accounts, and reported zero small targets, missing
+  image alternatives, unlabeled fields, horizontal overflow, or console
+  warnings/errors.
+- The live run corrected two release-check findings before closure: Work's
+  mobile Find people action and Tools' mobile Field tools Edit action now
+  meet the 44px target floor. The smoke now recognizes the current Account
+  menu, authenticated route titles, and scopes the removed More-navigation
+  assertion to the actual primary navigation.
 - Two gates are not claimed: the serial database integration command stalled
   without output after clean restarts, and Work lifecycle rendered QA sees
   fail-closed HTTP 503 responses from the locally disabled Stripe Connect
   status route. No database or Work lifecycle pass is fabricated.
-- This branch is not merged or deployed. Production still serves the commit
-  recorded above and Packet 70's ACH activation gates remain unchanged.
+- Railway application deployment `e0c5b4a4-4d82-4f1d-adc5-5eb17b7222fd`
+  and exact-source metadata deployment
+  `7aa5f117-c026-4f8f-8b0a-6f7d4efad003` serve the release. Live health
+  reports ready migration `0030_stripe_connect_accounts_v2`, PostgreSQL,
+  S3-compatible storage, configured Sentry/Web Push, and the exact source.
+  The production monitor passed with all seven anonymous private-route checks.
+  Packet 70's ACH activation gates remain unchanged.
 
 ## Stripe Connect Accounts v2 Correction (Deployed, Activation Gated)
 
